@@ -111,6 +111,17 @@ public:
     // legacyDefault so that a fresh install lands there
     static ConfigDirResolution xdgConfigDir(const QString& legacyDefault);
 
+    // Every root resolveConfigRoot() can pick for execDir as what the folders hold changes, not only today's:
+    // the one each portable.txt names, usable now or not, $XDG_CONFIG_HOME/mudlet and configDir
+    static QStringList configRootCandidates(const QString& execDir, const QString& configDir = legacyConfigDir());
+
+    // NTFS and APFS fold case by default; a case-sensitive volume there is then over-matched, which is the safe side
+    static Qt::CaseSensitivity fileNameCaseSensitivity();
+    // A folder by what it is rather than how it is spelled, made or not: the canonical path of its deepest
+    // existing ancestor and the rest, a link to nowhere on the way followed to where it will lead once that is made
+    static QString folderIdentity(const QString& path);
+    static bool sameFolder(const QString& first, const QString& second, Qt::CaseSensitivity caseSensitivity = fileNameCaseSensitivity());
+
     // A directory that cannot be listed must never read as "nothing here": that
     // inference is what hides profiles, so assume the strongest content instead.
     static bool configDirHoldsProfiles(const QString& dir);
@@ -177,10 +188,11 @@ public:
     static QSettings::Status earlySettingsStatus(const QString& fileName);
     // For texts printed before there is a window or a profile, in Mudlet.ini's language or else the
     // system's. Installed on the application; null when there is none. A print-and-exit run warns why not.
-    static QTranslator* loadTranslationsForCommandLine(bool printAndExitRun);
+    // configRoot, a root a frontend will choose, is read in place of the one resolved, and not settled.
+    static QTranslator* loadTranslationsForCommandLine(bool printAndExitRun, const QString& configRoot = QString());
     // For the whole of a run with no main window, in the interface language its pool reports, as the main window
-    // loads its own. Installed on the application; null when there is none.
-    static QTranslator* loadTranslationsForRun();
+    // loads its own. Installed on the application; null when there is none. configRoot as above.
+    static QTranslator* loadTranslationsForRun(const QString& configRoot = QString());
     // FFmpeg on Windows and AVFoundation on macOS over Qt Multimedia's own default, unless QT_MEDIA_BACKEND
     // names one; before the first media object is made
     static void setDefaultMediaBackend();
@@ -190,6 +202,11 @@ public:
     // the distinction a marker stat cannot make - and getting it wrong sends
     // credentials to portable-mode files on an install running non-portably.
     static bool portableRootInUse();
+    // Whether the root in force is one a frontend with no window chose for itself, through HostManager
+    static bool configRootChosen();
+    // Where the credential store keeps its files: under a root a frontend chose, so that nothing is shared
+    // with the GUI's, or else AppConfigLocation, which every other root shares
+    static QString credentialFilesRoot();
 
     // Has default form of "en_US" but can be just an ISO language code e.g. "fr"
     // for french, without a country designation. Replaces xx in "mudlet_xx.qm" to
@@ -265,6 +282,8 @@ private:
     // store to the Updater. portable says whether the root came from a
     // portable.txt that was honoured.
     static void setConfigPath(const QString& path, bool portable = false);
+    // A root a frontend chose: portable, as its passwords are kept in it
+    static void chooseConfigRoot(const QString& path);
     // Resolves the config root, logs what the resolution found - a refused portable.txt included - and
     // installs it through setConfigPath(), after which getQSettings() opens the Mudlet.ini under it.
     static ConfigDirResolution settleConfigRoot();

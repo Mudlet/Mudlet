@@ -3090,7 +3090,7 @@ int TLuaInterpreter::uninstallPackage(lua_State* L)
     if (!host.mInstalledPackages.contains(packageName)) {
         return warnArgumentValue(L, __func__, qsl("package '%1' is not installed").arg(packageName));
     }
-    if (!host.uninstallPackage(packageName, enums::PackageModuleType::Package)) {
+    if (!host.uninstallPackage(packageName, enums::PackageModuleType::Package, true)) {
         // An installed package is only refused while a profile save is running
         return warnArgumentValue(L, __func__, qsl("a profile save is in progress, try again once it has finished"));
     }
@@ -3121,7 +3121,7 @@ int TLuaInterpreter::uninstallModule(lua_State* L)
 {
     const QString module = getVerifiedString(L, __func__, 1, "module name");
     Host& host = getHostFromLua(L);
-    if (!host.uninstallPackage(module, enums::PackageModuleType::ModuleFromScript)) {
+    if (!host.uninstallPackage(module, enums::PackageModuleType::ModuleFromScript, true)) {
         lua_pushboolean(L, false);
         return 1;
     }
@@ -7299,6 +7299,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "pauseMusic", TLuaInterpreter::pauseMusic);
     lua_register(pGlobalLua, "pauseVideos", TLuaInterpreter::pauseVideos);
     lua_register(pGlobalLua, "updateSounds", TLuaInterpreter::updateSounds);
+    lua_register(pGlobalLua, "updateMusic", TLuaInterpreter::updateMusic);
     lua_register(pGlobalLua, "setMediaListener", TLuaInterpreter::setMediaListener);
     lua_register(pGlobalLua, "getMediaListener", TLuaInterpreter::getMediaListener);
     lua_register(pGlobalLua, "purgeMediaCache", TLuaInterpreter::purgeMediaCache);
@@ -7423,6 +7424,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "roomLocked", TLuaInterpreter::roomLocked);
     lua_register(pGlobalLua, "setCustomEnvColor", TLuaInterpreter::setCustomEnvColor);
     lua_register(pGlobalLua, "getCustomEnvColorTable", TLuaInterpreter::getCustomEnvColorTable);
+    lua_register(pGlobalLua, "getMapEnvColor", TLuaInterpreter::getMapEnvColor);
     lua_register(pGlobalLua, "setRoomEnv", TLuaInterpreter::setRoomEnv);
     lua_register(pGlobalLua, "setRoomName", TLuaInterpreter::setRoomName);
     lua_register(pGlobalLua, "getRoomName", TLuaInterpreter::getRoomName);
@@ -9430,15 +9432,26 @@ void TLuaInterpreter::updateExtendedAnsiColorsInTable()
     }
 }
 
-// Internal function - Creates a table for useful information from the http
-// response. It creates an empty table, calls upon other functions to
-// add things to it, and then returns a key to where it is in the lua registry.
+// Internal function - Creates a table of useful information from the http
+// response and returns a key to where it is in the lua registry.
 int TLuaInterpreter::createHttpResponseTable(QNetworkReply* reply)
 {
     lua_State* L = pGlobalLua;
 
     // Push empty table onto stack
     lua_newtable(L);
+    // Absent, not 0, when no HTTP response arrived (e.g. the connection was refused)
+    const QVariant status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute);
+    if (status.isValid()) {
+        lua_pushinteger(L, status.toInt());
+        lua_setfield(L, -2, "status");
+    }
+    // HTTP/2 has no reason phrase, yet Qt still reports an empty one
+    const QByteArray reason = reply->attribute(QNetworkRequest::HttpReasonPhraseAttribute).toString().toUtf8();
+    if (!reason.isEmpty()) {
+        lua_pushlstring(L, reason.constData(), reason.size());
+        lua_setfield(L, -2, "reason");
+    }
     // Add "headers" table to table
     createHttpHeadersTable(L, reply);
     // Add "cookies" table to table
@@ -9604,7 +9617,7 @@ int TLuaInterpreter::showNotification(lua_State* L)
     const QString title{lua_tostring(L, 1)};
     const QString text = (n >= 2) ? QString{lua_tostring(L, 2)} : title;
 
-    if (!TAppFrontend::instance()->showNotification(title, text, notificationExpirationTime)) {
+    if (!TAppFrontend::instance()->showNotification(title, text, notificationExpirationTime) && !getHostFromLua(L).requestNotification(title, text, notificationExpirationTime)) {
         return warnArgumentValue(L, __func__, "the profile has no main window");
     }
     lua_pushboolean(L, true);
@@ -10279,7 +10292,10 @@ int TLuaInterpreter::announce(lua_State* L)
         return lua_error(L);
     }
 
-    TAppFrontend::instance()->announce(QString{lua_tostring(L, 1)}, (n > 1) ? QString{lua_tostring(L, 2)} : QString(), true);
+    const QString text{lua_tostring(L, 1)};
+    const QString processing = (n > 1) ? QString{lua_tostring(L, 2)} : QString();
+    TAppFrontend::instance()->announce(text, processing, true);
+    emit getHostFromLua(L).signal_announcementRequested(text, processing);
     return 0;
 }
 

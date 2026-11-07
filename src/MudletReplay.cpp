@@ -78,10 +78,15 @@ bool MudletReplay::start(Host* pHost)
     mRunning = true;
     mpHost = pHost;
     mSpeed = 1;
-    // A null QTime would stay null through addMSecs(), so start a millisecond in
-    mElapsed.setHMS(0, 0, 0, 1);
-    emit signal_replayStarted();
+    mElapsedMSecs = 0;
     return true;
+}
+
+void MudletReplay::announce()
+{
+    if (mRunning) {
+        emit signal_replayStarted();
+    }
 }
 
 void MudletReplay::over()

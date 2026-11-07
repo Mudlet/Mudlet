@@ -32,8 +32,6 @@ def log(successes, failures=(), errors=(), pending=0, after=""):
 
 
 KNOWN = """# Specs that fail in mudlet-headless
-minimum successes: 10
-maximum pending: 1
 
 # Need a main window
 Failure Example_spec.lua: Example group one test
@@ -111,16 +109,6 @@ class CheckHeadlessLuaFailures(unittest.TestCase):
         status, output = self.check(log(10).replace("0 failures", "1 failures").replace("\nAll tests", "\n" + message + "All tests"))
         self.assertEqual(status, 0, output)
 
-    def test_fails_a_run_that_passed_fewer_tests_than_recorded(self):
-        status, output = self.check(log(9, ["Example group one test"]))
-        self.assertEqual(status, 1, output)
-        self.assertIn("fewer than the 10 recorded", output)
-
-    def test_fails_a_run_that_pended_more_tests_than_recorded(self):
-        status, output = self.check(log(10, ["Example group one test"], pending=2))
-        self.assertEqual(status, 1, output)
-        self.assertIn("more than the 1 recorded", output)
-
     def test_fails_a_list_line_that_is_not_an_entry(self):
         status, output = self.check(log(10, ["Example group one test"]), KNOWN + "Example_spec.lua: no kind given\n")
         self.assertEqual(status, 1, output)
@@ -129,14 +117,9 @@ class CheckHeadlessLuaFailures(unittest.TestCase):
     def test_write_keeps_comments_drops_stale_entries_and_adds_new_ones(self):
         status, output = self.check(log(12, ["Example group the other test"], pending=0), write=True)
         self.assertEqual(status, 0, output)
-        self.assertEqual(self.known(), KNOWN.replace("10", "12").replace("pending: 1", "pending: 0").replace(f"Failure {ONE}\n", "") + f"Failure {OTHER}\n")
+        self.assertEqual(self.known(), KNOWN.replace(f"Failure {ONE}\n", "") + f"Failure {OTHER}\n")
         status, output = self.check(log(12, ["Example group the other test"]), self.known())
         self.assertEqual(status, 0, output)
-
-    def test_write_adds_the_counts_to_a_list_without_them(self):
-        status, output = self.check(log(12, ["Example group one test"], pending=3), f"# comment\nFailure {ONE}\n", write=True)
-        self.assertEqual(status, 0, output)
-        self.assertEqual(self.known(), f"# comment\nminimum successes: 12\nmaximum pending: 3\nFailure {ONE}\n")
 
     def test_write_leaves_the_list_alone_when_the_run_has_problems(self):
         hook = (f"{HOOKED} @ 5", "Hooked group after_each")

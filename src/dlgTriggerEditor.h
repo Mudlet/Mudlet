@@ -117,6 +117,7 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
     friend class EditorEmptySelectionTest;
     friend class EditorFolderViewTest;
     friend class EditorFontTest;
+    friend class EditorKeyboardMoveTest;
     friend class EditorModuleFolderTest;
     friend class EditorReshowTest;
     friend class EditorSearchTest;
@@ -351,6 +352,7 @@ private slots:
     void slot_toggleSearchWholeWord(bool);
     void slot_toggleGroupBoxColorizeTrigger(const bool);
     void slot_changedPattern();
+    void slot_pastedExtraPatternLines(const QStringList& lines);
     void slot_lineSpacerChanged(int value);
     void slot_clearSearchResults();
     void slot_clearSoundFile();
@@ -423,9 +425,15 @@ private:
     void populateAliases();
     void populateActions();
     void populateKeys();
-    void saveOpenChanges();
+    // False when the open item refused its edits, which are then only in the form
+    bool saveOpenChanges();
+    enum class KeyboardMove { Up, Down, OutOfGroup, IntoGroupAbove };
+    void moveCurrentItem(const KeyboardMove move);
+    QList<int> unitChildIDs(const EditorViewType view, const int parentID) const;
+    void reParentInUnit(const EditorViewType view, const int itemID, const int oldParentID, const int newParentID, const int position);
     EditorViewType determineViewFromVisibleTree();
     EditorViewType resolveCurrentView();
+    void clearTypeTrees();
     void rebuildStaleTrees();
     void populateFolderTree();
     void addFolderTreeNode(QTreeWidgetItem* pSource, const EditorViewType view, QTreeWidgetItem* pParent, QTreeWidgetItem* pLooseItems, QHash<QString, int>& folderCounts);
@@ -453,7 +461,7 @@ private:
     static QString folderTreeItemKey(const EditorViewType view, const int id);
     static QString folderTreeTypeName(const EditorViewType view, const bool plural);
     void saveTrigger();
-    void saveAlias();
+    bool saveAlias();
     void computeAliasIcon(TAlias* pT, QIcon& icon, QString& itemDescription) const;
     void computeTriggerIcon(TTrigger* pT, QIcon& icon, QString& itemDescription) const;
     void computeTimerIcon(TTimer* pT, QIcon& icon, QString& itemDescription) const;
@@ -470,6 +478,7 @@ private:
     void showAliasLoopWarning(QTreeWidgetItem* pItem, const QString& name);
     void applyAliasState(QTreeWidgetItem* pItem, TAlias* pT, bool touchNotification = true, bool respectNewState = true);
     bool aliasSubstitutionLoops(const QString& regex, const QString& substitution) const;
+    QString aliasNameForPattern(const TAlias* pT, const QString& typedName, const QString& pattern) const;
     void saveTimer();
     void saveKey();
     void saveScript();
@@ -743,6 +752,7 @@ private:
 
     // Pattern rows the list shows in full however the splitter and advanced options are arranged (#2548)
     static constexpr int csmMinimumVisiblePatternRows = 5;
+    static constexpr int csmMaxPatternRows = 50;
 
     // Row height once the list overflows: the tallest control any pattern type puts in a row (see createPatternItem())
     int mPatternRowHeight = 0;
@@ -785,6 +795,7 @@ private:
     QTimer* mpFolderTreeRefreshTimer = nullptr;
     // FolderKeyRole of a folder node, or "view:id" of a real item -> its Folders view node
     QHash<QString, QTreeWidgetItem*> mFolderTreeNodes;
+    QHash<QTreeWidget*, QSet<int>> mExpandedIdsBeforeRefill;
     // FolderKeyRole of the current Folders view node when it is not one item - a merged folder or "Not in a folder" - and no form shows
     QString mFolderGroupKey;
     bool mFolderViewActive = false;

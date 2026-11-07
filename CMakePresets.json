@@ -132,6 +132,7 @@
       "cacheVariables": {
         "USE_SANITIZER": "",
         "BUILD_TESTING": "OFF",
+        "USE_GUI": "OFF",
         "USE_SPAWN": "OFF",
         "USE_DISCORD_RPC": "OFF",
         "USE_SPEECH_ENGINES": "OFF",

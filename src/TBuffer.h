@@ -148,7 +148,11 @@ public:
         // Replaces TCHAR_ECHO 16
         Echo = 0x200000,              // 0000 0000 0010 0000 0000 0000 0000 0000
         // In the showing console's selection. Not a display attribute (outside TestMask); dropped by the copy constructor:
-        Selected = 0x2000000          // 0000 0010 0000 0000 0000 0000 0000 0000
+        Selected = 0x2000000,         // 0000 0010 0000 0000 0000 0000 0000 0000
+        // Bold as SGR 1, MXP or a link's style asked for it, whatever the colour. Bold is how it is painted:
+        // not on a colour, which is brightened instead, and also after a 256-colour index from 8 to 15.
+        // Outside TestMask, so only an app embedding Mudlet reads it:
+        BoldAsked = 0x4000000         // 0000 0100 0000 0000 0000 0000 0000 0000
     };
     // clang-format on
     Q_DECLARE_FLAGS(AttributeFlags, AttributeFlag)
@@ -253,6 +257,7 @@ public:
     bool isStruckOut() const { return mFlags & StrikeOut; }
     bool isReversed() const { return mFlags & Reverse; }
     bool isConcealed() const { return mFlags & Concealed; }
+    bool isBoldAsked() const { return mFlags & BoldAsked; }
     bool isFound() const { return mFlags & Found; }
     // Extended underline style accessors for enhanced OSC 8 hyperlink support
     bool isUnderlineWavy() const { return mFlags & UnderlineWavy; }
@@ -564,6 +569,7 @@ public:
         bool gotString = false;
         bool isDefaultColor = true;
         bool bold = false;
+        bool boldAsked = false;
         bool italics = false;
         bool overline = false;
         bool reverse = false;
@@ -652,6 +658,10 @@ public:
     const TLineFormat& detachedTriggerPassLine() const { return mPreTriggerPassLine; }
     const QString& detachedTriggerPassLineText() const { return mDetachedTriggerPassLineText; }
     static constexpr int csmDetachedTriggerPassLine = -2;
+    // Whether a trigger pass, the current one or one a feedTriggers() paused, is running over the line,
+    // or over one a wrap split it off
+    bool triggerPassRunningOn(int lineNumber) const;
+    bool triggerPassUnderWay() const { return !mEnclosingTriggerPasses.isEmpty(); }
     int find(int line, const QString& what, int pos);
     QStringList split(int line, const QString& splitter);
     QStringList split(int line, const QRegularExpression& splitter);
@@ -791,6 +801,7 @@ private:
     void materialisePreTriggerPassLine(int y);
     void noteTriggerPassLineEdit(int y, int x, int removed, int inserted);
     void triggerPassLinesRemoved(int from, int to);
+    void triggerPassSegmentTaken(int lineNumber);
     int remapLinkId(const TLinkStore& sourceLinkStore, int sourceLinkId, QHash<int, int>& remappedLinkIds, int line = -1);
     int calculateWrapPosition(int lineNumber, int begin, int end);
     void handleNewLine();
@@ -839,6 +850,8 @@ private:
     void clearSequenceLatches();
     void endLocalFeedSequences();
     void appendReplacementCharacter(TChar);
+    void appendMxpText(const QString&);
+    void appendLinkedText(const QString&, TChar);
     static QStringDecoder multibyteDecoderFor(Decoder, const QByteArray&);
     bool decodeMultibyteSequence(QByteArrayView, QStringView&);
     // Views into the string decodeSGR() was handed, so none may outlive that call.
@@ -864,6 +877,8 @@ private:
     bool continuationRepeatsSegmentOpening() const;
     void joinPendingServerWrapOntoCurrent();
     void processMxpWatchdogCallback();
+    void watchMxpTag(bool tagWrittenOut);
+    void stopTagWatchdog();
     TChar::AttributeFlags computeCurrentAttributeFlags() const;
 
     // Helper function for parsing URI query parameters in OSC 8 hyperlinks
@@ -950,6 +965,8 @@ private:
     QPointer<Host> mpHost;
 
     bool mBold = false;
+    // By SGR 1 alone: mBold is also how 256-colour indexes 8 to 15 ask for their bright colour
+    bool mBoldAsked = false;
     bool mItalics = false;
     bool mOverline = false;
     bool mReverse = false;
@@ -971,6 +988,11 @@ private:
     // Parked between lines so the trigger-pass snapshot reuses its allocation:
     TLineFormat mSpareTriggerPassLine;
     int mPreTriggerPassLineNumber = -1;
+    // The last of the lines a wrap split the pass line into, or the pass line itself
+    int mTriggerPassLineLastSegment = -1;
+    // Where the rest of a split pass line starts once its first part is deleted, which the console still shows
+    int mTriggerPassLineTailFrom = -1;
+    static int triggerPassSpanFirst(int passLine, int tailFrom) { return passLine >= 0 ? passLine : tailFrom; }
     // The index the current trigger pass was handed, which mPreTriggerPassLineNumber moves on from
     int mTriggerPassLineAsCommitted = -1;
     QString mDetachedTriggerPassLineText;
@@ -988,6 +1010,8 @@ private:
         int lineNumber = -1;
         QString detachedText;
         std::vector<TriggerPassLineEdit> edits;
+        int lastSegment = -1;
+        int tailFrom = -1;
     };
     // The passes a trigger calling feedTriggers() has paused. A member, not saved in
     // commitLineData()'s frame, as their lines move with deleted, rewrapped and
@@ -996,6 +1020,9 @@ private:
     // Meaningful only inside a trigger pass: false until something overwrites
     // the committed line, while the game's colors are still readable from it:
     bool mPreTriggerPassSnapshotTaken = true;
+    // A line fed from inside the pass filled the pass's line, which it had left empty, so lineShown
+    // sends the fed line and not the pass's as well
+    bool mTriggerPassLineTaken = false;
     enum class PassLineUniformity { Unknown, Uniform, Mixed };
     // Worked out on demand, so a profile with no color triggers never pays for it:
     PassLineUniformity mPreTriggerPassLineUniformity = PassLineUniformity::Unknown;
@@ -1072,6 +1099,8 @@ private:
     QStringList mCurrentHyperlinkHint;
     int mCurrentHyperlinkLinkId = 0;
     bool mHyperlinkActive = false;
+    // The MXP link this OSC 8 hyperlink opened inside, which it overrides until it closes; 0 if none
+    int mHyperlinkEnclosingMxpLinkId = 0;
     // Track hyperlink start position for visibility manager registration
     int mCurrentHyperlinkStartLine = 0;
     int mCurrentHyperlinkStartColumn = 0;
@@ -1302,6 +1331,9 @@ inline QDebug& operator<<(QDebug& debug, const TChar::AttributeFlags& attributes
     }
     if (attributes & TChar::Selected) {
         presentAttributes << QLatin1String("Selected (0x2000000)");
+    }
+    if (attributes & TChar::BoldAsked) {
+        presentAttributes << QLatin1String("BoldAsked (0x4000000)");
     }
     if (presentAttributes.isEmpty()) {
         result.append(QLatin1String("None (0x0))"));

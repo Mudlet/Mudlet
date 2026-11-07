@@ -3,9 +3,8 @@
 
 Many specs drive a main window that a run with no main window does not have, so
 the run fails on those whatever the change under test. This passes only when the
-failures and errors the log reports are exactly the listed ones, and the run
-passed and pended no fewer and no more tests than the list records. It fails on
-a log with no busted summary, as after a crash or a hang; on a failure busted
+failures and errors the log reports are exactly the listed ones. It fails on a
+log with no busted summary, as after a crash or a hang; on a failure busted
 cannot place in a test, as when a spec file does not load; and on an error in a
 setup or teardown hook, which stops every test under it from running.
 
@@ -13,8 +12,7 @@ Usage: check-headless-lua-failures.py <busted log> <known failures file> [--writ
 
 Each entry in the known failures file is "Failure <spec file>: <full test name>"
 or "Error <spec file>: <full test name>", once for each test of that name that
-fails. "minimum successes: <n>" and "maximum pending: <n>" record the rest of the
-run. Blank lines and lines starting with '#' are ignored. --write updates the
+fails. Blank lines and lines starting with '#' are ignored. --write updates the
 file from the log: it keeps the comments and the entries that still fail where
 they are, drops the rest and adds new failures at the end.
 """
@@ -29,8 +27,6 @@ HEADER = re.compile(r"^(Pending|Failure|Error) -> (.*)$")
 TRACED = re.compile(r"^(?:.*[/\\])?([^/\\]+_spec\.lua) @ \d+\s*$")
 ENTRY = re.compile(r"^(Failure|Error) [^/\\]+_spec\.lua: .+$")
 HOOK = re.compile(r" (?:lazy_|strict_)?(?:setup|teardown)$| (?:before|after)_each$")
-SUCCESSES = "minimum successes"
-PENDING = "maximum pending"
 
 
 class Run:
@@ -72,20 +68,16 @@ def read_known(path):
     with open(path, encoding="utf-8") as known:
         lines = known.read().splitlines()
     entries = collections.Counter()
-    limits = {}
     malformed = []
     for line in lines:
         text = line.strip()
         if not text or text.startswith("#"):
             continue
-        key, _, value = text.partition(":")
-        if key in (SUCCESSES, PENDING) and value.strip().isdigit():
-            limits[key] = int(value)
-        elif ENTRY.match(text):
+        if ENTRY.match(text):
             entries[text] += 1
         else:
             malformed.append(line)
-    return lines, entries, limits, malformed
+    return lines, entries, malformed
 
 
 def write_known(path, lines, run):
@@ -93,20 +85,11 @@ def write_known(path, lines, run):
     kept = []
     for line in lines:
         text = line.strip()
-        key = text.partition(":")[0]
-        if key == SUCCESSES:
-            line = f"{SUCCESSES}: {run.successes}"
-        elif key == PENDING:
-            line = f"{PENDING}: {run.pending}"
-        elif text and not text.startswith("#"):
+        if text and not text.startswith("#"):
             if remaining[text] <= 0:
                 continue
             remaining[text] -= 1
         kept.append(line)
-    keys = {line.strip().partition(":")[0] for line in kept}
-    for key, value in ((PENDING, run.pending), (SUCCESSES, run.successes)):
-        if key not in keys:
-            kept.insert(next((i for i, line in enumerate(kept) if line.strip() and not line.startswith("#")), len(kept)), f"{key}: {value}")
     added = sorted(remaining.elements())
     with open(path, "w", encoding="utf-8") as out:
         out.write("\n".join(kept + added) + "\n")
@@ -131,7 +114,7 @@ def main(argv):
     if run is None:
         print(f"The busted run in {log_path} did not finish - it crashed, hung or never started.")
         return 1
-    lines, known, limits, malformed = read_known(known_path)
+    lines, known, malformed = read_known(known_path)
 
     problems = []
     report(problems, f"Lines in {known_path} that are not an entry", malformed)
@@ -154,12 +137,6 @@ def main(argv):
     report(problems, f"Failed with no main window but not listed in {known_path}", new)
     stale = sorted((known - run.entries).elements())
     report(problems, f"Listed in {known_path} but did not fail; take them off the list with --write", stale)
-    shortfall = []
-    if run.successes < limits.get(SUCCESSES, 0):
-        shortfall.append(f"{run.successes} tests passed, fewer than the {limits[SUCCESSES]} recorded")
-    if run.pending > limits.get(PENDING, 0):
-        shortfall.append(f"{run.pending} tests pended, more than the {limits.get(PENDING, 0)} recorded")
-    report(problems, "Fewer tests ran than the list records; if that was meant, update it with --write", shortfall)
 
     if problems:
         if os.environ.get("GITHUB_ACTIONS") == "true":

@@ -2552,7 +2552,7 @@ int TLuaInterpreter::tempButtonToolbar(lua_State* L)
 
     const QString name{lua_tostring(L, 1)};
 
-    if (location > 0) {
+    if (location > 0 && location < std::numeric_limits<int>::max()) {
         location++;
     }
     Host& host = getHostFromLua(L);

@@ -57,7 +57,8 @@ public:
     void setCompactInputLineChecked(Host*, bool) override {}
     void armForceClose() override;
     void writeSettings() override;
-    bool openWebPage(const QString&) override { return false; }
+    // As the main window: hands the page to the platform, which an app can take with QDesktopServices::setUrlHandler()
+    bool openWebPage(const QString& path) override;
     bool showNotification(const QString&, const QString&, std::optional<int>) override { return false; }
     bool drawUpperLowerLevels() const override { return mDrawUpperLowerLevels; }
     void setDrawUpperLowerLevels(bool draw) override { mDrawUpperLowerLevels = draw; }
@@ -67,7 +68,7 @@ public:
     void alertUser(int) override {}
     std::optional<QSize> getImageSize(const QString& imageLocation) override;
     int profileTabIndex(const QString&) const override { return -1; }
-    void setActiveProfileTab(const QString& profileName) override;
+    bool setActiveProfileTab(const QString& profileName) override;
     void setAppStyleSheet(const QString&) override {}
     bool resizeMainWindow(int, int) override { return false; }
     bool loadWindowLayout() override;
@@ -142,6 +143,8 @@ private:
     bool mShowTabConnectionIndicators = false;
     // A pointer, as the main window keeps it, so a profile opened again under the name is not in front
     QPointer<Host> mpActiveHost;
+    // Named before anyone hears of the switch, as the tab bar's current index is
+    QPointer<Host> mpActivatingHost;
     struct LayoutLoad
     {
         const QMap<QString, Placement>& placements;

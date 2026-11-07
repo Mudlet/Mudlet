@@ -1,7 +1,9 @@
 name: 📦 Build Linux packages
 run-name: >-
   ${{ github.event_name == 'workflow_dispatch'
-      && format('Build Linux packages for {0}{1}', inputs.tag, inputs.publish && ' (publish)' || '')
+      && format('Build Linux packages for {0}{1}{2}', inputs.tag,
+                inputs.base && format(' ({0} only)', inputs.base) || '',
+                inputs.publish && ' (publish)' || '')
       || github.event.pull_request.title }}
 on:
   workflow_dispatch:
@@ -13,6 +15,10 @@ on:
         description: 'Attach the packages to the Mudlet-X.Y.Z release and update the package repositories'
         type: boolean
         default: false
+      base:
+        description: 'Build only this distribution, e.g. fedora:45, to add it to a release without rebuilding the packages already there'
+        required: false
+        default: ''
   pull_request:
     paths:
       - 'CI/linux-packages/**'
@@ -32,7 +38,7 @@ jobs:
     if: ${{ github.repository_owner == 'Mudlet' }}
     timeout-minutes: 120
     outputs:
-      sha: ${{ steps.build.outputs.sha }}
+      sha: ${{ steps.source.outputs.sha }}
     strategy:
       fail-fast: false
       matrix:
@@ -41,6 +47,8 @@ jobs:
             base: ubuntu:26.04
           - format: deb
             base: debian:13
+          - format: rpm
+            base: fedora:45
           - format: rpm
             base: fedora:44
           - format: rpm
@@ -57,14 +65,18 @@ jobs:
           path: source
           submodules: recursive
 
+      # Unguarded: a skipped matrix job would otherwise blank the sha the attach job groups on
+      - name: Record the packaged commit
+        id: source
+        run: echo "sha=$(git -C source rev-parse HEAD)" >> "${GITHUB_OUTPUT}"
+
       - name: Build and install-test the package
-        id: build
+        if: ${{ !inputs.base || inputs.base == matrix.base }}
         env:
           FORMAT: ${{ matrix.format }}
           BASE: ${{ matrix.base }}
           TAG: ${{ inputs.tag }}
         run: |
-          echo "sha=$(git -C source rev-parse HEAD)" >> "${GITHUB_OUTPUT}"
           VERSION_ARGS=()
           ASSET_VERSION=snapshot
           if [[ "${TAG}" =~ ^Mudlet-([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
@@ -86,6 +98,7 @@ jobs:
           ls -l assets
 
       - uses: actions/upload-artifact@v7
+        if: ${{ !inputs.base || inputs.base == matrix.base }}
         with:
           name: linux-package-${{ matrix.format }}-${{ strategy.job-index }}
           path: assets/
@@ -256,4 +269,4 @@ jobs:
         run: |
           docker run --rm -e BASE_URL ubuntu:26.04 sh -euc \
             'apt-get update && apt-get install -y --no-install-recommends ca-certificates curl && curl -fsSL "$BASE_URL/install.sh" -o install.sh && sh install.sh'
-          docker run --rm -e BASE_URL fedora:44 sh -euc 'curl -fsSL "$BASE_URL/install.sh" -o install.sh && sh install.sh'
+          docker run --rm -e BASE_URL fedora:45 sh -euc 'curl -fsSL "$BASE_URL/install.sh" -o install.sh && sh install.sh'

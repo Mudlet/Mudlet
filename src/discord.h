@@ -175,6 +175,8 @@ class Discord : public QObject
 
     // Allows the functional test to simulate the logged-in Discord user:
     friend class TDiscordModeTest;
+    // Checks whether a presence is being published with no main window:
+    friend class HeadlessHostSmokeTest;
 
 public:
     explicit Discord(QObject *parent = nullptr);
