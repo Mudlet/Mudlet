@@ -281,6 +281,18 @@ carries what a script's `announce()`, Mudlet when it opens a sign-in page, or a 
 hidden or revealed asks screen readers to say, and whether the GUI would make it assertive, for an app to
 hand to the platform's own accessibility service.
 
+`attentionRequested` with 0 also carries the GUI's flash for new game text: while `setWindowMinimized()`
+has the app's window minimized or hidden, as the GUI's main window is when minimized, or a phone app sent
+to the background, game text that adds to or changes the main console asks for the player's attention
+until they come back, if the profile's setting to be notified of new data while minimized is on, as it is
+unless the player turned it off. As in the GUI, an app that is only behind another window, which
+`setApplicationActive(false)` reports, is not alerted, nor is one in front. The GUI's flash lasts until the
+player comes back, however much more text arrives, so the signal is sent once each time the window is
+minimized, at the first such text, from the event loop: the other prompts of a read that ends several with a
+go-ahead, and later reads, bring none until `setWindowMinimized(false)` and back. A script's `echo()` and the
+bare carriage return that finishes a line the game left open bring no alert, as in the GUI. As with
+`alert()`, only the session's own profile is relayed, not one its scripts opened with `loadProfile()`.
+
 `secureConnectionOffered` carries a game's offer of its secure port, worded as the GUI's question, for
 the player to answer with `answerSecureConnectionOffer()`. The offer lapses when its connection ends;
 until then, or an answer, the profile offers nothing more. A yes stores the secure port with TLS on, as
@@ -655,6 +667,12 @@ raises nothing, as the GUI tells scripts only of a change. It starts as active, 
 is only kept, for the next change to be told against; a profile opened later hears nothing until the
 next change, as in the GUI. `applicationActive()` reads it. It is refused while a profile loads, during
 `shutdown()`, and from a handler of `outputLine` and the other signals sent mid-write.
+
+`setWindowMinimized()` tells the session the app's window is minimized or hidden, or a phone app has
+gone to the background, as the GUI's main window is minimized: only then does new game text bring
+`attentionRequested`, as said above, so an app that is merely behind another window reports that with
+`setApplicationActive()` alone. It raises no event, as minimizing the GUI raises none, starts as `false`,
+may be set at any time, before `start()` too, and `windowMinimized()` reads it.
 
 `setReplayRecording(true)` is the main console's replay recording button: what the game sends from then
 on is recorded into a new file in the profile's `log` folder, named for the second it started, which a
