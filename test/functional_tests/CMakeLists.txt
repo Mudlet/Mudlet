@@ -217,6 +217,7 @@ set(EDITOR_GROUP_TEST_SOURCES
     EdbeeReinitTest.cpp
     EditorAutoCompleteFocusTest.cpp
     EditorClipboardXmlTest.cpp
+    EditorEmergencyStopTest.cpp
     EditorBannerViewSwitchTest.cpp
     EditorEmptySelectionTest.cpp
     EditorItemXMLHelpersTest.cpp
