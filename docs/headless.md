@@ -663,6 +663,26 @@ lowered are among the names. It comes from the event loop once a turn, however m
 the windows, so a script that makes a gauge and places it is one signal, and a call that changed nothing,
 such as a `moveWindow()` to where the window is, sends none.
 
+`labelContent(name)` is what a label shows, beside the place, colour and font its `ScriptWindow` has:
+
+- `text`, the rich text `echo()` or `setLabelText()` gave it as Qt's rich text, with its links styled as
+  `setLinkStyle()` asks. A Geyser label's alignment and text colour are in this markup;
+- `image`, the file `setBackgroundImage()` gave it while it shows, with `svg` set for an SVG one, which
+  is drawn under the text in `svgTint`, `svgRotation`, `svgShearX` and `svgShearY`. A raster image takes
+  the text down, as it does in the GUI;
+- `movie`, the file `setMovie()` gave it, while that shows in place of the text;
+- `toolTip` and `toolTipDuration`, in seconds, 0 for the platform's own;
+- `cursor`, unset for the parent's, or the shape `setLabelCursor()` gave it, or `Qt::BitmapCursor` with
+  `customCursor` and `customCursorHotSpot` from `setLabelCustomCursor()`;
+- `clickThrough`, as `enableClickthrough()` sets it;
+- `accessibleName` and `accessibleButton`, what a screen reader says for it and whether it is told it is
+  a button;
+- `styleSheet`, as `setLabelStyleSheet()` gave it. Mudlet does not interpret it for the app: drawing what
+  it says is the app's to do, or not.
+
+A change to any of these names the label in `scriptWindowsChanged`. It is empty for a name that is not a
+label's.
+
 ## What still needs a window
 
 Some of what a profile can do has nothing to stand in for the GUI's widgets yet, and does nothing,
