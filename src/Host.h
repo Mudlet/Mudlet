@@ -1579,8 +1579,8 @@ private:
     QList<ModuleWriteJob> prepareModuleSaves(bool backup);
     // Writes the prepared module documents (and updates their zips) to disk. Static on
     // purpose: it must keep working after the Host that ordered it has been destroyed,
-    // so it may not reach for any member. Usually a thread pool task, but a waiter in
-    // waitForProfileSave() can steal it onto the main thread, so it must suit either.
+    // so it may not reach for any member. Usually a thread pool task, but where saves run
+    // inline (see TBackgroundTask) it runs on the main thread, so it must suit either.
     // False if a module was not written, with a console line for each in failures.
     static bool writeModuleFiles(const QList<ModuleWriteJob>& jobs, QStringList& failures);
     static bool updateModuleZip(const ModuleWriteJob& job, QString& reason);
