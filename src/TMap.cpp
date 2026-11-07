@@ -3070,11 +3070,34 @@ bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
         createTransferProgress(tr("Map import"), tr("Importing XML map file for use in %1...").arg(mProfileName), false);
     }
 
-    // It is NOW safe to delete the map as we are in a position to load one
+    // The file is only found to be damaged part way through, so import into a
+    // room database of its own and put this one back if that fails
+    std::unique_ptr<TRoomDB> previousRoomDB = std::exchange(mpRoomDB, std::make_unique<TRoomDB>(this));
+    mpRoomDB->continueGenerationOf(*previousRoomDB);
+    const auto previousEnvColors = mEnvColors;
+    const auto previousCustomEnvColors = mCustomEnvColors;
+    const auto previousRoomIdHash = mRoomIdHash;
+    const auto previousUserData = mUserData;
+    const int previousVersion = mVersion;
     mapClear();
 
     XMLimport reader(pHost);
     auto [success, message] = reader.importPackage(&file);
+
+    if (!success) {
+        areasAboutToBeDeleted();
+        previousRoomDB->continueGenerationOf(*mpRoomDB);
+        std::swap(mpRoomDB, previousRoomDB);
+        mEnvColors = previousEnvColors;
+        mCustomEnvColors = previousCustomEnvColors;
+        mRoomIdHash = previousRoomIdHash;
+        mUserData = previousUserData;
+        mVersion = previousVersion;
+        // The route and the routing graph hold ids and pointers into the rooms the import made
+        clearRoutes();
+        emit signal_mapCleared();
+    }
+    previousRoomDB.reset();
 
     // No need to call audit() as XMLimport::importPackage() does it!
     // audit() produces the successful ending [ OK ] message...!
