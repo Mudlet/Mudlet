@@ -576,6 +576,362 @@ end)
         QVERIFY(session.shutdown(false));
         QVERIFY(!session.closeUserWindow(qsl("uw")));
     }
+
+    void test_labelsRunTheirCallbacksAsTheGuisMouseDoes()
+    {
+        const QString name = qsl("Headless Label Pointer");
+        QVERIFY(writeProfile(name));
+        using Type = THeadlessSession::WindowPointerEvent::Type;
+        THeadlessSession session;
+        QVERIFY(!session.pointer(qsl("lbl"), {.type = Type::press, .position = QPointF(5, 6)}));
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        const QString noting = qsl(R"lua(
+got = {}
+function note(kind)
+  return function(event)
+    if not event then
+      got[#got + 1] = kind
+    elseif kind == "wheel" then
+      got[#got + 1] = string.format("%s %d %d %d", kind, event.x, event.y, event.angleDeltaY)
+    else
+      got[#got + 1] = string.format("%s %s %d %d %d %d", kind, tostring(event.button), event.x, event.y, event.globalX, event.globalY)
+    end
+  end
+end
+function noteAll(label)
+  createLabel(label, 100, 50, 80, 40, 1)
+  setLabelClickCallback(label, note("click"))
+  setLabelDoubleClickCallback(label, note("double"))
+  setLabelReleaseCallback(label, note("release"))
+  setLabelMoveCallback(label, note("move"))
+  setLabelWheelCallback(label, note("wheel"))
+  setLabelOnEnter(label, note("enter"))
+  setLabelOnLeave(label, note("leave"))
+end
+)lua");
+        QVERIFY(session.runLua(noting));
+        QVERIFY(session.runLua(qsl(R"lua(
+noteAll("lbl")
+-- Docks, which are beside the main window's area and so under nothing in it
+openUserWindow("uw")
+openMapWidget()
+createLabel("plain", 300, 50, 80, 40, 1)
+createLabel("glass", 100, 50, 80, 40, 1)
+enableClickthrough("glass")
+createLabel("button", 500, 50, 80, 40, 1)
+setLabelClickCallback("button", note("click"))
+)lua")));
+        const auto got = [&session]() {
+            const QString all = luaString(session, qsl("table.concat(got, ';')"));
+            session.runLua(qsl("got = {}"));
+            return all;
+        };
+
+        QVERIFY(session.pointer(qsl("lbl"), {.type = Type::press, .position = QPointF(5, 6), .button = Qt::LeftButton, .buttons = Qt::LeftButton}));
+        QCOMPARE(got(), qsl("enter nil 5 6 105 56;click LeftButton 5 6 105 56"));
+        QVERIFY(session.pointer(qsl("lbl"), {.type = Type::release, .position = QPointF(5, 6), .button = Qt::LeftButton}));
+        QVERIFY(session.pointer(qsl("lbl"), {.type = Type::doubleClick, .position = QPointF(7, 8), .button = Qt::RightButton, .buttons = Qt::RightButton}));
+        QVERIFY(session.pointer(qsl("lbl"), {.type = Type::move, .position = QPointF(9, 10)}));
+        QVERIFY(session.pointer(qsl("lbl"), {.type = Type::wheel, .position = QPointF(1, 2), .angleDelta = QPoint(0, 120)}));
+        QCOMPARE(got(), qsl("release LeftButton 5 6 105 56;double RightButton 7 8 107 58;move NoButton 9 10 109 60;wheel 1 2 120"));
+
+        // The pointer is over one label at a time
+        QVERIFY(session.pointer(qsl("lbl"), {.type = Type::enter, .position = QPointF(1, 1)}));
+        QVERIFY(session.pointer(qsl("plain"), {.type = Type::move, .position = QPointF(1, 1)}));
+        QCOMPARE(got(), qsl("leave"));
+        QVERIFY(session.pointer(qsl("lbl"), {.type = Type::leave}));
+        QCOMPARE(got(), QString());
+        QVERIFY(session.pointer(qsl("plain"), {.type = Type::press, .position = QPointF(1, 1), .button = Qt::LeftButton}));
+        QCOMPARE(got(), QString());
+
+        // A click-through label lets the one under it have the click, not a dock made since
+        QVERIFY(session.pointer(qsl("glass"), {.type = Type::press, .position = QPointF(2, 3), .button = Qt::LeftButton}));
+        QCOMPARE(got(), qsl("enter nil 2 3 102 53;click LeftButton 2 3 102 53"));
+        QVERIFY(session.pointer(qsl("glass"), {.type = Type::release, .position = QPointF(2, 3), .button = Qt::LeftButton}));
+        // A leave says the pointer went, not from where, so it leaves the label the pointer was over through it
+        QVERIFY(session.pointer(qsl("glass"), {.type = Type::leave, .position = QPointF(210, 10)}));
+        QCOMPARE(got(), qsl("release LeftButton 2 3 102 53;leave"));
+        QVERIFY(session.pointer(qsl("glass"), {.type = Type::move, .position = QPointF(2, 3)}));
+        QCOMPARE(got(), qsl("enter nil 2 3 102 53;move NoButton 2 3 102 53"));
+
+        // With no double-click callback of its own, a double-click clicks
+        QVERIFY(session.pointer(qsl("button"), {.type = Type::doubleClick, .position = QPointF(3, 4), .button = Qt::LeftButton, .buttons = Qt::LeftButton}));
+        QCOMPARE(got(), qsl("leave;click LeftButton 3 4 503 54"));
+
+        // The GUI's mouse cannot reach a hidden window, nor a point outside one; a leave is taken from either
+        QVERIFY(session.runLua(qsl(R"(hideWindow("button"))")));
+        QVERIFY(!session.pointer(qsl("button"), {.type = Type::press, .position = QPointF(3, 4), .button = Qt::LeftButton}));
+        QVERIFY(session.errorString().contains(qsl("not shown")));
+        QVERIFY(session.pointer(qsl("button"), {.type = Type::leave}));
+        QVERIFY(!session.pointer(qsl("lbl"), {.type = Type::press, .position = QPointF(80, 5), .button = Qt::LeftButton}));
+        QVERIFY(session.errorString().contains(qsl("lbl")));
+        QVERIFY(!session.pointer(qsl("lbl"), {.type = Type::move, .position = QPointF(5, -1)}));
+        QCOMPARE(got(), QString());
+
+        // A label deleted and made again under its name is not the one the pointer entered
+        QVERIFY(session.pointer(qsl("lbl"), {.type = Type::move, .position = QPointF(1, 1)}));
+        QCOMPARE(got(), qsl("enter nil 1 1 101 51;move NoButton 1 1 101 51"));
+        QVERIFY(session.runLua(qsl(R"(deleteLabel("lbl") noteAll("lbl"))")));
+        QVERIFY(session.pointer(qsl("lbl"), {.type = Type::move, .position = QPointF(2, 2)}));
+        QCOMPARE(got(), qsl("enter nil 2 2 102 52;move NoButton 2 2 102 52"));
+
+        // Qt's press goes to the label it found under the pointer, which deleteLater() keeps, though its enter
+        // deleted it and made another under its name
+        QVERIFY(session.runLua(qsl(R"lua(
+createLabel("swap", 300, 200, 80, 40, 1)
+setLabelClickCallback("swap", note("old.click"))
+setLabelOnEnter("swap", function()
+  deleteLabel("swap")
+  createLabel("swap", 300, 200, 80, 40, 1)
+  setLabelClickCallback("swap", note("new.click"))
+end)
+)lua")));
+        QVERIFY(session.pointer(qsl("swap"), {.type = Type::press, .position = QPointF(1, 1), .button = Qt::LeftButton}));
+        QCOMPARE(got(), qsl("leave;old.click LeftButton 1 1 301 201"));
+
+        QVERIFY(!session.pointer(qsl("nonesuch"), {.type = Type::press}));
+        QVERIFY(session.errorString().contains(qsl("nonesuch")));
+        QVERIFY(session.shutdown(false));
+
+        // Nor is one of the next run, though the pointer was over its name as the last run ended; it is made as
+        // many labels in as that one was, so only the run tells them apart
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        QVERIFY(session.runLua(noting));
+        QVERIFY(session.runLua(qsl(R"(for i = 1, 4 do createLabel("pad" .. i, 0, 0, 1, 1, 1) end noteAll("lbl"))")));
+        QVERIFY(session.pointer(qsl("lbl"), {.type = Type::move, .position = QPointF(3, 3)}));
+        QCOMPARE(got(), qsl("enter nil 3 3 103 53;move NoButton 3 3 103 53"));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_aHeldButtonKeepsTheLabelThatTookThePress()
+    {
+        const QString name = qsl("Headless Label Grab");
+        QVERIFY(writeProfile(name));
+        using Type = THeadlessSession::WindowPointerEvent::Type;
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        QVERIFY2(session.runLua(qsl(R"lua(
+got = {}
+local function note(kind)
+  return function(event)
+    got[#got + 1] = event and string.format("%s %d %d", kind, event.x, event.y) or kind
+  end
+end
+local function noteAll(label, x, y)
+  createLabel(label, x, y, 80, 40, 1)
+  for _, kind in ipairs({"Click", "Release", "Move"}) do
+    _G["setLabel" .. kind .. "Callback"](label, note(label .. "." .. kind:lower()))
+  end
+  setLabelOnEnter(label, note(label .. ".enter"))
+  setLabelOnLeave(label, note(label .. ".leave"))
+end
+noteAll("drag", 100, 50)
+noteAll("other", 180, 50)
+noteAll("under", 300, 50)
+noteAll("toggle", 300, 50)
+setLabelClickCallback("toggle", function()
+  got[#got + 1] = "toggle.click"
+  hideWindow("toggle")
+end)
+ac = Adjustable.Container:new({name = "ac", x = 400, y = 300, width = 200, height = 150})
+finished = 0
+registerAnonymousEventHandler("AdjustableContainerRepositionFinish", function()
+  finished = finished + 1
+end)
+)lua")),
+                 qPrintable(session.errorString()));
+        const auto got = [&session]() {
+            const QString all = luaString(session, qsl("table.concat(got, ';')"));
+            session.runLua(qsl("got = {}"));
+            return all;
+        };
+
+        // As Qt's implicit grab, the label that took the press has the moves and the release wherever they are,
+        // and no other label is entered meanwhile
+        QVERIFY(session.pointer(qsl("drag"), {.type = Type::press, .position = QPointF(5, 6), .button = Qt::LeftButton, .buttons = Qt::LeftButton}));
+        QVERIFY(session.pointer(qsl("drag"), {.type = Type::move, .position = QPointF(90, 5), .buttons = Qt::LeftButton}));
+        QVERIFY(!session.pointer(qsl("other"), {.type = Type::move, .position = QPointF(10, 5), .buttons = Qt::LeftButton}));
+        QVERIFY(session.errorString().contains(qsl("drag")));
+        QVERIFY(session.pointer(qsl("drag"), {.type = Type::move, .position = QPointF(-5, 50), .buttons = Qt::LeftButton}));
+        QVERIFY(session.pointer(qsl("drag"), {.type = Type::release, .position = QPointF(90, 5), .button = Qt::LeftButton}));
+        QCOMPARE(got(), qsl("drag.enter 5 6;drag.click 5 6;drag.move 90 5;drag.move -5 50;drag.release 90 5;drag.leave"));
+        QVERIFY(session.pointer(qsl("other"), {.type = Type::move, .position = QPointF(10, 5)}));
+        QCOMPARE(got(), qsl("other.enter 10 5;other.move 10 5"));
+        // With no button held, the point must be in the window again
+        QVERIFY(!session.pointer(qsl("drag"), {.type = Type::move, .position = QPointF(85, 5)}));
+
+        // A label its own press hid lost the grab, as Qt drops it, so what the button held goes nowhere, and it has
+        // had its leave
+        QVERIFY(session.pointer(qsl("toggle"), {.type = Type::press, .position = QPointF(5, 5), .button = Qt::LeftButton, .buttons = Qt::LeftButton}));
+        QCOMPARE(got(), qsl("other.leave;toggle.enter 5 5;toggle.click"));
+        QVERIFY(session.pointer(qsl("toggle"), {.type = Type::move, .position = QPointF(6, 5), .buttons = Qt::LeftButton}));
+        QVERIFY(session.pointer(qsl("toggle"), {.type = Type::release, .position = QPointF(6, 5), .button = Qt::LeftButton}));
+        QCOMPARE(got(), qsl("toggle.leave"));
+        QVERIFY(session.pointer(qsl("under"), {.type = Type::move, .position = QPointF(6, 5)}));
+        QCOMPARE(got(), qsl("under.enter 6 5;under.move 6 5"));
+        // A press holds its own button, whether or not the app gave it among the buttons
+        QVERIFY(session.pointer(qsl("other"), {.type = Type::press, .position = QPointF(5, 5), .button = Qt::LeftButton}));
+        QVERIFY(session.pointer(qsl("other"), {.type = Type::move, .position = QPointF(-50, 5), .buttons = Qt::LeftButton}));
+        QVERIFY(session.pointer(qsl("other"), {.type = Type::release, .position = QPointF(-50, 5), .button = Qt::LeftButton}));
+        QCOMPARE(got(), qsl("under.leave;other.enter 5 5;other.click 5 5;other.move -50 5;other.release -50 5;other.leave"));
+
+        // A Geyser container dragged by its title past the label's edge moves, and its release ends the drag
+        const std::optional<THeadlessSession::ScriptWindow> title = session.scriptWindow(qsl("acadjLabel"));
+        QVERIFY(title);
+        const int width = title->geometry.width();
+        QVERIFY(session.pointer(qsl("acadjLabel"), {.type = Type::press, .position = QPointF(width / 2, 20), .button = Qt::LeftButton, .buttons = Qt::LeftButton}));
+        QVERIFY(session.pointer(qsl("acadjLabel"), {.type = Type::move, .position = QPointF(width + 50, 20), .buttons = Qt::LeftButton}));
+        const QString moved = luaString(session, qsl("ac:get_x()"));
+        QVERIFY2(moved.toInt() > 400, qPrintable(moved));
+        QVERIFY(session.pointer(qsl("acadjLabel"), {.type = Type::release, .position = QPointF(width + 50, 20), .button = Qt::LeftButton}));
+        QCOMPARE(luaString(session, qsl("finished")), qsl("1"));
+        // and a hover with no button held no longer drags it
+        QVERIFY(session.pointer(qsl("acadjLabel"), {.type = Type::move, .position = QPointF(width / 2 + 30, 20)}));
+        QCOMPARE(luaString(session, qsl("ac:get_x()")), moved);
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_theGrabEndsAndIsLostOnlyAsQtsIs()
+    {
+        const QString name = qsl("Headless Label Grab Ends");
+        QVERIFY(writeProfile(name));
+        using Type = THeadlessSession::WindowPointerEvent::Type;
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        QVERIFY2(session.runLua(qsl(R"lua(
+got = {}
+local function note(kind)
+  return function(event)
+    got[#got + 1] = event and string.format("%s %d %d", kind, event.x, event.y) or kind
+  end
+end
+function noteAll(label, x, y)
+  createLabel(label, x, y, 80, 40, 1)
+  for _, kind in ipairs({"Click", "Release", "Move", "Wheel"}) do
+    _G["setLabel" .. kind .. "Callback"](label, note(label .. "." .. kind:lower()))
+  end
+  setLabelOnEnter(label, note(label .. ".enter"))
+  setLabelOnLeave(label, note(label .. ".leave"))
+end
+noteAll("drag", 100, 50)
+noteAll("other", 180, 50)
+noteAll("lbl", 100, 150)
+createLabel("glass", 100, 150, 300, 40, 1)
+enableClickthrough("glass")
+noteAll("flip", 100, 250)
+setLabelClickCallback("flip", function()
+  got[#got + 1] = "flip.click"
+  hideWindow("flip")
+  showWindow("flip")
+end)
+noteAll("remade", 300, 250)
+setLabelClickCallback("remade", function()
+  got[#got + 1] = "remade.click"
+  deleteLabel("remade")
+  noteAll("remade", 300, 250)
+end)
+noteAll("again", 500, 250)
+setLabelReleaseCallback("again", function()
+  got[#got + 1] = "again.release"
+  deleteLabel("again")
+  noteAll("again", 500, 250)
+end)
+noteAll("btn", 300, 350)
+openUserWindow("uw")
+noteAll("moved", 500, 350)
+noteAll("slot", 100, 450)
+createLabel("overlay", 110, 460, 60, 30, 1)
+enableClickthrough("overlay")
+setLabelClickCallback("slot", function()
+  got[#got + 1] = "slot.click"
+  deleteLabel("overlay")
+end)
+setLabelClickCallback("moved", function()
+  got[#got + 1] = "moved.click"
+  setWindow("uw", "moved", 0, 0, true)
+end)
+createScrollBox("box", 600, 450, 150, 80)
+createLabel("box", "boxed", 10, 10, 80, 40, 1)
+for _, kind in ipairs({"Release", "Move"}) do
+  _G["setLabel" .. kind .. "Callback"]("boxed", note("boxed." .. kind:lower()))
+end
+setLabelOnEnter("boxed", note("boxed.enter"))
+setLabelOnLeave("boxed", note("boxed.leave"))
+setLabelClickCallback("boxed", function()
+  got[#got + 1] = "boxed.click"
+  hideWindow("box")
+end)
+)lua")),
+                 qPrintable(session.errorString()));
+        const auto got = [&session]() {
+            const QString all = luaString(session, qsl("table.concat(got, ';')"));
+            session.runLua(qsl("got = {}"));
+            return all;
+        };
+
+        // While the grab holds, Qt sends no enter or leave, a wheel goes where the pointer is without entering it,
+        // and only a release leaving no button held ends it
+        QVERIFY(session.pointer(qsl("drag"), {.type = Type::press, .position = QPointF(5, 6), .button = Qt::LeftButton, .buttons = Qt::LeftButton}));
+        QVERIFY(session.pointer(qsl("other"), {.type = Type::enter, .position = QPointF(10, 5)}));
+        QVERIFY(session.pointer(qsl("drag"), {.type = Type::leave}));
+        QVERIFY(session.pointer(qsl("other"), {.type = Type::wheel, .position = QPointF(10, 5), .buttons = Qt::LeftButton, .angleDelta = QPoint(0, 120)}));
+        QVERIFY(session.pointer(qsl("drag"), {.type = Type::move, .position = QPointF(-5, 50), .buttons = Qt::LeftButton}));
+        QVERIFY(session.pointer(qsl("drag"), {.type = Type::release, .position = QPointF(-5, 50), .button = Qt::LeftButton}));
+        QCOMPARE(got(), qsl("drag.enter 5 6;drag.click 5 6;other.wheel 10 5;drag.move -5 50;drag.release -5 50;drag.leave"));
+
+        // A press through a click-through label is the grab of what took it, which the app may name too
+        QVERIFY(session.pointer(qsl("glass"), {.type = Type::press, .position = QPointF(5, 5), .button = Qt::LeftButton, .buttons = Qt::LeftButton}));
+        QVERIFY(session.pointer(qsl("glass"), {.type = Type::move, .position = QPointF(150, 5), .buttons = Qt::LeftButton}));
+        QVERIFY(session.pointer(qsl("lbl"), {.type = Type::move, .position = QPointF(160, 5), .buttons = Qt::LeftButton}));
+        QVERIFY(session.pointer(qsl("glass"), {.type = Type::release, .position = QPointF(150, 5), .button = Qt::LeftButton}));
+        QCOMPARE(got(), qsl("lbl.enter 5 5;lbl.click 5 5;lbl.move 150 5;lbl.move 160 5;lbl.release 150 5;lbl.leave"));
+        // even after the press's callback deleted it, from where it was at the press
+        QVERIFY(session.pointer(qsl("overlay"), {.type = Type::press, .position = QPointF(5, 5), .button = Qt::LeftButton, .buttons = Qt::LeftButton}));
+        QVERIFY2(session.pointer(qsl("overlay"), {.type = Type::move, .position = QPointF(50, 50), .buttons = Qt::LeftButton}), qPrintable(session.errorString()));
+        // and an enter or a leave naming it is taken and runs nothing, but a wheel has no window to turn over
+        QVERIFY2(session.pointer(qsl("overlay"), {.type = Type::leave}), qPrintable(session.errorString()));
+        QVERIFY2(session.pointer(qsl("overlay"), {.type = Type::enter, .position = QPointF(20, 20)}), qPrintable(session.errorString()));
+        QVERIFY(!session.pointer(qsl("overlay"), {.type = Type::wheel, .position = QPointF(20, 20), .buttons = Qt::LeftButton, .angleDelta = QPoint(0, 120)}));
+        QCOMPARE(session.errorString(), qsl("There is no window \"overlay\"."));
+        QVERIFY2(session.pointer(qsl("overlay"), {.type = Type::release, .position = QPointF(40, 40), .button = Qt::LeftButton}), qPrintable(session.errorString()));
+        QCOMPARE(got(), qsl("slot.enter 15 15;slot.click;slot.move 60 60;slot.release 50 50;slot.leave"));
+
+        // A label that hid and showed again in its own press, or was made again, has lost the grab
+        QVERIFY(session.pointer(qsl("flip"), {.type = Type::press, .position = QPointF(5, 5), .button = Qt::LeftButton, .buttons = Qt::LeftButton}));
+        QVERIFY(session.pointer(qsl("flip"), {.type = Type::release, .position = QPointF(5, 5), .button = Qt::LeftButton}));
+        QCOMPARE(got(), qsl("flip.enter 5 5;flip.click"));
+        QVERIFY(session.pointer(qsl("remade"), {.type = Type::press, .position = QPointF(5, 5), .button = Qt::LeftButton, .buttons = Qt::LeftButton}));
+        QVERIFY(session.pointer(qsl("remade"), {.type = Type::release, .position = QPointF(5, 5), .button = Qt::LeftButton}));
+        QCOMPARE(got(), qsl("flip.leave;remade.enter 5 5;remade.click"));
+        QVERIFY(session.pointer(qsl("moved"), {.type = Type::press, .position = QPointF(5, 5), .button = Qt::LeftButton, .buttons = Qt::LeftButton}));
+        QVERIFY(session.pointer(qsl("moved"), {.type = Type::release, .position = QPointF(5, 5), .button = Qt::LeftButton}));
+        QVERIFY(session.pointer(qsl("moved"), {.type = Type::leave}));
+        QCOMPARE(got(), qsl("moved.enter 5 5;moved.click;moved.leave"));
+        // but one keeps it as the window it is in hides, as Qt's grab is on the label, which is left as the release
+        // ends it
+        QVERIFY(session.pointer(qsl("boxed"), {.type = Type::press, .position = QPointF(5, 5), .button = Qt::LeftButton, .buttons = Qt::LeftButton}));
+        QVERIFY(session.pointer(qsl("boxed"), {.type = Type::move, .position = QPointF(5, -12), .buttons = Qt::LeftButton}));
+        QVERIFY(session.pointer(qsl("boxed"), {.type = Type::release, .position = QPointF(5, -12), .button = Qt::LeftButton}));
+        QCOMPARE(got(), qsl("boxed.enter 5 5;boxed.click;boxed.move 5 -12;boxed.release 5 -12;boxed.leave"));
+
+        // The label a release's callback made again under the name was never entered, so is not left
+        QVERIFY(session.pointer(qsl("again"), {.type = Type::press, .position = QPointF(5, 5), .button = Qt::LeftButton, .buttons = Qt::LeftButton}));
+        QVERIFY(session.pointer(qsl("again"), {.type = Type::release, .position = QPointF(90, 5), .button = Qt::LeftButton}));
+        QCOMPARE(got(), qsl("again.enter 5 5;again.click 5 5;again.release"));
+
+        // A label that hid under the pointer has its leave even from a call that is refused
+        QVERIFY(session.pointer(qsl("btn"), {.type = Type::move, .position = QPointF(5, 5)}));
+        QCOMPARE(got(), qsl("btn.enter 5 5;btn.move 5 5"));
+        QVERIFY(session.runLua(qsl(R"(hideWindow("btn"))")));
+        QVERIFY(!session.pointer(qsl("btn"), {.type = Type::move, .position = QPointF(6, 5)}));
+        QVERIFY(session.errorString().contains(qsl("not shown")));
+        QCOMPARE(got(), qsl("btn.leave"));
+        QVERIFY(session.shutdown(false));
+    }
 };
 
 #include "HeadlessSessionWindowsTest.moc"
