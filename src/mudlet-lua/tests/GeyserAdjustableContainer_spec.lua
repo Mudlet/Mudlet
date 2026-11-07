@@ -1693,6 +1693,18 @@ describe("Tests the Adjustable.Container mouse handlers", function()
     end)
   end)
 
+  describe("the right click menu after the container was hidden and shown", function()
+    it("opens the lock style menu", function()
+      container:hide()
+      container:show()
+      container.adjLabel:onRightClick(mouseEvent("RightButton"))
+      doNestEnter(container.lockStylesLabel)
+      for _, style in ipairs(container.lockStylesLabel.nestedLabels) do
+        assert.is_true(windowVisible(style.name), style.name .. " should show")
+      end
+    end)
+  end)
+
   describe("Adjustable.Container:onEnterAtt", function()
     it("fills the attach menu with the borders the container can reach", function()
       local positions = container:validAttachPositions()
@@ -1708,6 +1720,13 @@ describe("Tests the Adjustable.Container mouse handlers", function()
     end)
 
     it("opens the menu it just built", function()
+      container:onEnterAtt()
+      assert.is_true(windowVisible(container.att[1].name))
+    end)
+
+    it("opens the menu it just built after the container was hidden and shown", function()
+      container:hide()
+      container:show()
       container:onEnterAtt()
       assert.is_true(windowVisible(container.att[1].name))
     end)

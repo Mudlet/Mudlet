@@ -1581,9 +1581,11 @@ end
 -- @param auto true when the label is shown because its container was shown
 function Geyser.Label:show(auto)
   -- the nest parent's container may still be hidden when this label's own one comes
-  -- back; showing the parent again brings this label back with it
+  -- back; showing the parent again brings this label back with it. A parent that is
+  -- only closed is not waited on: its nest is closed too and stays hidden, but must
+  -- drop auto_hidden, or opening the parent later could never show it
   local parent = self.nestParent
-  if auto and parent and (parent.hidden or parent.auto_hidden) then
+  if auto and parent and parent.auto_hidden then
     return false
   end
   if Geyser.Container.show(self, auto) == false then
