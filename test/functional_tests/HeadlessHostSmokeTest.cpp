@@ -32,6 +32,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QPointer>
+#include <QPromise>
 #include <QScopeGuard>
 #include <QSemaphore>
 #include <QSettings>
@@ -58,6 +59,8 @@
 #include <chrono>
 #include <memory>
 
+#include <zip.h>
+
 #include "CredentialManager.h"
 #include "FontManager.h"
 #include "Host.h"
@@ -69,6 +72,7 @@
 #include "SpeechRecognizer.h"
 #include "SpeechRecognizerFactory.h"
 #include "TAppFrontend.h"
+#include "TBackgroundTask.h"
 #include "TConsoleFrontend.h"
 #include "TConsoleModel.h"
 #include "TLabel.h"
@@ -12886,6 +12890,89 @@ headlessRecord("finished")
         QTRY_VERIFY_WITH_TIMEOUT(waited, 60000);
         QVERIFY2(saveEnded, qPrintable(qsl("The wait gave up on a save that had ended, after %1 ms.").arg(waitMs)));
         QVERIFY2(waitMs < 10000, qPrintable(qsl("The wait took %1 ms.").arg(waitMs)));
+        HostManager::self()->deleteHost(hostname);
+    }
+
+    // A wait for the module write skips one that reads as neither running nor finished, so one still queued behind
+    // the profile's write must read as running
+    void test_aWriteWaitingForAnEarlierOneReadsAsRunning()
+    {
+        QPromise<bool> earlier;
+        earlier.start();
+        QFuture<bool> later = TBackgroundTask::runAfter({earlier.future()}, []() {
+            return true;
+        });
+        QVERIFY2(later.isRunning(), "A write queued behind an earlier one did not read as running.");
+        QVERIFY(!later.isFinished());
+        earlier.addResult(true);
+        earlier.finish();
+        QTRY_VERIFY_WITH_TIMEOUT(later.isFinished(), 5000);
+        QVERIFY(later.result());
+    }
+
+    // As in a browser build, whose pool never runs a task: the save's writes, and an unzipAsync(), run as they are
+    // asked for, and their ends still reach the main thread by signal
+    void test_backgroundWorkRunsInlineWithNoPoolThread()
+    {
+        QTemporaryDir recordDir;
+        QVERIFY(recordDir.isValid());
+        const QString recordPath = recordDir.filePath(qsl("record.txt"));
+        const QString hostname = qsl("Test-Headless-Host-Background-Work-Inline");
+        QVERIFY(writeRecordingProfile(hostname, true, recordPath));
+        Host* host = HostManager::self()->openProfile(hostname, false);
+        QVERIFY2(host, "The saved profile did not open.");
+        host->waitForProfileSave();
+        const qsizetype savesBefore = saveCount(hostname);
+
+        const QString zipPath = recordDir.filePath(qsl("inline.zip"));
+        {
+            int errorCode = 0;
+            zip* archive = zip_open(zipPath.toUtf8().constData(), ZIP_CREATE | ZIP_TRUNCATE, &errorCode);
+            QVERIFY(archive);
+            static const char contents[] = "unzipped inline";
+            zip_source* source = zip_source_buffer(archive, contents, sizeof(contents) - 1, 0);
+            QVERIFY(source);
+            QVERIFY(zip_file_add(archive, "inline.txt", source, ZIP_FL_OVERWRITE) >= 0);
+            QCOMPARE(zip_close(archive), 0);
+        }
+
+        auto* pool = QThreadPool::globalInstance();
+        const int threads = pool->maxThreadCount();
+        QSemaphore held;
+        QSemaphore release;
+        for (int i = 0; i < threads; ++i) {
+            pool->start([&held, &release]() {
+                held.release();
+                release.acquire();
+            });
+        }
+        const auto freePool = qScopeGuard([&release, threads, pool]() {
+            TBackgroundTask::setRunInline(false);
+            release.release(threads);
+            pool->waitForDone(10000);
+        });
+        QVERIFY(held.tryAcquire(threads, 10000));
+        TBackgroundTask::setRunInline(true);
+
+        QSignalSpy finished(host, &Host::profileSaveFinished);
+        QVERIFY(std::get<0>(host->saveProfile()));
+        QTRY_COMPARE_WITH_TIMEOUT(finished.count(), 1, 5000);
+        QVERIFY(!host->currentlySavingProfile());
+        QCOMPARE(saveCount(hostname), savesBefore + 1);
+        QVERIFY(newestSaveIsComplete(hostname));
+
+        const QString extractTo = recordDir.filePath(qsl("extracted"));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+registerAnonymousEventHandler("sysUnzipDone", function() headlessRecord("sysUnzipDone") end)
+registerAnonymousEventHandler("sysUnzipError", function() headlessRecord("sysUnzipError") end)
+unzipAsync([[%1]], [[%2]])
+)lua")
+                                                                           .arg(zipPath, extractTo)));
+        QTRY_VERIFY_WITH_TIMEOUT(readRecord(recordPath).contains(qsl("sysUnzip")), 5000);
+        QVERIFY(readRecord(recordPath).contains(qsl("%1 sysUnzipDone\n").arg(hostname)));
+        QFile extracted(extractTo + qsl("/inline.txt"));
+        QVERIFY(extracted.open(QIODevice::ReadOnly));
+        QCOMPARE(extracted.readAll(), QByteArray("unzipped inline"));
         HostManager::self()->deleteHost(hostname);
     }
 

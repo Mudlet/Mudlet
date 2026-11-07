@@ -37,6 +37,7 @@
 #include "MudletReplay.h"
 #include "TAction.h"
 #include "TAlias.h"
+#include "TBackgroundTask.h"
 #include "TBuffer.h"
 #include "TConsoleModel.h"
 #include "TDebug.h"
@@ -62,7 +63,6 @@
 
 #include <math.h>
 
-#include <QtConcurrentRun>
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDesktopServices>
@@ -6926,7 +6926,9 @@ int TLuaInterpreter::unzipAsync(lua_State* L)
     // Extraction can outlast the profile, or this lua_State across a resetProfile(), so the
     // watcher goes with the Host and reaches it directly rather than through L
     Host* pHost = &getHostFromLua(L);
-    auto future = QtConcurrent::run(utils::unzip, zipLocation, extractLocation, temporaryDir.path());
+    auto future = TBackgroundTask::run([zipLocation, extractLocation, temporaryPath = temporaryDir.path()]() {
+        return utils::unzip(zipLocation, extractLocation, temporaryPath);
+    });
     auto watcher = new QFutureWatcher<bool>(pHost);
     connect(watcher, &QFutureWatcher<bool>::finished, watcher, [pHost, watcher, future, zipLocation, extractLocation]() {
         TEvent event{};
