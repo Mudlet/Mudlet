@@ -3514,7 +3514,6 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
         }
         mPromptEndedBy = ch;
         recvdGA = true;
-        emit signal_promptReceived();
         break;
     }
     case TN_AYT: {
@@ -6198,6 +6197,7 @@ void cTelnet::slot_processReplayChunk()
             recvdGA = false;
             gotPrompt(cleandata);
             cleandata = "";
+            emit signal_promptReceived();
         }
     } //for
 
@@ -6359,6 +6359,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     in_buffer[amount] = '\0';
 
     std::string cleandata;
+    int forcedOffPrompts = 0;
     qint32 datalen = 0;
     datalen = amount;
     char* buffer = in_buffer;
@@ -6639,9 +6640,13 @@ Some data loss is likely - please mention this problem to the game admins.)",
                 gameSpoke = true;
                 gotPrompt(cleandata);
                 cleandata = "";
+                // After the text is posted, so a link in it has been registered by the time its own prompt counts
+                emit signal_promptReceived();
             } else {
+                // Not posted here: a script's trigger for this text has to see this read's GMCP, as it runs after that
                 cleandata.push_back('\n');
                 recvdGA = false;
+                ++forcedOffPrompts;
             }
         }
     } //for
@@ -6651,6 +6656,9 @@ Some data loss is likely - please mention this problem to the game admins.)",
         gotRest(cleandata);
     }
     mPromptStartPosted = false;
+    for (int prompt = 0; prompt < forcedOffPrompts; ++prompt) {
+        emit signal_promptReceived();
+    }
 
     // Reprocess data left over after this decompression pass (more compressed
     // data than fit in one output buffer, or plain data past the end of the
