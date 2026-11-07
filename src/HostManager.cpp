@@ -200,7 +200,7 @@ bool HostManager::addHost(const QString& hostname, const QString& port, const QS
         qDebug() << "HostManager::addHost(" << hostname.toUtf8().constData() << ") ERROR: an unnamed Host is not permitted, aborting and returning false!";
         return false;
     }
-    if (mGoingDown) {
+    if (mGoingDown || mDeletionPending) {
         qWarning() << "HostManager::addHost() - not adding" << hostname << "as the pool is being destroyed";
         return false;
     }
@@ -352,8 +352,10 @@ bool HostManager::requestProfileClose(const QString& name)
     if (!pHost) {
         return false;
     }
-    // As the GUI's: a save wait ends on its own, so the close is asked again once it has
-    if (pHost->waitingForProfileSave()) {
+    // As the GUI's: a save wait ends on its own, so the close is asked again once it has. So does a load that has
+    // loaded the map, as from a sysLoadEvent handler: saveProfile() refuses the profile until the load ends. One
+    // from before then, as at the top level of its own script, closes at once and unsaved, as in the GUI.
+    if (pHost->waitingForProfileSave() || (pHost->mIsProfileLoadingSequence && pHost->mLoadedMap)) {
         QTimer::singleShot(50ms, pHost.data(), [this, alive = std::weak_ptr<bool>(mAlive), name, pClosingHost = pHost.data()]() {
             if (!alive.expired() && getHost(name) == pClosingHost) {
                 requestProfileClose(name);
@@ -438,6 +440,14 @@ void HostManager::closeAllProfiles()
         } else {
             deleteHost(pHost->getName());
         }
+    }
+}
+
+void HostManager::markDeletionPending()
+{
+    mDeletionPending = true;
+    for (const auto& pHost : hostList()) {
+        pHost->markDeletionPending();
     }
 }
 

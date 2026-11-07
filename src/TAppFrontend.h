@@ -34,7 +34,7 @@ class TAppFrontend
 {
 public:
     // Never null: while there is no main window, before it is made and from the end of its
-    // destructor, this is a null view whose answers are all "not there".
+    // destructor, this is a null view, which answers most calls with "not there".
     static TAppFrontend* instance() { return smpInstance ? smpInstance : nullView(); }
     static bool hasView() { return smpInstance != nullptr; }
     // From viewDestroyed() until another view is set

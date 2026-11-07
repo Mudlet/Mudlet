@@ -54,7 +54,9 @@
 #include <QTimer>
 
 #include <chrono>
+#include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 
 #include "TMxpMudlet.h"
@@ -309,18 +311,25 @@ public:
     bool isClosingDown() const { return mIsClosingDown; }
     // Also true while a close with no view runs sysExitEvent and its save, before isClosingDown()
     bool closeStarted() const { return mIsClosingDown || mClosingWithNoView; }
+    // For a profile whose deletion is decided but waits, as a deleted session's pool does, so that it does not
+    // dial the game meanwhile; a dial already under way is called off with it
+    void markDeletionPending();
+    bool deletionPending() const { return mDeletionPending; }
     bool isClosingForced() const { return mForcedClose; }
     bool requestClose();
     // A main console raises sysExitEvent as it closes; a profile that never had one gets it from this.
     void raiseExitEventIfOwed();
-    // The save a close makes without asking: the profile, Mudlet's settings and the map, waited for; false if
-    // either the profile or the map failed
+    // The save a close makes without asking: the profile, Mudlet's settings and the map, waited for; false if the
+    // profile or the map failed, or, writing nothing, if the profile is still loading and its map has not loaded yet
     bool saveForClose();
     // Whether deleting the profile now would pull its Lua state or map from under code still running
     // on them; asks a map operation to stop, so the wait ends.
     bool deletionMustWait();
     // What deletionMustWait() answers, without asking anything to stop
     bool deletionWouldWait() const;
+    // A script, nested event loop, map operation or profile save: what deletionWouldWait() waits for, bar a
+    // reconnect's event loop, which only a deletion must outwait
+    bool busyRunning() const;
 
     // The profile load, in this order, as the GUI and HostManager::openProfile() run it, the GUI doing its
     // window work between the steps. The first returns true when the profile has no save of its own yet,
@@ -469,6 +478,8 @@ public:
     std::pair<bool, QString> reloadModule(const QString& reloadModuleName, const QString& syncingFromHost = QString());
     std::pair<bool, QString> changeModuleSync(const QString& enableModuleName, const QLatin1String& value);
     std::pair<bool, QString> getModuleSync(const QString& moduleName);
+    // Whether a profile save rewrites the module's file, and so drops an item moved out of it
+    bool moduleSavesBack(const QString& moduleName) const;
     bool blockScripts() { return mBlockScriptCompile; }
     void refreshPackageFonts();
 
@@ -513,7 +524,8 @@ public:
     // installPackage()'s reason for refusing a package under a name a package already has
     static QString packageAlreadyInstalledReason(const QString& packageName) { return qsl("package %1 is already installed").arg(packageName); }
     void reportScriptsThatFailedToLoad();
-    bool uninstallPackage(const QString&, enums::PackageModuleType thing);
+    // With waitOutASave a running profile save is waited out, as a script's installPackage() does, rather than refused
+    bool uninstallPackage(const QString&, enums::PackageModuleType thing, bool waitOutASave = false);
     // The name a package file is installed under, unless its manifest renames it
     QString sanitizePackageName(const QString packageName) const;
     bool removeDir(const QString&, const QString&);
@@ -522,6 +534,9 @@ public:
     void readPackageConfig(const QString&, QString&, bool, QString* whyNotRead = nullptr);
     QString getPackageConfig(const QString&, bool isModule = false, QString* whyNotRead = nullptr);
     void postMessage(const QString message) { mTelnet.postMessage(message); }
+    // For an app that embeds Mudlet, as there is no main window to show a notification: answers whether it showed it
+    void setNotificationHandler(std::function<bool(const QString& title, const QString& text, std::optional<int> milliseconds)> handler) { mNotificationHandler = std::move(handler); }
+    bool requestNotification(const QString& title, const QString& text, std::optional<int> milliseconds) { return mNotificationHandler && mNotificationHandler(title, text, milliseconds); }
     void printToMainConsole(const QString& msg);
     void printToMainConsole(const QString& msg, QColor fgColor, QColor bgColor);
     void printSystemMessage(const QString& msg);
@@ -718,8 +733,8 @@ public:
     // Text or a link put into the main console's line while a trigger runs over
     // it, or a replacement there, moves the trigger's captures to follow it.
     bool insertWindowText(const QString& name, const QString& text);
-    // Puts text in place of the console's selection.
-    bool replaceWindowText(const QString& name, const QString& text);
+    // Puts text in place of the console's selection, in the colours of its first character when keepColor is set.
+    bool replaceWindowText(const QString& name, const QString& text, bool keepColor);
     std::pair<bool, QString> openWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area);
     // Whether windowname can hold a new mini console, scroll box, command line, text edit or label:
     // "" or "main" (any case) is the main console, else it must be a registered user window or scroll box.
@@ -893,8 +908,8 @@ public:
     void setFontsAntiAlias(const bool antiAlias) { mNoAntiAlias = !antiAlias; }
 
 private:
-    // A main console's close, for a profile that never had one; with nobody to ask, an unforced close
-    // saves only if save on exit is set. False, doing nothing, for a profile already closing.
+    // A main console's close, for a profile that never had one; it saves, as the GUI's "Yes" does, unless the
+    // profile's save did not load or is still loading. False, doing nothing, for a profile already closing.
     bool closeWithNoView();
     QSettings& profileIni();
 
@@ -950,6 +965,7 @@ private:
     std::unique_ptr<TNullConsoleFrontend> mpNullConsoleFrontend;
     bool mExitEventOwed = true;
     bool mClosingWithNoView = false;
+    bool mDeletionPending = false;
 
 public:
     cTelnet mTelnet;
@@ -1015,6 +1031,8 @@ public:
     // loading even though the buttons start out with themselves NOT being
     // pushed down:
     bool mIsProfileLoadingSequence = false;
+    // Its saved map has been loaded, so what it holds is the player's even while the load sequence runs on
+    bool mLoadedMap = false;
 
 
     QScopedPointer<TMap> mpMap;
@@ -1370,6 +1388,9 @@ signals:
     // The font getEditorFont() answers with may have moved
     void signal_editorFontChanged(const QFont& font);
     void signal_passwordEntryWantedChanged(bool wanted);
+    // The whole of the main command line once a script sets it or a send empties it, from a view with no
+    // widget to show it
+    void signal_commandLineTextRequested(const QString& text);
     void signal_forceMXPProcessorOnChanged(bool enabled);
     // The frontend (TMainConsole) owns the dialogs these drive; the strings are
     // built here so they stay in Host's translation context.
@@ -1421,6 +1442,10 @@ signals:
     // uninstalled a module, or turned a module's sync on or off.
     void signal_moduleListChangedByScript();
     void signal_moduleSyncChangedByScript(const QString& module, bool sync);
+    // A script's alert(), for an app that embeds Mudlet: for how long, 0 until the player comes back to it
+    void signal_attentionRequested(int milliseconds);
+    // Plain text for screen readers, with announce()'s processing style, for an app that embeds Mudlet
+    void signal_announcementRequested(const QString& text, const QString& processing);
 
 public slots:
     void slot_timerFires();
@@ -1605,6 +1630,8 @@ private:
     QMap<QString, QStringList> mAnonymousEventHandlerFunctions;
 
     QStringList mActiveModules;
+
+    std::function<bool(const QString&, const QString&, std::optional<int>)> mNotificationHandler;
 
     bool mHaveMapperScript = false;
     // This option makes the control on the preferences tristated so the value

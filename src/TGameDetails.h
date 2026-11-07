@@ -946,6 +946,26 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "No payment of any kind, and character creation is open. Actively developed, with "
                  "a friendly community that makes room for newcomers. New players welcome."),
              GameDetail::OwnUi::ClientGui},
+            {qsl("ClamberMUD"),
+             qsl("clambermud.com"),
+             4445,
+             true,
+             qsl("<a href='https://clambermud.com'>Website</a><br>"
+                 "<a href='https://discord.gg/Mrb44RSsA9'>Discord</a>"),
+             qsl(":/icons/clambermud_480x120.png"),
+             qsl("ClamberMUD is a free LitRPG text game: climb a deadly dungeon tower before your "
+                 "time runs out, on an alien game show nobody agreed to be on."
+                 "\n\n"
+                 "Every run is a new climber with one life and a ticking timer. Fight up through "
+                 "tiers of medieval fantasy, alien worlds, and cosmic horror while the show's host "
+                 "plays your best and worst moments for the viewers. Sponsors back the climbers "
+                 "they like, and retiring climbers unlocks new races and classes, over 100 in all."
+                 "\n\n"
+                 "In Mudlet, the game's own interface installs itself when you log in: a map that "
+                 "draws itself as you explore, health, mana, and movement gauges, a hotbar for "
+                 "your specials, and chat tabs. Free, in live development, for ages 16 and up. "
+                 "New climbers welcome."),
+             GameDetail::OwnUi::ClientGui},
             };
     // clang-format on
 };

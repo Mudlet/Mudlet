@@ -20,6 +20,7 @@
 #include <QAbstractEventDispatcher>
 #include <QApplication>
 #include <QDataStream>
+#include <QDesktopServices>
 #include <QDir>
 #include <QElapsedTimer>
 #include <QFile>
@@ -142,6 +143,18 @@ private:
     bool mFailNextLoad = false;
     // Biasing with no vocabulary of its own, so stt.setVocabulary() makes the base class report a fault
     Capabilities mCapabilities{.biasing = true, .sensitivityTuning = true};
+};
+
+// Stands in for the web browser, as an app that embeds Mudlet would take the pages its scripts open
+class HeadlessUrlCatcher : public QObject
+{
+    Q_OBJECT
+
+public:
+    QList<QUrl> mUrls;
+
+public slots:
+    void slot_openUrl(const QUrl& url) { mUrls.append(url); }
 };
 
 // A profile made without ever starting the main window, so it only has the null
@@ -10876,7 +10889,7 @@ headlessAppResult = 'not run'
 local ok, err = pcall(function()
   local tab, tabMsg = getProfileTabNumber()
   assert(tab == nil and type(tabMsg) == "string", "getProfileTabNumber did not answer nil and a message")
-  assert(openWebPage("about:blank") == false, "openWebPage did not answer false")
+  assert(openWebPage("") == false, "openWebPage did not answer false for an empty address")
   assert(loadWindowLayout() == false, "loadWindowLayout did not answer false")
   local shown, shownMsg = showNotification("headless title", "headless text")
   assert(shown == nil and shownMsg == "the profile has no main window", "showNotification did not answer nil and a message")
@@ -10885,6 +10898,37 @@ headlessAppResult = ok and 'ok' or tostring(err)
 )lua"));
         QVERIFY2(ran, "The Lua chunk did not run.");
         QCOMPARE(luaGlobalString(host, "headlessAppResult"), qsl("ok"));
+    }
+
+    void test_scriptsOpenWebPagesWithNoMainWindow()
+    {
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
+        const QString scheme = qsl("mudlet-headless-test");
+        HeadlessUrlCatcher catcher;
+        QDesktopServices::setUrlHandler(scheme, &catcher, "slot_openUrl");
+        const auto unsetHandler = qScopeGuard([&scheme] {
+            QDesktopServices::unsetUrlHandler(scheme);
+        });
+
+        const QString hostname = qsl("Test-Headless-Host-Web-Pages");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+headlessWebPages = 'not run'
+local ok, err = pcall(function()
+  assert(openWebPage("mudlet-headless-test://page/a") == true, "openWebPage did not answer true")
+  assert(openUrl("mudlet-headless-test://page/b") == true, "openUrl did not answer true")
+  assert(openWebPage("") == false, "openWebPage did not answer false for an empty address")
+  assert(openUrl("") == false, "openUrl did not answer false for an empty address")
+end)
+headlessWebPages = ok and 'ok' or tostring(err)
+)lua"));
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessWebPages"), qsl("ok"));
+        QCOMPARE(catcher.mUrls, (QList<QUrl>{QUrl(qsl("mudlet-headless-test://page/a")), QUrl(qsl("mudlet-headless-test://page/b"))}));
+        HostManager::self()->deleteHost(hostname);
     }
 
     void test_scriptsSeeNoMainWindowAsTheyDidBeforeTheNullAppView()
@@ -12710,16 +12754,19 @@ headlessAnswer = table.maxn(r) .. " " .. tostring(r[1]) .. " " .. tostring(r[2])
         QCOMPARE(answer(qsl("closeProfile('%1')").arg(target)), qsl("2 nil closeProfile: profile '%1' is not loaded").arg(target));
 
         // The GUI asks whether to save a profile that does not save on exit. Nobody can answer that here,
-        // so it closes as for the answer No.
+        // so it is saved, as for the answer Yes.
         QCOMPARE(answer(qsl("loadProfile('%1', true)").arg(unsaved)), qsl("1 true nil"));
         const QPointer<Host> pUnsaved(HostManager::self()->getHost(unsaved));
+        pUnsaved->mpMap->addRoom(7);
+        QVERIFY(clearMapSaves(unsaved));
         // As the GUI's: a close asked for while the profile is already closing is ignored
         QVERIFY(pUnsaved->getLuaInterpreter()->compileAndExecuteScript(
                 qsl(R"lua(registerAnonymousEventHandler("sysExitEvent", function() headlessRecord("closeProfile in exit " .. tostring(closeProfile())) end))lua")));
         QTest::ignoreMessage(QtWarningMsg, qPrintable(qsl("HostManager: asked to close profile \"%1\" while it is running a nested event loop, ignoring").arg(unsaved)));
         QCOMPARE(answer(qsl("closeProfile('%1')").arg(unsaved)), qsl("1 true nil"));
         QTRY_VERIFY_WITH_TIMEOUT(!pUnsaved, 5000);
-        QCOMPARE(saveCount(unsaved), 1);
+        QCOMPARE(saveCount(unsaved), 2);
+        QVERIFY2(newestMapSaveHoldsRoom(unsaved, 7), "closeProfile() did not save the map of a profile that does not save on exit.");
         QCOMPARE(readRecord(recordPath), qsl("%1 started\n%1 sysLoadEvent\n%1 sysExitEvent\n%2 started\n%2 sysLoadEvent\n%2 sysExitEvent\n%2 closeProfile in exit true\n").arg(target, unsaved));
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Loading or closing a profile created a widget.");
         HostManager::self()->deleteHost(runnerName);
@@ -12875,6 +12922,122 @@ headlessRecord("finished")
         QVERIFY2(closeSaveFailed, "A close whose own save was turned away was not reported as failed.");
         QCOMPARE(saveCount(hostname), savesBefore);
         QTRY_VERIFY_WITH_TIMEOUT(!pHost, 5000);
+    }
+
+    // saveProfile() turns it away, and its scripts run before its map is loaded, so the map it holds would go
+    // over the profile's last good one
+    void test_aCloseSaveWritesNothingForAProfileStillLoading()
+    {
+        QTemporaryDir recordDir;
+        QVERIFY(recordDir.isValid());
+        const QString hostname = qsl("Test-Headless-Host-Close-Save-Still-Loading");
+        QVERIFY(writeRecordingProfile(hostname, true, recordDir.filePath(qsl("record.txt"))));
+        Host* host = HostManager::self()->openProfile(hostname, false);
+        QVERIFY2(host, "The saved profile did not open.");
+        host->waitForProfileSave();
+        host->mpMap->addRoom(3);
+        QVERIFY(clearMapSaves(hostname));
+        const qsizetype savesBefore = saveCount(hostname);
+        host->mIsProfileLoadingSequence = true;
+        host->mLoadedMap = false;
+        QTest::ignoreMessage(QtWarningMsg, qPrintable(qsl("Host::saveForClose() WARNING - \"%1\" is not saved, as it is still loading.").arg(hostname)));
+        QVERIFY(!host->saveForClose());
+        QCOMPARE(saveCount(hostname), savesBefore);
+        QCOMPARE(QDir(MudletApp::getMudletPath(enums::profileMapsPath, hostname)).entryList(QStringList{qsl("*.dat")}, QDir::Files), QStringList());
+        host->mIsProfileLoadingSequence = false;
+        host->mLoadedMap = true;
+        HostManager::self()->deleteHost(hostname);
+    }
+
+    // As the GUI's tab close does from a sysLoadEvent handler: by then the map has loaded, so the handler's map
+    // changes are kept, while the profile, which saveProfile() turns away during the load, is not written
+    void test_aCloseSaveDuringTheLoadWritesAMapAlreadyLoaded()
+    {
+        QTemporaryDir recordDir;
+        QVERIFY(recordDir.isValid());
+        const QString hostname = qsl("Test-Headless-Host-Close-Save-Map-Loaded");
+        QVERIFY(writeRecordingProfile(hostname, true, recordDir.filePath(qsl("record.txt"))));
+        Host* host = HostManager::self()->openProfile(hostname, false);
+        QVERIFY2(host, "The saved profile did not open.");
+        host->waitForProfileSave();
+        QVERIFY(host->mLoadedMap);
+        host->mpMap->addRoom(12);
+        QVERIFY(clearMapSaves(hostname));
+        const qsizetype savesBefore = saveCount(hostname);
+        host->mIsProfileLoadingSequence = true;
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("^Host::saveProfileReportingFailure\\(\\) WARNING - could not save the profile to .*: profile loading is in progress$")));
+        QTest::ignoreMessage(QtWarningMsg, qPrintable(qsl("Host::saveForClose() WARNING - the profile \"%1\" or its modules could not be written.").arg(hostname)));
+        QVERIFY(!host->saveForClose());
+        host->mIsProfileLoadingSequence = false;
+        QCOMPARE(saveCount(hostname), savesBefore);
+        QVERIFY2(newestMapSaveHoldsRoom(hostname, 12), "A close save during the load did not write the map that had already loaded.");
+        HostManager::self()->deleteHost(hostname);
+    }
+
+    // As the GUI's tab close saves one: the map loads whether or not the profile's save did, so the session's
+    // map is kept, while the save that did not load is not written over
+    void test_aCloseSaveOfAProfileWhoseSaveDidNotLoadWritesItsMap()
+    {
+        QTemporaryDir recordDir;
+        QVERIFY(recordDir.isValid());
+        const QString hostname = qsl("Test-Headless-Host-Close-Save-Did-Not-Load");
+        QVERIFY(writeRecordingProfile(hostname, true, recordDir.filePath(qsl("record.txt"))));
+        Host* host = HostManager::self()->openProfile(hostname, false);
+        QVERIFY2(host, "The saved profile did not open.");
+        host->waitForProfileSave();
+        host->mpMap->addRoom(3);
+        QVERIFY(clearMapSaves(hostname));
+        const qsizetype savesBefore = saveCount(hostname);
+        host->mLoadedOk = false;
+        QTest::ignoreMessage(QtWarningMsg, qPrintable(qsl("Host::saveForClose() WARNING - the profile \"%1\" or its modules could not be written.").arg(hostname)));
+        QVERIFY(!host->saveForClose());
+        QCOMPARE(saveCount(hostname), savesBefore);
+        QVERIFY2(newestMapSaveHoldsRoom(hostname, 3), "The close save did not write the map of a profile whose save did not load.");
+        host->mLoadedOk = true;
+        HostManager::self()->deleteHost(hostname);
+    }
+
+    // Standard error is all a runner's user has to tell which part of the save failed; profile.ini is still
+    // written when the rest of the save failed, rather than left for the Host's deletion to write unchecked
+    void test_aCloseSaveThatFailsSaysWhatFailed()
+    {
+        QTemporaryDir recordDir;
+        QVERIFY(recordDir.isValid());
+        const QString hostname = qsl("Test-Headless-Host-Close-Save-Says-What-Failed");
+        QVERIFY(writeRecordingProfile(hostname, true, recordDir.filePath(qsl("record.txt"))));
+        Host* host = HostManager::self()->openProfile(hostname, false);
+        QVERIFY2(host, "The saved profile did not open.");
+        host->waitForProfileSave();
+        const QPointer<Host> pHost(host);
+        const QString home = MudletApp::getMudletPath(enums::profileHomePath, hostname);
+        const auto blockWith = [](const QString& path, const bool folder) {
+            QDir(path).removeRecursively();
+            QFile::remove(path);
+            if (folder) {
+                return QDir().mkpath(path);
+            }
+            QFile file(path);
+            return file.open(QIODevice::WriteOnly) && file.write("not a folder") > 0;
+        };
+        QVERIFY(blockWith(qsl("%1/current").arg(home), false));
+        QVERIFY(blockWith(qsl("%1/map").arg(home), false));
+        QVERIFY(blockWith(qsl("%1/profile.ini").arg(home), true));
+        host->writeProfileIniData(qsl("Headless/closed"), qsl("1"));
+        bool closeSaveFailed = false;
+        connect(host, &Host::closeSaveFailed, host, [&closeSaveFailed]() {
+            closeSaveFailed = true;
+        });
+
+        QTest::ignoreMessage(QtWarningMsg, qPrintable(qsl("Host::saveForClose() WARNING - the profile \"%1\" or its modules could not be written.").arg(hostname)));
+        QTest::ignoreMessage(QtWarningMsg, qPrintable(qsl("Host::saveForClose() WARNING - the map of \"%1\" could not be written.").arg(hostname)));
+        QTest::ignoreMessage(QtWarningMsg, qPrintable(qsl("Host::closeWithNoView() WARNING - the profile.ini of \"%1\" could not be written.").arg(hostname)));
+        QTest::ignoreMessage(QtWarningMsg, qPrintable(qsl("Host::closeWithNoView() WARNING - \"%1\" could not be saved.").arg(hostname)));
+        QVERIFY(HostManager::self()->requestProfileClose(hostname));
+        QVERIFY2(closeSaveFailed, "A close whose save failed was not reported as failed.");
+        QTRY_VERIFY_WITH_TIMEOUT(!pHost, 5000);
+        QVERIFY(blockWith(qsl("%1/current").arg(home), true));
+        QVERIFY(blockWith(qsl("%1/map").arg(home), true));
+        QVERIFY(QDir(qsl("%1/profile.ini").arg(home)).removeRecursively());
     }
 
     void test_deleteHostKeepsAProfileReopenedUnderItsExitHandler()

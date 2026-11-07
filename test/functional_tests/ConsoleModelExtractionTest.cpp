@@ -793,6 +793,92 @@ private slots:
         QCOMPARE(luaGlobalString(host, "wdogCapture"), qsl("<send"));
     }
 
+    // A watchdog the game's last tag armed must not give up on the next tag
+    // when it fires while that one is only split between two reads.
+    void test_aSplitMxpTagIsNotWrittenOutByAnEarlierTagsWatchdog()
+    {
+        mpServer->setSendsWelcome(false);
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
+
+        TBuffer& buffer = host->mainConsoleModel().buffer;
+        feedStalledMxpTag(host, buffer, "WDOGFIRST <B");
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        std::string rest = ">bold</B>";
+        buffer.translateToPlainText(rest, true);
+        QVERIFY2(!buffer.mTagWatchdog->isActive(), "The watchdog was left armed once its tag closed.");
+        // Its first phase comes round with no tag open
+        if (buffer.mTagWatchdog->isActive()) {
+            runTagWatchdogPhase(buffer);
+            if (QTest::currentTestFailed()) {
+                return;
+            }
+        }
+
+        // A watchdog already running when a tag begins is due before any that tag arms
+        const bool armedBeforeTheSplitTag = buffer.mTagWatchdog->isActive();
+        std::string head = " WDOGSPLIT <SEN";
+        buffer.translateToPlainText(head, true);
+        QVERIFY2(host->mMxpProcessor.getMxpTagBuilder().isInsideTag(), "The head of the split tag left no tag open.");
+        if (armedBeforeTheSplitTag) {
+            runTagWatchdogPhase(buffer);
+            if (QTest::currentTestFailed()) {
+                return;
+            }
+        }
+        // Room for a continuation the second phase queued to run
+        QTest::qWait(200ms);
+
+        std::string tail = "D href=\"look\">look</SEND> WDOGEND\n";
+        buffer.translateToPlainText(tail, true);
+        const int line = lastLineHolding(buffer, qsl("WDOGEND"));
+        QVERIFY2(line >= 0, "The line never arrived.");
+        QCOMPARE(buffer.lineBuffer.at(line), qsl("WDOGFIRST bold WDOGSPLIT look WDOGEND"));
+    }
+
+    // A '<' inside a tag writes that tag out and starts another, which the
+    // watchdog snapshot of the one written out must not stand in for.
+    void test_aSplitMxpTagAfterAnAbandonedOneIsNotWrittenOutByItsWatchdog()
+    {
+        mpServer->setSendsWelcome(false);
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
+
+        TBuffer& buffer = host->mainConsoleModel().buffer;
+        feedStalledMxpTag(host, buffer, "WDOGNEST <SEN");
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        runTagWatchdogPhase(buffer);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+
+        std::string head = "<SEND hr";
+        buffer.translateToPlainText(head, true);
+        // The second phase, armed before this tag began, is due before any phase this tag arms
+        if (buffer.mWatchdogPhase == TBuffer::WatchdogPhase::Phase2_Unfreeze) {
+            runTagWatchdogPhase(buffer);
+            if (QTest::currentTestFailed()) {
+                return;
+            }
+        }
+        // Room for a continuation the second phase queued to run
+        QTest::qWait(200ms);
+
+        std::string tail = "ef=\"look\">look</SEND> WDOGEND\n";
+        buffer.translateToPlainText(tail, true);
+        const int line = lastLineHolding(buffer, qsl("WDOGEND"));
+        QVERIFY2(line >= 0, "The line never arrived.");
+        QCOMPARE(buffer.lineBuffer.at(line), qsl("WDOGNEST <SENlook WDOGEND"));
+    }
+
     // The line a disconnect writes out is from the game too
     void test_aHeldServerWrappedLineWrittenOutByADisconnectRunsItsTriggersInTriggerContext()
     {
@@ -5345,14 +5431,23 @@ private:
             QVERIFY(buffer.mWatchdogPhase == phase);
             QCOMPARE(buffer.mTagWatchdog->interval(), TBuffer::MAX_TAG_TIMEOUT_MS);
             QVERIFY2(lastLineHolding(buffer, text) < 0, "The stalled tag was written out before the watchdog's second phase.");
-            buffer.mTagWatchdog->start(0);
-            QVERIFY2(QTest::qWaitFor(
-                             [&buffer, phase]() {
-                                 return buffer.mWatchdogPhase != phase;
-                             },
-                             5s),
-                     "The tag watchdog did not run its phase.");
+            runTagWatchdogPhase(buffer);
+            if (QTest::currentTestFailed()) {
+                return;
+            }
         }
+    }
+
+    void runTagWatchdogPhase(TBuffer& buffer)
+    {
+        const auto phase = buffer.mWatchdogPhase;
+        buffer.mTagWatchdog->start(0);
+        QVERIFY2(QTest::qWaitFor(
+                         [&buffer, phase]() {
+                             return buffer.mWatchdogPhase != phase;
+                         },
+                         5s),
+                 "The tag watchdog did not run its phase.");
     }
 
     static int lastLineHolding(TBuffer& buffer, const QString& text)

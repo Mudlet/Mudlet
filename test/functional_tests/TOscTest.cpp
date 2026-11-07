@@ -29,6 +29,7 @@
 
 #include <QFileInfo>
 #include <QKeyEvent>
+#include <QMenu>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 #include <chrono>
@@ -39,6 +40,7 @@
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "TAccessibleTextEdit.h"
+#include "TCommandLine.h"
 #include "THyperlinkStyling.h"
 #include "THyperlinkVisibilityManager.h"
 #include "TLinkStore.h"
@@ -215,6 +217,13 @@ private:
     mpHost->mUndoServerWrapWidth = 80;
   }
 
+  // As specialForceMXPProcessorOn has it once connected; cleanup() undoes it
+  void forceMxpOn() {
+    mpHost->setForceMXPProcessorOn(true);
+    mpHost->mMxpProcessor.enable();
+    mpHost->mMxpProcessor.setMode(MXP_MODE_CODE_LOCK_SECURE);
+  }
+
 private slots:
   // Start mudlet and create a profile once for all tests.
   void initTestCase() {
@@ -288,6 +297,10 @@ private slots:
       // held back rather than leaving it to be joined onto the next test's text
       feedFromServer(qsl("\n"));
       mpHost->mUndoServerWrap = false;
+    }
+    if (mpHost && mpHost->getForceMXPProcessorOn()) {
+      mpHost->setForceMXPProcessorOn(false);
+      mpHost->mMxpProcessor.disable();
     }
   }
 
@@ -701,8 +714,8 @@ private slots:
     QCOMPARE(console->buffer.getLinkTooltip(linkId), expectedTooltip);
   }
 
-  // Items without send: or prompt: that are not web links go to the game
-  // verbatim, since games may use bare commands that parse as URIs.
+  // Items without send: or prompt: that are not web or mail links go to the
+  // game verbatim, since games may use bare commands that parse as URIs.
   void test_Osc8MenuItemCommand_data() {
     QTest::addColumn<QString>("item");
     QTest::addColumn<QString>("expectedCommand");
@@ -714,6 +727,9 @@ private slots:
       return qsl("send(%1, false)").arg(LuaLiteral::quote(command));
     };
 
+    QTest::newRow("a mailto with a field hidden in its address")
+        << qsl("mailto:x%253Fattachment=/etc/hostname%2526@b.com")
+        << sends(qsl("mailto:x%3Fattachment=/etc/hostname%26@b.com"));
     QTest::newRow("https") << qsl("https://wiki.mudlet.org/w/Main_Page")
                            << opens(qsl("https://wiki.mudlet.org/w/Main_Page"));
     QTest::newRow("http") << qsl("http://example.com/")
@@ -729,9 +745,14 @@ private slots:
     QTest::newRow("bare command") << qsl("flee") << sends(qsl("flee"));
     QTest::newRow("file is not opened")
         << qsl("file:///etc/passwd") << sends(qsl("file:///etc/passwd"));
+    QTest::newRow("mailto")
+        << qsl("mailto:someone@example.com?subject=Hello")
+        << opens(qsl("mailto:someone@example.com?subject=Hello"));
+    QTest::newRow("mailto keeps only its message fields")
+        << qsl("mailto:someone@example.com?subject=Hello&attach=/etc/hostname")
+        << opens(qsl("mailto:someone@example.com?subject=Hello"));
     QTest::newRow("other scheme sent verbatim")
-        << qsl("mailto:someone@example.com")
-        << sends(qsl("mailto:someone@example.com"));
+        << qsl("steam://run/1") << sends(qsl("steam://run/1"));
   }
 
   void test_Osc8MenuItemCommand() {
@@ -1116,6 +1137,99 @@ private slots:
     const auto unhook = qScopeGuard([] { mudlet::self()->mConfirmGameLink = nullptr; });
     mudlet::self()->connectFromGameLink(qsl("telnet://games.example:4000"));
     QCOMPARE(questions, 1);
+  }
+
+  // A mailto: link keeps its own query, whatever case its scheme is in, losing
+  // only Mudlet's config; its default tooltip says it writes an email
+  void test_Osc8MailtoLink_data() {
+    QTest::addColumn<QString>("uri");
+    QTest::addColumn<QString>("expectedUrl");
+    QTest::addColumn<QString>("expectedTooltip");
+
+    QTest::newRow("with a config")
+        << qsl("mailto:admin@example.com?subject=Hello&config={\"tooltip\":\"Write to us\"}")
+        << qsl("mailto:admin@example.com?subject=Hello") << qsl("Write to us");
+    QTest::newRow("scheme in capitals")
+        << qsl("MAILTO:admin@example.com?subject=Hello")
+        << qsl("mailto:admin@example.com?subject=Hello")
+        << qsl("Write an email to: mailto:admin@example.com?subject=Hello");
+    QTest::newRow("scheme in capitals with a body and a config")
+        << qsl("MAILTO:admin@example.com?subject=Hello&body=Hi&config={\"tooltip\":\"Write to us\"}")
+        << qsl("mailto:admin@example.com?subject=Hello&body=Hi") << qsl("Write to us");
+    QTest::newRow("default tooltip")
+        << qsl("mailto:admin@example.com?subject=Hello")
+        << qsl("mailto:admin@example.com?subject=Hello")
+        << qsl("Write an email to: mailto:admin@example.com?subject=Hello");
+    QTest::newRow("only the recipients and message fields survive")
+        << qsl("mailto:admin@example.com?to=b@example.com&cc=c@example.com&bcc=d@example.com&subject=Hi&body=Text&attach=/etc/hostname&attachment=/etc/passwd&X-Other=1")
+        << qsl("mailto:admin@example.com?to=b@example.com&cc=c@example.com&bcc=d@example.com&subject=Hi&body=Text")
+        << qsl("Write an email to: mailto:admin@example.com?to=b@example.com&cc=c@example.com&bcc=d@example.com&subject=Hi&body=Text");
+    QTest::newRow("recipients only in the query")
+        << qsl("mailto:?to=c@example.com")
+        << qsl("mailto:?to=c@example.com")
+        << qsl("Write an email to: mailto:?to=c@example.com");
+    QTest::newRow("field names in capitals")
+        << qsl("MAILTO:admin@example.com?SUBJECT=Hi&ATTACH=/etc/hostname")
+        << qsl("mailto:admin@example.com?SUBJECT=Hi")
+        << qsl("Write an email to: mailto:admin@example.com?SUBJECT=Hi");
+    QTest::newRow("an encoded field name")
+        << qsl("mailto:admin@example.com?subject=Hi&%61ttach=/etc/hostname")
+        << qsl("mailto:admin@example.com?subject=Hi")
+        << qsl("Write an email to: mailto:admin@example.com?subject=Hi");
+    QTest::newRow("a field hidden behind another separator")
+        << qsl("mailto:admin@example.com?subject=Hi;attach=/etc/hostname")
+        << qsl("mailto:admin@example.com?subject=Hi%3Battach=/etc/hostname")
+        << qsl("Write an email to: mailto:admin@example.com?subject=Hi%3Battach=/etc/hostname");
+    QTest::newRow("nothing left of the query")
+        << qsl("mailto:admin@example.com?attach=/etc/hostname")
+        << qsl("mailto:admin@example.com")
+        << qsl("Write an email to: mailto:admin@example.com");
+    QTest::newRow("a fragment")
+        << qsl("mailto:admin@example.com?subject=Hi#&attach=/etc/hostname")
+        << qsl("mailto:admin@example.com?subject=Hi")
+        << qsl("Write an email to: mailto:admin@example.com?subject=Hi");
+  }
+
+  void test_Osc8MailtoLink() {
+    QFETCH(QString, uri);
+    QFETCH(QString, expectedUrl);
+    QFETCH(QString, expectedTooltip);
+
+    injectData(qsl("\x1b]8;;") + uri + qsl("\x1b\\Email\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    int linkId = 0;
+    for (int line = console->buffer.getLastLineNumber();
+         line >= 0 && linkId == 0; --line) {
+      linkId = console->buffer.getLinkIndexAt(line, 0);
+    }
+    QVERIFY2(linkId > 0, "Expected to find a link in the buffer");
+
+    QCOMPARE(console->getLinkStore().getLinksConst(linkId),
+             QStringList(qsl("openUrl(%1)").arg(LuaLiteral::quote(expectedUrl))));
+    QCOMPARE(console->buffer.getLinkTooltip(linkId), expectedTooltip);
+  }
+
+  void test_Osc8MailtoWithAFieldHiddenInARecipientIsRefused_data() {
+    QTest::addColumn<QString>("uri");
+    QTest::newRow("in the address") << qsl("mailto:x%3Fattachment=/etc/hostname%26@b.com");
+    QTest::newRow("a fragment in the address") << qsl("mailto:x%23y@b.com");
+    QTest::newRow("in a to field") << qsl("mailto:?to=x%3Fattachment=/etc/hostname%26@b.com");
+    QTest::newRow("in a bcc field") << qsl("mailto:a@b.com?bcc=x%26attachment=/etc/hostname@b.com");
+  }
+
+  void test_Osc8MailtoWithAFieldHiddenInARecipientIsRefused() {
+    QFETCH(QString, uri);
+
+    injectData(qsl("\x1b]8;;") + uri + qsl("\x1b\\Email\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    int line = console->buffer.getLastLineNumber();
+    while (line >= 0 && !console->buffer.lineBuffer.at(line).contains(qsl("Email"))) {
+      --line;
+    }
+    QVERIFY2(line >= 0, "the link's text was not printed");
+    QCOMPARE(console->buffer.getLinkIndexAt(line, 0), 0);
   }
 
   // A "config" parameter carrying something that is not an object is not a
@@ -2084,6 +2198,79 @@ private slots:
     QCOMPARE(console->buffer.getLinkIndexAt(outLine, outCol), linkId);
   }
 
+  // A closing popup can leave the window inactive, and only the active window's focus widget hears a popup open
+  bool focusPaneInActiveWindow(TTextEdit *pane) {
+    mudlet::self()->show();
+    pane->window()->activateWindow();
+    pane->setFocus();
+    return QTest::qWaitFor([pane] { return QApplication::activeWindow() == pane->window() && pane->hasFocus(); }, 3000);
+  }
+
+  // The pane's own menu only borrows the focus, so caret mode stays on, and the menu must still get the keys
+  void test_ALinkMenuLeavesCaretModeOn() {
+    injectData(qsl("\x1b]8;;send:look?config={\"menu\":[{\"Look\":\"send:look\"},{\"Wield\":\"send:wield\"}]}\x1b\\Sword\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY(pos.has_value());
+
+    mpHost->setCaretEnabled(true);
+    const auto caretOff = qScopeGuard([this] {
+      if (mpHost->caretEnabled()) {
+        mpHost->setCaretEnabled(false);
+      }
+    });
+    TTextEdit *pane = console->mUpperPane;
+    QVERIFY(focusPaneInActiveWindow(pane));
+    pane->setCaretPosition(std::get<0>(*pos), std::get<1>(*pos));
+    QKeyEvent menuKey(QEvent::KeyPress, Qt::Key_Menu, Qt::NoModifier);
+    QApplication::sendEvent(pane, &menuKey);
+
+    QMenu *menu = pane->findChild<QMenu *>();
+    QVERIFY2(menu && menu->isVisible(), "the Menu key did not open the link's menu");
+    const auto closeMenu = qScopeGuard([pane] {
+      if (QMenu *open = pane->findChild<QMenu *>()) {
+        open->close();
+      }
+    });
+    QVERIFY2(mpHost->caretEnabled(), "opening the menu took the player out of caret mode");
+
+    // Through the window, as a real key arrives: caret mode's keyboard grab would otherwise beat the menu to it
+    const int caretLine = pane->mCaretLine;
+    QTest::keyClick(pane->window()->windowHandle(), Qt::Key_Down);
+    QVERIFY2(menu->activeAction(), "the menu did not get the key");
+    QCOMPARE(pane->mCaretLine, caretLine);
+
+    menu->close();
+    QTRY_VERIFY(!pane->findChild<QMenu *>());
+    QVERIFY2(mpHost->caretEnabled(), "closing the menu took the player out of caret mode");
+    QVERIFY2(pane->hasFocus() || !QApplication::activeWindow(), "the pane did not get the focus back");
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
+    // The test platform leaves the window inactive when a popup closes, so never hands the focus back itself
+    QFocusEvent focusBack(QEvent::FocusIn, Qt::PopupFocusReason);
+    QApplication::sendEvent(pane, &focusBack);
+    QCOMPARE(QWidget::keyboardGrabber(), pane);
+#endif
+  }
+
+  // A menu that isn't the pane's, such as the menu bar's, may open a dialog, which the keyboard grab would keep keys from
+  void test_AnotherWidgetsMenuStillEndsCaretMode() {
+    mpHost->setCaretEnabled(true);
+    const auto caretOff = qScopeGuard([this] {
+      if (mpHost->caretEnabled()) {
+        mpHost->setCaretEnabled(false);
+      }
+    });
+    TTextEdit *pane = mpHost->mainConsoleView()->mUpperPane;
+    QVERIFY(focusPaneInActiveWindow(pane));
+
+    QMenu menu(pane->window());
+    menu.addAction(qsl("Elsewhere"));
+    menu.popup(pane->mapToGlobal(QPoint(1, 1)));
+    const auto closeMenu = qScopeGuard([&menu] { menu.close(); });
+    QVERIFY2(!mpHost->caretEnabled(), "a menu that was not the pane's left caret mode on");
+  }
+
   void test_KeyNav_CtrlBracketRight_MovesToNextLink() {
     injectData(qsl("\x1b]8;;send:north\x1b\\North\x1b]8;;\x1b\\ - "
                    "\x1b]8;;send:south\x1b\\South\x1b]8;;\x1b\\"));
@@ -2211,6 +2398,78 @@ private slots:
     const int link = console->buffer.getLinkIndexAt(line, 10);
     QVERIFY(link > 0);
     QCOMPARE(console->buffer.getLinkIndexAt(line, 12), link);
+  }
+
+  // Whichever of an MXP link and an OSC 8 link opened inside the other takes
+  // the text it wraps, and the outer one takes back the text after it
+  void test_Osc8LinkInsideAnMxpLink_data() {
+    QTest::addColumn<QString>("inside");
+    // What the second y sends, or empty when it is the MXP link's again
+    QTest::addColumn<QString>("secondSends");
+
+    QTest::newRow("one link")
+        << qsl("\x1b]8;;send:look\x1b\\yy\x1b]8;;\x1b\\") << qsl("look");
+    QTest::newRow("two links")
+        << qsl("\x1b]8;;send:look\x1b\\y\x1b]8;;send:read\x1b\\y\x1b]8;;\x1b\\") << qsl("read");
+    QTest::newRow("a rejected link after an accepted one")
+        << qsl("\x1b]8;;send:look\x1b\\y\x1b]8;;gmcp:Foo\x1b\\y\x1b]8;;\x1b\\") << QString();
+  }
+
+  void test_Osc8LinkInsideAnMxpLink() {
+    QFETCH(QString, inside);
+    QFETCH(QString, secondSends);
+    forceMxpOn();
+
+    feedFromServer(qsl("MXPOSC <SEND \"north\">xx ") + inside +
+                   qsl(" ww</SEND> after\n"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int line = lineStartingWith(qsl("MXPOSC"));
+    QVERIFY(line >= 0);
+    QCOMPARE(console->buffer.line(line), qsl("MXPOSC xx yy ww after"));
+
+    const int sendLink = console->buffer.getLinkIndexAt(line, 7);
+    QVERIFY2(sendLink > 0, "the MXP link's text is not a link");
+    QCOMPARE(console->getLinkStore().getLinksConst(sendLink),
+             QStringList(qsl("send(%1)").arg(LuaLiteral::quote(qsl("north")))));
+    const int osc8Link = console->buffer.getLinkIndexAt(line, 10);
+    QVERIFY2(osc8Link > 0 && osc8Link != sendLink,
+             "the OSC 8 link's text is not its own link");
+    QCOMPARE(console->getLinkStore().getLinksConst(osc8Link),
+             QStringList(qsl("send(%1, false)").arg(LuaLiteral::quote(qsl("look")))));
+    const int secondLink = console->buffer.getLinkIndexAt(line, 11);
+    if (secondSends.isEmpty()) {
+      QCOMPARE(secondLink, sendLink);
+    } else {
+      QVERIFY2(secondLink > 0 && secondLink != sendLink,
+               "the second y is not an OSC 8 link");
+      QCOMPARE(console->getLinkStore().getLinksConst(secondLink),
+               QStringList(qsl("send(%1, false)").arg(LuaLiteral::quote(secondSends))));
+    }
+    QCOMPARE(console->buffer.getLinkIndexAt(line, 12), sendLink);
+    QCOMPARE(console->buffer.getLinkIndexAt(line, 13), sendLink);
+    QCOMPARE(console->buffer.getLinkIndexAt(line, 16), 0);
+  }
+
+  void test_MxpLinkInsideAnOsc8Link() {
+    forceMxpOn();
+
+    feedFromServer(qsl("OSCMXP \x1b]8;;send:look\x1b\\aa <SEND \"north\">xx</SEND> bb\x1b]8;;\x1b\\ after\n"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int line = lineStartingWith(qsl("OSCMXP"));
+    QVERIFY(line >= 0);
+    QCOMPARE(console->buffer.line(line), qsl("OSCMXP aa xx bb after"));
+
+    const int osc8Link = console->buffer.getLinkIndexAt(line, 7);
+    QVERIFY2(osc8Link > 0, "the OSC 8 link's text is not a link");
+    const int sendLink = console->buffer.getLinkIndexAt(line, 10);
+    QVERIFY2(sendLink > 0 && sendLink != osc8Link,
+             "the MXP link's text is not its own link");
+    QCOMPARE(console->getLinkStore().getLinksConst(sendLink),
+             QStringList(qsl("send(%1)").arg(LuaLiteral::quote(qsl("north")))));
+    QCOMPARE(console->buffer.getLinkIndexAt(line, 13), osc8Link);
+    QCOMPARE(console->buffer.getLinkIndexAt(line, 16), 0);
   }
 
 
@@ -2370,6 +2629,252 @@ private slots:
     const int linkId = console->buffer.getLinkIndexAt(joinedLine, 71);
     QVERIFY2(linkId > 0, "the link text is no longer a link");
     QVERIFY(console->getHyperlinkVisibilityManager().trackedLinkIds().contains(linkId));
+  }
+
+  bool bufferShows(const QString &text) {
+    TBuffer &buffer = mpHost->mainConsoleView()->buffer;
+    for (int line = 0; line <= buffer.getLastLineNumber(); ++line) {
+      if (buffer.line(line).contains(text)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  QString expireLink(const QString &action, const QString &settings) {
+    return qsl("\x1b]8;;send:look?config={\"visibility\":{\"action\":\"%1\",%2}}\x1b\\Hint\x1b]8;;\x1b\\").arg(action, settings);
+  }
+
+  void test_Osc8ExpireEventsCountFromWhenALinkIsPrinted_data() {
+    QTest::addColumn<QString>("action");
+    QTest::addColumn<QString>("event");
+
+    for (const QString &action : {qsl("conceal"), qsl("reveal"), qsl("reveal-then-conceal")}) {
+      for (const QString &event : {qsl("input"), qsl("prompt"), qsl("output")}) {
+        QTest::addRow("%s on %s", qPrintable(action), qPrintable(event)) << action << event;
+      }
+    }
+  }
+
+  void test_Osc8ExpireEventsCountFromWhenALinkIsPrinted() {
+    QFETCH(QString, action);
+    QFETCH(QString, event);
+    const bool startsVisible = action == qsl("conceal");
+
+    injectData(expireLink(action, qsl("\"expire\":{\"%1\":true,\"outputDelay\":30}").arg(event)));
+    auto &manager = mpHost->mainConsoleView()->getHyperlinkVisibilityManager();
+    QCOMPARE(bufferShows(qsl("Hint")), startsVisible);
+
+    if (event == qsl("input")) {
+      manager.onUserInput();
+    } else if (event == qsl("prompt")) {
+      manager.onPromptReceived();
+      QVERIFY2(bufferShows(qsl("Hint")) == startsVisible, "the prompt ending the link's own output counted");
+      manager.onPromptReceived();
+    } else {
+      QTest::qWait(60ms);
+      manager.onDataReceived();
+    }
+    QCOMPARE(bufferShows(qsl("Hint")), !startsVisible);
+  }
+
+  void test_Osc8ExpiredRevealThenConcealHidesWhenClicked() {
+    injectData(expireLink(qsl("reveal-then-conceal"), qsl("\"expire\":{\"input\":true}")));
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY(pos.has_value());
+    const int linkId = std::get<2>(*pos);
+    auto &manager = mpHost->mainConsoleView()->getHyperlinkVisibilityManager();
+
+    QVERIFY2(!bufferShows(qsl("Hint")), "a link waiting for an event showed at once");
+    manager.onUserInput();
+    QVERIFY(bufferShows(qsl("Hint")));
+    manager.onLinkClicked(linkId);
+    QVERIFY(!bufferShows(qsl("Hint")));
+  }
+
+  void test_Osc8ClickingAConcealLinkWithExpireHidesItAtOnce() {
+    injectData(expireLink(qsl("conceal"), qsl("\"expire\":{\"input\":true}")));
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY(pos.has_value());
+    QVERIFY(bufferShows(qsl("Hint")));
+    mpHost->mainConsoleView()->getHyperlinkVisibilityManager().onLinkClicked(std::get<2>(*pos));
+    QVERIFY(!bufferShows(qsl("Hint")));
+  }
+
+  void test_Osc8AnExpireEventBeatsTheDelay_data() {
+    QTest::addColumn<QString>("action");
+    QTest::addColumn<bool>("showsAfterwards");
+
+    QTest::newRow("conceal") << qsl("conceal") << false;
+    QTest::newRow("reveal") << qsl("reveal") << true;
+  }
+
+  void test_Osc8AnExpireEventBeatsTheDelay() {
+    QFETCH(QString, action);
+    QFETCH(bool, showsAfterwards);
+
+    injectData(expireLink(action, qsl("\"delay\":60000,\"expire\":{\"input\":true}")));
+    QCOMPARE(bufferShows(qsl("Hint")), !showsAfterwards);
+    mpHost->mainConsoleView()->getHyperlinkVisibilityManager().onUserInput();
+    QCOMPARE(bufferShows(qsl("Hint")), showsAfterwards);
+  }
+
+  // A game's prompt arrives in the same read as the text before it, or in a
+  // later one, and either way it is the next prompt that hides the link.
+  void test_Osc8PromptExpiryWithARealGoAhead_data() {
+    QTest::addColumn<bool>("promptInTheSameRead");
+    QTest::addColumn<bool>("forceGaOff");
+    QTest::newRow("same read") << true << false;
+    QTest::newRow("later read") << false << false;
+    QTest::newRow("same read, GA interpretation forced off") << true << true;
+    QTest::newRow("later read, GA interpretation forced off") << false << true;
+  }
+
+  void test_Osc8PromptExpiryWithARealGoAhead() {
+    QFETCH(bool, promptInTheSameRead);
+    QFETCH(bool, forceGaOff);
+    const bool wasGaDriver = mpHost->mTelnet.mGA_Driver;
+    const bool wasForceGaOff = mpHost->mTelnet.mFORCE_GA_OFF;
+    const auto restoreFlags = qScopeGuard([this, wasGaDriver, wasForceGaOff] {
+      mpHost->mTelnet.mGA_Driver = wasGaDriver;
+      mpHost->mTelnet.mFORCE_GA_OFF = wasForceGaOff;
+    });
+    mpHost->mTelnet.mFORCE_GA_OFF = forceGaOff;
+
+    const QByteArray prompt = QByteArray("> ") + QByteArray("\xff\xf9", 2);
+    QByteArray link = (expireLink(qsl("conceal"), qsl("\"expire\":{\"prompt\":true}")) + qsl("\r\n")).toUtf8();
+    if (promptInTheSameRead) {
+      QByteArray read = link + prompt;
+      mpHost->mTelnet.loopbackTest(read);
+    } else {
+      mpHost->mTelnet.loopbackTest(link);
+      QTest::qWait(50ms);
+      QByteArray read = prompt;
+      mpHost->mTelnet.loopbackTest(read);
+    }
+    QTest::qWait(50ms);
+    QVERIFY2(bufferShows(qsl("Hint")), "the link's own prompt hid it");
+
+    QByteArray next = prompt;
+    mpHost->mTelnet.loopbackTest(next);
+    QTest::qWait(50ms);
+    QVERIFY2(!bufferShows(qsl("Hint")), "the next prompt did not hide it");
+  }
+
+  // A trigger reading gmcp has to see the GMCP that came in the same read, as it always has
+  void test_ForcedOffGoAheadLeavesScriptsTheirOrder() {
+    const bool wasForceGaOff = mpHost->mTelnet.mFORCE_GA_OFF;
+    const bool wasGmcpEnabled = mpHost->mEnableGMCP;
+    const auto restoreFlags = qScopeGuard([this, wasForceGaOff, wasGmcpEnabled] {
+      mpHost->mTelnet.mFORCE_GA_OFF = wasForceGaOff;
+      mpHost->mEnableGMCP = wasGmcpEnabled;
+    });
+    mpHost->mTelnet.mFORCE_GA_OFF = true;
+    mpHost->mEnableGMCP = true;
+
+    TLuaInterpreter &lua = mpHost->mLuaInterpreter;
+    lua.compileAndExecuteScript(qsl(R"(
+      forcedOffOrder = ""
+      forcedOffHandler = registerAnonymousEventHandler("gmcp.ForcedOffOrder", function() forcedOffOrder = forcedOffOrder .. "gmcp," end)
+      forcedOffTrigger = tempRegexTrigger("^forcedofftext", function() forcedOffOrder = forcedOffOrder .. "trigger," end)
+    )"));
+    const auto removeHandlers = qScopeGuard([&lua] {
+      lua.compileAndExecuteScript(qsl("killAnonymousEventHandler(forcedOffHandler); killTrigger(forcedOffTrigger)"));
+    });
+
+    QByteArray read = QByteArray("forcedofftext") + QByteArray("\xff\xf9", 2) + QByteArray("\xff\xfa\xc9", 3) + QByteArray("ForcedOffOrder 1") + QByteArray("\xff\xf0", 2);
+    mpHost->mTelnet.loopbackTest(read);
+    QTest::qWait(50ms);
+
+    QCOMPARE(lua.getLuaString(qsl("forcedOffOrder")), qsl("gmcp,trigger,"));
+  }
+
+  void test_Osc8OutputExpiryWaitsForAQuietGap() {
+    // Wide enough that a stalled machine can't turn the burst into a gap
+    feedFromServer(expireLink(qsl("conceal"), qsl("\"expire\":{\"output\":true,\"outputDelay\":1000}")) + qsl("\n"));
+    feedFromServer(qsl("the same burst\n"));
+    QVERIFY2(bufferShows(qsl("Hint")), "the link's own burst of text hid it");
+
+    QTest::qWait(1100ms);
+    feedFromServer(qsl("after a gap\n"));
+    QVERIFY2(!bufferShows(qsl("Hint")), "text after a quiet gap did not hide it");
+  }
+
+  void test_Osc8OutputExpiryIgnoresSteadyOutput() {
+    feedFromServer(expireLink(qsl("conceal"), qsl("\"expire\":{\"output\":true,\"outputDelay\":1000}")) + qsl("\n"));
+    for (int i = 0; i < 8; ++i) {
+      QTest::qWait(150ms);
+      feedFromServer(qsl("steady %1\n").arg(i));
+    }
+    QVERIFY2(bufferShows(qsl("Hint")), "output with no gap in it hid the link once the delay had passed since it was printed");
+  }
+
+  void test_Osc8OutputExpiryCountsFromAScriptPrintedLink() {
+    std::string printed = (expireLink(qsl("conceal"), qsl("\"expire\":{\"output\":true,\"outputDelay\":2000}")) + qsl("\n")).toStdString();
+    mpHost->printOnDisplay(printed, false);
+    QVERIFY(bufferShows(qsl("Hint")));
+    feedFromServer(qsl("the game speaks at once\n"));
+    QVERIFY2(bufferShows(qsl("Hint")), "the first data after a script printed the link hid it");
+  }
+
+  void test_Osc8OutputDelayBelongsToEachLink() {
+    const QString shortDelay = qsl("\x1b]8;;send:a?config={\"visibility\":{\"action\":\"conceal\",\"expire\":{\"output\":true,\"outputDelay\":30}}}\x1b\\Brief\x1b]8;;\x1b\\");
+    const QString longDelay = qsl("\x1b]8;;send:b?config={\"visibility\":{\"action\":\"conceal\",\"expire\":{\"output\":true,\"outputDelay\":60000}}}\x1b\\Lasting\x1b]8;;\x1b\\");
+    feedFromServer(shortDelay + qsl("\n") + longDelay + qsl("\n"));
+    QTest::qWait(60ms);
+    feedFromServer(qsl("after a gap\n"));
+    QVERIFY(!bufferShows(qsl("Brief")));
+    QVERIFY2(bufferShows(qsl("Lasting")), "one link's outputDelay decided another's");
+  }
+
+  // cTelnet posts these with no game text in them, and script output isn't the game's
+  void test_Osc8OutputExpiryIgnoresWhatIsNotGameOutput_data() {
+    QTest::addColumn<QByteArray>("posted");
+    QTest::addColumn<bool>("fromServer");
+
+    QTest::newRow("bare flush marker") << QByteArray("\r") << true;
+    QTest::newRow("empty post at a disconnect") << QByteArray() << true;
+    QTest::newRow("prompt marker alone") << QByteArray("\xff") << true;
+    QTest::newRow("prompt read as a newline") << QByteArray("\n") << true;
+    QTest::newRow("script output") << QByteArray("printed by a script\n") << false;
+  }
+
+  void test_Osc8OutputExpiryIgnoresWhatIsNotGameOutput() {
+    QFETCH(QByteArray, posted);
+    QFETCH(bool, fromServer);
+
+    feedFromServer(expireLink(qsl("conceal"), qsl("\"expire\":{\"output\":true,\"outputDelay\":30}")) + qsl("\n"));
+    QTest::qWait(60ms);
+    std::string data = posted.toStdString();
+    mpHost->printOnDisplay(data, fromServer);
+    QVERIFY2(bufferShows(qsl("Hint")), "something that is not game output hid the link");
+  }
+
+  void test_Osc8ExpiryRemovesWholeLinesInABatch() {
+    const QString wholeLine = qsl("\x1b]8;;send:%1?config={\"visibility\":{\"action\":\"conceal\",\"wholeline\":true,\"expire\":{\"input\":true}}}\x1b\\%2\x1b]8;;\x1b\\");
+    feedFromServer(wholeLine.arg(qsl("a"), qsl("FirstGone")) + qsl("\n") + wholeLine.arg(qsl("b"), qsl("SecondGone")) + qsl("\n") + wholeLine.arg(qsl("c"), qsl("ThirdGone")) + qsl(" ") + wholeLine.arg(qsl("d"), qsl("SameLine")) + qsl("\nThe text that stays\n"));
+    QVERIFY(bufferShows(qsl("SecondGone")));
+
+    mpHost->mainConsoleView()->getHyperlinkVisibilityManager().onUserInput();
+
+    for (const QString &gone : {qsl("FirstGone"), qsl("SecondGone"), qsl("ThirdGone"), qsl("SameLine")}) {
+      QVERIFY2(!bufferShows(gone), qPrintable(gone));
+    }
+    QVERIFY2(bufferShows(qsl("The text that stays")), "a neighbouring line went with the links");
+  }
+
+  void test_Osc8InputExpiryHearsTheInputLine() {
+    injectData(expireLink(qsl("conceal"), qsl("\"expire\":{\"input\":true}")));
+    QVERIFY(bufferShows(qsl("Hint")));
+
+    QVERIFY2(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("send('from a script', false)")), "the script did not run");
+    QVERIFY2(bufferShows(qsl("Hint")), "a script's send() counted as the player's input");
+
+    TCommandLine *commandLine = mpHost->mainConsoleView()->mpCommandLine;
+    QVERIFY(commandLine);
+    QTest::keyClicks(commandLine, qsl("look"));
+    QTest::keyClick(commandLine, Qt::Key_Return);
+    QVERIFY2(!bufferShows(qsl("Hint")), "the player's command did not hide the link");
   }
 
   // Every link with visibility settings that closes while text is held keeps

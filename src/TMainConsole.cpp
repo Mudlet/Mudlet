@@ -56,6 +56,7 @@
 #include <QDataStream>
 #include <QDialog>
 #include <QDockWidget>
+#include <QGuiApplication>
 #include <QIcon>
 #include <QLabel>
 #include <QLayout>
@@ -318,12 +319,19 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
     reportMainWindowSize();
 
     mpMainFrame->installEventFilter(this);
+
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
+    connect(qGuiApp, &QGuiApplication::focusWindowChanged, this, &TMainConsole::slot_focusWindowChanged);
+#endif
 }
 
 TMainConsole::~TMainConsole()
 {
     // Before any of the teardown, so nothing it reaches through Host::consoleFrontend() meets a half-destroyed view
     mpHost->setMainConsoleView(nullptr);
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
+    disconnect(qGuiApp, &QGuiApplication::focusWindowChanged, this, &TMainConsole::slot_focusWindowChanged);
+#endif
 
     // These widgets' destroyed() handlers would write to maps already destroyed if they ran after this
     // console's members go but before ~QObject severs connections. Only our own children, deleted by
@@ -590,6 +598,13 @@ TConsole* TMainConsole::deregisterSubConsole(const QString& name)
         mpHost->windowRegistry().deregisterSubConsole(name, &pConsole->model());
     }
     return pConsole;
+}
+
+void TMainConsole::forgetSubConsole(TConsole* pConsole)
+{
+    mSubConsoleMap.removeIf([pConsole](const auto& it) {
+        return it.value() == pConsole;
+    });
 }
 
 void TMainConsole::registerDockWidget(const QString& name, TDockWidget* pDockWidget)
@@ -2057,6 +2072,18 @@ bool TMainConsole::eventFilter(QObject* watched, QEvent* event)
     }
     return TConsole::eventFilter(watched, event);
 }
+
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
+// Caret mode's keyboard grab outranks the active window, so holding on to it would keep every key from the script editor
+void TMainConsole::slot_focusWindowChanged(QWindow* pFocusWindow)
+{
+    if (pFocusWindow != window()->windowHandle()) {
+        mUpperPane->releaseKeyboard();
+    } else if (mpHost && mpHost->caretEnabled() && window()->focusWidget() == mUpperPane) {
+        mUpperPane->grabKeyboard();
+    }
+}
+#endif
 
 void TMainConsole::recordActiveCommandLine(TCommandLine* pCommandLine)
 {

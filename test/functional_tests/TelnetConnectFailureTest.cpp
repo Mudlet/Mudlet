@@ -393,6 +393,61 @@ private slots:
         QVERIFY2(!bufferContains(host, qsl("Unable to connect")), "a failed handshake was reported as a failure to connect as well");
         QCOMPARE(recordedEventCount(host, qsl("sysDisconnectionEvent")), 1);
     }
+
+    // A game answering in plain text did not reject the login: the secure option is on for a port
+    // without it. Connected openly first, as a player who has just switched the option on was.
+    void test_aFailedSecureHandshakeSuggestsTurningTheOptionOff()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        QVERIFY2(disconnectAndWait(host), "the profile never noticed its own disconnect");
+        const int disconnectsBefore = countLines(host, qsl("Socket got disconnected"));
+
+        mpServer->setGreeting(QByteArray("Welcome to the game.\r\n"));
+        host->mSslTsl = true;
+        host->mTelnet.connectIt(mLocalhost, mPort);
+
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return countLines(host, qsl("Socket got disconnected")) > disconnectsBefore;
+                         },
+                         20s),
+                 "the failed handshake was not reported by the disconnection path");
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return bufferContains(host, qsl("Secure handshake failed; this game may not support secure connections on this port"));
+                         },
+                         2s),
+                 "a failed handshake was not explained as the game not offering secure connections on that port");
+        QVERIFY2(!bufferContains(host, qsl("rejected by server")), "a failed handshake was reported as the game rejecting the login");
+        QVERIFY2(!bufferContains(host, qsl("Secure connection made")), "a secure connection was announced before its handshake had succeeded");
+    }
+
+    // A connection that was never made did not last long enough to be worth reconnecting
+    // automatically, however long ago the last one that was made began.
+    void test_aFailedSecureHandshakeIsNotRetriedStraightAway()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        host->mTelnet.setAutoReconnect(true);
+        // Past the 5s a connection has to last before its loss sets off an automatic reconnect
+        QTest::qWait(5500ms);
+        QVERIFY2(disconnectAndWait(host), "the profile never noticed its own disconnect");
+        const int disconnectsBefore = countLines(host, qsl("Socket got disconnected"));
+
+        mpServer->setGreeting(QByteArray("Welcome to the game.\r\n"));
+        host->mSslTsl = true;
+        host->mTelnet.connectIt(mLocalhost, mPort);
+
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return countLines(host, qsl("Socket got disconnected")) > disconnectsBefore;
+                         },
+                         20s),
+                 "the failed handshake was not reported by the disconnection path");
+        QTest::qWait(3s);
+        QCOMPARE(countLines(host, qsl("Attempting a secure connection")), 1);
+    }
 #endif
 
     // connectToServer() can save an address the open profile is not using, which is the one a game's
