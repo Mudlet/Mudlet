@@ -1441,6 +1441,11 @@ void TConsole::scrollUp(int lines)
         return;
     }
 
+    // With every line already on screen there is nothing to scroll back to, and a split would only show them twice
+    if (mLowerPane->isHidden() && mUpperPane->imageTopLine() == 0) {
+        return;
+    }
+
     if (showLowerPane()) {
         QTimer::singleShot(0ms, this, [this, lines]() {
             mUpperPane->scrollUp(mLowerPane->getRowCount() + lines);
