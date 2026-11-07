@@ -402,6 +402,7 @@ public:
     static int getRoomName(lua_State*);
     static int setRoomEnv(lua_State*);
     static int setCustomEnvColor(lua_State*);
+    static int unsetCustomEnvColor(lua_State*);
     static int roomLocked(lua_State*);
     static int setAreaName(lua_State*);
     static int setAreaGraphPosition(lua_State*);

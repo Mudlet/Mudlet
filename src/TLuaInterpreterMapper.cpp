@@ -3933,6 +3933,37 @@ int TLuaInterpreter::setCustomEnvColor(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#unsetCustomEnvColor
+int TLuaInterpreter::unsetCustomEnvColor(lua_State* L)
+{
+    const int id = getVerifiedInt(L, __func__, 1, "environmentID");
+    const Host& host = getHostFromLua(L);
+    TMap* pMap = host.mpMap.data();
+    // TMap::restore16ColorSet() puts these back whenever the map or the profile's colours load
+    if (id >= 257 && id <= 272) {
+        return warnArgumentValue(L, __func__, qsl("environment ID %1 is one of the 16 default colors {257 to 272}, which cannot be removed").arg(id));
+    }
+    if (!pMap->mCustomEnvColors.contains(id)) {
+        return warnArgumentValue(L, __func__, qsl("environment ID %1 does not have a custom color").arg(id));
+    }
+    // An mEnvColors remap decides which color a room is drawn in, as in RoomAppearance's colorEnvironment()
+    std::optional<int> userRoomId;
+    for (const TRoom* pR : pMap->mpRoomDB->getRoomMap()) {
+        if (pMap->mEnvColors.value(pR->environment, pR->environment) == id && (!userRoomId || pR->getId() < *userRoomId)) {
+            userRoomId = pR->getId();
+        }
+    }
+    if (userRoomId) {
+        return warnArgumentValue(L, __func__, qsl("environment ID %1 is still used by room ID %2").arg(QString::number(id), QString::number(*userRoomId)));
+    }
+
+    pMap->mCustomEnvColors.remove(id);
+    pMap->setUnsaved(__func__);
+    pMap->updateArea(-1);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setDoor
 int TLuaInterpreter::setDoor(lua_State* L)
 {
