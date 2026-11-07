@@ -737,6 +737,13 @@ signals included.
 A Geyser gauge, button, or container is not a window of its own: it is the labels and windows it is made
 of, so a gauge is its `_back`, `_front` and `_text` labels, which the list has as any other.
 
+`scriptWindowsChanged(profile, names)` says when to read them again: the names, sorted, of the windows
+whose `ScriptWindow` differs from what the list gave at `profileLoaded` or at the last of these. A window
+deleted is gone from the list. Those whose `stackOrder` moved as another was made, deleted, raised or
+lowered are among the names. It comes from the event loop once a turn, however many calls in it changed
+the windows, so a script that makes a gauge and places it is one signal, and a call that changed nothing,
+such as a `moveWindow()` to where the window is, sends none.
+
 ## What still needs a window
 
 Some of what a profile can do has nothing to stand in for the GUI's widgets yet, and does nothing,

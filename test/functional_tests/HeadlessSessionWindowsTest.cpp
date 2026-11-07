@@ -227,6 +227,64 @@ openMapWidget()
         QVERIFY(session.shutdown(false));
         QVERIFY(session.scriptWindows().isEmpty());
     }
+
+    void test_aTurnsChangesAreToldOnce()
+    {
+        const QString name = qsl("Headless Windows Changes");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        QSignalSpy changes(&session, &THeadlessSession::scriptWindowsChanged);
+        const auto toldOnce = [&changes](const QStringList& names) {
+            if (!changes.wait(1000)) {
+                return false;
+            }
+            // Anything more this turn would be queued by now
+            QCoreApplication::processEvents();
+            QCoreApplication::processEvents();
+            const bool once = changes.count() == 1 && changes.at(0).at(0).toString() == qsl("Headless Windows Changes") && changes.at(0).at(1).toStringList() == names;
+            changes.clear();
+            return once;
+        };
+
+        QVERIFY(session.runLua(qsl(R"(createLabel("old", 0, 0, 10, 10, 1))")));
+        QVERIFY(toldOnce({qsl("old")}));
+
+        QVERIFY(session.runLua(qsl(R"lua(
+createLabel("fresh", 0, 0, 10, 10, 1)
+moveWindow("fresh", 50, 60)
+resizeWindow("fresh", 30, 40)
+hideWindow("fresh")
+deleteLabel("old")
+)lua")));
+        QVERIFY(toldOnce({qsl("fresh"), qsl("old")}));
+        QVERIFY(!session.scriptWindow(qsl("old")));
+        const std::optional<THeadlessSession::ScriptWindow> fresh = session.scriptWindow(qsl("fresh"));
+        QVERIFY(fresh);
+        QCOMPARE(fresh->geometry, QRect(50, 60, 30, 40));
+
+        QVERIFY(session.runLua(qsl(R"(moveWindow("fresh", 1, 2))")));
+        QVERIFY(toldOnce({qsl("fresh")}));
+        QVERIFY(session.runLua(qsl(R"(resizeWindow("fresh", 5, 6))")));
+        QVERIFY(toldOnce({qsl("fresh")}));
+        QVERIFY(session.runLua(qsl(R"(showWindow("fresh"))")));
+        QVERIFY(toldOnce({qsl("fresh")}));
+        QVERIFY(session.runLua(qsl(R"(createMiniConsole("mc", 0, 0, 100, 100))")));
+        QVERIFY(toldOnce({qsl("mc")}));
+        QVERIFY(session.runLua(qsl(R"(setBackgroundColor("mc", 1, 2, 3, 255))")));
+        QVERIFY(toldOnce({qsl("mc")}));
+        // A dock is not stacked with the main window's area, so raising a window there does not move it
+        QVERIFY(session.runLua(qsl(R"(openUserWindow("uw"))")));
+        QVERIFY(toldOnce({qsl("uw")}));
+        QVERIFY(session.runLua(qsl(R"(raiseWindow("fresh"))")));
+        QVERIFY(toldOnce({qsl("fresh"), qsl("mc")}));
+
+        QVERIFY(session.runLua(qsl(R"(moveWindow("fresh", 1, 2) moveWindow("mc", 0, 0))")));
+        QVERIFY(!changes.wait(200));
+
+        QVERIFY(session.shutdown(false));
+    }
 };
 
 #include "HeadlessSessionWindowsTest.moc"
