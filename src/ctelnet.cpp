@@ -5043,8 +5043,11 @@ void cTelnet::setGMCPVariables(QByteArrayView msg)
     data.removeIf([](const char ch) {
         return ch == '\n' || ch == '\r';
     });
-    // replace ANSI escape character with escaped version, to handle improperly passed ANSI codes
-    data.replace('\x1B', QByteArrayView("\\u001B"));
+    // replace ANSI escape character with escaped version, to handle improperly passed ANSI codes;
+    // contains() first, as replace() builds a QByteArrayMatcher even when nothing matches
+    if (data.contains('\x1B')) {
+        data.replace('\x1B', QByteArrayView("\\u001B"));
+    }
 
     const bool forDiscord =
             packageMessage.startsWith(QLatin1String("External.Discord.Status"), Qt::CaseInsensitive) || packageMessage.startsWith(QLatin1String("External.Discord.Info"), Qt::CaseInsensitive);
