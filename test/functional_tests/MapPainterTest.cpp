@@ -35,12 +35,15 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include <memory>
+
 #include "ExitAppearance.h"
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletApp.h"
 #include "MudletInstanceCoordinator.h"
 #include "PortableModeTestHelper.h"
+#include "RoomAppearance.h"
 #include "TArea.h"
 #include "TMap.h"
 #include "TMapLabel.h"
@@ -49,6 +52,7 @@
 #include "T2DMap.h"
 #include "TNullMapView.h"
 #include "TRoomDB.h"
+#include "mapInfoContributorManager.h"
 #include "mudlet.h"
 
 #include "GroupedTest.h"
@@ -150,6 +154,96 @@ private:
     {
         const QString path = qsl("%1/MapPainterTest-%2.png").arg(QDir::tempPath(), name);
         return image.save(path) ? qsl("The image is at %1").arg(path) : qsl("The image could not be saved to %1").arg(path);
+    }
+
+    static constexpr int scmPlayerMarkerStyle = 3;
+    static QColor markerColour() { return QColor(255, 128, 0); }
+    static QColor infoBoxColour() { return QColor(0, 128, 128); }
+    // Centred on the west room at the area's zoom of 7.5, a map unit is 40 pixels across the 400 by 300 view
+    static constexpr qreal scmViewZoom = 7.5;
+    static QPoint westCentreInView() { return QPoint(200, 150); }
+    static QPoint eastCentreInView() { return QPoint(280, 150); }
+
+    // The player in the west room, drawn as a solid marker, and the settings T2DMap::init() takes from the profile
+    void setUpPlayerView()
+    {
+        map()->mRoomIdHash[map()->mProfileName] = scmWestRoom;
+        map()->mPlayerRoomStyle = scmPlayerMarkerStyle;
+        map()->mPlayerRoomInnerDiameterPercentage = 0;
+        map()->mPlayerRoomInnerColor = markerColour();
+        map()->mPlayerRoomOuterColor = markerColour();
+        roomDB()->getArea(mAreaId)->set2DMapZoom(scmViewZoom);
+        mpHost->mMapperUseAntiAlias = false;
+        mpHost->mMapperCenterSmallAreas = false;
+        mpHost->mMapInfoBg = infoBoxColour();
+    }
+
+    TMapPainter::View playerView() const
+    {
+        TMapPainter::View view;
+        view.mpMap = map();
+        view.mpHost = mpHost;
+        view.mSize = QSize(scmImageWidth, scmImageHeight);
+        view.eSize = mpHost->mLineSize;
+        view.mBSize = mpHost->mRoomBorderSize;
+        view.rSize = mpHost->mRoomSize;
+        view.mMapperUseAntiAlias = mpHost->mMapperUseAntiAlias;
+        view.mLargeAreaExitArrows = mpHost->getLargeAreaExitArrows();
+        view.mPlayerRoomColorGradientStops =
+                RoomAppearance::playerRoomStops(map()->mPlayerRoomStyle, map()->mPlayerRoomInnerDiameterPercentage, map()->mPlayerRoomInnerColor, map()->mPlayerRoomOuterColor);
+        return view;
+    }
+
+    static QImage paintedView(TMapPainter& painter, const TMapPainter::View& view, TMapPainter::PaintResult& result)
+    {
+        QImage image = blankImage();
+        QPainter imagePainter(&image);
+        painter.paintView(imagePainter, view, result);
+        return image;
+    }
+
+    // An info box line from a contributor of the test's own, which counts its calls and keeps what it was asked about
+    struct InfoBoxCalls
+    {
+        int count = 0;
+        int roomId = 0;
+        int selectionSize = 0;
+        int displayAreaId = 0;
+    };
+    std::shared_ptr<InfoBoxCalls> showInfoBox()
+    {
+        auto calls = std::make_shared<InfoBoxCalls>();
+        map()->mMapInfoContributorManager->registerContributor(qsl("MapPainterTest"), [calls](int roomID, int selectionSize, int, int displayAreaId, QColor&) {
+            ++calls->count;
+            calls->roomId = roomID;
+            calls->selectionSize = selectionSize;
+            calls->displayAreaId = displayAreaId;
+            return MapInfoProperties{false, false, qsl("Painted by the test"), QColor(Qt::white)};
+        });
+        mpHost->mMapInfoContributors = {qsl("MapPainterTest")};
+        return calls;
+    }
+
+    void hideInfoBox()
+    {
+        map()->mMapInfoContributorManager->removeContributor(qsl("MapPainterTest"));
+        mpHost->mMapInfoContributors.clear();
+    }
+
+    // What both the painter and the mapper widget must show of the view: the player's marker on the west room,
+    // the east room, and the info box's background above its first line
+    static QString probeFailure(const QImage& image)
+    {
+        if (image.pixelColor(westCentreInView()) != markerColour()) {
+            return qsl("the player's marker is %1").arg(image.pixelColor(westCentreInView()).name());
+        }
+        if (image.pixelColor(eastCentreInView()) != QColor(Qt::blue)) {
+            return qsl("the east room is %1").arg(image.pixelColor(eastCentreInView()).name());
+        }
+        if (image.pixelColor(12, 12) != infoBoxColour()) {
+            return qsl("the info box corner is %1").arg(image.pixelColor(12, 12).name());
+        }
+        return QString();
     }
 
 private slots:
@@ -444,6 +538,241 @@ private slots:
         QVERIFY(holds(mapperImage, Qt::magenta));
         QCOMPARE(nullViewImage.size(), mapperImage.size());
         QVERIFY2(nullViewImage == mapperImage, qPrintable(saved(nullViewImage, qsl("null-view-export")) + qsl("; ") + saved(mapperImage, qsl("mapper-export"))));
+    }
+
+    // A whole view is painted centred on the player, with their marker, the rooms around them and the info box
+    void aViewIsPaintedCentredOnThePlayer()
+    {
+        setUpPlayerView();
+        const auto calls = showInfoBox();
+        auto removeInfoBox = qScopeGuard([this]() {
+            hideInfoBox();
+        });
+
+        TMapPainter painter;
+        TMapPainter::PaintResult result;
+        const QImage image = paintedView(painter, playerView(), result);
+
+        const QString failure = probeFailure(image);
+        QVERIFY2(failure.isEmpty(), qPrintable(failure + qsl("; ") + saved(image, qsl("view"))));
+        // Half a cell is a room's whole width at the default room size, so the cell's edge is the background
+        QVERIFY2(image.pixelColor(eastCentreInView() + QPoint(18, 0)) == mpHost->mBgColor_2, qPrintable(saved(image, qsl("view"))));
+        QCOMPARE(result.view.mAreaID, mAreaId);
+        QCOMPARE(result.view.mRoomID, scmWestRoom);
+        QCOMPARE(result.view.mRX, westCentreInView().x());
+        QCOMPARE(result.view.mRY, westCentreInView().y());
+        QCOMPARE(result.view.xyzoom, scmViewZoom);
+        QVERIFY(result.view.mShiftMode);
+        QVERIFY(result.areaChanged.has_value());
+        QCOMPARE(result.areaChanged->first, mAreaId);
+        QCOMPARE(result.areaChanged->second, -2);
+        QCOMPARE(calls->count, 1);
+        QCOMPARE(calls->roomId, scmWestRoom);
+        QCOMPARE(calls->displayAreaId, mAreaId);
+    }
+
+    // In grid mode a room fills its whole cell
+    void aGridModeViewFillsEachCell()
+    {
+        setUpPlayerView();
+        roomDB()->getArea(mAreaId)->gridMode = true;
+
+        TMapPainter painter;
+        TMapPainter::PaintResult result;
+        const QImage image = paintedView(painter, playerView(), result);
+
+        for (const QPoint& offset : {QPoint(0, 0), QPoint(18, 0), QPoint(-18, 18)}) {
+            QVERIFY2(image.pixelColor(eastCentreInView() + offset) == QColor(Qt::blue), qPrintable(saved(image, qsl("grid"))));
+        }
+        QVERIFY2(image.pixelColor(eastCentreInView() + QPoint(-40, 0)) == mpHost->mBgColor_2, qPrintable(saved(image, qsl("grid"))));
+    }
+
+    // Zoomed out to a couple of pixels a room, a room is a blob of its colour and the player's still has its marker
+    void aZoomedOutViewDrawsRoomsAsBlobs()
+    {
+        setUpPlayerView();
+        roomDB()->getArea(mAreaId)->set2DMapZoom(150.0);
+
+        TMapPainter painter;
+        TMapPainter::PaintResult result;
+        const QImage image = paintedView(painter, playerView(), result);
+
+        QVERIFY(result.view.mRoomWidth < TMapPainter::cLodPixelThreshold);
+        QVERIFY2(image.pixelColor(westCentreInView() + QPoint(4, 0)) == QColor(Qt::blue), qPrintable(saved(image, qsl("lod"))));
+        QVERIFY2(image.pixelColor(westCentreInView()) == markerColour(), qPrintable(saved(image, qsl("lod"))));
+    }
+
+    // The info box starts to the right of the selection's room list while that is shown
+    void theInfoBoxStartsRightOfTheSelectionList()
+    {
+        setUpPlayerView();
+        showInfoBox();
+        auto removeInfoBox = qScopeGuard([this]() {
+            hideInfoBox();
+        });
+        TMapPainter::View view = playerView();
+        view.mSelectionListVisible = true;
+        view.mSelectionListX = 0;
+        view.mSelectionListWidth = 100;
+
+        TMapPainter painter;
+        TMapPainter::PaintResult result;
+        const QImage image = paintedView(painter, view, result);
+
+        QVERIFY2(image.pixelColor(112, 12) == infoBoxColour(), qPrintable(saved(image, qsl("info-box"))));
+        QVERIFY2(image.pixelColor(12, 12) != infoBoxColour(), qPrintable(saved(image, qsl("info-box"))));
+    }
+
+    // Following the player into another area drops the selected rooms left behind, and says the area changed
+    void followingThePlayerIntoAnotherAreaPrunesTheSelection()
+    {
+        setUpPlayerView();
+        const int otherAreaId = roomDB()->addArea(qsl("Left behind"));
+        constexpr int roomLeftBehind = 3;
+        QVERIFY(map()->addRoom(roomLeftBehind));
+        QVERIFY(map()->setRoomArea(roomLeftBehind, otherAreaId));
+        QVERIFY(map()->setRoomCoordinates(roomLeftBehind, 0, 0, 0));
+        const auto calls = showInfoBox();
+        auto removeInfoBox = qScopeGuard([this]() {
+            hideInfoBox();
+        });
+        TMapPainter::View view = playerView();
+        view.mAreaID = otherAreaId;
+        view.mLastViewedAreaID = otherAreaId;
+        view.mMultiSelectionSet = {scmWestRoom, roomLeftBehind};
+        view.mMultiSelectionHighlightRoomId = roomLeftBehind;
+        view.mSelectionListVisible = true;
+        view.mSelectionListWidth = 100;
+
+        TMapPainter painter;
+        TMapPainter::PaintResult result;
+        const QImage image = paintedView(painter, view, result);
+
+        QVERIFY(result.selectionPruned);
+        QCOMPARE(result.view.mMultiSelectionSet, QSet<int>{scmWestRoom});
+        QCOMPARE(result.view.mMultiSelectionHighlightRoomId, scmWestRoom);
+        QVERIFY(!result.view.mSelectionListVisible);
+        QVERIFY(result.areaChanged.has_value());
+        QCOMPARE(result.areaChanged->first, mAreaId);
+        QCOMPARE(result.areaChanged->second, otherAreaId);
+        QCOMPARE(result.view.mLastViewedAreaID, mAreaId);
+        QCOMPARE(calls->roomId, scmWestRoom);
+        QCOMPARE(calls->selectionSize, 1);
+        QVERIFY2(image.pixelColor(12, 12) == infoBoxColour(), qPrintable(saved(image, qsl("pruned"))));
+    }
+
+    // A click on an area exit's marker is handed back as a speedwalk to the room it leads to
+    void aClickOnAnAreaExitIsHandedBackAsAPendingSpeedwalk()
+    {
+        setUpPlayerView();
+        const int otherAreaId = roomDB()->addArea(qsl("Through the exit"));
+        constexpr int roomThroughTheExit = 3;
+        QVERIFY(map()->addRoom(roomThroughTheExit));
+        QVERIFY(map()->setRoomArea(roomThroughTheExit, otherAreaId));
+        QVERIFY(map()->setRoomCoordinates(roomThroughTheExit, 4, 0, 0));
+        QVERIFY(map()->setExit(scmEastRoom, roomThroughTheExit, DIR_EAST));
+        TMapPainter::View view = playerView();
+        view.mAreaID = mAreaId;
+        view.mPick = true;
+        view.mStartSpeedWalk = true;
+        // The marker is a room's width beyond the room the exit leaves
+        view.mPHighlight = eastCentreInView() + QPoint(40, 0);
+
+        TMapPainter painter;
+        TMapPainter::PaintResult result;
+        paintedView(painter, view, result);
+
+        QVERIFY(!result.view.mPick);
+        QVERIFY(!result.view.mStartSpeedWalk);
+        QVERIFY(result.pendingSpeedWalk.has_value());
+        QCOMPARE(result.pendingSpeedWalk->first, scmWestRoom);
+        QCOMPARE(result.pendingSpeedWalk->second, roomThroughTheExit);
+    }
+
+    // The mapper widget draws through the painter, so it shows the same view
+    void theMapperWidgetPaintsTheSameView()
+    {
+        setUpPlayerView();
+        showInfoBox();
+        auto removeInfoBox = qScopeGuard([this]() {
+            hideInfoBox();
+        });
+        T2DMap mapperMap;
+        mapperMap.mpMap = map();
+        mapperMap.mpHost = mpHost;
+        mapperMap.init();
+        mapperMap.setPlayerRoomStyle(map()->mPlayerRoomStyle);
+        mapperMap.resize(scmImageWidth, scmImageHeight);
+
+        const QImage image = mapperMap.grab().toImage().convertToFormat(QImage::Format_ARGB32);
+
+        QCOMPARE(image.size(), QSize(scmImageWidth, scmImageHeight));
+        const QString failure = probeFailure(image);
+        QVERIFY2(failure.isEmpty(), qPrintable(failure + qsl("; ") + saved(image, qsl("mapper-widget"))));
+        QCOMPARE(mapperMap.getAreaId(), mAreaId);
+        QCOMPARE(mapperMap.getCenterRoomId(), scmWestRoom);
+    }
+
+    // The info box's Lua reads the area from the mapper, as getMapZoom() and setMapZoom() do, so the frame has moved it
+    // there by then; and an export from that Lua leaves the frame to finish as it was drawing it
+    void theInfoBoxLuaSeesTheFramesAreaAndCanExport()
+    {
+        setUpPlayerView();
+        T2DMap mapperMap;
+        mapperMap.mpMap = map();
+        mapperMap.mpHost = mpHost;
+        mapperMap.init();
+        mapperMap.setPlayerRoomStyle(map()->mPlayerRoomStyle);
+        mapperMap.resize(scmImageWidth, scmImageHeight);
+        const QString exportFile = qsl("%1/from-the-info-box.png").arg(mConfigDir.path());
+        QList<int> areasSeen;
+        map()->mMapInfoContributorManager->registerContributor(qsl("MapPainterTest"), [&mapperMap, &areasSeen, exportFile, this](int, int, int, int, QColor&) {
+            areasSeen.append(mapperMap.getAreaId());
+            if (areasSeen.size() == 1) {
+                mapperMap.exportAreaToImage(mAreaId, exportFile, 0, 1.0);
+            }
+            return MapInfoProperties{false, false, qsl("Painted by the test"), QColor(Qt::white)};
+        });
+        mpHost->mMapInfoContributors = {qsl("MapPainterTest")};
+        auto removeInfoBox = qScopeGuard([this]() {
+            hideInfoBox();
+        });
+
+        const QImage image = mapperMap.grab().toImage().convertToFormat(QImage::Format_ARGB32);
+        mapperMap.grab();
+
+        QCOMPARE(areasSeen, (QList<int>{mAreaId, mAreaId}));
+        QVERIFY(!exported(&mapperMap, exportFile).isNull());
+        const QString failure = probeFailure(image);
+        QVERIFY2(failure.isEmpty(), qPrintable(failure + qsl("; ") + saved(image, qsl("info-box-export"))));
+        QCOMPARE(roomDB()->getArea(mAreaId)->get2DMapZoom(), scmViewZoom);
+        QCOMPARE(mapperMap.getAreaId(), mAreaId);
+        QCOMPARE(mapperMap.getCenterRoomId(), scmWestRoom);
+    }
+
+    // Square and round rooms make their symbols at different sizes, and each painter keeps its own, so one painter
+    // switching to round rooms leaves another to remake its symbols when it switches
+    void eachPainterRemakesItsSymbolsForRoundRooms()
+    {
+        setUpPlayerView();
+        hideInfoBox();
+        roomDB()->getRoom(scmEastRoom)->mSymbol = qsl("W");
+        TMapPainter::View roundView = playerView();
+        roundView.mBubbleMode = true;
+
+        TMapPainter painter;
+        TMapPainter otherPainter;
+        TMapPainter freshPainter;
+        TMapPainter::PaintResult squareResult;
+        paintedView(painter, playerView(), squareResult);
+        TMapPainter::PaintResult result;
+        paintedView(otherPainter, roundView, result);
+        // As the painter's caller keeps the view between frames, so the room size the symbols were made at
+        TMapPainter::View roundAgain = squareResult.view;
+        roundAgain.mBubbleMode = true;
+        const QImage round = paintedView(painter, roundAgain, result);
+        const QImage fresh = paintedView(freshPainter, roundView, result);
+        QVERIFY2(round == fresh, qPrintable(saved(round, qsl("round")) + qsl("; ") + saved(fresh, qsl("round-fresh"))));
     }
 };
 
