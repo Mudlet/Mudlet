@@ -228,15 +228,56 @@ int clampedWrapIndent(const int indentSize, const int maxWidth)
     return (indentSize > 0 && indentSize < maxWidth) ? std::min(indentSize, maxWidth / 2) : 0;
 }
 
+// Whether the line has no LineFeed and fits widthAvailable by a column count never below getWrapInfo()'s: a
+// grapheme is as wide as its first code point (an unpaired surrogate may pair with the next QChar there) or
+// one column wider for VS16, and no width is negative. Out of line, keeping fitsUnwrapped() cheap to inline.
+Q_NEVER_INLINE bool codePointColumnsFit(const QString& lineText, const qsizetype widthAvailable, const QPointer<Host>& host)
+{
+    // getWrapInfo() reads the same setting, and has no host to read it from only when it does not wrap at all
+    const bool wideAmbiguous = host ? host->wideAmbiguousEAsianGlyphs() : true;
+    qsizetype columns = 0;
+    const qsizetype total = lineText.size();
+    const QChar* const units = lineText.constData();
+    for (qsizetype i = 0; i < total; ++i) {
+        const char16_t unit = units[i].unicode();
+        if (unit >= 0x20 && unit < 0x7F) {
+            ++columns;
+        } else if (unit == QChar::LineFeed) {
+            return false;
+        } else if (QChar::isHighSurrogate(unit) && i + 1 < total && units[i + 1].isLowSurrogate()) {
+            columns += graphemeInfo::getWidth(QChar::surrogateToUcs4(unit, units[i + 1].unicode()), wideAmbiguous);
+            ++i;
+        } else if (QChar::isSurrogate(unit)) {
+            columns += graphemeInfo::maxWidth;
+        } else if (unit == 0xFE0F) {
+            // VS16 may draw a one-column symbol before it as a two-column emoji
+            ++columns;
+        } else {
+            columns += graphemeInfo::getWidth(unit, wideAmbiguous);
+        }
+        if (columns > widthAvailable) {
+            return false;
+        }
+    }
+    return true;
+}
+
 // True only if getWrapInfo() would find no break, decided without its scan, the costliest part of appending
 // a line. No grapheme is wider than graphemeInfo::maxWidth columns or shorter than one QChar, and printable
 // ASCII (which excludes LineFeed and Tab) is one column per QChar.
-bool fitsUnwrapped(const QString& lineText, const qsizetype widthAvailable)
+bool fitsUnwrapped(const QString& lineText, const qsizetype widthAvailable, const QPointer<Host>& host)
 {
     if (lineText.size() * graphemeInfo::maxWidth <= widthAvailable) {
         return !lineText.contains(QChar::LineFeed);
     }
-    return lineText.size() <= widthAvailable && lineBreakInfo::printableAscii(lineText);
+    if (lineText.size() <= widthAvailable) {
+        if (lineBreakInfo::printableAscii(lineText)) {
+            return true;
+        }
+    } else if (widthAvailable < 0 || lineBreakInfo::printableAscii(QStringView(lineText).first(widthAvailable + 1))) {
+        return false;
+    }
+    return codePointColumnsFit(lineText, widthAvailable, host);
 }
 
 // Asks for the cache line holding the allocator's bookkeeping for a heap block,
@@ -3020,7 +3061,7 @@ void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch)
     // Spares wrapLine()'s setup for the usual last line that fits; one with no text or no TChars still goes
     // through, as wrapLine() rebuilds it. The width must not exceed getWrapInfo()'s widthAvailable for mWrapAt.
     const bool fitsAsIs = wrapStartLine == lastValidLine && !lineBuffer.at(wrapStartLine).isEmpty() && !buffer[wrapStartLine].empty()
-                          && fitsUnwrapped(lineBuffer.at(wrapStartLine), wrapsFromPreviousLine(wrapStartLine) ? mWrapAt : mWrapAt - clampedWrapIndent(mWrapIndent, mWrapAt));
+                          && fitsUnwrapped(lineBuffer.at(wrapStartLine), wrapsFromPreviousLine(wrapStartLine) ? mWrapAt : mWrapAt - clampedWrapIndent(mWrapIndent, mWrapAt), mpHost);
     const int addedLines = fitsAsIs ? 0 : wrapLine(wrapStartLine, mWrapAt, mWrapIndent, mWrapHangingIndent);
     // The line feed ended this line, so an empty wrapped line left by the
     // spaces it ended on is where the next line starts, not more of this one
@@ -6675,7 +6716,7 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
 
     const bool indentToCome = isNewline && !startsIndented;
     const qsizetype widthAvailable = std::min<qsizetype>(indentToCome ? maxWidth - indent : maxWidth, mWrapAt);
-    if (fitsUnwrapped(lineText, widthAvailable)) {
+    if (fitsUnwrapped(lineText, widthAvailable, mpHost)) {
         return output;
     }
     const bool plainAscii = lineBreakInfo::printableAscii(lineText);
