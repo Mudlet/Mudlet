@@ -87,8 +87,10 @@
 #include <QToolButton>
 #include <QToolBar>
 #include <QTreeWidgetItemIterator>
+#include <array>
 #include <chrono>
 #include <sstream>
+#include <utility>
 #include <pugixml.hpp>
 #include <QVBoxLayout>
 
@@ -2557,6 +2559,35 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
     } // End of switch()
 }
 
+// QTreeWidgetItem::setData() reallocates the item's role list for each role it adds, and
+// setAllSearchData() adds seven to each of the many rows a broad search makes
+class dlgTriggerEditor::SearchResultItem : public QTreeWidgetItem
+{
+public:
+    using QTreeWidgetItem::QTreeWidgetItem;
+
+    QVariant data(const int column, const int role) const override
+    {
+        if (column == 0 && role >= IdRole && role <= IndexRole) {
+            return mRoleData[role - IdRole];
+        }
+        return QTreeWidgetItem::data(column, role);
+    }
+
+    void setData(const int column, const int role, const QVariant& value) override
+    {
+        if (column == 0 && role >= IdRole && role <= IndexRole) {
+            mRoleData[role - IdRole] = value;
+            emitDataChanged();
+            return;
+        }
+        QTreeWidgetItem::setData(column, role, value);
+    }
+
+private:
+    std::array<QVariant, IndexRole - IdRole + 1> mRoleData;
+};
+
 void dlgTriggerEditor::slot_searchMudletItems(const int index)
 {
     if (index < 0) {
@@ -2579,6 +2610,20 @@ void dlgTriggerEditor::slot_searchMudletItems(const int index)
 
     if (mSearchOptions & enums::EditorSearchOptionIncludeVariables) {
         searchVariables(s);
+    }
+
+    // With sorting on, addTopLevelItems() inserts the rows one at a time, each in front of the last
+    const bool sortingEnabled = treeWidget_searchResults->isSortingEnabled();
+    treeWidget_searchResults->setSortingEnabled(false);
+    treeWidget_searchResults->addTopLevelItems(std::exchange(mPendingSearchResults, {}));
+    treeWidget_searchResults->setSortingEnabled(sortingEnabled);
+    // Expansion is held by the view, so it can only be set once a row is in the tree. By row
+    // rather than by item, as finding an item's row is a linear search of the top-level rows
+    const QAbstractItemModel* model = treeWidget_searchResults->model();
+    for (int row = 0, total = treeWidget_searchResults->topLevelItemCount(); row < total; ++row) {
+        if (treeWidget_searchResults->topLevelItem(row)->childCount()) {
+            treeWidget_searchResults->expand(model->index(row, 0));
+        }
     }
 
     mpSourceEditorEdbee->controller()->textSearcher()->setSearchTerm(s);
@@ -2653,10 +2698,10 @@ void dlgTriggerEditor::searchVariables(const QString& text)
             if ((startPos = findSearchMatch(name, text)) != -1) {
                 QStringList sl;
                 sl << tr("Variable") << idString << tr("Name");
-                parent = new QTreeWidgetItem(sl);
+                parent = new SearchResultItem(sl);
                 // We do not (yet) worry about multiple search results in the "name"
                 setAllSearchData(parent, name, vu->shortVarName(varDecendent), SearchResultIsName, startPos);
-                treeWidget_searchResults->addTopLevelItem(parent);
+                mPendingSearchResults.append(parent);
             }
 
             // The additional first test is needed to exclude the case when
@@ -2667,17 +2712,16 @@ void dlgTriggerEditor::searchVariables(const QString& text)
                 QStringList sl;
                 if (!parent) {
                     sl << tr("Variable") << idString << tr("Value") << value;
-                    parent = new QTreeWidgetItem(sl);
+                    parent = new SearchResultItem(sl);
                     // We do not (yet) worry about multiple search results in the "value"
                     setAllSearchData(parent, name, vu->shortVarName(varDecendent), SearchResultIsValue, startPos);
-                    treeWidget_searchResults->addTopLevelItem(parent);
+                    mPendingSearchResults.append(parent);
                 } else {
                     sl << QString() << QString() << tr("Value") << value;
-                    pItem = new QTreeWidgetItem(sl);
+                    pItem = new SearchResultItem(sl);
                     // We do not (yet) worry about multiple search results in the "value"
                     setAllSearchData(pItem, name, vu->shortVarName(varDecendent), SearchResultIsValue, startPos);
                     parent->addChild(pItem);
-                    parent->setExpanded(true);
                 }
             }
         }
@@ -2703,24 +2747,23 @@ void dlgTriggerEditor::searchSingleTimer(TTimer* timer, const QString& text)
     if ((startPos = findSearchMatch(name, text)) != -1) {
         QStringList sl;
         sl << tr("Timer") << name << tr("Name");
-        parent = new QTreeWidgetItem(sl);
+        parent = new SearchResultItem(sl);
         setAllSearchData(parent, EditorViewType::cmTimerView, name, timer->getID(), SearchResultIsName, startPos);
-        treeWidget_searchResults->addTopLevelItem(parent);
+        mPendingSearchResults.append(parent);
     }
 
     if ((startPos = findSearchMatch(timer->getCommand(), text)) != -1) {
         QStringList sl;
         if (!parent) {
             sl << tr("Timer") << name << tr("Command");
-            parent = new QTreeWidgetItem(sl);
+            parent = new SearchResultItem(sl);
             setAllSearchData(parent, EditorViewType::cmTimerView, name, timer->getID(), SearchResultIsCommand, startPos);
-            treeWidget_searchResults->addTopLevelItem(parent);
+            mPendingSearchResults.append(parent);
         } else {
             sl << QString() << QString() << tr("Command");
-            pItem = new QTreeWidgetItem(parent, sl);
+            pItem = new SearchResultItem(parent, sl);
             setAllSearchData(pItem, EditorViewType::cmTimerView, name, timer->getID(), SearchResultIsCommand, startPos);
             parent->addChild(pItem);
-            parent->setExpanded(true);
         }
     }
 
@@ -2737,24 +2780,23 @@ void dlgTriggerEditor::searchSingleKey(TKey* key, const QString& text)
     if ((startPos = findSearchMatch(name, text)) != -1) {
         QStringList sl;
         sl << tr("Key") << name << tr("Name");
-        parent = new QTreeWidgetItem(sl);
+        parent = new SearchResultItem(sl);
         setAllSearchData(parent, EditorViewType::cmKeysView, name, key->getID(), SearchResultIsName, startPos);
-        treeWidget_searchResults->addTopLevelItem(parent);
+        mPendingSearchResults.append(parent);
     }
 
     if ((startPos = findSearchMatch(key->getCommand(), text)) != -1) {
         QStringList sl;
         if (!parent) {
             sl << tr("Key") << name << tr("Command");
-            parent = new QTreeWidgetItem(sl);
+            parent = new SearchResultItem(sl);
             setAllSearchData(parent, EditorViewType::cmKeysView, name, key->getID(), SearchResultIsCommand, startPos);
-            treeWidget_searchResults->addTopLevelItem(parent);
+            mPendingSearchResults.append(parent);
         } else {
             sl << QString() << QString() << tr("Command");
-            pItem = new QTreeWidgetItem(parent, sl);
+            pItem = new SearchResultItem(parent, sl);
             setAllSearchData(pItem, EditorViewType::cmKeysView, name, key->getID(), SearchResultIsCommand, startPos);
             parent->addChild(pItem);
-            parent->setExpanded(true);
         }
     }
 
@@ -2791,15 +2833,14 @@ void dlgTriggerEditor::emitScriptSearchMatches(
             QStringList sl;
             if (!parent) {
                 sl << parentLabel << name << tr("Lua code (%1:%2)").arg(index + 1).arg(startPos + 1) << whatText;
-                parent = new QTreeWidgetItem(sl);
+                parent = new SearchResultItem(sl);
                 setAllSearchData(parent, viewType, name, objectId, SearchResultIsScript, startPos, index, instance++);
-                treeWidget_searchResults->addTopLevelItem(parent);
+                mPendingSearchResults.append(parent);
             } else {
                 sl << QString() << QString() << tr("Lua code (%1:%2)").arg(index + 1).arg(startPos + 1) << whatText;
-                auto* pItem = new QTreeWidgetItem(parent, sl);
+                auto* pItem = new SearchResultItem(parent, sl);
                 setAllSearchData(pItem, viewType, name, objectId, SearchResultIsScript, startPos, index, instance++);
                 parent->addChild(pItem);
-                parent->setExpanded(true);
             }
             ++startPos;
         }
@@ -2825,24 +2866,23 @@ void dlgTriggerEditor::searchSingleAction(TAction* action, const QString& text)
     if ((startPos = findSearchMatch(name, text)) != -1) {
         QStringList sl;
         sl << tr("Button") << name << tr("Name");
-        parent = new QTreeWidgetItem(sl);
+        parent = new SearchResultItem(sl);
         setAllSearchData(parent, EditorViewType::cmActionView, name, action->getID(), SearchResultIsName, startPos);
-        treeWidget_searchResults->addTopLevelItem(parent);
+        mPendingSearchResults.append(parent);
     }
 
     if ((startPos = findSearchMatch(action->getCommandButtonDown(), text)) != -1) {
         QStringList sl;
         if (!parent) {
             sl << tr("Button") << name << (action->isPushDownButton() ? tr("Command {Down}") : tr("Command"));
-            parent = new QTreeWidgetItem(sl);
+            parent = new SearchResultItem(sl);
             setAllSearchData(parent, EditorViewType::cmActionView, name, action->getID(), SearchResultIsCommand, startPos);
-            treeWidget_searchResults->addTopLevelItem(parent);
+            mPendingSearchResults.append(parent);
         } else {
             sl << QString() << QString() << (action->isPushDownButton() ? tr("Command {Down}") : tr("Command"));
-            pItem = new QTreeWidgetItem(parent, sl);
+            pItem = new SearchResultItem(parent, sl);
             setAllSearchData(pItem, EditorViewType::cmActionView, name, action->getID(), SearchResultIsCommand, startPos);
             parent->addChild(pItem);
-            parent->setExpanded(true);
         }
     }
 
@@ -2851,15 +2891,14 @@ void dlgTriggerEditor::searchSingleAction(TAction* action, const QString& text)
             QStringList sl;
             if (!parent) {
                 sl << tr("Button") << name << tr("Command {Up}");
-                parent = new QTreeWidgetItem(sl);
+                parent = new SearchResultItem(sl);
                 setAllSearchData(parent, EditorViewType::cmActionView, name, action->getID(), SearchResultIsExtraCommand, startPos);
-                treeWidget_searchResults->addTopLevelItem(parent);
+                mPendingSearchResults.append(parent);
             } else {
                 sl << QString() << QString() << tr("Command {Up}");
-                pItem = new QTreeWidgetItem(parent, sl);
+                pItem = new SearchResultItem(parent, sl);
                 setAllSearchData(pItem, EditorViewType::cmActionView, name, action->getID(), SearchResultIsExtraCommand, startPos);
                 parent->addChild(pItem);
-                parent->setExpanded(true);
             }
         }
     }
@@ -2877,15 +2916,14 @@ void dlgTriggerEditor::searchSingleAction(TAction* action, const QString& text)
             QStringList sl;
             if (!parent) {
                 sl << tr("Button") << name << tr("Stylesheet {L: %1 C: %2}").arg(index + 1).arg(startPos + 1) << textList.at(index);
-                parent = new QTreeWidgetItem(sl);
+                parent = new SearchResultItem(sl);
                 setAllSearchData(parent, EditorViewType::cmActionView, name, action->getID(), SearchResultsIsCss, startPos, index, instance++);
-                treeWidget_searchResults->addTopLevelItem(parent);
+                mPendingSearchResults.append(parent);
             } else {
                 sl << QString() << QString() << tr("Stylesheet {L: %1 C: %2}").arg(index + 1).arg(startPos + 1) << textList.at(index);
-                pItem = new QTreeWidgetItem(parent, sl);
+                pItem = new SearchResultItem(parent, sl);
                 setAllSearchData(pItem, EditorViewType::cmActionView, name, action->getID(), SearchResultsIsCss, startPos, index, instance++);
                 parent->addChild(pItem);
-                parent->setExpanded(true);
             }
             ++startPos;
         }
@@ -2913,9 +2951,9 @@ void dlgTriggerEditor::searchSingleScript(TScript* script, const QString& text)
     if ((startPos = findSearchMatch(name, text)) != -1) {
         QStringList sl;
         sl << tr("Script") << name << tr("Name");
-        parent = new QTreeWidgetItem(sl);
+        parent = new SearchResultItem(sl);
         setAllSearchData(parent, EditorViewType::cmScriptView, name, script->getID(), SearchResultIsName, startPos);
-        treeWidget_searchResults->addTopLevelItem(parent);
+        mPendingSearchResults.append(parent);
     }
 
     QStringList textList = script->getEventHandlerList();
@@ -2931,15 +2969,14 @@ void dlgTriggerEditor::searchSingleScript(TScript* script, const QString& text)
             QStringList sl;
             if (!parent) {
                 sl << tr("Script") << name << tr("Event Handler") << textList.at(index);
-                parent = new QTreeWidgetItem(sl);
+                parent = new SearchResultItem(sl);
                 setAllSearchData(parent, EditorViewType::cmScriptView, name, script->getID(), SearchResultIsEventHandler, startPos, index, instance++);
-                treeWidget_searchResults->addTopLevelItem(parent);
+                mPendingSearchResults.append(parent);
             } else {
                 sl << QString() << QString() << tr("Event Handler") << textList.at(index);
-                pItem = new QTreeWidgetItem(parent, sl);
+                pItem = new SearchResultItem(parent, sl);
                 setAllSearchData(pItem, EditorViewType::cmScriptView, name, script->getID(), SearchResultIsEventHandler, startPos, index, instance++);
                 parent->addChild(pItem);
-                parent->setExpanded(true);
             }
             ++startPos;
         }
@@ -2967,24 +3004,23 @@ void dlgTriggerEditor::searchSingleAlias(TAlias* alias, const QString& text)
     if ((startPos = findSearchMatch(name, text)) != -1) {
         QStringList sl;
         sl << tr("Alias") << name << tr("Name");
-        parent = new QTreeWidgetItem(sl);
+        parent = new SearchResultItem(sl);
         setAllSearchData(parent, EditorViewType::cmAliasView, name, alias->getID(), SearchResultIsName, startPos);
-        treeWidget_searchResults->addTopLevelItem(parent);
+        mPendingSearchResults.append(parent);
     }
 
     if ((startPos = findSearchMatch(alias->getCommand(), text)) != -1) {
         QStringList sl;
         if (!parent) {
             sl << tr("Alias") << name << tr("Command");
-            parent = new QTreeWidgetItem(sl);
+            parent = new SearchResultItem(sl);
             setAllSearchData(parent, EditorViewType::cmAliasView, name, alias->getID(), SearchResultIsCommand, startPos);
-            treeWidget_searchResults->addTopLevelItem(parent);
+            mPendingSearchResults.append(parent);
         } else {
             sl << QString() << QString() << tr("Command");
-            pItem = new QTreeWidgetItem(parent, sl);
+            pItem = new SearchResultItem(parent, sl);
             setAllSearchData(pItem, EditorViewType::cmAliasView, name, alias->getID(), SearchResultIsCommand, startPos);
             parent->addChild(pItem);
-            parent->setExpanded(true);
         }
     }
 
@@ -2992,15 +3028,14 @@ void dlgTriggerEditor::searchSingleAlias(TAlias* alias, const QString& text)
         QStringList sl;
         if (!parent) {
             sl << tr("Alias") << name << tr("Pattern") << alias->getRegexCode();
-            parent = new QTreeWidgetItem(sl);
+            parent = new SearchResultItem(sl);
             setAllSearchData(parent, EditorViewType::cmAliasView, name, alias->getID(), SearchResultIsPattern, startPos);
-            treeWidget_searchResults->addTopLevelItem(parent);
+            mPendingSearchResults.append(parent);
         } else {
             sl << QString() << QString() << tr("Pattern") << alias->getRegexCode();
-            pItem = new QTreeWidgetItem(parent, sl);
+            pItem = new SearchResultItem(parent, sl);
             setAllSearchData(pItem, EditorViewType::cmAliasView, name, alias->getID(), SearchResultIsPattern, startPos);
             parent->addChild(pItem);
-            parent->setExpanded(true);
         }
     }
 
@@ -3026,24 +3061,23 @@ void dlgTriggerEditor::searchSingleTrigger(TTrigger* trigger, const QString& tex
     if ((startPos = findSearchMatch(name, text)) != -1) {
         QStringList sl;
         sl << tr("Trigger") << name << tr("Name");
-        parent = new QTreeWidgetItem(sl);
+        parent = new SearchResultItem(sl);
         setAllSearchData(parent, EditorViewType::cmTriggerView, name, trigger->getID(), SearchResultIsName, startPos);
-        treeWidget_searchResults->addTopLevelItem(parent);
+        mPendingSearchResults.append(parent);
     }
 
     if ((startPos = findSearchMatch(trigger->getCommand(), text)) != -1) {
         QStringList sl;
         if (!parent) {
             sl << tr("Trigger") << name << tr("Command");
-            parent = new QTreeWidgetItem(sl);
+            parent = new SearchResultItem(sl);
             setAllSearchData(parent, EditorViewType::cmTriggerView, name, trigger->getID(), SearchResultIsCommand, startPos);
-            treeWidget_searchResults->addTopLevelItem(parent);
+            mPendingSearchResults.append(parent);
         } else {
             sl << QString() << QString() << tr("Command");
-            pItem = new QTreeWidgetItem(parent, sl);
+            pItem = new SearchResultItem(parent, sl);
             setAllSearchData(pItem, EditorViewType::cmTriggerView, name, trigger->getID(), SearchResultIsCommand, startPos);
             parent->addChild(pItem);
-            parent->setExpanded(true);
         }
     }
 
@@ -3060,15 +3094,14 @@ void dlgTriggerEditor::searchSingleTrigger(TTrigger* trigger, const QString& tex
             QStringList sl;
             if (!parent) {
                 sl << tr("Trigger") << name << tr("Pattern {%1}").arg(index + 1) << textList.at(index);
-                parent = new QTreeWidgetItem(sl);
+                parent = new SearchResultItem(sl);
                 setAllSearchData(parent, EditorViewType::cmTriggerView, name, trigger->getID(), SearchResultIsPattern, startPos, index, instance++);
-                treeWidget_searchResults->addTopLevelItem(parent);
+                mPendingSearchResults.append(parent);
             } else {
                 sl << QString() << QString() << tr("Pattern {%1}").arg(index + 1) << textList.at(index);
-                pItem = new QTreeWidgetItem(parent, sl);
+                pItem = new SearchResultItem(parent, sl);
                 setAllSearchData(pItem, EditorViewType::cmTriggerView, name, trigger->getID(), SearchResultIsPattern, startPos, index, instance++);
                 parent->addChild(pItem);
-                parent->setExpanded(true);
             }
             ++startPos;
         }
