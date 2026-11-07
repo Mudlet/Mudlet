@@ -5689,6 +5689,28 @@ describe("Tests saveMap and loadMap", function()
       assert.is_falsy(message:find("does not contain a map", 1, true))
       assert.is_true(roomExists(keeper), "the loaded map was thrown away for a file that is not XML")
     end)
+
+    -- this one passes the up-front check that the file holds a map, so it is
+    -- only found to be damaged once the import has read some rooms from it
+    it("keeps the loaded map when an XML map turns out to be damaged part way through", function()
+      local file = assert(io.open(brokenXmlPath, "w"))
+      file:write([[<map><areas><area id="9001" name="Half Read Area"/></areas><rooms>]]
+        .. [[<room id="9001" area="9001" title="Half Read Room"><coord x="0" y="0" z="0"/></room>]]
+        .. [[<room id="9002" area="9001"]])
+      file:close()
+
+      buildMap()
+      setMapUserData("mapper spec key", "mapper spec value")
+      centerview(roomA)
+
+      local ok, message = loadMap(brokenXmlPath)
+      assert.is_nil(ok)
+      assert.is_truthy(message:find("failure to import XML map file", 1, true))
+      assert.is_false(roomExists(9001), "rooms read from the damaged file were kept")
+      assertMapRestored()
+      assert.are.equal("mapper spec value", getMapUserData("mapper spec key"))
+      assert.are.equal(roomA, getPlayerRoom())
+    end)
   end)
 
   describe("Tests the saveMap and loadMap round-trip", function()
