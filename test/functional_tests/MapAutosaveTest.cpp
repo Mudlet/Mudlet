@@ -477,7 +477,7 @@ private slots:
     }
 
 #if defined(Q_OS_LINUX)
-    // Elsewhere a copy keeps the time of the file it was made from, so whichever is written last the autosave is newer
+    // Linux only: on Windows and macOS a copy keeps its source's time, so the autosave is newer whichever is written last
     void test_autosaveStartedWhileAMapIsCopiedToItsProfileIsOlderThanTheCopy()
     {
         deleteProfileDirectory(mCopyTargetProfileName);
@@ -542,7 +542,7 @@ private slots:
         QCOMPARE(room, 2);
     }
 
-    // Until it has been written, an autosave on Windows and macOS is a temporary file in the map folder
+    // Until it has been written, an autosave is missing from the map folder, or there under a temporary name
     void test_mapHistoryFilledDuringAnAutosaveWriteListsTheAutosave()
     {
         buildMap(map());

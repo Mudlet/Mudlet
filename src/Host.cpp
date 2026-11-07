@@ -1258,7 +1258,7 @@ void Host::autoSaveMapInBackground(const QString& path)
             return;
         }
     }
-    // Now rather than once written, so that a change made meanwhile is saved by the next autosave
+    // Before the write rather than after it, so that a change made meanwhile is saved by the next autosave
     mpMap->resetUnsaved();
 
     mMapAutosaveResultPending = true;
