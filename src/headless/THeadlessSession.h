@@ -139,18 +139,18 @@ public:
     QFont consoleFont() const;
     // For what the session does not cover, such as settings and the map. Null once the profile closes, so
     // hold it in a QPointer. Not from a handler of outputLine, lineShown, mainConsoleCleared, localText, errorConsoleText, debugText,
-    // hiddenInputWanted or a ...Requested signal: a line it fed would be committed in the middle of a write, which TBuffer
-    // does not allow.
+    // hiddenInputWanted or a ...Requested signal but quitRequested and mainWindowResizeRequested: a line it fed would be
+    // committed in the middle of a write, which TBuffer does not allow.
     Host* host() const;
 
     // As typed on the command line: its aliases run, and what is sent while not connected is echoed and dropped
     // with nothing said, as in the GUI, so a frontend that types ahead waits for connected(). These, and
     // installPackage(), are refused while a profile loads or shutdown() runs, and from a handler of outputLine,
     // lineShown, mainConsoleCleared, localText, errorConsoleText, debugText, hiddenInputWanted or a ...Requested
-    // signal, which run mid-write, and fail once a close of the profile has begun; submit() checks each line of a
-    // paste as a call. It is the app's input line being sent: the main command line holds the line while its aliases
-    // run, then is emptied or kept as the profile says. A command from elsewhere, such as a button, goes through
-    // runLua() and expandAlias(), which leave the line alone.
+    // signal but quitRequested and mainWindowResizeRequested, which run mid-write, and fail once a close of the
+    // profile has begun; submit() checks each line of a paste as a call. It is the app's input line being sent: the
+    // main command line holds the line while its aliases run, then is emptied or kept as the profile says. A command
+    // from elsewhere, such as a button, goes through runLua() and expandAlias(), which leave the line alone.
     bool submit(const QString& line);
     // As the GUI's hidden-input box sends what is typed into it while hiddenInputWanted holds: straight to the
     // game, with its carriage returns and line feeds taken out, and no aliases, command separator,
@@ -297,7 +297,7 @@ public:
     // sysApplicationFocusChangeEvent with true or false in every profile that loaded and has not begun to close, and
     // the state it is in already raises nothing. It starts true, and before start() it is only kept. Refused while a
     // profile loads, during shutdown(), and from a handler of outputLine, localText, errorConsoleText,
-    // hiddenInputWanted or a ...Requested signal.
+    // hiddenInputWanted or a ...Requested signal but quitRequested and mainWindowResizeRequested.
     bool setApplicationActive(bool active);
     bool applicationActive() const { return mApplicationActive; }
     // The main console's replay recording button: true records what the game sends into a new file in the
@@ -501,6 +501,15 @@ signals:
     // differ from what was last sent or what they gave at profileLoaded, so a turn that changes them more than once
     // sends them once.
     void mainConsoleAreaChanged(const QString& profile, const QSize& grid, const QRect& textRect);
+    // A script's setMainWindowSize() asked for the main window to be this size, for an app that can resize its
+    // window to do so. The profile has taken it as setMainWindowSize() would have, so mainConsoleAreaChanged
+    // follows if that changed the grid or where the text goes. From the event loop. Its handler may call the
+    // session. The app answers by giving the size its window has once it has resized, or would not, from the
+    // handler or later: the next size it gives is the session's answer, so a script asking for the same size again
+    // changes nothing till the app gives one with nothing asked for, or a script asks for another. A size given from
+    // the handler of a request a newer one has replaced is not laid out, and with nothing connected, nothing is
+    // waited for.
+    void mainWindowResizeRequested(const QString& profile, const QSize& pixels);
 
 private:
     bool storeConnectionDetails(const Options&, std::optional<bool> tls);
@@ -530,7 +539,7 @@ private:
     void connectOutputRelays(Host*, unsigned int run);
     void noteOutputStateAtLoad();
     void sendLatency();
-    // The relay of the main console's area, in THeadlessSessionArea.cpp
+    // The relays of the main window's area, in THeadlessSessionArea.cpp
     void connectAreaRelays(Host*, unsigned int run);
     void noteAreaAtLoad();
     // duringLoad takes a call while a profile loads, which only one that cannot reach the pool may do
@@ -601,6 +610,8 @@ private:
     QString mDeliveredLatency;
     // What mainConsoleGrid() and mainConsoleTextRect() gave at profileLoaded, then each mainConsoleAreaChanged
     std::optional<std::pair<QSize, QRect>> mDeliveredMainConsoleArea;
+    // The size a script asked for, and Host's count of that request, while mainWindowResizeRequested's handler runs
+    std::optional<std::pair<QSize, quint64>> mAnsweringMainWindowRequest;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(THeadlessSession::TextStyles)

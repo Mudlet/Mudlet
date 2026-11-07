@@ -2293,6 +2293,145 @@ tempTimer(0, function() feedTriggers("headless ready\n") end))lua"),
         QCOMPARE(readFile(recordPath), qsl("resized\nresized\nsysExitEvent\n"));
     }
 
+    // A script cannot resize the terminal, so the runner gives the terminal's size again and the game is told no other
+    void test_aScriptLeavesTheTerminalItsSize()
+    {
+        const QString name = qsl("Headless Runner Terminal Kept");
+        QString recordPath;
+        QVERIFY(writeRecordingProfile(name,
+                                      qsl(R"lua(tempTrigger("headless resize", function()
+  record(tostring(setMainWindowSize(1280, 800)))
+  tempTimer(1, function() record(getColumnCount() .. "x" .. getRowCount()) end)
+end))lua"),
+                                      recordPath));
+        TelnetServerStub server;
+        server.start(qsl("127.0.0.1"));
+        QVERIFY(server.isListening());
+        QVERIFY(writeProfileData(name, qsl("url"), qsl("127.0.0.1")));
+        QVERIFY(writeProfileData(name, qsl("port"), QString::number(server.serverPort())));
+        const int terminal = ::posix_openpt(O_RDWR | O_NOCTTY);
+        QVERIFY(terminal >= 0);
+        QVERIFY(::grantpt(terminal) == 0 && ::unlockpt(terminal) == 0);
+        const int output = ::open(::ptsname(terminal), O_RDWR | O_NOCTTY);
+        QVERIFY(output >= 0);
+        winsize size{};
+        size.ws_col = 80;
+        size.ws_row = 30;
+        QVERIFY(::ioctl(output, TIOCSWINSZ, &size) == 0);
+        QVERIFY(::fcntl(terminal, F_SETFD, FD_CLOEXEC) == 0 && ::fcntl(output, F_SETFD, FD_CLOEXEC) == 0);
+        QVERIFY(::fcntl(terminal, F_SETFL, O_NONBLOCK) == 0);
+        const auto closeTerminal = qScopeGuard([terminal]() {
+            ::close(terminal);
+        });
+        const auto drain = [terminal]() {
+            char buffer[4096];
+            while (::read(terminal, buffer, sizeof(buffer)) > 0) {
+            }
+        };
+
+        QProcess child;
+        child.setChildProcessModifier([output]() {
+            ::dup2(output, STDOUT_FILENO);
+        });
+        startChild(child, {qsl("-p"), name, qsl("--no-stdin")});
+        ::close(output);
+        QVERIFY(child.waitForStarted(scmFinishTimeoutMs));
+        QTRY_VERIFY_WITH_TIMEOUT((drain(), server.clientConnected()), scmFinishTimeoutMs);
+        // IAC DO NAWS
+        server.sendRaw(QByteArray("\xff\xfd\x1f", 3));
+        QTRY_VERIFY_WITH_TIMEOUT((drain(), server.nawsUpdates().contains(QSize(80, 30))), scmFinishTimeoutMs);
+        server.clearNawsUpdates();
+
+        server.sendRaw(QByteArray("headless resize\r\n"));
+        QTRY_COMPARE_WITH_TIMEOUT((drain(), readFile(recordPath)), qsl("true\n80x30\n"), scmFinishTimeoutMs);
+        // Past the 0.3s NAWS waits for the size to settle
+        QTest::qWait(500);
+        drain();
+        QCOMPARE(server.nawsUpdates(), QVector<QSize>());
+
+        QVERIFY(::kill(static_cast<pid_t>(child.processId()), SIGTERM) == 0);
+        QTRY_COMPARE_WITH_TIMEOUT((drain(), child.state()), QProcess::NotRunning, scmFinishTimeoutMs);
+        const QString standardError = textOf(child.readAllStandardError());
+        QVERIFY2(child.exitCode() == 128 + SIGTERM, qPrintable(qsl("exit code %1, stderr: %2").arg(child.exitCode()).arg(standardError)));
+    }
+
+    // A resize handler that asks again for a size the terminal cannot take is answered with the terminal's, so the
+    // sizes settle and the game is told them
+    void test_aScriptAskingAgainForItsSizeLetsTheTerminalSettle()
+    {
+        const QString name = qsl("Headless Runner Terminal Settles");
+        QString recordPath;
+        QVERIFY(writeRecordingProfile(name,
+                                      qsl(R"lua(local resizes = 0
+registerAnonymousEventHandler("sysWindowResizeEvent", function(_, width)
+  resizes = resizes + 1
+  if width < 1600 then
+    setMainWindowSize(1600, 900)
+  end
+end)
+tempTrigger("headless count", function()
+  record(resizes .. " " .. getColumnCount() .. "x" .. getRowCount())
+end))lua"),
+                                      recordPath));
+        TelnetServerStub server;
+        server.start(qsl("127.0.0.1"));
+        QVERIFY(server.isListening());
+        QVERIFY(writeProfileData(name, qsl("url"), qsl("127.0.0.1")));
+        QVERIFY(writeProfileData(name, qsl("port"), QString::number(server.serverPort())));
+        const int terminal = ::posix_openpt(O_RDWR | O_NOCTTY);
+        QVERIFY(terminal >= 0);
+        QVERIFY(::grantpt(terminal) == 0 && ::unlockpt(terminal) == 0);
+        const int output = ::open(::ptsname(terminal), O_RDWR | O_NOCTTY);
+        QVERIFY(output >= 0);
+        winsize size{};
+        size.ws_col = 80;
+        size.ws_row = 30;
+        QVERIFY(::ioctl(output, TIOCSWINSZ, &size) == 0);
+        QVERIFY(::fcntl(terminal, F_SETFD, FD_CLOEXEC) == 0 && ::fcntl(output, F_SETFD, FD_CLOEXEC) == 0);
+        QVERIFY(::fcntl(terminal, F_SETFL, O_NONBLOCK) == 0);
+        const auto closeTerminal = qScopeGuard([terminal]() {
+            ::close(terminal);
+        });
+        const auto drain = [terminal]() {
+            char buffer[4096];
+            while (::read(terminal, buffer, sizeof(buffer)) > 0) {
+            }
+        };
+
+        QProcess child;
+        child.setChildProcessModifier([output]() {
+            ::dup2(output, STDOUT_FILENO);
+        });
+        startChild(child, {qsl("-p"), name, qsl("--no-stdin")});
+        ::close(output);
+        const auto stopChild = qScopeGuard([&child]() {
+            if (child.state() != QProcess::NotRunning) {
+                child.kill();
+                child.waitForFinished(scmFinishTimeoutMs);
+            }
+        });
+        QVERIFY(child.waitForStarted(scmFinishTimeoutMs));
+        QTRY_VERIFY_WITH_TIMEOUT((drain(), server.clientConnected()), scmFinishTimeoutMs);
+        // IAC DO NAWS; a loop would regrid the main console each turn, and NAWS waits 0.3s for it to settle
+        server.sendRaw(QByteArray("\xff\xfd\x1f", 3));
+        QTRY_VERIFY_WITH_TIMEOUT((drain(), server.nawsUpdates().contains(QSize(80, 30))), 5000);
+        // The terminal's size, the script's and the terminal's again
+        server.sendRaw(QByteArray("headless count\r\n"));
+        QTRY_COMPARE_WITH_TIMEOUT((drain(), readFile(recordPath)), qsl("3 80x30\n"), scmFinishTimeoutMs);
+
+        size.ws_col = 100;
+        QVERIFY(::ioctl(terminal, TIOCSWINSZ, &size) == 0);
+        QVERIFY(::kill(static_cast<pid_t>(child.processId()), SIGWINCH) == 0);
+        QTRY_VERIFY_WITH_TIMEOUT((drain(), server.nawsUpdates().contains(QSize(100, 30))), 5000);
+        server.sendRaw(QByteArray("headless count\r\n"));
+        QTRY_COMPARE_WITH_TIMEOUT((drain(), readFile(recordPath)), qsl("3 80x30\n6 100x30\n"), scmFinishTimeoutMs);
+
+        QVERIFY(::kill(static_cast<pid_t>(child.processId()), SIGTERM) == 0);
+        QTRY_COMPARE_WITH_TIMEOUT((drain(), child.state()), QProcess::NotRunning, scmFinishTimeoutMs);
+        const QString standardError = textOf(child.readAllStandardError());
+        QVERIFY2(child.exitCode() == 128 + SIGTERM, qPrintable(qsl("exit code %1, stderr: %2").arg(child.exitCode()).arg(standardError)));
+    }
+
     // What a phone app built on mudlet_core can count on: nothing the core runs needs Qt Widgets
     void test_noQtWidgets()
     {

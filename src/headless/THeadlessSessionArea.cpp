@@ -24,8 +24,10 @@
 #include "Host.h"
 
 #include <QFontMetrics>
+#include <QMetaMethod>
 
 #include <algorithm>
+#include <utility>
 
 bool THeadlessSession::setMainWindowSize(const QSize& pixels)
 {
@@ -43,6 +45,9 @@ bool THeadlessSession::setMainWindowSize(const QSize& pixels)
                                .arg(columns)
                                .arg(rows);
         return false;
+    }
+    if (!mpHost->noteMainAreaGiven(mAnsweringMainWindowRequest)) {
+        return true;
     }
     // As a resize of the GUI's main window, which tells scripts nothing for the size they have
     if (mpHost->mainAreaInPixels() && mpHost->mainWindowSize() == pixels) {
@@ -83,6 +88,29 @@ void THeadlessSession::connectAreaRelays(Host* pHost, const unsigned int run)
                 mDeliveredMainConsoleArea = area;
                 const QString profile = mProfileName;
                 emit mainConsoleAreaChanged(profile, area.first, area.second);
+            },
+            Qt::QueuedConnection);
+    connect(
+            pHost,
+            &Host::signal_mainWindowResizeRequested,
+            this,
+            [this, run](const QSize& pixels, const quint64 request) {
+                if (run != mRun || !mpHost) {
+                    return;
+                }
+                // With no app to answer, no size it gives later is to be taken as an answer
+                if (!isSignalConnected(QMetaMethod::fromSignal(&THeadlessSession::mainWindowResizeRequested))) {
+                    mpHost->noteMainWindowRequestUnheard(request);
+                    return;
+                }
+                const QString profile = mProfileName;
+                // The handler may delete the session
+                const QPointer<THeadlessSession> self(this);
+                const auto outer = std::exchange(mAnsweringMainWindowRequest, std::pair{pixels, request});
+                emit mainWindowResizeRequested(profile, pixels);
+                if (self) {
+                    mAnsweringMainWindowRequest = outer;
+                }
             },
             Qt::QueuedConnection);
 }

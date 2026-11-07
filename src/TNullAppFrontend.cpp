@@ -578,6 +578,14 @@ static void raiseProfileFocusChange(Host* pHost, const bool gained)
     pHost->raiseEvent(event);
 }
 
+std::pair<bool, QString> TNullAppFrontend::resizeMainWindow(Host* pHost, const int width, const int height)
+{
+    if (!pHost) {
+        return {false, QString()};
+    }
+    return pHost->resizeMainWindowWithNoView(QSize(width, height));
+}
+
 bool TNullAppFrontend::setActiveProfileTab(const QString& profileName)
 {
     HostManager* pool = HostManager::self();
