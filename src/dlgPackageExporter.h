@@ -35,6 +35,7 @@
 
 class Host;
 class QCloseEvent;
+class QDropEvent;
 class QGroupBox;
 template <typename T>
 class QFutureWatcher;
@@ -177,6 +178,9 @@ private:
     static void cleanupUnusedImages(const QString& tempPath, const QString& plainDescription);
     void checkToEnableExportButton();
     void populateDependencies();
+    void useIcon(const QString& fileName);
+    static QString iconFileFromDrop(const QDropEvent* event);
+    void setIconDropHighlight(const bool highlight);
 
     std::unique_ptr<Ui::dlgPackageExporter> ui;
     QPointer<Host> mpHost;
@@ -195,6 +199,7 @@ private:
     QString mPackagePath;
     QString mPackagePathFileName;
     QString mPackageIconPath;
+    bool mIconDropHighlight = false;
     // The .mudlet folder of the installed package being re-exported, if any
     QString mPackageDataPath;
     QString mPackageConfig;

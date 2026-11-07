@@ -43,6 +43,7 @@
 #include <QInputDialog>
 #include <QMessageBox>
 #include <QMimeData>
+#include <QPainter>
 #include <QSettings>
 #include <QStandardPaths>
 #include <QTextDocumentFragment>
@@ -126,6 +127,8 @@ dlgPackageExporter::dlgPackageExporter(QWidget* parent, Host* pHost)
     ui->listWidget_addedFiles->installEventFilter(this);
     ui->comboBox_dependencies->installEventFilter(this);
     ui->textEdit_description->installEventFilter(this);
+    ui->widget_icon->setAcceptDrops(true);
+    ui->widget_icon->installEventFilter(this);
 
     // default package template - prevent clearing of text upon click
     dlgPackageExporter* te_parent = static_cast<dlgPackageExporter*>(topLevelWidget());
@@ -589,22 +592,15 @@ void dlgPackageExporter::slot_packageChanged(int index)
 
     const QString packagePath{MudletApp::getMudletPath(enums::profileHomePath, mpHost->getName())};
     //fill package metadata
-    mPackageIconPath.clear();
     mPackageDataPath.clear();
     QMap<QString, QString> const packageInfo = mpHost->mPackageInfo.value(packageName);
     ui->lineEdit_author->setText(packageInfo.value(qsl("author")));
     const QString icon{packageInfo.value(qsl("icon"))};
     if (!icon.isEmpty()) {
-        mPackageIconPath = qsl("%1/%2/.mudlet/Icon/%3").arg(packagePath, packageName, icon);
-        ui->Icon->show();
-        ui->pushButton_removeIcon->show();
+        useIcon(qsl("%1/%2/.mudlet/Icon/%3").arg(packagePath, packageName, icon));
     } else {
-        ui->Icon->hide();
-        ui->pushButton_removeIcon->hide();
+        slot_removeIcon();
     }
-    const QIcon myIcon(mPackageIconPath);
-    ui->Icon->clear();
-    ui->Icon->setPixmap(myIcon.pixmap(ui->Icon->size()));
     ui->lineEdit_title->setText(packageInfo.value(qsl("title")));
     mPlainDescription = packageInfo.value(qsl("description"));
     QString description{mPlainDescription};
@@ -704,6 +700,11 @@ void dlgPackageExporter::slot_importIcon()
         mPackagePath = lastDir;
         emit signal_exportLocationChanged(mPackagePath);
     }
+    useIcon(fileName);
+}
+
+void dlgPackageExporter::useIcon(const QString& fileName)
+{
     mPackageIconPath = fileName;
     const QIcon myIcon(mPackageIconPath);
     ui->Icon->clear();
@@ -712,9 +713,36 @@ void dlgPackageExporter::slot_importIcon()
     ui->pushButton_removeIcon->show();
 }
 
+QString dlgPackageExporter::iconFileFromDrop(const QDropEvent* event)
+{
+    // The same file types slot_importIcon() offers in its picker
+    static const QStringList iconSuffixes{qsl("png"), qsl("jpg"), qsl("jpeg"), qsl("bmp"), qsl("tif"), qsl("ico"), qsl("icns")};
+    if (!(event->possibleActions() & Qt::CopyAction) || !event->mimeData() || !event->mimeData()->hasUrls()) {
+        return QString();
+    }
+    const QList<QUrl> urls = event->mimeData()->urls();
+    if (urls.size() != 1 || !urls.first().isLocalFile()) {
+        return QString();
+    }
+    const QFileInfo info(urls.first().toLocalFile());
+    if (!info.isFile() || !iconSuffixes.contains(info.suffix(), Qt::CaseInsensitive)) {
+        return QString();
+    }
+    return info.absoluteFilePath();
+}
+
+void dlgPackageExporter::setIconDropHighlight(const bool highlight)
+{
+    if (mIconDropHighlight != highlight) {
+        mIconDropHighlight = highlight;
+        ui->widget_icon->update();
+    }
+}
+
 void dlgPackageExporter::slot_removeIcon()
 {
     mPackageIconPath.clear();
+    ui->Icon->clear();
     ui->Icon->hide();
     ui->pushButton_removeIcon->hide();
 }
@@ -769,6 +797,50 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
             mPlainDescription = ui->textEdit_description->toPlainText();
             showRenderedDescription();
             return false;
+        }
+    }
+
+    if (obj == ui->widget_icon) {
+        switch (evt->type()) {
+        case QEvent::DragEnter:
+        case QEvent::DragMove: {
+            auto* moveEvent = static_cast<QDragMoveEvent*>(evt);
+            if (iconFileFromDrop(moveEvent).isEmpty()) {
+                moveEvent->ignore();
+                setIconDropHighlight(false);
+                return true;
+            }
+            // A move would tell the source to delete the file it handed over
+            moveEvent->setDropAction(Qt::CopyAction);
+            moveEvent->accept();
+            setIconDropHighlight(true);
+            return true;
+        }
+        case QEvent::DragLeave:
+            setIconDropHighlight(false);
+            return true;
+        case QEvent::Drop: {
+            setIconDropHighlight(false);
+            auto* dropEvent = static_cast<QDropEvent*>(evt);
+            const QString fileName = iconFileFromDrop(dropEvent);
+            if (fileName.isEmpty()) {
+                dropEvent->ignore();
+                return true;
+            }
+            dropEvent->setDropAction(Qt::CopyAction);
+            dropEvent->accept();
+            useIcon(fileName);
+            return true;
+        }
+        case QEvent::Paint:
+            if (mIconDropHighlight) {
+                QPainter painter(ui->widget_icon);
+                painter.setPen(QPen(palette().highlight().color(), 2, Qt::DashLine));
+                painter.drawRect(QRectF(ui->widget_icon->rect()).adjusted(1, 1, -1, -1));
+            }
+            return false;
+        default:
+            break;
         }
     }
 

@@ -1552,6 +1552,112 @@ private slots:
         QVERIFY2(iconLabel->isHidden(), "the icon label was left showing for a package that has no icon");
     }
 
+    // Dropping an image onto the icon area sets the icon the file picker would,
+    // and shows it is a drop target while the image hovers over it.
+    void test_anImageDroppedOnTheIconAreaBecomesTheIcon_4994()
+    {
+        const QString packageName = packageNamed(qsl("exporter-dropped-icon"));
+        const QString iconPath = qsl("%1/Dropped Icon.PNG").arg(mExportDir);
+        QVERIFY(writeImage(iconPath));
+        const QString notAnImage = qsl("%1/readme.txt").arg(mExportDir);
+        QFile text(notAnImage);
+        QVERIFY(text.open(QIODevice::WriteOnly));
+        text.write("not an image");
+        text.close();
+        makeTrigger(qsl("exporter dropped icon trigger"), nullptr);
+
+        openExporter();
+        auto* iconArea = mpExporter->findChild<QWidget*>(qsl("widget_icon"));
+        auto* iconLabel = mpExporter->findChild<QLabel*>(qsl("Icon"));
+        QVERIFY(iconArea);
+        QVERIFY(iconLabel);
+        QVERIFY2(iconArea->acceptDrops(), "the icon area does not take drops");
+        // Qt hands a drop to the nearest widget that accepts drops, so a child that did would swallow it
+        for (auto* child : iconArea->findChildren<QWidget*>()) {
+            QVERIFY2(!child->acceptDrops(), qPrintable(qsl("%1 would keep drops from the icon area").arg(child->objectName())));
+        }
+        QVERIFY(iconLabel->isHidden());
+        const QPoint centre = iconArea->rect().center();
+        const QColor highlight = iconArea->palette().highlight().color();
+        auto highlighted = [&]() {
+            const QImage image = iconArea->grab().toImage();
+            for (int x = 0; x < image.width(); ++x) {
+                if (image.pixelColor(x, 0) == highlight) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        QVERIFY(!highlighted());
+
+        // Sent already accepted, as Qt carries an earlier answer over, so refusing has to be explicit
+        auto refused = [&](const QList<QUrl>& urls, Qt::DropActions actions = Qt::CopyAction) {
+            QMimeData mimeData;
+            mimeData.setUrls(urls);
+            QDragEnterEvent enter(centre, actions, &mimeData, Qt::LeftButton, Qt::NoModifier);
+            enter.setAccepted(true);
+            QApplication::sendEvent(iconArea, &enter);
+            return !enter.isAccepted() && !highlighted();
+        };
+        QVERIFY2(refused({QUrl::fromLocalFile(notAnImage)}), "a file that is not an image was taken for the icon");
+        QVERIFY2(refused({QUrl::fromLocalFile(iconPath), QUrl::fromLocalFile(iconPath)}), "two files were taken for the one icon");
+        QVERIFY2(refused({QUrl(qsl("https://www.mudlet.org/icon.png"))}), "a remote image was taken for the icon");
+        QVERIFY2(refused({QUrl::fromLocalFile(iconPath)}, Qt::MoveAction), "an image that could only be moved was taken for the icon");
+
+        const QString vanishingPath = qsl("%1/vanishing.png").arg(mExportDir);
+        QVERIFY(writeImage(vanishingPath));
+        QMimeData vanishing;
+        vanishing.setUrls({QUrl::fromLocalFile(vanishingPath)});
+        QDragEnterEvent vanishingEnter(centre, Qt::CopyAction, &vanishing, Qt::LeftButton, Qt::NoModifier);
+        QApplication::sendEvent(iconArea, &vanishingEnter);
+        QVERIFY(vanishingEnter.isAccepted());
+        QVERIFY(QFile::remove(vanishingPath));
+        QVERIFY2(highlighted(), "the icon area was not marked for an image it took");
+        QDragMoveEvent vanishingMove(centre, Qt::CopyAction, &vanishing, Qt::LeftButton, Qt::NoModifier);
+        vanishingMove.setAccepted(true);
+        QApplication::sendEvent(iconArea, &vanishingMove);
+        QVERIFY2(!vanishingMove.isAccepted(), "a move over the icon area with an image that had gone was taken");
+        QVERIFY2(!highlighted(), "the icon area stayed marked after it refused a move");
+        QDropEvent vanishingDrop(centre, Qt::CopyAction, &vanishing, Qt::LeftButton, Qt::NoModifier);
+        vanishingDrop.setAccepted(true);
+        QApplication::sendEvent(iconArea, &vanishingDrop);
+        QVERIFY2(!vanishingDrop.isAccepted(), "a drop of an image that had gone was reported as taken");
+        QVERIFY2(!highlighted(), "the icon area stayed marked after a refused drop");
+        QVERIFY2(iconLabel->isHidden(), "a refused drop set the icon");
+
+        QMimeData mimeData;
+        mimeData.setUrls({QUrl::fromLocalFile(iconPath)});
+        QDragEnterEvent enter(centre, Qt::CopyAction | Qt::MoveAction, &mimeData, Qt::LeftButton, Qt::NoModifier);
+        enter.setAccepted(false);
+        QApplication::sendEvent(iconArea, &enter);
+        QVERIFY2(enter.isAccepted(), "the icon area refused an image");
+        QCOMPARE(enter.dropAction(), Qt::CopyAction);
+        QVERIFY2(highlighted(), "the icon area was not marked as a drop target");
+        QDragLeaveEvent leave;
+        QApplication::sendEvent(iconArea, &leave);
+        QVERIFY2(!highlighted(), "the icon area stayed marked after the drag left it");
+
+        QDragEnterEvent reenter(centre, Qt::CopyAction | Qt::MoveAction, &mimeData, Qt::LeftButton, Qt::NoModifier);
+        reenter.setAccepted(false);
+        QApplication::sendEvent(iconArea, &reenter);
+        QVERIFY2(reenter.isAccepted(), "the icon area refused the image coming back");
+        QVERIFY2(highlighted(), "the icon area was not marked when the image came back");
+        QDropEvent drop(centre, Qt::CopyAction | Qt::MoveAction, &mimeData, Qt::LeftButton, Qt::NoModifier);
+        drop.setAccepted(false);
+        QApplication::sendEvent(iconArea, &drop);
+        QVERIFY(drop.isAccepted());
+        QCOMPARE(drop.dropAction(), Qt::CopyAction);
+        QVERIFY2(!highlighted(), "the icon area stayed marked after the drop");
+        QVERIFY2(!iconLabel->isHidden(), "the dropped icon was not shown");
+        QVERIFY2(!iconLabel->pixmap().isNull(), "the icon label was left with nothing to draw");
+        QVERIFY2(!buttonNamed(qsl("pushButton_removeIcon"))->isHidden(), "the dropped icon cannot be removed");
+
+        QVERIFY(checkItem(triggersTop(), qsl("exporter dropped icon trigger")));
+        QVERIFY2(runExport(packageName), "the export never finished");
+        QVERIFY2(QFileInfo::exists(packagePath(packageName)), qPrintable(qsl("No package was written. The dialog said: \"%1\"").arg(infoLabel()->text())));
+        QCOMPARE(QDir(qsl("%1/.mudlet/Icon").arg(stagingPath(packageName))).entryList(QDir::Files), QStringList{qsl("Dropped Icon.PNG")});
+    }
+
     // Re-exporting an installed package with a new icon has to ship that icon
     // alone, without listing the package's own .mudlet folder as an asset, while
     // the images its description already uses still come along.
