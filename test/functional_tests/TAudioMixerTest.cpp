@@ -450,6 +450,32 @@ private slots:
         QCOMPARE(media()->playersMixed(), 0);
     }
 
+    // Last, as it stops the mixer for good. Left to the application's teardown, the output would be closed
+    // from the main thread after its own had finished, and after Qt released the backend it plays through.
+    void test_theOutputIsClosedOnItsOwnThreadAsTheApplicationQuits()
+    {
+        REQUIRE_MIXING();
+        TMediaData data = clipData(writeClip(qsl("quit.wav"), 3000), TMediaData::MediaTypeSound);
+        media()->playMedia(data);
+        SKIP_OR_FAIL_WITHOUT(QTest::qWaitFor(
+                                     []() {
+                                         return TAudioMixer::self()->outputOpen();
+                                     },
+                                     QDeadlineTimer(5s))
+                                     ? QString()
+                                     : noAudioReason());
+
+        // What QCoreApplication::exec() emits as its event loop ends
+        QVERIFY(QMetaObject::invokeMethod(qApp, "aboutToQuit", Qt::DirectConnection));
+        const bool closed = !TAudioMixer::self()->outputOpen();
+        media()->playMedia(data);
+        QTest::qWait(500ms);
+        const bool stayedClosed = !TAudioMixer::self()->outputOpen();
+
+        QVERIFY2(closed, "The shared output was still open once the application said it was quitting.");
+        QVERIFY2(stayedClosed, "A sound played after the application said it was quitting opened the shared output again.");
+    }
+
 private:
     TMedia* media() const { return mpHost->mpMedia.data(); }
 
