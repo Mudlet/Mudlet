@@ -124,6 +124,17 @@ HostManager::HostManager(const ConfigRoot configRoot, const QString& configDir)
 HostManager::~HostManager()
 {
     mGoingDown = true;
+    // Told from the event loop that the closes are over, though they end here unfinished, so a quit waiting on them still comes
+    if (mpClosingAll) {
+        for (const auto& then : std::as_const(mpClosingAll->done)) {
+            QTimer::singleShot(0ms, then);
+        }
+        mpClosingAll.reset();
+    }
+    for (const auto& then : std::as_const(mDoneOnceLeft)) {
+        QTimer::singleShot(0ms, then);
+    }
+    mDoneOnceLeft.clear();
     for (const auto& pHost : hostList()) {
         pHost->raiseExitEventIfOwed();
         // As in deleteHost(): the handlers may have deleted this profile, which closed it
@@ -400,48 +411,122 @@ void HostManager::deleteHostOnceUnwound(Host* pHost, const std::chrono::millisec
     });
 }
 
-void HostManager::closeAllProfiles()
+void HostManager::closeAllProfiles(std::function<void()> done)
 {
     if (mGoingDown) {
+        if (done) {
+            done();
+        }
         return;
     }
-    // Each pass marks every profile first, as the GUI's forceClose() does, so one a handler closes
-    // meanwhile saves too; a handler may open a profile, which the next pass then closes
-    bool metOpenProfile = true;
-    QList<QSharedPointer<Host>> met;
-    while (metOpenProfile) {
-        metOpenProfile = false;
-        const QList<QSharedPointer<Host>> hosts = hostList();
-        for (const auto& pHost : hosts) {
-            if (!met.contains(pHost)) {
-                met.append(pHost);
-            }
+    if (mpClosingAll) {
+        if (done) {
+            mpClosingAll->done.append(std::move(done));
         }
-        for (const auto& pHost : hosts) {
-            if (!pHost->isClosingDown() && !pHost->isClosingForced()) {
-                pHost->markClosingForced();
-            }
-        }
-        for (const auto& pHost : hosts) {
-            // One a handler has taken out of the pool meanwhile is no longer this pool's to close
-            if (getHost(pHost->getName()) == pHost) {
-                metOpenProfile |= pHost->closeWithNoView();
-            }
+        return;
+    }
+    mpClosingAll = std::make_unique<ClosingAll>();
+    if (done) {
+        mpClosingAll->done.append(std::move(done));
+    }
+    startClosingPass();
+}
+
+// Each pass marks every profile first, as the GUI's forceClose() does, so one a handler closes meanwhile saves
+// too; a handler may open a profile, which the next pass then closes
+void HostManager::startClosingPass()
+{
+    const QList<QSharedPointer<Host>> hosts = hostList();
+    for (const auto& pHost : hosts) {
+        if (!mpClosingAll->met.contains(pHost)) {
+            mpClosingAll->met.append(pHost);
         }
     }
+    for (const auto& pHost : hosts) {
+        if (!pHost->isClosingDown() && !pHost->isClosingForced()) {
+            pHost->markClosingForced();
+        }
+    }
+    mpClosingAll->closedOne = false;
+    // The pass's own count, so a close that ends at once does not end the pass before the others start
+    mpClosingAll->pending = 1;
+    for (const auto& pHost : hosts) {
+        // One a handler has taken out of the pool meanwhile is no longer this pool's to close
+        if (getHost(pHost->getName()) != pHost) {
+            continue;
+        }
+        ++mpClosingAll->pending;
+        // Counted as its continuation goes, run or dropped with a profile deleted first. From the event loop:
+        // the last close of the pass deletes the profiles, and this one's is on the stack.
+        const std::shared_ptr<int> closedToken(new int(0), [this, alive = std::weak_ptr<bool>(mAlive)](int* token) {
+            delete token;
+            QTimer::singleShot(0ms, [this, alive]() {
+                if (!alive.expired()) {
+                    closingPassClosedOne();
+                }
+            });
+        });
+        // A close begun earlier, as a script's closeProfile(), is waited for too, so its save is written before the pool goes
+        if (pHost->closeSaveInFlight()) {
+            pHost->whenCloseSaveEnds([closedToken]() {});
+            continue;
+        }
+        const bool closing = pHost->closeWithNoView([closedToken]() {});
+        mpClosingAll->closedOne = mpClosingAll->closedOne || closing;
+    }
+    closingPassClosedOne();
+}
+
+void HostManager::closingPassClosedOne()
+{
+    if (!mpClosingAll || --mpClosingAll->pending > 0) {
+        return;
+    }
+    if (mpClosingAll->closedOne) {
+        startClosingPass();
+        return;
+    }
+    const std::unique_ptr<ClosingAll> closing = std::move(mpClosingAll);
     // As in requestProfileClose(): one a handler took out of the pool may be held here alone
-    for (const auto& pHost : std::as_const(met)) {
+    for (const auto& pHost : std::as_const(closing->met)) {
         if (getHost(pHost->getName()) != pHost) {
             releaseOnceUnwound(pHost);
         }
     }
-    met.clear();
+    closing->met.clear();
     for (const auto& pHost : hostList()) {
         if (pHost->deletionMustWait()) {
+            mLeaving.append(pHost.toWeakRef());
             deleteHostOnceUnwound(pHost.data(), 0ms);
         } else {
             deleteHost(pHost->getName());
         }
+    }
+    mDoneOnceLeft.append(closing->done);
+    tellOnceLeft();
+}
+
+// done is promised an empty pool, so an embedder may delete the pool from it
+void HostManager::tellOnceLeft()
+{
+    mLeaving.removeIf([this](const QWeakPointer<Host>& leaving) {
+        const QSharedPointer<Host> pHost = leaving.toStrongRef();
+        return !pHost || getHost(pHost->getName()) != pHost;
+    });
+    if (!mLeaving.isEmpty()) {
+        if (!mTellingOnceLeft) {
+            mTellingOnceLeft = true;
+            QTimer::singleShot(50ms, [this, alive = std::weak_ptr<bool>(mAlive)]() {
+                if (!alive.expired()) {
+                    mTellingOnceLeft = false;
+                    tellOnceLeft();
+                }
+            });
+        }
+        return;
+    }
+    for (const auto& then : std::exchange(mDoneOnceLeft, {})) {
+        then();
     }
 }
 

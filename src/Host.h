@@ -323,14 +323,21 @@ public:
     bool requestClose();
     // A main console raises sysExitEvent as it closes; a profile that never had one gets it from this.
     void raiseExitEventIfOwed();
-    // The save a close makes without asking: the profile, Mudlet's settings and the map, waited for; false if the
-    // profile or the map failed, or, writing nothing, if the profile is still loading and its map has not loaded yet
+    // The save a close makes without asking: the profile, Mudlet's settings and the map; done is told false if the
+    // profile or the map failed, or, writing nothing, if the profile is still loading and its map has not loaded yet.
+    // It waits for no save: done runs once they are written, or at once when nothing is written.
+    void saveForClose(std::function<void(bool saved)> done);
+    // The same, waited for in waitForProfileSave(), for the desktop GUI's close, which must answer at once
     bool saveForClose();
     // Whether deleting the profile now would pull its Lua state or map from under code still running
     // on them; asks a map operation to stop, so the wait ends.
     bool deletionMustWait();
     // What deletionMustWait() answers, without asking anything to stop
     bool deletionWouldWait() const;
+    // Whether a close with no main window has run sysExitEvent and is still writing its save
+    bool closeSaveInFlight() const { return mCloseSaveInFlight; }
+    // Runs then once that save is written and the close is done: now if none is under way. Never once the Host is gone.
+    void whenCloseSaveEnds(std::function<void()> then);
     // A script, nested event loop, map operation or profile save: what deletionWouldWait() waits for, bar a
     // reconnect's event loop, which only a deletion must outwait
     bool busyRunning() const;
@@ -586,6 +593,9 @@ public:
     // nested in the waiting script. A save that syncs modules still reloads them in the other profiles as
     // it ends, and their scripts can raise a global event that reaches this profile's handlers.
     void waitForProfileSave(bool onlyTheSavesOwnEvents = false);
+    // Runs then once no save is running: now if none is, else from the event loop once the save has ended, or
+    // has gone mProfileSaveNotificationTimeout past its writes without saying so. Never once the Host is gone.
+    void whenProfileSaveEnds(std::function<void()> then);
     inline static const QString scmProfileSaveWatcherName = qsl("profileSaveWatcher");
     // waitForProfileSave() pumps the event loop with this Host still in use on the stack below it
     bool waitingForProfileSave() const { return mProfileSaveWaitDepth > 0; }
@@ -959,8 +969,11 @@ public:
 
 private:
     // A main console's close, for a profile that never had one; it saves, as the GUI's "Yes" does, unless the
-    // profile's save did not load or is still loading. False, doing nothing, for a profile already closing.
-    bool closeWithNoView();
+    // profile's save did not load or is still loading. False, doing nothing, for a profile already closing. It
+    // returns once sysExitEvent has run; closed runs once the save is written, and until then deletionMustWait().
+    bool closeWithNoView(std::function<void()> closed = {});
+    void runSaveEndContinuations();
+    void checkSaveEndWatchdog();
     QSettings& profileIni();
 
     bool mNoAntiAlias = false;
@@ -1555,7 +1568,7 @@ private:
         enums::PackageModuleType thing;
         bool operator==(const DeferredUninstall&) const = default;
     };
-    void runUninstallsDeferredByAnInstall(const QList<DeferredUninstall>& deferred);
+    void runUninstallsDeferredByAnInstall(const QList<DeferredUninstall>& deferred, bool waitedForASave = false);
     static void createModuleBackup(const QString& filename, const QString& saveName);
     // A single module queued to be written out during a profile save. Its XML document
     // is built on the main thread (XMLexport::writeModuleXML()); serializing it to disk
@@ -1644,6 +1657,14 @@ private:
     int mProfileSaveWaitDepth = 0;
     // Long enough that reaching it means something is wrong, not that a disk is busy
     std::chrono::milliseconds mProfileSaveNotificationTimeout = std::chrono::seconds(30);
+    QList<std::function<void()>> mSaveEndContinuations;
+    // While mSaveEndContinuations waits: catches a save that has written everything and never says it has ended
+    QTimer mSaveEndWatchdog;
+    std::optional<std::chrono::steady_clock::time_point> mSaveWritesEndedAt;
+    // While the blocking saveForClose() waits, which runs the continuations itself
+    int mSaveEndContinuationsHeld = 0;
+    bool mCloseSaveInFlight = false;
+    QList<std::function<void()>> mCloseEndContinuations;
 
     QFile mErrorLogFile;
 

@@ -60,18 +60,29 @@ int gConnectionsBeingChanged = 0;
 
 // TNullAppFrontend's close waits only for a load, a nested event loop and a save wait, and leaves a running
 // script or map operation to deletionMustWait(); deleting the whole pool cannot wait that way, so all count here.
-// A save deletes nothing, so a reconnect's event loop holds up only a deletion.
-bool poolBusy(const HostManager& pool, const bool forDeletion)
+// A save deletes nothing, so a reconnect's event loop holds up only a deletion. A close still writing its save
+// holds up a deletion too, but not shutdown(), which waits for it.
+bool poolBusy(const HostManager& pool, const bool forDeletion, const bool closesCount = true)
 {
     if (pool.loadingProfile() || gConnectionsBeingChanged) {
         return true;
     }
     for (const auto& pHost : pool.hostList()) {
-        if (forDeletion ? pHost->deletionWouldWait() : pHost->busyRunning()) {
+        const bool deletionWaits = closesCount ? pHost->deletionWouldWait() : pHost->busyRunning() || pHost->mTelnet.connectRunningEventLoop();
+        if (forDeletion ? deletionWaits : pHost->busyRunning()) {
             return true;
         }
     }
     return false;
+}
+
+// A profile a script closed is still writing its save, which deleting the pool would cut off
+bool poolStillClosing(const HostManager& pool)
+{
+    const auto hosts = pool.hostList();
+    return std::any_of(hosts.cbegin(), hosts.cend(), [](const QSharedPointer<Host>& pHost) {
+        return pHost->closeSaveInFlight();
+    });
 }
 
 // Told apart from poolBusy(), whose refusals name a script or a save
@@ -89,7 +100,7 @@ bool poolReconnecting(const HostManager& pool)
 bool resetPending(const HostManager& pool)
 {
     for (const auto& pHost : pool.hostList()) {
-        if (pHost->profileResetInProgress() && !pHost->isClosingDown()) {
+        if (pHost->profileResetInProgress() && !pHost->closeStarted()) {
             return true;
         }
     }
@@ -1695,7 +1706,7 @@ bool THeadlessSession::shutdown(const bool save)
         mErrorString = tr("A profile is reconnecting, so its profiles cannot close until that has returned.");
         return false;
     }
-    if (poolBusy(*mpPool, true)) {
+    if (poolBusy(*mpPool, true, false)) {
         qWarning() << "THeadlessSession: shutdown() while a profile runs a script or waits for its save is refused; call it once that has returned";
         //: Error from a frontend with no window that was asked to close its profiles while one ran a script or waited for its save to be written
         mErrorString = tr("A profile is running a script or waiting for its save, so its profiles cannot close until that has ended.");
@@ -1731,10 +1742,17 @@ bool THeadlessSession::shutdown(const bool save)
                 return false;
             }
         }
-        mpPool->closeAllProfiles();
+        // Shared, as a session deleted meanwhile leaves the pool to finish the closes after this has returned
+        const auto closedAll = std::make_shared<bool>(false);
+        mpPool->closeAllProfiles([closedAll]() {
+            *closedAll = true;
+        });
+        while (self && !*closedAll) {
+            QCoreApplication::processEvents(QEventLoop::WaitForMoreEvents);
+        }
     }
     // One a handler took out of the pool is let go from a timer, which must be over before the pool goes
-    while (self && HostManager::releasingProfile()) {
+    while (self && (HostManager::releasingProfile() || poolStillClosing(*mpPool))) {
         QCoreApplication::processEvents(QEventLoop::WaitForMoreEvents);
     }
     if (!self) {
@@ -1795,6 +1813,15 @@ bool THeadlessSession::save()
         if (!saved) {
             unsaved.append(name);
         }
+    }
+    // A close begun meanwhile names its profile once its save has failed
+    for (const QPointer<Host>& pHost : std::as_const(profiles)) {
+        while (self && pHost && pHost->closeSaveInFlight()) {
+            QCoreApplication::processEvents(QEventLoop::WaitForMoreEvents);
+        }
+    }
+    if (!self) {
+        return false;
     }
     for (const QString& name : mUnsavedProfiles.mid(closesUnsavedBefore)) {
         if (!unsaved.contains(name)) {

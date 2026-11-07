@@ -676,6 +676,7 @@ void quitOnceRunning()
 }
 
 void closeAllAndQuit();
+void quitOnceClosed();
 
 // Nothing would delete a profile taken out of the pool after the quit, and its script may open another
 void closeAllOnceReleased()
@@ -705,14 +706,20 @@ void closeAllAndQuit()
                 mustWait = true;
                 break;
             }
-            mustWait |= pHost->profileResetInProgress() && !pHost->isClosingDown() && !pHost->getLuaInterpreter()->luaOnStack();
+            mustWait |= pHost->profileResetInProgress() && !pHost->closeStarted() && !pHost->getLuaInterpreter()->luaOnStack();
         }
         if (mustWait) {
             QTimer::singleShot(50ms, closeAllAndQuit);
             return;
         }
-        pool->closeAllProfiles();
+        pool->closeAllProfiles(quitOnceClosed);
+        return;
     }
+    quitOnceClosed();
+}
+
+void quitOnceClosed()
+{
     if (HostManager::releasingProfile()) {
         QTimer::singleShot(50ms, closeAllOnceReleased);
         return;

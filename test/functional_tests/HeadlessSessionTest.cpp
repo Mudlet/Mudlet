@@ -74,6 +74,8 @@
 #include "TelnetServerStub.h"
 #include "TriggerUnit.h"
 
+#include "ThreadPoolHold.h"
+
 #include "GroupedTest.h"
 
 class HeadlessSessionTest : public QObject
@@ -5966,19 +5968,51 @@ registerAnonymousEventHandler("sysLoadEvent", function() feedTriggers("fed by sy
         THeadlessSession session;
         QCOMPARE(session.start({.profile = qsl("Headless Closed Then Shut Down"), .connect = false}), THeadlessSession::StartResult::started);
         QSignalSpy quit(&session, &THeadlessSession::quitRequested);
-        std::optional<bool> hostWhenShutDown;
+        std::optional<bool> shutDown;
         QVERIFY(session.runLua(qsl("closeProfile()")));
+        // The close's save may still be writing; the shutdown waits for it rather than refusing
         QMetaObject::invokeMethod(
                 &session,
                 [&]() {
-                    hostWhenShutDown = static_cast<bool>(session.host());
-                    QVERIFY(session.shutdown(false));
+                    shutDown = session.shutdown(false);
                 },
                 Qt::QueuedConnection);
-        QTRY_VERIFY_WITH_TIMEOUT(hostWhenShutDown.has_value(), 10000);
-        QVERIFY(!*hostWhenShutDown);
+        QTRY_VERIFY_WITH_TIMEOUT(shutDown.has_value(), 10000);
+        QVERIFY2(*shutDown, qPrintable(session.errorString()));
+        QVERIFY(!session.host());
         QTest::qWait(200);
         QCOMPARE(quit.count(), 0);
+    }
+
+    // A shutdown that saves nothing still lets a close a script began write the save it owes
+    void test_anUnsavedShutdownKeepsTheSaveOfAProfileAScriptClosed()
+    {
+        const QString name = qsl("Headless Closed During A Save Then Shut Down");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        const QPointer<Host> pHost(session.host());
+        pHost->waitForProfileSave();
+        const qsizetype savesBefore = saveCount(name);
+        std::optional<bool> shutDown;
+        {
+            const PoolHold hold(std::chrono::seconds(2));
+            QVERIFY(hold.heldAll());
+            // The close's own save waits for this one
+            QVERIFY(std::get<0>(pHost->saveProfile()));
+            QVERIFY(session.runLua(qsl("closeProfile()")));
+            QVERIFY(pHost && pHost->closeSaveInFlight());
+            QMetaObject::invokeMethod(
+                    &session,
+                    [&]() {
+                        shutDown = session.shutdown(false);
+                    },
+                    Qt::QueuedConnection);
+            QTRY_VERIFY_WITH_TIMEOUT(shutDown.has_value(), 15000);
+        }
+        QVERIFY2(*shutDown, qPrintable(session.errorString()));
+        QVERIFY(!pHost);
+        QCOMPARE(saveCount(name), savesBefore + 2);
     }
 
     // The shutdown's wait for another profile's reset runs the event loop, which delivers the close's end
@@ -6000,7 +6034,6 @@ registerAnonymousEventHandler("sysLoadEvent", function() feedTriggers("fed by sy
         QMetaObject::invokeMethod(
                 &session,
                 [&]() {
-                    QVERIFY(!session.host());
                     QVERIFY(pOther->getLuaInterpreter()->compileAndExecuteScript(qsl("resetProfile()")));
                     QVERIFY(pOther->profileResetInProgress());
                     shutDown = session.shutdown(false);
