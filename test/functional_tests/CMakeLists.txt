@@ -117,6 +117,7 @@ set(PROFILE_GROUP_TEST_SOURCES
     ConnectionDialogCrashTest.cpp
     ConnectionDialogEscapeTest.cpp
     ConnectionDialogFocusTest.cpp
+    ConnectionDialogHistorySizeTest.cpp
     ConnectionDialogInitialSelectionTest.cpp
     ConnectionDialogKeychainWaitTest.cpp
     ConnectionDialogNewProfileTest.cpp
