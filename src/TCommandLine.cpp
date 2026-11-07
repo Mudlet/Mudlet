@@ -68,6 +68,30 @@ QTextCursor cursorAtWordStart(QTextDocument* pDocument, const int position)
     cursor.setPosition(cursor.selectionStart());
     return cursor;
 }
+
+bool formatAlreadyApplied(const QTextCursor& cursor, const QTextCharFormat& format)
+{
+    const int start = cursor.selectionStart();
+    const int end = cursor.selectionEnd();
+    for (QTextBlock block = cursor.document()->findBlock(start); block.isValid() && block.position() < end; block = block.next()) {
+        for (auto it = block.begin(); !it.atEnd(); ++it) {
+            const QTextFragment fragment = it.fragment();
+            if (fragment.position() + fragment.length() > start && fragment.position() < end && fragment.charFormat() != format) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+// Every mark is an undo record, even an unchanged one, and the undo stack never shrinks
+void setSpellCheckFormat(QTextCursor& cursor, const QTextCharFormat& format)
+{
+    if (cursor.hasSelection() && formatAlreadyApplied(cursor, format)) {
+        return;
+    }
+    cursor.setCharFormat(format);
+}
 } // namespace
 
 TCommandLine::TCommandLine(Host* pHost, const QString& name, enums::CommandLineType type, TConsole* pConsole, QWidget* parent)
@@ -136,6 +160,7 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, enums::CommandLineT
 
 TCommandLine::UserEditScope::UserEditScope(TCommandLine& line)
 : mLine(line)
+, mOuterEditInProgress(line.mUserEditInProgress)
 {
     const QTextCursor cursor = mLine.textCursor();
     const QString text = mLine.toPlainText();
@@ -145,7 +170,7 @@ TCommandLine::UserEditScope::UserEditScope(TCommandLine& line)
 
 TCommandLine::UserEditScope::~UserEditScope()
 {
-    mLine.mUserEditInProgress = false;
+    mLine.mUserEditInProgress = mOuterEditInProgress;
 }
 
 void TCommandLine::restorePlayerTypedLine(const QString& text)
@@ -199,10 +224,9 @@ bool TCommandLine::claimsShortcutOverride(const QKeyEvent* ke) const
 
 void TCommandLine::processNormalKey(QEvent* event)
 {
-    {
-        const UserEditScope userEdit(*this);
-        QPlainTextEdit::event(event);
-    }
+    const auto* keyEvent = static_cast<QKeyEvent*>(event);
+    const bool typing = !keyEvent->text().isEmpty() && keyEvent->text().at(0).isPrint() && !(keyEvent->modifiers() & (Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier));
+    editAndSpellCheck(event, typing ? KeyEdit::Typing : KeyEdit::Other);
     adjustHeight();
 
     mHistoryBuffer = 0;
@@ -212,8 +236,47 @@ void TCommandLine::processNormalKey(QEvent* event)
     } else {
         mUserKeptOnTyping = false;
     }
+}
 
-    spellCheck();
+void TCommandLine::editAndSpellCheck(QEvent* event, const KeyEdit kind)
+{
+    const auto* keyEvent = static_cast<QKeyEvent*>(event);
+    const int key = keyEvent->key();
+    const bool modifierAlone = key == Qt::Key_Shift || key == Qt::Key_Control || key == Qt::Key_Alt || key == Qt::Key_AltGr || key == Qt::Key_Meta;
+    // Marking after these would put back a mark that Undo just took away, even after
+    // the bare Ctrl a Ctrl+Z starts with; closing a block after Undo or Redo would also
+    // split the step they land on
+    const bool leavesMarksAlone = modifierAlone || keyEvent->matches(QKeySequence::Undo) || keyEvent->matches(QKeySequence::Redo);
+    // The key and the mark it leads to are one undo step, or Undo would take back only the mark
+    const bool grouped = mpHost->getEnableSpellCheck() && !leavesMarksAlone;
+    // Outlives the edit block, as contentsChange waits for the block to close
+    const UserEditScope userEdit(*this);
+    // Undo returns the caret to where the cursor that opened the block was
+    QTextCursor editBlock = textCursor();
+    if (grouped) {
+        // A run of typing stays one step, as Qt makes it with spell check off
+        const QTextCursor caret = textCursor();
+        const bool continuesRun = kind != KeyEdit::Other && kind == mLastKeyEdit && document()->revision() == mLastKeyEditRevision && caret.position() == mLastKeyEditPosition && !caret.hasSelection();
+        if (continuesRun) {
+            editBlock.joinPreviousEditBlock();
+        } else {
+            editBlock.beginEditBlock();
+        }
+    }
+    if (grouped) {
+        // However the caret got here, a mouse click or the menu's Undo included
+        keepMarkOffNextCharacter();
+    }
+    QPlainTextEdit::event(event);
+    if (!leavesMarksAlone) {
+        spellCheck();
+    }
+    if (grouped) {
+        editBlock.endEditBlock();
+        mLastKeyEdit = kind;
+        mLastKeyEditRevision = document()->revision();
+        mLastKeyEditPosition = textCursor().position();
+    }
 }
 
 bool TCommandLine::keybindingMatched(QKeyEvent* keyEvent)
@@ -360,7 +423,10 @@ bool TCommandLine::event(QEvent* event)
                 mTabCompletionTyped.clear();
                 mHistoryBuffer = 0;
                 mLastCompletion.clear();
-                break;
+                // Part of the run of typing, so one Undo takes back several words
+                editAndSpellCheck(event, KeyEdit::Typing);
+                adjustHeight();
+                return true;
             }
 
             if (keybindingMatched(ke)) {
@@ -436,13 +502,7 @@ bool TCommandLine::event(QEvent* event)
                 mTabCompletionCount = -1;
                 mAutoCompletionCount = -1;
                 mLastCompletion.clear();
-                {
-                    // This does the actual deletion of the character:
-                    const UserEditScope userEdit(*this);
-                    QPlainTextEdit::event(event);
-                }
-                // Recheck spelling of shortened word:
-                spellCheck();
+                editAndSpellCheck(event, KeyEdit::Backspace);
                 adjustHeight();
                 return true;
             }
@@ -467,13 +527,7 @@ bool TCommandLine::event(QEvent* event)
                 mAutoCompletionCount = -1;
                 mTabCompletionCount = -1;
                 mLastCompletion.clear();
-                {
-                    // This does the actual deletion of the character:
-                    const UserEditScope userEdit(*this);
-                    QPlainTextEdit::event(event);
-                }
-                // Recheck spelling of shortened word:
-                spellCheck();
+                editAndSpellCheck(event, KeyEdit::Delete);
                 adjustHeight();
                 return true;
             }
@@ -854,10 +908,23 @@ void TCommandLine::spellCheck()
     QTextCursor oldCursor = textCursor();
     QTextCursor c = cursorAtWordStart(document(), oldCursor.position());
     spellCheckWord(c);
+    setTextCursor(oldCursor);
+    keepMarkOffNextCharacter();
+}
+
+void TCommandLine::keepMarkOffNextCharacter()
+{
+    QTextCursor caret = textCursor();
+    // With a selection this would strip the marks from the selected words instead,
+    // which Undo and Redo leave selected
+    if (caret.hasSelection()) {
+        return;
+    }
+    // Sets only what the next character typed gets, which is not an undo record
     QTextCharFormat f;
     f.setFontUnderline(false);
-    oldCursor.setCharFormat(f);
-    setTextCursor(oldCursor);
+    caret.setCharFormat(f);
+    setTextCursor(caret);
 }
 
 void TCommandLine::slot_popupMenu()
@@ -1420,7 +1487,7 @@ void TCommandLine::spellCheckWord(QTextCursor& c)
         // We don't check when there is no dictionary or the word is too short,
         // but may need to undo any prior underline:
         f.setFontUnderline(false);
-        c.setCharFormat(f);
+        setSpellCheckFormat(c, f);
         return;
     }
 
@@ -1430,7 +1497,7 @@ void TCommandLine::spellCheckWord(QTextCursor& c)
     if (codecName.isEmpty()) {
         // If we don't know the encoding, we can't safely spell-check
         f.setFontUnderline(false);
-        c.setCharFormat(f);
+        setSpellCheckFormat(c, f);
         return;
     }
 
@@ -1462,7 +1529,7 @@ void TCommandLine::spellCheckWord(QTextCursor& c)
         // Word is spelt correctly
         f.setFontUnderline(false);
     }
-    c.setCharFormat(f);
+    setSpellCheckFormat(c, f);
 }
 
 bool TCommandLine::handleCtrlTabChange(QKeyEvent* ke, int tabNumber)
@@ -1523,9 +1590,9 @@ void TCommandLine::clearMarksOnWholeLine()
     QTextCharFormat f;
     QTextCursor c(document());
     c.select(QTextCursor::Document);
-    c.setCharFormat(f);
+    setSpellCheckFormat(c, f);
     f.setFontUnderline(false);
-    oldCursor.setCharFormat(f);
+    setSpellCheckFormat(oldCursor, f);
     setTextCursor(oldCursor);
 }
 

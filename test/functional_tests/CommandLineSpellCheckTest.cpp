@@ -279,6 +279,177 @@ private slots:
         QVERIFY2(markedMisspelt(pCommandLine, qsl("qzxfrob")), "a word no dictionary knows was not marked as misspelt");
     }
 
+    // Marking a word is not an edit, so Undo takes back the typing itself rather
+    // than a mark the key press then puts straight back, and Redo brings it back
+    void test_undoAndRedoTakeBackTypingWithSpellCheckOn()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QTest::keyClicks(pCommandLine, qsl("qzxfrob"));
+        QVERIFY(markedMisspelt(pCommandLine, qsl("qzxfrob")));
+
+        // One step for the whole run of typing, as with spell check off
+        QTest::keySequence(pCommandLine, QKeySequence::Undo);
+        QCOMPARE(pCommandLine->toPlainText(), QString());
+
+        QTest::keySequence(pCommandLine, QKeySequence::Redo);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("qzxfrob"));
+        QVERIFY2(markedMisspelt(pCommandLine, qsl("qzxfrob")), "the word Redo brought back lost its mark");
+    }
+
+    // Undo puts the caret back where the edit was, so typing after it carries on
+    // there rather than at the start of the line
+    void test_undoLeavesTheCaretWhereTheEditWas()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QTest::keyClicks(pCommandLine, qsl("go north"));
+        QTest::keyClick(pCommandLine, Qt::Key_Backspace);
+
+        QTest::keySequence(pCommandLine, QKeySequence::Undo);
+
+        QCOMPARE(pCommandLine->toPlainText(), qsl("go north"));
+        QCOMPARE(pCommandLine->textCursor().position(), 8);
+    }
+
+    // A word's mark stays on the word: what is typed after it, even straight after
+    // an Undo, starts unmarked
+    void test_aSpaceTypedAfterUndoIsNotMarked()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QTest::keyClicks(pCommandLine, qsl("qzxfrob"));
+        QTest::keyClick(pCommandLine, Qt::Key_Backspace);
+        QTest::keySequence(pCommandLine, QKeySequence::Undo);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("qzxfrob"));
+
+        QTest::keyClicks(pCommandLine, qsl(" go"));
+
+        QTextCursor space(pCommandLine->document());
+        space.setPosition(8);
+        QCOMPARE(space.charFormat().underlineStyle(), QTextCharFormat::NoUnderline);
+        QVERIFY(markedMisspelt(pCommandLine, qsl("qzxfrob")));
+    }
+
+    // The menu's Undo, like a mouse click, puts the caret at the end of a marked
+    // word without a key press, and the space typed there must still start unmarked
+    void test_aSpaceTypedAfterTheMenusUndoIsNotMarked()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QTest::keyClicks(pCommandLine, qsl("go qzxfrob"));
+        QTest::keyClick(pCommandLine, Qt::Key_Backspace);
+        pCommandLine->undo();
+        QCOMPARE(pCommandLine->toPlainText(), qsl("go qzxfrob"));
+
+        QTest::keyClicks(pCommandLine, qsl(" ab"));
+
+        QTextCursor space(pCommandLine->document());
+        space.setPosition(11);
+        QCOMPARE(space.charFormat().underlineStyle(), QTextCharFormat::NoUnderline);
+    }
+
+    // Spaces belong to the run of typing, as they do with spell check off
+    void test_undoTakesBackSeveralTypedWordsAtOnce()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QTest::keyClicks(pCommandLine, qsl("qzxa qzxb qzxc"));
+
+        QTest::keySequence(pCommandLine, QKeySequence::Undo);
+
+        QCOMPARE(pCommandLine->toPlainText(), QString());
+    }
+
+    // Switching spell check on rechecks the whole line outside any key press. Undo
+    // must get past that recheck too, with the bare Ctrl a real Ctrl+Z starts with.
+    void test_undoGetsPastARecheckOfTheWholeLine()
+    {
+        TCommandLine* pCommandLine = mpHost->mainConsoleView()->mpCommandLine;
+        QVERIFY(pCommandLine);
+        const auto clearTheLine = qScopeGuard([pCommandLine]() {
+            pCommandLine->clear();
+        });
+        pCommandLine->clear();
+        QTest::keyClicks(pCommandLine, qsl("qzxab"));
+        mpHost->setEnableSpellCheck(false);
+        QTest::keyClicks(pCommandLine, qsl("cd"));
+        mpHost->setEnableSpellCheck(true);
+        mpHost->setUserDictionaryOptions(true, false);
+        QTest::keyClicks(pCommandLine, qsl("ef"));
+
+        for (int presses = 0; presses < 10 && !pCommandLine->toPlainText().isEmpty(); ++presses) {
+            QTest::keyClick(pCommandLine, Qt::Key_Control);
+            QTest::keySequence(pCommandLine, QKeySequence::Undo);
+        }
+
+        QVERIFY2(pCommandLine->toPlainText().isEmpty(), qPrintable(qsl("Undo stuck at \"%1\"").arg(pCommandLine->toPlainText())));
+    }
+
+    // Deleting is undone as typing is
+    void test_undoTakesBackBackspaceWithSpellCheckOn()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QTest::keyClicks(pCommandLine, qsl("qzxfrob"));
+        QTest::keyClick(pCommandLine, Qt::Key_Backspace);
+        QTest::keyClick(pCommandLine, Qt::Key_Backspace);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("qzxfr"));
+
+        QTest::keySequence(pCommandLine, QKeySequence::Undo);
+
+        QCOMPARE(pCommandLine->toPlainText(), qsl("qzxfrob"));
+    }
+
+    // The mark is set inside the key's own edit, which must still count as the
+    // player's typing - that is what moves it into a password box that opens
+    void test_typingWithSpellCheckOnIsStillThePlayersOwn()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+
+        QTest::keyClicks(pCommandLine, qsl("qzxfrob"));
+        QVERIFY(pCommandLine->playerTypedLine());
+
+        QTest::keyClick(pCommandLine, Qt::Key_Backspace);
+        QVERIFY(pCommandLine->playerTypedLine());
+    }
+
+    // Rechecking a word that keeps its mark changes nothing, so moving the caret about
+    // must not pile up records on an undo stack that only clearing the line empties
+    void test_movingTheCaretAddsNothingToUndo()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QTest::keyClicks(pCommandLine, qsl("qzxfrob qzxgrok"));
+        const int undoRecords = pCommandLine->document()->availableUndoSteps();
+
+        for (int i = 0; i < 10; ++i) {
+            QTest::keyClick(pCommandLine, Qt::Key_Left);
+        }
+        for (int i = 0; i < 10; ++i) {
+            QTest::keyClick(pCommandLine, Qt::Key_Right);
+        }
+
+        QCOMPARE(pCommandLine->document()->availableUndoSteps(), undoRecords);
+        QVERIFY(markedMisspelt(pCommandLine, qsl("qzxfrob")));
+        QVERIFY(markedMisspelt(pCommandLine, qsl("qzxgrok")));
+    }
+
+    // Grouping a key with its mark is for spell check alone: without it Qt still
+    // merges a run of typing into the one step it always was
+    void test_undoTakesBackAWholeRunOfTypingWithSpellCheckOff()
+    {
+        mpHost->setEnableSpellCheck(false);
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QTest::keyClicks(pCommandLine, qsl("qzxfrob"));
+
+        QTest::keySequence(pCommandLine, QKeySequence::Undo);
+
+        QCOMPARE(pCommandLine->toPlainText(), QString());
+    }
+
     // The control for the test above
     void test_nothingIsUnderlinedWithSpellCheckOff()
     {
