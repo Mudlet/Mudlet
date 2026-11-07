@@ -283,6 +283,13 @@ void TTextEdit::needUpdate(int y1, int y2)
 
 void TTextEdit::focusInEvent(QFocusEvent* event)
 {
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
+    // The central debug console's menus never took the grab from the profile's own console
+    const bool centralDebug = mpConsole && mpConsole->getType() == TConsole::CentralDebugConsole;
+    if (!centralDebug && mpHost->caretEnabled() && event->reason() == Qt::PopupFocusReason) {
+        grabKeyboard();
+    }
+#endif
     update();
     QWidget::focusInEvent(event);
 }
@@ -292,10 +299,17 @@ void TTextEdit::focusOutEvent(QFocusEvent* event)
     // Avoid disabling caret mode when the window is merely deactivated
     // (e.g., user Alt+Tabs away). This preserves focus for screen reader
     // users like NVDA so returning to Mudlet restores the original widget
-    // rather than forcing focus to the command line.
+    // rather than forcing focus to the command line. This pane's own menus only
+    // borrow the focus and hand it back on closing, so caret mode stays on; a menu bar's may open a dialog.
+    const QWidget* popup = QApplication::activePopupWidget();
     // The central debug console shares its Host's caret mode without driving it.
     const bool centralDebug = mpConsole && mpConsole->getType() == TConsole::CentralDebugConsole;
-    if (!centralDebug && mpHost->caretEnabled() && event->reason() != Qt::ActiveWindowFocusReason) {
+    if (event->reason() == Qt::PopupFocusReason && popup && popup->parentWidget() == this) {
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
+        // Caret mode's keyboard grab would otherwise beat the popup to every key
+        releaseKeyboard();
+#endif
+    } else if (!centralDebug && mpHost->caretEnabled() && event->reason() != Qt::ActiveWindowFocusReason) {
         mpHost->setCaretEnabled(false);
     }
 
@@ -2301,11 +2315,21 @@ void TTextEdit::slot_popupMenu()
             mpBuffer->markLinkAsVisited(mPopupLinkIndex);
         }
 
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
+        // The item may open a dialog, whose keys caret mode's keyboard grab would keep for this pane
+        releaseKeyboard();
+#endif
         if (!luaReference) {
             mpHost->mLuaInterpreter.compileAndExecuteScript(cmd);
         } else {
             mpHost->mLuaInterpreter.callAnonymousFunction(luaReference, qsl("echoPopup"));
         }
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
+        const bool centralDebug = mpConsole && mpConsole->getType() == TConsole::CentralDebugConsole;
+        if (!centralDebug && mpHost->caretEnabled() && hasFocus()) {
+            grabKeyboard();
+        }
+#endif
     }
     mPopupLinkIndex = 0;
 }
