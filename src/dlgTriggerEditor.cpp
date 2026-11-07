@@ -57,6 +57,7 @@
 #include "widgetutils.h"
 #include "utils.h"
 #include "edbee/models/textdocumentscopes.h"
+#include "edbee/util/regexp.h"
 
 #include <QApplication>
 #include <QCheckBox>
@@ -12000,19 +12001,29 @@ void dlgTriggerEditor::slot_closeSourceFind()
 void dlgTriggerEditor::slot_sourceReplace()
 {
     auto controller = mpSourceEditorEdbee->controller();
-    auto replaceText = mpSourceEditorFindArea->lineEdit_replaceText->text();
+    const QString findText = mpSourceEditorFindArea->lineEdit_findText->text();
+    const QString replaceText = mpSourceEditorFindArea->lineEdit_replaceText->text();
+    // the same matching as the finds below, which fold case the Unicode way (ß matches ss)
+    edbee::RegExp term(findText, false, edbee::RegExp::SyntaxFixedString);
     for (size_t i = 0; i < controller->textSelection()->rangeCount(); i++) {
         auto& range = controller->textSelection()->range(i);
-        if (mpSourceEditorEdbee->textDocument()->text().mid(range.anchor(), range.length()) == replaceText) {
+        // anchor() is the end of a selection made right to left, min() is always its start
+        const QString selected = mpSourceEditorEdbee->textDocument()->text().mid(range.min(), range.length());
+        // finding replaces the whole selection, so `range` and the count are stale after one
+        if (selected == replaceText) {
             slot_sourceFindNext();
-            continue;
+            return;
         }
         if (!range.hasSelection()) {
             slot_sourceFindPrevious();
-            continue;
+            return;
         }
-        mpSourceEditorEdbee->textDocument()->replace(range.anchor(), range.length(), replaceText);
-        range.setLength(mpSourceEditorFindArea->lineEdit_replaceText->text().length());
+        if (term.indexIn(selected) != 0 || term.len(0) != static_cast<size_t>(selected.length())) {
+            slot_sourceFindNext();
+            return;
+        }
+        mpSourceEditorEdbee->textDocument()->replace(range.min(), range.length(), replaceText);
+        range.setLength(replaceText.length());
     }
 }
 
@@ -12043,13 +12054,15 @@ void dlgTriggerEditor::slot_sourceFindNext()
 void dlgTriggerEditor::slot_sourceFindTextChanges()
 {
     auto text = mpSourceEditorFindArea->lineEdit_findText->text();
+    auto controller = mpSourceEditorEdbee->controller();
+    // the marks left by a longer term no longer match what the box holds
+    controller->borderedTextRanges()->clear();
     if (text.length() <= 2) {
+        controller->update();
         return;
     }
 
-    auto controller = mpSourceEditorEdbee->controller();
     auto searcher = controller->textSearcher();
-    controller->borderedTextRanges()->clear();
     controller->textSelection()->range(0).clearSelection();
     searcher->setSearchTerm(text);
     searcher->markAll(controller->borderedTextRanges());

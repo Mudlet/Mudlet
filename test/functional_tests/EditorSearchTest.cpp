@@ -670,6 +670,146 @@ private slots:
         QCOMPARE(marked->rangeCount(), size_t{2});
     }
 
+    void test_shorteningTheScriptFindTermDropsItsMarks()
+    {
+        const QString script = mpEditor->mpSourceEditorEdbeeDocument->text();
+        auto restore = qScopeGuard([this, script]() {
+            mpEditor->mpSourceEditorEdbeeDocument->setText(script);
+            mpEditor->mpSourceEditorFindArea->lineEdit_findText->clear();
+        });
+
+        mpEditor->mpSourceEditorEdbeeDocument->setText(qsl("aaa bbb aaa\n"));
+        edbee::TextRangeSet* marked = mpEditor->mpSourceEditorEdbee->controller()->borderedTextRanges();
+        mpEditor->mpSourceEditorFindArea->lineEdit_findText->setText(qsl("aaa"));
+        QCOMPARE(marked->rangeCount(), size_t{2});
+
+        mpEditor->mpSourceEditorFindArea->lineEdit_findText->setText(qsl("aa"));
+        QCOMPARE(marked->rangeCount(), size_t{0});
+    }
+
+    void test_scriptReplace_data()
+    {
+        QTest::addColumn<int>("anchor");
+        QTest::addColumn<int>("caret");
+        QTest::addColumn<QString>("expected");
+
+        // "alpha beta gamma beta": the first "beta" spans 6..10, "alpha" 0..5
+        QTest::newRow("selected left to right") << 6 << 10 << "alpha BETA gamma beta\n";
+        QTest::newRow("selected right to left") << 10 << 6 << "alpha BETA gamma beta\n";
+        QTest::newRow("selection differs in case") << 17 << 21 << "alpha beta gamma BETA\n";
+        QTest::newRow("selection is not the term") << 0 << 5 << "alpha beta gamma beta\n";
+        QTest::newRow("nothing selected") << 22 << 22 << "alpha beta gamma beta\n";
+    }
+
+    void test_scriptReplace()
+    {
+        QFETCH(int, anchor);
+        QFETCH(int, caret);
+        QFETCH(QString, expected);
+
+        const QString script = mpEditor->mpSourceEditorEdbeeDocument->text();
+        auto restore = qScopeGuard([this, script]() {
+            mpEditor->mpSourceEditorEdbeeDocument->setText(script);
+            mpEditor->mpSourceEditorFindArea->lineEdit_findText->clear();
+            mpEditor->mpSourceEditorFindArea->lineEdit_replaceText->clear();
+        });
+
+        mpEditor->mpSourceEditorEdbeeDocument->setText(qsl("alpha beta gamma beta\n"));
+        mpEditor->mpSourceEditorFindArea->lineEdit_findText->setText(qsl("Beta"));
+        mpEditor->mpSourceEditorFindArea->lineEdit_replaceText->setText(qsl("BETA"));
+        edbee::TextRangeSet* selection = mpEditor->mpSourceEditorEdbee->controller()->textSelection();
+        selection->clear();
+        selection->addRange(anchor, caret);
+
+        mpEditor->slot_sourceReplace();
+
+        QCOMPARE(mpEditor->mpSourceEditorEdbeeDocument->text(), expected);
+    }
+
+    // The find matches case-insensitively with full Unicode case folding, so
+    // a match it selects must count as one when Replace is pressed
+    void test_scriptReplaceReplacesAMatchThatOnlyFoldsToTheTerm()
+    {
+        const QString script = mpEditor->mpSourceEditorEdbeeDocument->text();
+        auto restore = qScopeGuard([this, script]() {
+            mpEditor->mpSourceEditorEdbeeDocument->setText(script);
+            mpEditor->mpSourceEditorFindArea->lineEdit_findText->clear();
+            mpEditor->mpSourceEditorFindArea->lineEdit_replaceText->clear();
+        });
+
+        mpEditor->mpSourceEditorEdbeeDocument->setText(qsl("-- Strasse\n"));
+        mpEditor->mpSourceEditorFindArea->lineEdit_findText->setText(qsl("straße"));
+        mpEditor->mpSourceEditorFindArea->lineEdit_replaceText->setText(qsl("road"));
+        edbee::TextRangeSet* selection = mpEditor->mpSourceEditorEdbee->controller()->textSelection();
+        selection->clear();
+        selection->addRange(0, 0);
+
+        mpEditor->slot_sourceFindNext();
+        QCOMPARE(selection->range(0).min(), size_t{3});
+        QCOMPARE(selection->range(0).max(), size_t{10});
+
+        mpEditor->slot_sourceReplace();
+        QCOMPARE(mpEditor->mpSourceEditorEdbeeDocument->text(), qsl("-- road\n"));
+    }
+
+    // With nothing to put in its place, a match is deleted and the caret is
+    // left with no selection - the next press has to carry on forwards
+    void test_scriptReplaceWithNothingDeletesMatchesInOrder()
+    {
+        const QString script = mpEditor->mpSourceEditorEdbeeDocument->text();
+        auto restore = qScopeGuard([this, script]() {
+            mpEditor->mpSourceEditorEdbeeDocument->setText(script);
+            mpEditor->mpSourceEditorFindArea->lineEdit_findText->clear();
+        });
+
+        mpEditor->mpSourceEditorEdbeeDocument->setText(qsl("x foo y foo z foo\n"));
+        mpEditor->mpSourceEditorFindArea->lineEdit_findText->setText(qsl("foo"));
+        mpEditor->mpSourceEditorFindArea->lineEdit_replaceText->clear();
+        edbee::TextRangeSet* selection = mpEditor->mpSourceEditorEdbee->controller()->textSelection();
+        selection->clear();
+        selection->addRange(0, 0);
+
+        mpEditor->slot_sourceReplace();
+        QCOMPARE(selection->range(0).min(), size_t{2});
+        mpEditor->slot_sourceReplace();
+        QCOMPARE(mpEditor->mpSourceEditorEdbeeDocument->text(), qsl("x  y foo z foo\n"));
+        mpEditor->slot_sourceReplace();
+        mpEditor->slot_sourceReplace();
+        QCOMPARE(mpEditor->mpSourceEditorEdbeeDocument->text(), qsl("x  y  z foo\n"));
+    }
+
+    // Replace only steps over what is selected, so a selection that is not the
+    // term is passed by to the next match, which the following Replace changes
+    void test_scriptReplaceMovesPastANonMatchThenReplacesTheMatch()
+    {
+        const QString script = mpEditor->mpSourceEditorEdbeeDocument->text();
+        auto restore = qScopeGuard([this, script]() {
+            mpEditor->mpSourceEditorEdbeeDocument->setText(script);
+            mpEditor->mpSourceEditorFindArea->lineEdit_findText->clear();
+            mpEditor->mpSourceEditorFindArea->lineEdit_replaceText->clear();
+        });
+
+        mpEditor->mpSourceEditorEdbeeDocument->setText(qsl("alpha beta gamma beta\n"));
+        mpEditor->mpSourceEditorFindArea->lineEdit_findText->setText(qsl("beta"));
+        mpEditor->mpSourceEditorFindArea->lineEdit_replaceText->setText(qsl("delta"));
+        edbee::TextRangeSet* selection = mpEditor->mpSourceEditorEdbee->controller()->textSelection();
+        selection->clear();
+        selection->addRange(5, 0);
+
+        mpEditor->slot_sourceReplace();
+        QCOMPARE(mpEditor->mpSourceEditorEdbeeDocument->text(), qsl("alpha beta gamma beta\n"));
+        QCOMPARE(selection->range(0).min(), size_t{6});
+        QCOMPARE(selection->range(0).max(), size_t{10});
+
+        mpEditor->slot_sourceReplace();
+        QCOMPARE(mpEditor->mpSourceEditorEdbeeDocument->text(), qsl("alpha delta gamma beta\n"));
+
+        // the replacement is still selected, so the next press moves on to the second match
+        mpEditor->slot_sourceReplace();
+        mpEditor->slot_sourceReplace();
+        QCOMPARE(mpEditor->mpSourceEditorEdbeeDocument->text(), qsl("alpha delta gamma delta\n"));
+    }
+
     void test_anEmptyOrUnknownTermProducesNoResults()
     {
         search(qsl("qaNothingMatchesThis"));
