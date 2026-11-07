@@ -10203,6 +10203,28 @@ bool TBuffer::isLinkVisited(int linkIndex) const
     return mVisitedLinks.value(linkIndex, false);
 }
 
+bool TBuffer::linkHeld(const int linkIndex) const
+{
+    if (linkIndex <= 0 || !mLinkStore.contains(linkIndex)) {
+        return false;
+    }
+    if (!mLinkIdsRemovedSinceSweep.contains(linkIndex)) {
+        return true;
+    }
+    // A concealed link's characters carry no index
+    if (mpModel && mpModel->mHyperlinkVisibilityManager.trackedLinkIds().contains(linkIndex)) {
+        return true;
+    }
+    for (const TLineFormat& line : buffer) {
+        for (const TChar& c : line) {
+            if (c.linkIndex() == linkIndex) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 void TBuffer::setLinkSelected(int linkIndex, bool selected)
 {
     mLinkSelectionState[linkIndex] = selected;

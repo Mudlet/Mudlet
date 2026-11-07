@@ -215,6 +215,46 @@ public:
     // own, invalid with no profile open: read them at profileLoaded, then follow consoleColorsChanged
     QColor consoleForeground() const;
     QColor consoleBackground() const;
+    // An item of a link's menu, as the GUI lists it
+    struct LinkItem
+    {
+        QString label;
+        // Off where the GUI greys it out, as it has nothing to run
+        bool enabled = true;
+        // A line between items, with no label
+        bool separator = false;
+
+        bool operator==(const LinkItem&) const = default;
+    };
+    // What a link of the main console offers, as the GUI shows it now
+    struct Link
+    {
+        // Plain text, empty for none
+        QString tooltip;
+        // A click follows the first item; where menu is set, the GUI's right click lists the items, under menuTitle
+        // if that is not empty
+        bool menu = false;
+        QString menuTitle;
+        QList<LinkItem> items;
+        // A spoiler, which a click reveals before it follows the link, and whether it has been
+        bool spoiler = false;
+        bool revealed = false;
+        // A click does nothing, save reveal a spoiler
+        bool disabled = false;
+        // Hidden by the game's OSC 8 visibility settings: the GUI shows blanks in its place, which a click cannot reach
+        bool concealed = false;
+        bool visited = false;
+        // Chosen, in its selection group
+        bool selected = false;
+        // How the GUI paints the link in its state now, which may differ from its runs as sent: each is empty where
+        // the run's own applies, and styles replaces only the run's bold, italic, underline, overline and strike-out
+        std::optional<QColor> foreground;
+        std::optional<QColor> background;
+        std::optional<TextStyles> styles;
+    };
+    // The link a run names, while the main console holds it; nullopt for 0, an id it does not hold and with no profile
+    // open. A getter, so it may be called from any handler.
+    std::optional<Link> link(int id) const;
     // Answers the game's offer of a secure port, as the GUI's Yes and No do: true stores that port with TLS on,
     // as the connection dialog would, and connects there, so a frontend that passes its own port to a later
     // start() passes tls with it; false reconnects where it was and stops the profile asking again. False, with
