@@ -76,6 +76,20 @@ describe("Tests how a console wraps the lines it is given", function()
       assert.are.same({"日本語のテ", "キストです"}, wrapped(10, "日本語のテキストです"))
     end)
 
+    it("counts a symbol drawn as an emoji as two columns", function()
+      -- U+2620 and U+1F56F are one column on their own; VS16 (U+FE0F) makes each a colour emoji
+      assert.are.same({"☠️☠️", "☠️"}, wrapped(4, "☠️☠️☠️"))
+      assert.are.same({"🕯️🕯️", "🕯️"}, wrapped(4, "🕯️🕯️🕯️"))
+      assert.are.same({"#️⃣#️⃣", "#️⃣"}, wrapped(4, "#️⃣#️⃣#️⃣"))
+    end)
+
+    it("keeps a one column symbol without VS16 at one column", function()
+      assert.are.same({"☠☠☠☠"}, wrapped(4, "☠☠☠☠"))
+      assert.are.same({"#️#️#️#️"}, wrapped(4, "#️#️#️#️"))
+      -- U+00E9 has no emoji form, so VS16 leaves it a one column letter
+      assert.are.same({"é️é️é️é️"}, wrapped(4, "é️é️é️é️"))
+    end)
+
     it("drops the spaces a break lands inside", function()
       -- the break falls in the middle of the run of six spaces: the four that
       -- fit finish the line and the two that would have started the next are

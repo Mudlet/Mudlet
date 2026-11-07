@@ -864,7 +864,7 @@ void TTextEdit::replaceControlCharacterWith_Picture(const uint unicode, QStringV
         charWidth = 1;
         break; // DEL
     default:
-        charWidth = getGraphemeWidth(unicode);
+        charWidth = getGraphemeWidth(unicode, grapheme);
         outGrapheme = (charWidth < 1) ? QStringView() : grapheme;
     }
 }
@@ -1007,7 +1007,7 @@ void TTextEdit::replaceControlCharacterWith_OEMFont(const uint unicode, QStringV
         charWidth = 1;
         break; // DEL - House
     default:
-        charWidth = getGraphemeWidth(unicode);
+        charWidth = getGraphemeWidth(unicode, grapheme);
         outGrapheme = (charWidth < 1) ? QStringView() : grapheme;
     }
 }
@@ -1026,7 +1026,7 @@ int TTextEdit::layoutGrapheme(LineLayout& layout, const QPoint& cursor, QStringV
             charWidth = mTabStopwidth - (column % mTabStopwidth);
             run.grapheme = u"\t";
         } else {
-            charWidth = graphemeInfo::getWidth(unicode, mWideAmbigousWidthGlyphs);
+            charWidth = graphemeInfo::withPresentation(grapheme, unicode, graphemeInfo::getWidth(unicode, mWideAmbigousWidthGlyphs));
             run.grapheme = (charWidth < 1) ? QStringView() : grapheme;
         }
         break;
@@ -1287,7 +1287,7 @@ void TTextEdit::drawCustomDecorations(QPainter& painter, const QColor& defaultCo
     }
 }
 
-int TTextEdit::getGraphemeWidth(uint unicode) const
+int TTextEdit::getGraphemeWidth(uint unicode, QStringView grapheme) const
 {
 #if defined(DEBUG_CODEPOINT_PROBLEMS)
     switch (widechar_wcwidth(unicode)) {
@@ -1382,7 +1382,7 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
         return 1;
     }
 #endif
-    return graphemeInfo::getWidth(unicode, mWideAmbigousWidthGlyphs);
+    return graphemeInfo::withPresentation(grapheme, unicode, graphemeInfo::getWidth(unicode, mWideAmbigousWidthGlyphs));
 }
 QImage TTextEdit::cachedScreen()
 {
@@ -2161,7 +2161,7 @@ int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber, bo
             if (unicode == '\t') {
                 charWidth = mTabStopwidth - (column % mTabStopwidth);
             } else {
-                auto reportedWidth = getGraphemeWidth(unicode);
+                auto reportedWidth = getGraphemeWidth(unicode, grapheme);
                 // The paint code is set to use a replacement character for a
                 // zero return value - so handle the space that will need)
                 charWidth = (reportedWidth ? reportedWidth : 1);
@@ -2797,11 +2797,12 @@ void TTextEdit::slot_copySelectionToClipboardImage()
             auto nextBoundary{boundaryFinder.toNextBoundary()};
             // Width in "normal" width equivalent of this grapheme:
             int charWidth{};
-            const uint unicode = graphemeInfo::getBaseCharacter(QStringView(lineText).mid(indexOfChar, nextBoundary - indexOfChar));
+            const QStringView grapheme = QStringView(lineText).mid(indexOfChar, nextBoundary - indexOfChar);
+            const uint unicode = graphemeInfo::getBaseCharacter(grapheme);
             if (unicode == '\t') {
                 charWidth = mTabStopwidth - (column % mTabStopwidth);
             } else {
-                auto reportedWidth = getGraphemeWidth(unicode);
+                auto reportedWidth = getGraphemeWidth(unicode, grapheme);
                 // The paint code is set to use a replacement character for a
                 // zero return value - so handle the space that will need)
                 charWidth = (reportedWidth ? reportedWidth : 1);
