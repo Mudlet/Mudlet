@@ -252,7 +252,7 @@ private slots:
         QVERIFY2(mpEditor, "the editor dialog was not created");
 
         populateProfile();
-        // The editor filled its trees when the profile loaded, so items added
+        // The editor filled its trees as it opened, so items added
         // behind its back are only in them after the same rebuild that Host
         // does when a package is installed
         mpEditor->doCleanReset();

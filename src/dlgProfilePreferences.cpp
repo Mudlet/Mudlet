@@ -185,6 +185,8 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     // (see #5310). Done here rather than in loadEditorTab() so it holds even
     // when that returns early for want of a profile.
     new EditorAutoCompleteFocusHandler(edbeePreviewWidget, this);
+    // The preview completes Lua like the editor, which may not have been built yet
+    dlgTriggerEditor::ensureLuaAutoCompleteProvider();
 
     mpTimer_apply = new QTimer(this);
     mpTimer_apply->setSingleShot(true);
