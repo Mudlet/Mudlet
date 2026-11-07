@@ -74,6 +74,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     DetachedWindowOwnershipTest.cpp
     SpeechAcrossProfilesTest.cpp
     MudletProxyStyleTest.cpp
+    DarkThemeToolBarExtensionTest.cpp
     DarkThemeItemCheckTest.cpp
     MxpFramePlacementTest.cpp
     MxpDestFrameClearTest.cpp
