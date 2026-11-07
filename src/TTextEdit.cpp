@@ -187,6 +187,7 @@ void TTextEdit::scheduleUpdate(const QRect& rect)
         return;
     }
     const QRect area = rect.isValid() ? rect : QWidget::rect();
+    const bool nothingHeldBack = mPendingPaintRegion.isEmpty();
     mPendingPaintRegion += area;
     const int pace = paintPaceMs();
     const qint64 sincePaint = mSincePaint.isValid() ? mSincePaint.elapsed() : pace;
@@ -198,10 +199,15 @@ void TTextEdit::scheduleUpdate(const QRect& rect)
         update(mPendingPaintRegion);
         mWholePaneRequested = area.contains(QWidget::rect());
         mPendingPaintRegion = QRegion();
+        mPaintPacerMoved = false;
         return;
     }
 
-    if (!mpPaintPacer->isActive()) {
+    // A timer still running with nothing held back is due on the last frame's clock. Moved once a
+    // frame, as paints covering the pane can outpace it and only its firing moves the scrollbar.
+    const bool leftRunning = mpPaintPacer->isActive();
+    if (!leftRunning || (nothingHeldBack && !mPaintPacerMoved)) {
+        mPaintPacerMoved = leftRunning;
         mPaintPacerStretched = pace == csmFloodPaintPaceMs;
         mpPaintPacer->start(pace - static_cast<int>(sincePaint));
     }

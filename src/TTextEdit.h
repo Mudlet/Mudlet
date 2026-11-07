@@ -375,6 +375,7 @@ private:
     int paintPaceMs() const;
     QTimer* mpPaintPacer = nullptr;
     bool mPaintPacerStretched = false;
+    bool mPaintPacerMoved = false;
     // Restarted by each paintEvent(), so scheduleUpdate() can tell how much of
     // the current frame's window is left.
     QElapsedTimer mSincePaint;
