@@ -763,6 +763,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_triggers->setRootIsDecorated(false);
     treeWidget_triggers->setHost(mpHost);
     treeWidget_triggers->header()->hide();
+    //: Accessible name of the editor's tree of triggers, which screen readers announce when it gets the focus
+    treeWidget_triggers->setAccessibleName(tr("Triggers"));
     treeWidget_triggers->setContextMenuPolicy(Qt::ActionsContextMenu);
 
     treeWidget_aliases->hide();
@@ -770,6 +772,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_aliases->setTreeType(TreeType::Alias);
     treeWidget_aliases->setColumnCount(1);
     treeWidget_aliases->header()->hide();
+    //: Accessible name of the editor's tree of aliases, which screen readers announce when it gets the focus
+    treeWidget_aliases->setAccessibleName(tr("Aliases"));
     treeWidget_aliases->setRootIsDecorated(false);
     treeWidget_aliases->setContextMenuPolicy(Qt::ActionsContextMenu);
 
@@ -778,6 +782,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_actions->setTreeType(TreeType::Action);
     treeWidget_actions->setColumnCount(1);
     treeWidget_actions->header()->hide();
+    //: Accessible name of the editor's tree of buttons, which screen readers announce when it gets the focus
+    treeWidget_actions->setAccessibleName(tr("Buttons"));
     treeWidget_actions->setRootIsDecorated(false);
     treeWidget_actions->setContextMenuPolicy(Qt::ActionsContextMenu);
 
@@ -786,6 +792,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_timers->setTreeType(TreeType::Timer);
     treeWidget_timers->setColumnCount(1);
     treeWidget_timers->header()->hide();
+    //: Accessible name of the editor's tree of timers, which screen readers announce when it gets the focus
+    treeWidget_timers->setAccessibleName(tr("Timers"));
     treeWidget_timers->setRootIsDecorated(false);
     treeWidget_timers->setContextMenuPolicy(Qt::ActionsContextMenu);
 
@@ -795,6 +803,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_variables->setColumnCount(2);
     treeWidget_variables->hideColumn(1);
     treeWidget_variables->header()->hide();
+    //: Accessible name of the editor's tree of variables, which screen readers announce when it gets the focus
+    treeWidget_variables->setAccessibleName(tr("Variables"));
     treeWidget_variables->setRootIsDecorated(false);
     treeWidget_variables->setContextMenuPolicy(Qt::ActionsContextMenu);
 
@@ -803,6 +813,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_keys->setTreeType(TreeType::Key);
     treeWidget_keys->setColumnCount(1);
     treeWidget_keys->header()->hide();
+    //: Accessible name of the editor's tree of keys, which screen readers announce when it gets the focus
+    treeWidget_keys->setAccessibleName(tr("Keys"));
     treeWidget_keys->setRootIsDecorated(false);
     treeWidget_keys->setContextMenuPolicy(Qt::ActionsContextMenu);
 
@@ -811,6 +823,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_scripts->setTreeType(TreeType::Script);
     treeWidget_scripts->setColumnCount(1);
     treeWidget_scripts->header()->hide();
+    //: Accessible name of the editor's tree of scripts, which screen readers announce when it gets the focus
+    treeWidget_scripts->setAccessibleName(tr("Scripts"));
     treeWidget_scripts->setRootIsDecorated(false);
     treeWidget_scripts->setContextMenuPolicy(Qt::ActionsContextMenu);
 
@@ -1445,6 +1459,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
               //: Heading for the fourth column of the search results
               << tr("What");
     treeWidget_searchResults->setHeaderLabels(labelList);
+    //: Accessible name of the editor's list of search results, which screen readers announce when it gets the focus
+    treeWidget_searchResults->setAccessibleName(tr("Search results"));
 
     comboBox_searchTerms->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
