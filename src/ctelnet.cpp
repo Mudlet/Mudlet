@@ -260,6 +260,7 @@ void cTelnet::reset()
     // After ECHO is released, or a disconnect during the auto-login opens a box
     setAutoLoginPending(false);
     mGA_Driver = false;
+    forgetPromptEnd();
     // An outstanding measurement belongs to the connection being reset, so the
     // next connection's first packet must not be taken for its reply
     abandonNetworkLatencyMeasurement();
@@ -3506,6 +3507,12 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
     switch (ch) {
     case TN_GA:
     case TN_EOR: {
+        // Some games end each prompt with both EOR and GA, which ends it once
+        if (mPromptEndedBy == (ch == TN_GA ? TN_EOR : TN_GA)) {
+            forgetPromptEnd();
+            break;
+        }
+        mPromptEndedBy = ch;
         recvdGA = true;
         emit signal_promptReceived();
         break;
@@ -5708,8 +5715,12 @@ void cTelnet::postData(const bool endsWithPromptMarker)
     }
 
     // All data goes through main console's printOnDisplay which calls
-    // translateToPlainText - MXP DEST routing happens inside that process
+    // translateToPlainText - MXP DEST routing happens inside that process.
+    // What a trigger feedTelnet()s from in here is not this stream's text, so it must not part this
+    // stream's EOR from the GA that follows it
+    const char promptEndedBy = std::exchange(mPromptEndedBy, 0);
     mpHost->printOnDisplay(data, true);
+    mPromptEndedBy = promptEndedBy;
     if (mpHost->mMMCPServer && !mpHost->mIsRemoteEchoingActive) {
         mpHost->mMMCPServer->receiveFromPlayer(snooped ? original : data, endsWithPromptMarker);
     }
@@ -6118,6 +6129,7 @@ void cTelnet::slot_processReplayChunk()
                 //2. seq. of two IACs
                 iac = false;
                 cleandata += ch;
+                forgetPromptEnd();
                 command = "";
             } else if (iac && (!insb) && ((ch == TN_WILL) || (ch == TN_WONT) || (ch == TN_DO) || (ch == TN_DONT))) {
                 //3. IAC DO/DONT/WILL/WONT
@@ -6170,12 +6182,14 @@ void cTelnet::slot_processReplayChunk()
             // bell, so the run branch would measure an empty run and put the loop
             // back on the same byte for ever.
             cleandata += ch;
+            forgetPromptEnd();
         } else if (ch != '\r' && ch != '\0') {
             // Nearly all of a chunk is text that goes straight through, so it
             // goes across a run at a time rather than a byte at a time:
             const int runEnd = textRunEnd(loadBuffer, i, datalen);
             cleandata.append(loadBuffer + i, runEnd - i);
             i = runEnd - 1;
+            forgetPromptEnd();
         }
 
         if (recvdGA) {
@@ -6404,6 +6418,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                 //2. seq. of two IACs
                 iac = false;
                 cleandata += ch;
+                forgetPromptEnd();
                 command = "";
             } else if (iac && (!insb) && ((ch == TN_WILL) || (ch == TN_WONT) || (ch == TN_DO) || (ch == TN_DONT))) {
                 //3. IAC DO/DONT/WILL/WONT
@@ -6605,12 +6620,14 @@ Some data loss is likely - please mention this problem to the game admins.)",
             // received bell, not on every screen refresh
             emit signal_bell();
             cleandata += ch;
+            forgetPromptEnd();
         } else if (ch != '\r' && ch != '\0') {
             // Nearly all of a read is text that goes straight through, so it
             // goes across a run at a time rather than a byte at a time:
             const int runEnd = textRunEnd(buffer, i, datalen);
             cleandata.append(buffer + i, runEnd - i);
             i = runEnd - 1;
+            forgetPromptEnd();
         }
     MAIN_LOOP_END:;
         if (recvdGA) {
