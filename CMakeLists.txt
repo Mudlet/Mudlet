@@ -68,17 +68,20 @@ file(GLOB ROOT_FILES_LIST CONFIGURE_DEPENDS
 )
 
 file(GLOB_RECURSE OTHER_FILES_LIST CONFIGURE_DEPENDS
-  .github/**
-  .devcontainer/**
-  .vscode/**
+  .agents/**
+  .clang-format
   .claude/**
+  .devcontainer/**
+  .github/**
+  .signpath/**
+  .vscode/**
   3rdparty/discord/rpc/lib/*
   CI/**
   docker/**
   docs/**
-  .clang-format
   src/.gitignore
   src/mudlet-lua/**
+  templates/**
 )
 
 # It is not clear that the "COMMENT" actually shows up anywhere - so include
