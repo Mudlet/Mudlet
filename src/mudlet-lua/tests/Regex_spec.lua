@@ -840,10 +840,15 @@ describe("PCRE regex cases with tempRegexTrigger", function()
             local seen = {}
             regexTrigger("^[\\Qa]\\E]bc$", function() table.insert(seen, "quoted") end)
             regexTrigger("^xyz\\E?$", function() table.insert(seen, "stray end") end)
+            -- pcre2 skips an \E first in a class, so the ] after it is a member
+            regexTrigger("^[\\E]ab]$", function() table.insert(seen, "first member") end)
+            regexTrigger("^(?:ab|[\\E])(]cd)$", function() table.insert(seen, "first member in a branch") end)
+            -- and \c takes the character after it, even a ]
+            regexTrigger("^(?:xa|[\\c])(]cd)$", function() table.insert(seen, "control character") end)
 
-            feedTriggers("\nabc\nxy\n")
+            feedTriggers("\nabc\nxy\na\nab\nxa\n")
 
-            assert.are.same({"quoted", "stray end"}, seen)
+            assert.are.same({"quoted", "stray end", "first member", "first member in a branch", "control character"}, seen)
         end)
 
         -- pcre2 reads UTF-8 that leaves an unpaired surrogate out, which puts
