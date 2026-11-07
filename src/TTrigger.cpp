@@ -150,6 +150,11 @@ QString requiredLiteral(const QString& pattern)
         }
         return i;
     };
+    // (?< also opens the lookbehinds (?<=, (?<! and (?<*, so a name has to start
+    // with a letter or _; pcre2 refuses one outside the basic plane that is neither
+    const auto startsName = [](const QChar c) {
+        return c.isLetter() || c == u'_' || c.isHighSurrogate();
+    };
     // {n}, {n,} and {n,m} are quantifiers to every pcre2; {,m} and blanks
     // inside the braces are to 10.43 on and not before; any other brace is
     // the character itself
@@ -275,7 +280,7 @@ QString requiredLiteral(const QString& pattern)
                     const QChar kind = pattern.at(i + 2);
                     if (kind == u':') {
                         nameEnd = i + 2;
-                    } else if (kind == u'<' && i + 3 < size && pattern.at(i + 3) != u'=' && pattern.at(i + 3) != u'!') {
+                    } else if (kind == u'<' && i + 3 < size && startsName(pattern.at(i + 3))) {
                         nameEnd = pattern.indexOf(u'>', i + 3);
                     } else if (kind == u'P' && i + 3 < size && pattern.at(i + 3) == u'<') {
                         nameEnd = pattern.indexOf(u'>', i + 4);

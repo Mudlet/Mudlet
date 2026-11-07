@@ -870,6 +870,17 @@ describe("PCRE regex cases with tempRegexTrigger", function()
             assert.are.same({"Ann", "Ben", "Cal"}, seen)
         end)
 
+        -- a (?<* read as a name running to the > would swallow the | or [ before it
+        it("does not take a non-atomic lookbehind for a named group", function()
+            local seen = {}
+            regexTrigger("(?<*ab)(?:cd|ef>ghij)", function() table.insert(seen, matches[1]) end)
+            regexTrigger("(?<*[>]xy)z", function() table.insert(seen, matches[1]) end)
+
+            feedTriggers("\nabcd\n>xyz\n")
+
+            assert.are.same({"cd", "z"}, seen)
+        end)
+
         -- The named groups come out of pcre2 in alphabetical order, so their
         -- positions are read out of order, after the numbered ones
         it("places every capture of a multibyte match, in whichever order they are read", function()
