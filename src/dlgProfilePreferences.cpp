@@ -66,6 +66,7 @@
 #endif
 
 #include <chrono>
+#include <filesystem>
 #include <vector>
 #include <QtConcurrentRun>
 #include <QAbstractScrollArea>
@@ -6799,12 +6800,28 @@ void dlgProfilePreferences::slot_copyMap()
     }
 
     QList<QString> copiedToProfiles;
+    QStringList failedProfiles;
     // Make the copies into the destination profiles (for all to profiles whether
     // in use or not):
     itOtherProfile.toFront();
     while (itOtherProfile.hasNext()) {
         itOtherProfile.next();
         const QString otherHostName = itOtherProfile.key();
+        const QString destination = MudletApp::getMudletPath(enums::profileMapPathFileName, otherHostName, thisProfileLatestMapPathFileName);
+        // A map folder shared through a link or junction already holds the save just made, which a remove would delete
+        std::error_code notComparable;
+        if (std::filesystem::equivalent(QFileInfo(destination).filesystemFilePath(), QFileInfo(thisProfileLatestMapFile).filesystemFilePath(), notComparable)) {
+            copiedToProfiles.append(otherHostName);
+            continue;
+        }
+        // A copy made earlier in the same second may have left a file of this name, which QFile::copy() will not replace;
+        // it is set aside rather than removed, so a copy that fails can put it back
+        const QString setAside = qsl("%1.replaced").arg(destination);
+        bool replacing = false;
+        if (QFileInfo(destination).isFile()) {
+            QFile::remove(setAside);
+            replacing = QFile::rename(destination, setAside);
+        }
         // Copy over into the profiles map folder, so it is loaded first when map is open - this covers the offline case
         label_mapFileActionResult->setText(tr("Copying over map to %1 - please wait...").arg(otherHostName));
         qApp->processEvents(); // Copied from "Loading map - please wait..." case
@@ -6812,11 +6829,20 @@ void dlgProfilePreferences::slot_copyMap()
                                // show up when saving big maps
 
         if (!thisProfileLatestMapFile.copy(MudletApp::getMudletPath(enums::profileMapPathFileName, otherHostName, thisProfileLatestMapPathFileName))) {
-            label_mapFileActionResult->setText(tr("Could not copy the map to %1 - unable to copy the new map file over.").arg(otherHostName));
-            QTimer::singleShot(10s, this, &dlgProfilePreferences::slot_hideActionLabel);
+            //: %1 is the profile the map could not be copied to, %2 the system's reason, e.g. "Destination file exists"
+            pHost->postMessage(tr("[ ERROR ] - Unable to copy the map to profile \"%1\".\n"
+                                  "reason: %2.")
+                                       .arg(otherHostName, thisProfileLatestMapFile.errorString()));
+            failedProfiles.append(otherHostName);
+            if (replacing) {
+                QFile::rename(setAside, destination);
+            }
             continue; // Try again with next profile
         }
         copiedToProfiles.append(otherHostName);
+        if (replacing) {
+            QFile::remove(setAside);
+        }
         label_mapFileActionResult->setText(tr("Map copied successfully to other profile %1.").arg(otherHostName));
         qApp->processEvents(); // Copied from "Loading map - please wait..." case
                                // Just in case is needed to make the above message
@@ -6825,7 +6851,12 @@ void dlgProfilePreferences::slot_copyMap()
 
     // Finally, signal the other profiles to reload their maps:
     mudlet::self()->requestProfilesToReloadMaps(copiedToProfiles, thisProfileLatestMapPathFileName);
-    label_mapFileActionResult->setText(tr("Map copied, now signalling other profiles to reload it."));
+    if (failedProfiles.isEmpty()) {
+        label_mapFileActionResult->setText(tr("Map copied, now signalling other profiles to reload it."));
+    } else {
+        //: %1 is a comma-separated list of the profiles the map could not be copied to
+        label_mapFileActionResult->setText(tr("Could not copy the map to %1 - see the main console for why.").arg(failedProfiles.join(qsl(", "))));
+    }
     QTimer::singleShot(10s, this, &dlgProfilePreferences::slot_hideActionLabel);
 
     // CHECK: Race condition? We might be changing this while other profile
