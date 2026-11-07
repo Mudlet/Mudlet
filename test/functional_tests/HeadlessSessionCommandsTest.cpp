@@ -26,10 +26,15 @@
 
 #include <QDir>
 #include <QFile>
+#include <QScopeGuard>
 #include <QSignalSpy>
+#include <QTcpServer>
+#include <QTcpSocket>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include <cstring>
+#include <memory>
 #include <optional>
 
 #include "Host.h"
@@ -356,6 +361,141 @@ setCommandChecked(headlessToggle, false)
         QCOMPARE(luaGlobalString(session.host(), "headlessClicks"), QString());
         QVERIFY(session.activateAddonCommand(toggle));
         QCOMPARE(luaGlobalString(session.host(), "headlessClicks"), qsl("%1 ").arg(toggle));
+        QVERIFY(session.shutdown(false));
+    }
+    // In Qt's order: the focused line may claim a key first, then the menu's shortcut takes it, then the line has it
+    void test_aCommandsShortcutRunsAheadOfTheLine()
+    {
+        using KeyResult = THeadlessSession::KeyResult;
+        const QString name = qsl("Headless Commands Shortcut");
+        const QString other = qsl("Headless Commands Shortcut Other");
+        QVERIFY(writeProfile(name));
+        QVERIFY(writeProfile(other));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"lua(
+headlessClicks = ""
+headlessKeys = ""
+registerAnonymousEventHandler("sysCommandClicked", function(_, id) headlessClicks = headlessClicks .. id .. " " end)
+headlessShortcut = addCommand({name = "Shortcut", shortcut = "Ctrl+Alt+K"})
+headlessPad = addCommand({name = "Pad", shortcut = "Ctrl+8"})
+headlessEscape = addCommand({name = "Escape", shortcut = "Escape"})
+headlessUp = addCommand({name = "Up", shortcut = "Up"})
+headlessAll = addCommand({name = "All", shortcut = "Ctrl+A"})
+headlessOff = addCommand({name = "Off", shortcut = "F5"})
+disableCommand(headlessOff)
+headlessTwo = addCommand({name = "Two", shortcut = "Ctrl+J, Ctrl+L"})
+local m = mudlet.keymodifier
+tempKey(m.Control + m.Alt, mudlet.key.K, [[headlessKeys = headlessKeys .. "Ctrl+Alt+K "]])
+tempKey(m.Control + m.Keypad, mudlet.key["8"], [[headlessKeys = headlessKeys .. "Ctrl+Keypad 8 "]])
+tempKey(m.Control, mudlet.key.A, [[headlessKeys = headlessKeys .. "Ctrl+A "]])
+tempKey(m.None, mudlet.key.F5, [[headlessKeys = headlessKeys .. "F5 "]])
+tempKey(m.Control, mudlet.key.J, [[headlessKeys = headlessKeys .. "Ctrl+J "]])
+)lua")));
+        const QString shortcut = luaGlobalString(session.host(), "headlessShortcut");
+        const QString pad = luaGlobalString(session.host(), "headlessPad");
+        const QString escape = luaGlobalString(session.host(), "headlessEscape");
+        QCOMPARE(session.addonCommands().size(), 7);
+
+        QCOMPARE(session.pressKey(Qt::Key_K, Qt::ControlModifier | Qt::AltModifier), KeyResult::commandRan);
+        QCOMPARE(session.errorString(), qsl("That key is the shortcut of a command a script added to the menu, which ran."));
+        QCOMPARE(session.pressKey(Qt::Key_8, Qt::ControlModifier | Qt::KeypadModifier), KeyResult::commandRan);
+        QCOMPARE(session.pressKey(Qt::Key_Escape), KeyResult::commandRan);
+        QCOMPARE(luaGlobalString(session.host(), "headlessClicks"), qsl("%1 %2 %3 ").arg(shortcut, pad, escape));
+        QCOMPARE(luaGlobalString(session.host(), "headlessKeys"), QString());
+
+        // The line claims these, a disabled command's shortcut does not fire, and one of two keys is not offered
+#if defined(Q_OS_MACOS)
+        // The arrows carry the keypad flag there, and the line moves through its history only on that
+        QCOMPARE(session.pressKey(Qt::Key_Up, Qt::KeypadModifier), KeyResult::keyKept);
+        QCOMPARE(session.pressKey(Qt::Key_Up), KeyResult::noBinding);
+#else
+        QCOMPARE(session.pressKey(Qt::Key_Up), KeyResult::keyKept);
+        QCOMPARE(session.pressKey(Qt::Key_Up, Qt::KeypadModifier), KeyResult::noBinding);
+#endif
+        QCOMPARE(session.pressKey(Qt::Key_A, Qt::ControlModifier), KeyResult::bindingRan);
+        QCOMPARE(session.pressKey(Qt::Key_F5), KeyResult::bindingRan);
+        QCOMPARE(session.pressKey(Qt::Key_J, Qt::ControlModifier), KeyResult::bindingRan);
+        QCOMPARE(luaGlobalString(session.host(), "headlessKeys"), qsl("Ctrl+A F5 Ctrl+J "));
+        QCOMPARE(luaGlobalString(session.host(), "headlessClicks"), qsl("%1 %2 %3 ").arg(shortcut, pad, escape));
+
+        // Another profile's command does not fire, even pinned, as addonCommands() and activateAddonCommand() leave
+        // it out
+        QVERIFY(session.runLua(qsl("loadProfile([[%1]], true)").arg(other)));
+        Host* pOther = HostManager::self()->getHost(other);
+        QVERIFY(pOther);
+        QVERIFY(pOther->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+headlessClicks = ""
+registerAnonymousEventHandler("sysCommandClicked", function(_, id) headlessClicks = headlessClicks .. id .. " " end)
+headlessTheirs = addCommand({name = "Theirs", shortcut = "Ctrl+Alt+O"})
+setCommandPinned(headlessTheirs, true)
+)lua")));
+        QCOMPARE(session.pressKey(Qt::Key_O, Qt::ControlModifier | Qt::AltModifier), KeyResult::noBinding);
+        QVERIFY(!names(session.addonCommands()).contains(qsl("Theirs")));
+        QVERIFY(!session.activateAddonCommand(luaGlobalString(pOther, "headlessTheirs").toInt()));
+        QCOMPARE(luaGlobalString(pOther, "headlessClicks"), QString());
+        QCOMPARE(luaGlobalString(session.host(), "headlessClicks"), qsl("%1 %2 %3 ").arg(shortcut, pad, escape));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // The command's script prints, and a handler of that deletes the session inside pressKey()
+    void test_aSessionDeletedByItsShortcutsCommandIsLeftAlone()
+    {
+        const QString name = qsl("Headless Commands Shortcut Delete");
+        QVERIFY(writeProfile(name));
+        QObject owner;
+        auto* pSession = new THeadlessSession(&owner);
+        const QPointer<THeadlessSession> session(pSession);
+        QCOMPARE(pSession->start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QPointer<Host> profile(pSession->host());
+        QVERIFY(pSession->runLua(qsl(R"lua(
+registerAnonymousEventHandler("sysCommandClicked", function() echo("clicked\n") end)
+addCommand({name = "Delete", shortcut = "Ctrl+Alt+K"})
+)lua")));
+        // The allocator hands the session's memory straight back, where it can, and filling it makes a write into
+        // the deleted session crash with no sanitizer to see it
+        void* pReused = nullptr;
+        connect(pSession, &THeadlessSession::localText, pSession, [pSession, &pReused]() {
+            void* const pFreed = pSession;
+            delete pSession;
+            pReused = ::operator new(sizeof(THeadlessSession));
+            if (pReused == pFreed) {
+                std::memset(pReused, 0xa5, sizeof(THeadlessSession));
+            }
+        });
+        const auto releaseReused = qScopeGuard([&pReused]() {
+            ::operator delete(pReused);
+        });
+        QCOMPARE(pSession->pressKey(Qt::Key_K, Qt::ControlModifier | Qt::AltModifier), THeadlessSession::KeyResult::commandRan);
+        QVERIFY2(session.isNull(), "SETUP: the handler did not delete the session");
+        QTRY_VERIFY_WITH_TIMEOUT(profile.isNull(), 10000);
+    }
+
+    // The hidden-input box, a QLineEdit, claims fewer keys than the command line does
+    void test_aCommandsShortcutRunsAheadOfHiddenInput()
+    {
+        using KeyResult = THeadlessSession::KeyResult;
+        const QString name = qsl("Headless Commands Shortcut Hidden");
+        QVERIFY(writeProfile(name));
+        QTcpServer server;
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        QTRY_VERIFY_WITH_TIMEOUT(server.hasPendingConnections(), 10000);
+        std::unique_ptr<QTcpSocket> game(server.nextPendingConnection());
+        QVERIFY(session.runLua(qsl(R"lua(
+headlessClicks = ""
+registerAnonymousEventHandler("sysCommandClicked", function(_, id) headlessClicks = headlessClicks .. id .. " " end)
+headlessUp = addCommand({name = "Up", shortcut = "Up"})
+headlessLeft = addCommand({name = "Left", shortcut = "Ctrl+Left"})
+)lua")));
+        game->write("\xff\xfb\x01Password:\r\n");
+        QTRY_VERIFY_WITH_TIMEOUT(session.host()->passwordEntryWanted(), 10000);
+        QCOMPARE(session.pressKey(Qt::Key_Up), KeyResult::commandRan);
+        QCOMPARE(session.pressKey(Qt::Key_Left, Qt::ControlModifier), KeyResult::noBinding);
+        QCOMPARE(luaGlobalString(session.host(), "headlessClicks"), qsl("%1 ").arg(luaGlobalString(session.host(), "headlessUp")));
         QVERIFY(session.shutdown(false));
     }
 };

@@ -24,6 +24,8 @@
 #include "Host.h"
 #include "TNullAppFrontend.h"
 
+#include <QKeyEvent>
+
 QList<THeadlessSession::AddonCommand> THeadlessSession::addonCommands() const
 {
     QList<AddonCommand> result;
@@ -84,6 +86,35 @@ bool THeadlessSession::activateAddonCommand(const int id)
         return false;
     }
     return pView->activateAddonCommand(id);
+}
+
+int THeadlessSession::addonCommandOnKey(const QKeyEvent& event) const
+{
+    const auto* pView = dynamic_cast<const TNullAppFrontend*>(TAppFrontend::instance());
+    if (!pView) {
+        return 0;
+    }
+    const auto key = static_cast<Qt::Key>(event.key());
+    // Qt's shortcut map tries a key on the keypad without its keypad flag once nothing takes it with it
+    QList<QKeySequence> pressed{QKeySequence(QKeyCombination(event.modifiers(), key))};
+    if (event.modifiers() & Qt::KeypadModifier) {
+        pressed.append(QKeySequence(QKeyCombination(event.modifiers() & ~Qt::KeypadModifier, key)));
+    }
+    const QMap<int, TNullAppFrontend::AddonCommand>& commands = pView->addonCommands();
+    for (const QKeySequence& sequence : std::as_const(pressed)) {
+        for (auto it = commands.cbegin(); it != commands.cend(); ++it) {
+            const TNullAppFrontend::AddonCommand& command = it.value();
+            // Qt's shortcut map passes over a disabled action. Only the session's own, as addonCommands() lists,
+            // where the GUI's menu also keeps another profile's pinned ones
+            if (command.pHost != mpHost || !command.enabled || command.request.surfaces == TAppFrontend::CommandSurface::Toolbar) {
+                continue;
+            }
+            if (!command.request.shortcut.isEmpty() && QKeySequence(command.request.shortcut) == sequence) {
+                return it.key();
+            }
+        }
+    }
+    return 0;
 }
 
 void THeadlessSession::connectCommandRelays(const unsigned int run)

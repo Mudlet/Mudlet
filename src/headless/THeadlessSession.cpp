@@ -33,6 +33,7 @@
 #include "TGameDetails.h"
 #include "TLuaInterpreter.h"
 #include "TMap.h"
+#include "TNullAppFrontend.h"
 #include "TNullConsoleFrontend.h"
 
 #include <QCoreApplication>
@@ -1318,6 +1319,101 @@ bool commandLineKeepsKey(const Host& host, const QKeyEvent& event)
     }
 }
 
+// As the ShortcutOverride by which the GUI's focused line keeps a key from the main window's menu shortcuts: the
+// caret-mode key, then what QPlainTextEdit claims (QInputControl::isCommonTextEditShortcut()) or, while hidden input
+// is wanted, what QLineEdit does (QWidgetLineControl::processShortcutOverrideEvent())
+bool lineClaimsKey(const Host& host, const QKeyEvent& event, const bool hiddenInput)
+{
+    if (host.caretShortcutMatches(&event)) {
+        return true;
+    }
+    const Qt::KeyboardModifiers modifiers = event.modifiers();
+    const bool plain = modifiers == Qt::NoModifier || modifiers == Qt::ShiftModifier || modifiers == Qt::KeypadModifier;
+    if (hiddenInput) {
+        static const QList<QKeySequence::StandardKey> lineEditKeys{QKeySequence::Copy,
+                                                                   QKeySequence::Paste,
+                                                                   QKeySequence::Cut,
+                                                                   QKeySequence::Redo,
+                                                                   QKeySequence::Undo,
+                                                                   QKeySequence::DeleteCompleteLine,
+                                                                   QKeySequence::MoveToNextWord,
+                                                                   QKeySequence::MoveToPreviousWord,
+                                                                   QKeySequence::MoveToStartOfLine,
+                                                                   QKeySequence::MoveToEndOfLine,
+                                                                   QKeySequence::MoveToStartOfBlock,
+                                                                   QKeySequence::MoveToEndOfBlock,
+                                                                   QKeySequence::MoveToStartOfDocument,
+                                                                   QKeySequence::MoveToEndOfDocument,
+                                                                   QKeySequence::SelectPreviousWord,
+                                                                   QKeySequence::SelectNextWord,
+                                                                   QKeySequence::SelectStartOfLine,
+                                                                   QKeySequence::SelectEndOfLine,
+                                                                   QKeySequence::SelectStartOfBlock,
+                                                                   QKeySequence::SelectEndOfBlock,
+                                                                   QKeySequence::SelectStartOfDocument,
+                                                                   QKeySequence::SelectEndOfDocument,
+                                                                   QKeySequence::SelectAll};
+        if (std::any_of(lineEditKeys.cbegin(), lineEditKeys.cend(), [&event](const QKeySequence::StandardKey key) {
+                return event.matches(key);
+            })) {
+            return true;
+        }
+        if (!plain) {
+            return false;
+        }
+        switch (event.key()) {
+        case Qt::Key_Delete:
+        case Qt::Key_Home:
+        case Qt::Key_End:
+        case Qt::Key_Backspace:
+        case Qt::Key_Left:
+        case Qt::Key_Right:
+            return true;
+        default:
+            return event.key() < Qt::Key_Escape;
+        }
+    }
+    if (plain) {
+        switch (event.key()) {
+        case Qt::Key_Return:
+        case Qt::Key_Enter:
+        case Qt::Key_Delete:
+        case Qt::Key_Home:
+        case Qt::Key_End:
+        case Qt::Key_Backspace:
+        case Qt::Key_Left:
+        case Qt::Key_Right:
+        case Qt::Key_Up:
+        case Qt::Key_Down:
+        case Qt::Key_Tab:
+            return true;
+        default:
+            return event.key() < Qt::Key_Escape;
+        }
+    }
+    static const QList<QKeySequence::StandardKey> textEditKeys{QKeySequence::Copy,
+                                                               QKeySequence::Paste,
+                                                               QKeySequence::Cut,
+                                                               QKeySequence::Redo,
+                                                               QKeySequence::Undo,
+                                                               QKeySequence::MoveToNextWord,
+                                                               QKeySequence::MoveToPreviousWord,
+                                                               QKeySequence::MoveToStartOfDocument,
+                                                               QKeySequence::MoveToEndOfDocument,
+                                                               QKeySequence::SelectNextWord,
+                                                               QKeySequence::SelectPreviousWord,
+                                                               QKeySequence::SelectStartOfLine,
+                                                               QKeySequence::SelectEndOfLine,
+                                                               QKeySequence::SelectStartOfBlock,
+                                                               QKeySequence::SelectEndOfBlock,
+                                                               QKeySequence::SelectStartOfDocument,
+                                                               QKeySequence::SelectEndOfDocument,
+                                                               QKeySequence::SelectAll};
+    return std::any_of(textEditKeys.cbegin(), textEditKeys.cend(), [&event](const QKeySequence::StandardKey key) {
+        return event.matches(key);
+    });
+}
+
 // As TPasswordEntry::handleKeyPress(), which judges a printable key by its text; without the text, by its code
 bool hiddenInputKeepsKey(const Host& host, const QKeyEvent& event, const QString* text)
 {
@@ -1382,6 +1478,21 @@ THeadlessSession::KeyResult THeadlessSession::offerKey(const Qt::Key key, const 
     const QKeyEvent event(QEvent::KeyPress, key, modifiers, text ? *text : QString());
     const bool keypad = modifiers & Qt::KeypadModifier;
     const bool hiddenInput = mpHost->passwordEntryWanted();
+    // Qt offers the main window's shortcuts a key before the focused line has it, unless the line claims it first
+    if (!lineClaimsKey(*mpHost, event, hiddenInput)) {
+        if (const int command = addonCommandOnKey(event)) {
+            // The click's sysCommandClicked handlers may delete the session
+            const QPointer<THeadlessSession> self(this);
+            if (auto* pView = dynamic_cast<TNullAppFrontend*>(TAppFrontend::instance())) {
+                pView->activateAddonCommand(command);
+            }
+            if (self) {
+                //: Error from a frontend with no window that was given a key press which is the keyboard shortcut of a command a script added to the menu, which the GUI runs rather than offering the key to its input line
+                mErrorString = tr("That key is the shortcut of a command a script added to the menu, which ran.");
+            }
+            return KeyResult::commandRan;
+        }
+    }
     if (hiddenInput) {
         if (hiddenInputKeepsKey(*mpHost, event, text)) {
             //: Error from a frontend with no window that was given a key press while the game hides what the player types, as for a password, which the GUI's hidden-input box would take rather than any key binding
