@@ -924,6 +924,51 @@ end)
         QVERIFY(!HostManager::self());
     }
 
+    // Nor once the keychain has answered, while the load it queued waits in the event loop
+    void test_shutdownBeforeTheQueuedLoadRunsIsRefused()
+    {
+        const QString name = qsl("Headless Secret Queued Load");
+        {
+            const HostManager firstPool;
+        }
+        const bool storedSecurely = MudletApp::storingPasswordsSecurely();
+        MudletApp::setStorePasswordsSecurely(true);
+        const auto restore = qScopeGuard([storedSecurely]() {
+            MudletApp::setStorePasswordsSecurely(storedSecurely);
+        });
+        const QByteArray testMode = qgetenv("MUDLET_TEST_MODE");
+        const auto jobs = std::make_shared<int>(0);
+        const auto keychain = answerTheKeychain(QKeychain::EntryNotFound, QKeychain::NoError, QString(), jobs);
+        // Once the proxy's lookup, the last, has begun, the load that follows its answer is a test run's
+        CredentialManager::jobStartHookForTesting() = [answer = CredentialManager::jobStartHookForTesting(), testMode](QKeychain::Job* job) {
+            if (job->service().contains(qsl("-proxy-"))) {
+                qputenv("MUDLET_TEST_MODE", testMode);
+            }
+            return answer(job);
+        };
+        THeadlessSession session;
+        int attempts = 0;
+        bool shutDown = false;
+        // Asked at every turn of the event loop until the load has the profile, so also between the answer and the load
+        std::function<void()> tryShutdown;
+        tryShutdown = [&session, &attempts, &shutDown, &tryShutdown]() {
+            if (session.host() || shutDown) {
+                return;
+            }
+            ++attempts;
+            shutDown = session.shutdown(false);
+            QTimer::singleShot(0, &session, tryShutdown);
+        };
+        QTimer::singleShot(0, &session, tryShutdown);
+        const THeadlessSession::StartResult result = session.start({.profile = name, .connect = false, .host = qsl("game.example")});
+        QVERIFY2(*jobs > 0, "The keychain was not asked.");
+        QVERIFY(attempts > 1);
+        QVERIFY2(!shutDown, "A shutdown was let through before the load it would take the pool from.");
+        QCOMPARE(result, THeadlessSession::StartResult::started);
+        QVERIFY(session.shutdown(false));
+        QVERIFY(!HostManager::self());
+    }
+
     // What the frontend does with its own copy while the keychain is asked is nothing to the run
     void test_thePasswordForTheRunIsTheOneGiven()
     {
@@ -1013,7 +1058,7 @@ end)
     }
 
     // installPackage() waits for a save under way, which runs the event loop, where the frontend's timer may
-    // shut the session down or delete it; the profile's frame is still on the stack
+    // shut the session down, which waits for the install, or delete it, which closes the profile at once
     void test_aProfileWaitingForItsSaveIsKept()
     {
         QFETCH(bool, deleteSession);
@@ -1043,15 +1088,109 @@ end)
             }
         });
         const QPointer<THeadlessSession> pAlive(pSession);
-        pSession->installPackage(packagePath);
+        const auto installed = pSession->installPackage(packagePath);
         QVERIFY(keptThrough.has_value());
-        QVERIFY2(*keptThrough, "The profile was deleted while it waited for its save.");
-        if (!deleteSession) {
+        if (deleteSession) {
+            QCOMPARE(installed, THeadlessSession::PackageResult::failed);
+        } else {
+            QVERIFY2(*keptThrough, "The profile was deleted while it waited for its save.");
             QVERIFY(!shutDown);
             QVERIFY2(pSession->errorString().contains(qsl("waiting for its save")), qPrintable(pSession->errorString()));
         }
         delete pAlive.data();
         QTRY_VERIFY_WITH_TIMEOUT(!HostManager::self(), 10000);
+    }
+
+    // The async forms return at once, without running the event loop, and answer from it as the blocking ones do
+    void test_theAsyncCallsAnswerFromTheEventLoop()
+    {
+        using namespace std::chrono_literals;
+        const QString name = qsl("Headless Async Calls");
+        QVERIFY(writeProfile(name, QString()));
+        const QString packagePath = mConfigDir.filePath(qsl("headlessAsync.xml"));
+        QVERIFY(writeFile(packagePath, packageXml(R"(headlessAsyncRan = "yes")")));
+        THeadlessSession session;
+        bool timerRan = false;
+        const auto postTimer = [this, &timerRan]() {
+            timerRan = false;
+            QTimer::singleShot(0ms, this, [&timerRan]() {
+                timerRan = true;
+            });
+        };
+
+        QSignalSpy started(&session, &THeadlessSession::startFinished);
+        session.startAsync({.profile = name, .connect = false});
+        QCOMPARE(started.count(), 0);
+        QTRY_COMPARE(started.count(), 1);
+        QCOMPARE(started.at(0).at(0).value<THeadlessSession::StartResult>(), THeadlessSession::StartResult::started);
+        QCOMPARE(started.at(0).at(1).toString(), QString());
+        const QPointer<Host> pHost(session.host());
+        QVERIFY(pHost);
+
+        // A save under way is waited out from the event loop
+        QSignalSpy installed(&session, &THeadlessSession::packageInstallFinished);
+        pHost->mWritingHostAndModules = true;
+        postTimer();
+        session.installPackageAsync(packagePath);
+        QVERIFY2(!timerRan, "The install ran the event loop while it waited for the save.");
+        QCOMPARE(installed.count(), 0);
+        QTRY_VERIFY(timerRan);
+        QCOMPARE(installed.count(), 0);
+        QVERIFY(!pHost->mInstalledPackages.contains(qsl("headlessAsync")));
+        // While it waits, another is refused, and so are a shutdown and a save, as while the blocking form waits
+        QCOMPARE(session.installPackage(packagePath), THeadlessSession::PackageResult::failed);
+        QVERIFY2(session.errorString().contains(qsl("Another package")), qPrintable(session.errorString()));
+        QVERIFY(!session.save());
+        QVERIFY(!session.shutdown(true));
+        pHost->mWritingHostAndModules = false;
+        QTRY_COMPARE_WITH_TIMEOUT(installed.count(), 1, 5000);
+        QCOMPARE(installed.at(0).at(0).toString(), packagePath);
+        QCOMPARE(installed.at(0).at(1).value<THeadlessSession::PackageResult>(), THeadlessSession::PackageResult::installed);
+        QCOMPARE(luaGlobalString(pHost, "headlessAsyncRan"), qsl("yes"));
+        session.installPackageAsync(packagePath);
+        QTRY_COMPARE(installed.count(), 2);
+        QCOMPARE(installed.at(1).at(1).value<THeadlessSession::PackageResult>(), THeadlessSession::PackageResult::alreadyInstalled);
+        QVERIFY2(installed.at(1).at(2).toString().contains(qsl("already installed")), qPrintable(installed.at(1).at(2).toString()));
+
+        // The writes are held, so a save that waited for them would run the event loop meanwhile
+        QSignalSpy saved(&session, &THeadlessSession::saveFinished);
+        {
+            const PoolHold hold(2s);
+            QVERIFY(hold.heldAll());
+            postTimer();
+            session.saveAsync();
+            QVERIFY2(!timerRan, "The save ran the event loop while it waited for its writes.");
+            QCOMPARE(saved.count(), 0);
+            // As while the blocking form waits: the profiles it is saving are not closed under it
+            QVERIFY(!session.shutdown(true));
+            QVERIFY2(session.errorString().contains(qsl("waiting for its save")), qPrintable(session.errorString()));
+            QVERIFY(pHost);
+        }
+        QTRY_COMPARE_WITH_TIMEOUT(saved.count(), 1, 15000);
+        QVERIFY2(saved.at(0).at(0).toBool(), qPrintable(saved.at(0).at(1).toString()));
+
+        QSignalSpy shutDown(&session, &THeadlessSession::shutdownFinished);
+        {
+            const PoolHold hold(2s);
+            QVERIFY(hold.heldAll());
+            postTimer();
+            session.shutdownAsync(true);
+            QVERIFY2(!timerRan, "The shutdown ran the event loop while it waited for the saves.");
+            QCOMPARE(shutDown.count(), 0);
+            QVERIFY(pHost);
+        }
+        QTRY_COMPARE_WITH_TIMEOUT(shutDown.count(), 1, 15000);
+        QVERIFY2(shutDown.at(0).at(0).toBool(), qPrintable(shutDown.at(0).at(1).toString()));
+        QVERIFY(!pHost);
+        QVERIFY(!session.host());
+        QVERIFY(!HostManager::self());
+
+        // A refusal is told from the event loop too
+        session.installPackageAsync(packagePath);
+        QCOMPARE(installed.count(), 2);
+        QTRY_COMPARE(installed.count(), 3);
+        QCOMPARE(installed.at(2).at(1).value<THeadlessSession::PackageResult>(), THeadlessSession::PackageResult::failed);
+        QCOMPARE(installed.at(2).at(2).toString(), qsl("No profile is open."));
     }
 
     void test_installPackage()

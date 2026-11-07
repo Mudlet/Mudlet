@@ -38,6 +38,7 @@
 #include <QString>
 #include <QStringList>
 
+#include <functional>
 #include <memory>
 #include <optional>
 #include <utility>
@@ -131,6 +132,7 @@ public:
     // event loop. invalidConfigDir: the configDir is not absolute, cannot be made or is not a folder, or
     // is the GUI's, or another folder, the GUI's or one chosen, is in use; nothing is made.
     enum class StartResult { started, noSuchProfile, invalidName, invalidConnectionDetails, notOpened, loadFailed, poolClosing, invalidConfigDir };
+    Q_ENUM(StartResult)
 
     explicit THeadlessSession(QObject* parent = nullptr);
     // Closes the profiles unsaved, at once or, while one is busy as for shutdown(), a reset is pending, one is
@@ -146,6 +148,10 @@ public:
     // On loadFailed the profile stays open, its connect called off, for the frontend to close: it takes no
     // commands, Lua or packages, and shutdown() does not save it, so its last good save and map are kept.
     StartResult start(const Options&);
+    // start() without waiting: it returns at once, and startFinished() follows from the event loop with what start()
+    // would have answered and errorString() then. Only a new profile's stale passwords are waited for, in the
+    // credential store; the load itself runs in this call, as in start().
+    void startAsync(const Options&);
     // Why the last call that failed did
     QString errorString() const { return mErrorString; }
     // The font the main console is drawn in, a default QFont with no profile open: read it at profileLoaded, then
@@ -191,7 +197,12 @@ public:
     // part of it or its config.lua could not be read, or an item's Lua failed. A file that cannot be read fails.
     // One whose name, or whose config.lua's, is already installed is left as it is; errorString() says so.
     enum class PackageResult { installed, installedWithErrors, alreadyInstalled, failed };
+    Q_ENUM(PackageResult)
     PackageResult installPackage(const QString& path);
+    // installPackage() without waiting: it returns at once, and packageInstallFinished() follows from the event loop.
+    // A save running now is waited out from the event loop, not in this call. Failed while another install asked
+    // for has not answered.
+    void installPackageAsync(const QString& path);
     // The main window's size in characters, as a resize of the GUI's main window sets it. As there, the borders a
     // script or MXP sets take their room from it, and what they leave is the main console's grid. If the profile
     // has NAWS on and the game asks for it, the game is told the grid from the event loop once it has not changed
@@ -788,6 +799,9 @@ public:
     // shutdown(). It may run the event loop; a session the frontend deletes there returns at once, false if the
     // save asked for was not yet made.
     bool shutdown(bool save);
+    // shutdown() without waiting: sysExitEvent runs in this call, and shutdownFinished() follows from the event
+    // loop once the saves are written and the pool has gone. A session deleted meanwhile tells nothing.
+    void shutdownAsync(bool save);
     // The save shutdown(true) makes, with the profiles left running: every profile that loaded, the session's own
     // and ones its scripts opened, writes its save, synced modules, map and profile.ini, and the window layout is written,
     // with no sysExitEvent, so a frontend the system may stop without warning, such as a phone app sent to the
@@ -797,12 +811,20 @@ public:
     // included, or the layout was not, errorString() saying which; a session the frontend deletes in the event
     // loop returns at once, false.
     bool save();
+    // save() without waiting: saveFinished() follows from the event loop once the profiles are written. Failed
+    // while another save asked for has not answered.
+    void saveAsync();
     // The profiles, the session's own or ones its scripts opened, that a close from a script or shutdown()
     // could not save, in the order it failed to
     QStringList unsavedProfiles() const { return mUnsavedProfiles; }
     bool saveFailed() const { return !mUnsavedProfiles.isEmpty(); }
 
 signals:
+    // What the async calls answer; error is errorString() as the call ended, empty when it succeeded
+    void startFinished(THeadlessSession::StartResult result, const QString& error);
+    void packageInstallFinished(const QString& path, THeadlessSession::PackageResult result, const QString& error);
+    void shutdownFinished(bool succeeded, const QString& error);
+    void saveFinished(bool succeeded, const QString& error);
     void profileLoaded(const QString& profile);
     // A line committed to the main console as the game's (what the game sends, feedTriggers(), Mudlet's own
     // OSC 8 examples), before triggers run on it; not what echo(), print() and Mudlet's messages add. A
@@ -1019,6 +1041,18 @@ signals:
     void mainWindowResizeRequested(const QString& profile, const QSize& pixels);
 
 private:
+    void tellLater(std::function<void()> tell);
+    void beginStart(const Options&, std::function<void(StartResult)> done);
+    std::optional<StartResult> prepareStart(Options&, std::optional<bool>& tls, bool& stalePasswords);
+    StartResult finishStart(const Options&, std::optional<bool> tls, const QString& password);
+    void beginInstallPackage(const QString& path, std::function<void(PackageResult)> done);
+    void finishInstallPackage(const QString& path, std::function<void(PackageResult)> done);
+    // saved is set once the closes that save have begun, for a session deleted after that
+    void beginShutdown(bool save, const std::shared_ptr<bool>& saved, std::function<void(bool)> done);
+    void shutdownOnceResetsEnd(bool save, const std::shared_ptr<bool>& saved, std::function<void(bool)> done);
+    void shutdownOnceReleased(const std::shared_ptr<bool>& saved, std::function<void(bool)> done);
+    void beginSave(std::function<void(bool)> done);
+    void saveEach(QList<QPointer<Host>> profiles, qsizetype closesUnsavedBefore, QStringList unsaved, std::function<void(bool)> done);
     bool storeConnectionDetails(const Options&, std::optional<bool> tls);
     void detachFromHost();
     void connectInputRelays(unsigned int run);
@@ -1115,6 +1149,8 @@ private:
     bool mShuttingDown = false;
     bool mLoadFailed = false;
     bool mRemovingStalePasswords = false;
+    bool mInstallingPackage = false;
+    bool mSaving = false;
     bool mSecureConnectionOffered = false;
     // Bumped by each offer, to drop one still queued for the frontend once a later one is made
     unsigned int mSecureConnectionOffer = 0;
