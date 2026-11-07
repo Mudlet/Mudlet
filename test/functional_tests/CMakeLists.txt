@@ -116,6 +116,7 @@ set(PROFILE_GROUP_TEST_SOURCES
     ConnectionDialogInitialSelectionTest.cpp
     ConnectionDialogKeychainWaitTest.cpp
     ConnectionDialogNewProfileTest.cpp
+    ConnectionDialogNoticeLayoutTest.cpp
     ConnectionDialogOfflineProfileTest.cpp
     ConnectionDialogOpenProfileTest.cpp
     ConnectionDialogSecureSettingTest.cpp
