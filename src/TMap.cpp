@@ -661,6 +661,9 @@ bool TMap::setExit(int from, int to, int dir)
     if (to < 1) {
         to = -1;
     }
+    if (to > 0 && pR->getExit(dir) == to && !pR->hasExitStub(dir)) {
+        return mpRoomDB->getArea(pR->getArea()) != nullptr;
+    }
 
     bool ret = true;
 
@@ -957,6 +960,8 @@ void TMap::initGraph()
     _time.start();
     const ScriptCallbackScope callbackScope(this);
     mGraphBuildInProgress = true;
+    // Before the build, as the exit weight filter can edit rooms the build has already read
+    mMapGraphNeedsUpdate = false;
     locations.clear();
     locations.reserve(mpRoomDB->getRoomMap().size());
     roomidToIndex.clear();
@@ -1084,7 +1089,6 @@ void TMap::initGraph()
     }
 
     mGraphBuildInProgress = false;
-    mMapGraphNeedsUpdate = false;
     ++mPathGraphRevision;
     qDebug() << "TMap::initGraph() INFO: built graph with:" << locations.size() << "(" << roomCount << ") locations(roomCount), and discarded" << unUsableRoomSet.count()
              << "other NOT usable rooms and found:" << edgeCount << "distinct, usable edges in:" << _time.nsecsElapsed() * 1.0e-6
@@ -1187,6 +1191,12 @@ bool TMap::findPath(int from, int to)
 
     if (mMapGraphNeedsUpdate) {
         initGraph();
+        // Once more if the exit weight filter edited the map mid-build, then no more: a filter that edits
+        // on every build would otherwise rebuild the graph on every search
+        if (mMapGraphNeedsUpdate) {
+            initGraph();
+            mMapGraphNeedsUpdate = false;
+        }
     }
 
     QElapsedTimer t;

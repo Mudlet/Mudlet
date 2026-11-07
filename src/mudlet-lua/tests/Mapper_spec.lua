@@ -3067,9 +3067,118 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.is_truthy(inner[2]:find("from inside an exit weight filter", 1, true), tostring(inner[2]))
     end)
 
-    -- Every case above edits the map first, so each one searches a graph that
-    -- has just been rebuilt. These four do not, which is what puts them on the
-    -- state findPath() carries from one search to the next.
+    -- Both filters below edit what the build has already read, so only a second build sees it
+    it("routes through a room the exit weight filter unlocks mid-build", function()
+      lockRoom(rA2, true)
+      local unlocked = false
+      setExitWeightFilter(function()
+        if not unlocked then
+          unlocked = true
+          lockRoom(rA2, false)
+        end
+      end)
+
+      local ok, weight = getPath(rA1, rA3)
+      assert.is_true(unlocked, "the exit weight filter never ran")
+      assert.is_true(ok)
+      assert.are.equal(2, weight)
+      assert.are.same({tostring(rA2), tostring(rA3)}, speedWalkPath)
+    end)
+
+    it("uses an exit weight the exit weight filter sets mid-build", function()
+      local weighted = false
+      setExitWeightFilter(function(roomId)
+        if roomId == rA1 and not weighted then
+          weighted = true
+          setExitWeight(rA1, "east", 10)
+        end
+      end)
+
+      local ok, weight = getPath(rA1, rA3)
+      assert.is_true(weighted, "the exit weight filter never saw rA1")
+      assert.is_true(ok)
+      assert.are.equal(3, weight)
+      assert.are.same({tostring(rA4), tostring(rA5), tostring(rA3)}, speedWalkPath)
+    end)
+
+    -- The filter only runs during a graph build, once per exit, so its calls tell how many builds ran
+    local function filterCallsPerBuild()
+      local calls = 0
+      setExitWeightFilter(function() calls = calls + 1 end)
+      getPath(rA1, rA3)
+      assert.is_true(calls > 0, "the exit weight filter never ran")
+      return calls
+    end
+
+    it("does not rebuild the graph for exit weight filter edits that change nothing", function()
+      local from = createRoomID()
+      addRoom(from); setRoomArea(from, areaAlpha); setRoomCoordinates(from, 0, -6, 0)
+      local to = createRoomID()
+      addRoom(to); setRoomArea(to, areaAlpha); setRoomCoordinates(to, 1, -6, 0)
+      finally(function()
+        setExitWeightFilter(nil)
+        deleteRoom(from); deleteRoom(to)
+      end)
+      local function edit()
+        setExit(from, to, "east")
+        setExitWeight(from, "east", 5)
+        setRoomWeight(to, 3)
+        addSpecialExit(from, to, "jump")
+      end
+      edit()
+      assert.is_true(setExit(from, to, "east"))
+      local perBuild = filterCallsPerBuild()
+      local calls = 0
+      setExitWeightFilter(function()
+        calls = calls + 1
+        edit()
+      end)
+
+      assert.is_true(getPath(from, to))
+      assert.are.equal(perBuild, calls)
+    end)
+
+    it("rebuilds the graph only once more for an exit weight filter that edits on every build", function()
+      local perBuild = filterCallsPerBuild()
+      local calls, weight = 0, 1
+      setExitWeightFilter(function()
+        calls = calls + 1
+        weight = 3 - weight
+        setExitWeight(rA1, "east", weight)
+      end)
+
+      assert.is_true(getPath(rA1, rA3))
+      assert.are.equal(2 * perBuild, calls)
+      local callsBuilding = calls
+      assert.is_true(getPath(rA1, rA3))
+      assert.are.equal(callsBuilding, calls)
+    end)
+
+    it("routes around a room whose weight went up after the last search", function()
+      assert.is_true(getPath(rA1, rA3))
+      finally(function() setRoomWeight(rA2, 1) end)
+      setRoomWeight(rA2, 10)
+
+      local ok, weight = getPath(rA1, rA3)
+      assert.is_true(ok)
+      assert.are.equal(3, weight)
+      assert.are.same({tostring(rA4), tostring(rA5), tostring(rA3)}, speedWalkPath)
+    end)
+
+    it("routes through an exit setExit re-points after the last search", function()
+      assert.is_true(getPath(rA1, rA3))
+      finally(function() setExit(rA1, rA2, "east") end)
+      assert.is_true(setExit(rA1, rA3, "east"))
+
+      local ok, weight = getPath(rA1, rA3)
+      assert.is_true(ok)
+      assert.are.equal(1, weight)
+      assert.are.same({tostring(rA3)}, speedWalkPath)
+    end)
+
+    -- Every case above edits the map first, so its first search is on a graph
+    -- that has just been rebuilt. These four do not, which is what puts them on
+    -- the state findPath() carries from one search to the next.
 
     it("does not inherit the previous search's state", function()
       local firstOk = getPath(rA1, rA3)

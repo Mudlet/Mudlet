@@ -374,13 +374,17 @@ bool TRoom::hasExitWeight(const QString& cmd)
     return false;
 }
 
-void TRoom::setWeight(int w)
+bool TRoom::setWeight(int w)
 {
     if (w < 1) {
         w = 1;
     }
+    if (weight == w) {
+        return false;
+    }
     weight = w;
     mpRoomDB->mpMap->setUnsaved(__func__);
+    return true;
 }
 
 void TRoom::setHidden(const bool isHidden)
@@ -394,6 +398,9 @@ void TRoom::setHidden(const bool isHidden)
 void TRoom::setExitWeight(const QString& cmd, int w)
 {
     if (w > 0) {
+        if (exitWeights.value(cmd) == w) {
+            return;
+        }
         exitWeights[cmd] = w;
         mpRoomDB->mpMap->setUnsaved(__func__);
         mpRoomDB->mpMap->mMapGraphNeedsUpdate = true;
@@ -772,6 +779,9 @@ void TRoom::setSpecialExit(const int to, const QString& cmd)
     }
 
     if (to > 0) {
+        if (mSpecialExits.value(cmd) == to) {
+            return;
+        }
         mSpecialExits[cmd] = to;
     } else {
         mSpecialExits.remove(cmd);
