@@ -4127,7 +4127,9 @@ void TMainConsole::setupVideoOutput(TMediaPlayer* player, bool& setupSucceeded)
         return;
     }
 
-    player->mediaData().setMediaWidget(widgetType);
+    TMediaData mediaData = player->mediaData();
+    mediaData.setMediaWidget(widgetType);
+    player->setMediaData(mediaData);
 
     QVideoWidget* myVideoWidget = nullptr;
     if (widgetType == TMediaData::MediaWidgetLabel) {
@@ -4175,7 +4177,9 @@ void TMainConsole::hideVideoOutput(TMediaPlayer* player)
         return;
     }
 
-    QWidget* parent = videoOutput->parentWidget();
+    // Only a label is taken back: a request repeated while the video plays replaces the player's
+    // record of which kind of widget the video went to
+    auto* parent = qobject_cast<TLabel*>(videoOutput->parentWidget());
 
     if (parent && parent->isVisible()) {
         parent->hide();
