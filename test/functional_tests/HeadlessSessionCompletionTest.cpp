@@ -609,6 +609,72 @@ addCmdLineBlacklist("GOBLIN")
         QCOMPARE(scriptsLine(session), qsl("look"));
         QVERIFY(session.shutdown(false));
     }
+
+    // As the GUI flashes its taskbar entry for game text while it is minimized, and only then, the flash lasting until
+    // the player comes back
+    void test_newGameTextWhileMinimizedAsksForAttention()
+    {
+        const QString name = qsl("Headless New Data Alert");
+        THeadlessSession session;
+        QTcpServer server;
+        std::unique_ptr<QTcpSocket> game;
+        QVERIFY(startWithGameLine(session, name, server, game, "welcome"));
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QSignalSpy attention(&session, &THeadlessSession::attentionRequested);
+        // The bare profile this test writes has no say, which loads as off
+        session.host()->mAlertOnNewData = true;
+
+        game->write("in front\r\n");
+        QTRY_VERIFY_WITH_TIMEOUT(texts(output).contains(qsl("in front")), 10000);
+        QVERIFY(session.setApplicationActive(false));
+        game->write("behind another window\r\n");
+        QTRY_VERIFY_WITH_TIMEOUT(texts(output).contains(qsl("behind another window")), 10000);
+        QTest::qWait(100);
+        QVERIFY(attention.isEmpty());
+
+        // The bare carriage return the posting timer then finishes the line with is no new text
+        session.host()->mTelnet.setPostingTimeout(1000);
+        game->write("almost\r\n");
+        QTRY_VERIFY_WITH_TIMEOUT(texts(output).contains(qsl("almost")), 10000);
+        session.setWindowMinimized(true);
+        QVERIFY(session.windowMinimized());
+        QTest::qWait(1500);
+        QVERIFY(session.runLua(qsl(R"lua(echo("printed by a script\n"))lua")));
+        session.host()->mAlertOnNewData = false;
+        game->write("not asked for\r\n");
+        QTRY_VERIFY_WITH_TIMEOUT(texts(output).contains(qsl("not asked for")), 10000);
+        QTest::qWait(100);
+        QVERIFY(attention.isEmpty());
+
+        // Two prompts ended with a go-ahead in one read, then another read
+        session.host()->mAlertOnNewData = true;
+        game->write("You hit.\r\n> \xff\xf9The orc hits.\r\n> \xff\xf9");
+        QTRY_COMPARE_WITH_TIMEOUT(attention.size(), 1, 10000);
+        QCOMPARE(attention.constFirst().at(0).toString(), name);
+        QCOMPARE(attention.constFirst().at(1).toInt(), 0);
+        QTRY_VERIFY_WITH_TIMEOUT(texts(output).contains(qsl("The orc hits.")), 10000);
+        game->write("four\r\n");
+        QTRY_VERIFY_WITH_TIMEOUT(texts(output).contains(qsl("four")), 10000);
+        QTest::qWait(100);
+        QCOMPARE(attention.size(), 1);
+
+        session.setWindowMinimized(false);
+        game->write("restored\r\n");
+        QTRY_VERIFY_WITH_TIMEOUT(texts(output).contains(qsl("restored")), 10000);
+        QTest::qWait(100);
+        QCOMPARE(attention.size(), 1);
+        session.setWindowMinimized(true);
+        game->write("five\r\n");
+        QTRY_COMPARE_WITH_TIMEOUT(attention.size(), 2, 10000);
+
+        session.setWindowMinimized(false);
+        QVERIFY(session.setApplicationActive(true));
+        game->write("back in front\r\n");
+        QTRY_VERIFY_WITH_TIMEOUT(texts(output).contains(qsl("back in front")), 10000);
+        QTest::qWait(100);
+        QCOMPARE(attention.size(), 2);
+        QVERIFY(session.shutdown(false));
+    }
 };
 
 #include "HeadlessSessionCompletionTest.moc"

@@ -17,7 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-// What the GUI's command line completes as the player types
+// What the GUI's command line completes as the player types, and when its window flashes for new game text
 
 #include "THeadlessSession.h"
 
@@ -69,6 +69,14 @@ std::optional<QString> THeadlessSession::completeCommandLine(const bool forward)
         mErrorString = tr("No word completes what is typed.");
     }
     return line;
+}
+
+void THeadlessSession::setWindowMinimized(const bool minimized)
+{
+    if (minimized != mWindowMinimized) {
+        mWindowMinimized = minimized;
+        ++mWindowMinimizedChanges;
+    }
 }
 
 std::optional<QString> THeadlessSession::completeCommandLineFromHistory()

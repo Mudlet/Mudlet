@@ -357,7 +357,7 @@ public:
     void setDockLayoutChanged(const QString&) override {}
     bool clearDockLayoutChanged(const QString&) override { return false; }
     bool startIncomingText() override;
-    void alertNewData() override {}
+    void alertNewData() override;
     void finishIncomingText(bool) override;
     void finalize() override {}
     void showNewLines() override {}
