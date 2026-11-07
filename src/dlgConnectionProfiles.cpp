@@ -1606,6 +1606,13 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
     // temporaries from an interrupted save (e.g. "....xml.AbCdEf") must not be loadable
     const QStringList entries = dir.entryList(QStringList{qsl("*.xml")}, QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
 
+    const QLocale& locale = mudlet::self()->getUserLocale();
+    // A damaged save is often far smaller than the good ones around it, so the size helps pick one to restore
+    auto historyLabel = [&dir, &locale](const QString& when, const QString& entry) {
+        //: Entry in the connection dialog's list of a profile's saves: %1 is when it was saved (or its file name), %2 its size, e.g. "1.5 MB"
+        return tr("%1 (%2)").arg(when, locale.formattedDataSize(QFileInfo(dir, entry).size(), 1, QLocale::DataSizeTraditionalFormat));
+    };
+
     for (const auto& entry : entries) {
         const QRegularExpression rx(qsl("(\\d+)\\-(\\d+)\\-(\\d+)#(\\d+)\\-(\\d+)\\-(\\d+).xml"));
         const QRegularExpressionMatch match = rx.match(entry);
@@ -1631,14 +1638,13 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
             QDateTime datetime;
             datetime.setTime(QTime(hour.toInt(), minute.toInt(), second.toInt()));
             datetime.setDate(QDate(year.toInt(), month.toInt(), day.toInt()));
-            profile_history->addItem(mudlet::self()->getUserLocale().toString(datetime, mDateTimeFormat), QVariant(entry));
+            profile_history->addItem(historyLabel(locale.toString(datetime, mDateTimeFormat), entry), QVariant(entry));
         } else if (entry == QLatin1String("autosave.xml")) {
             const QFileInfo fileInfo(dir, entry);
-            auto lastModified = fileInfo.lastModified();
             profile_history->addItem(
-                    QIcon::fromTheme(qsl("document-save"), QIcon(qsl(":/icons/document-save.png"))), mudlet::self()->getUserLocale().toString(lastModified, mDateTimeFormat), QVariant(entry));
+                    QIcon::fromTheme(qsl("document-save"), QIcon(qsl(":/icons/document-save.png"))), historyLabel(locale.toString(fileInfo.lastModified(), mDateTimeFormat), entry), QVariant(entry));
         } else if (entry.endsWith(QLatin1String(".xml"), Qt::CaseInsensitive)) {
-            profile_history->addItem(entry, QVariant(entry)); // if it has a custom name, use it as it is
+            profile_history->addItem(historyLabel(entry, entry), QVariant(entry)); // a custom-named save is listed by its name
         }
     }
 
