@@ -185,6 +185,9 @@ set(TELNET_GROUP_TEST_SOURCES
     IrcWindowMarkupTest.cpp
     IrcLuaClientTest.cpp
 )
+if(USE_LIBGHOSTTY)
+    list(APPEND TELNET_GROUP_TEST_SOURCES LibghosttySgrTest.cpp)
+endif()
 
 # Triggers and the other scriptable units, and what a running script does to them
 set(TRIGGER_GROUP_TEST_SOURCES

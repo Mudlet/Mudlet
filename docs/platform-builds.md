@@ -301,6 +301,23 @@ cmake --preset linux-debug -DUSE_MCPSERVER=OFF
 `WITH_MCPSERVER=NO` in the environment does the same for a fresh build tree. The sources and the
 `TMCPServerTest` / `TMCPBridgeTest` ctest cases are then simply not built.
 
+### libghostty-vt SGR decoder (evaluation)
+
+`USE_LIBGHOSTTY` is off by default. Turned on, `TBuffer::decodeSGR()` reads SGR parameters through
+[libghostty-vt](https://lib.ghostty.org/)'s parser instead of Mudlet's own, so the two can be
+compared in one binary: `MUDLET_SGR_ENGINE=native` in the environment picks Mudlet's decoder again.
+Profiles that expect a colour space id in `38;2;...` keep Mudlet's decoder either way. Building the
+library needs the exact Zig version its `build.zig.zon` names (0.17 for libghostty-vt 1.0.0):
+
+```bash
+tar -xzf libghostty-vt-1.0.0.tar.gz && tar -xzf libghostty-vt-1.0.0-deps.tar.gz
+(cd libghostty-vt-1.0.0 && zig build --prefix "$PWD/../ghostty-prefix" --system ../libghostty-vt-1.0.0-deps -Doptimize=ReleaseFast -Dcpu=baseline)
+cmake --preset linux-release -DUSE_LIBGHOSTTY=ON -DCMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH;$PWD/ghostty-prefix"
+```
+
+`LibghosttySgrTest` (telnet group) compares the two decoders style by style, lists the inputs they
+decode differently on purpose, and reports throughput from its `benchSgrDecode` slot.
+
 ### Leaving out what a mobile build cannot use
 
 These options default to ON and are declared through `include_optional_module` like the modules
