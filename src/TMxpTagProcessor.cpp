@@ -115,6 +115,9 @@ TMxpTagProcessor::TMxpTagProcessor()
     // Line spacing tags
     registerHandler(TMxpFeatureOptions({"br", {}}), new TMxpBRTagHandler());
     registerHandler(TMxpFeatureOptions({"hr", {}}), new TMxpHRTagHandler());
+    // TMxpProcessor acts on these two itself
+    mSupportedMxpElements["sbr"] = QVector<QString>();
+    mSupportedMxpElements["nobr"] = QVector<QString>();
 
     // Link tags
     registerHandler(TMxpFeatureOptions({"send", {"href", "hint", "prompt", "expire"}}), new TMxpSendTagHandler());
