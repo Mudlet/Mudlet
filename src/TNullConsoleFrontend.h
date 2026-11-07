@@ -398,8 +398,13 @@ public:
         std::optional<Qt::CursorShape> cursor;
         QString customCursor;
         QPoint customCursorHotSpot;
+        // Which label of its name it is: one deleted and made again under the name has another
+        qint64 made = 0;
     };
     std::optional<LabelRecord> labelRecord(const QString& name) const;
+    // Changes as the label, or the console or scroll box, of the name is made, hides or moves into another window,
+    // as Qt drops the mouse's grab of a widget then (QWidgetPrivate::deactivateWidgetCleanup())
+    std::optional<qint64> deactivated(const QString& name, bool label) const;
     TWindowNotifier& windowNotifier() { return mWindowNotifier; }
     // Where an app put a user window's dock, as the GUI's dock is moved and resized by its layout or the player
     bool placeUserWindow(const QString& name, const QRect& geometry, bool floating);
@@ -444,6 +449,7 @@ private:
         bool shown = true;
         QPointer<QObject> holder;
         qint64 stackOrder = 0;
+        qint64 deactivated = 0;
     };
     // A window made inside a user window goes with it, as a real one is its dock's child widget, though
     // out of the registry at once rather than when deferred deletes run.
@@ -503,6 +509,7 @@ private:
         bool autoDock = true;
         Qt::DockWidgetArea dockArea = Qt::RightDockWidgetArea;
         bool floating = false;
+        qint64 deactivated = 0;
     };
     // As TConsole::mpCommandLine tells a console's own command line from another of its name
     static bool ownsLine(const SubConsole& console, const PlainWindow& commandLine) { return commandLine.writer && commandLine.writer == console.ownLine; }
@@ -550,6 +557,8 @@ private:
         std::optional<Qt::CursorShape> cursor;
         QString customCursor;
         QPoint customCursorHotSpot;
+        qint64 made = 0;
+        qint64 deactivated = 0;
     };
     struct MapWidget
     {
@@ -665,6 +674,8 @@ private:
     // As a QWidget made or reparented goes on top of its siblings, and a lowered one below them
     qint64 mTopOfStack = 0;
     qint64 mBottomOfStack = 0;
+    qint64 mLabelsMade = 0;
+    qint64 mDeactivations = 0;
     TWindowNotifier mWindowNotifier;
     QElapsedTimer mIncomingTextTimer;
 };
