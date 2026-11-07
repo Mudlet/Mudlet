@@ -959,6 +959,36 @@ setLabelOnLeave("hover", function() got[#got + 1] = "hover.leave" end)
         QCOMPARE(got(), qsl("press 2 31 42 uw;release 2 1030 42 uw"));
         QVERIFY(session.shutdown(false));
     }
+
+    void test_getMousePositionIsWhereTheAppsPointerLastWas()
+    {
+        const QString name = qsl("Headless Mouse Position");
+        QVERIFY(writeProfile(name));
+        using Type = THeadlessSession::PointerEvent::Type;
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        QVERIFY(session.runLua(qsl(R"(createMiniConsole("mc", 10, 20, 200, 100))")));
+        QCOMPARE(luaString(session, qsl("getMousePosition()")), qsl("nil"));
+        QCOMPARE(luaString(session, qsl("select(2, getMousePosition())")), qsl("the profile has no main window"));
+
+        QVERIFY(session.pointer(qsl("mc"), {.type = Type::move, .position = QPointF(5, 5)}));
+        QCOMPARE(luaString(session, qsl("table.concat({getMousePosition()}, ',')")), qsl("15,25"));
+        QVERIFY(session.pointer(qsl("main"), {.type = Type::press, .position = QPointF(300, 400), .button = Qt::LeftButton}));
+        QCOMPARE(luaString(session, qsl("table.concat({getMousePosition()}, ',')")), qsl("300,400"));
+        // A leave says the pointer went, not where
+        QVERIFY(session.pointer(qsl("mc"), {.type = Type::leave}));
+        QCOMPARE(luaString(session, qsl("table.concat({getMousePosition()}, ',')")), qsl("300,400"));
+        // A drag goes on past the window that took the press
+        QVERIFY(session.pointer(qsl("mc"), {.type = Type::press, .position = QPointF(5, 5), .button = Qt::LeftButton, .buttons = Qt::LeftButton}));
+        QVERIFY(session.pointer(qsl("mc"), {.type = Type::move, .position = QPointF(250, 5), .buttons = Qt::LeftButton}));
+        QCOMPARE(luaString(session, qsl("table.concat({getMousePosition()}, ',')")), qsl("260,25"));
+        // and on, as the pointer does, after the window has lost the grab
+        QVERIFY(session.runLua(qsl(R"(hideWindow("mc"))")));
+        QVERIFY(session.pointer(qsl("mc"), {.type = Type::move, .position = QPointF(30, 5), .buttons = Qt::LeftButton}));
+        QCOMPARE(luaString(session, qsl("table.concat({getMousePosition()}, ',')")), qsl("40,25"));
+        QVERIFY(session.shutdown(false));
+    }
 };
 
 #include "HeadlessSessionWindowsTest.moc"

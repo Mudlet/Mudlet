@@ -2590,7 +2590,7 @@ bool TMainConsole::setTextBoxTabMovesFocus(const QString& name, bool tabMovesFoc
     return true;
 }
 
-QPoint TMainConsole::mousePosition() const
+std::optional<QPoint> TMainConsole::mousePosition() const
 {
     return mpMainFrame->mapFromGlobal(QCursor::pos());
 }

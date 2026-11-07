@@ -381,6 +381,13 @@ bool THeadlessSession::pointer(const QString& window, const PointerEvent& event)
     const auto target = main ? windows.cend() : std::find_if(windows.cbegin(), windows.cend(), [&window](const ScriptWindow& candidate) {
         return candidate.name == window;
     });
+    // getMousePosition() follows the pointer, whether or not a window takes what it did there
+    const auto notePointer = [&]() {
+        auto* pView = dynamic_cast<TNullConsoleFrontend*>(mpHost->consoleFrontend());
+        if (pView && event.type != Type::leave && (main || target != windows.cend())) {
+            pView->setMousePosition((main ? event.position : inMainArea(windows, *target, event.position)).toPoint());
+        }
+    };
     const bool pressing = event.type == Type::press || event.type == Type::doubleClick;
     // As Qt's implicit grab, which a press with no other button held starts again, and a move with none held ends
     if (mGrab && ((event.type == Type::move && event.buttons == Qt::NoButton) || (pressing && (event.buttons & ~event.button) == Qt::NoButton))) {
@@ -393,6 +400,7 @@ bool THeadlessSession::pointer(const QString& window, const PointerEvent& event)
         if (ends) {
             mGrab.reset();
         }
+        notePointer();
         return true;
     }
     // The click-through label the press went through, which the app may name for what took it
@@ -409,6 +417,7 @@ bool THeadlessSession::pointer(const QString& window, const PointerEvent& event)
     }
     // While a grab holds, Qt sends no widget an enter or a leave
     if (mGrab && (event.type == Type::enter || event.type == Type::leave)) {
+        notePointer();
         return true;
     }
     const std::optional<QSize> size = main ? mpHost->mainWindowSize() : std::optional(target->geometry.size());
@@ -425,6 +434,7 @@ bool THeadlessSession::pointer(const QString& window, const PointerEvent& event)
             mErrorString = tr("The point (%1, %2) is not in the window \"%3\".").arg(event.position.x()).arg(event.position.y()).arg(window);
             return false;
         }
+        notePointer();
     }
     // QWidget::childAt() passes over a click-through label, so what is under it takes the press, and the grab
     const ScriptWindow* pNamed = main ? nullptr : &*target;

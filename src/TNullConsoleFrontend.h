@@ -380,7 +380,7 @@ public:
     void setF3SearchEnabled(bool) override {}
     void setCompactInputLine(bool) override {}
     void setCaretMode(bool) override {}
-    QPoint mousePosition() const override { return QPoint(); }
+    std::optional<QPoint> mousePosition() const override { return mMousePosition; }
     bool hasKeyboardFocus() const override { return false; }
     TMxpFrameFrontend& mxpFrames() override { return mMxpFrames; }
     const TMxpFrameFrontend& mxpFrames() const override { return mMxpFrames; }
@@ -406,6 +406,8 @@ public:
     // as Qt drops the mouse's grab of a widget then (QWidgetPrivate::deactivateWidgetCleanup())
     std::optional<qint64> deactivated(const QString& name, bool label) const;
     TWindowNotifier& windowNotifier() { return mWindowNotifier; }
+    // Where the app last said its pointer was, in the main window's area
+    void setMousePosition(const QPoint& position) { mMousePosition = position; }
     // Where an app put a user window's dock, as the GUI's dock is moved and resized by its layout or the player
     bool placeUserWindow(const QString& name, const QRect& geometry, bool floating);
     bool userWindow(const QString& name) const;
@@ -677,6 +679,7 @@ private:
     qint64 mLabelsMade = 0;
     qint64 mDeactivations = 0;
     TWindowNotifier mWindowNotifier;
+    std::optional<QPoint> mMousePosition;
     QElapsedTimer mIncomingTextTimer;
 };
 

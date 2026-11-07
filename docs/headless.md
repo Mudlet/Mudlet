@@ -738,7 +738,10 @@ Lua error goes to the error console, as the GUI's does, and `pointer()` still re
 where `runLua()` is, for a name no window has, for another window than the one a held button is on or the
 click-through label its press went through, and, but for a `leave` or what that grab takes, for a window
 that is not `shown` or a `position` outside it, which the GUI's mouse could not reach; a `leave` is taken
-for a hidden window, as Qt sends one to a widget that hides under the pointer.
+for a hidden window, as Qt sends one to a widget that hides under the pointer. `getMousePosition()`
+answers with the last point a `pointer()` call took, in the main window's area, other than a `leave`'s,
+whether or not a window ran anything for it, as for the moves of a grab Qt has dropped, and with nil and
+"the profile has no main window" until the first.
 
 ## What still needs a window
 
