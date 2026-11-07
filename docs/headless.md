@@ -200,6 +200,12 @@ it held, and if a trigger then deletes its first part, what is left of it comes 
 trigger makes to a line already sent, as by moving the cursor up to it, is not sent again, though what it
 inserts is sent as a line of its own.
 
+The last argument of both, `arrivalMSecs`, is when the line arrived, in milliseconds since the epoch: the
+time the GUI's timestamps show beside it. A line a trigger wrote has the time of the console line it went
+into, its own when it is a line of its own. It is -1 for a line with none. A handler that takes only the
+first three or four arguments may still be connected. `localText` carries no time of its own: it is sent as
+it is written, so the time its handler runs is when that text was written.
+
 `localText` carries the text written to the main console that the game did not send, as it is written,
 in pieces that need not end a line: the `echo()`s of aliases, timers, key bindings and `runLua()`, the
 commands the player sends, and Mudlet's own messages. While `lineShown` is connected, `localText` leaves
