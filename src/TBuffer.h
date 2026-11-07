@@ -903,8 +903,6 @@ private:
     bool parseVisibilitySettings(const QString& jsonString, Mudlet::HyperlinkStyling::VisibilitySettings& settings, QString* errorDetails = nullptr);
     // Helper function for parsing color values (hex, named, rgb)
     QColor parseColorValue(const QString& value);
-    // Accessibility enhancements for hyperlink styling
-    void applyAccessibilityEnhancements(Mudlet::HyperlinkStyling& styling);
 
     // The model this buffer is the text of. The hyperlink managers, the
     // current format and the console background are read off it, and whatever
@@ -1224,6 +1222,8 @@ public:
     void setHoveredLink(int linkIndex);
     void setActiveLink(int linkIndex);
     void setFocusedLink(int linkIndex);
+    // Whether the link has the caret on it and a focus style from the game to show it with
+    bool showsFocus(int linkIndex) const;
     void markLinkAsVisited(int linkIndex);
     bool isLinkVisited(int linkIndex) const;
     void setLinkSelected(int linkIndex, bool selected);

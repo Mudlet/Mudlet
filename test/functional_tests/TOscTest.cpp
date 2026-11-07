@@ -1619,6 +1619,422 @@ private slots:
                 .arg(attrsAfter)));
   }
 
+  // The style has to be on the text from the start, not wait for a click, and
+  // to come back after anything that gives the link another state for a moment.
+  void test_DisabledLinkHasItsStyleFromTheStart() {
+    injectData(qsl("\x1b]8;;send:look?config={\"disabled\":true,\"style\":{\"disabled\":{\"color\":\"#808080\",\"strikethrough\":true}}}\x1b\\Off\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    const auto showsDisabledStyle = [&, line = linkLine, col = linkCol]() {
+      const TChar &ch = console->buffer.buffer.at(line).at(col);
+      return ch.foreground() == QColor(0x80, 0x80, 0x80) && (ch.allDisplayAttributes() & TChar::StrikeOut);
+    };
+
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDisabled);
+    QVERIFY2(showsDisabledStyle(), "the disabled style is not on the text as printed");
+
+    console->buffer.setHoveredLink(linkId);
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDisabled);
+    console->buffer.setHoveredLink(0);
+
+    console->buffer.setFocusedLink(linkId);
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDisabled);
+    console->buffer.setFocusedLink(0);
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDisabled);
+
+    console->buffer.setActiveLink(linkId);
+    console->buffer.setActiveLink(0);
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDisabled);
+    QVERIFY2(showsDisabledStyle(), "the disabled style did not come back");
+  }
+
+  // A game that styles only :focus still sees it, since focus-visible falls back to focus
+  void test_KeyboardFocusShowsTheFocusStyle_data() {
+    QTest::addColumn<QString>("style");
+
+    QTest::newRow("focus") << qsl("{\"color\":\"#ffffff\",\"focus\":{\"color\":\"#00ff00\"}}");
+    QTest::newRow("focus-visible") << qsl("{\"color\":\"#ffffff\",\"focus-visible\":{\"color\":\"#00ff00\"}}");
+    QTest::newRow("focus-visible over focus") << qsl("{\"color\":\"#ffffff\",\"focus\":{\"color\":\"#ff0000\"},\"focus-visible\":{\"color\":\"#00ff00\"}}");
+  }
+
+  void test_KeyboardFocusShowsTheFocusStyle() {
+    QFETCH(QString, style);
+
+    injectData(qsl("\x1b]8;;send:look?config={\"style\":%1}\x1b\\Look\x1b]8;;\x1b\\ around").arg(style));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    const auto shownColor = [&, line = linkLine, col = linkCol]() {
+      return console->buffer.buffer.at(line).at(col).foreground();
+    };
+    QCOMPARE(shownColor(), QColor(0xff, 0xff, 0xff));
+
+    mpHost->setCaretEnabled(true);
+    const auto caretOff = qScopeGuard([this] { mpHost->setCaretEnabled(false); });
+    console->mUpperPane->setCaretPosition(linkLine, linkCol);
+    QCOMPARE(console->buffer.getFocusedLink(), linkId);
+    QCOMPARE(shownColor(), QColor(0x00, 0xff, 0x00));
+
+    console->buffer.setHoveredLink(linkId);
+    console->buffer.setHoveredLink(0);
+    QVERIFY2(shownColor() == QColor(0x00, 0xff, 0x00), "the focus style went when the pointer passed over the link");
+    console->buffer.setActiveLink(linkId);
+    console->buffer.setActiveLink(0);
+    QVERIFY2(shownColor() == QColor(0x00, 0xff, 0x00), "the focus style went when the link was pressed");
+
+    console->mUpperPane->setCaretPosition(linkLine, linkCol + qsl("Look ").size());
+    QCOMPARE(console->buffer.getFocusedLink(), 0);
+    QCOMPARE(shownColor(), QColor(0xff, 0xff, 0xff));
+  }
+
+  // Redrawing a link replaces the game's own formatting, so one without a focus style is left as printed
+  void test_ALinkWithoutAFocusStyleKeepsItsFormatting_data() {
+    QTest::addColumn<QString>("link");
+
+    QTest::newRow("bold from the link's style") << qsl("\x1b]8;;send:look?config={\"style\":{\"color\":\"#ffffff\",\"bold\":true,\"italic\":true}}\x1b\\Look\x1b]8;;\x1b\\ around");
+    QTest::newRow("bold from the game's text") << qsl("\x1b[0m\x1b]8;;send:look?config={\"style\":{\"color\":\"#ffffff\"}}\x1b\\\x1b[1;3mLook\x1b[22;23m\x1b]8;;\x1b\\ around");
+  }
+
+  void test_ALinkWithoutAFocusStyleKeepsItsFormatting() {
+    QFETCH(QString, link);
+
+    injectData(link);
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    const auto attributes = [&, line = linkLine, col = linkCol]() {
+      return console->buffer.buffer.at(line).at(col).allDisplayAttributes();
+    };
+    QVERIFY(attributes() & TChar::Bold);
+    QVERIFY(attributes() & TChar::Italic);
+    mpHost->setCaretEnabled(true);
+    const auto caretOff = qScopeGuard([this] { mpHost->setCaretEnabled(false); });
+    console->mUpperPane->setCaretPosition(linkLine, linkCol + qsl("Look ").size());
+
+    console->mUpperPane->setCaretPosition(linkLine, linkCol);
+    QCOMPARE(console->buffer.getFocusedLink(), linkId);
+    QVERIFY2(attributes() & TChar::Bold, "focus took the bold off the link");
+    QVERIFY2(attributes() & TChar::Italic, "focus took the italics off the link");
+    QVERIFY2(!(attributes() & TChar::Underline), "focus drew a style the game did not give");
+
+    console->buffer.setHoveredLink(linkId);
+    console->buffer.setHoveredLink(0);
+    console->mUpperPane->setCaretPosition(linkLine, linkCol + qsl("Look ").size());
+    QVERIFY2(attributes() & TChar::Bold, "losing focus took the bold off the link");
+  }
+
+  void test_ToggledSelectionWithoutAFocusStyleShowsAtOnce() {
+    injectData(qsl("\x1b]8;;send:channel%20newbie?config={\"selection\":{\"group\":\"channels\",\"value\":\"newbie\",\"exclusive\":false},\"style\":{\"color\":\"#ffffff\",\"selected\":{\"color\":\"#ff0000\"}}}\x1b\\Newbie\x1b]8;;\x1b\\ channel"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    mpHost->setCaretEnabled(true);
+    const auto caretOff = qScopeGuard([this] { mpHost->setCaretEnabled(false); });
+
+    console->mUpperPane->setCaretPosition(linkLine, linkCol);
+    QKeyEvent activate(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+    QApplication::sendEvent(console->mUpperPane, &activate);
+    QVERIFY(console->buffer.isLinkSelected(linkId));
+    QCOMPARE(console->buffer.buffer.at(linkLine).at(linkCol).foreground(), QColor(0xff, 0x00, 0x00));
+  }
+
+  void test_ALinkActivatedFromTheKeyboardIsVisitedOnceFocusLeaves() {
+    injectData(qsl("\x1b]8;;send:look?config={\"style\":{\"color\":\"#ffffff\",\"visited\":{\"color\":\"#ff00ff\"},\"focus-visible\":{\"color\":\"#00ff00\"}}}\x1b\\Look\x1b]8;;\x1b\\ around"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    const auto shownColor = [&, line = linkLine, col = linkCol]() {
+      return console->buffer.buffer.at(line).at(col).foreground();
+    };
+    mpHost->setCaretEnabled(true);
+    const auto caretOff = qScopeGuard([this] { mpHost->setCaretEnabled(false); });
+
+    console->mUpperPane->setCaretPosition(linkLine, linkCol);
+    QKeyEvent activate(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+    QApplication::sendEvent(console->mUpperPane, &activate);
+    QVERIFY(console->buffer.isLinkVisited(linkId));
+    QCOMPARE(shownColor(), QColor(0x00, 0xff, 0x00));
+
+    console->mUpperPane->setCaretPosition(linkLine, linkCol + qsl("Look ").size());
+    QCOMPARE(shownColor(), QColor(0xff, 0x00, 0xff));
+  }
+
+  // With no base color to draw, leaving a state has to bring back the color the game sent
+  void test_LeavingAStateRestoresTheGamesColor_data() {
+    QTest::addColumn<QString>("state");
+
+    QTest::newRow("focus-visible") << qsl("focus-visible");
+    QTest::newRow("hover") << qsl("hover");
+  }
+
+  void test_LeavingAStateRestoresTheGamesColor() {
+    QFETCH(QString, state);
+
+    injectData(qsl("\x1b[0;31m\x1b]8;;send:look?config={\"style\":{\"%1\":{\"color\":\"#00ff00\"}}}\x1b\\Look\x1b]8;;\x1b\\ around\x1b[0m").arg(state));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    const auto shownColor = [&, line = linkLine, col = linkCol]() {
+      return console->buffer.buffer.at(line).at(col).foreground();
+    };
+    const QColor printed = shownColor();
+    QVERIFY(printed != QColor(0x00, 0xff, 0x00));
+    mpHost->setCaretEnabled(true);
+    const auto caretOff = qScopeGuard([this] { mpHost->setCaretEnabled(false); });
+    console->mUpperPane->setCaretPosition(linkLine, linkCol + qsl("Look ").size());
+
+    if (state == qsl("hover")) {
+      console->buffer.setHoveredLink(linkId);
+    } else {
+      console->mUpperPane->setCaretPosition(linkLine, linkCol);
+    }
+    QCOMPARE(shownColor(), QColor(0x00, 0xff, 0x00));
+    if (state == qsl("hover")) {
+      console->buffer.setHoveredLink(0);
+    } else {
+      console->mUpperPane->setCaretPosition(linkLine, linkCol + qsl("Look ").size());
+    }
+    QCOMPARE(shownColor(), printed);
+  }
+
+  // A state the game gave no style leaves the link showing the one below it
+  void test_AnUnstyledPointerStateKeepsTheStyleBelowIt() {
+    injectData(qsl("\x1b]8;;send:look?config={\"style\":{\"color\":\"#ffffff\",\"focus-visible\":{\"color\":\"#00ff00\"}}}\x1b\\Look\x1b]8;;\x1b\\ around"));
+    injectData(qsl("\x1b]8;;send:vote?config={\"selection\":{\"group\":\"poll\",\"value\":\"a\",\"selected\":true},\"style\":{\"color\":\"#ffffff\",\"selected\":{\"color\":\"#ff0000\"}}}\x1b\\Vote\x1b]8;;\x1b\\ here"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto focusLink = findNthDistinctLinkPosition(1);
+    auto voteLink = findNthDistinctLinkPosition(2);
+    QVERIFY2(focusLink.has_value() && voteLink.has_value(), "Expected to find two links in the buffer");
+    auto [line, col, linkId] = *focusLink;
+    auto [voteLine, voteCol, voteId] = *voteLink;
+    const auto colorAt = [&](int atLine, int atCol) {
+      return console->buffer.buffer.at(atLine).at(atCol).foreground();
+    };
+
+    console->buffer.setHoveredLink(voteId);
+    QVERIFY2(colorAt(voteLine, voteCol) == QColor(0xff, 0x00, 0x00), "hovering a link with no hover style hid its selection");
+    console->buffer.setHoveredLink(0);
+
+    mpHost->setCaretEnabled(true);
+    const auto caretOff = qScopeGuard([this] { mpHost->setCaretEnabled(false); });
+    console->mUpperPane->setCaretPosition(line, col + qsl("Look ").size());
+    console->buffer.setHoveredLink(linkId);
+    console->mUpperPane->setCaretPosition(line, col);
+    QVERIFY2(colorAt(line, col) == QColor(0x00, 0xff, 0x00), "a pointer with no hover style kept focus from showing");
+    console->buffer.setHoveredLink(0);
+    console->buffer.setHoveredLink(linkId);
+    QVERIFY2(colorAt(line, col) == QColor(0x00, 0xff, 0x00), "hovering with no hover style hid the focus");
+    console->buffer.setActiveLink(linkId);
+    QVERIFY2(colorAt(line, col) == QColor(0x00, 0xff, 0x00), "pressing with no pressed style hid the focus");
+    console->buffer.setActiveLink(0);
+    console->buffer.setHoveredLink(0);
+    QCOMPARE(colorAt(line, col), QColor(0x00, 0xff, 0x00));
+  }
+
+  void test_ToggledSelectionKeepsAHoverStyle() {
+    injectData(qsl("\x1b]8;;send:channel%20newbie?config={\"selection\":{\"group\":\"channels\",\"value\":\"newbie\",\"exclusive\":false},\"style\":{\"color\":\"#ffffff\",\"hover\":{\"color\":\"#0000ff\"},\"selected\":{\"color\":\"#ff0000\"},\"focus-visible\":{\"color\":\"#00ff00\"}}}\x1b\\Newbie\x1b]8;;\x1b\\ channel"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    mpHost->setCaretEnabled(true);
+    const auto caretOff = qScopeGuard([this] { mpHost->setCaretEnabled(false); });
+
+    console->mUpperPane->setCaretPosition(linkLine, linkCol);
+    console->buffer.setHoveredLink(linkId);
+    QKeyEvent activate(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+    QApplication::sendEvent(console->mUpperPane, &activate);
+    QVERIFY(console->buffer.isLinkSelected(linkId));
+    QVERIFY2(console->buffer.buffer.at(linkLine).at(linkCol).foreground() == QColor(0x00, 0x00, 0xff), "toggling took the hover style off the link under the pointer");
+    console->buffer.setHoveredLink(0);
+    QCOMPARE(console->buffer.buffer.at(linkLine).at(linkCol).foreground(), QColor(0x00, 0xff, 0x00));
+  }
+
+  void test_LeavingCaretModeEndsTheFocusStyle() {
+    injectData(qsl("\x1b]8;;send:look?config={\"style\":{\"color\":\"#ffffff\",\"focus-visible\":{\"color\":\"#00ff00\"}}}\x1b\\Look\x1b]8;;\x1b\\ around"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    const auto shownColor = [&, line = linkLine, col = linkCol]() {
+      return console->buffer.buffer.at(line).at(col).foreground();
+    };
+    mpHost->setCaretEnabled(true);
+    auto caretOff = qScopeGuard([this] { mpHost->setCaretEnabled(false); });
+    console->mUpperPane->setCaretPosition(linkLine, linkCol + qsl("Look ").size());
+    console->mUpperPane->setCaretPosition(linkLine, linkCol);
+    QCOMPARE(shownColor(), QColor(0x00, 0xff, 0x00));
+
+    mpHost->setCaretEnabled(false);
+    caretOff.dismiss();
+    QCOMPARE(console->buffer.getFocusedLink(), 0);
+    QCOMPARE(shownColor(), QColor(0xff, 0xff, 0xff));
+    console->buffer.setHoveredLink(linkId);
+    console->buffer.setHoveredLink(0);
+    QCOMPARE(shownColor(), QColor(0xff, 0xff, 0xff));
+  }
+
+  void test_HoverOutranksKeyboardFocus() {
+    injectData(qsl("\x1b]8;;send:look?config={\"style\":{\"color\":\"#ffffff\",\"hover\":{\"color\":\"#0000ff\"},\"focus-visible\":{\"color\":\"#00ff00\"}}}\x1b\\Look\x1b]8;;\x1b\\ around"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    const auto shownColor = [&, line = linkLine, col = linkCol]() {
+      return console->buffer.buffer.at(line).at(col).foreground();
+    };
+    mpHost->setCaretEnabled(true);
+    const auto caretOff = qScopeGuard([this] { mpHost->setCaretEnabled(false); });
+
+    console->mUpperPane->setCaretPosition(linkLine, linkCol + qsl("Look ").size());
+    QCOMPARE(console->buffer.getFocusedLink(), 0);
+    console->buffer.setHoveredLink(linkId);
+    console->mUpperPane->setCaretPosition(linkLine, linkCol);
+    QCOMPARE(console->buffer.getFocusedLink(), linkId);
+    QVERIFY2(shownColor() == QColor(0x00, 0x00, 0xff), "the caret arriving took the hover style off the link under the pointer");
+    console->mUpperPane->setCaretPosition(linkLine, linkCol + qsl("Look ").size());
+    QVERIFY2(shownColor() == QColor(0x00, 0x00, 0xff), "the caret leaving took the hover style off the link under the pointer");
+    console->buffer.setHoveredLink(0);
+    QCOMPARE(shownColor(), QColor(0xff, 0xff, 0xff));
+  }
+
+  // Enter in caret mode toggles a selection without moving the caret off the link
+  void test_ToggledSelectionKeepsTheFocusStyle() {
+    injectData(qsl("\x1b]8;;send:channel%20newbie?config={\"selection\":{\"group\":\"channels\",\"value\":\"newbie\",\"exclusive\":false},\"style\":{\"color\":\"#ffffff\",\"selected\":{\"color\":\"#ff0000\"},\"focus-visible\":{\"color\":\"#00ff00\"}}}\x1b\\Newbie\x1b]8;;\x1b\\ channel"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    const auto shownColor = [&, line = linkLine, col = linkCol]() {
+      return console->buffer.buffer.at(line).at(col).foreground();
+    };
+    mpHost->setCaretEnabled(true);
+    const auto caretOff = qScopeGuard([this] { mpHost->setCaretEnabled(false); });
+
+    console->mUpperPane->setCaretPosition(linkLine, linkCol);
+    QKeyEvent activate(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+    QApplication::sendEvent(console->mUpperPane, &activate);
+    QVERIFY(console->buffer.isLinkSelected(linkId));
+    QVERIFY2(shownColor() == QColor(0x00, 0xff, 0x00), "toggling the selection took the focus style off the focused link");
+
+    console->mUpperPane->setCaretPosition(linkLine, linkCol + qsl("Newbie ").size());
+    QCOMPARE(shownColor(), QColor(0xff, 0x00, 0x00));
+  }
+
+  void test_DisabledOutranksSelectedFromTheStart_data() {
+    QTest::addColumn<QString>("selection");
+
+    QTest::newRow("in a group") << qsl("{\"group\":\"ranks\",\"value\":\"a\",\"selected\":true,\"disabled\":true}");
+    QTest::newRow("no group") << qsl("{\"selected\":true,\"disabled\":true}");
+    QTest::newRow("disabled without a group") << qsl("{\"disabled\":true}");
+  }
+
+  void test_DisabledOutranksSelectedFromTheStart() {
+    QFETCH(QString, selection);
+
+    injectData(qsl("\x1b]8;;send:look?config={\"selection\":%1,\"style\":{\"selected\":{\"color\":\"#00ff00\"},\"disabled\":{\"color\":\"#808080\"}}}\x1b\\Off\x1b]8;;\x1b\\").arg(selection));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDisabled);
+    QCOMPARE(console->buffer.buffer.at(linkLine).at(linkCol).foreground(), QColor(0x80, 0x80, 0x80));
+  }
+
+  // The flush marker splits the link's text, and held text commits apart from the link's own line
+  void test_DisabledStyleSurvivesTheLinkBeingSplit() {
+    TMainConsole *console = mpHost->mainConsoleView();
+    const QString link = qsl("\x1b]8;;send:look?config={\"disabled\":true,\"style\":{\"disabled\":{\"color\":\"#808080\"}}}\x1b\\");
+
+    feedFromServer(link + qsl("FLUSHED \r"));
+    feedFromServer(qsl("REST\x1b]8;;\x1b\\\n"));
+    int line = lineStartingWith(qsl("REST"));
+    QVERIFY2(line >= 1, qPrintable(allBufferText()));
+    QCOMPARE(console->buffer.buffer.at(line).at(0).foreground(), QColor(0x80, 0x80, 0x80));
+    const int flushedLine = lineStartingWith(qsl("FLUSHED"));
+    QVERIFY2(flushedLine >= 0, qPrintable(allBufferText()));
+    QCOMPARE(console->buffer.buffer.at(flushedLine).at(0).foreground(), QColor(0x80, 0x80, 0x80));
+
+    undoServerWrap();
+    feedFromServer(QString(64, QLatin1Char('x')) + qsl(" alpha\n"));
+    feedFromServer(qsl("- ") + link + qsl("listed\x1b]8;;\x1b\\\n"));
+    line = lineStartingWith(qsl("- listed"));
+    QVERIFY2(line >= 0, qPrintable(allBufferText()));
+    QCOMPARE(console->buffer.buffer.at(line).at(2).foreground(), QColor(0x80, 0x80, 0x80));
+  }
+
+  void test_DisabledStyleKeepsTheTextsOwnFormatting() {
+    injectData(qsl("\x1b[0m\x1b]8;;send:look?config={\"disabled\":true,\"style\":{\"disabled\":{\"color\":\"#808080\"}}}\x1b\\\x1b[1mOff\x1b[22m\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    const TChar &ch = console->buffer.buffer.at(std::get<0>(*pos)).at(std::get<1>(*pos));
+    QCOMPARE(ch.foreground(), QColor(0x80, 0x80, 0x80));
+    QVERIFY2(ch.allDisplayAttributes() & TChar::Bold, "the disabled style cleared the game's bold");
+  }
+
+  void test_PressingADisabledLinkLeavesItAsPrinted() {
+    injectData(qsl("\x1b[0m\x1b]8;;send:look?config={\"disabled\":true,\"style\":{\"disabled\":{\"strikethrough\":true}}}\x1b\\\x1b[1mOff\x1b[22m\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    const auto attributes = [&, line = linkLine, col = linkCol]() {
+      return console->buffer.buffer.at(line).at(col).allDisplayAttributes();
+    };
+    QVERIFY(attributes() & TChar::StrikeOut);
+
+    console->buffer.setActiveLink(linkId);
+    QVERIFY2(attributes() & TChar::StrikeOut, "pressing the link dropped its disabled style");
+    console->buffer.setActiveLink(0);
+    QVERIFY2(attributes() & TChar::StrikeOut, "releasing the link dropped its disabled style");
+    QVERIFY2(attributes() & TChar::Bold, "releasing the link cleared the game's bold");
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDisabled);
+  }
+
+  void test_DisabledLinkInAGroupKeepsTheTextsOwnFormatting() {
+    injectData(qsl("\x1b[0m\x1b]8;;send:look?config={\"selection\":{\"group\":\"boldgroup\",\"value\":\"off\",\"disabled\":true},\"style\":{\"disabled\":{\"color\":\"#808080\"}}}\x1b\\\x1b[1mOff\x1b[22m\x1b]8;;\x1b\\"));
+    injectData(qsl("after\n"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    const TChar &ch = console->buffer.buffer.at(std::get<0>(*pos)).at(std::get<1>(*pos));
+    QCOMPARE(ch.foreground(), QColor(0x80, 0x80, 0x80));
+    QVERIFY2(ch.allDisplayAttributes() & TChar::Bold, "the group's restyle cleared the game's bold");
+  }
+
+  void test_LinkThatIsNotDisabledStartsInTheDefaultState() {
+    injectData(qsl("\x1b]8;;send:look?config={\"disabled\":false,\"style\":{\"disabled\":{\"color\":\"#808080\"}}}\x1b\\Open\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDefault);
+  }
+
   void test_LinkAttributes_DisabledState() {
     injectData(qsl("\x1b]8;;send:look\x1b\\Disabled Link\x1b]8;;\x1b\\"));
 

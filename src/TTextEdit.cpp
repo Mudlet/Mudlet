@@ -4427,8 +4427,20 @@ void TTextEdit::applyHyperlinkSelectionGroupState(int linkIndex, QString& uri, c
         }
     }
 
+    // The pointer, a pressed button and focus outrank being selected, so a link in one of those states keeps it
+    const auto stateFor = [this](int link, bool selected) {
+        const auto current = mpBuffer->getLinkState(link);
+        if (current == Mudlet::HyperlinkStyling::StateDisabled || current == Mudlet::HyperlinkStyling::StateActive || current == Mudlet::HyperlinkStyling::StateHover) {
+            return current;
+        }
+        if (mpBuffer->showsFocus(link)) {
+            return Mudlet::HyperlinkStyling::StateFocusVisible;
+        }
+        return selected ? Mudlet::HyperlinkStyling::StateSelected : Mudlet::HyperlinkStyling::StateDefault;
+    };
+
     mpBuffer->setLinkSelected(linkIndex, newSelected);
-    mpBuffer->setLinkState(linkIndex, newSelected ? Mudlet::HyperlinkStyling::StateSelected : Mudlet::HyperlinkStyling::StateDefault);
+    mpBuffer->setLinkState(linkIndex, stateFor(linkIndex, newSelected));
     mpBuffer->updateLinkCharacters(linkIndex);
 
     if (!mgr->isGroupExclusive(group)) {
@@ -4446,7 +4458,7 @@ void TTextEdit::applyHyperlinkSelectionGroupState(int linkIndex, QString& uri, c
         const QList<int> matchingLinkIds = mpBuffer->mLinkStore.getLinkIdsByGroupValue(group, member);
         for (const int otherLinkId : std::as_const(matchingLinkIds)) {
             mpBuffer->setLinkSelected(otherLinkId, memberSelected);
-            mpBuffer->setLinkState(otherLinkId, memberSelected ? Mudlet::HyperlinkStyling::StateSelected : Mudlet::HyperlinkStyling::StateDefault);
+            mpBuffer->setLinkState(otherLinkId, stateFor(otherLinkId, memberSelected));
             mpBuffer->updateLinkCharacters(otherLinkId);
         }
     }

@@ -5264,13 +5264,16 @@ void TBuffer::decodeOSC(const QString& sequence)
                 setLinkSelected(mCurrentHyperlinkLinkId, mCurrentHyperlinkStyling.selection.selected);
                 if (mCurrentHyperlinkStyling.selection.selected) {
                     setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateSelected);
-                } else if (mCurrentHyperlinkStyling.selection.disabled) {
-                    setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateDisabled);
                 }
 #if defined(DEBUG_OSC_PROCESSING)
                 qDebug() << "[OSC] Link" << mCurrentHyperlinkLinkId << "initialized with selection state:" << "group=" << group << "value=" << value
                          << "selected=" << mCurrentHyperlinkStyling.selection.selected << "disabled=" << mCurrentHyperlinkStyling.selection.disabled;
 #endif
+            }
+
+            // Here and not when it closes: its characters take this state as they are built, and outrank being selected
+            if (mCurrentHyperlinkStyling.selection.disabled) {
+                setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateDisabled);
             }
 
 #if defined(DEBUG_OSC_PROCESSING)
@@ -6155,8 +6158,6 @@ void TBuffer::parseJsonStyleToHyperlinkStyling(const QJsonObject& styleObj, Mudl
         || styling.disabledStyle.hasCustomStyling) {
         styling.hasCustomStyling = true;
     }
-
-    applyAccessibilityEnhancements(styling);
 }
 
 QColor TBuffer::parseColorValue(const QString& value)
@@ -7403,16 +7404,16 @@ void TBuffer::finaliseActiveHyperlink()
 {
     // Apply initial selection/disabled state styling when link closes (from selection branch)
     // OR apply :link pseudo-class styling for preset-only links (from compact branch)
-    if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.selection.hasSelectionSettings) {
+    if (mCurrentHyperlinkLinkId > 0 && (mCurrentHyperlinkStyling.selection.hasSelectionSettings || mCurrentHyperlinkStyling.selection.disabled)) {
 #if defined(DEBUG_OSC_PROCESSING)
         qDebug() << "[OSC] Queuing initial selection styling for link" << mCurrentHyperlinkLinkId << "selected:" << mCurrentHyperlinkStyling.selection.selected
                  << "disabled:" << mCurrentHyperlinkStyling.selection.disabled << "selectedStyle.hasCustomStyling:" << mCurrentHyperlinkStyling.selectedStyle.hasCustomStyling;
 #endif
-        if (mCurrentHyperlinkStyling.selection.selected) {
-            setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateSelected);
-            mPendingSelectionStyling.insert(mCurrentHyperlinkLinkId);
-        } else if (mCurrentHyperlinkStyling.selection.disabled) {
+        if (mCurrentHyperlinkStyling.selection.disabled) {
+            // Not queued for restyling: its characters were built in this state, and that would clear the game's own formatting
             setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateDisabled);
+        } else if (mCurrentHyperlinkStyling.selection.selected) {
+            setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateSelected);
             mPendingSelectionStyling.insert(mCurrentHyperlinkLinkId);
         }
     } else if (mCurrentHyperlinkLinkId > 0) {
@@ -9855,7 +9856,7 @@ Mudlet::HyperlinkStyling::StateStyle Mudlet::HyperlinkStyling::getEffectiveStyle
     }
 
     // Apply state-specific styles with proper cascade order
-    // Priority: disabled > selected > active > focus-visible > focus > hover > visited > link > default
+    // Priority: disabled > active > hover > focus-visible > focus > selected > visited > link > default
     const StateStyle* stateStyle = nullptr;
 
     switch (currentState) {
@@ -9905,8 +9906,12 @@ Mudlet::HyperlinkStyling::StateStyle Mudlet::HyperlinkStyling::getEffectiveStyle
             stateStyle = &focusStyle;
         break;
     case StateFocusVisible:
-        if (focusVisibleStyle.hasCustomStyling)
+        // Visible keyboard focus is focus too, so a link styled only for :focus shows that
+        if (focusVisibleStyle.hasCustomStyling) {
             stateStyle = &focusVisibleStyle;
+        } else if (focusStyle.hasCustomStyling) {
+            stateStyle = &focusStyle;
+        }
         break;
     case StateDefault:
     default:
@@ -9958,21 +9963,6 @@ Mudlet::HyperlinkStyling::StateStyle Mudlet::HyperlinkStyling::getEffectiveStyle
     }
 
     return effective;
-}
-
-void TBuffer::applyAccessibilityEnhancements(Mudlet::HyperlinkStyling& styling)
-{
-    // Ensure focus states are appropriately visible
-    if (!styling.focusStyle.hasCustomStyling && !styling.focusVisibleStyle.hasCustomStyling) {
-        // Provide default focus styling for accessibility
-        styling.focusStyle.hasCustomStyling = true;
-        styling.focusStyle.isUnderlined = true;
-        styling.focusStyle.underlineStyle = Mudlet::HyperlinkStyling::UnderlineSolid;
-        styling.focusStyle.hasUnderlineColor = true;
-        styling.focusStyle.underlineColor = QColor(0, 120, 215); // Windows accent blue
-
-        styling.focusVisibleStyle = styling.focusStyle; // Copy focus style to focus-visible
-    }
 }
 
 // Link state management methods for interactive pseudo-classes
@@ -10095,17 +10085,19 @@ void TBuffer::setHoveredLink(int linkIndex)
     int previousHoveredLink = mCurrentHoveredLinkIndex;
     mCurrentHoveredLinkIndex = linkIndex;
 
-    // Reset previous hovered link to its base state (default, visited, or selected)
+    // Reset previous hovered link to its base state (focused, selected, visited or default)
     if (previousHoveredLink > 0 && previousHoveredLink != linkIndex) {
         auto currentState = getLinkState(previousHoveredLink);
 
         if (currentState == Mudlet::HyperlinkStyling::StateHover) {
             // Return to the appropriate base state:
-            // Priority: disabled > selected > visited > default
+            // Priority: disabled > focus > selected > visited > default
             // Disabled links should stay disabled
             Mudlet::HyperlinkStyling linkStyling = getEffectiveHyperlinkStyling(previousHoveredLink);
-            if (linkStyling.selection.hasSelectionSettings && linkStyling.selection.disabled) {
+            if (linkStyling.selection.disabled) {
                 setLinkState(previousHoveredLink, Mudlet::HyperlinkStyling::StateDisabled);
+            } else if (showsFocus(previousHoveredLink)) {
+                setLinkState(previousHoveredLink, Mudlet::HyperlinkStyling::StateFocusVisible);
             } else if (isLinkSelected(previousHoveredLink)) {
                 setLinkState(previousHoveredLink, Mudlet::HyperlinkStyling::StateSelected);
             } else if (isLinkVisited(previousHoveredLink)) {
@@ -10123,7 +10115,8 @@ void TBuffer::setHoveredLink(int linkIndex)
         auto currentState = getLinkState(linkIndex);
         // Don't override active or disabled states with hover
         // Disabled links should stay disabled and show their disabled styling
-        if (currentState != Mudlet::HyperlinkStyling::StateActive && currentState != Mudlet::HyperlinkStyling::StateDisabled) {
+        // Without a hover style, hovering would draw the link as if it had no other state, hiding focus or selection
+        if (currentState != Mudlet::HyperlinkStyling::StateActive && currentState != Mudlet::HyperlinkStyling::StateDisabled && mLinkStore.getStyling(linkIndex).hoverStyle.hasCustomStyling) {
             setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateHover);
             updateLinkCharacters(linkIndex); // Update displayed characters
         }
@@ -10132,17 +10125,24 @@ void TBuffer::setHoveredLink(int linkIndex)
 
 void TBuffer::setActiveLink(int linkIndex)
 {
+    // Restyling a disabled link to show it pressed would clear the game's own formatting
+    if (linkIndex > 0 && getEffectiveHyperlinkStyling(linkIndex).selection.disabled) {
+        return;
+    }
+
     int previousActiveLink = mCurrentActiveLinkIndex;
     mCurrentActiveLinkIndex = linkIndex;
 
     // Reset previous active link
     if (previousActiveLink > 0 && previousActiveLink != linkIndex) {
-        // Return to appropriate state based on priority: disabled > hover > selected > visited > default
+        // Return to appropriate state based on priority: disabled > hover > focus > selected > visited > default
         Mudlet::HyperlinkStyling linkStyling = getEffectiveHyperlinkStyling(previousActiveLink);
-        if (linkStyling.selection.hasSelectionSettings && linkStyling.selection.disabled) {
+        if (linkStyling.selection.disabled) {
             setLinkState(previousActiveLink, Mudlet::HyperlinkStyling::StateDisabled);
-        } else if (previousActiveLink == mCurrentHoveredLinkIndex) {
+        } else if (previousActiveLink == mCurrentHoveredLinkIndex && linkStyling.hoverStyle.hasCustomStyling) {
             setLinkState(previousActiveLink, Mudlet::HyperlinkStyling::StateHover);
+        } else if (showsFocus(previousActiveLink)) {
+            setLinkState(previousActiveLink, Mudlet::HyperlinkStyling::StateFocusVisible);
         } else if (isLinkSelected(previousActiveLink)) {
             setLinkState(previousActiveLink, Mudlet::HyperlinkStyling::StateSelected);
         } else if (isLinkVisited(previousActiveLink)) {
@@ -10154,8 +10154,8 @@ void TBuffer::setActiveLink(int linkIndex)
         updateLinkCharacters(previousActiveLink); // Update displayed characters
     }
 
-    // Set new link to active state
-    if (linkIndex > 0) {
+    // Set new link to active state, if it has a style to show it with
+    if (linkIndex > 0 && mLinkStore.getStyling(linkIndex).activeStyle.hasCustomStyling) {
         setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateActive);
         updateLinkCharacters(linkIndex); // Update displayed characters
     }
@@ -10166,27 +10166,37 @@ void TBuffer::setFocusedLink(int linkIndex)
     int previousFocusedLink = mCurrentFocusedLinkIndex;
     mCurrentFocusedLinkIndex = linkIndex;
 
-    // Reset previous focused link to appropriate base state
-    if (previousFocusedLink > 0 && previousFocusedLink != linkIndex) {
-        // Preserve disabled state, otherwise return to base state
-        Mudlet::HyperlinkStyling linkStyling = getEffectiveHyperlinkStyling(previousFocusedLink);
-        if (linkStyling.selection.hasSelectionSettings && linkStyling.selection.disabled) {
-            setLinkState(previousFocusedLink, Mudlet::HyperlinkStyling::StateDisabled);
-        } else if (isLinkSelected(previousFocusedLink)) {
+    // Reset previous focused link to appropriate base state; one under the pointer stays hovered or pressed
+    if (previousFocusedLink > 0 && previousFocusedLink != linkIndex && getLinkState(previousFocusedLink) == Mudlet::HyperlinkStyling::StateFocusVisible) {
+        if (isLinkSelected(previousFocusedLink)) {
             setLinkState(previousFocusedLink, Mudlet::HyperlinkStyling::StateSelected);
         } else if (isLinkVisited(previousFocusedLink)) {
             setLinkState(previousFocusedLink, Mudlet::HyperlinkStyling::StateVisited);
         } else {
             setLinkState(previousFocusedLink, Mudlet::HyperlinkStyling::StateDefault);
         }
+        updateLinkCharacters(previousFocusedLink);
     }
 
     // Set new link to focus state
-    if (linkIndex > 0) {
-        // Determine if focus came from keyboard (would use StateFocusVisible)
-        // For now, we use StateFocus
-        setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateFocus);
+    // Disabled links stay disabled, and a screen reader is told so from this state. The pointer and a
+    // pressed button outrank focus.
+    const auto state = getLinkState(linkIndex);
+    if (showsFocus(linkIndex) && state != Mudlet::HyperlinkStyling::StateDisabled && state != Mudlet::HyperlinkStyling::StateHover && state != Mudlet::HyperlinkStyling::StateActive) {
+        // Only the caret focuses a link, never a pointer click, so it always matches :focus-visible
+        setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateFocusVisible);
+        updateLinkCharacters(linkIndex);
     }
+}
+
+bool TBuffer::showsFocus(int linkIndex) const
+{
+    if (linkIndex <= 0 || linkIndex != mCurrentFocusedLinkIndex) {
+        return false;
+    }
+    // Redrawing a link replaces the game's own formatting, so a link without a focus style is left as printed
+    const Mudlet::HyperlinkStyling styling = mLinkStore.getStyling(linkIndex);
+    return styling.focusStyle.hasCustomStyling || styling.focusVisibleStyle.hasCustomStyling;
 }
 
 void TBuffer::markLinkAsVisited(int linkIndex)
@@ -10520,6 +10530,11 @@ void TBuffer::updateLinkCharacters(int linkIndex, int fromLine)
 
     // Get the effective styling for this link's current state
     Mudlet::HyperlinkStyling effectiveStyling = getEffectiveHyperlinkStyling(linkIndex);
+    // A state that colored the text leaves nothing to draw over it once it ends, so the color the game sent comes back
+    const Mudlet::HyperlinkStyling storedStyling = mLinkStore.getStyling(linkIndex);
+    const bool aStateColorsTheText = storedStyling.linkStyle.hasForegroundColor || storedStyling.visitedStyle.hasForegroundColor || storedStyling.hoverStyle.hasForegroundColor
+                                     || storedStyling.activeStyle.hasForegroundColor || storedStyling.focusStyle.hasForegroundColor || storedStyling.focusVisibleStyle.hasForegroundColor
+                                     || storedStyling.anyLinkStyle.hasForegroundColor || storedStyling.selectedStyle.hasForegroundColor || storedStyling.disabledStyle.hasForegroundColor;
 
 #if defined(DEBUG_OSC_PROCESSING)
     qDebug() << "[OSC] Link" << linkIndex << "effective styling:" << "hasFg:" << effectiveStyling.hasForegroundColor
@@ -10616,6 +10631,8 @@ void TBuffer::updateLinkCharacters(int linkIndex, int fromLine)
                         qDebug() << "[OSC] Applied FG color to link" << linkIndex << "- New FgColor:" << tchar.foreground().name();
                     }
 #endif
+                } else if (aStateColorsTheText && mLinkOriginalCharacters.contains(linkIndex)) {
+                    tchar.setForeground(mLinkOriginalCharacters.value(linkIndex).foreground());
                 }
 
                 // Update background color - restore original if not specified in styling
