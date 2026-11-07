@@ -23,8 +23,10 @@
 
 #include "Host.h"
 #include "TNullConsoleFrontend.h"
+#include "TWindowNotifier.h"
 
 #include <QDebug>
+#include <QHash>
 
 #include <algorithm>
 #include <functional>
@@ -65,6 +67,34 @@ THeadlessSession::ScriptWindow scriptWindowOf(const Record& record, const int st
 bool holdsWindows(const Record::Kind kind)
 {
     return kind == Record::Kind::userWindow || kind == Record::Kind::scrollBox || kind == Record::Kind::miniConsole;
+}
+
+QHash<QString, QList<THeadlessSession::ScriptWindow>> byName(const QList<THeadlessSession::ScriptWindow>& windows)
+{
+    QHash<QString, QList<THeadlessSession::ScriptWindow>> named;
+    for (const THeadlessSession::ScriptWindow& window : windows) {
+        named[window.name].append(window);
+    }
+    return named;
+}
+
+QStringList changedNames(const QList<THeadlessSession::ScriptWindow>& before, const QList<THeadlessSession::ScriptWindow>& after)
+{
+    const auto namedBefore = byName(before);
+    const auto namedAfter = byName(after);
+    QStringList names;
+    for (auto it = namedBefore.cbegin(); it != namedBefore.cend(); ++it) {
+        if (namedAfter.value(it.key()) != it.value()) {
+            names << it.key();
+        }
+    }
+    for (auto it = namedAfter.cbegin(); it != namedAfter.cend(); ++it) {
+        if (!namedBefore.contains(it.key())) {
+            names << it.key();
+        }
+    }
+    names.sort();
+    return names;
 }
 
 } // namespace
@@ -118,4 +148,36 @@ std::optional<THeadlessSession::ScriptWindow> THeadlessSession::scriptWindow(con
         }
     }
     return std::nullopt;
+}
+
+void THeadlessSession::connectWindowRelays(Host* pHost, const unsigned int run)
+{
+    mDeliveredWindows.reset();
+    auto* pView = dynamic_cast<TNullConsoleFrontend*>(pHost->consoleFrontend());
+    if (!pView) {
+        return;
+    }
+    connect(
+            &pView->windowNotifier(),
+            &TWindowNotifier::windowsChanged,
+            this,
+            [this, run]() {
+                if (run != mRun || !mpHost || !mDeliveredWindows) {
+                    return;
+                }
+                QList<ScriptWindow> windows = scriptWindows();
+                const QStringList names = changedNames(*mDeliveredWindows, windows);
+                if (names.isEmpty()) {
+                    return;
+                }
+                mDeliveredWindows = std::move(windows);
+                const QString profile = mProfileName;
+                emit scriptWindowsChanged(profile, names);
+            },
+            Qt::QueuedConnection);
+}
+
+void THeadlessSession::noteWindowsAtLoad()
+{
+    mDeliveredWindows = scriptWindows();
 }
