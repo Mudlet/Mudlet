@@ -7487,6 +7487,32 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       assert.are.equal(defaultAreaName, getAreaTableSwap()[-1])
     end)
 
+    it("deleteArea refuses the default area by the name it was read with, not by the usual default name", function()
+      buildMap()
+      local area = getRoomArea(roomA)
+      local usualDefaultName
+      reimportWith(function(document)
+        usualDefaultName = document.defaultAreaName
+        for _, exportedArea in ipairs(document.areas) do
+          if exportedArea.id == -1 then
+            exportedArea.name = "MapperSpecJsonRenamedDefaultArea"
+          elseif exportedArea.id == area then
+            exportedArea.name = usualDefaultName
+          end
+        end
+      end)
+      assert.are.equal("MapperSpecJsonRenamedDefaultArea", getAreaTableSwap()[-1])
+      assert.are.equal(area, getAreaTable()[usualDefaultName])
+
+      local ok, err = deleteArea("MapperSpecJsonRenamedDefaultArea")
+      assert.is_nil(ok)
+      assert.is_truthy(err:find("you can't delete the default area", 1, true), err)
+      assert.are.equal(-1, getAreaTable()["MapperSpecJsonRenamedDefaultArea"])
+
+      assert.is_true(deleteArea(usualDefaultName))
+      assert.is_nil(getAreaTableSwap()[area])
+    end)
+
     for _, position in ipairs({"after", "before"}) do
       it("keeps a named area when the file also lists its id with no name " .. position .. " it", function()
         buildMap()
