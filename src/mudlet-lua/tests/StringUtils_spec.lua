@@ -597,6 +597,34 @@ describe("Tests StringUtils.lua functions", function()
       assert.equals("[inner/outer] outer", f("[{inner()}] {outerName}"))
     end)
 
+    it("should read the function's own locals when return wraps f in parentheses", function()
+      local x, y = "caller", "caller"
+      local function own()
+        local x, y = "own", "own"
+        return (f("{x} {x .. '!'}"))
+      end
+      local function ownNames()
+        local x, y = "own", "own"
+        return (f("{x}/{y}"))
+      end
+      assert.equals("own own!", own())
+      assert.equals("own/own", ownNames())
+    end)
+
+    -- wrappers such as MDK's echofile.f rely on the tail call to reach their caller's locals
+    it("should let a wrapper doing return f(str) read its caller's locals", function()
+      local function wrapper(str)
+        return f(str)
+      end
+      local function namesWrapper(str)
+        local other = "wrapper"
+        return f(str)
+      end
+      local str, other = "caller", "caller"
+      assert.equals("caller caller!", wrapper("{str} {str .. '!'}"))
+      assert.equals("caller/caller", namesWrapper("{str}/{other}"))
+    end)
+
     it("should interpolate a variable named like one of f's own locals", function()
       do
         local lookup, outer_env, code = "local lookup", "local outer_env", "local code"

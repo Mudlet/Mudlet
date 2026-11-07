@@ -106,3 +106,20 @@ QIcon DarkTheme::standardIcon(StandardPixmap standardIcon, const QStyleOption* o
     }
     return recoloured.isNull() ? icon : recoloured;
 }
+
+void DarkTheme::drawPrimitive(PrimitiveElement element, const QStyleOption* option, QPainter* painter, const QWidget* widget) const
+{
+    const auto* item = element == PE_IndicatorItemViewItemCheck ? qstyleoption_cast<const QStyleOptionViewItem*>(option) : nullptr;
+    if (!item || item->state.testFlag(State_Selected) || item->backgroundBrush.style() != Qt::NoBrush) {
+        QProxyStyle::drawPrimitive(element, option, painter, widget);
+        return;
+    }
+
+    // Fusion's outline, Window.darker(140).lighter(110), is 1.2:1 on an item view's Base; this Window puts it halfway to
+    // WindowText (Text is the item's own foreground). Highlight and item backgrounds show the original well enough.
+    const QColor base = item->palette.color(QPalette::Base);
+    const QColor text = item->palette.color(QPalette::WindowText);
+    QStyleOptionViewItem check(*item);
+    check.palette.setColor(QPalette::Window, QColor((base.red() + text.red()) / 2, (base.green() + text.green()) / 2, (base.blue() + text.blue()) / 2).lighter(127));
+    QProxyStyle::drawPrimitive(element, &check, painter, widget);
+}

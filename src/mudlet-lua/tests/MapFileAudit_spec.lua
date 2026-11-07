@@ -104,6 +104,29 @@ describe("Tests the audit of a damaged binary map file", function()
     return id
   end
 
+  local mapErrorLogPath = getMudletHomeDir() .. "/log/errors.txt"
+
+  local function mapErrorLogSize()
+    local file = io.open(mapErrorLogPath, "rb")
+    if not file then
+      return 0
+    end
+    local size = file:seek("end")
+    file:close()
+    return size
+  end
+
+  local function readMapErrorLogFrom(offset)
+    local file = io.open(mapErrorLogPath, "rb")
+    if not file then
+      return ""
+    end
+    file:seek("set", offset)
+    local text = file:read("*a")
+    file:close()
+    return text
+  end
+
   local function listHas(list, wanted)
     for _, value in pairs(list or {}) do
       if value == wanted then
@@ -635,6 +658,32 @@ describe("Tests the audit of a damaged binary map file", function()
       assert.are.same({awayRoom}, getAreaRooms1(away))
       assert.are.equal(home, getRoomArea(homeRoom))
       assert.are.equal(away, getRoomArea(awayRoom))
+    end)
+
+    it("reports one room missing from and one extra in an area in the singular", function()
+      if mudlet.translations.interfacelanguage ~= "en_US" then
+        pending("the singular forms come from the en_US translation")
+        return
+      end
+      local home = newArea("MapFileAuditSpecHome")
+      local away = newArea("MapFileAuditSpecAway")
+      local homeRoom = newRoom(home, 0, distantRoomId)
+      local awayRoom = newRoom(away, 1, otherDistantRoomId)
+      local logSize = mapErrorLogSize()
+
+      reloadWith(function(data)
+        assert.are.equal(2, countBytes(data, int32(homeRoom)))
+        return planted(data, int32(homeRoom), int32(awayRoom), 1, 1)
+      end)
+
+      local log = readMapErrorLogFrom(logSize)
+      -- loading first writes out any messages still queued under a report of its own
+      local reportStart = log:find(('Loading map(1) "%s" at'):format(damagedPath), 1, true)
+      assert.is_truthy(reportStart, log)
+      local areaIssues = log:sub(reportStart):match("= Area issues =(.-)= Room issues =")
+      assert.is_truthy(areaIssues, log)
+      assert.is_truthy(areaIssues:find(("there was 1 room missing from those it should be recorded as possessing.  It is: %d."):format(homeRoom), 1, true), areaIssues)
+      assert.is_truthy(areaIssues:find(("there was 1 extra room that it should not be recorded as possessing.  It was: %d."):format(awayRoom), 1, true), areaIssues)
     end)
 
     it("creates an area that has a name but was never instantiated", function()

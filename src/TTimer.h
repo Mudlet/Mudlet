@@ -113,7 +113,11 @@ public:
     // 0 when no function is held; luaL_ref() never returns 0
     int mLuaFunctionRef = 0;
     bool exportItem = true;
+    // After a move: a member under a module's folder, and at the top level only while its module's file still holds it
+    void updateModuleMembership();
     bool mModuleMasterFolder = false;
+    // The module whose file this was loaded from
+    QString mLoadedFromModule;
 
     static const char* scmProperty_TTimerId;
 
@@ -121,6 +125,7 @@ public:
     bool mRepeating = false;
 
 private:
+    void setModuleMembership(bool);
     TTimer() = default;
     // A tempTimer() Lua function lives in the Lua registry, so such a timer's script is empty
     bool hasPayload() const { return !mScript.isEmpty() || !mCommand.isEmpty() || mRegisteredAnonymousLuaFunction; }

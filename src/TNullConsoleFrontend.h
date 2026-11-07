@@ -28,6 +28,7 @@
 #include "utils.h"
 
 #include <QColor>
+#include <QElapsedTimer>
 #include <QObject>
 #include <QPoint>
 #include <QPointer>
@@ -146,9 +147,23 @@ public:
     // its parent. Once the view goes, these make it again, so the view's last setting is still saved.
     void followView(QObject* view);
     void resumeMainCommandLine();
-    // As the main command line takes a command once it is sent, which a line typed while the game hides what is
-    // typed is not
-    void addMainCommandLineHistory(const QString& command);
+    // As the main command line keeps a sent line, as its aliases left it, unless the game hid what was typed; a
+    // line nothing wrote to since holdMainCommandLineForSend() is kept as sent
+    void addMainCommandLineHistory(const QString& sent);
+    QStringList mainCommandLineHistory() const;
+    // Why the main command line's history file could not be read, if it could not
+    std::optional<QString> mainCommandLineHistoryReadError() const;
+    // As TCommandLine::enterCommand(): the line holds what is sent while its aliases run, and is emptied after
+    // if the profile clears it after a send
+    bool holdMainCommandLineForSend(const QString& line);
+    void mainCommandLineSent();
+    // As the GUI's command line as it is typed into, or as it is set by a history recall or Tab completion
+    void typeMainCommandLine(const QString& text, bool playerTyped);
+    // As TMainConsole::openPasswordEntry(): a line typed ahead of the prompt that opens the box goes into it. True
+    // if it took one.
+    bool hiddenInputOpened();
+    // As TCommandLine::enterCommand() empties the line behind the box, the empty line a send could not report
+    void hiddenInputClosed();
     bool ownsContainer(const QString& windowname) const;
     bool subConsoleShown(const QString& name) const;
     void reportUserWindowVisibility();
@@ -204,7 +219,7 @@ public:
     bool appendCommandLineText(const QString& name, const QString& text) override;
     bool clearCommandLine(const QString& name) override { return replaceCommandLineText(name, QString()); }
     // Only typing and tab completion read what these set, and with no view nothing is typed
-    bool selectCommandLineText(const QString& name) override { return ownsCommandLine(name); }
+    bool selectCommandLineText(const QString& name) override;
     bool addCommandLineSuggestion(const QString& name, const QString&) override { return ownsCommandLine(name); }
     bool removeCommandLineSuggestion(const QString& name, const QString&) override { return ownsCommandLine(name); }
     bool clearCommandLineSuggestions(const QString& name) override { return ownsCommandLine(name); }
@@ -218,7 +233,7 @@ public:
     bool setWindowCommandLineVisible(const QString& name, bool visible) override;
     void setCommandLinePlaceholderText(const QString&) override {}
     void updateCommandLineSpellCheck(bool) override {}
-    void setCommandLineText(const QString& text) override { replaceCommandLineText(QString(), text); }
+    void setCommandLineText(const QString& text) override;
     void focusActiveCommandLine() override {}
     std::pair<bool, QString> createTextBox(const QString& windowname, const QString& name, int x, int y, int width, int height) override;
     std::pair<bool, QString> deleteTextBox(const QString& name) override;
@@ -322,9 +337,9 @@ public:
     void discardToolBarLayoutChanges() override {}
     void setDockLayoutChanged(const QString&) override {}
     bool clearDockLayoutChanged(const QString&) override { return false; }
-    bool startIncomingText() override { return false; }
+    bool startIncomingText() override;
     void alertNewData() override {}
-    void finishIncomingText(bool) override {}
+    void finishIncomingText(bool) override;
     void finalize() override {}
     void showNewLines() override {}
     void showCommandEcho(const TConsoleModel::CommandEcho&) override {}
@@ -358,6 +373,7 @@ private:
         QStringList history;
         // So a file that could not be read is not written over with what little was
         bool readFailed = false;
+        QString readError;
     };
 
     // QWidget's minimumSize() and maximumSize(), which QStyleSheetStyle::setGeometry() sets from a sheet
@@ -428,6 +444,10 @@ private:
         // TDockWidget::hasLayoutAlready: whether opening this user window has asked for the saved layout,
         // which a load already running refuses
         bool layoutRequested = false;
+        // TConsole::mDimensions, the grid last reported, and whether the pane was resized while hidden, as its
+        // TTextEdit::resizeEvent() then waits for the pane to show
+        QSize reportedGrid;
+        bool paneResizePending = true;
     };
     // As TConsole::mpCommandLine tells a console's own command line from another of its name
     static bool ownsLine(const SubConsole& console, const PlainWindow& commandLine) { return commandLine.writer && commandLine.writer == console.ownLine; }
@@ -502,6 +522,7 @@ private:
     QString userWindowOrMain(const QString& windowname) const;
     std::pair<QString, std::shared_ptr<ScrollBox>> containerFor(const QString& windowname, bool scrollBoxFirst) const;
     bool shownWithin(const QString& userWindow, const ScrollBox* box) const;
+    bool paneShown(const SubConsole& console) const { return console.shown && shownWithin(console.userWindow, console.box.get()); }
     bool setPlainWindowShown(const QString& name, bool shown);
     bool ownsCommandLine(const QString& name) const;
     PlainWindow* commandLineNamed(const QString& name);
@@ -534,6 +555,10 @@ private:
     void reportDisplayFontChange(const QFont& before);
     void raiseFontEvent(const QString& eventName, const QString& subject, const QFont& font);
     void reportGridSize(const QString& name);
+    void reportLinesOverflow(const TConsoleModel& model, int lineCount);
+    void resizePane(const QString& name);
+    void sendPendingPaneResize(const QString& name);
+    void reportConsoleSize(const QString& name);
 
     Host* mpHost = nullptr;
     TNullMxpFrameFrontend mMxpFrames{*this};
@@ -550,6 +575,14 @@ private:
     // While a hidden user window is removed, the names its deferred deletes are to report
     QStringList* mpDeferredReports = nullptr;
     bool mDroppingWindows = false;
+    // As TCommandLine::playerTypedLine()
+    bool mMainCommandLineTyped = false;
+    // As the GUI's line once selectAll() has run, so what the player types next replaces it
+    bool mMainCommandLineAllSelected = false;
+    // Whether the line held for a send was written to while it was sent
+    bool mMainCommandLineRewritten = false;
+    // A send emptied the line while hidden input was wanted, which the app has not been told
+    bool mMainCommandLineClearPending = false;
     // The main window, which holds what a script makes in it
     std::unique_ptr<QObject> mpMainHolder = std::make_unique<QObject>();
     // TMxpFrameWidgets' container widget of each frame, which holds the frame's console until a script moves it
@@ -561,6 +594,7 @@ private:
     QString mEmbeddedMapperWindow;
     std::shared_ptr<ScrollBox> mpEmbeddedMapperBox;
     bool mEmbeddedMapperShown = false;
+    QElapsedTimer mIncomingTextTimer;
 };
 
 #endif // MUDLET_TNULLCONSOLEFRONTEND_H

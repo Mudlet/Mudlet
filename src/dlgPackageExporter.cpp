@@ -43,10 +43,13 @@
 #include <QInputDialog>
 #include <QMessageBox>
 #include <QMimeData>
+#include <QPainter>
 #include <QSettings>
 #include <QStandardPaths>
+#include <QTextDocumentFragment>
 #include <QTimer>
 #include <QUrl>
+#include <QtMath>
 #include <chrono>
 
 using namespace std::chrono_literals;
@@ -125,6 +128,8 @@ dlgPackageExporter::dlgPackageExporter(QWidget* parent, Host* pHost)
     ui->listWidget_addedFiles->installEventFilter(this);
     ui->comboBox_dependencies->installEventFilter(this);
     ui->textEdit_description->installEventFilter(this);
+    ui->widget_icon->setAcceptDrops(true);
+    ui->widget_icon->installEventFilter(this);
 
     // default package template - prevent clearing of text upon click
     dlgPackageExporter* te_parent = static_cast<dlgPackageExporter*>(topLevelWidget());
@@ -213,6 +218,10 @@ void dlgPackageExporter::setModuleCreationMode(bool isModule)
 
         // Update UI elements for module creation
         ui->lineEdit_packageName->setPlaceholderText(tr("Enter module name"));
+        //: Screen reader name of the field the module to create is named in, which has no visible label of its own
+        ui->lineEdit_packageName->setAccessibleName(tr("Module name"));
+        //: Screen reader description of the field the module to create is named in
+        ui->lineEdit_packageName->setAccessibleDescription(tr("Name to create the module under"));
 
         // Update button text to be module-specific
         mExportButton->setText(tr("Create Module"));
@@ -233,6 +242,8 @@ void dlgPackageExporter::setModuleCreationMode(bool isModule)
 
         // Update the export location widget to be more descriptive
         ui->lineEdit_filePath->setPlaceholderText(tr("Module location"));
+        //: Screen reader name of the read-only field showing where the module will be saved, which has no visible label of its own
+        ui->lineEdit_filePath->setAccessibleName(tr("Module save location"));
 
         // Update info label if visible
         ui->infoLabel->setText(QString());
@@ -582,22 +593,15 @@ void dlgPackageExporter::slot_packageChanged(int index)
 
     const QString packagePath{MudletApp::getMudletPath(enums::profileHomePath, mpHost->getName())};
     //fill package metadata
-    mPackageIconPath.clear();
     mPackageDataPath.clear();
     QMap<QString, QString> const packageInfo = mpHost->mPackageInfo.value(packageName);
     ui->lineEdit_author->setText(packageInfo.value(qsl("author")));
     const QString icon{packageInfo.value(qsl("icon"))};
     if (!icon.isEmpty()) {
-        mPackageIconPath = qsl("%1/%2/.mudlet/Icon/%3").arg(packagePath, packageName, icon);
-        ui->Icon->show();
-        ui->pushButton_removeIcon->show();
+        useIcon(qsl("%1/%2/.mudlet/Icon/%3").arg(packagePath, packageName, icon));
     } else {
-        ui->Icon->hide();
-        ui->pushButton_removeIcon->hide();
+        slot_removeIcon();
     }
-    const QIcon myIcon(mPackageIconPath);
-    ui->Icon->clear();
-    ui->Icon->setPixmap(myIcon.pixmap(ui->Icon->size()));
     ui->lineEdit_title->setText(packageInfo.value(qsl("title")));
     mPlainDescription = packageInfo.value(qsl("description"));
     QString description{mPlainDescription};
@@ -697,6 +701,11 @@ void dlgPackageExporter::slot_importIcon()
         mPackagePath = lastDir;
         emit signal_exportLocationChanged(mPackagePath);
     }
+    useIcon(fileName);
+}
+
+void dlgPackageExporter::useIcon(const QString& fileName)
+{
     mPackageIconPath = fileName;
     const QIcon myIcon(mPackageIconPath);
     ui->Icon->clear();
@@ -705,9 +714,36 @@ void dlgPackageExporter::slot_importIcon()
     ui->pushButton_removeIcon->show();
 }
 
+QString dlgPackageExporter::iconFileFromDrop(const QDropEvent* event)
+{
+    // The same file types slot_importIcon() offers in its picker
+    static const QStringList iconSuffixes{qsl("png"), qsl("jpg"), qsl("jpeg"), qsl("bmp"), qsl("tif"), qsl("ico"), qsl("icns")};
+    if (!(event->possibleActions() & Qt::CopyAction) || !event->mimeData() || !event->mimeData()->hasUrls()) {
+        return QString();
+    }
+    const QList<QUrl> urls = event->mimeData()->urls();
+    if (urls.size() != 1 || !urls.first().isLocalFile()) {
+        return QString();
+    }
+    const QFileInfo info(urls.first().toLocalFile());
+    if (!info.isFile() || !iconSuffixes.contains(info.suffix(), Qt::CaseInsensitive)) {
+        return QString();
+    }
+    return info.absoluteFilePath();
+}
+
+void dlgPackageExporter::setIconDropHighlight(const bool highlight)
+{
+    if (mIconDropHighlight != highlight) {
+        mIconDropHighlight = highlight;
+        ui->widget_icon->update();
+    }
+}
+
 void dlgPackageExporter::slot_removeIcon()
 {
     mPackageIconPath.clear();
+    ui->Icon->clear();
     ui->Icon->hide();
     ui->pushButton_removeIcon->hide();
 }
@@ -762,6 +798,50 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
             mPlainDescription = ui->textEdit_description->toPlainText();
             showRenderedDescription();
             return false;
+        }
+    }
+
+    if (obj == ui->widget_icon) {
+        switch (evt->type()) {
+        case QEvent::DragEnter:
+        case QEvent::DragMove: {
+            auto* moveEvent = static_cast<QDragMoveEvent*>(evt);
+            if (iconFileFromDrop(moveEvent).isEmpty()) {
+                moveEvent->ignore();
+                setIconDropHighlight(false);
+                return true;
+            }
+            // A move would tell the source to delete the file it handed over
+            moveEvent->setDropAction(Qt::CopyAction);
+            moveEvent->accept();
+            setIconDropHighlight(true);
+            return true;
+        }
+        case QEvent::DragLeave:
+            setIconDropHighlight(false);
+            return true;
+        case QEvent::Drop: {
+            setIconDropHighlight(false);
+            auto* dropEvent = static_cast<QDropEvent*>(evt);
+            const QString fileName = iconFileFromDrop(dropEvent);
+            if (fileName.isEmpty()) {
+                dropEvent->ignore();
+                return true;
+            }
+            dropEvent->setDropAction(Qt::CopyAction);
+            dropEvent->accept();
+            useIcon(fileName);
+            return true;
+        }
+        case QEvent::Paint:
+            if (mIconDropHighlight) {
+                QPainter painter(ui->widget_icon);
+                painter.setPen(QPen(palette().highlight().color(), 2, Qt::DashLine));
+                painter.drawRect(QRectF(ui->widget_icon->rect()).adjusted(1, 1, -1, -1));
+            }
+            return false;
+        default:
+            break;
         }
     }
 
@@ -1037,8 +1117,7 @@ void dlgPackageExporter::slot_exportPackage()
                              false);
         assetsFuture.cancel();
         releaseExportLock();
-        mExportRunning = false;
-        QApplication::restoreOverrideCursor();
+        endExportRun();
         return;
     }
     checkWriteability.close();
@@ -1076,7 +1155,8 @@ void dlgPackageExporter::slot_exportPackage()
                     displayResultMessage(errorMsg, false);
                 } else {
                     // If in module creation mode, automatically install the module
-                    if (mIsModuleCreationMode) {
+                    // - unless its profile has closed meanwhile
+                    if (mIsModuleCreationMode && mpHost) {
                         // If a module of this name is already installed, the user
                         // confirmed overwriting it before the export began (see the
                         // overwrite prompt in slot_exportPackage), so remove the old
@@ -1094,8 +1174,7 @@ void dlgPackageExporter::slot_exportPackage()
                                 displayResultMessage(tr("Module \"%1\" exported but failed to uninstall existing version").arg(mPackageName.toHtmlEscaped()), false);
                                 mCancelButton->setVisible(false);
                                 mCloseButton->setVisible(true);
-                                mExportRunning = false;
-                                QApplication::restoreOverrideCursor();
+                                endExportRun();
                                 mpZipWatcher = nullptr;
                                 watcher->deleteLater();
                                 return;
@@ -1125,8 +1204,7 @@ void dlgPackageExporter::slot_exportPackage()
                 }
                 mCancelButton->setVisible(false);
                 mCloseButton->setVisible(true);
-                mExportRunning = false;
-                QApplication::restoreOverrideCursor();
+                endExportRun();
 
                 // Clean up the watcher
                 mpZipWatcher = nullptr;
@@ -1142,8 +1220,7 @@ void dlgPackageExporter::slot_exportPackage()
         releaseExportLock();
         mCancelButton->setVisible(false);
         mCloseButton->setVisible(true);
-        mExportRunning = false;
-        QApplication::restoreOverrideCursor();
+        endExportRun();
     }
 
     // save settings for future reuse
@@ -2131,6 +2208,11 @@ void dlgPackageExporter::listTimers()
 void dlgPackageExporter::displayResultMessage(const QString& html, const bool isSuccessMessage)
 {
     if (!isSuccessMessage) {
+        if (mDeleteWhenExportEnds) {
+            // Closed mid-export, so this hidden dialog goes without anyone seeing its label
+            qWarning().noquote().nospace() << "dlgPackageExporter WARNING - exporting \"" << mPackageName
+                                           << "\" failed after its dialog was closed: " << QTextDocumentFragment::fromHtml(html).toPlainText();
+        }
         // Light coral red error message - #FF6B6B has good contrast on both light and dark backgrounds
         ui->infoLabel->setText(qsl("<p><font color='#FF6B6B'><b><big>%1</big><b></font></p>").arg(html));
         return;
@@ -2214,6 +2296,17 @@ dlgPackageExporterDescription::dlgPackageExporterDescription(QWidget* pW)
 
 dlgPackageExporterDescription::~dlgPackageExporterDescription() {}
 
+// In lines of the current font rather than pixels, so a stylesheet or a larger
+// font still leaves room to write
+QSize dlgPackageExporterDescription::minimumSizeHint() const
+{
+    constexpr int minimumLines = 10;
+    const int textHeight = minimumLines * fontMetrics().lineSpacing() + qCeil(2 * document()->documentMargin());
+    // contentsMargins() already holds the frame's width
+    const QMargins margins = viewportMargins() + contentsMargins();
+    return {QTextEdit::minimumSizeHint().width(), textHeight + margins.top() + margins.bottom()};
+}
+
 bool dlgPackageExporterDescription::canInsertFromMimeData(const QMimeData* source) const
 {
     if (source->hasUrls()) {
@@ -2278,6 +2371,28 @@ void dlgPackageExporterDescription::restoreRenderedDescription()
     if (!hasFocus()) {
         static_cast<dlgPackageExporter*>(topLevelWidget())->showRenderedDescription();
     }
+}
+
+void dlgPackageExporter::endExportRun()
+{
+    mExportRunning = false;
+    QApplication::restoreOverrideCursor();
+    if (mDeleteWhenExportEnds) {
+        deleteLater();
+    }
+}
+
+// Close, Escape and the window's own close button all come through here
+void dlgPackageExporter::done(int result)
+{
+    // The export reports, and installs a module, through this dialog, so it outlives the closing until the export ends
+    if (mExportRunning && mpHost && testAttribute(Qt::WA_DeleteOnClose)) {
+        setAttribute(Qt::WA_DeleteOnClose, false);
+        mDeleteWhenExportEnds = true;
+        // Heard directly, as whether close() reaches a hidden window's closeEvent() depends on its platform window
+        connect(mpHost, &QObject::destroyed, this, &QObject::deleteLater);
+    }
+    QDialog::done(result);
 }
 
 void dlgPackageExporter::closeEvent(QCloseEvent* event)
