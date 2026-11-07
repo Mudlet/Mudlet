@@ -21,10 +21,15 @@
 
 #include "THeadlessSession.h"
 
+#include "ActionUnit.h"
 #include "Host.h"
+#include "TAction.h"
 #include "TNullAppFrontend.h"
 
 #include <QKeyEvent>
+
+#include <algorithm>
+#include <optional>
 
 QList<THeadlessSession::AddonCommand> THeadlessSession::addonCommands() const
 {
@@ -58,6 +63,126 @@ QList<THeadlessSession::AddonCommand> THeadlessSession::addonCommands() const
         entry.pulseColor2 = QColor::fromString(command.pulseColor2);
         entry.pulseIntervalMs = command.pulseInterval;
         result.append(entry);
+    }
+    return result;
+}
+
+namespace {
+
+THeadlessSession::Button buttonOf(const TAction& action)
+{
+    THeadlessSession::Button button;
+    button.id = action.getID();
+    button.name = action.getName();
+    button.icon = action.getIcon();
+    button.pushDown = action.isPushDownButton();
+    button.checked = button.pushDown && action.mButtonState;
+    button.menu = action.isFolder();
+    return button;
+}
+
+// As TEasyButtonBar::fillMenu(): the folder's active children, each with the folder's icon
+QList<THeadlessSession::Button> buttonBarMenu(const TAction& folder)
+{
+    QList<THeadlessSession::Button> entries;
+    for (auto* pNode : *folder.mpMyChildrenList) {
+        const auto& child = *static_cast<TAction*>(pNode);
+        if (!child.isActive()) {
+            continue;
+        }
+        THeadlessSession::Button entry = buttonOf(child);
+        entry.icon = folder.getIcon();
+        if (entry.menu) {
+            entry.children = buttonBarMenu(child);
+        }
+        entries.append(entry);
+    }
+    return entries;
+}
+
+// As TToolBar::addActionToMenu(): an entry for the folder itself, whose menu holds every child, active or not
+THeadlessSession::Button toolBarMenuEntry(const TAction& action)
+{
+    THeadlessSession::Button entry = buttonOf(action);
+    if (entry.menu) {
+        for (auto* pNode : *action.mpMyChildrenList) {
+            entry.children.append(toolBarMenuEntry(*static_cast<TAction*>(pNode)));
+        }
+    }
+    return entry;
+}
+
+// As TMainConsole::constructToolbar() fills a bar: nothing for an inactive one, nor for a button bar in a strip
+// attachEasyButtonBar() has none for
+std::optional<THeadlessSession::ButtonBar> barOf(const TAction& action, const bool floating)
+{
+    using Place = THeadlessSession::ButtonBar::Place;
+    if (!action.isActive()) {
+        return std::nullopt;
+    }
+    THeadlessSession::ButtonBar bar;
+    if (floating) {
+        bar.place = Place::floating;
+    } else if (action.mLocation == 0) {
+        bar.place = Place::top;
+    } else if (action.mLocation == 2) {
+        bar.place = Place::left;
+    } else if (action.mLocation == 3) {
+        bar.place = Place::right;
+    } else {
+        return std::nullopt;
+    }
+    bar.id = action.getID();
+    bar.name = action.getName();
+    bar.styleSheet = action.css;
+    bar.orientation = action.mOrientation == 1 ? Qt::Vertical : Qt::Horizontal;
+    bar.columns = std::max(1, action.getButtonColumns());
+    bar.fillerOffset = action.getButtonFillerOffset();
+    for (auto* pNode : *action.mpMyChildrenList) {
+        const auto& child = *static_cast<TAction*>(pNode);
+        if (!child.isActive()) {
+            continue;
+        }
+        THeadlessSession::Button button = buttonOf(child);
+        button.styleSheet = child.css;
+        if (button.menu) {
+            button.children = floating ? QList<THeadlessSession::Button>{toolBarMenuEntry(child)} : buttonBarMenu(child);
+        }
+        bar.buttons.append(button);
+    }
+    return bar;
+}
+
+} // namespace
+
+QList<THeadlessSession::ButtonBar> THeadlessSession::buttonBars() const
+{
+    QList<ButtonBar> result;
+    if (!mpHost) {
+        return result;
+    }
+    auto add = [&result](const TAction& action, const bool floating) {
+        if (auto bar = barOf(action, floating)) {
+            result.append(*bar);
+        }
+    };
+    // As TMainConsole::regenerateToolBars() and regenerateEasyButtonBars(): a package's root holds its bars, of which
+    // only those that float are filled while the root floats, and only those that do not while it does not
+    for (TAction* pRoot : mpHost->getActionUnit()->getActionRootNodeList()) {
+        if (pRoot->mPackageName.isEmpty()) {
+            add(*pRoot, pRoot->mLocation == 4);
+            continue;
+        }
+        for (auto* pNode : *pRoot->mpMyChildrenList) {
+            const auto& child = *static_cast<TAction*>(pNode);
+            if (pRoot->mLocation == 4) {
+                if (child.mLocation == 4) {
+                    add(child, true);
+                }
+            } else if (child.mLocation != 4) {
+                add(child, false);
+            }
+        }
     }
     return result;
 }
