@@ -541,6 +541,9 @@ private:
     // Stores the peer certificate from slot_socketSslError() so it can be
     // used by getPeerCertificate() when mpSocket is null:
     QSslCertificate mPeerCertificate;
+    // Set by slot_socketError(), as a handshake that fails leaves mpSocket null
+    // and so no socket for finishDisconnection() to ask about it
+    bool mSslHandshakeFailed = false;
     // Latched true while a TLS-upgrade question is pending or open in the
     // frontend. The dialog is delivered via a queued connection and so outlives
     // the emit; this stops a hostile server stacking further prompts by
