@@ -30,6 +30,8 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include <optional>
+
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletApp.h"
@@ -263,6 +265,97 @@ setCommandTooltip(headlessFirst, "Tip")
         QVERIFY(session.runLua(qsl("resetProfile()")));
         QTRY_VERIFY(changed.count() > 0);
         QVERIFY(session.addonCommands().isEmpty());
+        QVERIFY(session.shutdown(false));
+    }
+    void test_aClickRaisesSysCommandClicked()
+    {
+        const QString name = qsl("Headless Commands Click");
+        const QString other = qsl("Headless Commands Click Other");
+        QVERIFY(writeProfile(name));
+        QVERIFY(writeProfile(other));
+        THeadlessSession unstarted;
+        QVERIFY(!unstarted.activateAddonCommand(1));
+        QCOMPARE(unstarted.errorString(), qsl("No profile is open."));
+
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"lua(
+headlessClicks = ""
+registerAnonymousEventHandler("sysCommandClicked", function(_, id) headlessClicks = headlessClicks .. id .. " " end)
+headlessPlain = addCommand({name = "Plain"})
+headlessToggle = addCommand({name = "Toggle"})
+setCommandChecked(headlessToggle, false)
+headlessOff = addCommand({name = "Off"})
+disableCommand(headlessOff)
+)lua")));
+        const int plain = luaGlobalString(session.host(), "headlessPlain").toInt();
+        const int toggle = luaGlobalString(session.host(), "headlessToggle").toInt();
+        const int off = luaGlobalString(session.host(), "headlessOff").toInt();
+        QSignalSpy changed(&session, &THeadlessSession::addonCommandsChanged);
+        QTRY_VERIFY(changed.count() > 0);
+        changed.clear();
+
+        QVERIFY(session.activateAddonCommand(plain));
+        QCOMPARE(luaGlobalString(session.host(), "headlessClicks"), qsl("%1 ").arg(plain));
+        QVERIFY(!session.addonCommands().at(0).checked);
+        QTest::qWait(50);
+        QCOMPARE(changed.count(), 0);
+
+        QVERIFY(session.activateAddonCommand(toggle));
+        QVERIFY(session.addonCommands().at(1).checked);
+        QVERIFY(changed.wait());
+        QVERIFY(session.activateAddonCommand(toggle));
+        QVERIFY(!session.addonCommands().at(1).checked);
+        QCOMPARE(luaGlobalString(session.host(), "headlessClicks"), qsl("%1 %2 %2 ").arg(plain).arg(toggle));
+
+        QVERIFY(!session.activateAddonCommand(off));
+        QCOMPARE(session.errorString(), qsl("The command \"Off\" is disabled."));
+        QVERIFY(!session.activateAddonCommand(off + 1000));
+        QCOMPARE(session.errorString(), qsl("The profile has no command %1.").arg(off + 1000));
+        QVERIFY(session.runLua(qsl("loadProfile([[%1]], true)").arg(other)));
+        Host* pOther = HostManager::self()->getHost(other);
+        QVERIFY(pOther);
+        QVERIFY(pOther->getLuaInterpreter()->compileAndExecuteScript(qsl("headlessTheirs = addCommand({name = 'Theirs'})")));
+        const int theirs = luaGlobalString(pOther, "headlessTheirs").toInt();
+        QVERIFY(theirs > 0);
+        QVERIFY(!session.activateAddonCommand(theirs));
+        QCOMPARE(session.errorString(), qsl("The profile has no command %1.").arg(theirs));
+
+        std::optional<bool> clickedMidWrite;
+        connect(&session, &THeadlessSession::outputLine, this, [&session, &clickedMidWrite, plain](const QString&, const QString& text) {
+            if (text == qsl("click now")) {
+                clickedMidWrite = session.activateAddonCommand(plain);
+            }
+        });
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("refused")));
+        QVERIFY(session.runLua(qsl(R"lua(feedTriggers("click now\n"))lua")));
+        QCOMPARE(clickedMidWrite, std::optional<bool>(false));
+        QCOMPARE(luaGlobalString(session.host(), "headlessClicks"), qsl("%1 %2 %2 ").arg(plain).arg(toggle));
+        QVERIFY(session.shutdown(false));
+        QVERIFY(!session.activateAddonCommand(plain));
+    }
+
+    // As in the GUI, whose menu ticks the command before the event the stop holds is raised
+    void test_theEmergencyStopHoldsTheClickButNotTheTick()
+    {
+        const QString name = qsl("Headless Commands Click Stopped");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"lua(
+headlessClicks = ""
+registerAnonymousEventHandler("sysCommandClicked", function(_, id) headlessClicks = headlessClicks .. id .. " " end)
+headlessToggle = addCommand({name = "Toggle"})
+setCommandChecked(headlessToggle, false)
+)lua")));
+        const int toggle = luaGlobalString(session.host(), "headlessToggle").toInt();
+        QVERIFY(session.setScriptsStopped(true));
+        QVERIFY(session.activateAddonCommand(toggle));
+        QVERIFY(session.addonCommands().at(0).checked);
+        QVERIFY(session.setScriptsStopped(false));
+        QCOMPARE(luaGlobalString(session.host(), "headlessClicks"), QString());
+        QVERIFY(session.activateAddonCommand(toggle));
+        QCOMPARE(luaGlobalString(session.host(), "headlessClicks"), qsl("%1 ").arg(toggle));
         QVERIFY(session.shutdown(false));
     }
 };

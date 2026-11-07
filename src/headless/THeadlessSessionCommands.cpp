@@ -60,6 +60,32 @@ QList<THeadlessSession::AddonCommand> THeadlessSession::addonCommands() const
     return result;
 }
 
+bool THeadlessSession::activateAddonCommand(const int id)
+{
+    if (!usable()) {
+        return false;
+    }
+    auto* pView = dynamic_cast<TNullAppFrontend*>(TAppFrontend::instance());
+    const TNullAppFrontend::AddonCommand* pCommand = nullptr;
+    if (pView) {
+        const auto it = pView->addonCommands().constFind(id);
+        if (it != pView->addonCommands().cend() && it->pHost == mpHost) {
+            pCommand = &it.value();
+        }
+    }
+    if (!pCommand) {
+        //: Error from a frontend with no window that was asked to click a command a script added, giving its id
+        mErrorString = tr("The profile has no command %1.").arg(id);
+        return false;
+    }
+    if (!pCommand->enabled) {
+        //: Error from a frontend with no window that was asked to click a command a script disabled, giving its name
+        mErrorString = tr("The command \"%1\" is disabled.").arg(pCommand->request.name);
+        return false;
+    }
+    return pView->activateAddonCommand(id);
+}
+
 void THeadlessSession::connectCommandRelays(const unsigned int run)
 {
     auto* pView = dynamic_cast<TNullAppFrontend*>(TAppFrontend::instance());
