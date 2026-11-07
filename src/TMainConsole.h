@@ -260,7 +260,7 @@ public:
     bool setTextBoxStyleSheet(const QString& name, const QString& styleSheet) override;
     bool setTextBoxFont(const QString& name, const QFont& font) override;
     bool setTextBoxTabMovesFocus(const QString& name, bool tabMovesFocus) override;
-    QPoint mousePosition() const override;
+    std::optional<QPoint> mousePosition() const override;
     bool hasKeyboardFocus() const override;
     bool showPlainWindow(const QString& name) override;
     bool hidePlainWindow(const QString& name) override;

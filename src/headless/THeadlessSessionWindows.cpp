@@ -387,6 +387,27 @@ bool THeadlessSession::pointer(const QString& window, const PointerEvent& event)
     const auto target = main ? windows.cend() : std::find_if(windows.cbegin(), windows.cend(), [&window](const ScriptWindow& candidate) {
         return candidate.name == window;
     });
+    // getMousePosition() follows the pointer, whether or not a window takes what it did there, from where a window
+    // the grab names was at the press if it has gone since
+    const auto notePointer = [&]() {
+        auto* pView = dynamic_cast<TNullConsoleFrontend*>(mpHost->consoleFrontend());
+        if (!pView || event.type == Type::leave) {
+            return;
+        }
+        std::optional<QPointF> origin;
+        if (main) {
+            origin = QPointF();
+        } else if (target != windows.cend()) {
+            origin = inMainArea(windows, *target, QPointF());
+        } else if (mGrab && window == mGrab->name) {
+            origin = mGrab->origin;
+        } else if (mGrab && !mGrab->through.isEmpty() && window == mGrab->through) {
+            origin = mGrab->throughOrigin;
+        }
+        if (origin) {
+            pView->setMousePosition((*origin + event.position).toPoint());
+        }
+    };
     const bool pressing = event.type == Type::press || event.type == Type::doubleClick;
     // As Qt's implicit grab, which a press with no other button held starts again, and a move with none held ends
     if (mGrab && ((event.type == Type::move && event.buttons == Qt::NoButton) || (pressing && (event.buttons & ~event.button) == Qt::NoButton))) {
@@ -396,6 +417,7 @@ bool THeadlessSession::pointer(const QString& window, const PointerEvent& event)
     const bool ends = held && event.type == Type::release && event.buttons == Qt::NoButton;
     // QWidgetPrivate::deactivateWidgetCleanup() drops the grab of a widget that hides or goes, and what it held goes nowhere
     if (held && !grabHolds(windows)) {
+        notePointer();
         if (ends) {
             mGrab.reset();
         }
@@ -418,6 +440,7 @@ bool THeadlessSession::pointer(const QString& window, const PointerEvent& event)
     }
     // While a grab holds, Qt sends no widget an enter or a leave
     if (mGrab && hovering) {
+        notePointer();
         return true;
     }
     const std::optional<QSize> size = main ? mpHost->mainWindowSize() : target != windows.cend() ? std::optional(target->geometry.size()) : std::nullopt;
@@ -434,6 +457,7 @@ bool THeadlessSession::pointer(const QString& window, const PointerEvent& event)
             mErrorString = tr("The point (%1, %2) is not in the window \"%3\".").arg(event.position.x()).arg(event.position.y()).arg(window);
             return false;
         }
+        notePointer();
     }
     // QWidget::childAt() passes over a click-through label, so what is under it takes the press, and the grab
     const ScriptWindow* pNamed = main || target == windows.cend() ? nullptr : &*target;
@@ -457,6 +481,7 @@ bool THeadlessSession::pointer(const QString& window, const PointerEvent& event)
                      pTarget ? pTarget->kind : ScriptWindow::Kind::miniConsole,
                      pTarget != pNamed ? window : QString(),
                      pTarget ? deactivated(*pTarget) : std::nullopt,
+                     pTarget ? inMainArea(windows, *pTarget, QPointF()) : QPointF(),
                      pNamed && pTarget != pNamed ? inMainArea(windows, *pNamed, QPointF()) : QPointF()};
     }
     pointWindow(windows, pTarget, passed);
