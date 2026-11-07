@@ -1521,6 +1521,7 @@ bool Host::resetProfile_phase1()
     mTimerUnit.stopAllTriggers();
     mKeyUnit.stopAllTriggers();
     mResetProfile = true;
+    mBlockStopWatchCreation = true;
 
     QTimer::singleShot(0ms, this, [this]() {
         resetProfile_phase2();
@@ -1604,6 +1605,8 @@ void Host::resetProfile_phase2()
     mLuaInterpreter.updateExtendedAnsiColorsInTable();
 
     mBlockScriptCompile = false;
+    // Not before now: the teardown above can still run handlers on the old Lua state
+    mBlockStopWatchCreation = false;
 
     mAliasUnit.reenableAllTriggers();
     mTimerUnit.reenableAllTriggers();
@@ -2480,8 +2483,8 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
 
 QPair<int, QString> Host::createStopWatch(const QString& name)
 {
-    if (mResetProfile || mBlockStopWatchCreation) {
-        // Don't create stopwatches when test loading scripts or during a profile reset:
+    if (mBlockStopWatchCreation) {
+        // Not before the saved ones are loaded, nor while a reset is still tearing the profile down
         return qMakePair(0, qsl("unable to create a stopwatch at this time"));
     }
 
