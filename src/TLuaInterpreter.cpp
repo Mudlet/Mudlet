@@ -4599,12 +4599,13 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
 
             QStringList payloadList = packageList[i].split(MSSP_VAL);
 
-            if (payloadList.size() != 2) {
+            if (payloadList.size() < 2) {
                 continue;
             }
 
-            const QString msspVAR = payloadList[0];
-            const QString msspVAL = payloadList[1];
+            // A variable can carry several values, with the default one last
+            const QString msspVAR = payloadList.first();
+            const QString msspVAL = payloadList.last();
 
             lua_getglobal(L, "mssp");
             lua_pushstring(L, msspVAR.toUtf8().constData());

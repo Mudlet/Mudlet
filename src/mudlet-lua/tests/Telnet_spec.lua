@@ -1810,6 +1810,19 @@ describe("Tests telnet option negotiation", function()
     assert.equals("arrived", mssp.TELNETMSSPAFTERBAD)
   end)
 
+  -- MSSP lets one variable carry several values, such as a game's ports, and
+  -- sends its default value last
+  it("keeps the last of several values an MSSP variable arrives with", function()
+    finally(function()
+      mssp.TELNETMSSPMANY = nil
+      mssp.TELNETMSSPAFTERMANY = nil
+    end)
+
+    feed("<T_IAC><T_SB><O_MSSP><01>TELNETMSSPMANY<02>80<02>23<02>3000<01>TELNETMSSPAFTERMANY<02>arrived<T_IAC><T_SE>")
+    assert.equals("3000", mssp.TELNETMSSPMANY)
+    assert.equals("arrived", mssp.TELNETMSSPAFTERMANY)
+  end)
+
   it("displays nothing for the commands it answers on the wire", function()
     -- AYT and NOP produce no text of their own; a parser that lost track of
     -- them would leak 0xff and the command byte into the line instead
