@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QAccessible>
 #include <QComboBox>
 #include <QDialogButtonBox>
 #include <QDragEnterEvent>
@@ -37,6 +38,7 @@
 #include <QThreadPool>
 #include <QTimer>
 #include <QTreeWidget>
+#include <QtMath>
 #include <QtTest/QtTest>
 
 #include <chrono>
@@ -573,6 +575,91 @@ private slots:
         QCOMPARE(closing.at(0).at(0).toString(), mProfileName);
     }
 
+    // Each menu pick makes a new exporter, so a closed one has to go rather than
+    // linger hidden, where Windows still offers it in the task switcher
+    void test_anExporterOpenedFromTheMenuIsFreedWhenClosed_6545()
+    {
+        mudlet::self()->slot_packageExporter();
+        const QPointer<dlgPackageExporter> exporter = mudlet::self()->findChild<dlgPackageExporter*>();
+        QVERIFY2(exporter, "the menu never opened an exporter");
+        QVERIFY(QTest::qWaitForWindowExposed(exporter));
+
+        exporter->findChild<QDialogButtonBox*>(qsl("buttonBox"))->button(QDialogButtonBox::Close)->click();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QVERIFY2(!exporter, "the closed exporter was kept alive");
+    }
+
+    void test_anExporterClosedMidExportFinishesItBeforeItIsFreed_6545_data()
+    {
+        QTest::addColumn<int>("closeHow");
+        QTest::newRow("window closed") << 0;
+        QTest::newRow("Escape pressed") << 1;
+        QTest::newRow("closed while the export gets ready") << 2;
+    }
+
+    // A module is installed by the dialog once its zip ends, so one closed
+    // mid-export stays, hidden, until it has done that
+    void test_anExporterClosedMidExportFinishesItBeforeItIsFreed_6545()
+    {
+        QFETCH(int, closeHow);
+        const QString moduleName = packageNamed(qsl("exporter-module-closed-mid-export"));
+        makeTrigger(qsl("exporter closed mid-export module trigger"), nullptr);
+        mudlet::self()->slot_packageExporter();
+        const QPointer<dlgPackageExporter> exporter = mudlet::self()->findChild<dlgPackageExporter*>();
+        QVERIFY2(exporter, "the menu never opened an exporter");
+        mpExporter = exporter;
+        mpExporter->setModuleCreationMode(true);
+        QVERIFY(checkItem(triggersTop(), qsl("exporter closed mid-export module trigger")));
+        settleSaves();
+        nameField()->setText(moduleName);
+
+        if (closeHow == 2) {
+            // the export runs the event loop once before it starts the zip
+            QMetaObject::invokeMethod(exporter, &QWidget::close, Qt::QueuedConnection);
+        }
+        mpExporter->slot_exportPackage();
+        // cleanup() deletes mpExporter, so it must not be left dangling if the export freed it
+        mpExporter = exporter;
+        QVERIFY2(exporter, "closing the exporter as the export got ready freed it before its zip started");
+        QVERIFY2(infoLabel()->text().contains(qsl("Exporting package...")), qPrintable(qsl("The zip was never started; the dialog said: \"%1\"").arg(infoLabel()->text())));
+        mpExporter = nullptr;
+        if (closeHow == 0) {
+            QVERIFY(exporter->close());
+        } else if (closeHow == 1) {
+            QTest::keyClick(exporter, Qt::Key_Escape);
+        }
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QVERIFY2(exporter, "the exporter was freed before its zip ended, so the module it was making is never installed");
+        QVERIFY2(exporter->isHidden(), "closing the exporter mid-export left it on screen");
+
+        QTRY_VERIFY2_WITH_TIMEOUT(!exporter, "the exporter was kept alive after its export ended", 30000);
+        QVERIFY2(mpHost->mInstalledModules.contains(moduleName), "the module made by an exporter closed mid-export was not installed");
+    }
+
+    // Its hidden label is gone with it, so the failure has to be logged
+    void test_anExportThatFailsAfterItsExporterClosedIsLogged_6545()
+    {
+        const QString packageName = packageNamed(qsl("exporter-fails-after-closing"));
+        makeTrigger(qsl("exporter fails after closing trigger"), nullptr);
+        mudlet::self()->slot_packageExporter();
+        const QPointer<dlgPackageExporter> exporter = mudlet::self()->findChild<dlgPackageExporter*>();
+        QVERIFY2(exporter, "the menu never opened an exporter");
+        mpExporter = exporter;
+        QVERIFY(checkItem(triggersTop(), qsl("exporter fails after closing trigger")));
+        nameField()->setText(packageName);
+        // a folder where the package file goes makes the zip fail; permissions would not stop root
+        QVERIFY(QDir().mkpath(packagePath(packageName)));
+        answerNextMessageBox(QMessageBox::Yes);
+
+        mpExporter->slot_exportPackage();
+        QVERIFY2(infoLabel()->text().contains(qsl("Exporting package...")), qPrintable(qsl("The zip was never started; the dialog said: \"%1\"").arg(infoLabel()->text())));
+        mpExporter = nullptr;
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("exporting \"%1\" failed after its dialog was closed").arg(packageName)));
+        QVERIFY(exporter->close());
+
+        QTRY_VERIFY2_WITH_TIMEOUT(!exporter, "the exporter was kept alive after its export ended", 30000);
+    }
+
     // Checking a folder takes everything under it, and the count in the group
     // box title is of every checked item at any depth - the folder included.
     void test_checkingAFolderChecksItsChildrenAndCountsThem()
@@ -715,6 +802,31 @@ private slots:
 
         nameField()->setText(qsl("exporter-now-named"));
         QVERIFY2(exportButton()->isEnabled(), "the Export button stayed disabled after the package was named");
+    }
+
+    // Names come off the property, as an unnamed combo box is announced by its current
+    // item; descriptions off the accessible interface, where a placeholder stands in
+    void test_theUnlabelledFieldsAreNamedForAScreenReader_8227()
+    {
+        const auto description = [](QWidget* pField) {
+            return QAccessible::queryAccessibleInterface(pField)->text(QAccessible::Description);
+        };
+        openExporter();
+        QWidget* pPackageList = comboNamed(qsl("packageList"));
+        QWidget* pLocation = lineEditNamed(qsl("lineEdit_filePath"));
+        for (QWidget* pField : {static_cast<QWidget*>(nameField()), pPackageList, pLocation}) {
+            QVERIFY2(!pField->accessibleName().isEmpty(), qPrintable(qsl("%1 has nothing for a screen reader to announce it as").arg(pField->objectName())));
+            QVERIFY2(!description(pField).isEmpty(), qPrintable(qsl("%1 has no accessible description").arg(pField->objectName())));
+        }
+        QVERIFY(nameField()->accessibleName() != pPackageList->accessibleName());
+        const QString packageName = nameField()->accessibleName();
+        const QString packageNameDescription = nameField()->accessibleDescription();
+        const QString packageLocation = pLocation->accessibleName();
+
+        mpExporter->setModuleCreationMode(true);
+        QVERIFY2(nameField()->accessibleName() != packageName, "the module name field is still announced as the package name");
+        QVERIFY2(pLocation->accessibleName() != packageLocation, "the module location field is still announced as the package's");
+        QVERIFY2(nameField()->accessibleDescription() != packageNameDescription, "the module name field is still described as the package name");
     }
 
     // An empty package would install as nothing at all, so the export stops
@@ -1416,6 +1528,29 @@ private slots:
         QVERIFY2(description.contains(qsl("<$packagePath/.mudlet/description_images/badge.png>")), qPrintable(qsl("The description held: \"%1\"").arg(description)));
     }
 
+    // Opening the package details has to leave the description, the one field
+    // here meant for more than a line, room to show a decent part of itself.
+    void test_theDescriptionShowsAtLeastTenLinesWhenTheDetailsAreOpened_7051()
+    {
+        openExporter();
+        mpExporter->show();
+        QVERIFY(QTest::qWaitForWindowExposed(mpExporter));
+        auto* description = mpExporter->findChild<QTextEdit*>(qsl("textEdit_description"));
+        QVERIFY(description);
+        auto linesShown = [description]() {
+            const int textHeight = description->viewport()->height() - qCeil(2 * description->document()->documentMargin());
+            return textHeight / description->fontMetrics().lineSpacing();
+        };
+
+        buttonNamed(qsl("pushButton_openInfos"))->click();
+        QVERIFY2(QTest::qWaitFor(
+                         [&linesShown]() {
+                             return linesShown() >= 10;
+                         },
+                         2s),
+                 qPrintable(qsl("the description shows only %1 lines of text").arg(linesShown())));
+    }
+
     // The icon of the package being updated is drawn as a pixmap in a label
     // rather than as a stylesheet border image. The label is always on show, so a
     // package without an icon must not leave the last package's picture in it.
@@ -1450,6 +1585,113 @@ private slots:
         const QImage left = iconLabel->pixmap().toImage();
         QVERIFY2(left.isNull() || left.pixel(left.width() / 2, left.height() / 2) != qRgb(255, 0, 255), "the icon label was left showing the previous package's icon");
         QVERIFY2(buttonNamed(qsl("pushButton_removeIcon"))->isHidden(), "the remove button was left showing for a package that has no icon");
+    }
+
+    // Dropping an image onto the icon area sets the icon the file picker would,
+    // and shows it is a drop target while the image hovers over it.
+    void test_anImageDroppedOnTheIconAreaBecomesTheIcon_4994()
+    {
+        const QString packageName = packageNamed(qsl("exporter-dropped-icon"));
+        const QString iconPath = qsl("%1/Dropped Icon.PNG").arg(mExportDir);
+        QVERIFY(writeImage(iconPath));
+        const QString notAnImage = qsl("%1/readme.txt").arg(mExportDir);
+        QFile text(notAnImage);
+        QVERIFY(text.open(QIODevice::WriteOnly));
+        text.write("not an image");
+        text.close();
+        makeTrigger(qsl("exporter dropped icon trigger"), nullptr);
+
+        openExporter();
+        auto* iconArea = mpExporter->findChild<QWidget*>(qsl("widget_icon"));
+        auto* iconLabel = mpExporter->findChild<QLabel*>(qsl("Icon"));
+        QVERIFY(iconArea);
+        QVERIFY(iconLabel);
+        QVERIFY2(iconArea->acceptDrops(), "the icon area does not take drops");
+        // Qt hands a drop to the nearest widget that accepts drops, so a child that did would swallow it
+        for (auto* child : iconArea->findChildren<QWidget*>()) {
+            QVERIFY2(!child->acceptDrops(), qPrintable(qsl("%1 would keep drops from the icon area").arg(child->objectName())));
+        }
+        // The icon box shows a placeholder until an icon is chosen, and only a chosen icon can be removed
+        QVERIFY2(buttonNamed(qsl("pushButton_removeIcon"))->isHidden(), "the package already had an icon before anything was dropped");
+        const QPoint centre = iconArea->rect().center();
+        const QColor highlight = iconArea->palette().highlight().color();
+        auto highlighted = [&]() {
+            const QImage image = iconArea->grab().toImage();
+            for (int x = 0; x < image.width(); ++x) {
+                if (image.pixelColor(x, 0) == highlight) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        QVERIFY(!highlighted());
+
+        // Sent already accepted, as Qt carries an earlier answer over, so refusing has to be explicit
+        auto refused = [&](const QList<QUrl>& urls, Qt::DropActions actions = Qt::CopyAction) {
+            QMimeData mimeData;
+            mimeData.setUrls(urls);
+            QDragEnterEvent enter(centre, actions, &mimeData, Qt::LeftButton, Qt::NoModifier);
+            enter.setAccepted(true);
+            QApplication::sendEvent(iconArea, &enter);
+            return !enter.isAccepted() && !highlighted();
+        };
+        QVERIFY2(refused({QUrl::fromLocalFile(notAnImage)}), "a file that is not an image was taken for the icon");
+        QVERIFY2(refused({QUrl::fromLocalFile(iconPath), QUrl::fromLocalFile(iconPath)}), "two files were taken for the one icon");
+        QVERIFY2(refused({QUrl(qsl("https://www.mudlet.org/icon.png"))}), "a remote image was taken for the icon");
+        QVERIFY2(refused({QUrl::fromLocalFile(iconPath)}, Qt::MoveAction), "an image that could only be moved was taken for the icon");
+
+        const QString vanishingPath = qsl("%1/vanishing.png").arg(mExportDir);
+        QVERIFY(writeImage(vanishingPath));
+        QMimeData vanishing;
+        vanishing.setUrls({QUrl::fromLocalFile(vanishingPath)});
+        QDragEnterEvent vanishingEnter(centre, Qt::CopyAction, &vanishing, Qt::LeftButton, Qt::NoModifier);
+        QApplication::sendEvent(iconArea, &vanishingEnter);
+        QVERIFY(vanishingEnter.isAccepted());
+        QVERIFY(QFile::remove(vanishingPath));
+        QVERIFY2(highlighted(), "the icon area was not marked for an image it took");
+        QDragMoveEvent vanishingMove(centre, Qt::CopyAction, &vanishing, Qt::LeftButton, Qt::NoModifier);
+        vanishingMove.setAccepted(true);
+        QApplication::sendEvent(iconArea, &vanishingMove);
+        QVERIFY2(!vanishingMove.isAccepted(), "a move over the icon area with an image that had gone was taken");
+        QVERIFY2(!highlighted(), "the icon area stayed marked after it refused a move");
+        QDropEvent vanishingDrop(centre, Qt::CopyAction, &vanishing, Qt::LeftButton, Qt::NoModifier);
+        vanishingDrop.setAccepted(true);
+        QApplication::sendEvent(iconArea, &vanishingDrop);
+        QVERIFY2(!vanishingDrop.isAccepted(), "a drop of an image that had gone was reported as taken");
+        QVERIFY2(!highlighted(), "the icon area stayed marked after a refused drop");
+        QVERIFY2(buttonNamed(qsl("pushButton_removeIcon"))->isHidden(), "a refused drop set the icon");
+
+        QMimeData mimeData;
+        mimeData.setUrls({QUrl::fromLocalFile(iconPath)});
+        QDragEnterEvent enter(centre, Qt::CopyAction | Qt::MoveAction, &mimeData, Qt::LeftButton, Qt::NoModifier);
+        enter.setAccepted(false);
+        QApplication::sendEvent(iconArea, &enter);
+        QVERIFY2(enter.isAccepted(), "the icon area refused an image");
+        QCOMPARE(enter.dropAction(), Qt::CopyAction);
+        QVERIFY2(highlighted(), "the icon area was not marked as a drop target");
+        QDragLeaveEvent leave;
+        QApplication::sendEvent(iconArea, &leave);
+        QVERIFY2(!highlighted(), "the icon area stayed marked after the drag left it");
+
+        QDragEnterEvent reenter(centre, Qt::CopyAction | Qt::MoveAction, &mimeData, Qt::LeftButton, Qt::NoModifier);
+        reenter.setAccepted(false);
+        QApplication::sendEvent(iconArea, &reenter);
+        QVERIFY2(reenter.isAccepted(), "the icon area refused the image coming back");
+        QVERIFY2(highlighted(), "the icon area was not marked when the image came back");
+        QDropEvent drop(centre, Qt::CopyAction | Qt::MoveAction, &mimeData, Qt::LeftButton, Qt::NoModifier);
+        drop.setAccepted(false);
+        QApplication::sendEvent(iconArea, &drop);
+        QVERIFY(drop.isAccepted());
+        QCOMPARE(drop.dropAction(), Qt::CopyAction);
+        QVERIFY2(!highlighted(), "the icon area stayed marked after the drop");
+        QVERIFY2(!iconLabel->isHidden(), "the dropped icon was not shown");
+        QVERIFY2(!iconLabel->pixmap().isNull(), "the icon label was left with nothing to draw");
+        QVERIFY2(!buttonNamed(qsl("pushButton_removeIcon"))->isHidden(), "the dropped icon cannot be removed");
+
+        QVERIFY(checkItem(triggersTop(), qsl("exporter dropped icon trigger")));
+        QVERIFY2(runExport(packageName), "the export never finished");
+        QVERIFY2(QFileInfo::exists(packagePath(packageName)), qPrintable(qsl("No package was written. The dialog said: \"%1\"").arg(infoLabel()->text())));
+        QCOMPARE(QDir(qsl("%1/.mudlet/Icon").arg(stagingPath(packageName))).entryList(QDir::Files), QStringList{qsl("Dropped Icon.PNG")});
     }
 
     // Re-exporting an installed package with a new icon has to ship that icon

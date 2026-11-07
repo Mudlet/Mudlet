@@ -46,6 +46,7 @@
 #include "TConsole.h"
 #include "THyperlinkVisibilityManager.h"
 #include "TMainConsole.h"
+#include "TMxpProcessor.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "mudlet.h"
@@ -446,6 +447,337 @@ private slots:
         QCOMPARE(mpHost->mainConsoleView()->buffer.getFocusedLink(), 0);
     }
 
+    // A link the game is still writing has no characters in the buffer's lines yet,
+    // and a script's echo can trim and sweep, or its clearWindow() clear the
+    // store, before the rest of it arrives
+    void test_aLinkStillBeingWrittenSurvivesASweep_data()
+    {
+        QTest::addColumn<QByteArray>("opening");
+        QTest::addColumn<QByteArray>("closing");
+        QTest::addColumn<bool>("mxp");
+        QTest::addColumn<bool>("serverWrap");
+        QTest::addColumn<bool>("clearsWindow");
+        QTest::newRow("OSC 8 link carried past a line break with no text yet") << QByteArray("Exits: \x1b]8;;send:north\x1b\\\n") << QByteArray("north\x1b]8;;\x1b\\\n") << false << false << false;
+        // clearWindow() ends an open OSC 8 link itself, so that one has no clearing row
+        for (const bool clearsWindow : {false, true}) {
+            const char* suffix = clearsWindow ? ", across clearWindow()" : "";
+            QTest::addRow("MXP link with no text yet%s", suffix) << QByteArray("You see <SEND href=\"north\">") << QByteArray("north</SEND>\n") << true << false << clearsWindow;
+            QTest::addRow("OSC 8 link on a line not yet ended%s", suffix) << QByteArray("You see \x1b]8;;send:north\x1b\\north\x1b]8;;\x1b\\") << QByteArray("\n") << false << false << clearsWindow;
+            QTest::addRow("OSC 8 link on a line held for a server wrap%s", suffix)
+                    << QByteArray(64, 'x').append(" \x1b]8;;send:north\x1b\\north\x1b]8;;\x1b\\ alpha\n") << QByteArray() << false << true << clearsWindow;
+        }
+    }
+
+    void test_aLinkStillBeingWrittenSurvivesASweep()
+    {
+        QFETCH(QByteArray, opening);
+        QFETCH(QByteArray, closing);
+        QFETCH(bool, mxp);
+        QFETCH(bool, serverWrap);
+        QFETCH(bool, clearsWindow);
+        auto* pConsole = mpHost->mainConsoleView();
+        auto& buffer = pConsole->buffer;
+        const bool savedUndoServerWrap = mpHost->mUndoServerWrap;
+        const int savedUndoServerWrapWidth = mpHost->mUndoServerWrapWidth;
+        const auto restore = qScopeGuard([this, &buffer, mxp, savedUndoServerWrap, savedUndoServerWrapWidth] {
+            buffer.flushPendingServerWrapJoin();
+            mpHost->mUndoServerWrap = savedUndoServerWrap;
+            mpHost->mUndoServerWrapWidth = savedUndoServerWrapWidth;
+            mpHost->mMxpProcessor.getMxpTagBuilder().reset();
+            mpHost->setForceMXPProcessorOn(false);
+            if (mxp) {
+                mpHost->mMxpProcessor.disable();
+            }
+            mpHost->clearWindow(qsl("main"));
+            buffer.mLinkStore = TLinkStore();
+        });
+        QVERIFY(mpHost->clearWindow(qsl("main")));
+        buffer.setBufferSize(csmLinesLimit, csmBatchDeleteSize);
+        if (mxp) {
+            mpHost->setForceMXPProcessorOn(true);
+            mpHost->mMxpProcessor.enable();
+            mpHost->mMxpProcessor.setMode(MXP_MODE_CODE_LOCK_SECURE);
+        }
+        mpHost->mUndoServerWrap = serverWrap;
+        mpHost->mUndoServerWrapWidth = 80;
+        fill(pConsole, qsl("seed"), csmLinesLimit + 1);
+
+        const int idBefore = pConsole->getLinkStore().getCurrentLinkID();
+        std::string data = opening.toStdString();
+        mpHost->printOnDisplay(data, true);
+        const int linkId = pConsole->getLinkStore().getCurrentLinkID();
+        QVERIFY2(linkId != idBefore, "the game's text opened no link");
+        QVERIFY2(!buffer.collectActiveLinkIds().contains(linkId),
+                 qPrintable(qsl("the link's text already reached the buffer, so the sweep could see it anyway: '%1'").arg(buffer.lineBuffer.join(qsl("|")).right(300))));
+        if (serverWrap) {
+            QVERIFY2(!buffer.mServerWrapPendingLine.isEmpty(), "the line was not held for a server wrap");
+        }
+
+        if (clearsWindow) {
+            QVERIFY(mpHost->clearWindow(qsl("main")));
+        } else {
+            buffer.mLinesUntilLinkSweep = 0;
+            for (int i = 0; i <= csmLinesLimit && buffer.mLinesUntilLinkSweep <= 0; ++i) {
+                pConsole->print(qsl("filler line %1\n").arg(i));
+            }
+            QVERIFY2(buffer.mLinesUntilLinkSweep > 0, "no echo trimmed the buffer, so nothing swept and this test proves nothing");
+        }
+
+        data = closing.toStdString();
+        mpHost->printOnDisplay(data, true);
+        buffer.flushPendingServerWrapJoin();
+        const int line = lineContaining(buffer, qsl("north"));
+        QVERIFY2(line >= 0, "the link's text never reached the buffer");
+        QCOMPARE(buffer.getLinkIndexAt(line, buffer.lineBuffer.at(line).indexOf(qsl("north"))), linkId);
+        QVERIFY2(!pConsole->getLinkStore().getLinksConst(linkId).isEmpty(), "a sweep or clear dropped a link the game was still writing, so its text is a dead link");
+    }
+
+    void test_aSpoilerCutShortByClearingTheWindowRevealsOnlyWhatIsLeftOfIt_data()
+    {
+        QTest::addColumn<QByteArray>("beforeClear");
+        QTest::addColumn<QByteArray>("afterClear");
+        QTest::addColumn<bool>("serverWrap");
+        QTest::addColumn<QString>("revealed");
+        QTest::newRow("still open at the clear") << QByteArray("XYZ") << QByteArray("\x1b]8;;\x1b\\ end\n") << false << qsl("XYZ end");
+        QTest::newRow("closed on the line not yet ended") << QByteArray("XYZ\x1b]8;;\x1b\\") << QByteArray(" end\n") << false << qsl("XYZ end");
+        const QByteArray padding(64, 'x');
+        QTest::newRow("closed on a line held for a server wrap") << QByteArray("XYZ\x1b]8;;\x1b\\ ").append(padding).append(" alpha\n") << QByteArray() << true
+                                                                 << qsl("XYZ %1 alpha").arg(QString::fromLatin1(padding));
+    }
+
+    // clearWindow() takes the start of a spoiler with the cleared lines: the rest
+    // of it is masked, and reveals only itself
+    void test_aSpoilerCutShortByClearingTheWindowRevealsOnlyWhatIsLeftOfIt()
+    {
+        QFETCH(QByteArray, beforeClear);
+        QFETCH(QByteArray, afterClear);
+        QFETCH(bool, serverWrap);
+        QFETCH(QString, revealed);
+        auto* pConsole = mpHost->mainConsoleView();
+        auto& buffer = pConsole->buffer;
+        const bool savedUndoServerWrap = mpHost->mUndoServerWrap;
+        const int savedUndoServerWrapWidth = mpHost->mUndoServerWrapWidth;
+        const auto restore = qScopeGuard([this, &buffer, savedUndoServerWrap, savedUndoServerWrapWidth] {
+            buffer.flushPendingServerWrapJoin();
+            mpHost->mUndoServerWrap = savedUndoServerWrap;
+            mpHost->mUndoServerWrapWidth = savedUndoServerWrapWidth;
+            mpHost->clearWindow(qsl("main"));
+            buffer.mLinkStore = TLinkStore();
+        });
+        QVERIFY(mpHost->clearWindow(qsl("main")));
+        mpHost->mUndoServerWrap = serverWrap;
+        mpHost->mUndoServerWrapWidth = 80;
+        std::string data = "You see \x1b]8;;send:x?config={\"spoiler\":true}\x1b\\SECRET\r";
+        mpHost->printOnDisplay(data, true);
+        const int linkId = pConsole->getLinkStore().getCurrentLinkID();
+        QVERIFY2(buffer.isSpoilerUnrevealed(linkId), "the flush marker masked nothing, so this test proves nothing");
+        data = beforeClear.toStdString();
+        mpHost->printOnDisplay(data, true);
+        if (serverWrap) {
+            QVERIFY2(!buffer.mServerWrapPendingLine.isEmpty(), "the line was not held for a server wrap");
+        }
+
+        QVERIFY(mpHost->clearWindow(qsl("main")));
+        data = afterClear.toStdString();
+        mpHost->printOnDisplay(data, true);
+        buffer.flushPendingServerWrapJoin();
+
+        const QString masked = QString(3, QChar::Space) + revealed.mid(3);
+        const int line = lineContaining(buffer, revealed.mid(3));
+        QVERIFY2(line >= 0, "the spoiler's line never reached the buffer");
+        QCOMPARE(buffer.lineBuffer.at(line), masked);
+        buffer.revealSpoilerLink(linkId);
+        QCOMPARE(buffer.lineBuffer.at(line), revealed);
+    }
+
+    // A spoiler begun in a line held for a server wrap ends with that line once the
+    // next turns out not to continue it, the same whether or not the window was
+    // cleared while the next was arriving
+    void test_aHeldSpoilerCutShortByClearingTheWindowLeavesTheNextLineAlone_data()
+    {
+        QTest::addColumn<bool>("clearsWindow");
+        QTest::newRow("without a clear") << false;
+        QTest::newRow("across clearWindow()") << true;
+    }
+
+    void test_aHeldSpoilerCutShortByClearingTheWindowLeavesTheNextLineAlone()
+    {
+        QFETCH(bool, clearsWindow);
+        auto* pConsole = mpHost->mainConsoleView();
+        auto& buffer = pConsole->buffer;
+        const bool savedUndoServerWrap = mpHost->mUndoServerWrap;
+        const int savedUndoServerWrapWidth = mpHost->mUndoServerWrapWidth;
+        const auto restore = qScopeGuard([this, &buffer, savedUndoServerWrap, savedUndoServerWrapWidth] {
+            buffer.flushPendingServerWrapJoin();
+            mpHost->mUndoServerWrap = savedUndoServerWrap;
+            mpHost->mUndoServerWrapWidth = savedUndoServerWrapWidth;
+            mpHost->clearWindow(qsl("main"));
+            buffer.mLinkStore = TLinkStore();
+        });
+        QVERIFY(mpHost->clearWindow(qsl("main")));
+        mpHost->mUndoServerWrap = true;
+        mpHost->mUndoServerWrapWidth = 80;
+        const QString padding(64, QLatin1Char('x'));
+        std::string data = (padding + qsl(" \x1b]8;;send:x?config={\"spoiler\":true}\x1b\\SECRET\n")).toStdString();
+        mpHost->printOnDisplay(data, true);
+        const int linkId = pConsole->getLinkStore().getCurrentLinkID();
+        QVERIFY2(!buffer.mServerWrapPendingLine.isEmpty(), "the line was not held for a server wrap");
+        data = "* a li";
+        mpHost->printOnDisplay(data, true);
+
+        if (clearsWindow) {
+            QVERIFY(mpHost->clearWindow(qsl("main")));
+        }
+        data = "st entry\n";
+        mpHost->printOnDisplay(data, true);
+        buffer.flushPendingServerWrapJoin();
+
+        const int heldLine = lineContaining(buffer, padding);
+        const int nextLine = lineContaining(buffer, qsl("st entry"));
+        QVERIFY2(heldLine >= 0 && nextLine > heldLine, qPrintable(qsl("a line is missing: '%1'").arg(buffer.lineBuffer.join(qsl("|")))));
+        QCOMPARE(buffer.lineBuffer.at(nextLine), qsl("* a list entry"));
+        QCOMPARE(buffer.getLinkIndexAt(nextLine, 0), 0);
+        buffer.revealSpoilerLink(linkId);
+        QCOMPARE(buffer.lineBuffer.at(heldLine), padding + qsl(" SECRET"));
+        QCOMPARE(buffer.lineBuffer.at(nextLine), qsl("* a list entry"));
+    }
+
+    void test_aHeldConcealedLinkCutShortByClearingTheWindowStaysConcealed_data()
+    {
+        QTest::addColumn<bool>("clearsWindow");
+        QTest::addColumn<bool>("scriptPrintsFirst");
+        QTest::newRow("without a clear") << false << false;
+        QTest::newRow("across clearWindow()") << true << false;
+        QTest::newRow("across clearWindow(), a script printing before the line ends") << true << true;
+    }
+
+    // As the spoiler above: a link with a delayed reveal begun in a held line is
+    // tracked on that line once the next turns out not to continue it
+    void test_aHeldConcealedLinkCutShortByClearingTheWindowStaysConcealed()
+    {
+        QFETCH(bool, clearsWindow);
+        QFETCH(bool, scriptPrintsFirst);
+        auto* pConsole = mpHost->mainConsoleView();
+        auto& buffer = pConsole->buffer;
+        auto& manager = pConsole->getHyperlinkVisibilityManager();
+        const bool savedUndoServerWrap = mpHost->mUndoServerWrap;
+        const int savedUndoServerWrapWidth = mpHost->mUndoServerWrapWidth;
+        const auto restore = qScopeGuard([this, &buffer, savedUndoServerWrap, savedUndoServerWrapWidth] {
+            buffer.flushPendingServerWrapJoin();
+            mpHost->mUndoServerWrap = savedUndoServerWrap;
+            mpHost->mUndoServerWrapWidth = savedUndoServerWrapWidth;
+            mpHost->clearWindow(qsl("main"));
+            buffer.mLinkStore = TLinkStore();
+        });
+        QVERIFY(mpHost->clearWindow(qsl("main")));
+        mpHost->mUndoServerWrap = true;
+        mpHost->mUndoServerWrapWidth = 80;
+        const QString padding(64, QLatin1Char('x'));
+        std::string data = (padding + qsl(" \x1b]8;;send:x?config={\"visibility\":{\"action\":\"reveal\",\"delay\":600000}}\x1b\\SECRET\n")).toStdString();
+        mpHost->printOnDisplay(data, true);
+        const int linkId = pConsole->getLinkStore().getCurrentLinkID();
+        QVERIFY2(!buffer.mServerWrapPendingLine.isEmpty(), "the line was not held for a server wrap");
+        data = "* a li";
+        mpHost->printOnDisplay(data, true);
+
+        if (clearsWindow) {
+            QVERIFY(mpHost->clearWindow(qsl("main")));
+        }
+        const QString scriptLine = qsl("HP 100/100");
+        if (scriptPrintsFirst) {
+            pConsole->print(scriptLine);
+        }
+        data = "st entry\n";
+        mpHost->printOnDisplay(data, true);
+        buffer.flushPendingServerWrapJoin();
+
+        const int heldLine = lineContaining(buffer, padding);
+        const int nextLine = lineContaining(buffer, qsl("st entry"));
+        QVERIFY2(heldLine >= 0 && nextLine > heldLine, qPrintable(qsl("a line is missing: '%1'").arg(buffer.lineBuffer.join(qsl("|")))));
+        QCOMPARE(buffer.lineBuffer.at(heldLine), padding + QString(7, QChar::Space));
+        QVERIFY2(manager.isLinkConcealed(linkId), "the link is not tracked as concealed");
+        QCOMPARE(manager.mTrackedLinks.value(linkId).lineNumber, heldLine);
+        QCOMPARE(buffer.lineBuffer.at(nextLine), qsl("* a list entry"));
+        QCOMPARE(buffer.getLinkIndexAt(nextLine, 0), 0);
+        manager.revealLink(linkId);
+        QCOMPARE(buffer.lineBuffer.at(heldLine), padding + qsl(" SECRET"));
+        QCOMPARE(buffer.getLinkIndexAt(heldLine, padding.length() + 1), linkId);
+        QCOMPARE(buffer.lineBuffer.at(nextLine), qsl("* a list entry"));
+        if (scriptPrintsFirst) {
+            QCOMPARE(heldLine, 1);
+            QCOMPARE(buffer.lineBuffer.at(0), scriptLine);
+        }
+    }
+
+    void test_aConcealedLinkStillBeingWrittenIsRevealedAfterClearingTheWindow_data()
+    {
+        QTest::addColumn<QByteArray>("beforeClear");
+        QTest::addColumn<QByteArray>("afterClear");
+        QTest::addColumn<QString>("concealed");
+        QTest::addColumn<bool>("scriptPrintsFirst");
+        const QString closedConcealed = qsl("A chest ") + QString(6, QChar::Space);
+        const QString openConcealed = qsl("A chest ") + QString(3, QChar::Space) + qsl("en]");
+        QTest::newRow("closed before the clear") << QByteArray("[open]\x1b]8;;\x1b\\") << QByteArray("\n") << closedConcealed << false;
+        QTest::newRow("still open at the clear") << QByteArray("[op") << QByteArray("en]\x1b]8;;\x1b\\\n") << openConcealed << false;
+        QTest::newRow("closed before the clear, a script printing before the line ends") << QByteArray("[open]\x1b]8;;\x1b\\") << QByteArray("\n") << closedConcealed << true;
+        QTest::newRow("still open at the clear, a script printing before the line ends") << QByteArray("[op") << QByteArray("en]\x1b]8;;\x1b\\\n") << openConcealed << true;
+    }
+
+    // A link on the line the game is still sending is tracked at the line it lands
+    // on once the game ends it, below anything a script prints after clearWindow(),
+    // and one the clear ends starts out as its close would have left it
+    void test_aConcealedLinkStillBeingWrittenIsRevealedAfterClearingTheWindow()
+    {
+        QFETCH(QByteArray, beforeClear);
+        QFETCH(QByteArray, afterClear);
+        QFETCH(QString, concealed);
+        QFETCH(bool, scriptPrintsFirst);
+        auto* pConsole = mpHost->mainConsoleView();
+        auto& buffer = pConsole->buffer;
+        auto& manager = pConsole->getHyperlinkVisibilityManager();
+        const auto restore = qScopeGuard([this, &buffer] {
+            mpHost->clearWindow(qsl("main"));
+            buffer.mLinkStore = TLinkStore();
+        });
+        QVERIFY(mpHost->clearWindow(qsl("main")));
+        fill(pConsole, qsl("seed"), 5);
+        std::string data = "A chest \x1b]8;;send:open?config={\"visibility\":{\"action\":\"reveal\",\"delay\":600000},"
+                           "\"selection\":{\"group\":\"chest\",\"value\":\"open\",\"selected\":true}}\x1b\\";
+        data += beforeClear.toStdString();
+        mpHost->printOnDisplay(data, true);
+        const int linkId = pConsole->getLinkStore().getCurrentLinkID();
+
+        QVERIFY(mpHost->clearWindow(qsl("main")));
+        const QString scriptLine = qsl("Inventory: a sword and a shield");
+        if (scriptPrintsFirst) {
+            pConsole->print(scriptLine + QChar::LineFeed);
+        }
+        // a reveal falling due before the game ends the line has nowhere to go yet, and waits for it
+        QVERIFY2(manager.mTrackedLinks.contains(linkId), "the link was not kept across the clear");
+        manager.mTrackedLinks[linkId].creationTimeMs = 0;
+        manager.slot_checkTimers();
+        QVERIFY2(manager.isLinkConcealed(linkId), "the link was revealed before its line arrived");
+        if (scriptPrintsFirst) {
+            QCOMPARE(buffer.lineBuffer.at(0), scriptLine);
+        }
+        data = afterClear.toStdString();
+        mpHost->printOnDisplay(data, true);
+
+        const int line = lineContaining(buffer, qsl("A chest"));
+        QCOMPARE(line, scriptPrintsFirst ? 1 : 0);
+        QCOMPARE(buffer.lineBuffer.at(line), concealed);
+        QCOMPARE(buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateSelected);
+        QVERIFY2(manager.mpTimer->isActive(), "nothing will reveal the link once its delay is up");
+        manager.slot_checkTimers();
+        QCOMPARE(buffer.lineBuffer.at(line), qsl("A chest [open]"));
+        QCOMPARE(buffer.getLinkIndexAt(line, qsl("A chest ").length()), linkId);
+        QVERIFY2(!manager.mpTimer->isActive(), "the poll timer runs on with nothing left to reveal");
+        if (scriptPrintsFirst) {
+            QCOMPARE(buffer.lineBuffer.at(0), scriptLine);
+            QCOMPARE(buffer.getLinkIndexAt(0, qsl("A chest ").length()), 0);
+        }
+    }
+
     // A wholeline concealment deletes the link's own line, so every link below
     // it moves up exactly one.
     void test_aWholelineConcealmentMovesTheLinksBelowItOnlyOnce()
@@ -703,8 +1035,8 @@ private:
     }
 
     // The wholeline flag is what makes performConcealment() delete the line
-    // rather than blank the link out. No delay and no expire trigger, so the
-    // click conceals it there and then.
+    // rather than blank the link out. No delay, so the click conceals it there
+    // and then.
     Mudlet::HyperlinkStyling wholeLineConcealStyling() const
     {
         Mudlet::HyperlinkStyling styling;

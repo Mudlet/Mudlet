@@ -194,6 +194,7 @@ private:
     void restyleToolBarIcons();
     void connectToolBarActions();
     void closeProfileByName(const QString& profileName);
+    bool closeProfileHere(const QString& profileName);
     void updateTabIndicator(int tabIndex = -1);                            // -1 means current tab
     void updateDockWidgetVisibilityForProfile(const QString& profileName); // Show/hide docked widgets based on active profile
     void restoreWindowGeometry();
@@ -251,6 +252,7 @@ private:
     // Discord actions
     QAction* mpActionDiscord{nullptr};
     QAction* mpActionMudletDiscord{nullptr};
+    QAction* mpHelpMenuDiscordAction{nullptr};
 
     // Menu actions with shortcuts
     QAction* mpMenuConnectAction{nullptr};

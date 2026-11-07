@@ -36,6 +36,7 @@ endif()
 set(WINDOW_GROUP_TEST_SOURCES
     AccessibleToolTipTest.cpp
     AddonControlsTest.cpp
+    AnalyseCharactersTest.cpp
     AsciiLineBreakTest.cpp
     ConsoleFootSeamTest.cpp
     BlinkRowRepaintTest.cpp
@@ -77,6 +78,8 @@ set(WINDOW_GROUP_TEST_SOURCES
     DetachedWindowOwnershipTest.cpp
     SpeechAcrossProfilesTest.cpp
     MudletProxyStyleTest.cpp
+    DarkThemeToolBarExtensionTest.cpp
+    DarkThemeItemCheckTest.cpp
     MxpFramePlacementTest.cpp
     MxpDestFrameClearTest.cpp
     LabelBackgroundPaintTest.cpp
@@ -107,9 +110,11 @@ set(WINDOW_GROUP_TEST_SOURCES
     ConsoleSearchBarTest.cpp
     WrapLineRewrapTest.cpp
     ScrollLostOnPartialRepaintTest.cpp
+    ScrollUpShortBufferTest.cpp
     ScrollBarContrastTest.cpp
     ScriptFileDialogTest.cpp
     OpaqueConsolePaintTest.cpp
+    ConnectButtonIconsTest.cpp
 )
 
 # Profiles: their config dir, their folders, and loading, saving and deleting them
@@ -117,10 +122,13 @@ set(PROFILE_GROUP_TEST_SOURCES
     CloseDuringProfileLoadTest.cpp
     ConfigDirOverrideTest.cpp
     ConnectionDialogCrashTest.cpp
+    ConnectionDialogEscapeTest.cpp
     ConnectionDialogFocusTest.cpp
+    ConnectionDialogHistorySizeTest.cpp
     ConnectionDialogInitialSelectionTest.cpp
     ConnectionDialogKeychainWaitTest.cpp
     ConnectionDialogNewProfileTest.cpp
+    ConnectionDialogNoticeLayoutTest.cpp
     ConnectionDialogOfflineProfileTest.cpp
     ConnectionDialogOpenProfileTest.cpp
     ConnectionDialogSecureSettingTest.cpp
@@ -141,6 +149,7 @@ set(PROFILE_GROUP_TEST_SOURCES
     ProfileLifecycleTest.cpp
     ProfileLoadTempFileTest.cpp
     ProfileRoundTripTest.cpp
+    ProfileSaveDiskFullTest.cpp
     ProfileSaveShutdownRaceTest.cpp
     ResetProfileTest.cpp
     SavedVariableFenceTest.cpp
@@ -170,6 +179,7 @@ set(TELNET_GROUP_TEST_SOURCES
     TelnetConnectLookupRaceTest.cpp
     TelnetIacEscapingTest.cpp
     MMCPIncomingCallTest.cpp
+    DownloadShortWriteTest.cpp
     TelnetNewEnvironTest.cpp
     TelnetPasswordMaskTimeoutTest.cpp
     PasswordEntryPolicyTest.cpp
@@ -202,6 +212,7 @@ set(TRIGGER_GROUP_TEST_SOURCES
     SetScriptCallbackTest.cpp
     TFeedTriggersRecursionTest.cpp
     TriggerMatchPoolTest.cpp
+    TriggerPrescanTest.cpp
     TreeChildTeardownTest.cpp
     TriggerSoundArgumentTest.cpp
     UnitDeferredDeleteTest.cpp
@@ -219,6 +230,7 @@ set(EDITOR_GROUP_TEST_SOURCES
     EditorCaretReadingTest.cpp
     EditorChromeTest.cpp
     EditorClipboardXmlTest.cpp
+    EditorEmergencyStopTest.cpp
     EditorBannerViewSwitchTest.cpp
     EditorCodeHeadingTest.cpp
     EditorColumnAlignmentTest.cpp
@@ -228,6 +240,7 @@ set(EDITOR_GROUP_TEST_SOURCES
     EditorFormShellTest.cpp
     EditorGeometryWriteGuardTest.cpp
     EditorIconScaleTest.cpp
+    EditorErrorLineLinkTest.cpp
     EditorEmptySelectionTest.cpp
     EditorItemXMLHelpersTest.cpp
     ColorTriggerDialogTest.cpp
@@ -262,6 +275,8 @@ set(EDITOR_GROUP_TEST_SOURCES
     EditorAddItemTest.cpp
     EditorFolderViewTest.cpp
     EditorFontTest.cpp
+    EditorKeyboardMoveTest.cpp
+    EditorLazyCreationTest.cpp
     EditorModuleFolderTest.cpp
     EditorSearchTest.cpp
     TreeWidgetItemMoveTest.cpp
@@ -275,12 +290,14 @@ set(EDITOR_GROUP_TEST_SOURCES
 # The map: its rooms and areas, its file format, and the mapper widget
 set(MAP_GROUP_TEST_SOURCES
     EmbeddedMapperCreationTest.cpp
+    MapAutosaveTest.cpp
     FloatingMapKeyBindingTest.cpp
     ExitAppearanceTest.cpp
     MapAreaReassignmentTest.cpp
     MapAreaSelectionTest.cpp
     MapCloseDuringImportTest.cpp
     MapCoordinateLimitTest.cpp
+    MapCrossProfileStateTest.cpp
     MapContextMenuLifetimeTest.cpp
     MapDownloadTest.cpp
     MapSmallAreaCenteringTest.cpp
@@ -295,6 +312,7 @@ set(MAP_GROUP_TEST_SOURCES
     MapViewTeardownTest.cpp
     MapLabelRenderTest.cpp
     MapDecalsTest.cpp
+    MapExitStubTest.cpp
     MapViewCueTest.cpp
     LuaMapperCueTest.cpp
     MapLockNoOpTest.cpp
@@ -338,6 +356,7 @@ set(PACKAGE_GROUP_TEST_SOURCES
     PackageManagerHeadingTest.cpp
     PackageManagerRemovalTest.cpp
     PackageManagerRepositoryLinksTest.cpp
+    PackageManagerSearchTest.cpp
     PackageRemovalSaveTeardownTest.cpp
     PackageRepositoryDownloadTest.cpp
     PackageSelfRemovalTest.cpp
@@ -372,6 +391,7 @@ set(SETTINGS_GROUP_TEST_SOURCES
     SettingsInstantApplyTest.cpp
     SettingsLiveSyncTest.cpp
     SettingsMapControlsTest.cpp
+    SettingsMonospacedFontsTest.cpp
     SettingsPageFlowTest.cpp
     SettingsMmcpFlagsTest.cpp
     SettingsRoundTripTest.cpp
@@ -396,7 +416,10 @@ set(TEARDOWN_GROUP_TEST_SOURCES
     InstanceForwardTest.cpp
 )
 if(USE_HEADLESS)
+    list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessSessionInputTest.cpp)
+    list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessSessionCommandsTest.cpp)
     list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessRunnerTest.cpp HeadlessSessionTest.cpp)
+    list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessSessionOutputTest.cpp)
 endif()
 
 # Sound, music and video, speech in and out, and the rich presence published to Discord
@@ -706,10 +729,23 @@ if(TEST HeadlessRunnerTest)
     set_tests_properties(HeadlessRunnerTest PROPERTIES TIMEOUT 300)
 endif()
 
+# HeadlessSessionInputTest starts a fresh headless profile in each of its cases, as HeadlessSessionTest does
+if(TEST HeadlessSessionInputTest)
+    set_tests_properties(HeadlessSessionInputTest PROPERTIES TIMEOUT 300)
+endif()
+
+# HeadlessSessionCommandsTest starts a fresh headless profile in each of its cases too
+if(TEST HeadlessSessionCommandsTest)
+    set_tests_properties(HeadlessSessionCommandsTest PROPERTIES TIMEOUT 300)
+endif()
+
 # HeadlessSessionTest starts a fresh headless profile in nearly every one of its
 # cases, so it needs a longer timeout than the default 60s
 if(TEST HeadlessSessionTest)
     set_tests_properties(HeadlessSessionTest PROPERTIES TIMEOUT 300)
+endif()
+if(TEST HeadlessSessionOutputTest)
+    set_tests_properties(HeadlessSessionOutputTest PROPERTIES TIMEOUT 300)
 endif()
 
 # Undo/redo tests need a longer timeout due to large batch operations

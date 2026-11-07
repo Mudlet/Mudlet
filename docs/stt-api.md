@@ -97,6 +97,14 @@ engine's installed models rather than picking one, since a downloaded model
 should stay visible whether or not its engine happens to be the one loaded
 right now.
 
+**Installing an engine library on macOS.** Signed Mudlet releases and PTBs
+only load engine libraries signed by Mudlet, so the builds the sherpa-onnx and
+Vosk projects publish are refused there and the built-in macOS backend is used
+instead. Install the libraries from `Mudlet-<version>-speech-engines-<arch>.zip`
+on the same GitHub release as your Mudlet, whose README names the folder each
+engine goes into. The upstream builds work only in a self-built or unsigned
+Mudlet.
+
 **Using the built-in macOS backend from a development build.** It asks macOS
 for speech-recognition permission, and macOS attributes that request to the
 *responsible process* - which, for anything started from a shell, is the

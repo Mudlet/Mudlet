@@ -26,8 +26,9 @@ jobs:
     name: Build mudlet-headless with the mobile options off
     runs-on: ubuntu-22.04
     if: ${{ github.repository_owner == 'Mudlet' }}
+    # Per run outside pull requests: a group shared by every push cancels each queued push's job
     concurrency:
-      group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+      group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
       cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     steps:
       - uses: actions/checkout@v7
@@ -54,6 +55,7 @@ jobs:
             libpcre2-dev \
             libpugixml-dev \
             libpulse-dev \
+            libyajl-dev \
             libzip-dev \
             lua5.1 \
             ninja-build \

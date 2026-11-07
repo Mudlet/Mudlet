@@ -85,8 +85,9 @@ private slots:
 
         QVERIFY2(mSession.openProfile(mProfileName), qPrintable(mSession.why()));
         mpHost = mSession.host();
-        mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
-        QVERIFY2(mpEditor != nullptr, "Loading the profile should have built an editor");
+        // Built and never shown, as a script or the settings can build it before the player opens it
+        mpEditor = HostDialogs::editor(mpHost);
+        QVERIFY2(mpEditor != nullptr, "the profile has no editor to build");
     }
 
     void cleanupTestCase()

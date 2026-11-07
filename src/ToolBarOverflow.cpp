@@ -63,6 +63,7 @@ ToolBarOverflow::ToolBarOverflow(QToolBar* pBar, QToolButton* pButton)
 {
     pBar->installEventFilter(this);
     pButton->installEventFilter(this);
+    pButton->setProperty(scmProp_toolBarOverflowOwned, true);
     connect(pBar, &QToolBar::iconSizeChanged, this, &ToolBarOverflow::queueRefresh);
     connect(pBar, &QToolBar::toolButtonStyleChanged, this, &ToolBarOverflow::queueRefresh);
     connect(pButton, &QToolButton::toggled, this, &ToolBarOverflow::queueRefresh);

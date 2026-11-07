@@ -145,7 +145,6 @@ private:
     QString mTabCompletionOld;
     QPoint mPopupPosition;
     QString mSpellCheckedWord;
-    bool mSpellChecking = false;
     QSet<QString> commandLineSuggestions;
     QSet<QString> tabCompleteBlacklist;
     // The file used to store the command history between sessions:

@@ -305,11 +305,7 @@ private slots:
         QVERIFY(pacerWentIdle(pane));
         pane->repaint();
         pane->mSincePaint.restart();
-        QString screenful;
-        for (int i = 0; i <= pane->mScreenHeight; ++i) {
-            screenful += qsl("flood line %1\n").arg(i);
-        }
-        console->print(screenful);
+        console->print(screenful(pane));
         const qint64 printMs = pane->mSincePaint.elapsed();
         if (printMs >= TTextEdit::csmFloodPaintPaceMs - TTextEdit::csmPaintPaceMs) {
             QSKIP(qPrintable(qsl("the print itself took %1ms, so even the flood pace had no more than the normal pace left to arm - the runner stalled").arg(printMs)));
@@ -442,10 +438,7 @@ private slots:
         QVERIFY(pacerWentIdle(pane));
         pane->repaint();
         QVERIFY(pane->mScreenHeight > 0);
-        QString screenful;
-        for (int i = 0; i <= pane->mScreenHeight; ++i) {
-            screenful += qsl("flood line %1\n").arg(i);
-        }
+        const QString lines = screenful(pane);
 
         QElapsedTimer sinceStrip;
         int fires = 0;
@@ -467,7 +460,7 @@ private slots:
             pane->repaint(QRect(0, 0, 1, 1));
             sinceStrip.start();
             QVERIFY2(mPaintCount > 0, "repaint() of a strip delivered no paint event, so nothing here restarted the pane's frame window");
-            console->print(screenful);
+            console->print(lines);
             longestPrint = std::max(longestPrint, sinceStrip.elapsed());
             QTest::qWait(5ms);
         }
@@ -480,7 +473,159 @@ private slots:
         QVERIFY2(firesToHandOver == 1, qPrintable(qsl("a frame armed at the flood pace was pushed back %1 more times by strip paints").arg(firesToHandOver - 1)));
     }
 
+    // A read landing between the pacer's update() and the paint arms the pacer on the old frame's
+    // clock, and the paint leaves it running for the scrollbar.
+    void test_aPacerArmedBeforeAPaintDoesNotHurryTheNextFrame()
+    {
+        TTextEdit* pane = nullptr;
+        QPointer<TMainConsole> console;
+        openPane(console, pane);
+        QVERIFY(pane);
+
+        mpWatchedPane = pane;
+        pane->installEventFilter(this);
+        QVERIFY(pacerWentIdle(pane));
+        pane->repaint();
+        QVERIFY(pane->mScreenHeight > 0);
+        const QString lines = screenful(pane);
+
+        pane->mSincePaint.restart();
+        console->print(lines);
+        const qint64 printMs = pane->mSincePaint.elapsed();
+        if (printMs >= TTextEdit::csmFloodPaintPaceMs - TTextEdit::csmPaintPaceMs) {
+            QSKIP(qPrintable(qsl("the print itself took %1ms, so the frame window was gone before the pacer could be left running - the runner stalled").arg(printMs)));
+        }
+        QVERIFY2(pane->mpPaintPacer->isActive(), "a screen of lines did not hold a frame back");
+        while (pane->mSincePaint.elapsed() < TTextEdit::csmPaintPaceMs) {
+        }
+        checkTheFrameAfterAPaintKeepsItsPace(console, pane, lines);
+    }
+
+    // A burst that has already asked for the whole pane leaves a zero timer for the scrollbar.
+    void test_aScrollBarTimerArmedBeforeAPaintDoesNotHurryTheNextFrame()
+    {
+        TTextEdit* pane = nullptr;
+        QPointer<TMainConsole> console;
+        openPane(console, pane);
+        QVERIFY(pane);
+
+        mpWatchedPane = pane;
+        pane->installEventFilter(this);
+        QVERIFY(pacerWentIdle(pane));
+        pane->repaint();
+        QVERIFY(pane->mScreenHeight > 0);
+
+        pane->mSincePaint.invalidate();
+        console->print(qsl("asks for the whole pane\n"));
+        QVERIFY2(!pane->mpPaintPacer->isActive(), "the first line of the burst armed the pacer rather than asking for the whole pane");
+        console->print(qsl("leaves the scrollbar owing\n"));
+        QVERIFY2(pane->mpPaintPacer->isActive(), "the scrollbar's update was left with no timer to run it");
+        checkTheFrameAfterAPaintKeepsItsPace(console, pane, screenful(pane));
+    }
+
+    // A timer moves once a frame, and a frame asked for straight away starts the next one.
+    void test_aFrameAskedForLetsATimerLeftRunningMoveAgain()
+    {
+        TTextEdit* pane = nullptr;
+        QPointer<TMainConsole> console;
+        openPane(console, pane);
+        QVERIFY(pane);
+
+        mpWatchedPane = pane;
+        pane->installEventFilter(this);
+        QVERIFY(pacerWentIdle(pane));
+        pane->repaint();
+        QVERIFY(pane->mScreenHeight > 0);
+        const QString lines = screenful(pane);
+
+        pane->mSincePaint.restart();
+        console->print(lines);
+        pane->repaint();
+        pane->mSincePaint.restart();
+        console->print(lines);
+        while (pane->mSincePaint.elapsed() < TTextEdit::csmPaintPaceMs) {
+        }
+
+        pane->mSincePaint.invalidate();
+        console->print(lines);
+        QVERIFY2(pane->mWholePaneRequested && pane->mpPaintPacer->isActive(), "the frame was not asked for straight away with the old timer still running");
+        console->print(qsl("leaves the scrollbar owing\n"));
+        checkTheFrameAfterAPaintKeepsItsPace(console, pane, lines);
+    }
+
+    // As under an animated label covering the pane: those paints keep the text current, so nothing
+    // else asks for a frame, but the scrollbar still has to move during the flood.
+    void test_panePaintsFasterThanThePaceStillLetTheScrollBarMove()
+    {
+        TTextEdit* pane = nullptr;
+        QPointer<TMainConsole> console;
+        openPane(console, pane);
+        QVERIFY(pane);
+
+        QVERIFY(pacerWentIdle(pane));
+        pane->repaint();
+        QVERIFY(pane->mScreenHeight > 0);
+        const QString lines = screenful(pane);
+
+        QScrollBar* scrollBar = console->mpScrollBar;
+        const int maximumBefore = scrollBar->maximum();
+        QElapsedTimer flood;
+        flood.start();
+        while (scrollBar->maximum() == maximumBefore && flood.elapsed() < 500) {
+            pane->repaint();
+            console->print(lines);
+            QTest::qWait(5ms);
+        }
+        QVERIFY2(scrollBar->maximum() != maximumBefore, "the scrollbar stood still through 500ms of output with paints covering the pane every few ms");
+    }
+
 private:
+    // The pacer is running from before the paint this makes, and the lines printed after it have
+    // to wait out the flood pace from that paint however soon the old timer was due.
+    void checkTheFrameAfterAPaintKeepsItsPace(TMainConsole* console, TTextEdit* pane, const QString& lines)
+    {
+        pane->repaint();
+        QVERIFY2(pane->mpPaintPacer->isActive() && pane->mScrollBarUpdatePending, "the pacer did not outlive the paint for the scrollbar, so no old timer is left to test");
+
+        // A full-pane paint can use up the window by itself on a loaded runner
+        pane->mSincePaint.restart();
+        console->print(lines);
+        // In this order, as a stall between the two reads then only makes the frame look later
+        const qint64 remaining = pane->mpPaintPacer->remainingTime();
+        const qint64 sincePaint = pane->mSincePaint.elapsed();
+        const qint64 dueAfterPaint = sincePaint + remaining;
+        if (sincePaint >= TTextEdit::csmFloodPaintPaceMs - TTextEdit::csmPaintPaceMs) {
+            QSKIP(qPrintable(qsl("the print itself took %1ms, so an old timer and a new one could not be told apart - the runner stalled").arg(sincePaint)));
+        }
+        // The old timer is due at most csmFloodPaintPaceMs - csmPaintPaceMs after the paint; 2ms allows for rounding
+        QVERIFY2(dueAfterPaint >= TTextEdit::csmFloodPaintPaceMs - 2,
+                 qPrintable(qsl("the frame after a paint is due %1ms after it, so a timer armed before the paint is hurrying it past the %2ms flood pace")
+                                    .arg(dueAfterPaint)
+                                    .arg(TTextEdit::csmFloodPaintPaceMs)));
+
+        // The later deadline must not lose the frame or the scrollbar's update
+        mPaintCount = 0;
+        const int lastLine = console->buffer.getLastLineNumber();
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return mPaintCount > 0 && pane->mPendingPaintRegion.isEmpty() && console->mpScrollBar->maximum() == lastLine + 1;
+                         },
+                         2s),
+                 qPrintable(qsl("after the frame was held back the pane painted %1 times and the scrollbar's maximum stands at %2, not %3")
+                                    .arg(mPaintCount)
+                                    .arg(console->mpScrollBar->maximum())
+                                    .arg(lastLine + 1)));
+    }
+
+    static QString screenful(const TTextEdit* pane)
+    {
+        QString lines;
+        for (int i = 0; i <= pane->mScreenHeight; ++i) {
+            lines += qsl("flood line %1\n").arg(i);
+        }
+        return lines;
+    }
+
     void startProfile(const QString& hostname, const QString& address, const QString& port)
     {
         auto host = TestProfile::create(hostname, address, port);

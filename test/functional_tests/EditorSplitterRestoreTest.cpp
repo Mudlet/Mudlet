@@ -227,8 +227,8 @@ private slots:
         QVERIFY2(mSession.openProfile(mProfileName), qPrintable(mSession.why()));
         mpHost = mSession.host();
 
-        mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
-        QVERIFY2(mpEditor != nullptr, "Loading the profile did not build an editor");
+        mpEditor = HostDialogs::editor(mpHost);
+        QVERIFY2(mpEditor != nullptr, "the profile has no editor to build");
         QVERIFY2(!mpEditor->isVisible(), "the editor was already on screen, so the first-show case has nothing left to prove");
 
         mpTallTrigger = registeredTrigger(qsl("Eleven patterns"), scmTallTriggerPatterns, mpHost);
@@ -506,7 +506,7 @@ private slots:
             MudletApp::getQSettings()->setValue(key, mSeededState);
         }
         MudletApp::getQSettings()->sync();
-        auto* pReopened = new dlgTriggerEditor(mpHost);
+        auto* pReopened = new dlgTriggerEditor(mpHost, nullptr);
         pReopened->fillout_form();
         pReopened->resize(scmWindowWidth, scmWindowHeight);
         QTreeWidgetItem* pBase = pReopened->mpTriggerBaseItem;

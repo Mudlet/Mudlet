@@ -20,9 +20,12 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QApplication>
+#include <QColorDialog>
 #include <QDir>
 #include <QLineEdit>
 #include <QListWidget>
+#include <QPointer>
 #include <QScrollArea>
 #include <QSignalSpy>
 #include <QStackedWidget>
@@ -126,6 +129,25 @@ inline bool search(QWidget* pDialog, const QString& query)
     pField->setFocus();
     pField->setText(query);
     return waitForSearch(pDialog);
+}
+
+// QColorDialog::getColor() blocks in its own event loop, so the answer comes
+// from a timer armed before the click; the caller deletes one whose dialog never came
+inline QPointer<QTimer> pickInTheNextColorDialog(QObject* pOwner, const QColor& color)
+{
+    auto* pTimer = new QTimer(pOwner);
+    QObject::connect(pTimer, &QTimer::timeout, pOwner, [pTimer, color]() {
+        auto* pDialog = qobject_cast<QColorDialog*>(QApplication::activeModalWidget());
+        if (!pDialog) {
+            return;
+        }
+        pTimer->stop();
+        pTimer->deleteLater();
+        pDialog->setCurrentColor(color);
+        pDialog->accept();
+    });
+    pTimer->start(20);
+    return pTimer;
 }
 
 // Brackets every string it is asked for, so that a case can tell what the

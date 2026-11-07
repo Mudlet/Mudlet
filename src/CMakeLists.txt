@@ -68,6 +68,7 @@ set(mudlet_SRCS
     KeyUnit.cpp
     LuaInterface.cpp
     LuaLiteral.cpp
+    MailtoUri.cpp
     mapInfoContributorManager.cpp
     MapDecals.cpp
     MapStyle.cpp
@@ -393,6 +394,7 @@ set(mudlet_HDRS
     KeyUnit.h
     LuaInterface.h
     LuaLiteral.h
+    MailtoUri.h
     MacMicrophonePermission.h
     mapInfoContributorManager.h
     MapDecals.h
@@ -493,6 +495,7 @@ set(mudlet_HDRS
     TMxpVarTagHandler.h
     TMxpVersionTagHandler.h
     TNullAppFrontend.h
+    TNullAppFrontendNotifier.h
     TNullConsoleFrontend.h
     TNullMapView.h
     TNullMapViews.h
@@ -775,6 +778,8 @@ find_package(ZLIB REQUIRED)
 # fixed it mis-optimising the start of a match in 8-bit mode with PCRE2_CASELESS
 find_package(PCRE2 10.36 REQUIRED)
 find_package(PUGIXML REQUIRED)
+# lua-yajl already needs libyajl at runtime; parseJSON() drives its parser directly
+find_package(YAJL REQUIRED)
 find_package(HUNSPELL REQUIRED)
 find_package(Boost 1.44 CONFIG REQUIRED)
 message(STATUS "Found Boost: ${Boost_DIR} (found version \"${Boost_VERSION}\")")
@@ -1015,6 +1020,7 @@ target_link_libraries(
         LUA51::LUA51
         PCRE2::PCRE2
         PUGIXML::PUGIXML
+        YAJL::YAJL
         ZIP::ZIP
         ZLIB::ZLIB
 # PLACEMARKER: sample benchmarking code
@@ -1123,7 +1129,7 @@ if(USE_GUI)
 
   # main() stays out of the libraries: a test that links them brings its own, and
   # the linker can pull main.cpp's object in for any inline function it defines.
-  add_executable(${EXE_MUDLET_TARGET} main.cpp)
+  add_executable(${EXE_MUDLET_TARGET} main.cpp HardwareDeviceTypes.h)
   target_compile_definitions(${EXE_MUDLET_TARGET} PRIVATE APP_TARGET="${APP_TARGET}")
   set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES OUTPUT_NAME ${EXE_MUDLET_NAME})
   target_link_libraries(${EXE_MUDLET_TARGET} ${LIB_MUDLET_APP_TARGET} mudlet_lsan_hooks)

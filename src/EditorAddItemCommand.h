@@ -40,6 +40,7 @@ public:
     bool mergeWith(const QUndoCommand* other) override;
     // Marks this add finished if the save was of its item; const as QUndoStack only hands out const commands
     void finishAdding(EditorViewType viewType, int itemID) const;
+    bool adding(EditorViewType viewType, int itemID) const { return !mAddFinished && viewType == mViewType && itemID == mItemID; }
 
     // Check if item ID changed during redo (when item was recreated)
     bool didItemIDChange() const { return mOldItemID != -1 && mOldItemID != mItemID; }

@@ -536,7 +536,7 @@ private:
     // same XML export/import as a package, so this covers both.
     QTreeWidget* triggerTreeWidget(Host* host)
     {
-        dlgTriggerEditor* editor = HostDialogs::of(host).mpEditorDialog;
+        dlgTriggerEditor* editor = HostDialogs::editor(host);
         if (!editor) {
             return nullptr;
         }

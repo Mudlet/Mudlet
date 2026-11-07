@@ -96,6 +96,8 @@ private:
     void downloadIcon(const QString& packageName);
     void downloadRepositoryIndex();
     void fillPackageDetails(const QString& name, const QString& title, const QString& author, const QString& version);
+    QListWidgetItem* installedPackageItem(const QString& packageName) const;
+    bool installedPackageMatches(const QString& packageName, const QString& searchText) const;
     bool hasNewerVersion(const QString& installed, const QString& repo) const;
     QString updateVersionText(const QString& installedVersion, const QString& repoVersion) const;
     // Empty when either version is missing, rather than a dangling arrow

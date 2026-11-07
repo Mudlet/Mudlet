@@ -21,9 +21,14 @@
 #include "MudletProxyStyle.h"
 
 #include "ToolBarOverflow.h"
+#include "utils.h"
 
+#include <QApplication>
 #include <QScopedValueRollback>
 #include <QStyleFactory>
+#include <QStyleOption>
+#include <QToolBar>
+#include <QToolButton>
 #include <QWidget>
 
 #if defined(Q_OS_WIN)
@@ -38,8 +43,6 @@
 #include <QDBusServiceWatcher>
 #include <QDBusVariant>
 #include <QDebug>
-
-#include "utils.h"
 #endif
 
 namespace {
@@ -183,6 +186,27 @@ void MudletProxyStyle::drawControl(ControlElement element, const QStyleOption* o
         return;
     }
     QProxyStyle::drawControl(element, option, painter, widget);
+}
+
+// A toolbar's overflow button picks its chevron only when built; setStyle() re-polishes
+// it, and the application palette is current then while the button's own is not yet
+void MudletProxyStyle::polish(QWidget* widget)
+{
+    QProxyStyle::polish(widget);
+    auto* pButton = qobject_cast<QToolButton*>(widget);
+    auto* pToolBar = pButton ? qobject_cast<QToolBar*>(pButton->parentWidget()) : nullptr;
+    if (!pToolBar || pButton->objectName() != qsl("qt_toolbar_ext_button")) {
+        return;
+    }
+    // The design's own overflow button draws its own glyph, which a chevron set here would replace
+    if (pButton->property(uiDesign::scmProp_toolBarOverflowOwned).toBool()) {
+        return;
+    }
+    QStyleOption option;
+    option.initFrom(pButton);
+    option.palette = QApplication::palette(pButton);
+    const auto chevron = pToolBar->orientation() == Qt::Horizontal ? SP_ToolBarHorizontalExtensionButton : SP_ToolBarVerticalExtensionButton;
+    pButton->setIcon(pButton->style()->standardIcon(chevron, &option, pButton));
 }
 
 QIcon MudletProxyStyle::standardIcon(StandardPixmap standardIcon, const QStyleOption* option, const QWidget* widget) const

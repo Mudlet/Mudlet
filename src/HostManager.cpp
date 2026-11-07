@@ -185,6 +185,8 @@ void HostManager::deleteHost(const QString& hostname)
     // The handlers may have deleted this profile, closing it, and opened another under its name
     if (mHostPool.value(hostname) == pHost) {
         TAppFrontend::instance()->profileClosing(pHost.get());
+        // Something may hold the Host past this, and a profile opened again under its name loads the newest map file
+        pHost->waitForMapAutosave();
         // The Host is destroyed as pHost goes out of scope, once it is out of the pool
         mHostPool.remove(hostname);
     }
@@ -352,8 +354,10 @@ bool HostManager::requestProfileClose(const QString& name)
     if (!pHost) {
         return false;
     }
-    // As the GUI's: a save wait ends on its own, so the close is asked again once it has
-    if (pHost->waitingForProfileSave()) {
+    // As the GUI's: a save wait ends on its own, so the close is asked again once it has. So does a load that has
+    // loaded the map, as from a sysLoadEvent handler: saveProfile() refuses the profile until the load ends. One
+    // from before then, as at the top level of its own script, closes at once and unsaved, as in the GUI.
+    if (pHost->waitingForProfileSave() || (pHost->mIsProfileLoadingSequence && pHost->mLoadedMap)) {
         QTimer::singleShot(50ms, pHost.data(), [this, alive = std::weak_ptr<bool>(mAlive), name, pClosingHost = pHost.data()]() {
             if (!alive.expired() && getHost(name) == pClosingHost) {
                 requestProfileClose(name);

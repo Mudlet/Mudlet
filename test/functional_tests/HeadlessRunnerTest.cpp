@@ -1674,6 +1674,8 @@ closeMudlet())lua"),
         QCOMPARE(child.exitStatus(), QProcess::NormalExit);
         QVERIFY2(child.exitCode() == 1, qPrintable(qsl("exit code %1, stderr: %2").arg(child.exitCode()).arg(standardError)));
         QVERIFY2(standardError.contains(qsl("The profile \"%1\" could not be saved.").arg(name)), qPrintable(standardError));
+        // Which part of the save failed
+        QVERIFY2(standardError.contains(qsl("the profile \"%1\" or its modules could not be written").arg(name)), qPrintable(standardError));
         // What Qt logs, and the runner's own messages, start a line of their own
         QVERIFY2(standardError.contains(qsl("half a line\n")), qPrintable(standardError));
         QCOMPARE(readFile(recordPath), qsl("sysExitEvent\n"));
@@ -1702,6 +1704,7 @@ closeMudlet())lua"),
         QCOMPARE(child.exitStatus(), QProcess::NormalExit);
         QVERIFY2(child.exitCode() == 1, qPrintable(qsl("exit code %1, stderr: %2").arg(child.exitCode()).arg(standardError)));
         QVERIFY2(standardError.contains(qsl("The profile \"%1\" could not be saved.").arg(name)), qPrintable(standardError));
+        QVERIFY2(standardError.contains(qsl("the map of \"%1\" could not be written").arg(name)), qPrintable(standardError));
         QCOMPARE(readFile(recordPath), qsl("sysExitEvent\n"));
         QCOMPARE(saveCount(name), 2);
     }

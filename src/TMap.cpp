@@ -24,6 +24,7 @@
 #include "TMap.h"
 
 #include "Host.h"
+#include "HostManager.h"
 #include "MudletApp.h"
 #include "RoomAppearance.h"
 #include "TAppFrontend.h"
@@ -661,6 +662,9 @@ bool TMap::setExit(int from, int to, int dir)
     if (to < 1) {
         to = -1;
     }
+    if (to > 0 && pR->getExit(dir) == to && !pR->hasExitStub(dir)) {
+        return mpRoomDB->getArea(pR->getArea()) != nullptr;
+    }
 
     bool ret = true;
 
@@ -886,16 +890,15 @@ bool TMap::gotoRoom(int r1, int r2)
     return findPath(r1, r2);
 }
 
-void TMap::addDirectionalRoute(std::vector<std::pair<unsigned int, route>>& bestRoutes,
+void TMap::addDirectionalRoute(std::vector<std::pair<int, route>>& bestRoutes,
                                const QMap<QString, int>& exitWeights,
+                               bool recheckTargetLocks,
                                unsigned int source,
                                TRoom* pSourceR,
                                int target,
                                quint8 direction,
-                               const QString& exitKey,
-                               const QSet<unsigned int>& unUsableRoomSet)
+                               const QString& exitKey)
 {
-    // Skip self-edges and any exits that lead to rooms already known to be unusable.
     if (target <= 0 || static_cast<int>(source) == target) {
         return;
     }
@@ -914,12 +917,13 @@ void TMap::addDirectionalRoute(std::vector<std::pair<unsigned int, route>>& best
         return;
     }
 
-    TRoom* pTargetR = mpRoomDB->getRoom(target);
-    if (!pTargetR) {
+    // initGraph() only indexed the rooms that exist and were not locked, so one lookup rules out the rest.
+    const int targetIndex = roomidToIndex.value(target, -1);
+    if (targetIndex < 0) {
         return;
     }
-
-    if (pTargetR->isLocked || unUsableRoomSet.contains(target)) {
+    TRoom* pTargetR = locations[targetIndex].pR;
+    if (recheckTargetLocks && pTargetR->isLocked) {
         return;
     }
 
@@ -940,15 +944,15 @@ void TMap::addDirectionalRoute(std::vector<std::pair<unsigned int, route>>& best
     }
     r.cost = cost;
 
-    for (auto& [bestTarget, bestRoute] : bestRoutes) {
-        if (bestTarget == static_cast<unsigned int>(target)) {
+    for (auto& [bestTargetIndex, bestRoute] : bestRoutes) {
+        if (bestTargetIndex == targetIndex) {
             if (bestRoute.cost > r.cost) {
                 bestRoute = r;
             }
             return;
         }
     }
-    bestRoutes.emplace_back(target, r);
+    bestRoutes.emplace_back(targetIndex, r);
 }
 
 void TMap::initGraph()
@@ -957,28 +961,39 @@ void TMap::initGraph()
     _time.start();
     const ScriptCallbackScope callbackScope(this);
     mGraphBuildInProgress = true;
+    // Before the build, as the exit weight filter can edit rooms the build has already read
+    mMapGraphNeedsUpdate = false;
     locations.clear();
     locations.reserve(mpRoomDB->getRoomMap().size());
     roomidToIndex.clear();
     roomidToIndex.reserve(mpRoomDB->getRoomMap().size());
     unsigned int roomCount = 0;
     unsigned int edgeCount = 0;
-    QSet<unsigned int> unUsableRoomSet;
-    // Keep track of the unusable rather than the usable ones because that is
-    // hopefully a MUCH smaller set in normal situations!
+    int unusableRoomCount = 0;
+    qsizetype exitCount = 0;
     QHashIterator<int, TRoom*> itRoom = mpRoomDB->getRoomMap();
     while (itRoom.hasNext()) {
         itRoom.next();
         TRoom* pR = itRoom.value();
-        if (itRoom.key() < 1 || !pR) {
-            unUsableRoomSet.insert(itRoom.key());
+        if (itRoom.key() < 1 || !pR || pR->isLocked) {
+            ++unusableRoomCount;
             continue;
         }
-
-        if (pR->isLocked) {
-            unUsableRoomSet.insert(itRoom.key());
-            continue;
+        for (const int target : {pR->getNorth(),
+                                 pR->getNortheast(),
+                                 pR->getEast(),
+                                 pR->getSoutheast(),
+                                 pR->getSouth(),
+                                 pR->getSouthwest(),
+                                 pR->getWest(),
+                                 pR->getNorthwest(),
+                                 pR->getUp(),
+                                 pR->getDown(),
+                                 pR->getIn(),
+                                 pR->getOut()}) {
+            exitCount += target > 0;
         }
+        exitCount += pR->getSpecialExits().size();
 
         location l;
         l.pR = pR;
@@ -1011,67 +1026,72 @@ void TMap::initGraph()
     // would make the next search write out of bounds.
     resetSearchState(roomCount);
 
-    // Sized up front, as each growth rehashes every edge so far. Not cleared: overwriting the last build's
-    // entries costs less than freeing and reallocating them, and edges that are gone are never looked up.
-    edgeHash.reserve(static_cast<qsizetype>(roomCount) * 4);
+    // Sized from the exits, which bound the edges, as each growth rehashes every edge so far. Not cleared:
+    // overwriting the last build's entries costs less than freeing and reallocating them, and edges that
+    // are gone are never looked up.
+    edgeHash.reserve(exitCount);
 
     // Now identify the routes between rooms, and pick out the best edges of parallel ones.
     // A room has a handful of exits, so a reused list beats a hash table built per room.
-    std::vector<std::pair<unsigned int, route>> bestRoutes;
+    std::vector<std::pair<int, route>> bestRoutes;
+    TLuaInterpreter* interpreter = mpHost ? mpHost->getLuaInterpreter() : nullptr;
+    // The filter is the only script that runs mid-build, and it can lock rooms after they were indexed,
+    // then clear itself.
+    const bool recheckTargetLocks = interpreter && interpreter->hasExitWeightFilter();
     cost mostChebyshevPerCost = 0;
     cost mostEuclideanPerCost = 0;
     bool freeDistance = false;
-    for (const location& l : locations) {
+    for (std::size_t sourceIndex = 0; sourceIndex < locations.size(); ++sourceIndex) {
+        const location& l = locations[sourceIndex];
         unsigned const int source = l.id;
         TRoom* pSourceR = l.pR;
         bestRoutes.clear();
         QMap<QString, int> const exitWeights = pSourceR->getExitWeights();
 
-        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getNorth(), DIR_NORTH, qsl("n"), unUsableRoomSet);
-        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getEast(), DIR_EAST, qsl("e"), unUsableRoomSet);
-        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getSouth(), DIR_SOUTH, qsl("s"), unUsableRoomSet);
-        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getWest(), DIR_WEST, qsl("w"), unUsableRoomSet);
-        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getUp(), DIR_UP, qsl("up"), unUsableRoomSet);
-        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getDown(), DIR_DOWN, qsl("down"), unUsableRoomSet);
-        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getNortheast(), DIR_NORTHEAST, qsl("ne"), unUsableRoomSet);
-        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getSoutheast(), DIR_SOUTHEAST, qsl("se"), unUsableRoomSet);
-        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getSouthwest(), DIR_SOUTHWEST, qsl("sw"), unUsableRoomSet);
-        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getNorthwest(), DIR_NORTHWEST, qsl("nw"), unUsableRoomSet);
-        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getIn(), DIR_IN, qsl("in"), unUsableRoomSet);
-        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getOut(), DIR_OUT, qsl("out"), unUsableRoomSet);
+        addDirectionalRoute(bestRoutes, exitWeights, recheckTargetLocks, source, pSourceR, pSourceR->getNorth(), DIR_NORTH, qsl("n"));
+        addDirectionalRoute(bestRoutes, exitWeights, recheckTargetLocks, source, pSourceR, pSourceR->getEast(), DIR_EAST, qsl("e"));
+        addDirectionalRoute(bestRoutes, exitWeights, recheckTargetLocks, source, pSourceR, pSourceR->getSouth(), DIR_SOUTH, qsl("s"));
+        addDirectionalRoute(bestRoutes, exitWeights, recheckTargetLocks, source, pSourceR, pSourceR->getWest(), DIR_WEST, qsl("w"));
+        addDirectionalRoute(bestRoutes, exitWeights, recheckTargetLocks, source, pSourceR, pSourceR->getUp(), DIR_UP, qsl("up"));
+        addDirectionalRoute(bestRoutes, exitWeights, recheckTargetLocks, source, pSourceR, pSourceR->getDown(), DIR_DOWN, qsl("down"));
+        addDirectionalRoute(bestRoutes, exitWeights, recheckTargetLocks, source, pSourceR, pSourceR->getNortheast(), DIR_NORTHEAST, qsl("ne"));
+        addDirectionalRoute(bestRoutes, exitWeights, recheckTargetLocks, source, pSourceR, pSourceR->getSoutheast(), DIR_SOUTHEAST, qsl("se"));
+        addDirectionalRoute(bestRoutes, exitWeights, recheckTargetLocks, source, pSourceR, pSourceR->getSouthwest(), DIR_SOUTHWEST, qsl("sw"));
+        addDirectionalRoute(bestRoutes, exitWeights, recheckTargetLocks, source, pSourceR, pSourceR->getNorthwest(), DIR_NORTHWEST, qsl("nw"));
+        addDirectionalRoute(bestRoutes, exitWeights, recheckTargetLocks, source, pSourceR, pSourceR->getIn(), DIR_IN, qsl("in"));
+        addDirectionalRoute(bestRoutes, exitWeights, recheckTargetLocks, source, pSourceR, pSourceR->getOut(), DIR_OUT, qsl("out"));
 
         QMapIterator<QString, int> itSpecialExit(pSourceR->getSpecialExits());
         while (itSpecialExit.hasNext()) {
             itSpecialExit.next();
 
-            addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, itSpecialExit.value(), DIR_OTHER, itSpecialExit.key(), unUsableRoomSet);
+            addDirectionalRoute(bestRoutes, exitWeights, recheckTargetLocks, source, pSourceR, itSpecialExit.value(), DIR_OTHER, itSpecialExit.key());
         } // End of while(itSpecialExit.hasNext())
 
         // Now we have eliminated possible duplicate and useless edges we can create and
         // insert the remainder into the BGL graph:
-        const int sourceIndex = roomidToIndex.value(source);
         // Not part of boost's documented interface, but one allocation per room instead of a regrowth per exit.
         g.out_edge_list(sourceIndex).reserve(bestRoutes.size());
-        for (const auto& [target, bestRoute] : bestRoutes) {
+        for (const auto& [targetIndex, bestRoute] : bestRoutes) {
             edge_descriptor e;
             bool inserted; // This is always going to be false as it gets set if
                            // we had tried to insert a parallel edge into a graph
                            // that does not support them - but we've just been
                            // and disposed of those already!
-            const int targetIndex = roomidToIndex.value(target);
             tie(e, inserted) = add_edge(sourceIndex, targetIndex, bestRoute.cost, g);
-            const coordinateSpan edgeSpan = spanBetween(l, locations[targetIndex]);
+            const location& targetLocation = locations[targetIndex];
+            const coordinateSpan edgeSpan = spanBetween(l, targetLocation);
             if (bestRoute.cost > 0) {
                 mostChebyshevPerCost = std::max(mostChebyshevPerCost, edgeSpan.chebyshev / bestRoute.cost);
                 mostEuclideanPerCost = std::max(mostEuclideanPerCost, edgeSpan.euclidean / bestRoute.cost);
             } else if (edgeSpan.chebyshev > 0) {
                 freeDistance = true;
             }
-            edgeHash.insert(qMakePair(source, target), bestRoute);
+            edgeHash.insert(qMakePair(source, static_cast<unsigned int>(targetLocation.id)), bestRoute);
             // The key is made from the QPair<edgeSourceRoomId, edgeTargetRoomId>...
             edgeCount++;
         }
-    } // End of foreach(location l, locations)
+    }
 
     mHeuristicScale = heuristicScale();
     if (!freeDistance) {
@@ -1084,9 +1104,8 @@ void TMap::initGraph()
     }
 
     mGraphBuildInProgress = false;
-    mMapGraphNeedsUpdate = false;
     ++mPathGraphRevision;
-    qDebug() << "TMap::initGraph() INFO: built graph with:" << locations.size() << "(" << roomCount << ") locations(roomCount), and discarded" << unUsableRoomSet.count()
+    qDebug() << "TMap::initGraph() INFO: built graph with:" << locations.size() << "(" << roomCount << ") locations(roomCount), and discarded" << unusableRoomCount
              << "other NOT usable rooms and found:" << edgeCount << "distinct, usable edges in:" << _time.nsecsElapsed() * 1.0e-6
              << "ms, heuristic scale (Chebyshev, euclidean):" << mHeuristicScale.chebyshev << mHeuristicScale.euclidean;
 }
@@ -1187,6 +1206,12 @@ bool TMap::findPath(int from, int to)
 
     if (mMapGraphNeedsUpdate) {
         initGraph();
+        // Once more if the exit weight filter edited the map mid-build, then no more: a filter that edits
+        // on every build would otherwise rebuild the graph on every search
+        if (mMapGraphNeedsUpdate) {
+            initGraph();
+            mMapGraphNeedsUpdate = false;
+        }
     }
 
     QElapsedTimer t;
@@ -1918,6 +1943,7 @@ bool TMap::restore(QString location)
 {
     const MapOperationScope operationScope(this);
     qDebug().noquote().nospace() << "TMap::restore(\"" << location << "\") INFO: restoring map of Profile: \"" << mProfileName << "\" URL: " << mpHost->getUrl();
+    mpHost->waitForMapAutosave();
 
     if (location.isEmpty()) {
         // The newest file is not always one that loads - it can have been cut
@@ -2321,6 +2347,9 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
         return false;
     }
 
+    if (Host* pProfileHost = HostManager::self() ? HostManager::self()->getHost(profile) : nullptr) {
+        pProfileHost->waitForMapAutosave();
+    }
     QString folder;
     QStringList entries;
     folder = MudletApp::getMudletPath(enums::profileMapsPath, profile);
@@ -3070,11 +3099,34 @@ bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
         createTransferProgress(tr("Map import"), tr("Importing XML map file for use in %1...").arg(mProfileName), false);
     }
 
-    // It is NOW safe to delete the map as we are in a position to load one
+    // The file is only found to be damaged part way through, so import into a
+    // room database of its own and put this one back if that fails
+    std::unique_ptr<TRoomDB> previousRoomDB = std::exchange(mpRoomDB, std::make_unique<TRoomDB>(this));
+    mpRoomDB->continueGenerationOf(*previousRoomDB);
+    const auto previousEnvColors = mEnvColors;
+    const auto previousCustomEnvColors = mCustomEnvColors;
+    const auto previousRoomIdHash = mRoomIdHash;
+    const auto previousUserData = mUserData;
+    const int previousVersion = mVersion;
     mapClear();
 
     XMLimport reader(pHost);
     auto [success, message] = reader.importPackage(&file);
+
+    if (!success) {
+        areasAboutToBeDeleted();
+        previousRoomDB->continueGenerationOf(*mpRoomDB);
+        std::swap(mpRoomDB, previousRoomDB);
+        mEnvColors = previousEnvColors;
+        mCustomEnvColors = previousCustomEnvColors;
+        mRoomIdHash = previousRoomIdHash;
+        mUserData = previousUserData;
+        mVersion = previousVersion;
+        // The route and the routing graph hold ids and pointers into the rooms the import made
+        clearRoutes();
+        emit signal_mapCleared();
+    }
+    previousRoomDB.reset();
 
     // No need to call audit() as XMLimport::importPackage() does it!
     // audit() produces the successful ending [ OK ] message...!
@@ -3164,6 +3216,9 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         cleanup();
         return;
     }
+    if (mpHost) {
+        mpHost->waitForMapAutosave();
+    }
     // Separate the two kinds of files to gain QSaveFile's atomic write behavior
     QSaveFile writeFile(mLocalMapFileName);
     QFile readFile(mLocalMapFileName);
@@ -3174,7 +3229,8 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         return;
     }
     // The QNetworkReply is Ok here:
-    if (writeFile.write(reply->readAll()) == -1) {
+    // A full disk can cut the write short with no error on the file, and commit() would put the part that landed in place
+    if (const QByteArray downloaded = reply->readAll(); writeFile.write(downloaded) != downloaded.size()) {
         const QString alertMsg = tr("[ ALERT ] - Map download failed, unable to write destination file:\n%1.").arg(mLocalMapFileName);
         postMessage(alertMsg);
         cleanup();
@@ -3544,6 +3600,9 @@ void TMap::flushSymbolCaches()
 std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
 {
     const MapOperationScope operationScope(this);
+    if (mpHost) {
+        mpHost->waitForMapAutosave();
+    }
     QString destination{dest};
 
     if (destination.isEmpty()) {
@@ -3603,7 +3662,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
         qWarning().noquote().nospace() << "TMap::writeJsonMapFile(...) WARNING - Could not open save file \"" << destination << "\".";
         emit signal_mapProgressClose();
         mMapProgressStandalone = false;
-        return {false, qsl("could not open save file \"%1\", reason: %2").arg(destination.toHtmlEscaped(), file.errorString())};
+        return {false, qsl("could not open save file \"%1\", reason: %2").arg(destination, file.errorString())};
     }
 
     QJsonObject mapObj;
@@ -3728,15 +3787,24 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     emit signal_mapProgressSetValue(0);
     // Hide the cancel button as we can't stop now:
     emit signal_mapProgressDisableCancel();
-    file.write(QJsonDocument(mapObj).toJson(QJsonDocument::Indented));
-    if (!file.commit()) {
-        qDebug() << "TMap::writeJsonMapFile: error saving JSON map: " << file.errorString();
+    const QByteArray json = QJsonDocument(mapObj).toJson(QJsonDocument::Indented);
+    QString failure;
+    // A full disk can cut the write short with no error on the file, and commit() would put the part that landed in place
+    if (const qint64 written = file.write(json); written != json.size()) {
+        failure = (written < 0 || file.error() != QFileDevice::NoError) ? file.errorString() : qsl("only %1 of %2 bytes could be written, is the disk full?").arg(written).arg(json.size());
+        file.cancelWriting();
+    } else if (!file.commit()) {
+        failure = file.errorString();
     }
 
     emit signal_mapProgressClose();
     mMapProgressStandalone = false;
 
-    return {file.error() == QFileDevice::NoError, ((file.error() == QFileDevice::NoError) ? QString() : qsl("could not export file, reason: %1").arg(file.errorString()))};
+    if (!failure.isEmpty()) {
+        qDebug().noquote() << "TMap::writeJsonMapFile: error saving JSON map to" << destination << ":" << failure;
+        return {false, qsl("could not export file, reason: %1").arg(failure)};
+    }
+    return {true, QString()};
 }
 
 // readJsonMapFile() is also how restore() loads a JSON file, whose caller files

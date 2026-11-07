@@ -22,6 +22,7 @@
 
 #include <QMimeData>
 #include <QPlainTextEdit>
+#include <QStringList>
 
 class SingleLineTextEdit : public QPlainTextEdit
 {
@@ -37,6 +38,9 @@ public:
     void setTheme(const QString&);
     void setFieldColors(const QColor& background, const QColor& text);
     void rehighlight();
+
+signals:
+    void signal_pastedExtraLines(const QStringList& lines);
 
 protected:
     QMimeData* createMimeDataFromSelection() const override;

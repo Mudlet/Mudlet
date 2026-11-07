@@ -79,6 +79,13 @@ void TTreeWidget::getAllChildren(QTreeWidgetItem* pItem, QList<QTreeWidgetItem*>
     }
 }
 
+void TTreeWidget::reportCurrentRow()
+{
+    if (currentIndex().isValid()) {
+        QTreeWidget::currentChanged(currentIndex(), QModelIndex());
+    }
+}
+
 QStyleOptionViewItem TTreeWidget::viewItemOption() const
 {
     QStyleOptionViewItem option;

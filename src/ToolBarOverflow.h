@@ -35,6 +35,8 @@ struct ThemeTokens;
 
 // The bar's answer to QStyle::PM_ToolBarExtensionExtent, which MudletProxyStyle returns
 inline constexpr char scmProp_toolBarOverflowExtent[] = "uiToolBarOverflowExtent";
+// On Qt's own overflow button once this class draws its glyph, so a style polish leaves the glyph alone
+inline constexpr char scmProp_toolBarOverflowOwned[] = "uiToolBarOverflowOwned";
 
 // Makes Qt's overflow button a button of the bar: a chevron and "3 more", where Qt leaves an unlabelled sliver
 class ToolBarOverflow : public QObject

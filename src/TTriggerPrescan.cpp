@@ -23,18 +23,40 @@
 #include <bit>
 #include <limits>
 
-// Length in the high half, so the same characters at two lengths are different grams and 0 stays
-// free for "no gram" (a real one's length is at least scmMinGramLength).
+static_assert(TTriggerPrescan::scmMinGramLength >= 2, "a gram's prefix is its first two characters");
+static_assert(TTriggerPrescan::scmMaxGramLength <= 0xFF, "a gram's length has 8 bits");
+
+static inline quint64 gramStep(const quint64 v, const QChar c)
+{
+    return v * 0x100000001b3ULL + c.unicode();
+}
+
+// Both bytes of each code unit go in, so text outside Latin-1 still spreads over mPrefixBits
+static inline quint32 prefixKey(const QChar first, const QChar second)
+{
+    const char16_t a = first.unicode();
+    const char16_t b = second.unicode();
+    return (static_cast<quint32>((a ^ (a >> 8)) & 0xFF) << 8) | ((b ^ (b >> 8)) & 0xFF);
+}
+
+// The prefix above the length above the hash: the same characters at two lengths are different
+// grams, 0 stays free for "no gram" (a real one's length is at least scmMinGramLength), and a filed
+// gram's prefix can be set in mPrefixBits without its characters.
+static inline quint64 gramFinish(quint64 v, const int length, const quint32 prefix)
+{
+    v ^= v >> 29;
+    v *= 0xff51afd7ed558ccdULL;
+    v ^= v >> 32;
+    return (static_cast<quint64>(prefix) << 40) | (static_cast<quint64>(length) << 32) | static_cast<quint32>(v);
+}
+
 static inline quint64 gramHash(const QChar* p, const int length)
 {
     quint64 v = 0;
     for (int i = 0; i < length; ++i) {
-        v = v * 0x100000001b3ULL + p[i].unicode();
+        v = gramStep(v, p[i]);
     }
-    v ^= v >> 29;
-    v *= 0xff51afd7ed558ccdULL;
-    v ^= v >> 32;
-    return (static_cast<quint64>(length) << 32) | static_cast<quint32>(v);
+    return gramFinish(v, length, prefixKey(p[0], p[1]));
 }
 
 // English letter frequencies, space commonest. Need not be accurate, only make different patterns
@@ -55,7 +77,7 @@ static inline double characterScore(const QChar c)
 
 quint32 TTriggerPrescan::gramBit(const quint64 gram)
 {
-    // Fold the length in too, or a short and a long gram that hashed alike would share a bit.
+    // Fold the prefix and length in too, or grams whose low halves hashed alike would share a bit.
     const quint32 folded = static_cast<quint32>(gram ^ (gram >> 32));
     return (folded ^ (folded >> 16)) & scmGramBitsMask;
 }
@@ -139,6 +161,7 @@ void TTriggerPrescan::fileGrams(const int slot, const std::vector<quint64>& gram
 {
     if (mGramBits.empty()) {
         mGramBits.assign((1u << scmGramBitsLog) / 64, 0);
+        mPrefixBits.assign(scmPrefixCount / 64, 0);
     }
     GramRange& range = mSlotGrams[slot];
     range.mOffset = static_cast<int>(mGramPool.size());
@@ -149,9 +172,16 @@ void TTriggerPrescan::fileGrams(const int slot, const std::vector<quint64>& gram
         ++mLengthUse[gramLength(gram)];
         std::vector<int>& bucket = mIndex[gram];
         bucket.insert(std::upper_bound(bucket.begin(), bucket.end(), slot), slot);
-        const quint32 bit = gramBit(gram);
-        mGramBits[bit >> 6] |= (1ULL << (bit & 63));
+        setBits(gram);
     }
+}
+
+void TTriggerPrescan::setBits(const quint64 gram)
+{
+    const quint32 bit = gramBit(gram);
+    mGramBits[bit >> 6] |= (1ULL << (bit & 63));
+    const quint32 prefix = gramPrefix(gram);
+    mPrefixBits[prefix >> 6] |= (1ULL << (prefix & 63));
 }
 
 void TTriggerPrescan::unfileGrams(const int slot)
@@ -188,6 +218,7 @@ void TTriggerPrescan::reindex()
         entry.second.clear();
     }
     mGramBits.assign((1u << scmGramBitsLog) / 64, 0);
+    mPrefixBits.assign(scmPrefixCount / 64, 0);
     mLengthUse.fill(0);
     std::vector<quint64> pool;
     pool.reserve(mFiledGrams);
@@ -200,8 +231,7 @@ void TTriggerPrescan::reindex()
             pool.push_back(gram);
             ++mLengthUse[gramLength(gram)];
             mIndex[gram].push_back(slot);
-            const quint32 bit = gramBit(gram);
-            mGramBits[bit >> 6] |= (1ULL << (bit & 63));
+            setBits(gram);
         }
         range.mOffset = offset;
     }
@@ -223,14 +253,27 @@ void TTriggerPrescan::hits(const QString& line, std::vector<int>& out) const
         mGeneration = 1;
     }
 
+    int longest = scmMaxGramLength;
+    while (longest > scmMinGramLength && !mLengthUse[longest]) {
+        --longest;
+    }
     const QChar* const data = line.constData();
-    for (int length = scmMinGramLength; length <= scmMaxGramLength; ++length) {
-        if (!mLengthUse[length]) {
+    const int size = static_cast<int>(line.size());
+    // Positions in the outer loop, so one rolling hash serves every length and a position no filed
+    // gram starts at usually costs one bit test
+    for (int i = 0; i + scmMinGramLength <= size; ++i) {
+        const quint32 prefix = prefixKey(data[i], data[i + 1]);
+        if (!(mPrefixBits[prefix >> 6] & (1ULL << (prefix & 63)))) {
             continue;
         }
-        const int last = line.size() - length;
-        for (int i = 0; i <= last; ++i) {
-            const quint64 gram = gramHash(data + i, length);
+        const int top = std::min(longest, size - i);
+        quint64 v = gramStep(0, data[i]);
+        for (int length = scmMinGramLength; length <= top; ++length) {
+            v = gramStep(v, data[i + length - 1]);
+            if (!mLengthUse[length]) {
+                continue;
+            }
+            const quint64 gram = gramFinish(v, length, prefix);
             const quint32 bit = gramBit(gram);
             if (!(mGramBits[bit >> 6] & (1ULL << (bit & 63)))) {
                 continue;

@@ -198,13 +198,26 @@ MCPReply TMCPServer::handleMessage(const QByteArray& requestBody, const QHttpHea
 
     QJsonParseError parseError;
     const QJsonDocument document = QJsonDocument::fromJson(requestBody, &parseError);
-    if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
+    if (parseError.error != QJsonParseError::NoError) {
         //: Sent to an MCP client whose request was not valid JSON. %1 is the parser's reason.
         return error(QJsonValue(), ParseError, tr("JSON parse error: %1").arg(parseError.errorString()), QJsonValue(), QHttpServerResponse::StatusCode::BadRequest);
+    }
+    // MCP retired JSON-RPC batching, so an array is valid JSON that is not a request -
+    // and as a parse error its message would read "no error occurred".
+    if (!document.isObject()) {
+        //: Sent to an MCP client that sent valid JSON which is not a single request, such as a batch of them.
+        return error(QJsonValue(), InvalidRequest, tr("Expected a single JSON-RPC request object; batches are not supported."), QJsonValue(), QHttpServerResponse::StatusCode::BadRequest);
     }
 
     const QJsonObject message = document.object();
     const QJsonValue id = message.value(qsl("id"));
+
+    // MCP allows only a string or a number. Anything else is not echoed back, since no
+    // client could have been waiting on it. An absent or null id is a notification.
+    if (!id.isUndefined() && !id.isNull() && !id.isString() && !id.isDouble()) {
+        //: Sent to an MCP client whose request carried an "id" of the wrong kind. Keep 'id' as-is, it names a protocol field.
+        return error(QJsonValue(), InvalidRequest, tr("The request 'id' must be a string or a number."), QJsonValue(), QHttpServerResponse::StatusCode::BadRequest);
+    }
 
     if (message.value(qsl("jsonrpc")).toString() != qsl("2.0")) {
         //: Sent to an MCP client whose request was not a JSON-RPC 2.0 message.
@@ -219,7 +232,15 @@ MCPReply TMCPServer::handleMessage(const QByteArray& requestBody, const QHttpHea
         return {QJsonObject(), QHttpServerResponse::StatusCode::Accepted};
     }
 
-    const QString method = message.value(qsl("method")).toString();
+    // toString() would read a missing method as "", which then fails later checks with a
+    // complaint about _meta or a mirror header rather than the method actually missing.
+    const QJsonValue methodValue = message.value(qsl("method"));
+    if (!methodValue.isString()) {
+        //: Sent to an MCP client whose request had no method name. Keep 'method' as-is, it names a protocol field.
+        return error(id, InvalidRequest, tr("The request 'method' must be a string."), QJsonValue(), QHttpServerResponse::StatusCode::BadRequest);
+    }
+
+    const QString method = methodValue.toString();
     const QJsonObject params = message.value(qsl("params")).toObject();
     const QJsonObject meta = params.value(qsl("_meta")).toObject();
 

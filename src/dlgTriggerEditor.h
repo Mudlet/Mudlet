@@ -31,6 +31,7 @@
 
 #include <QPointer>
 #include <QRegularExpression>
+#include <memory>
 #include <unordered_map>
 
 #include "TAction.h"
@@ -108,6 +109,7 @@ class TAction;
 class TKey;
 class TVar;
 class TConsole;
+class TConsoleModel;
 class dlgVarsMainArea;
 class QShortcut;
 
@@ -139,14 +141,18 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
     friend class EditorColumnAlignmentTest;
     friend class EditorColumnFontTest;
     friend class EditorDefaultSizeTest;
+    friend class EditorEmergencyStopTest;
     friend class EditorEventChipRowTest;
     friend class EditorEmptySelectionTest;
+    friend class EditorErrorLineLinkTest;
     friend class EditorFolderViewTest;
     friend class EditorFontTest;
     friend class EditorFormShellTest;
     friend class EditorIconScaleTest;
     friend class EditorKeyCaptureTest;
     friend class EditorKeyGrabShortcutsTest;
+    friend class EditorKeyboardMoveTest;
+    friend class EditorLazyCreationTest;
     friend class EditorMinimumSizeTest;
     friend class EditorModuleFolderTest;
     friend class EditorNoticeGlyphTest;
@@ -236,8 +242,13 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
 
 public:
     Q_DISABLE_COPY(dlgTriggerEditor)
-    dlgTriggerEditor(Host*);
+    // Without an error console model it makes a fresh one
+    dlgTriggerEditor(Host*, std::unique_ptr<TConsoleModel> errorConsoleModel);
     ~dlgTriggerEditor();
+
+    static std::unique_ptr<TConsoleModel> newErrorConsoleModel(Host*);
+    static void ensureLuaAutoCompleteProvider();
+    static QString takenKeyWarning(Host*, const TKey*);
 
     void closeEvent(QCloseEvent* event) override;
     void hideEvent(QHideEvent* event) override;
@@ -341,6 +352,9 @@ public:
     void focusPanelTree(QWidget* pTreeWidget);
     void fillout_form();
     void showError(const QString&);
+    [[nodiscard]] QString linkErrorLineToScript(const QString& error);
+    void jumpToErrorLine(int line);
+    bool currentScriptChunk(int& itemId, QString& chunkName, QString& error);
     void showWarning(const QString&, bool announce = true);
     // The one place the package banner is raised from
     void showPackageWarning(const QString& packageName, QTreeWidgetItem* pItem = nullptr);
@@ -487,6 +501,7 @@ private slots:
     void slot_toggleSearchWholeWord(bool);
     void slot_toggleGroupBoxColorizeTrigger(const bool);
     void slot_changedPattern();
+    void slot_pastedExtraPatternLines(const QStringList& lines);
     void slot_lineSpacerChanged(int value);
     void slot_clearSearchResults();
     void slot_clearSoundFile();
@@ -579,9 +594,15 @@ private:
     void populateAliases();
     void populateActions();
     void populateKeys();
-    void saveOpenChanges();
+    // False when the open item refused its edits, which are then only in the form
+    bool saveOpenChanges();
+    enum class KeyboardMove { Up, Down, OutOfGroup, IntoGroupAbove };
+    void moveCurrentItem(const KeyboardMove move);
+    QList<int> unitChildIDs(const EditorViewType view, const int parentID) const;
+    void reParentInUnit(const EditorViewType view, const int itemID, const int oldParentID, const int newParentID, const int position);
     EditorViewType determineViewFromVisibleTree();
     EditorViewType resolveCurrentView();
+    void clearTypeTrees();
     void rebuildStaleTrees();
     void populateFolderTree();
     void addFolderTreeNode(QTreeWidgetItem* pSource, const EditorViewType view, QTreeWidgetItem* pParent, QTreeWidgetItem* pLooseItems, QHash<QString, int>& folderCounts);
@@ -608,7 +629,7 @@ private:
     static QString folderTreeItemKey(const EditorViewType view, const int id);
     static QString folderTreeTypeName(const EditorViewType view, const bool plural);
     void saveTrigger();
-    void saveAlias();
+    bool saveAlias();
     void computeAliasDescription(TAlias* pT, QString& itemDescription) const;
     void computeTriggerDescription(TTrigger* pT, QString& itemDescription) const;
     void computeTimerDescription(TTimer* pT, QString& itemDescription) const;
@@ -625,6 +646,7 @@ private:
     void showAliasLoopWarning(QTreeWidgetItem* pItem, const QString& name);
     void applyAliasState(QTreeWidgetItem* pItem, TAlias* pT, bool touchNotification = true, bool respectNewState = true);
     bool aliasSubstitutionLoops(const QString& regex, const QString& substitution) const;
+    QString aliasNameForPattern(const TAlias* pT, const QString& typedName, const QString& pattern) const;
     void saveTimer();
     void saveKey();
     void saveScript();
@@ -659,7 +681,6 @@ private:
     void clearVarForm();
 
     void updatePackageItemAccessibility(QTreeWidgetItem* pItem, const QString& currentDescription);
-    QString takenKeyWarning(const TKey* pKey) const;
     void showKeyTakenWarning(QTreeWidgetItem* pItem, const QString& warning, bool announce);
     void rewarnAboutCurrentKey();
 
@@ -696,6 +717,7 @@ private:
 
     void clearDocument(edbee::TextEditorWidget* pEditorWidget, const QString& initialText = QString());
 
+    class SearchResultItem;
     void setAllSearchData(QTreeWidgetItem* pItem,
                           const EditorViewType& type,
                           const QString& name,
@@ -1042,6 +1064,8 @@ private:
     // Reused for every field a whole-word search looks at, as each new QRegularExpression is JIT-compiled anew
     mutable QString mWholeWordSearchNeedle;
     mutable QRegularExpression mWholeWordSearchRegex;
+    // A search's top-level rows, kept out of the tree until it ends: every row added to the tree, and every role set on one there, emits a model signal
+    QList<QTreeWidgetItem*> mPendingSearchResults;
     QSplitter* searchSplitter;
     QWidget* mpWidget_searchResultsPane = nullptr;
     QWidget* mpWidget_itemTreesPane = nullptr;
@@ -1076,6 +1100,7 @@ private:
     QTimer* mpFolderTreeRefreshTimer = nullptr;
     // FolderKeyRole of a folder node, or "view:id" of a real item -> its Folders view node
     QHash<QString, QTreeWidgetItem*> mFolderTreeNodes;
+    QHash<QTreeWidget*, QSet<int>> mExpandedIdsBeforeRefill;
     // FolderKeyRole of the current Folders view node when it is not one item - a merged folder or "Not in a folder" - and no form shows
     QString mFolderGroupKey;
     bool mFolderViewActive = false;
@@ -1159,8 +1184,8 @@ private:
     // profile autosave interval in minutes
     int mAutosaveInterval = 2;
 
-    // Every profile builds an editor on load but all share one saved window position, so one never
-    // opened must not overwrite it. Also what the first show's measurements wait for.
+    // Every profile's editor shares one saved window position, so one built but never shown must not
+    // overwrite it. Also what the first show's measurements wait for.
     bool mHasBeenShown = false;
 
     // Per view, the form height the user dragged the splitter to, kept as items change; a view not named snaps to
@@ -1214,6 +1239,10 @@ private:
     EditorViewType mLastDismissedBannerView = EditorViewType::cmUnknownView;
     QString mLastDismissedBannerContent;
     QString mCurrentBannerKey;
+
+    // The item whose script the error banner's line link points into
+    EditorViewType mErrorLineView = EditorViewType::cmUnknownView;
+    int mErrorLineItemId = -1;
     QString mLastDismissedBannerKey;
     QSet<QString> mTemporarilyHiddenBanners;
 

@@ -1140,8 +1140,8 @@ nullViewItemAfter = tostring(removeCommandLineMenuEvent("main", "nullViewItem"))
         startProfile(mHostname, mLocalhost, mPort);
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        auto* editor = HostDialogs::of(host).mpEditorDialog.data();
-        QVERIFY2(editor, "The profile came up without its editor dialog.");
+        auto* editor = HostDialogs::editor(host);
+        QVERIFY2(editor, "No editor was built for the profile.");
         mudlet::self()->slot_notes();
         auto* notepad = HostDialogs::of(host).mpNotePad.data();
         QVERIFY2(notepad, "The notepad was not opened.");
@@ -1261,8 +1261,8 @@ nullViewItemAfter = tostring(removeCommandLineMenuEvent("main", "nullViewItem"))
         startProfile(mHostname, mLocalhost, mPort);
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        auto* editor = HostDialogs::of(host).mpEditorDialog.data();
-        QVERIFY2(editor, "The profile came up without its editor dialog.");
+        auto* editor = HostDialogs::editor(host);
+        QVERIFY2(editor, "No editor was built for the profile.");
         auto* sourceEditor = editor->findChild<edbee::TextEditorWidget*>(qsl("edbeeEditorWidget"));
         QVERIFY2(sourceEditor, "The editor has no source editor pane.");
         mudlet::self()->slot_notes();
@@ -1293,8 +1293,8 @@ nullViewItemAfter = tostring(removeCommandLineMenuEvent("main", "nullViewItem"))
         startProfile(mHostname, mLocalhost, mPort);
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        auto* editor = HostDialogs::of(host).mpEditorDialog.data();
-        QVERIFY2(editor, "The profile came up without its editor dialog.");
+        auto* editor = HostDialogs::editor(host);
+        QVERIFY2(editor, "No editor was built for the profile.");
 
         const enums::EditorSearchOptions options = enums::EditorSearchOptionCaseSensitive | enums::EditorSearchOptionWholeWord;
         QVERIFY2(editor->mSearchOptions != options, "SETUP: the editor already has these search options, so the assertions below cannot fail.");
@@ -1315,8 +1315,8 @@ nullViewItemAfter = tostring(removeCommandLineMenuEvent("main", "nullViewItem"))
         startProfile(mHostname, mLocalhost, mPort);
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        auto* editor = HostDialogs::of(host).mpEditorDialog.data();
-        QVERIFY2(editor, "The profile came up without its editor dialog.");
+        auto* editor = HostDialogs::editor(host);
+        QVERIFY2(editor, "No editor was built for the profile.");
         auto* sourceEditor = editor->findChild<edbee::TextEditorWidget*>(qsl("edbeeEditorWidget"));
         QVERIFY2(sourceEditor, "The editor has no source editor pane.");
 
@@ -1341,8 +1341,8 @@ nullViewItemAfter = tostring(removeCommandLineMenuEvent("main", "nullViewItem"))
         startProfile(mHostname, mLocalhost, mPort);
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        auto* editor = HostDialogs::of(host).mpEditorDialog.data();
-        QVERIFY2(editor, "The profile came up without its editor dialog.");
+        auto* editor = HostDialogs::editor(host);
+        QVERIFY2(editor, "No editor was built for the profile.");
         // One nobody has opened puts the rebuild off until it is
         editor->show();
         QVERIFY2(editor->mpTriggerBaseItem, "The editor has no trigger tree root.");
@@ -1375,8 +1375,8 @@ nullViewItemAfter = tostring(removeCommandLineMenuEvent("main", "nullViewItem"))
         startProfile(mHostname, mLocalhost, mPort);
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        const QPointer<dlgTriggerEditor> editor(HostDialogs::of(host).mpEditorDialog.data());
-        QVERIFY2(editor, "The profile came up without its editor dialog.");
+        const QPointer<dlgTriggerEditor> editor(HostDialogs::editor(host));
+        QVERIFY2(editor, "No editor was built for the profile.");
         mudlet::self()->slot_notes();
         const QPointer<dlgNotepad> notepad(HostDialogs::of(host).mpNotePad.data());
         QVERIFY2(notepad, "The notepad was not opened.");

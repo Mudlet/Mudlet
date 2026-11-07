@@ -178,7 +178,7 @@ private slots:
             return;
         }
 
-        mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
+        mpEditor = HostDialogs::editor(mpHost);
         QVERIFY2(mpEditor != nullptr, "Editor dialog should be created");
     }
 
@@ -318,17 +318,17 @@ private slots:
         QCOMPARE(mpEditor->size(), leftSize);
     }
 
-    // Every profile builds its own editor when it loads but they all share the
-    // one remembered position, so an editor the user never opened must not
-    // write over the position of one they did. Also the only test that closes
-    // an editor the way quitting Mudlet does, through Host::requestClose()
+    // Every profile's editor shares the one remembered position, so an editor
+    // built but never shown must not write over the position of one the user
+    // did open. Also the only test that closes an editor the way quitting
+    // Mudlet does, through Host::requestClose()
     void testAnUnopenedEditorDoesNotOverwriteThePosition()
     {
         Host* pSecondHost = startProfile(mSecondProfileName);
         if (QTest::currentTestFailed()) {
             return;
         }
-        dlgTriggerEditor* pSecondEditor = HostDialogs::of(pSecondHost).mpEditorDialog;
+        dlgTriggerEditor* pSecondEditor = HostDialogs::editor(pSecondHost);
         QVERIFY2(pSecondEditor != nullptr, "The second profile should have built an editor of its own");
         QVERIFY2(pSecondEditor != mpEditor, "The two profiles should not be sharing one editor");
 
@@ -367,7 +367,7 @@ private slots:
         TDetachedWindow* pDetachedWindow = mudlet::self()->getDetachedWindows().value(mDetachedProfileName);
         QVERIFY2(pDetachedWindow != nullptr, qPrintable(qsl("detaching tab %1 produced no window for '%2'").arg(QString::number(tabIndex), mDetachedProfileName)));
 
-        dlgTriggerEditor* pDetachedEditor = HostDialogs::of(pDetachedHost).mpEditorDialog;
+        dlgTriggerEditor* pDetachedEditor = HostDialogs::editor(pDetachedHost);
         QVERIFY2(pDetachedEditor != nullptr, "The detached profile should have built an editor of its own");
         const QPoint left = offCentrePoint() + QPoint(51, 53);
         placeEditorAtAndClose(pDetachedEditor, left);

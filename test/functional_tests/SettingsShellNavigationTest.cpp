@@ -1370,6 +1370,16 @@ private slots:
         }
     }
 
+    // Unnamed, a combo box is announced by its current item: what is picked, not what is being picked
+    void test_theEditorThemePickersAreNamedForAScreenReader()
+    {
+        for (QComboBox* pPicker : {mpPreferences->code_editor_theme_selection_combobox, mpPreferences->script_preview_combobox}) {
+            QVERIFY2(!pPicker->accessibleName().isEmpty(), qPrintable(qsl("%1 has nothing for a screen reader to announce it as").arg(pPicker->objectName())));
+            QVERIFY2(!pPicker->accessibleDescription().isEmpty(), qPrintable(qsl("%1 has no accessible description").arg(pPicker->objectName())));
+        }
+        QVERIFY(mpPreferences->code_editor_theme_selection_combobox->accessibleName() != mpPreferences->script_preview_combobox->accessibleName());
+    }
+
     // Escape means "up a level", and search results are a level of their own:
     // starting a search stows the subpage it interrupted. reject() knew nothing
     // of the search, so Escape read the cleared subpage as "nothing to go up

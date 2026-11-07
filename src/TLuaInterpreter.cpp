@@ -58,6 +58,7 @@
 #include "utils.h"
 
 #include <hunspell/hunspell.h>
+#include <yajl/yajl_parse.h>
 
 #include <math.h>
 
@@ -82,6 +83,8 @@
 #include <QFileInfo>
 #include <QVector>
 #include <cmath>
+#include <cstdlib>
+#include <cstring>
 #include <limits>
 
 using namespace std::chrono_literals;
@@ -297,6 +300,150 @@ int dofileThroughBytecodeCache(lua_State* L)
     }
     lua_call(L, argumentCount, LUA_MULTRET);
     return lua_gettop(L) - base;
+}
+
+constexpr int scmJsonMaxDepth = 64;
+
+// Repeats yajl.to_value's table operations in its order, unpresized, or pairs() would walk the result
+// differently. What yajl rejects or this gives up on, nesting past scmJsonMaxDepth included, is left to it.
+struct JsonToLua
+{
+    lua_State* L = nullptr;
+    const QByteArray* json = nullptr;
+    yajl_handle handle = nullptr;
+    bool decoded = false;
+    int depth = 0;
+    // 0 for an object, otherwise the index the array's next element takes
+    int nextIndex[scmJsonMaxDepth] = {};
+};
+
+// Lua errors longjmp out of these callbacks, through yajl, so nothing alive
+// across a Lua API call may have a destructor
+int jsonStoreValue(JsonToLua* state)
+{
+    if (state->depth) {
+        int& next = state->nextIndex[state->depth - 1];
+        if (next) {
+            lua_rawseti(state->L, -2, next++);
+        } else {
+            lua_rawset(state->L, -3);
+        }
+    }
+    return 1;
+}
+
+// strtod as yajl.to_value uses, so the values match
+double jsonNumberValue(lua_State* L, const char* text, const size_t length)
+{
+    char buffer[64];
+    char* copy = length < sizeof(buffer) ? buffer : static_cast<char*>(lua_newuserdata(L, length + 1));
+    memcpy(copy, text, length);
+    copy[length] = '\0';
+    const double value = strtod(copy, nullptr);
+    if (copy != buffer) {
+        lua_pop(L, 1);
+    }
+    return value;
+}
+
+int jsonNull(void* ctx)
+{
+    auto* state = static_cast<JsonToLua*>(ctx);
+    lua_getfield(state->L, LUA_REGISTRYINDEX, "yajl.null");
+    return jsonStoreValue(state);
+}
+
+int jsonBoolean(void* ctx, int value)
+{
+    auto* state = static_cast<JsonToLua*>(ctx);
+    lua_pushboolean(state->L, value);
+    return jsonStoreValue(state);
+}
+
+int jsonNumber(void* ctx, const char* text, size_t length)
+{
+    auto* state = static_cast<JsonToLua*>(ctx);
+    lua_pushnumber(state->L, jsonNumberValue(state->L, text, length));
+    return jsonStoreValue(state);
+}
+
+int jsonString(void* ctx, const unsigned char* text, size_t length)
+{
+    auto* state = static_cast<JsonToLua*>(ctx);
+    lua_pushlstring(state->L, reinterpret_cast<const char*>(text), length);
+    return jsonStoreValue(state);
+}
+
+int jsonMapKey(void* ctx, const unsigned char* text, size_t length)
+{
+    lua_pushlstring(static_cast<JsonToLua*>(ctx)->L, reinterpret_cast<const char*>(text), length);
+    return 1;
+}
+
+int jsonStartContainer(JsonToLua* state, const int firstIndex)
+{
+    // a value, its key and the table to put them in
+    if (state->depth == scmJsonMaxDepth || !lua_checkstack(state->L, 3)) {
+        return 0;
+    }
+    lua_newtable(state->L);
+    state->nextIndex[state->depth++] = firstIndex;
+    return 1;
+}
+
+int jsonStartMap(void* ctx)
+{
+    return jsonStartContainer(static_cast<JsonToLua*>(ctx), 0);
+}
+
+int jsonStartArray(void* ctx)
+{
+    return jsonStartContainer(static_cast<JsonToLua*>(ctx), 1);
+}
+
+int jsonEndContainer(void* ctx)
+{
+    auto* state = static_cast<JsonToLua*>(ctx);
+    --state->depth;
+    return jsonStoreValue(state);
+}
+
+const yajl_callbacks scmJsonToLuaCallbacks = {jsonNull, jsonBoolean, nullptr, nullptr, jsonNumber, jsonString, jsonStartMap, jsonMapKey, jsonEndContainer, jsonStartArray, jsonEndContainer};
+
+int decodeJson(lua_State* L)
+{
+    auto* state = static_cast<JsonToLua*>(lua_touserdata(L, 1));
+    lua_pop(L, 1);
+    state->L = L;
+    yajl_status status = yajl_parse(state->handle, reinterpret_cast<const unsigned char*>(state->json->constData()), static_cast<size_t>(state->json->size()));
+    if (status == yajl_status_ok) {
+        status = yajl_complete_parse(state->handle);
+    }
+    state->decoded = (status == yajl_status_ok);
+    return state->decoded ? 1 : 0;
+}
+
+// Pushes what yajl.to_value would return for json, or the message of a Lua error raised meanwhile
+// with error set; returns false with nothing pushed when yajl rejected or this gave up on the parse
+bool pushJsonValue(lua_State* L, const QByteArray& json, int& error)
+{
+    JsonToLua state;
+    state.json = &json;
+    // pushed first, as an error raised there (out of memory, or a finaliser's) would leak the handle
+    lua_pushcfunction(L, decodeJson);
+    lua_pushlightuserdata(L, &state);
+    state.handle = yajl_alloc(&scmJsonToLuaCallbacks, nullptr, &state);
+    if (!state.handle) {
+        lua_pop(L, 2);
+        return false;
+    }
+    error = lua_pcall(L, 1, 1, 0);
+    yajl_free(state.handle);
+    if (!error && !state.decoded) {
+        lua_pop(L, 1);
+        return false;
+    }
+    return true;
 }
 
 } // namespace
@@ -756,8 +903,10 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
             break;
         }
 
-        qint64 const bytesWritten = localFile.write(reply->readAll());
-        if (bytesWritten == -1) {
+        const QByteArray downloaded = reply->readAll();
+        qint64 const bytesWritten = localFile.write(downloaded);
+        // A full disk can cut the write short with no error on the file, and commit() would put the part that landed in place
+        if (bytesWritten != downloaded.size()) {
             event.mArgumentList << QLatin1String("sysDownloadError");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << QLatin1String("Couldn't save to the destination file");
@@ -3090,7 +3239,7 @@ int TLuaInterpreter::uninstallPackage(lua_State* L)
     if (!host.mInstalledPackages.contains(packageName)) {
         return warnArgumentValue(L, __func__, qsl("package '%1' is not installed").arg(packageName));
     }
-    if (!host.uninstallPackage(packageName, enums::PackageModuleType::Package)) {
+    if (!host.uninstallPackage(packageName, enums::PackageModuleType::Package, true)) {
         // An installed package is only refused while a profile save is running
         return warnArgumentValue(L, __func__, qsl("a profile save is in progress, try again once it has finished"));
     }
@@ -3121,7 +3270,7 @@ int TLuaInterpreter::uninstallModule(lua_State* L)
 {
     const QString module = getVerifiedString(L, __func__, 1, "module name");
     Host& host = getHostFromLua(L);
-    if (!host.uninstallPackage(module, enums::PackageModuleType::ModuleFromScript)) {
+    if (!host.uninstallPackage(module, enums::PackageModuleType::ModuleFromScript, true)) {
         lua_pushboolean(L, false);
         return 1;
     }
@@ -3318,7 +3467,9 @@ int TLuaInterpreter::setPackageInfo(lua_State* L)
     if (info == qsl("mpackage") && value != packageName) {
         return warnArgumentValue(L, __func__, qsl("'mpackage' is the name package '%1' is installed under and cannot be changed").arg(packageName));
     }
-    host.mPackageInfo[packageName][info] = value;
+    if (const QString error = host.setPackageInfo(packageName, info, value); !error.isEmpty()) {
+        return warnArgumentValue(L, __func__, error);
+    }
     lua_pushboolean(L, true);
     return 1;
 }
@@ -4458,8 +4609,14 @@ void TLuaInterpreter::parseJSON(QString& key, const QByteArray& utf8Data, const 
         qDebug() << "CRITICAL ERROR: json_to_value not defined";
         return;
     }
-    lua_pushlstring(L, utf8Data.constData(), utf8Data.length());
-    const int error = lua_pcall(L, 1, 1, 0);
+    int error = 0;
+    // a script that put its own decoder in json_to_value has that called
+    if (mStockJsonToValue && lua_tocfunction(L, -1) == mStockJsonToValue && pushJsonValue(L, utf8Data, error)) {
+        lua_remove(L, -2);
+    } else {
+        lua_pushlstring(L, utf8Data.constData(), utf8Data.length());
+        error = lua_pcall(L, 1, 1, 0);
+    }
     if (!error) {
         // Top of stack should now contain the lua representation of json.
         lua_rawset(L, -3);
@@ -4599,12 +4756,13 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
 
             QStringList payloadList = packageList[i].split(MSSP_VAL);
 
-            if (payloadList.size() != 2) {
+            if (payloadList.size() < 2) {
                 continue;
             }
 
-            const QString msspVAR = payloadList[0];
-            const QString msspVAL = payloadList[1];
+            // A variable can carry several values, with the default one last
+            const QString msspVAR = payloadList.first();
+            const QString msspVAL = payloadList.last();
 
             lua_getglobal(L, "mssp");
             lua_pushstring(L, msspVAR.toUtf8().constData());
@@ -7299,6 +7457,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "pauseMusic", TLuaInterpreter::pauseMusic);
     lua_register(pGlobalLua, "pauseVideos", TLuaInterpreter::pauseVideos);
     lua_register(pGlobalLua, "updateSounds", TLuaInterpreter::updateSounds);
+    lua_register(pGlobalLua, "updateMusic", TLuaInterpreter::updateMusic);
     lua_register(pGlobalLua, "setMediaListener", TLuaInterpreter::setMediaListener);
     lua_register(pGlobalLua, "getMediaListener", TLuaInterpreter::getMediaListener);
     lua_register(pGlobalLua, "purgeMediaCache", TLuaInterpreter::purgeMediaCache);
@@ -7422,7 +7581,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "resetAreaGraphLayout", TLuaInterpreter::resetAreaGraphLayout);
     lua_register(pGlobalLua, "roomLocked", TLuaInterpreter::roomLocked);
     lua_register(pGlobalLua, "setCustomEnvColor", TLuaInterpreter::setCustomEnvColor);
+    lua_register(pGlobalLua, "unsetCustomEnvColor", TLuaInterpreter::unsetCustomEnvColor);
     lua_register(pGlobalLua, "getCustomEnvColorTable", TLuaInterpreter::getCustomEnvColorTable);
+    lua_register(pGlobalLua, "getMapEnvColor", TLuaInterpreter::getMapEnvColor);
     lua_register(pGlobalLua, "setRoomEnv", TLuaInterpreter::setRoomEnv);
     lua_register(pGlobalLua, "setRoomName", TLuaInterpreter::setRoomName);
     lua_register(pGlobalLua, "getRoomName", TLuaInterpreter::getRoomName);
@@ -7935,7 +8096,16 @@ void TLuaInterpreter::initLuaGlobals()
         mpHost->postMessage(modLoadMessageQueue.dequeue());
     }
 
-    loadLuaModule(modLoadMessageQueue, QLatin1String("yajl"), tr("yajl.* Lua functions won't be available."), QString(), QLatin1String("yajl"));
+    mStockJsonToValue = nullptr;
+    if (loadLuaModule(modLoadMessageQueue, QLatin1String("yajl"), tr("yajl.* Lua functions won't be available."), QString(), QLatin1String("yajl"))) {
+        lua_getglobal(pGlobalLua, "yajl");
+        if (lua_istable(pGlobalLua, -1)) {
+            lua_getfield(pGlobalLua, -1, "to_value");
+            mStockJsonToValue = lua_tocfunction(pGlobalLua, -1);
+            lua_pop(pGlobalLua, 1);
+        }
+        lua_pop(pGlobalLua, 1);
+    }
     while (!modLoadMessageQueue.isEmpty()) {
         mpHost->postMessage(modLoadMessageQueue.dequeue());
     }
@@ -9430,15 +9600,26 @@ void TLuaInterpreter::updateExtendedAnsiColorsInTable()
     }
 }
 
-// Internal function - Creates a table for useful information from the http
-// response. It creates an empty table, calls upon other functions to
-// add things to it, and then returns a key to where it is in the lua registry.
+// Internal function - Creates a table of useful information from the http
+// response and returns a key to where it is in the lua registry.
 int TLuaInterpreter::createHttpResponseTable(QNetworkReply* reply)
 {
     lua_State* L = pGlobalLua;
 
     // Push empty table onto stack
     lua_newtable(L);
+    // Absent, not 0, when no HTTP response arrived (e.g. the connection was refused)
+    const QVariant status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute);
+    if (status.isValid()) {
+        lua_pushinteger(L, status.toInt());
+        lua_setfield(L, -2, "status");
+    }
+    // HTTP/2 has no reason phrase, yet Qt still reports an empty one
+    const QByteArray reason = reply->attribute(QNetworkRequest::HttpReasonPhraseAttribute).toString().toUtf8();
+    if (!reason.isEmpty()) {
+        lua_pushlstring(L, reason.constData(), reason.size());
+        lua_setfield(L, -2, "reason");
+    }
     // Add "headers" table to table
     createHttpHeadersTable(L, reply);
     // Add "cookies" table to table

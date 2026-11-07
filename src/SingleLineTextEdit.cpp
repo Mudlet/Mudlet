@@ -65,13 +65,16 @@ void SingleLineTextEdit::resizeEvent(QResizeEvent* event)
     QPlainTextEdit::resizeEvent(event);
 }
 
-// ensure we can't paste multiple lines
+// Only the first line fits here; the rest are handed on for the patterns that follow
 void SingleLineTextEdit::insertFromMimeData(const QMimeData* source)
 {
     if (source->hasText()) {
-        const QStringList lines = source->text().split(QRegularExpression(qsl("[\r\n]")), Qt::SkipEmptyParts);
+        QStringList lines = source->text().split(QRegularExpression(qsl("[\r\n]")), Qt::SkipEmptyParts);
         if (!lines.isEmpty()) {
-            QPlainTextEdit::insertPlainText(lines.first());
+            QPlainTextEdit::insertPlainText(lines.takeFirst());
+            if (!lines.isEmpty()) {
+                emit signal_pastedExtraLines(lines);
+            }
         }
     }
 }

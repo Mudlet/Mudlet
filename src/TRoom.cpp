@@ -374,13 +374,17 @@ bool TRoom::hasExitWeight(const QString& cmd)
     return false;
 }
 
-void TRoom::setWeight(int w)
+bool TRoom::setWeight(int w)
 {
     if (w < 1) {
         w = 1;
     }
+    if (weight == w) {
+        return false;
+    }
     weight = w;
     mpRoomDB->mpMap->setUnsaved(__func__);
+    return true;
 }
 
 void TRoom::setHidden(const bool isHidden)
@@ -394,6 +398,9 @@ void TRoom::setHidden(const bool isHidden)
 void TRoom::setExitWeight(const QString& cmd, int w)
 {
     if (w > 0) {
+        if (exitWeights.value(cmd) == w) {
+            return;
+        }
         exitWeights[cmd] = w;
         mpRoomDB->mpMap->setUnsaved(__func__);
         mpRoomDB->mpMap->mMapGraphNeedsUpdate = true;
@@ -707,6 +714,29 @@ void TRoom::removeExitExtras(const int direction)
     }
 }
 
+// A special exit named like a normal one ("n", "up"...) shares that exit's door,
+// weight and custom line; returns whether a custom line went
+bool TRoom::removeSpecialExitExtras(const QString& cmd)
+{
+    mSpecialExitLocks.remove(cmd);
+    if (hasExitOrSpecialExit(cmd)) {
+        return false;
+    }
+    exitWeights.remove(cmd);
+    const bool lineRemoved = customLines.remove(cmd) > 0;
+    customLinesColor.remove(cmd);
+    customLinesStyle.remove(cmd);
+    customLinesArrow.remove(cmd);
+    bool stubHoldsDoor = false;
+    for (int direction = DIR_NORTH; direction <= DIR_OUT && !stubHoldsDoor; ++direction) {
+        stubHoldsDoor = exitStubs.contains(direction) && dirCodeToShortString(direction) == cmd;
+    }
+    if (!stubHoldsDoor) {
+        doors.remove(cmd);
+    }
+    return lineRemoved;
+}
+
 bool TRoom::setSpecialExitLock(const QString& cmd, const bool doLock)
 {
     if (!mSpecialExits.contains(cmd)) {
@@ -749,17 +779,15 @@ void TRoom::setSpecialExit(const int to, const QString& cmd)
     }
 
     if (to > 0) {
+        if (mSpecialExits.value(cmd) == to) {
+            return;
+        }
         mSpecialExits[cmd] = to;
     } else {
-        // Clean up related data:
-        customLinesArrow.remove(cmd);
-        customLinesColor.remove(cmd);
-        customLinesStyle.remove(cmd);
-        customLines.remove(cmd);
-        exitWeights.remove(cmd);
-        doors.remove(cmd);
-        mSpecialExitLocks.remove(cmd);
         mSpecialExits.remove(cmd);
+        if (removeSpecialExitExtras(cmd)) {
+            calcRoomDimensions();
+        }
     }
 
     TArea* pA = mpRoomDB->getArea(area);
@@ -779,23 +807,15 @@ void TRoom::clearSpecialExits()
     }
 
     QMutableMapIterator<QString, int> itSpecialExit(mSpecialExits);
+    bool lineRemoved = false;
     while (itSpecialExit.hasNext()) {
         itSpecialExit.next();
-        // Clean up related elements first:
-        mSpecialExitLocks.remove(itSpecialExit.key());
-        doors.remove(itSpecialExit.key());
-        customLines.remove(itSpecialExit.key());
-        customLinesColor.remove(itSpecialExit.key());
-        customLinesStyle.remove(itSpecialExit.key());
-        customLinesArrow.remove(itSpecialExit.key());
         const QString exitName = itSpecialExit.key();
-        // Then remove the exit itself from the QMap:
         itSpecialExit.remove();
-        // A special exit named like a normal one ("n", "up"...) shares that
-        // exit's weight, which has to stay while the normal exit does:
-        if (!hasExitOrSpecialExit(exitName)) {
-            exitWeights.remove(exitName);
-        }
+        lineRemoved |= removeSpecialExitExtras(exitName);
+    }
+    if (lineRemoved) {
+        calcRoomDimensions();
     }
     if (TArea* pA = mpRoomDB->getArea(area)) {
         pA->determineAreaExitsOfRoom(id);
@@ -809,6 +829,7 @@ void TRoom::removeAllSpecialExitsToRoom(const int roomId)
 {
     QMutableMapIterator<QString, int> itSpecialExit(mSpecialExits);
     bool exitFound = false;
+    bool lineRemoved = false;
     while (itSpecialExit.hasNext()) {
         itSpecialExit.next();
         if (itSpecialExit.value() != roomId) {
@@ -816,24 +837,15 @@ void TRoom::removeAllSpecialExitsToRoom(const int roomId)
         }
 
         exitFound = true;
-        // Clean up related elements first:
-        mSpecialExitLocks.remove(itSpecialExit.key());
-        doors.remove(itSpecialExit.key());
-        customLines.remove(itSpecialExit.key());
-        customLinesColor.remove(itSpecialExit.key());
-        customLinesStyle.remove(itSpecialExit.key());
-        customLinesArrow.remove(itSpecialExit.key());
         const QString exitName = itSpecialExit.key();
-        // Then remove the exit itself from the QMap:
         itSpecialExit.remove();
-        // A special exit named like a normal one ("n", "up"...) shares that
-        // exit's weight, which has to stay while the normal exit does:
-        if (!hasExitOrSpecialExit(exitName)) {
-            exitWeights.remove(exitName);
-        }
+        lineRemoved |= removeSpecialExitExtras(exitName);
     }
 
     if (exitFound) {
+        if (lineRemoved) {
+            calcRoomDimensions();
+        }
         TArea* pA = mpRoomDB->getArea(area);
         if (pA) {
             pA->determineAreaExitsOfRoom(id);
@@ -1460,13 +1472,7 @@ void TRoom::auditExits(const QHash<int, int>& roomRemapping)
                     // Remove the corresponding things from the pools of things
                     // that have to be checked:
                     // TODO: Add additional warnings if we ARE deleting any data in following
-                    exitWeights.remove(exitName);
-                    doors.remove(exitName);
-                    mSpecialExitLocks.remove(exitName);
-                    customLines.remove(exitName);
-                    customLinesColor.remove(exitName);
-                    customLinesStyle.remove(exitName);
-                    customLinesArrow.remove(exitName);
+                    removeSpecialExitExtras(exitName);
                     exitWeightsCopy.remove(exitName);
                     doorsCopy.remove(exitName);
                     customLinesCopy.remove(exitName);
@@ -1500,14 +1506,7 @@ void TRoom::auditExits(const QHash<int, int>& roomRemapping)
                 }
                 mpRoomDB->mpMap->appendRoomErrorMsg(id, infoMsg, true);
                 it.remove();
-                // We cannot have a door or anything else on a non-existent special exit
-                doors.remove(exitName);
-                exitWeights.remove(exitName);
-                mSpecialExitLocks.remove(exitName);
-                customLines.remove(exitName);
-                customLinesColor.remove(exitName);
-                customLinesStyle.remove(exitName);
-                customLinesArrow.remove(exitName);
+                removeSpecialExitExtras(exitName);
                 doorsCopy.remove(exitName);
                 exitWeightsCopy.remove(exitName);
                 customLinesCopy.remove(exitName);

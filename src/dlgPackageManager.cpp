@@ -564,22 +564,8 @@ void dlgPackageManager::resetPackageList()
     syncViewBar();
     packageList->clear();
 
-    for (int i = 0; i < mpHost->mInstalledPackages.size(); i++) {
-        auto item = new QListWidgetItem();
-        item->setText(mpHost->mInstalledPackages.at(i));
-
-        auto packageInfo{mpHost->mPackageInfo.value(item->text())};
-        const auto title = packageInfo.value(qsl("title"));
-        if (!title.isEmpty()) {
-            item->setData(Qt::UserRole, title);
-        }
-        setRowVersion(item, packageInfo.value(qsl("version")));
-        const auto iconName = packageInfo.value(qsl("icon"));
-        if (!iconName.isEmpty()) {
-            const auto iconDir = MudletApp::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(mpHost->mInstalledPackages.at(i), iconName));
-            item->setIcon(QIcon(iconDir));
-        }
-        packageList->addItem(item);
+    for (const QString& packageName : std::as_const(mpHost->mInstalledPackages)) {
+        packageList->addItem(installedPackageItem(packageName));
     }
 
     populatePackagesWithUpdates();
@@ -1145,30 +1131,36 @@ void dlgPackageManager::slot_removePackages()
     comeBackToFront();
 }
 
+QListWidgetItem* dlgPackageManager::installedPackageItem(const QString& packageName) const
+{
+    auto* item = new QListWidgetItem(packageName);
+    const auto packageInfo = mpHost->mPackageInfo.value(packageName);
+    if (const QString title = packageInfo.value(qsl("title")); !title.isEmpty()) {
+        item->setData(Qt::UserRole, title);
+    }
+    setRowVersion(item, packageInfo.value(qsl("version")));
+    if (const QString iconName = packageInfo.value(qsl("icon")); !iconName.isEmpty()) {
+        item->setIcon(QIcon(MudletApp::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(packageName, iconName))));
+    }
+    return item;
+}
+
+bool dlgPackageManager::installedPackageMatches(const QString& packageName, const QString& searchText) const
+{
+    const auto packageInfo = mpHost->mPackageInfo.value(packageName);
+    return packageName.contains(searchText, Qt::CaseInsensitive) || packageInfo.value(qsl("title")).contains(searchText, Qt::CaseInsensitive)
+           || packageInfo.value(qsl("description")).contains(searchText, Qt::CaseInsensitive) || packageInfo.value(qsl("author")).contains(searchText, Qt::CaseInsensitive);
+}
+
 void dlgPackageManager::slot_searchTextChanged(const QString& searchText)
 {
     packageList->clear();
 
     if (mCurrentView == NavigationView::Installed) {
-        for (const auto& value : std::as_const(mpHost->mPackageInfo)) {
-            const QString name = value.value(qsl("mpackage"));
-            const QString title = value.value(qsl("title"));
-            const QString description = value.value(qsl("description"));
-            const QString author = value.value(qsl("author"));
-
-            if (name.contains(searchText, Qt::CaseInsensitive) || title.contains(searchText, Qt::CaseInsensitive) || description.contains(searchText, Qt::CaseInsensitive)
-                || author.contains(searchText, Qt::CaseInsensitive)) {
-                QListWidgetItem* item = new QListWidgetItem(name);
-                if (!title.isEmpty()) {
-                    item->setData(Qt::UserRole, title);
-                }
-                setRowVersion(item, value.value(qsl("version")));
-                const auto iconName = value.value(qsl("icon"));
-                if (!iconName.isEmpty()) {
-                    const auto iconDir = MudletApp::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(name, iconName));
-                    item->setIcon(QIcon(iconDir));
-                }
-                packageList->addItem(item);
+        // The list it filters is mInstalledPackages: a package installed without a config.lua has no details, but is listed
+        for (const QString& packageName : std::as_const(mpHost->mInstalledPackages)) {
+            if (installedPackageMatches(packageName, searchText)) {
+                packageList->addItem(installedPackageItem(packageName));
             }
         }
     } else if (mCurrentView == NavigationView::Explore) {
@@ -1195,23 +1187,9 @@ void dlgPackageManager::slot_searchTextChanged(const QString& searchText)
         }
     } else if (mCurrentView == NavigationView::Updates) {
         for (const QString& packageName : std::as_const(mPackagesWithUpdates)) {
-            const auto packageInfo = mpHost->mPackageInfo.value(packageName);
-            const QString title = packageInfo.value(qsl("title"));
-            const QString description = packageInfo.value(qsl("description"));
-            const QString author = packageInfo.value(qsl("author"));
-
-            if (packageName.contains(searchText, Qt::CaseInsensitive) || title.contains(searchText, Qt::CaseInsensitive) || description.contains(searchText, Qt::CaseInsensitive)
-                || author.contains(searchText, Qt::CaseInsensitive)) {
-                QListWidgetItem* item = new QListWidgetItem(packageName);
-                if (!title.isEmpty()) {
-                    item->setData(Qt::UserRole, title);
-                }
+            if (installedPackageMatches(packageName, searchText)) {
+                auto* item = installedPackageItem(packageName);
                 setRowVersion(item, updateRowVersion(packageName));
-                const auto iconName = packageInfo.value(qsl("icon"));
-                if (!iconName.isEmpty()) {
-                    const auto iconDir = MudletApp::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(packageName, iconName));
-                    item->setIcon(QIcon(iconDir));
-                }
                 packageList->addItem(item);
             }
         }
@@ -1234,21 +1212,8 @@ void dlgPackageManager::slot_setPackageList()
     clearPackageDetails();
 
     if (mCurrentView == NavigationView::Installed) {
-        for (int i = 0; i < mpHost->mInstalledPackages.size(); i++) {
-            auto item = new QListWidgetItem();
-            item->setText(mpHost->mInstalledPackages.at(i));
-            const auto packageInfo{mpHost->mPackageInfo.value(item->text())};
-            const auto iconName = packageInfo.value(qsl("icon"));
-            const auto title = packageInfo.value(qsl("title"));
-            if (!title.isEmpty()) {
-                item->setData(Qt::UserRole, title);
-            }
-            setRowVersion(item, packageInfo.value(qsl("version")));
-            if (!iconName.isEmpty()) {
-                const auto iconDir = MudletApp::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(mpHost->mInstalledPackages.at(i), iconName));
-                item->setIcon(QIcon(iconDir));
-            }
-            packageList->addItem(item);
+        for (const QString& packageName : std::as_const(mpHost->mInstalledPackages)) {
+            packageList->addItem(installedPackageItem(packageName));
         }
     } else if (mCurrentView == NavigationView::Explore) {
         // No early return: the button toggles at the end must still run for this view
@@ -1279,19 +1244,8 @@ void dlgPackageManager::slot_setPackageList()
         }
 
         for (const QString& packageName : std::as_const(mPackagesWithUpdates)) {
-            auto item = new QListWidgetItem();
-            item->setText(packageName);
-            const auto packageInfo{mpHost->mPackageInfo.value(packageName)};
-            const auto iconName = packageInfo.value(qsl("icon"));
-            const auto title = packageInfo.value(qsl("title"));
-            if (!title.isEmpty()) {
-                item->setData(Qt::UserRole, title);
-            }
+            auto* item = installedPackageItem(packageName);
             setRowVersion(item, updateRowVersion(packageName));
-            if (!iconName.isEmpty()) {
-                const auto iconDir = MudletApp::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("%1/.mudlet/Icon/%2").arg(packageName, iconName));
-                item->setIcon(QIcon(iconDir));
-            }
             packageList->addItem(item);
         }
     }

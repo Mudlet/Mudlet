@@ -38,6 +38,7 @@
 class ExporterTreeDelegate;
 class Host;
 class QCloseEvent;
+class QDropEvent;
 class QGroupBox;
 template <typename T>
 class QFutureWatcher;
@@ -135,6 +136,7 @@ public:
 public slots:
     void slot_addFiles();
     void slot_exportPackage();
+    void done(int result) override;
 
 private slots:
     void slot_addDependency();
@@ -227,6 +229,9 @@ private:
     static void cleanupUnusedImages(const QString& tempPath, const QString& plainDescription);
     void checkToEnableExportButton();
     void populateDependencies();
+    void useIcon(const QString& fileName);
+    static QString iconFileFromDrop(const QDropEvent* event);
+    void setIconDropHighlight(const bool highlight);
 
     std::unique_ptr<Ui::dlgPackageExporter> ui;
     QPointer<Host> mpHost;
@@ -245,6 +250,7 @@ private:
     QString mPackagePath;
     QString mPackagePathFileName;
     QString mPackageIconPath;
+    bool mIconDropHighlight = false;
     // The .mudlet folder of the installed package being re-exported, if any
     QString mPackageDataPath;
     QString mPackageConfig;
@@ -254,8 +260,11 @@ private:
     inline static bool mExportingPackage = false;
     static void releaseExportLock();
     static void recheckEveryExportButton();
+    void endExportRun();
     // This dialog's export has put the busy cursor up and not yet taken it down
     bool mExportRunning = false;
+    // Closed while its export ran, so it goes once that ends
+    bool mDeleteWhenExportEnds = false;
     QFutureWatcher<std::pair<bool, QString>>* mpZipWatcher = nullptr;
     // Read on the zip's worker thread by libzip's cancel callback
     std::shared_ptr<std::atomic<bool>> mpZipCancelled;
@@ -317,6 +326,7 @@ public:
     ~dlgPackageExporterDescription();
     bool canInsertFromMimeData(const QMimeData* source) const override;
     void insertFromMimeData(const QMimeData* source) override;
+    QSize minimumSizeHint() const override;
 
 protected:
     void dragEnterEvent(QDragEnterEvent* event) override;

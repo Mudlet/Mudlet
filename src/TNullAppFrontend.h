@@ -21,6 +21,7 @@
  ***************************************************************************/
 
 #include "TAppFrontend.h"
+#include "TNullAppFrontendNotifier.h"
 #include "TNullConsoleFrontend.h"
 #include "utils.h"
 
@@ -117,6 +118,7 @@ public:
     const QMap<int, AddonCommand>& addonCommands() const { return mAddonCommands; }
     // As a click on the main window's button or menu item: false for a disabled or unknown command
     bool activateAddonCommand(int commandId);
+    TNullAppFrontendNotifier mNotifier;
 
     // Why the main window refuses a request whatever it shows, or an empty string: a menu path or shortcut on a
     // command kept off the menu, a shortcut Qt cannot hold, or a pulse it cannot paint
@@ -135,7 +137,8 @@ private:
     QString addonPlacementRefusal(const CommandRequest& request, const Host* pHost) const;
     // As the main window's, a command goes with its package, a profile reset and its profile
     void watchAddonCommandsOf(Host* pHost);
-    void removeAddonCommandsOf(const Host* pHost, const QString& package = QString());
+    // False if it had none to remove
+    bool removeAddonCommandsOf(const Host* pHost, const QString& package = QString());
 
     // Held, unlike the rest, as getConfig() reads these back. Each starts at the main window's default
     // with no saved settings, until a pool with no main window reads Mudlet.ini's.

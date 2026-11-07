@@ -114,11 +114,13 @@ xvfb-run -a ./build/src/mudlet --profile "Mudlet self-test" --mirror --offline
 `TelnetTriggerFuzz_spec.lua` drives random bytes through the telnet parser and
 random patterns through the trigger engine; `BufferManipFuzz_spec.lua` drives the
 console text and selection API with deliberately out-of-range line and column
-indices. Both are diagnostic specs rather than pass/fail tests: they are meant to
-be run against a sanitizer build, where a memory error or undefined behaviour
+indices; `ApiArgFuzz_spec.lua` calls the API functions written in C++ with
+wrong-typed, missing and out-of-range arguments, retrying each call with the
+argument type its rejection asks for. All three are diagnostic specs rather than
+pass/fail tests: they are meant to be run against a sanitizer build, where a memory error or undefined behaviour
 aborts the run instead of corrupting silently.
 
-Because busted recurses into this whole directory, both bail out before
+Because busted recurses into this whole directory, they bail out before
 registering anything unless `MUDLET_FUZZ` is set, so a normal run - CI included -
 skips them. Set it to opt in:
 
@@ -142,6 +144,19 @@ list of variables.
 
 Some seeds abort today: the fuzzers reach bugs that are still open, so treat an
 abort as a finding to reduce and report rather than as a broken harness.
+
+`MapFileFuzz_spec.lua` and `XmlImportFuzz_spec.lua` aim at the file loaders
+instead. The first saves a map in each binary format version the save side
+offers and as JSON, then loads mutated copies of those files; the second imports
+mutated copies of the map and package fixtures through `loadMap(".xml")` and
+`installPackage()`. Both put the profile's map back when they finish, and, given a
+dump path, copy each file to `<dump path>.input` before loading it, as the runner deletes the
+profile on exit. The map file fuzzer's base files hold the labels' rendered
+images, which depend on the fonts installed, so keep that copy: its seed only
+replays on the machine that ran it. To run one
+fuzzer on its own, point `TESTS_DIRECTORY` at a directory holding only that spec;
+`XmlImportFuzz_spec.lua` reads its corpus from the `fixtures` directory beside it,
+so link that in too.
 
 ## Creating tests
 

@@ -69,6 +69,9 @@ public:
     void setTreeType(TreeType type);
     void beginInsertRows(const QModelIndex& parent, int first, int last);
     void getAllChildren(QTreeWidgetItem*, QList<QTreeWidgetItem*>&);
+    // For a caller that made a row current with the selection model's signals blocked, which keeps the
+    // view from telling a screen reader where its focus went
+    void reportCurrentRow();
 
     // Variables view rows. They are this widget's children, so the bookkeeping dies with them.
     void buildVariableRows(VarUnit* pVarUnit, QTreeWidgetItem* pParent, TVar* pVariable, bool showHidden);
