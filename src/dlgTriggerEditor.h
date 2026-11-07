@@ -117,6 +117,7 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
     friend class EditorEmptySelectionTest;
     friend class EditorFolderViewTest;
     friend class EditorFontTest;
+    friend class EditorKeyboardMoveTest;
     friend class EditorModuleFolderTest;
     friend class EditorReshowTest;
     friend class EditorSearchTest;
@@ -424,7 +425,12 @@ private:
     void populateAliases();
     void populateActions();
     void populateKeys();
-    void saveOpenChanges();
+    // False when the open item refused its edits, which are then only in the form
+    bool saveOpenChanges();
+    enum class KeyboardMove { Up, Down, OutOfGroup, IntoGroupAbove };
+    void moveCurrentItem(const KeyboardMove move);
+    QList<int> unitChildIDs(const EditorViewType view, const int parentID) const;
+    void reParentInUnit(const EditorViewType view, const int itemID, const int oldParentID, const int newParentID, const int position);
     EditorViewType determineViewFromVisibleTree();
     EditorViewType resolveCurrentView();
     void clearTypeTrees();
@@ -455,7 +461,7 @@ private:
     static QString folderTreeItemKey(const EditorViewType view, const int id);
     static QString folderTreeTypeName(const EditorViewType view, const bool plural);
     void saveTrigger();
-    void saveAlias();
+    bool saveAlias();
     void computeAliasIcon(TAlias* pT, QIcon& icon, QString& itemDescription) const;
     void computeTriggerIcon(TTrigger* pT, QIcon& icon, QString& itemDescription) const;
     void computeTimerIcon(TTimer* pT, QIcon& icon, QString& itemDescription) const;
