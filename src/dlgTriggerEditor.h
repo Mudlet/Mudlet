@@ -113,6 +113,7 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
     friend class dlgTriggerEditorUndoRedoTest;
     friend class EditorAddItemTest;
     friend class EditorBannerViewSwitchTest;
+    friend class EditorErrorLineLinkTest;
     friend class EditorClipboardXmlTest;
     friend class EditorEmptySelectionTest;
     friend class EditorFolderViewTest;
@@ -203,6 +204,9 @@ public:
     void updateExtraControlsToggleIcon();
     void fillout_form();
     void showError(const QString&);
+    [[nodiscard]] QString linkErrorLineToScript(const QString& error);
+    void jumpToErrorLine(int line);
+    bool currentScriptChunk(int& itemId, QString& chunkName, QString& error);
     void showWarning(const QString&, bool announce = true);
     void showInfo(const QString&);
     // touchNotification: whether an errored descendant may show its error on the
@@ -950,6 +954,10 @@ private:
     EditorViewType mLastDismissedBannerView = EditorViewType::cmUnknownView;
     QString mLastDismissedBannerContent;
     QString mCurrentBannerKey;
+
+    // The item whose script the error banner's line link points into
+    EditorViewType mErrorLineView = EditorViewType::cmUnknownView;
+    int mErrorLineItemId = -1;
     QString mLastDismissedBannerKey;
     QSet<QString> mTemporarilyHiddenBanners;
 
