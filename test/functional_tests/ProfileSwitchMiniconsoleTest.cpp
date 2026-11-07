@@ -40,6 +40,12 @@
  * a future regression; it is not evidence that the deferred refresh is
  * load-bearing, and #8273 itself is not reproduced here.
  *
+ * A miniconsole's wrap, unlike its columns, is whatever its scripts last set,
+ * and even behind another tab a profile wraps the text it receives at it. So
+ * the window being resized has to reach those scripts, and opening another
+ * profile must not squeeze the one in front: its scripts would lay out for
+ * the squeeze.
+ *
  * Run with: ctest -R ProfileSwitchMiniconsoleTest -V
  */
 
@@ -91,7 +97,9 @@ private:
     const QString mLocalhost = qsl("localhost");
     const QString mFirstProfile = qsl("ProfileSwitchMiniconsole-First");
     const QString mSecondProfile = qsl("ProfileSwitchMiniconsole-Second");
+    const QString mThirdProfile = qsl("ProfileSwitchMiniconsole-Third");
     const QString mMiniconsoleName = qsl("switchSpecMiniconsole");
+    const QString mWrapMiniconsoleName = qsl("switchSpecWrapMiniconsole");
     QTemporaryDir mConfigDir;
     QByteArray mSavedXdgConfigHome;
 
@@ -154,6 +162,34 @@ private:
             return false;
         }
         return true;
+    }
+
+    // sized off the main window and wrapped to fit it, as a game's chat window is
+    bool createAutoWrapMiniconsole(Host* pHost) const
+    {
+        const QString error = runLua(pHost,
+                                     qsl("if _wrapMiniconsole then return end\n"
+                                         "_wrapMiniconsole = Geyser.MiniConsole:new({\n"
+                                         "  name = '%1', x = '-40%', y = 0, width = '20%', height = '50%'\n"
+                                         "})\n"
+                                         "_wrapMiniconsole:enableAutoWrap()")
+                                             .arg(mWrapMiniconsoleName));
+        if (!error.isNull()) {
+            qWarning() << "createAutoWrapMiniconsole:" << error;
+            return false;
+        }
+        return true;
+    }
+
+    int autoWrapOf(Host* pHost) const
+    {
+        // assert(): a missing window answers nil and a message, which would read as a wrap of 0 that matches another
+        const QString error = runLua(pHost, qsl("_wrapNow = assert(getWindowWrap('%1'))").arg(mWrapMiniconsoleName));
+        if (!error.isNull()) {
+            qWarning() << "autoWrapOf:" << error;
+            return -1;
+        }
+        return luaGlobalNumber(pHost, qsl("_wrapNow"));
     }
 
     // the tab bar is what setActiveProfile() drives, and what a player clicks
@@ -298,6 +334,52 @@ private slots:
         int heightAfter = 0;
         QVERIFY(readGeyserSize(mpFirstHost, widthAfter, heightAfter));
         QVERIFY2(widthAfter > 0 && heightAfter > 0, qPrintable(qsl("the miniconsole reports %1x%2 to Lua after the switching").arg(QString::number(widthAfter), QString::number(heightAfter))));
+    }
+
+    void test_aWindowResizedBehindAnotherTabReachesItsMiniconsoles()
+    {
+        switchTo(mpFirstHost);
+        QVERIFY(createAutoWrapMiniconsole(mpFirstHost));
+        QTest::qWait(200ms);
+        const int wrapBefore = autoWrapOf(mpFirstHost);
+        QVERIFY2(wrapBefore > 0, "the miniconsole was created with no wrap to speak of");
+        switchTo(mpSecondHost);
+
+        mudlet::self()->resize(mudlet::self()->width() - 200, mudlet::self()->height());
+        QTest::qWait(200ms);
+
+        // Text arriving now is wrapped at this, so it has to be the wrap for the window the profile comes back to
+        const int wrapBehind = autoWrapOf(mpFirstHost);
+        QVERIFY(runLua(mpFirstHost, qsl("_wrapMiniconsole:resetAutoWrap()")).isNull());
+        const int wrapNeeded = autoWrapOf(mpFirstHost);
+        QVERIFY2(wrapNeeded > 0, "the miniconsole has no wrap after resetting it");
+        QVERIFY2(wrapNeeded != wrapBefore, "the resize did not change the wrap the window needs, so it tests nothing");
+        QCOMPARE(wrapBehind, wrapNeeded);
+    }
+
+    void test_openingAProfileDoesNotSqueezeTheOneInFront()
+    {
+        switchTo(mpFirstHost);
+        QVERIFY(createAutoWrapMiniconsole(mpFirstHost));
+        QTest::qWait(200ms);
+        QVERIFY(runLua(mpFirstHost,
+                       qsl("_narrowestResize = getMainWindowSize()\n"
+                           "registerAnonymousEventHandler('sysWindowResizeEvent', function()\n"
+                           "  _narrowestResize = math.min(_narrowestResize, (getMainWindowSize()))\n"
+                           "end)"))
+                        .isNull());
+        const int widthBefore = luaGlobalNumber(mpFirstHost, qsl("_narrowestResize"));
+        const int wrapBefore = autoWrapOf(mpFirstHost);
+        QVERIFY2(wrapBefore > 0, "the miniconsole has no wrap to compare against");
+
+        QVERIFY(provisionProfileOnDisk(mThirdProfile));
+        QVERIFY(runLua(mpFirstHost, qsl("loadProfile('%1', true)").arg(mThirdProfile)).isNull());
+        QTRY_VERIFY_WITH_TIMEOUT(hostFor(mThirdProfile), csmConnectBudgetMs);
+        QTest::qWait(300ms);
+
+        // The end wrap alone can't show a squeeze, as scripts are told the full size again once the profile is hidden
+        QCOMPARE(luaGlobalNumber(mpFirstHost, qsl("_narrowestResize")), widthBefore);
+        QCOMPARE(autoWrapOf(mpFirstHost), wrapBefore);
     }
 };
 

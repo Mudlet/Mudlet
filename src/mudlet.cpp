@@ -3789,10 +3789,12 @@ void mudlet::addConsoleForNewHost(Host* pH)
     // update the window title for the currently selected profile
     updateMainWindowTitle();
 
-    mpSplitter_profileContainer->addWidget(pConsole);
+    // Hidden before the new console joins the splitter: sharing it even briefly lays the profile in front out
+    // narrower, and its scripts keep that layout while hidden
     if (mpCurrentActiveHost && !mMultiView) {
         mpCurrentActiveHost->mainConsoleView()->hide();
     }
+    mpSplitter_profileContainer->addWidget(pConsole);
 
     pConsole->show();
 
