@@ -1508,6 +1508,13 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
         return;
     }
 
+    const bool enclosingReadingLocalText = mpHost && mpHost->mMxpProcessor.setReadingLocalText(true);
+    auto endLocalText = qScopeGuard([this, enclosingReadingLocalText] {
+        if (mpHost) {
+            mpHost->mMxpProcessor.setReadingLocalText(enclosingReadingLocalText);
+        }
+    });
+
     if (mProcessingLocalFeed) {
         // Text a trigger or an MXP tag feeds while the enclosing feed is still
         // being read is whole too, so it gets a clean state and leaves the
@@ -2351,7 +2358,15 @@ void TBuffer::parseChunk(
                 // after a newline (but not a <br>) return to default mode
                 // BUT only if we're not in the middle of parsing a tag (tags can span lines)
                 if (!mpHost->mMxpProcessor.getMxpTagBuilder().isInsideTag()) {
-                    mpHost->mMxpProcessor.resetToDefaultMode();
+                    // Any line end the game sends but cTelnet's flush marker uses up a <NOBR>; only a newline is ignored
+                    const bool noBreak = isFromServer && ch != CHAR_CARRIAGE_RETURN && mpHost->mMxpProcessor.takeIgnoredNewline();
+                    const bool ignoreNewline = noBreak && ch == CHAR_NEW_LINE;
+                    // The line still ends for the line modes, so a secure line cannot run on into the next one
+                    mpHost->mMxpProcessor.resetToDefaultMode(!ignoreNewline);
+                    if (ignoreNewline) {
+                        localBufferPosition++;
+                        continue;
+                    }
                 }
             }
         }

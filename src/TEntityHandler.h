@@ -23,6 +23,9 @@
  ***************************************************************************/
 
 #include "TEntityResolver.h"
+
+#include <utility>
+
 // Handles entity processing state and conversion of simple standard entities such as &gt; &lt; &amp; and &quot;
 class TEntityHandler
 {
@@ -39,6 +42,8 @@ public:
 
     bool isEntityResolved() const;
     bool readingEntity() const { return !mCurrentEntity.isEmpty(); }
+    // The '&' and name read so far, given up on as text
+    QString takePartialEntity() { return std::exchange(mCurrentEntity, QString()); }
     QString getResultAndReset();
     inline TEntityType getEntityType(void) {return entityType;}
 
