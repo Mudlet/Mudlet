@@ -27,7 +27,11 @@
  * Run with: ctest -R SettingsMapControlsTest -V
  */
 
+#include <algorithm>
+
 #include <QDir>
+#include <QFileDialog>
+#include <QLineEdit>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -42,6 +46,7 @@
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "T2DMap.h"
+#include "TMainConsole.h"
 #include "TMap.h"
 #include "TelnetServerStub.h"
 #include "dlgMapper.h"
@@ -49,6 +54,8 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 class SettingsMapControlsTest : public QObject
 {
@@ -214,6 +221,54 @@ private slots:
         // each has to be pinned to the size asked for rather than to the other.
         QVERIFY2(qAbs(mpHost->mRoomSize - wanted) < 1.0e-6, qPrintable(qsl("the profile was given a room size of %1 rather than %2").arg(mpHost->mRoomSize).arg(wanted)));
         QVERIFY2(qAbs(p2dMap->rSize - wanted) < 1.0e-6, qPrintable(qsl("the map was given a room size of %1 rather than %2").arg(p2dMap->rSize).arg(wanted)));
+    }
+
+    // saveJsonMap() hands a script the reason, so the dialog's own export should not keep it from the player
+    void test_aJsonExportThatFailsSaysWhy()
+    {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString name = qsl("missing&folder/exported.json");
+        QVERIFY2(openPreferences(), "the settings dialog never appeared");
+        auto& console = mpHost->mainConsoleView()->buffer;
+        const int mark = std::max(0, console.getLastLineNumber());
+
+        // A native dialog has no file name field to type into
+        const bool priorNative = QCoreApplication::testAttribute(Qt::AA_DontUseNativeDialogs);
+        QCoreApplication::setAttribute(Qt::AA_DontUseNativeDialogs, true);
+        const auto restoreNative = qScopeGuard([priorNative]() {
+            QCoreApplication::setAttribute(Qt::AA_DontUseNativeDialogs, priorNative);
+        });
+        mpPreferences->pushButton_saveMap->click();
+        QFileDialog* pDialog = nullptr;
+        QVERIFY(QTest::qWaitFor(
+                [&]() {
+                    pDialog = mpPreferences->findChild<QFileDialog*>();
+                    return pDialog && pDialog->isVisible();
+                },
+                5s));
+        // Typed, as selectFile() given a path into a missing folder keeps only the name
+        auto* pName = pDialog->findChild<QLineEdit*>(qsl("fileNameEdit"));
+        QVERIFY(pName);
+        pDialog->setDirectory(dir.path());
+        pName->setText(name);
+        QVERIFY2(pDialog->selectedFiles().value(0).endsWith(name), qPrintable(pDialog->selectedFiles().value(0)));
+        static_cast<QDialog*>(pDialog)->accept();
+
+        // As one line, since the console wraps long messages
+        const auto shown = [&]() {
+            QStringList lines;
+            for (int line = mark; line <= console.getLastLineNumber(); ++line) {
+                lines << console.line(line);
+            }
+            return lines.join(QChar::Space).simplified();
+        };
+        const auto saysWhy = [&]() {
+            return shown().contains(qsl("could not open save file"));
+        };
+        QVERIFY2(QTest::qWaitFor(saysWhy, 5s), qPrintable(qsl("the console does not say why: '%1'").arg(shown())));
+        // Spaces dropped, since a wrap can fall inside the path
+        QVERIFY2(shown().remove(QChar::Space).contains(qsl("/%1\"").arg(name)), qPrintable(qsl("the console does not show the path as typed: '%1'").arg(shown())));
     }
 };
 
