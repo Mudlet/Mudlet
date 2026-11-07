@@ -1145,6 +1145,8 @@ void TTrigger::processRegexMatch(const char* haystackC,
     const std::vector<int>& posList = lists.mPositions;
     QMap<QString, QPair<int, int>> namePositions;
     NameGroupMatches nameGroups;
+    // rc stops at the highest set group, so unset trailing groups stay out of matches (nil)
+    // instead of becoming "": scripts test `if matches[N]` on an optional trailing group
     for (i = 0; i < rc; i++) {
         const char* substring_start = haystackC + ovector[2 * i];
         const int substring_length = ovector[2 * i + 1] - ovector[2 * i];
