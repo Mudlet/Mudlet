@@ -11,6 +11,10 @@ db = {}
 db.__autocommit = {}
 db.__schema = {}
 db.__conn = {}
+db.__path = {}
+-- Files this code creates carry this id. A 4.18 file does not, which is how a
+-- digit-stripped file made for its own name stays distinct from a 4.18 fallback.
+db._new_naming_id = 0x4D444C54
 
 db.debug_sql = false
 
@@ -192,19 +196,128 @@ end
 --   "mydatabase", and "../../../../etc/passwd" becomes "etcpasswd". This prevents any possible
 --   security issues with database names.
 function db:safe_name(name)
-  name = name:gsub("[^%ad]", "")
+  name = name:gsub("[^%a%d]", "")
   name = name:lower()
   return name
+end
+
+
+function db:_database_path(safe_name)
+  return getMudletHomeDir() .. "/Database_" .. safe_name .. ".db"
+end
+
+
+-- [^%ad] is letters plus a literal d, so the previous safe_name dropped every
+-- digit and Database_stats.db is where "stats1" and "stats2" were both stored.
+-- A name that was only digits landed in Database_.db, so an empty legacy name
+-- is that file, not "no file".
+function db:_legacy_safe_name(safe_name)
+  return (safe_name:gsub("%d", ""))
+end
+
+
+function db:_application_id(path)
+  local file = io.open(path, "rb")
+  if not file then
+    return nil
+  end
+  file:seek("set", 68)
+  local bytes = file:read(4)
+  file:close()
+  if not bytes or #bytes < 4 then
+    return nil
+  end
+  local b1, b2, b3, b4 = bytes:byte(1, 4)
+  return b1 * 16777216 + b2 * 65536 + b3 * 256 + b4
+end
+
+
+function db:_has_new_naming_mark(path)
+  return db:_application_id(path) == db._new_naming_id
+end
+
+
+function db:_clear_new_naming_mark(path)
+  local file = io.open(path, "r+b")
+  if not file then
+    return false
+  end
+  file:seek("set", 68)
+  file:write(string.char(0, 0, 0, 0))
+  file:close()
+  return true
+end
+
+
+function db:_mark_new_naming(conn)
+  local cur = conn:execute("PRAGMA application_id = " .. db._new_naming_id)
+  if type(cur) == "userdata" or (type(cur) == "table" and cur.close) then
+    cur:close()
+  end
+end
+
+
+function db:_resolve_database_path(safe_name)
+  local current = db:_database_path(safe_name)
+  local legacy_name = db:_legacy_safe_name(safe_name)
+  -- 4.18.2 wrote the digit-stripped file and did not set this id. 4.18.0 and
+  -- 4.18.1 wrote the file that keeps the digits. An unmarked stripped file is
+  -- that later copy, so it wins. A stripped file this code created for a
+  -- digit-free name has the id, and a digit-named database must not open it.
+  -- A name that is only digits strips to Database_.db, and an empty legacy
+  -- name is that file, not "no file".
+  if legacy_name ~= safe_name then
+    local legacy = db:_database_path(legacy_name)
+    if io.exists(legacy) and not db:_has_new_naming_mark(legacy) then
+      return legacy
+    end
+  end
+
+  return current
+end
+
+
+-- lk1 and lk2 both fall back to Database_lk.db. A second SQLite connection to
+-- that file drops the other name's writes and then reports the file locked.
+-- Compare the path the other connection opened. Resolving again would follow
+-- a digit-free file created later and hand back the wrong connection.
+function db:_shared_connection(db_name)
+  local path = db:_resolve_database_path(db_name)
+  for other_name, other_conn in pairs(db.__conn) do
+    -- A deleted file leaves this name's own connection in __conn. Matching it
+    -- here reuses that handle, and the next add hears "readonly database"
+    -- instead of creating the file again.
+    if other_name ~= db_name
+        and other_conn and other_conn ~= "SQLite3 connection (closed)"
+        and db.__path[other_name] == path then
+      return other_conn
+    end
+  end
+end
+
+
+-- One file is one transaction. _begin on either name has to hold writes made
+-- through the other name, or the second add commits the first name's work.
+function db:_commits_after_write(db_name)
+  local conn = db.__conn[db_name]
+  for other_name, other_conn in pairs(db.__conn) do
+    if other_conn == conn and not db.__autocommit[other_name] then
+      return false
+    end
+  end
+  return true
 end
 
 
 function db:_isActiveDBName(db_name)
   db_name = db:safe_name(db_name)
 
+  local path = db.__path[db_name] or db:_resolve_database_path(db_name)
+
   return (
     db.__conn[db_name]
     and db.__conn[db_name] ~= 'SQLite3 connection (closed)'
-    and io.exists(getMudletHomeDir() .. "/Database_" .. db_name .. ".db")
+    and io.exists(path)
   )
 end
 
@@ -462,7 +575,11 @@ end
 --- reads them as before. <br/><br/>
 ---
 --- The database will be called Database_<sanitized database name>.db and will be stored in the
---- Mudlet configuration directory. <br/><br/>
+--- Mudlet configuration directory. If an older Mudlet stored the same name with its digits removed
+--- (Database_stats.db for "stats1", Database_.db for "2024"), that file is opened, including when
+--- a Database_stats1.db from 4.18.0 or 4.18.1 is also present. A name gets its own file only when
+--- the digit-stripped file is absent. Two names that used to share the stripped file still open it
+--- on one connection. <br/><br/>
 ---
 --- Database 'tables' are called 'sheets' consistently throughout this documentation, to avoid confusion
 --- with Lua tables. <br/><br/>
@@ -840,13 +957,24 @@ function db:create(db_name, sheets, force)
     -- the driver answers nil plus a reason for a file it can not open, which a
     -- read-only profile directory or a full disk both produce: without this the
     -- setautocommit below is the nil index instead
-    local conn, err = db.__env:connect(getMudletHomeDir() .. "/Database_" .. db_name .. ".db")
+    local path = db:_resolve_database_path(db_name)
+    local conn = db:_shared_connection(db_name)
+    local err
     if not conn then
-      error("db:create could not open the database file for "..db_name..": "..tostring(err), 2)
+      conn, err = db.__env:connect(path)
+      if not conn then
+        error("db:create could not open the database file for "..db_name..": "..tostring(err), 2)
+      end
+      -- Autocommit is still on, so the header write lands before the first
+      -- transaction. A legacy file we only fell back to keeps its old id.
+      if path == db:_database_path(db_name) then
+        db:_mark_new_naming(conn)
+      end
+      conn:setautocommit(false)
     end
 
     db.__conn[db_name] = conn
-    conn:setautocommit(false)
+    db.__path[db_name] = path
     db.__autocommit[db_name] = true
   end
 
@@ -1879,7 +2007,7 @@ function db:add(sheet, ...)
       return nil, msg
     end
   end
-  if db.__autocommit[db_name] then
+  if db:_commits_after_write(db_name) then
     conn:commit()
   end
   return true
@@ -2126,7 +2254,7 @@ function db:delete(sheet, query)
 
   db:echo_sql(sql)
   assert(conn:execute(sql))
-  if db.__autocommit[db_name] then
+  if db:_commits_after_write(db_name) then
     conn:commit()
   end
 end
@@ -2286,7 +2414,7 @@ function db:update(sheet, tbl)
   local sql = table.concat(sql_chunks, " ")
   db:echo_sql(sql)
   assert(conn:execute(sql))
-  if db.__autocommit[db_name] then
+  if db:_commits_after_write(db_name) then
     conn:commit()
   end
 end
@@ -2360,7 +2488,7 @@ function db:set(field, value, query)
 
   db:echo_sql(sql)
   assert(conn:execute(sql))
-  if db.__autocommit[db_name] then
+  if db:_commits_after_write(db_name) then
     conn:commit()
   end
 end
@@ -2749,14 +2877,19 @@ function db:_closeAll()
   end
 
   local result, msgs = true, {}
+  local closed = {}
   for db_name, conn in pairs(db.__conn) do
-    if not conn:close() then
-      result = false
-      table.insert(msgs, "database object for "..db_name.." is already closed.")
+    if not closed[conn] then
+      closed[conn] = true
+      if not conn:close() then
+        result = false
+        table.insert(msgs, "database object for "..db_name.." is already closed.")
+      end
     end
   end
 
   db.__conn = {}
+  db.__path = {}
   db.__env:close()
   db.__env = nil
 
@@ -2787,9 +2920,25 @@ function db:close(db_name)
     return false, "can not close "..db_name.." because it does not exist.  Did you forget to call db:create?"
   end
 
-  if db.__conn[db_name]:close() then
-    db.__conn[db_name] = nil
+  local conn = db.__conn[db_name]
+  local still_open = false
+  for other_name, other_conn in pairs(db.__conn) do
+    if other_name ~= db_name and other_conn == conn then
+      still_open = true
+      break
+    end
+  end
 
+  db.__conn[db_name] = nil
+  db.__path[db_name] = nil
+  -- Drop the connection only. _begin on a closed database must not change
+  -- __autocommit, and the spec reads the flag create stored. The name is
+  -- already out of __conn, so it no longer holds a shared transaction.
+  if still_open then
+    return true, ""
+  end
+
+  if conn:close() then
     return true, ""
   else
 
