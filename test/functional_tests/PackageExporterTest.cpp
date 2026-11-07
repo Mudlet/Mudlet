@@ -355,6 +355,48 @@ private slots:
         QVERIFY2(QFileInfo::exists(qsl("%1/qaAsset.txt").arg(unpacked.path())), "the added asset file is not in the package");
     }
 
+    // config.lua holds each detail as a Lua string literal, so one holding brackets
+    // or starting with a newline must still read back as typed
+    void test_detailsWithBracketsReadBackFromConfigLua()
+    {
+        auto* exporter = makeExporter();
+        const QString packageName = qsl("qaBracketPackage");
+        const auto cleanup = qScopeGuard([this, exporter, packageName]() {
+            delete exporter;
+            mpHost->mPackageInfo.remove(packageName);
+        });
+
+        const QString title = qsl("qaTitle [beta]");
+        const QString author = qsl("qa[[Author]]");
+        const QString version = qsl("1.0]");
+        const QString description = qsl("\nIndex it as t[x[1]] and quote it as [=[text]=]");
+
+        lineEdit(exporter, qsl("lineEdit_packageName"))->setText(packageName);
+        lineEdit(exporter, qsl("lineEdit_title"))->setText(title);
+        lineEdit(exporter, qsl("lineEdit_author"))->setText(author);
+        lineEdit(exporter, qsl("lineEdit_version"))->setText(version);
+        exporter->mPlainDescription = description;
+        QVERIFY2(tickRow(exporter->scriptMap, mScriptName), qPrintable(qsl("%1 is missing from the selection tree").arg(mScriptName)));
+
+        exporter->slot_exportPackage();
+        QVERIFY2(waitForExportToSettle(exporter), "the export never finished");
+        QVERIFY2(!reportedFailure(exporter), qPrintable(qsl("the export reported a failure: %1").arg(infoText(exporter))));
+
+        QTemporaryDir unpacked;
+        QVERIFY(unpacked.isValid());
+        QVERIFY(unpackInto(qsl("%1/%2.mpackage").arg(mExportDir.path(), packageName), unpacked));
+
+        QString whyNotRead;
+        const QString readName = mpHost->getPackageConfig(qsl("%1/config.lua").arg(unpacked.path()), false, &whyNotRead);
+        QVERIFY2(whyNotRead.isEmpty(), qPrintable(qsl("the exported config.lua could not be read: %1").arg(whyNotRead)));
+        QCOMPARE(readName, packageName);
+        const QMap<QString, QString> info = mpHost->mPackageInfo.value(packageName);
+        QCOMPARE(info.value(qsl("title")), title);
+        QCOMPARE(info.value(qsl("author")), author);
+        QCOMPARE(info.value(qsl("version")), version);
+        QCOMPARE(info.value(qsl("description")), description);
+    }
+
     // Unticked items must not be dragged along by the export, and their
     // exportItem flag has to be put back afterwards or the next profile save
     // writes the wrong set
