@@ -70,3 +70,38 @@ std::optional<QString> THeadlessSession::completeCommandLine(const bool forward)
     }
     return line;
 }
+
+std::optional<QString> THeadlessSession::completeCommandLineFromHistory()
+{
+    if (!usable()) {
+        return std::nullopt;
+    }
+    if (mpHost->passwordEntryWanted()) {
+        //: Error from a frontend with no window that was asked to complete the word on its input line while the game hides what the player types, as for a password
+        mErrorString = tr("Nothing is completed while the game hides what is typed.");
+        return std::nullopt;
+    }
+    if (mpHost->windowRegistry().commandLineText(QString()).value_or(QString()).isEmpty()) {
+        //: Error from a frontend with no window that was asked to complete its input line from the lines sent before, as the up arrow does, when nothing is typed on it; the GUI's up arrow then recalls whole lines, which the frontend reads from commandHistory()
+        mErrorString = tr("Nothing is typed to complete; commandHistory() holds the lines to recall.");
+        return std::nullopt;
+    }
+    // TCommandLine::historyMove() recalls whole lines in these too
+    if (!mpHost->mHighlightHistory) {
+        //: Error from a frontend with no window that was asked to complete its input line from the lines sent before, as the up arrow does, while the profile's "Highlight history" setting is off; the GUI's up arrow then recalls whole lines, which the frontend reads from commandHistory()
+        mErrorString = tr("\"Highlight history\" is off, so the up arrow recalls whole lines; commandHistory() holds them.");
+        return std::nullopt;
+    }
+    auto* pView = dynamic_cast<TNullConsoleFrontend*>(mpHost->consoleFrontend());
+    if (pView && pView->mainCommandLineWhollySelected()) {
+        //: Error from a frontend with no window that was asked to complete its input line from the lines sent before, as the up arrow does, while the GUI's line would have all of it selected, as after Escape, a recall or a send that keeps the line; the GUI's up arrow then recalls whole lines, which the frontend reads from commandHistory()
+        mErrorString = tr("The whole line is selected, so the up arrow recalls whole lines; commandHistory() holds them.");
+        return std::nullopt;
+    }
+    std::optional<QString> line = pView ? pView->historyCompleteMainCommandLine() : std::nullopt;
+    if (!line) {
+        //: Error from a frontend with no window that was asked to complete its input line from the lines sent before, as the up arrow does, when none of them starts with what is typed
+        mErrorString = tr("No line sent before starts with what is typed.");
+    }
+    return line;
+}

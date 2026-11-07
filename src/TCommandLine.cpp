@@ -206,7 +206,7 @@ void TCommandLine::processNormalKey(QEvent* event)
 
     mHistoryBuffer = 0;
     if (mCompletion.lineEdited(toPlainText())) {
-        mAutoCompletionCount = -1;
+        mCompletion.restartHistoryWalk();
     }
 
     spellCheck();
@@ -352,9 +352,8 @@ bool TCommandLine::event(QEvent* event)
             if ((ke->modifiers() & (allModifiers & ~(Qt::ShiftModifier))) == Qt::NoModifier) {
                 // Ignore the <SHIFT> modifier only - keeps some users happy!
                 mCompletion.reset();
-                mAutoCompletionCount = -1;
+                mCompletion.resetHistoryWalk();
                 mHistoryBuffer = 0;
-                mLastCompletion.clear();
                 break;
             }
 
@@ -425,8 +424,7 @@ bool TCommandLine::event(QEvent* event)
                 // Ignore state of <CTRL> and <SHIFT> keys
                 mHistoryBuffer = 0;
                 mCompletion.reset();
-                mAutoCompletionCount = -1;
-                mLastCompletion.clear();
+                mCompletion.resetHistoryWalk();
                 {
                     // This does the actual deletion of the character:
                     const UserEditScope userEdit(*this);
@@ -449,8 +447,7 @@ bool TCommandLine::event(QEvent* event)
             if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
                 mHistoryBuffer = 0;
                 mCompletion.reset();
-                mAutoCompletionCount = -1;
-                mLastCompletion.clear();
+                mCompletion.resetHistoryWalk();
                 {
                     // This does the actual deletion of the character:
                     const UserEditScope userEdit(*this);
@@ -589,7 +586,7 @@ bool TCommandLine::event(QEvent* event)
                 // Escape from tab completion mode if used with NO modifiers
                 selectAll();
                 mCompletion.reset();
-                mAutoCompletionCount = -1;
+                mCompletion.restartHistoryWalk();
                 mHistoryBuffer = 0;
                 ke->accept();
                 return true;
@@ -1118,8 +1115,7 @@ void TCommandLine::enterCommand(QKeyEvent* event)
     // The aliases and event handlers run below may write to the line
     mPlayerTypedLine = false;
     mCompletion.reset();
-    mAutoCompletionCount = -1;
-    mLastCompletion.clear();
+    mCompletion.resetHistoryWalk();
 
     // Emit signal for hyperlink visibility triggers before processing the command
     emit commandSubmitted();
@@ -1187,46 +1183,33 @@ void TCommandLine::handleTabCompletion(bool direction)
 // all possible matches. If the user keeps on typing more letters the
 // the set of possible matches is getting smaller. The ESC key brings you back to regular mode
 
-void TCommandLine::handleAutoCompletion()
+void TCommandLine::handleAutoCompletion(const bool forward)
 {
-    QString neu = toPlainText();
-    // Only the tail the previous completion filled in may be cut; any other selection is the player's own text
+    const QString line = toPlainText();
     const QTextCursor playerCursor = textCursor();
-    const bool cutCompletionTail = neu == mLastCompletion && playerCursor.selectionStart() == mCompletion.shownLine().size() && playerCursor.selectionEnd() == neu.size();
-    if (cutCompletionTail) {
-        neu.truncate(playerCursor.selectionStart());
-        setPlainText(neu);
+    const bool tailSelected = playerCursor.selectionStart() == mCompletion.shownLine().size() && playerCursor.selectionEnd() == line.size();
+    const auto completion = mCompletion.historyComplete(line, tailSelected, mHistoryList, forward);
+    if (completion.tailCut) {
+        setPlainText(completion.typed);
     }
-    mudlet::self()->announce(neu);
-    mCompletion.setShownLine(neu);
-    const int oldLength = neu.size();
-    if (mAutoCompletionCount >= mHistoryList.size()) {
-        mAutoCompletionCount = mHistoryList.size() - 1;
+    mudlet::self()->announce(completion.typed);
+    if (completion.line) {
+        setPlainText(*completion.line);
+        // As the document gives it back, which turns a no-break space into a plain one
+        mCompletion.setHistoryCompletion(toPlainText());
+        mudlet::self()->announce(*completion.line);
+        // By position, not by moving Right: that steps whole graphemes, which an emoji or accent spans several of
+        QTextCursor shown = textCursor();
+        shown.setPosition(completion.typed.size());
+        shown.movePosition(QTextCursor::End, QTextCursor::KeepAnchor);
+        setTextCursor(shown);
+        return;
     }
-    if (mAutoCompletionCount < 0) {
-        mAutoCompletionCount = 0;
-    }
-    for (int i = mAutoCompletionCount; i < mHistoryList.size(); i++) {
-        if (mHistoryList[i].startsWith(neu)) {
-            mAutoCompletionCount = i;
-            setPlainText(mHistoryList[i]);
-            // As the document gives it back, which turns a no-break space into a plain one
-            mLastCompletion = toPlainText();
-            mudlet::self()->announce(mHistoryList[i]);
-            // By position, not by moving Right: that steps whole graphemes, which an emoji or accent spans several of
-            QTextCursor completion = textCursor();
-            completion.setPosition(oldLength);
-            completion.movePosition(QTextCursor::End, QTextCursor::KeepAnchor);
-            setTextCursor(completion);
-            return;
-        }
-    }
-    if (cutCompletionTail) {
+    if (completion.tailCut) {
         moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
     } else {
         setTextCursor(playerCursor);
     }
-    mAutoCompletionCount = -1;
 }
 
 // cursor up/down: turns on autocompletion mode and cycles through all possible matches
@@ -1264,8 +1247,7 @@ void TCommandLine::historyMove(MoveDirection direction)
             moveCursor(QTextCursor::End);
         }
     } else {
-        mAutoCompletionCount += shift;
-        handleAutoCompletion();
+        handleAutoCompletion(direction == MOVE_UP);
     }
     adjustHeight();
 }
