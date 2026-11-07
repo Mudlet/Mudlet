@@ -28,6 +28,7 @@
 
 #include <QDebug>
 #include <QHash>
+#include <QPointer>
 
 #include <algorithm>
 #include <functional>
@@ -61,7 +62,11 @@ THeadlessSession::ScriptWindow::Kind kindOf(const Record::Kind kind)
 
 THeadlessSession::ScriptWindow scriptWindowOf(const Record& record, const int stackOrder)
 {
-    return {record.name, kindOf(record.kind), record.parent, record.geometry, record.visible, record.shown, stackOrder, record.background, record.font, record.inDock};
+    THeadlessSession::ScriptWindow window{record.name, kindOf(record.kind), record.parent, record.geometry, record.visible, record.shown, stackOrder, record.background, record.font, record.inDock};
+    if (record.kind == Record::Kind::userWindow) {
+        window.dock = THeadlessSession::ScriptWindow::Dock{record.autoDock, record.dockArea, record.floating, record.title};
+    }
+    return window;
 }
 
 // Only these hold other windows, so a label that shares a scroll box's name is not taken for it
@@ -229,4 +234,47 @@ std::optional<THeadlessSession::LabelContent> THeadlessSession::labelContent(con
     content.accessibleButton = pModel->actsAsButton();
     content.styleSheet = pModel->mStyleSheet;
     return content;
+}
+
+bool THeadlessSession::setUserWindowGeometry(const QString& name, const QRect& geometry, const bool floating)
+{
+    if (!usable()) {
+        return false;
+    }
+    auto* pView = dynamic_cast<TNullConsoleFrontend*>(mpHost->consoleFrontend());
+    if (!pView || !pView->userWindow(name)) {
+        //: Error from a frontend with no window asked to place or close a user window the profile's scripts have not opened; %1 is its name
+        mErrorString = tr("There is no user window \"%1\".").arg(name);
+        return false;
+    }
+    // Its resize handlers run in this, and may take the window away
+    const QPointer<THeadlessSession> self(this);
+    if (pView->placeUserWindow(name, geometry, floating)) {
+        return true;
+    }
+    if (self) {
+        //: Error from a frontend with no window placing a user window that a script's handler of its resize took away, or made again; %1 is its name
+        mErrorString = tr("The user window \"%1\" was taken away, or made again, by a script as it was placed.").arg(name);
+    }
+    return false;
+}
+
+bool THeadlessSession::closeUserWindow(const QString& name)
+{
+    if (!usable()) {
+        return false;
+    }
+    const auto* pView = dynamic_cast<TNullConsoleFrontend*>(mpHost->consoleFrontend());
+    if (!pView || !pView->userWindow(name)) {
+        //: Error from a frontend with no window asked to place or close a user window the profile's scripts have not opened; %1 is its name
+        mErrorString = tr("There is no user window \"%1\".").arg(name);
+        return false;
+    }
+    // As TDockWidget::closeEvent()
+    if (mpHost->hideWindow(name)) {
+        return true;
+    }
+    //: Error from a frontend with no window closing a user window the profile could not hide; %1 is its name
+    mErrorString = tr("The user window \"%1\" could not be closed.").arg(name);
+    return false;
 }

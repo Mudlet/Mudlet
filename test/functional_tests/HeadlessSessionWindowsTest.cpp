@@ -363,6 +363,91 @@ setLabelStyleSheet("lbl", "color: red;")
         QVERIFY(session.shutdown(false));
         QVERIFY(!session.labelContent(qsl("lbl")));
     }
+
+    void test_userWindowsArePlacedAsTheGuisDocksAre()
+    {
+        const QString name = qsl("Headless User Window Place");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QVERIFY(!session.setUserWindowGeometry(qsl("uw"), QRect(0, 0, 250, 400), false));
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        QVERIFY(session.runLua(qsl(R"lua(
+openUserWindow("uw", false, false, "left")
+openUserWindow("floater", false, true, "f")
+setUserWindowTitle("floater", "Chat")
+createLabel("lbl", 0, 0, 10, 10, 1)
+resizes = {}
+registerAnonymousEventHandler("sysUserWindowResizeEvent", function(_, width, height, window)
+  resizes[#resizes + 1] = string.format("%s %d %d", window, width, height)
+end)
+)lua")));
+        const std::optional<THeadlessSession::ScriptWindow> uw = session.scriptWindow(qsl("uw"));
+        QVERIFY(uw && uw->dock);
+        QVERIFY(!uw->dock->autoDock);
+        QCOMPARE(uw->dock->area, Qt::LeftDockWidgetArea);
+        QVERIFY(!uw->dock->floating);
+        QCOMPARE(uw->dock->title, qsl("uw"));
+        const std::optional<THeadlessSession::ScriptWindow> floater = session.scriptWindow(qsl("floater"));
+        QVERIFY(floater && floater->dock);
+        QVERIFY(floater->dock->autoDock && floater->dock->floating);
+        QCOMPARE(floater->dock->title, qsl("Chat"));
+        const std::optional<THeadlessSession::ScriptWindow> label = session.scriptWindow(qsl("lbl"));
+        QVERIFY(label);
+        QVERIFY(!label->dock);
+
+        QVERIFY(session.setUserWindowGeometry(qsl("uw"), QRect(10, 20, 250, 400), false));
+        QCOMPARE(luaString(session, qsl("table.concat(resizes, ';')")), qsl("uw 250 400"));
+        QCOMPARE(luaString(session, qsl("table.concat({getUserWindowSize('uw')}, ',')")), qsl("250,400"));
+        QCOMPARE(luaString(session, qsl("table.concat({getWindowGeometry('uw')}, ',')")), qsl("10,20,250,400"));
+        std::optional<THeadlessSession::ScriptWindow> placed = session.scriptWindow(qsl("uw"));
+        QVERIFY(placed && placed->dock);
+        QCOMPARE(placed->geometry, QRect(10, 20, 250, 400));
+        // Moved, not resized, as a dock's moveEvent() raises nothing
+        QVERIFY(session.setUserWindowGeometry(qsl("uw"), QRect(30, 40, 250, 400), true));
+        QCOMPARE(luaString(session, qsl("#resizes")), qsl("1"));
+        placed = session.scriptWindow(qsl("uw"));
+        QVERIFY(placed && placed->dock);
+        QVERIFY(placed->dock->floating);
+        // The area is what the script asked for, wherever the app docks it
+        QCOMPARE(placed->dock->area, Qt::LeftDockWidgetArea);
+
+        QVERIFY(session.closeUserWindow(qsl("uw")));
+        QCOMPARE(luaString(session, qsl("windowVisible('uw')")), qsl("false"));
+        // A size given while it is closed reaches it as it next shows
+        QVERIFY(session.setUserWindowGeometry(qsl("uw"), QRect(0, 0, 300, 300), false));
+        QCOMPARE(luaString(session, qsl("#resizes")), qsl("1"));
+        QVERIFY(session.runLua(qsl(R"(showWindow("uw"))")));
+        QCOMPARE(luaString(session, qsl("resizes[2]")), qsl("uw 300 300"));
+
+        // A handler of the resize that takes the window away, or opens another of its name in its place, leaves it unplaced
+        QVERIFY(session.runLua(qsl(R"lua(
+openUserWindow("gone")
+openUserWindow("again")
+registerAnonymousEventHandler("sysUserWindowResizeEvent", function(_, width, height, window)
+  if window == "gone" or (window == "again" and width == 222) then
+    deleteMiniConsole(window)
+  end
+  if window == "again" and width == 222 then
+    openUserWindow("again")
+  end
+end)
+)lua")));
+        QVERIFY(!session.setUserWindowGeometry(qsl("gone"), QRect(0, 0, 111, 111), false));
+        QVERIFY(session.errorString().contains(qsl("taken away")));
+        QVERIFY(!session.scriptWindow(qsl("gone")));
+        QVERIFY(!session.setUserWindowGeometry(qsl("again"), QRect(0, 0, 222, 222), false));
+        QVERIFY(session.errorString().contains(qsl("made again")));
+        const std::optional<THeadlessSession::ScriptWindow> again = session.scriptWindow(qsl("again"));
+        QVERIFY(again);
+        QVERIFY(again->geometry.size() != QSize(222, 222));
+
+        QVERIFY(!session.setUserWindowGeometry(qsl("lbl"), QRect(0, 0, 5, 5), false));
+        QVERIFY(session.errorString().contains(qsl("lbl")));
+        QVERIFY(!session.closeUserWindow(qsl("nonesuch")));
+        QVERIFY(session.shutdown(false));
+        QVERIFY(!session.closeUserWindow(qsl("uw")));
+    }
 };
 
 #include "HeadlessSessionWindowsTest.moc"
