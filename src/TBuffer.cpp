@@ -6158,8 +6158,6 @@ void TBuffer::parseJsonStyleToHyperlinkStyling(const QJsonObject& styleObj, Mudl
         || styling.disabledStyle.hasCustomStyling) {
         styling.hasCustomStyling = true;
     }
-
-    applyAccessibilityEnhancements(styling);
 }
 
 QColor TBuffer::parseColorValue(const QString& value)
@@ -9858,7 +9856,7 @@ Mudlet::HyperlinkStyling::StateStyle Mudlet::HyperlinkStyling::getEffectiveStyle
     }
 
     // Apply state-specific styles with proper cascade order
-    // Priority: disabled > selected > active > focus-visible > focus > hover > visited > link > default
+    // Priority: disabled > active > hover > focus-visible > focus > selected > visited > link > default
     const StateStyle* stateStyle = nullptr;
 
     switch (currentState) {
@@ -9908,8 +9906,12 @@ Mudlet::HyperlinkStyling::StateStyle Mudlet::HyperlinkStyling::getEffectiveStyle
             stateStyle = &focusStyle;
         break;
     case StateFocusVisible:
-        if (focusVisibleStyle.hasCustomStyling)
+        // Visible keyboard focus is focus too, so a link styled only for :focus shows that
+        if (focusVisibleStyle.hasCustomStyling) {
             stateStyle = &focusVisibleStyle;
+        } else if (focusStyle.hasCustomStyling) {
+            stateStyle = &focusStyle;
+        }
         break;
     case StateDefault:
     default:
@@ -9961,21 +9963,6 @@ Mudlet::HyperlinkStyling::StateStyle Mudlet::HyperlinkStyling::getEffectiveStyle
     }
 
     return effective;
-}
-
-void TBuffer::applyAccessibilityEnhancements(Mudlet::HyperlinkStyling& styling)
-{
-    // Ensure focus states are appropriately visible
-    if (!styling.focusStyle.hasCustomStyling && !styling.focusVisibleStyle.hasCustomStyling) {
-        // Provide default focus styling for accessibility
-        styling.focusStyle.hasCustomStyling = true;
-        styling.focusStyle.isUnderlined = true;
-        styling.focusStyle.underlineStyle = Mudlet::HyperlinkStyling::UnderlineSolid;
-        styling.focusStyle.hasUnderlineColor = true;
-        styling.focusStyle.underlineColor = QColor(0, 120, 215); // Windows accent blue
-
-        styling.focusVisibleStyle = styling.focusStyle; // Copy focus style to focus-visible
-    }
 }
 
 // Link state management methods for interactive pseudo-classes
@@ -10098,17 +10085,19 @@ void TBuffer::setHoveredLink(int linkIndex)
     int previousHoveredLink = mCurrentHoveredLinkIndex;
     mCurrentHoveredLinkIndex = linkIndex;
 
-    // Reset previous hovered link to its base state (default, visited, or selected)
+    // Reset previous hovered link to its base state (focused, selected, visited or default)
     if (previousHoveredLink > 0 && previousHoveredLink != linkIndex) {
         auto currentState = getLinkState(previousHoveredLink);
 
         if (currentState == Mudlet::HyperlinkStyling::StateHover) {
             // Return to the appropriate base state:
-            // Priority: disabled > selected > visited > default
+            // Priority: disabled > focus > selected > visited > default
             // Disabled links should stay disabled
             Mudlet::HyperlinkStyling linkStyling = getEffectiveHyperlinkStyling(previousHoveredLink);
             if (linkStyling.selection.disabled) {
                 setLinkState(previousHoveredLink, Mudlet::HyperlinkStyling::StateDisabled);
+            } else if (showsFocus(previousHoveredLink)) {
+                setLinkState(previousHoveredLink, Mudlet::HyperlinkStyling::StateFocusVisible);
             } else if (isLinkSelected(previousHoveredLink)) {
                 setLinkState(previousHoveredLink, Mudlet::HyperlinkStyling::StateSelected);
             } else if (isLinkVisited(previousHoveredLink)) {
@@ -10145,12 +10134,14 @@ void TBuffer::setActiveLink(int linkIndex)
 
     // Reset previous active link
     if (previousActiveLink > 0 && previousActiveLink != linkIndex) {
-        // Return to appropriate state based on priority: disabled > hover > selected > visited > default
+        // Return to appropriate state based on priority: disabled > hover > focus > selected > visited > default
         Mudlet::HyperlinkStyling linkStyling = getEffectiveHyperlinkStyling(previousActiveLink);
         if (linkStyling.selection.disabled) {
             setLinkState(previousActiveLink, Mudlet::HyperlinkStyling::StateDisabled);
         } else if (previousActiveLink == mCurrentHoveredLinkIndex) {
             setLinkState(previousActiveLink, Mudlet::HyperlinkStyling::StateHover);
+        } else if (showsFocus(previousActiveLink)) {
+            setLinkState(previousActiveLink, Mudlet::HyperlinkStyling::StateFocusVisible);
         } else if (isLinkSelected(previousActiveLink)) {
             setLinkState(previousActiveLink, Mudlet::HyperlinkStyling::StateSelected);
         } else if (isLinkVisited(previousActiveLink)) {
@@ -10174,30 +10165,36 @@ void TBuffer::setFocusedLink(int linkIndex)
     int previousFocusedLink = mCurrentFocusedLinkIndex;
     mCurrentFocusedLinkIndex = linkIndex;
 
-    // Reset previous focused link to appropriate base state
-    if (previousFocusedLink > 0 && previousFocusedLink != linkIndex) {
-        // Preserve disabled state, otherwise return to base state
-        Mudlet::HyperlinkStyling linkStyling = getEffectiveHyperlinkStyling(previousFocusedLink);
-        if (linkStyling.selection.disabled) {
-            setLinkState(previousFocusedLink, Mudlet::HyperlinkStyling::StateDisabled);
-        } else if (isLinkSelected(previousFocusedLink)) {
+    // Reset previous focused link to appropriate base state; one under the pointer stays hovered or pressed
+    if (previousFocusedLink > 0 && previousFocusedLink != linkIndex && getLinkState(previousFocusedLink) == Mudlet::HyperlinkStyling::StateFocusVisible) {
+        if (isLinkSelected(previousFocusedLink)) {
             setLinkState(previousFocusedLink, Mudlet::HyperlinkStyling::StateSelected);
         } else if (isLinkVisited(previousFocusedLink)) {
             setLinkState(previousFocusedLink, Mudlet::HyperlinkStyling::StateVisited);
         } else {
             setLinkState(previousFocusedLink, Mudlet::HyperlinkStyling::StateDefault);
         }
+        updateLinkCharacters(previousFocusedLink);
     }
 
     // Set new link to focus state
-    if (linkIndex > 0) {
-        // Disabled links stay disabled, and a screen reader is told so from this state.
-        if (getLinkState(linkIndex) != Mudlet::HyperlinkStyling::StateDisabled) {
-            // Determine if focus came from keyboard (would use StateFocusVisible)
-            // For now, we use StateFocus
-            setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateFocus);
-        }
+    // Disabled links stay disabled, and a screen reader is told so from this state. The pointer and a
+    // pressed button outrank focus.
+    if (showsFocus(linkIndex) && getLinkState(linkIndex) != Mudlet::HyperlinkStyling::StateDisabled && linkIndex != mCurrentHoveredLinkIndex && linkIndex != mCurrentActiveLinkIndex) {
+        // Only the caret focuses a link, never a pointer click, so it always matches :focus-visible
+        setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateFocusVisible);
+        updateLinkCharacters(linkIndex);
     }
+}
+
+bool TBuffer::showsFocus(int linkIndex) const
+{
+    if (linkIndex <= 0 || linkIndex != mCurrentFocusedLinkIndex) {
+        return false;
+    }
+    // Redrawing a link replaces the game's own formatting, so a link without a focus style is left as printed
+    const Mudlet::HyperlinkStyling styling = mLinkStore.getStyling(linkIndex);
+    return styling.focusStyle.hasCustomStyling || styling.focusVisibleStyle.hasCustomStyling;
 }
 
 void TBuffer::markLinkAsVisited(int linkIndex)
