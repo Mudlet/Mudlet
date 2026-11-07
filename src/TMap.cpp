@@ -3184,7 +3184,8 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         return;
     }
     // The QNetworkReply is Ok here:
-    if (writeFile.write(reply->readAll()) == -1) {
+    // A full disk can cut the write short with no error on the file, and commit() would put the part that landed in place
+    if (const QByteArray downloaded = reply->readAll(); writeFile.write(downloaded) != downloaded.size()) {
         const QString alertMsg = tr("[ ALERT ] - Map download failed, unable to write destination file:\n%1.").arg(mLocalMapFileName);
         postMessage(alertMsg);
         cleanup();
