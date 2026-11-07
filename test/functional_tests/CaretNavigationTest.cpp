@@ -39,6 +39,7 @@
 #include <QFileInfo>
 #include <QFontDatabase>
 #include <QFontInfo>
+#include <QLineEdit>
 #include <QMenu>
 #include <QScopeGuard>
 #include <QTemporaryDir>
@@ -132,6 +133,29 @@ private:
         }
         TConsole* pMini = mpHost->mainConsoleView()->subConsoleWidget(name);
         return pMini && pMini->mpCommandLine ? pMini : nullptr;
+    }
+
+    static bool activateMainWindow()
+    {
+        mudlet::self()->activateWindow();
+        return QTest::qWaitForWindowActive(mudlet::self());
+    }
+
+    // Through the window, as a real key press arrives: QTest::keyClick() on a
+    // widget hands the event straight to it, past any keyboard grab
+    static QString typeInto(QWidget& window)
+    {
+        auto pEdit = new QLineEdit(&window);
+        window.show();
+        window.activateWindow();
+        if (!QTest::qWaitForWindowActive(&window)) {
+            return qsl("(the window never became active)");
+        }
+        pEdit->setFocus();
+        for (const char key : {'a', 'b', 'c'}) {
+            QTest::keyClick(window.windowHandle(), key);
+        }
+        return pEdit->text();
     }
 
     QString luaGlobal(const char* name) const
@@ -817,6 +841,52 @@ private slots:
         press(pane(), Qt::Key_Return);
 
         QVERIFY2(consoleBuffer().isLinkVisited(linkIndex), "the activated link was not marked as visited");
+    }
+
+    // Caret mode's keyboard grab on Linux and Windows outranks the active window,
+    // so the script editor this stands in for would get none of these keys.
+    void test_anotherWindowGetsTheKeysWhileCaretModeIsOn()
+    {
+#if !defined(Q_OS_WINDOWS) && !defined(Q_OS_LINUX)
+        QSKIP("only Linux and Windows hold the keyboard in caret mode");
+#endif
+        QVERIFY(activateMainWindow());
+        pane()->setFocus();
+        QVERIFY(mpHost->caretEnabled());
+        QCOMPARE(QWidget::keyboardGrabber(), pane());
+
+        QWidget other;
+        QCOMPARE(typeInto(other), qsl("abc"));
+        QVERIFY2(QWidget::keyboardGrabber() != pane(), "the console still holds the keyboard while another window is active");
+        QVERIFY2(mpHost->caretEnabled(), "switching windows is not leaving the text, so caret mode should stay on");
+
+        QVERIFY(activateMainWindow());
+
+        QCOMPARE(QWidget::keyboardGrabber(), pane());
+        QVERIFY(mpHost->caretEnabled());
+    }
+
+    // A command line in a floating user window turns caret mode on too, and the
+    // grab is taken without the main window ever being the active one.
+    void test_caretModeTurnedOnFromAnotherWindowLetsAThirdHaveTheKeys()
+    {
+#if !defined(Q_OS_WINDOWS) && !defined(Q_OS_LINUX)
+        QSKIP("only Linux and Windows hold the keyboard in caret mode");
+#endif
+        mpHost->setCaretEnabled(false);
+        drainDeferredFocusChange();
+        QWidget floating;
+        floating.show();
+        floating.activateWindow();
+        QVERIFY(QTest::qWaitForWindowActive(&floating));
+        mpHost->setCaretEnabled(true);
+        QCOMPARE(QWidget::keyboardGrabber(), pane());
+
+        QWidget other;
+        QCOMPARE(typeInto(other), qsl("abc"));
+        QVERIFY2(QWidget::keyboardGrabber() != pane(), "the console still holds the keyboard while another window is active");
+
+        QVERIFY(activateMainWindow());
     }
 
     // deleteLine() can take a console's last line, leaving no line at all, and

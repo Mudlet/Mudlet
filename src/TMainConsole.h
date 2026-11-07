@@ -53,6 +53,7 @@ class QDialog;
 class QDockWidget;
 class QProgressDialog;
 class QTimer;
+class QWindow;
 
 class TMainConsole : public TConsole, public TConsoleFrontend
 {
@@ -389,6 +390,9 @@ signals:
 private:
     QString assembleTriggerMatchPoolReport() const;
     bool eventFilter(QObject* watched, QEvent* event) override;
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
+    void slot_focusWindowChanged(QWindow* pFocusWindow);
+#endif
     void openPasswordEntry();
     void closePasswordEntry();
     TPasswordEntry* passwordEntry() const;
