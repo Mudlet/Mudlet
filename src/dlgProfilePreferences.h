@@ -309,6 +309,7 @@ private:
     void fillOutMapHistory();
     bool updateDisplayFont(Host::DisplayFontChange change);
     void rememberDisplayFontFamilyShown();
+    void showDisplayFont(const QFont&);
     void showEditorFont(const QFont&);
     void reflectEditorFontControls();
     void cancelShortcutCaptures();
