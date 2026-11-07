@@ -1831,7 +1831,8 @@ QList<THeadlessSession::TextRun> textRuns(const QString& text, const TLineFormat
         const THeadlessSession::TextStyles styles = textStyles(first);
         int end = start + 1;
         // By style rather than TChar's flags, which also tell alternate fonts apart
-        while (end < length && format[end].foregroundRgba() == first.foregroundRgba() && format[end].backgroundRgba() == first.backgroundRgba() && textStyles(format[end]) == styles) {
+        while (end < length && format[end].foregroundRgba() == first.foregroundRgba() && format[end].backgroundRgba() == first.backgroundRgba() && textStyles(format[end]) == styles
+               && format[end].linkIndex() == first.linkIndex()) {
             ++end;
         }
         THeadlessSession::TextRun run;
@@ -1842,6 +1843,7 @@ QList<THeadlessSession::TextRun> textRuns(const QString& text, const TLineFormat
         run.defaultForeground = first.foregroundRgba() == profileForeground.rgba();
         run.defaultBackground = first.backgroundRgba() == profileBackground.rgba();
         run.styles = styles;
+        run.link = first.linkIndex();
         runs.append(run);
         start = end;
     }
