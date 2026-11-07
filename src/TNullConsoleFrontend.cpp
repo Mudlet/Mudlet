@@ -816,8 +816,10 @@ void TNullConsoleFrontend::dropWindows()
     mpMainHolder = std::make_unique<QObject>();
     mFrameHolders.clear();
     mMxpFrames.clear();
-    // The view's TCommandLine has its own menu items, which go with it
+    // The view's TCommandLine has its own menu items and words for Tab, which go with it
     mMainCommandLine.menuItems.clear();
+    mMainCommandLine.suggestions.clear();
+    mMainCommandLine.blacklist.clear();
     // The view has its own map widget, if any. An embedded mapper went with the main window's stand-in.
     mMapWidget.reset();
     mpEmbeddedMapperBox.reset();
@@ -2330,6 +2332,66 @@ std::optional<bool> TNullConsoleFrontend::removeCommandLineMenuItem(const QStrin
         return std::nullopt;
     }
     return pCommandLine->menuItems.erase(label) != 0;
+}
+
+bool TNullConsoleFrontend::addCommandLineSuggestion(const QString& name, const QString& word)
+{
+    PlainWindow* pCommandLine = commandLineNamed(name);
+    if (!pCommandLine) {
+        return false;
+    }
+    pCommandLine->suggestions.insert(word);
+    return true;
+}
+
+bool TNullConsoleFrontend::removeCommandLineSuggestion(const QString& name, const QString& word)
+{
+    PlainWindow* pCommandLine = commandLineNamed(name);
+    if (!pCommandLine) {
+        return false;
+    }
+    pCommandLine->suggestions.remove(word);
+    return true;
+}
+
+bool TNullConsoleFrontend::clearCommandLineSuggestions(const QString& name)
+{
+    PlainWindow* pCommandLine = commandLineNamed(name);
+    if (!pCommandLine) {
+        return false;
+    }
+    pCommandLine->suggestions.clear();
+    return true;
+}
+
+bool TNullConsoleFrontend::addCommandLineBlacklistWord(const QString& name, const QString& word)
+{
+    PlainWindow* pCommandLine = commandLineNamed(name);
+    if (!pCommandLine) {
+        return false;
+    }
+    pCommandLine->blacklist.insert(word);
+    return true;
+}
+
+bool TNullConsoleFrontend::removeCommandLineBlacklistWord(const QString& name, const QString& word)
+{
+    PlainWindow* pCommandLine = commandLineNamed(name);
+    if (!pCommandLine) {
+        return false;
+    }
+    pCommandLine->blacklist.remove(word);
+    return true;
+}
+
+bool TNullConsoleFrontend::clearCommandLineBlacklist(const QString& name)
+{
+    PlainWindow* pCommandLine = commandLineNamed(name);
+    if (!pCommandLine) {
+        return false;
+    }
+    pCommandLine->blacklist.clear();
+    return true;
 }
 
 bool TNullConsoleFrontend::setCommandLineSavesHistory(const QString& name, const bool savesHistory)

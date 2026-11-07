@@ -33,6 +33,7 @@
 #include <QPoint>
 #include <QPointer>
 #include <QRect>
+#include <QSet>
 #include <QSize>
 #include <QString>
 
@@ -220,12 +221,14 @@ public:
     bool clearCommandLine(const QString& name) override { return replaceCommandLineText(name, QString()); }
     // Only typing and tab completion read what these set, and with no view nothing is typed
     bool selectCommandLineText(const QString& name) override;
-    bool addCommandLineSuggestion(const QString& name, const QString&) override { return ownsCommandLine(name); }
-    bool removeCommandLineSuggestion(const QString& name, const QString&) override { return ownsCommandLine(name); }
-    bool clearCommandLineSuggestions(const QString& name) override { return ownsCommandLine(name); }
-    bool addCommandLineBlacklistWord(const QString& name, const QString&) override { return ownsCommandLine(name); }
-    bool removeCommandLineBlacklistWord(const QString& name, const QString&) override { return ownsCommandLine(name); }
-    bool clearCommandLineBlacklist(const QString& name) override { return ownsCommandLine(name); }
+    bool addCommandLineSuggestion(const QString& name, const QString& word) override;
+    bool removeCommandLineSuggestion(const QString& name, const QString& word) override;
+    bool clearCommandLineSuggestions(const QString& name) override;
+    bool addCommandLineBlacklistWord(const QString& name, const QString& word) override;
+    bool removeCommandLineBlacklistWord(const QString& name, const QString& word) override;
+    bool clearCommandLineBlacklist(const QString& name) override;
+    const QSet<QString>& mainCommandLineSuggestions() const { return mMainCommandLine.suggestions; }
+    const QSet<QString>& mainCommandLineBlacklist() const { return mMainCommandLine.blacklist; }
     bool addCommandLineMenuItem(const QString& name, const QString& label, const QString& eventName) override;
     std::optional<bool> removeCommandLineMenuItem(const QString& name, const QString& label) override;
     bool setCommandLineSavesHistory(const QString& name, bool savesHistory) override;
@@ -412,6 +415,9 @@ private:
         int action = 0;
         // A command line's TCommandLine::contextMenuItems, event names by label
         std::map<QString, QString> menuItems;
+        // A command line's TCommandLine::commandLineSuggestions and tabCompleteBlacklist
+        QSet<QString> suggestions;
+        QSet<QString> blacklist;
         QPointer<HistoryWriter> writer;
         // A console's own command line, still in TConsole::layerCommandLine, which TConsole::setCmdVisible() shows
         // and hides with it
@@ -557,7 +563,7 @@ private:
     std::map<QString, Label> mLabels;
     std::map<QString, std::shared_ptr<ScrollBox>> mScrollBoxes;
     std::map<QString, PlainWindow> mCommandLines;
-    // Only its menu items and history writer, as its text, sheet and setting are in the registry
+    // Only its menu items, words for Tab and history writer, as its text, sheet and setting are in the registry
     PlainWindow mMainCommandLine;
     std::map<QString, PlainWindow> mTextBoxes;
     std::vector<std::unique_ptr<TConsoleModel>> mRetiredConsoles;
