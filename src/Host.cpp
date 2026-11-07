@@ -1015,10 +1015,6 @@ QString writeFileAtomically(const QString& path, const QByteArray& bytes)
     }
     return file.commit() ? QString() : file.errorString();
 }
-
-// Above this the autosave writes on the main thread rather than hold a copy of the whole file
-// (about 190 bytes a room) in memory until a background write finishes
-constexpr int scmBackgroundMapAutosaveMaxRooms = 100'000;
 } // namespace
 
 // The three methods below might be better off on TMap, which is what they all
@@ -1228,14 +1224,7 @@ void Host::autoSaveMap()
 #if defined(DEBUG_MAPAUTOSAVE)
             qDebug().nospace().noquote() << "Host::autoSaveMap() INFO - map auto save initiated at:" << nowString << ".";
 #endif
-            const QString path = MudletApp::getMudletPath(enums::profileMapPathFileName, mHostName, qsl("autosave.dat"));
-            if (mpMap->mpRoomDB->size() <= scmBackgroundMapAutosaveMaxRooms) {
-                autoSaveMapInBackground(path);
-            } else if (!saveMapFile(path)) {
-                mpMap->setSaveError(true);
-            } else {
-                mpMap->setSaveError(false);
-            }
+            autoSaveMapInBackground(MudletApp::getMudletPath(enums::profileMapPathFileName, mHostName, qsl("autosave.dat")));
 #if defined(DEBUG_MAPAUTOSAVE)
         } else {
             qDebug().nospace().noquote() << "Host::autoSaveMap() INFO - map auto save requested at:" << nowString << " but declined whilst \"Host::mIsProfileLoadingSequence\" flag set.";
