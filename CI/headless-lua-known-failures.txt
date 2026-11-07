@@ -31,13 +31,16 @@ Failure Trigger_spec.lua: Trigger processing feedTriggers contract scrolls the m
 Failure Trigger_spec.lua: Trigger processing feedTriggers contract scrolls the main console to the lines it feeds from text a trigger feeds, once the pass that fired the trigger ends
 Failure UI_spec.lua: Widget state getters getUserWindowTitle reports the title a style sheet gives a floating user window
 Failure UI_spec.lua: Window state getters getLabelText reports text a style sheet gives the label
-Failure WindowGeometry_spec.lua: getWindowGeometry follows a docked user window as the main window lays its dock area out again
-Failure WindowSize_spec.lua: window sizes getMainWindowSize follows a button bar shown along its top
-Failure WindowSize_spec.lua: window sizes getMainWindowSize follows the command line as it grows with its text
-Failure WindowSize_spec.lua: window sizes getRowCount gives up the rows a button bar made along the top takes
 Failure zz_Mapper3DView_spec.lua: Tests show3dMapView with the mapper hidden reads back the mode the hidden mapper will reopen in
 Failure zz_Mapper3DView_spec.lua: Tests the 3D map perspective functions with the modern 3D view showing both are accepted while the modern 3D view shows, and refused for the classic view
 Failure zz_Mapper3DView_spec.lua: Tests the 3D map perspective functions with the modern 3D view showing paints rooms with a symbol, a highlight and a border, in and out of grid mode
 Failure zz_Mapper3DView_spec.lua: Tests the 3D map perspective functions with the modern 3D view showing setMapZoom keeps its contract while the modern 3D view shows
 Failure zz_Mapper3DView_spec.lua: Tests the blueprint style on an area spread over several levels paints a multi-level area in blueprint and switches back to tiles
 Failure zz_Mapper3DView_spec.lua: Tests the modern 3D mapper surviving context rebuilds floats, redocks and switches back to the classic view
+
+# The app's own chrome: the GUI's main window lays its command line, button bars and docks out around the
+# main console, and an app that embeds Mudlet draws its own outside the area it gives (docs/headless.md)
+Failure WindowGeometry_spec.lua: getWindowGeometry follows a docked user window as the main window lays its dock area out again
+Failure WindowSize_spec.lua: window sizes getMainWindowSize follows a button bar shown along its top
+Failure WindowSize_spec.lua: window sizes getMainWindowSize follows the command line as it grows with its text
+Failure WindowSize_spec.lua: window sizes getRowCount gives up the rows a button bar made along the top takes
