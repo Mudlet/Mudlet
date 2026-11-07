@@ -599,14 +599,14 @@ private:
     std::optional<int> mPendingAreaId;
     std::unique_ptr<TAreaGraph> mpAreaGraph;
 
-    void addDirectionalRoute(std::vector<std::pair<unsigned int, route>>& bestRoutes,
+    void addDirectionalRoute(std::vector<std::pair<int, route>>& bestRoutes,
                              const QMap<QString, int>& exitWeights,
+                             bool recheckTargetLocks,
                              unsigned int source,
                              TRoom* pSourceR,
                              int target,
                              quint8 direction,
-                             const QString& exitKey,
-                             const QSet<unsigned int>& unUsableRoomSet);
+                             const QString& exitKey);
     const QString createFileHeaderLine(QString, QChar);
     void warnIfMapProgressUnwired(const char* context, bool transferPath);
     void writeJsonUserData(QJsonObject&) const;

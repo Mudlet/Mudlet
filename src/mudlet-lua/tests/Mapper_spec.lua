@@ -2904,6 +2904,66 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.are.same({tostring(rA4), tostring(rA5), tostring(rA3)}, speedWalkPath)
     end)
 
+    it("leads nowhere through exits into a locked room", function()
+      -- the graph build finds an exit's target among the rooms it indexed, which leave out locked
+      -- ones, so a lookup falling back to the first index would wire these exits to an unrelated
+      -- room; two sources, as one of them may be that first room
+      local area = addAreaName("MapperSpecLockedTargetArea")
+      local from = createRoomID(); addRoom(from); setRoomArea(from, area)
+      local from2 = createRoomID(); addRoom(from2); setRoomArea(from2, area)
+      local locked = createRoomID(); addRoom(locked); setRoomArea(locked, area)
+      finally(function()
+        deleteRoom(from); deleteRoom(from2); deleteRoom(locked)
+        deleteArea(area)
+      end)
+      assert.is_true(setExit(from, locked, "east"))
+      assert.is_true(addSpecialExit(from, locked, "climb the wall"))
+      assert.is_true(setExit(from2, locked, "west"))
+      assert.is_true(lockRoom(locked, true))
+
+      local reached = {}
+      for _, source in ipairs({from, from2}) do
+        for id in pairs(getRooms()) do
+          if id ~= source and getPath(source, id) then
+            reached[#reached + 1] = source .. "->" .. id
+          end
+        end
+      end
+      assert.are.same({}, reached)
+    end)
+
+    for _, clearsItself in ipairs({false, true}) do
+      local name = "leads nowhere through an exit into a room the exit weight filter locks"
+      it(clearsItself and name .. ", then clears itself" or name, function()
+        -- the filter runs during the graph build, after the rooms were indexed
+        local area = addAreaName("MapperSpecFilterLockArea")
+        local from = createRoomID(); addRoom(from); setRoomArea(from, area)
+        local north = createRoomID(); addRoom(north); setRoomArea(north, area)
+        local east = createRoomID(); addRoom(east); setRoomArea(east, area)
+        finally(function()
+          setExitWeightFilter(nil)
+          deleteRoom(from); deleteRoom(north); deleteRoom(east)
+          deleteArea(area)
+        end)
+        assert.is_true(setExit(from, north, "north"))
+        assert.is_true(setExit(from, east, "east"))
+        -- the build offers a room's north exit before its east one
+        setExitWeightFilter(function(roomId, exitCommand)
+          if roomId == from and exitCommand == "n" then
+            lockRoom(east, true)
+            if clearsItself then
+              setExitWeightFilter(nil)
+            end
+          end
+        end)
+
+        -- the search that builds the graph, so the lock lands mid-build
+        assert.is_false(getPath(from, east))
+        assert.is_true(roomLocked(east))
+        assert.is_true(getPath(from, north))
+      end)
+    end
+
     it("reroutes around a locked exit", function()
       lockExit(rA1, "east", true)
       local ok = getPath(rA1, rA3)
