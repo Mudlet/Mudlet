@@ -1060,6 +1060,89 @@ private slots:
         QVERIFY2(pClipboard->text().contains(sentinel), qPrintable(qsl("Ctrl+C copied '%1' rather than the scrollback pane's selection").arg(pClipboard->text().left(60))));
     }
 
+    // A real keyboard sends Ctrl on its own ahead of the C, and the line spell checks
+    // that press - with no word at the caret after "('')"
+    void test_pressingCtrlKeepsTheGameWindowsSelectionForCopy()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+
+        TMainConsole* pConsole = mpHost->mainConsoleView();
+        QVERIFY(pConsole);
+        const bool spellCheckWas = mpHost->getEnableSpellCheck();
+        mpHost->setEnableSpellCheck(true);
+        const QSize windowSize = mudlet::self()->size();
+        const auto restore = qScopeGuard([this, pConsole, windowSize, spellCheckWas]() {
+            pConsole->clearSelection();
+            mudlet::self()->hide();
+            mudlet::self()->resize(windowSize);
+            mpHost->setEnableSpellCheck(spellCheckWas);
+        });
+
+        const QString sentinel = qsl("qzxupperpaneline");
+        pConsole->print(qsl("%1\n").arg(sentinel));
+
+        QClipboard* pClipboard = QApplication::clipboard();
+        QVERIFY(pClipboard);
+        pClipboard->setText(qsl("nothing has been copied yet"));
+        type(pCommandLine, qsl("lua echo('')"));
+        pCommandLine->selectAll();
+
+        // A selection in a pane of no height cannot be worked out
+        mudlet::self()->resize(1200, 800);
+        mudlet::self()->show();
+        QVERIFY2(QTest::qWaitForWindowExposed(mudlet::self()), "the main window never came up");
+        QTRY_VERIFY2(pConsole->mUpperPane->height() > 0, "the game window was never laid out");
+
+        pConsole->mUpperPane->slot_selectAll();
+        QVERIFY2(!pConsole->mUpperPane->mSelectedRegion.isEmpty(), "select-all put no selection on the game window");
+        QVERIFY2(pCommandLine->textCursor().hasSelection(), "the command line lost the selection it is meant to lose the contest with");
+
+        QTest::keyPress(pCommandLine, Qt::Key_Control, Qt::ControlModifier);
+        const bool keptAfterCtrl = !pConsole->mUpperPane->mSelectedRegion.isEmpty();
+        press(pCommandLine, Qt::Key_C, Qt::ControlModifier);
+        QTest::keyRelease(pCommandLine, Qt::Key_Control);
+
+        QVERIFY2(keptAfterCtrl, "pressing Ctrl on its own cleared the game window's selection");
+        QVERIFY2(pClipboard->text().contains(sentinel), qPrintable(qsl("Ctrl+C copied '%1' rather than the game window's selection").arg(pClipboard->text().left(60))));
+    }
+
+    // Switching spell checking off strips the marks from every command line,
+    // which must not count as the player selecting text in one of them
+    void test_switchingSpellCheckOffKeepsTheGameWindowsSelection()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+
+        TMainConsole* pConsole = mpHost->mainConsoleView();
+        QVERIFY(pConsole);
+        const bool spellCheckWas = mpHost->getEnableSpellCheck();
+        mpHost->setEnableSpellCheck(true);
+        const QSize windowSize = mudlet::self()->size();
+        const auto restore = qScopeGuard([this, pConsole, windowSize, spellCheckWas]() {
+            pConsole->clearSelection();
+            mudlet::self()->hide();
+            mudlet::self()->resize(windowSize);
+            mpHost->setEnableSpellCheck(spellCheckWas);
+        });
+
+        pConsole->print(qsl("qzxupperpaneline\n"));
+        type(pCommandLine, qsl("some typed words"));
+        QVERIFY(!pCommandLine->textCursor().hasSelection());
+
+        mudlet::self()->resize(1200, 800);
+        mudlet::self()->show();
+        QVERIFY2(QTest::qWaitForWindowExposed(mudlet::self()), "the main window never came up");
+        QTRY_VERIFY2(pConsole->mUpperPane->height() > 0, "the game window was never laid out");
+
+        pConsole->mUpperPane->slot_selectAll();
+        QVERIFY2(!pConsole->mUpperPane->mSelectedRegion.isEmpty(), "select-all put no selection on the game window");
+
+        mpHost->setEnableSpellCheck(false);
+
+        QVERIFY2(!pConsole->mUpperPane->mSelectedRegion.isEmpty(), "switching spell checking off cleared the game window's selection");
+    }
+
     // #10764: a key put in a group made by permGroup(name, "key") reported
     // itself active and still never fired, because the group above it was
     // created switched off and KeyUnit never descends into an inactive folder.

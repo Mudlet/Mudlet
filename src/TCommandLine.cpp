@@ -879,10 +879,8 @@ void TCommandLine::slot_popupMenu()
     c.clearSelection();
 
     // Recheck the replacement, which the caret need not be on
-    const QTextCursor oldCursor = textCursor();
     QTextCursor replacement = cursorAtWordStart(document(), c.position());
     spellCheckWord(replacement);
-    setTextCursor(oldCursor);
 }
 
 void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
@@ -1377,7 +1375,7 @@ void TCommandLine::historyMove(MoveDirection direction)
 
 void TCommandLine::slot_clearSelection(bool yes)
 {
-    if (yes && !mSpellChecking) {
+    if (yes) {
         mpConsole->clearSelection();
     }
 }
@@ -1415,17 +1413,14 @@ void TCommandLine::spellCheckWord(QTextCursor& c)
     Hunhandle* systemDictionaryHandle = mpHost->spellChecker().systemHandle();
 
     QTextCharFormat f;
-    mSpellChecking = true;
     c.select(QTextCursor::WordUnderCursor);
     const QString spellCheckedWord = c.selectedText();
     const bool wantSpellCheck = systemDictionaryHandle && TBuffer::lengthInGraphemes(spellCheckedWord) >= mudlet::self()->mMinLengthForSpellCheck;
     if (!wantSpellCheck) {
         // We don't check when there is no dictionary or the word is too short,
-        // but may need to undo any prior underline, and we need to also reset the flag:
+        // but may need to undo any prior underline:
         f.setFontUnderline(false);
         c.setCharFormat(f);
-        setTextCursor(c);
-        mSpellChecking = false;
         return;
     }
 
@@ -1436,8 +1431,6 @@ void TCommandLine::spellCheckWord(QTextCursor& c)
         // If we don't know the encoding, we can't safely spell-check
         f.setFontUnderline(false);
         c.setCharFormat(f);
-        setTextCursor(c);
-        mSpellChecking = false;
         return;
     }
 
@@ -1470,8 +1463,6 @@ void TCommandLine::spellCheckWord(QTextCursor& c)
         f.setFontUnderline(false);
     }
     c.setCharFormat(f);
-    setTextCursor(c);
-    mSpellChecking = false;
 }
 
 bool TCommandLine::handleCtrlTabChange(QKeyEvent* ke, int tabNumber)
@@ -1509,9 +1500,6 @@ void TCommandLine::recheckWholeLine()
         return;
     }
 
-    // Save the current position
-    const QTextCursor oldCursor = textCursor();
-
     QTextCursor c(document());
     const int length = document()->characterCount() - 1;
     int position = 0;
@@ -1527,18 +1515,15 @@ void TCommandLine::recheckWholeLine()
         spellCheckWord(word);
         position = std::max(wordEnd, position + 1);
     }
-    // Jump back to where we started
-    setTextCursor(oldCursor);
 }
 
 void TCommandLine::clearMarksOnWholeLine()
 {
     QTextCursor oldCursor = textCursor();
     QTextCharFormat f;
-    QTextCursor c = textCursor();
+    QTextCursor c(document());
     c.select(QTextCursor::Document);
     c.setCharFormat(f);
-    setTextCursor(c);
     f.setFontUnderline(false);
     oldCursor.setCharFormat(f);
     setTextCursor(oldCursor);
