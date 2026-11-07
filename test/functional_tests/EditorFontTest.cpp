@@ -30,6 +30,7 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 #include <chrono>
+#include <memory>
 #include <utility>
 
 #include "HostDialogs.h"
@@ -40,6 +41,7 @@
 #include "MudletInstanceCoordinator.h"
 #include "TConsole.h"
 #include "TelnetServerStub.h"
+#include "dlgProfilePreferences.h"
 #include "dlgTriggerEditor.h"
 #include "dlgTriggerPatternEdit.h"
 #include "dlgTriggersMainArea.h"
@@ -100,6 +102,18 @@ private:
     {
         const QStringList wrong = readersNotIn(family, pointSize);
         QVERIFY2(wrong.isEmpty(), qPrintable(qsl("expected %1 %2pt, but: %3").arg(family).arg(pointSize).arg(wrong.join(qsl(", ")))));
+    }
+
+    QStringList readersNotAntiAliased(const bool antiAliased) const
+    {
+        const std::pair<const char*, QFont> readers[] = {{"code pane", mpEditor->mpSourceEditorEdbee->config()->font()}, {"error console", mpEditor->mpErrorConsole->font()}};
+        QStringList wrong;
+        for (const auto& [name, font] : readers) {
+            if (!(font.styleStrategy() & QFont::NoAntialias) != antiAliased) {
+                wrong << qsl("%1 is drawn %2").arg(QLatin1String(name), antiAliased ? qsl("without anti-aliasing") : qsl("with anti-aliasing"));
+            }
+        }
+        return wrong;
     }
 
 #ifdef INCLUDE_FONTS
@@ -185,6 +199,7 @@ private slots:
     {
         if (mpHost) {
             mpHost->setEditorFontFollowsDisplay(true);
+            mpHost->setFontsAntiAlias(true);
             mpHost->setDisplayFont(mOriginalDisplayFont, Host::DisplayFontChange::UserChoice);
         }
     }
@@ -244,6 +259,46 @@ private slots:
         QVERIFY(mpHost->setDisplayFont(display, Host::DisplayFontChange::UserChoice).first);
         QCOMPARE(mpHost->getDisplayFont().pointSize(), mOriginalDisplayFont.pointSize() + 3);
         verifyReadersIn(scmOwnFamily, scmOwnSize);
+    }
+
+    // What following showed is what the editor goes on with, however long ago it had a font of its own
+    void test_leavingTheDisplayFontAgainStartsFromItNotTheEarlierOwnFont()
+    {
+        setOwnFont();
+        mpHost->setEditorFontFollowsDisplay(true);
+        QFont display = mOriginalDisplayFont;
+        display.setPointSize(mOriginalDisplayFont.pointSize() + 3);
+        QVERIFY(mpHost->setDisplayFont(display, Host::DisplayFontChange::UserChoice).first);
+        verifyReadersIn(mOriginalDisplayFont.family(), mOriginalDisplayFont.pointSize() + 3);
+
+        mpHost->setEditorFontFollowsDisplay(false, Host::EditorFontStart::FontOnShow);
+        verifyReadersIn(mOriginalDisplayFont.family(), mOriginalDisplayFont.pointSize() + 3);
+        QVERIFY(mpHost->editorFontChoice().has_value());
+        QCOMPARE(mpHost->editorFontChoice()->family(), mOriginalDisplayFont.family());
+    }
+
+    // The display font carries the toggle to a following editor; one with a font of its own has to be told
+    void test_anEditorWithAFontOfItsOwnHearsTheAntiAliasingToggle()
+    {
+        setOwnFont();
+        QVERIFY(mpHost->fontsAntiAlias());
+        QStringList wrong = readersNotAntiAliased(true);
+        QVERIFY2(wrong.isEmpty(), qPrintable(wrong.join(qsl(", "))));
+
+        auto pPreferences = std::make_unique<dlgProfilePreferences>(mudlet::self(), mpHost);
+        pPreferences->show();
+        QVERIFY(QTest::qWaitForWindowExposed(pPreferences.get()));
+        QCheckBox* pAntiAlias = pPreferences->checkBox_antiAlias;
+        QVERIFY(pAntiAlias->isChecked());
+
+        pAntiAlias->click();
+        QTRY_VERIFY2(!mpHost->fontsAntiAlias(), "the apply timer never stored the unticked box");
+        QTRY_VERIFY2((wrong = readersNotAntiAliased(false)).isEmpty(), qPrintable(qsl("unticking anti-aliasing did not reach the editor: %1").arg(wrong.join(qsl(", ")))));
+
+        pAntiAlias->click();
+        QTRY_VERIFY2(mpHost->fontsAntiAlias(), "the apply timer never stored the ticked box");
+        QTRY_VERIFY2((wrong = readersNotAntiAliased(true)).isEmpty(), qPrintable(qsl("ticking anti-aliasing again did not reach the editor: %1").arg(wrong.join(qsl(", ")))));
+        pPreferences.reset();
     }
 };
 

@@ -608,6 +608,8 @@ public:
     // cannot tell them apart while a stand-in is up.
     enum class DisplayFontChange { Adjustment, UserChoice };
     std::pair<bool, QString> setDisplayFont(const QFont&, DisplayFontChange = DisplayFontChange::Adjustment);
+    // How the editor starts out when it stops following the display font
+    enum class EditorFontStart { EarlierChoice, FontOnShow };
     void setDisplayFontFromString(const QString&);
     void setDisplayFontSize(int size);
     QFont createFontWithSettings(const QString& fontName, int pointSize) const;
@@ -667,7 +669,7 @@ public:
     // letters have no width stood in for by the bundled default
     QFont getEditorFont();
     bool editorFontFollowsDisplay() const { return mEditorFontFollowsDisplay; }
-    void setEditorFontFollowsDisplay(const bool);
+    void setEditorFontFollowsDisplay(const bool, const EditorFontStart = EditorFontStart::EarlierChoice);
     // Only the family and the point size are kept
     void setEditorFont(const QFont&);
     void setEditorFontFromString(const QString&);
@@ -905,7 +907,7 @@ public:
     }
     void sendCmdLine(const QString& cmd);
     bool fontsAntiAlias() const { return !mNoAntiAlias; }
-    void setFontsAntiAlias(const bool antiAlias) { mNoAntiAlias = !antiAlias; }
+    void setFontsAntiAlias(const bool);
 
 private:
     // A main console's close, for a profile that never had one; it saves, as the GUI's "Yes" does, unless the
@@ -929,7 +931,8 @@ private:
     // registered yet, so another profile's uninstall must not judge its display font missing
     bool mDisplayFontCheckReached = false;
     bool mEditorFontFollowsDisplay = true;
-    // Taken from the display font the first time the editor leaves it, so it starts from what is on show
+    // Taken from the display font when the editor leaves it with nothing of its own, or when a player or
+    // script asks to start from what is on show
     std::optional<QFont> mEditorFont;
     // What the editor's listeners were last given: getEditorFont() resolves the family on every read,
     // so a package bringing or taking it away changes the font without anything being set
