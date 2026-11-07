@@ -450,7 +450,6 @@ private:
     void hideSelectionWidget();
     void pruneDeletedRoomsFromSelectionWidget();
     std::pair<int, int> getMousePosition();
-    std::pair<bool, QString> performImageSave(const QPixmap& pixmap, const QString& filePath, const QString& format);
     bool isSnapCustomLinePointsToGridEnabled() const;
     QPointF snapPointToGrid(const QPointF& point) const;
     bool checkButtonIsForGivenDirection(const QPushButton*, const QString&, const int&);

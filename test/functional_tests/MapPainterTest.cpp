@@ -28,8 +28,10 @@
  * Run with: ctest -R MapPainterTest -V
  */
 
+#include <QFutureWatcher>
 #include <QImage>
 #include <QPainter>
+#include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -44,6 +46,8 @@
 #include "TMapLabel.h"
 #include "TMapPainter.h"
 #include "TRoom.h"
+#include "T2DMap.h"
+#include "TNullMapView.h"
 #include "TRoomDB.h"
 #include "mudlet.h"
 
@@ -108,6 +112,31 @@ private:
         const qreal lengthSquared = QPointF::dotProduct(along, along);
         const qreal t = lengthSquared > 0 ? std::clamp(QPointF::dotProduct(point - segment.p1(), along) / lengthSquared, 0.0, 1.0) : 0.0;
         return QLineF(point, segment.p1() + t * along).length();
+    }
+
+    // The image an export wrote, once the save it handed to a pool thread has reported back to its owner
+    static QImage exported(const QObject* pSaveOwner, const QString& filePath)
+    {
+        if (!QTest::qWaitFor(
+                    [pSaveOwner]() {
+                        return pSaveOwner->findChildren<QFutureWatcherBase*>(QString(), Qt::FindDirectChildrenOnly).isEmpty();
+                    },
+                    10000)) {
+            return QImage();
+        }
+        return QImage(filePath).convertToFormat(QImage::Format_ARGB32);
+    }
+
+    static bool holds(const QImage& image, const QColor& colour)
+    {
+        for (int y = 0; y < image.height(); ++y) {
+            for (int x = 0; x < image.width(); ++x) {
+                if (image.pixelColor(x, y) == colour) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     static QImage blankImage()
@@ -329,6 +358,92 @@ private slots:
         QCOMPARE(pending->first, scmWestRoom);
         QCOMPARE(pending->second, scmEastRoom);
         QVERIFY(!painter.takePendingSpeedWalk().has_value());
+    }
+
+    // An export makes the room symbols at a room size of its own, so the view it was made from makes them again
+    void aRoomDrawnAfterAnExportIsDrawnAsBefore()
+    {
+        roomDB()->getRoom(scmEastRoom)->mSymbol = qsl("W");
+        TMapPainter painter;
+        painter.setView(view());
+        const auto drawnEastRoom = [this, &painter]() {
+            QImage image = blankImage();
+            QPainter imagePainter(&image);
+            QFont roomIdFont;
+            QFont roomNameFont;
+            QPen pen;
+            const QPointF centre = onImage(QPointF(2, 0));
+            painter.drawRoom(imagePainter, roomIdFont, roomNameFont, pen, roomDB()->getRoom(scmEastRoom), false, false, false, scmWestRoom, centre.x(), centre.y(), false);
+            return image;
+        };
+        const QImage before = drawnEastRoom();
+        QCOMPARE(painter.symbolPixmapCacheCount(), 1);
+
+        QObject saveOwner;
+        const QString exportFile = qsl("%1/symbol-export.png").arg(mConfigDir.path());
+        const auto [exportStarted, exportMessage] = painter.exportArea(mAreaId, exportFile, 0, 1.0, false, &saveOwner);
+        QVERIFY2(exportStarted, qPrintable(exportMessage));
+        QVERIFY(!exported(&saveOwner, exportFile).isNull());
+
+        const QImage after = drawnEastRoom();
+        QVERIFY2(after == before, qPrintable(saved(after, qsl("after-export")) + qsl("; ") + saved(before, qsl("before-export"))));
+    }
+
+    // With no main window the map is drawn by the same code as the mapper's, so an export is the same image
+    void anExportWithNoMainWindowIsTheMappersImage()
+    {
+        TRoom* pWestRoom = roomDB()->getRoom(scmWestRoom);
+        TRoom* pEastRoom = roomDB()->getRoom(scmEastRoom);
+        QVERIFY(pWestRoom->setDoor(qsl("e"), 2));
+        pWestRoom->customLines[qsl("n")] = QList<QPointF>{QPointF(0, 2), QPointF(2, 2)};
+        pWestRoom->customLinesColor[qsl("n")] = lineColour();
+        pWestRoom->customLinesStyle[qsl("n")] = Qt::DashLine;
+        pWestRoom->customLinesArrow[qsl("n")] = true;
+        pWestRoom->calcRoomDimensions();
+        pEastRoom->setExitStub(DIR_NORTH, true);
+        const int otherAreaId = roomDB()->addArea(qsl("Elsewhere"));
+        constexpr int roomElsewhere = 3;
+        QVERIFY(map()->addRoom(roomElsewhere));
+        QVERIFY(map()->setRoomArea(roomElsewhere, otherAreaId));
+        QVERIFY(map()->setRoomCoordinates(roomElsewhere, 4, 0, 0));
+        QVERIFY(map()->setExit(scmEastRoom, roomElsewhere, DIR_EAST));
+        TArea* pArea = roomDB()->getArea(mAreaId);
+        TMapLabel label;
+        label.pos = QVector3D(-2, 2, 0);
+        label.size = QSizeF(1, 1);
+        label.pix = QPixmap(10, 10);
+        label.pix.fill(Qt::magenta);
+        pArea->mMapLabels.insert(1, label);
+        mpHost->mShowRoomID = true;
+        auto restoreRoomIds = qScopeGuard([this]() {
+            mpHost->mShowRoomID = false;
+        });
+
+        // What dlgMapper's constructor sets on its 2D map
+        T2DMap mapperMap;
+        mapperMap.mpMap = map();
+        mapperMap.mpHost = mpHost;
+        mapperMap.init();
+        mapperMap.mShowRoomID = mpHost->mShowRoomID;
+        mapperMap.mBubbleMode = mpHost->mBubbleMode;
+        TNullMapView nullView(mpHost);
+
+        const QString mapperFile = qsl("%1/mapper.png").arg(mConfigDir.path());
+        const QString nullViewFile = qsl("%1/null-view.png").arg(mConfigDir.path());
+        const auto [mapperExported, mapperMessage] = mapperMap.exportAreaToImage(mAreaId, mapperFile, 0, 1.0);
+        QVERIFY2(mapperExported, qPrintable(mapperMessage));
+        const auto [nullViewExported, nullViewMessage] = nullView.exportAreaToImage(mAreaId, nullViewFile, 0, 1.0, false);
+        QVERIFY2(nullViewExported, qPrintable(nullViewMessage));
+
+        const QImage mapperImage = exported(&mapperMap, mapperFile);
+        const QImage nullViewImage = exported(&nullView, nullViewFile);
+        QVERIFY(!mapperImage.isNull());
+        QVERIFY(!nullViewImage.isNull());
+        QVERIFY(holds(mapperImage, Qt::red));
+        QVERIFY(holds(mapperImage, Qt::blue));
+        QVERIFY(holds(mapperImage, Qt::magenta));
+        QCOMPARE(nullViewImage.size(), mapperImage.size());
+        QVERIFY2(nullViewImage == mapperImage, qPrintable(saved(nullViewImage, qsl("null-view-export")) + qsl("; ") + saved(mapperImage, qsl("mapper-export"))));
     }
 };
 

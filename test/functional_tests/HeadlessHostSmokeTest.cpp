@@ -12092,8 +12092,7 @@ headlessMapOpen = ok and "ok" or tostring(err)
                                   qsl("setMapZoom.area.opened=[1]true"),
                                   qsl("getMapSelection.opened=[1]{}"),
                                   qsl("setConfig.mapRoomSize.opened=[1]true"),
-                                  // The GUI draws the image, with the T2DMap the null view lacks
-                                  qsl("exportAreaImage.opened=[2]false:there is no main window to draw the map in"),
+                                  qsl("exportAreaImage.opened=[1]true"),
                                   qsl("getConfig.show3dMapView.opened=[1]false"),
                                   hide3dOpened};
 
