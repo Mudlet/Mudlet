@@ -697,6 +697,77 @@ tempButton("headlessChanges", "plain", 0)
         QCOMPARE(buttonNames(bars.at(0).buttons), QStringList{qsl("packagedButton")});
         QVERIFY(session.shutdown(false));
     }
+    void test_pressingAButtonRunsItAsTheGuiDoes()
+    {
+        const QString name = qsl("Headless Buttons Press");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QVERIFY(!session.pressButton(1));
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"lua(
+headlessSent = ""
+tempAlias("^(look|sit|stand)$", [[headlessSent = headlessSent .. matches[2] .. "/" .. getButtonState() .. " "]])
+)lua")));
+        Host* host = session.host();
+        TAction* bar = makeAction(host, nullptr, qsl("pressBar"), true);
+        TAction* look = makeAction(host, bar, qsl("look"));
+        look->setCommandButtonDown(qsl("look"));
+        TAction* posture = makeAction(host, bar, qsl("posture"));
+        posture->setIsPushDownButton(true);
+        posture->setCommandButtonDown(qsl("sit"));
+        posture->setCommandButtonUp(qsl("stand"));
+        TAction* menu = makeAction(host, bar, qsl("menu"), true);
+        QVERIFY(menu->setScript(qsl("headlessMenuOpened = 'yes'")));
+        TAction* entry = makeAction(host, menu, qsl("entry"));
+        QVERIFY(entry->setScript(qsl("headlessEntryRan = 'yes'")));
+        TAction* off = makeAction(host, bar, qsl("off"), false, false);
+        QSignalSpy changed(&session, &THeadlessSession::buttonsChanged);
+
+        QVERIFY2(session.pressButton(look->getID()), qPrintable(session.errorString()));
+        QCOMPARE(luaGlobalString(host, "headlessSent"), qsl("look/1 "));
+        QVERIFY(session.pressButton(posture->getID()));
+        QVERIFY(session.buttonBars().at(0).buttons.at(1).checked);
+        QVERIFY(changed.wait());
+        QVERIFY(session.pressButton(posture->getID()));
+        QCOMPARE(luaGlobalString(host, "headlessSent"), qsl("look/1 sit/2 stand/1 "));
+        QVERIFY(!session.buttonBars().at(0).buttons.at(1).checked);
+
+        QVERIFY(session.pressButton(menu->getID()));
+        QCOMPARE(luaGlobalString(host, "headlessMenuOpened"), qsl("yes"));
+        QVERIFY(session.pressButton(entry->getID()));
+        QCOMPARE(luaGlobalString(host, "headlessEntryRan"), qsl("yes"));
+
+        QVERIFY(!session.pressButton(off->getID()));
+        QCOMPARE(session.errorString(), qsl("The profile shows no button %1.").arg(off->getID()));
+        QVERIFY(!session.pressButton(bar->getID()));
+        QVERIFY(!session.pressButton(999999));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_pressingAButtonIsRefusedFromAHandler()
+    {
+        const QString name = qsl("Headless Buttons Press Refused");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"lua(
+tempButtonToolbar("refusedBar", 0, 0)
+tempButton("refusedBar", "refused", 0)
+)lua")));
+        const int id = session.buttonBars().at(0).buttons.at(0).id;
+        std::optional<bool> pressedMidWrite;
+        connect(&session, &THeadlessSession::outputLine, this, [&session, &pressedMidWrite, id](const QString&, const QString& text) {
+            if (text == qsl("press now")) {
+                pressedMidWrite = session.pressButton(id);
+            }
+        });
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("refused")));
+        QVERIFY(session.runLua(qsl(R"lua(feedTriggers("press now\n"))lua")));
+        QCOMPARE(pressedMidWrite, std::optional<bool>(false));
+        QVERIFY(session.errorString().startsWith(qsl("Refused from a handler of outputLine")));
+        QVERIFY(session.pressButton(id));
+        QVERIFY(session.shutdown(false));
+    }
 };
 
 #include "HeadlessSessionCommandsTest.moc"

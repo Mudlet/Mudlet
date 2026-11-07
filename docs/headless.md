@@ -677,12 +677,22 @@ first `fillerOffset` places empty. As in the GUI, an
 inactive bar or button is left out, and so is a bar placed where the GUI shows none; a package's
 folder lends its place to the bars in it, and a button bar's menu shows only active entries, each with
 the icon of the button it hangs from, while a floating toolbar's menu has an entry for the folder that
-holds every entry, active or not, with its own icon. A push-down button on a floating toolbar's menu
-reads as down when it is, where the GUI ticks it only once `setButtonState()` does. The list is empty
-with no profile open.
+holds every entry, active or not, with its own icon. The list is empty with no profile open.
 
 `buttonsChanged` says the bars have changed, for the app to read `buttonBars()` again: a script's
 `tempButtonToolbar()`, `tempButton()`, `setButtonStyleSheet()` or `showToolBar()`, a package installed or
 removed, and `setButtonState()` when it moves a button up or down, but not when it leaves it as it
 was. As with `addonCommandsChanged`, the changes made before the event loop runs send one, from the
 event loop.
+
+`pressButton()` is a click on a button, or on an entry of its menu, that `buttonBars()` lists: as in
+the GUI it sends the button's command, through the profile's aliases, and runs its script. A push-down
+button goes down, sending its down command, or up, sending its up command, and `getButtonState()` in
+what that sets off reads the state it went to; `buttonsChanged` follows. That holds for an entry of a
+menu too, where in the GUI an alias the entry's command sets off still reads what the last button to
+run left, as its menu sets the state for the entry's script only, after the command has gone. A folder's button runs
+its script as well. In the GUI a click on it opens its menu, which the app shows from the button's
+`children`, and the folder's script runs once the menu has closed, after the entry picked in it has
+run, so an app that presses the entry picked and then the folder does as the GUI does. It is false,
+with `errorString()` saying why, for an id `buttonBars()` does not list, such as an inactive button or a
+bar itself, and refused where `submit()` is.

@@ -399,6 +399,10 @@ public:
     // As the GUI draws them once it last redrew its bars, which it does as a script changes them. Read from
     // anywhere.
     QList<ButtonBar> buttonBars() const;
+    // A click on a button or menu entry buttonBars() lists, as the GUI's: it sends the button's command and runs its
+    // script, and a push-down button goes down or up. False, with errorString() saying why, for an id it does not
+    // list; refused where submit() is.
+    bool pressButton(int id);
 
     // sysExitEvent and, if asked, a save for every profile that loaded, then the pool goes. Meanwhile no profile
     // opens, and none dials the game or logs in, a live connection staying for the exit handlers. Refused while a
