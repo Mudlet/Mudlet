@@ -355,8 +355,8 @@ struct TConsoleModel
     // triggers run over this console's line it goes onto that line, which is shown once they are
     // done; otherwise it is appended, and this answers true for the view to show the new lines.
     bool echo(QString& text);
-    // Puts text in place of the selected run.
-    void replace(const QString& text);
+    // Puts text in place of the selected run, in the colours of its first character when keepColor is set.
+    void replace(const QString& text, bool keepColor);
     // The WCAG contrast ratio, which link colours here and TConsole's scroll bar are both chosen by.
     static double contrastRatio(const QColor& first, const QColor& second);
 

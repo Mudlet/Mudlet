@@ -2695,10 +2695,12 @@ int TLuaInterpreter::replace(lua_State* L)
     if (n > 1) {
         windowName = WINDOW_NAME(L, s++);
     }
-    const QString text = getVerifiedString(L, __func__, s, "with");
+    const QString text = getVerifiedString(L, __func__, s++, "with");
+    // Not getVerifiedBool(): replace(window, text, keepColor) has always taken any truthy keepColor
+    const bool keepColor = n > 2 && lua_toboolean(L, s);
     const QString consoleName{windowName};
     Host& host = getHostFromLua(L);
-    if (!host.replaceWindowText(consoleName, text)) {
+    if (!host.replaceWindowText(consoleName, text, keepColor)) {
         return windowNotFoundOrUnsupported(L, host, consoleName);
     }
     lua_pushboolean(L, true);

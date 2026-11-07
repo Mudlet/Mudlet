@@ -6438,13 +6438,13 @@ bool Host::insertWindowText(const QString& name, const QString& text)
     return true;
 }
 
-bool Host::replaceWindowText(const QString& name, const QString& text)
+bool Host::replaceWindowText(const QString& name, const QString& text, const bool keepColor)
 {
     auto pModel = consoleModelNamed(name);
     if (!pModel) {
         return false;
     }
-    pModel->replace(text);
+    pModel->replace(text, keepColor);
     markSelectionDirty(*pModel);
     return true;
 }
