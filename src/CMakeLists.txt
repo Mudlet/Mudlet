@@ -227,6 +227,8 @@ set(mudlet_app_SRCS
     mudlet.cpp
     MudletInstanceCoordinator.cpp
     MudletProxyStyle.cpp
+    MudletWebExport.cpp
+    MudletWebImport.cpp
     PackageItemDelegate.cpp
     PanInteractionHandler.cpp
     RoomContextMenuHandler.cpp
@@ -546,6 +548,8 @@ set(mudlet_app_HDRS
     mudlet.h
     MudletInstanceCoordinator.h
     MudletProxyStyle.h
+    MudletWebExport.h
+    MudletWebImport.h
     PackageItemDelegate.h
     PanInteractionHandler.h
     RoomContextMenuHandler.h

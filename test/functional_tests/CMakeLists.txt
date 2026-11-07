@@ -295,6 +295,8 @@ set(PACKAGE_GROUP_TEST_SOURCES
     ModuleSaveTeardownTest.cpp
     ModuleSyncReloadTest.cpp
     ModuleSyncSaveReentryTest.cpp
+    MudletWebExportTest.cpp
+    MudletWebImportTest.cpp
     PackageDownloadDialogRestyleTest.cpp
     PackageExporterDialogTest.cpp
     PackageFolderRemovalTest.cpp
