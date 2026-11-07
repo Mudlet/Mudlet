@@ -139,6 +139,32 @@ public:
         friend QDataStream& operator>>(QDataStream&, Placement&);
     };
 
+    // A window a script made, as an app that embeds Mudlet draws it in place of the GUI's widget
+    struct WindowRecord
+    {
+        enum class Kind { miniConsole, userWindow, label, commandLine, textBox, scrollBox, mapper };
+        QString name;
+        Kind kind = Kind::label;
+        // The user window or scroll box it is in, or the console whose own command line it is; empty for the main window
+        QString parent;
+        // In its parent's pixels; none for a console's own command line, which the console lays out along its bottom
+        QRect geometry;
+        // Its own flag, which a hidden parent leaves alone
+        bool visible = false;
+        // QWidget::isVisibleTo() the main window: visible, and so is every window it is in
+        bool shown = false;
+        // Among the windows of one parent, a higher one is drawn over a lower one
+        qint64 stackOrder = 0;
+        // Invalid where the window keeps no colour of its own
+        QColor background;
+        // A default QFont where the window keeps no font of its own
+        QFont font;
+        // One of the main window's QDockWidgets rather than a widget in its area
+        bool inDock = false;
+        // What its parent is, as a scroll box may share its name with a user window or console
+        Kind parentKind = Kind::userWindow;
+    };
+
     explicit TNullConsoleFrontend(Host* pHost);
     // Virtual, as Host deletes whichever view it holds as this type
     virtual ~TNullConsoleFrontend();
@@ -283,9 +309,8 @@ public:
     bool hidePlainWindow(const QString& name) override { return setPlainWindowShown(name, false); }
     bool resizePlainWindow(const QString& name, int width, int height) override;
     bool movePlainWindow(const QString& name, int x, int y) override;
-    // No Lua call reads the stacking order back, so these only answer whether the window exists
-    bool raiseWindow(const QString& name) override { return holdsWindow(name) || namesEmbeddedMapper(name); }
-    bool lowerWindow(const QString& name) override { return raiseWindow(name); }
+    bool raiseWindow(const QString& name) override { return restack(name, true); }
+    bool lowerWindow(const QString& name) override { return restack(name, false); }
     std::pair<bool, QString> reparentWindow(const QString& windowname, const QString& name, int x, int y, bool show) override;
     bool setWindowScrollBarVisible(const QString& name, bool visible) override;
     bool setWindowHorizontalScrollBarVisible(const QString& name, bool visible) override;
@@ -315,7 +340,6 @@ public:
     bool setSubConsoleCommandBackgroundColor(const QString& name, const QColor& color) override;
     bool setSubConsoleCommandForegroundColor(const QString& name, const QColor& color) override;
     void changeSubConsoleColors(const QString&) override {}
-    // The embedded mapper's position, size and visibility are not kept, as no Lua call reads them back
     std::pair<bool, QString> createMapper(const QString& windowname, int, int, int, int) override;
     void createMapperDock(const QString& title, const QString&) override;
     void showNewMapperDock() override;
@@ -378,6 +402,8 @@ public:
     bool hasKeyboardFocus() const override { return false; }
     TMxpFrameFrontend& mxpFrames() override { return mMxpFrames; }
     const TMxpFrameFrontend& mxpFrames() const override { return mMxpFrames; }
+    // Every window a script made, in no order; not buffers, which are never shown, nor MXP frames, which are the game's
+    std::vector<WindowRecord> windowRecords() const;
 
 private:
     friend class TNullMxpFrameFrontend;
@@ -417,6 +443,7 @@ private:
         std::shared_ptr<ScrollBox> box;
         bool shown = true;
         QPointer<QObject> holder;
+        qint64 stackOrder = 0;
     };
     // A window made inside a user window goes with it, as a real one is its dock's child widget, though
     // out of the registry at once rather than when deferred deletes run.
@@ -448,6 +475,7 @@ private:
         // QPlainTextEdit::isReadOnly() and the window's own sheet, which its limits depend on
         bool readOnly = false;
         QString styleSheet;
+        qint64 stackOrder = 0;
     };
     struct SubConsole
     {
@@ -473,6 +501,7 @@ private:
         // TTextEdit::resizeEvent() then waits for the pane to show
         QSize reportedGrid;
         bool paneResizePending = true;
+        qint64 stackOrder = 0;
     };
     // As TConsole::mpCommandLine tells a console's own command line from another of its name
     static bool ownsLine(const SubConsole& console, const PlainWindow& commandLine) { return commandLine.writer && commandLine.writer == console.ownLine; }
@@ -512,6 +541,7 @@ private:
         std::optional<QSize> pixmapSize;
         // TLabel::mpSvgRenderer's default size, as an SVG background image paints under the content
         std::optional<QSize> svgSize;
+        qint64 stackOrder = 0;
     };
     struct MapWidget
     {
@@ -519,10 +549,14 @@ private:
         QRect geometry;
         bool shown = false;
         std::unique_ptr<TNullMapView> pView;
+        qint64 stackOrder = 0;
     };
     // TMainConsole::raiseWindow(), lowerWindow() and reparentWindow() take "mapper" in any case for it
     bool namesEmbeddedMapper(const QString& name) const { return mpEmbeddedMapper && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive); }
     void copyPlayerRoomStyleToMap();
+    // As QWidget::raise() and lower() among the windows of its parent, in TMainConsole::raiseWindow()'s order of kinds
+    bool restack(const QString& name, bool raise);
+    QString parentName(const QString& userWindow, const ScrollBox* box) const;
     void showEmbeddedMapper();
     void reportEmbeddedMapperVisibility();
     QMovie* shownMovie(const QString& name) const;
@@ -628,6 +662,11 @@ private:
     QString mEmbeddedMapperWindow;
     std::shared_ptr<ScrollBox> mpEmbeddedMapperBox;
     bool mEmbeddedMapperShown = false;
+    QRect mEmbeddedMapperGeometry;
+    qint64 mEmbeddedMapperStackOrder = 0;
+    // As a QWidget made or reparented goes on top of its siblings, and a lowered one below them
+    qint64 mTopOfStack = 0;
+    qint64 mBottomOfStack = 0;
     QElapsedTimer mIncomingTextTimer;
 };
 
