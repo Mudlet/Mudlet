@@ -24,6 +24,7 @@
 #include "TMap.h"
 
 #include "Host.h"
+#include "HostManager.h"
 #include "MudletApp.h"
 #include "RoomAppearance.h"
 #include "TAppFrontend.h"
@@ -1918,6 +1919,7 @@ bool TMap::restore(QString location)
 {
     const MapOperationScope operationScope(this);
     qDebug().noquote().nospace() << "TMap::restore(\"" << location << "\") INFO: restoring map of Profile: \"" << mProfileName << "\" URL: " << mpHost->getUrl();
+    mpHost->waitForMapAutosave();
 
     if (location.isEmpty()) {
         // The newest file is not always one that loads - it can have been cut
@@ -2321,6 +2323,9 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
         return false;
     }
 
+    if (Host* pProfileHost = HostManager::self() ? HostManager::self()->getHost(profile) : nullptr) {
+        pProfileHost->waitForMapAutosave();
+    }
     QString folder;
     QStringList entries;
     folder = MudletApp::getMudletPath(enums::profileMapsPath, profile);
@@ -3164,6 +3169,9 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         cleanup();
         return;
     }
+    if (mpHost) {
+        mpHost->waitForMapAutosave();
+    }
     // Separate the two kinds of files to gain QSaveFile's atomic write behavior
     QSaveFile writeFile(mLocalMapFileName);
     QFile readFile(mLocalMapFileName);
@@ -3544,6 +3552,9 @@ void TMap::flushSymbolCaches()
 std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
 {
     const MapOperationScope operationScope(this);
+    if (mpHost) {
+        mpHost->waitForMapAutosave();
+    }
     QString destination{dest};
 
     if (destination.isEmpty()) {

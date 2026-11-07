@@ -6358,6 +6358,8 @@ void dlgProfilePreferences::fillOutMapHistory()
     if (!pHost) {
         return;
     }
+    // An autosave still being written would be listed as its temporary file wherever that file has a name
+    pHost->waitForMapAutosave();
 
     // Map files change while the dialog is open, so rebuild, resetting the enabled state to an empty list's.
     // The rebuild follows every change, so it keeps an older map that was picked to load; the newest entry
@@ -6766,6 +6768,14 @@ void dlgProfilePreferences::slot_copyMap()
     const int oldSaveVersionFormat = pHost->mpMap->mSaveVersion;
     pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->currentData().toInt();
 
+    // On Windows and macOS a copy keeps the time of the map saved here, so that save has to come
+    // after each destination's autosave
+    const QStringList toProfileNames = toProfilesRoomIdMap.keys();
+    for (const QString& otherHostName : toProfileNames) {
+        if (Host* pOtherHost = HostManager::self()->getHost(otherHostName)) {
+            pOtherHost->waitForMapAutosave();
+        }
+    }
     if (!pHost->saveMapFile(QString())) {
         label_mapFileActionResult->setText(tr("Could not backup the map - saving it failed."));
         QTimer::singleShot(10s, this, &dlgProfilePreferences::slot_hideActionLabel);
@@ -6809,6 +6819,9 @@ void dlgProfilePreferences::slot_copyMap()
                                // Just in case is needed to make the above message
                                // show up when saving big maps
 
+        if (Host* pOtherHost = HostManager::self()->getHost(otherHostName)) {
+            pOtherHost->waitForMapAutosave();
+        }
         if (!thisProfileLatestMapFile.copy(MudletApp::getMudletPath(enums::profileMapPathFileName, otherHostName, thisProfileLatestMapPathFileName))) {
             label_mapFileActionResult->setText(tr("Could not copy the map to %1 - unable to copy the new map file over.").arg(otherHostName));
             QTimer::singleShot(10s, this, &dlgProfilePreferences::slot_hideActionLabel);
