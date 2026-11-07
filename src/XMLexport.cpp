@@ -402,24 +402,26 @@ bool XMLexport::saveXmlDocToFile(const QString& fileName, const pugi::xml_docume
         }
     };
 
-    if (!file.open(QIODevice::WriteOnly)) {
+    // Unbuffered, or a small file cut short fails only at commit(), with "Unknown error" for the reason
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         printErrorMessage(file.errorString(), "open file");
         return false;
     }
 
     const std::string output = serializeForQxml(doc);
+    const auto size = static_cast<qint64>(output.size());
 
-    file.write(output.data(), output.size());
-    bool success = file.error() == QFileDevice::NoError;
-
-    if (!success) {
-        printErrorMessage(file.errorString());
-    } else if (!file.commit()) {
-        printErrorMessage(file.errorString());
-        success = false;
+    // A full disk can cut the write short with no error on the file, and commit() would put the part that landed in place
+    if (const qint64 written = file.write(output.data(), size); written != size) {
+        //: The reason a profile or module could not be saved when only part of it fit on the disk; %1 is the number of bytes written, %2 the size the whole file needed
+        printErrorMessage(file.error() != QFileDevice::NoError ? file.errorString() : tr("only %1 of %2 bytes could be written, is the disk full?").arg(written).arg(size));
+        return false;
     }
-
-    return success;
+    if (!file.commit()) {
+        printErrorMessage(file.errorString());
+        return false;
+    }
+    return true;
 }
 
 // TODO: Refactor dlgTriggerEditor::slot_export() {at least} to call this method instead of saveXml(const QString&)
