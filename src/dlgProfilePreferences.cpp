@@ -6083,8 +6083,9 @@ void dlgProfilePreferences::slot_setMapBgColor()
         setButtonAndProfileColor(pushButton_background_color_2, pHost->mBgColor_2, true);
 // if 3D map, update transparency flags
 #if defined(INCLUDE_3DMAPPER)
-        if (pHost->mpMap->mapper()->glWidget) {
-            QOpenGLWidget* map = pHost->mpMap->mapper()->glWidget;
+        dlgMapper* pMapper = pHost->mpMap ? pHost->mpMap->mapper() : nullptr;
+        if (pMapper && pMapper->glWidget) {
+            QOpenGLWidget* map = pMapper->glWidget;
             if (auto* modernMap = qobject_cast<ModernGLWidget*>(map)) {
                 // Its style may paint its own background, whatever the profile's is
                 modernMap->applyStyle();
