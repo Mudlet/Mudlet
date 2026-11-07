@@ -23,6 +23,7 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletApp.h"
+#include "MudletMedia.h"
 #include "MudletReplay.h"
 #include "SecureStringUtils.h"
 #include "TAppFrontend.h"
@@ -473,10 +474,11 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                             emit consoleFontChanged(profile, font);
                         },
                         Qt::QueuedConnection);
-                connect(pNewHost, &Host::signal_errorConsolePrint, this, [this](const QString& text) {
+                connectOutputRelays(pNewHost, run);
+                connect(pNewHost, &Host::signal_errorConsolePrint, this, [this](const QString& text, const QColor& foreground, const QColor& background) {
                     const QString profile = mProfileName;
                     ++gSignalsBeingHandedOut;
-                    emit errorConsoleText(profile, text);
+                    emit errorConsoleText(profile, text, foreground, background);
                     --gSignalsBeingHandedOut;
                 });
                 // Held by the profile, which an exit handler may still be running once the session has gone
@@ -506,8 +508,8 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                     const bool moved = wanted && pView && pView->hiddenInputOpened();
                     const QString profile = mProfileName;
                     mHiddenInputFor = wanted ? std::optional<QString>(profile) : std::nullopt;
+                    const QPointer<THeadlessSession> self(this);
                     if (moved) {
-                        const QPointer<THeadlessSession> self(this);
                         ++gSignalsBeingHandedOut;
                         emit typedLineMoveRequested(profile);
                         --gSignalsBeingHandedOut;
@@ -518,6 +520,12 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                     ++gSignalsBeingHandedOut;
                     emit hiddenInputWanted(profile, wanted);
                     --gSignalsBeingHandedOut;
+                    // After, so it empties the line the app has just put back
+                    if (!wanted && self && run == mRun) {
+                        if (auto* pClosedView = dynamic_cast<TNullConsoleFrontend*>(pNewHost->consoleFrontend())) {
+                            pClosedView->hiddenInputClosed();
+                        }
+                    }
                 });
                 connect(pNewHost, &Host::signal_announcementRequested, this, [this](const QString& text, const QString& processing) {
                     const QString profile = mProfileName;
@@ -722,6 +730,7 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                         }
                     });
                 }
+                connectInputRelays(run);
                 // Direct, so it keeps its place among the game's lines and hiddenInputWanted; an exit handler's
                 // text is for a line the app no longer shows, and a script's close raises it before quitRequested
                 connect(pNewHost, &Host::signal_commandLineTextRequested, this, [this, run, pNewHost](const QString& text) {
@@ -828,6 +837,7 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
         return StartResult::loadFailed;
     }
     mDeliveredConsoleFont = consoleFont();
+    noteOutputStateAtLoad();
     // A copy, as a handler may delete the session while its argument is in use
     const QString profile = mProfileName;
     emit profileLoaded(profile);
@@ -1687,6 +1697,9 @@ void THeadlessSession::withdrawSecureConnectionOffer()
 void THeadlessSession::detachFromHost()
 {
     closeDebugConsole();
+    if (mpLatencyPacer) {
+        mpLatencyPacer->stop();
+    }
     mSecureConnectionOffered = false;
     mMapOperationCancelable = false;
     if (mpHost) {
@@ -1698,6 +1711,9 @@ void THeadlessSession::detachFromHost()
     }
     if (MudletReplay* pReplay = MudletReplay::self()) {
         disconnect(pReplay, nullptr, this, nullptr);
+    }
+    if (MudletMedia* pMedia = MudletMedia::self()) {
+        disconnect(pMedia, nullptr, this, nullptr);
     }
 }
 

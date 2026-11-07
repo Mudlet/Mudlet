@@ -28,6 +28,7 @@
 #include "utils.h"
 
 #include <QColor>
+#include <QElapsedTimer>
 #include <QObject>
 #include <QPoint>
 #include <QPointer>
@@ -161,6 +162,8 @@ public:
     // As TMainConsole::openPasswordEntry(): a line typed ahead of the prompt that opens the box goes into it. True
     // if it took one.
     bool hiddenInputOpened();
+    // As TCommandLine::enterCommand() empties the line behind the box, the empty line a send could not report
+    void hiddenInputClosed();
     bool ownsContainer(const QString& windowname) const;
     bool subConsoleShown(const QString& name) const;
     void reportUserWindowVisibility();
@@ -334,9 +337,9 @@ public:
     void discardToolBarLayoutChanges() override {}
     void setDockLayoutChanged(const QString&) override {}
     bool clearDockLayoutChanged(const QString&) override { return false; }
-    bool startIncomingText() override { return false; }
+    bool startIncomingText() override;
     void alertNewData() override {}
-    void finishIncomingText(bool) override {}
+    void finishIncomingText(bool) override;
     void finalize() override {}
     void showNewLines() override {}
     void showCommandEcho(const TConsoleModel::CommandEcho&) override {}
@@ -441,6 +444,10 @@ private:
         // TDockWidget::hasLayoutAlready: whether opening this user window has asked for the saved layout,
         // which a load already running refuses
         bool layoutRequested = false;
+        // TConsole::mDimensions, the grid last reported, and whether the pane was resized while hidden, as its
+        // TTextEdit::resizeEvent() then waits for the pane to show
+        QSize reportedGrid;
+        bool paneResizePending = true;
     };
     // As TConsole::mpCommandLine tells a console's own command line from another of its name
     static bool ownsLine(const SubConsole& console, const PlainWindow& commandLine) { return commandLine.writer && commandLine.writer == console.ownLine; }
@@ -515,6 +522,7 @@ private:
     QString userWindowOrMain(const QString& windowname) const;
     std::pair<QString, std::shared_ptr<ScrollBox>> containerFor(const QString& windowname, bool scrollBoxFirst) const;
     bool shownWithin(const QString& userWindow, const ScrollBox* box) const;
+    bool paneShown(const SubConsole& console) const { return console.shown && shownWithin(console.userWindow, console.box.get()); }
     bool setPlainWindowShown(const QString& name, bool shown);
     bool ownsCommandLine(const QString& name) const;
     PlainWindow* commandLineNamed(const QString& name);
@@ -547,6 +555,10 @@ private:
     void reportDisplayFontChange(const QFont& before);
     void raiseFontEvent(const QString& eventName, const QString& subject, const QFont& font);
     void reportGridSize(const QString& name);
+    void reportLinesOverflow(const TConsoleModel& model, int lineCount);
+    void resizePane(const QString& name);
+    void sendPendingPaneResize(const QString& name);
+    void reportConsoleSize(const QString& name);
 
     Host* mpHost = nullptr;
     TNullMxpFrameFrontend mMxpFrames{*this};
@@ -569,6 +581,8 @@ private:
     bool mMainCommandLineAllSelected = false;
     // Whether the line held for a send was written to while it was sent
     bool mMainCommandLineRewritten = false;
+    // A send emptied the line while hidden input was wanted, which the app has not been told
+    bool mMainCommandLineClearPending = false;
     // The main window, which holds what a script makes in it
     std::unique_ptr<QObject> mpMainHolder = std::make_unique<QObject>();
     // TMxpFrameWidgets' container widget of each frame, which holds the frame's console until a script moves it
@@ -580,6 +594,7 @@ private:
     QString mEmbeddedMapperWindow;
     std::shared_ptr<ScrollBox> mpEmbeddedMapperBox;
     bool mEmbeddedMapperShown = false;
+    QElapsedTimer mIncomingTextTimer;
 };
 
 #endif // MUDLET_TNULLCONSOLEFRONTEND_H

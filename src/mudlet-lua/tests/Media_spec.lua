@@ -4558,6 +4558,43 @@ describe("Tests the text-to-speech Lua API", function()
         assert.same({voices[2], voices[1]}, changes)
       end)
 
+      it("ttsGetVoices lists the voices of every locale, the current locale's first", function()
+        if noMockEngine() then
+          return
+        end
+        -- Bob and Anne are the mock engine's voices for the locale it starts in,
+        -- whatever the system locale; it has more in other locales.
+        local voices = ttsGetVoices()
+        assert.same({"Bob", "Anne"}, {voices[1], voices[2]})
+        assert.is_true(#voices > 2, table.concat(voices, ", "))
+        -- the current locale's voices are not listed again among the rest
+        local seen = {}
+        for _, name in ipairs(voices) do
+          assert.is_nil(seen[name], name)
+          seen[name] = true
+        end
+      end)
+
+      it("the voice setters switch to a voice from another locale", function()
+        if noMockEngine() then
+          return
+        end
+        local voices = ttsGetVoices()
+        assert.is_true(#voices > 2, table.concat(voices, ", "))
+        local originalVoice = ttsGetCurrentVoice()
+        onCleanup(function() ttsSetVoiceByName(originalVoice) end)
+
+        local foreign = voices[#voices]
+        assert.is_true(ttsSetVoiceByName(foreign))
+        assert.equals(foreign, ttsGetCurrentVoice())
+        -- the engine's locale follows the voice, which must not renumber the list
+        assert.same(voices, ttsGetVoices())
+        assert.is_true(ttsSetVoiceByIndex(1))
+        assert.equals(voices[1], ttsGetCurrentVoice())
+        assert.is_true(ttsSetVoiceByIndex(#voices))
+        assert.equals(foreign, ttsGetCurrentVoice())
+      end)
+
       it("ttsSpeechStarted carries the text that just started being spoken", function()
         if noMockEngine() then
           return

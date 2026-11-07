@@ -82,8 +82,7 @@ on Windows.
 
 The profile closes, and is saved, when:
 
-- a script calls `closeMudlet()` or `closeProfile()` (the latter saves only if the profile's
-  "Auto save on exit" setting is on);
+- a script calls `closeMudlet()` or `closeProfile()`;
 - standard input ends, or standard output's reader goes away (as `| head` does);
 - the connection ends, with `--exit-on-disconnect`;
 - the runner gets `SIGINT`, `SIGTERM` or `SIGHUP`. A second `SIGINT` or `SIGTERM` ends the run at
@@ -95,6 +94,21 @@ no window can change, such as the media mutes and `showTabConnectionIndicators`.
 GUI has, such as its window position or toolbar, are left as the GUI last saved them. As in the
 GUI, a command line history or `Mudlet.ini` that cannot be written is only reported on standard
 error, and does not change the exit status; a history file that cannot be read is not written over.
+
+`closeProfile()` saves a profile whose "Auto save on exit" setting is off too: the GUI asks the player
+whether to save it, nobody can answer that here, and the answer taken is the GUI's Yes. A save, map or
+`profile.ini` that cannot be written is named on standard error, and the profile is reported as one
+that could not be saved.
+
+A `closeProfile()` from a `sysLoadEvent` handler, which runs once the profile's map has loaded but
+before its load has ended, closes it once the load has ended, as `closeMudlet()` does, and saves it
+then, with the map it loaded and what the handler changed.
+
+What is not saved, and is not reported as a failed save, is a profile whose save did not load, or one
+closed before its map has loaded, as by a `closeProfile()` at the top level of its own script, which
+closes it at once, as in the GUI: its scripts run before its map is loaded, so its last good save and
+map are kept rather than written over. For an app that embeds Mudlet, nor is a profile let go by
+`shutdown(false)` or by deleting the session.
 
 A command typed on standard input goes into the main command line's history file, just as the GUI
 keeps it: one entry for each line or paste, not for one typed while the game hides input (a
@@ -373,7 +387,9 @@ not built on Qt has to copy:
 `printCmdLine()`, `appendCmdLine()`, `clearCmdLine()` or `sendCmdLine()` sets it, for the app's input
 line to show as the GUI's command line does; `clearCmdLine()` sends an empty line. As the GUI's line does,
 the main line holds what `submit()` sends while its aliases run, so `getCmdLine()` there reads it, and
-if the profile clears the line after a send, an empty line follows the send. It is sent as it is set, so
+if the profile clears the line after a send, an empty line follows the send. If the game asked to hide
+input while the send's aliases ran, that empty line comes just after `hiddenInputWanted` turns off
+instead, as the GUI's line was emptied behind its hidden-input box. It is sent as it is set, so
 it keeps its place among the game's lines and `hiddenInputWanted`, and a handler may neither call the
 session nor run the event loop. Only the main command line is sent: a line from
 `createCommandLine()` or Geyser is not. Mudlet does not know what the app's user has typed until the
@@ -388,7 +404,9 @@ set. Nothing is sent:
 When `hiddenInputWanted` turns on, the app sets aside the text its input line holds from a script, as
 `commandLineTextRequested` last gave it, keeps it out of its masked line, and shows it again when hidden
 input ends, as the GUI's command line stays behind its hidden-input box; only what the player typed
-ahead moves into the masked line, when Mudlet says so (see `setCommandLineText()` below).
+ahead moves into the masked line, when Mudlet says so (see `setCommandLineText()` below). An empty
+`commandLineTextRequested` may follow `hiddenInputWanted` turning off, for a send whose aliases ran as
+the game hid input, and empties the line the app has just put back.
 
 `submit()` stands for the app's input line being sent, so it holds the line and then empties or keeps it
 as the profile says, as the GUI's line does. A command sent from anywhere else, such as a button or a
@@ -403,8 +421,11 @@ then as the profile leaves it, and `commandLineTextRequested` says so when Mudle
 no `commandLineTextRequested`, so an app that hands that signal's text back, once the signal is over,
 starts no loop. Text the app sets on the line itself, rather than the player typing it, goes with
 `CommandLineEdit::notTyped`: a history recall, a Tab completion, and text from a script it set aside
-while hidden input was wanted and puts back. The GUI's line does not count such text as typed either,
-though it does count what it puts back from its hidden-input box, which the app hands back as typed.
+while hidden input was wanted and puts back. For that last, it hands back what its line holds once the
+signals that end hidden input have been handled, not the text it set aside, as an empty
+`commandLineTextRequested` may have emptied the line meanwhile. The GUI's line does not count such text
+as typed either, though it does count what it puts back from its hidden-input box, which the app hands
+back as typed.
 
 What it guarantees about hidden input is narrow:
 
@@ -483,6 +504,44 @@ does, that raises `sysProfileFocusChangeEvent` with `false` in the profile it le
 one it brings forward, and shows that profile's Discord presence. A profile whose close has started is
 refused with `false` and a message, and the front stays where it was.
 
+## Embedding it: drawing the main console as the GUI does
+
+`lineShown` sends each line whole, so an app that draws the main console as the GUI does wraps it
+itself, and needs what the GUI draws it with besides the font. Each of these is read at
+`profileLoaded` and then followed by a signal that comes from the event loop, with the value as it is
+then, and only when that differs from the one the app last had. So none follows `profileLoaded` for
+what the load did, and a change a script makes and undoes before the event loop runs sends nothing.
+
+`consoleWrap()` is where the main console wraps the game's lines: at `wrapAt` characters, with `indent`
+spaces before the first part of a line and `hangingIndent` before each part after it, as a script's
+`setWindowWrap()`, `setWindowWrapIndent()` and `setWindowWrapHangingIndent()` on the main console, or
+the profile's save, set them. As in the GUI, an indent of the wrap width or more is none, and one of
+more than half of it is half. `consoleWrapChanged` carries each change; a mini console's wrap does not
+send it.
+
+`consoleForeground()` and `consoleBackground()` are the profile's own colours, which the main console
+is drawn in where the game asks for none, and which `TextRun` marks as the profile's own.
+`consoleColorsChanged` carries both when either changes: from a script's `setBackgroundColor()` on the
+main console, or a package or save loaded into the profile with colours of its own. A mini console's
+background does not send it, nor does the game redefining its palette, which leaves both as they were.
+
+`errorConsoleText` carries what the editor's error console prints, in pieces with the colours it prints
+them in: a Lua error comes as `[ERROR:]` in blue, where it was in green and the message in red, all on
+black. It is sent as written, as `localText` is, so its handler must not call the session back. A
+handler that takes only the profile and the text may still be connected.
+
+`latencyChanged` carries what the GUI's latency box shows: the network's lag, from a command sent to the
+game's reply, while the game marks its prompts with GA or EOR, and none otherwise, where the box shows
+`<no GA>`; and how long the game's last text took to process, its triggers included, in seconds. As the
+box, it is paced to once every 16ms, and sent only when its text, to the millisecond, would change. It
+comes from the event loop, and none comes for a profile that `shutdown()` has let go.
+
+`connecting` says the profile has begun connecting to the game, as it starts or reconnects, where the
+GUI marks its tab as connecting, so an app can show that through a slow address lookup or connect.
+`connected` or `disconnected` follows, or the profile closes; `disconnected` comes too when a script's
+`disconnect()` calls the connect off during the address lookup, or `start()` does for a profile whose
+save did not load. It comes from the event loop.
+
 ## What still needs a window
 
 Some of what a profile can do has nothing to stand in for the GUI's widgets yet, and does nothing,
@@ -497,3 +556,66 @@ Lua specs that fail with no window, so it is the up-to-date list; the main gaps 
 
 `.github/workflows/headless-lua-tests.yml` runs the Lua specs in `mudlet-headless`, and
 "The Lua specs with no main window" in `platform-builds.md` explains how to reproduce it.
+
+## Embedding it: the GUI's buttons and the app's state
+
+Some of what the player does in the GUI is a button on its main window or console toolbar, which Lua
+cannot do in the same way. `THeadlessSession` gives an app these too.
+
+`setScriptsStopped(true)` is the main console's emergency stop: it turns off the profile's triggers,
+aliases, timers and key bindings, and no event reaches its scripts until `setScriptsStopped(false)`,
+which is how an app stops scripts that keep setting each other off, such as a trigger that answers its
+own output. As the GUI's button does, `false` turns on again what the stop turned off; anything a script
+had turned off before the stop, with `disableTrigger()` and the like, stays off. The stop does not hold
+back what comes on while it lasts: a script's new `tempTrigger()`, what `resetProfile()` turns back on
+and a package installed with `installPackage()` all run, as in the GUI. Call `setScriptsStopped(true)`
+again to turn those off too, as each call turns off everything that is on. `false` when nothing is
+stopped changes nothing, and `scriptsStopped()` reads the state. Like `submit()`, it is refused with no
+profile open, while a profile loads or closes, and from a handler of `outputLine` and the other
+signals sent mid-write.
+
+`setApplicationActive()` tells the profiles the app has come to the front or left it, as the GUI hears
+it from the system: a change raises `sysApplicationFocusChangeEvent` with `true` or `false` in every
+profile that loaded and has not begun to close, the session's own and those its scripts opened, so a
+package can quiet its sounds or notifications while the player is away. The state it is in already
+raises nothing, as the GUI tells scripts only of a change. It starts as active, and before `start()` it
+is only kept, for the next change to be told against; a profile opened later hears nothing until the
+next change, as in the GUI. `applicationActive()` reads it. It is refused while a profile loads, during
+`shutdown()`, and from a handler of `outputLine` and the other signals sent mid-write.
+
+`setReplayRecording(true)` is the main console's replay recording button: what the game sends from then
+on is recorded into a new file in the profile's `log` folder, named for the second it started, which a
+script's `loadReplay()` plays back. `setReplayRecording(false)` stops and saves it, as the connection
+ending does on its own. Each says how it went in `localText`, with the file's path or the reason, as the
+GUI says it in the main console. It is false, with `errorString()` saying why, when it is recording
+already or is not, when the file cannot be opened, and when it cannot be saved, the recording being over
+then. A recording started in the same second as an earlier one gets a `-2`, `-3` and so on after the
+time, rather than replace it. One still running at `shutdown()` or as its profile closes is saved with
+nothing said, so an app that wants to know how that went stops it with `setReplayRecording(false)`
+first. `replayRecording()` reads whether one is under way. It is refused where `submit()` is.
+
+`dropOnMainConsole()` is a drop on the main console, as the GUI takes one dragged there from a file
+manager or a browser: each URL in the `QMimeData` that names a local file that exists raises
+`sysDropEvent` with the file's path, its suffix, the position and `"main"`, and then text that reads as a
+valid URL raises `sysDropUrlEvent` with the URL, its scheme, the position and `"main"`, in the GUI's
+order. Where the data has no text of its own, `QMimeData` gives its URLs as the text, so a single file
+dropped alone raises both events, the second with the `file` scheme, as in the GUI. Mudlet's own
+handlers install a package dropped as a file, and one from an `http` or `https` link, as they do in the
+GUI. The GUI installs a dropped file as a module instead while Ctrl is held, which its handler reads
+from the keyboard itself, not from the drop; on the offscreen platform no key is ever held, so there a
+dropped file is always installed as a package, never as a module. The position is the point on the
+app's view of the main console the drop landed at, in its own pixels, which scripts get as `x` and `y`.
+Data with neither URLs nor text is false and raises nothing, as the GUI's console does not take it. It
+is refused where `submit()` is, and while the scripts are stopped its events reach none of them.
+
+`setSoundsMuted()` is the main window's mute buttons, for `SoundSource::scripts`, the sounds scripts
+play, or `SoundSource::game`, those the game sends over GMCP or MSP, and `toggleAllSoundsMuted()` is
+the button for both, which unmutes both when both are muted and otherwise mutes both. As in the GUI,
+muting is for every profile: it reaches the session's own and those its scripts opened, the only ones in
+the process, as a second session's `start()` is refused while a pool exists. A change raises
+`sysSettingChanged` with `muteMediaAPI` or `muteMediaGame` in each profile, as a script's `setConfig()`
+does. `soundsMuted()` reads it, and is false with no profile open. `soundsMutedChanged` follows every
+change from the event loop, whoever made it, a script's `setConfig()` in any of the profiles included,
+and also a call that left it as it was, so an app's mute buttons can follow it as the GUI's do. It stops
+once the session's own profile has closed, as the session's other signals do, even while profiles its
+scripts opened live on. They are refused where `submit()` is.

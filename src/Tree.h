@@ -43,6 +43,7 @@ public:
     T* getParent() const { return mpParent; }
     std::list<Tree<T>*>* getChildrenList() const;
     std::list<T*> getAncestorList() const;
+    const T* getRoot() const;
     bool hasChildren() const { return (!mpMyChildrenList->empty()); }
     int getChildCount() const { return mpMyChildrenList->size(); }
     int getID() const { return mID; }
@@ -338,6 +339,16 @@ std::list<T*> Tree<T>::getAncestorList() const
         node = node->mpParent;
     }
     return ancestorList;
+}
+
+template <class T>
+const T* Tree<T>::getRoot() const
+{
+    const T* pRoot = static_cast<const T*>(this);
+    while (pRoot->mpParent) {
+        pRoot = pRoot->mpParent;
+    }
+    return pRoot;
 }
 
 template <class T>

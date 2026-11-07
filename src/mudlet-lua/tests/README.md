@@ -114,11 +114,13 @@ xvfb-run -a ./build/src/mudlet --profile "Mudlet self-test" --mirror --offline
 `TelnetTriggerFuzz_spec.lua` drives random bytes through the telnet parser and
 random patterns through the trigger engine; `BufferManipFuzz_spec.lua` drives the
 console text and selection API with deliberately out-of-range line and column
-indices. Both are diagnostic specs rather than pass/fail tests: they are meant to
-be run against a sanitizer build, where a memory error or undefined behaviour
+indices; `ApiArgFuzz_spec.lua` calls the API functions written in C++ with
+wrong-typed, missing and out-of-range arguments, retrying each call with the
+argument type its rejection asks for. All three are diagnostic specs rather than
+pass/fail tests: they are meant to be run against a sanitizer build, where a memory error or undefined behaviour
 aborts the run instead of corrupting silently.
 
-Because busted recurses into this whole directory, both bail out before
+Because busted recurses into this whole directory, they bail out before
 registering anything unless `MUDLET_FUZZ` is set, so a normal run - CI included -
 skips them. Set it to opt in:
 

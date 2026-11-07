@@ -34,6 +34,7 @@
 
 #include "EnvironmentKit.h"
 #include "Host.h"
+#include "RoomAppearance.h"
 #include "TArea.h"
 #include "TAreaGraph.h"
 #include "TConsoleFrontend.h"
@@ -1275,7 +1276,11 @@ int TLuaInterpreter::createRoomID(lua_State* L)
         if (minId < 1) {
             return warnArgumentValue(L, __func__, qsl("minimum roomID %1 is an optional value but if provided it must be greater than zero").arg(minId));
         }
-        lua_pushnumber(L, host.mpMap->createNewRoomID(lua_tointeger(L, 1)));
+        const int roomId = host.mpMap->createNewRoomID(minId);
+        if (!roomId) {
+            return warnArgumentValue(L, __func__, qsl("no free room ID at or above %1").arg(minId));
+        }
+        lua_pushnumber(L, roomId);
     } else {
         lua_pushnumber(L, host.mpMap->createNewRoomID());
     }
@@ -1781,6 +1786,20 @@ int TLuaInterpreter::getCustomEnvColorTable(lua_State* L)
         lua_newtable(L);
     }
     return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMapEnvColor
+int TLuaInterpreter::getMapEnvColor(lua_State* L)
+{
+    const int environmentId = getVerifiedInt(L, __func__, 1, "environmentID");
+    const Host& host = getHostFromLua(L);
+    const QColor color = RoomAppearance::environmentColor(*host.mpMap, host, environmentId);
+    lua_pushinteger(L, color.red());
+    lua_pushinteger(L, color.green());
+    lua_pushinteger(L, color.blue());
+    lua_pushinteger(L, color.alpha());
+    lua_pushboolean(L, RoomAppearance::environmentDefined(*host.mpMap, environmentId));
+    return 5;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getDoors
