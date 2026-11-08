@@ -365,10 +365,8 @@ public:
 
 
 public slots:
-    // Used by mudlet class as told by "Profile Preferences"
-    // =>"Copy Map" in another profile to inform a list of
-    // profiles - asynchronously - to load in an updated map
-    void slot_reloadMap(QList<QString>);
+    // From "Copy Map" in another profile; mapFileName is a bare name in this profile's map folder
+    void slot_reloadMap(QList<QString>, const QString& mapFileName);
 
 
 private slots:

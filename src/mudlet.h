@@ -219,10 +219,8 @@ public:
     void readLateSettings(const QSettings&);
     void refreshTabBar();
     void refreshTabBarsAfterStyleChange();
-    // Used by a profile to tell the mudlet class
-    // to tell other profiles to reload the updated
-    // maps (via signal_profileMapReloadRequested(...))
-    void requestProfilesToReloadMaps(QList<QString>);
+    // mapFileName is a bare file name; each listed profile loads it from its own map folder
+    void requestProfilesToReloadMaps(QList<QString>, const QString& mapFileName);
     bool saveWindowLayout();
     bool saveWindowLayoutForScript() override;
     bool openProfile(const QString& profileName, bool connect) override;
@@ -530,7 +528,7 @@ signals:
     void signal_passwordsMigratedToSecure();
     void signal_characterPasswordsMigrated();
     void signal_profileActivated(Host*, quint8);
-    void signal_profileMapReloadRequested(QList<QString>);
+    void signal_profileMapReloadRequested(QList<QString>, const QString& mapFileName);
     void signal_setToolBarIconSize(int);
     void signal_setTreeIconSize(int);
     void signal_shortcutsChanged();
