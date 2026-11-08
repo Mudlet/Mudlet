@@ -500,6 +500,28 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                     emit attentionRequested(profile, milliseconds);
                     --gSignalsBeingHandedOut;
                 });
+                // As the GUI's console, which alerts for new data only while the main window is minimized, and then
+                // once, as QApplication::alert()'s flash lasts until the player comes back
+                connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::newDataAlerted, this, [this, run]() {
+                    const std::pair<unsigned int, unsigned int> minimizing{run, mWindowMinimizedChanges};
+                    if (run != mRun || !mWindowMinimized || mNewDataAlertedFor == minimizing) {
+                        return;
+                    }
+                    mNewDataAlertedFor = minimizing;
+                    // From the event loop, as this runs mid-write
+                    QMetaObject::invokeMethod(
+                            this,
+                            [this, minimizing]() {
+                                if (minimizing != std::pair{mRun, mWindowMinimizedChanges} || !mpHost) {
+                                    return;
+                                }
+                                const QString profile = mProfileName;
+                                ++gSignalsBeingHandedOut;
+                                emit attentionRequested(profile, 0);
+                                --gSignalsBeingHandedOut;
+                            },
+                            Qt::QueuedConnection);
+                });
                 // Direct, as the GUI opens and closes its box inside the emit
                 connect(pNewHost, &Host::signal_passwordEntryWantedChanged, this, [this, run, pNewHost](const bool wanted) {
                     // The close of a profile being let go reads the game's data still, but its false has been sent
@@ -1492,9 +1514,12 @@ THeadlessSession::KeyResult THeadlessSession::offerKey(const Qt::Key key, const 
             return KeyResult::bindingRan;
         }
         if (commandLineKeepsKey(*mpHost, event)) {
-            // TCommandLine selects its whole line on Escape, so what the player types next replaces it
+            // TCommandLine selects its whole line on Escape, so what the player types next replaces it, and ends Tab's cycle
             if (auto* pFrontend = mpHost->consoleFrontend(); key == Qt::Key_Escape && pFrontend) {
                 pFrontend->selectCommandLineText(QString());
+                if (auto* pView = dynamic_cast<TNullConsoleFrontend*>(pFrontend)) {
+                    pView->resetMainCommandLineCompletion();
+                }
             }
             //: Error from a frontend with no window that was given a key press, such as Return or Up, which the GUI's command line acts on itself rather than offering it to any key binding
             mErrorString = tr("The GUI's command line keeps that key for itself, offering it to no key binding; the app handles it.");

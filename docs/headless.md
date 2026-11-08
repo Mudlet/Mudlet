@@ -281,6 +281,18 @@ carries what a script's `announce()`, Mudlet when it opens a sign-in page, or a 
 hidden or revealed asks screen readers to say, and whether the GUI would make it assertive, for an app to
 hand to the platform's own accessibility service.
 
+`attentionRequested` with 0 also carries the GUI's flash for new game text: while `setWindowMinimized()`
+has the app's window minimized or hidden, as the GUI's main window is when minimized, or a phone app sent
+to the background, game text that adds to or changes the main console asks for the player's attention
+until they come back, if the profile's setting to be notified of new data while minimized is on, as it is
+unless the player turned it off. As in the GUI, an app that is only behind another window, which
+`setApplicationActive(false)` reports, is not alerted, nor is one in front. The GUI's flash lasts until the
+player comes back, however much more text arrives, so the signal is sent once each time the window is
+minimized, at the first such text, from the event loop: the other prompts of a read that ends several with a
+go-ahead, and later reads, bring none until `setWindowMinimized(false)` and back. A script's `echo()` and the
+bare carriage return that finishes a line the game left open bring no alert, as in the GUI. As with
+`alert()`, only the session's own profile is relayed, not one its scripts opened with `loadProfile()`.
+
 `secureConnectionOffered` carries a game's offer of its secure port, worded as the GUI's question, for
 the player to answer with `answerSecureConnectionOffer()`. The offer lapses when its connection ends;
 until then, or an answer, the profile offers nothing more. A yes stores the secure port with TLS on, as
@@ -656,6 +668,12 @@ is only kept, for the next change to be told against; a profile opened later hea
 next change, as in the GUI. `applicationActive()` reads it. It is refused while a profile loads, during
 `shutdown()`, and from a handler of `outputLine` and the other signals sent mid-write.
 
+`setWindowMinimized()` tells the session the app's window is minimized or hidden, or a phone app has
+gone to the background, as the GUI's main window is minimized: only then does new game text bring
+`attentionRequested`, as said above, so an app that is merely behind another window reports that with
+`setApplicationActive()` alone. It raises no event, as minimizing the GUI raises none, starts as `false`,
+may be set at any time, before `start()` too, and `windowMinimized()` reads it.
+
 `setReplayRecording(true)` is the main console's replay recording button: what the game sends from then
 on is recorded into a new file in the profile's `log` folder, named for the second it started, which a
 script's `loadReplay()` plays back. `setReplayRecording(false)` stops and saves it, as the connection
@@ -766,3 +784,50 @@ its script as well. In the GUI a click on it opens its menu, which the app shows
 run, so an app that presses the entry picked and then the folder does as the GUI does. It is false,
 with `errorString()` saying why, for an id `buttonBars()` does not list, such as an inactive button or a
 bar itself, and refused where `submit()` is.
+
+## Embedding it: completing the command line
+
+The GUI's command line completes the word being typed when the player presses Tab, from the main
+console's recent text and from words scripts give it. `THeadlessSession` gives an app the same.
+
+`commandLineSuggestions()` is the words scripts gave the main command line with
+`addCmdLineSuggestion()`, and `commandLineBlacklist()` those they gave with `addCmdLineBlacklist()`,
+which Tab is never to complete to. Each word is there once, however often it was added, and the lists
+are sorted. As in the GUI, `removeCmdLineSuggestion()` and `removeCmdLineBlacklist()` take one word out,
+and `clearCmdLineSuggestions()` and `clearCmdLineBlacklist()` empty them. Words a script gives a line
+from `createCommandLine()` or a mini console's own command line are that line's, not the main line's.
+Both lists are empty with no profile open, and may be read from anywhere, a handler included. No signal
+says they changed: an app reads them when it needs them, as when the player presses Tab.
+
+`completeCommandLine()` is the Tab key itself, and `completeCommandLine(false)` Shift+Tab. It completes
+the word at the end of the line `setCommandLineText()` last set, from the same words the GUI would offer,
+the most recently seen first: words of the last 500 lines of the main console, then the suggestions, none
+that is blacklisted, matched without regard to case. It returns the whole line it leaves, which scripts'
+`getCmdLine()` reads from then on, for the app to show with its cursor at the end. Each further call takes
+the next word, or with `false` the one before, stopping at either end as the GUI does rather than wrapping.
+The cycle ends when the line changes, when the player presses Escape (sent with `pressKey()`) and when
+they submit it; the next call then reads the line afresh. Mudlet sees each new line rather than the key
+that made it, so any change ends the cycle, as Backspace does in the GUI: what the player types, a line the
+app sets itself, such as one it recalls from the history, the line `completeCommandLineFromHistory()`
+leaves, and a script's `printCmdLine()`. Only the line it was given, handed straight back to
+`setCommandLineText()`, keeps the cycle going. The GUI's line ends the cycle on a key alone, so there a
+recall, the up arrow or a script's `printCmdLine()` between two presses of Tab has the second complete the
+old word over the new line; the session completes the new line instead. On an empty
+line nothing is completed, as in the GUI once it has sent a line. When no word completes the line it
+returns nothing, and `errorString()` says so; it does the same while the game hides what is typed, as the
+GUI completes no password, and wherever `submit()` is refused, as from a handler of the session's signals.
+
+`completeCommandLineFromHistory()` is the up arrow on a line the player has typed into, as the GUI's command
+line does with "Highlight history" on in the profile's settings: it completes the line to the newest line of
+`commandHistory()` that starts with what was typed, and returns the whole line for the app to show with the
+part it added selected. Each further call goes on to the next older line that starts with it. Once no older
+one does, it returns just what was typed, and the call after that starts again from the newest, though, as in
+the GUI, calls stay on the oldest line of all if that one matched. Any change to the line starts the walk
+again from the newest line, as it ends Tab's cycle, and so does a submit; handing the returned line straight
+back to `setCommandLineText()` does not. The GUI's up arrow recalls each line of the history whole instead,
+which an app does by walking `commandHistory()` itself, with nothing typed, with "Highlight history" off, and
+while the whole line is selected: after Escape, a script's `selectCmdLineText()` or `sendCmdLine()`, a submit
+that leaves the line in place, and a line the app set itself (`CommandLineEdit::notTyped`), as a recall is,
+until the line is typed into or completed. The call returns nothing for each of these, with `errorString()`
+saying which, as it does when no line sent before starts with what was typed, while the game hides what is
+typed, and wherever `submit()` is refused.
