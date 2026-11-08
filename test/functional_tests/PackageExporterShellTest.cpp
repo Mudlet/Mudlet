@@ -42,6 +42,7 @@
 #include <QTemporaryDir>
 #include <QTextEdit>
 #include <QTimer>
+#include <QToolButton>
 #include <QTreeWidget>
 #include <QtTest/QtTest>
 
@@ -205,6 +206,22 @@ private:
                     return folderRow()->checkState(0) == wanted;
                 },
                 2s);
+    }
+
+    QString exportedItemsXml(const QString& packageName)
+    {
+        const QString packageFile = qsl("%1/%2.mpackage").arg(mExportDir.path(), packageName);
+        QFile::remove(packageFile);
+        mpDialog->slot_exportPackage();
+        if (!waitForExportToSettle() || !QFileInfo::exists(packageFile)) {
+            return QString();
+        }
+        QTemporaryDir unpacked;
+        QFile items(qsl("%1/%2.xml").arg(unpacked.path(), packageName));
+        if (!unpacked.isValid() || !unpackInto(packageFile, unpacked) || !items.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            return QString();
+        }
+        return QString::fromUtf8(items.readAll());
     }
 
     bool countChipReads(const QString& wanted) const
@@ -394,6 +411,11 @@ private slots:
         qInfo().noquote() << qsl("  after the hidden + the row shows %1").arg(chips()->items().join(qsl(", ")));
         QCOMPARE(pRequired->count(), 1);
         QCOMPARE(chips()->items(), QStringList{qsl("exporter-shell-dep-two")});
+        // The row is the script editor's event row, and its chips must not say they are events
+        QWidget* pChip = chips()->chipAt(0);
+        QVERIFY2(pChip && pChip->accessibleName().contains(qsl("package")), qPrintable(qsl("a required package is announced as \"%1\"").arg(pChip ? pChip->accessibleName() : QString())));
+        auto* pCross = pChip->findChild<QToolButton*>(qsl("editorChipRemove"));
+        QVERIFY2(pCross && !pCross->toolTip().contains(qsl("listening")), qPrintable(qsl("a required package's cross says \"%1\"").arg(pCross ? pCross->toolTip() : QString())));
 
         // Emptied the way a chip's own cross does
         chips()->setItems({});
@@ -518,54 +540,70 @@ private slots:
         QVERIFY(folderReads(Qt::Unchecked));
     }
 
-    void test_aFolderNamedAfterThePackageStandsForItsContents()
+    // Only the picked installed package's folder is made again by XMLimport. One that merely shares the typed name is
+    // the user's own and goes out whole, and typing the name a letter at a time past it leaves its tick alone.
+    void test_aFolderNamedLikeTheTypedPackageIsTheUsersOwn()
     {
         openExporter();
         auto* pName = fieldNamed(qsl("lineEdit_packageName"));
-        pName->setText(mFolderName);
-        TestPixels::settle();
-
         folderRow()->setCheckState(0, Qt::Checked);
-        QVERIFY2(countChipReads(qsl("2")), qPrintable(qsl("the count chip reads \"%1\" where only the two triggers inside the folder named after the package go in").arg(countChip()->text())));
-        QCOMPARE(folderRow()->child(0)->checkState(0), Qt::Checked);
-        QCOMPARE(folderRow()->child(1)->checkState(0), Qt::Checked);
-        QVERIFY2(folderRow()->checkState(0) == Qt::Checked,
-                 qPrintable(qsl("with all of its contents ticked the folder reads %1 rather than a full tick").arg(static_cast<int>(folderRow()->checkState(0)))));
+        QVERIFY2(folderReads(Qt::Checked), "SETUP: the ticked folder does not read ticked");
 
-        folderRow()->child(1)->setCheckState(0, Qt::Unchecked);
-        QVERIFY2(folderReads(Qt::PartiallyChecked),
-                 qPrintable(qsl("with one of two things ticked inside it the folder reads %1 rather than the dash").arg(static_cast<int>(folderRow()->checkState(0)))));
-        QVERIFY2(countChipReads(qsl("1")), qPrintable(qsl("the count chip reads \"%1\" with one trigger left ticked").arg(countChip()->text())));
-
-        // Unnamed, it is an ordinary folder whose own tick was never set
-        pName->clear();
-        TestPixels::settle();
-        QVERIFY2(folderReads(Qt::PartiallyChecked), qPrintable(qsl("as an ordinary folder with one thing ticked inside it the folder reads %1").arg(static_cast<int>(folderRow()->checkState(0)))));
-
-        pName->setText(mFolderName);
-        folderRow()->setCheckState(0, Qt::Checked);
-        QVERIFY2(countChipReads(qsl("2")), qPrintable(qsl("SETUP: the count chip reads \"%1\" before the export").arg(countChip()->text())));
-
-        const QString packageFile = qsl("%1/%2.mpackage").arg(mExportDir.path(), mFolderName);
-        QFile::remove(packageFile);
-        mpDialog->slot_exportPackage();
-        QVERIFY2(waitForExportToSettle(), "the export never finished");
-        QVERIFY2(QFileInfo::exists(packageFile), qPrintable(qsl("no package file was written; the window said \"%1\"").arg(infoLabel()->text())));
-
-        QTemporaryDir unpacked;
-        QVERIFY(unpacked.isValid());
-        QVERIFY2(unpackInto(packageFile, unpacked), "the exported package is not a readable archive");
-        QFile items(qsl("%1/%2.xml").arg(unpacked.path(), mFolderName));
-        QVERIFY2(items.open(QIODevice::ReadOnly | QIODevice::Text), "the package has no items XML");
-        const QString itemsXml = QString::fromUtf8(items.readAll());
-        for (const QString& name : {qsl("exporter shell first"), qsl("exporter shell second")}) {
-            QVERIFY2(itemsXml.contains(name), qPrintable(qsl("%1 was inside the ticked folder but is not in the exported XML").arg(name)));
+        for (int length = 1; length <= mFolderName.size(); ++length) {
+            pName->setText(mFolderName.left(length));
         }
-        QVERIFY2(!itemsXml.contains(mFolderName), qPrintable(qsl("the folder named after the package is in the XML, so installing it gives Triggers/%1/%1: %2").arg(mFolderName, itemsXml.left(400))));
+        TestPixels::settle();
+        QVERIFY2(folderReads(Qt::Checked), qPrintable(qsl("typing the package name past the folder's name changed its tick to %1").arg(static_cast<int>(folderRow()->checkState(0)))));
+
+        const QString itemsXml = exportedItemsXml(mFolderName);
+        QVERIFY2(!itemsXml.isEmpty(), qPrintable(qsl("the export wrote no readable package; the window said \"%1\"").arg(infoLabel()->text())));
+        for (const QString& name : {mFolderName, qsl("exporter shell first"), qsl("exporter shell second")}) {
+            QVERIFY2(itemsXml.contains(qsl("<name>%1</name>").arg(name)), qPrintable(qsl("%1 is not in the exported XML: %2").arg(name, itemsXml.left(400))));
+        }
 
         folderRow()->setCheckState(0, Qt::Unchecked);
         pName->clear();
         TestPixels::settle();
+    }
+
+    // The picked package's own folder stands for what is ticked in it and stays out of the XML, unless a right-click
+    // puts it in whole, with its own patterns
+    void test_thePickedPackagesFolderGoesInWholeOnlyByARightClick()
+    {
+        auto* pOwn = new TTrigger(nullptr, mpHost);
+        pOwn->setName(mPackageName);
+        pOwn->setIsFolder(true);
+        pOwn->setRegexCodeList(QStringList{qsl("^the folder's own pattern$")}, QList<int>{REGEX_PERL});
+        mpHost->getTriggerUnit()->registerTrigger(pOwn);
+        auto* pInside = new TTrigger(pOwn, mpHost);
+        pInside->setName(qsl("exporter shell inside the package"));
+        mpHost->getTriggerUnit()->registerTrigger(pInside);
+        const auto removeIt = qScopeGuard([pOwn]() {
+            delete pOwn;
+        });
+
+        openExporter();
+        comboNamed(qsl("packageList"))->setCurrentIndex(rowOfThePackage());
+        TestPixels::settle();
+        QTreeWidgetItem* pRow = nullptr;
+        for (int child = 0; child < tree()->topLevelItem(0)->childCount(); ++child) {
+            pRow = tree()->topLevelItem(0)->child(child)->text(0) == mPackageName ? tree()->topLevelItem(0)->child(child) : pRow;
+        }
+        QVERIFY2(pRow, "the package's own folder is not in the trigger tree");
+
+        pRow->setCheckState(0, Qt::Checked);
+        TestPixels::settle();
+        QString itemsXml = exportedItemsXml(mPackageName);
+        QVERIFY2(itemsXml.contains(qsl("exporter shell inside the package")), "what is inside the package's folder did not go out");
+        QVERIFY2(!itemsXml.contains(qsl("the folder's own pattern")), "the package's own folder went out without being asked for");
+
+        tree()->scrollToItem(pRow);
+        mpDialog->slot_rightClickOnItems(tree()->visualItemRect(pRow).center());
+        TestPixels::settle();
+        itemsXml = exportedItemsXml(mPackageName);
+        QVERIFY2(itemsXml.contains(qsl("the folder's own pattern")), qPrintable(qsl("a right-click did not put the package's folder in whole: %1").arg(itemsXml.left(400))));
+
+        mpDialog->uncheckAllChildren();
     }
 
     // Disabled rather than hidden, so the row does not change shape on the first keystroke

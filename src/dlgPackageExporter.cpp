@@ -449,6 +449,11 @@ void dlgPackageExporter::buildDetailsColumn()
             tr("Name another package this one needs"),
             //: Package exporter - prompt in the field a required package's name is typed into
             tr("package name"));
+    mpChipRow_dependencies->setChipWords(
+            //: Package exporter - accessible name of one package in the row of packages this one needs; %1 is that package's name
+            tr("Required package %1"),
+            //: Package exporter - tooltip on the cross that takes one package off the row of packages this one needs; %1 is that package's name
+            tr("No longer needs %1"));
     connect(mpChipRow_dependencies, &uiDesign::ChipRow::itemsChanged, this, &dlgPackageExporter::slot_dependencyChipsChanged);
     // Hidden, not removed: the export reads comboBox_dependencies and the other
     // exporter tests drive these
@@ -1604,9 +1609,6 @@ void dlgPackageExporter::slot_updateLocationPlaceholder()
     const QString where = packageName.isEmpty() ? getActualPath() : qsl("%1/%2.mpackage").arg(getActualPath(), packageName);
 
     checkToEnableExportButton();
-
-    // The name decides which folders are package folders
-    refreshFolderMarks();
 
     ui->lineEdit_filePath->setPlaceholderText(tr("Export to %1").arg(where));
     // Without "Export to": the caption beside the path says that
@@ -2815,6 +2817,7 @@ void dlgPackageExporter::slot_openPackageLocation()
 void uncheckRecursive(QTreeWidgetItem* item)
 {
     item->setCheckState(0, Qt::Unchecked);
+    item->setData(0, dlgPackageExporter::scmForcedInRole, false);
     for (int i = 0; i < item->childCount(); i++) {
         uncheckRecursive(item->child(i));
     }
@@ -2898,14 +2901,12 @@ TKey* dlgPackageExporter::keyOf(const QMap<QTreeWidgetItem*, int>& map, QTreeWid
 
 bool dlgPackageExporter::packageFolder(const QTreeWidgetItem* pItem) const
 {
-    if (!pItem || !pItem->parent() || pItem->parent()->parent() || pItem->data(0, Qt::UserRole) != isTopFolder) {
+    if (!pItem || !pItem->parent() || pItem->parent()->parent() || pItem->data(0, Qt::UserRole) != isTopFolder || pItem->data(0, scmForcedInRole).toBool()) {
         return false;
     }
-    const QString name = pItem->text(0);
-    if (name.isEmpty()) {
-        return false;
-    }
-    return name == ui->lineEdit_packageName->text().trimmed() || (ui->packageList->currentIndex() > 0 && name == ui->packageList->currentText());
+    // Only the picked installed package's: a folder that merely shares the typed name is the user's own, with patterns
+    // or CSS XMLimport would not make again
+    return ui->packageList->currentIndex() > 0 && pItem->text(0) == ui->packageList->currentText();
 }
 
 static bool everythingUnderIsTicked(const QTreeWidgetItem* pItem)
@@ -3295,7 +3296,12 @@ void dlgPackageExporter::slot_rightClickOnItems(const QPoint& point)
         return;
     }
     mCheckChildren = false;
-    if (item->checkState(0) == Qt::Checked) {
+    // The package's own folder goes in whole, its patterns or CSS with it, only this way
+    if (packageFolder(item)) {
+        item->setData(0, scmForcedInRole, true);
+        item->setCheckState(0, Qt::Checked);
+    } else if (item->checkState(0) == Qt::Checked) {
+        item->setData(0, scmForcedInRole, false);
         item->setCheckState(0, Qt::Unchecked);
     } else {
         item->setCheckState(0, Qt::Checked);

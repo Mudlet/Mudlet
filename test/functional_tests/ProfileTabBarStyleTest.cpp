@@ -611,6 +611,38 @@ private slots:
                                     .arg(QString::number(mpTabBar->tabSizeHint(0).width()), QString::number(sheetWidth))));
     }
 
+    // setProfileStyleSheet() puts the profile's sheet on the bar itself
+    void test_aProfileSheetNamingTheTabBarTakesTheTabs()
+    {
+        const auto restoreSheet = qScopeGuard([this]() {
+            mpTabBar->setStyleSheet(QString());
+        });
+        mpTabBar->setCurrentIndex(0);
+        constexpr int sheetTypePixels = 30;
+        mpTabBar->setStyleSheet(qsl("QTabBar::tab { background: rgb(250, 250, 250); color: black; font-size: %1px; }").arg(QString::number(sheetTypePixels)));
+        QTRY_VERIFY2(mpTabBar->tabSizeHint(0).height() > sheetTypePixels,
+                     qPrintable(qsl("the tab is %1px tall under a sheet setting its name in %2px type").arg(QString::number(mpTabBar->tabSizeHint(0).height()), QString::number(sheetTypePixels))));
+
+        const QImage picture = mpTabBar->grab().toImage().convertToFormat(QImage::Format_ARGB32);
+        const QRect tab = mpTabBar->tabRect(0).intersected(picture.rect());
+        int dark = 0;
+        int inkTop = tab.bottom();
+        int inkBottom = tab.top();
+        for (int y = tab.top(); y <= tab.bottom(); ++y) {
+            for (int x = tab.left(); x <= tab.right(); ++x) {
+                if (qGray(picture.pixel(x, y)) < 64) {
+                    ++dark;
+                    inkTop = std::min(inkTop, y);
+                    inkBottom = std::max(inkBottom, y);
+                }
+            }
+        }
+        QVERIFY2(dark > 20, qPrintable(qsl("the chosen tab holds %1 dark pixels, so its name is not in the sheet's black").arg(QString::number(dark))));
+        // A capital in 30px type stands about 21px tall; in the bar's own font about half that
+        QVERIFY2(inkBottom - inkTop + 1 > sheetTypePixels / 2,
+                 qPrintable(qsl("the name is drawn %1px tall, so not in the sheet's %2px type").arg(QString::number(inkBottom - inkTop + 1), QString::number(sheetTypePixels))));
+    }
+
     // TStyle's proxy base is never given a style, and a QProxyStyle without one builds a fresh
     // native style rather than falling back on the application's
     void test_nothingIsPaintedByABareNativeStyle()

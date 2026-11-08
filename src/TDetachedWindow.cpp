@@ -1101,34 +1101,35 @@ void TDetachedWindow::createToolBar()
     mpActionFullScreenView->setObjectName(qsl("fullscreen_action"));
     mpToolBar->addAction(mpActionFullScreenView);
 
-    mToolBarGlyphs = {{mpActionConnect, qsl(":/icons/toolbar-connect.svg"), QString()},
+    mToolBarGlyphs = {{mpActionConnect, qsl(":/icons/toolbar-connect.svg"), QString(), uiDesign::scmIdentity_connect},
                       {mpActionDisconnect, qsl(":/icons/toolbar-disconnect.svg"), QString()},
-                      {mpActionCloseProfile, qsl(":/icons/toolbar-close-profile.svg"), QString()},
-                      {mpActionCloseApplication, qsl(":/icons/toolbar-quit.svg"), QString()},
-                      {mpActionTriggers, qsl(":/icons/editor-triggers.svg"), QString()},
-                      {mpActionAliases, qsl(":/icons/editor-aliases.svg"), QString()},
+                      {mpActionCloseProfile, qsl(":/icons/toolbar-close-profile.svg"), QString(), uiDesign::scmIdentity_connect},
+                      {mpActionCloseApplication, qsl(":/icons/toolbar-quit.svg"), QString(), uiDesign::scmIdentity_delete},
+                      {mpActionTriggers, qsl(":/icons/editor-triggers.svg"), QString(), uiDesign::scmIdentity_triggers},
+                      {mpActionAliases, qsl(":/icons/editor-aliases.svg"), QString(), uiDesign::scmIdentity_input},
                       {mpActionTimers, qsl(":/icons/editor-timers.svg"), QString()},
-                      {mpActionButtons, qsl(":/icons/editor-buttons.svg"), QString()},
+                      {mpActionButtons, qsl(":/icons/editor-buttons.svg"), QString(), uiDesign::scmIdentity_buttons},
                       {mpActionScripts, qsl(":/icons/editor-scripts.svg"), QString()},
                       {mpActionKeys, qsl(":/icons/editor-keys.svg"), QString()},
-                      {mpActionVariables, qsl(":/icons/editor-variables.svg"), QString()},
-                      {mpActionMuteMedia, qsl(":/icons/toolbar-sound-on.svg"), qsl(":/icons/toolbar-sound-off.svg")},
-                      {mpActionMuteAPI, qsl(":/icons/toolbar-sound-on.svg"), qsl(":/icons/toolbar-sound-off.svg")},
-                      {mpActionMuteGame, qsl(":/icons/toolbar-sound-on.svg"), qsl(":/icons/toolbar-sound-off.svg")},
-                      {mpActionDiscord, qsl(":/icons/toolbar-discord.png"), QString()},
-                      {mpActionMudletDiscord, qsl(":/icons/toolbar-discord.png"), QString()},
-                      {mpActionMapper, qsl(":/icons/toolbar-map.svg"), QString()},
-                      {mpActionHelp, qsl(":/icons/toolbar-manual.svg"), QString()},
+                      {mpActionVariables, qsl(":/icons/editor-variables.svg"), QString(), uiDesign::scmIdentity_variables},
+                      {mpActionMuteMedia, qsl(":/icons/toolbar-sound-on.svg"), qsl(":/icons/toolbar-sound-off.svg"), uiDesign::scmIdentity_sound},
+                      {mpActionMuteAPI, qsl(":/icons/toolbar-sound-on.svg"), qsl(":/icons/toolbar-sound-off.svg"), uiDesign::scmIdentity_sound},
+                      {mpActionMuteGame, qsl(":/icons/toolbar-sound-on.svg"), qsl(":/icons/toolbar-sound-off.svg"), uiDesign::scmIdentity_sound},
+                      {mpActionDiscord, qsl(":/icons/toolbar-discord.png"), QString(), uiDesign::scmIdentity_discord},
+                      {mpActionMudletDiscord, qsl(":/icons/toolbar-discord.png"), QString(), uiDesign::scmIdentity_discord},
+                      {mpActionMapper, qsl(":/icons/toolbar-map.svg"), QString(), uiDesign::scmIdentity_map},
+                      {mpActionHelp, qsl(":/icons/toolbar-manual.svg"), QString(), uiDesign::scmIdentity_manual},
                       {mpActionOptions, qsl(":/icons/toolbar-settings.svg"), QString()},
                       {mpActionNotes, qsl(":/icons/toolbar-notepad.svg"), QString()},
-                      {mpActionPackageManager, qsl(":/icons/toolbar-packages.svg"), QString()},
-                      {mpActionModuleManager, qsl(":/icons/editor-module.svg"), QString()},
-                      {mpActionPackageExporter, qsl(":/icons/toolbar-export.svg"), QString()},
+                      {mpActionPackageManager, qsl(":/icons/toolbar-packages.svg"), QString(), uiDesign::scmIdentity_packages},
+                      {mpActionModuleManager, qsl(":/icons/editor-module.svg"), QString(), uiDesign::scmIdentity_packages},
+                      {mpActionPackageExporter, qsl(":/icons/toolbar-export.svg"), QString(), uiDesign::scmIdentity_packages},
                       {mpActionReplay, qsl(":/icons/toolbar-replay.svg"), QString()},
-                      {mpActionReconnectStandalone, qsl(":/icons/toolbar-reconnect.svg"), QString()},
+                      {mpActionReconnectStandalone, qsl(":/icons/toolbar-reconnect.svg"), QString(), uiDesign::scmIdentity_reconnect},
                       {mpActionAbout, qsl(":/icons/toolbar-about.svg"), QString()},
                       {mpActionFullScreenView, qsl(":/icons/toolbar-fullscreen.svg"), qsl(":/icons/toolbar-fullscreen-exit.svg")}};
     restyleToolBarIcons();
+    connect(mudlet::self(), &mudlet::signal_colouredIconsChanged, this, &TDetachedWindow::restyleToolBarIcons);
 
     // Setup context menu for the toolbar
     mpToolBar->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -3274,12 +3275,12 @@ void TDetachedWindow::slot_muteGame()
 
 void TDetachedWindow::restyleToolBarIcons()
 {
-    uiDesign::restyleToolBarGlyphs(mToolBarGlyphs, uiDesign::themeTokens());
+    uiDesign::restyleToolBarGlyphs(mToolBarGlyphs, uiDesign::themeTokens(), mudlet::self()->colouredIcons());
     uiDesign::ToolBarOverflow::restyle(mpToolBar, uiDesign::themeTokens());
 
     if (mpToolBar) {
         // Unlike the main bar, no profile stylesheet is assigned here to compose after
-        const QString sheet = mudlet::toolBarShellStyleSheet(qsl("QToolBar#detachedMainToolBar"));
+        const QString sheet = mudlet::sheetStylesToolBars(qApp->styleSheet()) ? QString() : mudlet::toolBarShellStyleSheet(qsl("QToolBar#detachedMainToolBar"));
         if (mpToolBar->styleSheet() != sheet) {
             mpToolBar->setStyleSheet(sheet);
         }
@@ -3348,6 +3349,7 @@ void TDetachedWindow::refreshAfterApplicationStyleChange()
     if (mpTabBar) {
         mpTabBar->refreshAfterApplicationStyleChange();
     }
+    restyleToolBarIcons();
 }
 
 void TDetachedWindow::slot_closeAllProfiles()

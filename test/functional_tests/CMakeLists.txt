@@ -43,6 +43,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     ConsoleModelExtractionTest.cpp
     ConsoleTextStyleTest.cpp
     CopyAsImageTest.cpp
+    DesignGlyphCacheTest.cpp
     SplitCharacterFormatTest.cpp
     DebugConsoleFilterTest.cpp
     DebugFilterBarGlyphTest.cpp

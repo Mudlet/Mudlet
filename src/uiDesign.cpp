@@ -20,6 +20,7 @@
 #include "uiDesign.h"
 
 #include "FontManager.h"
+#include "MudletApp.h"
 #include "TKeySequenceEdit.h"
 #include "utils.h"
 
@@ -31,6 +32,7 @@
 #include <QBuffer>
 #include <QCheckBox>
 #include <QComboBox>
+#include <QDateTime>
 #include <QDateTimeEdit>
 #include <QDir>
 #include <QDoubleSpinBox>
@@ -57,6 +59,7 @@
 #include <QRegularExpression>
 #include <QSpinBox>
 #include <QStandardPaths>
+#include <QtMath>
 #include <QStyle>
 #include <QStyleOptionGroupBox>
 #include <QStyleOptionViewItem>
@@ -757,36 +760,53 @@ bool setSidebarCollapsed(QWidget* pPane, QListWidget* pList, const QString& sepa
 
 // A stylesheet takes pictures only from files and cannot recolour them, so tinted glyphs are written here. The
 // colour is part of each file name: Qt caches a sheet's images by path.
+// A folder per build, so a glyph a later build draws differently is drawn again. A folder no build has written to
+// for a week goes when another build makes its own
 static QString glyphCacheFile(const QString& fileName)
 {
     const QString cacheRoot = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
     if (cacheRoot.isEmpty()) {
         return QString();
     }
-    QDir cacheDir(cacheRoot + qsl("/ui-glyphs"));
-    if (!cacheDir.exists() && !cacheDir.mkpath(qsl("."))) {
-        return QString();
+    QString build = MudletApp::scmVersion();
+    build.replace(QRegularExpression(qsl("[^A-Za-z0-9._-]")), qsl("_"));
+    const QDir glyphs(cacheRoot + qsl("/ui-glyphs"));
+    if (!glyphs.exists(build)) {
+        const QDateTime weekAgo = QDateTime::currentDateTime().addDays(-7);
+        for (const QFileInfo& old : glyphs.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot)) {
+            if (old.lastModified() < weekAgo) {
+                QDir(old.absoluteFilePath()).removeRecursively();
+            }
+        }
+        // Written before the cache had a folder per build
+        for (const QString& unversioned : glyphs.entryList(QDir::Files)) {
+            QFile::remove(glyphs.absoluteFilePath(unversioned));
+        }
+        if (!glyphs.mkpath(build)) {
+            return QString();
+        }
     }
-    return cacheDir.absoluteFilePath(fileName);
+    return glyphs.absoluteFilePath(qsl("%1/%2").arg(build, fileName));
 }
 
-// Written at 1x and, on a high-DPI screen, as an @2x twin beside it: a stylesheet loads its path through QPixmap,
-// which prefers that twin. Answers the 1x path, or nothing where the cache could not be written
+// Written at 1x with @2x and higher twins beside it: a stylesheet loads its path through QPixmap, which rounds the
+// screen's ratio up to pick a twin and takes it as drawn at that whole ratio. The @2x twin is written whatever the
+// screen, so a cache first written at 1x serves a high-DPI screen too. Answers the 1x path, or nothing where the
+// cache could not be written
 static QString cachedGlyphFile(const QString& stem, const std::function<QPixmap(qreal)>& drawnAt)
 {
     const QString filePath = glyphCacheFile(stem + qsl(".png"));
-    if (filePath.isEmpty() || QFileInfo::exists(filePath)) {
+    if (filePath.isEmpty()) {
         return filePath;
     }
 
-    const qreal ratio = qApp ? qApp->devicePixelRatio() : 1.0;
-    QList<qreal> ratios{1.0};
-    if (ratio > 1.0) {
-        ratios << ratio;
-    }
-    for (const qreal at : std::as_const(ratios)) {
+    const int most = std::max(2, qCeil(qApp ? qApp->devicePixelRatio() : 1.0));
+    for (int at = 1; at <= most; ++at) {
+        const QString wanted = at > 1 ? glyphCacheFile(qsl("%1@%2x.png").arg(stem, QString::number(at))) : filePath;
+        if (QFileInfo::exists(wanted)) {
+            continue;
+        }
         const QPixmap glyph = drawnAt(at);
-        const QString wanted = at > 1.0 ? glyphCacheFile(qsl("%1@%2x.png").arg(stem, QString::number(qRound(at)))) : filePath;
         if (glyph.isNull() || !glyph.save(wanted, "PNG")) {
             return QString();
         }
@@ -1863,10 +1883,25 @@ QString withLinkColour(const QString& richText, const QColor& colour)
 QFont fixedPitchFont(const QFont& base, const qreal scale)
 {
     QFont font = QFontDatabase::systemFont(QFontDatabase::FixedFont);
-    // A platform with no theme of its own, as offscreen on Windows, answers with its proportional default
+    // A platform with no theme of its own, as offscreen on Windows, answers with its proportional default. The bundled
+    // face is registered from the fonts folder, which only the application fills, so from the resources otherwise.
     if (!QFontInfo(font).fixedPitch()) {
-        FontManager::ensureFontsAdded();
-        font = QFont(qsl("Bitstream Vera Sans Mono"));
+        static const QString fixedFamily = []() {
+            FontManager::ensureFontsAdded();
+            const QString bundled = qsl("Bitstream Vera Sans Mono");
+            if (!QFontDatabase::hasFamily(bundled)) {
+                QFontDatabase::addApplicationFont(qsl(":/fonts/ttf-bitstream-vera-1.10/VeraMono.ttf"));
+            }
+            if (QFontDatabase::hasFamily(bundled)) {
+                return bundled;
+            }
+            const QStringList families = QFontDatabase::families();
+            const auto found = std::find_if(families.cbegin(), families.cend(), [](const QString& family) {
+                return QFontDatabase::isFixedPitch(family);
+            });
+            return found == families.cend() ? QString() : *found;
+        }();
+        font = QFont(fixedFamily);
         font.setStyleHint(QFont::TypeWriter);
     }
     if (base.pointSizeF() > 0.0) {

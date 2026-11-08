@@ -91,6 +91,7 @@ public:
     TabConnectionIndicator tabConnectionIndicator(int index) const;
 
 private:
+    bool scriptSheetTakesTheTabs() const;
     // indicator and close stay null on a tab that carries neither
     struct ChipLayout
     {

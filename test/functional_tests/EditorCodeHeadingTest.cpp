@@ -39,6 +39,8 @@
 #include "PixelTestHelper.h"
 #include "ProfileSessionTestHelper.h"
 #include "TScript.h"
+#include "TLuaInterpreter.h"
+#include "ScriptUnit.h"
 #include "dlgSystemMessageArea.h"
 #include "dlgTriggerEditor.h"
 #include "dlgTriggerPatternEdit.h"
@@ -82,6 +84,15 @@ private:
     QLabel* caretReading() const { return mpEditor->findChild<QLabel*>(qsl("editorCodeCaret")); }
     QWidget* compileNote() const { return mpEditor->findChild<QWidget*>(qsl("editorCompileNote")); }
     QLabel* compileMessage() const { return mpEditor->findChild<QLabel*>(qsl("editorCompileMessage")); }
+    // The note takes a second line before it is cut, so each line has to fit on its own
+    static int widestLine(const QLabel* pLabel, const QString& text)
+    {
+        int widest = 0;
+        for (const QString& line : text.split(QLatin1Char('\n'))) {
+            widest = std::max(widest, pLabel->fontMetrics().horizontalAdvance(line));
+        }
+        return widest;
+    }
     QLabel* compileMark() const { return mpEditor->findChild<QLabel*>(qsl("editorCompileMark")); }
 
     QString bannerReads() const { return mpEditor->mpSystemMessageArea->notificationAreaMessageBox->text(); }
@@ -381,7 +392,7 @@ private slots:
 
         const QString said = pMessage->text();
         const bool elided = said.endsWith(QChar(0x2026));
-        const int wanted = pMessage->fontMetrics().horizontalAdvance(said);
+        const int wanted = widestLine(pMessage, said);
         qInfo().noquote() << qsl("  on a %1px strip the note reads \"%2\" (%3px in a %4px label) and the caret reading \"%5\" (%6px)")
                                      .arg(QString::number(heading()->width()), said, QString::number(wanted), QString::number(pMessage->width()), pCaret->text(), QString::number(pCaret->width()));
         QVERIFY2(elided || wanted <= pMessage->width(),
@@ -415,7 +426,7 @@ private slots:
                      qPrintable(qsl("the caret reading went from \"%1\" to \"%2\" without taking any of the note's %3px").arg(shortReading, pCaret->text(), QString::number(roomWhenWide))));
 
         const QString narrow = pMessage->text();
-        const int wanted = pMessage->fontMetrics().horizontalAdvance(narrow);
+        const int wanted = widestLine(pMessage, narrow);
         qInfo().noquote() << qsl("  the reading went from \"%1\" to \"%2\", the note's room from %3px to %4px, and the note now wants %5px of it")
                                      .arg(shortReading, pCaret->text(), QString::number(roomWhenWide), QString::number(pMessage->width()), QString::number(wanted));
         QVERIFY2(narrow != wide,
@@ -596,6 +607,80 @@ private slots:
         QTRY_VERIFY2(pNote->isVisible(), "opening an item that has never compiled left the heading saying nothing about it");
         QVERIFY2(!mpEditor->mpSystemMessageArea->isVisible(),
                  qPrintable(qsl("opening a broken item raised the notice over the form as well as the note on the heading, reading \"%1\"").arg(bannerReads())));
+    }
+
+    // A second line before the note is cut, so the compiler's whole sentence is read at a common window width
+    void test_aNoteTooLongForOneLineGoesOntoASecond()
+    {
+        typeAndSave(qsl("if true then\nlocal a = 1\n"));
+        QTRY_VERIFY2(compileNote() != nullptr && compileNote()->isVisible(), "a save that did not compile left no note on the heading");
+        QLabel* pMessage = compileMessage();
+        const QString whole = mpEditor->mEditorCompileNoteText;
+        const QFontMetrics metrics = pMessage->fontMetrics();
+        const int needed = metrics.horizontalAdvance(whole);
+        // Room for a little over half of it, so it needs a second line but not a third
+        mpEditor->resize(mpEditor->width() - pMessage->width() + needed * 6 / 10, mpEditor->height());
+        QCoreApplication::processEvents();
+        QTRY_VERIFY2(pMessage->width() < needed, qPrintable(qsl("SETUP: the note's %1px still hold its %2px").arg(QString::number(pMessage->width()), QString::number(needed))));
+        QVERIFY2(2 * pMessage->width() > needed + 8 * metrics.averageCharWidth(), "SETUP: the note needs three lines here, so a cut is due anyway");
+
+        const QString said = pMessage->text();
+        QVERIFY2(!said.contains(QChar(0x2026)), qPrintable(qsl("the note was cut to \"%1\" where a second line holds it").arg(said)));
+        QCOMPARE(said.simplified(), whole.simplified());
+        QVERIFY2(widestLine(pMessage, said) <= pMessage->width(), qPrintable(qsl("a line of \"%1\" is wider than the %2px label").arg(said, QString::number(pMessage->width()))));
+        QTRY_VERIFY2(pMessage->height() >= 2 * metrics.lineSpacing(),
+                     qPrintable(qsl("the heading did not grow to hold the second line: the label is %1px tall").arg(QString::number(pMessage->height()))));
+    }
+
+    // setScript() replaces the code shown, so what was said about the old code goes with it
+    void test_setScriptThatCompilesTakesTheNoteAndTheMarkAway()
+    {
+        const QString name = qsl("A script setScript repairs");
+        auto* pBroken = new TScript(name, mpHost);
+        pBroken->setScript(qsl("local a = 1\nlocal b = 1 +* 2\n"));
+        pBroken->registerScript();
+        QVERIFY2(!pBroken->state(), "SETUP: the script this case repairs compiles already");
+        mpEditor->slot_showScripts();
+        QTest::qWait(50ms);
+        rebuildScriptRows();
+        mpEditor->slot_scriptsSelected(TestPixels::rowFor(mpEditor->mpScriptsBaseItem, pBroken->getID()));
+        QTRY_VERIFY2(compileNote()->isVisible(), "SETUP: opening the broken script left no note");
+        QCOMPARE(mpEditor->mpEditorLineMargin->errorLine(), scmBrokenLine);
+
+        const QString repaired = qsl("local a = 1\nlocal b = 1 + 2\n");
+        const auto [id, why] = mpHost->getLuaInterpreter()->setScriptCode(name, repaired, 0);
+        QVERIFY2(id == pBroken->getID(), qPrintable(why));
+        QCOMPARE(mpEditor->mpSourceEditorEdbeeDocument->text(), repaired);
+        QVERIFY2(!compileNote()->isVisible(), qPrintable(qsl("the note still reads \"%1\" over code that compiles").arg(compileMessage()->text())));
+        QCOMPARE(mpEditor->mpEditorLineMargin->errorLine(), 0);
+    }
+
+    // The heading describes the open item's own code, not a child painted along with it
+    void test_aBrokenChildsErrorStaysOffItsOpenFolder()
+    {
+        const QString folderName = qsl("A folder holding a broken script");
+        auto* pFolder = new TScript(folderName, mpHost);
+        pFolder->setIsFolder(true);
+        pFolder->registerScript();
+        auto* pBroken = new TScript(pFolder, mpHost);
+        pBroken->setName(qsl("The folder's broken script"));
+        pBroken->setScript(qsl("local a = 1\nbroken broken or {}\n"));
+        pBroken->registerScript();
+        QVERIFY2(!pBroken->state() && pFolder->state(), "SETUP: the child compiles, or the folder does not");
+        mpEditor->slot_showScripts();
+        QTest::qWait(50ms);
+        rebuildScriptRows();
+        QTreeWidgetItem* pFolderRow = TestPixels::rowFor(mpEditor->mpScriptsBaseItem, pFolder->getID());
+        QVERIFY2(pFolderRow != nullptr && pFolderRow->childCount() == 1, "SETUP: the folder has no row, or not one child under it");
+        mpEditor->slot_scriptsSelected(pFolderRow);
+        QTRY_VERIFY2(!compileNote()->isVisible(), "SETUP: the open folder's heading already carries a note");
+
+        const int flushes = mpEditor->mScriptIconFlushCount;
+        // What Lua's disableScript() runs
+        QVERIFY(mpHost->getScriptUnit()->disableScript(folderName));
+        QTRY_COMPARE(mpEditor->mScriptIconFlushCount, flushes + 1);
+        QVERIFY2(!compileNote()->isVisible(), qPrintable(qsl("the open folder's heading took its child's error: \"%1\"").arg(compileMessage()->text())));
+        QCOMPARE(mpEditor->mpEditorLineMargin->errorLine(), 0);
     }
 
     // Regression: a body that failed as the profile loaded opened under a notice calling the error

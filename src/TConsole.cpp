@@ -2313,7 +2313,7 @@ QSize TConsole::getMainWindowSize() const
     const QSize consoleSize = predicted ? parentWidget()->size() : size();
     const int toolbarWidth = mpLeftToolBar->width() + mpRightToolBar->width();
     const int toolbarHeight = mpTopToolBar->height();
-    const int commandLineHeight = mpCommandLine->height();
+    const int commandLineHeight = mpCommandLine->height() + footSeamHeightShown();
     const QSize mainWindowSize(consoleSize.width() - toolbarWidth, consoleSize.height() - (commandLineHeight + toolbarHeight));
 
     // A profile being switched to gets its geometry over several events, so in

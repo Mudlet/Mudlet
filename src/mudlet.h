@@ -254,6 +254,7 @@ public:
     void restyleToolBarIcons();
     void restyleMainToolBar();
     static QString toolBarShellStyleSheet(const QString& barSelector);
+    static bool sheetStylesToolBars(const QString& sheet);
     void setToolBarVisibility(enums::controlsVisibility);
     void showChangelogIfUpdated();
     void slot_showConnectionDialog();

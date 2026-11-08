@@ -65,6 +65,8 @@ public:
 
     void setName(const QString& name);
     [[nodiscard]] QString name() const { return mName; }
+    // Each %1 is the chip's name
+    void setWords(const QString& accessibleName, const QString& removeTooltip);
     void setRemoveGlyph(const QIcon& glyph);
     void setOrigin(const QString& origin, const bool system);
     // Public: a chip is measured off its row's font, so the row calls this when that font changes
@@ -80,9 +82,13 @@ protected:
     void mousePressEvent(QMouseEvent* pEvent) override;
 
 private:
+    void applyPadding();
+
     QLabel* mpLabel = nullptr;
     QToolButton* mpRemove = nullptr;
     QString mName;
+    QString mAccessibleNameWords;
+    QString mRemoveTooltipWords;
 };
 
 class ChipRow : public QWidget
@@ -104,6 +110,8 @@ public:
     void beginAdd();
 
     void setAddWords(const QString& button, const QString& tooltip, const QString& fieldPrompt);
+    // What a chip is called to a screen reader and on its cross, each %1 its name; a chip is an event until set
+    void setChipWords(const QString& accessibleName, const QString& removeTooltip);
 
     // Names already on a chip are left out of the offer, since adding one again would be refused.
     // Every chip takes its tone and the words on its tooltip from the suggestion of its name.
@@ -129,6 +137,8 @@ public:
 signals:
     void itemsChanged();
     void duplicateRefused(const QString& name);
+    // Before the field offers anything, so suggestions that take a while to gather are gathered only then
+    void fieldOpening();
 
 protected:
     void changeEvent(QEvent* pEvent) override;
@@ -164,6 +174,8 @@ private:
     SuggestionDelegate* mpSuggestionDelegate = nullptr;
     QList<Suggestion> mSuggestions;
     QString mUnlistedOrigin;
+    QString mChipAccessibleName;
+    QString mChipRemoveTooltip;
     // Kept for a restyle that comes before there is a popup to put them on
     QString mSuggestionSheet;
     QColor mSuggestionNote;

@@ -394,11 +394,16 @@ QString EditorTreeDelegate::dotToolTip(const QModelIndex& index) const
                 offGroup = parent.data(Qt::DisplayRole).toString();
             }
         }
-        tip = offGroup.isEmpty()
-                      //: Tooltip on the dot of an item in the script editor's trees that is switched on inside a group that is off
-                      ? tr("Switched on, but not running: a group it is in is switched off. Click to switch it off.")
-                      //: Tooltip on the dot of an item in the script editor's trees that is switched on inside a group that is off; %1 is that group's name
-                      : tr("Switched on, but not running: the group \"%1\" is switched off. Click to switch it off.").arg(offGroup.toHtmlEscaped());
+        if (!offGroup.isEmpty()) {
+            //: Tooltip on the dot of an item in the script editor's trees that is switched on inside a group that is off; %1 is that group's name
+            tip = tr("Switched on, but not running: the group \"%1\" is switched off. Click to switch it off.").arg(offGroup.toHtmlEscaped());
+        } else if (mpHost && mpHost->mEmergencyStop) {
+            //: Tooltip on the dot of an item in the script editor's trees that is switched on while the emergency stop holds every trigger, alias, timer and key
+            tip = tr("Switched on, but held by the emergency stop. Click to switch it off.");
+        } else {
+            //: Tooltip on the dot of an item in the script editor's trees that is switched on inside a group that is off
+            tip = tr("Switched on, but not running: a group it is in is switched off. Click to switch it off.");
+        }
         break;
     }
     }

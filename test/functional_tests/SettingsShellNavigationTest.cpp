@@ -324,6 +324,9 @@ private:
             for (int width = widest; width > narrowest - 8; width -= 8) {
                 mpPreferences->resize(std::max(width, narrowest), 760);
                 qApp->processEvents();
+                // The resize posts the scroll area's own layout pass, which hides a bar the new width no longer needs
+                QCoreApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
+                qApp->processEvents();
                 const int actual = mpPreferences->width();
                 QVERIFY2(!pPage->horizontalScrollBar()->isVisible(),
                          qPrintable(qsl("the '%1' page scrolls sideways in a %2px window, with the sidebar %3px wide").arg(page).arg(actual).arg(pSidebar->width())));

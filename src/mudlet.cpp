@@ -5004,6 +5004,13 @@ void mudlet::restyleToolBarIcons()
     restyleMainToolBar();
 }
 
+// A script's sheet naming these styles the bars as before the design, whose rules set on a bar itself would outrank an
+// application sheet whatever its selectors, and a profile sheet's plain type selectors
+bool mudlet::sheetStylesToolBars(const QString& sheet)
+{
+    return sheet.contains(qsl("QToolBar")) || sheet.contains(qsl("QToolButton"));
+}
+
 QString mudlet::toolBarShellStyleSheet(const QString& barSelector)
 {
     const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
@@ -5013,8 +5020,8 @@ QString mudlet::toolBarShellStyleSheet(const QString& barSelector)
            + splitToolBarButtonRules(barSelector, tokens);
 }
 
-// The profile's Lua sheet belongs to this same widget, so it goes after the design's rules;
-// a profile overrides them by naming the bar: "QToolBar#mpMainToolBar QToolButton { ... }"
+// The profile's Lua sheet belongs to this same widget, so it goes after the design's rules, or alone when it names the
+// bar's classes
 void mudlet::restyleMainToolBar()
 {
     if (!mpMainToolBar) {
@@ -5025,14 +5032,16 @@ void mudlet::restyleMainToolBar()
     // adds for a menu is drawn over the word, so it goes
     const QString aboutUpdateButton = qsl("QToolBar#mpMainToolBar QToolButton#aboutUpdateButton");
     const QString aboutUpdateRules = qsl("%1, %1:hover { color: %2; } %1::menu-indicator { image: none; }").arg(aboutUpdateButton, aboutUpdateInk(uiDesign::themeTokens()).name());
-    const QString mainSheet = toolBarShellStyleSheet(qsl("QToolBar#mpMainToolBar")) + aboutUpdateRules + mMainToolBarProfileStyleSheet;
+    const QString mainSheet = sheetStylesToolBars(qApp->styleSheet() + mMainToolBarProfileStyleSheet)
+                                      ? mMainToolBarProfileStyleSheet
+                                      : toolBarShellStyleSheet(qsl("QToolBar#mpMainToolBar")) + aboutUpdateRules + mMainToolBarProfileStyleSheet;
     // setStyleSheet() re-polishes the whole bar, and this runs on every palette change and profile switch
     if (mpMainToolBar->styleSheet() != mainSheet) {
         mpMainToolBar->setStyleSheet(mainSheet);
     }
 
     if (mpToolBarReplay) {
-        const QString replaySheet = toolBarShellStyleSheet(qsl("QToolBar#mpToolBarReplay"));
+        const QString replaySheet = sheetStylesToolBars(qApp->styleSheet()) ? QString() : toolBarShellStyleSheet(qsl("QToolBar#mpToolBarReplay"));
         if (mpToolBarReplay->styleSheet() != replaySheet) {
             mpToolBarReplay->setStyleSheet(replaySheet);
         }
@@ -8129,6 +8138,7 @@ void mudlet::setAppearance(const enums::Appearance state, const bool& loading)
 void mudlet::setAppStyleSheet(const QString& styleSheet)
 {
     qApp->setStyleSheet(styleSheet);
+    restyleMainToolBar();
     refreshTabBarsAfterStyleChange();
 }
 

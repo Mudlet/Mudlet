@@ -109,6 +109,7 @@
 #include <QStyle>
 #include <QTextCursor>
 #include <QTextDocumentFragment>
+#include <QTextLayout>
 #include <QTime>
 #include <QTimer>
 #include <QShowEvent>
@@ -7548,7 +7549,7 @@ void dlgTriggerEditor::showAliasError(QTreeWidgetItem* pItem, const QString& nam
     if (setRowDescription(pItem, descError)) {
         ++mAliasIconPaintCount;
     }
-    if (touchNotification) {
+    if (touchNotification && pItem == mpCurrentAliasItem) {
         reportCompileError(error);
     }
 }
@@ -7806,6 +7807,13 @@ void dlgTriggerEditor::writeScript(int id)
     disconnect(mpSourceEditorEdbeeDocument, &edbee::TextDocument::textChanged, this, &dlgTriggerEditor::slot_itemEdited);
     mpSourceEditorEdbeeDocument->setText(scriptCode);
     connect(mpSourceEditorEdbeeDocument, &edbee::TextDocument::textChanged, this, &dlgTriggerEditor::slot_itemEdited);
+    // The heading, the margin and the row describe the code shown, which this has just replaced
+    paintScriptItem(pItem, pT, false);
+    if (pT->state()) {
+        clearCompileState();
+    } else {
+        reportCompileError(pT->getError());
+    }
 }
 
 void dlgTriggerEditor::saveScript()
@@ -9797,7 +9805,8 @@ void dlgTriggerEditor::slot_scriptsSelected(QTreeWidgetItem* pItem)
     if (pT) {
         const QString name = pT->getName();
         mpChipRow_scriptEvents->setItems(pT->getEventHandlerList());
-        mpChipRow_scriptEvents->setSuggestions(eventSuggestions(mpHost->knownEventNames()));
+        // Only what the chips need to show where their names come from; the field gathers the rest as it opens
+        mpChipRow_scriptEvents->setSuggestions(eventSuggestions(Host::eventNameEntries(pT->getEventHandlerList())));
         const QString script = pT->getScript();
         clearDocument(mpSourceEditorEdbee, script);
         restoreEditorState(EditorViewType::cmScriptView, ID);
@@ -10087,7 +10096,8 @@ void dlgTriggerEditor::paintKeyItem(QTreeWidgetItem* pItem, TKey* pT, bool touch
         computeKeyDescription(pT, itemDescription);
     } else {
         itemDescription = descError;
-        if (touchNotification) {
+        // The heading describes the open item's own code; a child painted along with its folder keeps its error to its row
+        if (touchNotification && pItem == mpCurrentKeyItem) {
             reportCompileError(pT->getError());
         }
     }
@@ -10307,7 +10317,8 @@ void dlgTriggerEditor::paintScriptItem(QTreeWidgetItem* pItem, TScript* pT, bool
         computeScriptDescription(pT, itemDescription);
     } else {
         itemDescription = descError;
-        if (touchNotification) {
+        // The heading describes the open item's own code; a child painted along with its folder keeps its error to its row
+        if (touchNotification && pItem == mpCurrentScriptItem) {
             reportCompileError(pT->getError());
         }
     }
@@ -10444,7 +10455,8 @@ void dlgTriggerEditor::paintTimerItem(QTreeWidgetItem* pItem, TTimer* pT, bool t
         computeTimerDescription(pT, itemDescription);
     } else {
         itemDescription = descError;
-        if (touchNotification) {
+        // The heading describes the open item's own code; a child painted along with its folder keeps its error to its row
+        if (touchNotification && pItem == mpCurrentTimerItem) {
             reportCompileError(pT->getError());
         }
     }
@@ -10594,7 +10606,8 @@ void dlgTriggerEditor::paintTriggerItem(QTreeWidgetItem* pItem, TTrigger* pT, bo
         computeTriggerDescription(pT, itemDescription);
     } else {
         itemDescription = descError;
-        if (touchNotification) {
+        // The heading describes the open item's own code; a child painted along with its folder keeps its error to its row
+        if (touchNotification && pItem == mpCurrentTriggerItem) {
             reportCompileError(pT->getError());
         }
     }
@@ -11933,8 +11946,8 @@ void dlgTriggerEditor::showActivationFailure(const QString& name, const QString&
     const int line = match.captured(1).toInt();
     //: Link in the editor banner that jumps to the script line with the error. %1 is the line number.
     const QString lineLink = qsl("<a href='mudlet-error-line:%1' style='color: inherit; text-decoration: underline;'>%2</a>").arg(QString::number(line), tr("line %1").arg(line));
-    //: Editor banner when an item whose script has an error was switched on. %1 is a link reading "line 12", %2 the item's name.
-    showError(tr("<p>Fix the error on %1, then switch \"%2\" on again.</p>").arg(lineLink, name.toHtmlEscaped()));
+    //: Editor banner when an item whose script has an error was switched on. %1 is the item's name, %2 a link reading "line 12", %3 what the Lua compiler said about that line (in English).
+    showError(tr("<p>\"%1\" could not be switched on: %2: %3</p><p>Fix that, then switch it on again.</p>").arg(name.toHtmlEscaped(), lineLink, match.captured(2).toHtmlEscaped()));
     // showError() forgets the item any earlier link was for; this one is for the open item's own script
     int itemId = -1;
     QString chunkName;
@@ -14478,6 +14491,12 @@ void dlgTriggerEditor::restoreShortcuts()
     mpShortcutActivateMainWindow->setEnabled(true);
 }
 
+QString dlgTriggerEditor::unboundKeyText() const
+{
+    //: Stands in the key binding field for a key that answers no keystroke yet, and names such a key
+    return tr("No key chosen");
+}
+
 void dlgTriggerEditor::keyGrabCallback(const Qt::Key key, const Qt::KeyboardModifiers modifier)
 {
     KeyUnit* pKeyUnit = mpHost->getKeyUnit();
@@ -14486,8 +14505,6 @@ void dlgTriggerEditor::keyGrabCallback(const Qt::Key key, const Qt::KeyboardModi
     }
     const QString keyName = pKeyUnit->getKeyName(key, modifier);
     QLineEdit* pBindingField = mpKeysMainArea->lineEdit_key_binding;
-    // What saveKey() named an unbound key after: the field's placeholder shows while it is empty
-    const QString oldKeyName = pBindingField->text().isEmpty() ? pBindingField->placeholderText() : pBindingField->text();
     pBindingField->setText(keyName);
     QTreeWidgetItem* pItem = treeWidget_keys->currentItem();
     if (pItem) {
@@ -14500,8 +14517,13 @@ void dlgTriggerEditor::keyGrabCallback(const Qt::Key key, const Qt::KeyboardModi
 
             QString oldStateXML = exportKeyToXML(pT, SnapshotScope::ItemOnly);
             const QString typedName = mpKeysMainArea->lineEdit_key_name->text().trimmed();
+            // From the key, not the field, which an armed grab has emptied. An unbound key was named after the field's
+            // empty wording, or before the redesign after KeyUnit's.
+            const bool unbound = pT->getKeyCode() == Qt::Key_unknown;
+            const bool namedAfterBinding = unbound ? typedName == unboundKeyText() || typedName == pKeyUnit->getKeyName(Qt::Key_unknown, Qt::NoModifier)
+                                                   : typedName == pKeyUnit->getKeyName(pT->getKeyCode(), pT->getKeyModifiers());
             // A saved key's scripts may find it by a name that happens to match its binding
-            const bool nameIsOldBinding = typedName == oldKeyName && (pT->getKeyCode() == Qt::Key_unknown || mpUndoStack->addingItem(EditorViewType::cmKeysView, keyID));
+            const bool nameIsOldBinding = namedAfterBinding && (unbound || mpUndoStack->addingItem(EditorViewType::cmKeysView, keyID));
             pT->setKeyCode(key);
             pT->setKeyModifiers(modifier);
             if (pItem == mpCurrentKeyItem && !pT->isFolder() && (typedName.isEmpty() || typedName == tr("New key") || nameIsOldBinding)) {
@@ -15775,6 +15797,11 @@ void dlgTriggerEditor::buildScriptEventRow()
     pLabel->setWordWrap(false);
 
     connect(mpChipRow_scriptEvents, &uiDesign::ChipRow::itemsChanged, this, &dlgTriggerEditor::slot_itemEdited);
+    connect(mpChipRow_scriptEvents, &uiDesign::ChipRow::fieldOpening, this, [this]() {
+        if (mpHost) {
+            mpChipRow_scriptEvents->setSuggestions(eventSuggestions(mpHost->knownEventNames()));
+        }
+    });
 }
 
 void dlgTriggerEditor::buildTimerIntervalRow()
@@ -16020,8 +16047,7 @@ void dlgTriggerEditor::showKeyBinding()
     uiDesign::repolish(pField);
     pField->setCursor(Qt::PointingHandCursor);
     pField->setText(bound ? mpHost->getKeyUnit()->getKeyName(pKey->getKeyCode(), pKey->getKeyModifiers()) : QString());
-    //: Stands in the key binding field for a key that answers no keystroke yet
-    pField->setPlaceholderText(tr("No key chosen"));
+    pField->setPlaceholderText(unboundKeyText());
     if (bound) {
         //: Beside a key's keystroke, saying that clicking the field is how it is changed
         mpLabel_keyHint->setText(tr("Click to change"));
@@ -16956,7 +16982,9 @@ void dlgTriggerEditor::setupEditorCodeHeader()
     pNoteLayout->addWidget(mpLabel_editorCompileMark);
     mpLabel_editorCompileMessage = new QLabel(mpWidget_editorCompileNote);
     mpLabel_editorCompileMessage->setObjectName(qsl("editorCompileMessage"));
-    // Ignored: a compiler's sentence is as long as it likes, and elideCompileNote() cuts it to the room left
+    // Plain, or a message Qt takes for rich text would lose the line break elideCompileNote() puts in
+    mpLabel_editorCompileMessage->setTextFormat(Qt::PlainText);
+    // Ignored: a compiler's sentence is as long as it likes, and elideCompileNote() fits it to the room left
     mpLabel_editorCompileMessage->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     mpLabel_editorCompileMessage->installEventFilter(this);
     pNoteLayout->addWidget(mpLabel_editorCompileMessage, 1);
@@ -17044,12 +17072,33 @@ void dlgTriggerEditor::updateEditorCodeHeading()
     }
 }
 
+// A second line before any cut: what the compiler said is what the reader came to the note for
 void dlgTriggerEditor::elideCompileNote()
 {
     if (!mpLabel_editorCompileMessage) {
         return;
     }
-    mpLabel_editorCompileMessage->setText(mpLabel_editorCompileMessage->fontMetrics().elidedText(mEditorCompileNoteText, Qt::ElideRight, mpLabel_editorCompileMessage->width()));
+    const int room = mpLabel_editorCompileMessage->width();
+    const QFontMetrics metrics = mpLabel_editorCompileMessage->fontMetrics();
+    QString shown = mEditorCompileNoteText;
+    if (room > 0 && metrics.horizontalAdvance(shown) > room) {
+        QTextLayout layout(shown, mpLabel_editorCompileMessage->font());
+        QTextOption option;
+        option.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
+        layout.setTextOption(option);
+        layout.beginLayout();
+        QTextLine first = layout.createLine();
+        first.setLineWidth(room);
+        layout.endLayout();
+        const int split = first.textLength();
+        shown = shown.left(split).trimmed() + QLatin1Char('\n') + metrics.elidedText(shown.mid(split).trimmed(), Qt::ElideRight, room);
+    }
+    const bool wasTwoLines = mpLabel_editorCompileMessage->text().contains(QLatin1Char('\n'));
+    mpLabel_editorCompileMessage->setText(shown);
+    // The heading is a splitter handle, and QSplitter only reads its thickness again on a LayoutRequest
+    if (shown.contains(QLatin1Char('\n')) != wasTwoLines && mpWidget_editorCodeHeader && mpWidget_editorCodeHeader->parentWidget()) {
+        mpWidget_editorCodeHeader->parentWidget()->updateGeometry();
+    }
 }
 
 void dlgTriggerEditor::clearCompileState()

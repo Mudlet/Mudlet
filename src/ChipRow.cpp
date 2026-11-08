@@ -93,9 +93,6 @@ Chip::Chip(const QString& name, QWidget* pParent)
     setFocusPolicy(Qt::StrongFocus);
 
     auto* pRow = new QHBoxLayout(this);
-    // Not in the sheet: a plain QFrame's stylesheet padding moves what is drawn
-    // without moving what the layout places
-    pRow->setContentsMargins(scmChipPaddingLeading, scmChipPaddingVertical, scmChipPaddingTrailing, scmChipPaddingVertical);
     pRow->setSpacing(scmChipGap);
 
     mpLabel = new QLabel(this);
@@ -111,8 +108,20 @@ Chip::Chip(const QString& name, QWidget* pParent)
     connect(mpRemove, &QAbstractButton::clicked, this, &Chip::removeRequested);
     pRow->addWidget(mpRemove);
 
+    //: Accessible name of one event in a script's row of events; %1 is the event's name
+    mAccessibleNameWords = tr("Event %1");
+    //: Tooltip on the cross that takes one event off the row of events a script listens for; %1 is the event's name
+    mRemoveTooltipWords = tr("Stop listening for %1");
+    applyPadding();
     remeasure();
     setName(name);
+}
+
+void Chip::setWords(const QString& accessibleName, const QString& removeTooltip)
+{
+    mAccessibleNameWords = accessibleName;
+    mRemoveTooltipWords = removeTooltip;
+    setName(mName);
 }
 
 // Measured off the row: a stylesheet rule naming the chip stops it inheriting the
@@ -135,17 +144,26 @@ void Chip::changeEvent(QEvent* pEvent)
     QFrame::changeEvent(pEvent);
     if (pEvent->type() == QEvent::FontChange) {
         remeasure();
+    } else if (pEvent->type() == QEvent::LayoutDirectionChange) {
+        applyPadding();
     }
+}
+
+// Not in the sheet: a plain QFrame's stylesheet padding moves what is drawn without moving what the layout places. A
+// layout's margins stay where they are written, so right to left the leading one goes on the right by hand.
+void Chip::applyPadding()
+{
+    const bool rightToLeft = layoutDirection() == Qt::RightToLeft;
+    layout()->setContentsMargins(
+            rightToLeft ? scmChipPaddingTrailing : scmChipPaddingLeading, scmChipPaddingVertical, rightToLeft ? scmChipPaddingLeading : scmChipPaddingTrailing, scmChipPaddingVertical);
 }
 
 void Chip::setName(const QString& name)
 {
     mName = name;
     mpLabel->setText(name);
-    //: Tooltip on the cross that takes one event off the row of events a script listens for; %1 is the event's name
-    mpRemove->setToolTip(utils::richText(tr("Stop listening for %1").arg(name)));
-    //: Accessible name of one event in a script's row of events; %1 is the event's name
-    setAccessibleName(tr("Event %1").arg(name));
+    mpRemove->setToolTip(utils::richText(mRemoveTooltipWords.arg(name)));
+    setAccessibleName(mAccessibleNameWords.arg(name));
     updateGeometry();
 }
 
@@ -308,6 +326,15 @@ void ChipRow::beginAdd()
     openField(-1);
 }
 
+void ChipRow::setChipWords(const QString& accessibleName, const QString& removeTooltip)
+{
+    mChipAccessibleName = accessibleName;
+    mChipRemoveTooltip = removeTooltip;
+    for (Chip* pChip : std::as_const(mChips)) {
+        pChip->setWords(accessibleName, removeTooltip);
+    }
+}
+
 void ChipRow::setAddWords(const QString& button, const QString& tooltip, const QString& fieldPrompt)
 {
     mpAdd->setText(button);
@@ -422,6 +449,9 @@ bool ChipRow::eventFilter(QObject* pWatched, QEvent* pEvent)
 Chip* ChipRow::makeChip(const QString& name)
 {
     auto* pChip = new Chip(name, this);
+    if (!mChipAccessibleName.isEmpty()) {
+        pChip->setWords(mChipAccessibleName, mChipRemoveTooltip);
+    }
     pChip->setRemoveGlyph(mRemoveGlyph);
     markOrigin(pChip);
     connect(pChip, &Chip::removeRequested, this, [this, pChip]() {
@@ -476,6 +506,7 @@ void ChipRow::rebuild()
 
 void ChipRow::openField(const int index)
 {
+    emit fieldOpening();
     hideNote();
     mEditingIndex = index;
     mFieldOpen = true;

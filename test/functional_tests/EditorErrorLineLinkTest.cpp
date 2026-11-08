@@ -26,6 +26,7 @@
  */
 
 #include <QRegularExpression>
+#include <QTextDocumentFragment>
 #include <QtTest/QtTest>
 #include <chrono>
 
@@ -38,6 +39,7 @@
 #include "ScriptUnit.h"
 #include "TScript.h"
 #include "TTrigger.h"
+#include "TriggerUnit.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgSystemMessageArea.h"
@@ -261,6 +263,23 @@ private slots:
         moveCaretToStart();
         emit mpEditor->mpSystemMessageArea->notificationAreaMessageBox->linkActivated(lineLink());
         QCOMPARE(caretLine(), static_cast<size_t>(2));
+    }
+
+    // The banner names the line and says what the compiler said there: the heading note can be cut to the room it has
+    void testActivationFailureSaysWhatTheCompilerSaid()
+    {
+        mpEditor->slot_showTriggers();
+        selectTrigger(qsl("qaBrokenTrigger"));
+        TTrigger* pBroken = mpHost->getTriggerUnit()->findTrigger(qsl("qaBrokenTrigger"));
+        QVERIFY2(pBroken != nullptr, "the broken trigger is not in the trigger unit");
+        const QString plain = QTextDocumentFragment::fromHtml(pBroken->getError()).toPlainText().simplified();
+        const QString compilerSaid = dlgTriggerEditor::csmCompileErrorLineRegex.match(plain).captured(2);
+        QVERIFY2(!compilerSaid.isEmpty(), qPrintable(qsl("SETUP: the planted error is not in the form this case reads: %1").arg(plain)));
+
+        mpEditor->activeToggle_trigger();
+        const QString shown = QTextDocumentFragment::fromHtml(bannerText()).toPlainText().simplified();
+        QVERIFY2(shown.contains(compilerSaid), qPrintable(qsl("the banner reads \"%1\", without what the compiler said: \"%2\"").arg(shown, compilerSaid)));
+        QCOMPARE(lineLink(), qsl("mudlet-error-line:3"));
     }
 
     // Lua reports an unclosed block on the "end" line that the trigger wraps

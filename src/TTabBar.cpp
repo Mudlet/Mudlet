@@ -54,10 +54,12 @@ static QColor chosenFillOnLightPage(const uiDesign::ThemeTokens& tokens)
     return uiDesign::readableOn(tokens.field, tokens.accent, tokens.text, uiDesign::scmTextMinimumRatio);
 }
 
-// A script's setAppStyleSheet() that names QTabBar keeps the last word over the chips
-static bool applicationSheetTakesTheTabs()
+
+// A script's sheet that names QTabBar, through setAppStyleSheet() or setProfileStyleSheet(), keeps the last word over
+// the chips
+bool TStyle::scriptSheetTakesTheTabs() const
 {
-    return qApp->styleSheet().contains(qsl("QTabBar"));
+    return qApp->styleSheet().contains(qsl("QTabBar")) || (mpTabBar && mpTabBar->styleSheet().contains(qsl("QTabBar")));
 }
 
 // Qt paints a reordered tab's drag pixmap with the rect moved to the origin, so tabAt() on it
@@ -152,7 +154,7 @@ void TStyle::drawControl(ControlElement element, const QStyleOption* option, QPa
 {
     const auto* tabOption = qstyleoption_cast<const QStyleOptionTab*>(option);
     if (tabOption && (element == CE_TabBarTab || element == CE_TabBarTabShape || element == CE_TabBarTabLabel)) {
-        if (applicationSheetTakesTheTabs()) {
+        if (scriptSheetTakesTheTabs()) {
             paintThroughApplicationSheet(element, tabOption, painter, widget);
         } else {
             paintChip(painter, tabOption, widget, element != CE_TabBarTabLabel, element != CE_TabBarTabShape);
@@ -171,11 +173,14 @@ void TStyle::paintThroughApplicationSheet(const ControlElement element, const QS
     const int index = tabIndexOf(tabOption);
     const QString tabName = mpTabBar ? mpTabBar->tabData(index).toString() : QString();
     painter->save();
-    QFont font = widget ? widget->font() : painter->font();
-    font.setBold(mBoldTabsSet.contains(tabName));
-    font.setItalic(mItalicTabsSet.contains(tabName));
-    font.setUnderline(mUnderlineTabsSet.contains(tabName));
-    painter->setFont(font);
+    // Only for a marked tab: the painter already carries the font a sheet's QTabBar::tab rule sets
+    if (mBoldTabsSet.contains(tabName) || mItalicTabsSet.contains(tabName) || mUnderlineTabsSet.contains(tabName)) {
+        QFont font = widget ? widget->font() : painter->font();
+        font.setBold(mBoldTabsSet.contains(tabName));
+        font.setItalic(mItalicTabsSet.contains(tabName));
+        font.setUnderline(mUnderlineTabsSet.contains(tabName));
+        painter->setFont(font);
+    }
     qApp->style()->drawControl(element, tabOption, painter, widget);
     painter->restore();
 
@@ -241,7 +246,7 @@ void TStyle::paintChip(QPainter* painter, const QStyleOptionTab* tabOption, cons
 
 void TStyle::drawPrimitive(PrimitiveElement element, const QStyleOption* option, QPainter* painter, const QWidget* widget) const
 {
-    if (element == PE_IndicatorTabClose && option && applicationSheetTakesTheTabs()) {
+    if (element == PE_IndicatorTabClose && option && scriptSheetTakesTheTabs()) {
         qApp->style()->drawPrimitive(element, option, painter, widget);
         return;
     }
@@ -273,7 +278,7 @@ void TStyle::drawPrimitive(PrimitiveElement element, const QStyleOption* option,
 QRect TStyle::subElementRect(SubElement element, const QStyleOption* option, const QWidget* widget) const
 {
     const auto* tabOption = qstyleoption_cast<const QStyleOptionTab*>(option);
-    if (tabOption && applicationSheetTakesTheTabs()) {
+    if (tabOption && scriptSheetTakesTheTabs()) {
         return qApp->style()->subElementRect(element, option, widget);
     }
     if (tabOption) {
@@ -296,7 +301,7 @@ QRect TStyle::subElementRect(SubElement element, const QStyleOption* option, con
 // separate instance of the platform's native style and would size a look nothing here draws
 QSize TStyle::sizeFromContents(ContentsType type, const QStyleOption* option, const QSize& contentsSize, const QWidget* widget) const
 {
-    if (type == CT_TabBarTab && !applicationSheetTakesTheTabs()) {
+    if (type == CT_TabBarTab && !scriptSheetTakesTheTabs()) {
         // QTabBar has already added the text, the frame and the buttons
         return contentsSize;
     }
@@ -305,7 +310,7 @@ QSize TStyle::sizeFromContents(ContentsType type, const QStyleOption* option, co
 
 int TStyle::pixelMetric(PixelMetric metric, const QStyleOption* option, const QWidget* widget) const
 {
-    if (applicationSheetTakesTheTabs()) {
+    if (scriptSheetTakesTheTabs()) {
         return qApp->style()->pixelMetric(metric, option, widget);
     }
 

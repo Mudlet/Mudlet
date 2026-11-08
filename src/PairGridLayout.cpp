@@ -19,6 +19,7 @@
 
 #include "PairGridLayout.h"
 
+#include <QGuiApplication>
 #include <QStyle>
 #include <QWidget>
 
@@ -298,6 +299,13 @@ int PairGridLayout::runRows(const QRect& rect, const bool place) const
     const int leadingHalf = columns.leadingLabel + gapAcross + columns.control;
     const int trailingHalf = columns.trailingLabel + gapAcross + columns.control;
 
+    const QWidget* pParent = parentWidget();
+    const Qt::LayoutDirection direction = pParent ? pParent->layoutDirection() : QGuiApplication::layoutDirection();
+    // Every x here runs from the leading edge; mirrored inside the margins as QGridLayout mirrors its cells
+    const auto put = [&content, direction](QLayoutItem* pItem, const QRect& logical) {
+        pItem->setGeometry(QStyle::visualRect(direction, content, logical));
+    };
+
     int y = content.y();
     bool firstLine = true;
     const auto startLine = [&y, &firstLine, gapDown]() {
@@ -324,10 +332,10 @@ int PairGridLayout::runRows(const QRect& rect, const bool place) const
                     continue;
                 }
                 if (shown(pRow->pFirst)) {
-                    pRow->pFirst->setGeometry(QRect(labelX, y, labelWidth, height));
+                    put(pRow->pFirst, QRect(labelX, y, labelWidth, height));
                 }
                 if (shown(pRow->pSecond)) {
-                    pRow->pSecond->setGeometry(QRect(controlX, y, columns.control, height));
+                    put(pRow->pSecond, QRect(controlX, y, columns.control, height));
                 }
             }
         }
@@ -337,7 +345,7 @@ int PairGridLayout::runRows(const QRect& rect, const bool place) const
         startLine();
         const int height = heightAt(pItem, width);
         if (place) {
-            pItem->setGeometry(QRect(x, y, width, height));
+            put(pItem, QRect(x, y, width, height));
         }
         y += height;
     };
@@ -392,10 +400,10 @@ int PairGridLayout::runRows(const QRect& rect, const bool place) const
             {
                 const int height = std::max(heightAt(row.pFirst, leadingHalf), heightAt(row.pSecond, trailingHalf));
                 if (place && shown(row.pFirst)) {
-                    row.pFirst->setGeometry(QRect(content.x(), y, leadingHalf, height));
+                    put(row.pFirst, QRect(content.x(), y, leadingHalf, height));
                 }
                 if (place && shown(row.pSecond)) {
-                    row.pSecond->setGeometry(QRect(trailingLabelX, y, trailingHalf, height));
+                    put(row.pSecond, QRect(trailingLabelX, y, trailingHalf, height));
                 }
                 y += height;
             }

@@ -8605,9 +8605,14 @@ QList<eventNames::Entry> Host::knownEventNames()
     }
 
 
+    return eventNameEntries(QStringList(found.cbegin(), found.cend()));
+}
+
+QList<eventNames::Entry> Host::eventNameEntries(const QStringList& names)
+{
     QList<eventNames::Entry> entries;
-    entries.reserve(found.size());
-    for (const QString& name : found) {
+    entries.reserve(names.size());
+    for (const QString& name : names) {
         eventNames::Source source = eventNames::Source::Script;
         if (raisedByMudlet().contains(name)) {
             source = eventNames::Source::Mudlet;

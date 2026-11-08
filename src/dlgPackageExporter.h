@@ -192,14 +192,20 @@ private:
     int countRecursive(QTreeWidgetItem* item, int count) const;
     int countCheckedItems() const;
     void checkChildren(QTreeWidgetItem* item) const;
-    // A unit-root folder named after the package: XMLimport makes it again on
-    // install, so it is never exported or counted itself
+    // A unit-root folder named after the installed package picked to start from: XMLimport makes it again on
+    // install, so it is not exported or counted itself unless a right-click puts it in whole
     bool packageFolder(const QTreeWidgetItem* pItem) const;
     void refreshFolderMarks();
     // Returns whether anything that is exported is ticked at or under pItem
     bool refreshFolderMark(QTreeWidgetItem* pItem);
     QString getActualPath() const;
     static const int isTopFolder = 1;
+
+public:
+    // On a package's own folder a right-click put in whole
+    static constexpr int scmForcedInRole = Qt::UserRole + 1;
+
+private:
     static std::pair<bool, QString> writeFileToZip(const QString& archiveFileName, const QString& fileSystemFileName, zip* archive);
     static std::pair<bool, QString> zipPackage(const QString& stagingDirName,
                                                const QString& packagePathFileName,

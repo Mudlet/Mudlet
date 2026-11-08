@@ -272,6 +272,49 @@ private slots:
                  qPrintable(qsl("the form gave back only %1 for a key group while the row it stopped showing asks for %2 - the grid row it stood in is still open")
                                     .arg(QString::number(withRow - withoutRow), QString::number(rowHeight))));
     }
+
+    // Grabbed through the field as a player does it: the armed grab has emptied the field, so the old binding is
+    // not there to compare the name with
+    void test_aGrabRenamesANewKeyNamedAfterItsBinding()
+    {
+        mpEditor->slot_showKeys();
+        mpEditor->addKey(false);
+        QTest::qWait(100ms);
+        QTreeWidgetItem* pItem = mpEditor->mpCurrentKeyItem;
+        QVERIFY2(pItem != nullptr, "addKey() left no current key item");
+        TKey* pKey = mpHost->getKeyUnit()->getKey(pItem->data(0, Qt::UserRole).toInt());
+        QVERIFY2(pKey != nullptr, "the new key is not in the key unit");
+
+        armTheGrab();
+        QTest::keyClick(mpEditor, Qt::Key_F7);
+        QCoreApplication::processEvents();
+        QCOMPARE(pKey->getName(), qsl("F7"));
+
+        armTheGrab();
+        QTest::keyClick(mpEditor, Qt::Key_F8);
+        QCoreApplication::processEvents();
+        QCOMPARE(pKey->getName(), qsl("F8"));
+        QCOMPARE(pItem->text(0), qsl("F8"));
+    }
+
+    void test_aGrabRenamesAKeySavedWithNoBinding()
+    {
+        mpEditor->slot_showKeys();
+        mpEditor->addKey(false);
+        QTest::qWait(100ms);
+        QTreeWidgetItem* pItem = mpEditor->mpCurrentKeyItem;
+        QVERIFY2(pItem != nullptr, "addKey() left no current key item");
+        TKey* pKey = mpHost->getKeyUnit()->getKey(pItem->data(0, Qt::UserRole).toInt());
+        QVERIFY2(pKey != nullptr, "the new key is not in the key unit");
+        mpEditor->mpKeysMainArea->lineEdit_key_name->clear();
+        mpEditor->slot_saveSelectedItem();
+        QCOMPARE(pKey->getName(), mpEditor->unboundKeyText());
+
+        armTheGrab();
+        QTest::keyClick(mpEditor, Qt::Key_F4);
+        QCoreApplication::processEvents();
+        QCOMPARE(pKey->getName(), qsl("F4"));
+    }
 };
 
 #include "EditorKeyCaptureTest.moc"

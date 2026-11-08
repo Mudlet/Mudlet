@@ -1205,16 +1205,18 @@ nullViewItemAfter = tostring(removeCommandLineMenuEvent("main", "nullViewItem"))
         QToolBar* toolBar = mudlet::self()->mpMainToolBar;
         TTabBar* tabBar = mudlet::self()->mpTabBar;
         QVERIFY2(toolBar && tabBar, "The main window has no toolbar or tab bar.");
+        // Neither profile has a sheet yet, so the bar carries the design's rules alone; a profile's comes after them
+        const QString designSheet = toolBar->styleSheet();
 
         const QString firstStyleSheet = qsl("QWidget { color: #111111; }");
         QVERIFY(first->setProfileStyleSheet(firstStyleSheet));
-        QVERIFY2(menuBar->styleSheet() != firstStyleSheet && !toolBar->styleSheet().endsWith(firstStyleSheet) && tabBar->styleSheet() != firstStyleSheet,
+        QVERIFY2(menuBar->styleSheet() != firstStyleSheet && toolBar->styleSheet() == designSheet && tabBar->styleSheet() != firstStyleSheet,
                  "A profile that is not the active one restyled the main window.");
 
         const QString secondStyleSheet = qsl("QWidget { color: #222222; }");
         QVERIFY(second->setProfileStyleSheet(secondStyleSheet));
         QCOMPARE(menuBar->styleSheet(), secondStyleSheet);
-        QVERIFY2(toolBar->styleSheet().endsWith(secondStyleSheet), qPrintable(qsl("The toolbar's sheet does not end with the active profile's: %1").arg(toolBar->styleSheet().right(200))));
+        QCOMPARE(toolBar->styleSheet(), designSheet + secondStyleSheet);
         QCOMPARE(tabBar->styleSheet(), secondStyleSheet);
 
         tabBar->setCurrentIndex(tabBar->tabIndex(first->getName()));
@@ -1222,7 +1224,7 @@ nullViewItemAfter = tostring(removeCommandLineMenuEvent("main", "nullViewItem"))
 
         QVERIFY(second->setProfileStyleSheet(qsl("QWidget { color: #333333; }")));
         QCOMPARE(menuBar->styleSheet(), firstStyleSheet);
-        QVERIFY2(toolBar->styleSheet().endsWith(firstStyleSheet), qPrintable(qsl("The toolbar's sheet does not end with the active profile's: %1").arg(toolBar->styleSheet().right(200))));
+        QCOMPARE(toolBar->styleSheet(), designSheet + firstStyleSheet);
         QCOMPARE(tabBar->styleSheet(), firstStyleSheet);
     }
 

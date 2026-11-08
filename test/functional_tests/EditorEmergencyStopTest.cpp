@@ -150,6 +150,14 @@ private:
     }
 
 
+    static QModelIndex indexOf(QTreeWidget* pTree, QTreeWidgetItem* pItem)
+    {
+        if (!pItem->parent()) {
+            return pTree->model()->index(pTree->indexOfTopLevelItem(pItem), 0);
+        }
+        return pTree->model()->index(pItem->parent()->indexOfChild(pItem), 0, indexOf(pTree, pItem->parent()));
+    }
+
     static Look lookOf(QTreeWidgetItem* pItem) { return {pItem->data(0, Qt::AccessibleDescriptionRole).toString(), pItem->icon(0).cacheKey()}; }
 
     static QString newKeyName() { return dlgTriggerEditor::tr("New key"); }
@@ -642,6 +650,22 @@ private slots:
         QVERIFY2(pBroken, "the rebuilt tree does not hold the item once");
         QCOMPARE(lookOf(pBroken).description, mpEditor->descError);
         QVERIFY2(markOf(pTree, pBroken) == uiDesign::EditorTreeDelegate::RowMark::Error, "the rebuilt tree drops the broken item's error mark");
+    }
+
+    // In no group of its own, so a dot the stop alone holds back has to name the stop
+    void test_aHeldItemInNoGroupNamesTheStop()
+    {
+        QVERIFY(runLua(qsl("permAlias('HeldInNoGroup', '', '^held in no group$', '')")));
+        mpHost->stopAllTriggers();
+        mpEditor->rebuildStaleTrees();
+        QTreeWidget* pTree = showView(qsl("alias"));
+        QTreeWidgetItem* pItem = itemNamed(pTree, qsl("HeldInNoGroup"));
+        QVERIFY2(pItem, "the alias made for this case is not in the tree");
+        auto* pDelegate = qobject_cast<uiDesign::EditorTreeDelegate*>(pTree->itemDelegate());
+        QVERIFY2(pDelegate, "the alias tree has no dot to hover");
+
+        const QString tip = pDelegate->dotToolTip(indexOf(pTree, pItem));
+        QVERIFY2(tip.contains(qsl("emergency stop")), qPrintable(qsl("the dot of a switched-on alias in no group says \"%1\" during a stop").arg(tip)));
     }
 };
 

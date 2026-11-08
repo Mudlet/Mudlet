@@ -609,11 +609,13 @@ profile is a ring rather than a fill - nothing is happening, and nothing is
 wrong - drawn in the same ink as the word beside it: `mutedText` at rest, and the
 field's white on a filled chip.
 
-Mudlet sets no stylesheet on this bar. That is what leaves a profile's own
-`setAppStyleSheet` rules the last word, exactly as before: a `::tab` rule of
-theirs takes the tab over, a `::close-button` rule takes the cross, and with
-neither, Qt's stylesheet style falls through to `TStyle`, which is its base.
-`ProfileTabBarStyleTest` guards the lot.
+Mudlet sets no stylesheet of its own on this bar; `setProfileStyleSheet()` puts
+the profile's there. A script's sheet that names `QTabBar`, through that or
+`setAppStyleSheet()`, keeps the last word, exactly as before the design:
+`TStyle` hands the tabs to the application style, a `::tab` rule of theirs takes
+the tab over, font size included, and a `::close-button` rule takes the cross.
+With neither, Qt's stylesheet style falls through to `TStyle`, which is its
+base. `ProfileTabBarStyleTest` guards the lot.
 
 ### One sidebar for both windows
 
@@ -994,14 +996,17 @@ into a corner of it.
   but the pointer. Sound, Full Screen, MultiView and the compact input line are
   the ones that reach it, and `tintedIcon()` has already inked their `QIcon::On`
   glyph `accentText` to match.
-- **A profile's Lua stylesheet is composed after the design's, on the same
-  widget.** `setAppStyleSheet()` and a profile switch both assign a sheet to this
-  very bar, so it is kept in `mMainToolBarProfileStyleSheet` and appended last by
-  `mudlet::restyleMainToolBar()` rather than replacing what the design wrote.
-  Where the two name the same property the more specific selector wins and a tie
-  goes to the later rule, so a profile that wants a bar of its own names it -
-  `QToolBar#mpMainToolBar QToolButton { ... }` - where a bare `QToolButton { ... }`
-  no longer reaches it.
+- **A script's stylesheet that names the bar's classes takes the bar back.** The
+  design's rules sit on the bar itself, where they outrank any application sheet
+  whatever its selectors, and a profile sheet's plain type selectors; scripts in
+  the package repository (dark-theme-for-mudlet, PRS, arkadia) restyle the bar
+  with exactly those. So `mudlet::restyleMainToolBar()` leaves the design's rules
+  off whenever the application's sheet or the profile's names `QToolBar` or
+  `QToolButton`, and the bar carries the profile's sheet alone, as it did before
+  the design. Otherwise the profile's sheet, kept in
+  `mMainToolBarProfileStyleSheet`, is appended after the design's rules on the
+  same widget. The replay bar and a detached window's bar step aside for an
+  application sheet the same way.
 - `restyleMainToolBar()` runs from `restyleToolBarIcons()`, which is what every
   appearance change already calls, and a detached window's bar is redrawn by its
   own `restyleToolBarIcons()` for the same reason. The replay bar is named

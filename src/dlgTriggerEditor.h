@@ -854,6 +854,7 @@ private:
     [[nodiscard]] int patternTypeColumnWidth(const QFont& typeFont) const;
 
     void keyGrabCallback(const Qt::Key, const Qt::KeyboardModifiers);
+    [[nodiscard]] QString unboundKeyText() const;
     QList<QAction*> toolbarActions() const;
     void suspendShortcuts();
     void restoreShortcuts();

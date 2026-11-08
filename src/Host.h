@@ -357,7 +357,9 @@ public:
 
     // Sorted case-insensitively, without repeats. Not const: the units hand out
     // their contents only through non-const accessors.
+    // Reads every item's code, so it is for when the names are about to be offered
     QList<eventNames::Entry> knownEventNames();
+    static QList<eventNames::Entry> eventNameEntries(const QStringList& names);
 
     void send(QString cmd, bool wantPrint = true, bool dontExpandAliases = false);
 

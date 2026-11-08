@@ -19,6 +19,8 @@
 
 #include "FlowLayout.h"
 
+#include <QGuiApplication>
+#include <QStyle>
 #include <QWidget>
 
 #include <algorithm>
@@ -181,7 +183,10 @@ int FlowLayout::runItems(const QRect& rect, const bool place) const
     int lineHeight = 0;
     // Placing waits for a full line: centring needs the line's final height
     QList<QPair<QLayoutItem*, QRect>> line;
-    const auto placeLine = [this, &line, &y, &lineHeight, &content]() {
+    const QWidget* pParent = parentWidget();
+    const Qt::LayoutDirection direction = pParent ? pParent->layoutDirection() : QGuiApplication::layoutDirection();
+    // Placed left to right, then mirrored inside the margins as QBoxLayout and QGridLayout mirror
+    const auto placeLine = [this, &line, &y, &lineHeight, &content, direction]() {
         const int spare = line.isEmpty() ? 0 : std::max(0, content.right() - line.constLast().second.right());
         int shift = 0;
         for (auto& [pItem, geometry] : line) {
@@ -193,7 +198,7 @@ int FlowLayout::runItems(const QRect& rect, const bool place) const
             if (mLineAlignment == LineAlignment::Centre) {
                 geometry.moveTop(y + (lineHeight - geometry.height()) / 2);
             }
-            pItem->setGeometry(geometry);
+            pItem->setGeometry(QStyle::visualRect(direction, content, geometry));
         }
         line.clear();
     };

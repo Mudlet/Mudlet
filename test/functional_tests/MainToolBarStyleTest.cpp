@@ -311,6 +311,49 @@ private slots:
         QVERIFY2(composed.contains(qsl("QToolBar#mpMainToolBar {")), "a profile's stylesheet replaced the design's rules on the bar rather than being composed after them");
     }
 
+    void test_aScriptSheetNamingTheBarStylesIt_data()
+    {
+        QTest::addColumn<bool>("application");
+        QTest::newRow("setAppStyleSheet") << true;
+        QTest::newRow("setProfileStyleSheet") << false;
+    }
+
+    // As scripts in the package repository restyle the bar: the design's rules on the bar itself would outrank an
+    // application sheet whatever its selectors, and a profile sheet's plain type selectors
+    void test_aScriptSheetNamingTheBarStylesIt()
+    {
+        QFETCH(bool, application);
+        Host* pHost = mudlet::self()->getActiveHost();
+        QVERIFY2(pHost, "no profile is active, so no profile stylesheet can reach the bar");
+        const QColor background(1, 2, 3);
+        const QColor word(250, 240, 230);
+        const QString sheet = qsl("QToolBar { background-color: %1; } QToolButton { color: %2; }").arg(background.name(), word.name());
+        const auto restore = qScopeGuard([pHost]() {
+            mudlet::self()->setAppStyleSheet(QString());
+            pHost->setProfileStyleSheet(QString());
+        });
+        if (application) {
+            mudlet::self()->setAppStyleSheet(sheet);
+        } else {
+            pHost->setProfileStyleSheet(sheet);
+        }
+        QCoreApplication::processEvents();
+
+        const QImage picture = theBar()->grab().toImage().convertToFormat(QImage::Format_ARGB32);
+        int filled = 0;
+        int worded = 0;
+        for (int y = 0; y < picture.height(); ++y) {
+            for (int x = 0; x < picture.width(); ++x) {
+                const QColor pixel = picture.pixelColor(x, y);
+                filled += pixel.rgb() == background.rgb() ? 1 : 0;
+                worded += pixel.rgb() == word.rgb() ? 1 : 0;
+            }
+        }
+        const int area = picture.width() * picture.height();
+        QVERIFY2(filled > area / 2, qPrintable(qsl("%1 of the bar's %2 pixels are the sheet's background").arg(QString::number(filled), QString::number(area))));
+        QVERIFY2(worded > 20, qPrintable(qsl("%1 pixels are in the sheet's word colour, so the buttons' names are not").arg(QString::number(worded))));
+    }
+
     void test_aHoveredButtonIsWashed() { aHoveredButtonIsWashed(qsl("as started")); }
 
     void test_aSwitchedOnSplitButtonReadsAsTwoAreas() { aSwitchedOnSplitButtonReadsAsTwoAreas(qsl("as started")); }

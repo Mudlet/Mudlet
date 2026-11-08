@@ -665,6 +665,48 @@ private slots:
         QCoreApplication::processEvents();
     }
 
+    // Every item's code is read when the field opens, not on each click on a script: a profile with megabytes of
+    // Lua spent tens of milliseconds a click on it, and a name written since the click is still offered
+    void test_theNamesAreGatheredWhenTheFieldOpens()
+    {
+        mpEditor->slot_scriptsSelected(mpScriptItem);
+        QTest::qWait(50ms);
+
+        auto* pTrigger = new TTrigger(qsl("LateTrigger"), QStringList(), QList<int>(), false, mpHost);
+        pTrigger->registerTrigger();
+        pTrigger->setScript(qsl("raiseEvent(\"RaisedAfterTheClick\")"));
+
+        row()->beginAdd();
+        QCoreApplication::processEvents();
+        QVERIFY2(field() != nullptr, "beginAdd() did not open the field");
+        keyIntoField(qsl("raisedafter"));
+        QVERIFY2(offered().contains(qsl("RaisedAfterTheClick")), qPrintable(qsl("a name written after the script was chosen was not offered: %1").arg(offered().join(qsl(", ")))));
+
+        QTest::keyClick(field(), Qt::Key_Escape);
+        QCoreApplication::processEvents();
+    }
+
+    // A layout's margins stay where they are written, so the chip mirrors its own
+    void test_aChipKeepsItsLeadingPaddingRightToLeft()
+    {
+        mpEditor->slot_scriptsSelected(mpScriptItem);
+        QTest::qWait(50ms);
+        QWidget* pChip = row()->chipAt(0);
+        QVERIFY2(pChip != nullptr, "SETUP: the script shows no chip");
+        auto* pLabel = pChip->findChild<QLabel*>(qsl("editorChipLabel"));
+        QVERIFY2(pLabel != nullptr, "the chip has no name on it");
+        const int leading = pLabel->geometry().left();
+        const auto restore = qScopeGuard([this]() {
+            row()->setLayoutDirection(Qt::LeftToRight);
+            QCoreApplication::processEvents();
+        });
+
+        row()->setLayoutDirection(Qt::RightToLeft);
+        QCoreApplication::processEvents();
+        pChip->layout()->activate();
+        QCOMPARE(pChip->width() - 1 - pLabel->geometry().right(), leading);
+    }
+
     void test_aChosenSuggestionBecomesAChip()
     {
         reopenFieldOn(startingEvents());

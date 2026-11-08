@@ -522,6 +522,39 @@ private slots:
                                            "value, or - if it is a picture of something outside this application - write \"// theme-fixed: <why>\" on the line.")
                                     .arg(QString::number(hits.size()))));
     }
+
+    // The scans above pass on finding nothing, which a scanner that reads nothing does too
+    void test_theScannerReportsAWrittenColour_data()
+    {
+        QTest::addColumn<QString>("line");
+        QTest::addColumn<bool>("sizes");
+        QTest::newRow("hex in a string") << QStringLiteral(R"x(painter.setPen(QColor("#ff8800"));)x") << false;
+        QTest::newRow("Qt name to a pen") << QStringLiteral("painter.setPen(Qt::red);") << false;
+        QTest::newRow("Qt name assigned") << QStringLiteral("mInk = Qt::red;") << false;
+        QTest::newRow("channels") << QStringLiteral("const QColor ink = QColor(12, 34, 56);") << false;
+        QTest::newRow("packed") << QStringLiteral("const QColor ink = QColor(0xff8800);") << false;
+        QTest::newRow("constant") << QStringLiteral("const QColor ink = QColorConstants::Red;") << false;
+        QTest::newRow("size in a sheet") << QStringLiteral(R"x(sheet = QStringLiteral("QLabel { font-size: 12pt; }");)x") << true;
+    }
+
+    void test_theScannerReportsAWrittenColour()
+    {
+        QFETCH(QString, line);
+        QFETCH(bool, sizes);
+        QList<Hit> hits;
+        scanSource(QStringLiteral("sample.cpp"), {line}, hits, sizes ? Looking::Sizes : Looking::Colours);
+        QVERIFY2(!hits.isEmpty(), qPrintable(QStringLiteral("the scanner let \"%1\" through").arg(line)));
+    }
+
+    void test_theScannerReportsAColourSetInDesigner()
+    {
+        QList<Hit> hits;
+        scanDesignerFile(QStringLiteral("sample.ui"),
+                         {QStringLiteral("<property name=\"styleSheet\">"), QStringLiteral("<string>QLabel { color: #ff0000; }</string>"), QStringLiteral("</property>")},
+                         hits,
+                         Looking::Colours);
+        QVERIFY2(!hits.isEmpty(), "the scanner let a colour in a Designer stylesheet through");
+    }
 };
 
 QTEST_GUILESS_MAIN(DesignColourLiteralTest)
