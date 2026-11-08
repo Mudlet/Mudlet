@@ -707,10 +707,12 @@ if(TEST LabelTextureCacheTest)
 endif()
 
 # Offscreen's own screen is 800px wide, narrower than the settings dialog at its widest, and a
-# language that lengthens the sidebar's names widens the dialog only as far as its screen allows
+# language that lengthens the sidebar's names widens the dialog only as far as its screen allows.
+# The path is relative because Qt splits the platform's arguments at every colon, a drive letter's too.
 if(TEST SettingsShellNavigationTest)
     file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/offscreen-wide-screen.json" "{\"screens\": [{\"name\": \"OffscreenWide\", \"x\": 0, \"y\": 0, \"width\": 1920, \"height\": 1200}]}\n")
-    set_property(TEST SettingsShellNavigationTest APPEND PROPERTY ENVIRONMENT_MODIFICATION "QT_QPA_PLATFORM=set:offscreen:configfile=${CMAKE_CURRENT_BINARY_DIR}/offscreen-wide-screen.json")
+    set_tests_properties(SettingsShellNavigationTest PROPERTIES WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+    set_property(TEST SettingsShellNavigationTest APPEND PROPERTY ENVIRONMENT_MODIFICATION "QT_QPA_PLATFORM=set:offscreen:configfile=offscreen-wide-screen.json")
 endif()
 
 # A buffer's default font gives the same row count for its pane's stale and laid-out

@@ -174,13 +174,15 @@ private slots:
     // shortening that the case above restores, rather than reproducing the bug.
     void test_aNameTooLongForTheHeadingIsShortened()
     {
-        const QString longName = mPackageName.repeated(4);
+        const QString longName = mPackageName.repeated(8);
         installPackage(longName);
         openManager();
 
         auto* pHeading = mpManager->label_packageName;
         const QFontMetrics metrics(pHeading->font());
-        QVERIFY2(metrics.horizontalAdvance(longName) > headingRoom(), "SETUP: the deliberately over-long name fits after all");
+        QVERIFY2(metrics.horizontalAdvance(longName) > headingRoom(),
+                 qPrintable(qsl("SETUP: the deliberately over-long name needs %1px and fits the %2px the heading has after all")
+                                    .arg(QString::number(metrics.horizontalAdvance(longName)), QString::number(headingRoom()))));
 
         const auto rows = mpManager->packageList->findItems(longName, Qt::MatchExactly);
         QVERIFY2(!rows.isEmpty(), "the over-long package was not listed at all");
@@ -196,7 +198,7 @@ private slots:
     // given a new width every time the dialog is resized
     void test_wideningTheDialogGivesMoreOfTheNameBack()
     {
-        const QString longName = mPackageName.repeated(4);
+        const QString longName = mPackageName.repeated(8);
         installPackage(longName);
         openManager();
 
@@ -205,7 +207,9 @@ private slots:
         QVERIFY2(!rows.isEmpty(), "the over-long package was not listed at all");
         mpManager->packageList->setCurrentItem(rows.first());
         const QString atNineHundred = pHeading->text();
-        QVERIFY2(atNineHundred != longName, "SETUP: the over-long name already fits at 900px, so widening can give nothing back");
+        QVERIFY2(atNineHundred != longName,
+                 qPrintable(qsl("SETUP: the over-long name needs %1px and already fits the %2px the heading has at 900px, so widening can give nothing back")
+                                    .arg(QString::number(QFontMetrics(pHeading->font()).horizontalAdvance(longName)), QString::number(headingRoom()))));
 
         mpManager->resize(1600, 600);
         QTRY_VERIFY2(pHeading->text().length() > atNineHundred.length(), "widening the dialog did not give the heading back more of the name");

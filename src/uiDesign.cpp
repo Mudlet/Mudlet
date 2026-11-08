@@ -19,6 +19,7 @@
 
 #include "uiDesign.h"
 
+#include "FontManager.h"
 #include "TKeySequenceEdit.h"
 #include "utils.h"
 
@@ -1862,6 +1863,12 @@ QString withLinkColour(const QString& richText, const QColor& colour)
 QFont fixedPitchFont(const QFont& base, const qreal scale)
 {
     QFont font = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+    // A platform with no theme of its own, as offscreen on Windows, answers with its proportional default
+    if (!QFontInfo(font).fixedPitch()) {
+        FontManager::ensureFontsAdded();
+        font = QFont(qsl("Bitstream Vera Sans Mono"));
+        font.setStyleHint(QFont::TypeWriter);
+    }
     if (base.pointSizeF() > 0.0) {
         font.setPointSizeF(base.pointSizeF() * scale);
     } else {

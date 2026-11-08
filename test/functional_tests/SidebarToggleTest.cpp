@@ -72,10 +72,10 @@ public:
     }
 };
 
-// Two thirds of the way from 1.0 to the 1.59x (settings) and 1.64x (editor) a
-// bold chosen name measured; one weight in both states comes to 1.11x to 1.16x
-// from the colours and the pill alone
-constexpr double scmBoldInkFloor = 1.40;
+// A bold chosen name measured 1.59x (settings) and 1.64x (editor) on macOS, and
+// 1.42x and 1.35x with Windows' fonts; one weight in both states comes to 1.11x
+// to 1.16x from the colours and the pill alone
+constexpr double scmBoldInkFloor = 1.25;
 
 // A solid pen's stems come back opaque; only antialiased edges are partial, and
 // those follow the background rather than the weight

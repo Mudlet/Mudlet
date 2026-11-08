@@ -64,6 +64,15 @@ private:
         QVERIFY(themes.write(contents) == contents.size());
     }
 
+    // Written, not copied: a copy keeps the resource's read-only flag, Windows will not remove a
+    // read-only file, and the next case's copy then fails on the file left behind
+    bool putLoneThemeInCache(const QString& file) const
+    {
+        QFile source(qsl(":/edbee_defaults/Mudlet Light.tmTheme"));
+        QFile target(file);
+        return QDir().mkpath(QFileInfo(file).absolutePath()) && source.open(QIODevice::ReadOnly) && target.open(QIODevice::WriteOnly | QIODevice::Truncate) && target.write(source.readAll()) > 0;
+    }
+
     void openPreferences()
     {
         mpPreferences = new dlgProfilePreferences(mudlet::self(), mpHost);
@@ -246,8 +255,7 @@ private slots:
     void test_aThemeThisMachineDoesHaveIsUsedAsItStands()
     {
         const QString file = MudletApp::getMudletPath(enums::editorWidgetThemePathFile, mLoneThemeFile);
-        QVERIFY(QDir().mkpath(QFileInfo(file).absolutePath()));
-        QVERIFY2(QFile::copy(qsl(":/edbee_defaults/Mudlet Light.tmTheme"), file), "could not put a readable theme file in the cache for this case");
+        QVERIFY2(putLoneThemeInCache(file), "could not put a readable theme file in the cache for this case");
         QVERIFY2(MudletApp::editorThemeResolves(mLoneThemeFile), "the theme file was written but does not resolve");
 
         mpHost->mEditorTheme = mLoneThemeName;
@@ -269,8 +277,7 @@ private slots:
     void test_aDarkHalfThatCannotBeFoundDoesNotCostTheLightOne()
     {
         const QString file = MudletApp::getMudletPath(enums::editorWidgetThemePathFile, mLoneThemeFile);
-        QVERIFY(QDir().mkpath(QFileInfo(file).absolutePath()));
-        QVERIFY2(QFile::copy(qsl(":/edbee_defaults/Mudlet Light.tmTheme"), file), "could not put a readable theme file in the cache for this case");
+        QVERIFY2(putLoneThemeInCache(file), "could not put a readable theme file in the cache for this case");
 
         mpHost->mEditorTheme = mLoneThemeName;
         mpHost->mEditorThemeFile = mLoneThemeFile;

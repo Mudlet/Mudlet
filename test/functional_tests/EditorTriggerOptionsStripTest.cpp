@@ -88,8 +88,9 @@ private:
     static constexpr int scmWideStrip = 1400;
     static constexpr int scmNarrowStrip = 1000;
     static constexpr int scmTallEditor = 900;
-    // Short enough that the form wants more than the code pane's share leaves it
-    static constexpr int scmShortEditor = 500;
+    // Short enough that the form wants more than the code pane's share leaves it, also with Windows'
+    // smaller fonts, where the form wants 270px of the 393px a 500px window gives the two panes
+    static constexpr int scmShortEditor = 440;
     // The seam is placed by hand and lands a pixel or two off what was asked for
     static constexpr int scmSeamTolerance = 2;
     // Mirror the file-local scmEditorSegmentPaddingHorizontal in src/dlgTriggerEditor.cpp and its
