@@ -122,8 +122,8 @@ bool SecureStringUtils::confirmFileIsOwnerOnly(const QString& path)
 bool SecureStringUtils::restrictSaveFileToOwner(QSaveFile& file, QString* refusal)
 {
 #if defined(Q_OS_UNIX)
-    // Not QSaveFile::setPermissions(): from Qt 6.12 it only records the mode, and commit() drops a
-    // refusal to apply it, so the save succeeds with the file still readable to others
+    // Not QSaveFile::setPermissions() alone: from Qt 6.12 it only records the mode for commit(),
+    // which drops a refusal to apply it, so the save succeeds and the file may stay readable to others
     if (::fchmod(file.handle(), S_IRUSR | S_IWUSR) != 0) {
         if (refusal) {
             *refusal = qt_error_string(errno);

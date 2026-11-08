@@ -472,7 +472,6 @@ private slots:
         // Each session starts on a recognizer built afresh, which has to be told again
         QVERIFY(recognizer.setSensitivity(SpeechRecognizer::Sensitivity::Long));
         const int recognizersBeforeStart = VoskStub::recognizersCreated();
-        QVERIFY(recognizersBeforeStart >= 0);
         recognizer.startListening();
         const auto stateAfterStart = recognizer.state();
         if (stateAfterStart == SpeechRecognizer::State::Listening) {

@@ -65,11 +65,10 @@ VoskRecognizer::vosk_recognizer_set_words_fn VoskRecognizer::s_vosk_recognizer_s
 static constexpr int VOSK_SAMPLE_RATE = 16000;
 
 // libvosk's VoskEndpointerMode numbers its modes 0 default, 1 short, 2 long,
-// 3 very long, so ours cannot be passed through unchanged: our Short is its long
+// 3 very long, so ours cannot be passed through unchanged: our Short (2) would be its long
 static int voskEndpointerModeValue(VoskRecognizer::EndpointerMode mode)
 {
     switch (mode) {
-    // libvosk has nothing shorter than its short mode
     case VoskRecognizer::EndpointerMode::VeryShort:
     case VoskRecognizer::EndpointerMode::Short:
         return 1;

@@ -34,7 +34,7 @@
 
 #include <filesystem> // NOLINT(build/c++17) - Qt cannot set the time of a directory, see ageDirectory() below
 
-#if defined(Q_OS_LINUX)
+#if defined(MUDLET_FCHMOD_REFUSAL)
 #include "FchmodRefusal.h"
 #endif
 
@@ -154,7 +154,7 @@ private slots:
 
 void TMCPBridgeTest::cleanup()
 {
-#if defined(Q_OS_LINUX)
+#if defined(MUDLET_FCHMOD_REFUSAL)
     setRefuseOwnerOnlyOnOpenFiles(false);
 #endif
 }
@@ -186,15 +186,17 @@ void TMCPBridgeTest::discoveryFileIsPrivate()
 // written, and narrowed by path once it is in place
 void TMCPBridgeTest::discoveryFileIsPrivateWhereTheOpenFileCannotBeNarrowed()
 {
-#if !defined(Q_OS_LINUX)
-    QSKIP("needs fchmod() to be replaced, which this test does only on Linux");
+#if !defined(MUDLET_FCHMOD_REFUSAL)
+    QSKIP("needs fchmod() to be replaced, which this binary does only on Linux");
 #else
     QTemporaryDir dir;
     QVERIFY(dir.isValid());
+    const int refusalsBefore = ownerOnlyRefusals();
     setRefuseOwnerOnlyOnOpenFiles(true);
     const bool written = TMCPBridge::writeDiscoveryFile(dir.path(), 12345, qsl("sekrit"));
     setRefuseOwnerOnlyOnOpenFiles(false);
     QVERIFY(written);
+    QVERIFY2(ownerOnlyRefusals() > refusalsBefore, "nothing asked for owner-only on the open file, so this case proves nothing");
 
     const QFileDevice::Permissions permissions = QFileInfo(TMCPBridge::discoveryFilePath(dir.path())).permissions();
     QVERIFY2(!(permissions & (QFileDevice::ReadGroup | QFileDevice::ReadOther)), "the token in the discovery file must not be readable by other users");

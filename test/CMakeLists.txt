@@ -209,6 +209,7 @@ if(USE_MCPSERVER)
     # TMCPBridgeTest's refusal case; it replaces fchmod() for the whole binary
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         target_sources(unit_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/functional_tests/FchmodRefusal.cpp)
+        target_compile_definitions(unit_tests PRIVATE MUDLET_FCHMOD_REFUSAL)
     endif()
 endif()
 

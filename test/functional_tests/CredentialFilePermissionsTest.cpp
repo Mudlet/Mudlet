@@ -60,7 +60,7 @@
 #include <sys/stat.h>
 #endif
 
-#if defined(Q_OS_LINUX)
+#if defined(MUDLET_FCHMOD_REFUSAL)
 #include "FchmodRefusal.h"
 #endif
 
@@ -230,7 +230,7 @@ private slots:
 
     void cleanup()
     {
-#if defined(Q_OS_LINUX)
+#if defined(MUDLET_FCHMOD_REFUSAL)
         setRefuseOwnerOnlyOnOpenFiles(false);
 #endif
     }
@@ -335,8 +335,8 @@ private slots:
     // still saved, and narrowed by path once it is in place
     void test_aPlainTextProfilePasswordIsSavedWhereTheOpenFileCannotBeNarrowed()
     {
-#if !defined(Q_OS_LINUX)
-        QSKIP("needs fchmod() to be replaced, which this test does only on Linux");
+#if !defined(MUDLET_FCHMOD_REFUSAL)
+        QSKIP("needs fchmod() to be replaced, which this binary does only on Linux");
 #else
         QFETCH(bool, overAReadableFile);
         const QString item = qsl("password");
@@ -347,11 +347,13 @@ private slots:
             QVERIFY(openToEveryone(path));
         }
 
+        const int refusalsBefore = ownerOnlyRefusals();
         setRefuseOwnerOnlyOnOpenFiles(true);
         const QPair<bool, QString> result = MudletApp::writeProfileData(mProfile, item, mPassword);
         setRefuseOwnerOnlyOnOpenFiles(false);
 
         QVERIFY2(result.first, qPrintable(qsl("the password was not saved: %1").arg(result.second)));
+        QVERIFY2(ownerOnlyRefusals() > refusalsBefore, "nothing asked for owner-only on the open file, so this case proves nothing");
         // Before reading it back, as a read narrows the file too
         QVERIFY2(!reachableByOthers(path), "the password was left readable by other accounts on this machine");
         QCOMPARE(MudletApp::readProfileData(mProfile, item), mPassword);

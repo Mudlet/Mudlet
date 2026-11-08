@@ -417,14 +417,14 @@ bool TMCPBridge::writeDiscoveryFile(const QString& configDir, const quint16 port
     }
 
 #if defined(Q_OS_UNIX)
-    // Some file systems refuse it on the open file but take it by path
+    // Some file systems refuse owner-only on the open file but take it by path
     const bool ownerOnly = narrowAfterCommit ? SecureStringUtils::restrictFileToOwner(file.fileName()) : SecureStringUtils::confirmFileIsOwnerOnly(file.fileName());
     if (!ownerOnly) {
         qWarning().noquote() << "TMCPBridge::writeDiscoveryFile(...) WARNING - could not make" << file.fileName()
                              << "private to this user; other users of this machine may be able to read the MCP access token." << refusal;
     }
 #else
-    // No permission bits to check, and SecureStringUtils' note about that names passwords
+    // Not confirmFileIsOwnerOnly(): off Unix it only warns, and calls this file a saved password
     Q_UNUSED(narrowAfterCommit)
 #endif
     return true;

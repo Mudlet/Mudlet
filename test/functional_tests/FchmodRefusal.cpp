@@ -26,11 +26,17 @@
 
 namespace {
 bool refuseOwnerOnlyOnOpenFiles = false;
+int refusals = 0;
 }
 
 void setRefuseOwnerOnlyOnOpenFiles(const bool refuse)
 {
     refuseOwnerOnlyOnOpenFiles = refuse;
+}
+
+int ownerOnlyRefusals()
+{
+    return refusals;
 }
 
 // Replaces libc's fchmod() for this binary, Qt's calls included, so a case can play a file system
@@ -39,6 +45,7 @@ extern "C" int fchmod(int fd, mode_t mode) noexcept
 {
     if (refuseOwnerOnlyOnOpenFiles && !(mode & (S_IRGRP | S_IROTH))) {
         ::syscall(SYS_fchmod, fd, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+        ++refusals;
         errno = EPERM;
         return -1;
     }
