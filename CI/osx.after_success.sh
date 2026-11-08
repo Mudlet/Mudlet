@@ -86,7 +86,7 @@ fetch_pinned () {
 build_speech_engines_asset () {
 
   local outDir="$1" assetBase="$2"
-  # Vosk stays at 0.3.42: later releases publish no macOS build (0.3.50 is source only)
+  # Vosk stays at 0.3.42: no later GitHub release ships a vosk-osx zip (0.3.50 is source only)
   local sherpaVersion="2.0.1" onnxruntimeVersion="1.28.2" voskVersion="0.3.42"
   local sherpaArch sherpaSha256
   case "${ARCH}" in
