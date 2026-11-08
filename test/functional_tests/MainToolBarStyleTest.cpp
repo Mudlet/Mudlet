@@ -161,9 +161,11 @@ private:
         QCoreApplication::processEvents();
         pWidget->setAttribute(Qt::WA_UnderMouse, over);
         if (over) {
-            QEnterEvent entered(QPointF(at), QPointF(at), QPointF(pWidget->mapToGlobal(at)));
+            // Named first: GCC reads entered(QPointF(at), QPointF(at), ...) as a declaration with two parameters called at
+            const QPointF local(at);
+            QEnterEvent entered(local, local, QPointF(pWidget->mapToGlobal(at)));
             QApplication::sendEvent(pWidget, &entered);
-            QHoverEvent hovered(QEvent::HoverEnter, QPointF(at), QPointF(at), QPointF(-1, -1));
+            QHoverEvent hovered(QEvent::HoverEnter, local, local, QPointF(-1, -1));
             QApplication::sendEvent(pWidget, &hovered);
         } else {
             QEvent left(QEvent::Leave);
