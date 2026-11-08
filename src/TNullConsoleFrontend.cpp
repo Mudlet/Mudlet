@@ -804,6 +804,9 @@ QDataStream& operator>>(QDataStream& in, TNullConsoleFrontend::Placement& placem
 TNullConsoleFrontend::TNullConsoleFrontend(Host* pHost)
 : mpHost(pHost)
 {
+    // Not TCommandLine's first state, in which Tab on an empty line puts a word of the buffer there, but the one it
+    // is in after any send, in which that does nothing
+    endMainCommandLineCompletion();
 }
 
 TNullConsoleFrontend::~TNullConsoleFrontend() = default;
@@ -818,8 +821,13 @@ void TNullConsoleFrontend::dropWindows()
     mpMainHolder = std::make_unique<QObject>();
     mFrameHolders.clear();
     mMxpFrames.clear();
-    // The view's TCommandLine has its own menu items, which go with it
+    // The view's TCommandLine has its own menu items and words for Tab, which go with it
     mMainCommandLine.menuItems.clear();
+    mMainCommandLine.suggestions.clear();
+    mMainCommandLine.blacklist.clear();
+    mMainCommandLineCompletion = TCommandLineCompletion();
+    endMainCommandLineCompletion();
+    mMainCommandLineWhollySelected = false;
     // The view has its own map widget, if any. An embedded mapper went with the main window's stand-in.
     mMapWidget.reset();
     mpEmbeddedMapperBox.reset();
@@ -2293,6 +2301,8 @@ bool TNullConsoleFrontend::replaceCommandLineText(const QString& name, const QSt
         mMainCommandLineTyped = false;
         mMainCommandLineAllSelected = false;
         mMainCommandLineRewritten = true;
+        mMainCommandLineWhollySelected = false;
+        endMainCommandLineCompletion();
         const QString plain = plainText(text);
         mpHost->windowRegistry().setMainCommandLineText(plain);
         emit mpHost->signal_commandLineTextRequested(plain);
@@ -2309,6 +2319,8 @@ bool TNullConsoleFrontend::holdMainCommandLineForSend(const QString& line)
     }
     mMainCommandLineTyped = false;
     mMainCommandLineAllSelected = false;
+    mMainCommandLineWhollySelected = false;
+    endMainCommandLineCompletion();
     mpHost->windowRegistry().setMainCommandLineText(plainText(line));
     return true;
 }
@@ -2318,6 +2330,7 @@ void TNullConsoleFrontend::mainCommandLineSent()
     // TCommandLine::enterCommand() selects a line it keeps
     if (!mpHost->mAutoClearCommandLineAfterSend) {
         mMainCommandLineAllSelected = true;
+        mMainCommandLineWhollySelected = true;
         return;
     }
     if (mpHost->passwordEntryWanted()) {
@@ -2339,6 +2352,7 @@ void TNullConsoleFrontend::setCommandLineText(const QString& text)
     // As TMainConsole::setCommandLineText()
     if (!mpHost->passwordEntryWanted()) {
         mMainCommandLineAllSelected = true;
+        mMainCommandLineWhollySelected = true;
     }
 }
 
@@ -2349,14 +2363,27 @@ bool TNullConsoleFrontend::selectCommandLineText(const QString& name)
     }
     if (mainCommandLine(name) && !mpHost->passwordEntryWanted()) {
         mMainCommandLineAllSelected = true;
+        mMainCommandLineWhollySelected = true;
     }
     return true;
 }
 
 void TNullConsoleFrontend::typeMainCommandLine(const QString& text, const bool playerTyped)
 {
-    TWindowRegistry& registry = mpHost->windowRegistry();
     const QString plain = plainText(text);
+    // Mudlet sees each new line, never the key that made it, so any change ends Tab's cycle and the history walk, as
+    // Backspace does on the GUI's line; the line a completion left, handed back, is no change
+    if (plain != mpHost->windowRegistry().commandLineText(QString()).value_or(QString()) && plain != mMainCommandLineCompleted) {
+        endMainCommandLineCompletion();
+        // The GUI's line shows a recall all selected
+        mMainCommandLineWhollySelected = !playerTyped;
+    }
+    writeMainCommandLine(plain, playerTyped);
+}
+
+void TNullConsoleFrontend::writeMainCommandLine(const QString& plain, const bool playerTyped)
+{
+    TWindowRegistry& registry = mpHost->windowRegistry();
     const QString current = registry.commandLineText(QString()).value_or(QString());
     // As TCommandLine::slot_contentsChange(): typing on into a line a script set leaves it the script's, but typing
     // over it replaces it with a line of the player's. Mudlet does not see the app's caret or selection, so any
@@ -2375,6 +2402,54 @@ void TNullConsoleFrontend::typeMainCommandLine(const QString& text, const bool p
     }
     mMainCommandLineRewritten = true;
     registry.setMainCommandLineText(plain);
+}
+
+void TNullConsoleFrontend::endMainCommandLineCompletion()
+{
+    mMainCommandLineCompletion.reset();
+    mMainCommandLineCompletion.resetHistoryWalk();
+    mMainCommandLineCompleted.reset();
+}
+
+std::optional<QString> TNullConsoleFrontend::tabCompleteMainCommandLine(const bool forward)
+{
+    TWindowRegistry& registry = mpHost->windowRegistry();
+    const auto completion = mMainCommandLineCompletion.tabComplete(
+            registry.commandLineText(QString()).value_or(QString()), forward, mpHost->mainConsoleModel().buffer, mMainCommandLine.suggestions, mMainCommandLine.blacklist);
+    if (!completion) {
+        return std::nullopt;
+    }
+    writeMainCommandLine(plainText(completion->line), false);
+    mMainCommandLineWhollySelected = false;
+    const QString shown = registry.commandLineText(QString()).value_or(QString());
+    mMainCommandLineCompletion.setShownLine(shown);
+    mMainCommandLineCompleted = shown;
+    return shown;
+}
+
+std::optional<QString> TNullConsoleFrontend::historyCompleteMainCommandLine()
+{
+    TWindowRegistry& registry = mpHost->windowRegistry();
+    const QStringList history = mainCommandLineHistory();
+    const QString line = registry.commandLineText(QString()).value_or(QString());
+    // TCommandLine::historyMove() recalls a whole line instead for an empty line or none in the history
+    if (line.isEmpty() || history.isEmpty()) {
+        return std::nullopt;
+    }
+    const auto completion = mMainCommandLineCompletion.historyComplete(line, true, history, true);
+    if (!completion.line && !completion.tailCut) {
+        return std::nullopt;
+    }
+    // Only Tab's cycle: the walk goes on from here
+    mMainCommandLineCompletion.reset();
+    writeMainCommandLine(plainText(completion.line.value_or(completion.typed)), false);
+    mMainCommandLineWhollySelected = false;
+    const QString shown = registry.commandLineText(QString()).value_or(QString());
+    if (completion.line) {
+        mMainCommandLineCompletion.setHistoryCompletion(shown);
+    }
+    mMainCommandLineCompleted = shown;
+    return shown;
 }
 
 bool TNullConsoleFrontend::hiddenInputOpened()
@@ -2434,6 +2509,66 @@ std::optional<bool> TNullConsoleFrontend::removeCommandLineMenuItem(const QStrin
         return std::nullopt;
     }
     return pCommandLine->menuItems.erase(label) != 0;
+}
+
+bool TNullConsoleFrontend::addCommandLineSuggestion(const QString& name, const QString& word)
+{
+    PlainWindow* pCommandLine = commandLineNamed(name);
+    if (!pCommandLine) {
+        return false;
+    }
+    pCommandLine->suggestions.insert(word);
+    return true;
+}
+
+bool TNullConsoleFrontend::removeCommandLineSuggestion(const QString& name, const QString& word)
+{
+    PlainWindow* pCommandLine = commandLineNamed(name);
+    if (!pCommandLine) {
+        return false;
+    }
+    pCommandLine->suggestions.remove(word);
+    return true;
+}
+
+bool TNullConsoleFrontend::clearCommandLineSuggestions(const QString& name)
+{
+    PlainWindow* pCommandLine = commandLineNamed(name);
+    if (!pCommandLine) {
+        return false;
+    }
+    pCommandLine->suggestions.clear();
+    return true;
+}
+
+bool TNullConsoleFrontend::addCommandLineBlacklistWord(const QString& name, const QString& word)
+{
+    PlainWindow* pCommandLine = commandLineNamed(name);
+    if (!pCommandLine) {
+        return false;
+    }
+    pCommandLine->blacklist.insert(word);
+    return true;
+}
+
+bool TNullConsoleFrontend::removeCommandLineBlacklistWord(const QString& name, const QString& word)
+{
+    PlainWindow* pCommandLine = commandLineNamed(name);
+    if (!pCommandLine) {
+        return false;
+    }
+    pCommandLine->blacklist.remove(word);
+    return true;
+}
+
+bool TNullConsoleFrontend::clearCommandLineBlacklist(const QString& name)
+{
+    PlainWindow* pCommandLine = commandLineNamed(name);
+    if (!pCommandLine) {
+        return false;
+    }
+    pCommandLine->blacklist.clear();
+    return true;
 }
 
 bool TNullConsoleFrontend::setCommandLineSavesHistory(const QString& name, const bool savesHistory)
@@ -3512,11 +3647,17 @@ bool TNullConsoleFrontend::setWindowFontSize(const QString& name, const int size
     return true;
 }
 
-// No window to alert, but timed as TMainConsole times a pass for its latency box
+// Timed as TMainConsole times a pass for its latency box. With no window to be minimized, whether the app's is is the
+// session's to say
 bool TNullConsoleFrontend::startIncomingText()
 {
     mIncomingTextTimer.restart();
-    return false;
+    return mpHost->mAlertOnNewData;
+}
+
+void TNullConsoleFrontend::alertNewData()
+{
+    emit mpHost->mainConsoleModel().mNotifier.newDataAlerted();
 }
 
 void TNullConsoleFrontend::finishIncomingText(bool)
