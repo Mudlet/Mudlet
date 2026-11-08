@@ -558,7 +558,7 @@ jobs:
                 <pubDate>$PUB_DATE</pubDate>
                 <sparkle:version>$BUNDLE_VERSION</sparkle:version>
                 <sparkle:shortVersionString>$RELEASE_VERSION</sparkle:shortVersionString>
-                <sparkle:minimumSystemVersion>11.0</sparkle:minimumSystemVersion>
+                <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
                 <description><![CDATA[$CHANGELOG_HTML]]></description>
                 <enclosure
                   url="$DOWNLOAD_URL"
