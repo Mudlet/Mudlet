@@ -212,6 +212,13 @@ into, its own when it is a line of its own. It is -1 for a line with none. A han
 first three or four arguments may still be connected. `localText` carries no time of its own: it is sent as
 it is written, so the time its handler runs is when that text was written.
 
+`timeStampsShown()` says whether the main console shows those times beside its lines, as the GUI's
+timestamp button does, and `setTimeStampsShown()` presses that button: the choice is saved for the
+profile's next load as the button saves it, and refused where `submit()` is. Where it was made but could
+not be saved, it gives false and `errorString()` says so. `timeStampsShownChanged`
+follows a change made either way or by a script's `enableTimeStamps()` and `disableTimeStamps()`, from the
+event loop and only when the state differs from the one last sent or the one at `profileLoaded`.
+
 `localText` carries the text written to the main console that the game did not send, as it is written,
 in pieces that need not end a line: the `echo()`s of aliases, timers, key bindings and `runLua()`, the
 commands the player sends, and Mudlet's own messages. While `lineShown` is connected, `localText` leaves
