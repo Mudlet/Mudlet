@@ -41,6 +41,9 @@ namespace {
 int gNullHandleCalls = 0;
 int gModelsAlive = 0;
 int gRecognizersAlive = 0;
+// What the newest recognizer was told, -1 until it is told anything: a stale
+// value from the one before it would hide a mode that was never reapplied
+int gLastEndpointerMode = -1;
 // Anything a caller might keep a pointer into has to outlive the call.
 const char* const kEmptyResult = "{\"text\": \"\"}";
 
@@ -76,6 +79,7 @@ void voskStubReset()
     gNullHandleCalls = 0;
     gModelsAlive = 0;
     gRecognizersAlive = 0;
+    gLastEndpointerMode = -1;
 }
 
 // Both are zero once a recognizer has been closed, so a non-zero answer here is
@@ -88,6 +92,13 @@ int voskStubModelsAlive()
 int voskStubRecognizersAlive()
 {
     return gRecognizersAlive;
+}
+
+// The endpointer mode the newest recognizer was handed, in libvosk's own
+// numbering
+int voskStubLastEndpointerMode()
+{
+    return gLastEndpointerMode;
 }
 
 // --- the libvosk surface VoskRecognizer resolves --------------------------
@@ -129,6 +140,7 @@ void* vosk_recognizer_new(void* model, float sampleRate)
     auto* recognizer = new StubRecognizer;
     recognizer->model = static_cast<StubModel*>(model);
     recognizer->sampleRate = sampleRate;
+    gLastEndpointerMode = -1;
     return recognizer;
 }
 
@@ -192,6 +204,7 @@ void vosk_recognizer_set_endpointer_mode(void* recognizer, int mode)
         return;
     }
     static_cast<StubRecognizer*>(recognizer)->endpointerMode = mode;
+    gLastEndpointerMode = mode;
 }
 
 void vosk_recognizer_set_words(void* recognizer, int words)

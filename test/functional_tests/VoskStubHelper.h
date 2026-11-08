@@ -135,6 +135,19 @@ inline int nullHandleCalls()
     return calls;
 }
 
+// The endpointer mode the stub's newest recognizer was handed, -1 when it was
+// handed none and -2 when it cannot be read; from the installed copy, as
+// nullHandleCalls() is
+inline int lastEndpointerMode()
+{
+    QLibrary stub(installedPath());
+    using modeFn = int (*)();
+    auto* mode = reinterpret_cast<modeFn>(stub.resolve("voskStubLastEndpointerMode"));
+    const int answer = mode ? mode() : -2;
+    stub.unload();
+    return answer;
+}
+
 } // namespace VoskStub
 
 #endif // MUDLET_VOSKSTUBHELPER_H

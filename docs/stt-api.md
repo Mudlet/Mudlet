@@ -169,7 +169,10 @@ words, sensitivityTuning, onDevice = true}`. `biasing` and `grammar` are always
 `false` there. The other two each follow a symbol resolving in the installed
 libvosk — `words` the word-level one, `sensitivityTuning` the endpointer — so an
 older or partial library reports `false` rather than promising a `sysSTTWords`
-that never arrives, or a sensitivity the engine cannot be told about. Unloading
+that never arrives, or a sensitivity the engine cannot be told about. The
+endpointer symbol first appears in libvosk 0.3.50, which the Vosk project
+publishes as source only, so its prebuilt libraries (0.3.45 and older) report
+`sensitivityTuning = false`. Unloading
 or reloading the library changes both answers, announced through
 `sysSTTCapabilitiesChanged`. Its sherpa-onnx backend reports `{biasing,
 grammar = false, words = false, sensitivityTuning = true, onDevice = true}`,
