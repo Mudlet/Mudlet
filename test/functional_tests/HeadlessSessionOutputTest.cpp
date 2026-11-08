@@ -39,6 +39,7 @@
 #include "HostManager.h"
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
+#include "RefusedPort.h"
 #include "TConsoleModel.h"
 #include "THeadlessSession.h"
 #include "TelnetServerStub.h"
@@ -350,12 +351,9 @@ setBackgroundColor("headlessColoursMini", 200, 100, 50)
     {
         const QString name = qsl("Headless Connecting Refused");
         QVERIFY(writeProfile(name, QString()));
-        quint16 port = 0;
-        {
-            QTcpServer closed;
-            QVERIFY(closed.listen(QHostAddress::LocalHost));
-            port = closed.serverPort();
-        }
+        RefusedPort refused;
+        QVERIFY(refused.reserve());
+        const quint16 port = refused.port();
         QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
         QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(port)).first);
 

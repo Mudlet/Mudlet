@@ -61,6 +61,7 @@
 #include "MudletMedia.h"
 #include "MudletReplay.h"
 #include "PortableModeTestHelper.h"
+#include "RefusedPort.h"
 #include "TAppFrontend.h"
 #include "TConsoleModel.h"
 #include "TDebug.h"
@@ -4438,12 +4439,9 @@ tempTrigger("Gamma", [[echo(" <c>")]]))lua")));
     {
         const QString name = qsl("Headless Refused");
         QVERIFY(writeProfile(name, QString()));
-        quint16 port = 0;
-        {
-            QTcpServer closed;
-            QVERIFY(closed.listen(QHostAddress::LocalHost));
-            port = closed.serverPort();
-        }
+        RefusedPort refused;
+        QVERIFY(refused.reserve());
+        const quint16 port = refused.port();
         QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
         QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(port)).first);
 
