@@ -59,31 +59,13 @@
 #if defined(Q_OS_UNIX)
 #include <sys/stat.h>
 #endif
+
 #if defined(Q_OS_LINUX)
-#include <cerrno>
-#include <sys/syscall.h>
-#include <unistd.h>
+#include "FchmodRefusal.h"
 #endif
 
 #include "GroupedTest.h"
 #include "PortableModeTestHelper.h"
-
-#if defined(Q_OS_LINUX)
-static bool refuseOwnerOnlyOnOpenFiles = false;
-
-// Stands in for libc's for this whole binary, Qt's own calls included, so that a case can play a
-// file system that refuses to close an open file to other accounts and leaves it readable by all
-// (vfat with fmask=022 keeps every file so), yet takes owner-only by path, as some file systems do
-extern "C" int fchmod(int fd, mode_t mode) noexcept
-{
-    if (refuseOwnerOnlyOnOpenFiles && !(mode & (S_IRGRP | S_IROTH))) {
-        ::syscall(SYS_fchmod, fd, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-        errno = EPERM;
-        return -1;
-    }
-    return static_cast<int>(::syscall(SYS_fchmod, fd, mode));
-}
-#endif
 
 // QTest::ignoreMessage can only assert that a message was printed, so counting the
 // diagnostic is the only way to say it was not.
@@ -246,6 +228,13 @@ private slots:
     // the one before it - or an earlier run - left rather than trusting the root to be empty
     void init() { removeTheProfilesTheseCasesUse(); }
 
+    void cleanup()
+    {
+#if defined(Q_OS_LINUX)
+        setRefuseOwnerOnlyOnOpenFiles(false);
+#endif
+    }
+
     // One row per file and directory the fix narrows, so that each of them is shown to need
     // the fix on its own rather than only the first one a case happens to reach
     void test_aSavedPasswordAndItsKeyAreOwnerOnly_data()
@@ -335,23 +324,11 @@ private slots:
         QVERIFY2(!reachableByOthers(path), "reading the profile's password left it readable by other accounts on this machine");
     }
 
-    // Saving again over a file left readable must not hand the new copy the old file's mode
-    void test_aPlainTextProfilePasswordSavedOverAnOpenFileIsOwnerOnly()
+    void test_aPlainTextProfilePasswordIsSavedWhereTheOpenFileCannotBeNarrowed_data()
     {
-#if !defined(Q_OS_UNIX)
-        QSKIP("there are no POSIX permission bits to check on this platform");
-#endif
-        const QString item = qsl("password");
-        const QString path = MudletApp::getMudletPath(enums::profileDataItemPath, mProfile, item);
-        QVERIFY2(!QFileInfo::exists(path), "this case started on a config root an earlier run left behind, so it would prove nothing");
-        QVERIFY(MudletApp::writeProfileData(mProfile, item, qsl("an older password")).first);
-        QVERIFY(openToEveryone(path));
-        QVERIFY(reachableByOthers(path));
-
-        QVERIFY(MudletApp::writeProfileData(mProfile, item, mPassword).first);
-
-        QVERIFY2(!reachableByOthers(path), "saving the profile's password over a readable copy left it readable by other accounts on this machine");
-        QCOMPARE(MudletApp::readProfileData(mProfile, item), mPassword);
+        QTest::addColumn<bool>("overAReadableFile");
+        QTest::newRow("a new file") << false;
+        QTest::newRow("over a file other accounts can read") << true;
     }
 
     // Where the file system refuses to narrow the file while it is being written, the password is
@@ -361,13 +338,18 @@ private slots:
 #if !defined(Q_OS_LINUX)
         QSKIP("needs fchmod() to be replaced, which this test does only on Linux");
 #else
+        QFETCH(bool, overAReadableFile);
         const QString item = qsl("password");
         const QString path = MudletApp::getMudletPath(enums::profileDataItemPath, mProfile, item);
         QVERIFY2(!QFileInfo::exists(path), "this case started on a config root an earlier run left behind, so it would prove nothing");
+        if (overAReadableFile) {
+            QVERIFY(MudletApp::writeProfileData(mProfile, item, qsl("an older password")).first);
+            QVERIFY(openToEveryone(path));
+        }
 
-        refuseOwnerOnlyOnOpenFiles = true;
+        setRefuseOwnerOnlyOnOpenFiles(true);
         const QPair<bool, QString> result = MudletApp::writeProfileData(mProfile, item, mPassword);
-        refuseOwnerOnlyOnOpenFiles = false;
+        setRefuseOwnerOnlyOnOpenFiles(false);
 
         QVERIFY2(result.first, qPrintable(qsl("the password was not saved: %1").arg(result.second)));
         // Before reading it back, as a read narrows the file too
