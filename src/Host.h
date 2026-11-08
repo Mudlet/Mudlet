@@ -359,8 +359,6 @@ public:
     // their contents only through non-const accessors.
     QList<eventNames::Entry> knownEventNames();
 
-    const QSet<QString>& eventNamesSeen() const { return mEventNamesSeen; }
-
     void send(QString cmd, bool wantPrint = true, bool dontExpandAliases = false);
 
     int getHostID() { return mHostID; }
@@ -1683,8 +1681,18 @@ private:
 
     QMap<QString, QStringList> mAnonymousEventHandlerFunctions;
 
-    // Session only: the one record of names a game sends, and of no use to another profile
-    QSet<QString> mEventNamesSeen;
+    void rememberEventName(const QString& name);
+    // Session only: the one record of names a game sends, and of no use to another profile. Its protocols
+    // name a fixed set, so the limit only guards against a game that misbehaves.
+    QSet<QString> mGameEventNamesSeen;
+    static constexpr int scmGameEventNamesLimit = 2000;
+    // Names scripts raise, each with when it was last raised: a script can build a new name every time,
+    // so only the most recent are kept, and one raised again stays
+    QHash<QString, quint64> mScriptEventNamesSeen;
+    quint64 mScriptEventNameTick = 0;
+    static constexpr int scmScriptEventNamesLimit = 200;
+    // Trimmed back to the limit only once this many more have come, so a flood of new names sorts rarely
+    static constexpr int scmScriptEventNamesSlack = 50;
 
     QStringList mActiveModules;
 

@@ -887,6 +887,40 @@ private slots:
         mpEditor->slot_scriptsSelected(mpScriptItem);
         QTest::qWait(50ms);
     }
+    // A script can build a new name every time it raises one, so only the most recent of those are
+    // offered; the game's names stay, and so does a script's name it keeps raising
+    void test_namesBuiltAtRunTimeDoNotPileUp()
+    {
+        auto offeredNames = [this]() {
+            QStringList names;
+            for (const eventNames::Entry& entry : mpHost->knownEventNames()) {
+                names << entry.name;
+            }
+            return names;
+        };
+        raiseInProfile(qsl("gmcp.Room.Info"));
+        for (int i = 0; i < 1000; ++i) {
+            raiseInProfile(qsl("counterBuilt.%1").arg(i));
+        }
+        QStringList offered = offeredNames();
+        const qsizetype built = offered.filter(qsl("counterBuilt.")).size();
+        // 200 kept, and up to 50 more before the next trim (Host.h)
+        QVERIFY2(built >= 200 && built <= 250, qPrintable(qsl("%1 of the 1000 names built at run time are offered").arg(built)));
+        QVERIFY2(offered.contains(qsl("counterBuilt.999")), "the newest name built at run time is not offered");
+        QVERIFY2(!offered.contains(qsl("counterBuilt.0")), "the oldest name built at run time is still offered");
+        QVERIFY2(offered.contains(qsl("gmcp.Room.Info")), "a name the game sent was dropped with the script's");
+
+        // Raised again while still kept, then outlived by 150 newer names: only the second raise keeps it
+        raiseInProfile(qsl("RaisedAgain"));
+        for (int i = 0; i < 100; ++i) {
+            raiseInProfile(qsl("laterBuilt.%1").arg(i));
+        }
+        raiseInProfile(qsl("RaisedAgain"));
+        for (int i = 100; i < 250; ++i) {
+            raiseInProfile(qsl("laterBuilt.%1").arg(i));
+        }
+        QVERIFY2(offeredNames().contains(qsl("RaisedAgain")), "a name raised again was dropped with the old ones");
+    }
 };
 
 #include "EditorEventChipRowTest.moc"
