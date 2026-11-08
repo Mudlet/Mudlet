@@ -71,7 +71,7 @@ public:
     int profileTabIndex(const QString&) const override { return -1; }
     bool setActiveProfileTab(const QString& profileName) override;
     void setAppStyleSheet(const QString&) override {}
-    bool resizeMainWindow(int, int) override { return false; }
+    std::pair<bool, QString> resizeMainWindow(Host*, int width, int height) override;
     bool loadWindowLayout() override;
     bool layoutLoading() const override { return mpLayoutLoad != nullptr; }
     bool saveWindowLayoutForScript() override;

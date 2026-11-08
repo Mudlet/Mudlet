@@ -29,6 +29,7 @@
 #include <QFile>
 #include <QSignalSpy>
 #include <QTemporaryDir>
+#include <QTimer>
 #include <QtTest/QtTest>
 
 #include <optional>
@@ -230,6 +231,260 @@ private slots:
         QCOMPARE(mainWindowSize(session), qsl("%1x%2").arg(100 * smallCell.width()).arg(30 * smallCell.height()));
         // Both in one turn, so one is sent
         QTRY_COMPARE(areasSent(areas), (QList<QVariantList>{area(QSize(100, 30), QRect(0, 0, 100 * smallCell.width(), 30 * smallCell.height()))}));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_aScriptSetsItsOwnProfilesSize()
+    {
+        const QString name = qsl("Headless Area Script");
+        const QString other = qsl("Headless Area Script Other");
+        QVERIFY(writeProfile(name));
+        QVERIFY(writeProfile(other));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl("loadProfile('%1', true)").arg(other)));
+        Host* pOther = HostManager::self()->getHost(other);
+        QVERIFY(pOther);
+        const std::optional<QSize> otherSize = pOther->mainWindowSize();
+        QVERIFY(otherSize && *otherSize != QSize(640, 480));
+        QSignalSpy requests(&session, &THeadlessSession::mainWindowResizeRequested);
+        QSignalSpy areas(&session, &THeadlessSession::mainConsoleAreaChanged);
+        QVERIFY(session.runLua(qsl(R"lua(
+headlessAreaResizes = {}
+registerAnonymousEventHandler("sysWindowResizeEvent", function(_, width, height, window)
+  headlessAreaResizes[#headlessAreaResizes + 1] = string.format("%dx%d %s", width, height, window)
+end)
+)lua")));
+
+        QCOMPARE(luaString(session, qsl("setMainWindowSize(640, 480)")), qsl("true"));
+        QCOMPARE(mainWindowSize(session), qsl("640x480"));
+        QCOMPARE(luaString(session, qsl("table.concat(headlessAreaResizes, ';')")), qsl("640x480 main"));
+        const QSize cellSize = cell(session);
+        const QSize expected(std::max(40, 640 / cellSize.width()), 480 / cellSize.height());
+        QCOMPARE(grid(session), expected);
+        QTRY_COMPARE(requests.count(), 1);
+        QCOMPARE(requests.at(0), (QVariantList{name, QSize(640, 480)}));
+        QTRY_COMPARE(areasSent(areas), (QList<QVariantList>{area(expected, QRect(0, 0, 640, 480))}));
+        QCOMPARE(pOther->mainWindowSize(), otherSize);
+
+        // What the app's own call refuses is refused here too, and the app is not asked for it
+        for (const QString& refused : {qsl("0, 0"), qsl("-640, 480"), qsl("640, 0"), qsl("%1, 480").arg(cellSize.width() * 65536)}) {
+            const QString answer = luaString(session, qsl("(function() local ok, err = setMainWindowSize(%1) return tostring(ok) .. '|' .. tostring(err) end)()").arg(refused));
+            QVERIFY2(answer.startsWith(qsl("nil|a main window of")) && answer.endsWith(qsl("each must be from 1 to 65535")), qPrintable(answer));
+        }
+        QCOMPARE(mainWindowSize(session), qsl("640x480"));
+        QCOMPARE(grid(session), expected);
+
+        // Asked again for the size it has, the app is told, and the profile's scripts are not
+        QCOMPARE(luaString(session, qsl("setMainWindowSize(640, 480)")), qsl("true"));
+        QTRY_COMPARE(requests.count(), 2);
+        QCOMPARE(luaString(session, qsl("#headlessAreaResizes")), qsl("1"));
+
+        // Another profile's is its own, and not this session's to tell
+        QVERIFY(pOther->getLuaInterpreter()->compileAndExecuteScript(qsl("setMainWindowSize(320, 240)")));
+        QCOMPARE(pOther->mainWindowSize(), std::optional(QSize(320, 240)));
+        QCOMPARE(mainWindowSize(session), qsl("640x480"));
+        QTest::qWait(100);
+        QCOMPARE(requests.count(), 2);
+        QCOMPARE(areas.count(), 1);
+        QVERIFY(session.shutdown(false));
+    }
+
+    // The size an app that cannot take the one a script asks for gives back, from the request's handler, next
+    // turn, or later as a window system's would, in milliseconds; -1 is from the handler
+    void test_aScriptAskingAgainForASizeTheAppCannotGiveSettles_data()
+    {
+        QTest::addColumn<int>("delay");
+        QTest::newRow("from the handler") << -1;
+        QTest::newRow("next turn") << 0;
+        QTest::newRow("later") << 50;
+    }
+
+    // A resize handler that asks again is answered by the size the app gave, as the GUI's is by a window manager
+    // holding the window
+    void test_aScriptAskingAgainForASizeTheAppCannotGiveSettles()
+    {
+        QFETCH(const int, delay);
+        const QString name = qsl("Headless Area Script Asks Again %1").arg(delay);
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QSize terminal(80, 30);
+        QVERIFY(session.setScreenSize(terminal.width(), terminal.height()));
+        int answers = 0;
+        connect(&session, &THeadlessSession::mainWindowResizeRequested, this, [&session, &terminal, &answers, delay](const QString&, const QSize&) {
+            ++answers;
+            if (delay < 0) {
+                session.setScreenSize(terminal.width(), terminal.height());
+                return;
+            }
+            QTimer::singleShot(delay, &session, [&session, &terminal] {
+                session.setScreenSize(terminal.width(), terminal.height());
+            });
+        });
+        QVERIFY(session.runLua(qsl(R"lua(
+headlessAreaResizes = {}
+registerAnonymousEventHandler("sysWindowResizeEvent", function(_, width, height, window)
+  if #headlessAreaResizes < 10 then
+    headlessAreaResizes[#headlessAreaResizes + 1] = string.format("%dx%d %s", width, height, window)
+  end
+  if width < 1600 then
+    setMainWindowSize(1600, 900)
+  end
+end)
+)lua")));
+        const QSize cellSize = cell(session);
+        const auto resized = [&cellSize](const QSize& cells) {
+            return qsl("%1x%2 main").arg(cells.width() * cellSize.width()).arg(cells.height() * cellSize.height());
+        };
+
+        QCOMPARE(luaString(session, qsl("setMainWindowSize(1600, 900)")), qsl("true"));
+        // A loop would go on answering for as long as the event loop runs
+        QTest::qWait(500);
+        QCOMPARE(answers, 1);
+        QCOMPARE(luaString(session, qsl("table.concat(headlessAreaResizes, ';')")), (QStringList{qsl("1600x900 main"), resized(terminal)}.join(QLatin1Char(';'))));
+        QCOMPARE(grid(session), terminal);
+
+        // Later, too, from a timer
+        QVERIFY(session.runLua(qsl("tempTimer(0, function() headlessAreaLater = setMainWindowSize(1600, 900) end)")));
+        QTest::qWait(200);
+        QCOMPARE(luaString(session, qsl("headlessAreaLater")), qsl("true"));
+        QCOMPARE(answers, 1);
+        QCOMPARE(grid(session), terminal);
+
+        // A size the app gives of its own accord is a new one, which a script may ask to change once more
+        QVERIFY(session.runLua(qsl("headlessAreaResizes = {}")));
+        terminal = QSize(100, 30);
+        QVERIFY(session.setScreenSize(terminal.width(), terminal.height()));
+        QTest::qWait(500);
+        QCOMPARE(answers, 2);
+        QCOMPARE(luaString(session, qsl("table.concat(headlessAreaResizes, ';')")), (QStringList{resized(terminal), qsl("1600x900 main"), resized(terminal)}.join(QLatin1Char(';'))));
+        QCOMPARE(grid(session), terminal);
+        QVERIFY(session.shutdown(false));
+    }
+
+    // A script that asks for another size after one the app answered is heard, as in the GUI, whether the app
+    // answered it with a size of its own or with the one asked for
+    void test_aScriptAskingForAnotherSizeIsHeardAgain()
+    {
+        const QString name = qsl("Headless Area Script Asks Another");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy requests(&session, &THeadlessSession::mainWindowResizeRequested);
+        bool honours = false;
+        const QSize smallest(640, 480);
+        connect(&session, &THeadlessSession::mainWindowResizeRequested, this, [&session, &honours, &smallest](const QString&, const QSize& pixels) {
+            session.setMainWindowSize(honours ? pixels : pixels.expandedTo(smallest));
+        });
+
+        // A window no smaller than 640x480, which answers each request with the size it took
+        QCOMPARE(luaString(session, qsl("setMainWindowSize(320, 200)")), qsl("true"));
+        QTRY_COMPARE(requests.count(), 1);
+        QCOMPARE(mainWindowSize(session), qsl("640x480"));
+        QCOMPARE(luaString(session, qsl("setMainWindowSize(1024, 768)")), qsl("true"));
+        QTRY_COMPARE(requests.count(), 2);
+        QCOMPARE(mainWindowSize(session), qsl("1024x768"));
+        QCOMPARE(luaString(session, qsl("setMainWindowSize(320, 200)")), qsl("true"));
+        QTRY_COMPARE(requests.count(), 3);
+        QCOMPARE(mainWindowSize(session), qsl("640x480"));
+
+        // Asked twice in one turn, the answer to the first, which the second has replaced, is not laid out
+        QVERIFY(session.runLua(qsl(R"lua(
+headlessAreaResizes = {}
+registerAnonymousEventHandler("sysWindowResizeEvent", function(_, width, height, window)
+  headlessAreaResizes[#headlessAreaResizes + 1] = string.format("%dx%d %s", width, height, window)
+end)
+setMainWindowSize(400, 300)
+setMainWindowSize(1100, 700)
+)lua")));
+        QTRY_COMPARE(requests.count(), 5);
+        QTest::qWait(100);
+        QCOMPARE(mainWindowSize(session), qsl("1100x700"));
+        QCOMPARE(luaString(session, qsl("table.concat(headlessAreaResizes, ';')")), qsl("400x300 main;1100x700 main"));
+
+        // A window that takes any size and says so, and a script that measures and puts back what it had, as UI_spec's do
+        honours = true;
+        requests.clear();
+        QCOMPARE(luaString(session, qsl("setMainWindowSize(1000, 700)")), qsl("true"));
+        QTRY_COMPARE(requests.count(), 1);
+        QCOMPARE(mainWindowSize(session), qsl("1000x700"));
+        QVERIFY(session.runLua(qsl("local width, height = getMainWindowSize() setMainWindowSize(800, 600) setMainWindowSize(width, height)")));
+        QTRY_COMPARE(requests.count(), 3);
+        QTest::qWait(100);
+        QCOMPARE(requests.count(), 3);
+        QCOMPARE(requests.at(1), (QVariantList{name, QSize(800, 600)}));
+        QCOMPARE(requests.at(2), (QVariantList{name, QSize(1000, 700)}));
+        QCOMPARE(mainWindowSize(session), qsl("1000x700"));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // An app that takes a size it can have and says nothing has the next size it gives taken as the answer
+    void test_anAppThatDoesNotAnswerHasItsNextSizeTakenAsTheAnswer()
+    {
+        const QString name = qsl("Headless Area Silent App");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy requests(&session, &THeadlessSession::mainWindowResizeRequested);
+        const QSize smallest(640, 480);
+        connect(&session, &THeadlessSession::mainWindowResizeRequested, this, [&session, &smallest](const QString&, const QSize& pixels) {
+            if (pixels.width() < smallest.width() || pixels.height() < smallest.height()) {
+                session.setMainWindowSize(pixels.expandedTo(smallest));
+            }
+        });
+        QVERIFY(session.setMainWindowSize(QSize(1000, 700)));
+        const QSize cellSize = cell(session);
+
+        // The answer to a request the next has replaced is not laid out, though the next is not answered
+        QVERIFY(session.runLua(qsl("setMainWindowSize(320, 200) setMainWindowSize(1000, 700)")));
+        QTRY_COMPARE(requests.count(), 2);
+        QTest::qWait(100);
+        QCOMPARE(mainWindowSize(session), qsl("1000x700"));
+        QCOMPARE(grid(session), QSize(std::max(40, 1000 / cellSize.width()), 700 / cellSize.height()));
+
+        // A size it took silently is answered by the next it gives, so the app is not asked for it again till it
+        // gives another
+        QCOMPARE(luaString(session, qsl("setMainWindowSize(1024, 768)")), qsl("true"));
+        QTRY_COMPARE(requests.count(), 3);
+        QVERIFY(session.setMainWindowSize(QSize(900, 700)));
+        for (int ask = 0; ask < 2; ++ask) {
+            QCOMPARE(luaString(session, qsl("setMainWindowSize(1024, 768)")), qsl("true"));
+            QTest::qWait(50);
+            QCOMPARE(requests.count(), 3);
+            QCOMPARE(mainWindowSize(session), qsl("900x700"));
+        }
+        QVERIFY(session.setMainWindowSize(QSize(950, 700)));
+        QCOMPARE(luaString(session, qsl("setMainWindowSize(1024, 768)")), qsl("true"));
+        QTRY_COMPARE(requests.count(), 4);
+        QCOMPARE(mainWindowSize(session), qsl("1024x768"));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // With nothing connected to mainWindowResizeRequested nothing answers, so a size the app gives is not taken
+    // as an answer and a resize handler keeping to a size keeps it after each one
+    void test_anAppThatDoesNotListenLeavesAScriptItsSize()
+    {
+        const QString name = qsl("Headless Area Deaf App");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"lua(
+registerAnonymousEventHandler("sysWindowResizeEvent", function(_, width, height)
+  if width ~= 1200 or height ~= 800 then
+    setMainWindowSize(1200, 800)
+  end
+end)
+)lua")));
+        const QSize cellSize = cell(session);
+        const QSize kept(std::max(40, 1200 / cellSize.width()), 800 / cellSize.height());
+        for (const QSize& given : {QSize(1000, 700), QSize(900, 650), QSize(950, 600)}) {
+            QVERIFY(session.setMainWindowSize(given));
+            QCOMPARE(mainWindowSize(session), qsl("1200x800"));
+            QCOMPARE(grid(session), kept);
+            // The request's relay, which finds nothing to answer it
+            QTest::qWait(50);
+        }
         QVERIFY(session.shutdown(false));
     }
 

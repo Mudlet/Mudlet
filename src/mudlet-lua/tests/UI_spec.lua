@@ -8244,14 +8244,22 @@ describe("Main window size and saved layout", function()
     assert.is_truthy(tostring(err):find("setMainWindowSize: bad argument #2 type", 1, true))
   end)
 
-  it("setMainWindowSize says so when there is no main window to size", function()
+  it("setMainWindowSize sizes the profile's own area when there is no main window", function()
     -- getMousePosition() has no answer only when there is no main window
     if getMousePosition() then
       pending("there is a main window")
     end
-    local ok, err = setMainWindowSize(800, 600)
+    local width, height = getMainWindowSize()
+    finally(function()
+      -- Leaves the area given in pixels, as the GUI always has it: no script can give it in characters again
+      setMainWindowSize(width, height)
+    end)
+    assert.is_true(setMainWindowSize(800, 600))
+    assert.are.same({800, 600}, {getMainWindowSize()})
+    local ok, err = setMainWindowSize(0, 0)
     assert.is_nil(ok)
-    assert.are.equal("the profile has no main window", err)
+    assert.is_truthy(err:find("each must be from 1 to 65535", 1, true))
+    assert.are.same({800, 600}, {getMainWindowSize()})
   end)
 
   it("a bigger main window is reported as bigger", function()

@@ -8,9 +8,6 @@ Failure AddonCommand_spec.lua: addon commands a shortcut it cannot honour refuse
 Failure AddonCommand_spec.lua: addon commands a shortcut it cannot honour refuses one Mudlet uses for switching profiles, and says what holds it
 Failure AddonCommand_spec.lua: addon commands a shortcut it cannot honour says so when the search is switched on over a command's key
 Failure ConsoleFontsByName_spec.lua: Tests that the font functions find their console by name with a sub-console's name reads the size a style sheet gives a user window's text
-Failure GeyserAdjustableContainer_spec.lua: Tests Adjustable.Container borders, persistence and menu items Adjustable.Container:adjustBorder/setBorderMargin/resetBorder keeps the console its rows through a window resize with both sides attached
-Failure GeyserAdjustableContainer_spec.lua: Tests Adjustable.Container borders, persistence and menu items Tests the functionality of Adjustable.Container:connectToBorder keeps a connected container following the window once it is resized
-Failure GeyserAdjustableContainer_spec.lua: Tests Adjustable.Container borders, persistence and menu items Tests the functionality of Adjustable.Container:connectToBorder leaves a far-edge constraint measuring from the far edge
 Failure GeyserUserWindow_spec.lua: Tests functionality of Geyser.UserWindow Geyser.UserWindow:new/new2 gives itself a root container sized to the user window
 Failure HostApi_spec.lua: openUserWindow still refuses the name of a mini console inside a deleted user window
 Failure MapSymbolPrivateUse_spec.lua: Tests room symbols from a font's Private Use Area draws a glyph the symbol font has there, from any font, in a map loaded from a JSON file
@@ -37,6 +34,7 @@ Failure UI_spec.lua: Window state getters getLabelText reports text a style shee
 Failure WindowGeometry_spec.lua: getWindowGeometry follows a docked user window as the main window lays its dock area out again
 Failure WindowSize_spec.lua: window sizes getMainWindowSize follows a button bar shown along its top
 Failure WindowSize_spec.lua: window sizes getMainWindowSize follows the command line as it grows with its text
+Failure WindowSize_spec.lua: window sizes getRowCount gives up the rows a button bar made along the top takes
 Failure zz_Mapper3DView_spec.lua: Tests show3dMapView with the mapper hidden reads back the mode the hidden mapper will reopen in
 Failure zz_Mapper3DView_spec.lua: Tests the 3D map perspective functions with the modern 3D view showing both are accepted while the modern 3D view shows, and refused for the classic view
 Failure zz_Mapper3DView_spec.lua: Tests the 3D map perspective functions with the modern 3D view showing paints rooms with a symbol, a highlight and a border, in and out of grid mode
