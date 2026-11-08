@@ -20,20 +20,34 @@
 #ifndef REFUSED_PORT_H
 #define REFUSED_PORT_H
 
-#include <QtNetwork/QTcpSocket>
+#include <QRandomGenerator>
+#include <QtNetwork/QTcpServer>
 
-// A localhost port that refuses connections for as long as this lives. A port taken from a
-// server that then closes is free again, and ctest runs other tests at the same time: one of
-// them can be given it and accept the connection meant to fail. Bound without listening, it
-// refuses connections and the system hands it to no one else.
+// A localhost port nothing listens on. A free port the system picked can be handed straight to a
+// test ctest runs alongside, which then accepts the connection meant to be refused; systems only
+// pick from 32768 up, so this takes one below that, and below the 20000 up the Lua specs pick from.
+// Holding it bound without listening is no use: macOS drops connections to such a port.
 class RefusedPort
 {
 public:
-    bool reserve() { return mSocket.bind(QHostAddress::LocalHost, 0, QAbstractSocket::DontShareAddress); }
-    quint16 port() const { return mSocket.localPort(); }
+    bool reserve()
+    {
+        for (int attempt = 0; attempt < 100; ++attempt) {
+            const auto candidate = static_cast<quint16>(QRandomGenerator::global()->bounded(scmFirst, scmLast));
+            QTcpServer probe;
+            if (probe.listen(QHostAddress::LocalHost, candidate)) {
+                mPort = candidate;
+                return true;
+            }
+        }
+        return false;
+    }
+    quint16 port() const { return mPort; }
 
 private:
-    QTcpSocket mSocket;
+    static constexpr int scmFirst = 10000;
+    static constexpr int scmLast = 20000;
+    quint16 mPort = 0;
 };
 
 #endif // REFUSED_PORT_H
