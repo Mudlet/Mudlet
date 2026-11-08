@@ -15,8 +15,14 @@ finish-args:
   - --filesystem=home
 
 cleanup:
-  - /bin/json_reformat
-  - /bin/json_verify
+  - /include
+  - /lib/cmake
+  - /lib/pkgconfig
+  - /share/pkgconfig
+  - /share/doc
+  - /share/man
+  - '*.a'
+  - '*.la'
 
 modules:
   - name: lua-5.1
@@ -32,7 +38,7 @@ modules:
       - ln -sf lua.pc $FLATPAK_DEST/lib/pkgconfig/lua-5.1.pc
     sources:
       - type: archive
-        url: 'https://www.lua.org/ftp/lua-5.1.5.tar.gz'
+        url: https://www.lua.org/ftp/lua-5.1.5.tar.gz
         sha256: 2640fc56a795f29d28ef15e13c34a47e223960b0240e8cb0a82d9b0738695333
       - type: patch
         path: lua-5.1.5-so.patch
@@ -40,10 +46,7 @@ modules:
         commands:
           - sed -i "s|/usr/local|$FLATPAK_DEST|" etc/lua.pc src/luaconf.h
     cleanup:
-      - '*.a'
       - /bin
-      - /include
-      - /lib/pkgconfig
       - /man
 
   - name: libsecret
@@ -66,37 +69,46 @@ modules:
   - name: libzip
     buildsystem: cmake-ninja
     config-opts:
-    - "-DCMAKE_BUILD_TYPE=Release"
-    - "-DCMAKE_INSTALL_LIBDIR=lib"
-    cleanup:
-    - "/include"
-    - "/bin"
-    - "/share"
-    - "/lib/pkgconfig"
-    - "/lib/*.la"
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DCMAKE_INSTALL_LIBDIR=lib
+      - -DBUILD_TOOLS=OFF
+      - -DBUILD_REGRESS=OFF
+      - -DBUILD_OSSFUZZ=OFF
+      - -DBUILD_EXAMPLES=OFF
+      - -DBUILD_DOC=OFF
     sources:
-    - type: archive
-      url: https://libzip.org/download/libzip-1.9.2.tar.xz
-      sha256: c93e9852b7b2dc931197831438fee5295976ee0ba24f8524a8907be5c2ba5937
+      - type: archive
+        url: https://libzip.org/download/libzip-1.12.1.tar.xz
+        sha256: c40062022a1963c80573d48f6070792297cecd7c6bffe3aefcac0d8b9bee8913
 
   - name: pugixml
     buildsystem: cmake-ninja
     config-opts:
-      - -DBUILD_SHARED_LIBS=on .
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DCMAKE_INSTALL_LIBDIR=lib
+      - -DBUILD_SHARED_LIBS=ON
     sources:
-      - type: archive
-        url: https://github.com/zeux/pugixml/releases/download/v1.11.4/pugixml-1.11.4.tar.gz
-        sha256: 8ddf57b65fb860416979a3f0640c2ad45ddddbbafa82508ef0a0af3ce7061716
+      - type: git
+        url: https://github.com/zeux/pugixml.git
+        tag: v1.16
+        commit: c8033ce9d039e7f9d134877c363397b3cfe20816
 
   - name: yajl
     buildsystem: cmake-ninja
     builddir: true
     config-opts:
-      - '-DCMAKE_BUILD_TYPE=Release'
+      - -DCMAKE_BUILD_TYPE=Release
+      # yajl declares cmake_minimum_required(2.6), which CMake 4 rejects
+      - -DCMAKE_POLICY_VERSION_MINIMUM=3.5
     sources:
-      - type: archive
-        url: 'https://github.com/lloyd/yajl/archive/refs/tags/2.1.0.tar.gz'
-        sha256: 3fb73364a5a30efe615046d07e6db9d09fd2b41c763c5f7d3bfb121cd5c5ac5a
+      - type: git
+        url: https://github.com/lloyd/yajl.git
+        tag: 2.1.0
+        commit: a0ecdde0c042b9256170f2f8890dd9451a4240aa
+      - type: patch
+        path: yajl-cmake-fix.patch
+    cleanup:
+      - /bin
 
   - name: luarocks
     buildsystem: simple
@@ -169,27 +181,59 @@ modules:
       - /lib/luarocks
 
   - name: boost
-    buildsystem: 'simple'
+    buildsystem: simple
     build-commands:
-      # we don't need to build boost, only using it for headers
-      - cp -r * /app/include
+      # Mudlet uses only headers, but finds them through the CMake config that b2 installs
+      - ./bootstrap.sh --prefix=$FLATPAK_DEST --with-libraries=system
+      - ./b2 install -j $FLATPAK_BUILDER_N_JOBS
     sources:
       - type: archive
-        url: 'https://sourceforge.net/projects/boost/files/boost/1.83.0/boost_1_83_0.tar.bz2'
-        sha256: 6478edfe2f3305127cffe8caf73ea0176c53769f4bf1585be237eb30798c3b8e
+        url: https://archives.boost.io/release/1.92.0/source/boost_1_92_0.tar.bz2
+        sha256: 5c1d40cb8e19adbf740a4ec2da35b3e58f3f5804b1dce44deb53df72193cbc6c
+
+  - name: qtkeychain
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DCMAKE_INSTALL_LIBDIR=lib
+      - -DBUILD_TRANSLATIONS=OFF
+    sources:
+      - type: git
+        url: https://github.com/frankosterfeld/qtkeychain.git
+        tag: 0.17.0
+        commit: 875f77d9f61bd97fd84cca47ce3bc71186dfbd09
+    cleanup:
+      - /mkspecs
 
   - name: glu
+    buildsystem: meson
     config-opts:
-      - --disable-static
+      - --libdir=lib
+      - -Ddefault_library=shared
     sources:
       - type: archive
-        url: https://ftp.osuosl.org/pub/blfs/conglomeration/glu/glu-9.0.2.tar.xz
-        sha256: 6e7280ff585c6a1d9dfcdf2fca489251634b3377bfc33c29e4002466a38d02d4
-    cleanup:
-      - /include
-      - /lib/*.a
-      - /lib/*.la
-      - /lib/pkgconfig
+        url: https://archive.mesa3d.org/glu/glu-9.0.3.tar.xz
+        sha256: bd43fe12f374b1192eb15fe20e45ff456b9bc26ab57f0eee919f96ca0f8a330f
+
+  # The 3D mapper only loads its embedded glTF model
+  - name: assimp
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DCMAKE_INSTALL_LIBDIR=lib
+      - -DASSIMP_BUILD_TESTS=OFF
+      - -DASSIMP_BUILD_ASSIMP_TOOLS=OFF
+      - -DASSIMP_WARNINGS_AS_ERRORS=OFF
+      - -DASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT=OFF
+      - -DASSIMP_BUILD_GLTF_IMPORTER=ON
+      - -DASSIMP_NO_EXPORT=ON
+      - -DASSIMP_INJECT_DEBUG_POSTFIX=OFF
+      - -DASSIMP_IGNORE_GIT_HASH=ON
+    sources:
+      - type: git
+        url: https://github.com/assimp/assimp.git
+        tag: v6.0.5
+        commit: 392a658f9c271be965271f45e7521a1b80ea4392
 
   # The KDE runtime ships Qt WebSockets but not Qt HttpServer, which the MCP server needs
   - name: qt6-qthttpserver
