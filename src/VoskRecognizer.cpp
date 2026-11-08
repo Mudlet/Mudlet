@@ -69,6 +69,7 @@ static constexpr int VOSK_SAMPLE_RATE = 16000;
 static int voskEndpointerModeValue(VoskRecognizer::EndpointerMode mode)
 {
     switch (mode) {
+    // libvosk has nothing shorter than its short mode
     case VoskRecognizer::EndpointerMode::VeryShort:
     case VoskRecognizer::EndpointerMode::Short:
         return 1;
