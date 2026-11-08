@@ -430,6 +430,12 @@ bool TConsoleModelNotifier::lineShownConnected() const
     return isSignalConnected(lineShownSignal);
 }
 
+bool TConsoleModelNotifier::linkChangedConnected() const
+{
+    static const QMetaMethod linkChangedSignal = QMetaMethod::fromSignal(&TConsoleModelNotifier::linkChanged);
+    return isSignalConnected(linkChangedSignal);
+}
+
 void TConsoleModel::notifyPrinted(const QString& text, const PrintedInto into, const bool startsLine)
 {
     if (text.isEmpty() || !mNotifier.textPrintedConnected()) {

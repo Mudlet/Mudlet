@@ -140,20 +140,21 @@ QList<TLinkStore::MenuItem> TLinkStore::menuItems(const int id) const
     return items;
 }
 
-void TLinkStore::expireLinks(const QString& expireName, Host* pH)
+QList<int> TLinkStore::expireLinks(const QString& expireName, Host* pH)
 {
     if (expireName.isEmpty()) {
-        return;
+        return {};
     }
 
-    QList<int> linkIds = mExpireToLinks.values(expireName);
+    const QList<int> linkIds = mExpireToLinks.values(expireName);
 
-    for (const int linkId : std::as_const(linkIds)) {
+    for (const int linkId : linkIds) {
         removeLinkById(linkId, pH);
     }
+    return linkIds;
 }
 
-void TLinkStore::removeUnreferencedLinks(const QSet<int>& referencedIds, Host* pH)
+QList<int> TLinkStore::removeUnreferencedLinks(const QSet<int>& referencedIds, Host* pH)
 {
     QList<int> idsToRemove;
 
@@ -166,6 +167,7 @@ void TLinkStore::removeUnreferencedLinks(const QSet<int>& referencedIds, Host* p
     for (int id : idsToRemove) {
         removeLinkById(id, pH);
     }
+    return idsToRemove;
 }
 
 void TLinkStore::clearStyling(int id)

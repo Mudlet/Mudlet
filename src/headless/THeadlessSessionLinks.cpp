@@ -24,6 +24,8 @@
 
 #include <QPointer>
 
+#include <utility>
+
 std::optional<THeadlessSession::Link> THeadlessSession::link(const int id) const
 {
     if (!mpHost || id <= 0) {
@@ -115,4 +117,46 @@ THeadlessSession::LinkResult THeadlessSession::followLink(const int link, const 
         mErrorString = luaErrorOf(errorText);
     }
     return LinkResult::failed;
+}
+
+void THeadlessSession::connectLinkRelays(Host* pHost, const unsigned int run)
+{
+    mChangedLinks.clear();
+    mChangedLinkIds.clear();
+    mLinksChangedPending = false;
+    connect(&pHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::linkChanged, this, [this, run](const int linkIndex) {
+        if (run != mRun) {
+            return;
+        }
+        if (!mChangedLinkIds.contains(linkIndex)) {
+            mChangedLinkIds.insert(linkIndex);
+            mChangedLinks.append(linkIndex);
+        }
+        if (!mLinksChangedPending) {
+            mLinksChangedPending = true;
+            QMetaObject::invokeMethod(
+                    this,
+                    [this, run]() {
+                        sendLinksChanged(run);
+                    },
+                    Qt::QueuedConnection);
+        }
+    });
+}
+
+void THeadlessSession::sendLinksChanged(const unsigned int run)
+{
+    // A later run gathers its own
+    if (run != mRun) {
+        return;
+    }
+    mLinksChangedPending = false;
+    mChangedLinkIds.clear();
+    const QList<int> links = std::exchange(mChangedLinks, {});
+    // A shutdown() runs the event loop as the profiles close
+    if (mShuttingDown || !mpHost || links.isEmpty()) {
+        return;
+    }
+    const QString profile = mProfileName;
+    emit linksChanged(profile, links);
 }
