@@ -2,7 +2,7 @@
 #
 #   cp .env.template .env                          # optional: sets the build's job count
 #   xhost +SI:localuser:"$(id -un)"                # let the container use your display; assumes your UID is 1000
-#   docker compose -f docker-compose.yml -f docker-compose.override.linux.yml up mudlet   # build and run Mudlet
+#   docker compose -f docker-compose.yml -f docker-compose.override.linux.yml up --build mudlet   # build and run Mudlet
 #   docker compose -f docker-compose.yml -f docker-compose.override.linux.yml up dev      # Qt Creator on this checkout
 #
 # On Wayland the window goes through Xwayland. "dev" builds into the checkout, so give it a build
