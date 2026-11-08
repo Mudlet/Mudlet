@@ -440,9 +440,8 @@ private slots:
         QCOMPARE(recognizer.endpointerMode(), VoskRecognizer::EndpointerMode::Default);
     }
 
-    // libvosk numbers its endpointer modes 0 default, 1 short, 2 long, 3 very
-    // long, which is not EndpointerMode's numbering: passed through unchanged,
-    // stt.setSensitivity("short") would ask libvosk for a longer pause
+    // Passed through in EndpointerMode's numbering, stt.setSensitivity("short")
+    // would ask libvosk for a longer pause
     void sensitivityReachesVoskInItsOwnNumbering()
     {
 #if !defined(INCLUDE_SPEECH_ENGINES)
@@ -472,6 +471,8 @@ private slots:
 
         // Each session starts on a recognizer built afresh, which has to be told again
         QVERIFY(recognizer.setSensitivity(SpeechRecognizer::Sensitivity::Long));
+        const int recognizersBeforeStart = VoskStub::recognizersCreated();
+        QVERIFY(recognizersBeforeStart >= 0);
         recognizer.startListening();
         const auto stateAfterStart = recognizer.state();
         if (stateAfterStart == SpeechRecognizer::State::Listening) {
@@ -481,6 +482,7 @@ private slots:
             recognizer.releaseResources();
             QSKIP("the start is waiting on a microphone permission prompt, so no session recognizer was built");
         }
+        QVERIFY2(VoskStub::recognizersCreated() > recognizersBeforeStart, "the start built no recognizer, so the mode below is the one set before it");
         QCOMPARE(VoskStub::lastEndpointerMode(), 2);
 
         recognizer.releaseResources();

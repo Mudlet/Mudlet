@@ -41,6 +41,7 @@ namespace {
 int gNullHandleCalls = 0;
 int gModelsAlive = 0;
 int gRecognizersAlive = 0;
+int gRecognizersCreated = 0;
 // What the newest recognizer was told, -1 until it is told anything: a stale
 // value from the one before it would hide a mode that was never reapplied
 int gLastEndpointerMode = -1;
@@ -79,6 +80,7 @@ void voskStubReset()
     gNullHandleCalls = 0;
     gModelsAlive = 0;
     gRecognizersAlive = 0;
+    gRecognizersCreated = 0;
     gLastEndpointerMode = -1;
 }
 
@@ -94,8 +96,12 @@ int voskStubRecognizersAlive()
     return gRecognizersAlive;
 }
 
-// The endpointer mode the newest recognizer was handed, in libvosk's own
-// numbering
+int voskStubRecognizersCreated()
+{
+    return gRecognizersCreated;
+}
+
+// In libvosk's own numbering, not EndpointerMode's
 int voskStubLastEndpointerMode()
 {
     return gLastEndpointerMode;
@@ -140,6 +146,7 @@ void* vosk_recognizer_new(void* model, float sampleRate)
     auto* recognizer = new StubRecognizer;
     recognizer->model = static_cast<StubModel*>(model);
     recognizer->sampleRate = sampleRate;
+    ++gRecognizersCreated;
     gLastEndpointerMode = -1;
     return recognizer;
 }

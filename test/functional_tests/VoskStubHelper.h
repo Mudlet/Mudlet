@@ -148,6 +148,18 @@ inline int lastEndpointerMode()
     return answer;
 }
 
+// How many recognizers the stub has built since it was last reset, -1 when it
+// cannot be read; from the installed copy, as nullHandleCalls() is
+inline int recognizersCreated()
+{
+    QLibrary stub(installedPath());
+    using countFn = int (*)();
+    auto* counter = reinterpret_cast<countFn>(stub.resolve("voskStubRecognizersCreated"));
+    const int created = counter ? counter() : -1;
+    stub.unload();
+    return created;
+}
+
 } // namespace VoskStub
 
 #endif // MUDLET_VOSKSTUBHELPER_H
