@@ -108,6 +108,7 @@ private:
     void startSendingLines(const QStringList& lines);
     void updateSendStrip();
     void updateSendReach();
+    void updateSelectionReach();
     void alignPrefixLeadWord();
     void updateNoPrefixWarning();
     void fitNoPrefixNote();
@@ -142,6 +143,8 @@ private:
     QString mNoPrefixNoteText;
     // Not action_noPrefixNote's visibility, which fitNoPrefixNote() also clears when no form of the words fits
     bool mNoPrefixWarningApplies = false;
+    // Counted once per edit or note switch, so a moving selection does not recount the whole note
+    int mNoteSendableLines = 0;
     QList<uiDesign::ActionGlyph> mNotepadActionGlyphs;
     QStringList mLinesToSend;
     QTimer* mSendTimer = nullptr;

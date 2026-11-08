@@ -475,7 +475,7 @@ int dlgNotepad::addTab(const QString& name, const QString& content)
     connect(textEdit->verticalScrollBar(), &QScrollBar::rangeChanged, this, rehighlightIfShown);
     textEdit->viewport()->installEventFilter(this);
     connect(textEdit, &QPlainTextEdit::textChanged, this, &dlgNotepad::updateSendStrip);
-    connect(textEdit, &QPlainTextEdit::selectionChanged, this, &dlgNotepad::updateSendStrip);
+    connect(textEdit, &QPlainTextEdit::selectionChanged, this, &dlgNotepad::updateSelectionReach);
 
     //: Default name for a new note tab
     const QString tabName = name.isEmpty() ? tr("New Note") : name;
@@ -969,21 +969,29 @@ void dlgNotepad::setSending(const bool sending)
 
 void dlgNotepad::updateSendStrip()
 {
+    auto* pTextEdit = currentTextEdit();
+    mNoteSendableLines = pTextEdit ? sendableLineCount(linesOf(pTextEdit->toPlainText())) : 0;
     updateSendReach();
     updateNoPrefixWarning();
 }
 
 void dlgNotepad::updateSendReach()
 {
-    auto* pTextEdit = currentTextEdit();
-    const int inTheNote = pTextEdit ? sendableLineCount(linesOf(pTextEdit->toPlainText())) : 0;
-    const int inTheSelection = pTextEdit ? sendableLineCount(linesOf(pTextEdit->textCursor().selectedText())) : 0;
+    const int inTheNote = mNoteSendableLines;
 
     // Singular as its own string: with no catalogue loaded Qt applies no plural form and shows "1 lines"
     //: Button at the foot of the notepad. %n is how many lines of the note would go to the game, one at a time.
     action_sendAll->setText(inTheNote == 1 ? tr("Send all (1 line)") : tr("Send all (%n lines)", "", inTheNote));
     action_sendAll->setEnabled(inTheNote > 0);
 
+    updateSelectionReach();
+    alignPrefixLeadWord();
+}
+
+void dlgNotepad::updateSelectionReach()
+{
+    auto* pTextEdit = currentTextEdit();
+    const int inTheSelection = pTextEdit ? sendableLineCount(linesOf(pTextEdit->textCursor().selectedText())) : 0;
     if (inTheSelection > 0) {
         //: Button at the foot of the notepad. %n is how many of the note's lines are selected.
         action_sendSelection->setText(inTheSelection == 1 ? tr("Send selection (1 line)") : tr("Send selection (%n lines)", "", inTheSelection));
@@ -992,7 +1000,6 @@ void dlgNotepad::updateSendReach()
         action_sendSelection->setText(tr("Send selection"));
     }
     action_sendSelection->setEnabled(inTheSelection > 0);
-    alignPrefixLeadWord();
 }
 
 // A tool button's sizeHint() slack lands after its word, on the seam's side, while a label's word sits at its edge
@@ -1021,8 +1028,7 @@ void dlgNotepad::updateNoPrefixWarning()
         return;
     }
 
-    auto* pTextEdit = currentTextEdit();
-    const int inTheNote = pTextEdit ? sendableLineCount(linesOf(pTextEdit->toPlainText())) : 0;
+    const int inTheNote = mNoteSendableLines;
     const bool warn = !mSending && lineEdit_prependText->text().isEmpty() && inTheNote > scmNotepadWarnAtLines;
 
     mNoPrefixWarningApplies = warn;

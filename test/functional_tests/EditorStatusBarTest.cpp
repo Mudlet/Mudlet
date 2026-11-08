@@ -196,6 +196,24 @@ private slots:
                                      .arg(pSidebar->item(1)->text(), nameInk.name(), countsInk.name(), QString::number(TestPixels::distance(nameInk, countsInk)));
         QVERIFY2(TestPixels::distance(nameInk, countsInk) <= scmInkTolerance, qPrintable(qsl("the bar is written in %1 while the sidebar's names are in %2").arg(countsInk.name(), nameInk.name())));
     }
+    void test_aSaveTurnedAwayLeavesTheLastSavedTime()
+    {
+        QLabel* pAutosave = mpEditor->mpLabel_statusAutosave;
+        QVERIFY2(pAutosave != nullptr, "the status bar has no label for the last save");
+        QTRY_VERIFY2(!mpHost->currentlySavingProfile(), "an earlier save never finished");
+        const QString before = qsl("no save yet");
+        pAutosave->setText(before);
+
+        // saveProfile() turns a save away while the profile is still loading
+        mpHost->mIsProfileLoadingSequence = true;
+        mpEditor->autoSave();
+        mpHost->mIsProfileLoadingSequence = false;
+        QCOMPARE(pAutosave->text(), before);
+
+        mpEditor->autoSave();
+        QVERIFY2(pAutosave->text() != before, "a save that went through did not say when");
+        QTRY_VERIFY2(!mpHost->currentlySavingProfile(), "the save never finished");
+    }
 };
 
 #include "EditorStatusBarTest.moc"

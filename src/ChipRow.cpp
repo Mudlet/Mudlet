@@ -265,13 +265,13 @@ void ChipRow::setItems(const QStringList& items)
     mChips.clear();
     QStringList taken;
     for (const QString& name : items) {
-        // The user cannot type an empty or repeated name here, but a profile file can carry either
-        const QString shown = cleaned(name);
-        if (shown.isEmpty() || taken.contains(shown)) {
+        // The user cannot type an empty or repeated name here, but a profile file can carry either; neither registers
+        // twice. Not cleaned like a typed name: a stored "ready," is its own event, and saving the row writes it back.
+        if (name.isEmpty() || taken.contains(name)) {
             continue;
         }
-        taken << shown;
-        mChips.append(makeChip(shown));
+        taken << name;
+        mChips.append(makeChip(name));
     }
     rebuild();
 }
@@ -288,9 +288,8 @@ QWidget* ChipRow::chipAt(const int index) const
 
 int ChipRow::indexOf(const QString& name) const
 {
-    const QString wanted = cleaned(name);
     for (int i = 0; i < mChips.size(); ++i) {
-        if (mChips.at(i)->name() == wanted) {
+        if (mChips.at(i)->name() == name) {
             return i;
         }
     }

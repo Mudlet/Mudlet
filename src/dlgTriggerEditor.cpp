@@ -11076,8 +11076,8 @@ void dlgTriggerEditor::timerEvent(QTimerEvent* event)
 
 void dlgTriggerEditor::autoSave()
 {
-    mpHost->saveProfileReportingFailure(qsl("autosave"));
-    if (mpLabel_statusAutosave) {
+    // A save turned away or failed keeps the last time that did get written
+    if (mpHost->saveProfileReportingFailure(qsl("autosave")) && mpLabel_statusAutosave) {
         //: Editor status bar, trailing edge. %1 is a time of day in the player's own format.
         mpLabel_statusAutosave->setText(tr("Autosaved %1").arg(QLocale::system().toString(QTime::currentTime(), QLocale::ShortFormat)));
     }

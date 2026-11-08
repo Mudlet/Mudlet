@@ -341,6 +341,20 @@ private slots:
         QCOMPARE(mpNotepad->action_sendSelection->text(), qsl("Send selection"));
         QVERIFY2(!mpNotepad->action_sendSelection->isEnabled(), "Send selection is available with nothing selected");
 
+        // The count is kept between edits, so it has to follow the note on show and ignore the others
+        mpNotepad->tabWidget->setCurrentIndex(1);
+        QCoreApplication::processEvents();
+        currentNote()->setPlainText(qsl("one\ntwo"));
+        QCoreApplication::processEvents();
+        QCOMPARE(mpNotepad->action_sendAll->text(), qsl("Send all (2 lines)"));
+        QPlainTextEdit* pSecond = currentNote();
+        mpNotepad->tabWidget->setCurrentIndex(0);
+        QCoreApplication::processEvents();
+        QCOMPARE(mpNotepad->action_sendAll->text(), qsl("Send all (12 lines)"));
+        pSecond->clear();
+        QCoreApplication::processEvents();
+        QCOMPARE(mpNotepad->action_sendAll->text(), qsl("Send all (12 lines)"));
+
         QVERIFY2(!onShow(mpNotepad->action_stop), "Stop is on the strip with nothing being sent");
 
         // On macOS the lead word and the field otherwise sit a size larger than

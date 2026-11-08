@@ -867,6 +867,26 @@ private slots:
         const QString renamedMiss = expectChip({qsl("sysLoadEvent"), true, fromMudlet});
         QVERIFY2(renamedMiss.isEmpty(), qPrintable(renamedMiss));
     }
+    // Typing cleans a name, but one a profile file carries is its own event: a script listening for
+    // "ready," must not be moved to "ready" just because it was opened and saved
+    void test_aStoredNameIsKeptAsItIs()
+    {
+        TScript* pScript = mpHost->getScriptUnit()->getScript(mpScriptItem->data(0, Qt::UserRole).toInt());
+        QVERIFY2(pScript != nullptr, "the script is not in the script unit");
+        const QStringList stored{qsl("ready,"), qsl(" padded "), qsl("MyEvent")};
+        pScript->setEventHandlerList(stored);
+        mpEditor->slot_scriptsSelected(mpScriptItem);
+        QTest::qWait(50ms);
+        QCOMPARE(row()->items(), stored);
+
+        mpEditor->slot_saveSelectedItem();
+        QTest::qWait(50ms);
+        QCOMPARE(savedEvents(), stored);
+
+        pScript->setEventHandlerList(startingEvents());
+        mpEditor->slot_scriptsSelected(mpScriptItem);
+        QTest::qWait(50ms);
+    }
 };
 
 #include "EditorEventChipRowTest.moc"
