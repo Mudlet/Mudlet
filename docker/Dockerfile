@@ -70,7 +70,7 @@ RUN --mount=type=bind,source=CI/install-lua-rocks.sh,target=/tmp/install-lua-roc
     && /tmp/install-lua-rocks.sh --check \
     && mkdir -p /home/mudlet/.cache /home/mudlet/.config/mudlet /home/mudlet/settings
 
-# Mudlet finds the --local rocks itself; the C++ tests and a bare busted need them on the Lua path
+# Mudlet finds the --local rocks itself; the C++ functional tests need them on the Lua path
 ENV LUA_PATH="/home/mudlet/.luarocks/share/lua/5.1/?.lua;/home/mudlet/.luarocks/share/lua/5.1/?/init.lua;;" \
     LUA_CPATH="/home/mudlet/.luarocks/lib/lua/5.1/?.so;;"
 

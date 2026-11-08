@@ -5,7 +5,8 @@
 #   docker compose -f docker-compose.yml -f docker-compose.override.linux.yml up mudlet   # build and run Mudlet
 #   docker compose -f docker-compose.yml -f docker-compose.override.linux.yml up dev      # Qt Creator on this checkout
 #
-# On Wayland the window goes through Xwayland.
+# On Wayland the window goes through Xwayland. "dev" builds into the checkout, so give it a build
+# directory that no host build has configured: CMake would reuse that tree's paths to the host's Qt.
 name: mudlet
 
 services:
