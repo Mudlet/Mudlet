@@ -80,8 +80,8 @@ jobs:
             gcc_compiler_version: 14
             qt: '6.11.3'
             ccache_id: ubuntu-clang
-          # macOS 15, not 26: the app bundles the runner's Homebrew libraries, which take their minimum
-          # macOS from the system they were built on (26.0 on macos-26), not CMAKE_OSX_DEPLOYMENT_TARGET.
+          # Homebrew has no Intel bottles past Sonoma, so this also bundles the image's preinstalled pcre2, sqlite,
+          # libzip and oniguruma; GitHub keeps macos-15-intel until August 2027 and says macos-26-intel is no replacement.
           # No tests: none branch on host architecture, so the arm64 job covers them on a faster pool.
           - os: macos-15-intel
             buildname: 'macos (x86_64)'
@@ -91,6 +91,8 @@ jobs:
             deploy: 'deploy'
             build_tests: 'false'
             pgo: 'true'
+          # macOS 15, not 26: bundled Homebrew libraries carry the minos of the macOS they were bottled for
+          # (15.0 here, 26.0 on macos-26), whatever CMAKE_OSX_DEPLOYMENT_TARGET says.
           - os: macos-15
             buildname: 'macos (arm64) / c++, lua tests'
             compiler: clang_64
