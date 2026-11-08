@@ -24,6 +24,7 @@
  * Run with: ctest -R HeadlessSessionLinksTest -V
  */
 
+#include <QDateTime>
 #include <QDesktopServices>
 #include <QDir>
 #include <QFile>
@@ -41,6 +42,7 @@
 #include "PortableModeTestHelper.h"
 #include "TConsoleModel.h"
 #include "THeadlessSession.h"
+#include "TelnetServerStub.h"
 
 #include "GroupedTest.h"
 
@@ -796,6 +798,51 @@ tempRegexTrigger("^headless raising$", [[echoLink(" r", function() error("headle
         QVERIFY(session.shutdown(false));
         QTest::qWait(50);
         QCOMPARE(changed.count(), 0);
+    }
+    void test_aLineCarriesWhenItArrived()
+    {
+        const QString name = qsl("Headless Line Times");
+        QVERIFY(writeProfile(name, qsl(R"lua(tempRegexTrigger("^headless timed$", [[deleteLine() echo("headless written\n")]]))lua")));
+        TelnetServerStub server;
+        server.setSendsWelcome(false);
+        server.start(qsl("127.0.0.1"));
+        QVERIFY(server.isListening());
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+        THeadlessSession session;
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QSignalSpy shown(&session, &THeadlessSession::lineShown);
+        QStringList oldHandlerLines;
+        connect(&session, &THeadlessSession::outputLine, this, [&oldHandlerLines](const QString&, const QString& text, bool) {
+            oldHandlerLines << text;
+        });
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        QTRY_VERIFY_WITH_TIMEOUT(server.clientConnected(), 10000);
+
+        const qint64 before = QDateTime::currentMSecsSinceEpoch();
+        server.sendRaw("headless game line\nheadless timed\n");
+        QTRY_VERIFY_WITH_TIMEOUT(oldHandlerLines.contains(qsl("headless timed")), 10000);
+        const qint64 after = QDateTime::currentMSecsSinceEpoch();
+        QVERIFY(oldHandlerLines.contains(qsl("headless game line")));
+
+        auto timeOf = [](const QSignalSpy& spy, const QString& text) -> std::optional<qint64> {
+            for (const auto& arguments : spy) {
+                if (arguments.at(1).toString() == text) {
+                    return arguments.at(4).toLongLong();
+                }
+            }
+            return std::nullopt;
+        };
+        const std::optional<qint64> gameLine = timeOf(output, qsl("headless game line"));
+        QVERIFY(gameLine);
+        QVERIFY2(*gameLine >= before && *gameLine <= after, qPrintable(qsl("%1 not in [%2, %3]").arg(*gameLine).arg(before).arg(after)));
+        QCOMPARE(timeOf(shown, qsl("headless game line")), gameLine);
+        const std::optional<qint64> triggerLine = timeOf(output, qsl("headless timed"));
+        QVERIFY(triggerLine);
+        QVERIFY(*triggerLine >= *gameLine && *triggerLine <= after);
+        // An echo() after deleteLine() is drawn on the end of the line above, so it has that line's time
+        QCOMPARE(timeOf(shown, qsl("headless written")), gameLine);
+        QVERIFY(session.shutdown(false));
     }
 };
 

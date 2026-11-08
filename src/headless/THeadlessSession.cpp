@@ -1982,6 +1982,19 @@ QList<THeadlessSession::TextRun> textRuns(const QString& text, const TLineFormat
     return runs;
 }
 
+// A segment a wrap split off has no time of its own, so takes that of the line it came from
+qint64 arrivalTime(const TBuffer& buffer, int line)
+{
+    if (line < 0 || line >= buffer.timeBuffer.size()) {
+        return -1;
+    }
+    while (line > 0 && buffer.timeBuffer.at(line) == TBuffer::csmWrappedLineTimeStamp) {
+        --line;
+    }
+    const qint64 time = buffer.timeBuffer.at(line);
+    return time < 0 ? -1 : time;
+}
+
 } // namespace
 
 void THeadlessSession::lineCommitted(const int lineIndex)
@@ -2007,7 +2020,7 @@ void THeadlessSession::lineCommitted(const int lineIndex)
     // A handler may delete the session, whose pool then waits for the commit to end; hence the copy of the name
     const QString profile = mProfileName;
     ++gSignalsBeingHandedOut;
-    emit outputLine(profile, text, buffer.promptBuffer.at(lineIndex), runs);
+    emit outputLine(profile, text, buffer.promptBuffer.at(lineIndex), runs, arrivalTime(buffer, lineIndex));
     --gSignalsBeingHandedOut;
 }
 
@@ -2059,7 +2072,7 @@ THeadlessSession::ShownLine THeadlessSession::wholeLine(const TBuffer& buffer, c
         format.insert(format.end(), formatFrom, segmentFormat.end());
         format.resize(text.size(), format.empty() ? TChar() : format.back());
     }
-    return {text, buffer.promptBuffer.at(first), textRuns(text, TLineFormat(std::move(format)), mpHost->mFgColor, mpHost->mBgColor)};
+    return {text, buffer.promptBuffer.at(first), textRuns(text, TLineFormat(std::move(format)), mpHost->mFgColor, mpHost->mBgColor), arrivalTime(buffer, first)};
 }
 
 bool THeadlessSession::lineShownWanted() const
@@ -2085,8 +2098,9 @@ QList<THeadlessSession::ShownLine> THeadlessSession::takeTriggerWrites(const boo
     if (writes.isEmpty() || !taken) {
         return lines;
     }
+    const TBuffer& buffer = mpHost->mainConsoleModel().buffer;
     for (const TConsoleModel::TriggerWrite& write : writes) {
-        lines.append({write.text, false, textRuns(write.text, TLineFormat(write.format), mpHost->mFgColor, mpHost->mBgColor)});
+        lines.append({write.text, false, textRuns(write.text, TLineFormat(write.format), mpHost->mFgColor, mpHost->mBgColor), arrivalTime(buffer, write.line)});
     }
     return lines;
 }
@@ -2097,7 +2111,7 @@ bool THeadlessSession::sendShownLines(const QList<ShownLine>& lines)
     const QString profile = mProfileName;
     for (const ShownLine& line : lines) {
         ++gSignalsBeingHandedOut;
-        emit lineShown(profile, line.text, line.isPrompt, line.runs);
+        emit lineShown(profile, line.text, line.isPrompt, line.runs, line.arrivalMSecs);
         --gSignalsBeingHandedOut;
         if (!self) {
             return false;
