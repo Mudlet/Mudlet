@@ -9,19 +9,10 @@ Failure AddonCommand_spec.lua: addon commands a shortcut it cannot honour refuse
 Failure AddonCommand_spec.lua: addon commands a shortcut it cannot honour says so when the search is switched on over a command's key
 Failure ConsoleFontsByName_spec.lua: Tests that the font functions find their console by name with a sub-console's name reads the size a style sheet gives a user window's text
 Failure GeyserAdjustableContainer_spec.lua: Tests Adjustable.Container borders, persistence and menu items Adjustable.Container:adjustBorder/setBorderMargin/resetBorder keeps the console its rows through a window resize with both sides attached
-Failure GeyserAdjustableContainer_spec.lua: Tests Adjustable.Container borders, persistence and menu items Adjustable.Container:adjustBorder/setBorderMargin/resetBorder reserves nothing for a container a nested detach took off the facing border
-Failure GeyserAdjustableContainer_spec.lua: Tests Adjustable.Container borders, persistence and menu items Adjustable.Container:hideObj is followed once shown by a container that connected while it was hidden
-Failure GeyserAdjustableContainer_spec.lua: Tests Adjustable.Container borders, persistence and menu items Adjustable.Container:hideObj still leads the containers connected to it after being hidden and shown
 Failure GeyserAdjustableContainer_spec.lua: Tests Adjustable.Container borders, persistence and menu items Tests the functionality of Adjustable.Container:connectToBorder keeps a connected container following the window once it is resized
 Failure GeyserAdjustableContainer_spec.lua: Tests Adjustable.Container borders, persistence and menu items Tests the functionality of Adjustable.Container:connectToBorder leaves a far-edge constraint measuring from the far edge
-Failure GeyserAdjustableContainer_spec.lua: Tests functionality of Adjustable.Container Tests the functionality of Adjustable.Container:attachToBorder/detach ends detached when a resize handler moves it out of reach mid-move
-Failure GeyserAdjustableContainer_spec.lua: Tests functionality of Adjustable.Container Tests the functionality of Adjustable.Container:attachToBorder/detach takes the new border when shown after a resize handler hides it mid-move
-Failure GeyserAdjustableContainer_spec.lua: Tests the Adjustable.Container mouse handlers Adjustable.Container:onMove raises AdjustableContainerReposition while the drag is in progress
 Failure GeyserUserWindow_spec.lua: Tests functionality of Geyser.UserWindow Geyser.UserWindow:new/new2 gives itself a root container sized to the user window
 Failure HostApi_spec.lua: openUserWindow still refuses the name of a mini console inside a deleted user window
-Failure MXP_spec.lua: Tests MXP handling Tests the frames MXP asks for reads a size given in characters as characters
-Failure MXP_spec.lua: Tests MXP handling Tests the frames MXP asks for takes rows instead when the frame is along the bottom
-Failure MXP_spec.lua: Tests MXP handling Tests the frames MXP asks for takes the columns an internal frame needs from the main window
 Failure MapSymbolPrivateUse_spec.lua: Tests room symbols from a font's Private Use Area draws a glyph the symbol font has there, from any font, in a map loaded from a JSON file
 Failure MapSymbolPrivateUse_spec.lua: Tests room symbols from a font's Private Use Area draws a glyph the symbol font has there, from any font, in a map loaded from a binary file
 Failure MapSymbolPrivateUse_spec.lua: Tests room symbols from a font's Private Use Area draws a glyph the symbol font has there, from only the selected font, in a map loaded from a binary file

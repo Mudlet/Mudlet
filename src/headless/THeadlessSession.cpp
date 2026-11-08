@@ -1120,32 +1120,14 @@ bool THeadlessSession::setScreenSize(const int columns, const int rows)
         return false;
     }
     // The GUI's main console never reports itself narrower
-    const int width = std::max(40, columns);
-    // As the GUI's resize: each call would put NAWS off for another 0.3s
-    if (width == mpHost->mScreenWidth && rows == mpHost->mScreenHeight) {
+    const QSize area(std::max(40, columns), rows);
+    // As TConsole::resizeEvent(), which tells scripts nothing for the size they have
+    if (area == mpHost->mainAreaCells()) {
         return true;
     }
-    mpHost->setScreenDimensions(width, rows);
-    mpHost->updateDisplayDimensions();
-
-    // As TConsole::resizeEvent() reports the main window. The first handler may close the profile, and a
-    // function the frontend bound into Lua delete the session.
-    const QPointer<THeadlessSession> self(this);
-    mpHost->getLuaInterpreter()->call(qsl("handleWindowResizeEvent"), qsl("WindowResizeEvent"));
-    if (!self || !mpHost || mpHost->closeStarted()) {
-        return true;
-    }
-    const QSize size = mpHost->mainWindowSize().value_or(QSize());
-    TEvent event{};
-    event.mArgumentList.append(qsl("sysWindowResizeEvent"));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    event.mArgumentList.append(QString::number(size.width()));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    event.mArgumentList.append(QString::number(size.height()));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    event.mArgumentList.append(qsl("main"));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    mpHost->raiseEvent(event);
+    mpHost->setMainAreaCells(area);
+    // The first handler may close the profile, and a function the frontend bound into Lua delete the session
+    mpHost->layOutMainAreaWithNoView(Host::MainAreaChange::area);
     return true;
 }
 

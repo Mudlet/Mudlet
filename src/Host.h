@@ -882,6 +882,17 @@ public:
     static constexpr int scmMaxBorderSize = 1'000'000;
     void setUserBorders(const QMargins);
     void setMxpBorders(const QMargins);
+    // With no view: the main window's area in the main console's cells, which the borders take from
+    QSize mainAreaCells() const { return mMainAreaCells.value_or(QSize(mScreenWidth, mScreenHeight)); }
+    void setMainAreaCells(const QSize& cells) { mMainAreaCells = cells; }
+    // With no view, as the GUI lays the main console out: fits its grid to what the borders leave of the main
+    // window's area, then tells scripts as a change of border or a resize of the main window does there. A
+    // handler can close the profile. Nothing is laid out while the save loads; load lays out the borders it left,
+    // and tells scripts nothing, as none has run yet.
+    enum class MainAreaChange { borders, area, load };
+    void layOutMainAreaWithNoView(MainAreaChange);
+    // With no view: what the borders leave of the main window's area
+    QSize mainTextAreaWithNoView() const;
     void loadMap();
     bool saveMapFile(const QString& location, int saveVersion = 0);
     // Call before writing or reading the profile's map files: the newest of them is the one a profile loads
@@ -1770,6 +1781,8 @@ private:
     QMargins mBorders;
     QMargins mUserBorders;
     QMargins mMxpBorders;
+    // Unset till a frontend gives an area or a border first takes from it, so till then it is the grid
+    std::optional<QSize> mMainAreaCells;
 
     // 0 to scmMaxCommandLineHistorySaveSize lines, for ALL command lines; 0 turns
     // saving the history off:
