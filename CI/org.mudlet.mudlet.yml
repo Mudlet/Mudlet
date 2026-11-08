@@ -12,7 +12,14 @@ finish-args:
   - --device=dri
   - --socket=pulseaudio
   - --share=network
+  # Scripts load sounds, packages, maps and logs from any absolute path they are given
   - --filesystem=home
+  # showNotification() goes through Qt's tray icon, which uses these
+  - --talk-name=org.kde.StatusNotifierWatcher
+  - --talk-name=org.freedesktop.Notifications
+  # QtKeychain stores passwords in KWallet on KDE; elsewhere libsecret uses the Secret portal
+  - --talk-name=org.kde.kwalletd6
+  - --talk-name=org.kde.kwalletd5
 
 cleanup:
   - /include
