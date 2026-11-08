@@ -45,6 +45,7 @@
 #endif
 
 #if defined(Q_OS_UNIX)
+#include <cerrno>
 #include <sys/stat.h>
 #endif
 
@@ -118,12 +119,15 @@ bool SecureStringUtils::confirmFileIsOwnerOnly(const QString& path)
     return ownerOnlyOrWarn(path);
 }
 
-bool SecureStringUtils::restrictSaveFileToOwner(QSaveFile& file)
+bool SecureStringUtils::restrictSaveFileToOwner(QSaveFile& file, QString* refusal)
 {
 #if defined(Q_OS_UNIX)
     // Not QSaveFile::setPermissions(): from Qt 6.12 it only records the mode, and commit() drops a
     // refusal to apply it, so the save succeeds with the file still readable to others
     if (::fchmod(file.handle(), S_IRUSR | S_IWUSR) != 0) {
+        if (refusal) {
+            *refusal = qt_error_string(errno);
+        }
         return false;
     }
     // Otherwise commit() on Qt 6.12+ gives the file the mode of the one it replaces, or the umask's
@@ -132,6 +136,7 @@ bool SecureStringUtils::restrictSaveFileToOwner(QSaveFile& file)
     return true;
 #else
     Q_UNUSED(file)
+    Q_UNUSED(refusal)
     return true;
 #endif
 }
