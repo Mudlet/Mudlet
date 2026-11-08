@@ -766,3 +766,17 @@ its script as well. In the GUI a click on it opens its menu, which the app shows
 run, so an app that presses the entry picked and then the folder does as the GUI does. It is false,
 with `errorString()` saying why, for an id `buttonBars()` does not list, such as an inactive button or a
 bar itself, and refused where `submit()` is.
+
+## Embedding it: completing the command line
+
+The GUI's command line completes the word being typed when the player presses Tab, from the main
+console's recent text and from words scripts give it. `THeadlessSession` gives an app the same.
+
+`commandLineSuggestions()` is the words scripts gave the main command line with
+`addCmdLineSuggestion()`, and `commandLineBlacklist()` those they gave with `addCmdLineBlacklist()`,
+which Tab is never to complete to. Each word is there once, however often it was added, and the lists
+are sorted. As in the GUI, `removeCmdLineSuggestion()` and `removeCmdLineBlacklist()` take one word out,
+and `clearCmdLineSuggestions()` and `clearCmdLineBlacklist()` empty them. Words a script gives a line
+from `createCommandLine()` or a mini console's own command line are that line's, not the main line's.
+Both lists are empty with no profile open, and may be read from anywhere, a handler included. No signal
+says they changed: an app reads them when it needs them, as when the player presses Tab.

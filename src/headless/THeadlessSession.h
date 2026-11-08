@@ -417,6 +417,11 @@ public:
     // less the borders. Empty with no profile open: read them at profileLoaded, then follow mainConsoleAreaChanged.
     QSize mainConsoleGrid() const;
     QRect mainConsoleTextRect() const;
+    // The words scripts gave the main command line for Tab to complete, with addCmdLineSuggestion(), and those
+    // it is never to complete, with addCmdLineBlacklist(), each once and sorted. Empty with no profile open.
+    // Read from anywhere.
+    QStringList commandLineSuggestions() const;
+    QStringList commandLineBlacklist() const;
 
     // sysExitEvent and, if asked, a save for every profile that loaded, then the pool goes. Meanwhile no profile
     // opens, and none dials the game or logs in, a live connection staying for the exit handlers. Refused while a
