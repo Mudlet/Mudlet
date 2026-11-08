@@ -30,6 +30,7 @@ int TLinkStore::addLinks(const QStringList& links, const QStringList& hints, Hos
 {
     if (++mLinkID > mMaxLinks) {
         mLinkID = 1;
+        ++mLaps;
     }
 
     // Used to unref lua objects in the registry to avoid memory leaks
@@ -57,6 +58,16 @@ int TLinkStore::addLinks(const QStringList& links, const QStringList& hints, Hos
     }
 
     return mLinkID;
+}
+
+qint64 TLinkStore::issueOf(const int id) const
+{
+    if (!contains(id)) {
+        return 0;
+    }
+    // Those above the last id handed out were handed out on the lap before
+    const qint64 lap = id <= mLinkID ? mLaps : mLaps - 1;
+    return lap * mMaxLinks + id;
 }
 
 void TLinkStore::freeReference(Host* pH, const QVector<int>& oldReference)

@@ -30,7 +30,6 @@
 
 #include <QColor>
 #include <QElapsedTimer>
-#include <QMap>
 #include <QPointer>
 #include <QImage>
 #include <QRect>
@@ -41,8 +40,6 @@
 #include <memory>
 #include <string>
 #include <vector>
-
-#include "THyperlinkStyling.h"
 
 
 class Host;
@@ -127,7 +124,6 @@ public:
     void updateCaret();
     void showKeyboardContextMenu();
     void announceLinkFocus(int linkIndex);
-    void applyHyperlinkSelectionGroupState(int linkIndex, QString& uri, const Mudlet::HyperlinkStyling::SelectionSettings& selection, const char* callerContext);
 
     QColor mBgColor;
     // position of cursor, in characters, across the entire buffer. The upper
@@ -167,16 +163,10 @@ public:
     // to be related to the file monitoring feature in the *nix tail command.
     // See, e.g.: https://en.wikipedia.org/wiki/Tail_(Unix)#File_monitoring
     bool mIsTailMode = true;
-    // The content to use for the current popup (link)
-    // Key: is an index stored when the popup is created - this has been
-    // changed from the previous "text to show for each popup" to avoid
-    // problems with duplicate texts:
-    // Value: is the lua code as a string (first) or the lua function reference number (second)
-    QMap<int, std::pair<QString, int>> mPopupCommands;
-    // The link index that the currently-displayed popup belongs to, or 0 if
-    // none. Used so that selection-group state is applied to the right link
-    // when a multi-command popup item is activated via slot_popupMenu().
+    // The link whose menu is showing, 0 for none; its actions carry the item's index plus one
     int mPopupLinkIndex = 0;
+    // Its TLinkStore::issueOf() as the menu was built, as a pick must not run a link that has since taken its id
+    qint64 mPopupLinkIssue = 0;
     // How many lines the screen scrolled since it was last rendered.
     int mScrollVector;
     QRegion mSelectedRegion;
