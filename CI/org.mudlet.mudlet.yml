@@ -1,6 +1,6 @@
 id: org.mudlet.mudlet
 runtime: org.kde.Platform
-runtime-version: '6.8'
+runtime-version: '6.11'
 sdk: org.kde.Sdk
 command: mudlet
 rename-desktop-file: mudlet.desktop
@@ -48,23 +48,6 @@ modules:
     cleanup:
       - /bin
       - /man
-
-  - name: libsecret
-    buildsystem: meson
-    config-opts:
-      - -Dmanpage=false
-      - -Dvapi=false
-      - -Dgtk_doc=false
-      - -Dintrospection=false
-      # https://gitlab.gnome.org/GNOME/libsecret/-/issues/49
-      - -Dgcrypt=false
-    sources:
-      - commit: 3fe635e64efd4b8dbc9ec3548b0bc8034c7665c4
-        tag: 0.20.4
-        type: git
-        url: https://gitlab.gnome.org/GNOME/libsecret.git
-    cleanup:
-      - /bin/secret-tool
 
   - name: libzip
     buildsystem: cmake-ninja
@@ -235,24 +218,21 @@ modules:
         tag: v6.0.5
         commit: 392a658f9c271be965271f45e7521a1b80ea4392
 
-  # The KDE runtime ships Qt WebSockets but not Qt HttpServer, which the MCP server needs
-  - name: qt6-qthttpserver
-    buildsystem: cmake-ninja
-    sources:
-      - type: archive
-        url: https://download.qt.io/archive/qt/6.8/6.8.3/submodules/qthttpserver-everywhere-src-6.8.3.tar.xz
-        sha256: 792be98dd979a3f1cf42477139321a8999a648b7e7ad041ae133965c3cc35f65
-    # Qt installs to /app/lib/<triplet>, which is not on the sandbox's loader path
-    post-install:
-      - mkdir -p ${FLATPAK_DEST}/etc
-      - for dir in ${FLATPAK_DEST}/lib/*-linux-gnu; do echo "$dir" >> ${FLATPAK_DEST}/etc/ld.so.conf; done
-
   - name: mudlet
     buildsystem: cmake-ninja
     config-opts:
       - -DCMAKE_BUILD_TYPE=RelWithDebInfo
+      # Defaults to address, which a release build must not carry
+      - -DUSE_SANITIZER=
+      - -DBUILD_TESTING=OFF
+      # Flatpak delivers updates itself
+      - -DUSE_UPDATER=OFF
       # The rocks are in /app, where only the Lua built above looks
       - -DUSE_BUNDLED_LUA=OFF
+      # The SDK has a newer Lua in /usr, which CMake would otherwise find first
+      - -DLUA_INCLUDE_DIR=/app/include
+      - -DLUA_LIBRARY=/app/lib/liblua.so
     sources:
+      # Check out the git submodules first: the build has no network to fetch them
       - type: dir
         path: ../
