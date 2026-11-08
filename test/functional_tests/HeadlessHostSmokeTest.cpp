@@ -12973,6 +12973,17 @@ unzipAsync([[%1]], [[%2]])
         QFile extracted(extractTo + qsl("/inline.txt"));
         QVERIFY(extracted.open(QIODevice::ReadOnly));
         QCOMPARE(extracted.readAll(), QByteArray("unzipped inline"));
+
+        // The map's autosave too, whose wait for its write would otherwise never end
+        host->mpMap->addRoom(7);
+        QVERIFY(host->mpMap->isUnsaved());
+        const QString autosave = MudletApp::getMudletPath(enums::profileMapPathFileName, hostname, qsl("autosave.dat"));
+        QFile::remove(autosave);
+        host->autoSaveMap();
+        QVERIFY2(host->mMapAutosaveFuture.isFinished(), "The map's autosave was left for a pool thread.");
+        QVERIFY(QFileInfo(autosave).size() > 0);
+        host->waitForMapAutosave();
+        QVERIFY(!host->mpMap->isUnsaved());
         HostManager::self()->deleteHost(hostname);
     }
 

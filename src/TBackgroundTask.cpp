@@ -55,6 +55,16 @@ QFuture<bool> TBackgroundTask::run(std::function<bool()> task)
     return QtFuture::makeReadyValueFuture(task());
 }
 
+QFuture<QString> TBackgroundTask::runForReason(std::function<QString()> task)
+{
+#if QT_CONFIG(thread)
+    if (!runsInline()) {
+        return QtConcurrent::run(std::move(task));
+    }
+#endif
+    return QtFuture::makeReadyValueFuture(task());
+}
+
 QFuture<bool> TBackgroundTask::runAfter(const QList<QFuture<bool>>& earlier, std::function<bool()> task)
 {
 #if QT_CONFIG(thread)

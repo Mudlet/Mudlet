@@ -76,7 +76,6 @@
 #include <QEventLoop>
 #include <QFileInfo>
 #include <QFutureWatcher>
-#include <QtConcurrentRun>
 #include <QFontInfo>
 #include <QFontMetrics>
 #include <QJsonDocument>
@@ -1293,7 +1292,9 @@ void Host::autoSaveMapInBackground(const QString& path)
     mpMap->resetUnsaved();
 
     mMapAutosaveResultPending = true;
-    mMapAutosaveFuture = QtConcurrent::run(writeFileAtomically, path, std::move(bytes));
+    mMapAutosaveFuture = TBackgroundTask::runForReason([path, bytes = std::move(bytes)]() {
+        return writeFileAtomically(path, bytes);
+    });
     auto watcher = new QFutureWatcher<QString>(this);
     connect(watcher, &QFutureWatcher<QString>::finished, this, [this, watcher]() {
         watcher->deleteLater();

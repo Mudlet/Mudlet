@@ -23,6 +23,7 @@
 
 #include <QFuture>
 #include <QList>
+#include <QString>
 
 #include <functional>
 
@@ -33,6 +34,8 @@ class TBackgroundTask
 {
 public:
     static QFuture<bool> run(std::function<bool()> task);
+    // For a task that answers why it failed, empty when it did not
+    static QFuture<QString> runForReason(std::function<QString()> task);
     // Starts once every one of earlier has finished, without holding a pool thread while it waits
     static QFuture<bool> runAfter(const QList<QFuture<bool>>& earlier, std::function<bool()> task);
     static bool runsInline();
