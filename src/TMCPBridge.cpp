@@ -19,6 +19,7 @@
 
 #include "TMCPBridge.h"
 
+#include "SecureStringUtils.h"
 #include "TMCPServer.h"
 #include "utils.h"
 
@@ -405,7 +406,7 @@ bool TMCPBridge::writeDiscoveryFile(const QString& configDir, const quint16 port
     // portable install, say) the restriction cannot be applied; the file is written
     // anyway, since refusing would break the feature there entirely, but it is worth
     // a trace.
-    if (!file.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner)) {
+    if (!SecureStringUtils::restrictSaveFileToOwner(file)) {
         qWarning() << "TMCPBridge::writeDiscoveryFile(...) WARNING - could not make" << file.fileName() << "private to this user; other users of this machine may be able to read the MCP access token";
     }
     QJsonObject contents;

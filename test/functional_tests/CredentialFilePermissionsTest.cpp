@@ -59,9 +59,31 @@
 #if defined(Q_OS_UNIX)
 #include <sys/stat.h>
 #endif
+#if defined(Q_OS_LINUX)
+#include <cerrno>
+#include <sys/syscall.h>
+#include <unistd.h>
+#endif
 
 #include "GroupedTest.h"
 #include "PortableModeTestHelper.h"
+
+#if defined(Q_OS_LINUX)
+static bool refuseOwnerOnlyOnOpenFiles = false;
+
+// Stands in for libc's for this whole binary, Qt's own calls included, so that a case can play a
+// file system that refuses to close an open file to other accounts and leaves it readable by all
+// (vfat with fmask=022 keeps every file so), yet takes owner-only by path, as some file systems do
+extern "C" int fchmod(int fd, mode_t mode) noexcept
+{
+    if (refuseOwnerOnlyOnOpenFiles && !(mode & (S_IRGRP | S_IROTH))) {
+        ::syscall(SYS_fchmod, fd, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+        errno = EPERM;
+        return -1;
+    }
+    return static_cast<int>(::syscall(SYS_fchmod, fd, mode));
+}
+#endif
 
 // QTest::ignoreMessage can only assert that a message was printed, so counting the
 // diagnostic is the only way to say it was not.
@@ -153,6 +175,8 @@ private:
             QDir(profileDirectory(profile)).removeRecursively();
             QDir(rawProfileDirectory(profile)).removeRecursively();
             QDir(qsl("%1/profiles/%2").arg(configRoot(), profile.left(50))).removeRecursively();
+            // Where MudletApp keeps the plain-text password, which is not under configRoot()
+            QDir(MudletApp::getMudletPath(enums::profileHomePath, profile)).removeRecursively();
         }
     }
 
@@ -309,6 +333,47 @@ private slots:
         QVERIFY(openToEveryone(path));
         QCOMPARE(MudletApp::readProfileData(mProfile, item), mPassword);
         QVERIFY2(!reachableByOthers(path), "reading the profile's password left it readable by other accounts on this machine");
+    }
+
+    // Saving again over a file left readable must not hand the new copy the old file's mode
+    void test_aPlainTextProfilePasswordSavedOverAnOpenFileIsOwnerOnly()
+    {
+#if !defined(Q_OS_UNIX)
+        QSKIP("there are no POSIX permission bits to check on this platform");
+#endif
+        const QString item = qsl("password");
+        const QString path = MudletApp::getMudletPath(enums::profileDataItemPath, mProfile, item);
+        QVERIFY2(!QFileInfo::exists(path), "this case started on a config root an earlier run left behind, so it would prove nothing");
+        QVERIFY(MudletApp::writeProfileData(mProfile, item, qsl("an older password")).first);
+        QVERIFY(openToEveryone(path));
+        QVERIFY(reachableByOthers(path));
+
+        QVERIFY(MudletApp::writeProfileData(mProfile, item, mPassword).first);
+
+        QVERIFY2(!reachableByOthers(path), "saving the profile's password over a readable copy left it readable by other accounts on this machine");
+        QCOMPARE(MudletApp::readProfileData(mProfile, item), mPassword);
+    }
+
+    // Where the file system refuses to narrow the file while it is being written, the password is
+    // still saved, and narrowed by path once it is in place
+    void test_aPlainTextProfilePasswordIsSavedWhereTheOpenFileCannotBeNarrowed()
+    {
+#if !defined(Q_OS_LINUX)
+        QSKIP("needs fchmod() to be replaced, which this test does only on Linux");
+#else
+        const QString item = qsl("password");
+        const QString path = MudletApp::getMudletPath(enums::profileDataItemPath, mProfile, item);
+        QVERIFY2(!QFileInfo::exists(path), "this case started on a config root an earlier run left behind, so it would prove nothing");
+
+        refuseOwnerOnlyOnOpenFiles = true;
+        const QPair<bool, QString> result = MudletApp::writeProfileData(mProfile, item, mPassword);
+        refuseOwnerOnlyOnOpenFiles = false;
+
+        QVERIFY2(result.first, qPrintable(qsl("the password was not saved: %1").arg(result.second)));
+        // Before reading it back, as a read narrows the file too
+        QVERIFY2(!reachableByOthers(path), "the password was left readable by other accounts on this machine");
+        QCOMPARE(MudletApp::readProfileData(mProfile, item), mPassword);
+#endif
     }
 
     // The passwords/<key>.dat pair SecureStringUtils offers on its own, which has no caller

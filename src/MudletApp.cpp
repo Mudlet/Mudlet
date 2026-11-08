@@ -805,7 +805,7 @@ QPair<bool, QString> MudletApp::writeProfileData(const QString& profile, const Q
     if (holdsSecret) {
         // On the temporary file, before the secret is in it: commit() renames it into place, and a
         // replaced file's mode would otherwise carry over
-        narrowAfterCommit = !file.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner);
+        narrowAfterCommit = !SecureStringUtils::restrictSaveFileToOwner(file);
     }
 
     QDataStream ofs(&file);
