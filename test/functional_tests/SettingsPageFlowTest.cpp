@@ -371,7 +371,8 @@ private:
                 }
             }
             const int contentEnd = inside.right() - trailingPadding;
-            QVERIFY2(inkEnd <= contentEnd && inkEnd >= contentEnd - 3,
+            // A last glyph's antialiased edge can stand a pixel past its advance, as "%" does in Windows' fixed-pitch faces
+            QVERIFY2(inkEnd <= contentEnd + 1 && inkEnd >= contentEnd - 3,
                      qPrintable(qsl("the words in '%1' end at %2px, not at the trailing padding at %3px").arg(pAlpha->objectName()).arg(inkEnd - inside.left()).arg(contentEnd - inside.left())));
             wordsEnd.append(inkEnd);
             // ...and where they start, the first ink past the field after the swatch
