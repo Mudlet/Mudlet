@@ -882,17 +882,24 @@ public:
     static constexpr int scmMaxBorderSize = 1'000'000;
     void setUserBorders(const QMargins);
     void setMxpBorders(const QMargins);
-    // With no view: the main window's area in the main console's cells, which the borders take from
+    // With no view: the main window's area, which the borders take from. Given in the main console's cells, a
+    // font change counts it again in the new font's; given in pixels, the font decides the grid.
     QSize mainAreaCells() const { return mMainAreaCells.value_or(QSize(mScreenWidth, mScreenHeight)); }
-    void setMainAreaCells(const QSize& cells) { mMainAreaCells = cells; }
+    void setMainAreaCells(const QSize& cells)
+    {
+        mMainAreaCells = cells;
+        mMainAreaPixels.reset();
+    }
+    void setMainAreaPixels(const QSize& pixels) { mMainAreaPixels = pixels; }
+    bool mainAreaInPixels() const { return mMainAreaPixels.has_value(); }
+    // With no view: where the main console's text goes in the main window's area, what the borders leave of it
+    QRect mainTextRectWithNoView() const;
     // With no view, as the GUI lays the main console out: fits its grid to what the borders leave of the main
-    // window's area, then tells scripts as a change of border or a resize of the main window does there. A
-    // handler can close the profile. Nothing is laid out while the save loads; load lays out the borders it left,
-    // and tells scripts nothing, as none has run yet.
-    enum class MainAreaChange { borders, area, load };
+    // window's area, then tells scripts as a change of border or a resize of the main window does there; a font
+    // change, which does not resize the main window, tells them nothing. A handler can close the profile. Nothing
+    // is laid out while the save loads; load lays out what it left, and tells scripts nothing, as none has run yet.
+    enum class MainAreaChange { borders, area, font, load };
     void layOutMainAreaWithNoView(MainAreaChange);
-    // With no view: what the borders leave of the main window's area
-    QSize mainTextAreaWithNoView() const;
     void loadMap();
     bool saveMapFile(const QString& location, int saveVersion = 0);
     // Call before writing or reading the profile's map files: the newest of them is the one a profile loads
@@ -1425,6 +1432,8 @@ signals:
     void signal_packageListChanged();
     void signal_profileStyleSheetChanged(const QString& styleSheet);
     void signal_consoleFontChanged(const QFont& font);
+    // With no view: the main console's grid, or where its text goes, may have changed
+    void signal_mainAreaLaidOut();
     void signal_editorSearchOptionsChanged(const enums::EditorSearchOptions);
     void signal_editorShowBidiChanged(const bool);
     void signal_showIdsInEditorChanged(const bool);
@@ -1783,6 +1792,7 @@ private:
     QMargins mMxpBorders;
     // Unset till a frontend gives an area or a border first takes from it, so till then it is the grid
     std::optional<QSize> mMainAreaCells;
+    std::optional<QSize> mMainAreaPixels;
 
     // 0 to scmMaxCommandLineHistorySaveSize lines, for ALL command lines; 0 turns
     // saving the history off:

@@ -28,6 +28,8 @@
 #include <QList>
 #include <QObject>
 #include <QPointer>
+#include <QRect>
+#include <QSize>
 #include <QString>
 #include <QStringList>
 
@@ -405,6 +407,16 @@ public:
     // script, and a push-down button goes down or up. False, with errorString() saying why, for an id it does not
     // list; refused where submit() is.
     bool pressButton(int id);
+    // The main window's size in pixels, as a resize of the GUI's main window gives it: the borders a script or MXP
+    // sets take their room from it, and the main console's font decides how many characters fit in what is left,
+    // so a font change regrids it and the area stays. Raises sysWindowResizeEvent as setScreenSize() does, and the
+    // later of the two holds. Refused where setScreenSize() is, and for a size that holds no character of the font
+    // either way, or more than 65535.
+    bool setMainWindowSize(const QSize& pixels);
+    // The main console's grid in characters, and where its text goes in the main window's area in pixels: the area
+    // less the borders. Empty with no profile open: read them at profileLoaded, then follow mainConsoleAreaChanged.
+    QSize mainConsoleGrid() const;
+    QRect mainConsoleTextRect() const;
 
     // sysExitEvent and, if asked, a save for every profile that loaded, then the pool goes. Meanwhile no profile
     // opens, and none dials the game or logs in, a live connection staying for the exit handlers. Refused while a
@@ -574,6 +586,11 @@ signals:
     // The session's profile closed; any other profile its scripts opened runs on until shutdown(). Not sent once
     // shutdown() has been called, even for a close a script made before it
     void quitRequested();
+    // mainConsoleGrid() or mainConsoleTextRect() changed, from a border a script or MXP set, a font change,
+    // setMainWindowSize() or setScreenSize(). From the event loop, with both as they are then, and only when they
+    // differ from what was last sent or what they gave at profileLoaded, so a turn that changes them more than once
+    // sends them once.
+    void mainConsoleAreaChanged(const QString& profile, const QSize& grid, const QRect& textRect);
 
 private:
     bool storeConnectionDetails(const Options&, std::optional<bool> tls);
@@ -607,6 +624,9 @@ private:
     void connectOutputRelays(Host*, unsigned int run);
     void noteOutputStateAtLoad();
     void sendLatency();
+    // The relay of the main console's area, in THeadlessSessionArea.cpp
+    void connectAreaRelays(Host*, unsigned int run);
+    void noteAreaAtLoad();
     // duringLoad takes a call while a profile loads, which only one that cannot reach the pool may do
     bool refused(bool duringLoad = false);
     bool usable(bool duringLoad = false);
@@ -677,6 +697,8 @@ private:
     unsigned int mLatencyPaceRun = 0;
     // The latency box's text as last sent
     QString mDeliveredLatency;
+    // What mainConsoleGrid() and mainConsoleTextRect() gave at profileLoaded, then each mainConsoleAreaChanged
+    std::optional<std::pair<QSize, QRect>> mDeliveredMainConsoleArea;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(THeadlessSession::TextStyles)
