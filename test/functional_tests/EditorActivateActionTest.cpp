@@ -278,10 +278,10 @@ private slots:
         }
         QVERIFY2(qAlpha(densest) > 128, "the unavailable glyph has nothing drawn to read");
         const QColor ink(densest);
-        const auto near = [](const QColor& a, const QColor& b) {
+        const auto closeTo = [](const QColor& a, const QColor& b) {
             return std::abs(a.red() - b.red()) <= 2 && std::abs(a.green() - b.green()) <= 2 && std::abs(a.blue() - b.blue()) <= 2;
         };
-        QVERIFY2(near(ink, tokens.disabledBarText), qPrintable(qsl("the unavailable button's glyph is %1, not the bar's %2").arg(ink.name(), tokens.disabledBarText.name())));
+        QVERIFY2(closeTo(ink, tokens.disabledBarText), qPrintable(qsl("the unavailable button's glyph is %1, not the bar's %2").arg(ink.name(), tokens.disabledBarText.name())));
     }
 
     void test_nothingToSwitchLeavesItUnavailable()

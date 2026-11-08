@@ -197,7 +197,7 @@ private slots:
             }
             return hue;
         };
-        const auto near = [](const qreal hue, const uiDesign::IdentityColour& identity) {
+        const auto closeTo = [](const qreal hue, const uiDesign::IdentityColour& identity) {
             return hue >= 0.0 && std::abs(hue - identity.hue) < 0.03;
         };
 
@@ -205,14 +205,14 @@ private slots:
         mudlet::self()->setColouredIcons(true);
 
         const qreal triggers = hueOf(sidebarRowFor(EditorViewType::cmTriggerView)->icon());
-        QVERIFY2(near(triggers, uiDesign::scmIdentity_triggers), qPrintable(qsl("the Triggers row is not the orange of its old wand: hue %1").arg(triggers)));
+        QVERIFY2(closeTo(triggers, uiDesign::scmIdentity_triggers), qPrintable(qsl("the Triggers row is not the orange of its old wand: hue %1").arg(triggers)));
         QVERIFY2(TestPixels::drawnAt(mpEditor->mpTriggerBaseItem->icon(0), scmComparisonSize) == TestPixels::drawnAt(sidebarRowFor(EditorViewType::cmTriggerView)->icon(), scmComparisonSize),
                  "the Triggers heading and its sidebar row took different pictures");
         QCOMPARE(hueOf(sidebarRowFor(EditorViewType::cmKeysView)->icon()), -1.0);
         const qreal add = hueOf(mpEditor->mAddItem->icon());
-        QVERIFY2(near(add, uiDesign::scmIdentity_add), qPrintable(qsl("Add is not the green of its old plus: hue %1").arg(add)));
+        QVERIFY2(closeTo(add, uiDesign::scmIdentity_add), qPrintable(qsl("Add is not the green of its old plus: hue %1").arg(add)));
         const qreal deleted = hueOf(mpEditor->mDeleteItem->icon());
-        QVERIFY2(near(deleted, uiDesign::scmIdentity_delete), qPrintable(qsl("Delete is not the red of its old cross: hue %1").arg(deleted)));
+        QVERIFY2(closeTo(deleted, uiDesign::scmIdentity_delete), qPrintable(qsl("Delete is not the red of its old cross: hue %1").arg(deleted)));
         QCOMPARE(hueOf(mpEditor->mSaveItem->icon()), -1.0);
 
         mudlet::self()->setColouredIcons(false);
