@@ -126,10 +126,12 @@ modules:
       - luarocks --tree=$FLATPAK_DEST build --deps-mode=none luautf8-0.2.1-1.src.rock
       - luarocks --tree=$FLATPAK_DEST build --deps-mode=none lpeg-1.1.0-2.src.rock
       - luarocks --tree=$FLATPAK_DEST build --deps-mode=none lua-zip-0.2-0.src.rock ZIP_DIR=$FLATPAK_DEST
+      # Assigned first, as a failed command substitution inside the luarocks arguments would pass an empty path
       - >-
+        PCRE2_INCDIR=$(pkg-config --variable=includedir libpcre2-8) &&
+        PCRE2_LIBDIR=$(pkg-config --variable=libdir libpcre2-8) &&
         luarocks --tree=$FLATPAK_DEST build --deps-mode=none lrexlib-pcre2-2.9.4-1.src.rock
-        PCRE2_INCDIR=$(pkg-config --variable=includedir libpcre2-8)
-        PCRE2_LIBDIR=$(pkg-config --variable=libdir libpcre2-8)
+        PCRE2_INCDIR="$PCRE2_INCDIR" PCRE2_LIBDIR="$PCRE2_LIBDIR"
       - cd lua-yajl && luarocks --tree=$FLATPAK_DEST make --deps-mode=none lua-yajl-2.1-0.rockspec YAJL_DIR=$FLATPAK_DEST
       # db:create fails on luasql-sqlite3 2.7 and newer, so every Mudlet build pins it
       - cd luasql && luarocks --tree=$FLATPAK_DEST make --deps-mode=none luasql-sqlite3-2.6.1-3.rockspec
