@@ -41,6 +41,7 @@
 #include <QtNetwork/QTcpSocket>
 #include <QtTest/QtTest>
 
+#include "RefusedPort.h"
 #include "TelnetServerStub.h"
 
 #if defined(Q_OS_WINDOWS)
@@ -1391,12 +1392,9 @@ tempAlias("^bye$", [[closeProfile()]]))lua")
         const QString name = qsl("Headless Runner Typed To Nobody");
         QString recordPath;
         QVERIFY(writeRecordingProfile(name, qsl(R"lua(tempAlias("^note$", [[record("noted")]]))lua"), recordPath));
-        quint16 port = 0;
-        {
-            QTcpServer closed;
-            QVERIFY(closed.listen(QHostAddress::LocalHost));
-            port = closed.serverPort();
-        }
+        RefusedPort refused;
+        QVERIFY(refused.reserve());
+        const quint16 port = refused.port();
         QVERIFY(writeProfileData(name, qsl("url"), qsl("127.0.0.1")) && writeProfileData(name, qsl("port"), QString::number(port)));
 
         QProcess child;
@@ -1418,12 +1416,9 @@ tempAlias("^bye$", [[closeProfile()]]))lua")
         const QString name = qsl("Headless Runner Noted To Nobody");
         QString recordPath;
         QVERIFY(writeRecordingProfile(name, qsl(R"lua(tempAlias("^note$", [[record("noted")]]))lua"), recordPath));
-        quint16 port = 0;
-        {
-            QTcpServer closed;
-            QVERIFY(closed.listen(QHostAddress::LocalHost));
-            port = closed.serverPort();
-        }
+        RefusedPort refused;
+        QVERIFY(refused.reserve());
+        const quint16 port = refused.port();
         QVERIFY(writeProfileData(name, qsl("url"), qsl("127.0.0.1")) && writeProfileData(name, qsl("port"), QString::number(port)));
 
         QProcess child;
@@ -1442,12 +1437,9 @@ tempAlias("^bye$", [[closeProfile()]]))lua")
     void test_inputTakenDuringAnAliasEventLoopIsCountedOnce()
     {
         const QString name = qsl("Headless Runner Hop");
-        quint16 closedPort = 0;
-        {
-            QTcpServer closed;
-            QVERIFY(closed.listen(QHostAddress::LocalHost));
-            closedPort = closed.serverPort();
-        }
+        RefusedPort refused;
+        QVERIFY(refused.reserve());
+        const quint16 closedPort = refused.port();
         QString recordPath;
         // Long enough for the next line to be waiting when connectToServer() runs its event loop
         QVERIFY(writeRecordingProfile(name,
@@ -1518,12 +1510,9 @@ record("hopped")
     void test_aPackageThatSendsBeforeTheConnectionFailsTheRun()
     {
         const QString name = qsl("Headless Runner Package Sent Too Soon");
-        quint16 closedPort = 0;
-        {
-            QTcpServer closed;
-            QVERIFY(closed.listen(QHostAddress::LocalHost));
-            closedPort = closed.serverPort();
-        }
+        RefusedPort refused;
+        QVERIFY(refused.reserve());
+        const quint16 closedPort = refused.port();
         QString recordPath;
         QVERIFY(writeRecordingProfile(name, QString(), recordPath));
         const QString packagePath = writePackage(qsl("runnerSendsEarly"), qsl(R"lua(send("frompackage"))lua"));
@@ -1633,12 +1622,9 @@ registerAnonymousEventHandler("sysDisconnectionEvent", function() record("discon
         const QString name = qsl("Headless Runner Refused %1").arg(arguments.size());
         QString recordPath;
         QVERIFY(writeRecordingProfile(name, QString(), recordPath));
-        quint16 port = 0;
-        {
-            QTcpServer closed;
-            QVERIFY(closed.listen(QHostAddress::LocalHost));
-            port = closed.serverPort();
-        }
+        RefusedPort refused;
+        QVERIFY(refused.reserve());
+        const quint16 port = refused.port();
         QVERIFY(writeProfileData(name, qsl("url"), qsl("127.0.0.1")) && writeProfileData(name, qsl("port"), QString::number(port)));
 
         QProcess child;
