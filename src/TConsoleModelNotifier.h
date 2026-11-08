@@ -70,6 +70,8 @@ signals:
     // The buffer was emptied, so view state indexing its old lines is stale.
     void bufferCleared();
     void spoilerRevealed();
+    // The null view's alertNewData(): game text came in that the profile asks to be alerted to.
+    void newDataAlerted();
 };
 
 #endif // MUDLET_TCONSOLEMODELNOTIFIER_H

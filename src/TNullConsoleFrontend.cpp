@@ -3647,11 +3647,17 @@ bool TNullConsoleFrontend::setWindowFontSize(const QString& name, const int size
     return true;
 }
 
-// No window to alert, but timed as TMainConsole times a pass for its latency box
+// Timed as TMainConsole times a pass for its latency box. With no window to be minimized, whether the app's is is the
+// session's to say
 bool TNullConsoleFrontend::startIncomingText()
 {
     mIncomingTextTimer.restart();
-    return false;
+    return mpHost->mAlertOnNewData;
+}
+
+void TNullConsoleFrontend::alertNewData()
+{
+    emit mpHost->mainConsoleModel().mNotifier.newDataAlerted();
 }
 
 void TNullConsoleFrontend::finishIncomingText(bool)

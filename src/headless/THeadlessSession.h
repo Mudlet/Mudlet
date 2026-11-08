@@ -440,6 +440,11 @@ public:
     // history" off, or the whole line selected, as after Escape, a kept submit or a line set as notTyped, until it is
     // typed into or completed.
     std::optional<QString> completeCommandLineFromHistory();
+    // The app's window minimized or hidden, as the GUI's main window is when minimized, or a phone app sent to the
+    // background: only then does new game text ask for the player's attention, as attentionRequested says. It starts
+    // false, raises no event, as minimizing the GUI raises none, and may be set from anywhere, before start() too.
+    void setWindowMinimized(bool minimized);
+    bool windowMinimized() const { return mWindowMinimized; }
 
     // sysExitEvent and, if asked, a save for every profile that loaded, then the pool goes. Meanwhile no profile
     // opens, and none dials the game or logs in, a live connection staying for the exit handlers. Refused while a
@@ -526,7 +531,9 @@ signals:
     // What the GUI shows outside the profile's screen: a script's showNotification(), which answers true only
     // when this signal is connected and not blocked, with no milliseconds for the system's own time; and a
     // script's alert() or the game's bell, asking for the player's attention for that long, 0 until they come
-    // back to the app.
+    // back to the app; and, with 0, game text that arrives while setWindowMinimized() has the app minimized and the
+    // profile asks for a notification when new data arrives while minimized, once each time it is minimized, as the
+    // GUI's flash lasts until the player comes back.
     // Sent as asked, so a handler may neither call the session nor run the event loop.
     void notificationRequested(const QString& profile, const QString& title, const QString& text, std::optional<int> milliseconds);
     void attentionRequested(const QString& profile, int milliseconds);
@@ -733,6 +740,11 @@ private:
     std::optional<std::pair<QSize, QRect>> mDeliveredMainConsoleArea;
     // The size a script asked for, and Host's count of that request, while mainWindowResizeRequested's handler runs
     std::optional<std::pair<QSize, quint64>> mAnsweringMainWindowRequest;
+    bool mWindowMinimized = false;
+    // Counted, so that the new-data alert of one time minimized is neither sent in another nor stops its own
+    unsigned int mWindowMinimizedChanges = 0;
+    // The run and time minimized the new-data alert was last sent for
+    std::optional<std::pair<unsigned int, unsigned int>> mNewDataAlertedFor;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(THeadlessSession::TextStyles)
