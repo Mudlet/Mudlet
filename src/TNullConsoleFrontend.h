@@ -20,6 +20,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "TCommandLineCompletion.h"
 #include "TConsoleFrontend.h"
 #include "TMxpFrameFrontend.h"
 #include "TNullMapView.h"
@@ -229,6 +230,11 @@ public:
     bool clearCommandLineBlacklist(const QString& name) override;
     const QSet<QString>& mainCommandLineSuggestions() const { return mMainCommandLine.suggestions; }
     const QSet<QString>& mainCommandLineBlacklist() const { return mMainCommandLine.blacklist; }
+    // As Tab or Shift+Tab on the GUI's main command line: the line it leaves, set as not typed, or nullopt with nothing
+    // to complete
+    std::optional<QString> tabCompleteMainCommandLine(bool forward);
+    // As Escape on the GUI's line ends the cycle
+    void resetMainCommandLineCompletion() { mMainCommandLineCompletion.reset(); }
     bool addCommandLineMenuItem(const QString& name, const QString& label, const QString& eventName) override;
     std::optional<bool> removeCommandLineMenuItem(const QString& name, const QString& label) override;
     bool setCommandLineSavesHistory(const QString& name, bool savesHistory) override;
@@ -533,6 +539,9 @@ private:
     bool ownsCommandLine(const QString& name) const;
     PlainWindow* commandLineNamed(const QString& name);
     void releaseCommandLine(const QString& name, const PlainWindow& commandLine);
+    // typeMainCommandLine() less its end of Tab's cycle, for a completion to leave its line with
+    void writeMainCommandLine(const QString& plain, bool playerTyped);
+    void endMainCommandLineCompletion();
     QObject* holderFor(const QString& userWindow, const ScrollBox* box) const;
     HistoryWriter* makeHistoryWriter(QObject* parent, const QString& name, const QString& fileName, bool savesHistory);
     void dropModels();
@@ -585,6 +594,10 @@ private:
     bool mMainCommandLineTyped = false;
     // As the GUI's line once selectAll() has run, so what the player types next replaces it
     bool mMainCommandLineAllSelected = false;
+    // TCommandLine's own, for Tab
+    TCommandLineCompletion mMainCommandLineCompletion;
+    // The line a completion last left, which the app handing back does not edit, until the cycle ends
+    std::optional<QString> mMainCommandLineCompleted;
     // Whether the line held for a send was written to while it was sent
     bool mMainCommandLineRewritten = false;
     // A send emptied the line while hidden input was wanted, which the app has not been told

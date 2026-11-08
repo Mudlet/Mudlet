@@ -26,13 +26,21 @@
 
 #include <QDir>
 #include <QFile>
+#include <QSignalSpy>
+#include <QTcpServer>
+#include <QTcpSocket>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include <memory>
+#include <optional>
+
+#include "Host.h"
 #include "HostManager.h"
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "THeadlessSession.h"
+#include "TLuaInterpreter.h"
 
 #include "GroupedTest.h"
 
@@ -61,6 +69,60 @@ private:
 </MudletPackage>
 )");
         return true;
+    }
+
+    static bool listenAsTheGame(QTcpServer& server, const QString& name)
+    {
+        return server.listen(QHostAddress::LocalHost) && MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first
+               && MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first;
+    }
+
+    static QStringList texts(const QSignalSpy& spy)
+    {
+        QStringList result;
+        for (const auto& arguments : spy) {
+            result << arguments.at(1).toString();
+        }
+        return result;
+    }
+
+    // What a script's getCmdLine() reads
+    static QString scriptsLine(THeadlessSession& session)
+    {
+        if (!session.runLua(qsl("headlessCmdLine = getCmdLine()"))) {
+            return qsl("<getCmdLine() failed>");
+        }
+        lua_State* L = session.host()->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, "headlessCmdLine");
+        const QString value = lua_isstring(L, -1) ? QString::fromUtf8(lua_tostring(L, -1)) : QString();
+        lua_pop(L, 1);
+        return value;
+    }
+
+    // Started against a game that has sent the line
+    static bool startWithGameLine(THeadlessSession& session, const QString& name, QTcpServer& server, std::unique_ptr<QTcpSocket>& game, const QByteArray& line)
+    {
+        if (!writeProfile(name) || !listenAsTheGame(server, name)) {
+            return false;
+        }
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        if (session.start({.profile = name, .connect = true}) != THeadlessSession::StartResult::started) {
+            return false;
+        }
+        // The connection is made on this thread's event loop, which waitForNewConnection() would block
+        for (int waited = 0; !server.hasPendingConnections() && waited < 10000; waited += 50) {
+            QTest::qWait(50);
+        }
+        if (!server.hasPendingConnections()) {
+            return false;
+        }
+        game.reset(server.nextPendingConnection());
+        game->write(line + "\r\n");
+        const QString text = QString::fromUtf8(line);
+        for (int waited = 0; !texts(output).contains(text) && waited < 10000; waited += 50) {
+            QTest::qWait(50);
+        }
+        return texts(output).contains(text);
     }
 
 private slots:
@@ -154,6 +216,181 @@ clearCmdLineSuggestions("headlessConsole")
 )lua")),
                  qPrintable(session.errorString()));
         QCOMPARE(session.commandLineSuggestions(), QStringList({qsl("mainword")}));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_tabCompletesAWordTheGameSent()
+    {
+        THeadlessSession session;
+        QCOMPARE(session.completeCommandLine(), std::nullopt);
+        QCOMPARE(session.errorString(), qsl("No profile is open."));
+        QTcpServer server;
+        std::unique_ptr<QTcpSocket> game;
+        QVERIFY(startWithGameLine(session, qsl("Headless Tab Game Word"), server, game, "a goblin attacks"));
+
+        QVERIFY(session.setCommandLineText(qsl("kill gob")));
+        QCOMPARE(session.completeCommandLine(), std::optional<QString>(qsl("kill goblin")));
+        QCOMPARE(scriptsLine(session), qsl("kill goblin"));
+        QVERIFY(session.setCommandLineText(qsl("kill orc")));
+        QCOMPARE(session.completeCommandLine(), std::nullopt);
+        QCOMPARE(session.errorString(), qsl("No word completes what is typed."));
+        QCOMPARE(scriptsLine(session), qsl("kill orc"));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // The most recently seen first, as the GUI offers them, stopping at either end
+    void test_tabGoesThroughTheWordsInTheGuisOrder()
+    {
+        THeadlessSession session;
+        QTcpServer server;
+        std::unique_ptr<QTcpSocket> game;
+        QVERIFY(startWithGameLine(session, qsl("Headless Tab Order"), server, game, "a goblet and a goblin"));
+
+        QVERIFY(session.setCommandLineText(qsl("gob")));
+        QCOMPARE(session.completeCommandLine(), std::optional<QString>(qsl("goblin")));
+        QCOMPARE(session.completeCommandLine(), std::optional<QString>(qsl("goblet")));
+        QCOMPARE(session.completeCommandLine(), std::optional<QString>(qsl("goblet")));
+        QCOMPARE(session.completeCommandLine(false), std::optional<QString>(qsl("goblin")));
+        QCOMPARE(session.completeCommandLine(false), std::optional<QString>(qsl("goblin")));
+        QCOMPARE(session.completeCommandLine(true), std::optional<QString>(qsl("goblet")));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_tabCompletesASuggestionButNoBlacklistedWord()
+    {
+        const QString name = qsl("Headless Tab Suggestion");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"lua(
+addCmdLineSuggestion("fireball")
+addCmdLineSuggestion("gobstopper")
+addCmdLineSuggestion("goblin")
+addCmdLineBlacklist("GOBLIN")
+)lua")));
+        QVERIFY(session.setCommandLineText(qsl("cast fir")));
+        QCOMPARE(session.completeCommandLine(), std::optional<QString>(qsl("cast fireball")));
+        QVERIFY(session.setCommandLineText(qsl("eat gob")));
+        QCOMPARE(session.completeCommandLine(), std::optional<QString>(qsl("eat gobstopper")));
+        QCOMPARE(session.completeCommandLine(), std::optional<QString>(qsl("eat gobstopper")));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // As a key on the GUI's line: one that changes it starts a new cycle, Escape ends the cycle, and the line the
+    // completion set handed back as typed changes nothing
+    void test_editingTheLineStartsANewCycle()
+    {
+        THeadlessSession session;
+        QTcpServer server;
+        std::unique_ptr<QTcpSocket> game;
+        QVERIFY(startWithGameLine(session, qsl("Headless Tab Reset"), server, game, "a goblet and a goblin"));
+
+        QVERIFY(session.setCommandLineText(qsl("gob")));
+        QCOMPARE(session.completeCommandLine(), std::optional<QString>(qsl("goblin")));
+        QVERIFY(session.setCommandLineText(qsl("goblin")));
+        QCOMPARE(session.completeCommandLine(), std::optional<QString>(qsl("goblet")));
+        QVERIFY(session.setCommandLineText(qsl("go")));
+        QCOMPARE(session.completeCommandLine(), std::optional<QString>(qsl("goblin")));
+
+        QCOMPARE(session.completeCommandLine(), std::optional<QString>(qsl("goblet")));
+        QCOMPARE(session.pressKey(Qt::Key_Escape), THeadlessSession::KeyResult::keyKept);
+        // Read again whole, and no word goes on from "goblet"
+        QCOMPARE(session.completeCommandLine(), std::nullopt);
+        QVERIFY(session.shutdown(false));
+    }
+
+    // As Backspace on the GUI's line, as Mudlet cannot tell it from another key
+    void test_anEditBackToTheCompletedLineEndsTheCycle()
+    {
+        THeadlessSession session;
+        QTcpServer server;
+        std::unique_ptr<QTcpSocket> game;
+        QVERIFY(startWithGameLine(session, qsl("Headless Tab Edit Back"), server, game, "a goblet and a goblin"));
+
+        QVERIFY(session.setCommandLineText(qsl("gob")));
+        QCOMPARE(session.completeCommandLine(), std::optional<QString>(qsl("goblin")));
+        QVERIFY(session.setCommandLineText(qsl("goblinx")));
+        QVERIFY(session.setCommandLineText(qsl("goblin")));
+        // No longer word starts with "goblin"
+        QCOMPARE(session.completeCommandLine(), std::nullopt);
+        QCOMPARE(scriptsLine(session), qsl("goblin"));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // A recall or a script's printCmdLine() between two presses of Tab: the new line is completed, never overwritten
+    void test_aLineSetBetweenTabsIsCompleted()
+    {
+        THeadlessSession session;
+        QTcpServer server;
+        std::unique_ptr<QTcpSocket> game;
+        QVERIFY(startWithGameLine(session, qsl("Headless Tab Line Set"), server, game, "a goblet and a goblin"));
+
+        QVERIFY(session.setCommandLineText(qsl("gob")));
+        QCOMPARE(session.completeCommandLine(), std::optional<QString>(qsl("goblin")));
+        QVERIFY(session.setCommandLineText(qsl("kill gob"), THeadlessSession::CommandLineEdit::notTyped));
+        QCOMPARE(session.completeCommandLine(), std::optional<QString>(qsl("kill goblin")));
+        QCOMPARE(session.completeCommandLine(), std::optional<QString>(qsl("kill goblet")));
+        QVERIFY(session.runLua(qsl(R"lua(printCmdLine("eat gob"))lua")));
+        QCOMPARE(session.completeCommandLine(), std::optional<QString>(qsl("eat goblin")));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // As the GUI's Tab once it has sent a line, not its very first, which puts a word of the buffer there
+    void test_tabCompletesNothingOnAnEmptyLine()
+    {
+        THeadlessSession session;
+        QTcpServer server;
+        std::unique_ptr<QTcpSocket> game;
+        QVERIFY(startWithGameLine(session, qsl("Headless Tab Empty"), server, game, "a goblet and a goblin"));
+
+        QCOMPARE(session.completeCommandLine(), std::nullopt);
+        QCOMPARE(session.errorString(), qsl("No word completes what is typed."));
+        QCOMPARE(scriptsLine(session), QString());
+        QVERIFY(session.shutdown(false));
+    }
+
+    // As the GUI completes no password
+    void test_nothingIsCompletedWhileTheGameHidesWhatIsTyped()
+    {
+        THeadlessSession session;
+        QTcpServer server;
+        std::unique_ptr<QTcpSocket> game;
+        QVERIFY(startWithGameLine(session, qsl("Headless Tab Hidden"), server, game, "a goblin"));
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+
+        QVERIFY(session.setCommandLineText(qsl("gob")));
+        game->write("\xff\xfb\x01Password:\r\n");
+        QTRY_VERIFY_WITH_TIMEOUT(texts(output).contains(qsl("Password:")), 10000);
+        QCOMPARE(session.completeCommandLine(), std::nullopt);
+        QCOMPARE(session.errorString(), qsl("Nothing is completed while the game hides what is typed."));
+        game->write("\xff\xfc\x01Welcome\r\n");
+        QTRY_VERIFY_WITH_TIMEOUT(texts(output).contains(qsl("Welcome")), 10000);
+        QVERIFY(session.setCommandLineText(qsl("gob")));
+        QCOMPARE(session.completeCommandLine(), std::optional<QString>(qsl("goblin")));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_tabIsRefusedMidWrite()
+    {
+        const QString name = qsl("Headless Tab Mid Write");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setCommandLineText(qsl("gob")));
+        std::optional<std::optional<QString>> midWrite;
+        QString midWriteError;
+        connect(&session, &THeadlessSession::outputLine, this, [&session, &midWrite, &midWriteError](const QString&, const QString& text) {
+            if (text == qsl("a goblin")) {
+                midWrite = session.completeCommandLine();
+                midWriteError = session.errorString();
+            }
+        });
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("refused")));
+        QVERIFY(session.runLua(qsl(R"lua(feedTriggers("a goblin\n"))lua")));
+        QCOMPARE(midWrite, std::optional<std::optional<QString>>(std::optional<QString>()));
+        QVERIFY2(midWriteError.startsWith(qsl("Refused from a handler")), qPrintable(midWriteError));
+        QCOMPARE(scriptsLine(session), qsl("gob"));
+        QCOMPARE(session.completeCommandLine(), std::optional<QString>(qsl("goblin")));
         QVERIFY(session.shutdown(false));
     }
 };
