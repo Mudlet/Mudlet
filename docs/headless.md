@@ -190,7 +190,8 @@ profiles and `Mudlet.ini` with that GUI (not its passwords), so `start()` warns 
 Each of `outputLine`'s runs covers part of the line, in order, with the colours and styles the game
 asked for (`THeadlessSession::TextStyle`: bold, italic, underline, overline, strike-out, reverse, blink,
 fast blink, concealed), and says whether each colour is the profile's own, which a frontend may swap
-for its own theme's. Links in the line, and what `echo()` and the like print, come as plain text for now.
+for its own theme's. A run also names the link it is part of, as "links in the main console" below tells.
+What `echo()` and the like print comes as plain text for now.
 
 `outputLine` carries each line as the game sent it, before the profile's triggers run on it, so a line a
 trigger gags still arrives, and one it rewrites arrives unchanged. `lineShown` carries the same lines as
@@ -627,6 +628,15 @@ from `tempButtonToolbar()`, a toolbar and docked user windows around the main co
 its own gives the area without them, and gives a smaller one as they grow; the session does not take
 their room from it, so what a script reads of the main window's size changes with them only when the app
 gives a new one.
+
+## Embedding it: links in the main console
+
+Each `TextRun` of `outputLine` and `lineShown` has a `link`: the id of the main console's link the run is
+part of, or 0 for none. A line is split into runs where its link changes as well as where its look does,
+so two links that touch and look alike are two runs. Links come from the game (OSC 8 and MXP `<SEND>`)
+and from scripts (`echoLink()`, `echoPopup()` and the like, a trigger's included). An id names its link
+while the main console still holds a line with it: the console reuses the ids of links whose lines it
+has let go, so an app that keeps older lines than the console does should not rely on theirs.
 
 ## What still needs a window
 

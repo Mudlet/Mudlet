@@ -108,6 +108,9 @@ public:
         bool defaultForeground = false;
         bool defaultBackground = false;
         TextStyles styles;
+        // The main console's link the run is part of, 0 for none; touching links that look alike are runs of their
+        // own. An id names its link while the main console still holds a line with it, after which it may be reused.
+        int link = 0;
 
         bool operator==(const TextRun&) const = default;
     };
