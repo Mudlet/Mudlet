@@ -96,9 +96,14 @@ bool ToolBarOverflow::eventFilter(QObject* pWatched, QEvent* pEvent)
         mFitFor.clear();
         queueRefresh();
         break;
+    case QEvent::Resize:
+        if (pWatched == mpButton) {
+            widenToTheWord();
+        }
+        queueRefresh();
+        break;
     case QEvent::LanguageChange:
     case QEvent::LayoutRequest:
-    case QEvent::Resize:
     case QEvent::Show:
     case QEvent::ActionAdded:
     case QEvent::ActionChanged:
@@ -184,6 +189,13 @@ void ToolBarOverflow::fitToBar()
     const QSize needed = mpButton->QToolButton::sizeHint();
     mpButton->setText(shown);
 
+    // Down an edge QToolBarLayout gives the button the width of the widest button in the column, which the word under
+    // the glyph can be wider than; the bar is widened to hold it, and the button after each layout pass
+    mWordWidthDownAnEdge = downAnEdge ? needed.width() : 0;
+    const QMargins barMargins = mpBar->layout() ? mpBar->layout()->contentsMargins() : QMargins();
+    mpBar->setMinimumWidth(downAnEdge ? needed.width() + barMargins.left() + barMargins.right() : 0);
+    widenToTheWord();
+
     // The sheet takes the side padding off for the word's sake, which would leave a lone glyph too small to aim at
     const int glyphPadding = mpBar->toolButtonStyle() == Qt::ToolButtonIconOnly ? 2 * scmToolBarButtonPaddingHorizontal : 0;
     const int extent = downAnEdge ? needed.height() : needed.width() + glyphPadding;
@@ -193,6 +205,13 @@ void ToolBarOverflow::fitToBar()
             pLayout->invalidate();
         }
         mpBar->updateGeometry();
+    }
+}
+
+void ToolBarOverflow::widenToTheWord()
+{
+    if (mpButton && mpButton->width() < mWordWidthDownAnEdge) {
+        mpButton->resize(mWordWidthDownAnEdge, mpButton->height());
     }
 }
 

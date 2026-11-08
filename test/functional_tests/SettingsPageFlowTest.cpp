@@ -699,6 +699,13 @@ private slots:
             QCOMPARE(pReset->geometry().right(), pMapColours->width() - 1);
             if (wide) {
                 QCOMPARE(pReset->geometry().left(), p->label_40->geometry().left());
+                // A pixel narrower, so both parities of what the two controls share are seen
+                QGroupBox* pCard = p->groupBox_mapperColors;
+                QVERIFY2(pMapColours->width() > twoPairs, "SETUP: the card has no pixel to spare above two pairs to a row");
+                pCard->setMaximumWidth(cardChrome(pCard, pMapColours) + pMapColours->width() - 1);
+                qApp->processEvents();
+                QCOMPARE(pReset->geometry().right(), pMapColours->width() - 1);
+                QCOMPARE(pReset->geometry().left(), p->label_40->geometry().left());
             } else {
                 QCOMPARE(pReset->width(), pReset->sizeHint().width());
                 break;

@@ -825,8 +825,7 @@ void TCommandLine::adjustHeight()
     centerRows();
 }
 
-// The slack goes one pixel more above the rows than below: heightForRows() leaves its spare pixel
-// under them, and this way a row's top lands where QLineEdit, the hidden-input box, puts its own.
+// The slack goes one pixel more above the rows than below: heightForRows() leaves its spare pixel under them
 void TCommandLine::centerRows()
 {
     const int rows = std::max(1, static_cast<int>(document()->size().height()));
@@ -835,6 +834,7 @@ void TCommandLine::centerRows()
     const QMargins margins(0, top, 0, slack - top);
     if (viewportMargins() != margins) {
         setViewportMargins(margins);
+        emit rowsMoved();
     }
 }
 

@@ -1217,8 +1217,8 @@ private slots:
             mpHost->mpConsole->setFontSize(fontSizeBefore);
         });
 
-        // Well under the minimum height, the profile's own, and over it
-        for (const int fontSize : {10, fontSizeBefore, 20}) {
+        // From well under the minimum height to over it: which sizes land a pixel off depends on the font's metrics
+        for (int fontSize = 8; fontSize <= 24; ++fontSize) {
             mpHost->mpConsole->setFontSize(fontSize);
             commandLine()->setPlainText(qsl("look"));
             commandLine()->adjustHeight();

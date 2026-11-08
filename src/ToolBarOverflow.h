@@ -58,6 +58,7 @@ private:
     void queueRefresh();
     void refresh();
     void fitToBar();
+    void widenToTheWord();
     void showHiddenCount();
     void styleItsMenu();
     [[nodiscard]] QList<QAction*> countedActions() const;
@@ -65,6 +66,7 @@ private:
     QPointer<QToolBar> mpBar;
     QPointer<QToolButton> mpButton;
     QString mFitFor;
+    int mWordWidthDownAnEdge = 0;
     bool mRefreshQueued = false;
     bool mGlyphStale = false;
 };

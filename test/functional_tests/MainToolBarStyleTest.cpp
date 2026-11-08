@@ -367,9 +367,18 @@ private slots:
             QVERIFY2(pointsDown(pMore->icon(), pMore->iconSize(), QIcon::Off), "the closed chevron does not point down");
             QVERIFY2(!pointsDown(pMore->icon(), pMore->iconSize(), QIcon::On), "the open chevron does not point up");
 
-            windowWidth(scmFoldingWidth - 200);
-            QVERIFY2(hiddenButtons(pBar) > hidden, "a narrower window hid no more buttons, so the count below proves nothing");
-            QCOMPARE(pMore->text(), uiDesign::ToolBarOverflow::word(hiddenButtons(pBar)));
+            // Wider, not narrower: the window's minimum width can sit just under the folding width
+            int wider = scmFoldingWidth;
+            int fewer = hidden;
+            while (fewer == hidden && wider < scmWindowWidth) {
+                wider += 20;
+                windowWidth(wider);
+                fewer = hiddenButtons(pBar);
+            }
+            QVERIFY2(fewer > 0 && fewer < hidden,
+                     qPrintable(qsl("widening from %1px to %2px took the hidden buttons from %3 to %4, so the count below proves nothing")
+                                        .arg(QString::number(scmFoldingWidth), QString::number(wider), QString::number(hidden), QString::number(fewer))));
+            QCOMPARE(pMore->text(), uiDesign::ToolBarOverflow::word(fewer));
         }
         TestPixels::setAppearanceAndWait(enums::Appearance::systemSetting);
 

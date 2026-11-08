@@ -290,8 +290,10 @@ int PairGridLayout::runRows(const QRect& rect, const bool place) const
     if (!footersFit(columns, twoPairs)) {
         columns = stretch(narrowestColumns(twoPairs));
     }
+    // The controls share an odd pixel out by putting it between the pairs, so the trailing one still ends on the edge
+    const int oddPixel = twoPairs ? std::max(0, content.width() - columns.leadingLabel - columns.trailingLabel - 3 * gapAcross - 2 * columns.control) : 0;
     const int leadingControlX = content.x() + columns.leadingLabel + gapAcross;
-    const int trailingLabelX = leadingControlX + columns.control + gapAcross;
+    const int trailingLabelX = leadingControlX + columns.control + gapAcross + oddPixel;
     const int trailingControlX = trailingLabelX + columns.trailingLabel + gapAcross;
     const int leadingHalf = columns.leadingLabel + gapAcross + columns.control;
     const int trailingHalf = columns.trailingLabel + gapAcross + columns.control;

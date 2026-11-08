@@ -94,6 +94,7 @@ signals:
     void commandSubmitted();
     // Emitted when the command line text changes (for hyperlink visibility triggers)
     void commandLineTextChanged();
+    void rowsMoved();
 
 public slots:
     void slot_popupMenu();
