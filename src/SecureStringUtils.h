@@ -148,8 +148,9 @@ public:
     /**
      * @brief Set an open QSaveFile to 0600 now, before the secret is written, and keep it so through commit()
      *
-     * Never makes the save fail: when the file system refuses, the file is left as it was and false is
-     * returned, so the caller can try restrictFileToOwner() on the committed file.
+     * Never makes the save fail: when the file system refuses, false is returned and the file is committed
+     * with the mode of the one it replaces, or the umask's default, so the caller can try
+     * restrictFileToOwner() on the committed file.
      * @param file An open QSaveFile
      * @return false when the narrowing was refused. On a platform without such permission bits this
      * does nothing and returns true.
