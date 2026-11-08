@@ -5840,6 +5840,7 @@ void dlgProfilePreferences::slot_resetMapColors()
 
     if (pHost->mpMap) {
         pHost->mpMap->restore16ColorSet();
+        pHost->mpMap->announceMapperSettingChanged(TMap::MapperSetting::BackgroundColor);
         pHost->mpMap->updateArea(-1);
     }
 }
@@ -6090,23 +6091,9 @@ void dlgProfilePreferences::slot_setMapBgColor()
     Host* pHost = mpHost;
     if (pHost) {
         setButtonAndProfileColor(pushButton_background_color_2, pHost->mBgColor_2, true);
-// if 3D map, update transparency flags
-#if defined(INCLUDE_3DMAPPER)
-        dlgMapper* pMapper = pHost->mpMap ? pHost->mpMap->mapper() : nullptr;
-        if (pMapper && pMapper->glWidget) {
-            QOpenGLWidget* map = pMapper->glWidget;
-            if (auto* modernMap = qobject_cast<ModernGLWidget*>(map)) {
-                // Its style may paint its own background, whatever the profile's is
-                modernMap->applyStyle();
-            } else if (pHost->mBgColor_2.alpha() < 255) {
-                map->setAttribute(Qt::WA_OpaquePaintEvent, false);
-                map->setAttribute(Qt::WA_AlwaysStackOnTop, true);
-            } else {
-                map->setAttribute(Qt::WA_OpaquePaintEvent, true);
-                map->setAttribute(Qt::WA_AlwaysStackOnTop, false);
-            }
+        if (pHost->mpMap) {
+            pHost->mpMap->announceMapperSettingChanged(TMap::MapperSetting::BackgroundColor);
         }
-#endif
     }
 }
 

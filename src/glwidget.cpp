@@ -49,12 +49,25 @@ GLWidget::GLWidget(TMap* pMap, Host* pHost, QWidget* parent)
 , mpMap(pMap)
 , mpHost(pHost)
 {
-    if (mpHost->mBgColor_2.alpha() < 255) {
-        setAttribute(Qt::WA_OpaquePaintEvent, false);
-        setAttribute(Qt::WA_AlwaysStackOnTop);
-    } else {
-        setAttribute(Qt::WA_OpaquePaintEvent);
+    applyBackgroundTranslucency();
+    if (mpMap) {
+        connect(mpMap, &TMap::signal_mapperSettingChanged, this, [this](const TMap::MapperSetting setting) {
+            if (setting == TMap::MapperSetting::BackgroundColor) {
+                applyBackgroundTranslucency();
+            }
+        });
     }
+}
+
+void GLWidget::applyBackgroundTranslucency()
+{
+    // Only an opaque view may tell Qt that it paints over everything behind it
+    const bool translucent = mpHost && mpHost->mBgColor_2.alpha() < 255;
+    setAttribute(Qt::WA_OpaquePaintEvent, !translucent);
+    setAttribute(Qt::WA_AlwaysStackOnTop, translucent);
+    // Qt asks for the window, not only this widget, to be repainted when stacking on top changes
+    window()->update();
+    update();
 }
 
 QSize GLWidget::minimumSizeHint() const
