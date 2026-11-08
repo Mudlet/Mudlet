@@ -135,10 +135,10 @@ void AlphaColourWell::applyLook()
             return fixedMetrics.size(Qt::TextShowMnemonic, text).width();
         };
         const int shortfall = measured(opacity(100)) - measured(words);
-        // ...and as tall as a plain well, whichever face is the taller
-        const int spare = plainMetrics.height() - fixedMetrics.height();
-        const int top = std::max(0, scmWellPaddingVertical + spare / 2);
-        const int bottom = std::max(0, scmWellPaddingVertical + spare - spare / 2);
+        // ...and as tall as a plain well whatever face the platform gives: the content is held to the plain face's
+        // line, as a stylesheet measures a face's text in a way of its own
+        const int top = scmWellPaddingVertical;
+        const int bottom = scmWellPaddingVertical;
         sheet = qsl("QPushButton { color: %1; background-color: transparent; border: %2px solid %3; border-radius: %4px; font-family: \"%5\"; font-size: %6pt;"
                     " padding: %7px %8px %9px ")
                         .arg(tokens.text.name())
@@ -150,9 +150,10 @@ void AlphaColourWell::applyLook()
                         .arg(top)
                         .arg(scmInputPaddingHorizontal)
                         .arg(bottom)
-                + qsl("%1px; min-height: 0px; text-align: right; } QPushButton:disabled { color: %2; }")
+                + qsl("%1px; min-height: %3px; max-height: %3px; text-align: right; } QPushButton:disabled { color: %2; }")
                           .arg(scmWellPaddingVertical + swatch + scmWellPaddingVertical + std::max(0, shortfall))
-                          .arg(tokens.disabledText.name());
+                          .arg(tokens.disabledText.name())
+                          .arg(plainMetrics.height());
     }
     // Setting either brings the events that call this back again, so only what differs is set
     if (mpButton->text() != words) {

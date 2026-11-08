@@ -19,7 +19,6 @@
 
 #include "uiDesign.h"
 
-#include "FontManager.h"
 #include "MudletApp.h"
 #include "TKeySequenceEdit.h"
 #include "utils.h"
@@ -1884,15 +1883,11 @@ QFont fixedPitchFont(const QFont& base, const qreal scale)
 {
     QFont font = QFontDatabase::systemFont(QFontDatabase::FixedFont);
     // A platform with no theme of its own, as offscreen on Windows, answers with its proportional default. The bundled
-    // face is registered from the fonts folder, which only the application fills, so from the resources otherwise.
+    // face where the fonts folder registered it, or else any fixed-pitch family there is: registering one here would
+    // change the font database under any font picker open at the time.
     if (!QFontInfo(font).fixedPitch()) {
         static const QString fixedFamily = []() {
-            FontManager::ensureFontsAdded();
-            const QString bundled = qsl("Bitstream Vera Sans Mono");
-            if (!QFontDatabase::hasFamily(bundled)) {
-                QFontDatabase::addApplicationFont(qsl(":/fonts/ttf-bitstream-vera-1.10/VeraMono.ttf"));
-            }
-            if (QFontDatabase::hasFamily(bundled)) {
+            if (const QString bundled = qsl("Bitstream Vera Sans Mono"); QFontDatabase::hasFamily(bundled)) {
                 return bundled;
             }
             const QStringList families = QFontDatabase::families();
