@@ -29,6 +29,7 @@
 #include <QObject>
 #include <QPointer>
 #include <QRect>
+#include <QSet>
 #include <QSize>
 #include <QString>
 #include <QStringList>
@@ -108,6 +109,9 @@ public:
         bool defaultForeground = false;
         bool defaultBackground = false;
         TextStyles styles;
+        // The main console's link the run is part of, 0 for none; touching links that look alike are runs of their
+        // own. An id names its link while the main console still holds a line with it, after which it may be reused.
+        int link = 0;
 
         bool operator==(const TextRun&) const = default;
     };
@@ -217,6 +221,62 @@ public:
     // own, invalid with no profile open: read them at profileLoaded, then follow consoleColorsChanged
     QColor consoleForeground() const;
     QColor consoleBackground() const;
+    // An item of a link's menu, as the GUI lists it
+    struct LinkItem
+    {
+        QString label;
+        // Off where the GUI greys it out, as it has nothing to run
+        bool enabled = true;
+        // A line between items, with no label
+        bool separator = false;
+
+        bool operator==(const LinkItem&) const = default;
+    };
+    // What a link of the main console offers, as the GUI shows it now
+    struct Link
+    {
+        // Plain text, empty for none
+        QString tooltip;
+        // A click follows the first item; where menu is set, the GUI's right click lists the items, under menuTitle
+        // if that is not empty
+        bool menu = false;
+        QString menuTitle;
+        QList<LinkItem> items;
+        // A spoiler, which a click reveals before it follows the link, and whether it has been
+        bool spoiler = false;
+        bool revealed = false;
+        // A click does nothing, save reveal a spoiler
+        bool disabled = false;
+        // Hidden by the game's OSC 8 visibility settings: the GUI shows blanks in its place, which a click cannot reach
+        bool concealed = false;
+        bool visited = false;
+        // Chosen, in its selection group
+        bool selected = false;
+        // How the GUI paints the link in its state now, which may differ from its runs as sent: each is empty where
+        // the run's own applies, and styles replaces only the run's bold, italic, underline, overline and strike-out
+        std::optional<QColor> foreground;
+        std::optional<QColor> background;
+        std::optional<TextStyles> styles;
+    };
+    // The link a run names, while the main console holds it; nullopt for 0, an id it does not hold and with no profile
+    // open. A getter, so it may be called from any handler.
+    std::optional<Link> link(int id) const;
+    // Follows a link as a left click on it does, or given an item, as picking that item from its menu does: a
+    // spoiler not yet revealed is only revealed (revealedSpoiler); a disabled link and a menu's greyed-out item
+    // run nothing (disabled), nor does a link the game's visibility settings have concealed (concealed); and
+    // otherwise its selection group is updated and its command or function runs before this returns, so an
+    // OSC 8 web link opens through QDesktopServices: ran, or failed where that raised a Lua error, which
+    // errorString() gives. noSuchItem: item does not index link()'s items. unknown: an id the main console does
+    // not hold. refused: where submit() is; errorString() says why.
+    enum class LinkResult { ran, revealedSpoiler, disabled, concealed, failed, noSuchItem, unknown, refused };
+    LinkResult followLink(int link, std::optional<int> item = std::nullopt);
+    // Whether the main console shows each line's time beside it, as the GUI's timestamp button says; false with
+    // no profile open. A getter, so it may be called from any handler.
+    bool timeStampsShown() const;
+    // As a press of the GUI's timestamp button: saved for the profile's next load as the button saves it, and
+    // timeStampsShownChanged follows where it changed. Refused where submit() is, and false where the change was
+    // made but could not be saved; errorString() says why.
+    bool setTimeStampsShown(bool shown);
     // Answers the game's offer of a secure port, as the GUI's Yes and No do: true stores that port with TLS on,
     // as the connection dialog would, and connects there, so a frontend that passes its own port to a later
     // start() passes tls with it; false reconnects where it was and stops the profile asking again. False, with
@@ -473,8 +533,9 @@ signals:
     // handler must not run the event loop, as a modal dialog does: the profile's own timers may commit
     // another line or close the profile there, in the middle of this line's commit. runs covers text from its
     // start to its end, in order, with no empty run, and is empty for an empty line; a handler that takes
-    // only the first three arguments may be connected.
-    void outputLine(const QString& profile, const QString& text, bool isPrompt, const QList<THeadlessSession::TextRun>& runs);
+    // only the first three or four arguments may be connected. arrivalMSecs is when the line arrived, in ms since
+    // the epoch as debugText's is, the time the GUI's timestamps show; -1 where it has none.
+    void outputLine(const QString& profile, const QString& text, bool isPrompt, const QList<THeadlessSession::TextRun>& runs, qint64 arrivalMSecs);
     // What the GUI shows only on the profile's own screen, in pieces that need not end a line: text
     // written to the main console that the game did not send (echo(), print(), commands, Mudlet's
     // messages), and the error console. While lineShown is connected, it leaves out what that sends, as
@@ -488,8 +549,9 @@ signals:
     // feeds follow the line it ran on, as they are shown, and so does what it wrote anywhere else (an echo()
     // after deleteLine(), clearWindow() or a feedTriggers(), a send()'s command echo), as lines of their own.
     // Sent whole, before the console wraps it or after a trigger's wrapLine() split it, and not again for a later
-    // change to it. Sent mid-write, as outputLine is, with the same arguments.
-    void lineShown(const QString& profile, const QString& text, bool isPrompt, const QList<THeadlessSession::TextRun>& runs);
+    // change to it. Sent mid-write, as outputLine is, with the same arguments; a line a trigger wrote has the time
+    // of the console line it went into, which is when it was written for a line of its own.
+    void lineShown(const QString& profile, const QString& text, bool isPrompt, const QList<THeadlessSession::TextRun>& runs, qint64 arrivalMSecs);
     // A script emptied the main console, as clearWindow() does; lines from before it that lineShown has yet to
     // send are dropped. Sent mid-write, as outputLine is, so a handler may neither call the session nor run the
     // event loop.
@@ -528,6 +590,17 @@ signals:
     // The profile began connecting to the game, as it starts or reconnects, where the GUI marks its tab as
     // connecting; connected or disconnected follows, or the profile closes. From the event loop
     void connecting(const QString& profile);
+    // What link() gives for these main console links may have changed, gathered from one pass of the event loop:
+    // a click or followLink() leaving one visited, chosen or deselected in its group, a spoiler revealed, the game's
+    // OSC 8 visibility settings concealing or revealing one, an MXP <EXPIRE>, a line holding it deleted, as by
+    // deleteLine(), clearWindow() or a whole-line concealment, or the console letting go of one no line holds any
+    // more after trims; link() gives nullopt once no line holds it.
+    // Each id once, in the order they changed. Hover is not sent, the pointer being the app's own. From the event loop.
+    void linksChanged(const QString& profile, const QList<int>& links);
+    // timeStampsShown() changed, by setTimeStampsShown() or a script's enableTimeStamps() or disableTimeStamps() on
+    // the main console. From the event loop, with the state as it is then, and only when that differs from the
+    // one last sent or the one timeStampsShown() gave at profileLoaded.
+    void timeStampsShownChanged(const QString& profile, bool shown);
     // What the GUI shows outside the profile's screen: a script's showNotification(), which answers true only
     // when this signal is connected and not blocked, with no milliseconds for the system's own time; and a
     // script's alert() or the game's bell, asking for the player's attention for that long, 0 until they come
@@ -666,9 +739,13 @@ private:
     // The relays of the main window's area, in THeadlessSessionArea.cpp
     void connectAreaRelays(Host*, unsigned int run);
     void noteAreaAtLoad();
+    void connectLinkRelays(Host*, unsigned int run);
+    void sendLinksChanged(unsigned int run);
     // duringLoad takes a call while a profile loads, which only one that cannot reach the pool may do
     bool refused(bool duringLoad = false);
     bool usable(bool duringLoad = false);
+    // Lua's own message, out of what the GUI's error console shows of it
+    static QString luaErrorOf(const QString& consoleText);
     // False, with errorString() saying why, while the GUI's hidden-input box would not be open
     bool inputHidden(bool sending);
     void noteAlreadyInstalled(const QString& path, const QString& name);
@@ -720,6 +797,7 @@ private:
         QString text;
         bool isPrompt = false;
         QList<TextRun> runs;
+        qint64 arrivalMSecs = -1;
     };
     // For each trigger pass under way, outermost first, the lines that passes nested in it have shown
     QList<QList<ShownLine>> mShownLinesOfPasses;
@@ -745,6 +823,13 @@ private:
     unsigned int mWindowMinimizedChanges = 0;
     // The run and time minimized the new-data alert was last sent for
     std::optional<std::pair<unsigned int, unsigned int>> mNewDataAlertedFor;
+    // The links changed since linksChanged was last sent, for the run they changed in
+    QList<int> mChangedLinks;
+    // The same, to look up: a sweep or clearWindow() removes thousands at once
+    QSet<int> mChangedLinkIds;
+    bool mLinksChangedPending = false;
+    // What timeStampsShown() gave at profileLoaded, then each timeStampsShownChanged; none before the load ends
+    std::optional<bool> mDeliveredTimeStampsShown;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(THeadlessSession::TextStyles)

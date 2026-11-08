@@ -59,7 +59,8 @@ void THeadlessSession::connectOutputRelays(Host* pHost, const unsigned int run)
             &TConsoleModelNotifier::wrapChanged,
             this,
             [this, run]() {
-                if (run != mRun || !mpHost || !mDeliveredConsoleWrap) {
+                // A shutdown() runs the event loop as the profiles close
+                if (mShuttingDown || run != mRun || !mpHost || !mDeliveredConsoleWrap) {
                     return;
                 }
                 const ConsoleWrap wrap = consoleWrap();
@@ -77,7 +78,7 @@ void THeadlessSession::connectOutputRelays(Host* pHost, const unsigned int run)
             &TConsoleModelNotifier::colorsChanged,
             this,
             [this, run]() {
-                if (run != mRun || !mpHost || !mDeliveredConsoleColors) {
+                if (mShuttingDown || run != mRun || !mpHost || !mDeliveredConsoleColors) {
                     return;
                 }
                 const std::pair colors{consoleForeground(), consoleBackground()};
@@ -147,4 +148,5 @@ void THeadlessSession::noteOutputStateAtLoad()
 {
     mDeliveredConsoleWrap = consoleWrap();
     mDeliveredConsoleColors = {consoleForeground(), consoleBackground()};
+    mDeliveredTimeStampsShown = timeStampsShown();
 }

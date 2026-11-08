@@ -1322,18 +1322,22 @@ void TBuffer::dropStateOfRemovedLinks()
 }
 
 // Line numbers here count every line ever removed, so they stay put as the buffer is trimmed
-void TBuffer::noteRemovedLinkId(const int id, const qint64 lastLine)
+void TBuffer::noteRemovedLinkId(const int id, const qint64 lastLine, const bool tell)
 {
     // Once the store has wrapped, an id handed out again further down belongs to that newer
     // link, and recording it would make every trim of a link-dense buffer rescan the buffer.
     // The focused id is always recorded, as that newer link may never have reached the buffer.
     if (id == mCurrentFocusedLinkIndex || mLinkIdIssuedAtLine.value(id, -1) <= lastLine) {
         mLinkIdsRemovedSinceSweep.insert(id);
+        // Every time, not just the first: a link that runs over two lines goes with the last of them
+        if (tell) {
+            noteLinkChanged(id);
+        }
     }
 }
 
 // to < 0 runs to the end of the line
-void TBuffer::noteRemovedLinks(const TLineFormat& line, const qint64 lineNumber, const int from, const int to)
+void TBuffer::noteRemovedLinks(const TLineFormat& line, const qint64 lineNumber, const int from, const int to, const bool tell)
 {
     if (mLinkStore.pristine()) {
         return;
@@ -1343,7 +1347,7 @@ void TBuffer::noteRemovedLinks(const TLineFormat& line, const qint64 lineNumber,
     for (int x = from; x < end; ++x) {
         const int id = line[x].linkIndex();
         if (id && id != previousId) {
-            noteRemovedLinkId(id, lineNumber);
+            noteRemovedLinkId(id, lineNumber, tell);
             previousId = id;
         }
     }
@@ -7798,7 +7802,12 @@ void TBuffer::clearLinkState(const QSet<int>& stillLiveLinkIds)
     const QSet<int> activeLinkIds = collectLiveLinkIdsResettingIssueLines() | stillLiveLinkIds;
 
     if (pH) {
-        mLinkStore.removeUnreferencedLinks(activeLinkIds, pH);
+        const QList<int> removedIds = mLinkStore.removeUnreferencedLinks(activeLinkIds, pH);
+        if (mpModel && mpModel->mNotifier.linkChangedConnected()) {
+            for (const int id : removedIds) {
+                emit mpModel->mNotifier.linkChanged(id);
+            }
+        }
     } else {
         qWarning() << "TBuffer::clearLinkState() WARNING - mpHost is null, cannot remove unreferenced links from store";
     }
@@ -7952,9 +7961,11 @@ void TBuffer::shrinkBuffer()
     bool sweepLinks = mLinesUntilLinkSweep <= 0;
     const bool noteLinks = !sweepLinks && !mLinkStore.pristine();
     const qint64 firstTrimmedLine = mLinesRemovedTotal;
+    // Not told: link() of an id still in the store reads the whole buffer, and an app reading it for every link of
+    // every trim would do that thousands of times a trim. The sweep tells of each id once it is out of the store.
     if (noteLinks) {
         for (int i = 0; i < mBatchDeleteSize; ++i) {
-            noteRemovedLinks(buffer[i], firstTrimmedLine + i);
+            noteRemovedLinks(buffer[i], firstTrimmedLine + i, 0, -1, false);
         }
     }
 
@@ -8034,7 +8045,7 @@ void TBuffer::shrinkBuffer()
         // A concealed link's characters carry no index, so only its tracking says it was trimmed
         if (noteLinks) {
             for (const int id : droppedLinkIds) {
-                noteRemovedLinkId(id, firstTrimmedLine + mBatchDeleteSize - 1);
+                noteRemovedLinkId(id, firstTrimmedLine + mBatchDeleteSize - 1, false);
             }
         }
     }
@@ -10193,7 +10204,9 @@ void TBuffer::setLinkState(int linkIndex, Mudlet::HyperlinkStyling::LinkState st
         return; // Invalid link index
     }
 
-    mLinkStates[linkIndex] = state;
+    if (std::exchange(mLinkStates[linkIndex], state) != state) {
+        noteLinkChanged(linkIndex);
+    }
 
 #if defined(DEBUG_OSC_PROCESSING)
     QString stateName;
@@ -10403,7 +10416,9 @@ void TBuffer::setFocusedLink(int linkIndex)
 void TBuffer::markLinkAsVisited(int linkIndex)
 {
     if (linkIndex > 0) {
-        mVisitedLinks[linkIndex] = true;
+        if (!std::exchange(mVisitedLinks[linkIndex], true)) {
+            noteLinkChanged(linkIndex);
+        }
 
         // If the link is not in an interactive state (hover/active/focus),
         // update it to visited state immediately
@@ -10425,9 +10440,41 @@ bool TBuffer::isLinkVisited(int linkIndex) const
     return mVisitedLinks.value(linkIndex, false);
 }
 
+bool TBuffer::linkHeld(const int linkIndex) const
+{
+    if (linkIndex <= 0 || !mLinkStore.contains(linkIndex)) {
+        return false;
+    }
+    if (!mLinkIdsRemovedSinceSweep.contains(linkIndex)) {
+        return true;
+    }
+    // A concealed link's characters carry no index
+    if (mpModel && mpModel->mHyperlinkVisibilityManager.trackedLinkIds().contains(linkIndex)) {
+        return true;
+    }
+    for (const TLineFormat& line : buffer) {
+        for (const TChar& c : line) {
+            if (c.linkIndex() == linkIndex) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 void TBuffer::setLinkSelected(int linkIndex, bool selected)
 {
+    if (mLinkSelectionState.value(linkIndex, false) != selected) {
+        noteLinkChanged(linkIndex);
+    }
     mLinkSelectionState[linkIndex] = selected;
+}
+
+void TBuffer::noteLinkChanged(const int linkIndex)
+{
+    if (mpModel && mpModel->mNotifier.linkChangedConnected()) {
+        emit mpModel->mNotifier.linkChanged(linkIndex);
+    }
 }
 
 bool TBuffer::isLinkSelected(int linkIndex) const
@@ -10503,6 +10550,7 @@ void TBuffer::revealSpoilerLink(int linkIndex)
     updateLinkCharacters(linkIndex);
 
     mLinkOriginalText.remove(linkIndex);
+    noteLinkChanged(linkIndex);
 
     if (mpModel) {
         emit mpModel->mNotifier.spoilerRevealed();

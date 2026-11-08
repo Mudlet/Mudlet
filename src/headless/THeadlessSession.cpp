@@ -477,6 +477,7 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                         Qt::QueuedConnection);
                 connectOutputRelays(pNewHost, run);
                 connectAreaRelays(pNewHost, run);
+                connectLinkRelays(pNewHost, run);
                 connect(pNewHost, &Host::signal_errorConsolePrint, this, [this](const QString& text, const QColor& foreground, const QColor& background) {
                     const QString profile = mProfileName;
                     ++gSignalsBeingHandedOut;
@@ -1057,16 +1058,22 @@ bool THeadlessSession::runLua(const QString& code)
     const bool ran = mpHost->getLuaInterpreter()->compileAndExecuteScript(code);
     disconnect(errorCapture);
     if (!ran && self) {
-        mErrorString = errorText.trimmed();
-        // Lua's own message, out of the console's "<Lua error:...>"
-        if (mErrorString.startsWith(QLatin1Char('<')) && mErrorString.endsWith(QLatin1Char('>'))) {
-            mErrorString = mErrorString.sliced(1).chopped(1);
-        }
-        if (mErrorString.startsWith(qsl("Lua error:"))) {
-            mErrorString = mErrorString.sliced(10);
-        }
+        mErrorString = luaErrorOf(errorText);
     }
     return ran;
+}
+
+QString THeadlessSession::luaErrorOf(const QString& consoleText)
+{
+    QString error = consoleText.trimmed();
+    // Out of the console's "<Lua error:...>"
+    if (error.startsWith(QLatin1Char('<')) && error.endsWith(QLatin1Char('>'))) {
+        error = error.sliced(1).chopped(1);
+    }
+    if (error.startsWith(qsl("Lua error:"))) {
+        error = error.sliced(10);
+    }
+    return error;
 }
 
 THeadlessSession::PackageResult THeadlessSession::installPackage(const QString& path)
@@ -1956,7 +1963,8 @@ QList<THeadlessSession::TextRun> textRuns(const QString& text, const TLineFormat
         const THeadlessSession::TextStyles styles = textStyles(first);
         int end = start + 1;
         // By style rather than TChar's flags, which also tell alternate fonts apart
-        while (end < length && format[end].foregroundRgba() == first.foregroundRgba() && format[end].backgroundRgba() == first.backgroundRgba() && textStyles(format[end]) == styles) {
+        while (end < length && format[end].foregroundRgba() == first.foregroundRgba() && format[end].backgroundRgba() == first.backgroundRgba() && textStyles(format[end]) == styles
+               && format[end].linkIndex() == first.linkIndex()) {
             ++end;
         }
         THeadlessSession::TextRun run;
@@ -1967,10 +1975,24 @@ QList<THeadlessSession::TextRun> textRuns(const QString& text, const TLineFormat
         run.defaultForeground = first.foregroundRgba() == profileForeground.rgba();
         run.defaultBackground = first.backgroundRgba() == profileBackground.rgba();
         run.styles = styles;
+        run.link = first.linkIndex();
         runs.append(run);
         start = end;
     }
     return runs;
+}
+
+// A segment a wrap split off has no time of its own, so takes that of the line it came from
+qint64 arrivalTime(const TBuffer& buffer, int line)
+{
+    if (line < 0 || line >= buffer.timeBuffer.size()) {
+        return -1;
+    }
+    while (line > 0 && buffer.timeBuffer.at(line) == TBuffer::csmWrappedLineTimeStamp) {
+        --line;
+    }
+    const qint64 time = buffer.timeBuffer.at(line);
+    return time < 0 ? -1 : time;
 }
 
 } // namespace
@@ -1998,7 +2020,7 @@ void THeadlessSession::lineCommitted(const int lineIndex)
     // A handler may delete the session, whose pool then waits for the commit to end; hence the copy of the name
     const QString profile = mProfileName;
     ++gSignalsBeingHandedOut;
-    emit outputLine(profile, text, buffer.promptBuffer.at(lineIndex), runs);
+    emit outputLine(profile, text, buffer.promptBuffer.at(lineIndex), runs, arrivalTime(buffer, lineIndex));
     --gSignalsBeingHandedOut;
 }
 
@@ -2050,7 +2072,7 @@ THeadlessSession::ShownLine THeadlessSession::wholeLine(const TBuffer& buffer, c
         format.insert(format.end(), formatFrom, segmentFormat.end());
         format.resize(text.size(), format.empty() ? TChar() : format.back());
     }
-    return {text, buffer.promptBuffer.at(first), textRuns(text, TLineFormat(std::move(format)), mpHost->mFgColor, mpHost->mBgColor)};
+    return {text, buffer.promptBuffer.at(first), textRuns(text, TLineFormat(std::move(format)), mpHost->mFgColor, mpHost->mBgColor), arrivalTime(buffer, first)};
 }
 
 bool THeadlessSession::lineShownWanted() const
@@ -2076,8 +2098,9 @@ QList<THeadlessSession::ShownLine> THeadlessSession::takeTriggerWrites(const boo
     if (writes.isEmpty() || !taken) {
         return lines;
     }
+    const TBuffer& buffer = mpHost->mainConsoleModel().buffer;
     for (const TConsoleModel::TriggerWrite& write : writes) {
-        lines.append({write.text, false, textRuns(write.text, TLineFormat(write.format), mpHost->mFgColor, mpHost->mBgColor)});
+        lines.append({write.text, false, textRuns(write.text, TLineFormat(write.format), mpHost->mFgColor, mpHost->mBgColor), arrivalTime(buffer, write.line)});
     }
     return lines;
 }
@@ -2088,7 +2111,7 @@ bool THeadlessSession::sendShownLines(const QList<ShownLine>& lines)
     const QString profile = mProfileName;
     for (const ShownLine& line : lines) {
         ++gSignalsBeingHandedOut;
-        emit lineShown(profile, line.text, line.isPrompt, line.runs);
+        emit lineShown(profile, line.text, line.isPrompt, line.runs, line.arrivalMSecs);
         --gSignalsBeingHandedOut;
         if (!self) {
             return false;

@@ -190,7 +190,8 @@ profiles and `Mudlet.ini` with that GUI (not its passwords), so `start()` warns 
 Each of `outputLine`'s runs covers part of the line, in order, with the colours and styles the game
 asked for (`THeadlessSession::TextStyle`: bold, italic, underline, overline, strike-out, reverse, blink,
 fast blink, concealed), and says whether each colour is the profile's own, which a frontend may swap
-for its own theme's. Links in the line, and what `echo()` and the like print, come as plain text for now.
+for its own theme's. A run also names the link it is part of, as "links in the main console" below tells.
+What `echo()` and the like print comes as plain text for now.
 
 `outputLine` carries each line as the game sent it, before the profile's triggers run on it, so a line a
 trigger gags still arrives, and one it rewrites arrives unchanged. `lineShown` carries the same lines as
@@ -204,6 +205,19 @@ line itself, as for `outputLine`; a line a trigger split with `wrapLine()` comes
 it held, and if a trigger then deletes its first part, what is left of it comes as the line. A change a later
 trigger makes to a line already sent, as by moving the cursor up to it, is not sent again, though what it
 inserts is sent as a line of its own.
+
+The last argument of both, `arrivalMSecs`, is when the line arrived, in milliseconds since the epoch: the
+time the GUI's timestamps show beside it. A line a trigger wrote has the time of the console line it went
+into, its own when it is a line of its own. It is -1 for a line with none. A handler that takes only the
+first three or four arguments may still be connected. `localText` carries no time of its own: it is sent as
+it is written, so the time its handler runs is when that text was written.
+
+`timeStampsShown()` says whether the main console shows those times beside its lines, as the GUI's
+timestamp button does, and `setTimeStampsShown()` presses that button: the choice is saved for the
+profile's next load as the button saves it, and refused where `submit()` is. Where it was made but could
+not be saved, it gives false and `errorString()` says so. `timeStampsShownChanged`
+follows a change made either way or by a script's `enableTimeStamps()` and `disableTimeStamps()`, from the
+event loop and only when the state differs from the one last sent or the one at `profileLoaded`.
 
 `localText` carries the text written to the main console that the game did not send, as it is written,
 in pieces that need not end a line: the `echo()`s of aliases, timers, key bindings and `runLua()`, the
@@ -627,6 +641,57 @@ from `tempButtonToolbar()`, a toolbar and docked user windows around the main co
 its own gives the area without them, and gives a smaller one as they grow; the session does not take
 their room from it, so what a script reads of the main window's size changes with them only when the app
 gives a new one.
+
+## Embedding it: links in the main console
+
+Each `TextRun` of `outputLine` and `lineShown` has a `link`: the id of the main console's link the run is
+part of, or 0 for none. A line is split into runs where its link changes as well as where its look does,
+so two links that touch and look alike are two runs. Links come from the game (OSC 8 and MXP `<SEND>`)
+and from scripts (`echoLink()`, `echoPopup()` and the like, a trigger's included). An id names its link
+while the main console still holds a line with it: the console reuses the ids of links whose lines it
+has let go, so an app that keeps older lines than the console does should not rely on theirs.
+
+`link(id)` says what a link offers, as the GUI shows it: its `tooltip`, as plain text; its `items`,
+one for each thing it can run, each with the label the GUI gives it, and marked as greyed out where it
+has nothing to run or as a separator where it has no label either; and `menu`, where the GUI's right
+click lists the items, under `menuTitle` if that is set. A click follows the first item. It also gives
+the link's state (a `spoiler` and whether it is `revealed`, `disabled`, `concealed` by the game's OSC 8
+visibility settings, which leave blanks in its place in the GUI, `visited`, and `selected` in its group),
+and how the GUI paints the link in that state, which may differ from its runs as they were sent: a
+`foreground`, `background` and `styles` that are empty where the run's own apply, the styles standing in
+for the run's bold, italic, underline, overline and strike-out only. It is `nullopt` for 0, for an id the
+main console no longer holds, as once an MXP `<EXPIRE>` has removed the link or its line has been
+deleted, and with no profile open. It is a getter, so it may be called from any handler, `outputLine`'s included.
+
+`followLink(id)` does what a left click on the link does, which runs its first item whatever that holds,
+and `followLink(id, item)` what picking that item from its `menu` does; `item` indexes `items`. A spoiler
+not yet revealed is only revealed (`revealedSpoiler`), and the next follow runs it; the revealed text is
+not sent, so an app's copy of the line keeps the blanks it was sent with. A `disabled` link, or a menu's
+greyed-out item, runs nothing (`disabled`), nor does a `concealed` one (`concealed`), which the GUI leaves
+no way to click. Otherwise the link is chosen in its selection group, deselecting the rest of an exclusive
+group, and its command or function runs before `followLink()` returns (`ran`); a `send:` link sends, and a
+web link opens through `QDesktopServices::openUrl()`, which an app can route with
+`QDesktopServices::setUrlHandler()`. Where that raises a Lua error the result is `failed`, and
+`errorString()` gives Lua's message. The link is `visited` after either. `noSuchItem` is for an item the
+link does not have, `unknown` for an id the main console does not hold, as once a game's OSC 8 visibility
+settings have deleted its line, and `refused` for where `submit()` is, a handler included.
+
+`linksChanged(profile, links)` names the links whose `link()` may have changed, once per pass of the
+event loop, each id once: one followed (by `followLink()` or a script) and now `visited`, chosen or
+deselected in its group, a spoiler revealed, one a game's OSC 8 visibility settings concealed or revealed,
+one a game's MXP `<EXPIRE>` removed, and every link on a line that went. A line goes by a script's
+`deleteLine()` or `clearWindow()`, or by an OSC 8 concealment that deletes the whole line, which names the
+line's other links as well as the one followed. `link()` gives `nullopt` once no line holds the link, so
+one that runs on over a line still held is named and still given. The app reads `link()` again for
+each; an id may be one it was never sent, as where a trigger deletes the line the link arrived on. Hover
+is not sent, the pointer being the app's own.
+
+The trimming of the main console's oldest lines, as its buffer fills, is not told: no signal names the
+lines it lets go, and the app has each of them, with its links, from `outputLine` and `lineShown`, to
+keep for as long as it likes. Nor does it name their links. The console lets go of the links that no
+line holds any more each time a quarter of its buffer has been trimmed, and `linksChanged` names those
+then, after which `link()` gives `nullopt` for each at once. Until then, `link()` of a link that only
+trimmed lines held gives `nullopt` too, but reads the whole buffer to find that out.
 
 ## What still needs a window
 
