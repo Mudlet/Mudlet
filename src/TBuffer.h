@@ -1242,6 +1242,8 @@ public:
     bool isLinkSelected(int linkIndex) const;
     void revealSpoilerLink(int linkIndex);
     bool isSpoilerUnrevealed(int linkIndex) const { return mLinkOriginalText.contains(linkIndex); }
+    // Whether a line still carries the link, concealed or not: the store keeps a removed line's links until a sweep
+    bool linkHeld(int linkIndex) const;
     void clearGroupSelection(const QString& group, const QString& exceptValue);
     void applyPendingSelectionStyling();
     void updateLinkCharacters(int linkIndex, int fromLine = 0);
