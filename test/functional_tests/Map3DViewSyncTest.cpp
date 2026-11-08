@@ -40,13 +40,27 @@
 #include "ProfileTestHelper.h"
 #include "T2DMap.h"
 #include "TArea.h"
+#include "TLuaInterpreter.h"
 #include "TMap.h"
+#include "TMapView.h"
+#include "TMapViewManager.h"
 #include "TRoomDB.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgMapper.h"
+#include "glwidget.h"
 #include "modern_glwidget.h"
 #include "mudlet.h"
+
+extern "C" {
+#if defined(INCLUDE_VERSIONED_LUA_HEADERS)
+#include <lua5.1/lauxlib.h>
+#include <lua5.1/lua.h>
+#else
+#include <lauxlib.h>
+#include <lua.h>
+#endif
+}
 
 #include "GroupedTest.h"
 
@@ -80,6 +94,21 @@ private:
     }
 
     bool addRoomAt(const int id, const int areaId, const int x, const int y) const { return map()->addRoom(id) && map()->setRoomArea(id, areaId) && map()->setRoomCoordinates(id, x, y, 0); }
+
+    QString runLua(const QString& code) const
+    {
+        lua_State* L = mpHost->getLuaInterpreter()->getLuaGlobalState();
+        if (luaL_dostring(L, code.toUtf8().constData()) == 0) {
+            return QString();
+        }
+        const QString error = QString::fromUtf8(lua_tostring(L, -1));
+        lua_pop(L, 1);
+        return error;
+    }
+
+    static bool drawsSeeThrough(const QWidget* pView) { return !pView->testAttribute(Qt::WA_OpaquePaintEvent) && pView->testAttribute(Qt::WA_AlwaysStackOnTop); }
+
+    static bool drawsOpaque(const QWidget* pView) { return pView->testAttribute(Qt::WA_OpaquePaintEvent) && !pView->testAttribute(Qt::WA_AlwaysStackOnTop); }
 
     // There is no GL to start the view with here; what a camera call does to the camera needs none
     static auto standInForAViewThatStarted(ModernGLWidget* pModern)
@@ -782,6 +811,43 @@ private slots:
 
         pMapper->show3DView(false);
         pDock->setFloating(false);
+    }
+
+    void test_aTranslucentBackgroundSetFromLuaReachesEvery3DView()
+    {
+        dlgMapper* pMapper = mapperShowing2DAtThePlayer();
+        QVERIFY(pMapper);
+        pMapper->show3DView(true);
+        auto* pMain3D = qobject_cast<ModernGLWidget*>(pMapper->glWidget);
+        QVERIFY(pMain3D);
+
+        TMapViewManager* pManager = map()->getViewManager();
+        QVERIFY(pManager);
+        const auto [viewId, error] = pManager->createView(mPlayerAreaId);
+        QVERIFY2(viewId, qPrintable(error));
+        const QColor priorBackground = mpHost->mBgColor_2;
+        const auto restore = qScopeGuard([this, pManager, pMapper, viewId = viewId, priorBackground]() {
+            pManager->closeView(viewId);
+            runLua(qsl("setMapBackgroundColor(%1, %2, %3, %4)").arg(priorBackground.red()).arg(priorBackground.green()).arg(priorBackground.blue()).arg(priorBackground.alpha()));
+            pMapper->show3DView(false);
+        });
+        TMapView* pView = pManager->getView(viewId);
+        QVERIFY(pView);
+        pView->show3DView(true);
+        ModernGLWidget* pView3D = pView->get3DView();
+        QVERIFY(pView3D);
+        GLWidget classic3D(map(), mpHost);
+        QVERIFY2(drawsOpaque(pMain3D) && drawsOpaque(pView3D) && drawsOpaque(&classic3D), "a 3D view over an opaque background does not start out opaque");
+
+        QCOMPARE(runLua(qsl("setMapBackgroundColor(0, 0, 0, 100)")), QString());
+        QVERIFY2(drawsSeeThrough(pMain3D), "the mapper's 3D view still draws as opaque over a translucent background");
+        QVERIFY2(drawsSeeThrough(pView3D), "a createMapView() 3D view still draws as opaque over a translucent background");
+        QVERIFY2(drawsSeeThrough(&classic3D), "the classic 3D view still draws as opaque over a translucent background");
+
+        QCOMPARE(runLua(qsl("setMapBackgroundColor(0, 0, 0, 255)")), QString());
+        QVERIFY2(drawsOpaque(pMain3D), "the mapper's 3D view still draws as see-through over an opaque background");
+        QVERIFY2(drawsOpaque(pView3D), "a createMapView() 3D view still draws as see-through over an opaque background");
+        QVERIFY2(drawsOpaque(&classic3D), "the classic 3D view still draws as see-through over an opaque background");
     }
 };
 

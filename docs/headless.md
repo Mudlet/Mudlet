@@ -75,8 +75,13 @@ When standard output is a terminal, the runner gives its size to the profile as 
 size, as the GUI gives the main window's: the game is told it if the profile has NAWS on and the
 game asks, no wider than the profile's wrap width, and scripts see it as the main window's size.
 A resize (`SIGWINCH`) is passed on as a resize of the main window is, with a
-`sysWindowResizeEvent`. Output to a file or a pipe keeps the default of 90 by 25. This is not done
-on Windows.
+`sysWindowResizeEvent`. A script's `setMainWindowSize()` answers `true` but cannot resize the
+terminal, so the runner then gives the terminal's size again, with another `sysWindowResizeEvent`,
+and the game is told no other. A script that asks again from that event, to keep to its size, is
+answered `true` and nothing changes, as in the GUI when the window manager holds the window, until
+the terminal is resized or a script asks for another size. Output to a file or a pipe has no size
+to give, so it starts at the default of 90 by 25 and a script's `setMainWindowSize()` sets the size,
+which the game is told, as in the GUI. Every run on Windows is like that.
 
 ### Stopping it and what is saved
 
@@ -165,6 +170,7 @@ if (session->start(options) != THeadlessSession::StartResult::started) {
 session->submit(qsl("look"));        // as typed on the command line
 session->runLua(qsl("echo('hi')"));  // as a script
 session->setScreenSize(80, 24);      // in characters, as a resize of the main window
+session->setMainWindowSize(QSize(800, 600)); // or in pixels, for an app that draws the main console
 session->save();                     // before the system may stop the app, as a phone does
 session->shutdown(true);             // sysExitEvent, then the save
 ```
@@ -239,7 +245,7 @@ session is deleted first: a session being deleted sends none. It comes from the 
 font: read it at `profileLoaded`, then follow `consoleFontChanged`, which carries each change, whatever
 made it - a script's `setFont()` or `setFontSize()`, the profile's save, the bundled default standing in for
 a font that is not installed, or a package bringing that font or taking it away. The size `setScreenSize()`
-gives is in that font's characters. It comes from the event loop, with the font as it is then, and only
+gives is in that font's characters, counted again in each new one. It comes from the event loop, with the font as it is then, and only
 when that differs from the one the app last had, so none follows `profileLoaded` for what the load did.
 
 `setDebugConsoleShown(true)` shows the Central Debug Console, as the editor's button does, before
@@ -529,6 +535,10 @@ is drawn in where the game asks for none, and which `TextRun` marks as the profi
 main console, or a package or save loaded into the profile with colours of its own. A mini console's
 background does not send it, nor does the game redefining its palette, which leaves both as they were.
 
+`mainConsoleGrid()` and `mainConsoleTextRect()` are the main console's grid and where its text goes,
+which `mainConsoleAreaChanged` follows; "Embedding it: the main window's size" below says what decides
+them.
+
 `errorConsoleText` carries what the editor's error console prints, in pieces with the colours it prints
 them in: a Lua error comes as `[ERROR:]` in blue, where it was in green and the message in red, all on
 black. It is sent as written, as `localText` is, so its handler must not call the session back. A
@@ -546,6 +556,66 @@ GUI marks its tab as connecting, so an app can show that through a slow address 
 `disconnect()` calls the connect off during the address lookup, or `start()` does for a profile whose
 save did not load. It comes from the event loop.
 
+## Embedding it: the main window's size
+
+What an app gives the session is the main window, as a resize of the GUI's main window gives it: the
+area a profile's scripts read with `getMainWindowSize()`. The rest is laid out inside it as the GUI lays
+it out:
+
+- The borders a script's `setBorderTop()`, `setBorderLeft()` and the like set, the edges an
+  `Adjustable.Container` keeps for itself and an MXP internal frame each take their room from the edges
+  of the area. Borders the profile's save holds are laid out once it has loaded, before any script runs.
+- What they leave is where the main console's text goes, `mainConsoleTextRect()`, in pixels from the
+  area's top left corner.
+- The main console's grid, `mainConsoleGrid()`, is as many characters of its font as fit there, never
+  fewer than 40 columns. The game is told it, if the profile has NAWS on and the game asks, and a
+  script's `getColumnCount()` and `getRowCount()` read it. With no border set, the grid fills the area.
+- Borders wider than the area leave the text no room, as in the GUI: `mainConsoleTextRect()` and
+  `sysWindowResizeEvent` give a width or height of 0, never a negative one, and the grid stays at its
+  40 columns, or 1 row.
+
+There are two ways to give the area, and the later of the two holds:
+
+- `setScreenSize(columns, rows)` gives it in characters of the main console's font, as a terminal does,
+  and is what the runner gives from its terminal. A font change counts it again in the new font's
+  characters, so the grid stays the terminal's.
+- `setMainWindowSize(QSize(width, height))` gives it in pixels, for an app that draws the main console
+  itself. A font change keeps the area and fits the new font's characters into it, so the grid changes.
+
+Either raises `sysWindowResizeEvent` with the text's width and height in pixels, as a resize of the main
+window does in the GUI, and nothing when the size is the one already given; a border change raises it
+too. Both are refused where `submit()` is, and for a size of no character, or more than 65535, either
+way.
+
+`mainConsoleAreaChanged` carries the grid and where the text goes when either changes: from a border, a
+font change, either call, or a script's own `setMainWindowSize()`. Read both at `profileLoaded`; the
+signal comes from the event loop, with both as they are then, and only when they differ from what the
+app last had, so a script that sets a border twice in one turn sends one, and one that sets it and takes
+it back sends none.
+
+A script's `setMainWindowSize(width, height)` sets its own profile's area in pixels, as the app's call
+would, and answers `true`, or `nil` and a message for a size the app's call refuses.
+`mainWindowResizeRequested` tells the app the size it asked for, from the event loop: an app that can
+resize its window does so, and one that cannot gives its own size again, as the runner does for its
+terminal. The app answers each request by giving the size its window has once it has resized, or would
+not, even when that is the size asked for, from the signal's handler or later, once its window system has
+answered. The session takes the next size the app gives after a request as its answer: a script that asks
+again for the same size, as a `sysWindowResizeEvent` handler that keeps to a size does, is answered `true`
+and nothing changes, as in the GUI when the window manager holds the window, until the app gives a size
+with nothing asked for, or a script asks for another. A size given from the handler of a request that a
+newer one has replaced is not laid out: the newer request's answer decides. An app that connects nothing
+to `mainWindowResizeRequested` is not waited for, so a script's size holds until the app gives another,
+as in the GUI. An app that is connected but does not answer a request has the next size it gives, such
+as the player's resize, taken as the answer: until the app gives another size after that, a script
+asking again for the size of that request is answered `true`, the app is not asked, and the area keeps
+the size the app gave. Every other profile in the run keeps its own area.
+
+The app's own chrome stays outside the area. Where the GUI's main window has a command line, button bars
+from `tempButtonToolbar()`, a toolbar and docked user windows around the main console, an app that shows
+its own gives the area without them, and gives a smaller one as they grow; the session does not take
+their room from it, so what a script reads of the main window's size changes with them only when the app
+gives a new one.
+
 ## What still needs a window
 
 Some of what a profile can do has nothing to stand in for the GUI's widgets yet, and does nothing,
@@ -553,9 +623,9 @@ or answers as the GUI would with no window open. `CI/headless-lua-known-failures
 Lua specs that fail with no window, so it is the up-to-date list; the main gaps are:
 
 - the 2D and 3D mappers' views, and map symbols drawn with a font's Private Use Area;
-- the space an internal MXP frame takes from the main console;
-- layout that follows the main window, such as `Adjustable.Container` borders, docked user
-  windows, and the command line a mini console or user window can show.
+- the main window's own command line, button bars and docks, which an app draws outside the area
+  it gives (see "Embedding it: the main window's size"), and the command line a mini console or user
+  window can show.
 
 `.github/workflows/headless-lua-tests.yml` runs the Lua specs in `mudlet-headless`, and
 "The Lua specs with no main window" in `platform-builds.md` explains how to reproduce it.

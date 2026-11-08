@@ -134,6 +134,9 @@ private:
 private slots:
     void initTestCase()
     {
+#ifndef INCLUDE_FONTS
+        QSKIP("Built with WITH_FONTS=NO, so the bundled Bitstream Vera fonts this tells apart are not in the resources");
+#else
         if (portableMarkerPresent()) {
             QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
         }
@@ -164,6 +167,7 @@ private slots:
 
         mpHost = TestProfile::create(mProfileName, mLocalhost, QString::number(mpServer->serverPort()));
         QVERIFY2(mpHost, "No active host after profile creation");
+#endif
     }
 
     void cleanupTestCase()

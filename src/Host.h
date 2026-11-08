@@ -890,6 +890,38 @@ public:
     static constexpr int scmMaxBorderSize = 1'000'000;
     void setUserBorders(const QMargins);
     void setMxpBorders(const QMargins);
+    // With no view: the main window's area, which the borders take from. Given in the main console's cells, a
+    // font change counts it again in the new font's; given in pixels, the font decides the grid.
+    QSize mainAreaCells() const { return mMainAreaCells.value_or(QSize(mScreenWidth, mScreenHeight)); }
+    void setMainAreaCells(const QSize& cells)
+    {
+        mMainAreaCells = cells;
+        mMainAreaPixels.reset();
+    }
+    void setMainAreaPixels(const QSize& pixels) { mMainAreaPixels = pixels; }
+    // The frontend gave the area: from mainWindowResizeRequested's handler, answering the size and request that
+    // names, or later, answering what a script last asked for, as a window resizes once its window system answers,
+    // or with nothing asked for, of its own accord. False for an answer to a request a newer one has replaced, which
+    // is not to be laid out: the newer one's answer decides.
+    bool noteMainAreaGiven(const std::optional<std::pair<QSize, quint64>>& answering);
+    // Nothing listens for that request, so nothing will answer it
+    void noteMainWindowRequestUnheard(quint64 request);
+    bool mainAreaInPixels() const { return mMainAreaPixels.has_value(); }
+    // With no view: where the main console's text goes in the main window's area, what the borders leave of it
+    QRect mainTextRectWithNoView() const;
+    // With no view, as the GUI lays the main console out: fits its grid to what the borders leave of the main
+    // window's area, then tells scripts as a change of border or a resize of the main window does there; a font
+    // change, which does not resize the main window, tells them nothing. A handler can close the profile. Nothing
+    // is laid out while the save loads; load lays out what it left, and tells scripts nothing, as none has run yet.
+    enum class MainAreaChange { borders, area, font, load };
+    void layOutMainAreaWithNoView(MainAreaChange);
+    // With no view, a script's setMainWindowSize(): tells the frontend, then takes the size as one it gave in
+    // pixels, as there is no window's frame or menu to take from it. Refuses, as the frontend's own call does, a
+    // size that holds no character of the main console's font or more than NAWS can carry. A size the frontend
+    // answered with the one it gave is not asked for again till it gives one of its own accord or a script asks
+    // for another, as a window manager that holds the GUI's window gives it no new size, so a resize handler that
+    // asks for it settles.
+    std::pair<bool, QString> resizeMainWindowWithNoView(const QSize& pixels);
     void loadMap();
     bool saveMapFile(const QString& location, int saveVersion = 0);
     // Call before writing or reading the profile's map files: the newest of them is the one a profile loads
@@ -1425,6 +1457,10 @@ signals:
     void signal_packageListChanged();
     void signal_profileStyleSheetChanged(const QString& styleSheet);
     void signal_consoleFontChanged(const QFont& font);
+    // With no view: the main console's grid, or where its text goes, may have changed
+    void signal_mainAreaLaidOut();
+    // request counts the requests made, so an answer to one a newer one has replaced is known
+    void signal_mainWindowResizeRequested(const QSize& pixels, quint64 request);
     void signal_editorSearchOptionsChanged(const enums::EditorSearchOptions);
     void signal_editorShowBidiChanged(const bool);
     void signal_showIdsInEditorChanged(const bool);
@@ -1785,6 +1821,15 @@ private:
     QMargins mBorders;
     QMargins mUserBorders;
     QMargins mMxpBorders;
+    // Unset till a frontend gives an area or a border first takes from it, so till then it is the grid
+    std::optional<QSize> mMainAreaCells;
+    std::optional<QSize> mMainAreaPixels;
+    // What a script's setMainWindowSize() asked for that the frontend answered, till it gives an area of its own accord
+    // or a script asks for another
+    std::optional<QSize> mAnsweredMainWindowRequest;
+    // What a script's setMainWindowSize() last asked for, till the frontend answers it or nothing listens for it
+    std::optional<QSize> mUnansweredMainWindowRequest;
+    quint64 mMainWindowRequests = 0;
 
     // 0 to scmMaxCommandLineHistorySaveSize lines, for ALL command lines; 0 turns
     // saving the history off:

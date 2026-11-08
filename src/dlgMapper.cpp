@@ -298,6 +298,9 @@ void dlgMapper::connectMapCues()
         case TMap::MapperSetting::Style:
             update3DView();
             break;
+        case TMap::MapperSetting::BackgroundColor:
+            repaintMaps();
+            break;
         }
     });
 }

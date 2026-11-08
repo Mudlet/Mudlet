@@ -72,6 +72,7 @@
 #endif
 
 #include <chrono>
+#include <filesystem>
 #include <vector>
 #include <QtConcurrentRun>
 #include <QAbstractScrollArea>
@@ -5986,6 +5987,7 @@ void dlgProfilePreferences::slot_resetMapColors()
 
     if (pHost->mpMap) {
         pHost->mpMap->restore16ColorSet();
+        pHost->mpMap->announceMapperSettingChanged(TMap::MapperSetting::BackgroundColor);
         pHost->mpMap->updateArea(-1);
     }
 }
@@ -6243,23 +6245,9 @@ void dlgProfilePreferences::slot_setMapBgColor()
     Host* pHost = mpHost;
     if (pHost) {
         setButtonAndProfileColor(pushButton_background_color_2, pHost->mBgColor_2, true);
-// if 3D map, update transparency flags
-#if defined(INCLUDE_3DMAPPER)
-        dlgMapper* pMapper = pHost->mpMap ? pHost->mpMap->mapper() : nullptr;
-        if (pMapper && pMapper->glWidget) {
-            QOpenGLWidget* map = pMapper->glWidget;
-            if (auto* modernMap = qobject_cast<ModernGLWidget*>(map)) {
-                // Its style may paint its own background, whatever the profile's is
-                modernMap->applyStyle();
-            } else if (pHost->mBgColor_2.alpha() < 255) {
-                map->setAttribute(Qt::WA_OpaquePaintEvent, false);
-                map->setAttribute(Qt::WA_AlwaysStackOnTop, true);
-            } else {
-                map->setAttribute(Qt::WA_OpaquePaintEvent, true);
-                map->setAttribute(Qt::WA_AlwaysStackOnTop, false);
-            }
+        if (pHost->mpMap) {
+            pHost->mpMap->announceMapperSettingChanged(TMap::MapperSetting::BackgroundColor);
         }
-#endif
     }
 }
 
@@ -6852,8 +6840,9 @@ void dlgProfilePreferences::slot_copyMap()
 
             // Check for the destination directory for the other profiles
             const QDir toProfileDir;
-            const QString toProfileDirPathString = MudletApp::getMudletPath(enums::profileHomePath, pHost->getName());
-            if (!toProfileDir.exists(toProfileDirPathString)) {
+            const QString toProfileDirPathString = MudletApp::getMudletPath(enums::profileMapsPath, toProfileName);
+            // A profile deleted while this dialog was open is left for its copy to fail, rather than brought back holding only a map
+            if (toProfileDir.exists(MudletApp::getMudletPath(enums::profileHomePath, toProfileName)) && !toProfileDir.exists(toProfileDirPathString)) {
                 if (!toProfileDir.mkpath(toProfileDirPathString)) {
                     const QString errMsg = tr("[ ERROR ] - Unable to use or create directory to store map for other profile \"%1\".\n"
                                               "Please check that you have permissions/access to:\n"
@@ -6979,12 +6968,29 @@ void dlgProfilePreferences::slot_copyMap()
         return;
     }
 
+    QList<QString> copiedToProfiles;
+    QStringList failedProfiles;
     // Make the copies into the destination profiles (for all to profiles whether
     // in use or not):
     itOtherProfile.toFront();
     while (itOtherProfile.hasNext()) {
         itOtherProfile.next();
         const QString otherHostName = itOtherProfile.key();
+        const QString destination = MudletApp::getMudletPath(enums::profileMapPathFileName, otherHostName, thisProfileLatestMapPathFileName);
+        // A map folder shared through a link or junction already holds the save just made, which a remove would delete
+        std::error_code notComparable;
+        if (std::filesystem::equivalent(QFileInfo(destination).filesystemFilePath(), QFileInfo(thisProfileLatestMapFile).filesystemFilePath(), notComparable)) {
+            copiedToProfiles.append(otherHostName);
+            continue;
+        }
+        // A copy made earlier in the same second may have left a file of this name, which QFile::copy() will not replace;
+        // it is set aside rather than removed, so a copy that fails can put it back
+        const QString setAside = qsl("%1.replaced").arg(destination);
+        bool replacing = false;
+        if (QFileInfo(destination).isFile()) {
+            QFile::remove(setAside);
+            replacing = QFile::rename(destination, setAside);
+        }
         // Copy over into the profiles map folder, so it is loaded first when map is open - this covers the offline case
         label_mapFileActionResult->setText(tr("Copying over map to %1 - please wait...").arg(otherHostName));
         qApp->processEvents(); // Copied from "Loading map - please wait..." case
@@ -6995,9 +7001,19 @@ void dlgProfilePreferences::slot_copyMap()
             pOtherHost->waitForMapAutosave();
         }
         if (!thisProfileLatestMapFile.copy(MudletApp::getMudletPath(enums::profileMapPathFileName, otherHostName, thisProfileLatestMapPathFileName))) {
-            label_mapFileActionResult->setText(tr("Could not copy the map to %1 - unable to copy the new map file over.").arg(otherHostName));
-            QTimer::singleShot(10s, this, &dlgProfilePreferences::slot_hideActionLabel);
+            //: %1 is the profile the map could not be copied to, %2 the system's reason, e.g. "Destination file exists"
+            pHost->postMessage(tr("[ ERROR ] - Unable to copy the map to profile \"%1\".\n"
+                                  "reason: %2.")
+                                       .arg(otherHostName, thisProfileLatestMapFile.errorString()));
+            failedProfiles.append(otherHostName);
+            if (replacing) {
+                QFile::rename(setAside, destination);
+            }
             continue; // Try again with next profile
+        }
+        copiedToProfiles.append(otherHostName);
+        if (replacing) {
+            QFile::remove(setAside);
         }
         label_mapFileActionResult->setText(tr("Map copied successfully to other profile %1.").arg(otherHostName));
         qApp->processEvents(); // Copied from "Loading map - please wait..." case
@@ -7006,11 +7022,13 @@ void dlgProfilePreferences::slot_copyMap()
     }
 
     // Finally, signal the other profiles to reload their maps:
-    mudlet::self()->requestProfilesToReloadMaps(toProfilesRoomIdMap.keys());
-    // GOTCHA: keys() is a QList<QString>, however, though it IS equivalent to a
-    // QStringList in many ways, the SLOT/SIGNAL system treats them as different
-    // - I thinK - so use QList<QString> throughout the SIGNAL/SLOT links Slysven!
-    label_mapFileActionResult->setText(tr("Map copied, now signalling other profiles to reload it."));
+    mudlet::self()->requestProfilesToReloadMaps(copiedToProfiles, thisProfileLatestMapPathFileName);
+    if (failedProfiles.isEmpty()) {
+        label_mapFileActionResult->setText(tr("Map copied, now signalling other profiles to reload it."));
+    } else {
+        //: %1 is a comma-separated list of the profiles the map could not be copied to
+        label_mapFileActionResult->setText(tr("Could not copy the map to %1 - see the main console for why.").arg(failedProfiles.join(qsl(", "))));
+    }
     QTimer::singleShot(10s, this, &dlgProfilePreferences::slot_hideActionLabel);
 
     // CHECK: Race condition? We might be changing this while other profile

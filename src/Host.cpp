@@ -823,6 +823,9 @@ void Host::startProfileScripts()
 {
     // enable script compilation (which is off by default)
     mBlockScriptCompile = false;
+    if (!hasConsoleView() && !mBorders.isNull()) {
+        layOutMainAreaWithNoView(MainAreaChange::load);
+    }
     // This uses the external LuaGlobal.lua file to load all the other external
     // lua files, including the condenseMapLoad() function needed by the
     // TMap::audit() method:
@@ -2219,6 +2222,7 @@ std::pair<bool, QString> Host::setDisplayFont(const QFont& font, const DisplayFo
     mTempDisplayFont = mTempDisplayFontAttributes.value().makeFont();
     if (TFontAttributes(mTempDisplayFont.value()) != before) {
         emit signal_consoleFontChanged(mTempDisplayFont.value());
+        layOutMainAreaWithNoView(MainAreaChange::font);
     }
 
     return {true, QString()};
@@ -2282,6 +2286,7 @@ void Host::setDisplayFontSize(int size)
     mTempDisplayFont = mTempDisplayFontAttributes.value().makeFont();
     if (TFontAttributes(mTempDisplayFont.value()) != before) {
         emit signal_consoleFontChanged(mTempDisplayFont.value());
+        layOutMainAreaWithNoView(MainAreaChange::font);
     }
 }
 
@@ -7788,9 +7793,12 @@ std::optional<QRect> Host::windowGeometry(const QString& name) const
 std::optional<QSize> Host::mainWindowSize() const
 {
     if (!hasConsoleView()) {
-        // Nothing lays the main console out, so it is the character grid NAWS reports
+        if (mMainAreaPixels) {
+            return mMainAreaPixels;
+        }
         const QFontMetrics metrics(consoleFrontend()->displayFont());
-        return {QSize(mScreenWidth * metrics.averageCharWidth(), mScreenHeight * metrics.height())};
+        const QSize cells = mainAreaCells();
+        return {QSize(cells.width() * metrics.averageCharWidth(), cells.height() * metrics.height())};
     }
     return {mWindowRegistry.mainWindowSize()};
 }
@@ -8042,6 +8050,114 @@ void Host::setMxpBorders(const QMargins borders)
 {
     mMxpBorders = borders;
     setBorders(mUserBorders + mMxpBorders);
+}
+
+// Never of negative size, as Qt holds the GUI's text widget to no less than nothing however wide the borders are
+QRect Host::mainTextRectWithNoView() const
+{
+    const QSize area = mainWindowSize().value_or(QSize());
+    return {mBorders.left(), mBorders.top(), std::max(0, area.width() - mBorders.left() - mBorders.right()), std::max(0, area.height() - mBorders.top() - mBorders.bottom())};
+}
+
+void Host::layOutMainAreaWithNoView(const MainAreaChange change)
+{
+    // Till then the save is loading: the GUI makes its main console only after that, and the load may still change
+    // the font, so startProfileScripts() lays out what the save left
+    if (mBlockScriptCompile) {
+        return;
+    }
+    // Till then the area is the grid, which a font change keeps; measuring it would add the bundled fonts before
+    // anything draws in them
+    if (change == MainAreaChange::font && !mMainAreaCells) {
+        emit signal_mainAreaLaidOut();
+        return;
+    }
+    if (!mMainAreaCells) {
+        mMainAreaCells = QSize(mScreenWidth, mScreenHeight);
+    }
+    const QSize textArea = mainTextRectWithNoView().size();
+    const QFontMetrics metrics(consoleFrontend()->displayFont());
+    // As TTextEdit::updateScreenView() counts it, and NAWS carries no more than 16 bits
+    const int columns = std::clamp(textArea.width() / std::max(1, metrics.averageCharWidth()), 40, 65535);
+    const int rows = std::clamp(textArea.height() / std::max(1, metrics.height()), 1, 65535);
+    if (columns != mScreenWidth || rows != mScreenHeight) {
+        setScreenDimensions(columns, rows);
+        updateDisplayDimensions();
+    }
+    emit signal_mainAreaLaidOut();
+    if (change == MainAreaChange::font || change == MainAreaChange::load) {
+        return;
+    }
+
+    // As TConsole::resizeEvent() and TMainConsole::applyBorders() tell scripts, with no command line to take off
+    if (change == MainAreaChange::area) {
+        mLuaInterpreter.call(qsl("handleWindowResizeEvent"), qsl("WindowResizeEvent"));
+        if (closeStarted()) {
+            return;
+        }
+    }
+    // Measured now, as TConsole::raiseMudletSysWindowResizeEvent() takes off the borders the handler may have set
+    const QSize reported = mainTextRectWithNoView().size();
+    TEvent event{};
+    event.mArgumentList.append(qsl("sysWindowResizeEvent"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(QString::number(reported.width()));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    event.mArgumentList.append(QString::number(reported.height()));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    event.mArgumentList.append(qsl("main"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    raiseEvent(event);
+}
+
+std::pair<bool, QString> Host::resizeMainWindowWithNoView(const QSize& pixels)
+{
+    const QFontMetrics metrics(consoleFrontend()->displayFont());
+    const qint64 columns = pixels.width() / std::max(1, metrics.averageCharWidth());
+    const qint64 rows = pixels.height() / std::max(1, metrics.height());
+    if (columns < 1 || columns > 65535 || rows < 1 || rows > 65535) {
+        return {false,
+                qsl("a main window of %1 by %2 pixels holds %3 columns by %4 rows of the main console's font, and each must be from 1 to 65535")
+                        .arg(pixels.width())
+                        .arg(pixels.height())
+                        .arg(columns)
+                        .arg(rows)};
+    }
+    if (mAnsweredMainWindowRequest == pixels) {
+        return {true, QString()};
+    }
+    // An answer to what was asked before must not stand for this
+    mAnsweredMainWindowRequest.reset();
+    mUnansweredMainWindowRequest = pixels;
+    emit signal_mainWindowResizeRequested(pixels, ++mMainWindowRequests);
+    // As a resize of the GUI's main window, which tells nothing for the size the window has
+    if (mMainAreaPixels == pixels) {
+        return {true, QString()};
+    }
+    mMainAreaPixels = pixels;
+    layOutMainAreaWithNoView(MainAreaChange::area);
+    return {true, QString()};
+}
+
+bool Host::noteMainAreaGiven(const std::optional<std::pair<QSize, quint64>>& answering)
+{
+    if (!answering) {
+        mAnsweredMainWindowRequest = std::exchange(mUnansweredMainWindowRequest, std::nullopt);
+        return true;
+    }
+    if (answering->second != mMainWindowRequests) {
+        return false;
+    }
+    mAnsweredMainWindowRequest = answering->first;
+    mUnansweredMainWindowRequest.reset();
+    return true;
+}
+
+void Host::noteMainWindowRequestUnheard(const quint64 request)
+{
+    if (request == mMainWindowRequests) {
+        mUnansweredMainWindowRequest.reset();
+    }
 }
 
 void Host::setCommandLineHistorySaveSize(const int lines)

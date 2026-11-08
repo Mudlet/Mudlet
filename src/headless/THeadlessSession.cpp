@@ -476,6 +476,7 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                         },
                         Qt::QueuedConnection);
                 connectOutputRelays(pNewHost, run);
+                connectAreaRelays(pNewHost, run);
                 connect(pNewHost, &Host::signal_errorConsolePrint, this, [this](const QString& text, const QColor& foreground, const QColor& background) {
                     const QString profile = mProfileName;
                     ++gSignalsBeingHandedOut;
@@ -840,6 +841,7 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
     }
     mDeliveredConsoleFont = consoleFont();
     noteOutputStateAtLoad();
+    noteAreaAtLoad();
     // A copy, as a handler may delete the session while its argument is in use
     const QString profile = mProfileName;
     emit profileLoaded(profile);
@@ -1119,33 +1121,18 @@ bool THeadlessSession::setScreenSize(const int columns, const int rows)
         mErrorString = tr("A screen of %1 columns by %2 rows cannot be sent to the game: each must be from 1 to 65535.").arg(columns).arg(rows);
         return false;
     }
+    if (!mpHost->noteMainAreaGiven(mAnsweringMainWindowRequest)) {
+        return true;
+    }
     // The GUI's main console never reports itself narrower
-    const int width = std::max(40, columns);
-    // As the GUI's resize: each call would put NAWS off for another 0.3s
-    if (width == mpHost->mScreenWidth && rows == mpHost->mScreenHeight) {
+    const QSize area(std::max(40, columns), rows);
+    // As TConsole::resizeEvent(), which tells scripts nothing for the size they have
+    if (!mpHost->mainAreaInPixels() && area == mpHost->mainAreaCells()) {
         return true;
     }
-    mpHost->setScreenDimensions(width, rows);
-    mpHost->updateDisplayDimensions();
-
-    // As TConsole::resizeEvent() reports the main window. The first handler may close the profile, and a
-    // function the frontend bound into Lua delete the session.
-    const QPointer<THeadlessSession> self(this);
-    mpHost->getLuaInterpreter()->call(qsl("handleWindowResizeEvent"), qsl("WindowResizeEvent"));
-    if (!self || !mpHost || mpHost->closeStarted()) {
-        return true;
-    }
-    const QSize size = mpHost->mainWindowSize().value_or(QSize());
-    TEvent event{};
-    event.mArgumentList.append(qsl("sysWindowResizeEvent"));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    event.mArgumentList.append(QString::number(size.width()));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    event.mArgumentList.append(QString::number(size.height()));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    event.mArgumentList.append(qsl("main"));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    mpHost->raiseEvent(event);
+    mpHost->setMainAreaCells(area);
+    // The first handler may close the profile, and a function the frontend bound into Lua delete the session
+    mpHost->layOutMainAreaWithNoView(Host::MainAreaChange::area);
     return true;
 }
 

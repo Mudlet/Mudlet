@@ -7498,9 +7498,9 @@ void mudlet::setEditorTextoptions(const bool isTabsAndSpacesToBeShown, const boo
 }
 
 // Originally a slot_ but it does not actually need to be - Slysven
-void mudlet::requestProfilesToReloadMaps(QList<QString> affectedProfiles)
+void mudlet::requestProfilesToReloadMaps(QList<QString> affectedProfiles, const QString& mapFileName)
 {
-    emit signal_profileMapReloadRequested(affectedProfiles);
+    emit signal_profileMapReloadRequested(affectedProfiles, mapFileName);
 }
 
 //loads the luaFunctionList for use by the edbee Autocompleter

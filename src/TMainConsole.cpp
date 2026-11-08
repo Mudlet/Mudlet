@@ -3522,7 +3522,7 @@ void TMainConsole::finalize()
     }
 }
 
-void TMainConsole::slot_reloadMap(QList<QString> profilesList)
+void TMainConsole::slot_reloadMap(QList<QString> profilesList, const QString& mapFileName)
 {
     Host* pHost = getHost();
     if (!pHost) {
@@ -3538,7 +3538,14 @@ void TMainConsole::slot_reloadMap(QList<QString> profilesList)
     pHost->postMessage(infoMsg);
 
     QString outcomeMsg;
-    if (pHost->loadMapFile(QString())) {
+    const QString copiedMap = MudletApp::getMudletPath(enums::profileMapPathFileName, mProfileName, mapFileName);
+    // By name and then made the newest file, which is the one this profile opens next time, as an autosave here during the copy can be newer
+    if (pHost->loadMapFile(copiedMap)) {
+        QFile copiedMapFile(copiedMap);
+        if (!copiedMapFile.open(QIODevice::ReadWrite | QIODevice::ExistingOnly) || !copiedMapFile.setFileTime(QDateTime::currentDateTime(), QFileDevice::FileModificationTime)) {
+            // Then the next save writes it as the newest
+            pHost->mpMap->setUnsavedKeepingRevisions(__func__);
+        }
         outcomeMsg = tr("[  OK  ]  - ... System Map reload request completed.");
     } else {
         outcomeMsg = tr("[ WARN ]  - ... System Map reload request failed.");

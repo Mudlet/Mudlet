@@ -28,6 +28,8 @@
 #include <QList>
 #include <QObject>
 #include <QPointer>
+#include <QRect>
+#include <QSize>
 #include <QString>
 #include <QStringList>
 
@@ -138,18 +140,18 @@ public:
     QFont consoleFont() const;
     // For what the session does not cover, such as settings and the map. Null once the profile closes, so
     // hold it in a QPointer. Not from a handler of outputLine, lineShown, mainConsoleCleared, localText, errorConsoleText, debugText,
-    // hiddenInputWanted or a ...Requested signal: a line it fed would be committed in the middle of a write, which TBuffer
-    // does not allow.
+    // hiddenInputWanted or a ...Requested signal but quitRequested and mainWindowResizeRequested: a line it fed would be
+    // committed in the middle of a write, which TBuffer does not allow.
     Host* host() const;
 
     // As typed on the command line: its aliases run, and what is sent while not connected is echoed and dropped
     // with nothing said, as in the GUI, so a frontend that types ahead waits for connected(). These, and
     // installPackage(), are refused while a profile loads or shutdown() runs, and from a handler of outputLine,
     // lineShown, mainConsoleCleared, localText, errorConsoleText, debugText, hiddenInputWanted or a ...Requested
-    // signal, which run mid-write, and fail once a close of the profile has begun; submit() checks each line of a
-    // paste as a call. It is the app's input line being sent: the main command line holds the line while its aliases
-    // run, then is emptied or kept as the profile says. A command from elsewhere, such as a button, goes through
-    // runLua() and expandAlias(), which leave the line alone.
+    // signal but quitRequested and mainWindowResizeRequested, which run mid-write, and fail once a close of the
+    // profile has begun; submit() checks each line of a paste as a call. It is the app's input line being sent: the
+    // main command line holds the line while its aliases run, then is emptied or kept as the profile says. A command
+    // from elsewhere, such as a button, goes through runLua() and expandAlias(), which leave the line alone.
     bool submit(const QString& line);
     // As the GUI's hidden-input box sends what is typed into it while hiddenInputWanted holds: straight to the
     // game, with its carriage returns and line feeds taken out, and no aliases, command separator,
@@ -177,12 +179,14 @@ public:
     // One whose name, or whose config.lua's, is already installed is left as it is; errorString() says so.
     enum class PackageResult { installed, installedWithErrors, alreadyInstalled, failed };
     PackageResult installPackage(const QString& path);
-    // The main console's size in characters, as a resize of the GUI's main window sets it. If the profile has
-    // NAWS on and the game asks for it, the game is told from the event loop once the size has not changed for
-    // 0.3s, and only if what it is told has changed, or when it next asks; until then it is told 90 by 25. The
-    // profile's scripts read it as the main window's size, and a change raises sysWindowResizeEvent with that
-    // size in pixels. As in the GUI, a width below 40 is taken as 40 and the game is told no more than the
-    // profile's wrap width. Refused below 1 or above 65535, which NAWS cannot carry, and where submit() is.
+    // The main window's size in characters, as a resize of the GUI's main window sets it. As there, the borders a
+    // script or MXP sets take their room from it, and what they leave is the main console's grid. If the profile
+    // has NAWS on and the game asks for it, the game is told the grid from the event loop once it has not changed
+    // for 0.3s, and only if what it is told has changed, or when it next asks; until then it is told 90 by 25.
+    // The profile's scripts read the size as the main window's, and a change raises sysWindowResizeEvent with
+    // what the borders leave of it, in pixels. As in the GUI, a width below 40 is taken as 40 and the game is told
+    // no more than the profile's wrap width. Refused below 1 or above 65535, which NAWS cannot carry, and where
+    // submit() is.
     bool setScreenSize(int columns, int rows);
     // Shows or closes the Central Debug Console, as the editor's button does: while it is shown, debugText carries
     // what it prints, what was kept from before first, and the profiles write what they write only in debug mode.
@@ -296,7 +300,7 @@ public:
     // sysApplicationFocusChangeEvent with true or false in every profile that loaded and has not begun to close, and
     // the state it is in already raises nothing. It starts true, and before start() it is only kept. Refused while a
     // profile loads, during shutdown(), and from a handler of outputLine, localText, errorConsoleText,
-    // hiddenInputWanted or a ...Requested signal.
+    // hiddenInputWanted or a ...Requested signal but quitRequested and mainWindowResizeRequested.
     bool setApplicationActive(bool active);
     bool applicationActive() const { return mApplicationActive; }
     // The main console's replay recording button: true records what the game sends into a new file in the
@@ -403,6 +407,16 @@ public:
     // script, and a push-down button goes down or up. False, with errorString() saying why, for an id it does not
     // list; refused where submit() is.
     bool pressButton(int id);
+    // The main window's size in pixels, as a resize of the GUI's main window gives it: the borders a script or MXP
+    // sets take their room from it, and the main console's font decides how many characters fit in what is left,
+    // so a font change regrids it and the area stays. Raises sysWindowResizeEvent as setScreenSize() does, and the
+    // later of the two holds. Refused where setScreenSize() is, and for a size that holds no character of the font
+    // either way, or more than 65535.
+    bool setMainWindowSize(const QSize& pixels);
+    // The main console's grid in characters, and where its text goes in the main window's area in pixels: the area
+    // less the borders. Empty with no profile open: read them at profileLoaded, then follow mainConsoleAreaChanged.
+    QSize mainConsoleGrid() const;
+    QRect mainConsoleTextRect() const;
 
     // sysExitEvent and, if asked, a save for every profile that loaded, then the pool goes. Meanwhile no profile
     // opens, and none dials the game or logs in, a live connection staying for the exit handlers. Refused while a
@@ -572,6 +586,20 @@ signals:
     // The session's profile closed; any other profile its scripts opened runs on until shutdown(). Not sent once
     // shutdown() has been called, even for a close a script made before it
     void quitRequested();
+    // mainConsoleGrid() or mainConsoleTextRect() changed, from a border a script or MXP set, a font change,
+    // setMainWindowSize() or setScreenSize(). From the event loop, with both as they are then, and only when they
+    // differ from what was last sent or what they gave at profileLoaded, so a turn that changes them more than once
+    // sends them once.
+    void mainConsoleAreaChanged(const QString& profile, const QSize& grid, const QRect& textRect);
+    // A script's setMainWindowSize() asked for the main window to be this size, for an app that can resize its
+    // window to do so. The profile has taken it as setMainWindowSize() would have, so mainConsoleAreaChanged
+    // follows if that changed the grid or where the text goes. From the event loop. Its handler may call the
+    // session. The app answers by giving the size its window has once it has resized, or would not, from the
+    // handler or later: the next size it gives is the session's answer, so a script asking for the same size again
+    // changes nothing till the app gives one with nothing asked for, or a script asks for another. A size given from
+    // the handler of a request a newer one has replaced is not laid out, and with nothing connected, nothing is
+    // waited for.
+    void mainWindowResizeRequested(const QString& profile, const QSize& pixels);
 
 private:
     bool storeConnectionDetails(const Options&, std::optional<bool> tls);
@@ -605,6 +633,9 @@ private:
     void connectOutputRelays(Host*, unsigned int run);
     void noteOutputStateAtLoad();
     void sendLatency();
+    // The relays of the main window's area, in THeadlessSessionArea.cpp
+    void connectAreaRelays(Host*, unsigned int run);
+    void noteAreaAtLoad();
     // duringLoad takes a call while a profile loads, which only one that cannot reach the pool may do
     bool refused(bool duringLoad = false);
     bool usable(bool duringLoad = false);
@@ -675,6 +706,10 @@ private:
     unsigned int mLatencyPaceRun = 0;
     // The latency box's text as last sent
     QString mDeliveredLatency;
+    // What mainConsoleGrid() and mainConsoleTextRect() gave at profileLoaded, then each mainConsoleAreaChanged
+    std::optional<std::pair<QSize, QRect>> mDeliveredMainConsoleArea;
+    // The size a script asked for, and Host's count of that request, while mainWindowResizeRequested's handler runs
+    std::optional<std::pair<QSize, quint64>> mAnsweringMainWindowRequest;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(THeadlessSession::TextStyles)
