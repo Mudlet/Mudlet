@@ -469,9 +469,16 @@ void XMLimport::readArea()
 {
     if (attributes().hasAttribute(qsl("id"))) {
         const int id = attributes().value(qsl("id")).toString().toInt();
-        const QString name = attributes().value(qsl("name")).toString();
+        const QString wantedName = attributes().value(qsl("name")).toString();
+        TRoomDB* pRoomDB = mpHost->mpMap->mpRoomDB.get();
 
-        mpHost->mpMap->mpRoomDB->addArea(id, name);
+        // Game maps reuse area names, which addArea() refuses, and the area would
+        // then only be made, nameless, for its rooms
+        QString name = wantedName;
+        for (int suffix = 1; !name.isEmpty() && pRoomDB->hasAreaName(name); ++suffix) {
+            name = qsl("%1_%2").arg(wantedName).arg(suffix, 3, 10, QLatin1Char('0'));
+        }
+        pRoomDB->addArea(id, name);
     }
 }
 

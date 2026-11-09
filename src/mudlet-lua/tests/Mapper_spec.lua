@@ -6132,6 +6132,33 @@ describe("Tests saveMap and loadMap", function()
       assert.are.same({4001}, getAllRoomEntrances(4002))
     end)
 
+    it("keeps the names of areas that share a name, told apart by a suffix", function()
+      local sharedPath = getMudletHomeDir() .. "/mapper_spec_shared_area_names.xml"
+      finally(function() os.remove(sharedPath) end)
+      local file = assert(io.open(sharedPath, "w"))
+      file:write([[<?xml version="1.0" encoding="UTF-8"?>
+<map>
+  <areas>
+    <area id="4101" name="Mapper Spec Song City"/>
+    <area id="4102" name="Mapper Spec Song City"/>
+    <area id="4103" name="Mapper Spec Song City"/>
+  </areas>
+  <rooms>
+    <room id="4101" area="4101"><coord x="0" y="0" z="0"/></room>
+    <room id="4102" area="4102"><coord x="0" y="0" z="0"/></room>
+    <room id="4103" area="4103"><coord x="0" y="0" z="0"/></room>
+  </rooms>
+</map>
+]])
+      file:close()
+
+      assert.is_true(loadMap(sharedPath))
+      local names = getAreaTableSwap()
+      assert.are.equal("Mapper Spec Song City", names[4101])
+      assert.are.equal("Mapper Spec Song City_001", names[4102])
+      assert.are.equal("Mapper Spec Song City_002", names[4103])
+    end)
+
     it("throws away the map that was there before the import", function()
       local stray = createRoomID()
       addRoom(stray)
@@ -6235,7 +6262,8 @@ describe("Tests saveMap and loadMap", function()
       assert.are.equal(mapRooms, rooms)
       local areas = 0
       for _ in pairs(getAreaTable()) do areas = areas + 1 end
-      assert.are.equal(mapAreas, areas)
+      -- every area the file lists, those sharing a name included, and the Default Area
+      assert.are.equal(mapAreas + 1, areas)
     end)
 
     teardown(function()
