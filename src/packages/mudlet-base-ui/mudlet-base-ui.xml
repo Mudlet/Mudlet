@@ -2845,12 +2845,12 @@ local function completeReading(data)
   return data.current ~= nil and data.max ~= nil and data.max &gt; 0
 end
 
--- the single entry point every vitals source feeds. snapshot sources (GMCP,
--- MSDP) resend everything they know each time, so their stats replace what
--- is stored and a transient stat they no longer mention is gone; the prompt
--- layer sees one line at a time and merges instead, letting a score screen's
--- maxima complete a prompt's bare currents. A source ranked lower than the
--- lock's owner is ignored outright.
+-- the single entry point every vitals source feeds. Readings merge into what
+-- is stored: a score screen's maxima complete a prompt's bare currents, and
+-- some GMCP games send only the fields that changed while Mudlet replaces
+-- gmcp.Char.Vitals with each message. Only for a transient stat do snapshot
+-- sources (GMCP, MSDP) replace: one they no longer mention is gone. A source
+-- ranked lower than the lock's owner is ignored outright.
 function BaseUI.applyVitals(source, readings, snapshot)
   local rank = sourceRanks[source]
   if BaseUI.dormant() or rank &lt; BaseUI.vitalsLock then
@@ -2872,7 +2872,7 @@ function BaseUI.applyVitals(source, readings, snapshot)
   end
   for _, stat in ipairs(vitalsStats) do
     local reading = readings[stat.key]
-    if snapshot then
+    if snapshot and stat.transient then
       BaseUI.vitalsData[stat.key] = reading
     elseif reading and not stat.transient then
       local data = BaseUI.vitalsData[stat.key] or {}
