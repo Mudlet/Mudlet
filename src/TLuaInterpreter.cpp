@@ -1321,7 +1321,7 @@ QByteArray TLuaInterpreter::parseTelnetCodes(const QByteArray& input)
                                                           {QByteArray("<DC1>"), '\x11'},
 
                                                           {QByteArray("<12>"), '\x12'}, // Logout
-                                                          {QByteArray("<DC2"), '\x12'},
+                                                          {QByteArray("<DC2>"), '\x12'},
 
                                                           {QByteArray("<13>"), '\x13'}, // Byte Macro
                                                           {QByteArray("<DC3>"), '\x13'},

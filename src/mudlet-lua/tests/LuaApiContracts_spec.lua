@@ -737,6 +737,26 @@ describe("Tests feedTelnet's marker escapes", function()
     assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
     assert.is_true(contains(textFrom(mark), "FeedTelnetEscaped <T_IAC> and <b>"), textFrom(mark))
   end)
+
+  -- A subnegotiation payload reaches sysTelnetEvent byte for byte, so it shows what each marker became
+  it("turns every named control code marker into its byte", function()
+    -- <FF> is left out: as a hex marker it is 0xFF, not form feed
+    local names = {NUL = 0, SOH = 1, STX = 2, ETX = 3, EOT = 4, ENQ = 5, ACK = 6, BELL = 7, BS = 8, HTAB = 9, LF = 10,
+                   VTAB = 11, CR = 13, SO = 14, SI = 15, DLE = 16, DC1 = 17, DC2 = 18, DC3 = 19, DC4 = 20}
+    local option = 140
+    for name, byte in pairs(names) do
+      local seen
+      local handler = registerAnonymousEventHandler("sysTelnetEvent", function(_, kind, opt, payload)
+        if kind == 250 and opt == option then
+          seen = payload
+        end
+      end)
+      local ok, msg = feedTelnet("<T_IAC><T_SB>" .. string.char(option) .. "<" .. name .. "><T_IAC><T_SE>")
+      killAnonymousEventHandler(handler)
+      assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+      assert.equals(string.char(byte), seen, "<" .. name .. "> did not become byte " .. byte)
+    end
+  end)
 end)
 
 -- The perm*Trigger family all take the name of a parent to create the trigger
