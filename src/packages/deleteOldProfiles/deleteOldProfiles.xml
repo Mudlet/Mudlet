@@ -75,11 +75,25 @@
     keepdays
   ))
 
+  -- The newest file Mudlet would load stays however old it is. An interrupted
+  -- save can leave a newer temporary file behind, which Mudlet skips over.
+  local loadedExtensions = {profiles = {xml = true}, maps = {dat = true, json = true}}
+  local newestLoaded = #profile_table
+  if loadedExtensions[delete_folder] then
+    newestLoaded = nil
+    for i = #profile_table, 1, -1 do
+      local extension = profile_table[i].name:match("%.([^.]+)$")
+      if extension and loadedExtensions[delete_folder][extension:lower()] then
+        newestLoaded = i
+        break
+      end
+    end
+  end
+
   for i, v in ipairs(profile_table) do
     local days = math.floor(os.difftime(os.time(), v.last_mod) / 86400)
     local last_mod_month = os.date("%Y/%m", v.last_mod)
-    -- the newest file is the one Mudlet loads, so it stays however old it is
-    if days &gt; keepdays and i &lt; #profile_table then
+    if days &gt; keepdays and i ~= newestLoaded then
       -- For profiles older than X days, check if we already kept a table for this month:
       if not table.contains(used_last_mod_months, last_mod_month) then
         -- If not, do nothing and mark this month as "kept".

@@ -9,7 +9,8 @@ describe("Tests the deleteOldProfiles package", function()
   local realGetMudletHomeDir = getMudletHomeDir
   local specHome = realGetMudletHomeDir():gsub("\\", "/") .. "/delete_old_profiles_spec"
   local savesFolder = specHome .. "/current"
-  local names = {"2020-03-01#12-00-00.xml", "2020-03-10#12-00-00.xml", "2020-03-20#12-00-00.xml"}
+  -- the last is what an interrupted save leaves behind, which Mudlet does not load
+  local names = {"2020-03-01#12-00-00.xml", "2020-03-10#12-00-00.xml", "2020-03-20#12-00-00.xml", "2020-03-21#12-00-00.xml.AbCdEf"}
 
   local function makeSave(name, day)
     local path = savesFolder .. "/" .. name
@@ -42,6 +43,7 @@ describe("Tests the deleteOldProfiles package", function()
     makeSave(names[1], 1)
     makeSave(names[2], 10)
     makeSave(names[3], 20)
+    makeSave(names[4], 21)
 
     _G.getMudletHomeDir = function() return specHome end
     local ok, err = pcall(deleteOldProfiles, nil, "profiles")
@@ -51,5 +53,6 @@ describe("Tests the deleteOldProfiles package", function()
     assert.is_true(exists(names[1]), "the month's first save should be kept")
     assert.is_false(exists(names[2]), "an old save that is neither its month's first nor the newest should go")
     assert.is_true(exists(names[3]), "the newest save, the one the profile loads, should be kept")
+    assert.is_false(exists(names[4]), "a leftover temporary file is not a save, so it should not stand in for the newest one")
   end)
 end)
