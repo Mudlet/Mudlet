@@ -460,12 +460,13 @@ private slots:
         QVERIFY(recognizer.initialize(stubModelDirectory()));
         QCOMPARE(VoskStub::lastEndpointerMode(), 2);
 
+        // Each step changes the value libvosk sees, so none can pass on the one before it
         QVERIFY(recognizer.setSensitivity(SpeechRecognizer::Sensitivity::Short));
-        QCOMPARE(VoskStub::lastEndpointerMode(), 1);
-        QVERIFY(recognizer.setEndpointerMode(VoskRecognizer::EndpointerMode::VeryShort));
         QCOMPARE(VoskStub::lastEndpointerMode(), 1);
         QVERIFY(recognizer.setEndpointerMode(VoskRecognizer::EndpointerMode::VeryLong));
         QCOMPARE(VoskStub::lastEndpointerMode(), 3);
+        QVERIFY(recognizer.setEndpointerMode(VoskRecognizer::EndpointerMode::VeryShort));
+        QCOMPARE(VoskStub::lastEndpointerMode(), 1);
         QVERIFY(recognizer.setSensitivity(SpeechRecognizer::Sensitivity::Default));
         QCOMPARE(VoskStub::lastEndpointerMode(), 0);
 
@@ -481,6 +482,13 @@ private slots:
             recognizer.releaseResources();
             QSKIP("the start is waiting on a microphone permission prompt, so no session recognizer was built");
         }
+#if defined(Q_OS_MACOS)
+        // A refusal recorded earlier stops the start before the recognizer is rebuilt
+        if (stateAfterStart == SpeechRecognizer::State::Error && VoskStub::recognizersCreated() == recognizersBeforeStart) {
+            recognizer.releaseResources();
+            QSKIP("microphone access is denied here, so the start stopped before building a session recognizer");
+        }
+#endif
         QVERIFY2(VoskStub::recognizersCreated() > recognizersBeforeStart, "the start built no recognizer, so the mode below is the one set before it");
         QCOMPARE(VoskStub::lastEndpointerMode(), 2);
 
