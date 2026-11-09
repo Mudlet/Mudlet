@@ -80,6 +80,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     SpeechAcrossProfilesTest.cpp
     MudletProxyStyleTest.cpp
     DarkThemeToolBarExtensionTest.cpp
+    ComboListWheelTest.cpp
     DarkThemeItemCheckTest.cpp
     MxpFramePlacementTest.cpp
     MxpDestFrameClearTest.cpp
