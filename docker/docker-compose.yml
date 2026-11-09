@@ -6,7 +6,7 @@
 #   docker compose -f docker-compose.yml -f docker-compose.override.linux.yml up --build dev      # Qt Creator on this checkout
 #
 # On Wayland the window goes through Xwayland. "dev" builds into the checkout, so give it a build
-# directory that no host build has configured: CMake would reuse that tree's paths to the host's Qt.
+# directory that no host build has configured: CMake refuses a tree configured at another path.
 name: mudlet
 
 services:

@@ -48,6 +48,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
         qt6-l10n-tools \
         qt6-multimedia-dev \
         qt6-speech-dev \
+        qt6-speech-flite-plugin \
         qt6-svg-dev \
         qt6-tools-dev \
         qt6-websockets-dev \
@@ -65,12 +66,12 @@ USER mudlet
 WORKDIR /home/mudlet
 
 RUN --mount=type=bind,source=CI/install-lua-rocks.sh,target=/tmp/install-lua-rocks.sh \
-    /tmp/install-lua-rocks.sh lua-yajl \
-    && /tmp/install-lua-rocks.sh \
-    && /tmp/install-lua-rocks.sh --check \
+    bash /tmp/install-lua-rocks.sh lua-yajl \
+    && bash /tmp/install-lua-rocks.sh \
+    && bash /tmp/install-lua-rocks.sh --check \
     && mkdir -p /home/mudlet/.cache /home/mudlet/.config/mudlet /home/mudlet/settings
 
-# Mudlet finds the --local rocks itself; the C++ functional tests need them on the Lua path
+# Mudlet on Linux, unlike macOS, does not search ~/.luarocks, so the --local rocks need the Lua path
 ENV LUA_PATH="/home/mudlet/.luarocks/share/lua/5.1/?.lua;/home/mudlet/.luarocks/share/lua/5.1/?/init.lua;;" \
     LUA_CPATH="/home/mudlet/.luarocks/lib/lua/5.1/?.so;;"
 
