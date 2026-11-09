@@ -508,6 +508,15 @@ jobs:
           export BUNDLE_VERSION="${RELEASE_TAG#Mudlet-}"
           export RELEASE_VERSION
 
+          # From the built commit at the workspace root, not release-scripts/, so the
+          # feed matches the LSMinimumSystemVersion of the app it offers
+          MIN_MACOS=$(sed -n 's/^ *set(CMAKE_OSX_DEPLOYMENT_TARGET "\([0-9.]*\)".*/\1/p' CMakeLists.txt)
+          if [[ -z "${MIN_MACOS}" ]]; then
+            echo "::error::Could not read CMAKE_OSX_DEPLOYMENT_TARGET from CMakeLists.txt"
+            exit 1
+          fi
+          export MIN_MACOS
+
           # Convert changelog to HTML for Sparkle's description field. Not exported:
           # one environment variable over 128KB makes every later command fail
           CHANGELOG_HTML=""
@@ -558,7 +567,7 @@ jobs:
                 <pubDate>$PUB_DATE</pubDate>
                 <sparkle:version>$BUNDLE_VERSION</sparkle:version>
                 <sparkle:shortVersionString>$RELEASE_VERSION</sparkle:shortVersionString>
-                <sparkle:minimumSystemVersion>11.0</sparkle:minimumSystemVersion>
+                <sparkle:minimumSystemVersion>$MIN_MACOS</sparkle:minimumSystemVersion>
                 <description><![CDATA[$CHANGELOG_HTML]]></description>
                 <enclosure
                   url="$DOWNLOAD_URL"
