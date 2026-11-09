@@ -64,6 +64,24 @@ VoskRecognizer::vosk_recognizer_set_words_fn VoskRecognizer::s_vosk_recognizer_s
 // Sample rate for Vosk - most models expect 16kHz
 static constexpr int VOSK_SAMPLE_RATE = 16000;
 
+// libvosk's VoskEndpointerMode numbers its modes 0 default, 1 short, 2 long,
+// 3 very long, so ours cannot be passed through unchanged: our Short (2) would be its long
+static int voskEndpointerModeValue(VoskRecognizer::EndpointerMode mode)
+{
+    switch (mode) {
+    case VoskRecognizer::EndpointerMode::VeryShort:
+    case VoskRecognizer::EndpointerMode::Short:
+        return 1;
+    case VoskRecognizer::EndpointerMode::Long:
+        return 2;
+    case VoskRecognizer::EndpointerMode::VeryLong:
+        return 3;
+    case VoskRecognizer::EndpointerMode::Default:
+        break;
+    }
+    return 0;
+}
+
 // Common hallucination words that Vosk models generate during silence or speech onset
 Q_GLOBAL_STATIC_WITH_ARGS(QStringList,
                           kHallucinationWords,
@@ -449,9 +467,9 @@ bool VoskRecognizer::initialize(const QString& modelPath)
     noteModelLoaded(!reloadingTheModelInPlace);
 
     if (s_vosk_recognizer_set_endpointer_mode && mEndpointerMode != EndpointerMode::Default) {
-        s_vosk_recognizer_set_endpointer_mode(mVoskRecognizer, static_cast<int>(mEndpointerMode));
+        s_vosk_recognizer_set_endpointer_mode(mVoskRecognizer, voskEndpointerModeValue(mEndpointerMode));
 #ifdef DEBUG_STT
-        qDebug() << "VoskRecognizer: Applied endpointer mode" << static_cast<int>(mEndpointerMode);
+        qDebug() << "VoskRecognizer: Applied endpointer mode" << voskEndpointerModeValue(mEndpointerMode);
 #endif
     }
     // Always requested: leadingWordIsPhantom() needs the timings to tell a
@@ -596,7 +614,7 @@ void VoskRecognizer::startListeningInternal()
 
     // Reapply settings to the new recognizer
     if (s_vosk_recognizer_set_endpointer_mode && mEndpointerMode != EndpointerMode::Default) {
-        s_vosk_recognizer_set_endpointer_mode(mVoskRecognizer, static_cast<int>(mEndpointerMode));
+        s_vosk_recognizer_set_endpointer_mode(mVoskRecognizer, voskEndpointerModeValue(mEndpointerMode));
     }
 
     // Always requested, for the same reason as in initialize(): without the
@@ -1093,9 +1111,9 @@ bool VoskRecognizer::setEndpointerMode(EndpointerMode mode)
     mEndpointerMode = static_cast<EndpointerMode>(modeInt);
 
     if (mVoskRecognizer) {
-        s_vosk_recognizer_set_endpointer_mode(mVoskRecognizer, modeInt);
+        s_vosk_recognizer_set_endpointer_mode(mVoskRecognizer, voskEndpointerModeValue(mEndpointerMode));
 #ifdef DEBUG_STT
-        qDebug() << "VoskRecognizer: Set endpointer mode to" << modeInt;
+        qDebug() << "VoskRecognizer: Set endpointer mode to" << voskEndpointerModeValue(mEndpointerMode);
 #endif
     }
     return true;

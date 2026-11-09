@@ -68,17 +68,20 @@ file(GLOB ROOT_FILES_LIST CONFIGURE_DEPENDS
 )
 
 file(GLOB_RECURSE OTHER_FILES_LIST CONFIGURE_DEPENDS
-  .github/**
-  .devcontainer/**
-  .vscode/**
+  .agents/**
+  .clang-format
   .claude/**
+  .devcontainer/**
+  .github/**
+  .signpath/**
+  .vscode/**
   3rdparty/discord/rpc/lib/*
   CI/**
   docker/**
   docs/**
-  .clang-format
   src/.gitignore
   src/mudlet-lua/**
+  templates/**
 )
 
 # It is not clear that the "COMMENT" actually shows up anywhere - so include
@@ -294,17 +297,32 @@ git_submodule_init(
 
 if(APPLE)
   if(USE_UPDATER)
-    if(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle")
-      message(
-        STATUS "Sparkle is missing, fetching it..."
-      )
-      file(DOWNLOAD "https://github.com/sparkle-project/Sparkle/releases/download/2.7.1/Sparkle-2.7.1.tar.xz" "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle-2.7.1.tar.xz"
+    set(SPARKLE_VERSION "2.10.1")
+    set(SPARKLE_SHA256 "1a856d2a9edb8e628de88121d7be04cf0e2167f8641650b78fca00b14244cf27")
+    set(SPARKLE_DIR "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle")
+    set(SPARKLE_STAMP "${SPARKLE_DIR}/.mudlet-sparkle-version")
+    # A checkout that fetched an older Sparkle keeps it until the stamp says otherwise
+    if(EXISTS "${SPARKLE_DIR}")
+      set(SPARKLE_FETCHED_VERSION "")
+      if(EXISTS "${SPARKLE_STAMP}")
+        file(READ "${SPARKLE_STAMP}" SPARKLE_FETCHED_VERSION)
+      endif()
+      if(NOT SPARKLE_FETCHED_VERSION STREQUAL SPARKLE_VERSION)
+        file(REMOVE_RECURSE "${SPARKLE_DIR}")
+      endif()
+    endif()
+    if(NOT EXISTS "${SPARKLE_DIR}")
+      message(STATUS "Sparkle ${SPARKLE_VERSION} is missing, fetching it...")
+      set(SPARKLE_ARCHIVE "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle-${SPARKLE_VERSION}.tar.xz")
+      file(DOWNLOAD "https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-${SPARKLE_VERSION}.tar.xz" "${SPARKLE_ARCHIVE}"
         TIMEOUT 60  # seconds
         TLS_VERIFY ON
+        # also stops the configure on a failed download, instead of a missing Sparkle::Sparkle later
+        EXPECTED_HASH SHA256=${SPARKLE_SHA256}
       )
-      file(ARCHIVE_EXTRACT INPUT "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle-2.7.1.tar.xz"
-        DESTINATION "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle")
-      file(REMOVE "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle-2.7.1.tar.xz")
+      file(ARCHIVE_EXTRACT INPUT "${SPARKLE_ARCHIVE}" DESTINATION "${SPARKLE_DIR}")
+      file(REMOVE "${SPARKLE_ARCHIVE}")
+      file(WRITE "${SPARKLE_STAMP}" "${SPARKLE_VERSION}")
     endif()
   endif()
 endif()

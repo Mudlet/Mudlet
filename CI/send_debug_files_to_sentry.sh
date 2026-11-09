@@ -20,40 +20,62 @@
 
 set -e
 
-SENTRY_CLI_VERSION="3.6.0"
+SENTRY_CLI_VERSION="3.8.2"
 
 download_sentry_cli() {
     local os="$1"
     local arch="$2"
     local file="$3"
-    local url=""
+    local asset="" sha256="" actual=""
     local base="https://github.com/getsentry/sentry-cli/releases/download/${SENTRY_CLI_VERSION}"
 
+    # From checksums.txt in the @sentry/cli npm package of the same version
     if [[ "$os" == "Darwin" ]]; then
         if [[ "$arch" == "x86_64" ]]; then
-            url="${base}/sentry-cli-Darwin-x86_64"
+            asset="sentry-cli-Darwin-x86_64"
+            sha256="084591ee1f0a43ba8696ccde30d4a79cd9a70d0fa294c5a10143a340f8f332ff"
         elif [[ "$arch" == "arm64" ]]; then
-            url="${base}/sentry-cli-Darwin-arm64"
+            asset="sentry-cli-Darwin-arm64"
+            sha256="c80d92b6d34eb64fe7402f56cc7968fbb15aab1c763254ad428b55cc98ec7dcf"
         fi
     elif [[ "$os" == "Linux" ]]; then
         if [[ "$arch" == "x86_64" ]]; then
-            url="${base}/sentry-cli-Linux-x86_64"
+            asset="sentry-cli-Linux-x86_64"
+            sha256="c958865f9d4000183509ea21b1f04925d5390de6d8d87386b9e69f2b305070c3"
         fi
     elif [[ "$os" == "MINGW"* || "$os" == "MSYS"* || "$os" == "CYGWIN"* ]]; then
         if [[ "$arch" == "x86_64" ]]; then
-            url="${base}/sentry-cli-Windows-x86_64.exe"
+            asset="sentry-cli-Windows-x86_64.exe"
+            sha256="50009f23c49d6e9ff7624204c7035855303b49c5e326708ee783c1fdf783ac83"
         elif [[ "$arch" == "i686" || "$arch" == "i386" ]]; then
-            url="${base}/sentry-cli-Windows-i686.exe"
+            asset="sentry-cli-Windows-i686.exe"
+            sha256="e8d50ca10a77a1ca10996a1a957cdbaa9bab9f3efcc97de7460e0e0a000b2578"
         fi
     fi
 
-    if [[ -z "$url" ]]; then
+    if [[ -z "$asset" ]]; then
         echo "Unsupported OS/ARCH: $os / $arch"
         return 1
     fi
+    local url="${base}/${asset}"
 
     echo "Downloading $url ..."
-    curl -L -o "$file" "$url"
+    # Without --fail a GitHub 504 page is saved as the binary and exits 0. curl
+    # --retry covers 5xx gateway errors; --retry-all-errors adds dropped connections.
+    if ! curl -fsSL --retry 5 --retry-delay 10 --retry-all-errors --connect-timeout 30 -o "$file" "$url"; then
+        rm -f "$file"
+        echo "::error::could not download sentry-cli from $url"
+        return 1
+    fi
+
+    # macOS has no sha256sum
+    actual=$(shasum -a 256 "$file" 2>/dev/null || sha256sum "$file")
+    actual="${actual%% *}"
+    if [[ "$actual" != "$sha256" ]]; then
+        rm -f "$file"
+        echo "::error::sentry-cli from $url has sha256 $actual, expected $sha256"
+        return 1
+    fi
 
     if [[ "$os" != "MINGW"* && "$os" != "MSYS"* && "$os" != "CYGWIN"* ]]; then
         chmod +x "$file"

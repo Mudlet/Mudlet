@@ -430,6 +430,12 @@ bool TConsoleModelNotifier::lineShownConnected() const
     return isSignalConnected(lineShownSignal);
 }
 
+bool TConsoleModelNotifier::linkChangedConnected() const
+{
+    static const QMetaMethod linkChangedSignal = QMetaMethod::fromSignal(&TConsoleModelNotifier::linkChanged);
+    return isSignalConnected(linkChangedSignal);
+}
+
 void TConsoleModel::notifyPrinted(const QString& text, const PrintedInto into, const bool startsLine)
 {
     if (text.isEmpty() || !mNotifier.textPrintedConnected()) {
@@ -971,6 +977,120 @@ bool TConsoleModel::setSelectionDisplayAttributes(const TChar::AttributeFlags at
 bool TConsoleModel::setLink(const QStringList& commands, const QStringList& hints, const QVector<int>& luaReferences)
 {
     return buffer.applyLink(P_begin, P_end, commands, hints, luaReferences);
+}
+
+TConsoleModel::LinkFollowed TConsoleModel::linkMayRun(const int linkIndex)
+{
+    if (linkIndex <= 0 || !buffer.mLinkStore.contains(linkIndex)) {
+        return LinkFollowed::unknown;
+    }
+    Mudlet::HyperlinkStyling styling = buffer.getEffectiveHyperlinkStyling(linkIndex);
+    // Even a disabled link reveals its spoiler
+    if (styling.isSpoiler) {
+        const bool wasUnrevealed = buffer.isSpoilerUnrevealed(linkIndex);
+        buffer.revealSpoilerLink(linkIndex);
+        if (wasUnrevealed && !styling.selection.disabled) {
+            return LinkFollowed::revealedSpoiler;
+        }
+        styling = buffer.getEffectiveHyperlinkStyling(linkIndex);
+    }
+    if (styling.selection.disabled) {
+        buffer.setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateDisabled);
+        return LinkFollowed::disabled;
+    }
+    return LinkFollowed::ran;
+}
+
+bool TConsoleModel::runLink(const int linkIndex, const int item, const bool fromMenu)
+{
+    const QStringList commands = buffer.mLinkStore.getLinksConst(linkIndex);
+    if (!mpHost || item < 0 || item >= commands.size()) {
+        return false;
+    }
+    QString command = commands.at(item);
+    const int luaReference = buffer.mLinkStore.getReference(linkIndex).value(item, 0);
+    const Mudlet::HyperlinkStyling styling = buffer.mLinkStore.getStyling(linkIndex);
+    if (styling.selection.hasSelectionSettings) {
+        applyLinkSelection(linkIndex, command, styling.selection);
+    }
+    mHyperlinkVisibilityManager.onLinkClicked(linkIndex);
+    bool ran = false;
+    if (luaReference) {
+        ran = mpHost->mLuaInterpreter.callAnonymousFunction(luaReference, fromMenu ? qsl("echoPopup") : qsl("echoLink"));
+    } else {
+        // An empty command runs nothing, which is no error
+        ran = mpHost->mLuaInterpreter.compileAndExecuteScript(command) || command.isEmpty();
+    }
+    buffer.markLinkAsVisited(linkIndex);
+    return ran;
+}
+
+void TConsoleModel::runMenuPick(const int linkIndex, const qint64 issue, const int item)
+{
+    if (buffer.mLinkStore.issueOf(linkIndex) == issue) {
+        runLink(linkIndex, item, true);
+    }
+}
+
+void TConsoleModel::applyLinkSelection(const int linkIndex, QString& command, const Mudlet::HyperlinkStyling::SelectionSettings& selection)
+{
+    const QString& group = selection.group;
+    const QString& value = selection.value;
+
+    mHyperlinkSelectionManager.setGroupExclusive(group, selection.exclusive);
+    if (selection.toggle) {
+        mHyperlinkSelectionManager.toggleSelection(group, value);
+    } else {
+        mHyperlinkSelectionManager.setSelected(group, value, true);
+    }
+    const bool selected = mHyperlinkSelectionManager.isSelected(group, value);
+
+    // A menu link's commands are built from its menu items and the base URI's
+    // command is discarded, so baseCommand matches none of what can actually be
+    // run here. Callers pass the item the user picked; rebuilding from the base
+    // would send something they did not choose. A one-item menu has a single
+    // command too, but its hints carry the tooltip ahead of the item's label.
+    if (buffer.mLinkStore.getLinksConst(linkIndex).size() <= 1 && buffer.mLinkStore.getHintsConst(linkIndex).size() <= 1) {
+        const Mudlet::HyperlinkStyling styling = buffer.mLinkStore.getStyling(linkIndex);
+        const QString rebuilt = mHyperlinkSelectionManager.modifyUriForSelection(styling.actionScheme, styling.baseCommand, group, value);
+        if (!rebuilt.isEmpty()) {
+            command = rebuilt;
+        }
+    }
+
+    // The pointer, a pressed button and focus outrank being selected, so a link in one of those states keeps it
+    const auto stateFor = [this](int link, bool linkSelected) {
+        const auto current = buffer.getLinkState(link);
+        if (current == Mudlet::HyperlinkStyling::StateDisabled || current == Mudlet::HyperlinkStyling::StateActive || current == Mudlet::HyperlinkStyling::StateHover) {
+            return current;
+        }
+        if (buffer.showsFocus(link)) {
+            return Mudlet::HyperlinkStyling::StateFocusVisible;
+        }
+        return linkSelected ? Mudlet::HyperlinkStyling::StateSelected : Mudlet::HyperlinkStyling::StateDefault;
+    };
+
+    buffer.setLinkSelected(linkIndex, selected);
+    buffer.setLinkState(linkIndex, stateFor(linkIndex, selected));
+    buffer.updateLinkCharacters(linkIndex);
+
+    if (!mHyperlinkSelectionManager.isGroupExclusive(group)) {
+        return;
+    }
+    // Choosing one member of an exclusive group may have deselected the others
+    const QStringList members = mHyperlinkSelectionManager.getGroupMembers(group);
+    for (const QString& member : members) {
+        if (member == value) {
+            continue;
+        }
+        const bool memberSelected = mHyperlinkSelectionManager.isSelected(group, member);
+        const QList<int> memberLinks = buffer.mLinkStore.getLinkIdsByGroupValue(group, member);
+        for (const int memberLink : memberLinks) {
+            buffer.setLinkSelected(memberLink, memberSelected);
+            buffer.setLinkState(memberLink, stateFor(memberLink, memberSelected));
+            buffer.updateLinkCharacters(memberLink);
+        }
+    }
 }
 
 double TConsoleModel::contrastRatio(const QColor& first, const QColor& second)

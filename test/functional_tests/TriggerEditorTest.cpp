@@ -28,7 +28,11 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include <QAbstractItemView>
+#include <QAccessible>
 #include <QAction>
+#include <QComboBox>
+#include <QHeaderView>
 #include <QClipboard>
 #include <QContextMenuEvent>
 #include <QMenu>
@@ -1010,6 +1014,32 @@ private slots:
     QTest::keyClick(pEditor, Qt::Key_Escape);
     QVERIFY(!pEditor->mIsGrabKey);
     QVERIFY2(pShortcut->isEnabled(), "the \"Script editor\" key did not come back after grabbing a key");
+  }
+  // A list or tree a screen reader cannot name is announced as a bare "tree"
+  // on Tab, with the item types' header hidden and no label beside it (#6159)
+  void test_itemViewsHaveAccessibleNames() {
+    mudlet::self()->slot_showScriptDialog();
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
+    QVERIFY2(pEditor, "the editor dialog was not created");
+
+    QStringList unnamed;
+    int checked = 0;
+    for (auto *pView : pEditor->findChildren<QAbstractItemView *>()) {
+      // Popups are named by the combo box or field that opens them, and a
+      // header by its sections
+      if (pView->window() != pEditor || qobject_cast<QHeaderView *>(pView) ||
+          qobject_cast<QComboBox *>(pView->parent())) {
+        continue;
+      }
+      ++checked;
+      QAccessibleInterface *pInterface = QAccessible::queryAccessibleInterface(pView);
+      QVERIFY(pInterface);
+      if (pInterface->text(QAccessible::Name).trimmed().isEmpty()) {
+        unnamed << pView->objectName();
+      }
+    }
+    QVERIFY2(checked == 10, qPrintable(qsl("found %1 item views in the editor, expected 10").arg(checked)));
+    QVERIFY2(unnamed.isEmpty(), qPrintable(qsl("item views without an accessible name: %1").arg(unnamed.join(qsl(", ")))));
   }
 };
 

@@ -63,6 +63,8 @@
 #include "TTabBar.h"
 #include "TToolBar.h"
 #include "TUiTour.h"
+#include "TelnetUri.h"
+#include "UntrustedText.h"
 
 #include "dlgAboutDialog.h"
 #include "dlgComposer.h"
@@ -941,15 +943,11 @@ void mudlet::warnProfilesLosingBindingTo(const QKeySequence& sequence, Host* pHo
         // for as long as it lasts - on the main screen that is a line the
         // player is told to ignore, which is worse than not saying it. The
         // editor is where a key binding is looked at and where it is changed.
-        // Opening it replaces this notice, so it is read out only if the editor
-        // is open; selecting the binding says it again.
-        if (auto* pDialogs = HostDialogs::find(pOtherHost.data()); auto* pEditor = pDialogs ? pDialogs->mpEditorDialog.data() : nullptr) {
-            //: Warning shown in the editor when an add-on command in another of the player's profiles takes a key one of this profile's key bindings uses. %1 is a key such as "Alt+F9", %2 the name of the command and %3 the name of the profile it was added in.
-            pEditor->showWarning(
-                    tr("%1 is now used by the \"%2\" command in your \"%3\" profile, so this profile's key binding on it will not fire. Put one of the two on a different key to use both.")
-                            .arg(sequence.toString(QKeySequence::NativeText), commandName, pHost ? pHost->getName() : QString()),
-                    pEditor->isVisible());
-        }
+        //: Warning shown in the editor when an add-on command in another of the player's profiles takes a key one of this profile's key bindings uses. %1 is a key such as "Alt+F9", %2 the name of the command and %3 the name of the profile it was added in.
+        HostDialogs::showEditorWarning(
+                pOtherHost.data(),
+                tr("%1 is now used by the \"%2\" command in your \"%3\" profile, so this profile's key binding on it will not fire. Put one of the two on a different key to use both.")
+                        .arg(sequence.toString(QKeySequence::NativeText), commandName, pHost ? pHost->getName() : QString()));
     }
 }
 
@@ -1820,16 +1818,12 @@ void mudlet::init()
             return;
         }
 
-        HostDialogs& dialogs = HostDialogs::of(host);
-        if (!dialogs.mpEditorDialog && !createMudletEditor()) {
-            qWarning() << "Failed to create editor dialog";
-            return;
-        }
-        dialogs.mpEditorDialog->showCurrentTriggerItem();
-        dialogs.mpEditorDialog->raise();
-        showEditorRestoringWindowState(dialogs.mpEditorDialog);
-        dialogs.mpEditorDialog->activateWindow();
-        dialogs.mpEditorDialog->mpErrorConsole->setVisible(true);
+        dlgTriggerEditor* pEditor = HostDialogs::editor(host);
+        pEditor->showCurrentTriggerItem();
+        pEditor->raise();
+        showEditorRestoringWindowState(pEditor);
+        pEditor->activateWindow();
+        pEditor->mpErrorConsole->setVisible(true);
     });
 
 #if defined(INCLUDE_UPDATER)
@@ -3627,6 +3621,8 @@ void mudlet::addConsoleForNewHost(Host* pH)
     connect(pH, &Host::signal_showUnpackingProgress, pConsole, &TMainConsole::showUnpackingProgress, Qt::UniqueConnection);
     connect(pH, &Host::signal_hideUnpackingProgress, pConsole, &TMainConsole::closeUnpackingProgress, Qt::UniqueConnection);
     HostDialogs::connectTeardown(pH);
+    // The editor is built when first opened, and until then this keeps what it would show
+    HostDialogs::of(pH);
 
     // Functor connects again, so no Qt::UniqueConnection: see the note above signal_bell's
     connect(pH, &Host::signal_consoleFontChanged, this, [](const QFont& font) {
@@ -3801,13 +3797,6 @@ void mudlet::addConsoleForNewHost(Host* pH)
     }
 
     pConsole->show();
-
-    auto pEditor = new dlgTriggerEditor(pH);
-    HostDialogs::of(pH).mpEditorDialog = pEditor;
-    connect(pH, &Host::profileSaveStarted, pEditor, &dlgTriggerEditor::slot_profileSaveStarted);
-    connect(pH, &Host::profileSaveFinished, pEditor, &dlgTriggerEditor::slot_profileSaveFinished);
-    // Item trees are deliberately not populated here: the rebuild ScriptUnit::compileAll() queues is put off
-    // until the editor is first opened (see dlgTriggerEditor::runScheduledCleanReset()).
 
     pH->getActionUnit()->updateAllToolbars();
 
@@ -4818,8 +4807,13 @@ void mudlet::readLateSettings(const QSettings& settings)
     mShowTabConnectionIndicators = settings.value("showTabConnectionIndicators", QVariant(false)).toBool();
 
 
-    resize(size);
-    move(pos);
+    // While maximized pos and size are what the window covers, not where it returns to. Otherwise they are
+    // preferred: an older Mudlet sharing this file updates them and leaves mainWindowGeometry stale.
+    const bool savedEnlarged = settings.value(qsl("maximized"), false).toBool() || settings.value(qsl("fullScreen"), false).toBool();
+    if (!savedEnlarged || !restoreGeometry(settings.value(qsl("mainWindowGeometry")).toByteArray())) {
+        resize(size);
+        move(pos);
+    }
 
     // Need to remove the Qt::WindowMaximized, Qt::WindowFullScreen AND
     // Qt::WindowActive from the state and then apply the result of combining
@@ -5154,6 +5148,7 @@ void mudlet::writeSettings()
     QSettings& settings = *MudletApp::getQSettings();
     settings.setValue("pos", pos());
     settings.setValue("size", size());
+    settings.setValue(qsl("mainWindowGeometry"), saveGeometry());
     settings.setValue("mainiconsize", mToolbarIconSize);
     settings.setValue("tefoldericonsize", mEditorTreeWidgetIconSize);
     settings.setValue("scrollbackTutorialsShown", mScrollbackTutorialsShown);
@@ -6567,7 +6562,7 @@ void mudlet::attachDebugArea(const QString& hostname)
     smpDebugArea->hide();
 }
 
-void mudlet::doAutoLogin(const QString& profile_name, const bool offline)
+void mudlet::doAutoLogin(const QString& profile_name, const bool offline, const bool useTlsThisSession)
 {
     if (profile_name.isEmpty()) {
         return;
@@ -6582,49 +6577,14 @@ void mudlet::doAutoLogin(const QString& profile_name, const bool offline)
     const auto loadScope = qScopeGuard([this] {
         endProfileLoad();
     });
-    loadProfile(profile_name, !offline);
+    Host* pHost = loadProfile(profile_name, !offline);
+    // Set before slot_connectionDialogueFinished() dials
+    if (pHost && useTlsThisSession) {
+        pHost->mUseTlsThisSession = true;
+    }
 
     slot_connectionDialogueFinished(profile_name, !offline);
     enableToolbarButtons();
-}
-
-// Parse a telnet:// (RFC 4248) or telnets:// (TLS variant) URI
-std::optional<mudlet::TelnetUriData> mudlet::parseTelnetUri(const QString& uri)
-{
-    QUrl url(uri);
-
-    if (!url.isValid()) {
-        qWarning() << "mudlet::parseTelnetUri() - Malformed URI";
-        return std::nullopt;
-    }
-
-    const QString scheme = url.scheme();
-    const bool isTelnets = scheme.compare(qsl("telnets"), Qt::CaseInsensitive) == 0;
-    if (scheme.compare(qsl("telnet"), Qt::CaseInsensitive) != 0 && !isTelnets) {
-        qWarning() << "mudlet::parseTelnetUri() - Invalid URI scheme:" << scheme;
-        return std::nullopt;
-    }
-
-    TelnetUriData data;
-    data.useTls = isTelnets;
-    data.host = url.host();
-    if (data.host.isEmpty()) {
-        qWarning() << "mudlet::parseTelnetUri() - URI missing host";
-        return std::nullopt;
-    }
-
-    data.port = url.port(data.useTls ? 992 : 23);
-    if (data.port < 1 || data.port > 65535) {
-        qWarning() << "mudlet::parseTelnetUri() - Port out of range:" << data.port;
-        return std::nullopt;
-    }
-
-    if (!url.userName().isEmpty()) {
-        data.username = url.userName();
-    }
-
-    qDebug() << "mudlet::parseTelnetUri() - Parsed URI:" << url.toDisplayString(QUrl::RemoveUserInfo);
-    return data;
 }
 
 // Find existing profile matching host and port
@@ -6771,6 +6731,80 @@ void mudlet::handleTelnetUri(const QString& uri)
     mProcessingTelnetUri = false;
 }
 
+// A game's link to a telnet:// or telnets:// address always asks first, as a saved profile for it logs in with its
+// saved details. telnets:// uses TLS until the profile closes or a script dials elsewhere, and never changes a saved
+// profile's own setting.
+void mudlet::connectFromGameLink(const QString& uri)
+{
+    // The question's event loop runs further clicks on game links
+    if (mGameLinkQuestionOpen) {
+        return;
+    }
+    const auto uriData = parseTelnetUri(uri);
+    if (!uriData) {
+        return;
+    }
+#if defined(QT_NO_SSL)
+    // Without TLS this would dial in plain text, and a saved profile would send its login over it
+    if (uriData->useTls) {
+        qWarning() << "mudlet::connectFromGameLink() - Mudlet is not configured for secure connections, ignoring:" << uri;
+        return;
+    }
+#endif
+    mGameLinkQuestionOpen = true;
+    const auto questionDone = qScopeGuard([this] {
+        mGameLinkQuestionOpen = false;
+    });
+
+    QString target = (uriData->host.contains(QLatin1Char(':')) ? qsl("[%1]:%2") : qsl("%1:%2")).arg(uriData->host, QString::number(uriData->port));
+    // A Unicode host can look like another site's, so the name it really resolves as goes beside it
+    const QString aceHost = QString::fromLatin1(QUrl::toAce(uriData->host));
+    if (!aceHost.isEmpty() && aceHost.compare(uriData->host, Qt::CaseInsensitive) != 0) {
+        target += qsl(" (%1)").arg(aceHost);
+    }
+    const QString address = UntrustedText::forTarget(target);
+    QString profileName = findMatchingProfile(uriData->host, uriData->port);
+    QString question;
+    if (profileName.isEmpty()) {
+        //: Asked when the player clicks a link from the game to a game's address, which may be the game being played; %1 is its host and port
+        question = tr("Connect to %1?").arg(address);
+    } else {
+        //: Asked when the player clicks a link from the game to an address one of their profiles is for; %1 is its host and port, %2 the profile's name
+        question = tr("Connect to %1 with your profile %2? It will log in with your saved details.").arg(address, profileName);
+    }
+
+    bool confirmed = false;
+    if (mConfirmGameLink) {
+        confirmed = mConfirmGameLink(question);
+    } else {
+        //: Title of the question asked when the player clicks a link from the game to a game's address
+        QMessageBox box(QMessageBox::Question, tr("Connect to a game"), question, QMessageBox::Yes | QMessageBox::Cancel, this);
+        box.setTextFormat(Qt::PlainText);
+        box.setDefaultButton(QMessageBox::Cancel);
+        confirmed = box.exec() == QMessageBox::Yes;
+    }
+    if (!confirmed) {
+        return;
+    }
+
+    if (profileName.isEmpty()) {
+        profileName = createProfileForUri(*uriData);
+        if (profileName.isEmpty()) {
+            return;
+        }
+    }
+
+    if (Host* pHost = mHostManager.getHost(profileName)) {
+        if (pHost->mTelnet.getConnectionState() == QAbstractSocket::UnconnectedState) {
+            pHost->mUseTlsThisSession = uriData->useTls;
+            // The address asked about: connectToServer() can save one the open profile is not using
+            pHost->mTelnet.connectIt(uriData->host, uriData->port);
+        }
+    } else {
+        doAutoLogin(profileName, false, uriData->useTls);
+    }
+    restoreProfileFocus(profileName);
+}
 
 void mudlet::processEventLoopHack()
 {
@@ -7382,9 +7416,9 @@ void mudlet::setEditorTextoptions(const bool isTabsAndSpacesToBeShown, const boo
 }
 
 // Originally a slot_ but it does not actually need to be - Slysven
-void mudlet::requestProfilesToReloadMaps(QList<QString> affectedProfiles)
+void mudlet::requestProfilesToReloadMaps(QList<QString> affectedProfiles, const QString& mapFileName)
 {
-    emit signal_profileMapReloadRequested(affectedProfiles);
+    emit signal_profileMapReloadRequested(affectedProfiles, mapFileName);
 }
 
 //loads the luaFunctionList for use by the edbee Autocompleter
@@ -8566,18 +8600,7 @@ dlgTriggerEditor* mudlet::createMudletEditor()
         return nullptr;
     }
 
-    HostDialogs& dialogs = HostDialogs::of(pHost);
-    if (dialogs.mpEditorDialog != nullptr) {
-        return dialogs.mpEditorDialog;
-    }
-
-    auto* pEditor = new dlgTriggerEditor(pHost);
-    dialogs.mpEditorDialog = pEditor;
-    connect(pHost, &Host::profileSaveStarted, pEditor, &dlgTriggerEditor::slot_profileSaveStarted);
-    connect(pHost, &Host::profileSaveFinished, pEditor, &dlgTriggerEditor::slot_profileSaveFinished);
-    pEditor->fillout_form();
-
-    return pEditor;
+    return HostDialogs::editor(pHost);
 }
 
 // Getting a QWidget to emit a signal that normally comes from a QWindow;

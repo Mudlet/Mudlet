@@ -55,6 +55,7 @@ jobs:
             libpcre2-dev \
             libpugixml-dev \
             libpulse-dev \
+            libyajl-dev \
             libzip-dev \
             lua5.1 \
             ninja-build \

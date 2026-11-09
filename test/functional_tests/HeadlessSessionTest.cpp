@@ -61,6 +61,7 @@
 #include "MudletMedia.h"
 #include "MudletReplay.h"
 #include "PortableModeTestHelper.h"
+#include "RefusedPort.h"
 #include "TAppFrontend.h"
 #include "TConsoleModel.h"
 #include "TDebug.h"
@@ -2282,14 +2283,13 @@ local function answer(f, ...)
   return tostring(ok) .. "|" .. tostring(err)
 end
 headlessNoWindow = table.concat({
-  answer(setMainWindowSize, 800, 600),
   answer(showNotification, "headless title", "headless text"),
   answer(playVideoFile, {name = "headless-absent.mp4"}),
   answer(loadVideoFile, {name = "headless-absent.mp4"}),
 }, ";")
 )lua")));
         const QString refused = qsl("nil|the profile has no main window");
-        QCOMPARE(luaGlobalString(session.host(), "headlessNoWindow"), QStringList({refused, refused, refused, qsl("true|nil")}).join(qsl(";")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessNoWindow"), QStringList({refused, refused, qsl("true|nil")}).join(qsl(";")));
         QVERIFY(session.shutdown(false));
     }
 
@@ -4438,12 +4438,9 @@ tempTrigger("Gamma", [[echo(" <c>")]]))lua")));
     {
         const QString name = qsl("Headless Refused");
         QVERIFY(writeProfile(name, QString()));
-        quint16 port = 0;
-        {
-            QTcpServer closed;
-            QVERIFY(closed.listen(QHostAddress::LocalHost));
-            port = closed.serverPort();
-        }
+        RefusedPort refused;
+        QVERIFY(refused.reserve());
+        const quint16 port = refused.port();
         QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
         QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(port)).first);
 
@@ -4545,6 +4542,123 @@ end))lua")));
         QTest::qWait(500);
         QVERIFY(server.nawsUpdates().isEmpty());
         session.shutdown(false);
+    }
+
+    // As the GUI's main console takes a border from its text, and tells the game and scripts
+    void test_aBorderTakesItsRoomFromTheGrid()
+    {
+        const QString name = qsl("Headless Border Columns");
+        QVERIFY(writeProfile(name, QString()));
+        TelnetServerStub server;
+        server.start(qsl("127.0.0.1"));
+        QVERIFY(server.isListening());
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setScreenSize(100, 30));
+        QTRY_VERIFY_WITH_TIMEOUT(server.clientConnected(), 10000);
+        server.sendRaw(QByteArray::fromHex("fffd1f"));
+        QTRY_COMPARE_WITH_TIMEOUT(server.nawsUpdates(), (QVector<QSize>{QSize(100, 30)}), 10000);
+        server.clearNawsUpdates();
+        QVERIFY(session.runLua(qsl(R"lua(cellWidth, cellHeight = calcFontSize()
+headlessResizes = ""
+registerAnonymousEventHandler("sysWindowResizeEvent", function(_, w, h, window)
+  headlessResizes = headlessResizes .. w .. "x" .. h .. " " .. window .. ";"
+end))lua")));
+        const int cellWidth = luaGlobalString(session.host(), "cellWidth").toInt();
+        const int cellHeight = luaGlobalString(session.host(), "cellHeight").toInt();
+        QVERIFY(cellWidth > 0 && cellHeight > 0);
+        const QString mainWindow = qsl("%1x%2").arg(100 * cellWidth).arg(30 * cellHeight);
+
+        QVERIFY(session.runLua(qsl(R"lua(setBorderLeft(10 * cellWidth)
+headlessGrid = getColumnCount() .. "x" .. getRowCount()
+local w, h = getMainWindowSize()
+headlessMainWindow = w .. "x" .. h)lua")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessGrid"), qsl("90x30"));
+        QCOMPARE(luaGlobalString(session.host(), "headlessMainWindow"), mainWindow);
+        QCOMPARE(luaGlobalString(session.host(), "headlessResizes"), qsl("%1x%2 main;").arg(90 * cellWidth).arg(30 * cellHeight));
+        QTRY_COMPARE_WITH_TIMEOUT(server.nawsUpdates(), (QVector<QSize>{QSize(90, 30)}), 10000);
+        server.clearNawsUpdates();
+
+        // The area stays the frontend's, so a new size is less the border too
+        QVERIFY(session.setScreenSize(120, 30));
+        QVERIFY(session.runLua(qsl("headlessGrid = getColumnCount() .. 'x' .. getRowCount()")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessGrid"), qsl("110x30"));
+        QTRY_COMPARE_WITH_TIMEOUT(server.nawsUpdates(), (QVector<QSize>{QSize(std::min(110, session.host()->mWrapAt), 30)}), 10000);
+        server.clearNawsUpdates();
+        QVERIFY(session.setScreenSize(100, 30));
+        QTRY_COMPARE_WITH_TIMEOUT(server.nawsUpdates(), (QVector<QSize>{QSize(90, 30)}), 10000);
+        server.clearNawsUpdates();
+
+        // A handler that sets a border as it is told of one is told once more, and that ends it
+        QVERIFY(session.runLua(qsl(R"lua(headlessResizes = ""
+local handler
+handler = registerAnonymousEventHandler("sysWindowResizeEvent", function()
+  setBorderTop(2 * cellHeight)
+end)
+setBorderLeft(0)
+killAnonymousEventHandler(handler)
+headlessGrid = getColumnCount() .. "x" .. getRowCount()
+local w, h = getMainWindowSize()
+headlessMainWindow = w .. "x" .. h)lua")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessGrid"), qsl("100x28"));
+        QCOMPARE(luaGlobalString(session.host(), "headlessMainWindow"), mainWindow);
+        QCOMPARE(luaGlobalString(session.host(), "headlessResizes"), qsl("%1x%2 main;%1x%3 main;").arg(100 * cellWidth).arg(30 * cellHeight).arg(28 * cellHeight));
+        QTRY_COMPARE_WITH_TIMEOUT(server.nawsUpdates(), (QVector<QSize>{QSize(100, 28)}), 10000);
+        server.clearNawsUpdates();
+
+        QVERIFY(session.runLua(qsl("setBorderTop(0) headlessGrid = getColumnCount() .. 'x' .. getRowCount()")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessGrid"), qsl("100x30"));
+        QTRY_COMPARE_WITH_TIMEOUT(server.nawsUpdates(), (QVector<QSize>{QSize(100, 30)}), 10000);
+
+        // A border handleWindowResizeEvent() sets is off what the resize raises, as the GUI takes them off as it raises
+        QVERIFY(session.runLua(qsl(R"lua(headlessResizes = ""
+headlessOwnHandler = handleWindowResizeEvent
+function handleWindowResizeEvent()
+  setBorderLeft(20 * cellWidth)
+end)lua")));
+        QVERIFY(session.setScreenSize(120, 30));
+        QVERIFY(session.runLua(qsl("handleWindowResizeEvent = headlessOwnHandler headlessGrid = getColumnCount() .. 'x' .. getRowCount()")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessGrid"), qsl("100x30"));
+        QCOMPARE(luaGlobalString(session.host(), "headlessResizes"), qsl("%1x%2 main;%1x%2 main;").arg(100 * cellWidth).arg(30 * cellHeight));
+
+        // Borders wider than the area leave the GUI's floor of 40 columns, and no room for the text
+        QVERIFY(session.runLua(qsl(R"lua(headlessResizes = ""
+setBorderLeft(200 * cellWidth)
+headlessGrid = getColumnCount() .. "x" .. getRowCount())lua")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessGrid"), qsl("40x30"));
+        QCOMPARE(luaGlobalString(session.host(), "headlessResizes"), qsl("0x%1 main;").arg(30 * cellHeight));
+        session.shutdown(false);
+    }
+
+    // The GUI loads a save before it makes the main console, which lays out the borders the save left; with no view
+    // they are laid out once the load has settled the font, before any script runs
+    void test_aSavedBorderIsLaidOutOnceTheSaveHasLoaded()
+    {
+        const QString name = qsl("Headless Saved Border");
+        QVERIFY(writeProfile(name, qsl(R"lua(headlessGridAtStart = getColumnCount() .. "x" .. getRowCount())lua"), qsl("<borderLeftWidth>300</borderLeftWidth>")));
+        QSize unlaid;
+        {
+            QVERIFY(!HostManager::self());
+            auto pool = std::make_unique<HostManager>();
+            QVERIFY(pool->addHost(name, QString(), QString(), QString()));
+            Host* pHost = pool->getHost(name);
+            QVERIFY(pHost);
+            unlaid = QSize(pHost->mScreenWidth, pHost->mScreenHeight);
+            pHost->loadProfileSave(QString());
+            QCOMPARE(pHost->borders(), QMargins(300, 0, 0, 0));
+            QCOMPARE(QSize(pHost->mScreenWidth, pHost->mScreenHeight), unlaid);
+        }
+
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl("cellWidth = calcFontSize()")));
+        const int cellWidth = luaGlobalString(session.host(), "cellWidth").toInt();
+        QVERIFY(cellWidth > 0);
+        QCOMPARE(luaGlobalString(session.host(), "headlessGridAtStart"), qsl("%1x%2").arg(std::max(40, (unlaid.width() * cellWidth - 300) / cellWidth)).arg(unlaid.height()));
+        QVERIFY(session.shutdown(false));
     }
 
     void test_aResizeHandlerThatClosesTheProfile_data()

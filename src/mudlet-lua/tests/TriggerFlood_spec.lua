@@ -318,7 +318,7 @@ describe("trigger matching under a flood", function()
             disableTrigger(id)
         end
         for index = 1, 100 do
-            track(tempRegexTrigger("^(?:flood_hit|flood_also_hit_" .. index .. ") (\\d+) never$", function() note("miss") end))
+            track(tempRegexTrigger("^(?:flood_hit (\\d+) never|flood_also_hit_" .. index .. ")$", function() note("miss") end))
         end
         for index = 1, 40 do
             track(tempRegexTrigger("^(?:flood_hit|flood_more_hit_" .. index .. ") (\\d+)", function() note("hit") end))
@@ -329,6 +329,14 @@ describe("trigger matching under a flood", function()
         assert.are.equal(12 * 40, fired.hit, "every matching trigger should fire on every line")
         assert.is_nil(fired.miss)
         assert.is_true(prescans <= 1, "the burst went through the parallel prescan " .. prescans .. " times on 100 failed searches a line")
+
+        -- 30 more take the misses over the threshold, which they only reach if pcre2 is asked for each
+        for index = 101, 130 do
+            track(tempRegexTrigger("^(?:flood_hit (\\d+) never|flood_also_hit_" .. index .. ")$", function() note("miss") end))
+        end
+        local sampledBefore = getProfileStats().triggers.matchPool.sampledLines
+        local opened = prescansDuring(hitLines()) + getProfileStats().triggers.matchPool.sampledLines - sampledBefore
+        assert.is_true(opened >= 11, "130 misses a line opened the pool on " .. opened .. " lines, so they are not all searched")
     end)
 
     -- A regex the prescan finds a match for is not searched for again: match()

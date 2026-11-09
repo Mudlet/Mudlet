@@ -388,6 +388,7 @@ void THyperlinkVisibilityManager::clear()
 {
     mTrackedLinks.clear();
     mHasTimerBasedLinks = false;
+    mHasLinksAwaitingTheirLine = false;
     mLastDataReceivedMs = 0;
     // drop a queued screen-reader announcement rather than name links that have just gone
     if (mpAnnouncementTimer) {
@@ -395,6 +396,47 @@ void THyperlinkVisibilityManager::clear()
     }
     mPendingHiddenCount = 0;
     stopTimerIfNotNeeded();
+}
+
+QList<TrackedHyperlink> THyperlinkVisibilityManager::takeLinks(const QSet<int>& linkIds)
+{
+    QList<TrackedHyperlink> taken;
+    for (const int linkId : linkIds) {
+        if (mTrackedLinks.contains(linkId)) {
+            taken.append(mTrackedLinks.take(linkId));
+        }
+    }
+    return taken;
+}
+
+// Each link keeps its own clock, so a delay still runs from when the link arrived; until its line
+// commits, every action on it misses the buffer's bounds and waits, as on a line not yet ended
+void THyperlinkVisibilityManager::trackAwaitingTheirLine(const QList<TrackedHyperlink>& links)
+{
+    if (links.isEmpty()) {
+        return;
+    }
+    for (TrackedHyperlink link : links) {
+        link.lineNumber = csmLineStillToCome;
+        mTrackedLinks.insert(link.linkId, link);
+    }
+    mHasLinksAwaitingTheirLine = true;
+    mHasTimerBasedLinks = true;
+    startTimerIfNeeded();
+    stopTimerIfNotNeeded();
+}
+
+void THyperlinkVisibilityManager::anchorLinksAwaitingTheirLine(const int lineNumber)
+{
+    if (!mHasLinksAwaitingTheirLine) {
+        return;
+    }
+    for (TrackedHyperlink& link : mTrackedLinks) {
+        if (link.lineNumber == csmLineStillToCome) {
+            link.lineNumber = lineNumber;
+        }
+    }
+    mHasLinksAwaitingTheirLine = false;
 }
 
 void THyperlinkVisibilityManager::slot_checkTimers()
@@ -557,6 +599,14 @@ void THyperlinkVisibilityManager::stopTimerIfNotNeeded()
     }
 }
 
+// An app that embeds Mudlet reads a link's concealment from its link()
+static void noteConcealmentChanged(TConsoleModel& model, const int linkId)
+{
+    if (model.mNotifier.linkChangedConnected()) {
+        emit model.mNotifier.linkChanged(linkId);
+    }
+}
+
 void THyperlinkVisibilityManager::performConcealment(TrackedHyperlink& link)
 {
 #if defined(DEBUG_OSC_PROCESSING)
@@ -566,37 +616,13 @@ void THyperlinkVisibilityManager::performConcealment(TrackedHyperlink& link)
     TBuffer& buffer = mModel.buffer;
 
     if (link.deletesEntireLine) {
-        // CRITICAL BUG FIX: Prevent cascade deletion by unregistering ALL links on the target line
-        // before deleting it. This prevents other links from being adjusted to the wrong line
-        // and accidentally triggering on content they shouldn't affect.
-
-        // Capture fields from link before removal to avoid dangling reference
+        // deleteLine() frees `link`, so it is not read after that
         const int targetLine = link.lineNumber;
-        const int currentLinkId = link.linkId;
 
         if (targetLine >= 0 && targetLine < buffer.lineBuffer.size()) {
-            // First, collect all link IDs that are on the same line as the one being deleted
-            QList<int> linksOnTargetLine;
-            for (auto it = mTrackedLinks.begin(); it != mTrackedLinks.end(); ++it) {
-                if (it.value().lineNumber == targetLine) {
-                    linksOnTargetLine.append(it.key());
-                }
-            }
-
-            // Unregister all links on the target line to prevent interference
-            for (int linkId : linksOnTargetLine) {
-                if (linkId != currentLinkId) { // Don't remove the current link yet
-                    mTrackedLinks.remove(linkId);
-#if defined(DEBUG_OSC_PROCESSING)
-                    qDebug().noquote() << "[OSC] Pre-emptively unregistered co-located link" << linkId;
-#endif
-                }
-            }
-
-            // Now delete the line
+            // Unregisters every tracked link on the line and records each link the line held as removed, concealed
+            // ones included, which names them all to an app that embeds Mudlet
             buffer.deleteLine(targetLine);
-
-            mTrackedLinks.remove(currentLinkId);
 
             queueHiddenAnnouncement();
 
@@ -629,6 +655,7 @@ void THyperlinkVisibilityManager::performConcealment(TrackedHyperlink& link)
 
                 // Only mark as concealed and update panes after successful text replacement
                 link.isConcealed = true;
+                noteConcealmentChanged(mModel, link.linkId);
 
                 queueHiddenAnnouncement();
             }
@@ -696,6 +723,7 @@ void THyperlinkVisibilityManager::performReveal(TrackedHyperlink& link)
             // Restore the link indices so the text is clickable again
             buffer.restoreLinkIndices(link.lineNumber, link.startColumn, link.length, link.linkId);
             link.isConcealed = false;
+            noteConcealmentChanged(mModel, link.linkId);
 
             //: Screen-reader announcement when a previously hidden OSC 8 link is revealed; %1 is the original link text
             announce(tr("Link revealed: %1").arg(link.originalText));

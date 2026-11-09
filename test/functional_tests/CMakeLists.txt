@@ -74,6 +74,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     DetachedWindowOwnershipTest.cpp
     SpeechAcrossProfilesTest.cpp
     MudletProxyStyleTest.cpp
+    DarkThemeToolBarExtensionTest.cpp
     DarkThemeItemCheckTest.cpp
     MxpFramePlacementTest.cpp
     MxpDestFrameClearTest.cpp
@@ -116,6 +117,7 @@ set(PROFILE_GROUP_TEST_SOURCES
     ConnectionDialogCrashTest.cpp
     ConnectionDialogEscapeTest.cpp
     ConnectionDialogFocusTest.cpp
+    ConnectionDialogHistorySizeTest.cpp
     ConnectionDialogInitialSelectionTest.cpp
     ConnectionDialogKeychainWaitTest.cpp
     ConnectionDialogNewProfileTest.cpp
@@ -139,6 +141,7 @@ set(PROFILE_GROUP_TEST_SOURCES
     ProfileLifecycleTest.cpp
     ProfileLoadTempFileTest.cpp
     ProfileRoundTripTest.cpp
+    ProfileSaveDiskFullTest.cpp
     ProfileSaveShutdownRaceTest.cpp
     ResetProfileTest.cpp
     SavedVariableFenceTest.cpp
@@ -168,6 +171,7 @@ set(TELNET_GROUP_TEST_SOURCES
     TelnetConnectLookupRaceTest.cpp
     TelnetIacEscapingTest.cpp
     MMCPIncomingCallTest.cpp
+    DownloadShortWriteTest.cpp
     TelnetNewEnvironTest.cpp
     TelnetPasswordMaskTimeoutTest.cpp
     PasswordEntryPolicyTest.cpp
@@ -200,6 +204,7 @@ set(TRIGGER_GROUP_TEST_SOURCES
     SetScriptCallbackTest.cpp
     TFeedTriggersRecursionTest.cpp
     TriggerMatchPoolTest.cpp
+    TriggerPrescanTest.cpp
     TreeChildTeardownTest.cpp
     TriggerSoundArgumentTest.cpp
     UnitDeferredDeleteTest.cpp
@@ -213,7 +218,9 @@ set(EDITOR_GROUP_TEST_SOURCES
     EdbeeReinitTest.cpp
     EditorAutoCompleteFocusTest.cpp
     EditorClipboardXmlTest.cpp
+    EditorEmergencyStopTest.cpp
     EditorBannerViewSwitchTest.cpp
+    EditorErrorLineLinkTest.cpp
     EditorEmptySelectionTest.cpp
     EditorItemXMLHelpersTest.cpp
     ColorTriggerDialogTest.cpp
@@ -227,6 +234,7 @@ set(EDITOR_GROUP_TEST_SOURCES
     EditorFolderViewTest.cpp
     EditorFontTest.cpp
     EditorKeyboardMoveTest.cpp
+    EditorLazyCreationTest.cpp
     EditorModuleFolderTest.cpp
     EditorSearchTest.cpp
     TreeWidgetItemMoveTest.cpp
@@ -240,12 +248,14 @@ set(EDITOR_GROUP_TEST_SOURCES
 # The map: its rooms and areas, its file format, and the mapper widget
 set(MAP_GROUP_TEST_SOURCES
     EmbeddedMapperCreationTest.cpp
+    MapAutosaveTest.cpp
     FloatingMapKeyBindingTest.cpp
     ExitAppearanceTest.cpp
     MapAreaReassignmentTest.cpp
     MapAreaSelectionTest.cpp
     MapCloseDuringImportTest.cpp
     MapCoordinateLimitTest.cpp
+    MapCrossProfileStateTest.cpp
     MapContextMenuLifetimeTest.cpp
     MapDownloadTest.cpp
     MapSmallAreaCenteringTest.cpp
@@ -253,13 +263,16 @@ set(MAP_GROUP_TEST_SOURCES
     MapLevelOfDetailTest.cpp
     MapMouseInteractionTest.cpp
     MapOffscreenCustomLineTest.cpp
+    MapPainterTest.cpp
     MapRoomNameVisibilityTest.cpp
     MapFileStatsTest.cpp
+    MapCopyTest.cpp
     MapTextLabelCacheTest.cpp
     MapViewAreaListTest.cpp
     MapViewTeardownTest.cpp
     MapLabelRenderTest.cpp
     MapDecalsTest.cpp
+    MapExitStubTest.cpp
     MapViewCueTest.cpp
     LuaMapperCueTest.cpp
     MapLockNoOpTest.cpp
@@ -302,6 +315,7 @@ set(PACKAGE_GROUP_TEST_SOURCES
     PackageManagerHeadingTest.cpp
     PackageManagerRemovalTest.cpp
     PackageManagerRepositoryLinksTest.cpp
+    PackageManagerSearchTest.cpp
     PackageRemovalSaveTeardownTest.cpp
     PackageRepositoryDownloadTest.cpp
     PackageSelfRemovalTest.cpp
@@ -335,6 +349,7 @@ set(SETTINGS_GROUP_TEST_SOURCES
     SettingsInstantApplyTest.cpp
     SettingsLiveSyncTest.cpp
     SettingsMapControlsTest.cpp
+    SettingsMonospacedFontsTest.cpp
     SettingsMmcpFlagsTest.cpp
     SettingsRoundTripTest.cpp
     SettingsSearchTest.cpp
@@ -358,8 +373,12 @@ set(TEARDOWN_GROUP_TEST_SOURCES
 )
 if(USE_HEADLESS)
     list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessSessionInputTest.cpp)
-    list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessRunnerTest.cpp HeadlessSessionTest.cpp)
+    list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessSessionCommandsTest.cpp)
+    list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessRunnerTest.cpp HeadlessSessionTest.cpp HeadlessSessionMapTest.cpp)
     list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessSessionOutputTest.cpp)
+    list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessSessionAreaTest.cpp)
+    list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessSessionCompletionTest.cpp)
+    list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessSessionLinksTest.cpp)
 endif()
 
 # Sound, music and video, speech in and out, and the rich presence published to Discord
@@ -483,6 +502,12 @@ endmacro()
 
 add_grouped_test_binary(functional_window_tests ${WINDOW_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_profile_tests ${PROFILE_GROUP_TEST_SOURCES})
+# Not a grouped source: it would get a ctest case of its own. It replaces fchmod() for the whole binary.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_sources(functional_profile_tests PRIVATE FchmodRefusal.cpp)
+    target_compile_definitions(functional_profile_tests PRIVATE MUDLET_FCHMOD_REFUSAL)
+    target_link_libraries(functional_profile_tests PRIVATE ${CMAKE_DL_LIBS})
+endif()
 add_grouped_test_binary(functional_telnet_tests ${TELNET_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_trigger_tests ${TRIGGER_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_editor_tests ${EDITOR_GROUP_TEST_SOURCES})
@@ -667,6 +692,11 @@ if(TEST HeadlessSessionInputTest)
     set_tests_properties(HeadlessSessionInputTest PROPERTIES TIMEOUT 300)
 endif()
 
+# HeadlessSessionCommandsTest starts a fresh headless profile in each of its cases too
+if(TEST HeadlessSessionCommandsTest)
+    set_tests_properties(HeadlessSessionCommandsTest PROPERTIES TIMEOUT 300)
+endif()
+
 # HeadlessSessionTest starts a fresh headless profile in nearly every one of its
 # cases, so it needs a longer timeout than the default 60s
 if(TEST HeadlessSessionTest)
@@ -674,6 +704,12 @@ if(TEST HeadlessSessionTest)
 endif()
 if(TEST HeadlessSessionOutputTest)
     set_tests_properties(HeadlessSessionOutputTest PROPERTIES TIMEOUT 300)
+endif()
+if(TEST HeadlessSessionAreaTest)
+    set_tests_properties(HeadlessSessionAreaTest PROPERTIES TIMEOUT 300)
+endif()
+if(TEST HeadlessSessionLinksTest)
+    set_tests_properties(HeadlessSessionLinksTest PROPERTIES TIMEOUT 300)
 endif()
 
 # Undo/redo tests need a longer timeout due to large batch operations

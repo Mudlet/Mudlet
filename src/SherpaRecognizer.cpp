@@ -38,9 +38,9 @@
 #include "MacMicrophonePermission.h"
 #endif
 
-// Vendored from sherpa-onnx v1.13.5 c-api.h. These layouts are the ABI the
+// Vendored from sherpa-onnx v2.0.1 c-api.h. These layouts are the ABI the
 // loaded library reads, so field order and types must not change; sherpa-onnx
-// itself only ever appends fields, which initialize() defends against by
+// itself only ever appends fields, which loadModel() defends against by
 // passing the struct inside a larger zeroed block.
 
 struct SherpaOnnxOnlineTransducerModelConfig
@@ -596,7 +596,7 @@ bool SherpaRecognizer::loadModel(const QString& modelPath)
     qInfo().noquote() << "SherpaRecognizer: Loading model from:" << modelPath;
 
     // The config crosses the ABI boundary by pointer. A library newer than the
-    // vendored 1.13.5 layout may read fields appended after it, so the struct
+    // vendored 2.0.1 layout may read fields appended after it, so the struct
     // sits at the front of a larger zeroed block and any such field reads as
     // zero, which sherpa-onnx replaces with its own default.
     alignas(std::max_align_t) char configBlock[4096] = {};

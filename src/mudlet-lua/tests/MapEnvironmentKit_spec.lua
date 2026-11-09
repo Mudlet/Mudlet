@@ -134,6 +134,96 @@ describe("Tests setMapEnvironmentKit, getMapEnvironmentKit, getMapEnvironmentKit
     assert.are.same({}, getMapEnvironmentKits())
   end)
 
+  describe("unsetCustomEnvColor", function()
+    it("removes a custom environment colour, and it stays removed through saving and loading the map", function()
+      assert.is_not_nil(getCustomEnvColorTable()[blue])
+      assert.is_true(unsetCustomEnvColor(blue))
+      assert.is_nil(getCustomEnvColorTable()[blue])
+      assert.is_not_nil(getCustomEnvColorTable()[green])
+
+      assert.is_true(saveMap(savePath))
+      assert.is_true(loadMap(savePath))
+      assert.is_nil(getCustomEnvColorTable()[blue])
+      assert.is_not_nil(getCustomEnvColorTable()[green])
+    end)
+
+    it("refuses an environment that has no custom colour", function()
+      local ok, message = unsetCustomEnvColor(9399)
+      assert.is_nil(ok)
+      assert.truthy(message:find("9399", 1, true))
+    end)
+
+    it("refuses the 16 default colours", function()
+      for environment = 257, 272 do
+        local ok, message = unsetCustomEnvColor(environment)
+        assert.is_nil(ok, "environment " .. environment)
+        assert.truthy(message:find(tostring(environment), 1, true))
+        assert.is_not_nil(getCustomEnvColorTable()[environment])
+      end
+    end)
+
+    it("refuses a colour a room still uses, until the room stops using it", function()
+      local roomId = createRoomID()
+      assert.is_true(addRoom(roomId))
+      assert.is_true(setRoomEnv(roomId, grey))
+
+      local ok, message = unsetCustomEnvColor(grey)
+      assert.is_nil(ok)
+      assert.truthy(message:find("room ID " .. roomId, 1, true), message)
+      assert.is_not_nil(getCustomEnvColorTable()[grey])
+
+      assert.is_true(setRoomEnv(roomId, tan))
+      assert.is_true(unsetCustomEnvColor(grey))
+      assert.is_nil(getCustomEnvColorTable()[grey])
+    end)
+
+    -- Lua cannot set an environment-to-colour remap; only a map file can, so one is written into a JSON export
+    local function loadWithRemap(roomEnvironment, colour)
+      local jsonPath = mapDirectory .. "/environment_kit_spec_remap.json"
+      finally(function() os.remove(jsonPath) end)
+      local roomId = createRoomID()
+      assert.is_true(addRoom(roomId))
+      setRoomArea(roomId, addAreaName("EnvironmentKitSpecRemapArea"))
+      assert.is_true(setRoomEnv(roomId, roomEnvironment))
+      assert.is_true(saveJsonMap(jsonPath))
+      local file = assert(io.open(jsonPath, "r"))
+      local document = yajl.to_value(file:read("*a"))
+      file:close()
+      document.envToColorMapping = {[tostring(roomEnvironment)] = colour}
+      file = assert(io.open(jsonPath, "w"))
+      file:write(yajl.to_string(document))
+      file:close()
+      deleteMap()
+      assert.is_true(loadJsonMap(jsonPath))
+      assert.are.equal(roomEnvironment, getRoomEnv(roomId))
+      return roomId
+    end
+
+    it("refuses a colour a room is remapped to", function()
+      local roomId = loadWithRemap(9398, grey)
+
+      local ok, message = unsetCustomEnvColor(grey)
+      assert.is_nil(ok)
+      assert.truthy(message:find("room ID " .. roomId, 1, true), message)
+      assert.is_not_nil(getCustomEnvColorTable()[grey])
+    end)
+
+    it("removes the colour of an environment whose rooms are remapped away from it", function()
+      local roomId = loadWithRemap(grey, tan)
+
+      assert.is_true(unsetCustomEnvColor(grey))
+      assert.is_nil(getCustomEnvColorTable()[grey])
+      local ok, message = unsetCustomEnvColor(tan)
+      assert.is_nil(ok)
+      assert.truthy(message:find("room ID " .. roomId, 1, true), message)
+    end)
+
+    it("rejects an environment ID that is not a number", function()
+      assert.has_error(function() unsetCustomEnvColor("grey") end)
+      assert.has_error(function() unsetCustomEnvColor() end)
+    end)
+  end)
+
   describe("Tests getMapEnvColor", function()
     local jsonPath = mapDirectory .. "/environment_kit_spec_env_colors.json"
     local ansiRed, ansiGreen, ansiBlue = 257, 258, 260

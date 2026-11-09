@@ -21,7 +21,10 @@
 #include "DarkTheme.h"
 #include "MudletProxyStyle.h"
 
+#include <QApplication>
+#include <QPainter>
 #include <QStyleOption>
+#include <QWidget>
 
 //DarkTheme only works with Fusion style
 DarkTheme::DarkTheme()
@@ -70,6 +73,38 @@ void DarkTheme::polish(QPalette& palette)
     palette.setColor(QPalette::Disabled, QPalette::Highlight, QColor(80, 80, 80));
 
     QProxyStyle::polish(palette);
+}
+
+QIcon DarkTheme::standardIcon(StandardPixmap standardIcon, const QStyleOption* option, const QWidget* widget) const
+{
+    const QIcon icon = QProxyStyle::standardIcon(standardIcon, option, widget);
+    if (icon.isNull() || (standardIcon != SP_ToolBarHorizontalExtensionButton && standardIcon != SP_ToolBarVerticalExtensionButton)) {
+        return icon;
+    }
+
+    // Fusion's toolbar overflow chevrons are near-black images whatever the
+    // palette, so on the dark Window colour they cannot be seen
+    const QPalette& palette = option ? option->palette : (widget ? widget->palette() : QApplication::palette());
+    const auto tinted = [](QPixmap pixmap, const QColor& colour) {
+        QPainter painter(&pixmap);
+        painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
+        painter.fillRect(pixmap.rect(), colour);
+        painter.end();
+        return pixmap;
+    };
+    QIcon recoloured;
+    const QList<QSize> sizes = icon.availableSizes();
+    for (const QSize& size : sizes) {
+        const QPixmap pixmap = icon.pixmap(size, 1.0);
+        // Filling through an opaque pixmap would leave a solid square
+        if (!pixmap.hasAlphaChannel()) {
+            return icon;
+        }
+        recoloured.addPixmap(tinted(pixmap, palette.color(QPalette::Active, QPalette::WindowText)));
+        // Qt would otherwise lighten the white glyph, leaving it looking enabled
+        recoloured.addPixmap(tinted(pixmap, palette.color(QPalette::Disabled, QPalette::WindowText)), QIcon::Disabled);
+    }
+    return recoloured.isNull() ? icon : recoloured;
 }
 
 void DarkTheme::drawPrimitive(PrimitiveElement element, const QStyleOption* option, QPainter* painter, const QWidget* widget) const

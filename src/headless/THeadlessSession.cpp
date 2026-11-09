@@ -33,6 +33,7 @@
 #include "TGameDetails.h"
 #include "TLuaInterpreter.h"
 #include "TMap.h"
+#include "TNullAppFrontend.h"
 #include "TNullConsoleFrontend.h"
 
 #include <QCoreApplication>
@@ -475,6 +476,8 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                         },
                         Qt::QueuedConnection);
                 connectOutputRelays(pNewHost, run);
+                connectAreaRelays(pNewHost, run);
+                connectLinkRelays(pNewHost, run);
                 connect(pNewHost, &Host::signal_errorConsolePrint, this, [this](const QString& text, const QColor& foreground, const QColor& background) {
                     const QString profile = mProfileName;
                     ++gSignalsBeingHandedOut;
@@ -492,11 +495,34 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                     --gSignalsBeingHandedOut;
                     return true;
                 });
+                relayMapRepaints(pNewHost, run);
                 connect(pNewHost, &Host::signal_attentionRequested, this, [this](const int milliseconds) {
                     const QString profile = mProfileName;
                     ++gSignalsBeingHandedOut;
                     emit attentionRequested(profile, milliseconds);
                     --gSignalsBeingHandedOut;
+                });
+                // As the GUI's console, which alerts for new data only while the main window is minimized, and then
+                // once, as QApplication::alert()'s flash lasts until the player comes back
+                connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::newDataAlerted, this, [this, run]() {
+                    const std::pair<unsigned int, unsigned int> minimizing{run, mWindowMinimizedChanges};
+                    if (run != mRun || !mWindowMinimized || mNewDataAlertedFor == minimizing) {
+                        return;
+                    }
+                    mNewDataAlertedFor = minimizing;
+                    // From the event loop, as this runs mid-write
+                    QMetaObject::invokeMethod(
+                            this,
+                            [this, minimizing]() {
+                                if (minimizing != std::pair{mRun, mWindowMinimizedChanges} || !mpHost) {
+                                    return;
+                                }
+                                const QString profile = mProfileName;
+                                ++gSignalsBeingHandedOut;
+                                emit attentionRequested(profile, 0);
+                                --gSignalsBeingHandedOut;
+                            },
+                            Qt::QueuedConnection);
                 });
                 // Direct, as the GUI opens and closes its box inside the emit
                 connect(pNewHost, &Host::signal_passwordEntryWantedChanged, this, [this, run, pNewHost](const bool wanted) {
@@ -731,6 +757,7 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                     });
                 }
                 connectInputRelays(run);
+                connectCommandRelays(run);
                 // Direct, so it keeps its place among the game's lines and hiddenInputWanted; an exit handler's
                 // text is for a line the app no longer shows, and a script's close raises it before quitRequested
                 connect(pNewHost, &Host::signal_commandLineTextRequested, this, [this, run, pNewHost](const QString& text) {
@@ -838,6 +865,7 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
     }
     mDeliveredConsoleFont = consoleFont();
     noteOutputStateAtLoad();
+    noteAreaAtLoad();
     // A copy, as a handler may delete the session while its argument is in use
     const QString profile = mProfileName;
     emit profileLoaded(profile);
@@ -1031,16 +1059,22 @@ bool THeadlessSession::runLua(const QString& code)
     const bool ran = mpHost->getLuaInterpreter()->compileAndExecuteScript(code);
     disconnect(errorCapture);
     if (!ran && self) {
-        mErrorString = errorText.trimmed();
-        // Lua's own message, out of the console's "<Lua error:...>"
-        if (mErrorString.startsWith(QLatin1Char('<')) && mErrorString.endsWith(QLatin1Char('>'))) {
-            mErrorString = mErrorString.sliced(1).chopped(1);
-        }
-        if (mErrorString.startsWith(qsl("Lua error:"))) {
-            mErrorString = mErrorString.sliced(10);
-        }
+        mErrorString = luaErrorOf(errorText);
     }
     return ran;
+}
+
+QString THeadlessSession::luaErrorOf(const QString& consoleText)
+{
+    QString error = consoleText.trimmed();
+    // Out of the console's "<Lua error:...>"
+    if (error.startsWith(QLatin1Char('<')) && error.endsWith(QLatin1Char('>'))) {
+        error = error.sliced(1).chopped(1);
+    }
+    if (error.startsWith(qsl("Lua error:"))) {
+        error = error.sliced(10);
+    }
+    return error;
 }
 
 THeadlessSession::PackageResult THeadlessSession::installPackage(const QString& path)
@@ -1117,33 +1151,18 @@ bool THeadlessSession::setScreenSize(const int columns, const int rows)
         mErrorString = tr("A screen of %1 columns by %2 rows cannot be sent to the game: each must be from 1 to 65535.").arg(columns).arg(rows);
         return false;
     }
+    if (!mpHost->noteMainAreaGiven(mAnsweringMainWindowRequest)) {
+        return true;
+    }
     // The GUI's main console never reports itself narrower
-    const int width = std::max(40, columns);
-    // As the GUI's resize: each call would put NAWS off for another 0.3s
-    if (width == mpHost->mScreenWidth && rows == mpHost->mScreenHeight) {
+    const QSize area(std::max(40, columns), rows);
+    // As TConsole::resizeEvent(), which tells scripts nothing for the size they have
+    if (!mpHost->mainAreaInPixels() && area == mpHost->mainAreaCells()) {
         return true;
     }
-    mpHost->setScreenDimensions(width, rows);
-    mpHost->updateDisplayDimensions();
-
-    // As TConsole::resizeEvent() reports the main window. The first handler may close the profile, and a
-    // function the frontend bound into Lua delete the session.
-    const QPointer<THeadlessSession> self(this);
-    mpHost->getLuaInterpreter()->call(qsl("handleWindowResizeEvent"), qsl("WindowResizeEvent"));
-    if (!self || !mpHost || mpHost->closeStarted()) {
-        return true;
-    }
-    const QSize size = mpHost->mainWindowSize().value_or(QSize());
-    TEvent event{};
-    event.mArgumentList.append(qsl("sysWindowResizeEvent"));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    event.mArgumentList.append(QString::number(size.width()));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    event.mArgumentList.append(QString::number(size.height()));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    event.mArgumentList.append(qsl("main"));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    mpHost->raiseEvent(event);
+    mpHost->setMainAreaCells(area);
+    // The first handler may close the profile, and a function the frontend bound into Lua delete the session
+    mpHost->layOutMainAreaWithNoView(Host::MainAreaChange::area);
     return true;
 }
 
@@ -1317,6 +1336,101 @@ bool commandLineKeepsKey(const Host& host, const QKeyEvent& event)
     }
 }
 
+// As the ShortcutOverride by which the GUI's focused line keeps a key from the main window's menu shortcuts: the
+// caret-mode key, then what QPlainTextEdit claims (QInputControl::isCommonTextEditShortcut()) or, while hidden input
+// is wanted, what QLineEdit does (QWidgetLineControl::processShortcutOverrideEvent())
+bool lineClaimsKey(const Host& host, const QKeyEvent& event, const bool hiddenInput)
+{
+    if (host.caretShortcutMatches(&event)) {
+        return true;
+    }
+    const Qt::KeyboardModifiers modifiers = event.modifiers();
+    const bool plain = modifiers == Qt::NoModifier || modifiers == Qt::ShiftModifier || modifiers == Qt::KeypadModifier;
+    if (hiddenInput) {
+        static const QList<QKeySequence::StandardKey> lineEditKeys{QKeySequence::Copy,
+                                                                   QKeySequence::Paste,
+                                                                   QKeySequence::Cut,
+                                                                   QKeySequence::Redo,
+                                                                   QKeySequence::Undo,
+                                                                   QKeySequence::DeleteCompleteLine,
+                                                                   QKeySequence::MoveToNextWord,
+                                                                   QKeySequence::MoveToPreviousWord,
+                                                                   QKeySequence::MoveToStartOfLine,
+                                                                   QKeySequence::MoveToEndOfLine,
+                                                                   QKeySequence::MoveToStartOfBlock,
+                                                                   QKeySequence::MoveToEndOfBlock,
+                                                                   QKeySequence::MoveToStartOfDocument,
+                                                                   QKeySequence::MoveToEndOfDocument,
+                                                                   QKeySequence::SelectPreviousWord,
+                                                                   QKeySequence::SelectNextWord,
+                                                                   QKeySequence::SelectStartOfLine,
+                                                                   QKeySequence::SelectEndOfLine,
+                                                                   QKeySequence::SelectStartOfBlock,
+                                                                   QKeySequence::SelectEndOfBlock,
+                                                                   QKeySequence::SelectStartOfDocument,
+                                                                   QKeySequence::SelectEndOfDocument,
+                                                                   QKeySequence::SelectAll};
+        if (std::any_of(lineEditKeys.cbegin(), lineEditKeys.cend(), [&event](const QKeySequence::StandardKey key) {
+                return event.matches(key);
+            })) {
+            return true;
+        }
+        if (!plain) {
+            return false;
+        }
+        switch (event.key()) {
+        case Qt::Key_Delete:
+        case Qt::Key_Home:
+        case Qt::Key_End:
+        case Qt::Key_Backspace:
+        case Qt::Key_Left:
+        case Qt::Key_Right:
+            return true;
+        default:
+            return event.key() < Qt::Key_Escape;
+        }
+    }
+    if (plain) {
+        switch (event.key()) {
+        case Qt::Key_Return:
+        case Qt::Key_Enter:
+        case Qt::Key_Delete:
+        case Qt::Key_Home:
+        case Qt::Key_End:
+        case Qt::Key_Backspace:
+        case Qt::Key_Left:
+        case Qt::Key_Right:
+        case Qt::Key_Up:
+        case Qt::Key_Down:
+        case Qt::Key_Tab:
+            return true;
+        default:
+            return event.key() < Qt::Key_Escape;
+        }
+    }
+    static const QList<QKeySequence::StandardKey> textEditKeys{QKeySequence::Copy,
+                                                               QKeySequence::Paste,
+                                                               QKeySequence::Cut,
+                                                               QKeySequence::Redo,
+                                                               QKeySequence::Undo,
+                                                               QKeySequence::MoveToNextWord,
+                                                               QKeySequence::MoveToPreviousWord,
+                                                               QKeySequence::MoveToStartOfDocument,
+                                                               QKeySequence::MoveToEndOfDocument,
+                                                               QKeySequence::SelectNextWord,
+                                                               QKeySequence::SelectPreviousWord,
+                                                               QKeySequence::SelectStartOfLine,
+                                                               QKeySequence::SelectEndOfLine,
+                                                               QKeySequence::SelectStartOfBlock,
+                                                               QKeySequence::SelectEndOfBlock,
+                                                               QKeySequence::SelectStartOfDocument,
+                                                               QKeySequence::SelectEndOfDocument,
+                                                               QKeySequence::SelectAll};
+    return std::any_of(textEditKeys.cbegin(), textEditKeys.cend(), [&event](const QKeySequence::StandardKey key) {
+        return event.matches(key);
+    });
+}
+
 // As TPasswordEntry::handleKeyPress(), which judges a printable key by its text; without the text, by its code
 bool hiddenInputKeepsKey(const Host& host, const QKeyEvent& event, const QString* text)
 {
@@ -1381,6 +1495,21 @@ THeadlessSession::KeyResult THeadlessSession::offerKey(const Qt::Key key, const 
     const QKeyEvent event(QEvent::KeyPress, key, modifiers, text ? *text : QString());
     const bool keypad = modifiers & Qt::KeypadModifier;
     const bool hiddenInput = mpHost->passwordEntryWanted();
+    // Qt offers the main window's shortcuts a key before the focused line has it, unless the line claims it first
+    if (!lineClaimsKey(*mpHost, event, hiddenInput)) {
+        if (const int command = addonCommandOnKey(event)) {
+            // The click's sysCommandClicked handlers may delete the session
+            const QPointer<THeadlessSession> self(this);
+            if (auto* pView = dynamic_cast<TNullAppFrontend*>(TAppFrontend::instance())) {
+                pView->activateAddonCommand(command);
+            }
+            if (self) {
+                //: Error from a frontend with no window that was given a key press which is the keyboard shortcut of a command a script added to the menu, which the GUI runs rather than offering the key to its input line
+                mErrorString = tr("That key is the shortcut of a command a script added to the menu, which ran.");
+            }
+            return KeyResult::commandRan;
+        }
+    }
     if (hiddenInput) {
         if (hiddenInputKeepsKey(*mpHost, event, text)) {
             //: Error from a frontend with no window that was given a key press while the game hides what the player types, as for a password, which the GUI's hidden-input box would take rather than any key binding
@@ -1393,9 +1522,12 @@ THeadlessSession::KeyResult THeadlessSession::offerKey(const Qt::Key key, const 
             return KeyResult::bindingRan;
         }
         if (commandLineKeepsKey(*mpHost, event)) {
-            // TCommandLine selects its whole line on Escape, so what the player types next replaces it
+            // TCommandLine selects its whole line on Escape, so what the player types next replaces it, and ends Tab's cycle
             if (auto* pFrontend = mpHost->consoleFrontend(); key == Qt::Key_Escape && pFrontend) {
                 pFrontend->selectCommandLineText(QString());
+                if (auto* pView = dynamic_cast<TNullConsoleFrontend*>(pFrontend)) {
+                    pView->resetMainCommandLineCompletion();
+                }
             }
             //: Error from a frontend with no window that was given a key press, such as Return or Up, which the GUI's command line acts on itself rather than offering it to any key binding
             mErrorString = tr("The GUI's command line keeps that key for itself, offering it to no key binding; the app handles it.");
@@ -1715,6 +1847,7 @@ void THeadlessSession::detachFromHost()
     if (MudletMedia* pMedia = MudletMedia::self()) {
         disconnect(pMedia, nullptr, this, nullptr);
     }
+    disconnectCommandRelays();
 }
 
 void THeadlessSession::startMapProgress(const QString& title, const QString& label, const int maximum)
@@ -1831,7 +1964,8 @@ QList<THeadlessSession::TextRun> textRuns(const QString& text, const TLineFormat
         const THeadlessSession::TextStyles styles = textStyles(first);
         int end = start + 1;
         // By style rather than TChar's flags, which also tell alternate fonts apart
-        while (end < length && format[end].foregroundRgba() == first.foregroundRgba() && format[end].backgroundRgba() == first.backgroundRgba() && textStyles(format[end]) == styles) {
+        while (end < length && format[end].foregroundRgba() == first.foregroundRgba() && format[end].backgroundRgba() == first.backgroundRgba() && textStyles(format[end]) == styles
+               && format[end].linkIndex() == first.linkIndex()) {
             ++end;
         }
         THeadlessSession::TextRun run;
@@ -1842,10 +1976,24 @@ QList<THeadlessSession::TextRun> textRuns(const QString& text, const TLineFormat
         run.defaultForeground = first.foregroundRgba() == profileForeground.rgba();
         run.defaultBackground = first.backgroundRgba() == profileBackground.rgba();
         run.styles = styles;
+        run.link = first.linkIndex();
         runs.append(run);
         start = end;
     }
     return runs;
+}
+
+// A segment a wrap split off has no time of its own, so takes that of the line it came from
+qint64 arrivalTime(const TBuffer& buffer, int line)
+{
+    if (line < 0 || line >= buffer.timeBuffer.size()) {
+        return -1;
+    }
+    while (line > 0 && buffer.timeBuffer.at(line) == TBuffer::csmWrappedLineTimeStamp) {
+        --line;
+    }
+    const qint64 time = buffer.timeBuffer.at(line);
+    return time < 0 ? -1 : time;
 }
 
 } // namespace
@@ -1873,7 +2021,7 @@ void THeadlessSession::lineCommitted(const int lineIndex)
     // A handler may delete the session, whose pool then waits for the commit to end; hence the copy of the name
     const QString profile = mProfileName;
     ++gSignalsBeingHandedOut;
-    emit outputLine(profile, text, buffer.promptBuffer.at(lineIndex), runs);
+    emit outputLine(profile, text, buffer.promptBuffer.at(lineIndex), runs, arrivalTime(buffer, lineIndex));
     --gSignalsBeingHandedOut;
 }
 
@@ -1925,7 +2073,7 @@ THeadlessSession::ShownLine THeadlessSession::wholeLine(const TBuffer& buffer, c
         format.insert(format.end(), formatFrom, segmentFormat.end());
         format.resize(text.size(), format.empty() ? TChar() : format.back());
     }
-    return {text, buffer.promptBuffer.at(first), textRuns(text, TLineFormat(std::move(format)), mpHost->mFgColor, mpHost->mBgColor)};
+    return {text, buffer.promptBuffer.at(first), textRuns(text, TLineFormat(std::move(format)), mpHost->mFgColor, mpHost->mBgColor), arrivalTime(buffer, first)};
 }
 
 bool THeadlessSession::lineShownWanted() const
@@ -1951,8 +2099,9 @@ QList<THeadlessSession::ShownLine> THeadlessSession::takeTriggerWrites(const boo
     if (writes.isEmpty() || !taken) {
         return lines;
     }
+    const TBuffer& buffer = mpHost->mainConsoleModel().buffer;
     for (const TConsoleModel::TriggerWrite& write : writes) {
-        lines.append({write.text, false, textRuns(write.text, TLineFormat(write.format), mpHost->mFgColor, mpHost->mBgColor)});
+        lines.append({write.text, false, textRuns(write.text, TLineFormat(write.format), mpHost->mFgColor, mpHost->mBgColor), arrivalTime(buffer, write.line)});
     }
     return lines;
 }
@@ -1963,7 +2112,7 @@ bool THeadlessSession::sendShownLines(const QList<ShownLine>& lines)
     const QString profile = mProfileName;
     for (const ShownLine& line : lines) {
         ++gSignalsBeingHandedOut;
-        emit lineShown(profile, line.text, line.isPrompt, line.runs);
+        emit lineShown(profile, line.text, line.isPrompt, line.runs, line.arrivalMSecs);
         --gSignalsBeingHandedOut;
         if (!self) {
             return false;

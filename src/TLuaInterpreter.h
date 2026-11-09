@@ -371,6 +371,7 @@ public:
     static int setRoomIDbyHash(lua_State*);
     static int sendSocket(lua_State*);
     static int openUrl(lua_State*);
+    static int connectFromGameLink(lua_State*);
     static int getRoomsByPosition(lua_State*);
     static int getRoomsByPosition1(lua_State*);
     static int getRoomEnv(lua_State*);
@@ -402,6 +403,7 @@ public:
     static int getRoomName(lua_State*);
     static int setRoomEnv(lua_State*);
     static int setCustomEnvColor(lua_State*);
+    static int unsetCustomEnvColor(lua_State*);
     static int roomLocked(lua_State*);
     static int setAreaName(lua_State*);
     static int setAreaGraphPosition(lua_State*);
@@ -1158,6 +1160,8 @@ private:
     // a line, though not one made while a script is running. The fifth slot
     // is rawget(), which puts a name still left out in place before reading.
     lua_CFunction mStockMetatableFunctions[5] = {};
+    // yajl.to_value as loaded, which parseJSON() stands in for while json_to_value is still it
+    lua_CFunction mStockJsonToValue = nullptr;
     bool mGlobalsMetatableTouched = false;
     // Once both handlers are seen in place with no script running, the next
     // lines do not look for them again until a script runs. Lua can also run

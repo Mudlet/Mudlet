@@ -25,6 +25,7 @@
  ***************************************************************************/
 
 
+#include "TCommandLineCompletion.h"
 #include "enums.h"
 #include "utils.h"
 
@@ -43,10 +44,7 @@ class TCommandLine : public QPlainTextEdit //QLineEdit
 {
     Q_OBJECT
 
-    enum MoveDirection {
-        MOVE_UP,
-        MOVE_DOWN
-    };
+    enum MoveDirection { MOVE_UP, MOVE_DOWN };
 
 public:
     Q_DISABLE_COPY(TCommandLine)
@@ -109,7 +107,7 @@ private:
     bool event(QEvent*) override;
     void mousePressEvent(QMouseEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
-    void handleAutoCompletion();
+    void handleAutoCompletion(bool forward);
     void insertFromMimeData(const QMimeData*) override;
     void slot_contentsChange();
     void spellCheck();
@@ -130,16 +128,11 @@ private:
     enums::CommandLineType mType = enums::UnknownCommandLine;
     KeyUnit* mpKeyUnit = nullptr;
     QPointer<TConsole> mpConsole;
-    QString mLastCompletion;
-    int mTabCompletionCount = 0;
-    int mAutoCompletionCount = 0;
-    QString mTabCompletionTyped;
-    bool mUserKeptOnTyping = false;
+    TCommandLineCompletion mCompletion;
     int mHistoryBuffer = 0;
     QStringList mHistoryList;
     QString mSelectedText;
     int mSelectionStart = 0;
-    QString mTabCompletionOld;
     QPoint mPopupPosition;
     QString mSpellCheckedWord;
     QSet<QString> commandLineSuggestions;

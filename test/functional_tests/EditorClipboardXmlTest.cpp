@@ -323,9 +323,9 @@ private slots:
         QVERIFY2(mpEditor, "the editor dialog was not created");
 
         populateProfile();
-        // The editor built its trees while the profile loaded, so items added
-        // behind its back only appear after the rebuild that Host asks for when
-        // a package is installed
+        // The editor built its trees as it opened, so items added behind its
+        // back only appear after the rebuild that Host asks for when a package
+        // is installed
         mpEditor->doCleanReset();
         QVERIFY2(waitForTreeToHold(EditorViewType::cmTriggerView, qsl("qaClipTrigger")), "the editor never rebuilt its trees around the items this test planted");
     }

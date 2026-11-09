@@ -1705,6 +1705,32 @@ describe("Media playback effects with a generated sound file", function()
     assert.is_true(windowVisible(videoLabel), "a video that never asked to close still took its label off screen when it stopped")
   end)
 
+  it("a video asked to close leaves the miniconsole it played in on screen", function()
+    if videoWidgetUnavailable() or mediaPlaybackUnavailable() then
+      return
+    end
+    -- close = true takes back only a label: the gate on it reads which kind of
+    -- widget the video went to, so it has to be told a miniconsole is not one.
+    local videoWindow = "busted-media-video-window"
+    createMiniConsole(videoWindow, 0, 0, 40, 40)
+    showWindow(videoWindow)
+    onCleanup(function() hideWindow(videoWindow) end)
+    writeSoundFiles()
+
+    assert.is_true(playVideoFile({name = longSoundFile, key = videoWindow, close = true}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    assert.is_true(windowVisible(videoWindow))
+    -- Asked again while it plays, the request's own settings replace the player's
+    assert.is_true(playVideoFile({name = longSoundFile, key = videoWindow, close = true}))
+    assert.equals(1, #getPlayingVideos())
+
+    assert.is_true(stopVideos())
+    assert.equals(0, #getPlayingVideos())
+
+    pumpEvents(quietMilliseconds)
+    assert.is_true(windowVisible(videoWindow), "a video asked to close took the miniconsole it played in off screen")
+  end)
+
   it("the closing caption of a stop is printed a turn after the call, not inside it", function()
     if mediaPlaybackUnavailable() then
       return
@@ -2774,6 +2800,32 @@ describe("Media playback effects with a generated sound file", function()
     assert.is_true(receiveMSP("!!SOUND(_profile/busted-msp-reserved.wav U=ftp://example.invalid/)"))
     pumpEvents(250)
     assert.equals(1, #errors, "an MSP sound naming the folder kept for scripts' copies reached the download")
+  end)
+
+  -- The MSP spec separates parameters by "one or more spaces" and lets the url be quoted. An ftp
+  -- url raises sysDownloadError carrying the url it was asked for, so each message that is parsed
+  -- rather than dropped shows up as one error naming that url.
+  it("an MSP sound is played whatever the spacing, and with a quoted url or one that has a query", function()
+    local errors = {}
+    collect("sysDownloadError", errors)
+    feedTelnet("<T_IAC><T_DO><O_MSP>")
+    onCleanup(function()
+      receiveMSP("!!SOUND(Off U=ftp://example.invalid/)")
+      feedTelnet("<T_IAC><T_DONT><O_MSP>")
+    end)
+
+    local messages = {
+      {"!!SOUND(busted-msp-spaced.wav  V=50   U=ftp://example.invalid/spaced/)", "ftp://example.invalid/spaced/busted-msp-spaced.wav"},
+      {'!!SOUND(busted-msp-quoted.wav U="ftp://example.invalid/quoted/")', "ftp://example.invalid/quoted/busted-msp-quoted.wav"},
+      {"!!SOUND(busted-msp-query.wav U=ftp://example.invalid/query?set=1&v=2/)", "ftp://example.invalid/query?set=1&v=2/busted-msp-query.wav"},
+    }
+    for _, message in ipairs(messages) do
+      local before = #errors
+      assert.is_true(receiveMSP(message[1]))
+      pumpEvents(250)
+      assert.equals(before + 1, #errors, "this MSP message was dropped rather than played: " .. message[1])
+      assert.is_truthy(tostring(errors[#errors].file):find('"' .. message[2] .. '"', 1, true), tostring(errors[#errors].file))
+    end
   end)
 
   it("a Client.Media.Play message that names a type is played as that type", function()
@@ -4804,3 +4856,42 @@ describe("Tests the text-to-speech Lua API", function()
       end)
     end)
   end)
+
+describe("FFmpeg's hardware device types", function()
+  local variables = {"QT_FFMPEG_DECODING_HW_DEVICE_TYPES", "QT_FFMPEG_ENCODING_HW_DEVICE_TYPES"}
+
+  it("are named on Linux only, unless already set, so Qt does not try each one when the first sound plays", function()
+    local named = "vaapi,vdpau,qsv,drm"
+    if getOS() ~= "linux" then
+      -- Qt's own list there holds the platform's decoders, such as D3D11 and VideoToolbox
+      for _, variable in ipairs(variables) do
+        assert.are_not.equals(named, os.getenv(variable))
+        assert.are_not.equals("cuda," .. named, os.getenv(variable))
+      end
+      return
+    end
+    local nvidiaDriver = io.open("/proc/driver/nvidia/version")
+    if nvidiaDriver then
+      nvidiaDriver:close()
+      -- "init": the library loaded, and only the made-up symbol was missing
+      local _, _, failedAt = package.loadlib("libnvcuvid.so", "noSuchSymbol")
+      if failedAt == "init" then
+        named = "cuda," .. named
+      end
+    end
+    -- The environment Mudlet was started with, which setenv() leaves alone
+    local environ = io.open("/proc/self/environ", "rb")
+    local inherited = "\0" .. environ:read("*a")
+    environ:close()
+    for _, variable in ipairs(variables) do
+      local key = "\0" .. variable .. "="
+      local at = inherited:find(key, 1, true)
+      local expected = named
+      if at then
+        local valueStart = at + #key
+        expected = inherited:sub(valueStart, (inherited:find("\0", valueStart, true) or #inherited + 1) - 1)
+      end
+      assert.equals(expected, os.getenv(variable))
+    end
+  end)
+end)

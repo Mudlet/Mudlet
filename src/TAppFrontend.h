@@ -23,6 +23,7 @@
 #include <QString>
 
 #include <optional>
+#include <utility>
 
 class Host;
 class QObject;
@@ -58,6 +59,8 @@ public:
     virtual void showOptionsDialog(const QString& tab, Host* pHost) = 0;
     virtual void showConnectionDialog() = 0;
     virtual void handleTelnetUri(const QString& uri) = 0;
+    // A link from a game to a telnet:// or telnets:// address: asks the player first, always.
+    virtual void connectFromGameLink(const QString& uri) = 0;
     // Only the profile in the active tab drives the menu's checkbox.
     virtual void setCompactInputLineChecked(Host* pHost, bool checked) = 0;
     // closeMudlet(): asks, from the event loop, for every profile to close and save and then the application to quit
@@ -79,8 +82,9 @@ public:
     // With no main window, false for a profile not in the pool or whose close has started, leaving the front as it was
     virtual bool setActiveProfileTab(const QString& profileName) = 0;
     virtual void setAppStyleSheet(const QString& styleSheet) = 0;
-    // false when there is no window to resize
-    virtual bool resizeMainWindow(int width, int height) = 0;
+    // The GUI resizes its one window, whichever profile asks; with no window, the asking profile's own area. With
+    // no window either, false and no message; refused, false and why.
+    virtual std::pair<bool, QString> resizeMainWindow(Host*, int width, int height) = 0;
     virtual bool loadWindowLayout() = 0;
     virtual bool layoutLoading() const = 0;
     // Saves even if quitting already saved the layout; if this save fails, quitting saves it again.

@@ -75,8 +75,13 @@ When standard output is a terminal, the runner gives its size to the profile as 
 size, as the GUI gives the main window's: the game is told it if the profile has NAWS on and the
 game asks, no wider than the profile's wrap width, and scripts see it as the main window's size.
 A resize (`SIGWINCH`) is passed on as a resize of the main window is, with a
-`sysWindowResizeEvent`. Output to a file or a pipe keeps the default of 90 by 25. This is not done
-on Windows.
+`sysWindowResizeEvent`. A script's `setMainWindowSize()` answers `true` but cannot resize the
+terminal, so the runner then gives the terminal's size again, with another `sysWindowResizeEvent`,
+and the game is told no other. A script that asks again from that event, to keep to its size, is
+answered `true` and nothing changes, as in the GUI when the window manager holds the window, until
+the terminal is resized or a script asks for another size. Output to a file or a pipe has no size
+to give, so it starts at the default of 90 by 25 and a script's `setMainWindowSize()` sets the size,
+which the game is told, as in the GUI. Every run on Windows is like that.
 
 ### Stopping it and what is saved
 
@@ -165,6 +170,7 @@ if (session->start(options) != THeadlessSession::StartResult::started) {
 session->submit(qsl("look"));        // as typed on the command line
 session->runLua(qsl("echo('hi')"));  // as a script
 session->setScreenSize(80, 24);      // in characters, as a resize of the main window
+session->setMainWindowSize(QSize(800, 600)); // or in pixels, for an app that draws the main console
 session->save();                     // before the system may stop the app, as a phone does
 session->shutdown(true);             // sysExitEvent, then the save
 ```
@@ -184,7 +190,8 @@ profiles and `Mudlet.ini` with that GUI (not its passwords), so `start()` warns 
 Each of `outputLine`'s runs covers part of the line, in order, with the colours and styles the game
 asked for (`THeadlessSession::TextStyle`: bold, italic, underline, overline, strike-out, reverse, blink,
 fast blink, concealed), and says whether each colour is the profile's own, which a frontend may swap
-for its own theme's. Links in the line, and what `echo()` and the like print, come as plain text for now.
+for its own theme's. A run also names the link it is part of, as "links in the main console" below tells.
+What `echo()` and the like print comes as plain text for now.
 
 `outputLine` carries each line as the game sent it, before the profile's triggers run on it, so a line a
 trigger gags still arrives, and one it rewrites arrives unchanged. `lineShown` carries the same lines as
@@ -198,6 +205,19 @@ line itself, as for `outputLine`; a line a trigger split with `wrapLine()` comes
 it held, and if a trigger then deletes its first part, what is left of it comes as the line. A change a later
 trigger makes to a line already sent, as by moving the cursor up to it, is not sent again, though what it
 inserts is sent as a line of its own.
+
+The last argument of both, `arrivalMSecs`, is when the line arrived, in milliseconds since the epoch: the
+time the GUI's timestamps show beside it. A line a trigger wrote has the time of the console line it went
+into, its own when it is a line of its own. It is -1 for a line with none. A handler that takes only the
+first three or four arguments may still be connected. `localText` carries no time of its own: it is sent as
+it is written, so the time its handler runs is when that text was written.
+
+`timeStampsShown()` says whether the main console shows those times beside its lines, as the GUI's
+timestamp button does, and `setTimeStampsShown()` presses that button: the choice is saved for the
+profile's next load as the button saves it, and refused where `submit()` is. Where it was made but could
+not be saved, it gives false and `errorString()` says so. `timeStampsShownChanged`
+follows a change made either way or by a script's `enableTimeStamps()` and `disableTimeStamps()`, from the
+event loop and only when the state differs from the one last sent or the one at `profileLoaded`.
 
 `localText` carries the text written to the main console that the game did not send, as it is written,
 in pieces that need not end a line: the `echo()`s of aliases, timers, key bindings and `runLua()`, the
@@ -239,7 +259,7 @@ session is deleted first: a session being deleted sends none. It comes from the 
 font: read it at `profileLoaded`, then follow `consoleFontChanged`, which carries each change, whatever
 made it - a script's `setFont()` or `setFontSize()`, the profile's save, the bundled default standing in for
 a font that is not installed, or a package bringing that font or taking it away. The size `setScreenSize()`
-gives is in that font's characters. It comes from the event loop, with the font as it is then, and only
+gives is in that font's characters, counted again in each new one. It comes from the event loop, with the font as it is then, and only
 when that differs from the one the app last had, so none follows `profileLoaded` for what the load did.
 
 `setDebugConsoleShown(true)` shows the Central Debug Console, as the editor's button does, before
@@ -274,6 +294,18 @@ game's sounds are muted. The session shows, flashes and beeps nothing itself. `a
 carries what a script's `announce()`, Mudlet when it opens a sign-in page, or a game's OSC 8 link being
 hidden or revealed asks screen readers to say, and whether the GUI would make it assertive, for an app to
 hand to the platform's own accessibility service.
+
+`attentionRequested` with 0 also carries the GUI's flash for new game text: while `setWindowMinimized()`
+has the app's window minimized or hidden, as the GUI's main window is when minimized, or a phone app sent
+to the background, game text that adds to or changes the main console asks for the player's attention
+until they come back, if the profile's setting to be notified of new data while minimized is on, as it is
+unless the player turned it off. As in the GUI, an app that is only behind another window, which
+`setApplicationActive(false)` reports, is not alerted, nor is one in front. The GUI's flash lasts until the
+player comes back, however much more text arrives, so the signal is sent once each time the window is
+minimized, at the first such text, from the event loop: the other prompts of a read that ends several with a
+go-ahead, and later reads, bring none until `setWindowMinimized(false)` and back. A script's `echo()` and the
+bare carriage return that finishes a line the game left open bring no alert, as in the GUI. As with
+`alert()`, only the session's own profile is relayed, not one its scripts opened with `loadProfile()`.
 
 `secureConnectionOffered` carries a game's offer of its secure port, worded as the GUI's question, for
 the player to answer with `answerSecureConnectionOffer()`. The offer lapses when its connection ends;
@@ -371,6 +403,10 @@ call returns, as an alias does for `submit()`, so the session's signals may be s
   while hidden input is wanted, though the GUI offers it on a layout where that types nothing.
 - `refused`: the call was refused, as `submit()` is. Use `errorString()` to see why; the app should not
   type the key.
+- `commandRan`: the key is the shortcut of a command a script added to the menu, which ran as
+  `activateAddonCommand()` runs it, ahead of the line and its bindings; see "Embedding it: commands and
+  buttons that scripts add". It was added after the others, so an app's `switch` over every
+  `KeyResult` needs a case for it.
 
 A binding matches its key and modifiers exactly, as Qt's key event gives them, which a frontend that is
 not built on Qt has to copy:
@@ -525,6 +561,10 @@ is drawn in where the game asks for none, and which `TextRun` marks as the profi
 main console, or a package or save loaded into the profile with colours of its own. A mini console's
 background does not send it, nor does the game redefining its palette, which leaves both as they were.
 
+`mainConsoleGrid()` and `mainConsoleTextRect()` are the main console's grid and where its text goes,
+which `mainConsoleAreaChanged` follows; "Embedding it: the main window's size" below says what decides
+them.
+
 `errorConsoleText` carries what the editor's error console prints, in pieces with the colours it prints
 them in: a Lua error comes as `[ERROR:]` in blue, where it was in green and the message in red, all on
 black. It is sent as written, as `localText` is, so its handler must not call the session back. A
@@ -542,17 +582,161 @@ GUI marks its tab as connecting, so an app can show that through a slow address 
 `disconnect()` calls the connect off during the address lookup, or `start()` does for a profile whose
 save did not load. It comes from the event loop.
 
+## Embedding it: the main window's size
+
+What an app gives the session is the main window, as a resize of the GUI's main window gives it: the
+area a profile's scripts read with `getMainWindowSize()`. The rest is laid out inside it as the GUI lays
+it out:
+
+- The borders a script's `setBorderTop()`, `setBorderLeft()` and the like set, the edges an
+  `Adjustable.Container` keeps for itself and an MXP internal frame each take their room from the edges
+  of the area. Borders the profile's save holds are laid out once it has loaded, before any script runs.
+- What they leave is where the main console's text goes, `mainConsoleTextRect()`, in pixels from the
+  area's top left corner.
+- The main console's grid, `mainConsoleGrid()`, is as many characters of its font as fit there, never
+  fewer than 40 columns. The game is told it, if the profile has NAWS on and the game asks, and a
+  script's `getColumnCount()` and `getRowCount()` read it. With no border set, the grid fills the area.
+- Borders wider than the area leave the text no room, as in the GUI: `mainConsoleTextRect()` and
+  `sysWindowResizeEvent` give a width or height of 0, never a negative one, and the grid stays at its
+  40 columns, or 1 row.
+
+There are two ways to give the area, and the later of the two holds:
+
+- `setScreenSize(columns, rows)` gives it in characters of the main console's font, as a terminal does,
+  and is what the runner gives from its terminal. A font change counts it again in the new font's
+  characters, so the grid stays the terminal's.
+- `setMainWindowSize(QSize(width, height))` gives it in pixels, for an app that draws the main console
+  itself. A font change keeps the area and fits the new font's characters into it, so the grid changes.
+
+Either raises `sysWindowResizeEvent` with the text's width and height in pixels, as a resize of the main
+window does in the GUI, and nothing when the size is the one already given; a border change raises it
+too. Both are refused where `submit()` is, and for a size of no character, or more than 65535, either
+way.
+
+`mainConsoleAreaChanged` carries the grid and where the text goes when either changes: from a border, a
+font change, either call, or a script's own `setMainWindowSize()`. Read both at `profileLoaded`; the
+signal comes from the event loop, with both as they are then, and only when they differ from what the
+app last had, so a script that sets a border twice in one turn sends one, and one that sets it and takes
+it back sends none.
+
+A script's `setMainWindowSize(width, height)` sets its own profile's area in pixels, as the app's call
+would, and answers `true`, or `nil` and a message for a size the app's call refuses.
+`mainWindowResizeRequested` tells the app the size it asked for, from the event loop: an app that can
+resize its window does so, and one that cannot gives its own size again, as the runner does for its
+terminal. The app answers each request by giving the size its window has once it has resized, or would
+not, even when that is the size asked for, from the signal's handler or later, once its window system has
+answered. The session takes the next size the app gives after a request as its answer: a script that asks
+again for the same size, as a `sysWindowResizeEvent` handler that keeps to a size does, is answered `true`
+and nothing changes, as in the GUI when the window manager holds the window, until the app gives a size
+with nothing asked for, or a script asks for another. A size given from the handler of a request that a
+newer one has replaced is not laid out: the newer request's answer decides. An app that connects nothing
+to `mainWindowResizeRequested` is not waited for, so a script's size holds until the app gives another,
+as in the GUI. An app that is connected but does not answer a request has the next size it gives, such
+as the player's resize, taken as the answer: until the app gives another size after that, a script
+asking again for the size of that request is answered `true`, the app is not asked, and the area keeps
+the size the app gave. Every other profile in the run keeps its own area.
+
+The app's own chrome stays outside the area. Where the GUI's main window has a command line, button bars
+from `tempButtonToolbar()`, a toolbar and docked user windows around the main console, an app that shows
+its own gives the area without them, and gives a smaller one as they grow; the session does not take
+their room from it, so what a script reads of the main window's size changes with them only when the app
+gives a new one.
+
+## Embedding it: links in the main console
+
+Each `TextRun` of `outputLine` and `lineShown` has a `link`: the id of the main console's link the run is
+part of, or 0 for none. A line is split into runs where its link changes as well as where its look does,
+so two links that touch and look alike are two runs. Links come from the game (OSC 8 and MXP `<SEND>`)
+and from scripts (`echoLink()`, `echoPopup()` and the like, a trigger's included). An id names its link
+while the main console still holds a line with it: the console reuses the ids of links whose lines it
+has let go, so an app that keeps older lines than the console does should not rely on theirs.
+
+`link(id)` says what a link offers, as the GUI shows it: its `tooltip`, as plain text; its `items`,
+one for each thing it can run, each with the label the GUI gives it, and marked as greyed out where it
+has nothing to run or as a separator where it has no label either; and `menu`, where the GUI's right
+click lists the items, under `menuTitle` if that is set. A click follows the first item. It also gives
+the link's state (a `spoiler` and whether it is `revealed`, `disabled`, `concealed` by the game's OSC 8
+visibility settings, which leave blanks in its place in the GUI, `visited`, and `selected` in its group),
+and how the GUI paints the link in that state, which may differ from its runs as they were sent: a
+`foreground`, `background` and `styles` that are empty where the run's own apply, the styles standing in
+for the run's bold, italic, underline, overline and strike-out only. It is `nullopt` for 0, for an id the
+main console no longer holds, as once an MXP `<EXPIRE>` has removed the link or its line has been
+deleted, and with no profile open. It is a getter, so it may be called from any handler, `outputLine`'s included.
+
+`followLink(id)` does what a left click on the link does, which runs its first item whatever that holds,
+and `followLink(id, item)` what picking that item from its `menu` does; `item` indexes `items`. A spoiler
+not yet revealed is only revealed (`revealedSpoiler`), and the next follow runs it; the revealed text is
+not sent, so an app's copy of the line keeps the blanks it was sent with. A `disabled` link, or a menu's
+greyed-out item, runs nothing (`disabled`), nor does a `concealed` one (`concealed`), which the GUI leaves
+no way to click. Otherwise the link is chosen in its selection group, deselecting the rest of an exclusive
+group, and its command or function runs before `followLink()` returns (`ran`); a `send:` link sends, and a
+web link opens through `QDesktopServices::openUrl()`, which an app can route with
+`QDesktopServices::setUrlHandler()`. Where that raises a Lua error the result is `failed`, and
+`errorString()` gives Lua's message. The link is `visited` after either. `noSuchItem` is for an item the
+link does not have, `unknown` for an id the main console does not hold, as once a game's OSC 8 visibility
+settings have deleted its line, and `refused` for where `submit()` is, a handler included.
+
+`linksChanged(profile, links)` names the links whose `link()` may have changed, once per pass of the
+event loop, each id once: one followed (by `followLink()` or a script) and now `visited`, chosen or
+deselected in its group, a spoiler revealed, one a game's OSC 8 visibility settings concealed or revealed,
+one a game's MXP `<EXPIRE>` removed, and every link on a line that went. A line goes by a script's
+`deleteLine()` or `clearWindow()`, or by an OSC 8 concealment that deletes the whole line, which names the
+line's other links as well as the one followed. `link()` gives `nullopt` once no line holds the link, so
+one that runs on over a line still held is named and still given. The app reads `link()` again for
+each; an id may be one it was never sent, as where a trigger deletes the line the link arrived on. Hover
+is not sent, the pointer being the app's own.
+
+The trimming of the main console's oldest lines, as its buffer fills, is not told: no signal names the
+lines it lets go, and the app has each of them, with its links, from `outputLine` and `lineShown`, to
+keep for as long as it likes. Nor does it name their links. The console lets go of the links that no
+line holds any more each time a quarter of its buffer has been trimmed, and `linksChanged` names those
+then, after which `link()` gives `nullopt` for each at once. Until then, `link()` of a link that only
+trimmed lines held gives `nullopt` too, but reads the whole buffer to find that out.
+
+## Embedding it: the 2D map
+
+`renderMap()` draws the profile's 2D map onto a `QPainter` at the size given, as the GUI's mapper
+shows it: the area of the player's room, centred on that room (or, with `mapCenterSmallAreas` on in
+`Mudlet.ini`, on an area that fits), at that area's zoom, with the player's marker, the profile's
+mapper settings and the map info box. A script opens the map first, as with `openMapWidget()`;
+until then it is false with the reason in `errorString()`, as it is for a painter that is not active
+and for a size under 10 by 10 pixels, which the GUI draws nothing in.
+As the GUI's does, a draw that moves to another area raises `sysMapAreaChanged`. The map info box runs
+the profile's Lua, so the call is refused where `submit()` is, from a handler of `outputLine` and the
+other signals sent in the middle of a write.
+
+`mapRepaintRequested` says when the GUI would draw the map again: a script opened the map, showed it
+again or replaced it with an embedded mapper, the player moved or a script centred the map, the map
+loaded or changed, or its zoom, colours, settings or info box did. It comes once a turn
+of the event loop however many changes there were, while a script has opened a map, even one it has
+since closed, and from the event loop, so a handler may call `renderMap()` at once. Only the 2D map is drawn; there is no
+3D view.
+
+`mapPointer()` is the GUI's mouse on the map, at a position in what `renderMap()` last drew, so the map
+is drawn before it is clicked. A move or `centerview()` the app has not drawn yet does not change what
+the pointer lands on, as the GUI's mapper moves its view only as it draws. A left press selects the
+room under it, Ctrl and Shift adding to the selection as in the GUI, and a press away from the rooms
+clears it; `getMapSelection()` reads it. Any press raises `sysMapWindowMousePressEvent`. A left
+`doubleClick`, sent after the press that began it as Qt sends a `MouseButtonDblClick`, speedwalks to
+the room under it as the GUI's does, with the profile's `doSpeedWalk()`. A `wheel` turn zooms the shown
+area about the pointer, with Ctrl five times as fast and `invertMapZoom` in `Mudlet.ini` read as the
+GUI's preference sets it. What the GUI does with a right press, a drag or a release, its menus, moving
+rooms and labels and sizing a selection, stays the GUI's. It is false, with the reason in
+`errorString()`, before the map is drawn, for a double-click of another button, for less than half a
+notch of the wheel and for a wheel turn on a map whose last draw showed no area, as one with no rooms
+does, and it is refused where `renderMap()` is.
+
 ## What still needs a window
 
 Some of what a profile can do has nothing to stand in for the GUI's widgets yet, and does nothing,
 or answers as the GUI would with no window open. `CI/headless-lua-known-failures.txt` lists the
 Lua specs that fail with no window, so it is the up-to-date list; the main gaps are:
 
-- the 2D and 3D mappers' views, and map symbols drawn with a font's Private Use Area;
-- the space an internal MXP frame takes from the main console;
-- layout that follows the main window, such as `Adjustable.Container` borders, docked user
-  windows, and the command line a mini console or user window can show;
-- keyboard shortcuts for addon commands, which the main window's menus hold.
+- the 3D mapper's view, the 2D map but for an app that calls `renderMap()`, and map symbols
+  drawn with a font's Private Use Area;
+- the main window's own command line, button bars and docks, which an app draws outside the area
+  it gives (see "Embedding it: the main window's size"), and the command line a mini console or user
+  window can show.
 
 `.github/workflows/headless-lua-tests.yml` runs the Lua specs in `mudlet-headless`, and
 "The Lua specs with no main window" in `platform-builds.md` explains how to reproduce it.
@@ -582,6 +766,12 @@ raises nothing, as the GUI tells scripts only of a change. It starts as active, 
 is only kept, for the next change to be told against; a profile opened later hears nothing until the
 next change, as in the GUI. `applicationActive()` reads it. It is refused while a profile loads, during
 `shutdown()`, and from a handler of `outputLine` and the other signals sent mid-write.
+
+`setWindowMinimized()` tells the session the app's window is minimized or hidden, or a phone app has
+gone to the background, as the GUI's main window is minimized: only then does new game text bring
+`attentionRequested`, as said above, so an app that is merely behind another window reports that with
+`setApplicationActive()` alone. It raises no event, as minimizing the GUI raises none, starts as `false`,
+may be set at any time, before `start()` too, and `windowMinimized()` reads it.
 
 `setReplayRecording(true)` is the main console's replay recording button: what the game sends from then
 on is recorded into a new file in the profile's `log` folder, named for the second it started, which a
@@ -619,3 +809,124 @@ change from the event loop, whoever made it, a script's `setConfig()` in any of 
 and also a call that left it as it was, so an app's mute buttons can follow it as the GUI's do. It stops
 once the session's own profile has closed, as the session's other signals do, even while profiles its
 scripts opened live on. They are refused where `submit()` is.
+
+## Embedding it: commands and buttons that scripts add
+
+`addonCommands()` lists the commands the session's profile's scripts added with `addCommand()`, which
+the GUI shows in the main window's menu, on its toolbar or on both, in the order they were added, for
+an app to draw them where its own menus and toolbars are. Each carries the `id` that `addCommand()`
+returned and `sysCommandClicked` names, the package whose code added it (empty when no package's did),
+its name, icon path and tooltip, the `menuPath` of submenus it sits in and its `shortcut` as the script
+wrote them, `onMenu` and `onToolbar` for where it shows, and what the script set since: whether it is
+enabled, checkable and checked, pinned to the menu whichever profile is in front, and flashing on the
+toolbar between `pulseColor1` and `pulseColor2`, each held for `pulseIntervalMs`. Commands the session's
+scripts added in a profile they opened with `loadProfile()` are that profile's, not the session's, so
+they are left out. It reads the commands as they are at the call, from anywhere, and is empty with no
+profile open, so after `shutdown()` too, as removing a package, resetting the profile and closing it
+removes its commands.
+
+`addonCommandsChanged` says one or more of them changed, for the app to read them again: a command
+added or removed, or a change a script made to one that `addonCommands()` gives, and the commands a
+removed package added, or all of the profile's when it is reset. A call that leaves a command as it was,
+such as setting the tooltip it has, sends nothing, and nor does a change to another profile's commands.
+It is sent from the event loop, once for all the changes made before it runs, so a script that adds a
+dozen commands sends it once.
+
+`activateAddonCommand()` is a click on one of them, in the menu or on the toolbar: a checkable command
+is ticked or unticked, which `addonCommandsChanged` follows, and then `sysCommandClicked` is raised with
+its id, as the GUI does. The emergency stop holds the event, as it holds every event, but not the tick,
+which the GUI's menu makes before the event is raised. It is false, with `errorString()` saying why,
+for an id that is not a command of the session's profile, and for a disabled command, which the GUI does
+not let be clicked. It is refused where `submit()` is.
+
+`pressKey()` runs a command whose shortcut is the key ahead of the line and its bindings, giving
+`commandRan`, as Qt hands the main window's menu a key before the focused widget has it. The line may
+claim the key first, as the GUI's does, and then the command does not run: the command line, a
+`QPlainTextEdit`, claims the key that toggles caret mode and, alone or with Shift or on the keypad,
+printable keys, Return, Enter, Delete, Backspace, Home, End, Tab and the arrows, and with other
+modifiers copy, paste, cut, undo, redo, select all and the moves and selections by word, line and
+document. While hidden input is wanted the hidden-input box, a `QLineEdit`, claims fewer: not Return,
+Enter, Tab, Up or Down, so a command on one of those runs while the game hides what is typed. Only an
+enabled command of the session's profile that is on the menu runs. A command that a profile opened with
+`loadProfile()` pinned is left out, even though the GUI's menu keeps it whichever profile is in front,
+because `addonCommands()` does not list it and `activateAddonCommand()` does not click it. A keypad key
+matches a shortcut written without the keypad, as in Qt, and a shortcut of more than one key never runs
+from `pressKey()`, which takes one key at a time.
+
+`buttonBars()` lists the profile's button bars and toolbars, the buttons a script makes with
+`tempButtonToolbar()` and `tempButton()` and those a package or the editor adds, as the GUI draws
+them: in the order of the profile's actions, each bar with its place (`top`, `left`, `right` or
+`floating`), orientation, grid and style sheet, and each active button with its icon, style sheet,
+whether it is a push-down button and is down, and, for a folder, the menu it opens. A horizontal bar
+fills each column top to bottom with `columns` buttons, then the next column to its right. A vertical
+bar fills each row left to right with `columns` buttons, then the next row down. Either leaves its
+first `fillerOffset` places empty. As in the GUI, an
+inactive bar or button is left out, and so is a bar placed where the GUI shows none; a package's
+folder lends its place to the bars in it, and a button bar's menu shows only active entries, each with
+the icon of the button it hangs from, while a floating toolbar's menu has an entry for the folder that
+holds every entry, active or not, with its own icon. The list is empty with no profile open.
+
+`buttonsChanged` says the bars have changed, for the app to read `buttonBars()` again: a script's
+`tempButtonToolbar()`, `tempButton()`, `setButtonStyleSheet()` or `showToolBar()`, a package installed or
+removed, and `setButtonState()` when it moves a button up or down, but not when it leaves it as it
+was. As with `addonCommandsChanged`, the changes made before the event loop runs send one, from the
+event loop.
+
+`pressButton()` is a click on a button, or on an entry of its menu, that `buttonBars()` lists: as in
+the GUI it sends the button's command, through the profile's aliases, and runs its script. A push-down
+button goes down, sending its down command, or up, sending its up command, and `getButtonState()` in
+what that sets off reads the state it went to; `buttonsChanged` follows. That holds for an entry of a
+menu too, where in the GUI an alias the entry's command sets off still reads what the last button to
+run left, as its menu sets the state for the entry's script only, after the command has gone. A folder's button runs
+its script as well. In the GUI a click on it opens its menu, which the app shows from the button's
+`children`, and the folder's script runs once the menu has closed, after the entry picked in it has
+run, so an app that presses the entry picked and then the folder does as the GUI does. It is false,
+with `errorString()` saying why, for an id `buttonBars()` does not list, such as an inactive button or a
+bar itself, and refused where `submit()` is.
+
+## Embedding it: completing the command line
+
+The GUI's command line completes the word being typed when the player presses Tab, from the main
+console's recent text and from words scripts give it. `THeadlessSession` gives an app the same.
+
+`commandLineSuggestions()` is the words scripts gave the main command line with
+`addCmdLineSuggestion()`, and `commandLineBlacklist()` those they gave with `addCmdLineBlacklist()`,
+which Tab is never to complete to. Each word is there once, however often it was added, and the lists
+are sorted. As in the GUI, `removeCmdLineSuggestion()` and `removeCmdLineBlacklist()` take one word out,
+and `clearCmdLineSuggestions()` and `clearCmdLineBlacklist()` empty them. Words a script gives a line
+from `createCommandLine()` or a mini console's own command line are that line's, not the main line's.
+Both lists are empty with no profile open, and may be read from anywhere, a handler included. No signal
+says they changed: an app reads them when it needs them, as when the player presses Tab.
+
+`completeCommandLine()` is the Tab key itself, and `completeCommandLine(false)` Shift+Tab. It completes
+the word at the end of the line `setCommandLineText()` last set, from the same words the GUI would offer,
+the most recently seen first: words of the last 500 lines of the main console, then the suggestions, none
+that is blacklisted, matched without regard to case. It returns the whole line it leaves, which scripts'
+`getCmdLine()` reads from then on, for the app to show with its cursor at the end. Each further call takes
+the next word, or with `false` the one before, stopping at either end as the GUI does rather than wrapping.
+The cycle ends when the line changes, when the player presses Escape (sent with `pressKey()`) and when
+they submit it; the next call then reads the line afresh. Mudlet sees each new line rather than the key
+that made it, so any change ends the cycle, as Backspace does in the GUI: what the player types, a line the
+app sets itself, such as one it recalls from the history, the line `completeCommandLineFromHistory()`
+leaves, and a script's `printCmdLine()`. Only the line it was given, handed straight back to
+`setCommandLineText()`, keeps the cycle going. The GUI's line ends the cycle on a key alone, so there a
+recall, the up arrow or a script's `printCmdLine()` between two presses of Tab has the second complete the
+old word over the new line; the session completes the new line instead. On an empty
+line nothing is completed, as in the GUI once it has sent a line. When no word completes the line it
+returns nothing, and `errorString()` says so; it does the same while the game hides what is typed, as the
+GUI completes no password, and wherever `submit()` is refused, as from a handler of the session's signals.
+
+`completeCommandLineFromHistory()` is the up arrow on a line the player has typed into, as the GUI's command
+line does with "Highlight history" on in the profile's settings: it completes the line to the newest line of
+`commandHistory()` that starts with what was typed, and returns the whole line for the app to show with the
+part it added selected. Each further call goes on to the next older line that starts with it. Once no older
+one does, it returns just what was typed, and the call after that starts again from the newest, though, as in
+the GUI, calls stay on the oldest line of all if that one matched. Any change to the line starts the walk
+again from the newest line, as it ends Tab's cycle, and so does a submit; handing the returned line straight
+back to `setCommandLineText()` does not. The GUI's up arrow recalls each line of the history whole instead,
+which an app does by walking `commandHistory()` itself, with nothing typed, with "Highlight history" off, and
+while the whole line is selected: after Escape, a script's `selectCmdLineText()` or `sendCmdLine()`, a submit
+that leaves the line in place, and a line the app set itself (`CommandLineEdit::notTyped`), as a recall is,
+until the line is typed into or completed. The call returns nothing for each of these, with `errorString()`
+saying which, as it does when no line sent before starts with what was typed, while the game hides what is
+typed, and wherever `submit()` is refused.

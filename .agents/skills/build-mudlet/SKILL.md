@@ -170,12 +170,17 @@ binary under `build-<preset-name>/` instead. Allow up to 10 minutes for a full b
 ## Claude Code on the web (remote sessions)
 
 The `.claude/hooks/session-start.sh` SessionStart hook provisions the remote Ubuntu container:
-apt dependencies, Qt 6.9.0 via aqtinstall under `/opt/qt` (Ubuntu's packaged Qt 6.4 is older
+apt dependencies, Qt via aqtinstall under `/opt/qt` (Ubuntu's packaged Qt 6.4 is older
 than the 6.8.2 minimum), the Lua rocks, submodules, and a CMake configure of the
 `linux-debug-nosan` preset. The hook exports `CMAKE_PREFIX_PATH` pointing at the aqt Qt, so the
 documented preset commands work unchanged. It takes ~3 minutes on a cold container and seconds
 on a warm one. ccache starts cold, so budget ~18 minutes for the first full build of a session
 on the 4 cores these containers get.
+
+The hook installs the Qt version that `.github/workflows/build-mudlet.yml` builds with, read
+from its first `qt:` matrix entry, so tests behave as they do on CI. Behaviour does differ across
+the supported range: before Qt 6.10, `QAccessible::setActive(true)` leaves `isActive()` false
+without a screen reader, so `LabelAccessibleInterfaceTest` skips its live-region cases there.
 
 The hook also pre-configures `build-linux-debug-nosan/` with `-DUSE_ALTERNATE_LINKER=mold` - keep
 that flag if you reconfigure the tree from scratch.
@@ -228,9 +233,9 @@ successes):
   All of this is Linux/X11-only, and XTEST events work headlessly on Xvfb only; from a
   Wayland desktop it needs `QT_QPA_PLATFORM=xcb GDK_BACKEND=x11`.
 
-The `docker/` directory is a separate developer convenience (QtCreator-in-container); its
-Ubuntu 22.04 base only offers Qt 6.2 from apt, so it cannot build current Mudlet until it is
-modernised — do not reach for it in remote sessions.
+`docker/` (Mudlet or Qt Creator in a container) and `.devcontainer/` are separate developer
+conveniences, both built from `docker/Dockerfile` on Ubuntu 26.04 with Ubuntu's own Qt. They need
+a container runtime; in remote sessions use the hook-provisioned toolchain above instead.
 
 ## Pitfalls
 

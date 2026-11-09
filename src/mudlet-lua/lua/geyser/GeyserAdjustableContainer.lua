@@ -1303,7 +1303,7 @@ function Adjustable.Container:load(slot, dir)
 
     local ok = pcall(table.load, loadDir, mytable)
     if not ok then
-        self:deleteSaveFile()
+        self:deleteSaveFile(dir)
         debugc(string.format("Adjustable.Container.load: Save file %s got corrupted. It was deleted so everything else can load properly.", loadDir))
         return false
     end
@@ -1690,6 +1690,9 @@ function Adjustable.Container:disableAutoSave()
     end
 end
 
+-- stands in for translations that cannot be found, showing each text's key, so they are looked for once rather than on every new()
+local untranslated = setmetatable({}, {__index = function(_, key) return {message = key} end})
+
 --- constructor for the Adjustable Container
 ---@param cons besides standard Geyser.Container parameters there are also:
 ---@param container
@@ -1727,7 +1730,7 @@ end
 --@param[opt=false] cons.dragOut  lets a container nested in another container be dragged out of it, into the window it is in. A nested container is otherwise held inside its parent. There is no dragging back in, use changeContainer for that
 
 function Adjustable.Container:new(cons,container)
-    Adjustable.Container.Locale = Adjustable.Container.Locale or loadTranslations("AdjustableContainer")
+    Adjustable.Container.Locale = Adjustable.Container.Locale or loadTranslations("AdjustableContainer") or untranslated
     cons = cons or {}
     cons.type = cons.type or "adjustablecontainer"
     -- its labels are made only once it is in its container, too late to stop there

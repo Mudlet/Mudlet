@@ -144,6 +144,20 @@ describe("Tests functionality of Geyser.VBox", function()
       assert.are.same({x = 0, y = 0, width = 200, height = 300}, geometry("gvbStretchA"))
       assert.are.same({x = 0, y = 300, width = 200, height = 100}, geometry("gvbStretchB"))
     end)
+
+    it("keeps a lone child with a stretch factor inside the box", function()
+      local box = track(Geyser.VBox:new({name = "gvbLoneStretch", x = 0, y = 0, width = 200, height = 400}))
+      track(Geyser.Label:new({name = "gvbLoneStretchA", v_stretch_factor = 3}, box))
+      assert.are.same({x = 0, y = 0, width = 200, height = 400}, geometry("gvbLoneStretchA"))
+    end)
+
+    it("gives the survivor the whole box when its stretched sibling is removed", function()
+      local box = track(Geyser.VBox:new({name = "gvbLoneLeft", x = 0, y = 0, width = 200, height = 400}))
+      local plain = track(Geyser.Label:new({name = "gvbLoneLeftA"}, box))
+      track(Geyser.Label:new({name = "gvbLoneLeftB", v_stretch_factor = 2}, box))
+      plain:delete()
+      assert.are.same({x = 0, y = 0, width = 200, height = 400}, geometry("gvbLoneLeftB"))
+    end)
   end)
 
   -- The box lays itself out when a child arrives, and has to do the same when

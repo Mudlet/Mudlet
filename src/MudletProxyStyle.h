@@ -55,6 +55,8 @@ public:
     int styleHint(StyleHint styleHint, const QStyleOption* opt, const QWidget* widget, QStyleHintReturn* returnData) const override;
     void drawControl(ControlElement element, const QStyleOption* option, QPainter* painter, const QWidget* widget = nullptr) const override;
     QIcon standardIcon(StandardPixmap standardIcon, const QStyleOption* option = nullptr, const QWidget* widget = nullptr) const override;
+    void polish(QWidget* widget) override;
+    using QProxyStyle::polish;
     bool nativeEventFilter(const QByteArray& eventType, void* message, qintptr* result) override;
 
 #if defined(Q_OS_UNIX) && !defined(Q_OS_MACOS)

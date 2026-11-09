@@ -128,6 +128,8 @@ describe("Tests functionality of Adjustable.Container", function()
       assert.equals(false, ac.locked)
       assert.equals(10, ac.padding)
       assert.equals("standard", ac.lockStyle)
+      local lockText = loadTranslations("AdjustableContainer").lock.message
+      assert.equals(lockText, ac.lockLabel.txt:sub(-#lockText), "the menu texts are not the translated ones")
       -- the title bar is a drag handle, the close button is a button
       assert.equals("text", getLabelAccessibleRole(ac.adjLabel.name))
       assert.equals("button", getLabelAccessibleRole(ac.exitLabel.name))
@@ -180,6 +182,44 @@ describe("Tests functionality of Adjustable.Container", function()
       ac:restore()
       assert.equals(200, ac:get_height())
       assert.is_false(windowVisible(ac.exitLabel.name))
+    end)
+
+    it("is created with its untranslated menu texts when the translations cannot be found, looking only once", function()
+      local realLocale, realLoadTranslations = Adjustable.Container.Locale, _G.loadTranslations
+      local names = {"testUntranslatedContainer", "testUntranslatedContainer2"}
+      finally(function()
+        Adjustable.Container.Locale, _G.loadTranslations = realLocale, realLoadTranslations
+        if Geyser.Label.closeAllTimer then
+          killTimer(Geyser.Label.closeAllTimer)
+          Geyser.Label.closeAllTimer = nil
+        end
+        for _, name in ipairs(names) do
+          if Geyser.windowList[name] then
+            Geyser.windowList[name]:delete()
+          end
+        end
+      end)
+      local loads = 0
+      Adjustable.Container.Locale = nil
+      _G.loadTranslations = function()
+        loads = loads + 1
+        return nil, "unable to find 'mudlet-lua.json'"
+      end
+
+      local created = {}
+      for _, name in ipairs(names) do
+        created[#created + 1] = Adjustable.Container:new({name = name, x = 0, y = 0, width = 200, height = 200, autoLoad = false, autoSave = false})
+      end
+
+      assert.equals(1, loads)
+      for _, container in ipairs(created) do
+        assert.equals("lock", container.lockLabel.txt:match("</font>(.*)$"))
+        assert.equals("custom", container.customItemsLabel.txt:match("</font>(.*)$"))
+        container:addConnectMenu()
+        assert.is_not_nil(container.adjLabel:findMenuElement("Connect To: "))
+        container:onEnterAtt()
+        assert.equals("<center>" .. container:validAttachPositions()[1], container.att[1].message)
+      end
     end)
   end)
 
@@ -1693,6 +1733,18 @@ describe("Tests the Adjustable.Container mouse handlers", function()
     end)
   end)
 
+  describe("the right click menu after the container was hidden and shown", function()
+    it("opens the lock style menu", function()
+      container:hide()
+      container:show()
+      container.adjLabel:onRightClick(mouseEvent("RightButton"))
+      doNestEnter(container.lockStylesLabel)
+      for _, style in ipairs(container.lockStylesLabel.nestedLabels) do
+        assert.is_true(windowVisible(style.name), style.name .. " should show")
+      end
+    end)
+  end)
+
   describe("Adjustable.Container:onEnterAtt", function()
     it("fills the attach menu with the borders the container can reach", function()
       local positions = container:validAttachPositions()
@@ -1708,6 +1760,13 @@ describe("Tests the Adjustable.Container mouse handlers", function()
     end)
 
     it("opens the menu it just built", function()
+      container:onEnterAtt()
+      assert.is_true(windowVisible(container.att[1].name))
+    end)
+
+    it("opens the menu it just built after the container was hidden and shown", function()
+      container:hide()
+      container:show()
       container:onEnterAtt()
       assert.is_true(windowVisible(container.att[1].name))
     end)
@@ -3248,6 +3307,19 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       local message = container:deleteSaveFile(scratchDir)
       assert.is_string(message)
       assert.is_truthy(message:find("Couldn't find file to delete", 1, true))
+    end)
+
+    it("load deletes the corrupt file it read, not the one in the default directory", function()
+      local container = make("gapCorruptLoad")
+      container:save()
+      container:save(nil, scratchDir)
+      local corrupt = io.open(scratchDir .. "gapCorruptLoad.lua", "w")
+      corrupt:write("this is not a saved layout {")
+      corrupt:close()
+
+      assert.is_false(container:load(nil, scratchDir))
+      assert.is_false(io.exists(scratchDir .. "gapCorruptLoad.lua"))
+      assert.is_true(io.exists(container.defaultDir .. "gapCorruptLoad.lua"))
     end)
   end)
 

@@ -21,6 +21,7 @@
  ***************************************************************************/
 
 #include "TAppFrontend.h"
+#include "TNullAppFrontendNotifier.h"
 #include "TNullConsoleFrontend.h"
 #include "utils.h"
 
@@ -54,6 +55,7 @@ public:
     void showOptionsDialog(const QString&, Host*) override {}
     void showConnectionDialog() override {}
     void handleTelnetUri(const QString&) override {}
+    void connectFromGameLink(const QString&) override {}
     void setCompactInputLineChecked(Host*, bool) override {}
     void armForceClose() override;
     void writeSettings() override;
@@ -70,7 +72,7 @@ public:
     int profileTabIndex(const QString&) const override { return -1; }
     bool setActiveProfileTab(const QString& profileName) override;
     void setAppStyleSheet(const QString&) override {}
-    bool resizeMainWindow(int, int) override { return false; }
+    std::pair<bool, QString> resizeMainWindow(Host*, int width, int height) override;
     bool loadWindowLayout() override;
     bool layoutLoading() const override { return mpLayoutLoad != nullptr; }
     bool saveWindowLayoutForScript() override;
@@ -117,6 +119,7 @@ public:
     const QMap<int, AddonCommand>& addonCommands() const { return mAddonCommands; }
     // As a click on the main window's button or menu item: false for a disabled or unknown command
     bool activateAddonCommand(int commandId);
+    TNullAppFrontendNotifier mNotifier;
 
     // Why the main window refuses a request whatever it shows, or an empty string: a menu path or shortcut on a
     // command kept off the menu, a shortcut Qt cannot hold, or a pulse it cannot paint
@@ -135,7 +138,8 @@ private:
     QString addonPlacementRefusal(const CommandRequest& request, const Host* pHost) const;
     // As the main window's, a command goes with its package, a profile reset and its profile
     void watchAddonCommandsOf(Host* pHost);
-    void removeAddonCommandsOf(const Host* pHost, const QString& package = QString());
+    // False if it had none to remove
+    bool removeAddonCommandsOf(const Host* pHost, const QString& package = QString());
 
     // Held, unlike the rest, as getConfig() reads these back. Each starts at the main window's default
     // with no saved settings, until a pool with no main window reads Mudlet.ini's.

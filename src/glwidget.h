@@ -90,6 +90,7 @@ public:
 
 private:
     bool contextCreationFailed() const;
+    void applyBackgroundTranslucency();
     QPointer<Host> mpHost;
     bool is2DView = false;
     bool mPanMode = false;

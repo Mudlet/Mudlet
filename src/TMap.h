@@ -80,8 +80,8 @@ class TMap : public QObject
     friend class FrontendRoutingContractTest;
 
 public:
-    // Host settings the 2D map keeps a copy of to draw with, and the 3D view's style
-    enum class MapperSetting { RoomSize, ExitSize, RoundRooms, ShowRoomIds, ShowGrid, Style };
+    // Host settings the 2D map keeps a copy of to draw with, and those a 3D view sets itself up from
+    enum class MapperSetting { RoomSize, ExitSize, RoundRooms, ShowRoomIds, ShowGrid, Style, BackgroundColor };
 
 signals:
     void signal_saveErrorChanged(bool hasError);
@@ -599,14 +599,14 @@ private:
     std::optional<int> mPendingAreaId;
     std::unique_ptr<TAreaGraph> mpAreaGraph;
 
-    void addDirectionalRoute(std::vector<std::pair<unsigned int, route>>& bestRoutes,
+    void addDirectionalRoute(std::vector<std::pair<int, route>>& bestRoutes,
                              const QMap<QString, int>& exitWeights,
+                             bool recheckTargetLocks,
                              unsigned int source,
                              TRoom* pSourceR,
                              int target,
                              quint8 direction,
-                             const QString& exitKey,
-                             const QSet<unsigned int>& unUsableRoomSet);
+                             const QString& exitKey);
     const QString createFileHeaderLine(QString, QChar);
     void warnIfMapProgressUnwired(const char* context, bool transferPath);
     void writeJsonUserData(QJsonObject&) const;

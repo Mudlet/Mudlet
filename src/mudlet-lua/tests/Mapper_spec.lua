@@ -831,6 +831,27 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.is_truthy(err:find("reserved and protected", 1, true), err)
     end)
 
+    it("setAreaName renames an area by a name that is only part of the default area's name", function()
+      local defaultName = getRoomAreaName(-1)
+      local made = {}
+      finally(function()
+        for _, id in ipairs(made) do
+          deleteArea(id)
+        end
+      end)
+      -- Taken from the name itself, as it is translated
+      for _, oldName in ipairs({utf8.sub(defaultName, 1, 3), utf8.sub(defaultName, -3), utf8.sub(defaultName, 2, 2)}) do
+        local id = addAreaName(oldName)
+        assert.is_number(id, oldName)
+        made[#made + 1] = id
+
+        assert.is_true(setAreaName(oldName, "MapperSpecRenamed " .. oldName))
+        assert.are.equal(id, getAreaTable()["MapperSpecRenamed " .. oldName])
+        assert.is_nil(getAreaTable()[oldName])
+      end
+      assert.are.equal(defaultName, getRoomAreaName(-1))
+    end)
+
     it("setAreaName rejects an areaID below one", function()
       local ok, err = setAreaName(0, "MapperSpecRenameTarget")
       assert.is_nil(ok)
@@ -2904,6 +2925,66 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.are.same({tostring(rA4), tostring(rA5), tostring(rA3)}, speedWalkPath)
     end)
 
+    it("leads nowhere through exits into a locked room", function()
+      -- the graph build finds an exit's target among the rooms it indexed, which leave out locked
+      -- ones, so a lookup falling back to the first index would wire these exits to an unrelated
+      -- room; two sources, as one of them may be that first room
+      local area = addAreaName("MapperSpecLockedTargetArea")
+      local from = createRoomID(); addRoom(from); setRoomArea(from, area)
+      local from2 = createRoomID(); addRoom(from2); setRoomArea(from2, area)
+      local locked = createRoomID(); addRoom(locked); setRoomArea(locked, area)
+      finally(function()
+        deleteRoom(from); deleteRoom(from2); deleteRoom(locked)
+        deleteArea(area)
+      end)
+      assert.is_true(setExit(from, locked, "east"))
+      assert.is_true(addSpecialExit(from, locked, "climb the wall"))
+      assert.is_true(setExit(from2, locked, "west"))
+      assert.is_true(lockRoom(locked, true))
+
+      local reached = {}
+      for _, source in ipairs({from, from2}) do
+        for id in pairs(getRooms()) do
+          if id ~= source and getPath(source, id) then
+            reached[#reached + 1] = source .. "->" .. id
+          end
+        end
+      end
+      assert.are.same({}, reached)
+    end)
+
+    for _, clearsItself in ipairs({false, true}) do
+      local name = "leads nowhere through an exit into a room the exit weight filter locks"
+      it(clearsItself and name .. ", then clears itself" or name, function()
+        -- the filter runs during the graph build, after the rooms were indexed
+        local area = addAreaName("MapperSpecFilterLockArea")
+        local from = createRoomID(); addRoom(from); setRoomArea(from, area)
+        local north = createRoomID(); addRoom(north); setRoomArea(north, area)
+        local east = createRoomID(); addRoom(east); setRoomArea(east, area)
+        finally(function()
+          setExitWeightFilter(nil)
+          deleteRoom(from); deleteRoom(north); deleteRoom(east)
+          deleteArea(area)
+        end)
+        assert.is_true(setExit(from, north, "north"))
+        assert.is_true(setExit(from, east, "east"))
+        -- the build offers a room's north exit before its east one
+        setExitWeightFilter(function(roomId, exitCommand)
+          if roomId == from and exitCommand == "n" then
+            lockRoom(east, true)
+            if clearsItself then
+              setExitWeightFilter(nil)
+            end
+          end
+        end)
+
+        -- the search that builds the graph, so the lock lands mid-build
+        assert.is_false(getPath(from, east))
+        assert.is_true(roomLocked(east))
+        assert.is_true(getPath(from, north))
+      end)
+    end
+
     it("reroutes around a locked exit", function()
       lockExit(rA1, "east", true)
       local ok = getPath(rA1, rA3)
@@ -3067,9 +3148,118 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.is_truthy(inner[2]:find("from inside an exit weight filter", 1, true), tostring(inner[2]))
     end)
 
-    -- Every case above edits the map first, so each one searches a graph that
-    -- has just been rebuilt. These four do not, which is what puts them on the
-    -- state findPath() carries from one search to the next.
+    -- Both filters below edit what the build has already read, so only a second build sees it
+    it("routes through a room the exit weight filter unlocks mid-build", function()
+      lockRoom(rA2, true)
+      local unlocked = false
+      setExitWeightFilter(function()
+        if not unlocked then
+          unlocked = true
+          lockRoom(rA2, false)
+        end
+      end)
+
+      local ok, weight = getPath(rA1, rA3)
+      assert.is_true(unlocked, "the exit weight filter never ran")
+      assert.is_true(ok)
+      assert.are.equal(2, weight)
+      assert.are.same({tostring(rA2), tostring(rA3)}, speedWalkPath)
+    end)
+
+    it("uses an exit weight the exit weight filter sets mid-build", function()
+      local weighted = false
+      setExitWeightFilter(function(roomId)
+        if roomId == rA1 and not weighted then
+          weighted = true
+          setExitWeight(rA1, "east", 10)
+        end
+      end)
+
+      local ok, weight = getPath(rA1, rA3)
+      assert.is_true(weighted, "the exit weight filter never saw rA1")
+      assert.is_true(ok)
+      assert.are.equal(3, weight)
+      assert.are.same({tostring(rA4), tostring(rA5), tostring(rA3)}, speedWalkPath)
+    end)
+
+    -- The filter only runs during a graph build, once per exit, so its calls tell how many builds ran
+    local function filterCallsPerBuild()
+      local calls = 0
+      setExitWeightFilter(function() calls = calls + 1 end)
+      getPath(rA1, rA3)
+      assert.is_true(calls > 0, "the exit weight filter never ran")
+      return calls
+    end
+
+    it("does not rebuild the graph for exit weight filter edits that change nothing", function()
+      local from = createRoomID()
+      addRoom(from); setRoomArea(from, areaAlpha); setRoomCoordinates(from, 0, -6, 0)
+      local to = createRoomID()
+      addRoom(to); setRoomArea(to, areaAlpha); setRoomCoordinates(to, 1, -6, 0)
+      finally(function()
+        setExitWeightFilter(nil)
+        deleteRoom(from); deleteRoom(to)
+      end)
+      local function edit()
+        setExit(from, to, "east")
+        setExitWeight(from, "east", 5)
+        setRoomWeight(to, 3)
+        addSpecialExit(from, to, "jump")
+      end
+      edit()
+      assert.is_true(setExit(from, to, "east"))
+      local perBuild = filterCallsPerBuild()
+      local calls = 0
+      setExitWeightFilter(function()
+        calls = calls + 1
+        edit()
+      end)
+
+      assert.is_true(getPath(from, to))
+      assert.are.equal(perBuild, calls)
+    end)
+
+    it("rebuilds the graph only once more for an exit weight filter that edits on every build", function()
+      local perBuild = filterCallsPerBuild()
+      local calls, weight = 0, 1
+      setExitWeightFilter(function()
+        calls = calls + 1
+        weight = 3 - weight
+        setExitWeight(rA1, "east", weight)
+      end)
+
+      assert.is_true(getPath(rA1, rA3))
+      assert.are.equal(2 * perBuild, calls)
+      local callsBuilding = calls
+      assert.is_true(getPath(rA1, rA3))
+      assert.are.equal(callsBuilding, calls)
+    end)
+
+    it("routes around a room whose weight went up after the last search", function()
+      assert.is_true(getPath(rA1, rA3))
+      finally(function() setRoomWeight(rA2, 1) end)
+      setRoomWeight(rA2, 10)
+
+      local ok, weight = getPath(rA1, rA3)
+      assert.is_true(ok)
+      assert.are.equal(3, weight)
+      assert.are.same({tostring(rA4), tostring(rA5), tostring(rA3)}, speedWalkPath)
+    end)
+
+    it("routes through an exit setExit re-points after the last search", function()
+      assert.is_true(getPath(rA1, rA3))
+      finally(function() setExit(rA1, rA2, "east") end)
+      assert.is_true(setExit(rA1, rA3, "east"))
+
+      local ok, weight = getPath(rA1, rA3)
+      assert.is_true(ok)
+      assert.are.equal(1, weight)
+      assert.are.same({tostring(rA3)}, speedWalkPath)
+    end)
+
+    -- Every case above edits the map first, so its first search is on a graph
+    -- that has just been rebuilt. These four do not, which is what puts them on
+    -- the state findPath() carries from one search to the next.
 
     it("does not inherit the previous search's state", function()
       local firstOk = getPath(rA1, rA3)
@@ -3654,16 +3844,6 @@ describe("Tests mapper functions against a shared fixture", function()
       return getMudletHomeDir() .. "/" .. name
     end
 
-    -- getMousePosition() has no answer only when there is no main window to draw the map in
-    local function noMainWindow()
-      return not getMousePosition()
-    end
-
-    -- Only a target the checks made before drawing accept gets as far as wanting a main window
-    local function assertAcceptedButNotDrawn(...)
-      assert.are.same({false, "there is no main window to draw the map in"}, {exportAreaImage(...)})
-    end
-
     -- Windows has no chmod to hand
     local function chmod(mode, path)
       if getOS() ~= "windows" then
@@ -3726,10 +3906,6 @@ describe("Tests mapper functions against a shared fixture", function()
     it("exportAreaImage returns true for a valid area (the file is written asynchronously)", function()
       local written, removeAll = expectExports({"mapper_spec_export.png"})
       finally(removeAll)
-      if noMainWindow() then
-        assertAcceptedButNotDrawn(areaAlpha, exportPath("mapper_spec_export.png"))
-        return
-      end
       assert.is_true(exportAreaImage(areaAlpha, exportPath("mapper_spec_export.png")))
       assert.is_true(waitUntil(written, 5000))
     end)
@@ -3744,10 +3920,6 @@ describe("Tests mapper functions against a shared fixture", function()
       local written, removeAll = expectExports({"mapper_spec_export_player.png"})
       finally(removeAll)
       assert.is_true(centerview(rA1))
-      if noMainWindow() then
-        assertAcceptedButNotDrawn(nil, exportPath("mapper_spec_export_player.png"))
-        return
-      end
       assert.is_true(exportAreaImage(nil, exportPath("mapper_spec_export_player.png")))
       assert.is_true(waitUntil(written, 5000))
     end)
@@ -3755,10 +3927,6 @@ describe("Tests mapper functions against a shared fixture", function()
     it("exportAreaImage takes a single z level", function()
       local written, removeAll = expectExports({"mapper_spec_export_z0.png"})
       finally(removeAll)
-      if noMainWindow() then
-        assertAcceptedButNotDrawn(areaAlpha, exportPath("mapper_spec_export_z0.png"), 0)
-        return
-      end
       assert.is_true(exportAreaImage(areaAlpha, exportPath("mapper_spec_export_z0.png"), 0))
       assert.is_true(waitUntil(written, 5000))
     end)
@@ -3782,10 +3950,6 @@ describe("Tests mapper functions against a shared fixture", function()
         setRoomArea(id, area)
         setRoomCoordinates(id, 0, 0, z)
       end
-      if noMainWindow() then
-        assertAcceptedButNotDrawn(area, exportPath("mapper_spec_export_levels.png"), true)
-        return
-      end
       assert.is_true(exportAreaImage(area, exportPath("mapper_spec_export_levels.png"), true))
       assert.is_true(waitUntil(written, 5000))
     end)
@@ -3795,11 +3959,6 @@ describe("Tests mapper functions against a shared fixture", function()
     it("exportAreaImage can be called twice in a row", function()
       local written, removeAll = expectExports({"mapper_spec_export_a.png", "mapper_spec_export_b.png"})
       finally(removeAll)
-      if noMainWindow() then
-        assertAcceptedButNotDrawn(areaAlpha, exportPath("mapper_spec_export_a.png"))
-        assertAcceptedButNotDrawn(areaAlpha, exportPath("mapper_spec_export_b.png"))
-        return
-      end
       assert.is_true(exportAreaImage(areaAlpha, exportPath("mapper_spec_export_a.png")))
       assert.is_true(exportAreaImage(areaAlpha, exportPath("mapper_spec_export_b.png")))
       assert.is_true(waitUntil(written, 5000))
@@ -3810,11 +3969,6 @@ describe("Tests mapper functions against a shared fixture", function()
       finally(removeAll)
       -- a name longer than file systems allow passes the checks made before the save
       local badPath = exportPath(string.rep("n", 300) .. ".png")
-      if noMainWindow() then
-        assertAcceptedButNotDrawn(areaAlpha, badPath)
-        assertAcceptedButNotDrawn(areaAlpha, exportPath("mapper_spec_export_ok.png"))
-        return
-      end
       -- Not the last few lines: the generic mapper prints its help on a timer
       -- after the map opens, which can push the report out of them
       local marker = "mapper spec failed-save marker " .. tostring({})
@@ -3907,11 +4061,6 @@ describe("Tests mapper functions against a shared fixture", function()
       chmod("0644", file)
       io.open(file, "w"):close()
       chmod("0444", file)
-      if noMainWindow() then
-        assertAcceptedButNotDrawn(area, directory, true)
-        assertAcceptedButNotDrawn(area, file, true)
-        return
-      end
       assert.is_true(exportAreaImage(area, directory, true))
       assert.is_true(exportAreaImage(area, file, true))
       assert.is_true(waitUntil(written, 5000))
@@ -4048,10 +4197,6 @@ describe("Tests mapper functions against a shared fixture", function()
       addRoom(room)
       setRoomArea(room, area)
       setRoomCoordinates(room, 0, 0, 0)
-      if noMainWindow() then
-        assertAcceptedButNotDrawn(area, exportPath(names[1]))
-        return
-      end
 
       local function export(name)
         local written = expectExports({name})
@@ -5051,6 +5196,46 @@ describe("Tests saveMap and loadMap", function()
     end)
   end)
 
+  -- saveMap() hands the file 256 KiB at a time, so this map runs over several of
+  -- those, and one string in it is longer than a whole one
+  it("saves a map larger than its write buffer whole", function()
+    local path = mapDirectory .. "/mapper_spec_large.dat"
+    finally(function() os.remove(path) end)
+    local function contents()
+      local file = assert(io.open(path, "rb"))
+      local data = file:read("*a")
+      file:close()
+      return data
+    end
+    deleteMap()
+    local area = addAreaName("MapperSpecLargeArea")
+    local rooms = {}
+    for i = 1, 2000 do
+      local id = createRoomID()
+      addRoom(id)
+      setRoomArea(id, area)
+      setRoomCoordinates(id, i % 50, math.floor(i / 50), 0)
+      setRoomName(id, "room " .. i .. " " .. string.rep("é", 80))
+      rooms[i] = id
+    end
+    local big = string.rep("x", 300000)
+    setMapUserData("mapper spec big", big)
+
+    assert.is_true(saveMap(path))
+    local saved = contents()
+    assert.is_true(#saved > 1024 * 1024)
+    assert.is_true(saveMap(path))
+    assert.is_true(saved == contents(), "saving the same map twice wrote different files")
+
+    deleteMap()
+    assert.is_true(loadMap(path))
+    assert.is_true(big == getMapUserData("mapper spec big"), "the longest string did not survive the round trip")
+    assert.are.equal(#rooms, table.size(getRooms()))
+    for i, id in ipairs(rooms) do
+      assert.are.equal("room " .. i .. " " .. string.rep("é", 80), getRoomName(id))
+    end
+  end)
+
   -- Careful with the order of anything added here: a map document that will
   -- not parse has emptied the map first (TMap::readXmlMapFile clears before it
   -- parses), so it leaves no map behind for the next spec. A file that is not
@@ -5458,6 +5643,28 @@ describe("Tests saveMap and loadMap", function()
       assert.is_truthy(message:find("damaged or unreadable", 1, true))
       assert.is_falsy(message:find("does not contain a map", 1, true))
       assert.is_true(roomExists(keeper), "the loaded map was thrown away for a file that is not XML")
+    end)
+
+    -- this one passes the up-front check that the file holds a map, so it is
+    -- only found to be damaged once the import has read some rooms from it
+    it("keeps the loaded map when an XML map turns out to be damaged part way through", function()
+      local file = assert(io.open(brokenXmlPath, "w"))
+      file:write([[<map><areas><area id="9001" name="Half Read Area"/></areas><rooms>]]
+        .. [[<room id="9001" area="9001" title="Half Read Room"><coord x="0" y="0" z="0"/></room>]]
+        .. [[<room id="9002" area="9001"]])
+      file:close()
+
+      buildMap()
+      setMapUserData("mapper spec key", "mapper spec value")
+      centerview(roomA)
+
+      local ok, message = loadMap(brokenXmlPath)
+      assert.is_nil(ok)
+      assert.is_truthy(message:find("failure to import XML map file", 1, true))
+      assert.is_false(roomExists(9001), "rooms read from the damaged file were kept")
+      assertMapRestored()
+      assert.are.equal("mapper spec value", getMapUserData("mapper spec key"))
+      assert.are.equal(roomA, getPlayerRoom())
     end)
   end)
 
@@ -7485,6 +7692,32 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       -- the area -1 in the file still carries its name, so only a new map shows the one the import settled on
       deleteMap()
       assert.are.equal(defaultAreaName, getAreaTableSwap()[-1])
+    end)
+
+    it("deleteArea refuses the default area by the name it was read with, not by the usual default name", function()
+      buildMap()
+      local area = getRoomArea(roomA)
+      local usualDefaultName
+      reimportWith(function(document)
+        usualDefaultName = document.defaultAreaName
+        for _, exportedArea in ipairs(document.areas) do
+          if exportedArea.id == -1 then
+            exportedArea.name = "MapperSpecJsonRenamedDefaultArea"
+          elseif exportedArea.id == area then
+            exportedArea.name = usualDefaultName
+          end
+        end
+      end)
+      assert.are.equal("MapperSpecJsonRenamedDefaultArea", getAreaTableSwap()[-1])
+      assert.are.equal(area, getAreaTable()[usualDefaultName])
+
+      local ok, err = deleteArea("MapperSpecJsonRenamedDefaultArea")
+      assert.is_nil(ok)
+      assert.is_truthy(err:find("you can't delete the default area", 1, true), err)
+      assert.are.equal(-1, getAreaTable()["MapperSpecJsonRenamedDefaultArea"])
+
+      assert.is_true(deleteArea(usualDefaultName))
+      assert.is_nil(getAreaTableSwap()[area])
     end)
 
     for _, position in ipairs({"after", "before"}) do

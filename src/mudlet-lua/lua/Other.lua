@@ -859,27 +859,32 @@ end
 
 
 
---- <b><u>TODO</u></b> getColorWildcard(color)
+--- Returns every run of text on the current trigger line that is shown in the given foreground colour.
+--- @param color the colour as isAnsiFgColor() numbers it
+--- @return a table of the runs, in the order they appear on the line, or false if no text has that colour
+--- @usage Inside a trigger, collect the names a game shows in red:
+---   <pre>
+---   local names = getColorWildcard(4)
+---   </pre>
 function getColorWildcard(color)
   color = tonumber(color)
   local results, startc, endc = {}, nil, nil
-
-  for i = 0, string.len(line) do
-    selectSection(i, 1)
+  -- selectSection() counts UTF-16 units, so the walk keeps that offset alongside
+  -- each character's byte position in line
+  local offset = 0
+  for position, char in line:gmatch("()([%z\1-\127\194-\244][\128-\191]*)") do
+    selectSection(offset, 1)
     if isAnsiFgColor(color) then
-      if not startc then
-        startc = i + 1
-        endc = i + 1
-      else
-        endc = i + 1
-        if i == line:len() then
-          results[#results + 1] = line:sub(startc, endc)
-        end
-      end
+      startc = startc or position
+      endc = position + #char - 1
     elseif startc then
       results[#results + 1] = line:sub(startc, endc)
       startc = nil
     end
+    offset = offset + (char:byte() >= 240 and 2 or 1)
+  end
+  if startc then
+    results[#results + 1] = line:sub(startc, endc)
   end
   return results[1] and results or false
 end
@@ -1124,9 +1129,13 @@ do
       -- wrap the original function to remove itself from the event handler list.
       local origFunc = func
       func = function(...)
-        local keepEvaluating = origFunc(...)
-        if not keepEvaluating then
+        -- a handler that errors never asked to stay, so it goes like one that returned nothing
+        local ok, keepEvaluating = pcall(origFunc, ...)
+        if not (ok and keepEvaluating) then
           killAnonymousEventHandler(eventHandlerId)
+        end
+        if not ok then
+          error(keepEvaluating, 0)
         end
       end
     end
@@ -1242,6 +1251,9 @@ function timeframe(vname, true_time, nil_time, ...)
   timeframetable[vname] = {}
 
   local vtype = type(vname)
+  -- the value goes in as an argument, not pasted into the source, so a quote or
+  -- backslash in a string and the full precision of a number both survive
+  local assign
 
   -- loop through timerlist and create tempTimers
   local maxtime = 0
@@ -1261,7 +1273,10 @@ function timeframe(vname, true_time, nil_time, ...)
       end
     else
       assert(type(value) == "string" or type(value) == "number" or type(value) == "boolean" or type(value) == "nil", format("timeframe: bad argument #%d type (timerlist data argument #2 expects a string, number or boolean value; got %s!", step, type(value)))
-      fun = assert(loadstring(format("%s = %s", vname, type(value) == "string" and ("'" .. value .. "'") or tostring(value))))
+      assign = assign or assert(loadstring(vname .. " = ..."))
+      fun = function()
+        assign(value)
+      end
     end
 
     if time <= 0 then
@@ -1388,6 +1403,23 @@ local function packageFileFromUrl(target)
   end
 end
 
+-- the English texts of mudlet-lua.json's Mudlet strings, standing in for translations
+-- that cannot be found, so they are looked for once rather than on every message
+local untranslatedMessages = {
+  packageInstallSuccess = {message = "Package '%s' installed successfully."},
+  packageInstallPartial = {message = "Package '%s' was installed, but not everything in it is working: %s"},
+  packageInstallFail = {message = "Installing '%s' failed: %s"},
+  moduleInstallSuccess = {message = "Module '%s' installed successfully."},
+  moduleInstallPartial = {message = "Module '%s' was installed, but not everything in it is working: %s"},
+  moduleInstallFail = {message = "Installing '%s' failed: %s"},
+  packageDownloading = {message = "Downloading package from %s."},
+  packageDownloadRefused = {message = "Could not download package from %s: %s"},
+  packageDownloadPending = {message = "Package '%s' is already being downloaded."},
+  prefixOk = {message = "[  OK  ]  - "},
+  prefixWarn = {message = "[ WARN ]  - "},
+  prefixInfo = {message = "[ INFO ]  - "},
+}
+
 function verbosePackageInstall(fileName)
   local ok, reason = installPackage(fileName)
   -- a URL has only started downloading: installPackageFromUrl() reports that, and the install once it is done
@@ -1400,7 +1432,7 @@ function verbosePackageInstall(fileName)
   local profileFolder = getMudletHomeDir() .. "/"
   local packageName = fileName:starts(profileFolder) and fileName:sub(#profileFolder + 1) or fileName
   -- That is all for installing, now to announce the result to the user:
-  mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet")
+  mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet") or untranslatedMessages
   if ok and reason and reason ~= "" then
     -- A quiet install keeps a broken item's error off the console, so it is shown here; a file that did not
     -- load in full was already warned of, and is named again as a reason the package is not all working
@@ -1431,7 +1463,7 @@ function verboseModuleInstall(fileName)
   local ok, reason = installModule(fileName)
   local moduleName = fileName
   -- That is all for installing, now to announce the result to the user:
-  mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet")
+  mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet") or untranslatedMessages
   if ok and reason and reason ~= "" then
     local partialText = mudlet.Locale.moduleInstallPartial.message
     partialText = string.format(partialText, moduleName, reason)
@@ -1483,7 +1515,7 @@ local packageDownloadsPending = {}
 -- or nil and the reason when the download was not started
 function installPackageFromUrl(file, url)
   local destination = string.format("%s/%s", getMudletHomeDir(), file)
-  mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet")
+  mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet") or untranslatedMessages
 
   local function warn(text)
     decho('<0,150,190>' .. mudlet.Locale.prefixWarn.message)

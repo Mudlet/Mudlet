@@ -4524,6 +4524,18 @@ describe("Tests UI functions", function()
       assert.are.equal("ERROR: mini console does not exist", first)
       assert.is_string(second)
     end)
+
+    it("getCurrentLine returns nil and a message for an unknown window when asked for full error reporting", function()
+      local first, second = getCurrentLine("uiReadbackNoSuchWindow", true)
+      assert.is_nil(first)
+      assert.are.equal('window "uiReadbackNoSuchWindow" not found', second)
+    end)
+
+    it("getCurrentLine rejects an enableFullErrorReporting that is not a boolean", function()
+      local wanted = "getCurrentLine: bad argument #2 type (enableFullErrorReporting {default = false} as boolean is optional, got string!)"
+      assert.has_error(function() getCurrentLine("main", "yes") end, wanted)
+      assert.has_error(function() getCurrentLine("uiReadbackNoSuchWindow", 1) end)
+    end)
   end)
 
   -- these all return nil plus a 'window "..." not found' message for an
@@ -8077,10 +8089,7 @@ describe("Console buffer size", function()
   end)
 
   it("useMaximum raises the main console to the buffer maximum", function()
-    -- the main console has to be named for this one: with three arguments the
-    -- first is read as a window name, so the four argument form only lines up
-    -- when it is actually given one. The lines limit is then discarded and the
-    -- machine's maximum used instead
+    -- the lines limit is discarded and the machine's maximum used instead
     local before = getConsoleBufferSize()
     assert.is_true(setConsoleBufferSize("main", 1000, 100, true))
     local maximum = getConsoleBufferSize()
@@ -8089,11 +8098,23 @@ describe("Console buffer size", function()
     assert.are.equal(before, getConsoleBufferSize())
   end)
 
-  it("the useMaximum flag needs the window to be named", function()
-    -- without a name the flag lands in the batch deletion size's place
-    local ok, err = pcall(setConsoleBufferSize, 1000, 100, true)
-    assert.is_false(ok)
-    assert.is_truthy(tostring(err):find("setConsoleBufferSize: bad argument #3 type", 1, true))
+  it("the useMaximum flag works without naming the main console", function()
+    local before = getConsoleBufferSize()
+    assert.are.same({true}, {setConsoleBufferSize(1000, 100, true)})
+    local maximum, batch = getConsoleBufferSize()
+    assert.is_true(maximum > 1000, "maximum was " .. maximum)
+    assert.are.equal(100, batch)
+    assert.are.same({true}, {setConsoleBufferSize(2500, 250, false)})
+    assert.are.same({2500, 250}, {getConsoleBufferSize()})
+    assert.is_true(setConsoleBufferSize(before, mainBatchSize))
+    assert.are.equal(before, getConsoleBufferSize())
+  end)
+
+  it("three arguments not ending in a boolean still start with the window name", function()
+    assert.is_true(setConsoleBufferSize(console, 3000, 300))
+    assert.are.same({3000, 300}, {getConsoleBufferSize(console)})
+    local unknown = "bufferSizeNoSuchWindow" .. suffix
+    assert.are.same({nil, ('window "%s" not found'):format(unknown)}, {setConsoleBufferSize(unknown, 3000, 300)})
   end)
 
   it("useMaximum is refused for anything but the main console", function()
@@ -8223,14 +8244,22 @@ describe("Main window size and saved layout", function()
     assert.is_truthy(tostring(err):find("setMainWindowSize: bad argument #2 type", 1, true))
   end)
 
-  it("setMainWindowSize says so when there is no main window to size", function()
+  it("setMainWindowSize sizes the profile's own area when there is no main window", function()
     -- getMousePosition() has no answer only when there is no main window
     if getMousePosition() then
       pending("there is a main window")
     end
-    local ok, err = setMainWindowSize(800, 600)
+    local width, height = getMainWindowSize()
+    finally(function()
+      -- Leaves the area given in pixels, as the GUI always has it: no script can give it in characters again
+      setMainWindowSize(width, height)
+    end)
+    assert.is_true(setMainWindowSize(800, 600))
+    assert.are.same({800, 600}, {getMainWindowSize()})
+    local ok, err = setMainWindowSize(0, 0)
     assert.is_nil(ok)
-    assert.are.equal("the profile has no main window", err)
+    assert.is_truthy(err:find("each must be from 1 to 65535", 1, true))
+    assert.are.same({800, 600}, {getMainWindowSize()})
   end)
 
   it("a bigger main window is reported as bigger", function()

@@ -51,6 +51,8 @@ jobs:
             # Enable AddressSanitizer for PTB and testing builds, but not release
             # builds (tagged Mudlet-*) - ASAN adds significant runtime overhead
             enable_asan: 'true'
+          # macOS 15, not 26: bundled Homebrew libraries carry the minos of the macOS they were bottled for
+          # (15.0 here, 26.0 on macos-26), whatever CMAKE_OSX_DEPLOYMENT_TARGET says.
           - os: macos-15
             buildname: 'macos (arm64) / c++, lua tests'
             compiler: clang_64
@@ -264,15 +266,15 @@ jobs:
         echo "LUA_PATH=$LUA_PATH" >> $GITHUB_ENV
         echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
 
-    - name: (Linux) Restore xcb-util-cursor 0.1.5 cache
+    - name: (Linux) Restore xcb-util-cursor 0.1.6 cache
       id: cache-xcb-cursor
       if: runner.os == 'Linux'
       uses: actions/cache/restore@v6
       with:
         path: ${{runner.workspace}}/xcb-util-cursor-stage
-        key: xcb-util-cursor-0.1.5-${{matrix.os}}-${{runner.arch}}
+        key: xcb-util-cursor-0.1.6-${{matrix.os}}-${{runner.arch}}
 
-    - name: (Linux) Build xcb-util-cursor 0.1.5
+    - name: (Linux) Build xcb-util-cursor 0.1.6
       timeout-minutes: 5
       if: runner.os == 'Linux' && steps.cache-xcb-cursor.outputs.cache-hit != 'true'
       run: |
@@ -281,23 +283,23 @@ jobs:
         # Several mirrors, each retried: xorg.freedesktop.org served an expired
         # TLS certificate on 2026-07-28, breaking every CI run
         for url in \
-          https://xorg.freedesktop.org/archive/individual/lib/xcb-util-cursor-0.1.5.tar.xz \
-          https://www.x.org/releases/individual/lib/xcb-util-cursor-0.1.5.tar.xz \
-          https://xcb.freedesktop.org/dist/xcb-util-cursor-0.1.5.tar.xz
+          https://xorg.freedesktop.org/archive/individual/lib/xcb-util-cursor-0.1.6.tar.xz \
+          https://www.x.org/releases/individual/lib/xcb-util-cursor-0.1.6.tar.xz \
+          https://xcb.freedesktop.org/dist/xcb-util-cursor-0.1.6.tar.xz
         do
           for attempt in 1 2 3; do
-            if wget -q --connect-timeout=10 --read-timeout=30 --tries=3 --waitretry=5 -O xcb-util-cursor-0.1.5.tar.xz "$url"; then
+            if wget -q --connect-timeout=10 --read-timeout=30 --tries=3 --waitretry=5 -O xcb-util-cursor-0.1.6.tar.xz "$url"; then
               break 2
             fi
             echo "::warning::download attempt $attempt from $url failed, retrying..."
             sleep $((attempt * 5))
           done
         done
-        # Checksum from https://lists.x.org/archives/xorg-announce/2023-October/003428.html
+        # Checksum from https://lists.x.org/archives/xorg-announce/2025-September/003625.html
         # also fails the step if every mirror was unreachable
-        echo "0caf99b0d60970f81ce41c7ba694e5eaaf833227bb2cbcdb2f6dc9666a663c57  xcb-util-cursor-0.1.5.tar.xz" | sha256sum -c
-        tar xf xcb-util-cursor-0.1.5.tar.xz
-        cd xcb-util-cursor-0.1.5
+        echo "fdeb8bd127873519be5cc70dcd0d3b5d33b667877200f9925a59fdcad8f7a933  xcb-util-cursor-0.1.6.tar.xz" | sha256sum -c
+        tar xf xcb-util-cursor-0.1.6.tar.xz
+        cd xcb-util-cursor-0.1.6
 
         # Configure and build
         ./configure --prefix=/usr --libdir=/usr/lib/x86_64-linux-gnu
@@ -307,7 +309,7 @@ jobs:
         # from this tree whether it was built here or restored from the cache
         make DESTDIR="${{runner.workspace}}/xcb-util-cursor-stage" install
 
-    - name: (Linux) Install xcb-util-cursor 0.1.5
+    - name: (Linux) Install xcb-util-cursor 0.1.6
       if: runner.os == 'Linux'
       run: |
         # Install system-wide (replaces Ubuntu 22.04's buggy 0.1.1)
@@ -320,10 +322,10 @@ jobs:
       timeout-minutes: 5
       if: runner.os == 'Linux'
       env:
-        MOLD_VERSION: '2.41.0'
+        MOLD_VERSION: '3.0.0'
         # mold publishes no checksum manifest, so this is the hash of the
         # pinned asset as downloaded - re-verify it by hand when bumping
-        MOLD_SHA256: 'a3696680d99e692970590a178bc3a33d78d60d1c6dc9db7a11b557b02b751f5d'
+        MOLD_SHA256: '6c90d4a474c7c0409dfb575be03a5345878ac14fdba18de8b40fa58c60121189'
       run: |
         # Ubuntu 22.04 only packages mold 1.0.3, so take it from upstream
         curl -fsSL --retry 3 --retry-delay 5 --connect-timeout 10 --max-time 120 -o mold.tar.gz \

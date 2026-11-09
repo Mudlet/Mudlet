@@ -462,4 +462,5 @@ void ActionUnit::updateAllToolbars()
 {
     mpHost->consoleFrontend()->regenerateToolBars(mActionRootNodeList);
     mpHost->consoleFrontend()->regenerateEasyButtonBars(mActionRootNodeList);
+    emit mpHost->signal_buttonsChanged();
 }

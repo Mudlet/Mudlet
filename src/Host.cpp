@@ -64,6 +64,7 @@
 #include "SecureStringUtils.h"
 #include "ShortcutsManager.h"
 
+#include <algorithm>
 #include <chrono>
 #include <cstring>
 #include <limits>
@@ -522,6 +523,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 
 Host::~Host()
 {
+    // So that the profile opened again next loads the newest map
+    mMapAutosaveFuture.waitForFinished();
     Q_ASSERT_X(mpConsole.isNull(), "Host::~Host()", "the main console view would outlive the model it refers to");
     // Mark the host as closing down to prevent keybinding processing during destruction
     mIsClosingDown = true;
@@ -818,6 +821,9 @@ void Host::startProfileScripts()
 {
     // enable script compilation (which is off by default)
     mBlockScriptCompile = false;
+    if (!hasConsoleView() && !mBorders.isNull()) {
+        layOutMainAreaWithNoView(MainAreaChange::load);
+    }
     // This uses the external LuaGlobal.lua file to load all the other external
     // lua files, including the condenseMapLoad() function needed by the
     // TMap::audit() method:
@@ -972,10 +978,77 @@ void Host::loadMap()
     }
 }
 
+namespace {
+// QDataStream writes a map a few bytes at a time, and each of those writes costs QSaveFile more than
+// serialising it does, so this hands the file 256 KiB at a time instead
+class ChunkedWriter final : public QIODevice
+{
+public:
+    explicit ChunkedWriter(QIODevice* target)
+    : mpTarget(target)
+    , mBuffer(std::make_unique<char[]>(scmChunkSize))
+    {
+        open(QIODevice::WriteOnly | QIODevice::Unbuffered);
+    }
+    bool isSequential() const override { return true; }
+    // False once any write has failed. That has to be remembered here: a full disk cuts a write short
+    // without setting an error on the QSaveFile, which would then commit what it got.
+    bool flushChunk()
+    {
+        if (mUsed > 0 && mpTarget->write(mBuffer.get(), mUsed) != mUsed) {
+            mFailed = true;
+        }
+        mUsed = 0;
+        return !mFailed;
+    }
+
+protected:
+    qint64 readData(char*, qint64) override { return -1; }
+    qint64 writeData(const char* data, qint64 len) override
+    {
+        if (mUsed + len > scmChunkSize && !flushChunk()) {
+            return -1;
+        }
+        if (len >= scmChunkSize) {
+            if (mpTarget->write(data, len) != len) {
+                mFailed = true;
+                return -1;
+            }
+            return len;
+        }
+        std::memcpy(mBuffer.get() + mUsed, data, static_cast<size_t>(len));
+        mUsed += len;
+        return len;
+    }
+
+private:
+    static constexpr qint64 scmChunkSize = 256 * 1024;
+    QIODevice* mpTarget;
+    std::unique_ptr<char[]> mBuffer;
+    qint64 mUsed = 0;
+    bool mFailed = false;
+};
+
+// Runs on a pool thread, so it is given everything it needs and must reach nothing else. Returns why the
+// write failed, or nothing if it did not.
+QString writeFileAtomically(const QString& path, const QByteArray& bytes)
+{
+    QSaveFile file(path);
+    if (!file.open(QIODevice::WriteOnly)) {
+        return file.errorString();
+    }
+    if (file.write(bytes) != bytes.size()) {
+        return file.error() == QFileDevice::NoError ? qsl("the write was cut short") : file.errorString();
+    }
+    return file.commit() ? QString() : file.errorString();
+}
+} // namespace
+
 // The three methods below might be better off on TMap, which is what they all
 // end up talking to.
 bool Host::saveMapFile(const QString& location, int saveVersion)
 {
+    waitForMapAutosave();
     QString filename_map = location;
     if (filename_map.isEmpty()) {
         filename_map = MudletApp::getMudletPath(enums::profileDateTimeStampedMapPathFileName, mHostName, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
@@ -1000,10 +1073,15 @@ bool Host::saveMapFile(const QString& location, int saveVersion)
         return false;
     }
 
-    QDataStream out(&file_map);
+    ChunkedWriter sink(&file_map);
+    QDataStream out(&sink);
     out.setVersion(QDataStream::Qt_5_12);
 
     bool saved = mpMap->serialize(out, saveVersion);
+    if (saved && !sink.flushChunk()) {
+        qDebug().noquote() << "Error saving map to" << filename_map << ": a write to it was cut short" << (file_map.error() == QFileDevice::NoError ? QString() : file_map.errorString());
+        saved = false;
+    }
     if (saved && !file_map.commit()) {
         qDebug() << "Error saving map: " << (file_map.error() == QFile::NoError ? "issue with serializing" : file_map.errorString());
         saved = false;
@@ -1173,17 +1251,69 @@ void Host::autoSaveMap()
 #if defined(DEBUG_MAPAUTOSAVE)
             qDebug().nospace().noquote() << "Host::autoSaveMap() INFO - map auto save initiated at:" << nowString << ".";
 #endif
-            if (!saveMapFile(MudletApp::getMudletPath(enums::profileMapPathFileName, mHostName, qsl("autosave.dat")))) {
-                mpMap->setSaveError(true);
-            } else {
-                mpMap->setSaveError(false);
-            }
+            autoSaveMapInBackground(MudletApp::getMudletPath(enums::profileMapPathFileName, mHostName, qsl("autosave.dat")));
 #if defined(DEBUG_MAPAUTOSAVE)
         } else {
             qDebug().nospace().noquote() << "Host::autoSaveMap() INFO - map auto save requested at:" << nowString << " but declined whilst \"Host::mIsProfileLoadingSequence\" flag set.";
 #endif
         }
     }
+}
+
+// Serialising reads the map, so only the file write and its fsync leave the main thread
+void Host::autoSaveMapInBackground(const QString& path)
+{
+    // Not queued behind it: the map stays unsaved, so the next autosave writes it
+    if (!mMapAutosaveFuture.isFinished()) {
+        return;
+    }
+    waitForMapAutosave();
+
+    const QDir dir_map(MudletApp::getMudletPath(enums::profileMapsPath, mHostName));
+    if (!dir_map.exists() && !dir_map.mkpath(dir_map.path())) {
+        qDebug().noquote() << "Error autosaving map: could not make the profile's map directory" << dir_map.path();
+        mpMap->setSaveError(true);
+        return;
+    }
+
+    QByteArray bytes;
+    {
+        QDataStream out(&bytes, QIODevice::WriteOnly);
+        out.setVersion(QDataStream::Qt_5_12);
+        if (!mpMap->serialize(out, 0)) {
+            mpMap->setSaveError(true);
+            return;
+        }
+    }
+    // Before the write rather than after it, so that a change made meanwhile is saved by the next autosave
+    mpMap->resetUnsaved();
+
+    mMapAutosaveResultPending = true;
+    mMapAutosaveFuture = QtConcurrent::run(writeFileAtomically, path, std::move(bytes));
+    auto watcher = new QFutureWatcher<QString>(this);
+    connect(watcher, &QFutureWatcher<QString>::finished, this, [this, watcher]() {
+        watcher->deleteLater();
+        // Otherwise a later autosave's write is still running, and its own watcher reports it
+        if (mMapAutosaveFuture.isFinished()) {
+            waitForMapAutosave();
+        }
+    });
+    watcher->setFuture(mMapAutosaveFuture);
+}
+
+void Host::waitForMapAutosave()
+{
+    if (!mMapAutosaveResultPending) {
+        return;
+    }
+    mMapAutosaveFuture.waitForFinished();
+    mMapAutosaveResultPending = false;
+    const QString failure = mMapAutosaveFuture.result();
+    if (!failure.isEmpty()) {
+        qDebug().noquote() << "Error autosaving map to" << MudletApp::getMudletPath(enums::profileMapPathFileName, mHostName, qsl("autosave.dat")) << ":" << failure;
+        mpMap->setUnsavedKeepingRevisions(__func__);
+    }
+    mpMap->setSaveError(!failure.isEmpty());
 }
 
 void Host::loadPackageInfo()
@@ -1276,7 +1406,7 @@ QList<Host::ModuleWriteJob> Host::prepareModuleSaves(bool backup)
     return jobs;
 }
 
-bool Host::writeModuleFiles(const QList<ModuleWriteJob>& jobs)
+bool Host::writeModuleFiles(const QList<ModuleWriteJob>& jobs, QStringList& failures)
 {
     // Pure file I/O over self-contained jobs, usually on a thread pool thread. It is
     // static because a close that answers "No" to "Save profile?", and one that finds
@@ -1284,15 +1414,22 @@ bool Host::writeModuleFiles(const QList<ModuleWriteJob>& jobs)
     // writes can be, and regularly is, destroyed while they are still queued.
     bool allWritten = true;
     for (const auto& job : jobs) {
+        auto fail = [&](const QString& fileName, const QString& reason) {
+            //: %1 is the name of a module, %2 the file it was being saved to, %3 the reason it could not be
+            failures << tr("[ ERROR ] - The module \"%1\" could not be saved to \"%2\": %3").arg(job.moduleName, fileName, reason);
+            allWritten = false;
+        };
         if (!job.backupName.isEmpty()) {
             createModuleBackup(job.filename, job.backupName);
         }
-        if (!XMLexport::saveXmlDocToFile(job.xmlFilename, *job.document)) {
+        if (QString reason; !XMLexport::saveXmlDocToFile(job.xmlFilename, *job.document, &reason)) {
             qWarning().noquote().nospace() << "Host::writeModuleFiles() WARNING - failed to write module \"" << job.moduleName << "\" to \"" << job.xmlFilename << "\".";
-            allWritten = false;
+            fail(job.xmlFilename, reason);
+            // The archive would only be rebuilt from the older unpacked copy, on a disk that just refused a write
+            continue;
         }
-        if (!updateModuleZip(job)) {
-            allWritten = false;
+        if (QString reason; !updateModuleZip(job, reason)) {
+            fail(job.filename, reason);
         }
     }
     return allWritten;
@@ -1328,7 +1465,7 @@ void Host::reloadModules()
     mModulesToSync.clear();
 }
 
-bool Host::updateModuleZip(const ModuleWriteJob& job)
+bool Host::updateModuleZip(const ModuleWriteJob& job, QString& reason)
 {
     // Static for the same reason writeModuleFiles() is: every path it needs was
     // resolved, and every folder it needs created, on the main thread beforehand.
@@ -1353,6 +1490,7 @@ bool Host::updateModuleZip(const ModuleWriteJob& job)
         */
         qWarning().noquote().nospace() << "Host::updateModuleZip(\"" << zipName << "\", \"" << moduleName << "\") WARNING - failed to open module to update it, error: \""
                                        << zip_error_strerror(&zipError) << "\"";
+        reason = QString::fromUtf8(zip_error_strerror(&zipError));
         zip_error_fini(&zipError);
         return false;
     }
@@ -1360,12 +1498,16 @@ bool Host::updateModuleZip(const ModuleWriteJob& job)
     zip_delete(zipFile, xmlIndex);
     struct zip_source* s = zip_source_file(zipFile, filename_xml.toUtf8().constData(), 0, -1);
     if (s == nullptr) {
+        reason = QString::fromUtf8(zip_strerror(zipFile));
         // Not TDebug: this runs on a worker thread, which must not touch a profile's console.
         qWarning().noquote().nospace() << "Host::updateModuleZip(\"" << zipName << "\", \"" << moduleName << "\") WARNING - failed to open xml file \"" << filename_xml
                                        << "\" inside the module to update it, error: \"" << zip_strerror(zipFile) << "\"";
     }
     err = zip_file_add(zipFile, qsl("%1.xml").arg(moduleName).toUtf8().constData(), s, ZIP_FL_ENC_UTF_8 | ZIP_FL_OVERWRITE);
     const bool added = s && err >= 0;
+    if (s && !added) {
+        reason = QString::fromUtf8(zip_strerror(zipFile));
+    }
 
     if (zipFile) {
         // This is the point at which the data is written out to the archive,
@@ -1375,6 +1517,7 @@ bool Host::updateModuleZip(const ModuleWriteJob& job)
 
     if (err == -1) {
         qWarning().noquote().nospace() << "Host::updateModuleZip(\"" << zipName << "\", \"" << moduleName << "\") WARNING - failed to save the module, error: \"" << zip_strerror(zipFile) << "\"";
+        reason = QString::fromUtf8(zip_strerror(zipFile));
         // Properly dispose of things after failing to zip_close(...) the
         // archive:
         zip_discard(zipFile);
@@ -1521,6 +1664,7 @@ bool Host::resetProfile_phase1()
     mTimerUnit.stopAllTriggers();
     mKeyUnit.stopAllTriggers();
     mResetProfile = true;
+    mBlockStopWatchCreation = true;
 
     QTimer::singleShot(0ms, this, [this]() {
         resetProfile_phase2();
@@ -1604,6 +1748,8 @@ void Host::resetProfile_phase2()
     mLuaInterpreter.updateExtendedAnsiColorsInTable();
 
     mBlockScriptCompile = false;
+    // Not before now: the teardown above can still run handlers on the old Lua state
+    mBlockStopWatchCreation = false;
 
     mAliasUnit.reenableAllTriggers();
     mTimerUnit.reenableAllTriggers();
@@ -1736,14 +1882,16 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     // the write is still queued would leave the watcher with no owner at all.
     auto watcher = new QFutureWatcher<void>(this);
     watcher->setObjectName(scmProfileSaveWatcherName);
+    // Filled by the task before its future finishes, read only after it has
+    auto moduleFailures = std::make_shared<QStringList>();
     // Captures values only, never `this`: no wait for this task is guaranteed, so the
     // Host can be destroyed while it is still queued or running.
-    mModuleFuture = QtConcurrent::run([xmlSaveFutures, moduleJobs]() {
+    mModuleFuture = QtConcurrent::run([xmlSaveFutures, moduleJobs, moduleFailures]() {
         // wait for the host xml to be ready before writing the modules out
         for (auto future : xmlSaveFutures) {
             future.waitForFinished();
         }
-        return Host::writeModuleFiles(moduleJobs);
+        return Host::writeModuleFiles(moduleJobs, *moduleFailures);
     });
     // Only the names: holding the whole jobs would keep every module's document in
     // memory until this runs, and all it needs is what to retire from `writers`.
@@ -1752,8 +1900,11 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     for (const auto& job : moduleJobs) {
         savedModuleXmlNames << job.xmlFilename;
     }
-    connect(watcher, &QFutureWatcher<void>::finished, this, [this, savedModuleXmlNames, syncModules]() {
-        // Finish on the main thread: the module documents are now on disk. Consume
+    connect(watcher, &QFutureWatcher<void>::finished, this, [this, savedModuleXmlNames, syncModules, moduleFailures]() {
+        for (const auto& failure : std::as_const(*moduleFailures)) {
+            postMessage(failure);
+        }
+        // Finish on the main thread: the module writes are done. Consume
         // mModulesToSync via reloadModules() *before* the xmlSaved() loop below empties
         // `writers` and emits profileSaveFinished(): that signal fires synchronously,
         // and a deferred handler (e.g. a queued package install) could start another
@@ -2069,6 +2220,7 @@ std::pair<bool, QString> Host::setDisplayFont(const QFont& font, const DisplayFo
     mTempDisplayFont = mTempDisplayFontAttributes.value().makeFont();
     if (TFontAttributes(mTempDisplayFont.value()) != before) {
         emit signal_consoleFontChanged(mTempDisplayFont.value());
+        layOutMainAreaWithNoView(MainAreaChange::font);
     }
 
     return {true, QString()};
@@ -2132,6 +2284,7 @@ void Host::setDisplayFontSize(int size)
     mTempDisplayFont = mTempDisplayFontAttributes.value().makeFont();
     if (TFontAttributes(mTempDisplayFont.value()) != before) {
         emit signal_consoleFontChanged(mTempDisplayFont.value());
+        layOutMainAreaWithNoView(MainAreaChange::font);
     }
 }
 
@@ -2480,8 +2633,8 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
 
 QPair<int, QString> Host::createStopWatch(const QString& name)
 {
-    if (mResetProfile || mBlockStopWatchCreation) {
-        // Don't create stopwatches when test loading scripts or during a profile reset:
+    if (mBlockStopWatchCreation) {
+        // Not before the saved ones are loaded, nor while a reset is still tearing the profile down
         return qMakePair(0, qsl("unable to create a stopwatch at this time"));
     }
 
@@ -3534,28 +3687,135 @@ static bool nameIsAStepOutOfTheProfile(const QString& name)
     return name.isEmpty() || name == QLatin1String(".") || name == QLatin1String("..") || name.contains(QLatin1Char('/')) || name.contains(QLatin1Char('\\'));
 }
 
+// Whether the file system takes both names for one folder
+static bool namesShareAFolder(QString first, QString second)
+{
+#if defined(Q_OS_WINDOWS)
+    // Windows drops trailing dots and spaces from a path, so "media." is the "media" folder too
+    for (QString* name : {&first, &second}) {
+        while (name->endsWith(QLatin1Char('.')) || name->endsWith(QLatin1Char(' '))) {
+            name->chop(1);
+        }
+    }
+#endif
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_MACOS)
+    // The file system ignores case, so "Log" is the profile's "log" folder
+    return !first.compare(second, Qt::CaseInsensitive);
+#else
+    return first == second;
+#endif
+}
+
 // Package folders sit beside the profile's own, so a package of one of these names would share that folder.
 static bool theProfileKeepsItsOwnDataIn(const QString& name)
 {
-    QString folder = name;
-#if defined(Q_OS_WINDOWS) || defined(Q_OS_MACOS)
-    // The file system ignores case, so "Log" is the profile's "log" folder
-    const Qt::CaseSensitivity caseSensitivity = Qt::CaseInsensitive;
-#else
-    const Qt::CaseSensitivity caseSensitivity = Qt::CaseSensitive;
-#endif
-#if defined(Q_OS_WINDOWS)
-    // Windows drops trailing dots and spaces from a path, so "media." is the "media" folder too
-    while (folder.endsWith(QLatin1Char('.')) || folder.endsWith(QLatin1Char(' '))) {
-        folder.chop(1);
-    }
-#endif
     for (const auto ownFolder : {QLatin1String("map"), QLatin1String("log"), QLatin1String("current"), QLatin1String("media")}) {
-        if (!folder.compare(ownFolder, caseSensitivity)) {
+        if (namesShareAFolder(name, ownFolder)) {
             return true;
         }
     }
     return false;
+}
+
+// Quoted rather than the exporter's [[...]], which cannot hold a "]]" or end in a "]"
+static QString luaStringLiteral(const QString& text)
+{
+    QString literal{QLatin1Char('"')};
+    for (const QChar character : text) {
+        const char16_t code = character.unicode();
+        if (code == u'\\' || code == u'"') {
+            literal.append(QLatin1Char('\\')).append(character);
+        } else if (code == u'\n') {
+            literal.append(QLatin1String("\\n"));
+        } else if (code < 0x20 || code == 0x7f) {
+            // Three digits, as Lua reads up to three and a digit could follow
+            literal.append(qsl("\\%1").arg(static_cast<int>(code), 3, 10, QLatin1Char('0')));
+        } else {
+            literal.append(character);
+        }
+    }
+    return literal.append(QLatin1Char('"'));
+}
+
+static bool isLuaName(const QString& text)
+{
+    // Anchored: "$" would also match before a final newline, letting "end\n" pass for a name
+    static const QRegularExpression name(QRegularExpression::anchoredPattern(qsl("[A-Za-z_][A-Za-z0-9_]*")));
+    static const QStringList keywords{qsl("and"),   qsl("break"), qsl("do"),  qsl("else"), qsl("elseif"), qsl("end"),    qsl("false"), qsl("for"),  qsl("function"), qsl("if"),   qsl("in"),
+                                      qsl("local"), qsl("nil"),   qsl("not"), qsl("or"),   qsl("repeat"), qsl("return"), qsl("then"),  qsl("true"), qsl("until"),    qsl("while")};
+    return name.match(text).hasMatch() && !keywords.contains(text);
+}
+
+// An empty string, or why config.lua could not be written, with nothing left behind
+static QString writePackageConfig(const QString& folder, const QMap<QString, QString>& details)
+{
+    const bool folderWasThere = QDir(folder).exists();
+    if (!QDir().mkpath(folder)) {
+        return qsl("could not make the folder '%1'").arg(folder);
+    }
+
+    QString config;
+    for (auto it = details.cbegin(); it != details.cend(); ++it) {
+        // Last, as it replaces the table the lines through _G[...] set the other details in
+        if (it.key() == QLatin1String("_G")) {
+            continue;
+        }
+        if (isLuaName(it.key())) {
+            config.append(qsl("%1 = %2\n").arg(it.key(), luaStringLiteral(it.value())));
+        } else {
+            config.append(qsl("_G[%1] = %2\n").arg(luaStringLiteral(it.key()), luaStringLiteral(it.value())));
+        }
+    }
+    if (details.contains(qsl("_G"))) {
+        config.append(qsl("_G = %1\n").arg(luaStringLiteral(details.value(qsl("_G")))));
+    }
+
+    QSaveFile configFile(QDir(folder).filePath(qsl("config.lua")));
+    QString error;
+    if (configFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QTextStream out(&configFile);
+        out << config;
+        out.flush();
+        if (!configFile.commit()) {
+            error = qsl("could not write '%1': %2").arg(configFile.fileName(), configFile.errorString());
+        }
+    } else {
+        error = qsl("could not write '%1': %2").arg(configFile.fileName(), configFile.errorString());
+    }
+    if (!error.isEmpty() && !folderWasThere) {
+        QDir().rmdir(folder);
+    }
+    return error;
+}
+
+QString Host::setPackageInfo(const QString& packageName, const QString& info, const QString& value)
+{
+    QMap<QString, QString> details = mPackageInfo.value(packageName);
+    if (details.contains(info) && details.value(info) == value) {
+        return {};
+    }
+    details[info] = value;
+    // With no folder of its own to save to, such a package's details stay what they always were: for the session.
+    // Only a profile from before installs refused the profile's own folder names can have one of those, but a
+    // package and a module whose names differ only in case share a folder where the file system ignores case.
+    const auto sharesItsFolder = [&packageName](const QString& other) {
+        return other != packageName && namesShareAFolder(other, packageName);
+    };
+    if (nameIsAStepOutOfTheProfile(packageName) || theProfileKeepsItsOwnDataIn(packageName) || std::any_of(mInstalledPackages.cbegin(), mInstalledPackages.cend(), sharesItsFolder)
+        || std::any_of(mInstalledModules.keyBegin(), mInstalledModules.keyEnd(), sharesItsFolder)) {
+        mPackageInfo[packageName] = details;
+        return {};
+    }
+
+    // getPackageConfig() files the details under this name, and ignores a config.lua without one
+    if (!details.contains(qsl("mpackage"))) {
+        details.insert(qsl("mpackage"), packageName);
+    }
+    if (const QString error = writePackageConfig(MudletApp::getMudletPath(enums::profilePackagePath, getName(), packageName), details); !error.isEmpty()) {
+        return qsl("could not save the details of package '%1', so nothing was changed: %2").arg(packageName, error);
+    }
+    mPackageInfo[packageName] = details;
+    return {};
 }
 
 // Left in each folder installPackage() unpacks into until the archive is put in place, so that one a crash left
@@ -5077,6 +5337,10 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule, QString*
 
     lua_State* L = luaL_newstate();
     setupSandboxedLuaState(L);
+    // Lua's own version string is no detail of the package, but cleared before the manifest runs
+    // rather than after, so a detail of that name that setPackageInfo() saved is still read back
+    lua_pushnil(L);
+    lua_setglobal(L, "_VERSION");
 
     int error = luaL_loadstring(L, strings.join("\n").toUtf8().constData());
 
@@ -5114,11 +5378,7 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule, QString*
             return noManifest(qsl("the name \"%1\" its config.lua asks for has nothing left in it once the endings a package file is named by are taken off").arg(theNameItAsksFor));
         }
         if (!packageName.isEmpty()) {
-            //get rid of lua version
             lua_pushvalue(L, LUA_GLOBALSINDEX);
-            lua_pushstring(L, "_VERSION");
-            lua_pushnil(L);
-            lua_rawset(L, -3);
             QMap<QString, QString> packageInfo;
             lua_pushnil(L);
             while (lua_next(L, -2) != 0) {
@@ -5569,9 +5829,10 @@ void Host::processDiscordGMCP(const QString& packageMessage, const QString& data
         return;
     }
 
-    if (packageMessage == QLatin1String("External.Discord.Status")) {
+    // GMCP package names are case-insensitive, as cTelnet's routing here already treats them
+    if (!packageMessage.compare(QLatin1String("External.Discord.Status"), Qt::CaseInsensitive)) {
         processGMCPDiscordStatus(json);
-    } else if (packageMessage == QLatin1String("External.Discord.Info")) {
+    } else if (!packageMessage.compare(QLatin1String("External.Discord.Info"), Qt::CaseInsensitive)) {
         processGMCPDiscordInfo(json);
     }
 }
@@ -7517,9 +7778,12 @@ std::optional<QRect> Host::windowGeometry(const QString& name) const
 std::optional<QSize> Host::mainWindowSize() const
 {
     if (!hasConsoleView()) {
-        // Nothing lays the main console out, so it is the character grid NAWS reports
+        if (mMainAreaPixels) {
+            return mMainAreaPixels;
+        }
         const QFontMetrics metrics(consoleFrontend()->displayFont());
-        return {QSize(mScreenWidth * metrics.averageCharWidth(), mScreenHeight * metrics.height())};
+        const QSize cells = mainAreaCells();
+        return {QSize(cells.width() * metrics.averageCharWidth(), cells.height() * metrics.height())};
     }
     return {mWindowRegistry.mainWindowSize()};
 }
@@ -7771,6 +8035,114 @@ void Host::setMxpBorders(const QMargins borders)
 {
     mMxpBorders = borders;
     setBorders(mUserBorders + mMxpBorders);
+}
+
+// Never of negative size, as Qt holds the GUI's text widget to no less than nothing however wide the borders are
+QRect Host::mainTextRectWithNoView() const
+{
+    const QSize area = mainWindowSize().value_or(QSize());
+    return {mBorders.left(), mBorders.top(), std::max(0, area.width() - mBorders.left() - mBorders.right()), std::max(0, area.height() - mBorders.top() - mBorders.bottom())};
+}
+
+void Host::layOutMainAreaWithNoView(const MainAreaChange change)
+{
+    // Till then the save is loading: the GUI makes its main console only after that, and the load may still change
+    // the font, so startProfileScripts() lays out what the save left
+    if (mBlockScriptCompile) {
+        return;
+    }
+    // Till then the area is the grid, which a font change keeps; measuring it would add the bundled fonts before
+    // anything draws in them
+    if (change == MainAreaChange::font && !mMainAreaCells) {
+        emit signal_mainAreaLaidOut();
+        return;
+    }
+    if (!mMainAreaCells) {
+        mMainAreaCells = QSize(mScreenWidth, mScreenHeight);
+    }
+    const QSize textArea = mainTextRectWithNoView().size();
+    const QFontMetrics metrics(consoleFrontend()->displayFont());
+    // As TTextEdit::updateScreenView() counts it, and NAWS carries no more than 16 bits
+    const int columns = std::clamp(textArea.width() / std::max(1, metrics.averageCharWidth()), 40, 65535);
+    const int rows = std::clamp(textArea.height() / std::max(1, metrics.height()), 1, 65535);
+    if (columns != mScreenWidth || rows != mScreenHeight) {
+        setScreenDimensions(columns, rows);
+        updateDisplayDimensions();
+    }
+    emit signal_mainAreaLaidOut();
+    if (change == MainAreaChange::font || change == MainAreaChange::load) {
+        return;
+    }
+
+    // As TConsole::resizeEvent() and TMainConsole::applyBorders() tell scripts, with no command line to take off
+    if (change == MainAreaChange::area) {
+        mLuaInterpreter.call(qsl("handleWindowResizeEvent"), qsl("WindowResizeEvent"));
+        if (closeStarted()) {
+            return;
+        }
+    }
+    // Measured now, as TConsole::raiseMudletSysWindowResizeEvent() takes off the borders the handler may have set
+    const QSize reported = mainTextRectWithNoView().size();
+    TEvent event{};
+    event.mArgumentList.append(qsl("sysWindowResizeEvent"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(QString::number(reported.width()));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    event.mArgumentList.append(QString::number(reported.height()));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    event.mArgumentList.append(qsl("main"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    raiseEvent(event);
+}
+
+std::pair<bool, QString> Host::resizeMainWindowWithNoView(const QSize& pixels)
+{
+    const QFontMetrics metrics(consoleFrontend()->displayFont());
+    const qint64 columns = pixels.width() / std::max(1, metrics.averageCharWidth());
+    const qint64 rows = pixels.height() / std::max(1, metrics.height());
+    if (columns < 1 || columns > 65535 || rows < 1 || rows > 65535) {
+        return {false,
+                qsl("a main window of %1 by %2 pixels holds %3 columns by %4 rows of the main console's font, and each must be from 1 to 65535")
+                        .arg(pixels.width())
+                        .arg(pixels.height())
+                        .arg(columns)
+                        .arg(rows)};
+    }
+    if (mAnsweredMainWindowRequest == pixels) {
+        return {true, QString()};
+    }
+    // An answer to what was asked before must not stand for this
+    mAnsweredMainWindowRequest.reset();
+    mUnansweredMainWindowRequest = pixels;
+    emit signal_mainWindowResizeRequested(pixels, ++mMainWindowRequests);
+    // As a resize of the GUI's main window, which tells nothing for the size the window has
+    if (mMainAreaPixels == pixels) {
+        return {true, QString()};
+    }
+    mMainAreaPixels = pixels;
+    layOutMainAreaWithNoView(MainAreaChange::area);
+    return {true, QString()};
+}
+
+bool Host::noteMainAreaGiven(const std::optional<std::pair<QSize, quint64>>& answering)
+{
+    if (!answering) {
+        mAnsweredMainWindowRequest = std::exchange(mUnansweredMainWindowRequest, std::nullopt);
+        return true;
+    }
+    if (answering->second != mMainWindowRequests) {
+        return false;
+    }
+    mAnsweredMainWindowRequest = answering->first;
+    mUnansweredMainWindowRequest.reset();
+    return true;
+}
+
+void Host::noteMainWindowRequestUnheard(const quint64 request)
+{
+    if (request == mMainWindowRequests) {
+        mUnansweredMainWindowRequest.reset();
+    }
 }
 
 void Host::setCommandLineHistorySaveSize(const int lines)

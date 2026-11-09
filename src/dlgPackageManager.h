@@ -77,6 +77,8 @@ private:
     void elidePackageName();
     bool eventFilter(QObject* pWatched, QEvent* pEvent) override;
     void fillPackageDetails(const QString& name, const QString& title, const QString& author, const QString& version);
+    QListWidgetItem* installedPackageItem(const QString& packageName) const;
+    bool installedPackageMatches(const QString& packageName, const QString& searchText) const;
     bool hasNewerVersion(const QString& installed, const QString& repo) const;
     bool matchesRepositoryPackage(const QString& packageName) const;
     QString packageHelpUrl(const QString& packageName) const;

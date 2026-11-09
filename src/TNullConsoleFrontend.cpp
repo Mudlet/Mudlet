@@ -554,6 +554,8 @@ void TConsoleModelSink::printFormatted(const QString& text, const std::vector<TC
 void TConsoleModelSink::discardAll()
 {
     mModel.clear();
+    // As TConsole::discardAll() clears through bufferCleared(), which closes its split
+    emit mModel.mNotifier.bufferCleared();
 }
 
 void TConsoleModelSink::discardLastLine()
@@ -802,6 +804,9 @@ QDataStream& operator>>(QDataStream& in, TNullConsoleFrontend::Placement& placem
 TNullConsoleFrontend::TNullConsoleFrontend(Host* pHost)
 : mpHost(pHost)
 {
+    // Not TCommandLine's first state, in which Tab on an empty line puts a word of the buffer there, but the one it
+    // is in after any send, in which that does nothing
+    endMainCommandLineCompletion();
 }
 
 TNullConsoleFrontend::~TNullConsoleFrontend() = default;
@@ -816,8 +821,13 @@ void TNullConsoleFrontend::dropWindows()
     mpMainHolder = std::make_unique<QObject>();
     mFrameHolders.clear();
     mMxpFrames.clear();
-    // The view's TCommandLine has its own menu items, which go with it
+    // The view's TCommandLine has its own menu items and words for Tab, which go with it
     mMainCommandLine.menuItems.clear();
+    mMainCommandLine.suggestions.clear();
+    mMainCommandLine.blacklist.clear();
+    mMainCommandLineCompletion = TCommandLineCompletion();
+    endMainCommandLineCompletion();
+    mMainCommandLineWhollySelected = false;
     // The view has its own map widget, if any. An embedded mapper went with the main window's stand-in.
     mMapWidget.reset();
     mpEmbeddedMapperBox.reset();
@@ -1157,6 +1167,14 @@ TConsoleModel& TNullConsoleFrontend::addSubConsole(const QString& name, const TW
             // A hidden pane keeps the size it had until the resize it is owed reaches it
             if (const auto it = mSubConsoles.find(name); it != mSubConsoles.end() && (!it->second.paneResizePending || paneShown(it->second))) {
                 reportConsoleSize(name);
+            }
+        });
+        // As TConsole::bufferCleared() closes the split, which TConsoleModel::clear() has already forgotten
+        QObject::connect(&model.mNotifier, &TConsoleModelNotifier::bufferCleared, &model.mNotifier, [this, name, &model]() {
+            const QSize before = model.mGridSize;
+            reportGridSize(name);
+            if (model.mGridSize != before) {
+                resizePane(name);
             }
         });
     }
@@ -1528,6 +1546,11 @@ std::pair<bool, QString> TNullConsoleFrontend::createMapper(const QString& windo
     if (mMapWidget) {
         // As TMainConsole::createMapper() deleting the hidden map dock leaves QMainWindow its placeholder
         TAppFrontend::instance()->mapWidgetRemoved(mpHost);
+        // Deferred, as the GUI's dock is: a map info contributor or a mouse press handler drawing this view may be
+        // the caller
+        TNullMapView* pOldView = mMapWidget->pView.release();
+        pOldView->setParent(mpMainHolder.get());
+        pOldView->deleteLater();
         mMapWidget.reset();
     }
     if (!mpEmbeddedMapper) {
@@ -2283,6 +2306,8 @@ bool TNullConsoleFrontend::replaceCommandLineText(const QString& name, const QSt
         mMainCommandLineTyped = false;
         mMainCommandLineAllSelected = false;
         mMainCommandLineRewritten = true;
+        mMainCommandLineWhollySelected = false;
+        endMainCommandLineCompletion();
         const QString plain = plainText(text);
         mpHost->windowRegistry().setMainCommandLineText(plain);
         emit mpHost->signal_commandLineTextRequested(plain);
@@ -2299,6 +2324,8 @@ bool TNullConsoleFrontend::holdMainCommandLineForSend(const QString& line)
     }
     mMainCommandLineTyped = false;
     mMainCommandLineAllSelected = false;
+    mMainCommandLineWhollySelected = false;
+    endMainCommandLineCompletion();
     mpHost->windowRegistry().setMainCommandLineText(plainText(line));
     return true;
 }
@@ -2308,6 +2335,7 @@ void TNullConsoleFrontend::mainCommandLineSent()
     // TCommandLine::enterCommand() selects a line it keeps
     if (!mpHost->mAutoClearCommandLineAfterSend) {
         mMainCommandLineAllSelected = true;
+        mMainCommandLineWhollySelected = true;
         return;
     }
     if (mpHost->passwordEntryWanted()) {
@@ -2329,6 +2357,7 @@ void TNullConsoleFrontend::setCommandLineText(const QString& text)
     // As TMainConsole::setCommandLineText()
     if (!mpHost->passwordEntryWanted()) {
         mMainCommandLineAllSelected = true;
+        mMainCommandLineWhollySelected = true;
     }
 }
 
@@ -2339,14 +2368,27 @@ bool TNullConsoleFrontend::selectCommandLineText(const QString& name)
     }
     if (mainCommandLine(name) && !mpHost->passwordEntryWanted()) {
         mMainCommandLineAllSelected = true;
+        mMainCommandLineWhollySelected = true;
     }
     return true;
 }
 
 void TNullConsoleFrontend::typeMainCommandLine(const QString& text, const bool playerTyped)
 {
-    TWindowRegistry& registry = mpHost->windowRegistry();
     const QString plain = plainText(text);
+    // Mudlet sees each new line, never the key that made it, so any change ends Tab's cycle and the history walk, as
+    // Backspace does on the GUI's line; the line a completion left, handed back, is no change
+    if (plain != mpHost->windowRegistry().commandLineText(QString()).value_or(QString()) && plain != mMainCommandLineCompleted) {
+        endMainCommandLineCompletion();
+        // The GUI's line shows a recall all selected
+        mMainCommandLineWhollySelected = !playerTyped;
+    }
+    writeMainCommandLine(plain, playerTyped);
+}
+
+void TNullConsoleFrontend::writeMainCommandLine(const QString& plain, const bool playerTyped)
+{
+    TWindowRegistry& registry = mpHost->windowRegistry();
     const QString current = registry.commandLineText(QString()).value_or(QString());
     // As TCommandLine::slot_contentsChange(): typing on into a line a script set leaves it the script's, but typing
     // over it replaces it with a line of the player's. Mudlet does not see the app's caret or selection, so any
@@ -2365,6 +2407,54 @@ void TNullConsoleFrontend::typeMainCommandLine(const QString& text, const bool p
     }
     mMainCommandLineRewritten = true;
     registry.setMainCommandLineText(plain);
+}
+
+void TNullConsoleFrontend::endMainCommandLineCompletion()
+{
+    mMainCommandLineCompletion.reset();
+    mMainCommandLineCompletion.resetHistoryWalk();
+    mMainCommandLineCompleted.reset();
+}
+
+std::optional<QString> TNullConsoleFrontend::tabCompleteMainCommandLine(const bool forward)
+{
+    TWindowRegistry& registry = mpHost->windowRegistry();
+    const auto completion = mMainCommandLineCompletion.tabComplete(
+            registry.commandLineText(QString()).value_or(QString()), forward, mpHost->mainConsoleModel().buffer, mMainCommandLine.suggestions, mMainCommandLine.blacklist);
+    if (!completion) {
+        return std::nullopt;
+    }
+    writeMainCommandLine(plainText(completion->line), false);
+    mMainCommandLineWhollySelected = false;
+    const QString shown = registry.commandLineText(QString()).value_or(QString());
+    mMainCommandLineCompletion.setShownLine(shown);
+    mMainCommandLineCompleted = shown;
+    return shown;
+}
+
+std::optional<QString> TNullConsoleFrontend::historyCompleteMainCommandLine()
+{
+    TWindowRegistry& registry = mpHost->windowRegistry();
+    const QStringList history = mainCommandLineHistory();
+    const QString line = registry.commandLineText(QString()).value_or(QString());
+    // TCommandLine::historyMove() recalls a whole line instead for an empty line or none in the history
+    if (line.isEmpty() || history.isEmpty()) {
+        return std::nullopt;
+    }
+    const auto completion = mMainCommandLineCompletion.historyComplete(line, true, history, true);
+    if (!completion.line && !completion.tailCut) {
+        return std::nullopt;
+    }
+    // Only Tab's cycle: the walk goes on from here
+    mMainCommandLineCompletion.reset();
+    writeMainCommandLine(plainText(completion.line.value_or(completion.typed)), false);
+    mMainCommandLineWhollySelected = false;
+    const QString shown = registry.commandLineText(QString()).value_or(QString());
+    if (completion.line) {
+        mMainCommandLineCompletion.setHistoryCompletion(shown);
+    }
+    mMainCommandLineCompleted = shown;
+    return shown;
 }
 
 bool TNullConsoleFrontend::hiddenInputOpened()
@@ -2424,6 +2514,66 @@ std::optional<bool> TNullConsoleFrontend::removeCommandLineMenuItem(const QStrin
         return std::nullopt;
     }
     return pCommandLine->menuItems.erase(label) != 0;
+}
+
+bool TNullConsoleFrontend::addCommandLineSuggestion(const QString& name, const QString& word)
+{
+    PlainWindow* pCommandLine = commandLineNamed(name);
+    if (!pCommandLine) {
+        return false;
+    }
+    pCommandLine->suggestions.insert(word);
+    return true;
+}
+
+bool TNullConsoleFrontend::removeCommandLineSuggestion(const QString& name, const QString& word)
+{
+    PlainWindow* pCommandLine = commandLineNamed(name);
+    if (!pCommandLine) {
+        return false;
+    }
+    pCommandLine->suggestions.remove(word);
+    return true;
+}
+
+bool TNullConsoleFrontend::clearCommandLineSuggestions(const QString& name)
+{
+    PlainWindow* pCommandLine = commandLineNamed(name);
+    if (!pCommandLine) {
+        return false;
+    }
+    pCommandLine->suggestions.clear();
+    return true;
+}
+
+bool TNullConsoleFrontend::addCommandLineBlacklistWord(const QString& name, const QString& word)
+{
+    PlainWindow* pCommandLine = commandLineNamed(name);
+    if (!pCommandLine) {
+        return false;
+    }
+    pCommandLine->blacklist.insert(word);
+    return true;
+}
+
+bool TNullConsoleFrontend::removeCommandLineBlacklistWord(const QString& name, const QString& word)
+{
+    PlainWindow* pCommandLine = commandLineNamed(name);
+    if (!pCommandLine) {
+        return false;
+    }
+    pCommandLine->blacklist.remove(word);
+    return true;
+}
+
+bool TNullConsoleFrontend::clearCommandLineBlacklist(const QString& name)
+{
+    PlainWindow* pCommandLine = commandLineNamed(name);
+    if (!pCommandLine) {
+        return false;
+    }
+    pCommandLine->blacklist.clear();
+    return true;
 }
 
 bool TNullConsoleFrontend::setCommandLineSavesHistory(const QString& name, const bool savesHistory)
@@ -3254,6 +3404,11 @@ void TNullConsoleFrontend::setBorderColor(const QColor& color)
     mpHost->mainConsoleModel().mBorderColor = color;
 }
 
+void TNullConsoleFrontend::applyBorders()
+{
+    mpHost->layOutMainAreaWithNoView(Host::MainAreaChange::borders);
+}
+
 // As TConsole::setConsoleBgColor() leaves a sub-console's model
 bool TNullConsoleFrontend::setSubConsoleBackgroundColor(const QString& name, const QColor& color)
 {
@@ -3312,8 +3467,10 @@ bool TNullConsoleFrontend::setWindowScrolling(const QString& name, const bool en
     const auto kind = mpHost->windowRegistry().subConsoleKind(name);
     if (kind == TWindowRegistry::SubConsoleKind::MiniConsole || kind == TWindowRegistry::SubConsoleKind::UserWindow) {
         pModel->mScrollingEnabled = enabled;
-        if (!enabled) {
+        if (!enabled && pModel->mScrolledBackTo) {
             pModel->mScrolledBackTo.reset();
+            reportGridSize(name);
+            resizePane(name);
         }
     }
     return true;
@@ -3325,16 +3482,19 @@ bool TNullConsoleFrontend::scrollWindowTo(const QString& name, const int line, c
     if (!pModel) {
         return false;
     }
+    const bool wasSplit = pModel->mScrolledBackTo.has_value();
     const int lastLine = pModel->buffer.getLastLineNumber();
+    // A buffer is never painted, so a real one never shows itself scrolled back
     if (toEnd || line >= lastLine) {
         pModel->mScrolledBackTo.reset();
-        return true;
+    } else if (pModel->mScrollingEnabled && mpHost->windowRegistry().subConsoleKind(name) != TWindowRegistry::SubConsoleKind::Buffer) {
+        pModel->mScrolledBackTo = line < 0 ? std::max(lastLine + line, 0) : line;
     }
-    // A buffer is never painted, so a real one never shows itself scrolled back
-    if (!pModel->mScrollingEnabled || mpHost->windowRegistry().subConsoleKind(name) == TWindowRegistry::SubConsoleKind::Buffer) {
-        return true;
+    // As TConsole's lower pane showing or hiding resizes the upper one
+    if (pModel->mScrolledBackTo.has_value() != wasSplit) {
+        reportGridSize(name);
+        resizePane(name);
     }
-    pModel->mScrolledBackTo = line < 0 ? std::max(lastLine + line, 0) : line;
     return true;
 }
 
@@ -3357,6 +3517,13 @@ void TNullConsoleFrontend::reportGridSize(const QString& name)
     const auto commandLine = mCommandLines.find(name);
     if (console != mSubConsoles.end() && commandLine != mCommandLines.end() && ownsLine(console->second, commandLine->second) && commandLine->second.shown) {
         size.setHeight(std::max(0, size.height() - 31));
+    }
+    // TConsole's splitter gives a scrolled-back console's upper pane 6 of every 8 pixels its 3px handle leaves,
+    // rounded half up: measured in the GUI, as its constructor's 6:1 stretch factors suggest otherwise. A change to
+    // that split must change this too
+    const auto kind = mpHost->windowRegistry().subConsoleKind(name);
+    if (pModel->mScrolledBackTo && (kind == TWindowRegistry::SubConsoleKind::MiniConsole || kind == TWindowRegistry::SubConsoleKind::UserWindow)) {
+        size.setHeight((std::max(0, size.height() - 3) * 6 + 4) / 8);
     }
     const QFontMetricsF metrics(pModel->mUpperPaneFont);
     pModel->mGridSize = QSize(qRound(size.width() / metrics.averageCharWidth()), qRound(size.height() / metrics.lineSpacing()));
@@ -3485,11 +3652,17 @@ bool TNullConsoleFrontend::setWindowFontSize(const QString& name, const int size
     return true;
 }
 
-// No window to alert, but timed as TMainConsole times a pass for its latency box
+// Timed as TMainConsole times a pass for its latency box. With no window to be minimized, whether the app's is is the
+// session's to say
 bool TNullConsoleFrontend::startIncomingText()
 {
     mIncomingTextTimer.restart();
-    return false;
+    return mpHost->mAlertOnNewData;
+}
+
+void TNullConsoleFrontend::alertNewData()
+{
+    emit mpHost->mainConsoleModel().mNotifier.newDataAlerted();
 }
 
 void TNullConsoleFrontend::finishIncomingText(bool)

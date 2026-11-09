@@ -20,6 +20,7 @@
 // mudlet-headless: one profile with no window, its main console on standard output. It links mudlet_core
 // alone, so it is also the check that the core runs without Qt Widgets.
 
+#include "HardwareDeviceTypes.h"
 #include "Host.h"
 #include "MudletApp.h"
 #include "SecureStringUtils.h"
@@ -850,6 +851,8 @@ int main(int argc, char* argv[])
     if (platformChosenHere) {
         qputenv("QT_QPA_PLATFORM", "offscreen");
     }
+    // Setting the environment is a data race once the application's threads are reading it
+    nameHardwareDeviceTypes();
     // Deleted before main() returns, as the GUI's src/main.cpp does its own, so Qt's cleanup runs ahead of static
     // destruction
     auto* app = new QGuiApplication(argc, argv);
@@ -1136,6 +1139,9 @@ int main(int argc, char* argv[])
                     followTerminal();
                 });
             }
+            // A script's setMainWindowSize() cannot resize the terminal, so the game is told the terminal's size again;
+            // given from the handler, so the session takes it as its answer and a script asking again settles
+            QObject::connect(session.get(), &THeadlessSession::mainWindowResizeRequested, app, followTerminal);
             followTerminal();
         }
 #endif

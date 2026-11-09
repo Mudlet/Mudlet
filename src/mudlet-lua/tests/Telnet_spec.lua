@@ -1810,6 +1810,19 @@ describe("Tests telnet option negotiation", function()
     assert.equals("arrived", mssp.TELNETMSSPAFTERBAD)
   end)
 
+  -- MSSP lets one variable carry several values, such as a game's ports, and
+  -- sends its default value last
+  it("keeps the last of several values an MSSP variable arrives with", function()
+    finally(function()
+      mssp.TELNETMSSPMANY = nil
+      mssp.TELNETMSSPAFTERMANY = nil
+    end)
+
+    feed("<T_IAC><T_SB><O_MSSP><01>TELNETMSSPMANY<02>80<02>23<02>3000<01>TELNETMSSPAFTERMANY<02>arrived<T_IAC><T_SE>")
+    assert.equals("3000", mssp.TELNETMSSPMANY)
+    assert.equals("arrived", mssp.TELNETMSSPAFTERMANY)
+  end)
+
   it("displays nothing for the commands it answers on the wire", function()
     -- AYT and NOP produce no text of their own; a parser that lost track of
     -- them would leak 0xff and the command byte into the line instead
@@ -2213,6 +2226,17 @@ describe("Tests CHARSET negotiation", function()
     -- neither may leave the parser unable to act on the request that follows
     request("UTF-8")
     assert.equals("UTF-8", getServerEncoding())
+  end)
+
+  -- RFC 2066 has the version after "[TTABLE]" as a binary octet, not a digit
+  it("reads the character sets after a translate table version", function()
+    setServerEncoding("CP437")
+    feed("<T_IAC><T_SB><O_CHARS><01>[TTABLE]<01>;UTF-8<T_IAC><T_SE>")
+    assert.equals("UTF-8", getServerEncoding())
+
+    -- a version above 1 is the highest one the server has, so it is skipped the same way
+    feed("<T_IAC><T_SB><O_CHARS><01>[TTABLE]<02>;CP437<T_IAC><T_SE>")
+    assert.equals("CP437", getServerEncoding())
   end)
 
   it("ignores a translate table it cannot use", function()

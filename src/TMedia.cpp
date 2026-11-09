@@ -1488,9 +1488,11 @@ void TMedia::slot_writeFile(QNetworkReply* reply)
             return;
         }
 
-        qint64 const bytesWritten = localFile.write(reply->readAll());
+        const QByteArray downloaded = reply->readAll();
+        qint64 const bytesWritten = localFile.write(downloaded);
 
-        if (bytesWritten == -1) {
+        // A full disk can cut the write short with no error on the file, and commit() would put the part that landed in place
+        if (bytesWritten != downloaded.size()) {
             event.mArgumentList << QLatin1String("sysDownloadError");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << QLatin1String("Couldn't save to the destination file");

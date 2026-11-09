@@ -57,6 +57,7 @@
 #include "widgetutils.h"
 #include "utils.h"
 #include "edbee/models/textdocumentscopes.h"
+#include "edbee/util/regexp.h"
 
 #include <QApplication>
 #include <QCheckBox>
@@ -87,8 +88,10 @@
 #include <QToolButton>
 #include <QToolBar>
 #include <QTreeWidgetItemIterator>
+#include <array>
 #include <chrono>
 #include <sstream>
+#include <utility>
 #include <pugixml.hpp>
 #include <QVBoxLayout>
 
@@ -116,7 +119,7 @@ static const QString cMultiItemPasteSeparator = qsl("\n<!--MUDLET_MULTI_ITEM_SEP
 // Track whether the shared auto-complete provider has been initialized
 bool dlgTriggerEditor::smAutoCompleteInitialized = false;
 
-dlgTriggerEditor::dlgTriggerEditor(Host* pH)
+dlgTriggerEditor::dlgTriggerEditor(Host* pH, std::unique_ptr<TConsoleModel> errorConsoleModel)
 : mpHost(pH)
 , mSearchOptions(pH->mSearchOptions)
 {
@@ -533,207 +536,16 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     connect(mpUndoStack, &EditorUndoStack::itemsChanged, this, &dlgTriggerEditor::slot_itemsChanged);
 
-    if (!smAutoCompleteInitialized) {
-        auto* provider = new edbee::StringTextAutoCompleteProvider();
-
-        // Add lua functions and reserved lua terms to an AutoComplete provider
-        for (const QString& key : mudlet::smLuaFunctionNames.keys()) {
-            provider->add(key, 3, mudlet::smLuaFunctionNames.value(key).toString());
-        }
-
-        // Lua reserved keywords (highest priority for basic syntax)
-        provider->add(qsl("and"), 14);
-        provider->add(qsl("break"), 14);
-        provider->add(qsl("else"), 14);
-        provider->add(qsl("elseif"), 14);
-        provider->add(qsl("end"), 14);
-        provider->add(qsl("false"), 14);
-        provider->add(qsl("for"), 14);
-        provider->add(qsl("function"), 14);
-        provider->add(qsl("goto"), 14);
-        provider->add(qsl("local"), 14);
-        provider->add(qsl("nil"), 14);
-        provider->add(qsl("not"), 14);
-        provider->add(qsl("repeat"), 14);
-        provider->add(qsl("return"), 14);
-        provider->add(qsl("then"), 14);
-        provider->add(qsl("true"), 14);
-        provider->add(qsl("until"), 14);
-        provider->add(qsl("while"), 14);
-
-        // Standard Lua library functions (priority 4 - between Mudlet functions and keywords)
-        // String library
-        provider->add(qsl("string.byte"), 4, qsl("string.byte(s [, i [, j]])"));
-        provider->add(qsl("string.char"), 4, qsl("string.char(...)"));
-        provider->add(qsl("string.dump"), 4, qsl("string.dump(function)"));
-        provider->add(qsl("string.find"), 4, qsl("string.find(s, pattern [, init [, plain]])"));
-        provider->add(qsl("string.format"), 4, qsl("string.format(formatstring, ...)"));
-        provider->add(qsl("string.gmatch"), 4, qsl("string.gmatch(s, pattern)"));
-        provider->add(qsl("string.gsub"), 4, qsl("string.gsub(s, pattern, repl [, n])"));
-        provider->add(qsl("string.len"), 4, qsl("string.len(s)"));
-        provider->add(qsl("string.lower"), 4, qsl("string.lower(s)"));
-        provider->add(qsl("string.match"), 4, qsl("string.match(s, pattern [, init])"));
-        provider->add(qsl("string.rep"), 4, qsl("string.rep(s, n)"));
-        provider->add(qsl("string.reverse"), 4, qsl("string.reverse(s)"));
-        provider->add(qsl("string.sub"), 4, qsl("string.sub(s, i [, j])"));
-        provider->add(qsl("string.upper"), 4, qsl("string.upper(s)"));
-
-        // Table library
-        provider->add(qsl("table.concat"), 4, qsl("table.concat(list [, sep [, i [, j]]])"));
-        provider->add(qsl("table.insert"), 4, qsl("table.insert(list, [pos,] value)"));
-        provider->add(qsl("table.pack"), 4, qsl("table.pack(...)"));
-        provider->add(qsl("table.remove"), 4, qsl("table.remove(list [, pos])"));
-        provider->add(qsl("table.sort"), 4, qsl("table.sort(list [, comp])"));
-        provider->add(qsl("table.unpack"), 4, qsl("table.unpack(list [, i [, j]])"));
-
-        // Math library
-        provider->add(qsl("math.abs"), 4, qsl("math.abs(x)"));
-        provider->add(qsl("math.acos"), 4, qsl("math.acos(x)"));
-        provider->add(qsl("math.asin"), 4, qsl("math.asin(x)"));
-        provider->add(qsl("math.atan"), 4, qsl("math.atan(x)"));
-        provider->add(qsl("math.atan2"), 4, qsl("math.atan2(y, x)"));
-        provider->add(qsl("math.ceil"), 4, qsl("math.ceil(x)"));
-        provider->add(qsl("math.cos"), 4, qsl("math.cos(x)"));
-        provider->add(qsl("math.cosh"), 4, qsl("math.cosh(x)"));
-        provider->add(qsl("math.deg"), 4, qsl("math.deg(x)"));
-        provider->add(qsl("math.exp"), 4, qsl("math.exp(x)"));
-        provider->add(qsl("math.floor"), 4, qsl("math.floor(x)"));
-        provider->add(qsl("math.fmod"), 4, qsl("math.fmod(x, y)"));
-        provider->add(qsl("math.frexp"), 4, qsl("math.frexp(x)"));
-        provider->add(qsl("math.huge"), 4, qsl("math.huge"));
-        provider->add(qsl("math.ldexp"), 4, qsl("math.ldexp(m, e)"));
-        provider->add(qsl("math.log"), 4, qsl("math.log(x [, base])"));
-        provider->add(qsl("math.log10"), 4, qsl("math.log10(x)"));
-        provider->add(qsl("math.max"), 4, qsl("math.max(x, ...)"));
-        provider->add(qsl("math.min"), 4, qsl("math.min(x, ...)"));
-        provider->add(qsl("math.modf"), 4, qsl("math.modf(x)"));
-        provider->add(qsl("math.pi"), 4, qsl("math.pi"));
-        provider->add(qsl("math.pow"), 4, qsl("math.pow(x, y)"));
-        provider->add(qsl("math.rad"), 4, qsl("math.rad(x)"));
-        provider->add(qsl("math.random"), 4, qsl("math.random([m [, n]])"));
-        provider->add(qsl("math.randomseed"), 4, qsl("math.randomseed(x)"));
-        provider->add(qsl("math.sin"), 4, qsl("math.sin(x)"));
-        provider->add(qsl("math.sinh"), 4, qsl("math.sinh(x)"));
-        provider->add(qsl("math.sqrt"), 4, qsl("math.sqrt(x)"));
-        provider->add(qsl("math.tan"), 4, qsl("math.tan(x)"));
-        provider->add(qsl("math.tanh"), 4, qsl("math.tanh(x)"));
-
-        // IO library
-        provider->add(qsl("io.close"), 4, qsl("io.close([file])"));
-        provider->add(qsl("io.flush"), 4, qsl("io.flush()"));
-        provider->add(qsl("io.input"), 4, qsl("io.input([file])"));
-        provider->add(qsl("io.lines"), 4, qsl("io.lines([filename, ...])"));
-        provider->add(qsl("io.open"), 4, qsl("io.open(filename [, mode])"));
-        provider->add(qsl("io.output"), 4, qsl("io.output([file])"));
-        provider->add(qsl("io.popen"), 4, qsl("io.popen(prog [, mode])"));
-        provider->add(qsl("io.read"), 4, qsl("io.read(...)"));
-        provider->add(qsl("io.tmpfile"), 4, qsl("io.tmpfile()"));
-        provider->add(qsl("io.type"), 4, qsl("io.type(obj)"));
-        provider->add(qsl("io.write"), 4, qsl("io.write(...)"));
-
-        // OS library
-        provider->add(qsl("os.clock"), 4, qsl("os.clock()"));
-        provider->add(qsl("os.date"), 4, qsl("os.date([format [, time]])"));
-        provider->add(qsl("os.difftime"), 4, qsl("os.difftime(t2, t1)"));
-        provider->add(qsl("os.execute"), 4, qsl("os.execute([command])"));
-        provider->add(qsl("os.exit"), 4, qsl("os.exit([code [, close]])"));
-        provider->add(qsl("os.getenv"), 4, qsl("os.getenv(varname)"));
-        provider->add(qsl("os.remove"), 4, qsl("os.remove(filename)"));
-        provider->add(qsl("os.rename"), 4, qsl("os.rename(oldname, newname)"));
-        provider->add(qsl("os.setlocale"), 4, qsl("os.setlocale(locale [, category])"));
-        provider->add(qsl("os.time"), 4, qsl("os.time([table])"));
-        provider->add(qsl("os.tmpname"), 4, qsl("os.tmpname()"));
-
-        // Coroutine library
-        provider->add(qsl("coroutine.create"), 4, qsl("coroutine.create(f)"));
-        provider->add(qsl("coroutine.resume"), 4, qsl("coroutine.resume(co [, val1, ...])"));
-        provider->add(qsl("coroutine.running"), 4, qsl("coroutine.running()"));
-        provider->add(qsl("coroutine.status"), 4, qsl("coroutine.status(co)"));
-        provider->add(qsl("coroutine.wrap"), 4, qsl("coroutine.wrap(f)"));
-        provider->add(qsl("coroutine.yield"), 4, qsl("coroutine.yield(...)"));
-
-        // Debug library
-        provider->add(qsl("debug.debug"), 4, qsl("debug.debug()"));
-        provider->add(qsl("debug.gethook"), 4, qsl("debug.gethook([thread])"));
-        provider->add(qsl("debug.getinfo"), 4, qsl("debug.getinfo([thread,] f [, what])"));
-        provider->add(qsl("debug.getlocal"), 4, qsl("debug.getlocal([thread,] f, local)"));
-        provider->add(qsl("debug.getmetatable"), 4, qsl("debug.getmetatable(value)"));
-        provider->add(qsl("debug.getregistry"), 4, qsl("debug.getregistry()"));
-        provider->add(qsl("debug.getupvalue"), 4, qsl("debug.getupvalue(f, up)"));
-        provider->add(qsl("debug.getuservalue"), 4, qsl("debug.getuservalue(u)"));
-        provider->add(qsl("debug.sethook"), 4, qsl("debug.sethook([thread,] hook, mask [, count])"));
-        provider->add(qsl("debug.setlocal"), 4, qsl("debug.setlocal([thread,] level, local, value)"));
-        provider->add(qsl("debug.setmetatable"), 4, qsl("debug.setmetatable(value, table)"));
-        provider->add(qsl("debug.setupvalue"), 4, qsl("debug.setupvalue(f, up, value)"));
-        provider->add(qsl("debug.setuservalue"), 4, qsl("debug.setuservalue(udata, value)"));
-        provider->add(qsl("debug.traceback"), 4, qsl("debug.traceback([thread,] [message [, level]])"));
-        provider->add(qsl("debug.upvalueid"), 4, qsl("debug.upvalueid(f, n)"));
-        provider->add(qsl("debug.upvaluejoin"), 4, qsl("debug.upvaluejoin(f1, n1, f2, n2)"));
-
-        // Package library
-        provider->add(qsl("package.config"), 4, qsl("package.config"));
-        provider->add(qsl("package.cpath"), 4, qsl("package.cpath"));
-        provider->add(qsl("package.loaded"), 4, qsl("package.loaded"));
-        provider->add(qsl("package.loadlib"), 4, qsl("package.loadlib(libname, funcname)"));
-        provider->add(qsl("package.path"), 4, qsl("package.path"));
-        provider->add(qsl("package.preload"), 4, qsl("package.preload"));
-        provider->add(qsl("package.searchers"), 4, qsl("package.searchers"));
-        provider->add(qsl("package.searchpath"), 4, qsl("package.searchpath(name, path [, sep [, rep]])"));
-
-        // Mudlet framework namespaced functions (priority 4 - same as Lua stdlib)
-        // Geyser UI Framework
-        provider->add(qsl("Geyser.Container:new"), 4, qsl("Geyser.Container:new(cons, container)"));
-        provider->add(qsl("Geyser.Window:new"), 4, qsl("Geyser.Window:new(cons, container)"));
-        provider->add(qsl("Geyser.Label:new"), 4, qsl("Geyser.Label:new(cons, container)"));
-        provider->add(qsl("Geyser.MiniConsole:new"), 4, qsl("Geyser.MiniConsole:new(cons, container)"));
-        provider->add(qsl("Geyser.Button:new"), 4, qsl("Geyser.Button:new(cons, container)"));
-        provider->add(qsl("Geyser.Gauge:new"), 4, qsl("Geyser.Gauge:new(cons, container)"));
-        provider->add(qsl("Geyser.Mapper:new"), 4, qsl("Geyser.Mapper:new(cons, container)"));
-        provider->add(qsl("Geyser.UserWindow:new"), 4, qsl("Geyser.UserWindow:new(cons)"));
-        provider->add(qsl("Geyser.CommandLine:new"), 4, qsl("Geyser.CommandLine:new(cons, container)"));
-        provider->add(qsl("Geyser.HBox:new"), 4, qsl("Geyser.HBox:new(cons, container)"));
-        provider->add(qsl("Geyser.VBox:new"), 4, qsl("Geyser.VBox:new(cons, container)"));
-        provider->add(qsl("Geyser.ScrollBox:new"), 4, qsl("Geyser.ScrollBox:new(cons, container)"));
-        provider->add(qsl("Geyser.ScrollBox:new2"), 4, qsl("Geyser.ScrollBox:new2()"));
-        provider->add(qsl("Geyser.StyleSheet:new"), 4, qsl("Geyser.StyleSheet:new(stylesheet, parent, target)"));
-
-        // Geyser namespace functions
-        provider->add(qsl("Geyser.Color.parse"), 4, qsl("Geyser.Color.parse(color)"));
-        provider->add(qsl("Geyser.Color.hex"), 4, qsl("Geyser.Color.hex(color)"));
-        provider->add(qsl("Geyser.Color.hexa"), 4, qsl("Geyser.Color.hexa(color)"));
-        provider->add(qsl("Geyser.Color.hhex"), 4, qsl("Geyser.Color.hhex(color)"));
-        provider->add(qsl("Geyser.Color.hhexa"), 4, qsl("Geyser.Color.hhexa(color)"));
-        provider->add(qsl("Geyser.Color.hdec"), 4, qsl("Geyser.Color.hdec(color)"));
-        provider->add(qsl("Geyser.Color.hdeca"), 4, qsl("Geyser.Color.hdeca(color)"));
-
-        // Adjustable Container Framework
-        provider->add(qsl("Adjustable.Container:new"), 4, qsl("Adjustable.Container:new(cons, container)"));
-
-        // Database Framework
-        provider->add(qsl("db.create"), 4, qsl("db.create(db_name, schema)"));
-        provider->add(qsl("db.query"), 4, qsl("db.query(db_name, query, ...)"));
-        provider->add(qsl("db.insert"), 4, qsl("db.insert(db_name, sheet_name, values)"));
-        provider->add(qsl("db.update"), 4, qsl("db.update(db_name, sheet_name, values, query)"));
-        provider->add(qsl("db.delete"), 4, qsl("db.delete(db_name, sheet_name, query)"));
-        provider->add(qsl("db.fetch"), 4, qsl("db.fetch(db_name, query, ...)"));
-        provider->add(qsl("db.aggregate"), 4, qsl("db.aggregate(db_name, query, ...)"));
-
-        // DateTime utilities
-        provider->add(qsl("datetime.parse"), 4, qsl("datetime.parse(format, date_string)"));
-
-        // Transfer ownership to Edbee - deleted automatically at app shutdown
-        edbee::Edbee::instance()->autoCompleteProviderList()->giveProvider(provider);
-        smAutoCompleteInitialized = true;
-    }
+    ensureLuaAutoCompleteProvider();
 
     mpSourceEditorEdbee->textEditorComponent()->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(mpSourceEditorEdbee->textEditorComponent(), &QWidget::customContextMenuRequested, this, &dlgTriggerEditor::slot_editorContextMenu);
 
     // option areas
-    mpErrorConsole = new TConsole(mpHost, qsl("errors_%1").arg(hostName), TConsole::ErrorConsole, this);
-    mpErrorConsole->setWrapAt(100);
-    mpErrorConsole->slot_toggleTimeStamps(true);
-    mpErrorConsole->print(qsl("%1\n").arg(tr("*** starting new session ***")));
+    if (!errorConsoleModel) {
+        errorConsoleModel = newErrorConsoleModel(mpHost);
+    }
+    mpErrorConsole = new TConsole(mpHost, QString(), TConsole::ErrorConsole, this, std::move(errorConsoleModel));
     mpErrorConsole->setMinimumHeight(100);
     mpErrorConsole->setFont(mpHost->getEditorFont());
     mpErrorConsole->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Minimum);
@@ -763,6 +575,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_triggers->setRootIsDecorated(false);
     treeWidget_triggers->setHost(mpHost);
     treeWidget_triggers->header()->hide();
+    //: Accessible name of the editor's tree of triggers, which screen readers announce when it gets the focus
+    treeWidget_triggers->setAccessibleName(tr("Triggers"));
     treeWidget_triggers->setContextMenuPolicy(Qt::ActionsContextMenu);
 
     treeWidget_aliases->hide();
@@ -770,6 +584,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_aliases->setTreeType(TreeType::Alias);
     treeWidget_aliases->setColumnCount(1);
     treeWidget_aliases->header()->hide();
+    //: Accessible name of the editor's tree of aliases, which screen readers announce when it gets the focus
+    treeWidget_aliases->setAccessibleName(tr("Aliases"));
     treeWidget_aliases->setRootIsDecorated(false);
     treeWidget_aliases->setContextMenuPolicy(Qt::ActionsContextMenu);
 
@@ -778,6 +594,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_actions->setTreeType(TreeType::Action);
     treeWidget_actions->setColumnCount(1);
     treeWidget_actions->header()->hide();
+    //: Accessible name of the editor's tree of buttons, which screen readers announce when it gets the focus
+    treeWidget_actions->setAccessibleName(tr("Buttons"));
     treeWidget_actions->setRootIsDecorated(false);
     treeWidget_actions->setContextMenuPolicy(Qt::ActionsContextMenu);
 
@@ -786,6 +604,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_timers->setTreeType(TreeType::Timer);
     treeWidget_timers->setColumnCount(1);
     treeWidget_timers->header()->hide();
+    //: Accessible name of the editor's tree of timers, which screen readers announce when it gets the focus
+    treeWidget_timers->setAccessibleName(tr("Timers"));
     treeWidget_timers->setRootIsDecorated(false);
     treeWidget_timers->setContextMenuPolicy(Qt::ActionsContextMenu);
 
@@ -795,6 +615,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_variables->setColumnCount(2);
     treeWidget_variables->hideColumn(1);
     treeWidget_variables->header()->hide();
+    //: Accessible name of the editor's tree of variables, which screen readers announce when it gets the focus
+    treeWidget_variables->setAccessibleName(tr("Variables"));
     treeWidget_variables->setRootIsDecorated(false);
     treeWidget_variables->setContextMenuPolicy(Qt::ActionsContextMenu);
 
@@ -803,6 +625,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_keys->setTreeType(TreeType::Key);
     treeWidget_keys->setColumnCount(1);
     treeWidget_keys->header()->hide();
+    //: Accessible name of the editor's tree of keys, which screen readers announce when it gets the focus
+    treeWidget_keys->setAccessibleName(tr("Keys"));
     treeWidget_keys->setRootIsDecorated(false);
     treeWidget_keys->setContextMenuPolicy(Qt::ActionsContextMenu);
 
@@ -811,6 +635,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_scripts->setTreeType(TreeType::Script);
     treeWidget_scripts->setColumnCount(1);
     treeWidget_scripts->header()->hide();
+    //: Accessible name of the editor's tree of scripts, which screen readers announce when it gets the focus
+    treeWidget_scripts->setAccessibleName(tr("Scripts"));
     treeWidget_scripts->setRootIsDecorated(false);
     treeWidget_scripts->setContextMenuPolicy(Qt::ActionsContextMenu);
 
@@ -1445,6 +1271,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
               //: Heading for the fourth column of the search results
               << tr("What");
     treeWidget_searchResults->setHeaderLabels(labelList);
+    //: Accessible name of the editor's list of search results, which screen readers announce when it gets the focus
+    treeWidget_searchResults->setAccessibleName(tr("Search results"));
 
     comboBox_searchTerms->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
@@ -1549,20 +1377,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(mpHost, &Host::signal_itemsChangedByScript, this, [this]() {
         mNeedUpdateData = true;
     });
-    connect(mpHost, &Host::signal_keyBoundByScript, this, [this](const int id) {
-        const QString warning = takenKeyWarning(mpHost->getKeyUnit()->getKey(id));
-        if (warning.isEmpty()) {
-            return;
-        }
-        // Here rather than on the main screen, for the reason
-        // mudlet::warnProfilesLosingBindingTo() gives: a script that makes its
-        // bindings at profile load would repeat it at every startup, and a line
-        // the player learns to ignore is worse than no line. Read out only when
-        // it can also be seen: a closed editor replaces it when it opens, and a
-        // script making its bindings on connect would have it read out at every
-        // connect. Selecting the binding shows it again.
-        showWarning(warning, isVisible());
-    });
     connect(mpHost, &Host::signal_errorConsolePrint, this, [this](const QString& text, const QColor& fgColor, const QColor& bgColor) {
         mpErrorConsole->print(text, fgColor, bgColor);
     });
@@ -1582,6 +1396,217 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     if (mAutosaveInterval > 0) {
         startTimer(mAutosaveInterval * 1min);
     }
+    // Built after the profile load's reset, so it starts as that reset leaves an editor that was never shown
+    runScheduledCleanReset();
+}
+
+// Shared by every edbee widget, the preferences preview included
+void dlgTriggerEditor::ensureLuaAutoCompleteProvider()
+{
+    if (smAutoCompleteInitialized) {
+        return;
+    }
+    auto* provider = new edbee::StringTextAutoCompleteProvider();
+
+    // Add lua functions and reserved lua terms to an AutoComplete provider
+    for (const QString& key : mudlet::smLuaFunctionNames.keys()) {
+        provider->add(key, 3, mudlet::smLuaFunctionNames.value(key).toString());
+    }
+
+    // Lua reserved keywords (highest priority for basic syntax)
+    provider->add(qsl("and"), 14);
+    provider->add(qsl("break"), 14);
+    provider->add(qsl("else"), 14);
+    provider->add(qsl("elseif"), 14);
+    provider->add(qsl("end"), 14);
+    provider->add(qsl("false"), 14);
+    provider->add(qsl("for"), 14);
+    provider->add(qsl("function"), 14);
+    provider->add(qsl("goto"), 14);
+    provider->add(qsl("local"), 14);
+    provider->add(qsl("nil"), 14);
+    provider->add(qsl("not"), 14);
+    provider->add(qsl("repeat"), 14);
+    provider->add(qsl("return"), 14);
+    provider->add(qsl("then"), 14);
+    provider->add(qsl("true"), 14);
+    provider->add(qsl("until"), 14);
+    provider->add(qsl("while"), 14);
+
+    // Standard Lua library functions (priority 4 - between Mudlet functions and keywords)
+    // String library
+    provider->add(qsl("string.byte"), 4, qsl("string.byte(s [, i [, j]])"));
+    provider->add(qsl("string.char"), 4, qsl("string.char(...)"));
+    provider->add(qsl("string.dump"), 4, qsl("string.dump(function)"));
+    provider->add(qsl("string.find"), 4, qsl("string.find(s, pattern [, init [, plain]])"));
+    provider->add(qsl("string.format"), 4, qsl("string.format(formatstring, ...)"));
+    provider->add(qsl("string.gmatch"), 4, qsl("string.gmatch(s, pattern)"));
+    provider->add(qsl("string.gsub"), 4, qsl("string.gsub(s, pattern, repl [, n])"));
+    provider->add(qsl("string.len"), 4, qsl("string.len(s)"));
+    provider->add(qsl("string.lower"), 4, qsl("string.lower(s)"));
+    provider->add(qsl("string.match"), 4, qsl("string.match(s, pattern [, init])"));
+    provider->add(qsl("string.rep"), 4, qsl("string.rep(s, n)"));
+    provider->add(qsl("string.reverse"), 4, qsl("string.reverse(s)"));
+    provider->add(qsl("string.sub"), 4, qsl("string.sub(s, i [, j])"));
+    provider->add(qsl("string.upper"), 4, qsl("string.upper(s)"));
+
+    // Table library
+    provider->add(qsl("table.concat"), 4, qsl("table.concat(list [, sep [, i [, j]]])"));
+    provider->add(qsl("table.insert"), 4, qsl("table.insert(list, [pos,] value)"));
+    provider->add(qsl("table.pack"), 4, qsl("table.pack(...)"));
+    provider->add(qsl("table.remove"), 4, qsl("table.remove(list [, pos])"));
+    provider->add(qsl("table.sort"), 4, qsl("table.sort(list [, comp])"));
+    provider->add(qsl("table.unpack"), 4, qsl("table.unpack(list [, i [, j]])"));
+
+    // Math library
+    provider->add(qsl("math.abs"), 4, qsl("math.abs(x)"));
+    provider->add(qsl("math.acos"), 4, qsl("math.acos(x)"));
+    provider->add(qsl("math.asin"), 4, qsl("math.asin(x)"));
+    provider->add(qsl("math.atan"), 4, qsl("math.atan(x)"));
+    provider->add(qsl("math.atan2"), 4, qsl("math.atan2(y, x)"));
+    provider->add(qsl("math.ceil"), 4, qsl("math.ceil(x)"));
+    provider->add(qsl("math.cos"), 4, qsl("math.cos(x)"));
+    provider->add(qsl("math.cosh"), 4, qsl("math.cosh(x)"));
+    provider->add(qsl("math.deg"), 4, qsl("math.deg(x)"));
+    provider->add(qsl("math.exp"), 4, qsl("math.exp(x)"));
+    provider->add(qsl("math.floor"), 4, qsl("math.floor(x)"));
+    provider->add(qsl("math.fmod"), 4, qsl("math.fmod(x, y)"));
+    provider->add(qsl("math.frexp"), 4, qsl("math.frexp(x)"));
+    provider->add(qsl("math.huge"), 4, qsl("math.huge"));
+    provider->add(qsl("math.ldexp"), 4, qsl("math.ldexp(m, e)"));
+    provider->add(qsl("math.log"), 4, qsl("math.log(x [, base])"));
+    provider->add(qsl("math.log10"), 4, qsl("math.log10(x)"));
+    provider->add(qsl("math.max"), 4, qsl("math.max(x, ...)"));
+    provider->add(qsl("math.min"), 4, qsl("math.min(x, ...)"));
+    provider->add(qsl("math.modf"), 4, qsl("math.modf(x)"));
+    provider->add(qsl("math.pi"), 4, qsl("math.pi"));
+    provider->add(qsl("math.pow"), 4, qsl("math.pow(x, y)"));
+    provider->add(qsl("math.rad"), 4, qsl("math.rad(x)"));
+    provider->add(qsl("math.random"), 4, qsl("math.random([m [, n]])"));
+    provider->add(qsl("math.randomseed"), 4, qsl("math.randomseed(x)"));
+    provider->add(qsl("math.sin"), 4, qsl("math.sin(x)"));
+    provider->add(qsl("math.sinh"), 4, qsl("math.sinh(x)"));
+    provider->add(qsl("math.sqrt"), 4, qsl("math.sqrt(x)"));
+    provider->add(qsl("math.tan"), 4, qsl("math.tan(x)"));
+    provider->add(qsl("math.tanh"), 4, qsl("math.tanh(x)"));
+
+    // IO library
+    provider->add(qsl("io.close"), 4, qsl("io.close([file])"));
+    provider->add(qsl("io.flush"), 4, qsl("io.flush()"));
+    provider->add(qsl("io.input"), 4, qsl("io.input([file])"));
+    provider->add(qsl("io.lines"), 4, qsl("io.lines([filename, ...])"));
+    provider->add(qsl("io.open"), 4, qsl("io.open(filename [, mode])"));
+    provider->add(qsl("io.output"), 4, qsl("io.output([file])"));
+    provider->add(qsl("io.popen"), 4, qsl("io.popen(prog [, mode])"));
+    provider->add(qsl("io.read"), 4, qsl("io.read(...)"));
+    provider->add(qsl("io.tmpfile"), 4, qsl("io.tmpfile()"));
+    provider->add(qsl("io.type"), 4, qsl("io.type(obj)"));
+    provider->add(qsl("io.write"), 4, qsl("io.write(...)"));
+
+    // OS library
+    provider->add(qsl("os.clock"), 4, qsl("os.clock()"));
+    provider->add(qsl("os.date"), 4, qsl("os.date([format [, time]])"));
+    provider->add(qsl("os.difftime"), 4, qsl("os.difftime(t2, t1)"));
+    provider->add(qsl("os.execute"), 4, qsl("os.execute([command])"));
+    provider->add(qsl("os.exit"), 4, qsl("os.exit([code [, close]])"));
+    provider->add(qsl("os.getenv"), 4, qsl("os.getenv(varname)"));
+    provider->add(qsl("os.remove"), 4, qsl("os.remove(filename)"));
+    provider->add(qsl("os.rename"), 4, qsl("os.rename(oldname, newname)"));
+    provider->add(qsl("os.setlocale"), 4, qsl("os.setlocale(locale [, category])"));
+    provider->add(qsl("os.time"), 4, qsl("os.time([table])"));
+    provider->add(qsl("os.tmpname"), 4, qsl("os.tmpname()"));
+
+    // Coroutine library
+    provider->add(qsl("coroutine.create"), 4, qsl("coroutine.create(f)"));
+    provider->add(qsl("coroutine.resume"), 4, qsl("coroutine.resume(co [, val1, ...])"));
+    provider->add(qsl("coroutine.running"), 4, qsl("coroutine.running()"));
+    provider->add(qsl("coroutine.status"), 4, qsl("coroutine.status(co)"));
+    provider->add(qsl("coroutine.wrap"), 4, qsl("coroutine.wrap(f)"));
+    provider->add(qsl("coroutine.yield"), 4, qsl("coroutine.yield(...)"));
+
+    // Debug library
+    provider->add(qsl("debug.debug"), 4, qsl("debug.debug()"));
+    provider->add(qsl("debug.gethook"), 4, qsl("debug.gethook([thread])"));
+    provider->add(qsl("debug.getinfo"), 4, qsl("debug.getinfo([thread,] f [, what])"));
+    provider->add(qsl("debug.getlocal"), 4, qsl("debug.getlocal([thread,] f, local)"));
+    provider->add(qsl("debug.getmetatable"), 4, qsl("debug.getmetatable(value)"));
+    provider->add(qsl("debug.getregistry"), 4, qsl("debug.getregistry()"));
+    provider->add(qsl("debug.getupvalue"), 4, qsl("debug.getupvalue(f, up)"));
+    provider->add(qsl("debug.getuservalue"), 4, qsl("debug.getuservalue(u)"));
+    provider->add(qsl("debug.sethook"), 4, qsl("debug.sethook([thread,] hook, mask [, count])"));
+    provider->add(qsl("debug.setlocal"), 4, qsl("debug.setlocal([thread,] level, local, value)"));
+    provider->add(qsl("debug.setmetatable"), 4, qsl("debug.setmetatable(value, table)"));
+    provider->add(qsl("debug.setupvalue"), 4, qsl("debug.setupvalue(f, up, value)"));
+    provider->add(qsl("debug.setuservalue"), 4, qsl("debug.setuservalue(udata, value)"));
+    provider->add(qsl("debug.traceback"), 4, qsl("debug.traceback([thread,] [message [, level]])"));
+    provider->add(qsl("debug.upvalueid"), 4, qsl("debug.upvalueid(f, n)"));
+    provider->add(qsl("debug.upvaluejoin"), 4, qsl("debug.upvaluejoin(f1, n1, f2, n2)"));
+
+    // Package library
+    provider->add(qsl("package.config"), 4, qsl("package.config"));
+    provider->add(qsl("package.cpath"), 4, qsl("package.cpath"));
+    provider->add(qsl("package.loaded"), 4, qsl("package.loaded"));
+    provider->add(qsl("package.loadlib"), 4, qsl("package.loadlib(libname, funcname)"));
+    provider->add(qsl("package.path"), 4, qsl("package.path"));
+    provider->add(qsl("package.preload"), 4, qsl("package.preload"));
+    provider->add(qsl("package.searchers"), 4, qsl("package.searchers"));
+    provider->add(qsl("package.searchpath"), 4, qsl("package.searchpath(name, path [, sep [, rep]])"));
+
+    // Mudlet framework namespaced functions (priority 4 - same as Lua stdlib)
+    // Geyser UI Framework
+    provider->add(qsl("Geyser.Container:new"), 4, qsl("Geyser.Container:new(cons, container)"));
+    provider->add(qsl("Geyser.Window:new"), 4, qsl("Geyser.Window:new(cons, container)"));
+    provider->add(qsl("Geyser.Label:new"), 4, qsl("Geyser.Label:new(cons, container)"));
+    provider->add(qsl("Geyser.MiniConsole:new"), 4, qsl("Geyser.MiniConsole:new(cons, container)"));
+    provider->add(qsl("Geyser.Button:new"), 4, qsl("Geyser.Button:new(cons, container)"));
+    provider->add(qsl("Geyser.Gauge:new"), 4, qsl("Geyser.Gauge:new(cons, container)"));
+    provider->add(qsl("Geyser.Mapper:new"), 4, qsl("Geyser.Mapper:new(cons, container)"));
+    provider->add(qsl("Geyser.UserWindow:new"), 4, qsl("Geyser.UserWindow:new(cons)"));
+    provider->add(qsl("Geyser.CommandLine:new"), 4, qsl("Geyser.CommandLine:new(cons, container)"));
+    provider->add(qsl("Geyser.HBox:new"), 4, qsl("Geyser.HBox:new(cons, container)"));
+    provider->add(qsl("Geyser.VBox:new"), 4, qsl("Geyser.VBox:new(cons, container)"));
+    provider->add(qsl("Geyser.ScrollBox:new"), 4, qsl("Geyser.ScrollBox:new(cons, container)"));
+    provider->add(qsl("Geyser.ScrollBox:new2"), 4, qsl("Geyser.ScrollBox:new2()"));
+    provider->add(qsl("Geyser.StyleSheet:new"), 4, qsl("Geyser.StyleSheet:new(stylesheet, parent, target)"));
+
+    // Geyser namespace functions
+    provider->add(qsl("Geyser.Color.parse"), 4, qsl("Geyser.Color.parse(color)"));
+    provider->add(qsl("Geyser.Color.hex"), 4, qsl("Geyser.Color.hex(color)"));
+    provider->add(qsl("Geyser.Color.hexa"), 4, qsl("Geyser.Color.hexa(color)"));
+    provider->add(qsl("Geyser.Color.hhex"), 4, qsl("Geyser.Color.hhex(color)"));
+    provider->add(qsl("Geyser.Color.hhexa"), 4, qsl("Geyser.Color.hhexa(color)"));
+    provider->add(qsl("Geyser.Color.hdec"), 4, qsl("Geyser.Color.hdec(color)"));
+    provider->add(qsl("Geyser.Color.hdeca"), 4, qsl("Geyser.Color.hdeca(color)"));
+
+    // Adjustable Container Framework
+    provider->add(qsl("Adjustable.Container:new"), 4, qsl("Adjustable.Container:new(cons, container)"));
+
+    // Database Framework
+    provider->add(qsl("db.create"), 4, qsl("db.create(db_name, schema)"));
+    provider->add(qsl("db.query"), 4, qsl("db.query(db_name, query, ...)"));
+    provider->add(qsl("db.insert"), 4, qsl("db.insert(db_name, sheet_name, values)"));
+    provider->add(qsl("db.update"), 4, qsl("db.update(db_name, sheet_name, values, query)"));
+    provider->add(qsl("db.delete"), 4, qsl("db.delete(db_name, sheet_name, query)"));
+    provider->add(qsl("db.fetch"), 4, qsl("db.fetch(db_name, query, ...)"));
+    provider->add(qsl("db.aggregate"), 4, qsl("db.aggregate(db_name, query, ...)"));
+
+    // DateTime utilities
+    provider->add(qsl("datetime.parse"), 4, qsl("datetime.parse(format, date_string)"));
+
+    // Transfer ownership to Edbee - deleted automatically at app shutdown
+    edbee::Edbee::instance()->autoCompleteProviderList()->giveProvider(provider);
+    smAutoCompleteInitialized = true;
+}
+
+// Made before the editor, to collect what its error console would have shown
+std::unique_ptr<TConsoleModel> dlgTriggerEditor::newErrorConsoleModel(Host* pHost)
+{
+    auto model = std::make_unique<TConsoleModel>(pHost);
+    model->mConsoleName = qsl("errors_%1").arg(pHost->getName());
+    model->setWrapAt(100);
+    model->mShowTimeStamps = true;
+    model->print(qsl("%1\n").arg(tr("*** starting new session ***")));
+    return model;
 }
 
 dlgTriggerEditor::~dlgTriggerEditor()
@@ -1610,7 +1635,9 @@ void dlgTriggerEditor::slot_searchSplitterMoved(const int pos, const int index)
 
 void dlgTriggerEditor::slot_clickedMessageBox(const QString& URL)
 {
-    if (URL.startsWith("http")) {
+    if (URL.startsWith(qsl("mudlet-error-line:"))) {
+        jumpToErrorLine(URL.mid(qsl("mudlet-error-line:").size()).toInt());
+    } else if (URL.startsWith("http")) {
         QDesktopServices::openUrl(URL);
     } else { // internal links used by expanding info text navigation
         showIntro(URL);
@@ -2557,6 +2584,35 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
     } // End of switch()
 }
 
+// QTreeWidgetItem::setData() reallocates the item's role list for each role it adds, and
+// setAllSearchData() adds seven to each of the many rows a broad search makes
+class dlgTriggerEditor::SearchResultItem : public QTreeWidgetItem
+{
+public:
+    using QTreeWidgetItem::QTreeWidgetItem;
+
+    QVariant data(const int column, const int role) const override
+    {
+        if (column == 0 && role >= IdRole && role <= IndexRole) {
+            return mRoleData[role - IdRole];
+        }
+        return QTreeWidgetItem::data(column, role);
+    }
+
+    void setData(const int column, const int role, const QVariant& value) override
+    {
+        if (column == 0 && role >= IdRole && role <= IndexRole) {
+            mRoleData[role - IdRole] = value;
+            emitDataChanged();
+            return;
+        }
+        QTreeWidgetItem::setData(column, role, value);
+    }
+
+private:
+    std::array<QVariant, IndexRole - IdRole + 1> mRoleData;
+};
+
 void dlgTriggerEditor::slot_searchMudletItems(const int index)
 {
     if (index < 0) {
@@ -2579,6 +2635,20 @@ void dlgTriggerEditor::slot_searchMudletItems(const int index)
 
     if (mSearchOptions & enums::EditorSearchOptionIncludeVariables) {
         searchVariables(s);
+    }
+
+    // With sorting on, addTopLevelItems() inserts the rows one at a time, each in front of the last
+    const bool sortingEnabled = treeWidget_searchResults->isSortingEnabled();
+    treeWidget_searchResults->setSortingEnabled(false);
+    treeWidget_searchResults->addTopLevelItems(std::exchange(mPendingSearchResults, {}));
+    treeWidget_searchResults->setSortingEnabled(sortingEnabled);
+    // Expansion is held by the view, so it can only be set once a row is in the tree. By row
+    // rather than by item, as finding an item's row is a linear search of the top-level rows
+    const QAbstractItemModel* model = treeWidget_searchResults->model();
+    for (int row = 0, total = treeWidget_searchResults->topLevelItemCount(); row < total; ++row) {
+        if (treeWidget_searchResults->topLevelItem(row)->childCount()) {
+            treeWidget_searchResults->expand(model->index(row, 0));
+        }
     }
 
     mpSourceEditorEdbee->controller()->textSearcher()->setSearchTerm(s);
@@ -2653,10 +2723,10 @@ void dlgTriggerEditor::searchVariables(const QString& text)
             if ((startPos = findSearchMatch(name, text)) != -1) {
                 QStringList sl;
                 sl << tr("Variable") << idString << tr("Name");
-                parent = new QTreeWidgetItem(sl);
+                parent = new SearchResultItem(sl);
                 // We do not (yet) worry about multiple search results in the "name"
                 setAllSearchData(parent, name, vu->shortVarName(varDecendent), SearchResultIsName, startPos);
-                treeWidget_searchResults->addTopLevelItem(parent);
+                mPendingSearchResults.append(parent);
             }
 
             // The additional first test is needed to exclude the case when
@@ -2667,17 +2737,16 @@ void dlgTriggerEditor::searchVariables(const QString& text)
                 QStringList sl;
                 if (!parent) {
                     sl << tr("Variable") << idString << tr("Value") << value;
-                    parent = new QTreeWidgetItem(sl);
+                    parent = new SearchResultItem(sl);
                     // We do not (yet) worry about multiple search results in the "value"
                     setAllSearchData(parent, name, vu->shortVarName(varDecendent), SearchResultIsValue, startPos);
-                    treeWidget_searchResults->addTopLevelItem(parent);
+                    mPendingSearchResults.append(parent);
                 } else {
                     sl << QString() << QString() << tr("Value") << value;
-                    pItem = new QTreeWidgetItem(sl);
+                    pItem = new SearchResultItem(sl);
                     // We do not (yet) worry about multiple search results in the "value"
                     setAllSearchData(pItem, name, vu->shortVarName(varDecendent), SearchResultIsValue, startPos);
                     parent->addChild(pItem);
-                    parent->setExpanded(true);
                 }
             }
         }
@@ -2703,24 +2772,23 @@ void dlgTriggerEditor::searchSingleTimer(TTimer* timer, const QString& text)
     if ((startPos = findSearchMatch(name, text)) != -1) {
         QStringList sl;
         sl << tr("Timer") << name << tr("Name");
-        parent = new QTreeWidgetItem(sl);
+        parent = new SearchResultItem(sl);
         setAllSearchData(parent, EditorViewType::cmTimerView, name, timer->getID(), SearchResultIsName, startPos);
-        treeWidget_searchResults->addTopLevelItem(parent);
+        mPendingSearchResults.append(parent);
     }
 
     if ((startPos = findSearchMatch(timer->getCommand(), text)) != -1) {
         QStringList sl;
         if (!parent) {
             sl << tr("Timer") << name << tr("Command");
-            parent = new QTreeWidgetItem(sl);
+            parent = new SearchResultItem(sl);
             setAllSearchData(parent, EditorViewType::cmTimerView, name, timer->getID(), SearchResultIsCommand, startPos);
-            treeWidget_searchResults->addTopLevelItem(parent);
+            mPendingSearchResults.append(parent);
         } else {
             sl << QString() << QString() << tr("Command");
-            pItem = new QTreeWidgetItem(parent, sl);
+            pItem = new SearchResultItem(parent, sl);
             setAllSearchData(pItem, EditorViewType::cmTimerView, name, timer->getID(), SearchResultIsCommand, startPos);
             parent->addChild(pItem);
-            parent->setExpanded(true);
         }
     }
 
@@ -2737,24 +2805,23 @@ void dlgTriggerEditor::searchSingleKey(TKey* key, const QString& text)
     if ((startPos = findSearchMatch(name, text)) != -1) {
         QStringList sl;
         sl << tr("Key") << name << tr("Name");
-        parent = new QTreeWidgetItem(sl);
+        parent = new SearchResultItem(sl);
         setAllSearchData(parent, EditorViewType::cmKeysView, name, key->getID(), SearchResultIsName, startPos);
-        treeWidget_searchResults->addTopLevelItem(parent);
+        mPendingSearchResults.append(parent);
     }
 
     if ((startPos = findSearchMatch(key->getCommand(), text)) != -1) {
         QStringList sl;
         if (!parent) {
             sl << tr("Key") << name << tr("Command");
-            parent = new QTreeWidgetItem(sl);
+            parent = new SearchResultItem(sl);
             setAllSearchData(parent, EditorViewType::cmKeysView, name, key->getID(), SearchResultIsCommand, startPos);
-            treeWidget_searchResults->addTopLevelItem(parent);
+            mPendingSearchResults.append(parent);
         } else {
             sl << QString() << QString() << tr("Command");
-            pItem = new QTreeWidgetItem(parent, sl);
+            pItem = new SearchResultItem(parent, sl);
             setAllSearchData(pItem, EditorViewType::cmKeysView, name, key->getID(), SearchResultIsCommand, startPos);
             parent->addChild(pItem);
-            parent->setExpanded(true);
         }
     }
 
@@ -2791,15 +2858,14 @@ void dlgTriggerEditor::emitScriptSearchMatches(
             QStringList sl;
             if (!parent) {
                 sl << parentLabel << name << tr("Lua code (%1:%2)").arg(index + 1).arg(startPos + 1) << whatText;
-                parent = new QTreeWidgetItem(sl);
+                parent = new SearchResultItem(sl);
                 setAllSearchData(parent, viewType, name, objectId, SearchResultIsScript, startPos, index, instance++);
-                treeWidget_searchResults->addTopLevelItem(parent);
+                mPendingSearchResults.append(parent);
             } else {
                 sl << QString() << QString() << tr("Lua code (%1:%2)").arg(index + 1).arg(startPos + 1) << whatText;
-                auto* pItem = new QTreeWidgetItem(parent, sl);
+                auto* pItem = new SearchResultItem(parent, sl);
                 setAllSearchData(pItem, viewType, name, objectId, SearchResultIsScript, startPos, index, instance++);
                 parent->addChild(pItem);
-                parent->setExpanded(true);
             }
             ++startPos;
         }
@@ -2825,24 +2891,23 @@ void dlgTriggerEditor::searchSingleAction(TAction* action, const QString& text)
     if ((startPos = findSearchMatch(name, text)) != -1) {
         QStringList sl;
         sl << tr("Button") << name << tr("Name");
-        parent = new QTreeWidgetItem(sl);
+        parent = new SearchResultItem(sl);
         setAllSearchData(parent, EditorViewType::cmActionView, name, action->getID(), SearchResultIsName, startPos);
-        treeWidget_searchResults->addTopLevelItem(parent);
+        mPendingSearchResults.append(parent);
     }
 
     if ((startPos = findSearchMatch(action->getCommandButtonDown(), text)) != -1) {
         QStringList sl;
         if (!parent) {
             sl << tr("Button") << name << (action->isPushDownButton() ? tr("Command {Down}") : tr("Command"));
-            parent = new QTreeWidgetItem(sl);
+            parent = new SearchResultItem(sl);
             setAllSearchData(parent, EditorViewType::cmActionView, name, action->getID(), SearchResultIsCommand, startPos);
-            treeWidget_searchResults->addTopLevelItem(parent);
+            mPendingSearchResults.append(parent);
         } else {
             sl << QString() << QString() << (action->isPushDownButton() ? tr("Command {Down}") : tr("Command"));
-            pItem = new QTreeWidgetItem(parent, sl);
+            pItem = new SearchResultItem(parent, sl);
             setAllSearchData(pItem, EditorViewType::cmActionView, name, action->getID(), SearchResultIsCommand, startPos);
             parent->addChild(pItem);
-            parent->setExpanded(true);
         }
     }
 
@@ -2851,15 +2916,14 @@ void dlgTriggerEditor::searchSingleAction(TAction* action, const QString& text)
             QStringList sl;
             if (!parent) {
                 sl << tr("Button") << name << tr("Command {Up}");
-                parent = new QTreeWidgetItem(sl);
+                parent = new SearchResultItem(sl);
                 setAllSearchData(parent, EditorViewType::cmActionView, name, action->getID(), SearchResultIsExtraCommand, startPos);
-                treeWidget_searchResults->addTopLevelItem(parent);
+                mPendingSearchResults.append(parent);
             } else {
                 sl << QString() << QString() << tr("Command {Up}");
-                pItem = new QTreeWidgetItem(parent, sl);
+                pItem = new SearchResultItem(parent, sl);
                 setAllSearchData(pItem, EditorViewType::cmActionView, name, action->getID(), SearchResultIsExtraCommand, startPos);
                 parent->addChild(pItem);
-                parent->setExpanded(true);
             }
         }
     }
@@ -2877,15 +2941,14 @@ void dlgTriggerEditor::searchSingleAction(TAction* action, const QString& text)
             QStringList sl;
             if (!parent) {
                 sl << tr("Button") << name << tr("Stylesheet {L: %1 C: %2}").arg(index + 1).arg(startPos + 1) << textList.at(index);
-                parent = new QTreeWidgetItem(sl);
+                parent = new SearchResultItem(sl);
                 setAllSearchData(parent, EditorViewType::cmActionView, name, action->getID(), SearchResultsIsCss, startPos, index, instance++);
-                treeWidget_searchResults->addTopLevelItem(parent);
+                mPendingSearchResults.append(parent);
             } else {
                 sl << QString() << QString() << tr("Stylesheet {L: %1 C: %2}").arg(index + 1).arg(startPos + 1) << textList.at(index);
-                pItem = new QTreeWidgetItem(parent, sl);
+                pItem = new SearchResultItem(parent, sl);
                 setAllSearchData(pItem, EditorViewType::cmActionView, name, action->getID(), SearchResultsIsCss, startPos, index, instance++);
                 parent->addChild(pItem);
-                parent->setExpanded(true);
             }
             ++startPos;
         }
@@ -2913,9 +2976,9 @@ void dlgTriggerEditor::searchSingleScript(TScript* script, const QString& text)
     if ((startPos = findSearchMatch(name, text)) != -1) {
         QStringList sl;
         sl << tr("Script") << name << tr("Name");
-        parent = new QTreeWidgetItem(sl);
+        parent = new SearchResultItem(sl);
         setAllSearchData(parent, EditorViewType::cmScriptView, name, script->getID(), SearchResultIsName, startPos);
-        treeWidget_searchResults->addTopLevelItem(parent);
+        mPendingSearchResults.append(parent);
     }
 
     QStringList textList = script->getEventHandlerList();
@@ -2931,15 +2994,14 @@ void dlgTriggerEditor::searchSingleScript(TScript* script, const QString& text)
             QStringList sl;
             if (!parent) {
                 sl << tr("Script") << name << tr("Event Handler") << textList.at(index);
-                parent = new QTreeWidgetItem(sl);
+                parent = new SearchResultItem(sl);
                 setAllSearchData(parent, EditorViewType::cmScriptView, name, script->getID(), SearchResultIsEventHandler, startPos, index, instance++);
-                treeWidget_searchResults->addTopLevelItem(parent);
+                mPendingSearchResults.append(parent);
             } else {
                 sl << QString() << QString() << tr("Event Handler") << textList.at(index);
-                pItem = new QTreeWidgetItem(parent, sl);
+                pItem = new SearchResultItem(parent, sl);
                 setAllSearchData(pItem, EditorViewType::cmScriptView, name, script->getID(), SearchResultIsEventHandler, startPos, index, instance++);
                 parent->addChild(pItem);
-                parent->setExpanded(true);
             }
             ++startPos;
         }
@@ -2967,24 +3029,23 @@ void dlgTriggerEditor::searchSingleAlias(TAlias* alias, const QString& text)
     if ((startPos = findSearchMatch(name, text)) != -1) {
         QStringList sl;
         sl << tr("Alias") << name << tr("Name");
-        parent = new QTreeWidgetItem(sl);
+        parent = new SearchResultItem(sl);
         setAllSearchData(parent, EditorViewType::cmAliasView, name, alias->getID(), SearchResultIsName, startPos);
-        treeWidget_searchResults->addTopLevelItem(parent);
+        mPendingSearchResults.append(parent);
     }
 
     if ((startPos = findSearchMatch(alias->getCommand(), text)) != -1) {
         QStringList sl;
         if (!parent) {
             sl << tr("Alias") << name << tr("Command");
-            parent = new QTreeWidgetItem(sl);
+            parent = new SearchResultItem(sl);
             setAllSearchData(parent, EditorViewType::cmAliasView, name, alias->getID(), SearchResultIsCommand, startPos);
-            treeWidget_searchResults->addTopLevelItem(parent);
+            mPendingSearchResults.append(parent);
         } else {
             sl << QString() << QString() << tr("Command");
-            pItem = new QTreeWidgetItem(parent, sl);
+            pItem = new SearchResultItem(parent, sl);
             setAllSearchData(pItem, EditorViewType::cmAliasView, name, alias->getID(), SearchResultIsCommand, startPos);
             parent->addChild(pItem);
-            parent->setExpanded(true);
         }
     }
 
@@ -2992,15 +3053,14 @@ void dlgTriggerEditor::searchSingleAlias(TAlias* alias, const QString& text)
         QStringList sl;
         if (!parent) {
             sl << tr("Alias") << name << tr("Pattern") << alias->getRegexCode();
-            parent = new QTreeWidgetItem(sl);
+            parent = new SearchResultItem(sl);
             setAllSearchData(parent, EditorViewType::cmAliasView, name, alias->getID(), SearchResultIsPattern, startPos);
-            treeWidget_searchResults->addTopLevelItem(parent);
+            mPendingSearchResults.append(parent);
         } else {
             sl << QString() << QString() << tr("Pattern") << alias->getRegexCode();
-            pItem = new QTreeWidgetItem(parent, sl);
+            pItem = new SearchResultItem(parent, sl);
             setAllSearchData(pItem, EditorViewType::cmAliasView, name, alias->getID(), SearchResultIsPattern, startPos);
             parent->addChild(pItem);
-            parent->setExpanded(true);
         }
     }
 
@@ -3026,24 +3086,23 @@ void dlgTriggerEditor::searchSingleTrigger(TTrigger* trigger, const QString& tex
     if ((startPos = findSearchMatch(name, text)) != -1) {
         QStringList sl;
         sl << tr("Trigger") << name << tr("Name");
-        parent = new QTreeWidgetItem(sl);
+        parent = new SearchResultItem(sl);
         setAllSearchData(parent, EditorViewType::cmTriggerView, name, trigger->getID(), SearchResultIsName, startPos);
-        treeWidget_searchResults->addTopLevelItem(parent);
+        mPendingSearchResults.append(parent);
     }
 
     if ((startPos = findSearchMatch(trigger->getCommand(), text)) != -1) {
         QStringList sl;
         if (!parent) {
             sl << tr("Trigger") << name << tr("Command");
-            parent = new QTreeWidgetItem(sl);
+            parent = new SearchResultItem(sl);
             setAllSearchData(parent, EditorViewType::cmTriggerView, name, trigger->getID(), SearchResultIsCommand, startPos);
-            treeWidget_searchResults->addTopLevelItem(parent);
+            mPendingSearchResults.append(parent);
         } else {
             sl << QString() << QString() << tr("Command");
-            pItem = new QTreeWidgetItem(parent, sl);
+            pItem = new SearchResultItem(parent, sl);
             setAllSearchData(pItem, EditorViewType::cmTriggerView, name, trigger->getID(), SearchResultIsCommand, startPos);
             parent->addChild(pItem);
-            parent->setExpanded(true);
         }
     }
 
@@ -3060,15 +3119,14 @@ void dlgTriggerEditor::searchSingleTrigger(TTrigger* trigger, const QString& tex
             QStringList sl;
             if (!parent) {
                 sl << tr("Trigger") << name << tr("Pattern {%1}").arg(index + 1) << textList.at(index);
-                parent = new QTreeWidgetItem(sl);
+                parent = new SearchResultItem(sl);
                 setAllSearchData(parent, EditorViewType::cmTriggerView, name, trigger->getID(), SearchResultIsPattern, startPos, index, instance++);
-                treeWidget_searchResults->addTopLevelItem(parent);
+                mPendingSearchResults.append(parent);
             } else {
                 sl << QString() << QString() << tr("Pattern {%1}").arg(index + 1) << textList.at(index);
-                pItem = new QTreeWidgetItem(parent, sl);
+                pItem = new SearchResultItem(parent, sl);
                 setAllSearchData(pItem, EditorViewType::cmTriggerView, name, trigger->getID(), SearchResultIsPattern, startPos, index, instance++);
                 parent->addChild(pItem);
-                parent->setExpanded(true);
             }
             ++startPos;
         }
@@ -4218,9 +4276,9 @@ void dlgTriggerEditor::activeToggle_trigger()
     bool newState = pT->isActive();
 
     if (pT->isFilterChain()) {
-        if (pT->isActive()) {
+        if (pT->shownActive(mpHost->mEmergencyStop)) {
             itemDescription = descActiveFilterChain;
-            if (pT->ancestorsActive()) {
+            if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                 icon = cachedIcon(qsl(":/icons/filter.png"));
             } else {
                 icon = cachedIcon(qsl(":/icons/filter-grey.png"));
@@ -4228,16 +4286,16 @@ void dlgTriggerEditor::activeToggle_trigger()
             }
         } else {
             itemDescription = descInactiveFilterChain;
-            if (pT->ancestorsActive()) {
+            if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                 icon = cachedIcon(qsl(":/icons/filter-locked.png"));
             } else {
                 icon = cachedIcon(qsl(":/icons/filter-grey-locked.png"));
             }
         }
     } else if (pT->isFolder()) {
-        if (pT->isActive()) {
+        if (pT->shownActive(mpHost->mEmergencyStop)) {
             itemDescription = descActiveFolder;
-            if (pT->ancestorsActive()) {
+            if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                 icon = cachedIcon(qsl(":/icons/folder-blue.png"));
             } else {
                 icon = cachedIcon(qsl(":/icons/folder-grey.png"));
@@ -4245,16 +4303,16 @@ void dlgTriggerEditor::activeToggle_trigger()
             }
         } else {
             itemDescription = descInactiveFolder;
-            if (pT->ancestorsActive()) {
+            if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                 icon = cachedIcon(qsl(":/icons/folder-blue-locked.png"));
             } else {
                 icon = cachedIcon(qsl(":/icons/folder-grey-locked.png"));
             }
         }
     } else {
-        if (pT->isActive()) {
+        if (pT->shownActive(mpHost->mEmergencyStop)) {
             itemDescription = descActive;
-            if (pT->ancestorsActive()) {
+            if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                 icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
             } else {
                 icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
@@ -4262,7 +4320,7 @@ void dlgTriggerEditor::activeToggle_trigger()
             }
         } else {
             itemDescription = descInactive;
-            if (pT->ancestorsActive()) {
+            if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                 icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
             } else {
                 icon = cachedIcon(qsl(":/icons/tag_checkbox-grey.png"));
@@ -4624,9 +4682,9 @@ void dlgTriggerEditor::children_icon_triggers(QTreeWidgetItem* pWidgetItemParent
         }
         if (pT->state()) {
             if (pT->isFilterChain()) {
-                if (pT->isActive()) {
+                if (pT->shownActive(mpHost->mEmergencyStop)) {
                     itemDescription = descActiveFilterChain;
-                    if (pT->ancestorsActive()) {
+                    if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                         icon = cachedIcon(qsl(":/icons/filter.png"));
                     } else {
                         icon = cachedIcon(qsl(":/icons/filter-grey.png"));
@@ -4634,16 +4692,16 @@ void dlgTriggerEditor::children_icon_triggers(QTreeWidgetItem* pWidgetItemParent
                     }
                 } else {
                     itemDescription = descInactiveFilterChain;
-                    if (pT->ancestorsActive()) {
+                    if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                         icon = cachedIcon(qsl(":/icons/filter-locked.png"));
                     } else {
                         icon = cachedIcon(qsl(":/icons/filter-grey-locked.png"));
                     }
                 }
             } else if (pT->isFolder()) {
-                if (pT->isActive()) {
+                if (pT->shownActive(mpHost->mEmergencyStop)) {
                     itemDescription = descActiveFolder;
-                    if (pT->ancestorsActive()) {
+                    if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                         icon = cachedIcon(qsl(":/icons/folder-blue.png"));
                     } else {
                         icon = cachedIcon(qsl(":/icons/folder-grey.png"));
@@ -4651,16 +4709,16 @@ void dlgTriggerEditor::children_icon_triggers(QTreeWidgetItem* pWidgetItemParent
                     }
                 } else {
                     itemDescription = descInactiveFolder;
-                    if (pT->ancestorsActive()) {
+                    if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                         icon = cachedIcon(qsl(":/icons/folder-blue-locked.png"));
                     } else {
                         icon = cachedIcon(qsl(":/icons/folder-grey-locked.png"));
                     }
                 }
             } else {
-                if (pT->isActive()) {
+                if (pT->shownActive(mpHost->mEmergencyStop)) {
                     itemDescription = descActive;
-                    if (pT->ancestorsActive()) {
+                    if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                         icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                     } else {
                         icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
@@ -4669,7 +4727,7 @@ void dlgTriggerEditor::children_icon_triggers(QTreeWidgetItem* pWidgetItemParent
 
                 } else {
                     itemDescription = descInactive;
-                    if (pT->ancestorsActive()) {
+                    if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                         icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
                     } else {
                         icon = cachedIcon(qsl(":/icons/tag_checkbox-grey.png"));
@@ -4728,7 +4786,7 @@ void dlgTriggerEditor::activeToggle_timer()
 
         if (pT->shouldBeActive()) {
             itemDescription = descActiveFolder;
-            if (pT->ancestorsActive()) {
+            if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                 if (!pT->mPackageName.isEmpty()) {
                     icon = cachedIcon(qsl(":/icons/folder-brown.png"));
                 } else {
@@ -4740,7 +4798,7 @@ void dlgTriggerEditor::activeToggle_timer()
             }
         } else {
             itemDescription = descInactiveFolder;
-            if (pT->ancestorsActive()) {
+            if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                 if (!pT->mPackageName.isEmpty()) {
                     icon = cachedIcon(qsl(":/icons/folder-brown-locked.png"));
                 } else {
@@ -4758,7 +4816,7 @@ void dlgTriggerEditor::activeToggle_timer()
                 // Its parent firing arms it, so it must not count down from being switched on
                 pT->stop();
                 itemDescription = descActiveOffsetTimer;
-                if (pT->ancestorsActive()) {
+                if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                     icon = cachedIcon(qsl(":/icons/offsettimer-on.png"));
                 } else {
                     icon = cachedIcon(qsl(":/icons/offsettimer-on-grey.png"));
@@ -4767,7 +4825,7 @@ void dlgTriggerEditor::activeToggle_timer()
             } else {
                 pT->disableTimer(pT->getID());
                 itemDescription = descInactiveOffsetTimer;
-                if (pT->ancestorsActive()) {
+                if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                     icon = cachedIcon(qsl(":/icons/offsettimer-off.png"));
                 } else {
                     icon = cachedIcon(qsl(":/icons/offsettimer-off-grey.png"));
@@ -4777,7 +4835,7 @@ void dlgTriggerEditor::activeToggle_timer()
             if (pT->shouldBeActive()) {
                 pT->enableTimer(pT->getID());
                 itemDescription = descActive;
-                if (pT->ancestorsActive()) {
+                if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                     icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                 } else {
                     icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
@@ -4833,14 +4891,14 @@ void dlgTriggerEditor::children_icon_timer(QTreeWidgetItem* pWidgetItemParent, b
             if (pT->isFolder()) {
                 itemDescription = (itemActive ? descActiveFolder : descInactiveFolder);
                 if (itemActive) {
-                    if (pT->ancestorsActive()) {
+                    if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                         icon = cachedIcon(qsl(":/icons/folder-green.png"));
                     } else {
                         icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 } else {
-                    if (pT->ancestorsActive()) {
+                    if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                         icon = cachedIcon(qsl(":/icons/folder-green-locked.png"));
                     } else {
                         icon = cachedIcon(qsl(":/icons/folder-grey-locked.png"));
@@ -4850,7 +4908,7 @@ void dlgTriggerEditor::children_icon_timer(QTreeWidgetItem* pWidgetItemParent, b
                 if (pT->isOffsetTimer()) {
                     if (pT->shouldBeActive()) {
                         itemDescription = descActiveOffsetTimer;
-                        if (pT->ancestorsActive()) {
+                        if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                             icon = cachedIcon(qsl(":/icons/offsettimer-on.png"));
                         } else {
                             icon = cachedIcon(qsl(":/icons/offsettimer-on-grey.png"));
@@ -4858,7 +4916,7 @@ void dlgTriggerEditor::children_icon_timer(QTreeWidgetItem* pWidgetItemParent, b
                         }
                     } else {
                         itemDescription = descInactiveOffsetTimer;
-                        if (pT->ancestorsActive()) {
+                        if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                             icon = cachedIcon(qsl(":/icons/offsettimer-off.png"));
                         } else {
                             icon = cachedIcon(qsl(":/icons/offsettimer-off-grey.png"));
@@ -4868,7 +4926,7 @@ void dlgTriggerEditor::children_icon_timer(QTreeWidgetItem* pWidgetItemParent, b
                 } else {
                     if (itemActive) {
                         itemDescription = descActive;
-                        if (pT->ancestorsActive()) {
+                        if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                             icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                         } else {
                             icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
@@ -4876,7 +4934,7 @@ void dlgTriggerEditor::children_icon_timer(QTreeWidgetItem* pWidgetItemParent, b
                         }
                     } else {
                         itemDescription = descInactive;
-                        if (pT->ancestorsActive()) {
+                        if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                             icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
                         } else {
                             icon = cachedIcon(qsl(":/icons/tag_checkbox-grey.png"));
@@ -4919,7 +4977,7 @@ void dlgTriggerEditor::activeToggle_alias()
     bool newState = pT->isActive();
 
     if (pT->isFolder()) {
-        if (pT->isActive()) {
+        if (pT->shownActive(mpHost->mEmergencyStop)) {
             icon = cachedIcon(qsl(":/icons/folder-violet.png"));
             itemDescription = descActiveFolder;
         } else {
@@ -4927,9 +4985,9 @@ void dlgTriggerEditor::activeToggle_alias()
             itemDescription = descInactiveFolder;
         }
     } else {
-        if (pT->isActive()) {
+        if (pT->shownActive(mpHost->mEmergencyStop)) {
             itemDescription = descActive;
-            if (pT->ancestorsActive()) {
+            if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                 icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
             } else {
                 icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
@@ -4979,9 +5037,9 @@ void dlgTriggerEditor::children_icon_alias(QTreeWidgetItem* pWidgetItemParent, b
         }
         if (pT->state()) {
             if (pT->isFolder()) {
-                if (pT->isActive()) {
+                if (pT->shownActive(mpHost->mEmergencyStop)) {
                     itemDescription = descActiveFolder;
-                    if (pT->ancestorsActive()) {
+                    if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                         icon = cachedIcon(qsl(":/icons/folder-violet.png"));
                     } else {
                         icon = cachedIcon(qsl(":/icons/folder-grey.png"));
@@ -4989,16 +5047,16 @@ void dlgTriggerEditor::children_icon_alias(QTreeWidgetItem* pWidgetItemParent, b
                     }
                 } else {
                     itemDescription = descInactiveFolder;
-                    if (pT->ancestorsActive()) {
+                    if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                         icon = cachedIcon(qsl(":/icons/folder-violet-locked.png"));
                     } else {
                         icon = cachedIcon(qsl(":/icons/folder-grey-locked.png"));
                     }
                 }
             } else {
-                if (pT->isActive()) {
+                if (pT->shownActive(mpHost->mEmergencyStop)) {
                     itemDescription = descActive;
-                    if (pT->ancestorsActive()) {
+                    if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                         icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                     } else {
                         icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
@@ -5007,7 +5065,7 @@ void dlgTriggerEditor::children_icon_alias(QTreeWidgetItem* pWidgetItemParent, b
 
                 } else {
                     itemDescription = descInactive;
-                    if (pT->ancestorsActive()) {
+                    if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                         icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
                     } else {
                         icon = cachedIcon(qsl(":/icons/tag_checkbox-grey.png"));
@@ -5359,9 +5417,9 @@ void dlgTriggerEditor::activeToggle_key()
     bool newState = pT->isActive();
 
     if (pT->isFolder()) {
-        if (pT->isActive()) {
+        if (pT->shownActive(mpHost->mEmergencyStop)) {
             itemDescription = descActiveFolder;
-            if (pT->ancestorsActive()) {
+            if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                 icon = cachedIcon(qsl(":/icons/folder-pink.png"));
             } else {
                 icon = cachedIcon(qsl(":/icons/folder-grey.png"));
@@ -5369,16 +5427,16 @@ void dlgTriggerEditor::activeToggle_key()
             }
         } else {
             itemDescription = descInactiveFolder;
-            if (pT->ancestorsActive()) {
+            if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                 icon = cachedIcon(qsl(":/icons/folder-pink-locked.png"));
             } else {
                 icon = cachedIcon(qsl(":/icons/folder-grey-locked.png"));
             }
         }
     } else {
-        if (pT->isActive()) {
+        if (pT->shownActive(mpHost->mEmergencyStop)) {
             itemDescription = descActive;
-            if (pT->ancestorsActive()) {
+            if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                 icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
             } else {
                 icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
@@ -5386,7 +5444,7 @@ void dlgTriggerEditor::activeToggle_key()
             }
         } else {
             itemDescription = descInactive;
-            if (pT->ancestorsActive()) {
+            if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                 icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
             } else {
                 icon = cachedIcon(qsl(":/icons/tag_checkbox-grey.png"));
@@ -5440,9 +5498,9 @@ void dlgTriggerEditor::children_icon_key(QTreeWidgetItem* pWidgetItemParent, boo
         }
         if (pT->state()) {
             if (pT->isFolder()) {
-                if (pT->isActive()) {
+                if (pT->shownActive(mpHost->mEmergencyStop)) {
                     itemDescription = descActiveFolder;
-                    if (pT->ancestorsActive()) {
+                    if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                         icon = cachedIcon(qsl(":/icons/folder-pink.png"));
                     } else {
                         icon = cachedIcon(qsl(":/icons/folder-grey.png"));
@@ -5450,16 +5508,16 @@ void dlgTriggerEditor::children_icon_key(QTreeWidgetItem* pWidgetItemParent, boo
                     }
                 } else {
                     itemDescription = descInactiveFolder;
-                    if (pT->ancestorsActive()) {
+                    if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                         icon = cachedIcon(qsl(":/icons/folder-pink-locked.png"));
                     } else {
                         icon = cachedIcon(qsl(":/icons/folder-grey-locked.png"));
                     }
                 }
             } else {
-                if (pT->isActive()) {
+                if (pT->shownActive(mpHost->mEmergencyStop)) {
                     itemDescription = descActive;
-                    if (pT->ancestorsActive()) {
+                    if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                         icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                     } else {
                         icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
@@ -5468,7 +5526,7 @@ void dlgTriggerEditor::children_icon_key(QTreeWidgetItem* pWidgetItemParent, boo
 
                 } else {
                     itemDescription = descInactive;
-                    if (pT->ancestorsActive()) {
+                    if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                         icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
                     } else {
                         icon = cachedIcon(qsl(":/icons/tag_checkbox-grey.png"));
@@ -6433,9 +6491,9 @@ void dlgTriggerEditor::saveTrigger()
         QIcon icon;
         QString itemDescription;
         if (pT->isFilterChain()) {
-            if (pT->isActive()) {
+            if (pT->shownActive(mpHost->mEmergencyStop)) {
                 itemDescription = descActiveFilterChain;
-                if (pT->ancestorsActive()) {
+                if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                     icon = cachedIcon(qsl(":/icons/filter.png"));
                 } else {
                     icon = cachedIcon(qsl(":/icons/filter-grey.png"));
@@ -6443,7 +6501,7 @@ void dlgTriggerEditor::saveTrigger()
                 }
             } else {
                 itemDescription = descInactiveFilterChain;
-                if (pT->ancestorsActive()) {
+                if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                     icon = cachedIcon(qsl(":/icons/filter-locked.png"));
                 } else {
                     icon = cachedIcon(qsl(":/icons/filter-grey-locked.png"));
@@ -6451,9 +6509,9 @@ void dlgTriggerEditor::saveTrigger()
             }
         } else if (pT->isFolder()) {
             if (!pT->mPackageName.isEmpty()) {
-                if (pT->isActive()) {
+                if (pT->shownActive(mpHost->mEmergencyStop)) {
                     itemDescription = descActiveFolder;
-                    if (pT->ancestorsActive()) {
+                    if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                         icon = cachedIcon(qsl(":/icons/folder-brown.png"));
                     } else {
                         icon = cachedIcon(qsl(":/icons/folder-grey.png"));
@@ -6463,9 +6521,9 @@ void dlgTriggerEditor::saveTrigger()
                     icon = cachedIcon(qsl(":/icons/folder-brown-locked.png"));
                     itemDescription = descInactiveFolder;
                 }
-            } else if (pT->isActive()) {
+            } else if (pT->shownActive(mpHost->mEmergencyStop)) {
                 itemDescription = descActiveFolder;
-                if (pT->ancestorsActive()) {
+                if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                     icon = cachedIcon(qsl(":/icons/folder-blue.png"));
                 } else {
                     icon = cachedIcon(qsl(":/icons/folder-grey.png"));
@@ -6473,16 +6531,16 @@ void dlgTriggerEditor::saveTrigger()
                 }
             } else {
                 itemDescription = descInactiveFolder;
-                if (pT->ancestorsActive()) {
+                if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                     icon = cachedIcon(qsl(":/icons/folder-blue-locked.png"));
                 } else {
                     icon = cachedIcon(qsl(":/icons/folder-grey-locked.png"));
                 }
             }
         } else {
-            if (pT->isActive()) {
+            if (pT->shownActive(mpHost->mEmergencyStop)) {
                 itemDescription = descActive;
-                if (pT->ancestorsActive()) {
+                if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                     icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                 } else {
                     icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
@@ -6490,7 +6548,7 @@ void dlgTriggerEditor::saveTrigger()
                 }
             } else {
                 itemDescription = descInactive;
-                if (pT->ancestorsActive()) {
+                if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                     icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
                 } else {
                     icon = cachedIcon(qsl(":/icons/tag_checkbox-grey.png"));
@@ -6504,7 +6562,7 @@ void dlgTriggerEditor::saveTrigger()
                 if (pT->isFolder()) {
                     if (pT->shouldBeActive()) {
                         itemDescription = descActiveFolder;
-                        if (pT->ancestorsActive()) {
+                        if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                             icon = cachedIcon(qsl(":/icons/folder-blue.png"));
                         } else {
                             icon = cachedIcon(qsl(":/icons/folder-grey.png"));
@@ -6517,7 +6575,7 @@ void dlgTriggerEditor::saveTrigger()
                 } else {
                     if (pT->shouldBeActive()) {
                         itemDescription = descActive;
-                        if (pT->ancestorsActive()) {
+                        if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                             icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                         } else {
                             icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
@@ -6531,7 +6589,8 @@ void dlgTriggerEditor::saveTrigger()
                 pItem->setIcon(0, icon);
                 pItem->setText(0, name);
 
-                if (pT->shouldBeActive()) {
+                // The emergency stop's resume switches it on; doing so here would let it run during the stop
+                if (pT->shouldBeActive() && !mpHost->mEmergencyStop) {
                     pT->setIsActive(true);
                 }
                 pT->unmarkAsNew();
@@ -6611,9 +6670,9 @@ void dlgTriggerEditor::saveTimer()
         QString itemDescription;
         if (pT->isFolder()) {
             if (!pT->mPackageName.isEmpty()) {
-                if (pT->isActive()) {
+                if (pT->shownActive(mpHost->mEmergencyStop)) {
                     itemDescription = descActiveFolder;
-                    if (pT->ancestorsActive()) {
+                    if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                         icon = cachedIcon(qsl(":/icons/folder-brown.png"));
                     } else {
                         icon = cachedIcon(qsl(":/icons/folder-grey.png"));
@@ -6626,7 +6685,7 @@ void dlgTriggerEditor::saveTimer()
             } else {
                 if (pT->shouldBeActive()) {
                     itemDescription = descActiveFolder;
-                    if (pT->ancestorsActive()) {
+                    if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                         icon = cachedIcon(qsl(":/icons/folder-green.png"));
                     } else {
                         icon = cachedIcon(qsl(":/icons/folder-grey.png"));
@@ -6634,7 +6693,7 @@ void dlgTriggerEditor::saveTimer()
                     }
                 } else {
                     itemDescription = descInactiveFolder;
-                    if (pT->ancestorsActive()) {
+                    if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                         icon = cachedIcon(qsl(":/icons/folder-green-locked.png"));
                     } else {
                         icon = cachedIcon(qsl(":/icons/folder-grey-locked.png"));
@@ -6644,7 +6703,7 @@ void dlgTriggerEditor::saveTimer()
         } else if (pT->isOffsetTimer()) {
             if (pT->shouldBeActive()) {
                 itemDescription = descActiveOffsetTimer;
-                if (pT->ancestorsActive()) {
+                if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                     icon = cachedIcon(qsl(":/icons/offsettimer-on.png"));
                 } else {
                     icon = cachedIcon(qsl(":/icons/offsettimer-on-grey.png"));
@@ -6652,7 +6711,7 @@ void dlgTriggerEditor::saveTimer()
                 }
             } else {
                 itemDescription = descInactiveOffsetTimer;
-                if (pT->ancestorsActive()) {
+                if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                     icon = cachedIcon(qsl(":/icons/offsettimer-off.png"));
                 } else {
                     icon = cachedIcon(qsl(":/icons/offsettimer-off-grey.png"));
@@ -6661,16 +6720,19 @@ void dlgTriggerEditor::saveTimer()
         } else {
             if (pT->shouldBeActive()) {
                 itemDescription = descActive;
-                if (pT->ancestorsActive()) {
+                if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                     icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                 } else {
                     icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
                     itemDescription = descInactiveParent.arg(itemDescription);
                 }
-                pT->stayActive();
+                // The emergency stop's resume starts it; doing so here would let it run during the stop
+                if (!mpHost->mEmergencyStop) {
+                    pT->stayActive();
+                }
             } else {
                 itemDescription = descInactive;
-                if (pT->ancestorsActive()) {
+                if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                     icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
                 } else {
                     icon = cachedIcon(qsl(":/icons/tag_checkbox-grey.png"));
@@ -6765,7 +6827,7 @@ bool dlgTriggerEditor::saveAlias()
                 if (pT->isFolder()) {
                     if (pT->shouldBeActive()) {
                         itemDescription = descActiveFolder;
-                        if (pT->ancestorsActive()) {
+                        if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                             icon = cachedIcon(qsl(":/icons/folder-violet.png"));
                         } else {
                             icon = cachedIcon(qsl(":/icons/folder-grey.png"));
@@ -6778,7 +6840,7 @@ bool dlgTriggerEditor::saveAlias()
                 } else {
                     if (pT->shouldBeActive()) {
                         itemDescription = descActive;
-                        if (pT->ancestorsActive()) {
+                        if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                             icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                         } else {
                             icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
@@ -6792,7 +6854,8 @@ bool dlgTriggerEditor::saveAlias()
                 pItem->setIcon(0, icon);
                 pItem->setText(0, name);
 
-                if (pT->shouldBeActive()) {
+                // The emergency stop's resume switches it on; doing so here would let it run during the stop
+                if (pT->shouldBeActive() && !mpHost->mEmergencyStop) {
                     pT->setIsActive(true);
                 }
                 pT->unmarkAsNew();
@@ -6864,9 +6927,9 @@ void dlgTriggerEditor::computeAliasIcon(TAlias* pT, QIcon& icon, QString& itemDe
 {
     if (pT->isFolder()) {
         if (!pT->mPackageName.isEmpty()) {
-            if (pT->isActive()) {
+            if (pT->shownActive(mpHost->mEmergencyStop)) {
                 itemDescription = descActiveFolder;
-                if (pT->ancestorsActive()) {
+                if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                     icon = cachedIcon(qsl(":/icons/folder-brown.png"));
                 } else {
                     icon = cachedIcon(qsl(":/icons/folder-grey.png"));
@@ -6876,9 +6939,9 @@ void dlgTriggerEditor::computeAliasIcon(TAlias* pT, QIcon& icon, QString& itemDe
                 icon = cachedIcon(qsl(":/icons/folder-brown-locked.png"));
                 itemDescription = descInactiveFolder;
             }
-        } else if (pT->isActive()) {
+        } else if (pT->shownActive(mpHost->mEmergencyStop)) {
             itemDescription = descActiveFolder;
-            if (pT->ancestorsActive()) {
+            if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                 icon = cachedIcon(qsl(":/icons/folder-violet.png"));
             } else {
                 icon = cachedIcon(qsl(":/icons/folder-grey.png"));
@@ -6886,16 +6949,16 @@ void dlgTriggerEditor::computeAliasIcon(TAlias* pT, QIcon& icon, QString& itemDe
             }
         } else {
             itemDescription = descInactiveFolder;
-            if (pT->ancestorsActive()) {
+            if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                 icon = cachedIcon(qsl(":/icons/folder-violet-locked.png"));
             } else {
                 icon = cachedIcon(qsl(":/icons/folder-grey-locked.png"));
             }
         }
     } else {
-        if (pT->isActive()) {
+        if (pT->shownActive(mpHost->mEmergencyStop)) {
             itemDescription = descActive;
-            if (pT->ancestorsActive()) {
+            if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                 icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
             } else {
                 icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
@@ -6903,7 +6966,7 @@ void dlgTriggerEditor::computeAliasIcon(TAlias* pT, QIcon& icon, QString& itemDe
             }
         } else {
             itemDescription = descInactive;
-            if (pT->ancestorsActive()) {
+            if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                 icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
             } else {
                 icon = cachedIcon(qsl(":/icons/tag_checkbox-grey.png"));
@@ -6974,7 +7037,7 @@ void dlgTriggerEditor::applyAliasState(QTreeWidgetItem* pItem, TAlias* pT, bool 
 }
 
 // Repaints aliasID's tree item (and, if any, its descendants) from its
-// current isActive() state - used when the state changed via the Lua
+// current active state - used when the state changed via the Lua
 // enableAlias()/disableAlias() API rather than the GUI toggle. Only touches
 // the shared editor-wide notification banner when aliasID is the item
 // currently open in the detail pane *and* the Aliases view is the one on
@@ -7436,10 +7499,10 @@ void dlgTriggerEditor::updatePackageItemAccessibility(QTreeWidgetItem* pItem, co
 // Qt matches Mudlet's own shortcuts and add-on menu shortcuts before the command line sees the
 // key, so a binding on one of their keys never fires. It is still accepted, only warned about.
 // Empty when the binding will fire. The strings keep the KeyUnit context they were translated in.
-QString dlgTriggerEditor::takenKeyWarning(const TKey* pKey) const
+QString dlgTriggerEditor::takenKeyWarning(Host* pHost, const TKey* pKey)
 {
     auto* pMudlet = mudlet::self();
-    if (!pKey || mpHost.isNull() || !pMudlet || pKey->isFolder() || pKey->getKeyCode() == Qt::Key_unknown) {
+    if (!pKey || !pHost || !pMudlet || pKey->isFolder() || pKey->getKeyCode() == Qt::Key_unknown) {
         return {};
     }
     // A keypad or group-switch binding cannot be written as a key sequence, so
@@ -7462,7 +7525,7 @@ QString dlgTriggerEditor::takenKeyWarning(const TKey* pKey) const
                                                     "Mudlet's own shortcuts can be changed in the preferences, under Shortcuts.")
                                 .arg(keyText, action));
     }
-    if (const QStringList holders = pMudlet->addonCommandsUsingShortcut(sequence, mpHost); !holders.isEmpty()) {
+    if (const QStringList holders = pMudlet->addonCommandsUsingShortcut(sequence, pHost); !holders.isEmpty()) {
         //: Warning shown in the editor when a key binding is given a key an add-on command already holds. %1 is a key such as "Alt+F9", %2 a comma separated list of the commands holding it.
         warnings.append(QCoreApplication::translate("KeyUnit", "%1 is already used by %2, which will get the key first, so this key binding will not fire.").arg(keyText, holders.join(qsl(", "))));
     }
@@ -7501,7 +7564,7 @@ void dlgTriggerEditor::rewarnAboutCurrentKey()
     const TKey* pT = mpHost->getKeyUnit()->getKey(mpCurrentKeyItem->data(0, Qt::UserRole).toInt());
     // A failed compile's error is what the banner should keep showing
     if (pT && pT->state()) {
-        showKeyTakenWarning(mpCurrentKeyItem, takenKeyWarning(pT), false);
+        showKeyTakenWarning(mpCurrentKeyItem, takenKeyWarning(mpHost, pT), false);
     }
 }
 
@@ -7923,12 +7986,12 @@ void dlgTriggerEditor::saveKey()
 
         QIcon icon;
         QString itemDescription;
-        const bool itemActive = pT->isActive();
+        const bool itemActive = pT->shownActive(mpHost->mEmergencyStop);
         if (pT->isFolder()) {
             itemDescription = (itemActive ? descActiveFolder : descInactiveFolder);
             if (!pT->mPackageName.isEmpty()) {
                 if (itemActive) {
-                    if (pT->ancestorsActive()) {
+                    if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                         icon = cachedIcon(qsl(":/icons/folder-brown.png"));
                     } else {
                         icon = cachedIcon(qsl(":/icons/folder-grey.png"));
@@ -7938,7 +8001,7 @@ void dlgTriggerEditor::saveKey()
                     icon = cachedIcon(qsl(":/icons/folder-brown-locked.png"));
                 }
             } else if (itemActive) {
-                if (pT->ancestorsActive()) {
+                if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                     icon = cachedIcon(qsl(":/icons/folder-pink.png"));
                 } else {
                     icon = cachedIcon(qsl(":/icons/folder-grey.png"));
@@ -7946,7 +8009,7 @@ void dlgTriggerEditor::saveKey()
                 }
             } else {
                 itemDescription = descInactiveFolder;
-                if (pT->ancestorsActive()) {
+                if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                     icon = cachedIcon(qsl(":/icons/folder-pink-locked.png"));
                 } else {
                     icon = cachedIcon(qsl(":/icons/folder-grey-locked.png"));
@@ -7955,7 +8018,7 @@ void dlgTriggerEditor::saveKey()
         } else {
             if (itemActive) {
                 itemDescription = descActive;
-                if (pT->ancestorsActive()) {
+                if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                     icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                 } else {
                     icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
@@ -7963,7 +8026,7 @@ void dlgTriggerEditor::saveKey()
                 }
             } else {
                 itemDescription = descInactive;
-                if (pT->ancestorsActive()) {
+                if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                     icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
                 } else {
                     icon = cachedIcon(qsl(":/icons/tag_checkbox-grey.png"));
@@ -7977,7 +8040,7 @@ void dlgTriggerEditor::saveKey()
                 if (pT->isFolder()) {
                     if (pT->shouldBeActive()) {
                         itemDescription = descActiveFolder;
-                        if (pT->ancestorsActive()) {
+                        if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                             icon = cachedIcon(qsl(":/icons/folder-pink.png"));
                         } else {
                             icon = cachedIcon(qsl(":/icons/folder-grey.png"));
@@ -7990,7 +8053,7 @@ void dlgTriggerEditor::saveKey()
                 } else {
                     if (pT->shouldBeActive()) {
                         itemDescription = descActive;
-                        if (pT->ancestorsActive()) {
+                        if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                             icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                         } else {
                             icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
@@ -8004,7 +8067,8 @@ void dlgTriggerEditor::saveKey()
                 pItem->setIcon(0, icon);
                 pItem->setText(0, name);
 
-                if (pT->shouldBeActive()) {
+                // The emergency stop's resume switches it on; doing so here would let it run during the stop
+                if (pT->shouldBeActive() && !mpHost->mEmergencyStop) {
                     pT->setIsActive(true);
                 }
             } else {
@@ -8825,9 +8889,9 @@ void dlgTriggerEditor::slot_keySelected(QTreeWidgetItem* pItem)
                     firstPackageAnnounced = true;
                 }
             }
-            // A warning given while the editor was closed is replaced when it opens, so a script-made binding
-            // is only warned about here. Not announced, or arrowing through the keys would be talked over.
-            showKeyTakenWarning(pItem, takenKeyWarning(pT), false);
+            // A warning given while the editor was closed can be replaced when it opens, so a script-made binding
+            // is warned about here too. Not announced, or arrowing through the keys would be talked over.
+            showKeyTakenWarning(pItem, takenKeyWarning(mpHost, pT), false);
         }
     } else {
         clearKeyForm();
@@ -9657,12 +9721,12 @@ void dlgTriggerEditor::populateKeys()
 
 void dlgTriggerEditor::computeKeyIcon(TKey* pT, QIcon& icon, QString& itemDescription) const
 {
-    const bool itemActive = pT->isActive();
+    const bool itemActive = pT->shownActive(mpHost->mEmergencyStop);
     if (pT->isFolder()) {
         itemDescription = (itemActive ? descActiveFolder : descInactiveFolder);
         if (!pT->mPackageName.isEmpty()) {
-            if (pT->isActive()) {
-                if (pT->ancestorsActive()) {
+            if (pT->shownActive(mpHost->mEmergencyStop)) {
+                if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                     icon = cachedIcon(qsl(":/icons/folder-brown.png"));
                 } else {
                     icon = cachedIcon(qsl(":/icons/folder-grey.png"));
@@ -9671,24 +9735,24 @@ void dlgTriggerEditor::computeKeyIcon(TKey* pT, QIcon& icon, QString& itemDescri
             } else {
                 icon = cachedIcon(qsl(":/icons/folder-brown-locked.png"));
             }
-        } else if (pT->isActive()) {
-            if (pT->ancestorsActive()) {
+        } else if (pT->shownActive(mpHost->mEmergencyStop)) {
+            if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                 icon = cachedIcon(qsl(":/icons/folder-pink.png"));
             } else {
                 icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                 itemDescription = descInactiveParent.arg(itemDescription);
             }
         } else {
-            if (pT->ancestorsActive()) {
+            if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                 icon = cachedIcon(qsl(":/icons/folder-pink-locked.png"));
             } else {
                 icon = cachedIcon(qsl(":/icons/folder-grey-locked.png"));
             }
         }
     } else {
-        if (pT->isActive()) {
+        if (pT->shownActive(mpHost->mEmergencyStop)) {
             itemDescription = descActive;
-            if (pT->ancestorsActive()) {
+            if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                 icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
             } else {
                 icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
@@ -9696,7 +9760,7 @@ void dlgTriggerEditor::computeKeyIcon(TKey* pT, QIcon& icon, QString& itemDescri
             }
         } else {
             itemDescription = descInactive;
-            if (pT->ancestorsActive()) {
+            if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                 icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
             } else {
                 icon = cachedIcon(qsl(":/icons/tag_checkbox-grey.png"));
@@ -9706,7 +9770,7 @@ void dlgTriggerEditor::computeKeyIcon(TKey* pT, QIcon& icon, QString& itemDescri
 }
 
 // Repaints keyID's tree item (and, if any, its descendants) from its current
-// isActive() state - used when the state changed via the Lua
+// active state - used when the state changed via the Lua
 // enableKey()/disableKey() API rather than the GUI toggle. Only touches the
 // shared editor-wide notification banner when keyID is the item currently
 // open in the detail pane *and* the Keys view is the one on screen -
@@ -9894,7 +9958,7 @@ void dlgTriggerEditor::populateAliases()
         }
         QIcon icon;
         QString itemDescription;
-        const bool itemActive = alias->isActive();
+        const bool itemActive = alias->shownActive(mpHost->mEmergencyStop);
         if (alias->hasChildren()) {
             expand_child_alias(alias, pItem);
         }
@@ -9905,7 +9969,7 @@ void dlgTriggerEditor::populateAliases()
                 itemDescription = (itemActive ? descActiveFolder : descInactiveFolder);
                 if (!alias->mPackageName.isEmpty()) {
                     if (itemActive) {
-                        if (alias->ancestorsActive()) {
+                        if (alias->ancestorsShownActive(mpHost->mEmergencyStop)) {
                             icon = cachedIcon(qsl(":/icons/folder-brown.png"));
                         } else {
                             icon = cachedIcon(qsl(":/icons/folder-grey.png"));
@@ -9915,23 +9979,23 @@ void dlgTriggerEditor::populateAliases()
                         icon = cachedIcon(qsl(":/icons/folder-brown-locked.png"));
                     }
                 } else if (itemActive) {
-                    if (alias->ancestorsActive()) {
+                    if (alias->ancestorsShownActive(mpHost->mEmergencyStop)) {
                         icon = cachedIcon(qsl(":/icons/folder-violet.png"));
                     } else {
                         icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                         itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 } else {
-                    if (alias->ancestorsActive()) {
+                    if (alias->ancestorsShownActive(mpHost->mEmergencyStop)) {
                         icon = cachedIcon(qsl(":/icons/folder-violet-locked.png"));
                     } else {
                         icon = cachedIcon(qsl(":/icons/folder-grey-locked.png"));
                     }
                 }
             } else {
-                if (alias->isActive()) {
+                if (alias->shownActive(mpHost->mEmergencyStop)) {
                     itemDescription = descActive;
-                    if (alias->ancestorsActive()) {
+                    if (alias->ancestorsShownActive(mpHost->mEmergencyStop)) {
                         icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                     } else {
                         icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
@@ -9939,7 +10003,7 @@ void dlgTriggerEditor::populateAliases()
                     }
                 } else {
                     itemDescription = descInactive;
-                    if (alias->ancestorsActive()) {
+                    if (alias->ancestorsShownActive(mpHost->mEmergencyStop)) {
                         icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
                     } else {
                         icon = cachedIcon(qsl(":/icons/tag_checkbox-grey.png"));
@@ -10162,7 +10226,7 @@ void dlgTriggerEditor::populateTimers()
 
 void dlgTriggerEditor::computeTimerIcon(TTimer* pT, QIcon& icon, QString& itemDescription) const
 {
-    const bool itemActive = pT->isActive();
+    const bool itemActive = pT->shownActive(mpHost->mEmergencyStop);
     if (pT->isFolder()) {
         itemDescription = (itemActive ? descActiveFolder : descInactiveFolder);
         if (!pT->mPackageName.isEmpty()) {
@@ -10173,14 +10237,14 @@ void dlgTriggerEditor::computeTimerIcon(TTimer* pT, QIcon& icon, QString& itemDe
             }
         } else {
             if (pT->shouldBeActive()) {
-                if (pT->ancestorsActive()) {
+                if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                     icon = cachedIcon(qsl(":/icons/folder-green.png"));
                 } else {
                     icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                     itemDescription = descInactiveParent.arg(itemDescription);
                 }
             } else {
-                if (pT->ancestorsActive()) {
+                if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                     icon = cachedIcon(qsl(":/icons/folder-green-locked.png"));
                 } else {
                     icon = cachedIcon(qsl(":/icons/folder-grey-locked.png"));
@@ -10191,7 +10255,7 @@ void dlgTriggerEditor::computeTimerIcon(TTimer* pT, QIcon& icon, QString& itemDe
         if (pT->isOffsetTimer()) {
             if (pT->shouldBeActive()) {
                 itemDescription = descActiveOffsetTimer;
-                if (pT->ancestorsActive()) {
+                if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                     icon = cachedIcon(qsl(":/icons/offsettimer-on.png"));
                 } else {
                     icon = cachedIcon(qsl(":/icons/offsettimer-on-grey.png"));
@@ -10199,7 +10263,7 @@ void dlgTriggerEditor::computeTimerIcon(TTimer* pT, QIcon& icon, QString& itemDe
                 }
             } else {
                 itemDescription = descInactiveOffsetTimer;
-                if (pT->ancestorsActive()) {
+                if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                     icon = cachedIcon(qsl(":/icons/offsettimer-off.png"));
                 } else {
                     icon = cachedIcon(qsl(":/icons/offsettimer-off-grey.png"));
@@ -10208,7 +10272,7 @@ void dlgTriggerEditor::computeTimerIcon(TTimer* pT, QIcon& icon, QString& itemDe
         } else {
             if (pT->shouldBeActive()) {
                 itemDescription = descActive;
-                if (pT->ancestorsActive()) {
+                if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                     icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                 } else {
                     icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
@@ -10223,7 +10287,7 @@ void dlgTriggerEditor::computeTimerIcon(TTimer* pT, QIcon& icon, QString& itemDe
 }
 
 // Repaints timerID's tree item (and, if any, its descendants) from its
-// current isActive() state - used when the state changed via the Lua
+// current active state - used when the state changed via the Lua
 // enableTimer()/disableTimer() API rather than the GUI toggle. Only touches
 // the shared editor-wide notification banner when timerID is the item
 // currently open in the detail pane *and* the Timers view is the one on
@@ -10346,11 +10410,11 @@ void dlgTriggerEditor::populateTriggers()
 
 void dlgTriggerEditor::computeTriggerIcon(TTrigger* pT, QIcon& icon, QString& itemDescription) const
 {
-    const bool itemActive = pT->isActive();
+    const bool itemActive = pT->shownActive(mpHost->mEmergencyStop);
     if (pT->isFilterChain()) {
         if (itemActive) {
             itemDescription = descActiveFilterChain;
-            if (pT->ancestorsActive()) {
+            if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                 icon = cachedIcon(qsl(":/icons/filter.png"));
             } else {
                 icon = cachedIcon(qsl(":/icons/filter-grey.png"));
@@ -10358,7 +10422,7 @@ void dlgTriggerEditor::computeTriggerIcon(TTrigger* pT, QIcon& icon, QString& it
             }
         } else {
             itemDescription = descInactiveFilterChain;
-            if (pT->ancestorsActive()) {
+            if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                 icon = cachedIcon(qsl(":/icons/filter-locked.png"));
             } else {
                 icon = cachedIcon(qsl(":/icons/filter-grey-locked.png"));
@@ -10373,14 +10437,14 @@ void dlgTriggerEditor::computeTriggerIcon(TTrigger* pT, QIcon& icon, QString& it
                 icon = cachedIcon(qsl(":/icons/folder-brown-locked.png"));
             }
         } else if (itemActive) {
-            if (pT->ancestorsActive()) {
+            if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                 icon = cachedIcon(qsl(":/icons/folder-blue.png"));
             } else {
                 icon = cachedIcon(qsl(":/icons/folder-grey.png"));
                 itemDescription = descInactiveParent.arg(itemDescription);
             }
         } else {
-            if (pT->ancestorsActive()) {
+            if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                 icon = cachedIcon(qsl(":/icons/folder-blue-locked.png"));
             } else {
                 icon = cachedIcon(qsl(":/icons/folder-grey-locked.png"));
@@ -10389,7 +10453,7 @@ void dlgTriggerEditor::computeTriggerIcon(TTrigger* pT, QIcon& icon, QString& it
     } else {
         if (itemActive) {
             itemDescription = descActive;
-            if (pT->ancestorsActive()) {
+            if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                 icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
             } else {
                 icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
@@ -10397,7 +10461,7 @@ void dlgTriggerEditor::computeTriggerIcon(TTrigger* pT, QIcon& icon, QString& it
             }
         } else {
             itemDescription = descInactive;
-            if (pT->ancestorsActive()) {
+            if (pT->ancestorsShownActive(mpHost->mEmergencyStop)) {
                 icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
             } else {
                 icon = cachedIcon(qsl(":/icons/tag_checkbox-grey.png"));
@@ -10407,7 +10471,7 @@ void dlgTriggerEditor::computeTriggerIcon(TTrigger* pT, QIcon& icon, QString& it
 }
 
 // Repaints triggerID's tree item (and, if any, its descendants) from its
-// current isActive() state - used when the state changed via the Lua
+// current active state - used when the state changed via the Lua
 // enableTrigger()/disableTrigger() API rather than the GUI toggle, which
 // otherwise leaves the tree icon stale until the next full repopulation.
 // Only touches the shared editor-wide notification banner when triggerID is
@@ -10544,9 +10608,9 @@ void dlgTriggerEditor::expand_child_triggers(TTrigger* pTriggerParent, QTreeWidg
             clearEditorNotification();
 
             if (trigger->isFilterChain()) {
-                if (trigger->isActive()) {
+                if (trigger->shownActive(mpHost->mEmergencyStop)) {
                     itemDescription = descActiveFilterChain;
-                    if (trigger->ancestorsActive()) {
+                    if (trigger->ancestorsShownActive(mpHost->mEmergencyStop)) {
                         icon = cachedIcon(qsl(":/icons/filter.png"));
                     } else {
                         icon = cachedIcon(qsl(":/icons/filter-grey.png"));
@@ -10554,16 +10618,16 @@ void dlgTriggerEditor::expand_child_triggers(TTrigger* pTriggerParent, QTreeWidg
                     }
                 } else {
                     itemDescription = descInactiveFilterChain;
-                    if (trigger->ancestorsActive()) {
+                    if (trigger->ancestorsShownActive(mpHost->mEmergencyStop)) {
                         icon = cachedIcon(qsl(":/icons/filter-locked.png"));
                     } else {
                         icon = cachedIcon(qsl(":/icons/filter-grey-locked.png"));
                     }
                 }
             } else if (trigger->isFolder()) {
-                if (trigger->isActive()) {
+                if (trigger->shownActive(mpHost->mEmergencyStop)) {
                     itemDescription = descActiveFolder;
-                    if (trigger->ancestorsActive()) {
+                    if (trigger->ancestorsShownActive(mpHost->mEmergencyStop)) {
                         icon = cachedIcon(qsl(":/icons/folder-blue.png"));
                     } else {
                         icon = cachedIcon(qsl(":/icons/folder-grey.png"));
@@ -10571,16 +10635,16 @@ void dlgTriggerEditor::expand_child_triggers(TTrigger* pTriggerParent, QTreeWidg
                     }
                 } else {
                     itemDescription = descInactiveFolder;
-                    if (trigger->ancestorsActive()) {
+                    if (trigger->ancestorsShownActive(mpHost->mEmergencyStop)) {
                         icon = cachedIcon(qsl(":/icons/folder-blue-locked.png"));
                     } else {
                         icon = cachedIcon(qsl(":/icons/folder-grey-locked.png"));
                     }
                 }
             } else {
-                if (trigger->isActive()) {
+                if (trigger->shownActive(mpHost->mEmergencyStop)) {
                     itemDescription = descActive;
-                    if (trigger->ancestorsActive()) {
+                    if (trigger->ancestorsShownActive(mpHost->mEmergencyStop)) {
                         icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                     } else {
                         icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
@@ -10588,7 +10652,7 @@ void dlgTriggerEditor::expand_child_triggers(TTrigger* pTriggerParent, QTreeWidg
                     }
                 } else {
                     itemDescription = descInactive;
-                    if (trigger->ancestorsActive()) {
+                    if (trigger->ancestorsShownActive(mpHost->mEmergencyStop)) {
                         icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
                     } else {
                         icon = cachedIcon(qsl(":/icons/tag_checkbox-grey.png"));
@@ -10629,9 +10693,9 @@ void dlgTriggerEditor::expand_child_key(TKey* pTriggerParent, QTreeWidgetItem* p
             clearEditorNotification();
 
             if (key->isFolder()) {
-                if (key->isActive()) {
+                if (key->shownActive(mpHost->mEmergencyStop)) {
                     itemDescription = descActiveFolder;
-                    if (key->ancestorsActive()) {
+                    if (key->ancestorsShownActive(mpHost->mEmergencyStop)) {
                         icon = cachedIcon(qsl(":/icons/folder-pink.png"));
                     } else {
                         icon = cachedIcon(qsl(":/icons/folder-grey.png"));
@@ -10639,16 +10703,16 @@ void dlgTriggerEditor::expand_child_key(TKey* pTriggerParent, QTreeWidgetItem* p
                     }
                 } else {
                     itemDescription = descInactiveFolder;
-                    if (key->ancestorsActive()) {
+                    if (key->ancestorsShownActive(mpHost->mEmergencyStop)) {
                         icon = cachedIcon(qsl(":/icons/folder-pink-locked.png"));
                     } else {
                         icon = cachedIcon(qsl(":/icons/folder-grey-locked.png"));
                     }
                 }
             } else {
-                if (key->isActive()) {
+                if (key->shownActive(mpHost->mEmergencyStop)) {
                     itemDescription = descActive;
-                    if (key->ancestorsActive()) {
+                    if (key->ancestorsShownActive(mpHost->mEmergencyStop)) {
                         icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                     } else {
                         icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
@@ -10656,7 +10720,7 @@ void dlgTriggerEditor::expand_child_key(TKey* pTriggerParent, QTreeWidgetItem* p
                     }
                 } else {
                     itemDescription = descInactive;
-                    if (key->ancestorsActive()) {
+                    if (key->ancestorsShownActive(mpHost->mEmergencyStop)) {
                         icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
                     } else {
                         icon = cachedIcon(qsl(":/icons/tag_checkbox-grey.png"));
@@ -10756,9 +10820,9 @@ void dlgTriggerEditor::expand_child_alias(TAlias* pTriggerParent, QTreeWidgetIte
             clearEditorNotification();
 
             if (alias->isFolder()) {
-                if (alias->isActive()) {
+                if (alias->shownActive(mpHost->mEmergencyStop)) {
                     itemDescription = descActiveFolder;
-                    if (alias->ancestorsActive()) {
+                    if (alias->ancestorsShownActive(mpHost->mEmergencyStop)) {
                         icon = cachedIcon(qsl(":/icons/folder-violet.png"));
                     } else {
                         icon = cachedIcon(qsl(":/icons/folder-grey.png"));
@@ -10766,16 +10830,16 @@ void dlgTriggerEditor::expand_child_alias(TAlias* pTriggerParent, QTreeWidgetIte
                     }
                 } else {
                     itemDescription = descInactiveFolder;
-                    if (alias->ancestorsActive()) {
+                    if (alias->ancestorsShownActive(mpHost->mEmergencyStop)) {
                         icon = cachedIcon(qsl(":/icons/folder-violet-locked.png"));
                     } else {
                         icon = cachedIcon(qsl(":/icons/folder-grey-locked.png"));
                     }
                 }
             } else {
-                if (alias->isActive()) {
+                if (alias->shownActive(mpHost->mEmergencyStop)) {
                     itemDescription = descActive;
-                    if (alias->ancestorsActive()) {
+                    if (alias->ancestorsShownActive(mpHost->mEmergencyStop)) {
                         icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                     } else {
                         icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
@@ -10783,7 +10847,7 @@ void dlgTriggerEditor::expand_child_alias(TAlias* pTriggerParent, QTreeWidgetIte
                     }
                 } else {
                     itemDescription = descInactive;
-                    if (alias->ancestorsActive()) {
+                    if (alias->ancestorsShownActive(mpHost->mEmergencyStop)) {
                         icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
                     } else {
                         icon = cachedIcon(qsl(":/icons/tag_checkbox-grey.png"));
@@ -10885,7 +10949,7 @@ void dlgTriggerEditor::expand_child_timers(TTimer* pTimerParent, QTreeWidgetItem
 
             if (timer->isFolder()) {
                 if (timer->shouldBeActive()) {
-                    if (timer->ancestorsActive()) {
+                    if (timer->ancestorsShownActive(mpHost->mEmergencyStop)) {
                         icon = cachedIcon(qsl(":/icons/folder-green.png"));
                         itemDescription = descActiveFolder;
                     } else {
@@ -10894,7 +10958,7 @@ void dlgTriggerEditor::expand_child_timers(TTimer* pTimerParent, QTreeWidgetItem
                     }
                 } else {
                     itemDescription = descInactiveFolder;
-                    if (timer->ancestorsActive()) {
+                    if (timer->ancestorsShownActive(mpHost->mEmergencyStop)) {
                         icon = cachedIcon(qsl(":/icons/folder-green-locked.png"));
                     } else {
                         icon = cachedIcon(qsl(":/icons/folder-grey-locked.png"));
@@ -10904,7 +10968,7 @@ void dlgTriggerEditor::expand_child_timers(TTimer* pTimerParent, QTreeWidgetItem
                 if (timer->isOffsetTimer()) {
                     if (timer->shouldBeActive()) {
                         itemDescription = descActiveOffsetTimer;
-                        if (timer->ancestorsActive()) {
+                        if (timer->ancestorsShownActive(mpHost->mEmergencyStop)) {
                             icon = cachedIcon(qsl(":/icons/offsettimer-on.png"));
                         } else {
                             icon = cachedIcon(qsl(":/icons/offsettimer-on-grey.png"));
@@ -10912,7 +10976,7 @@ void dlgTriggerEditor::expand_child_timers(TTimer* pTimerParent, QTreeWidgetItem
                         }
                     } else {
                         itemDescription = descInactiveOffsetTimer;
-                        if (timer->ancestorsActive()) {
+                        if (timer->ancestorsShownActive(mpHost->mEmergencyStop)) {
                             icon = cachedIcon(qsl(":/icons/offsettimer-off.png"));
                         } else {
                             icon = cachedIcon(qsl(":/icons/offsettimer-off-grey.png"));
@@ -10921,7 +10985,7 @@ void dlgTriggerEditor::expand_child_timers(TTimer* pTimerParent, QTreeWidgetItem
                 } else {
                     if (timer->shouldBeActive()) {
                         itemDescription = descActive;
-                        if (timer->ancestorsActive()) {
+                        if (timer->ancestorsShownActive(mpHost->mEmergencyStop)) {
                             icon = cachedIcon(qsl(":/icons/tag_checkbox_checked.png"));
                         } else {
                             icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
@@ -10929,7 +10993,7 @@ void dlgTriggerEditor::expand_child_timers(TTimer* pTimerParent, QTreeWidgetItem
                         }
                     } else {
                         itemDescription = descInactive;
-                        if (timer->ancestorsActive()) {
+                        if (timer->ancestorsShownActive(mpHost->mEmergencyStop)) {
                             icon = cachedIcon(qsl(":/icons/tag_checkbox.png"));
                         } else {
                             icon = cachedIcon(qsl(":/icons/tag_checkbox-grey.png"));
@@ -11541,6 +11605,142 @@ void dlgTriggerEditor::slot_showAliases()
     focusItemTree(treeWidget_aliases);
 }
 
+// Qt's rich text does not understand 'color: inherit' and renders it as
+// black, so the theme's text colour has to be spelled out explicitly
+static QString themedBannerLinkColor()
+{
+    return MudletApp::darkMode() ? qsl("rgb(230, 230, 230)") : qsl("black");
+}
+
+// Chunk names as TTrigger::compileScript() and its siblings build them. A repaired item keeps its last error, so
+// it counts only while broken; a cleared tree's current item is deleted before fillout_form() forgets it.
+bool dlgTriggerEditor::currentScriptChunk(int& itemId, QString& chunkName, QString& error)
+{
+    switch (mCurrentView) {
+    case EditorViewType::cmTriggerView:
+        if (auto* pT = treeWidget_triggers->topLevelItemCount() ? getTriggerFromTreeItem(mpCurrentTriggerItem) : nullptr) {
+            itemId = pT->getID();
+            chunkName = qsl("Trigger: %1").arg(pT->getName());
+            error = pT->state() ? QString() : pT->getError();
+            return true;
+        }
+        break;
+    case EditorViewType::cmAliasView:
+        if (auto* pT = treeWidget_aliases->topLevelItemCount() ? getAliasFromTreeItem(mpCurrentAliasItem) : nullptr) {
+            itemId = pT->getID();
+            chunkName = qsl("Alias: %1").arg(pT->getName());
+            error = pT->state() ? QString() : pT->getError();
+            return true;
+        }
+        break;
+    case EditorViewType::cmTimerView:
+        if (auto* pT = treeWidget_timers->topLevelItemCount() ? getTimerFromTreeItem(mpCurrentTimerItem) : nullptr) {
+            itemId = pT->getID();
+            chunkName = qsl("Timer: %1").arg(pT->getName());
+            error = pT->state() ? QString() : pT->getError();
+            return true;
+        }
+        break;
+    case EditorViewType::cmScriptView:
+        if (auto* pT = treeWidget_scripts->topLevelItemCount() ? getScriptFromTreeItem(mpCurrentScriptItem) : nullptr) {
+            itemId = pT->getID();
+            chunkName = qsl("Script: %1").arg(pT->getName());
+            error = pT->state() ? QString() : pT->getError();
+            return true;
+        }
+        break;
+    case EditorViewType::cmActionView:
+        if (auto* pT = treeWidget_actions->topLevelItemCount() ? getActionFromTreeItem(mpCurrentActionItem) : nullptr) {
+            itemId = pT->getID();
+            chunkName = qsl("Button: %1").arg(pT->getName());
+            error = pT->state() ? QString() : pT->getError();
+            return true;
+        }
+        break;
+    case EditorViewType::cmKeysView:
+        if (auto* pT = treeWidget_keys->topLevelItemCount() ? getKeyFromTreeItem(mpCurrentKeyItem) : nullptr) {
+            itemId = pT->getID();
+            chunkName = qsl("Key: %1").arg(pT->getName());
+            error = pT->state() ? QString() : pT->getError();
+            return true;
+        }
+        break;
+    case EditorViewType::cmUnknownView:
+        [[fallthrough]];
+    case EditorViewType::cmVarsView:
+        break;
+    }
+    return false;
+}
+
+// Turns the [string "Trigger: name"]:12: location of a Lua error in the open
+// item's own script into a link that jumps to that line. Another item's error -
+// a descendant's, even one of the same name - or a location in another chunk,
+// such as a script a running one called, stays as text.
+QString dlgTriggerEditor::linkErrorLineToScript(const QString& error)
+{
+    mErrorLineView = EditorViewType::cmUnknownView;
+    mErrorLineItemId = -1;
+
+    int itemId = -1;
+    QString chunkName;
+    QString ownError;
+    // Toggling a broken item on wraps its error in an explanation that names the item first
+    const qsizetype ownErrorStart = currentScriptChunk(itemId, chunkName, ownError) && !ownError.isEmpty() ? error.indexOf(ownError) : -1;
+    if (ownErrorStart < 0) {
+        return error;
+    }
+
+    // TLuaInterpreter::compile() HTML-escapes the message, so the quotes arrive as entities
+    static const QRegularExpression location(qsl(R"(\[string &quot;(.*?)&quot;\]:(\d+):)"));
+    const QRegularExpressionMatch match = location.match(error, ownErrorStart);
+    if (!match.hasMatch() || match.capturedEnd() > ownErrorStart + ownError.size()) {
+        return error;
+    }
+
+    QString label = match.captured(1);
+    label.replace(qsl("&quot;"), qsl("\"")).replace(qsl("&lt;"), qsl("<")).replace(qsl("&gt;"), qsl(">")).replace(qsl("&amp;"), qsl("&"));
+    // Lua cuts a long chunk name, or one with a line break, short and appends "...";
+    // the cut is by bytes, so a split character arrives as a replacement character
+    bool sameChunk = label == chunkName;
+    if (!sameChunk && label.endsWith(qsl("..."))) {
+        QString stemText = label.chopped(3);
+        while (stemText.endsWith(QChar::ReplacementCharacter)) {
+            stemText.chop(1);
+        }
+        const QByteArray stem = stemText.toUtf8();
+        sameChunk = !stem.isEmpty() && chunkName.toUtf8().startsWith(stem);
+    }
+    if (!sameChunk) {
+        return error;
+    }
+
+    mErrorLineView = mCurrentView;
+    mErrorLineItemId = itemId;
+    QString linked = error;
+    linked.replace(match.capturedStart(),
+                   match.capturedLength(),
+                   qsl("<a href='mudlet-error-line:%1' style='color: %2; text-decoration: underline;'>%3</a>").arg(match.captured(2), themedBannerLinkColor(), match.captured(0)));
+    return linked;
+}
+
+void dlgTriggerEditor::jumpToErrorLine(const int line)
+{
+    int itemId = -1;
+    QString chunkName;
+    QString ownError;
+    // The banner can outlive a switch to another item, whose script the line is not in
+    if (line < 1 || !mpSourceEditorEdbee || !mpSourceEditorEdbeeDocument || mCurrentView != mErrorLineView || !currentScriptChunk(itemId, chunkName, ownError) || itemId != mErrorLineItemId) {
+        return;
+    }
+
+    // An unclosed block is reported on the "end" line the item classes append after the script
+    const auto lineCount = static_cast<int>(mpSourceEditorEdbeeDocument->lineCount());
+    const int targetLine = std::min(line, std::max(lineCount, 1)) - 1;
+    mpSourceEditorEdbee->setFocus();
+    mpSourceEditorEdbee->controller()->moveCaretTo(static_cast<size_t>(targetLine), static_cast<size_t>(0), false);
+}
+
 void dlgTriggerEditor::showError(const QString& text)
 {
     // A still-running undo-toast expiry timer would hide this message when it
@@ -11549,7 +11749,7 @@ void dlgTriggerEditor::showError(const QString& text)
     mpSystemMessageArea->notificationAreaIconLabelInformation->hide();
     mpSystemMessageArea->notificationAreaIconLabelError->show();
     mpSystemMessageArea->notificationAreaIconLabelWarning->hide();
-    mpSystemMessageArea->notificationAreaMessageBox->setText(text);
+    mpSystemMessageArea->notificationAreaMessageBox->setText(linkErrorLineToScript(text));
     mpSystemMessageArea->show();
     mCurrentBannerKey.clear();
 
@@ -11594,13 +11794,6 @@ void dlgTriggerEditor::showInfo(const QString& text)
     if (!mpHost->mIsProfileLoadingSequence) {
         mudlet::self()->announce(text);
     }
-}
-
-// Qt's rich text does not understand 'color: inherit' and renders it as
-// black, so the theme's text colour has to be spelled out explicitly
-static QString themedBannerLinkColor()
-{
-    return MudletApp::darkMode() ? qsl("rgb(230, 230, 230)") : qsl("black");
 }
 
 void dlgTriggerEditor::showIntro(const QString& desiredOption)
@@ -11939,19 +12132,29 @@ void dlgTriggerEditor::slot_closeSourceFind()
 void dlgTriggerEditor::slot_sourceReplace()
 {
     auto controller = mpSourceEditorEdbee->controller();
-    auto replaceText = mpSourceEditorFindArea->lineEdit_replaceText->text();
+    const QString findText = mpSourceEditorFindArea->lineEdit_findText->text();
+    const QString replaceText = mpSourceEditorFindArea->lineEdit_replaceText->text();
+    // the same matching as the finds below, which fold case the Unicode way (ß matches ss)
+    edbee::RegExp term(findText, false, edbee::RegExp::SyntaxFixedString);
     for (size_t i = 0; i < controller->textSelection()->rangeCount(); i++) {
         auto& range = controller->textSelection()->range(i);
-        if (mpSourceEditorEdbee->textDocument()->text().mid(range.anchor(), range.length()) == replaceText) {
+        // anchor() is the end of a selection made right to left, min() is always its start
+        const QString selected = mpSourceEditorEdbee->textDocument()->text().mid(range.min(), range.length());
+        // finding replaces the whole selection, so `range` and the count are stale after one
+        if (selected == replaceText) {
             slot_sourceFindNext();
-            continue;
+            return;
         }
         if (!range.hasSelection()) {
             slot_sourceFindPrevious();
-            continue;
+            return;
         }
-        mpSourceEditorEdbee->textDocument()->replace(range.anchor(), range.length(), replaceText);
-        range.setLength(mpSourceEditorFindArea->lineEdit_replaceText->text().length());
+        if (term.indexIn(selected) != 0 || term.len(0) != static_cast<size_t>(selected.length())) {
+            slot_sourceFindNext();
+            return;
+        }
+        mpSourceEditorEdbee->textDocument()->replace(range.min(), range.length(), replaceText);
+        range.setLength(replaceText.length());
     }
 }
 
@@ -11982,13 +12185,15 @@ void dlgTriggerEditor::slot_sourceFindNext()
 void dlgTriggerEditor::slot_sourceFindTextChanges()
 {
     auto text = mpSourceEditorFindArea->lineEdit_findText->text();
+    auto controller = mpSourceEditorEdbee->controller();
+    // the marks left by a longer term no longer match what the box holds
+    controller->borderedTextRanges()->clear();
     if (text.length() <= 2) {
+        controller->update();
         return;
     }
 
-    auto controller = mpSourceEditorEdbee->controller();
     auto searcher = controller->textSearcher();
-    controller->borderedTextRanges()->clear();
     controller->textSelection()->range(0).clearSelection();
     searcher->setSearchTerm(text);
     searcher->markAll(controller->borderedTextRanges());
@@ -13056,73 +13261,92 @@ void dlgTriggerEditor::slot_copyXml()
 }
 
 // FIXME: The switch cases in here need to handle EditorViewType::cmVarsView but how is not clear
-// Applies the same placement to every pasted item that pasting a single item
-// would get: into the selected group/folder, or next to the selected item.
+// The import leaves pasted items at the bottom of the list; move them to just
+// beneath the selected item, beside it even when it is a folder.
 void dlgTriggerEditor::placePastedItems(EditorViewType itemType, const QList<int>& itemIDs)
 {
+    // The units' sibling lists also hold temporary items the tree does not show,
+    // so a tree row is not a position in them - find the selected item itself
+    const auto positionAfter = [](auto* pTarget, const auto& rootList) {
+        const auto indexAfter = [pTarget](const auto& siblings) {
+            int position = 1;
+            for (const auto* pSibling : siblings) {
+                if (pSibling == pTarget) {
+                    return position;
+                }
+                ++position;
+            }
+            return -1;
+        };
+        if (!pTarget) {
+            return -1;
+        }
+        return pTarget->getParent() ? indexAfter(*pTarget->getParent()->getChildrenList()) : indexAfter(rootList);
+    };
+
     QTreeWidget* targetTree = nullptr;
-    std::function<bool(int)> itemIsFolder;
-    std::function<void(int, int, int, int)> reParentItem;
+    std::function<int(int)> positionAfterItem;
+    std::function<void(int, int, TreeItemInsertMode, int)> reParentItem;
 
     switch (itemType) {
     case EditorViewType::cmTriggerView:
         targetTree = treeWidget_triggers;
-        itemIsFolder = [this](int id) {
-            auto* pItem = mpHost->getTriggerUnit()->getTrigger(id);
-            return pItem && pItem->isFolder();
+        positionAfterItem = [this, positionAfter](int id) {
+            auto* pUnit = mpHost->getTriggerUnit();
+            return positionAfter(pUnit->getTrigger(id), pUnit->getTriggerRootNodeList());
         };
-        reParentItem = [this](int id, int parentId, int parentPos, int childPos) {
-            mpHost->getTriggerUnit()->reParentTrigger(id, 0, parentId, parentPos, childPos);
+        reParentItem = [this](int id, int parentId, TreeItemInsertMode mode, int position) {
+            mpHost->getTriggerUnit()->reParentTrigger(id, 0, parentId, mode, position);
         };
         break;
     case EditorViewType::cmTimerView:
         targetTree = treeWidget_timers;
-        itemIsFolder = [this](int id) {
-            auto* pItem = mpHost->getTimerUnit()->getTimer(id);
-            return pItem && pItem->isFolder();
+        positionAfterItem = [this, positionAfter](int id) {
+            auto* pUnit = mpHost->getTimerUnit();
+            return positionAfter(pUnit->getTimer(id), pUnit->getTimerRootNodeList());
         };
-        reParentItem = [this](int id, int parentId, int parentPos, int childPos) {
-            mpHost->getTimerUnit()->reParentTimer(id, 0, parentId, parentPos, childPos);
+        reParentItem = [this](int id, int parentId, TreeItemInsertMode mode, int position) {
+            mpHost->getTimerUnit()->reParentTimer(id, 0, parentId, mode, position);
         };
         break;
     case EditorViewType::cmAliasView:
         targetTree = treeWidget_aliases;
-        itemIsFolder = [this](int id) {
-            auto* pItem = mpHost->getAliasUnit()->getAlias(id);
-            return pItem && pItem->isFolder();
+        positionAfterItem = [this, positionAfter](int id) {
+            auto* pUnit = mpHost->getAliasUnit();
+            return positionAfter(pUnit->getAlias(id), pUnit->getAliasRootNodeList());
         };
-        reParentItem = [this](int id, int parentId, int parentPos, int childPos) {
-            mpHost->getAliasUnit()->reParentAlias(id, 0, parentId, parentPos, childPos);
+        reParentItem = [this](int id, int parentId, TreeItemInsertMode mode, int position) {
+            mpHost->getAliasUnit()->reParentAlias(id, 0, parentId, mode, position);
         };
         break;
     case EditorViewType::cmScriptView:
         targetTree = treeWidget_scripts;
-        itemIsFolder = [this](int id) {
-            auto* pItem = mpHost->getScriptUnit()->getScript(id);
-            return pItem && pItem->isFolder();
+        positionAfterItem = [this, positionAfter](int id) {
+            auto* pUnit = mpHost->getScriptUnit();
+            return positionAfter(pUnit->getScript(id), pUnit->getScriptRootNodeList());
         };
-        reParentItem = [this](int id, int parentId, int parentPos, int childPos) {
-            mpHost->getScriptUnit()->reParentScript(id, 0, parentId, parentPos, childPos);
+        reParentItem = [this](int id, int parentId, TreeItemInsertMode mode, int position) {
+            mpHost->getScriptUnit()->reParentScript(id, 0, parentId, mode, position);
         };
         break;
     case EditorViewType::cmActionView:
         targetTree = treeWidget_actions;
-        itemIsFolder = [this](int id) {
-            auto* pItem = mpHost->getActionUnit()->getAction(id);
-            return pItem && pItem->isFolder();
+        positionAfterItem = [this, positionAfter](int id) {
+            auto* pUnit = mpHost->getActionUnit();
+            return positionAfter(pUnit->getAction(id), pUnit->getActionRootNodeList());
         };
-        reParentItem = [this](int id, int parentId, int parentPos, int childPos) {
-            mpHost->getActionUnit()->reParentAction(id, 0, parentId, parentPos, childPos);
+        reParentItem = [this](int id, int parentId, TreeItemInsertMode mode, int position) {
+            mpHost->getActionUnit()->reParentAction(id, 0, parentId, mode, position);
         };
         break;
     case EditorViewType::cmKeysView:
         targetTree = treeWidget_keys;
-        itemIsFolder = [this](int id) {
-            auto* pItem = mpHost->getKeyUnit()->getKey(id);
-            return pItem && pItem->isFolder();
+        positionAfterItem = [this, positionAfter](int id) {
+            auto* pUnit = mpHost->getKeyUnit();
+            return positionAfter(pUnit->getKey(id), pUnit->getKeyRootNodeList());
         };
-        reParentItem = [this](int id, int parentId, int parentPos, int childPos) {
-            mpHost->getKeyUnit()->reParentKey(id, 0, parentId, parentPos, childPos);
+        reParentItem = [this](int id, int parentId, TreeItemInsertMode mode, int position) {
+            mpHost->getKeyUnit()->reParentKey(id, 0, parentId, mode, position);
         };
         break;
     case EditorViewType::cmVarsView:
@@ -13141,22 +13365,13 @@ void dlgTriggerEditor::placePastedItems(EditorViewType itemType, const QList<int
         return;
     }
 
-    QTreeWidgetItem* targetItem = targetTree->itemFromIndex(targetIndex);
-    const int targetId = targetIndex.data(Qt::UserRole).toInt();
-    const bool isGroup = (targetItem && targetItem->childCount() > 0) || itemIsFolder(targetId);
-
-    if (isGroup) {
-        for (const int itemID : itemIDs) {
-            reParentItem(itemID, targetId, -1, -1);
-        }
-    } else {
-        // mirror single-item paste: insert as siblings right after the selected item
-        const QModelIndex parentIndex = targetIndex.parent();
-        const int parentId = parentIndex.data(Qt::UserRole).toInt();
-        const int parentRow = parentIndex.row();
-        int childRow = targetIndex.row() + 1;
-        for (const int itemID : itemIDs) {
-            reParentItem(itemID, parentId, parentRow, childRow++);
+    const int parentId = targetIndex.parent().data(Qt::UserRole).toInt();
+    int position = positionAfterItem(targetIndex.data(Qt::UserRole).toInt());
+    for (const int itemID : itemIDs) {
+        if (position == -1) {
+            reParentItem(itemID, parentId, TreeItemInsertMode::Append, 0);
+        } else {
+            reParentItem(itemID, parentId, TreeItemInsertMode::AtPosition, position++);
         }
     }
 }
@@ -13262,183 +13477,10 @@ void dlgTriggerEditor::slot_pasteXml()
     }
 
     mCurrentView = static_cast<EditorViewType>(importedItemType);
-    // importing drops the item at the bottom of the list - move it to be a sibling
-    // of the currently selected item instead
-    switch (mCurrentView) {
-    case EditorViewType::cmTriggerView: {
-        if (xmlPackages.size() > 1) {
-            // multi-item pastes were already reparented above; reparenting the
-            // first trigger again would link it into its parent's children twice
-            break;
-        }
-        // Handle multi-selection: use the first selected item as reference
-        QModelIndex targetIndex = treeWidget_triggers->currentIndex();
-        if (!targetIndex.isValid()) {
-            // If no current index, try to get from selected items
-            QList<QTreeWidgetItem*> selectedItems = treeWidget_triggers->selectedItems();
-            if (!selectedItems.isEmpty()) {
-                targetIndex = treeWidget_triggers->indexFromItem(selectedItems.first());
-            }
-        }
-
-        if (targetIndex.isValid()) {
-            // Check if the selected item is a trigger group/folder
-            QTreeWidgetItem* targetItem = treeWidget_triggers->itemFromIndex(targetIndex);
-            int targetId = targetIndex.data(Qt::UserRole).toInt();
-            TTrigger* targetTrigger = mpHost->getTriggerUnit()->getTrigger(targetId);
-
-            // Check if target is a group/folder (has children OR is a group trigger)
-            bool isGroup = (targetItem && targetItem->childCount() > 0) || (targetTrigger && targetTrigger->isFolder());
-
-            if (isGroup) {
-                // Paste INSIDE the selected group/folder
-                mpHost->getTriggerUnit()->reParentTrigger(importedItemID, 0, targetId, -1, -1);
-            } else {
-                // Paste as sibling next to the selected item
-                auto parent = targetIndex.parent();
-                auto parentRow = parent.row();
-                auto parentId = parent.data(Qt::UserRole).toInt();
-
-                const int siblingRow = targetIndex.row() + 1;
-                mpHost->getTriggerUnit()->reParentTrigger(importedItemID, 0, parentId, parentRow, siblingRow);
-            }
-        } else {
-            // If no valid target, place at the root level
-            mpHost->getTriggerUnit()->reParentTrigger(importedItemID, 0, 0, -1, -1);
-        }
-        break;
-    }
-    case EditorViewType::cmTimerView: {
-        if (xmlPackages.size() > 1) {
-            // multi-item pastes were already reparented above
-            break;
-        }
-        QModelIndex targetIndex = treeWidget_timers->currentIndex();
-        if (!targetIndex.isValid()) {
-            QList<QTreeWidgetItem*> selectedItems = treeWidget_timers->selectedItems();
-            if (!selectedItems.isEmpty()) {
-                targetIndex = treeWidget_timers->indexFromItem(selectedItems.first());
-            }
-        }
-
-        if (targetIndex.isValid()) {
-            auto parent = targetIndex.parent();
-            auto parentRow = parent.row();
-            auto parentId = parent.data(Qt::UserRole).toInt();
-
-            const int siblingRow = targetIndex.row() + 1;
-            mpHost->getTimerUnit()->reParentTimer(importedItemID, 0, parentId, parentRow, siblingRow);
-        } else {
-            mpHost->getTimerUnit()->reParentTimer(importedItemID, 0, 0, -1, -1);
-        }
-        break;
-    }
-    case EditorViewType::cmAliasView: {
-        if (xmlPackages.size() > 1) {
-            // multi-item pastes were already reparented above
-            break;
-        }
-        QModelIndex targetIndex = treeWidget_aliases->currentIndex();
-        if (!targetIndex.isValid()) {
-            QList<QTreeWidgetItem*> selectedItems = treeWidget_aliases->selectedItems();
-            if (!selectedItems.isEmpty()) {
-                targetIndex = treeWidget_aliases->indexFromItem(selectedItems.first());
-            }
-        }
-
-        if (targetIndex.isValid()) {
-            auto parent = targetIndex.parent();
-            auto parentRow = parent.row();
-            auto parentId = parent.data(Qt::UserRole).toInt();
-
-            const int siblingRow = targetIndex.row() + 1;
-            mpHost->getAliasUnit()->reParentAlias(importedItemID, 0, parentId, parentRow, siblingRow);
-        } else {
-            mpHost->getAliasUnit()->reParentAlias(importedItemID, 0, 0, -1, -1);
-        }
-        break;
-    }
-    case EditorViewType::cmScriptView: {
-        if (xmlPackages.size() > 1) {
-            // multi-item pastes were already reparented above
-            break;
-        }
-        QModelIndex targetIndex = treeWidget_scripts->currentIndex();
-        if (!targetIndex.isValid()) {
-            QList<QTreeWidgetItem*> selectedItems = treeWidget_scripts->selectedItems();
-            if (!selectedItems.isEmpty()) {
-                targetIndex = treeWidget_scripts->indexFromItem(selectedItems.first());
-            }
-        }
-
-        if (targetIndex.isValid()) {
-            auto parent = targetIndex.parent();
-            auto parentRow = parent.row();
-            auto parentId = parent.data(Qt::UserRole).toInt();
-
-            const int siblingRow = targetIndex.row() + 1;
-            mpHost->getScriptUnit()->reParentScript(importedItemID, 0, parentId, parentRow, siblingRow);
-        } else {
-            mpHost->getScriptUnit()->reParentScript(importedItemID, 0, 0, -1, -1);
-        }
-        break;
-    }
-    case EditorViewType::cmActionView: {
-        if (xmlPackages.size() > 1) {
-            // multi-item pastes were already reparented above
-            break;
-        }
-        QModelIndex targetIndex = treeWidget_actions->currentIndex();
-        if (!targetIndex.isValid()) {
-            QList<QTreeWidgetItem*> selectedItems = treeWidget_actions->selectedItems();
-            if (!selectedItems.isEmpty()) {
-                targetIndex = treeWidget_actions->indexFromItem(selectedItems.first());
-            }
-        }
-
-        if (targetIndex.isValid()) {
-            auto parent = targetIndex.parent();
-            auto parentRow = parent.row();
-            auto parentId = parent.data(Qt::UserRole).toInt();
-
-            const int siblingRow = targetIndex.row() + 1;
-            mpHost->getActionUnit()->reParentAction(importedItemID, 0, parentId, parentRow, siblingRow);
-        } else {
-            mpHost->getActionUnit()->reParentAction(importedItemID, 0, 0, -1, -1);
-        }
-        break;
-    }
-    case EditorViewType::cmKeysView: {
-        if (xmlPackages.size() > 1) {
-            // multi-item pastes were already reparented above
-            break;
-        }
-        QModelIndex targetIndex = treeWidget_keys->currentIndex();
-        if (!targetIndex.isValid()) {
-            QList<QTreeWidgetItem*> selectedItems = treeWidget_keys->selectedItems();
-            if (!selectedItems.isEmpty()) {
-                targetIndex = treeWidget_keys->indexFromItem(selectedItems.first());
-            }
-        }
-
-        if (targetIndex.isValid()) {
-            auto parent = targetIndex.parent();
-            auto parentRow = parent.row();
-            auto parentId = parent.data(Qt::UserRole).toInt();
-
-            const int siblingRow = targetIndex.row() + 1;
-            mpHost->getKeyUnit()->reParentKey(importedItemID, 0, parentId, parentRow, siblingRow);
-        } else {
-            mpHost->getKeyUnit()->reParentKey(importedItemID, 0, 0, -1, -1);
-        }
-        break;
-    }
-    case EditorViewType::cmVarsView:
-        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_pasteXml() WARNING - switch(EditorViewType) number 2 not expected to be called for \"EditorViewType::cmVarsView!\"";
-        break;
-    case EditorViewType::cmUnknownView:
-        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_pasteXml() WARNING - switch(EditorViewType) number 2 not expected to be called for \"EditorViewType::cmUnknownView!\"";
-        break;
+    // multi-item pastes were already placed above; placing the first again would
+    // link it into its parent's children twice
+    if (xmlPackages.size() == 1) {
+        placePastedItems(importedItemType, {importedItemID});
     }
 
     // Register undo commands for the pasted items
@@ -13814,8 +13856,8 @@ void dlgTriggerEditor::runScheduledCleanReset()
         return;
     }
 
-    // Every profile builds an editor on load that may never be opened, and populating it costs as much as
-    // the profile has items; changeView(), focus and enter events rebuild on mNeedUpdateData, showEvent() on the flag
+    // Populating costs as much as the profile has items, so it waits for the editor to be seen;
+    // changeView(), focus and enter events rebuild on mNeedUpdateData, showEvent() on the flag
     if (!mHasBeenShown) {
         mCleanResetDeferred = true;
         mNeedUpdateData = true;
@@ -14119,7 +14161,7 @@ void dlgTriggerEditor::keyGrabCallback(const Qt::Key key, const Qt::KeyboardModi
             }
             QString newStateXML = exportKeyToXML(pT, SnapshotScope::ItemOnly);
 
-            showKeyTakenWarning(pItem, takenKeyWarning(pT), true);
+            showKeyTakenWarning(pItem, takenKeyWarning(mpHost, pT), true);
 
             pushKeyPropertyCommand(mpUndoStack, mpHost, keyID, pT->getName(), qsl("keyBinding"), oldStateXML, newStateXML);
         }

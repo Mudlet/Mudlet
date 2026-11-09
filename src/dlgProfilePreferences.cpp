@@ -66,6 +66,7 @@
 #endif
 
 #include <chrono>
+#include <filesystem>
 #include <vector>
 #include <QtConcurrentRun>
 #include <QAbstractScrollArea>
@@ -80,6 +81,7 @@
 #include <QDoubleSpinBox>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QFontDatabase>
 #include <QFontDialog>
 #include <QFutureWatcher>
 #include <QIcon>
@@ -185,6 +187,8 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     // (see #5310). Done here rather than in loadEditorTab() so it holds even
     // when that returns early for want of a profile.
     new EditorAutoCompleteFocusHandler(edbeePreviewWidget, this);
+    // The preview completes Lua like the editor, which may not have been built yet
+    dlgTriggerEditor::ensureLuaAutoCompleteProvider();
 
     mpTimer_apply = new QTimer(this);
     mpTimer_apply->setSingleShot(true);
@@ -269,6 +273,10 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     // have to respond to changes in the settings when *another* profile saves
     // them.
     populateApplicationSettings();
+
+    connect(checkBox_monospacedFontsOnly, &QCheckBox::toggled, this, [this]() {
+        showDisplayFont(fontComboBox_displayFont->currentFont());
+    });
 
     connect(checkBox_showTabConnectionIndicators, &QCheckBox::toggled, this, [=](bool checked) {
         mudlet::self()->setShowTabConnectionIndicators(checked);
@@ -4192,6 +4200,10 @@ void dlgProfilePreferences::populateApplicationSettings()
         const QSignalBlocker blocker(telnetHandlerEnabled);
         telnetHandlerEnabled->setChecked(MudletApp::getQSettings()->value("telnetHandlerEnabled", false).toBool());
     }
+    {
+        const QSignalBlocker blocker(checkBox_monospacedFontsOnly);
+        checkBox_monospacedFontsOnly->setChecked(MudletApp::getQSettings()->value(qsl("showOnlyMonospacedFonts"), false).toBool());
+    }
     populateTriggerMatchPoolSettings();
     {
         // The one setting here that lives in its own QSettings group rather than
@@ -4223,7 +4235,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 {
     loadEditorTab();
 
-    fontComboBox_displayFont->setCurrentFont(pHost->getDisplayFont());
+    showDisplayFont(pHost->getDisplayFont());
     rememberDisplayFontFamilyShown();
     // Accommodate an initial font size being larger than expected - and ensure
     // it is a positive value:
@@ -5829,6 +5841,7 @@ void dlgProfilePreferences::slot_resetMapColors()
 
     if (pHost->mpMap) {
         pHost->mpMap->restore16ColorSet();
+        pHost->mpMap->announceMapperSettingChanged(TMap::MapperSetting::BackgroundColor);
         pHost->mpMap->updateArea(-1);
     }
 }
@@ -6079,22 +6092,9 @@ void dlgProfilePreferences::slot_setMapBgColor()
     Host* pHost = mpHost;
     if (pHost) {
         setButtonAndProfileColor(pushButton_background_color_2, pHost->mBgColor_2, true);
-// if 3D map, update transparency flags
-#if defined(INCLUDE_3DMAPPER)
-        if (pHost->mpMap->mapper()->glWidget) {
-            QOpenGLWidget* map = pHost->mpMap->mapper()->glWidget;
-            if (auto* modernMap = qobject_cast<ModernGLWidget*>(map)) {
-                // Its style may paint its own background, whatever the profile's is
-                modernMap->applyStyle();
-            } else if (pHost->mBgColor_2.alpha() < 255) {
-                map->setAttribute(Qt::WA_OpaquePaintEvent, false);
-                map->setAttribute(Qt::WA_AlwaysStackOnTop, true);
-            } else {
-                map->setAttribute(Qt::WA_OpaquePaintEvent, true);
-                map->setAttribute(Qt::WA_AlwaysStackOnTop, false);
-            }
+        if (pHost->mpMap) {
+            pHost->mpMap->announceMapperSettingChanged(TMap::MapperSetting::BackgroundColor);
         }
-#endif
     }
 }
 
@@ -6358,6 +6358,8 @@ void dlgProfilePreferences::fillOutMapHistory()
     if (!pHost) {
         return;
     }
+    // An autosave still being written would be listed as its temporary file wherever that file has a name
+    pHost->waitForMapAutosave();
 
     // Map files change while the dialog is open, so rebuild, resetting the enabled state to an empty list's.
     // The rebuild follows every change, so it keeps an older map that was picked to load; the newest entry
@@ -6605,7 +6607,14 @@ void dlgProfilePreferences::slot_saveMap()
         if (!fileName.endsWith(qsl(".json"), Qt::CaseInsensitive)) {
             success = pHost->saveMapFile(fileName, comboBox_mapFileSaveFormatVersion->currentData().toInt());
         } else {
-            success = pHost->mpMap->writeJsonMapFile(fileName).first;
+            auto [localSuccess, errorMessage] = pHost->mpMap->writeJsonMapFile(fileName);
+            success = localSuccess;
+            if (!localSuccess) {
+                //: %1 is the file the map was being exported to, %2 why it could not be
+                pHost->postMessage(tr("[ ERROR ] - Unable to save JSON map file: %1\n"
+                                      "reason: %2.")
+                                           .arg(fileName, errorMessage));
+            }
         }
 
         if (success) {
@@ -6678,8 +6687,9 @@ void dlgProfilePreferences::slot_copyMap()
 
             // Check for the destination directory for the other profiles
             const QDir toProfileDir;
-            const QString toProfileDirPathString = MudletApp::getMudletPath(enums::profileHomePath, pHost->getName());
-            if (!toProfileDir.exists(toProfileDirPathString)) {
+            const QString toProfileDirPathString = MudletApp::getMudletPath(enums::profileMapsPath, toProfileName);
+            // A profile deleted while this dialog was open is left for its copy to fail, rather than brought back holding only a map
+            if (toProfileDir.exists(MudletApp::getMudletPath(enums::profileHomePath, toProfileName)) && !toProfileDir.exists(toProfileDirPathString)) {
                 if (!toProfileDir.mkpath(toProfileDirPathString)) {
                     const QString errMsg = tr("[ ERROR ] - Unable to use or create directory to store map for other profile \"%1\".\n"
                                               "Please check that you have permissions/access to:\n"
@@ -6766,6 +6776,14 @@ void dlgProfilePreferences::slot_copyMap()
     const int oldSaveVersionFormat = pHost->mpMap->mSaveVersion;
     pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->currentData().toInt();
 
+    // On Windows and macOS a copy keeps the time of the map saved here, so that save has to come
+    // after each destination's autosave
+    const QStringList toProfileNames = toProfilesRoomIdMap.keys();
+    for (const QString& otherHostName : toProfileNames) {
+        if (Host* pOtherHost = HostManager::self()->getHost(otherHostName)) {
+            pOtherHost->waitForMapAutosave();
+        }
+    }
     if (!pHost->saveMapFile(QString())) {
         label_mapFileActionResult->setText(tr("Could not backup the map - saving it failed."));
         QTimer::singleShot(10s, this, &dlgProfilePreferences::slot_hideActionLabel);
@@ -6797,22 +6815,52 @@ void dlgProfilePreferences::slot_copyMap()
         return;
     }
 
+    QList<QString> copiedToProfiles;
+    QStringList failedProfiles;
     // Make the copies into the destination profiles (for all to profiles whether
     // in use or not):
     itOtherProfile.toFront();
     while (itOtherProfile.hasNext()) {
         itOtherProfile.next();
         const QString otherHostName = itOtherProfile.key();
+        const QString destination = MudletApp::getMudletPath(enums::profileMapPathFileName, otherHostName, thisProfileLatestMapPathFileName);
+        // A map folder shared through a link or junction already holds the save just made, which a remove would delete
+        std::error_code notComparable;
+        if (std::filesystem::equivalent(QFileInfo(destination).filesystemFilePath(), QFileInfo(thisProfileLatestMapFile).filesystemFilePath(), notComparable)) {
+            copiedToProfiles.append(otherHostName);
+            continue;
+        }
+        // A copy made earlier in the same second may have left a file of this name, which QFile::copy() will not replace;
+        // it is set aside rather than removed, so a copy that fails can put it back
+        const QString setAside = qsl("%1.replaced").arg(destination);
+        bool replacing = false;
+        if (QFileInfo(destination).isFile()) {
+            QFile::remove(setAside);
+            replacing = QFile::rename(destination, setAside);
+        }
         // Copy over into the profiles map folder, so it is loaded first when map is open - this covers the offline case
         label_mapFileActionResult->setText(tr("Copying over map to %1 - please wait...").arg(otherHostName));
         qApp->processEvents(); // Copied from "Loading map - please wait..." case
                                // Just in case is needed to make the above message
                                // show up when saving big maps
 
+        if (Host* pOtherHost = HostManager::self()->getHost(otherHostName)) {
+            pOtherHost->waitForMapAutosave();
+        }
         if (!thisProfileLatestMapFile.copy(MudletApp::getMudletPath(enums::profileMapPathFileName, otherHostName, thisProfileLatestMapPathFileName))) {
-            label_mapFileActionResult->setText(tr("Could not copy the map to %1 - unable to copy the new map file over.").arg(otherHostName));
-            QTimer::singleShot(10s, this, &dlgProfilePreferences::slot_hideActionLabel);
+            //: %1 is the profile the map could not be copied to, %2 the system's reason, e.g. "Destination file exists"
+            pHost->postMessage(tr("[ ERROR ] - Unable to copy the map to profile \"%1\".\n"
+                                  "reason: %2.")
+                                       .arg(otherHostName, thisProfileLatestMapFile.errorString()));
+            failedProfiles.append(otherHostName);
+            if (replacing) {
+                QFile::rename(setAside, destination);
+            }
             continue; // Try again with next profile
+        }
+        copiedToProfiles.append(otherHostName);
+        if (replacing) {
+            QFile::remove(setAside);
         }
         label_mapFileActionResult->setText(tr("Map copied successfully to other profile %1.").arg(otherHostName));
         qApp->processEvents(); // Copied from "Loading map - please wait..." case
@@ -6821,11 +6869,13 @@ void dlgProfilePreferences::slot_copyMap()
     }
 
     // Finally, signal the other profiles to reload their maps:
-    mudlet::self()->requestProfilesToReloadMaps(toProfilesRoomIdMap.keys());
-    // GOTCHA: keys() is a QList<QString>, however, though it IS equivalent to a
-    // QStringList in many ways, the SLOT/SIGNAL system treats them as different
-    // - I thinK - so use QList<QString> throughout the SIGNAL/SLOT links Slysven!
-    label_mapFileActionResult->setText(tr("Map copied, now signalling other profiles to reload it."));
+    mudlet::self()->requestProfilesToReloadMaps(copiedToProfiles, thisProfileLatestMapPathFileName);
+    if (failedProfiles.isEmpty()) {
+        label_mapFileActionResult->setText(tr("Map copied, now signalling other profiles to reload it."));
+    } else {
+        //: %1 is a comma-separated list of the profiles the map could not be copied to
+        label_mapFileActionResult->setText(tr("Could not copy the map to %1 - see the main console for why.").arg(failedProfiles.join(qsl(", "))));
+    }
     QTimer::singleShot(10s, this, &dlgProfilePreferences::slot_hideActionLabel);
 
     // CHECK: Race condition? We might be changing this while other profile
@@ -7522,6 +7572,12 @@ void dlgProfilePreferences::applyAll()
         QSettings* settings = MudletApp::getQSettings();
         if (settings->value("telnetHandlerEnabled", false).toBool() != telnetHandlerEnabled->isChecked()) {
             settings->setValue("telnetHandlerEnabled", telnetHandlerEnabled->isChecked());
+        }
+    }
+    if (mSnapshot.dirty(checkBox_monospacedFontsOnly)) {
+        QSettings* settings = MudletApp::getQSettings();
+        if (settings->value(qsl("showOnlyMonospacedFonts"), false).toBool() != checkBox_monospacedFontsOnly->isChecked()) {
+            settings->setValue(qsl("showOnlyMonospacedFonts"), checkBox_monospacedFontsOnly->isChecked());
         }
     }
     applyTriggerMatchPoolSettings();
@@ -9630,6 +9686,16 @@ void dlgProfilePreferences::rememberDisplayFontFamilyShown()
     mDisplayFontFamilyShown = (mpHost && mpHost->resolveFontFamily(family).available) ? family : QString();
 }
 
+// QFontComboBox::setFontFilters() moves the list off a family it leaves out, which would put another font
+// on the profile, so proportional fonts are left out only while the font shown is a monospaced one
+void dlgProfilePreferences::showDisplayFont(const QFont& font)
+{
+    const bool monospacedOnly = checkBox_monospacedFontsOnly->isChecked() && QFontDatabase::isFixedPitch(font.family());
+    const QSignalBlocker blocker(fontComboBox_displayFont);
+    fontComboBox_displayFont->setFontFilters(monospacedOnly ? QFontComboBox::MonospacedFonts : QFontComboBox::AllFonts);
+    fontComboBox_displayFont->setCurrentFont(font);
+}
+
 void dlgProfilePreferences::slot_displayFontChanged()
 {
     // QFontComboBox moves off a family by itself when its package is uninstalled: no choice of the
@@ -9665,7 +9731,7 @@ void dlgProfilePreferences::slot_hostDisplayFontChanged(const QFont& font)
         const QSignalBlocker comboBlocker(fontComboBox_displayFont);
         const QSignalBlocker sizeBlocker(spinBox_displayFontSize);
         const QSignalBlocker antiAliasBlocker(checkBox_antiAlias);
-        fontComboBox_displayFont->setCurrentFont(font);
+        showDisplayFont(font);
         spinBox_displayFontSize->setMaximum(std::max(font.pointSize(), spinBox_displayFontSize->maximum()));
         spinBox_displayFontSize->setValue(std::max(1, font.pointSize()));
         // Not fontsAntiAlias(): applyAll() writes that from this box only once the apply timer fires

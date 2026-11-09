@@ -2884,6 +2884,39 @@ describe("Trigger processing", function()
             assert.are.same(defaultForeground, coloursOf(line, "highlight_quiet").foreground)
         end)
 
+        -- A number for either highlight colour leaves that side as it was, as "transparent" does
+        describe("with only one highlight colour given", function()
+            local function highlighted(name, foreground, background)
+                local before = coloursOf(getLineNumber(), "plain")
+                tempComplexRegexTrigger(name, [[^highlight_one (\w+)$]], "", 0, 0, 0, 0, 0, foreground, background, 0, 0, 0)
+                finally(function() killTrigger(name) end)
+                feedTriggers("highlight_one ddd\n")
+                return coloursOf(getLineNumber(), "ddd"), before
+            end
+
+            before_each(function()
+                feedTriggers("plain line for the starting colours\n")
+            end)
+
+            it("recolours only the foreground when the background is a number", function()
+                local after, before = highlighted("SpecHighlightFgOnly", "red", 0)
+                assert.are.same(color_table.red, after.foreground)
+                assert.are.same(before.background, after.background)
+            end)
+
+            it("recolours only the background when the foreground is a number", function()
+                local after, before = highlighted("SpecHighlightBgOnly", 0, "blue")
+                assert.are.same(color_table.blue, after.background)
+                assert.are.same(before.foreground, after.foreground, "the foreground should keep its colour rather than turn black")
+            end)
+
+            it("recolours nothing when both are numbers", function()
+                local after, before = highlighted("SpecHighlightNeither", 0, 0)
+                assert.are.same(before.foreground, after.foreground)
+                assert.are.same(before.background, after.background)
+            end)
+        end)
+
         -- Every trigger matches the line as it arrived, so a later trigger's capture
         -- positions have to be moved past what earlier triggers edited before they are used
         describe("after an earlier trigger edited the line", function()

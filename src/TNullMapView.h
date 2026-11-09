@@ -23,18 +23,35 @@
 #include "TMapViewFrontend.h"
 #include "utils.h"
 
+#include "TMapPainter.h"
+
 #include <QObject>
 
 class Host;
+class QPainter;
+class QPoint;
+class QPointF;
+class QSize;
 
-// The 2D map of a map widget or embedded mapper that the null view records. It keeps the area that
-// T2DMap would show, which T2DMap moves as it paints, so this "paints" once the event loop runs.
+// The 2D map of a map widget or embedded mapper that the null view records. It follows the player once the
+// event loop runs, as T2DMap does as it paints, but its view moves only when the app draws it.
 class TNullMapView final : public QObject, public TMapViewFrontend
 {
 public:
     explicit TNullMapView(Host* pHost, QObject* parent = nullptr);
     // A hidden mapper does not paint
     void setShown(bool shown);
+    // What T2DMap would draw at that size, whether or not the mapper is shown, raising sysMapAreaChanged as it does
+    void render(QPainter&, const QSize&);
+    // What a mouse press, the second press of a double-click and a wheel turn at that point of the last render() do
+    // to T2DMap, menus and dragging aside
+    bool rendered() const { return !mView.mSize.isEmpty(); }
+    // Whether the last render() laid out an area's rooms, which a press and a wheel turn act on
+    bool showsArea() const;
+    void press(const QPoint&, Qt::MouseButton, Qt::KeyboardModifiers);
+    void doubleClick(const QPoint&);
+    // False for less than half a notch, which T2DMap ignores
+    bool wheel(const QPointF&, const QPoint& angleDelta, Qt::KeyboardModifiers);
 
     bool onScreen() const override { return false; }
     void showMapProgress(const QString&, bool) override {}
@@ -47,12 +64,13 @@ public:
     bool isMapProgressVisible() const override { return false; }
     // Only a user selects rooms
     bool selectingRooms() const override { return false; }
-    QSet<int> selectedRooms() const override { return {}; }
-    int centerSelectedRoom() const override { return 0; }
-    void clearRoomSelection() override {}
-    int shownAreaId() const override { return mAreaId; }
+    QSet<int> selectedRooms() const override { return mView.mMultiSelectionSet; }
+    int centerSelectedRoom() const override { return mView.mMultiSelectionHighlightRoomId; }
+    void clearRoomSelection() override;
+    // The area the view follows, which the next render() draws
+    int shownAreaId() const override { return mRecentre ? mFollowedAreaId : mView.mAreaID; }
     std::pair<bool, QString> setMapZoom(qreal zoom, int areaId) override;
-    std::pair<bool, QString> exportAreaToImage(int areaId, const QString& filePath, std::optional<int>, qreal zoom, bool exportAllZLevels) override;
+    std::pair<bool, QString> exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel, qreal zoom, bool exportAllZLevels) override;
     std::pair<bool, QString> show3DView(bool shown) override;
     // As dlgMapper answers while it shows its 2D map, the only one this keeps
     bool showing3DView() const override { return false; }
@@ -63,15 +81,32 @@ public:
 private:
     void schedulePaint();
     void paint();
+    void requestRepaint();
+    void raiseAreaChanged(int areaId, int lastViewedAreaId);
+    void forgetDeletedRoom(int roomId);
+    int centredRoomId() const { return mRecentre ? mFollowedRoomId : mView.mRoomID; }
 
     Host* mpHost = nullptr;
     bool mShown = false;
     bool mPaintScheduled = false;
-    // T2DMap's mAreaID, mLastViewedAreaID, mRoomID and mShiftMode
-    int mAreaId = 0;
-    int mLastViewedAreaId = -2;
-    int mCentredRoomId = 0;
-    bool mCentred = false;
+    // What T2DMap keeps between frames: the view last drawn, as the pointer and the selection have changed it since,
+    // and the area last raised for
+    TMapPainter::View mView;
+    // paint() followed the player to this room and area, which the next render() centres on as T2DMap would, and
+    // for a small area may centre on the area
+    bool mRecentre = false;
+    int mFollowedRoomId = 0;
+    int mFollowedAreaId = 0;
+    bool mLaidOut = false;
+    // A wheel turn's zoom and centre, which only the next render() lays out, so the pointer acts on what was drawn
+    struct PendingZoom
+    {
+        qreal xyzoom = 0.0;
+        qreal centreX = 0.0;
+        qreal centreY = 0.0;
+    };
+    std::optional<PendingZoom> mPendingZoom;
+    TMapPainter mPainter;
 };
 
 #endif // MUDLET_TNULLMAPVIEW_H

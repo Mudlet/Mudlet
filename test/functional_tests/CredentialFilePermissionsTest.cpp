@@ -60,6 +60,10 @@
 #include <sys/stat.h>
 #endif
 
+#if defined(MUDLET_FCHMOD_REFUSAL)
+#include "FchmodRefusal.h"
+#endif
+
 #include "GroupedTest.h"
 #include "PortableModeTestHelper.h"
 
@@ -153,6 +157,8 @@ private:
             QDir(profileDirectory(profile)).removeRecursively();
             QDir(rawProfileDirectory(profile)).removeRecursively();
             QDir(qsl("%1/profiles/%2").arg(configRoot(), profile.left(50))).removeRecursively();
+            // Where MudletApp keeps the plain-text password, which is not under configRoot()
+            QDir(MudletApp::getMudletPath(enums::profileHomePath, profile)).removeRecursively();
         }
     }
 
@@ -221,6 +227,13 @@ private slots:
     // XDG_CONFIG_HOME only redirects the config root on Linux, so each case clears out what
     // the one before it - or an earlier run - left rather than trusting the root to be empty
     void init() { removeTheProfilesTheseCasesUse(); }
+
+    void cleanup()
+    {
+#if defined(MUDLET_FCHMOD_REFUSAL)
+        setRefuseOwnerOnlyOnOpenFiles(false);
+#endif
+    }
 
     // One row per file and directory the fix narrows, so that each of them is shown to need
     // the fix on its own rather than only the first one a case happens to reach
@@ -309,6 +322,44 @@ private slots:
         QVERIFY(openToEveryone(path));
         QCOMPARE(MudletApp::readProfileData(mProfile, item), mPassword);
         QVERIFY2(!reachableByOthers(path), "reading the profile's password left it readable by other accounts on this machine");
+    }
+
+    void test_aPlainTextProfilePasswordIsSavedWhereTheOpenFileCannotBeNarrowed_data()
+    {
+        QTest::addColumn<bool>("overAReadableFile");
+        QTest::newRow("a new file") << false;
+        QTest::newRow("over a file other accounts can read") << true;
+    }
+
+    // Where the file system refuses to narrow the file while it is being written, the password is
+    // still saved, and narrowed by path once it is in place
+    void test_aPlainTextProfilePasswordIsSavedWhereTheOpenFileCannotBeNarrowed()
+    {
+#if !defined(MUDLET_FCHMOD_REFUSAL)
+        QSKIP("needs fchmod() to be replaced, which this binary does only on Linux");
+#else
+        QFETCH(bool, overAReadableFile);
+        const QString item = qsl("password");
+        const QString path = MudletApp::getMudletPath(enums::profileDataItemPath, mProfile, item);
+        QVERIFY2(!QFileInfo::exists(path), "this case started on a config root an earlier run left behind, so it would prove nothing");
+        if (overAReadableFile) {
+            QVERIFY(MudletApp::writeProfileData(mProfile, item, qsl("an older password")).first);
+            QVERIFY(openToEveryone(path));
+        }
+
+        // Narrowed by path, so there is nothing to warn about
+        QTest::failOnWarning(QRegularExpression(qsl("can still read")));
+        const int refusalsBefore = ownerOnlyRefusals();
+        setRefuseOwnerOnlyOnOpenFiles(true);
+        const QPair<bool, QString> result = MudletApp::writeProfileData(mProfile, item, mPassword);
+        setRefuseOwnerOnlyOnOpenFiles(false);
+
+        QVERIFY2(result.first, qPrintable(qsl("the password was not saved: %1").arg(result.second)));
+        QVERIFY2(ownerOnlyRefusals() > refusalsBefore, "nothing asked for owner-only on the open file, so this case proves nothing");
+        // Before reading it back, as a read narrows the file too
+        QVERIFY2(!reachableByOthers(path), "the password was left readable by other accounts on this machine");
+        QCOMPARE(MudletApp::readProfileData(mProfile, item), mPassword);
+#endif
     }
 
     // The passwords/<key>.dat pair SecureStringUtils offers on its own, which has no caller

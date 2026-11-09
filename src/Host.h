@@ -185,6 +185,8 @@ class Host : public QObject
     friend class HostManager;
     // Allows the functional test to close a profile with no view, and to hold a save open past a shortened wait:
     friend class HeadlessHostSmokeTest;
+    // Allows the functional test to run a map autosave without waiting minutes for its timer:
+    friend class MapAutosaveTest;
 
 public:
     Host(int port, const QString& mHostName, const QString& login, const QString& pass, int host_id);
@@ -533,6 +535,9 @@ public:
     // config.lua that would not run apart from one that simply names no package
     void readPackageConfig(const QString&, QString&, bool, QString* whyNotRead = nullptr);
     QString getPackageConfig(const QString&, bool isModule = false, QString* whyNotRead = nullptr);
+    // Saves the change to the package's config.lua, which loadPackageInfo() reads it back from; an empty
+    // string is success, otherwise why it could not be saved, and nothing is changed
+    QString setPackageInfo(const QString& packageName, const QString& info, const QString& value);
     void postMessage(const QString message) { mTelnet.postMessage(message); }
     // For an app that embeds Mudlet, as there is no main window to show a notification: answers whether it showed it
     void setNotificationHandler(std::function<bool(const QString& title, const QString& text, std::optional<int> milliseconds)> handler) { mNotificationHandler = std::move(handler); }
@@ -877,8 +882,42 @@ public:
     static constexpr int scmMaxBorderSize = 1'000'000;
     void setUserBorders(const QMargins);
     void setMxpBorders(const QMargins);
+    // With no view: the main window's area, which the borders take from. Given in the main console's cells, a
+    // font change counts it again in the new font's; given in pixels, the font decides the grid.
+    QSize mainAreaCells() const { return mMainAreaCells.value_or(QSize(mScreenWidth, mScreenHeight)); }
+    void setMainAreaCells(const QSize& cells)
+    {
+        mMainAreaCells = cells;
+        mMainAreaPixels.reset();
+    }
+    void setMainAreaPixels(const QSize& pixels) { mMainAreaPixels = pixels; }
+    // The frontend gave the area: from mainWindowResizeRequested's handler, answering the size and request that
+    // names, or later, answering what a script last asked for, as a window resizes once its window system answers,
+    // or with nothing asked for, of its own accord. False for an answer to a request a newer one has replaced, which
+    // is not to be laid out: the newer one's answer decides.
+    bool noteMainAreaGiven(const std::optional<std::pair<QSize, quint64>>& answering);
+    // Nothing listens for that request, so nothing will answer it
+    void noteMainWindowRequestUnheard(quint64 request);
+    bool mainAreaInPixels() const { return mMainAreaPixels.has_value(); }
+    // With no view: where the main console's text goes in the main window's area, what the borders leave of it
+    QRect mainTextRectWithNoView() const;
+    // With no view, as the GUI lays the main console out: fits its grid to what the borders leave of the main
+    // window's area, then tells scripts as a change of border or a resize of the main window does there; a font
+    // change, which does not resize the main window, tells them nothing. A handler can close the profile. Nothing
+    // is laid out while the save loads; load lays out what it left, and tells scripts nothing, as none has run yet.
+    enum class MainAreaChange { borders, area, font, load };
+    void layOutMainAreaWithNoView(MainAreaChange);
+    // With no view, a script's setMainWindowSize(): tells the frontend, then takes the size as one it gave in
+    // pixels, as there is no window's frame or menu to take from it. Refuses, as the frontend's own call does, a
+    // size that holds no character of the main console's font or more than NAWS can carry. A size the frontend
+    // answered with the one it gave is not asked for again till it gives one of its own accord or a script asks
+    // for another, as a window manager that holds the GUI's window gives it no new size, so a resize handler that
+    // asks for it settles.
+    std::pair<bool, QString> resizeMainWindowWithNoView(const QSize& pixels);
     void loadMap();
     bool saveMapFile(const QString& location, int saveVersion = 0);
+    // Call before writing or reading the profile's map files: the newest of them is the one a profile loads
+    void waitForMapAutosave();
     bool loadMapFile(const QString& location);
     bool importMapFile(const QString& location, QString* errMsg = nullptr);
     std::tuple<QString, bool> getCmdLineSettings(const enums::CommandLineType, const QString&);
@@ -1014,6 +1053,8 @@ public:
     bool mFORCE_SAVE_ON_EXIT = true;
 
     bool mSslTsl = false;
+    // A game's telnets:// link asks for TLS until the profile closes; unlike mSslTsl it is never saved
+    bool mUseTlsThisSession = false;
     bool mSslIgnoreExpired = false;
     bool mSslIgnoreSelfSigned = false;
     bool mSslIgnoreAll = false;
@@ -1407,6 +1448,10 @@ signals:
     void signal_packageListChanged();
     void signal_profileStyleSheetChanged(const QString& styleSheet);
     void signal_consoleFontChanged(const QFont& font);
+    // With no view: the main console's grid, or where its text goes, may have changed
+    void signal_mainAreaLaidOut();
+    // request counts the requests made, so an answer to one a newer one has replaced is known
+    void signal_mainWindowResizeRequested(const QSize& pixels, quint64 request);
     void signal_editorSearchOptionsChanged(const enums::EditorSearchOptions);
     void signal_editorShowBidiChanged(const bool);
     void signal_showIdsInEditorChanged(const bool);
@@ -1417,6 +1462,8 @@ signals:
     void signal_profileResetting();
     // A package or module's items are gone, so whatever its Lua placed in the frontend has to go too.
     void signal_packageRemoved(const QString& packageName);
+    // The buttons or bars a frontend draws, or a push-down button's state, changed; the GUI redraws its own.
+    void signal_buttonsChanged();
     // The frontend owns the editor, notepad and IRC client it opens for a
     // profile. On close it closes them and lets go of them; on destruction it
     // deletes them there and then, while the units the editor references still
@@ -1519,9 +1566,9 @@ private:
     // purpose: it must keep working after the Host that ordered it has been destroyed,
     // so it may not reach for any member. Usually a thread pool task, but a waiter in
     // waitForProfileSave() can steal it onto the main thread, so it must suit either.
-    // False if a module was not written.
-    static bool writeModuleFiles(const QList<ModuleWriteJob>& jobs);
-    static bool updateModuleZip(const ModuleWriteJob& job);
+    // False if a module was not written, with a console line for each in failures.
+    static bool writeModuleFiles(const QList<ModuleWriteJob>& jobs, QStringList& failures);
+    static bool updateModuleZip(const ModuleWriteJob& job, QString& reason);
     // Main thread only: snapshot of the still-pending profile-save futures, so a
     // background task never reads `writers`/`saveFutures` while the main thread mutates
     // them (that concurrent access is a heap-corrupting data race).
@@ -1531,6 +1578,7 @@ private:
     void startMapAutosave(const int interval);
     void timerEvent(QTimerEvent* event) override;
     void autoSaveMap();
+    void autoSaveMapInBackground(const QString& path);
     void closeChildren();
     void installModulesList(const QStringList&);
     void setupSandboxedLuaState(lua_State* L);
@@ -1619,10 +1667,8 @@ private:
     bool mSaveProfileOnExit = false;
 
     // To keep things simple for Lua the first stopwatch will be allocated a key
-    // of 1 - and anything less that that will be rejected - and we force
-    // createStopWatch() to return 0 during script loading so that we do not get
-    // superious stopwatches from being created then (when
-    // mIsProfileLoadingSequence is true):
+    // of 1 - and anything less than that will be rejected - and
+    // createStopWatch() returns 0 while mBlockStopWatchCreation is set:
     std::map<int, std::unique_ptr<stopWatch>> mStopWatchMap;
 
     QMap<QString, QStringList> mAnonymousEventHandlerFunctions;
@@ -1650,6 +1696,8 @@ private:
     QHash<QString, std::shared_ptr<XMLexport>> writers;
 
     QFuture<bool> mModuleFuture;
+    QFuture<QString> mMapAutosaveFuture;
+    bool mMapAutosaveResultPending = false;
 
     // Will be null/empty if is to use Mudlet's default/own presence
     QString mDiscordApplicationID;
@@ -1760,6 +1808,15 @@ private:
     QMargins mBorders;
     QMargins mUserBorders;
     QMargins mMxpBorders;
+    // Unset till a frontend gives an area or a border first takes from it, so till then it is the grid
+    std::optional<QSize> mMainAreaCells;
+    std::optional<QSize> mMainAreaPixels;
+    // What a script's setMainWindowSize() asked for that the frontend answered, till it gives an area of its own accord
+    // or a script asks for another
+    std::optional<QSize> mAnsweredMainWindowRequest;
+    // What a script's setMainWindowSize() last asked for, till the frontend answers it or nothing listens for it
+    std::optional<QSize> mUnansweredMainWindowRequest;
+    quint64 mMainWindowRequests = 0;
 
     // 0 to scmMaxCommandLineHistorySaveSize lines, for ALL command lines; 0 turns
     // saving the history off:
