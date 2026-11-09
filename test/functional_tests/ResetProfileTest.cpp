@@ -566,6 +566,49 @@ private slots:
     delete mpHost->getScriptUnit()->getScript(groupId);
   }
 
+  void test_scriptSwitchingOnItsOwnGroupDuringResetRunsOnce() {
+    auto [groupId, groupMsg] = mpHost->mLuaInterpreter.createPermScript(
+        qsl("resetDuringSelfEnablingGroup"), QString(), QString());
+    QVERIFY2(groupId > 0, qPrintable(groupMsg));
+    auto [id, msg] = mpHost->mLuaInterpreter.createPermScript(
+        qsl("resetDuringSelfEnablingChild"), qsl("resetDuringSelfEnablingGroup"),
+        qsl("resetDuringSelfEnablingRuns = (resetDuringSelfEnablingRuns or 0) "
+            "+ 1 enableScript('resetDuringSelfEnablingGroup')"));
+    QVERIFY2(id > 0, qPrintable(msg));
+
+    performReset();
+
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    lua_getglobal(L, "resetDuringSelfEnablingRuns");
+    const int runs = static_cast<int>(lua_tointeger(L, -1));
+    lua_pop(L, 1);
+    QCOMPARE(runs, 1);
+    delete mpHost->getScriptUnit()->getScript(groupId);
+  }
+
+  void test_scriptSwitchingOnALaterScriptDuringResetRunsItOnce() {
+    auto [firstId, firstMsg] = mpHost->mLuaInterpreter.createPermScript(
+        qsl("resetEnablerScript"), QString(),
+        qsl("enableScript('resetEnabledLaterScript')"));
+    QVERIFY2(firstId > 0, qPrintable(firstMsg));
+    // permScript() makes its scripts switched off; the later one stays so
+    mpHost->getScriptUnit()->getScript(firstId)->setIsActive(true);
+    auto [laterId, laterMsg] = mpHost->mLuaInterpreter.createPermScript(
+        qsl("resetEnabledLaterScript"), QString(),
+        qsl("resetEnabledLaterRuns = (resetEnabledLaterRuns or 0) + 1"));
+    QVERIFY2(laterId > 0, qPrintable(laterMsg));
+
+    performReset();
+
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    lua_getglobal(L, "resetEnabledLaterRuns");
+    const int runs = static_cast<int>(lua_tointeger(L, -1));
+    lua_pop(L, 1);
+    QCOMPARE(runs, 1);
+    delete mpHost->getScriptUnit()->getScript(firstId);
+    delete mpHost->getScriptUnit()->getScript(laterId);
+  }
+
   void test_buttonOnAHiddenToolbarRunsItsScriptAfterResetAndShow() {
     auto *actionUnit = mpHost->getActionUnit();
     auto *toolbar = new TAction(qsl("resetHiddenToolbar"), mpHost);

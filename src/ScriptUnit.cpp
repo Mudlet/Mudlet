@@ -343,11 +343,16 @@ void ScriptUnit::compileAll(bool saveLoadingError)
     // the stack, so no node is unlinked mid-loop, but taking a copy keeps the
     // iteration safe even against a body that adds or removes root scripts:
     const std::vector<TScript*> rootNodes(mScriptRootNodeList.begin(), mScriptRootNodeList.end());
+    // Marked up front, so a body that switches on another tree during a reset runs each of its
+    // scripts once, whether that tree comes before or after it in the list
+    if (mpHost->profileResetInProgress()) {
+        for (auto script : rootNodes) {
+            script->markForCompile();
+        }
+    }
     for (auto script : rootNodes) {
         if (script->isActive()) {
             script->compileAll(saveLoadingError);
-        } else if (mpHost->profileResetInProgress()) {
-            script->markForCompile();
         }
     }
     // The loop is now done with the (possibly self-uninstalled) scripts, so flush

@@ -88,9 +88,6 @@ void TScript::setEventHandlerList(QStringList handlerList)
 
 void TScript::compileAll(bool saveLoadingError)
 {
-    if (mpHost->mResetProfile) {
-        mNeedsToBeCompiled = true;
-    }
     compile(saveLoadingError);
     for (auto* scriptNode : *mpMyChildrenList) {
         auto* script = static_cast<TScript*>(scriptNode);
@@ -98,8 +95,7 @@ void TScript::compileAll(bool saveLoadingError)
     }
 }
 
-// For a script a reset leaves uncompiled: the reset closed the Lua state its body ran in, and
-// cleared the event handlers it had registered
+// A reset closed the Lua state the body ran in, and cleared the event handlers it had registered
 void TScript::markForCompile()
 {
     mNeedsToBeCompiled = true;
