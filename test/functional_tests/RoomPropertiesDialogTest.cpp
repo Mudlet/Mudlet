@@ -33,6 +33,7 @@
  */
 
 #include <QCheckBox>
+#include <QColorDialog>
 #include <QComboBox>
 #include <QContextMenuEvent>
 #include <QDialog>
@@ -52,6 +53,7 @@
 #include <QTimer>
 #include <QtTest/QtTest>
 
+#include "ColourValue.h"
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
@@ -62,6 +64,7 @@
 #include "TRoomDB.h"
 #include "dlgRoomProperties.h"
 #include "mudlet.h"
+#include "uiDesign.h"
 
 #include "GroupedTest.h"
 
@@ -335,6 +338,65 @@ private:
         return result;
     }
 
+    static uiDesign::ColourValue* symbolColour(const dlgRoomProperties* pDlg) { return pDlg->findChild<uiDesign::ColourValue*>(qsl("roomPropertiesSymbolColour")); }
+    static uiDesign::ColourValue* borderColour(const dlgRoomProperties* pDlg) { return pDlg->findChild<uiDesign::ColourValue*>(qsl("roomPropertiesBorderColour")); }
+    static QSpinBox* borderOpacity(const dlgRoomProperties* pDlg) { return pDlg->findChild<QSpinBox*>(qsl("roomPropertiesBorderOpacity")); }
+
+    // The swatch is the square at the field's leading edge, inset alike from the top and the leading edge, so at the
+    // field's own height its middle is half that height in from both
+    static QList<QColor> swatchRow(QWidget* pField)
+    {
+        const QImage image = pField->grab().toImage();
+        const qreal ratio = image.devicePixelRatio();
+        const int middle = uiDesign::scmInputHeight / 2;
+        // Inside the swatch's hairline, which spans the field's height less 2 * (hairline + 3) pixels
+        QList<QColor> row;
+        for (int x = middle - 8; x <= middle + 8; ++x) {
+            row.append(image.pixelColor(QPointF(x * ratio, (pField->height() / 2) * ratio).toPoint()));
+        }
+        return row;
+    }
+    static QColor swatchOf(QWidget* pField) { return swatchRow(pField).at(8); }
+    // A see-through colour shows the checkerboard's squares through it, which no opaque one does
+    static bool showsTheBoardThrough(QWidget* pField)
+    {
+        const QList<QColor> row = swatchRow(pField);
+        return std::any_of(row.cbegin(), row.cend(), [&row](const QColor& pixel) {
+            return std::abs(pixel.lightness() - row.constFirst().lightness()) > 24;
+        });
+    }
+
+    // Types into the field, ending with key: the field takes the code at Return and gives it up at Escape
+    static void typeInto(QWidget* pField, const QString& typed, const Qt::Key key)
+    {
+        pField->setFocus();
+        if (auto* pLineEdit = qobject_cast<QLineEdit*>(pField)) {
+            pLineEdit->selectAll();
+        } else if (auto* pSpinBox = qobject_cast<QSpinBox*>(pField)) {
+            pSpinBox->selectAll();
+        }
+        if (typed.isEmpty()) {
+            QTest::keyClick(pField, Qt::Key_Backspace);
+        } else {
+            QTest::keyClicks(pField, typed);
+        }
+        QTest::keyClick(pField, key);
+    }
+
+    // The colours window is opened rather than run, so it is among the dialog's children as soon as Choose is clicked
+    static bool chooseInTheColoursWindow(dlgRoomProperties* pDlg, QPushButton* pChoose, const QColor& colour)
+    {
+        QTest::mouseClick(pChoose, Qt::LeftButton);
+        auto* pWindow = pDlg->findChild<QColorDialog*>();
+        if (!pWindow || !pWindow->isVisible()) {
+            return false;
+        }
+        pWindow->setCurrentColor(colour);
+        pWindow->accept();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        return true;
+    }
+
 private slots:
     void initTestCase()
     {
@@ -560,6 +622,255 @@ private slots:
         pDlg->accept();
 
         QVERIFY2(!mEmitted.changeWeight, "text that names no number was still applied as a room weight");
+    }
+
+    // Each colour is a field showing the room's own colour as a code over a swatch of it, beside glyph buttons that
+    // choose it in the colours window and reset it
+    void theColourFieldsShowTheRoomsOwnColours()
+    {
+        buildMap();
+        TRoom* pRoom = room(scmFirstRoom);
+        pRoom->mSymbol = qsl("=");
+        pRoom->mSymbolColor = QColor(Qt::magenta);
+        pRoom->mBorderColor = QColor(Qt::darkGreen);
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        pDlg->show();
+        QVERIFY(QTest::qWaitForWindowExposed(pDlg));
+        uiDesign::ColourValue* pSymbol = symbolColour(pDlg);
+        uiDesign::ColourValue* pBorder = borderColour(pDlg);
+        QVERIFY2(pSymbol && pBorder && borderOpacity(pDlg), "the dialog has no colour fields, or no opacity for the border");
+        QCOMPARE(pSymbol->text(), qsl("#FF00FF"));
+        QCOMPARE(pBorder->text(), qsl("#008000"));
+        QCOMPARE(swatchOf(pSymbol), QColor(Qt::magenta));
+        QCOMPARE(swatchOf(pBorder), QColor(Qt::darkGreen));
+        QCOMPARE(borderOpacity(pDlg)->value(), 100);
+        QVERIFY2(!pDlg->findChild<QSpinBox*>(qsl("roomPropertiesSymbolOpacity")), "the symbol, which is never see-through, was given an opacity");
+        for (QPushButton* pButton : {pDlg->pushButton_setSymbolColor, pDlg->pushButton_setBorderColor, pDlg->pushButton_resetSymbolColor, pDlg->pushButton_resetBorderColor}) {
+            QVERIFY2(pButton->text().isEmpty() && !pButton->icon().isNull(), qPrintable(qsl("%1 is not a glyph button: '%2'").arg(pButton->objectName(), pButton->text())));
+            QCOMPARE(pButton->size(), QSize(uiDesign::scmInputHeight, uiDesign::scmInputHeight));
+        }
+        QVERIFY(pDlg->pushButton_resetSymbolColor->isEnabled());
+        QVERIFY(pDlg->pushButton_resetBorderColor->isEnabled());
+    }
+
+    // With no colour of its own the field is empty, says why, and its swatch shows what the room is drawn with
+    void withNoColourOfItsOwnTheFieldShowsWhatTheRoomIsDrawnWith()
+    {
+        buildMap();
+        room(scmFirstRoom)->mSymbol = qsl("=");
+        // A light room, so its symbol is drawn in black rather than in the white of the field round the swatch
+        const int lightEnvironment = 300;
+        map()->mCustomEnvColors[lightEnvironment] = QColor(240, 240, 200);
+        const auto forgetEnvironment = qScopeGuard([this, lightEnvironment]() {
+            map()->mCustomEnvColors.remove(lightEnvironment);
+        });
+        room(scmFirstRoom)->environment = lightEnvironment;
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        pDlg->show();
+        QVERIFY(QTest::qWaitForWindowExposed(pDlg));
+        uiDesign::ColourValue* pSymbol = symbolColour(pDlg);
+        uiDesign::ColourValue* pBorder = borderColour(pDlg);
+        QVERIFY(pSymbol && pBorder);
+        QVERIFY2(pSymbol->text().isEmpty() && pBorder->text().isEmpty(), qPrintable(qsl("'%1' and '%2'").arg(pSymbol->text(), pBorder->text())));
+        QCOMPARE(pSymbol->placeholderText(), qsl("Automatic"));
+        QCOMPARE(pBorder->placeholderText(), qsl("Map default"));
+        // The symbol is black or white, whichever stands out against the room
+        QCOMPARE(swatchOf(pSymbol), QColor(Qt::black));
+        QCOMPARE(pBorder->colour(), mpHost->mRoomBorderColor);
+        QCOMPARE(swatchOf(pBorder), QColor(mpHost->mRoomBorderColor.rgb()));
+        QCOMPARE(borderOpacity(pDlg)->value(), qRound(mpHost->mRoomBorderColor.alphaF() * 100));
+        QVERIFY2(!pDlg->pushButton_resetSymbolColor->isEnabled(), "Reset is offered for a symbol colour the room does not have");
+        QVERIFY2(!pDlg->pushButton_resetBorderColor->isEnabled(), "Reset is offered for a border colour the room does not have");
+    }
+
+    // Reset is there while the room has a colour to reset, and always for several rooms, as the others may have one
+    void resetIsOfferedOnlyWhileThereIsAColourToReset()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        pDlg->show();
+        QVERIFY(QTest::qWaitForWindowExposed(pDlg));
+        QVERIFY(!pDlg->pushButton_resetSymbolColor->isEnabled());
+        QVERIFY(!pDlg->pushButton_resetBorderColor->isEnabled());
+
+        QVERIFY2(chooseInTheColoursWindow(pDlg, pDlg->pushButton_setSymbolColor, QColor(Qt::cyan)), "Choose opened no colours window for the symbol");
+        QCOMPARE(symbolColour(pDlg)->text(), qsl("#00FFFF"));
+        QVERIFY2(pDlg->pushButton_resetSymbolColor->isEnabled(), "a chosen symbol colour cannot be reset");
+        // The opacity follows a colour the colours window chose
+        QVERIFY2(chooseInTheColoursWindow(pDlg, pDlg->pushButton_setBorderColor, QColor(10, 20, 30, 153)), "Choose opened no colours window for the border");
+        QCOMPARE(borderColour(pDlg)->text(), qsl("#0A141E"));
+        QCOMPARE(borderOpacity(pDlg)->value(), 60);
+        QVERIFY2(pDlg->pushButton_resetBorderColor->isEnabled(), "a chosen border colour cannot be reset");
+
+        pDlg->pushButton_resetSymbolColor->click();
+        pDlg->pushButton_resetBorderColor->click();
+        QVERIFY(!pDlg->pushButton_resetSymbolColor->isEnabled());
+        QVERIFY(!pDlg->pushButton_resetBorderColor->isEnabled());
+        pDlg->reject();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+
+        pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
+        QVERIFY2(pDlg->pushButton_resetSymbolColor->isEnabled() && pDlg->pushButton_resetBorderColor->isEnabled(), "Reset is held back for rooms other than the first, which may carry colours");
+    }
+
+    // The field takes a click and the keyboard, and only Choose opens the colours window
+    void onlyChooseOpensTheColoursWindow()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        pDlg->show();
+        QVERIFY(QTest::qWaitForWindowExposed(pDlg));
+        QTest::mouseClick(symbolColour(pDlg), Qt::LeftButton);
+        QTest::mouseClick(borderColour(pDlg), Qt::LeftButton);
+        QCoreApplication::processEvents();
+        QVERIFY2(!pDlg->findChild<QColorDialog*>(), "clicking a colour field opened the colours window");
+
+        QTest::mouseClick(pDlg->pushButton_setSymbolColor, Qt::LeftButton);
+        auto* pWindow = pDlg->findChild<QColorDialog*>();
+        QVERIFY2(pWindow && pWindow->isVisible(), "Choose opened no colours window");
+        pWindow->reject();
+    }
+
+    // A code typed and taken with Return is a chosen colour, the border's previewed on the room as the colours
+    // window's is, and the short form and a missing # are both understood
+    void aTypedCodeIsTakenAsAChosenColour()
+    {
+        buildMap();
+        TRoom* pRoom = room(scmFirstRoom);
+        pRoom->mSymbol = qsl("=");
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        pDlg->show();
+        QVERIFY(QTest::qWaitForWindowExposed(pDlg));
+        typeInto(symbolColour(pDlg), qsl("#00ff00"), Qt::Key_Return);
+        QVERIFY2(pDlg->isVisible(), "Return in the colour field closed the dialog");
+        QCOMPARE(symbolColour(pDlg)->text(), qsl("#00FF00"));
+        QVERIFY2(pDlg->pushButton_resetSymbolColor->isEnabled(), "a typed symbol colour cannot be reset");
+        typeInto(borderColour(pDlg), qsl("0f0"), Qt::Key_Return);
+        QCOMPARE(borderColour(pDlg)->text(), qsl("#00FF00"));
+        QCOMPARE(pRoom->mBorderColor, QColor(0, 255, 0));
+        QVERIFY2(pDlg->pushButton_resetBorderColor->isEnabled(), "a typed border colour cannot be reset");
+
+        pDlg->accept();
+        QVERIFY(mEmitted.changeSymbolColor);
+        QCOMPARE(mEmitted.newSymbolColor, QColor(0, 255, 0));
+        QVERIFY(mEmitted.changeBorderColor);
+        QCOMPARE(mEmitted.newBorderColor, QColor(0, 255, 0));
+    }
+
+    // A code that is not a whole colour when it is taken, and anything left at Escape, puts the colour back
+    void anUnfinishedCodeOrEscapePutsTheColourBack()
+    {
+        buildMap();
+        TRoom* pRoom = room(scmFirstRoom);
+        pRoom->mSymbol = qsl("=");
+        pRoom->mSymbolColor = QColor(Qt::magenta);
+        pRoom->mBorderColor = QColor(Qt::darkGreen);
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        pDlg->show();
+        QVERIFY(QTest::qWaitForWindowExposed(pDlg));
+        typeInto(symbolColour(pDlg), qsl("#12"), Qt::Key_Return);
+        QCOMPARE(symbolColour(pDlg)->text(), qsl("#FF00FF"));
+        typeInto(borderColour(pDlg), qsl("#1234"), Qt::Key_Return);
+        QCOMPARE(borderColour(pDlg)->text(), qsl("#008000"));
+        typeInto(symbolColour(pDlg), qsl("#123456"), Qt::Key_Escape);
+        QVERIFY2(pDlg->isVisible(), "Escape in a field holding a typed code closed the dialog");
+        QCOMPARE(symbolColour(pDlg)->text(), qsl("#FF00FF"));
+        typeInto(borderColour(pDlg), qsl("#123456"), Qt::Key_Escape);
+        QCOMPARE(borderColour(pDlg)->text(), qsl("#008000"));
+        QCOMPARE(pRoom->mBorderColor, QColor(Qt::darkGreen));
+
+        pDlg->accept();
+        QVERIFY2(!mEmitted.changeSymbolColor, "a code put back was reported as a change of symbol colour");
+        QVERIFY2(!mEmitted.changeBorderColor, "a code put back was reported as a change of border colour");
+    }
+
+    // Emptying a field and taking it is what Reset does
+    void anEmptiedFieldPutsTheRoomBackToTheDefault()
+    {
+        buildMap();
+        TRoom* pRoom = room(scmFirstRoom);
+        pRoom->mSymbol = qsl("=");
+        pRoom->mSymbolColor = QColor(Qt::magenta);
+        pRoom->mBorderColor = QColor(Qt::darkGreen);
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        pDlg->show();
+        QVERIFY(QTest::qWaitForWindowExposed(pDlg));
+        typeInto(symbolColour(pDlg), QString(), Qt::Key_Return);
+        QVERIFY2(symbolColour(pDlg)->showsDefault(), qPrintable(qsl("the emptied symbol field shows '%1' rather than its default").arg(symbolColour(pDlg)->text())));
+        QVERIFY2(!pDlg->pushButton_resetSymbolColor->isEnabled(), "Reset is still offered once the field has reset the colour");
+        typeInto(borderColour(pDlg), QString(), Qt::Key_Return);
+        QVERIFY(borderColour(pDlg)->showsDefault());
+        QVERIFY2(!pRoom->mBorderColor.isValid(), "emptying the border field did not reach the room");
+        QVERIFY(!pDlg->pushButton_resetBorderColor->isEnabled());
+
+        pDlg->accept();
+        QVERIFY(mEmitted.changeSymbolColor);
+        QVERIFY2(!mEmitted.newSymbolColor.isValid(), "an emptied symbol field has to report an invalid QColor so the default is used");
+    }
+
+    // Only the colour is typed: how see-through the border is stays as it was
+    void aTypedCodeKeepsTheOpacity()
+    {
+        buildMap();
+        TRoom* pRoom = room(scmFirstRoom);
+        pRoom->mBorderColor = QColor(200, 40, 80, 153);
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        pDlg->show();
+        QVERIFY(QTest::qWaitForWindowExposed(pDlg));
+        QCOMPARE(borderOpacity(pDlg)->value(), 60);
+        typeInto(borderColour(pDlg), qsl("#00ff00"), Qt::Key_Return);
+        QCOMPARE(pRoom->mBorderColor, QColor(0, 255, 0, 153));
+        QCOMPARE(borderOpacity(pDlg)->value(), 60);
+    }
+
+    // The opacity box sets how see-through the border is, keeping its colour, and the swatch shows the board through it
+    void theOpacityBoxSetsHowSeeThroughTheBorderIs()
+    {
+        buildMap();
+        TRoom* pRoom = room(scmFirstRoom);
+        pRoom->mBorderColor = QColor(Qt::darkGreen);
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        pDlg->show();
+        QVERIFY(QTest::qWaitForWindowExposed(pDlg));
+        QVERIFY2(!showsTheBoardThrough(borderColour(pDlg)), "an opaque border's swatch shows the board through it");
+        typeInto(borderOpacity(pDlg), qsl("60"), Qt::Key_Return);
+        QVERIFY2(pDlg->isVisible(), "Return in the opacity box closed the dialog");
+        QCOMPARE(pRoom->mBorderColor, QColor(0, 128, 0, 153));
+        QCOMPARE(borderColour(pDlg)->text(), qsl("#008000"));
+        QVERIFY2(showsTheBoardThrough(borderColour(pDlg)), "a see-through border's swatch does not show the board through it");
+        QVERIFY(pDlg->pushButton_resetBorderColor->isEnabled());
+    }
+
+    // Rooms with different symbols show no one colour, and a code typed for them goes to every one
+    void aCodeTypedForRoomsWithDifferentSymbolsReachesThemAll()
+    {
+        buildMap();
+        mp2dMap->mAreaID = mAreaId;
+        room(scmFirstRoom)->mSymbol = qsl("!");
+        room(scmSecondRoom)->mSymbol = qsl("?");
+        room(scmFirstRoom)->mSymbolColor = QColor(Qt::red);
+
+        auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
+        connect(pDlg, &dlgRoomProperties::signal_save_symbol, mp2dMap, &T2DMap::slot_setRoomProperties);
+        pDlg->show();
+        QVERIFY(QTest::qWaitForWindowExposed(pDlg));
+        uiDesign::ColourValue* pSymbol = symbolColour(pDlg);
+        QVERIFY2(pSymbol->text().isEmpty() && pSymbol->placeholderText().isEmpty() && !pSymbol->colour().isValid(), "rooms that differ were shown a colour");
+        typeInto(pSymbol, qsl("#0000ff"), Qt::Key_Return);
+        QCOMPARE(pSymbol->text(), qsl("#0000FF"));
+        pDlg->accept();
+
+        QCOMPARE(room(scmFirstRoom)->mSymbolColor, QColor(Qt::blue));
+        QCOMPARE(room(scmSecondRoom)->mSymbolColor, QColor(Qt::blue));
+        QCOMPARE(room(scmFirstRoom)->mSymbol, qsl("!"));
+        QCOMPARE(room(scmSecondRoom)->mSymbol, qsl("?"));
     }
 
     // The border controls preview onto the rooms themselves as they are moved,

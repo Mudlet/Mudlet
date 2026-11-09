@@ -35,9 +35,19 @@ namespace uiDesign {
 //
 // The height therefore depends on the width, so this answers heightForWidth()
 // and the widget carrying it has to say so in its size policy.
+//
+// Read down rather than across, the pairs between two full-width rows are two
+// columns, the first half of them leading and the rest trailing, each column as
+// wide as its own controls need; one pair to a row, the trailing column's pairs
+// follow the leading column's whole rather than taking turns with them.
 class PairGridLayout : public QLayout
 {
 public:
+    enum class ReadingOrder { AcrossRows, DownColumns };
+    // Automatic decides from the width the layout is given. A caller deciding for itself, from a width of its own and
+    // with a margin against flipping, gives the answer here; sizeHint().width() is what two pairs to a row need.
+    enum class PairsPerRow { Automatic, Two, One };
+
     Q_DISABLE_COPY(PairGridLayout)
     // A spacing of -1 takes the style's own idea of what goes between two
     // controls, as a QGridLayout the caller says nothing about does
@@ -48,6 +58,11 @@ public:
     void addSpanningWidget(QWidget* pWidget);
     // Under the leading pair and the trailing one; either may be null
     void addFooter(QWidget* pLeading, QWidget* pTrailing);
+    void setReadingOrder(const ReadingOrder order);
+    void setPairsPerRow(const PairsPerRow pairsPerRow);
+    [[nodiscard]] PairsPerRow pairsPerRow() const { return mPairsPerRow; }
+    // Between the leading pair and the trailing one, two to a row; -1 takes the horizontal spacing
+    void setPairSpacing(const int spacing);
 
     // Takes the item as a row across the whole width
     void addItem(QLayoutItem* pItem) override;
@@ -64,6 +79,7 @@ public:
 
     [[nodiscard]] int horizontalSpacing() const;
     [[nodiscard]] int verticalSpacing() const;
+    [[nodiscard]] int pairSpacing() const;
 
 private:
     enum class RowKind {
@@ -77,16 +93,21 @@ private:
         QLayoutItem* pFirst = nullptr;
         QLayoutItem* pSecond = nullptr;
     };
-    // What the columns come to: the labels of either side, and the one width
-    // every control is given
+    // What the columns come to: the labels and the controls of either side.
+    // Read across, every control is given the one width.
     struct Columns
     {
         int leadingLabel = 0;
         int trailingLabel = 0;
-        int control = 0;
+        int leadingControl = 0;
+        int trailingControl = 0;
     };
 
     void addRow(const RowKind kind, QWidget* pFirst, QWidget* pSecond);
+    // The shown pairs between two rows of any other kind, in the order added
+    [[nodiscard]] QList<QList<const Row*>> pairBlocks() const;
+    // How many of a block's pairs lead, two pairs to a row
+    [[nodiscard]] qsizetype leadingCount(const qsizetype pairs) const;
     // The columns the pairs alone come to
     [[nodiscard]] Columns pairColumns(const bool twoPairs) const;
     [[nodiscard]] bool footersFit(const Columns& columns, const bool twoPairs) const;
@@ -100,8 +121,11 @@ private:
 
     QList<QLayoutItem*> mItems;
     QList<Row> mRows;
+    ReadingOrder mReadingOrder = ReadingOrder::AcrossRows;
+    PairsPerRow mPairsPerRow = PairsPerRow::Automatic;
     int mHorizontalSpacing = -1;
     int mVerticalSpacing = -1;
+    int mPairSpacing = -1;
     mutable int mCachedWidth = -1;
     mutable int mCachedHeight = 0;
 };

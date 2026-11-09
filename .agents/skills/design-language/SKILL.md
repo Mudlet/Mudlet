@@ -61,7 +61,10 @@ script editor (`src/dlgTriggerEditor.cpp`) is the reference look; the settings d
 11. **Human copy.** Controls say what happens in a player's words; every user-visible string
     is `tr()` with a `//:` translator note on the line above.
 12. **Measured responsiveness.** Breakpoints come from font metrics, the style's own metrics
-    and `sizeHint()`s, with a different collapse and restore threshold so nothing oscillates.
+    and `sizeHint()`s, with a different collapse and restore threshold so nothing oscillates. A
+    breakpoint inside a scrolling page is taken against the width with the scroll bar's room kept
+    whether it is showing or not: a section that wraps can make the page tall enough to need the bar,
+    and the width the bar then takes would hold it wrapped.
     What a style leaves round what it draws is the style's, not a constant: it changes with the
     appearance, so anything measured against it is taken again on `QEvent::StyleChange`.
 
@@ -103,6 +106,9 @@ State colours (ok, warning, error) come from `stateColor(scmStateHue_*, darkPage
 | Sidebar list with rail collapse | `sidebarStyleSheet(...)` + `setSidebarCollapsed(...)` + `sidebarRowWidth(...)` + `SidebarItemDelegate` + `SidebarToggle` | The rail width, the paddings, the row height and the glyph are the component's own `scmSidebar*` constants; `SidebarMetrics` carries only what a window has a reason to differ by - the expanded width, which each measures off its widest row, and the vertical padding. A row is never a constant: `sidebarRowWidth()` asks the *base* style what an item of that name in bold and that icon needs (`CT_ItemViewItem`, widget `nullptr`, so a stylesheet style defers to the style underneath) and adds the accent bar and `::item` padding the sheet writes - a style leaves its own margins round an item's text, four pixels either side on macOS light against two under the dark theme, and a row measured for one elides in the other. `SidebarToggle` is the chevron on the seam, a child of the shell holding both panes, kept under `<window>SidebarLabelsShown` |
 | Scrollbars on a surface | `scrollBarStyleSheet(prefix, tokens, surface)` | A scroll area's bars answer only to a descendant selector |
 | Primary button | `buttonStyleSheet(tokens, prefix)` + `scmProp_primaryButton` (`uiPrimaryButton`) | The one act a window exists for, and never two on one window: `accentSoft` behind `accentText` on a 1px accent hairline, `hoverSoft` over it under the pointer, and the ordinary unavailable look while it is switched off rather than an invitation that cannot be taken. Opt-in, so every other button on the form keeps the plain face. The package exporter's Export carries it; the About dialog's own `aboutPrimaryButton` predates it and is that window's rule |
+| A colour row: shown, typed, chosen, reset | `uiDesign::ColourValue` (`src/ColourValue.h`) + `setColourButtonGlyph(button, ColourButton::Choose` / `Reset, tokens)` | The colour apart from the buttons that change it, in the order field, opacity, Choose, Reset. The field is a `QLineEdit` drawn by the window's `inputStyleSheet()` like any other: it shows the code and takes one typed as `#RGB` or `#RRGGBB`, with or without the `#`, over a swatch painted at its leading edge - the checkerboard under it where the colour is see-through - with the text held clear of it by `setTextMargins()`. Return or leaving the field takes the code; Escape, or a code that is not a whole colour, puts the colour back; Return and Escape go on to the dialog only when nothing was typed. A typed code keeps the colour's alpha. `setDefaultWord()` ("Automatic", "Map default") is the placeholder an item with no colour of its own shows, its swatch the colour it is drawn with, and makes an emptied field go back to the default; without a word an emptied field is put back. `clear()` is a selection that does not agree: no code, word or swatch. `opacityBox()` is the spin box for a colour that may be see-through (0 to 100, `%`, applied on Return, on leaving it and on each arrow step), laid out right after the field and kept in step with it, and fitted by `fitNumberBoxes()`. `colourEntered` and `defaultEntered` are wired to the same slots the colours window and Reset use, and a dialog with instant apply takes the field into its snapshot once the profile holds the colour, or the field reads as an edit waiting to be applied and the dialog stops re-reading its settings. Choose (`control-choose-colour.svg`, Lucide swatch-book) opens the colours window; Reset (`control-reset.svg`, rotate-ccw) is there only where the item has a default and is disabled with nothing to reset. Both are icon-only, as square as the row is tall, their words in the tooltip and the accessible name, and re-inked on every appearance change. `ColourRowSize::Compact` (the field's constructor, and the last argument of `setColourButtonGlyph()`) is the row at a colour well's `scmColourWellHeight` for a card holding a column of colours: swatch, text margin, opacity box and button scaled to it and held there by `holdHeight()` against the input and button recipes' min-height. The colour wells (`mTEXT_ON_BG_STYLESHEET`) are the older recipe, one target that shows a value and acts; the script editor still has them |
+| Spin boxes holding one kind of number, one above the other | `fitNumberBoxes(boxes, height)` | One fixed size for the group, measured from the widest value any of them can hold with its suffix; every value right-aligned with an inset from the trailing edge that puts that widest value in the middle, so the `%` signs stand in a line and "100%" is centred. Kept up on polish, style and font changes. The opacity boxes and the Player room marker's two Diameter boxes |
+| Colours seen in use | `uiDesign::ConsoleColourPreview` / `MapColourPreview` | Display-only self-painting widgets beside the sixteen console colours: game text in the profile's display font, or a small map, read from the Host at every paint, framed by the `border` hairline at `scmRadiusInput`. Policy (Expanding, Ignored), so the row beside them sets the height and they never add to it; the owner calls `update()` on every colour change and hides them below a useful width rather than letting them wrap |
 | Check mark on a row of a view | `itemCheckMarkStyleSheet(viewSelector, tokens)` | The very mark `choiceStyleSheet()` draws, written for a view's `::indicator` instead - same size, same field fill, same hairline, same accent once it is set, same tick and same dash for a part-checked row. Apart only because a view's indicator is a sub-control of the view rather than of a control on a form; a ticked row and a ticked option must not come to look like two different acts. `viewSelector` is that view's own selector |
 | The arrow that folds a group of a tree away | `treeBranchStyleSheet(viewSelector, tokens, surface)` | For a tree keeping its own indentation and branch column, where the editor's item trees give both up to `EditorTreeDelegate`: the design's chevrons in `mutedText`, right while closed and down while open, and no picture at all on a row with nothing inside it. The column is held to the view's surface rather than washed with the row - a tree draws one square branch cell per level of indentation, so a wash carried through them reads as a block glued to the leading edge of the rounded pill rather than as part of it, and the chosen row is filled across the whole of its width by the palette's highlight before a branch is drawn, so a rule painting nothing there leaves that band on show. Empty where the chevrons could not be cached |
 | Rows of a list or a tree | `itemRowStyleSheet(viewSelector, tokens, surface, rowGutter)` | The view on its own surface with no frame and no focus outline, every row cut to `scmRadiusPanel`, washed in `hoverSoft` under the pointer and filled with `blend(surface, accent, scmAccentWashStrength)` and inked `accentText` while chosen. The `border-left` it writes is the gutter the accent bar stands in - transparent on every row, never coloured, and given back out of the row's leading padding, so what a delegate draws at the leading edge stays where it was. The bar itself is `paintAccentBar()` in that view's delegate, which cuts it to the pill's own corner rather than to the arc a `border-left` is bent into. `viewSelector` is `QTreeWidget` for the editor's seven item trees and `QListWidget#packageList` for the package manager's list; `surface` is the pane in both |
@@ -122,7 +128,26 @@ State colours (ok, warning, error) come from `stateColor(scmStateHue_*, darkPage
 
 Adopted (styled through `uiDesign`, guarded by the tests below):
 
-- Settings dialog `dlgProfilePreferences` (shell, sidebar, cards, fields, marks, buttons, search)
+- Settings dialog `dlgProfilePreferences` (shell, sidebar, cards, fields, marks, buttons, search); the
+  Player room marker card's two ring colours are colour rows (`ColourValue` with its opacity box and a
+  Choose button, no Reset), each followed by its "Diameter" label and stepper after `scmFieldPairGap`,
+  the two Diameter boxes and the two opacities each one group of `fitNumberBoxes()`. The Main display's
+  Colors card and the Mapper's Map colors card are compact colour rows throughout, no Reset beside any
+  (the card's "Reset all colors to default" stays): the card's own colours a label and a row to a pair
+  in `PairGridLayout` - the Main display's read across, two pairs to a row and one to a row in the same
+  order; the map's read down (`ReadingOrder::DownColumns`), a leading column of four and a trailing one
+  holding the four see-through colours so their opacity boxes stand in one, side by side or the trailing
+  column under the leading one whole, never taking turns. Two to a row or one is decided by
+  `arrangeColourCards()` from the width the page gives the card with room kept for its scroll bar
+  whether that is showing or not, plus `scmColourArrangementHysteresis` (4px) before an arrangement is
+  taken up, and handed to the grid through `setPairsPerRow()`, so the same window always shows the same
+  arrangement; under the divider the sixteen console colours as a table,
+  "Normal" and "Light" over two columns and the eight names down the side once each (the light twins'
+  own labels hidden, their names in the fields' and buttons' accessible names); and beside the table the
+  preview, `ConsoleColourPreview` or `MapColourPreview`, hidden below 200px by the same decision
+- The room properties dialog's two colour rows (`dlgRoomProperties`): symbol and border, each a colour
+  row with Reset, the border's with its opacity box, styled by `inputStyleSheet()` set on the row widget
+  alone. The rest of that dialog is still platform drawn
 - Script editor `dlgTriggerEditor` (toolbar, sidebar, trees via `EditorTreeDelegate` /
   `VariableTreeDelegate` - the Folders view's tree included, see `docs/design-language.md`
   "One sidebar for both windows" - seven forms, pattern rows, options strip, chips, code heading, notice).
@@ -248,7 +273,8 @@ Not yet adopted (platform or Fusion drawn; a new feature there still uses the re
 for anything it adds, and adoption is one window per pull request):
 
 - Main window body: search field, bottom icon buttons, dock title bars
-- Mapper dock `dlgMapper` and its map controls; `dlgRoomProperties`, `dlgRoomExits`, `dlgMapLabel`
+- Mapper dock `dlgMapper` and its map controls; `dlgRoomProperties` apart from its two colour rows,
+  `dlgRoomExits`, `dlgMapLabel`
 - Module manager `dlgModuleManager`
 - Composer `dlgComposer`, IRC `dlgIRC`
 - Colour trigger picker `dlgColorTrigger`, UI tour

@@ -96,6 +96,27 @@ void PairGridLayout::addFooter(QWidget* pLeading, QWidget* pTrailing)
     addRow(RowKind::Footer, pLeading, pTrailing);
 }
 
+void PairGridLayout::setReadingOrder(const ReadingOrder order)
+{
+    mReadingOrder = order;
+    invalidate();
+}
+
+void PairGridLayout::setPairsPerRow(const PairsPerRow pairsPerRow)
+{
+    if (pairsPerRow == mPairsPerRow) {
+        return;
+    }
+    mPairsPerRow = pairsPerRow;
+    invalidate();
+}
+
+void PairGridLayout::setPairSpacing(const int spacing)
+{
+    mPairSpacing = spacing;
+    invalidate();
+}
+
 void PairGridLayout::addItem(QLayoutItem* pItem)
 {
     mItems.append(pItem);
@@ -193,25 +214,55 @@ int PairGridLayout::verticalSpacing() const
     return mVerticalSpacing >= 0 ? mVerticalSpacing : styleSpacing(Qt::Vertical);
 }
 
-PairGridLayout::Columns PairGridLayout::pairColumns(const bool twoPairs) const
+int PairGridLayout::pairSpacing() const
 {
-    Columns columns;
-    // A divider starts the next pair on the leading side again, as it starts a
-    // new row of a grid
-    bool trailing = false;
+    return mPairSpacing >= 0 ? mPairSpacing : horizontalSpacing();
+}
+
+QList<QList<const PairGridLayout::Row*>> PairGridLayout::pairBlocks() const
+{
+    QList<QList<const Row*>> blocks;
+    bool open = false;
     for (const Row& row : mRows) {
         if (row.kind != RowKind::Pair) {
-            trailing = false;
+            open = false;
             continue;
         }
         if (!shown(row.pFirst) && !shown(row.pSecond)) {
             continue;
         }
-        int& label = trailing ? columns.trailingLabel : columns.leadingLabel;
-        label = std::max(label, hintWidth(row.pFirst));
-        // Every control on the one width, so none is narrower than the widest
-        columns.control = std::max(columns.control, hintWidth(row.pSecond));
-        trailing = twoPairs && !trailing;
+        if (!open) {
+            blocks.append(QList<const Row*>());
+            open = true;
+        }
+        blocks.last().append(&row);
+    }
+    return blocks;
+}
+
+qsizetype PairGridLayout::leadingCount(const qsizetype pairs) const
+{
+    return mReadingOrder == ReadingOrder::DownColumns ? (pairs + 1) / 2 : pairs;
+}
+
+PairGridLayout::Columns PairGridLayout::pairColumns(const bool twoPairs) const
+{
+    Columns columns;
+    for (const QList<const Row*>& block : pairBlocks()) {
+        const qsizetype leading = leadingCount(block.size());
+        for (qsizetype index = 0; index < block.size(); ++index) {
+            const Row* pRow = block.at(index);
+            const bool trailing = twoPairs && (mReadingOrder == ReadingOrder::DownColumns ? index >= leading : index % 2 == 1);
+            int& label = trailing ? columns.trailingLabel : columns.leadingLabel;
+            int& control = trailing ? columns.trailingControl : columns.leadingControl;
+            label = std::max(label, hintWidth(pRow->pFirst));
+            control = std::max(control, hintWidth(pRow->pSecond));
+        }
+    }
+    // Read across, every control on the one width, so none is narrower than the widest
+    if (mReadingOrder == ReadingOrder::AcrossRows) {
+        columns.leadingControl = std::max(columns.leadingControl, columns.trailingControl);
+        columns.trailingControl = columns.leadingControl;
     }
     return columns;
 }
@@ -220,11 +271,13 @@ PairGridLayout::Columns PairGridLayout::pairColumns(const bool twoPairs) const
 bool PairGridLayout::footersFit(const Columns& columns, const bool twoPairs) const
 {
     const int gap = horizontalSpacing();
+    const int leadingHalf = columns.leadingLabel + gap + columns.leadingControl;
+    const int trailingHalf = twoPairs ? columns.trailingLabel + gap + columns.trailingControl : leadingHalf;
     for (const Row& row : mRows) {
         if (row.kind != RowKind::Footer) {
             continue;
         }
-        if (hintWidth(row.pFirst) > columns.leadingLabel + gap + columns.control || hintWidth(row.pSecond) > (twoPairs ? columns.trailingLabel : columns.leadingLabel) + gap + columns.control) {
+        if (hintWidth(row.pFirst) > leadingHalf || hintWidth(row.pSecond) > trailingHalf) {
             return false;
         }
     }
@@ -244,12 +297,12 @@ PairGridLayout::Columns PairGridLayout::narrowestColumns(const bool twoPairs) co
             continue;
         }
         if (twoPairs) {
-            columns.leadingLabel = std::max(columns.leadingLabel, hintWidth(row.pFirst) - gap - columns.control);
-            columns.trailingLabel = std::max(columns.trailingLabel, hintWidth(row.pSecond) - gap - columns.control);
+            columns.leadingLabel = std::max(columns.leadingLabel, hintWidth(row.pFirst) - gap - columns.leadingControl);
+            columns.trailingLabel = std::max(columns.trailingLabel, hintWidth(row.pSecond) - gap - columns.trailingControl);
             continue;
         }
         for (const QLayoutItem* pItem : {row.pFirst, row.pSecond}) {
-            columns.control = std::max(columns.control, hintWidth(pItem) - columns.leadingLabel - gap);
+            columns.leadingControl = std::max(columns.leadingControl, hintWidth(pItem) - columns.leadingLabel - gap);
         }
     }
     return columns;
@@ -259,9 +312,9 @@ int PairGridLayout::narrowestContentWidth(const bool twoPairs) const
 {
     const Columns columns = narrowestColumns(twoPairs);
     const int gap = horizontalSpacing();
-    int width = columns.leadingLabel + gap + columns.control;
+    int width = columns.leadingLabel + gap + columns.leadingControl;
     if (twoPairs) {
-        width += gap + columns.trailingLabel + gap + columns.control;
+        width += pairSpacing() + columns.trailingLabel + gap + columns.trailingControl;
     }
     for (const Row& row : mRows) {
         if (row.kind == RowKind::Spanning && shown(row.pFirst)) {
@@ -276,15 +329,30 @@ int PairGridLayout::runRows(const QRect& rect, const bool place) const
     const QMargins margins = contentsMargins();
     const QRect content = rect.marginsRemoved(margins);
     const int gapAcross = horizontalSpacing();
+    const int gapBetweenPairs = pairSpacing();
     const int gapDown = verticalSpacing();
-    const bool twoPairs = content.width() >= narrowestContentWidth(true);
+    const bool twoPairs = mPairsPerRow == PairsPerRow::Automatic ? content.width() >= narrowestContentWidth(true) : mPairsPerRow == PairsPerRow::Two;
 
-    // The labels keep their widths and the controls share what is left, one
-    // width for all of them. Only where that leaves a footer piece too little
+    // The labels keep their widths and the controls share what is left: read
+    // across, one width for all of them, and read down, half each on top of
+    // what each column needs. Only where that leaves a footer piece too little
     // room do the label columns take the narrowest arrangement's widths.
-    const auto stretch = [&content, gapAcross, twoPairs](Columns columns) {
-        const int labels = columns.leadingLabel + columns.trailingLabel + (twoPairs ? 3 : 1) * gapAcross;
-        columns.control = std::max(columns.control, (content.width() - labels) / (twoPairs ? 2 : 1));
+    const auto stretch = [this, &content, gapAcross, gapBetweenPairs, twoPairs](Columns columns) {
+        if (!twoPairs) {
+            columns.leadingControl = std::max(columns.leadingControl, content.width() - columns.leadingLabel - gapAcross);
+            return columns;
+        }
+        const int labels = columns.leadingLabel + columns.trailingLabel + 2 * gapAcross + gapBetweenPairs;
+        if (mReadingOrder == ReadingOrder::AcrossRows) {
+            columns.leadingControl = std::max(columns.leadingControl, (content.width() - labels) / 2);
+            columns.trailingControl = columns.leadingControl;
+            return columns;
+        }
+        const int spare = content.width() - labels - columns.leadingControl - columns.trailingControl;
+        if (spare > 0) {
+            columns.leadingControl += spare / 2;
+            columns.trailingControl += spare - spare / 2;
+        }
         return columns;
     };
     Columns columns = stretch(pairColumns(twoPairs));
@@ -292,12 +360,13 @@ int PairGridLayout::runRows(const QRect& rect, const bool place) const
         columns = stretch(narrowestColumns(twoPairs));
     }
     // The controls share an odd pixel out by putting it between the pairs, so the trailing one still ends on the edge
-    const int oddPixel = twoPairs ? std::max(0, content.width() - columns.leadingLabel - columns.trailingLabel - 3 * gapAcross - 2 * columns.control) : 0;
+    const int oddPixel =
+            twoPairs ? std::max(0, content.width() - columns.leadingLabel - columns.trailingLabel - 2 * gapAcross - gapBetweenPairs - columns.leadingControl - columns.trailingControl) : 0;
     const int leadingControlX = content.x() + columns.leadingLabel + gapAcross;
-    const int trailingLabelX = leadingControlX + columns.control + gapAcross + oddPixel;
+    const int trailingLabelX = leadingControlX + columns.leadingControl + gapBetweenPairs + oddPixel;
     const int trailingControlX = trailingLabelX + columns.trailingLabel + gapAcross;
-    const int leadingHalf = columns.leadingLabel + gapAcross + columns.control;
-    const int trailingHalf = columns.trailingLabel + gapAcross + columns.control;
+    const int leadingHalf = columns.leadingLabel + gapAcross + columns.leadingControl;
+    const int trailingHalf = columns.trailingLabel + gapAcross + columns.trailingControl;
 
     const QWidget* pParent = parentWidget();
     const Qt::LayoutDirection direction = pParent ? pParent->layoutDirection() : QGuiApplication::layoutDirection();
@@ -320,14 +389,15 @@ int PairGridLayout::runRows(const QRect& rect, const bool place) const
     const auto putPairs = [&](const Row* pLeading, const Row* pTrailing) {
         startLine();
         int height = 0;
-        for (const Row* pRow : {pLeading, pTrailing}) {
-            if (pRow) {
-                height = std::max({height, heightAt(pRow->pFirst, columns.leadingLabel), heightAt(pRow->pSecond, columns.control)});
-            }
+        if (pLeading) {
+            height = std::max({height, heightAt(pLeading->pFirst, columns.leadingLabel), heightAt(pLeading->pSecond, columns.leadingControl)});
+        }
+        if (pTrailing) {
+            height = std::max({height, heightAt(pTrailing->pFirst, columns.trailingLabel), heightAt(pTrailing->pSecond, columns.trailingControl)});
         }
         if (place) {
-            for (const auto& [pRow, labelX, labelWidth, controlX] :
-                 {std::tuple{pLeading, content.x(), columns.leadingLabel, leadingControlX}, std::tuple{pTrailing, trailingLabelX, columns.trailingLabel, trailingControlX}}) {
+            for (const auto& [pRow, labelX, labelWidth, controlX, controlWidth] : {std::tuple{pLeading, content.x(), columns.leadingLabel, leadingControlX, columns.leadingControl},
+                                                                                   std::tuple{pTrailing, trailingLabelX, columns.trailingLabel, trailingControlX, columns.trailingControl}}) {
                 if (!pRow) {
                     continue;
                 }
@@ -335,7 +405,7 @@ int PairGridLayout::runRows(const QRect& rect, const bool place) const
                     put(pRow->pFirst, QRect(labelX, y, labelWidth, height));
                 }
                 if (shown(pRow->pSecond)) {
-                    put(pRow->pSecond, QRect(controlX, y, columns.control, height));
+                    put(pRow->pSecond, QRect(controlX, y, controlWidth, height));
                 }
             }
         }
@@ -349,37 +419,44 @@ int PairGridLayout::runRows(const QRect& rect, const bool place) const
         }
         y += height;
     };
-
-    const Row* pWaiting = nullptr;
-    const auto flushWaiting = [&]() {
-        if (pWaiting) {
-            putPairs(pWaiting, nullptr);
-            pWaiting = nullptr;
+    const auto putBlock = [&](const QList<const Row*>& block) {
+        if (!twoPairs) {
+            for (const Row* pRow : block) {
+                putPairs(pRow, nullptr);
+            }
+            return;
+        }
+        if (mReadingOrder == ReadingOrder::DownColumns) {
+            const qsizetype leading = leadingCount(block.size());
+            for (qsizetype index = 0; index < leading; ++index) {
+                putPairs(block.at(index), index + leading < block.size() ? block.at(index + leading) : nullptr);
+            }
+            return;
+        }
+        for (qsizetype index = 0; index < block.size(); index += 2) {
+            putPairs(block.at(index), index + 1 < block.size() ? block.at(index + 1) : nullptr);
         }
     };
+
+    QList<const Row*> block;
     for (const Row& row : mRows) {
+        if (row.kind == RowKind::Pair) {
+            if (shown(row.pFirst) || shown(row.pSecond)) {
+                block.append(&row);
+            }
+            continue;
+        }
+        putBlock(block);
+        block.clear();
         switch (row.kind) {
         case RowKind::Pair:
-            if (!shown(row.pFirst) && !shown(row.pSecond)) {
-                break;
-            }
-            if (!twoPairs) {
-                putPairs(&row, nullptr);
-            } else if (!pWaiting) {
-                pWaiting = &row;
-            } else {
-                putPairs(pWaiting, &row);
-                pWaiting = nullptr;
-            }
             break;
         case RowKind::Spanning:
-            flushWaiting();
             if (shown(row.pFirst)) {
                 putAcross(row.pFirst, content.x(), content.width());
             }
             break;
         case RowKind::Footer:
-            flushWaiting();
             if (!twoPairs) {
                 if (shown(row.pFirst)) {
                     putAcross(row.pFirst, content.x(), content.width());
@@ -410,7 +487,7 @@ int PairGridLayout::runRows(const QRect& rect, const bool place) const
             break;
         }
     }
-    flushWaiting();
+    putBlock(block);
 
     return y - rect.y() + margins.bottom();
 }

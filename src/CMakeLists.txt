@@ -191,9 +191,10 @@ set(mudlet_SRCS
 set(mudlet_app_SRCS
     ../3rdparty/qt-tags-widget/src/qtagedit.cpp
     AboutLinkButton.cpp
-    AlphaColourWell.cpp
     AboutSupporterBanner.cpp
     ChipRow.cpp
+    ColourValue.cpp
+    ConsoleColourPreview.cpp
     ContentScrollArea.cpp
     CustomLineDrawContextMenuHandler.cpp
     CustomLineDrawHandler.cpp
@@ -241,6 +242,7 @@ set(mudlet_app_SRCS
     GripSplitter.cpp
     HostDialogs.cpp
     LabelInteractionHandler.cpp
+    MapColourPreview.cpp
     MiddleMousePanHandler.cpp
     mudlet.cpp
     MudletInstanceCoordinator.cpp
@@ -536,9 +538,10 @@ set(mudlet_HDRS
 set(mudlet_app_HDRS
     ../3rdparty/qt-tags-widget/include/QTagEdit/qtagedit.hpp
     AboutLinkButton.h
-    AlphaColourWell.h
     AboutSupporterBanner.h
     ChipRow.h
+    ColourValue.h
+    ConsoleColourPreview.h
     ContentScrollArea.h
     CustomLineDrawContextMenuHandler.h
     CustomLineDrawHandler.h
@@ -586,6 +589,7 @@ set(mudlet_app_HDRS
     GripSplitter.h
     HostDialogs.h
     LabelInteractionHandler.h
+    MapColourPreview.h
     MiddleMousePanHandler.h
     mudlet.h
     MudletInstanceCoordinator.h

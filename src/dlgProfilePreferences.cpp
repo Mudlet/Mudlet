@@ -25,7 +25,8 @@
 
 #include "dlgProfilePreferences.h"
 
-#include "AlphaColourWell.h"
+#include "ColourValue.h"
+#include "ConsoleColourPreview.h"
 #include "CredentialManager.h"
 #include "EditorAutoCompleteFocusHandler.h"
 #include "FlowLayout.h"
@@ -33,6 +34,7 @@
 #include "Host.h"
 #include "HostDialogs.h"
 #include "HostManager.h"
+#include "MapColourPreview.h"
 #include "MapStyle.h"
 #include "MudletApp.h"
 #include "MudletProxyStyle.h"
@@ -650,10 +652,10 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     setMinimumSize(scmMinimumWindowWidth, 560);
     const auto geometry = MudletApp::getQSettings()->value(qsl("profilePreferencesGeometry")).toByteArray();
     if (geometry.isEmpty() || !restoreGeometry(geometry)) {
-        // No wider than the names beside the widest page's column, the width the window was held to when that
-        // was as wide as it went
-        const int fullyExpanded = sidebarWidths().fullyExpanded;
-        resize(fullyExpanded ? std::min(1060, fullyExpanded) : 1060, 760);
+        // No wider than the names beside the widest page's column and the map's colours side by side, the width the
+        // window was held to when that was as wide as it went
+        const int opening = sidebarWidths().opening;
+        resize(opening ? std::min(1060, opening) : 1060, 760);
     }
     // resize() on a never-shown dialog does not always deliver a resize event
     updateSidebarMode();
@@ -1357,6 +1359,24 @@ void dlgProfilePreferences::retranslateShell()
     mpLabel_noProfileNotice->setText(tr("These settings are not linked to an open profile, so the ones that belong to a profile are greyed out. "
                                         "To change those, including the accessibility options, open Settings from a loaded profile."));
     updateNoProfileNotice();
+
+    //: Settings, Mapper page, Player room marker card: words in front of the outer ring's color and the button that chooses it
+    mpLabel_playerRoomOuterRing->setText(tr("Outer ring"));
+    //: Settings, Mapper page, Player room marker card: words in front of the inner ring's color and the button that chooses it
+    mpLabel_playerRoomInnerRing->setText(tr("Inner ring"));
+    //: Settings, Mapper page, Player room marker card: words in front of the stepper setting the size of a ring of the marker, as a percentage, on the outer ring's row and again on the inner ring's
+    const QString diameter = tr("Diameter");
+    mpLabel_playerRoomOuterDiameter->setText(diameter);
+    mpLabel_playerRoomInnerDiameter->setText(diameter);
+    // One width for both ring names, so the colours and the diameters of the two rows stand in columns
+    const int ringNameWidth = std::max(mpLabel_playerRoomOuterRing->sizeHint().width(), mpLabel_playerRoomInnerRing->sizeHint().width());
+    mpLabel_playerRoomOuterRing->setMinimumWidth(ringNameWidth);
+    mpLabel_playerRoomInnerRing->setMinimumWidth(ringNameWidth);
+    //: Settings, Mapper page, Player room marker card: tooltip of the button, showing only a glyph, that opens a color picker for the marker's outer ring
+    pushButton_playerRoomPrimaryColor->setToolTip(tr("Choose the outer ring color"));
+    //: Settings, Mapper page, Player room marker card: tooltip of the button, showing only a glyph, that opens a color picker for the marker's inner ring
+    pushButton_playerRoomSecondaryColor->setToolTip(tr("Choose the inner ring color"));
+    nameColourControls();
 
     retranslateTriggerMatchPoolControls();
     setSearchKeywords();
@@ -2498,13 +2518,45 @@ void dlgProfilePreferences::reflowMapperCards()
     // A row like the Map files rows, so the list can drop under its label: glued into one piece, the two were
     // wider than the reading column in German
     gridLayout_groupBox_playerRoomStyle->addWidget(makeFlowRow(groupBox_playerRoomStyle, qsl("settingsMapperRow_playerRoomStyle"), {label_playerRoomStyle, comboBox_playerRoomStyle}), 0, 0);
+    // A row per ring: its colour as a code and an opacity, the button opening the colours window, then its
+    // diameter, each half moving to the next line whole. The words are retranslateShell()'s.
+    const auto ringRow = [this](const QString& ring, QLabel*& pRingName, uiDesign::ColourValue*& pColour, QPushButton* pChoose, QLabel*& pDiameterName, QSpinBox* pDiameter) {
+        pRingName = new QLabel(groupBox_playerRoomStyle);
+        pRingName->setObjectName(qsl("settingsPlayerRoom%1RingLabel").arg(ring));
+        pColour = new uiDesign::ColourValue(groupBox_playerRoomStyle);
+        pColour->setObjectName(qsl("settingsPlayerRoom%1Colour").arg(ring));
+        pColour->opacityBox()->setObjectName(qsl("settingsPlayerRoom%1Opacity").arg(ring));
+        pRingName->setBuddy(pColour);
+        pDiameterName = new QLabel(groupBox_playerRoomStyle);
+        pDiameterName->setObjectName(qsl("settingsPlayerRoom%1DiameterLabel").arg(ring));
+        pDiameterName->setBuddy(pDiameter);
+        const QList<QWidget*> halves{makeFlowPiece(groupBox_playerRoomStyle, qsl("settingsPlayerRoom%1Ring").arg(ring), QBoxLayout::LeftToRight, {pRingName, pColour, pColour->opacityBox(), pChoose}),
+                                     makeFlowPiece(groupBox_playerRoomStyle, qsl("settingsPlayerRoom%1Size").arg(ring), QBoxLayout::LeftToRight, {pDiameterName, pDiameter})};
+        return makeFlowRow(groupBox_playerRoomStyle, qsl("settingsPlayerRoom%1Row").arg(ring), halves, scmFieldPairGap);
+    };
     gridLayout_groupBox_playerRoomStyle->addWidget(
-            makeFlowRow(groupBox_playerRoomStyle,
-                        qsl("settingsPlayerRoomMarker"),
-                        {pushButton_playerRoomPrimaryColor, pushButton_playerRoomSecondaryColor, spinBox_playerRoomOuterDiameter, spinBox_playerRoomInnerDiameter},
-                        scmFieldPairGap),
+            ringRow(qsl("Outer"), mpLabel_playerRoomOuterRing, mpColourValue_playerRoomOuter, pushButton_playerRoomPrimaryColor, mpLabel_playerRoomOuterDiameter, spinBox_playerRoomOuterDiameter),
             1,
             0);
+    gridLayout_groupBox_playerRoomStyle->addWidget(
+            ringRow(qsl("Inner"), mpLabel_playerRoomInnerRing, mpColourValue_playerRoomInner, pushButton_playerRoomSecondaryColor, mpLabel_playerRoomInnerDiameter, spinBox_playerRoomInnerDiameter),
+            2,
+            0);
+    // One width for both whatever their ranges, so their percent signs stand one over the other as the opacities' do
+    uiDesign::fitNumberBoxes({spinBox_playerRoomOuterDiameter, spinBox_playerRoomInnerDiameter}, uiDesign::scmInputHeight);
+    // A typed colour goes the way one chosen in the colours window does
+    connect(mpColourValue_playerRoomOuter, &uiDesign::ColourValue::colourEntered, this, [this](const QColor& colour) {
+        if (mpHost && mpHost->mpMap) {
+            mpHost->mpMap->mPlayerRoomOuterColor = colour;
+            passOnPlayerRoomColour(true);
+        }
+    });
+    connect(mpColourValue_playerRoomInner, &uiDesign::ColourValue::colourEntered, this, [this](const QColor& colour) {
+        if (mpHost && mpHost->mpMap) {
+            mpHost->mpMap->mPlayerRoomInnerColor = colour;
+            passOnPlayerRoomColour(false);
+        }
+    });
     gridLayout_groupBox_playerRoomStyle->setVerticalSpacing(scmFlowRowGap);
 }
 
@@ -2550,21 +2602,21 @@ void dlgProfilePreferences::reflowPrivacyCards()
     hBoxLayout_groupBox_purgeMediaCache->addWidget(makeFlowRow(groupBox_purgeMediaCache, qsl("settingsPrivacyRow_purgeMediaCache"), {label_purgeMediaCache, buttonPurgeMediaCache}));
 }
 
-// What a colour card holds: the colours of its own, a divider with whatever is said under it, the sixteen ANSI
-// colours a colour and its light twin to a row, and a footer under each half
+// What a colour card holds: its own colours a label and a row to a pair, a divider with whatever is said under it,
+// the console colours' table, and a footer under each half
 struct ColourCardContents
 {
     QList<std::pair<QWidget*, QWidget*>> namedColours;
     QList<QWidget*> divider;
-    QList<std::pair<QWidget*, QWidget*>> ansiColours;
+    QWidget* pConsoleColours = nullptr;
     QWidget* pFooterLeading = nullptr;
     QWidget* pFooterTrailing = nullptr;
 };
 
-// The Main display's colours and the map's are one recipe: label, well, label, well, every well the one width so
-// they line up down the card, and one pair to a row once two no longer fit the column. The card keeps its .ui grid,
-// emptied, with the colours in its one cell.
-static void layOutColourCard(QGroupBox* pCard, QGridLayout* pCardGrid, const QString& objectName, const ColourCardContents& contents)
+// The Main display's colours and the map's are one recipe: label, row, label, row, every row the one width so they
+// line up down the card, and one pair to a row once two no longer fit the column; then the console colours. The card
+// keeps its .ui grid, emptied, with the colours in its one cell.
+static QWidget* layOutColourCard(QGroupBox* pCard, QGridLayout* pCardGrid, const QString& objectName, const ColourCardContents& contents)
 {
     auto* pColours = new QWidget(pCard);
     pColours->setObjectName(objectName);
@@ -2575,90 +2627,317 @@ static void layOutColourCard(QGroupBox* pCard, QGridLayout* pCardGrid, const QSt
     // per pair of them and left to the layout
     auto* pLayout = new uiDesign::PairGridLayout(pColours, pCardGrid->horizontalSpacing(), pCardGrid->verticalSpacing());
     pLayout->setContentsMargins(0, 0, 0, 0);
+    // The console colours' Light column stands this far from Normal's, and the pairs above line up with it
+    pLayout->setPairSpacing(scmFieldPairGap);
     const auto take = [](QWidget* pWidget) {
         if (pWidget) {
             detachFromLayout(pWidget);
         }
         return pWidget;
     };
-    for (const auto& [pLabel, pWell] : contents.namedColours) {
-        pLayout->addPair(take(pLabel), take(pWell));
+    for (const auto& [pLabel, pRow] : contents.namedColours) {
+        pLayout->addPair(take(pLabel), pRow);
     }
     for (auto* pWidget : contents.divider) {
         pLayout->addSpanningWidget(take(pWidget));
     }
-    for (const auto& [pLabel, pWell] : contents.ansiColours) {
-        pLayout->addPair(take(pLabel), take(pWell));
-    }
+    pLayout->addSpanningWidget(contents.pConsoleColours);
     pLayout->addFooter(take(contents.pFooterLeading), take(contents.pFooterTrailing));
     pCardGrid->addWidget(pColours, 0, 0);
+    return pColours;
+}
+
+// Narrower than this the preview shows too little of anything to judge a colour by
+static constexpr int scmColourPreviewMinimumWidth = 200;
+
+// The width a widget on a settings page has with the page's scroll bar showing, whether it is showing or not. A colour
+// card that wraps makes its page tall enough to need the bar, and the width the bar takes would hold it wrapped, so
+// the same window could show either arrangement.
+static int widthBesideScrollBar(const QWidget* pWidget)
+{
+    for (const QWidget* pAncestor = pWidget->parentWidget(); pAncestor; pAncestor = pAncestor->parentWidget()) {
+        if (const auto* pPage = qobject_cast<const QAbstractScrollArea*>(pAncestor)) {
+            const QScrollBar* pBar = pPage->verticalScrollBar();
+            return pBar->isVisibleTo(pPage) ? pWidget->width() : pWidget->width() - pBar->sizeHint().width();
+        }
+    }
+    return pWidget->width();
+}
+
+// Taken up at the width it needs plus the hysteresis and given up only below the width it needs, so a width at the
+// breakpoint keeps whichever it had
+static bool roomFor(const bool hadIt, const int width, const int needed, const int hysteresis)
+{
+    return width >= needed + (hadIt ? 0 : hysteresis);
+}
+
+// Beside the table or not at all: under it, the card would grow taller for a picture
+static void offerColourPreview(QWidget* pConsoleColours, const int hysteresis)
+{
+    auto* pBeside = qobject_cast<QBoxLayout*>(pConsoleColours->layout());
+    if (!pBeside || pBeside->count() < 2) {
+        return;
+    }
+    QWidget* pTable = pBeside->itemAt(0)->widget();
+    QWidget* pPreview = pBeside->itemAt(1)->widget();
+    const int besideTable = widthBesideScrollBar(pConsoleColours) - pTable->sizeHint().width() - pBeside->spacing();
+    const bool fits = roomFor(!pPreview->isHidden(), besideTable, scmColourPreviewMinimumWidth, hysteresis);
+    if (pPreview->isHidden() == fits) {
+        pPreview->setVisible(fits);
+    }
+}
+
+// Two pairs to a row, the map's two columns side by side, and the previews follow the page's width and nothing else
+void dlgProfilePreferences::arrangeColourCards()
+{
+    for (QWidget* pColours : {mpWidget_displayColours, mpWidget_mapColours}) {
+        auto* pGrid = pColours ? dynamic_cast<uiDesign::PairGridLayout*>(pColours->layout()) : nullptr;
+        if (!pGrid) {
+            continue;
+        }
+        const bool hadTwo = pGrid->pairsPerRow() == uiDesign::PairGridLayout::PairsPerRow::Two;
+        const bool two = roomFor(hadTwo, widthBesideScrollBar(pColours), pGrid->sizeHint().width(), scmColourArrangementHysteresis);
+        pGrid->setPairsPerRow(two ? uiDesign::PairGridLayout::PairsPerRow::Two : uiDesign::PairGridLayout::PairsPerRow::One);
+    }
+    for (QWidget* pConsoleColours : {mpWidget_displayConsoleColours, mpWidget_mapConsoleColours}) {
+        if (pConsoleColours) {
+            offerColourPreview(pConsoleColours, scmColourArrangementHysteresis);
+        }
+    }
 }
 
 void dlgProfilePreferences::reflowColourCards()
 {
-    layOutColourCard(groupBox_displayColors,
-                     gridLayout_groupBox_displayColors,
-                     qsl("settingsDisplayColours"),
-                     {.namedColours = {{label_foreground_color, pushButton_foreground_color},
-                                       {label_background_color, pushButton_background_color},
-                                       {label_command_line_foreground_color, pushButton_command_line_foreground_color},
-                                       {label_command_line_background_color, pushButton_command_line_background_color},
-                                       {label_command_foreground_color, pushButton_command_foreground_color},
-                                       {label_command_background_color, pushButton_command_background_color}},
-                      .divider = {line_colorsSeparator, label_ANSI_color_buttons_introduction},
-                      .ansiColours = {{label_black, pushButton_black},
-                                      {label_lBlack, pushButton_lBlack},
-                                      {label_red, pushButton_red},
-                                      {label_lRed, pushButton_lRed},
-                                      {label_green, pushButton_green},
-                                      {label_lGreen, pushButton_lGreen},
-                                      {label_yellow, pushButton_yellow},
-                                      {label_lYellow, pushButton_lYellow},
-                                      {label_blue, pushButton_blue},
-                                      {label_lBlue, pushButton_lBlue},
-                                      {label_magenta, pushButton_magenta},
-                                      {label_lMagenta, pushButton_lMagenta},
-                                      {label_cyan, pushButton_cyan},
-                                      {label_lCyan, pushButton_lCyan},
-                                      {label_white, pushButton_white},
-                                      {label_lWhite, pushButton_lWhite}},
-                      .pFooterLeading = checkBox_allowServerToRedefineColors,
-                      .pFooterTrailing = pushButton_resetColors});
+    mDisplayColours = {{label_foreground_color, pushButton_foreground_color, &Host::mFgColor},
+                       {label_background_color, pushButton_background_color, &Host::mBgColor},
+                       {label_command_line_foreground_color, pushButton_command_line_foreground_color, &Host::mCommandLineFgColor},
+                       {label_command_line_background_color, pushButton_command_line_background_color, &Host::mCommandLineBgColor},
+                       {label_command_foreground_color, pushButton_command_foreground_color, &Host::mCommandFgColor},
+                       {label_command_background_color, pushButton_command_background_color, &Host::mCommandBgColor},
+                       {label_black, pushButton_black, &Host::mBlack},
+                       {label_lBlack, pushButton_lBlack, &Host::mLightBlack},
+                       {label_red, pushButton_red, &Host::mRed},
+                       {label_lRed, pushButton_lRed, &Host::mLightRed},
+                       {label_green, pushButton_green, &Host::mGreen},
+                       {label_lGreen, pushButton_lGreen, &Host::mLightGreen},
+                       {label_yellow, pushButton_yellow, &Host::mYellow},
+                       {label_lYellow, pushButton_lYellow, &Host::mLightYellow},
+                       {label_blue, pushButton_blue, &Host::mBlue},
+                       {label_lBlue, pushButton_lBlue, &Host::mLightBlue},
+                       {label_magenta, pushButton_magenta, &Host::mMagenta},
+                       {label_lMagenta, pushButton_lMagenta, &Host::mLightMagenta},
+                       {label_cyan, pushButton_cyan, &Host::mCyan},
+                       {label_lCyan, pushButton_lCyan, &Host::mLightCyan},
+                       {label_white, pushButton_white, &Host::mWhite},
+                       {label_lWhite, pushButton_lWhite, &Host::mLightWhite}};
+    constexpr qsizetype displayNamedCount = 6;
+    // Read down, the leading column and then the trailing one, which holds the four that may be see-through: their
+    // opacity boxes stand in one column, and the two columns go under one another whole
+    mMapColours = {{label_40, pushButton_background_color_2, &Host::mBgColor_2},
+                   {label_4, pushButton_roomBorderColor, &Host::mRoomBorderColor},
+                   {label_pushButton_roomCollisionBorderColor, pushButton_roomCollisionBorderColor, &Host::mRoomCollisionBorderColor},
+                   {label_39, pushButton_foreground_color_2, &Host::mFgColor_2},
+                   {label_mapInfoBg, pushButton_mapInfoBg, &Host::mMapInfoBg, true},
+                   {label_upperLevelColor, pushButton_upperLevelColor, &Host::mUpperLevelColor, true},
+                   {label_lowerLevelColor, pushButton_lowerLevelColor, &Host::mLowerLevelColor, true},
+                   {label_mapGridColor, pushButton_mapGridColor, &Host::mMapGridColor, true},
+                   {label_17, pushButton_black_2, &Host::mBlack_2},
+                   {label_49, pushButton_Lblack_2, &Host::mLightBlack_2},
+                   {label_42, pushButton_red_2, &Host::mRed_2},
+                   {label_50, pushButton_Lred_2, &Host::mLightRed_2},
+                   {label_43, pushButton_green_2, &Host::mGreen_2},
+                   {label_51, pushButton_Lgreen_2, &Host::mLightGreen_2},
+                   {label_48, pushButton_yellow_2, &Host::mYellow_2},
+                   {label_52, pushButton_Lyellow_2, &Host::mLightYellow_2},
+                   {label_44, pushButton_blue_2, &Host::mBlue_2},
+                   {label_53, pushButton_Lblue_2, &Host::mLightBlue_2},
+                   {label_45, pushButton_magenta_2, &Host::mMagenta_2},
+                   {label_54, pushButton_Lmagenta_2, &Host::mLightMagenta_2},
+                   {label_46, pushButton_cyan_2, &Host::mCyan_2},
+                   {label_55, pushButton_Lcyan_2, &Host::mLightCyan_2},
+                   {label_47, pushButton_white_2, &Host::mWhite_2},
+                   {label_56, pushButton_Lwhite_2, &Host::mLightWhite_2}};
+    constexpr qsizetype mapNamedCount = 8;
 
-    layOutColourCard(groupBox_mapperColors,
-                     gridLayout_groupBox_mapperColors,
-                     qsl("settingsMapColours"),
-                     {.namedColours = {{label_39, pushButton_foreground_color_2},
-                                       {label_40, pushButton_background_color_2},
-                                       {label_4, pushButton_roomBorderColor},
-                                       {label_mapInfoBg, pushButton_mapInfoBg},
-                                       {label_lowerLevelColor, pushButton_lowerLevelColor},
-                                       {label_upperLevelColor, pushButton_upperLevelColor},
-                                       {label_pushButton_roomCollisionBorderColor, pushButton_roomCollisionBorderColor},
-                                       {label_mapGridColor, pushButton_mapGridColor}},
-                      .divider = {line_mapperColorsSeparator},
-                      .ansiColours = {{label_17, pushButton_black_2},
-                                      {label_49, pushButton_Lblack_2},
-                                      {label_42, pushButton_red_2},
-                                      {label_50, pushButton_Lred_2},
-                                      {label_43, pushButton_green_2},
-                                      {label_51, pushButton_Lgreen_2},
-                                      {label_48, pushButton_yellow_2},
-                                      {label_52, pushButton_Lyellow_2},
-                                      {label_44, pushButton_blue_2},
-                                      {label_53, pushButton_Lblue_2},
-                                      {label_45, pushButton_magenta_2},
-                                      {label_54, pushButton_Lmagenta_2},
-                                      {label_46, pushButton_cyan_2},
-                                      {label_55, pushButton_Lcyan_2},
-                                      {label_47, pushButton_white_2},
-                                      {label_56, pushButton_Lwhite_2}},
-                      .pFooterTrailing = reset_colors_button_2});
+    // A field for every colour, at a colour well's height so a card of thirty colours stays short; the words are
+    // nameColourControls()'s
+    const auto giveFields = [this](QGroupBox* pCard, QList<ProfileColour>& colours) {
+        for (ProfileColour& colour : colours) {
+            const QString stem = colour.pChoose->objectName().remove(qsl("pushButton_"));
+            colour.pValue = new uiDesign::ColourValue(pCard, uiDesign::ColourRowSize::Compact);
+            colour.pValue->setObjectName(qsl("settingsColour_%1").arg(stem));
+            if (colour.seeThrough) {
+                colour.pValue->opacityBox()->setObjectName(qsl("settingsOpacity_%1").arg(stem));
+            }
+            colour.pName->setBuddy(colour.pValue);
+            // A typed colour goes the way one chosen in the colours window does
+            connect(colour.pValue, &uiDesign::ColourValue::colourEntered, this, [this, pChoose = colour.pChoose, pHeld = colour.pHeld](const QColor& entered) {
+                Host* pHost = mpHost;
+                if (!pHost) {
+                    return;
+                }
+                takeColour(pChoose, pHost->*pHeld, entered);
+                // As slot_setMapBgColor() does once the colours window closes
+                if (pChoose == pushButton_background_color_2 && pHost->mpMap) {
+                    pHost->mpMap->announceMapperSettingChanged(TMap::MapperSetting::BackgroundColor);
+                }
+            });
+        }
+    };
+    giveFields(groupBox_displayColors, mDisplayColours);
+    giveFields(groupBox_mapperColors, mMapColours);
 
-    // The four map colours that may be see-through: a swatch over a checkerboard and how opaque the colour is
-    for (QPushButton* pWell : {pushButton_mapInfoBg, pushButton_lowerLevelColor, pushButton_upperLevelColor, pushButton_mapGridColor}) {
-        uiDesign::AlphaColourWell::on(pWell);
+    // The field, the opacity box for a colour that may be see-through, then the button choosing it
+    const auto rowOf = [](QGroupBox* pCard, const ProfileColour& colour) {
+        auto* pRow = new QWidget(pCard);
+        pRow->setObjectName(colour.pValue->objectName() + qsl("Row"));
+        auto* pLayout = new QHBoxLayout(pRow);
+        pLayout->setContentsMargins(0, 0, 0, 0);
+        pLayout->setSpacing(scmFlowRowGap);
+        pLayout->addWidget(colour.pValue);
+        if (colour.seeThrough) {
+            pLayout->addWidget(colour.pValue->opacityBox());
+        }
+        detachFromLayout(colour.pChoose);
+        pLayout->addWidget(colour.pChoose);
+        pLayout->addStretch(1);
+        return pRow;
+    };
+    const auto namedRows = [&rowOf](QGroupBox* pCard, const QList<ProfileColour>& named) {
+        QList<std::pair<QWidget*, QWidget*>> rows;
+        for (const ProfileColour& colour : named) {
+            rows.append({colour.pName, rowOf(pCard, colour)});
+        }
+        return rows;
+    };
+
+    // Each of the eight names once, its normal colour and its light twin side by side under their headings, and the
+    // preview beside them in whatever width is left
+    const auto consoleColours = [](QGroupBox* pCard, const QString& objectName, const QList<ProfileColour>& colours, QLabel* pNormal, QLabel* pLight, QWidget* pPreview, const int rowGap) {
+        auto* pConsoleColours = new QWidget(pCard);
+        pConsoleColours->setObjectName(objectName);
+        auto* pBeside = new QHBoxLayout(pConsoleColours);
+        pBeside->setContentsMargins(0, 0, 0, 0);
+        pBeside->setSpacing(scmFieldPairGap);
+        auto* pTable = new QWidget(pConsoleColours);
+        pTable->setObjectName(objectName + qsl("Table"));
+        auto* pGrid = new QGridLayout(pTable);
+        pGrid->setContentsMargins(0, 0, 0, 0);
+        pGrid->setHorizontalSpacing(scmFlowRowGap);
+        pGrid->setVerticalSpacing(rowGap);
+        pGrid->addWidget(pNormal, 0, 1, 1, 2);
+        // Light's column a pair's gap from Normal's
+        pGrid->addItem(new QSpacerItem(scmFieldPairGap - 2 * scmFlowRowGap, 0, QSizePolicy::Fixed, QSizePolicy::Minimum), 0, 3);
+        pGrid->addWidget(pLight, 0, 4, 1, 2);
+        for (qsizetype index = 0; index + 1 < colours.size(); index += 2) {
+            const int row = static_cast<int>(index / 2) + 1;
+            const ProfileColour& normal = colours.at(index);
+            const ProfileColour& light = colours.at(index + 1);
+            for (QWidget* pWidget : {static_cast<QWidget*>(normal.pName), static_cast<QWidget*>(normal.pChoose), static_cast<QWidget*>(light.pName), static_cast<QWidget*>(light.pChoose)}) {
+                detachFromLayout(pWidget);
+            }
+            pGrid->addWidget(normal.pName, row, 0);
+            pGrid->addWidget(normal.pValue, row, 1);
+            pGrid->addWidget(normal.pChoose, row, 2);
+            pGrid->addWidget(light.pValue, row, 4);
+            pGrid->addWidget(light.pChoose, row, 5);
+            // The column heading says it is the light one, and its field and button carry the whole name
+            light.pName->hide();
+        }
+        pBeside->addWidget(pTable, 0, Qt::AlignLeft | Qt::AlignTop);
+        pPreview->setParent(pConsoleColours);
+        pBeside->addWidget(pPreview, 1);
+        return pConsoleColours;
+    };
+    const auto heading = [](QGroupBox* pCard, const QString& objectName) {
+        auto* pHeading = new QLabel(pCard);
+        pHeading->setObjectName(objectName);
+        return pHeading;
+    };
+
+    mpLabel_displayColoursNormal = heading(groupBox_displayColors, qsl("settingsDisplayColoursNormal"));
+    mpLabel_displayColoursLight = heading(groupBox_displayColors, qsl("settingsDisplayColoursLight"));
+    mpConsoleColourPreview = new uiDesign::ConsoleColourPreview(groupBox_displayColors);
+    mpConsoleColourPreview->setObjectName(qsl("settingsDisplayColoursPreview"));
+    mpWidget_displayConsoleColours = consoleColours(groupBox_displayColors,
+                                                    qsl("settingsDisplayConsoleColours"),
+                                                    mDisplayColours.mid(displayNamedCount),
+                                                    mpLabel_displayColoursNormal,
+                                                    mpLabel_displayColoursLight,
+                                                    mpConsoleColourPreview,
+                                                    gridLayout_groupBox_displayColors->verticalSpacing());
+    mpWidget_displayConsoleColours->installEventFilter(this);
+    mpWidget_displayColours = layOutColourCard(groupBox_displayColors,
+                                               gridLayout_groupBox_displayColors,
+                                               qsl("settingsDisplayColours"),
+                                               {.namedColours = namedRows(groupBox_displayColors, mDisplayColours.first(displayNamedCount)),
+                                                .divider = {line_colorsSeparator, label_ANSI_color_buttons_introduction},
+                                                .pConsoleColours = mpWidget_displayConsoleColours,
+                                                .pFooterLeading = checkBox_allowServerToRedefineColors,
+                                                .pFooterTrailing = pushButton_resetColors});
+
+    mpLabel_mapColoursNormal = heading(groupBox_mapperColors, qsl("settingsMapColoursNormal"));
+    mpLabel_mapColoursLight = heading(groupBox_mapperColors, qsl("settingsMapColoursLight"));
+    mpMapColourPreview = new uiDesign::MapColourPreview(groupBox_mapperColors);
+    mpMapColourPreview->setObjectName(qsl("settingsMapColoursPreview"));
+    mpWidget_mapConsoleColours = consoleColours(groupBox_mapperColors,
+                                                qsl("settingsMapConsoleColours"),
+                                                mMapColours.mid(mapNamedCount),
+                                                mpLabel_mapColoursNormal,
+                                                mpLabel_mapColoursLight,
+                                                mpMapColourPreview,
+                                                gridLayout_groupBox_mapperColors->verticalSpacing());
+    mpWidget_mapConsoleColours->installEventFilter(this);
+    mpWidget_mapColours = layOutColourCard(groupBox_mapperColors,
+                                           gridLayout_groupBox_mapperColors,
+                                           qsl("settingsMapColours"),
+                                           {.namedColours = namedRows(groupBox_mapperColors, mMapColours.first(mapNamedCount)),
+                                            .divider = {line_mapperColorsSeparator},
+                                            .pConsoleColours = mpWidget_mapConsoleColours,
+                                            .pFooterTrailing = reset_colors_button_2});
+    static_cast<uiDesign::PairGridLayout*>(mpWidget_mapColours->layout())->setReadingOrder(uiDesign::PairGridLayout::ReadingOrder::DownColumns);
+    for (QWidget* pColours : {mpWidget_displayColours, mpWidget_mapColours}) {
+        pColours->installEventFilter(this);
     }
+}
+
+// The buttons show only a glyph and the fields only a code, so each says which colour it is in its accessible name.
+// What the .ui file says about a colour describes the colour rather than the button, so it goes to the field.
+void dlgProfilePreferences::nameColourControls()
+{
+    //: Settings, Main display page, Colors card, and Mapper page, Map colors card: heading over the column of the eight console colors as they are normally drawn, beside the column of their light twins
+    const QString normal = tr("Normal");
+    //: Settings, Main display page, Colors card, and Mapper page, Map colors card: heading over the column of the light (bright) twins of the eight console colors
+    const QString light = tr("Light");
+    mpLabel_displayColoursNormal->setText(normal);
+    mpLabel_mapColoursNormal->setText(normal);
+    mpLabel_displayColoursLight->setText(light);
+    mpLabel_mapColoursLight->setText(light);
+
+    static const char* const scmChooseTip = "settingsChooseTip";
+    for (const QList<ProfileColour>* pColours : {&mDisplayColours, &mMapColours}) {
+        for (const ProfileColour& colour : *pColours) {
+            QString name = colour.pName->text().trimmed();
+            // A label ends in a colon, a full-width one in some languages, which a name read out on its own does not
+            while (name.endsWith(QLatin1Char(':')) || name.endsWith(QChar(0xFF1A))) {
+                name.chop(1);
+                name = name.trimmed();
+            }
+            // Unless retranslateUi() has just put the .ui file's description back, the button still shows ours
+            if (colour.pChoose->toolTip() != colour.pChoose->property(scmChooseTip).toString()) {
+                colour.pValue->setToolTip(colour.pChoose->toolTip());
+                colour.pValue->setAccessibleDescription(colour.pChoose->accessibleDescription());
+            }
+            //: Settings, Main display and Mapper pages: tooltip of the button, showing only a glyph, that opens a color picker for one color; %1 is that color's name as its label shows it, such as "Foreground" or "Light red"
+            const QString choose = tr("Choose %1…").arg(name);
+            colour.pChoose->setToolTip(choose);
+            colour.pChoose->setProperty(scmChooseTip, choose);
+            colour.pChoose->setAccessibleName(name);
+            colour.pValue->setAccessibleName(name);
+        }
+    }
+    // The labels' new words move what two pairs to a row need
+    arrangeColourCards();
 }
 
 // Other pages took three of this card's checkboxes and the double-click controls joined it, leaving the .ui
@@ -2736,7 +3015,7 @@ int dlgProfilePreferences::measuredSidebarWidth() const
     mpListWidget_categories->ensurePolished();
 
     // What the style in force says each row needs at its own name and glyph,
-    // which is a different number in each appearance - see
+    // which is a different number in each style - see
     // uiDesign::sidebarRowWidth()
     int widestRow = 0;
     for (int row = 0, rows = mpListWidget_categories->count(); row < rows; ++row) {
@@ -2802,8 +3081,20 @@ dlgProfilePreferences::SidebarWidths dlgProfilePreferences::sidebarWidths() cons
     // than scrolling sideways. Longer names move it, and updateSidebarMode() widens the window after them.
     const QWidget* pShownColumn = pPage ? pPage->widget() : nullptr;
     const int shownPageMinimum = pShownColumn ? pShownColumn->minimumSizeHint().width() : 0;
-    widths.collapseBelow = sidebarAndMargins + std::max(std::min(scmContentColumnWidth, widestPageMinimum), shownPageMinimum) + scrollBarWidth;
+    // A colour card on the page on show keeps two pairs to a row while the names are there, so the names go first:
+    // the other way round the card would stack, then spread out again as the names went
+    int shownColourCards = 0;
+    for (const QGroupBox* pCard : {groupBox_displayColors, groupBox_mapperColors}) {
+        if (pShownColumn && pShownColumn->isAncestorOf(pCard)) {
+            shownColourCards = std::max(shownColourCards, pCard->sizeHint().width() + scmColourArrangementHysteresis);
+        }
+    }
+    widths.collapseBelow = sidebarAndMargins + std::max({std::min(scmContentColumnWidth, widestPageMinimum), shownPageMinimum, shownColourCards}) + scrollBarWidth;
     widths.narrowest = uiDesign::scmSidebarRailWidth + contentMargins.left() + contentMargins.right() + widestPageMinimum + scrollBarWidth;
+    // Both colour cards two pairs to a row beside the names, which no page's minimum asks for, as one pair to a row is
+    // a card's minimum; taken up as arrangeColourCards() would, so the window opens with them
+    const int coloursSideBySide = std::max(groupBox_displayColors->sizeHint().width(), groupBox_mapperColors->sizeHint().width()) + scmColourArrangementHysteresis;
+    widths.opening = std::max(widths.fullyExpanded, sidebarAndMargins + coloursSideBySide + scrollBarWidth);
     return widths;
 }
 
@@ -3015,6 +3306,10 @@ bool dlgProfilePreferences::event(QEvent* pEvent)
 
 bool dlgProfilePreferences::eventFilter(QObject* pObject, QEvent* pEvent)
 {
+    if (pEvent->type() == QEvent::Resize
+        && (pObject == mpWidget_displayColours || pObject == mpWidget_mapColours || pObject == mpWidget_displayConsoleColours || pObject == mpWidget_mapConsoleColours)) {
+        arrangeColourCards();
+    }
     // A wrapped checkbox's label greys out with it and toggles it when clicked, as its own text would
     if (pEvent->type() == QEvent::EnabledChange) {
         if (auto* pCheckBox = qobject_cast<QCheckBox*>(pObject); pCheckBox) {
@@ -3665,6 +3960,19 @@ void dlgProfilePreferences::applyShellStyle()
         mpAction_searchIcon->setIcon(QIcon(tintedGlyph(uiDesign::glyphPixmap(qsl(":/icons/settings-search.svg")), mutedText)));
     }
     restyleSidebarIcons(tokens);
+    for (QPushButton* pChoose : {pushButton_playerRoomPrimaryColor, pushButton_playerRoomSecondaryColor}) {
+        uiDesign::setColourButtonGlyph(pChoose, uiDesign::ColourButton::Choose, tokens);
+    }
+    for (const QList<ProfileColour>* pColours : {&mDisplayColours, &mMapColours}) {
+        for (const ProfileColour& colour : *pColours) {
+            uiDesign::setColourButtonGlyph(colour.pChoose, uiDesign::ColourButton::Choose, tokens, uiDesign::ColourRowSize::Compact);
+        }
+    }
+    // Their frames are in the border token
+    mpConsoleColourPreview->update();
+    mpMapColourPreview->update();
+    // A style or a font moves what two pairs to a row need
+    arrangeColourCards();
 
     // The check indicator a checkable card's title begins with, drawn the one
     // way the editor's cards draw theirs
@@ -4894,15 +5202,10 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
         groupBox_playerRoomStyle->setEnabled(true);
         comboBox_playerRoomStyle->setCurrentIndex(pHost->mpMap->mPlayerRoomStyle);
-        // Custom colours only available in style '3' (of '0' to '3'):
-        pushButton_playerRoomPrimaryColor->setEnabled(pHost->mpMap->mPlayerRoomStyle == 3);
-        pushButton_playerRoomSecondaryColor->setEnabled(pHost->mpMap->mPlayerRoomStyle == 3);
+        offerPlayerRoomControls(pHost->mpMap->mPlayerRoomStyle);
         spinBox_playerRoomOuterDiameter->setValue(pHost->mpMap->mPlayerRoomOuterDiameterPercentage);
         spinBox_playerRoomInnerDiameter->setValue(pHost->mpMap->mPlayerRoomInnerDiameterPercentage);
-        // Adjustable inner diameter not available for style '0' (original):
-        spinBox_playerRoomInnerDiameter->setEnabled(pHost->mpMap->mPlayerRoomStyle != 0);
-        setButtonColor(pushButton_playerRoomPrimaryColor, pHost->mpMap->mPlayerRoomOuterColor, true);
-        setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomInnerColor, true);
+        showPlayerRoomColours();
 
         connect(pushButton_deleteMap, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_deleteMap, Qt::UniqueConnection);
         connect(comboBox_playerRoomStyle, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changePlayerRoomStyle, Qt::UniqueConnection);
@@ -5184,8 +5487,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
      * they are called:*/
     setColors();
     setColors2();
-    setButtonColor(pushButton_playerRoomPrimaryColor, pHost->mpMap->mPlayerRoomOuterColor, true);
-    setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomInnerColor, true);
+    showPlayerRoomColours();
 
     // Identify which Profile we are showing the settings for:
     setWindowTitle(tr("Profile preferences - %1").arg(pHost->getName()));
@@ -5745,112 +6047,19 @@ void dlgProfilePreferences::loadEditorTab()
 void dlgProfilePreferences::setColors()
 {
     Host* pHost = mpHost;
-    if (pHost) {
-        setButtonColor(pushButton_foreground_color, pHost->mFgColor);
-        setButtonColor(pushButton_background_color, pHost->mBgColor);
-        setButtonColor(pushButton_command_line_foreground_color, pHost->mCommandLineFgColor);
-        setButtonColor(pushButton_command_line_background_color, pHost->mCommandLineBgColor);
-        setButtonColor(pushButton_command_foreground_color, pHost->mCommandFgColor);
-        setButtonColor(pushButton_command_background_color, pHost->mCommandBgColor);
-        setButtonColor(pushButton_black, pHost->mBlack);
-        setButtonColor(pushButton_lBlack, pHost->mLightBlack);
-        setButtonColor(pushButton_red, pHost->mRed);
-        setButtonColor(pushButton_lRed, pHost->mLightRed);
-        setButtonColor(pushButton_green, pHost->mGreen);
-        setButtonColor(pushButton_lGreen, pHost->mLightGreen);
-        setButtonColor(pushButton_blue, pHost->mBlue);
-        setButtonColor(pushButton_lBlue, pHost->mLightBlue);
-        setButtonColor(pushButton_yellow, pHost->mYellow);
-        setButtonColor(pushButton_lYellow, pHost->mLightYellow);
-        setButtonColor(pushButton_cyan, pHost->mCyan);
-        setButtonColor(pushButton_lCyan, pHost->mLightCyan);
-        setButtonColor(pushButton_magenta, pHost->mMagenta);
-        setButtonColor(pushButton_lMagenta, pHost->mLightMagenta);
-        setButtonColor(pushButton_white, pHost->mWhite);
-        setButtonColor(pushButton_lWhite, pHost->mLightWhite);
-    } else {
-        pushButton_foreground_color->setStyleSheet(QString());
-        pushButton_background_color->setStyleSheet(QString());
-        pushButton_command_line_foreground_color->setStyleSheet(QString());
-        pushButton_command_line_background_color->setStyleSheet(QString());
-        pushButton_command_foreground_color->setStyleSheet(QString());
-        pushButton_command_background_color->setStyleSheet(QString());
-        pushButton_black->setStyleSheet(QString());
-        pushButton_lBlack->setStyleSheet(QString());
-        pushButton_red->setStyleSheet(QString());
-        pushButton_lRed->setStyleSheet(QString());
-        pushButton_green->setStyleSheet(QString());
-        pushButton_lGreen->setStyleSheet(QString());
-        pushButton_yellow->setStyleSheet(QString());
-        pushButton_lYellow->setStyleSheet(QString());
-        pushButton_blue->setStyleSheet(QString());
-        pushButton_lBlue->setStyleSheet(QString());
-        pushButton_magenta->setStyleSheet(QString());
-        pushButton_lMagenta->setStyleSheet(QString());
-        pushButton_cyan->setStyleSheet(QString());
-        pushButton_lCyan->setStyleSheet(QString());
-        pushButton_white->setStyleSheet(QString());
-        pushButton_lWhite->setStyleSheet(QString());
+    for (const ProfileColour& colour : std::as_const(mDisplayColours)) {
+        showColour(colour.pChoose, pHost ? pHost->*colour.pHeld : QColor());
     }
+    mpConsoleColourPreview->setHost(pHost);
 }
 
 void dlgProfilePreferences::setColors2()
 {
     Host* pHost = mpHost;
-    if (pHost) {
-        setButtonColor(pushButton_black_2, pHost->mBlack_2);
-        setButtonColor(pushButton_Lblack_2, pHost->mLightBlack_2);
-        setButtonColor(pushButton_green_2, pHost->mGreen_2);
-        setButtonColor(pushButton_Lgreen_2, pHost->mLightGreen_2);
-        setButtonColor(pushButton_red_2, pHost->mRed_2);
-        setButtonColor(pushButton_Lred_2, pHost->mLightRed_2);
-        setButtonColor(pushButton_blue_2, pHost->mBlue_2);
-        setButtonColor(pushButton_Lblue_2, pHost->mLightBlue_2);
-        setButtonColor(pushButton_yellow_2, pHost->mYellow_2);
-        setButtonColor(pushButton_Lyellow_2, pHost->mLightYellow_2);
-        setButtonColor(pushButton_cyan_2, pHost->mCyan_2);
-        setButtonColor(pushButton_Lcyan_2, pHost->mLightCyan_2);
-        setButtonColor(pushButton_magenta_2, pHost->mMagenta_2);
-        setButtonColor(pushButton_Lmagenta_2, pHost->mLightMagenta_2);
-        setButtonColor(pushButton_white_2, pHost->mWhite_2);
-        setButtonColor(pushButton_Lwhite_2, pHost->mLightWhite_2);
-
-        setButtonColor(pushButton_foreground_color_2, pHost->mFgColor_2);
-        setButtonColor(pushButton_background_color_2, pHost->mBgColor_2);
-        setButtonColor(pushButton_lowerLevelColor, pHost->mLowerLevelColor, true);
-        setButtonColor(pushButton_upperLevelColor, pHost->mUpperLevelColor, true);
-        setButtonColor(pushButton_roomBorderColor, pHost->mRoomBorderColor);
-        setButtonColor(pushButton_mapInfoBg, pHost->mMapInfoBg, true);
-        setButtonColor(pushButton_roomCollisionBorderColor, pHost->mRoomCollisionBorderColor);
-        setButtonColor(pushButton_mapGridColor, pHost->mMapGridColor, true);
-    } else {
-        // Using QColor() gives an "invalid" color:
-        setButtonColor(pushButton_black_2, QColor());
-        setButtonColor(pushButton_Lblack_2, QColor());
-        setButtonColor(pushButton_green_2, QColor());
-        setButtonColor(pushButton_Lgreen_2, QColor());
-        setButtonColor(pushButton_red_2, QColor());
-        setButtonColor(pushButton_Lred_2, QColor());
-        setButtonColor(pushButton_blue_2, QColor());
-        setButtonColor(pushButton_Lblue_2, QColor());
-        setButtonColor(pushButton_yellow_2, QColor());
-        setButtonColor(pushButton_Lyellow_2, QColor());
-        setButtonColor(pushButton_cyan_2, QColor());
-        setButtonColor(pushButton_Lcyan_2, QColor());
-        setButtonColor(pushButton_magenta_2, QColor());
-        setButtonColor(pushButton_Lmagenta_2, QColor());
-        setButtonColor(pushButton_white_2, QColor());
-        setButtonColor(pushButton_Lwhite_2, QColor());
-
-        setButtonColor(pushButton_foreground_color_2, QColor());
-        setButtonColor(pushButton_background_color_2, QColor());
-        setButtonColor(pushButton_lowerLevelColor, QColor());
-        setButtonColor(pushButton_upperLevelColor, QColor());
-        setButtonColor(pushButton_roomBorderColor, QColor());
-        setButtonColor(pushButton_mapInfoBg, QColor());
-        setButtonColor(pushButton_roomCollisionBorderColor, QColor());
-        setButtonColor(pushButton_mapGridColor, QColor());
+    for (const ProfileColour& colour : std::as_const(mMapColours)) {
+        showColour(colour.pChoose, pHost ? pHost->*colour.pHeld : QColor());
     }
+    mpMapColourPreview->setHost(pHost);
 }
 
 // The twelve legacy tab objectNames callers may still pass map onto categories; otherwise a target is a
@@ -6029,48 +6238,57 @@ void dlgProfilePreferences::setButtonAndProfileColor(QPushButton* button, QColor
     }
     returnFromColourDialog(pClicked);
     if (color.isValid()) {
-        presentColor = color;
-
-        QPointer<TMainConsole> console = pHost->mainConsoleView();
-        if (console) {
-            console->changeColors();
-            // update the display properly when color selections change.
-            console->mUpperPane->updateScreenView();
-            console->mUpperPane->forceUpdate();
-            if (console->mUpperPane->mIsTailMode) {
-                // The upper pane having mIsTailMode true means lower pane is hidden
-                console->mLowerPane->updateScreenView();
-                console->mLowerPane->forceUpdate();
-            }
-        }
-
-        if (button == pushButton_black || button == pushButton_lBlack || button == pushButton_red || button == pushButton_lRed || button == pushButton_green || button == pushButton_lGreen
-            || button == pushButton_yellow || button == pushButton_lYellow || button == pushButton_blue || button == pushButton_lBlue || button == pushButton_magenta || button == pushButton_lMagenta
-            || button == pushButton_cyan || button == pushButton_lCyan || button == pushButton_white || button == pushButton_lWhite) {
-            pHost->updateAnsi16ColorsInTable();
-        }
-
-        const bool isAMapEnvColor = (button == pushButton_black_2 || button == pushButton_Lblack_2 || button == pushButton_red_2 || button == pushButton_Lred_2 || button == pushButton_green_2
-                                     || button == pushButton_Lgreen_2 || button == pushButton_yellow_2 || button == pushButton_Lyellow_2 || button == pushButton_blue_2 || button == pushButton_Lblue_2
-                                     || button == pushButton_magenta_2 || button == pushButton_Lmagenta_2 || button == pushButton_cyan_2 || button == pushButton_Lcyan_2 || button == pushButton_white_2
-                                     || button == pushButton_Lwhite_2);
-
-        if (isAMapEnvColor || button == pushButton_foreground_color_2 || button == pushButton_background_color_2 || button == pushButton_lowerLevelColor || button == pushButton_upperLevelColor
-            || button == pushButton_mapInfoBg || button == pushButton_roomBorderColor || button == pushButton_roomCollisionBorderColor || button == pushButton_mapGridColor) {
-            if (pHost->mpMap) {
-                // Update the custom environment (room colors)
-                if (isAMapEnvColor) {
-                    pHost->mpMap->restore16ColorSet();
-                }
-                // Redraw the map with the modified color:
-                pHost->mpMap->updateArea(-1);
-            }
-        }
-
-        // Also set a contrasting foreground color so text will always be
-        // visible:
-        setButtonColor(button, color, allowAlpha);
+        takeColour(button, presentColor, color);
     }
+}
+
+// A colour chosen in the colours window or typed into its field: the profile keeps it, and whatever is drawn in it is
+// drawn again
+void dlgProfilePreferences::takeColour(QPushButton* button, QColor& presentColor, const QColor& color)
+{
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+    presentColor = color;
+
+    QPointer<TMainConsole> console = pHost->mainConsoleView();
+    if (console) {
+        console->changeColors();
+        // update the display properly when color selections change.
+        console->mUpperPane->updateScreenView();
+        console->mUpperPane->forceUpdate();
+        if (console->mUpperPane->mIsTailMode) {
+            // The upper pane having mIsTailMode true means lower pane is hidden
+            console->mLowerPane->updateScreenView();
+            console->mLowerPane->forceUpdate();
+        }
+    }
+
+    if (button == pushButton_black || button == pushButton_lBlack || button == pushButton_red || button == pushButton_lRed || button == pushButton_green || button == pushButton_lGreen
+        || button == pushButton_yellow || button == pushButton_lYellow || button == pushButton_blue || button == pushButton_lBlue || button == pushButton_magenta || button == pushButton_lMagenta
+        || button == pushButton_cyan || button == pushButton_lCyan || button == pushButton_white || button == pushButton_lWhite) {
+        pHost->updateAnsi16ColorsInTable();
+    }
+
+    const bool isAMapEnvColor =
+            (button == pushButton_black_2 || button == pushButton_Lblack_2 || button == pushButton_red_2 || button == pushButton_Lred_2 || button == pushButton_green_2 || button == pushButton_Lgreen_2
+             || button == pushButton_yellow_2 || button == pushButton_Lyellow_2 || button == pushButton_blue_2 || button == pushButton_Lblue_2 || button == pushButton_magenta_2
+             || button == pushButton_Lmagenta_2 || button == pushButton_cyan_2 || button == pushButton_Lcyan_2 || button == pushButton_white_2 || button == pushButton_Lwhite_2);
+
+    if (isAMapEnvColor || button == pushButton_foreground_color_2 || button == pushButton_background_color_2 || button == pushButton_lowerLevelColor || button == pushButton_upperLevelColor
+        || button == pushButton_mapInfoBg || button == pushButton_roomBorderColor || button == pushButton_roomCollisionBorderColor || button == pushButton_mapGridColor) {
+        if (pHost->mpMap) {
+            // Update the custom environment (room colors)
+            if (isAMapEnvColor) {
+                pHost->mpMap->restore16ColorSet();
+            }
+            // Redraw the map with the modified color:
+            pHost->mpMap->updateArea(-1);
+        }
+    }
+
+    showColour(button, color);
 }
 
 void dlgProfilePreferences::slot_setFgColor()
@@ -8431,9 +8649,7 @@ void dlgProfilePreferences::slot_handleHostDeletion(Host* pHost)
         // And redraw the color controls in their cleared state
         setColors();
         setColors2();
-
-        setButtonColor(pushButton_playerRoomPrimaryColor, QColor(), true);
-        setButtonColor(pushButton_playerRoomSecondaryColor, QColor(), true);
+        showPlayerRoomColours();
     }
 }
 
@@ -8888,81 +9104,43 @@ void dlgProfilePreferences::slot_mmcpChatNameChanged()
     }
 }
 
-void dlgProfilePreferences::setButtonColor(QPushButton* button, const QColor& color, const bool hasAlpha)
+// The profile holds what the control shows already, so it is no edit for an apply to wait on, and it must not keep
+// refreshFromSettings() from re-reading the rest - nor must the line edit inside a spin box, which the snapshot holds
+// as well
+void dlgProfilePreferences::takeAsShown(QWidget* pControl)
 {
-    uiDesign::AlphaColourWell* pAlphaWell = hasAlpha ? uiDesign::AlphaColourWell::find(button) : nullptr;
-    if (pAlphaWell && color.isValid()) {
-        // The well draws itself - its swatch, its words and its sheet - at whatever state the button is in when
-        // it is drawn, available or not
-        pAlphaWell->setColour(color);
-        button->setIcon(QIcon());
-        return;
+    mSnapshot.take(pControl);
+    for (const auto* pPart : pControl->findChildren<QWidget*>()) {
+        if (SettingsSnapshot::carriesValue(pPart)) {
+            mSnapshot.take(pPart);
+        }
     }
-    if (pAlphaWell) {
-        pAlphaWell->setColour(QColor());
-    }
-    if (color.isValid()) {
-        if (button->isEnabled()) {
-            if (hasAlpha) {
-                // This is for buttons that show a color that may have
-                // transparency; so,instead of colouring the background, we
-                // include a generated black/white checkerboard pattern overlaid
-                // with the colour which, when its alpha is not 100% opaque,
-                // will (partly) show the checkerboard.
+}
 
-                // Ensure the icon has a 3:1 aspect ratio:
-                if (auto iconWidth{button->iconSize().width()}, iconHeight{button->iconSize().height()}; iconWidth != iconHeight * 3) {
-                    button->setIconSize(QSize(iconHeight * 3, iconHeight));
-                }
-
-                // Create a black/white checker background and overlay
-                QPixmap labelBackground(1 + (button->iconSize().height() * 3), 1 + (button->iconSize().height()));
-                labelBackground.fill(Qt::black);
-                QPainter painter(&labelBackground);
-                painter.drawImage(QRect(0, 0, labelBackground.width(), labelBackground.height()),
-                                  QImage(qsl(":/icons/black_white_transparent_check_1x3_ratio.png")).scaled(labelBackground.width(), labelBackground.height(), Qt::KeepAspectRatioByExpanding));
-                painter.fillRect(0, 0, labelBackground.width(), labelBackground.height(), color);
-                painter.end();
-                button->setIcon(QIcon(labelBackground));
+void dlgProfilePreferences::showColour(QPushButton* pChoose, const QColor& colour)
+{
+    for (const QList<ProfileColour>* pColours : {&mDisplayColours, &mMapColours}) {
+        for (const ProfileColour& shown : *pColours) {
+            if (shown.pChoose != pChoose) {
+                continue;
+            }
+            if (colour.isValid()) {
+                shown.pValue->setColour(colour);
             } else {
-                // theme-fixed: the fill is the colour the user picked, so the word on it is chosen against that fill rather than against a page
-                button->setStyleSheet(
-                        mudlet::self()->mTEXT_ON_BG_STYLESHEET.arg(color.lightness() > 127 ? QLatin1String("black") : QLatin1String("white"), color.name(), uiDesign::themeTokens().border.name()));
+                shown.pValue->clear();
+            }
+            takeAsShown(shown.pValue);
+            if (shown.seeThrough) {
+                takeAsShown(shown.pValue->opacityBox());
+            }
+            if (pColours == &mDisplayColours) {
+                mpConsoleColourPreview->update();
+            } else {
+                mpMapColourPreview->update();
             }
             return;
         }
-
-        const QColor disabledColor = QColor::fromHsl(color.hslHue(), color.hslSaturation() / 4, color.lightness(), color.alpha());
-        if (hasAlpha) {
-            // As above for buttons showing a potentially transparent color:
-            if (auto iconWidth{button->iconSize().width()}, iconHeight{button->iconSize().height()}; iconWidth != iconHeight * 3) {
-                button->setIconSize(QSize(iconHeight * 3, iconHeight));
-            }
-
-            QPixmap iconBackground(1 + (button->iconSize().height() * 3), 1 + (button->iconSize().height()));
-            iconBackground.fill(Qt::black);
-            QPainter painter(&iconBackground);
-            painter.drawImage(QRect(0, 0, iconBackground.width(), iconBackground.height()),
-                              QImage(qsl(":/icons/black_white_transparent_check_1x3_ratio.png")).scaled(iconBackground.width(), iconBackground.height(), Qt::KeepAspectRatioByExpanding));
-            painter.fillRect(0, 0, iconBackground.width(), iconBackground.height(), disabledColor);
-            painter.end();
-            // Because the button is disabled we have to explicitly force our
-            // icon to be used for that state otherwise the built-in icon engine
-            // will assume our image is for the normal state and grey it out
-            // completely by automagic means instead of making use of the
-            // partial (desaturating) effect that we want to use:
-            QIcon icon;
-            icon.addPixmap(iconBackground, QIcon::Disabled, QIcon::Off);
-            button->setIcon(icon);
-        } else {
-            // theme-fixed: the same well, desaturated - the word still sits on the value rather than on a page
-            button->setStyleSheet(mudlet::self()->mTEXT_ON_BG_STYLESHEET.arg(QLatin1String("darkGray"), disabledColor.name(), uiDesign::themeTokens().border.name()));
-        }
-        return;
     }
-
-    button->setIcon(QIcon());
-    button->setStyleSheet(QString());
 }
 
 // These next eight slots are so that if there are multiple profile preferences
@@ -9500,36 +9678,9 @@ void dlgProfilePreferences::slot_changePlayerRoomStyle(const int index)
         return;
     }
 
-    int style = index;
-    switch (index) {
-    case 1: // Red ring
-        pushButton_playerRoomPrimaryColor->setEnabled(false);
-        pushButton_playerRoomSecondaryColor->setEnabled(false);
-        spinBox_playerRoomInnerDiameter->setEnabled(true);
-        break;
-
-    case 2: // Blue-yellow ring
-        pushButton_playerRoomPrimaryColor->setEnabled(false);
-        pushButton_playerRoomSecondaryColor->setEnabled(false);
-        spinBox_playerRoomInnerDiameter->setEnabled(true);
-        break;
-
-    case 3: // Custom ring
-        pushButton_playerRoomPrimaryColor->setEnabled(true);
-        pushButton_playerRoomSecondaryColor->setEnabled(true);
-        spinBox_playerRoomInnerDiameter->setEnabled(true);
-        break;
-
-    default:
-        style = 0;
-        [[fallthrough]];
-    case 0: // "Original"
-        pushButton_playerRoomPrimaryColor->setEnabled(false);
-        pushButton_playerRoomSecondaryColor->setEnabled(false);
-        spinBox_playerRoomInnerDiameter->setEnabled(false);
-    }
-    setButtonColor(pushButton_playerRoomPrimaryColor, pHost->mpMap->mPlayerRoomOuterColor, true);
-    setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomInnerColor, true);
+    // 0 is the original marker, 1 the red ring, 2 the blue and yellow one and 3 the custom ring
+    const int style = index >= 1 && index <= 3 ? index : 0;
+    offerPlayerRoomControls(style);
     pHost->mpMap->mPlayerRoomStyle = static_cast<quint8>(style);
     pHost->setPlayerRoomStyle(static_cast<quint8>(style));
     if (!pHost->mpMap->mapper() || !pHost->mpMap->mapper()->mp2dMap) {
@@ -9548,17 +9699,7 @@ void dlgProfilePreferences::slot_setPlayerRoomPrimaryColor()
     }
 
     setPlayerRoomColor(pushButton_playerRoomPrimaryColor, mpHost->mpMap->mPlayerRoomOuterColor);
-    pHost->setPlayerRoomOuterColor(mpHost->mpMap->mPlayerRoomOuterColor);
-    if (comboBox_playerRoomStyle->currentIndex() != 3) {
-        return;
-    }
-
-    if (mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap) {
-        // The current setting IS for the custom color - so use it straight away:
-        mpHost->mpMap->mapper()->mp2dMap->setPlayerRoomStyle(3);
-        // And update the displayed map:
-        mpHost->mpMap->mapper()->repaintMaps();
-    }
+    passOnPlayerRoomColour(true);
 }
 
 void dlgProfilePreferences::slot_setPlayerRoomSecondaryColor()
@@ -9569,16 +9710,33 @@ void dlgProfilePreferences::slot_setPlayerRoomSecondaryColor()
     }
 
     setPlayerRoomColor(pushButton_playerRoomSecondaryColor, mpHost->mpMap->mPlayerRoomInnerColor);
-    pHost->setPlayerRoomInnerColor(mpHost->mpMap->mPlayerRoomInnerColor);
+    passOnPlayerRoomColour(false);
+}
+
+// Once the map holds a ring's colour, chosen in the colours window or typed: the Host keeps it for the profile, and
+// the map is drawn in it at once while the custom ring is the marker in use
+void dlgProfilePreferences::passOnPlayerRoomColour(const bool outer)
+{
+    Host* pHost = mpHost;
+    // The colours window runs an event loop of its own, in which the profile can close
+    if (!pHost || !pHost->mpMap) {
+        return;
+    }
+    if (outer) {
+        pHost->setPlayerRoomOuterColor(pHost->mpMap->mPlayerRoomOuterColor);
+    } else {
+        pHost->setPlayerRoomInnerColor(pHost->mpMap->mPlayerRoomInnerColor);
+    }
+    showPlayerRoomColours();
     if (comboBox_playerRoomStyle->currentIndex() != 3) {
         return;
     }
 
-    if (mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap) {
+    if (pHost->mpMap->mapper() && pHost->mpMap->mapper()->mp2dMap) {
         // The current setting IS for the custom color - so use it straight away:
-        mpHost->mpMap->mapper()->mp2dMap->setPlayerRoomStyle(3);
+        pHost->mpMap->mapper()->mp2dMap->setPlayerRoomStyle(3);
         // And update the displayed map:
-        mpHost->mpMap->mapper()->repaintMaps();
+        pHost->mpMap->mapper()->repaintMaps();
     }
 }
 
@@ -9636,11 +9794,39 @@ void dlgProfilePreferences::setPlayerRoomColor(QPushButton* b, QColor& c)
     returnFromColourDialog(pClicked);
     if (color.isValid()) {
         c = color;
-
-        // Also sets a contrasting foreground color so text will always be
-        // visible and adjusts the saturation of a disabled button:
-        setButtonColor(b, color, true);
     }
+}
+
+void dlgProfilePreferences::showPlayerRoomColours()
+{
+    Host* pHost = mpHost;
+    if (!pHost || !pHost->mpMap) {
+        mpColourValue_playerRoomOuter->clear();
+        mpColourValue_playerRoomInner->clear();
+        return;
+    }
+    mpColourValue_playerRoomOuter->setColour(pHost->mpMap->mPlayerRoomOuterColor);
+    mpColourValue_playerRoomInner->setColour(pHost->mpMap->mPlayerRoomInnerColor);
+    for (uiDesign::ColourValue* pRing : {mpColourValue_playerRoomOuter, mpColourValue_playerRoomInner}) {
+        takeAsShown(pRing);
+        takeAsShown(pRing->opacityBox());
+    }
+}
+
+// Only the custom ring is drawn in the colours chosen here, and the original marker has no inner ring to size
+void dlgProfilePreferences::offerPlayerRoomControls(const int style)
+{
+    const QList<QWidget*> colourControls{mpLabel_playerRoomOuterRing,
+                                         mpColourValue_playerRoomOuter,
+                                         pushButton_playerRoomPrimaryColor,
+                                         mpLabel_playerRoomInnerRing,
+                                         mpColourValue_playerRoomInner,
+                                         pushButton_playerRoomSecondaryColor};
+    for (QWidget* pControl : colourControls) {
+        pControl->setEnabled(style == 3);
+    }
+    mpLabel_playerRoomInnerDiameter->setEnabled(style != 0);
+    spinBox_playerRoomInnerDiameter->setEnabled(style != 0);
 }
 
 void dlgProfilePreferences::returnFromColourDialog(QWidget* pClicked)
@@ -9811,6 +9997,7 @@ void dlgProfilePreferences::slot_changeMapperShowRoomBorders(const bool state)
     if (pHost->mpMap && pHost->mpMap->mapper() && pHost->mpMap->mapper()->mp2dMap) {
         pHost->mpMap->mapper()->repaintMaps();
     }
+    mpMapColourPreview->update();
 }
 
 void dlgProfilePreferences::slot_changeDrawUpperLowerLevels(const bool state)
@@ -9830,6 +10017,7 @@ void dlgProfilePreferences::slot_changeMapperUseAntiAlias(const bool state)
         pHost->mpMap->mapper()->mp2dMap->mMapperUseAntiAlias = state;
         pHost->mpMap->mapper()->mp2dMap->update();
     }
+    mpMapColourPreview->update();
 }
 
 // Tells screen-reader users the hyperlink shortcuts when they pick a pane-switching key, so they need not
@@ -10110,6 +10298,7 @@ void dlgProfilePreferences::slot_roomSizeChanged(int size)
             mpHost->mpMap->mapper()->mp2dMap->setRoomSize(mpHost->mRoomSize);
             mpHost->mpMap->mapper()->mp2dMap->update();
         }
+        mpMapColourPreview->update();
     }
 }
 
@@ -10127,6 +10316,7 @@ void dlgProfilePreferences::slot_exitSizeChanged(int size)
         if (mpHost->mpMap && mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap) {
             mpHost->mpMap->mapper()->mp2dMap->setExitSize(internalSize);
         }
+        mpMapColourPreview->update();
     }
 }
 
@@ -10139,6 +10329,7 @@ void dlgProfilePreferences::slot_borderSizeChanged(int size)
             mpHost->mpMap->mapper()->mp2dMap->setBorderSize(internalSize);
             mpHost->mpMap->mapper()->update3DView();
         }
+        mpMapColourPreview->update();
     }
 }
 
@@ -10149,6 +10340,7 @@ void dlgProfilePreferences::slot_gridSizeChanged(double size)
         if (mpHost->mpMap) {
             mpHost->mpMap->requestMapRepaint();
         }
+        mpMapColourPreview->update();
     }
 }
 
