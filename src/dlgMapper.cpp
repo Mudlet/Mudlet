@@ -677,6 +677,7 @@ void dlgMapper::slot_toggleShowRoomIDs(int toggle)
     mp2dMap->mShowRoomID = (toggle == Qt::Checked);
     mp2dMap->mpHost->mShowRoomID = mp2dMap->mShowRoomID;
     repaintMaps();
+    mpMap->requestMapRepaint();
 }
 
 void dlgMapper::slot_toggleStrongHighlight(int toggle)
@@ -1229,6 +1230,7 @@ void dlgMapper::slot_toggleShowRoomIDsFromMenu(bool enabled)
     mp2dMap->mShowRoomID = enabled;
     mp2dMap->mpHost->mShowRoomID = enabled;
     repaintMaps();
+    mpMap->requestMapRepaint();
 }
 
 void dlgMapper::slot_toggleShowRoomNames(const bool enabled)
