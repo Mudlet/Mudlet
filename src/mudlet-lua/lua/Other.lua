@@ -1066,6 +1066,8 @@ do
   local highestHandlerId = 0
   -- Helps us finding the right event handler from an ID.
   local handlerIdsToHandlers = {}
+  -- about how deep a one-shot handler could once nest by raising the event it handles
+  local maxDeferredEvents = 200
 
   -- C function that gets overwritten.
   registerAnonymousEventHandler("*", "dispatchEventToFunctions")
@@ -1128,21 +1130,40 @@ do
     if isOneShot then
       -- wrap the original function to remove itself from the event handler list.
       local origFunc = func
-      local running = false
+      local running, deferred = false, {}
       func = function(...)
-        -- an event it raises itself must not run it again before it has said whether to stay
+        -- an event it raises itself waits until it has said whether to stay, so one that goes
+        -- runs once and one that stays still sees it
         if running then
+          deferred[#deferred + 1] = {n = select("#", ...), ...}
           return
         end
         running = true
         -- a handler that errors never asked to stay, so it goes like one that returned nothing
         local ok, keepEvaluating = pcall(origFunc, ...)
+        local failed, failure = not ok, keepEvaluating
+        local nextEvent = 1
+        while ok and keepEvaluating and deferred[nextEvent] and handlerIdsToHandlers[eventHandlerId] do
+          -- one that raises an event for every one it handles would otherwise never be done
+          if nextEvent > maxDeferredEvents then
+            ok, failed = false, true
+            failure = string.format("registerAnonymousEventHandler: one-shot handler for '%s' removed as it kept raising events it handles", event)
+            break
+          end
+          local args = deferred[nextEvent]
+          nextEvent = nextEvent + 1
+          ok, keepEvaluating = pcall(origFunc, unpack(args, 1, args.n))
+          if not ok then
+            showHandlerError(args[1], keepEvaluating)
+          end
+        end
+        deferred = {}
         running = false
         if not (ok and keepEvaluating) then
           killAnonymousEventHandler(eventHandlerId)
         end
-        if not ok then
-          error(keepEvaluating, 0)
+        if failed then
+          error(failure, 0)
         end
       end
     end

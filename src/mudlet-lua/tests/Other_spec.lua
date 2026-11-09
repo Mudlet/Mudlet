@@ -4938,21 +4938,109 @@ describe("Tests one-shot event handlers", function()
     assert.are.equal(0, #reported)
   end)
 
-  it("keeps handling later events after a nested raise when it returns true", function()
-    local calls = 0
-    local id = registerAnonymousEventHandler("otherSpecOneShotReentrantKeep", function(_, nested)
-      calls = calls + 1
-      if not nested then
-        raiseEvent("otherSpecOneShotReentrantKeep", true)
+  it("hands a one-shot handler that returns true the event it raised, once it has returned", function()
+    local seen = {}
+    local id = registerAnonymousEventHandler("otherSpecOneShotReentrantKeep", function(_, label)
+      seen[#seen + 1] = label
+      if label == "outer" then
+        raiseEvent("otherSpecOneShotReentrantKeep", "nested")
+        seen[#seen + 1] = "outer done"
       end
       return true
     end, true)
-    raiseEvent("otherSpecOneShotReentrantKeep")
-    raiseEvent("otherSpecOneShotReentrantKeep", true)
+    raiseEvent("otherSpecOneShotReentrantKeep", "outer")
+    raiseEvent("otherSpecOneShotReentrantKeep", "later")
     local stillThere = killAnonymousEventHandler(id)
 
-    assert.are.equal(2, calls)
+    assert.are.same({"outer", "outer done", "nested", "later"}, seen)
     assert.is_true(stillThere)
+  end)
+
+  it("lets a one-shot handler waiting for an event it raises itself finish on it", function()
+    local finished = 0
+    local id = registerAnonymousEventHandler("*", function(event)
+      if event == "otherSpecOneShotStepDone" then
+        finished = finished + 1
+        return
+      end
+      if event == "otherSpecOneShotStep" then
+        raiseEvent("otherSpecOneShotStepDone")
+      end
+      return true
+    end, true)
+    raiseEvent("otherSpecOneShotStep")
+    raiseEvent("otherSpecOneShotStep")
+    local stillThere = killAnonymousEventHandler(id)
+
+    assert.are.equal(1, finished)
+    assert.is_nil(stillThere)
+  end)
+
+  it("removes a one-shot handler that keeps raising the event it handles, with one error", function()
+    local calls = 0
+    local id = registerAnonymousEventHandler("otherSpecOneShotSelfFeeding", function()
+      calls = calls + 1
+      raiseEvent("otherSpecOneShotSelfFeeding")
+      return true
+    end, true)
+    raiseEvent("otherSpecOneShotSelfFeeding")
+    local stillThere = killAnonymousEventHandler(id)
+
+    assert.is_nil(stillThere)
+    assert.is_true(calls > 1 and calls < 1000)
+    assert.are.equal(1, #reported)
+    assert.are.equal("otherSpecOneShotSelfFeeding", reported[1][1])
+    assert.truthy(tostring(reported[1][2]):find("kept raising events it handles", 1, true))
+  end)
+
+  it("reports an error from an event a one-shot handler raised under that event", function()
+    local id = registerAnonymousEventHandler("*", function(event)
+      if event == "otherSpecOneShotRaisedFails" then
+        error("otherSpecOneShotRaisedFails failed")
+      end
+      if event == "otherSpecOneShotRaisesFailing" then
+        raiseEvent("otherSpecOneShotRaisedFails")
+      end
+      return true
+    end, true)
+    raiseEvent("otherSpecOneShotRaisesFailing")
+    local stillThere = killAnonymousEventHandler(id)
+
+    assert.is_nil(stillThere)
+    assert.are.equal(1, #reported)
+    assert.are.equal("otherSpecOneShotRaisedFails", reported[1][1])
+    assert.truthy(tostring(reported[1][2]):find("otherSpecOneShotRaisedFails failed", 1, true))
+  end)
+
+  it("drops the events a one-shot handler raised once it is killed", function()
+    local calls = 0
+    local id
+    id = registerAnonymousEventHandler("otherSpecOneShotKilledWhileRunning", function()
+      calls = calls + 1
+      raiseEvent("otherSpecOneShotKilledWhileRunning")
+      killAnonymousEventHandler(id)
+      return true
+    end, true)
+    raiseEvent("otherSpecOneShotKilledWhileRunning")
+    raiseEvent("otherSpecOneShotKilledWhileRunning")
+
+    assert.are.equal(1, calls)
+  end)
+
+  it("still runs other one-shot handlers for an event one of them raises", function()
+    local first, second = 0, 0
+    registerAnonymousEventHandler("otherSpecOneShotPair", function()
+      first = first + 1
+      raiseEvent("otherSpecOneShotPair")
+    end, true)
+    registerAnonymousEventHandler("otherSpecOneShotPair", function()
+      second = second + 1
+    end, true)
+    raiseEvent("otherSpecOneShotPair")
+    raiseEvent("otherSpecOneShotPair")
+
+    assert.are.equal(1, first)
+    assert.are.equal(1, second)
   end)
 
   it("hands the event name and arguments to a one-shot handler", function()
