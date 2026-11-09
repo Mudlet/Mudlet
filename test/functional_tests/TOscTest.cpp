@@ -1618,6 +1618,134 @@ private slots:
                 .arg(attrsAfter)));
   }
 
+  // The style has to be on the text from the start, not wait for a click, and
+  // to come back after anything that gives the link another state for a moment.
+  void test_DisabledLinkHasItsStyleFromTheStart() {
+    injectData(qsl("\x1b]8;;send:look?config={\"disabled\":true,\"style\":{\"disabled\":{\"color\":\"#808080\",\"strikethrough\":true}}}\x1b\\Off\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    const auto showsDisabledStyle = [&, line = linkLine, col = linkCol]() {
+      const TChar &ch = console->buffer.buffer.at(line).at(col);
+      return ch.foreground() == QColor(0x80, 0x80, 0x80) && (ch.allDisplayAttributes() & TChar::StrikeOut);
+    };
+
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDisabled);
+    QVERIFY2(showsDisabledStyle(), "the disabled style is not on the text as printed");
+
+    console->buffer.setHoveredLink(linkId);
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDisabled);
+    console->buffer.setHoveredLink(0);
+
+    console->buffer.setFocusedLink(linkId);
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDisabled);
+    console->buffer.setFocusedLink(0);
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDisabled);
+
+    console->buffer.setActiveLink(linkId);
+    console->buffer.setActiveLink(0);
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDisabled);
+    QVERIFY2(showsDisabledStyle(), "the disabled style did not come back");
+  }
+
+  void test_DisabledOutranksSelectedFromTheStart_data() {
+    QTest::addColumn<QString>("selection");
+
+    QTest::newRow("in a group") << qsl("{\"group\":\"ranks\",\"value\":\"a\",\"selected\":true,\"disabled\":true}");
+    QTest::newRow("no group") << qsl("{\"selected\":true,\"disabled\":true}");
+    QTest::newRow("disabled without a group") << qsl("{\"disabled\":true}");
+  }
+
+  void test_DisabledOutranksSelectedFromTheStart() {
+    QFETCH(QString, selection);
+
+    injectData(qsl("\x1b]8;;send:look?config={\"selection\":%1,\"style\":{\"selected\":{\"color\":\"#00ff00\"},\"disabled\":{\"color\":\"#808080\"}}}\x1b\\Off\x1b]8;;\x1b\\").arg(selection));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDisabled);
+    QCOMPARE(console->buffer.buffer.at(linkLine).at(linkCol).foreground(), QColor(0x80, 0x80, 0x80));
+  }
+
+  // The flush marker splits the link's text, and held text commits apart from the link's own line
+  void test_DisabledStyleSurvivesTheLinkBeingSplit() {
+    TMainConsole *console = mpHost->mainConsoleView();
+    const QString link = qsl("\x1b]8;;send:look?config={\"disabled\":true,\"style\":{\"disabled\":{\"color\":\"#808080\"}}}\x1b\\");
+
+    feedFromServer(link + qsl("FLUSHED \r"));
+    feedFromServer(qsl("REST\x1b]8;;\x1b\\\n"));
+    int line = lineStartingWith(qsl("REST"));
+    QVERIFY2(line >= 1, qPrintable(allBufferText()));
+    QCOMPARE(console->buffer.buffer.at(line).at(0).foreground(), QColor(0x80, 0x80, 0x80));
+    const int flushedLine = lineStartingWith(qsl("FLUSHED"));
+    QVERIFY2(flushedLine >= 0, qPrintable(allBufferText()));
+    QCOMPARE(console->buffer.buffer.at(flushedLine).at(0).foreground(), QColor(0x80, 0x80, 0x80));
+
+    undoServerWrap();
+    feedFromServer(QString(64, QLatin1Char('x')) + qsl(" alpha\n"));
+    feedFromServer(qsl("- ") + link + qsl("listed\x1b]8;;\x1b\\\n"));
+    line = lineStartingWith(qsl("- listed"));
+    QVERIFY2(line >= 0, qPrintable(allBufferText()));
+    QCOMPARE(console->buffer.buffer.at(line).at(2).foreground(), QColor(0x80, 0x80, 0x80));
+  }
+
+  void test_DisabledStyleKeepsTheTextsOwnFormatting() {
+    injectData(qsl("\x1b[0m\x1b]8;;send:look?config={\"disabled\":true,\"style\":{\"disabled\":{\"color\":\"#808080\"}}}\x1b\\\x1b[1mOff\x1b[22m\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    const TChar &ch = console->buffer.buffer.at(std::get<0>(*pos)).at(std::get<1>(*pos));
+    QCOMPARE(ch.foreground(), QColor(0x80, 0x80, 0x80));
+    QVERIFY2(ch.allDisplayAttributes() & TChar::Bold, "the disabled style cleared the game's bold");
+  }
+
+  void test_PressingADisabledLinkLeavesItAsPrinted() {
+    injectData(qsl("\x1b[0m\x1b]8;;send:look?config={\"disabled\":true,\"style\":{\"disabled\":{\"strikethrough\":true}}}\x1b\\\x1b[1mOff\x1b[22m\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    const auto attributes = [&, line = linkLine, col = linkCol]() {
+      return console->buffer.buffer.at(line).at(col).allDisplayAttributes();
+    };
+    QVERIFY(attributes() & TChar::StrikeOut);
+
+    console->buffer.setActiveLink(linkId);
+    QVERIFY2(attributes() & TChar::StrikeOut, "pressing the link dropped its disabled style");
+    console->buffer.setActiveLink(0);
+    QVERIFY2(attributes() & TChar::StrikeOut, "releasing the link dropped its disabled style");
+    QVERIFY2(attributes() & TChar::Bold, "releasing the link cleared the game's bold");
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDisabled);
+  }
+
+  void test_DisabledLinkInAGroupKeepsTheTextsOwnFormatting() {
+    injectData(qsl("\x1b[0m\x1b]8;;send:look?config={\"selection\":{\"group\":\"boldgroup\",\"value\":\"off\",\"disabled\":true},\"style\":{\"disabled\":{\"color\":\"#808080\"}}}\x1b\\\x1b[1mOff\x1b[22m\x1b]8;;\x1b\\"));
+    injectData(qsl("after\n"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    const TChar &ch = console->buffer.buffer.at(std::get<0>(*pos)).at(std::get<1>(*pos));
+    QCOMPARE(ch.foreground(), QColor(0x80, 0x80, 0x80));
+    QVERIFY2(ch.allDisplayAttributes() & TChar::Bold, "the group's restyle cleared the game's bold");
+  }
+
+  void test_LinkThatIsNotDisabledStartsInTheDefaultState() {
+    injectData(qsl("\x1b]8;;send:look?config={\"disabled\":false,\"style\":{\"disabled\":{\"color\":\"#808080\"}}}\x1b\\Open\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDefault);
+  }
+
   void test_LinkAttributes_DisabledState() {
     injectData(qsl("\x1b]8;;send:look\x1b\\Disabled Link\x1b]8;;\x1b\\"));
 
