@@ -920,6 +920,19 @@ describe("presence the game sends over GMCP", function()
     assert.equals("spec-string-small", getDiscordSmallIcon())
   end)
 
+  it("leaves the icons alone when the game sends an icon value that is not a key", function()
+    if not readyForDiscord() then
+      return
+    end
+    feedDiscordStatus('{"largeimage": ["spec-kept-large"], "smallimage": ["spec-kept-small"]}')
+    for _, value in ipairs({"[]", "null", "5", '{"key": "spec-object"}'}) do
+      feedDiscordStatus(string.format('{"largeimage": %s, "smallimage": %s}', value, value))
+
+      assert.equals("spec-kept-large", getDiscordLargeIcon(), "largeimage " .. value)
+      assert.equals("spec-kept-small", getDiscordSmallIcon(), "smallimage " .. value)
+    end
+  end)
+
   it("takes the presence from a package name in any letter case, as GMCP allows", function()
     if not readyForDiscord() then
       return
