@@ -96,12 +96,14 @@ void TScript::compileAll(bool saveLoadingError)
 }
 
 // A reset closed the Lua state the body ran in, and cleared the event handlers it had registered
-void TScript::markForCompile()
+void TScript::markForCompile(const bool registerHandlers)
 {
     mNeedsToBeCompiled = true;
-    setEventHandlerList(mEventHandlerList);
+    if (registerHandlers) {
+        setEventHandlerList(mEventHandlerList);
+    }
     for (auto* scriptNode : *mpMyChildrenList) {
-        static_cast<TScript*>(scriptNode)->markForCompile();
+        static_cast<TScript*>(scriptNode)->markForCompile(registerHandlers);
     }
 }
 

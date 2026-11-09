@@ -637,6 +637,85 @@ private slots:
     delete scriptUnit->getScript(targetId);
   }
 
+  void test_scriptSwitchingOnItsOwnGroupLeavesItsSiblingsInOrder() {
+    auto [groupId, groupMsg] = mpHost->mLuaInterpreter.createPermScript(
+        qsl("resetSiblingOrderGroup"), QString(), QString());
+    QVERIFY2(groupId > 0, qPrintable(groupMsg));
+    auto [firstId, firstMsg] = mpHost->mLuaInterpreter.createPermScript(
+        qsl("resetSiblingOrderFirst"), qsl("resetSiblingOrderGroup"),
+        qsl("enableScript('resetSiblingOrderGroup') "
+            "resetSiblingOrderFirstDone = true"));
+    QVERIFY2(firstId > 0, qPrintable(firstMsg));
+    auto [secondId, secondMsg] = mpHost->mLuaInterpreter.createPermScript(
+        qsl("resetSiblingOrderSecond"), qsl("resetSiblingOrderGroup"),
+        qsl("resetSiblingOrderSecondSaw = resetSiblingOrderFirstDone"));
+    QVERIFY2(secondId > 0, qPrintable(secondMsg));
+    QVERIFY(mpHost->getScriptUnit()->disableScript(
+        qsl("resetSiblingOrderGroup")));
+
+    performReset();
+
+    QVERIFY(mpHost->getScriptUnit()->enableScript(
+        qsl("resetSiblingOrderGroup")));
+    QVERIFY2(luaGlobalIsTrue("resetSiblingOrderSecondSaw"),
+             "a script must run after the sibling before it has finished");
+    delete mpHost->getScriptUnit()->getScript(groupId);
+  }
+
+  void test_enablingDoesNotRunAScriptWhosePackageWasJustUninstalled() {
+    const QString packageName = qsl("resetEnableUninstalledPackage");
+    mpHost->mInstalledPackages << packageName;
+    auto *scriptUnit = mpHost->getScriptUnit();
+    // Neither body may run before the reset
+    mpHost->mBlockScriptCompile = true;
+    auto *pUninstaller = new TScript(nullptr, mpHost);
+    scriptUnit->registerScript(pUninstaller);
+    pUninstaller->setName(qsl("resetEnableSameName"));
+    pUninstaller->setScript(
+        qsl("uninstallPackage('%1')").arg(packageName));
+    auto *pPackaged = new TScript(nullptr, mpHost);
+    scriptUnit->registerScript(pPackaged);
+    pPackaged->mPackageName = packageName;
+    pPackaged->setName(qsl("resetEnableSameName"));
+    pPackaged->setScript(qsl("resetEnableUninstalledRan = true"));
+    mpHost->mBlockScriptCompile = false;
+    const int uninstallerId = pUninstaller->getID();
+
+    performReset();
+
+    QVERIFY(scriptUnit->enableScript(qsl("resetEnableSameName")));
+    QVERIFY2(!mpHost->mInstalledPackages.contains(packageName),
+             "the package was not uninstalled");
+    QVERIFY2(!luaGlobalIsTrue("resetEnableUninstalledRan"),
+             "a script whose package was uninstalled must not run");
+    scriptUnit->doCleanup();
+    delete scriptUnit->getScript(uninstallerId);
+  }
+
+  void test_handlerOfALaterScriptIsNotCalledBeforeItsBodyRuns() {
+    auto [raiserId, raiserMsg] = mpHost->mLuaInterpreter.createPermScript(
+        qsl("resetEarlyRaiser"), QString(),
+        qsl("function resetLateHandler() resetLateHandlerCalledEarly = true "
+            "end raiseEvent('resetLateEvent')"));
+    QVERIFY2(raiserId > 0, qPrintable(raiserMsg));
+    mpHost->getScriptUnit()->getScript(raiserId)->setIsActive(true);
+    auto [handlerId, handlerMsg] = mpHost->mLuaInterpreter.createPermScript(
+        qsl("resetLateHandler"), QString(), qsl("resetLateHandlerBodyRan = true"));
+    QVERIFY2(handlerId > 0, qPrintable(handlerMsg));
+    auto *pHandler = mpHost->getScriptUnit()->getScript(handlerId);
+    pHandler->setIsActive(true);
+    pHandler->setEventHandlerList({qsl("resetLateEvent")});
+
+    performReset();
+
+    QVERIFY(luaGlobalIsTrue("resetLateHandlerBodyRan"));
+    QVERIFY2(!luaGlobalIsTrue("resetLateHandlerCalledEarly"),
+             "an event handler must not be called before its script's body "
+             "has run");
+    delete mpHost->getScriptUnit()->getScript(raiserId);
+    delete pHandler;
+  }
+
   void test_buttonOnAHiddenToolbarRunsItsScriptAfterResetAndShow() {
     auto *actionUnit = mpHost->getActionUnit();
     auto *toolbar = new TAction(qsl("resetHiddenToolbar"), mpHost);

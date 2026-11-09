@@ -302,7 +302,10 @@ bool ScriptUnit::enableScript(const QString& name)
     for (auto script : scripts) {
         if (script->getName() == name) {
             script->setIsActive(true);
-            compileSwitchedOn(script);
+            // A body run by an earlier match can uninstall this one's package
+            if (!pendingDeletion(script)) {
+                compileSwitchedOn(script);
+            }
             found = true;
             emit mpHost->signal_scriptToggled(script->getID());
         }
@@ -319,10 +322,14 @@ void ScriptUnit::compileSwitchedOn(TScript* pScript)
     if (!mCompilePassDone && std::find(mRootsCompiledThisPass.begin(), mRootsCompiledThisPass.end(), pRoot) == mRootsCompiledThisPass.end()) {
         return;
     }
-    // Only the scripts still waiting to run their body are compiled
-    if (pRoot->isActive()) {
-        pRoot->compileAll();
+    // A body in a tree being run switches that tree on: the walk already running reaches the rest in order
+    if (!pRoot->isActive() || std::find(mRootsBeingCompiled.begin(), mRootsBeingCompiled.end(), pRoot) != mRootsBeingCompiled.end()) {
+        return;
     }
+    mRootsBeingCompiled.push_back(pRoot);
+    // Only the scripts still waiting to run their body are compiled
+    pRoot->compileAll();
+    mRootsBeingCompiled.pop_back();
 }
 
 bool ScriptUnit::disableScript(const QString& name)
@@ -348,15 +355,18 @@ void ScriptUnit::compileAll(bool saveLoadingError)
     const std::vector<TScript*> rootNodes(mScriptRootNodeList.begin(), mScriptRootNodeList.end());
     mCompilePassDone = false;
     mRootsCompiledThisPass.clear();
-    // Marked up front, so a body that switches on an earlier tree during a reset runs it
+    // Marked up front: TScript::compileAll() only runs the scripts still marked
     if (mpHost->profileResetInProgress()) {
         for (auto script : rootNodes) {
-            script->markForCompile();
+            script->markForCompile(false);
         }
     }
     for (auto script : rootNodes) {
         if (script->isActive()) {
             script->compileAll(saveLoadingError);
+        } else if (mpHost->profileResetInProgress()) {
+            // An active script registers its handlers once its body has run, so none is called before then
+            script->markForCompile(true);
         }
         mRootsCompiledThisPass.push_back(script);
     }

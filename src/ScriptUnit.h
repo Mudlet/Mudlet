@@ -113,6 +113,7 @@ private:
     // compileAll() to run in order, after the scripts before them
     std::vector<TScript*> mRootsCompiledThisPass;
     bool mCompilePassDone = false;
+    std::vector<TScript*> mRootsBeingCompiled;
     int mMaxID = 0;
     int statsItemsTotal = 0;
     int statsTempItems = 0;
