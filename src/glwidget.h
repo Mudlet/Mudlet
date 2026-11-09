@@ -49,7 +49,7 @@ public:
 
     void wheelEvent(QWheelEvent* e) override;
     void setViewCenter(int, int, int, int);
-    static float scaleAfterWheel(float scale, double notches);
+    static float scaleAfterWheel(float scale, int angleDeltaY);
 
     QSize minimumSizeHint() const override;
     QSize sizeHint() const override;

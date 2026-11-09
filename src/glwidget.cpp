@@ -2226,25 +2226,26 @@ void GLWidget::mouseReleaseEvent(QMouseEvent* event)
     mPanMode = false;
 }
 
-float GLWidget::scaleAfterWheel(const float scale, const double notches)
+float GLWidget::scaleAfterWheel(const float scale, const int angleDeltaY)
 {
+    // Fractional, as touchpads and high-resolution wheels send a notch in many small parts
+    const float notches = static_cast<float>(angleDeltaY) / (8.0f * 15.0f);
     // The field of view is 60 times the scale in degrees: at or past 0 the map vanishes or turns upside down,
     // and towards 180 it does the same
     constexpr float minScale = 0.05f;
     constexpr float maxScale = 2.5f;
     const float step = std::abs(scale) < 0.3f ? 0.01f : 0.03f;
-    return std::clamp(scale + step * static_cast<float>(notches), minScale, maxScale);
+    return std::clamp(scale + step * notches, minScale, maxScale);
 }
 
 void GLWidget::wheelEvent(QWheelEvent* e)
 {
-    // Fractional, as touchpads and high-resolution wheels send a notch in many small parts
-    const double notches = e->angleDelta().y() / (8.0 * 15.0);
-    if (qFuzzyIsNull(notches)) {
+    const int angleDeltaY = e->angleDelta().y();
+    if (!angleDeltaY) {
         e->ignore();
         return;
     }
-    mScale = scaleAfterWheel(mScale, notches);
+    mScale = scaleAfterWheel(mScale, angleDeltaY);
     applyScale();
     e->accept();
 }

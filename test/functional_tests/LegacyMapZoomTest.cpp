@@ -18,9 +18,9 @@
  ***************************************************************************/
 
 /*
- * The original 3D map's field of view is 60 times its scale in degrees, so
- * a mouse wheel that pushed the scale to 0 or below emptied the view or
- * turned it upside down, and one that pushed it towards 3 did the same.
+ * The original 3D map's field of view is 60 times its scale in degrees: a
+ * scale of 0 or below empties the view or turns it upside down, and one
+ * towards 3 does the same, so the mouse wheel must stop short of both.
  *
  * Run with: ctest -R LegacyMapZoomTest -V
  */
@@ -40,7 +40,7 @@ private slots:
     {
         float scale = 1.0f;
         for (int i = 0; i < 500; ++i) {
-            scale = GLWidget::scaleAfterWheel(scale, -1.0);
+            scale = GLWidget::scaleAfterWheel(scale, -120);
         }
         QVERIFY2(scale > 0.0f, qPrintable(qsl("zooming in left a scale of %1, a field of view of %2 degrees").arg(scale).arg(60.0f * scale)));
     }
@@ -49,7 +49,7 @@ private slots:
     {
         float scale = 1.0f;
         for (int i = 0; i < 500; ++i) {
-            scale = GLWidget::scaleAfterWheel(scale, 1.0);
+            scale = GLWidget::scaleAfterWheel(scale, 120);
         }
         QVERIFY2(60.0f * scale < 180.0f, qPrintable(qsl("zooming out left a field of view of %1 degrees").arg(60.0f * scale)));
     }
@@ -58,9 +58,9 @@ private slots:
     {
         float scale = 1.0f;
         for (int i = 0; i < 8; ++i) {
-            scale = GLWidget::scaleAfterWheel(scale, 1.0 / 8.0);
+            scale = GLWidget::scaleAfterWheel(scale, 15);
         }
-        QCOMPARE(scale, GLWidget::scaleAfterWheel(1.0f, 1.0));
+        QCOMPARE(scale, GLWidget::scaleAfterWheel(1.0f, 120));
     }
 };
 
