@@ -4486,17 +4486,17 @@ int TLuaInterpreter::setRoomCharColor(lua_State* L)
     const int id = getVerifiedInt(L, __func__, 1, "roomID");
     const int r = getVerifiedInt(L, __func__, 2, "red component");
     if (r < 0 || r > 255) {
-        lua_pushfstring(L, "setRoomCharColor: bad argument #2 type (red component value %d out of range (0 to 255)", r);
+        lua_pushfstring(L, "setRoomCharColor: bad argument #2 value (red component %d is out of range 0 to 255)", r);
         return lua_error(L);
     }
     const int g = getVerifiedInt(L, __func__, 3, "green component");
     if (g < 0 || g > 255) {
-        lua_pushfstring(L, "setRoomCharColor: bad argument #3 type (red component value %d out of range (0 to 255)", r);
+        lua_pushfstring(L, "setRoomCharColor: bad argument #3 value (green component %d is out of range 0 to 255)", g);
         return lua_error(L);
     }
     const int b = getVerifiedInt(L, __func__, 4, "blue component");
     if (b < 0 || b > 255) {
-        lua_pushfstring(L, "setRoomCharColor: bad argument #4 type (blue component value %d out of range (0 to 255)", r);
+        lua_pushfstring(L, "setRoomCharColor: bad argument #4 value (blue component %d is out of range 0 to 255)", b);
         return lua_error(L);
     }
 
