@@ -63,11 +63,13 @@ public:
         std::optional<QString> line;
         bool tailCut = false;
     };
-    // Up, or Down for !forward, on a line typed into, with "Highlight history" on: each call goes on to the next older
-    // line of history that starts with what was typed. Once line is shown, setHistoryCompletion() with what the line
-    // then holds.
+    // Up, or Down for !forward, on a line typed into, with "Highlight history" on: each Up goes on to the next older
+    // line of history that starts with what was typed, and each Down back to the next newer one, then to what was
+    // typed. Once line is shown, setHistoryCompletion() with what the line then holds.
     HistoryCompletion historyComplete(const QString& line, bool tailSelected, const QStringList& history, bool forward);
     void setHistoryCompletion(const QString& line) { mLastCompletion = line; }
+    // The line, with the tail after shownLine() selected, is the one historyComplete() last filled in
+    bool showingHistoryCompletion(const QString& line, const bool tailSelected) const { return tailSelected && line == mLastCompletion; }
     // An edit: the next Up looks from the newest line again
     void restartHistoryWalk() { mHistoryCount = -1; }
     // A space, a deletion or a send also forgets the line the walk last found

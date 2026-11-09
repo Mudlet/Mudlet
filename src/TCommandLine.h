@@ -111,6 +111,7 @@ private:
     void mousePressEvent(QMouseEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
     void handleAutoCompletion(bool forward);
+    bool completionTailSelected() const;
     void insertFromMimeData(const QMimeData*) override;
     void slot_contentsChange();
     void spellCheck();

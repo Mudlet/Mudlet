@@ -523,6 +523,38 @@ private slots:
         QCOMPARE(pCommandLine->textCursor().position(), 3);
     }
 
+    // Down after Up's completion steps back to the newer match and then to what was
+    // typed, rather than banking the completed line and clearing the box.
+    void test_downWalksBackThroughUpsCompletions()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        for (const QString& command : {qsl("look"), qsl("north"), qsl("look at sign")}) {
+            sendCommand(pCommandLine, command);
+        }
+        type(pCommandLine, qsl("lo"));
+
+        press(pCommandLine, Qt::Key_Up);
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look"));
+
+        press(pCommandLine, Qt::Key_Down);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look at sign"));
+        QCOMPARE(selection(pCommandLine), qsl("ok at sign"));
+
+        press(pCommandLine, Qt::Key_Down);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("lo"));
+        QVERIFY(selection(pCommandLine).isEmpty());
+
+        // Back on what was typed, Down banks it as it does any fresh text
+        press(pCommandLine, Qt::Key_Down);
+        QCOMPARE(pCommandLine->toPlainText(), QString());
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("lo"));
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look at sign"));
+    }
+
     // A selection in the middle of the line is the player's own text, not a completion tail.
     void test_upWithAMidLineSelectionKeepsTheTypedText()
     {

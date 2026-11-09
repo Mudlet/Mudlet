@@ -140,10 +140,11 @@ TCommandLineCompletion::HistoryCompletion TCommandLineCompletion::historyComplet
     if (mHistoryCount >= history.size()) {
         mHistoryCount = history.size() - 1;
     }
-    if (mHistoryCount < 0) {
+    if (forward && mHistoryCount < 0) {
         mHistoryCount = 0;
     }
-    for (int i = mHistoryCount; i < history.size(); i++) {
+    const int step = forward ? 1 : -1;
+    for (int i = mHistoryCount; i >= 0 && i < history.size(); i += step) {
         if (history[i].startsWith(result.typed)) {
             mHistoryCount = i;
             result.line = history[i];
@@ -151,6 +152,8 @@ TCommandLineCompletion::HistoryCompletion TCommandLineCompletion::historyComplet
         }
     }
     mHistoryCount = -1;
+    // The line is back to what was typed, so a Down on it banks it rather than walking on
+    mLastCompletion.clear();
     return result;
 }
 
