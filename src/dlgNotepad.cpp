@@ -833,9 +833,8 @@ void dlgNotepad::slot_sendLine()
         return;
     }
 
-    QTextCursor cursor = textEdit->textCursor();
-    cursor.select(QTextCursor::LineUnderCursor);
-    const QString line = cursor.selectedText();
+    // The block, not QTextCursor::LineUnderCursor: that is only the row a wrapped line shows on screen
+    const QString line = textEdit->textCursor().block().text();
 
     if (!line.isEmpty()) {
         startSendingLines(QStringList{line});
