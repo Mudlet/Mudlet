@@ -670,6 +670,17 @@ describe("Tests connectExitStub with a direction code on a map without those roo
     assert.are.equal(b, getRoomExits(a)["east"])
     assert.are.equal(a, getRoomExits(b)["west"])
   end)
+
+  it("connectExitStub refuses a number past int's range as a toID", function()
+    local area = addAreaName("connectExitStub huge")
+    finally(function() deleteArea(area) end)
+    local a = createRoomID(12); addRoom(a); setRoomArea(a, area)
+    for _, id in ipairs({math.huge, -math.huge, 0 / 0, 2147483648, -2147483649}) do
+      local ok, err = pcall(connectExitStub, a, id)
+      assert.is_false(ok, tostring(id))
+      assert.truthy(tostring(err):find("toID", 1, true), tostring(err))
+    end
+  end)
 end)
 
 -- A shared in-memory fixture: three areas and ten rooms wired into a
