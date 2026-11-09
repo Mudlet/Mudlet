@@ -275,6 +275,8 @@ describe("Tests GBK decoding", function()
     assert.equals("狜", decoded(bytes(0xAA, 0x40)), "area 4")
     assert.same({0xE000}, codePoints(decoded(bytes(0xAA, 0xA1))), "user defined area 1")
     assert.same({0xE234}, codePoints(decoded(bytes(0xF8, 0xA1))), "user defined area 2")
+    assert.same({0xE4C6}, codePoints(decoded(bytes(0xA1, 0x40))), "user defined area 3")
+    assert.same({0xE765}, codePoints(decoded(bytes(0xA7, 0xA0))), "user defined area 3")
   end)
 
   it("decodes a pair sitting between ASCII bytes without disturbing them", function()
@@ -334,6 +336,7 @@ describe("Tests GB18030 decoding", function()
     using("GB18030")
 
     assert.equals("你", decoded(bytes(0xC4, 0xE3)))
+    assert.same({0xE4C6}, codePoints(decoded(bytes(0xA1, 0x40))), "user defined area 3")
   end)
 
   it("rejects a lead byte the encoding has no meaning for", function()

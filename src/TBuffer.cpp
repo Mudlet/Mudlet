@@ -8878,8 +8878,8 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
             const bool userArea1 = (byte1 >= 0xAA) && (byte1 <= 0xAF) && (byte2 >= 0xA1) && (byte2 <= 0xFE);
             // User Defined (PU) Area 2: byte1 F8-FE, byte2 A1-FE
             const bool userArea2 = (byte1 >= 0xF8) && (byte1 <= 0xFE) && (byte2 >= 0xA1) && (byte2 <= 0xFE);
-            // User Defined (PU) Area 3: byte1 A1-A7, byte2 A1-FE (excluding 7F)
-            const bool userArea3 = (byte1 >= 0xA1) && (byte1 <= 0xA7) && (byte2 >= 0xA1) && (byte2 <= 0xFE) && (byte2 != 0x7F);
+            // User Defined (PU) Area 3: byte1 A1-A7, byte2 40-A0 (excluding 7F)
+            const bool userArea3 = (byte1 >= 0xA1) && (byte1 <= 0xA7) && (byte2 >= 0x40) && (byte2 <= 0xA0) && (byte2 != 0x7F);
             // Looks like first pair of 4-byte GB18030 non-BMP sequence: byte1 90-E3, byte2 30-39
             const bool looksLikeGB18030NonBMP = (byte1 >= 0x90) && (byte1 <= 0xE3) && (byte2 >= 0x30) && (byte2 <= 0x39);
             // Looks like first pair of 4-byte GB18030 Private Use sequence: byte1 FD-FE, byte2 30-39
@@ -9070,8 +9070,8 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
                 const bool isUserArea1 = (byte1 >= 0xAA) && (byte1 <= 0xAF) && (byte2 >= 0xA1) && (byte2 <= 0xFE);
                 // User Defined (PU) Area 2: byte1 F8-FE, byte2 A1-FE
                 const bool isUserArea2 = (byte1 >= 0xF8) && (byte1 <= 0xFE) && (byte2 >= 0xA1) && (byte2 <= 0xFE);
-                // User Defined (PU) Area 3: byte1 A1-A7, byte2 A1-FE (excluding 7F)
-                const bool isUserArea3 = (byte1 >= 0xA1) && (byte1 <= 0xA7) && (byte2 >= 0xA1) && (byte2 <= 0xFE) && (byte2 != 0x7F);
+                // User Defined (PU) Area 3: byte1 A1-A7, byte2 40-A0 (excluding 7F)
+                const bool isUserArea3 = (byte1 >= 0xA1) && (byte1 <= 0xA7) && (byte2 >= 0x40) && (byte2 <= 0xA0) && (byte2 != 0x7F);
 
                 if (isGBKArea3) {
                     // GBK/3 sequence
