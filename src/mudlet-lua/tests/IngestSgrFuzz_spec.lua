@@ -175,6 +175,15 @@ local function feed(data)
   assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
 end
 
+-- selectSection() counts UTF-16 units, so a character outside the BMP - four bytes in UTF-8 - takes two
+local function cellCount(text)
+  local count = 0
+  for character in text:gmatch("[%z\1-\127\194-\244][\128-\191]*") do
+    count = count + (#character == 4 and 2 or 1)
+  end
+  return count
+end
+
 -- each line's text and prompt flag, then the format of each of its characters
 local function snapshot(from, to)
   local result = {}
@@ -182,7 +191,7 @@ local function snapshot(from, to)
     assert.is_true(moveCursor("main", 0, lineNumber))
     local text = getCurrentLine("main")
     local cells = {text, "prompt=" .. tostring(isPrompt())}
-    for offset = 0, (utf8.len(text) or #text) - 1 do
+    for offset = 0, cellCount(text) - 1 do
       selectSection("main", offset, 1)
       local fields = {}
       for key, value in pairs(getTextFormat("main")) do
