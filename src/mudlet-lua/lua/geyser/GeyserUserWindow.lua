@@ -194,7 +194,19 @@ function Geyser.UserWindow:new(cons)
   elseif cons.wrapAt then
     me:setWrap(cons.wrapAt)
   end
-  
+  if cons.horizontalScrollBar then
+    me:enableHorizontalScrollBar()
+  end
+  if me.commandLine then
+    me:enableCommandLine()
+    if me.cmdLineStylesheet then
+      me:setCmdLineStyleSheet()
+    end
+  end
+  if me.scrolling == false then
+    me:disableScrolling()
+  end
+
   --Resizing not possible if docked
   --Docking position not choosable if restoreLayout don't move/resize at start
   if me.docked == false and me.restoreLayout == false then
