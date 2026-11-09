@@ -210,8 +210,8 @@ private slots:
         QVERIFY2(!console->mLowerPane->isHidden(), "scrolling back did not open the split-screen scrollback");
     }
 
-    // Nor can a mini console with all its text showing, or its scrolling disabled, so a wheel turn over
-    // one goes on to what holds it
+    // A mini console with all its text on screen, or with scrolling disabled, has no use for a wheel
+    // turn, so the scroll box holding it scrolls instead
     void test_aWheelTheMiniConsoleCannotUseScrollsTheScrollBoxHoldingIt_data()
     {
         QTest::addColumn<int>("lines");
@@ -252,11 +252,26 @@ private slots:
         QVERIFY(mini);
         QScrollBar* bar = box->verticalScrollBar();
         QTRY_VERIFY2(bar->maximum() > 0, "the scroll box has nothing to scroll");
+        // Partway down, so a turn up that leaked to the scroll box would show
+        bar->setValue(bar->maximum() / 2);
+        const int boxAt = bar->value();
+        QCOMPARE(box->childAt(box->rect().center()), mini->mUpperPane);
 
         wheelOver(box, 120);
         QTRY_VERIFY2(!mini->mUpperPane->mIsTailMode, "the mini console did not scroll back");
+        // This one meets the split already open
+        wheelOver(box, 120);
+        QTest::qWait(50ms);
+        QCOMPARE(bar->value(), boxAt);
+
+        for (int turns = 0; !mini->mLowerPane->isHidden(); ++turns) {
+            QVERIFY2(turns < 20, "turning the wheel down never brought the mini console back to its bottom");
+            wheelOver(box, -120);
+            QCOMPARE(bar->value(), boxAt);
+        }
+        QVERIFY(mini->mUpperPane->mIsTailMode);
         wheelOver(box, -120);
-        QCOMPARE(bar->value(), 0);
+        QVERIFY2(bar->value() > boxAt, "back at its bottom, the mini console kept a wheel turn down it had no use for");
     }
 };
 
