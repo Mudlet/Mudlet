@@ -331,10 +331,10 @@ void EditorDeleteItemCommand::redo()
         }
     }
 
-    // As in the editor's own delete, all but a script are left to their destructor to
-    // unregister, which also frees their compiled script. Only delete items whose parent is not also being deleted
-    // (parent deletion handles children), and only if they still match the recorded
-    // name to avoid deleting unrelated items.
+    // Bar a script, each item is left to its destructor to unregister, as in the editor's
+    // own delete, which also frees its compiled script. Only delete items whose parent
+    // is not also being deleted (parent deletion handles children), and only if they
+    // still match the recorded name to avoid deleting unrelated items.
     QSet<int> deletedIDs;
     deletedIDs.reserve(mDeletedItems.size());
     for (const auto& info : std::as_const(mDeletedItems)) {

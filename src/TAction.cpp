@@ -56,8 +56,7 @@ TAction::~TAction()
 {
     // Each child's removal redraws the bars, which draw this action as a menu
     // of its children; ~Tree() would delete them only once this action's own
-    // members and QObject were gone. Done even without a host, as the editor
-    // clears only this action's before deleting it, not its children's.
+    // members and QObject were gone.
     while (!mpMyChildrenList->empty()) {
         delete mpMyChildrenList->front();
     }
