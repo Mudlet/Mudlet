@@ -447,7 +447,10 @@ void TTextEdit::updateScreenView()
         // Note the values in the "parent" Host instance - for the UPPER pane
         // so that they are available for NAWS:
         if (!mIsLowerPane) {
-            mpHost->setScreenDimensions(mScreenWidth, mScreenHeight);
+            // Scrolling back splits the window without making it any shorter, so the
+            // game keeps the height it has: as TConsole::upperPaneHeightFor() does
+            const bool scrolledBack = mpConsole->mLowerPane && !mpConsole->mLowerPane->isHidden() && mpHost->mScreenHeight > 0;
+            mpHost->setScreenDimensions(mScreenWidth, scrolledBack ? mpHost->mScreenHeight : mScreenHeight);
         }
     } else {
         mScreenWidth = currentScreenWidth;

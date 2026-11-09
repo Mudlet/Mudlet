@@ -361,6 +361,26 @@ private slots:
         QCOMPARE(updates.constLast().width(), 1);
     }
 
+    // Scrolling back splits the main window in two, but the window is no
+    // shorter, so the game must not be told it is - one that pages its output
+    // to the rows it was given would stop every screenful short.
+    void scrollingBackLeavesTheReportedSizeAlone()
+    {
+        runLua(mpHost, qsl("for i = 1, 300 do echo('line ' .. i .. '\\n') end"));
+        settle();
+
+        mpServer->clearNawsUpdates();
+        runLua(mpHost, qsl("scrollUp(50)"));
+        settle();
+        QVERIFY2(!mpHost->mainConsoleView()->mLowerPane->isHidden(), "scrolling back did not split the window");
+        const auto scrolledBack = mpServer->nawsUpdates();
+        runLua(mpHost, qsl("scrollTo()"));
+        settle();
+
+        QVERIFY2(scrolledBack.isEmpty(), describe(scrolledBack).constData());
+        QVERIFY2(mpServer->nawsUpdates().isEmpty(), describe(mpServer->nawsUpdates()).constData());
+    }
+
     // Rows start at the top left corner, so an opaque overlay there hides some of
     // them without taking any away from the grid or from what the game is told.
     void overlaysAlongTheTopAndLeftLeaveTheMainWindowItsSize()
