@@ -1355,7 +1355,7 @@ private slots:
                 *colours.at(index).second = priorColours.at(index);
             }
         });
-        const QStringList seeThrough{qsl("mapInfoBg"), qsl("upperLevelColor"), qsl("lowerLevelColor"), qsl("mapGridColor")};
+        const QStringList seeThrough{qsl("background_color"), qsl("background_color_2"), qsl("mapInfoBg"), qsl("upperLevelColor"), qsl("lowerLevelColor"), qsl("mapGridColor")};
         for (int index = 0; index < colours.size(); ++index) {
             *colours.at(index).second = QColor(5 * index, 250 - 5 * index, (37 * index) % 256, seeThrough.contains(colours.at(index).first) ? 200 : 255);
         }
@@ -1429,20 +1429,24 @@ private slots:
         QCOMPARE(mpHost->mpMap->mCustomEnvColors.value(257), QColor(0x0A, 0x0B, 0x0C));
     }
 
-    // The four map colours that may be see-through each have an opacity box,
+    // The five map colours that may be see-through each have an opacity box,
     // and a number typed into it changes how see-through the colour is and
     // nothing else; the box follows a colour chosen in the colours window
     void test_aTypedMapOpacityKeepsTheColour()
     {
+        QVERIFY2(mpHost->mpMap, "the profile has no map to announce the background to");
         const QColor priorGrid = mpHost->mMapGridColor;
-        restoreLater([this, priorGrid]() {
+        const QColor priorBackground = mpHost->mBgColor_2;
+        restoreLater([this, priorGrid, priorBackground]() {
             mpHost->mMapGridColor = priorGrid;
+            mpHost->mBgColor_2 = priorBackground;
         });
         mpHost->mMapGridColor = QColor(10, 20, 30, 64);
+        mpHost->mBgColor_2 = QColor(70, 80, 90);
 
         openPreferences();
         mpPreferences->setTab(qsl("mapper"));
-        for (const QString& stem : {qsl("mapInfoBg"), qsl("upperLevelColor"), qsl("lowerLevelColor"), qsl("mapGridColor")}) {
+        for (const QString& stem : {qsl("background_color_2"), qsl("mapInfoBg"), qsl("upperLevelColor"), qsl("lowerLevelColor"), qsl("mapGridColor")}) {
             QVERIFY2(mpPreferences->findChild<QSpinBox*>(qsl("settingsOpacity_%1").arg(stem)), qPrintable(qsl("'%1' has no opacity box").arg(stem)));
         }
         auto* pOpacity = mpPreferences->findChild<QSpinBox*>(qsl("settingsOpacity_mapGridColor"));
@@ -1456,6 +1460,33 @@ private slots:
         QCOMPARE(mpHost->mMapGridColor, QColor(1, 2, 3, 51));
         QCOMPARE(colourField(qsl("mapGridColor"))->text(), qsl("#010203"));
         QCOMPARE(pOpacity->value(), 20);
+
+        // The map's background tells the map's widgets, as one chosen in the colours window does
+        QSignalSpy announced(mpHost->mpMap.data(), &TMap::signal_mapperSettingChanged);
+        typeInto(mpPreferences->findChild<QSpinBox*>(qsl("settingsOpacity_background_color_2")), qsl("60"), Qt::Key_Return);
+        QCOMPARE(mpHost->mBgColor_2, QColor(70, 80, 90, 153));
+        QCOMPARE(colourField(qsl("background_color_2"))->text(), qsl("#46505A"));
+        QCOMPARE(announced.count(), 1);
+    }
+
+    // ...and so has the Main display's background
+    void test_aTypedDisplayBackgroundOpacityKeepsTheColour()
+    {
+        const QColor priorBackground = mpHost->mBgColor;
+        restoreLater([this, priorBackground]() {
+            mpHost->mBgColor = priorBackground;
+            mpHost->mainConsoleView()->changeColors();
+        });
+        mpHost->mBgColor = QColor(40, 50, 60);
+
+        openPreferences();
+        mpPreferences->setTab(qsl("mainDisplay"));
+        auto* pOpacity = mpPreferences->findChild<QSpinBox*>(qsl("settingsOpacity_background_color"));
+        QVERIFY2(pOpacity, "the Main display's background has no opacity box");
+        QCOMPARE(pOpacity->value(), 100);
+        typeInto(pOpacity, qsl("40"), Qt::Key_Return);
+        QCOMPARE(mpHost->mBgColor, QColor(40, 50, 60, 102));
+        QCOMPARE(colourField(qsl("background_color"))->text(), qsl("#28323C"));
     }
 
     // The preview beside the sixteen colours is drawn in the profile's colours
@@ -1671,6 +1702,59 @@ private slots:
 
         mpPreferences->checkbox_mMapperShowRoomBorders->setChecked(false);
         QCOMPARE(pixelsOf(pPreview, border), 0);
+    }
+
+    // Each of the sixteen environment colours has a room on show in the map preview, so a change to any of them shows
+    void test_theMapPreviewShowsEveryEnvironmentColour()
+    {
+        const QList<std::pair<QString, QColor Host::*>> environment{{qsl("mBlack_2"), &Host::mBlack_2},
+                                                                    {qsl("mLightBlack_2"), &Host::mLightBlack_2},
+                                                                    {qsl("mRed_2"), &Host::mRed_2},
+                                                                    {qsl("mLightRed_2"), &Host::mLightRed_2},
+                                                                    {qsl("mGreen_2"), &Host::mGreen_2},
+                                                                    {qsl("mLightGreen_2"), &Host::mLightGreen_2},
+                                                                    {qsl("mYellow_2"), &Host::mYellow_2},
+                                                                    {qsl("mLightYellow_2"), &Host::mLightYellow_2},
+                                                                    {qsl("mBlue_2"), &Host::mBlue_2},
+                                                                    {qsl("mLightBlue_2"), &Host::mLightBlue_2},
+                                                                    {qsl("mMagenta_2"), &Host::mMagenta_2},
+                                                                    {qsl("mLightMagenta_2"), &Host::mLightMagenta_2},
+                                                                    {qsl("mCyan_2"), &Host::mCyan_2},
+                                                                    {qsl("mLightCyan_2"), &Host::mLightCyan_2},
+                                                                    {qsl("mWhite_2"), &Host::mWhite_2},
+                                                                    {qsl("mLightWhite_2"), &Host::mLightWhite_2}};
+        QList<QColor> priorColours;
+        for (const auto& [name, pHeld] : environment) {
+            priorColours.append(mpHost->*pHeld);
+        }
+        const bool priorAntiAlias = mpHost->mMapperUseAntiAlias;
+        restoreLater([this, environment, priorColours, priorAntiAlias]() {
+            for (int index = 0; index < environment.size(); ++index) {
+                mpHost->*environment.at(index).second = priorColours.at(index);
+            }
+            mpHost->mMapperUseAntiAlias = priorAntiAlias;
+            mpHost->mpMap->restore16ColorSet();
+        });
+        // Every edge on whole pixels, so a room's own colour is there to count
+        mpHost->mMapperUseAntiAlias = false;
+
+        openPreferences();
+        mpPreferences->setTab(qsl("mapper"));
+        QCoreApplication::processEvents();
+        auto* pPreview = mpPreferences->findChild<QWidget*>(qsl("settingsMapColoursPreview"));
+        QVERIFY2(pPreview && pPreview->isVisible(), "there is no map preview on show");
+        const QColor marker(0x13, 0xA7, 0x5D);
+        QVERIFY2(pixelsOf(pPreview, marker) == 0, "SETUP: the map preview already shows the colour standing out");
+        QStringList unseen;
+        for (const auto& [name, pHeld] : environment) {
+            const QColor prior = mpHost->*pHeld;
+            mpHost->*pHeld = marker;
+            if (pixelsOf(pPreview, marker) == 0) {
+                unseen.append(name);
+            }
+            mpHost->*pHeld = prior;
+        }
+        QVERIFY2(unseen.isEmpty(), qPrintable(qsl("the map preview shows no room in %1").arg(unseen.join(qsl(", ")))));
     }
 
     // The diameters and the opacities are percentages standing one over the

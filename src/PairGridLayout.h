@@ -37,9 +37,10 @@ namespace uiDesign {
 // and the widget carrying it has to say so in its size policy.
 //
 // Read down rather than across, the pairs between two full-width rows are two
-// columns, the first half of them leading and the rest trailing, each column as
-// wide as its own controls need; one pair to a row, the trailing column's pairs
-// follow the leading column's whole rather than taking turns with them.
+// columns, the first half of them (or as many as setLeadingPairs() says) leading
+// and the rest trailing, each column as wide as its own controls need; one pair
+// to a row, the trailing column's pairs follow the leading column's whole rather
+// than taking turns with them.
 class PairGridLayout : public QLayout
 {
 public:
@@ -59,6 +60,8 @@ public:
     // Under the leading pair and the trailing one; either may be null
     void addFooter(QWidget* pLeading, QWidget* pTrailing);
     void setReadingOrder(const ReadingOrder order);
+    // Read down, how many of a block's pairs the leading column holds; -1 gives it the first half
+    void setLeadingPairs(const qsizetype pairs);
     void setPairsPerRow(const PairsPerRow pairsPerRow);
     [[nodiscard]] PairsPerRow pairsPerRow() const { return mPairsPerRow; }
     // Between the leading pair and the trailing one, two to a row; -1 takes the horizontal spacing
@@ -122,6 +125,7 @@ private:
     QList<QLayoutItem*> mItems;
     QList<Row> mRows;
     ReadingOrder mReadingOrder = ReadingOrder::AcrossRows;
+    qsizetype mLeadingPairs = -1;
     PairsPerRow mPairsPerRow = PairsPerRow::Automatic;
     int mHorizontalSpacing = -1;
     int mVerticalSpacing = -1;

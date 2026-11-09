@@ -315,14 +315,14 @@ private:
     {
         auto* p = mpPreferences;
         const QList<std::tuple<QLabel*, QPushButton*, bool>> column =
-                trailing ? QList<std::tuple<QLabel*, QPushButton*, bool>>{{p->label_mapInfoBg, p->pushButton_mapInfoBg, true},
+                trailing ? QList<std::tuple<QLabel*, QPushButton*, bool>>{{p->label_4, p->pushButton_roomBorderColor, false},
+                                                                          {p->label_pushButton_roomCollisionBorderColor, p->pushButton_roomCollisionBorderColor, false},
+                                                                          {p->label_39, p->pushButton_foreground_color_2, false}}
+                         : QList<std::tuple<QLabel*, QPushButton*, bool>>{{p->label_40, p->pushButton_background_color_2, true},
+                                                                          {p->label_mapInfoBg, p->pushButton_mapInfoBg, true},
                                                                           {p->label_upperLevelColor, p->pushButton_upperLevelColor, true},
                                                                           {p->label_lowerLevelColor, p->pushButton_lowerLevelColor, true},
-                                                                          {p->label_mapGridColor, p->pushButton_mapGridColor, true}}
-                         : QList<std::tuple<QLabel*, QPushButton*, bool>>{{p->label_40, p->pushButton_background_color_2, false},
-                                                                          {p->label_4, p->pushButton_roomBorderColor, false},
-                                                                          {p->label_pushButton_roomCollisionBorderColor, p->pushButton_roomCollisionBorderColor, false},
-                                                                          {p->label_39, p->pushButton_foreground_color_2, false}};
+                                                                          {p->label_mapGridColor, p->pushButton_mapGridColor, true}};
         QList<std::pair<QLabel*, QWidget*>> rows;
         for (const auto& [pLabel, pChoose, seeThrough] : column) {
             verifyColourRow(pChoose, seeThrough);
@@ -338,7 +338,7 @@ private:
     }
 
     // By the rows, which share a parent where the fields in them do not
-    bool mapSideBySide() const { return levelWith(fieldOf(mpPreferences->pushButton_mapInfoBg)->parentWidget(), fieldOf(mpPreferences->pushButton_background_color_2)->parentWidget()); }
+    bool mapSideBySide() const { return levelWith(fieldOf(mpPreferences->pushButton_roomBorderColor)->parentWidget(), fieldOf(mpPreferences->pushButton_background_color_2)->parentWidget()); }
 
     bool displayTwoPairsToARow() const { return levelWith(fieldOf(mpPreferences->pushButton_background_color)->parentWidget(), fieldOf(mpPreferences->pushButton_foreground_color)->parentWidget()); }
 
@@ -354,11 +354,12 @@ private:
     }
 
     // The map's two columns: side by side, each read down and the trailing
-    // one's rows level with the leading one's; or one under the other, the
-    // leading column whole and then the trailing one, never the two taking turns
+    // one's rows level with the leading one's, the leading one the longer; or
+    // one under the other, the leading column whole and then the trailing one,
+    // never the two taking turns
     void verifyColourColumns(const QList<std::pair<QLabel*, QWidget*>>& leading, const QList<std::pair<QLabel*, QWidget*>>& trailing, const bool sideBySide)
     {
-        QVERIFY2(!leading.isEmpty() && leading.size() == trailing.size(), "SETUP: the two columns are not there to compare");
+        QVERIFY2(!trailing.isEmpty() && leading.size() >= trailing.size(), "SETUP: the two columns are not there to compare");
         const QList<std::pair<QLabel*, QWidget*>> all = leading + trailing;
         for (const auto& [pLabel, pRow] : all) {
             QVERIFY2(levelWith(pRow, pLabel) && pRow->geometry().left() > pLabel->geometry().right(), qPrintable(qsl("'%1' is not level with the row after it").arg(pLabel->objectName())));
@@ -366,18 +367,21 @@ private:
         if (sideBySide) {
             for (int index = 0; index < leading.size(); ++index) {
                 const auto& [pLabel, pRow] = leading.at(index);
+                QCOMPARE(pRow->geometry().left(), leading.first().second->geometry().left());
+                if (index > 0) {
+                    QVERIFY2(pRow->geometry().top() > leading.at(index - 1).second->geometry().bottom(),
+                             qPrintable(qsl("'%1' is not under '%2'").arg(pRow->objectName(), leading.at(index - 1).second->objectName())));
+                }
+                if (index >= trailing.size()) {
+                    continue;
+                }
                 const auto& [pTrailingLabel, pTrailingRow] = trailing.at(index);
                 QVERIFY2(levelWith(pTrailingRow, pRow) && pTrailingLabel->geometry().left() > pRow->geometry().right(),
                          qPrintable(qsl("side by side, '%1' is not beside '%2'").arg(pTrailingRow->objectName(), pRow->objectName())));
                 // The console colours' Light column stands a pair's gap from Normal's, 24px, and the columns above as far
                 const int between = pTrailingLabel->geometry().left() - pRow->geometry().right() - 1;
                 QVERIFY2(between >= 24, qPrintable(qsl("side by side, '%1' stands %2px from '%3'").arg(pTrailingLabel->objectName()).arg(between).arg(pRow->objectName())));
-                QCOMPARE(pRow->geometry().left(), leading.first().second->geometry().left());
                 QCOMPARE(pTrailingRow->geometry().left(), trailing.first().second->geometry().left());
-                if (index > 0) {
-                    QVERIFY2(pRow->geometry().top() > leading.at(index - 1).second->geometry().bottom(),
-                             qPrintable(qsl("'%1' is not under '%2'").arg(pRow->objectName(), leading.at(index - 1).second->objectName())));
-                }
             }
             return;
         }
@@ -632,7 +636,7 @@ private slots:
     // card's own colours a label and a row. The Main display's are pairs that
     // belong on a row together, two to a row where they fit and one to a row
     // in the same order where they do not. The map's are two columns read down,
-    // the four that may be see-through all in the trailing one, so their
+    // the five that may be see-through all in the leading one, so their
     // opacity boxes stand one over the other: side by side where they fit, and
     // where they do not, the trailing column under the leading one whole.
     void test_theColourCardsAreOneGridThatDropsToOnePairARow()
@@ -659,26 +663,24 @@ private slots:
             if (QTest::currentTestFailed()) {
                 return;
             }
-            if (wide) {
-                // ...the see-through ones in the trailing column, their opacity boxes one above the other
-                const int opacityX = p->findChild<QSpinBox*>(qsl("settingsOpacity_mapInfoBg"))->mapTo(pMapColours, QPoint(0, 0)).x();
-                for (const QString& stem : {qsl("upperLevelColor"), qsl("lowerLevelColor"), qsl("mapGridColor")}) {
-                    QCOMPARE(p->findChild<QSpinBox*>(qsl("settingsOpacity_%1").arg(stem))->mapTo(pMapColours, QPoint(0, 0)).x(), opacityX);
-                }
+            // ...the see-through ones in the leading column, their opacity boxes one above the other
+            const int opacityX = p->findChild<QSpinBox*>(qsl("settingsOpacity_background_color_2"))->mapTo(pMapColours, QPoint(0, 0)).x();
+            for (const QString& stem : {qsl("mapInfoBg"), qsl("upperLevelColor"), qsl("lowerLevelColor"), qsl("mapGridColor")}) {
+                QCOMPARE(p->findChild<QSpinBox*>(qsl("settingsOpacity_%1").arg(stem))->mapTo(pMapColours, QPoint(0, 0)).x(), opacityX);
             }
             // Reset ends the card on its trailing edge: across the trailing
             // column side by side, and at its own width one under the other
             QPushButton* pReset = p->reset_colors_button_2;
             QCOMPARE(pReset->geometry().right(), pMapColours->width() - 1);
             if (wide) {
-                QCOMPARE(pReset->geometry().left(), p->label_mapInfoBg->geometry().left());
+                QCOMPARE(pReset->geometry().left(), p->label_4->geometry().left());
                 // A pixel narrower, so both parities of what the two columns share are seen
                 QGroupBox* pCard = p->groupBox_mapperColors;
                 QVERIFY2(pMapColours->width() > twoPairs, "SETUP: the card has no pixel to spare above the two columns side by side");
                 pCard->setMaximumWidth(cardChrome(pCard, pMapColours) + pMapColours->width() - 1);
                 qApp->processEvents();
                 QCOMPARE(pReset->geometry().right(), pMapColours->width() - 1);
-                QCOMPARE(pReset->geometry().left(), p->label_mapInfoBg->geometry().left());
+                QCOMPARE(pReset->geometry().left(), p->label_4->geometry().left());
             } else {
                 QCOMPARE(pReset->width(), pReset->sizeHint().width());
                 break;
@@ -694,15 +696,15 @@ private slots:
 
         p->setTab(qsl("mainDisplay"));
         qApp->processEvents();
-        const QList<std::pair<QLabel*, QPushButton*>> displayColours{{p->label_foreground_color, p->pushButton_foreground_color},
-                                                                     {p->label_background_color, p->pushButton_background_color},
-                                                                     {p->label_command_line_foreground_color, p->pushButton_command_line_foreground_color},
-                                                                     {p->label_command_line_background_color, p->pushButton_command_line_background_color},
-                                                                     {p->label_command_foreground_color, p->pushButton_command_foreground_color},
-                                                                     {p->label_command_background_color, p->pushButton_command_background_color}};
+        const QList<std::tuple<QLabel*, QPushButton*, bool>> displayColours{{p->label_foreground_color, p->pushButton_foreground_color, false},
+                                                                            {p->label_background_color, p->pushButton_background_color, true},
+                                                                            {p->label_command_line_foreground_color, p->pushButton_command_line_foreground_color, false},
+                                                                            {p->label_command_line_background_color, p->pushButton_command_line_background_color, false},
+                                                                            {p->label_command_foreground_color, p->pushButton_command_foreground_color, false},
+                                                                            {p->label_command_background_color, p->pushButton_command_background_color, false}};
         QList<std::pair<QLabel*, QWidget*>> displayRows;
-        for (const auto& [pLabel, pChoose] : displayColours) {
-            verifyColourRow(pChoose, false);
+        for (const auto& [pLabel, pChoose, seeThrough] : displayColours) {
+            verifyColourRow(pChoose, seeThrough);
             if (QTest::currentTestFailed()) {
                 return;
             }
@@ -716,6 +718,31 @@ private slots:
         qApp->processEvents();
         verifyColourGrid(displayRows, false);
         pDisplayCard->setMaximumWidth(QWIDGETSIZE_MAX);
+    }
+
+    // Tab goes down the map's leading column and then the trailing one, as they are read
+    void test_tabGoesDownTheMapsLeadingColumnFirst()
+    {
+        QVERIFY2(openPreferences(), "the settings dialog never appeared");
+        QList<QWidget*> fields;
+        QStringList expected;
+        for (const bool trailing : {false, true}) {
+            for (const auto& [pLabel, pRow] : mapColumn(trailing)) {
+                fields.append(pLabel->buddy());
+                expected.append(pLabel->buddy()->objectName());
+            }
+        }
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        QStringList reached;
+        QWidget* pStop = fields.first();
+        for (int step = 0; step < 1000 && reached.size() < fields.size(); ++step, pStop = pStop->nextInFocusChain()) {
+            if (fields.contains(pStop)) {
+                reached.append(pStop->objectName());
+            }
+        }
+        QCOMPARE(reached, expected);
     }
 
     // However narrow the window is taken, the map's colours never need more
@@ -1130,7 +1157,9 @@ private slots:
     // 456px. Each card is to stay within 12px of that: the headings add a line
     // of words and a row gap (21px offscreen), and each of the 11 or 12 rows
     // gives back what its well was taller than 22px (1px offscreen, 2px under
-    // cocoa) - about 10px taller offscreen and level under cocoa.
+    // cocoa) - about 10px taller offscreen and level under cocoa. The wells
+    // stood the map's eight four to a column, where its leading column holds
+    // five, so that card is allowed one row more on top of that.
     void test_theColourCardsStayAsTallAsTheirWellsMadeThem()
     {
 #if !defined(Q_OS_MACOS)
@@ -1141,12 +1170,15 @@ private slots:
             QSKIP("the heights compared against were measured offscreen and under cocoa");
         }
         QVERIFY2(openPreferences(qsl("mainDisplay")), "the settings dialog never appeared");
-        const QList<std::tuple<QString, QGroupBox*, int>> cards{{qsl("mainDisplay"), mpPreferences->groupBox_displayColors, offscreen ? 434 : 448},
-                                                                {qsl("mapper"), mpPreferences->groupBox_mapperColors, offscreen ? 442 : 456}};
-        for (const auto& [page, pCard, before] : cards) {
+        const QList<std::tuple<QString, QGroupBox*, int, int>> cards{{qsl("mainDisplay"), mpPreferences->groupBox_displayColors, offscreen ? 434 : 448, 0},
+                                                                     {qsl("mapper"), mpPreferences->groupBox_mapperColors, offscreen ? 442 : 456, 1}};
+        for (const auto& [page, pCard, before, rowsAdded] : cards) {
             mpPreferences->setTab(page);
             qApp->processEvents();
-            QVERIFY2(qAbs(pCard->height() - before) <= 12, qPrintable(qsl("the '%1' card is %2px tall, where its wells made it %3px").arg(pCard->title()).arg(pCard->height()).arg(before)));
+            const int row = fieldOf(mpPreferences->pushButton_mapInfoBg)->parentWidget()->geometry().top() - fieldOf(mpPreferences->pushButton_background_color_2)->parentWidget()->geometry().top();
+            const int allowed = before + rowsAdded * row;
+            QVERIFY2(qAbs(pCard->height() - allowed) <= 12,
+                     qPrintable(qsl("the '%1' card is %2px tall, where its wells made it %3px and its rows add %4px").arg(pCard->title()).arg(pCard->height()).arg(before).arg(rowsAdded * row)));
         }
     }
 

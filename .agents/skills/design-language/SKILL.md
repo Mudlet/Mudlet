@@ -135,9 +135,9 @@ Adopted (styled through `uiDesign`, guarded by the tests below):
   Colors card and the Mapper's Map colors card are compact colour rows throughout, no Reset beside any
   (the card's "Reset all colors to default" stays): the card's own colours a label and a row to a pair
   in `PairGridLayout` - the Main display's read across, two pairs to a row and one to a row in the same
-  order; the map's read down (`ReadingOrder::DownColumns`), a leading column of four and a trailing one
-  holding the four see-through colours so their opacity boxes stand in one, side by side or the trailing
-  column under the leading one whole, never taking turns. Two to a row or one is decided by
+  order; the map's read down (`ReadingOrder::DownColumns`), a leading column holding the five see-through
+  colours (`setLeadingPairs(5)`) so their opacity boxes stand in one, and a trailing one of three, side by
+  side or the trailing column under the leading one whole, never taking turns. Two to a row or one is decided by
   `arrangeColourCards()` from the width the page gives the card with room kept for its scroll bar
   whether that is showing or not, plus `scmColourArrangementHysteresis` (4px) before an arrangement is
   taken up, and handed to the grid through `setPairsPerRow()`, so the same window always shows the same

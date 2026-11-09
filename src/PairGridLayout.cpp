@@ -102,6 +102,12 @@ void PairGridLayout::setReadingOrder(const ReadingOrder order)
     invalidate();
 }
 
+void PairGridLayout::setLeadingPairs(const qsizetype pairs)
+{
+    mLeadingPairs = pairs;
+    invalidate();
+}
+
 void PairGridLayout::setPairsPerRow(const PairsPerRow pairsPerRow)
 {
     if (pairsPerRow == mPairsPerRow) {
@@ -242,7 +248,10 @@ QList<QList<const PairGridLayout::Row*>> PairGridLayout::pairBlocks() const
 
 qsizetype PairGridLayout::leadingCount(const qsizetype pairs) const
 {
-    return mReadingOrder == ReadingOrder::DownColumns ? (pairs + 1) / 2 : pairs;
+    if (mReadingOrder != ReadingOrder::DownColumns) {
+        return pairs;
+    }
+    return mLeadingPairs < 0 ? (pairs + 1) / 2 : std::min(mLeadingPairs, pairs);
 }
 
 PairGridLayout::Columns PairGridLayout::pairColumns(const bool twoPairs) const

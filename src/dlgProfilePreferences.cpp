@@ -2711,7 +2711,7 @@ void dlgProfilePreferences::arrangeColourCards()
 void dlgProfilePreferences::reflowColourCards()
 {
     mDisplayColours = {{label_foreground_color, pushButton_foreground_color, &Host::mFgColor},
-                       {label_background_color, pushButton_background_color, &Host::mBgColor},
+                       {label_background_color, pushButton_background_color, &Host::mBgColor, true},
                        {label_command_line_foreground_color, pushButton_command_line_foreground_color, &Host::mCommandLineFgColor},
                        {label_command_line_background_color, pushButton_command_line_background_color, &Host::mCommandLineBgColor},
                        {label_command_foreground_color, pushButton_command_foreground_color, &Host::mCommandFgColor},
@@ -2733,16 +2733,16 @@ void dlgProfilePreferences::reflowColourCards()
                        {label_white, pushButton_white, &Host::mWhite},
                        {label_lWhite, pushButton_lWhite, &Host::mLightWhite}};
     constexpr qsizetype displayNamedCount = 6;
-    // Read down, the leading column and then the trailing one, which holds the four that may be see-through: their
-    // opacity boxes stand in one column, and the two columns go under one another whole
-    mMapColours = {{label_40, pushButton_background_color_2, &Host::mBgColor_2},
-                   {label_4, pushButton_roomBorderColor, &Host::mRoomBorderColor},
-                   {label_pushButton_roomCollisionBorderColor, pushButton_roomCollisionBorderColor, &Host::mRoomCollisionBorderColor},
-                   {label_39, pushButton_foreground_color_2, &Host::mFgColor_2},
+    // Read down, the leading column and then the trailing one, the two going under one another whole. The leading one
+    // holds the five that may be see-through, so their opacity boxes stand in one column
+    mMapColours = {{label_40, pushButton_background_color_2, &Host::mBgColor_2, true},
                    {label_mapInfoBg, pushButton_mapInfoBg, &Host::mMapInfoBg, true},
                    {label_upperLevelColor, pushButton_upperLevelColor, &Host::mUpperLevelColor, true},
                    {label_lowerLevelColor, pushButton_lowerLevelColor, &Host::mLowerLevelColor, true},
                    {label_mapGridColor, pushButton_mapGridColor, &Host::mMapGridColor, true},
+                   {label_4, pushButton_roomBorderColor, &Host::mRoomBorderColor},
+                   {label_pushButton_roomCollisionBorderColor, pushButton_roomCollisionBorderColor, &Host::mRoomCollisionBorderColor},
+                   {label_39, pushButton_foreground_color_2, &Host::mFgColor_2},
                    {label_17, pushButton_black_2, &Host::mBlack_2},
                    {label_49, pushButton_Lblack_2, &Host::mLightBlack_2},
                    {label_42, pushButton_red_2, &Host::mRed_2},
@@ -2760,6 +2760,7 @@ void dlgProfilePreferences::reflowColourCards()
                    {label_47, pushButton_white_2, &Host::mWhite_2},
                    {label_56, pushButton_Lwhite_2, &Host::mLightWhite_2}};
     constexpr qsizetype mapNamedCount = 8;
+    constexpr qsizetype mapLeadingCount = 5;
 
     // A field for every colour, at a colour well's height so a card of thirty colours stays short; the words are
     // nameColourControls()'s
@@ -2898,7 +2899,9 @@ void dlgProfilePreferences::reflowColourCards()
                                             .divider = {line_mapperColorsSeparator},
                                             .pConsoleColours = mpWidget_mapConsoleColours,
                                             .pFooterTrailing = reset_colors_button_2});
-    static_cast<uiDesign::PairGridLayout*>(mpWidget_mapColours->layout())->setReadingOrder(uiDesign::PairGridLayout::ReadingOrder::DownColumns);
+    auto* pMapGrid = static_cast<uiDesign::PairGridLayout*>(mpWidget_mapColours->layout());
+    pMapGrid->setReadingOrder(uiDesign::PairGridLayout::ReadingOrder::DownColumns);
+    pMapGrid->setLeadingPairs(mapLeadingCount);
     for (QWidget* pColours : {mpWidget_displayColours, mpWidget_mapColours}) {
         pColours->installEventFilter(this);
     }

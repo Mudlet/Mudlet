@@ -47,30 +47,54 @@ struct PreviewRoom
 {
     QPoint cell;
     QColor Host::* pFill = nullptr;
+    // Stands for two rooms on one spot, of which the map shows the top one, bordered whether borders are on or not
+    bool overlapping = false;
 };
 
-// No room under the info box's corner, which covers the top left as it does on the map
+// Each of the sixteen environment colours once, and no room under the info box's corner, which covers the top left
+// as it does on the map
 const QList<PreviewRoom>& rooms()
 {
-    static const QList<PreviewRoom> placed{{{4, 0}, &Host::mGreen_2},
+    static const QList<PreviewRoom> placed{{{3, 0}, &Host::mLightGreen_2},
+                                           {{4, 0}, &Host::mGreen_2},
                                            {{5, 0}, &Host::mYellow_2},
+                                           {{6, 0}, &Host::mLightYellow_2},
+                                           {{1, 1}, &Host::mLightBlue_2},
                                            {{2, 1}, &Host::mBlue_2},
                                            {{3, 1}, &Host::mMagenta_2},
                                            {{4, 1}, &Host::mCyan_2},
+                                           {{5, 1}, &Host::mLightCyan_2},
+                                           {{0, 2}, &Host::mLightRed_2},
                                            {{1, 2}, &Host::mRed_2},
                                            {{3, 2}, &Host::mWhite_2},
+                                           {{4, 2}, &Host::mLightWhite_2},
+                                           {{5, 2}, &Host::mLightMagenta_2, true},
+                                           {{2, 3}, &Host::mBlack_2},
                                            {{3, 3}, &Host::mLightBlack_2}};
     return placed;
 }
 
 const QList<std::pair<QPoint, QPoint>>& links()
 {
-    static const QList<std::pair<QPoint, QPoint>> joined{
-            {{4, 0}, {5, 0}}, {{4, 0}, {4, 1}}, {{2, 1}, {3, 1}}, {{3, 1}, {4, 1}}, {{3, 1}, {3, 2}}, {{2, 1}, {1, 2}}, {{3, 2}, {3, 3}}, {{4, 1}, {5, 2}}};
+    static const QList<std::pair<QPoint, QPoint>> joined{{{3, 0}, {4, 0}},
+                                                         {{4, 0}, {5, 0}},
+                                                         {{5, 0}, {6, 0}},
+                                                         {{3, 0}, {3, 1}},
+                                                         {{4, 0}, {4, 1}},
+                                                         {{1, 1}, {2, 1}},
+                                                         {{2, 1}, {3, 1}},
+                                                         {{3, 1}, {4, 1}},
+                                                         {{4, 1}, {5, 1}},
+                                                         {{2, 1}, {1, 2}},
+                                                         {{0, 2}, {1, 2}},
+                                                         {{3, 1}, {3, 2}},
+                                                         {{3, 2}, {4, 2}},
+                                                         {{4, 1}, {5, 2}},
+                                                         {{3, 2}, {3, 3}},
+                                                         {{2, 3}, {3, 3}}};
     return joined;
 }
 
-constexpr QPoint scmOverlappingCell{5, 2};
 constexpr QPoint scmLowerLevelCell{6, 1};
 constexpr QPoint scmUpperLevelCell{1, 3};
 
@@ -197,12 +221,8 @@ void MapColourPreview::paintEvent(QPaintEvent* pEvent)
     };
     const std::optional<QColor> roomBorder = host.mMapperShowRoomBorders ? std::optional<QColor>(host.mRoomBorderColor) : std::nullopt;
     for (const PreviewRoom& room : rooms()) {
-        drawRoom(roomAt(room.cell), host.*room.pFill, roomBorder);
+        drawRoom(roomAt(room.cell), host.*room.pFill, room.overlapping ? std::optional<QColor>(host.mRoomCollisionBorderColor) : roomBorder);
     }
-    // Two rooms on one spot, the second over the first, bordered whether borders are on or not
-    const QRectF overlapping = roomAt(scmOverlappingCell);
-    painter.fillRect(overlapping, host.mLightRed_2);
-    drawRoom(overlapping, host.mLightBlue_2, host.mRoomCollisionBorderColor);
 
     // Anchored at the top left, so both of its lines are on show however short the picture is
     QFont font = pHost->getDisplayFont();

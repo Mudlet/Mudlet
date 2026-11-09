@@ -477,13 +477,16 @@ colours; the map's background, borders, links, levels, info box and grid) are
 label-and-row pairs in `PairGridLayout`. The Main display's belong together a
 row at a time (Foreground beside Background), so they are read across: two
 pairs to a row, and one to a row in that same order. The map's are two columns
-read down (`ReadingOrder::DownColumns`): Background, Room border, Overlapping
-rooms border and Link leading, and the four that may be see-through - map info
-background, upper level, lower level, grid - trailing, so their opacity boxes
-form one column rather than appearing on alternate sides wherever the order put
-them. Where the two columns do not fit side by side the trailing one goes under
-the leading one whole; read across, the see-through colours were shuffled in
-among the others. Side by side each column is only as wide as its own labels
+read down (`ReadingOrder::DownColumns`): the five that may be see-through -
+background, map info background, upper level, lower level, grid - leading
+(`setLeadingPairs(5)`), and Room border, Overlapping rooms border and Link
+trailing, so the opacity boxes form one column and the buttons after them line
+up, rather than appearing on alternate sides wherever the order put them. The
+trailing column is two rows shorter, and the space under it stays empty. Where
+the two columns do not fit side by side the trailing one goes under the leading
+one whole; read across, the see-through colours were shuffled in among the
+others. The Main display's Background may be see-through as well and has the
+card's one opacity box. Side by side each column is only as wide as its own labels
 and rows, with 24px between the two (`setPairSpacing(scmFieldPairGap)`, the gap
 between the console colours' Normal and Light columns). With the sidebar's names
 beside them that takes a 944px window under cocoa in English, where the names

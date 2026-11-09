@@ -27,9 +27,9 @@ class Host;
 
 namespace uiDesign {
 
-// A small map drawn in the profile's map colours: rooms in the environment colours joined by links on the grid, a
-// room on the level below and one above, two rooms on one spot and the info box over its corner. Shows only; the
-// colours are read from the Host at every paint, so whoever changes one calls update().
+// A small map drawn in the profile's map colours: a room in each of the sixteen environment colours joined by links on
+// the grid, a room on the level below and one above, two rooms on one spot and the info box over its corner. Shows
+// only; the colours are read from the Host at every paint, so whoever changes one calls update().
 class MapColourPreview : public QWidget
 {
     Q_OBJECT
