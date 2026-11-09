@@ -412,6 +412,8 @@ private slots:
             mpMapper->slot_setShowGrid(showGrid);
             mpHost->mRoomSize = roomSize;
             mpHost->mLineSize = exitSize;
+            map()->announceMapperSettingChanged(TMap::MapperSetting::RoomSize);
+            map()->announceMapperSettingChanged(TMap::MapperSetting::ExitSize);
             pManager->closeAllViews();
         });
 
@@ -433,9 +435,12 @@ private slots:
         mpMapper->slot_setShowGrid(!showGrid);
         QCOMPARE(pViewMap->mShowGrid, !showGrid);
 
+        pViewMap->addSymbolToPixmapCache(qsl("test-key"), qsl("A"), Qt::white, false);
+        QVERIFY2(pViewMap->symbolPixmapCacheCount() > 0, "nothing was cached, so a flush would prove nothing");
         mpHost->mRoomSize = 1.2;
         map()->announceMapperSettingChanged(TMap::MapperSetting::RoomSize);
         QCOMPARE(pViewMap->rSize, 1.2);
+        QCOMPARE(pViewMap->symbolPixmapCacheCount(), 0);
         mpHost->mLineSize = 5.0;
         map()->announceMapperSettingChanged(TMap::MapperSetting::ExitSize);
         QCOMPARE(pViewMap->eSize, 5.0);

@@ -117,7 +117,12 @@ void TMapView::followMapperSettings()
     mp2dMap->mShowRoomID = mpHost->mShowRoomID;
     mp2dMap->mBubbleMode = mpHost->mBubbleMode;
     mp2dMap->mShowGrid = mpHost->mMapperShowGrid;
-    mp2dMap->rSize = mpHost->mRoomSize;
+    if (mp2dMap->rSize != mpHost->mRoomSize) {
+        // Symbols are cached at the size of the room they were drawn for
+        mp2dMap->flushSymbolPixmapCache();
+        mp2dMap->flushTextLabelPixmapCache();
+        mp2dMap->rSize = mpHost->mRoomSize;
+    }
     mp2dMap->eSize = mpHost->mLineSize;
     mp2dMap->mBSize = mpHost->mRoomBorderSize;
     mp2dMap->update();
