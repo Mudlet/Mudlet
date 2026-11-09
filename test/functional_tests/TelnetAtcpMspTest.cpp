@@ -433,6 +433,13 @@ private slots:
         feedAtcp("Client.Compose Note\ntyped draft");
         QCOMPARE(openComposers().size(), 1);
         dlgComposer* composer = openComposers().first();
+        composer->edit->moveCursor(QTextCursor::End);
+        QTest::keyClick(composer->edit, Qt::Key_Tab);
+        QTest::keyClick(composer->edit, Qt::Key_Backtab, Qt::ControlModifier | Qt::ShiftModifier);
+        QTest::qWait(100);
+        QCOMPARE(openComposers().size(), 1);
+        QVERIFY2(subnegotiationsFor(mpServer->received(), OPT_GMCP).isEmpty(), "Tab or Ctrl+Shift+Tab in the composer saved the draft");
+
         QTest::keyClick(composer->edit, Qt::Key_Backtab, Qt::ShiftModifier);
 
         QVERIFY2(QTest::qWaitFor(
@@ -441,7 +448,7 @@ private slots:
                          },
                          10s),
                  "Shift+Tab in the composer sent no GMCP message");
-        QCOMPARE(subnegotiationsFor(mpServer->received(), OPT_GMCP).first().payload, QByteArray("IRE.Composer.SetBuffer \"typed draft\""));
+        QCOMPARE(subnegotiationsFor(mpServer->received(), OPT_GMCP).first().payload, QByteArray("IRE.Composer.SetBuffer \"typed draft\t\""));
         QVERIFY2(QTest::qWaitFor(
                          []() {
                              return openComposers().isEmpty();
