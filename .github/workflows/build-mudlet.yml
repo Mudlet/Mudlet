@@ -80,6 +80,8 @@ jobs:
             gcc_compiler_version: 14
             qt: '6.11.3'
             ccache_id: ubuntu-clang
+          # Homebrew no longer bottles for Intel: this job pours the Sonoma bottles the image's frozen Homebrew still
+          # names (HOMEBREW_NO_AUTO_UPDATE), and uses the pcre2, sqlite, libzip and oniguruma the image preinstalls.
           # No tests: none branch on host architecture, so the arm64 job covers them on a faster pool.
           - os: macos-15-intel
             buildname: 'macos (x86_64)'
@@ -89,6 +91,8 @@ jobs:
             deploy: 'deploy'
             build_tests: 'false'
             pgo: 'true'
+          # macOS 15, not 26: bundled Homebrew libraries carry the minos of the macOS they were bottled for
+          # (15.0 here, 26.0 on macos-26), whatever CMAKE_OSX_DEPLOYMENT_TARGET says.
           - os: macos-15
             buildname: 'macos (arm64) / c++, lua tests'
             compiler: clang_64

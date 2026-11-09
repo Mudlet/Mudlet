@@ -51,6 +51,8 @@ jobs:
             # Enable AddressSanitizer for PTB and testing builds, but not release
             # builds (tagged Mudlet-*) - ASAN adds significant runtime overhead
             enable_asan: 'true'
+          # macOS 15, not 26: bundled Homebrew libraries carry the minos of the macOS they were bottled for
+          # (15.0 here, 26.0 on macos-26), whatever CMAKE_OSX_DEPLOYMENT_TARGET says.
           - os: macos-15
             buildname: 'macos (arm64) / c++, lua tests'
             compiler: clang_64
