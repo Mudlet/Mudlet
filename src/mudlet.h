@@ -467,8 +467,6 @@ public slots:
     void slot_minimize();
     void slot_newMapWindow();
     void updateWindowMenu();
-    void slot_activateMainWindow();
-    void slot_activateDetachedWindow();
     void slot_activateMainWindowProfile();
     void slot_activateDetachedWindowProfile();
     void slot_replay();
@@ -509,6 +507,7 @@ public slots:
     void slot_showUiTour();
     void slot_uiTourClosed();
     static void restoreProfileFocus(const QString& profileName);
+    static void bringWindowToFront(QWidget* window);
     static void setupEditorFocusRestoration(dlgTriggerEditor* pEditor, const QString& profileName, QWidget* targetWindow = nullptr);
     void setupNotepadFocusRestoration(dlgNotepad* pNotepad);
     void setupPackageManagerFocusRestoration(dlgPackageManager* pPackageManager);

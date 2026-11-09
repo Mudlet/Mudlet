@@ -3189,33 +3189,13 @@ void mudlet::updateWindowMenu()
     }
 }
 
-void mudlet::slot_activateMainWindow()
+// show() leaves a minimized window minimized; clearing just that bit keeps a maximized or full-screen state
+void mudlet::bringWindowToFront(QWidget* window)
 {
-    raise();
-    activateWindow();
-    show();             // Ensure it's not minimized
-    updateWindowMenu(); // Refresh checkmarks
-}
-
-void mudlet::slot_activateDetachedWindow()
-{
-    QAction* action = qobject_cast<QAction*>(sender());
-    if (!action) {
-        return;
-    }
-
-    QString profileName = action->data().toString();
-
-    if (mDetachedWindows.contains(profileName)) {
-        TDetachedWindow* detachedWindow = mDetachedWindows[profileName];
-
-        if (detachedWindow) {
-            detachedWindow->raise();
-            detachedWindow->activateWindow();
-            detachedWindow->show(); // Ensure it's not minimized
-            updateWindowMenu();     // Refresh checkmarks
-        }
-    }
+    window->setWindowState((window->windowState() & ~Qt::WindowMinimized) | Qt::WindowActive);
+    window->show();
+    window->raise();
+    window->activateWindow();
 }
 
 void mudlet::slot_activateMainWindowProfile()
@@ -3239,10 +3219,7 @@ void mudlet::slot_activateMainWindowProfile()
     }
 
     if (tabIndex >= 0) {
-        // Activate the main window first
-        raise();
-        activateWindow();
-        show(); // Ensure it's not minimized
+        bringWindowToFront(this);
 
         // Switch to the specific tab
         mpTabBar->setCurrentIndex(tabIndex);
@@ -3267,10 +3244,7 @@ void mudlet::slot_activateDetachedWindowProfile()
     // Find which detached window contains this profile
     for (const auto& detachedWindow : std::as_const(mDetachedWindows)) {
         if (detachedWindow && detachedWindow->getProfileNames().contains(profileName)) {
-            // Activate the detached window
-            detachedWindow->raise();
-            detachedWindow->activateWindow();
-            detachedWindow->show(); // Ensure it's not minimized
+            bringWindowToFront(detachedWindow);
 
             // Switch to the specific profile tab in the detached window
             detachedWindow->switchToProfile(profileName);
