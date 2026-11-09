@@ -4074,9 +4074,13 @@ int TLuaInterpreter::setExitStub(lua_State* L)
         lua_pushstring(L, "setExitStub: direction must be between 1 and 12");
         return lua_error(L);
     }
+    if (status && pR->hasExit(dir)) {
+        return warnArgumentValue(L, __func__, qsl("roomID %1 already has an exit in direction '%2', so it cannot have a stub there too").arg(QString::number(roomId), TRoom::dirCodeToString(dir)));
+    }
     pR->setExitStub(dir, status);
     host.mpMap->updateArea(pR->getArea());
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setExitWeightFilter
 // Function passed to setExitWeightFilter should return numeric exit weight (current or modified)
