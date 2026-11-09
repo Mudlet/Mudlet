@@ -233,9 +233,9 @@ successes):
   All of this is Linux/X11-only, and XTEST events work headlessly on Xvfb only; from a
   Wayland desktop it needs `QT_QPA_PLATFORM=xcb GDK_BACKEND=x11`.
 
-The `docker/` directory is a separate developer convenience (QtCreator-in-container); its
-Ubuntu 22.04 base only offers Qt 6.2 from apt, so it cannot build current Mudlet until it is
-modernised — do not reach for it in remote sessions.
+`docker/` (Mudlet or Qt Creator in a container) and `.devcontainer/` are separate developer
+conveniences, both built from `docker/Dockerfile` on Ubuntu 26.04 with Ubuntu's own Qt. They need
+a container runtime; in remote sessions use the hook-provisioned toolchain above instead.
 
 ## Pitfalls
 
