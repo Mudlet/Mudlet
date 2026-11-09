@@ -1142,7 +1142,7 @@ do
         -- a handler that errors never asked to stay, so it goes like one that returned nothing
         local ok, keepEvaluating = pcall(origFunc, ...)
         local failed, failure = not ok, keepEvaluating
-        local nextEvent = 1
+        local nextEvent, deferredFailure = 1, nil
         while ok and keepEvaluating and deferred[nextEvent] and handlerIdsToHandlers[eventHandlerId] do
           -- one that raises an event for every one it handles would otherwise never be done
           if nextEvent > maxDeferredEvents then
@@ -1154,13 +1154,17 @@ do
           nextEvent = nextEvent + 1
           ok, keepEvaluating = pcall(origFunc, unpack(args, 1, args.n))
           if not ok then
-            showHandlerError(args[1], keepEvaluating)
+            deferredFailure = args
           end
         end
         deferred = {}
         running = false
         if not (ok and keepEvaluating) then
           killAnonymousEventHandler(eventHandlerId)
+        end
+        -- reported only once cleaned up, as showHandlerError raises on an error that is not a string
+        if deferredFailure then
+          showHandlerError(deferredFailure[1], tostring(keepEvaluating))
         end
         if failed then
           error(failure, 0)

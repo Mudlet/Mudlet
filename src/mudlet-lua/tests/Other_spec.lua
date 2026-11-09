@@ -5012,6 +5012,33 @@ describe("Tests one-shot event handlers", function()
     assert.truthy(tostring(reported[1][2]):find("otherSpecOneShotRaisedFails failed", 1, true))
   end)
 
+  it("removes a one-shot handler when an event it raised fails with a non-string error", function()
+    -- like the C function, which raises on anything but a string
+    _G.showHandlerError = function(event, message)
+      assert(type(message) == "string", "showHandlerError: bad argument #2 type (error message as string expected)")
+      reported[#reported + 1] = {event, message}
+    end
+    local calls = 0
+    local id = registerAnonymousEventHandler("*", function(event)
+      if event == "otherSpecOneShotTableErrorOuter" then
+        raiseEvent("otherSpecOneShotTableErrorInner")
+        return true
+      end
+      if event == "otherSpecOneShotTableErrorInner" then
+        calls = calls + 1
+        error({})
+      end
+      return true
+    end, true)
+    raiseEvent("otherSpecOneShotTableErrorOuter")
+    raiseEvent("otherSpecOneShotTableErrorInner")
+
+    assert.is_nil(killAnonymousEventHandler(id))
+    assert.are.equal(1, calls)
+    assert.are.equal(1, #reported)
+    assert.are.equal("otherSpecOneShotTableErrorInner", reported[1][1])
+  end)
+
   it("drops the events a one-shot handler raised once it is killed", function()
     local calls = 0
     local id
