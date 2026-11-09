@@ -6132,6 +6132,29 @@ describe("Tests saveMap and loadMap", function()
       assert.are.same({4001}, getAllRoomEntrances(4002))
     end)
 
+    it("reads the rooms and areas that come after the environments", function()
+      local reorderedPath = getMudletHomeDir() .. "/mapper_spec_environments_first.xml"
+      finally(function() os.remove(reorderedPath) end)
+      local file = assert(io.open(reorderedPath, "w"))
+      file:write([[<?xml version="1.0" encoding="UTF-8"?>
+<map>
+  <environments>
+    <environment id="169" color="8"/>
+  </environments>
+  <areas><area id="4001" name="Mapper Spec Environments First Area"/></areas>
+  <rooms>
+    <room id="4001" area="4001" title="After The Environments" environment="169"><coord x="0" y="0" z="0"/></room>
+  </rooms>
+</map>
+]])
+      file:close()
+
+      assert.is_true(loadMap(reorderedPath))
+      assert.is_true(roomExists(importedRoomA))
+      assert.are.equal("After The Environments", getRoomName(importedRoomA))
+      assert.are.equal(4001, getAreaTable()["Mapper Spec Environments First Area"])
+    end)
+
     it("throws away the map that was there before the import", function()
       local stray = createRoomID()
       addRoom(stray)
