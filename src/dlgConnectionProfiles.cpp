@@ -45,6 +45,7 @@
 #include <QRegularExpression>
 #include <QDataStream>
 #include <QSaveFile>
+#include <QScrollBar>
 #include <QtConcurrentRun>
 #include <QtMath>
 #include <QtUiTools>
@@ -628,6 +629,9 @@ bool dlgConnectionProfiles::event(QEvent* event)
 {
     if (event->type() == QEvent::ApplicationFontChange || event->type() == QEvent::FontChange) {
         QMetaObject::invokeMethod(this, &dlgConnectionProfiles::resolveTabFonts, Qt::QueuedConnection);
+    }
+    if (event->type() == QEvent::StyleChange) {
+        QMetaObject::invokeMethod(this, &dlgConnectionProfiles::fitGamesListToItsColumns, Qt::QueuedConnection);
     }
     return QDialog::event(event);
 }
@@ -2108,11 +2112,30 @@ void dlgConnectionProfiles::fillout_form()
 // size it has at that moment.
 void dlgConnectionProfiles::showEvent(QShowEvent* pEvent)
 {
+    fitGamesListToItsColumns();
     if (mFitWelcomeMessagePending) {
         mFitWelcomeMessagePending = false;
         fitWelcomeMessageToContents();
     }
     QDialog::showEvent(pEvent);
+}
+
+// QListView wraps an icon row while the next cell would reach the bounds' last pixel, and takes the
+// scroll bar's width off those bounds whether or not the bar is up
+void dlgConnectionProfiles::fitGamesListToItsColumns()
+{
+    constexpr int columns = 3;
+    QListWidget* pList = listWidget_profiles;
+    QStyle* pStyle = pList->style();
+    int frameAroundContents = 0;
+    if (pStyle->styleHint(QStyle::SH_ScrollView_FrameOnlyAroundContents, nullptr, pList)) {
+        QStyleOption option;
+        option.initFrom(pList);
+        frameAroundContents = 2 * pStyle->pixelMetric(QStyle::PM_DefaultFrameWidth, &option, pList);
+    }
+    const int scrollBar = pStyle->pixelMetric(QStyle::PM_ScrollBarExtent, nullptr, pList->verticalScrollBar());
+    const int cellWidth = mpProfileChipDelegate->sizeHint(QStyleOptionViewItem(), QModelIndex()).width();
+    pList->setMinimumWidth(columns * cellWidth + 1 + 2 * pList->frameWidth() + scrollBar + frameAroundContents);
 }
 
 // A QTextBrowser reports the same size hint whatever it holds, so shrinking the

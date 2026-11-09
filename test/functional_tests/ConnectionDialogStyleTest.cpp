@@ -504,6 +504,45 @@ private slots:
         QVERIFY2(!pDialog->notificationArea->isVisible(), "a port of 23 is valid, and the notice about the invalid one is still up");
     }
 
+    // Three games to a row, at the size the dialog opens with and at the narrowest it can be dragged to
+    void test_theGamesListShowsThreeGamesToARow()
+    {
+        auto* pDialog = dialog();
+        auto* pTabBar = pDialog->findChild<QTabBar*>(qsl("gamesTabBar"));
+        QVERIFY(pTabBar);
+        const int shownTab = pTabBar->currentIndex();
+        auto restoreTab = qScopeGuard([pTabBar, shownTab]() {
+            pTabBar->setCurrentIndex(shownTab);
+        });
+        // All games
+        pTabBar->setCurrentIndex(1);
+        auto* pList = pDialog->listWidget_profiles;
+        QTRY_VERIFY2(pList->count() > 3, "SETUP: the All games tab lists too few games to fill a row");
+
+        const auto gamesOnTheFirstRow = [pList]() {
+            const int top = pList->visualRect(pList->model()->index(0, 0)).top();
+            int games = 0;
+            while (games < pList->count() && pList->visualRect(pList->model()->index(games, 0)).top() == top) {
+                ++games;
+            }
+            return games;
+        };
+        const auto report = [pDialog, pList]() {
+            return qsl("dialog %1px, list %2px, viewport %3px").arg(QString::number(pDialog->width()), QString::number(pList->width()), QString::number(pList->viewport()->width()));
+        };
+        QTRY_VERIFY2(gamesOnTheFirstRow() == 3, qPrintable(qsl("%1 games to the first row at the opening size: %2").arg(QString::number(gamesOnTheFirstRow()), report())));
+
+        const QSize opening = pDialog->size();
+        auto restoreSize = qScopeGuard([pDialog, opening]() {
+            pDialog->resize(opening);
+        });
+        pDialog->resize(1, pDialog->height());
+        QTRY_COMPARE(pDialog->width(), pDialog->minimumWidth());
+        QTRY_VERIFY2(gamesOnTheFirstRow() == 3, qPrintable(qsl("%1 games to the first row at the narrowest: %2").arg(QString::number(gamesOnTheFirstRow()), report())));
+        QVERIFY2(pList->width() == pList->minimumWidth(),
+                 qPrintable(qsl("SETUP: the list has %1px over its narrowest at the dialog's narrowest, so this checks nothing tight").arg(pList->width() - pList->minimumWidth())));
+    }
+
     void test_theGamesListChipsHaveRoundedCorners()
     {
         auto* pDialog = dialog();

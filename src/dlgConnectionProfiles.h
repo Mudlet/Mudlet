@@ -204,6 +204,7 @@ private:
     QPair<bool, QString> saveProfileDetail(const QString& profile, const QString& item, const QString& what);
     void showUnsavedChange(const QString& message, const QString& profile, const QString& item);
     void fitWelcomeMessageToContents();
+    void fitGamesListToItsColumns();
     void continueProfileSave(QListWidgetItem* pItem, const QString& newProfileName, const QString& newProfileHost, const QString& newProfilePort, const int newProfileSslTsl);
     void setItemName(QListWidgetItem*, const QString&) const;
     void setItemTooltip(QListWidgetItem*, const QString& description, const bool iconLoaded) const;

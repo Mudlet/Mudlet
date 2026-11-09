@@ -102,12 +102,6 @@
            </property>
            <item>
             <widget class="QListWidget" name="listWidget_profiles">
-             <property name="minimumSize">
-              <size>
-               <width>365</width>
-               <height>0</height>
-              </size>
-             </property>
              <property name="accessibleName">
               <string>profiles list</string>
              </property>
