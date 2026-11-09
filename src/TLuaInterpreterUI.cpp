@@ -2845,13 +2845,9 @@ int TLuaInterpreter::selectCaptureGroup(lua_State* L)
 
     if (lua_isnumber(L, 1)) {
         auto captureGroup = lua_tonumber(L, 1);
-        if (captureGroup < 1) {
-            lua_pushnumber(L, -1);
-            return 1;
-        }
         // We want capture groups to start with 1 instead of 0 so predecrement
         // luaNumOfMatch :
-        if (--captureGroup < static_cast<int>(pL->mCaptureGroups.size())) {
+        if (captureGroup >= 1 && --captureGroup < static_cast<int>(pL->mCaptureGroups.size())) {
             const auto offset = static_cast<std::size_t>(captureGroup);
             begin = pL->mCaptureGroupPosList[offset];
             length = pL->captureGroupLength(offset);
@@ -2870,6 +2866,8 @@ int TLuaInterpreter::selectCaptureGroup(lua_State* L)
         const int pos = host.selectMainConsoleSection(begin, length);
         lua_pushnumber(L, pos);
     } else {
+        // As selectString() does: a selection left over from earlier would be what fg() or replace() acts on next
+        host.deselectMainConsole();
         lua_pushnumber(L, -1);
     }
     return 1;
