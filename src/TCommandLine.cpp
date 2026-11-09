@@ -1149,7 +1149,8 @@ void TCommandLine::enterCommand(QKeyEvent* event)
     // Emit signal for hyperlink visibility triggers before processing the command
     emit commandSubmitted();
 
-    QStringList commandList = toPlainText().split(QChar::LineFeed);
+    const QString submitted = toPlainText();
+    QStringList commandList = submitted.split(QChar::LineFeed);
 
     for (QString& command : commandList) {
         if (mType != enums::MainCommandLine && mActionFunction) {
@@ -1166,30 +1167,36 @@ void TCommandLine::enterCommand(QKeyEvent* event)
         }
     }
 
+    // An alias that wrote to the line, say with printCmdLine(), left that for the player to finish,
+    // so it is neither cleared nor selected for the next keystroke to replace
+    const bool scriptWroteLine = toPlainText() != submitted;
+
     // A line typed past the hidden-input box stays out of the on-disk history
-    if (!toPlainText().isEmpty() && (!mpHost->isRemoteEchoingActive() || mpHost->disablePasswordMasking())) {
-        if (mpHost->mAutoClearCommandLineAfterSend) {
+    if (!submitted.isEmpty() && (!mpHost->isRemoteEchoingActive() || mpHost->disablePasswordMasking())) {
+        if (mpHost->mAutoClearCommandLineAfterSend || scriptWroteLine) {
             mHistoryBuffer = 0;
         } else {
             mHistoryBuffer = 1;
         }
 
-        TCommandHistory::add(mHistoryList, toPlainText());
+        TCommandHistory::add(mHistoryList, submitted);
     }
 
-    if (mpHost->mAutoClearCommandLineAfterSend) {
+    if (!scriptWroteLine) {
+        if (mpHost->mAutoClearCommandLineAfterSend) {
 #if defined(Q_OS_MACOS)
-        // clearing the input line on macOS 11.6 makes VoiceOver announce the removed text,
-        // essentially re-announcing everything we've typed. This workaround fixes this behaviour
-        // and does not seem to negatively affect other platforms
-        hide();
+            // clearing the input line on macOS 11.6 makes VoiceOver announce the removed text,
+            // essentially re-announcing everything we've typed. This workaround fixes this behaviour
+            // and does not seem to negatively affect other platforms
+            hide();
 #endif
-        clear();
+            clear();
 #if defined(Q_OS_MACOS)
-        show();
+            show();
 #endif
-    } else {
-        selectAll();
+        } else {
+            selectAll();
+        }
     }
     adjustHeight();
 }

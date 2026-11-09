@@ -432,6 +432,40 @@ private slots:
         QCOMPARE(pCleared->toPlainText(), QString());
     }
 
+    // An alias that fills the line in for the player, like "t bob" writing
+    // "tell bob ", must not have that cleared, or selected for the next key
+    // to replace, and the history keeps what the player typed.
+    void test_textAnAliasWritesIsLeftForThePlayerToFinish_data()
+    {
+        QTest::addColumn<bool>("autoClear");
+        QTest::newRow("kept after send") << false;
+        QTest::newRow("cleared after send") << true;
+    }
+
+    void test_textAnAliasWritesIsLeftForThePlayerToFinish()
+    {
+        QFETCH(bool, autoClear);
+        mpHost->mAutoClearCommandLineAfterSend = autoClear;
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY(runLua(qsl("specPrefillAlias = tempAlias([[^specPrefill (\\w+)$]], [[printCmdLine('%1', 'tell ' .. matches[2] .. ' ')]])").arg(mLineName)));
+        const auto killPrefillAlias = qScopeGuard([this] {
+            runLua(qsl("killAlias(specPrefillAlias)"));
+        });
+
+        type(pCommandLine, qsl("specPrefill bob"));
+        press(pCommandLine, Qt::Key_Return);
+
+        QCOMPARE(pCommandLine->toPlainText(), qsl("tell bob "));
+        QCOMPARE(selection(pCommandLine), QString());
+        type(pCommandLine, qsl("hi"));
+        QCOMPARE(pCommandLine->toPlainText(), qsl("tell bob hi"));
+
+        setText(pCommandLine, QString());
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("specPrefill bob"));
+    }
+
     // Up walks back through what was sent, Down comes forward again, and the
     // walk stops at the oldest entry rather than running off the end.
     void test_upAndDownWalkTheCommandHistory()
