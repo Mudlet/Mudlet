@@ -243,7 +243,7 @@ describe("Tests the functionality of gmod.reenableModules", function()
       sendGMCP:revert()
       _G.gmcp = saved
     end)
-    raiseEvent("sysProtocolEnabled", "GMCP")
+    gmod.reenableModules()
     assert.spy(sg).was_called_with(match.has_match("Core.Supports.Add .*" .. module .. " 1"))
   end)
 
