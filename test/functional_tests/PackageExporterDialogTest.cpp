@@ -805,6 +805,32 @@ private slots:
         QVERIFY2(exportButton()->isEnabled(), "the Export button stayed disabled after the package was named");
     }
 
+    // The name is the staging folder the export wipes first, so "../<folder>" would wipe a folder beside it
+    void test_exportRefusesANameThatStepsOutOfItsStagingFolder()
+    {
+        const QString outsideName = packageNamed(qsl("exporter-outside-staging"));
+        const QString outsideDir = qsl("%1/%2").arg(QStandardPaths::writableLocation(QStandardPaths::TempLocation), outsideName);
+        QVERIFY(QDir().mkpath(outsideDir));
+        const QString keptFile = qsl("%1/keep.txt").arg(outsideDir);
+        QFile keep(keptFile);
+        QVERIFY(keep.open(QIODevice::WriteOnly));
+        keep.close();
+
+        makeTrigger(qsl("exporter traversal trigger"), nullptr);
+        openExporter();
+        QVERIFY(checkItem(triggersTop(), qsl("exporter traversal trigger")));
+
+        for (const QString& badName : {qsl("../%1").arg(outsideName), qsl(".."), qsl("."), qsl("sub\\name")}) {
+            nameField()->setText(badName);
+            mpExporter->slot_exportPackage();
+            QVERIFY(waitForExportToSettle());
+            QVERIFY2(infoLabel()->text().contains(qsl("The name cannot be")), qPrintable(qsl("\"%1\" was not refused, the label held: \"%2\"").arg(badName, infoLabel()->text())));
+        }
+        const bool kept = QFileInfo::exists(keptFile);
+        QDir(outsideDir).removeRecursively();
+        QVERIFY2(kept, "exporting under a name that steps out of the staging folder wiped a folder outside it");
+    }
+
     // Names come off the property, as an unnamed combo box is announced by its current
     // item; descriptions off the accessible interface, where a placeholder stands in
     void test_theUnlabelledFieldsAreNamedForAScreenReader_8227()
