@@ -766,6 +766,14 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     if (mType == MainConsole) {
         // All console control buttons should only be on MainConsole
         layoutButtonLayer->addWidget(mpBufferSearchBox);
+        // Ctrl+F leads here from the command line, so Escape leads back without reaching for the mouse
+        auto* pShortcut_leaveSearch = new QShortcut(QKeySequence(Qt::Key_Escape), mpBufferSearchBox);
+        pShortcut_leaveSearch->setContext(Qt::WidgetShortcut);
+        connect(pShortcut_leaveSearch, &QShortcut::activated, this, [this]() {
+            if (mpCommandLine) {
+                mpCommandLine->setFocus(Qt::ShortcutFocusReason);
+            }
+        });
         layoutButtonLayer->addWidget(mpBufferSearchUp);
         layoutButtonLayer->addWidget(mpBufferSearchDown);
         layoutButtonLayer->addWidget(timeStampButton);
