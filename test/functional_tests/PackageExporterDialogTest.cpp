@@ -1209,6 +1209,41 @@ private slots:
         QVERIFY2(QFileInfo::exists(qsl("%1/%2/.mudlet/Icon/badge.png").arg(profileHome(), rebuiltName)), "the icon file did not survive the round trip");
     }
 
+    // The dropdown offers installed modules as well, whose details are kept apart from packages'
+    void test_choosingAnInstalledModuleFillsTheFormFromItsDetails()
+    {
+        const QString existingModule = qsl("exporter-existing-module");
+        auto* member = makeTrigger(qsl("exporter module member"), nullptr);
+        member->mPackageName = existingModule;
+
+        mpHost->mInstalledModules[existingModule] = QStringList{qsl("%1/%2.mpackage").arg(mExportDir, existingModule), qsl("0")};
+        mpHost->mModuleInfo[existingModule] = QMap<QString, QString>{{qsl("mpackage"), existingModule},
+                                                                     {qsl("author"), qsl("The Module Author")},
+                                                                     {qsl("title"), qsl("The module summary")},
+                                                                     {qsl("version"), qsl("2.1")},
+                                                                     {qsl("helpURL"), qsl("https://example.org/module")},
+                                                                     {qsl("dependencies"), qsl("some-dependency")}};
+
+        openExporter();
+        auto* packageList = comboNamed(qsl("packageList"));
+        const int index = packageList->findText(existingModule);
+        QVERIFY2(index > 0, "the installed module was not offered in the dropdown");
+        packageList->setCurrentIndex(index);
+
+        QCOMPARE(nameField()->text(), existingModule);
+        QCOMPARE(lineEditNamed(qsl("lineEdit_author"))->text(), qsl("The Module Author"));
+        QCOMPARE(lineEditNamed(qsl("lineEdit_title"))->text(), qsl("The module summary"));
+        QCOMPARE(lineEditNamed(qsl("lineEdit_version"))->text(), qsl("2.1"));
+        QCOMPARE(lineEditNamed(qsl("lineEdit_helpUrl"))->text(), qsl("https://example.org/module"));
+        auto* dependencies = comboNamed(qsl("comboBox_dependencies"));
+        QCOMPARE(dependencies->count(), 1);
+        QCOMPARE(dependencies->itemText(0), qsl("some-dependency"));
+        QCOMPARE(itemNamed(triggersTop(), qsl("exporter module member"))->checkState(0), Qt::Checked);
+
+        mpHost->mInstalledModules.remove(existingModule);
+        mpHost->mModuleInfo.remove(existingModule);
+    }
+
     // The dialog is not modal, so the editor or a script can delete an item it
     // lists while it is open; that item is then simply not there to export.
     void test_itemsDeletedWhileTheDialogIsOpenAreLeftOutOfTheExport()
