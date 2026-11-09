@@ -438,8 +438,7 @@ private slots:
         QCOMPARE(pDlg->checkBox_hidden->checkState(), Qt::PartiallyChecked);
     }
 
-    // A screen reader takes a field's name from its buddy label or an
-    // accessible name; these fields had neither, so each was read as just "edit"
+    // Without a buddy label or an accessible name a screen reader reads a field as just "edit"
     void everyRoomFieldHasAScreenReaderName()
     {
         buildMap();
