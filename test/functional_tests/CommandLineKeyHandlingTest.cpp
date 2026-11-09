@@ -434,7 +434,7 @@ private slots:
 
     // An alias that fills the line in for the player, like "t bob" writing
     // "tell bob ", must not have that cleared, or selected for the next key
-    // to replace, and the history keeps what the player typed.
+    // to replace.
     void test_textAnAliasWritesIsLeftForThePlayerToFinish_data()
     {
         QTest::addColumn<bool>("autoClear");
@@ -452,8 +452,6 @@ private slots:
         const auto killPrefillAlias = qScopeGuard([this] {
             runLua(qsl("killAlias(specPrefillAlias)"));
         });
-        // An older entry, so Up landing one past the newest would show
-        sendCommand(pCommandLine, qsl("specOlderCommand"));
 
         type(pCommandLine, qsl("specPrefill bob"));
         press(pCommandLine, Qt::Key_Return);
@@ -462,15 +460,6 @@ private slots:
         QCOMPARE(selection(pCommandLine), QString());
         type(pCommandLine, qsl("hi"));
         QCOMPARE(pCommandLine->toPlainText(), qsl("tell bob hi"));
-
-        // Up straight away, as typing resets the walk: the line is a fresh one,
-        // so the first step back is the command just sent
-        mpHost->mHighlightHistory = false;
-        setText(pCommandLine, QString());
-        type(pCommandLine, qsl("specPrefill ann"));
-        press(pCommandLine, Qt::Key_Return);
-        press(pCommandLine, Qt::Key_Up);
-        QCOMPARE(pCommandLine->toPlainText(), qsl("specPrefill ann"));
     }
 
     // Writing back the very text that was sent still counts as the script's

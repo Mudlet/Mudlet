@@ -1149,9 +1149,8 @@ void TCommandLine::enterCommand(QKeyEvent* event)
     // Emit signal for hyperlink visibility triggers before processing the command
     emit commandSubmitted();
 
-    const QString submitted = toPlainText();
     const int revisionAtSubmit = document()->revision();
-    QStringList commandList = submitted.split(QChar::LineFeed);
+    QStringList commandList = toPlainText().split(QChar::LineFeed);
 
     for (QString& command : commandList) {
         if (mType != enums::MainCommandLine && mActionFunction) {
@@ -1173,14 +1172,14 @@ void TCommandLine::enterCommand(QKeyEvent* event)
     const bool scriptWroteLine = document()->revision() != revisionAtSubmit;
 
     // A line typed past the hidden-input box stays out of the on-disk history
-    if (!submitted.isEmpty() && (!mpHost->isRemoteEchoingActive() || mpHost->disablePasswordMasking())) {
-        if (mpHost->mAutoClearCommandLineAfterSend || scriptWroteLine) {
+    if (!toPlainText().isEmpty() && (!mpHost->isRemoteEchoingActive() || mpHost->disablePasswordMasking())) {
+        if (mpHost->mAutoClearCommandLineAfterSend) {
             mHistoryBuffer = 0;
         } else {
             mHistoryBuffer = 1;
         }
 
-        TCommandHistory::add(mHistoryList, submitted);
+        TCommandHistory::add(mHistoryList, toPlainText());
     }
 
     if (!scriptWroteLine) {

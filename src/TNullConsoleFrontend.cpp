@@ -2216,7 +2216,6 @@ void TNullConsoleFrontend::addMainCommandLineHistory(const QString& sent)
 {
     // The line as it stands, which an alias that clears it leaves nothing of
     const QString command = mMainCommandLineRewritten ? mpHost->windowRegistry().commandLineText(QString()).value_or(QString()) : sent;
-    mMainCommandLineRewritten = false;
     // As TCommandLine::enterCommand(), past the hidden-input box
     if (command.isEmpty() || !mMainCommandLine.writer || (mpHost->isRemoteEchoingActive() && !mpHost->disablePasswordMasking())) {
         return;
@@ -2332,6 +2331,10 @@ bool TNullConsoleFrontend::holdMainCommandLineForSend(const QString& line)
 
 void TNullConsoleFrontend::mainCommandLineSent()
 {
+    // TCommandLine::enterCommand() leaves a line the aliases wrote to the player
+    if (std::exchange(mMainCommandLineRewritten, false)) {
+        return;
+    }
     // TCommandLine::enterCommand() selects a line it keeps
     if (!mpHost->mAutoClearCommandLineAfterSend) {
         mMainCommandLineAllSelected = true;

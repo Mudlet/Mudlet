@@ -3789,7 +3789,8 @@ registerAnonymousEventHandler("sysDataSendRequest", function(_, command) hiddenS
         QVERIFY(session.shutdown(false));
     }
 
-    // As the GUI's command line holds what it sends while its aliases run, then empties if the profile says so
+    // As the GUI's command line holds what it sends while its aliases run, then empties if the profile says so,
+    // unless an alias wrote to it
     void test_aSubmittedLineIsClearedAsTheProfileSays_data()
     {
         QTest::addColumn<bool>("autoClear");
@@ -3820,12 +3821,11 @@ registerAnonymousEventHandler("sysDataSendRequest", function(_, command) hiddenS
         QCOMPARE(luaGlobalString(session.host(), "headlessHeld"), qsl("headless alias"));
         QVERIFY(session.runLua(qsl("headlessAfter = '[' .. getCmdLine() .. ']'")));
         if (autoClear) {
-            QCOMPARE(texts(), (QStringList{qsl("a"), QString(), qsl("b"), qsl("set by the alias"), QString()}));
-            QCOMPARE(luaGlobalString(session.host(), "headlessAfter"), qsl("[]"));
+            QCOMPARE(texts(), (QStringList{qsl("a"), QString(), qsl("b"), qsl("set by the alias")}));
         } else {
             QCOMPARE(texts(), (QStringList{qsl("a"), qsl("xb"), qsl("set by the alias")}));
-            QCOMPARE(luaGlobalString(session.host(), "headlessAfter"), qsl("[set by the alias]"));
         }
+        QCOMPARE(luaGlobalString(session.host(), "headlessAfter"), qsl("[set by the alias]"));
         QVERIFY(session.shutdown(false));
     }
 
