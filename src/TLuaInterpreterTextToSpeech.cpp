@@ -98,13 +98,13 @@ static void raiseSpeechStartedEvent(const QString& text)
 
 // Trimmed after the brackets go, so markup-only text such as "<>" is caught
 // by the empty-text refusal: an engine given nothing to say stalls the queue.
-static QString textToSpeak(lua_State* L, QString text)
+static QString textToSpeak(lua_State* L, QString text, const bool reportRemoval = true)
 {
     std::vector<QString> const dontSpeak = {"<", ">", "&lt;", "&gt;"}; // discussion: https://github.com/Mudlet/Mudlet/issues/4689
     for (const QString& dropThis : dontSpeak) {
         if (text.contains(dropThis)) {
             text.replace(dropThis, QString());
-            if (TDebug::wants(TDebug::Category::LuaWarning)) {
+            if (reportRemoval && TDebug::wants(TDebug::Category::LuaWarning)) {
                 auto& host = getHostFromLua(L);
                 TDebug(Qt::white, Qt::darkGreen, TDebug::Category::LuaWarning) << "LUA: removed angle-shaped brackets (<>) from text to speak (TTS)\n" >> &host;
             }
@@ -448,13 +448,13 @@ int TLuaInterpreter::ttsQueue(lua_State* L)
     // the empty-input refusal has to stay ahead of the argument #2 check, as it
     // did before, or ttsQueue("", <bad index>) would raise instead of returning
     // nil and a message
-    const QString inputText = textToSpeak(L, QString{lua_tostring(L, 1)});
-    if (inputText.isEmpty()) { // there's nothing more to say. discussion: https://github.com/Mudlet/Mudlet/issues/4688
+    if (textToSpeak(L, QString{lua_tostring(L, 1)}, false).isEmpty()) { // there's nothing more to say. discussion: https://github.com/Mudlet/Mudlet/issues/4688
         return warnArgumentValue(L, __func__, qsl("skipped empty text to speak (TTS)"));
     }
     if (lua_gettop(L) > 1 && !checkIntArg(L, __func__, 2, "index")) {
         return lua_error(L);
     }
+    const QString inputText = textToSpeak(L, QString{lua_tostring(L, 1)});
 
     int index;
     if (lua_gettop(L) > 1) {
