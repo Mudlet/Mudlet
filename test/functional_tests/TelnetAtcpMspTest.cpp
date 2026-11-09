@@ -436,6 +436,8 @@ private slots:
         composer->edit->moveCursor(QTextCursor::End);
         QTest::keyClick(composer->edit, Qt::Key_Tab);
         QTest::keyClick(composer->edit, Qt::Key_Backtab, Qt::ControlModifier | Qt::ShiftModifier);
+        // macOS reports the physical Ctrl key as Meta
+        QTest::keyClick(composer->edit, Qt::Key_Backtab, Qt::MetaModifier | Qt::ShiftModifier);
         QTest::qWait(100);
         QCOMPARE(openComposers().size(), 1);
         QVERIFY2(subnegotiationsFor(mpServer->received(), OPT_GMCP).isEmpty(), "Tab or Ctrl+Shift+Tab in the composer saved the draft");
