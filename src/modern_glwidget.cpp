@@ -42,9 +42,9 @@
 #include "TEvent.h"
 #include "TMainConsole.h"
 #include "TMap.h"
+#include "TMapPainter.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
-#include "dlgMapper.h"
 #include "mudlet.h"
 
 #include <QtEvents>
@@ -818,7 +818,7 @@ void ModernGLWidget::paintGL()
     if (infoBackground != mpHost->mMapInfoBg && style.infoTextColor.isValid()) {
         infoColor = style.infoTextColor;
     }
-    const int infoBottom = dlgMapper::paintMapInfo(mFrameTimer, painter, mpHost, mpMap, mRID, mAID, 0, infoColor, 10, 10, width(), mFontHeight, infoBackground, style.labelFontFamily);
+    const int infoBottom = TMapPainter::paintMapInfo(mFrameTimer, painter, mpHost, mpMap, mRID, mAID, 0, infoColor, 10, 10, width(), mFontHeight, infoBackground, style.labelFontFamily);
     paintScannerOverlay(painter, infoBottom > 10 ? infoBottom : 0);
 
     if (mRectangleSelecting) {

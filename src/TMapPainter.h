@@ -28,29 +28,33 @@
 #include <QCache>
 #include <QColor>
 #include <QFont>
+#include <QGradient>
 #include <QList>
 #include <QMap>
 #include <QPixmap>
 #include <QPoint>
 #include <QPointF>
+#include <QRectF>
 #include <QSet>
 #include <QSize>
 #include <QString>
 
+#include <functional>
 #include <optional>
 #include <utility>
 
 class Host;
+class QElapsedTimer;
 class QLineF;
 class QObject;
 class QPainter;
 class QPen;
 class QRect;
-class QRectF;
 class TArea;
 class TMap;
 class TMapLabel;
 class TRoom;
+struct MapInfoProperties;
 
 // What a TMapPainter draws: the map, which part of it and at what size, and the state of the view that marks it.
 // The fields keep the names of T2DMap's members they are copied from, so the drawing code reads them unchanged.
@@ -79,6 +83,44 @@ struct TMapPainterView
     bool mBubbleMode = false;
     bool mMapperUseAntiAlias = true;
     bool mLargeAreaExitArrows = false;
+    double eSize = 3.0;
+    // The room the view was last centred on, and whether it has since been panned away from the player
+    int mRoomID = 0;
+    bool mShiftMode = false;
+    qreal mMapCenterX = 0.0;
+    qreal mMapCenterY = 0.0;
+    // A secondary view does not follow the player
+    bool mIsSecondaryView = false;
+    // The area sysMapAreaChanged was last raised for
+    int mLastViewedAreaID = -2;
+    qreal xyzoom = 0.0;
+    float xspan = 0.0f;
+    float yspan = 0.0f;
+    // The room size the symbol and label pixmaps were cached at
+    float mPrevRoomWidth = 0.0f;
+    float mPrevRoomHeight = 0.0f;
+    // The TArea::getRoomsVersion() mMaxRoomIdDigits was counted at
+    quint32 mCachedRoomIdDigitsVersion = 0;
+    bool mDrawUpperLowerLevels = false;
+    bool mShowGrid = false;
+    bool mRoomBeingMoved = false;
+    // The rectangle being dragged out, to select rooms or to size a label
+    bool mMultiSelection = false;
+    bool mSizeLabel = false;
+    QRectF mMultiRect;
+    int mMultiSelectionHighlightRoomId = 0;
+    // The selection's room list, which the map info box is drawn to the right of
+    bool mSelectionListVisible = false;
+    int mSelectionListX = 0;
+    int mSelectionListWidth = 0;
+    QGradientStops mPlayerRoomColorGradientStops;
+    // Leaves an empty map's area blank rather than saying why
+    bool mSuppressEmptyStateMessage = false;
+    QString mHelpMsg;
+    int mFontHeight = 20;
+    bool isCenterViewCall = false;
+    // Drawn over the map but under the map info box
+    std::function<void(QPainter&)> mPaintBelowInfoBox;
     // A click at mPHighlight that the drawing of a room resolves: it clears mPick, and mStartSpeedWalk when the
     // room it lands on is one to speedwalk to
     QPoint mPHighlight;
@@ -103,6 +145,45 @@ public:
 
     void setView(const View& view) { static_cast<View&>(*this) = view; }
     const View& view() const { return *this; }
+
+    // What painting a view resolved, for its caller to act on: no Lua runs in here but the map info contributors'
+    struct PaintResult
+    {
+        // The view as the frame left it: centred on the player, zoomed to the area's zoom, the click used up
+        View view;
+        // The area shown changed, from the second to the first: the caller raises sysMapAreaChanged
+        std::optional<std::pair<int, int>> areaChanged;
+        // A click to speedwalk from the first room to the second
+        std::optional<std::pair<int, int>> pendingSpeedWalk;
+        // Rooms outside the area now shown left the selection, so its room list is stale
+        bool selectionPruned = false;
+        int lodExitIndexRoomsHandedOver = -1;
+    };
+    // Paints the whole view, the map info box included, at view.mSize. viewSettled is handed the frame's view just
+    // before the info box's contributors run, so the Lua they run can read this frame's area and zoom from its caller.
+    void paintView(QPainter&, const View&, PaintResult&, const std::function<void(const View&)>& viewSettled = {});
+    // Returns where the box ends, down from the top
+    static int paintMapInfo(const QElapsedTimer& renderTimer,
+                            QPainter& painter,
+                            Host* pHost,
+                            TMap* pMap,
+                            int roomID,
+                            int displayAreaId,
+                            int selectionSize,
+                            QColor& infoColor,
+                            int xOffset,
+                            int yOffset,
+                            int widgetWidth,
+                            int fontHeight,
+                            // Invalid for the profile's info box background
+                            const QColor& background = QColor(),
+                            // Empty for the profile's display font's
+                            const QString& fontFamily = QString());
+    static int paintMapInfoContributor(QPainter& painter, int xOffset, int yOffset, const MapInfoProperties& properties, QColor bgColor, int fontHeight, int widgetWidth);
+    // Whether any selected room was dropped
+    static bool pruneSelectionToArea(TMap*, QSet<int>& selection, int& highlightRoomId, int areaId);
+    // The selected room nearest the selection's mean position, 0 when none is left
+    static int selectionCentreRoom(TMap*, const QSet<int>& selection);
 
     // A highlight reaches over the rooms around it but stays under their symbols, ids, names and exit markers, so
     // with one in view every room's body is drawn first, then the highlights, then everything else.
@@ -240,6 +321,8 @@ public:
     int lodExitIndexRoomsHandedOver() const { return mLodExitIndexRoomsHandedOver; }
 
 private:
+    void paintFrame(QPainter&, PaintResult&, const std::function<void(const View&)>& viewSettled);
+    void resolveAreaExitClick(QPainter&, const QMap<int, QPointF>& areaExitsMap, const int speedWalkStartRoomId);
     static std::pair<bool, QString> performImageSave(const QPixmap& pixmap, const QString& filePath, const QString& format);
     int width() const { return mSize.width(); }
     int height() const { return mSize.height(); }
@@ -248,7 +331,10 @@ private:
     int mLodExitIndexRoomsHandedOver = -1;
 
     QCache<QString, QPixmap> mSymbolPixmapCache;
+    // The round-room setting the symbol pixmaps were drawn for
+    bool mCachedBubbleMode = false;
     ushort mSymbolFontSize = 1;
+    QFont mMapSymbolFont;
 
     struct LabelPixmapKey
     {
