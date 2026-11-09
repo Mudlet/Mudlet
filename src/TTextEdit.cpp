@@ -3267,7 +3267,11 @@ void TTextEdit::wheelEvent(QWheelEvent* e)
         used = true;
     }
 
-    // Space for future use of xDelta
+    if (xDelta != 0 && mpConsole->mHScrollBarEnabled && !mpConsole->mpHScrollBar->isHidden()) {
+        // A positive delta is a tilt or swipe to the left
+        mpConsole->mpHScrollBar->setValue(mpConsole->mpHScrollBar->value() - xDelta);
+        used = true;
+    }
 
     e->setAccepted(used);
 }
