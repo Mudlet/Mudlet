@@ -766,13 +766,12 @@ describe("Downloads and HTTP verbs against the local fixture server", function()
       if noFixtureServer() then
         return
       end
-      -- a binary part of a multipart form, say; the echo's Content-Length shows what went on the wire
-      local data = "a\0b\255c"
-      assert.is_true(postHTTP(data, fixtureUrl("/echo")))
+      -- a binary part of a multipart form, say
+      assert.is_true(postHTTP("a\0b\255c", fixtureUrl("/echo")))
 
       local event, _, body = waitForEvent("sysPostHttpDone", 2000)
       assert.equals("sysPostHttpDone", event)
-      assert.is_true(contains(body, "header:content-length=" .. #data .. "\n"), body)
+      assert.is_true(contains(body, "bodyhex=610062ff63\n"), body)
     end)
 
     it("raises sysPostHttpError when the endpoint refuses the verb", function()
