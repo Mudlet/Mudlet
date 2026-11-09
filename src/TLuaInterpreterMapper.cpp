@@ -3122,9 +3122,11 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
     auto& host = getHostFromLua(L);
     // Host is non-copyable and the lambda copies its captures.
     auto* pHost = &host;
+    // L may be a coroutine, which can be suspended or collected by the time the map paints
+    lua_State* globalL = host.getLuaInterpreter()->getLuaGlobalState();
     host.mpMap->mMapInfoContributorManager->registerContributor(
             name,
-            [=](int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor) {
+            [=, L = globalL](int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor) {
                 Q_UNUSED(infoColor)
                 const ScriptCallerScope callerScope(*pHost->getLuaInterpreter(), false);
                 const int callerStackTop = lua_gettop(L);
@@ -3171,7 +3173,7 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
                 lua_settop(L, callerStackTop);
                 return MapInfoProperties{isBold, isItalic, text, color};
             },
-            L,
+            globalL,
             callback);
 
     host.mpMap->updateArea(-1);
