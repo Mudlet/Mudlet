@@ -231,19 +231,17 @@ describe("Tests the functionality of gmod.reenableModules", function()
     gmcp.BustedReenableProbe = nil
   end)
 
-  it("Should send nothing while the gmcp table is still empty", function()
-    -- reenableModules is driven by sysProtocolEnabled, which can fire before
-    -- the server has sent any GMCP at all
-    if next(gmcp) then
-      -- the profile or an earlier spec left GMCP data behind, so the guard
-      -- this test is about cannot be reached
-      pending("the gmcp table is not empty in this profile")
-    end
+  it("Should announce modules enabled before GMCP came up, while the gmcp table is still empty", function()
+    -- a module enabled at profile load or on sysConnectionEvent could not be sent then,
+    -- and sysProtocolEnabled fires before the server has sent any GMCP at all
+    local saved = gmcp
+    _G.gmcp = {}
+    finally(function() _G.gmcp = saved end)
     gmod.enableModule(user, module)
     local sg = spy.on(_G, "sendGMCP")
     finally(function() sendGMCP:revert() end)
     gmod.reenableModules()
-    assert.spy(sg).was_not_called()
+    assert.spy(sg).was_called_with(match.has_match("Core.Supports.Add .*" .. module .. " 1"))
   end)
 
   it("Should re-announce every registered module once GMCP data has arrived", function()

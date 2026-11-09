@@ -85,13 +85,10 @@ function enableModule(user, module)
 end
 
 
--- Send the module list again on reconnect, so activated modules stay enabled during
---   a session unless explicitly disabled
+-- Send the module list whenever GMCP comes up: modules enabled before then, such as
+--   at profile load or on sysConnectionEvent, could not be sent, and a reconnect
+--   resets the server's list, so activated modules stay enabled unless explicitly disabled
 function gmod.reenableModules()
-  if not next(gmcp) then
-    return
-  end
-
   local list = {}
   for module, users in pairs(registeredModules) do
     list[#list + 1] = module .. " 1"
