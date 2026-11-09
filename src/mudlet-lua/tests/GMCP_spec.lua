@@ -236,11 +236,14 @@ describe("Tests the functionality of gmod.reenableModules", function()
     -- and sysProtocolEnabled fires before the server has sent any GMCP at all
     local saved = gmcp
     _G.gmcp = {}
-    finally(function() _G.gmcp = saved end)
     gmod.enableModule(user, module)
     local sg = spy.on(_G, "sendGMCP")
-    finally(function() sendGMCP:revert() end)
-    gmod.reenableModules()
+    -- busted keeps only the last finally() given
+    finally(function()
+      sendGMCP:revert()
+      _G.gmcp = saved
+    end)
+    raiseEvent("sysProtocolEnabled", "GMCP")
     assert.spy(sg).was_called_with(match.has_match("Core.Supports.Add .*" .. module .. " 1"))
   end)
 
