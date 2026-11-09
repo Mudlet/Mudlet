@@ -331,9 +331,8 @@ void EditorDeleteItemCommand::redo()
         }
     }
 
-    // Now manually unregister and delete all items.
-    // We nullify mpHost right before deleting each item to prevent destructors from
-    // trying to unregister. Only delete items whose parent is not also being deleted
+    // As in the editor's own delete, all but a script are left to their destructor to
+    // unregister, which also frees their compiled script. Only delete items whose parent is not also being deleted
     // (parent deletion handles children), and only if they still match the recorded
     // name to avoid deleting unrelated items.
     QSet<int> deletedIDs;
@@ -360,8 +359,6 @@ void EditorDeleteItemCommand::redo()
 #endif
                 break;
             }
-            mpHost->getTriggerUnit()->unregisterTrigger(trigger);
-            trigger->mpHost = nullptr;
             delete trigger;
             break;
         }
@@ -376,8 +373,6 @@ void EditorDeleteItemCommand::redo()
 #endif
                 break;
             }
-            mpHost->getAliasUnit()->unregisterAlias(alias);
-            alias->mpHost = nullptr;
             delete alias;
             break;
         }
@@ -392,8 +387,6 @@ void EditorDeleteItemCommand::redo()
 #endif
                 break;
             }
-            mpHost->getTimerUnit()->unregisterTimer(timer);
-            timer->mpHost = nullptr;
             delete timer;
             break;
         }
@@ -424,8 +417,6 @@ void EditorDeleteItemCommand::redo()
 #endif
                 break;
             }
-            mpHost->getKeyUnit()->unregisterKey(key);
-            key->mpHost = nullptr;
             delete key;
             break;
         }
@@ -440,8 +431,6 @@ void EditorDeleteItemCommand::redo()
 #endif
                 break;
             }
-            mpHost->getActionUnit()->unregisterAction(action);
-            action->mpHost = nullptr;
             delete action;
             break;
         }

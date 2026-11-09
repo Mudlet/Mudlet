@@ -275,6 +275,45 @@ private slots:
         delete group;
     }
 
+    // Each script is compiled into a global named after the item's ID, and IDs are never reused
+    void test_redoingADeletionFreesTheCompiledScripts()
+    {
+        QVERIFY(runLua(qsl(R"(
+            tctScriptTriggerId = permRegexTrigger("tct script trigger", "", {"^tct script trigger$"}, "local _ = 1")
+            tctScriptAliasId = permAlias("tct script alias", "", "^tct script alias$", "local _ = 1")
+            tctScriptTimerId = permTimer("tct script timer", "", 300, "local _ = 1")
+            tctScriptKeyId = permKey("tct script key", "", 67108864, 16777275, "local _ = 1")
+        )")));
+        auto* button = new TAction(qsl("tct script button"), mpHost);
+        QVERIFY(mpHost->getActionUnit()->registerAction(button));
+        QVERIFY(button->setScript(qsl("local _ = 1")));
+
+        struct Deleted
+        {
+            EditorViewType view;
+            int id;
+            QString name;
+            QString function;
+        };
+        const QList<Deleted> items{
+                {EditorViewType::cmTriggerView, luaInteger("tctScriptTriggerId"), qsl("tct script trigger"), qsl("Trigger")},
+                {EditorViewType::cmAliasView, luaInteger("tctScriptAliasId"), qsl("tct script alias"), qsl("Alias")},
+                {EditorViewType::cmTimerView, luaInteger("tctScriptTimerId"), qsl("tct script timer"), qsl("Timer")},
+                {EditorViewType::cmKeysView, luaInteger("tctScriptKeyId"), qsl("tct script key"), qsl("Key")},
+                {EditorViewType::cmActionView, button->getID(), button->getName(), qsl("Action")},
+        };
+        for (const auto& item : items) {
+            const QString function = item.function + QString::number(item.id);
+            QVERIFY2(item.id > 0, qPrintable(item.name));
+            QVERIFY2(luaGlobalIsFunction(function), qPrintable(qsl("%1 was not compiled as %2").arg(item.name, function)));
+
+            EditorDeleteItemCommand command(item.view, {{item.id, -1, 0, QString(), item.name}}, mpHost);
+            command.redo();
+
+            QVERIFY2(!luaGlobalIsFunction(function), qPrintable(qsl("%1 outlived the deletion of %2").arg(function, item.name)));
+        }
+    }
+
     void test_deletingAnAliasGroup()
     {
         AliasUnit* unit = mpHost->getAliasUnit();
@@ -345,6 +384,15 @@ private slots:
 
 private:
     bool runLua(const QString& script) { return mpHost->mLuaInterpreter.compileAndExecuteScript(script); }
+
+    bool luaGlobalIsFunction(const QString& name)
+    {
+        lua_State* L = mpHost->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, name.toUtf8().constData());
+        const bool function = lua_isfunction(L, -1);
+        lua_pop(L, 1);
+        return function;
+    }
 
     int luaInteger(const char* name)
     {
