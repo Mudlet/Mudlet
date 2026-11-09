@@ -15104,7 +15104,12 @@ int dlgTriggerEditor::findSearchMatch(const QString& haystack, const QString& ne
             options |= QRegularExpression::CaseInsensitiveOption;
         }
         if (needle != mWholeWordSearchNeedle || options != mWholeWordSearchRegex.patternOptions()) {
-            mWholeWordSearchRegex = QRegularExpression(qsl("\\b%1\\b").arg(QRegularExpression::escape(needle)), options);
+            // \b beside punctuation demands a word character next to it, so "^You" could never match at a line start
+            static const QRegularExpression startsWithWordChar(qsl("^\\w"));
+            static const QRegularExpression endsWithWordChar(qsl("\\w$"));
+            const QString leading = startsWithWordChar.match(needle).hasMatch() ? qsl("\\b") : QString();
+            const QString trailing = endsWithWordChar.match(needle).hasMatch() ? qsl("\\b") : QString();
+            mWholeWordSearchRegex = QRegularExpression(leading + QRegularExpression::escape(needle) + trailing, options);
             mWholeWordSearchNeedle = needle;
         }
         const QRegularExpressionMatch match = mWholeWordSearchRegex.match(haystack, from);

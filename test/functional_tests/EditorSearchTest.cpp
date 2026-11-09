@@ -568,6 +568,25 @@ private slots:
         QCOMPARE(resultsFor(qsl("Script")), QStringList({qsl("Lua 2:4"), qsl("Lua 3:11")}));
     }
 
+    // Patterns and Lua code are full of needles that start or end in punctuation
+    void test_wholeWordSearchFindsNeedlesEdgedWithPunctuation()
+    {
+        mpEditor->setSearchOptions(enums::EditorSearchOptionWholeWord);
+        search(qsl("^%1").arg(mNeedle));
+        QCOMPARE(resultsFor(qsl("Trigger")), QStringList({qsl("Pattern 1")}));
+        QCOMPARE(resultsFor(qsl("Alias")), QStringList({qsl("Pattern")}));
+
+        search(qsl("pattern$"));
+        QCOMPARE(resultsFor(qsl("Trigger")), QStringList({qsl("Pattern 1")}));
+
+        search(qsl("-- qaLater"));
+        QCOMPARE(resultsFor(qsl("Script")), QStringList({qsl("Lua 2:1")}));
+
+        // The end that is a word character still has to finish the word
+        search(qsl("^qaHay"));
+        QCOMPARE(totalResultRows(), 0);
+    }
+
     // Variables live in the Lua state rather than in a unit, so they are only
     // walked when the option asks for it
     void test_variablesAreOnlySearchedWhenAskedFor()
