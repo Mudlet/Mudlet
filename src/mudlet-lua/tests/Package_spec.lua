@@ -3908,7 +3908,8 @@ describe("Tests the functionality of packageUrlDrop", function()
     }, asked)
   end)
 
-  it("hands a URL with no file name in it to the plain installer", function()
+  it("still hands a URL with no file name in it to the plain installer", function()
+    -- the host's dots must not be taken for the file name's once the query is cut off
     local asked = recordDownloads()
 
     local ok, reason = installPackage("http://127.0.0.1:1/mudlet-spec-download?id=5")
