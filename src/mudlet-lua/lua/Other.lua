@@ -1128,9 +1128,16 @@ do
     if isOneShot then
       -- wrap the original function to remove itself from the event handler list.
       local origFunc = func
+      local running = false
       func = function(...)
+        -- an event it raises itself must not run it again before it has said whether to stay
+        if running then
+          return
+        end
+        running = true
         -- a handler that errors never asked to stay, so it goes like one that returned nothing
         local ok, keepEvaluating = pcall(origFunc, ...)
+        running = false
         if not (ok and keepEvaluating) then
           killAnonymousEventHandler(eventHandlerId)
         end

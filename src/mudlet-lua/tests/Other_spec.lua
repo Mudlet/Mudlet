@@ -4922,6 +4922,39 @@ describe("Tests one-shot event handlers", function()
     assert.is_nil(stillThere)
   end)
 
+  it("runs a one-shot handler once when it raises its own event", function()
+    local calls = 0
+    local id = registerAnonymousEventHandler("otherSpecOneShotReentrant", function()
+      calls = calls + 1
+      if calls < 5 then
+        raiseEvent("otherSpecOneShotReentrant")
+      end
+    end, true)
+    raiseEvent("otherSpecOneShotReentrant")
+    local stillThere = killAnonymousEventHandler(id)
+
+    assert.are.equal(1, calls)
+    assert.is_nil(stillThere)
+    assert.are.equal(0, #reported)
+  end)
+
+  it("keeps handling later events after a nested raise when it returns true", function()
+    local calls = 0
+    local id = registerAnonymousEventHandler("otherSpecOneShotReentrantKeep", function(_, nested)
+      calls = calls + 1
+      if not nested then
+        raiseEvent("otherSpecOneShotReentrantKeep", true)
+      end
+      return true
+    end, true)
+    raiseEvent("otherSpecOneShotReentrantKeep")
+    raiseEvent("otherSpecOneShotReentrantKeep", true)
+    local stillThere = killAnonymousEventHandler(id)
+
+    assert.are.equal(2, calls)
+    assert.is_true(stillThere)
+  end)
+
   it("hands the event name and arguments to a one-shot handler", function()
     local received
     registerAnonymousEventHandler("otherSpecOneShotArgs", function(...) received = {...} end, true)
