@@ -2754,7 +2754,9 @@ void T2DMap::slot_setArea()
     set_room_area_dialog->show();
     set_room_area_dialog->raise();
 
-    arealist_combobox->setCurrentIndex(arealist_combobox->findData(QString::number(mAreaID)));
+    // From the 3D view's menu this hidden 2D map may still hold the area it last showed
+    const int shownAreaId = (!mIsSecondaryView && mpMap->mapper()) ? mpMap->mapper()->shownAreaId() : mAreaID;
+    arealist_combobox->setCurrentIndex(arealist_combobox->findData(QString::number(shownAreaId)));
 }
 
 
