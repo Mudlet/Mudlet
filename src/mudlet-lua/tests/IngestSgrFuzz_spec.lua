@@ -58,38 +58,51 @@ local function number()
   return tostring(rrange(256, 100000))
 end
 
--- one SGR parameter, possibly carrying its own ':' sub-parameters
-local function parameter()
-  local k = rnd(14)
-  if k < 4 then
-    return pick({"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "20", "21", "22", "23", "24", "25",
-                 "27", "28", "29", "39", "49", "51", "53", "55", "59", "", "00"})
-  elseif k < 6 then
+-- how many SGR parameters and segments in a thousand are malformed, set per round: the worker
+-- hands a line with anything it cannot decode quietly back to the main thread, so a round
+-- full of those would compare the main thread with itself
+local junk = 0
+
+local function wellFormedParameter()
+  local k = rnd(8)
+  if k < 3 then
+    return pick({"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "22", "23", "24", "25",
+                 "27", "28", "29", "39", "49", "53", "55", ""})
+  elseif k < 5 then
     return tostring(pick({30, 40, 90, 100}) + rrange(0, 7))
+  elseif k == 5 then
+    return pick({"38", "48"}) .. pick({";5;", ":5:"}) .. rrange(0, 255)
   elseif k == 6 then
-    local layer = pick({"38", "48", "58"})
-    return layer .. ":5:" .. number()
-  elseif k == 7 then
-    local layer = pick({"38", "48", "58"})
-    local parts = {layer, "2"}
+    local layer = pick({"38", "48"})
+    if chance(50) then
+      return layer .. ";2;" .. rrange(0, 255) .. ";" .. rrange(0, 255) .. ";" .. rrange(0, 255)
+    end
+    return layer .. ":2::" .. rrange(0, 255) .. ":" .. rrange(0, 255) .. ":" .. rrange(0, 255)
+  end
+  return "4:" .. rrange(0, 5)
+end
+
+-- an SGR parameter that is out of range, cut short, oddly separated or unknown
+local function malformedParameter()
+  local k = rnd(7)
+  if k == 0 then
+    return pick({"38", "48", "58"}) .. ":5:" .. number()
+  elseif k == 1 then
     -- with and without the colour space slot, and cut short
+    local parts = {pick({"38", "48", "58"}), "2"}
     for _ = 1, rrange(0, 5) do
       parts[#parts + 1] = number()
     end
     return concat(parts, ":")
-  elseif k == 8 then
-    return pick({"38", "48", "58"}) .. ";5;" .. number()
-  elseif k == 9 then
-    local parts = {pick({"38", "48", "58"}), pick({"2", "2", "5", "3", "4", "1", "0", "", "9"})}
+  elseif k == 2 then
+    local parts = {pick({"38", "48", "58"}), pick({"2", "5", "3", "4", "1", "0", "", "9"})}
     for _ = 1, rrange(0, 5) do
       parts[#parts + 1] = number()
     end
     return concat(parts, ";")
-  elseif k == 10 then
-    return "4:" .. pick({"0", "1", "2", "3", "4", "5", "6", "", "x"})
-  elseif k == 11 then
-    return pick({"38", "48", "58", "38:", "48:", ":", "::", "38::", "4:"})
-  elseif k == 12 then
+  elseif k == 3 then
+    return pick({"4:6", "4:", "4:x", "38", "48", "58", "38:", "48:", ":", "::", "38::", "51", "59", "20", "21", "00"})
+  elseif k == 4 then
     return number()
   end
   local parts = {}
@@ -102,30 +115,37 @@ end
 local function sgr()
   local parts = {}
   for _ = 1, rrange(0, 8) do
-    parts[#parts + 1] = parameter()
+    parts[#parts + 1] = rnd(1000) < junk and malformedParameter() or wellFormedParameter()
   end
-  return "\27[" .. concat(parts, pick({";", ";", ";", ":"})) .. "m"
+  return "\27[" .. concat(parts, rnd(1000) < junk and ":" or ";") .. "m"
 end
 
 -- no '<' or '>' (feedTelnet() reads those as tag delimiters), NUL or IAC
 local words = {"sword", "the orc", "HP:100", "  ", "\t", "café", "┌─┐", "✓", "😀", "日本語", "e\204\129", "[]", "\\", "|", "%"}
 
-local function segment()
-  local k = rnd(20)
-  if k < 7 then
-    return sgr()
-  elseif k < 14 then
-    return pick(words)
-  elseif k == 14 then
+local function malformedSegment()
+  local k = rnd(4)
+  if k == 0 then
     -- a sequence the decoder does not treat as SGR, or one cut short
     return pick({"\27[5C", "\27[2J", "\27[K", "\27[?25l", "\27[1;31", "\27[38;2;1", "\27[", "\27", "\27(B", "\27[5n", "\27[6n", "\27[z"})
-  elseif k == 15 then
+  elseif k == 1 then
     -- a byte that is not valid UTF-8, or the first half of a character
     return char(rrange(0x80, 0xfe))
-  elseif k == 16 then
+  elseif k == 2 then
     return pick({"\27]8;;send:look\27\\", "\27]8;;\27\\", "\27]0;title\7", "\27]8;id=1;https://example.com\27\\link\27]8;;\27\\"})
-  elseif k == 17 then
-    return char(rrange(1, 31)):gsub("[\r\n]", "")
+  end
+  return (char(rrange(1, 31)):gsub("[\r\n]", ""))
+end
+
+local function segment()
+  if rnd(1000) < junk then
+    return malformedSegment()
+  end
+  local k = rnd(10)
+  if k < 4 then
+    return sgr()
+  elseif k < 8 then
+    return pick(words)
   end
   return string.rep(pick({"a", "b", "-"}), rrange(1, 40))
 end
@@ -213,7 +233,8 @@ local function pass(lines, oneRead, cut)
   end
   assert.is_truthy(from and to, "the pass markers did not both reach the buffer")
   local result = snapshot(from, to)
-  local reset = snapshot(closingLine, closingLine)[1]
+  -- the marker's first character, as the markers differ in length
+  local reset = snapshot(closingLine, closingLine)[1]:match("^[^|]*|[^|]*|([^|]*)")
   return result, reset
 end
 
@@ -227,7 +248,7 @@ describe("fuzz: SGR decoding on the ingest worker and the main thread", function
     feed("<T_IAC><T_GA>")
     feed("\27[0m\27]8;;\27\\\r\n")
     local _, reset = pass({"SgrFuzzBaseline"}, false)
-    baseline = reset:gsub("^SgrFuzzCloses%d+", "")
+    baseline = reset
   end)
 
   teardown(function()
@@ -239,6 +260,8 @@ describe("fuzz: SGR decoding on the ingest worker and the main thread", function
   end)
 
   for round = 1, ROUNDS do
+    junk = pick({0, 0, 0, 1, 3, 10, 30, 100, 400})
+    local roundJunk = junk
     local lines = {}
     for i = 1, rrange(16, 70) do
       lines[i] = line()
@@ -246,7 +269,7 @@ describe("fuzz: SGR decoding on the ingest worker and the main thread", function
     local joinedLength = #concat(lines, "\r\n") + 2
     local cut = rrange(1, joinedLength - 1)
 
-    it(string.format("round %d (seed %d) leaves the same buffer from one read as from a read per line", round, SEED), function()
+    it(string.format("round %d (seed %d, %d per mille malformed) leaves the same buffer from one read as from a read per line", round, SEED, roundJunk), function()
       dump(round, lines)
       local apart, apartReset = pass(lines, false)
       local together, togetherReset = pass(lines, true)
@@ -258,7 +281,7 @@ describe("fuzz: SGR decoding on the ingest worker and the main thread", function
         end
       end
       for name, reset in pairs({["a read per line"] = apartReset, ["one read"] = togetherReset, ["a cut read"] = splitReset}) do
-        assert.are.equal(baseline, (reset:gsub("^SgrFuzzCloses%d+", "")), "ESC[0m after " .. name .. " did not restore the default format")
+        assert.are.equal(baseline, reset, "ESC[0m after " .. name .. " did not restore the default format")
       end
     end)
   end
