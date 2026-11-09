@@ -1479,6 +1479,45 @@ private slots:
                  "the download after an aborted one never finished");
         QVERIFY2(consoleShows(qsl("map downloaded and stored")), "the download after an aborted one was refused, so the import flag was left set");
     }
+
+    // A download started from the empty state that comes to nothing must give
+    // back its choices, or the player is left with a blank map and nothing to retry with
+    void test_theMappersEmptyStateReturnsWhenADownloadComesToNothing()
+    {
+        dlgMapper* pMapper = ensureMapper();
+        QVERIFY2(pMapper && pMapper->isVisible(), "the mapper is not on screen to show its empty state");
+        TMap* pMap = mpHost->mpMap.data();
+        pMap->mapClear();
+        pMap->setMmpMapLocation(mpMapServer->url(qsl("/stalled.xml")));
+        pMapper->updateEmptyStateOverlay();
+
+        auto* emptyState = pMapper->findChild<QFrame*>(qsl("emptyStateOverlay"));
+        auto* progress = pMapper->findChild<QFrame*>(qsl("mapProgressOverlay"));
+        QVERIFY(emptyState && progress);
+        QVERIFY2(emptyState->isVisible(), "an empty map with an MMP location did not offer its empty state");
+        QPushButton* downloadButton = nullptr;
+        const auto buttons = emptyState->findChildren<QPushButton*>();
+        for (QPushButton* button : buttons) {
+            if (button->text() == QCoreApplication::translate("dlgMapper", "Download from game")) {
+                downloadButton = button;
+                break;
+            }
+        }
+        QVERIFY(downloadButton);
+
+        downloadButton->click();
+        QVERIFY2(progress->isVisible(), "the download put no progress overlay on the mapper");
+        QVERIFY2(!emptyState->isVisible(), "the empty state stayed up over the download's progress");
+        progress->findChild<QPushButton*>()->click();
+        QVERIFY2(emptyState->isVisible(), "an aborted download left the empty map without its choices");
+
+        pMap->setMmpMapLocation(mpMapServer->url(qsl("/nosuchmap.xml")));
+        QSignalSpy closeSpy(pMap, &TMap::signal_mapProgressClose);
+        downloadButton->click();
+        QVERIFY2(closeSpy.count() == 1 || closeSpy.wait(15s), "the failed map download never finished");
+        QVERIFY2(consoleShows(qsl("Map download encountered an error")), qPrintable(consoleTextSinceMark()));
+        QVERIFY2(emptyState->isVisible(), "a failed download left the empty map without its choices");
+    }
 };
 
 #include "MapDownloadTest.moc"
