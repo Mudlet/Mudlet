@@ -1857,6 +1857,14 @@ describe("Tests DB.lua functions", function()
       assert.are.same({"Eve"}, names(results))
     end)
 
+    it("an empty table query filters nothing", function()
+      assert.are.same({"Ada", "Bram", "Cyra", "Drake", "Eve"}, names(db:fetch(mydb.people, {})))
+    end)
+
+    it("a table query that is not a list of conditions still matches nothing rather than everything", function()
+      assert.is_nil(db:fetch(mydb.people, {name = "Ada"}))
+    end)
+
     it("db:exp still combines with db:AND and db:OR", function()
       local anded = db:fetch(mydb.people, db:AND(db:exp("level > 25"), db:eq(mydb.people.city, "Chicago")))
       assert.are.same({"Eve"}, names(anded))

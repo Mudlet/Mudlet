@@ -1982,7 +1982,10 @@ function db:fetch(sheet, query, order_by, descending)
 
   if query then
     if type(query) == "table" and not query._isExp then
-      sql = sql .. " WHERE " .. db:AND(unpack(query))
+      -- an empty list of conditions, as a script building its filters may end up with, filters nothing
+      if next(query) ~= nil then
+        sql = sql .. " WHERE " .. db:AND(unpack(query))
+      end
     else
       sql = sql .. " WHERE " .. tostring(query)
     end
