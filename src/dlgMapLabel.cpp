@@ -73,6 +73,7 @@ dlgMapLabel::dlgMapLabel(QWidget* pParentWidget)
     outlineColor = settings.value("outlineColorDialogMapLabel", outlineColor).value<QColor>();
     slot_updateControls();
     slot_updateControlsVisibility();
+    plainTextEdit_labelText->setFocus();
 }
 
 bool dlgMapLabel::isTextLabel()

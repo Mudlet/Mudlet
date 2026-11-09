@@ -3502,6 +3502,28 @@ private slots:
         QVERIFY(map()->isUnsaved());
     }
 
+    // The dialog opens ready to type the label's text, and Enter away from the
+    // text box saves it rather than opening the first colour picker.
+    void test_theLabelDialogTypesIntoTheTextAndEnterSaves()
+    {
+        buildMap();
+        showMapper(false);
+        dragOutALabelBox();
+        QPointer<dlgMapLabel> dialog = mp2dMap->mpDlgMapLabel.data();
+        QVERIFY(dialog);
+        QVERIFY(QTest::qWaitForWindowActive(dialog));
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(dialog->plainTextEdit_labelText));
+
+        QTest::keyClicks(dialog->plainTextEdit_labelText, qsl("Market"));
+        dialog->lineEdit_font->setFocus();
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(dialog->lineEdit_font));
+        QTest::keyClick(dialog->lineEdit_font, Qt::Key_Return);
+
+        QTRY_VERIFY2(dialog.isNull() || dialog->isHidden(), "Enter did not save the label");
+        QCOMPARE(area()->mMapLabels.size(), 1);
+        QCOMPARE(area()->mMapLabels.first().text, qsl("Market"));
+    }
+
     // A box is a box whichever corner it was dragged out from: the label goes
     // in it exactly, at the size it was drawn.
     void test_theLabelBoxLandsWhereItWasDrawnFromAnyCorner()
