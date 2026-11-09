@@ -61,6 +61,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     AboutDialogLicencesTest.cpp
     AboutDialogShellTest.cpp
     AboutMenuReleaseNoticeTest.cpp
+    AppearanceBaseStyleTest.cpp
     LabelAccessibleInterfaceTest.cpp
     LabelAnchorInteractionTest.cpp
     MainWindowTitleTest.cpp

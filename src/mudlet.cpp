@@ -8168,8 +8168,15 @@ void mudlet::setAppearance(const enums::Appearance state, const bool& loading)
             // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
             qApp->setStyle(new DarkTheme);
         } else {
+#if defined(Q_OS_MACOS) || defined(Q_OS_WINDOWS)
+            // The dark appearance is drawn on Fusion, and the platform style here sizes and spaces controls its own
+            // way, so on it every window shifted as the appearance changed
+            const QString lightStyle = qsl("Fusion");
+#else
+            const QString lightStyle = mDefaultStyle;
+#endif
             // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
-            qApp->setStyle(new MudletProxyStyle(mDefaultStyle));
+            qApp->setStyle(new MudletProxyStyle(lightStyle));
         }
     } else {
         // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
