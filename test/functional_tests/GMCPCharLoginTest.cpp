@@ -575,6 +575,25 @@ private slots:
         QCOMPARE(sent.value(qsl("token_storage")), QJsonValue(true));
     }
 
+    // GMCP is UTF-8 whatever the game's text encoding, so a Latin-1 profile must not send Latin-1
+    // bytes, or '?' for what Latin-1 cannot hold, inside the JSON
+    void testCredentialsStayUtf8OnALatin1Game()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        QVERIFY(host->mTelnet.setEncoding(QByteArrayLiteral("ISO 8859-1"), false).first);
+        host->setLogin(qsl("joão"));
+        host->setPass(qsl("sécret€"));
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"password-credentials\"]}"));
+
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not send Char.Login.Credentials");
+        QCOMPARE(sent.value(qsl("account")).toString(), qsl("joão"));
+        QCOMPARE(sent.value(qsl("password")).toString(), qsl("sécret€"));
+    }
+
     void testAbsentServerVersionEchoesVersionOne()
     {
         Host* host = connectAndNegotiate();

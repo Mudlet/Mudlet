@@ -495,9 +495,9 @@ void GMCPAuthenticator::sendCredentials(bool interactiveHandoff)
     SecureStringUtils::secureByteArrayClear(json);  // Clear the plaintext JSON bytes toJson() produced
 
     // Keep the plaintext and its telnet-cooked form in named buffers so both can be wiped; passing the
-    // toStdString()/encodeAndCookBytes() temporaries inline would leave un-scrubbed copies behind.
+    // toStdString()/escapeIac() temporaries inline would leave un-scrubbed copies behind.
     std::string plaintext = gmcpMessage.toStdString();
-    std::string encoded = mpHost->mTelnet.encodeAndCookBytes(plaintext);
+    std::string encoded = cTelnet::escapeIac(plaintext);
 
     std::string output;
     output += TN_IAC;
@@ -553,9 +553,9 @@ bool GMCPAuthenticator::sendReconnect(const QString& account, QString token, boo
     SecureStringUtils::secureByteArrayClear(json);
 
     // Keep the plaintext and its telnet-cooked form in named buffers so both can be wiped; the
-    // toStdString()/encodeAndCookBytes() temporaries would otherwise leave un-scrubbed token copies.
+    // toStdString()/escapeIac() temporaries would otherwise leave un-scrubbed token copies.
     std::string plaintext = gmcpMessage.toStdString();
-    std::string encoded = mpHost->mTelnet.encodeAndCookBytes(plaintext);
+    std::string encoded = cTelnet::escapeIac(plaintext);
 
     std::string output;
     output += TN_IAC;
@@ -756,7 +756,7 @@ void GMCPAuthenticator::sendResume(const QString& account, const QString& provid
     output += TN_SB;
     output += OPT_GMCP;
     output += "Char.Login.Credentials ";
-    output += mpHost->mTelnet.encodeAndCookBytes(gmcpMessage.toStdString());
+    output += cTelnet::escapeIac(gmcpMessage.toStdString());
     output += TN_IAC;
     output += TN_SE;
 
@@ -971,9 +971,9 @@ void GMCPAuthenticator::sendAuthCode(QString code, QString codeVerifier, const Q
     SecureStringUtils::secureByteArrayClear(json);
 
     // Keep the plaintext and its telnet-cooked form in named buffers so both can be wiped; the
-    // toStdString()/encodeAndCookBytes() temporaries would otherwise leave un-scrubbed copies behind.
+    // toStdString()/escapeIac() temporaries would otherwise leave un-scrubbed copies behind.
     std::string plaintext = gmcpMessage.toStdString();
-    std::string encoded = mpHost->mTelnet.encodeAndCookBytes(plaintext);
+    std::string encoded = cTelnet::escapeIac(plaintext);
 
     std::string output;
     output += TN_IAC;

@@ -5376,7 +5376,7 @@ void cTelnet::atcpComposerSave(QString txt)
             // Escape the text for the GMCP message that we will send to the game, put the result inside of quotes.
             // Backslashes are escaped first because they are contained in the others, then quotes and new lines.
             output += " \"";
-            output += encodeAndCookBytes(txt.replace('\\', QLatin1String(R"(\\)")).replace('\"', QLatin1String(R"(\")")).replace('\n', QLatin1String(R"(\n)")).toStdString());
+            output += escapeIac(txt.replace('\\', QLatin1String(R"(\\)")).replace('\"', QLatin1String(R"(\")")).replace('\n', QLatin1String(R"(\n)")).toStdString());
             output += "\"";
         }
         output += TN_IAC;
