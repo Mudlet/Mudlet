@@ -2998,8 +2998,11 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.are.equal(areaAlpha, getRoomArea(rA2))
 
       -- moving a room to another area still rebuilds it, as the filter may route by area
-      local moved = createRoomID(); addRoom(moved); setRoomArea(moved, areaAlpha)
+      local moved = createRoomID(); addRoom(moved)
       finally(function() deleteRoom(moved) end)
+      -- a new room says it is in -1 before that area holds it, so this must still file it
+      assert.is_true(table.contains(getAreaRooms1(-1) or {}, moved))
+      setRoomArea(moved, areaAlpha)
       assert.is_true(getPath(rA1, rA3))
       builds = 0
       assert.is_true(setRoomArea(moved, areaBeta))
