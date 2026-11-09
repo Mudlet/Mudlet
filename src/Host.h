@@ -339,7 +339,7 @@ public:
     // Runs then once that save is written and the close is done: now if none is under way. Never once the Host is gone.
     void whenCloseSaveEnds(std::function<void()> then);
     // A script, nested event loop, map operation or profile save: what deletionWouldWait() waits for, bar a
-    // reconnect's event loop, which only a deletion must outwait
+    // reconnect on the stack, which only a deletion must outwait
     bool busyRunning() const;
 
     // The profile load, in this order, as the GUI and HostManager::openProfile() run it, the GUI doing its

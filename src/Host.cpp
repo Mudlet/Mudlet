@@ -738,7 +738,7 @@ void Host::markDeletionPending()
 
 bool Host::deletionWouldWait() const
 {
-    return busyRunning() || mTelnet.connectRunningEventLoop() || mCloseSaveInFlight;
+    return busyRunning() || mTelnet.reconnectOnStack() || mCloseSaveInFlight;
 }
 
 void Host::whenCloseSaveEnds(std::function<void()> then)

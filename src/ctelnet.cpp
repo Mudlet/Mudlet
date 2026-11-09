@@ -753,16 +753,15 @@ void cTelnet::connectIt(const QString& address, int port)
         finishDisconnection();
     }
 
-    // Set early - before the recursion-on-busy-socket block below - so the
-    // QCoreApplication::processEvents() call there cannot leave the indicator
-    // briefly showing Disconnected during a reconnect.
+    // For a socket the aborts below stop while it is still connecting, which
+    // reports no disconnection to clear it
     mLookingUpHost = true;
 
     mTimerFailedConnectionRetry->stop();
     // Cleared before the aborts below so that a socket erroring as it is torn
     // down cannot be counted against the attempt being started here:
     mPendingConnectionAttempts = 0;
-    // Done before the processEvents() below so that call cannot deliver a
+    // Done before the aborts below so that their reports cannot meet a lookup
     // result for a server this one has already replaced.
     abandonHostLookup();
 
@@ -791,8 +790,9 @@ void cTelnet::connectIt(const QString& address, int port)
     }
 
     if (mSocket_ipV4.state() != QAbstractSocket::UnconnectedState || mSocket_ipV6.state() != QAbstractSocket::UnconnectedState) {
-        // One of the sockets (at least) is not ready - so take care of that:
-        // CHECKME: do we also need to block the sockets from emitting signals here?
+        // Held so the profile outlives this: each abort reports the connection it ends, and a handler of that
+        // may close the profile
+        ++mReconnectsOnStack;
         if (mSocket_ipV4.state() != QAbstractSocket::UnconnectedState) {
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET & 4)
             qDebug().noquote().nospace() << "cTelnet::cTelnet::connectIt(" << address << ", " << port << ") INFO - IPv4 socket not disconnected, aborting exisiting connection.";
@@ -805,18 +805,28 @@ void cTelnet::connectIt(const QString& address, int port)
 #endif
             mSocket_ipV6.abort();
         }
-        // Since at least one of them was not ready lets give them a chance to
-        // sort themselves out. Held so the profile outlives this: a close posted
-        // earlier, as by closeMudlet(), may run in it.
-        ++mConnectEventLoops;
-        QCoreApplication::processEvents();
-        --mConnectEventLoops;
+        if (mDisconnectionPending && mDecompressionRecursionDepth == 0) {
+            // Input still to be read held the report back; it is finished here, where the close check below covers
+            // what its handlers do
+            mDisconnectionPending = false;
+            finishDisconnection();
+        }
+        --mReconnectsOnStack;
         if (!mpHost || mpHost->closeStarted() || mpHost->deletionPending()) {
             mLookingUpHost = false;
             return;
         }
-
-        // This looks less than ideal - recursively calling ourselves?
+        if (mSocket_ipV4.state() != QAbstractSocket::UnconnectedState || mSocket_ipV6.state() != QAbstractSocket::UnconnectedState) {
+            // abort() resets a socket at once, but a handler of its report may have dialled again: tried from the
+            // event loop rather than by running one here
+            QTimer::singleShot(0ms, this, [this, address, port]() {
+                if (mpHost && !mpHost->closeStarted() && !mDisconnectRequested) {
+                    connectIt(address, port);
+                }
+            });
+            return;
+        }
+        // Afresh, as the reports of the aborts above may have changed what was set up for this attempt
         connectIt(address, port);
         return;
     }

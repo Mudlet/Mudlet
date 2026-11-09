@@ -2443,7 +2443,8 @@ headlessNoWindow = table.concat({
     }
 
     // As GMCPAuthenticator reconnects after a rejected sign-in: from a timer, with no Lua running. The socket is
-    // still connected, so connectIt() aborts it and runs the event loop, where the close closeMudlet() posted runs.
+    // still connected, so connectIt() aborts it, and a handler of that disconnection asks to quit and runs the event
+    // loop, where the close closeMudlet() posted runs.
     void test_aProfileClosedWhileItReconnectsOutlivesTheReconnect()
     {
         const QString name = qsl("Headless Close During Reconnect");
@@ -2469,6 +2470,16 @@ headlessNoWindow = table.concat({
         std::optional<bool> outlivedReconnect;
         bool closedInReconnect = false;
         bool lookingUpOnceClosed = false;
+        // A handler of the disconnection the reconnect's abort reports, which quits and runs the event loop
+        connect(
+                &profile->mTelnet,
+                &cTelnet::signal_disconnected,
+                this,
+                [&profile]() {
+                    profile->getLuaInterpreter()->compileAndExecuteScript(qsl("closeMudlet()"));
+                    QCoreApplication::processEvents();
+                },
+                Qt::SingleShotConnection);
         QTimer::singleShot(0, profile, [&]() {
             profile->mTelnet.reconnect();
             outlivedReconnect = !profile.isNull();
@@ -2477,7 +2488,6 @@ headlessNoWindow = table.concat({
                 lookingUpOnceClosed = profile->mTelnet.getConnectionState() == QAbstractSocket::HostLookupState;
             }
         });
-        QVERIFY(session.runLua(qsl("closeMudlet()")));
         QTRY_VERIFY_WITH_TIMEOUT(outlivedReconnect.has_value(), 10000);
         QVERIFY(*outlivedReconnect);
         QVERIFY2(closedInReconnect, "SETUP: the close did not run inside the reconnect");
@@ -2495,8 +2505,37 @@ headlessNoWindow = table.concat({
         QCOMPARE(QCoreApplication::exec(), 0);
     }
 
-    // shutdown() from a handler the reconnect's event loop runs would close the profile under it; a save deletes
-    // nothing, so it goes ahead
+    // A reconnect ends the live connection and dials again within the call, running no event loop of its own
+    void test_aReconnectRunsNoEventLoop()
+    {
+        const QString name = qsl("Headless Reconnect No Pump");
+        QVERIFY(writeProfile(name, QString()));
+        QTcpServer server;
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        QTRY_VERIFY_WITH_TIMEOUT(server.hasPendingConnections(), 10000);
+        std::unique_ptr<QTcpSocket> game(server.nextPendingConnection());
+        QTRY_COMPARE_WITH_TIMEOUT(session.host()->mTelnet.getConnectionState(), QAbstractSocket::ConnectedState, 10000);
+        bool timerRan = false;
+        QTimer::singleShot(0, this, [&timerRan]() {
+            timerRan = true;
+        });
+
+        session.host()->mTelnet.reconnect();
+
+        QVERIFY2(!timerRan, "A timer ran while the profile reconnected.");
+        QVERIFY(session.host()->mTelnet.getConnectionState() != QAbstractSocket::UnconnectedState);
+        QTRY_VERIFY_WITH_TIMEOUT(server.hasPendingConnections(), 10000);
+        QVERIFY(timerRan);
+        QVERIFY(session.shutdown(false));
+    }
+
+    // shutdown() from a handler of the disconnection a reconnect's abort reports would close the profile under it;
+    // a save deletes nothing, so it goes ahead
     void test_aSessionWaitsForAReconnectToReturn()
     {
         const QString name = qsl("Headless Shutdown During Reconnect");
@@ -2516,7 +2555,8 @@ headlessNoWindow = table.concat({
         std::optional<bool> shutDown;
         QString saveError;
         QString shutdownError;
-        connect(&session, &THeadlessSession::disconnected, &session, [&]() {
+        // On the profile's own signal, as the session's comes from the event loop, after the reconnect
+        connect(&session.host()->mTelnet, &cTelnet::signal_disconnected, &session, [&]() {
             if (!shutDown.has_value()) {
                 saved = session.save();
                 saveError = session.errorString();
@@ -2538,10 +2578,19 @@ headlessNoWindow = table.concat({
         QVERIFY(session.shutdown(false));
     }
 
+    void test_aSessionDeletedWhileItReconnectsDialsNoMore_data()
+    {
+        QTest::addColumn<bool>("inputHeldBack");
+        QTest::newRow("all read") << false;
+        // Input still to be read holds back the report of the connection's end
+        QTest::newRow("input still to be read") << true;
+    }
+
     // The deleted session's pool waits for the reconnect, which must not then dial the game it is about to drop
     void test_aSessionDeletedWhileItReconnectsDialsNoMore()
     {
-        const QString name = qsl("Headless Delete During Reconnect");
+        QFETCH(const bool, inputHeldBack);
+        const QString name = qsl("Headless Delete During Reconnect %1").arg(inputHeldBack);
         QVERIFY(writeProfile(name, QString()));
         QTcpServer server;
         QVERIFY(server.listen(QHostAddress::LocalHost));
@@ -2562,7 +2611,8 @@ headlessNoWindow = table.concat({
                 ++dialled;
             }
         });
-        connect(pSession, &THeadlessSession::disconnected, pSession, [pSession]() {
+        // On the profile's own signal, as the session's comes from the event loop, after the reconnect
+        connect(&pSession->host()->mTelnet, &cTelnet::signal_disconnected, pSession, [pSession]() {
             delete pSession;
         });
         QPointer<Host> profile(pSession->host());
@@ -2570,6 +2620,9 @@ headlessNoWindow = table.concat({
         bool deletedInReconnect = false;
         bool connectingOnceDeleted = false;
         QTimer::singleShot(0, profile, [&]() {
+            if (inputHeldBack) {
+                profile->mTelnet.mDeferredInput = QByteArrayLiteral("held back");
+            }
             profile->mTelnet.reconnect();
             outlivedReconnect = !profile.isNull();
             deletedInReconnect = session.isNull();
@@ -2971,7 +3024,7 @@ announce("queued", "all")
 #endif
     }
 
-    // The answer reconnects, which runs the event loop while the profile's connection is still on the stack
+    // The answer reconnects, whose abort reports the disconnection while the profile's connection is still on the stack
     void test_aSecurePortAnswerKeepsTheProfileOpenUntilItReturns()
     {
 #if defined(QT_NO_SSL)
@@ -2987,12 +3040,15 @@ announce("queued", "all")
         THeadlessSession session;
         QSignalSpy offers(&session, &THeadlessSession::secureConnectionOffered);
         std::optional<bool> shutDownFromHandler;
-        connect(&session, &THeadlessSession::disconnected, &session, [&]() {
+        QString shutdownError;
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        // On the profile's own signal, as the session's comes from the event loop, after the reconnect
+        connect(&session.host()->mTelnet, &cTelnet::signal_disconnected, &session, [&]() {
             if (!shutDownFromHandler.has_value()) {
                 shutDownFromHandler = session.shutdown(false);
+                shutdownError = session.errorString();
             }
         });
-        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
         QTRY_VERIFY_WITH_TIMEOUT(server.hasPendingConnections(), 10000);
         std::unique_ptr<QTcpSocket> game(server.nextPendingConnection());
         session.host()->mAskTlsAvailable = true;
@@ -3003,6 +3059,7 @@ announce("queued", "all")
         QVERIFY(session.submit(qsl("look")));
         QVERIFY(session.answerSecureConnectionOffer(false));
         QCOMPARE(shutDownFromHandler, std::optional<bool>(false));
+        QVERIFY2(shutdownError.contains(qsl("reconnecting")), qPrintable(shutdownError));
         QVERIFY(session.shutdown(false));
 #endif
     }
