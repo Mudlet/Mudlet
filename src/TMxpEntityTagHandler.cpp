@@ -19,6 +19,19 @@
 #include "TMxpEntityTagHandler.h"
 #include "TStringUtils.h"
 
+namespace {
+// An undefined entity resolves to its own name, and an empty one would split into one empty item
+QStringList currentList(const TEntityResolver& resolver, const QString& entity)
+{
+    TEntityType type = ENTITY_TYPE_UNKNOWN;
+    const QString definition = resolver.getResolution(entity, true, &type);
+    if (type != ENTITY_TYPE_CUSTOM || definition.isEmpty()) {
+        return {};
+    }
+    return definition.split('|');
+}
+} // namespace
+
 TMxpTagHandlerResult TMxpEntityTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
 {
     if (tag->getAttributesCount() < 1) {
@@ -37,13 +50,11 @@ TMxpTagHandlerResult TMxpEntityTagHandler::handleStartTag(TMxpContext& ctx, TMxp
         // 2nd attribute is actually the value
         const QString& value = tag->getAttrName(1);
         if (tag->hasAttribute("ADD")) {
-            const QString prevDefinition = resolver.getResolution(entity);
-            QStringList definitionList = prevDefinition.split('|');
+            QStringList definitionList = currentList(resolver, entity);
             definitionList.push_back(value);
             resolver.registerEntity(entity, definitionList.join('|'));
         } else if (tag->hasAttribute("REMOVE")) {
-            const QString prevDefinition = resolver.getResolution(entity);
-            QStringList definitionList = prevDefinition.split('|');
+            QStringList definitionList = currentList(resolver, entity);
             definitionList.removeOne(value);
             resolver.registerEntity(entity, definitionList.join('|'));
         } else {

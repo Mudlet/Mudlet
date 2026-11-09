@@ -147,6 +147,15 @@ describe("Tests MXP handling", function()
       assertLineShown("\27[1z<!ENTITY storm \"Гроза\">The &storm; rages", "The Гроза rages")
     end)
 
+    -- a list built up with ADD starts from nothing, whether the entity was
+    -- never defined, was deleted, or had every item removed from it
+    it("starts a list ADD builds from an entity with no items", function()
+      assertLineShown("\27[1z<!EN mxpadd1 a ADD><!EN mxpadd1 b ADD>[&mxpadd1;]", "[a|b]")
+      assertLineShown("\27[1z<!EN mxpadd1 DELETE><!EN mxpadd1 c ADD>[&mxpadd1;]", "[c]")
+      assertLineShown("\27[1z<!EN mxpadd1 c REMOVE><!EN mxpadd1 d ADD>[&mxpadd1;]", "[d]")
+      assertLineShown("\27[1z<!EN mxpadd1 ''><!EN mxpadd1 e ADD>[&mxpadd1;]", "[e]")
+    end)
+
     -- <HR> is not written out, it is fed back through the parser as a rule of
     -- its own, so its width is the window's wrap column with a forty column floor
     it("draws a horizontal rule as wide as the window wraps", function()
