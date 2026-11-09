@@ -42,6 +42,7 @@
 #include "PortableModeTestHelper.h"
 #include "THeadlessSession.h"
 #include "TLuaInterpreter.h"
+#include "TMap.h"
 
 #include "GroupedTest.h"
 
@@ -266,7 +267,8 @@ end)
         QVERIFY(session.shutdown(false));
     }
 
-    // The handler's saveJsonMap() runs the event loop, where the app comes to the front and leaves it again
+    // The handler's saveJsonMap() runs the event loop, as the GUI's progress dialog does, where the app comes to the
+    // front and leaves it again
     void test_theAppLeavingAndComingBackUnderAHandlerIsToldOnce()
     {
         const QString name = qsl("Headless App Active Nested");
@@ -293,6 +295,9 @@ end)
         for (Host* pHost : {session.host(), pOther}) {
             const QString path = mConfigDir.filePath(qsl("%1.json").arg(pHost->getName()));
             QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("headlessPump = [[%1]]").arg(path)));
+            connect(pHost->mpMap.data(), &TMap::signal_mapProgressRepaintWanted, this, []() {
+                QCoreApplication::processEvents();
+            });
         }
         std::optional<std::pair<bool, bool>> nested;
         QTimer::singleShot(0, this, [&session, &nested]() {

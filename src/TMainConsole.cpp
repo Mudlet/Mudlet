@@ -3694,6 +3694,12 @@ void TMainConsole::disableMapProgressDialogCancel()
     }
 }
 
+// Runs with the map operation on the stack; see TMap::mapOperationInProgress()
+void TMainConsole::repaintMapProgressDialog()
+{
+    QCoreApplication::processEvents();
+}
+
 void TMainConsole::closeMapProgressDialog()
 {
     if (mpMapProgressDialog) {

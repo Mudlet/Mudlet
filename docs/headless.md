@@ -349,9 +349,9 @@ the game sends, as the GUI's progress dialog does, and `cancelPackageDownload()`
 
 `mapProgressStarted`, `mapProgressChanged` and `mapProgressFinished` follow a map export, import or
 download, as the GUI's progress dialog does, each change carrying the whole label, the rooms done and the
-rooms to go through. They are sent from the event loop. An export or import runs it as it goes, so its
-start and changes can arrive while the script that began it, or the `start()` that loads a JSON map,
-still runs, but its end arrives only once that has returned. A map download, which only an app can begin,
+rooms to go through. They are sent from the event loop, or, for an export or import, at its progress
+steps, where only the session's own signals are delivered, so its start and changes can arrive while the script that began it, or
+the `start()` that loads a JSON map, still runs, but its end arrives only once that has returned. A map download, which only an app can begin,
 through `host()`, carries on after its script returns.
 
 A map operation or package download still open when its profile closes, or when `shutdown()` or a later
@@ -1189,9 +1189,14 @@ These still block the application's thread or run a nested event loop:
   answers;
 - `waitForEvent()`, `pumpEvents()` and `EventLoopPump`, which only the test profile's Lua uses;
 - the connection's bounded waits in `ctelnet.cpp`: one event loop pass while a reconnect lets the old
-  sockets abort, and, as a profile disconnects, up to a second waiting for the game to close its end;
-- the map's long operations (loading, importing, exporting and auditing a map), which run the event
-  loop to keep their progress display alive.
+  sockets abort, and, as a profile disconnects, up to a second waiting for the game to close its end.
+
+A map's long operations (loading, importing, exporting and auditing a map) run no event loop of their
+own: they emit `TMap::signal_mapProgressRepaintWanted()` where a progress display could repaint, and only
+the desktop GUI pumps the event loop from it, for its progress dialog and its Abort. There
+`THeadlessSession` delivers only its own map progress signals, so a handler of them can still call
+`cancelMapOperation()` while the operation runs, and anything else posted meanwhile, such as a profile
+close, runs once the operation has returned.
 
 ## What still needs a window
 

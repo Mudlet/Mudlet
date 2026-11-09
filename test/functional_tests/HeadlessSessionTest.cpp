@@ -175,7 +175,7 @@ end))lua")
         return file.open(QIODevice::ReadOnly) ? QString::fromUtf8(file.readAll()) : QString();
     }
 
-    // Each one the map load tries and turns down runs the event loop
+    // Each one the map load tries and turns down runs the event loop, with pumpUnderMapOperations()
     static bool writeUnreadableMaps(const QString& name, const int count)
     {
         const QString mapFolder = MudletApp::getMudletPath(enums::profileMapsPath, name);
@@ -189,6 +189,14 @@ end))lua")
             }
         }
         return true;
+    }
+
+    // As the GUI's progress dialog does, which no frontend with no window has
+    static void pumpUnderMapOperations(Host* pHost)
+    {
+        QObject::connect(pHost->mpMap.data(), &TMap::signal_mapProgressRepaintWanted, pHost, []() {
+            QCoreApplication::processEvents();
+        });
     }
 
     static QMap<QString, QByteArray> filesUnder(const QString& dir)
@@ -1469,6 +1477,7 @@ version = "1.2")"},
     {
         QFETCH(const bool, partlyLoaded);
         QFETCH(const bool, deleteSession);
+        const auto testMode = inTestMode();
         const QString name = qsl("Headless Unwanted Connect %1%2").arg(partlyLoaded).arg(deleteSession);
         const QString saveFolder = MudletApp::getMudletPath(enums::profileXmlFilesPath, name);
         QVERIFY(QDir().mkpath(saveFolder));
@@ -1480,7 +1489,7 @@ version = "1.2")"},
       headlessConnected = "yes"
       return
     end
-    loadMap()
+    pumpEvents(10)
   end
 end))lua");
         saveFile.write(qsl(R"(<?xml version="1.0" encoding="UTF-8"?>
@@ -1491,7 +1500,6 @@ end))lua");
                                .arg(script.toHtmlEscaped(), partlyLoaded ? qsl("<HostPackage><Host") : qsl("<HostPackage><Host></Host></HostPackage></MudletPackage>"))
                                .toUtf8());
         saveFile.close();
-        QVERIFY(writeUnreadableMaps(name, 1));
         TelnetServerStub server;
         server.start(qsl("127.0.0.1"));
         QVERIFY(server.isListening());
@@ -6614,13 +6622,13 @@ registerAnonymousEventHandler("sysLoadEvent", function() feedTriggers("fed by sy
         QVERIFY2(outputTexts(output).contains(qsl("Docs: https://wiki.mudlet.org/w/Area_51#OSC_8:_Hyperlink_Protocol")), qPrintable(outputTexts(output).join(QLatin1Char('\n'))));
     }
 
-    // A map that will not read takes a turn of the event loop, where a frontend's timer could run a script
-    // before the profile's own have started, or delete the profile under the load
+    // A load that runs the event loop, as a script of its own can, lets a frontend's timer run a script before the
+    // load has finished, or delete the profile under it
     void test_callsDuringTheLoadAreRefused()
     {
         const QString name = qsl("Headless Load Shutdown");
-        QVERIFY(writeProfile(name, QString()));
-        QVERIFY(writeUnreadableMaps(name, 1));
+        QVERIFY(writeProfile(name, qsl("pumpEvents(100)")));
+        const auto testMode = inTestMode();
         THeadlessSession session;
         bool askedDuringTheLoad = false;
         bool ranLua = true;
@@ -6656,8 +6664,8 @@ registerAnonymousEventHandler("sysLoadEvent", function() feedTriggers("fed by sy
     {
         const QString name = qsl("Headless Load Delete");
         const QString recordPath = qsl("%1/%2.record").arg(mConfigDir.path(), name);
-        QVERIFY(writeProfile(name, recordingScript(recordPath)));
-        QVERIFY(writeUnreadableMaps(name, 1));
+        QVERIFY(writeProfile(name, recordingScript(recordPath) + qsl("\npumpEvents(100)")));
+        const auto testMode = inTestMode();
         QObject owner;
         auto* pSession = new THeadlessSession(&owner);
         QTimer::singleShot(0, this, [pSession = QPointer(pSession)]() {
@@ -6677,6 +6685,7 @@ registerAnonymousEventHandler("sysLoadEvent", function() feedTriggers("fed by sy
         THeadlessSession session;
         QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
         QVERIFY(writeUnreadableMaps(name, 2));
+        pumpUnderMapOperations(session.host());
         bool shutDown = true;
         QTimer::singleShot(0, &session, [&session, &shutDown]() {
             shutDown = session.shutdown(true);
@@ -6824,6 +6833,7 @@ registerAnonymousEventHandler("sysExitEvent", function() loadMap() end))lua")
         auto* pSession = new THeadlessSession(&owner);
         QCOMPARE(pSession->start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
         QVERIFY(writeUnreadableMaps(name, 2));
+        pumpUnderMapOperations(pSession->host());
         QTimer::singleShot(0, this, [pSession = QPointer(pSession)]() {
             delete pSession.data();
         });
@@ -6852,6 +6862,7 @@ registerAnonymousEventHandler("sysExitEvent", function() loadMap() end))lua")
         auto* pSession = new THeadlessSession(&owner);
         QCOMPARE(pSession->start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
         QVERIFY(writeUnreadableMaps(name, 2));
+        pumpUnderMapOperations(pSession->host());
         if (close == 3) {
             QVERIFY(pSession->runLua(qsl("resetProfile()")));
         }
@@ -6896,6 +6907,7 @@ registerAnonymousEventHandler("sysExitEvent", function() loadMap() end))lua")
             QVERIFY(session.runLua(qsl("resetProfile()")));
         } else {
             QVERIFY(writeUnreadableMaps(name, 2));
+            pumpUnderMapOperations(session.host());
         }
         std::optional<bool> nested;
         bool ranLua = true;
@@ -6932,6 +6944,7 @@ registerAnonymousEventHandler("sysExitEvent", function() loadMap() end))lua")
         auto* pSession = new THeadlessSession(&owner);
         QCOMPARE(pSession->start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
         QVERIFY(writeUnreadableMaps(name, 2));
+        pumpUnderMapOperations(pSession->host());
         const QPointer<Host> pHost(pSession->host());
         QTimer::singleShot(0, this, [pSession = QPointer(pSession)]() {
             delete pSession.data();
@@ -6952,6 +6965,7 @@ registerAnonymousEventHandler("sysExitEvent", function() loadMap() end))lua")
         QCOMPARE(pSession->start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
         QVERIFY(pSession->runLua(qsl(R"lua(tempAlias("^pump$", [[loadMap()]]) tempAlias("^after$", [[headlessAfterDelete = "yes"]]))lua")));
         QVERIFY(writeUnreadableMaps(name, 2));
+        pumpUnderMapOperations(pSession->host());
         const QPointer<Host> pHost(pSession->host());
         QTimer::singleShot(0, this, [pSession = QPointer(pSession)]() {
             delete pSession.data();
@@ -6981,6 +6995,7 @@ registerAnonymousEventHandler("sysExitEvent", function() loadMap() end))lua")
         QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
         QVERIFY(session.runLua(qsl(R"lua(tempAlias("^first$", [[%1]]) tempAlias("^after$", [[headlessAfter = "yes"]]))lua").arg(closedBy == 1 ? qsl("closeProfile()") : qsl("loadMap()"))));
         QVERIFY(writeUnreadableMaps(name, 2));
+        pumpUnderMapOperations(session.host());
         const QPointer<Host> pHost(session.host());
         if (closedBy == 0) {
             QVERIFY(session.runLua(qsl("closeProfile()")));
