@@ -3540,6 +3540,26 @@ private slots:
         }
     }
 
+    // The dialog stays open while the map is panned or moved to another level,
+    // and every edit in it redraws the label: that must keep it in its box.
+    void test_editingANewLabelAfterPanningKeepsItWhereItWasDrawn()
+    {
+        buildMap();
+        showMapper(false);
+        dragOutALabelBox();
+        QVERIFY(mp2dMap->mpDlgMapLabel);
+
+        mp2dMap->mMapCenterX = 3;
+        mp2dMap->mMapCenterY = -2;
+        mp2dMap->mMapCenterZ = 1;
+        emit mp2dMap->mpDlgMapLabel->updated();
+
+        QCOMPARE(area()->mMapLabels.size(), 1);
+        QCOMPARE(area()->mMapLabels.first().pos, QVector3D(-5, 5, 0));
+        QCOMPARE(area()->mMapLabels.first().size, QSizeF(3, 2));
+        mp2dMap->mpDlgMapLabel->close();
+    }
+
     // A click with no drag has no box to put a label in, so nothing is made
     // and no dialog comes up.
     void test_clickingWithoutDraggingOutABoxMakesNoLabel()
