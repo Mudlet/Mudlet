@@ -170,8 +170,8 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
                     versionString = attributes().value(qsl("version")).toString();
                     if (!versionString.isEmpty()) {
                         bool isOk = false;
-                        // Capped so a huge or infinite version still reads as a later Mudlet's rather than
-                        // overflowing the conversion to int; a NaN or negative one is left as the default
+                        // Capped so a version past int's range still reads as a later Mudlet's rather than
+                        // overflowing qFloor(); a NaN or negative one is left as the default
                         const float versionNumber = std::min(versionString.toFloat(&isOk), 255.0f);
                         if (isOk && versionNumber >= 0.0f) {
                             mVersionMajor = qFloor(versionNumber);
