@@ -6428,12 +6428,10 @@ std::unique_ptr<QNetworkProxy>& Host::getConnectionProxy()
     auto& proxy = mpConnectionProxy;
     proxy->setHostName(mProxyAddress);
     proxy->setPort(mProxyPort);
-    if (!mProxyUsername.isEmpty()) {
-        proxy->setUser(mProxyUsername);
-    }
-    if (!mProxyPassword.isEmpty()) {
-        proxy->setPassword(mProxyPassword);
-    }
+    // Unconditionally, as the proxy is kept between connections: credentials the player has since
+    // cleared would otherwise still be offered, to whichever proxy is now set
+    proxy->setUser(mProxyUsername);
+    proxy->setPassword(mProxyPassword);
 
     return mpConnectionProxy;
 }
