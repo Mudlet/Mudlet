@@ -20,6 +20,8 @@
 #include "FchmodRefusal.h"
 
 #include <cerrno>
+#include <cstring>
+#include <dlfcn.h>
 #include <sys/stat.h>
 #include <sys/syscall.h>
 #include <unistd.h>
@@ -27,7 +29,13 @@
 namespace {
 bool refuseOwnerOnlyOnOpenFiles = false;
 int refusals = 0;
+
+bool calledFromQtCore(const void* caller)
+{
+    Dl_info info;
+    return dladdr(caller, &info) && info.dli_fname && std::strstr(info.dli_fname, "libQt6Core");
 }
+} // namespace
 
 void setRefuseOwnerOnlyOnOpenFiles(const bool refuse)
 {
@@ -46,6 +54,11 @@ extern "C" int fchmod(int fd, mode_t mode) noexcept
     if (refuseOwnerOnlyOnOpenFiles && !(mode & (S_IRGRP | S_IROTH))) {
         ::syscall(SYS_fchmod, fd, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
         ++refusals;
+        // Qt 6.12's QSaveFile::commit() never reports this refusal; answering Qt as it would lets the
+        // cases catch, on older Qt too, a caller that trusts QSaveFile::setPermissions()
+        if (calledFromQtCore(__builtin_return_address(0))) {
+            return 0;
+        }
         errno = EPERM;
         return -1;
     }

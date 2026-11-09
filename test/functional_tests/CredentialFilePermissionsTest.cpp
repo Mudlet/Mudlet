@@ -347,6 +347,8 @@ private slots:
             QVERIFY(openToEveryone(path));
         }
 
+        // Narrowed by path, so there is nothing to warn about
+        QTest::failOnWarning(QRegularExpression(qsl("can still read")));
         const int refusalsBefore = ownerOnlyRefusals();
         setRefuseOwnerOnlyOnOpenFiles(true);
         const QPair<bool, QString> result = MudletApp::writeProfileData(mProfile, item, mPassword);

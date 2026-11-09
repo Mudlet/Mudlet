@@ -802,11 +802,10 @@ QPair<bool, QString> MudletApp::writeProfileData(const QString& profile, const Q
 
     const bool holdsSecret = profileDataItemHoldsSecret(item);
     bool narrowAfterCommit = false;
-    QString refusal;
     if (holdsSecret) {
         // On the temporary file, before the secret is in it: commit() renames it into place, and a
         // replaced file's mode would otherwise carry over
-        narrowAfterCommit = !SecureStringUtils::restrictSaveFileToOwner(file, &refusal);
+        narrowAfterCommit = !SecureStringUtils::restrictSaveFileToOwner(file);
     }
 
     QDataStream ofs(&file);
@@ -833,9 +832,7 @@ QPair<bool, QString> MudletApp::writeProfileData(const QString& profile, const Q
 
     if (narrowAfterCommit) {
         // Some file systems refuse it on the open file but take it by path, which still closes the file for good
-        if (!SecureStringUtils::restrictFileToOwner(file.fileName())) {
-            qWarning().noquote() << "MudletApp::writeProfileData(...) WARNING - the file system refused owner-only permissions for" << file.fileName() << "while it was written:" << refusal;
-        }
+        SecureStringUtils::restrictFileToOwner(file.fileName());
     } else if (holdsSecret) {
         // Only checked, so the tests see a narrowing above that went missing instead of this repairing it
         SecureStringUtils::confirmFileIsOwnerOnly(file.fileName());

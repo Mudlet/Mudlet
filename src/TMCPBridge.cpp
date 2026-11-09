@@ -406,8 +406,7 @@ bool TMCPBridge::writeDiscoveryFile(const QString& configDir, const quint16 port
     // portable install, say) the restriction cannot be applied; the file is written
     // anyway, since refusing would break the feature there entirely, but it is worth
     // a trace.
-    QString refusal;
-    const bool narrowAfterCommit = !SecureStringUtils::restrictSaveFileToOwner(file, &refusal);
+    const bool narrowAfterCommit = !SecureStringUtils::restrictSaveFileToOwner(file);
     QJsonObject contents;
     contents[qsl("port")] = static_cast<int>(port);
     contents[qsl("token")] = token;
@@ -417,11 +416,12 @@ bool TMCPBridge::writeDiscoveryFile(const QString& configDir, const quint16 port
     }
 
 #if defined(Q_OS_UNIX)
-    // Some file systems refuse owner-only on the open file but take it by path
-    const bool ownerOnly = narrowAfterCommit ? SecureStringUtils::restrictFileToOwner(file.fileName()) : SecureStringUtils::confirmFileIsOwnerOnly(file.fileName());
-    if (!ownerOnly) {
-        qWarning().noquote() << "TMCPBridge::writeDiscoveryFile(...) WARNING - could not make" << file.fileName()
-                             << "private to this user; other users of this machine may be able to read the MCP access token." << refusal;
+    // Some file systems refuse owner-only on the open file but take it by path; either way, a file
+    // left readable by others is warned about once per path
+    if (narrowAfterCommit) {
+        SecureStringUtils::restrictFileToOwner(file.fileName());
+    } else {
+        SecureStringUtils::confirmFileIsOwnerOnly(file.fileName());
     }
 #else
     // Not confirmFileIsOwnerOnly(): off Unix it only warns, and calls this file a saved password

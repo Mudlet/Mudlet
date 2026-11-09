@@ -152,11 +152,10 @@ public:
      * with the mode of the one it replaces, or the umask's default, so the caller can try
      * restrictFileToOwner() on the committed file.
      * @param file An open QSaveFile
-     * @param refusal If given, set to the file system's reason when it refuses
      * @return false when the narrowing was refused. On a platform without such permission bits this
      * does nothing and returns true.
      */
-    static bool restrictSaveFileToOwner(QSaveFile& file, QString* refusal = nullptr);
+    static bool restrictSaveFileToOwner(QSaveFile& file);
 
     /**
      * @brief The secret that could not be narrowed, forgetting it as it is handed over

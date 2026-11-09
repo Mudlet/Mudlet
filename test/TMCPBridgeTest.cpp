@@ -29,6 +29,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QProcess>
+#include <QRegularExpression>
 #include <QTcpServer>
 #include <QTemporaryDir>
 
@@ -191,6 +192,8 @@ void TMCPBridgeTest::discoveryFileIsPrivateWhereTheOpenFileCannotBeNarrowed()
 #else
     QTemporaryDir dir;
     QVERIFY(dir.isValid());
+    // Narrowed by path, so there is nothing to warn about
+    QTest::failOnWarning(QRegularExpression(qsl("can still read")));
     const int refusalsBefore = ownerOnlyRefusals();
     setRefuseOwnerOnlyOnOpenFiles(true);
     const bool written = TMCPBridge::writeDiscoveryFile(dir.path(), 12345, qsl("sekrit"));

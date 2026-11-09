@@ -210,6 +210,7 @@ if(USE_MCPSERVER)
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         target_sources(unit_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/functional_tests/FchmodRefusal.cpp)
         target_compile_definitions(unit_tests PRIVATE MUDLET_FCHMOD_REFUSAL)
+        target_link_libraries(unit_tests PRIVATE ${CMAKE_DL_LIBS})
     endif()
 endif()
 

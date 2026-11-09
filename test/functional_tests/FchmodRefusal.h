@@ -20,8 +20,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-// Only in the test binaries whose CMakeLists.txt adds FchmodRefusal.cpp, which defines
-// MUDLET_FCHMOD_REFUSAL for them
+// Linked only into binaries whose CMakeLists.txt also defines MUDLET_FCHMOD_REFUSAL; a case
+// without it QSKIPs, so add both
 void setRefuseOwnerOnlyOnOpenFiles(bool refuse);
 // How many fchmod() calls have been refused so far, so a case can show its refusal was reached
 int ownerOnlyRefusals();
