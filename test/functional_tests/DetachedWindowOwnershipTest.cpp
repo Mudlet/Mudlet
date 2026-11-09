@@ -638,6 +638,25 @@ private slots:
         QVERIFY(!pRetry);
     }
 
+    // setActiveProfile() from a script has to reach a profile that is not in the main window's tab bar
+    void test_setActiveProfileSwitchesToADetachedProfile()
+    {
+        QVERIFY(mpDetachedWindow);
+        startProfile(mThirdHostname);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        mudlet::self()->slot_profileDetachToWindow(mThirdHostname, mpDetachedWindow);
+        QVERIFY2(mudlet::self()->getDetachedWindows().value(mThirdHostname) == mpDetachedWindow, "the third profile did not join the detached window");
+        mpDetachedWindow->switchToProfile(mThirdHostname);
+        QCOMPARE(mpDetachedWindow->getCurrentProfileName(), mThirdHostname);
+
+        Host* pFirstHost = HostManager::self()->getHost(mFirstHostname);
+        QVERIFY(pFirstHost);
+        QVERIFY(pFirstHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(setActiveProfile('%1'))").arg(mSecondHostname)));
+        QCOMPARE(mpDetachedWindow->getCurrentProfileName(), mSecondHostname);
+    }
+
 private:
     // init() detached the second profile, so this puts it back to open its map in the main window
     QDockWidget* showSecondProfilesMapDock()

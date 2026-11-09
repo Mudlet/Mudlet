@@ -4498,6 +4498,14 @@ int mudlet::profileTabIndex(const QString& profileName) const
 
 bool mudlet::setActiveProfileTab(const QString& profileName)
 {
+    // A detached profile's tab is in its own window, not the main tab bar
+    if (TDetachedWindow* pDetachedWindow = mDetachedWindows.value(profileName)) {
+        pDetachedWindow->show();
+        pDetachedWindow->raise();
+        pDetachedWindow->activateWindow();
+        pDetachedWindow->switchToProfile(profileName);
+        return true;
+    }
     mpTabBar->setCurrentIndex(mpTabBar->tabIndex(profileName));
     return true;
 }
