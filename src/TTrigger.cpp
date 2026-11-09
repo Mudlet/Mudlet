@@ -665,12 +665,11 @@ TTrigger::~TTrigger()
     if (mpHost) {
         mpHost->getTriggerUnit()->unregisterTrigger(this);
 
-        if (isTemporary()) {
-            if (mScript.isEmpty()) {
-                mpHost->mLuaInterpreter.delete_luafunction(mLuaFunctionRef);
-            } else {
-                mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
-            }
+        // Permanent items too: IDs are never reused, so nothing else would free the compiled script
+        if (mScript.isEmpty()) {
+            mpHost->mLuaInterpreter.delete_luafunction(mLuaFunctionRef);
+        } else {
+            mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
         }
     }
 

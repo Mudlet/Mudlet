@@ -64,7 +64,8 @@ TAction::~TAction()
     if (mpHost) {
         mpHost->getActionUnit()->unregisterAction(this);
 
-        if (isTemporary() && !mScript.isEmpty()) {
+        // Permanent buttons too: IDs are never reused, so nothing else would free the compiled script
+        if (!mScript.isEmpty()) {
             mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
         }
     }
