@@ -255,17 +255,17 @@ private slots:
         QVERIFY2(waitForShownText(client, qsl("Could not send that message: target \"<b>a</b>,,b\"")), qPrintable(shownText(client)));
     }
 
-    // An unknown command marks the input field; what is still typed in it has
+    // A command missing its arguments marks the input field; what is still typed in it has
     // to stay readable on that mark in either appearance
-    void test_aMistypedCommandLeavesTheInputReadable()
+    void test_aMalformedCommandLeavesTheInputReadable()
     {
         dlgIRC* client = openConnectedClient();
         QVERIFY2(client, "the IRC client could not be opened");
         for (const auto appearance : {enums::Appearance::dark, enums::Appearance::light}) {
             mudlet::self()->setAppearance(appearance);
             QCoreApplication::processEvents();
-            enterText(client, qsl("/notacommand"));
-            QVERIFY2(!client->lineEdit->styleSheet().isEmpty(), "a mistyped command left the input field unmarked");
+            enterText(client, qsl("/msg"));
+            QVERIFY2(!client->lineEdit->styleSheet().isEmpty(), "a command missing its arguments left the input field unmarked");
             QCoreApplication::processEvents();
             const QImage shot = client->lineEdit->grab().toImage();
             // The commonest pixel is the field's fill: the words are the minority
