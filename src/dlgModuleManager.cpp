@@ -26,13 +26,17 @@
 #include "mudlet.h"
 #include "MudletApp.h"
 #include "TMainConsole.h"
+#include "dlgSystemMessageArea.h"
+#include "uiDesign.h"
 
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QSettings>
-#include <QTimer>
+#include <QToolButton>
+#include <QVBoxLayout>
 
-using namespace std::chrono_literals;
+static constexpr int scmModulesInset = uiDesign::scmTabPaneInset * 2;
+static constexpr int scmModulesButtonGlyphSize = 16;
 
 
 dlgModuleManager::dlgModuleManager(QWidget* parent, Host* pHost)
@@ -40,6 +44,9 @@ dlgModuleManager::dlgModuleManager(QWidget* parent, Host* pHost)
 , mpHost(pHost)
 {
     setupUi(this);
+    buildShell();
+    applyModuleManagerShellStyle();
+    connect(mudlet::self(), &mudlet::signal_appearanceChanged, this, &dlgModuleManager::slot_applyAppearance);
 
     // nothing is selected yet, so there is no help to show
     helpButton->setDisabled(true);
@@ -349,12 +356,86 @@ void dlgModuleManager::slot_helpModule()
     }
 }
 
+// Sheets go on the shell, not the dialog: a profile's Lua stylesheet replaces the dialog's on every show
+void dlgModuleManager::buildShell()
+{
+    mpShell = new QWidget(this);
+    mpShell->setObjectName(qsl("modulesShell"));
+    uiDesign::markAsShellSurface(mpShell);
+    auto* pShellLayout = new QVBoxLayout(mpShell);
+    pShellLayout->setContentsMargins(scmModulesInset, scmModulesInset, scmModulesInset, scmModulesInset);
+    pShellLayout->setSpacing(scmModulesInset);
+
+    for (QWidget* pWidget : {static_cast<QWidget*>(moduleTable), static_cast<QWidget*>(textEdit), static_cast<QWidget*>(label_importStatus), widget_2}) {
+        uiDesign::removeFromLayoutTree(gridLayout, pWidget);
+    }
+    delete gridLayout;
+    gridLayout = nullptr;
+    auto* pDialogLayout = new QVBoxLayout(this);
+    pDialogLayout->setContentsMargins(0, 0, 0, 0);
+    pDialogLayout->addWidget(mpShell);
+
+    pShellLayout->addWidget(moduleTable, 1);
+
+    // An explanation to read, not a field to type in, so it loses the sunken box
+    textEdit->setFrameShape(QFrame::NoFrame);
+    pShellLayout->addWidget(textEdit);
+
+    label_importStatus->hide();
+    mpNotice = new dlgSystemMessageArea(mpShell);
+    mpNotice->setObjectName(qsl("modulesNotice"));
+    mpNotice->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Maximum);
+    if (QLayout* pNoticeLayout = mpNotice->layout()) {
+        pNoticeLayout->setContentsMargins(0, 0, 0, 0);
+    }
+    mpNotice->notificationAreaIconLabelError->hide();
+    mpNotice->notificationAreaIconLabelInformation->hide();
+    mpNotice->notificationAreaIconLabelWarning->show();
+    mpNotice->hide();
+    pShellLayout->addWidget(mpNotice);
+    connect(mpNotice->messageAreaCloseButton, &QAbstractButton::clicked, mpNotice, &QWidget::hide);
+
+    pShellLayout->addWidget(widget_2, 0, Qt::AlignRight);
+}
+
+void dlgModuleManager::slot_applyAppearance()
+{
+    applyModuleManagerShellStyle();
+}
+
+void dlgModuleManager::applyModuleManagerShellStyle()
+{
+    const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
+    const QString table = qsl("QTableWidget#moduleTable");
+
+    mpShell->setStyleSheet(qsl("#modulesShell { background-color: %1; }").arg(tokens.page.name()) + uiDesign::buttonStyleSheet(tokens, qsl("#modulesShell"))
+                           + qsl("#modulesShell QTextEdit#textEdit { background: transparent; border: none; color: %1; }").arg(tokens.mutedText.name())
+                           + uiDesign::itemCheckMarkStyleSheet(table, tokens) + uiDesign::scrollBarStyleSheet(table, tokens, tokens.field)
+                           + uiDesign::scrollBarStyleSheet(qsl("#modulesShell QTextEdit#textEdit"), tokens, tokens.page));
+
+    // Tinted pixmaps keep the old appearance's ink until taken again here
+    installButton->setIcon(uiDesign::tintedIcon(qsl(":/icons/packages-install-file.svg"), tokens));
+    uninstallButton->setIcon(uiDesign::tintedIcon(qsl(":/icons/editor-delete.svg"), tokens));
+    helpButton->setIcon(uiDesign::tintedIcon(qsl(":/icons/about-docs.svg"), tokens));
+    for (QAbstractButton* pButton : {static_cast<QAbstractButton*>(installButton), static_cast<QAbstractButton*>(uninstallButton), static_cast<QAbstractButton*>(helpButton)}) {
+        pButton->setIconSize(QSize(scmModulesButtonGlyphSize, scmModulesButtonGlyphSize));
+    }
+    if (QToolButton* pClose = mpNotice ? mpNotice->messageAreaCloseButton : nullptr) {
+        pClose->setIcon(uiDesign::tintedIcon(qsl(":/icons/editor-clear.svg"), tokens));
+        pClose->setIconSize(QSize(scmModulesButtonGlyphSize, scmModulesButtonGlyphSize));
+    }
+
+    uiDesign::keepClickFocusOffControls(mpShell);
+}
+
+// Stays until dismissed: a failure that hid itself after a few seconds could be missed entirely
 void dlgModuleManager::showImportStatus(const QString& message)
 {
-    label_importStatus->setText(message);
-    label_importStatus->setStyleSheet(qsl("QLabel { padding: 8px; }"));
-    label_importStatus->show();
-    QTimer::singleShot(4s, label_importStatus, &QWidget::hide);
+    if (!mpNotice) {
+        return;
+    }
+    mpNotice->notificationAreaMessageBox->setText(message);
+    mpNotice->show();
 }
 
 void dlgModuleManager::closeEvent(QCloseEvent* event)

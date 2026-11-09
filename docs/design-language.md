@@ -1812,6 +1812,15 @@ pressed.
 ...and one dynamic property of its own, `exporterCountEmpty`, which the count chip carries
 while nothing is ticked and which needs `uiDesign::repolish()` after every change.
 
+...and the module manager's. `applyModuleManagerShellStyle()` builds the one sheet, on the
+shell, and none on the dialog.
+
+| Name | What it is |
+| --- | --- |
+| `modulesShell` | Everything on the window, on the page tone, carrying the button recipe, the table's tick and scroll bars, and the explanation under the table as `mutedText` with no box round it. The table's rows and headings are still platform-drawn |
+| `modulesNotice` | The `dlgSystemMessageArea` under the explanation, which `showImportStatus()` brings out in its warning reading and which stays until dismissed; `label_importStatus` is left hidden and unused |
+| `installButton`, `uninstallButton`, `helpButton` | The `.ui` file's buttons at the trailing end of the foot, carrying `packages-install-file.svg`, `editor-delete.svg` and `about-docs.svg` |
+
 Three of the `settings*` names are not the settings dialog's alone.
 `settingsRail` and `settingsFocused` are the contract `SidebarItemDelegate` and
 `sidebarStyleSheet()` are written against, and `settingsSurface` - which

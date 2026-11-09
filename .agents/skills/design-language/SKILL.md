@@ -222,6 +222,10 @@ Adopted (styled through `uiDesign`, guarded by the tests below):
   fields and selections" and puts the form back to how the window opened - always on show and
   disabled while there is nothing on it to clear; the picker's first entry does the same act,
   and both ask first when words were typed by hand
+- Module manager `dlgModuleManager` - one shell (`modulesShell`) on the page tone carrying the
+  buttons, now with the package manager's glyphs, the table's ticks and scroll bars, the
+  explanation as `mutedText` without its sunken box, and import failures in the shared notice
+  (`modulesNotice`) until dismissed; the table's rows and headings are still platform-drawn
 - Profile tab strip `TTabBar` (main window and detached windows) - chips, the chosen one filled on
   a light page with the accent walked dark enough for `field`'s white to read on it and washed with
   the sidebar's accent bar and an outline on a dark one, its word in bold as the sidebar's chosen
@@ -249,7 +253,6 @@ for anything it adds, and adoption is one window per pull request):
 
 - Main window body: search field, bottom icon buttons, dock title bars
 - Mapper dock `dlgMapper` and its map controls; `dlgRoomProperties`, `dlgRoomExits`, `dlgMapLabel`
-- Module manager `dlgModuleManager`
 - Composer `dlgComposer`, IRC `dlgIRC`
 - Colour trigger picker `dlgColorTrigger`, UI tour
 - User-made toolbars `TToolBar` / `TEasyButtonBar` (profile-owned look, mostly out of scope)

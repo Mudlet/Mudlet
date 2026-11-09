@@ -57,6 +57,7 @@
 #include "dlgKeysMainArea.h"
 #include "dlgAboutDialog.h"
 #include "dlgConnectionProfiles.h"
+#include "dlgModuleManager.h"
 #include "dlgNotepad.h"
 #include "dlgPackageExporter.h"
 #include "dlgPackageManager.h"
@@ -87,6 +88,7 @@ private:
     dlgNotepad* mpNotepad = nullptr;
     dlgPackageManager* mpPackages = nullptr;
     dlgPackageExporter* mpExporter = nullptr;
+    dlgModuleManager* mpModules = nullptr;
     Host* mpHost = nullptr;
     QTreeWidgetItem* mpKeyItem = nullptr;
     QTreeWidgetItem* mpTimerItem = nullptr;
@@ -140,6 +142,8 @@ private:
     static constexpr int scmLeastAuditedOnTheExporterSelection = 3;
     static constexpr int scmLeastAuditedOnTheExporterDetails = 18;
     static constexpr int scmLeastAuditedOnTheExporterFoot = 3;
+    // Measured at 3: Module Help is disabled with no module chosen
+    static constexpr int scmLeastAuditedInTheModuleManager = 3;
 
     // A colour well's fill is a value rather than a surface, and its words are
     // chosen against that fill by generateButtonStyleSheet(), so it is not audited
@@ -296,6 +300,16 @@ private:
         QVERIFY2(mpExporter->findChild<QWidget*>(qsl("exporterFoot")), "the package exporter built no foot, so there is nothing to walk");
     }
 
+    void openModuleManager()
+    {
+        mpModules = new dlgModuleManager(nullptr, mpHost);
+        QVERIFY2(mpModules, "the module manager did not open at all");
+        mpModules->show();
+        QVERIFY(QTest::qWaitForWindowExposed(mpModules));
+        QCoreApplication::processEvents();
+        QVERIFY2(mpModules->findChild<QWidget*>(qsl("modulesShell")), "the module manager built no shell, so there is nothing to walk");
+    }
+
     // Through the settings dialog's control, the path a player takes; each window
     // restyles off the mudlet::signal_appearanceChanged it sets off. Painting
     // settles a widget's palette, and offscreen nothing paints unless grabbed.
@@ -321,6 +335,9 @@ private:
         }
         if (mpExporter) {
             mpExporter->grab();
+        }
+        if (mpModules) {
+            mpModules->grab();
         }
     }
 
@@ -656,6 +673,12 @@ private:
             auditWithinFor(qsl("exporter"), mpExporter, pFoot, qsl("the package exporter's foot"), appearance, scmLeastAuditedOnTheExporterFoot);
         }
 
+        if (QWidget* pModulesShell = mpModules->findChild<QWidget*>(qsl("modulesShell"))) {
+            auditWithinFor(qsl("modules"), mpModules, pModulesShell, qsl("the module manager"), appearance, scmLeastAuditedInTheModuleManager);
+        } else {
+            mCases[qsl("modules")].setupFailure = qsl("the module manager's shell is not there to walk");
+        }
+
         if (showForm(
                     qsl("buttons"),
                     [this]() {
@@ -769,6 +792,7 @@ private slots:
         openNotepad();
         openPackageManager();
         openPackageExporter();
+        openModuleManager();
 
         // A failed compile puts up the code pane's note: the editor's one word in
         // a state colour rather than the shell's ink
@@ -784,6 +808,8 @@ private slots:
     void cleanupTestCase()
     {
         mpNotepad = nullptr;
+        delete mpModules;
+        mpModules = nullptr;
         delete mpExporter;
         mpExporter = nullptr;
         delete mpPackages;
@@ -842,6 +868,8 @@ private slots:
     void test_thePackageManagerIsReadableInBothAppearances() { report(qsl("packages")); }
 
     void test_thePackageExporterIsReadableInBothAppearances() { report(qsl("exporter")); }
+
+    void test_theModuleManagerIsReadableInBothAppearances() { report(qsl("modules")); }
 
     void test_theButtonsFormIsReadableInBothAppearances() { report(qsl("buttons")); }
 };
