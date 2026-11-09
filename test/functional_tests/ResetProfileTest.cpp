@@ -494,6 +494,53 @@ private slots:
     delete group;
   }
 
+  void test_disabledScriptRunsAfterResetAndEnable() {
+    const QString eventName = qsl("resetDisabledScriptEvent");
+    // permScript() makes its script switched off
+    auto [id, msg] = mpHost->mLuaInterpreter.createPermScript(
+        qsl("resetDisabledScript"), QString(),
+        qsl("function resetDisabledScript() resetDisabledScriptRan = true "
+            "end"));
+    QVERIFY2(id > 0, qPrintable(msg));
+    auto *pScript = mpHost->getScriptUnit()->getScript(id);
+    QVERIFY(!pScript->isActive());
+    pScript->setEventHandlerList({eventName});
+
+    performReset();
+
+    QVERIFY(mpHost->getScriptUnit()->enableScript(qsl("resetDisabledScript")));
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    QCOMPARE(luaL_dostring(
+                 L, "raiseEvent('resetDisabledScriptEvent')"),
+             0);
+    QVERIFY2(luaGlobalIsTrue("resetDisabledScriptRan"),
+             "a script switched off during a reset must answer its event "
+             "once switched back on");
+    delete pScript;
+  }
+
+  void test_scriptInADisabledGroupRunsAfterResetAndEnable() {
+    auto [groupId, groupMsg] = mpHost->mLuaInterpreter.createPermScript(
+        qsl("resetDisabledScriptGroup"), QString(), QString());
+    QVERIFY2(groupId > 0, qPrintable(groupMsg));
+    auto [id, msg] = mpHost->mLuaInterpreter.createPermScript(
+        qsl("resetDisabledScriptGroupChild"), qsl("resetDisabledScriptGroup"),
+        qsl("resetDisabledScriptGroupChildRan = true"));
+    QVERIFY2(id > 0, qPrintable(msg));
+    auto *pChild = mpHost->getScriptUnit()->getScript(id);
+    pChild->setIsActive(true);
+
+    performReset();
+
+    QVERIFY(!luaGlobalIsTrue("resetDisabledScriptGroupChildRan"));
+    QVERIFY(mpHost->getScriptUnit()->enableScript(
+        qsl("resetDisabledScriptGroup")));
+    QVERIFY2(luaGlobalIsTrue("resetDisabledScriptGroupChildRan"),
+             "a script in a group switched off during a reset must run once "
+             "the group is switched back on");
+    delete mpHost->getScriptUnit()->getScript(groupId);
+  }
+
   void test_buttonOnAHiddenToolbarRunsItsScriptAfterResetAndShow() {
     auto *actionUnit = mpHost->getActionUnit();
     auto *toolbar = new TAction(qsl("resetHiddenToolbar"), mpHost);

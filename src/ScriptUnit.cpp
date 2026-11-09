@@ -297,14 +297,29 @@ int ScriptUnit::getNewID()
 bool ScriptUnit::enableScript(const QString& name)
 {
     bool found = false;
-    for (auto script : std::as_const(mScriptMap)) {
+    // A copy: the bodies compileSwitchedOn() runs can create scripts
+    const QMap<int, TScript*> scripts = mScriptMap;
+    for (auto script : scripts) {
         if (script->getName() == name) {
             script->setIsActive(true);
+            compileSwitchedOn(script);
             found = true;
             emit mpHost->signal_scriptToggled(script->getID());
         }
     }
     return found;
+}
+
+void ScriptUnit::compileSwitchedOn(TScript* pScript)
+{
+    TScript* pRoot = pScript;
+    while (pRoot->getParent()) {
+        pRoot = pRoot->getParent();
+    }
+    // Only the scripts still waiting to run their body are compiled
+    if (pRoot->isActive()) {
+        pRoot->compileAll();
+    }
 }
 
 bool ScriptUnit::disableScript(const QString& name)
@@ -331,6 +346,8 @@ void ScriptUnit::compileAll(bool saveLoadingError)
     for (auto script : rootNodes) {
         if (script->isActive()) {
             script->compileAll(saveLoadingError);
+        } else if (mpHost->profileResetInProgress()) {
+            script->markForCompile();
         }
     }
     // The loop is now done with the (possibly self-uninstalled) scripts, so flush

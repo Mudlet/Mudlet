@@ -55,6 +55,7 @@ public:
     void setName(const QString& name) { mName = name; }
     void compile(bool saveLoadingError = false);
     void compileAll(bool saveLoadingError = false);
+    void markForCompile();
     bool compileScript(bool saveLoadingError = false);
     void execute();
     QString getScript() const { return mScript; }

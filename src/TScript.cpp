@@ -98,6 +98,17 @@ void TScript::compileAll(bool saveLoadingError)
     }
 }
 
+// For a script a reset leaves uncompiled: the reset closed the Lua state its body ran in, and
+// cleared the event handlers it had registered
+void TScript::markForCompile()
+{
+    mNeedsToBeCompiled = true;
+    setEventHandlerList(mEventHandlerList);
+    for (auto* scriptNode : *mpMyChildrenList) {
+        static_cast<TScript*>(scriptNode)->markForCompile();
+    }
+}
+
 void TScript::callEventHandler(const TEvent& pEvent)
 {
     // Only call this event handler if this script and all its ancestors are active:

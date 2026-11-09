@@ -60,6 +60,9 @@ public:
     bool enableScript(const QString& name);
     bool disableScript(const QString& name);
     void compileAll(bool saveLoadingError = false);
+    // compileAll() skips a switched off root, so a script under one has not run its body in
+    // this Lua state yet when it is switched on
+    void compileSwitchedOn(TScript* pScript);
     bool registerScript(TScript* pT);
     void unregisterScript(TScript* pT);
     void reParentScript(int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1);

@@ -5940,6 +5940,9 @@ void dlgTriggerEditor::activeToggle_script()
     // Capture old state for undo
     bool oldState = pT->shouldBeActive();
     pT->setIsActive(!pT->shouldBeActive());
+    if (pT->isActive()) {
+        mpHost->getScriptUnit()->compileSwitchedOn(pT);
+    }
     // Capture new state after toggle
     bool newState = pT->isActive();
 
