@@ -631,6 +631,38 @@ private slots:
         QVERIFY2(image.pixelColor(350, 10) == QColor(Qt::magenta), qPrintable(saved(image, qsl("unscaled-label-top"))));
     }
 
+    // An export sizes its image by the rooms alone, so an unscaled label can hang off its left or top edge too
+    void anUnscaledLabelOverAnExportsEdgeShowsItsVisiblePart()
+    {
+        TArea* pArea = roomDB()->getArea(mAreaId);
+        QVERIFY(pArea);
+        // The two rooms span map x 0 to 2 on y 0, so a room is 50 pixels with map (0, 0) at the image's (100, 100)
+        const auto addLabel = [pArea](const int id, const QPointF& topLeftInImage, const bool showOnTop) {
+            TMapLabel label;
+            label.pix = QPixmap(100, 40);
+            label.pix.fill(Qt::magenta);
+            label.size = QSizeF(0.25, 0.25);
+            label.noScaling = true;
+            label.showOnTop = showOnTop;
+            label.pos = QVector3D((topLeftInImage.x() - 100) / 50.0, (100 - topLeftInImage.y()) / 50.0, 0);
+            pArea->mMapLabels.insert(id, label);
+        };
+        addLabel(1, QPointF(-25, 150), true);
+        addLabel(2, QPointF(250, -20), false);
+
+        TMapPainter painter;
+        painter.setView(view());
+        QObject saveOwner;
+        const QString exportFile = qsl("%1/unscaled-label-export.png").arg(mConfigDir.path());
+        const auto [exportStarted, exportMessage] = painter.exportArea(mAreaId, exportFile, 0, 1.0, false, &saveOwner);
+        QVERIFY2(exportStarted, qPrintable(exportMessage));
+        const QImage image = exported(&saveOwner, exportFile);
+        QCOMPARE(image.size(), QSize(350, 250));
+
+        QVERIFY2(image.pixelColor(10, 170) == QColor(Qt::magenta), qPrintable(saved(image, qsl("unscaled-label-export-left"))));
+        QVERIFY2(image.pixelColor(300, 10) == QColor(Qt::magenta), qPrintable(saved(image, qsl("unscaled-label-export-top"))));
+    }
+
     // The info box starts to the right of the selection's room list while that is shown
     void theInfoBoxStartsRightOfTheSelectionList()
     {
