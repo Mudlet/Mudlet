@@ -8,7 +8,7 @@
 -- are dense in SGR sequences, with mixed ';' and ':' separators, empty,
 -- oversized and out of range values and truncated 38/48/58 forms, plus UTF-8,
 -- invalid bytes, other CSI sequences and OSC 8 links. Each round also checks
--- that a lone ESC[0m restores the default format whatever came before it.
+-- that ESC[0m restores the default format whatever came before it, bold included.
 --
 -- Run against a sanitizer build, as with the other fuzzers, and with
 -- MUDLET_INGEST_THREAD=verify to also have the main thread warn
@@ -200,7 +200,7 @@ end
 local passes = 0
 
 -- feeds the lines one read each, or all in one read (cut in two after byte cut),
--- and returns what they left in the buffer, then the format of a lone ESC[0m after them
+-- and returns what they left in the buffer, then the format of bold text after an ESC[0m
 local function pass(lines, oneRead, cut)
   passes = passes + 1
   local opening, closing = "SgrFuzzOpens" .. passes, "SgrFuzzCloses" .. passes
@@ -219,8 +219,9 @@ local function pass(lines, oneRead, cut)
       feed(text .. "\r\n")
     end
   end
-  -- ends a sequence or link a line left unfinished, so the marker below is plain text
-  feed("\27\\\27]8;;\27\\\r\n\27[0m" .. closing .. "\r\n")
+  -- ends a sequence or link a line left unfinished; the marker is bold on a 16 colour
+  -- background, which draws it in the bright foreground, so ESC[0m has to reset that too
+  feed("\27\\\27]8;;\27\\\r\n\27[0m\27[1;48;5;4m" .. closing .. "\r\n")
   local found = getLines("main", mark, getLastLineNumber("main") + 1)
   local from, to, closingLine
   for i, text in ipairs(found) do
