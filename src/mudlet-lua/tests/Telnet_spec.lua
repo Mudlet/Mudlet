@@ -462,6 +462,25 @@ describe("Tests the rest of the SGR decoder", function()
     end
   end)
 
+  -- underline colour is not drawn, but its arguments must not be read as
+  -- codes of their own: 58;5;196 used to turn on blink, 58;2;1;2;3 italic
+  it("steps over the arguments of an underline colour and applies the codes around it", function()
+    for i, colour in ipairs({"58;5;196", "58;2;1;2;3", "58;3;1;2;3", "58;4;1;2;3;4", "58;1", "59", "58:5:196", "58:2::1:2:3"}) do
+      local marker = ("SgrUnderlineColour%02d"):format(i)
+      feed("\27[4;" .. colour .. ";41;31m" .. marker)
+      local format = formatOf(marker)
+      assert.is_true(format.underline, "the underline before SGR " .. colour .. " was dropped")
+      assert.equals("none", format.blinking, "an argument of SGR " .. colour .. " was read as blink")
+      assert.is_false(format.italic, "an argument of SGR " .. colour .. " was read as italic")
+      assert.is_false(format.bold, "an argument of SGR " .. colour .. " was read as bold")
+      assert.is_false(format.reverse, "an argument of SGR " .. colour .. " was read as reverse")
+      assert.is_false(format.strikeout, "an argument of SGR " .. colour .. " was read as strikeout")
+      selectMarker(marker)
+      assert.is_true(isAnsiBgColor(4), "the background after SGR " .. colour .. " was dropped")
+      assert.is_true(isAnsiFgColor(4), "the foreground after SGR " .. colour .. " was dropped")
+    end
+  end)
+
   -- a sequence with an intermediate byte is held over a split between two
   -- reads like any other, rather than its tail reaching the screen
   it("carries a sequence with an intermediate byte over to the next read", function()
