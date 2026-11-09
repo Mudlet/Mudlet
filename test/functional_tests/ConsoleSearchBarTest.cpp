@@ -689,6 +689,18 @@ private slots:
 
         QTest::keyClick(console->mpBufferSearchBox, Qt::Key_Escape);
         QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(console->mpCommandLine));
+
+        // A script's extra command line searches the same buffer, and Escape goes back to it, not the main one
+        auto [created, message] = console->createCommandLine(QString(), qsl("extraLine"), 0, 0, 300, 30);
+        QVERIFY2(created, qPrintable(message));
+        TCommandLine* extraLine = console->subCommandLineWidget(qsl("extraLine"));
+        QVERIFY(extraLine);
+        extraLine->setFocus(Qt::MouseFocusReason);
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(extraLine));
+        QTest::keyClick(extraLine, Qt::Key_F, Qt::ControlModifier);
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(console->mpBufferSearchBox));
+        QTest::keyClick(console->mpBufferSearchBox, Qt::Key_Escape);
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(extraLine));
     }
 
     // Side by side in multi-view each profile has a split of its own, so
