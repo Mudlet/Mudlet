@@ -655,6 +655,8 @@ private slots:
         QVERIFY(pFirstHost);
         QVERIFY(pFirstHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(setActiveProfile('%1'))").arg(mSecondHostname)));
         QCOMPARE(mpDetachedWindow->getCurrentProfileName(), mSecondHostname);
+        QVERIFY(mudlet::self()->getActiveHost());
+        QCOMPARE(mudlet::self()->getActiveHost()->getName(), mSecondHostname);
     }
 
 private:

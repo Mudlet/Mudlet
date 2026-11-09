@@ -4504,6 +4504,8 @@ bool mudlet::setActiveProfileTab(const QString& profileName)
         pDetachedWindow->raise();
         pDetachedWindow->activateWindow();
         pDetachedWindow->switchToProfile(profileName);
+        // The main tab bar's change of tab is what does this for a profile in the main window
+        activateProfile(mHostManager.getHost(profileName));
         return true;
     }
     mpTabBar->setCurrentIndex(mpTabBar->tabIndex(profileName));
