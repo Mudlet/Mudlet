@@ -1,6 +1,6 @@
 id: org.mudlet.mudlet
 runtime: org.kde.Platform
-runtime-version: '6.8'
+runtime-version: '6.11'
 sdk: org.kde.Sdk
 command: mudlet
 rename-desktop-file: mudlet.desktop
@@ -12,11 +12,24 @@ finish-args:
   - --device=dri
   - --socket=pulseaudio
   - --share=network
+  # Scripts read and write sounds, packages, maps and logs at paths they are given, mostly under home
   - --filesystem=home
+  # showNotification() goes through Qt's tray icon, which uses these
+  - --talk-name=org.kde.StatusNotifierWatcher
+  - --talk-name=org.freedesktop.Notifications
+  # QtKeychain stores passwords in KWallet on KDE; elsewhere libsecret uses the Secret portal
+  - --talk-name=org.kde.kwalletd6
+  - --talk-name=org.kde.kwalletd5
 
 cleanup:
-  - /bin/json_reformat
-  - /bin/json_verify
+  - /include
+  - /lib/cmake
+  - /lib/pkgconfig
+  - /share/pkgconfig
+  - /share/doc
+  - /share/man
+  - '*.a'
+  - '*.la'
 
 modules:
   - name: lua-5.1
@@ -32,7 +45,7 @@ modules:
       - ln -sf lua.pc $FLATPAK_DEST/lib/pkgconfig/lua-5.1.pc
     sources:
       - type: archive
-        url: 'https://www.lua.org/ftp/lua-5.1.5.tar.gz'
+        url: https://www.lua.org/ftp/lua-5.1.5.tar.gz
         sha256: 2640fc56a795f29d28ef15e13c34a47e223960b0240e8cb0a82d9b0738695333
       - type: patch
         path: lua-5.1.5-so.patch
@@ -40,164 +53,197 @@ modules:
         commands:
           - sed -i "s|/usr/local|$FLATPAK_DEST|" etc/lua.pc src/luaconf.h
     cleanup:
-      - '*.a'
       - /bin
-      - /include
-      - /lib/pkgconfig
       - /man
-
-  - name: libsecret
-    buildsystem: meson
-    config-opts:
-      - -Dmanpage=false
-      - -Dvapi=false
-      - -Dgtk_doc=false
-      - -Dintrospection=false
-      # https://gitlab.gnome.org/GNOME/libsecret/-/issues/49
-      - -Dgcrypt=false
-    sources:
-      - commit: 3fe635e64efd4b8dbc9ec3548b0bc8034c7665c4
-        tag: 0.20.4
-        type: git
-        url: https://gitlab.gnome.org/GNOME/libsecret.git
-    cleanup:
-      - /bin/secret-tool
 
   - name: libzip
     buildsystem: cmake-ninja
     config-opts:
-    - "-DCMAKE_BUILD_TYPE=Release"
-    - "-DCMAKE_INSTALL_LIBDIR=lib"
-    cleanup:
-    - "/include"
-    - "/bin"
-    - "/share"
-    - "/lib/pkgconfig"
-    - "/lib/*.la"
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DCMAKE_INSTALL_LIBDIR=lib
+      - -DBUILD_TOOLS=OFF
+      - -DBUILD_REGRESS=OFF
+      - -DBUILD_OSSFUZZ=OFF
+      - -DBUILD_EXAMPLES=OFF
+      - -DBUILD_DOC=OFF
     sources:
-    - type: archive
-      url: https://libzip.org/download/libzip-1.9.2.tar.xz
-      sha256: c93e9852b7b2dc931197831438fee5295976ee0ba24f8524a8907be5c2ba5937
+      - type: archive
+        url: https://libzip.org/download/libzip-1.12.1.tar.xz
+        sha256: c40062022a1963c80573d48f6070792297cecd7c6bffe3aefcac0d8b9bee8913
 
   - name: pugixml
     buildsystem: cmake-ninja
     config-opts:
-      - -DBUILD_SHARED_LIBS=on .
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DCMAKE_INSTALL_LIBDIR=lib
+      - -DBUILD_SHARED_LIBS=ON
     sources:
-      - type: archive
-        url: https://github.com/zeux/pugixml/releases/download/v1.11.4/pugixml-1.11.4.tar.gz
-        sha256: 8ddf57b65fb860416979a3f0640c2ad45ddddbbafa82508ef0a0af3ce7061716
+      - type: git
+        url: https://github.com/zeux/pugixml.git
+        tag: v1.16
+        commit: c8033ce9d039e7f9d134877c363397b3cfe20816
 
   - name: yajl
     buildsystem: cmake-ninja
     builddir: true
     config-opts:
-      - '-DCMAKE_BUILD_TYPE=Release'
+      - -DCMAKE_BUILD_TYPE=Release
+      # yajl declares cmake_minimum_required(2.6), which CMake 4 rejects
+      - -DCMAKE_POLICY_VERSION_MINIMUM=3.5
     sources:
-      - type: archive
-        url: 'https://github.com/lloyd/yajl/archive/refs/tags/2.1.0.tar.gz'
-        sha256: 3fb73364a5a30efe615046d07e6db9d09fd2b41c763c5f7d3bfb121cd5c5ac5a
+      - type: git
+        url: https://github.com/lloyd/yajl.git
+        tag: 2.1.0
+        commit: a0ecdde0c042b9256170f2f8890dd9451a4240aa
+      # CMake 4 refuses to read a target's LOCATION (CMP0026), so the patch uses $<TARGET_FILE:...>
+      - type: patch
+        path: yajl-cmake-fix.patch
+    cleanup:
+      - /bin
 
   - name: luarocks
     buildsystem: simple
     build-commands:
       - >-
-        ./configure --with-lua=/app --prefix=/app
-        --with-lua-include=/app/include --force-config
+        ./configure --prefix=$FLATPAK_DEST --with-lua=$FLATPAK_DEST
+        --with-lua-include=$FLATPAK_DEST/include --lua-version=5.1 --force-config
       - make build
       - make install
-    build-options:
-      strip: false
-      no-debuginfo: true
-      no-debuginfo-compression: true
     sources:
-      - type: archive
-        url: 'https://github.com/luarocks/luarocks/archive/refs/tags/v3.9.2.tar.gz'
-        sha256: a0b36cd68586cd79966d0106bb2e5a4f5523327867995fd66bee4237062b3e3b
+      - type: git
+        url: https://github.com/luarocks/luarocks.git
+        tag: v3.13.0
+        commit: 3421bedc2ce2b64e79530bb97497531b014899a8
     cleanup:
-      - /bin/luarocks*
-      - /share/luarocks
-      - /etc/luarocks*
+      - /bin
+      - /etc
+      - /share/lua/5.1/luarocks
 
-  - name: sqlite3
-    config-opts:
-      - CFLAGS=-O2 -DSQLITE_ENABLE_FTS4 -DSQLITE_ENABLE_RTREE
+  # Built offline from pinned sources: the sandbox has no network at build time
+  - name: lua-modules
+    buildsystem: simple
+    build-commands:
+      - luarocks --tree=$FLATPAK_DEST build --deps-mode=none luafilesystem-1.9.0-1.src.rock
+      - luarocks --tree=$FLATPAK_DEST build --deps-mode=none luautf8-0.2.1-1.src.rock
+      - luarocks --tree=$FLATPAK_DEST build --deps-mode=none lpeg-1.1.0-2.src.rock
+      - luarocks --tree=$FLATPAK_DEST build --deps-mode=none lua-zip-0.2-0.src.rock ZIP_DIR=$FLATPAK_DEST
+      # Assigned first, as a failed command substitution inside the luarocks arguments would pass an empty path
+      - >-
+        PCRE2_INCDIR=$(pkg-config --variable=includedir libpcre2-8) &&
+        PCRE2_LIBDIR=$(pkg-config --variable=libdir libpcre2-8) &&
+        luarocks --tree=$FLATPAK_DEST build --deps-mode=none lrexlib-pcre2-2.9.4-1.src.rock
+        PCRE2_INCDIR="$PCRE2_INCDIR" PCRE2_LIBDIR="$PCRE2_LIBDIR"
+      - cd lua-yajl && luarocks --tree=$FLATPAK_DEST make --deps-mode=none lua-yajl-2.1-0.rockspec YAJL_DIR=$FLATPAK_DEST
+      # db:create fails on luasql-sqlite3 2.7 and newer, so every Mudlet build pins it
+      - cd luasql && luarocks --tree=$FLATPAK_DEST make --deps-mode=none luasql-sqlite3-2.6.1-3.rockspec
     sources:
-      - type: archive
-        url: 'https://www.sqlite.org/2021/sqlite-autoconf-3360000.tar.gz'
-        sha256: bd90c3eb96bee996206b83be7065c9ce19aef38c3f4fb53073ada0d0b69bbce3
+      - type: file
+        url: https://luarocks.org/luafilesystem-1.9.0-1.src.rock
+        sha256: 3de68d619f6ad95a27f4728814375447d921305194b7050dee6199057c31282f
+      - type: file
+        url: https://luarocks.org/luautf8-0.2.1-1.src.rock
+        sha256: 70c1590a6c2cfca417755b0bc79207bdfd0b469f854bfcc4e2cc5a39b5e3e3b6
+      - type: file
+        url: https://luarocks.org/lpeg-1.1.0-2.src.rock
+        sha256: 836d315b920a5cdd62e21786c6c9fad547c4faa131d5583ebca64f0b6595ee76
+      - type: file
+        url: https://luarocks.org/lua-zip-0.2-0.src.rock
+        sha256: 106cbef9aaac1742824bead6d2373adfe1f829a536eb0d3435d53ecf9af5b253
+      - type: file
+        url: https://luarocks.org/lrexlib-pcre2-2.9.4-1.src.rock
+        sha256: d41d736a309b14fed859ed4d3a49de89ef8f6565a7143570ed0cf1ccdbaebf29
+      - type: git
+        url: https://github.com/brimworks/lua-yajl.git
+        branch: v2.1
+        commit: 167c294046d5bbdc5bc4a791e6397439b6c825df
+        dest: lua-yajl
+      - type: file
+        url: https://luarocks.org/lua-yajl-2.1-0.rockspec
+        sha256: 39d9184c8c184066ebcade2f54a4aa0a76ada66bf5496838c1e30e54487b540a
+        dest: lua-yajl
+      - type: git
+        url: https://github.com/lunarmodules/luasql.git
+        tag: 2.6.0
+        commit: 22d4a911f35cf851af9db71124e3998d96fb3fa1
+        dest: luasql
+      - type: file
+        url: https://luarocks.org/luasql-sqlite3-2.6.1-3.rockspec
+        sha256: cb4f274bb9062becefa4a2e5c63159d09bad5b71bae959cce5cfeaca4867c8e1
+        dest: luasql
     cleanup:
-      - /bin/sqlite3
-
-  - name: pcre8
-    config-opts:
-      - "--enable-utf"
-      - "--enable-unicode-properties"
-      - "--prefix=/app"
-    sources:
-      - type: archive
-        url: 'https://sourceforge.net/projects/pcre/files/pcre/8.45/pcre-8.45.tar.bz2'
-        sha256: 4dae6fdcd2bb0bb6c37b5f97c33c2be954da743985369cddac3546e3218bffb8
-    cleanup:
-    - /bin/pcre-config
-    - /bin/pcregrep
-    - /bin/pcretest
+      - /lib/luarocks
 
   - name: boost
-    buildsystem: 'simple'
+    buildsystem: simple
     build-commands:
-      # we don't need to build boost, only using it for headers
-      - cp -r * /app/include
+      # Mudlet uses only headers, but finds them through the CMake config that b2 installs;
+      # naming header-only Boost.System stops b2 compiling every other library
+      - ./bootstrap.sh --prefix=$FLATPAK_DEST --with-libraries=system
+      - ./b2 install -j $FLATPAK_BUILDER_N_JOBS
     sources:
       - type: archive
-        url: 'https://sourceforge.net/projects/boost/files/boost/1.83.0/boost_1_83_0.tar.bz2'
-        sha256: 6478edfe2f3305127cffe8caf73ea0176c53769f4bf1585be237eb30798c3b8e
+        url: https://archives.boost.io/release/1.92.0/source/boost_1_92_0.tar.bz2
+        sha256: 5c1d40cb8e19adbf740a4ec2da35b3e58f3f5804b1dce44deb53df72193cbc6c
 
-  - name: luarucks-mods
-    buildsystem: simple
-    build-options:
-      build-args:
-        - '--share=network'
-    build-commands:
-      - luarocks install --tree="/app" lua-yajl YAJL_INCDIR="/app/include" YAJL_LIBDIR="/app/lib" LUA_INCDIR="/app/include"
-      - luarocks install --tree="/app" luautf8
-      - luarocks install --tree="/app" LuaFileSystem
-      - luarocks install --tree="/app" lpeg LUA_INCDIR="/app/include"
-      - luarocks install --tree="/app" lua-zip ZIP_INCDIR="/app/include" ZIP_LIBDIR="/app/lib" LUA_INCDIR="/app/include"
-      - luarocks install --tree="/app" LuaSQL-SQLite3 SQLITE_INCDIR="/app/include"
-      - luarocks install --tree="/app" lrexlib-pcre PCRE_INCDIR="/app/include" PCRE_LIBDIR="/app/lib"
+  - name: qtkeychain
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DCMAKE_INSTALL_LIBDIR=lib
+      - -DBUILD_TRANSLATIONS=OFF
+    sources:
+      - type: git
+        url: https://github.com/frankosterfeld/qtkeychain.git
+        tag: 0.17.0
+        commit: 875f77d9f61bd97fd84cca47ce3bc71186dfbd09
+    cleanup:
+      - /mkspecs
 
   - name: glu
+    buildsystem: meson
     config-opts:
-      - --disable-static
+      - --libdir=lib
+      - -Ddefault_library=shared
     sources:
       - type: archive
-        url: https://ftp.osuosl.org/pub/blfs/conglomeration/glu/glu-9.0.2.tar.xz
-        sha256: 6e7280ff585c6a1d9dfcdf2fca489251634b3377bfc33c29e4002466a38d02d4
-    cleanup:
-      - /include
-      - /lib/*.a
-      - /lib/*.la
-      - /lib/pkgconfig
+        url: https://archive.mesa3d.org/glu/glu-9.0.3.tar.xz
+        sha256: bd43fe12f374b1192eb15fe20e45ff456b9bc26ab57f0eee919f96ca0f8a330f
 
-  # The KDE runtime ships Qt WebSockets but not Qt HttpServer, which the MCP server needs
-  - name: qt6-qthttpserver
+  # The 3D mapper only loads its embedded glTF model
+  - name: assimp
     buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DCMAKE_INSTALL_LIBDIR=lib
+      - -DASSIMP_BUILD_TESTS=OFF
+      - -DASSIMP_BUILD_ASSIMP_TOOLS=OFF
+      - -DASSIMP_WARNINGS_AS_ERRORS=OFF
+      - -DASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT=OFF
+      - -DASSIMP_BUILD_GLTF_IMPORTER=ON
+      - -DASSIMP_NO_EXPORT=ON
+      - -DASSIMP_INJECT_DEBUG_POSTFIX=OFF
+      - -DASSIMP_IGNORE_GIT_HASH=ON
     sources:
-      - type: archive
-        url: https://download.qt.io/archive/qt/6.8/6.8.3/submodules/qthttpserver-everywhere-src-6.8.3.tar.xz
-        sha256: 792be98dd979a3f1cf42477139321a8999a648b7e7ad041ae133965c3cc35f65
-    # Qt installs to /app/lib/<triplet>, which is not on the sandbox's loader path
-    post-install:
-      - mkdir -p ${FLATPAK_DEST}/etc
-      - for dir in ${FLATPAK_DEST}/lib/*-linux-gnu; do echo "$dir" >> ${FLATPAK_DEST}/etc/ld.so.conf; done
+      - type: git
+        url: https://github.com/assimp/assimp.git
+        tag: v6.0.5
+        commit: 392a658f9c271be965271f45e7521a1b80ea4392
 
   - name: mudlet
     buildsystem: cmake-ninja
     config-opts:
       - -DCMAKE_BUILD_TYPE=RelWithDebInfo
+      # Defaults to address, which a release build must not carry
+      - -DUSE_SANITIZER=
+      - -DBUILD_TESTING=OFF
+      # Flatpak delivers updates itself
+      - -DUSE_UPDATER=OFF
       # The rocks are in /app, where only the Lua built above looks
       - -DUSE_BUNDLED_LUA=OFF
+      # The SDK has a newer Lua in /usr, which CMake would otherwise find first
+      - -DLUA_INCLUDE_DIR=/app/include
+      - -DLUA_LIBRARY=/app/lib/liblua.so
     sources:
+      # Check out the git submodules first: the build has no network to fetch them
       - type: dir
         path: ../
