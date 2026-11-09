@@ -63,8 +63,9 @@ TAction::~TAction()
     if (mpHost) {
         mpHost->getActionUnit()->unregisterAction(this);
 
-        // Permanent buttons too: IDs are never reused, so nothing else would free the compiled script
-        if (!mScript.isEmpty()) {
+        // Permanent buttons too, and after a cleared script: IDs are never reused, so nothing else would
+        // free it. Only under this button's own ID, as one compiled before it had an ID shares its name.
+        if (mID > 0 && mFuncName == qsl("Action%1").arg(QString::number(mID))) {
             mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
         }
     }

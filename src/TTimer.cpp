@@ -73,10 +73,10 @@ TTimer::~TTimer()
     if (mpHost) {
         mpHost->getTimerUnit()->unregisterTimer(this);
 
-        // Permanent items too: IDs are never reused, so nothing else would free the compiled script
-        if (mScript.isEmpty()) {
-            mpHost->mLuaInterpreter.delete_luafunction(mLuaFunctionRef);
-        } else {
+        mpHost->mLuaInterpreter.delete_luafunction(mLuaFunctionRef);
+        // Permanent items too, and after a cleared script: IDs are never reused, so nothing else would
+        // free it. Only under this item's own ID, as one compiled before it had an ID shares its name.
+        if (mID > 0 && mFuncName == qsl("Timer%1").arg(QString::number(mID))) {
             mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
         }
 

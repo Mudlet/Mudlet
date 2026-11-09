@@ -314,6 +314,47 @@ private slots:
         }
     }
 
+    // A cleared script leaves the function compiled before it, and an alias or key compiles one for an empty script too
+    void test_deletingAnItemWithAClearedScriptFreesItsFunction()
+    {
+        QVERIFY(runLua(qsl(R"(
+            tctClearedTriggerId = permRegexTrigger("tct cleared trigger", "", {"^tct cleared trigger$"}, "local _ = 1")
+            tctClearedAliasId = permAlias("tct cleared alias", "", "^tct cleared alias$", "local _ = 1")
+            tctClearedKeyId = permKey("tct cleared key", "", 67108864, 16777274, "local _ = 1")
+        )")));
+        const int triggerID = luaInteger("tctClearedTriggerId");
+        const int aliasID = luaInteger("tctClearedAliasId");
+        const int keyID = luaInteger("tctClearedKeyId");
+        TTrigger* trigger = mpHost->getTriggerUnit()->getTrigger(triggerID);
+        TAlias* alias = mpHost->getAliasUnit()->getAlias(aliasID);
+        TKey* key = mpHost->getKeyUnit()->getKey(keyID);
+        QVERIFY(trigger && alias && key);
+        trigger->setScript(QString());
+        alias->setScript(QString());
+        key->setScript(QString());
+
+        struct Deleted
+        {
+            EditorViewType view;
+            int id;
+            QString name;
+            QString function;
+        };
+        const QList<Deleted> items{
+                {EditorViewType::cmTriggerView, triggerID, trigger->getName(), qsl("Trigger%1").arg(triggerID)},
+                {EditorViewType::cmAliasView, aliasID, alias->getName(), qsl("Alias%1").arg(aliasID)},
+                {EditorViewType::cmKeysView, keyID, key->getName(), qsl("Key%1").arg(keyID)},
+        };
+        for (const auto& item : items) {
+            QVERIFY2(luaGlobalIsFunction(item.function), qPrintable(qsl("%1 has no function %2 to free").arg(item.name, item.function)));
+
+            EditorDeleteItemCommand command(item.view, {{item.id, -1, 0, QString(), item.name}}, mpHost);
+            command.redo();
+
+            QVERIFY2(!luaGlobalIsFunction(item.function), qPrintable(qsl("%1 outlived the deletion of %2").arg(item.function, item.name)));
+        }
+    }
+
     void test_deletingAnAliasGroup()
     {
         AliasUnit* unit = mpHost->getAliasUnit();
