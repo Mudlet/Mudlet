@@ -820,7 +820,7 @@ private slots:
         openExporter();
         QVERIFY(checkItem(triggersTop(), qsl("exporter traversal trigger")));
 
-        for (const QString& badName : {qsl("../%1").arg(outsideName), qsl(".."), qsl("."), qsl("sub\\name")}) {
+        for (const QString& badName : {qsl("../%1").arg(outsideName), qsl(".."), qsl("."), qsl(". .."), qsl("sub\\name")}) {
             nameField()->setText(badName);
             mpExporter->slot_exportPackage();
             QVERIFY(waitForExportToSettle());

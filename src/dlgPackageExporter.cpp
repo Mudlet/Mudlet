@@ -1879,10 +1879,12 @@ void dlgPackageExporter::slot_exportPackage()
         return;
     }
     // The name becomes a folder under the temporary directory that is wiped before each export,
-    // so ".." or a path in it would wipe a folder outside it
-    if (mPackageName == QLatin1String(".") || mPackageName == QLatin1String("..") || mPackageName.contains(QLatin1Char('/')) || mPackageName.contains(QLatin1Char('\\'))) {
+    // so ".." or a path in it would wipe a folder outside it. Windows drops trailing dots and spaces,
+    // making "..." or ".. " a step out too, so refuse every name of nothing else.
+    static const QRegularExpression onlyDotsAndSpaces(qsl("^[. ]*$"));
+    if (mPackageName.contains(onlyDotsAndSpaces) || mPackageName.contains(QLatin1Char('/')) || mPackageName.contains(QLatin1Char('\\'))) {
         //: Shown in the package exporter when the package or module name could not be used as a file name
-        displayResultMessage(tr("The name cannot be \".\" or \"..\", or contain \"/\" or \"\\\". Please choose another name."), false);
+        displayResultMessage(tr("The name cannot be only dots and spaces, or contain \"/\" or \"\\\". Please choose another name."), false);
         return;
     }
 
