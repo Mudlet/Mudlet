@@ -170,6 +170,9 @@
         </property>
         <item>
          <widget class="QLineEdit" name="lineEdit_searchBar">
+          <property name="accessibleName">
+           <string extracomment="Name a screen reader announces for the Package Manager search field">Search packages</string>
+          </property>
          <property name="toolTip">
           <string>Search packages</string>
          </property>
@@ -183,6 +186,9 @@
        </item>
        <item>
         <widget class="QListWidget" name="packageList">
+         <property name="accessibleName">
+          <string extracomment="Name a screen reader announces for the Package Manager list of packages">Packages</string>
+         </property>
          <property name="focusPolicy">
           <enum>Qt::FocusPolicy::StrongFocus</enum>
          </property>
