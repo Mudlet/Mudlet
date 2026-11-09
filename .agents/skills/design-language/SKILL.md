@@ -249,6 +249,7 @@ for anything it adds, and adoption is one window per pull request):
 
 - Main window body: search field, bottom icon buttons, dock title bars
 - Mapper dock `dlgMapper` and its map controls; `dlgRoomProperties`, `dlgRoomExits`, `dlgMapLabel`
+  (whose three colours are already `uiDesign::AlphaColourWell`s, guarded by `MapLabelColourWellTest`)
 - Module manager `dlgModuleManager`
 - Composer `dlgComposer`, IRC `dlgIRC`
 - Colour trigger picker `dlgColorTrigger`, UI tour

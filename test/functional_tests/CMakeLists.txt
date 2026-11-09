@@ -293,6 +293,7 @@ set(EDITOR_GROUP_TEST_SOURCES
 set(MAP_GROUP_TEST_SOURCES
     EmbeddedMapperCreationTest.cpp
     MapAutosaveTest.cpp
+    MapLabelColourWellTest.cpp
     FloatingMapKeyBindingTest.cpp
     ExitAppearanceTest.cpp
     MapAreaReassignmentTest.cpp
