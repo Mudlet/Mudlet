@@ -301,6 +301,41 @@ private:
         delete menuAnswerer;
     }
 
+    // Left-clicks a colour in the selector, from a timer inside its event
+    // loop, then closes the selector with OK or Cancel
+    void clickAColorInTheRoomColorSelector(dlgRoomProperties* pDlg, const int row, const bool pressOk)
+    {
+        using namespace std::chrono_literals;
+        auto* selectorDriver = new QTimer(this);
+        selectorDriver->setInterval(20ms);
+        QElapsedTimer waited;
+        waited.start();
+        connect(selectorDriver, &QTimer::timeout, this, [selectorDriver, row, pressOk, &waited]() {
+            auto* selector = qobject_cast<QDialog*>(QApplication::activeModalWidget());
+            auto* list = selector ? selector->findChild<QListWidget*>() : nullptr;
+            if (!list) {
+                if (waited.hasExpired(10000)) {
+                    selectorDriver->stop();
+                    if (selector) {
+                        selector->reject();
+                    }
+                }
+                return;
+            }
+            selectorDriver->stop();
+            QTest::mouseClick(list->viewport(), Qt::LeftButton, Qt::NoModifier, list->visualItemRect(list->item(row)).center());
+            if (pressOk) {
+                selector->accept();
+            } else {
+                selector->reject();
+            }
+        });
+        selectorDriver->start();
+        pDlg->pushButton_setRoomColor->click();
+        selectorDriver->stop();
+        delete selectorDriver;
+    }
+
     // In the grabbed image's pixels, which outnumber the label's on a high-DPI screen
     struct PreviewInk
     {
@@ -819,6 +854,21 @@ private slots:
         QCOMPARE(mColorSelectorOutcome.colorsLeftInList, 1);
         QVERIFY(map()->mCustomEnvColors.contains(257));
         QVERIFY2(!map()->mCustomEnvColors.contains(258), "the right-clicked color was not deleted");
+    }
+
+    void cancellingTheColorSelectorKeepsTheColorPickedBefore()
+    {
+        buildMap();
+        map()->mCustomEnvColors = {{257, QColor(Qt::red)}, {258, QColor(Qt::blue)}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        clickAColorInTheRoomColorSelector(pDlg, 0, true);
+        clickAColorInTheRoomColorSelector(pDlg, 1, false);
+        pDlg->accept();
+
+        QCOMPARE(mEmitted.emitCount, 1);
+        QVERIFY(mEmitted.changeRoomColor);
+        QCOMPARE(mEmitted.roomColorNumber, 257);
     }
 
     // The preview is a sample of the room as the map draws it, where a symbol

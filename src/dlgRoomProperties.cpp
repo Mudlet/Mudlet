@@ -567,12 +567,6 @@ QColor dlgRoomProperties::defaultSymbolColor()
 }
 
 
-void dlgRoomProperties::slot_selectRoomColor(QListWidgetItem* pI)
-{
-    mRoomColorNumber = pI->text().toInt();
-}
-
-
 void dlgRoomProperties::slot_defineNewColor()
 {
     auto color = QColorDialog::getColor(mpHost->mRed, this, tr("Define new room color"));
@@ -607,8 +601,12 @@ void dlgRoomProperties::slot_openRoomColorSelector()
     listWidget->setViewMode(QListView::IconMode);
     listWidget->setResizeMode(QListView::Adjust);
 
+    // Held apart from mRoomColorNumber until OK, so a Cancel discards the click
+    int clickedColorNumber = mRoomColorNumber;
     connect(listWidget, &QListWidget::itemDoubleClicked, dialog, &QDialog::accept);
-    connect(listWidget, &QListWidget::itemClicked, this, &dlgRoomProperties::slot_selectRoomColor);
+    connect(listWidget, &QListWidget::itemClicked, dialog, [&clickedColorNumber](QListWidgetItem* pI) {
+        clickedColorNumber = pI->text().toInt();
+    });
     listWidget->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(listWidget, &QListWidget::customContextMenuRequested, this, [=, this](const QPoint& pos) {
         // A right-click on empty space leaves the current item as it was, so
@@ -673,8 +671,8 @@ void dlgRoomProperties::slot_openRoomColorSelector()
     }
     listWidget->sortItems();
 
-    if (dialog->exec() == QDialog::Accepted && mpHost->mpMap->mCustomEnvColors.contains(mRoomColorNumber)) {
-        // Only proceed if OK pressed and color is valid - "Cancel" prevents change
+    if (dialog->exec() == QDialog::Accepted && mpHost->mpMap->mCustomEnvColors.contains(clickedColorNumber)) {
+        mRoomColorNumber = clickedColorNumber;
         mChangeRoomColor = true;
         mRoomColor = mpHost->mpMap->mCustomEnvColors.value(mRoomColorNumber);
         slot_updatePreview();
