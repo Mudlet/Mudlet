@@ -54,6 +54,20 @@ function Geyser.Button:new(cons, container)
     return nil, taken
   end
   setmetatable(me, self)
+  -- setClickFunction/setDownFunction compile Lua code given as a string; kept
+  -- as a string here, it would fail with "attempt to call" on every click.
+  -- Not raised: the constructor never has, so scripts carry on past it.
+  for _, field in ipairs({"clickFunction", "downFunction"}) do
+    local code = me[field]
+    if type(code) == "string" then
+      local func, err = loadstring(code)
+      if func then
+        me[field] = func
+      else
+        printError(f"Error while compiling Lua code from string for {field}: {err}", true, false)
+      end
+    end
+  end
   me:setClickCallback(function() me:press() end)
   -- an unusable state constraint would otherwise leave the button holding it
   -- and never painted, since setState returns before drawing anything
