@@ -34,6 +34,7 @@
 
 #include <QClipboard>
 #include <QFileInfo>
+#include <QInputMethodEvent>
 #include <QLineEdit>
 #include <QScopeGuard>
 #include <QSignalSpy>
@@ -943,6 +944,56 @@ private slots:
         QVERIFY(runLua(qsl("clearCmdLine()")));
         qApp->processEvents();
         QCOMPARE(pLayer->maximumHeight(), oneRow);
+    }
+
+    // Chinese, Japanese or Korean text from an input method arrives as one
+    // InputMethod event, never as a KeyPress
+    void test_inputMethodTextResizesTheMainCommandLine()
+    {
+        TCommandLine* pMain = mpHost->mainConsoleView()->mpCommandLine;
+        QVERIFY(pMain);
+        QWidget* pLayer = mpHost->mainConsoleView()->layerCommandLine;
+        QVERIFY(pLayer);
+        const auto clearMain = qScopeGuard([this]() {
+            runLua(qsl("clearCmdLine()"));
+        });
+        QVERIFY(runLua(qsl("clearCmdLine()")));
+        qApp->processEvents();
+        const int oneRow = pLayer->maximumHeight();
+
+        QInputMethodEvent commit;
+        commit.setCommitString(QString(600, QChar(0x4E2D)));
+        QApplication::sendEvent(pMain, &commit);
+        qApp->processEvents();
+
+        QCOMPARE(pMain->toPlainText().size(), 600);
+        QVERIFY2(pLayer->maximumHeight() > oneRow, qPrintable(qsl("600 committed characters left the command line %1 high, one row %2").arg(pLayer->maximumHeight()).arg(oneRow)));
+    }
+
+    // Text an input method adds to a recalled command is the player's own, so
+    // Down banks it as it would typed text, rather than walking the history over it
+    void test_downBanksInputMethodTextAddedToARecalledCommand()
+    {
+        mpHost->mAutoClearCommandLineAfterSend = true;
+        mpHost->mHighlightHistory = false;
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+
+        type(pCommandLine, qsl("say"));
+        press(pCommandLine, Qt::Key_Return);
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("say"));
+
+        QInputMethodEvent commit;
+        commit.setCommitString(qsl(" \u4F60\u597D"));
+        QApplication::sendEvent(pCommandLine, &commit);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("say \u4F60\u597D"));
+
+        press(pCommandLine, Qt::Key_Down);
+        QVERIFY(pCommandLine->toPlainText().isEmpty());
+
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("say \u4F60\u597D"));
     }
 
     // Escape leaves completion mode, and selects the line so the next thing

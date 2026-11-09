@@ -695,8 +695,13 @@ bool TCommandLine::event(QEvent* event)
         }
     }
 
-    if (event->type() == QEvent::KeyPress || event->type() == QEvent::InputMethod) {
-        // Keys that fell through the switch, Space among them, and dead-key and IME composition
+    if (event->type() == QEvent::InputMethod) {
+        // Text from an input method, such as Chinese or Japanese, or a dead key, never arrives as a KeyPress
+        processNormalKey(event);
+        return true;
+    }
+    if (event->type() == QEvent::KeyPress) {
+        // Keys that fell through the switch, Space among them
         const UserEditScope userEdit(*this);
         return QPlainTextEdit::event(event);
     }
