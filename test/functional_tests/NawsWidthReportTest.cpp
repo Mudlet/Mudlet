@@ -402,6 +402,33 @@ private slots:
         QCOMPARE(whileScrolledBack.constLast(), QSize(reportableWidth(mpHost), mpHost->mScreenHeight));
     }
 
+    // An overlay along the bottom that covers the whole of the lower pane
+    // still leaves the rows above it, scrolled back or not.
+    void scrollingBackUnderATallBottomOverlayLeavesTheReportedSizeAlone()
+    {
+        const int paneHeight = mpHost->mainConsoleView()->mUpperPane->height();
+        runLua(mpHost,
+               qsl("local width = getMainWindowSize()\n"
+                   "assert(createCommandLine('nawsProbeTallBelow', 0, %1, width + 50, %2))")
+                       .arg(paneHeight - paneHeight / 3)
+                       .arg(paneHeight));
+        runLua(mpHost, qsl("for i = 1, 300 do echo('line ' .. i .. '\\n') end"));
+        // an overlay is measured at the next layout, not when it appears
+        mudlet::self()->resize(1100, 800);
+        settle();
+
+        mpServer->clearNawsUpdates();
+        runLua(mpHost, qsl("scrollUp(50)"));
+        settle();
+        const bool lowerCovered = mpHost->mainConsoleView()->mLowerPane->drawableSize().isEmpty();
+        const auto scrolledBack = mpServer->nawsUpdates();
+        runLua(mpHost, qsl("scrollTo() deleteCommandLine('nawsProbeTallBelow')"));
+        settle();
+
+        QVERIFY2(lowerCovered, "the overlay did not cover the whole lower pane");
+        QVERIFY2(scrolledBack.isEmpty(), describe(scrolledBack).constData());
+    }
+
     // Rows start at the top left corner, so an opaque overlay there hides some of
     // them without taking any away from the grid or from what the game is told.
     void overlaysAlongTheTopAndLeftLeaveTheMainWindowItsSize()

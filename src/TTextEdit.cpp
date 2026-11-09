@@ -476,10 +476,12 @@ void TTextEdit::updateScreenView()
 int TTextEdit::mainWindowRows() const
 {
     const TTextEdit* pLower = mpConsole->mLowerPane;
-    if (!pLower || pLower->isHidden()) {
+    // An overlay can cover all of the lower pane, leaving the upper pane's own bottom the lowest seen
+    const int lowerSeen = pLower && !pLower->isHidden() ? pLower->drawableSize().height() : 0;
+    if (lowerSeen == 0) {
         return mScreenHeight;
     }
-    return (height() + mpConsole->splitter->handleWidth() + pLower->drawableSize().height()) / mFontHeight;
+    return (height() + mpConsole->splitter->handleWidth() + lowerSeen) / mFontHeight;
 }
 
 // Rows and columns start at the top left corner, so whatever covers that edge
