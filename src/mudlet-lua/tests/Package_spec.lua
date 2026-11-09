@@ -3895,6 +3895,7 @@ describe("Tests the functionality of packageUrlDrop", function()
       "https://127.0.0.1:1/mudlet-spec-query.mpackage?raw=true",
       "https://127.0.0.1:1/mudlet-spec-fragment.zip#readme",
       "https://127.0.0.1:1/mudlet-spec-both.xml?dl=1#top",
+      "https://127.0.0.1:1/mudlet-spec-path.mpackage?src=readme.xml",
     }
 
     for _, url in ipairs(urls) do
@@ -3905,7 +3906,18 @@ describe("Tests the functionality of packageUrlDrop", function()
       {destination = getMudletHomeDir() .. "/mudlet-spec-query.mpackage", url = urls[1]},
       {destination = getMudletHomeDir() .. "/mudlet-spec-fragment.zip", url = urls[2]},
       {destination = getMudletHomeDir() .. "/mudlet-spec-both.xml", url = urls[3]},
+      {destination = getMudletHomeDir() .. "/mudlet-spec-path.mpackage", url = urls[4]},
     }, asked)
+  end)
+
+  it("hands a URL with no file name in it to the plain installer", function()
+    local asked = recordDownloads()
+
+    local ok, reason = installPackage("http://127.0.0.1:1/mudlet-spec-download?id=5")
+
+    assert.is_nil(ok)
+    assert.is_truthy(reason)
+    assert.same({}, asked)
   end)
 
   it("downloads a package URL whose suffix is in capitals", function()
