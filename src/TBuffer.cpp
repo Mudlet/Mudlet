@@ -4151,6 +4151,13 @@ void TBuffer::decodeSGR(const QStringView sequence)
 
     const bool haveColorSpaceId = hostHaveColorSpaceId();
 
+#if defined(INCLUDE_LIBGHOSTTY)
+    // libghostty-vt has no 38;2;<colour space>;r;g;b form, so a profile expecting one keeps Mudlet's decoder
+    if (!haveColorSpaceId && ghosttySgrEngine() && decodeSGRWithGhostty(sequence, hostForeground(), hostBackground())) {
+        return;
+    }
+#endif
+
     SgrParameters parameterStrings;
     for (const QStringView parameter : sequence.tokenize(u';')) {
         parameterStrings.append(parameter);
