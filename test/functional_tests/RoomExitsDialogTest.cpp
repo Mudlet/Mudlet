@@ -323,9 +323,9 @@ private slots:
         QCOMPARE(pDlg->getActionOnExit(pDlg->down), pDlg->mpAction_noExit);
     }
 
-    // The no route, stub and door controls carry no text and share their
-    // tooltips across all twelve directions, so the name a screen reader reads
-    // out is all that tells one direction's controls from another's
+    // The no route, stub and door controls carry no text and no tooltip names
+    // its direction, so the name a screen reader reads out is all that tells
+    // one direction's controls from another's
     void everyExitControlHasItsOwnScreenReaderName()
     {
         buildMap();

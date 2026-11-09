@@ -275,9 +275,9 @@ void CommandLineEditDelegate::setModelData(QWidget* pEditor, QAbstractItemModel*
     QStyledItemDelegate::setModelData(pEditor, model, index);
 }
 
-// Most of each direction's controls show an icon or nothing at all, and the
-// tooltips are the same in every direction, so without these a screen reader
-// cannot tell the player which exit a control belongs to
+// Most of each direction's controls carry no text and their tooltips never
+// name the direction, so without these a screen reader cannot tell the player
+// which exit a control belongs to
 void dlgRoomExits::nameExitControlsForScreenReaders()
 {
     struct ExitControls
