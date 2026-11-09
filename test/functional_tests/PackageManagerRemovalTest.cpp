@@ -147,6 +147,20 @@ private slots:
         host->waitForProfileSave();
     }
 
+    // The reason a file was refused otherwise goes only to the main console, behind the dialog
+    void test_aFailedImportSaysWhy()
+    {
+        auto* host = startProfile();
+        QVERIFY2(host, "Could not start the profile");
+
+        auto* manager = new dlgPackageManager(nullptr, host);
+        const QString msg = manager->installPackageFiles(QStringList({qsl("%1/no<such>package.xml").arg(mConfigDir.path())}));
+        delete manager;
+
+        QVERIFY2(msg.contains(qsl("no&lt;such&gt;package.xml")), qPrintable(qsl("The refused file was not named, or not escaped for the rich-text notice: %1").arg(msg)));
+        QVERIFY2(msg.contains(qsl("could not open file")), qPrintable(qsl("The notice did not say why the file was refused: %1").arg(msg)));
+    }
+
     // A package taken away by a script leaves the listing with it: the dialog
     // hears Host::signal_packageListChanged itself, so no row stays behind to
     // offer a removal that can only be refused.

@@ -289,6 +289,20 @@ private slots:
         delete manager;
     }
 
+    // The reason a file was refused otherwise goes only to the main console, behind the dialog
+    void test_aFailedImportSaysWhy()
+    {
+        auto* host = startProfile();
+        QVERIFY2(host, "Could not start the profile");
+
+        auto* manager = new dlgModuleManager(nullptr, host);
+        const QString msg = manager->installModuleFiles(QStringList({qsl("%1/no-such-module.xml").arg(mConfigDir.path())}));
+        delete manager;
+
+        QVERIFY2(msg.contains(qsl("no-such-module.xml")), qPrintable(qsl("The refused file was not named: %1").arg(msg)));
+        QVERIFY2(msg.contains(qsl("could not open file")), qPrintable(qsl("The notice did not say why the file was refused: %1").arg(msg)));
+    }
+
     // Refusals are gathered into one message: a single module is named on its
     // own, several are listed together
     void test_refusedRemovalsAreReportedTogether()
