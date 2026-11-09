@@ -86,16 +86,17 @@ fetch_pinned () {
 build_speech_engines_asset () {
 
   local outDir="$1" assetBase="$2"
-  local sherpaVersion="1.13.5" onnxruntimeVersion="1.27.1" voskVersion="0.3.42"
+  # Vosk stays at 0.3.42: no later GitHub release ships a vosk-osx zip (0.3.50 is source only)
+  local sherpaVersion="2.0.1" onnxruntimeVersion="1.28.2" voskVersion="0.3.42"
   local sherpaArch sherpaSha256
   case "${ARCH}" in
     arm64)
       sherpaArch="arm64"
-      sherpaSha256="bd0e13f42eb1e2aa7174a2816198f2cff3b586fa09a7140f5504d8c1ab1cb19e"
+      sherpaSha256="ac5594ad237db56ec4a6c4b3fc48700441b33a07bb71c235f35530a52a93f2e3"
       ;;
     x86_64)
       sherpaArch="x64"
-      sherpaSha256="c1a65c52458a59ac0fc861733a42bd2c870940e6b23a77eb528aa3c3e6f0b85f"
+      sherpaSha256="b0107b8166c4131245380bc9b984345c4ea8637c65807f09ca5f501c72926be5"
       ;;
     *)
       echo "::warning::no speech engine builds are pinned for ${ARCH}"
