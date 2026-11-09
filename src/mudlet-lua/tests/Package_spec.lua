@@ -3895,7 +3895,6 @@ describe("Tests the functionality of packageUrlDrop", function()
       "https://127.0.0.1:1/mudlet-spec-query.mpackage?raw=true",
       "https://127.0.0.1:1/mudlet-spec-fragment.zip#readme",
       "https://127.0.0.1:1/mudlet-spec-both.xml?dl=1#top",
-      "https://127.0.0.1:1/mudlet-spec-path.mpackage?src=readme.xml",
     }
 
     for _, url in ipairs(urls) do
@@ -3906,7 +3905,6 @@ describe("Tests the functionality of packageUrlDrop", function()
       {destination = getMudletHomeDir() .. "/mudlet-spec-query.mpackage", url = urls[1]},
       {destination = getMudletHomeDir() .. "/mudlet-spec-fragment.zip", url = urls[2]},
       {destination = getMudletHomeDir() .. "/mudlet-spec-both.xml", url = urls[3]},
-      {destination = getMudletHomeDir() .. "/mudlet-spec-path.mpackage", url = urls[4]},
     }, asked)
   end)
 
@@ -3929,13 +3927,22 @@ describe("Tests the functionality of packageUrlDrop", function()
     assert.same({{destination = getMudletHomeDir() .. "/mudlet-spec-capitals.MPACKAGE", url = url}}, asked)
   end)
 
-  it("still downloads a URL whose query names the package file", function()
+  it("still downloads a URL whose query names the package file, under the name it always had", function()
     local asked = recordDownloads()
-    local url = "http://127.0.0.1:1/get.php?file=mudlet-spec-named.mpackage"
+    local urls = {
+      "http://127.0.0.1:1/get.php?file=mudlet-spec-named.mpackage",
+      -- the path names a package too, but scripts have had the query's name win
+      "http://127.0.0.1:1/mudlet-spec-index.xml?file=mudlet-spec-named.mpackage",
+    }
 
-    installPackage(url)
+    for _, url in ipairs(urls) do
+      installPackage(url)
+    end
 
-    assert.same({{destination = getMudletHomeDir() .. "/get.php?file=mudlet-spec-named.mpackage", url = url}}, asked)
+    assert.same({
+      {destination = getMudletHomeDir() .. "/get.php?file=mudlet-spec-named.mpackage", url = urls[1]},
+      {destination = getMudletHomeDir() .. "/mudlet-spec-index.xml?file=mudlet-spec-named.mpackage", url = urls[2]},
+    }, asked)
   end)
 
   it("does not download a URL that is not a package file", function()

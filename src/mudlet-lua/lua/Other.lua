@@ -1401,9 +1401,9 @@ end
 -- the file name installPackage() downloads a package URL under, or nil when target is not one
 local function packageFileFromUrl(target)
   if target:starts("http://") or target:starts("https://") then
-    -- a link such as .../package.mpackage?raw=true or ?dl=1 names its file before the query;
-    -- one such as get.php?file=package.mpackage names it in the query instead
-    for _, candidate in ipairs({target:match("^[^?#]*"), target}) do
+    -- the whole URL first, as scripts rely on: get.php?file=package.mpackage names its file in the
+    -- query; a link such as .../package.mpackage?raw=true or ?dl=1 names it before the query
+    for _, candidate in ipairs({target, target:match("^[^?#]*")}) do
       local fileName, suffix = candidate:match("([^/]+)%.([^./]+)$")
       if packageSuffix(suffix) then
         return string.format("%s.%s", fileName, suffix)
