@@ -26,6 +26,7 @@
   The following files are NOT deleted:
   - Files newer than the amount of days specified as an argument to deleteOldProfiles(), or 31 days if not specified.
   - One file for every month before that. Specifically: The first available file of every month prior to this.
+  - The newest file, which is the one Mudlet loads.
   Setting the second argument to true will delete maps instead of profiles. (e.g. deleteOldProfiles(10, true))
   --]]
 
@@ -77,7 +78,8 @@
   for i, v in ipairs(profile_table) do
     local days = math.floor(os.difftime(os.time(), v.last_mod) / 86400)
     local last_mod_month = os.date("%Y/%m", v.last_mod)
-    if days &gt; keepdays then
+    -- the newest file is the one Mudlet loads, so it stays however old it is
+    if days &gt; keepdays and i &lt; #profile_table then
       -- For profiles older than X days, check if we already kept a table for this month:
       if not table.contains(used_last_mod_months, last_mod_month) then
         -- If not, do nothing and mark this month as "kept".

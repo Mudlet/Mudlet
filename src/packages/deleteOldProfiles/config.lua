@@ -23,6 +23,7 @@ The following files are NOT deleted:
 
 - Files newer than the amount of days specified, or 31 days if not specified.
 - One file for every month before that. Specifically: The first available file of every month prior to this.
+- The newest file, which is the one Mudlet loads, however old it is.
 
 ```
 -- Examples: 
@@ -30,5 +31,5 @@ The following files are NOT deleted:
 > delete old maps 10    -- deletes maps older than 10 days
 ```
 ]]
-version = [[3]]
+version = [[4]]
 created = "2024-08-24T08:26:45+02:00"
