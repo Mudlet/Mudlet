@@ -181,6 +181,23 @@ private slots:
         QVERIFY(roomDB()->getAreaNamesMap().contains(doomedView->getCurrentAreaId()));
     }
 
+    // Area names are unique only as written, so two can differ in case alone
+    void test_areasWhoseNamesDifferOnlyInCaseAreBothListed()
+    {
+        map()->mapClear();
+        const int upper = addAreaWithRoom(qsl("Forest"), 1);
+        const int lower = addAreaWithRoom(qsl("forest"), 2);
+        QVERIFY(upper > 0 && lower > 0);
+
+        QPointer<TMapView> view = openView(upper);
+        QVERIFY(view);
+        const QStringList names = areaListOf(view);
+        QVERIFY2(names.contains(qsl("Forest")) && names.contains(qsl("forest")), qPrintable(qsl("the view's area list lost one of them: %1").arg(names.join(qsl(", ")))));
+        auto* comboBox = view->findChild<QComboBox*>();
+        QVERIFY(comboBox);
+        QCOMPARE(comboBox->currentText(), qsl("Forest"));
+    }
+
     // Once the application palette carries a resolve mask, the view's own
     // setPalette() pins it, so the view has to be told when the scheme changes.
     void test_aColourSchemeChangeReachesEveryMapView()

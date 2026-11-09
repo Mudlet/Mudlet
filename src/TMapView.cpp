@@ -38,6 +38,8 @@
 #include <QToolButton>
 #include <QVBoxLayout>
 
+#include <algorithm>
+
 TMapView::TMapView(int viewId, Host* pHost, TMap* pMap, QWidget* parent)
 : QWidget(parent)
 , mViewId(viewId)
@@ -207,19 +209,20 @@ void TMapView::updateAreaComboBox()
 
     const auto& areaNamesMap = mpMap->mpRoomDB->getAreaNamesMap();
 
-    QMap<QString, QString> areaNames;
+    QStringList areaNames;
     for (const auto& [areaId, areaName] : areaNamesMap.asKeyValueRange()) {
         if (areaId == -1 && !mpMap->getDefaultAreaShown()) {
             continue;
         }
-        areaNames.insert(areaName.toLower(), areaName);
+        areaNames.append(areaName);
     }
+    // Area names only have to differ in case, so "Forest" and "forest" are both listed
+    std::stable_sort(areaNames.begin(), areaNames.end(), [](const QString& a, const QString& b) {
+        return a.compare(b, Qt::CaseInsensitive) < 0;
+    });
 
     mpAreaComboBox->clear();
-    for (const auto& [sortKey, areaName] : areaNames.asKeyValueRange()) {
-        Q_UNUSED(sortKey)
-        mpAreaComboBox->addItem(areaName);
-    }
+    mpAreaComboBox->addItems(areaNames);
 
     // Re-select whichever entry names the area this view is actually
     // showing - not whatever text used to be selected, which goes stale
