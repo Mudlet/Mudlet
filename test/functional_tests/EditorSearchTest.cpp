@@ -258,7 +258,7 @@ private:
         mpHost->getScriptUnit()->registerScript(pScript);
 
         auto* pLongScript = new TScript(qsl("qaMultiLineScript"), mpHost);
-        pLongScript->setScript(qsl("local a = 1\n-- qaLater qaLaterWord\nlocal b = qaLater\n"));
+        pLongScript->setScript(qsl("local a = 1\n-- qaLater qaLaterWord\nlocal b = qaLater\n-- qaCafé qaCaféine\n"));
         mpHost->getScriptUnit()->registerScript(pLongScript);
 
         auto* pTimer = new TTimer(qsl("qaSearchTimer"), QTime(0, 0, 30), mpHost);
@@ -585,6 +585,16 @@ private slots:
         // The end that is a word character still has to finish the word
         search(qsl("^qaHay"));
         QCOMPARE(totalResultRows(), 0);
+        search(qsl("tern$"));
+        QCOMPARE(totalResultRows(), 0);
+    }
+
+    // A letter outside ASCII is part of the word, not an edge of punctuation
+    void test_wholeWordSearchTreatsNonAsciiLettersAsWordCharacters()
+    {
+        mpEditor->setSearchOptions(enums::EditorSearchOptionWholeWord);
+        search(qsl("qaCafé"));
+        QCOMPARE(resultsFor(qsl("Script")), QStringList({qsl("Lua 4:4")}));
     }
 
     // Variables live in the Lua state rather than in a unit, so they are only
