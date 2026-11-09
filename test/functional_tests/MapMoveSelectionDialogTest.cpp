@@ -19,7 +19,7 @@
 
 /*
  * The 2D map's "Move to position" dialog must not take a coordinate it cannot
- * read as 0: that silently moves the whole selection onto the origin, and the
+ * read as 0: that silently moves the whole selection to 0 on that axis, and the
  * map has no undo.
  *
  * The dialog is modal and only the context menu opens it, so this cannot be a

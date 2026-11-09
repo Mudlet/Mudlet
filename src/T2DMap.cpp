@@ -2128,7 +2128,7 @@ void T2DMap::slot_movePosition()
     auto pLEz = new QLineEdit(dialog);
 
     // QString::toInt() reads the C locale and turns anything it cannot read
-    // into 0, which would move the whole selection onto the origin
+    // into 0, which would silently move the selection to 0 on that axis
     QLocale coordinateLocale = QLocale::c();
     coordinateLocale.setNumberOptions(QLocale::RejectGroupSeparator);
     auto coordinateValidator = new QIntValidator(dialog);
