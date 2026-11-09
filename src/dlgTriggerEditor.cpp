@@ -14123,8 +14123,11 @@ void dlgTriggerEditor::resetTrees()
     // A package (un)install or module sync resets the editor without warning, so keep what was being typed;
     // an item it removed is looked up by id and skipped. Saving a script runs its body, so only when it was edited.
     const TScript* pOpenScript = mCurrentView == EditorViewType::cmScriptView ? getScriptFromTreeItem(mpCurrentScriptItem) : nullptr;
+    // The chip row shows a handler a profile file names twice only once
+    QStringList storedHandlers = pOpenScript ? pOpenScript->getEventHandlerList() : QStringList();
+    storedHandlers.removeDuplicates();
     const bool openScriptUnchanged = pOpenScript && pOpenScript->getScript() == mpSourceEditorEdbeeDocument->text() && pOpenScript->getName() == mpScriptsMainArea->lineEdit_script_name->text()
-                                     && pOpenScript->getEventHandlerList() == mpChipRow_scriptEvents->items();
+                                     && storedHandlers == mpChipRow_scriptEvents->items();
     if (!openScriptUnchanged) {
         saveOpenChanges();
     }

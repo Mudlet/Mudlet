@@ -1011,6 +1011,27 @@ private slots:
     QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(qaResetRuns == 0)")));
   }
 
+  // The chip row shows a handler named twice in the profile file once
+  void test_editorResetLeavesAnUneditedScriptWithARepeatedHandlerUnrun() {
+    mudlet::self()->slot_showScriptDialog();
+    QTest::qWait(100ms);
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
+    QVERIFY(pEditor);
+    const QString body = qsl("qaRepeatedHandlerRuns = (qaRepeatedHandlerRuns or 0) + 1");
+    QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(
+        qsl("permScript(\"qaRepeatedHandlerScript\", \"\", [[%1]])").arg(body)));
+    const auto ids = mpHost->getScriptUnit()->findItems(qsl("qaRepeatedHandlerScript"));
+    QCOMPARE(ids.size(), 1);
+    mpHost->getScriptUnit()->getScript(ids.front())->setEventHandlerList({qsl("qaRepeatedEvent"), qsl("qaRepeatedEvent")});
+    QVERIFY(typeIntoScript(pEditor, qsl("qaRepeatedHandlerScript"), body));
+    QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("qaRepeatedHandlerRuns = 0")));
+
+    emit mpHost->signal_editorCleanResetRequested();
+    QTRY_VERIFY(!pEditor->mCleanResetQueued);
+
+    QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(qaRepeatedHandlerRuns == 0)")));
+  }
+
   void test_editorResetAfterUninstallDropsEditsToTheRemovedItem() {
     mudlet::self()->slot_showScriptDialog();
     QTest::qWait(100ms);
