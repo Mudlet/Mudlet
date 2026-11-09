@@ -77,6 +77,7 @@
 #include <QHBoxLayout>
 #include <QPushButton>
 #include <QInputDialog>
+#include <QIntValidator>
 #include <QMessageBox>
 #include <QComboBox>
 
@@ -2126,6 +2127,15 @@ void T2DMap::slot_movePosition()
     auto pLEy = new QLineEdit(dialog);
     auto pLEz = new QLineEdit(dialog);
 
+    // QString::toInt() reads the C locale and turns anything it cannot read
+    // into 0, which would move the whole selection onto the origin
+    QLocale coordinateLocale = QLocale::c();
+    coordinateLocale.setNumberOptions(QLocale::RejectGroupSeparator);
+    auto coordinateValidator = new QIntValidator(dialog);
+    coordinateValidator->setLocale(coordinateLocale);
+    for (auto pLineEdit : {pLEx, pLEy, pLEz}) {
+        pLineEdit->setValidator(coordinateValidator);
+    }
     pLEx->setText(QString::number(pR_start->x()));
     pLEy->setText(QString::number(pR_start->y()));
     pLEz->setText(QString::number(pR_start->z()));
@@ -2156,6 +2166,11 @@ void T2DMap::slot_movePosition()
     pB_ok->setText(tr("OK"));
     boxLayout->addWidget(pB_ok);
     connect(pB_ok, &QAbstractButton::clicked, dialog, &QDialog::accept);
+    for (auto pLineEdit : {pLEx, pLEy, pLEz}) {
+        connect(pLineEdit, &QLineEdit::textChanged, pB_ok, [pB_ok, pLEx, pLEy, pLEz]() {
+            pB_ok->setEnabled(pLEx->hasAcceptableInput() && pLEy->hasAcceptableInput() && pLEz->hasAcceptableInput());
+        });
+    }
 
     auto pB_abort = new QPushButton(pButtonBar);
     //: dialog (room(s) move) button
