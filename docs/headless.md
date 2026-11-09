@@ -909,6 +909,59 @@ These still block the application's thread or run a nested event loop:
 - the map's long operations (loading, importing, exporting and auditing a map), which run the event
   loop to keep their progress display alive.
 
+## Building it for a browser (proof of concept)
+
+`mudlet_core`, the headless library and `mudlet-headless` build for WebAssembly against Qt's
+single-threaded `wasm_singlethread` kit, and the runner starts, makes a profile and runs its Lua in
+Chromium. This is a proof that the core gets there, not a supported build: what it still lacks is below.
+
+The toolchain and libraries it was built with:
+
+- Emscripten 3.1.70, which Qt 6.9 targets, and Qt 6.9.0 `wasm_singlethread` with `qtmultimedia`,
+  `qt5compat` and `qtspeech` (`aqt install-qt all_os wasm 6.9.0 wasm_singlethread -m ...`), beside the
+  desktop Qt of the same version, whose `lrelease` and `rcc` run on the host.
+- Static Emscripten builds of zlib, PCRE2 (8-bit, no JIT), libzip (zlib only), pugixml, yajl and
+  Hunspell in one prefix, and Boost's headers.
+
+```bash
+source /opt/emsdk/emsdk_env.sh
+sh /opt/qt/6.9.0/wasm_singlethread/bin/qt-cmake -S . -B build-wasm -G Ninja \
+  -DQT_HOST_PATH=/opt/qt/6.9.0/gcc_64 -DQt6LinguistTools_DIR=/opt/qt/6.9.0/gcc_64/lib/cmake/Qt6LinguistTools \
+  -DCMAKE_PREFIX_PATH="$DEPS;$DEPS/lib/cmake" -DCMAKE_FIND_ROOT_PATH="$DEPS" -DPCRE2_USE_STATIC_LIBS=ON \
+  -DZLIB_INCLUDE_DIR=$DEPS/include -DZLIB_LIBRARY=$DEPS/lib/libz.a \
+  -DUSE_GUI=OFF -DUSE_HEADLESS=ON -DUSE_UPDATER=OFF -DUSE_3DMAPPER=OFF -DUSE_MCPSERVER=OFF \
+  -DUSE_DISCORD_RPC=OFF -DUSE_SPEECH_ENGINES=OFF -DUSE_SPAWN=OFF -DUSE_VARIABLE_SPLASH_SCREEN=OFF \
+  -DBUILD_TESTING=OFF -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON \
+  "-DCMAKE_EXE_LINKER_FLAGS=-Wl,--allow-multiple-definition"
+cmake --build build-wasm -j2
+```
+
+`--allow-multiple-definition` is there because Qt's static build carries its own 16-bit PCRE2, whose
+width-neutral helpers clash with the 8-bit library's. The build gives `mudlet-headless.js`,
+`mudlet-headless.wasm` and Qt's `qtloader.js`; a page loads it with `qtLoad()`, passing the runner's
+command line as `arguments` and `mudlet_headless_executable_entry` as `qt.entryFunction`.
+
+Without threads Qt has no `QFuture`, `QFutureWatcher` or Qt Concurrent, so `TBackgroundTask` hands back
+a `TBackgroundResult` of its own, which wraps a `QFuture` where there are threads and runs the task in the
+call where there are none. The ingest thread and the trigger match helpers are left off, as on a machine
+with one CPU.
+
+What the browser build still lacks:
+
+- **Mudlet's Lua.** `mudlet-lua` is read from disk, and the page's file system has no copy, so
+  `LuaGlobal.lua` and everything it loads are missing. It needs packing into the build, as a resource
+  or an Emscripten preloaded file.
+- **The Lua C modules.** The desktop loads `lfs`, `zip`, `rex_pcre2`, `luasql.sqlite3`, `lua-utf8`,
+  `yajl` and `lpeg` from the system at run time. A browser cannot load native code that way, so each
+  must be built for Emscripten, linked in and registered in `package.preload`.
+- **Waiting.** `mudlet-headless` calls the blocking `start()`, `installPackage()` and `shutdown()`,
+  whose waits cannot block in a browser: Qt warns that `WaitForMoreEvents` is not supported there, and
+  the close never ends. A browser runner, or Mudlet Web, uses their async forms.
+- **The connection.** `ctelnet` speaks raw TCP and TLS, which a page cannot open. Mudlet Web reaches
+  games through a telnet-to-WebSocket proxy, which the connection would have to speak too.
+- **Storage.** Profiles and `Mudlet.ini` live in the page's memory and go with it; keeping them needs
+  a persistent file system, Emscripten's IndexedDB one or the host app's own.
+
 ## What still needs a window
 
 Some of what a profile can do has nothing to stand in for the GUI's widgets yet, and does nothing,

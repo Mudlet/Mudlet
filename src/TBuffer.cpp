@@ -89,6 +89,8 @@
 // OpenBSD doesn't have a sysinfo.h
 #include <sys/sysctl.h>
 #include <unistd.h>
+#elif defined(Q_OS_WASM)
+#include <emscripten/heap.h>
 #elif defined(Q_OS_UNIX)
 // Including both GNU/Linux and FreeBSD
 #include <sys/sysinfo.h>
@@ -167,6 +169,9 @@ int64_t physicalMemoryTotal()
     }
 
     return -1;
+#elif defined(Q_OS_WASM)
+    // The most the page's heap may grow to, which is all the memory this build can ever have
+    return static_cast<int64_t>(emscripten_get_heap_max());
 #elif defined(Q_OS_UNIX)
     // Including both GNU/Linux and FreeBSD:
     // Prefer sysctl() over sysconf() except sysctl() HW_REALMEM and HW_PHYSMEM

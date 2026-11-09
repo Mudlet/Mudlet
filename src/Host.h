@@ -31,6 +31,7 @@
 #include "KeyUnit.h"
 #include "ScriptUnit.h"
 #include "GifTracker.h"
+#include "TBackgroundTask.h"
 #include "TConsoleModel.h"
 #include "TLuaInterpreter.h"
 #include "TimerUnit.h"
@@ -43,7 +44,6 @@
 #include <QColor>
 #include <QFile>
 #include <QFont>
-#include <QFuture>
 #include <QList>
 #include <QMargins>
 #include <QPointer>
@@ -1586,7 +1586,7 @@ private:
     // Main thread only: snapshot of the still-pending profile-save futures, so a
     // background task never reads `writers`/`saveFutures` while the main thread mutates
     // them (that concurrent access is a heap-corrupting data race).
-    QList<QFuture<bool>> pendingXmlSaveFutures() const;
+    QList<TBackgroundResult> pendingXmlSaveFutures() const;
     void waitForAsyncXmlSave();
     void reloadModules();
     void startMapAutosave(const int interval);
@@ -1717,8 +1717,8 @@ private:
     // keeps track of all of the array writers we're currently operating with
     QHash<QString, std::shared_ptr<XMLexport>> writers;
 
-    QFuture<bool> mModuleFuture;
-    QFuture<QString> mMapAutosaveFuture;
+    TBackgroundResult mModuleFuture;
+    TBackgroundResult mMapAutosaveFuture;
     bool mMapAutosaveResultPending = false;
 
     // Will be null/empty if is to use Mudlet's default/own presence

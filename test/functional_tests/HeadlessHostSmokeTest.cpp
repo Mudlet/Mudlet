@@ -32,7 +32,6 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QPointer>
-#include <QPromise>
 #include <QScopeGuard>
 #include <QSemaphore>
 #include <QSettings>
@@ -12941,17 +12940,19 @@ headlessRecord("finished")
     // the profile's write must read as running
     void test_aWriteWaitingForAnEarlierOneReadsAsRunning()
     {
-        QPromise<bool> earlier;
-        earlier.start();
-        QFuture<bool> later = TBackgroundTask::runAfter({earlier.future()}, []() {
+        QSemaphore release;
+        const TBackgroundResult earlier = TBackgroundTask::run([&release]() {
+            release.acquire();
+            return true;
+        });
+        const TBackgroundResult later = TBackgroundTask::runAfter({earlier}, []() {
             return true;
         });
         QVERIFY2(later.isRunning(), "A write queued behind an earlier one did not read as running.");
         QVERIFY(!later.isFinished());
-        earlier.addResult(true);
-        earlier.finish();
+        release.release();
         QTRY_VERIFY_WITH_TIMEOUT(later.isFinished(), 5000);
-        QVERIFY(later.result());
+        QVERIFY(later.succeeded());
     }
 
     // As in a browser build, whose pool never runs a task: the save's writes, and an unzipAsync(), run as they are

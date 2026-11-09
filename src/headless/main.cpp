@@ -68,11 +68,11 @@
 #endif
 
 // A Qt Resource Collection in a static library only reaches the executable if something here names it
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
+extern int qInitResources_mudlet();
+extern int qInitResources_qm();
+extern int qInitResources_additional_splash_screens();
+extern int qInitResources_mudlet_fonts_common();
+extern int qInitResources_mudlet_fonts_posix();
 
 namespace {
 
@@ -846,8 +846,13 @@ int main(int argc, char* argv[])
         return exitOk;
     }
 
-    // Nothing is drawn, so no display is needed unless one is asked for
+    // Nothing is drawn, so no display is needed unless one is asked for. In a browser the page is the display,
+    // and Qt's own wasm platform the only one there is.
+#if defined(Q_OS_WASM)
+    const bool platformChosenHere = false;
+#else
     const bool platformChosenHere = qEnvironmentVariableIsEmpty("QT_QPA_PLATFORM");
+#endif
     if (platformChosenHere) {
         qputenv("QT_QPA_PLATFORM", "offscreen");
     }

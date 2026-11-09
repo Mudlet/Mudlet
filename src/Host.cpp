@@ -75,7 +75,6 @@
 #include <QElapsedTimer>
 #include <QEventLoop>
 #include <QFileInfo>
-#include <QFutureWatcher>
 #include <QFontInfo>
 #include <QFontMetrics>
 #include <QJsonDocument>
@@ -760,8 +759,8 @@ void Host::saveForClose(std::function<void(bool)> done)
         // Refused when the wait gave up on a save, which may predate the session's last changes, so the close fails
         const bool xmlStarted = saveProfileReportingFailure();
         // Taken now, as a writer leaves pendingXmlSaveFutures() once it has written
-        const QList<QFuture<bool>> xmlWrites = pendingXmlSaveFutures();
-        const QFuture<bool> moduleWrite = mModuleFuture;
+        const QList<TBackgroundResult> xmlWrites = pendingXmlSaveFutures();
+        const TBackgroundResult moduleWrite = mModuleFuture;
         // Other profiles can keep Mudlet running long after this one closes
         if (auto* frontend = TAppFrontend::instance()) {
             frontend->writeSettings();
@@ -771,10 +770,10 @@ void Host::saveForClose(std::function<void(bool)> done)
         whenProfileSaveEnds([this, xmlStarted, xmlWrites, moduleWrite, mapSaved, done = std::move(done)]() {
             bool xmlWritten = xmlStarted;
             for (const auto& write : xmlWrites) {
-                xmlWritten = xmlWritten && write.isFinished() && write.result();
+                xmlWritten = xmlWritten && write.succeeded();
             }
             // Only reached when this save started, so the module write is its own
-            const bool profileWritten = xmlWritten && moduleWrite.isFinished() && moduleWrite.result();
+            const bool profileWritten = xmlWritten && moduleWrite.succeeded();
             if (!profileWritten) {
                 qWarning().nospace().noquote() << "Host::saveForClose() WARNING - the profile \"" << getName() << "\" or its modules could not be written.";
             }
@@ -1360,15 +1359,12 @@ void Host::autoSaveMapInBackground(const QString& path)
     mMapAutosaveFuture = TBackgroundTask::runForReason([path, bytes = std::move(bytes)]() {
         return writeFileAtomically(path, bytes);
     });
-    auto watcher = new QFutureWatcher<QString>(this);
-    connect(watcher, &QFutureWatcher<QString>::finished, this, [this, watcher]() {
-        watcher->deleteLater();
-        // Otherwise a later autosave's write is still running, and its own watcher reports it
+    mMapAutosaveFuture.whenFinished(this, QString(), [this]() {
+        // Otherwise a later autosave's write is still running, and its own end reports it
         if (mMapAutosaveFuture.isFinished()) {
             waitForMapAutosave();
         }
     });
-    watcher->setFuture(mMapAutosaveFuture);
 }
 
 void Host::waitForMapAutosave()
@@ -1378,7 +1374,7 @@ void Host::waitForMapAutosave()
     }
     mMapAutosaveFuture.waitForFinished();
     mMapAutosaveResultPending = false;
-    const QString failure = mMapAutosaveFuture.result();
+    const QString failure = mMapAutosaveFuture.reason();
     if (!failure.isEmpty()) {
         qDebug().noquote() << "Error autosaving map to" << MudletApp::getMudletPath(enums::profileMapPathFileName, mHostName, qsl("autosave.dat")) << ":" << failure;
         mpMap->setUnsavedKeepingRevisions(__func__);
@@ -1402,9 +1398,9 @@ void Host::createModuleBackup(const QString& filename, const QString& saveName)
     QFile::copy(filename, saveName + time);
 }
 
-QList<QFuture<bool>> Host::pendingXmlSaveFutures() const
+QList<TBackgroundResult> Host::pendingXmlSaveFutures() const
 {
-    QList<QFuture<bool>> futures;
+    QList<TBackgroundResult> futures;
     for (const auto& writer : writers) {
         futures += writer->saveFutures;
     }
@@ -1930,8 +1926,8 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     const bool backupModules = saveName != qsl("autosave");
     const QList<ModuleWriteJob> moduleJobs = prepareModuleSaves(backupModules);
 
-    // Nothing between here and watcher->setFuture() below may pump the event loop: the
-    // save is marked as started, but the watcher that retires that mark does not exist
+    // Nothing between here and whenFinished() below may pump the event loop: the
+    // save is marked as started, but the notifier that retires that mark does not exist
     // yet, so a waitForProfileSave() reached from a pump waits for an end it can never
     // be told about, then lets its caller carry on - into a teardown that destroys the
     // profile the rest of this function goes on to use (#9807).
@@ -1945,13 +1941,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     // Snapshot the pending profile-save futures on the main thread - see
     // pendingXmlSaveFutures(): the background task must not read `writers`/`saveFutures`
     // itself, as the main thread mutates them whenever a save starts or finishes.
-    const QList<QFuture<bool>> xmlSaveFutures = pendingXmlSaveFutures();
-    // Parented so the profile owns the watcher outright. The deleteLater() below only
-    // arrives if the event loop lives long enough to deliver `finished` and then the
-    // deferred delete, which on the way out it does not - and a Host destroyed while
-    // the write is still queued would leave the watcher with no owner at all.
-    auto watcher = new QFutureWatcher<void>(this);
-    watcher->setObjectName(scmProfileSaveWatcherName);
+    const QList<TBackgroundResult> xmlSaveFutures = pendingXmlSaveFutures();
     // Filled by the task before its future finishes, read only after it has
     auto moduleFailures = std::make_shared<QStringList>();
     // Captures values only, never `this`: no wait for this task is guaranteed, so the
@@ -1967,7 +1957,10 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     for (const auto& job : moduleJobs) {
         savedModuleXmlNames << job.xmlFilename;
     }
-    connect(watcher, &QFutureWatcher<void>::finished, this, [this, savedModuleXmlNames, syncModules, moduleFailures]() {
+    // Told through a child of the profile, so the profile owns it outright: what removes it only arrives if the
+    // event loop lives long enough to deliver the end and then the deferred delete, which on the way out it does
+    // not - and a Host destroyed while the write is still queued would leave it with no owner at all.
+    mModuleFuture.whenFinished(this, scmProfileSaveWatcherName, [this, savedModuleXmlNames, syncModules, moduleFailures]() {
         for (const auto& failure : std::as_const(*moduleFailures)) {
             postMessage(failure);
         }
@@ -1994,8 +1987,6 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
             emit profileSaveFinished();
         }
     });
-    connect(watcher, &QFutureWatcher<void>::finished, watcher, &QObject::deleteLater);
-    watcher->setFuture(QFuture<void>(mModuleFuture));
     return {true, filename_xml, QString()};
 }
 
@@ -2097,12 +2088,16 @@ void Host::waitForProfileSave(const bool onlyTheSavesOwnEvents)
             waitedForNotification.start();
         }
         if (onlyTheSavesOwnEvents) {
-            // Every write's end reaches the main thread as a QFutureWatcher's posted FutureCallOut. Only this
-            // save's: an unzipAsync() or another profile's save has a watcher too, and theirs run Lua.
-            const auto watchers = findChildren<QFutureWatcherBase*>(scmProfileSaveWatcherName, Qt::FindDirectChildrenOnly);
-            for (const QPointer<QFutureWatcherBase> watcher : watchers) {
-                if (watcher) {
-                    QCoreApplication::sendPostedEvents(watcher, QEvent::FutureCallOut);
+            // Every write's end reaches the main thread as an event posted to its notifier: a QFutureWatcher's
+            // FutureCallOut, or a queued call where it ran inline. Only this save's: an unzipAsync() or another
+            // profile's save has one too, and theirs run Lua.
+            const auto notifiers = findChildren<QObject*>(scmProfileSaveWatcherName, Qt::FindDirectChildrenOnly);
+            for (const QPointer<QObject> notifier : notifiers) {
+                if (notifier) {
+                    QCoreApplication::sendPostedEvents(notifier, QEvent::FutureCallOut);
+                }
+                if (notifier) {
+                    QCoreApplication::sendPostedEvents(notifier, QEvent::MetaCall);
                 }
             }
             if (currentlySavingProfile()) {

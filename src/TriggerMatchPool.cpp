@@ -211,6 +211,11 @@ void TriggerMatchPool::configure(const Settings& settings)
 
 void TriggerMatchPool::startHelpers(const int wanted)
 {
+#if !QT_CONFIG(thread)
+    // No helpers to ask, so the main thread walks every trigger, as with one CPU
+    Q_UNUSED(wanted)
+    return;
+#endif
     if (wanted < 2) {
         return;
     }

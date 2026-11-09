@@ -20,20 +20,117 @@
 
 #include "TBackgroundTask.h"
 
+#include <QObject>
 #include <QtGlobal>
-#if QT_CONFIG(thread)
+#if QT_CONFIG(future)
+#include <QFutureWatcher>
 #include <QPromise>
 #include <QtConcurrentRun>
+#endif
 
 #include <algorithm>
-#include <memory>
+#include <optional>
+
+namespace {
+QString reasonFor(const bool succeeded)
+{
+    return succeeded ? QString() : QStringLiteral("failed");
+}
+} // namespace
+
+struct TBackgroundResult::State
+{
+#if QT_CONFIG(future)
+    // Unset for a task that ran inline
+    std::optional<QFuture<QString>> future;
 #endif
+    bool finished = true;
+    QString reason = QStringLiteral("never ran");
+};
+
+TBackgroundResult::TBackgroundResult()
+: mpState(std::make_shared<State>())
+{
+}
+
+TBackgroundResult::TBackgroundResult(std::shared_ptr<State> state)
+: mpState(std::move(state))
+{
+}
+
+bool TBackgroundResult::isFinished() const
+{
+#if QT_CONFIG(future)
+    if (mpState->future) {
+        return mpState->future->isFinished();
+    }
+#endif
+    return mpState->finished;
+}
+
+bool TBackgroundResult::isRunning() const
+{
+#if QT_CONFIG(future)
+    if (mpState->future) {
+        return mpState->future->isRunning();
+    }
+#endif
+    return false;
+}
+
+QString TBackgroundResult::reason() const
+{
+#if QT_CONFIG(future)
+    if (mpState->future) {
+        return mpState->future->isFinished() ? mpState->future->result() : QString();
+    }
+#endif
+    return mpState->reason;
+}
+
+bool TBackgroundResult::succeeded() const
+{
+    return isFinished() && reason().isEmpty();
+}
+
+void TBackgroundResult::waitForFinished() const
+{
+#if QT_CONFIG(future)
+    if (mpState->future) {
+        mpState->future->waitForFinished();
+    }
+#endif
+}
+
+void TBackgroundResult::whenFinished(QObject* context, const QString& notifierName, std::function<void()> then) const
+{
+#if QT_CONFIG(future)
+    if (mpState->future) {
+        auto* watcher = new QFutureWatcher<QString>(context);
+        watcher->setObjectName(notifierName);
+        QObject::connect(watcher, &QFutureWatcher<QString>::finished, context, std::move(then));
+        QObject::connect(watcher, &QFutureWatcher<QString>::finished, watcher, &QObject::deleteLater);
+        watcher->setFuture(*mpState->future);
+        return;
+    }
+#endif
+    // Posted, as a watcher's finished is, so it never runs during the call
+    auto* notifier = new QObject(context);
+    notifier->setObjectName(notifierName);
+    QMetaObject::invokeMethod(
+            notifier,
+            [notifier, then = std::move(then)]() {
+                notifier->deleteLater();
+                then();
+            },
+            Qt::QueuedConnection);
+}
 
 bool TBackgroundTask::smRunInline = false;
 
 bool TBackgroundTask::runsInline()
 {
-#if QT_CONFIG(thread)
+#if QT_CONFIG(future)
     return smRunInline;
 #else
     return true;
@@ -45,48 +142,53 @@ void TBackgroundTask::setRunInline(const bool runInline)
     smRunInline = runInline;
 }
 
-QFuture<bool> TBackgroundTask::run(std::function<bool()> task)
+TBackgroundResult TBackgroundTask::run(std::function<bool()> task)
 {
-#if QT_CONFIG(thread)
-    if (!runsInline()) {
-        return QtConcurrent::run(std::move(task));
-    }
-#endif
-    return QtFuture::makeReadyValueFuture(task());
+    return runForReason([task = std::move(task)]() {
+        return reasonFor(task());
+    });
 }
 
-QFuture<QString> TBackgroundTask::runForReason(std::function<QString()> task)
+TBackgroundResult TBackgroundTask::runForReason(std::function<QString()> task)
 {
-#if QT_CONFIG(thread)
+    auto state = std::make_shared<TBackgroundResult::State>();
+#if QT_CONFIG(future)
     if (!runsInline()) {
-        return QtConcurrent::run(std::move(task));
+        state->future = QtConcurrent::run(std::move(task));
+        return TBackgroundResult(state);
     }
 #endif
-    return QtFuture::makeReadyValueFuture(task());
+    state->reason = task();
+    return TBackgroundResult(state);
 }
 
-QFuture<bool> TBackgroundTask::runAfter(const QList<QFuture<bool>>& earlier, std::function<bool()> task)
+TBackgroundResult TBackgroundTask::runAfter(const QList<TBackgroundResult>& earlier, std::function<bool()> task)
 {
-#if QT_CONFIG(thread)
-    const bool earlierDone = std::all_of(earlier.cbegin(), earlier.cend(), [](const QFuture<bool>& future) {
-        return future.isFinished();
+#if QT_CONFIG(future)
+    const bool earlierDone = std::all_of(earlier.cbegin(), earlier.cend(), [](const TBackgroundResult& result) {
+        return result.isFinished();
     });
     // Inline only once the earlier ones have finished, as ones started before inline running was asked for may not have
     if (!runsInline() || !earlierDone) {
         // Started now, so the future reads as running while it waits: a continuation's own would read as neither
         // running nor finished until a pool thread picks it up, and a waiter would take that for done
-        auto promise = std::make_shared<QPromise<bool>>();
+        auto promise = std::make_shared<QPromise<QString>>();
         promise->start();
-        QFuture<bool> future = promise->future();
-        // whenAll() attaches continuations, which a const future cannot take
-        QList<QFuture<bool>> futures = earlier;
+        auto state = std::make_shared<TBackgroundResult::State>();
+        state->future = promise->future();
+        QList<QFuture<QString>> futures;
+        for (const auto& result : earlier) {
+            if (result.mpState->future) {
+                futures.append(*result.mpState->future);
+            }
+        }
         // Async, not the default Sync: a whenAll() already finished would run the task on this thread
-        QtFuture::whenAll(futures.begin(), futures.end()).then(QtFuture::Launch::Async, [promise, task = std::move(task)](const QList<QFuture<bool>>&) {
-            promise->addResult(task());
+        QtFuture::whenAll(futures.begin(), futures.end()).then(QtFuture::Launch::Async, [promise, task = std::move(task)](const QList<QFuture<QString>>&) {
+            promise->addResult(reasonFor(task()));
             promise->finish();
         });
-        return future;
+        return TBackgroundResult(state);
     }
 #endif
-    return QtFuture::makeReadyValueFuture(task());
+    return run(std::move(task));
 }

@@ -42,7 +42,6 @@
 #include <QSaveFile>
 #include <QRegularExpression>
 #include <QVersionNumber>
-#include <QFutureWatcher>
 #include <QFile>
 #include <QGuiApplication>
 #include <QMetaEnum>
@@ -221,30 +220,27 @@ bool XMLexport::exportHost(const QString& filename_pugi_xml)
 void XMLexport::runAsyncSave(const QString& fileName, const QString& xmlSavedKey)
 {
     QPointer<Host> host = mpHost;
-    // Written by the task before the future finishes, read only after it has
-    auto reason = std::make_shared<QString>();
-    auto future = TBackgroundTask::run([fileName, doc = takeExportDocument(), reason]() {
-        return XMLexport::saveXmlDocToFile(fileName, *doc, reason.get());
+    const TBackgroundResult result = TBackgroundTask::runForReason([fileName, doc = takeExportDocument()]() {
+        QString reason;
+        if (XMLexport::saveXmlDocToFile(fileName, *doc, &reason)) {
+            return QString();
+        }
+        return reason.isEmpty() ? QStringLiteral("failed") : reason;
     });
-    // Parented to the profile for the same reason the module save's watcher is: the
-    // deleteLater() below needs an event loop that is still running to be delivered,
-    // and the save that matters most here is the one on the way out.
-    auto watcher = new QFutureWatcher<bool>(host);
-    watcher->setObjectName(Host::scmProfileSaveWatcherName);
-    connect(watcher, &QFutureWatcher<bool>::finished, host, [host, xmlSavedKey, fileName, watcher, reason]() {
+    // Told through a child of the profile for the same reason the module save is: what removes it needs an event
+    // loop that is still running to be delivered, and the save that matters most here is the one on the way out.
+    result.whenFinished(host, Host::scmProfileSaveWatcherName, [host, xmlSavedKey, fileName, result]() {
         if (!host) {
             return;
         }
         // The caller was told the save had started long before this, so the console is the only place left to say it
-        if (!watcher->result()) {
+        if (!result.succeeded()) {
             //: %1 is the file the profile was being saved to, %2 is the reason it could not be
-            host->postMessage(tr("[ ERROR ] - The profile could not be saved to \"%1\": %2").arg(fileName, *reason));
+            host->postMessage(tr("[ ERROR ] - The profile could not be saved to \"%1\": %2").arg(fileName, result.reason()));
         }
         host->xmlSaved(xmlSavedKey);
     });
-    connect(watcher, &QFutureWatcher<bool>::finished, watcher, &QObject::deleteLater);
-    watcher->setFuture(future);
-    saveFutures.append(future);
+    saveFutures.append(result);
 }
 
 namespace {

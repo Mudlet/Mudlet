@@ -25,8 +25,9 @@
  ***************************************************************************/
 
 
+#include "TBackgroundTask.h"
+
 #include <QClipboard>
-#include <QFuture>
 #include <QPointer>
 #include <QSaveFile>
 #include <pugixml.hpp>
@@ -89,7 +90,7 @@ public:
 
     void writeScriptElement(const QString&, pugi::xml_node xmlElement);
 
-    QVector<QFuture<bool>> saveFutures;
+    QVector<TBackgroundResult> saveFutures;
 
 private:
     QPointer<Host> mpHost;
