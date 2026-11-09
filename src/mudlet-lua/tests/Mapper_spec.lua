@@ -6102,11 +6102,16 @@ describe("Tests saveMap and loadMap", function()
       assert.are.equal("true", getRoomUserData(importedRoomA, "feature-shop"))
     end)
 
-    -- the file's <environments> block fills TMap::mEnvColors, which maps an
-    -- environment id to a stock colour index. getCustomEnvColorTable() reads
-    -- mCustomEnvColors, a different map, so there is nothing to read this back
-    -- with from Lua
-    pending("the environment colours an XML map declares have no Lua getter")
+    -- TMap::mEnvColors has no Lua getter, but a JSON export writes it out
+    it("maps each environment the file declares, and nothing else", function()
+      local jsonPath = getMudletHomeDir() .. "/mapper_spec_xml_environments.json"
+      finally(function() os.remove(jsonPath) end)
+      assert.is_true(saveJsonMap(jsonPath))
+      local file = assert(io.open(jsonPath, "r"))
+      local document = yajl.to_value(file:read("*a"))
+      file:close()
+      assert.are.same({["169"] = 8}, document.envToColorMapping)
+    end)
 
     it("keeps the entrances of a room whose ID a later room in the file reuses", function()
       local duplicatePath = getMudletHomeDir() .. "/mapper_spec_duplicate.xml"
