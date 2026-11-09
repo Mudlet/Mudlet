@@ -1393,12 +1393,21 @@ end
 
 local acceptableSuffix = {"xml", "mpackage", "zip", "trigger"}
 
+-- the installer itself takes these in any case, as in a file called PACKAGE.MPACKAGE
+local function packageSuffix(suffix)
+  return suffix ~= nil and table.contains(acceptableSuffix, suffix:lower())
+end
+
 -- the file name installPackage() downloads a package URL under, or nil when target is not one
 local function packageFileFromUrl(target)
   if target:starts("http://") or target:starts("https://") then
-    local fileName, suffix = target:gmatch("([^/]+)%.([^.]+)$")()
-    if suffix and table.contains(acceptableSuffix, suffix) then
-      return string.format("%s.%s", fileName, suffix)
+    -- a link such as .../package.mpackage?raw=true or ?dl=1 names its file before the query;
+    -- one such as get.php?file=package.mpackage names it in the query instead
+    for _, candidate in ipairs({target:match("^[^?#]*"), target}) do
+      local fileName, suffix = candidate:match("([^/]+)%.([^./]+)$")
+      if packageSuffix(suffix) then
+        return string.format("%s.%s", fileName, suffix)
+      end
     end
   end
 end
@@ -1591,7 +1600,7 @@ end
 -- @param fileName name and location of the file
 -- @param suffix suffix of the file
 function packageDrop(event, fileName, suffix)
-  if not table.contains(acceptableSuffix, suffix) then
+  if not packageSuffix(suffix) then
     return
   end
   if holdingModifiers(mudlet.keymodifier.Control) then

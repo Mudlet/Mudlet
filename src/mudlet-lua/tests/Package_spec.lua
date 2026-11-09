@@ -3809,6 +3809,17 @@ describe("Tests the functionality of packageDrop", function()
     end
   end)
 
+  it("hands on a file whose suffix is in capitals", function()
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local path = fixtureDirectory .. "/mudlet-spec-there-is-no-such-drop.MPACKAGE"
+    local mark = getLastLineNumber("main")
+
+    packageDrop("sysDropEvent", path, "MPACKAGE")
+
+    local text = textFrom(mark)
+    assert.is_true(containsWrapped(text, "Installing '" .. path .. "' failed:"), text)
+  end)
+
   it("ignores a file whose type Mudlet does not install", function()
     assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
     local mark = getLastLineNumber("main")
@@ -3856,6 +3867,63 @@ describe("Tests the functionality of packageUrlDrop", function()
     assert.equals(0, select('#', packageUrlDrop("sysDropUrlEvent", droppedUrl, "ftp")))
 
     assert.is_false(announcedADownload(mark))
+  end)
+
+  -- Stands in for downloadFile() and records what it was asked for, so nothing
+  -- leaves the machine. Set on _G because a spec's own globals are sandboxed
+  -- from Other.lua's.
+  local function recordDownloads()
+    local realDownloadFile = _G.downloadFile
+    local asked = {}
+    defer(function()
+      _G.downloadFile = realDownloadFile
+      -- disarms the handlers installPackageFromUrl() left waiting for each download
+      for _, request in ipairs(asked) do
+        raiseEvent("sysDownloadError", "mudlet-spec-cleanup", request.destination)
+      end
+    end)
+    _G.downloadFile = function(destination, url)
+      asked[#asked + 1] = {destination = destination, url = url}
+      return true
+    end
+    return asked
+  end
+
+  it("downloads a package URL that carries a query string or fragment", function()
+    local asked = recordDownloads()
+    local urls = {
+      "https://127.0.0.1:1/mudlet-spec-query.mpackage?raw=true",
+      "https://127.0.0.1:1/mudlet-spec-fragment.zip#readme",
+      "https://127.0.0.1:1/mudlet-spec-both.xml?dl=1#top",
+    }
+
+    for _, url in ipairs(urls) do
+      packageUrlDrop("sysDropUrlEvent", url, "https")
+    end
+
+    assert.same({
+      {destination = getMudletHomeDir() .. "/mudlet-spec-query.mpackage", url = urls[1]},
+      {destination = getMudletHomeDir() .. "/mudlet-spec-fragment.zip", url = urls[2]},
+      {destination = getMudletHomeDir() .. "/mudlet-spec-both.xml", url = urls[3]},
+    }, asked)
+  end)
+
+  it("downloads a package URL whose suffix is in capitals", function()
+    local asked = recordDownloads()
+    local url = "http://127.0.0.1:1/mudlet-spec-capitals.MPACKAGE"
+
+    installPackage(url)
+
+    assert.same({{destination = getMudletHomeDir() .. "/mudlet-spec-capitals.MPACKAGE", url = url}}, asked)
+  end)
+
+  it("still downloads a URL whose query names the package file", function()
+    local asked = recordDownloads()
+    local url = "http://127.0.0.1:1/get.php?file=mudlet-spec-named.mpackage"
+
+    installPackage(url)
+
+    assert.same({{destination = getMudletHomeDir() .. "/get.php?file=mudlet-spec-named.mpackage", url = url}}, asked)
   end)
 
   it("does not download a URL that is not a package file", function()
