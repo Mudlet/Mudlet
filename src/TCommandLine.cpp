@@ -1150,6 +1150,7 @@ void TCommandLine::enterCommand(QKeyEvent* event)
     emit commandSubmitted();
 
     const QString submitted = toPlainText();
+    const int revisionAtSubmit = document()->revision();
     QStringList commandList = submitted.split(QChar::LineFeed);
 
     for (QString& command : commandList) {
@@ -1169,7 +1170,7 @@ void TCommandLine::enterCommand(QKeyEvent* event)
 
     // An alias that wrote to the line, say with printCmdLine(), left that for the player to finish,
     // so it is neither cleared nor selected for the next keystroke to replace
-    const bool scriptWroteLine = toPlainText() != submitted;
+    const bool scriptWroteLine = document()->revision() != revisionAtSubmit;
 
     // A line typed past the hidden-input box stays out of the on-disk history
     if (!submitted.isEmpty() && (!mpHost->isRemoteEchoingActive() || mpHost->disablePasswordMasking())) {
