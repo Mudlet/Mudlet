@@ -602,6 +602,35 @@ private slots:
         QVERIFY2(image.pixelColor(westCentreInView()) == markerColour(), qPrintable(saved(image, qsl("lod"))));
     }
 
+    // An unscaled label is drawn at its pixmap's size, so one hanging off the view's left or top edge still shows
+    // the part of it inside, even where its stored size, scaled by the zoom, would end before the edge
+    void anUnscaledLabelOverTheViewsEdgeShowsItsVisiblePart()
+    {
+        setUpPlayerView();
+        TArea* pArea = roomDB()->getArea(mAreaId);
+        QVERIFY(pArea);
+        // A map unit is 40 pixels, with map (0, 0) at the view's (200, 150); a quarter unit is 10 pixels
+        const auto addLabel = [pArea](const int id, const QPointF& topLeftInView, const bool showOnTop) {
+            TMapLabel label;
+            label.pix = QPixmap(100, 40);
+            label.pix.fill(Qt::magenta);
+            label.size = QSizeF(0.25, 0.25);
+            label.noScaling = true;
+            label.showOnTop = showOnTop;
+            label.pos = QVector3D((topLeftInView.x() - 200) / 40.0, (150 - topLeftInView.y()) / 40.0, 0);
+            pArea->mMapLabels.insert(id, label);
+        };
+        addLabel(1, QPointF(-30, 220), true);
+        addLabel(2, QPointF(300, -20), false);
+
+        TMapPainter painter;
+        TMapPainter::PaintResult result;
+        const QImage image = paintedView(painter, playerView(), result);
+
+        QVERIFY2(image.pixelColor(10, 240) == QColor(Qt::magenta), qPrintable(saved(image, qsl("unscaled-label-left"))));
+        QVERIFY2(image.pixelColor(350, 10) == QColor(Qt::magenta), qPrintable(saved(image, qsl("unscaled-label-top"))));
+    }
+
     // The info box starts to the right of the selection's room list while that is shown
     void theInfoBoxStartsRightOfTheSelectionList()
     {
