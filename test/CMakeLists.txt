@@ -266,6 +266,7 @@ add_executable(IrcMessageFormatterTest
 )
 target_include_directories(IrcMessageFormatterTest PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(IrcMessageFormatterTest PRIVATE Qt6::Test communi)
+target_compile_definitions(IrcMessageFormatterTest PRIVATE MUDLET_EN_US_QM="${mudlet_BINARY_DIR}/translations/translated/mudlet_en_US.qm")
 add_test(NAME IrcMessageFormatterTest COMMAND $<TARGET_FILE:IrcMessageFormatterTest>)
 set_tests_properties(IrcMessageFormatterTest PROPERTIES
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
