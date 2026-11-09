@@ -169,6 +169,8 @@ void dlgModuleManager::slot_installModule()
     if (fileNames.isEmpty()) {
         return;
     }
+    // An earlier failure says nothing about this attempt
+    mpNotice->hide();
 
     lastDir = QFileInfo(fileNames.first()).absolutePath();
     settings.setValue(qsl("lastFileDialogLocation"), lastDir);
@@ -391,6 +393,8 @@ void dlgModuleManager::buildShell()
     mpNotice->notificationAreaIconLabelError->hide();
     mpNotice->notificationAreaIconLabelInformation->hide();
     mpNotice->notificationAreaIconLabelWarning->show();
+    // It reports file names, and a '<' in one would otherwise be taken for markup
+    mpNotice->notificationAreaMessageBox->setTextFormat(Qt::PlainText);
     mpNotice->hide();
     pShellLayout->addWidget(mpNotice);
     connect(mpNotice->messageAreaCloseButton, &QAbstractButton::clicked, mpNotice, &QWidget::hide);

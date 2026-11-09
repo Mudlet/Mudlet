@@ -126,11 +126,12 @@ private slots:
         QVERIFY2(shell()->isAncestorOf(pNotice), "the notice is not inside the shell");
         QVERIFY2(!pNotice->isVisible(), "the notice is on show with nothing to report");
 
-        const QString message = qsl("Failed to import: broken.mpackage");
+        const QString message = qsl("Failed to import: broken<v2>.mpackage");
         mpDialog->showImportStatus(message);
         QTest::qWait(4500ms);
         QVERIFY2(pNotice->isVisible(), "the import failure hid itself before the player dismissed it");
         QCOMPARE(pNotice->notificationAreaMessageBox->text(), message);
+        QCOMPARE(pNotice->notificationAreaMessageBox->textFormat(), Qt::PlainText);
         QVERIFY2(!mpDialog->label_importStatus->isVisible(), "the label the notice replaced is on show as well");
 
         pNotice->messageAreaCloseButton->click();
