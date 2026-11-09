@@ -2331,8 +2331,9 @@ bool TNullConsoleFrontend::holdMainCommandLineForSend(const QString& line)
 
 void TNullConsoleFrontend::mainCommandLineSent()
 {
-    // TCommandLine::enterCommand() leaves a line the aliases wrote to the player
-    if (std::exchange(mMainCommandLineRewritten, false)) {
+    // TCommandLine::enterCommand() leaves a line the aliases wrote to the player. Left set for an outer send whose
+    // alias ran this one from the event loop; the next send's holdMainCommandLineForSend() resets it.
+    if (mMainCommandLineRewritten) {
         return;
     }
     // TCommandLine::enterCommand() selects a line it keeps

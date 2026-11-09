@@ -3944,6 +3944,35 @@ registerAnonymousEventHandler("sysDataSendRequest", function(_, command) hiddenS
         QVERIFY(session.shutdown(false));
     }
 
+    // A line an inner send's alias wrote stays for the outer send to leave too, as TCommandLine::enterCommand() does
+    void test_anOuterSendLeavesTheLineAnInnerSendsAliasWrote()
+    {
+        const QString name = qsl("Headless Command Line Written By A Nested Send");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        session.host()->mAutoClearCommandLineAfterSend = true;
+        static bool innerSent;
+        innerSent = false;
+        lua_register(session.host()->getLuaInterpreter()->getLuaGlobalState(), "headlessAwaitInnerSend", [](lua_State*) -> int {
+            QDeadlineTimer deadline(10000);
+            while (!innerSent && !deadline.hasExpired()) {
+                QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+            }
+            return 0;
+        });
+        QVERIFY(session.runLua(qsl(R"lua(tempAlias("^outer$", [[headlessAwaitInnerSend()]]) tempAlias("^inner$", [[printCmdLine("tell bob ")]]))lua")));
+        QTimer::singleShot(0, this, [&session]() {
+            QVERIFY(session.submit(qsl("inner")));
+            innerSent = true;
+        });
+        QVERIFY(session.submit(qsl("outer")));
+        QVERIFY(innerSent);
+        QVERIFY(session.runLua(qsl("headlessAfter = '[' .. getCmdLine() .. ']'")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessAfter"), qsl("[tell bob ]"));
+        QVERIFY(session.shutdown(false));
+    }
+
     // As scripts read the GUI's command line, such as a key binding that acts on the line being typed
     void test_whatThePlayerHasTypedReachesTheScripts()
     {
