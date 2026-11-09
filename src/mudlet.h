@@ -509,6 +509,7 @@ public slots:
     void slot_showUiTour();
     void slot_uiTourClosed();
     static void restoreProfileFocus(const QString& profileName);
+    static void setWindowStaysOnTop(QWidget* window, const bool onTop);
     static void setupEditorFocusRestoration(dlgTriggerEditor* pEditor, const QString& profileName, QWidget* targetWindow = nullptr);
     void setupNotepadFocusRestoration(dlgNotepad* pNotepad);
     void setupPackageManagerFocusRestoration(dlgPackageManager* pPackageManager);
