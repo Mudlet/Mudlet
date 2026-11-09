@@ -150,10 +150,13 @@ describe("Tests MXP handling", function()
     -- a list built up with ADD starts from nothing, whether the entity was
     -- never defined, was deleted, or had every item removed from it
     it("starts a list ADD builds from an entity with no items", function()
+      finally(function() feedTriggers("\27[1z<!EN mxpadd1 DELETE><!EN mxpadd2 DELETE><!EN mxpadd3 DELETE>\n") end)
       assertLineShown("\27[1z<!EN mxpadd1 a ADD><!EN mxpadd1 b ADD>[&mxpadd1;]", "[a|b]")
       assertLineShown("\27[1z<!EN mxpadd1 DELETE><!EN mxpadd1 c ADD>[&mxpadd1;]", "[c]")
       assertLineShown("\27[1z<!EN mxpadd1 c REMOVE><!EN mxpadd1 d ADD>[&mxpadd1;]", "[d]")
       assertLineShown("\27[1z<!EN mxpadd1 ''><!EN mxpadd1 e ADD>[&mxpadd1;]", "[e]")
+      assertLineShown("\27[1z<!EN mxpadd2 a ADD><!EN mxpadd2 b ADD><!EN mxpadd2 c ADD><!EN mxpadd2 b REMOVE>[&mxpadd2;]", "[a|c]")
+      assertLineShown("\27[1z<!EN mxpadd3 z REMOVE>[&mxpadd3;]", "[]")
     end)
 
     -- <HR> is not written out, it is fed back through the parser as a rule of
