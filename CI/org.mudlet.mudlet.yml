@@ -12,7 +12,7 @@ finish-args:
   - --device=dri
   - --socket=pulseaudio
   - --share=network
-  # Scripts load sounds, packages, maps and logs from any absolute path they are given
+  # Scripts read and write sounds, packages, maps and logs at paths they are given, mostly under home
   - --filesystem=home
   # showNotification() goes through Qt's tray icon, which uses these
   - --talk-name=org.kde.StatusNotifierWatcher
@@ -95,6 +95,7 @@ modules:
         url: https://github.com/lloyd/yajl.git
         tag: 2.1.0
         commit: a0ecdde0c042b9256170f2f8890dd9451a4240aa
+      # CMake 4 refuses to read a target's LOCATION (CMP0026), so the patch uses $<TARGET_FILE:...>
       - type: patch
         path: yajl-cmake-fix.patch
     cleanup:
@@ -175,7 +176,8 @@ modules:
   - name: boost
     buildsystem: simple
     build-commands:
-      # Mudlet uses only headers, but finds them through the CMake config that b2 installs
+      # Mudlet uses only headers, but finds them through the CMake config that b2 installs;
+      # naming header-only Boost.System stops b2 compiling every other library
       - ./bootstrap.sh --prefix=$FLATPAK_DEST --with-libraries=system
       - ./b2 install -j $FLATPAK_BUILDER_N_JOBS
     sources:
