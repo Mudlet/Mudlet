@@ -316,6 +316,9 @@ void ScriptUnit::compileSwitchedOn(TScript* pScript)
     while (pRoot->getParent()) {
         pRoot = pRoot->getParent();
     }
+    if (!mCompilePassDone && std::find(mRootsCompiledThisPass.begin(), mRootsCompiledThisPass.end(), pRoot) == mRootsCompiledThisPass.end()) {
+        return;
+    }
     // Only the scripts still waiting to run their body are compiled
     if (pRoot->isActive()) {
         pRoot->compileAll();
@@ -343,8 +346,9 @@ void ScriptUnit::compileAll(bool saveLoadingError)
     // the stack, so no node is unlinked mid-loop, but taking a copy keeps the
     // iteration safe even against a body that adds or removes root scripts:
     const std::vector<TScript*> rootNodes(mScriptRootNodeList.begin(), mScriptRootNodeList.end());
-    // Marked up front, so a body that switches on another tree during a reset runs each of its
-    // scripts once, whether that tree comes before or after it in the list
+    mCompilePassDone = false;
+    mRootsCompiledThisPass.clear();
+    // Marked up front, so a body that switches on an earlier tree during a reset runs it
     if (mpHost->profileResetInProgress()) {
         for (auto script : rootNodes) {
             script->markForCompile();
@@ -354,7 +358,10 @@ void ScriptUnit::compileAll(bool saveLoadingError)
         if (script->isActive()) {
             script->compileAll(saveLoadingError);
         }
+        mRootsCompiledThisPass.push_back(script);
     }
+    mRootsCompiledThisPass.clear();
+    mCompilePassDone = true;
     // The loop is now done with the (possibly self-uninstalled) scripts, so flush
     // the deletes uninstall() deferred - before the editor tree is rebuilt below and
     // before returning to the event loop, where the 0ms save Host::uninstallPackage()

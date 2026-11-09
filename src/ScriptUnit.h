@@ -109,6 +109,10 @@ private:
     // > 0 whilst Host::raiseEvent() is dispatching to event handlers; uninstall()
     // and doCleanup() must not delete scripts then:
     int mProcessingDepth = 0;
+    // Until compileAll() ends, compileSwitchedOn() runs only these roots and leaves the rest for
+    // compileAll() to run in order, after the scripts before them
+    std::vector<TScript*> mRootsCompiledThisPass;
+    bool mCompilePassDone = false;
     int mMaxID = 0;
     int statsItemsTotal = 0;
     int statsTempItems = 0;

@@ -609,6 +609,34 @@ private slots:
     delete mpHost->getScriptUnit()->getScript(laterId);
   }
 
+  void test_scriptSwitchedOnDuringResetRunsInItsTurn() {
+    auto *scriptUnit = mpHost->getScriptUnit();
+    auto [enablerId, enablerMsg] = mpHost->mLuaInterpreter.createPermScript(
+        qsl("resetOrderEnabler"), QString(),
+        qsl("enableScript('resetOrderTarget')"));
+    QVERIFY2(enablerId > 0, qPrintable(enablerMsg));
+    scriptUnit->getScript(enablerId)->setIsActive(true);
+    auto [libraryId, libraryMsg] = mpHost->mLuaInterpreter.createPermScript(
+        qsl("resetOrderLibrary"), QString(), qsl("resetOrderLibraryValue = 42"));
+    QVERIFY2(libraryId > 0, qPrintable(libraryMsg));
+    scriptUnit->getScript(libraryId)->setIsActive(true);
+    auto [targetId, targetMsg] = mpHost->mLuaInterpreter.createPermScript(
+        qsl("resetOrderTarget"), QString(),
+        qsl("resetOrderTargetSaw = resetOrderLibraryValue"));
+    QVERIFY2(targetId > 0, qPrintable(targetMsg));
+
+    performReset();
+
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    lua_getglobal(L, "resetOrderTargetSaw");
+    const int seen = static_cast<int>(lua_tointeger(L, -1));
+    lua_pop(L, 1);
+    QCOMPARE(seen, 42);
+    delete scriptUnit->getScript(enablerId);
+    delete scriptUnit->getScript(libraryId);
+    delete scriptUnit->getScript(targetId);
+  }
+
   void test_buttonOnAHiddenToolbarRunsItsScriptAfterResetAndShow() {
     auto *actionUnit = mpHost->getActionUnit();
     auto *toolbar = new TAction(qsl("resetHiddenToolbar"), mpHost);
