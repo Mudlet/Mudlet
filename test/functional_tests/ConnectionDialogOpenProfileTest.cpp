@@ -221,11 +221,12 @@ private slots:
         QTest::qWait(100ms);
 
         dialog()->character_password_entry->selectAll();
-        QTest::keyClicks(dialog()->character_password_entry, qsl("sesame"));
+        // spaces at either end are part of the password, as the saved copy keeps them
+        QTest::keyClicks(dialog()->character_password_entry, qsl(" sesame "));
         // the dialog waits for typing to pause before it saves
         QVERIFY2(QTest::qWaitFor(
                          [pHost]() {
-                             return pHost->getPass() == qsl("sesame");
+                             return pHost->getPass() == qsl(" sesame ");
                          },
                          5s),
                  "The open profile is still using its old password");
