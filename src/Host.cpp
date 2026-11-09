@@ -545,8 +545,9 @@ Host::~Host()
     mStopWatchMap.clear();
 
     // No line will now arrive to let out the one log() holds back, nor appendLog() text queued behind it
-    if (mpMainConsoleModel) {
-        mpMainConsoleModel->buffer.logRemainingOutput();
+    if (mpMainConsoleModel && mpMainConsoleModel->mLogToLogFile) {
+        mpMainConsoleModel->closeLogFile();
+        mpMainConsoleModel->mLogToLogFile = false;
     }
 
     mErrorLogStream.flush();

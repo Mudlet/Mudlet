@@ -360,6 +360,9 @@ private slots:
         QVERIFY2(logFile.open(QIODevice::ReadOnly | QIODevice::Text), "The log file is not readable");
         const QString contents = QString::fromUtf8(logFile.readAll());
         QVERIFY2(contents.contains(qsl("teardown-exit-event-text\n")), qPrintable(qsl("The text sysExitEvent appended never reached the log:\n%1").arg(contents)));
+        QVERIFY2(contents.indexOf(qsl("Log session ending at ")) > contents.indexOf(qsl("teardown-exit-event-text\n")),
+                 qPrintable(qsl("Closing the profile did not end the log session after its last text:\n%1").arg(contents)));
+        QVERIFY2(QFile::exists(MudletApp::getMudletPath(enums::profileDataItemPath, profileName, qsl("autolog"))), "Closing the profile stopped logging from resuming on its next load");
     }
 
     // closeChildren() disposes of these windows through deleteLater(), and
