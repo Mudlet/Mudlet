@@ -268,6 +268,18 @@ they have been removed.</numerusform>
     </message>
 </context>
 <context>
+    <name>dlgTriggerEditor</name>
+    <message numerus="yes">
+        <location filename="../../src/dlgTriggerEditor.cpp" line="13712"/>
+        <source>Pasted %n item(s) successfully</source>
+        <extracomment>Status bar message after pasting items into the editor; %n is how many were pasted</extracomment>
+        <translation>
+            <numerusform>Pasted %n item successfully</numerusform>
+            <numerusform>Pasted %n items successfully</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
     <name>dlgRoomProperties</name>
     <message numerus="yes">
         <location filename="../../src/dlgRoomProperties.cpp" line="193"/>
@@ -389,6 +401,27 @@ they have been removed.</numerusform>
         <translation>
             <numerusform>Review the update available...</numerusform>
             <numerusform>Review the updates available...</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
+    <name>uiDesign::VariableTreeDelegate</name>
+    <message numerus="yes">
+        <location filename="../../src/VariableTreeDelegate.cpp" line="126"/>
+        <source>{ %n item(s) }</source>
+        <extracomment>How a Lua table whose every key is a number is summarised at the trailing edge of its row in the editor&apos;s Variables view. %n is how many members it has.</extracomment>
+        <translation>
+            <numerusform>{ %n item }</numerusform>
+            <numerusform>{ %n items }</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/VariableTreeDelegate.cpp" line="129"/>
+        <source>{ %n key(s) }</source>
+        <extracomment>How a Lua table is summarised at the trailing edge of its row in the editor&apos;s Variables view. %n is how many members it has.</extracomment>
+        <translation>
+            <numerusform>{ %n key }</numerusform>
+            <numerusform>{ %n keys }</numerusform>
         </translation>
     </message>
 </context>
