@@ -2117,8 +2117,8 @@ void dlgConnectionProfiles::showEvent(QShowEvent* pEvent)
     QDialog::showEvent(pEvent);
 }
 
-// QListView wraps an icon row while the next cell would reach the bounds' last pixel, and takes the
-// scroll bar's width off those bounds whether or not the bar is up
+// QListView wraps an icon row while the next cell would reach the bounds' last pixel, and takes the style's
+// scroll bar extent off those bounds whether or not the bar is up; a styled bar can be wider than that extent
 void dlgConnectionProfiles::fitGamesListToItsColumns()
 {
     constexpr int columns = 3;
@@ -2130,9 +2130,11 @@ void dlgConnectionProfiles::fitGamesListToItsColumns()
         option.initFrom(pList);
         frameAroundContents = 2 * pStyle->pixelMetric(QStyle::PM_DefaultFrameWidth, &option, pList);
     }
-    const int scrollBar = pStyle->pixelMetric(QStyle::PM_ScrollBarExtent, nullptr, pList->verticalScrollBar());
+    QScrollBar* pScrollBar = pList->verticalScrollBar();
+    const int wrapRoom = pStyle->pixelMetric(QStyle::PM_ScrollBarExtent, nullptr, pScrollBar) + 1;
+    const int scrollBarRoom = qMax(wrapRoom, pScrollBar->sizeHint().width());
     const int cellWidth = mpProfileChipDelegate->sizeHint(QStyleOptionViewItem(), QModelIndex()).width();
-    pList->setMinimumWidth(columns * cellWidth + 1 + 2 * pList->frameWidth() + scrollBar + frameAroundContents);
+    pList->setMinimumWidth(columns * cellWidth + 2 * pList->frameWidth() + scrollBarRoom + frameAroundContents);
 }
 
 // A QTextBrowser reports the same size hint whatever it holds, so shrinking the

@@ -53,8 +53,8 @@ private:
     QTemporaryDir mXdgDir;
     QByteArray mSavedXdg;
 
-    // enough games that the list has to scroll
-    static constexpr int scmProfileCount = 40;
+    // enough games that the list has to scroll at three to a row
+    static constexpr int scmProfileCount = 80;
     // sorts last, so it is on screen with the list scrolled to the bottom
     const QString mLoadedProfile = qsl("Z-ConnDialogNoticeLoaded");
     // no server address, so picking it raises a three-line warning
@@ -197,6 +197,15 @@ private slots:
         auto* pOtherItem = visibleOrdinaryItem();
         QVERIFY(pOtherItem);
         selectEachWithoutShift({{pOtherItem, false}, {pLoadedItem, true}});
+    }
+
+    // A styled scroll bar is wider than the style's extent QListView sets aside for it when it wraps the rows
+    void test_aListThatScrollsDoesNotScrollSideways()
+    {
+        auto* pList = dialog()->listWidget_profiles;
+        QVERIFY2(pList->verticalScrollBar()->isVisible(), "SETUP: the games list does not scroll, so its scroll bar takes no room from the rows");
+        QVERIFY2(pList->horizontalScrollBar()->maximum() == 0,
+                 qPrintable(qsl("the rows are %1px wider than the list's %2px viewport").arg(QString::number(pList->horizontalScrollBar()->maximum()), QString::number(pList->viewport()->width()))));
     }
 
     // The checks that fill the notice add each problem between line breaks, which left blank lines over and under the words
