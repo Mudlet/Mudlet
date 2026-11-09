@@ -555,6 +555,24 @@ private slots:
         QCOMPARE(pCommandLine->toPlainText(), qsl("look at sign"));
     }
 
+    // Once the completion is accepted, the line is the player's own and Down banks it
+    void test_downBanksAnAcceptedCompletion()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        sendCommand(pCommandLine, qsl("look"));
+        sendCommand(pCommandLine, qsl("look at sign"));
+        type(pCommandLine, qsl("lo"));
+
+        press(pCommandLine, Qt::Key_Up);
+        press(pCommandLine, Qt::Key_End);
+        press(pCommandLine, Qt::Key_Down);
+        QCOMPARE(pCommandLine->toPlainText(), QString());
+
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look at sign"));
+    }
+
     // A selection in the middle of the line is the player's own text, not a completion tail.
     void test_upWithAMidLineSelectionKeepsTheTypedText()
     {

@@ -1252,7 +1252,7 @@ bool TCommandLine::completionTailSelected() const
 
 void TCommandLine::historyMove(MoveDirection direction)
 {
-    // DOWN at position 0 with text: save to history and clear input, unless that text is a completion Up filled in
+    // DOWN at position 0 with text: save to history and clear input, unless it is Up's completion with its tail still selected
     if (direction == MOVE_DOWN && mHistoryBuffer == 0 && !toPlainText().isEmpty() && !mCompletion.showingHistoryCompletion(toPlainText(), completionTailSelected())
         && (!mpHost->isRemoteEchoingActive() || mpHost->disablePasswordMasking())) {
         TCommandHistory::add(mHistoryList, toPlainText());
