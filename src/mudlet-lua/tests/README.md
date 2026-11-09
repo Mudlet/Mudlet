@@ -145,6 +145,12 @@ list of variables.
 Some seeds abort today: the fuzzers reach bugs that are still open, so treat an
 abort as a finding to reduce and report rather than as a broken harness.
 
+`LegacyEncodingFuzz_spec.lua` sets each multibyte server encoding Mudlet decodes
+itself (GBK, GB18030, BIG5, BIG5-HKSCS, SHIFT_JIS, EUC-JP, EUC-KR, and UTF-8 for
+comparison) and feeds random lines of valid, truncated and invalid characters as
+one read and again in reads of one to seven bytes, requiring the same text and
+formats from both, so a character split across reads is checked.
+
 `MapFileFuzz_spec.lua` and `XmlImportFuzz_spec.lua` aim at the file loaders
 instead. The first saves a map in each binary format version the save side
 offers and as JSON, then loads mutated copies of those files; the second imports
