@@ -679,6 +679,18 @@ describe("Downloads and HTTP verbs against the local fixture server", function()
       assert.equals("a\0b\255c", body)
     end)
 
+    it("delivers an error body holding NUL and non-UTF-8 bytes unchanged", function()
+      if noFixtureServer() then
+        return
+      end
+      assert.is_true(getHTTP(fixtureUrl("/binary-error")))
+
+      local event, _, _, response, body = waitForEvent("sysGetHttpError", 2000)
+      assert.equals("sysGetHttpError", event)
+      assert.equals(500, response.status)
+      assert.equals("a\0b\255c", body)
+    end)
+
     it("sends the custom headers it was given", function()
       if noFixtureServer() then
         return
