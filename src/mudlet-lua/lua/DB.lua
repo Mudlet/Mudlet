@@ -2728,26 +2728,26 @@ end
 
 
 
---- Returns a compound database expression that combines both of the simple expressions passed into it.
+--- Returns a compound database expression that combines all of the simple expressions passed into it.
 --- These expressions should be generated with other db: functions such as db:eq, db:like, db:lt and the like. <br/><br/>
 ---
---- This compound expression will find any item that matches either the first or the second sub-expression.
+--- This compound expression will find any item that matches at least one of the sub-expressions.
 ---
 --- @see db:fetch
-function db:OR(left, right)
-  -- coerce to strings so db:exp sentinels work here as well as plain expressions
-  left = tostring(left)
-  right = tostring(right)
+function db:OR(...)
+  local parts = {}
 
-  if not string.starts(left, "(") then
-    left = "(" .. left .. ")"
+  -- counted rather than ipairs so a nil condition still reaches sqlite and fails loudly
+  for i = 1, select("#", ...) do
+    -- coerce to strings so db:exp sentinels work here as well as plain expressions
+    local expression = tostring((select(i, ...)))
+    if not string.starts(expression, "(") then
+      expression = "(" .. expression .. ")"
+    end
+    parts[#parts + 1] = expression
   end
 
-  if not string.starts(right, "(") then
-    right = "(" .. right .. ")"
-  end
-
-  return left .. " OR " .. right
+  return table.concat(parts, " OR ")
 end
 
 
