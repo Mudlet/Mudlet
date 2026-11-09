@@ -51,6 +51,7 @@
 #include <QtMath>
 #include <QVersionNumber>
 
+#include <algorithm>
 #include <memory>
 
 XMLimport::XMLimport(Host* pH)
@@ -169,8 +170,10 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
                     versionString = attributes().value(qsl("version")).toString();
                     if (!versionString.isEmpty()) {
                         bool isOk = false;
-                        const float versionNumber = versionString.toFloat(&isOk);
-                        if (isOk) {
+                        // Capped so a huge or infinite version still reads as a later Mudlet's rather than
+                        // overflowing the conversion to int; a NaN or negative one is left as the default
+                        const float versionNumber = std::min(versionString.toFloat(&isOk), 255.0f);
+                        if (isOk && versionNumber >= 0.0f) {
                             mVersionMajor = qFloor(versionNumber);
                             mVersionMinor = qRound(1000.0 * versionNumber) - (1000 * mVersionMajor);
                         }
