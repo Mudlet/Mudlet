@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QAccessible>
 #include <QDir>
 #include <QLineEdit>
 #include <QMessageBox>
@@ -286,6 +287,30 @@ private slots:
         QCOMPARE(editAt(reopened.data(), 0)->toPlainText(), qsl("first note"));
         QCOMPARE(editAt(reopened.data(), 1)->toPlainText(), qsl("valerian\nbloodroot"));
         QCOMPARE(reopened->tabWidget->currentIndex(), 1);
+    }
+
+    // A tab bar takes a lone "&" for a shortcut marker, drawing "Spells & Skills" without it.
+    // Its accessible name strips markers the same way the painted label does.
+    void test_aNoteNamedWithAnAmpersandShowsAndKeepsIt()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto* profile = mudlet::self()->getActiveHost();
+        const QString name = qsl("Spells & Skills");
+
+        QScopedPointer<dlgNotepad> notepad(new dlgNotepad(profile));
+        notepad->addTab(name, qsl("fireball"));
+        QVERIFY(putOnScreen(notepad.data()));
+        QAccessibleInterface* tabBar = QAccessible::queryAccessibleInterface(notepad->tabWidget->tabBar());
+        QVERIFY(tabBar && tabBar->child(1));
+        QCOMPARE(tabBar->child(1)->text(QAccessible::Name), name);
+
+        notepad->save();
+        notepad.reset();
+        QScopedPointer<dlgNotepad> reopened(new dlgNotepad(profile));
+        QVERIFY(putOnScreen(reopened.data()));
+        tabBar = QAccessible::queryAccessibleInterface(reopened->tabWidget->tabBar());
+        QVERIFY(tabBar && tabBar->child(1));
+        QCOMPARE(tabBar->child(1)->text(QAccessible::Name), name);
     }
 
     // Closing the only tab would leave the notepad with nowhere to type.
