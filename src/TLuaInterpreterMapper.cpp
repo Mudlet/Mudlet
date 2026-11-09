@@ -339,6 +339,295 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
     int g = 0;
     int b = 0;
     Qt::PenStyle line_style(Qt::SolidLine);
+    // Table argument support
+    if (lua_gettop(L) == 1 && lua_istable(L, 1)) {
+        // lua_error() longjmps past C++ destructors, so every QString below has
+        // to be out of scope before the raise at the end - see checkStringArg()
+        bool errorPushed = false;
+        {
+            QString direction;
+            QList<qreal> x;
+            QList<qreal> y;
+            QList<int> z;
+            int id_from = 0;
+
+            bool hasRoomID = false, hasToRoomIDOrCoords = false, hasDirection = false, hasStyle = false, hasColor = false, hasArrow = false;
+            bool arrow = false;
+
+            lua_pushnil(L);
+            while (lua_next(L, 1) != 0) {
+                if (!checkStringArg(L, __func__, -2, "table key")) {
+                    errorPushed = true;
+                    break;
+                }
+
+                // read the key from a copy: lua_tostring() on the slot itself
+                // converts a numeric key in place, which makes the next
+                // lua_next() fail
+                lua_pushvalue(L, -2);
+                const QString key = QString{lua_tostring(L, -1)};
+                lua_pop(L, 1);
+
+                if (!key.compare(QLatin1String("roomID"), Qt::CaseInsensitive) || !key.compare(QLatin1String("fromRoomID"), Qt::CaseInsensitive)
+                    || !key.compare(QLatin1String("id_from"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    id_from = static_cast<int>(lua_tointeger(L, -1));
+                    hasRoomID = true;
+                } else if (!key.compare(QLatin1String("toRoomID"), Qt::CaseInsensitive) || !key.compare(QLatin1String("id_to"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    id_to = static_cast<int>(lua_tointeger(L, -1));
+                    hasToRoomIDOrCoords = true;
+                } else if (!key.compare(QLatin1String("coordinates"), Qt::CaseInsensitive)) {
+                    if (!lua_istable(L, -1)) {
+                        errorArgumentType(L, __func__, -1, qPrintable(key), "table of tables of three coordinates");
+                        errorPushed = true;
+                        break;
+                    }
+                    x.clear();
+                    y.clear();
+                    z.clear();
+                    lua_pushnil(L);
+                    int i = 0;
+                    while (!errorPushed && lua_next(L, -2) != 0) {
+                        ++i;
+                        if (lua_type(L, -1) != LUA_TTABLE) {
+                            lua_pushfstring(L, "addCustomLine: bad 'coordinates' item #%d type (a table of three coordinates expected, got %s!)", i, luaL_typename(L, -1));
+                            errorPushed = true;
+                            break;
+                        }
+                        lua_pushnil(L);
+                        int j = 0;
+                        while (lua_next(L, -2) != 0) {
+                            ++j;
+                            if (j <= 3) {
+                                if (lua_type(L, -1) != LUA_TNUMBER) {
+                                    lua_pushfstring(L,
+                                                    "addCustomLine: bad 'coordinates' item #%d inner item #%d type (the %c-coordinate as a number expected, got %s!)",
+                                                    i,
+                                                    j,
+                                                    "xyz"[j - 1],
+                                                    luaL_typename(L, -1));
+                                    errorPushed = true;
+                                    break;
+                                }
+                                if (const lua_Number value = lua_tonumber(L, -1); !(value >= std::numeric_limits<int>::min() && value <= std::numeric_limits<int>::max())) {
+                                    lua_pop(L, 6);
+                                    return warnArgumentValue(L, __func__, qsl("the %1-coordinate of point #%2 is outside the range of room coordinates").arg(QLatin1Char("xyz"[j - 1])).arg(i));
+                                }
+                                switch (j) {
+                                case 1:
+                                    x.append(lua_tonumber(L, -1));
+                                    break;
+                                case 2:
+                                    y.append(lua_tonumber(L, -1));
+                                    break;
+                                case 3:
+                                    z.append(static_cast<int>(lua_tonumber(L, -1)));
+                                    break;
+                                }
+                            }
+                            lua_pop(L, 1);
+                        }
+                        if (!errorPushed) {
+                            lua_pop(L, 1);
+                        }
+                    }
+                    if (errorPushed) {
+                        break;
+                    }
+                    if (x.isEmpty()) {
+                        lua_pop(L, 2);
+                        return warnArgumentValue(L, __func__, "missing coordinates to create the line to");
+                    }
+                    if (x.count() != y.count() || x.count() != z.count()) {
+                        lua_pop(L, 2);
+                        return warnArgumentValue(L,
+                                                 __func__,
+                                                 "mismatch in numbers of coordinates for the points for the custom line given in the coordinates table; each must contain three coordinates, "
+                                                 "i.e. x, y AND z numeric values as a sub-table");
+                    }
+                    hasToRoomIDOrCoords = true;
+                } else if (!key.compare(QLatin1String("direction"), Qt::CaseInsensitive)) {
+                    direction = dirToString(L, -1);
+                    if (direction.isEmpty()) {
+                        errorArgumentType(L, __func__, -1, qPrintable(key), "string or number (between 1 and 12 inclusive)");
+                        errorPushed = true;
+                        break;
+                    }
+                    hasDirection = true;
+                } else if (!key.compare(QLatin1String("style"), Qt::CaseInsensitive) || !key.compare(QLatin1String("lineStyle"), Qt::CaseInsensitive)) {
+                    if (!checkStringArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    const QString styleStr{lua_tostring(L, -1)};
+                    if (!styleStr.compare(QLatin1String("solid line"))) {
+                        line_style = Qt::SolidLine;
+                    } else if (!styleStr.compare(QLatin1String("dot line"))) {
+                        line_style = Qt::DotLine;
+                    } else if (!styleStr.compare(QLatin1String("dash line"))) {
+                        line_style = Qt::DashLine;
+                    } else if (!styleStr.compare(QLatin1String("dash dot line"))) {
+                        line_style = Qt::DashDotLine;
+                    } else if (!styleStr.compare(QLatin1String("dash dot dot line"))) {
+                        line_style = Qt::DashDotDotLine;
+                    } else {
+                        lua_pop(L, 2);
+                        return warnArgumentChoice(L, __func__, qsl("line style"), {qsl("solid line"), qsl("dot line"), qsl("dash line"), qsl("dash dot line"), qsl("dash dot dot line")}, styleStr);
+                    }
+                    hasStyle = true;
+                } else if (!key.compare(QLatin1String("color"), Qt::CaseInsensitive) || !key.compare(QLatin1String("lineColor"), Qt::CaseInsensitive)) {
+                    if (!lua_istable(L, -1)) {
+                        errorArgumentType(L, __func__, -1, qPrintable(key), "RGB color components as a table");
+                        errorPushed = true;
+                        break;
+                    }
+                    // Read by index: lua_next() visits keys in no defined order and counts any extra keys too
+                    for (int colorIndex = 1; colorIndex <= 3; ++colorIndex) {
+                        lua_rawgeti(L, -1, colorIndex);
+                        if (lua_isnil(L, -1)) {
+                            lua_pop(L, 3);
+                            return warnArgumentValue(L, __func__, qsl("color table has no item #%1 but red, green and blue are all needed").arg(colorIndex));
+                        }
+                        if (lua_type(L, -1) != LUA_TNUMBER) {
+                            lua_pushfstring(L, "addCustomLine: bad 'color' item #%d type (color component as a number between 0 and 255 expected, got %s!)", colorIndex, luaL_typename(L, -1));
+                            errorPushed = true;
+                            break;
+                        }
+                        const qint64 component = lua_tointeger(L, -1);
+                        lua_pop(L, 1);
+                        if (component < 0 || component > 255) {
+                            lua_pop(L, 2);
+                            return warnArgumentValue(L, __func__, qsl("color component #%1 is %2, must be 0-255").arg(colorIndex).arg(component));
+                        }
+                        switch (colorIndex) {
+                        case 1:
+                            r = static_cast<int>(component);
+                            break;
+                        case 2:
+                            g = static_cast<int>(component);
+                            break;
+                        case 3:
+                            b = static_cast<int>(component);
+                            break;
+                        default:
+                            Q_UNREACHABLE();
+                        }
+                    }
+                    if (errorPushed) {
+                        break;
+                    }
+                    hasColor = true;
+                } else if (!key.compare(QLatin1String("arrow"), Qt::CaseInsensitive) || !key.compare(QLatin1String("endWithArrow"), Qt::CaseInsensitive)) {
+                    if (!checkBoolArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    arrow = lua_toboolean(L, -1);
+                    hasArrow = true;
+                }
+
+                lua_pop(L, 1);
+            }
+
+            if (!errorPushed) {
+                if (!hasRoomID) {
+                    return warnArgumentValue(L, __func__, "missing required 'roomID' in table");
+                }
+                if (!hasToRoomIDOrCoords) {
+                    return warnArgumentValue(L, __func__, "missing required 'toRoomID' or 'coordinates' in table");
+                }
+                if (!hasDirection) {
+                    return warnArgumentValue(L, __func__, "missing required 'direction' in table");
+                }
+                if (!hasStyle) {
+                    return warnArgumentValue(L, __func__, "missing required 'style' in table");
+                }
+                if (!hasColor) {
+                    return warnArgumentValue(L, __func__, "missing required 'color' in table");
+                }
+                if (!hasArrow) {
+                    return warnArgumentValue(L, __func__, "missing required 'arrow' in table");
+                }
+
+                TRoom* pR = host.mpMap->mpRoomDB->getRoom(id_from);
+                if (!pR) {
+                    return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id_from));
+                }
+
+                if (id_to > 0 && x.isEmpty()) {
+                    TRoom* pR_to = host.mpMap->mpRoomDB->getRoom(id_to);
+                    if (!pR_to) {
+                        return warnArgumentValue(L, __func__, qsl("toRoomID %1 is not a valid room").arg(id_to));
+                    }
+                    x.append(static_cast<qreal>(pR_to->x()));
+                    y.append(static_cast<qreal>(pR_to->y()));
+                    z.append(pR->z());
+                }
+
+                if (id_to > 0) {
+                    TRoom* pR_to = host.mpMap->mpRoomDB->getRoom(id_to);
+                    if (!pR_to) {
+                        return warnArgumentValue(L, __func__, qsl("toRoomID %1 is not a valid room").arg(id_to));
+                    }
+                    const int area = pR->getArea();
+                    const int area_to = pR_to->getArea();
+                    if (area != area_to) {
+                        return warnArgumentValue(L,
+                                                 __func__,
+                                                 qsl("target room is in area '%1' (ID: %2) which is not the one '%3' (ID: %4) in which this custom line is to be drawn")
+                                                         .arg((host.mpMap->mpRoomDB->getAreaNamesMap()).value(area_to),
+                                                              QString::number(area_to),
+                                                              (host.mpMap->mpRoomDB->getAreaNamesMap()).value(area),
+                                                              QString::number(area)));
+                    }
+                }
+
+                if (x.isEmpty()) {
+                    return warnArgumentValue(L, __func__, "missing coordinates to create the line to");
+                }
+                if (x.count() != y.count() || x.count() != z.count()) {
+                    return warnArgumentValue(L, __func__, "mismatch in numbers of coordinates");
+                }
+
+                if (!pR->hasExitOrSpecialExit(direction)) {
+                    return warnArgumentValue(L, __func__, qsl("roomID %1 does not have an exit in direction '%2'").arg(id_from).arg(direction));
+                }
+
+                const int lz = z.at(0);
+                QList<QPointF> points;
+                points.append(QPointF(x.at(0), y.at(0)));
+                for (int i = 1, total = z.size(); i < total; ++i) {
+                    if (lz != z.at(i)) {
+                        return warnArgumentValue(
+                                L, __func__, qsl("the z values are not all on the same level (first wrong value is %1 at index %2)").arg(QString::number(z.at(i)), QString::number(i + 1)));
+                    }
+                    points.append(QPointF(x.at(i), y.at(i)));
+                }
+
+                pR->customLines[direction] = points;
+                pR->customLinesArrow[direction] = arrow;
+                pR->customLinesStyle[direction] = line_style;
+                pR->customLinesColor[direction] = QColor(r, g, b);
+
+                pR->calcRoomDimensions();
+                host.mpMap->setUnsaved(__func__);
+                host.mpMap->updateArea(pR->getArea());
+
+                lua_pushboolean(L, true);
+                return 1;
+            }
+        }
+
+        return lua_error(L);
+    }
+
     TRoom* pR_to = nullptr;
     const int id_from = getVerifiedInt(L, __func__, 1, "roomID");
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id_from);
@@ -580,6 +869,97 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addMapEvent
 int TLuaInterpreter::addMapEvent(lua_State* L)
 {
+    // Table argument support
+    if (lua_gettop(L) == 1 && lua_istable(L, 1)) {
+        // lua_error() longjmps past C++ destructors, so every QString below has
+        // to be out of scope before the raise at the end - see checkStringArg()
+        bool errorPushed = false;
+        {
+            QString uniqueName;
+            QString eventName;
+            QString parent;
+            QString displayName;
+            QStringList arguments;
+            bool hasUniqueName = false, hasEventName = false, hasDisplayName = false;
+
+            lua_pushnil(L);
+            while (lua_next(L, 1) != 0) {
+                if (!checkStringArg(L, __func__, -2, "table key")) {
+                    errorPushed = true;
+                    break;
+                }
+
+                // read the key from a copy: lua_tostring() on the slot itself
+                // converts a numeric key in place, which makes the next
+                // lua_next() fail
+                lua_pushvalue(L, -2);
+                const QString key = QString{lua_tostring(L, -1)};
+                lua_pop(L, 1);
+
+                if (!key.compare(QLatin1String("uniquename"), Qt::CaseInsensitive) || !key.compare(QLatin1String("uniqueName"), Qt::CaseInsensitive)) {
+                    if (!checkStringArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    uniqueName = lua_tostring(L, -1);
+                    hasUniqueName = true;
+                } else if (!key.compare(QLatin1String("eventname"), Qt::CaseInsensitive) || !key.compare(QLatin1String("eventName"), Qt::CaseInsensitive)
+                           || !key.compare(QLatin1String("event"), Qt::CaseInsensitive)) {
+                    if (!checkStringArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    eventName = lua_tostring(L, -1);
+                    hasEventName = true;
+                } else if (!key.compare(QLatin1String("parent"), Qt::CaseInsensitive)) {
+                    parent = lua_isstring(L, -1) ? QString::fromUtf8(lua_tostring(L, -1)) : QString();
+                } else if (!key.compare(QLatin1String("displayname"), Qt::CaseInsensitive) || !key.compare(QLatin1String("displayName"), Qt::CaseInsensitive)) {
+                    hasDisplayName = lua_isstring(L, -1);
+                    displayName = hasDisplayName ? QString::fromUtf8(lua_tostring(L, -1)) : QString();
+                } else if (!key.compare(QLatin1String("arguments"), Qt::CaseInsensitive) || !key.compare(QLatin1String("args"), Qt::CaseInsensitive)) {
+                    arguments.clear();
+                    if (lua_istable(L, -1)) {
+                        for (int index = 1, total = static_cast<int>(lua_objlen(L, -1)); index <= total; ++index) {
+                            lua_rawgeti(L, -1, index);
+                            arguments << QString::fromUtf8(lua_tostring(L, -1));
+                            lua_pop(L, 1);
+                        }
+                    } else {
+                        arguments << QString::fromUtf8(lua_tostring(L, -1));
+                    }
+                }
+
+                lua_pop(L, 1);
+            }
+
+            if (!errorPushed) {
+                if (!hasUniqueName) {
+                    return warnArgumentValue(L, __func__, "missing required 'uniqueName' in table");
+                }
+                if (!hasEventName) {
+                    return warnArgumentValue(L, __func__, "missing required 'eventName' in table");
+                }
+
+                // Build actionInfo list
+                QStringList actionInfo;
+                actionInfo << eventName;
+                actionInfo << parent;
+                actionInfo << (hasDisplayName ? displayName : uniqueName);
+                actionInfo << arguments;
+
+                const Host& host = getHostFromLua(L);
+                if (!host.mpMap) {
+                    return warnArgumentValue(L, __func__, "no map present or loaded");
+                }
+                host.mpMap->mUserActions.insert(uniqueName, actionInfo);
+                lua_pushboolean(L, true);
+                return 1;
+            }
+        }
+
+        return lua_error(L);
+    }
+
     if (!checkStringArg(L, __func__, 1, "uniquename")) {
         return lua_error(L);
     }
@@ -1121,6 +1501,265 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
     int backgroundTransparency = 50;
 
     const int args = lua_gettop(L);
+
+    // Check if first argument is a table for named-key format
+    if (lua_gettop(L) == 1 && lua_istable(L, 1)) {
+        // lua_error() longjmps past C++ destructors, so every QString below has
+        // to be out of scope before the raise at the end - see checkStringArg()
+        bool errorPushed = false;
+        {
+            int area = 0, fgr = 0, fgg = 0, fgb = 0, bgr = 0, bgg = 0, bgb = 0;
+            int olr = 0, olg = 0, olb = 0;
+            float posx = 0, posy = 0, posz = 0;
+            QString text;
+            QString fontName;
+            bool hasArea = false, hasText = false, hasPosX = false, hasPosY = false, hasPosZ = false;
+            bool hasFgR = false, hasFgG = false, hasFgB = false;
+            bool hasBgR = false, hasBgG = false, hasBgB = false;
+            bool hasOlR = false, hasOlG = false, hasOlB = false;
+
+            lua_pushnil(L);
+            while (lua_next(L, 1) != 0) {
+                if (!checkStringArg(L, __func__, -2, "table key")) {
+                    errorPushed = true;
+                    break;
+                }
+
+                // read the key from a copy: lua_tostring() on the slot itself
+                // converts a numeric key in place, which makes the next
+                // lua_next() fail
+                lua_pushvalue(L, -2);
+                const QString key = QString{lua_tostring(L, -1)};
+                lua_pop(L, 1);
+
+                if (!key.compare(QLatin1String("area"), Qt::CaseInsensitive) || !key.compare(QLatin1String("areaID"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    area = static_cast<int>(lua_tointeger(L, -1));
+                    hasArea = true;
+                } else if (!key.compare(QLatin1String("text"), Qt::CaseInsensitive)) {
+                    if (!checkStringArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    text = lua_tostring(L, -1);
+                    hasText = true;
+                } else if (!key.compare(QLatin1String("posX"), Qt::CaseInsensitive) || !key.compare(QLatin1String("x"), Qt::CaseInsensitive)) {
+                    if (!checkNumberArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    posx = static_cast<float>(lua_tonumber(L, -1));
+                    hasPosX = true;
+                } else if (!key.compare(QLatin1String("posY"), Qt::CaseInsensitive) || !key.compare(QLatin1String("y"), Qt::CaseInsensitive)) {
+                    if (!checkNumberArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    posy = static_cast<float>(lua_tonumber(L, -1));
+                    hasPosY = true;
+                } else if (!key.compare(QLatin1String("posZ"), Qt::CaseInsensitive) || !key.compare(QLatin1String("z"), Qt::CaseInsensitive)) {
+                    if (!checkNumberArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    posz = static_cast<float>(lua_tonumber(L, -1));
+                    hasPosZ = true;
+                } else if (!key.compare(QLatin1String("fgRed"), Qt::CaseInsensitive) || !key.compare(QLatin1String("fgR"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    fgr = static_cast<int>(lua_tointeger(L, -1));
+                    hasFgR = true;
+                } else if (!key.compare(QLatin1String("fgGreen"), Qt::CaseInsensitive) || !key.compare(QLatin1String("fgG"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    fgg = static_cast<int>(lua_tointeger(L, -1));
+                    hasFgG = true;
+                } else if (!key.compare(QLatin1String("fgBlue"), Qt::CaseInsensitive) || !key.compare(QLatin1String("fgB"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    fgb = static_cast<int>(lua_tointeger(L, -1));
+                    hasFgB = true;
+                } else if (!key.compare(QLatin1String("bgRed"), Qt::CaseInsensitive) || !key.compare(QLatin1String("bgR"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    bgr = static_cast<int>(lua_tointeger(L, -1));
+                    hasBgR = true;
+                } else if (!key.compare(QLatin1String("bgGreen"), Qt::CaseInsensitive) || !key.compare(QLatin1String("bgG"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    bgg = static_cast<int>(lua_tointeger(L, -1));
+                    hasBgG = true;
+                } else if (!key.compare(QLatin1String("bgBlue"), Qt::CaseInsensitive) || !key.compare(QLatin1String("bgB"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    bgb = static_cast<int>(lua_tointeger(L, -1));
+                    hasBgB = true;
+                } else if (!key.compare(QLatin1String("zoom"), Qt::CaseInsensitive)) {
+                    if (!checkNumberArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    zoom = static_cast<float>(lua_tonumber(L, -1));
+                } else if (!key.compare(QLatin1String("fontSize"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    fontSize = static_cast<int>(lua_tointeger(L, -1));
+                } else if (!key.compare(QLatin1String("showOnTop"), Qt::CaseInsensitive)) {
+                    if (!checkBoolArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    showOnTop = lua_toboolean(L, -1);
+                } else if (!key.compare(QLatin1String("noScaling"), Qt::CaseInsensitive)) {
+                    if (!checkBoolArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    noScaling = lua_toboolean(L, -1);
+                } else if (!key.compare(QLatin1String("fontName"), Qt::CaseInsensitive)) {
+                    if (!checkStringArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    fontName = lua_tostring(L, -1);
+                } else if (!key.compare(QLatin1String("foregroundTransparency"), Qt::CaseInsensitive) || !key.compare(QLatin1String("fgAlpha"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    foregroundTransparency = static_cast<int>(lua_tointeger(L, -1));
+                } else if (!key.compare(QLatin1String("backgroundTransparency"), Qt::CaseInsensitive) || !key.compare(QLatin1String("bgAlpha"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    backgroundTransparency = static_cast<int>(lua_tointeger(L, -1));
+                } else if (!key.compare(QLatin1String("temporary"), Qt::CaseInsensitive)) {
+                    if (!checkBoolArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    temporary = lua_toboolean(L, -1);
+                } else if (!key.compare(QLatin1String("outlineRed"), Qt::CaseInsensitive) || !key.compare(QLatin1String("olR"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    olr = static_cast<int>(lua_tointeger(L, -1));
+                    hasOlR = true;
+                } else if (!key.compare(QLatin1String("outlineGreen"), Qt::CaseInsensitive) || !key.compare(QLatin1String("olG"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    olg = static_cast<int>(lua_tointeger(L, -1));
+                    hasOlG = true;
+                } else if (!key.compare(QLatin1String("outlineBlue"), Qt::CaseInsensitive) || !key.compare(QLatin1String("olB"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    olb = static_cast<int>(lua_tointeger(L, -1));
+                    hasOlB = true;
+                }
+
+                lua_pop(L, 1);
+            }
+
+            if (!errorPushed) {
+                if (!hasArea) {
+                    lua_pushfstring(L, "createMapLabel: bad argument, missing 'area' or 'areaID' in table");
+                    errorPushed = true;
+                } else if (!hasText) {
+                    lua_pushfstring(L, "createMapLabel: bad argument, missing 'text' in table");
+                    errorPushed = true;
+                } else if (!hasPosX) {
+                    lua_pushfstring(L, "createMapLabel: bad argument, missing 'posX' or 'x' in table");
+                    errorPushed = true;
+                } else if (!hasPosY) {
+                    lua_pushfstring(L, "createMapLabel: bad argument, missing 'posY' or 'y' in table");
+                    errorPushed = true;
+                } else if (!hasPosZ) {
+                    lua_pushfstring(L, "createMapLabel: bad argument, missing 'posZ' or 'z' in table");
+                    errorPushed = true;
+                } else if (!hasFgR) {
+                    lua_pushfstring(L, "createMapLabel: bad argument, missing 'fgRed' or 'fgR' in table");
+                    errorPushed = true;
+                } else if (!hasFgG) {
+                    lua_pushfstring(L, "createMapLabel: bad argument, missing 'fgGreen' or 'fgG' in table");
+                    errorPushed = true;
+                } else if (!hasFgB) {
+                    lua_pushfstring(L, "createMapLabel: bad argument, missing 'fgBlue' or 'fgB' in table");
+                    errorPushed = true;
+                } else if (!hasBgR) {
+                    lua_pushfstring(L, "createMapLabel: bad argument, missing 'bgRed' or 'bgR' in table");
+                    errorPushed = true;
+                } else if (!hasBgG) {
+                    lua_pushfstring(L, "createMapLabel: bad argument, missing 'bgGreen' or 'bgG' in table");
+                    errorPushed = true;
+                } else if (!hasBgB) {
+                    lua_pushfstring(L, "createMapLabel: bad argument, missing 'bgBlue' or 'bgB' in table");
+                    errorPushed = true;
+                } else if ((hasOlR || hasOlG || hasOlB) && !hasOlR) {
+                    lua_pushfstring(L, "createMapLabel: bad argument, missing 'outlineRed' or 'olR' in table");
+                    errorPushed = true;
+                } else if ((hasOlR || hasOlG || hasOlB) && !hasOlG) {
+                    lua_pushfstring(L, "createMapLabel: bad argument, missing 'outlineGreen' or 'olG' in table");
+                    errorPushed = true;
+                } else if ((hasOlR || hasOlG || hasOlB) && !hasOlB) {
+                    lua_pushfstring(L, "createMapLabel: bad argument, missing 'outlineBlue' or 'olB' in table");
+                    errorPushed = true;
+                } else {
+                    // If outline color not specified, default to foreground color
+                    if (!hasOlR) {
+                        olr = fgr;
+                        olg = fgg;
+                        olb = fgb;
+                    }
+
+                    const Host& host = getHostFromLua(L);
+                    lua_pushinteger(L,
+                                    host.mpMap->createMapLabel(area,
+                                                               text,
+                                                               posx,
+                                                               posy,
+                                                               posz,
+                                                               QColor(fgr, fgg, fgb, foregroundTransparency),
+                                                               QColor(bgr, bgg, bgb, backgroundTransparency),
+                                                               showOnTop,
+                                                               noScaling,
+                                                               temporary,
+                                                               zoom,
+                                                               fontSize,
+                                                               fontName,
+                                                               QColor(olr, olg, olb, foregroundTransparency)));
+                    host.mpMap->updateArea(area);
+                    return 1;
+                }
+            }
+        }
+
+        return lua_error(L);
+    }
+
+    // Original positional argument handling
     const int area = getVerifiedInt(L, __func__, 1, "areaID");
     if (!checkStringArg(L, __func__, 2, "text")) {
         return lua_error(L);
@@ -1194,6 +1833,155 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createMapImageLabel
 int TLuaInterpreter::createMapImageLabel(lua_State* L)
 {
+    // Support both table and ordered arguments
+    if (lua_gettop(L) == 1 && lua_istable(L, 1)) {
+        // Table argument format: {areaID=id, imagePath="path", x=x, y=y, z=z, width=w, height=h, zoom=z, showOnTop=bool, temporary=bool}
+        // lua_error() longjmps past C++ destructors, so the QString below has to
+        // be out of scope before the raise at the end - see checkStringArg()
+        bool errorPushed = false;
+        {
+            int area = 0;
+            QString imagePathFileName;
+            float posx = 0, posy = 0, posz = 0, width = 0, height = 0, zoom = 0;
+            bool showOnTop = false;
+            bool temporary = false;
+            bool hasAreaID = false, hasImagePath = false, hasX = false, hasY = false, hasZ = false;
+            bool hasWidth = false, hasHeight = false, hasZoom = false, hasShowOnTop = false;
+
+            lua_pushnil(L);
+            while (lua_next(L, 1) != 0) {
+                if (!checkStringArg(L, __func__, -2, "table key")) {
+                    errorPushed = true;
+                    break;
+                }
+
+                // read the key from a copy: lua_tostring() on the slot itself
+                // converts a numeric key in place, which makes the next
+                // lua_next() fail
+                lua_pushvalue(L, -2);
+                const QString key = QString{lua_tostring(L, -1)};
+                lua_pop(L, 1);
+
+                if (!key.compare(QLatin1String("areaID"), Qt::CaseInsensitive) || !key.compare(QLatin1String("area"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, "areaID")) {
+                        errorPushed = true;
+                        break;
+                    }
+                    area = static_cast<int>(lua_tointeger(L, -1));
+                    hasAreaID = true;
+                } else if (!key.compare(QLatin1String("imagePath"), Qt::CaseInsensitive) || !key.compare(QLatin1String("imagePathFileName"), Qt::CaseInsensitive)
+                           || !key.compare(QLatin1String("filePath"), Qt::CaseInsensitive)) {
+                    if (!checkStringArg(L, __func__, -1, "imagePath")) {
+                        errorPushed = true;
+                        break;
+                    }
+                    imagePathFileName = lua_tostring(L, -1);
+                    hasImagePath = true;
+                } else if (!key.compare(QLatin1String("x"), Qt::CaseInsensitive) || !key.compare(QLatin1String("posX"), Qt::CaseInsensitive)) {
+                    if (!checkNumberArg(L, __func__, -1, "posX")) {
+                        errorPushed = true;
+                        break;
+                    }
+                    posx = static_cast<float>(lua_tonumber(L, -1));
+                    hasX = true;
+                } else if (!key.compare(QLatin1String("y"), Qt::CaseInsensitive) || !key.compare(QLatin1String("posY"), Qt::CaseInsensitive)) {
+                    if (!checkNumberArg(L, __func__, -1, "posY")) {
+                        errorPushed = true;
+                        break;
+                    }
+                    posy = static_cast<float>(lua_tonumber(L, -1));
+                    hasY = true;
+                } else if (!key.compare(QLatin1String("z"), Qt::CaseInsensitive) || !key.compare(QLatin1String("posZ"), Qt::CaseInsensitive)) {
+                    if (!checkNumberArg(L, __func__, -1, "posZ")) {
+                        errorPushed = true;
+                        break;
+                    }
+                    posz = static_cast<float>(lua_tonumber(L, -1));
+                    hasZ = true;
+                } else if (!key.compare(QLatin1String("width"), Qt::CaseInsensitive)) {
+                    if (!checkNumberArg(L, __func__, -1, "width")) {
+                        errorPushed = true;
+                        break;
+                    }
+                    width = static_cast<float>(lua_tonumber(L, -1));
+                    hasWidth = true;
+                } else if (!key.compare(QLatin1String("height"), Qt::CaseInsensitive)) {
+                    if (!checkNumberArg(L, __func__, -1, "height")) {
+                        errorPushed = true;
+                        break;
+                    }
+                    height = static_cast<float>(lua_tonumber(L, -1));
+                    hasHeight = true;
+                } else if (!key.compare(QLatin1String("zoom"), Qt::CaseInsensitive)) {
+                    if (!checkNumberArg(L, __func__, -1, "zoom")) {
+                        errorPushed = true;
+                        break;
+                    }
+                    zoom = static_cast<float>(lua_tonumber(L, -1));
+                    hasZoom = true;
+                } else if (!key.compare(QLatin1String("showOnTop"), Qt::CaseInsensitive)) {
+                    if (!checkBoolArg(L, __func__, -1, "showOnTop")) {
+                        errorPushed = true;
+                        break;
+                    }
+                    showOnTop = lua_toboolean(L, -1);
+                    hasShowOnTop = true;
+                } else if (!key.compare(QLatin1String("temporary"), Qt::CaseInsensitive)) {
+                    if (!checkBoolArg(L, __func__, -1, "temporary")) {
+                        errorPushed = true;
+                        break;
+                    }
+                    temporary = lua_toboolean(L, -1);
+                }
+
+                lua_pop(L, 1); // Remove value, keep key for next iteration
+            }
+
+            // Validate required parameters
+            if (!errorPushed) {
+                if (!hasAreaID) {
+                    lua_pushfstring(L, "%s: missing required 'areaID' or 'area' in table", __func__);
+                    errorPushed = true;
+                } else if (!hasImagePath) {
+                    lua_pushfstring(L, "%s: missing required 'imagePath', 'imagePathFileName', or 'filePath' in table", __func__);
+                    errorPushed = true;
+                } else if (!hasX) {
+                    lua_pushfstring(L, "%s: missing required 'x' or 'posX' in table", __func__);
+                    errorPushed = true;
+                } else if (!hasY) {
+                    lua_pushfstring(L, "%s: missing required 'y' or 'posY' in table", __func__);
+                    errorPushed = true;
+                } else if (!hasZ) {
+                    lua_pushfstring(L, "%s: missing required 'z' or 'posZ' in table", __func__);
+                    errorPushed = true;
+                } else if (!hasWidth) {
+                    lua_pushfstring(L, "%s: missing required 'width' in table", __func__);
+                    errorPushed = true;
+                } else if (!hasHeight) {
+                    lua_pushfstring(L, "%s: missing required 'height' in table", __func__);
+                    errorPushed = true;
+                } else if (!hasZoom) {
+                    lua_pushfstring(L, "%s: missing required 'zoom' in table", __func__);
+                    errorPushed = true;
+                } else if (!hasShowOnTop) {
+                    lua_pushfstring(L, "%s: missing required 'showOnTop' in table", __func__);
+                    errorPushed = true;
+                } else {
+                    const Host& host = getHostFromLua(L);
+                    const int labelId = host.mpMap->createMapImageLabel(area, imagePathFileName, posx, posy, posz, width, height, zoom, showOnTop, temporary);
+                    if (labelId == TMap::scmUnreadableImageLabel) {
+                        return warnArgumentValue(L, __func__, qsl("image file '%1' could not be read").arg(imagePathFileName));
+                    }
+                    lua_pushinteger(L, labelId);
+                    host.mpMap->updateArea(area);
+                    return 1;
+                }
+            }
+        }
+
+        return lua_error(L);
+    }
+
     const int args = lua_gettop(L);
     const int area = getVerifiedInt(L, __func__, 1, "areaID");
     if (!checkStringArg(L, __func__, 2, "imagePathFileName")) {
@@ -1225,6 +2013,100 @@ int TLuaInterpreter::createMapImageLabel(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createMapper
 int TLuaInterpreter::createMapper(lua_State* L)
 {
+    // Table argument support
+    if (lua_gettop(L) == 1 && lua_istable(L, 1)) {
+        // lua_error() longjmps past C++ destructors, so every QString below has
+        // to be out of scope before the raise at the end - see checkStringArg()
+        bool errorPushed = false;
+        {
+            QString windowName;
+            int x = 0, y = 0, width = 0, height = 0;
+            bool hasX = false, hasY = false, hasWidth = false, hasHeight = false;
+
+            lua_pushnil(L);
+            while (lua_next(L, 1) != 0) {
+                if (!checkStringArg(L, __func__, -2, "table key")) {
+                    errorPushed = true;
+                    break;
+                }
+
+                // read the key from a copy: lua_tostring() on the slot itself
+                // converts a numeric key in place, which makes the next
+                // lua_next() fail
+                lua_pushvalue(L, -2);
+                const QString key = QString{lua_tostring(L, -1)};
+                lua_pop(L, 1);
+
+                if (!key.compare(QLatin1String("windowName"), Qt::CaseInsensitive) || !key.compare(QLatin1String("parent"), Qt::CaseInsensitive)) {
+                    if (!checkStringArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    windowName = lua_tostring(L, -1);
+                    if (isMain(windowName)) {
+                        windowName.clear();
+                    }
+                } else if (!key.compare(QLatin1String("x"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    x = static_cast<int>(lua_tointeger(L, -1));
+                    hasX = true;
+                } else if (!key.compare(QLatin1String("y"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    y = static_cast<int>(lua_tointeger(L, -1));
+                    hasY = true;
+                } else if (!key.compare(QLatin1String("width"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    width = static_cast<int>(lua_tointeger(L, -1));
+                    hasWidth = true;
+                } else if (!key.compare(QLatin1String("height"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, qPrintable(key))) {
+                        errorPushed = true;
+                        break;
+                    }
+                    height = static_cast<int>(lua_tointeger(L, -1));
+                    hasHeight = true;
+                }
+
+                lua_pop(L, 1);
+            }
+
+            if (!errorPushed) {
+                if (!hasX) {
+                    return warnArgumentValue(L, __func__, "missing required 'x' in table");
+                }
+                if (!hasY) {
+                    return warnArgumentValue(L, __func__, "missing required 'y' in table");
+                }
+                if (!hasWidth) {
+                    return warnArgumentValue(L, __func__, "missing required 'width' in table");
+                }
+                if (!hasHeight) {
+                    return warnArgumentValue(L, __func__, "missing required 'height' in table");
+                }
+
+                const Host& host = getHostFromLua(L);
+                if (auto [success, message] = host.consoleFrontend()->createMapper(windowName, x, y, width, height); !success) {
+                    return warnArgumentValue(L, __func__, message, true);
+                }
+
+                lua_pushboolean(L, true);
+                return 1;
+            }
+        }
+
+        return lua_error(L);
+    }
+
+    // Original positional argument handling
     const int n = lua_gettop(L);
     const bool hasParentWindow = (n > 4);
     int counter = 1;
@@ -2577,7 +3459,6 @@ int TLuaInterpreter::getRoomsByPosition(lua_State* L)
     const int x = getVerifiedInt(L, __func__, 2, "x");
     const int y = getVerifiedInt(L, __func__, 3, "y");
     const int z = getVerifiedInt(L, __func__, 4, "z");
-
     const Host& host = getHostFromLua(L);
     TArea* pA = host.mpMap->mpRoomDB->getArea(area);
     if (!pA) {
@@ -2886,16 +3767,161 @@ int TLuaInterpreter::hasSpecialExitLock(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#highlightRoom
 int TLuaInterpreter::highlightRoom(lua_State* L)
 {
-    const int id = getVerifiedInt(L, __func__, 1, "roomID");
-    const int fgr = getVerifiedInt(L, __func__, 2, "color1Red");
-    const int fgg = getVerifiedInt(L, __func__, 3, "color1Green");
-    const int fgb = getVerifiedInt(L, __func__, 4, "color1Blue");
-    const int bgr = getVerifiedInt(L, __func__, 5, "color2Red");
-    const int bgg = getVerifiedInt(L, __func__, 6, "color2Green");
-    const int bgb = getVerifiedInt(L, __func__, 7, "color2Blue");
-    const float radius = getVerifiedFloat(L, __func__, 8, "highlightRadius");
-    const int alpha1 = getVerifiedInt(L, __func__, 9, "color1Alpha");
-    const int alpha2 = getVerifiedInt(L, __func__, 10, "color2Alpha");
+    int id, fgr, fgg, fgb, bgr, bgg, bgb, alpha1, alpha2;
+    float radius;
+
+    // Support both table and ordered arguments
+    if (lua_gettop(L) == 1 && lua_istable(L, 1)) {
+        // Table argument format: {roomID=id, fgr=N, fgg=N, fgb=N, bgr=N, bgg=N, bgb=N, radius=r, alpha1=N, alpha2=N}
+        // lua_error() longjmps past C++ destructors, so the QString key below has
+        // to be out of scope before the raise - see checkStringArg()
+        bool errorPushed = false;
+        {
+            bool hasID = false, hasFgr = false, hasFgg = false, hasFgb = false;
+            bool hasBgr = false, hasBgg = false, hasBgb = false, hasRadius = false;
+            bool hasAlpha1 = false, hasAlpha2 = false;
+
+            lua_pushnil(L);
+            while (lua_next(L, 1) != 0) {
+                if (!checkStringArg(L, __func__, -2, "table key")) {
+                    errorPushed = true;
+                    break;
+                }
+
+                // read the key from a copy: lua_tostring() on the slot itself
+                // converts a numeric key in place, which makes the next
+                // lua_next() fail
+                lua_pushvalue(L, -2);
+                const QString key = QString{lua_tostring(L, -1)};
+                lua_pop(L, 1);
+
+                if (!key.compare(QLatin1String("roomID"), Qt::CaseInsensitive) || !key.compare(QLatin1String("id"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, "roomID")) {
+                        errorPushed = true;
+                        break;
+                    }
+                    id = static_cast<int>(lua_tointeger(L, -1));
+                    hasID = true;
+                } else if (!key.compare(QLatin1String("fgr"), Qt::CaseInsensitive) || !key.compare(QLatin1String("color1Red"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, "color1Red")) {
+                        errorPushed = true;
+                        break;
+                    }
+                    fgr = static_cast<int>(lua_tointeger(L, -1));
+                    hasFgr = true;
+                } else if (!key.compare(QLatin1String("fgg"), Qt::CaseInsensitive) || !key.compare(QLatin1String("color1Green"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, "color1Green")) {
+                        errorPushed = true;
+                        break;
+                    }
+                    fgg = static_cast<int>(lua_tointeger(L, -1));
+                    hasFgg = true;
+                } else if (!key.compare(QLatin1String("fgb"), Qt::CaseInsensitive) || !key.compare(QLatin1String("color1Blue"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, "color1Blue")) {
+                        errorPushed = true;
+                        break;
+                    }
+                    fgb = static_cast<int>(lua_tointeger(L, -1));
+                    hasFgb = true;
+                } else if (!key.compare(QLatin1String("bgr"), Qt::CaseInsensitive) || !key.compare(QLatin1String("color2Red"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, "color2Red")) {
+                        errorPushed = true;
+                        break;
+                    }
+                    bgr = static_cast<int>(lua_tointeger(L, -1));
+                    hasBgr = true;
+                } else if (!key.compare(QLatin1String("bgg"), Qt::CaseInsensitive) || !key.compare(QLatin1String("color2Green"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, "color2Green")) {
+                        errorPushed = true;
+                        break;
+                    }
+                    bgg = static_cast<int>(lua_tointeger(L, -1));
+                    hasBgg = true;
+                } else if (!key.compare(QLatin1String("bgb"), Qt::CaseInsensitive) || !key.compare(QLatin1String("color2Blue"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, "color2Blue")) {
+                        errorPushed = true;
+                        break;
+                    }
+                    bgb = static_cast<int>(lua_tointeger(L, -1));
+                    hasBgb = true;
+                } else if (!key.compare(QLatin1String("radius"), Qt::CaseInsensitive) || !key.compare(QLatin1String("highlightRadius"), Qt::CaseInsensitive)) {
+                    if (!checkNumberArg(L, __func__, -1, "highlightRadius")) {
+                        errorPushed = true;
+                        break;
+                    }
+                    radius = static_cast<float>(lua_tonumber(L, -1));
+                    hasRadius = true;
+                } else if (!key.compare(QLatin1String("alpha1"), Qt::CaseInsensitive) || !key.compare(QLatin1String("color1Alpha"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, "color1Alpha")) {
+                        errorPushed = true;
+                        break;
+                    }
+                    alpha1 = static_cast<int>(lua_tointeger(L, -1));
+                    hasAlpha1 = true;
+                } else if (!key.compare(QLatin1String("alpha2"), Qt::CaseInsensitive) || !key.compare(QLatin1String("color2Alpha"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, "color2Alpha")) {
+                        errorPushed = true;
+                        break;
+                    }
+                    alpha2 = static_cast<int>(lua_tointeger(L, -1));
+                    hasAlpha2 = true;
+                }
+
+                lua_pop(L, 1); // Remove value, keep key for next iteration
+            }
+
+            // Validate required parameters
+            if (!errorPushed) {
+                if (!hasID) {
+                    lua_pushfstring(L, "%s: missing required 'roomID' or 'id' in table", __func__);
+                    errorPushed = true;
+                } else if (!hasFgr) {
+                    lua_pushfstring(L, "%s: missing required 'fgr' or 'color1Red' in table", __func__);
+                    errorPushed = true;
+                } else if (!hasFgg) {
+                    lua_pushfstring(L, "%s: missing required 'fgg' or 'color1Green' in table", __func__);
+                    errorPushed = true;
+                } else if (!hasFgb) {
+                    lua_pushfstring(L, "%s: missing required 'fgb' or 'color1Blue' in table", __func__);
+                    errorPushed = true;
+                } else if (!hasBgr) {
+                    lua_pushfstring(L, "%s: missing required 'bgr' or 'color2Red' in table", __func__);
+                    errorPushed = true;
+                } else if (!hasBgg) {
+                    lua_pushfstring(L, "%s: missing required 'bgg' or 'color2Green' in table", __func__);
+                    errorPushed = true;
+                } else if (!hasBgb) {
+                    lua_pushfstring(L, "%s: missing required 'bgb' or 'color2Blue' in table", __func__);
+                    errorPushed = true;
+                } else if (!hasRadius) {
+                    lua_pushfstring(L, "%s: missing required 'radius' or 'highlightRadius' in table", __func__);
+                    errorPushed = true;
+                } else if (!hasAlpha1) {
+                    lua_pushfstring(L, "%s: missing required 'alpha1' or 'color1Alpha' in table", __func__);
+                    errorPushed = true;
+                } else if (!hasAlpha2) {
+                    lua_pushfstring(L, "%s: missing required 'alpha2' or 'color2Alpha' in table", __func__);
+                    errorPushed = true;
+                }
+            }
+        }
+
+        if (errorPushed) {
+            return lua_error(L);
+        }
+    } else {
+        // Ordered argument format: roomID, color1Red, color1Green, color1Blue, color2Red, color2Green, color2Blue, radius, alpha1, alpha2
+        id = getVerifiedInt(L, __func__, 1, "roomID");
+        fgr = getVerifiedInt(L, __func__, 2, "color1Red");
+        fgg = getVerifiedInt(L, __func__, 3, "color1Green");
+        fgb = getVerifiedInt(L, __func__, 4, "color1Blue");
+        bgr = getVerifiedInt(L, __func__, 5, "color2Red");
+        bgg = getVerifiedInt(L, __func__, 6, "color2Green");
+        bgb = getVerifiedInt(L, __func__, 7, "color2Blue");
+        radius = getVerifiedFloat(L, __func__, 8, "highlightRadius");
+        alpha1 = getVerifiedInt(L, __func__, 9, "color1Alpha");
+        alpha2 = getVerifiedInt(L, __func__, 10, "color2Alpha");
+    }
 
     const Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
@@ -3842,15 +4868,105 @@ int TLuaInterpreter::setAreaUserData(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setCustomEnvColor
 int TLuaInterpreter::setCustomEnvColor(lua_State* L)
 {
-    const int id = getVerifiedInt(L, __func__, 1, "environmentID");
-    const int r = getVerifiedInt(L, __func__, 2, "red color component");
-    const int g = getVerifiedInt(L, __func__, 3, "green color component");
-    const int b = getVerifiedInt(L, __func__, 4, "blue color component");
-    int alpha = 255;
-    if (lua_gettop(L) > 4) {
-        alpha = getVerifiedInt(L, __func__, 5, "alpha color component", true);
+    int id, r, g, b, alpha;
+
+    // Support both table and ordered arguments
+    if (lua_gettop(L) == 1 && lua_istable(L, 1)) {
+        // Table argument format: {environmentID=id, r=N, g=N, b=N, a=N}
+        // lua_error() longjmps past C++ destructors, so the QString key below has
+        // to be out of scope before the raise - see checkStringArg()
+        bool errorPushed = false;
+        {
+            bool hasID = false, hasR = false, hasG = false, hasB = false;
+            alpha = 255; // default value
+
+            lua_pushnil(L);
+            while (lua_next(L, 1) != 0) {
+                if (!checkStringArg(L, __func__, -2, "table key")) {
+                    errorPushed = true;
+                    break;
+                }
+
+                // read the key from a copy: lua_tostring() on the slot itself
+                // converts a numeric key in place, which makes the next
+                // lua_next() fail
+                lua_pushvalue(L, -2);
+                const QString key = QString{lua_tostring(L, -1)};
+                lua_pop(L, 1);
+
+                if (!key.compare(QLatin1String("environmentID"), Qt::CaseInsensitive) || !key.compare(QLatin1String("id"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, "environmentID")) {
+                        errorPushed = true;
+                        break;
+                    }
+                    id = static_cast<int>(lua_tointeger(L, -1));
+                    hasID = true;
+                } else if (!key.compare(QLatin1String("r"), Qt::CaseInsensitive) || !key.compare(QLatin1String("red"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, "red component")) {
+                        errorPushed = true;
+                        break;
+                    }
+                    r = static_cast<int>(lua_tointeger(L, -1));
+                    hasR = true;
+                } else if (!key.compare(QLatin1String("g"), Qt::CaseInsensitive) || !key.compare(QLatin1String("green"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, "green component")) {
+                        errorPushed = true;
+                        break;
+                    }
+                    g = static_cast<int>(lua_tointeger(L, -1));
+                    hasG = true;
+                } else if (!key.compare(QLatin1String("b"), Qt::CaseInsensitive) || !key.compare(QLatin1String("blue"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, "blue component")) {
+                        errorPushed = true;
+                        break;
+                    }
+                    b = static_cast<int>(lua_tointeger(L, -1));
+                    hasB = true;
+                } else if (!key.compare(QLatin1String("a"), Qt::CaseInsensitive) || !key.compare(QLatin1String("alpha"), Qt::CaseInsensitive)) {
+                    if (!checkIntArg(L, __func__, -1, "alpha component")) {
+                        errorPushed = true;
+                        break;
+                    }
+                    alpha = static_cast<int>(lua_tointeger(L, -1));
+                }
+
+                lua_pop(L, 1); // Remove value, keep key for next iteration
+            }
+
+            // Validate required parameters
+            if (!errorPushed) {
+                if (!hasID) {
+                    lua_pushfstring(L, "%s: missing required 'environmentID' or 'id' in table", __func__);
+                    errorPushed = true;
+                } else if (!hasR) {
+                    lua_pushfstring(L, "%s: missing required 'r' or 'red' in table", __func__);
+                    errorPushed = true;
+                } else if (!hasG) {
+                    lua_pushfstring(L, "%s: missing required 'g' or 'green' in table", __func__);
+                    errorPushed = true;
+                } else if (!hasB) {
+                    lua_pushfstring(L, "%s: missing required 'b' or 'blue' in table", __func__);
+                    errorPushed = true;
+                }
+            }
+        }
+
+        if (errorPushed) {
+            return lua_error(L);
+        }
+    } else {
+        // Ordered argument format: environmentID, r, g, b, [alpha]
+        id = getVerifiedInt(L, __func__, 1, "environmentID");
+        r = getVerifiedInt(L, __func__, 2, "red color component");
+        g = getVerifiedInt(L, __func__, 3, "green color component");
+        b = getVerifiedInt(L, __func__, 4, "blue color component");
+        alpha = 255;
+        if (lua_gettop(L) > 4) {
+            alpha = getVerifiedInt(L, __func__, 5, "alpha color component", true);
+        }
     }
 
+    // Validate color component ranges
     if ((r < 0) || (r > 255)) {
         lua_pushnil(L);
         lua_pushfstring(L, "red color component %d out of range {0 to 255}", r);
@@ -3871,6 +4987,7 @@ int TLuaInterpreter::setCustomEnvColor(lua_State* L)
         lua_pushfstring(L, "alpha color component %d out of range {0 to 255}", alpha);
         return 2;
     }
+
     const QColor& newColor = QColor(r, g, b, alpha);
     Host& host = getHostFromLua(L);
     host.mpMap->mCustomEnvColors[id] = newColor;
@@ -4485,18 +5602,18 @@ int TLuaInterpreter::setRoomCharColor(lua_State* L)
 {
     const int id = getVerifiedInt(L, __func__, 1, "roomID");
     const int r = getVerifiedInt(L, __func__, 2, "red component");
-    if (r < 0 || r > 255) {
-        lua_pushfstring(L, "setRoomCharColor: bad argument #2 type (red component value %d out of range (0 to 255)", r);
-        return lua_error(L);
-    }
     const int g = getVerifiedInt(L, __func__, 3, "green component");
-    if (g < 0 || g > 255) {
-        lua_pushfstring(L, "setRoomCharColor: bad argument #3 type (red component value %d out of range (0 to 255)", r);
+    const int b = getVerifiedInt(L, __func__, 4, "blue component");
+    if (r < 0 || r > 255) {
+        lua_pushfstring(L, "%s: red component value %d out of range (0 to 255)", __func__, r);
         return lua_error(L);
     }
-    const int b = getVerifiedInt(L, __func__, 4, "blue component");
+    if (g < 0 || g > 255) {
+        lua_pushfstring(L, "%s: green component value %d out of range (0 to 255)", __func__, g);
+        return lua_error(L);
+    }
     if (b < 0 || b > 255) {
-        lua_pushfstring(L, "setRoomCharColor: bad argument #4 type (blue component value %d out of range (0 to 255)", r);
+        lua_pushfstring(L, "%s: blue component value %d out of range (0 to 255)", __func__, b);
         return lua_error(L);
     }
 
