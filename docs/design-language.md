@@ -431,7 +431,15 @@ where the item has a default, puts it back. Choose carries Lucide's
 swatch-book. Not the pipette: macOS's colours window has a pipette of its own
 that picks a colour off the screen, and a pipette on the button would promise
 that. Not the palette either, which is already the Settings sidebar's
-Appearance glyph. Reset (rotate-ccw) is unavailable while the item has nothing
+Appearance glyph. The swatch is a second way to Choose, for the player who
+clicks the colour itself: a click on it presses the row's Choose
+(`setChooseButton()`), so it does exactly what that button does and nothing
+while the button is unavailable. Unlike the old well it never stands alone,
+and under the pointer it says it can be clicked: a pointing hand where the
+code has the text cursor, a ring in `accent` in the inset round the swatch, and
+Choose's tooltip. The target is the swatch with that inset, 20px square in a
+compact row, under the usual 24px because Choose beside it does the same.
+Reset (rotate-ccw) is unavailable while the item has nothing
 to reset; the field is then empty, its placeholder says what the item is drawn
 with - "Automatic" for a room's symbol, the code of the map's border colour for
 its border, so that field is no wider than any other - and its swatch shows

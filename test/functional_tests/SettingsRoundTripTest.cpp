@@ -1547,6 +1547,34 @@ private slots:
         QVERIFY2(seamPixels >= pPreview->width() / 2, qPrintable(qsl("the preview shows %1 pixels of the console's seam colour %2 across %3").arg(seamPixels).arg(seam.name()).arg(pPreview->width())));
     }
 
+    // Every colour field's swatch stands for the Choose beside it, so a click on a swatch picks in the colours window
+    void test_aClickOnASwatchChoosesInTheColoursWindow()
+    {
+        const QColor priorCommandBackground = mpHost->mCommandBgColor;
+        restoreLater([this, priorCommandBackground]() {
+            mpHost->mCommandBgColor = priorCommandBackground;
+        });
+        openPreferences();
+        const QList<uiDesign::ColourValue*> fields = mpPreferences->findChildren<uiDesign::ColourValue*>();
+        QCOMPARE(fields.size(), 48);
+        for (const uiDesign::ColourValue* pField : fields) {
+            QVERIFY2(pField->chooseButton(), qPrintable(qsl("%1 has no Choose for its swatch to stand for").arg(pField->objectName())));
+        }
+        QCOMPARE(ringColour(qsl("Outer"))->chooseButton(), mpPreferences->pushButton_playerRoomPrimaryColor);
+
+        mpPreferences->setTab(qsl("mainDisplay"));
+        QCoreApplication::processEvents();
+        uiDesign::ColourValue* pField = colourField(qsl("command_background_color"));
+        TestSettings::pageOf(mpPreferences, qsl("mainDisplay"))->ensureWidgetVisible(pField, 0, 0);
+        QCoreApplication::processEvents();
+        const QColor chosen(0x21, 0x43, 0x65);
+        mpColorDialogTimer = TestSettings::pickInTheNextColorDialog(this, chosen);
+        const int middle = pField->height() / 2;
+        QTest::mouseClick(pField, Qt::LeftButton, Qt::NoModifier, QPoint(middle, middle));
+        QTRY_COMPARE(mpHost->mCommandBgColor, chosen);
+        QCOMPARE(pField->text(), chosen.name().toUpper());
+    }
+
     // The map preview's grid is drawn with the map's own pen: as wide as the grid width setting makes it against a
     // room, so a thin grid in the map is a thin grid in the preview
     void test_theMapPreviewGridFollowsTheGridWidth()

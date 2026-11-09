@@ -2526,6 +2526,7 @@ void dlgProfilePreferences::reflowMapperCards()
         pColour = new uiDesign::ColourValue(groupBox_playerRoomStyle, uiDesign::ColourRowSize::Compact);
         pColour->setObjectName(qsl("settingsPlayerRoom%1Colour").arg(ring));
         pColour->opacityBox()->setObjectName(qsl("settingsPlayerRoom%1Opacity").arg(ring));
+        pColour->setChooseButton(pChoose);
         pRingName->setBuddy(pColour);
         pDiameterName = new QLabel(groupBox_playerRoomStyle);
         pDiameterName->setObjectName(qsl("settingsPlayerRoom%1DiameterLabel").arg(ring));
@@ -2771,6 +2772,7 @@ void dlgProfilePreferences::reflowColourCards()
                 colour.pValue->opacityBox()->setObjectName(qsl("settingsOpacity_%1").arg(stem));
             }
             colour.pName->setBuddy(colour.pValue);
+            colour.pValue->setChooseButton(colour.pChoose);
             // A typed colour goes the way one chosen in the colours window does
             connect(colour.pValue, &uiDesign::ColourValue::colourEntered, this, [this, pChoose = colour.pChoose, pHeld = colour.pHeld](const QColor& entered) {
                 Host* pHost = mpHost;

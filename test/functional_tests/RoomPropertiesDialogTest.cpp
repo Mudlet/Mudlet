@@ -738,7 +738,7 @@ private slots:
         QVERIFY2(pDlg->pushButton_resetSymbolColor->isEnabled() && pDlg->pushButton_resetBorderColor->isEnabled(), "Reset is held back for rooms other than the first, which may carry colours");
     }
 
-    // The field takes a click and the keyboard, and only Choose opens the colours window
+    // A click on the code edits it; the colours window is Choose's, and its swatch's (below)
     void onlyChooseOpensTheColoursWindow()
     {
         buildMap();
@@ -753,6 +753,44 @@ private slots:
         QTest::mouseClick(pDlg->pushButton_setSymbolColor, Qt::LeftButton);
         auto* pWindow = pDlg->findChild<QColorDialog*>();
         QVERIFY2(pWindow && pWindow->isVisible(), "Choose opened no colours window");
+        pWindow->reject();
+    }
+
+    // The swatch stands for Choose: the pointer over it is a hand and rings it in the accent, and a click on it opens
+    // the colours window for that row's colour
+    void aClickOnTheSwatchOpensTheColoursWindow()
+    {
+        buildMap();
+        room(scmFirstRoom)->mBorderColor = QColor(Qt::darkGreen);
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        pDlg->show();
+        QVERIFY(QTest::qWaitForWindowExposed(pDlg));
+        uiDesign::ColourValue* pBorder = borderColour(pDlg);
+        QVERIFY(pBorder);
+        QCOMPARE(pBorder->chooseButton(), pDlg->pushButton_setBorderColor);
+        QCOMPARE(symbolColour(pDlg)->chooseButton(), pDlg->pushButton_setSymbolColor);
+        const int middle = pBorder->height() / 2;
+        const QPoint onTheSwatch(middle, middle);
+        const QPoint onTheCode(pBorder->width() - middle, middle);
+        // In the inset between the swatch and the field's frame
+        const QPoint onTheRing(uiDesign::scmInputBorderWidth + 1, middle);
+        const auto ringInk = [pBorder, onTheRing]() {
+            const QImage image = pBorder->grab().toImage();
+            return image.pixelColor(onTheRing * image.devicePixelRatio());
+        };
+        const QColor accent = uiDesign::themeTokens().accent;
+
+        QTest::mouseMove(pBorder, onTheCode);
+        QTRY_COMPARE(pBorder->cursor().shape(), Qt::IBeamCursor);
+        QVERIFY2(ringInk() != accent, "the swatch is ringed with the pointer away from it");
+        QTest::mouseMove(pBorder, onTheSwatch);
+        QTRY_COMPARE(pBorder->cursor().shape(), Qt::PointingHandCursor);
+        QVERIFY2(ringInk() == accent, qPrintable(qsl("under the pointer the swatch is ringed in %1, not the accent %2").arg(ringInk().name(), accent.name())));
+
+        QTest::mouseClick(pBorder, Qt::LeftButton, Qt::NoModifier, onTheSwatch);
+        auto* pWindow = pDlg->findChild<QColorDialog*>();
+        QVERIFY2(pWindow && pWindow->isVisible(), "a click on the swatch opened no colours window");
+        QCOMPARE(pWindow->currentColor().rgb(), QColor(Qt::darkGreen).rgb());
         pWindow->reject();
     }
 

@@ -58,6 +58,10 @@ public:
     // For a colour that may be see-through, a box for its opacity, kept in step with this field, for the owner to
     // lay out right after it. Made on the first call.
     QSpinBox* opacityBox();
+    // The row's Choose. A click on the swatch presses it, and while it is available the swatch shows it can be
+    // clicked: a pointing hand, a ring in the accent and Choose's tooltip under the pointer.
+    void setChooseButton(QAbstractButton* pChoose);
+    [[nodiscard]] QAbstractButton* chooseButton() const { return mpChoose; }
 
     // What the swatch shows; invalid while the field is blank
     [[nodiscard]] QColor colour() const { return mColour; }
@@ -78,6 +82,11 @@ protected:
     void focusOutEvent(QFocusEvent* pEvent) override;
     void changeEvent(QEvent* pEvent) override;
     void paintEvent(QPaintEvent* pEvent) override;
+    void mousePressEvent(QMouseEvent* pEvent) override;
+    void mouseReleaseEvent(QMouseEvent* pEvent) override;
+    void mouseDoubleClickEvent(QMouseEvent* pEvent) override;
+    void mouseMoveEvent(QMouseEvent* pEvent) override;
+    void leaveEvent(QEvent* pEvent) override;
 
 private:
     enum class Shows { Nothing, Default, Own };
@@ -90,12 +99,21 @@ private:
     void showOpacity();
     void takeOpacity(const int percent);
     void keepTextClearOfSwatch();
+    [[nodiscard]] QRect swatchRect() const;
+    // The swatch and the inset round it: the whole square at the field's leading edge
+    [[nodiscard]] QRect swatchTarget() const;
+    [[nodiscard]] bool swatchClickable() const;
+    [[nodiscard]] bool onSwatch(const QPoint& position) const;
+    void hoverSwatch(const bool over);
 
     const ColourRowSize mSize;
     QColor mColour;
     Shows mShows = Shows::Nothing;
     QString mDefaultWord;
     QPointer<QSpinBox> mpOpacity;
+    QPointer<QAbstractButton> mpChoose;
+    bool mSwatchHovered = false;
+    bool mSwatchPressed = false;
 };
 
 enum class ColourButton { Choose, Reset };

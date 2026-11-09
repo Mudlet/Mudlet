@@ -58,6 +58,8 @@ dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
     horizontalLayout_widget_borderColor->insertWidget(horizontalLayout_widget_borderColor->indexOf(pushButton_setBorderColor), mpBorderColour);
     horizontalLayout_widget_borderColor->insertWidget(horizontalLayout_widget_borderColor->indexOf(pushButton_setBorderColor), mpBorderColour->opacityBox());
     mpBorderColour->opacityBox()->setObjectName(qsl("roomPropertiesBorderOpacity"));
+    mpSymbolColour->setChooseButton(pushButton_setSymbolColor);
+    mpBorderColour->setChooseButton(pushButton_setBorderColor);
     restyleColourRows();
     connect(mudlet::self(), &mudlet::signal_appearanceChanged, this, &dlgRoomProperties::restyleColourRows);
     // A typed colour goes the way one chosen in the colours window does

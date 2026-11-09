@@ -25,7 +25,9 @@
 #include <QAbstractButton>
 #include <QFocusEvent>
 #include <QFontMetrics>
+#include <QHelpEvent>
 #include <QKeyEvent>
+#include <QMouseEvent>
 #include <QPainter>
 #include <QPainterPath>
 #include <QPen>
@@ -34,6 +36,7 @@
 #include <QSpinBox>
 #include <QStyle>
 #include <QStyleOptionFrame>
+#include <QToolTip>
 
 #include <algorithm>
 
@@ -266,6 +269,13 @@ bool ColourValue::event(QEvent* pEvent)
         pEvent->accept();
         return true;
     }
+    if (pEvent->type() == QEvent::ToolTip) {
+        if (auto* pHelp = static_cast<QHelpEvent*>(pEvent); onSwatch(pHelp->pos())) {
+            const QString words = mpChoose->toolTip().isEmpty() ? mpChoose->accessibleName() : mpChoose->toolTip();
+            QToolTip::showText(pHelp->globalPos(), words, this, swatchTarget());
+            return true;
+        }
+    }
     return QLineEdit::event(pEvent);
 }
 
@@ -322,6 +332,7 @@ void ColourValue::changeEvent(QEvent* pEvent)
     QLineEdit::changeEvent(pEvent);
     if (pEvent->type() == QEvent::EnabledChange) {
         showOpacity();
+        hoverSwatch(false);
     } else if (pEvent->type() == QEvent::LayoutDirectionChange) {
         keepTextClearOfSwatch();
     }
@@ -359,10 +370,8 @@ void ColourValue::paintEvent(QPaintEvent* pEvent)
     const ThemeTokens tokens = themeTokens();
     const bool available = isEnabled();
     const qreal half = scmInputBorderWidth / 2.0;
-    const int inset = scmInputBorderWidth + swatchInset(mSize);
-    const int side = swatchSide(mSize);
     const int radius = swatchRadius(mSize);
-    const QRect swatch = QStyle::visualRect(layoutDirection(), rect(), QRect(inset, (height() - side) / 2, side, side));
+    const QRect swatch = swatchRect();
 
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
@@ -380,6 +389,102 @@ void ColourValue::paintEvent(QPaintEvent* pEvent)
     painter.setPen(QPen(available ? tokens.border : disabledBorderColour(tokens), scmInputBorderWidth));
     painter.setBrush(Qt::NoBrush);
     painter.drawRoundedRect(QRectF(swatch).adjusted(half, half, -half, -half), radius - half, radius - half);
+    // Just outside the swatch, in the inset between it and the field's frame
+    if (mSwatchHovered && swatchClickable()) {
+        painter.setPen(QPen(tokens.accent, scmInputBorderWidth));
+        painter.drawRoundedRect(QRectF(swatch).adjusted(-half, -half, half, half), radius + half, radius + half);
+    }
+}
+
+void ColourValue::setChooseButton(QAbstractButton* pChoose)
+{
+    mpChoose = pChoose;
+    setMouseTracking(true);
+}
+
+QRect ColourValue::swatchRect() const
+{
+    const int inset = scmInputBorderWidth + swatchInset(mSize);
+    const int side = swatchSide(mSize);
+    return QStyle::visualRect(layoutDirection(), rect(), QRect(inset, (height() - side) / 2, side, side));
+}
+
+QRect ColourValue::swatchTarget() const
+{
+    const int inset = swatchInset(mSize);
+    return swatchRect().adjusted(-inset, -inset, inset, inset);
+}
+
+// Only a swatch on show stands for Choose: a field showing no colour has none to click
+bool ColourValue::swatchClickable() const
+{
+    return mpChoose && mpChoose->isEnabled() && isEnabled() && mColour.isValid();
+}
+
+bool ColourValue::onSwatch(const QPoint& position) const
+{
+    return swatchClickable() && swatchTarget().contains(position);
+}
+
+void ColourValue::hoverSwatch(const bool over)
+{
+    if (over == mSwatchHovered) {
+        return;
+    }
+    mSwatchHovered = over;
+    setCursor(over ? Qt::PointingHandCursor : Qt::IBeamCursor);
+    update();
+}
+
+void ColourValue::mousePressEvent(QMouseEvent* pEvent)
+{
+    if (pEvent->button() == Qt::LeftButton && onSwatch(pEvent->position().toPoint())) {
+        mSwatchPressed = true;
+        pEvent->accept();
+        return;
+    }
+    QLineEdit::mousePressEvent(pEvent);
+}
+
+void ColourValue::mouseReleaseEvent(QMouseEvent* pEvent)
+{
+    if (mSwatchPressed && pEvent->button() == Qt::LeftButton) {
+        mSwatchPressed = false;
+        pEvent->accept();
+        // As a button does: only a release over what was pressed acts
+        if (onSwatch(pEvent->position().toPoint())) {
+            mpChoose->click();
+        }
+        return;
+    }
+    QLineEdit::mouseReleaseEvent(pEvent);
+}
+
+// A double click on the swatch would otherwise select the code beside it
+void ColourValue::mouseDoubleClickEvent(QMouseEvent* pEvent)
+{
+    if (onSwatch(pEvent->position().toPoint())) {
+        pEvent->accept();
+        return;
+    }
+    QLineEdit::mouseDoubleClickEvent(pEvent);
+}
+
+void ColourValue::mouseMoveEvent(QMouseEvent* pEvent)
+{
+    hoverSwatch(onSwatch(pEvent->position().toPoint()));
+    // A drag begun on the swatch selects no text
+    if (mSwatchPressed) {
+        pEvent->accept();
+        return;
+    }
+    QLineEdit::mouseMoveEvent(pEvent);
+}
+
+void ColourValue::leaveEvent(QEvent* pEvent)
+{
+    hoverSwatch(false);
+    QLineEdit::leaveEvent(pEvent);
 }
 
 void setColourButtonGlyph(QAbstractButton* pButton, const ColourButton kind, const ThemeTokens& tokens, const ColourRowSize size)
