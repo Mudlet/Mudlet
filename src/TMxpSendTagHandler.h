@@ -47,7 +47,7 @@ public:
     QString currentCaption() const { return mLastCaption; }
 
 private:
-    void updateHrefInLinks(TMxpClient& client) const;
+    void updateHrefInLinks(TMxpClient& client, const QString& content) const;
     QString actionFor(const QString& command) const;
     void resetCurrentTagContent(TMxpClient& client);
 
@@ -60,7 +60,8 @@ private:
     bool mIsHrefInContent;
     // Every byte of game text reaches handleContentBytes(), not only what is inside a SEND
     bool mInsideTag = false;
-    QString mCurrentTagContent;
+    // The game's bytes, decoded at the end tag so a character split across calls stays whole
+    QByteArray mCurrentTagContent;
     QString mLastCaption;
     QString mCommand;
     QStringList mHrefs;

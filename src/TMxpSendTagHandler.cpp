@@ -138,11 +138,12 @@ TMxpTagHandlerResult TMxpSendTagHandler::handleEndTag(TMxpContext& ctx, TMxpClie
 
     // Only process link-related logic if a link was actually created
     if (mLinkId != 0) {
+        const QString content = TStringUtils::decodeBytes(mCurrentTagContent.toStdString(), client.getEncoding());
         if (mIsHrefInContent) {
-            updateHrefInLinks(client);
+            updateHrefInLinks(client, content);
         }
 
-        mLastCaption = mCurrentTagContent.trimmed();
+        mLastCaption = content.trimmed();
         client.setCaptionForSendEvent(mLastCaption);
     }
 
@@ -163,7 +164,7 @@ QString TMxpSendTagHandler::actionFor(const QString& command) const
     return qsl("%1(%2)").arg(mCommand, LuaLiteral::quote(command));
 }
 
-void TMxpSendTagHandler::updateHrefInLinks(TMxpClient& client) const
+void TMxpSendTagHandler::updateHrefInLinks(TMxpClient& client, const QString& content) const
 {
     QStringList *hrefs, *hints;
     if (client.getLink(mLinkId, &hrefs, &hints)) {
@@ -171,18 +172,18 @@ void TMxpSendTagHandler::updateHrefInLinks(TMxpClient& client) const
         // written to close the Lua string stays inside it
         if (hrefs != nullptr) {
             for (int i = 0, total = qMin(hrefs->size(), mHrefs.size()); i < total; ++i) {
-                (*hrefs)[i] = actionFor(QString(mHrefs.at(i)).replace(TAG_CONTENT_PLACEHOLDER, mCurrentTagContent, Qt::CaseInsensitive));
+                (*hrefs)[i] = actionFor(QString(mHrefs.at(i)).replace(TAG_CONTENT_PLACEHOLDER, content, Qt::CaseInsensitive));
             }
         }
 
         if (hints != nullptr) {
-            hints->replaceInStrings(TAG_CONTENT_PLACEHOLDER, mCurrentTagContent, Qt::CaseInsensitive);
+            hints->replaceInStrings(TAG_CONTENT_PLACEHOLDER, content, Qt::CaseInsensitive);
         }
     }
 }
 void TMxpSendTagHandler::handleContentBytes(QByteArrayView bytes)
 {
     if (mInsideTag) {
-        mCurrentTagContent.append(QLatin1StringView(bytes));
+        mCurrentTagContent.append(bytes);
     }
 }
