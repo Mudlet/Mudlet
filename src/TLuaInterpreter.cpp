@@ -593,14 +593,10 @@ bool TLuaInterpreter::checkIntArg(lua_State* L, const char* functionName, const 
         errorArgumentType(L, functionName, pos, publicName, "number", isOptional);
         return false;
     }
-    // lua_tointeger(...) returns a ptrdiff_t which on 64-bit platforms is a
-    // signed 64 bit value, which is usually larger than an "int" a.k.a. an
-    // int32_t:
-    // We have to error out here otherwise we have to restructure every usage
-    // to handle such an over/under-flow - at least with a change to a
-    // std::optional<int>...
-    auto const result = lua_tointeger(L, pos);
-    if (result < std::numeric_limits<int>::min() || result > std::numeric_limits<int>::max()) {
+    // Checked as a double: lua_tointeger() is a plain cast, undefined for NaN and
+    // out-of-range values. These bounds keep its truncation; NaN fails both.
+    const lua_Number number = lua_tonumber(L, pos);
+    if (!(number > std::numeric_limits<int>::min() - 1.0 && number < std::numeric_limits<int>::max() + 1.0)) {
         lua_pushfstring(L,
                         "%s: integer over/under-flow in argument #%d (%s as an integer, provided value %s is outside of valid range %d to %d!)",
                         functionName,
