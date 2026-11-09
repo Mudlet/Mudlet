@@ -317,6 +317,15 @@ private slots:
         QCOMPARE(discord.gameIntegrationSupported(qsl("localhost")), qMakePair(true, qsl("localhost")));
     }
 
+    void testGameIntegrationSkipsAWebOrGamePrefix()
+    {
+        Discord discord;
+
+        QCOMPARE(discord.gameIntegrationSupported(qsl("www.achaea.com")), qMakePair(true, qsl("achaea")));
+        QCOMPARE(discord.gameIntegrationSupported(qsl("game.starmourn.com")), qMakePair(true, qsl("starmourn")));
+        QCOMPARE(discord.gameIntegrationSupported(qsl("avalon.de")), qMakePair(false, qsl("avalon")));
+    }
+
     void testGameIntegrationIgnoresAddressCase()
     {
         Discord discord;

@@ -558,13 +558,6 @@ QString Discord::deduceGameName(const QString& address)
         break;
     }
 
-    if (host.endsWith(qsl(".com"))) {
-        otherName = host.left(host.length() - 4);
-    } else if (host.endsWith(qsl(".de"))) {
-        // Handle avalon.de case
-        otherName = host.left(host.length() - 4);
-    }
-
     // Handle the remaining cases where the known URL is something else - like
     // say a fixed IP address stored as a member of the value for the QHash
     // mKnownGames:
