@@ -38,6 +38,7 @@
 #include "TStringUtils.h"
 #include "UntrustedText.h"
 #include "TTextProperties.h"
+#include "TelnetUri.h"
 #include "widechar_width.h"
 #include "TEncodingHelper.h"
 #include "SentryWrapper.h"
@@ -5288,6 +5289,10 @@ void TBuffer::decodeOSC(const QString& sequence)
                         action = QObject::tr("Write an email to");
                     }
                     hint = {qsl("%1: %2").arg(action, UntrustedText::forTarget(baseUrl))};
+                } else if ((scheme == qsl("telnet") || scheme == qsl("telnets")) && parseTelnetUri(baseUrl)) {
+                    command = {qsl("connectFromGameLink(%1)").arg(LuaLiteral::quote(baseUrl))};
+                    //: Start of the tooltip on a link from the game to a game's address, which may be the game being played, followed by a colon and that address
+                    hint = {qsl("%1: %2").arg(QObject::tr("Connect to"), UntrustedText::forTarget(baseUrl))};
                 } else {
                     qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - Ignored untrusted or unsupported URI scheme: \"" << scheme << "\"";
                     return;
@@ -5333,6 +5338,10 @@ void TBuffer::decodeOSC(const QString& sequence)
                         menuHints.append(QString());
                     } else if (const QString address = MailtoUri::withOnlyMessageFields(menuCommand); systemMayOpenUrl(QUrl(address))) {
                         menuCommands.append(qsl("openUrl(%1)").arg(LuaLiteral::quote(address)));
+                        menuHints.append(UntrustedText::forAuthoredText(menuLabel));
+                    } else if (const QString menuScheme = QUrl(menuCommand).scheme().toLower(); menuScheme == qsl("telnet") || menuScheme == qsl("telnets")) {
+                        // One Mudlet could not connect to stays in the menu with nothing to run, so it shows greyed out
+                        menuCommands.append(parseTelnetUri(menuCommand) ? qsl("connectFromGameLink(%1)").arg(LuaLiteral::quote(menuCommand)) : QString());
                         menuHints.append(UntrustedText::forAuthoredText(menuLabel));
                     } else {
                         // Treat as direct command
@@ -5393,13 +5402,16 @@ void TBuffer::decodeOSC(const QString& sequence)
                 setLinkSelected(mCurrentHyperlinkLinkId, mCurrentHyperlinkStyling.selection.selected);
                 if (mCurrentHyperlinkStyling.selection.selected) {
                     setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateSelected);
-                } else if (mCurrentHyperlinkStyling.selection.disabled) {
-                    setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateDisabled);
                 }
 #if defined(DEBUG_OSC_PROCESSING)
                 qDebug() << "[OSC] Link" << mCurrentHyperlinkLinkId << "initialized with selection state:" << "group=" << group << "value=" << value
                          << "selected=" << mCurrentHyperlinkStyling.selection.selected << "disabled=" << mCurrentHyperlinkStyling.selection.disabled;
 #endif
+            }
+
+            // Here and not when it closes: its characters take this state as they are built, and outrank being selected
+            if (mCurrentHyperlinkStyling.selection.disabled) {
+                setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateDisabled);
             }
 
 #if defined(DEBUG_OSC_PROCESSING)
@@ -7531,16 +7543,16 @@ void TBuffer::finaliseActiveHyperlink()
 {
     // Apply initial selection/disabled state styling when link closes (from selection branch)
     // OR apply :link pseudo-class styling for preset-only links (from compact branch)
-    if (mCurrentHyperlinkLinkId > 0 && mCurrentHyperlinkStyling.selection.hasSelectionSettings) {
+    if (mCurrentHyperlinkLinkId > 0 && (mCurrentHyperlinkStyling.selection.hasSelectionSettings || mCurrentHyperlinkStyling.selection.disabled)) {
 #if defined(DEBUG_OSC_PROCESSING)
         qDebug() << "[OSC] Queuing initial selection styling for link" << mCurrentHyperlinkLinkId << "selected:" << mCurrentHyperlinkStyling.selection.selected
                  << "disabled:" << mCurrentHyperlinkStyling.selection.disabled << "selectedStyle.hasCustomStyling:" << mCurrentHyperlinkStyling.selectedStyle.hasCustomStyling;
 #endif
-        if (mCurrentHyperlinkStyling.selection.selected) {
-            setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateSelected);
-            mPendingSelectionStyling.insert(mCurrentHyperlinkLinkId);
-        } else if (mCurrentHyperlinkStyling.selection.disabled) {
+        if (mCurrentHyperlinkStyling.selection.disabled) {
+            // Not queued for restyling: its characters were built in this state, and that would clear the game's own formatting
             setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateDisabled);
+        } else if (mCurrentHyperlinkStyling.selection.selected) {
+            setLinkState(mCurrentHyperlinkLinkId, Mudlet::HyperlinkStyling::StateSelected);
             mPendingSelectionStyling.insert(mCurrentHyperlinkLinkId);
         }
     } else if (mCurrentHyperlinkLinkId > 0) {
@@ -10328,7 +10340,7 @@ void TBuffer::setHoveredLink(int linkIndex)
             // Priority: disabled > selected > visited > default
             // Disabled links should stay disabled
             Mudlet::HyperlinkStyling linkStyling = getEffectiveHyperlinkStyling(previousHoveredLink);
-            if (linkStyling.selection.hasSelectionSettings && linkStyling.selection.disabled) {
+            if (linkStyling.selection.disabled) {
                 setLinkState(previousHoveredLink, Mudlet::HyperlinkStyling::StateDisabled);
             } else if (isLinkSelected(previousHoveredLink)) {
                 setLinkState(previousHoveredLink, Mudlet::HyperlinkStyling::StateSelected);
@@ -10356,6 +10368,11 @@ void TBuffer::setHoveredLink(int linkIndex)
 
 void TBuffer::setActiveLink(int linkIndex)
 {
+    // Restyling a disabled link to show it pressed would clear the game's own formatting
+    if (linkIndex > 0 && getEffectiveHyperlinkStyling(linkIndex).selection.disabled) {
+        return;
+    }
+
     int previousActiveLink = mCurrentActiveLinkIndex;
     mCurrentActiveLinkIndex = linkIndex;
 
@@ -10363,7 +10380,7 @@ void TBuffer::setActiveLink(int linkIndex)
     if (previousActiveLink > 0 && previousActiveLink != linkIndex) {
         // Return to appropriate state based on priority: disabled > hover > selected > visited > default
         Mudlet::HyperlinkStyling linkStyling = getEffectiveHyperlinkStyling(previousActiveLink);
-        if (linkStyling.selection.hasSelectionSettings && linkStyling.selection.disabled) {
+        if (linkStyling.selection.disabled) {
             setLinkState(previousActiveLink, Mudlet::HyperlinkStyling::StateDisabled);
         } else if (previousActiveLink == mCurrentHoveredLinkIndex) {
             setLinkState(previousActiveLink, Mudlet::HyperlinkStyling::StateHover);
@@ -10394,7 +10411,7 @@ void TBuffer::setFocusedLink(int linkIndex)
     if (previousFocusedLink > 0 && previousFocusedLink != linkIndex) {
         // Preserve disabled state, otherwise return to base state
         Mudlet::HyperlinkStyling linkStyling = getEffectiveHyperlinkStyling(previousFocusedLink);
-        if (linkStyling.selection.hasSelectionSettings && linkStyling.selection.disabled) {
+        if (linkStyling.selection.disabled) {
             setLinkState(previousFocusedLink, Mudlet::HyperlinkStyling::StateDisabled);
         } else if (isLinkSelected(previousFocusedLink)) {
             setLinkState(previousFocusedLink, Mudlet::HyperlinkStyling::StateSelected);
@@ -10407,9 +10424,12 @@ void TBuffer::setFocusedLink(int linkIndex)
 
     // Set new link to focus state
     if (linkIndex > 0) {
-        // Determine if focus came from keyboard (would use StateFocusVisible)
-        // For now, we use StateFocus
-        setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateFocus);
+        // Disabled links stay disabled, and a screen reader is told so from this state.
+        if (getLinkState(linkIndex) != Mudlet::HyperlinkStyling::StateDisabled) {
+            // Determine if focus came from keyboard (would use StateFocusVisible)
+            // For now, we use StateFocus
+            setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateFocus);
+        }
     }
 }
 

@@ -76,6 +76,10 @@ private:
     QTest::qWait(50ms);
   }
 
+  static QString connects(const QString &address) {
+    return qsl("connectFromGameLink(%1)").arg(LuaLiteral::quote(address));
+  }
+
   // Scans backward through the buffer to find the first hyperlink and returns
   // its command list from the link store.
   QStringList findFirstLinkCommands() {
@@ -999,6 +1003,141 @@ private slots:
     QCOMPARE(console->buffer.isLinkSelected(linkId), !expectedDisabled);
   }
 
+  void test_Osc8TelnetLinkAsksBeforeConnecting() {
+    injectData(qsl("\x1b]8;;telnet://games.example:4000\x1b\\Visit\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    int linkId = 0;
+    for (int line = console->buffer.getLastLineNumber();
+         line >= 0 && linkId == 0; --line) {
+      linkId = console->buffer.getLinkIndexAt(line, 0);
+    }
+    QVERIFY2(linkId > 0, "Expected to find a link in the buffer");
+    QCOMPARE(console->getLinkStore().getLinksConst(linkId),
+             QStringList(connects(qsl("telnet://games.example:4000"))));
+    QCOMPARE(console->buffer.getLinkTooltip(linkId),
+             qsl("Connect to: telnet://games.example:4000"));
+
+    QString asked;
+    mudlet::self()->mConfirmGameLink = [&asked](const QString &question) {
+      asked = question;
+      return false;
+    };
+    const auto unhook = qScopeGuard([] { mudlet::self()->mConfirmGameLink = nullptr; });
+    mpHost->mLuaInterpreter.compileAndExecuteScript(
+        console->getLinkStore().getLinksConst(linkId).at(0));
+    QTRY_COMPARE(asked, qsl("Connect to games.example:4000?"));
+    QVERIFY2(!mudlet::self()->profileExists(qsl("Games")),
+             "declining still made a profile");
+  }
+
+  void test_Osc8TelnetMenuItemAsksBeforeConnecting() {
+    injectData(qsl("\x1b]8;;send:look?config={\"menu\":[{\"Look\":\"send:look\"},{\"Visit\":\"telnet://games.example:4000\"}]}\x1b\\Menu\x1b]8;;\x1b\\"));
+
+    const QStringList commands = findFirstLinkCommands();
+    QCOMPARE(commands.size(), 2);
+    QCOMPARE(commands.at(1), connects(qsl("telnet://games.example:4000")));
+
+    QString asked;
+    mudlet::self()->mConfirmGameLink = [&asked](const QString &question) {
+      asked = question;
+      return false;
+    };
+    const auto unhook = qScopeGuard([] { mudlet::self()->mConfirmGameLink = nullptr; });
+    mpHost->mLuaInterpreter.compileAndExecuteScript(commands.at(1));
+    QTRY_COMPARE(asked, qsl("Connect to games.example:4000?"));
+  }
+
+  // Typed at the game, an address it could never connect to would be sent as a
+  // command, so the item has nothing to run and shows greyed out
+  void test_Osc8TelnetMenuItemWithoutAHostDoesNothing() {
+    injectData(qsl("\x1b]8;;send:look?config={\"menu\":[{\"Look\":\"send:look\"},{\"Visit\":\"telnet://:4000\"}]}\x1b\\Menu\x1b]8;;\x1b\\"));
+
+    const QStringList commands = findFirstLinkCommands();
+    QCOMPARE(commands.size(), 2);
+    QCOMPARE(commands.at(1), QString());
+  }
+
+  void test_AGameLinkQuestionShowsTheAddressItDials_data() {
+    QTest::addColumn<QString>("uri");
+    QTest::addColumn<QString>("expected");
+
+    QTest::newRow("IPv6 with a zone") << qsl("telnet://[fe80::1%252]:4000") << qsl("Connect to [fe80::1%2]:4000?");
+    QTest::newRow("IPv6") << qsl("telnet://[2001:db8::1]:4000") << qsl("Connect to [2001:db8::1]:4000?");
+    QTest::newRow("a lookalike Unicode host") << qsl("telnet://xn--pple-43d.com:4000") << qsl("Connect to аpple.com:4000 (xn--pple-43d.com)?");
+    QTest::newRow("an ASCII host") << qsl("telnet://games.example:4000") << qsl("Connect to games.example:4000?");
+  }
+
+  void test_AGameLinkQuestionShowsTheAddressItDials() {
+    QFETCH(QString, uri);
+    QFETCH(QString, expected);
+
+    QString asked;
+    mudlet::self()->mConfirmGameLink = [&asked](const QString &question) {
+      asked = question;
+      return false;
+    };
+    const auto unhook = qScopeGuard([] { mudlet::self()->mConfirmGameLink = nullptr; });
+    mudlet::self()->connectFromGameLink(uri);
+    QCOMPARE(asked, expected);
+  }
+
+  // One that could never connect would otherwise say "Connect to" and then do
+  // nothing when clicked
+  void test_Osc8TelnetLinkWithoutAHostIsNotMade() {
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int linksBefore = console->getLinkStore().getCurrentLinkID();
+    injectData(qsl("\x1b]8;;telnet://:4000\x1b\\Visit\x1b]8;;\x1b\\"));
+    QCOMPARE(console->getLinkStore().getCurrentLinkID(), linksBefore);
+  }
+
+  void test_Osc8TelnetsLinkToARawAddressIsNotMade_data() {
+    QTest::addColumn<QString>("uri");
+    QTest::newRow("IPv4") << qsl("telnets://127.0.0.1:4000");
+    QTest::newRow("IPv6") << qsl("telnets://[::1]:4000");
+  }
+
+  void test_Osc8TelnetsLinkToARawAddressIsNotMade() {
+    QFETCH(QString, uri);
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int linksBefore = console->getLinkStore().getCurrentLinkID();
+    injectData(qsl("\x1b]8;;") + uri + qsl("\x1b\\Visit\x1b]8;;\x1b\\"));
+    QCOMPARE(console->getLinkStore().getCurrentLinkID(), linksBefore);
+  }
+
+  // A profile already connected is only brought forward, so the link cannot
+  // set TLS for some later reconnection the player never asked for
+  void test_AGameLinkToAConnectedProfileLeavesItsTlsAlone() {
+    QVERIFY(mpHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectedState);
+    QString asked;
+    mudlet::self()->mConfirmGameLink = [&asked](const QString &question) {
+      asked = question;
+      return true;
+    };
+    const auto unhook = qScopeGuard([] { mudlet::self()->mConfirmGameLink = nullptr; });
+    mudlet::self()->connectFromGameLink(qsl("telnets://%1:%2").arg(mLocalhost, mPort));
+
+    QCOMPARE(asked, qsl("Connect to %1:%2 with your profile %3? It will log in with your saved details.").arg(mLocalhost, mPort, mHostname));
+    QVERIFY(!mpHost->mUseTlsThisSession);
+    QVERIFY(!mpHost->mSslTsl);
+    QVERIFY2(MudletApp::readProfileData(mHostname, qsl("ssl_tsl")).isEmpty(),
+             "the link changed the profile's saved TLS setting");
+  }
+
+  // The question runs an event loop, which carries on running clicks
+  void test_AGameLinkClickedWhileAskingIsNotAskedAgain() {
+    int questions = 0;
+    mudlet::self()->mConfirmGameLink = [&questions](const QString &) {
+      if (++questions == 1) {
+        mudlet::self()->connectFromGameLink(qsl("telnet://games.example:4000"));
+      }
+      return false;
+    };
+    const auto unhook = qScopeGuard([] { mudlet::self()->mConfirmGameLink = nullptr; });
+    mudlet::self()->connectFromGameLink(qsl("telnet://games.example:4000"));
+    QCOMPARE(questions, 1);
+  }
+
   // A mailto: link keeps its own query, whatever case its scheme is in, losing
   // only Mudlet's config; its default tooltip says it writes an email
   void test_Osc8MailtoLink_data() {
@@ -1616,6 +1755,134 @@ private slots:
         qPrintable(
             qsl("Expected 'text-link-visited:true' after visiting but got: %1")
                 .arg(attrsAfter)));
+  }
+
+  // The style has to be on the text from the start, not wait for a click, and
+  // to come back after anything that gives the link another state for a moment.
+  void test_DisabledLinkHasItsStyleFromTheStart() {
+    injectData(qsl("\x1b]8;;send:look?config={\"disabled\":true,\"style\":{\"disabled\":{\"color\":\"#808080\",\"strikethrough\":true}}}\x1b\\Off\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    const auto showsDisabledStyle = [&, line = linkLine, col = linkCol]() {
+      const TChar &ch = console->buffer.buffer.at(line).at(col);
+      return ch.foreground() == QColor(0x80, 0x80, 0x80) && (ch.allDisplayAttributes() & TChar::StrikeOut);
+    };
+
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDisabled);
+    QVERIFY2(showsDisabledStyle(), "the disabled style is not on the text as printed");
+
+    console->buffer.setHoveredLink(linkId);
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDisabled);
+    console->buffer.setHoveredLink(0);
+
+    console->buffer.setFocusedLink(linkId);
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDisabled);
+    console->buffer.setFocusedLink(0);
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDisabled);
+
+    console->buffer.setActiveLink(linkId);
+    console->buffer.setActiveLink(0);
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDisabled);
+    QVERIFY2(showsDisabledStyle(), "the disabled style did not come back");
+  }
+
+  void test_DisabledOutranksSelectedFromTheStart_data() {
+    QTest::addColumn<QString>("selection");
+
+    QTest::newRow("in a group") << qsl("{\"group\":\"ranks\",\"value\":\"a\",\"selected\":true,\"disabled\":true}");
+    QTest::newRow("no group") << qsl("{\"selected\":true,\"disabled\":true}");
+    QTest::newRow("disabled without a group") << qsl("{\"disabled\":true}");
+  }
+
+  void test_DisabledOutranksSelectedFromTheStart() {
+    QFETCH(QString, selection);
+
+    injectData(qsl("\x1b]8;;send:look?config={\"selection\":%1,\"style\":{\"selected\":{\"color\":\"#00ff00\"},\"disabled\":{\"color\":\"#808080\"}}}\x1b\\Off\x1b]8;;\x1b\\").arg(selection));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDisabled);
+    QCOMPARE(console->buffer.buffer.at(linkLine).at(linkCol).foreground(), QColor(0x80, 0x80, 0x80));
+  }
+
+  // The flush marker splits the link's text, and held text commits apart from the link's own line
+  void test_DisabledStyleSurvivesTheLinkBeingSplit() {
+    TMainConsole *console = mpHost->mainConsoleView();
+    const QString link = qsl("\x1b]8;;send:look?config={\"disabled\":true,\"style\":{\"disabled\":{\"color\":\"#808080\"}}}\x1b\\");
+
+    feedFromServer(link + qsl("FLUSHED \r"));
+    feedFromServer(qsl("REST\x1b]8;;\x1b\\\n"));
+    int line = lineStartingWith(qsl("REST"));
+    QVERIFY2(line >= 1, qPrintable(allBufferText()));
+    QCOMPARE(console->buffer.buffer.at(line).at(0).foreground(), QColor(0x80, 0x80, 0x80));
+    const int flushedLine = lineStartingWith(qsl("FLUSHED"));
+    QVERIFY2(flushedLine >= 0, qPrintable(allBufferText()));
+    QCOMPARE(console->buffer.buffer.at(flushedLine).at(0).foreground(), QColor(0x80, 0x80, 0x80));
+
+    undoServerWrap();
+    feedFromServer(QString(64, QLatin1Char('x')) + qsl(" alpha\n"));
+    feedFromServer(qsl("- ") + link + qsl("listed\x1b]8;;\x1b\\\n"));
+    line = lineStartingWith(qsl("- listed"));
+    QVERIFY2(line >= 0, qPrintable(allBufferText()));
+    QCOMPARE(console->buffer.buffer.at(line).at(2).foreground(), QColor(0x80, 0x80, 0x80));
+  }
+
+  void test_DisabledStyleKeepsTheTextsOwnFormatting() {
+    injectData(qsl("\x1b[0m\x1b]8;;send:look?config={\"disabled\":true,\"style\":{\"disabled\":{\"color\":\"#808080\"}}}\x1b\\\x1b[1mOff\x1b[22m\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    const TChar &ch = console->buffer.buffer.at(std::get<0>(*pos)).at(std::get<1>(*pos));
+    QCOMPARE(ch.foreground(), QColor(0x80, 0x80, 0x80));
+    QVERIFY2(ch.allDisplayAttributes() & TChar::Bold, "the disabled style cleared the game's bold");
+  }
+
+  void test_PressingADisabledLinkLeavesItAsPrinted() {
+    injectData(qsl("\x1b[0m\x1b]8;;send:look?config={\"disabled\":true,\"style\":{\"disabled\":{\"strikethrough\":true}}}\x1b\\\x1b[1mOff\x1b[22m\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    const auto attributes = [&, line = linkLine, col = linkCol]() {
+      return console->buffer.buffer.at(line).at(col).allDisplayAttributes();
+    };
+    QVERIFY(attributes() & TChar::StrikeOut);
+
+    console->buffer.setActiveLink(linkId);
+    QVERIFY2(attributes() & TChar::StrikeOut, "pressing the link dropped its disabled style");
+    console->buffer.setActiveLink(0);
+    QVERIFY2(attributes() & TChar::StrikeOut, "releasing the link dropped its disabled style");
+    QVERIFY2(attributes() & TChar::Bold, "releasing the link cleared the game's bold");
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDisabled);
+  }
+
+  void test_DisabledLinkInAGroupKeepsTheTextsOwnFormatting() {
+    injectData(qsl("\x1b[0m\x1b]8;;send:look?config={\"selection\":{\"group\":\"boldgroup\",\"value\":\"off\",\"disabled\":true},\"style\":{\"disabled\":{\"color\":\"#808080\"}}}\x1b\\\x1b[1mOff\x1b[22m\x1b]8;;\x1b\\"));
+    injectData(qsl("after\n"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    const TChar &ch = console->buffer.buffer.at(std::get<0>(*pos)).at(std::get<1>(*pos));
+    QCOMPARE(ch.foreground(), QColor(0x80, 0x80, 0x80));
+    QVERIFY2(ch.allDisplayAttributes() & TChar::Bold, "the group's restyle cleared the game's bold");
+  }
+
+  void test_LinkThatIsNotDisabledStartsInTheDefaultState() {
+    injectData(qsl("\x1b]8;;send:look?config={\"disabled\":false,\"style\":{\"disabled\":{\"color\":\"#808080\"}}}\x1b\\Open\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDefault);
   }
 
   void test_LinkAttributes_DisabledState() {
