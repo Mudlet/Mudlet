@@ -93,6 +93,10 @@
   for i, v in ipairs(profile_table) do
     local days = math.floor(os.difftime(os.time(), v.last_mod) / 86400)
     local last_mod_month = os.date("%Y/%m", v.last_mod)
+    -- every module's backups share one folder, so each module keeps a file a month of its own
+    if delete_folder == "modules" then
+      last_mod_month = (v.name:match("^(.-)%d%d%d%d%-%d%d%-%d%d#%d%d%-%d%d%-%d%d$") or v.name) .. "|" .. last_mod_month
+    end
     if days &gt; keepdays and i ~= newestLoaded then
       -- For profiles older than X days, check if we already kept a table for this month:
       if not table.contains(used_last_mod_months, last_mod_month) then
