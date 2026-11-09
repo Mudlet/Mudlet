@@ -44,6 +44,11 @@
 #include <QSslSocket>
 #endif
 
+#if defined(Q_OS_UNIX)
+#include <cerrno>
+#include <sys/stat.h>
+#endif
+
 namespace {
 // Warned once per path per session, so repeats don't train readers to skip it; kept for the
 // connection dialog, since users never see stderr
@@ -112,6 +117,28 @@ bool SecureStringUtils::restrictDirectoryToOwner(const QString& path)
 bool SecureStringUtils::confirmFileIsOwnerOnly(const QString& path)
 {
     return ownerOnlyOrWarn(path);
+}
+
+bool SecureStringUtils::restrictSaveFileToOwner(QSaveFile& file, QString* refusal)
+{
+#if defined(Q_OS_UNIX)
+    // Not QSaveFile::setPermissions() alone: from Qt 6.12 it only records the mode for commit(),
+    // which drops a refusal to apply it, so the save succeeds and the file may stay readable to others
+    if (::fchmod(file.handle(), S_IRUSR | S_IWUSR) != 0) {
+        if (refusal) {
+            *refusal = qt_error_string(errno);
+        }
+        return false;
+    }
+    // Otherwise commit() on Qt 6.12+ gives the file the mode of the one it replaces, or the umask's
+    // default for a new one; the file system has just taken this mode, so commit() can apply it again
+    file.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner);
+    return true;
+#else
+    Q_UNUSED(file)
+    Q_UNUSED(refusal)
+    return true;
+#endif
 }
 
 QString SecureStringUtils::takeUnprotectedSecretPath()

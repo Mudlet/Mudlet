@@ -206,6 +206,11 @@ if(USE_MCPSERVER)
     set_property(SOURCE TMCPBridgeTest.cpp
         APPEND PROPERTY COMPILE_DEFINITIONS MUDLET_BINARY_PATH="$<TARGET_FILE:mudlet_executable>")
     add_dependencies(unit_tests mudlet_executable)
+    # TMCPBridgeTest's refusal case; it replaces fchmod() for the whole binary
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        target_sources(unit_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/functional_tests/FchmodRefusal.cpp)
+        target_compile_definitions(unit_tests PRIVATE MUDLET_FCHMOD_REFUSAL)
+    endif()
 endif()
 
 # TKeySequenceEditTest's focus traversal cases need an active window, which an X
