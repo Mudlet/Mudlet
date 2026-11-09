@@ -2754,11 +2754,7 @@ void T2DMap::slot_setArea()
     set_room_area_dialog->show();
     set_room_area_dialog->raise();
 
-    if (!mIsSecondaryView && mpMap->mapper()) {
-        arealist_combobox->setCurrentIndex(mpMap->mapper()->getCurrentShownAreaIndex());
-    } else {
-        arealist_combobox->setCurrentIndex(arealist_combobox->findData(QString::number(mAreaID)));
-    }
+    arealist_combobox->setCurrentIndex(arealist_combobox->findData(QString::number(mAreaID)));
 }
 
 
