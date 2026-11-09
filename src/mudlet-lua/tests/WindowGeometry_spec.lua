@@ -173,31 +173,52 @@ describe("getWindowGeometry", function()
     assert.is_nil(getWindowGeometry(name))
   end)
 
-  -- A position near INT_MAX overflowed the right edge of the widget's QRect
-  describe("of a window placed at the edge of the int range", function()
-    local limit = 16777215 -- QWIDGETSIZE_MAX
+  -- A widget placed or sized near the int limits would overflow its QRect, so these are bounded
+  describe("of a window placed or sized at the edge of the int range", function()
+    local max, limit = 2147483647, 16777215 -- QWIDGETSIZE_MAX
 
-    it("bounds a scroll box made again there", function()
-      local name = uniqueName("wgEdgeScrollBox")
-      finally(function() deleteScrollBox(name) end)
-      createScrollBox("main", name, 0, 0, 200, 100)
-      createScrollBox(name, 2147483647, 0, 255, 1)
-      assert.are.same({limit, 0, 255, 1}, geometry(name))
-    end)
+    local cases = {
+      {"a scroll box made again there", deleteScrollBox, {limit, 0, 255, 1}, function(name)
+        createScrollBox("main", name, 0, 0, 200, 100)
+        createScrollBox(name, max, 0, 255, 1)
+      end},
+      {"a label made in the main window there", deleteLabel, {limit, limit, 30, 40}, function(name)
+        createLabel(name, max, max, 30, 40, 1)
+      end},
+      {"a label made in a named window there", deleteLabel, {limit, limit, 30, 40}, function(name)
+        createLabel("main", name, max, max, 30, 40, 1)
+      end},
+      {"a label moved there", deleteLabel, {limit, -limit, 30, 40}, function(name)
+        createLabel("main", name, 10, 20, 30, 40, 1)
+        moveWindow(name, max, -1e300)
+      end},
+      {"a label set into the main window there", deleteLabel, {limit, 0, 30, 40}, function(name)
+        createLabel("main", name, 10, 20, 30, 40, 1)
+        setWindow("main", name, max, 0, true)
+      end},
+      {"a miniconsole made there", deleteMiniConsole, {limit, limit, 200, 100}, function(name)
+        createMiniConsole("main", name, max, max, 200, 100)
+      end},
+      {"a command line made there", deleteCommandLine, {limit, limit, 200, 30}, function(name)
+        createCommandLine("main", name, max, max, 200, 30)
+      end},
+      {"a text edit made there", deleteTextEdit, {limit, limit, 200, 30}, function(name)
+        createTextEdit("main", name, max, max, 200, 30)
+      end},
+      {"a scroll box resized there", deleteScrollBox, {0, 0, limit, -limit}, function(name)
+        createScrollBox("main", name, 0, 0, 200, 100)
+        resizeWindow(name, 1e300, -1e300)
+      end},
+    }
 
-    it("bounds a label moved there", function()
-      local name = uniqueName("wgEdgeLabel")
-      finally(function() deleteLabel(name) end)
-      createLabel("main", name, 10, 20, 30, 40, 1)
-      moveWindow(name, 2147483647, -1e300)
-      assert.are.same({limit, -limit, 30, 40}, geometry(name))
-    end)
-
-    it("bounds a miniconsole made there", function()
-      local name = uniqueName("wgEdgeMiniConsole")
-      finally(function() deleteMiniConsole(name) end)
-      createMiniConsole("main", name, 2147483647, 2147483647, 200, 100)
-      assert.are.same({limit, limit, 200, 100}, geometry(name))
-    end)
+    for _, case in ipairs(cases) do
+      local description, delete, expected, place = unpack(case)
+      it("bounds " .. description, function()
+        local name = uniqueName("wgEdge")
+        finally(function() delete(name) end)
+        place(name)
+        assert.are.same(expected, geometry(name))
+      end)
+    end
   end)
 end)

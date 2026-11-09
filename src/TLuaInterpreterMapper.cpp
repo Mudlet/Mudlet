@@ -1237,13 +1237,13 @@ int TLuaInterpreter::createMapper(lua_State* L)
         counter++;
     }
 
-    const int x = getVerifiedPosition(L, __func__, counter, "mapper x-coordinate");
+    const int x = getVerifiedGeometry(L, __func__, counter, "mapper x-coordinate");
     counter++;
-    const int y = getVerifiedPosition(L, __func__, counter, "mapper y-coordinate");
+    const int y = getVerifiedGeometry(L, __func__, counter, "mapper y-coordinate");
     counter++;
-    const int width = getVerifiedInt(L, __func__, counter, "mapper width");
+    const int width = getVerifiedGeometry(L, __func__, counter, "mapper width");
     counter++;
-    const int height = getVerifiedInt(L, __func__, counter, "mapper height");
+    const int height = getVerifiedGeometry(L, __func__, counter, "mapper height");
 
     QString windowName = "";
     if (hasParentWindow) {
@@ -3089,12 +3089,12 @@ int TLuaInterpreter::openMapWidget(lua_State* L)
 
     if (n > 1) {
         area = qsl("f");
-        x = getVerifiedPosition(L, __func__, 1, "x-coordinate");
-        y = getVerifiedPosition(L, __func__, 2, "y-coordinate");
+        x = getVerifiedGeometry(L, __func__, 1, "x-coordinate");
+        y = getVerifiedGeometry(L, __func__, 2, "y-coordinate");
     }
     if (n > 2) {
-        width = getVerifiedInt(L, __func__, 3, "width");
-        height = getVerifiedInt(L, __func__, 4, "height");
+        width = getVerifiedGeometry(L, __func__, 3, "width");
+        height = getVerifiedGeometry(L, __func__, 4, "height");
     }
 
     Host& host = getHostFromLua(L);
