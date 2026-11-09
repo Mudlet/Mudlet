@@ -910,6 +910,27 @@ describe("presence the game sends over GMCP", function()
     assert.equals("", getDiscordSmallIconText())
   end)
 
+  it("takes an icon key the game sent as a plain string rather than an array", function()
+    if not readyForDiscord() then
+      return
+    end
+    feedDiscordStatus('{"largeimage": "spec-string-large", "smallimage": "spec-string-small"}')
+
+    assert.equals("spec-string-large", getDiscordLargeIcon())
+    assert.equals("spec-string-small", getDiscordSmallIcon())
+  end)
+
+  it("leaves the icons alone when the game sends an empty icon array", function()
+    if not readyForDiscord() then
+      return
+    end
+    feedDiscordStatus('{"largeimage": ["spec-kept-large"], "smallimage": ["spec-kept-small"]}')
+    feedDiscordStatus('{"largeimage": [], "smallimage": []}')
+
+    assert.equals("spec-kept-large", getDiscordLargeIcon())
+    assert.equals("spec-kept-small", getDiscordSmallIcon())
+  end)
+
   it("takes the presence from a package name in any letter case, as GMCP allows", function()
     if not readyForDiscord() then
       return
