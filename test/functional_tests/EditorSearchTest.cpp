@@ -258,7 +258,7 @@ private:
         mpHost->getScriptUnit()->registerScript(pScript);
 
         auto* pLongScript = new TScript(qsl("qaMultiLineScript"), mpHost);
-        pLongScript->setScript(qsl("local a = 1\n-- qaLater qaLaterWord\nlocal b = qaLater\n-- qaCafé qaCaféine\n-- 😀😀\n"));
+        pLongScript->setScript(qsl("local a = 1\n-- qaLater qaLaterWord\nlocal b = qaLater\n-- qaCafé qaCaféine\n-- 😀😀\n-- की कीमत\n"));
         mpHost->getScriptUnit()->registerScript(pLongScript);
 
         auto* pTimer = new TTimer(qsl("qaSearchTimer"), QTime(0, 0, 30), mpHost);
@@ -599,6 +599,10 @@ private slots:
         // Each emoji is two UTF-16 code units, and the second one is found after the first
         search(qsl("😀"));
         QCOMPARE(resultsFor(qsl("Script")), QStringList({qsl("Lua 5:4"), qsl("Lua 5:6")}));
+
+        // The vowel sign ending "की" is a combining mark, which \w does not cover but still belongs to the word
+        search(qsl("की"));
+        QCOMPARE(resultsFor(qsl("Script")), QStringList({qsl("Lua 6:4")}));
     }
 
     // Variables live in the Lua state rather than in a unit, so they are only

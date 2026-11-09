@@ -15099,17 +15099,17 @@ int dlgTriggerEditor::findSearchMatch(const QString& haystack, const QString& ne
     }
 
     if (mSearchOptions & enums::EditorSearchOptionWholeWord) {
-        // Without Unicode properties \w and \b take "é" or "м" for punctuation
         QRegularExpression::PatternOptions options = QRegularExpression::UseUnicodePropertiesOption;
         if (!(mSearchOptions & enums::EditorSearchOptionCaseSensitive)) {
             options |= QRegularExpression::CaseInsensitiveOption;
         }
         if (needle != mWholeWordSearchNeedle || options != mWholeWordSearchRegex.patternOptions()) {
-            // \b beside punctuation demands a word character next to it, so "^You" could never match at a line start
-            static const QRegularExpression startsWithWordChar(qsl("^\\w"), QRegularExpression::UseUnicodePropertiesOption);
-            static const QRegularExpression endsWithWordChar(qsl("\\w$"), QRegularExpression::UseUnicodePropertiesOption);
-            const QString leading = startsWithWordChar.match(needle).hasMatch() ? qsl("\\b") : QString();
-            const QString trailing = endsWithWordChar.match(needle).hasMatch() ? qsl("\\b") : QString();
+            // Not \b: beside punctuation it demands a word character, so "^You" never matched at a line start,
+            // and \w leaves out combining marks such as the vowel signs of Indic scripts, splitting words at them
+            static const QRegularExpression startsWithWordChar(qsl("^[\\w\\p{M}]"), QRegularExpression::UseUnicodePropertiesOption);
+            static const QRegularExpression endsWithWordChar(qsl("[\\w\\p{M}]$"), QRegularExpression::UseUnicodePropertiesOption);
+            const QString leading = startsWithWordChar.match(needle).hasMatch() ? qsl("(?<![\\w\\p{M}])") : QString();
+            const QString trailing = endsWithWordChar.match(needle).hasMatch() ? qsl("(?![\\w\\p{M}])") : QString();
             mWholeWordSearchRegex = QRegularExpression(leading + QRegularExpression::escape(needle) + trailing, options);
             mWholeWordSearchNeedle = needle;
         }
