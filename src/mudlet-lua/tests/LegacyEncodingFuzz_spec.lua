@@ -169,7 +169,6 @@ local passes = 0
 local function pass(lines, pieces)
   passes = passes + 1
   local opening, closing = "EncFuzzOpens" .. passes, "EncFuzzCloses" .. passes
-  local mark = getLastLineNumber("main")
   feed("\27[0m" .. opening .. "\r\n")
   local joined = concat(lines, "\r\n") .. "\r\n"
   if pieces then
@@ -183,13 +182,15 @@ local function pass(lines, pieces)
     feed(joined)
   end
   feed("\27[0m" .. closing .. "\r\n")
-  local found = getLines("main", mark, getLastLineNumber("main") + 1)
+  -- found from the end after the feeds: a full buffer trims its oldest lines and renumbers the rest
+  local last = getLastLineNumber("main")
+  local start = math.max(0, last - #lines - 4)
   local from, to
-  for i, text in ipairs(found) do
+  for i, text in ipairs(getLines("main", start, last + 1)) do
     if text == opening then
-      from = mark + i
+      from = start + i
     elseif text == closing then
-      to = mark + i - 2
+      to = start + i - 2
     end
   end
   assert.is_truthy(from and to, "the pass markers did not both reach the buffer")
