@@ -1100,7 +1100,13 @@ describe("Tests that the item lookups refuse a numeric ID outside int's range", 
   it("still rounds a fractional ID to the nearest item", function()
     local id = tempTrigger("fractionalIdLookupProbe", "")
     finally(function() killTrigger(id) end)
-    assert.equals(1, exists(id + 0.4, "trigger"))
+    -- truncating instead of rounding would turn id - 0.4 into id - 1 and id + 0.6 into id
+    assert.equals(1, exists(id - 0.4, "trigger"))
     assert.equals(1, isActive(id - 0.4, "trigger"))
+    assert.equals(0, exists(id + 0.6, "trigger"))
+  end)
+
+  it("still accepts the largest int as an ID", function()
+    assert.equals(0, exists(2147483647, "trigger"))
   end)
 end)
