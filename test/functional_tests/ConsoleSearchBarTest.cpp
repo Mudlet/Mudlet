@@ -460,6 +460,26 @@ private slots:
         QCOMPARE(console->buffer.mCursorY, movedTo);
     }
 
+    // Ctrl+Enter in the main command line would not clear a mini console's split, so the hint is
+    // kept for the main console rather than printed there about another one
+    void test_aMiniConsoleSplittingDoesNotUseUpTheSplitScreenTutorial()
+    {
+        auto* console = startSearchableProfile();
+        QVERIFY2(console, "the profile never started, or the fixture text never reached its buffer - see the warning above");
+        mudlet::self()->mScrollbackTutorialsShown = 0;
+        QVERIFY2(mudlet::self()->showSplitscreenTutorial(), "the tutorial is off, so nothing here would show it");
+
+        QVERIFY(runLua(console, qsl("createMiniConsole('tutorialMini', 0, 0, 300, 100) for i = 1, 50 do echo('tutorialMini', 'chat line ' .. i .. '\\n') end")));
+        TConsole* mini = console->subConsoleWidget(qsl("tutorialMini"));
+        QVERIFY(mini);
+        QVERIFY(runLua(console, qsl("scrollUp('tutorialMini', 5)")));
+        QTest::qWait(100);
+        QVERIFY2(!mini->mLowerPane->isHidden(), "the mini console did not split, so nothing here was exercised");
+
+        QCOMPARE(lineHolding(console, qsl("Split-screen scrollback activated")), -1);
+        QCOMPARE(mudlet::self()->mScrollbackTutorialsShown, 0);
+    }
+
     // A search that has not moved off the end of the buffer yet has nothing
     // below it, and saying so would be worse than staying quiet.
     void test_searchingDownWithNothingBelowTheCurrentLineDoesNothing()
