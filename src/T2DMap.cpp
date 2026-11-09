@@ -2197,6 +2197,7 @@ void T2DMap::slot_movePosition()
                 pArea->calcSpan();
             }
         }
+        mpMap->updateArea(mAreaID);
         mpMap->setUnsaved(__func__);
     }
     dialog->deleteLater();
@@ -2425,6 +2426,7 @@ void T2DMap::slot_deleteRoom()
     mMultiSelectionListWidget.clear();
     mMultiSelectionListWidget.hide();
     repaint();
+    mpMap->updateArea(mAreaID);
     mpMap->setUnsaved(__func__);
 }
 
@@ -2501,6 +2503,7 @@ void T2DMap::slot_spread()
             pArea->clean();
         }
         repaint();
+        mpMap->updateArea(areaID);
         mpMap->setUnsaved(__func__);
     }
 }
@@ -2578,6 +2581,7 @@ void T2DMap::slot_shrink()
             pArea->clean();
         }
         repaint();
+        mpMap->updateArea(areaID);
         mpMap->setUnsaved(__func__);
     }
 }

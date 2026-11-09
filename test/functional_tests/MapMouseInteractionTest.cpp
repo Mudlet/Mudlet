@@ -3892,6 +3892,52 @@ private slots:
         QVERIFY(map()->isUnsaved());
     }
 
+    // Other map views and the 3D view only redraw when the map announces the
+    // change, so each room edit on the menu has to announce it.
+    void test_roomEditsFromTheMenuAreAnnouncedToTheOtherMapViews_data()
+    {
+        QTest::addColumn<QString>("item");
+        QTest::newRow("Delete") << qsl("Delete");
+        QTest::newRow("Spread") << qsl("Spread...");
+        QTest::newRow("Shrink") << qsl("Shrink...");
+        QTest::newRow("Move to position") << qsl("Move to position...");
+    }
+
+    void test_roomEditsFromTheMenuAreAnnouncedToTheOtherMapViews()
+    {
+        QFETCH(QString, item);
+        buildMap();
+        QVERIFY(map()->setRoomCoordinates(kWestRoomId, -2, 0, 0));
+        QVERIFY(map()->setRoomCoordinates(kEastRoomId, 2, 0, 0));
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-2.5, 0.5), pointUnitsFromCentre(2.5, -0.5));
+        QCOMPARE(mp2dMap->mMultiSelectionHighlightRoomId, kPlayerRoomId);
+        rightClickAt(pointUnitsFromCentre(2, 0));
+        QCoreApplication::sendPostedEvents(map(), QEvent::MetaCall);
+        QSignalSpy announced(map(), &TMap::signal_areaChanged);
+
+        if (item == qsl("Move to position...")) {
+            QVERIFY(pickMoveToPosition(3, 2, 0));
+        } else if (item == qsl("Delete")) {
+            QVERIFY(pickContextMenuItem(item));
+        } else {
+            QVERIFY(pickFactorItem(item, 2));
+        }
+
+        QVERIFY2(QTest::qWaitFor(
+                         [this, &announced]() {
+                             for (const QList<QVariant>& arguments : std::as_const(announced)) {
+                                 const int areaId = arguments.first().toInt();
+                                 if (areaId == mAreaId || areaId == -1) {
+                                     return true;
+                                 }
+                             }
+                             return false;
+                         },
+                         2s),
+                 "the edit was not announced, so other map views go on drawing the rooms as they were");
+    }
+
     // The factor and coordinates dialogs run their own event loop, in which a
     // script can delete the room the selection is centred on.
     void test_spreadingAroundARoomAScriptDeletedLeavesTheRestWhereTheyAre()
