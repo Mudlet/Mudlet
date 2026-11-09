@@ -2197,7 +2197,8 @@ void T2DMap::slot_movePosition()
                 pArea->calcSpan();
             }
         }
-        mpMap->updateArea(mAreaID);
+        // Not mAreaID: the 3D view's menu edits through this map while it may be showing another area
+        mpMap->updateArea(dirtyAreas.size() == 1 ? *dirtyAreas.cbegin() : -1);
         mpMap->setUnsaved(__func__);
     }
     dialog->deleteLater();
@@ -2419,6 +2420,13 @@ void T2DMap::slot_setImage() {}
 
 void T2DMap::slot_deleteRoom()
 {
+    // Not mAreaID: the 3D view's menu edits through this map while it may be showing another area
+    QSet<int> affectedAreas;
+    for (const int roomId : std::as_const(mMultiSelectionSet)) {
+        if (const TRoom* room = mpMap->mpRoomDB->getRoom(roomId)) {
+            affectedAreas.insert(room->getArea());
+        }
+    }
     mpMap->mpRoomDB->removeRoom(mMultiSelectionSet);
     // mMultiSelectionSet gets cleared as rooms are removed by
     // TRoomDB::removeRoom() so no need to clear it here!
@@ -2426,7 +2434,7 @@ void T2DMap::slot_deleteRoom()
     mMultiSelectionListWidget.clear();
     mMultiSelectionListWidget.hide();
     repaint();
-    mpMap->updateArea(mAreaID);
+    mpMap->updateArea(affectedAreas.size() == 1 ? *affectedAreas.cbegin() : -1);
     mpMap->setUnsaved(__func__);
 }
 

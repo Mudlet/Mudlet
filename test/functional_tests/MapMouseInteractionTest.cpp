@@ -3915,16 +3915,23 @@ private slots:
     void test_roomEditsFromTheMenuAreAnnouncedToTheOtherMapViews_data()
     {
         QTest::addColumn<QString>("item");
-        QTest::newRow("Delete") << qsl("Delete");
-        QTest::newRow("Spread") << qsl("Spread...");
-        QTest::newRow("Shrink") << qsl("Shrink...");
-        QTest::newRow("Move to position") << qsl("Move to position...");
+        // The 3D view's menu edits through the 2D map, which can be showing another area meanwhile
+        QTest::addColumn<bool>("mapShowsAnotherArea");
+        for (const bool elsewhere : {false, true}) {
+            const char* suffix = elsewhere ? ", 2D map elsewhere" : "";
+            QTest::newRow(qPrintable(qsl("Delete%1").arg(suffix))) << qsl("Delete") << elsewhere;
+            QTest::newRow(qPrintable(qsl("Spread%1").arg(suffix))) << qsl("Spread...") << elsewhere;
+            QTest::newRow(qPrintable(qsl("Shrink%1").arg(suffix))) << qsl("Shrink...") << elsewhere;
+            QTest::newRow(qPrintable(qsl("Move to position%1").arg(suffix))) << qsl("Move to position...") << elsewhere;
+        }
     }
 
     void test_roomEditsFromTheMenuAreAnnouncedToTheOtherMapViews()
     {
         QFETCH(QString, item);
+        QFETCH(bool, mapShowsAnotherArea);
         buildMap();
+        const int otherAreaId = map()->mpRoomDB->addArea(qsl("Next Door"));
         QVERIFY(map()->setRoomCoordinates(kWestRoomId, -2, 0, 0));
         QVERIFY(map()->setRoomCoordinates(kEastRoomId, 2, 0, 0));
         showMapper(false);
@@ -3932,6 +3939,14 @@ private slots:
         QCOMPARE(mp2dMap->mMultiSelectionHighlightRoomId, kPlayerRoomId);
         rightClickAt(pointUnitsFromCentre(2, 0));
         QCoreApplication::sendPostedEvents(map(), QEvent::MetaCall);
+        const auto restoreMap = qScopeGuard([this]() {
+            mp2dMap->show();
+        });
+        if (mapShowsAnotherArea) {
+            // Hidden, as it is behind the 3D view, so no paint takes it back to the player's area
+            mp2dMap->hide();
+            mp2dMap->mAreaID = otherAreaId;
+        }
         QSignalSpy announced(map(), &TMap::signal_areaChanged);
 
         if (item == qsl("Move to position...")) {
