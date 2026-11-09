@@ -35,8 +35,10 @@
  */
 
 #include <QAbstractItemDelegate>
+#include <QAccessible>
 #include <QCheckBox>
 #include <QFileInfo>
+#include <QGroupBox>
 #include <QLineEdit>
 #include <QPushButton>
 #include <QRadioButton>
@@ -319,6 +321,65 @@ private slots:
         QVERIFY2(pDlg->down->text().isEmpty(), "an exit to a deleted room was still shown as a destination");
         QVERIFY(pDlg->stub_down->isEnabled());
         QCOMPARE(pDlg->getActionOnExit(pDlg->down), pDlg->mpAction_noExit);
+    }
+
+    // The no route, stub and door controls carry no text and share their
+    // tooltips across all twelve directions, so the name a screen reader reads
+    // out is all that tells one direction's controls from another's
+    void everyExitControlHasItsOwnScreenReaderName()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn(scmSubjectRoom);
+
+        const QList<QGroupBox*> groups{pDlg->groupBox_nw,
+                                       pDlg->groupBox_n,
+                                       pDlg->groupBox_ne,
+                                       pDlg->groupBox_up,
+                                       pDlg->groupBox_w,
+                                       pDlg->groupBox_e,
+                                       pDlg->groupBox_down,
+                                       pDlg->groupBox_sw,
+                                       pDlg->groupBox_s,
+                                       pDlg->groupBox_se,
+                                       pDlg->groupBox_in,
+                                       pDlg->groupBox_out};
+        QSet<QString> namesSeen;
+        int controlCount = 0;
+        for (auto* pGroup : groups) {
+            const auto controls = pGroup->findChildren<QWidget*>(QString(), Qt::FindDirectChildrenOnly);
+            QCOMPARE(controls.size(), 8);
+            for (auto* pControl : controls) {
+                QAccessibleInterface* pInterface = QAccessible::queryAccessibleInterface(pControl);
+                QVERIFY(pInterface);
+                const QString name = pInterface->text(QAccessible::Name);
+                QVERIFY2(name.startsWith(pGroup->title()), qPrintable(qsl("%1 is read out as \"%2\"").arg(pControl->objectName(), name)));
+                QVERIFY2(!namesSeen.contains(name), qPrintable(qsl("%1 shares the name \"%2\"").arg(pControl->objectName(), name)));
+                namesSeen.insert(name);
+                ++controlCount;
+            }
+        }
+        QCOMPARE(controlCount, 12 * 8);
+    }
+
+    void theNoRouteBoxesCanBeReachedFromTheKeyboard()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn(scmSubjectRoom);
+
+        for (auto* pNoRoute : {pDlg->noroute_nw,
+                               pDlg->noroute_n,
+                               pDlg->noroute_ne,
+                               pDlg->noroute_up,
+                               pDlg->noroute_w,
+                               pDlg->noroute_e,
+                               pDlg->noroute_down,
+                               pDlg->noroute_sw,
+                               pDlg->noroute_s,
+                               pDlg->noroute_se,
+                               pDlg->noroute_in,
+                               pDlg->noroute_out}) {
+            QVERIFY2(pNoRoute->focusPolicy() & Qt::TabFocus, qPrintable(qsl("%1 cannot be tabbed to").arg(pNoRoute->objectName())));
+        }
     }
 
     void typingAKnownRoomIdOpensUpTheRestOfTheRow()

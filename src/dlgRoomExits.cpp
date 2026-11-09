@@ -275,6 +275,59 @@ void CommandLineEditDelegate::setModelData(QWidget* pEditor, QAbstractItemModel*
     QStyledItemDelegate::setModelData(pEditor, model, index);
 }
 
+// Most of each direction's controls show an icon or nothing at all, and the
+// tooltips are the same in every direction, so without these a screen reader
+// cannot tell the player which exit a control belongs to
+void dlgRoomExits::nameExitControlsForScreenReaders()
+{
+    struct ExitControls
+    {
+        QGroupBox* group;
+        QLineEdit* roomId;
+        QCheckBox* noRoute;
+        QCheckBox* stub;
+        QSpinBox* weight;
+        QRadioButton* doorNone;
+        QRadioButton* doorOpen;
+        QRadioButton* doorClosed;
+        QRadioButton* doorLocked;
+    };
+    const ExitControls allExitControls[] = {
+            {groupBox_nw, nw, noroute_nw, stub_nw, weight_nw, doortype_none_nw, doortype_open_nw, doortype_closed_nw, doortype_locked_nw},
+            {groupBox_n, n, noroute_n, stub_n, weight_n, doortype_none_n, doortype_open_n, doortype_closed_n, doortype_locked_n},
+            {groupBox_ne, ne, noroute_ne, stub_ne, weight_ne, doortype_none_ne, doortype_open_ne, doortype_closed_ne, doortype_locked_ne},
+            {groupBox_up, up, noroute_up, stub_up, weight_up, doortype_none_up, doortype_open_up, doortype_closed_up, doortype_locked_up},
+            {groupBox_w, w, noroute_w, stub_w, weight_w, doortype_none_w, doortype_open_w, doortype_closed_w, doortype_locked_w},
+            {groupBox_e, e, noroute_e, stub_e, weight_e, doortype_none_e, doortype_open_e, doortype_closed_e, doortype_locked_e},
+            {groupBox_down, down, noroute_down, stub_down, weight_down, doortype_none_down, doortype_open_down, doortype_closed_down, doortype_locked_down},
+            {groupBox_sw, sw, noroute_sw, stub_sw, weight_sw, doortype_none_sw, doortype_open_sw, doortype_closed_sw, doortype_locked_sw},
+            {groupBox_s, s, noroute_s, stub_s, weight_s, doortype_none_s, doortype_open_s, doortype_closed_s, doortype_locked_s},
+            {groupBox_se, se, noroute_se, stub_se, weight_se, doortype_none_se, doortype_open_se, doortype_closed_se, doortype_locked_se},
+            {groupBox_in, in, noroute_in, stub_in, weight_in, doortype_none_in, doortype_open_in, doortype_closed_in, doortype_locked_in},
+            {groupBox_out, out, noroute_out, stub_out, weight_out, doortype_none_out, doortype_open_out, doortype_closed_out, doortype_locked_out},
+    };
+
+    for (const auto& controls : allExitControls) {
+        const QString direction = controls.group->title();
+        //: Screen reader name for the room number field of one exit in the Room Exits dialog; %1 is the direction, e.g. "Northwest"
+        controls.roomId->setAccessibleName(tr("%1 exit room ID").arg(direction));
+        //: Screen reader name for the "No route" checkbox of one exit in the Room Exits dialog; %1 is the direction, e.g. "Northwest"
+        controls.noRoute->setAccessibleName(tr("%1 exit: no route").arg(direction));
+        //: Screen reader name for the "Stub exit" checkbox of one exit in the Room Exits dialog; %1 is the direction, e.g. "Northwest"
+        controls.stub->setAccessibleName(tr("%1 exit: stub exit").arg(direction));
+        //: Screen reader name for the weight spin box of one exit in the Room Exits dialog; %1 is the direction, e.g. "Northwest"
+        controls.weight->setAccessibleName(tr("%1 exit weight").arg(direction));
+        //: Screen reader name for a door type radio button of one exit in the Room Exits dialog; %1 is the direction, e.g. "Northwest"
+        controls.doorNone->setAccessibleName(tr("%1 exit: no door").arg(direction));
+        //: Screen reader name for a door type radio button of one exit in the Room Exits dialog; %1 is the direction, e.g. "Northwest"
+        controls.doorOpen->setAccessibleName(tr("%1 exit: open door").arg(direction));
+        //: Screen reader name for a door type radio button of one exit in the Room Exits dialog; %1 is the direction, e.g. "Northwest"
+        controls.doorClosed->setAccessibleName(tr("%1 exit: closed door").arg(direction));
+        //: Screen reader name for a door type radio button of one exit in the Room Exits dialog; %1 is the direction, e.g. "Northwest"
+        controls.doorLocked->setAccessibleName(tr("%1 exit: locked door").arg(direction));
+    }
+}
+
 dlgRoomExits::dlgRoomExits(Host* pH, const int roomNumber, QWidget* pW)
 : QDialog(pW)
 , mpHost(pH)
@@ -315,6 +368,7 @@ dlgRoomExits::dlgRoomExits(Host* pH, const int roomNumber, QWidget* pW)
     mAllExitActionsSet << mpAction_noExit << mpAction_invalidExit << mpAction_inAreaExit << mpAction_otherAreaExit << mpAction_exitRoomLocked;
 
     init();
+    nameExitControlsForScreenReaders();
 
     specialExits->setItemDelegateForColumn(ExitsTreeWidget::colIndex_exitRoomId, new RoomIdLineEditDelegate(specialExits));
     specialExits->setItemDelegateForColumn(ExitsTreeWidget::colIndex_exitWeight, new WeightSpinBoxDelegate(specialExits));
