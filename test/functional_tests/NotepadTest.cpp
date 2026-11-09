@@ -388,8 +388,28 @@ private slots:
         QVERIFY(QMetaObject::invokeMethod(notepad.data(), "slot_sendLine"));
 
         QVERIFY2(waitForServerToReceive(longLine.toUtf8()), "only the part of the line on the cursor's row of the screen reached the game");
+        // Longer than the 300ms the notepad leaves between lines, so a line after the cursor's would be here by now
+        QTest::qWait(1200ms);
         QVERIFY2(!mpServer->received().contains("look"), "a line other than the cursor's was sent");
         QVERIFY2(!mpServer->received().contains("north"), "a line other than the cursor's was sent");
+    }
+
+    // Shift+Enter breaks a line without starting a new block; each side still goes as a command of its own.
+    void test_sendingALineSendsEachPartOfALineBrokenWithShiftEnter()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        QScopedPointer<dlgNotepad> notepad(new dlgNotepad(mudlet::self()->getActiveHost()));
+        auto* note = editAt(notepad.data(), 0);
+        note->setPlainText(qsl("north"));
+        note->moveCursor(QTextCursor::End);
+        QTest::keyClick(note, Qt::Key_Return, Qt::ShiftModifier);
+        QTest::keyClicks(note, qsl("look"));
+        QCOMPARE(note->document()->blockCount(), 1);
+
+        QVERIFY(QMetaObject::invokeMethod(notepad.data(), "slot_sendLine"));
+
+        QVERIFY2(waitForServerToReceive("north\r\n"), "the part before the break did not go as a command of its own");
+        QVERIFY2(waitForServerToReceive("look\r\n"), "the part after the break did not go as a command of its own");
     }
 
     // Stopping is the way out of having sent a long note by mistake, so what is
