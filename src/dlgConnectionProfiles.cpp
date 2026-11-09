@@ -877,6 +877,10 @@ void dlgConnectionProfiles::slot_updatePassword(const QString& pass)
     }
 
     const QString profileName = pItem->data(csmNameRole).toString();
+    // An open profile read this when it loaded, and would otherwise sign in with the old password until reopened
+    if (Host* pHost = HostManager::self()->getHost(profileName)) {
+        pHost->setPass(pass.trimmed());
+    }
 
     if (MudletApp::storingPasswordsSecurely()) {
         if (pass.trimmed().isEmpty()) {
