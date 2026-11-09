@@ -102,14 +102,11 @@ static QString badBorderSizeMessage(const double size, const int argument = 1)
     return qsl("border size %1 (argument #%2) is out of range, it must be between %3 and %4").arg(size, 0, 'g', 14).arg(argument).arg(-Host::scmMaxBorderSize).arg(Host::scmMaxBorderSize);
 }
 
-// QWIDGETSIZE_MAX, which only <QWidget> defines; casting a double beyond int to int is undefined, and Qt
-// adds a widget's position and size in int, so anything past this would wrap inside Qt
-constexpr double maximumWindowCoordinate = (1 << 24) - 1;
-
-// Also false for NaN, which fails every comparison
+// Casting a double outside int to int is undefined; on x86 it gives INT_MIN and the window vanishes.
+// Also false for NaN, which fails every comparison.
 static bool validWindowCoordinate(const double value)
 {
-    return value >= -maximumWindowCoordinate && value <= maximumWindowCoordinate;
+    return value >= std::numeric_limits<int>::min() && value <= std::numeric_limits<int>::max();
 }
 
 static QString badWindowCoordinateMessage(const char* what, const double value, const int argument)
@@ -118,8 +115,8 @@ static QString badWindowCoordinateMessage(const char* what, const double value, 
             .arg(QLatin1String(what))
             .arg(value, 0, 'g', 14)
             .arg(argument)
-            .arg(-maximumWindowCoordinate, 0, 'f', 0)
-            .arg(maximumWindowCoordinate, 0, 'f', 0);
+            .arg(std::numeric_limits<int>::min())
+            .arg(std::numeric_limits<int>::max());
 }
 
 // Only sub-consoles and labels have a background colour of their own; these widgets take theirs from a stylesheet.

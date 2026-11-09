@@ -5391,7 +5391,7 @@ describe("Window and label state", function()
 
     it("moveWindow refuses a coordinate that is not finite or out of range, leaving the window where it was", function()
       moveWindow(label, 12, 34)
-      for _, bad in ipairs({0/0, math.huge, -math.huge, 1e10, -1e10, 2^24}) do
+      for _, bad in ipairs({0/0, math.huge, -math.huge, 1e10, -1e10, 2^31, -2^31 - 1}) do
         local result, message = moveWindow(label, bad, 5)
         assert.is_nil(result)
         assert.is_truthy(message:find("x .* %(argument #2%) is out of range"))
@@ -5405,7 +5405,7 @@ describe("Window and label state", function()
 
     it("resizeWindow refuses a size that is not finite or out of range, leaving the window as it was", function()
       resizeWindow(label, 110, 60)
-      for _, bad in ipairs({0/0, math.huge, -math.huge, 1e10, 2^24}) do
+      for _, bad in ipairs({0/0, math.huge, -math.huge, 1e10, 2^31}) do
         local result, message = resizeWindow(label, bad, 5)
         assert.is_nil(result)
         assert.is_truthy(message:find("width .* %(argument #2%) is out of range"))
@@ -5417,9 +5417,9 @@ describe("Window and label state", function()
       assert.are.same({110, 60}, {w, h})
     end)
 
-    it("moveWindow and resizeWindow still accept the largest coordinate Qt holds", function()
-      assert.is_true(moveWindow(label, -(2^24 - 1), 2^24 - 1))
-      assert.is_true(resizeWindow(label, 2^24 - 1, 1))
+    it("moveWindow and resizeWindow still accept a far-off but representable coordinate", function()
+      assert.is_true(moveWindow(label, -2^24, 2^24))
+      assert.is_true(resizeWindow(label, 2^24, 1))
       resizeWindow(label, 100, 50)
       moveWindow(label, 10, 10)
     end)
