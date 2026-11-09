@@ -125,6 +125,30 @@ private slots:
         QVERIFY2(msg.contains(qsl("no longer installed")) && msg.contains(qsl("removal-b")), qPrintable(qsl("The package that had gone was not named as such: %1").arg(msg)));
     }
 
+    // The reason goes to the main console as well, but that is behind this dialog
+    void test_aFailedImportSaysWhy()
+    {
+        auto* host = startProfile();
+        QVERIFY2(host, "Could not start the profile");
+
+        QTemporaryDir packageDir;
+        QVERIFY(packageDir.isValid());
+        const QString packageFile = packageDir.filePath(qsl("import-twice.xml"));
+        QFile file(packageFile);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        QVERIFY(file.write(R"(<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE MudletPackage><MudletPackage version="1.001"></MudletPackage>)") > 0);
+        file.close();
+
+        auto* manager = new dlgPackageManager(nullptr, host);
+        const QString first = manager->installPackageFiles({packageFile});
+        const QString second = manager->installPackageFiles({packageFile});
+        delete manager;
+
+        QVERIFY2(first.isEmpty(), qPrintable(qsl("SETUP: the package did not install the first time: %1").arg(first)));
+        QVERIFY2(second.contains(qsl("import-twice.xml")), qPrintable(qsl("The file that failed is not named: %1").arg(second)));
+        QVERIFY2(second.contains(qsl("already installed")), qPrintable(qsl("The notice does not say why the import failed: %1").arg(second)));
+    }
+
     // The other half of the same wording: a save really running is still the
     // thing to say, and it names every package it turned away.
     void test_aRemovalRefusedByASaveStillSaysSo()
@@ -190,10 +214,7 @@ private:
         return mudlet::self()->getActiveHost();
     }
 
-    void deleteProfileDirectory(const QString& profileName)
-    {
-        TestProfile::removeProfileDirectory(profileName);
-    }
+    void deleteProfileDirectory(const QString& profileName) { TestProfile::removeProfileDirectory(profileName); }
 };
 
 #include "PackageManagerRemovalTest.moc"
