@@ -1335,8 +1335,10 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           for offset = 0, 3 do
             local path = folder .. "/" .. os.date("%Y-%m-%d#%H-%M-%S", now + offset) .. ".html"
             assert.is_false(fileExists(path), "a log file this spec would overwrite already exists: " .. path)
-            writeFile(path, contents)
             paths[#paths + 1] = path
+          end
+          for _, path in ipairs(paths) do
+            writeFile(path, contents)
           end
           return paths
         end
@@ -1358,6 +1360,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           local started, message = startLogging(true)
           assert.is_nil(started)
           assert.is_true(contains(message, "not a Mudlet HTML log"), message)
+          assert.is_false(fileExists(getMudletHomeDir() .. "/autolog"), "a refused log would be retried on the next profile load")
           for _, path in ipairs(paths) do
             assert.equals(notes, readFile(path), "the existing file was changed: " .. path)
           end
