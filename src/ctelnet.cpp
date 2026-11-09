@@ -1376,7 +1376,8 @@ void cTelnet::finishDisconnection()
     }
 
     // If mConnectionTimer has never been started then its ::elapsed() is NOT usable:
-    const QString msg = tr("[ INFO ]  - Connection time: %1.").arg(connectionTimeText(mConnectionTimer.isValid() ? mConnectionTimer.elapsed() : 0));
+    const auto timeOffset = mConnectionTimer.isValid() ? mConnectionTimer.elapsed() : 0;
+    const QString msg = tr("[ INFO ]  - Connection time: %1.").arg(connectionTimeText(timeOffset));
     inflateEnd(&mZstream);
     mNeedDecompression = false;
     reset();
