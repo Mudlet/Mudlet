@@ -2955,7 +2955,20 @@ void T2DMap::slot_configureAreas()
             return;
         }
 
-        // Delete immediately without confirmation
+        // There is no undo, so taking rooms with it needs a second word; an empty area is cheap to make again
+        if (const TArea* pArea = mpMap->mpRoomDB->getArea(areaId)) {
+            if (const auto roomCount = pArea->getAreaRooms().size()) {
+                const QString areaName = mpMap->mpRoomDB->getAreaNamesMap().value(areaId);
+                //: Title of the confirmation shown before deleting an area that still has rooms in it
+                const QString title = tr("Delete area");
+                //: Confirmation before deleting an area from the "Configure Areas" dialog; %1 is the area's name and %n how many rooms are deleted with it
+                const QString question = tr("Delete the area \"%1\" and the %n room(s) in it? This cannot be undone.", nullptr, static_cast<int>(roomCount)).arg(areaName);
+                if (QMessageBox::question(dialog, title, question, QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel) != QMessageBox::Yes) {
+                    return;
+                }
+            }
+        }
+
         const bool removed = mpMap->mpRoomDB->removeArea(areaId);
         if (!removed) {
             //: Warning message shown when trying to delete an area fails.

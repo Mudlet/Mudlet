@@ -677,6 +677,27 @@ private:
         return true;
     }
 
+    // Presses Delete and answers the confirmation that deleting an area with
+    // rooms puts up. Reports whether there was one to answer.
+    bool pressDeleteAndAnswer(const QMessageBox::StandardButton answer, T2DMap* p2dMap = nullptr)
+    {
+        QPushButton* pButton = configureAreasButton(qsl("Delete"), p2dMap);
+        if (!pButton || !pButton->isEnabled()) {
+            return false;
+        }
+        answerNextModalDialog([answer](QWidget* pDialog) {
+            auto* pBox = qobject_cast<QMessageBox*>(pDialog);
+            if (!pBox || !pBox->button(answer)) {
+                return false;
+            }
+            pBox->button(answer)->click();
+            return true;
+        });
+        pButton->click();
+        stopAnsweringModalDialogs();
+        return mModalDialogAnswered;
+    }
+
     // Presses Rename or Create and types the name into the prompt it puts up;
     // an empty name cancels the prompt instead. A name the map turns down is
     // followed by a warning box, which is dismissed with its text kept in
@@ -4149,7 +4170,7 @@ private slots:
         QVERIFY(openConfigureAreas());
         QVERIFY(selectConfiguredArea(otherAreaRow()));
 
-        QVERIFY(pressConfigureAreasButton(qsl("Delete")));
+        QVERIFY(pressDeleteAndAnswer(QMessageBox::Yes));
 
         QVERIFY(!map()->mpRoomDB->getArea(mOtherAreaId));
         QVERIFY(!map()->mpRoomDB->getAreaNamesMap().contains(mOtherAreaId));
@@ -4158,6 +4179,35 @@ private slots:
         QCOMPARE(map()->mapper()->comboBox_showArea->findText(qsl("Other")), -1);
         QCOMPARE(map()->mapper()->comboBox_showArea->currentText(), qsl("Mouse Area"));
         QCOMPARE(mp2dMap->mAreaID, mAreaId);
+    }
+
+    // There is no undo for the rooms that go with an area
+    void test_cancellingTheDeletePromptKeepsTheAreaAndItsRooms()
+    {
+        showMapWithAnotherArea();
+        QVERIFY(openConfigureAreas());
+        QVERIFY(selectConfiguredArea(otherAreaRow()));
+        map()->resetUnsaved();
+
+        QVERIFY2(pressDeleteAndAnswer(QMessageBox::Cancel), "deleting an area with a room in it did not ask first");
+
+        QVERIFY(map()->mpRoomDB->getArea(mOtherAreaId));
+        QVERIFY(map()->mpRoomDB->getRoom(kOtherAreaRoomId));
+        QVERIFY(!map()->isUnsaved());
+        QCOMPARE(configuredAreas(), (QStringList{qsl("Default Area (-1)"), mouseAreaRow(), otherAreaRow()}));
+    }
+
+    void test_deletingAnEmptyAreaDoesNotAsk()
+    {
+        showMapWithAnotherArea();
+        const int emptyAreaId = map()->mpRoomDB->addArea(qsl("Empty"));
+        QVERIFY(emptyAreaId > 0);
+        QVERIFY(openConfigureAreas());
+        QVERIFY(selectConfiguredArea(qsl("Empty (%1)").arg(emptyAreaId)));
+
+        QVERIFY2(!pressDeleteAndAnswer(QMessageBox::Cancel), "deleting an area with no rooms asked first");
+
+        QVERIFY(!map()->mpRoomDB->getArea(emptyAreaId));
     }
 
     // Regression test: slot_configureAreas() used to preselect by index into
@@ -4191,7 +4241,7 @@ private slots:
         QVERIFY(map()->isUnsaved());
 
         map()->resetUnsaved();
-        QVERIFY(pressConfigureAreasButton(qsl("Delete")));
+        QVERIFY(pressDeleteAndAnswer(QMessageBox::Yes));
         QVERIFY(map()->isUnsaved());
     }
 
@@ -4249,7 +4299,7 @@ private slots:
         QVERIFY(openConfigureAreasOn(pView->get2DMap()));
         QCOMPARE(configuredAreaSelected(pView->get2DMap()), otherAreaRow());
 
-        QVERIFY(pressConfigureAreasButton(qsl("Delete"), pView->get2DMap()));
+        QVERIFY(pressDeleteAndAnswer(QMessageBox::Yes, pView->get2DMap()));
 
         QVERIFY2(pView->getCurrentAreaId() != mOtherAreaId, "the secondary view is still showing the deleted area");
         QCOMPARE(pView->getCurrentAreaId(), -1);
