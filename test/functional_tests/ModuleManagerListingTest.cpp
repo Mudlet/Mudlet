@@ -250,6 +250,35 @@ private slots:
         delete manager;
     }
 
+    // Help opens the page of the current row, so it has to follow that row
+    // when the arrow keys or a rebuild move it, not just when it is clicked
+    void test_helpFollowsTheCurrentModuleWithoutAClick()
+    {
+        auto* host = startProfile();
+        QVERIFY2(host, "Could not start the profile");
+        listModules(host);
+        host->mModuleInfo[qsl("listing-a")][qsl("helpURL")] = qsl("https://example.invalid/listing-a");
+
+        auto* manager = new dlgModuleManager(nullptr, host);
+        const int withHelp = rowNames(manager).indexOf(qsl("listing-a"));
+        const int withoutHelp = rowNames(manager).indexOf(qsl("listing-b"));
+        QVERIFY(withHelp >= 0 && withoutHelp >= 0);
+
+        manager->moduleTable->setCurrentCell(withHelp, 0);
+        QVERIFY2(manager->helpButton->isEnabled(), "Help stayed off for a module that has a help page");
+        manager->moduleTable->setCurrentCell(withoutHelp, 0);
+        QVERIFY2(!manager->helpButton->isEnabled(), "Help stayed on for a module without a help page");
+        manager->moduleTable->setCurrentCell(withHelp, 0);
+        QVERIFY(manager->helpButton->isEnabled());
+
+        manager->layoutModules();
+        QCOMPARE(manager->moduleTable->currentRow(), -1);
+        QVERIFY2(!manager->helpButton->isEnabled(), "Help stayed on after the rebuild left no module current");
+
+        host->mModuleInfo.remove(qsl("listing-a"));
+        delete manager;
+    }
+
     // Ctrl-clicking a second module adds it to the selection, and the remove
     // button then takes away every selected module, not just the last clicked
     void test_removingSeveralSelectedModulesRemovesThemAll()
