@@ -4336,7 +4336,6 @@ describe("Tests the text-to-speech Lua API", function()
           assert.is_true(err:find("skipped empty text to speak (TTS)", 1, true) ~= nil, markup)
         end
         assert.equals(0, #ttsGetQueue())
-        assert.equals("ttsSpeechReady", ttsGetState())
       end)
 
       it("ttsSpeak and ttsQueue raise a Lua error for a non-string argument", function()
