@@ -30,7 +30,7 @@ describe("Tests the deleteOldProfiles package", function()
   end)
 
   teardown(function()
-    getMudletHomeDir = realGetMudletHomeDir
+    _G.getMudletHomeDir = realGetMudletHomeDir
     for _, name in ipairs(names) do
       os.remove(savesFolder .. "/" .. name)
     end
@@ -43,9 +43,9 @@ describe("Tests the deleteOldProfiles package", function()
     makeSave(names[2], 10)
     makeSave(names[3], 20)
 
-    getMudletHomeDir = function() return specHome end
+    _G.getMudletHomeDir = function() return specHome end
     local ok, err = pcall(deleteOldProfiles, nil, "profiles")
-    getMudletHomeDir = realGetMudletHomeDir
+    _G.getMudletHomeDir = realGetMudletHomeDir
     assert.is_true(ok, err)
 
     assert.is_true(exists(names[1]), "the month's first save should be kept")
