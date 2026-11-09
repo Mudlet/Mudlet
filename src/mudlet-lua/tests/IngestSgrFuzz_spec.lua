@@ -213,7 +213,6 @@ local passes = 0
 local function pass(lines, oneRead, cut)
   passes = passes + 1
   local opening, closing = "SgrFuzzOpens" .. passes, "SgrFuzzCloses" .. passes
-  local mark = getLastLineNumber("main")
   feed("\27[0m\27]8;;\27\\" .. opening .. "\r\n")
   if oneRead then
     local joined = concat(lines, "\r\n") .. "\r\n"
@@ -231,17 +230,19 @@ local function pass(lines, oneRead, cut)
   -- ends a sequence or link a line left unfinished; the marker is bold on a 16 colour
   -- background, which draws it in the bright foreground, so ESC[0m has to reset that too
   feed("\27\\\27]8;;\27\\\r\n\27[0m\27[1;48;5;4m" .. closing .. "\r\n")
-  local found = getLines("main", mark, getLastLineNumber("main") + 1)
-  local from, to, closingLine
-  for i, text in ipairs(found) do
-    if text == opening then
-      from = mark + i
-    elseif text == closing then
-      to = mark + i - 2
-      closingLine = mark + i - 1
+  -- found from the end after the feeds: a full buffer trims its oldest lines and renumbers the rest
+  local from, closingLine
+  for i = getLastLineNumber("main"), 0, -1 do
+    local text = getLines("main", i, i + 1)[1]
+    if not closingLine then
+      closingLine = text == closing and i or nil
+    elseif text == opening then
+      from = i + 1
+      break
     end
   end
-  assert.is_truthy(from and to, "the pass markers did not both reach the buffer")
+  assert.is_truthy(from, "the pass markers did not both reach the buffer")
+  local to = closingLine - 1
   local result = snapshot(from, to)
   -- the marker's first character, as the markers differ in length
   local reset = snapshot(closingLine, closingLine)[1]:match("^[^|]*|[^|]*|([^|]*)")
