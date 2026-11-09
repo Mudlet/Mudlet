@@ -112,7 +112,10 @@ private slots:
     {
         for (QPushButton* pButton : {mpDialog->installButton, mpDialog->uninstallButton, mpDialog->helpButton}) {
             QVERIFY2(!pButton->icon().isNull(), qPrintable(qsl("%1 has no glyph").arg(pButton->objectName())));
+            // A right-to-left button draws its glyph after its words, unlike the package manager's
+            QVERIFY2(pButton->layoutDirection() == QGuiApplication::layoutDirection(), qPrintable(qsl("%1 is not laid out in the application's direction").arg(pButton->objectName())));
         }
+        QVERIFY2(mpDialog->helpButton->x() < mpDialog->installButton->x() && mpDialog->installButton->x() < mpDialog->uninstallButton->x(), "the foot no longer reads Module Help, Install, Uninstall");
     }
 
     // It used to hide itself after four seconds, so a player who looked away missed it

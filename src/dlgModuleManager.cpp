@@ -395,7 +395,13 @@ void dlgModuleManager::buildShell()
     pShellLayout->addWidget(mpNotice);
     connect(mpNotice->messageAreaCloseButton, &QAbstractButton::clicked, mpNotice, &QWidget::hide);
 
-    pShellLayout->addWidget(widget_2, 0, Qt::AlignRight);
+    // The .ui file orders the row by drawing it right to left, which also puts every button's glyph after its words
+    widget_2->unsetLayoutDirection();
+    for (QWidget* pButton : {static_cast<QWidget*>(helpButton), static_cast<QWidget*>(installButton), static_cast<QWidget*>(uninstallButton)}) {
+        horizontalLayout->removeWidget(pButton);
+        horizontalLayout->addWidget(pButton);
+    }
+    pShellLayout->addWidget(widget_2, 0, Qt::AlignTrailing);
 }
 
 void dlgModuleManager::slot_applyAppearance()
