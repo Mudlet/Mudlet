@@ -1071,6 +1071,8 @@ public:
             if (QLineEdit* pEdit = editFieldOf(pBox)) {
                 pEdit->installEventFilter(this);
             }
+            // As holdHeight(): a box's first Polish reaches the filter before the style does
+            pBox->ensurePolished();
         }
         fit();
     }
@@ -1195,6 +1197,9 @@ void holdHeight(QWidget* pWidget, const int height)
     if (!pHeld) {
         pHeld = new HeldHeight(pWidget, height);
     }
+    // Polished first: a widget's first Polish reaches the filter before the style, which then puts a sheet's
+    // min-height back over the hold
+    pWidget->ensurePolished();
     pHeld->hold(pWidget, height);
 }
 

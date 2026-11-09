@@ -433,7 +433,9 @@ that picks a colour off the screen, and a pipette on the button would promise
 that. Not the palette either, which is already the Settings sidebar's
 Appearance glyph. Reset (rotate-ccw) is unavailable while the item has nothing
 to reset; the field is then empty, its placeholder says what the item is drawn
-with ("Automatic", "Map default"), and its swatch shows that colour. The room
+with - "Automatic" for a room's symbol, the code of the map's border colour for
+its border, so that field is no wider than any other - and its swatch shows
+that colour. The room
 properties dialog's symbol and border rows (`roomPropertiesSymbolColour`,
 `roomPropertiesBorderColour`, `roomPropertiesBorderOpacity`) and the settings'
 Player room marker card (`settingsPlayerRoomOuterColour`,
@@ -449,11 +451,19 @@ edge by half of what that widest value leaves, so "100%" is centred and "60%"
 ends where it does, the percent signs one over the other. Centring each value
 on its own puts every sign somewhere else.
 
-The Main display's Colors card and the Mapper's Map colors card hold 30 and 32
-colours, so their rows are `ColourRowSize::Compact`: field, opacity box and
-Choose at a colour well's 22px (`scmColourWellHeight`), the swatch and its
-inset scaled down with them, and the card no taller than its wells made it.
-There is no Reset per colour; the card's "Reset all colors to default" is the
+Every colour row is `ColourRowSize::Compact`: field, opacity box and buttons
+at a colour well's 22px (`scmColourWellHeight`), the swatch and its inset
+scaled down with them, so a colour row looks the same in the room properties
+dialog, the Player room marker card and the colour cards, and the cards
+holding 30 and 32 colours are no taller than their wells made them. The
+marker's Diameter boxes are held to the same height, so a ring's row is one
+height across. The room properties dialog gives its rows the button recipe
+as well as the input recipe, scoped to the row, so Choose and Reset have the
+design's face there too. `holdHeight()` and `fitNumberBoxes()` polish a
+widget before holding it: the first Polish reaches their event filter before
+the style, which then sets the recipe's min-height back, and a dialog that
+sizes itself before it is shown (`adjustSize()`) never gives them a later
+style change to correct it. In the colour cards there is no Reset per colour; the card's "Reset all colors to default" is the
 way back. The card's own colours (Foreground, Background and the command
 colours; the map's background, borders, links, levels, info box and grid) are
 label-and-row pairs in `PairGridLayout`. The Main display's belong together a

@@ -2523,7 +2523,7 @@ void dlgProfilePreferences::reflowMapperCards()
     const auto ringRow = [this](const QString& ring, QLabel*& pRingName, uiDesign::ColourValue*& pColour, QPushButton* pChoose, QLabel*& pDiameterName, QSpinBox* pDiameter) {
         pRingName = new QLabel(groupBox_playerRoomStyle);
         pRingName->setObjectName(qsl("settingsPlayerRoom%1RingLabel").arg(ring));
-        pColour = new uiDesign::ColourValue(groupBox_playerRoomStyle);
+        pColour = new uiDesign::ColourValue(groupBox_playerRoomStyle, uiDesign::ColourRowSize::Compact);
         pColour->setObjectName(qsl("settingsPlayerRoom%1Colour").arg(ring));
         pColour->opacityBox()->setObjectName(qsl("settingsPlayerRoom%1Opacity").arg(ring));
         pRingName->setBuddy(pColour);
@@ -2542,8 +2542,9 @@ void dlgProfilePreferences::reflowMapperCards()
             ringRow(qsl("Inner"), mpLabel_playerRoomInnerRing, mpColourValue_playerRoomInner, pushButton_playerRoomSecondaryColor, mpLabel_playerRoomInnerDiameter, spinBox_playerRoomInnerDiameter),
             2,
             0);
-    // One width for both whatever their ranges, so their percent signs stand one over the other as the opacities' do
-    uiDesign::fitNumberBoxes({spinBox_playerRoomOuterDiameter, spinBox_playerRoomInnerDiameter}, uiDesign::scmInputHeight);
+    // One width for both whatever their ranges, so their percent signs stand one over the other as the opacities' do,
+    // and the colour rows' compact height, so a ring's row is one height across
+    uiDesign::fitNumberBoxes({spinBox_playerRoomOuterDiameter, spinBox_playerRoomInnerDiameter}, uiDesign::scmColourWellHeight);
     // A typed colour goes the way one chosen in the colours window does
     connect(mpColourValue_playerRoomOuter, &uiDesign::ColourValue::colourEntered, this, [this](const QColor& colour) {
         if (mpHost && mpHost->mpMap) {
@@ -3961,7 +3962,7 @@ void dlgProfilePreferences::applyShellStyle()
     }
     restyleSidebarIcons(tokens);
     for (QPushButton* pChoose : {pushButton_playerRoomPrimaryColor, pushButton_playerRoomSecondaryColor}) {
-        uiDesign::setColourButtonGlyph(pChoose, uiDesign::ColourButton::Choose, tokens);
+        uiDesign::setColourButtonGlyph(pChoose, uiDesign::ColourButton::Choose, tokens, uiDesign::ColourRowSize::Compact);
     }
     for (const QList<ProfileColour>* pColours : {&mDisplayColours, &mMapColours}) {
         for (const ProfileColour& colour : *pColours) {

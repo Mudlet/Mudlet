@@ -348,15 +348,20 @@ private:
     {
         const QImage image = pField->grab().toImage();
         const qreal ratio = image.devicePixelRatio();
-        const int middle = uiDesign::scmInputHeight / 2;
-        // Inside the swatch's hairline, which spans the field's height less 2 * (hairline + 3) pixels
+        const int middle = pField->height() / 2;
+        // Inside the swatch's hairline, which spans the field's height less 2 * (hairline + inset) pixels
+        const int reach = middle - 5;
         QList<QColor> row;
-        for (int x = middle - 8; x <= middle + 8; ++x) {
+        for (int x = middle - reach; x <= middle + reach; ++x) {
             row.append(image.pixelColor(QPointF(x * ratio, (pField->height() / 2) * ratio).toPoint()));
         }
         return row;
     }
-    static QColor swatchOf(QWidget* pField) { return swatchRow(pField).at(8); }
+    static QColor swatchOf(QWidget* pField)
+    {
+        const QList<QColor> row = swatchRow(pField);
+        return row.at(row.size() / 2);
+    }
     // A see-through colour shows the checkerboard's squares through it, which no opaque one does
     static bool showsTheBoardThrough(QWidget* pField)
     {
@@ -648,7 +653,22 @@ private slots:
         QVERIFY2(!pDlg->findChild<QSpinBox*>(qsl("roomPropertiesSymbolOpacity")), "the symbol, which is never see-through, was given an opacity");
         for (QPushButton* pButton : {pDlg->pushButton_setSymbolColor, pDlg->pushButton_setBorderColor, pDlg->pushButton_resetSymbolColor, pDlg->pushButton_resetBorderColor}) {
             QVERIFY2(pButton->text().isEmpty() && !pButton->icon().isNull(), qPrintable(qsl("%1 is not a glyph button: '%2'").arg(pButton->objectName(), pButton->text())));
-            QCOMPARE(pButton->size(), QSize(uiDesign::scmInputHeight, uiDesign::scmInputHeight));
+            QCOMPARE(pButton->size(), QSize(uiDesign::scmColourWellHeight, uiDesign::scmColourWellHeight));
+        }
+        // The same compact row as the settings' colour cards, its buttons drawn with the design's button face
+        QCOMPARE(pSymbol->height(), uiDesign::scmColourWellHeight);
+        QCOMPARE(pBorder->height(), uiDesign::scmColourWellHeight);
+        QCOMPARE(borderOpacity(pDlg)->height(), uiDesign::scmColourWellHeight);
+        QPushButton reference;
+        reference.setStyleSheet(uiDesign::buttonStyleSheet(uiDesign::themeTokens()));
+        reference.setFixedSize(pDlg->pushButton_setSymbolColor->size());
+        const QImage referenceImage = reference.grab().toImage();
+        const QPoint onTheFace(2, uiDesign::scmColourWellHeight / 2);
+        for (QPushButton* pButton : {pDlg->pushButton_setSymbolColor, pDlg->pushButton_setBorderColor}) {
+            const QImage image = pButton->grab().toImage();
+            const QColor face = image.pixelColor(onTheFace * image.devicePixelRatio());
+            const QColor designFace = referenceImage.pixelColor(onTheFace * referenceImage.devicePixelRatio());
+            QVERIFY2(face == designFace, qPrintable(qsl("%1 is drawn in %2, not the design's button face %3").arg(pButton->objectName(), face.name(), designFace.name())));
         }
         QVERIFY(pDlg->pushButton_resetSymbolColor->isEnabled());
         QVERIFY(pDlg->pushButton_resetBorderColor->isEnabled());
@@ -675,7 +695,10 @@ private slots:
         QVERIFY(pSymbol && pBorder);
         QVERIFY2(pSymbol->text().isEmpty() && pBorder->text().isEmpty(), qPrintable(qsl("'%1' and '%2'").arg(pSymbol->text(), pBorder->text())));
         QCOMPARE(pSymbol->placeholderText(), qsl("Automatic"));
-        QCOMPARE(pBorder->placeholderText(), qsl("Map default"));
+        QCOMPARE(pBorder->placeholderText(), mpHost->mRoomBorderColor.name(QColor::HexRgb).toUpper());
+        // ...so it is no wider than a field showing a code, as every other colour field is
+        const uiDesign::ColourValue codeOnly(pDlg->widget_borderColor, uiDesign::ColourRowSize::Compact);
+        QCOMPARE(pBorder->width(), codeOnly.sizeHint().width());
         // The symbol is black or white, whichever stands out against the room
         QCOMPARE(swatchOf(pSymbol), QColor(Qt::black));
         QCOMPARE(pBorder->colour(), mpHost->mRoomBorderColor);

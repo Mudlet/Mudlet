@@ -43,19 +43,18 @@ dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
     // init generated dialog
     setupUi(this);
 
-    mpSymbolColour = new uiDesign::ColourValue(widget_symbolColor);
+    // Compact, as the colour rows in the settings are, so a colour row looks the same wherever it stands
+    mpSymbolColour = new uiDesign::ColourValue(widget_symbolColor, uiDesign::ColourRowSize::Compact);
     mpSymbolColour->setObjectName(qsl("roomPropertiesSymbolColour"));
     //: Room properties dialog, screen reader name of the field showing the room symbol's color as a code, which a code can be typed into
     mpSymbolColour->setAccessibleName(tr("Symbol color"));
     //: Room properties dialog, in the field for the room symbol's color while no color was chosen for it: the symbol is then drawn in black or white, whichever stands out against the room
     mpSymbolColour->setDefaultWord(tr("Automatic"));
     horizontalLayout_widget_symbolColor->insertWidget(horizontalLayout_widget_symbolColor->indexOf(pushButton_setSymbolColor), mpSymbolColour);
-    mpBorderColour = new uiDesign::ColourValue(widget_borderColor);
+    mpBorderColour = new uiDesign::ColourValue(widget_borderColor, uiDesign::ColourRowSize::Compact);
     mpBorderColour->setObjectName(qsl("roomPropertiesBorderColour"));
     //: Room properties dialog, screen reader name of the field showing the room border's color as a code, which a code can be typed into
     mpBorderColour->setAccessibleName(tr("Border color"));
-    //: Room properties dialog, in the field for the room border's color while the room has no border color of its own and is drawn in the map's
-    mpBorderColour->setDefaultWord(tr("Map default"));
     horizontalLayout_widget_borderColor->insertWidget(horizontalLayout_widget_borderColor->indexOf(pushButton_setBorderColor), mpBorderColour);
     horizontalLayout_widget_borderColor->insertWidget(horizontalLayout_widget_borderColor->indexOf(pushButton_setBorderColor), mpBorderColour->opacityBox());
     mpBorderColour->opacityBox()->setObjectName(qsl("roomPropertiesBorderOpacity"));
@@ -589,13 +588,14 @@ void dlgRoomProperties::restyleColourRows()
 {
     const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
     for (QWidget* pRow : {widget_symbolColor, widget_borderColor}) {
-        pRow->setStyleSheet(uiDesign::inputStyleSheet(tokens, qsl("#%1").arg(pRow->objectName())));
+        const QString row = qsl("#%1").arg(pRow->objectName());
+        pRow->setStyleSheet(uiDesign::inputStyleSheet(tokens, row) + uiDesign::buttonStyleSheet(tokens, row));
     }
     for (QPushButton* pChoose : {pushButton_setSymbolColor, pushButton_setBorderColor}) {
-        uiDesign::setColourButtonGlyph(pChoose, uiDesign::ColourButton::Choose, tokens);
+        uiDesign::setColourButtonGlyph(pChoose, uiDesign::ColourButton::Choose, tokens, uiDesign::ColourRowSize::Compact);
     }
     for (QPushButton* pReset : {pushButton_resetSymbolColor, pushButton_resetBorderColor}) {
-        uiDesign::setColourButtonGlyph(pReset, uiDesign::ColourButton::Reset, tokens);
+        uiDesign::setColourButtonGlyph(pReset, uiDesign::ColourButton::Reset, tokens, uiDesign::ColourRowSize::Compact);
     }
 }
 
@@ -607,6 +607,8 @@ bool dlgRoomProperties::resetOffered(const QColor& chosen) const
 
 void dlgRoomProperties::showBorderColour()
 {
+    // A room with no border colour of its own is drawn in the map's, so the field shows that code, not a word
+    mpBorderColour->setDefaultWord(mpHost->mRoomBorderColor.name(QColor::HexRgb).toUpper());
     if (selectedBorderColor.isValid()) {
         mpBorderColour->setColour(selectedBorderColor);
     } else {
