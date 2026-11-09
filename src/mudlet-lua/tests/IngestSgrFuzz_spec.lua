@@ -269,6 +269,25 @@ describe("fuzz: SGR decoding on the ingest worker and the main thread", function
     feed("\27\\\27]8;;\27\\\27[0m\r\n")
   end)
 
+  -- with the worker off, every round below would compare the main thread with itself
+  it("has the ingest worker parse a read ahead", function()
+    local before = getProfileStats().linesParsedAhead
+    if not before then
+      pending("telling whether the worker parsed a read needs MUDLET_TEST_MODE")
+      return
+    end
+    if os.getenv("MUDLET_INGEST_THREAD") == "verify" then
+      pending("in verify mode the main thread parses every line itself and the worker's are not counted")
+      return
+    end
+    local lines = {}
+    for i = 1, 20 do
+      lines[i] = "SgrFuzzWorker " .. i
+    end
+    pass(lines, true)
+    assert.is_true(getProfileStats().linesParsedAhead > before, "the ingest worker is off, so the rounds compare the main thread with itself")
+  end)
+
   for round = 1, ROUNDS do
     junk = pick({0, 0, 0, 1, 3, 10, 30, 100, 400})
     local roundJunk = junk
