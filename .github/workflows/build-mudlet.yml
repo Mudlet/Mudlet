@@ -80,8 +80,8 @@ jobs:
             gcc_compiler_version: 14
             qt: '6.11.3'
             ccache_id: ubuntu-clang
-          # Homebrew has no Intel bottles of pcre2, sqlite or libzip, and oniguruma's stop at Sonoma, so this bundles
-          # the copies preinstalled on the runner image; GitHub supports macos-15-intel until about August 2027.
+          # Homebrew no longer bottles for Intel: this job pours the Sonoma bottles the image's frozen Homebrew still
+          # names (HOMEBREW_NO_AUTO_UPDATE), and uses the pcre2, sqlite, libzip and oniguruma the image preinstalls.
           # No tests: none branch on host architecture, so the arm64 job covers them on a faster pool.
           - os: macos-15-intel
             buildname: 'macos (x86_64)'
