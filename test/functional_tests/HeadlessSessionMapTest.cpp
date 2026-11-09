@@ -284,6 +284,51 @@ enableMapInfo("HeadlessReplace")
         QVERIFY(session.shutdown(false));
     }
 
+    // Every draw calls the contributor again, so its error reaches the error console once rather than per draw
+    void test_aFailingContributorReportsItsErrorOnce()
+    {
+        const QString name = qsl("Headless Map Info Error");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"lua(
+openMapWidget()
+local area = addAreaName("Headless Info Error")
+addRoom(1)
+setRoomArea(1, area)
+centerview(1)
+headlessFailures = 0
+registerMapInfo("HeadlessFailing", function()
+  headlessFailures = headlessFailures + 1
+  error("headless map info failure")
+end)
+enableMapInfo("HeadlessFailing")
+)lua")));
+        QTest::qWait(50);
+        QSignalSpy errors(session.host(), &Host::signal_errorConsolePrint);
+        const auto reports = [&errors]() {
+            int count = 0;
+            for (const QList<QVariant>& arguments : std::as_const(errors)) {
+                count += arguments.at(0).toString().contains(qsl("headless map info failure"));
+            }
+            return count;
+        };
+
+        QVERIFY2(rendered(session), qPrintable(session.errorString()));
+        QVERIFY2(rendered(session), qPrintable(session.errorString()));
+        QVERIFY(luaGlobalString(session.host(), "headlessFailures").toInt() >= 2);
+        QCOMPARE(reports(), 1);
+
+        // Registering it again is a new callback, whose error is news
+        QVERIFY(session.runLua(qsl(R"lua(
+registerMapInfo("HeadlessFailing", function() error("headless map info failure") end)
+)lua")));
+        QVERIFY2(rendered(session), qPrintable(session.errorString()));
+        QVERIFY2(rendered(session), qPrintable(session.errorString()));
+        QCOMPARE(reports(), 2);
+        QVERIFY(session.shutdown(false));
+    }
+
     // Room symbols are kept as pixmaps made at the room's size in the symbol font, so a draw after either changes
     // makes them again as the mapper does, and so does one after an export, which makes them at a size of its own
     void test_symbolsAreRemadeAfterTheirSizeFontOrAnExportChanges()

@@ -3122,6 +3122,8 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
     auto& host = getHostFromLua(L);
     // Host is non-copyable and the lambda copies its captures.
     auto* pHost = &host;
+    // Shared, as each paint calls a copy of the callback; the paint repeats every error, so report the first
+    auto errorReported = std::make_shared<bool>(false);
     host.mpMap->mMapInfoContributorManager->registerContributor(
             name,
             [=](int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor) {
@@ -3140,9 +3142,17 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
 
                 const int error = lua_pcall(L, 4, 6, 0);
                 if (error) {
-                    if (TDebug::wants(TDebug::Category::Map) && lua_isstring(L, -1)) {
-                        auto errorMessage = lua_tostring(L, -1);
-                        TDebug(QColor(Qt::white), QColor(Qt::red), TDebug::Category::Map) << "LUA ERROR: when running map info callback for '" << name << "\nreason: " << errorMessage << "\n" >> pHost;
+                    if (lua_isstring(L, -1)) {
+                        std::string errorMessage = lua_tostring(L, -1);
+                        if (!*errorReported) {
+                            *errorReported = true;
+                            pHost->getLuaInterpreter()->logError(errorMessage, qsl("map info '%1'").arg(name), qsl("anonymous Lua function"));
+                        }
+                        if (TDebug::wants(TDebug::Category::Map)) {
+                            TDebug(QColor(Qt::white), QColor(Qt::red), TDebug::Category::Map)
+                                            << "LUA ERROR: when running map info callback for '" << name << "\nreason: " << errorMessage.c_str() << "\n"
+                                    >> pHost;
+                        }
                     }
                     lua_settop(L, callerStackTop);
                     return MapInfoProperties{};
