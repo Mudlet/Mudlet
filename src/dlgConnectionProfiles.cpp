@@ -2607,10 +2607,11 @@ void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
     QListWidgetItem* pItem;
     const auto oldPassword = character_password_entry->text();
     const CopiedProfileData data = captureProfileData();
-    // stops selecting the copy from blanking the password field and reading the copy's empty slot
-    mCopyingProfile = true;
+    // stops selecting the copy from blanking the password field and reading the copy's empty slot;
+    // a full copy may still be running, and holds the flag until it finishes
+    const bool fullCopyRunning = std::exchange(mCopyingProfile, true);
     if (!copyProfileWidget(profile_name, oldname, pItem)) {
-        mCopyingProfile = false;
+        mCopyingProfile = fullCopyRunning;
         return;
     }
     const QDir oldProfileDir(MudletApp::getMudletPath(enums::profileHomePath, oldname));
@@ -2622,7 +2623,7 @@ void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
     const QDir newProfileDir(MudletApp::getMudletPath(enums::profileHomePath, profile_name));
     newProfileDir.mkpath(newProfileDir.path());
     if (!newProfileDir.exists()) {
-        mCopyingProfile = false;
+        mCopyingProfile = fullCopyRunning;
         return;
     }
 
@@ -2644,7 +2645,7 @@ void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
     if (MudletApp::storingPasswordsSecurely() && !oldPassword.trimmed().isEmpty()) {
         writeSecurePassword(profile_name, oldPassword);
     }
-    mCopyingProfile = false;
+    mCopyingProfile = fullCopyRunning;
     validateProfile();
 }
 
