@@ -1237,9 +1237,9 @@ int TLuaInterpreter::createMapper(lua_State* L)
         counter++;
     }
 
-    const int x = getVerifiedInt(L, __func__, counter, "mapper x-coordinate");
+    const int x = getVerifiedPosition(L, __func__, counter, "mapper x-coordinate");
     counter++;
-    const int y = getVerifiedInt(L, __func__, counter, "mapper y-coordinate");
+    const int y = getVerifiedPosition(L, __func__, counter, "mapper y-coordinate");
     counter++;
     const int width = getVerifiedInt(L, __func__, counter, "mapper width");
     counter++;
@@ -3089,8 +3089,8 @@ int TLuaInterpreter::openMapWidget(lua_State* L)
 
     if (n > 1) {
         area = qsl("f");
-        x = getVerifiedInt(L, __func__, 1, "x-coordinate");
-        y = getVerifiedInt(L, __func__, 2, "y-coordinate");
+        x = getVerifiedPosition(L, __func__, 1, "x-coordinate");
+        y = getVerifiedPosition(L, __func__, 2, "y-coordinate");
     }
     if (n > 2) {
         width = getVerifiedInt(L, __func__, 3, "width");

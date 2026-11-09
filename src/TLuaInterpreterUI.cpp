@@ -539,9 +539,9 @@ int TLuaInterpreter::createCommandLine(lua_State* L)
         lua_pushfstring(L, "createCommandLine: bad argument #%d type (commandLine name as string expected, got %s!)", commandLineNamePos, luaL_typename(L, commandLineNamePos));
         return lua_error(L);
     }
-    const int x = getVerifiedInt(L, __func__, counter, "commandline x-coordinate");
+    const int x = getVerifiedPosition(L, __func__, counter, "commandline x-coordinate");
     counter++;
-    const int y = getVerifiedInt(L, __func__, counter, "commandline y-coordinate");
+    const int y = getVerifiedPosition(L, __func__, counter, "commandline y-coordinate");
     counter++;
     const int width = getVerifiedInt(L, __func__, counter, "commandline width");
     counter++;
@@ -604,9 +604,9 @@ int TLuaInterpreter::createMiniConsole(lua_State* L)
         counter = 2;
     }
 
-    const int x = getVerifiedInt(L, __func__, counter, "miniconsole x-coordinate");
+    const int x = getVerifiedPosition(L, __func__, counter, "miniconsole x-coordinate");
     counter++;
-    const int y = getVerifiedInt(L, __func__, counter, "miniconsole y-coordinate");
+    const int y = getVerifiedPosition(L, __func__, counter, "miniconsole y-coordinate");
     counter++;
     const int width = getVerifiedInt(L, __func__, counter, "miniconsole width");
     counter++;
@@ -656,9 +656,9 @@ int TLuaInterpreter::createScrollBox(lua_State* L)
         counter = 2;
     }
 
-    const int x = getVerifiedInt(L, __func__, counter, "scrollBox x-coordinate");
+    const int x = getVerifiedPosition(L, __func__, counter, "scrollBox x-coordinate");
     counter++;
-    const int y = getVerifiedInt(L, __func__, counter, "scrollBox y-coordinate");
+    const int y = getVerifiedPosition(L, __func__, counter, "scrollBox y-coordinate");
     counter++;
     const int width = getVerifiedInt(L, __func__, counter, "scrollBox width");
     counter++;
@@ -762,9 +762,9 @@ int TLuaInterpreter::createTextEdit(lua_State* L)
         lua_pushfstring(L, "createTextEdit: bad argument #%d type (text edit name as string expected, got %s!)", textEditNamePos, luaL_typename(L, textEditNamePos));
         return lua_error(L);
     }
-    const int x = getVerifiedInt(L, __func__, counter, "text edit x-coordinate");
+    const int x = getVerifiedPosition(L, __func__, counter, "text edit x-coordinate");
     counter++;
-    const int y = getVerifiedInt(L, __func__, counter, "text edit y-coordinate");
+    const int y = getVerifiedPosition(L, __func__, counter, "text edit y-coordinate");
     counter++;
     const int width = getVerifiedInt(L, __func__, counter, "text edit width");
     counter++;
@@ -2565,7 +2565,7 @@ int TLuaInterpreter::moveWindow(lua_State* L)
     const double y1 = getVerifiedDouble(L, __func__, 3, "y");
     const QString text{lua_tostring(L, 1)};
     Host& host = getHostFromLua(L);
-    if (!host.moveWindow(text, static_cast<int>(x1), static_cast<int>(y1))) {
+    if (!host.moveWindow(text, boundedPosition(x1), boundedPosition(y1))) {
         return windowNotFoundOrUnsupported(L, host, text);
     }
     lua_pushboolean(L, true);
@@ -4601,8 +4601,8 @@ int TLuaInterpreter::setWindow(lua_State* L)
     }
 
     if (n > 2) {
-        x = getVerifiedInt(L, __func__, 3, "x-coordinate");
-        y = getVerifiedInt(L, __func__, 4, "y-coordinate");
+        x = getVerifiedPosition(L, __func__, 3, "x-coordinate");
+        y = getVerifiedPosition(L, __func__, 4, "y-coordinate");
         show = getVerifiedBool(L, __func__, 5, "show element");
     }
 

@@ -172,4 +172,32 @@ describe("getWindowGeometry", function()
     deleteLabel(name)
     assert.is_nil(getWindowGeometry(name))
   end)
+
+  -- A position near INT_MAX overflowed the right edge of the widget's QRect
+  describe("of a window placed at the edge of the int range", function()
+    local limit = 16777215 -- QWIDGETSIZE_MAX
+
+    it("bounds a scroll box made again there", function()
+      local name = uniqueName("wgEdgeScrollBox")
+      finally(function() deleteScrollBox(name) end)
+      createScrollBox("main", name, 0, 0, 200, 100)
+      createScrollBox(name, 2147483647, 0, 255, 1)
+      assert.are.same({limit, 0, 255, 1}, geometry(name))
+    end)
+
+    it("bounds a label moved there", function()
+      local name = uniqueName("wgEdgeLabel")
+      finally(function() deleteLabel(name) end)
+      createLabel("main", name, 10, 20, 30, 40, 1)
+      moveWindow(name, 2147483647, -1e300)
+      assert.are.same({limit, -limit, 30, 40}, geometry(name))
+    end)
+
+    it("bounds a miniconsole made there", function()
+      local name = uniqueName("wgEdgeMiniConsole")
+      finally(function() deleteMiniConsole(name) end)
+      createMiniConsole("main", name, 2147483647, 2147483647, 200, 100)
+      assert.are.same({limit, limit, 200, 100}, geometry(name))
+    end)
+  end)
 end)

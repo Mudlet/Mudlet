@@ -625,6 +625,22 @@ int TLuaInterpreter::getVerifiedInt(lua_State* L, const char* functionName, cons
     return static_cast<int>(lua_tointeger(L, pos));
 }
 
+// A widget keeps its geometry as a QRect, whose right edge (x + width - 1) overflows int for a
+// position near INT_MAX; Qt caps a widget's size at QWIDGETSIZE_MAX (2^24 - 1, which only <QWidget>
+// defines), so capping its position there too keeps that sum in range
+int TLuaInterpreter::boundedPosition(const double position)
+{
+    constexpr double maximumWidgetSize = (1 << 24) - 1;
+    return static_cast<int>(qBound(-maximumWidgetSize, position, maximumWidgetSize));
+}
+
+// No documentation available in wiki - internal function
+// getVerifiedInt() for a widget's x or y position, bounded as boundedPosition() explains
+int TLuaInterpreter::getVerifiedPosition(lua_State* L, const char* functionName, const int pos, const char* publicName)
+{
+    return boundedPosition(getVerifiedInt(L, functionName, pos, publicName));
+}
+
 // No documentation available in wiki - internal function
 // The non-raising counterpart of getVerifiedFloat and getVerifiedDouble - see checkStringArg()
 bool TLuaInterpreter::checkNumberArg(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
@@ -1888,8 +1904,8 @@ int TLuaInterpreter::getMudletInfo(lua_State* L)
 int TLuaInterpreter::createLabelUserWindow(lua_State* L, const char* windowName, const char* labelName)
 {
     const int n = lua_gettop(L);
-    const int x = getVerifiedInt(L, "createLabel", 3, "label x-coordinate");
-    const int y = getVerifiedInt(L, "createLabel", 4, "label y-coordinate");
+    const int x = getVerifiedPosition(L, "createLabel", 3, "label x-coordinate");
+    const int y = getVerifiedPosition(L, "createLabel", 4, "label y-coordinate");
     const int width = getVerifiedInt(L, "createLabel", 5, "label width");
     const int height = getVerifiedInt(L, "createLabel", 6, "label height");
 
@@ -1933,8 +1949,8 @@ int TLuaInterpreter::createLabelUserWindow(lua_State* L, const char* windowName,
 int TLuaInterpreter::createLabelMainWindow(lua_State* L, const char* labelName)
 {
     const int n = lua_gettop(L);
-    const int x = getVerifiedInt(L, "createLabel", 2, "label x-coordinate");
-    const int y = getVerifiedInt(L, "createLabel", 3, "label y-coordinate");
+    const int x = getVerifiedPosition(L, "createLabel", 2, "label x-coordinate");
+    const int y = getVerifiedPosition(L, "createLabel", 3, "label y-coordinate");
     const int width = getVerifiedInt(L, "createLabel", 4, "label width");
     const int height = getVerifiedInt(L, "createLabel", 5, "label height");
 

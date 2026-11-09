@@ -981,6 +981,8 @@ private:
     static bool checkCommandsOrFunctionsTable(lua_State*, const char* functionName, const int index);
     static bool checkHintsTable(lua_State*, const char* functionName, const int index);
     static int getVerifiedInt(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
+    static int getVerifiedPosition(lua_State*, const char* functionName, const int pos, const char* publicName);
+    static int boundedPosition(double);
     static float getVerifiedFloat(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static double getVerifiedDouble(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static std::pair<bool, QString> getVerifiedStringOrInteger(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
