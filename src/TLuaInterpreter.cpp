@@ -807,8 +807,8 @@ void TLuaInterpreter::slot_httpRequestFinished(QNetworkReply* reply)
         event.mArgumentTypeList << ARGUMENT_TYPE_TABLE;
         // Last, after the response table, so handlers written for the
         // earlier argument positions keep working
-        event.mArgumentList << QString(reply->readAll());
-        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        event.mArgumentList << QString::fromLatin1(reply->readAll());
+        event.mArgumentTypeList << ARGUMENT_TYPE_BYTES;
 
         reply->deleteLater();
         downloadMap.remove(reply);
@@ -836,8 +836,8 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
         event.mArgumentList << reply->url().toString();
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-        event.mArgumentList << QString(reply->readAll());
-        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        event.mArgumentList << QString::fromLatin1(reply->readAll());
+        event.mArgumentTypeList << ARGUMENT_TYPE_BYTES;
         break;
 
     case QNetworkAccessManager::CustomOperation:
@@ -845,8 +845,8 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
         event.mArgumentList << reply->url().toString();
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-        event.mArgumentList << QString(reply->readAll());
-        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        event.mArgumentList << QString::fromLatin1(reply->readAll());
+        event.mArgumentTypeList << ARGUMENT_TYPE_BYTES;
         event.mArgumentList << reply->request().attribute(QNetworkRequest::CustomVerbAttribute).toString();
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
         break;
@@ -858,8 +858,8 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
         event.mArgumentList << reply->url().toString();
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-        event.mArgumentList << QString(reply->readAll());
-        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        event.mArgumentList << QString::fromLatin1(reply->readAll());
+        event.mArgumentTypeList << ARGUMENT_TYPE_BYTES;
         break;
 
     case QNetworkAccessManager::PutOperation:
@@ -867,8 +867,8 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
         event.mArgumentList << reply->url().toString();
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-        event.mArgumentList << QString(reply->readAll());
-        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        event.mArgumentList << QString::fromLatin1(reply->readAll());
+        event.mArgumentTypeList << ARGUMENT_TYPE_BYTES;
         break;
 
     case QNetworkAccessManager::GetOperation:
@@ -885,8 +885,8 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << reply->url().toString();
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            event.mArgumentList << QString(reply->readAll());
-            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << QString::fromLatin1(reply->readAll());
+            event.mArgumentTypeList << ARGUMENT_TYPE_BYTES;
             break;
         }
 

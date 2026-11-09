@@ -667,6 +667,18 @@ describe("Downloads and HTTP verbs against the local fixture server", function()
       assert.equals("OK", response.reason)
     end)
 
+    it("delivers a body holding NUL and non-UTF-8 bytes unchanged", function()
+      if noFixtureServer() then
+        return
+      end
+      assert.is_true(getHTTP(fixtureUrl("/binary.bin")))
+
+      local event, _, body = waitForEvent("sysGetHttpDone", 2000)
+      assert.equals("sysGetHttpDone", event)
+      -- the contents of CI/http-fixtures/binary.bin
+      assert.equals("a\0b\255c", body)
+    end)
+
     it("sends the custom headers it was given", function()
       if noFixtureServer() then
         return
