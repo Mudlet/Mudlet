@@ -22,7 +22,8 @@
  * has to filter the same list the dialog shows with an empty box, under the
  * same names: a package installed without a config.lua has no details but is
  * still installed, and a package is installed under its sanitized name even
- * when its config.lua spelled it with a file ending.
+ * when its config.lua spelled it with a file ending. The Explore view, searched
+ * or not, lists the repository's packages alphabetically whatever their case.
  *
  * A spec cannot reach this: the dialog is C++ only, with no Lua way to open it.
  *
@@ -102,7 +103,8 @@ private slots:
         // With no repository index on disk the dialog downloads one each time it opens
         QFile index(MudletApp::getMudletPath(enums::profileHomePath, mProfileName + QDir::separator() + qsl("mpkg.packages.json")));
         QVERIFY(index.open(QIODevice::WriteOnly));
-        QVERIFY(index.write(R"({"packages": []})") > 0);
+        // In the index's own order, which puts every capital before any lower case letter
+        QVERIFY(index.write(R"({"packages": [{"mpackage": "Zeta"}, {"mpackage": "alpha"}, {"mpackage": "Beta"}]})") > 0);
         index.close();
 
         mpHost->mInstalledPackages << mBarePackage << mNamedPackage;
@@ -153,6 +155,15 @@ private slots:
     {
         mpManager->lineEdit_searchBar->setText(qsl("titled"));
         QCOMPARE(listedNames(), QStringList{mNamedPackage});
+    }
+
+    void test_theRepositoryIsListedAlphabeticallyWhateverTheCase()
+    {
+        mpManager->pushButton_explore->click();
+        const QStringList alphabetical{qsl("alpha"), qsl("Beta"), qsl("Zeta")};
+        QCOMPARE(listedNames(), alphabetical);
+        mpManager->lineEdit_searchBar->setText(qsl("a"));
+        QCOMPARE(listedNames(), alphabetical);
     }
 };
 
