@@ -541,6 +541,31 @@ private slots:
     delete mpHost->getScriptUnit()->getScript(groupId);
   }
 
+  void test_scriptSwitchingOnItsOwnGroupRunsOnce() {
+    auto [groupId, groupMsg] = mpHost->mLuaInterpreter.createPermScript(
+        qsl("resetSelfEnablingGroup"), QString(), QString());
+    QVERIFY2(groupId > 0, qPrintable(groupMsg));
+    auto [id, msg] = mpHost->mLuaInterpreter.createPermScript(
+        qsl("resetSelfEnablingChild"), qsl("resetSelfEnablingGroup"),
+        qsl("resetSelfEnablingRuns = (resetSelfEnablingRuns or 0) + 1 "
+            "enableScript('resetSelfEnablingGroup')"));
+    QVERIFY2(id > 0, qPrintable(msg));
+    // Creating it ran the body, which switched the group on
+    QVERIFY(mpHost->getScriptUnit()->disableScript(
+        qsl("resetSelfEnablingGroup")));
+
+    performReset();
+
+    QVERIFY(mpHost->getScriptUnit()->enableScript(
+        qsl("resetSelfEnablingGroup")));
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    lua_getglobal(L, "resetSelfEnablingRuns");
+    const int runs = static_cast<int>(lua_tointeger(L, -1));
+    lua_pop(L, 1);
+    QCOMPARE(runs, 1);
+    delete mpHost->getScriptUnit()->getScript(groupId);
+  }
+
   void test_buttonOnAHiddenToolbarRunsItsScriptAfterResetAndShow() {
     auto *actionUnit = mpHost->getActionUnit();
     auto *toolbar = new TAction(qsl("resetHiddenToolbar"), mpHost);

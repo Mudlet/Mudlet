@@ -172,10 +172,12 @@ bool TScript::compileScript(bool saveLoadingError)
     // package's scripts run their own bodies inside this one
     const Host::RunningScript outer = std::exchange(mpHost->mRunningScript, {chunkName, pRoot->mPackageName});
     QString error;
+    // Cleared first: a body that calls enableScript() on its own tree would otherwise run itself
+    // again from compileSwitchedOn(), and one that stopped part way must not be run again either
+    mNeedsToBeCompiled = false;
     const bool compiled = mpHost->mLuaInterpreter.compile(mScript, error, chunkName);
     mpHost->mRunningScript = outer;
     if (compiled) {
-        mNeedsToBeCompiled = false;
         mOK_code = true;
         clearLoadingError();
         if (mpHost->mResetProfile) {
