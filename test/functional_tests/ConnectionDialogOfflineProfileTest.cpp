@@ -409,6 +409,32 @@ private slots:
         QTRY_COMPARE(CredentialManager::retrieveCredential(settingsCopy, qsl("character")), password);
     }
 
+    // A password the copy could not be given has to say so, not be cleared by the copy's own validation
+    void test_aSettingsCopyThatCannotSaveThePasswordSaysSo()
+    {
+        QVERIFY2(dialog(), "No connection dialog to test against");
+        const QString profile = qsl("UnsavablePassword-ConnDialogOffline");
+        const QString settingsCopy = profile + qsl("1");
+        const QString keyDir = qsl("%1/profiles/%2").arg(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation), settingsCopy);
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, profile)));
+        mudlet::self()->setStorePasswordsSecurely(true);
+        const auto restore = qScopeGuard([profile, keyDir]() {
+            mudlet::self()->setStorePasswordsSecurely(false);
+            CredentialManager::removeCredential(profile, qsl("character"));
+            QDir(keyDir).removeRecursively();
+        });
+        QVERIFY(CredentialManager::storeCredential(profile, qsl("character"), qsl("unsavable-secret")));
+        dialog()->fillout_form();
+        selectTestProfile();
+        selectProfile(profile);
+        QTRY_COMPARE(dialog()->character_password_entry->text(), qsl("unsavable-secret"));
+        // a directory where the copy's key file belongs makes it impossible to write
+        QVERIFY(QDir().mkpath(keyDir + qsl("/encryption_key")));
+
+        dialog()->slot_copyOnlySettingsOfProfile();
+        QVERIFY2(dialog()->notificationArea->isVisible() && dialog()->notificationAreaMessageBox->text().contains(settingsCopy), qPrintable(dialog()->notificationAreaMessageBox->text()));
+    }
+
     // A renamed catalog game's new name is not in the catalog either
     void test_aRenamedCatalogGameKeepsItsDetails()
     {

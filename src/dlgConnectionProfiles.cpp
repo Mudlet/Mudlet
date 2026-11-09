@@ -2641,12 +2641,13 @@ void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
     mProfileList << profile_name;
     slot_itemClicked(pItem);
 
+    mCopyingProfile = fullCopyRunning;
+    // before the password is saved, as it clears the notification a failed save shows
+    validateProfile();
     // the "password" file copied above only holds it when passwords are not stored securely
     if (MudletApp::storingPasswordsSecurely() && !oldPassword.trimmed().isEmpty()) {
         writeSecurePassword(profile_name, oldPassword);
     }
-    mCopyingProfile = fullCopyRunning;
-    validateProfile();
 }
 
 bool dlgConnectionProfiles::copyProfileWidget(QString& profile_name, QString& oldname, QListWidgetItem*& pItem) const
