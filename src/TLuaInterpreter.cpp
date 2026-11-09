@@ -4375,6 +4375,12 @@ void TLuaInterpreter::setAtcpTable(const QString& var, const QString& arg)
 {
     lua_State* L = pGlobalLua;
     lua_getglobal(L, "atcp"); //defined in LuaGlobal.lua
+    if (!lua_istable(L, -1)) {
+        lua_pop(L, 1);
+        lua_newtable(L);
+        lua_pushvalue(L, -1);
+        lua_setglobal(L, "atcp");
+    }
     lua_pushstring(L, var.toUtf8().constData());
     lua_pushstring(L, arg.toUtf8().constData());
     lua_rawset(L, -3);

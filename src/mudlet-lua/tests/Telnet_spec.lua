@@ -3381,3 +3381,19 @@ describe("Tests the posting timer of a game that sends no GA", function()
     assert.is_truthy(shown:find("EndlessStart", 1, true), "still held after 5s of reads: " .. shown)
   end)
 end)
+
+describe("Tests the atcp table", function()
+  -- _G because busted runs each spec in an environment of its own
+  it("starts a fresh atcp table when a script has replaced it", function()
+    local saved = _G.atcp
+    finally(function() _G.atcp = saved end)
+
+    local replacements = {n = 2, nil, "not a table"}
+    for i = 1, replacements.n do
+      _G.atcp = replacements[i]
+      local ok, msg = feedTelnet("<T_IAC><T_SB><O_ATCP>Room.Brief Spec cave<T_IAC><T_SE>")
+      assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+      assert.same({RoomBrief = "Spec cave"}, _G.atcp)
+    end
+  end)
+end)
