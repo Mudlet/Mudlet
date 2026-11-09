@@ -6290,7 +6290,9 @@ void cTelnet::slot_socketReadyToBeRead()
 void cTelnet::readPendingSocketData()
 {
     mReadPending = false;
-    if (!mpHost || mpHost->isClosingDown() || !mpSocket || mDeferredReconnect) {
+    // drainBeforeDisconnection() does the reading once the close is noticed: a burst can have left several
+    // of these queued, one per readyRead(), and all of them reading here would share one event-loop turn
+    if (!mpHost || mpHost->isClosingDown() || !mpSocket || mDeferredReconnect || mDisconnectionPending) {
         return;
     }
 
