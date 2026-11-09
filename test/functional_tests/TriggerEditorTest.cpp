@@ -993,6 +993,24 @@ private slots:
     QCOMPARE(mpHost->getScriptUnit()->getScript(ids.front())->getScript(), qsl("-- typed but not saved"));
   }
 
+  // Saving a script runs its body, which an untouched script must not get from a reset
+  void test_editorResetLeavesAnUneditedScriptUnrun() {
+    mudlet::self()->slot_showScriptDialog();
+    QTest::qWait(100ms);
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
+    QVERIFY(pEditor);
+    const QString body = qsl("qaResetRuns = (qaResetRuns or 0) + 1");
+    QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(
+        qsl("qaResetRuns = 0 permScript(\"qaUneditedScript\", \"\", [[%1]])").arg(body)));
+    QVERIFY(typeIntoScript(pEditor, qsl("qaUneditedScript"), body));
+    QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("qaResetRuns = 0")));
+
+    emit mpHost->signal_editorCleanResetRequested();
+    QTRY_VERIFY(!pEditor->mCleanResetQueued);
+
+    QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(qaResetRuns == 0)")));
+  }
+
   void test_editorResetAfterUninstallDropsEditsToTheRemovedItem() {
     mudlet::self()->slot_showScriptDialog();
     QTest::qWait(100ms);

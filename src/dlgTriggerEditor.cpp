@@ -14121,8 +14121,13 @@ void dlgTriggerEditor::runScheduledCleanReset()
 void dlgTriggerEditor::resetTrees()
 {
     // A package (un)install or module sync resets the editor without warning, so keep what was being typed;
-    // an item it removed is looked up by id and skipped
-    saveOpenChanges();
+    // an item it removed is looked up by id and skipped. Saving a script runs its body, so only when it was edited.
+    const TScript* pOpenScript = mCurrentView == EditorViewType::cmScriptView ? getScriptFromTreeItem(mpCurrentScriptItem) : nullptr;
+    const bool openScriptUnchanged = pOpenScript && pOpenScript->getScript() == mpSourceEditorEdbeeDocument->text() && pOpenScript->getName() == mpScriptsMainArea->lineEdit_script_name->text()
+                                     && pOpenScript->getEventHandlerList() == mpChipRow_scriptEvents->items();
+    if (!openScriptUnchanged) {
+        saveOpenChanges();
+    }
 
     // Clear all current item pointers before clearing the tree widgets
     // to prevent heap-use-after-free when the tree widgets are cleared
