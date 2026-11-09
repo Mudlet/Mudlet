@@ -453,12 +453,16 @@ describe("Tests functionality of Geyser.Button", function()
 
       it("still creates the button when the code does not compile", function()
         local button
+        local reported = spy.on(_G, "errorc")
+        finally(function() reported:revert() end)
         assert.has_no.errors(function()
           button = track(Geyser.Button:new({name = "gbsBadStringFunc", x = 0, y = 0, width = 60, height = 20,
             clickFunction = "this is not lua"}))
         end)
         assert.is_table(button)
         assert.are.equal("string", type(button.clickFunction))
+        assert.spy(reported).was.called(1)
+        assert.truthy(tostring(reported.calls[1].vals[1]):find("clickFunction", 1, true))
       end)
 
       it("keeps a function it was given as it is", function()
