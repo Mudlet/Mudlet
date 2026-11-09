@@ -214,7 +214,10 @@ private:
         return mudlet::self()->getActiveHost();
     }
 
-    void deleteProfileDirectory(const QString& profileName) { TestProfile::removeProfileDirectory(profileName); }
+    void deleteProfileDirectory(const QString& profileName)
+    {
+        TestProfile::removeProfileDirectory(profileName);
+    }
 };
 
 #include "PackageManagerRemovalTest.moc"
