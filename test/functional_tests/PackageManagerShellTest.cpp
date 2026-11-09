@@ -26,6 +26,7 @@
  */
 
 #include <QAbstractButton>
+#include <QAccessible>
 #include <QAction>
 #include <QApplication>
 #include <QImage>
@@ -679,6 +680,18 @@ private slots:
                  qPrintable(qsl("the seam was left at %1 and the next window opened at %2 - the split is not put back").arg(QString::number(chosen), QString::number(restored))));
         pSecond->close();
         TestPixels::settle();
+    }
+
+    // Without an accessible name a screen reader reads these as just "edit" and "list"
+    void test_theSearchFieldAndListHaveScreenReaderNames()
+    {
+        for (const QString& objectName : {qsl("lineEdit_searchBar"), qsl("packageList")}) {
+            auto* pWidget = mpDialog->findChild<QWidget*>(objectName);
+            QVERIFY2(pWidget, qPrintable(objectName));
+            QAccessibleInterface* pInterface = QAccessible::queryAccessibleInterface(pWidget);
+            QVERIFY(pInterface);
+            QVERIFY2(!pInterface->text(QAccessible::Name).trimmed().isEmpty(), qPrintable(qsl("%1 has no name for a screen reader to announce").arg(objectName)));
+        }
     }
 
     void test_theActionButtonsSayWhatTheyDo()
