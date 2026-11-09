@@ -1206,6 +1206,23 @@ describe("Tests DB.lua functions", function()
       assert.are.equal(1730615400, db:aggregate(mydb.sheet.seen, "MAX"):as_number())
       assert.are.equal(1710037800, db:aggregate(mydb.sheet.seen, "MIN"):as_number())
     end)
+
+    it("queries and sets a datetime field with a plain epoch number", function()
+      for n, epoch in ipairs(epochs) do
+        db:add(mydb.sheet, { seen = db:Timestamp(epoch), n = n })
+      end
+      local after = db:fetch(mydb.sheet, db:gt(mydb.sheet.seen, 1729989000), { mydb.sheet.n })
+      local epochsAfter = {}
+      for _, row in ipairs(after) do
+        epochsAfter[#epochsAfter + 1] = row.seen:as_number()
+      end
+      assert.are.same({ 1729992600, 1729996200, 1730611800, 1730615400 }, epochsAfter)
+      assert.are.equal(1, #db:fetch(mydb.sheet, db:eq(mydb.sheet.seen, 1711848600)))
+      assert.are.equal(3, #db:fetch(mydb.sheet, db:between(mydb.sheet.seen, 1711846800, 1711852200)))
+
+      db:set(mydb.sheet.seen, 1700000000, db:eq(mydb.sheet.n, 1))
+      assert.are.equal(1700000000, db:fetch(mydb.sheet, db:eq(mydb.sheet.n, 1))[1].seen:as_number())
+    end)
   end)
 
 
@@ -3719,6 +3736,7 @@ describe("Tests db's internals against a real database", function()
       assert.are.equal("datetime('now')", db:_coerce(mydb.people.seen, db:Timestamp("CURRENT_TIMESTAMP")))
       assert.are.equal("datetime('1234', 'unixepoch')", db:_coerce(mydb.people.seen, db:Timestamp(1234)))
       assert.are.equal("NULL", db:_coerce(mydb.people.seen, db:Timestamp(nil)))
+      assert.are.equal("datetime('1234', 'unixepoch')", db:_coerce(mydb.people.seen, 1234))
     end)
 
     it("single quotes a text field's value and doubles up single quotes in it", function()

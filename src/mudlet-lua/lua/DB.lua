@@ -2462,12 +2462,14 @@ function db:_coerce(field, value)
   elseif field.type == "number" then
     return tonumber(value) or ("'" .. value .. "'")
   elseif field.type == "datetime" then
-    if value._timestamp == false then
+    if type(value) == "number" then
+      return "datetime('" .. value .. "', 'unixepoch')"
+    elseif value._timestamp == false then
       return "NULL"
     elseif value._timestamp == "CURRENT_TIMESTAMP" then
       return "datetime('now')"
     else
-      return "datetime('" .. value._timestamp .. "', 'unixepoch')" or "'" .. value .. "'"
+      return "datetime('" .. value._timestamp .. "', 'unixepoch')"
     end
   else
     return "'" .. tostring(value):gsub("'", "''") .. "'"
