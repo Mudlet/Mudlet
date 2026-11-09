@@ -28,6 +28,8 @@
 #include <QObject>
 
 class Host;
+class QPainter;
+class QSize;
 
 // The 2D map of a map widget or embedded mapper that the null view records. It keeps the area that
 // T2DMap would show, which T2DMap moves as it paints, so this "paints" once the event loop runs.
@@ -37,6 +39,8 @@ public:
     explicit TNullMapView(Host* pHost, QObject* parent = nullptr);
     // A hidden mapper does not paint
     void setShown(bool shown);
+    // What T2DMap would draw at that size, whether or not the mapper is shown, raising sysMapAreaChanged as it does
+    void render(QPainter&, const QSize&);
 
     bool onScreen() const override { return false; }
     void showMapProgress(const QString&, bool) override {}
@@ -52,7 +56,7 @@ public:
     QSet<int> selectedRooms() const override { return {}; }
     int centerSelectedRoom() const override { return 0; }
     void clearRoomSelection() override {}
-    int shownAreaId() const override { return mAreaId; }
+    int shownAreaId() const override { return mView.mAreaID; }
     std::pair<bool, QString> setMapZoom(qreal zoom, int areaId) override;
     std::pair<bool, QString> exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel, qreal zoom, bool exportAllZLevels) override;
     std::pair<bool, QString> show3DView(bool shown) override;
@@ -65,15 +69,18 @@ public:
 private:
     void schedulePaint();
     void paint();
+    void requestRepaint();
+    void raiseAreaChanged(int areaId, int lastViewedAreaId);
 
     Host* mpHost = nullptr;
     bool mShown = false;
     bool mPaintScheduled = false;
-    // T2DMap's mAreaID, mLastViewedAreaID, mRoomID and mShiftMode
-    int mAreaId = 0;
-    int mLastViewedAreaId = -2;
-    int mCentredRoomId = 0;
-    bool mCentred = false;
+    // What T2DMap keeps between frames: its area, the area last raised for, the room it centred on, whether it
+    // has, and where
+    TMapPainter::View mView;
+    // paint() centred on the player without a size, so the next render() centres again as T2DMap would, which
+    // for a small area may be on the area
+    bool mRecentre = false;
     TMapPainter mPainter;
 };
 
