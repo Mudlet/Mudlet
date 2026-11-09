@@ -1512,9 +1512,13 @@ private slots:
         QVERIFY2(emptyState->isVisible(), "an aborted download left the empty map without its choices");
 
         pMap->setMmpMapLocation(mpMapServer->url(qsl("/nosuchmap.xml")));
-        QSignalSpy closeSpy(pMap, &TMap::signal_mapProgressClose);
         downloadButton->click();
-        QVERIFY2(closeSpy.count() == 1 || closeSpy.wait(15s), "the failed map download never finished");
+        QVERIFY2(QTest::qWaitFor(
+                         [pMap]() {
+                             return !pMap->hasActiveTransferProgress();
+                         },
+                         15s),
+                 "the failed map download never finished");
         QVERIFY2(consoleShows(qsl("Map download encountered an error")), qPrintable(consoleTextSinceMark()));
         QVERIFY2(emptyState->isVisible(), "a failed download left the empty map without its choices");
     }
