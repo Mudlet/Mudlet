@@ -104,6 +104,7 @@ public:
     void updateAllTabIndicators(); // Update all tab indicators in this window
 
     void saveWindowGeometry();
+    void closeProfileByName(const QString& profileName);
 
 protected:
     void closeEvent(QCloseEvent* event) override;
@@ -193,7 +194,6 @@ private:
     void createToolBar();
     void restyleToolBarIcons();
     void connectToolBarActions();
-    void closeProfileByName(const QString& profileName);
     bool closeProfileHere(const QString& profileName);
     void updateTabIndicator(int tabIndex = -1);                            // -1 means current tab
     void updateDockWidgetVisibilityForProfile(const QString& profileName); // Show/hide docked widgets based on active profile

@@ -4483,6 +4483,11 @@ bool mudlet::openProfile(const QString& profileName, bool connect)
 
 bool mudlet::requestProfileClose(const QString& profileName)
 {
+    // A detached profile's tab is in its own window, not the main tab bar
+    if (TDetachedWindow* pDetachedWindow = mDetachedWindows.value(profileName)) {
+        pDetachedWindow->closeProfileByName(profileName);
+        return true;
+    }
     const int index = mpTabBar->tabIndex(profileName);
     if (index == -1) {
         return false;
