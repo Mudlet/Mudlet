@@ -1635,6 +1635,26 @@ void dlgProfilePreferences::addSidebarSeparator()
     mpListWidget_categories->setItemWidget(pItem, pLine);
 }
 
+namespace {
+// A wrapping card's minimum height is measured at the column's narrowest width, many lines taller than at the
+// width it is given, and QScrollArea keeps its bar until the viewport holds the taller of that and the
+// height-for-width it lays the column out at
+class SettingsColumn : public QWidget
+{
+public:
+    using QWidget::QWidget;
+
+    QSize minimumSizeHint() const override
+    {
+        QSize hint = QWidget::minimumSizeHint();
+        if (layout() && layout()->hasHeightForWidth()) {
+            hint.setHeight(0);
+        }
+        return hint;
+    }
+};
+} // namespace
+
 QScrollArea* dlgProfilePreferences::createScrollPage(const QString& objectSuffix)
 {
     auto* pScrollArea = new QScrollArea(mpStackedWidget_categories);
@@ -1643,7 +1663,7 @@ QScrollArea* dlgProfilePreferences::createScrollPage(const QString& objectSuffix
     pScrollArea->setWidgetResizable(true);
     markAsShellSurface(pScrollArea);
 
-    auto* pColumn = new QWidget(pScrollArea);
+    auto* pColumn = new SettingsColumn(pScrollArea);
     pColumn->setObjectName(qsl("settingsColumn_%1").arg(objectSuffix));
     auto* pColumnLayout = new QVBoxLayout(pColumn);
     pColumnLayout->setContentsMargins(0, 0, 0, 0);

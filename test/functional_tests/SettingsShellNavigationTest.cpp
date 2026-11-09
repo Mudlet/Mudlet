@@ -435,6 +435,63 @@ private slots:
     // that it is out of the layout rather than deleted
     // Set before the dialog is built, as the platform does: macOS gives a list a smaller font than the window's, and a
     // width measured before the list took it kept the sidebar wider until the next restyle
+    // A wrapping card measures its minimum height at the column's narrowest width, many lines taller than at the
+    // width it is given, and the page kept its scroll bar until the window reached that height
+    void test_aPageWhoseCardsFitShowsNoScrollBar()
+    {
+        QScrollArea* pPage = pageOf(qsl("general"));
+        QWidget* pColumn = pPage->widget();
+        const auto settle = [this](const int height) {
+            mpPreferences->resize(mpPreferences->width(), height);
+            QCoreApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
+            QCoreApplication::processEvents();
+        };
+        const auto cardsHeight = [pPage, pColumn]() {
+            return pColumn->heightForWidth(pPage->maximumViewportSize().width());
+        };
+        QVERIFY2(pColumn->layout()->minimumSize().height() > cardsHeight(),
+                 qPrintable(qsl("SETUP: the cards' minimum heights add up to %1px, no more than the %2px they take, so nothing wraps taller at the narrowest")
+                                    .arg(pColumn->layout()->minimumSize().height())
+                                    .arg(cardsHeight())));
+
+        const int chrome = mpPreferences->height() - pPage->maximumViewportSize().height();
+        settle(chrome + cardsHeight() + 8);
+        QTRY_VERIFY2(!pPage->verticalScrollBar()->isVisible(),
+                     qPrintable(qsl("the page shows a scroll bar with %1px of room for %2px of cards").arg(pPage->maximumViewportSize().height()).arg(cardsHeight())));
+
+        settle(chrome + cardsHeight() - 40);
+        QTRY_VERIFY2(pPage->verticalScrollBar()->isVisible(), "SETUP: the page shows no scroll bar even when its cards do not fit");
+    }
+
+    // The other side of the case above: a page whose cards do not fit keeps its scroll bar and its cards' heights,
+    // whether or not anything on it wraps
+    void test_aPageWhoseCardsDoNotFitKeepsItsScrollBar()
+    {
+        mpPreferences->resize(mpPreferences->width(), mpPreferences->minimumHeight());
+        QStringList checked;
+        for (int index = 0, pages = stack()->count(); index < pages; ++index) {
+            auto* pPage = qobject_cast<QScrollArea*>(stack()->widget(index));
+            if (!pPage) {
+                continue;
+            }
+            stack()->setCurrentWidget(pPage);
+            QCoreApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
+            QCoreApplication::processEvents();
+            QWidget* pColumn = pPage->widget();
+            const bool wraps = pColumn->layout()->hasHeightForWidth();
+            const int needed = wraps ? pColumn->heightForWidth(pColumn->width()) : pColumn->layout()->minimumSize().height();
+            if (needed <= pPage->viewport()->height()) {
+                continue;
+            }
+            checked << qsl("%1%2").arg(pPage->objectName(), wraps ? qsl(" (wraps)") : QString());
+            QVERIFY2(pPage->verticalScrollBar()->isVisible(),
+                     qPrintable(qsl("'%1' shows no scroll bar for %2px of cards in %3px").arg(pPage->objectName()).arg(needed).arg(pPage->viewport()->height())));
+            QVERIFY2(pColumn->height() >= needed, qPrintable(qsl("'%1' squeezes %2px of cards into %3px").arg(pPage->objectName()).arg(needed).arg(pColumn->height())));
+        }
+        qDebug() << "pages too tall for the window:" << checked;
+        QVERIFY2(checked.size() > 1, "SETUP: at most one page is taller than the shortest window, so this checks next to nothing");
+    }
+
     void test_theSidebarOpensAtTheWidthARestyleKeeps()
     {
         const QFont savedListFont = QApplication::font("QAbstractItemView");
