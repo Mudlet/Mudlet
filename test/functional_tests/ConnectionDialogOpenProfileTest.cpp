@@ -254,6 +254,15 @@ private slots:
         dialog()->auto_reconnect->click();
         QCOMPARE(pHost->mTelnet.mAutoReconnect, wasReconnecting);
 
+        // Unticking it is how a player stops a game that is down from being retried
+        if (!pHost->mTelnet.mAutoReconnect) {
+            dialog()->auto_reconnect->click();
+        }
+        pHost->mTelnet.mTimerFailedConnectionRetry->start(1h);
+        dialog()->auto_reconnect->click();
+        QVERIFY(!pHost->mTelnet.mAutoReconnect);
+        QVERIFY2(!pHost->mTelnet.mTimerFailedConnectionRetry->isActive(), "Turning auto-reconnect off left a retry of a failed connection waiting to run");
+
         dialog()->login_entry->selectAll();
         QTest::keyClicks(dialog()->login_entry, qsl("Hero"));
         QCOMPARE(pHost->getLogin(), qsl("Hero"));
