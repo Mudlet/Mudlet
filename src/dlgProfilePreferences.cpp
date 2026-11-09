@@ -8192,6 +8192,16 @@ void dlgProfilePreferences::populateThemesList()
         return QString::localeAwareCompare(a.first, b.first) < 0;
     });
 
+    // Every instant apply reads the settings back through here, and refilling an unchanged list throws an open one
+    // back to wherever the chosen theme then lands
+    bool unchanged = code_editor_theme_selection_combobox->count() == sortedThemes.size();
+    for (qsizetype row = 0; unchanged && row < sortedThemes.size(); ++row) {
+        unchanged = code_editor_theme_selection_combobox->itemText(row) == sortedThemes.at(row).first && code_editor_theme_selection_combobox->itemData(row).toString() == sortedThemes.at(row).second;
+    }
+    if (unchanged) {
+        return;
+    }
+
     // temporary disable painting and event updates while we refill the list
     code_editor_theme_selection_combobox->setUpdatesEnabled(false);
     code_editor_theme_selection_combobox->blockSignals(true);
