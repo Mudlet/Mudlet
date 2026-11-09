@@ -40,7 +40,7 @@
 
 // Vendored from sherpa-onnx v2.0.1 c-api.h. These layouts are the ABI the
 // loaded library reads, so field order and types must not change; sherpa-onnx
-// itself only ever appends fields, which initialize() defends against by
+// itself only ever appends fields, which loadModel() defends against by
 // passing the struct inside a larger zeroed block.
 
 struct SherpaOnnxOnlineTransducerModelConfig
