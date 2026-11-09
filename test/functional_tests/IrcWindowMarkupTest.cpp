@@ -46,6 +46,7 @@
 #include "TelnetServerStub.h"
 #include "dlgIRC.h"
 #include "mudlet.h"
+#include "uiDesign.h"
 
 #include "GroupedTest.h"
 
@@ -252,6 +253,44 @@ private slots:
         QVERIFY2(client, "the IRC client could not be opened");
         enterText(client, qsl("/msg <b>a</b>,,b hi"));
         QVERIFY2(waitForShownText(client, qsl("Could not send that message: target \"<b>a</b>,,b\"")), qPrintable(shownText(client)));
+    }
+
+    // An unknown command marks the input field; what is still typed in it has
+    // to stay readable on that mark in either appearance
+    void test_aMistypedCommandLeavesTheInputReadable()
+    {
+        dlgIRC* client = openConnectedClient();
+        QVERIFY2(client, "the IRC client could not be opened");
+        for (const auto appearance : {enums::Appearance::dark, enums::Appearance::light}) {
+            mudlet::self()->setAppearance(appearance);
+            QCoreApplication::processEvents();
+            enterText(client, qsl("/notacommand"));
+            QVERIFY2(!client->lineEdit->styleSheet().isEmpty(), "a mistyped command left the input field unmarked");
+            QCoreApplication::processEvents();
+            const QImage shot = client->lineEdit->grab().toImage();
+            // The commonest pixel is the field's fill: the words are the minority
+            QHash<QRgb, int> histogram;
+            for (int y = 0; y < shot.height(); ++y) {
+                for (int x = 0; x < shot.width(); ++x) {
+                    ++histogram[shot.pixel(x, y)];
+                }
+            }
+            QRgb fill = 0;
+            int seen = 0;
+            for (auto entry = histogram.cbegin(); entry != histogram.cend(); ++entry) {
+                if (entry.value() > seen) {
+                    seen = entry.value();
+                    fill = entry.key();
+                }
+            }
+            const QColor ink = client->lineEdit->palette().color(QPalette::Text);
+            const qreal ratio = uiDesign::contrastRatio(ink, QColor(fill));
+            QVERIFY2(ratio >= uiDesign::scmTextMinimumRatio,
+                     qPrintable(qsl("on the %1 appearance the marked field writes %2 on %3, a contrast of %4:1")
+                                        .arg(appearance == enums::Appearance::dark ? qsl("dark") : qsl("light"), ink.name(), QColor(fill).name(), QString::number(ratio, 'f', 2))));
+            client->lineEdit->clear();
+        }
+        mudlet::self()->setAppearance(enums::Appearance::systemSetting);
     }
 
     // A click must neither load the link into the window nor, unless it is a
