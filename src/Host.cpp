@@ -1245,7 +1245,9 @@ void Host::timerEvent(QTimerEvent* event)
 
 void Host::autoSaveMap()
 {
-    if (mpMap->isUnsaved()) {
+    // An import pumps events part way through, when the rooms are only half replaced; the map stays unsaved, so
+    // the next autosave writes the whole of it
+    if (mpMap->isUnsaved() && !mpMap->mapOperationInProgress()) {
 #if defined(DEBUG_MAPAUTOSAVE)
         QString nowString = QDateTime::currentDateTimeUtc().toString("HH:mm:ss.zzz");
 #endif

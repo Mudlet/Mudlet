@@ -348,6 +348,52 @@ private slots:
         QCOMPARE(readFile(autosavePath(mProfileName)), expected);
     }
 
+    // An XML import pumps events while its rooms are only part built, and the newest map file is the one the
+    // profile loads next, so an autosave then would leave a part of the map to be loaded in place of all of it
+    void test_autosaveDueDuringAnXmlImportWaitsForItToFinish()
+    {
+        buildMap(map());
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        const QString xmlPath = qsl("%1/imported map.xml").arg(mConfigDir.path());
+        {
+            QFile file(xmlPath);
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            QByteArray xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<map>\n <areas>\n  <area id=\"1\" name=\"Imported\"/>\n </areas>\n <rooms>\n";
+            for (int id = 1; id <= 5000; ++id) {
+                xml += qsl("  <room id=\"%1\" area=\"1\" title=\"Imported %1\" environment=\"2\">\n   <coord x=\"%2\" y=\"%3\" z=\"0\"/>\n  </room>\n").arg(id).arg(id % 50).arg(id / 50).toUtf8();
+            }
+            xml += " </rooms>\n</map>\n";
+            QCOMPARE(file.write(xml), xml.size());
+        }
+        QVERIFY(map()->isUnsaved());
+
+        QTimer ticker;
+        int roomsWhenDue = -1;
+        connect(&ticker, &QTimer::timeout, this, [&]() {
+            if (roomsWhenDue < 0 && map()->mapOperationInProgress()) {
+                roomsWhenDue = map()->mpRoomDB->size();
+                mpHost->autoSaveMap();
+            }
+        });
+        ticker.start(0);
+        QString errMsg;
+        const bool imported = mpHost->importMapFile(xmlPath, &errMsg);
+        ticker.stop();
+        QVERIFY2(imported, qPrintable(errMsg));
+        QVERIFY2(roomsWhenDue >= 0, "the import let no events run, so this case covers nothing");
+        QVERIFY2(roomsWhenDue < 5000, "the import had finished its rooms before the autosave came due");
+        mpHost->waitForMapAutosave();
+        QVERIFY2(!QFileInfo::exists(autosavePath(mProfileName)), qPrintable(qsl("an autosave was written with %1 of the import's 5000 rooms").arg(roomsWhenDue)));
+        QVERIFY2(map()->isUnsaved(), "the autosave put off by the import left the map marked as saved");
+
+        const QByteArray expected = serialized(map());
+        mpHost->autoSaveMap();
+        mpHost->waitForMapAutosave();
+        QCOMPARE(readFile(autosavePath(mProfileName)), expected);
+    }
+
     void test_closingDuringAnAutosaveWriteLeavesTheWholeFile()
     {
         QVERIFY(HostManager::self()->addHost(mClosingProfileName, qsl("23"), QString(), QString()));
