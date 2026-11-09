@@ -2304,12 +2304,9 @@ std::unique_ptr<TColorTable> TTrigger::createColorPattern(int ansiFg, int ansiBg
      * 16 dark white          ->  7
      */
 
-    const QColor fgColor = mpHost->getAnsiColor(ansiFg, false);
-    const QColor bgColor = mpHost->getAnsiColor(ansiBg, true);
-
     // If BOTH ansiFg AND ansiBg are scmIgnored then the color pattern is
     // totally unset
-    if (!(fgColor.isValid() || bgColor.isValid())) {
+    if (!(mpHost->getAnsiColor(ansiFg, false).isValid() || mpHost->getAnsiColor(ansiBg, true).isValid())) {
         return nullptr;
     }
 
@@ -2320,13 +2317,39 @@ std::unique_ptr<TColorTable> TTrigger::createColorPattern(int ansiFg, int ansiBg
 
     pCT->ansiBg = ansiBg;
     pCT->ansiFg = ansiFg;
-    pCT->mBgColor = bgColor;
-    pCT->mFgColor = fgColor;
-    pCT->mFgValid = fgColor.isValid();
-    pCT->mBgValid = bgColor.isValid();
-    pCT->mFgRgba = fgColor.rgba();
-    pCT->mBgRgba = bgColor.rgba();
+    applyPalette(*pCT);
     return pCT;
+}
+
+bool TTrigger::applyPalette(TColorTable& table) const
+{
+    const QColor fgColor = mpHost->getAnsiColor(table.ansiFg, false);
+    const QColor bgColor = mpHost->getAnsiColor(table.ansiBg, true);
+    if (fgColor == table.mFgColor && bgColor == table.mBgColor) {
+        return false;
+    }
+    table.mFgColor = fgColor;
+    table.mBgColor = bgColor;
+    table.mFgValid = fgColor.isValid();
+    table.mBgValid = bgColor.isValid();
+    table.mFgRgba = fgColor.rgba();
+    table.mBgRgba = bgColor.rgba();
+    return true;
+}
+
+// The text a color pattern is matched against carries the RGB its ANSI color had when it arrived,
+// so the pattern has to follow the profile's palette or it never matches newly arrived text again
+void TTrigger::refreshColorPatterns()
+{
+    bool changed = false;
+    for (const auto& pColorTable : mColorPatternList) {
+        if (pColorTable && applyPalette(*pColorTable)) {
+            changed = true;
+        }
+    }
+    if (changed) {
+        refile(TriggerRefile::Patterns);
+    }
 }
 
 bool TTrigger::setupColorTrigger(int ansiFg, int ansiBg)
