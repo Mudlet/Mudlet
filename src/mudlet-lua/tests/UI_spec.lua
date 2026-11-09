@@ -2256,6 +2256,7 @@ describe("Tests UI functions", function()
         "You shout, 'hello'",
         "Bob chats, 'hello everyone'",
         'You chat, "test."',
+        "Bob gossips 'anyone around?'",
         "[newbie] Ann: how do I get out of here?",
         "(gossip) Ann: anyone around?",
         "< chat | Ann: anyone around?",
