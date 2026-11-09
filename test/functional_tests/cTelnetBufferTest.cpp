@@ -569,6 +569,14 @@ private slots:
         });
         mpHost->mTelnet.mFORCE_GA_OFF = true;
         QSignalSpy prompts(&mpHost->mTelnet, &cTelnet::signal_promptReceived);
+        // A link in the prompt's text expires on that prompt only if the text is posted before the prompt counts
+        bool textPostedFirst = false;
+        auto connection = connect(&mpHost->mTelnet, &cTelnet::signal_promptReceived, this, [this, &textPostedFirst]() {
+            textPostedFirst = bufferContains(qsl("PROMPT_S"));
+        });
+        auto disconnectSpy = qScopeGuard([connection]() {
+            QObject::disconnect(connection);
+        });
         QByteArray chunk("\r\nPROMPT_S> ");
         chunk += TN_IAC;
         chunk += TN_GA;
@@ -581,6 +589,7 @@ private slots:
         QCOMPARE(linesFrom(qsl("PROMPT_S")), (QStringList{qsl("PROMPT_S> "), qsl("AFTER_S"), QString()}));
         QVERIFY2(!console->buffer.promptBuffer.at(promptLine), "a GA forced off still marked a replayed line as a prompt");
         QCOMPARE(prompts.count(), 1);
+        QVERIFY2(textPostedFirst, "a forced-off replayed prompt counted before its text was posted");
     }
 
     // The production route from Lua: feedTelnet() -> loopbackTest() ->

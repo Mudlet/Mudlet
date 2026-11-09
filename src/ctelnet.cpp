@@ -6160,6 +6160,7 @@ void cTelnet::slot_processReplayChunk()
     int datalen = loadedBytes;
     std::string cleandata = "";
     recvdGA = false;
+    int forcedOffPrompts = 0;
     for (int i = 0; i < datalen; ++i) {
         char ch = loadBuffer[i];
         if (iac || iac2 || insb || (ch == TN_IAC)) {
@@ -6241,10 +6242,11 @@ void cTelnet::slot_processReplayChunk()
                 cleandata.push_back('\xff');
                 gotPrompt(cleandata);
                 cleandata = "";
+                emit signal_promptReceived();
             } else {
                 cleandata.push_back('\n');
+                ++forcedOffPrompts;
             }
-            emit signal_promptReceived();
         }
     } //for
 
@@ -6252,6 +6254,9 @@ void cTelnet::slot_processReplayChunk()
         gotRest(cleandata);
     }
     mPromptStartPosted = false;
+    for (int prompt = 0; prompt < forcedOffPrompts; ++prompt) {
+        emit signal_promptReceived();
+    }
 
     if (mpHost) {
         mpHost->finalizeMainConsole();
