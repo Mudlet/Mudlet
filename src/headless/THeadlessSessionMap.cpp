@@ -51,7 +51,7 @@ bool THeadlessSession::renderMap(QPainter& painter, const QSize& size)
     return true;
 }
 
-bool THeadlessSession::mapPointer(const PointerEvent& event)
+bool THeadlessSession::mapPointer(const MapPointerEvent& event)
 {
     if (!usable()) {
         return false;
@@ -68,10 +68,10 @@ bool THeadlessSession::mapPointer(const PointerEvent& event)
         return false;
     }
     switch (event.type) {
-    case PointerEvent::Type::press:
+    case MapPointerEvent::Type::press:
         pView->press(event.position.toPoint(), event.button, event.modifiers);
         return true;
-    case PointerEvent::Type::doubleClick:
+    case MapPointerEvent::Type::doubleClick:
         if (event.button != Qt::LeftButton) {
             //: Error from a frontend with no window that was given a double-click on the 2D map with a mouse button other than the left one
             mErrorString = tr("Only a double-click of the left button acts on the map.");
@@ -79,7 +79,7 @@ bool THeadlessSession::mapPointer(const PointerEvent& event)
         }
         pView->doubleClick(event.position.toPoint());
         return true;
-    case PointerEvent::Type::wheel:
+    case MapPointerEvent::Type::wheel:
         if (!pView->showsArea()) {
             //: Error from a frontend with no window that was given a turn of the mouse wheel on the 2D map while the map it last drew showed no area, as for a map with no rooms
             mErrorString = tr("The map drawn last shows no area to zoom.");

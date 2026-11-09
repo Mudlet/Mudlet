@@ -516,7 +516,7 @@ public:
     // errorString() saying why, with no map open, a painter that is not active or a size under 10 by 10 pixels.
     bool renderMap(QPainter& painter, const QSize& size);
     // The pointer, at a position in what renderMap() last drew
-    struct PointerEvent
+    struct MapPointerEvent
     {
         enum class Type {
             press,
@@ -537,7 +537,7 @@ public:
     // False, with errorString() saying why, with no map open, before the map is drawn, for a double-click with
     // another button, for less than half a notch of the wheel, which the GUI ignores, and for a wheel turn on a
     // map whose last draw showed no area.
-    bool mapPointer(const PointerEvent& event);
+    bool mapPointer(const MapPointerEvent& event);
 
     // sysExitEvent and, if asked, a save for every profile that loaded, then the pool goes. Meanwhile no profile
     // opens, and none dials the game or logs in, a live connection staying for the exit handlers. Refused while a
