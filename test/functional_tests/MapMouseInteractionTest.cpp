@@ -1462,6 +1462,24 @@ private slots:
         QCOMPARE(movedLine.constLast(), QPointF(1.0, 6.0));
     }
 
+    void test_draggingARoomIsAnnouncedToTheOtherMapViewsOnceItIsDropped()
+    {
+        buildMap();
+        showMapper(false);
+        QCoreApplication::sendPostedEvents(map(), QEvent::MetaCall);
+        QSignalSpy announced(map(), &TMap::signal_areaChanged);
+
+        clickAt(pointUnitsFromCentre(1, 0));
+        QCoreApplication::sendPostedEvents(map(), QEvent::MetaCall);
+        QVERIFY2(announced.isEmpty(), "clicking a room without moving it was announced as a change");
+
+        dragFromTo(pointUnitsFromCentre(1, 0), pointUnitsFromCentre(1, 2));
+        QCOMPARE(roomPosition(kEastRoomId), QVector3D(1, 2, 0));
+        QCoreApplication::sendPostedEvents(map(), QEvent::MetaCall);
+        QCOMPARE(announced.size(), 1);
+        QCOMPARE(announced.first().first().toInt(), mAreaId);
+    }
+
     // The area files its rooms by position, by how far it reaches and by how
     // long their exits are; a dragged room has to be refiled in all of them
     // without the area rebuilding them from scratch.

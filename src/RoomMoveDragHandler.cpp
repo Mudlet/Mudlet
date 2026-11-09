@@ -102,6 +102,7 @@ bool RoomMoveDragHandler::handle(T2DMap::MapInteractionContext& context)
     mMapWidget.mRoomMoveLastMapPoint.setY(mMapWidget.mRoomMoveLastMapPoint.y() + dy);
 
     mMapWidget.moveSelectedRoomsBy(dx, dy);
+    mMapWidget.mRoomsMovedByDrag = true;
     mMapWidget.repaint();
 
     return true;

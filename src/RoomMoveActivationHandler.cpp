@@ -126,6 +126,11 @@ bool RoomMoveActivationHandler::handle(T2DMap::MapInteractionContext& context)
         mMapWidget.mHasRoomMoveLastMapPoint = false;
         context.isRoomBeingMoved = false;
         mMapWidget.mHelpMsg.clear();
+        // Announced once on the drop rather than on every step, which would rebuild the 3D view's caches each time
+        if (mMapWidget.mRoomsMovedByDrag) {
+            mMapWidget.mRoomsMovedByDrag = false;
+            mMapWidget.mpMap->updateArea(mMapWidget.mAreaID);
+        }
         mMapWidget.update();
         return true;
     default:
