@@ -6234,11 +6234,16 @@ void cTelnet::slot_processReplayChunk()
         }
 
         if (recvdGA) {
-            mGA_Driver = true;
-            cleandata.push_back('\n');
             recvdGA = false;
-            gotPrompt(cleandata);
-            cleandata = "";
+            if (!mFORCE_GA_OFF) {
+                mGA_Driver = true;
+                // As the socket path does, so a replayed prompt is marked one for isPrompt() and prompt triggers
+                cleandata.push_back('\xff');
+                gotPrompt(cleandata);
+                cleandata = "";
+            } else {
+                cleandata.push_back('\n');
+            }
             emit signal_promptReceived();
         }
     } //for

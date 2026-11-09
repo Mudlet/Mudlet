@@ -542,6 +542,47 @@ private slots:
         QCOMPARE(prompts.count(), 1);
     }
 
+    // isPrompt() and prompt triggers read promptBuffer, so a replayed prompt has to be marked there as a live one is
+    void replayedPromptIsMarkedAsAPrompt()
+    {
+        QByteArray chunk("\r\nPROMPT_R> ");
+        chunk += TN_IAC;
+        chunk += TN_GA;
+        chunk += "AFTER_R\r\n";
+
+        feedReplayChunk(chunk);
+
+        TMainConsole* console = mpHost->mainConsoleView();
+        const int promptLine = console->buffer.getLastLineNumber() - 2;
+        QCOMPARE(console->buffer.line(promptLine), qsl("PROMPT_R> "));
+        QVERIFY2(console->buffer.promptBuffer.at(promptLine), "a GA in a replay did not mark its line as a prompt");
+        QVERIFY(!console->buffer.promptBuffer.at(promptLine + 1));
+    }
+
+    void replayedPromptIsNotMarkedWithGaForcedOff()
+    {
+        const bool savedForceGaOff = mpHost->mTelnet.mFORCE_GA_OFF;
+        const bool savedGaDriver = mpHost->mTelnet.mGA_Driver;
+        auto restoreFlags = qScopeGuard([this, savedForceGaOff, savedGaDriver]() {
+            mpHost->mTelnet.mFORCE_GA_OFF = savedForceGaOff;
+            mpHost->mTelnet.mGA_Driver = savedGaDriver;
+        });
+        mpHost->mTelnet.mFORCE_GA_OFF = true;
+        QSignalSpy prompts(&mpHost->mTelnet, &cTelnet::signal_promptReceived);
+        QByteArray chunk("\r\nPROMPT_S> ");
+        chunk += TN_IAC;
+        chunk += TN_GA;
+        chunk += "AFTER_S\r\n";
+
+        feedReplayChunk(chunk);
+
+        TMainConsole* console = mpHost->mainConsoleView();
+        const int promptLine = console->buffer.getLastLineNumber() - 2;
+        QCOMPARE(linesFrom(qsl("PROMPT_S")), (QStringList{qsl("PROMPT_S> "), qsl("AFTER_S"), QString()}));
+        QVERIFY2(!console->buffer.promptBuffer.at(promptLine), "a GA forced off still marked a replayed line as a prompt");
+        QCOMPARE(prompts.count(), 1);
+    }
+
     // The production route from Lua: feedTelnet() -> loopbackTest() ->
     // processSocketData(). loopbackTest() takes a non-const QByteArray and calls
     // data(), which detaches, so the allocation shape is Qt's choice rather than
