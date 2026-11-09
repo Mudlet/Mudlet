@@ -374,6 +374,10 @@ describe("Tests Other.lua functions", function()
       sent = {}
       speedwalk("nneeu", true)
       assert.are.same({"d", "w", "sw", "s"}, sent)
+
+      sent = {}
+      speedwalk("2in, nout, 10e", true)
+      assert.are.same({"w", "w", "w", "w", "w", "w", "w", "w", "w", "w", "in", "s", "out", "out"}, sent)
     end)
 
     it("dispatches only the first step synchronously when a delay is given", function()
