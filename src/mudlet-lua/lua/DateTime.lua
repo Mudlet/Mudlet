@@ -5,10 +5,10 @@ datetime = {
   _directives = {
     ["%b"] = "(?P<abbrev_month_name>jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)",
     ["%B"] = "(?P<month_name>january|february|march|april|may|june|july|august|september|october|november|december)",
-    ["%d"] = "(?P<day_of_month>\\d{2})",
-    ["%H"] = "(?P<hour_24>\\d{2})",
-    ["%I"] = "(?P<hour_12>\\d{2})",
-    ["%m"] = "(?P<month>\\d{2})",
+    ["%d"] = "(?P<day_of_month>\\d{1,2})",
+    ["%H"] = "(?P<hour_24>\\d{1,2})",
+    ["%I"] = "(?P<hour_12>\\d{1,2})",
+    ["%m"] = "(?P<month>\\d{1,2})",
     ["%M"] = "(?P<minute>\\d{2})",
     ["%p"] = "(?P<ampm>am|pm)",
     ["%S"] = "(?P<second>\\d{2})",
@@ -105,11 +105,11 @@ end
 ---   </pre>
 ---   %b   Abbreviated Month Name
 ---   %B   Full Month Name
----   %d   Day of Month
----   %H   Hour (24-hour format)
----   %I   Hour (12-hour format, requires %p as well)
+---   %d   Day of Month (1 or 2 digits)
+---   %H   Hour (24-hour format, 1 or 2 digits)
+---   %I   Hour (12-hour format, 1 or 2 digits, requires %p as well)
 ---   %p   AM or PM
----   %m   2-digit month (01-12)
+---   %m   Month (1 or 2 digits, 1-12)
 ---   %M   2-digit minutes (00-59)
 ---   %S   2-digit seconds (00-59)
 ---   %y   2-digit year (00-99), will automatically prepend 20 so 10 becomes 2010 and not 1910.
