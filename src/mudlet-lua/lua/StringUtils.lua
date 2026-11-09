@@ -107,12 +107,24 @@ function string:split(delimiter)
       result[i] = self:sub(i,i)
     end
   else
-    local from = 1
-    local delim_from, delim_to = string.find( self, delimiter, from  )
-    while delim_from do
-      result[#result+1] = string.sub(self, from, delim_from - 1)
-      from = delim_to + 1
-      delim_from, delim_to = string.find( self, delimiter, from  )
+    -- An empty match (a delimiter like " *" or "%f[%w]") is skipped rather than
+    -- split on: it would never advance the search, so the loop would never end.
+    -- The search stops at the last byte because Lua 5.1 clamps a start past the
+    -- end back onto the end, where an empty match is always found again.
+    local len = string.len(self)
+    local from, searchFrom = 1, 1
+    while searchFrom <= len do
+      local delim_from, delim_to = string.find(self, delimiter, searchFrom)
+      if not delim_from then
+        break
+      end
+      if delim_to < delim_from then
+        searchFrom = delim_from + 1
+      else
+        result[#result+1] = string.sub(self, from, delim_from - 1)
+        from = delim_to + 1
+        searchFrom = from
+      end
     end
     result[#result+1] = string.sub(self, from)
   end
