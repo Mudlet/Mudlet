@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QScrollBar>
 #include <QTemporaryDir>
 #include <QWheelEvent>
 #include <QtTest/QtTest>
@@ -29,6 +30,7 @@
 #include "SettingsTestHelper.h"
 #include "TCommandLine.h"
 #include "TMainConsole.h"
+#include "TScrollBox.h"
 #include "TTextEdit.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
@@ -79,6 +81,32 @@ private:
         const QPointF position(pane->width() / 2.0, pane->height() / 2.0);
         QWheelEvent event(position, pane->mapToGlobal(position), QPoint(), QPoint(0, 120), Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
         QApplication::sendEvent(pane, &event);
+    }
+
+    // Through the window, as the mouse does: Qt never passes a wheel event made with sendEvent() on to a parent
+    static void wheelOver(TScrollBox* box, const int angle)
+    {
+        QWidget* window = box->window();
+        const QPoint position = box->viewport()->mapTo(window, box->viewport()->rect().center());
+        QTest::wheelEvent(window->windowHandle(), position, QPoint(0, angle));
+    }
+
+    // A scroll box 200 pixels high holding a taller mini console, which has the given number of lines
+    TConsole* miniConsoleInAScrollBox(TMainConsole* console, const int lines, TScrollBox*& box)
+    {
+        if (!console->createScrollBox(QString(), qsl("box"), 0, 0, 300, 200)) {
+            return nullptr;
+        }
+        TConsole* mini = console->createMiniConsole(qsl("box"), qsl("mini"), 0, 0, 280, 1000);
+        box = console->findChild<TScrollBox*>(qsl("box"));
+        if (!mini || !box) {
+            return nullptr;
+        }
+        for (int line = 1; line <= lines; ++line) {
+            mini->print(qsl("LINE %1\n").arg(line));
+        }
+        qApp->processEvents();
+        return mini;
     }
 
     static void echoLine(TMainConsole* console, const int number) { console->print(qsl("LINE %1\n").arg(number)); }
@@ -180,6 +208,55 @@ private slots:
         wheelUp(upper);
         QTRY_VERIFY2(!upper->mIsTailMode, "scrolling up with a line above the screen did not scroll back");
         QVERIFY2(!console->mLowerPane->isHidden(), "scrolling back did not open the split-screen scrollback");
+    }
+
+    // Nor can a mini console with all its text showing, or its scrolling disabled, so a wheel turn over
+    // one goes on to what holds it
+    void test_aWheelTheMiniConsoleCannotUseScrollsTheScrollBoxHoldingIt_data()
+    {
+        QTest::addColumn<int>("lines");
+        QTest::addColumn<bool>("scrollingEnabled");
+        QTest::newRow("all its text on screen") << 3 << true;
+        QTest::newRow("scrolling disabled") << 200 << false;
+    }
+
+    void test_aWheelTheMiniConsoleCannotUseScrollsTheScrollBoxHoldingIt()
+    {
+        QFETCH(int, lines);
+        QFETCH(bool, scrollingEnabled);
+        TMainConsole* console = startProfile();
+        QVERIFY2(console, "the profile did not start");
+        TScrollBox* box = nullptr;
+        TConsole* mini = miniConsoleInAScrollBox(console, lines, box);
+        QVERIFY(mini);
+        QScrollBar* bar = box->verticalScrollBar();
+        mini->setScrolling(scrollingEnabled);
+        QTRY_VERIFY2(bar->maximum() > 0, "the scroll box has nothing to scroll");
+        QCOMPARE(bar->value(), 0);
+        QCOMPARE(box->childAt(box->rect().center()), mini->mUpperPane);
+
+        wheelOver(box, -120);
+        QVERIFY2(bar->value() > 0, "turning the wheel down over the mini console did not scroll the scroll box");
+        const int scrolledTo = bar->value();
+        wheelOver(box, 120);
+        QVERIFY2(bar->value() < scrolledTo, "turning the wheel up over the mini console did not scroll the scroll box back");
+        QVERIFY2(mini->mLowerPane->isHidden(), "the mini console split although it could not scroll");
+    }
+
+    void test_aMiniConsoleWithScrollbackKeepsTheWheel()
+    {
+        TMainConsole* console = startProfile();
+        QVERIFY2(console, "the profile did not start");
+        TScrollBox* box = nullptr;
+        TConsole* mini = miniConsoleInAScrollBox(console, 500, box);
+        QVERIFY(mini);
+        QScrollBar* bar = box->verticalScrollBar();
+        QTRY_VERIFY2(bar->maximum() > 0, "the scroll box has nothing to scroll");
+
+        wheelOver(box, 120);
+        QTRY_VERIFY2(!mini->mUpperPane->mIsTailMode, "the mini console did not scroll back");
+        wheelOver(box, -120);
+        QCOMPARE(bar->value(), 0);
     }
 };
 
