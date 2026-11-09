@@ -675,7 +675,8 @@ describe("Tests connectExitStub with a direction code on a map without those roo
     local area = addAreaName("connectExitStub huge")
     finally(function() deleteArea(area) end)
     local a = createRoomID(12); addRoom(a); setRoomArea(a, area)
-    for _, id in ipairs({math.huge, -math.huge, 0 / 0, 2147483648, -2147483649}) do
+    -- not NaN or infinity: getVerifiedInt() converts those differently on x86-64 and ARM64
+    for _, id in ipairs({2147483648, -2147483649}) do
       local ok, err = pcall(connectExitStub, a, id)
       assert.is_false(ok, tostring(id))
       assert.truthy(tostring(err):find("toID", 1, true), tostring(err))
