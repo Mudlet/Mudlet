@@ -2830,6 +2830,9 @@ int TLuaInterpreter::gotoRoom(lua_State* L)
 
     if (!host.mpMap->gotoRoom(targetRoomId)) {
         host.assemblePath(); // Needed if unsuccessful to clear lua speedwalk tables
+        if (!host.mpMap->mpRoomDB->getRoom(host.mpMap->mRoomIdHash.value(host.getName(), -1))) {
+            return warnArgumentValue(L, __func__, qsl("the player does not have a valid roomID set, so there is no current room to walk from"), true);
+        }
         return warnArgumentValue(L, __func__, qsl("no path found from current room to room with id %1").arg(targetRoomId), true);
     }
     host.startSpeedWalk();
