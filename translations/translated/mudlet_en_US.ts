@@ -61,9 +61,9 @@
     <message numerus="yes">
         <location filename="../../src/TDetachedWindow.cpp" line="1463"/>
         <source>Mudlet (%n profiles) - %1 (Detached)</source>
-        <extracomment>This is the title of a Mudlet window which was detached from the main Mudlet window, and has multiple profiles opened in this window. %n is the number of profiles, always 2 or more, and %1 is the name of the profile currently shown.</extracomment>
+        <extracomment>This is the title of a Mudlet window which was detached from the main Mudlet window, and has multiple profiles opened in this window. %n is the number of profiles and %1 is the name of the profile currently shown.</extracomment>
         <translation>
-            <numerusform>{unused}Mudlet (%n profile) - %1 (Detached)</numerusform>
+            <numerusform>Mudlet (%n profile) - %1 (Detached)</numerusform>
             <numerusform>Mudlet (%n profiles) - %1 (Detached)</numerusform>
         </translation>
     </message>
