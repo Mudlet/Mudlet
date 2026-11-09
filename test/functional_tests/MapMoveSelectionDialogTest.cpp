@@ -33,6 +33,7 @@
 #include <QFileInfo>
 #include <QLineEdit>
 #include <QPushButton>
+#include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -106,6 +107,12 @@ private:
         QTimer::singleShot(0, this, [&dialogSeen, &fillIn]() {
             auto* dialog = qobject_cast<QDialog*>(QApplication::activeModalWidget());
             QVERIFY(dialog);
+            // A failed check below returns early, and an open modal dialog would hang the test
+            const auto closeDialog = qScopeGuard([dialog]() {
+                if (dialog->isVisible()) {
+                    dialog->reject();
+                }
+            });
             const QList<QLineEdit*> edits = dialog->findChildren<QLineEdit*>();
             const QList<QPushButton*> buttons = dialog->findChildren<QPushButton*>();
             QCOMPARE(edits.size(), 3);
@@ -113,9 +120,6 @@ private:
             dialogSeen = true;
             // OK is created before Cancel
             fillIn(edits, buttons.at(0));
-            if (dialog->isVisible()) {
-                dialog->reject();
-            }
         });
         mp2dMap->slot_movePosition();
         QVERIFY(dialogSeen);
@@ -163,30 +167,38 @@ private slots:
 
     void unreadableCoordinateCannotBeAccepted_data()
     {
+        QTest::addColumn<int>("field");
         QTest::addColumn<QString>("text");
-        QTest::newRow("empty") << QString();
-        QTest::newRow("letters") << qsl("abc");
-        QTest::newRow("typo") << qsl("1O");
-        QTest::newRow("fraction") << qsl("2.5");
-        QTest::newRow("lone minus") << qsl("-");
-        QTest::newRow("group separator") << qsl("1,000");
+        const QStringList axes{qsl("x"), qsl("y"), qsl("z")};
+        for (int field = 0; field < axes.size(); ++field) {
+            const QByteArray axis = axes.at(field).toLatin1();
+            QTest::newRow(axis + " empty") << field << QString();
+            QTest::newRow(axis + " letters") << field << qsl("abc");
+            QTest::newRow(axis + " typo") << field << qsl("1O");
+            QTest::newRow(axis + " fraction") << field << qsl("2.5");
+            QTest::newRow(axis + " lone minus") << field << qsl("-");
+            QTest::newRow(axis + " group separator") << field << qsl("1,000");
+            QTest::newRow(axis + " too large for an int") << field << qsl("2147483648");
+        }
     }
 
     void unreadableCoordinateCannotBeAccepted()
     {
+        QFETCH(int, field);
         QFETCH(QString, text);
         buildSelection();
 
         bool okEnabled = true;
         runDialog([&](const QList<QLineEdit*>& edits, QPushButton* ok) {
-            edits.at(0)->setText(text);
+            edits.at(field)->setText(text);
             okEnabled = ok->isEnabled();
             ok->click();
         });
 
+        QCOMPARE(roomDB()->getRoom(scmRoomA)->z(), 7);
         QCOMPARE(roomPosition(scmRoomA), QPoint(5, 6));
         QCOMPARE(roomPosition(scmRoomB), QPoint(8, 6));
-        QVERIFY2(!okEnabled, "OK stayed enabled with an unreadable x coordinate");
+        QVERIFY2(!okEnabled, "OK stayed enabled with an unreadable coordinate");
     }
 
     void validCoordinatesMoveTheSelection()
@@ -195,6 +207,10 @@ private slots:
 
         bool okEnabled = false;
         runDialog([&](const QList<QLineEdit*>& edits, QPushButton* ok) {
+            // A corrected typo has to give OK back
+            for (auto* edit : edits) {
+                edit->setText(qsl("abc"));
+            }
             edits.at(0)->setText(qsl("-10"));
             edits.at(1)->setText(qsl("20"));
             edits.at(2)->setText(qsl("7"));
