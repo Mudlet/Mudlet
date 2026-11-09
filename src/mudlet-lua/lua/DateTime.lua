@@ -101,6 +101,9 @@ end
 --- month. With as_epoch, a missing hour is 12 and a missing minute or second is 0, as in os.time(); a partial
 --- date that does not exist (such as "02-29" outside a leap year, or the 31st in a 30-day month) returns nil. <br/><br/>
 ---
+--- A format without ^ matches the first place in the source it fits, and %d, %m, %H and %I take one digit as
+--- well as two, so anchor the format with ^ and $ when the source may hold other numbers. <br/><br/>
+---
 --- Supported Format Codes
 ---   </pre>
 ---   %b   Abbreviated Month Name
