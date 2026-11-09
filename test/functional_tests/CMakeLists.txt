@@ -501,6 +501,12 @@ endmacro()
 
 add_grouped_test_binary(functional_window_tests ${WINDOW_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_profile_tests ${PROFILE_GROUP_TEST_SOURCES})
+# Not a grouped source: it would get a ctest case of its own. It replaces fchmod() for the whole binary.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_sources(functional_profile_tests PRIVATE FchmodRefusal.cpp)
+    target_compile_definitions(functional_profile_tests PRIVATE MUDLET_FCHMOD_REFUSAL)
+    target_link_libraries(functional_profile_tests PRIVATE ${CMAKE_DL_LIBS})
+endif()
 add_grouped_test_binary(functional_telnet_tests ${TELNET_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_trigger_tests ${TRIGGER_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_editor_tests ${EDITOR_GROUP_TEST_SOURCES})

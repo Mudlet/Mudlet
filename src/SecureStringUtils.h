@@ -25,6 +25,8 @@
 
 #include <string>
 
+class QSaveFile;
+
 /**
  * @brief Utility class for secure string operations
  *
@@ -142,6 +144,18 @@ public:
      * @return false when other accounts on the machine can read the file
      */
     static bool confirmFileIsOwnerOnly(const QString& path);
+
+    /**
+     * @brief Set an open QSaveFile to 0600 now, before the secret is written, and keep it so through commit()
+     *
+     * Never makes the save fail: when the file system refuses, false is returned and the file is committed
+     * with the mode of the one it replaces, or the umask's default, so the caller can try
+     * restrictFileToOwner() on the committed file.
+     * @param file An open QSaveFile
+     * @return false when the narrowing was refused. On a platform without such permission bits this
+     * does nothing and returns true.
+     */
+    static bool restrictSaveFileToOwner(QSaveFile& file);
 
     /**
      * @brief The secret that could not be narrowed, forgetting it as it is handed over
