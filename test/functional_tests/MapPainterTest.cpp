@@ -571,6 +571,36 @@ private slots:
         QCOMPARE(calls->displayAreaId, mAreaId);
     }
 
+    // On a high-DPI screen a symbol is drawn with every pixel the screen has: one drawn a pixel per room unit and
+    // scaled up would be made of 2 by 2 blocks of a single colour
+    void aSymbolIsDrawnAtTheScreensPixelRatio()
+    {
+        setUpPlayerView();
+        hideInfoBox();
+        roomDB()->getRoom(scmEastRoom)->mSymbol = qsl("W");
+
+        TMapPainter painter;
+        TMapPainter::PaintResult result;
+        QImage image(scmImageWidth * 2, scmImageHeight * 2, QImage::Format_ARGB32_Premultiplied);
+        image.setDevicePixelRatio(2.0);
+        image.fill(Qt::black);
+        {
+            QPainter imagePainter(&image);
+            painter.paintView(imagePainter, playerView(), result);
+        }
+
+        // Well inside the room, clear of its edges, in device pixels
+        const QPoint centre = eastCentreInView() * 2;
+        bool finerThanAViewPixel = false;
+        for (int y = centre.y() - 16; y < centre.y() + 16 && !finerThanAViewPixel; y += 2) {
+            for (int x = centre.x() - 16; x < centre.x() + 16 && !finerThanAViewPixel; x += 2) {
+                const QRgb corner = image.pixel(x, y);
+                finerThanAViewPixel = image.pixel(x + 1, y) != corner || image.pixel(x, y + 1) != corner || image.pixel(x + 1, y + 1) != corner;
+            }
+        }
+        QVERIFY2(finerThanAViewPixel, qPrintable(saved(image, qsl("high-dpi-symbol"))));
+    }
+
     // In grid mode a room fills its whole cell
     void aGridModeViewFillsEachCell()
     {
@@ -773,36 +803,6 @@ private slots:
         const QImage round = paintedView(painter, roundAgain, result);
         const QImage fresh = paintedView(freshPainter, roundView, result);
         QVERIFY2(round == fresh, qPrintable(saved(round, qsl("round")) + qsl("; ") + saved(fresh, qsl("round-fresh"))));
-    }
-
-    // On a high-DPI screen a symbol is drawn with every pixel the screen has: one drawn a pixel per room unit and
-    // scaled up would be made of 2 by 2 blocks of a single colour
-    void aSymbolIsDrawnAtTheScreensPixelRatio()
-    {
-        setUpPlayerView();
-        hideInfoBox();
-        roomDB()->getRoom(scmEastRoom)->mSymbol = qsl("W");
-
-        TMapPainter painter;
-        TMapPainter::PaintResult result;
-        QImage image(scmImageWidth * 2, scmImageHeight * 2, QImage::Format_ARGB32_Premultiplied);
-        image.setDevicePixelRatio(2.0);
-        image.fill(Qt::black);
-        {
-            QPainter imagePainter(&image);
-            painter.paintView(imagePainter, playerView(), result);
-        }
-
-        // Well inside the room, clear of its edges, in device pixels
-        const QPoint centre = eastCentreInView() * 2;
-        bool finerThanAViewPixel = false;
-        for (int y = centre.y() - 16; y < centre.y() + 16 && !finerThanAViewPixel; y += 2) {
-            for (int x = centre.x() - 16; x < centre.x() + 16 && !finerThanAViewPixel; x += 2) {
-                const QRgb corner = image.pixel(x, y);
-                finerThanAViewPixel = image.pixel(x + 1, y) != corner || image.pixel(x, y + 1) != corner || image.pixel(x + 1, y + 1) != corner;
-            }
-        }
-        QVERIFY2(finerThanAViewPixel, qPrintable(saved(image, qsl("high-dpi-symbol"))));
     }
 
     // A double-click no room or area exit takes is spent with its frame, or a later one would act on whatever moved
