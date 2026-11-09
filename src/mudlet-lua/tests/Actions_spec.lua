@@ -142,6 +142,11 @@ describe("Packaged toolbar layouts", function()
       }),
       action({name = item("TopPlaced"), folder = "yes", location = 0, custom = "yes", sizeX = 200, sizeY = 40, posX = 0, posY = 0},
              {action({name = item("TopPlacedButton"), sizeX = 90, sizeY = 25, posX = 4, posY = 4})}),
+      -- a damaged or hostile file: laying these out as given would exhaust memory
+      action({name = item("TopHuge"), folder = "yes", location = 0, columns = 2147483647, filler = 2000000000},
+             {action({name = item("TopHugeButton")})}),
+      action({name = item("TopNegative"), folder = "yes", location = 0, orientation = 1, columns = -2147483648, filler = 5},
+             {action({name = item("TopNegativeButton")})}),
       [[</ActionPackage>]],
       [[</MudletPackage>]],
     }, "\n")
@@ -216,6 +221,12 @@ describe("Packaged toolbar layouts", function()
     end
   end)
 
+  it("lays out a bar asking for an impossible number of columns", function()
+    for _, name in ipairs({"TopHuge", "TopHugeButton", "TopNegative", "TopNegativeButton"}) do
+      assert.equals(1, exists(item(name), "button"), name)
+    end
+  end)
+
   it("reads each push-down button's saved state from the XML, whatever it sits in", function()
     for _, name in ipairs({"FloatingPressed", "FloatingMenuPressed", "LeftPressed", "LeftMenuPressed"}) do
       assert.is_true(getButtonState(item(name)), name)
@@ -254,8 +265,8 @@ describe("Packaged toolbar layouts", function()
   end)
 
   describe("findItems for buttons", function()
-    -- two bars of eleven, FloatingPlaced, FloatingOff and TopPlaced of two, Top of three
-    local everything = 2 * 11 + 3 * 2 + 3
+    -- two bars of eleven, FloatingPlaced, FloatingOff, TopPlaced, TopHuge and TopNegative of two, Top of three
+    local everything = 2 * 11 + 5 * 2 + 3
 
     it("matches only the whole name by default", function()
       assert.same({}, findItems(marker, "button"))
