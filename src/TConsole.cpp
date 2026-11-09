@@ -906,6 +906,14 @@ TConsole::~TConsole()
         }
     }
 
+    // Only the main console's layout adopts these, and a parentless widget stays
+    // reachable through QApplication, so nothing would ever free them
+    for (QWidget* pWidget : std::initializer_list<QWidget*>{mpBufferSearchBox, mpBufferSearchUp, mpBufferSearchDown, timeStampButton, replayButton, logButton, emergencyStop}) {
+        if (pWidget && !pWidget->parent()) {
+            delete pWidget;
+        }
+    }
+
 #if defined(DEBUG_CODEPOINT_PROBLEMS)
     if (mType & ~CentralDebugConsole) {
         // Codepoint issues reporting is not enabled for the CDC:

@@ -44,6 +44,7 @@
  * Bootstrap mirrors the other functional tests.
  */
 
+#include <QApplication>
 #include <QFileInfo>
 #include <QPointer>
 #include <QScopeGuard>
@@ -182,6 +183,32 @@ private slots:
         QVERIFY2(created, qPrintable(createMsg));
         console->deleteCommandLine(name);
         runDeferredDeletes();
+    }
+
+    // A sub-console builds the main console's search box and buttons too, without a layout to adopt
+    // them; left parentless they stay listed by QApplication, so every create and delete grew the heap
+    void test_deletedSubConsolesLeaveNoWidgetsBehind()
+    {
+        TMainConsole* console = mpHost->mainConsoleView();
+        const QString miniConsoleName = qsl("widgetCountMiniConsole");
+        const QString windowName = qsl("widgetCountUserWindow");
+        const QString bufferName = qsl("widgetCountBuffer");
+        auto createAndDelete = [&]() {
+            QVERIFY(console->createMiniConsole(QString(), miniConsoleName, 0, 0, 300, 100));
+            QVERIFY(mpHost->deleteMiniConsole(miniConsoleName).first);
+            QVERIFY(mpHost->openWindow(windowName, /*loadLayout=*/false, /*autoDock=*/true, qsl("l")).first);
+            QVERIFY(mpHost->deleteMiniConsole(windowName).first);
+            QVERIFY(mpHost->createBuffer(bufferName));
+            QVERIFY(mpHost->deleteMiniConsole(bufferName).first);
+            runDeferredDeletes();
+        };
+        // The first round may create widgets that are kept for reuse
+        createAndDelete();
+        const auto widgetsBefore = QApplication::allWidgets().size();
+
+        createAndDelete();
+
+        QCOMPARE(QApplication::allWidgets().size(), widgetsBefore);
     }
 
     // Route 2: createCommandLine() into a scroll box, then deleteScrollBox().
