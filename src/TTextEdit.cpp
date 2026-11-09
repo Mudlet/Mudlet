@@ -39,6 +39,7 @@
 #include "mudlet.h"
 #include "MudletApp.h"
 #include "TMainConsole.h"
+#include "TSplitter.h"
 #include "utils.h"
 #include "widechar_width.h"
 #include "TTextProperties.h"
@@ -444,13 +445,13 @@ void TTextEdit::updateScreenView()
         // This is the MAIN console - we do not want it to ever disappear!
         mScreenWidth = qMax(40, currentScreenWidth);
 
-        // Note the values in the "parent" Host instance - for the UPPER pane
-        // so that they are available for NAWS:
+        // Note the values in the "parent" Host instance so that they are
+        // available for NAWS. The lower pane is laid out after the upper one,
+        // so it is the one that knows the split's height once both have moved.
         if (!mIsLowerPane) {
-            // Scrolling back splits the window without making it any shorter, so the
-            // game keeps the height it has: as TConsole::upperPaneHeightFor() does
-            const bool scrolledBack = mpConsole->mLowerPane && !mpConsole->mLowerPane->isHidden() && mpHost->mScreenHeight > 0;
-            mpHost->setScreenDimensions(mScreenWidth, scrolledBack ? mpHost->mScreenHeight : mScreenHeight);
+            mpHost->setScreenDimensions(mScreenWidth, mainWindowRows());
+        } else {
+            mpHost->setScreenDimensions(mpHost->mScreenWidth, mpConsole->mUpperPane->mainWindowRows());
         }
     } else {
         mScreenWidth = currentScreenWidth;
@@ -468,6 +469,17 @@ void TTextEdit::updateScreenView()
         forceUpdate();
     }
     mOldScrollPos = mpBuffer->getLastLineNumber();
+}
+
+// Scrolling back splits the main window without making it any shorter, so the
+// game is told the rows of both panes together
+int TTextEdit::mainWindowRows() const
+{
+    const TTextEdit* pLower = mpConsole->mLowerPane;
+    if (!pLower || pLower->isHidden()) {
+        return mScreenHeight;
+    }
+    return (height() + mpConsole->splitter->handleWidth() + pLower->drawableSize().height()) / mFontHeight;
 }
 
 // Rows and columns start at the top left corner, so whatever covers that edge

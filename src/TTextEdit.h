@@ -105,6 +105,7 @@ public:
     }
     int getScreenHeight() const { return mScreenHeight; }
     QSize drawableSize() const;
+    int mainWindowRows() const;
     void searchSelectionOnline();
     int getColumnCount() const;
     int getRowCount() const;

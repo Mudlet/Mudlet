@@ -368,17 +368,38 @@ private slots:
     {
         runLua(mpHost, qsl("for i = 1, 300 do echo('line ' .. i .. '\\n') end"));
         settle();
+        const int rowsBefore = mpHost->mScreenHeight;
 
         mpServer->clearNawsUpdates();
         runLua(mpHost, qsl("scrollUp(50)"));
         settle();
         QVERIFY2(!mpHost->mainConsoleView()->mLowerPane->isHidden(), "scrolling back did not split the window");
+        QVERIFY2(mpHost->mainConsoleView()->mUpperPane->getScreenHeight() < rowsBefore, "the split did not make the upper pane any shorter");
         const auto scrolledBack = mpServer->nawsUpdates();
         runLua(mpHost, qsl("scrollTo()"));
         settle();
 
         QVERIFY2(scrolledBack.isEmpty(), describe(scrolledBack).constData());
-        QVERIFY2(mpServer->nawsUpdates().isEmpty(), describe(mpServer->nawsUpdates()).constData());
+    }
+
+    // The split is no reason to stop following the window, which a player can
+    // still resize while reading back.
+    void resizingWhileScrolledBackReportsTheNewSize()
+    {
+        runLua(mpHost, qsl("for i = 1, 300 do echo('line ' .. i .. '\\n') end"));
+        runLua(mpHost, qsl("scrollUp(50)"));
+        settle();
+        QVERIFY2(!mpHost->mainConsoleView()->mLowerPane->isHidden(), "scrolling back did not split the window");
+
+        mpServer->clearNawsUpdates();
+        mudlet::self()->resize(1000, 500);
+        settle();
+        const auto whileScrolledBack = mpServer->nawsUpdates();
+        runLua(mpHost, qsl("scrollTo()"));
+        settle();
+
+        QVERIFY2(!whileScrolledBack.isEmpty(), describe(whileScrolledBack).constData());
+        QCOMPARE(whileScrolledBack.constLast(), QSize(reportableWidth(mpHost), mpHost->mScreenHeight));
     }
 
     // Rows start at the top left corner, so an opaque overlay there hides some of
