@@ -1042,7 +1042,6 @@ describe("Tests MSSP subnegotiation handling", function()
   end)
 
   it("keeps the line breaks of a multi-line value", function()
-    -- the lines used to run together, "...forest.Beware..."
     feedMssp(VAR .. "MSSPDESC" .. VAL .. "A dark forest.<CR><LF>Beware the wolves.")
     assert.equals("A dark forest.\nBeware the wolves.", mssp.MSSPDESC)
   end)
