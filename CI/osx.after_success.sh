@@ -184,7 +184,7 @@ fi
 
 if [ "${DEPLOY}" = "deploy" ]; then
 
-  git clone https://github.com/Mudlet/installers.git "${BUILD_DIR}/../installers"
+  git clone --branch fix/macos-adhoc-sign-pr-builds https://github.com/MorquinDevlar/installers.git "${BUILD_DIR}/../installers"
 
   cd "${BUILD_DIR}/../installers/osx"
 
