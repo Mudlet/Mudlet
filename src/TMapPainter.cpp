@@ -163,7 +163,12 @@ bool TMapPainter::customLineRunsStraightTo(const TRoom& owner, const TRoom& othe
     return false;
 }
 
-// key format: <QColor.name()><QString of one or more QChars>
+// A grid mode room fills its whole cell, so its symbol is made at a different size
+QString TMapPainter::symbolPixmapKey(const QColor& symbolColor, const QString& symbol, const bool gridMode)
+{
+    return qsl("%1_%2_%3").arg(symbolColor.name(), gridMode ? qsl("g") : qsl("n"), symbol);
+}
+
 void TMapPainter::addSymbolToPixmapCache(const QString key, const QString text, const QColor symbolColor, const bool gridMode)
 {
     // Prevents small, unreadable symbols:
@@ -593,7 +598,7 @@ void TMapPainter::drawRoom(QPainter& painter,
     // Do we need to draw the room symbol:
     if (!(mShowRoomID && areRoomIdsLegible) && !pRoom->mSymbol.isEmpty()) {
         const QColor symbolColor = RoomAppearance::symbolColor(pRoom->mSymbolColor, roomColor);
-        auto pixmapKey = qsl("%1_%2").arg(symbolColor.name(), pRoom->mSymbol);
+        const QString pixmapKey = symbolPixmapKey(symbolColor, pRoom->mSymbol, isGridMode);
         if (!mSymbolPixmapCache.contains(pixmapKey)) {
             addSymbolToPixmapCache(pixmapKey, pRoom->mSymbol, symbolColor, isGridMode);
         }
@@ -1267,7 +1272,7 @@ void TMapPainter::drawGridModeRooms(QPainter& painter,
         if (!showVnums && !room->mSymbol.isEmpty()) {
             const QColor roomColor = environmentColor(room->environment);
             const QColor symbolColor = RoomAppearance::symbolColor(room->mSymbolColor, roomColor);
-            const QString pixmapKey = qsl("%1_%2").arg(symbolColor.name(), room->mSymbol);
+            const QString pixmapKey = symbolPixmapKey(symbolColor, room->mSymbol, true);
             if (!mSymbolPixmapCache.contains(pixmapKey)) {
                 addSymbolToPixmapCache(pixmapKey, room->mSymbol, symbolColor, true);
             }

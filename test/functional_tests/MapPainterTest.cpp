@@ -775,6 +775,29 @@ private slots:
         QVERIFY2(round == fresh, qPrintable(saved(round, qsl("round")) + qsl("; ") + saved(fresh, qsl("round-fresh"))));
     }
 
+    // A grid mode room fills its whole cell, so its symbol is made bigger than a room's elsewhere: switching an area
+    // in or out of grid mode at the same zoom must not reuse the symbols made for the other mode
+    void switchingGridModeRemakesTheSymbols()
+    {
+        setUpPlayerView();
+        hideInfoBox();
+        roomDB()->getRoom(scmEastRoom)->mSymbol = qsl("W");
+        TArea* pArea = roomDB()->getArea(mAreaId);
+
+        for (const bool startInGridMode : {false, true}) {
+            pArea->gridMode = startInGridMode;
+            TMapPainter painter;
+            TMapPainter freshPainter;
+            TMapPainter::PaintResult result;
+            paintedView(painter, playerView(), result);
+            pArea->gridMode = !startInGridMode;
+            const QImage switched = paintedView(painter, result.view, result);
+            const QImage fresh = paintedView(freshPainter, playerView(), result);
+            const QString name = startInGridMode ? qsl("out-of-grid") : qsl("into-grid");
+            QVERIFY2(switched == fresh, qPrintable(saved(switched, name) + qsl("; ") + saved(fresh, name + qsl("-fresh"))));
+        }
+    }
+
     // A double-click no room or area exit takes is spent with its frame, or a later one would act on whatever moved
     // under it
     void aClickNothingTakesIsSpentWithItsFrame()
