@@ -365,11 +365,12 @@ int TLuaInterpreter::sendGMCP(lua_State* L)
         return lua_error(L);
     }
 
-    const std::string msg = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 1));
+    // GMCP is UTF-8 whatever the game's own encoding, as incoming GMCP is read
+    const std::string msg = cTelnet::escapeIac(lua_tostring(L, 1));
 
     std::string what;
     if (hasWhat) {
-        what = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 2));
+        what = cTelnet::escapeIac(lua_tostring(L, 2));
     }
 
     std::string output;
@@ -392,7 +393,6 @@ int TLuaInterpreter::sendGMCP(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("GMCP is not currently enabled"));
     }
 
-    // output is in Mud Server Encoding form here:
     if (!host.mTelnet.socketOutRaw(output)) {
         return warnArgumentValue(L, __func__, qsl("failed to send GMCP message - connection may have been lost or a socket write error occurred"));
     }
