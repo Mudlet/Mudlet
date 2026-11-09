@@ -957,9 +957,9 @@ function replaceWildcard(what, replacement, keepColor)
   if replacement == nil or what == nil then
     return
   end
-  -- a group that matched nothing has no text to replace, and replace() would
-  -- write into line 0 instead
-  if selectCaptureGroup(what) < 0 then
+  -- selectCaptureGroup() keeps the old selection when it selects nothing, and
+  -- replace() would then overwrite that instead
+  if selectCaptureGroup(what) ~= 1 then
     return
   end
   replace(replacement, keepColor)

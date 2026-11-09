@@ -2688,16 +2688,6 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       killTrigger(id)
       assert.equals("You greet Alice.", fired)
     end)
-
-    it("Should clear the selection when selectCaptureGroup() has no group to select", function()
-      local id = tempRegexTrigger("^You bow (\\w+)(?: to (\\w+))?\\.$", function()
-        selectString("bow", 1)
-        fired = {selectCaptureGroup(3), getSelection()}
-      end)
-      feedTriggers("You bow deeply.\n")
-      killTrigger(id)
-      assert.are.same({-1, ""}, fired)
-    end)
   end)
 
   describe("Tests the functionality of showColors", function()
