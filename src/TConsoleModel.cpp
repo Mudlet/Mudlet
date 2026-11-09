@@ -1308,6 +1308,8 @@ void TConsoleModel::toggleLogging(bool isMessageEnabled)
     const auto loggingPath = MudletApp::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("autolog"));
     QFile file(loggingPath);
     const QDateTime logDateTime = QDateTime::currentDateTime();
+    QString previousSessions;
+    bool foundBody = false;
     if (!mLogToLogFile) {
         if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
             qWarning() << "TConsoleModel: failed to open autolog file" << loggingPath << "for writing:" << file.errorString();
@@ -1365,6 +1367,30 @@ void TConsoleModel::toggleLogging(bool isMessageEnabled)
                 qWarning() << "TConsoleModel: failed to open log file" << mLogFileName << "for reading/writing:" << mLogFile.errorString();
                 removeAutologSentinel(loggingPath);
                 reportFailedLogStart(mLogFileName, mLogFile.errorString());
+                return;
+            }
+            // The earlier sessions are carried into the rewritten file from
+            // the old <body>, so a file without one would be wiped
+            QTextStream previousLog(&mLogFile);
+            bool isAtBody = false;
+            while (!previousLog.atEnd()) {
+                const QString line = previousLog.readLine();
+                if (line.contains("<body><div>")) {
+                    isAtBody = true;
+                    foundBody = true;
+                } else if (line.contains("</div></body>")) {
+                    isAtBody = false;
+                }
+
+                if (isAtBody) {
+                    previousSessions.append(line).append(QChar::LineFeed);
+                }
+            }
+            if (!foundBody && mLogFile.size() > 0) {
+                mLogFile.close();
+                removeAutologSentinel(loggingPath);
+                //: Reason shown when logging to an HTML file is refused because the file already holds something that is not a Mudlet HTML log
+                reportFailedLogStart(mLogFileName, QCoreApplication::translate("TConsoleModel", "the file already exists and is not a Mudlet HTML log, so logging to it would overwrite it"));
                 return;
             }
         } else {
@@ -1434,25 +1460,7 @@ void TConsoleModel::toggleLogging(bool isMessageEnabled)
             logStream << "     -->\n";
             logStream << "  </style>\n";
             logStream << "  </head>\n";
-            bool isAtBody = false;
-            bool foundBody = false;
-            while (!mLogStream.atEnd()) {
-                const QString line = mLogStream.readLine();
-                if (line.contains("<body><div>")) {
-                    // Begin writing old log to the current log when the body is
-                    // found.
-                    isAtBody = true;
-                    foundBody = true;
-                } else if (line.contains("</div></body>")) {
-                    // Stop writing to current log once the end of the old log's
-                    // <body> is reached.
-                    isAtBody = false;
-                }
-
-                if (isAtBody) {
-                    logStream << line << "\n";
-                }
-            }
+            logStream << previousSessions;
             if (!foundBody) {
                 logStream << "  <body><div>\n";
             } else {

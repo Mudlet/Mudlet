@@ -1324,6 +1324,78 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           assert.is_true(contains(contents, "mudlet-spec-html-logged-line"), "the console output did not reach the HTML log")
         end)
 
+        -- The default file name format is to the second, so the files are
+        -- written for that second and the next few, ahead of whichever one
+        -- startLogging() ends up taking
+        local function writeLogFilesAhead(contents)
+          local folder = getConfig("logDirectory")
+          lfs.mkdir(folder)
+          local now = os.time()
+          local paths = {}
+          for offset = 0, 3 do
+            local path = folder .. "/" .. os.date("%Y-%m-%d#%H-%M-%S", now + offset) .. ".html"
+            assert.is_false(fileExists(path), "a log file this spec would overwrite already exists: " .. path)
+            writeFile(path, contents)
+            paths[#paths + 1] = path
+          end
+          return paths
+        end
+
+        it("refuses to log over a file that is not a Mudlet HTML log", function()
+          local paths = {}
+          local htmlLogging = getConfig("logInHTML")
+          finally(function()
+            startLogging(false)
+            setConfig("logInHTML", htmlLogging)
+            for _, path in ipairs(paths) do
+              os.remove(path)
+            end
+          end)
+          setConfig("logInHTML", true)
+          local notes = "<p>A player's own notes</p>\nsecond line\n"
+          paths = writeLogFilesAhead(notes)
+
+          local started, message = startLogging(true)
+          assert.is_nil(started)
+          assert.is_true(contains(message, "not a Mudlet HTML log"), message)
+          for _, path in ipairs(paths) do
+            assert.equals(notes, readFile(path), "the existing file was changed: " .. path)
+          end
+          assert.equals(-2, select(4, startLogging(false)), "logging was left on after it was refused")
+        end)
+
+        it("keeps the earlier sessions when a new one is appended to an HTML log", function()
+          local paths = {}
+          local htmlLogging = getConfig("logInHTML")
+          finally(function()
+            startLogging(false)
+            setConfig("logInHTML", htmlLogging)
+            for _, path in ipairs(paths) do
+              os.remove(path)
+            end
+          end)
+          setConfig("logInHTML", true)
+
+          local firstPath = select(3, startLogging(true))
+          echo("mudlet-spec-html-first-session\n")
+          startLogging(false)
+          local firstSession = readFile(firstPath)
+          os.remove(firstPath)
+          paths = writeLogFilesAhead(firstSession)
+
+          local started, _, path = startLogging(true)
+          assert.is_true(started)
+          echo("mudlet-spec-html-second-session\n")
+          startLogging(false)
+
+          local contents = readFile(path)
+          assert.is_true(contains(contents, "mudlet-spec-html-first-session"), "the earlier session was lost")
+          assert.is_true(contains(contents, "mudlet-spec-html-second-session"), "the new session was not logged")
+          assert.is_true(contains(contents, "</div><hr><div>"), "the sessions are not separated")
+          local _, documents = contents:gsub("<html>", "")
+          assert.equals(1, documents, "the appended log is not a single document")
+        end)
+
         it("marks the text up with the colours and attributes it carries", function()
           local logPath
           local htmlLogging = getConfig("logInHTML")
