@@ -2607,7 +2607,10 @@ void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
     QListWidgetItem* pItem;
     const auto oldPassword = character_password_entry->text();
     const CopiedProfileData data = captureProfileData();
+    // stops selecting the copy from blanking the password field and reading the copy's empty slot
+    mCopyingProfile = true;
     if (!copyProfileWidget(profile_name, oldname, pItem)) {
+        mCopyingProfile = false;
         return;
     }
     const QDir oldProfileDir(MudletApp::getMudletPath(enums::profileHomePath, oldname));
@@ -2619,6 +2622,7 @@ void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
     const QDir newProfileDir(MudletApp::getMudletPath(enums::profileHomePath, profile_name));
     newProfileDir.mkpath(newProfileDir.path());
     if (!newProfileDir.exists()) {
+        mCopyingProfile = false;
         return;
     }
 
@@ -2635,6 +2639,13 @@ void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
 
     mProfileList << profile_name;
     slot_itemClicked(pItem);
+
+    // the "password" file copied above only holds it when passwords are not stored securely
+    if (MudletApp::storingPasswordsSecurely() && !oldPassword.trimmed().isEmpty()) {
+        writeSecurePassword(profile_name, oldPassword);
+    }
+    mCopyingProfile = false;
+    validateProfile();
 }
 
 bool dlgConnectionProfiles::copyProfileWidget(QString& profile_name, QString& oldname, QListWidgetItem*& pItem) const

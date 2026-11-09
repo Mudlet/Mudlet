@@ -35,6 +35,7 @@
  */
 
 #include "PortableModeTestHelper.h"
+#include "CredentialManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "Host.h"
 #include "HostManager.h"
@@ -380,6 +381,32 @@ private slots:
         const QString settingsCopy = mSavedProfile + qsl("1");
         QCOMPARE(saved(settingsCopy, qsl("port")), qsl("4000"));
         QCOMPARE(saved(settingsCopy, qsl("ssl_tsl")), QString::number(Qt::Checked));
+    }
+
+    // With passwords stored securely the "password" file a settings copy takes is empty, so the copy has to be given the password itself
+    void test_aSettingsCopyKeepsASecurelyStoredPassword()
+    {
+        QVERIFY2(dialog(), "No connection dialog to test against");
+        const QString profile = qsl("SecurePassword-ConnDialogOffline");
+        const QString settingsCopy = profile + qsl("1");
+        const QString password = qsl("settings-copy-secret");
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, profile)));
+        mudlet::self()->setStorePasswordsSecurely(true);
+        const auto restore = qScopeGuard([profile, settingsCopy]() {
+            mudlet::self()->setStorePasswordsSecurely(false);
+            CredentialManager::removeCredential(profile, qsl("character"));
+            CredentialManager::removeCredential(settingsCopy, qsl("character"));
+        });
+        QVERIFY(CredentialManager::storeCredential(profile, qsl("character"), password));
+        dialog()->fillout_form();
+        selectTestProfile();
+        selectProfile(profile);
+        QTRY_COMPARE(dialog()->character_password_entry->text(), password);
+
+        dialog()->slot_copyOnlySettingsOfProfile();
+        QCOMPARE(dialog()->profile_name_entry->text(), settingsCopy);
+        QCOMPARE(dialog()->character_password_entry->text(), password);
+        QTRY_COMPARE(CredentialManager::retrieveCredential(settingsCopy, qsl("character")), password);
     }
 
     // A renamed catalog game's new name is not in the catalog either
