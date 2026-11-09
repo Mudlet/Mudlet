@@ -142,7 +142,7 @@ private:
     static constexpr int scmLeastAuditedOnTheExporterSelection = 3;
     static constexpr int scmLeastAuditedOnTheExporterDetails = 18;
     static constexpr int scmLeastAuditedOnTheExporterFoot = 3;
-    // Measured at 3: Module Help is disabled with no module chosen
+    // Measured at 4; Module Help is disabled with no module chosen
     static constexpr int scmLeastAuditedInTheModuleManager = 3;
 
     // A colour well's fill is a value rather than a surface, and its words are
