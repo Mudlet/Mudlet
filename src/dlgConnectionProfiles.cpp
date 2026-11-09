@@ -2637,6 +2637,24 @@ void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
     slot_itemClicked(pItem);
 }
 
+/*static*/ QString dlgConnectionProfiles::nameForCopy(const QString& name, const QStringList& takenNames)
+{
+    qsizetype digitsStart = name.size();
+    while (digitsStart > 0 && name.at(digitsStart - 1) >= QLatin1Char('0') && name.at(digitsStart - 1) <= QLatin1Char('9')) {
+        --digitsStart;
+    }
+    // Zero, and the whole name kept as the stem, when it has no number or one too long to count on from
+    bool numbered = false;
+    qulonglong number = name.mid(digitsStart).toULongLong(&numbered);
+    const QString stem = numbered ? name.left(digitsStart) : name;
+
+    QString candidate;
+    do {
+        candidate = stem + QString::number(++number);
+    } while (takenNames.contains(candidate, Qt::CaseInsensitive) || signInRemovalPending(candidate));
+    return candidate;
+}
+
 bool dlgConnectionProfiles::copyProfileWidget(QString& profile_name, QString& oldname, QListWidgetItem*& pItem) const
 {
     profile_name = profile_name_entry->text().trimmed();
@@ -2645,20 +2663,7 @@ bool dlgConnectionProfiles::copyProfileWidget(QString& profile_name, QString& ol
         return false;
     }
 
-    // prepend n+1 to end of the profile name
-    if (profile_name.at(profile_name.size() - 1).isDigit()) {
-        int i = 1;
-        do {
-            profile_name = profile_name.left(profile_name.size() - 1) + QString::number(profile_name.at(profile_name.size() - 1).digitValue() + i++);
-        } while (mProfileList.contains(profile_name) || signInRemovalPending(profile_name));
-    } else {
-        int i = 1;
-        QString profile_name2;
-        do {
-            profile_name2 = profile_name + QString::number(i++);
-        } while (mProfileList.contains(profile_name2) || signInRemovalPending(profile_name2));
-        profile_name = profile_name2;
-    }
+    profile_name = nameForCopy(profile_name, mProfileList);
 
     pItem = new (std::nothrow) QListWidgetItem();
     if (!pItem) {

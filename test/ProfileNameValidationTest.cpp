@@ -122,6 +122,36 @@ private slots:
         QCOMPARE(MudletApp::profileNameUsableAsIs(name), usable);
     }
 
+    // What the connection dialog's Copy names the copy of a profile
+    void nameForCopy_data()
+    {
+        QTest::addColumn<QString>("name");
+        QTest::addColumn<QStringList>("taken");
+        QTest::addColumn<QString>("expected");
+
+        QTest::newRow("no number") << qsl("Achaea") << QStringList{qsl("Achaea")} << qsl("Achaea1");
+        QTest::newRow("no number, first taken") << qsl("Achaea") << QStringList{qsl("Achaea"), qsl("Achaea1")} << qsl("Achaea2");
+        QTest::newRow("numbered") << qsl("Char1") << QStringList{qsl("Char1")} << qsl("Char2");
+        QTest::newRow("numbered, next taken") << qsl("Char1") << QStringList{qsl("Char1"), qsl("Char2")} << qsl("Char3");
+        QTest::newRow("numbered, next two taken") << qsl("Char1") << QStringList{qsl("Char1"), qsl("Char2"), qsl("Char3")} << qsl("Char4");
+        QTest::newRow("nine") << qsl("Char9") << QStringList{qsl("Char9")} << qsl("Char10");
+        QTest::newRow("two digits") << qsl("Char19") << QStringList{qsl("Char19")} << qsl("Char20");
+        QTest::newRow("leading zero") << qsl("Char09") << QStringList{qsl("Char09")} << qsl("Char10");
+        QTest::newRow("spaced number") << qsl("Achaea 2") << QStringList{qsl("Achaea 2"), qsl("Achaea 3")} << qsl("Achaea 4");
+        QTest::newRow("only digits") << qsl("42") << QStringList{qsl("42")} << qsl("43");
+        // the dialog refuses a name another profile has in a different case
+        QTest::newRow("taken in another case") << qsl("achaea") << QStringList{qsl("achaea"), qsl("Achaea1")} << qsl("achaea2");
+        QTest::newRow("number too long to count on") << qsl("x99999999999999999999") << QStringList{} << qsl("x999999999999999999991");
+    }
+
+    void nameForCopy()
+    {
+        QFETCH(QString, name);
+        QFETCH(QStringList, taken);
+        QFETCH(QString, expected);
+        QCOMPARE(dlgConnectionProfiles::nameForCopy(name, taken), expected);
+    }
+
     // No path at all means nothing for the deletion to act on
     void folderPath_data()
     {

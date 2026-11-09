@@ -102,6 +102,8 @@ public:
     // namesWithSignInBeingRemoved(). For anything that creates a profile outside this dialog, such as a telnet:// link.
     static bool signInRemovalPending(const QString& name);
     static QString profileFolderPath(const QString& profilesPath, const QString& profile);
+    // "Name" gives "Name1" and "Name19" gives "Name20", or the next number on from that no profile has
+    static QString nameForCopy(const QString& name, const QStringList& takenNames);
     // files whose presence alone does not warrant confirming a profile's removal
     static const QStringList scmConnectionDetailFiles;
     // a testing aid rather than a game, and the one list entry that is offered
