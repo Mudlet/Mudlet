@@ -90,6 +90,15 @@ public:
     // secure handshake outright, rather than leaving it waiting.
     void setGreeting(const QByteArray& greeting) { mGreeting = greeting; }
 
+    // Plain text sent after the client has already started its handshake, so a test can act before it fails.
+    void sendToClient(const QByteArray& bytes)
+    {
+        if (mClient) {
+            mClient->write(bytes);
+            mClient->flush();
+        }
+    }
+
     // The game dropping the player, which is how most disconnections actually happen.
     void dropClient()
     {
@@ -447,6 +456,55 @@ private slots:
                  "the failed handshake was not reported by the disconnection path");
         QTest::qWait(3s);
         QCOMPARE(countLines(host, qsl("Attempting a secure connection")), 1);
+    }
+
+    // A game with both an IPv4 and an IPv6 address gets a secure attempt on each, and a handshake
+    // one of them fails, the other fails too: it is reported once, and straight away. This machine
+    // may have no IPv6, so the other attempt is played by the profile's own IPv6 socket.
+    void test_aFailedSecureHandshakeCallsOffTheOtherAddressFamily()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        QVERIFY(recordEvents(host));
+        QVERIFY2(disconnectAndWait(host), "the profile never noticed its own disconnect");
+        const int disconnectsBefore = countLines(host, qsl("Socket got disconnected"));
+        const int connectionsBefore = mpServer->connectionCount();
+
+        host->mSslTsl = true;
+        host->getLuaInterpreter()->compileAndExecuteScript(qsl("recordedEvents = {}"));
+        host->mTelnet.connectIt(mLocalhost, mPort);
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return mpServer->connectionCount() > connectionsBefore;
+                         },
+                         8s),
+                 "the secure attempt never reached the stub");
+        QCOMPARE(host->mTelnet.mPendingConnectionAttempts, 1);
+
+        // Left waiting on a game that says nothing, as a handshake still under way would be
+        QTcpServer otherAddress;
+        QVERIFY(otherAddress.listen(QHostAddress::LocalHost, 0));
+        host->mTelnet.mSocket_ipV6.connectToHost(QHostAddress::LocalHost, otherAddress.serverPort());
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return host->mTelnet.mSocket_ipV6.state() == QAbstractSocket::ConnectedState;
+                         },
+                         8s),
+                 "the stand-in for the other address family's attempt never got under way");
+        host->mTelnet.mPendingConnectionAttempts = 2;
+
+        mpServer->sendToClient(QByteArray("Welcome to the game.\r\n"));
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return countLines(host, qsl("Socket got disconnected")) > disconnectsBefore;
+                         },
+                         8s),
+                 "the failed handshake was not reported while the other address family was still trying");
+        QVERIFY2(bufferContains(host, qsl("Secure handshake failed")), "the failed handshake was not explained");
+        QCOMPARE(host->mTelnet.mSocket_ipV6.state(), QAbstractSocket::UnconnectedState);
+        QTest::qWait(500ms);
+        QCOMPARE(countLines(host, qsl("Socket got disconnected")), disconnectsBefore + 1);
+        QCOMPARE(recordedEventCount(host, qsl("sysDisconnectionEvent")), 1);
     }
 #endif
 
