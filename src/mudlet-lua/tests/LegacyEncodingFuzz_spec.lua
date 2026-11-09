@@ -183,17 +183,17 @@ local function pass(lines, pieces)
   end
   feed("\27[0m" .. closing .. "\r\n")
   -- found from the end after the feeds: a full buffer trims its oldest lines and renumbers the rest
-  local last = getLastLineNumber("main")
-  local start = math.max(0, last - #lines - 4)
   local from, to
-  for i, text in ipairs(getLines("main", start, last + 1)) do
-    if text == opening then
-      from = start + i
-    elseif text == closing then
-      to = start + i - 2
+  for i = getLastLineNumber("main"), 0, -1 do
+    local text = getLines("main", i, i + 1)[1]
+    if not to then
+      to = text == closing and i - 1 or nil
+    elseif text == opening then
+      from = i + 1
+      break
     end
   end
-  assert.is_truthy(from and to, "the pass markers did not both reach the buffer")
+  assert.is_truthy(from, "the pass markers did not both reach the buffer")
   return snapshot(from, to)
 end
 
