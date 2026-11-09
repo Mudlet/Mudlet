@@ -44,6 +44,7 @@
 #include "TTreeWidget.h"
 #include "TVar.h"
 #include "VarUnit.h"
+#include "VariableTreeDelegate.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
@@ -54,7 +55,6 @@
 #include "mudlet.h"
 
 #include <QDropEvent>
-#include <QHeaderView>
 #include <QMimeData>
 #include <QTreeWidget>
 
@@ -980,7 +980,8 @@ private slots:
         mpEditor->repopulateVars();
     }
 
-    void test_movingThePointerOnARowsSaveBoxLeavesTheSelectionAlone()
+    // A press on the save box also makes the row current, so a rename pending on the row left is saved rather than lost
+    void test_aPressOnARowsSaveBoxIsNotADragOrAClickOnTheRow()
     {
         const bool wasAnimated = mpVariablesTree->isAnimated();
         mpVariablesTree->setAnimated(false);
@@ -1009,22 +1010,25 @@ private slots:
         QTest::mouseRelease(mpVariablesTree->viewport(), Qt::LeftButton, {}, corner + QPoint(1, 1));
 
         QCOMPARE(pC->checkState(0), Qt::Checked);
-        QCOMPARE(mpVariablesTree->selectedItems(), QList<QTreeWidgetItem*>{pD});
-        QCOMPARE(mpEditor->mpVarsMainArea->lineEdit_var_name->text(), qsl("a0"));
-        QCOMPARE(rowNames(pHolder), (QStringList{qsl("b"), qsl("c"), qsl("d")}));
+        QCOMPARE(mpVariablesTree->selectedItems(), QList<QTreeWidgetItem*>{pC});
+        QCOMPARE(mpEditor->mpVarsMainArea->lineEdit_var_name->text(), qsl("c"));
+        QCOMPARE(rowNames(pHolder), (QStringList{qsl("a0"), qsl("b"), qsl("c")}));
 
+        // The rename moved the rows, so the square is looked for again
         QSignalSpy clickSpy(mpVariablesTree, &QTreeWidget::itemClicked);
         QTest::qWait(QApplication::doubleClickInterval() + 50);
-        QTest::mousePress(mpVariablesTree->viewport(), Qt::LeftButton, {}, corner);
-        const QPoint cText(mpVariablesTree->visualItemRect(pC).center().x(), corner.y());
+        const QPoint cornerNow = saveBoxCorner(pC);
+        QTest::mousePress(mpVariablesTree->viewport(), Qt::LeftButton, {}, cornerNow);
+        const QPoint cText(mpVariablesTree->visualItemRect(pC).center().x(), cornerNow.y());
         QTest::mouseMove(mpVariablesTree->viewport(), cText);
         QTest::mouseRelease(mpVariablesTree->viewport(), Qt::LeftButton, {}, cText);
 
-        QCOMPARE(pC->checkState(0), Qt::Checked);
+        // Released on the row's text: the delegate keeps the whole press, so the box flips once and the row gets no click
+        QCOMPARE(pC->checkState(0), Qt::Unchecked);
         QCOMPARE(clickSpy.count(), 0);
-        QCOMPARE(mpVariablesTree->selectedItems(), QList<QTreeWidgetItem*>{pD});
-        QCOMPARE(mpVariablesTree->currentItem(), pD);
-        QCOMPARE(mpEditor->mpVarsMainArea->lineEdit_var_name->text(), qsl("a0"));
+        QCOMPARE(mpVariablesTree->selectedItems(), QList<QTreeWidgetItem*>{pC});
+        QCOMPARE(mpVariablesTree->currentItem(), pC);
+        QCOMPARE(rowNames(pHolder), (QStringList{qsl("a0"), qsl("b"), qsl("c")}));
 
         mpVariablesTree->setAnimated(wasAnimated);
         mpEditor->mpCurrentVarItem = nullptr;
@@ -1113,15 +1117,31 @@ private:
         execLua(qsl("setmetatable(_G, {__newindex = function(t, k, v) rawset(t, k, v) if k == '%1' then waitForEvent('neverRaised', 300) end end})").arg(name));
     }
 
-    // A corner of the area the tree ticks on, not the middle of the box,
-    // where the item delegate takes the press before the view selects
+    // VariableTreeDelegate answers a press anywhere inside the square it draws the save box as
     QPoint saveBoxCorner(QTreeWidgetItem* pItem)
     {
         mpVariablesTree->scrollToItem(pItem);
-        auto* pView = static_cast<QTreeView*>(mpVariablesTree);
-        const QRect rowRect = pView->visualRect(mpVariablesTree->indexFromItem(pItem));
-        const int indentation = rowRect.x() - pView->visualRect(pView->rootIndex()).x();
-        const QRect tickArea(pView->header()->sectionViewportPosition(0) + indentation, rowRect.y(), pView->style()->pixelMetric(QStyle::PM_IndicatorWidth), rowRect.height());
+        QCoreApplication::processEvents();
+        auto* pDelegate = qobject_cast<uiDesign::VariableTreeDelegate*>(mpVariablesTree->itemDelegate());
+        if (!pDelegate) {
+            qWarning() << "saveBoxCorner(): the Variables tree is not drawn by its delegate";
+            return {};
+        }
+        const auto keptSquareOf = [this, pDelegate](QTreeWidgetItem* pRow) {
+            const QModelIndex index = mpVariablesTree->indexFromItem(pRow);
+            return pDelegate->dotHitRect(pDelegate->rowOption(index), index);
+        };
+        QRect tickArea = keptSquareOf(pItem);
+        // A row the profile cannot keep has no square, so the press goes where
+        // a sibling's is drawn
+        for (int i = 0; tickArea.isNull() && pItem->parent() && i < pItem->parent()->childCount(); ++i) {
+            QTreeWidgetItem* pSibling = pItem->parent()->child(i);
+            const QRect square = keptSquareOf(pSibling);
+            if (!square.isNull()) {
+                const int rowOffset = mpVariablesTree->visualItemRect(pItem).top() - mpVariablesTree->visualItemRect(pSibling).top();
+                tickArea = square.translated(0, rowOffset);
+            }
+        }
         const QPoint corner(tickArea.left() + 1, tickArea.top() + 2);
         if (mpVariablesTree->itemAt(corner) != pItem) {
             qWarning() << "saveBoxCorner(): the point found is not on the row asked for";

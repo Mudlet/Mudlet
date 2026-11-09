@@ -28,6 +28,7 @@
 
 #include "ActionUnit.h"
 #include "AliasUnit.h"
+#include "EventNames.h"
 #include "KeyUnit.h"
 #include "ScriptUnit.h"
 #include "GifTracker.h"
@@ -354,6 +355,12 @@ public:
     ScriptUnit* getScriptUnit() { return &mScriptUnit; }
     GifTracker* getGifTracker() { return &mGifTracker; }
 
+    // Sorted case-insensitively, without repeats. Not const: the units hand out
+    // their contents only through non-const accessors.
+    // Reads every item's code, so it is for when the names are about to be offered
+    QList<eventNames::Entry> knownEventNames();
+    static QList<eventNames::Entry> eventNameEntries(const QStringList& names);
+
     void send(QString cmd, bool wantPrint = true, bool dontExpandAliases = false);
 
     int getHostID() { return mHostID; }
@@ -559,6 +566,7 @@ public:
     // creates.
     void writeProfileIniData(const QString& item, const QString& what);
     QString readProfileIniData(const QString& item);
+    void removeProfileIniData(const QString& item);
     // Now, not from the event loop; false if the file could not be written
     bool syncProfileIni();
     void xmlSaved(const QString& xmlName);
@@ -1211,15 +1219,18 @@ public:
     bool mEditorAutoComplete = true;
 
     // code editor theme for light mode (human-friendly name)
-    QString mEditorTheme = QLatin1String("Mudlet");
+    QString mEditorTheme = QLatin1String("Mudlet Light");
     // code editor theme file for light mode on disk for edbee to load
-    QString mEditorThemeFile = QLatin1String("Mudlet.tmTheme");
+    QString mEditorThemeFile = QLatin1String("Mudlet Light.tmTheme");
     // code editor theme for dark mode (human-friendly name), auto-populated on first dark mode switch
     QString mEditorThemeDark;
     // code editor theme file for dark mode on disk for edbee to load
     QString mEditorThemeFileDark;
+    // Both answer the bundled theme when the profile's own is not on this machine, rather than
+    // edbee's own fallback. Never saved, so reinstalling the chosen theme brings it back.
     QString getEditorTheme() const;
     QString getEditorThemeFile() const;
+    void storedEditorTheme(QString& themeName, QString& themeFile) const;
     void editorThemeChanged();
 
     // search engine URL prefix to search query
@@ -1481,6 +1492,7 @@ signals:
     void signal_scriptToggled(int id);
     void signal_scriptCodeChanged(int id);
     void signal_itemsChangedByScript();
+    void signal_emergencyStopChanged(bool stopped);
     void signal_keyBoundByScript(int id);
     void signal_errorConsolePrint(const QString& text, const QColor& fgColor, const QColor& bgColor);
     // For the profile's module manager, if it has one: a script installed or
@@ -1672,6 +1684,19 @@ private:
     std::map<int, std::unique_ptr<stopWatch>> mStopWatchMap;
 
     QMap<QString, QStringList> mAnonymousEventHandlerFunctions;
+
+    void rememberEventName(const QString& name);
+    // Session only: the one record of names a game sends, and of no use to another profile. Its protocols
+    // name a fixed set, so the limit only guards against a game that misbehaves.
+    QSet<QString> mGameEventNamesSeen;
+    static constexpr int scmGameEventNamesLimit = 2000;
+    // Names scripts raise, each with when it was last raised: a script can build a new name every time,
+    // so only the most recent are kept, and one raised again stays
+    QHash<QString, quint64> mScriptEventNamesSeen;
+    quint64 mScriptEventNameTick = 0;
+    static constexpr int scmScriptEventNamesLimit = 200;
+    // Trimmed back to the limit only once this many more have come, so a flood of new names sorts rarely
+    static constexpr int scmScriptEventNamesSlack = 50;
 
     QStringList mActiveModules;
 

@@ -44,6 +44,7 @@
 #include "TTextEdit.h"
 #include "dlgMapper.h"
 #include "mudlet.h"
+#include "uiDesign.h"
 
 #include <QAccessibleInterface>
 #include <QAccessibleWidget>
@@ -77,6 +78,8 @@ using namespace std::chrono_literals;
 namespace {
 // Between the text panes and the vertical scroll bar; predictions of pane width must subtract it.
 constexpr int scrollBarSpacing = 1;
+
+constexpr int footSeamHeight = 1;
 
 // Windows 11 colours the handle for the app's colour scheme, not its surface: 45% black, invisible on a
 // black console. A style, not a style sheet: a widget's own sheet outranks every rule, so it would drop
@@ -516,13 +519,25 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     layerCommandLine->setSizePolicy(sizePolicy);
     layerCommandLine->setFocusPolicy(Qt::NoFocus);
 
-    layerCommandLine->setMaximumHeight(31);
-    layerCommandLine->setMinimumHeight(31);
+    layerCommandLine->setMaximumHeight(commandLineLayerHeight(31));
+    layerCommandLine->setMinimumHeight(commandLineLayerHeight(31));
     layerCommandLine->setMinimumWidth(300);
 
-    layoutLayer2 = new QHBoxLayout(layerCommandLine);
+    mpFootSeam = new QWidget;
+    mpFootSeam->setObjectName(qsl("consoleFootSeam"));
+    mpFootSeam->setFixedHeight(footSeamHeight);
+    mpFootSeam->setAutoFillBackground(true);
+
+    auto commandLineLayerLayout = new QVBoxLayout(layerCommandLine);
+    commandLineLayerLayout->setContentsMargins(0, 0, 0, 0);
+    commandLineLayerLayout->setSpacing(0);
+    if (mType != MainConsole) {
+        commandLineLayerLayout->addWidget(mpFootSeam);
+    }
+    layoutLayer2 = new QHBoxLayout;
     layoutLayer2->setContentsMargins(0, 0, 0, 0);
     layoutLayer2->setSpacing(0);
+    commandLineLayerLayout->addLayout(layoutLayer2);
 
     mpButtonMainLayer = new QWidget;
     mpButtonMainLayer->setObjectName(qsl("mpButtonMainLayer"));
@@ -770,7 +785,14 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         commandSplitter->setCollapsible(0, false); // command line cannot collapse
         commandSplitter->setCollapsible(1, false); // search layer cannot collapse
 
-        centralLayout->addWidget(commandSplitter);
+        mpFoot = new QWidget(this);
+        mpFoot->setObjectName(qsl("consoleFoot"));
+        auto footLayout = new QVBoxLayout(mpFoot);
+        footLayout->setContentsMargins(0, 0, 0, 0);
+        footLayout->setSpacing(0);
+        footLayout->addWidget(mpFootSeam);
+        footLayout->addWidget(commandSplitter);
+        centralLayout->addWidget(mpFoot);
         restoreCommandSearchSettings();
     } else {
         centralLayout->addWidget(layerCommandLine);
@@ -1052,7 +1074,7 @@ void TConsole::resizeEvent(QResizeEvent* event)
 void TConsole::layoutMainDisplay()
 {
     const int x = width() - mpLeftToolBar->width() - mpRightToolBar->width();
-    const int y = height() - mpTopToolBar->height() - mpCommandLine->height();
+    const int y = height() - mpTopToolBar->height() - mpCommandLine->height() - footSeamHeightShown();
     // Move before resizing: resizing first could leave the display overrunning
     // its parent frame, clipping it and making TTextEdit::updateScreenView()
     // undercount the visible rows:
@@ -1088,7 +1110,7 @@ void TConsole::refresh()
 
     // Move before resizing, see comment in layoutMainDisplay():
     mpMainDisplay->move(mBorders.left(), mBorders.top());
-    mpMainDisplay->resize(x - mBorders.left() - mBorders.right(), y - mBorders.top() - mBorders.bottom() - mpCommandLine->height());
+    mpMainDisplay->resize(x - mBorders.left() - mBorders.right(), y - mBorders.top() - mBorders.bottom() - mpCommandLine->height() - footSeamHeightShown());
 
     if (!mpCommandLine.isNull()) {
         mpCommandLine->adjustHeight();
@@ -1317,6 +1339,15 @@ void TConsole::changeColors()
         updateMainFrameTransparency();
     } else {
         Q_ASSERT_X(false, "TConsole::changeColors()", "invalid TConsole type detected");
+    }
+    applyFootSeamColour();
+    // The settings dialog and an import restyle only the main console, yet every foot mixes these colours
+    if (auto pMainConsole = qobject_cast<TMainConsole*>(this); pMainConsole && !mpHost.isNull()) {
+        for (const QString& name : mpHost->windowRegistry().subConsoleNames()) {
+            if (TConsole* pSubConsole = pMainConsole->subConsoleWidget(name)) {
+                pSubConsole->applyFootSeamColour();
+            }
+        }
     }
 
     if (mType != MainConsole) {
@@ -1700,6 +1731,26 @@ bool TConsole::updateWindowBackgroundCoverPixmap()
     return true;
 }
 
+int TConsole::commandLineLayerHeight(const int commandLineHeight) const
+{
+    return mType == MainConsole ? commandLineHeight : commandLineHeight + footSeamHeight;
+}
+
+int TConsole::footSeamHeightShown() const
+{
+    return mpFootSeam && mpFootSeam->isVisibleTo(this) ? footSeamHeight : 0;
+}
+
+void TConsole::applyFootSeamColour()
+{
+    if (!mpFootSeam || mpHost.isNull()) {
+        return;
+    }
+    QPalette seamPalette;
+    seamPalette.setColor(QPalette::Window, uiDesign::blend(mpHost->mCommandLineBgColor, mpHost->mCommandLineFgColor, uiDesign::scmConsoleFootSeamStrength));
+    mpFootSeam->setPalette(seamPalette);
+}
+
 void TConsole::setCmdVisible(bool isVisible)
 {
     const QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
@@ -1728,6 +1779,9 @@ void TConsole::setCmdVisible(bool isVisible)
         }
     } else {
         mpButtonMainLayer->setVisible(false);
+    }
+    if (mpFoot) {
+        mpFoot->setVisible(isVisible);
     }
     layerCommandLine->setVisible(isVisible);
     mpCommandLine->setVisible(isVisible);
@@ -2259,7 +2313,7 @@ QSize TConsole::getMainWindowSize() const
     const QSize consoleSize = predicted ? parentWidget()->size() : size();
     const int toolbarWidth = mpLeftToolBar->width() + mpRightToolBar->width();
     const int toolbarHeight = mpTopToolBar->height();
-    const int commandLineHeight = mpCommandLine->height();
+    const int commandLineHeight = mpCommandLine->height() + footSeamHeightShown();
     const QSize mainWindowSize(consoleSize.width() - toolbarWidth, consoleSize.height() - (commandLineHeight + toolbarHeight));
 
     // A profile being switched to gets its geometry over several events, so in

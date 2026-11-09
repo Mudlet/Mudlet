@@ -293,7 +293,10 @@ private:
         if (display->pos() != QPoint(borders.left(), borders.top())) {
             misses << qsl("placed at %1,%2").arg(display->x()).arg(display->y());
         }
-        const int overhang = display->mapTo(console, QPoint(0, display->height() + borders.bottom())).y() - console->mpCommandLine->mapTo(console, QPoint(0, 0)).y();
+        // The hairline over the command line is part of the foot, so the output area stops at it
+        const QWidget* seam = console->findChild<QWidget*>(qsl("consoleFootSeam"));
+        const QWidget* below = seam && seam->isVisibleTo(console) ? seam : static_cast<const QWidget*>(console->mpCommandLine);
+        const int overhang = display->mapTo(console, QPoint(0, display->height() + borders.bottom())).y() - below->mapTo(console, QPoint(0, 0)).y();
         if (overhang) {
             misses << qsl("%1px over the command line").arg(overhang);
         }

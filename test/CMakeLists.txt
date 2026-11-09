@@ -299,6 +299,21 @@ set_tests_properties(MudletProxyStyleDockTitleTest PROPERTIES
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0;QT_QPA_PLATFORM=offscreen"
 )
 
+add_executable(LayoutMirrorTest
+    LayoutMirrorTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/FlowLayout.cpp
+    ${CMAKE_SOURCE_DIR}/src/PairGridLayout.cpp
+)
+target_include_directories(LayoutMirrorTest PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(LayoutMirrorTest PRIVATE Qt6::Test Qt6::Widgets)
+if(UNIX AND NOT APPLE)
+  target_link_libraries(LayoutMirrorTest PRIVATE Qt6::DBus)
+endif()
+add_test(NAME LayoutMirrorTest COMMAND $<TARGET_FILE:LayoutMirrorTest>)
+set_tests_properties(LayoutMirrorTest PROPERTIES
+    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0;QT_QPA_PLATFORM=offscreen"
+)
+
 add_executable(CrashReportUploadTest
     CrashReportUploadTest.cpp
     ${CMAKE_SOURCE_DIR}/src/crash_reporter/sendCrashReport.cpp
@@ -346,6 +361,18 @@ target_link_libraries(LuaFunctionListTest PRIVATE Qt6::Test)
 target_compile_definitions(LuaFunctionListTest PRIVATE MUDLET_SRC_DIR="${CMAKE_SOURCE_DIR}/src")
 add_test(NAME LuaFunctionListTest COMMAND $<TARGET_FILE:LuaFunctionListTest>)
 set_tests_properties(LuaFunctionListTest PROPERTIES
+    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
+)
+
+# Colours written out on the surfaces that have adopted the design language.
+# Reads those sources the same way, so it links nothing either.
+add_executable(DesignColourLiteralTest DesignColourLiteralTest.cpp)
+# Qt6::Gui for QColor::colorNames(), which is where the colour names it looks
+# for come from rather than a list kept by hand in the test
+target_link_libraries(DesignColourLiteralTest PRIVATE Qt6::Test Qt6::Gui)
+target_compile_definitions(DesignColourLiteralTest PRIVATE MUDLET_SRC_DIR="${CMAKE_SOURCE_DIR}/src")
+add_test(NAME DesignColourLiteralTest COMMAND $<TARGET_FILE:DesignColourLiteralTest>)
+set_tests_properties(DesignColourLiteralTest PROPERTIES
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
 )
 

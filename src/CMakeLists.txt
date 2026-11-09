@@ -57,6 +57,7 @@ set(mudlet_SRCS
     EditorUndoStack.cpp
     EnvironmentKit.cpp
     EventLoopPump.cpp
+    EventNames.cpp
     ExitAppearance.cpp
     FontManager.cpp
     GifTracker.cpp
@@ -189,6 +190,11 @@ set(mudlet_SRCS
 # here instead, in mudlet_app, kept in alphabetical order (case-insensitive).
 set(mudlet_app_SRCS
     ../3rdparty/qt-tags-widget/src/qtagedit.cpp
+    AboutLinkButton.cpp
+    AlphaColourWell.cpp
+    AboutSupporterBanner.cpp
+    ChipRow.cpp
+    ContentScrollArea.cpp
     CustomLineDrawContextMenuHandler.cpp
     CustomLineDrawHandler.cpp
     CustomLineEditContextMenuHandler.cpp
@@ -223,8 +229,16 @@ set(mudlet_app_SRCS
     dlgVarsMainArea.cpp
     EAction.cpp
     EditorAutoCompleteFocusHandler.cpp
+    EditorLineMarginDelegate.cpp
+    EditorPlaceholderButton.cpp
+    EditorTreeDelegate.cpp
+    EditorTreeRowDelegate.cpp
+    EditorTreeRowMetrics.cpp
     exitstreewidget.cpp
+    ExporterTreeDelegate.cpp
     FileOpenHandler.cpp
+    FlowLayout.cpp
+    GripSplitter.cpp
     HostDialogs.cpp
     LabelInteractionHandler.cpp
     MiddleMousePanHandler.cpp
@@ -232,11 +246,15 @@ set(mudlet_app_SRCS
     MudletInstanceCoordinator.cpp
     MudletProxyStyle.cpp
     PackageItemDelegate.cpp
+    PairGridLayout.cpp
     PanInteractionHandler.cpp
     RoomContextMenuHandler.cpp
     RoomMoveActivationHandler.cpp
     RoomMoveDragHandler.cpp
+    SearchResultDelegate.cpp
     SelectionRectangleHandler.cpp
+    SidebarItemDelegate.cpp
+    SidebarToggle.cpp
     SingleLineTextEdit.cpp
     T2DMap.cpp
     TAccessibleLabel.cpp
@@ -264,9 +282,12 @@ set(mudlet_app_SRCS
     TTabBar.cpp
     TTextBox.cpp
     TTextEdit.cpp
+    ToolBarOverflow.cpp
     TToolBar.cpp
     TTreeWidget.cpp
     TUiTour.cpp
+    uiDesign.cpp
+    VariableTreeDelegate.cpp
     WideComboBox.cpp
     widgetutils.cpp)
 
@@ -365,6 +386,7 @@ set(mudlet_HDRS
     EnvironmentKit.h
     enums.h
     EventLoopPump.h
+    EventNames.h
     ExitAppearance.h
     FontManager.h
     GifTracker.h
@@ -513,6 +535,11 @@ set(mudlet_HDRS
 # here instead, in mudlet_app, kept in alphabetical order (case-insensitive).
 set(mudlet_app_HDRS
     ../3rdparty/qt-tags-widget/include/QTagEdit/qtagedit.hpp
+    AboutLinkButton.h
+    AlphaColourWell.h
+    AboutSupporterBanner.h
+    ChipRow.h
+    ContentScrollArea.h
     CustomLineDrawContextMenuHandler.h
     CustomLineDrawHandler.h
     CustomLineEditContextMenuHandler.h
@@ -547,8 +574,16 @@ set(mudlet_app_HDRS
     dlgVarsMainArea.h
     EAction.h
     EditorAutoCompleteFocusHandler.h
+    EditorLineMarginDelegate.h
+    EditorPlaceholderButton.h
+    EditorTreeDelegate.h
+    EditorTreeRowDelegate.h
+    EditorTreeRowMetrics.h
     exitstreewidget.h
+    ExporterTreeDelegate.h
     FileOpenHandler.h
+    FlowLayout.h
+    GripSplitter.h
     HostDialogs.h
     LabelInteractionHandler.h
     MiddleMousePanHandler.h
@@ -556,11 +591,15 @@ set(mudlet_app_HDRS
     MudletInstanceCoordinator.h
     MudletProxyStyle.h
     PackageItemDelegate.h
+    PairGridLayout.h
     PanInteractionHandler.h
     RoomContextMenuHandler.h
     RoomMoveActivationHandler.h
     RoomMoveDragHandler.h
+    SearchResultDelegate.h
     SelectionRectangleHandler.h
+    SidebarItemDelegate.h
+    SidebarToggle.h
     SingleLineTextEdit.h
     T2DMap.h
     TAccessibleConsole.h
@@ -589,9 +628,12 @@ set(mudlet_app_HDRS
     TTabBar.h
     TTextBox.h
     TTextEdit.h
+    ToolBarOverflow.h
     TToolBar.h
     TTreeWidget.h
     TUiTour.h
+    uiDesign.h
+    VariableTreeDelegate.h
     WideComboBox.h
     widgetutils.h)
 

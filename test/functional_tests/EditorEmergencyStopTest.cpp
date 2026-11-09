@@ -28,6 +28,7 @@
 #include <chrono>
 
 #include "AliasUnit.h"
+#include "EditorTreeDelegate.h"
 #include "Host.h"
 #include "HostDialogs.h"
 #include "MudletApp.h"
@@ -148,11 +149,36 @@ private:
         pTree->dragLeaveEvent(&leaveEvent);
     }
 
-    static QImage imageOf(QTreeWidgetItem* pItem) { return pItem->icon(0).pixmap(16, 16).toImage(); }
+
+    static QModelIndex indexOf(QTreeWidget* pTree, QTreeWidgetItem* pItem)
+    {
+        if (!pItem->parent()) {
+            return pTree->model()->index(pTree->indexOfTopLevelItem(pItem), 0);
+        }
+        return pTree->model()->index(pItem->parent()->indexOfChild(pItem), 0, indexOf(pTree, pItem->parent()));
+    }
 
     static Look lookOf(QTreeWidgetItem* pItem) { return {pItem->data(0, Qt::AccessibleDescriptionRole).toString(), pItem->icon(0).cacheKey()}; }
 
     static QString newKeyName() { return dlgTriggerEditor::tr("New key"); }
+
+    // The tree draws a broken item's mark from the item's own state, not from an icon set on the row
+    static uiDesign::EditorTreeDelegate::RowMark markOf(QTreeWidget* pTree, QTreeWidgetItem* pItem)
+    {
+        auto* pDelegate = qobject_cast<uiDesign::EditorTreeDelegate*>(pTree->itemDelegate());
+        if (!pDelegate) {
+            return uiDesign::EditorTreeDelegate::RowMark::None;
+        }
+        QList<int> rows;
+        for (QTreeWidgetItem* pRow = pItem; pRow; pRow = pRow->parent()) {
+            rows.prepend(pRow->parent() ? pRow->parent()->indexOfChild(pRow) : pTree->indexOfTopLevelItem(pRow));
+        }
+        QModelIndex index;
+        for (const int row : rows) {
+            index = pTree->model()->index(row, 0, index);
+        }
+        return pDelegate->stateOf(index).mark;
+    }
 
     static QStringList suffixes(const QString& prefix)
     {
@@ -214,11 +240,23 @@ private:
         return {};
     }
 
+    // During a stop a screen reader also hears that the stop holds a switched-on item back; the setting under that is
+    // what has to be kept
+    QString settingOf(const QString& description) const
+    {
+        for (const QString& active : {mpEditor->descActive, mpEditor->descActiveFolder, mpEditor->descActiveFilterChain, mpEditor->descActiveOffsetTimer}) {
+            if (description == mpEditor->descHeldByStop.arg(active)) {
+                return active;
+            }
+        }
+        return description;
+    }
+
     QString changedLook(const QList<QTreeWidgetItem*>& items, const QList<Look>& before) const
     {
         for (int i = 0; i < items.count(); ++i) {
             const Look now = lookOf(items.at(i));
-            if (now.description != before.at(i).description || now.iconKey != before.at(i).iconKey) {
+            if (settingOf(now.description) != before.at(i).description || now.iconKey != before.at(i).iconKey) {
                 return qsl("\"%1\" changed from \"%2\" to \"%3\"").arg(items.at(i)->text(0), before.at(i).description, now.description);
             }
         }
@@ -539,10 +577,12 @@ private slots:
         QVERIFY2(pFolder && pMoving, "the items made for this test are not each in the tree once");
         QCOMPARE(lookOf(pFolder).description, mpEditor->descActiveFolder);
         QCOMPARE(lookOf(pMoving).description, look == qsl("active") ? mpEditor->descActive : mpEditor->descActiveFolder);
-        // At the top level its look is that of a switched-on item in a switched-on folder
-        const QImage folderBefore = imageOf(pFolder);
-        const QImage movingBefore = imageOf(pMoving);
-        QVERIFY(!folderBefore.isNull() && !movingBefore.isNull());
+        // At the top level its look is that of a switched-on item in a switched-on folder; the rows carry no
+        // icon, the tree draws each one's mark from the item
+        const QString folderBefore = lookOf(pFolder).description;
+        const QString movingBefore = lookOf(pMoving).description;
+        const auto folderMarkBefore = markOf(pTree, pFolder);
+        const auto movingMarkBefore = markOf(pTree, pMoving);
 
         mpHost->stopAllTriggers();
         moveOntoFolder(pTree, pMoving, pFolder);
@@ -550,9 +590,40 @@ private slots:
         QCOMPARE(pMoving->parent(), pFolder);
         // Only a trigger's move repaints the folder it lands in
         if (kind == qsl("trigger")) {
-            QVERIFY2(imageOf(pFolder) == folderBefore, "the folder moved into has another icon");
+            QVERIFY2(settingOf(lookOf(pFolder).description) == folderBefore && markOf(pTree, pFolder) == folderMarkBefore, "the folder moved into looks different");
         }
-        QVERIFY2(imageOf(pMoving) == movingBefore, "the moved item has another icon");
+        QVERIFY2(settingOf(lookOf(pMoving).description) == movingBefore && markOf(pTree, pMoving) == movingMarkBefore, "the moved item looks different");
+    }
+
+    void test_aScreenReaderHearsWhatTheStopHoldsBack_data() { addKinds(); }
+
+    // The dot shows a switched-on item as not running during a stop; the description has to say the same
+    void test_aScreenReaderHearsWhatTheStopHoldsBack()
+    {
+        QFETCH(QString, kind);
+        QFETCH(QString, prefix);
+        mpEditor->rebuildStaleTrees();
+        mpEditor->mNeedUpdateData = false;
+
+        mpHost->stopAllTriggers();
+        QVERIFY2(mpEditor->mNeedUpdateData, "the stop did not mark the trees for rebuilding");
+        mpEditor->rebuildStaleTrees();
+        QTreeWidget* pTree = showView(kind);
+        QList<QTreeWidgetItem*> items = itemsOf(pTree, prefix);
+        QVERIFY2(!items.contains(nullptr), "the items made for this test are not each in the tree once");
+        const QStringList looks = expectedLooks(prefix);
+        const QStringList active{mpEditor->descActive, mpEditor->descActiveFolder, mpEditor->descActiveFilterChain, mpEditor->descActiveOffsetTimer};
+        for (int i = 0; i < items.count(); ++i) {
+            const QString expected = active.contains(looks.at(i)) ? mpEditor->descHeldByStop.arg(looks.at(i)) : looks.at(i);
+            QCOMPARE(lookOf(items.at(i)).description, expected);
+        }
+
+        mpHost->reenableAllTriggers();
+        QVERIFY2(mpEditor->mNeedUpdateData, "ending the stop did not mark the trees for rebuilding");
+        mpEditor->rebuildStaleTrees();
+        items = itemsOf(showView(kind), prefix);
+        const QString unexpected = unexpectedLook(prefix, items);
+        QVERIFY2(unexpected.isEmpty(), qPrintable(qsl("after the stop ended: %1").arg(unexpected)));
     }
 
     void test_aScriptThatDoesNotCompileStillShowsAsBrokenDuringAStop_data() { addKinds(); }
@@ -570,15 +641,31 @@ private slots:
         select(kind, pTree, pBroken);
         mpEditor->mpSourceEditorEdbeeDocument->setText(qsl("qaBroken = ("));
         select(kind, pTree, pOther);
-        const qint64 errorIcon = mpEditor->cachedIcon(qsl(":/icons/tools-report-bug.png")).cacheKey();
         QCOMPARE(lookOf(pBroken).description, mpEditor->descError);
-        QCOMPARE(lookOf(pBroken).iconKey, errorIcon);
+        QVERIFY2(markOf(pTree, pBroken) == uiDesign::EditorTreeDelegate::RowMark::Error, "the broken item does not carry the error mark");
 
         mpEditor->rebuildStaleTrees();
-        pBroken = itemNamed(showView(kind), prefix + qsl("Broken"));
+        pTree = showView(kind);
+        pBroken = itemNamed(pTree, prefix + qsl("Broken"));
         QVERIFY2(pBroken, "the rebuilt tree does not hold the item once");
         QCOMPARE(lookOf(pBroken).description, mpEditor->descError);
-        QCOMPARE(lookOf(pBroken).iconKey, errorIcon);
+        QVERIFY2(markOf(pTree, pBroken) == uiDesign::EditorTreeDelegate::RowMark::Error, "the rebuilt tree drops the broken item's error mark");
+    }
+
+    // In no group of its own, so a dot the stop alone holds back has to name the stop
+    void test_aHeldItemInNoGroupNamesTheStop()
+    {
+        QVERIFY(runLua(qsl("permAlias('HeldInNoGroup', '', '^held in no group$', '')")));
+        mpHost->stopAllTriggers();
+        mpEditor->rebuildStaleTrees();
+        QTreeWidget* pTree = showView(qsl("alias"));
+        QTreeWidgetItem* pItem = itemNamed(pTree, qsl("HeldInNoGroup"));
+        QVERIFY2(pItem, "the alias made for this case is not in the tree");
+        auto* pDelegate = qobject_cast<uiDesign::EditorTreeDelegate*>(pTree->itemDelegate());
+        QVERIFY2(pDelegate, "the alias tree has no dot to hover");
+
+        const QString tip = pDelegate->dotToolTip(indexOf(pTree, pItem));
+        QVERIFY2(tip.contains(qsl("emergency stop")), qPrintable(qsl("the dot of a switched-on alias in no group says \"%1\" during a stop").arg(tip)));
     }
 };
 

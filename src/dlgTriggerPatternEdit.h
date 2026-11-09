@@ -24,6 +24,10 @@
 
 
 #include "ui_trigger_pattern_edit.h"
+#include "utils.h"
+
+#include <QColor>
+#include <QIcon>
 #include <QPalette>
 
 
@@ -39,15 +43,33 @@ public:
 
     void applyThemePalette(const QPalette& editorPalette);
 
+    // Drawn on hover, and on focus since a control that can be tabbed to must then be visible.
+    // An empty icon rather than a hidden button, so crossing the rows does not shuffle them.
+    void setDeleteGlyph(const QIcon& deleteGlyph);
+
+    void setHoverTint(const QColor& hoverTint);
+
     int mRow = 0;
 
 
-public slots:
-    void slot_triggerTypeComboBoxChanged(const int);
+protected:
+    // A QWidget subclass draws nothing a stylesheet gives it without this
+    void paintEvent(QPaintEvent*) override;
+    // Qt sends these along the whole chain under the mouse, so a child control keeps the row hovered
+    void enterEvent(TEnterEvent*) override;
+    void leaveEvent(QEvent*) override;
+    bool eventFilter(QObject* watched, QEvent* event) override;
 
 
 private:
     void resetThemePalette();
+    void setRowHovered(const bool hovered);
+    void updateDeleteGlyph();
+
+    QIcon mDeleteGlyph;
+    QColor mHoverTint;
+    bool mRowHovered = false;
+    bool mDeleteButtonFocused = false;
 
     QPalette mDefaultPalette;
     QPalette mDefaultPatternNumberPalette;

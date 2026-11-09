@@ -1161,6 +1161,9 @@ nullViewItemAfter = tostring(removeCommandLineMenuEvent("main", "nullViewItem"))
         QCOMPARE(preferences->styleSheet(), styleSheet);
         QCOMPARE(notepad->styleSheet(), styleSheet);
         QCOMPARE(note->styleSheet(), styleSheet);
+        auto* laterNote = notepad->tabWidget->widget(notepad->addTab());
+        QVERIFY2(laterNote && laterNote != note, "Adding a note did not make a tab of its own.");
+        QCOMPARE(laterNote->styleSheet(), styleSheet);
     }
 
     // The main window's own bars take the style sheet of the profile on show,
@@ -1177,13 +1180,14 @@ nullViewItemAfter = tostring(removeCommandLineMenuEvent("main", "nullViewItem"))
         QVERIFY2(toolBar && tabBar, "The main window has no toolbar or tab bar.");
 
         const QString styleSheet = qsl("QWidget { color: #123456; }");
-        QVERIFY2(menuBar->styleSheet() != styleSheet && toolBar->styleSheet() != styleSheet && tabBar->styleSheet() != styleSheet,
+        QVERIFY2(menuBar->styleSheet() != styleSheet && !toolBar->styleSheet().endsWith(styleSheet) && tabBar->styleSheet() != styleSheet,
                  "SETUP: a bar already carries the style sheet, so the assertions below cannot fail.");
 
         QVERIFY(host->setProfileStyleSheet(styleSheet));
 
         QCOMPARE(menuBar->styleSheet(), styleSheet);
-        QCOMPARE(toolBar->styleSheet(), styleSheet);
+        // The toolbar carries the design's own sheet with the profile's appended, so the profile's rules come last and win
+        QVERIFY2(toolBar->styleSheet().endsWith(styleSheet), qPrintable(qsl("The toolbar's sheet does not end with the profile's: %1").arg(toolBar->styleSheet().right(200))));
         QCOMPARE(tabBar->styleSheet(), styleSheet);
     }
 
@@ -1201,16 +1205,18 @@ nullViewItemAfter = tostring(removeCommandLineMenuEvent("main", "nullViewItem"))
         QToolBar* toolBar = mudlet::self()->mpMainToolBar;
         TTabBar* tabBar = mudlet::self()->mpTabBar;
         QVERIFY2(toolBar && tabBar, "The main window has no toolbar or tab bar.");
+        // Neither profile has a sheet yet, so the bar carries the design's rules alone; a profile's comes after them
+        const QString designSheet = toolBar->styleSheet();
 
         const QString firstStyleSheet = qsl("QWidget { color: #111111; }");
         QVERIFY(first->setProfileStyleSheet(firstStyleSheet));
-        QVERIFY2(menuBar->styleSheet() != firstStyleSheet && toolBar->styleSheet() != firstStyleSheet && tabBar->styleSheet() != firstStyleSheet,
+        QVERIFY2(menuBar->styleSheet() != firstStyleSheet && toolBar->styleSheet() == designSheet && tabBar->styleSheet() != firstStyleSheet,
                  "A profile that is not the active one restyled the main window.");
 
         const QString secondStyleSheet = qsl("QWidget { color: #222222; }");
         QVERIFY(second->setProfileStyleSheet(secondStyleSheet));
         QCOMPARE(menuBar->styleSheet(), secondStyleSheet);
-        QCOMPARE(toolBar->styleSheet(), secondStyleSheet);
+        QCOMPARE(toolBar->styleSheet(), designSheet + secondStyleSheet);
         QCOMPARE(tabBar->styleSheet(), secondStyleSheet);
 
         tabBar->setCurrentIndex(tabBar->tabIndex(first->getName()));
@@ -1218,7 +1224,7 @@ nullViewItemAfter = tostring(removeCommandLineMenuEvent("main", "nullViewItem"))
 
         QVERIFY(second->setProfileStyleSheet(qsl("QWidget { color: #333333; }")));
         QCOMPARE(menuBar->styleSheet(), firstStyleSheet);
-        QCOMPARE(toolBar->styleSheet(), firstStyleSheet);
+        QCOMPARE(toolBar->styleSheet(), designSheet + firstStyleSheet);
         QCOMPARE(tabBar->styleSheet(), firstStyleSheet);
     }
 

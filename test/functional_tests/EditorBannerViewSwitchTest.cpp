@@ -45,6 +45,7 @@
 #include "dlgSystemMessageArea.h"
 #include "dlgTriggerEditor.h"
 #include "mudlet.h"
+#include "uiDesign.h"
 
 #include "GroupedTest.h"
 
@@ -97,6 +98,9 @@ private:
     }
 
     QString bannerText() const { return mpEditor->mpSystemMessageArea->notificationAreaMessageBox->text(); }
+
+    // The message before its anchors are inked, which is what a dismissal stashes and an undo shows again
+    QString bannerContent() const { return mpEditor->systemMessage(); }
 
     void clickBannerCloseButton()
     {
@@ -234,6 +238,7 @@ private slots:
         QTest::qWait(50ms);
         QVERIFY2(mpEditor->mpSystemMessageArea->isVisible(), "Scripts banner should show initially");
         const QString scriptsBanner = bannerText();
+        const QString scriptsBannerContent = bannerContent();
 
         clickBannerCloseButton();
         QVERIFY2(mpEditor->mpSystemMessageArea->isVisible(), "Undo toast should show after dismissing the banner");
@@ -242,7 +247,7 @@ private slots:
         clickBannerCloseButton();
         QVERIFY2(!mpEditor->mpSystemMessageArea->isVisible(), "Closing the undo toast should hide the message area");
         QCOMPARE(mpEditor->mLastDismissedBannerKey, qsl("intro"));
-        QCOMPARE(mpEditor->mLastDismissedBannerContent, scriptsBanner);
+        QCOMPARE(mpEditor->mLastDismissedBannerContent, scriptsBannerContent);
         const QString baseKey = mpEditor->bannerSettingsKey(EditorViewType::cmScriptView, QString());
         QVERIFY2(!mpEditor->mTemporarilyHiddenBanners.contains(baseKey), "Closing the toast must not suppress all banners for the view");
     }
@@ -318,6 +323,34 @@ private slots:
         QTest::qWait(50ms);
         QVERIFY2(mpEditor->mpSystemMessageArea->isVisible(), "An error shown while the undo toast timer was live must survive a view switch");
         QCOMPARE(bannerText(), errorText);
+    }
+
+    // QLabel bakes an anchor's colour into its document at setText(), so a banner
+    // on screen when the appearance changes has to be written again in the new ink
+    void testBannerLinksCarryTheAccentInBothAppearances()
+    {
+        mpEditor->slot_showScripts();
+        QTest::qWait(50ms);
+        QVERIFY2(mpEditor->mpSystemMessageArea->isVisible(), "the Scripts banner is not up, so there is no link to read");
+        QVERIFY2(bannerText().contains(qsl("<a ")), "the Scripts banner carries no anchor, so nothing below is measured");
+
+        mudlet::self()->setAppearance(enums::Appearance::dark);
+        QCoreApplication::processEvents();
+        const QString onDark = uiDesign::themeTokens().accentText.name();
+        const QString bannerOnDark = bannerText();
+
+        mudlet::self()->setAppearance(enums::Appearance::light);
+        QCoreApplication::processEvents();
+        const QString onLight = uiDesign::themeTokens().accentText.name();
+        const QString bannerOnLight = bannerText();
+        mudlet::self()->setAppearance(enums::Appearance::systemSetting);
+
+        QVERIFY2(onDark != onLight, "the two appearances answer the same accent ink, so the checks below cannot tell them apart");
+        QVERIFY2(bannerOnDark.contains(qsl("color: %1").arg(onDark)), qPrintable(qsl("the banner's links are not inked %1 on the dark appearance: \"%2\"").arg(onDark, bannerOnDark)));
+        QVERIFY2(bannerOnLight.contains(qsl("color: %1").arg(onLight)),
+                 qPrintable(qsl("the banner's links are not inked %1 on the light appearance - the appearance change did not re-ink them: \"%2\"").arg(onLight, bannerOnLight)));
+        QVERIFY2(!bannerOnLight.contains(qsl("color: %1").arg(onDark)), qPrintable(qsl("the dark appearance's ink %1 is still in the banner: \"%2\"").arg(onDark, bannerOnLight)));
+        QVERIFY2(!bannerOnLight.contains(qsl("color: inherit")), qPrintable(qsl("an anchor reached the label still saying 'color: inherit', which Qt renders as black: \"%1\"").arg(bannerOnLight)));
     }
 };
 

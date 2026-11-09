@@ -3,6 +3,7 @@
  *   Copyright (C) 2013-2014, 2017-2019, 2022, 2024-2026 by Stephen Lyons  *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2026 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -26,294 +27,1192 @@
 
 #include "dlgAboutDialog.h"
 
+#include "AboutLinkButton.h"
+#include "AboutSupporterBanner.h"
+#include "FlowLayout.h"
 #include "mudlet.h"
 #include "MudletApp.h"
 
+#include <QApplication>
+#include <QClipboard>
+#include <QDesktopServices>
+#include <QFontDatabase>
+#include <QFontMetrics>
+#include <QHBoxLayout>
+#include <QGridLayout>
+#include <QGroupBox>
+#include <QLabel>
 #include <QPainter>
-#include <QTextLayout>
-#include <QDebug>
+#include <QPainterPath>
+#include <QPushButton>
+#include <QResizeEvent>
+#include <QScreen>
+#include <QScrollArea>
+#include <QScrollBar>
+#include <QStackedWidget>
+#include <QSysInfo>
+#include <QTextBrowser>
+#include <QTimer>
+#include <QToolButton>
+#include <QUrl>
+#include <QVBoxLayout>
 
-#if defined(Q_OS_WINDOWS)
-#include <wow64apiset.h>
-#endif
+using namespace uiDesign;
+
+namespace {
+// The two thresholds differ on purpose: held equal, a one-pixel drag across the
+// boundary would flip the column back and forth
+constexpr int scmArtColumnWidth = 304;
+constexpr int scmArtColumnPadding = 20;
+constexpr int scmNarrowArtColumnWidth = 238;
+constexpr int scmNarrowArtColumnPadding = 14;
+constexpr int scmNarrowBelowWidth = 1000;
+constexpr int scmWidenAboveWidth = 1060;
+constexpr int scmLinkColumns = 3;
+constexpr int scmNarrowLinkColumns = 2;
+
+constexpr int scmMinimumWidth = 900;
+constexpr int scmMinimumHeight = 560;
+constexpr int scmPreferredWidth = 1080;
+constexpr int scmPreferredHeight = 680;
+
+constexpr int scmCardPadding = 16;
+constexpr int scmPageSpacing = 16;
+constexpr int scmPageMarginTop = 18;
+constexpr int scmPageMarginSide = 20;
+constexpr int scmPageMarginBottom = 24;
+
+inline constexpr char scmProp_aboutRichText[] = "aboutRichText";
+
+constexpr int scmChipSpacing = 5;
+constexpr int scmChipGlyphSize = 18;
+// This window's own: a notice elsewhere is uiDesign's shared control, at its own size
+constexpr int scmAboutLicenceGlyphSize = 18;
+// In characters, so a 25-character address still fits at a 150% interface font
+constexpr int scmMoreNameColumnCharacters = 30;
+
+constexpr int scmCopiedMilliseconds = 1600;
+
+constexpr int scmPrimaryButtonHeight = 30;
+
+// Opened up a little so the capitals do not close up
+constexpr int scmTierLetterSpacing = 106;
+
+int artworkWidth(const bool narrow)
+{
+    return (narrow ? scmNarrowArtColumnWidth : scmArtColumnWidth) - 2 * (narrow ? scmNarrowArtColumnPadding : scmArtColumnPadding);
+}
+
+// At the application's size, so the stylesheet's percentage is relative to it
+QFont fixedPitchFont()
+{
+    return uiDesign::fixedPitchFont(QApplication::font());
+}
+
+// Rasterised for its slot rather than the 128px file, so nothing downsamples it later
+QPixmap glyphAt(const QString& file, const int size, const qreal ratio, const QColor& colour)
+{
+    QPixmap glyph = uiDesign::glyphPixmap(file).scaled(qRound(size * ratio), qRound(size * ratio), Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    glyph.setDevicePixelRatio(ratio);
+    return uiDesign::tintedGlyph(glyph, colour);
+}
+
+} // namespace
 
 dlgAboutDialog::dlgAboutDialog(QWidget* parent)
 : QDialog(parent)
 {
     setupUi(this);
 
-    QImage splashImage = mudlet::getSplashScreen(MudletApp::release(), MudletApp::publicTest());
+    mSplash = mudlet::getSplashScreen(MudletApp::release(), MudletApp::publicTest());
 
-    { // Brace code using painter to ensure it is freed at right time...
-        QPainter painter(&splashImage);
+    // Settled once rather than per label: themeTokens() walks four colours to their
+    // contrast floors, and the shell builds eighty labels
+    mInkedLinkColour = themeTokens().accentText;
 
-        unsigned fontSize = 16;
-        QString sourceVersionText = QString("Version: " + qsl(APP_VERSION) + MudletApp::buildSuffix());
+    mpTimer_copyFeedback = new QTimer(this);
+    mpTimer_copyFeedback->setObjectName(qsl("aboutCopyFeedback"));
+    mpTimer_copyFeedback->setSingleShot(true);
+    mpTimer_copyFeedback->setInterval(scmCopiedMilliseconds);
+    connect(mpTimer_copyFeedback, &QTimer::timeout, this, &dlgAboutDialog::slot_restoreCopyButton);
 
-        bool isWithinSpace = false;
-        while (!isWithinSpace) {
-            QFont font(qsl("Bitstream Vera Serif"), fontSize, 75);
-            font.setStyleHint(QFont::Serif, QFont::StyleStrategy(QFont::PreferMatch | QFont::PreferAntialias));
-            QTextLayout versionTextLayout(sourceVersionText, font, painter.device());
-            versionTextLayout.beginLayout();
-            // Start work in this text item
-            QTextLine versionTextline = versionTextLayout.createLine();
-            // First draw (one line from) the text we have put in on the layout to
-            // see how wide it is..., assuming actually that it will only take one
-            // line of text
-            versionTextline.setLineWidth(280);
-            //Splashscreen bitmap is (now) 320x360 - hopefully entire line will all fit into 280
-            versionTextline.setPosition(QPointF(0, 0));
-            // Only pretend, so we can see how much space it will take
-            QTextLine dummy = versionTextLayout.createLine();
-            if (!dummy.isValid()) {
-                // No second line so have got all text in first so can do it
-                isWithinSpace = true;
-                qreal versionTextWidth = versionTextline.naturalTextWidth();
-                // This is the ACTUAL width of the created text
-                versionTextline.setPosition(QPointF((320 - versionTextWidth) / 2.0, 270));
-                // And now we can place it centred horizontally
-                versionTextLayout.endLayout();
-                // end the layout process and paint it out
-                painter.setPen(QColor(176, 64, 0, 255)); // #b04000
-                versionTextLayout.draw(&painter, QPointF(0, 0));
-            } else {
-                // Too big - text has spilled over onto a second line - so try again
-                fontSize--;
-                versionTextLayout.clearLayout();
-                versionTextLayout.endLayout();
-            }
-        }
+    buildShell();
+    applyShellStyle();
+    connect(mudlet::self(), &mudlet::signal_appearanceChanged, this, &dlgAboutDialog::slot_applyAppearance);
 
-        // Repeat for other text, but we know it will fit at given size
-        // PLACEMARKER: Date-stamp needing annual update
-        QString sourceCopyrightText = qsl("©️ Mudlet makers 2008-2026");
-        QFont font(qsl("Bitstream Vera Serif"), 16, 75);
-        font.setStyleHint(QFont::Serif, QFont::StyleStrategy(QFont::PreferMatch | QFont::PreferAntialias));
-        QTextLayout copyrightTextLayout(sourceCopyrightText, font, painter.device());
-        copyrightTextLayout.beginLayout();
-        QTextLine copyrightTextline = copyrightTextLayout.createLine();
-        copyrightTextline.setLineWidth(280);
-        copyrightTextline.setPosition(QPointF(1, 1));
-        qreal copyrightTextWidth = copyrightTextline.naturalTextWidth();
-        copyrightTextline.setPosition(QPointF((320 - copyrightTextWidth) / 2.0, 340));
-        copyrightTextLayout.endLayout();
-        painter.setPen(QColor(112, 16, 0, 255)); // #701000
-        copyrightTextLayout.draw(&painter, QPointF(0, 0));
+    setMinimumSize(scmMinimumWidth, scmMinimumHeight);
+    QSize opening(scmPreferredWidth, scmPreferredHeight);
+    if (const QScreen* pScreen = screen(); pScreen) {
+        const QSize available = pScreen->availableGeometry().size();
+        opening = opening.boundedTo(available);
     }
-
-    mudletTitleLabel->setPixmap(QPixmap::fromImage(splashImage));
-
-    /*
-     * Have moved the texts in from the dialog definitions - as it makes it
-     * easier to do the translations required for I18n work (Qt Linguist is
-     * "borked" for HTML content particularly in dialogues) - what follows
-     * particularly for the third tab (3rd party licences) actually tries to
-     * format the text in a uniform and modular fashion.  Whilst it is not
-     * the most efficient way of putting together a set of large QStrings
-     * some of which will shortly be made translable, it is intended to make
-     * it easier to add and remove sections according to the build settings
-     * and for boiler-plate licences to be reused multiple times if necessary.
-     */
-
-    // A uniform header for all tabs:
-    // clang-format off
-    QString htmlHead(qsl(R"(
-        <head><style type="text/css">
-        h1 { font-family: "Bitstream Vera Serif"; text-align: center; }
-        h2 { font-family: "Bitstream Vera Serif"; text-align: center; }
-        h3 { font-family: "Bitstream Vera Serif"; text-align: center; white-space: pre-wrap; }
-        h4 { font-family: "Bitstream Vera Serif"; white-space: pre-wrap; }
-        p { font-family: "Bitstream Vera Serif" }
-        tt { font-family: "Monospace"; white-space: pre-wrap; }
-        .container { text-align: center; }
-        </style></head>
-    )"));
-    // clang-format on
-
-    setAboutTab(htmlHead);
-    setSupportersTab(htmlHead);
-    setLicenseTab(htmlHead);
-    setThirdPartyTab(htmlHead);
+    resize(opening);
+    showPage(qsl("mudlet"));
 }
 
-void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
-{ // TAB 1 - "About Mudlet"
-    // clang-format off
-    QString aboutMudletHeader(
-        tr("<tr><td><span style=\"color:#bc8942;\"><b>Homepage</b></span></td><td><a href=\"http://www.mudlet.org/\">www.mudlet.org</a></td></tr>\n"
-           "<tr><td><span style=\"color:#bc8942;\"><b>Forums</b></span></td><td><a href=\"http://forums.mudlet.org/\">forums.mudlet.org</a></td></tr>\n"
-           "<tr><td><span style=\"color:#bc8942;\"><b>Documentation</b></span></td><td><a href=\"http://wiki.mudlet.org/w/Main_Page\">wiki.mudlet.org/w/Main_Page</a></td></tr>\n"
-           "<tr><td><span style=\"color:#7289DA;\"><b>Discord</b></span></td><td><a href=\"https://www.mudlet.org/chat\">discord.gg</a></td></tr>\n"
-           "<tr><td><span style=\"color:#40b040;\"><b>Source code</b></span></td><td><a href=\"https://github.com/Mudlet/Mudlet\">github.com/Mudlet/Mudlet</a></td></tr>\n"
-           "<tr><td><span style=\"color:#40b040;\"><b>Features/bugs</b></span></td><td><a href=\"https://github.com/Mudlet/Mudlet/issues\">github.com/Mudlet/Mudlet/issues</a></td></tr>"));
-
-    QVector<aboutMaker> aboutMakers; // [big?, name, discord, github, email, description]
-    aboutMakers.append({true, qsl("Heiko Köhn"), QString(), QString(), qsl("KoehnHeiko@googlemail.com"),
-                        //: about:Heiko
-                        tr("Original author, original project lead, Mudlet core coding, retired.")});
-    aboutMakers.append({true, qsl("Vadim Peretokin"), qsl("Vadi#3695"), qsl("vadi2"), qsl("vadim.peretokin@mudlet.org"),
-                        //: about:Vadi
-                        tr("GUI design and initial feature planning. He is responsible for the project homepage and the user manual. "
-                           "Maintainer of the Windows, macOS, Ubuntu and generic Linux installers. "
-                           "Maintains the Mudlet wiki, Lua API, and handles project management, public relations &amp; user help. "
-                           "With the project from the very beginning and is an official spokesman of the project. "
-                           "Since the retirement of Heiko, he has become the head of the Mudlet project.")});
-    aboutMakers.append({true, qsl("Stephen Lyons"), qsl("SlySven#2703"), qsl("SlySven"), qsl("slysven@virginmedia.com"),
-                        //: about:SlySven
-                        tr("After joining in 2013, he has been poking various bits of the C++ code and GUI with a pointy stick; "
-                           "subsequently trying to patch over some of the holes made/found. "
-                           "Most recently he has been working on I18n and L10n for Mudlet 4.0.0 so if you are playing Mudlet in a language "
-                           "other than American English you will be seeing the results of him getting fed up with the spelling differences "
-                           "between what was being used and the British English his brain wanted to see.")});
-    aboutMakers.append({true, qsl("Damian Monogue"), qsl("demonnic#4307"), qsl("demonnic"), qsl("demonnic@gmail.com"),
-                        //: about:demonnic
-                        tr("Former maintainer of the early Windows and Apple OSX packages. "
-                           "He also administers our server and helps the project in many ways.")});
-    aboutMakers.append({true, qsl("Florian Scheel"), qsl("keneanung#2803"), qsl("keneanung"), qsl("keneanung@googlemail.com"),
-                        //: about:keneanung
-                        tr("Contributed many improvements to Mudlet's db: interface, event system, "
-                           "and has been around the project for a very long while assisting users.")});
-    aboutMakers.append({true, qsl("Leris"), qsl("Leris#5152"), qsl("Kebap"), qsl("kebap_spam@gmx.net"),
-                        //: about:Leris
-                        tr("Does a ton of work in making Mudlet, the website and the wiki accessible to you "
-                           "regardless of the language you speak - and promoting our genre!")});
-    aboutMakers.append({true, qsl("Piotr Wilczynski"), QString(), qsl("Delwing"), qsl("delwing@gmail.com"),
-                        //: about:Delwing
-                        tr("Joined in 2020, reworking much of the 2D mapper and adding many Lua API features. "
-                           "Outside the client they build Mudlet Web, the documentation extract that powers "
-                           "autocompletion in code editors, and the tools that share Mudlet maps online.")});
-    aboutMakers.append({true, qsl("Zooka"), QString(), qsl("ZookaOnGit"), QString(),
-                        //: about:Zooka
-                        tr("Joined in 2023 and works across the whole client - script editor, preferences, package manager "
-                           "and mapper - along with many Lua API additions. Wrote the Mudlet Tutorial profile and "
-                           "maintains the Mudlet package repository.")});
-    aboutMakers.append({false, qsl("Ahmed Charles"), QString(), qsl("ahmedcharles"), qsl("acharles@outlook.com"),
-                        //: about:ahmedcharles
-                        tr("Contributions to the Travis integration, CMake and Visual C++ build, "
-                           "a lot of code quality and memory management improvements.")});
-    aboutMakers.append({false, qsl("Chris Mitchell"), QString("Chris7#6113"), qsl("Chris7"), qsl("chris.mit7@gmail.com"),
-                        //: about:Chris7
-                        tr("Developed a shared module system that allows script packages to be shared among profiles, "
-                           "a UI for viewing Lua variables, improvements in the mapper and all around.")});
-    aboutMakers.append({false, qsl("Ben Carlsen"), QString(), QString(), qsl("arkholt@gmail.com"),
-                        //: about:Ben Carlsen
-                        tr("Developed the first version of our Mac OSX installer. "
-                           "He is the former maintainer of the Mac version of Mudlet.")});
-    aboutMakers.append({false, qsl("Ben Smith"), QString(), QString(), QString(),
-                        //: about:Ben Smith
-                        tr("Joined in December 2009 though he's been around much longer. "
-                           "Contributed to the Lua API and is the former maintainer of the Lua API.")});
-    aboutMakers.append({false, qsl("Blaine von Roeder"), QString(), QString(), QString(),
-                        //: about:Blaine von Roeder
-                        tr("Joined in December 2009. He has contributed to the Lua API, submitted small bugfix patches "
-                           "and has helped with release management of 1.0.5.")});
-    aboutMakers.append({false, qsl("Bruno Bigras"), QString(), QString(), qsl("bruno@burnbox.net"),
-                        //: about:Bruno Bigras
-                        tr("Developed the original cmake build script and he has committed a number of patches.")});
-    aboutMakers.append({false, qsl("Carter Dewey"), QString(), QString(), qsl("eldarerathis@gmail.com"),
-                        //: about:Carter Dewey
-                        tr("Contributed to the Lua API.")});
-    aboutMakers.append({false, qsl("Erik Pettis"), qsl("Etomyutikos#9266"), qsl("Oneymus"), QString(),
-                        //: about:Oneymus
-                        tr("Developed the Vyzor GUI Manager for Mudlet.")});
-    aboutMakers.append({false, qsl("Harrison"), QString(), qsl("Harrison-Teeg"), qsl("harrison.martin@gmail.com"),
-                        //: about:Harrison
-                        tr("Brought the 3D mapper back to life with camera controls, lighting and proper geometry "
-                           "for z-squished rooms, and has fixed a number of console and command line annoyances.")});
-    aboutMakers.append({false, qsl("ItsTheFae"), qsl("TheFae#9971"), qsl("Kae"), QString(),
-                        //: about:TheFae
-                        tr("Worked wonders in rejuvenating our Website in 2017 but who prefers a little anonymity - "
-                           "if you are a <i>SpamBot</i> you will not get onto our Fora now. They have also made some useful "
-                           "C++ core code contributions and we look forward to future reviews on and work in that area.")});
-    aboutMakers.append({false, qsl("Ian Adkins"), qsl("Dicene#1533"), qsl("dicene"), qsl("ieadkins@gmail.com"),
-                        //: about:Dicene
-                        tr("Joining us 2017 they have given us some useful C++ and Lua contributions.")});
-    aboutMakers.append({false, qsl("James Younquist"), QString(), QString(), qsl("daemacles@yahoo.com"),
-                        //: about:James Younquist
-                        tr("Contributed the Geyser layout manager for Mudlet in March 2010. "
-                           "It is written in Lua and aims at simplifying user GUI scripting.")});
-    aboutMakers.append({false, qsl("John Dahlström"), QString(), QString(), qsl("email@johndahlstrom.se"),
-                        //: about:John Dahlström
-                        tr("Helped develop and debug the Lua API.")});
-    aboutMakers.append({false, qsl("John McKisson"), QString(), qsl("jmckisson"), qsl("john.mckisson@gmail.com"),
-                        //: about:John McKisson
-                        tr("Implemented MMCP, so Mudlet can join MudMaster chat networks, and has contributed "
-                           "a range of console and Lua API fixes.")});
-    aboutMakers.append({false, qsl("Karsten Bock"), QString(), qsl("Beliaar"), QString(),
-                        //: about:Beliaar
-                        tr("Contributed several improvements and new features for Geyser.")});
-    aboutMakers.append({false, qsl("Leigh Stillard"), QString(), QString(), qsl("leigh.stillard@gmail.com"),
-                        //: about:Leigh Stillard
-                        tr("The original author of our Windows installer.")});
-    aboutMakers.append({false, qsl("Maksym Grinenko"), QString(), QString(), qsl("maksym.grinenko@gmail.com"),
-                        //: about:Maksym Grinenko
-                        tr("Worked on the manual, forum help and helps with GUI design and documentation.")});
-    aboutMakers.append({false, qsl("Manuel Wegmann"), QString(), qsl("Edru2"), QString(),
-                        //: about:Edru2
-                        tr("Built much of the GUI toolkit you script with between 2020 and 2022: Adjustable Containers, "
-                           "Geyser's ScrollBox, animated labels and Geyser in UserWindows - plus the dark theme toggle "
-                           "and the Package Exporter rework.")});
-    aboutMakers.append({false, qsl("Mike Conley"), QString(), qsl("mpconley"), qsl("sousesider@gmail.com"),
-                        //: about:Mike Conley
-                        tr("Joined in 2018 and looks after nearly everything Mudlet plays or negotiates - MCMP media, "
-                           "sound and video, closed captioning, MXP, OSC 8 hyperlinks and text encodings - plus "
-                           "multi-window support with drag-and-drop tabs.")});
-    aboutMakers.append({false, qsl("Stephen Hansen"), QString(), QString(), qsl("me+mudlet@ixokai.io"),
-                        //: about:Stephen Hansen
-                        tr("Developed a database Lua API that allows for far easier use of databases and one of the original OSX installers.")});
-    aboutMakers.append({false, qsl("Thorsten Wilms"), QString(), QString(), qsl("t_w_@freenet.de"),
-                        //: about:Thorsten Wilms
-                        tr("Designed our beautiful logo, our splash screen, the about dialog, our website, several icons and badges. "
-                           "Visit his homepage at <a href=\"http://thorwil.wordpress.com/\">thorwil.wordpress.com</a>.")});
-    aboutMakers.append({false, qsl("Tim Johnson"), QString(), qsl("atari2600tim"), QString(),
-                        //: about:Tim Johnson
-                        tr("Joined in 2020 and made Mudlet work far better with screen readers, alongside secure IRC "
-                           "connections, Discord improvements, and a batch of editor shortcuts and Lua configuration functions.")});
-
-    QString aboutMudletBody("<p align=\"center\"><big><b>Credits:</b></big></p>");
-    QVectorIterator<aboutMaker> iterateMakers(aboutMakers);
-    while (iterateMakers.hasNext()) { aboutMudletBody.append(createMakerHTML(iterateMakers.next())); }
-
-    aboutMudletBody.append(
-        tr("<p>Others too, have make their mark on different aspects of the Mudlet project and if they have not been mentioned here it is by no means intentional! For past contributors you may see them mentioned in the <b><a href=\"https://launchpad.net/~mudlet-makers/+members#active\">Mudlet Makers</a></b> list (on our former bug-tracking site), or for on-going contributors they may well be included in the <b><a href=\"https://github.com/Mudlet/Mudlet/graphs/contributors\">Contributors</a></b> list on GitHub.</p>\n"
-           "<br>\n"
-           "<p>Many icons are taken from the <span style=\"color:#bc8942;\"><b><u>KDE4 oxygen icon theme</u></b></span> at <a href=\"https://web.archive.org/web/20130921230632/http://www.oxygen-icons.org/\">www.oxygen-icons.org <sup>{wayback machine archive}</sup></a> or <a href=\"http://www.kde.org\">www.kde.org</a>.  Most of the rest are from Thorsten Wilms, or from Stephen Lyons combining bits of Thorsten's work with the other sources.  The settings dialog's line icons are from the <span style=\"color:#bc8942;\"><b><u>Lucide icon set</u></b></span> at <a href=\"https://lucide.dev\">lucide.dev</a>, used under the ISC licence.</p>\n"
-           "<p>Special thanks to <span style=\"color:#bc8942;\"><b>Brett Duzevich</b></span> and <span style=\"color:#bc8942;\"><b>Ronny Ho</b></span>. They have contributed many good ideas and thus helped improve the scripting framework substantially.</p>\n"
-           "<p>Thanks to <span style=\"color:#bc8942;\"><b>Tomas Mecir</b></span> (<span style=\"color:#0000ff;\">kmuddy@kmuddy.com</span>) who brought us all together and inspired us with his KMuddy project. Mudlet is using some of the telnet code he wrote for his KMuddy project (<a href=\"https://cgit.kde.org/kmuddy.git/\">cgit.kde.org/kmuddy.git/</a>).</p>\n"
-           "<p>Special thanks to <span style=\"color:#bc8942;\"><b>Nick Gammon</b></span> (<a href=\"http://www.gammon.com.au/mushclient/mushclient.htm\">www.gammon.com.au/mushclient/mushclient.htm</a>) for giving us some valued pieces of advice.</p>"));
-
-    textBrowser_mudlet->setHtml(
-            qsl("<html>%1<body><table border=\"0\" style=\"margin:18px 36px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">\n"
-                           "%2</table>\n"
-                           "%3"
-                           "%4</body></html>")
-                    .arg(htmlHead, aboutMudletHeader, createBuildInfo(), aboutMudletBody));
-    // clang-format on
-}
-
-QString dlgAboutDialog::createMakerHTML(const aboutMaker& maker) const
+void dlgAboutDialog::buildShell()
 {
-    QString coloredText = qsl("<span style=\"color:#%1;\">%2</span>");
-    QStringList contactDetails;
-    if (!maker.discord.isEmpty()) {
-        contactDetails.append(coloredText.arg(qsl("7289DA"), maker.discord));
-    }
-    if (!maker.github.isEmpty()) {
-        contactDetails.append(coloredText.arg(qsl("40b040"), maker.github));
-    }
-    if (!maker.email.isEmpty()) {
-        contactDetails.append(coloredText.arg(qsl("0000ff"), maker.email));
-    }
+    mpWidget_shell = new QWidget(this);
+    mpWidget_shell->setObjectName(qsl("aboutShell"));
+    markAsShellSurface(mpWidget_shell);
 
-    return qsl("<p>%1%2 %3</p>\n") // name (big?), contacts (if any?), description
-            .arg(coloredText.arg(qsl("bc8942"), qsl("<b>%1</b>").arg((maker.big) ? qsl("<big>%1</big>").arg(maker.name) : maker.name)),
-                 (contactDetails.isEmpty()) ? QString() : qsl(" (%1)").arg(contactDetails.join(QChar::Space)),
-                 maker.description);
+    auto* pShellLayout = new QHBoxLayout(mpWidget_shell);
+    pShellLayout->setContentsMargins(0, 0, 0, 0);
+    pShellLayout->setSpacing(0);
+    pShellLayout->addWidget(buildArtColumn());
+    pShellLayout->addWidget(buildContentColumn(), 1);
+
+    auto* pRootLayout = layout();
+    pRootLayout->setContentsMargins(0, 0, 0, 0);
+    pRootLayout->setSpacing(0);
+    pRootLayout->addWidget(mpWidget_shell);
+
+    updateArtColumnWidth();
 }
 
-void dlgAboutDialog::setLicenseTab(const QString& htmlHead) const
-{ // TAB 2 - "License"
+QWidget* dlgAboutDialog::buildArtColumn()
+{
+    mpWidget_artColumn = new QWidget(mpWidget_shell);
+    mpWidget_artColumn->setObjectName(qsl("aboutArtColumn"));
+    mpWidget_artColumn->setFixedWidth(scmArtColumnWidth);
+
+    auto* pColumn = new QVBoxLayout(mpWidget_artColumn);
+    pColumn->setContentsMargins(scmArtColumnPadding, scmArtColumnPadding, scmArtColumnPadding, scmArtColumnPadding);
+    pColumn->setSpacing(8);
+
+    detachFromLayout(mudletTitleLabel);
+    mudletTitleLabel->setParent(mpWidget_artColumn);
+    mudletTitleLabel->setAlignment(Qt::AlignHCenter | Qt::AlignTop);
+    //: Alternative text for the Mudlet artwork on the About dialog, read out by a screen reader
+    mudletTitleLabel->setAccessibleName(tr("The Mudlet arch"));
+    pColumn->addWidget(mudletTitleLabel);
+
+    auto* pName = new QLabel(qsl("Mudlet"), mpWidget_artColumn);
+    pName->setObjectName(qsl("aboutName"));
+    pColumn->addWidget(pName);
+
+    auto* pVersion = new QLabel(qsl(APP_VERSION) + MudletApp::buildSuffix(), mpWidget_artColumn);
+    pVersion->setObjectName(qsl("aboutVersion"));
+    pVersion->setFont(fixedPitchFont());
+    pVersion->setWordWrap(true);
+    pVersion->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    pColumn->addWidget(pVersion);
+
+    auto* pChipRow = new QWidget(mpWidget_artColumn);
+    markAsShellSurface(pChipRow);
+    auto* pChipLayout = new QHBoxLayout(pChipRow);
+    pChipLayout->setContentsMargins(0, 2, 0, 2);
+    pChipLayout->setSpacing(6);
+
+    QString channel;
+    if (MudletApp::release()) {
+        //: Chip on the About dialog naming which kind of build of Mudlet this is
+        channel = tr("Release");
+    } else if (MudletApp::publicTest()) {
+        //: Chip on the About dialog naming which kind of build of Mudlet this is
+        channel = tr("Public test build");
+    } else {
+        //: Chip on the About dialog naming which kind of build of Mudlet this is
+        channel = tr("Development build");
+    }
+    auto* pChannelChip = new QLabel(channel, pChipRow);
+    pChannelChip->setObjectName(qsl("aboutChannelChip"));
+    pChannelChip->setProperty("aboutChip", true);
+    pChannelChip->setProperty("aboutChipLit", true);
+    pChipLayout->addWidget(pChannelChip);
+
+    auto* pQtChip = new QLabel(qsl("Qt %1").arg(QString::fromLatin1(qVersion())), pChipRow);
+    pQtChip->setObjectName(qsl("aboutQtChip"));
+    pQtChip->setProperty("aboutChip", true);
+    pChipLayout->addWidget(pQtChip);
+    pChipLayout->addStretch(1);
+    pColumn->addWidget(pChipRow);
+
+    // PLACEMARKER: Date-stamp needing annual update
+    //: %1 is the year the copyright runs to
+    auto* pCopyright = new QLabel(tr("Copyright 2008-%1 the Mudlet makers").arg(qsl("2026")), mpWidget_artColumn);
+    pCopyright->setObjectName(qsl("aboutCopyright"));
+    pCopyright->setWordWrap(true);
+    pColumn->addWidget(pCopyright);
+
+    //: Button that puts the build information on the clipboard, to be pasted into a bug report
+    QPushButton* pCopy = createCopyButton(qsl("aboutCopyBuildInfo"), tr("Copy build information"), mpWidget_artColumn);
+    pColumn->addWidget(pCopy);
+
+    pColumn->addStretch(1);
+
+    auto* pFooter = new QLabel(mpWidget_artColumn);
+    pFooter->setObjectName(qsl("aboutFooter"));
+    pFooter->setWordWrap(true);
+    pFooter->setOpenExternalLinks(false);
+    /*: Footer of the About dialog. The link opens the License page of this same
+ dialog rather than a web page, so keep the href as it is. */
+    setRichText(pFooter, tr("Free software under the <a href=\"license\">GPL 3.0</a>."));
+    connect(pFooter, &QLabel::linkActivated, this, [this](const QString&) {
+        showPage(qsl("license"));
+    });
+    pColumn->addWidget(pFooter);
+
+    return mpWidget_artColumn;
+}
+
+QWidget* dlgAboutDialog::buildContentColumn()
+{
+    auto* pContent = new QWidget(mpWidget_shell);
+    pContent->setObjectName(qsl("aboutContent"));
+    markAsShellSurface(pContent);
+    auto* pContentLayout = new QVBoxLayout(pContent);
+    pContentLayout->setContentsMargins(0, 0, 0, 0);
+    pContentLayout->setSpacing(0);
+
+    auto* pNav = new QWidget(pContent);
+    pNav->setObjectName(qsl("aboutNav"));
+    markAsShellSurface(pNav);
+    auto* pNavLayout = new QHBoxLayout(pNav);
+    pNavLayout->setContentsMargins(scmPageMarginSide, 12, scmPageMarginSide, 10);
+    pNavLayout->setSpacing(4);
+
+    mpStackedWidget_pages = new QStackedWidget(pContent);
+    mpStackedWidget_pages->setObjectName(qsl("aboutStack"));
+    markAsShellSurface(mpStackedWidget_pages);
+
+    // Translated in the .ui file's context, which the pages' titles were tabs in until the shell took them over,
+    // so every language keeps the words it already has
+    //: Title of the About window's page about Mudlet itself
+    const QString mudletTitle = QCoreApplication::translate("about_dialog", "Mudlet");
+    //: Title of the About window's page thanking the people who fund Mudlet
+    const QString supportersTitle = QCoreApplication::translate("about_dialog", "Supporters");
+    //: Title of the About window's page showing Mudlet's own licence
+    const QString licenseTitle = QCoreApplication::translate("about_dialog", "License");
+    //: Title of the About window's page listing the third-party components Mudlet is built with and their licences
+    const QString thirdPartyTitle = QCoreApplication::translate("about_dialog", "Third Party");
+    const QList<QPair<QString, QPair<QString, QString>>> pages{{qsl("mudlet"), {mudletTitle, qsl(":/icons/about-mudlet.svg")}},
+                                                               {qsl("supporters"), {supportersTitle, qsl(":/icons/about-supporters.svg")}},
+                                                               {qsl("license"), {licenseTitle, qsl(":/icons/about-license.svg")}},
+                                                               {qsl("thirdparty"), {thirdPartyTitle, qsl(":/icons/about-third-party.svg")}}};
+    for (const auto& page : pages) {
+        auto* pButton = new QToolButton(pNav);
+        pButton->setObjectName(qsl("aboutNavButton_%1").arg(page.first));
+        pButton->setText(page.second.first);
+        pButton->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+        pButton->setCheckable(true);
+        pButton->setAutoExclusive(true);
+        pButton->setFocusPolicy(Qt::StrongFocus);
+        pButton->setProperty("aboutNavGlyph", page.second.second);
+        const QString key = page.first;
+        connect(pButton, &QToolButton::clicked, this, [this, key]() {
+            showPage(key);
+        });
+        mNavButtons.insert(key, pButton);
+        pNavLayout->addWidget(pButton);
+    }
+    pNavLayout->addStretch(1);
+
+    mPageIndexes.insert(qsl("mudlet"), mpStackedWidget_pages->addWidget(buildMudletPage()));
+    mPageIndexes.insert(qsl("supporters"), mpStackedWidget_pages->addWidget(buildSupportersPage()));
+    mPageIndexes.insert(qsl("license"), mpStackedWidget_pages->addWidget(buildLicensePage()));
+    mPageIndexes.insert(qsl("thirdparty"), mpStackedWidget_pages->addWidget(buildThirdPartyPage()));
+
+    pContentLayout->addWidget(pNav);
+    pContentLayout->addWidget(mpStackedWidget_pages, 1);
+    return pContent;
+}
+
+QScrollArea* dlgAboutDialog::createScrollPage(const QString& key)
+{
+    auto* pScrollArea = new QScrollArea(mpStackedWidget_pages);
+    pScrollArea->setObjectName(qsl("aboutPage_%1").arg(key));
+    pScrollArea->setFrameShape(QFrame::NoFrame);
+    pScrollArea->setWidgetResizable(true);
+    markAsShellSurface(pScrollArea);
+
+    auto* pColumn = new QWidget(pScrollArea);
+    pColumn->setObjectName(qsl("aboutColumn_%1").arg(key));
+    auto* pColumnLayout = new QVBoxLayout(pColumn);
+    pColumnLayout->setContentsMargins(scmPageMarginSide, scmPageMarginTop, scmPageMarginSide, scmPageMarginBottom);
+    pColumnLayout->setSpacing(scmPageSpacing);
+
+    pScrollArea->setWidget(pColumn);
+    // setWidget() turns autoFillBackground on, which would paint over the page's surface
+    pColumn->setAutoFillBackground(false);
+    pScrollArea->viewport()->setAutoFillBackground(false);
+    markAsShellSurface(pColumn);
+    markAsShellSurface(pScrollArea->viewport());
+    return pScrollArea;
+}
+
+QGroupBox* dlgAboutDialog::createCard(const QString& title, QWidget* pParent)
+{
+    auto* pCard = new QGroupBox(title, pParent);
+    pCard->setProperty(scmProp_aboutCard, true);
+    if (title.isEmpty()) {
+        pCard->setProperty(scmProp_aboutCardPlain, true);
+    }
+    return pCard;
+}
+
+QWidget* dlgAboutDialog::createSection(const QString& title, const QString& note, QWidget* pParent)
+{
+    auto* pSection = new QWidget(pParent);
+    pSection->setObjectName(qsl("aboutSection"));
+    markAsShellSurface(pSection);
+    auto* pRow = new QHBoxLayout(pSection);
+    pRow->setContentsMargins(0, 22, 0, 10);
+    pRow->setSpacing(10);
+
+    auto* pTitle = new QLabel(title, pSection);
+    pTitle->setObjectName(qsl("aboutSectionTitle"));
+    pRow->addWidget(pTitle);
+    if (!note.isEmpty()) {
+        auto* pNote = new QLabel(note, pSection);
+        pNote->setObjectName(qsl("aboutSectionNote"));
+        pRow->addWidget(pNote);
+    }
+    pRow->addStretch(1);
+    return pSection;
+}
+
+QWidget* dlgAboutDialog::createSeparatorLine(QWidget* pParent)
+{
+    auto* pLine = new QWidget(pParent);
+    pLine->setObjectName(qsl("aboutSeparatorLine"));
+    pLine->setFixedHeight(1);
+    return pLine;
+}
+
+QLabel* dlgAboutDialog::createParagraph(const QString& text, QWidget* pParent)
+{
+    auto* pLabel = new QLabel(pParent);
+    pLabel->setWordWrap(true);
+    pLabel->setOpenExternalLinks(true);
+    setRichText(pLabel, text);
+    return pLabel;
+}
+
+void dlgAboutDialog::setRichText(QLabel* pLabel, const QString& text)
+{
+    pLabel->setTextFormat(Qt::RichText);
+    pLabel->setTextInteractionFlags(Qt::TextBrowserInteraction);
+    // text() will carry a colour in every anchor; the original is kept to re-ink from
+    pLabel->setProperty(scmProp_aboutRichText, text);
+    pLabel->setText(uiDesign::withLinkColour(text, mInkedLinkColour));
+}
+
+void dlgAboutDialog::restyleRichText(const ThemeTokens& tokens)
+{
+    for (QLabel* pLabel : mpWidget_shell->findChildren<QLabel*>()) {
+        const QVariant raw = pLabel->property(scmProp_aboutRichText);
+        if (raw.isValid()) {
+            pLabel->setText(uiDesign::withLinkColour(raw.toString(), tokens.accentText));
+        }
+    }
+    mInkedLinkColour = tokens.accentText;
+}
+
+QPushButton* dlgAboutDialog::createCopyButton(const QString& objectName, const QString& label, QWidget* pParent)
+{
+    auto* pButton = new QPushButton(label, pParent);
+    pButton->setObjectName(objectName);
+    pButton->setProperty("aboutButton", true);
+    pButton->setProperty("aboutRestingText", label);
+    pButton->setAutoDefault(false);
+    pButton->setDefault(false);
+    connect(pButton, &QPushButton::clicked, this, &dlgAboutDialog::slot_copyBuildInformation);
+    mCopyButtons.append(pButton);
+    return pButton;
+}
+
+QWidget* dlgAboutDialog::createContactChips(const aboutMaker& maker, QWidget* pParent)
+{
+    auto* pRow = new QWidget(pParent);
+    pRow->setObjectName(qsl("aboutContacts"));
+    markAsShellSurface(pRow);
+    // Wraps: a QHBoxLayout's minimum is the sum of its items, which pushed the card
+    // beside it off the page
+    auto* pLayout = new uiDesign::FlowLayout(pRow, scmChipSpacing, scmChipSpacing);
+    pLayout->setWidthPolicy(uiDesign::FlowLayout::Width::WidestItem);
+    pLayout->setContentsMargins(0, 0, 0, 0);
+    // Qt only asks a layout for heightForWidth when its widget's size policy says so
+    QSizePolicy rowPolicy(QSizePolicy::Preferred, QSizePolicy::Minimum);
+    rowPolicy.setHeightForWidth(true);
+    pRow->setSizePolicy(rowPolicy);
+
+    const QList<QPair<QString, QString>> contacts{{qsl(":/icons/about-github.png"), maker.github}, {qsl(":/icons/toolbar-discord.png"), maker.discord}, {qsl(":/icons/about-mail.svg"), maker.email}};
+    for (const auto& contact : contacts) {
+        if (contact.second.isEmpty()) {
+            continue;
+        }
+        auto* pChip = new QLabel(pRow);
+        pChip->setObjectName(qsl("aboutContactChip"));
+        pChip->setProperty("aboutChip", true);
+        pChip->setTextFormat(Qt::RichText);
+        pChip->setTextInteractionFlags(Qt::TextSelectableByMouse);
+        mContactChips.append({pChip, contact.first, contact.second});
+        pLayout->addWidget(pChip);
+    }
+    if (pLayout->count() == 0) {
+        pRow->hide();
+    }
+    return pRow;
+}
+
+QWidget* dlgAboutDialog::createMakerCard(const aboutMaker& maker, QWidget* pParent)
+{
+    QGroupBox* pCard = createCard(maker.name, pParent);
+    pCard->setObjectName(qsl("aboutPersonCard"));
+    auto* pLayout = new QVBoxLayout(pCard);
+    pLayout->setContentsMargins(0, 0, 0, 0);
+    pLayout->setSpacing(6);
+    pLayout->addWidget(createContactChips(maker, pCard));
+
+    auto* pDescription = createParagraph(maker.description, pCard);
+    pDescription->setObjectName(qsl("aboutPersonDescription"));
+    pLayout->addWidget(pDescription);
+    pLayout->addStretch(1);
+    return pCard;
+}
+
+QWidget* dlgAboutDialog::createMoreRow(const aboutMaker& maker, QWidget* pParent)
+{
+    auto* pRow = new QWidget(pParent);
+    pRow->setObjectName(qsl("aboutMoreRow"));
+    markAsShellSurface(pRow);
+    // A box, not a grid: a grid spreads a wrapping description over the rows it
+    // spans and comes out far taller than the words
+    auto* pRowLayout = new QHBoxLayout(pRow);
+    pRowLayout->setContentsMargins(0, 9, 0, 9);
+    pRowLayout->setSpacing(14);
+
+    auto* pWho = new QWidget(pRow);
+    markAsShellSurface(pWho);
+    pWho->setFixedWidth(QFontMetrics(pWho->font()).averageCharWidth() * scmMoreNameColumnCharacters);
+    auto* pWhoLayout = new QVBoxLayout(pWho);
+    pWhoLayout->setContentsMargins(0, 0, 0, 0);
+    pWhoLayout->setSpacing(4);
+    auto* pName = new QLabel(maker.name, pWho);
+    pName->setObjectName(qsl("aboutMoreName"));
+    pName->setWordWrap(true);
+    pWhoLayout->addWidget(pName);
+    pWhoLayout->addWidget(createContactChips(maker, pWho));
+    pWhoLayout->addStretch(1);
+    pRowLayout->addWidget(pWho, 0, Qt::AlignTop);
+
+    auto* pDescription = createParagraph(maker.description, pRow);
+    pDescription->setObjectName(qsl("aboutMoreDescription"));
+    pRowLayout->addWidget(pDescription, 1, Qt::AlignTop);
+    return pRow;
+}
+
+QWidget* dlgAboutDialog::buildMudletPage()
+{
+    QScrollArea* pPage = createScrollPage(qsl("mudlet"));
+    QWidget* pColumn = pPage->widget();
+    auto* pColumnLayout = qobject_cast<QVBoxLayout*>(pColumn->layout());
+
+    auto* pLinks = new QWidget(pColumn);
+    pLinks->setObjectName(qsl("aboutLinks"));
+    markAsShellSurface(pLinks);
+    mpLayout_links = new QGridLayout(pLinks);
+    mpLayout_links->setContentsMargins(0, 0, 0, 0);
+    mpLayout_links->setSpacing(10);
+
+    const QList<QList<QString>> links{//: Name of the link to the Mudlet homepage
+                                      {qsl(":/icons/about-homepage.svg"), tr("Homepage"), qsl("www.mudlet.org"), qsl("https://www.mudlet.org/")},
+                                      //: Name of the link to the Mudlet forums
+                                      {qsl(":/icons/about-forums.svg"), tr("Forums"), qsl("forums.mudlet.org"), qsl("https://forums.mudlet.org/")},
+                                      //: Name of the link to the Mudlet wiki
+                                      {qsl(":/icons/about-docs.svg"), tr("Documentation"), qsl("wiki.mudlet.org/w/Main_Page"), qsl("https://wiki.mudlet.org/w/Main_Page")},
+                                      //: Name of the link to the Mudlet Discord server
+                                      {qsl(":/icons/toolbar-discord.png"), tr("Discord"), qsl("mudlet.org/chat"), qsl("https://www.mudlet.org/chat")},
+                                      //: Name of the link to Mudlet's source code
+                                      {qsl(":/icons/about-github.png"), tr("Source code"), qsl("github.com/Mudlet/Mudlet"), qsl("https://github.com/Mudlet/Mudlet")},
+                                      //: Name of the link to Mudlet's issue tracker
+                                      {qsl(":/icons/about-bug.svg"), tr("Report a bug"), qsl("github.com/Mudlet/Mudlet/issues"), qsl("https://github.com/Mudlet/Mudlet/issues")}};
+    for (const auto& link : links) {
+        auto* pButton = new uiDesign::AboutLinkButton(link.at(0), link.at(1), link.at(2), link.at(3), pLinks);
+        pButton->setObjectName(qsl("aboutLinkButton"));
+        mLinkButtons.append(pButton);
+    }
+    layOutLinkButtons(scmLinkColumns);
+    pColumnLayout->addWidget(pLinks);
+
+    //: Title of the card on the About dialog holding the version, OS and Qt version
+    QGroupBox* pBuildCard = createCard(tr("Build information"), pColumn);
+    pBuildCard->setObjectName(qsl("aboutBuildCard"));
+    auto* pBuildLayout = new QVBoxLayout(pBuildCard);
+    pBuildLayout->setContentsMargins(0, 0, 0, 0);
+    pBuildLayout->setSpacing(10);
+
+    auto* pHeadRow = new QWidget(pBuildCard);
+    markAsShellSurface(pHeadRow);
+    auto* pHeadLayout = new QHBoxLayout(pHeadRow);
+    pHeadLayout->setContentsMargins(0, 0, 0, 0);
+    pHeadLayout->setSpacing(10);
+    //: Description under the title of the build information card
+    auto* pDescription = new QLabel(tr("What to paste into a bug report."), pHeadRow);
+    pDescription->setObjectName(qsl("aboutCardDescription"));
+    pHeadLayout->addWidget(pDescription);
+    pHeadLayout->addStretch(1);
+    //: Button that puts the build information on the clipboard
+    pHeadLayout->addWidget(createCopyButton(qsl("aboutCopyButton"), tr("Copy"), pHeadRow));
+    pBuildLayout->addWidget(pHeadRow);
+
+    auto* pFacts = new QWidget(pBuildCard);
+    pFacts->setObjectName(qsl("aboutBuildFacts"));
+    markAsShellSurface(pFacts);
+    auto* pFactsGrid = new QGridLayout(pFacts);
+    pFactsGrid->setContentsMargins(0, 0, 0, 0);
+    pFactsGrid->setHorizontalSpacing(20);
+    pFactsGrid->setVerticalSpacing(4);
+    pFactsGrid->setColumnStretch(1, 1);
+    int factRow = 0;
+    for (const auto& fact : buildInfoRows()) {
+        auto* pKey = new QLabel(fact.first, pFacts);
+        pKey->setObjectName(qsl("aboutBuildKey"));
+        pKey->setFont(fixedPitchFont());
+        auto* pValue = new QLabel(fact.second, pFacts);
+        pValue->setObjectName(qsl("aboutBuildValue"));
+        pValue->setFont(fixedPitchFont());
+        pValue->setTextInteractionFlags(Qt::TextSelectableByMouse);
+        pFactsGrid->addWidget(pKey, factRow, 0, Qt::AlignTop);
+        pFactsGrid->addWidget(pValue, factRow, 1, Qt::AlignTop);
+        ++factRow;
+    }
+    pBuildLayout->addWidget(pFacts);
+    pColumnLayout->addWidget(pBuildCard);
+
+    const QVector<aboutMaker> allMakers = makers();
+
+    //: Section heading over the cards naming the people who make Mudlet
+    pColumnLayout->addWidget(createSection(tr("Credits"), QString(), pColumn));
+
+    auto* pPeople = new QWidget(pColumn);
+    pPeople->setObjectName(qsl("aboutPeople"));
+    markAsShellSurface(pPeople);
+    auto* pPeopleGrid = new QGridLayout(pPeople);
+    pPeopleGrid->setContentsMargins(0, 0, 0, 0);
+    pPeopleGrid->setSpacing(10);
+    pPeopleGrid->setColumnStretch(0, 1);
+    pPeopleGrid->setColumnStretch(1, 1);
+    int personIndex = 0;
+    for (const aboutMaker& maker : allMakers) {
+        if (!maker.big) {
+            continue;
+        }
+        pPeopleGrid->addWidget(createMakerCard(maker, pPeople), personIndex / 2, personIndex % 2);
+        ++personIndex;
+    }
+    pColumnLayout->addWidget(pPeople);
+
+    //: Section heading over the compact list of everyone else who has contributed
+    const QString moreHeading = tr("More contributors");
+    //: Note beside the "More contributors" heading on the About dialog
+    const QString moreNote = tr("everyone who left a mark");
+    pColumnLayout->addWidget(createSection(moreHeading, moreNote, pColumn));
+
+    auto* pMore = new QWidget(pColumn);
+    pMore->setObjectName(qsl("aboutMoreList"));
+    markAsShellSurface(pMore);
+    auto* pMoreLayout = new QVBoxLayout(pMore);
+    pMoreLayout->setContentsMargins(0, 0, 0, 0);
+    pMoreLayout->setSpacing(0);
+    for (const aboutMaker& maker : allMakers) {
+        if (maker.big) {
+            continue;
+        }
+        pMoreLayout->addWidget(createSeparatorLine(pMore));
+        pMoreLayout->addWidget(createMoreRow(maker, pMore));
+    }
+    pMoreLayout->addWidget(createSeparatorLine(pMore));
+    pColumnLayout->addWidget(pMore);
+
+    //: Section heading over the closing paragraphs of the Mudlet page
+    pColumnLayout->addWidget(createSection(tr("Thanks"), QString(), pColumn));
+
+    QGroupBox* pThanks = createCard(QString(), pColumn);
+    pThanks->setObjectName(qsl("aboutThanksCard"));
+    auto* pThanksLayout = new QVBoxLayout(pThanks);
+    pThanksLayout->setContentsMargins(0, 0, 0, 0);
+    pThanksLayout->setSpacing(8);
+    const QStringList thanks{
+            //: About dialog, thanks: where Mudlet's icons come from
+            tr("Many icons are taken from the <b>KDE4 Oxygen icon theme</b>. Most of the rest are from <b>Thorsten Wilms</b>, or from <b>Stephen Lyons</b> combining bits of Thorsten's work "
+               "with the other sources. The main toolbar, settings and editor line icons are from the <b>Lucide</b> icon set at <a href=\"https://lucide.dev\">lucide.dev</a>, used under the "
+               "ISC licence, and the Discord, GitHub and Patreon marks from <b>Simple Icons</b> at <a href=\"https://simpleicons.org\">simpleicons.org</a>, used under the CC0 1.0 licence."),
+            //: About dialog, thanks: two people who shaped the scripting framework
+            tr("Special thanks to <b>Brett Duzevich</b> and <b>Ronny Ho</b>. They have contributed many good ideas and thus helped improve the scripting framework substantially."),
+            //: About dialog, thanks: the KMuddy project Mudlet's telnet code came from
+            tr("Thanks to <b>Tomas Mecir</b> (kmuddy@kmuddy.com) who brought us all together and inspired us with his KMuddy project. Mudlet is using some of the telnet code he wrote for his "
+               "KMuddy project (<a href=\"https://cgit.kde.org/kmuddy.git/\">cgit.kde.org/kmuddy.git/</a>)."),
+            //: About dialog, thanks: the author of MUSHclient
+            tr("Special thanks to <b>Nick Gammon</b> (<a href=\"http://www.gammon.com.au/mushclient/mushclient.htm\">www.gammon.com.au/mushclient/mushclient.htm</a>) for giving us some valued "
+               "pieces of advice."),
+            //: About dialog, thanks: everyone not named above
+            tr("Others too, have made their mark on different aspects of the Mudlet project and if they have not been mentioned here it is by no means intentional! For past contributors you "
+               "may see them mentioned in the <b><a href=\"https://launchpad.net/~mudlet-makers/+members\">Mudlet Makers</a></b> list (on our former bug-tracking site), or for on-going "
+               "contributors they may well be included in the <b><a href=\"https://github.com/Mudlet/Mudlet/graphs/contributors\">Contributors</a></b> list on GitHub.")};
+    for (const QString& paragraph : thanks) {
+        auto* pParagraph = createParagraph(paragraph, pThanks);
+        pParagraph->setObjectName(qsl("aboutThanksParagraph"));
+        pThanksLayout->addWidget(pParagraph);
+    }
+    pColumnLayout->addWidget(pThanks);
+    pColumnLayout->addStretch(1);
+    return pPage;
+}
+
+QWidget* dlgAboutDialog::buildSupportersPage()
+{
+    QScrollArea* pPage = createScrollPage(qsl("supporters"));
+    QWidget* pColumn = pPage->widget();
+    auto* pColumnLayout = qobject_cast<QVBoxLayout*>(pColumn->layout());
+    pColumnLayout->setSpacing(10);
+
+    // see https://www.patreon.com/mudlet if you'd like to be added!
+    const QStringList mightier_than_swords = {/* active */ "Joshua C. Burt", "StickMUD", "Medievia", /* inactive */ "Qwindor Rousseau", "Maiyannah Bishop", "Stick In the MUD 🎙"};
+    const QStringList on_a_plaque = {"demonnic", "Henry Hsiao"};
+
+    const QString introText = mudlet::smSteamMode ? tr(R"(
+                            These formidable folks will be fondly remembered forever<br>for their generous financial support on Mudlet's patreon:
+                            )")
+                                                  : tr(R"(
+                            These formidable folks will be fondly remembered forever<br>for their generous financial support on <a href="https://www.patreon.com/mudlet">Mudlet's patreon</a>:
+                            )");
+    auto* pIntro = new QLabel(pColumn);
+    pIntro->setObjectName(qsl("aboutSupportersIntro"));
+    pIntro->setWordWrap(true);
+    pIntro->setAlignment(Qt::AlignHCenter);
+    pIntro->setOpenExternalLinks(true);
+    setRichText(pIntro, introText);
+    // No layout alignment flag: with one, the box measures the height at the column
+    // width while the label draws at its cap, which clipped it to two lines
+    pColumnLayout->addWidget(pIntro);
+
+    struct Tier
+    {
+        QString heading;
+        bool swords = false;
+        QStringList names;
+    };
+    const QList<Tier> tiers{//: Heading over the higher tier of Mudlet's Patreon supporters
+                            {tr("Mightier than swords"), true, mightier_than_swords},
+                            //: Heading over the second tier of Mudlet's Patreon supporters
+                            {tr("On a plaque"), false, on_a_plaque}};
+    bool firstTier = true;
+    for (const Tier& tier : tiers) {
+        if (!firstTier) {
+            pColumnLayout->addSpacing(8);
+        }
+        firstTier = false;
+        auto* pTier = new QLabel(tier.heading, pColumn);
+        pTier->setObjectName(qsl("aboutTier"));
+        pTier->setAlignment(Qt::AlignHCenter);
+        // Uppercased by the font rather than the words, so a caseless script is left alone
+        QFont tierFont = pTier->font();
+        tierFont.setCapitalization(QFont::AllUppercase);
+        tierFont.setLetterSpacing(QFont::PercentageSpacing, scmTierLetterSpacing);
+        pTier->setFont(tierFont);
+        pColumnLayout->addWidget(pTier, 0, Qt::AlignHCenter);
+
+        for (const QString& name : tier.names) {
+            auto* pBanner = new uiDesign::AboutSupporterBanner(name, tier.swords, pColumn);
+            mBanners.append(pBanner);
+            pColumnLayout->addWidget(pBanner, 0, Qt::AlignHCenter);
+        }
+    }
+
+    if (!mudlet::smSteamMode) {
+        //: Button on the Supporters page that opens Mudlet's Patreon page
+        auto* pPatreon = new QPushButton(tr("Support Mudlet on Patreon"), pColumn);
+        pPatreon->setObjectName(qsl("aboutPatreonButton"));
+        pPatreon->setProperty("aboutPrimaryButton", true);
+        pPatreon->setAutoDefault(false);
+        pPatreon->setDefault(false);
+        pPatreon->setCursor(Qt::PointingHandCursor);
+        connect(pPatreon, &QPushButton::clicked, this, []() {
+            QDesktopServices::openUrl(QUrl(qsl("https://www.patreon.com/mudlet")));
+        });
+        pColumnLayout->addSpacing(12);
+        pColumnLayout->addWidget(pPatreon, 0, Qt::AlignHCenter);
+    }
+
+    pColumnLayout->addStretch(1);
+    return pPage;
+}
+
+QWidget* dlgAboutDialog::buildLicensePage()
+{
+    // Not a scroll page: the browser scrolls itself, and nested scroll areas scroll neither well
+    auto* pPage = new QWidget(mpStackedWidget_pages);
+    pPage->setObjectName(qsl("aboutPage_license"));
+    markAsShellSurface(pPage);
+    auto* pPageLayout = new QVBoxLayout(pPage);
+    pPageLayout->setContentsMargins(scmPageMarginSide, scmPageMarginTop, scmPageMarginSide, scmPageMarginBottom);
+    pPageLayout->setSpacing(scmPageSpacing);
+
+    QGroupBox* pNotice = createCard(QString(), pPage);
+    pNotice->setObjectName(qsl("aboutLicenseNotice"));
+    auto* pNoticeLayout = new QHBoxLayout(pNotice);
+    pNoticeLayout->setContentsMargins(0, 0, 0, 0);
+    pNoticeLayout->setSpacing(12);
+
+    auto* pNoticeGlyph = new QLabel(pNotice);
+    pNoticeGlyph->setObjectName(qsl("aboutLicenseNoticeGlyph"));
+    pNoticeGlyph->setFixedSize(18, 18);
+    pNoticeLayout->addWidget(pNoticeGlyph, 0, Qt::AlignTop);
+
+    auto* pWords = new QWidget(pNotice);
+    markAsShellSurface(pWords);
+    auto* pWordsLayout = new QVBoxLayout(pWords);
+    pWordsLayout->setContentsMargins(0, 2, 0, 0);
+    pWordsLayout->setSpacing(6);
+    //: About dialog, License page: the first line of the licence notice
+    pWordsLayout->addWidget(createParagraph(tr("<b>Mudlet is free software.</b> Its own source code is released under the "
+                                               "<a href=\"https://www.gnu.org/licenses/old-licenses/gpl-2.0.html#SEC1\">GNU General Public License version 2</a> or later."),
+                                            pWords));
+    /*: About dialog, License page: why the whole of Mudlet is offered under
+ version 3. For non-english language versions please append a translation of
+ the following to explain why the GPL is NOT reproduced in the relevant
+ language: 'As only the English form is considered the official version of the
+ license, the following is stated in that language:' */
+    pWordsLayout->addWidget(createParagraph(tr("Because it uses components that are only compatible with version 3, the combined work you are running is offered under the GNU General Public "
+                                               "License 3.0 only. That licence is reproduced below."),
+                                            pWords));
+    //: About dialog, License page: who wrote Mudlet first
+    auto* pOrigin = createParagraph(tr("Mudlet was originally written by Heiko Köhn, KoehnHeiko@googlemail.com."), pWords);
+    pOrigin->setObjectName(qsl("aboutLicenseOrigin"));
+    pWordsLayout->addWidget(pOrigin);
+    pNoticeLayout->addWidget(pWords, 1);
+    pPageLayout->addWidget(pNotice);
+
+    detachFromLayout(textBrowser_license);
+    textBrowser_license->setParent(pPage);
+    textBrowser_license->setFrameShape(QFrame::NoFrame);
+    textBrowser_license->setOpenExternalLinks(true);
+    textBrowser_license->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    markAsShellSurface(textBrowser_license->viewport());
+
+    pPageLayout->addWidget(textBrowser_license, 1);
+    return pPage;
+}
+
+QWidget* dlgAboutDialog::buildThirdPartyPage()
+{
+    QScrollArea* pPage = createScrollPage(qsl("thirdparty"));
+    QWidget* pColumn = pPage->widget();
+    auto* pColumnLayout = qobject_cast<QVBoxLayout*>(pColumn->layout());
+
+    auto* pIntro = new QLabel(pColumn);
+    pIntro->setObjectName(qsl("aboutThirdPartyIntro"));
+    pIntro->setWordWrap(true);
+    setRichText(
+            pIntro,
+            qsl("%1 %2").arg(
+                    //: Introduction to the Third party page of the About dialog
+                    tr("<b>Mudlet</b> is built upon the shoulders of other projects in the FOSS world; as well as using many GPL components we also make use of some third-party software with other "
+                       "licenses."),
+                    //: Second half of the introduction to the Third party page, saying that a row opens
+                    tr("Open a row to read the licence as shipped.")));
+    pColumnLayout->addWidget(pIntro);
+
+    QGroupBox* pList = createCard(QString(), pColumn);
+    pList->setObjectName(qsl("aboutThirdPartyList"));
+    auto* pListLayout = new QVBoxLayout(pList);
+    pListLayout->setContentsMargins(0, 0, 0, 0);
+    pListLayout->setSpacing(0);
+
+    bool first = true;
+    for (const aboutThirdParty& component : thirdPartyComponents()) {
+        if (!first) {
+            pListLayout->addWidget(createSeparatorLine(pList));
+        }
+        first = false;
+
+        auto* pRow = new QWidget(pList);
+        pRow->setObjectName(qsl("aboutThirdPartyRow"));
+        markAsShellSurface(pRow);
+        auto* pRowLayout = new QVBoxLayout(pRow);
+        pRowLayout->setContentsMargins(0, 0, 0, 0);
+        pRowLayout->setSpacing(0);
+
+        auto* pHead = new QWidget(pRow);
+        markAsShellSurface(pHead);
+        auto* pHeadLayout = new QHBoxLayout(pHead);
+        pHeadLayout->setContentsMargins(0, 0, 14, 0);
+        pHeadLayout->setSpacing(10);
+
+        auto* pToggle = new QToolButton(pHead);
+        pToggle->setObjectName(qsl("aboutThirdPartyToggle"));
+        pToggle->setText(component.name);
+        pToggle->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+        pToggle->setCheckable(true);
+        pToggle->setFocusPolicy(Qt::StrongFocus);
+        pToggle->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+        mThirdPartyToggles.append(pToggle);
+        pHeadLayout->addWidget(pToggle);
+
+        auto* pCopyright = new QLabel(pHead);
+        pCopyright->setObjectName(qsl("aboutThirdPartyCopyright"));
+        pCopyright->setWordWrap(true);
+        pCopyright->setOpenExternalLinks(true);
+        setRichText(pCopyright, component.copyright);
+        pHeadLayout->addWidget(pCopyright, 1);
+
+        auto* pKind = new QLabel(component.licenceKind, pHead);
+        pKind->setObjectName(qsl("aboutThirdPartyKind"));
+        pKind->setProperty("aboutChip", true);
+        pHeadLayout->addWidget(pKind, 0, Qt::AlignRight | Qt::AlignVCenter);
+        pRowLayout->addWidget(pHead);
+
+        auto* pBody = new QLabel(pRow);
+        pBody->setObjectName(qsl("aboutThirdPartyBody"));
+        pBody->setWordWrap(true);
+        pBody->setOpenExternalLinks(true);
+        setRichText(pBody, component.body);
+        pBody->setContentsMargins(40, 2, 14, 14);
+        pBody->hide();
+        connect(pToggle, &QToolButton::toggled, pBody, &QLabel::setVisible);
+        pRowLayout->addWidget(pBody);
+
+        pListLayout->addWidget(pRow);
+    }
+    pColumnLayout->addWidget(pList);
+    pColumnLayout->addStretch(1);
+    return pPage;
+}
+
+void dlgAboutDialog::showPage(const QString& key)
+{
+    if (!mPageIndexes.contains(key)) {
+        return;
+    }
+    mpStackedWidget_pages->setCurrentIndex(mPageIndexes.value(key));
+    if (QToolButton* pButton = mNavButtons.value(key, nullptr); pButton && !pButton->isChecked()) {
+        pButton->setChecked(true);
+    }
+    if (auto* pScrollArea = qobject_cast<QScrollArea*>(mpStackedWidget_pages->currentWidget()); pScrollArea) {
+        pScrollArea->verticalScrollBar()->setValue(0);
+    }
+}
+
+QList<QPair<QString, QString>> dlgAboutDialog::buildInfoRows()
+{
+    QList<QPair<QString, QString>> rows;
+    //: Key of the build-information row naming which Mudlet this is
+    rows.append({tr("Version"), MudletApp::scmVersion()});
+    //: Key of the build-information row naming the operating system
+    rows.append({tr("OS"), QSysInfo::prettyProductName()});
+#if defined(Q_OS_WINDOWS)
+    // We only support 64-bit now on Windows but retain what we used to use when
+    // we did 32 as well for consistency
+    //: Key of the build-information row naming the processor, on Windows
+    rows.append({tr("CPU (64-bits)"), QSysInfo::currentCpuArchitecture()});
+#else
+    //: This is shown for all other OSes than Windows.
+    rows.append({tr("CPU"), QSysInfo::currentCpuArchitecture()});
+#endif
+    if (Q_UNLIKELY(QLatin1String(qVersion()) != QLatin1String(QT_VERSION_STR))) {
+        /*: This is shown when the Qt version used at run-time
+ is different to that used during compilation - it is not
+ the usual case.*/
+        rows.append({tr("Qt version (compilation)"), QString::fromLatin1(QT_VERSION_STR)});
+        /*: This is shown when the Qt version used at run-time
+ is different to that used during compilation - it is not
+ the usual case.*/
+        rows.append({tr("Qt version (run-time)"), QString::fromLatin1(qVersion())});
+    } else {
+        /*: This is shown when the same Qt version is used at run-time
+ as was used during compilation - it is the usual case.*/
+        rows.append({tr("Qt version"), QString::fromLatin1(QT_VERSION_STR)});
+    }
+    return rows;
+}
+
+QString dlgAboutDialog::buildInformationText() const
+{
+    QStringList lines;
+    for (const auto& row : buildInfoRows()) {
+        lines << qsl("%1: %2").arg(row.first, row.second);
+    }
+    return lines.join(QChar::LineFeed);
+}
+
+void dlgAboutDialog::slot_copyBuildInformation()
+{
+    QApplication::clipboard()->setText(buildInformationText());
+
+    auto* pButton = qobject_cast<QPushButton*>(sender());
+    if (!pButton) {
+        return;
+    }
+    slot_restoreCopyButton();
+
+    mpButton_showingCopied = pButton;
+    //: Shown on the Copy button for a moment after the build information has been put on the clipboard
+    pButton->setText(tr("Copied"));
+    pButton->setIcon(copyButtonIcon(true, themeTokens()));
+    pButton->setProperty("aboutCopied", true);
+    repolish(pButton);
+    mpTimer_copyFeedback->start();
+}
+
+void dlgAboutDialog::slot_restoreCopyButton()
+{
+    mpTimer_copyFeedback->stop();
+    if (!mpButton_showingCopied) {
+        return;
+    }
+    QPushButton* pButton = mpButton_showingCopied;
+    mpButton_showingCopied = nullptr;
+    pButton->setText(pButton->property("aboutRestingText").toString());
+    pButton->setIcon(copyButtonIcon(false, themeTokens()));
+    pButton->setProperty("aboutCopied", false);
+    repolish(pButton);
+}
+
+void dlgAboutDialog::slot_applyAppearance()
+{
+    applyShellStyle();
+}
+
+void dlgAboutDialog::resizeEvent(QResizeEvent* pEvent)
+{
+    QDialog::resizeEvent(pEvent);
+    updateArtColumnWidth();
+}
+
+bool dlgAboutDialog::event(QEvent* pEvent)
+{
+    // Glyphs and artwork are rasterised for the old ratio, and nothing else re-derives a
+    // pixmap once it has been set
+    if (pEvent->type() == QEvent::DevicePixelRatioChange) {
+        applyShellStyle();
+    }
+    return QDialog::event(pEvent);
+}
+
+void dlgAboutDialog::layOutLinkButtons(const int columns)
+{
+    if (!mpLayout_links) {
+        return;
+    }
+    for (int index = 0; index < mLinkButtons.size(); ++index) {
+        mpLayout_links->addWidget(mLinkButtons.at(index), index / columns, index % columns);
+    }
+    for (int column = 0; column < scmLinkColumns; ++column) {
+        mpLayout_links->setColumnStretch(column, column < columns ? 1 : 0);
+    }
+}
+
+void dlgAboutDialog::updateArtColumnWidth()
+{
+    if (!mpWidget_artColumn) {
+        return;
+    }
+    const bool narrow = mNarrow ? width() < scmWidenAboveWidth : width() < scmNarrowBelowWidth;
+    // A flag rather than testing the label for a picture: a splash that failed to
+    // load would re-grid the cards on every resize
+    if (narrow == mNarrow && mArtColumnPlaced) {
+        return;
+    }
+    mNarrow = narrow;
+    mArtColumnPlaced = true;
+
+    const int padding = narrow ? scmNarrowArtColumnPadding : scmArtColumnPadding;
+    mpWidget_artColumn->setFixedWidth(narrow ? scmNarrowArtColumnWidth : scmArtColumnWidth);
+    mpWidget_artColumn->layout()->setContentsMargins(padding, padding, padding, padding);
+    restyleArtwork(themeTokens());
+
+    layOutLinkButtons(narrow ? scmNarrowLinkColumns : scmLinkColumns);
+}
+
+void dlgAboutDialog::restyleArtwork(const ThemeTokens& tokens)
+{
+    if (mSplash.isNull()) {
+        return;
+    }
+    const int wide = artworkWidth(mNarrow);
+    const qreal ratio = devicePixelRatioF();
+    QImage scaled = mSplash.scaledToWidth(static_cast<int>(wide * ratio), Qt::SmoothTransformation);
+    scaled.setDevicePixelRatio(ratio);
+
+    // A QLabel does not clip a pixmap to a stylesheet's corner radius, so the
+    // rounded picture and the hairline round it are painted into the pixmap
+    QPixmap rounded(scaled.size());
+    rounded.setDevicePixelRatio(ratio);
+    rounded.fill(Qt::transparent);
+    {
+        QPainter painter(&rounded);
+        painter.setRenderHint(QPainter::Antialiasing, true);
+        const QRectF frame(0, 0, wide, scaled.height() / ratio);
+        QPainterPath corners;
+        corners.addRoundedRect(frame, scmRadiusPanel, scmRadiusPanel);
+        painter.setClipPath(corners);
+        painter.drawImage(frame, scaled);
+        painter.setClipping(false);
+        painter.setPen(QPen(tokens.border, 1.0));
+        painter.setBrush(Qt::NoBrush);
+        painter.drawRoundedRect(frame.adjusted(0.5, 0.5, -0.5, -0.5), scmRadiusPanel, scmRadiusPanel);
+    }
+    mudletTitleLabel->setPixmap(rounded);
+    mudletTitleLabel->setFixedSize(wide, qRound(scaled.height() / ratio));
+}
+
+void dlgAboutDialog::restyleContactChips(const ThemeTokens& tokens)
+{
+    // Made once per file: 49 chips share three glyphs, and each would cost a load, a
+    // tint, a PNG encode and a base64
+    QHash<QString, QString> inlined;
+    const qreal ratio = devicePixelRatioF();
+    for (const ContactChip& chip : mContactChips) {
+        if (!chip.pLabel) {
+            continue;
+        }
+        auto glyph = inlined.constFind(chip.glyphFile);
+        if (glyph == inlined.constEnd()) {
+            glyph = inlined.insert(chip.glyphFile, inlineGlyph(glyphAt(chip.glyphFile, scmChipGlyphSize, ratio, tokens.mutedText)));
+        }
+        chip.pLabel->setText(qsl("%1 %2").arg(glyph.value(), chip.text.toHtmlEscaped()));
+    }
+}
+
+QIcon dlgAboutDialog::copyButtonIcon(const bool copied, const ThemeTokens& tokens) const
+{
+    return QIcon(copied ? tintedGlyph(uiDesign::glyphPixmap(qsl(":/icons/about-check.svg")), tokens.accentText) : tintedGlyph(uiDesign::glyphPixmap(qsl(":/icons/editor-copy.svg")), tokens.mutedText));
+}
+
+void dlgAboutDialog::applyShellStyle()
+{
+    if (!mpWidget_shell) {
+        return;
+    }
+    // From the application palette: assigning a stylesheet freezes this dialog's (see themeTokens())
+    const ThemeTokens tokens = themeTokens();
+
+    const QString cardIndicatorRules = cardIndicatorStyleSheet(scmProp_aboutCard, tokens);
+    const int cardTitleHeight = measuredCardTitleHeight(mpWidget_shell, cardIndicatorRules, scmProp_aboutCard);
+    const CardMetrics cardMetrics{
+            .cardProperty = scmProp_aboutCard, .plainProperty = scmProp_aboutCardPlain, .padding = scmCardPadding, .titleHeight = cardTitleHeight, .flattenNestedGroupBoxes = false};
+
+    const QString captionSize = QString::number(typeSize(TypeStep::Caption));
+    const QString titleSize = QString::number(typeSize(TypeStep::Title));
+
+    mpWidget_shell->setStyleSheet(
+            qsl("#aboutShell, #aboutContent { background-color: %1; }"
+                "#aboutArtColumn { background-color: %2; border-right: 1px solid %3; }"
+                // So a profile's Lua stylesheet painting every QWidget cannot colour the scaffolding
+                "QWidget[settingsSurface=\"true\"] { background-color: transparent; border: none; }"
+                "#aboutName { font-size: %5pt; font-weight: bold; }"
+                "#aboutVersion { font-size: %6pt; color: %4; }"
+                "#aboutCopyright { font-size: %6pt; color: %4; }"
+                "#aboutFooter { font-size: %6pt; color: %4; }"
+                "#textBrowser_license { background-color: %1; border: none; }")
+                    .arg(tokens.page.name(), tokens.pane.name(), tokens.separator.name(), tokens.mutedText.name(), titleSize, captionSize)
+            + qsl("QLabel[aboutChip=\"true\"] { border: 1px solid %1; border-radius: %2px; padding: 1px 7px; font-size: %9pt; color: %3; }"
+                  "QLabel[aboutChipLit=\"true\"] { background-color: %4; color: %5; border: 1px solid transparent; }"
+                  "#aboutNav { border-bottom: 1px solid %1; }"
+                  "#aboutNav QToolButton { border: 1px solid transparent; border-radius: 6px; padding: 6px 12px; color: %3; background-color: transparent; }"
+                  "#aboutNav QToolButton:hover { background-color: %6; color: %7; }"
+                  "#aboutNav QToolButton:checked { background-color: %4; color: %5; font-weight: bold; }"
+                  "#aboutNav QToolButton:focus { border: 1px solid %8; }")
+                      .arg(tokens.border.name(),
+                           QString::number(scmRadiusChip),
+                           tokens.mutedText.name(),
+                           tokens.accentSoft,
+                           tokens.accentText.name(),
+                           tokens.hoverSoft,
+                           tokens.text.name(),
+                           tokens.accent.name(),
+                           captionSize)
+            + cardStyleSheet(cardMetrics, tokens) + cardIndicatorRules
+            + qsl("#aboutSectionTitle { font-size: %6pt; font-weight: bold; }"
+                  "#aboutSectionNote { font-size: %7pt; color: %1; }"
+                  "#aboutCardDescription { font-size: %7pt; color: %1; }"
+                  "#aboutPersonDescription { color: %1; }"
+                  "#aboutMoreName { font-weight: bold; }"
+                  "#aboutMoreDescription { color: %1; }"
+                  "#aboutThanksParagraph { color: %1; }"
+                  "#aboutSupportersIntro { color: %1; }"
+                  "#aboutTier { font-size: %7pt; color: %1; }"
+                  "#aboutThirdPartyIntro { color: %1; }"
+                  "#aboutThirdPartyCopyright { font-size: %7pt; color: %1; }"
+                  "#aboutThirdPartyBody { font-size: %7pt; color: %1; }"
+                  "#aboutLicenseOrigin { font-size: %7pt; color: %1; }"
+                  "#aboutBuildKey { font-size: %7pt; color: %1; }"
+                  "#aboutBuildValue { font-size: %7pt; color: %2; }"
+                  "#aboutSeparatorLine { background-color: %3; }"
+                  "#aboutThirdPartyToggle { border: 1px solid transparent; padding: 9px 14px; text-align: left; background-color: transparent; color: %2; font-weight: bold; }"
+                  "#aboutThirdPartyToggle:hover { background-color: %4; }"
+                  "#aboutThirdPartyToggle:focus { border: 1px solid %5; }")
+                      .arg(tokens.mutedText.name(), tokens.text.name(), tokens.border.name(), tokens.hoverSoft, tokens.accent.name(), titleSize, captionSize)
+            + buttonStyleSheet(tokens) + qsl("QPushButton[aboutButton=\"true\"][aboutCopied=\"true\"] { color: %1; border: 1px solid %2; }").arg(tokens.accentText.name(), tokens.accent.name())
+            + qsl("QPushButton[aboutPrimaryButton=\"true\"] { background-color: %1; color: %2; border: 1px solid transparent; border-radius: %3px; padding: 5px 16px;"
+                  " min-height: %4px; font-weight: bold; }"
+                  "QPushButton[aboutPrimaryButton=\"true\"]:hover { background-color: %5; }"
+                  "QPushButton[aboutPrimaryButton=\"true\"]:focus { border: 1px solid %6; }")
+                      .arg(tokens.accentSoft, tokens.accentText.name(), QString::number(scmRadiusInput), QString::number(scmPrimaryButtonHeight), tokens.hoverSoft, tokens.accent.name())
+            + scrollBarStyleSheet(qsl("QScrollArea[settingsSurface=\"true\"]"), tokens) + scrollBarStyleSheet(qsl("#textBrowser_license"), tokens));
+
+    keepClickFocusOffControls(mpWidget_shell);
+
+    // After the sheet: assigning a stylesheet re-polishes the subtree back to the
+    // palette it was first polished with, discarding any ink written before it
+    for (QToolButton* pButton : std::as_const(mNavButtons)) {
+        pButton->setIcon(tintedIcon(pButton->property("aboutNavGlyph").toString(), tokens));
+    }
+    for (QToolButton* pToggle : mThirdPartyToggles) {
+        pToggle->setIcon(tintedIcon(qsl(":/icons/about-chevron-right.svg"), qsl(":/icons/about-chevron-down.svg"), tokens));
+    }
+    for (uiDesign::AboutLinkButton* pLink : mLinkButtons) {
+        pLink->applyTokens(tokens);
+    }
+    for (uiDesign::AboutSupporterBanner* pBanner : mBanners) {
+        pBanner->applyTokens(tokens);
+    }
+    for (QPushButton* pButton : mCopyButtons) {
+        pButton->setIcon(copyButtonIcon(pButton == mpButton_showingCopied, tokens));
+    }
+    restyleContactChips(tokens);
+    restyleArtwork(tokens);
+    if (auto* pNoticeGlyph = findChild<QLabel*>(qsl("aboutLicenseNoticeGlyph")); pNoticeGlyph) {
+        pNoticeGlyph->setPixmap(glyphAt(qsl(":/icons/about-mudlet.svg"), scmAboutLicenceGlyphSize, devicePixelRatioF(), tokens.accentText));
+    }
+    if (auto* pPatreon = findChild<QPushButton*>(qsl("aboutPatreonButton")); pPatreon) {
+        pPatreon->setIcon(QIcon(tintedGlyph(uiDesign::glyphPixmap(qsl(":/icons/about-patreon.png")), tokens.accentText)));
+    }
+
+    // Only when it moved: re-parsing eighty labels for the colour they already
+    // carry is the costliest step of construction
+    if (tokens.accentText != mInkedLinkColour) {
+        restyleRichText(tokens);
+    }
+
+    // Half a megabyte of rich text: only re-parsed when one of its head's three inks changed
+    const QString licenceInk = qsl("%1/%2/%3").arg(tokens.text.name(), tokens.mutedText.name(), tokens.accentText.name());
+    if (licenceInk != mLicenceInkKey) {
+        mLicenceInkKey = licenceInk;
+        setLicenseText(tokens);
+    }
+    update();
+}
+
+void dlgAboutDialog::setLicenseText(const ThemeTokens& tokens)
+{
+    // h2 to h4 name the body size outright: Qt's rich text engine otherwise gives each
+    // heading a larger size of its own
+    const QString htmlHead = qsl("<head><style type=\"text/css\">"
+                                 "body { margin: 0; }"
+                                 "h1 { text-align: center; font-size: %4pt; font-weight: bold; color: %1; }"
+                                 "h2 { text-align: center; font-size: %5pt; font-weight: bold; color: %2; }"
+                                 "h3 { text-align: center; font-size: %5pt; font-weight: bold; color: %2; }"
+                                 "h4 { font-size: %5pt; font-weight: bold; color: %1; }"
+                                 "p { color: %1; }"
+                                 "li { color: %1; }"
+                                 "a { color: %3; }"
+                                 "tt { white-space: pre-wrap; }"
+                                 "</style></head>")
+                                     .arg(tokens.text.name(), tokens.mutedText.name(), tokens.accentText.name(), QString::number(typeSize(TypeStep::Title)), QString::number(typeSize(TypeStep::Body)));
+
     // clang-format off
     /* Only the introductory text at the top is to be translated - the Licence
      * itself MUST NOT be translated as only the English Language version is
@@ -324,18 +1223,6 @@ void dlgAboutDialog::setLicenseTab(const QString& htmlHead) const
      * third-party components means that the Mudlet application must also have a GPL 3.0 only
      * (not lower and not higher) licence when all parts are packaged together in an installable
      * form or a Linux AppImage.*/
-
-    /*: For non-english language versions please append a translation of the following
- to explain why the GPL is NOT reproduced in the relevant language: 'As only
- the English form is considered the official version of the license, the
- following is stated in that language:' to replace 'This is reproduced below:'...*/
-    QString headerText(tr("<p>Mudlet was originally written by Heiko Köhn, KoehnHeiko@googlemail.com.</p>\n"
-                          "<p>Mudlet's own source code is released under the "
-                          "<a href=\"https://www.gnu.org/licenses/old-licenses/gpl-2.0.html#SEC1\">GNU "
-                          "Public License version 2</a> or later; however, because we use elements from "
-                          "other projects with (or which are only compatible with) a GPL version 3 "
-                          "licence, the combined work has to be offered to you under a GNU Public Licence "
-                          "3.0 only. This is reproduced below:</p>"));
 
     QString gplText(qsl("<h1>GNU GENERAL PUBLIC LICENSE</h1>"
                           "<h2>Version 3, 29 June 2007</h2>"
@@ -837,24 +1724,149 @@ void dlgAboutDialog::setLicenseTab(const QString& htmlHead) const
                           "library. If this is what you want to do, use the GNU Lesser General Public "
                           "instead of this License. But first, please read "
                           "&lt;<a href=\"https://www.gnu.org/licenses/why-not-lgpl.html\">https://www.gnu.org/licenses/why-not-lgpl.html</a>&gt;.</p>"));
-
-    //    textBrowser_license->setFont(QFont(qsl("Bitstream Vera Serif"), 14));
-    textBrowser_license->setHtml(
-                qsl("<html>%1<body>%2<hr>%3</body></html>")
-                .arg(htmlHead, headerText, gplText));
     // clang-format on
+
+    // A theme change must not throw the reader back to the top
+    const int wasAt = textBrowser_license->verticalScrollBar()->value();
+    // A QTextDocument ignores the head's "a { color }" rule when inking anchors
+    textBrowser_license->setHtml(qsl("<html>%1<body>%2</body></html>").arg(htmlHead, uiDesign::withLinkColour(gplText, tokens.accentText)));
+    textBrowser_license->verticalScrollBar()->setValue(wasAt);
 }
 
-void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
-{ // TAB 3 - Third party items
+QVector<aboutMaker> dlgAboutDialog::makers()
+{
     // clang-format off
-    // Only the introductory text at the top and interspersed between items are
-    // to be translated - the Licences themselves MUST NOT be translated:
-    QString thirdPartiesHeader(
-            tr("<p align=\"center\"><b>Mudlet</b> is built upon the shoulders of other projects in the FOSS world; "
-               "as well as using many GPL components we also make use of some third-party software "
-               "with other licenses:</p>"));
+    // theme-fixed: a Discord handle carries a # and four digits, which reads as a hex colour and is not one
+    QVector<aboutMaker> aboutMakers; // [big?, name, discord, github, email, description]
+    aboutMakers.append({true, qsl("Heiko Köhn"), QString(), QString(), qsl("KoehnHeiko@googlemail.com"),
+                        //: about:Heiko
+                        tr("Original author, original project lead, Mudlet core coding, retired.")});
+    aboutMakers.append({true, qsl("Vadim Peretokin"), qsl("Vadi#3695"), qsl("vadi2"), qsl("vadim.peretokin@mudlet.org"),
+                        //: about:Vadi
+                        tr("GUI design and initial feature planning. He is responsible for the project homepage and the user manual. "
+                           "Maintainer of the Windows, macOS, Ubuntu and generic Linux installers. "
+                           "Maintains the Mudlet wiki, Lua API, and handles project management, public relations &amp; user help. "
+                           "With the project from the very beginning and is an official spokesman of the project. "
+                           "Since the retirement of Heiko, he has become the head of the Mudlet project.")});
+    aboutMakers.append({true, qsl("Stephen Lyons"), qsl("SlySven#2703"), qsl("SlySven"), qsl("slysven@virginmedia.com"),
+                        //: about:SlySven
+                        tr("After joining in 2013, he has been poking various bits of the C++ code and GUI with a pointy stick; "
+                           "subsequently trying to patch over some of the holes made/found. "
+                           "Most recently he has been working on I18n and L10n for Mudlet 4.0.0 so if you are playing Mudlet in a language "
+                           "other than American English you will be seeing the results of him getting fed up with the spelling differences "
+                           "between what was being used and the British English his brain wanted to see.")});
+    aboutMakers.append({true, qsl("Damian Monogue"), qsl("demonnic#4307"), qsl("demonnic"), qsl("demonnic@gmail.com"),
+                        //: about:demonnic
+                        tr("Former maintainer of the early Windows and Apple OSX packages. "
+                           "He also administers our server and helps the project in many ways.")});
+    aboutMakers.append({true, qsl("Florian Scheel"), qsl("keneanung#2803"), qsl("keneanung"), qsl("keneanung@googlemail.com"),
+                        //: about:keneanung
+                        tr("Contributed many improvements to Mudlet's db: interface, event system, "
+                           "and has been around the project for a very long while assisting users.")});
+    aboutMakers.append({true, qsl("Leris"), qsl("Leris#5152"), qsl("Kebap"), qsl("kebap_spam@gmx.net"),
+                        //: about:Leris
+                        tr("Does a ton of work in making Mudlet, the website and the wiki accessible to you "
+                           "regardless of the language you speak - and promoting our genre!")});
+    aboutMakers.append({true, qsl("Piotr Wilczynski"), QString(), qsl("Delwing"), qsl("delwing@gmail.com"),
+                        //: about:Delwing
+                        tr("Joined in 2020, reworking much of the 2D mapper and adding many Lua API features. "
+                           "Outside the client they build Mudlet Web, the documentation extract that powers "
+                           "autocompletion in code editors, and the tools that share Mudlet maps online.")});
+    aboutMakers.append({true, qsl("Zooka"), QString(), qsl("ZookaOnGit"), QString(),
+                        //: about:Zooka
+                        tr("Joined in 2023 and works across the whole client - script editor, preferences, package manager "
+                           "and mapper - along with many Lua API additions. Wrote the Mudlet Tutorial profile and "
+                           "maintains the Mudlet package repository.")});
+    aboutMakers.append({false, qsl("Ahmed Charles"), QString(), qsl("ahmedcharles"), qsl("acharles@outlook.com"),
+                        //: about:ahmedcharles
+                        tr("Contributions to the Travis integration, CMake and Visual C++ build, "
+                           "a lot of code quality and memory management improvements.")});
+    aboutMakers.append({false, qsl("Chris Mitchell"), qsl("Chris7#6113"), qsl("Chris7"), qsl("chris.mit7@gmail.com"),
+                        //: about:Chris7
+                        tr("Developed a shared module system that allows script packages to be shared among profiles, "
+                           "a UI for viewing Lua variables, improvements in the mapper and all around.")});
+    aboutMakers.append({false, qsl("Ben Carlsen"), QString(), QString(), qsl("arkholt@gmail.com"),
+                        //: about:Ben Carlsen
+                        tr("Developed the first version of our Mac OSX installer. "
+                           "He is the former maintainer of the Mac version of Mudlet.")});
+    aboutMakers.append({false, qsl("Ben Smith"), QString(), QString(), QString(),
+                        //: about:Ben Smith
+                        tr("Joined in December 2009 though he's been around much longer. "
+                           "Contributed to the Lua API and is the former maintainer of the Lua API.")});
+    aboutMakers.append({false, qsl("Blaine von Roeder"), QString(), QString(), QString(),
+                        //: about:Blaine von Roeder
+                        tr("Joined in December 2009. He has contributed to the Lua API, submitted small bugfix patches "
+                           "and has helped with release management of 1.0.5.")});
+    aboutMakers.append({false, qsl("Bruno Bigras"), QString(), QString(), qsl("bruno@burnbox.net"),
+                        //: about:Bruno Bigras
+                        tr("Developed the original cmake build script and he has committed a number of patches.")});
+    aboutMakers.append({false, qsl("Carter Dewey"), QString(), QString(), qsl("eldarerathis@gmail.com"),
+                        //: about:Carter Dewey
+                        tr("Contributed to the Lua API.")});
+    aboutMakers.append({false, qsl("Erik Pettis"), qsl("Etomyutikos#9266"), qsl("Oneymus"), QString(),
+                        //: about:Oneymus
+                        tr("Developed the Vyzor GUI Manager for Mudlet.")});
+    aboutMakers.append({false, qsl("Harrison"), QString(), qsl("Harrison-Teeg"), qsl("harrison.martin@gmail.com"),
+                        //: about:Harrison
+                        tr("Brought the 3D mapper back to life with camera controls, lighting and proper geometry "
+                           "for z-squished rooms, and has fixed a number of console and command line annoyances.")});
+    aboutMakers.append({false, qsl("ItsTheFae"), qsl("TheFae#9971"), qsl("Kae"), QString(),
+                        //: about:TheFae
+                        tr("Worked wonders in rejuvenating our Website in 2017 but who prefers a little anonymity - "
+                           "if you are a <i>SpamBot</i> you will not get onto our Fora now. They have also made some useful "
+                           "C++ core code contributions and we look forward to future reviews on and work in that area.")});
+    aboutMakers.append({false, qsl("Ian Adkins"), qsl("Dicene#1533"), qsl("dicene"), qsl("ieadkins@gmail.com"),
+                        //: about:Dicene
+                        tr("Joining us 2017 they have given us some useful C++ and Lua contributions.")});
+    aboutMakers.append({false, qsl("James Younquist"), QString(), QString(), qsl("daemacles@yahoo.com"),
+                        //: about:James Younquist
+                        tr("Contributed the Geyser layout manager for Mudlet in March 2010. "
+                           "It is written in Lua and aims at simplifying user GUI scripting.")});
+    aboutMakers.append({false, qsl("John Dahlström"), QString(), QString(), qsl("email@johndahlstrom.se"),
+                        //: about:John Dahlström
+                        tr("Helped develop and debug the Lua API.")});
+    aboutMakers.append({false, qsl("John McKisson"), QString(), qsl("jmckisson"), qsl("john.mckisson@gmail.com"),
+                        //: about:John McKisson
+                        tr("Implemented MMCP, so Mudlet can join MudMaster chat networks, and has contributed "
+                           "a range of console and Lua API fixes.")});
+    aboutMakers.append({false, qsl("Karsten Bock"), QString(), qsl("Beliaar"), QString(),
+                        //: about:Beliaar
+                        tr("Contributed several improvements and new features for Geyser.")});
+    aboutMakers.append({false, qsl("Leigh Stillard"), QString(), QString(), qsl("leigh.stillard@gmail.com"),
+                        //: about:Leigh Stillard
+                        tr("The original author of our Windows installer.")});
+    aboutMakers.append({false, qsl("Maksym Grinenko"), QString(), QString(), qsl("maksym.grinenko@gmail.com"),
+                        //: about:Maksym Grinenko
+                        tr("Worked on the manual, forum help and helps with GUI design and documentation.")});
+    aboutMakers.append({false, qsl("Manuel Wegmann"), QString(), qsl("Edru2"), QString(),
+                        //: about:Edru2
+                        tr("Built much of the GUI toolkit you script with between 2020 and 2022: Adjustable Containers, "
+                           "Geyser's ScrollBox, animated labels and Geyser in UserWindows - plus the dark theme toggle "
+                           "and the Package Exporter rework.")});
+    aboutMakers.append({false, qsl("Mike Conley"), QString(), qsl("mpconley"), qsl("sousesider@gmail.com"),
+                        //: about:Mike Conley
+                        tr("Joined in 2018 and looks after nearly everything Mudlet plays or negotiates - MCMP media, "
+                           "sound and video, closed captioning, MXP, OSC 8 hyperlinks and text encodings - plus "
+                           "multi-window support with drag-and-drop tabs.")});
+    aboutMakers.append({false, qsl("Stephen Hansen"), QString(), QString(), qsl("me+mudlet@ixokai.io"),
+                        //: about:Stephen Hansen
+                        tr("Developed a database Lua API that allows for far easier use of databases and one of the original OSX installers.")});
+    aboutMakers.append({false, qsl("Thorsten Wilms"), QString(), QString(), qsl("t_w_@freenet.de"),
+                        //: about:Thorsten Wilms
+                        tr("Designed our beautiful logo, our splash screen, the about dialog, our website, several icons and badges. "
+                           "Visit his homepage at <a href=\"http://thorwil.wordpress.com/\">thorwil.wordpress.com</a>.")});
+    aboutMakers.append({false, qsl("Tim Johnson"), QString(), qsl("atari2600tim"), QString(),
+                        //: about:Tim Johnson
+                        tr("Joined in 2020 and made Mudlet work far better with screen readers, alongside secure IRC "
+                           "connections, Discord improvements, and a batch of editor shortcuts and Lua configuration functions.")});
+    // clang-format on
+    return aboutMakers;
+}
 
+QVector<aboutThirdParty> dlgAboutDialog::thirdPartyComponents()
+{
+    // clang-format off
+    // The Licences themselves MUST NOT be translated: only the English form is legally definitive
     // This one needs something about the name of the original copyright holder
     // and possible contributors as it includes a %1 placeholder in the text
     // to represent something that varies between different products using it:
@@ -1236,414 +2248,182 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                "SOFTWARE.</p>"));
 #endif // defined(INCLUDE_FONTS)
 
-    QString communiHeader(tr("<h2><u>Communi IRC Library</u></h2>"
-                             "<h3>Copyright © 2008-2020 The Communi Project</h3>"));
+    QVector<aboutThirdParty> components;
 
-    QString communiKonverstionSuppliment(tr("<p>Parts of <tt>irctextformat.cpp</t> code come from Konversation and are copyrighted to:<br>"
-                                            "Copyright © 2002 Dario Abatianni &lt;eisfuchs@tigress.com&gt;<br>"
-                                            "Copyright © 2004 Peter Simonsson &lt;psn@linux.se&gt;<br>"
-                                            "Copyright © 2006-2008 Eike Hein &lt;hein@kde.org&gt;<br>"
-                                            "Copyright © 2004-2009 Eli Mackenzie &lt;argonel@gmail.com&gt;</p>"));
+    // Names and SPDX identifiers are not translated: a name is what its authors call it
+    components.append({qsl("Communi IRC Library"),
+                       //: about:third-party Communi
+                       tr("IRC support. Copyright © 2008-2020 The Communi Project"),
+                       qsl("BSD-3-Clause"),
+                       BSD3Clause_Body.arg(qsl("Neither the name of the Communi Project nor the names of its contributors may"),
+                                           qsl("COPYRIGHT HOLDERS AND CONTRIBUTORS"),
+                                           qsl("COPYRIGHT HOLDERS OR CONTRIBUTORS"))
+                               //: about:third-party the Konversation code inside Communi
+                               + tr("<p>Parts of <tt>irctextformat.cpp</tt> code come from Konversation and are copyrighted to:<br>"
+                                    "Copyright © 2002 Dario Abatianni &lt;eisfuchs@tigress.com&gt;<br>"
+                                    "Copyright © 2004 Peter Simonsson &lt;psn@linux.se&gt;<br>"
+                                    "Copyright © 2006-2008 Eike Hein &lt;hein@kde.org&gt;<br>"
+                                    "Copyright © 2004-2009 Eli Mackenzie &lt;argonel@gmail.com&gt;</p>")});
 
-    QString luaHeader(tr("<h2><u>Lua - Lua 5.1</u></h2>"
-                         "<h3>Copyright © 1994–2017 Lua.org, PUC-Rio.</h3>"));
+    components.append({qsl("Lua 5.1"),
+                       //: about:third-party Lua
+                       tr("The language Mudlet is scripted in. Copyright © 1994–2017 Lua.org, PUC-Rio."), qsl("MIT"), MIT_Body});
 
-    QString luaFileSystemHeader(tr("<h2><u>LuaFileSystem</u></h2>"
-                                   "<h3>Copyright © 2003-2020, Kepler Project</h3>"));
+    components.append({qsl("LuaFileSystem"),
+                       //: about:third-party LuaFileSystem
+                       tr("File system access for Lua. Copyright © 2003-2020, Kepler Project"), qsl("MIT"), MIT_Body});
 
-    QString luaYajlHeader(tr("<h2><u>Lua_yajl - Lua 5.1 interface to yajl</u></h2>"
-                             "<h3>Author: Brian Maher &lt;maherb at brimworks dot com&gt;<br>"
-                             "Copyright © 2009 Brian Maher</h3>"));
+    components.append({qsl("Lua_yajl"),
+                       //: about:third-party lua_yajl
+                       tr("Lua 5.1 interface to yajl. Author: Brian Maher &lt;maherb at brimworks dot com&gt;. Copyright © 2009 Brian Maher"), qsl("MIT"), MIT_Body});
 
-    QString luaUTF8Header(tr("<h2><u>Luautf8 - A UTF-8 support module for Lua.</u></h2>"
-                             "<h3>Copyright © 2018 Xavier Wang</h3>"));
+    components.append({qsl("Luautf8"),
+                       //: about:third-party luautf8
+                       tr("A UTF-8 support module for Lua. Copyright © 2018 Xavier Wang"), qsl("MIT"), MIT_Body});
 
-    QString luaSql_Sqlite3Header(tr("<h2><u>LuaSql-Sqlite3 - Database connectivity for the Lua programming language (Sqlite3 component).</u></h2>"
-                                    "<h3>Copyright © 2003-2019, The Kepler Project</h3>"));
+    components.append({qsl("LuaSql-Sqlite3"),
+                       //: about:third-party LuaSql
+                       tr("Database connectivity for the Lua programming language (Sqlite3 component). Copyright © 2003-2019, The Kepler Project"), qsl("MIT"), MIT_Body});
 
-    QString lrexlib_pcre2Header(tr("<h2><u>Lrexlib-pcre2 -  Regular expression library binding (PCRE2 flavour).</u></h2>"
-                                   "<h3>Copyright © Reuben Thomas 2000-2020<br>"
-                                   "Copyright © Shmuel Zeigerman 2004-2020</h3>"));
+    components.append({qsl("Lrexlib-pcre2"),
+                       //: about:third-party lrexlib
+                       tr("Regular expression library binding (PCRE2 flavour). Copyright © Reuben Thomas 2000-2020, Copyright © Shmuel Zeigerman 2004-2020"), qsl("MIT"), MIT_Body});
 
 #if defined(Q_OS_MACOS) || defined(DEBUG_SHOWALL)
-    QString luaZipHeader(tr("<h2><u>LuaZip - Reading files inside zip files</u></h2>"
-                            "<h3>Author: Danilo Tuler<br>"
-                            "Copyright © 2003-2007 Kepler Project</h3>"));
+    components.append({qsl("LuaZip"),
+                       //: about:third-party LuaZip
+                       tr("Reading files inside zip files. Author: Danilo Tuler. Copyright © 2003-2007 Kepler Project"), qsl("MIT"), MIT_Body});
 #endif // defined(Q_OS_MACOS)
 
-    QString edbeeHeader(tr("<h2><u>Edbee - multi-feature editor widget</u></h2>"
-                           "<h3>Copyright © 2012-2026 by Rick Blommers</h3>"));
+    components.append({qsl("Edbee"),
+                       //: about:third-party edbee
+                       tr("The multi-feature editor widget the script editor is built on. Copyright © 2012-2026 by Rick Blommers"),
+                       qsl("MIT"),
+                       MIT_Body
+                               //: about:third-party edbee supplement
+                               + qsl("<p>%1</p>").arg(tr("The <b>edbee-lib</b> widget itself incorporates another component with a licence that must be noted as well, it is Oniguruma - listed "
+                                                         "below."))});
 
-    QString edbeeSuppliment(tr("The <b>edbee-lib</b> widget itself incorporates another component with a licence that must be noted as well, it is:"));
-
-    QString OnigurumaHeader(tr("<h2><u>Oniguruma LICENSE</u></h2>"
-                               "<h3>Copyright © 2002-2021 K.Kosako &lt;kkosako0@gmail.com&gt;<br>"
-                               "All rights reserved.</h3>"));
+    components.append({qsl("Oniguruma"),
+                       //: about:third-party Oniguruma
+                       tr("Regular expressions inside edbee. Copyright © 2002-2021 K.Kosako &lt;kkosako0@gmail.com&gt;. All rights reserved."),
+                       qsl("BSD-2-Clause"),
+                       BSD2Clause_Body.arg(qsl("COPYRIGHT HOLDERS AND CONTRIBUTORS"), qsl("COPYRIGHT HOLDERS OR CONTRIBUTORS"))});
 
 #if defined(INCLUDE_UPDATER) || defined(DEBUG_SHOWALL)
-    QString DblsqdHeader(tr("<h2><u>Dblsqd (derived work)</u></h2>"
-                            "<h3>Copyright © 2017 Philipp Medien</h3>"));
+    components.append({qsl("Dblsqd"),
+                       //: about:third-party dblsqd
+                       tr("The updater, as a derived work. Copyright © 2017 Philipp Medien"), qsl("Apache-2.0"), APACHE2_Body});
 #if defined(Q_OS_MACOS)
-    QString SparkleHeader(tr("<h2><u>Sparkle - macOS updater</u></h2>"
-                             "<h3>Copyright © 2006-2013 Andy Matuschak.<br>"
-                             "Copyright © 2009-2013 Elgato Systems GmbH.<br>"
-                             "Copyright © 2011-2014 Kornel Lesiński.<br>"
-                             "Copyright © 2015-2017 Mayur Pawashe.<br>"
-                             "Copyright © 2014 C.W. Betts.<br>"
-                             "Copyright © 2014 Petroules Corporation.<br>"
-                             "Copyright © 2014 Big Nerd Ranch.<br>"
-                             "All rights reserved.</h3>"));
-
-    QString Sparkle3rdPartyHeader(tr("<h4>bspatch.c and bsdiff.c, from bsdiff 4.3 <a href=\"http://www.daemonology.net/bsdiff/\">http://www.daemonology.net/bsdiff</a>:</h4>"
-                                     "<h3>Copyright © 2003-2005 Colin Percival.</h3>"
-                                     "<h4>sais.c and sais.c, from sais-lite (2010/08/07) <a href=\"https://sites.google.com/site/yuta256/sais\">https://sites.google.com/site/yuta256/sais</a>:</h4>"
-                                     "<h3>Copyright © 2008-2010 Yuta Mori.</h3>"
-                                     "<h4>SUDSAVerifier.m:</h4>"
-                                     "<h3>Copyright © 2011 Mark Hamlin.<br>"
-                                     "All rights reserved.</h3>"));
+    components.append({qsl("Sparkle"),
+                       //: about:third-party Sparkle
+                       tr("The macOS updater. Copyright © 2006-2013 Andy Matuschak, "
+                          "Copyright © 2009-2013 Elgato Systems GmbH, "
+                          "Copyright © 2011-2014 Kornel Lesiński, "
+                          "Copyright © 2015-2017 Mayur Pawashe, "
+                          "Copyright © 2014 C.W. Betts, "
+                          "Copyright © 2014 Petroules Corporation, "
+                          "Copyright © 2014 Big Nerd Ranch. All rights reserved."),
+                       qsl("MIT"),
+                       MIT_Body
+                               //: about:third-party the components bundled inside Sparkle
+                               + tr("<h4>bspatch.c and bsdiff.c, from bsdiff 4.3 <a href=\"http://www.daemonology.net/bsdiff/\">http://www.daemonology.net/bsdiff</a>:</h4>"
+                                    "<p>Copyright © 2003-2005 Colin Percival.</p>"
+                                    "<h4>sais.c and sais.c, from sais-lite (2010/08/07) "
+                                    "<a href=\"https://sites.google.com/site/yuta256/sais\">https://sites.google.com/site/yuta256/sais</a>:</h4>"
+                                    "<p>Copyright © 2008-2010 Yuta Mori.</p>"
+                                    "<h4>SUDSAVerifier.m:</h4>"
+                                    "<p>Copyright © 2011 Mark Hamlin.<br>All rights reserved.</p>")
+                               + BSD2Clause_Body.arg(QLatin1String("AUTHOR"), QLatin1String("AUTHOR"))
+                               + BSD2Clause_Body.arg(QLatin1String("AUTHOR AND CONTRIBUTORS"), QLatin1String("AUTHOR OR CONTRIBUTORS"))});
 #endif // defined(Q_OS_MACOS)
-#endif // defined(INCLUDE_UPDATER)
-
-    QString DiscordHeader(tr("<h2><u>Discord - Rich Presence - RPC library</u></h2>"
-                             "<h3>Copyright © 2017 Discord, Inc.</h3>"));
-
-    QString QtKeyChainHeader(tr("<h2><u>QtKeyChain - Platform-independent Qt API for storing passwords securely</u></h2>"
-                                 "<h3>Copyright © 2011-2026 Frank Osterfeld &lt;frank.osterfeld@gmail.com&gt;.</h3>"));
-
-    QString SingleConnectHeader(tr("<h2><u>singleshot_connect.h - part of KDToolBox</u><br>"
-                                   "Github: <a href=\"https://github.com/KDAB/KDToolBox\">KDToolBox</a></h2>"
-                                   "<h3>Copyright © 2020-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, &lt;info@kdab.com&gt;.</h3>"));
-
-    QString Utf8_filenamesHeader(tr("<h2><u>utf8_filenames.lua - modifies standard Lua functions so that they work with UTF-8 filenames on Windows</u><br>"
-                                    "<a href=\"https://gist.github.com/Egor-Skriptunoff/2458547aa3b9210a8b5f686ac08ecbf0\">Github GIST</a></h2>"
-                                    "<h3>Copyright © 2019 Egor-Skriptunoff</h3>"));
-
-#if defined(WITH_SENTRY) || defined(DEBUG_SHOWALL)
-    QString SentryHeader(tr("<h2><u>Sentry Native - Crash reporting SDK</u></h2>"
-                            "<h3>Copyright © 2019 Sentry (https://sentry.io) and individual contributors.<br>"
-                            "All rights reserved.</h3>"));
-#endif
-
-    //: Credits the speech recognition libraries Mudlet can load. None are bundled - the user installs them - so this names them rather than reproducing their licences
-    QString speechBackendsHeader(tr("<h2><u>Speech recognition backends</u></h2>"
-                                    "<h3>Mudlet can drive <a href=\"https://alphacephei.com/vosk\">Vosk</a> (Apache 2.0), "
-                                    "<a href=\"https://github.com/k2-fsa/sherpa-onnx\">sherpa-onnx</a> (Apache 2.0), and the "
-                                    "<a href=\"https://onnxruntime.ai\">ONNX Runtime</a> (MIT) it runs on.<br>"
-                                    "None of them ship with Mudlet: you install them yourself, and each one's licence "
-                                    "travels with the files you download.</h3>"));
-
-    //: Credits the Lucide icon set used for the settings dialog's category icons. The copyright line below it is required by the ISC licence, so keep the name and year as they are
-    QString LucideHeader(tr("<h2><u>Lucide - icon toolkit used for the settings dialog's category icons</u><br>"
-                            "<a href=\"https://lucide.dev\">lucide.dev</a></h2>"
-                            "<h3>Copyright © 2026 Lucide Icons and Contributors</h3>"));
-
-    //: Introduces the second licence covering those Lucide icons that Lucide itself inherited from the Feather project
-    QString LucideFeatherSuppliment(tr("<h4>Of the icons used by Mudlet, <tt>monitor</tt>, <tt>search</tt>, "
-                                       "<tt>terminal</tt> and <tt>help-circle</tt> are derived from the Feather "
-                                       "project and are additionally covered by the following licence:</h4>"
-                                       "<h3>Copyright © 2013-present Cole Bemis</h3>"));
-
-    QString swordModelHeader(tr("<h2><u>Sword 3D Model</u></h2>"
-                               "<h3>Model obtained from <a href=\"https://sketchfab.com/3d-models/sword-07463a2658e04d6ab8a42b5639a35d63\">Sketchfab</a><br>"
-                               "Author: <a href=\"https://sketchfab.com/minghau\">minghauLoh</a><br>"
-                               "Licensed under <a href=\"https://creativecommons.org/licenses/by/4.0/\">CC BY 4.0</a></h3>"));
-
-#if defined(INCLUDE_OPENSSL3) || defined(DEBUG_SHOWALL)
-    QString openSSL3Header(tr("<h2><u>OpenSSL 3.x - Open Source Toolkit for Secure Transport Layer Security</u></h2>"
-                              "<h3>Copyright © 1995-2026 The OpenSSL Project Authors.<br>"
-                              "All Rights Reserved</h3>"));
-#endif
-
-    // Now start to assemble the fragments above:
-    QStringList license_3rdParty_texts;
-    license_3rdParty_texts.append(qsl("<html>%1<body>%2<hr>")
-                                          .arg(htmlHead,                       //  1 - Html Header
-                                               thirdPartiesHeader));           //  2 - Introductory header - translatable
-
-    license_3rdParty_texts.append(qsl("%3%4%5<hr>")
-                                          .arg(communiHeader,                  //  3 - Communi (IRC) header - translatable
-                                               BSD3Clause_Body                 //  4 - Communi (IRC) body BSD3 ("COPYRIGHT HOLDERS AND/OR CONTRIBUTORS") - not translatable
-                                                       .arg(qsl("Neither the name of the Communi Project nor the names of its contributors may"),
-                                                            qsl("COPYRIGHT HOLDERS AND CONTRIBUTORS"),
-                                                            qsl("COPYRIGHT HOLDERS OR CONTRIBUTORS")),
-                                               communiKonverstionSuppliment)); //  5 - Communi supplimentary about Konversation - translatable
-
-    license_3rdParty_texts.append(qsl("%6%12<hr>%7%12<hr>%8%12<hr>%9%12<hr>%10%12<hr>%11%12<hr>")
-                                          .arg(luaHeader,                      //  6 - lua header - translatable
-                                               luaFileSystemHeader,            //  7 - luaFileSystem header - translatable
-                                               luaYajlHeader,                  //  8 - lua_yajl header - translatable
-                                               luaUTF8Header,                  //  9 - luautf8 header - translatable
-                                               luaSql_Sqlite3Header,           // 10 - luaSql_Sqlite3 header - translatable
-                                               lrexlib_pcre2Header,            // 11 - lrexlib_pcre2 header - translatable
-                                               MIT_Body));                     // 12 - six copies of the body MIT for all of the above - not translatable
-
-#if defined(Q_OS_MACOS) || defined(DEBUG_SHOWALL)
-    license_3rdParty_texts.append(qsl("%13%14<hr>")
-                                          .arg(luaZipHeader,                   // 13 - macOS luazip header - translatable
-                                               MIT_Body));                     // 14 - macOS luazip body MIT - not translatable
-#endif // defined(Q_OS_MACOS)
-
-    license_3rdParty_texts.append(qsl("%15%16")
-                                          .arg(edbeeHeader,                    // 15 - edbee header - translatable
-                                               MIT_Body));                     // 16 - edbee body MIT - not translatable
-
-    // Items 18, 19, 22, 23 & 24 have been removed
-    license_3rdParty_texts.append(qsl("<hr width=\"50%\">%17"
-                                                 "%20%21")
-                                          .arg(edbeeSuppliment,                // 17 - edbee other components:
-                                               OnigurumaHeader,                // 20 - Oniguruma header - translatable
-                                               BSD2Clause_Body                 // 21 - Oniguruma body BSD2 ("COPYRIGHT HOLDERS AND/OR CONTRIBUTORS") - not translatable
-                                                       .arg(qsl("COPYRIGHT HOLDERS AND CONTRIBUTORS"),
-                                                            qsl("COPYRIGHT HOLDERS OR CONTRIBUTORS"))));
-
-#if defined(INCLUDE_UPDATER) || defined(DEBUG_SHOWALL)
-    license_3rdParty_texts.append(qsl("<hr>%25%26")
-                                          .arg(DblsqdHeader,                   // 25 - dblsqd Header - translatable
-                                               APACHE2_Body));                 // 26 - dblsqd body APACHE2 - not translatable
-#if defined(Q_OS_MACOS) || defined(DEBUG_SHOWALL)
-    license_3rdParty_texts.append(qsl("<hr width=\"50%\">%27%28<hr width=\"33%\">%29%30<hr width=\"33%\">%31%32")
-                                          .arg(SparkleHeader,                  // 27 - Sparkle header - translatable
-                                               MIT_Body,                       // 28 - Sparkle body MIT - not translatable
-                                               Sparkle3rdPartyHeader,          // 29 - Sparkle 3rd Party headers - translatable
-                                               BSD2Clause_Body                 // 30 - Sparkle 3rd Party body BSD2 ("AUTHOR") - not translatable
-                                                       .arg(QLatin1String("AUTHOR"), QLatin1String("AUTHOR")),
-                                               BSD2Clause_Body    // 32 - Sparkle glue body BSD2 ("COPYRIGHT HOLDERS AND/OR CONTRIBUTORS") - not translatable
-                                                       .arg(QLatin1String("AUTHOR AND CONTRIBUTORS"), QLatin1String("AUTHOR OR CONTRIBUTORS"))));
-#endif // defined(Q_OS_MACOS))
 #endif // defined(INCLUDE_UPDATER)
 
 #if defined(INCLUDE_FONTS) || defined(DEBUG_SHOWALL)
-    license_3rdParty_texts.append(qsl("<hr>%33")
-                                  .arg(UbuntuFontText));                       // 33 - Ubuntu Font Text - not translatable
-    license_3rdParty_texts.append(qsl("<hr>%34")
-                                  .arg(SILOpenFontText));                      // 34 - SIL Open Font Text - not translatable
-
+    components.append({qsl("Ubuntu Font Family"),
+                       //: about:third-party Ubuntu font
+                       tr("A font family bundled with Mudlet"), qsl("UFL-1.0"), UbuntuFontText});
+    components.append({qsl("Noto Color Emoji"),
+                       //: about:third-party Noto font
+                       tr("A font bundled with Mudlet"), qsl("OFL-1.1"), SILOpenFontText});
 #endif // defined(INCLUDE_FONTS)
 
-    license_3rdParty_texts.append(qsl("<hr><center><img src=\":/icons/Discord-Logo+Wordmark-Color_438x120px.png\"/></center><br>"
-                                      "%35%36")
-                                  .arg(DiscordHeader,                          // 35 - Discord header - translatable
-                                       MIT_Body));                             // 36 - Discord body MIT - not translatable
+    components.append({qsl("Discord Rich Presence"),
+                       //: about:third-party Discord RPC
+                       tr("The RPC library that tells Discord what you are playing. Copyright © 2017 Discord, Inc."),
+                       qsl("MIT"),
+                       // A picture rather than chrome, so no colour of the design applies
+                       qsl(R"(<p><img src=":/icons/Discord-Logo+Wordmark-Color_438x120px.png" width="219" height="60"></p>)") + MIT_Body});
 
-    license_3rdParty_texts.append(qsl("<hr>%37%38")
-                                  .arg(QtKeyChainHeader,                       // 37 - QtKeyChain header - translatable
-                                       BSD3Clause_Body                         // 38 - QtKeyChain body BSD3 ("AUTHOR") - not translatable
-                                       .arg(QLatin1String("The name of the author may not"),
-                                            QLatin1String("AUTHOR"),
-                                            QLatin1String("AUTHOR"))));
+    components.append({qsl("QtKeyChain"),
+                       //: about:third-party QtKeychain
+                       tr("Platform-independent Qt API for storing passwords securely. Copyright © 2011-2026 Frank Osterfeld &lt;frank.osterfeld@gmail.com&gt;."),
+                       qsl("BSD-3-Clause"),
+                       BSD3Clause_Body.arg(QLatin1String("The name of the author may not"), QLatin1String("AUTHOR"), QLatin1String("AUTHOR"))});
 
-    license_3rdParty_texts.append(qsl("<hr>%39%40")
-                                  .arg(SingleConnectHeader,                    // 39 - singleshot_connect header - translatable
-                                       MIT_Body));                             // 40 - singleshot_connect body MIT - not translatable
+    components.append({qsl("singleshot_connect.h"),
+                       //: about:third-party KDToolBox
+                       tr("Part of <a href=\"https://github.com/KDAB/KDToolBox\">KDToolBox</a>. Copyright © 2020-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, "
+                          "&lt;info@kdab.com&gt;."),
+                       qsl("MIT"),
+                       MIT_Body});
 
     // Although this is only effective on Windows it is bundled in ALL builds
-    license_3rdParty_texts.append(qsl("<hr>%41%42")
-                                  .arg(Utf8_filenamesHeader,                   // 41 - utf8_filename header - translatable
-                                       MIT_Body));                             // 42 - utf8_filename body MIT - not translatable
+    components.append({qsl("utf8_filenames.lua"),
+                       //: about:third-party utf8_filenames
+                       tr("Modifies standard Lua functions so that they work with UTF-8 filenames on Windows. Copyright © 2019 Egor-Skriptunoff. "
+                          "<a href=\"https://gist.github.com/Egor-Skriptunoff/2458547aa3b9210a8b5f686ac08ecbf0\">Github GIST</a>"),
+                       qsl("MIT"),
+                       MIT_Body});
 
 #if defined(WITH_SENTRY) || defined(DEBUG_SHOWALL)
-    license_3rdParty_texts.append(qsl("<hr>%43%44")
-                                  .arg(SentryHeader,                           // 43 - Sentry header - translatable
-                                       MIT_Body));                             // 44 - Sentry body MIT - not translatable
+    components.append({qsl("Sentry Native"),
+                       //: about:third-party Sentry
+                       tr("Crash reporting SDK. Copyright © 2019 Sentry (https://sentry.io) and individual contributors. All rights reserved."), qsl("MIT"), MIT_Body});
 #endif
 
-    license_3rdParty_texts.append(qsl("<hr>%45")
-                                  .arg(swordModelHeader));                     // 45 - sword model attribution - translatable
+    //: about:third-party name of the sword model the 3D mapper uses
+    components.append({tr("Sword 3D model"),
+                       //: about:third-party sword model
+                       tr("Used by the 3D mapper. Model by minghauLoh, obtained from Sketchfab"),
+                       //: Licence chip for a component whose licence is none of the usual ones
+                       tr("Other"),
+                       //: about:third-party where the 3D mapper's sword model came from
+                       tr("<p>Model obtained from <a href=\"https://sketchfab.com/3d-models/sword-07463a2658e04d6ab8a42b5639a35d63\">Sketchfab</a><br>"
+                          "Author: <a href=\"https://sketchfab.com/minghau\">minghauLoh</a><br>"
+                          "Licensed under <a href=\"https://creativecommons.org/licenses/by/4.0/\">CC BY 4.0</a></p>")});
 
 #if defined(INCLUDE_OPENSSL3) || defined(DEBUG_SHOWALL)
-    license_3rdParty_texts.append(qsl("<hr>%46%47")
-                                  .arg(openSSL3Header,                         // 46 - OpenSSL3 header - translatable
-                                       APACHE2_Body));                         // 47 - OpenSSL3 body APACHE2 - not translatable
+    components.append({qsl("OpenSSL 3.x"),
+                       //: about:third-party OpenSSL
+                       tr("Open Source Toolkit for Secure Transport Layer Security. Copyright © 1995-2026 The OpenSSL Project Authors. All Rights Reserved"),
+                       qsl("Apache-2.0"),
+                       APACHE2_Body});
 #endif
 
-    license_3rdParty_texts.append(qsl("<hr>%48")
-                                  .arg(speechBackendsHeader));                 // 48 - speech recognition backends - translatable
+    //: about:third-party the speech recognition libraries Mudlet can load. None are bundled - the user installs them - so this names them rather than reproducing their licences
+    components.append({tr("Speech recognition backends"),
+                       //: about:third-party Vosk, sherpa-onnx and the ONNX Runtime
+                       tr("Mudlet can drive Vosk, sherpa-onnx and the ONNX Runtime for speech recognition. None of them ship with Mudlet: you install them yourself."),
+                       qsl("Apache-2.0 AND MIT"),
+                       //: about:third-party where the speech recognition backends come from and why their licences are not reproduced here
+                       tr("<p>Mudlet can drive <a href=\"https://alphacephei.com/vosk\">Vosk</a> (Apache 2.0), "
+                          "<a href=\"https://github.com/k2-fsa/sherpa-onnx\">sherpa-onnx</a> (Apache 2.0), and the "
+                          "<a href=\"https://onnxruntime.ai\">ONNX Runtime</a> (MIT) it runs on.<br>"
+                          "None of them ship with Mudlet: you install them yourself, and each one's licence "
+                          "travels with the files you download.</p>")});
 
-    license_3rdParty_texts.append(qsl("<hr>%49%50%51%52")
-                                  .arg(LucideHeader,                           // 49 - Lucide header - translatable
-                                       ISC_Body,                               // 50 - Lucide body ISC - not translatable
-                                       LucideFeatherSuppliment,                // 51 - Lucide/Feather supplement - translatable
-                                       MIT_Body));                             // 52 - Lucide/Feather body MIT - not translatable
+    components.append({qsl("Lucide"),
+                       //: about:third-party Lucide. The copyright line is required by the ISC licence, so keep the name and year as they are
+                       tr("Mudlet's line icons, from <a href=\"https://lucide.dev\">lucide.dev</a>. Copyright © 2026 Lucide Icons and Contributors"),
+                       qsl("ISC"),
+                       ISC_Body
+                               //: about:third-party Lucide supplement: introduces the second licence, which covers the icons Lucide itself inherited from the Feather project
+                               + tr("<h4>Icons derived from the Feather project</h4>"
+                                    "<p>Those of Lucide's icons that it inherited from the Feather project are additionally covered by the following licence.<br>"
+                                    "Copyright © 2013-present Cole Bemis</p>")
+                               + MIT_Body});
 
-    license_3rdParty_texts.append(qsl("</body></html>"));
-
-    textBrowser_license_3rdparty->setHtml(license_3rdParty_texts.join(QString()));
     // clang-format on
-}
-
-void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
-{
-    // see https://www.patreon.com/mudlet if you'd like to be added!
-    QStringList mightier_than_swords = {/* active */ "Joshua C. Burt", "StickMUD", "Medievia", /* inactive */ "Qwindor Rousseau", "Maiyannah Bishop", "Stick In the MUD 🎙"};
-    QStringList on_a_plaque = {"demonnic", "Henry Hsiao"};
-    int image_counter{1};
-
-    if (!supportersDocument) {
-        supportersDocument = std::make_unique<QTextDocument>();
-    }
-
-    QFont nameFont;
-    nameFont.setPixelSize(32);
-    nameFont.setFamily(qsl("Bitstream Vera Sans"));
-
-    for (const auto& name : std::as_const(mightier_than_swords)) {
-        QImage background(qsl(":/icons/frame_swords.png"));
-        QPainter painter(&background);
-        painter.setFont(nameFont);
-        painter.drawText(0, 0, background.width(), background.height(), Qt::AlignCenter, name);
-        supportersDocument->addResource(QTextDocument::ImageResource, QUrl(qsl("data://image%1").arg(image_counter)), background);
-        image_counter++;
-    }
-
-    for (const auto& name : std::as_const(on_a_plaque)) {
-        QImage background(qsl(":/icons/frame_plaque.png"));
-        QPainter painter(&background);
-        painter.setFont(nameFont);
-        painter.drawText(0, 0, background.width(), background.height(), Qt::AlignCenter, name);
-        supportersDocument->addResource(QTextDocument::ImageResource, QUrl(qsl("data://image%1").arg(image_counter)), background);
-        image_counter++;
-    }
-
-    QString supporters_image_html;
-    auto supporters_amount = mightier_than_swords.size() + on_a_plaque.size();
-    for (auto counter = 1; counter <= supporters_amount; counter++) {
-        // clang-format off
-        supporters_image_html.append(qsl(R"(
-            <div class="container">
-                <img src="data://image%1"/>
-            </div>
-        )").arg(counter));
-        // clang-format on
-    }
-
-    QString supporters_text;
-    if (mudlet::smSteamMode) {
-        supporters_text = qsl(R"(
-                <p align="center"><br>%1<br></p>
-                %2
-                )")
-                                  .arg(tr(R"(
-                            These formidable folks will be fondly remembered forever<br>for their generous financial support on Mudlet's patreon:
-                            )"),
-                                       supporters_image_html);
-    } else {
-        supporters_text = qsl(R"(
-                <p align="center"><br>%1<br></p>
-                %2
-                )")
-                                  .arg(tr(R"(
-                            These formidable folks will be fondly remembered forever<br>for their generous financial support on <a href="https://www.patreon.com/mudlet">Mudlet's patreon</a>:
-                            )"),
-                                       supporters_image_html);
-    }
-
-    supportersDocument->setHtml(qsl("<html>%1<body>%2</body></html>").arg(htmlHead, supporters_text));
-    textBrowser_supporters->setDocument(supportersDocument.get());
-    textBrowser_supporters->setOpenExternalLinks(true);
-}
-
-QString dlgAboutDialog::createBuildInfo() const
-{
-#if defined(Q_OS_WINDOWS)
-    if (Q_UNLIKELY(QLatin1String(qVersion()) != QLatin1String(QT_VERSION_STR))) {
-        return qsl("<table border=\"0\" style=\"margin-bottom:18px; margin-left:36px; margin-right:36px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">\n"
-                   "<tr><td colspan=\"2\" style=\"font-weight: 800\">%1</td></tr>\n"
-                   "<tr><td style=\"padding-right: 10px;\">%2<td>%3</td></tr>\n"
-                   "<tr><td style=\"padding-right: 10px;\">%4</td><td>%5</td></tr>\n"
-                   "<tr><td style=\"padding-right: 10px;\">%6</td><td>%7</td></tr>\n"
-                   "<tr><td style=\"padding-right: 10px;\">%8</td><td>%9</td></tr>\n"
-                   "<tr><td style=\"padding-right: 10px;\">%10</td><td>%11</td></tr>\n"
-                   "</table>")
-                .arg(tr("Technical information:"),  // %1
-                     tr("Version"),                 // %2
-                     MudletApp::scmVersion(),       // %3
-                     tr("OS"),                      // %4
-                     QSysInfo::prettyProductName(), // %5
-                     tr("CPU (64-bits)"),           // %6 - We only support 64-bit now on Windows but retain what we
-                                                    // used to use when we did 32 as well for consistency
-                     QSysInfo::currentCpuArchitecture(), // %7
-                     /*: This is shown when the Qt version used at run-time
- is different to that used during compilation - it is not
- the usual case.*/
-                     tr("Qt version (compilation)"), // %8
-                     QLatin1String(QT_VERSION_STR))  // %9
-                     /*: This is shown when the Qt version used at run-time
- is different to that used during compilation - it is not
- the usual case.*/
-                .arg(tr("Qt version (run-time)"),    // %10
-                     qVersion());                    // %11
-    }
-
-    // Else they are the same:
-    return qsl("<table border=\"0\" style=\"margin-bottom:18px; margin-left:36px; margin-right:36px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">\n"
-               "<tr><td colspan=\"2\" style=\"font-weight: 800\">%1</td></tr>\n"
-               "<tr><td style=\"padding-right: 10px;\">%2<td>%3</td></tr>\n"
-               "<tr><td style=\"padding-right: 10px;\">%4</td><td>%5</td></tr>\n"
-               "<tr><td style=\"padding-right: 10px;\">%6</td><td>%7</td></tr>\n"
-               "<tr><td style=\"padding-right: 10px;\">%8</td><td>%9</td></tr>\n"
-               "</table>")
-            .arg(tr("Technical information:"),  // %1
-                 tr("Version"),                 // %2
-                 MudletApp::scmVersion(),       // %3
-                 tr("OS"),                      // %4
-                 QSysInfo::prettyProductName(), // %5
-                 tr("CPU (64-bits)"),           // %6 - We only support 64-bit now on Windows but retain what we
-                                                // used to use when we did 32 as well for consistency
-                 QSysInfo::currentCpuArchitecture(),     // %7
-                 /*: This is shown when the same Qt version is used at run-time
- as was used during compilation - it is the usual case.*/
-                 tr("Qt version"),              // %8
-                 QLatin1String(QT_VERSION_STR)); // %9
-#else
-    // Anything else
-    if (Q_UNLIKELY(QLatin1String(qVersion()) != QLatin1String(QT_VERSION_STR))) {
-        return qsl("<table border=\"0\" style=\"margin-bottom:18px; margin-left:36px; margin-right:36px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">\n"
-                   "<tr><td colspan=\"2\" style=\"font-weight: 800\">%1</td></tr>\n"
-                   "<tr><td style=\"padding-right: 10px;\">%2<td>%3</td></tr>\n"
-                   "<tr><td style=\"padding-right: 10px;\">%4</td><td>%5</td></tr>\n"
-                   "<tr><td style=\"padding-right: 10px;\">%6</td><td>%7</td></tr>\n"
-                   "<tr><td style=\"padding-right: 10px;\">%8</td><td>%9</td></tr>\n"
-                   "<tr><td style=\"padding-right: 10px;\">%10</td><td>%11</td></tr>\n"
-                   "</table>")
-                .arg(tr("Technical information:"),  // %1
-                     tr("Version"),                 // %2
-                     MudletApp::scmVersion(),       // %3
-                     tr("OS"),                      // %4
-                     QSysInfo::prettyProductName(), // %5
-                     //: This is shown for all other OSes than Windows.
-                     tr("CPU"),                          // %6
-                     QSysInfo::currentCpuArchitecture(), // %7
-                     /*: This is shown when the Qt version used at run-time
- is different to that used during compilation - it is not
-the usual case.*/
-                     tr("Qt version (compilation)"), // %8
-                     QLatin1String(QT_VERSION_STR))  // %9
-                     /*: This is shown when the Qt version used at run-time
- is different to that used during compilation - it is not
- the usual case.*/
-                .arg(tr("Qt version (run-time)"),    // %10
-                     qVersion());                    // %11
-    }
-
-    // Else they are the same:
-    return qsl("<table border=\"0\" style=\"margin-bottom:18px; margin-left:36px; margin-right:36px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">\n"
-               "<tr><td colspan=\"2\" style=\"font-weight: 800\">%1</td></tr>\n"
-               "<tr><td style=\"padding-right: 10px;\">%2<td>%3</td></tr>\n"
-               "<tr><td style=\"padding-right: 10px;\">%4</td><td>%5</td></tr>\n"
-               "<tr><td style=\"padding-right: 10px;\">%6</td><td>%7</td></tr>\n"
-               "<tr><td style=\"padding-right: 10px;\">%8</td><td>%9</td></tr>\n"
-               "</table>")
-            .arg(tr("Technical information:"),  // %1
-                 tr("Version"),                 // %2
-                 MudletApp::scmVersion(),       // %3
-                 tr("OS"),                      // %4
-                 QSysInfo::prettyProductName(), // %5
-                 //: This is shown for all other OSes than Windows.
-                 tr("CPU"),                          // %6
-                 QSysInfo::currentCpuArchitecture(), // %7
-                 /*: This is shown when the same Qt version is used at run-time
- as was used during compilation - it is the usual case.*/
-                 tr("Qt version"),               // %8
-                 QLatin1String(QT_VERSION_STR)); // %9
-#endif
+    return components;
 }

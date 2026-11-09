@@ -16,7 +16,7 @@
     <verstretch>0</verstretch>
    </sizepolicy>
   </property>
-  <layout class="QGridLayout" name="gridLayout_triggers_main_area" rowstretch="0,1" columnstretch="1,0">
+  <layout class="QGridLayout" name="gridLayout_triggers_main_area" rowstretch="0,1" columnstretch="0,1">
    <property name="leftMargin">
     <number>0</number>
    </property>
@@ -29,8 +29,11 @@
    <property name="bottomMargin">
     <number>0</number>
    </property>
-   <property name="spacing">
-    <number>3</number>
+   <property name="horizontalSpacing">
+    <number>14</number>
+   </property>
+   <property name="verticalSpacing">
+    <number>12</number>
    </property>
    <item row="0" column="0" colspan="2">
     <widget class="QWidget" name="widget_top" native="true">
@@ -40,15 +43,18 @@
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
-     <property name="autoFillBackground">
-      <bool>true</bool>
-     </property>
      <layout class="QHBoxLayout" name="horizontalLayout_widget_top" stretch="0,1,0,1,0,0">
+      <property name="spacing">
+       <number>10</number>
+      </property>
       <property name="leftMargin">
-       <number>6</number>
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
       </property>
       <property name="rightMargin">
-       <number>6</number>
+       <number>0</number>
       </property>
       <property name="bottomMargin">
        <number>0</number>
@@ -62,7 +68,7 @@
          </sizepolicy>
         </property>
         <property name="text">
-         <string>Name:</string>
+         <string>Name</string>
         </property>
         <property name="alignment">
          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -82,7 +88,7 @@
       <item>
        <widget class="QLabel" name="label_trigger_command">
         <property name="text">
-         <string>Command:</string>
+         <string>Command</string>
         </property>
         <property name="alignment">
          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -103,48 +109,25 @@
        </widget>
       </item>
       <item>
-       <widget class="QToolButton" name="toolButton_toggleExtraControls">
-        <property name="toolTip">
-         <string>&lt;p&gt;Show or hide the advanced options for this trigger; hiding them leaves more room for the trigger &lt;i&gt;items&lt;/i&gt; on a smaller screen.&lt;/p&gt;</string>
-        </property>
-        <property name="text">
-         <string extracomment="Label of the disclosure button that shows or hides the trigger's less commonly used settings - the stay open, sound, multi-line, filter and colourise options. Keep it short, it shares one row with the Name and Command fields.">Advanced options</string>
-        </property>
-        <property name="icon">
-         <iconset resource="../mudlet.qrc">
-          <normaloff>:/icons/arrow-right_grey-16x.png</normaloff>
-          <normalon>:/icons/arrow-down_grey-16x.png</normalon>
-          <activeoff>:/icons/arrow-right-16x.png</activeoff>
-          <activeon>:/icons/arrow-down-16x.png</activeon>:/icons/arrow-right_grey-16x.png</iconset>
-        </property>
-        <property name="checkable">
-         <bool>true</bool>
-        </property>
-        <property name="checked">
-         <bool>false</bool>
-        </property>
-        <property name="toolButtonStyle">
-         <enum>Qt::ToolButtonTextBesideIcon</enum>
-        </property>
-       </widget>
-      </item>
-      <item>
        <widget class="QFrame" name="frameId">
         <property name="frameShape">
          <enum>QFrame::NoFrame</enum>
         </property>
         <layout class="QHBoxLayout" name="horizontalLayout_frameId">
+         <property name="spacing">
+          <number>4</number>
+         </property>
          <property name="leftMargin">
-          <number>3</number>
+          <number>9</number>
          </property>
          <property name="topMargin">
-          <number>0</number>
-         </property>
-         <property name="rightMargin">
           <number>3</number>
          </property>
+         <property name="rightMargin">
+          <number>9</number>
+         </property>
          <property name="bottomMargin">
-          <number>0</number>
+          <number>3</number>
          </property>
          <item alignment="Qt::AlignVCenter">
           <widget class="QLabel" name="label_idLabel">
@@ -178,14 +161,27 @@
         </layout>
        </widget>
       </item>
+      <item>
+       <widget class="QToolButton" name="toolButton_toggleExtraControls">
+        <property name="text">
+         <string/>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <property name="checked">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
      </layout>
     </widget>
    </item>
-   <item row="1" column="0">
+   <item row="1" column="0" colspan="2">
     <widget class="QWidget" name="widget_left" native="true">
      <layout class="QVBoxLayout" name="verticalLayout_left" stretch="1">
       <property name="spacing">
-       <number>3</number>
+       <number>10</number>
       </property>
       <property name="leftMargin">
        <number>0</number>
@@ -200,15 +196,12 @@
        <number>0</number>
       </property>
       <item>
-       <widget class="QScrollArea" name="scrollArea">
+       <widget class="uiDesign::ContentScrollArea" name="scrollArea">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
-        </property>
-        <property name="toolTip">
-         <string>&lt;p&gt;Match all occurrences of the pattern in the line.&lt;/p&gt;</string>
         </property>
         <property name="widgetResizable">
          <bool>true</bool>
@@ -221,395 +214,86 @@
      </layout>
     </widget>
    </item>
-   <item row="1" column="1">
-    <widget class="QWidget" name="widget_right" native="true">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Fixed" vsizetype="Minimum">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="autoFillBackground">
-      <bool>true</bool>
-     </property>
-     <layout class="QVBoxLayout" name="verticalLayout_widget_right" stretch="0,0,0,0,0,0,0">
-      <property name="spacing">
-       <number>3</number>
-      </property>
-      <property name="leftMargin">
-       <number>0</number>
-      </property>
-      <property name="topMargin">
-       <number>0</number>
-      </property>
-      <property name="rightMargin">
-       <number>0</number>
-      </property>
-      <property name="bottomMargin">
-       <number>0</number>
-      </property>
-      <item alignment="Qt::AlignTop">
-       <widget class="QGroupBox" name="groupBox_stayOpen">
-        <property name="toolTip">
-         <string>&lt;p&gt;Keep firing the script for this many more lines, after the trigger or chain has matched.&lt;/p&gt;</string>
-        </property>
-        <property name="autoFillBackground">
-         <bool>true</bool>
-        </property>
-        <property name="title">
-         <string>fire length (extra lines)</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignCenter</set>
-        </property>
-        <property name="checkable">
-         <bool>false</bool>
-        </property>
-        <property name="checked">
-         <bool>false</bool>
-        </property>
-        <layout class="QHBoxLayout" name="horizontalLayout_groupBox_stayOpen" stretch="1">
-         <property name="spacing">
-          <number>3</number>
-         </property>
-         <property name="leftMargin">
-          <number>3</number>
-         </property>
-         <property name="topMargin">
-          <number>3</number>
-         </property>
-         <property name="rightMargin">
-          <number>3</number>
-         </property>
-         <property name="bottomMargin">
-          <number>3</number>
-         </property>
-         <item alignment="Qt::AlignTop">
-          <widget class="QSpinBox" name="spinBox_stayOpen">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>21</height>
-            </size>
-           </property>
-           <property name="toolTip">
-            <string>&lt;p&gt;How many more lines, after the one that fired the trigger, should be passed to the trigger's children?&lt;/p&gt;</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignCenter</set>
-           </property>
-           <property name="maximum">
-            <number>999</number>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </widget>
-      </item>
-      <item>
-       <widget class="QGroupBox" name="groupBox_soundTrigger">
-        <property name="toolTip">
-         <string>&lt;p&gt;Play a sound file if the trigger fires.&lt;/p&gt;</string>
-        </property>
-        <property name="title">
-         <string>play sound</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignCenter</set>
-        </property>
-        <property name="checkable">
-         <bool>true</bool>
-        </property>
-        <property name="checked">
-         <bool>false</bool>
-        </property>
-        <layout class="QGridLayout" name="gridLayout_groupBox_soundTrigger" rowstretch="1,1" columnstretch="1,1">
-         <property name="leftMargin">
-          <number>3</number>
-         </property>
-         <property name="topMargin">
-          <number>3</number>
-         </property>
-         <property name="rightMargin">
-          <number>3</number>
-         </property>
-         <property name="bottomMargin">
-          <number>3</number>
-         </property>
-         <property name="spacing">
-          <number>3</number>
-         </property>
-         <item row="0" column="0" colspan="2" alignment="Qt::AlignVCenter">
-          <widget class="QPushButton" name="pushButtonSound">
-           <property name="toolTip">
-            <string comment="This is the button used to select a sound file to be played when a trigger fires." extracomment="Please ensure the text used here is duplicated within the tooltip for the QLineEdit that displays the file name selected.">&lt;p&gt;Use this to open a file selection dialogue to find a sound file to play when the trigger fires.&lt;/p&gt;
-&lt;p&gt;&lt;i&gt;Cancelling from the file dialogue will not make any changes; to clear the file use the clear button to the right of the file name display.&lt;/i&gt;&lt;/p&gt;</string>
-           </property>
-           <property name="text">
-            <string>Choose file...</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="0">
-          <widget class="QLineEdit" name="lineEdit_soundFile">
-           <property name="enabled">
-            <bool>false</bool>
-           </property>
-           <property name="cursor">
-            <cursorShape>ForbiddenCursor</cursorShape>
-           </property>
-           <property name="focusPolicy">
-            <enum>Qt::NoFocus</enum>
-           </property>
-           <property name="toolTip">
-            <string comment="This is the tooltip for the QLineEdit that shows - but does not permit changing - the sound file used for a trigger.">&lt;p&gt;Sound file to play when the trigger fires.&lt;/p&gt;</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-           </property>
-           <property name="readOnly">
-            <bool>true</bool>
-           </property>
-           <property name="placeholderText">
-            <string>no file</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="1">
-          <widget class="QToolButton" name="toolButton_clearSoundFile">
-           <property name="minimumSize">
-            <size>
-             <width>22</width>
-             <height>22</height>
-            </size>
-           </property>
-           <property name="toolTip">
-            <string>&lt;p&gt;Click to remove the sound file set for this trigger.&lt;/p&gt;</string>
-           </property>
-           <property name="icon">
-            <iconset resource="../mudlet.qrc">
-             <normaloff>:/icons/edit-clear-locationbar-rtl-green.png</normaloff>:/icons/edit-clear-locationbar-rtl-green.png</iconset>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </widget>
-      </item>
-      <item>
-       <widget class="QGroupBox" name="groupBox_multiLineTrigger">
-        <property name="toolTip">
-         <string>&lt;p&gt;If set to any value but the first the trigger will only fire if &lt;u&gt;all&lt;/u&gt; conditions on the list have been met within the specified line delta, and captures will be saved in &lt;tt&gt;multimatches&lt;/tt&gt; instead of &lt;tt&gt;matches&lt;/tt&gt;.&lt;/p&gt;&lt;p&gt;If set to the first value the trigger will fire if &lt;u&gt;any&lt;/u&gt; condition on the list have been met.&lt;/p&gt;</string>
-        </property>
-        <property name="autoFillBackground">
-         <bool>true</bool>
-        </property>
-        <property name="title">
-         <string extracomment="This text preceeds (is above) the content of the spinBox_lineMargin which also contain text with the text in the label_multiLineTrigger suffixed on the end (underneath).">handle multiple items as a</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignCenter</set>
-        </property>
-        <property name="checkable">
-         <bool>false</bool>
-        </property>
-        <property name="checked">
-         <bool>false</bool>
-        </property>
-        <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0">
-         <property name="leftMargin">
-          <number>3</number>
-         </property>
-         <property name="topMargin">
-          <number>3</number>
-         </property>
-         <property name="rightMargin">
-          <number>3</number>
-         </property>
-         <property name="bottomMargin">
-          <number>3</number>
-         </property>
-         <item>
-          <widget class="QSpinBox" name="spinBox_lineMargin">
-           <property name="toolTip">
-            <string>&lt;p&gt;&lt;b&gt;Multi-line Trigger Range&lt;/b&gt;&lt;/p&gt;&lt;p&gt;Specifies within how many consecutive lines all trigger patterns must match.&lt;/p&gt;&lt;p&gt;&lt;b&gt;Example:&lt;/b&gt; If set to 3 and pattern 1 matches on line 100, pattern 2 must match somewhere between lines 100-103 for the trigger to fire.&lt;/p&gt;</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignCenter</set>
-           </property>
-           <property name="specialValueText">
-            <string extracomment="This text represents what is shown in the spinBox_lineMargin control when it is at it minimum value and replaces the normal value and the normal prefix and suffix that would otherwise surround it before this or those elements are inserted in the middle of the groupBox_multiLineTrigger and the label_multiLineTrigger text.">OR / Multi-item</string>
-           </property>
-           <property name="suffix">
-            <string extracomment="This text is appended after the numeric value shown in the spin box (so that it and the prefix text is &quot;wrapped&quot; around it), except when the control is set to the special first value when all of them are replaced by that text."> lines)</string>
-           </property>
-           <property name="prefix">
-            <string extracomment="This text is prepended before the numeric value shown in the spin box (so that it and the suffix text is &quot;wrapped&quot; around it), except when the control is set to the special first value when all of them are replaced by that text. For locales using spaces between words ensure a space is left at the end to separate the text from the number that is shown from the control after it.">AND / Multi-line (within: </string>
-           </property>
-           <property name="minimum">
-            <number>-1</number>
-           </property>
-           <property name="value">
-            <number>-1</number>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLabel" name="label_multLineTrigger">
-           <property name="text">
-            <string extracomment="This text follows (is beneath) the content of the spinBox_lineMargin which also contain text with the groupBox_multiLineTrigger prefixed at the beginning (above).">trigger</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignCenter</set>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </widget>
-      </item>
-      <item>
-       <widget class="QCheckBox" name="checkBox_filterTrigger">
-        <property name="toolTip">
-         <string>&lt;p&gt;Do not pass whole line to children.&lt;/p&gt;</string>
-        </property>
-        <property name="text">
-         <string>only pass matches</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QCheckBox" name="checkBox_perlSlashGOption">
-        <property name="text">
-         <string>match all</string>
-        </property>
-       </widget>
-      </item>
-      <item alignment="Qt::AlignTop">
-       <widget class="QGroupBox" name="groupBox_triggerColorizer">
-        <property name="toolTip">
-         <string>&lt;p&gt;Enable this to highlight the matching text by changing the fore and background colors to the ones selected here.&lt;/p&gt;</string>
-        </property>
-        <property name="autoFillBackground">
-         <bool>true</bool>
-        </property>
-        <property name="title">
-         <string>highlight</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignCenter</set>
-        </property>
-        <property name="checkable">
-         <bool>true</bool>
-        </property>
-        <property name="checked">
-         <bool>false</bool>
-        </property>
-        <layout class="QGridLayout" name="gridLayout">
-         <property name="leftMargin">
-          <number>3</number>
-         </property>
-         <property name="topMargin">
-          <number>3</number>
-         </property>
-         <property name="rightMargin">
-          <number>3</number>
-         </property>
-         <property name="bottomMargin">
-          <number>3</number>
-         </property>
-         <item row="0" column="0">
-          <widget class="QLabel" name="label_foregroundColor">
-           <property name="text">
-            <string>Foreground</string>
-           </property>
-           <property name="buddy">
-            <cstring>pushButtonFgColor</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="1">
-          <widget class="QPushButton" name="pushButtonBgColor">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="text">
-            <string comment="Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button">keep</string>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="1">
-          <widget class="QLabel" name="label_backgroundColor">
-           <property name="text">
-            <string>Background</string>
-           </property>
-           <property name="buddy">
-            <cstring>pushButtonBgColor</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="0">
-          <widget class="QPushButton" name="pushButtonFgColor">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="text">
-            <string comment="Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button">keep</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </widget>
-      </item>
-      <item>
-       <widget class="QWidget" name="widget_verticalSpacer_right" native="true">
-        <layout class="QVBoxLayout" name="verticalLayout_widget_verticalSpacer_right">
-         <property name="spacing">
-          <number>0</number>
-         </property>
-         <property name="leftMargin">
-          <number>0</number>
-         </property>
-         <property name="topMargin">
-          <number>0</number>
-         </property>
-         <property name="rightMargin">
-          <number>0</number>
-         </property>
-         <property name="bottomMargin">
-          <number>0</number>
-         </property>
-         <item>
-          <spacer name="verticalSpacer_middleRight">
-           <property name="orientation">
-            <enum>Qt::Vertical</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>20</width>
-             <height>0</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-        </layout>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
   </layout>
+  <widget class="QSpinBox" name="spinBox_lineMargin">
+   <property name="alignment">
+    <set>Qt::AlignCenter</set>
+   </property>
+   <property name="minimum">
+    <number>-1</number>
+   </property>
+   <property name="value">
+    <number>-1</number>
+   </property>
+  </widget>
+  <widget class="QSpinBox" name="spinBox_stayOpen">
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignCenter</set>
+   </property>
+   <property name="maximum">
+    <number>999</number>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="checkBox_perlSlashGOption">
+   <property name="text">
+    <string/>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="checkBox_filterTrigger">
+   <property name="text">
+    <string/>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="checkBox_soundTrigger">
+   <property name="text">
+    <string/>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="lineEdit_soundFile">
+   <property name="readOnly">
+    <bool>true</bool>
+   </property>
+  </widget>
+  <widget class="QToolButton" name="toolButton_clearSoundFile">
+   <property name="minimumSize">
+    <size>
+     <width>22</width>
+     <height>22</height>
+    </size>
+   </property>
+   <property name="text">
+    <string/>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="checkBox_triggerColorizer">
+   <property name="text">
+    <string/>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="pushButtonFgColor">
+   <property name="text">
+    <string comment="Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button">keep</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="pushButtonBgColor">
+   <property name="text">
+    <string comment="Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button">keep</string>
+   </property>
+  </widget>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>uiDesign::ContentScrollArea</class>
+   <extends>QScrollArea</extends>
+   <header>ContentScrollArea.h</header>
+  </customwidget>
+ </customwidgets>
  <resources>
   <include location="../mudlet.qrc"/>
  </resources>

@@ -229,13 +229,14 @@ describe("Tests that the cursor and line functions find their console by name", 
 
       -- the upper pane keeps 6 of every 8 pixels the 3px handle leaves, rounded
       -- half up, as the GUI measures it; in the default font the shorter heights
-      -- lose a row if that is truncated instead
+      -- lose a row if that is truncated instead. A command line takes 31px and
+      -- the seam over it 1px more
       it("counts the rows above the split", function()
         for _, case in ipairs({{40}, {65}, {140}, {400}, {171, true}}) do
           local height, commandLine = case[1], case[2]
           local split = ("specCursorByName split %d"):format(height) .. suffix
           local unsplit = ("specCursorByName unsplit %d"):format(height) .. suffix
-          local paneHeight = math.max(0, height - (commandLine and 31 or 0) - 3)
+          local paneHeight = math.max(0, height - (commandLine and 32 or 0) - 3)
           assert.is_true(createMiniConsole(split, 0, 0, 300, height))
           assert.is_true(createMiniConsole(unsplit, 0, 0, 300, math.floor(paneHeight * 0.75 + 0.5)))
           if commandLine then

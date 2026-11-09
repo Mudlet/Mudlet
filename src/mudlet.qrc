@@ -9,20 +9,34 @@
         <file>packages/mpkg/mpkg.mpackage</file>
         <file>packages/MedBootstrap/MedBootstrap.mpackage</file>
         <file>edbee_defaults/Lua.tmLanguage</file>
-        <file>edbee_defaults/Mudlet.tmTheme</file>
+        <file>edbee_defaults/Mudlet Dark.tmTheme</file>
+        <file>edbee_defaults/Mudlet Light.tmTheme</file>
         <file>icons/120x30RoDLogo.png</file>
         <file>icons/3Kingdoms.png</file>
         <file>icons/3Scapes.png</file>
         <file>icons/aardwolf_mud.png</file>
         <file>icons/abandonedrealms_icon.jpg</file>
-        <file>icons/accessories-text-editor.png</file>
+        <file>icons/about-bug.svg</file>
+        <file>icons/about-check.svg</file>
+        <file>icons/about-chevron-down.svg</file>
+        <file>icons/about-chevron-right.svg</file>
+        <file>icons/about-docs.svg</file>
+        <file>icons/about-forums.svg</file>
+        <file>icons/about-github.png</file>
+        <file>icons/about-homepage.svg</file>
+        <file>icons/about-license.svg</file>
+        <file>icons/about-mail.svg</file>
+        <file>icons/about-mudlet.svg</file>
+        <file>icons/about-patreon.png</file>
+        <file>icons/about-supporters.svg</file>
+        <file>icons/about-swords.svg</file>
+        <file>icons/about-third-party.svg</file>
         <file>icons/accursed_lands.png</file>
         <file>icons/achaea.png</file>
         <file>icons/aetolia.png</file>
         <file>icons/application-exit.png</file>
         <file>icons/application-json.png</file>
         <file>icons/application-xml.png</file>
-        <file>icons/applications-accessories.png</file>
         <file>icons/applications-engineering.png</file>
         <file>icons/applications-internet.png</file>
         <file>icons/arrow-down_grey-16x.png</file>
@@ -50,10 +64,14 @@
         <file>icons/clambermud_480x120.png</file>
         <file>icons/clessidra.jpg</file>
         <file>icons/cleftofdimensions.png</file>
-        <file>icons/configure.png</file>
+        <file>icons/control-check.svg</file>
+        <file>icons/control-minus.svg</file>
         <file>icons/dash-dot-dot-line.png</file>
         <file>icons/dash-dot-line.png</file>
         <file>icons/dash-line.png</file>
+        <file>icons/debug-clear.svg</file>
+        <file>icons/debug-pause.svg</file>
+        <file>icons/debug-resume.svg</file>
         <file>icons/dialog-cancel.png</file>
         <file>icons/dialog-close.png</file>
         <file>icons/dialog-error.png</file>
@@ -63,7 +81,6 @@
         <file>icons/dialog-warning.png</file>
         <file>icons/Discord-Logo+Wordmark-Color.png</file>
         <file>icons/Discord-Logo+Wordmark-Color_438x120px.png</file>
-        <file>icons/Discord-Logo-Color.png</file>
         <file>icons/discord-rich-presence-large-icon.png</file>
         <file>icons/discord-rich-presence-small-icon.png</file>
         <file>icons/discord-rich-presence.png</file>
@@ -77,12 +94,53 @@
         <file>icons/dot-line.png</file>
         <file>icons/dragonfire_icon.png</file>
         <file>icons/edit-bomb.png</file>
-        <file>icons/edit-clear-locationbar-rtl-green.png</file>
         <file>icons/edit-cut.png</file>
         <file>icons/edit-delete.png</file>
         <file>icons/edit-paste.png</file>
         <file>icons/edit-select-all.png</file>
         <file>icons/edit-web-search.png</file>
+        <file>icons/editor-activate.svg</file>
+        <file>icons/editor-activate-fill.svg</file>
+        <file>icons/editor-add-group.svg</file>
+        <file>icons/editor-add.svg</file>
+        <file>icons/editor-aliases.svg</file>
+        <file>icons/editor-buttons.svg</file>
+        <file>icons/editor-chevron-down.svg</file>
+        <file>icons/editor-clear.svg</file>
+        <file>icons/editor-copy.svg</file>
+        <file>icons/editor-debug.svg</file>
+        <file>icons/editor-delete.svg</file>
+        <file>icons/editor-errors.svg</file>
+        <file>icons/editor-export.svg</file>
+        <file>icons/editor-filter.svg</file>
+        <file>icons/editor-folder.svg</file>
+        <file>icons/editor-hidden.svg</file>
+        <file>icons/editor-import.svg</file>
+        <file>icons/editor-keys.svg</file>
+        <file>icons/editor-module.svg</file>
+        <file>icons/editor-new-folder.svg</file>
+        <file>icons/editor-new-item.svg</file>
+        <file>icons/editor-notice-error.svg</file>
+        <file>icons/editor-notice-info.svg</file>
+        <file>icons/editor-notice-warning.svg</file>
+        <file>icons/editor-offset-timer.svg</file>
+        <file>icons/editor-options.svg</file>
+        <file>icons/editor-paste.svg</file>
+        <file>icons/editor-redo.svg</file>
+        <file>icons/editor-save-item.svg</file>
+        <file>icons/editor-save-profile.svg</file>
+        <file>icons/editor-scripts.svg</file>
+        <file>icons/editor-statistics.svg</file>
+        <file>icons/editor-timers.svg</file>
+        <file>icons/editor-triggers.svg</file>
+        <file>icons/editor-type-boolean.svg</file>
+        <file>icons/editor-type-function.svg</file>
+        <file>icons/editor-type-number.svg</file>
+        <file>icons/editor-type-other.svg</file>
+        <file>icons/editor-type-string.svg</file>
+        <file>icons/editor-undo.svg</file>
+        <file>icons/editor-variables.svg</file>
+        <file>icons/editor-variables-fill.svg</file>
         <file>icons/errors.png</file>
         <file>icons/export.png</file>
         <file>icons/face-plain.png</file>
@@ -92,45 +150,18 @@
         <file>icons/face-uncertain.png</file>
         <file>icons/fed2-logo.png</file>
         <file>icons/fiery_mud.png</file>
-        <file>icons/filter-grey-locked.png</file>
-        <file>icons/filter-grey.png</file>
-        <file>icons/filter-locked.png</file>
-        <file>icons/filter.png</file>
         <file>icons/flag-red.png</file>
-        <file>icons/folder-blue-locked.png</file>
-        <file>icons/folder-blue.png</file>
         <file>icons/folder-bookmarks.png</file>
-        <file>icons/folder-brown-locked.png</file>
-        <file>icons/folder-brown.png</file>
-        <file>icons/folder-cyan-locked.png</file>
-        <file>icons/folder-cyan.png</file>
         <file>icons/folder-downloads-red-cross.png</file>
         <file>icons/folder-downloads.png</file>
-        <file>icons/folder-green-locked.png</file>
-        <file>icons/folder-green.png</file>
-        <file>icons/folder-grey-locked.png</file>
-        <file>icons/folder-grey.png</file>
         <file>icons/folder-lightblue-locked.png</file>
         <file>icons/folder-new.png</file>
-        <file>icons/folder-orange-locked.png</file>
-        <file>icons/folder-orange.png</file>
-        <file>icons/folder-pink-locked.png</file>
-        <file>icons/folder-pink.png</file>
         <file>icons/folder-red-locked.png</file>
-        <file>icons/folder-red.png</file>
-        <file>icons/folder-violet-locked.png</file>
-        <file>icons/folder-violet.png</file>
-        <file>icons/folder-yellow-locked.png</file>
-        <file>icons/folder-yellow.png</file>
         <file>icons/folder.png</file>
-        <file>icons/frame_plaque.png</file>
-        <file>icons/frame_swords.png</file>
-        <file>icons/function.png</file>
         <file>icons/games-solve.png</file>
         <file>icons/generic_mud.jpg</file>
         <file>icons/gw2.png</file>
         <file>icons/head.png</file>
-        <file>icons/help-hint.png</file>
         <file>icons/icesus_480x120.png</file>
         <file>icons/imperian.png</file>
         <file>icons/import.png</file>
@@ -139,14 +170,12 @@
         <file>icons/legendsofthejedi_120x30.png</file>
         <file>icons/luminari_icon.png</file>
         <file>icons/lusternia.png</file>
-        <file>icons/media-optical.png</file>
         <file>icons/media-seek-backward.png</file>
         <file>icons/media-seek-forward.png</file>
         <file>icons/media-tape.png</file>
         <file>icons/media-tape-red-cross.png</file>
         <file>icons/medievia.png</file>
         <file>icons/midnightsun2.png</file>
-        <file>icons/module-manager.png</file>
         <file>icons/morgengrauen_480x120.png</file>
         <file>icons/mudlet.png</file>
         <file>icons/mudlet_color.png</file>
@@ -155,7 +184,6 @@
         <file>icons/mudlet_custom_exit_properties.png</file>
         <file>icons/mudlet_debug.png</file>
         <file>icons/mudlet_dev_256px.png</file>
-        <file>icons/mudlet_discord.png</file>
         <file>icons/mudlet_editor.png</file>
         <file>icons/mudlet_important.png</file>
         <file>icons/mudlet_information.png</file>
@@ -170,17 +198,20 @@
         <file>icons/mudlet-tutorial.png</file>
         <file>icons/mume.png</file>
         <file>icons/mudren.png</file>
-        <file>icons/mute.png</file>
         <file>icons/network-disconnect.png</file>
-        <file>icons/offsettimer-off.png</file>
-        <file>icons/offsettimer-off-grey.png</file>
-        <file>icons/offsettimer-on.png</file>
-        <file>icons/offsettimer-on-grey.png</file>
+        <file>icons/notepad-chevron-up.svg</file>
+        <file>icons/notepad-send-all.svg</file>
+        <file>icons/notepad-send-line.svg</file>
+        <file>icons/notepad-send-selection.svg</file>
+        <file>icons/notepad-stop.svg</file>
+        <file>icons/packages-install-file.svg</file>
+        <file>icons/packages-install.svg</file>
+        <file>icons/packages-package.svg</file>
+        <file>icons/packages-update.svg</file>
         <file>icons/package-exporter.png</file>
         <file>icons/package-manager.png</file>
         <file>icons/password-show-off.png</file>
         <file>icons/password-show-on.png</file>
-        <file>icons/Patreon_Mark_Primary.png</file>
         <file>icons/phoenixmud_480x120.png</file>
         <file>icons/place_of_interest.png</file>
         <file>icons/pkuxkx.png</file>
@@ -197,44 +228,62 @@
         <file>icons/searchOptions-caseSensitive.png</file>
         <file>icons/searchOptions-none.png</file>
         <file>icons/searchOptions-unspecified.png</file>
-        <file>icons/searchOptions-wholeWords.png</file>
         <file>icons/searchOptions-withVariables+wholeWords.png</file>
-        <file>icons/searchOptions-withVariables.png</file>
-        <file>icons/settings-accessibility.png</file>
-        <file>icons/settings-advanced.png</file>
-        <file>icons/settings-appearance.png</file>
-        <file>icons/settings-chat.png</file>
-        <file>icons/settings-connection.png</file>
-        <file>icons/settings-display.png</file>
-        <file>icons/settings-editor.png</file>
-        <file>icons/settings-general.png</file>
-        <file>icons/settings-input.png</file>
-        <file>icons/settings-mapper.png</file>
-        <file>icons/settings-privacy.png</file>
-        <file>icons/settings-search.png</file>
-        <file>icons/settings-shortcuts.png</file>
-        <file>icons/settings-support.png</file>
+        <file>icons/settings-accessibility.svg</file>
+        <file>icons/settings-advanced.svg</file>
+        <file>icons/settings-appearance.svg</file>
+        <file>icons/settings-appearance-dots.svg</file>
+        <file>icons/settings-chat.svg</file>
+        <file>icons/settings-connection.svg</file>
+        <file>icons/settings-display.svg</file>
+        <file>icons/settings-editor.svg</file>
+        <file>icons/settings-general.svg</file>
+        <file>icons/settings-input.svg</file>
+        <file>icons/settings-mapper.svg</file>
+        <file>icons/settings-privacy.svg</file>
+        <file>icons/settings-search.svg</file>
+        <file>icons/settings-shortcuts.svg</file>
+        <file>icons/settings-support.svg</file>
         <file>icons/Slothmud.png</file>
         <file>icons/starmourn.png</file>
         <file>icons/solid-line.png</file>
         <file>icons/stickmud_icon.jpg</file>
-        <file>icons/system-restart.png</file>
         <file>icons/system-users.png</file>
-        <file>icons/table.png</file>
-        <file>icons/tag_checkbox-grey.png</file>
-        <file>icons/tag_checkbox.png</file>
-        <file>icons/tag_checkbox_checked.png</file>
-        <file>icons/tag_checkbox_checked_grey.png</file>
+        <file>icons/toolbar-about.svg</file>
+        <file>icons/toolbar-about-update.svg</file>
+        <file>icons/toolbar-more-down.svg</file>
+        <file>icons/toolbar-more-left.svg</file>
+        <file>icons/toolbar-more-right.svg</file>
+        <file>icons/toolbar-more-up.svg</file>
+        <file>icons/toolbar-close-profile.svg</file>
+        <file>icons/toolbar-connect.svg</file>
+        <file>icons/toolbar-disconnect.svg</file>
+        <file>icons/toolbar-discord.png</file>
+        <file>icons/toolbar-export.svg</file>
+        <file>icons/toolbar-fullscreen-exit.svg</file>
+        <file>icons/toolbar-fullscreen.svg</file>
+        <file>icons/toolbar-manual.svg</file>
+        <file>icons/toolbar-map.svg</file>
+        <file>icons/toolbar-multiview.svg</file>
+        <file>icons/toolbar-notepad.svg</file>
+        <file>icons/toolbar-packages.svg</file>
+        <file>icons/toolbar-quit.svg</file>
+        <file>icons/toolbar-reconnect.svg</file>
+        <file>icons/toolbar-reconnect-fill.svg</file>
+        <file>icons/toolbar-replay-faster.svg</file>
+        <file>icons/toolbar-replay-pause.svg</file>
+        <file>icons/toolbar-replay-resume.svg</file>
+        <file>icons/toolbar-replay-slower.svg</file>
+        <file>icons/toolbar-replay-stop.svg</file>
+        <file>icons/toolbar-replay.svg</file>
+        <file>icons/toolbar-settings.svg</file>
+        <file>icons/toolbar-sound-off.svg</file>
+        <file>icons/toolbar-sound-on.svg</file>
         <file>icons/tools-report-bug.png</file>
         <file>icons/tools-wizard.png</file>
-        <file>icons/unmute.png</file>
         <file>icons/utilities-file-archiver.png</file>
-        <file>icons/variable.png</file>
         <file>icons/variables.png</file>
-        <file>icons/view-filter.png</file>
-        <file>icons/view-fullscreen.png</file>
         <file>icons/view-restore.png</file>
-        <file>icons/view-split-left-right.png</file>
         <file>icons/view-statistics.png</file>
         <file>icons/voidmud_icon.png</file>
         <file>icons/window-close.png</file>

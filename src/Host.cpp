@@ -27,6 +27,7 @@
 
 #include "discord.h"
 #include "MudletApp.h"
+#include "EventNames.h"
 #include "FontManager.h"
 #include "GifTracker.h"
 #include "GMCPAuthenticator.h"
@@ -94,6 +95,7 @@
 #include <QTimer>
 #include <QUuid>
 #include <zip.h>
+#include <algorithm>
 #include <memory>
 #include <ranges>
 
@@ -2547,6 +2549,10 @@ void Host::stopAllTriggers()
     mAliasUnit.stopAllTriggers();
     mTimerUnit.stopAllTriggers();
     mKeyUnit.stopAllTriggers();
+    // Closing stops everything too, as the windows that would show it are being let go
+    if (!mIsClosingDown) {
+        emit signal_emergencyStopChanged(true);
+    }
 }
 
 void Host::reenableAllTriggers()
@@ -2556,6 +2562,7 @@ void Host::reenableAllTriggers()
     mAliasUnit.reenableAllTriggers();
     mTimerUnit.reenableAllTriggers();
     mKeyUnit.reenableAllTriggers();
+    emit signal_emergencyStopChanged(false);
 }
 
 QPair<QString, QString> Host::getSearchEngine()
@@ -3525,6 +3532,44 @@ void Host::unregisterEventHandler(const QString& name, TScript* pScript)
 // Handlers run on this profile's shared lua_State, but each unwinds it back to
 // the level it found, so a C function raising an event mid-flight keeps its own
 // arguments and any return values it has already pushed
+static const QSet<QString>& raisedByMudlet()
+{
+    static const QSet<QString> names = []() {
+        const QStringList system = eventNames::systemEvents();
+        return QSet<QString>(system.constBegin(), system.constEnd());
+    }();
+    return names;
+}
+
+void Host::rememberEventName(const QString& name)
+{
+    if (name.isEmpty()) {
+        return;
+    }
+    if (eventNames::fromGame(name)) {
+        if (mGameEventNamesSeen.size() < scmGameEventNamesLimit) {
+            mGameEventNamesSeen.insert(name);
+        }
+        return;
+    }
+    // Offered from their own list already
+    if (raisedByMudlet().contains(name)) {
+        return;
+    }
+
+    mScriptEventNamesSeen.insert(name, ++mScriptEventNameTick);
+    if (mScriptEventNamesSeen.size() < scmScriptEventNamesLimit + scmScriptEventNamesSlack) {
+        return;
+    }
+    QList<quint64> ticks = mScriptEventNamesSeen.values();
+    const auto oldestKept = ticks.begin() + (ticks.size() - scmScriptEventNamesLimit);
+    std::nth_element(ticks.begin(), oldestKept, ticks.end());
+    const quint64 keepFrom = *oldestKept;
+    mScriptEventNamesSeen.removeIf([keepFrom](const QHash<QString, quint64>::iterator& entry) {
+        return entry.value() < keepFrom;
+    });
+}
+
 void Host::raiseEvent(const TEvent& pE)
 {
     if (Q_UNLIKELY(mEmergencyStop)) {
@@ -3534,6 +3579,9 @@ void Host::raiseEvent(const TEvent& pE)
     if (pE.mArgumentList.isEmpty()) {
         return;
     }
+
+    // Handled or not: one nobody listens for is the one the editor has no other way to learn of
+    rememberEventName(pE.mArgumentList.at(0));
 
     static const QString star = qsl("*");
 
@@ -5458,6 +5506,11 @@ void Host::writeProfileIniData(const QString& item, const QString& what)
 QString Host::readProfileIniData(const QString& item)
 {
     return profileIni().value(item).toString();
+}
+
+void Host::removeProfileIniData(const QString& item)
+{
+    profileIni().remove(item);
 }
 
 bool Host::syncProfileIni()
@@ -8158,20 +8211,37 @@ void Host::setCommandLineHistorySaveSize(const int lines)
                                    << mCommandLineHistorySaveSize << " instead.";
 }
 
-QString Host::getEditorTheme() const
+void Host::storedEditorTheme(QString& themeName, QString& themeFile) const
 {
     if (MudletApp::darkMode() && !mEditorThemeDark.isEmpty() && !mEditorThemeFileDark.isEmpty()) {
-        return mEditorThemeDark;
+        themeName = mEditorThemeDark;
+        themeFile = mEditorThemeFileDark;
+        return;
     }
-    return mEditorTheme;
+    themeName = mEditorTheme;
+    themeFile = mEditorThemeFile;
+}
+
+QString Host::getEditorTheme() const
+{
+    QString themeName;
+    QString themeFile;
+    storedEditorTheme(themeName, themeFile);
+    if (MudletApp::editorThemeResolves(themeFile)) {
+        return themeName;
+    }
+    return MudletApp::darkMode() ? QString(MudletApp::scmEditorThemeNameDark) : QString(MudletApp::scmEditorThemeNameLight);
 }
 
 QString Host::getEditorThemeFile() const
 {
-    if (MudletApp::darkMode() && !mEditorThemeDark.isEmpty() && !mEditorThemeFileDark.isEmpty()) {
-        return mEditorThemeFileDark;
+    QString themeName;
+    QString themeFile;
+    storedEditorTheme(themeName, themeFile);
+    if (MudletApp::editorThemeResolves(themeFile)) {
+        return themeFile;
     }
-    return mEditorThemeFile;
+    return MudletApp::darkMode() ? QString(MudletApp::scmEditorThemeFileDark) : QString(MudletApp::scmEditorThemeFileLight);
 }
 
 void Host::editorThemeChanged()
@@ -8494,4 +8564,65 @@ bool Host::shouldStripOscHyperlinkConfigParam()
 bool Host::shouldStripOscHyperlinkPresetParam()
 {
     return mTelnet.oscHyperlinkPresetsEnabled();
+}
+
+QList<eventNames::Entry> Host::knownEventNames()
+{
+    QSet<QString> found;
+    auto add = [&found](const QStringList& names) {
+        for (const QString& name : names) {
+            if (!name.isEmpty()) {
+                found.insert(name);
+            }
+        }
+    };
+
+    add(eventNames::systemEvents());
+    for (TScript* pScript : mScriptUnit.getScriptList()) {
+        add(pScript->getEventHandlerList());
+        add(eventNames::namesInCode(pScript->getScript()));
+    }
+    for (TTrigger* pTrigger : mTriggerUnit.getTriggerList()) {
+        add(eventNames::namesInCode(pTrigger->getScript()));
+    }
+    for (TAlias* pAlias : mAliasUnit.getAliasList()) {
+        add(eventNames::namesInCode(pAlias->getScript()));
+    }
+    for (TTimer* pTimer : mTimerUnit.getTimerList()) {
+        add(eventNames::namesInCode(pTimer->getScript()));
+    }
+    for (TKey* pKey : mKeyUnit.getKeyList()) {
+        add(eventNames::namesInCode(pKey->getScript()));
+    }
+    for (TAction* pAction : mActionUnit.getActionList()) {
+        add(eventNames::namesInCode(pAction->getScript()));
+    }
+    for (const QString& name : std::as_const(mGameEventNamesSeen)) {
+        found.insert(name);
+    }
+    for (auto it = mScriptEventNamesSeen.cbegin(); it != mScriptEventNamesSeen.cend(); ++it) {
+        found.insert(it.key());
+    }
+
+
+    return eventNameEntries(QStringList(found.cbegin(), found.cend()));
+}
+
+QList<eventNames::Entry> Host::eventNameEntries(const QStringList& names)
+{
+    QList<eventNames::Entry> entries;
+    entries.reserve(names.size());
+    for (const QString& name : names) {
+        eventNames::Source source = eventNames::Source::Script;
+        if (raisedByMudlet().contains(name)) {
+            source = eventNames::Source::Mudlet;
+        } else if (eventNames::fromGame(name)) {
+            source = eventNames::Source::Game;
+        }
+        entries.append({name, source});
+    }
+    std::sort(entries.begin(), entries.end(), [](const eventNames::Entry& left, const eventNames::Entry& right) {
+        return QString::compare(left.name, right.name, Qt::CaseInsensitive) < 0;
+    });
+    return entries;
 }

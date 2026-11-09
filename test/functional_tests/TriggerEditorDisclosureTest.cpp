@@ -171,9 +171,7 @@ private slots:
              "appears on hover is one nobody discovers");
   }
 
-  // It shares the Command row rather than taking a row of its own, and the ID
-  // number keeps the far right of that row
-  void test_toggleSitsBetweenTheCommandFieldAndTheId() {
+  void test_toggleClosesTheCommandRowAfterTheId() {
     auto *area = mpEditor->mpTriggersMainArea;
     auto *command = area->lineEdit_trigger_command;
 
@@ -203,8 +201,8 @@ private slots:
     QVERIFY2(toggleRect.left() >= commandRect.right(),
              "the toggle follows the command field, so the command label and "
              "field stay adjacent");
-    QVERIFY2(toggleRect.right() <= idRect.left(),
-             "the ID number keeps the far right of the row");
+    QVERIFY2(toggleRect.left() >= idRect.right(),
+             "the toggle closes the row, so the ID number sits before it");
   }
 
   void test_tabFromCommandFieldReachesTheToggle() {

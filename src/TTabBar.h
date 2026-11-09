@@ -21,11 +21,19 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QColor>
 #include <QHash>
 #include <QProxyStyle>
+#include <QRect>
 #include <QSet>
 #include <QString>
 #include <QTabBar>
+
+class QStyleOptionTab;
+
+namespace uiDesign {
+struct ThemeTokens;
+}
 
 // Connection status indicator drawn next to the tab text by TStyle. We paint
 // it ourselves rather than via QTabBar::setTabIcon() because the macOS native
@@ -38,13 +46,17 @@ enum class TabConnectionIndicator {
     Error,
 };
 
+// Painted, not styled: a QTabBar::tab rule hands the tab to QStyleSheetStyle, which has no
+// per-tab state for the font emphasis or the indicator; QTabBar's drag offsets are private
 class TStyle : public QProxyStyle
 {
 public:
-    // Indicator diameter + left margin + right margin, in logical pixels.
-    // Tuned so the dot is not crammed against the close button or the
-    // tab text.
-    static constexpr int sIndicatorReservedWidth = 20;
+    static constexpr int sIndicatorDiameter = 8;
+    static constexpr int sIndicatorGap = 6;
+    static constexpr int sIndicatorReservedWidth = sIndicatorDiameter + sIndicatorGap;
+    static constexpr int sIndicatorRingWidth = 2;
+    // accentText at the 4.5:1 floor fades into the wash on the grey page; 7:1 matches the sidebar's chosen row
+    static constexpr qreal sChosenWordMinimumRatio = 7.0;
 
     explicit TStyle(QTabBar* bar)
     : mpTabBar(bar)
@@ -54,9 +66,11 @@ public:
     ~TStyle() = default;
 
     void drawControl(ControlElement element, const QStyleOption* option, QPainter* painter, const QWidget* widget = nullptr) const override;
+    void drawPrimitive(PrimitiveElement element, const QStyleOption* option, QPainter* painter, const QWidget* widget = nullptr) const override;
     QRect subElementRect(SubElement element, const QStyleOption* option, const QWidget* widget = nullptr) const override;
     QSize sizeFromContents(ContentsType type, const QStyleOption* option, const QSize& contentsSize, const QWidget* widget = nullptr) const override;
     int pixelMetric(PixelMetric metric, const QStyleOption* option = nullptr, const QWidget* widget = nullptr) const override;
+    int styleHint(StyleHint hint, const QStyleOption* option = nullptr, const QWidget* widget = nullptr, QStyleHintReturn* returnData = nullptr) const override;
     void setTabBold(const QString& tabName, const bool state) { setNamedTabState(tabName, state, mBoldTabsSet); }
     void setTabBold(const int index, const bool state) { setIndexedTabState(index, state, mBoldTabsSet); }
     void setTabItalic(const QString& tabName, const bool state) { setNamedTabState(tabName, state, mItalicTabsSet); }
@@ -77,11 +91,40 @@ public:
     TabConnectionIndicator tabConnectionIndicator(int index) const;
 
 private:
+    bool scriptSheetTakesTheTabs() const;
+    // indicator and close stay null on a tab that carries neither
+    struct ChipLayout
+    {
+        QRect chip;
+        QRect indicator;
+        QRect text;
+        QRect close;
+    };
+
+    // surface is the fill as composited over the page: what anything on the chip is read against
+    struct ChipFace
+    {
+        QColor fill;
+        QColor word;
+        QColor surface;
+        bool bar = false;
+        bool outline = false;
+    };
+
+    // QTabBar::tabSizeHint()'s "padding += 4" per tab button; the word leaves it before
+    // the cross so both sit where Qt measured them
+    static constexpr int sCloseButtonGap = 4;
+
+    ChipFace chipFace(const QStyleOptionTab* tabOption, const uiDesign::ThemeTokens& tokens) const;
+    ChipLayout layoutChip(const QStyleOptionTab* tabOption) const;
+    int tabIndexOf(const QStyleOptionTab* tabOption) const;
     bool indexedTabState(int index, const QSet<QString>& effect) const;
     bool namedTabState(const QString& tabName, const QSet<QString>& effect) const;
     void setNamedTabState(const QString& tabName, bool state, QSet<QString>& effect);
     void setIndexedTabState(int index, bool state, QSet<QString>& effect);
-    void paintConnectionIndicator(QPainter* painter, const QStyleOptionTab* tabOption, TabConnectionIndicator state) const;
+    void paintChip(QPainter* painter, const QStyleOptionTab* tabOption, const QWidget* widget, const bool shape, const bool label) const;
+    void paintThroughApplicationSheet(ControlElement element, const QStyleOptionTab* tabOption, QPainter* painter, const QWidget* widget) const;
+    void paintConnectionIndicator(QPainter* painter, const QRect& box, TabConnectionIndicator state, const uiDesign::ThemeTokens& tokens, const QColor& surface, const QColor& ringInk) const;
 
     QTabBar* mpTabBar;
     // The sets that hold the tab names that have the particular effect, we
@@ -107,6 +150,9 @@ public:
     {
         setStyle(&mStyle);
         setAcceptDrops(true);
+        // Without it QTabBar::initStyleOption() never sets State_MouseOver
+        setAttribute(Qt::WA_Hover);
+        setDrawBase(false);
     }
     ~TTabBar() = default;
 
@@ -169,6 +215,8 @@ signals:
 
 private:
     void relayoutTab(int index);
+    // True only when the button still had the application style, the one case needing a re-measure
+    bool adoptCloseButton(int index);
 
     // This instance of TStyle needs a pointer to a QTabBar on instantiation:
     TStyle mStyle;
@@ -187,6 +235,7 @@ private slots:
     void onDetachedTabReattach(const QString& tabName);
 
 protected:
+    void tabInserted(int index) override;
     void mousePressEvent(QMouseEvent* event) override;
     void mouseMoveEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;

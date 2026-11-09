@@ -35,6 +35,7 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include <QApplication>
 #include <QImage>
 #include <QPointer>
 #include <QPushButton>
@@ -232,6 +233,29 @@ private slots:
         frame.fill(Qt::magenta);
         p2dMap->render(&frame);
         QCOMPARE(frame.pixelColor(frame.width() - 5, frame.height() - 5), picked);
+    }
+
+    // macOS's native colour panel hands the activation to the main window as
+    // it closes, cancelled or not, so after every colour dialog the settings
+    // take it back and the well that was clicked takes the keyboard. The
+    // dialog itself is modal and native, so it is the step after it that is
+    // tested here, with the main window holding the activation as the panel
+    // leaves it.
+    void test_theSettingsTakeTheActivationBackAfterAColourDialog()
+    {
+        QVERIFY2(openPreferences(), "the settings dialog never appeared");
+        mpPreferences->setTab(qsl("mapper"));
+        QPushButton* pWell = mpPreferences->pushButton_mapInfoBg;
+        QVERIFY2(pWell->isVisible(), "the map info background well is not on show");
+
+        mudlet::self()->show();
+        mudlet::self()->activateWindow();
+        QTRY_COMPARE(QApplication::activeWindow(), mudlet::self());
+        QVERIFY(QApplication::focusWidget() != pWell);
+
+        mpPreferences->returnFromColourDialog(pWell);
+        QTRY_COMPARE(QApplication::activeWindow(), mpPreferences);
+        QCOMPARE(QApplication::focusWidget(), pWell);
     }
 
     // The spin box counts in tenths of a room, and the profile and the 2D map

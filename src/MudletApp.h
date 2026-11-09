@@ -259,6 +259,18 @@ public:
     static bool development();
     static void setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request);
 
+    // Named as a light/dark pair so the preferences' counterpart lookup switches between
+    // them when the appearance changes
+    static constexpr QLatin1String scmEditorThemeNameLight{"Mudlet Light"};
+    static constexpr QLatin1String scmEditorThemeFileLight{"Mudlet Light.tmTheme"};
+    static constexpr QLatin1String scmEditorThemeNameDark{"Mudlet Dark"};
+    static constexpr QLatin1String scmEditorThemeFileDark{"Mudlet Dark.tmTheme"};
+    // The light theme's names before the pair existed; profiles saved then still carry them
+    static constexpr QLatin1String scmEditorThemeNameLegacy{"Mudlet"};
+    static constexpr QLatin1String scmEditorThemeFileLegacy{"Mudlet.tmTheme"};
+    static void migrateBundledEditorTheme(QString& themeName, QString& themeFile);
+    static bool editorThemeResolves(const QString& themeFile);
+
 private:
     // Only the main window moves the language or the preferences below in a
     // running Mudlet: the language follows the preferences dialog through

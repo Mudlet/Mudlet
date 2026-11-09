@@ -1680,7 +1680,7 @@ void T2DMap::slot_customLineProperties()
             mpCurrentLineArrow->setChecked(room->customLinesArrow.value(exit));
             mCurrentLineColor = room->customLinesColor.value(exit);
 
-            mpCurrentLineColor->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(mCurrentLineColor.name()));
+            mpCurrentLineColor->setStyleSheet(mudlet::self()->backgroundOnlyStyleSheet(mCurrentLineColor));
             connect(mpCurrentLineColor, &QAbstractButton::clicked, this, &T2DMap::slot_customLineColor);
             dialog->adjustSize();
 
@@ -3374,7 +3374,7 @@ void T2DMap::slot_setCustomLine()
     mpCurrentLineStyle->setCurrentIndex(mpCurrentLineStyle->findData(static_cast<int>(mCurrentLineStyle)));
 
     mpCurrentLineArrow->setChecked(mCurrentLineArrow);
-    mpCurrentLineColor->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(mCurrentLineColor.name()));
+    mpCurrentLineColor->setStyleSheet(mudlet::self()->backgroundOnlyStyleSheet(mCurrentLineColor));
     connect(specialExits, &QTreeWidget::itemClicked, this, &T2DMap::slot_setCustomLine2B);
     connect(mpCurrentLineColor, &QAbstractButton::clicked, this, &T2DMap::slot_customLineColor);
     dialog->adjustSize();
@@ -3395,7 +3395,7 @@ void T2DMap::slot_customLineColor()
 
     if (color.isValid()) {
         mCurrentLineColor = color;
-        mpCurrentLineColor->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(color.name()));
+        mpCurrentLineColor->setStyleSheet(mudlet::self()->backgroundOnlyStyleSheet(color));
     }
 }
 

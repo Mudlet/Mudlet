@@ -94,6 +94,7 @@ signals:
     void commandSubmitted();
     // Emitted when the command line text changes (for hyperlink visibility triggers)
     void commandLineTextChanged();
+    void rowsMoved();
 
 public slots:
     void slot_popupMenu();
@@ -105,6 +106,8 @@ public slots:
 
 private:
     bool event(QEvent*) override;
+    void resizeEvent(QResizeEvent*) override;
+    void changeEvent(QEvent*) override;
     void mousePressEvent(QMouseEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
     void handleAutoCompletion(bool forward);
@@ -122,6 +125,7 @@ private:
     bool handleCtrlTabChange(QKeyEvent* key, int tabNumber);
     void restoreHistory();
     int heightForRows(const int) const;
+    void centerRows();
     QMargins frameSides() const;
 
     QPointer<Host> mpHost;

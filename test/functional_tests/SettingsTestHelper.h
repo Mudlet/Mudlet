@@ -43,7 +43,7 @@
 //
 // Nothing here may use QVERIFY or QFAIL - both expand to a bare return, so they
 // are ill-formed in a function returning anything. The object names are the
-// dialog's test interface, documented in docs/settings-redesign.md.
+// dialog's test interface, documented in docs/design-language.md.
 namespace TestSettings {
 
 // What a case waits out to say that no apply happened at all: the 400ms
