@@ -460,7 +460,7 @@ centerview(1)
     // room 7 in the middle
     void test_anAppClicksDoubleClicksAndZoomsTheMap()
     {
-        using Pointer = THeadlessSession::PointerEvent;
+        using Pointer = THeadlessSession::MapPointerEvent;
         const QString name = qsl("Headless Map Pointer");
         QVERIFY(writeProfile(name));
         THeadlessSession session;
@@ -616,7 +616,7 @@ function doSpeedWalk() headlessWalk = table.concat(speedWalkDir, ",") .. " to " 
         QVERIFY(rendered(session));
 
         // Nothing is a room west of room 7, until the player moves to room 8 and the view with them
-        QVERIFY(session.mapPointer({.type = THeadlessSession::PointerEvent::Type::doubleClick, .position = QPointF(scmWidth / 2 - 60, scmHeight / 2)}));
+        QVERIFY(session.mapPointer({.type = THeadlessSession::MapPointerEvent::Type::doubleClick, .position = QPointF(scmWidth / 2 - 60, scmHeight / 2)}));
         QCOMPARE(luaGlobalString(session.host(), "headlessWalk"), QString());
         QVERIFY(session.runLua(qsl("centerview(8)")));
         QVERIFY(rendered(session));
@@ -624,10 +624,10 @@ function doSpeedWalk() headlessWalk = table.concat(speedWalkDir, ",") .. " to " 
 
         // Room 10 is east of room 9, but the app has not drawn the move there
         QVERIFY(session.runLua(qsl("centerview(9)")));
-        QVERIFY(session.mapPointer({.type = THeadlessSession::PointerEvent::Type::doubleClick, .position = QPointF(scmWidth / 2 + 60, scmHeight / 2)}));
+        QVERIFY(session.mapPointer({.type = THeadlessSession::MapPointerEvent::Type::doubleClick, .position = QPointF(scmWidth / 2 + 60, scmHeight / 2)}));
         QCOMPARE(luaGlobalString(session.host(), "headlessWalk"), QString());
         QVERIFY(rendered(session));
-        QVERIFY(session.mapPointer({.type = THeadlessSession::PointerEvent::Type::doubleClick, .position = QPointF(scmWidth / 2 + 60, scmHeight / 2)}));
+        QVERIFY(session.mapPointer({.type = THeadlessSession::MapPointerEvent::Type::doubleClick, .position = QPointF(scmWidth / 2 + 60, scmHeight / 2)}));
         QCOMPARE(luaGlobalString(session.host(), "headlessWalk"), qsl("e to 10"));
         QVERIFY(session.shutdown(false));
     }
@@ -637,7 +637,7 @@ function doSpeedWalk() headlessWalk = table.concat(speedWalkDir, ",") .. " to " 
     // the app drew, until it draws the move
     void test_thePointerActsOnWhatTheAppDrewBeforeItDrawsAMove()
     {
-        using Pointer = THeadlessSession::PointerEvent;
+        using Pointer = THeadlessSession::MapPointerEvent;
         const QString name = qsl("Headless Map Undrawn Move");
         QVERIFY(writeProfile(name));
         THeadlessSession session;
@@ -698,7 +698,7 @@ end
     // wheel that the app has not drawn yet leaves a double-click and a press to hit the room drawn under them
     void test_thePointerActsOnWhatTheAppDrewBeforeItDrawsAZoom()
     {
-        using Pointer = THeadlessSession::PointerEvent;
+        using Pointer = THeadlessSession::MapPointerEvent;
         const QString name = qsl("Headless Map Undrawn Zoom");
         QVERIFY(writeProfile(name));
         THeadlessSession session;
@@ -762,7 +762,7 @@ end
     // at that size; a draw of another area at the size last drawn must make them again
     void test_aDoubleClickLeavesTheSymbolsToBeRemadeAtTheSizeDrawnNext()
     {
-        using Pointer = THeadlessSession::PointerEvent;
+        using Pointer = THeadlessSession::MapPointerEvent;
         const QString name = qsl("Headless Map Double Click Symbols");
         QVERIFY(writeProfile(name));
         THeadlessSession session;
@@ -812,7 +812,7 @@ function doSpeedWalk() headlessWalk = table.concat(speedWalkDir, ",") .. " to " 
 )lua")));
         QTest::qWait(50);
         QVERIFY(rendered(session));
-        QVERIFY(session.mapPointer({.type = THeadlessSession::PointerEvent::Type::doubleClick, .position = QPointF(scmWidth / 2 + 60, scmHeight / 2)}));
+        QVERIFY(session.mapPointer({.type = THeadlessSession::MapPointerEvent::Type::doubleClick, .position = QPointF(scmWidth / 2 + 60, scmHeight / 2)}));
 
         QVERIFY(session.runLua(qsl(R"lua(
 local area = addAreaName("Headless Was Empty")
@@ -844,7 +844,7 @@ headlessPresses = 0
 registerAnonymousEventHandler("sysMapWindowMousePressEvent", function() headlessPresses = headlessPresses + 1 end)
 )lua")));
         QTest::qWait(50);
-        const THeadlessSession::PointerEvent notch{.type = THeadlessSession::PointerEvent::Type::wheel, .position = QPointF(scmWidth / 2, scmHeight / 2), .angleDelta = QPoint(0, 120)};
+        const THeadlessSession::MapPointerEvent notch{.type = THeadlessSession::MapPointerEvent::Type::wheel, .position = QPointF(scmWidth / 2, scmHeight / 2), .angleDelta = QPoint(0, 120)};
         QVERIFY2(rendered(session), qPrintable(session.errorString()));
         QVERIFY(session.mapPointer({.position = QPointF(scmWidth / 2, scmHeight / 2)}));
         QCOMPARE(luaGlobalString(session.host(), "headlessPresses"), qsl("1"));
