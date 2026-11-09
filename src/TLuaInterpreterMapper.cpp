@@ -97,6 +97,15 @@ static void roomUserDataChanged(TMap& map, const TRoom& room, const bool drawn, 
     map.updatePlayerArea(room.getArea());
 }
 
+// The map's own room.ui_ keys (the room name font, and "Show room names") are read by every area's view
+static void mapUserDataChanged(TMap& map, const bool drawn, const char* fromWhere)
+{
+    map.setUnsaved(fromWhere);
+    if (drawn) {
+        map.updateArea(-1);
+    }
+}
+
 static const char* const csmMapInUseByCallback = "rooms and areas cannot be deleted, nor the map replaced, from inside an exit weight filter or map info callback";
 static const char* const csmPathfindingInExitWeightFilter = "a path cannot be found from inside an exit weight filter";
 
@@ -874,8 +883,9 @@ int TLuaInterpreter::clearMapUserData(lua_State* L)
     }
 
     if (!host.mpMap->mUserData.isEmpty()) {
+        const bool drawn = std::any_of(host.mpMap->mUserData.keyBegin(), host.mpMap->mUserData.keyEnd(), roomUserDataKeyDrawn);
         host.mpMap->mUserData.clear();
-        host.mpMap->setUnsaved(__func__);
+        mapUserDataChanged(*host.mpMap, drawn, __func__);
         lua_pushboolean(L, true);
     } else {
         lua_pushboolean(L, false);
@@ -897,7 +907,7 @@ int TLuaInterpreter::clearMapUserDataItem(lua_State* L)
     }
     const bool removed = host.mpMap->mUserData.remove(key) > 0;
     if (removed) {
-        host.mpMap->setUnsaved(__func__);
+        mapUserDataChanged(*host.mpMap, roomUserDataKeyDrawn(key), __func__);
     }
     lua_pushboolean(L, removed);
     return 1;
@@ -4320,7 +4330,7 @@ int TLuaInterpreter::setMapUserData(lua_State* L)
     const QString key{keyName};
 
     host.mpMap->mUserData[key] = value;
-    host.mpMap->setUnsaved(__func__);
+    mapUserDataChanged(*host.mpMap, roomUserDataKeyDrawn(key), __func__);
     lua_pushboolean(L, true);
     return 1;
 }
