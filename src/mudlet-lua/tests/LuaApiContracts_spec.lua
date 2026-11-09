@@ -1076,3 +1076,31 @@ describe("Tests that the window functions answer true for a window that exists",
     assert.are.same({}, {clearWindow(window)})
   end)
 end)
+
+describe("Tests that the item lookups refuse a numeric ID outside int's range", function()
+
+  local hostile = {
+    {"math.huge", math.huge},
+    {"-math.huge", -math.huge},
+    {"NaN", 0 / 0},
+    {"1e10", 1e10},
+    {"just past the largest int", 2147483647.5},
+  }
+
+  for _, case in ipairs(hostile) do
+    local label, id = case[1], case[2]
+
+    it("refuses " .. label .. " in exists, isActive and getKeyCode", function()
+      assertRefused("does not seem to be parseable as a positive integer", exists(id, "trigger"))
+      assertRefused("does not seem to be parseable as a positive integer", isActive(id, "trigger"))
+      assertRefused("does not seem to be parseable as a positive integer", getKeyCode(id))
+    end)
+  end
+
+  it("still rounds a fractional ID to the nearest item", function()
+    local id = tempTrigger("fractionalIdLookupProbe", "")
+    finally(function() killTrigger(id) end)
+    assert.equals(1, exists(id + 0.4, "trigger"))
+    assert.equals(1, isActive(id - 0.4, "trigger"))
+  end)
+end)
