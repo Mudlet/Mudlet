@@ -906,8 +906,8 @@ TConsole::~TConsole()
         }
     }
 
-    // Only the main console's layout adopts these, and a parentless widget stays
-    // reachable through QApplication, so nothing would ever free them
+    // Only the main console's layout (and the debug console's find bar) adopts these, and a
+    // parentless widget stays reachable through QApplication, so nothing would ever free them
     for (QWidget* pWidget : std::initializer_list<QWidget*>{mpBufferSearchBox, mpBufferSearchUp, mpBufferSearchDown, timeStampButton, replayButton, logButton, emergencyStop}) {
         if (pWidget && !pWidget->parent()) {
             delete pWidget;
