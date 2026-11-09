@@ -397,6 +397,9 @@ private:
     friend class MirrorToStdOutTest;
     friend class NawsWidthReportTest;
 
+    // Reads whether the connection dialog handed an open profile its auto-reconnect setting
+    friend class ConnectionDialogOpenProfileTest;
+
     // Shorten mFailedConnectionRetryDelay and mNetworkLatencyTimeout rather than sitting them out
     friend class TelnetConnectFailureTest;
     friend class TelnetLatencyMeasurementTest;
