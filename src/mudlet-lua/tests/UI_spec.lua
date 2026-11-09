@@ -5389,6 +5389,41 @@ describe("Window and label state", function()
       assert.are.same({nil, notFound}, {resizeWindow(name("wlsNoSuchWindow"), 1, 2)})
     end)
 
+    it("moveWindow refuses a coordinate that is not finite or out of range, leaving the window where it was", function()
+      moveWindow(label, 12, 34)
+      for _, bad in ipairs({0/0, math.huge, -math.huge, 1e10, -1e10, 2^24}) do
+        local result, message = moveWindow(label, bad, 5)
+        assert.is_nil(result)
+        assert.is_truthy(message:find("x .* %(argument #2%) is out of range"))
+        result, message = moveWindow(label, 5, bad)
+        assert.is_nil(result)
+        assert.is_truthy(message:find("y .* %(argument #3%) is out of range"))
+      end
+      local x, y = getWindowGeometry(label)
+      assert.are.same({12, 34}, {x, y})
+    end)
+
+    it("resizeWindow refuses a size that is not finite or out of range, leaving the window as it was", function()
+      resizeWindow(label, 110, 60)
+      for _, bad in ipairs({0/0, math.huge, -math.huge, 1e10, 2^24}) do
+        local result, message = resizeWindow(label, bad, 5)
+        assert.is_nil(result)
+        assert.is_truthy(message:find("width .* %(argument #2%) is out of range"))
+        result, message = resizeWindow(label, 5, bad)
+        assert.is_nil(result)
+        assert.is_truthy(message:find("height .* %(argument #3%) is out of range"))
+      end
+      local _, _, w, h = getWindowGeometry(label)
+      assert.are.same({110, 60}, {w, h})
+    end)
+
+    it("moveWindow and resizeWindow still accept the largest coordinate Qt holds", function()
+      assert.is_true(moveWindow(label, -(2^24 - 1), 2^24 - 1))
+      assert.is_true(resizeWindow(label, 2^24 - 1, 1))
+      resizeWindow(label, 100, 50)
+      moveWindow(label, 10, 10)
+    end)
+
     it("moveWindow and resizeWindow hard-error without arguments", function()
       local movedOk, movedErr = pcall(moveWindow)
       assert.is_false(movedOk)

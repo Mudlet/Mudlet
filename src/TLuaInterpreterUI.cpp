@@ -102,6 +102,26 @@ static QString badBorderSizeMessage(const double size, const int argument = 1)
     return qsl("border size %1 (argument #%2) is out of range, it must be between %3 and %4").arg(size, 0, 'g', 14).arg(argument).arg(-Host::scmMaxBorderSize).arg(Host::scmMaxBorderSize);
 }
 
+// QWIDGETSIZE_MAX, which only <QWidget> defines; casting a double beyond int to int is undefined, and Qt
+// adds a widget's position and size in int, so anything past this would wrap inside Qt
+constexpr double maximumWindowCoordinate = (1 << 24) - 1;
+
+// Also false for NaN, which fails every comparison
+static bool validWindowCoordinate(const double value)
+{
+    return value >= -maximumWindowCoordinate && value <= maximumWindowCoordinate;
+}
+
+static QString badWindowCoordinateMessage(const char* what, const double value, const int argument)
+{
+    return qsl("%1 %2 (argument #%3) is out of range, it must be between %4 and %5")
+            .arg(QLatin1String(what))
+            .arg(value, 0, 'g', 14)
+            .arg(argument)
+            .arg(-maximumWindowCoordinate, 0, 'f', 0)
+            .arg(maximumWindowCoordinate, 0, 'f', 0);
+}
+
 // Only sub-consoles and labels have a background colour of their own; these widgets take theirs from a stylesheet.
 // One name can belong to several of them at once, so each one is named. Empty when the name is none of them.
 static QString backgroundColorRefusal(const Host& host, const QString& name, const bool reading)
@@ -2563,6 +2583,12 @@ int TLuaInterpreter::moveWindow(lua_State* L)
     }
     const double x1 = getVerifiedDouble(L, __func__, 2, "x");
     const double y1 = getVerifiedDouble(L, __func__, 3, "y");
+    if (!validWindowCoordinate(x1)) {
+        return warnArgumentValue(L, __func__, badWindowCoordinateMessage("x", x1, 2));
+    }
+    if (!validWindowCoordinate(y1)) {
+        return warnArgumentValue(L, __func__, badWindowCoordinateMessage("y", y1, 3));
+    }
     const QString text{lua_tostring(L, 1)};
     Host& host = getHostFromLua(L);
     if (!host.moveWindow(text, static_cast<int>(x1), static_cast<int>(y1))) {
@@ -2801,6 +2827,12 @@ int TLuaInterpreter::resizeWindow(lua_State* L)
     }
     const double x1 = getVerifiedDouble(L, __func__, 2, "width");
     const double y1 = getVerifiedDouble(L, __func__, 3, "height");
+    if (!validWindowCoordinate(x1)) {
+        return warnArgumentValue(L, __func__, badWindowCoordinateMessage("width", x1, 2));
+    }
+    if (!validWindowCoordinate(y1)) {
+        return warnArgumentValue(L, __func__, badWindowCoordinateMessage("height", y1, 3));
+    }
     const QString text{lua_tostring(L, 1)};
     Host& host = getHostFromLua(L);
     if (!host.resizeWindow(text, static_cast<int>(x1), static_cast<int>(y1))) {
