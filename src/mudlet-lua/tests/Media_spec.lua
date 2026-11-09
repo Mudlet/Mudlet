@@ -2533,6 +2533,37 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(0, #getPlayingSounds())
   end)
 
+  it("a finish position ends each pass of a loop count, not the whole request", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local finished, started = {}, {}
+    collect("sysMediaFinished", finished)
+    collect("sysMediaStarted", started)
+
+    writeSoundFiles()
+    assert.is_true(playSoundFile({name = longSoundFile, finish = 300, loops = 3, key = "busted-finish-loops"}))
+    waitForCount("sysMediaFinished", finished, 3)
+    assert.equals(3, #started)
+    assert.equals(3, #finished)
+    assert.equals(0, #getPlayingSounds())
+  end)
+
+  it("a finish position with endless loops repeats the stretch before it until stopped", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local started = {}
+    collect("sysMediaStarted", started)
+
+    writeSoundFiles()
+    assert.is_true(playMusicFile({name = longSoundFile, start = 200, finish = 500, loops = -1, key = "busted-finish-forever"}))
+    waitForCount("sysMediaStarted", started, 3)
+    assert.is_true(#started >= 3)
+    assert.equals(1, #getPlayingMusic({key = "busted-finish-forever"}))
+    assert.is_true(stopMusic({key = "busted-finish-forever"}))
+  end)
+
   it("a stop asked to fade away leaves the sound playing until the fade runs out", function()
     if mediaPlaybackUnavailable() then
       return

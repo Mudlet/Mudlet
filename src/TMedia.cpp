@@ -1696,6 +1696,30 @@ void TMedia::seekToMediaStart(const std::shared_ptr<TMediaPlayer>& player)
     mediaPlayer->setPosition(startPosition);
 }
 
+// Returns false when the playlist has no pass left to play
+bool TMedia::playNextPass(const std::shared_ptr<TMediaPlayer>& player)
+{
+    TMediaPlaylist* playlist = player->playlist();
+
+    if (!playlist || playlist->isEmpty()) {
+        return false;
+    }
+
+    QUrl nextMedia = playlist->next();
+
+    if (nextMedia.isEmpty() && playlist->playbackMode() == TMediaPlaylist::Loop) {
+        playlist->setCurrentIndex(0);
+        nextMedia = playlist->currentMedia();
+    }
+
+    if (nextMedia.isEmpty()) {
+        return false;
+    }
+
+    player->continuePlaying(nextMedia);
+    return true;
+}
+
 void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
 {
     if (!player || !player->mediaPlayer()) {
@@ -1721,16 +1745,7 @@ void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
             seekToMediaStart(lockedPlayer);
 
             if (mediaStatus == QMediaPlayer::EndOfMedia) {
-                if (lockedPlayer->playlist() && !lockedPlayer->playlist()->isEmpty()) {
-                    QUrl nextMedia = lockedPlayer->playlist()->next();
-
-                    if (!nextMedia.isEmpty()) {
-                        lockedPlayer->continuePlaying(nextMedia);
-                    } else if (lockedPlayer->playlist()->playbackMode() == TMediaPlaylist::Loop) {
-                        lockedPlayer->playlist()->setCurrentIndex(0);
-                        lockedPlayer->continuePlaying(lockedPlayer->playlist()->currentMedia());
-                    }
-                }
+                playNextPass(lockedPlayer);
             }
         }
     });
@@ -1827,7 +1842,11 @@ void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
             bool actionTaken = false;
 
             if (progress > relativeDuration && (endUsed || finishUsed)) {
-                lockedPlayer->mediaPlayer()->stop();
+                // A finish position ends one pass of a loop count; a fade-away stop ends them all.
+                // One at or before the start leaves no pass to play, which would loop with no end.
+                if (endUsed || finishPosition <= startPosition || !playNextPass(lockedPlayer)) {
+                    lockedPlayer->mediaPlayer()->stop();
+                }
             } else {
                 if (fadeInUsed) {
                     if (progress < relativeFadeInPosition) {
