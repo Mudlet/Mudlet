@@ -5653,6 +5653,7 @@ void dlgProfilePreferences::loadEditorTab()
         return;
     }
 
+    mudlet::loadEdbeeTheme(pHost->getEditorTheme(), pHost->getEditorThemeFile());
     auto config = edbeePreviewWidget->config();
     config->beginChanges();
     config->setSmartTab(true);
@@ -5673,7 +5674,6 @@ void dlgProfilePreferences::loadEditorTab()
     edbeePreviewWidget->textScrollArea()->enableShadowWidget(false);
 
     populateThemesList();
-    mudlet::loadEdbeeTheme(pHost->getEditorTheme(), pHost->getEditorThemeFile());
     // Walking every scripted item stalls a large profile, too long to repeat on every refresh; a profile
     // change empties the list in clearHostDetails()
     if (!script_preview_combobox->count()) {

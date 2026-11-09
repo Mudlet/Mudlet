@@ -2185,6 +2185,7 @@ void mudlet::initEdbee()
     loadLuaFunctionList();
 
     loadEdbeeTheme(MudletApp::scmEditorThemeNameLight, MudletApp::scmEditorThemeFileLight);
+    loadEdbeeTheme(MudletApp::scmEditorThemeNameDark, MudletApp::scmEditorThemeFileDark);
 }
 
 void mudlet::loadMaps()
@@ -7589,6 +7590,13 @@ bool mudlet::loadEdbeeTheme(const QString& themeName, const QString& themeFile)
     }
 
     return true;
+}
+
+// An editor given a theme name edbee does not hold falls back to its plain theme, and naming the same theme again
+// once it is loaded does not re-apply it
+bool mudlet::ensureEdbeeTheme(const QString& themeName, const QString& themeFile)
+{
+    return edbee::Edbee::instance()->themeManager()->theme(themeName) || loadEdbeeTheme(themeName, themeFile);
 }
 
 #if defined(INCLUDE_UPDATER)

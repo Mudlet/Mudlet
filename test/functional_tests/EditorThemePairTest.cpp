@@ -29,14 +29,22 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QScopeGuard>
 #include <QtTest/QtTest>
 
 #include "Host.h"
 #include "MudletApp.h"
 #include "PixelTestHelper.h"
 #include "ProfileSessionTestHelper.h"
+#include "HostDialogs.h"
 #include "dlgProfilePreferences.h"
+#include "dlgTriggerEditor.h"
 #include "mudlet.h"
+
+#include "edbee/edbee.h"
+#include "edbee/texteditorwidget.h"
+#include "edbee/views/textrenderer.h"
+#include "edbee/views/texttheme.h"
 
 #include "GroupedTest.h"
 
@@ -83,6 +91,10 @@ private:
     }
 
     QComboBox* themeBox() const { return mpPreferences->code_editor_theme_selection_combobox; }
+
+    // A name of its own per case: edbee keeps every theme it loads for the life of the process, and a theme already
+    // loaded hides the order it is loaded in
+    static bool loaded(const QString& themeName) { return edbee::Edbee::instance()->themeManager()->theme(themeName) != nullptr; }
 
     // Through the control: the appearance slot it is wired to is private, and
     // this is the path a user takes
@@ -294,6 +306,66 @@ private slots:
         TestPixels::setAppearanceAndWait(enums::Appearance::light);
         QCOMPARE(mpHost->getEditorTheme(), mLoneThemeName);
         QFile::remove(file);
+    }
+
+    // The settings page named the preview's theme before loading it, so the preview fell back to edbee's plain theme,
+    // and naming the same theme again once it was loaded did not re-apply it
+    void test_thePreviewWearsAThemeNothingHadLoadedYet()
+    {
+        const QString name = qsl("PreviewProbe");
+        const QString fileName = qsl("PreviewProbe.tmTheme");
+        QVERIFY2(!loaded(name), "SETUP: the theme is loaded already, so the order it is loaded in cannot show");
+        const QString file = MudletApp::getMudletPath(enums::editorWidgetThemePathFile, fileName);
+        QVERIFY2(putLoneThemeInCache(file), "could not put a readable theme file in the cache for this case");
+        auto restore = qScopeGuard([this, file]() {
+            QFile::remove(file);
+            writeEditorThemesFile();
+        });
+        QFile themes(MudletApp::getMudletPath(enums::editorWidgetThemeJsonFile));
+        QVERIFY(themes.open(QIODevice::WriteOnly | QIODevice::Truncate));
+        QVERIFY(themes.write(qsl(R"([{"Title": "%1", "FileName": "%2"}])").arg(name, fileName).toUtf8()) > 0);
+        themes.close();
+
+        mpHost->mEditorTheme = name;
+        mpHost->mEditorThemeFile = fileName;
+        mpHost->mEditorThemeDark.clear();
+        mpHost->mEditorThemeFileDark.clear();
+        openPreferences();
+
+        QCOMPARE(themeBox()->currentText(), name);
+        QCOMPARE(mpPreferences->edbeePreviewWidget->textRenderer()->themeName(), name);
+    }
+
+    // An appearance change can hand the profile a theme no editor has loaded, and the script editor names it on the
+    // next item it shows
+    void test_theScriptEditorWearsTheDarkHalfAfterTheAppearanceTurns()
+    {
+        const QString name = qsl("EditorDarkProbe");
+        const QString fileName = qsl("EditorDarkProbe.tmTheme");
+        QVERIFY2(!loaded(name), "SETUP: the theme is loaded already, so the order it is loaded in cannot show");
+        const QString file = MudletApp::getMudletPath(enums::editorWidgetThemePathFile, fileName);
+        QVERIFY2(putLoneThemeInCache(file), "could not put a readable theme file in the cache for this case");
+        auto restore = qScopeGuard([file]() {
+            QFile::remove(file);
+        });
+
+        mpHost->mEditorTheme = QString(MudletApp::scmEditorThemeNameLight);
+        mpHost->mEditorThemeFile = QString(MudletApp::scmEditorThemeFileLight);
+        mpHost->mEditorThemeDark = name;
+        mpHost->mEditorThemeFileDark = fileName;
+        TestPixels::setAppearanceAndWait(enums::Appearance::light);
+        mudlet::self()->slot_showTriggerDialog();
+        dlgTriggerEditor* pEditor = HostDialogs::of(mpHost).mpEditorDialog;
+        QVERIFY2(pEditor, "the script editor did not open");
+        auto* pCode = pEditor->findChild<edbee::TextEditorWidget*>(qsl("edbeeEditorWidget"));
+        QVERIFY2(pCode, "the script editor has no code pane");
+        QVERIFY2(!loaded(name), "SETUP: opening the editor on the light appearance loaded the dark half already");
+
+        TestPixels::setAppearanceAndWait(enums::Appearance::dark);
+        QCOMPARE(mpHost->getEditorTheme(), name);
+        mudlet::self()->slot_showAliasDialog();
+        QCoreApplication::processEvents();
+        QCOMPARE(pCode->textRenderer()->themeName(), name);
     }
 };
 

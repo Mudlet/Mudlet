@@ -117,6 +117,7 @@ public:
     ~mudlet() override;
 
     static bool loadEdbeeTheme(const QString& themeName, const QString& themeFile);
+    static bool ensureEdbeeTheme(const QString& themeName, const QString& themeFile);
     static bool loadLuaFunctionList(const QString& fileName = qsl(":/lua-function-list.json"));
     static mudlet* self();
     // This method allows better debugging when mudlet::self() is called inappropriately.

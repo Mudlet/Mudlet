@@ -14916,6 +14916,7 @@ void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* pEditorWidget, con
 
     auto config = mpSourceEditorEdbee->config();
     config->beginChanges();
+    mudlet::ensureEdbeeTheme(mpHost->getEditorTheme(), mpHost->getEditorThemeFile());
     config->setThemeName(mpHost->getEditorTheme());
     config->setFont(mpHost->getEditorFont());
     config->setShowWhitespaceMode((mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces) ? edbee::TextEditorConfig::ShowWhitespaces : edbee::TextEditorConfig::HideWhitespaces);
