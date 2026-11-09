@@ -332,6 +332,15 @@ private slots:
         QCOMPARE(recordedEventCount(host, qsl("sysDisconnectionEvent")), 1);
     }
 
+    // A profile left connected overnight must not report its session as having just begun
+    void test_aConnectionTimeOfADayOrMoreKeepsItsDays()
+    {
+        const QString clock = cTelnet::connectionTimeText(0);
+        QCOMPARE(cTelnet::connectionTimeText(std::chrono::milliseconds(23h + 59min + 59s + 999ms).count()), QTime(23, 59, 59, 999).toString(cTelnet::tr("hh:mm:ss.zzz")));
+        QCOMPARE(cTelnet::connectionTimeText(std::chrono::milliseconds(25h + 2s).count()), cTelnet::tr("%n day(s), %1", nullptr, 1).arg(QTime(1, 0, 2).toString(cTelnet::tr("hh:mm:ss.zzz"))));
+        QCOMPARE(cTelnet::connectionTimeText(std::chrono::milliseconds(24h * 40).count()), cTelnet::tr("%n day(s), %1", nullptr, 40).arg(clock));
+    }
+
     void test_osc8PresetsEndWithTheConnection()
     {
         Host* host = startProfile();
