@@ -404,6 +404,9 @@ private:
     // Reads a proxy's reply into the dialling socket's proxy engine without running the event loop
     friend class HeadlessSessionTest;
 
+    // Reads how much text Qt holds of a flood
+    friend class TelnetLargeBurstTest;
+
     // Host calls reset(), not cTelnet's constructor: it clears Host members declared after
     // cTelnet, which don't exist yet while cTelnet is constructed.
     friend class Host;
@@ -590,7 +593,8 @@ private:
     // Whether mUninflatedInput still holds every byte the stream has taken
     bool mUninflatedInputComplete = true;
     // Re-entry depth of processSocketData() while draining leftover
-    // (de)compressed data; bounds stack use.
+    // (de)compressed data; bounds stack use. A replay chunk counts too, as above
+    // zero is what puts off whatever must not land in a trigger's nested event loop.
     int mDecompressionRecursionDepth = 0;
     // Input left over once a drain reached scmMaxDecompressionRecursion, processed
     // ahead of anything read after it
@@ -716,7 +720,7 @@ private:
     // Set while what the game sent before closing is still being taken in, one
     // read per event-loop turn; the disconnect is finished once it is all in.
     bool mDisconnectionPending = false;
-    // A readPendingSocketData() is queued for the rest of a burst; only Windows acts on it
+    // A readPendingSocketData() is queued or postponed for the rest of a burst, and does the reading until it is in
     bool mReadPending = false;
     bool mAutoReconnect = false;
     QStringList messageStack;

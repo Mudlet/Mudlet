@@ -743,7 +743,7 @@ void cTelnet::connectIt(const QString& address, int port)
         if (mDecompressionRecursionDepth > 0) {
             // A trigger on the last words of the connection that ended: tearing
             // it down from inside their read would reset the parse it is in
-            QTimer::singleShot(0ms, this, [this, address, port]() {
+            QTimer::singleShot(10ms, this, [this, address, port]() {
                 connectIt(address, port);
             });
             return;
@@ -1217,11 +1217,11 @@ void cTelnet::slot_socketConnected()
     mpSocket->setSocketOption(QAbstractSocket::LowDelayOption, 1);
 #if defined(Q_OS_WINDOWS)
     // Windows fixes a socket's receive buffer at 64 KB, so a burst of game text refills it every
-    // 64 KB with a notifier round trip each time; other platforms size it themselves. The cap on
-    // Qt's own buffer leaves what the queued reads have not caught up with in the socket instead
+    // 64 KB with a notifier round trip each time; other platforms size it themselves.
     mpSocket->setSocketOption(QAbstractSocket::ReceiveBufferSizeSocketOption, 1024 * 1024);
-    mpSocket->setReadBufferSize(1024 * 1024);
 #endif
+    // Leaves what the queued reads have not caught up with in the socket rather than in memory
+    mpSocket->setReadBufferSize(1024 * 1024);
     reset();
     setKeepAlive(mpSocket->socketDescriptor());
 
@@ -5655,7 +5655,8 @@ void cTelnet::gotRest(std::string& mud_data)
             mpPostingTimer->start();
             mIsTimerPosting = true;
 
-            mMudData.assign(mud_data, i + 1, std::string::npos);
+            // Appended, as a feedTelnet() from a trigger in that post can have left a partial line ahead of this
+            mMudData.append(mud_data, i + 1, std::string::npos);
             mPartialLineHeldSince.start();
         } else {
             if (mMudData.empty()) {
@@ -5698,9 +5699,10 @@ void cTelnet::slot_timerPosting()
     // flush marker would put that, not the read's last bytes, in the tail the next read is joined to
     mMudData += "\r";
 
-    postData();
-    mMudData = "";
+    // Ahead of the post, with mMudData left alone after it: during a trigger on this line, a read
+    // in its nested event loop or a feedTelnet() can leave a partial line of its own for this timer
     mIsTimerPosting = false;
+    postData();
     if (mpHost) {
         mpHost->finalizeMainConsole();
     }
@@ -6157,6 +6159,9 @@ void cTelnet::endReplay(const QString& message)
 void cTelnet::slot_processReplayChunk()
 {
     mReplayChunkPending = false;
+    // Counted as processSocketData() counts: a read in a trigger's nested event loop
+    // would land ahead of the rest of the chunk
+    ++mDecompressionRecursionDepth;
     int datalen = loadedBytes;
     std::string cleandata = "";
     recvdGA = false;
@@ -6251,6 +6256,7 @@ void cTelnet::slot_processReplayChunk()
     if (mpHost) {
         mpHost->finalizeMainConsole();
     }
+    --mDecompressionRecursionDepth;
     if (loadingReplay) {
         loadReplayChunk();
     }
@@ -6272,14 +6278,11 @@ void cTelnet::slot_socketReadyToBeRead()
         finishNetworkLatencyMeasurement();
     }
 
-#if defined(Q_OS_WINDOWS)
-    // This runs inside the socket notifier, which Qt's Windows dispatcher serves ahead of every
-    // timer: reading here as well as in the queued chain would hold the timers off until a flood
-    // was all in. The Unix dispatcher runs timers every turn; there the skip only slows a burst
+    // One read to an event-loop turn however long a flood lasts, or input, timers and painting wait for
+    // them all. The pending read takes it from here; Qt's Windows dispatcher serves this ahead of every timer.
     if (mReadPending) {
         return;
     }
-#endif
     readPendingSocketData();
 }
 
@@ -6290,11 +6293,20 @@ void cTelnet::slot_socketReadyToBeRead()
 void cTelnet::readPendingSocketData()
 {
     mReadPending = false;
-    if (!mpHost || mpHost->isClosingDown() || !mpSocket || mDeferredReconnect) {
+    // drainBeforeDisconnection() does the reading once the close is noticed
+    if (!mpHost || mpHost->isClosingDown() || !mpSocket || mDeferredReconnect || mDisconnectionPending) {
+        return;
+    }
+    // A trigger is running a nested event loop: a read now would land in the
+    // middle of the one it is part of
+    if (mDecompressionRecursionDepth > 0) {
+        mReadPending = true;
+        QTimer::singleShot(10ms, this, &cTelnet::readPendingSocketData);
         return;
     }
 
-    if (readSocketDataOnce()) {
+    // A trigger's nested event loop can have postponed one during that read
+    if (readSocketDataOnce() && !mReadPending) {
         mReadPending = true;
         QMetaObject::invokeMethod(this, &cTelnet::readPendingSocketData, Qt::QueuedConnection);
     }
