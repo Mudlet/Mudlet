@@ -129,6 +129,13 @@ describe("Tests keybind-related functions", function()
       killKey(id)
     end)
 
+    it("returns -1 and the reason for a body that does not compile, as tempTimer does", function()
+      local id, message = tempKey(mudlet.key.F9, [[send("kick"]])
+      assert.are.equal(-1, id, "a key that can never run must not be created")
+      assert.is_string(message)
+      assert.truthy(message:find("unable to compile", 1, true), message)
+    end)
+
     it("rejects a non-string, non-function body", function()
       -- a table is not string-coercible (a number would be accepted as code)
       assert.has_error(function() tempKey(mudlet.key.F8, {}) end)
