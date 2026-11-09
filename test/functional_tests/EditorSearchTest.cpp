@@ -258,7 +258,7 @@ private:
         mpHost->getScriptUnit()->registerScript(pScript);
 
         auto* pLongScript = new TScript(qsl("qaMultiLineScript"), mpHost);
-        pLongScript->setScript(qsl("local a = 1\n-- qaLater qaLaterWord\nlocal b = qaLater\n-- qaCafé qaCaféine\n"));
+        pLongScript->setScript(qsl("local a = 1\n-- qaLater qaLaterWord\nlocal b = qaLater\n-- qaCafé qaCaféine\n-- 😀😀\n"));
         mpHost->getScriptUnit()->registerScript(pLongScript);
 
         auto* pTimer = new TTimer(qsl("qaSearchTimer"), QTime(0, 0, 30), mpHost);
@@ -590,11 +590,15 @@ private slots:
     }
 
     // A letter outside ASCII is part of the word, not an edge of punctuation
-    void test_wholeWordSearchTreatsNonAsciiLettersAsWordCharacters()
+    void test_wholeWordSearchHandlesTextOutsideAscii()
     {
         mpEditor->setSearchOptions(enums::EditorSearchOptionWholeWord);
         search(qsl("qaCafé"));
         QCOMPARE(resultsFor(qsl("Script")), QStringList({qsl("Lua 4:4")}));
+
+        // Each emoji is two UTF-16 code units, and the second one is found after the first
+        search(qsl("😀"));
+        QCOMPARE(resultsFor(qsl("Script")), QStringList({qsl("Lua 5:4"), qsl("Lua 5:6")}));
     }
 
     // Variables live in the Lua state rather than in a unit, so they are only

@@ -15113,6 +15113,10 @@ int dlgTriggerEditor::findSearchMatch(const QString& haystack, const QString& ne
             mWholeWordSearchRegex = QRegularExpression(leading + QRegularExpression::escape(needle) + trailing, options);
             mWholeWordSearchNeedle = needle;
         }
+        // Callers resume one code unit on, which can land inside a surrogate pair where PCRE2 finds nothing
+        if (from > 0 && from < haystack.size() && haystack.at(from).isLowSurrogate()) {
+            ++from;
+        }
         const QRegularExpressionMatch match = mWholeWordSearchRegex.match(haystack, from);
         if (match.hasMatch()) {
             return match.capturedStart();
