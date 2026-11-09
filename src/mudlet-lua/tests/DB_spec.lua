@@ -1199,6 +1199,18 @@ describe("Tests DB.lua functions", function()
       end
     end)
 
+    it("reads back a plain epoch number added to a datetime field as that timestamp", function()
+      for n, epoch in ipairs(epochs) do
+        db:add(mydb.sheet, { seen = epoch, n = n })
+      end
+      local results = db:fetch(mydb.sheet, nil, { mydb.sheet.n })
+      assert.are.equal(#epochs, #results)
+      for n, epoch in ipairs(epochs) do
+        assert.are.equal(epoch, results[n].seen:as_number())
+      end
+      assert.are.equal(1730615400, db:aggregate(mydb.sheet.seen, "MAX"):as_number())
+    end)
+
     it("aggregates to the same epoch as was added", function()
       for n, epoch in ipairs(epochs) do
         db:add(mydb.sheet, { seen = db:Timestamp(epoch), n = n })

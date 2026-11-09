@@ -2398,6 +2398,10 @@ end
 -- epoch. Done arithmetically (Howard Hinnant's days_from_civil) rather than through
 -- os.time, which can only read local time and is slow enough to dominate a db:fetch.
 function db:_epoch_from_utc(value)
+  -- db:add writes a plain number for a datetime field as it is, and sqlite hands it back as one
+  if type(value) == "number" then
+    return value
+  end
   local year, month, day, hour, min, sec = value:match("^(%d%d%d%d)%-(%d%d)%-(%d%d) (%d%d):(%d%d):(%d%d)$")
   if not year then
     local utc_epoch = datetime:parse(value, nil, true)
