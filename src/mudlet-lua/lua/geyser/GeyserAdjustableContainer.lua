@@ -1551,7 +1551,9 @@ end
 -- @param position_as_absolute bool true to have the position as absolute values
 function Adjustable.Container:setAbsolute(size_as_absolute, position_as_absolute)
     if position_as_absolute then
-        self.x, self.y = self.get_x(), self.get_y()
+        -- get_x/get_y are on screen, while x and y are taken from the parent's origin
+        local originX, originY = parentFrame(self)
+        self.x, self.y = self.get_x() - originX, self.get_y() - originY
     end
     if size_as_absolute then
         self.width, self.height = self.get_width(), self.get_height()
