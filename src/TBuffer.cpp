@@ -10240,8 +10240,8 @@ Mudlet::HyperlinkStyling::StateStyle Mudlet::HyperlinkStyling::getEffectiveStyle
     // the link has SOME pseudo-class styling so updateLinkCharacters() processes it.
     // This ensures ANSI base links with only :hover (but no :link) styling get updated.
     if (!effective.hasCustomStyling) {
-        // Check if ANY pseudo-class state has custom styling
-        if (linkStyle.hasCustomStyling || visitedStyle.hasCustomStyling || hoverStyle.hasCustomStyling || activeStyle.hasCustomStyling || focusStyle.hasCustomStyling
+        // Check if the base or ANY pseudo-class state has custom styling
+        if (hasBaseCustomStyling || linkStyle.hasCustomStyling || visitedStyle.hasCustomStyling || hoverStyle.hasCustomStyling || activeStyle.hasCustomStyling || focusStyle.hasCustomStyling
             || focusVisibleStyle.hasCustomStyling || anyLinkStyle.hasCustomStyling || selectedStyle.hasCustomStyling || disabledStyle.hasCustomStyling) {
             effective.hasCustomStyling = true;
         }
