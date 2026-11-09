@@ -1027,6 +1027,38 @@ describe("Tests MSDP subnegotiation handling", function()
     end)
 end)
 
+describe("Tests MSSP subnegotiation handling", function()
+  local VAR, VAL = "<01>", "<02>"
+
+  local function feedMssp(payload)
+    local ok, msg = feedTelnet("<T_IAC><T_SB><O_MSSP>" .. payload .. "<T_IAC><T_SE>")
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+  end
+
+  teardown(function()
+    mssp.MSSPDESC = nil
+    mssp.MSSPESC = nil
+    mssp.MSSPNAME = nil
+  end)
+
+  it("keeps the line breaks of a multi-line value", function()
+    -- the lines used to run together, "...forest.Beware..."
+    feedMssp(VAR .. "MSSPDESC" .. VAL .. "A dark forest.<CR><LF>Beware the wolves.")
+    assert.equals("A dark forest.\nBeware the wolves.", mssp.MSSPDESC)
+  end)
+
+  it("keeps an escape character as the byte the game sent", function()
+    feedMssp(VAR .. "MSSPESC" .. VAL .. "a<ESC>b")
+    assert.equals("a\27b", mssp.MSSPESC)
+  end)
+
+  it("still reads the variables after a multi-line one", function()
+    feedMssp(VAR .. "MSSPDESC" .. VAL .. "one<CR><LF>two" .. VAR .. "MSSPNAME" .. VAL .. "Test Realm")
+    assert.equals("one\ntwo", mssp.MSSPDESC)
+    assert.equals("Test Realm", mssp.MSSPNAME)
+  end)
+end)
+
 describe("Tests GMCP decode failures", function()
   it("raises no events for a GMCP message whose JSON cannot be decoded", function()
     -- the decode-failure path is shared with MSDP: no arrival events for a

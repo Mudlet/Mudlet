@@ -5102,10 +5102,7 @@ void cTelnet::setMSSPVariables(const QByteArray& msg)
         transcodedMsg = msg;
     }
 
-    transcodedMsg.remove(QChar::LineFeed);
-    // replace ANSI escape character with escaped version, to handle improperly passed ANSI codes
-    transcodedMsg.replace(QLatin1String("\u001B"), QLatin1String("\\u001B"));
-    // remove \r's from the data, as yajl doesn't like it
+    // A multi-line value such as DESCRIPTION arrives with telnet's CR LF line ends
     transcodedMsg.remove(QChar::CarriageReturn);
 
     mpHost->mLuaInterpreter.setMSSPTable(transcodedMsg);
