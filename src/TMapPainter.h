@@ -135,6 +135,9 @@ struct TMapPainterView
     // Test-only: forces the every-room loop so a test can check the index path draws the same frame,
     // i.e. never hands over too few rooms.
     bool mLodExitIndexDisabled = false;
+    // Lays the rooms out at xyzoom, leaving the area's zoom be: a click on a frame already drawn hits what it showed,
+    // though the area's zoom has changed since
+    bool mKeepZoom = false;
 };
 
 // Draws the 2D map onto any QPainter, with QtGui alone, for T2DMap and for an app that draws the map itself.
@@ -184,6 +187,17 @@ public:
     static bool pruneSelectionToArea(TMap*, QSet<int>& selection, int& highlightRoomId, int areaId);
     // The selected room nearest the selection's mean position, 0 when none is left
     static int selectionCentreRoom(TMap*, const QSet<int>& selection);
+    // What the mouse does to a view, for T2DMap and for an app that draws the map itself:
+    // the rooms of the view's area and level under a click
+    static QList<int> roomsAtPoint(const View&, const TArea&, const QPoint& position);
+    // A click's rooms added to the selection: Ctrl toggles a room in or out, unless Shift is held as well
+    static void addRoomsToSelection(TMap*, QSet<int>& selection, bool& multiSelection, int& highlightRoomId, const QList<int>& rooms, Qt::KeyboardModifiers);
+    // A wheel turn's zoom, keeping the point under the pointer in place: none for less than half a notch, else whether
+    // the zoom changed
+    static std::optional<bool>
+    zoomAtPoint(TArea&, qreal& xyzoom, qreal& mapCenterX, qreal& mapCenterY, const QSize& size, const QPointF& position, const QPoint& angleDelta, Qt::KeyboardModifiers, bool invertZoom);
+    static void startSpeedWalk(Host*, TMap*, int fromRoomId, int toRoomId);
+    static void raiseMousePressEvent(Host*);
 
     // A highlight reaches over the rooms around it but stays under their symbols, ids, names and exit markers, so
     // with one in view every room's body is drawn first, then the highlights, then everything else.
@@ -323,6 +337,7 @@ public:
 private:
     void paintFrame(QPainter&, PaintResult&, const std::function<void(const View&)>& viewSettled);
     void resolveAreaExitClick(QPainter&, const QMap<int, QPointF>& areaExitsMap, const int speedWalkStartRoomId);
+    void spendClick();
     static std::pair<bool, QString> performImageSave(const QPixmap& pixmap, const QString& filePath, const QString& format);
     int width() const { return mSize.width(); }
     int height() const { return mSize.height(); }

@@ -712,6 +712,20 @@ of the event loop however many changes there were, while a script has opened a m
 since closed, and from the event loop, so a handler may call `renderMap()` at once. Only the 2D map is drawn; there is no
 3D view.
 
+`mapPointer()` is the GUI's mouse on the map, at a position in what `renderMap()` last drew, so the map
+is drawn before it is clicked. A move or `centerview()` the app has not drawn yet does not change what
+the pointer lands on, as the GUI's mapper moves its view only as it draws. A left press selects the
+room under it, Ctrl and Shift adding to the selection as in the GUI, and a press away from the rooms
+clears it; `getMapSelection()` reads it. Any press raises `sysMapWindowMousePressEvent`. A left
+`doubleClick`, sent after the press that began it as Qt sends a `MouseButtonDblClick`, speedwalks to
+the room under it as the GUI's does, with the profile's `doSpeedWalk()`. A `wheel` turn zooms the shown
+area about the pointer, with Ctrl five times as fast and `invertMapZoom` in `Mudlet.ini` read as the
+GUI's preference sets it. What the GUI does with a right press, a drag or a release, its menus, moving
+rooms and labels and sizing a selection, stays the GUI's. It is false, with the reason in
+`errorString()`, before the map is drawn, for a double-click of another button, for less than half a
+notch of the wheel and for a wheel turn on a map whose last draw showed no area, as one with no rooms
+does, and it is refused where `renderMap()` is.
+
 ## What still needs a window
 
 Some of what a profile can do has nothing to stand in for the GUI's widgets yet, and does nothing,

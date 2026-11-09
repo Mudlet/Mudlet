@@ -27,6 +27,8 @@
 #include <QFont>
 #include <QList>
 #include <QObject>
+#include <QPoint>
+#include <QPointF>
 #include <QPointer>
 #include <QRect>
 #include <QSet>
@@ -513,6 +515,29 @@ public:
     // openMapWidget(). The map info box runs the profile's Lua, so this is refused where submit() is. False, with
     // errorString() saying why, with no map open, a painter that is not active or a size under 10 by 10 pixels.
     bool renderMap(QPainter& painter, const QSize& size);
+    // The pointer, at a position in what renderMap() last drew
+    struct PointerEvent
+    {
+        enum class Type {
+            press,
+            // The second press of a double-click, which follows a press as QEvent::MouseButtonDblClick does
+            doubleClick,
+            wheel
+        };
+        Type type = Type::press;
+        QPointF position;
+        Qt::MouseButton button = Qt::LeftButton;
+        Qt::KeyboardModifiers modifiers;
+        // As QWheelEvent::angleDelta(), in eighths of a degree: 120 is a notch of most wheels
+        QPoint angleDelta;
+    };
+    // What the GUI's mouse does on the 2D map, menus and dragging aside: a left press selects the room under it,
+    // with Ctrl and Shift as in the GUI, and any press raises sysMapWindowMousePressEvent; a left double-click
+    // speedwalks to the room under it; a wheel turn zooms the area about the pointer. Refused where submit() is.
+    // False, with errorString() saying why, with no map open, before the map is drawn, for a double-click with
+    // another button, for less than half a notch of the wheel, which the GUI ignores, and for a wheel turn on a
+    // map whose last draw showed no area.
+    bool mapPointer(const PointerEvent& event);
 
     // sysExitEvent and, if asked, a save for every profile that loaded, then the pool goes. Meanwhile no profile
     // opens, and none dials the game or logs in, a live connection staying for the exit handlers. Refused while a
