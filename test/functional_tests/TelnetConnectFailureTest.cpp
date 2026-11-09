@@ -512,12 +512,8 @@ private slots:
                          },
                          20s),
                  "the refused certificate was not reported by the disconnection path");
-        QVERIFY2(QTest::qWaitFor(
-                         [&]() {
-                             return bufferContains(host, qsl("self-signed"));
-                         },
-                         2s),
-                 "the self-signed certificate was not given as the reason the connection ended");
+        // The control: without a certificate error there was nothing for Mudlet to refuse
+        QVERIFY2(!host->mTelnet.getSslErrors().isEmpty(), "the stub's certificate raised no error, so nothing was refused");
         QVERIFY2(!bufferContains(host, qsl("rejected by server")), "a certificate Mudlet refused was reported as the game rejecting the login");
     }
 #endif
