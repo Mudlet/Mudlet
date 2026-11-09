@@ -36,6 +36,7 @@
 #include <QStringList>
 
 class QNetworkRequest;
+class QRegularExpression;
 class QTranslator;
 class QUrl;
 
@@ -153,6 +154,7 @@ public:
     // name a folder of its own and have none of the characters sanitizeForPath() rewrites, which
     // CredentialManager::generateFilePath() refuses, so its password could never be stored.
     static const QString scmAllowedProfileNameChars;
+    static const QRegularExpression scmUnusableProfileNameChars;
     static QChar firstInvalidProfileNameChar(const QString& name);
     static bool profileNameUsableAsIs(const QString& name);
     static bool gamePortUsable(int port) { return port >= 1 && port <= 65535; }

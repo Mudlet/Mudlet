@@ -422,6 +422,25 @@
              </widget>
             </item>
             <item>
+             <widget class="QPushButton" name="import_profile_button">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>25</height>
+               </size>
+              </property>
+              <property name="text">
+               <string extracomment="Button that adds profiles from a .zip exported by Mudlet Web or by another computer's Mudlet">Import</string>
+              </property>
+             </widget>
+            </item>
+            <item>
              <widget class="QPushButton" name="new_profile_button">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
@@ -990,6 +1009,7 @@
   <tabstop>mud_description_textedit</tabstop>
   <tabstop>remove_profile_button</tabstop>
   <tabstop>copy_profile_toolbutton</tabstop>
+  <tabstop>import_profile_button</tabstop>
   <tabstop>new_profile_button</tabstop>
  </tabstops>
  <resources>
