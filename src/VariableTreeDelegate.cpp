@@ -123,10 +123,10 @@ QString VariableTreeDelegate::variablePreview(TVar* pVar)
         }
         if (everyKeyAnIndex) {
             //: How a Lua table whose every key is a number is summarised at the trailing edge of its row in the editor's Variables view. %n is how many members it has.
-            return tr("{ %n item(s) }", nullptr, members.size());
+            return tr("{ %n items }", nullptr, members.size());
         }
         //: How a Lua table is summarised at the trailing edge of its row in the editor's Variables view. %n is how many members it has.
-        return tr("{ %n key(s) }", nullptr, members.size());
+        return tr("{ %n keys }", nullptr, members.size());
     }
     case LUA_TFUNCTION:
         //: Shown at the trailing edge of a row in the editor's Variables view where the variable holds a Lua function rather than a value that can be shown.

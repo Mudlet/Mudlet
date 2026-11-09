@@ -31,6 +31,7 @@
 #include <QPalette>
 #include <QPixmap>
 #include <QStyleOptionViewItem>
+#include <QTranslator>
 #include <QTreeWidget>
 #include <QtTest/QtTest>
 #include <chrono>
@@ -78,6 +79,8 @@ private:
     dlgTriggerEditor* mpEditor = nullptr;
     Host* mpHost = nullptr;
     TTreeWidget* mpVariablesTree = nullptr;
+    // Singular forms come from it, and the machine's locale could load another English one
+    QTranslator mAmericanEnglish;
     const QString mProfileName = qsl("EditorVariablesTree-Test-Profile");
     // Written out rather than read from the code under test, so the test fails
     // when that size moves
@@ -173,6 +176,8 @@ private slots:
 
         QVERIFY2(mSession.start(mProfileName), qPrintable(mSession.why()));
         mpHost = mSession.host();
+        QVERIFY2(mAmericanEnglish.load(qsl(":/lang/mudlet_en_US.qm")), "the American English translation is not built in");
+        QCoreApplication::installTranslator(&mAmericanEnglish);
 
         mudlet::self()->slot_showTriggerDialog();
         QTest::qWait(100ms);
@@ -219,6 +224,7 @@ private slots:
         mpEditor = nullptr;
         mpHost = nullptr;
         mSession.stop();
+        QCoreApplication::removeTranslator(&mAmericanEnglish);
     }
 
     void test_everyRowIsTheHeightAnItemTreesRowIs()

@@ -46,6 +46,72 @@
     </message>
 </context>
 <context>
+    <name>QObject</name>
+    <message numerus="yes">
+        <location filename="../../src/EditorDeleteItemCommand.cpp" line="485"/>
+        <source>delete %n triggers</source>
+        <extracomment>Undo/redo menu text for deleting multiple triggers. %n is the count, always 2 or more</extracomment>
+        <translation>
+            <numerusform>{unused}delete %n trigger</numerusform>
+            <numerusform>delete %n triggers</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/EditorDeleteItemCommand.cpp" line="488"/>
+        <source>delete %n aliases</source>
+        <extracomment>Undo/redo menu text for deleting multiple aliases. %n is the count, always 2 or more</extracomment>
+        <translation>
+            <numerusform>{unused}delete %n alias</numerusform>
+            <numerusform>delete %n aliases</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/EditorDeleteItemCommand.cpp" line="491"/>
+        <source>delete %n timers</source>
+        <extracomment>Undo/redo menu text for deleting multiple timers. %n is the count, always 2 or more</extracomment>
+        <translation>
+            <numerusform>{unused}delete %n timer</numerusform>
+            <numerusform>delete %n timers</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/EditorDeleteItemCommand.cpp" line="494"/>
+        <source>delete %n scripts</source>
+        <extracomment>Undo/redo menu text for deleting multiple scripts. %n is the count, always 2 or more</extracomment>
+        <translation>
+            <numerusform>{unused}delete %n script</numerusform>
+            <numerusform>delete %n scripts</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/EditorDeleteItemCommand.cpp" line="497"/>
+        <source>delete %n keys</source>
+        <extracomment>Undo/redo menu text for deleting multiple key bindings. %n is the count, always 2 or more</extracomment>
+        <translation>
+            <numerusform>{unused}delete %n key</numerusform>
+            <numerusform>delete %n keys</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/EditorDeleteItemCommand.cpp" line="500"/>
+        <source>delete %n buttons</source>
+        <extracomment>Undo/redo menu text for deleting multiple buttons. %n is the count, always 2 or more</extracomment>
+        <translation>
+            <numerusform>{unused}delete %n button</numerusform>
+            <numerusform>delete %n buttons</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/EditorDeleteItemCommand.cpp" line="503"/>
+        <source>delete %n items</source>
+        <extracomment>Undo/redo menu text for deleting multiple unknown items. %n is the count, always 2 or more</extracomment>
+        <translation>
+            <numerusform>{unused}delete %n item</numerusform>
+            <numerusform>delete %n items</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
     <name>T2DMap</name>
     <message numerus="yes">
         <location filename="../../src/T2DMap.cpp" line="2419"/>
@@ -270,8 +336,62 @@ they have been removed.</numerusform>
 <context>
     <name>dlgTriggerEditor</name>
     <message numerus="yes">
+        <location filename="../../src/dlgTriggerEditor.cpp" line="13087"/>
+        <source>Copied %n triggers to clipboard</source>
+        <extracomment>Status bar message after copying several triggers from the editor; %n is how many, always 2 or more</extracomment>
+        <translation>
+            <numerusform>{unused}Copied %n trigger to clipboard</numerusform>
+            <numerusform>Copied %n triggers to clipboard</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/dlgTriggerEditor.cpp" line="13144"/>
+        <source>Copied %n timers to clipboard</source>
+        <extracomment>Status bar message after copying several timers from the editor; %n is how many, always 2 or more</extracomment>
+        <translation>
+            <numerusform>{unused}Copied %n timer to clipboard</numerusform>
+            <numerusform>Copied %n timers to clipboard</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/dlgTriggerEditor.cpp" line="13195"/>
+        <source>Copied %n aliases to clipboard</source>
+        <extracomment>Status bar message after copying several aliases from the editor; %n is how many, always 2 or more</extracomment>
+        <translation>
+            <numerusform>{unused}Copied %n alias to clipboard</numerusform>
+            <numerusform>Copied %n aliases to clipboard</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/dlgTriggerEditor.cpp" line="13246"/>
+        <source>Copied %n actions to clipboard</source>
+        <extracomment>Status bar message after copying several actions from the editor; %n is how many, always 2 or more</extracomment>
+        <translation>
+            <numerusform>{unused}Copied %n action to clipboard</numerusform>
+            <numerusform>Copied %n actions to clipboard</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/dlgTriggerEditor.cpp" line="13297"/>
+        <source>Copied %n scripts to clipboard</source>
+        <extracomment>Status bar message after copying several scripts from the editor; %n is how many, always 2 or more</extracomment>
+        <translation>
+            <numerusform>{unused}Copied %n script to clipboard</numerusform>
+            <numerusform>Copied %n scripts to clipboard</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/dlgTriggerEditor.cpp" line="13348"/>
+        <source>Copied %n keys to clipboard</source>
+        <extracomment>Status bar message after copying several keys from the editor; %n is how many, always 2 or more</extracomment>
+        <translation>
+            <numerusform>{unused}Copied %n key to clipboard</numerusform>
+            <numerusform>Copied %n keys to clipboard</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
         <location filename="../../src/dlgTriggerEditor.cpp" line="13712"/>
-        <source>Pasted %n item(s) successfully</source>
+        <source>Pasted %n items successfully</source>
         <extracomment>Status bar message after pasting items into the editor; %n is how many were pasted</extracomment>
         <translation>
             <numerusform>Pasted %n item successfully</numerusform>
@@ -408,7 +528,7 @@ they have been removed.</numerusform>
     <name>uiDesign::VariableTreeDelegate</name>
     <message numerus="yes">
         <location filename="../../src/VariableTreeDelegate.cpp" line="126"/>
-        <source>{ %n item(s) }</source>
+        <source>{ %n items }</source>
         <extracomment>How a Lua table whose every key is a number is summarised at the trailing edge of its row in the editor&apos;s Variables view. %n is how many members it has.</extracomment>
         <translation>
             <numerusform>{ %n item }</numerusform>
@@ -417,7 +537,7 @@ they have been removed.</numerusform>
     </message>
     <message numerus="yes">
         <location filename="../../src/VariableTreeDelegate.cpp" line="129"/>
-        <source>{ %n key(s) }</source>
+        <source>{ %n keys }</source>
         <extracomment>How a Lua table is summarised at the trailing edge of its row in the editor&apos;s Variables view. %n is how many members it has.</extracomment>
         <translation>
             <numerusform>{ %n key }</numerusform>

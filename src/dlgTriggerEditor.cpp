@@ -13709,7 +13709,7 @@ void dlgTriggerEditor::slot_pasteXml()
             importedItemID = importedIDs.first();
 
             //: Status bar message after pasting items into the editor; %n is how many were pasted
-            statusBar()->showMessage(tr("Pasted %n item(s) successfully", nullptr, importedIDs.size()), 3000);
+            statusBar()->showMessage(tr("Pasted %n items successfully", nullptr, importedIDs.size()), 3000);
         } else {
             // No items were imported - don't create undo action
             return;
