@@ -132,7 +132,7 @@ private slots:
         QVERIFY2(mpHost, "Could not create the test profile - see the warning above for the step that timed out.");
 
         QSignalSpy connected(&mpHost->mTelnet, &cTelnet::signal_connected);
-        if (connected.isEmpty()) {
+        if (mpHost->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState) {
             QVERIFY2(connected.wait(15s), "The test profile never connected to the recording server.");
         }
     }
