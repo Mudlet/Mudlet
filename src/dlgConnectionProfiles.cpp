@@ -112,11 +112,17 @@ void ProfileChipDelegate::restyle(const uiDesign::ThemeTokens& tokens)
     // Walked to the quiet floor: on the light appearance the platform's accent is a pale
     // selection highlight, which on a white list is no ring at all
     mHaloInk = uiDesign::readableOn(tokens.field, tokens.accent, tokens.text, uiDesign::scmQuietMinimumRatio);
+    mChosenInk = uiDesign::readableOn(tokens.field, uiDesign::stateColor(uiDesign::scmStateHue_update, tokens.darkPage), tokens.text, uiDesign::scmQuietMinimumRatio);
 }
 
 QColor ProfileChipDelegate::haloInk() const
 {
     return mHaloInk;
+}
+
+QColor ProfileChipDelegate::chosenInk() const
+{
+    return mChosenInk;
 }
 
 static constexpr int scmChipHaloRoom = ProfileChipDelegate::scmChipHaloGap + ProfileChipDelegate::scmChipHaloWidth;
@@ -159,15 +165,6 @@ void ProfileChipDelegate::paint(QPainter* painter, const QStyleOptionViewItem& o
     painter->setRenderHint(QPainter::Antialiasing, true);
     painter->setBrush(Qt::NoBrush);
 
-    if (chosen) {
-        // Under the picture, so the band's antialiased inner edge never lands on its pixels.
-        // A stroke is centred on its path, so the path is half the band's width out.
-        constexpr qreal frameWidth = scmChipHaloRoom;
-        painter->setPen(QPen(mHaloInk, frameWidth));
-        const qreal outward = frameWidth / 2.0;
-        painter->drawRoundedRect(QRectF(chip).adjusted(-outward, -outward, outward, outward), uiDesign::scmRadiusChip + outward, uiDesign::scmRadiusChip + outward);
-    }
-
     const auto icon = index.data(Qt::DecorationRole).value<QIcon>();
     if (!icon.isNull()) {
         // The typed search clears a non-matching row's enabled flag; the base delegate's
@@ -175,9 +172,9 @@ void ProfileChipDelegate::paint(QPainter* painter, const QStyleOptionViewItem& o
         icon.paint(painter, chip, Qt::AlignCenter, (option.state & QStyle::State_Enabled) ? QIcon::Normal : QIcon::Disabled);
     }
 
-    if (!chosen && (option.state & QStyle::State_MouseOver)) {
+    if (chosen || (option.state & QStyle::State_MouseOver)) {
         constexpr qreal standOff = scmChipHaloGap + scmChipHaloWidth / 2.0;
-        painter->setPen(QPen(mHaloInk, scmChipHaloWidth));
+        painter->setPen(QPen(chosen ? mChosenInk : mHaloInk, scmChipHaloWidth));
         painter->drawRoundedRect(QRectF(chip).adjusted(-standOff, -standOff, standOff, standOff), uiDesign::scmRadiusChip + standOff, uiDesign::scmRadiusChip + standOff);
     }
 

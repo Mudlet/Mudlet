@@ -61,6 +61,7 @@ public:
 
     void restyle(const uiDesign::ThemeTokens& tokens);
     QColor haloInk() const;
+    QColor chosenInk() const;
 
     // Public so the window's test reads where the halo is drawn rather than guessing
     QRect chipRect(const QListView* pView, const QModelIndex& index) const;
@@ -72,6 +73,7 @@ public:
 
 private:
     QColor mHaloInk;
+    QColor mChosenInk;
 };
 
 class dlgConnectionProfiles : public QDialog, public Ui::connection_profiles

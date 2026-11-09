@@ -724,13 +724,15 @@ private slots:
         QTest::qWait(50ms);
     }
 
-    void test_theChosenChipCarriesTheSolidAccentFrame()
+    // The hover ring's shape and place in green: a solid frame filling the gap met the picture's rounded corner,
+    // and the list showed through both antialiased edges there as a dark seam
+    void test_theChosenChipCarriesTheGreenRing()
     {
         auto* pDialog = dialog();
         QVERIFY2(pDialog, "No connection dialog to test against");
         auto* pList = pDialog->listWidget_profiles;
         auto* pDelegate = qobject_cast<ProfileChipDelegate*>(pList->itemDelegate());
-        QVERIFY2(pDelegate, "the games list carries no chip delegate, so nothing is there to draw the halo");
+        QVERIFY2(pDelegate, "the games list carries no chip delegate, so nothing is there to draw the ring");
 
         selectTheTestProfile();
         const auto items = pDialog->findData(*pList, mProfile, dlgConnectionProfiles::csmNameRole);
@@ -743,38 +745,42 @@ private slots:
         const QRect chip = pDelegate->chipRect(pList, pList->indexFromItem(items.first()));
         QVERIFY2(!chip.isEmpty() && pList->viewport()->rect().contains(chip), "the chosen profile's chip is not on show in the list, so there is nothing to read");
 
-        // haloInk(), not the raw accent: the delegate walks it to the quiet floor against the list
-        const QColor accent = pDelegate->haloInk();
+        const QColor green = pDelegate->chosenInk();
+        QVERIFY2(qAbs(green.hueF() - uiDesign::scmStateHue_update) < 0.05,
+                 qPrintable(qsl("the chosen ring's ink %1 has hue %2, not the update green's %3").arg(green.name()).arg(green.hueF()).arg(uiDesign::scmStateHue_update)));
+        QVERIFY2(TestPixels::distance(green, pDelegate->haloInk()) > 3 * scmHairlineInkSlack,
+                 qPrintable(qsl("the chosen ring's %1 is too near the hover ring's %2 to tell the two apart").arg(green.name(), pDelegate->haloInk().name())));
+
         const auto offPicture = [&](const int above, const int below) {
             return pList->viewport()->mapTo(pDialog, QPoint(chip.center().x(), above ? chip.top() - above : chip.bottom() + below));
         };
-        const QPoint bandPoint = offPicture(ProfileChipDelegate::scmChipHaloGap + 1, 0);
+        const int ringOffset = ProfileChipDelegate::scmChipHaloGap + 1;
+        const QPoint ringPoint = offPicture(ringOffset, 0);
         const QPoint gapPoint = offPicture(1, 0);
-        const QPoint underBandPoint = offPicture(0, ProfileChipDelegate::scmChipHaloWidth);
-        // Past the halo's room is where the platform's selection highlight would fill the row
-        const QPoint pastTheHaloPoint = offPicture(0, scmHaloRoom + 3);
+        const QPoint underRingPoint = offPicture(0, ringOffset);
+        // Past the ring's room is where the platform's selection highlight would fill the row
+        const QPoint pastTheRingPoint = offPicture(0, scmHaloRoom + 3);
 
-        QColor bandRead;
+        QColor ringRead;
         QColor gapRead;
         QColor underRead;
         QColor pastRead;
         const QImage shot = pDialog->grab().toImage();
-        const int band = nearestToAccent(shot, bandPoint, accent, &bandRead);
-        const int gap = nearestToAccent(shot, gapPoint, accent, &gapRead);
-        const int under = nearestToAccent(shot, underBandPoint, accent, &underRead);
-        const int past = nearestToAccent(shot, pastTheHaloPoint, accent, &pastRead);
-        qInfo().noquote() << qsl("  the chosen row is %1x%2 and its chip %3x%4; %5px over the picture reads %6 (%7 from the accent %8), 1px over it %9 (%10), %11px under it %12 (%13) and %14px under "
-                                 "it %15 (%16)")
+        const int ring = nearestToAccent(shot, ringPoint, green, &ringRead);
+        const int gap = nearestToAccent(shot, gapPoint, green, &gapRead);
+        const int under = nearestToAccent(shot, underRingPoint, green, &underRead);
+        const int past = nearestToAccent(shot, pastTheRingPoint, green, &pastRead);
+        qInfo().noquote() << qsl("  the chosen row is %1x%2 and its chip %3x%4; %5px over the picture reads %6 (%7 from the green %8), 1px over it %9 (%10), %5px under it %11 (%12) and %13px "
+                                 "under it %14 (%15)")
                                      .arg(row.width())
                                      .arg(row.height())
                                      .arg(chip.width())
                                      .arg(chip.height())
-                                     .arg(ProfileChipDelegate::scmChipHaloGap + 1)
-                                     .arg(bandRead.name())
-                                     .arg(band)
-                                     .arg(accent.name(), gapRead.name())
+                                     .arg(ringOffset)
+                                     .arg(ringRead.name())
+                                     .arg(ring)
+                                     .arg(green.name(), gapRead.name())
                                      .arg(gap)
-                                     .arg(ProfileChipDelegate::scmChipHaloWidth)
                                      .arg(underRead.name())
                                      .arg(under)
                                      .arg(scmHaloRoom + 3)
@@ -782,30 +788,27 @@ private slots:
                                      .arg(past);
 
         // A view repaints only an item's own rect as the pointer moves on or off
-        // it, so a band drawn outside it is left behind as a fragment
+        // it, so a ring drawn outside it is left behind as a fragment
         const QSize needed = pList->iconSize() + QSize(2 * scmHaloRoom, 2 * scmHaloRoom);
         QVERIFY2(row.width() >= needed.width() && row.height() >= needed.height(),
-                 qPrintable(qsl("the chosen row is %1x%2, which does not hold the %3x%4 its halo needs, so the band is painted outside the rectangle the view repaints")
+                 qPrintable(qsl("the chosen row is %1x%2, which does not hold the %3x%4 its ring needs, so the ring is painted outside the rectangle the view repaints")
                                     .arg(row.width())
                                     .arg(row.height())
                                     .arg(needed.width())
                                     .arg(needed.height())));
-        QVERIFY2(band <= scmHairlineInkSlack,
-                 qPrintable(qsl("%1px over the chosen chip reads %2 rather than the design's accent %3, %4 away, so it carries no frame")
-                                    .arg(ProfileChipDelegate::scmChipHaloGap + 1)
-                                    .arg(bandRead.name(), accent.name())
-                                    .arg(band)));
-        QVERIFY2(gap <= scmHairlineInkSlack,
-                 qPrintable(qsl("1px over the chosen chip reads %1 rather than the accent %2, %3 away, so the frame stands off the picture as the hover ring does rather than being solid")
-                                    .arg(gapRead.name(), accent.name())
-                                    .arg(gap)));
+        QVERIFY2(ring <= scmHairlineInkSlack,
+                 qPrintable(qsl("%1px over the chosen chip reads %2 rather than the green %3, %4 away, so it carries no ring").arg(ringOffset).arg(ringRead.name(), green.name()).arg(ring)));
+        QVERIFY2(gap > scmHairlineInkSlack,
+                 qPrintable(qsl("1px over the chosen chip reads the green %1 too, so the ring sits on the picture's own edge rather than standing %2px off it as the hover ring does")
+                                    .arg(gapRead.name())
+                                    .arg(ProfileChipDelegate::scmChipHaloGap)));
         QVERIFY2(under <= scmHairlineInkSlack,
-                 qPrintable(qsl("%1px under the chosen chip reads %2 rather than the accent %3, %4 away, so the frame does not go all the way round the picture")
-                                    .arg(ProfileChipDelegate::scmChipHaloWidth)
-                                    .arg(underRead.name(), accent.name())
+                 qPrintable(qsl("%1px under the chosen chip reads %2 rather than the green %3, %4 away, so the ring does not go all the way round the picture")
+                                    .arg(ringOffset)
+                                    .arg(underRead.name(), green.name())
                                     .arg(under)));
         QVERIFY2(past > scmHairlineInkSlack,
-                 qPrintable(qsl("%1px under the chosen chip still reads the accent %2, so something is painted under the row past the halo's own %3px")
+                 qPrintable(qsl("%1px under the chosen chip still reads the green %2, so something is painted under the row past the ring's own %3px")
                                     .arg(scmHaloRoom + 3)
                                     .arg(pastRead.name())
                                     .arg(scmHaloRoom)));

@@ -138,8 +138,9 @@ Adopted (styled through `uiDesign`, guarded by the tests below):
   the games-list chips cut to `scmRadiusChip` at the screen's pixel ratio - the generated
   ones, every shipped game banner and a user's own picture - which carry a halo on that same
   corner: under the pointer a 2px accent ring standing 2px off the picture, and while it is the
-  chosen one that gap filled in as a solid 4px accent frame, drawn under the picture - both inked
-  in the accent walked with `readableOn()` to `scmQuietMinimumRatio` against the list's field
+  chosen one the same ring in the update green (`scmStateHue_update`) - a solid frame filling the
+  gap met the picture's rounded corner, and the list showed through both antialiased edges there.
+  Both inks are walked with `readableOn()` to `scmQuietMinimumRatio` against the list's field
   tone, since on the light appearance the platform's accent is a pastel that reads as nothing on
   a white list. Both come
   from `ProfileChipDelegate`, which paints the pictures itself rather than calling the base
