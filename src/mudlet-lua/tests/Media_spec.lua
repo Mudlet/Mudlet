@@ -4320,6 +4320,25 @@ describe("Tests the text-to-speech Lua API", function()
         assert.is_true(err:find("skipped empty text to speak (TTS)", 1, true) ~= nil)
       end)
 
+      -- Only the brackets are dropped, so these would otherwise reach the
+      -- engine as nothing at all, which stalls the queue (#4688).
+      it("ttsSpeak and ttsQueue reject text that is nothing but angle brackets", function()
+        if ttsUnsupported() then
+          return
+        end
+        ttsClearQueue()
+        for _, markup in ipairs({"<>", "< >", "&lt;&gt;", " <<>> "}) do
+          local ok, err = ttsSpeak(markup)
+          assert.is_nil(ok, markup)
+          assert.is_true(err:find("skipped empty text to speak (TTS)", 1, true) ~= nil, markup)
+          ok, err = ttsQueue(markup)
+          assert.is_nil(ok, markup)
+          assert.is_true(err:find("skipped empty text to speak (TTS)", 1, true) ~= nil, markup)
+        end
+        assert.equals(0, #ttsGetQueue())
+        assert.equals("ttsSpeechReady", ttsGetState())
+      end)
+
       it("ttsSpeak and ttsQueue raise a Lua error for a non-string argument", function()
         if ttsUnsupported() then
           return
