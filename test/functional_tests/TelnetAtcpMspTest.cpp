@@ -421,6 +421,35 @@ private slots:
                  "saving the composer left its window behind");
     }
 
+    // The Save button's tooltip offers Shift+Tab, so pressing it in the editor
+    // has to send the draft rather than move focus to the title.
+    void test_shiftTabInTheComposerSavesTheDraft()
+    {
+        announce(TN_WILL, static_cast<char>(OPT_GMCP));
+        QVERIFY2(mpHost->mTelnet.isGMCPEnabled(), "GMCP did not turn on, so the composer had nothing to send its buffer over");
+        waitForEverythingSentSoFar();
+        mpServer->forgetReceived();
+
+        feedAtcp("Client.Compose Note\ntyped draft");
+        QCOMPARE(openComposers().size(), 1);
+        dlgComposer* composer = openComposers().first();
+        QTest::keyClick(composer->edit, Qt::Key_Backtab, Qt::ShiftModifier);
+
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return !subnegotiationsFor(mpServer->received(), OPT_GMCP).isEmpty();
+                         },
+                         10s),
+                 "Shift+Tab in the composer sent no GMCP message");
+        QCOMPARE(subnegotiationsFor(mpServer->received(), OPT_GMCP).first().payload, QByteArray("IRE.Composer.SetBuffer \"typed draft\""));
+        QVERIFY2(QTest::qWaitFor(
+                         []() {
+                             return openComposers().isEmpty();
+                         },
+                         5s),
+                 "saving the composer left its window behind");
+    }
+
     // The other arm of the same save: a profile with GMCP turned off sends the
     // buffer as ATCP instead, in a completely different shape - and with no
     // quoting at all, which is what an ATCP-only game receives.
