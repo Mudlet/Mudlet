@@ -19,8 +19,9 @@
 
 /*
  * Guards the About dialog's widget shell: nothing painted onto the splash, the
- * Copy button, third-party rows held against the bundled data, and no Patreon
- * button on Steam builds.
+ * Copy button, third-party rows held against the bundled data, no Patreon
+ * button on Steam builds, and the Patreon button drawn by the shared primary
+ * button recipe.
  *
  * Run with: ctest -R AboutDialogShellTest -V
  */
@@ -32,10 +33,12 @@
 #include <QGroupBox>
 #include <QImage>
 #include <QLabel>
+#include <QPainter>
 #include <QPushButton>
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QStackedWidget>
+#include <QStyleOptionButton>
 #include <QTextBrowser>
 #include <QToolButton>
 #include <QtTest/QtTest>
@@ -66,6 +69,9 @@ private:
     static constexpr int scmSwordsSupporters = 6;
     static constexpr int scmPlaqueSupporters = 2;
 
+    // Summed over the three channels, as TestPixels::distance() measures
+    static constexpr int scmStatesApart = 12;
+
     // The way mudlet::slot_showAboutDialog() opens it
     dlgAboutDialog* openDialog()
     {
@@ -83,6 +89,27 @@ private:
             buttons << pDialog->findChild<QToolButton*>(qsl("aboutNavButton_%1").arg(key));
         }
         return buttons;
+    }
+
+    // Drawn as QPushButton::paintEvent draws, with the state on the option: QTest::mouseMove does not set
+    // WA_UnderMouse, so a hover sent from a test does not reliably reach the sheet's :hover
+    static QColor fillOf(QPushButton* pButton, const QStyle::State state, const QColor& page)
+    {
+        QImage image(pButton->size(), QImage::Format_ARGB32);
+        image.setDevicePixelRatio(1.0);
+        image.fill(page);
+        QStyleOptionButton option;
+        option.initFrom(pButton);
+        option.rect = pButton->rect();
+        option.text = pButton->text();
+        option.state &= ~(QStyle::State_MouseOver | QStyle::State_Sunken | QStyle::State_Raised | QStyle::State_HasFocus);
+        option.state |= state;
+        {
+            QPainter painter(&image);
+            pButton->style()->drawControl(QStyle::CE_PushButton, &option, &painter, pButton);
+        }
+        // Inside the leading padding: clear of the centred word and below the rounded corner
+        return image.pixelColor(QPoint(uiDesign::scmInputBorderWidth + 3, image.height() / 2));
     }
 
 private slots:
@@ -403,6 +430,61 @@ private slots:
         QVERIFY2(!introText.contains(qsl("<a")), qPrintable(qsl("a Steam build's supporters intro still carries a link: \"%1\"").arg(introText.simplified())));
 
         QVERIFY2(mpDialog->findChild<QPushButton*>(qsl("aboutPatreonButton")), "a non-Steam build has no Patreon button, so the check above says nothing");
+    }
+
+    // The window's own rule follows the shared recipe in one sheet, so a colour in it would win the tie with the
+    // recipe's resting rule; it keeps only the bold word and the taller face
+    void test_thePatreonButtonTakesThePrimaryButtonsStates()
+    {
+        mpDialog->findChild<QToolButton*>(qsl("aboutNavButton_supporters"))->click();
+        QCoreApplication::processEvents();
+        auto* pButton = mpDialog->findChild<QPushButton*>(qsl("aboutPatreonButton"));
+        QVERIFY2(pButton, "the Supporters page has no 'aboutPatreonButton'");
+        auto* pShell = mpDialog->findChild<QWidget*>(qsl("aboutShell"));
+        QVERIFY2(pShell, "the dialog has no 'aboutShell' carrying the window's sheet");
+
+        const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
+        const QColor rest = fillOf(pButton, QStyle::State_Raised, tokens.page);
+        const QColor hover = fillOf(pButton, QStyle::State_MouseOver | QStyle::State_Raised, tokens.page);
+        const QColor pressed = fillOf(pButton, QStyle::State_MouseOver | QStyle::State_Sunken, tokens.page);
+        const bool bold = pButton->font().bold();
+        const int height = pButton->height();
+        mpDialog->findChild<QToolButton*>(qsl("aboutNavButton_mudlet"))->click();
+        QCoreApplication::processEvents();
+        qInfo().noquote() << qsl("  the Patreon button reads rest %1, hover %2, pressed %3 against the accent %4; it is %5px tall and its word %6")
+                                     .arg(rest.name(), hover.name(), pressed.name(), tokens.accent.name(), QString::number(height), bold ? qsl("bold") : qsl("not bold"));
+
+        QVERIFY2(pButton->property(uiDesign::scmProp_primaryButton).toBool(), "the Patreon button does not carry uiPrimaryButton, so the shared primary recipe's states never reach it");
+
+        const QString sheet = pShell->styleSheet();
+        const QString selector = qsl("[aboutPrimaryButton=\"true\"]");
+        int rules = 0;
+        bool heightKept = false;
+        for (qsizetype at = sheet.indexOf(selector); at != -1; at = sheet.indexOf(selector, at + 1)) {
+            const qsizetype open = sheet.indexOf(QLatin1Char('{'), at);
+            const qsizetype close = open == -1 ? -1 : sheet.indexOf(QLatin1Char('}'), open);
+            QVERIFY2(close != -1, "an aboutPrimaryButton rule in the window's sheet has no body");
+            const QString declarations = sheet.mid(open + 1, close - open - 1);
+            ++rules;
+            heightKept = heightKept || declarations.contains(qsl("min-height"));
+            for (const QString& property : {qsl("background-color"), qsl("color"), qsl("border")}) {
+                QVERIFY2(!declarations.contains(property),
+                         qPrintable(qsl("the window's own aboutPrimaryButton rule writes %1, which outranks the shared primary recipe: \"%2\"").arg(property, declarations.simplified())));
+            }
+        }
+        QVERIFY2(rules > 0, "the window's sheet has no aboutPrimaryButton rule, so nothing above was read");
+        QVERIFY2(heightKept, "no aboutPrimaryButton rule sets min-height, so the button falls back to an ordinary button's height");
+
+        QVERIFY2(TestPixels::distance(hover, tokens.accent) < TestPixels::distance(rest, tokens.accent),
+                 qPrintable(qsl("the Patreon button reads %1 under the pointer, further from the accent %2 than its resting %3, so the pointer dims it")
+                                    .arg(hover.name(), tokens.accent.name(), rest.name())));
+        QVERIFY2(TestPixels::distance(pressed, hover) > scmStatesApart,
+                 qPrintable(qsl("the Patreon button reads %1 pressed and %2 under the pointer, so a press looks like a hover").arg(pressed.name(), hover.name())));
+
+        QVERIFY2(bold, "the Patreon button's word is not bold, so the window's own rule no longer reaches it");
+        QVERIFY2(height > uiDesign::scmInputHeight,
+                 qPrintable(qsl("the Patreon button is %1px tall, no taller than an ordinary button's %2px, so the window's own rule no longer reaches it")
+                                    .arg(QString::number(height), QString::number(uiDesign::scmInputHeight))));
     }
 
     // QLabel bakes link colours into its document at setText() from the palette

@@ -725,6 +725,7 @@ QWidget* dlgAboutDialog::buildSupportersPage()
         //: Button on the Supporters page that opens Mudlet's Patreon page
         auto* pPatreon = new QPushButton(tr("Support Mudlet on Patreon"), pColumn);
         pPatreon->setObjectName(qsl("aboutPatreonButton"));
+        pPatreon->setProperty(scmProp_primaryButton, true);
         pPatreon->setProperty("aboutPrimaryButton", true);
         pPatreon->setAutoDefault(false);
         pPatreon->setDefault(false);
@@ -1097,61 +1098,58 @@ void dlgAboutDialog::applyShellStyle()
     const QString captionSize = QString::number(typeSize(TypeStep::Caption));
     const QString titleSize = QString::number(typeSize(TypeStep::Title));
 
-    mpWidget_shell->setStyleSheet(
-            qsl("#aboutShell, #aboutContent { background-color: %1; }"
-                "#aboutArtColumn { background-color: %2; border-right: 1px solid %3; }"
-                // So a profile's Lua stylesheet painting every QWidget cannot colour the scaffolding
-                "QWidget[settingsSurface=\"true\"] { background-color: transparent; border: none; }"
-                "#aboutName { font-size: %5pt; font-weight: bold; }"
-                "#aboutVersion { font-size: %6pt; color: %4; }"
-                "#aboutCopyright { font-size: %6pt; color: %4; }"
-                "#aboutFooter { font-size: %6pt; color: %4; }"
-                "#textBrowser_license { background-color: %1; border: none; }")
-                    .arg(tokens.page.name(), tokens.pane.name(), tokens.separator.name(), tokens.mutedText.name(), titleSize, captionSize)
-            + qsl("QLabel[aboutChip=\"true\"] { border: 1px solid %1; border-radius: %2px; padding: 1px 7px; font-size: %9pt; color: %3; }"
-                  "QLabel[aboutChipLit=\"true\"] { background-color: %4; color: %5; border: 1px solid transparent; }"
-                  "#aboutNav { border-bottom: 1px solid %1; }"
-                  "#aboutNav QToolButton { border: 1px solid transparent; border-radius: 6px; padding: 6px 12px; color: %3; background-color: transparent; }"
-                  "#aboutNav QToolButton:hover { background-color: %6; color: %7; }"
-                  "#aboutNav QToolButton:checked { background-color: %4; color: %5; font-weight: bold; }"
-                  "#aboutNav QToolButton:focus { border: 1px solid %8; }")
-                      .arg(tokens.border.name(),
-                           QString::number(scmRadiusChip),
-                           tokens.mutedText.name(),
-                           tokens.accentSoft,
-                           tokens.accentText.name(),
-                           tokens.hoverSoft,
-                           tokens.text.name(),
-                           tokens.accent.name(),
-                           captionSize)
-            + cardStyleSheet(cardMetrics, tokens) + cardIndicatorRules
-            + qsl("#aboutSectionTitle { font-size: %6pt; font-weight: bold; }"
-                  "#aboutSectionNote { font-size: %7pt; color: %1; }"
-                  "#aboutCardDescription { font-size: %7pt; color: %1; }"
-                  "#aboutPersonDescription { color: %1; }"
-                  "#aboutMoreName { font-weight: bold; }"
-                  "#aboutMoreDescription { color: %1; }"
-                  "#aboutThanksParagraph { color: %1; }"
-                  "#aboutSupportersIntro { color: %1; }"
-                  "#aboutTier { font-size: %7pt; color: %1; }"
-                  "#aboutThirdPartyIntro { color: %1; }"
-                  "#aboutThirdPartyCopyright { font-size: %7pt; color: %1; }"
-                  "#aboutThirdPartyBody { font-size: %7pt; color: %1; }"
-                  "#aboutLicenseOrigin { font-size: %7pt; color: %1; }"
-                  "#aboutBuildKey { font-size: %7pt; color: %1; }"
-                  "#aboutBuildValue { font-size: %7pt; color: %2; }"
-                  "#aboutSeparatorLine { background-color: %3; }"
-                  "#aboutThirdPartyToggle { border: 1px solid transparent; padding: 9px 14px; text-align: left; background-color: transparent; color: %2; font-weight: bold; }"
-                  "#aboutThirdPartyToggle:hover { background-color: %4; }"
-                  "#aboutThirdPartyToggle:focus { border: 1px solid %5; }")
-                      .arg(tokens.mutedText.name(), tokens.text.name(), tokens.border.name(), tokens.hoverSoft, tokens.accent.name(), titleSize, captionSize)
-            + buttonStyleSheet(tokens) + qsl("QPushButton[aboutButton=\"true\"][aboutCopied=\"true\"] { color: %1; border: 1px solid %2; }").arg(tokens.accentText.name(), tokens.accent.name())
-            + qsl("QPushButton[aboutPrimaryButton=\"true\"] { background-color: %1; color: %2; border: 1px solid transparent; border-radius: %3px; padding: 5px 16px;"
-                  " min-height: %4px; font-weight: bold; }"
-                  "QPushButton[aboutPrimaryButton=\"true\"]:hover { background-color: %5; }"
-                  "QPushButton[aboutPrimaryButton=\"true\"]:focus { border: 1px solid %6; }")
-                      .arg(tokens.accentSoft, tokens.accentText.name(), QString::number(scmRadiusInput), QString::number(scmPrimaryButtonHeight), tokens.hoverSoft, tokens.accent.name())
-            + scrollBarStyleSheet(qsl("QScrollArea[settingsSurface=\"true\"]"), tokens) + scrollBarStyleSheet(qsl("#textBrowser_license"), tokens));
+    mpWidget_shell->setStyleSheet(qsl("#aboutShell, #aboutContent { background-color: %1; }"
+                                      "#aboutArtColumn { background-color: %2; border-right: 1px solid %3; }"
+                                      // So a profile's Lua stylesheet painting every QWidget cannot colour the scaffolding
+                                      "QWidget[settingsSurface=\"true\"] { background-color: transparent; border: none; }"
+                                      "#aboutName { font-size: %5pt; font-weight: bold; }"
+                                      "#aboutVersion { font-size: %6pt; color: %4; }"
+                                      "#aboutCopyright { font-size: %6pt; color: %4; }"
+                                      "#aboutFooter { font-size: %6pt; color: %4; }"
+                                      "#textBrowser_license { background-color: %1; border: none; }")
+                                          .arg(tokens.page.name(), tokens.pane.name(), tokens.separator.name(), tokens.mutedText.name(), titleSize, captionSize)
+                                  + qsl("QLabel[aboutChip=\"true\"] { border: 1px solid %1; border-radius: %2px; padding: 1px 7px; font-size: %9pt; color: %3; }"
+                                        "QLabel[aboutChipLit=\"true\"] { background-color: %4; color: %5; border: 1px solid transparent; }"
+                                        "#aboutNav { border-bottom: 1px solid %1; }"
+                                        "#aboutNav QToolButton { border: 1px solid transparent; border-radius: 6px; padding: 6px 12px; color: %3; background-color: transparent; }"
+                                        "#aboutNav QToolButton:hover { background-color: %6; color: %7; }"
+                                        "#aboutNav QToolButton:checked { background-color: %4; color: %5; font-weight: bold; }"
+                                        "#aboutNav QToolButton:focus { border: 1px solid %8; }")
+                                            .arg(tokens.border.name(),
+                                                 QString::number(scmRadiusChip),
+                                                 tokens.mutedText.name(),
+                                                 tokens.accentSoft,
+                                                 tokens.accentText.name(),
+                                                 tokens.hoverSoft,
+                                                 tokens.text.name(),
+                                                 tokens.accent.name(),
+                                                 captionSize)
+                                  + cardStyleSheet(cardMetrics, tokens) + cardIndicatorRules
+                                  + qsl("#aboutSectionTitle { font-size: %6pt; font-weight: bold; }"
+                                        "#aboutSectionNote { font-size: %7pt; color: %1; }"
+                                        "#aboutCardDescription { font-size: %7pt; color: %1; }"
+                                        "#aboutPersonDescription { color: %1; }"
+                                        "#aboutMoreName { font-weight: bold; }"
+                                        "#aboutMoreDescription { color: %1; }"
+                                        "#aboutThanksParagraph { color: %1; }"
+                                        "#aboutSupportersIntro { color: %1; }"
+                                        "#aboutTier { font-size: %7pt; color: %1; }"
+                                        "#aboutThirdPartyIntro { color: %1; }"
+                                        "#aboutThirdPartyCopyright { font-size: %7pt; color: %1; }"
+                                        "#aboutThirdPartyBody { font-size: %7pt; color: %1; }"
+                                        "#aboutLicenseOrigin { font-size: %7pt; color: %1; }"
+                                        "#aboutBuildKey { font-size: %7pt; color: %1; }"
+                                        "#aboutBuildValue { font-size: %7pt; color: %2; }"
+                                        "#aboutSeparatorLine { background-color: %3; }"
+                                        "#aboutThirdPartyToggle { border: 1px solid transparent; padding: 9px 14px; text-align: left; background-color: transparent; color: %2; font-weight: bold; }"
+                                        "#aboutThirdPartyToggle:hover { background-color: %4; }"
+                                        "#aboutThirdPartyToggle:focus { border: 1px solid %5; }")
+                                            .arg(tokens.mutedText.name(), tokens.text.name(), tokens.border.name(), tokens.hoverSoft, tokens.accent.name(), titleSize, captionSize)
+                                  + buttonStyleSheet(tokens)
+                                  + qsl("QPushButton[aboutButton=\"true\"][aboutCopied=\"true\"] { color: %1; border: 1px solid %2; }").arg(tokens.accentText.name(), tokens.accent.name())
+                                  // Only the bold word and the taller face: a colour here would win the specificity tie with the shared primary rule before it
+                                  + qsl("QPushButton[aboutPrimaryButton=\"true\"] { padding: 5px 16px; min-height: %1px; font-weight: bold; }").arg(QString::number(scmPrimaryButtonHeight))
+                                  + scrollBarStyleSheet(qsl("QScrollArea[settingsSurface=\"true\"]"), tokens) + scrollBarStyleSheet(qsl("#textBrowser_license"), tokens));
 
     keepClickFocusOffControls(mpWidget_shell);
 

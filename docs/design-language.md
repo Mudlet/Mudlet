@@ -1591,7 +1591,7 @@ Stylesheets select on these; setting one after the widget is shown needs an
 | `aboutChipLit` | ...and that chip filled with the accent, which the build channel is |
 | `aboutButton` | An ordinary push button on this dialog |
 | `aboutCopied` | ...one of them for the moment after it has copied |
-| `aboutPrimaryButton` | The one button that is an invitation rather than a control |
+| `aboutPrimaryButton` | The one button that is an invitation rather than a control - the Patreon button, which also carries `uiPrimaryButton` for its look and its states; this property gives it only its bold word and taller face, so its rule writes no colour |
 | `aboutNavGlyph` | Which file a navigation button's glyph is re-inked from |
 | `aboutRestingText` | What a Copy button reads when it is not saying "Copied" |
 | `aboutRichText` | The text a label was given, before its links were inked |
