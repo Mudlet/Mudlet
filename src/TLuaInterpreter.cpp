@@ -2196,7 +2196,12 @@ std::pair<int, TAction*> TLuaInterpreter::getTActionFromIdOrName(lua_State* L, c
     auto argType = lua_type(L, index);
     TAction* pItem = nullptr;
     if (argType == LUA_TNUMBER) {
-        const int id = qRound(lua_tonumber(L, index));
+        const double rounded = std::round(lua_tonumber(L, index));
+        // Converting NaN or a value outside int's range is undefined, and no button has such an ID
+        if (!(rounded >= std::numeric_limits<int>::min() && rounded <= std::numeric_limits<int>::max())) {
+            return {warnArgumentValue(L, func, qsl("no button item with ID %1 found").arg(lua_tonumber(L, index)).toUtf8().constData()), pItem};
+        }
+        const int id = static_cast<int>(rounded);
         if (id < 0) {
             return {warnArgumentValue(L, func, qsl("item ID (%1) invalid, it must be equal or greater than zero").arg(id).toUtf8().constData()), pItem};
         }

@@ -8864,6 +8864,17 @@ describe("Toolbar buttons", function()
       assert.are.equal("no button item with ID 999999 found", setErr)
     end)
 
+    it("both refuse an item ID that is not a finite int", function()
+      for _, id in ipairs({math.huge, -math.huge, 0 / 0, 2147483648, -2147483649}) do
+        local getOk, getErr = getButtonState(id)
+        assert.is_nil(getOk, tostring(id))
+        assert.truthy(tostring(getErr):find("^no button item with ID "), tostring(getErr))
+        local setOk, setErr = setButtonState(id, true)
+        assert.is_nil(setOk, tostring(id))
+        assert.truthy(tostring(setErr):find("^no button item with ID "), tostring(setErr))
+      end
+    end)
+
     it("getButtonState with no arguments answers the console's own button state", function()
       -- with no arguments this answers TConsoleModel::mButtonState, which is 1 or 2
       -- rather than the boolean the named form answers, and which only a real
