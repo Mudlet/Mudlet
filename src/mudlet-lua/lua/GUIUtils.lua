@@ -2129,9 +2129,14 @@ function hecho2ansi(text)
     n = n + 1
     parts[n] = str
     if color then
-      if color:sub(1,1) == "|" then color = color:gsub("|c", "#") end
       n = n + 1
-      parts[n] = hexToAnsi(color:sub(2,-1))
+      local first = color:sub(1, 1)
+      if first == "#" or first == "|" then
+        parts[n] = hexToAnsi(color:gsub("^|c", "#"):sub(2, -1))
+      else
+        -- the pattern also matches bare and backslash-escaped hex digits, which hecho shows as text
+        parts[n] = first == "\\" and color:sub(2) or color
+      end
     end
     if res then
       n = n + 1
