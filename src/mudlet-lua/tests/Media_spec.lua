@@ -1359,6 +1359,55 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(20, playing[1].volume)
   end)
 
+  it("a stop sent while the file is still downloading keeps the sound from starting once it lands", function()
+    if noFixtureServer() then
+      return
+    end
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local downloadName = "busted-media-stop-download.wav"
+    local downloaded = mediaDirectory .. "/" .. downloadName
+    lfs.mkdir(mediaDirectory)
+    os.remove(downloaded)
+    onCleanup(function() os.remove(downloaded) end)
+    onCleanup(function() stopSounds() end)
+    local done, started = {}, {}
+    collect("sysDownloadDone", done)
+    collect("sysMediaStarted", started)
+
+    assert.is_true(playSoundFile({name = downloadName, url = fixtureUrl() .. "/media", volume = 60, key = "busted-media-stop-download"}))
+    assert.is_true(stopSounds({key = "busted-media-stop-download"}))
+    waitForCount("sysDownloadDone", done, 1)
+    waitForEvent("sysMediaStarted", quietMilliseconds)
+
+    assert.equals(0, #started)
+    assert.equals(0, #getPlayingSounds())
+    -- still saved, so the next play of it needs no download
+    assert.is_not_nil(lfs.attributes(downloaded, "mode"), "the stopped download did not keep its file")
+  end)
+
+  it("a stop for other media leaves a file still downloading to play once it lands", function()
+    if noFixtureServer() then
+      return
+    end
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local downloadName = "busted-media-stop-other-download.wav"
+    local downloaded = mediaDirectory .. "/" .. downloadName
+    lfs.mkdir(mediaDirectory)
+    os.remove(downloaded)
+    onCleanup(function() os.remove(downloaded) end)
+    onCleanup(function() stopSounds() end)
+
+    assert.is_true(playSoundFile({name = downloadName, url = fixtureUrl() .. "/media", volume = 60, key = "busted-media-stop-other-download"}))
+    assert.is_true(stopSounds({key = "busted-media-some-other-key"}))
+    assert.is_true(stopMusic())
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 10000)))
+    assert.equals(1, #getPlayingSounds({key = "busted-media-stop-other-download"}))
+  end)
+
   it("loadVideoFile reports a download error for a url it cannot fetch from", function()
     -- The preload reaches the same fetch as a play would, so the refusal of a
     -- url that is not http(s) is where a spec can see a load act on its url

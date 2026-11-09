@@ -403,12 +403,6 @@ void TMedia::stopMedia(TMediaData& mediaData, const PriorityStop priorityStop)
         mediaData.setMediaPriority(TMediaData::MediaPriorityNotSet);
     }
 
-    QList<std::shared_ptr<TMediaPlayer>> mediaPlayerList = findMediaPlayersByCriteria(mediaData);
-
-    if (mediaPlayerList.isEmpty()) {
-        return;
-    }
-
     if (!mediaData.mediaFileName().isEmpty() && mediaData.mediaInput() == TMediaData::MediaInputFile) {
         const bool fileRelative = TMedia::isFileRelative(mediaData);
 
@@ -418,18 +412,26 @@ void TMedia::stopMedia(TMediaData& mediaData, const PriorityStop priorityStop)
     }
 
     const TMediaData fileRequest = requestForFilePlayers(mediaData);
+    const auto stops = [&](const TMediaData& candidate) {
+        if (!isMediaMatch(candidate, candidate.mediaInput() == TMediaData::MediaInputFile ? fileRequest : mediaData, BareName::AlsoMatchesSourceFile)) {
+            return false;
+        }
+        return mediaData.mediaPriority() == TMediaData::MediaPriorityNotSet || candidate.mediaPriority() == TMediaData::MediaPriorityNotSet
+               || (priorityStop == PriorityStop::Below ? candidate.mediaPriority() < mediaData.mediaPriority() : candidate.mediaPriority() <= mediaData.mediaPriority());
+    };
+
+    // A file still downloading has no player yet, and would start once it lands; as a preload it is
+    // still saved, but not played
+    for (TMediaData& pending : mMediaDownloads) {
+        if (pending.mediaProtocol() == mediaData.mediaProtocol() && (mediaData.mediaType() == TMediaData::MediaTypeNotSet || pending.mediaType() == mediaData.mediaType()) && stops(pending)) {
+            pending.setMediaVolume(TMediaData::MediaVolumePreload);
+        }
+    }
+
+    QList<std::shared_ptr<TMediaPlayer>> mediaPlayerList = findMediaPlayersByCriteria(mediaData);
 
     for (auto& pPlayer : mediaPlayerList) {
-        if (!pPlayer) {
-            continue;
-        }
-
-        if (!isMediaMatch(pPlayer, pPlayer->mediaData().mediaInput() == TMediaData::MediaInputFile ? fileRequest : mediaData, BareName::AlsoMatchesSourceFile)) {
-            continue;
-        }
-
-        if (mediaData.mediaPriority() != TMediaData::MediaPriorityNotSet && pPlayer->mediaData().mediaPriority() != TMediaData::MediaPriorityNotSet
-            && (priorityStop == PriorityStop::Below ? pPlayer->mediaData().mediaPriority() >= mediaData.mediaPriority() : pPlayer->mediaData().mediaPriority() > mediaData.mediaPriority())) {
+        if (!pPlayer || !stops(pPlayer->mediaData())) {
             continue;
         }
 
@@ -845,6 +847,11 @@ bool TMedia::resume(TMediaData mediaData)
 
 void TMedia::stopAllMediaPlayers()
 {
+    // A file still downloading is still saved, but does not start once it lands
+    for (TMediaData& pending : mMediaDownloads) {
+        pending.setMediaVolume(TMediaData::MediaVolumePreload);
+    }
+
     TMediaData mediaData{};
 
     mediaData.setMediaProtocol(TMediaData::MediaProtocolNotSet);
