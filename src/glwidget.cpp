@@ -33,6 +33,10 @@
 #include <QtEvents>
 
 #include <QPainter>
+
+#include <algorithm>
+#include <cmath>
+
 #ifdef Q_OS_MACOS
 #include <OpenGL/glu.h>
 #else
@@ -181,7 +185,7 @@ void GLWidget::slot_defaultView()
     zRot = 10.0;
     mScale = 1.0;
     is2DView = false;
-    update();
+    applyScale();
 }
 
 void GLWidget::slot_sideView()
@@ -191,7 +195,7 @@ void GLWidget::slot_sideView()
     zRot = 0.0;
     mScale = 1.0;
     is2DView = false;
-    update();
+    applyScale();
 }
 
 void GLWidget::slot_topView()
@@ -202,12 +206,18 @@ void GLWidget::slot_topView()
     mScale = 1.0;
     // This is the ONLY place this value is set:
     is2DView = true;
-    update();
+    applyScale();
 }
 
 void GLWidget::slot_setScale(int angle)
 {
     mScale = 150 / (static_cast<float>(angle) + 300.0f);
+    applyScale();
+}
+
+// The projection is only set up in resizeGL(), so a new scale shows nowhere until it runs again
+void GLWidget::applyScale()
+{
     makeCurrent();
     resizeGL(width(), height());
     doneCurrent();
@@ -2216,27 +2226,25 @@ void GLWidget::mouseReleaseEvent(QMouseEvent* event)
     mPanMode = false;
 }
 
+float GLWidget::scaleAfterWheel(const float scale, const double notches)
+{
+    // The field of view is 60 times the scale in degrees: at or past 0 the map vanishes or turns upside down,
+    // and towards 180 it does the same
+    constexpr float minScale = 0.05f;
+    constexpr float maxScale = 2.5f;
+    const float step = std::abs(scale) < 0.3f ? 0.01f : 0.03f;
+    return std::clamp(scale + step * static_cast<float>(notches), minScale, maxScale);
+}
+
 void GLWidget::wheelEvent(QWheelEvent* e)
 {
-    const int xDelta = qRound(e->angleDelta().x() / (8.0 * 15.0));
-    const int yDelta = qRound(e->angleDelta().y() / (8.0 * 15.0));
-    bool used = false;
-    if (yDelta) {
-        if (abs(mScale) < 0.3) {
-            mScale += 0.01 * yDelta;
-        } else {
-            mScale += 0.03 * yDelta;
-        }
-        makeCurrent();
-        resizeGL(width(), height());
-        doneCurrent();
-        update();
-        used = true;
+    // Fractional, as touchpads and high-resolution wheels send a notch in many small parts
+    const double notches = e->angleDelta().y() / (8.0 * 15.0);
+    if (qFuzzyIsNull(notches)) {
+        e->ignore();
+        return;
     }
-
-    // Space for future use of xDelta - depending on what that is the update
-    // may need to be moved out of the yDelta part
-    Q_UNUSED(xDelta)
-
-    e->setAccepted(used);
+    mScale = scaleAfterWheel(mScale, notches);
+    applyScale();
+    e->accept();
 }
