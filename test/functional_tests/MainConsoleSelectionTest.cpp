@@ -918,6 +918,50 @@ private slots:
         QCOMPARE(copiedText(pane), expected);
     }
 
+    // An emoji is two QChars (a surrogate pair) and an accent can be a combining mark after its
+    // letter, but each is one grapheme under the pointer, so a drag ending on one takes all of it
+    void test_dragEndingOnAMultiCharacterGraphemeCopiesAllOfIt_data()
+    {
+        QTest::addColumn<QString>("text");
+        QTest::addColumn<int>("pressColumn");
+        QTest::addColumn<int>("releaseColumn");
+        QTest::addColumn<QString>("expected");
+        const QString emoji = QString::fromUcs4(U"\U0001F600");
+        const QString eAcute = qsl("é");
+        QTest::newRow("onto an emoji") << qsl("take %1 now").arg(emoji) << 0 << 5 << qsl("take %1").arg(emoji);
+        QTest::newRow("from an emoji leftwards") << qsl("take %1 now").arg(emoji) << 6 << 0 << qsl("take %1").arg(emoji);
+        QTest::newRow("onto an accented letter") << qsl("caf%1 open").arg(eAcute) << 0 << 3 << qsl("caf%1").arg(eAcute);
+    }
+
+    void test_dragEndingOnAMultiCharacterGraphemeCopiesAllOfIt()
+    {
+        QFETCH(QString, text);
+        QFETCH(int, pressColumn);
+        QFETCH(int, releaseColumn);
+        QFETCH(QString, expected);
+
+        TConsole* console = consoleWrappingAt(100, 0);
+        QVERIFY2(console, "the profile never came up");
+        mudlet::self()->resize(1200, 800);
+        QTest::qWait(100ms);
+        const int lineNumber = printedLineNumber(text);
+        QVERIFY2(lineNumber >= 0, "the text never reached the buffer");
+        TTextEdit* pane = upperPane();
+        pane->forceUpdate();
+        QTest::qWait(100ms);
+        const int row = lineNumber - pane->imageTopLine();
+        QVERIFY2(row >= 0 && (row + 1) * pane->mFontHeight <= pane->height(), "the text is not on screen");
+        const auto cell = [pane, row](int column) {
+            return QPointF(column * pane->mFontWidth + pane->mFontWidth / 2.0, row * pane->mFontHeight + pane->mFontHeight / 2.0);
+        };
+
+        pressLeftButton(pane, cell(pressColumn), 1);
+        moveAndReleaseLeftButton(pane, cell(releaseColumn));
+
+        QCOMPARE(highlightedText(), expected);
+        QCOMPARE(copiedText(pane), expected);
+    }
+
     // Word wrapping only breaks a line to fit the console, so a copy has to put
     // the pieces back together as they were printed: the spaces a break at a
     // space dropped go back in, the hanging indent stays out, and a break with

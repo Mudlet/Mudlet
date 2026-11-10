@@ -1825,6 +1825,19 @@ void TTextEdit::paintEvent(QPaintEvent* e)
 // limit is mpB.y() + 1 for the row and mpB.x() + 1 for the column:
 void TTextEdit::highlightSelection()
 {
+    // mPB is the last selected QChar, but the pointer only ever lands on a grapheme's first one, so
+    // ending on an emoji's surrogate pair or a letter with combining marks would cut it in two
+    if (mPB.y() >= 0 && mPB.y() < mpBuffer->lineBuffer.size()) {
+        const QString& line = mpBuffer->lineBuffer.at(mPB.y());
+        if (mPB.x() >= 0 && mPB.x() + 1 < line.size()) {
+            QTextBoundaryFinder finder(QTextBoundaryFinder::Grapheme, line);
+            finder.setPosition(mPB.x() + 1);
+            if (!finder.isAtBoundary()) {
+                mPB.setX(static_cast<int>(finder.toNextBoundary()) - 1);
+            }
+        }
+    }
+
     QRegion newRegion;
 
     int lineDelta = abs(mPA.y() - mPB.y()) - 1;
