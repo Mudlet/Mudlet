@@ -4197,6 +4197,36 @@ private slots:
         QCOMPARE(configuredAreas(), (QStringList{qsl("Default Area (-1)"), mouseAreaRow(), otherAreaRow()}));
     }
 
+    // A script's timer can replace the map while the prompt waits, and the new
+    // map may reuse the area's id; Yes must not delete that one unasked
+    void test_aMapReplacedWhileTheDeletePromptIsUpKeepsItsArea()
+    {
+        showMapWithAnotherArea();
+        QVERIFY(openConfigureAreas());
+        QVERIFY(selectConfiguredArea(otherAreaRow()));
+        QPushButton* pButton = configureAreasButton(qsl("Delete"));
+        QVERIFY(pButton && pButton->isEnabled());
+        const int otherAreaId = mOtherAreaId;
+        bool replaced = false;
+        answerNextModalDialog([this, otherAreaId, &replaced](QWidget* pDialog) {
+            auto* pBox = qobject_cast<QMessageBox*>(pDialog);
+            if (!pBox || !pBox->button(QMessageBox::Yes)) {
+                return false;
+            }
+            map()->mpRoomDB->clearMapDB();
+            replaced = map()->mpRoomDB->addArea(otherAreaId, qsl("Replacement")) && map()->addRoom(kOtherAreaRoomId) && map()->setRoomArea(kOtherAreaRoomId, otherAreaId);
+            pBox->button(QMessageBox::Yes)->click();
+            return true;
+        });
+        pButton->click();
+        stopAnsweringModalDialogs();
+        QVERIFY(mModalDialogAnswered);
+        QVERIFY(replaced);
+
+        QVERIFY2(map()->mpRoomDB->getArea(otherAreaId), "the replacement map's area was deleted without being asked about");
+        QVERIFY(map()->mpRoomDB->getRoom(kOtherAreaRoomId));
+    }
+
     void test_deletingAnEmptyAreaDoesNotAsk()
     {
         showMapWithAnotherArea();

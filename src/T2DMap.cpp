@@ -2963,7 +2963,14 @@ void T2DMap::slot_configureAreas()
                 const QString title = tr("Delete area");
                 //: Confirmation before deleting an area from the "Configure Areas" dialog; %1 is the area's name and %n how many rooms are deleted with it
                 const QString question = tr("Delete the area \"%1\" and the %n room(s) in it? This cannot be undone.", nullptr, static_cast<int>(roomCount)).arg(areaName);
+                const TRoomDB* roomDB = mpMap->mpRoomDB.get();
+                const unsigned int mapGeneration = roomDB->mapGeneration();
                 if (QMessageBox::question(dialog, title, question, QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel) != QMessageBox::Yes) {
+                    return;
+                }
+                // A script may have loaded another map, perhaps reusing this id, while the question was up
+                if (!mpMap->mpRoomDB || mpMap->mpRoomDB.get() != roomDB || roomDB->mapGeneration() != mapGeneration) {
+                    repopulate();
                     return;
                 }
             }
