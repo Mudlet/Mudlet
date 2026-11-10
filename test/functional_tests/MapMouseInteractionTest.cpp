@@ -1473,8 +1473,16 @@ private slots:
         QCoreApplication::sendPostedEvents(map(), QEvent::MetaCall);
         QVERIFY2(announced.isEmpty(), "clicking a room without moving it was announced as a change");
 
-        dragFromTo(pointUnitsFromCentre(1, 0), pointUnitsFromCentre(1, 2));
-        QCOMPARE(roomPosition(kEastRoomId), QVector3D(1, 2, 0));
+        // Flushed after each step, as updateArea() merges every call made before its announcement goes out
+        pressAt(pointUnitsFromCentre(1, 0));
+        moveTo(pointUnitsFromCentre(1, 0));
+        for (const double y : {1.0, 2.0}) {
+            moveTo(pointUnitsFromCentre(1, y));
+            QCOMPARE(roomPosition(kEastRoomId), QVector3D(1, static_cast<float>(y), 0));
+            QCoreApplication::sendPostedEvents(map(), QEvent::MetaCall);
+            QVERIFY2(announced.isEmpty(), "a step of the drag was announced, so the 3D view rebuilds its caches as the mouse moves");
+        }
+        releaseAt(pointUnitsFromCentre(1, 2));
         QCoreApplication::sendPostedEvents(map(), QEvent::MetaCall);
         QCOMPARE(announced.size(), 1);
         QCOMPARE(announced.first().first().toInt(), mAreaId);
