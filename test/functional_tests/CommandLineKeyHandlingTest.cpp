@@ -412,6 +412,24 @@ private slots:
         QVERIFY2(waitForServerToReceive("east"), "the second of the two lines never reached the game");
     }
 
+    // An action that hands its line back to the game on the first of several
+    // lines leaves the rest for the game
+    void test_linesAfterAnActionResetsItselfGoToTheGame()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY(runLua(qsl("cmdLineActionSaw = ''")));
+        QVERIFY(runLua(qsl("setCmdLineAction('%1', function(text) cmdLineActionSaw = text resetCmdLineAction('%1') end)").arg(mLineName)));
+
+        type(pCommandLine, qsl("to the action"));
+        press(pCommandLine, Qt::Key_Return, Qt::ShiftModifier);
+        type(pCommandLine, qsl("to the game"));
+        press(pCommandLine, Qt::Key_Return);
+
+        QCOMPARE(luaGlobal("cmdLineActionSaw"), qsl("to the action"));
+        QVERIFY2(waitForServerToReceive("to the game"), qPrintable(qsl("the game never received the second line - it got: %1").arg(QString::fromUtf8(mpServer->received()))));
+    }
+
     // The preference decides what is left in the box afterwards: cleared, or
     // kept and selected so the next thing typed replaces it.
     void test_autoClearPreferenceDecidesWhatIsLeftBehind()
