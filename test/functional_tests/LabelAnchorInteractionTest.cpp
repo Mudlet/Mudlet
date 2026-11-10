@@ -137,6 +137,22 @@ private:
         return result;
     }
 
+    // Sent to the label itself, as Qt delivers a turn of the wheel to the widget under the pointer
+    static bool wheelUpOn(TLabel* pLabel)
+    {
+        const QPointF centre = QRectF(pLabel->rect()).center();
+        QWheelEvent wheel(centre, pLabel->mapToGlobal(centre), QPoint(), QPoint(0, 120), Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
+        QApplication::sendEvent(pLabel, &wheel);
+        return wheel.isAccepted();
+    }
+
+    // Enough lines that the console has scrollback for a turn of the wheel to open
+    void fillConsole(const QString& console) const
+    {
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("for i = 1, 80 do echo('%1', 'line ' .. i .. '\\n') end").arg(console)));
+        QTest::qWait(50ms);
+    }
+
 private slots:
     void initTestCase()
     {
@@ -848,6 +864,97 @@ private slots:
 
         QVERIFY2(menuParent == mpHost->mainConsoleView()->mUpperPane, "a right-click on a label over a link opened no menu from the console");
         QVERIFY2(consoleMenu, "a right-click on a label offered the commands of the link it hides");
+    }
+    // A label over the output must not cost the player scrolling it back, unless
+    // the label has a wheel callback of its own to answer with
+    void test_aWheelOnALabelWithoutAWheelCallbackScrollsTheConsoleUnderIt()
+    {
+        TMainConsole* pMain = mpHost->mainConsoleView();
+        const QString name = qsl("wheelForwardLabel");
+        fillConsole(qsl("main"));
+        const auto clearOutput = qScopeGuard([pMain]() {
+            pMain->clearSplit();
+            pMain->buffer.clear();
+        });
+        auto [created, createMessage] = mpHost->createLabel(qsl("main"), name, 50, 100, 200, 50, true, false);
+        QVERIFY2(created, qPrintable(createMessage));
+        const auto removeLabel = qScopeGuard([pMain, name]() {
+            pMain->deleteLabel(name);
+        });
+        TLabel* pLabel = pMain->labelWidget(name);
+        QVERIFY(pLabel);
+        pLabel->show();
+        pLabel->raise();
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setLabelClickCallback('%1', function() end)").arg(name)));
+        QVERIFY2(pMain->mLowerPane->isHidden(), "the console was already scrolled back before the wheel turned");
+
+        QVERIFY2(wheelUpOn(pLabel), "the turn of the wheel was left unused");
+        QVERIFY2(!pMain->mLowerPane->isHidden(), "a turn of the wheel on a label with no wheel callback did not scroll the console under it");
+        QVERIFY2(!pLabel->testAttribute(Qt::WA_TransparentForMouseEvents), "the wheel left the label click-through");
+
+        pMain->clearSplit();
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("qaLabelWheeled = false setLabelWheelCallback('%1', function() qaLabelWheeled = true end)").arg(name)));
+        QVERIFY(wheelUpOn(pLabel));
+        QVERIFY2(luaHolds(qsl("qaLabelWheeled")), "the label's own wheel callback did not run");
+        QVERIFY2(pMain->mLowerPane->isHidden(), "the console scrolled under a label whose own wheel callback answers the wheel");
+    }
+
+    // What scrolls is whatever the label covers, which over a miniconsole is the
+    // miniconsole rather than the main console behind it
+    void test_aWheelOnALabelOverAMiniconsoleScrollsThatConsole()
+    {
+        TMainConsole* pMain = mpHost->mainConsoleView();
+        const QString mini = qsl("wheelUnderLabelMini");
+        const QString name = qsl("wheelOverMiniLabel");
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("createMiniConsole('%1', 40, 90, 300, 120)").arg(mini)));
+        const auto removeMini = qScopeGuard([this, mini]() {
+            mpHost->deleteMiniConsole(mini);
+        });
+        TConsole* pMini = pMain->subConsoleWidget(mini);
+        QVERIFY(pMini);
+        fillConsole(mini);
+        fillConsole(qsl("main"));
+        const auto clearOutput = qScopeGuard([pMain]() {
+            pMain->clearSplit();
+            pMain->buffer.clear();
+        });
+        auto [created, createMessage] = mpHost->createLabel(qsl("main"), name, 50, 100, 200, 50, true, false);
+        QVERIFY2(created, qPrintable(createMessage));
+        const auto removeLabel = qScopeGuard([pMain, name]() {
+            pMain->deleteLabel(name);
+        });
+        TLabel* pLabel = pMain->labelWidget(name);
+        QVERIFY(pLabel);
+        pLabel->show();
+        pLabel->raise();
+
+        QVERIFY(wheelUpOn(pLabel));
+
+        QVERIFY2(!pMini->mLowerPane->isHidden(), "a turn of the wheel on a label over a miniconsole did not scroll that miniconsole");
+        QVERIFY2(pMain->mLowerPane->isHidden(), "a turn of the wheel on a label over a miniconsole scrolled the main console instead");
+    }
+
+    // With nothing under it to scroll the turn stays unused, so it still goes on
+    // to whatever holds the label, such as a scroll box
+    void test_aWheelOnALabelOverNoConsoleIsLeftForItsParent()
+    {
+        TMainConsole* pMain = mpHost->mainConsoleView();
+        const QString box = qsl("wheelLabelBox");
+        const QString name = qsl("wheelInBoxLabel");
+        QVERIFY(pMain->createScrollBox(qsl("main"), box, 40, 90, 300, 120));
+        const auto removeBox = qScopeGuard([pMain, box]() {
+            pMain->deleteScrollBox(box);
+        });
+        auto [created, createMessage] = mpHost->createLabel(box, name, 0, 0, 200, 50, true, false);
+        QVERIFY2(created, qPrintable(createMessage));
+        const auto removeLabel = qScopeGuard([pMain, name]() {
+            pMain->deleteLabel(name);
+        });
+        TLabel* pLabel = pMain->labelWidget(name);
+        QVERIFY(pLabel);
+        pLabel->show();
+
+        QVERIFY2(!wheelUpOn(pLabel), "a turn of the wheel was taken with no console under the label to scroll");
     }
 };
 
