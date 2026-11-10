@@ -435,6 +435,26 @@ private slots:
         QVERIFY2(dialog()->notificationArea->isVisible() && dialog()->notificationAreaMessageBox->text().contains(settingsCopy), qPrintable(dialog()->notificationAreaMessageBox->text()));
     }
 
+    // Without secure storage the copy's password is the "password" file it took, so that is what its field has to show
+    void test_aSettingsCopyShowsThePasswordItSaved()
+    {
+        QVERIFY2(dialog(), "No connection dialog to test against");
+        const QString profile = qsl("FilePassword-ConnDialogOffline");
+        const QString settingsCopy = profile + qsl("1");
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, profile)));
+        QVERIFY(MudletApp::writeProfileData(profile, qsl("password"), qsl("saved-secret")).first);
+        dialog()->fillout_form();
+        selectTestProfile();
+        selectProfile(profile);
+        QTRY_COMPARE(dialog()->character_password_entry->text(), qsl("saved-secret"));
+        // an edit still waiting for its debounced save when the copy is made
+        dialog()->character_password_entry->setText(qsl("unsaved-secret"));
+
+        dialog()->slot_copyOnlySettingsOfProfile();
+        QCOMPARE(dialog()->profile_name_entry->text(), settingsCopy);
+        QTRY_COMPARE(dialog()->character_password_entry->text(), saved(settingsCopy, qsl("password")));
+    }
+
     // A settings copy of a game with no folder yet must leave a running full copy's flag up, as every other settings copy does
     void test_aSettingsCopyOfAnUnopenedGameKeepsAFullCopyRunning()
     {
@@ -452,7 +472,7 @@ private slots:
         QVERIFY(dialog()->mCopyingProfile);
         const int shownTab = dialog()->mpTabBar->currentIndex();
         const auto restore = qScopeGuard([this, shownTab, unopenedGame]() {
-            // not the flag, which this case finds dropped while the copy still runs
+            // the button, not the flag: should this case fail, the flag is already down while the copy still runs
             QTest::qWaitFor(
                     [this]() {
                         return dialog()->mpCopyProfile->isEnabled();
@@ -466,6 +486,11 @@ private slots:
         selectProfile(unopenedGame);
         dialog()->slot_copyOnlySettingsOfProfile();
         QVERIFY2(QDir(MudletApp::getMudletPath(enums::profileHomePath, unopenedGame + qsl("1"))).exists(), "the settings copy was not made");
+        QVERIFY2(dialog()->mCopyingProfile, "the settings copy cleared the flag of the full copy still running");
+        // and so must one of a profile that has a folder
+        selectProfile(profile);
+        dialog()->slot_copyOnlySettingsOfProfile();
+        QVERIFY2(QDir(MudletApp::getMudletPath(enums::profileHomePath, profile + qsl("2"))).exists(), "the settings copy was not made");
         QVERIFY2(dialog()->mCopyingProfile, "the settings copy cleared the flag of the full copy still running");
         QVERIFY2(waitForTheCopy(), "the copy never finished");
     }
