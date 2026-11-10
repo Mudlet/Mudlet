@@ -152,7 +152,7 @@ TCommandLineCompletion::HistoryCompletion TCommandLineCompletion::historyComplet
         }
     }
     mHistoryCount = -1;
-    // The line is back to what was typed, so a Down on it banks it rather than walking on
+    // The line is back to what was typed, so no completion is showing any more
     mLastCompletion.clear();
     return result;
 }
