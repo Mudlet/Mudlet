@@ -221,6 +221,18 @@ describe("Tests StringUtils.lua functions", function()
       local expected = { "", "a", "b", "" }
       assert.same(expected, str:split(","))
     end)
+
+    it("should skip empty matches of a delimiter pattern instead of hanging", function()
+      local hook, mask, count = debug.gethook()
+      finally(function() debug.sethook(hook, mask, count) end)
+      debug.sethook(function() error("string.split did not terminate", 0) end, "", 1000000)
+      assert.same({ "a", "b" }, ("a b"):split(" *"))
+      assert.same({ "a", "b", "c" }, ("a   b c"):split("%s*"))
+      assert.same({ "a", "b", "c" }, ("a, b,c"):split(", *"))
+      assert.same({ "abc" }, ("abc"):split("x*"))
+      assert.same({ "hello world" }, ("hello world"):split("%f[%w]"))
+      assert.same({ "" }, (""):split(" *"))
+    end)
   end)
 
   describe("Tests the functionality of string.starts", function()
