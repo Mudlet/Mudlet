@@ -43,8 +43,6 @@ dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
     mBorderColorButtonWords = pushButton_setBorderColor->text();
     // The well's words say how opaque the colour is, so its name says what it sets
     pushButton_setBorderColor->setAccessibleName(mBorderColorButtonWords);
-    // The well's corners are rounded; a filled background would square them off
-    pushButton_setBorderColor->setAutoFillBackground(false);
 
     connect(lineEdit_roomSymbol, &QLineEdit::textChanged, this, &dlgRoomProperties::slot_updatePreview);
     connect(comboBox_roomSymbol, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgRoomProperties::slot_symbolComboBoxItemChanged);
