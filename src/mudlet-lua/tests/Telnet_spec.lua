@@ -463,7 +463,7 @@ describe("Tests the rest of the SGR decoder", function()
   end)
 
   -- underline colour is not drawn, but its arguments must not be read as codes
-  -- of their own; each form ends in a value that would show if it were
+  -- of their own; each semicolon form ends in a value that would show if it were
   it("steps over the arguments of an underline colour and applies the codes around it", function()
     for i, colour in ipairs({"58;5;9", "58;2;1;2;3", "58;3;1;2;3", "58;4;1;2;3;7", "58;1", "59", "58:5:196", "58:2::1:2:3"}) do
       local marker = ("SgrUnderlineColour%02d"):format(i)
