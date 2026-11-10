@@ -1387,6 +1387,38 @@ describe("Media playback effects with a generated sound file", function()
     assert.is_not_nil(lfs.attributes(downloaded, "mode"), "the stopped download did not keep its file")
   end)
 
+  it("a stop from a sysDownloadDone handler keeps the downloaded sound from starting", function()
+    if noFixtureServer() then
+      return
+    end
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local downloadName = "busted-media-stop-on-done.wav"
+    local downloaded = mediaDirectory .. "/" .. downloadName
+    lfs.mkdir(mediaDirectory)
+    os.remove(downloaded)
+    onCleanup(function() os.remove(downloaded) end)
+    onCleanup(function() stopSounds() end)
+    local done, started = {}, {}
+    local handler = registerAnonymousEventHandler("sysDownloadDone", function(_, path)
+      if contains(path, downloadName) then
+        done[#done + 1] = path
+        stopSounds({key = "busted-media-stop-on-done"})
+      end
+    end)
+    onCleanup(function() killAnonymousEventHandler(handler) end)
+    collect("sysMediaStarted", started)
+
+    assert.is_true(playSoundFile({name = downloadName, url = fixtureUrl() .. "/media", volume = 60, key = "busted-media-stop-on-done"}))
+    waitForCount("sysDownloadDone", done, 1)
+    waitForEvent("sysMediaStarted", quietMilliseconds)
+
+    assert.equals(1, #done)
+    assert.equals(0, #started)
+    assert.equals(0, #getPlayingSounds())
+  end)
+
   it("a stop for other media leaves a file still downloading to play once it lands", function()
     if noFixtureServer() then
       return

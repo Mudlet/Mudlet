@@ -39,6 +39,7 @@
 #include <QMetaMethod>
 #include <QNetworkDiskCache>
 #include <QRandomGenerator>
+#include <QScopeGuard>
 #include <QSaveFile>
 #include <QStandardPaths>
 #include <QTimer>
@@ -1465,7 +1466,10 @@ void TMedia::slot_writeFile(QNetworkReply* reply)
 {
     TEvent event{};
     TMediaData mediaData = mMediaDownloads.value(reply);
-    mMediaDownloads.remove(reply);
+    // Listed until this returns, so a stop from a sysDownloadDone handler still reaches the request
+    const auto unlist = qScopeGuard([this, reply] {
+        mMediaDownloads.remove(reply);
+    });
 
     if (reply->error() != QNetworkReply::NoError) {
         event.mArgumentList << qsl("sysDownloadError");
@@ -1539,6 +1543,7 @@ void TMedia::slot_writeFile(QNetworkReply* reply)
 
                 reply->deleteLater();
                 mpHost->raiseEvent(event);
+                mediaData = mMediaDownloads.value(reply);
 
                 // A preload (volume 0) asked for the file to be in the cache, not to be
                 // heard: playMedia() returns before playing one it already has, so a
