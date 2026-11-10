@@ -481,26 +481,26 @@ QString EditorDeleteItemCommand::generateText(EditorViewType viewType, int itemC
         // Multiple items deletion - use count
         switch (viewType) {
         case EditorViewType::cmTriggerView:
-            //: Undo/redo menu text for deleting multiple triggers. %1 = count
-            return QObject::tr("delete %1 triggers").arg(itemCount);
+            //: Undo/redo menu text for deleting multiple triggers. %n is the count, always 2 or more
+            return QObject::tr("delete %n triggers", nullptr, itemCount);
         case EditorViewType::cmAliasView:
-            //: Undo/redo menu text for deleting multiple aliases. %1 = count
-            return QObject::tr("delete %1 aliases").arg(itemCount);
+            //: Undo/redo menu text for deleting multiple aliases. %n is the count, always 2 or more
+            return QObject::tr("delete %n aliases", nullptr, itemCount);
         case EditorViewType::cmTimerView:
-            //: Undo/redo menu text for deleting multiple timers. %1 = count
-            return QObject::tr("delete %1 timers").arg(itemCount);
+            //: Undo/redo menu text for deleting multiple timers. %n is the count, always 2 or more
+            return QObject::tr("delete %n timers", nullptr, itemCount);
         case EditorViewType::cmScriptView:
-            //: Undo/redo menu text for deleting multiple scripts. %1 = count
-            return QObject::tr("delete %1 scripts").arg(itemCount);
+            //: Undo/redo menu text for deleting multiple scripts. %n is the count, always 2 or more
+            return QObject::tr("delete %n scripts", nullptr, itemCount);
         case EditorViewType::cmKeysView:
-            //: Undo/redo menu text for deleting multiple key bindings. %1 = count
-            return QObject::tr("delete %1 keys").arg(itemCount);
+            //: Undo/redo menu text for deleting multiple key bindings. %n is the count, always 2 or more
+            return QObject::tr("delete %n keys", nullptr, itemCount);
         case EditorViewType::cmActionView:
-            //: Undo/redo menu text for deleting multiple buttons. %1 = count
-            return QObject::tr("delete %1 buttons").arg(itemCount);
+            //: Undo/redo menu text for deleting multiple buttons. %n is the count, always 2 or more
+            return QObject::tr("delete %n buttons", nullptr, itemCount);
         default:
-            //: Undo/redo menu text for deleting multiple unknown items. %1 = count
-            return QObject::tr("delete %1 items").arg(itemCount);
+            //: Undo/redo menu text for deleting multiple unknown items. %n is the count, always 2 or more
+            return QObject::tr("delete %n items", nullptr, itemCount);
         }
     }
 }
