@@ -367,6 +367,8 @@ describe("Tests the audit of a damaged binary map file", function()
       local image = specDirectory .. "/fixtures/images/solid-magenta-4x4.png"
       -- at this zoom the label's image is 43 by 12 pixels
       local label = assert(createMapImageLabel(area, image, 0, 0, 0, 4321.25, 1234.5, 0.01, false))
+      -- the control, whose 4 by 3 pixel image is not its size either
+      local soundLabel = assert(createMapImageLabel(area, image, 5, 5, 0, 3.5, 2.75, 1, false))
 
       reloadWith(function(data)
         -- the size is two doubles, most significant byte first: the width
@@ -378,6 +380,9 @@ describe("Tests the audit of a damaged binary map file", function()
       local loaded = getMapLabel(area, label)
       assert.are.equal(43, loaded.Width)
       assert.are.equal(12, loaded.Height)
+      local sound = getMapLabel(area, soundLabel)
+      assert.are.equal(3.5, sound.Width)
+      assert.are.equal(2.75, sound.Height)
     end)
   end)
 
