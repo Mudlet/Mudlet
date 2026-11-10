@@ -1654,6 +1654,10 @@ bool TCommandLine::copyConsoleSelection()
 {
     TMainConsole* pMainConsole = mpHost->mainConsoleView();
     TTextEdit* pLastSelected = pMainConsole ? pMainConsole->mpLastSelectedPane.data() : nullptr;
+    // A script can hide a window with its selection still in it
+    if (pLastSelected && !pLastSelected->isVisible()) {
+        pLastSelected = nullptr;
+    }
     for (TTextEdit* pPane : {pLastSelected, mpConsole ? mpConsole->mUpperPane : nullptr, mpConsole ? mpConsole->mLowerPane : nullptr}) {
         if (pPane && !pPane->mSelectedRegion.isEmpty()) {
             pPane->slot_copySelectionToClipboard();

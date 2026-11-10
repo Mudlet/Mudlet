@@ -363,7 +363,7 @@ public:
     // nothing else destroys it before ~TMainConsole().
     QPointer<QDockWidget> mpDockableMapWidget;
     QPointer<QDialog> mpUnpackingDialog;
-    // Every window's panes hand their focus to the main command line, so its Ctrl+C needs to know
+    // Miniconsoles and user windows hand their focus to the main command line, so its Ctrl+C needs to know
     // which of them the player selected in last; older highlights elsewhere are left in place.
     QPointer<TTextEdit> mpLastSelectedPane;
 
