@@ -4164,7 +4164,7 @@ describe("Tests installing a package file from a later Mudlet", function()
   local name = "mudlet-spec-from-the-future"
   local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
 
-  local function writeLaterMudletXml(path, itemName)
+  local function writeLaterMudletXml(path, itemName, version)
     writePackageXml(path, table.concat({
       '<TriggerPackage>',
       '<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no"',
@@ -4176,7 +4176,7 @@ describe("Tests installing a package file from a later Mudlet", function()
       '<regexCodePropertyList><integer>0</integer></regexCodePropertyList>',
       '</Trigger>',
       '</TriggerPackage>',
-    }, "\n"), "2.000")
+    }, "\n"), version or "2.000")
   end
 
   -- the item folders named after the package are made before the version is read
@@ -4207,6 +4207,25 @@ describe("Tests installing a package file from a later Mudlet", function()
     assertNoFoldersNamed(name)
     -- the console has had its own alert, so the reason is one plain line
     assert.is_false(contains(err, "\n"), tostring(err))
+  end)
+
+  -- 256 wraps the byte the major version is kept in, and 4294967296, inf and nan are past the int its
+  -- whole part is converted to
+  it("refuses one whose version is out of range", function()
+    defer(function()
+      removeFixturePackage(name)
+      os.remove(xml)
+    end)
+    for _, version in ipairs({"256", "4294967296", "inf", "nan", "-1", "-0.5"}) do
+      writeLaterMudletXml(xml, name, version)
+      assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+
+      local err = installExpectingRefusal(installPackage, xml)
+
+      assert.is_true(contains(err, "you need a newer Mudlet"), version .. ": " .. tostring(err))
+      assert.equals(0, exists(name .. " trigger", "trigger"), version .. ": an unreadable file's trigger was installed anyway")
+      assert.is_false(packageInstalled(name), version)
+    end
   end)
 
   it("leaves no empty folders behind when it is installed as a module", function()
