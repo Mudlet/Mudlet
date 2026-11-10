@@ -644,7 +644,7 @@ map.listMapFeatures()</script>
 			</Alias>
 			<Alias isActive="yes" isFolder="no">
 				<name>Map Path Alias</name>
-				<script>map.find_path(matches[2],matches[3])</script>
+				<script>map.find_path(string.trim(matches[2]), matches[3] and string.trim(matches[3]))</script>
 				<command></command>
 				<packageName></packageName>
 				<regex>^map path ([^;]+)(?:\s*;\s*(.+))?</regex>
@@ -2876,19 +2876,20 @@ local function find_room(name, area)
     -- looks for rooms with a particular name, and if given, in a specific area
     local rooms = searchRoom(name)
     if type(area) == "string" then
-        local areas = getAreaTable() or {}
-        for k,v in pairs(areas) do
-            if string.lower(k) == string.lower(area) then
+        local wanted = string.lower(area)
+        -- false rather than nil, so that an unknown area matches no room at all
+        area = false
+        for k,v in pairs(getAreaTable() or {}) do
+            if string.lower(k) == wanted then
                 area = v
                 break
             end
         end
-        area = areas[area] or nil
     end
     for k,v in pairs(rooms) do
         if string.lower(v) ~= string.lower(name) then
             rooms[k] = nil
-        elseif area and getRoomArea(k) ~= area then
+        elseif area ~= nil and getRoomArea(k) ~= area then
             rooms[k] = nil
         end
     end
