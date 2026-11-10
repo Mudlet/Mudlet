@@ -23,7 +23,7 @@ The following files are NOT deleted:
 
 - Files newer than the amount of days specified, or 31 days if not specified.
 - One file for every month before that. Specifically: The first available file of every month prior to this.
-- The newest file, which is the one Mudlet loads, however old it is.
+- The newest save, which is the one Mudlet loads, however old it is; for modules, the newest backup.
 
 ```
 -- Examples: 

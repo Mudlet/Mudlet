@@ -26,7 +26,7 @@
   The following files are NOT deleted:
   - Files newer than the amount of days specified as an argument to deleteOldProfiles(), or 31 days if not specified.
   - One file for every month before that. Specifically: The first available file of every month prior to this.
-  - The newest file, which is the one Mudlet loads.
+  - The newest save, which is the one Mudlet loads, however old it is; for modules, the newest backup.
   Setting the second argument to true will delete maps instead of profiles. (e.g. deleteOldProfiles(10, true))
   --]]
 
@@ -70,7 +70,7 @@
   table.sort(profile_table, function (a,b) return a.last_mod &lt; b.last_mod end)
 
   echo(string.format(
-    "\nDeleting old %s. Files newer than %d days and one for every month before that will be kept.",
+    "\nDeleting old %s. Files newer than %d days, one for every month before that and the newest one will be kept.",
     delete_folder,
     keepdays
   ))
