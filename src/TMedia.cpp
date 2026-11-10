@@ -52,8 +52,8 @@
 using namespace std::chrono_literals;
 
 namespace {
-// Holds TMediaPlayer::reservedForPlay() for as long as a play() call is setting that player up,
-// however that call returns.
+// Holds TMediaPlayer::reservedForPlay() for as long as its holder owns that player, however its
+// scope is left.
 class MediaPlayerReservation
 {
 public:
@@ -1840,10 +1840,10 @@ void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
             bool actionTaken = false;
 
             if (progress > relativeDuration && (endUsed || finishUsed)) {
-                // Stopped first: stop() raises sysMediaFinished synchronously, so its handler runs
-                // before the next pass. A stop it makes empties the playlist. Reserved meanwhile so a
-                // sound it plays takes another player rather than this loop's; one that still claims
-                // this player bumps the claim.
+                // Stopped first: stop() delivers StoppedState, and with it sysMediaFinished,
+                // synchronously on the FFmpeg backend, so its handler runs before the next pass. A
+                // stop it makes empties the playlist. Reserved meanwhile so a sound it plays takes
+                // another player rather than this loop's; the claim check is a backstop.
                 const quint64 claimedAt = lockedPlayer->claimGeneration();
                 {
                     MediaPlayerReservation reservation;
@@ -1851,8 +1851,7 @@ void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
                     lockedPlayer->mediaPlayer()->stop();
                 }
                 // A finish position ends one pass of a loop count; a fading stop ends them all, as
-                // does another file the handler plays under this key, which a playing track would
-                // have stopped. One at or before the start leaves nothing to play in a pass, so stop
+                // does another file the handler plays under this key. One at or before the start leaves nothing to play in a pass, so stop
                 // outright rather than cycle through empty passes (forever with loops = -1).
                 if (!endUsed && finishPosition > startPosition && lockedPlayer->claimGeneration() == claimedAt && !keyTakenOver(lockedPlayer)) {
                     playNextPass(lockedPlayer);
@@ -2391,7 +2390,7 @@ bool TMedia::keyTakenOver(const std::shared_ptr<TMediaPlayer>& player)
     }
 
     for (const auto& otherPlayer : findMediaPlayersByCriteria(player->mediaData())) {
-        // Still loading on a backend that reports PlayingState only once the file has opened.
+        // LoadingMedia too: the handler's new track has not reached PlayingState yet.
         if (otherPlayer && otherPlayer != player && otherPlayer->mediaPlayer()
             && (otherPlayer->getPlaybackState() == QMediaPlayer::PlayingState || otherPlayer->mediaPlayer()->mediaStatus() == QMediaPlayer::LoadingMedia) && otherPlayer->mediaData().mediaKey() == key
             && otherPlayer->mediaData().mediaAbsolutePathFileName() != player->mediaData().mediaAbsolutePathFileName()) {

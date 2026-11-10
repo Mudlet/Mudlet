@@ -147,10 +147,10 @@ public:
     // has already said so - with the metadata the player no longer holds.
     bool claimingSource() const { return mClaimingSource; }
 
-    // A play() call owns the player it is setting up until it returns, because the events it
-    // raises run script handlers synchronously. A handler that starts media of its own must be
-    // given a different player: two play() calls sharing one overwrite each other's playlist and
-    // media data.
+    // A play() call owns the player it is setting up until it returns, and a loop stopped at a
+    // finish position owns its player until its next pass, because the events each raises run
+    // script handlers synchronously. A handler that starts media of its own must be given a
+    // different player: two requests sharing one overwrite each other's playlist and media data.
     bool reservedForPlay() const { return mReservedForPlay; }
     void setReservedForPlay(const bool reserved) { mReservedForPlay = reserved; }
 
