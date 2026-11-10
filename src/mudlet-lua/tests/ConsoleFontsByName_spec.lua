@@ -285,6 +285,84 @@ describe("Tests that the font functions find their console by name", function()
       assert.is_true(setUserWindowStyleSheet(window, ("TTextEdit { font-size: %dpt; }"):format(size)))
       assert.are.equal(size, getFontSize(window))
     end)
+
+    describe("under a style sheet that sets its text's font", function()
+      local window
+      local count = 0
+
+      before_each(function()
+        count = count + 1
+        window = ("specFontsByName sheet font %d%s"):format(count, suffix)
+        assert.is_true(kinds[2][2](window))
+        assert.is_true(setFont(window, families[2]))
+        assert.is_true(setFontSize(window, 10))
+      end)
+
+      after_each(function()
+        kinds[2][3](window)
+      end)
+
+      it("keeps the size from before the sheet when a script changes the family", function()
+        assert.is_true(setUserWindowStyleSheet(window, "TTextEdit { font-size: 21pt; }"))
+        assert.is_true(setFont(window, families[1]))
+        assert.are.same({families[1], 21}, {getFont(window), getFontSize(window)})
+
+        assert.is_true(setUserWindowStyleSheet(window, ""))
+        assert.are.same({families[1], 10}, {getFont(window), getFontSize(window)})
+      end)
+
+      it("keeps the family from before the sheet when a script changes the size", function()
+        assert.is_true(setUserWindowStyleSheet(window, ('TTextEdit { font-family: "%s"; }'):format(families[1])))
+        assert.is_true(setFontSize(window, 14))
+        assert.are.same({families[1], 14}, {getFont(window), getFontSize(window)})
+
+        assert.is_true(setUserWindowStyleSheet(window, ""))
+        assert.are.same({families[2], 14}, {getFont(window), getFontSize(window)})
+      end)
+
+      it("goes back to the font from before the first sheet once one font sheet replaces another", function()
+        assert.is_true(setUserWindowStyleSheet(window, "TTextEdit { font-size: 21pt; }"))
+        assert.is_true(setUserWindowStyleSheet(window, "TTextEdit { font-size: 14pt; }"))
+        assert.are.equal(14, getFontSize(window))
+        assert.is_true(setUserWindowStyleSheet(window, "QDockWidget {}"))
+        assert.are.equal(10, getFontSize(window))
+
+        assert.is_true(setUserWindowStyleSheet(window, "TTextEdit { font-size: 21pt; }"))
+        assert.is_true(setUserWindowStyleSheet(window, ""))
+        assert.are.equal(10, getFontSize(window))
+      end)
+
+      it("has room for fewer rows and columns under a sheet's larger font, and the old number once it goes", function()
+        pumpEvents(100)
+        local rows, columns = getRowCount(window), getColumnCount(window)
+        assert.is_true(setUserWindowStyleSheet(window, "TTextEdit { font-size: 21pt; }"))
+        pumpEvents(100)
+        assert.is_true(getRowCount(window) < rows)
+        assert.is_true(getColumnCount(window) < columns)
+
+        assert.is_true(setUserWindowStyleSheet(window, ""))
+        pumpEvents(100)
+        assert.are.same({rows, columns}, {getRowCount(window), getColumnCount(window)})
+      end)
+
+      it("takes a size from a script that is the one the sheet gives", function()
+        assert.is_true(setUserWindowStyleSheet(window, "TTextEdit { font-size: 21pt; }"))
+        assert.is_true(setFontSize(window, 21))
+
+        assert.is_true(setUserWindowStyleSheet(window, ""))
+        assert.are.equal(21, getFontSize(window))
+      end)
+
+      it("leaves the title a script gave it after the sheet when the font changes", function()
+        assert.is_true(setUserWindowStyleSheet(window, 'QDockWidget { qproperty-windowTitle: "from the sheet"; } TTextEdit { font-size: 21pt; }'))
+        assert.are.equal("from the sheet", getUserWindowTitle(window))
+        setUserWindowTitle(window, "from the script")
+
+        assert.is_true(setFontSize(window, 12))
+        assert.is_true(setFont(window, families[1]))
+        assert.are.equal("from the script", getUserWindowTitle(window))
+      end)
+    end)
   end)
 
   describe("with the main console", function()

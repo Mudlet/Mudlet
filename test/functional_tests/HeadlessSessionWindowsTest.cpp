@@ -583,6 +583,21 @@ end)
         QVERIFY(!session.closeUserWindow(qsl("uw")));
     }
 
+    void test_aUserWindowsSheetFindsItsTextByTheGuisName()
+    {
+        const QString name = qsl("HeadlessPaneSheet");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"(openUserWindow("uw") setFontSize("uw", 10))")));
+        // The TConsole constructor names the upper pane, which a rule may pick by that name
+        QVERIFY(session.runLua(qsl(R"(setUserWindowStyleSheet("uw", "TTextEdit#upperPane_HeadlessPaneSheet_uw { font-size: 21pt; }"))")));
+        QCOMPARE(luaString(session, qsl(R"(getFontSize("uw"))")), qsl("21"));
+        QVERIFY(session.runLua(qsl(R"(setUserWindowStyleSheet("uw", "TTextEdit#upperPane_HeadlessPaneSheet_other { font-size: 14pt; }"))")));
+        QCOMPARE(luaString(session, qsl(R"(getFontSize("uw"))")), qsl("10"));
+        QVERIFY(session.shutdown(false));
+    }
+
     void test_labelsRunTheirCallbacksAsTheGuisMouseDoes()
     {
         const QString name = qsl("Headless Label Pointer");
