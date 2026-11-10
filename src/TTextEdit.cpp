@@ -1825,6 +1825,11 @@ void TTextEdit::paintEvent(QPaintEvent* e)
 // limit is mpB.y() + 1 for the row and mpB.x() + 1 for the column:
 void TTextEdit::highlightSelection()
 {
+    if (mpConsole->getType() & (TConsole::MainConsole | TConsole::SubConsole | TConsole::UserWindow)) {
+        if (auto pMainConsole = mpHost->mainConsoleView()) {
+            pMainConsole->mpLastSelectedPane = this;
+        }
+    }
     QRegion newRegion;
 
     int lineDelta = abs(mPA.y() - mPB.y()) - 1;

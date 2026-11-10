@@ -300,20 +300,7 @@ bool TCommandLine::event(QEvent* event)
         }
 
         if (ke->matches(QKeySequence::Copy)) { // Copy is Ctrl+C and possibly Ctrl+Ins, F16
-            // Check for console selections in both upper and lower panes
-            // Prioritize console selection over command line text
-            const bool hasUpperPaneSelection = !mpConsole->mUpperPane->mSelectedRegion.isEmpty();
-            const bool hasLowerPaneSelection = !mpConsole->mLowerPane->mSelectedRegion.isEmpty();
-
-            if (hasUpperPaneSelection) {
-                // Copy from upper pane if it has a selection
-                mpConsole->mUpperPane->slot_copySelectionToClipboard();
-                ke->accept();
-                return true;
-            }
-            if (hasLowerPaneSelection) {
-                // Copy from lower pane if it has a selection
-                mpConsole->mLowerPane->slot_copySelectionToClipboard();
+            if (copyConsoleSelection()) {
                 ke->accept();
                 return true;
             }
@@ -1661,4 +1648,17 @@ void TCommandLine::slot_saveHistory()
 TConsole* TCommandLine::console() const
 {
     return mpConsole;
+}
+
+bool TCommandLine::copyConsoleSelection()
+{
+    TMainConsole* pMainConsole = mpHost->mainConsoleView();
+    TTextEdit* pLastSelected = pMainConsole ? pMainConsole->mpLastSelectedPane.data() : nullptr;
+    for (TTextEdit* pPane : {pLastSelected, mpConsole ? mpConsole->mUpperPane : nullptr, mpConsole ? mpConsole->mLowerPane : nullptr}) {
+        if (pPane && !pPane->mSelectedRegion.isEmpty()) {
+            pPane->slot_copySelectionToClipboard();
+            return true;
+        }
+    }
+    return false;
 }
