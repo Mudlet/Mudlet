@@ -432,11 +432,17 @@ QString IrcMessageFormatter::formatTopicMessage(IrcTopicMessage* message, bool i
         return QObject::tr("[TOPIC] %1").arg(topic);
     }
 
+    const QString nick = nameFor(message->nick(), isForLua);
     if (message->topic().isEmpty()) {
-        return QObject::tr("! %2 cleared topic").arg(nameFor(message->nick(), isForLua));
+        return QObject::tr("! %2 cleared topic").arg(nick);
     }
 
-    return QObject::tr("! %2 changed topic").arg(nameFor(message->nick(), isForLua));
+    // scripts are given the line they always were
+    if (isForLua) {
+        return QObject::tr("! %2 changed topic").arg(nick);
+    }
+    //: Shown in the IRC client when someone sets a channel's topic. %1 is their nickname, %2 the new topic.
+    return QObject::tr("! %1 changed topic to: %2").arg(nick, IrcTextFormat().toHtml(message->topic()));
 }
 
 QString IrcMessageFormatter::formatUnknownMessage(IrcMessage* message, bool isForLua)
