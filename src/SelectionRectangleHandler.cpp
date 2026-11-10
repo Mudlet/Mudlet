@@ -91,10 +91,6 @@ bool SelectionRectangleHandler::handleMousePress(T2DMap::MapInteractionContext& 
     mMapWidget.mMultiSelection = !mMapWidget.mMapViewOnly;
     mMapWidget.mMultiRect = QRectF(context.widgetPosition, context.widgetPosition);
 
-    if (!mMapWidget.mpMap->mpRoomDB->getRoom(mMapWidget.mRoomID)) {
-        return true;
-    }
-
     auto* area = context.area;
     if (!area) {
         return true;
@@ -162,10 +158,6 @@ bool SelectionRectangleHandler::handleMouseMove(T2DMap::MapInteractionContext& c
         mMapWidget.mNewMoveAction = false;
     } else {
         mMapWidget.mMultiRect.setBottomLeft(context.widgetPosition);
-    }
-
-    if (!mMapWidget.mpMap->mpRoomDB->getRoom(mMapWidget.mRoomID)) {
-        return true;
     }
 
     auto* area = mMapWidget.mpMap->mpRoomDB->getArea(mMapWidget.mAreaID);

@@ -74,10 +74,6 @@ bool RoomMoveDragHandler::handle(T2DMap::MapInteractionContext& context)
     mMapWidget.mMultiRect = QRect(0, 0, 0, 0);
 
     auto* roomDb = mMapWidget.mpMap->mpRoomDB.get();
-    if (!roomDb->getRoom(mMapWidget.mRoomID)) {
-        return false;
-    }
-
     const TArea* shownArea = roomDb->getArea(mMapWidget.mAreaID);
     if (!shownArea) {
         return false;
