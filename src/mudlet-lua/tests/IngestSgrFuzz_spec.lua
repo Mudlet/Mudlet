@@ -10,9 +10,9 @@
 -- invalid bytes, other CSI sequences and OSC 8 links. Each round also checks
 -- that ESC[0m restores the default format whatever came before it, bold included.
 --
--- Run against a sanitizer build, as with the other fuzzers, and with
--- MUDLET_INGEST_THREAD=verify to also have the main thread warn
--- "TBuffer ingest worker MISMATCH" for any line the worker made differently.
+-- Run against a sanitizer build, as with the other fuzzers. Under
+-- MUDLET_INGEST_THREAD=verify the main thread keeps its own parse, so the rounds
+-- cannot fail on the worker; grep the log for "TBuffer ingest worker MISMATCH".
 --
 -- Reproducible via a self-contained MINSTD PRNG seeded from MUDLET_SGRFUZZ_SEED.
 --   MUDLET_SGRFUZZ_SEED    integer seed                    (default 1)
