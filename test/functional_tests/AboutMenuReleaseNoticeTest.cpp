@@ -200,16 +200,24 @@ private slots:
         QVERIFY(!pMudlet->getActiveHost());
         const QString error = qsl("Could not connect to the update server: Host not found");
 
+        const auto shownBoxes = [pMudlet]() {
+            QList<QMessageBox*> shown;
+            for (QMessageBox* pBox : pMudlet->findChildren<QMessageBox*>()) {
+                if (pBox->isVisible()) {
+                    shown << pBox;
+                }
+            }
+            return shown;
+        };
+
+        emit pMudlet->pUpdater->signal_updateCheckFailed(qsl("Failed to install the update."));
         emit pMudlet->pUpdater->signal_updateCheckFailed(error);
 
-        QMessageBox* pShown = nullptr;
-        for (QMessageBox* pBox : pMudlet->findChildren<QMessageBox*>()) {
-            if (pBox->isVisible() && pBox->text() == error) {
-                pShown = pBox;
-            }
-        }
-        QVERIFY2(pShown, "a failed update check with no profile open showed the player nothing");
-        pShown->close();
+        const QList<QMessageBox*> shown = shownBoxes();
+        QVERIFY2(!shown.isEmpty(), "a failed update check with no profile open showed the player nothing");
+        QCOMPARE(shown.size(), 1);
+        QCOMPARE(shown.constFirst()->text(), error);
+        shown.constFirst()->close();
     }
 
     // The feed keeps listing an installed update until Mudlet restarts into it
