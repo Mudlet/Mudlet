@@ -543,7 +543,7 @@ private slots:
         QVERIFY2(IrcMessageFormatter::formatMessage(message, false).contains(QStringLiteral("! #mudlet has 2 users")), "the window form should carry the count");
     }
 
-    // English players get the American English translation, which is where the singular comes from
+    // The source string is always plural; the singular comes from the en_US translation
     void names_saysUserForALoneUserInTheWindow()
     {
         QTranslator americanEnglish;

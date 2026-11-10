@@ -61,9 +61,9 @@
     <message numerus="yes">
         <location filename="../../src/TDetachedWindow.cpp" line="1463"/>
         <source>Mudlet (%n profiles) - %1 (Detached)</source>
-        <extracomment>This is the title of a Mudlet window which was detached from the main Mudlet window, and has multiple profiles opened in this window. %n is the number of profiles and %1 is the name of the profile currently shown.</extracomment>
+        <extracomment>This is the title of a Mudlet window which was detached from the main Mudlet window, and has several profiles opened in this window (or none, briefly, while it closes). %n is the number of profiles, never 1, and %1 is the name of the profile currently shown.</extracomment>
         <translation>
-            <numerusform>Mudlet (%n profile) - %1 (Detached)</numerusform>
+            <numerusform>{unused}Mudlet (%n profile) - %1 (Detached)</numerusform>
             <numerusform>Mudlet (%n profiles) - %1 (Detached)</numerusform>
         </translation>
     </message>
@@ -391,7 +391,7 @@ they have been removed.</numerusform>
     <message numerus="yes">
         <location filename="../../src/ircmessageformatter.cpp" line="256"/>
         <source>! %1 has %n users</source>
-        <extracomment>Shown in the IRC window after joining a channel. %1 is the channel, %n how many users are in it.</extracomment>
+        <extracomment>Shown in the IRC window when the server lists a channel&apos;s users, on joining it or after /NAMES. %1 is the channel, %n how many users are in it.</extracomment>
         <translation>
             <numerusform>! %1 has %n user</numerusform>
             <numerusform>! %1 has %n users</numerusform>

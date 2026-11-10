@@ -252,7 +252,7 @@ QString IrcMessageFormatter::formatNamesMessage(IrcNamesMessage* message, bool i
         const QString nameList = message->names().join(" ");
         return QObject::tr("! %1 has %2 users: %3").arg(channel, count, nameList);
     }
-    //: Shown in the IRC window after joining a channel. %1 is the channel, %n how many users are in it.
+    //: Shown in the IRC window when the server lists a channel's users, on joining it or after /NAMES. %1 is the channel, %n how many users are in it.
     return QObject::tr("! %1 has %n users", nullptr, message->names().count()).arg(channel);
 }
 

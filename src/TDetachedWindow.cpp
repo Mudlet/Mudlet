@@ -1459,7 +1459,7 @@ void TDetachedWindow::updateWindowTitle()
         }
     } else {
         // Multiple profiles - show count and current
-        //: This is the title of a Mudlet window which was detached from the main Mudlet window, and has multiple profiles opened in this window. %n is the number of profiles and %1 is the name of the profile currently shown.
+        //: This is the title of a Mudlet window which was detached from the main Mudlet window, and has several profiles opened in this window (or none, briefly, while it closes). %n is the number of profiles, never 1, and %1 is the name of the profile currently shown.
         title = tr("Mudlet (%n profiles) - %1 (Detached)", nullptr, mProfileConsoleMap.size()).arg(mCurrentProfileName);
     }
 
