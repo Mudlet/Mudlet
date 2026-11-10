@@ -22,7 +22,41 @@ describe("Tests DebugTools.lua functions", function()
     it("should pass a message on to debugc", function()
       printDebug("This is a test")
       assert.spy(s).was_called(1)
-      assert.spy(s).was_called_with(match.has_match("%(.+[\\/]busted[\\/]core.lua:line %d+%) This is a test"))
+      assert.spy(s).was_called_with(match.has_match("%(.+DebugTools_spec.lua:line %d+%) This is a test"))
+    end)
+
+    it("should name the line that called it, not the bottom of the call stack", function()
+      local line
+      local function helper()
+        line = debug.getinfo(1, "l").currentline + 1
+        printDebug("This is a test")
+      end
+      helper()
+      assert.spy(s).was_called_with(match.has_match("DebugTools_spec.lua:line " .. line .. "%) This is a test"))
+    end)
+
+    it("should name the line that called it through pcall", function()
+      local line = debug.getinfo(1, "l").currentline + 1
+      pcall(printDebug, "This is a test")
+      assert.spy(s).was_called_with(match.has_match("DebugTools_spec.lua:line " .. line .. "%) This is a test"))
+    end)
+
+    it("should still print when it is tail called with nothing beneath it", function()
+      -- a trigger or alias is called straight from C++, as a coroutine's body is
+      local ok, err = coroutine.resume(coroutine.create(function()
+        return printDebug("This is a test")
+      end))
+      assert.is_true(ok, err)
+      assert.spy(s).was_called_with(match.has_match("This is a test"))
+    end)
+
+    it("should name a real line when it is tail called", function()
+      local function helper()
+        return printDebug("This is a test")
+      end
+      local line = debug.getinfo(1, "l").currentline + 1
+      helper()
+      assert.spy(s).was_called_with(match.has_match("DebugTools_spec.lua:line " .. line .. "%) This is a test"))
     end)
 
     it("should include a stacktrace when called with stackTrace true", function()
@@ -52,13 +86,34 @@ describe("Tests DebugTools.lua functions", function()
     it("should pass msg on to error with additional information", function()
       printError("This is a test")
       assert.spy(s).was_called(1)
-      assert.spy(s).was_called_with(match.has_match("This is a test"), match.has_match("%(.+[\\/]busted[\\/]core.lua:line %d+%)"))
+      assert.spy(s).was_called_with(match.has_match("This is a test"), match.has_match("%(.+DebugTools_spec.lua:line %d+%)"))
+    end)
+
+    it("should name the line that called it, not the bottom of the call stack", function()
+      local line
+      local function helper()
+        line = debug.getinfo(1, "l").currentline + 1
+        printError("This is a test")
+      end
+      helper()
+      assert.spy(s).was_called_with(match.has_match("This is a test"), match.has_match("DebugTools_spec.lua:line " .. line .. "%)$"))
+    end)
+
+    it("should name the script's line, not Mudlet's own, when Mudlet's Lua reports a mistake", function()
+      local label = "debugToolsSpecTakenName"
+      finally(function()
+        deleteLabel(label)
+      end)
+      assert.is_true(createLabel(label, 0, 0, 10, 10, 1))
+      local line = debug.getinfo(1, "l").currentline + 1
+      assert.is_nil(Geyser.MiniConsole:new({name = label}))
+      assert.spy(s).was_called_with(match.has_match("was not created"), match.has_match("DebugTools_spec.lua:line " .. line .. "%)$"))
     end)
 
     it("should include a stacktrace when called with stackTrace true", function()
       printError("This is a test", true)
       assert.spy(s).was_called(1)
-      assert.spy(s).was_called_with(match.has_match("\nstack traceback:\n"), match.has_match("%(.+[\\/]busted[\\/]core.lua:line %d+%)"))
+      assert.spy(s).was_called_with(match.has_match("\nstack traceback:\n"), match.has_match("%(.+DebugTools_spec.lua:line %d+%)"))
     end)
 
     it("should NOT include a stacktrace when called without stackTrace true", function()
