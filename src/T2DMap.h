@@ -467,7 +467,7 @@ private:
     void applyPaintedView(const TMapPainter::View& before, const TMapPainter::View& after);
     void applyPaintResult(const TMapPainter::View& before, const TMapPainter::PaintResult&);
     void addClickedRoomsToSelection(const QList<int>& hitRooms, Qt::KeyboardModifiers modifiers);
-    void updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea);
+    void updateMapLabel(QRectF labelRectangle, QVector3D mapPosition, QSizeF mapSize, int labelId, int areaId, TArea* pArea);
 
     bool mDialogLock = false;
     struct ClickPosition
