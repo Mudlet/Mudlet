@@ -699,7 +699,7 @@ describe("Downloads and HTTP verbs against the local fixture server", function()
 
       local event, _, body = waitForEvent("sysGetHttpDone", 2000)
       assert.equals("sysGetHttpDone", event)
-      assert.equals('{"a":1}', body)
+      assert.equals('{"a":1}\n', body)
       assert.equals(1, yajl.to_value(body).a)
     end)
 
