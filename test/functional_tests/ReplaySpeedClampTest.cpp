@@ -90,6 +90,11 @@ private slots:
         // A replay starts at the slowest speed, so Slower has nothing to do yet
         QVERIFY(!pSlower->isEnabled());
         QVERIFY(pFaster->isEnabled());
+        // Headless sessions call speedDown() with no button in the way, and a
+        // zero speed would divide the replay chunk timer by zero
+        MudletReplay::self()->speedDown();
+        QCOMPARE(MudletReplay::self()->speed(), 1);
+        QVERIFY(!pSlower->isEnabled());
 
         pFaster->trigger();
         QCOMPARE(MudletReplay::self()->speed(), 2);
