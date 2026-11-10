@@ -920,6 +920,12 @@ signals:
     // From the event loop, sorted, once however many calls in a turn changed them, and not for calls that changed
     // nothing.
     void scriptWindowsChanged(const QString& profile, const QStringList& names);
+    // What windowLines() gives for these mini consoles and user windows may differ: text written, edited,
+    // recoloured, deleted or cleared, a link of theirs changed, or the console new, as one made again under the
+    // name of one deleted in the same turn is. Never the main console, which outputLine, lineShown
+    // and mainConsoleCleared tell of. From the event loop, sorted, once however many writes a turn made, and after
+    // the scriptWindowsChanged of a window made in that turn. A handler may call the session.
+    void windowTextChanged(const QString& profile, const QStringList& windows);
     // A script's setMainWindowSize() asked for the main window to be this size, for an app that can resize its
     // window to do so. The profile has taken it as setMainWindowSize() would have, so mainConsoleAreaChanged
     // follows if that changed the grid or where the text goes. From the event loop. Its handler may call the

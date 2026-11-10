@@ -76,6 +76,9 @@ signals:
     // What a link offers changed: its state, its selection, its spoiler, or it was expired, swept from the store or
     // a line holding it was deleted. Not for a trim, which leaves the link to the sweep.
     void linkChanged(int linkIndex);
+    // The buffer's rows changed with none of the signals above sent, as the view showing it repaints only later:
+    // a script's deleteLine() or wrapLine().
+    void contentEdited();
 };
 
 #endif // MUDLET_TCONSOLEMODELNOTIFIER_H

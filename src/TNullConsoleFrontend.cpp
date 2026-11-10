@@ -1188,6 +1188,20 @@ TConsoleModel& TNullConsoleFrontend::addSubConsole(const QString& name, const TW
                 reportConsoleSize(name);
             }
         });
+        const auto noteText = [this, name]() {
+            mWindowNotifier.noteText(name);
+        };
+        // One made again under a name deleted in the same turn can look the same among the windows
+        noteText();
+        const TConsoleModelNotifier* pNotifier = &model.mNotifier;
+        QObject::connect(pNotifier, &TConsoleModelNotifier::linesAppended, pNotifier, noteText);
+        QObject::connect(pNotifier, &TConsoleModelNotifier::linesChanged, pNotifier, noteText);
+        QObject::connect(pNotifier, &TConsoleModelNotifier::newLinesWritten, pNotifier, noteText);
+        QObject::connect(pNotifier, &TConsoleModelNotifier::bufferCleared, pNotifier, noteText);
+        QObject::connect(pNotifier, &TConsoleModelNotifier::linkCharactersChanged, pNotifier, noteText);
+        QObject::connect(pNotifier, &TConsoleModelNotifier::linkChanged, pNotifier, noteText);
+        QObject::connect(pNotifier, &TConsoleModelNotifier::spoilerRevealed, pNotifier, noteText);
+        QObject::connect(pNotifier, &TConsoleModelNotifier::contentEdited, pNotifier, noteText);
         // As TConsole::bufferCleared() closes the split, which TConsoleModel::clear() has already forgotten
         QObject::connect(&model.mNotifier, &TConsoleModelNotifier::bufferCleared, &model.mNotifier, [this, name, &model]() {
             const QSize before = model.mGridSize;
