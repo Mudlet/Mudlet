@@ -284,6 +284,146 @@ enableMapInfo("HeadlessReplace")
         QVERIFY(session.shutdown(false));
     }
 
+    // Every draw calls the contributor again, so its error reaches the error console once rather than per draw
+    void test_aFailingContributorReportsItsErrorOnce()
+    {
+        const QString name = qsl("Headless Map Info Error");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"lua(
+openMapWidget()
+local area = addAreaName("Headless Info Error")
+addRoom(1)
+setRoomArea(1, area)
+centerview(1)
+headlessFailures = 0
+registerMapInfo("HeadlessFailing", function()
+  headlessFailures = headlessFailures + 1
+  error("headless map info failure")
+end)
+enableMapInfo("HeadlessFailing")
+)lua")));
+        QTest::qWait(50);
+        QSignalSpy errors(session.host(), &Host::signal_errorConsolePrint);
+        const auto reports = [&errors]() {
+            int count = 0;
+            for (const QList<QVariant>& arguments : std::as_const(errors)) {
+                count += arguments.at(0).toString().contains(qsl("headless map info failure"));
+            }
+            return count;
+        };
+
+        QVERIFY2(rendered(session), qPrintable(session.errorString()));
+        QVERIFY2(rendered(session), qPrintable(session.errorString()));
+        QVERIFY(luaGlobalString(session.host(), "headlessFailures").toInt() >= 2);
+        QCOMPARE(reports(), 1);
+
+        // Registering it again is a new callback, whose error is news
+        QVERIFY(session.runLua(qsl(R"lua(
+registerMapInfo("HeadlessFailing", function() error("headless map info failure") end)
+)lua")));
+        QVERIFY2(rendered(session), qPrintable(session.errorString()));
+        QVERIFY2(rendered(session), qPrintable(session.errorString()));
+        QCOMPARE(reports(), 2);
+
+        // An error raised with something other than a string is reported by its type
+        QVERIFY(session.runLua(qsl(R"lua(
+registerMapInfo("HeadlessFailing", function() error({}) end)
+)lua")));
+        QVERIFY2(rendered(session), qPrintable(session.errorString()));
+        QVERIFY2(rendered(session), qPrintable(session.errorString()));
+        QCOMPARE(reports(), 2);
+        int tableReports = 0;
+        for (const QList<QVariant>& arguments : std::as_const(errors)) {
+            tableReports += arguments.at(0).toString().contains(qsl("error object is a table value"));
+        }
+        QCOMPARE(tableReports, 1);
+
+        // A later error with different text is still reported, so one before GMCP arrives does not hide it
+        QVERIFY(session.runLua(qsl(R"lua(
+headlessMapInfoMode = "early"
+registerMapInfo("HeadlessFailing", function()
+  if headlessMapInfoMode == "early" then error("headless early failure") end
+  if headlessMapInfoMode == "late" then error("headless late failure") end
+  return "fine"
+end)
+)lua")));
+        QVERIFY2(rendered(session), qPrintable(session.errorString()));
+        QVERIFY(session.runLua(qsl(R"lua(headlessMapInfoMode = "working")lua")));
+        QVERIFY2(rendered(session), qPrintable(session.errorString()));
+        QVERIFY(session.runLua(qsl(R"lua(headlessMapInfoMode = "late")lua")));
+        QVERIFY2(rendered(session), qPrintable(session.errorString()));
+        QVERIFY2(rendered(session), qPrintable(session.errorString()));
+        int lateReports = 0;
+        for (const QList<QVariant>& arguments : std::as_const(errors)) {
+            lateReports += arguments.at(0).toString().contains(qsl("headless late failure"));
+        }
+        QCOMPARE(lateReports, 1);
+
+        // Failing for one room only, as when two views show different rooms, is still the one error
+        QVERIFY(session.runLua(qsl(R"lua(
+addRoom(2)
+setRoomArea(2, getRoomArea(1))
+registerMapInfo("HeadlessFailing", function(roomID)
+  if roomID == 2 then error("headless room failure") end
+  return "fine"
+end)
+)lua")));
+        for (int i = 0; i < 3; ++i) {
+            QVERIFY(session.runLua(qsl("centerview(1)")));
+            QVERIFY2(rendered(session), qPrintable(session.errorString()));
+            QVERIFY(session.runLua(qsl("centerview(2)")));
+            QVERIFY2(rendered(session), qPrintable(session.errorString()));
+        }
+        int roomReports = 0;
+        for (const QList<QVariant>& arguments : std::as_const(errors)) {
+            roomReports += arguments.at(0).toString().contains(qsl("headless room failure"));
+        }
+        QCOMPARE(roomReports, 1);
+
+        // Two views on rooms that fail differently take turns, which must not report both on every paint
+        QVERIFY(session.runLua(qsl(R"lua(
+registerMapInfo("HeadlessFailing", function(roomID)
+  error("headless failure in room " .. roomID)
+end)
+)lua")));
+        for (int i = 0; i < 3; ++i) {
+            QVERIFY(session.runLua(qsl("centerview(1)")));
+            QVERIFY2(rendered(session), qPrintable(session.errorString()));
+            QVERIFY(session.runLua(qsl("centerview(2)")));
+            QVERIFY2(rendered(session), qPrintable(session.errorString()));
+        }
+        int alternatingReports = 0;
+        for (const QList<QVariant>& arguments : std::as_const(errors)) {
+            alternatingReports += arguments.at(0).toString().contains(qsl("headless failure in room"));
+        }
+        QCOMPARE(alternatingReports, 2);
+
+        // An error whose text changes on every call is not reported on every paint for ever, and the last report says so
+        QVERIFY(session.runLua(qsl(R"lua(
+headlessChangingCalls = 0
+registerMapInfo("HeadlessFailing", function()
+  headlessChangingCalls = headlessChangingCalls + 1
+  error("headless changing failure " .. headlessChangingCalls)
+end)
+)lua")));
+        for (int i = 0; i < 40; ++i) {
+            QVERIFY2(rendered(session), qPrintable(session.errorString()));
+        }
+        QVERIFY(luaGlobalString(session.host(), "headlessChangingCalls").toInt() >= 40);
+        int changingReports = 0;
+        int stoppedNotices = 0;
+        for (const QList<QVariant>& arguments : std::as_const(errors)) {
+            const QString report = arguments.at(0).toString();
+            changingReports += report.contains(qsl("headless changing failure"));
+            stoppedNotices += report.contains(qsl("further errors from this map info are not shown"));
+        }
+        QCOMPARE(changingReports, 17);
+        QCOMPARE(stoppedNotices, 1);
+        QVERIFY(session.shutdown(false));
+    }
+
     // Room symbols are kept as pixmaps made at the room's size in the symbol font, so a draw after either changes
     // makes them again as the mapper does, and so does one after an export, which makes them at a size of its own
     void test_symbolsAreRemadeAfterTheirSizeFontOrAnExportChanges()

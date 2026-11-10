@@ -59,6 +59,7 @@
 #include <QCoreApplication>
 #include <QFileInfo>
 #include <QMovie>
+#include <QSet>
 #include <QStringEncoder>
 #include <QStringMatcher>
 #include <QVector>
@@ -3122,6 +3123,9 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
     auto& host = getHostFromLua(L);
     // Host is non-copyable and the lambda copies its captures.
     auto* pHost = &host;
+    // Shared, as each paint calls a copy of the callback. Paints repeat, and views on different rooms take
+    // turns, so report each error text once; capped, saying so, for texts that change on every call
+    auto reportedErrors = std::make_shared<QSet<QString>>();
     host.mpMap->mMapInfoContributorManager->registerContributor(
             name,
             [=](int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor) {
@@ -3140,9 +3144,23 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
 
                 const int error = lua_pcall(L, 4, 6, 0);
                 if (error) {
-                    if (TDebug::wants(TDebug::Category::Map) && lua_isstring(L, -1)) {
-                        auto errorMessage = lua_tostring(L, -1);
-                        TDebug(QColor(Qt::white), QColor(Qt::red), TDebug::Category::Map) << "LUA ERROR: when running map info callback for '" << name << "\nreason: " << errorMessage << "\n" >> pHost;
+                    std::string errorMessage;
+                    if (lua_isstring(L, -1)) {
+                        errorMessage = lua_tostring(L, -1);
+                    } else {
+                        errorMessage.append("error object is a ").append(luaL_typename(L, -1)).append(" value");
+                    }
+                    constexpr qsizetype maxReportedErrors = 16;
+                    if (const QString text = QString::fromStdString(errorMessage); reportedErrors->size() <= maxReportedErrors && !reportedErrors->contains(text)) {
+                        reportedErrors->insert(text);
+                        if (reportedErrors->size() > maxReportedErrors) {
+                            errorMessage.append(" (further errors from this map info are not shown until it is registered again)");
+                        }
+                        pHost->getLuaInterpreter()->logError(errorMessage, qsl("map info '%1'").arg(name), qsl("anonymous Lua function"));
+                    }
+                    if (TDebug::wants(TDebug::Category::Map)) {
+                        TDebug(QColor(Qt::white), QColor(Qt::red), TDebug::Category::Map) << "LUA ERROR: when running map info callback for '" << name << "\nreason: " << errorMessage.c_str() << "\n"
+                                >> pHost;
                     }
                     lua_settop(L, callerStackTop);
                     return MapInfoProperties{};
