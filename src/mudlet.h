@@ -65,6 +65,7 @@ class QDockWidget;
 class QKeyEvent;
 class QMediaPlayer;
 class QMenu;
+class QMessageBox;
 class QLabel;
 class QListWidget;
 class QPushButton;
@@ -676,6 +677,7 @@ private:
     QPointer<QAction> mpActionAboutWithUpdates;
 #if defined(INCLUDE_UPDATER)
     bool mUpdateInstalled = false;
+    QPointer<QMessageBox> mpUpdateFailedBox;
 #endif
     QPointer<QAction> mpActionAliases;
     QPointer<QAction> mpActionButtons;
