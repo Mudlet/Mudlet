@@ -623,12 +623,18 @@ describe("yajl generators", function()
     generator:close()
   end)
 
-  it("raise an error for an indent that is not whitespace", function()
-    assert.has_error(function() yajl.generator({indent = true}) end)
-    assert.has_error(function() yajl.to_string({1}, {indent = {}}) end)
-    assert.has_error(function() yajl.to_string({1}, {indent = 2}) end)
-    assert.has_error(function() yajl.to_string({1}, {indent = "--"}) end)
+  it("write no indent for one that is not whitespace", function()
+    local options = {indent = 2}
+    assert.are.equal('[\n1\n]\n', yajl.to_string({1}, options))
+    assert.are.equal(2, options.indent)
+    assert.are.equal('[\n1\n]\n', yajl.to_string({1}, {indent = "--"}))
+    assert.are.equal('[\n1\n]\n', yajl.to_string({1}, {indent = true}))
+    assert.are.equal('5\n', yajl.to_string(5, {indent = 2}))
     assert.are.equal('[\n  1\n]\n', yajl.to_string({1}, {indent = "  "}))
+    local written = {}
+    local generator = yajl.generator({indent = {}, printer = function(text) written[#written + 1] = text end})
+    generator:value({1})
+    assert.are.equal('[\n1\n]\n', table.concat(written))
   end)
 
   it("still write values", function()
