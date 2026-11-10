@@ -1408,6 +1408,46 @@ private slots:
         QCOMPARE(pane->cursor().shape(), Qt::IBeamCursor);
     }
 
+    // A link is only un-hovered by a move event over something else, and none
+    // reaches the pane once the pointer leaves it for the command line or
+    // another window, so the leave itself has to drop the hover style
+    void test_aLinkStopsBeingHoveredWhenTheMouseLeavesThePane()
+    {
+        mpServer->setWelcomeMessage(qsl("hover test\r\n"));
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        QVERIFY2(waitForTextInBuffer(qsl("hover test")), "the welcome text never reached the buffer");
+
+        mudlet::self()->resize(1200, 800);
+        QTest::qWait(100ms);
+
+        TTextEdit* pane = upperPane();
+        QVERIFY2(pane, "No upper pane available");
+
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("clearWindow()\nechoLink('LinkForHoverTest', [[ ]], '', true)\n")), "the echoLink() call failed");
+        QVERIFY2(waitForTextInBuffer(qsl("LinkForHoverTest")), "the link text never reached the buffer");
+        QTest::qWait(100ms);
+
+        int hoveredLink = 0;
+        for (int y = pane->mFontHeight / 2; y < pane->height() && !hoveredLink; y += pane->mFontHeight) {
+            for (int x = pane->mFontWidth / 2; x < pane->width(); x += pane->mFontWidth) {
+                sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::NoButton, QPointF(x, y));
+                hoveredLink = pane->mpBuffer->getHoveredLink();
+                if (hoveredLink) {
+                    break;
+                }
+            }
+        }
+        QVERIFY2(hoveredLink > 0, "no pixel of the pane hovered the link, so the leave below proves nothing");
+        QCOMPARE(pane->mpBuffer->getLinkState(hoveredLink), Mudlet::HyperlinkStyling::StateHover);
+
+        QEvent leave(QEvent::Leave);
+        QApplication::sendEvent(pane, &leave);
+
+        QCOMPARE(pane->mpBuffer->getHoveredLink(), 0);
+        QVERIFY2(pane->mpBuffer->getLinkState(hoveredLink) != Mudlet::HyperlinkStyling::StateHover, "the link kept its hover style after the mouse left the pane");
+    }
+
     // #3031: the timestamp sits in a gutter to the left of the line's own text,
     // so a click there is taken to mean the line as a whole and selects all of
     // it the way a Ctrl+click does. Without that, the click lands on the line's
