@@ -2324,8 +2324,9 @@ function ansi2decho(text, ansi_default_color)
         lastColour = ansi_default_color
       elseif code == "39" or code == "49" then
         -- decho can only return to the default colours together, so reset both and restore the other
-        formatCodeHandled = true
         local foreground = code == "39"
+        -- like 0, a 39 falls through below to take on ansi_default_color
+        formatCodeHandled = not foreground
         if foreground then
           fg = nil
           lastColour = ansi_default_color

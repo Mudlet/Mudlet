@@ -202,7 +202,8 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       for _, seq in ipairs(sequences) do
         assert.are.same(seq[2], ansi2decho(seq[1]), string.format("ansi2decho(%q)", seq[1]))
       end
-      local _, lastColour = ansi2decho("\27[31mred\27[39mplain", 7)
+      local result, lastColour = ansi2decho("\27[31mred\27[39mplain", 7)
+      assert.are.same("<128,0,0>red<r><192,192,192>plain", result)
       assert.are.equal(7, lastColour)
     end)
 
