@@ -443,7 +443,8 @@ function Adjustable.Container:onMove (label, event)
             -- a container partly past the parent's top or left edge is brought back in first,
             -- as a negative position is read as one measured from the far edge
             local left, top = max(0, x1), max(0, y1)
-            local right, bottom = left + w, top + h
+            local right = (adjustInfo.left and x1 or left) + w
+            local bottom = (adjustInfo.top and y1 or top) + h
             -- a dragged edge stops at the parent's edge and at the minimum size while the
             -- opposite edge stays put, rather than pushing the whole container along
             if adjustInfo.top then
