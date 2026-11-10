@@ -146,13 +146,14 @@ private slots:
         const QString first = manager->installPackageFiles({packageFile});
         host->saveProfile();
         QVERIFY2(host->currentlySavingProfile(), "SETUP: the save had already finished, so the second import did not meet a running save");
-        const QString second = manager->installPackageFiles({packageFile});
+        const QString second = manager->installPackageFiles({packageFile, packageDir.filePath(qsl("never-written.xml"))});
         delete manager;
 
         QVERIFY2(first.isEmpty(), qPrintable(qsl("SETUP: the package did not install the first time: %1").arg(first)));
         QVERIFY2(second.contains(qsl("import&amp;twice.xml")), qPrintable(qsl("The file that failed is not named: %1").arg(second)));
         QVERIFY2(!second.contains(qsl("import&twice")), qPrintable(qsl("The package name is not escaped everywhere in the rich-text notice: %1").arg(second)));
         QVERIFY2(second.contains(qsl("already installed")), qPrintable(qsl("The notice does not say why the import failed: %1").arg(second)));
+        QVERIFY2(second.contains(qsl("<br>never-written.xml: ")), qPrintable(qsl("The second failure is not on a line of its own with its reason: %1").arg(second)));
     }
 
     // The other half of the same wording: a save really running is still the
