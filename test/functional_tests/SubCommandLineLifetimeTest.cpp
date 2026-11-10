@@ -41,9 +41,13 @@
  * And the dock of a deleted user window, which has to leave the main window
  * straight away rather than when its deferred delete gets round to it.
  *
+ * And the search box and buttons every TConsole builds, which only the main
+ * console lays out, so a deleted sub-console must free them itself.
+ *
  * Bootstrap mirrors the other functional tests.
  */
 
+#include <QApplication>
 #include <QFileInfo>
 #include <QPointer>
 #include <QScopeGuard>
@@ -182,6 +186,38 @@ private slots:
         QVERIFY2(created, qPrintable(createMsg));
         console->deleteCommandLine(name);
         runDeferredDeletes();
+    }
+
+    // A sub-console builds its own search box and buttons too, with no layout to adopt them; any it
+    // leaves parentless stay listed by QApplication, so each create and delete would grow the heap
+    void test_deletedSubConsolesLeaveNoWidgetsBehind()
+    {
+        TMainConsole* console = mpHost->mainConsoleView();
+        const QString miniConsoleName = qsl("widgetCountMiniConsole");
+        const QString windowName = qsl("widgetCountUserWindow");
+        const QString bufferName = qsl("widgetCountBuffer");
+        auto createAndDelete = [&]() {
+            QVERIFY(console->createMiniConsole(QString(), miniConsoleName, 0, 0, 300, 100));
+            QVERIFY(mpHost->deleteMiniConsole(miniConsoleName).first);
+            QVERIFY(mpHost->openWindow(windowName, /*loadLayout=*/false, /*autoDock=*/true, qsl("l")).first);
+            QVERIFY(mpHost->deleteMiniConsole(windowName).first);
+            QVERIFY(mpHost->createBuffer(bufferName));
+            QVERIFY(mpHost->deleteMiniConsole(bufferName).first);
+            runDeferredDeletes();
+        };
+        // The first round may create widgets that are kept for reuse
+        createAndDelete();
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        const auto widgetsBefore = QApplication::allWidgets().size();
+
+        createAndDelete();
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+
+        QCOMPARE(QApplication::allWidgets().size(), widgetsBefore);
     }
 
     // Route 2: createCommandLine() into a scroll box, then deleteScrollBox().
