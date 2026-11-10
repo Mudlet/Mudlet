@@ -171,8 +171,12 @@ private slots:
         QVERIFY2(host, "Could not start the profile");
 
         auto* manager = new dlgPackageManager(nullptr, host);
-        const QString msg = manager->installPackageFiles(QStringList({qsl("%1/no<such>package.xml").arg(mConfigDir.path())}));
+        const QString msg = manager->installPackageFiles(QStringList({qsl("%1/no<such>package.xml").arg(mConfigDir.path()), qsl("%1/also-missing.xml").arg(mConfigDir.path())}));
         delete manager;
+
+        // One line per file, and the notice is rich text, so only <br> breaks a line
+        QVERIFY2(msg.contains(qsl("also-missing.xml")), qPrintable(qsl("The second refused file was not named: %1").arg(msg)));
+        QVERIFY2(msg.count(qsl("<br>")) == 1, qPrintable(qsl("The two refusals are not on lines of their own: %1").arg(msg)));
 
         QVERIFY2(msg.contains(qsl("no&lt;such&gt;package.xml")), qPrintable(qsl("The refused file was not named, or not escaped for the rich-text notice: %1").arg(msg)));
         QVERIFY2(msg.contains(qsl("could not open file")), qPrintable(qsl("The notice did not say why the file was refused: %1").arg(msg)));
