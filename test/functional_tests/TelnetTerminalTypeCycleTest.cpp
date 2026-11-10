@@ -25,7 +25,6 @@
 // waited out with a DO TIMING_MARK, which Mudlet always answers.
 
 #include <QDir>
-#include <QFileInfo>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -34,6 +33,7 @@
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "MudletApp.h"
+#include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "RecordingTelnetServer.h"
 #include "ctelnet.h"
@@ -53,12 +53,6 @@ private:
     RecordingTelnetServer* mpServer = nullptr;
     Host* mpHost = nullptr;
     const QString mHostname = qsl("Test-Telnet-Terminal-Type-Cycle");
-
-    // setupConfig() consults portable.txt before the XDG logic
-    static bool portableMarkerPresent()
-    {
-        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
-    }
 
     void announce(const char command, const char option)
     {
