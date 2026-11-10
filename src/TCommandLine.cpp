@@ -196,7 +196,8 @@ bool TCommandLine::claimsShortcutOverride(const QKeyEvent* ke) const
 
 void TCommandLine::processNormalKey(QEvent* event)
 {
-    const QString before = toPlainText();
+    const QString textBefore = toPlainText();
+    const QTextCursor cursorBefore = textCursor();
     {
         const UserEditScope userEdit(*this);
         QPlainTextEdit::event(event);
@@ -204,8 +205,10 @@ void TCommandLine::processNormalKey(QEvent* event)
     adjustHeight();
 
     mHistoryBuffer = 0;
-    // A key that leaves the text alone, such as Shift on its way to Shift+End, keeps Up's walk where it is
-    if (mCompletion.lineEdited(toPlainText()) && toPlainText() != before) {
+    // A key that changes neither text nor caret, such as Shift on its way to Shift+End, keeps Up's walk where it is
+    const QTextCursor cursor = textCursor();
+    const bool changed = toPlainText() != textBefore || cursor.position() != cursorBefore.position() || cursor.anchor() != cursorBefore.anchor();
+    if (mCompletion.lineEdited(toPlainText()) && changed) {
         mCompletion.restartHistoryWalk();
     }
 

@@ -631,6 +631,24 @@ private slots:
         QCOMPARE(pCommandLine->toPlainText(), qsl("look at sign"));
     }
 
+    // Up after accepting a completion looks for longer lines from the newest again
+    void test_upAfterAcceptingACompletionSearchesFromTheNewest()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        sendCommand(pCommandLine, qsl("look at sign"));
+        sendCommand(pCommandLine, qsl("look at sign 2"));
+        type(pCommandLine, qsl("lo"));
+
+        press(pCommandLine, Qt::Key_Up);
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look at sign"));
+        press(pCommandLine, Qt::Key_End);
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look at sign 2"));
+        QCOMPARE(selection(pCommandLine), qsl(" 2"));
+    }
+
     // Once the completion is accepted, the line is the player's own and Down banks it
     void test_downBanksAnAcceptedCompletion()
     {
