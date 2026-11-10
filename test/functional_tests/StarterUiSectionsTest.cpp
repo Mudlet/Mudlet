@@ -427,8 +427,8 @@ private slots:
         QVERIFY2(luaTrue(host, qsl("__ui.backX <= 2 and __ui.backY <= 2 and __ui.backW <= 2")), "the mapper did not come back to the top of the dock");
     }
 
-    // A game that offers a map (MMP's Client.Map) can only have it downloaded
-    // from the mapper's own empty state, which the placeholder would cover.
+    // A game that offers a map (MMP's Client.Map) gets the mapper's empty state
+    // in the dock, so its download button is not covered by the placeholder.
     void test_aMapTheGameOffersCanBeDownloadedFromTheDock()
     {
         Host* host = startProfileWithDock();

@@ -2227,8 +2227,8 @@ function BaseUI.mapHasData()
   return roomExists(1) or next(getRooms()) ~= nil
 end
 
--- MMP: a game that has a map to give says where with Client.Map, and only the
--- mapper's own empty state has the button that downloads it
+-- MMP: a game that has a map to give says where with Client.Map. The mapper's
+-- empty state offers to download it, which the placeholder would cover up
 function BaseUI.gameOffersMap()
   local offers = {}
   addGmcpNodes({ "client", "map" }, offers)
@@ -2250,7 +2250,7 @@ end
 -- the embedded mapper shows a clipped "load or create a map" widget while the
 -- profile has no map data, so a placeholder holds its spot until the first
 -- room exists (made by a mapping script, a map download or a manual load), or
--- until the game offers a map, which only that widget can download.
+-- until the game offers a map, which that widget can download.
 -- Cheap to poll: getRooms() stays empty right up until the swap happens.
 function BaseUI.checkMapData(event)
   if not BaseUI.container or BaseUI.map or BaseUI.dormant() then
