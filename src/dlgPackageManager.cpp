@@ -688,7 +688,6 @@ void dlgPackageManager::slot_installPackageFromFile()
     }
 }
 
-// The main console gets installPackage()'s reason too, but it is behind this dialog
 static QString installFailure(const QString& name, const QString& reason)
 {
     if (reason.isEmpty()) {
