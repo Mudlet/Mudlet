@@ -957,8 +957,14 @@ void dlgConnectionProfiles::deleteSecurePassword(const QString& profile)
 void dlgConnectionProfiles::slot_updateLogin(const QString& login)
 {
     QListWidgetItem* pItem = listWidget_profiles->currentItem();
-    if (pItem) {
-        saveProfileDetail(pItem->data(csmNameRole).toString(), qsl("login"), login);
+    if (!pItem) {
+        return;
+    }
+    const QString profile = pItem->data(csmNameRole).toString();
+    saveProfileDetail(profile, qsl("login"), login);
+    // An open profile read this when it loaded, and would otherwise sign in with the old name until reopened
+    if (Host* pHost = HostManager::self()->getHost(profile)) {
+        pHost->setLogin(login.trimmed());
     }
 }
 
@@ -996,7 +1002,12 @@ void dlgConnectionProfiles::slot_updateAutoReconnect(int state)
     if (!pItem) {
         return;
     }
-    writeProfileData(pItem->data(csmNameRole).toString(), qsl("autoreconnect"), QString::number(state));
+    const QString profile = pItem->data(csmNameRole).toString();
+    writeProfileData(profile, qsl("autoreconnect"), QString::number(state));
+    // An open profile read this when it loaded, and the dialog is the only place to change it
+    if (Host* pHost = HostManager::self()->getHost(profile)) {
+        pHost->setAutoReconnect(state == Qt::Checked);
+    }
 }
 
 void dlgConnectionProfiles::slot_updatePort(const QString& ignoreBlank)
