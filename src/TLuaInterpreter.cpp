@@ -8715,23 +8715,24 @@ std::pair<int, QString> TLuaInterpreter::startPermKey(QString& name, QString& pa
 }
 
 // No documentation available in wiki - internal function
-int TLuaInterpreter::startTempKey(int& modifier, int& keycode, const QString& function)
+std::pair<int, QString> TLuaInterpreter::startTempKey(int& modifier, int& keycode, const QString& function)
 {
-    TKey* pT;
-    pT = new TKey("a", mpHost);
+    auto* pT = new TKey("a", mpHost);
     pT->setKeyCode(keycode);
     pT->setKeyModifiers(modifier);
     pT->setIsFolder(false);
     pT->setIsActive(true);
     pT->setTemporary(true);
     pT->registerKey();
-    if (!function.isEmpty()) {
-        pT->setScript(function);
-    }
     const int id = pT->getID();
     pT->setName(QString::number(id));
-    emit mpHost->signal_keyBoundByScript(pT->getID());
-    return id;
+    if (!function.isEmpty() && !pT->setScript(function)) {
+        const QString errMsg = compileErrorAsPlainText(pT->getError());
+        delete pT;
+        return {-1, qsl("unable to compile \"%1\", reason: %2").arg(function, errMsg)};
+    }
+    emit mpHost->signal_keyBoundByScript(id);
+    return {id, QString()};
 }
 
 // No documentation available in wiki - internal function

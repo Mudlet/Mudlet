@@ -312,7 +312,7 @@ private slots:
   void test_tempKeysRemovedAfterReset() {
     int modifier = Qt::NoModifier;
     int keycode = Qt::Key_F12;
-    int id = mpHost->mLuaInterpreter.startTempKey(modifier, keycode, qsl(""));
+    int id = mpHost->mLuaInterpreter.startTempKey(modifier, keycode, qsl("")).first;
     QVERIFY(id > 0);
     QVERIFY(countTempKeys() > 0);
 
