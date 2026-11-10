@@ -4808,6 +4808,31 @@ describe("Tests the script API", function()
       assert.are.same({ yes = { message = "Ja" }, no = { message = "No" } }, loadTranslations("Pkg", "strings", "de_DE", folder))
     end)
 
+    it("Should close the files it reads", function()
+      if not lfs.attributes("/proc/self/fd") then
+        pending("counting open files needs /proc")
+        return
+      end
+      local function openFiles()
+        local count = 0
+        for _ in lfs.dir("/proc/self/fd") do
+          count = count + 1
+        end
+        return count
+      end
+      -- otherwise a collection could close the handles for it
+      collectgarbage("collect")
+      collectgarbage("stop")
+      finally(function() collectgarbage("restart") end)
+      local before = openFiles()
+
+      for _ = 1, 10 do
+        loadTranslations("AdjustableContainer", nil, "ru_RU")
+      end
+
+      assert.are.equal(before, openFiles())
+    end)
+
     it("Should reject arguments of the wrong type", function()
       assert.has_error(function() loadTranslations(5) end)
       assert.has_error(function() loadTranslations("AdjustableContainer", 5) end)

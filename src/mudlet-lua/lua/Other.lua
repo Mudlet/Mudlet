@@ -1338,6 +1338,7 @@ end
 local function readJsonFile(input)
   local filePointer = io.open(input, "r")
   local str = filePointer:read("*all")
+  filePointer:close()
   if str == "" then
     return {}
   end
