@@ -3177,7 +3177,7 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
 
     it("attaches a container saved minimized to its border again when restored after loading", function()
       local container = make("gapMinAttached", {width = 150})
-      container:attachToBorder("left")
+      assert.is_true(container:attachToBorder("left"))
       container:minimize()
       container:save(nil, scratchDir)
       container:restore()
@@ -3185,6 +3185,22 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
 
       container:load(nil, scratchDir)
       assert.is_true(container.minimized)
+      container:restore()
+      assert.are.equal("left", container.attached)
+    end)
+
+    it("attaches a container saved hidden and minimized to its border again when shown and restored after loading", function()
+      local container = make("gapHideMinAttached", {width = 150})
+      assert.is_true(container:attachToBorder("left"))
+      container:hide()
+      container:minimize()
+      container:save(nil, scratchDir)
+      container:show()
+      container:restore()
+      container:detach()
+
+      container:load(nil, scratchDir)
+      container:show()
       container:restore()
       assert.are.equal("left", container.attached)
     end)

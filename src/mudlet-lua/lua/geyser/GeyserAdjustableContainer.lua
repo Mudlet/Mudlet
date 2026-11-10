@@ -1059,12 +1059,15 @@ end
 
 --- minimizes the container
 -- hides everything beside the title; does nothing if it is already minimized.
--- One attached to a border gives the border back while minimized, and restore() attaches it again
+-- One attached to a border, or hidden while attached, gives the border back while minimized, and
+-- restore() attaches it again if it still can
 function Adjustable.Container:minimize()
     if self.minimized == true then
         return
     end
-    local attached = self.attached
+    -- a hidden container keeps its border for show(), which refuses to attach a minimized one
+    local attached = self.attached or self.hiddenAttached
+    self.hiddenAttached = nil
     self.origh = self.height
     self.Inside:hide()
     self:resize(nil, self.buttonsize + 10)
@@ -1238,10 +1241,7 @@ function Adjustable.Container:show(auto)
     Geyser.Container.show(self, auto)
     closeAllLevels(self.rCLabel)
     if self.hiddenAttached and not (self.hidden or self.auto_hidden) then
-        if self.minimized then
-            -- attachToBorder() refuses a minimized container, so restore() takes the border back
-            self.minimizedAttached, self.hiddenAttached = self.hiddenAttached, nil
-        elseif self:attachToBorder(self.hiddenAttached) then
+        if self:attachToBorder(self.hiddenAttached) then
             -- resizeBorder() only lays the connected containers out again when the window itself changes size
             self:adjustConnectedContainers()
         else
