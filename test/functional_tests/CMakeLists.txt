@@ -349,6 +349,7 @@ set(PACKAGE_GROUP_TEST_SOURCES
     DefaultPackagesTest.cpp
     DualPackageModuleTest.cpp
     ModuleManagerListingTest.cpp
+    ModuleManagerShellTest.cpp
     ModuleSaveTeardownTest.cpp
     ModuleSyncReloadTest.cpp
     ModuleSyncSaveReentryTest.cpp

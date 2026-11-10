@@ -116,6 +116,8 @@ class DesignColourLiteralTest : public QObject
                           QStringLiteral("dlgPackageExporter.h"),
                           QStringLiteral("ExporterTreeDelegate.cpp"),
                           QStringLiteral("ExporterTreeDelegate.h"),
+                          QStringLiteral("dlgModuleManager.cpp"),
+                          QStringLiteral("dlgModuleManager.h"),
                           QStringLiteral("dlgColorTrigger.cpp"),
                           QStringLiteral("dlgSystemMessageArea.cpp"),
                           QStringLiteral("TDetachedWindow.cpp"),
