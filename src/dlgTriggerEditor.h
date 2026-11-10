@@ -806,6 +806,7 @@ private:
     void buildDeferredTrees(const bool asAtLoad);
     void autoSave();
     void setupPatternControls(const int type, dlgTriggerPatternEdit* pItem);
+    void paintColorPatternButtons(dlgTriggerPatternEdit* pItem);
     void createPatternItem(int index);
     void showPatternItems(int count);
     void updatePatternPlaceholders();
