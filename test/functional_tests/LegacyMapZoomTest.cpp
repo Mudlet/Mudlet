@@ -30,9 +30,25 @@
 #include <QOpenGLContext>
 #include <QOpenGLFunctions>
 
+#include <cmath>
+#include <utility>
+
 #include "glwidget.h"
 
 #include "GroupedTest.h"
+
+// initializeGL() needs a profile, and the projection under test does not
+class BareGLWidget : public GLWidget
+{
+public:
+    BareGLWidget()
+    : GLWidget(nullptr, nullptr)
+    {
+    }
+
+protected:
+    void initializeGL() override {}
+};
 
 class LegacyMapZoomTest : public QObject
 {
@@ -85,6 +101,33 @@ private slots:
         };
         QVERIFY2(wheel(QPoint(0, 15)), "an eighth of a notch from a touchpad was passed on instead of zooming the map");
         QVERIFY2(!wheel(QPoint(120, 0)), "a sideways scroll was kept from the widgets around the map");
+    }
+
+    void test_aViewButtonResetsTheZoomOnScreen()
+    {
+        BareGLWidget view;
+        view.resize(300, 300);
+        view.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&view));
+        if (!view.isValid()) {
+            QSKIP("no OpenGL context can be made here");
+        }
+        auto verticalFieldOfView = [&view]() {
+            view.makeCurrent();
+            GLfloat projection[16] = {};
+            glGetFloatv(GL_PROJECTION_MATRIX, projection);
+            view.doneCurrent();
+            return qRadiansToDegrees(2.0f * std::atan(1.0f / projection[5]));
+        };
+        view.slot_setScale(1000);
+        QVERIFY2(qAbs(verticalFieldOfView() - 60.0f * 150.0f / 1300.0f) < 0.1f, "the zoom slider did not reach the projection");
+
+        for (auto [button, name] : {std::pair{&GLWidget::slot_defaultView, "Default"}, {&GLWidget::slot_sideView, "Side"}, {&GLWidget::slot_topView, "Top"}}) {
+            view.slot_setScale(1000);
+            (view.*button)();
+            const float degrees = verticalFieldOfView();
+            QVERIFY2(qAbs(degrees - 60.0f) < 0.1f, qPrintable(qsl("after %1 the view shows a %2 degree field of view").arg(name).arg(degrees)));
+        }
     }
 
     void test_zoomingBeforeTheMapHasAContextLeavesOtherContextsAlone()
