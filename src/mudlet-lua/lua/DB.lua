@@ -2035,7 +2035,8 @@ end
 ---   TOTAL - Returns the value of adding all the contents of the specified field.
 ---   </pre>
 ---
---- @param query optional, as for db:fetch; an empty table aggregates over every row
+--- @param query optional, as for db:fetch; an empty table aggregates over every row, and a table keyed
+--- by field name, such as {name = "Bob"}, raises an error rather than returning nil
 ---
 --- @usage Example:
 ---   <pre>

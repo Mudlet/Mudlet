@@ -1876,6 +1876,10 @@ describe("Tests DB.lua functions", function()
       assert.is_nil(db:fetch(mydb.people, {name = "Ada"}))
     end)
 
+    it("db:aggregate over a hash-style table query raises rather than counting every row", function()
+      assert.has_error(function() db:aggregate(mydb.people.name, "COUNT", {name = "Ada"}) end)
+    end)
+
     it("db:exp still combines with db:AND and db:OR", function()
       local anded = db:fetch(mydb.people, db:AND(db:exp("level > 25"), db:eq(mydb.people.city, "Chicago")))
       assert.are.same({"Eve"}, names(anded))
