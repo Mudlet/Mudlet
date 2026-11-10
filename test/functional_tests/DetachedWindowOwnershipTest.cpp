@@ -659,6 +659,37 @@ private slots:
         QCOMPARE(mudlet::self()->getActiveHost()->getName(), mSecondHostname);
     }
 
+    // A user window stays in the main window, so the command line last used in one cannot take the keyboard from the window just raised
+    void test_setActiveProfileGivesTheKeyboardToTheDetachedWindow()
+    {
+        QVERIFY(mpDetachedWindow);
+        Host* pHost = HostManager::self()->getHost(mSecondHostname);
+        QVERIFY(pHost && pHost->mainConsoleView());
+        auto restore = qScopeGuard([pHost]() {
+            if (TConsole* pWindow = pHost->mainConsoleView()->subConsoleWidget(qsl("qaActivateWindow"))) {
+                pHost->mainConsoleView()->forgetCommandLine(pWindow->mpCommandLine);
+            }
+            pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("hideWindow('qaActivateWindow')"));
+            pHost->mainConsoleView()->recordActiveCommandLine(pHost->mainConsoleView()->mpCommandLine);
+        });
+        QTest::qWait(200ms);
+        QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("openUserWindow('qaActivateWindow') enableCommandLine('qaActivateWindow')")));
+        TConsole* pUserWindow = pHost->mainConsoleView()->subConsoleWidget(qsl("qaActivateWindow"));
+        QVERIFY(pUserWindow && pUserWindow->mpCommandLine);
+        const QPointer<TCommandLine> pUserCommandLine = pUserWindow->mpCommandLine.data();
+        QVERIFY2(pUserCommandLine->window() != mpDetachedWindow.data(), "the user window is in the detached window, so this case no longer covers one left behind");
+        pHost->mainConsoleView()->recordActiveCommandLine(pUserCommandLine);
+        Host* pFirstHost = HostManager::self()->getHost(mFirstHostname);
+        QVERIFY(pFirstHost);
+        mudlet::self()->activateProfile(pFirstHost);
+        QTest::qWait(200ms);
+
+        QVERIFY(pFirstHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(setActiveProfile('%1'))").arg(mSecondHostname)));
+        QTest::qWait(200ms);
+        QCOMPARE(QApplication::activeWindow(), mpDetachedWindow.data());
+        QCOMPARE(QApplication::focusWidget(), static_cast<QWidget*>(pHost->mainConsoleView()->mpCommandLine.data()));
+    }
+
 private:
     // init() detached the second profile, so this puts it back to open its map in the main window
     QDockWidget* showSecondProfilesMapDock()

@@ -4504,8 +4504,17 @@ bool mudlet::setActiveProfileTab(const QString& profileName)
         pDetachedWindow->raise();
         pDetachedWindow->activateWindow();
         pDetachedWindow->switchToProfile(profileName);
+        Host* pHost = mHostManager.getHost(profileName);
         // The main tab bar's change of tab is what does this for a profile in the main window
-        activateProfile(mHostManager.getHost(profileName));
+        activateProfile(pHost);
+        // Queued after activateProfile()'s own hand-off, which could give the keyboard to a user window left in the main window
+        QTimer::singleShot(0ms, pDetachedWindow, [pDetachedWindow, pDetachedHost = QPointer<Host>(pHost)]() {
+            pDetachedWindow->raise();
+            pDetachedWindow->activateWindow();
+            if (pDetachedHost && pDetachedHost->mainConsoleView()) {
+                pDetachedHost->mainConsoleView()->focusActiveCommandLine(pDetachedWindow);
+            }
+        });
         return true;
     }
     mpTabBar->setCurrentIndex(mpTabBar->tabIndex(profileName));
