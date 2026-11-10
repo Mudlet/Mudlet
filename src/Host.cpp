@@ -5990,13 +5990,19 @@ void Host::processGMCPDiscordStatus(const QJsonObject& discordInfo)
         Discord::self()->setStateText(this, state.toString());
     }
 
-    auto largeImages = discordInfo.value(qsl("largeimage"));
-    if (largeImages != QJsonValue::Undefined) {
-        auto largeImage = largeImages.toArray().first();
-        if (largeImage != QJsonValue::Undefined) {
-            Discord::self()->setServerOrigin(this, DiscordSetLargeIcon);
-            Discord::self()->setLargeImage(this, largeImage.toString());
+    // The standard sends an icon key as a one-element array, but a bare string is taken too
+    const auto iconKey = [&discordInfo](const QString& field) -> QJsonValue {
+        const auto value = discordInfo.value(field);
+        if (value.isArray()) {
+            return value.toArray().first();
         }
+        return value.isString() ? value : QJsonValue(QJsonValue::Undefined);
+    };
+
+    const auto largeImage = iconKey(qsl("largeimage"));
+    if (largeImage != QJsonValue::Undefined) {
+        Discord::self()->setServerOrigin(this, DiscordSetLargeIcon);
+        Discord::self()->setLargeImage(this, largeImage.toString());
     }
 
     auto largeImageText = discordInfo.value(qsl("largeimagetext"));
@@ -6005,13 +6011,10 @@ void Host::processGMCPDiscordStatus(const QJsonObject& discordInfo)
         Discord::self()->setLargeImageText(this, largeImageText.toString());
     }
 
-    auto smallImages = discordInfo.value(qsl("smallimage"));
-    if (smallImages != QJsonValue::Undefined) {
-        auto smallImage = smallImages.toArray().first();
-        if (smallImage != QJsonValue::Undefined) {
-            Discord::self()->setServerOrigin(this, DiscordSetSmallIcon);
-            Discord::self()->setSmallImage(this, smallImage.toString());
-        }
+    const auto smallImage = iconKey(qsl("smallimage"));
+    if (smallImage != QJsonValue::Undefined) {
+        Discord::self()->setServerOrigin(this, DiscordSetSmallIcon);
+        Discord::self()->setSmallImage(this, smallImage.toString());
     }
 
     auto smallImageText = discordInfo.value(qsl("smallimagetext"));
