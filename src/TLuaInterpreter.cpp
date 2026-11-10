@@ -95,6 +95,15 @@ int luaopen_yajl(lua_State*);
 
 namespace {
 
+// Upvalue 1: the module's function
+int forwardToModuleFunction(lua_State* L)
+{
+    lua_pushvalue(L, lua_upvalueindex(1));
+    lua_insert(L, 1);
+    lua_call(L, lua_gettop(L) - 1, LUA_MULTRET);
+    return lua_gettop(L);
+}
+
 // Some modules' methods read their first argument as their own object unchecked, so a script
 // calling one without it, as in env.__tostring() or dir.close(), crashes Mudlet.
 // Upvalues: the module's function, its metatable, its name.
@@ -108,10 +117,7 @@ int checkedSelfMethod(lua_State* L)
     if (!ownObject) {
         return luaL_typerror(L, 1, lua_tostring(L, lua_upvalueindex(3)));
     }
-    lua_pushvalue(L, lua_upvalueindex(1));
-    lua_insert(L, 1);
-    lua_call(L, lua_gettop(L) - 1, LUA_MULTRET);
-    return lua_gettop(L);
+    return forwardToModuleFunction(L);
 }
 
 // methodTable is the metatable field holding the method, or nullptr for the metatable itself
@@ -141,6 +147,42 @@ void guardSelfMethod(lua_State* L, const char* metatableName, const char* method
     lua_pushcclosure(L, checkedSelfMethod, 3);
     lua_setfield(L, -2, methodName);
     lua_pop(L, 2);
+}
+
+// lua-utf8's charpos() and next() read outside the string for a byte position past its end once
+// given a character count, so clamp that position to just past the end, where it means the same
+int clampedUtf8Position(lua_State* L)
+{
+    if (!lua_isnoneornil(L, 3) && lua_isstring(L, 1) && lua_isnumber(L, 2)) {
+        const auto pastEnd = static_cast<lua_Number>(lua_objlen(L, 1) + 1);
+        if (lua_tonumber(L, 2) > pastEnd) {
+            lua_pushnumber(L, pastEnd);
+            lua_replace(L, 2);
+        }
+    }
+    return forwardToModuleFunction(L);
+}
+
+// lua-yajl's generator value() crashes formatting its own error for a missing value
+int checkedYajlGeneratorValue(lua_State* L)
+{
+    luaL_checkany(L, 2);
+    return forwardToModuleFunction(L);
+}
+
+// Wraps the C function in field name of the table on top of the stack, if there is one
+void wrapModuleFunction(lua_State* L, const char* name, lua_CFunction wrapper)
+{
+    if (!lua_istable(L, -1)) {
+        return;
+    }
+    lua_getfield(L, -1, name);
+    if (!lua_iscfunction(L, -1)) {
+        lua_pop(L, 1);
+        return;
+    }
+    lua_pushcclosure(L, wrapper, 1);
+    lua_setfield(L, -2, name);
 }
 
 // The signature, version, format, endianness, four type sizes and the integral flag
@@ -8093,6 +8135,10 @@ void TLuaInterpreter::initLuaGlobals()
     if (!loaded) {
         loadLuaModule(modLoadMessageQueue, QLatin1String("utf8"), tr("utf8.* Lua functions won't be available."));
     }
+    lua_getglobal(pGlobalLua, "utf8");
+    wrapModuleFunction(pGlobalLua, "charpos", clampedUtf8Position);
+    wrapModuleFunction(pGlobalLua, "next", clampedUtf8Position);
+    lua_pop(pGlobalLua, 1);
     while (!modLoadMessageQueue.isEmpty()) {
         mpHost->postMessage(modLoadMessageQueue.dequeue());
     }
@@ -8106,6 +8152,10 @@ void TLuaInterpreter::initLuaGlobals()
             lua_pop(pGlobalLua, 1);
         }
         lua_pop(pGlobalLua, 1);
+        luaL_getmetatable(pGlobalLua, "yajl.generator.meta");
+        wrapModuleFunction(pGlobalLua, "value", checkedYajlGeneratorValue);
+        lua_pop(pGlobalLua, 1);
+        guardSelfMethod(pGlobalLua, "yajl.generator.meta", "__index", "close");
     }
     while (!modLoadMessageQueue.isEmpty()) {
         mpHost->postMessage(modLoadMessageQueue.dequeue());

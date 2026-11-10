@@ -586,3 +586,47 @@ describe("lfs directory objects", function()
     assert.has_error(function() dir:next() end)
   end)
 end)
+
+describe("utf8 positions past the end of the string", function()
+  it("count back from the end, as a position just past it does", function()
+    assert.are.same({3, 99}, {utf8.charpos("abc", 4, -1)})
+    assert.are.same({3, 99}, {utf8.charpos("abc", 2^31, -1)})
+    assert.are.same({3, 99}, {utf8.next("abc", 2^31, -1)})
+  end)
+
+  it("find no character in place", function()
+    assert.are.same({}, {utf8.charpos("abc", 5, 0)})
+    assert.are.same({}, {utf8.next("abc", 5, 0)})
+  end)
+
+  it("leave positions within the string alone", function()
+    assert.are.same({2, 0xE9}, {utf8.charpos("aé", 3, 0)})
+    assert.are.same({1, 97}, {utf8.charpos("abc", 3, -2)})
+    local codes = {}
+    for _, code in utf8.next, "aé" do
+      codes[#codes + 1] = code
+    end
+    assert.are.same({97, 0xE9}, codes)
+  end)
+end)
+
+describe("yajl generators", function()
+  it("raise an error when value is called without a value", function()
+    local generator = yajl.generator({printer = function() end})
+    assert.has_error(function() generator:value() end)
+  end)
+
+  it("raise an error when close is called on something else", function()
+    local generator = yajl.generator({printer = function() end})
+    generator:open_array()
+    assert.has_error(function() generator.close(io.stdout) end)
+    generator:close()
+  end)
+
+  it("still write values", function()
+    local written = {}
+    local generator = yajl.generator({printer = function(text) written[#written + 1] = text end})
+    generator:value({1, "two"})
+    assert.are.equal('[1,"two"]', table.concat(written))
+  end)
+end)
