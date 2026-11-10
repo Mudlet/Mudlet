@@ -85,7 +85,12 @@ By 2026-11 the map file fuzzer had loaded ~136k mutated binary and JSON maps (AS
 2-3, UBSan 4-8) and the XML one ~24k map and package files (UBSan 3-4, ASan 2), with the
 loaders clean. What they did reach is `T2DMap::paintEvent` overflowing on rooms or labels
 at the edge of the int range - known, and as reachable through `setRoomCoordinates()` -
-so expect those reports from a UBSan run until it is fixed.
+so expect those reports from a UBSan run until it is fixed. By 2026-11
+`LegacyEncodingFuzz_spec.lua` had fed ~12k batches through the multibyte decoders (ASan
+and UBSan, seeds 2-5) with whole and split reads decoding alike, once SHIFT_JIS was kept
+off 0x1A and 0x1C: ICU remaps those controls, but plain bytes after decoded text in the
+same read are copied unchanged, so they come out differently depending on where a read
+was cut.
 
 ## Sanitizer gotchas
 
