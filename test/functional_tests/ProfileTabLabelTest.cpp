@@ -67,6 +67,16 @@ private slots:
         QCOMPARE(spokenName(bar, bar.tabIndex(mPlainName)), mPlainName);
     }
 
+    // Reattaching a detached profile puts its tab back with insertTab()
+    void test_ampersandInAnInsertedTabIsShown()
+    {
+        TTabBar bar(nullptr);
+        addTab(bar, mPlainName);
+        bar.setTabData(bar.insertTab(0, mAmpersandName), mAmpersandName);
+
+        QCOMPARE(spokenName(bar, bar.tabIndex(mAmpersandName)), mAmpersandName);
+    }
+
     void test_ampersandSurvivesAPrefix()
     {
         TTabBar bar(nullptr);
