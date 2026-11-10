@@ -67,6 +67,8 @@ bool THeadlessSession::mapPointer(const MapPointerEvent& event)
         mErrorString = tr("The map has not been drawn yet; the position is in what renderMap() drew.");
         return false;
     }
+    // Before the press, as what it raises may ask getMousePosition()
+    noteMapPointer(event.position);
     switch (event.type) {
     case MapPointerEvent::Type::press:
         pView->press(event.position.toPoint(), event.button, event.modifiers);

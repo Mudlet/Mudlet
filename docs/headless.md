@@ -724,7 +724,10 @@ GUI's preference sets it. What the GUI does with a right press, a drag or a rele
 rooms and labels and sizing a selection, stays the GUI's. It is false, with the reason in
 `errorString()`, before the map is drawn, for a double-click of another button, for less than half a
 notch of the wheel and for a wheel turn on a map whose last draw showed no area, as one with no rooms
-does, and it is refused where `renderMap()` is.
+does, and it is refused where `renderMap()` is. Once the map is drawn, and while its window is `shown`,
+`getMousePosition()` follows each `mapPointer()` call, even one the map does nothing for: the `position`
+is taken as that point of the `mapper` window among `scriptWindows()`, which the GUI's map fills from its
+top left, so the app draws the map at that window's size for the two to agree.
 
 ## Embedding it: the windows scripts make
 
@@ -871,8 +874,8 @@ for a hidden window, as Qt sends one to a widget that hides under the pointer. O
 a held button's press went through has gone, a press, move or release while the button is held, or an
 `enter` or a `leave`, naming it is still taken until the grab ends, and any other event naming it is
 refused. `getMousePosition()`
-answers with the last point a `pointer()` call took, in the main window's area, other than a `leave`'s,
-whether or not a window ran anything for it, as for the moves of a grab Qt has dropped, from where the
+answers with the last point a `pointer()` or `mapPointer()` call took, in the main window's area, other
+than a `leave`'s, whether or not a window ran anything for it, as for the moves of a grab Qt has dropped, from where the
 window was at the press if it has gone since, and with nil and
 "the profile has no main window" until the first.
 
