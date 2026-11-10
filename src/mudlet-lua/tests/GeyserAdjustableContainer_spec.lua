@@ -3114,6 +3114,36 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       assert.are.equal(30, container:get_y())
     end)
 
+    it("creates every missing directory in the path it is given", function()
+      local container = make("gapSaveNested", {x = 20, y = 30})
+      local dir = scratchDir .. "nested/deeper/"
+      -- the after_each only empties the scratch directory itself
+      finally(function()
+        os.remove(dir .. "gapSaveNested.lua")
+        lfs.rmdir(scratchDir .. "nested/deeper")
+        lfs.rmdir(scratchDir .. "nested")
+      end)
+      assert.is_true(container:save(nil, dir))
+      assert.is_true(io.exists(dir .. "gapSaveNested.lua"))
+
+      container:move(300, 400)
+      container:load(nil, dir)
+      assert.are.equal(20, container:get_x())
+    end)
+
+    it("reports settings it could not write rather than claim to have saved them", function()
+      local container = make("gapSaveBlocked")
+      lfs.mkdir(scratchDir)
+      local blocker = scratchDir .. "notADirectory"
+      local file = io.open(blocker, "w")
+      file:write("")
+      file:close()
+
+      local ok, message = container:save(nil, blocker .. "/sub/")
+      assert.is_nil(ok)
+      assert.is_truthy(message:find("couldn't save settings", 1, true))
+    end)
+
     it("keeps a slot apart from the settings saved without one", function()
       local container = make("gapSlots", {x = 20, y = 30})
       container:save(nil, scratchDir)
