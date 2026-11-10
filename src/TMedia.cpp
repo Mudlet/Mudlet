@@ -1849,8 +1849,8 @@ void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
                     reservation.reserve(lockedPlayer);
                     lockedPlayer->mediaPlayer()->stop();
                 }
-                // Media the handler plays under this key replaces the loop. A finish at or before
-                // the start would cycle through empty passes, forever with loops = -1.
+                // An end is a fade-away stop, and media the handler plays under this key replaces the
+                // loop. A finish at or before the start would cycle through empty passes forever.
                 if (!endUsed && finishPosition > startPosition && lockedPlayer->claimGeneration() == claimedAt && !keyClaimedSince(lockedPlayer, lastClaim)) {
                     playNextPass(lockedPlayer);
                 }
@@ -1887,7 +1887,7 @@ void TMedia::purgeStoppedMediaPlayers(QList<std::shared_ptr<TMediaPlayer>>& medi
     mediaList.erase(std::remove_if(mediaList.begin(),
                                    mediaList.end(),
                                    [](const std::shared_ptr<TMediaPlayer>& player) {
-                                       // A reserved player is stopped only while a script handler runs.
+                                       // Reserved: owned by a request still in progress, so stopped without being finished.
                                        return player->getPlaybackState() == QMediaPlayer::StoppedState && !player->reservedForPlay();
                                    }),
                     mediaList.end());
@@ -1988,7 +1988,7 @@ std::shared_ptr<TMediaPlayer> TMedia::getMediaPlayer(TMediaData& mediaData)
         }
 
         if (existingPlayer->reservedForPlay()) {
-            continue; // Another play() call is setting this one up
+            continue; // Owned by a request in progress - see TMediaPlayer::reservedForPlay()
         }
 
         if (existingPlayer->getPlaybackState() != QMediaPlayer::PlayingState && existingPlayer->mediaPlayer()->mediaStatus() != QMediaPlayer::LoadingMedia) {
