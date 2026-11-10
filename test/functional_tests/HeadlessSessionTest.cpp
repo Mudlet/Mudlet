@@ -5942,7 +5942,7 @@ registerAnonymousEventHandler("sysLoadEvent", function() feedTriggers("fed by sy
         QVERIFY(!session.runLua(qsl("error('headless failure')")));
         QCOMPARE(session.errorString(), qsl(R"lua([string "error('headless failure')"]:1: headless failure)lua"));
         QVERIFY(!session.runLua(qsl("error({})")));
-        QCOMPARE(session.errorString(), qsl("no error message available from Lua"));
+        QCOMPARE(session.errorString(), qsl("error object is a table value"));
         QVERIFY(!session.runLua(QString()));
         QVERIFY(!session.errorString().contains(qsl("headless failure")));
     }

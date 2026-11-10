@@ -3774,6 +3774,15 @@ int TLuaInterpreter::getProcessID(lua_State* L)
     return 1;
 }
 
+// error() can raise any value or none; only a string or a number has text to report
+static std::string luaErrorText(lua_State* L)
+{
+    if (lua_isstring(L, -1)) {
+        return lua_tostring(L, -1);
+    }
+    return std::string("error object is a ") + luaL_typename(L, -1) + " value";
+}
+
 // No documentation available in wiki - internal function
 bool TLuaInterpreter::compileAndExecuteScript(const QString& code)
 {
@@ -3786,11 +3795,7 @@ bool TLuaInterpreter::compileAndExecuteScript(const QString& code)
 
     const int error = luaL_dostring(L, code.toUtf8().constData());
     if (error) {
-        std::string e = "no error message available from Lua";
-        if (lua_isstring(L, -1)) {
-            e = "Lua error:";
-            e += lua_tostring(L, -1);
-        }
+        std::string e = "Lua error:" + luaErrorText(L);
         if (TDebug::smDebugMode) {
             qDebug() << "LUA ERROR: code did not compile: ERROR:" << e.c_str();
         }
@@ -3874,11 +3879,7 @@ bool TLuaInterpreter::compile(const QString& code, QString& errorMsg, const QStr
         // is how a failure came to be reported as the script's own name.
         // A load can also fail for want of memory, which is no syntax error
         std::string e = loadStatus == LUA_ERRSYNTAX ? "Lua syntax error:" : "Lua error:";
-        if (lua_isstring(L, -1)) {
-            e.append(lua_tostring(L, -1));
-        } else {
-            e.append("error object is a ").append(luaL_typename(L, -1)).append(" value");
-        }
+        e.append(luaErrorText(L));
         errorMsg = qsl("<b>%1</b>").arg(QString::fromStdString(e).toHtmlEscaped());
         if (TDebug::wants(TDebug::Category::Error)) {
             auto& host = getHostFromLua(L);
@@ -4636,22 +4637,14 @@ void TLuaInterpreter::parseJSON(QString& key, const QByteArray& utf8Data, const 
             }
             lua_pushstring(L, tokenList.at(i).toUtf8().constData());
             if (lua_pcall(L, 2, 0, 0)) {
-                std::string e;
-                if (lua_isstring(L, -1)) {
-                    e = "GMCP merge error: ";
-                    e += lua_tostring(L, -1);
-                }
+                std::string e = "GMCP merge error: " + luaErrorText(L);
                 const QString _n = qsl("GMCP merge");
                 const QString _f = qsl("__gmcp_merge_gmcp_sub_tables");
                 logError(e, _n, _f);
             }
         }
     } else {
-        std::string e;
-        if (lua_isstring(L, -1)) {
-            e = "could not decode " + protocol.toStdString() + "." + key.toStdString() + " - any previous value is kept: ";
-            e += lua_tostring(L, -1);
-        }
+        std::string e = "could not decode " + protocol.toStdString() + "." + key.toStdString() + " - any previous value is kept: " + luaErrorText(L);
         const QString _n = "JSON decoder error:";
         const QString _f = "json_to_value";
         logError(e, _n, _f);
@@ -5932,17 +5925,13 @@ bool TLuaInterpreter::call_luafunction(const int functionRef, const QString& ite
         }
         const int error = lua_pcall(L, 0, LUA_MULTRET, 0);
         if (error) {
-            std::string e = "";
-            if (lua_isstring(L, -1)) {
-                e = "Lua error:";
-                e += lua_tostring(L, -1);
-                const QString _n = "error in anonymous Lua function";
-                const QString _n2 = "no debug data available";
-                logError(e, _n, _n2);
-                if (TDebug::wants(TDebug::Category::Error)) {
-                    auto& host = getHostFromLua(L);
-                    TDebug(Qt::white, Qt::red, TDebug::Category::Error, itemName) << "LUA: ERROR running anonymous Lua function ERROR:" << e.c_str() >> &host;
-                }
+            std::string e = "Lua error:" + luaErrorText(L);
+            const QString _n = "error in anonymous Lua function";
+            const QString _n2 = "no debug data available";
+            logError(e, _n, _n2);
+            if (TDebug::wants(TDebug::Category::Error)) {
+                auto& host = getHostFromLua(L);
+                TDebug(Qt::white, Qt::red, TDebug::Category::Error, itemName) << "LUA: ERROR running anonymous Lua function ERROR:" << e.c_str() >> &host;
             }
         } else {
             if (TDebug::wants(TDebug::Category::LuaSuccess)) {
@@ -6014,17 +6003,13 @@ std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(const int funct
         }
         const int error = lua_pcall(L, 0, LUA_MULTRET, 0);
         if (error) {
-            std::string e = "";
-            if (lua_isstring(L, -1)) {
-                e = "Lua error:";
-                e += lua_tostring(L, -1);
-                const QString _n = "error in anonymous Lua function";
-                const QString _n2 = "no debug data available";
-                logError(e, _n, _n2);
-                if (TDebug::wants(TDebug::Category::Error)) {
-                    auto& host = getHostFromLua(L);
-                    TDebug(Qt::white, Qt::red, TDebug::Category::Error, itemName) << "LUA: ERROR running anonymous Lua function ERROR:" << e.c_str() >> &host;
-                }
+            std::string e = "Lua error:" + luaErrorText(L);
+            const QString _n = "error in anonymous Lua function";
+            const QString _n2 = "no debug data available";
+            logError(e, _n, _n2);
+            if (TDebug::wants(TDebug::Category::Error)) {
+                auto& host = getHostFromLua(L);
+                TDebug(Qt::white, Qt::red, TDebug::Category::Error, itemName) << "LUA: ERROR running anonymous Lua function ERROR:" << e.c_str() >> &host;
             }
         } else {
             if (lua_gettop(L) > callerStackTop && lua_isboolean(L, -1)) {
@@ -6070,14 +6055,11 @@ bool TLuaInterpreter::call(const QString& function, const QString& mName, const 
     lua_getglobal(L, function.toUtf8().constData());
     const int error = lua_pcall(L, 0, LUA_MULTRET, 0);
     if (error) {
-        std::string e = "";
-        if (lua_isstring(L, -1)) {
-            e += lua_tostring(L, -1);
-            logError(e, mName, function);
-            if (TDebug::wants(TDebug::Category::Error)) {
-                auto& host = getHostFromLua(L);
-                TDebug(Qt::white, Qt::red, TDebug::Category::Error, mName) << "LUA ERROR: when running script " << mName << " (" << function << "),\nreason: " << e.c_str() << "\n" >> &host;
-            }
+        std::string e = luaErrorText(L);
+        logError(e, mName, function);
+        if (TDebug::wants(TDebug::Category::Error)) {
+            auto& host = getHostFromLua(L);
+            TDebug(Qt::white, Qt::red, TDebug::Category::Error, mName) << "LUA ERROR: when running script " << mName << " (" << function << "),\nreason: " << e.c_str() << "\n" >> &host;
         }
     } else {
         if (TDebug::wants(TDebug::Category::LuaSuccess) && !muteDebugOutput) {
@@ -6111,14 +6093,11 @@ std::pair<bool, bool> TLuaInterpreter::callReturnBool(const QString& function, c
     lua_getglobal(L, function.toUtf8().constData());
     const int error = lua_pcall(L, 0, LUA_MULTRET, 0);
     if (error) {
-        std::string e = "";
-        if (lua_isstring(L, -1)) {
-            e += lua_tostring(L, -1);
-            logError(e, mName, function);
-            if (TDebug::wants(TDebug::Category::Error)) {
-                auto& host = getHostFromLua(L);
-                TDebug(Qt::white, Qt::red, TDebug::Category::Error, mName) << "LUA: ERROR running script " << mName << " (" << function << ") ERROR:" << e.c_str() << "\n" >> &host;
-            }
+        std::string e = luaErrorText(L);
+        logError(e, mName, function);
+        if (TDebug::wants(TDebug::Category::Error)) {
+            auto& host = getHostFromLua(L);
+            TDebug(Qt::white, Qt::red, TDebug::Category::Error, mName) << "LUA: ERROR running script " << mName << " (" << function << ") ERROR:" << e.c_str() << "\n" >> &host;
         }
     } else {
         if (lua_gettop(L) > callerStackTop && lua_isboolean(L, -1)) {
@@ -6209,15 +6188,12 @@ bool TLuaInterpreter::callConditionFunction(std::string& function, const QString
     lua_getfield(L, LUA_GLOBALSINDEX, function.c_str());
     const int error = lua_pcall(L, 0, 1, 0);
     if (error) {
-        std::string e = "";
-        if (lua_isstring(L, -1)) {
-            e += lua_tostring(L, -1);
-            const QString _f = function.c_str();
-            logError(e, mName, _f);
-            if (TDebug::wants(TDebug::Category::Error)) {
-                auto& host = getHostFromLua(L);
-                TDebug(Qt::white, Qt::red, TDebug::Category::Error, mName) << "LUA: ERROR running script " << mName << " (" << function.c_str() << ") ERROR:" << e.c_str() << "\n" >> &host;
-            }
+        std::string e = luaErrorText(L);
+        const QString _f = function.c_str();
+        logError(e, mName, _f);
+        if (TDebug::wants(TDebug::Category::Error)) {
+            auto& host = getHostFromLua(L);
+            TDebug(Qt::white, Qt::red, TDebug::Category::Error, mName) << "LUA: ERROR running script " << mName << " (" << function.c_str() << ") ERROR:" << e.c_str() << "\n" >> &host;
         }
     } else {
         if (TDebug::wants(TDebug::Category::LuaSuccess)) {
@@ -6258,14 +6234,11 @@ bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
     lua_getglobal(L, function.toUtf8().constData());
     const int error = lua_pcall(L, 0, LUA_MULTRET, 0);
     if (error) {
-        std::string e = "";
-        if (lua_isstring(L, -1)) {
-            e += lua_tostring(L, -1);
-            logError(e, mName, function);
-            if (TDebug::wants(TDebug::Category::Error)) {
-                auto& host = getHostFromLua(L);
-                TDebug(Qt::white, Qt::red, TDebug::Category::Error, mName) << "LUA: ERROR running script " << mName << " (" << function << ") ERROR:" << e.c_str() << "\n" >> &host;
-            }
+        std::string e = luaErrorText(L);
+        logError(e, mName, function);
+        if (TDebug::wants(TDebug::Category::Error)) {
+            auto& host = getHostFromLua(L);
+            TDebug(Qt::white, Qt::red, TDebug::Category::Error, mName) << "LUA: ERROR running script " << mName << " (" << function << ") ERROR:" << e.c_str() << "\n" >> &host;
         }
     } else {
         if (TDebug::wants(TDebug::Category::LuaSuccess)) {
@@ -6301,14 +6274,11 @@ std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& functi
     lua_getglobal(L, function.toUtf8().constData());
     const int error = lua_pcall(L, 0, LUA_MULTRET, 0);
     if (error) {
-        std::string e = "";
-        if (lua_isstring(L, -1)) {
-            e += lua_tostring(L, -1);
-            logError(e, mName, function);
-            if (TDebug::wants(TDebug::Category::Error)) {
-                auto& host = getHostFromLua(L);
-                TDebug(Qt::white, Qt::red, TDebug::Category::Error, mName) << "LUA: ERROR running script " << mName << " (" << function << ") ERROR:" << e.c_str() << "\n" >> &host;
-            }
+        std::string e = luaErrorText(L);
+        logError(e, mName, function);
+        if (TDebug::wants(TDebug::Category::Error)) {
+            auto& host = getHostFromLua(L);
+            TDebug(Qt::white, Qt::red, TDebug::Category::Error, mName) << "LUA: ERROR running script " << mName << " (" << function << ") ERROR:" << e.c_str() << "\n" >> &host;
         }
     } else {
         if (lua_gettop(L) > callerStackTop && lua_isboolean(L, -1)) {
@@ -6339,12 +6309,7 @@ bool TLuaInterpreter::callReference(lua_State* L, QString name, int parameters)
     int error = 0;
     error = lua_pcall(L, parameters, LUA_MULTRET, 0);
     if (error) {
-        std::string err = "";
-        if (lua_isstring(L, -1)) {
-            err += lua_tostring(L, -1);
-        } else {
-            err.append("error object is a ").append(luaL_typename(L, -1)).append(" value");
-        }
+        std::string err = luaErrorText(L);
         logError(err, name, qsl("anonymous Lua function"));
         if (TDebug::wants(TDebug::Category::Error)) {
             auto& host = getHostFromLua(L);
@@ -6620,11 +6585,7 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
         error = lua_pcall(L, 0, LUA_MULTRET, 0);
     }
     if (error) {
-        std::string err;
-        if (lua_isstring(L, -1)) {
-            err = "Lua error: ";
-            err += lua_tostring(L, -1);
-        }
+        std::string err = "Lua error: " + luaErrorText(L);
         const QString name = "event handler function";
         logError(err, name, function);
 
@@ -6690,10 +6651,7 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
     }
 
     if (error) {
-        std::string err = "";
-        if (lua_isstring(L, -1)) {
-            err += lua_tostring(L, -1);
-        }
+        std::string err = luaErrorText(L);
         const QString name = "event handler function";
         logError(err, name, function);
         if (TDebug::wants(TDebug::Category::Error)) {
@@ -6797,15 +6755,12 @@ double TLuaInterpreter::condenseMapLoad()
     lua_getfield(L, LUA_GLOBALSINDEX, "condenseMapLoad");
     const int error = lua_pcall(L, 0, 1, 0);
     if (error) {
-        std::string e = "";
-        if (lua_isstring(L, -1)) {
-            e += lua_tostring(L, -1);
-            const QString _f = luaFunction.toUtf8().constData();
-            logError(e, luaFunction, _f);
-            if (TDebug::wants(TDebug::Category::Error)) {
-                auto& host = getHostFromLua(L);
-                TDebug(Qt::white, Qt::red, TDebug::Category::Error) << "LUA: ERROR running " << luaFunction << " ERROR:" << e.c_str() << "\n" >> &host;
-            }
+        std::string e = luaErrorText(L);
+        const QString _f = luaFunction.toUtf8().constData();
+        logError(e, luaFunction, _f);
+        if (TDebug::wants(TDebug::Category::Error)) {
+            auto& host = getHostFromLua(L);
+            TDebug(Qt::white, Qt::red, TDebug::Category::Error) << "LUA: ERROR running " << luaFunction << " ERROR:" << e.c_str() << "\n" >> &host;
         }
     } else {
         if (TDebug::wants(TDebug::Category::LuaSuccess)) {
