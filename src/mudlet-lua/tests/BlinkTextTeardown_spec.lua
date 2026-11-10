@@ -21,7 +21,9 @@ describe("Deleting the last console showing blinking text", function()
     assert.is_true(pumpEvents(300))
 
     -- The deferred delete only runs inside pumpEvents() when it was posted from that loop
-    tempTimer(0, function() deleteMiniConsole(name) end)
+    local deleted
+    tempTimer(0, function() deleted = deleteMiniConsole(name) end)
     assert.is_true(pumpEvents(300))
+    assert.is_true(deleted)
   end)
 end)
