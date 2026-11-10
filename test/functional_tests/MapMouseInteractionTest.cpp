@@ -1233,18 +1233,19 @@ private slots:
         QVERIFY2(remaining.contains(pViewMap->mMultiSelectionHighlightRoomId), "the view's highlight is still the deleted room");
     }
 
-    // A view opened on an area is never centred on a room, so it has no mRoomID
-    // to go by; editing in it must still work off the area it shows.
-    void test_draggingInASecondaryViewSelectsAndMovesRooms_data()
+    // A view opened on an area has no mRoomID until a script centres it on a
+    // room; editing in it must still work off the area it shows.
+    void test_aSecondaryViewSelectsAndMovesRooms_data()
     {
-        QTest::addColumn<bool>("moveARoom");
-        QTest::newRow("select") << false;
-        QTest::newRow("move") << true;
+        QTest::addColumn<QString>("action");
+        QTest::newRow("select") << qsl("select");
+        QTest::newRow("shift-click") << qsl("shift-click");
+        QTest::newRow("move") << qsl("move");
     }
 
-    void test_draggingInASecondaryViewSelectsAndMovesRooms()
+    void test_aSecondaryViewSelectsAndMovesRooms()
     {
-        QFETCH(bool, moveARoom);
+        QFETCH(QString, action);
         buildMap();
         showMapper(false);
         const auto [viewId, error] = mpHost->createMapView(mAreaId);
@@ -1263,9 +1264,17 @@ private slots:
         renderFrame();
         QVERIFY(!map()->mpRoomDB->getRoom(mp2dMap->mRoomID));
 
-        if (!moveARoom) {
+        if (action == qsl("select")) {
             dragFromTo(pointUnitsFromCentre(-1.5, 1.5), pointUnitsFromCentre(0.5, -0.5));
             const QSet<int> expected{kNorthWestRoomId, kNorthRoomId, kWestRoomId, kPlayerRoomId};
+            QCOMPARE(mp2dMap->mMultiSelectionSet, expected);
+            return;
+        }
+
+        if (action == qsl("shift-click")) {
+            clickAt(pointUnitsFromCentre(-1, 0));
+            clickAt(pointUnitsFromCentre(1, 0), Qt::ShiftModifier);
+            const QSet<int> expected{kWestRoomId, kEastRoomId};
             QCOMPARE(mp2dMap->mMultiSelectionSet, expected);
             return;
         }
