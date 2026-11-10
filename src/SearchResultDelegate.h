@@ -44,7 +44,8 @@ class SearchResultDelegate : public QStyledItemDelegate
     Q_OBJECT
 
 public:
-    enum RowKind { ItemRow = 0, MatchRow = 1, NoticeRow = 2 };
+    // An ActionRow is a notice that does something when clicked
+    enum RowKind { ItemRow = 0, MatchRow = 1, NoticeRow = 2, ActionRow = 3 };
 
     // Clear of dlgTriggerEditor's private navigation roles, which start at
     // Qt::UserRole, so one added there needs nothing here.
@@ -84,6 +85,7 @@ private:
     QColor mSelectedText;
     QColor mMarkerColor;
     QColor mMarkerText;
+    QColor mActionColor;
 
     QFont mNameFont;
     QFont mChipFont;

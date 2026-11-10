@@ -3088,6 +3088,16 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
         return;
     }
 
+    if (pItem->data(0, uiDesign::SearchResultDelegate::RowKindRole).toInt() == uiDesign::SearchResultDelegate::ActionRow) {
+        mpAction_searchIncludeVariables->setChecked(true);
+        slot_toggleSearchIncludeVariables(true);
+        // Deferred: searching again clears the tree, and with it the row whose click is still being handled
+        QTimer::singleShot(0ms, this, [this]() {
+            slot_searchMudletItems(comboBox_searchTerms->findText(mSearchTerm, Qt::MatchFixedString | Qt::MatchCaseSensitive));
+        });
+        return;
+    }
+
     // Showing the item's view rebuilds stale trees, which would free the items found below
     if (mNeedUpdateData) {
         saveOpenChanges();
@@ -3623,7 +3633,8 @@ void dlgTriggerEditor::slot_searchMudletItems(const int index)
         }
     }
 
-    if (!treeWidget_searchResults->topLevelItemCount()) {
+    const bool noMatches = !treeWidget_searchResults->topLevelItemCount();
+    if (noMatches) {
         //: Shown in place of search results when a search found nothing: %1 is what was typed into the search field, in the quotation marks the locale uses
         auto* pNotice = new QTreeWidgetItem(QStringList{tr("No matches for %1").arg(QLocale().quoteString(s))});
         pNotice->setData(0, uiDesign::SearchResultDelegate::RowKindRole, static_cast<int>(uiDesign::SearchResultDelegate::NoticeRow));
@@ -3631,6 +3642,18 @@ void dlgTriggerEditor::slot_searchMudletItems(const int index)
         pNotice->setData(0, Qt::AccessibleTextRole, pNotice->text(0));
         pNotice->setFlags(Qt::ItemIsEnabled);
         treeWidget_searchResults->addTopLevelItem(pNotice);
+    }
+
+    // Variables are left out unless asked for, which reads as "not found" to someone looking for one
+    if (!(mSearchOptions & enums::EditorSearchOptionIncludeVariables) && (noMatches || mCurrentView == EditorViewType::cmVarsView)) {
+        //: Clickable last row of the editor's search results when variables were left out of the search; clicking it turns on "Include variables" and searches again
+        auto* pOffer = new QTreeWidgetItem(QStringList{tr("Search variables too")});
+        pOffer->setData(0, uiDesign::SearchResultDelegate::RowKindRole, static_cast<int>(uiDesign::SearchResultDelegate::ActionRow));
+        pOffer->setData(0, uiDesign::SearchResultDelegate::TitleRole, pOffer->text(0));
+        pOffer->setData(0, Qt::AccessibleTextRole, pOffer->text(0));
+        pOffer->setToolTip(0, mpAction_searchIncludeVariables->toolTip());
+        pOffer->setFlags(Qt::ItemIsEnabled);
+        treeWidget_searchResults->addTopLevelItem(pOffer);
     }
 
     mpSourceEditorEdbee->controller()->textSearcher()->setSearchTerm(s);
