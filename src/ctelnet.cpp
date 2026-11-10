@@ -1265,9 +1265,8 @@ void cTelnet::slot_socketDisconnected()
     qDebug().noquote() << "cTelnet::slot_socketDisconnected() INFO - called.";
 #endif
 #if !defined(QT_NO_SSL)
-    // A secure attempt that failed its handshake: the other address family's attempt is to the
-    // same game, port and certificate so would fail the same way, and left running it would be
-    // reported as a second disconnection
+    // A failed handshake would fail the same way on the other address family's attempt to the same
+    // game, which would then be reported as a second disconnection; a mere drop may be one path's fault
     if (!mpSocket && mSslHandshakeFailed && mPendingConnectionAttempts > 1) {
         abortLosingSocket(sender() == &mSocket_ipV4 ? &mSocket_ipV6 : &mSocket_ipV4);
     }
