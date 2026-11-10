@@ -638,6 +638,30 @@ private slots:
         QVERIFY(!pRetry);
     }
 
+    // closeProfile() from a script has to reach a profile that is not in the main window's tab bar
+    void test_closeProfileClosesADetachedProfile()
+    {
+        startThirdProfile();
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        mudlet::self()->slot_tabDetachRequested(mudlet::self()->mpTabBar->tabIndex(mThirdHostname), QPoint(200, 200));
+        QPointer<TDetachedWindow> pWindow = mudlet::self()->getDetachedWindows().value(mThirdHostname);
+        QVERIFY2(pWindow, "the third profile did not detach, so this case would close it from the main window");
+
+        Host* pFirstHost = HostManager::self()->getHost(mFirstHostname);
+        QVERIFY(pFirstHost);
+        QVERIFY(pFirstHost->getLuaInterpreter()->compileAndExecuteScript(qsl("closeProfile('%1')").arg(mThirdHostname)));
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return HostManager::self()->getHost(mThirdHostname) == nullptr;
+                         },
+                         10s),
+                 "closeProfile() left the detached profile open");
+        QTRY_VERIFY2(!pWindow, "the detached window was left open with no profile in it");
+        deleteProfileDirectory(mThirdHostname);
+    }
+
 private:
     // init() detached the second profile, so this puts it back to open its map in the main window
     QDockWidget* showSecondProfilesMapDock()
