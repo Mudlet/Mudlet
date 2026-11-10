@@ -165,7 +165,7 @@ public:
     // As TMainConsole::openPasswordEntry(): a line typed ahead of the prompt that opens the box goes into it. True
     // if it took one.
     bool hiddenInputOpened();
-    // As TCommandLine::enterCommand() empties an unwritten line behind the box, the empty line a send could not report
+    // As TCommandLine::enterCommand() empties a line no script wrote to behind the box, the empty line a send could not report
     void hiddenInputClosed();
     bool ownsContainer(const QString& windowname) const;
     bool subConsoleShown(const QString& name) const;
@@ -614,7 +614,7 @@ private:
     // Unlike mMainCommandLineAllSelected, not set by a completion
     bool mMainCommandLineWhollySelected = false;
     // Whether anything, the frontend's own clear included, wrote to the main line since a send last held it; then
-    // mainCommandLineSent() leaves the line as it is
+    // addMainCommandLineHistory() records the line as it is and mainCommandLineSent() leaves it
     bool mMainCommandLineRewritten = false;
     // A send emptied the line while hidden input was wanted, which the app has not been told
     bool mMainCommandLineClearPending = false;

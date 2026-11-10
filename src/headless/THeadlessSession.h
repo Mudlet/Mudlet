@@ -158,8 +158,9 @@ public:
     // lineShown, mainConsoleCleared, localText, errorConsoleText, debugText, hiddenInputWanted or a ...Requested
     // signal but quitRequested and mainWindowResizeRequested, which run mid-write, and fail once a close of the
     // profile has begun; submit() checks each line of a paste as a call. It is the app's input line being sent: the
-    // main command line holds the line while its aliases run, then is emptied or kept as the profile says. A command
-    // from elsewhere, such as a button, goes through runLua() and expandAlias(), which leave the line alone.
+    // main command line holds the line while its aliases run, then is emptied or kept as the profile says, unless
+    // something wrote to it meanwhile, which is left as written. A command from elsewhere, such as a button, goes
+    // through runLua() and expandAlias(), which leave the line alone.
     bool submit(const QString& line);
     // As the GUI's hidden-input box sends what is typed into it while hiddenInputWanted holds: straight to the
     // game, with its carriage returns and line feeds taken out, and no aliases, command separator,

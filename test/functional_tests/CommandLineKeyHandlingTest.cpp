@@ -521,11 +521,12 @@ private slots:
         QCOMPARE(selection(pCommandLine), autoClear ? QString() : qsl("250"));
     }
 
-    // As does a one-shot field whose action hands the line back to the game
+    // As does a one-shot field whose action resets itself before writing its value back
     void test_anActionFieldThatResetsItselfKeepsItsValueSelected()
     {
         TCommandLine* pCommandLine = freshCommandLine();
         QVERIFY(pCommandLine);
+        mpHost->mAutoClearCommandLineAfterSend = false;
         QVERIFY(runLua(qsl("setCmdLineAction('%1', function(text) resetCmdLineAction('%1') printCmdLine('%1', text .. '0') end)").arg(mLineName)));
 
         type(pCommandLine, qsl("25"));
