@@ -1455,9 +1455,9 @@ private slots:
         QVERIFY2(menu.isNull(), "the menu did not delete itself on closing");
     }
 
-    // A link with one command has no menu of its own, so a right click on it
-    // has to give the console's menu rather than nothing, while a popup link
-    // still gives its own
+    // A link that doesn't opensMenu() (one command and no menu title) has no
+    // menu of its own, so a right click on it has to give the console's menu,
+    // while a popup link still gives its own
     void test_aRightClickOnALinkWithoutAMenuGivesTheConsolesMenu()
     {
         mpServer->setWelcomeMessage(qsl("menu test\r\n"));
