@@ -4929,4 +4929,50 @@ describe("Tests one-shot event handlers", function()
 
     assert.are.same({"otherSpecOneShotArgs", "first", 2}, received)
   end)
+
+  describe("registered by name alongside a handler that stays", function()
+    after_each(function()
+      _G.otherSpecOneShotByName = nil
+    end)
+
+    it("still hands back the ID of the handler that stays when that is registered again", function()
+      local calls = 0
+      _G.otherSpecOneShotByName = function() calls = calls + 1 end
+      local first = registerAnonymousEventHandler("otherSpecOneShotByName", "otherSpecOneShotByName")
+      local second = registerAnonymousEventHandler("otherSpecOneShotByName", "otherSpecOneShotByName")
+      raiseEvent("otherSpecOneShotByName")
+      killAnonymousEventHandler(first)
+
+      assert.are.equal(first, second)
+      assert.are.equal(1, calls)
+    end)
+
+    it("runs once more than the handler that stays, and killing it leaves that one", function()
+      local calls = 0
+      _G.otherSpecOneShotByName = function() calls = calls + 1 end
+      local staying = registerAnonymousEventHandler("otherSpecOneShotByName", "otherSpecOneShotByName")
+      local once = registerAnonymousEventHandler("otherSpecOneShotByName", "otherSpecOneShotByName", true)
+      raiseEvent("otherSpecOneShotByName")
+      raiseEvent("otherSpecOneShotByName")
+      local onceStillThere = killAnonymousEventHandler(once)
+      local stayingStillThere = killAnonymousEventHandler(staying)
+
+      assert.are_not.equal(staying, once)
+      assert.are.equal(3, calls)
+      assert.is_nil(onceStillThere)
+      assert.is_true(stayingStillThere)
+    end)
+
+    it("lets killing a pending one-shot leave the handler that stays", function()
+      local calls = 0
+      _G.otherSpecOneShotByName = function() calls = calls + 1 end
+      local staying = registerAnonymousEventHandler("otherSpecOneShotByName", "otherSpecOneShotByName")
+      local once = registerAnonymousEventHandler("otherSpecOneShotByName", "otherSpecOneShotByName", true)
+      killAnonymousEventHandler(once)
+      raiseEvent("otherSpecOneShotByName")
+      killAnonymousEventHandler(staying)
+
+      assert.are.equal(1, calls)
+    end)
+  end)
 end)
