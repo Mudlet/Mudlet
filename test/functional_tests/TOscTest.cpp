@@ -1619,6 +1619,28 @@ private slots:
     QVERIFY(!console->buffer.isLinkVisited(std::get<2>(*pos)));
   }
 
+  // The caret can still land on a note, where the Menu key opens what it would on any other text
+  void test_Osc8TheMenuKeyOnANoteOpensTheConsolesMenu() {
+    injectData(qsl("\x1b]8;;local:?config={\"tooltip\":\"Note\"}\x1b\\Word\x1b]8;;\x1b\\"));
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY(pos.has_value());
+    auto [line, col, linkId] = *pos;
+    TTextEdit *pane = console->mUpperPane;
+    for (QMenu *stale : pane->findChildren<QMenu *>()) {
+      delete stale;
+    }
+    mpHost->setCaretEnabled(true);
+    const auto caretOff = qScopeGuard([this] { mpHost->setCaretEnabled(false); });
+    pane->setCaretPosition(line, col);
+    QCOMPARE(console->buffer.getFocusedLink(), linkId);
+
+    QTest::keyClick(pane, Qt::Key_Menu);
+    const auto closeMenu = qScopeGuard([&] { if (QMenu *open = pane->findChild<QMenu *>()) { open->close(); } });
+    QVERIFY2(!console->buffer.isLinkVisited(linkId), "the Menu key activated the note");
+    QVERIFY2(pane->findChild<QMenu *>(), "the Menu key on a note opened no menu");
+  }
+
   void test_Osc8AMenuOfOnlySeparatorsLeavesTheLinksOwnAction() {
     injectData(qsl("\x1b]8;;send:look?config={\"menu\":[\"-\",{\"Nothing\":\"local:\"}]}\x1b\\Text\x1b]8;;\x1b\\"));
     QCOMPARE(findFirstLinkCommands(), QStringList(qsl("send(%1, false)").arg(LuaLiteral::quote(qsl("look")))));

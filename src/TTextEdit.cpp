@@ -4299,7 +4299,8 @@ void TTextEdit::showKeyboardContextMenu()
     }
 
     int focusedLink = mpBuffer->getFocusedLink();
-    if (focusedLink <= 0) {
+    // A note takes no keys, so the Menu key on one opens what it would on any other text
+    if (focusedLink <= 0 || mpBuffer->linkIsNote(focusedLink)) {
         // The central debug console builds its own menu in contextMenuEvent()
         if (!(mpConsole && mpConsole->getType() == TConsole::CentralDebugConsole)) {
             showContextMenu(caretGlobalPosition());
