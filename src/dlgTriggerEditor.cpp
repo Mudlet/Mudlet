@@ -3100,6 +3100,8 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
         // Deferred: searching again clears the tree, and with it the row whose click is still being handled
         QTimer::singleShot(0ms, this, [this]() {
             slot_searchMudletItems(comboBox_searchTerms->findText(mSearchTerm, Qt::MatchFixedString | Qt::MatchCaseSensitive));
+            // Restarted: the second click waits behind a slow search, which must not use up the window
+            mSearchVariablesOfferTaken.start();
         });
         return;
     }

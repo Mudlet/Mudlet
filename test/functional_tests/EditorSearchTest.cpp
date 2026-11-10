@@ -30,6 +30,7 @@
 #include <QTemporaryDir>
 #include <QTreeWidget>
 #include <QScopeGuard>
+#include <QThread>
 #include <QtTest/QtTest>
 #include <chrono>
 
@@ -907,6 +908,36 @@ private slots:
         QCoreApplication::processEvents();
         const QPoint pos = tree->visualItemRect(offer).center();
         QTest::mouseClick(tree->viewport(), Qt::LeftButton, Qt::NoModifier, pos);
+        QVERIFY(QTest::qWaitFor([this]() {
+            return topLevelResultFor(qsl("Variable")) != nullptr;
+        }));
+        QTreeWidgetItem* landed = tree->itemAt(pos);
+        QVERIFY2(landed && !isNotice(landed), "no result moved under the pointer, so this case tests nothing");
+
+        QTest::mouseClick(tree->viewport(), Qt::LeftButton, Qt::NoModifier, pos);
+        QCoreApplication::processEvents();
+        QCOMPARE(mpEditor->treeWidget_variables->currentItem(), mpEditor->treeWidget_variables->topLevelItem(0));
+    }
+
+    // A search slower than a double-click must not use up the window that swallows its second click
+    void test_aSlowVariableSearchStillSwallowsTheSecondClick()
+    {
+        const int savedInterval = QApplication::doubleClickInterval();
+        QApplication::setDoubleClickInterval(1000);
+        const auto restoreInterval = qScopeGuard([savedInterval]() {
+            QApplication::setDoubleClickInterval(savedInterval);
+        });
+        mpEditor->slot_showVariables();
+        search(mNeedle);
+        QTreeWidgetItem* offer = offerToSearchVariables();
+        QVERIFY(offer);
+        auto* tree = mpEditor->treeWidget_searchResults;
+        tree->scrollToItem(offer);
+        QCoreApplication::processEvents();
+        const QPoint pos = tree->visualItemRect(offer).center();
+        QTest::mouseClick(tree->viewport(), Qt::LeftButton, Qt::NoModifier, pos);
+        // Stands in for the search itself running longer than the interval
+        QThread::msleep(1200);
         QVERIFY(QTest::qWaitFor([this]() {
             return topLevelResultFor(qsl("Variable")) != nullptr;
         }));
