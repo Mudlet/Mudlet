@@ -26,9 +26,10 @@
 // it: what a word looks like and what a right-click offers are only visible
 // from the widget.
 //
-// Every word checked here is made up, so no system dictionary can know it -
-// the test binaries do not find Mudlet's bundled ones, and a machine that has
-// one installed must not change the outcome.
+// Most words checked here are made up, so no system dictionary can know them
+// and which one is installed cannot change the outcome. The few that are
+// common English words, or near misses of one, rely on any en_US dictionary
+// knowing "look", which init() already requires one to be there for.
 
 #include <QMenu>
 #include <QMouseEvent>
@@ -503,6 +504,22 @@ private slots:
         const QStringList entries = actionTexts(pMenu);
         closeMenu(pMenu);
         QCOMPARE(entries, standardEntries);
+    }
+
+    // The system dictionary's own suggestions are what the menu is for
+    void test_rightClickingANearMissOffersTheRealWord()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QTest::keyClicks(pCommandLine, qsl("lokk qzxother"));
+        QVERIFY(markedMisspelt(pCommandLine, qsl("lokk")));
+
+        QMenu* pMenu = rightClick(pCommandLine, qsl("lokk"));
+        QVERIFY2(pMenu, "right-clicking the command line opened no menu");
+        const QStringList entries = actionTexts(pMenu);
+        closeMenu(pMenu);
+        QVERIFY2(entries.contains(qsl("look")), qPrintable(entries.join(qsl(" | "))));
+        QVERIFY2(!entries.contains(TCommandLine::tr("no suggestions (system)")), qPrintable(entries.join(qsl(" | "))));
     }
 
     // Nothing is underlined without a dictionary, so nothing is offered either
