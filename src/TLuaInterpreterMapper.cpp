@@ -59,6 +59,7 @@
 #include <QCoreApplication>
 #include <QFileInfo>
 #include <QMovie>
+#include <QSet>
 #include <QStringEncoder>
 #include <QStringMatcher>
 #include <QVector>
@@ -3122,9 +3123,9 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
     auto& host = getHostFromLua(L);
     // Host is non-copyable and the lambda copies its captures.
     auto* pHost = &host;
-    // Shared, as each paint calls a copy of the callback; a failing callback fails on every paint, and may work
-    // for another view or room in between, so report only an error that differs from the last one reported
-    auto lastReportedError = std::make_shared<std::string>();
+    // Shared, as each paint calls a copy of the callback. Paints repeat, and views on different rooms take
+    // turns, so report each error text once; capped, for texts that change on every call
+    auto reportedErrors = std::make_shared<QSet<QString>>();
     host.mpMap->mMapInfoContributorManager->registerContributor(
             name,
             [=](int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor) {
@@ -3149,8 +3150,8 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
                     } else {
                         errorMessage.append("error object is a ").append(luaL_typename(L, -1)).append(" value");
                     }
-                    if (*lastReportedError != errorMessage) {
-                        *lastReportedError = errorMessage;
+                    if (const QString text = QString::fromStdString(errorMessage); reportedErrors->size() < 16 && !reportedErrors->contains(text)) {
+                        reportedErrors->insert(text);
                         pHost->getLuaInterpreter()->logError(errorMessage, qsl("map info '%1'").arg(name), qsl("anonymous Lua function"));
                     }
                     if (TDebug::wants(TDebug::Category::Map)) {

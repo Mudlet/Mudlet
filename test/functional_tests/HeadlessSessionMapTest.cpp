@@ -340,7 +340,7 @@ registerMapInfo("HeadlessFailing", function() error({}) end)
         }
         QCOMPARE(tableReports, 1);
 
-        // A callback that recovers and then fails again, say once GMCP arrives, has a new error to report
+        // A later error with different text is still reported, so one before GMCP arrives does not hide it
         QVERIFY(session.runLua(qsl(R"lua(
 headlessMapInfoMode = "early"
 registerMapInfo("HeadlessFailing", function()
@@ -381,6 +381,42 @@ end)
             roomReports += arguments.at(0).toString().contains(qsl("headless room failure"));
         }
         QCOMPARE(roomReports, 1);
+
+        // Two views on rooms that fail differently take turns, which must not report both on every paint
+        QVERIFY(session.runLua(qsl(R"lua(
+registerMapInfo("HeadlessFailing", function(roomID)
+  error("headless failure in room " .. roomID)
+end)
+)lua")));
+        for (int i = 0; i < 3; ++i) {
+            QVERIFY(session.runLua(qsl("centerview(1)")));
+            QVERIFY2(rendered(session), qPrintable(session.errorString()));
+            QVERIFY(session.runLua(qsl("centerview(2)")));
+            QVERIFY2(rendered(session), qPrintable(session.errorString()));
+        }
+        int alternatingReports = 0;
+        for (const QList<QVariant>& arguments : std::as_const(errors)) {
+            alternatingReports += arguments.at(0).toString().contains(qsl("headless failure in room"));
+        }
+        QCOMPARE(alternatingReports, 2);
+
+        // An error whose text changes on every call is not reported on every paint for ever
+        QVERIFY(session.runLua(qsl(R"lua(
+headlessChangingCalls = 0
+registerMapInfo("HeadlessFailing", function()
+  headlessChangingCalls = headlessChangingCalls + 1
+  error("headless changing failure " .. headlessChangingCalls)
+end)
+)lua")));
+        for (int i = 0; i < 20; ++i) {
+            QVERIFY2(rendered(session), qPrintable(session.errorString()));
+        }
+        QVERIFY(luaGlobalString(session.host(), "headlessChangingCalls").toInt() >= 20);
+        int changingReports = 0;
+        for (const QList<QVariant>& arguments : std::as_const(errors)) {
+            changingReports += arguments.at(0).toString().contains(qsl("headless changing failure"));
+        }
+        QVERIFY2(changingReports < 20, qPrintable(QString::number(changingReports)));
         QVERIFY(session.shutdown(false));
     }
 
