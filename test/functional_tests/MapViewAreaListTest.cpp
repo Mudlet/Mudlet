@@ -210,8 +210,8 @@ private slots:
         QCOMPARE(lowerView->getCurrentAreaId(), lower);
 
         // A view whose area goes falls back to the first listed, which the headless view must pick too
-        const int firstTwin = addAreaWithRoom(qsl("Aardvark"), 3);
-        const int secondTwin = addAreaWithRoom(qsl("aardvark"), 4);
+        const int firstTwin = addAreaWithRoom(qsl("aardvark"), 3);
+        const int secondTwin = addAreaWithRoom(qsl("Aardvark"), 4);
         const int doomed = addAreaWithRoom(qsl("Zulu"), 5);
         QVERIFY(firstTwin > 0 && secondTwin > 0 && doomed > 0);
         QPointer<TMapView> doomedView = openView(doomed);

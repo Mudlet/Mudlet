@@ -877,8 +877,8 @@ centerview(1)
         THeadlessSession session;
         QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
         QVERIFY(session.runLua(qsl(R"lua(
-local firstTwin = assert(addAreaName("Aardvark"))
-assert(addAreaName("aardvark"))
+local firstTwin = assert(addAreaName("aardvark"))
+assert(addAreaName("Aardvark"))
 local doomed = assert(addAreaName("Zulu"))
 local view = assert(createMapView(doomed))
 assert(deleteArea("Zulu"))
