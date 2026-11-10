@@ -461,12 +461,13 @@ void TDetachedWindow::createMenus()
     mpWindowMenu = menuBar()->addMenu(tr("Window"));
 
     //: This is an item in the "Window" menu in the menubar of a detached Mudlet window.
-    auto fullScreenAction = new QAction(tr("&Fullscreen"), this);
-    fullScreenAction->setCheckable(true);
+    mpMenuFullScreenAction = new QAction(tr("&Fullscreen"), this);
+    mpMenuFullScreenAction->setCheckable(true);
+    mpMenuFullScreenAction->setObjectName(qsl("menuFullScreen"));
     //: This explains the "Fullscreen" item in the "Window" menu in the menubar of a detached Mudlet window.
-    fullScreenAction->setStatusTip(tr("Toggle Full Screen View"));
-    connect(fullScreenAction, &QAction::triggered, this, &TDetachedWindow::slot_toggleFullScreen);
-    mpWindowMenu->addAction(fullScreenAction);
+    mpMenuFullScreenAction->setStatusTip(tr("Toggle Full Screen View"));
+    connect(mpMenuFullScreenAction, &QAction::triggered, this, &TDetachedWindow::slot_toggleFullScreenView);
+    mpWindowMenu->addAction(mpMenuFullScreenAction);
 
     //: This is an item in the "Window" menu in the menubar of a detached Mudlet window. Its "&" letter must differ from the other items in that menu, "Minimize" among them.
     mpMenuMultiViewAction = new QAction(tr("&Multiview"), this);
@@ -1684,15 +1685,10 @@ void TDetachedWindow::updateDockWidgetVisibilityForProfile(const QString& profil
 #endif
 }
 
+// showNormal() would also drop a maximized state, so only the full-screen bit is flipped; changeEvent() syncs the checkmarks
 void TDetachedWindow::slot_toggleFullScreenView()
 {
-    if (isFullScreen()) {
-        showNormal();
-        mpActionFullScreenView->setChecked(false);
-    } else {
-        showFullScreen();
-        mpActionFullScreenView->setChecked(true);
-    }
+    setWindowState((windowState() & ~Qt::WindowActive) ^ Qt::WindowFullScreen);
 }
 
 void TDetachedWindow::slot_toggleAlwaysOnTop()
@@ -3300,6 +3296,13 @@ void TDetachedWindow::changeEvent(QEvent* event)
     }
 
     if (event->type() == QEvent::WindowStateChange) {
+        if (mpActionFullScreenView) {
+            mpActionFullScreenView->setChecked(isFullScreen());
+        }
+        if (mpMenuFullScreenAction) {
+            mpMenuFullScreenAction->setChecked(isFullScreen());
+        }
+
         // Check if window is being minimized
         if (windowState() & Qt::WindowMinimized) {
             mIsBeingMinimized = true;
@@ -3525,14 +3528,4 @@ void TDetachedWindow::slot_toggleMultiView()
     withCurrentProfileActive([this]() {
         mudlet::self()->slot_toggleMultiView();
     });
-}
-
-void TDetachedWindow::slot_toggleFullScreen()
-{
-    // Toggle fullscreen state for this detached window
-    if (isFullScreen()) {
-        showNormal();
-    } else {
-        showFullScreen();
-    }
 }
