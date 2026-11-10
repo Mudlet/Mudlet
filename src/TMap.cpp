@@ -94,6 +94,17 @@ qreal usableSymbolFontFudgeFactor(const qreal fromFile)
     return qBound(TMap::scmMinimumSymbolFontFudgeFactor, fromFile, TMap::scmMaximumSymbolFontFudgeFactor);
 }
 
+// qRound() of a number an int cannot hold asserts in a debug build and is undefined
+// behaviour otherwise, so a damaged JSON map's number reads as 0 instead
+int jsonInt(const QJsonValue& value)
+{
+    const double number = value.toDouble();
+    if (!(number >= std::numeric_limits<int>::min() && number <= std::numeric_limits<int>::max())) {
+        return 0;
+    }
+    return qRound(number);
+}
+
 // Not QFont::PreferNoShaping: Qt's unshaped text path treats Private Use Area
 // code points as unprintable, which blanks every symbol from an icon font.
 QFont::StyleStrategy symbolFontStyleStrategy(const bool onlySymbolFontUsed)
@@ -3880,11 +3891,11 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
         return {false, (translatableTexts ? tr("no areas detected") : qsl("no areas detected"))};
     }
 
-    mProgressDialogAreasTotal = mapObj[QLatin1String("areaCount")].toInt();
+    mProgressDialogAreasTotal = jsonInt(mapObj[QLatin1String("areaCount")]);
     mProgressDialogAreasCount = 0;
-    mProgressDialogRoomsTotal = mapObj[QLatin1String("roomCount")].toInt();
+    mProgressDialogRoomsTotal = jsonInt(mapObj[QLatin1String("roomCount")]);
     mProgressDialogRoomsCount = 0;
-    mProgressDialogLabelsTotal = mapObj[QLatin1String("labelCount")].toInt();
+    mProgressDialogLabelsTotal = jsonInt(mapObj[QLatin1String("labelCount")]);
     mProgressDialogLabelsCount = 0;
     mJsonProgressShown.invalidate();
     mMapProgressStandalone = true;
@@ -3925,12 +3936,12 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     }
     const QString mapSymbolFontText = mapObj[QLatin1String("mapSymbolFontDetails")].toString();
     // Not qRound(), whose int overflows on a huge factor; the 1000 keeps the
-    // value to the three decimals the preferences offer:
+    // value to the three decimals the preferences offer
     const qreal mapSymbolFontFudgeFactor = usableSymbolFontFudgeFactor(std::round(mapObj[QLatin1String("mapSymbolFontFudgeFactor")].toDouble() * 1000.0) / 1000.0);
     const bool isOnlyMapSymbolFontToBeUsed = mapObj[QLatin1String("onlyMapSymbolFontToBeUsed")].toBool();
-    const int playerRoomStyle = mapObj[QLatin1String("playerRoomStyle")].toInt();
-    quint8 const playerRoomOuterDiameterPercentage = mapObj[QLatin1String("playerRoomOuterDiameterPercentage")].toInt();
-    quint8 const playerRoomInnerDiameterPercentage = mapObj[QLatin1String("playerRoomInnerDiameterPercentage")].toInt();
+    const int playerRoomStyle = jsonInt(mapObj[QLatin1String("playerRoomStyle")]);
+    quint8 const playerRoomOuterDiameterPercentage = jsonInt(mapObj[QLatin1String("playerRoomOuterDiameterPercentage")]);
+    quint8 const playerRoomInnerDiameterPercentage = jsonInt(mapObj[QLatin1String("playerRoomInnerDiameterPercentage")]);
     QColor playerRoomOuterColor;
     QColor playerRoomInnerColor;
 
