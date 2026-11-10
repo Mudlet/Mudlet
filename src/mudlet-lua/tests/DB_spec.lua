@@ -1199,6 +1199,29 @@ describe("Tests DB.lua functions", function()
       end
     end)
 
+    it("reads back a plain epoch number stored in a datetime field as that timestamp", function()
+      local conn = db.__conn["mydbdstesting"]
+      for n, epoch in ipairs(epochs) do
+        assert.are.equal(1, conn:execute(string.format("INSERT INTO sheet (seen, n) VALUES (%d, %d)", epoch, n)))
+      end
+      local results = db:fetch(mydb.sheet, nil, { mydb.sheet.n })
+      assert.are.equal(#epochs, #results)
+      for n, epoch in ipairs(epochs) do
+        assert.are.equal(epoch, results[n].seen:as_number())
+      end
+      assert.are.equal(1730615400, db:aggregate(mydb.sheet.seen, "MAX"):as_number())
+    end)
+
+    it("aggregates by time across plain epoch numbers and timestamps in one datetime field", function()
+      db:add(mydb.sheet, { seen = db:Timestamp(1500000000), n = 1 })
+      local conn = db.__conn["mydbdstesting"]
+      assert.are.equal(1, conn:execute("INSERT INTO sheet (seen, n) VALUES (1800000000, 2)"))
+      assert.are.equal(1, conn:execute("INSERT INTO sheet (seen, n) VALUES (1600000000, 3)"))
+
+      assert.are.equal(1800000000, db:aggregate(mydb.sheet.seen, "MAX"):as_number())
+      assert.are.equal(1500000000, db:aggregate(mydb.sheet.seen, "MIN"):as_number())
+    end)
+
     it("aggregates to the same epoch as was added", function()
       for n, epoch in ipairs(epochs) do
         db:add(mydb.sheet, { seen = db:Timestamp(epoch), n = n })
