@@ -304,8 +304,8 @@ private slots:
         mSession.stop();
     }
 
-    // These controls draw a glyph or a placeholder and nothing else, so without
-    // a name a screen reader announces each one as just "button" or "edit"
+    // Qt doesn't use a tooltip or placeholder as the accessible name, so without
+    // one a screen reader announces these controls as just "button" or "edit"
     void test_theFindBarAndAddTabControlsHaveScreenReaderNames()
     {
         QSet<QString> namesSeen;

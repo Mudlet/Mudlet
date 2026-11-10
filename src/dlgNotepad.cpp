@@ -321,18 +321,21 @@ void dlgNotepad::setupFindBar()
 
     mpFindPrevButton = new QToolButton(mpFindBar);
     mpFindPrevButton->setObjectName(qsl("notepadFindPrevious"));
+    //: Tooltip and screen reader name of the notepad's find bar button that jumps to the previous match
     mpFindPrevButton->setToolTip(tr("Find previous"));
     mpFindPrevButton->setAccessibleName(mpFindPrevButton->toolTip());
     mpFindPrevButton->setAutoRaise(false);
 
     mpFindNextButton = new QToolButton(mpFindBar);
     mpFindNextButton->setObjectName(qsl("notepadFindNext"));
+    //: Tooltip and screen reader name of the notepad's find bar button that jumps to the next match
     mpFindNextButton->setToolTip(tr("Find next"));
     mpFindNextButton->setAccessibleName(mpFindNextButton->toolTip());
     mpFindNextButton->setAutoRaise(false);
 
     mpFindCloseButton = new QToolButton(mpFindBar);
     mpFindCloseButton->setObjectName(qsl("notepadFindClose"));
+    //: Tooltip and screen reader name of the notepad's find bar button that closes the find bar
     mpFindCloseButton->setToolTip(tr("Close find bar"));
     mpFindCloseButton->setAccessibleName(mpFindCloseButton->toolTip());
     mpFindCloseButton->setAutoRaise(false);
