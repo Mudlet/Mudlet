@@ -52,7 +52,7 @@ local encodings = {
   {name = "BIG5", lead = {0x81, 0xFE}, trail = {0x40, 0xFE}},
   {name = "BIG5-HKSCS", lead = {0x81, 0xFE}, trail = {0x40, 0xFE}},
   {name = "SHIFT_JIS", lead = {0x81, 0xFC}, trail = {0x40, 0xFC}, single = {0xA1, 0xDF}},
-  {name = "EUC-JP", lead = {0xA1, 0xFE}, trail = {0xA1, 0xFE}, single = {0x8E, 0x8E}},
+  {name = "EUC-JP", lead = {0xA1, 0xFE}, trail = {0xA1, 0xFE}, single = {0x8E, 0x8E}, three = 0x8F},
   {name = "EUC-KR", lead = {0xA1, 0xFE}, trail = {0xA1, 0xFE}},
   {name = "UTF-8", lead = {0xC2, 0xF4}, trail = {0x80, 0xBF}},
 }
@@ -93,6 +93,11 @@ local function segment(encoding)
       -- a four byte GB18030 form, or one cut short
       local bytes = inRange({0x81, 0xFE}) .. char(rrange(0x30, 0x39)) .. inRange({0x81, 0xFE}) .. char(rrange(0x30, 0x39))
       return bytes:sub(1, rrange(2, 4))
+    end
+    if encoding.three then
+      -- EUC-JP's three byte JIS X 0212 form, or one cut short
+      local bytes = char(encoding.three) .. inRange(encoding.trail) .. inRange(encoding.trail)
+      return bytes:sub(1, rrange(1, 3))
     end
     return inRange(encoding.lead) .. inRange(encoding.trail) .. inRange(encoding.trail)
   elseif k == 8 then
