@@ -190,7 +190,8 @@ profiles and `Mudlet.ini` with that GUI (not its passwords), so `start()` warns 
 Each of `outputLine`'s runs covers part of the line, in order, with the colours and styles the game
 asked for (`THeadlessSession::TextStyle`: bold, italic, underline, overline, strike-out, reverse, blink,
 fast blink, concealed), and says whether each colour is the profile's own, which a frontend may swap
-for its own theme's. A run also names the link it is part of, as "links in the main console" below tells.
+for its own theme's. A run also names the link it is part of, as "links in the main console and in
+windows" below tells.
 What `echo()` and the like print comes as plain text for now.
 
 `outputLine` carries each line as the game sent it, before the profile's triggers run on it, so a line a
@@ -643,7 +644,7 @@ its own gives the area without them, and gives a smaller one as they grow; the s
 their room from it, so what a script reads of the main window's size changes with them only when the app
 gives a new one.
 
-## Embedding it: links in the main console
+## Embedding it: links in the main console and in windows
 
 Each `TextRun` of `outputLine` and `lineShown` has a `link`: the id of the main console's link the run is
 part of, or 0 for none. A line is split into runs where its link changes as well as where its look does,
@@ -693,6 +694,16 @@ keep for as long as it likes. Nor does it name their links. The console lets go 
 line holds any more each time a quarter of its buffer has been trimmed, and `linksChanged` names those
 then, after which `link()` gives `nullopt` for each at once. Until then, `link()` of a link that only
 trimmed lines held gives `nullopt` too, but reads the whole buffer to find that out.
+
+A mini console or user window has links of its own, from `echoLink("name", …)` and the like, which the
+runs of `windowLines()` name (see "Reading a console's text"). Each console counts its own ids, so an id
+means a link only together with its window: `windowLink(window, id)` and `followWindowLink(window, id)`
+or `followWindowLink(window, id, item)` are the calls above for a link of that window, and with `"main"`
+or no name they are the calls above. They answer `nullopt` and `unknown` for a name `windowLines()`
+refuses. A hidden window's link is still followed, as only the app knows what its pointer can reach.
+There is no `linksChanged` for a window: a link of it followed, revealed or chosen names the window in
+`windowTextChanged`, and the app reads `windowLink(window, id)` again for the runs it shows. A game's MXP
+`<EXPIRE>` expires only the main console's links, in the GUI too, so a window's links stay as they are.
 
 ## Embedding it: the 2D map
 

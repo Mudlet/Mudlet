@@ -240,7 +240,7 @@ public:
 
         bool operator==(const LinkItem&) const = default;
     };
-    // What a link of the main console offers, as the GUI shows it now
+    // What a link of a console offers, as the GUI shows it now
     struct Link
     {
         // Plain text, empty for none
@@ -269,6 +269,9 @@ public:
     // The link a run names, while the main console holds it; nullopt for 0, an id it does not hold and with no profile
     // open. A getter, so it may be called from any handler.
     std::optional<Link> link(int id) const;
+    // The same for a run of windowLines(): a link of that mini console or user window, each console counting its
+    // own ids, or of the main console for "main" or no name; nullopt too for a name windowLines() refuses
+    std::optional<Link> windowLink(const QString& window, int id) const;
     // Follows a link as a left click on it does, or given an item, as picking that item from its menu does: a
     // spoiler not yet revealed is only revealed (revealedSpoiler); a disabled link and a menu's greyed-out item
     // run nothing (disabled), nor does a link the game's visibility settings have concealed (concealed); and
@@ -278,6 +281,9 @@ public:
     // not hold. refused: where submit() is; errorString() says why.
     enum class LinkResult { ran, revealedSpoiler, disabled, concealed, failed, noSuchItem, unknown, refused };
     LinkResult followLink(int link, std::optional<int> item = std::nullopt);
+    // The same for a link of that window, shown or hidden, as only the app knows what its pointer can reach;
+    // unknown too for a name windowLines() refuses. What it changes of the link is windowTextChanged's to tell.
+    LinkResult followWindowLink(const QString& window, int link, std::optional<int> item = std::nullopt);
     // Whether the main console shows each line's time beside it, as the GUI's timestamp button says; false with
     // no profile open. A getter, so it may be called from any handler.
     bool timeStampsShown() const;
@@ -810,6 +816,7 @@ signals:
     // deleteLine(), clearWindow() or a whole-line concealment, or the console letting go of one no line holds any
     // more after trims; link() gives nullopt once no line holds it.
     // Each id once, in the order they changed. Hover is not sent, the pointer being the app's own. From the event loop.
+    // Only the main console's: a link of a mini console or user window changing names the window in windowTextChanged.
     void linksChanged(const QString& profile, const QList<int>& links);
     // timeStampsShown() changed, by setTimeStampsShown() or a script's enableTimeStamps() or disableTimeStamps() on
     // the main console. From the event loop, with the state as it is then, and only when that differs from the
@@ -1014,7 +1021,7 @@ private:
     static QList<TextRun> textRuns(const QString& text, const TLineFormat& format, const QColor& consoleForeground, const QColor& consoleBackground);
     static qint64 arrivalTime(const TBuffer& buffer, int line);
     // The console windowLines() reads for the name, null for one it refuses
-    const TConsoleModel* windowTextModel(const QString& window) const;
+    TConsoleModel* windowTextModel(const QString& window) const;
     // False, with errorString() saying why, while the GUI's hidden-input box would not be open
     bool inputHidden(bool sending);
     void noteAlreadyInstalled(const QString& path, const QString& name);

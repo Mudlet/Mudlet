@@ -27,7 +27,7 @@
 
 #include <algorithm>
 
-const TConsoleModel* THeadlessSession::windowTextModel(const QString& window) const
+TConsoleModel* THeadlessSession::windowTextModel(const QString& window) const
 {
     if (!mpHost) {
         return nullptr;

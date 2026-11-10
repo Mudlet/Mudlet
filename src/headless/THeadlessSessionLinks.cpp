@@ -30,15 +30,18 @@
 
 std::optional<THeadlessSession::Link> THeadlessSession::link(const int id) const
 {
-    if (!mpHost || id <= 0) {
+    return windowLink(qsl("main"), id);
+}
+
+std::optional<THeadlessSession::Link> THeadlessSession::windowLink(const QString& window, const int id) const
+{
+    const TConsoleModel* pModel = windowTextModel(window);
+    if (!pModel || !pModel->buffer.linkHeld(id)) {
         return std::nullopt;
     }
-    const TConsoleModel& model = mpHost->mainConsoleModel();
+    const TConsoleModel& model = *pModel;
     const TBuffer& buffer = model.buffer;
     const TLinkStore& store = buffer.mLinkStore;
-    if (!buffer.linkHeld(id)) {
-        return std::nullopt;
-    }
     const Mudlet::HyperlinkStyling styling = buffer.getEffectiveHyperlinkStyling(id);
     Link link;
     link.tooltip = store.tooltip(id);
@@ -74,14 +77,20 @@ std::optional<THeadlessSession::Link> THeadlessSession::link(const int id) const
 
 THeadlessSession::LinkResult THeadlessSession::followLink(const int link, const std::optional<int> item)
 {
+    return followWindowLink(qsl("main"), link, item);
+}
+
+THeadlessSession::LinkResult THeadlessSession::followWindowLink(const QString& window, const int link, const std::optional<int> item)
+{
     if (!usable()) {
         return LinkResult::refused;
     }
-    TConsoleModel& model = mpHost->mainConsoleModel();
-    const TLinkStore& store = model.buffer.mLinkStore;
-    if (!model.buffer.linkHeld(link)) {
+    TConsoleModel* pModel = windowTextModel(window);
+    if (!pModel || !pModel->buffer.linkHeld(link)) {
         return LinkResult::unknown;
     }
+    TConsoleModel& model = *pModel;
+    const TLinkStore& store = model.buffer.mLinkStore;
     const QList<TLinkStore::MenuItem> items = store.menuItems(link);
     if (item && (*item < 0 || *item >= items.size())) {
         return LinkResult::noSuchItem;
