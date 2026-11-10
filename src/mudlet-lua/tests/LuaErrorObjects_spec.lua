@@ -42,6 +42,7 @@ describe("Tests reporting errors raised with something other than a string", fun
     local layoutFiles = {
       configurationDirectory .. "/windowLayout.dat",
       configurationDirectory .. "/windowLayoutGeometry.dat",
+      configurationDirectory .. "/windowLayoutHeadless.dat",
     }
     local layoutBefore = {}
     for _, path in ipairs(layoutFiles) do
@@ -83,9 +84,11 @@ describe("Tests reporting errors raised with something other than a string", fun
     assert(lfs.mkdir(directory), "could not create " .. directory)
     assert(io.open(marker, "w")):close()
     assert(lfs.mkdir(directory .. "/current"), "could not create " .. directory .. "/current")
-    -- a timer given a function, a timer given code, and an event handler
+    -- a timer given a function, a timer given code, an event handler and a trigger's code
     local script = [[
 function mudletSpecErrorObjectHandler() error(true) end
+tempTrigger("mudletSpecErrorObjectLine", "error(print)")
+tempTimer(0.05, function() feedTriggers("mudletSpecErrorObjectLine\n") end)
 tempTimer(0.05, function() error({}) end)
 tempTimer(0.05, "error()")
 tempTimer(0.05, function() raiseEvent("mudletSpecErrorObjectEvent") end)
@@ -123,5 +126,6 @@ tempTimer(0.5, function() raiseGlobalEvent("mudletSpecLuaErrorObjectsConsole", t
     assert.is_truthy(unwrapped:find("error object is a table value", 1, true), consoleText)
     assert.is_truthy(unwrapped:find("error object is a nil value", 1, true), consoleText)
     assert.is_truthy(unwrapped:find("error object is a boolean value", 1, true), consoleText)
+    assert.is_truthy(unwrapped:find("error object is a function value", 1, true), consoleText)
   end)
 end)
