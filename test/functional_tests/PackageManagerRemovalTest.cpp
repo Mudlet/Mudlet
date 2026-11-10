@@ -41,7 +41,8 @@ using namespace std::chrono_literals;
 // loop - a package's sysUninstall handler is free to take a sibling away, and
 // the rows were drawn before any of that.
 //
-// An import that fails has to say why in the same notice.
+// An import that fails has to give the reason next to the file's name in the
+// notice, not only on the console behind the dialog.
 //
 // A spec cannot reach this: the dialog is C++ only, with no Lua way to open it
 // or to run its removal or import.
@@ -150,6 +151,7 @@ private slots:
 
         QVERIFY2(first.isEmpty(), qPrintable(qsl("SETUP: the package did not install the first time: %1").arg(first)));
         QVERIFY2(second.contains(qsl("import&amp;twice.xml")), qPrintable(qsl("The file that failed is not named: %1").arg(second)));
+        QVERIFY2(!second.contains(qsl("import&twice")), qPrintable(qsl("The reason is not escaped for the rich-text notice: %1").arg(second)));
         QVERIFY2(second.contains(qsl("already installed")), qPrintable(qsl("The notice does not say why the import failed: %1").arg(second)));
     }
 

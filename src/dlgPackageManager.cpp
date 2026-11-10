@@ -688,7 +688,7 @@ void dlgPackageManager::slot_installPackageFromFile()
     }
 }
 
-// installPackage() also posts its reason to the main console, but that is behind this dialog
+// The main console gets installPackage()'s reason too, but it is behind this dialog
 static QString installFailure(const QString& name, const QString& reason)
 {
     if (reason.isEmpty()) {
@@ -706,14 +706,13 @@ QString dlgPackageManager::installPackageFiles(const QStringList& fileNames)
     for (const QString& fileName : fileNames) {
         // During a save an install is put off and reports success before it has run
         mpHost->waitForProfileSave();
-        if (auto [installed, reason] = mpHost->installPackage(fileName, enums::PackageModuleType::Package); installed) {
-            mpHost->waitForProfileSave();
-        } else {
+        if (auto [installed, reason] = mpHost->installPackage(fileName, enums::PackageModuleType::Package); !installed) {
             const QString baseName = QFileInfo(fileName).fileName();
             failures << installFailure(baseName, reason);
             qWarning() << "dlgPackageManager::installPackageFiles() ERROR - failed to import" << baseName;
         }
     }
+    mpHost->waitForProfileSave();
     if (failures.isEmpty()) {
         return {};
     }
