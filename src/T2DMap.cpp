@@ -2512,7 +2512,7 @@ void T2DMap::slot_spread()
     }
     if (!movedAreas.isEmpty()) {
         for (const int areaId : std::as_const(movedAreas)) {
-            if (auto pArea = mpMap->mpRoomDB->getArea(areaId); pArea && areaId == pR_centerRoom->getArea()) {
+            if (auto pArea = mpMap->mpRoomDB->getArea(areaId)) {
                 pArea->mIsDirty = true;
                 pArea->clean();
             }
@@ -2590,7 +2590,7 @@ void T2DMap::slot_shrink()
     }
     if (!movedAreas.isEmpty()) {
         for (const int areaId : std::as_const(movedAreas)) {
-            if (auto pArea = mpMap->mpRoomDB->getArea(areaId); pArea && areaId == pR_centerRoom->getArea()) {
+            if (auto pArea = mpMap->mpRoomDB->getArea(areaId)) {
                 pArea->mIsDirty = true;
                 pArea->clean();
             }

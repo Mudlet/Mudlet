@@ -1488,6 +1488,25 @@ private slots:
         QCOMPARE(announced.first().first().toInt(), mAreaId);
     }
 
+    void test_draggingRoomsOfTwoAreasIsAnnouncedForEveryArea()
+    {
+        buildMap();
+        const int otherAreaId = map()->mpRoomDB->addArea(qsl("Next Door"));
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 0.5), pointUnitsFromCentre(1.5, -0.5));
+        QVERIFY(mp2dMap->mMultiSelectionSet.contains(kWestRoomId));
+        QVERIFY(map()->setRoomArea(kWestRoomId, otherAreaId));
+        QCoreApplication::sendPostedEvents(map(), QEvent::MetaCall);
+        QSignalSpy announced(map(), &TMap::signal_areaChanged);
+
+        dragFromTo(pointUnitsFromCentre(1, 0), pointUnitsFromCentre(1, 1));
+
+        QCOMPARE(roomPosition(kWestRoomId), QVector3D(-1, 1, 0));
+        QCoreApplication::sendPostedEvents(map(), QEvent::MetaCall);
+        QCOMPARE(announced.size(), 1);
+        QVERIFY2(announced.constFirst().constFirst().toInt() == -1, "only the shown area was announced, so a view of the other area goes on drawing its moved room where it was");
+    }
+
     // The area files its rooms by position, by how far it reaches and by how
     // long their exits are; a dragged room has to be refiled in all of them
     // without the area rebuilding them from scratch.
@@ -3285,8 +3304,13 @@ private slots:
         QCOMPARE(pEastRoom->y(), -1);
         QCOMPARE(linePoints(), (QList<QPointF>{QPointF(3.0, 2.0), QPointF(3.0, 3.0)}));
 
+        QCoreApplication::sendPostedEvents(map(), QEvent::MetaCall);
+        QSignalSpy announced(map(), &TMap::signal_areaChanged);
         clickAt(pointUnitsFromCentre(3, -1));
         QVERIFY2(!mp2dMap->mRoomBeingMoved, "a click did not put the rooms down");
+        QCoreApplication::sendPostedEvents(map(), QEvent::MetaCall);
+        QCOMPARE(announced.size(), 1);
+        QCOMPARE(announced.constFirst().constFirst().toInt(), mAreaId);
         QVERIFY(mp2dMap->mHelpMsg.isEmpty());
         hoverTo(pointUnitsFromCentre(7, -2));
         QCOMPARE(pEastRoom->x(), 3);
@@ -3984,9 +4008,15 @@ private slots:
                          },
                          2s),
                  "the edit was not announced, so other map views go on drawing the rooms as they were");
+        QCoreApplication::sendPostedEvents(map(), QEvent::MetaCall);
         // Every area when the rooms are in several, else just theirs, so views of other areas are spared a redraw
         QCOMPARE(announced.size(), 1);
         QCOMPARE(announced.constFirst().constFirst().toInt(), selectionSpansTwoAreas ? -1 : mAreaId);
+        if (selectionSpansTwoAreas && item != qsl("Delete")) {
+            const TArea* otherArea = map()->mpRoomDB->getArea(otherAreaId);
+            QVERIFY(otherArea);
+            QCOMPARE(otherArea->min_x, static_cast<int>(roomPosition(kWestRoomId).x()));
+        }
     }
 
     // Deleting a room also takes the exits into it away from rooms in other areas
@@ -4006,17 +4036,9 @@ private slots:
 
         QVERIFY(!map()->mpRoomDB->getRoom(kEastRoomId));
         QCOMPARE(map()->mpRoomDB->getRoom(kOtherAreaRoomId)->getExit(DIR_WEST), -1);
-        QVERIFY2(QTest::qWaitFor(
-                         [&announced]() {
-                             for (const QList<QVariant>& arguments : std::as_const(announced)) {
-                                 if (arguments.first().toInt() == -1) {
-                                     return true;
-                                 }
-                             }
-                             return false;
-                         },
-                         2s),
-                 "only the deleted room's area was announced, so a view of the area whose exit led to it goes on drawing that exit");
+        QCoreApplication::sendPostedEvents(map(), QEvent::MetaCall);
+        QCOMPARE(announced.size(), 1);
+        QVERIFY2(announced.constFirst().constFirst().toInt() == -1, "only the deleted room's area was announced, so a view of the area whose exit led to it goes on drawing that exit");
     }
 
     // The factor and coordinates dialogs run their own event loop, in which a
