@@ -1677,6 +1677,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH, std::unique_ptr<TConsoleModel> erro
 
     verticalLayout_frame_left->addWidget(searchSplitter);
     verticalLayout_frame_left->setStretchFactor(searchSplitter, 1);
+    // Under a stylesheet setParent() hands a widget back the palette it had before one was set, and
+    // applyEditorShellStyle() skips a repeat while the colours stand, so the trees adopted above are inked again
+    inkEditorTrees();
 
     setSearchResultsShown(false);
 
@@ -17335,6 +17338,15 @@ static void inkAsChrome(QWidget* pWidget, const QColor& chrome, const QColor& ch
     pWidget->setPalette(palette);
 }
 
+void dlgTriggerEditor::inkEditorTrees()
+{
+    const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
+    const QList<QTreeWidget*> trees{treeWidget_triggers, treeWidget_aliases, treeWidget_timers, treeWidget_scripts, treeWidget_actions, treeWidget_keys, treeWidget_variables, mpFolderTree, treeWidget_searchResults};
+    for (QTreeWidget* pTreeWidget : trees) {
+        inkAsChrome(pTreeWidget, tokens.mutedText, tokens.accentText);
+    }
+}
+
 // Painted by the row, not a QSS property rule: re-polishing re-runs the whole sheet over the row's controls
 QColor dlgTriggerEditor::patternHoverTint() const
 {
@@ -17457,17 +17469,16 @@ void dlgTriggerEditor::applyEditorShellStyle()
     const QList<QTreeWidget*> panelTrees{treeWidget_triggers, treeWidget_aliases, treeWidget_timers, treeWidget_scripts, treeWidget_actions, treeWidget_keys, treeWidget_variables, mpFolderTree};
     for (QTreeWidget* pTreeWidget : panelTrees) {
         pTreeWidget->setStyleSheet(treeRules);
-        inkAsChrome(pTreeWidget, mutedText, accentText);
     }
+
+    // The branch column is left to the style here: its arrow is what says a heading can be folded away
+    treeWidget_searchResults->setStyleSheet(treeRules + qsl("QTreeWidget#editorSearchResults::item { padding: 0px 2px; }"));
+    inkEditorTrees();
 
     for (uiDesign::EditorTreeDelegate* pDelegate : std::as_const(mEditorTreeDelegates)) {
         pDelegate->setColouredMarks(mudlet::self() && mudlet::self()->colouredIcons());
         pDelegate->restyle();
     }
-
-    // The branch column is left to the style here: its arrow is what says a heading can be folded away
-    treeWidget_searchResults->setStyleSheet(treeRules + qsl("QTreeWidget#editorSearchResults::item { padding: 0px 2px; }"));
-    inkAsChrome(treeWidget_searchResults, mutedText, accentText);
     if (mpSearchResultDelegate) {
         mpSearchResultDelegate->restyle();
     }

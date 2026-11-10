@@ -576,6 +576,23 @@ private slots:
         mSession.stop();
     }
 
+    // First, ahead of any appearance switch: a switch inks the trees again, which would hide a window that
+    // opened without its ink
+    void test_theTreesHeadingRowIsInkedAsTheWindowOpens()
+    {
+        const QString miss = headingInkMiss();
+        QVERIFY2(miss.isEmpty(), qPrintable(qsl("before any appearance change: %1").arg(miss)));
+        // The palette too, for the trees not on show
+        const QColor mutedText = uiDesign::themeTokens().mutedText;
+        QStringList misses;
+        for (const QTreeWidget* pTree : mpEditor->findChildren<QTreeWidget*>()) {
+            if (pTree->palette().color(QPalette::Text) != mutedText) {
+                misses << qsl("%1 in %2").arg(pTree->objectName(), pTree->palette().color(QPalette::Text).name());
+            }
+        }
+        QVERIFY2(misses.isEmpty(), qPrintable(qsl("trees that open with their rows inked in something other than the chrome's %1: %2").arg(mutedText.name(), misses.join(qsl(", ")))));
+    }
+
     // One list at the end: stopping at the first miss would take a run per miss
     // to clear
     void test_everyWordOutsideAFieldIsTheOneQuietTone()
@@ -615,28 +632,26 @@ private slots:
         QVERIFY2(misses.isEmpty(), qPrintable(qsl("%1 thing(s) in the editor's chrome are written in something other than the one quiet tone - listed above").arg(QString::number(misses.size()))));
     }
 
-    // A palette a view never draws from would pass the walk above while the tree
-    // paints in the platform's white
-    void test_theTreesHeadingRowIsPaintedInThatSameTone()
+    // Empty when the Triggers heading row is painted in the quiet tone, otherwise what is wrong
+    QString headingInkMiss()
     {
-        // Put back on the way out: the cases after this one read the window under
-        // the appearance the run opened in
-        const auto putBack = qScopeGuard([this]() {
-            setAppearance(mAppearanceAtStart);
-        });
-        setAppearance(enums::Appearance::dark);
-        // The panel shows one tree at a time, and the walk above leaves the last
-        // view up
+        // The panel shows one tree at a time, and the walk leaves the last view up
         enterView(EditorViewType::cmTriggerView);
         const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
 
         QTreeWidget* pTree = mpEditor->treeWidget_triggers;
         QTreeWidgetItem* pHeading = mpEditor->mpTriggerBaseItem;
-        QVERIFY2(pTree && pHeading, "the triggers tree has no heading row to read");
-        QVERIFY2(!pHeading->isSelected(), "the heading row is chosen, so what it is painted in is the accent rather than the chrome tone");
+        if (!pTree || !pHeading) {
+            return qsl("the triggers tree has no heading row to read");
+        }
+        if (pHeading->isSelected()) {
+            return qsl("the heading row is chosen, so what it is painted in is the accent rather than the chrome tone");
+        }
 
         const QRect row = pTree->visualItemRect(pHeading);
-        QVERIFY2(row.width() > 20 && row.height() > 4, "the heading row is too small to read a pixel out of");
+        if (row.width() <= 20 || row.height() <= 4) {
+            return qsl("the heading row is too small to read a pixel out of");
+        }
 
         const QImage shot = mpEditor->grab().toImage();
         // grab() answers a pixmap at the screen's device pixel ratio, so the
@@ -644,7 +659,9 @@ private slots:
         const qreal ratio = shot.width() / static_cast<qreal>(std::max(1, mpEditor->width()));
         const QPoint topLeft = pTree->viewport()->mapTo(mpEditor, row.topLeft());
         const QRect painted = QRect(QPoint(qRound(topLeft.x() * ratio), qRound(topLeft.y() * ratio)), QSize(qRound(row.width() * ratio), qRound(row.height() * ratio))).intersected(shot.rect());
-        QVERIFY2(painted.width() > 8 && painted.height() > 4, "the heading row does not land on the shot of the window");
+        if (painted.width() <= 8 || painted.height() <= 4) {
+            return qsl("the heading row does not land on the shot of the window");
+        }
 
         const auto distanceFromThePane = [&tokens](const QColor& colour) {
             return TestPixels::distance(colour, tokens.pane);
@@ -662,8 +679,24 @@ private slots:
         qInfo().noquote()
                 << qsl("  the Triggers heading is painted %1, against the %2 the editor's chrome is written in, on the %3 the panel is").arg(ink.name(), tokens.mutedText.name(), tokens.pane.name());
         const int off = std::max({std::abs(ink.red() - tokens.mutedText.red()), std::abs(ink.green() - tokens.mutedText.green()), std::abs(ink.blue() - tokens.mutedText.blue())});
-        QVERIFY2(off <= scmInkTolerance,
-                 qPrintable(qsl("the Triggers heading is painted %1, %2 off the %3 every word of the editor's chrome is written in").arg(ink.name(), QString::number(off), tokens.mutedText.name())));
+        if (off > scmInkTolerance) {
+            return qsl("the Triggers heading is painted %1, %2 off the %3 every word of the editor's chrome is written in").arg(ink.name(), QString::number(off), tokens.mutedText.name());
+        }
+        return {};
+    }
+
+    // A palette a view never draws from would pass the walk above while the tree
+    // paints in the platform's white
+    void test_theTreesHeadingRowIsPaintedInThatSameTone()
+    {
+        // Put back on the way out: the cases after this one read the window under
+        // the appearance the run opened in
+        const auto putBack = qScopeGuard([this]() {
+            setAppearance(mAppearanceAtStart);
+        });
+        setAppearance(enums::Appearance::dark);
+        const QString miss = headingInkMiss();
+        QVERIFY2(miss.isEmpty(), qPrintable(miss));
     }
 
     void test_theFormBehindThePatternsIsThePageTone()
