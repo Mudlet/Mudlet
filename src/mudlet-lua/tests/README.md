@@ -149,7 +149,8 @@ abort as a finding to reduce and report rather than as a broken harness.
 itself (GBK, GB18030, BIG5, BIG5-HKSCS, SHIFT_JIS, EUC-JP, EUC-KR, and UTF-8 for
 comparison) and feeds random lines of valid, truncated and invalid characters as
 one read and again in reads of one to seven bytes, requiring the same text and
-formats from both, so a character split across reads is checked.
+formats from both, so a character split across reads is checked. Like the telnet
+fuzzer it needs `--offline`, as it feeds through `feedTelnet()`.
 
 `MapFileFuzz_spec.lua` and `XmlImportFuzz_spec.lua` aim at the file loaders
 instead. The first saves a map in each binary format version the save side
