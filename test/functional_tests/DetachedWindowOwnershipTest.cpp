@@ -751,6 +751,21 @@ private slots:
         QVERIFY2(QApplication::focusWidget() != static_cast<QWidget*>(pSecondHost->mainConsoleView()->mpCommandLine.data()), "the keyboard went to a profile that is no longer active");
     }
 
+    // A script can ask for a profile whose window the player has minimised
+    void test_setActiveProfileRestoresAMinimisedDetachedWindow()
+    {
+        QVERIFY(mpDetachedWindow);
+        Host* pFirstHost = HostManager::self()->getHost(mFirstHostname);
+        QVERIFY(pFirstHost);
+        mudlet::self()->activateProfile(pFirstHost);
+        mpDetachedWindow->showMinimized();
+        QTRY_VERIFY(mpDetachedWindow->isMinimized());
+
+        QVERIFY(pFirstHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(setActiveProfile('%1'))").arg(mSecondHostname)));
+        QTest::qWait(100ms);
+        QVERIFY2(!mpDetachedWindow->isMinimized(), "the profile became active in a window left minimised");
+    }
+
     // A user window stays in the main window, so the command line last used in one cannot take the keyboard from the window just raised
     void test_setActiveProfileGivesTheKeyboardToTheDetachedWindow()
     {

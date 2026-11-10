@@ -4508,6 +4508,8 @@ bool mudlet::setActiveProfileTab(const QString& profileName)
 
     // A detached profile's tab is in its own window, not the main tab bar
     if (TDetachedWindow* pDetachedWindow = mDetachedWindows.value(profileName)) {
+        // show() leaves a minimised window minimised
+        pDetachedWindow->setWindowState(pDetachedWindow->windowState() & ~Qt::WindowMinimized);
         pDetachedWindow->show();
         pDetachedWindow->raise();
         pDetachedWindow->activateWindow();
