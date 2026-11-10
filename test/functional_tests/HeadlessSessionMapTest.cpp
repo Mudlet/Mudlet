@@ -332,6 +332,8 @@ registerMapInfo("HeadlessFailing", function() error("headless map info failure")
 registerMapInfo("HeadlessFailing", function() error({}) end)
 )lua")));
         QVERIFY2(rendered(session), qPrintable(session.errorString()));
+        QVERIFY2(rendered(session), qPrintable(session.errorString()));
+        QCOMPARE(reports(), 2);
         int tableReports = 0;
         for (const QList<QVariant>& arguments : std::as_const(errors)) {
             tableReports += arguments.at(0).toString().contains(qsl("error object is a table value"));
