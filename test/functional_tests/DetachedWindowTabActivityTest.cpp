@@ -280,6 +280,29 @@ private slots:
         QCOMPARE(mudlet::self()->profileWindow(mpFirstHost), mudlet::self());
     }
 
+    // The new data alert is armed when the profile's console is hidden by its
+    // window being minimised, which for a detached profile is not the main window
+    void test_minimisingADetachedWindowArmsItsNewDataAlert()
+    {
+        TDetachedWindow* pWindow = gatherSecondAndThirdIntoOneWindow();
+        QVERIFY(pWindow);
+        pWindow->show();
+        QVERIFY(QTest::qWaitForWindowExposed(pWindow));
+        TMainConsole* pConsole = mpThirdHost->mainConsoleView();
+        QVERIFY(pConsole);
+        QVERIFY(mpThirdHost->mAlertOnNewData);
+        QVERIFY2(!pConsole->startIncomingText(), "the alert was armed while the window was on screen");
+
+        pWindow->showMinimized();
+        QTRY_VERIFY(pWindow->isMinimized());
+        const bool armed = pConsole->startIncomingText();
+        pWindow->showNormal();
+
+        QVERIFY2(armed, "minimising the detached window left its profile's new data alert unarmed");
+        QTRY_VERIFY(pConsole->isVisible());
+        QVERIFY2(!pConsole->startIncomingText(), "the alert stayed armed after the window came back");
+    }
+
     // The main window's marks now come from the same two functions as a detached
     // window's, so this is here to see that sharing them cost it nothing
     void test_theMainWindowStillMarksAndClearsItsOwnTabs()
