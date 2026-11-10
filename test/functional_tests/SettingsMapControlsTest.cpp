@@ -292,29 +292,37 @@ private slots:
         QVERIFY2(qAbs(p2dMap->rSize - wanted) < 1.0e-6, qPrintable(qsl("the map was given a room size of %1 rather than %2").arg(p2dMap->rSize).arg(wanted)));
     }
 
-    // An extra map window draws with sizes of its own, so the three size controls must reach it as well as the main mapper
-    void test_theSizeControlsReachAnExtraMapWindow()
+    // An extra map window draws with settings of its own, so the controls must reach it as well as the main mapper
+    void test_theMapControlsReachAnExtraMapWindow()
     {
         if (!mpHost->mpMap->mapper()) {
             mpHost->showHideOrCreateMapper(true);
         }
+        QVERIFY2(mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap, "the mapper could not be opened");
+        T2DMap* pMainMap = mpHost->mpMap->mapper()->mp2dMap;
         TMapViewManager* pManager = mpHost->mpMap->getViewManager();
+        QVERIFY2(pManager, "the profile has no manager for extra map windows");
         const auto [viewId, message] = pManager->createView(0);
         const auto closeViews = qScopeGuard([pManager]() {
             pManager->closeAllViews();
         });
-        QVERIFY2(pManager->getView(viewId), qPrintable(message));
-        QPointer<T2DMap> pViewMap = pManager->getView(viewId)->get2DMap();
+        TMapView* pView = pManager->getView(viewId);
+        QVERIFY2(pView, qPrintable(message));
+        QPointer<T2DMap> pViewMap = pView->get2DMap();
         QVERIFY(pViewMap);
 
         QVERIFY2(openPreferences(), "the settings dialog never appeared");
         const int priorRoom = mpPreferences->spinBox_roomSize->value();
         const int priorExit = mpPreferences->spinBox_exitSize->value();
         const int priorBorder = mpPreferences->spinBox_borderSize->value();
-        const auto restore = qScopeGuard([this, priorRoom, priorExit, priorBorder]() {
+        const bool priorAntiAlias = mpPreferences->mMapperUseAntiAlias->isChecked();
+        const bool priorLargeArrows = mpPreferences->checkBox_largeAreaExitArrows->isChecked();
+        const auto restore = qScopeGuard([=, this]() {
             mpPreferences->spinBox_roomSize->setValue(priorRoom);
             mpPreferences->spinBox_exitSize->setValue(priorExit);
             mpPreferences->spinBox_borderSize->setValue(priorBorder);
+            mpPreferences->mMapperUseAntiAlias->setChecked(priorAntiAlias);
+            mpPreferences->checkBox_largeAreaExitArrows->setChecked(priorLargeArrows);
         });
 
         const int room = priorRoom == 7 ? 8 : 7;
@@ -325,8 +333,13 @@ private slots:
         QVERIFY2(qAbs(pViewMap->rSize - room / 10.0) < 1.0e-6, qPrintable(qsl("the extra map window kept a room size of %1 rather than %2").arg(pViewMap->rSize).arg(room / 10.0)));
         mpPreferences->spinBox_exitSize->setValue(exit);
         QVERIFY2(qAbs(pViewMap->eSize - 50.0 / exit) < 1.0e-6, qPrintable(qsl("the extra map window kept an exit size of %1 rather than %2").arg(pViewMap->eSize).arg(50.0 / exit)));
+        QVERIFY2(qAbs(pMainMap->eSize - 50.0 / exit) < 1.0e-6, qPrintable(qsl("the mapper kept an exit size of %1 rather than %2").arg(pMainMap->eSize).arg(50.0 / exit)));
         mpPreferences->spinBox_borderSize->setValue(border);
         QVERIFY2(qAbs(pViewMap->mBSize - 50.0 / border) < 1.0e-6, qPrintable(qsl("the extra map window kept a border size of %1 rather than %2").arg(pViewMap->mBSize).arg(50.0 / border)));
+        mpPreferences->mMapperUseAntiAlias->setChecked(!priorAntiAlias);
+        QCOMPARE(pViewMap->mMapperUseAntiAlias, !priorAntiAlias);
+        mpPreferences->checkBox_largeAreaExitArrows->setChecked(!priorLargeArrows);
+        QCOMPARE(pViewMap->mLargeAreaExitArrows, !priorLargeArrows);
     }
 
     // saveJsonMap() hands a script the reason, so the dialog's own export should not keep it from the player

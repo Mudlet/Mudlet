@@ -108,7 +108,8 @@ void TMapView::keyPressEvent(QKeyEvent* event)
     }
 }
 
-// The main mapper's menu and the profile preferences change these on the Host, for every map window
+// These live on the Host. The mapper menu and some preferences only request a repaint, while
+// others and setConfig() announce the setting, so both signals must lead here
 void TMapView::followMapperSettings()
 {
     if (!mpHost) {
@@ -125,6 +126,8 @@ void TMapView::followMapperSettings()
     }
     mp2dMap->eSize = mpHost->mLineSize;
     mp2dMap->mBSize = mpHost->mRoomBorderSize;
+    mp2dMap->mMapperUseAntiAlias = mpHost->mMapperUseAntiAlias;
+    mp2dMap->mLargeAreaExitArrows = mpHost->getLargeAreaExitArrows();
     mp2dMap->update();
 }
 

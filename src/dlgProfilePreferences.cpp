@@ -5043,7 +5043,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                         break;
                     default: {
                     } // There are a significant number of other errors
-                        // that are not handled here!
+                    // that are not handled here!
                     }
                 }
             }
@@ -9830,6 +9830,9 @@ void dlgProfilePreferences::slot_changeMapperUseAntiAlias(const bool state)
         pHost->mpMap->mapper()->mp2dMap->mMapperUseAntiAlias = state;
         pHost->mpMap->mapper()->mp2dMap->update();
     }
+    if (pHost->mpMap) {
+        pHost->mpMap->requestMapRepaint();
+    }
 }
 
 // Tells screen-reader users the hyperlink shortcuts when they pick a pane-switching key, so they need not
@@ -10134,11 +10137,11 @@ void dlgProfilePreferences::slot_borderSizeChanged(int size)
     if (mpHost) {
         const double internalSize = 50.0 / size;
         mpHost->mRoomBorderSize = internalSize;
-        if (mpHost->mpMap && mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap) {
-            mpHost->mpMap->mapper()->mp2dMap->setBorderSize(internalSize);
-            mpHost->mpMap->mapper()->update3DView();
-        }
         if (mpHost->mpMap) {
+            if (mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap) {
+                mpHost->mpMap->mapper()->mp2dMap->setBorderSize(internalSize);
+                mpHost->mpMap->mapper()->update3DView();
+            }
             mpHost->mpMap->requestMapRepaint();
         }
     }

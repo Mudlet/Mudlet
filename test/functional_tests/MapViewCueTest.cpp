@@ -396,7 +396,7 @@ private slots:
         QCOMPARE(errors.buffer.at(line).at(column).foreground(), QColor(255, 128, 0));
     }
 
-    // The mapper menu and the preferences set these on the profile, which every map window draws with
+    // Settings are on the profile; a window must pick them up when it opens and again on each change
     void test_anExtraMapWindowFollowsTheMapperSettings()
     {
         const bool showRoomIds = mpHost->mShowRoomID;
@@ -422,7 +422,9 @@ private slots:
         mpHost->mRoomSize = 0.8;
         const auto [viewId, message] = pManager->createView(0);
         QVERIFY2(viewId, qPrintable(message));
-        QPointer<T2DMap> pViewMap = pManager->getView(viewId)->get2DMap();
+        TMapView* pView = pManager->getView(viewId);
+        QVERIFY(pView);
+        QPointer<T2DMap> pViewMap = pView->get2DMap();
         QVERIFY(pViewMap);
         QVERIFY2(pViewMap->mShowRoomID, "a new map window did not show room IDs while the mapper does");
         QVERIFY2(pViewMap->mBubbleMode, "a new map window drew square rooms while the mapper draws round ones");
@@ -437,6 +439,8 @@ private slots:
 
         pViewMap->addSymbolToPixmapCache(qsl("test-key"), qsl("A"), Qt::white, false);
         QVERIFY2(pViewMap->symbolPixmapCacheCount() > 0, "nothing was cached, so a flush would prove nothing");
+        map()->requestMapRepaint();
+        QVERIFY2(pViewMap->symbolPixmapCacheCount() > 0, "a repaint without a size change threw away the cached symbols");
         mpHost->mRoomSize = 1.2;
         map()->announceMapperSettingChanged(TMap::MapperSetting::RoomSize);
         QCOMPARE(pViewMap->rSize, 1.2);
