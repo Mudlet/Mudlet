@@ -418,11 +418,14 @@ function Adjustable.Container:onMove (label, event)
                     return
                 end
             end
-            local tx, ty = max(0,x1-dx), max(0,y1-dy)
+            local tx, ty = x1-dx, y1-dy
             -- get rid of move/size limits when in scrollbox (as it is scrollable)
             if not(hasScrollBox) then
                 tx, ty = min(tx, winw - w), min(ty, winh - h)
             end
+            -- last, as for a container bigger than its parent the bound above is negative,
+            -- and a negative position is read as one measured from the far edge
+            tx, ty = max(0, tx), max(0, ty)
             tx = make_percent(tx/winw)
             ty = make_percent(ty/winh)
             self:move(tx, ty)
