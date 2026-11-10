@@ -3925,23 +3925,31 @@ private slots:
         QTest::addColumn<QString>("item");
         // The 3D view's menu edits through the 2D map, which can be showing another area meanwhile
         QTest::addColumn<bool>("mapShowsAnotherArea");
+        QTest::addColumn<bool>("selectionSpansTwoAreas");
         for (const bool elsewhere : {false, true}) {
             const char* suffix = elsewhere ? ", 2D map elsewhere" : "";
-            QTest::newRow(qPrintable(qsl("Delete%1").arg(suffix))) << qsl("Delete") << elsewhere;
-            QTest::newRow(qPrintable(qsl("Spread%1").arg(suffix))) << qsl("Spread...") << elsewhere;
-            QTest::newRow(qPrintable(qsl("Shrink%1").arg(suffix))) << qsl("Shrink...") << elsewhere;
-            QTest::newRow(qPrintable(qsl("Move to position%1").arg(suffix))) << qsl("Move to position...") << elsewhere;
+            QTest::newRow(qPrintable(qsl("Delete%1").arg(suffix))) << qsl("Delete") << elsewhere << false;
+            QTest::newRow(qPrintable(qsl("Spread%1").arg(suffix))) << qsl("Spread...") << elsewhere << false;
+            QTest::newRow(qPrintable(qsl("Shrink%1").arg(suffix))) << qsl("Shrink...") << elsewhere << false;
+            QTest::newRow(qPrintable(qsl("Move to position%1").arg(suffix))) << qsl("Move to position...") << elsewhere << false;
         }
+        QTest::newRow("Delete, two areas") << qsl("Delete") << false << true;
+        QTest::newRow("Spread, two areas") << qsl("Spread...") << false << true;
+        QTest::newRow("Shrink, two areas") << qsl("Shrink...") << false << true;
+        QTest::newRow("Move to position, two areas") << qsl("Move to position...") << false << true;
     }
 
     void test_roomEditsFromTheMenuAreAnnouncedToTheOtherMapViews()
     {
         QFETCH(QString, item);
         QFETCH(bool, mapShowsAnotherArea);
+        QFETCH(bool, selectionSpansTwoAreas);
         buildMap();
         const int otherAreaId = map()->mpRoomDB->addArea(qsl("Next Door"));
         QVERIFY(map()->setRoomCoordinates(kWestRoomId, -2, 0, 0));
         QVERIFY(map()->setRoomCoordinates(kEastRoomId, 2, 0, 0));
+        // An unselected room of the same area leads in, which must not widen the announcement
+        QVERIFY(map()->setExit(kNorthRoomId, kPlayerRoomId, DIR_SOUTH));
         showMapper(false);
         dragFromTo(pointUnitsFromCentre(-2.5, 0.5), pointUnitsFromCentre(2.5, -0.5));
         QCOMPARE(mp2dMap->mMultiSelectionHighlightRoomId, kPlayerRoomId);
@@ -3955,6 +3963,11 @@ private slots:
             mp2dMap->hide();
             mp2dMap->mAreaID = otherAreaId;
         }
+        if (selectionSpansTwoAreas) {
+            QVERIFY(map()->setRoomArea(kWestRoomId, otherAreaId));
+            QVERIFY(mp2dMap->mMultiSelectionSet.contains(kWestRoomId));
+            QCoreApplication::sendPostedEvents(map(), QEvent::MetaCall);
+        }
         QSignalSpy announced(map(), &TMap::signal_areaChanged);
 
         if (item == qsl("Move to position...")) {
@@ -3966,17 +3979,44 @@ private slots:
         }
 
         QVERIFY2(QTest::qWaitFor(
-                         [this, &announced]() {
+                         [&announced]() {
+                             return !announced.isEmpty();
+                         },
+                         2s),
+                 "the edit was not announced, so other map views go on drawing the rooms as they were");
+        // Every area when the rooms are in several, else just theirs, so views of other areas are spared a redraw
+        QCOMPARE(announced.size(), 1);
+        QCOMPARE(announced.constFirst().constFirst().toInt(), selectionSpansTwoAreas ? -1 : mAreaId);
+    }
+
+    // Deleting a room also takes the exits into it away from rooms in other areas
+    void test_deletingARoomIsAnnouncedToTheAreasWhoseExitsLedToIt()
+    {
+        buildMap();
+        const int otherAreaId = map()->mpRoomDB->addArea(qsl("Next Door"));
+        QVERIFY(map()->addRoom(kOtherAreaRoomId) && map()->setRoomArea(kOtherAreaRoomId, otherAreaId));
+        QVERIFY(map()->setExit(kOtherAreaRoomId, kEastRoomId, DIR_WEST));
+        showMapper(false);
+        clickAt(pointUnitsFromCentre(1, 0));
+        rightClickAt(pointUnitsFromCentre(1, 0));
+        QCoreApplication::sendPostedEvents(map(), QEvent::MetaCall);
+        QSignalSpy announced(map(), &TMap::signal_areaChanged);
+
+        QVERIFY(pickContextMenuItem(qsl("Delete")));
+
+        QVERIFY(!map()->mpRoomDB->getRoom(kEastRoomId));
+        QCOMPARE(map()->mpRoomDB->getRoom(kOtherAreaRoomId)->getExit(DIR_WEST), -1);
+        QVERIFY2(QTest::qWaitFor(
+                         [&announced]() {
                              for (const QList<QVariant>& arguments : std::as_const(announced)) {
-                                 const int areaId = arguments.first().toInt();
-                                 if (areaId == mAreaId || areaId == -1) {
+                                 if (arguments.first().toInt() == -1) {
                                      return true;
                                  }
                              }
                              return false;
                          },
                          2s),
-                 "the edit was not announced, so other map views go on drawing the rooms as they were");
+                 "only the deleted room's area was announced, so a view of the area whose exit led to it goes on drawing that exit");
     }
 
     // The factor and coordinates dialogs run their own event loop, in which a
@@ -4074,8 +4114,17 @@ private slots:
         QVERIFY2(nextDoorIndex >= 0, "Next Door is not offered in the list of areas");
 
         mp2dMap->arealist_combobox->setCurrentIndex(nextDoorIndex);
+        QCoreApplication::sendPostedEvents(map(), QEvent::MetaCall);
+        QSignalSpy announced(map(), &TMap::signal_areaChanged);
         pDialog->accept();
 
+        QVERIFY2(QTest::qWaitFor(
+                         [&announced]() {
+                             return !announced.isEmpty();
+                         },
+                         2s),
+                 "the move was not announced, so other map views go on drawing the rooms where they were");
+        QCOMPARE(announced.constLast().constFirst().toInt(), -1);
         QCOMPARE(roomsInArea(otherAreaId), northRow + farRooms);
         QVERIFY2(!roomsInArea(mAreaId).intersects(northRow), "the rooms are still in the area they came from");
         QCOMPARE(mp2dMap->mAreaID, otherAreaId);
