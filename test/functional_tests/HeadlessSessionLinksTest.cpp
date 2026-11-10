@@ -785,6 +785,102 @@ tempRegexTrigger("^headless raising$", [[echoLink(" r", function() error("headle
         QVERIFY(session.shutdown(false));
     }
 
+    void test_aMiniConsolesLinksAreReadAndFollowed()
+    {
+        const QString name = qsl("Headless Window Links");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QVERIFY(!session.windowLink(qsl("mini"), 1));
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"lua(
+echoLink("in main", [[headlessMain = "ran"]], "the main hint")
+createMiniConsole("mini", 10, 20, 300, 200)
+createLabel("lbl", 0, 300, 100, 20, 1)
+echoLink("mini", "go", [[headlessFollowed = (headlessFollowed or 0) + 1]], "the mini hint")
+echo("mini", "\n")
+echoPopup("mini", "pick", {[[headlessPicked = "first"]], [[headlessPicked = "second"]]}, {"the tip", "First", "Second"})
+echo("mini", "\n")
+)lua")));
+        const std::optional<THeadlessSession::WindowText> rows = session.windowLines(qsl("mini"), 0, 2);
+        QVERIFY(rows);
+        QCOMPARE(rows->lines.size(), 2);
+        const int go = rows->lines.at(0).runs.constLast().link;
+        const int pick = rows->lines.at(1).runs.constLast().link;
+        QVERIFY(go > 0);
+        QVERIFY(pick > 0);
+        QVERIFY(go != pick);
+        const std::optional<THeadlessSession::Link> link = session.windowLink(qsl("mini"), go);
+        QVERIFY(link);
+        QCOMPARE(link->tooltip, qsl("the mini hint"));
+        QVERIFY(!link->menu);
+        QVERIFY(!link->visited);
+        const std::optional<THeadlessSession::Link> popup = session.windowLink(qsl("mini"), pick);
+        QVERIFY(popup);
+        QCOMPARE(popup->tooltip, qsl("the tip"));
+        QVERIFY(popup->menu);
+        QCOMPARE(popup->items, (QList<THeadlessSession::LinkItem>{item(qsl("First")), item(qsl("Second"))}));
+
+        // Each console counts its own: the main console's one link is not the mini console's of that id
+        const std::optional<THeadlessSession::WindowText> mainRows = session.windowLines(qsl("main"), 0, 1000);
+        QVERIFY(mainRows);
+        int inMain = 0;
+        for (const THeadlessSession::WindowLine& line : mainRows->lines) {
+            if (line.text == qsl("in main")) {
+                inMain = line.runs.constLast().link;
+            }
+        }
+        QVERIFY(inMain > 0);
+        for (const QString& mainName : {qsl("main"), QString()}) {
+            QVERIFY(session.windowLink(mainName, inMain));
+            QCOMPARE(session.windowLink(mainName, inMain)->tooltip, qsl("the main hint"));
+        }
+        QCOMPARE(session.link(inMain)->tooltip, qsl("the main hint"));
+        QVERIFY(session.windowLink(qsl("mini"), inMain));
+        QVERIFY(session.windowLink(qsl("mini"), inMain)->tooltip != qsl("the main hint"));
+        const int notInMain = std::max(go, pick);
+        QVERIFY(notInMain != inMain);
+        QVERIFY(!session.link(notInMain));
+        QVERIFY(!session.windowLink(qsl("main"), notInMain));
+        QCOMPARE(session.followLink(notInMain), THeadlessSession::LinkResult::unknown);
+        QCOMPARE(session.followWindowLink(qsl("main"), notInMain), THeadlessSession::LinkResult::unknown);
+        QCOMPARE(luaGlobal(session, "headlessFollowed"), QString());
+
+        // A name whose text is not read has no links
+        for (const QString& refused : {qsl("lbl"), qsl("nothing")}) {
+            QVERIFY2(!session.windowLink(refused, go), qPrintable(refused));
+            QCOMPARE(session.followWindowLink(refused, go), THeadlessSession::LinkResult::unknown);
+        }
+
+        QCoreApplication::processEvents();
+        QCoreApplication::processEvents();
+        QSignalSpy textChanged(&session, &THeadlessSession::windowTextChanged);
+        QSignalSpy linksChanged(&session, &THeadlessSession::linksChanged);
+        QCOMPARE(session.followWindowLink(qsl("mini"), go), THeadlessSession::LinkResult::ran);
+        QCOMPARE(luaGlobal(session, "headlessFollowed"), qsl("1"));
+        QCOMPARE(luaGlobal(session, "headlessMain"), QString());
+        QVERIFY(session.windowLink(qsl("mini"), go)->visited);
+        QVERIFY(!session.link(inMain)->visited);
+        // The window is named for the app to read its links again; linksChanged is the main console's
+        QCoreApplication::processEvents();
+        QCoreApplication::processEvents();
+        QCOMPARE(textChanged.size(), 1);
+        QCOMPARE(textChanged.at(0).at(1).toStringList(), QStringList{qsl("mini")});
+        QVERIFY(linksChanged.isEmpty());
+
+        QCOMPARE(session.followWindowLink(qsl("mini"), pick, 1), THeadlessSession::LinkResult::ran);
+        QCOMPARE(luaGlobal(session, "headlessPicked"), qsl("second"));
+        QCOMPARE(session.followWindowLink(qsl("mini"), pick, 2), THeadlessSession::LinkResult::noSuchItem);
+
+        // Hidden, it still follows: what the pointer can reach is the app's to know
+        QVERIFY(session.runLua(qsl("hideWindow('mini')")));
+        QCOMPARE(session.followWindowLink(qsl("mini"), go), THeadlessSession::LinkResult::ran);
+        QCOMPARE(luaGlobal(session, "headlessFollowed"), qsl("2"));
+
+        QCOMPARE(session.followLink(inMain), THeadlessSession::LinkResult::ran);
+        QCOMPARE(luaGlobal(session, "headlessMain"), qsl("ran"));
+        QVERIFY(session.shutdown(false));
+    }
+
     void test_noLinkChangeIsToldAfterShutdown()
     {
         const QString name = qsl("Headless Links Changed Shutdown");

@@ -3874,7 +3874,7 @@ bool TNullConsoleFrontend::listsConsole(const SubConsole& console, const std::op
     return !console.pFrameSink && (kind == TWindowRegistry::SubConsoleKind::MiniConsole || kind == TWindowRegistry::SubConsoleKind::UserWindow);
 }
 
-const TConsoleModel* TNullConsoleFrontend::listedConsoleModel(const QString& name) const
+TConsoleModel* TNullConsoleFrontend::listedConsoleModel(const QString& name) const
 {
     const auto it = mSubConsoles.find(name);
     return it != mSubConsoles.end() && listsConsole(it->second, mpHost->windowRegistry().subConsoleKind(name)) ? it->second.pModel.get() : nullptr;
