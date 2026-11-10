@@ -345,7 +345,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
 
     it("should keep tags that cecho prints as text", function()
-      for _, text in ipairs({ "Say <hello> world", "<notacolour:alsonot>", "</foo>", "<:>", "<red,blue,green>x", "<red:blue:>x", "<b,notacolour>x", "<b:notacolour>x", "<r:notacolour>x" }) do
+      for _, text in ipairs({ "Say <hello> world", "<notacolour:alsonot>", "</foo>", "<:>", "<red,blue,green>x", "<red:blue:>x", "<b,notacolour>x", "<b:notacolour>x", "<r:notacolour>x", "</red:blue>x", "</b:blue>x", "</foo,red>x", "Map <3,4> here", "<12,34>x" }) do
         assert.equals(text, cecho2ansi(text))
       end
     end)
@@ -357,6 +357,12 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
 
     it("should accept a comma between the colours, as cecho does", function()
       assert.equals("\27[38:5:1m\27[48:5:4mtext", cecho2ansi("<red,blue>text"))
+    end)
+
+    it("should only take ctable numbers and names in the fg:bg form", function()
+      assert.equals("\27[38:5:3m\27[48:5:4mx", cecho2ansi("<3:4>x"))
+      assert.equals("\27[38:5:9m\27[48:5:4mx", cecho2ansi("<light_red:blue>x"))
+      assert.equals("\27[48:5:4mx", cecho2ansi("<light_red,blue>x"))
     end)
   end)
 

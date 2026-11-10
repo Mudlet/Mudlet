@@ -1974,43 +1974,36 @@ local resets = {
   ["/o"]    = "\27[55m"
 }
 
--- take a color name and turn it into an ANSI escape string
-local function colorToAnsi(colorName)
-  -- as in cecho, a style or reset code only counts as the whole tag
-  if resets[colorName] then
-    return resets[colorName]
+local function colorCodeToAnsi(name, layer, namesOnly)
+  if not name or (namesOnly and not color_table[name]) then
+    return ""
   end
-  local result = ""
-  local cols = colorName:split("[:,]")
-  -- cecho takes at most a foreground and a background
-  if #cols > 2 then
-    return result
+  local colorNumber = ctable[name]
+  if colorNumber then
+    return string.format("\27[%d:5:%sm", layer, colorNumber)
   end
-  local fore = cols[1]
-  local back = cols[2]
-  if fore ~= "" then
-    local colorNumber = ctable[fore]
-    if colorNumber then
-      result = string.format("%s\27[38:5:%sm", result, colorNumber)
-    elseif color_table[fore] then
-      local rgb = color_table[fore]
-      result = string.format("%s\27[38:2::%s:%s:%sm", result, rgb[1], rgb[2], rgb[3])
-    end
+  local rgb = color_table[name]
+  if rgb then
+    return string.format("\27[%d:2::%s:%s:%sm", layer, rgb[1], rgb[2], rgb[3])
   end
-  if back then
-    local colorNumber = ctable[back]
-    if colorNumber then
-      result = string.format("%s\27[48:5:%sm", result, colorNumber)
-    elseif color_table[back] then
-      local rgb = color_table[back]
-      result = string.format("%s\27[48:2::%s:%s:%sm", result, rgb[1], rgb[2], rgb[3])
-    end
-  end
-  return result
+  return ""
 end
 
--- converts a decho colour tag to ansi escape sequences, or returns nil when decho would print it as text
+local colorCapturePattern = _Echos.Patterns.Color[2]
+-- converts the inside of a cecho tag to ansi escape sequences, or returns "" when cecho would print the tag as text
+local function colorToAnsi(tag)
+  -- as in cecho, a style or reset code only counts as the whole tag
+  if resets[tag] then
+    return resets[tag]
+  end
+  local fore, back = colorCapturePattern:match("<" .. tag .. ">")
+  -- ctable's numbers and extra names are only taken in the fg:bg form; cecho reads <3,4> as text
+  local namesOnly = tag:find(",", 1, true) ~= nil
+  return colorCodeToAnsi(fore, 38, namesOnly) .. colorCodeToAnsi(back, 48, namesOnly)
+end
+
 local decimalCapturePattern = _Echos.Patterns.Decimal[2]
+-- converts a decho colour tag to ansi escape sequences, or returns nil when decho would print it as text
 local function rgbToAnsi(tag)
   local fr, fg, fb, br, bg, bb = decimalCapturePattern:match(tag)
   if not (fr or br) then
