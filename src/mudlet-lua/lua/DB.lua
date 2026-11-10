@@ -1983,7 +1983,7 @@ function db:fetch(sheet, query, order_by, descending)
 
   if query then
     if type(query) == "table" and not query._isExp then
-      -- next(), not #: only {} means no filter, so a hash-style table such as {name = x} still fails
+      -- next(), not #: only {} means no filter, so a hash-style table such as {name = x} still builds invalid SQL
       if next(query) ~= nil then
         sql = sql .. " WHERE " .. db:AND(unpack(query))
       end
@@ -2034,7 +2034,7 @@ end
 ---   TOTAL - Returns the value of adding all the contents of the specified field.
 ---   </pre>
 ---
---- @param query optional, as for db:fetch; an empty table counts every row
+--- @param query optional, as for db:fetch; an empty table aggregates over every row
 ---
 --- @usage Example:
 ---   <pre>
@@ -2053,11 +2053,14 @@ function db:aggregate(field, fn, query, distinct)
 
   local sql_chunks = { "SELECT", fn, "(", distinct and "DISTINCT" or "", quoted_column(field), ")", "AS", fn, "FROM", s_name }
 
-  if query and not (type(query) == "table" and not query._isExp and next(query) == nil) then
-    sql_chunks[#sql_chunks + 1] = "WHERE"
+  if query then
     if type(query) == "table" and not query._isExp then
-      sql_chunks[#sql_chunks + 1] = db:AND(unpack(query))
+      if next(query) ~= nil then
+        sql_chunks[#sql_chunks + 1] = "WHERE"
+        sql_chunks[#sql_chunks + 1] = db:AND(unpack(query))
+      end
     else
+      sql_chunks[#sql_chunks + 1] = "WHERE"
       sql_chunks[#sql_chunks + 1] = tostring(query)
     end
   end
