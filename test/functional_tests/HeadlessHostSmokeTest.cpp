@@ -12637,6 +12637,25 @@ end))lua");
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Opening the profile created a widget.");
     }
 
+    void test_openProfileWhoseSaveDidNotLoadSaysSoInsteadOfOk()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Open-Corrupt");
+        const QString saveFolder = MudletApp::getMudletPath(enums::profileXmlFilesPath, hostname);
+        QVERIFY(QDir().mkpath(saveFolder));
+        QFile saveFile(qsl("%1/2020-01-01#00-00-00.xml").arg(saveFolder));
+        QVERIFY(saveFile.open(QIODevice::WriteOnly));
+        saveFile.write("<?xml version=\"1.0\"?><MudletPackage version=\"1.001\"><HostPackage><Host");
+        saveFile.close();
+
+        Host* host = HostManager::self()->openProfile(hostname, false);
+        QVERIFY2(host, "The profile did not open.");
+        QVERIFY(!host->mLoadedOk);
+        QCoreApplication::processEvents();
+        QVERIFY2(!mainBufferHolds(host, qsl("loaded in offline mode")), "A profile whose save did not load was reported as loaded.");
+        QVERIFY2(mainBufferHolds(host, qsl("opened in offline mode, but")), "The offline open did not say the save failed to load.");
+        HostManager::self()->deleteHost(hostname);
+    }
+
     // A negative priority module runs before the profile's own scripts, so the editor, which lists the root
     // scripts in order, has to show it above them - and a profile reset runs them in that order too
     void test_negativePriorityModulesComeBeforeTheProfileScripts()
