@@ -103,6 +103,9 @@ private slots:
         QCOMPARE(MudletReplay::self()->speed(), 1024);
         QVERIFY(!pFaster->isEnabled());
         QVERIFY(pSlower->isEnabled());
+        // The disabled button no longer reaches the clamp, so check it directly
+        MudletReplay::self()->speedUp();
+        QCOMPARE(MudletReplay::self()->speed(), 1024);
 
         pSlower->trigger();
         QCOMPARE(MudletReplay::self()->speed(), 512);
