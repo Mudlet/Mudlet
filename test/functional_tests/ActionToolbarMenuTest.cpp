@@ -610,6 +610,42 @@ private slots:
                  "the clicks did not send the down then the up command, each before the script, at the state it went to");
     }
 
+    // A push-down menu entry is pressed as a button is: its command sees the
+    // state it went to, and the headless frontend hears it changed
+    void test_choosingAPushDownMenuEntryTogglesIt()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        auto* group = buildNestedGroup(host, 0);
+        auto* entryAction = actionNamed(host, qsl("menuTestEntry"));
+        QVERIFY(entryAction);
+        entryAction->setIsPushDownButton(true);
+        entryAction->setCommandButtonDown(qsl("QA_ENTRY_DOWN_COMMAND"));
+        entryAction->setCommandButtonUp(qsl("QA_ENTRY_UP_COMMAND"));
+        QVERIFY(entryAction->setScript(qsl("qaEntrySeen = qaEntrySeen .. 'script' .. getButtonState() .. ' '")));
+
+        QVERIFY(host->mLuaInterpreter.compileAndExecuteScript(qsl("qaEntrySeen = ''; "
+                                                                  "tempAlias([[^QA_ENTRY_(\\w+)_COMMAND$]], [[qaEntrySeen = qaEntrySeen .. matches[2] .. getButtonState() .. ' ']])")));
+
+        host->getActionUnit()->updateAllToolbars();
+        auto* button = findButtonWidget(group);
+        QVERIFY(button);
+        QVERIFY(button->menu());
+        auto* entry = entryNamed(button->menu(), qsl("menuTestEntry"));
+        QVERIFY(entry);
+        QSignalSpy buttonsChanged(host, &Host::signal_buttonsChanged);
+
+        entry->trigger();
+        QVERIFY(entryAction->mButtonState);
+        entry->trigger();
+        QVERIFY(!entryAction->mButtonState);
+        QVERIFY2(host->mLuaInterpreter.compileAndExecuteScript(qsl("assert(qaEntrySeen == 'DOWN2 script2 UP1 script1 ', qaEntrySeen)")),
+                 "choosing the entry did not send the down then the up command, each before the script, at the state it went to");
+        QCOMPARE(buttonsChanged.count(), 2);
+    }
+
     // A plain button is left up whatever its stored state, and getButtonState()
     // reads it up, on either bar
     void test_clickingAPlainButtonLeavesItUp_data()
