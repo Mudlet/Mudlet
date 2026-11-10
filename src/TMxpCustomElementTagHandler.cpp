@@ -22,6 +22,7 @@
 #include "TEntityResolver.h"
 #include "TMxpClient.h"
 #include "TMxpTagParser.h"
+#include "TStringUtils.h"
 
 // Far deeper than any game nests its elements, and shallow enough for a 1MB main-thread stack
 static constexpr qsizetype maxElementExpansionDepth = 32;
@@ -50,7 +51,8 @@ TMxpTagHandlerResult TMxpCustomElementTagHandler::handleStartTag(TMxpContext& ct
         mElementsBeingExpanded.insert(key);
         for (const QSharedPointer<MxpNode>& ptr : std::as_const(el.parsedDefinition)) {
             if (!ptr->isTag()) {
-                ctx.handleContent(ptr->asText()->getContent());
+                // Links decode what they wrap as the game's bytes, which this text was decoded from
+                ctx.handleContentBytes(TStringUtils::encodeBytes(ptr->asText()->getContent(), client.getEncoding()));
             } else if (ptr->isStartTag()) {
                 // transform the custom tag to the given in the definition
                 MxpStartTag newTag = resolveElementDefinition(el, ptr->asStartTag(), tag);

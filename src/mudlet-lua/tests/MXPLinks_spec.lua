@@ -365,6 +365,16 @@ describe("Tests the Lua an MXP link runs", function()
       it("opens the text a bare A wraps", function()
         assertRunsOnly(actionsAfter(("<A>https://example/%s</A>"):format(word)), "openUrl", "https://example/" .. word)
       end)
+
+      it("sends the text an element's definition gives a SEND along with the text the game wraps", function()
+        feed(("<!ELEMENT mxpLinksDefinedSend '<SEND>%s <B>'>"):format(word))
+        assertRunsOnly(actionsAfter(("<mxpLinksDefinedSend>%s</mxpLinksDefinedSend>"):format(word)), "send", ("%s %s"):format(word, word))
+      end)
+
+      it("opens the text an element's definition gives an A along with the text the game wraps", function()
+        feed(("<!ELEMENT mxpLinksDefinedA '<A>https://example/%s/<B>'>"):format(word))
+        assertRunsOnly(actionsAfter(("<mxpLinksDefinedA>%s</mxpLinksDefinedA>"):format(word)), "openUrl", ("https://example/%s/%s"):format(word, word))
+      end)
     end)
   end
 
