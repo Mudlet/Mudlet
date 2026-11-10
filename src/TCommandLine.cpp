@@ -210,6 +210,28 @@ void TCommandLine::processNormalKey(QEvent* event)
     spellCheck();
 }
 
+// Text from an input method, such as Chinese or Japanese, or a dead key, never arrives as a KeyPress
+void TCommandLine::processInputMethod(QEvent* event)
+{
+    const QString before = toPlainText();
+    {
+        const UserEditScope userEdit(*this);
+        QPlainTextEdit::event(event);
+    }
+    // The text being composed is laid out in the line too, so it can wrap before it is committed
+    adjustHeight();
+
+    // A composition the player cancels changes nothing, unless it started over a selection, which it deleted
+    if (toPlainText() == before) {
+        return;
+    }
+    mHistoryBuffer = 0;
+    if (mCompletion.lineEdited(toPlainText())) {
+        mCompletion.restartHistoryWalk();
+    }
+    spellCheck();
+}
+
 bool TCommandLine::keybindingMatched(QKeyEvent* keyEvent)
 {
     // Don't process keybindings if the host is closing down to prevent crashes
@@ -696,8 +718,7 @@ bool TCommandLine::event(QEvent* event)
     }
 
     if (event->type() == QEvent::InputMethod) {
-        // Text from an input method, such as Chinese or Japanese, or a dead key, never arrives as a KeyPress
-        processNormalKey(event);
+        processInputMethod(event);
         return true;
     }
     if (event->type() == QEvent::KeyPress) {
