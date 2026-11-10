@@ -513,7 +513,11 @@ private slots:
                          20s),
                  "the refused certificate was not reported by the disconnection path");
         // The control: without a certificate error there was nothing for Mudlet to refuse
-        QVERIFY2(!host->mTelnet.getSslErrors().isEmpty(), "the stub's certificate raised no error, so nothing was refused");
+        const QList<QSslError> sslErrors = host->mTelnet.getSslErrors();
+        QVERIFY2(!sslErrors.isEmpty(), "the stub's certificate raised no error, so nothing was refused");
+        for (const auto& sslError : sslErrors) {
+            QVERIFY2(bufferContains(host, sslError.errorString()), qPrintable(qsl("the player was not told \"%1\"").arg(sslError.errorString())));
+        }
         QVERIFY2(!bufferContains(host, qsl("rejected by server")), "a certificate Mudlet refused was reported as the game rejecting the login");
     }
 #endif
