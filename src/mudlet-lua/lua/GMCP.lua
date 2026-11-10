@@ -85,8 +85,8 @@ function enableModule(user, module)
 end
 
 
--- Runs on every GMCP enable: Mudlet's Core.Supports.Set, sent just before this event, replaces the
---   server's list, and modules enabled earlier (profile load, sysConnectionEvent) could not be sent
+-- Runs on every GMCP enable: modules enabled before GMCP was up (profile load, sysConnectionEvent)
+--   could not be sent, and a Core.Supports.Set from Mudlet replaces the server's list
 function gmod.reenableModules()
   local list = {}
   for module, users in pairs(registeredModules) do
