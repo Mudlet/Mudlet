@@ -75,25 +75,29 @@
     keepdays
   ))
 
-  -- The newest file Mudlet would load stays however old it is. An interrupted
-  -- save can leave a newer temporary file behind, which Mudlet skips over.
+  -- The newest files Mudlet would load stay however old they are. An interrupted
+  -- save can leave a newer temporary file behind, which Mudlet skips over, and
+  -- modification times are whole seconds, so every file tied for newest stays.
   local loadedExtensions = {profiles = {xml = true}, maps = {dat = true, json = true}}
-  local newestLoaded = #profile_table
-  if loadedExtensions[delete_folder] then
-    newestLoaded = nil
-    for i = #profile_table, 1, -1 do
-      local extension = profile_table[i].name:match("%.([^.]+)$")
-      if extension and loadedExtensions[delete_folder][extension:lower()] then
-        newestLoaded = i
-        break
-      end
+  local function loadable(name)
+    local extensions = loadedExtensions[delete_folder]
+    if not extensions then
+      return true
+    end
+    local extension = name:match("%.([^.]+)$")
+    return extension ~= nil and extensions[extension:lower()] == true
+  end
+  local newestLoadedTime
+  for _, v in ipairs(profile_table) do
+    if loadable(v.name) then
+      newestLoadedTime = v.last_mod
     end
   end
 
   for i, v in ipairs(profile_table) do
     local days = math.floor(os.difftime(os.time(), v.last_mod) / 86400)
     local last_mod_month = os.date("%Y/%m", v.last_mod)
-    if days &gt; keepdays and i ~= newestLoaded then
+    if days &gt; keepdays and not (v.last_mod == newestLoadedTime and loadable(v.name)) then
       -- For profiles older than X days, check if we already kept a table for this month:
       if not table.contains(used_last_mod_months, last_mod_month) then
         -- If not, do nothing and mark this month as "kept".
