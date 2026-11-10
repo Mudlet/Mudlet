@@ -120,6 +120,8 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
         lines = ["method=%s" % self.command, "path=%s" % self.path]
         for name, value in self.headers.items():
             lines.append("header:%s=%s" % (name.lower(), value))
+        # The body as hex too, since the decoded copy cannot show bytes that are not UTF-8
+        lines.append("bodyhex=%s" % body.hex())
         # Body last: it is the only part that may itself contain newlines.
         lines.append("body=%s" % body.decode("utf-8", "replace"))
         payload = "\n".join(lines).encode("utf-8")

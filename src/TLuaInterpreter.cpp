@@ -6843,9 +6843,12 @@ int TLuaInterpreter::performHttpRequest(lua_State* L, const char* functionName, 
         return lua_error(L);
     }
 
-    QString dataToPost;
+    // Sent byte for byte: the data may hold NULs, or bytes that are not UTF-8
+    QByteArray dataToPost;
     if (lua_isstring(L, pos + 1)) {
-        dataToPost = lua_tostring(L, pos + 1);
+        size_t dataLength = 0;
+        const char* data = lua_tolstring(L, pos + 1, &dataLength);
+        dataToPost = QByteArray(data, static_cast<qsizetype>(dataLength));
     }
     const QString urlString{lua_tostring(L, pos + 2)};
     QString fileLocation;
@@ -6881,13 +6884,13 @@ int TLuaInterpreter::performHttpRequest(lua_State* L, const char* functionName, 
     QNetworkReply* reply;
     switch (operation) {
     case QNetworkAccessManager::PostOperation:
-        reply = host.mLuaInterpreter.mpFileDownloader->post(request, fileToUpload.isEmpty() ? dataToPost.toUtf8() : fileToUpload);
+        reply = host.mLuaInterpreter.mpFileDownloader->post(request, fileToUpload.isEmpty() ? dataToPost : fileToUpload);
         break;
     case QNetworkAccessManager::PutOperation:
-        reply = host.mLuaInterpreter.mpFileDownloader->put(request, fileToUpload.isEmpty() ? dataToPost.toUtf8() : fileToUpload);
+        reply = host.mLuaInterpreter.mpFileDownloader->put(request, fileToUpload.isEmpty() ? dataToPost : fileToUpload);
         break;
     default:
-        reply = host.mLuaInterpreter.mpFileDownloader->sendCustomRequest(request, QByteArray{verb}, fileToUpload.isEmpty() ? dataToPost.toUtf8() : fileToUpload);
+        reply = host.mLuaInterpreter.mpFileDownloader->sendCustomRequest(request, QByteArray{verb}, fileToUpload.isEmpty() ? dataToPost : fileToUpload);
     };
 
     if (TDebug::wants(TDebug::Category::Network)) {
