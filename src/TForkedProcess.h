@@ -48,7 +48,12 @@ private:
     int callBackFunctionRef = -1;
     TLuaInterpreter* mpInterpreter = nullptr;
     bool running = false;
+    // How many slot_receivedData() calls are on the stack, as a callback can
+    // spin an event loop (a modal dialog) that delivers finished() inside it
+    int mReadDepth = 0;
 
+signals:
+    void signal_doneWith();
 
 private slots:
     void slot_receivedData();
