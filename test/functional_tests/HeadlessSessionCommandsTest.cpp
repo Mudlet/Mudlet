@@ -146,6 +146,34 @@ private slots:
 
     void cleanupTestCase() { mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg); }
 
+    void test_theShortcutsTheAppKeepsAreRefused()
+    {
+        const QString name = qsl("Headless Commands Reserved");
+        QVERIFY(writeProfile(name));
+        const auto forgetReserved = qScopeGuard([]() {
+            THeadlessSession::setReservedShortcuts({});
+        });
+        THeadlessSession::setReservedShortcuts({{QKeySequence(qsl("Ctrl+Alt+L")), qsl("Toggle logging")}, {QKeySequence(), qsl("No key")}});
+        QCOMPARE(THeadlessSession::reservedShortcuts(), (QList<THeadlessSession::ReservedShortcut>{{QKeySequence(qsl("Ctrl+Alt+L")), qsl("Toggle logging")}}));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"lua(
+headlessKept, headlessWhy = addCommand({name = "Kept", shortcut = "ctrl+alt+l"})
+headlessWhy = tostring(headlessKept) .. " " .. tostring(headlessWhy)
+headlessFree = addCommand({name = "Free", shortcut = "Ctrl+Alt+K"})
+headlessToolbar = type(addCommand({name = "Toolbar", surfaces = "toolbar"}))
+)lua")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessWhy"), qsl("nil %1 is already taken by \"Toggle logging\"").arg(QKeySequence(qsl("Ctrl+Alt+L")).toString(QKeySequence::NativeText)));
+        QCOMPARE(luaGlobalString(session.host(), "headlessToolbar"), qsl("number"));
+        QCOMPARE(names(session.addonCommands()), (QStringList{qsl("Free"), qsl("Toolbar")}));
+
+        // Once given up, the key is handed out, and the command that has it by then keeps it
+        THeadlessSession::setReservedShortcuts({{QKeySequence(qsl("Ctrl+Alt+K")), qsl("Search")}});
+        QVERIFY(session.runLua(qsl(R"lua(headlessLater = type(addCommand({name = "Later", shortcut = "Ctrl+Alt+L"})))lua")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessLater"), qsl("number"));
+        QCOMPARE(session.pressKey(Qt::Key_K, Qt::ControlModifier | Qt::AltModifier), THeadlessSession::KeyResult::commandRan);
+    }
+
     void test_theCommandsPackagesAddAreListed()
     {
         const QString name = qsl("Headless Commands Listed");

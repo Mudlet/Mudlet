@@ -1122,6 +1122,16 @@ because `addonCommands()` does not list it and `activateAddonCommand()` does not
 matches a shortcut written without the keypad, as in Qt, and a shortcut of more than one key never runs
 from `pressKey()`, which takes one key at a time.
 
+`THeadlessSession::setReservedShortcuts()` tells Mudlet which shortcuts the app keeps for its own menus,
+each a `QKeySequence` with the name of what holds it. The GUI refuses a package the keys of its own
+menu, and with this the app's are refused the same way: `addCommand()` returns `nil` and
+`<key> is already taken by "<holder>"`, so a package picks another key instead of getting one the app
+never passes on. The call is static because the keys are the app's, not one profile's: the list holds
+for every session, each call replaces the one before, and an entry with an empty sequence is left out.
+It is checked as a command is added, so make the call before `start()` to cover what packages add as
+the profile loads; a command added earlier keeps its shortcut. `reservedShortcuts()` gives the list
+back. `mudlet-headless` has no menus and reserves none.
+
 `buttonBars()` lists the profile's button bars and toolbars, the buttons a script makes with
 `tempButtonToolbar()` and `tempButton()` and those a package or the editor adds, as the GUI draws
 them: in the order of the profile's actions, each bar with its place (`top`, `left`, `right` or

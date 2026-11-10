@@ -26,6 +26,7 @@
 #include <QFlags>
 #include <QFont>
 #include <QHash>
+#include <QKeySequence>
 #include <QList>
 #include <QObject>
 #include <QPoint>
@@ -440,6 +441,20 @@ public:
     // with errorString() saying why, for an id that is not a command of the session's profile and for a disabled
     // command, which the GUI does not let be clicked.
     bool activateAddonCommand(int id);
+    // A shortcut the app keeps for itself, and the name a refusal gives for what holds it
+    struct ReservedShortcut
+    {
+        QKeySequence sequence;
+        QString holder;
+
+        bool operator==(const ReservedShortcut&) const = default;
+    };
+    // The shortcuts addCommand() refuses from here on, as the GUI refuses the keys of its own menu: the script
+    // gets nil and '<key> is already taken by "<holder>"'. For every session of the app, as one app holds the
+    // keys, and it replaces the list given before; an empty sequence is left out. A command added earlier
+    // keeps its shortcut. Call it before start() to cover what the profile's packages add as they load.
+    static void setReservedShortcuts(const QList<ReservedShortcut>& shortcuts);
+    static QList<ReservedShortcut> reservedShortcuts();
     // A button on one of the profile's button bars or toolbars, or an entry of a button's menu, as the GUI draws it
     struct Button
     {
