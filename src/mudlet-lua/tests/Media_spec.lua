@@ -1464,6 +1464,7 @@ describe("Media playback effects with a generated sound file", function()
     waitForCount("sysDownloadDone", done, 1)
     waitForEvent("sysMediaStarted", quietMilliseconds)
 
+    assert.equals(1, #done)
     for _, entry in ipairs(started) do
       assert.are_not.equals("busted-media-priority-download", entry.key)
     end
