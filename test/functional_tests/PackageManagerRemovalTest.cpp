@@ -145,7 +145,7 @@ private slots:
         auto* manager = new dlgPackageManager(nullptr, host);
         const QString first = manager->installPackageFiles({packageFile});
         host->saveProfile();
-        QVERIFY2(host->currentlySavingProfile(), "SETUP: the save had already finished, so the second import could not be put off");
+        QVERIFY2(host->currentlySavingProfile(), "SETUP: the save had already finished, so the second import did not meet a running save");
         const QString second = manager->installPackageFiles({packageFile});
         delete manager;
 
