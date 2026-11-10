@@ -623,6 +623,12 @@ describe("yajl generators", function()
     generator:close()
   end)
 
+  it("raise an error for an indent that is not text", function()
+    assert.has_error(function() yajl.generator({indent = true}) end)
+    assert.has_error(function() yajl.to_string({1}, {indent = {}}) end)
+    assert.are.equal('[\n  1\n]\n', yajl.to_string({1}, {indent = "  "}))
+  end)
+
   it("still write values", function()
     local written = {}
     local generator = yajl.generator({printer = function(text) written[#written + 1] = text end})

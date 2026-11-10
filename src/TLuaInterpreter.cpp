@@ -170,6 +170,30 @@ int checkedYajlGeneratorValue(lua_State* L)
     return forwardToModuleFunction(L);
 }
 
+// lua-yajl hands yajl a null indent string for an indent option that is not text, which yajl reads
+int checkedYajlIndent(lua_State* L, const int options)
+{
+    if (lua_istable(L, options)) {
+        lua_getfield(L, options, "indent");
+        const bool notText = !lua_isnil(L, -1) && !lua_isstring(L, -1);
+        lua_pop(L, 1);
+        if (notText) {
+            return luaL_argerror(L, options, "indent must be a string");
+        }
+    }
+    return forwardToModuleFunction(L);
+}
+
+int checkedYajlGenerator(lua_State* L)
+{
+    return checkedYajlIndent(L, 1);
+}
+
+int checkedYajlToString(lua_State* L)
+{
+    return checkedYajlIndent(L, 2);
+}
+
 // Wraps the C function in field name of the table on top of the stack, if there is one
 void wrapModuleFunction(lua_State* L, const char* name, lua_CFunction wrapper)
 {
@@ -8151,6 +8175,10 @@ void TLuaInterpreter::initLuaGlobals()
             mStockJsonToValue = lua_tocfunction(pGlobalLua, -1);
             lua_pop(pGlobalLua, 1);
         }
+        lua_pop(pGlobalLua, 1);
+        lua_getglobal(pGlobalLua, "yajl");
+        wrapModuleFunction(pGlobalLua, "generator", checkedYajlGenerator);
+        wrapModuleFunction(pGlobalLua, "to_string", checkedYajlToString);
         lua_pop(pGlobalLua, 1);
         luaL_getmetatable(pGlobalLua, "yajl.generator.meta");
         wrapModuleFunction(pGlobalLua, "value", checkedYajlGeneratorValue);
