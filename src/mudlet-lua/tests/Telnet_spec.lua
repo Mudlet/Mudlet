@@ -1039,6 +1039,7 @@ describe("Tests MSSP subnegotiation handling", function()
     mssp.MSSPDESC = nil
     mssp.MSSPESC = nil
     mssp.MSSPNAME = nil
+    mssp.MSSPEND = nil
   end)
 
   it("keeps the line breaks of a multi-line value", function()
@@ -1049,6 +1050,12 @@ describe("Tests MSSP subnegotiation handling", function()
   it("keeps an escape character as the byte the game sent", function()
     feedMssp(VAR .. "MSSPESC" .. VAL .. "a<ESC>b")
     assert.equals("a\27b", mssp.MSSPESC)
+  end)
+
+  it("drops the line break that ends a value", function()
+    feedMssp(VAR .. "MSSPNAME" .. VAL .. "Test Realm<CR><LF>" .. VAR .. "MSSPEND" .. VAL .. "one<CR><LF>two<CR><LF>")
+    assert.equals("Test Realm", mssp.MSSPNAME)
+    assert.equals("one\ntwo", mssp.MSSPEND)
   end)
 
   it("still reads the variables after a multi-line one", function()

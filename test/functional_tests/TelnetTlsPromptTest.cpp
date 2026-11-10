@@ -173,7 +173,7 @@ private slots:
         QVERIFY(spy.isValid());
         QByteArray advertise = msspTlsPayload("1\r\n");
         host->mTelnet.loopbackTest(advertise);
-        QVERIFY2(!spy.wait(500ms), "The MSSP 'TLS supported' flag 1 was taken for port 1.");
+        QVERIFY2(spy.isEmpty(), "The MSSP 'TLS supported' flag 1 was taken for port 1.");
         QCOMPARE(host->mMSSPTlsPort, 0);
 #endif
     }

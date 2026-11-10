@@ -4762,7 +4762,11 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
 
             // A variable can carry several values, with the default one last
             const QString msspVAR = payloadList.first();
-            const QString msspVAL = payloadList.last();
+            // setMSSPVariables() already dropped the CR of each CR LF
+            QString msspVAL = payloadList.last();
+            while (msspVAL.endsWith(QChar::LineFeed)) {
+                msspVAL.chop(1);
+            }
 
             lua_getglobal(L, "mssp");
             lua_pushstring(L, msspVAR.toUtf8().constData());
@@ -4786,14 +4790,12 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
             }
             host.raiseEvent(event);
 
-            // A value can end in the line break of a multi-line MSSP block
             if (msspVAR == "HOSTNAME") {
-                host.mMSSPHostName = msspVAL.trimmed();
+                host.mMSSPHostName = msspVAL;
             } else if (msspVAR == "TLS" || msspVAR == "SSL") {
                 // In certain MSSP fields "-1" and "1" denote not supported/supported indicators,
                 // however the port is the standard value here. Ignore those values here.
-                const QString port = msspVAL.trimmed();
-                host.mMSSPTlsPort = (port != "-1" && port != "1") ? port.toInt() : 0;
+                host.mMSSPTlsPort = (msspVAL != "-1" && msspVAL != "1") ? msspVAL.toInt() : 0;
             }
         }
     }
