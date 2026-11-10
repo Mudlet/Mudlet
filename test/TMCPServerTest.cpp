@@ -1086,6 +1086,37 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
         QCOMPARE(array.text.count(qsl("the rest was left out")), 1);
     }
 
+    void testAMarkerSitsInTheTableThatLostEntries()
+    {
+        // The child is complete, but its last string runs the budget out, so it is the
+        // parent's own entry that goes missing and the parent that has to say so.
+        const MCPToolResult result = TMCPLuaBridge::runLua(L, qsl("local c = {} for i = 1, 16 do c[i] = string.rep('x', 99999) end return {c, extra = 'tail'}"));
+
+        QVERIFY(result.success);
+        QCOMPARE(result.text.count(qsl("the rest was left out")), 1);
+        QVERIFY2(result.text.contains(qsl("\"<too much data, the rest was left out>\":null")), qPrintable(result.text.right(300)));
+    }
+
+    void testATableWhoseLastStringRunsTheBudgetOutIsNotMarked()
+    {
+        const MCPToolResult array = TMCPLuaBridge::runLua(L, qsl("local t = {} for i = 1, 16 do t[i] = string.rep('x', 99999) end return t"));
+        const MCPToolResult object = TMCPLuaBridge::runLua(L, qsl("local t = {} for i = 1, 16 do t['k' .. i] = string.rep('x', 99999) end return t"));
+
+        QVERIFY(array.success);
+        QVERIFY(object.success);
+        QVERIFY2(!array.text.contains(qsl("left out")), qPrintable(array.text.right(300)));
+        QVERIFY2(!object.text.contains(qsl("left out")), qPrintable(object.text.right(300)));
+    }
+
+    void testAKeyThatRunsTheBudgetOutIsMarkedOnce()
+    {
+        // The key's own charge leaves the marker as its value, which already says it.
+        const MCPToolResult result = TMCPLuaBridge::runLua(L, qsl("local t = {} for i = 1, 40 do t[string.rep('k', 99999) .. i] = 1 end return t"));
+
+        QVERIFY(result.success);
+        QCOMPARE(result.text.count(qsl("the rest was left out")), 1);
+    }
+
     void testANestedTableCutShortIsMarkedOnce()
     {
         const MCPToolResult result = TMCPLuaBridge::runLua(L, qsl("local t = {} for i = 1, 40 do t[i] = string.rep('x', 99999) end return {t}"));

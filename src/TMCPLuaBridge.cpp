@@ -511,7 +511,7 @@ QJsonValue TMCPLuaBridge::luaTableToJson(lua_State* L, int index, int depth, int
             array.append(value);
             lua_pop(L, 1);
             if (nodeBudget < 0) {
-                if (!carriesLeftOutMarker(value)) {
+                if (i < length && !carriesLeftOutMarker(value)) {
                     array.append(leftOutMarker());
                 }
                 break;
@@ -560,14 +560,17 @@ QJsonValue TMCPLuaBridge::luaTableToJson(lua_State* L, int index, int depth, int
         object[uniqueKey] = value;
         lua_pop(L, 1);
         if (nodeBudget < 0 || object.size() >= csmMaxObjectKeys) {
-            // Leaving a lua_next() walk early means popping the key it is holding, which
-            // the loop would otherwise have handed back on the next call.
-            lua_pop(L, 1);
-            if (nodeBudget < 0 && !carriesLeftOutMarker(value)) {
-                object[leftOutMarker()] = QJsonValue();
-            } else if (nodeBudget >= 0) {
+            // One more step tells whether anything is actually left out; a table whose
+            // last entry is what ran out the budget is complete and is not marked.
+            if (lua_next(L, index) == 0) {
+                break;
+            }
+            lua_pop(L, 2);
+            if (nodeBudget >= 0) {
                 //: Stands in for the keys of a Lua table that were too many to send to an AI model.
                 object[tr("<too many keys, the rest were left out>")] = QJsonValue();
+            } else if (!carriesLeftOutMarker(value)) {
+                object[leftOutMarker()] = QJsonValue();
             }
             break;
         }
@@ -583,9 +586,9 @@ QString TMCPLuaBridge::leftOutMarker()
 
 bool TMCPLuaBridge::carriesLeftOutMarker(const QJsonValue& value)
 {
-    // A string that overdrew the budget comes back whole, so only the marker itself or a
-    // table, which marks its own cut, already tells the reader where the value stops.
-    return value.isArray() || value.isObject() || value == QJsonValue(leftOutMarker());
+    // A table marks only what it left out of itself, and a string that overdrew the budget
+    // comes back whole, so only the marker standing in for the value says the rest is gone.
+    return value == QJsonValue(leftOutMarker());
 }
 
 QString TMCPLuaBridge::readString(lua_State* L, int index, qsizetype limit)
