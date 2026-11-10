@@ -4241,7 +4241,7 @@ QString TTextEdit::linkAnnouncement(const int linkIndex) const
     // A link is announced by what it does, which its appearance need not show
     QString role;
     if (mpBuffer->linkIsNote(linkIndex)) {
-        //: Screen reader role for a game's text that has a tooltip or styling but does nothing when activated
+        //: Screen reader role for marked-up text from the game that does nothing when activated, such as text that only carries a tooltip
         role = tr("note");
     } else if (styling.isSpoiler && mpBuffer->isSpoilerUnrevealed(linkIndex)) {
         //: Screen reader role for a game's hidden text that activating the link reveals
@@ -4263,7 +4263,7 @@ QString TTextEdit::linkAnnouncement(const int linkIndex) const
             role = tr("checkbox, not checked");
         }
     } else {
-        //: Screen reader role for a link that does something when activated
+        //: Screen reader role for an ordinary link, announced after its tooltip or command
         role = tr("link");
     }
 

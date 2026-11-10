@@ -27,7 +27,7 @@
 struct GmcpLinkUri
 {
     QString name;
-    // A single JSON value as the game wrote it, or empty when the message carries no data
+    // The single JSON value the game sent, percent-decoded and trimmed, or empty when the message carries no data
     QString json;
 
     bool dataAllowsSelection() const;

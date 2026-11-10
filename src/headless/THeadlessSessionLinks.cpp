@@ -92,6 +92,10 @@ THeadlessSession::LinkResult THeadlessSession::followLink(const int link, const 
     }
     switch (model.linkMayRun(link)) {
     case TConsoleModel::LinkFollowed::ran:
+        // As in the GUI, which takes no click or key on a note
+        if (model.buffer.linkIsNote(link)) {
+            return LinkResult::disabled;
+        }
         break;
     case TConsoleModel::LinkFollowed::revealedSpoiler:
         return LinkResult::revealedSpoiler;
@@ -100,8 +104,8 @@ THeadlessSession::LinkResult THeadlessSession::followLink(const int link, const 
     case TConsoleModel::LinkFollowed::unknown:
         return LinkResult::unknown;
     }
-    // A left click runs the first item whatever it holds, but on a local: link that opens its menu; the GUI's menu
-    // greys out an item with nothing to run
+    // A left click runs the first item whatever it holds, except on a local: link with a menu, where it runs nothing;
+    // the GUI's menu greys out an item with nothing to run
     const bool fromMenu = item && store.opensMenu(link);
     if (fromMenu && !items.at(*item).enabled) {
         return LinkResult::disabled;

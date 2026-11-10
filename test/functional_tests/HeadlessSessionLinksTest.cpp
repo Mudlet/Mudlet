@@ -410,6 +410,30 @@ tempRegexTrigger("^headless popup$", [[echoPopup(" p", {"headlessPopup = 1", "he
         QVERIFY(session.shutdown(false));
     }
 
+    void test_aLocalLinkRunsOnlyAnItemChosenFromItsMenu()
+    {
+        const QString name = qsl("Headless Follow Local");
+        QVERIFY(writeProfile(name, recordSends()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QVERIFY(session.runLua(feed(qsl("note: ") + osc8(qsl("local:?config={\"tooltip\":\"It needs a key\"}"), qsl("the door")))
+                               + feed(qsl("menu: ") + osc8(qsl("local:?config={\"menu\":[{\"Look\":\"send:look\"}]}"), qsl("the chest")))));
+
+        const QList<int> note = linksOnLineStarting(output, qsl("note: "));
+        QCOMPARE(note.size(), 1);
+        QCOMPARE(session.followLink(note.first()), THeadlessSession::LinkResult::disabled);
+        QVERIFY(!session.link(note.first())->visited);
+
+        const QList<int> menu = linksOnLineStarting(output, qsl("menu: "));
+        QCOMPARE(menu.size(), 1);
+        QCOMPARE(session.followLink(menu.first()), THeadlessSession::LinkResult::ran);
+        QVERIFY(luaGlobal(session, "headlessSent").isEmpty());
+        QCOMPARE(session.followLink(menu.first(), 0), THeadlessSession::LinkResult::ran);
+        QCOMPARE(luaGlobal(session, "headlessSent"), qsl("look;"));
+        QVERIFY(session.shutdown(false));
+    }
+
     void test_followingALinkOfAnExclusiveGroupSelectsOnlyIt()
     {
         const QString name = qsl("Headless Follow Group");

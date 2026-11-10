@@ -104,5 +104,14 @@ QString gmcpMessageWithSelected(const QString& message, const bool selected)
         data = singleJsonValue(message.mid(nameEnd + 1)).value_or(QJsonValue()).toObject();
     }
     data[qsl("selected")] = selected;
-    return qsl("%1 %2").arg(name, QString::fromUtf8(QJsonDocument(data).toJson(QJsonDocument::Compact)));
+    // Qt writes DEL and the C1 controls out raw, which parseGmcpLinkUri() refuses in a message, so they go back to escapes
+    QString json;
+    for (const QChar character : QString::fromUtf8(QJsonDocument(data).toJson(QJsonDocument::Compact))) {
+        if (character.category() == QChar::Other_Control) {
+            json += qsl("\\u%1").arg(static_cast<uint>(character.unicode()), 4, 16, QLatin1Char('0'));
+        } else {
+            json += character;
+        }
+    }
+    return qsl("%1 %2").arg(name, json);
 }

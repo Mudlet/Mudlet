@@ -5249,7 +5249,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                     }
                 }
             } else {
-                // Schemes Mudlet handles itself (send:, prompt:, gmcp:, local:) lose all query parameters
+                // Every scheme the system does not open, Mudlet's own among them, loses all query parameters
                 int queryStart = baseUrl.indexOf('?');
                 if (queryStart != -1) {
                     baseUrl = baseUrl.left(queryStart);
@@ -5353,6 +5353,9 @@ void TBuffer::decodeOSC(const QString& sequence)
                     } else if (menuCommand.startsWith(qsl("gmcp:"), Qt::CaseInsensitive)) {
                         // One that is not valid stays in the menu with nothing to run, so it shows greyed out, and is never typed at the game
                         const auto gmcpItem = parseGmcpLinkUri(menuCommand);
+                        if (!gmcpItem) {
+                            qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - Greyed out a gmcp: menu item that is not valid or may not be sent: \"" << menuCommand << "\"";
+                        }
                         menuCommands.append(gmcpItem ? qsl("sendGMCP(%1)").arg(LuaLiteral::quote(gmcpItem->message())) : QString());
                         menuHints.append(UntrustedText::forAuthoredText(menuLabel));
                     } else if (menuCommand.startsWith(qsl("local:"), Qt::CaseInsensitive)) {
@@ -5386,7 +5389,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                     // Default tooltip for menu links
                     linkTooltip = QObject::tr("Right-click for menu");
                     if (mCurrentHyperlinkStyling.actionScheme == Mudlet::HyperlinkStyling::ActionLocal) {
-                        //: Tooltip on a game's link whose only action is a menu, which a left click opens
+                        //: Default tooltip on a game's link that opens its menu when clicked, rather than running the menu's first item
                         linkTooltip = QObject::tr("Click for menu");
                     }
                 }
@@ -5398,7 +5401,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                 finalHints.append(linkTooltip); // First: tooltip for hover
                 finalHints.append(menuHints);   // Rest: menu labels for the menu
 
-                // Every item may have been left out, or a separator with nothing to separate, which leaves a link with no menu
+                // Every item may have been left out or be a separator, which leaves the link with no menu
                 bool hasMenuItem = false;
                 for (int i = 0; i < menuCommands.size(); ++i) {
                     hasMenuItem = hasMenuItem || !menuCommands.at(i).isEmpty() || !menuHints.at(i).isEmpty();

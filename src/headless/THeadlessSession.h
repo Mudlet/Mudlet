@@ -266,8 +266,8 @@ public:
     // open. A getter, so it may be called from any handler.
     std::optional<Link> link(int id) const;
     // Follows a link as a left click on it does, or given an item, as picking that item from its menu does: a
-    // spoiler not yet revealed is only revealed (revealedSpoiler); a disabled link and a menu's greyed-out item
-    // run nothing (disabled), nor does a link the game's visibility settings have concealed (concealed); and
+    // spoiler not yet revealed is only revealed (revealedSpoiler); a disabled link, a local: note and a menu's
+    // greyed-out item run nothing (disabled), nor does a link the game's visibility settings have concealed (concealed); and
     // otherwise its selection group is updated and its command or function runs before this returns, so an
     // OSC 8 web link opens through QDesktopServices: ran, or failed where that raised a Lua error, which
     // errorString() gives. noSuchItem: item does not index link()'s items. unknown: an id the main console does

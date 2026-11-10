@@ -1340,6 +1340,8 @@ private slots:
     QTest::newRow("no data") << qsl("gmcp:Game.Pref.Set") << qsl("Game.Pref.Set {\"selected\":true}") << qsl("Game.Pref.Set {\"selected\":false}");
     QTest::newRow("an object") << qsl("gmcp:Game.Pref.Set%20%7B%22pref%22%3A%22hints%22%7D") << qsl("Game.Pref.Set {\"pref\":\"hints\",\"selected\":true}") << qsl("Game.Pref.Set {\"pref\":\"hints\",\"selected\":false}");
     QTest::newRow("replaces selected") << qsl("gmcp:Game.Pref.Set%20%7B%22selected%22%3A%22x%22%7D") << qsl("Game.Pref.Set {\"selected\":true}") << qsl("Game.Pref.Set {\"selected\":false}");
+    // The parser refuses these raw, so rewriting the object must not turn their escapes into them
+    QTest::newRow("escaped DEL and C1 stay escaped") << qsl("gmcp:Game.Pref.Set%20%7B%22a%22%3A%22x%5Cu0085y%5Cu007fz%22%7D") << qsl("Game.Pref.Set {\"a\":\"x\\u0085y\\u007fz\",\"selected\":true}") << qsl("Game.Pref.Set {\"a\":\"x\\u0085y\\u007fz\",\"selected\":false}");
   }
 
   void test_Osc8GmcpSelectionAddsItsState() {
@@ -1491,7 +1493,7 @@ private slots:
       }
     });
     TTextEdit *pane = console->mUpperPane;
-    // Without the focus there is nothing for the popup to take, and caret mode would survive regardless
+    // The popup takes the pane's focus, and without it the checks that caret mode survives would pass regardless
     if (!withMouse) {
       pane->setFocus();
       QTRY_VERIFY(pane->hasFocus());
@@ -1548,10 +1550,13 @@ private slots:
 
     QMenu *menu = pane->findChild<QMenu *>();
     QVERIFY(menu);
+    const QByteArray sentBefore = mpServer->receivedSoFar();
     menu->actions().first()->trigger();
     menu->close();
     QTRY_VERIFY(!pane->findChild<QMenu *>());
     QVERIFY2(console->buffer.isLinkSelected(linkId), "choosing an item changed the selection a second time");
+    QTRY_VERIFY2(mpServer->receivedSoFar().mid(sentBefore.size()).contains("look"), "choosing an item did not run it");
+    QVERIFY(!mpServer->receivedSoFar().mid(sentBefore.size()).contains("wield"));
   }
 
   // The tooltip shares a list with the menu's labels, so revealing must not take them with it
