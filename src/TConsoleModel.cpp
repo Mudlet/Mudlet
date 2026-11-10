@@ -1309,7 +1309,6 @@ void TConsoleModel::toggleLogging(bool isMessageEnabled)
     QFile file(loggingPath);
     const QDateTime logDateTime = QDateTime::currentDateTime();
     QString previousSessions;
-    bool foundBody = false;
     if (!mLogToLogFile) {
         if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
             qWarning() << "TConsoleModel: failed to open autolog file" << loggingPath << "for writing:" << file.errorString();
@@ -1373,11 +1372,13 @@ void TConsoleModel::toggleLogging(bool isMessageEnabled)
             // the old <body>, so a file without one would be wiped
             QTextStream previousLog(&mLogFile);
             bool isAtBody = false;
+            bool hasContent = false;
             while (!previousLog.atEnd()) {
                 const QString line = previousLog.readLine();
+                // An editor "emptying" a file often leaves a newline or byte order mark behind
+                hasContent = hasContent || !line.trimmed().remove(QChar::ByteOrderMark).isEmpty();
                 if (line.contains("<body><div>")) {
                     isAtBody = true;
-                    foundBody = true;
                 } else if (line.contains("</div></body>")) {
                     isAtBody = false;
                 }
@@ -1386,7 +1387,7 @@ void TConsoleModel::toggleLogging(bool isMessageEnabled)
                     previousSessions.append(line).append(QChar::LineFeed);
                 }
             }
-            if (!foundBody && mLogFile.size() > 0) {
+            if (previousSessions.isEmpty() && hasContent) {
                 mLogFile.close();
                 removeAutologSentinel(loggingPath);
                 //: Reason shown when logging to an HTML file is refused because the file already holds something that is not a Mudlet HTML log
@@ -1461,7 +1462,7 @@ void TConsoleModel::toggleLogging(bool isMessageEnabled)
             logStream << "  </style>\n";
             logStream << "  </head>\n";
             logStream << previousSessions;
-            if (!foundBody) {
+            if (previousSessions.isEmpty()) {
                 logStream << "  <body><div>\n";
             } else {
                 // Put a horizontal line between separate log sessions

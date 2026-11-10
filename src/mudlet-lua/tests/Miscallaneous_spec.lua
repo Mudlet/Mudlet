@@ -1367,6 +1367,33 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           assert.equals(-2, select(4, startLogging(false)), "logging was left on after it was refused")
         end)
 
+        it("starts a new log in a file an editor emptied to a newline or byte order mark", function()
+          local paths = {}
+          local htmlLogging = getConfig("logInHTML")
+          finally(function()
+            startLogging(false)
+            setConfig("logInHTML", htmlLogging)
+            for _, path in ipairs(paths) do
+              os.remove(path)
+            end
+          end)
+          setConfig("logInHTML", true)
+
+          for _, blank in ipairs({"\n", "\239\187\191", "\239\187\191\r\n"}) do
+            for _, path in ipairs(paths) do
+              os.remove(path)
+            end
+            paths = writeLogFilesAhead(blank)
+            local started, message, path = startLogging(true)
+            assert.is_true(started, message)
+            echo("mudlet-spec-html-blank-file-session\n")
+            startLogging(false)
+            local contents = readFile(path)
+            assert.is_true(contains(contents, "mudlet-spec-html-blank-file-session"), "the session did not reach the log")
+            assert.is_false(contains(contents, "<hr>"), "an empty file was treated as an earlier session")
+          end
+        end)
+
         it("keeps the earlier sessions when a new one is appended to an HTML log", function()
           local paths = {}
           local htmlLogging = getConfig("logInHTML")
