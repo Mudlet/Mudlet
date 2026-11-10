@@ -2384,8 +2384,8 @@ void dlgConnectionProfiles::slot_resetCustomIcon()
     }
     const QString profileColorPath = MudletApp::getMudletPath(enums::profileDataItemPath, profileName, qsl("profilecolor"));
     if (QFileInfo::exists(profileColorPath) && !QFile::remove(profileColorPath)) {
+        // no return: the picture is already gone, so the list still has to be redrawn
         qWarning() << "dlgConnectionProfiles::slot_resetCustomIcon: couldn't remove custom color file" << profileColorPath;
-        return;
     }
 
     auto currentRow = listWidget_profiles->currentRow();

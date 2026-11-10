@@ -347,6 +347,44 @@ private slots:
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     }
 
+    // the picture is gone once resetProfileIcon() returns, so a color that will
+    // not go must not leave the list still drawing that picture
+    void test_aResetThatCannotRemoveTheColorStillDropsThePicture()
+    {
+        const QString profileName = qsl("Test-ResetWithStuckColor");
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, profileName)));
+        const QString iconPath = MudletApp::getMudletPath(enums::profileDataItemPath, profileName, qsl("profileicon"));
+        QVERIFY(QFile::copy(mArtworkPath, iconPath));
+        // a non-empty folder in its place is something QFile::remove() cannot delete
+        const QString colorPath = MudletApp::getMudletPath(enums::profileDataItemPath, profileName, qsl("profilecolor"));
+        QVERIFY(QDir().mkpath(colorPath));
+        QFile blocker(qsl("%1/blocker").arg(colorPath));
+        QVERIFY(blocker.open(QIODevice::WriteOnly));
+        blocker.close();
+
+        auto* pDialog = new dlgConnectionProfiles();
+        pDialog->show();
+        auto* pTabBar = pDialog->findChild<QTabBar*>(qsl("gamesTabBar"));
+        QVERIFY(pTabBar);
+        pTabBar->setCurrentIndex(0); // "My games"
+        pDialog->fillout_form();
+        QListWidgetItem* pItem = listedItem(pDialog, profileName);
+        QVERIFY2(pItem, qPrintable(qsl("'%1' is not listed under 'My games' at all").arg(profileName)));
+        const QImage pictureShown = pItem->icon().pixmap(QSize(120, 30)).toImage();
+
+        pDialog->listWidget_profiles->setCurrentItem(pItem);
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("couldn't remove custom color file")));
+        pDialog->slot_resetCustomIcon();
+        QVERIFY2(!QFileInfo::exists(iconPath), "SETUP: the reset did not remove the picture, so this case checks nothing");
+        pItem = listedItem(pDialog, profileName);
+        QVERIFY(pItem);
+        QVERIFY2(pItem->icon().pixmap(QSize(120, 30)).toImage() != pictureShown, "the picture was deleted but the list still draws it");
+
+        QDir(MudletApp::getMudletPath(enums::profileHomePath, profileName)).removeRecursively();
+        pDialog->deleteLater();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    }
+
     // the tooltip is rich text, and a description is the plain words of whoever
     // wrote it: markup left in one must not be able to eat the warning that
     // follows it, nor be acted on instead of shown
