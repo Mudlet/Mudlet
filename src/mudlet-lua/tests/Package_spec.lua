@@ -3921,7 +3921,6 @@ describe("Tests the functionality of packageUrlDrop", function()
   end)
 
   it("still hands a URL with no file name in it to the plain installer", function()
-    -- a guard: this already held before query strings were cut off
     local asked = recordDownloads()
 
     local ok, reason = installPackage("http://127.0.0.1:1/mudlet-spec-download?id=5")
@@ -3946,6 +3945,7 @@ describe("Tests the functionality of packageUrlDrop", function()
       "http://127.0.0.1:1/get.php?file=mudlet-spec-named.mpackage",
       -- the path names a package too, but scripts have had the query's name win
       "http://127.0.0.1:1/mudlet-spec-index.xml?file=mudlet-spec-named.mpackage",
+      "http://127.0.0.1:1/Mudlet-Spec.Named-1.0.mpackage",
     }
 
     for _, url in ipairs(urls) do
@@ -3955,6 +3955,7 @@ describe("Tests the functionality of packageUrlDrop", function()
     assert.same({
       {destination = getMudletHomeDir() .. "/get.php?file=mudlet-spec-named.mpackage", url = urls[1]},
       {destination = getMudletHomeDir() .. "/mudlet-spec-index.xml?file=mudlet-spec-named.mpackage", url = urls[2]},
+      {destination = getMudletHomeDir() .. "/Mudlet-Spec.Named-1.0.mpackage", url = urls[3]},
     }, asked)
   end)
 
@@ -3967,6 +3968,27 @@ describe("Tests the functionality of packageUrlDrop", function()
     packageUrlDrop("sysDropUrlEvent", "http://127.0.0.1:1/mudlet-spec-not-a-package.txt", "http")
 
     assert.is_false(announcedADownload(mark))
+  end)
+
+  it("does not download a URL that is not a package file once its query is cut off", function()
+    local asked = recordDownloads()
+
+    packageUrlDrop("sysDropUrlEvent", "http://127.0.0.1:1/mudlet-spec-not-a-package.txt?raw=true", "http")
+    packageUrlDrop("sysDropUrlEvent", "http://127.0.0.1:1/mudlet-spec-page.html?file=x.mpackage&y=1", "http")
+
+    assert.same({}, asked)
+  end)
+
+  it("reports a package URL with a query string as downloading, not as a failed install", function()
+    local asked = recordDownloads()
+    local url = "https://127.0.0.1:1/mudlet-spec-verbose.mpackage?raw=true"
+    local mark = getLastLineNumber("main")
+
+    verbosePackageInstall(url)
+
+    assert.same({{destination = getMudletHomeDir() .. "/mudlet-spec-verbose.mpackage", url = url}}, asked)
+    local text = textFrom(mark)
+    assert.is_falsy(text:find("failed:", 1, true), text)
   end)
 end)
 
