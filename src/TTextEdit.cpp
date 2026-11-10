@@ -2124,6 +2124,12 @@ void TTextEdit::leaveEvent(QEvent* event)
     if (mpBuffer->getHoveredLink() != 0) {
         mpBuffer->setHoveredLink(0);
         forceUpdate();
+        // The panes share the buffer, so the other one may be drawing the link too
+        if (mIsLowerPane) {
+            mpConsole->mUpperPane->forceUpdate();
+        } else if (!mIsTailMode) {
+            mpConsole->mLowerPane->forceUpdate();
+        }
     }
     mpBuffer->clearLastClickedLinkIndex();
     QWidget::leaveEvent(event);
