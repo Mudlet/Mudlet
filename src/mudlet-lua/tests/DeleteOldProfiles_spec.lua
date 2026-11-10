@@ -28,6 +28,14 @@ describe("Tests the deleteOldProfiles package", function()
     return lfs.attributes(folders[folder] .. "/" .. name, "mode") == "file"
   end
 
+  local function makeDirectory(folder, name, day, month)
+    local path = folders[folder] .. "/" .. name
+    assert(lfs.mkdir(path))
+    local when = os.time({year = 2020, month = month or 3, day = day, hour = 12})
+    assert.is_true(lfs.touch(path, when, when))
+    made[#made + 1] = path
+  end
+
   local function deleteOld(folder)
     _G.getMudletHomeDir = function() return specHome end
     local ok, err = pcall(deleteOldProfiles, nil, folder)
@@ -37,7 +45,11 @@ describe("Tests the deleteOldProfiles package", function()
 
   local function removeMade()
     for _, path in ipairs(made) do
-      os.remove(path)
+      if lfs.attributes(path, "mode") == "directory" then
+        lfs.rmdir(path)
+      else
+        os.remove(path)
+      end
     end
     made = {}
   end
@@ -122,5 +134,33 @@ describe("Tests the deleteOldProfiles package", function()
 
     assert.is_true(exists("profiles", "2020-03-20#12-00-00.xml"))
     assert.is_true(exists("profiles", "autosave.xml"))
+  end)
+
+  it("keeps a leftover from an interrupted save when there is no completed save to load", function()
+    makeFile("profiles", "2020-03-01#12-00-00.xml.AbCdEf", 1)
+
+    deleteOld("profiles")
+
+    assert.is_true(exists("profiles", "2020-03-01#12-00-00.xml.AbCdEf"), "with no completed save, the leftover may be all that is left of the profile")
+  end)
+
+  it("lets an XML map, which Map history can load, keep its month's spot", function()
+    makeFile("maps", "2020-02-05#12-00-00map.xml", 5, 2)
+    makeFile("maps", "2020-03-20#12-00-00map.dat", 20)
+
+    deleteOld("maps")
+
+    assert.is_true(exists("maps", "2020-02-05#12-00-00map.xml"), "February's only map should be kept")
+    assert.is_true(exists("maps", "2020-03-20#12-00-00map.dat"))
+  end)
+
+  it("leaves folders alone", function()
+    makeDirectory("maps", "old maps", 1)
+    makeFile("maps", "2020-03-05#12-00-00map.dat", 5)
+
+    deleteOld("maps")
+
+    assert.is_true(lfs.attributes(folders.maps .. "/old maps", "mode") == "directory", "a folder is not a backup, so it should not be removed")
+    assert.is_true(exists("maps", "2020-03-05#12-00-00map.dat"))
   end)
 end)

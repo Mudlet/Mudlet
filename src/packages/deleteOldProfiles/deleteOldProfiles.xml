@@ -25,8 +25,9 @@
   Deletes old profiles/maps/modules in the "current"/"map"/"moduleBackups" folders of the Mudlet home directory.
   The following files are NOT deleted:
   - Files newer than the amount of days specified as an argument to deleteOldProfiles(), or 31 days if not specified.
-  - One file for every month before that. Specifically: The first save of every month prior to this; a leftover from an interrupted save does not count.
+  - One file for every month before that. Specifically: The first save of every month prior to this; a leftover from an interrupted save does not count, and neither does a folder.
   - The newest profile save (.xml) or map (.dat/.json), which is the one Mudlet loads, however old it is. Module backups are never loaded, so there it is just the single newest file in the shared folder.
+  - A leftover from an interrupted save, when there is no completed save to recover instead.
   The second argument picks the folder: "profiles", "maps" or "modules". (e.g. deleteOldProfiles(10, "maps"))
   --]]
 
@@ -58,10 +59,12 @@
 
   -- Traverse the profiles folder and create a table of files:
   for filename in lfs.dir(dirpath) do
-    if filename~="." and filename~=".." then
+    local attributes = lfs.attributes(dirpath..slash..filename)
+    -- folders are not backups; attributes can be nil if a save renames the file meanwhile
+    if attributes and attributes.mode == "file" then
       profile_table[#profile_table+1] = {
         name = filename,
-        last_mod = lfs.attributes(dirpath..slash..filename, "modification")
+        last_mod = attributes.modification
       }
     end
   end
@@ -75,21 +78,22 @@
     keepdays
   ))
 
-  -- Only the extensions Mudlet loads count as saves: an interrupted save can leave a
-  -- temporary file behind, which Mudlet skips. Module backups are never loaded, so
-  -- every file there counts. Times are whole seconds, so every save tied for newest stays.
+  -- An interrupted save can leave a temporary file behind, which is not a save and does
+  -- not take a month's spot. Mudlet loads the newest .xml profile or .dat/.json map, and
+  -- times are whole seconds, so every save tied for newest stays. Module backups are never
+  -- loaded, so every file there counts as a save.
+  local savedExtensions = {profiles = {xml = true}, maps = {dat = true, json = true, xml = true}}
   local loadedExtensions = {profiles = {xml = true}, maps = {dat = true, json = true}}
-  local function loadable(name)
-    local extensions = loadedExtensions[delete_folder]
-    if not extensions then
+  local function hasExtension(name, extensions)
+    if not extensions[delete_folder] then
       return true
     end
     local extension = name:match("%.([^.]+)$")
-    return extension ~= nil and extensions[extension:lower()] == true
+    return extension ~= nil and extensions[delete_folder][extension:lower()] == true
   end
   local newestLoadedTime
   for _, v in ipairs(profile_table) do
-    if loadable(v.name) then
+    if hasExtension(v.name, loadedExtensions) then
       newestLoadedTime = v.last_mod
     end
   end
@@ -99,11 +103,15 @@
     local last_mod_month = os.date("%Y/%m", v.last_mod)
     if days &gt; keepdays then
       -- For saves older than X days, check if we already kept one for this month:
-      if loadable(v.name) and not table.contains(used_last_mod_months, last_mod_month) then
+      local saved = hasExtension(v.name, savedExtensions)
+      if saved and not table.contains(used_last_mod_months, last_mod_month) then
         -- If not, do nothing and mark this month as "kept".
         used_last_mod_months[#used_last_mod_months+1] = last_mod_month
-      elseif not (v.last_mod == newestLoadedTime and loadable(v.name)) then
-        -- Otherwise remove the file, unless it is tied for the newest save:
+      elseif v.last_mod == newestLoadedTime and hasExtension(v.name, loadedExtensions) then
+        -- Keep every save tied for the newest, which Mudlet loads.
+      elseif not saved and not newestLoadedTime then
+        -- With no completed save, Mudlet points the player at a leftover to recover from.
+      else
         local success, errorstring = os.remove(dirpath..slash..v.name)
         if success then
           delnum = delnum + 1
