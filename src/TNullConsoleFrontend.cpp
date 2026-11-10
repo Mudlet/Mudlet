@@ -3855,6 +3855,17 @@ QString TNullConsoleFrontend::parentName(const QString& userWindow, const Scroll
     return userWindow;
 }
 
+bool TNullConsoleFrontend::listsConsole(const SubConsole& console, const std::optional<TWindowRegistry::SubConsoleKind> kind)
+{
+    return !console.pFrameSink && (kind == TWindowRegistry::SubConsoleKind::MiniConsole || kind == TWindowRegistry::SubConsoleKind::UserWindow);
+}
+
+const TConsoleModel* TNullConsoleFrontend::listedConsoleModel(const QString& name) const
+{
+    const auto it = mSubConsoles.find(name);
+    return it != mSubConsoles.end() && listsConsole(it->second, mpHost->windowRegistry().subConsoleKind(name)) ? it->second.pModel.get() : nullptr;
+}
+
 std::vector<TNullConsoleFrontend::WindowRecord> TNullConsoleFrontend::windowRecords() const
 {
     using Kind = WindowRecord::Kind;
@@ -3872,7 +3883,7 @@ std::vector<TNullConsoleFrontend::WindowRecord> TNullConsoleFrontend::windowReco
     std::vector<WindowRecord> records;
     for (const auto& [name, console] : mSubConsoles) {
         const auto kind = registry.subConsoleKind(name);
-        if (console.pFrameSink || (kind != TWindowRegistry::SubConsoleKind::MiniConsole && kind != TWindowRegistry::SubConsoleKind::UserWindow)) {
+        if (!listsConsole(console, kind)) {
             continue;
         }
         records.push_back({name,

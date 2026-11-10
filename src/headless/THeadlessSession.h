@@ -47,6 +47,8 @@ class QPainter;
 class QSize;
 class QTimer;
 class TBuffer;
+class TConsoleModel;
+class TLineFormat;
 class QKeyEvent;
 class QMimeData;
 class QPoint;
@@ -114,8 +116,9 @@ public:
         bool defaultForeground = false;
         bool defaultBackground = false;
         TextStyles styles;
-        // The main console's link the run is part of, 0 for none; touching links that look alike are runs of their
-        // own. An id names its link while the main console still holds a line with it, after which it may be reused.
+        // The link the run is part of, 0 for none, among those of the console the line is in; touching links that look
+        // alike are runs of their own. An id names its link while that console still holds a line with it, after which
+        // it may be reused.
         int link = 0;
 
         bool operator==(const TextRun&) const = default;
@@ -641,6 +644,35 @@ public:
     };
     // None for a name that is not a label's
     std::optional<LabelContent> labelContent(const QString& name) const;
+    // A row of a console as the GUI draws it: one line of its buffer, after the console's wrap
+    struct WindowLine
+    {
+        QString text;
+        bool isPrompt = false;
+        // As outputLine's, the colours a run has by default being the console's own
+        QList<TextRun> runs;
+        // As outputLine's; a row the wrap split off has the time of the line it came from
+        qint64 arrivalMSecs = -1;
+        // Carries on from the row above, which the console's wrap split it off
+        bool wrapped = false;
+
+        bool operator==(const WindowLine&) const = default;
+    };
+    struct WindowText
+    {
+        // How many rows the console holds, the last being the one the next write carries on: one more than a
+        // script's getLineCount() gives
+        int lineCount = 0;
+        // The row lines starts at, from 0 as getLines() counts them
+        int first = 0;
+        QList<WindowLine> lines;
+    };
+    // Up to count rows of a mini console or user window among scriptWindows(), shown or hidden, or of the main
+    // console for "main" or no name, from row first, cut to the rows there are; a first below 0 counts back from the
+    // end, so -count is the last count rows. None with no profile open and for any other name: a label, a buffer,
+    // one of the game's MXP frames. A getter, so it may be called from any handler, but from one of outputLine or
+    // lineShown the main console's last row is in the middle of its commit.
+    std::optional<WindowText> windowLines(const QString& window, int first, int count) const;
     // Where the app put a user window, in the main window's pixels, docked or floating, as the GUI's dock is placed
     // by its layout or the player. A new size raises sysUserWindowResizeEvent and handleWindowResizeEvent, now while
     // it shows or as it next shows, and is what getUserWindowSize() and getWindowGeometry() read. Refused where
@@ -973,6 +1005,10 @@ private:
     bool usable(bool duringLoad = false);
     // Lua's own message, out of what the GUI's error console shows of it
     static QString luaErrorOf(const QString& consoleText);
+    static QList<TextRun> textRuns(const QString& text, const TLineFormat& format, const QColor& consoleForeground, const QColor& consoleBackground);
+    static qint64 arrivalTime(const TBuffer& buffer, int line);
+    // The console windowLines() reads for the name, null for one it refuses
+    const TConsoleModel* windowTextModel(const QString& window) const;
     // False, with errorString() saying why, while the GUI's hidden-input box would not be open
     bool inputHidden(bool sending);
     void noteAlreadyInstalled(const QString& path, const QString& name);
