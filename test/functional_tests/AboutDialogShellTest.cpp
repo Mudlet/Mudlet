@@ -283,6 +283,14 @@ private slots:
         QCOMPARE(lines.size(), rows.size());
         QCOMPARE(lines.first(), qsl("%1: %2").arg(rows.first().first, rows.first().second));
         QVERIFY2(lines.first().contains(MudletApp::scmVersion()), qPrintable(qsl("the first line is \"%1\", which does not name the version").arg(lines.first())));
+#if defined(Q_OS_UNIX) && !defined(Q_OS_MACOS)
+        QVERIFY2(std::any_of(lines.cbegin(),
+                             lines.cend(),
+                             [](const QString& line) {
+                                 return line.endsWith(qsl(": ") + QGuiApplication::platformName());
+                             }),
+                 qPrintable(qsl("nothing copied names the windowing system \"%1\", which Wayland and X11 bugs need: %2").arg(QGuiApplication::platformName(), lines.join(qsl(" | ")))));
+#endif
         QVERIFY2(pButton->text() != resting, qPrintable(qsl("the button still reads \"%1\" straight after copying, so nothing says it worked").arg(pButton->text())));
 
         QTest::qWait(1900ms);
