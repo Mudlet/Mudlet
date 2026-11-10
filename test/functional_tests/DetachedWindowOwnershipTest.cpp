@@ -683,6 +683,8 @@ private slots:
         QVERIFY(pFirstHost);
         mudlet::self()->activateProfile(pFirstHost);
         QTest::qWait(200ms);
+        // Already active, the profile would hand over no keyboard for the fix to keep in its window
+        QCOMPARE(mudlet::self()->getActiveHost(), pFirstHost);
 
         QVERIFY(pFirstHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(setActiveProfile('%1'))").arg(mSecondHostname)));
         QTest::qWait(200ms);
