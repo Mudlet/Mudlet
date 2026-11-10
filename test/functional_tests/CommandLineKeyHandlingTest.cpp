@@ -569,6 +569,30 @@ private slots:
         QCOMPARE(pCommandLine->toPlainText(), QString());
     }
 
+    // Up past a longer match onto one that is just what was typed leaves nothing selected, yet Down still goes back
+    void test_downWalksBackFromACompletionThatIsWhatWasTyped()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        for (const QString& command : {qsl("look"), qsl("north"), qsl("look at sign")}) {
+            sendCommand(pCommandLine, command);
+        }
+        type(pCommandLine, qsl("look"));
+
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look at sign"));
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look"));
+
+        press(pCommandLine, Qt::Key_Down);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look at sign"));
+        QCOMPARE(selection(pCommandLine), qsl(" at sign"));
+        press(pCommandLine, Qt::Key_Down);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look"));
+        press(pCommandLine, Qt::Key_Down);
+        QCOMPARE(pCommandLine->toPlainText(), QString());
+    }
+
     // Once the completion is accepted, the line is the player's own and Down banks it
     void test_downBanksAnAcceptedCompletion()
     {

@@ -1243,8 +1243,16 @@ void TCommandLine::handleAutoCompletion(const bool forward)
 bool TCommandLine::completionTailSelected() const
 {
     const QTextCursor cursor = textCursor();
-    // A completion that is a whole history line leaves no tail, and the line is then as much the player's as typed text
-    return cursor.hasSelection() && cursor.selectionStart() == mCompletion.shownLine().size() && cursor.selectionEnd() == toPlainText().size();
+    return cursor.selectionStart() == mCompletion.shownLine().size() && cursor.selectionEnd() == toPlainText().size();
+}
+
+bool TCommandLine::walkingHistoryCompletion() const
+{
+    if (!mCompletion.showingHistoryCompletion(toPlainText(), completionTailSelected())) {
+        return false;
+    }
+    // A completion that is just what was typed has no tail to take back, so it is the player's line unless a newer match is left
+    return textCursor().hasSelection() || mCompletion.newerHistoryMatch(mHistoryList);
 }
 
 // cursor up/down: turns on autocompletion mode and cycles through all possible matches
@@ -1253,9 +1261,8 @@ bool TCommandLine::completionTailSelected() const
 
 void TCommandLine::historyMove(MoveDirection direction)
 {
-    // DOWN at position 0 with text: save to history and clear input, unless it is Up's completion with its tail still selected
-    if (direction == MOVE_DOWN && mHistoryBuffer == 0 && !toPlainText().isEmpty() && !mCompletion.showingHistoryCompletion(toPlainText(), completionTailSelected())
-        && (!mpHost->isRemoteEchoingActive() || mpHost->disablePasswordMasking())) {
+    // DOWN at position 0 with text: save to history and clear input, unless Down can still walk back through Up's completions
+    if (direction == MOVE_DOWN && mHistoryBuffer == 0 && !toPlainText().isEmpty() && !walkingHistoryCompletion() && (!mpHost->isRemoteEchoingActive() || mpHost->disablePasswordMasking())) {
         TCommandHistory::add(mHistoryList, toPlainText());
 
         clear();

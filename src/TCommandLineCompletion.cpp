@@ -157,6 +157,16 @@ TCommandLineCompletion::HistoryCompletion TCommandLineCompletion::historyComplet
     return result;
 }
 
+bool TCommandLineCompletion::newerHistoryMatch(const QStringList& history) const
+{
+    for (int i = std::min(mHistoryCount, static_cast<int>(history.size())) - 1; i >= 0; --i) {
+        if (history[i].startsWith(mShownLine)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void TCommandLineCompletion::resetHistoryWalk()
 {
     mHistoryCount = -1;

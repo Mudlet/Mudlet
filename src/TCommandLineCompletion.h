@@ -70,6 +70,8 @@ public:
     void setHistoryCompletion(const QString& line) { mLastCompletion = line; }
     // The line, with the tail after shownLine() selected, is the one historyComplete() last filled in
     bool showingHistoryCompletion(const QString& line, const bool tailSelected) const { return tailSelected && line == mLastCompletion; }
+    // A Down would find a line of history newer than the one last shown that starts with what was typed
+    bool newerHistoryMatch(const QStringList& history) const;
     // An edit: the next Up looks from the newest line again
     void restartHistoryWalk() { mHistoryCount = -1; }
     // A space, a deletion or a send also forgets the line the walk last found
