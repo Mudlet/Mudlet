@@ -221,7 +221,7 @@ void TCommandLine::processInputMethod(QEvent* event)
     // The text being composed is laid out in the line too, so it can wrap before it is committed
     adjustHeight();
 
-    // A composition the player cancels changes nothing, unless it started over a selection, which it deleted
+    // Text being composed stays out of the document, so only a commit, or the first preedit over a selection, edits the line
     if (toPlainText() == before) {
         return;
     }
