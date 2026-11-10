@@ -2118,7 +2118,7 @@ void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tC
 }
 
 // No move event reaches the pane once the pointer is outside it, so without
-// this a link left by moving off the console keeps its hover style
+// this a link left by moving off the pane keeps its hover style
 void TTextEdit::leaveEvent(QEvent* event)
 {
     if (mpBuffer->getHoveredLink() != 0) {

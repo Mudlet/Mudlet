@@ -1408,9 +1408,8 @@ private slots:
         QCOMPARE(pane->cursor().shape(), Qt::IBeamCursor);
     }
 
-    // A link is only un-hovered by a move event over something else, and none
-    // reaches the pane once the pointer leaves it for the command line or
-    // another window, so the leave itself has to drop the hover style
+    // Leaving for the command line or another window sends the pane no move
+    // event, only a Leave
     void test_aLinkStopsBeingHoveredWhenTheMouseLeavesThePane()
     {
         mpServer->setWelcomeMessage(qsl("hover test\r\n"));
@@ -1472,6 +1471,17 @@ private slots:
         QApplication::sendEvent(lowerPane, &leave);
         QCOMPARE(pane->mpBuffer->getHoveredLink(), 0);
         QVERIFY2(pane->mForceUpdate, "leaving the lower pane cleared the shared hover without redrawing the upper pane that also shows it");
+
+        // Scrolled back, the lower pane shows the end of the buffer and can be
+        // drawing the link as well
+        pane->mpBuffer->setHoveredLink(hoveredLink);
+        QCOMPARE(pane->mpBuffer->getHoveredLink(), hoveredLink);
+        pane->mIsTailMode = false;
+        lowerPane->mForceUpdate = false;
+        QApplication::sendEvent(pane, &leave);
+        pane->mIsTailMode = true;
+        QCOMPARE(pane->mpBuffer->getHoveredLink(), 0);
+        QVERIFY2(lowerPane->mForceUpdate, "leaving the scrolled-back upper pane cleared the shared hover without redrawing the lower pane that also shows it");
     }
 
     // #3031: the timestamp sits in a gutter to the left of the line's own text,
