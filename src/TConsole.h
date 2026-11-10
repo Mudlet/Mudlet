@@ -131,8 +131,9 @@ public:
     void setCmdVisible(bool);
     int commandLineLayerHeight(const int commandLineHeight) const;
     void changeColors();
-    void scrollDown(int lines);
-    void scrollUp(int lines);
+    // False when it could not scroll (scrolling disabled, or nothing to scroll towards), so a wheel turn can go on to the parent
+    bool scrollDown(int lines);
+    bool scrollUp(int lines);
     // To an absolute buffer position, as the scroll bar does, splitting the screen if it is not split yet
     void scrollTo(int line);
     void print(const QString& msg);

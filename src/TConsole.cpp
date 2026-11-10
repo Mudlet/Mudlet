@@ -1444,12 +1444,13 @@ void TConsole::setConsoleBgColor(int r, int g, int b, int a)
    47 bg white
    49 bg black     */
 
-void TConsole::scrollDown(int lines)
+bool TConsole::scrollDown(int lines)
 {
     if ((mType & (UserWindow | SubConsole)) && !mScrollingEnabled) {
-        return;
+        return false;
     }
 
+    const bool scrolledBack = !mLowerPane->isHidden();
     mUpperPane->scrollDown(lines);
     if (!mUpperPane->mIsTailMode && (mUpperPane->imageTopLine() + mUpperPane->getScreenHeight() >= buffer.lineBuffer.size() - mLowerPane->getRowCount())) {
         mUpperPane->scrollDown(mLowerPane->getRowCount() + 100); // Gets to the bottom
@@ -1464,17 +1465,18 @@ void TConsole::scrollDown(int lines)
         mUpperPane->forceUpdate();
     }
     slot_adjustAccessibleNames();
+    return scrolledBack;
 }
 
-void TConsole::scrollUp(int lines)
+bool TConsole::scrollUp(int lines)
 {
     if ((mType & (UserWindow | SubConsole)) && !mScrollingEnabled) {
-        return;
+        return false;
     }
 
     // With every line already on screen there is nothing to scroll back to, and a split would only show them twice
     if (mLowerPane->isHidden() && mUpperPane->imageTopLine() == 0) {
-        return;
+        return false;
     }
 
     if (showLowerPane()) {
@@ -1485,6 +1487,7 @@ void TConsole::scrollUp(int lines)
         mUpperPane->scrollUp(lines);
     }
     slot_adjustAccessibleNames();
+    return true;
 }
 
 void TConsole::scrollTo(int line)
