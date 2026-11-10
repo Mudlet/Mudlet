@@ -235,22 +235,18 @@ void TEasyButtonBar::fillMenu(TAction* pAction, QMenu* pMenu)
 
 void TEasyButtonBar::finalize()
 {
-    if (mpTAction->mUseCustomLayout || !mpTAction->getButtonFillerOffset()) {
+    if (!mpLayout || mpTAction->mUseCustomLayout || !mpTAction->getButtonFillerOffset()) {
         return;
     }
-    auto fillerWidget = new QWidget(this);
-    QPushButton dummy;
-    fillerWidget->setMinimumSize(dummy.minimumSizeHint());
-    fillerWidget->setMaximumSize(dummy.minimumSizeHint());
-    if (mpLayout) {
-        if (mpTAction->mOrientation == 1) {
-            // The toolbar is to be filled with rows of mpTAction->getButtonColumns() wide
-            // The filler widget is to be one or more columns wide
-            mpLayout->addWidget(fillerWidget, 0, 0, mpTAction->getButtonFillerOffset(), 1);
+    const QSize fillerSize = QPushButton().minimumSizeHint();
+    // The offset is kept below the column count, so every empty place is in the first row or column
+    for (int place = 0; place < mpTAction->getButtonFillerOffset(); ++place) {
+        auto fillerWidget = new QWidget(mpWidget);
+        fillerWidget->setFixedSize(fillerSize);
+        if (mVerticalOrientation) {
+            mpLayout->addWidget(fillerWidget, 0, place);
         } else {
-            // The toolbar is to be filled with columns of mpTAction->getButtonColumns() tall
-            // The filler widget is to be one or more rows tall
-            mpLayout->addWidget(fillerWidget, 0, 0, 1, mpTAction->getButtonFillerOffset());
+            mpLayout->addWidget(fillerWidget, place, 0);
         }
     }
 }
