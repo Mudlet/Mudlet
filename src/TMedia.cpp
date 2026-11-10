@@ -442,10 +442,10 @@ void TMedia::stopMedia(TMediaData& mediaData, const PriorityStop priorityStop)
         }
 
         // Whichever way this track is being ended below, it is not to start again. A looping
-        // or multi-entry track restarts itself from the EndOfMedia handler in
-        // connectMediaPlayer(), which would undo the stop that was just asked for - on a
-        // StoppedState-first backend that signal can still be on its way when the stop
-        // arrives. An emptied playlist is what that handler checks, and play() builds a fresh
+        // or multi-entry track restarts itself through playNextPass(), at its end or its finish
+        // position, which would undo the stop that was just asked for - on a
+        // StoppedState-first backend EndOfMedia can still be on its way when the stop
+        // arrives. An emptied playlist is what playNextPass() checks, and play() builds a fresh
         // one whenever this player is picked up again.
         if (pPlayer->playlist()) {
             pPlayer->playlist()->clear();
@@ -864,7 +864,7 @@ void TMedia::stopAllMediaPlayers()
         const bool hadVideoOutput = pPlayer->mediaPlayer()->videoOutput() != nullptr;
         const quint64 claimedAt = pPlayer->claimGeneration();
 
-        // No loop is to survive this: the EndOfMedia handler restarts one from the playlist,
+        // No loop is to survive this: playNextPass() restarts one from the playlist,
         // and a StoppedState-first backend can still have that signal on its way.
         if (pPlayer->playlist()) {
             pPlayer->playlist()->clear();
@@ -1696,13 +1696,12 @@ void TMedia::seekToMediaStart(const std::shared_ptr<TMediaPlayer>& player)
     mediaPlayer->setPosition(startPosition);
 }
 
-// Returns false when the playlist has no pass left to play
-bool TMedia::playNextPass(const std::shared_ptr<TMediaPlayer>& player)
+void TMedia::playNextPass(const std::shared_ptr<TMediaPlayer>& player)
 {
     TMediaPlaylist* playlist = player->playlist();
 
     if (!playlist || playlist->isEmpty()) {
-        return false;
+        return;
     }
 
     QUrl nextMedia = playlist->next();
@@ -1713,11 +1712,10 @@ bool TMedia::playNextPass(const std::shared_ptr<TMediaPlayer>& player)
     }
 
     if (nextMedia.isEmpty()) {
-        return false;
+        return;
     }
 
     player->continuePlaying(nextMedia);
-    return true;
 }
 
 void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
@@ -1780,7 +1778,7 @@ void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
 
         // Nothing else will end it: a source set on a player that was already stopped - which
         // is what every claimSource() on a new or finished player does, and what a loop restart
-        // or playlist advance does from the EndOfMedia handler - has no state to change from.
+        // or playlist advance does from playNextPass() - has no state to change from.
         // Left alone the track falls silent still holding a source nothing will ever release,
         // and a script waiting on sysMediaFinished to start the next one waits forever.
         //
@@ -1847,7 +1845,8 @@ void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
                 const quint64 claimedAt = lockedPlayer->claimGeneration();
                 lockedPlayer->mediaPlayer()->stop();
                 // A finish position ends one pass of a loop count; a fade-away stop ends them all.
-                // One at or before the start leaves no pass to play, which would loop with no end.
+                // One at or before the start leaves nothing to play in a pass, so stop outright
+                // rather than cycle through empty passes (forever with loops = -1).
                 if (!endUsed && finishPosition > startPosition && lockedPlayer->claimGeneration() == claimedAt) {
                     playNextPass(lockedPlayer);
                 }

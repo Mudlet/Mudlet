@@ -2544,6 +2544,7 @@ describe("Media playback effects with a generated sound file", function()
     writeSoundFiles()
     assert.is_true(playSoundFile({name = longSoundFile, finish = 300, loops = 3, key = "busted-finish-loops"}))
     waitForCount("sysMediaFinished", finished, 3)
+    waitForEvent("sysMediaStarted", quietMilliseconds)
     assert.equals(3, #started)
     assert.equals(3, #finished)
     assert.equals(0, #getPlayingSounds())
@@ -2571,7 +2572,8 @@ describe("Media playback effects with a generated sound file", function()
     if mediaPlaybackUnavailable() then
       return
     end
-    local started = {}
+    local finished, started = {}, {}
+    collect("sysMediaFinished", finished)
     collect("sysMediaStarted", started)
     local handler = registerAnonymousEventHandler("sysMediaFinished", function(_, _, _, _, key)
       if key == "busted-finish-stopped" then
@@ -2582,9 +2584,27 @@ describe("Media playback effects with a generated sound file", function()
 
     writeSoundFiles()
     assert.is_true(playSoundFile({name = longSoundFile, finish = 300, loops = 3, key = "busted-finish-stopped"}))
-    waitForCount("sysMediaStarted", started, 2)
-    assert.equals(1, #started)
+    waitForCount("sysMediaFinished", finished, 1)
+    waitForEvent("sysMediaStarted", quietMilliseconds)
+    assert.equals(1, #started, "a pass started after the handler stopped the sound")
     assert.equals(0, #getPlayingSounds({key = "busted-finish-stopped"}))
+  end)
+
+  it("a finish at or before the start ends an endless loop after one pass", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local finished, started = {}, {}
+    collect("sysMediaFinished", finished)
+    collect("sysMediaStarted", started)
+
+    writeSoundFiles()
+    assert.is_true(playSoundFile({name = longSoundFile, start = 5000, finish = 4000, loops = -1, key = "busted-finish-backwards"}))
+    waitForCount("sysMediaFinished", finished, 1)
+    waitForEvent("sysMediaStarted", quietMilliseconds)
+    assert.equals(1, #started)
+    assert.equals(1, #finished)
+    assert.equals(0, #getPlayingSounds({key = "busted-finish-backwards"}))
   end)
 
   it("a stop asked to fade away leaves the sound playing until the fade runs out", function()
