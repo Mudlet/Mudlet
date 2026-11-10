@@ -4997,6 +4997,27 @@ describe("Tests one-shot event handlers", function()
     assert.truthy(tostring(reported[1][2]):find("kept raising events it handles", 1, true))
   end)
 
+  it("removes a one-shot handler that raises the event it handles more than once each time, with one error", function()
+    local calls = 0
+    local id = registerAnonymousEventHandler("otherSpecOneShotBranching", function()
+      calls = calls + 1
+      -- a bound of its own, so a missing limit fails this spec instead of hanging the run
+      if calls < 100000 then
+        raiseEvent("otherSpecOneShotBranching")
+        raiseEvent("otherSpecOneShotBranching")
+      end
+      return true
+    end, true)
+    raiseEvent("otherSpecOneShotBranching")
+    local stillThere = killAnonymousEventHandler(id)
+
+    assert.is_nil(stillThere)
+    assert.is_true(calls < 100000)
+    assert.are.equal(1, #reported)
+    assert.are.equal("otherSpecOneShotBranching", reported[1][1])
+    assert.truthy(tostring(reported[1][2]):find("kept raising events it handles", 1, true))
+  end)
+
   it("keeps a one-shot handler that returns true and raises many events it handles in one go", function()
     local calls = 0
     local id = registerAnonymousEventHandler("otherSpecOneShotBulk", function(_, label)

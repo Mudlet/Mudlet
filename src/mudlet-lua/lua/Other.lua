@@ -1066,9 +1066,9 @@ do
   local highestHandlerId = 0
   -- Helps us finding the right event handler from an ID.
   local handlerIdsToHandlers = {}
-  -- how long a chain of events raised from events a one-shot handler handles may grow before it
-  -- is taken to be feeding itself for ever: about as deep as Lua's C stack lets calls nest
-  local maxDeferredGenerations = 200
+  -- past either, a one-shot handler raising events it handles is taken to be feeding itself for
+  -- ever: a chain of events each raised from the last, and all the events one call leads to
+  local maxDeferredGenerations, maxDeferredEvents = 200, 10000
 
   -- C function that gets overwritten.
   registerAnonymousEventHandler("*", "dispatchEventToFunctions")
@@ -1157,7 +1157,7 @@ do
         local nextEvent, failedEvent = 1, nil
         while ok and keepEvaluating and deferred[nextEvent] and handlerIdsToHandlers[eventHandlerId] do
           local args = deferred[nextEvent]
-          if args.generation > maxDeferredGenerations then
+          if args.generation > maxDeferredGenerations or nextEvent > maxDeferredEvents then
             ok, failed = false, true
             failure = string.format("registerAnonymousEventHandler: one-shot handler for '%s' removed as it kept raising events it handles", event)
             break
