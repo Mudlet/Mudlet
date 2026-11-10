@@ -380,6 +380,7 @@ private slots:
         settle();
 
         QVERIFY2(scrolledBack.isEmpty(), describe(scrolledBack).constData());
+        QVERIFY2(mpServer->nawsUpdates().isEmpty(), describe(mpServer->nawsUpdates()).constData());
     }
 
     // The split is no reason to stop following the window, which a player can
