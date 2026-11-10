@@ -223,8 +223,9 @@ private slots:
         console->scrollDown(1);
         qApp->processEvents();
         QVERIFY2(!upper->mIsTailMode, "the queued scroll back did not happen, so this test means nothing");
+        QVERIFY2(console->mLowerPane->isHidden(), "the scroll down did not hide the split, so this test means nothing");
 
-        console->scrollDown(10000);
+        QVERIFY2(console->scrollDown(10000), "a console scrolled back behind a hidden split gave its wheel turn away");
         QVERIFY2(upper->mIsTailMode, "scrolling down did not bring the console back to its bottom");
     }
 

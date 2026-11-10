@@ -1449,7 +1449,7 @@ bool TConsole::usesWheel(const bool up)
     if ((mType & (UserWindow | SubConsole)) && !mScrollingEnabled) {
         return false;
     }
-    // The pane scrolls back on a queued timer, so it can be scrolled back while the split is still hidden
+    // scrollUp() queues its scroll back, so a scrollDown() in between can hide the split and leave the pane scrolled back behind it
     if (!mLowerPane->isHidden() || !mUpperPane->mIsTailMode) {
         return true;
     }
