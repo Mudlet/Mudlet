@@ -49,3 +49,14 @@ QString TStringUtils::decodeBytes(const std::string& bytes, const QByteArray& en
     }
     return TEncodingHelper::decode(QByteArray::fromRawData(bytes.c_str(), bytes.length()), encoding);
 }
+
+QByteArray TStringUtils::encodeBytes(const QString& text, const QByteArray& encoding)
+{
+    if (encoding.isEmpty() || encoding == QByteArrayLiteral("UTF-8")) {
+        return text.toUtf8();
+    }
+    if (encoding == QByteArrayLiteral("ISO 8859-1")) {
+        return text.toLatin1();
+    }
+    return TEncodingHelper::encode(text, encoding);
+}

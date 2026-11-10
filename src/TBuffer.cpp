@@ -2242,6 +2242,7 @@ void TBuffer::parseChunk(
             flushPendingLead();
         }
 
+        bool mxpTakesDecodedCharacter = false;
         if (localBufferPosition >= endOfLiteralEntity && mxpProcessorEnabled()) {
             // MXP rewrites the unit in place, so the worker's offsets stop matching it
             if (Q_UNLIKELY(speculation)) {
@@ -2250,7 +2251,11 @@ void TBuffer::parseChunk(
                 mpVerifiedLine = nullptr;
             }
             if (mpHost->mTelnet.isMXPEnabled() || mpHost->getForceMXPProcessorOn()) {
-                if (mpHost->mMxpProcessor.mode() != MXP_MODE_LOCKED) {
+                if ((ch & 0x80) && encodingLookupTable.isEmpty() && mDecoder != Decoder::Latin1 && mDecoder != Decoder::Ascii && mpHost->mMxpProcessor.readingText()) {
+                    // The decoder takes the rest of a multi-byte character without coming back round the
+                    // loop, and holds an incomplete one for the next packet, which goes round again
+                    mxpTakesDecodedCharacter = true;
+                } else if (mpHost->mMxpProcessor.mode() != MXP_MODE_LOCKED) {
                     // The comparison signals to the processor, if custom entities may be resolved
                     // (countermeasure against infinite recursion)
                     TMxpProcessingResult const result = mpHost->mMxpProcessor.processMxpInput(ch, localBufferPosition >= endOfMXPEntity);
@@ -2393,6 +2398,7 @@ void TBuffer::parseChunk(
         bool heldIncompleteSequence = false;
         // The byte just decoded was the trail of a character whose lead byte is in mPendingLead:
         bool completesSplitCharacter = false;
+        const size_t charStart = localBufferPosition;
 
         if (!encodingLookupTable.isEmpty()) {
             auto index = static_cast<quint8>(ch);
@@ -2418,6 +2424,9 @@ void TBuffer::parseChunk(
                 // two bytes; hold the lead byte and let the SGR be parsed as usual:
                 mPendingLead = ch;
                 mPendingLeadFormat = TChar((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, computeCurrentAttributeFlags());
+                if (mxpTakesDecodedCharacter) {
+                    mpHost->mMxpProcessor.processRawInput(QByteArrayView(&ch, 1));
+                }
                 ++localBufferPosition;
                 continue;
             } else {
@@ -2436,6 +2445,10 @@ void TBuffer::parseChunk(
             } else {
                 mMudLine.append(ch);
             }
+        }
+
+        if (mxpTakesDecodedCharacter && !heldIncompleteSequence) {
+            mpHost->mMxpProcessor.processRawInput(QByteArrayView(localBuffer.data() + charStart, static_cast<qsizetype>(localBufferPosition - charStart + 1)));
         }
 
         if (heldIncompleteSequence) {

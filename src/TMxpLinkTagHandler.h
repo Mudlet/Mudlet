@@ -26,7 +26,8 @@ class TMxpLinkTagHandler : public TMxpSingleTagHandler
 {
     bool mIsHrefInContent;
     bool mHintIsHref = false;
-    QString mCurrentTagContent;
+    // Bytes in the session encoding, decoded at the end tag so a character split across calls stays whole
+    QByteArray mCurrentTagContent;
     QString mHref;
     int mLinkId;
 

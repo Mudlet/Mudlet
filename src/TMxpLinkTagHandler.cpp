@@ -22,6 +22,7 @@
 #include "LuaLiteral.h"
 #include "MailtoUri.h"
 #include "TMxpClient.h"
+#include "TStringUtils.h"
 #include "TelnetUri.h"
 #include "UntrustedText.h"
 
@@ -108,7 +109,8 @@ TMxpTagHandlerResult TMxpLinkTagHandler::handleEndTag(TMxpContext& ctx, TMxpClie
     // The wrapped text goes into the address before it is quoted, so text
     // written to close the Lua string stays inside it
     if (links != nullptr && mIsHrefInContent && !links->isEmpty()) {
-        const QString href = QString(mHref).replace(TAG_CONTENT_PLACEHOLDER, mCurrentTagContent, Qt::CaseInsensitive);
+        const QString content = TStringUtils::decodeBytes(mCurrentTagContent.toStdString(), client.getEncoding());
+        const QString href = QString(mHref).replace(TAG_CONTENT_PLACEHOLDER, content, Qt::CaseInsensitive);
         const QString address = openableAddress(href);
         links->first() = actionFor(address);
         if (hints != nullptr && !hints->isEmpty()) {
@@ -166,6 +168,6 @@ QString TMxpLinkTagHandler::getHref(const MxpStartTag* tag)
 void TMxpLinkTagHandler::handleContentBytes(QByteArrayView bytes)
 {
     if (mIsHrefInContent) {
-        mCurrentTagContent.append(QLatin1StringView(bytes));
+        mCurrentTagContent.append(bytes);
     }
 }
