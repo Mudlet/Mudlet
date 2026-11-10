@@ -479,16 +479,13 @@ void dlgIRC::slot_nameCompleted(const QString& text, int cursor)
 
 void dlgIRC::slot_onHistoryCompletion()
 {
-    if (mInputHistoryIdxCurrent >= mInputHistory.count()) {
-        mInputHistoryIdxCurrent = 0;
-    }
-
     if (mInputHistory.isEmpty()) {
         return;
     }
 
     lineEdit->setText(mInputHistory.at(mInputHistoryIdxCurrent));
-    ++mInputHistoryIdxCurrent;
+    // the history is a ring, so the line before the oldest is the newest
+    mInputHistoryIdxCurrent = (mInputHistoryIdxCurrent + mInputHistory.count() - 1) % mInputHistory.count();
 }
 
 void dlgIRC::slot_onBufferAdded(IrcBuffer* buffer)
