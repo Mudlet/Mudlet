@@ -196,6 +196,7 @@ bool TCommandLine::claimsShortcutOverride(const QKeyEvent* ke) const
 
 void TCommandLine::processNormalKey(QEvent* event)
 {
+    const QString before = toPlainText();
     {
         const UserEditScope userEdit(*this);
         QPlainTextEdit::event(event);
@@ -203,7 +204,8 @@ void TCommandLine::processNormalKey(QEvent* event)
     adjustHeight();
 
     mHistoryBuffer = 0;
-    if (mCompletion.lineEdited(toPlainText())) {
+    // A key that leaves the text alone, such as Shift on its way to Shift+End, keeps Up's walk where it is
+    if (mCompletion.lineEdited(toPlainText()) && toPlainText() != before) {
         mCompletion.restartHistoryWalk();
     }
 
@@ -1248,7 +1250,7 @@ bool TCommandLine::completionTailSelected() const
 
 bool TCommandLine::walkingHistoryCompletion() const
 {
-    if (!mCompletion.showingHistoryCompletion(toPlainText(), completionTailSelected())) {
+    if (!mpHost->mHighlightHistory || !mCompletion.showingHistoryCompletion(toPlainText(), completionTailSelected())) {
         return false;
     }
     // A completion that is just what was typed has no tail to take back, so it is the player's line unless a newer match is left
