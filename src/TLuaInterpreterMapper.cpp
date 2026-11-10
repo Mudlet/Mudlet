@@ -3142,17 +3142,19 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
 
                 const int error = lua_pcall(L, 4, 6, 0);
                 if (error) {
+                    std::string errorMessage;
                     if (lua_isstring(L, -1)) {
-                        std::string errorMessage = lua_tostring(L, -1);
-                        if (!*errorReported) {
-                            *errorReported = true;
-                            pHost->getLuaInterpreter()->logError(errorMessage, qsl("map info '%1'").arg(name), qsl("anonymous Lua function"));
-                        }
-                        if (TDebug::wants(TDebug::Category::Map)) {
-                            TDebug(QColor(Qt::white), QColor(Qt::red), TDebug::Category::Map)
-                                            << "LUA ERROR: when running map info callback for '" << name << "\nreason: " << errorMessage.c_str() << "\n"
-                                    >> pHost;
-                        }
+                        errorMessage = lua_tostring(L, -1);
+                    } else {
+                        errorMessage.append("error object is a ").append(luaL_typename(L, -1)).append(" value");
+                    }
+                    if (!*errorReported) {
+                        *errorReported = true;
+                        pHost->getLuaInterpreter()->logError(errorMessage, qsl("map info '%1'").arg(name), qsl("anonymous Lua function"));
+                    }
+                    if (TDebug::wants(TDebug::Category::Map)) {
+                        TDebug(QColor(Qt::white), QColor(Qt::red), TDebug::Category::Map) << "LUA ERROR: when running map info callback for '" << name << "\nreason: " << errorMessage.c_str() << "\n"
+                                >> pHost;
                     }
                     lua_settop(L, callerStackTop);
                     return MapInfoProperties{};

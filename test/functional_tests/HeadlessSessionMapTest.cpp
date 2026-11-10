@@ -326,6 +326,17 @@ registerMapInfo("HeadlessFailing", function() error("headless map info failure")
         QVERIFY2(rendered(session), qPrintable(session.errorString()));
         QVERIFY2(rendered(session), qPrintable(session.errorString()));
         QCOMPARE(reports(), 2);
+
+        // An error raised with something other than a string is reported by its type
+        QVERIFY(session.runLua(qsl(R"lua(
+registerMapInfo("HeadlessFailing", function() error({}) end)
+)lua")));
+        QVERIFY2(rendered(session), qPrintable(session.errorString()));
+        int tableReports = 0;
+        for (const QList<QVariant>& arguments : std::as_const(errors)) {
+            tableReports += arguments.at(0).toString().contains(qsl("error object is a table value"));
+        }
+        QCOMPARE(tableReports, 1);
         QVERIFY(session.shutdown(false));
     }
 
