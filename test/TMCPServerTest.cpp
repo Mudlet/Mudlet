@@ -1108,6 +1108,16 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
         QVERIFY2(!object.text.contains(qsl("left out")), qPrintable(object.text.right(300)));
     }
 
+    void testALongListOfNumbersIsMarkedOnce()
+    {
+        // The element where the budget runs out is the marker itself, so the list must not
+        // add a second one after it.
+        const MCPToolResult result = TMCPLuaBridge::runLua(L, qsl("local t = {} for i = 1, 300000 do t[i] = i end return t"));
+
+        QVERIFY(result.success);
+        QCOMPARE(result.text.count(qsl("the rest was left out")), 1);
+    }
+
     void testAKeyThatRunsTheBudgetOutIsMarkedOnce()
     {
         // The key's own charge leaves the marker as its value, which already says it.

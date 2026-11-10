@@ -560,8 +560,8 @@ QJsonValue TMCPLuaBridge::luaTableToJson(lua_State* L, int index, int depth, int
         object[uniqueKey] = value;
         lua_pop(L, 1);
         if (nodeBudget < 0 || object.size() >= csmMaxObjectKeys) {
-            // One more step tells whether anything is actually left out; a table whose
-            // last entry is what ran out the budget is complete and is not marked.
+            // One more step tells whether anything is actually left out: when the budget
+            // runs out on the last entry, nothing after it is missing, so no marker is added.
             if (lua_next(L, index) == 0) {
                 break;
             }
