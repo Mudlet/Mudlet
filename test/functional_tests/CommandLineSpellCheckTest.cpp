@@ -485,6 +485,47 @@ private slots:
         closeMenu(pMenu);
     }
 
+    // A word the line does not underline is not one to correct, so it gets the standard menu alone
+    void test_rightClickingAWordSpeltRightOffersNoSpellings()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        // too short to be checked, so its menu is the standard one
+        enterText(pCommandLine, qsl("qz look"));
+        QVERIFY(unmarked(pCommandLine, qsl("look")));
+        QMenu* pStandardMenu = rightClick(pCommandLine, qsl("qz"));
+        QVERIFY2(pStandardMenu, "right-clicking the command line opened no menu");
+        const QStringList standardEntries = actionTexts(pStandardMenu);
+        closeMenu(pStandardMenu);
+
+        QMenu* pMenu = rightClick(pCommandLine, qsl("look"));
+        QVERIFY2(pMenu, "right-clicking the command line opened no menu");
+        const QStringList entries = actionTexts(pMenu);
+        closeMenu(pMenu);
+        QCOMPARE(entries, standardEntries);
+    }
+
+    // Nothing is underlined without a dictionary, so nothing is offered either
+    void test_rightClickingWithNoDictionaryOffersNoSpellings()
+    {
+        const QString dictionary = mpHost->getSpellDic();
+        mpHost->setSpellDic(qsl("qq_QZX"));
+        QVERIFY(!mpHost->spellChecker().systemHandle());
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        enterText(pCommandLine, qsl("qzxnodict"));
+
+        QMenu* pMenu = rightClick(pCommandLine, qsl("qzxnodict"));
+        const QString texts = pMenu ? actionTexts(pMenu).join(qsl(" | ")) : QString();
+        if (pMenu) {
+            closeMenu(pMenu);
+        }
+        mpHost->setSpellDic(dictionary);
+        QVERIFY2(pMenu, "right-clicking the command line opened no menu");
+        QVERIFY2(!texts.contains(TCommandLine::tr("Add to user dictionary")) && !texts.contains(TCommandLine::tr("no suggestions (system)")), qPrintable(texts));
+        QVERIFY(mpHost->spellChecker().systemHandle());
+    }
+
     // Scripts add their own entries to the menu, which raise the event they
     // were given when chosen, and can take them away again
     void test_aMenuEntryFromAScriptRaisesItsEvent()
