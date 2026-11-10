@@ -179,9 +179,15 @@ describe("Tests DateTime.lua functions", function()
 
     it("still reads two digits where one would do", function()
       assert.are.equal(15, datetime:parse("6/15/2025", "^%m/%d").day)
-      local dt = datetime:parse("156", "^%d%m$")
-      assert.are.equal(15, dt.day)
-      assert.are.equal(6, dt.month)
+    end)
+
+    it("needs two digits for a field that touches another number", function()
+      local dt = datetime:parse("20250615", "^%Y%m%d$")
+      assert.are.same({2025, 6, 15}, {dt.year, dt.month, dt.day})
+      assert.is_nil(datetime:parse("2025615", "^%Y%m%d$"))
+      assert.is_nil(datetime:parse("1312025", "^%m%d%Y$", true))
+      assert.is_nil(datetime:parse("930", "^%H%M$"))
+      assert.is_nil(datetime:parse("2025-06-150 12:00:00"))
     end)
 
     it("errors when %I is used without %p", function()

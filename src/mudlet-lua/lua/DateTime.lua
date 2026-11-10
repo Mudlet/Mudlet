@@ -5,10 +5,10 @@ datetime = {
   _directives = {
     ["%b"] = "(?P<abbrev_month_name>jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)",
     ["%B"] = "(?P<month_name>january|february|march|april|may|june|july|august|september|october|november|december)",
-    ["%d"] = "(?P<day_of_month>\\d{1,2})",
-    ["%H"] = "(?P<hour_24>\\d{1,2})",
-    ["%I"] = "(?P<hour_12>\\d{1,2})",
-    ["%m"] = "(?P<month>\\d{1,2})",
+    ["%d"] = "(?P<day_of_month>\\d{2}|(?<!\\d)\\d(?!\\d))",
+    ["%H"] = "(?P<hour_24>\\d{2}|(?<!\\d)\\d(?!\\d))",
+    ["%I"] = "(?P<hour_12>\\d{2}|(?<!\\d)\\d(?!\\d))",
+    ["%m"] = "(?P<month>\\d{2}|(?<!\\d)\\d(?!\\d))",
     ["%M"] = "(?P<minute>\\d{2})",
     ["%p"] = "(?P<ampm>am|pm)",
     ["%S"] = "(?P<second>\\d{2})",
@@ -101,8 +101,8 @@ end
 --- month. With as_epoch, a missing hour is 12 and a missing minute or second is 0, as in os.time(); a partial
 --- date that does not exist (such as "02-29" outside a leap year, or the 31st in a 30-day month) returns nil. <br/><br/>
 ---
---- A format without ^ matches the first place in the source it fits, and %d, %m, %H and %I take one digit as
---- well as two, so anchor the format with ^ and $ when the source may hold other numbers. <br/><br/>
+--- %d, %m, %H and %I also take a single digit, but only one with no digit beside it, so "^%Y%m%d$" still needs
+--- "20250615". A format without ^ matches anywhere in the source, so anchor it when the source holds other numbers. <br/><br/>
 ---
 --- Supported Format Codes
 ---   </pre>
@@ -112,7 +112,7 @@ end
 ---   %H   Hour (24-hour format, 1 or 2 digits)
 ---   %I   Hour (12-hour format, 1 or 2 digits, requires %p as well)
 ---   %p   AM or PM
----   %m   Month (1 or 2 digits, 1-12)
+---   %m   Month (1 or 2 digits)
 ---   %M   2-digit minutes (00-59)
 ---   %S   2-digit seconds (00-59)
 ---   %y   2-digit year (00-99), will automatically prepend 20 so 10 becomes 2010 and not 1910.
