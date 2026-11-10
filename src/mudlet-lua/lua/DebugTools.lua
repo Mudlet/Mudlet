@@ -69,7 +69,8 @@ local function printX(options)
   table.remove(stackTable,2)
   table.remove(stackTable,2)
   local level = #stackTable + 1
-  local dinfo = debug.getinfo(level)
+  -- level 1 is printX and 2 is printError or printDebug, so 3 is the line that called them
+  local dinfo = debug.getinfo(3, "Sl")
   local header = string.format("(%s:line %s)", dinfo.source, dinfo.currentline)
   if halt then
     header = "\n" .. header

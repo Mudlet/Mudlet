@@ -22,7 +22,17 @@ describe("Tests DebugTools.lua functions", function()
     it("should pass a message on to debugc", function()
       printDebug("This is a test")
       assert.spy(s).was_called(1)
-      assert.spy(s).was_called_with(match.has_match("%(.+[\\/]busted[\\/]core.lua:line %d+%) This is a test"))
+      assert.spy(s).was_called_with(match.has_match("%(.+DebugTools_spec.lua:line %d+%) This is a test"))
+    end)
+
+    it("should name the line that called it, not the bottom of the call stack", function()
+      local line
+      local function helper()
+        line = debug.getinfo(1, "l").currentline + 1
+        printDebug("This is a test")
+      end
+      helper()
+      assert.spy(s).was_called_with(match.has_match("DebugTools_spec.lua:line " .. line .. "%) This is a test"))
     end)
 
     it("should include a stacktrace when called with stackTrace true", function()
@@ -52,13 +62,23 @@ describe("Tests DebugTools.lua functions", function()
     it("should pass msg on to error with additional information", function()
       printError("This is a test")
       assert.spy(s).was_called(1)
-      assert.spy(s).was_called_with(match.has_match("This is a test"), match.has_match("%(.+[\\/]busted[\\/]core.lua:line %d+%)"))
+      assert.spy(s).was_called_with(match.has_match("This is a test"), match.has_match("%(.+DebugTools_spec.lua:line %d+%)"))
+    end)
+
+    it("should name the line that called it, not the bottom of the call stack", function()
+      local line
+      local function helper()
+        line = debug.getinfo(1, "l").currentline + 1
+        printError("This is a test")
+      end
+      helper()
+      assert.spy(s).was_called_with(match.has_match("This is a test"), match.has_match("DebugTools_spec.lua:line " .. line .. "%)$"))
     end)
 
     it("should include a stacktrace when called with stackTrace true", function()
       printError("This is a test", true)
       assert.spy(s).was_called(1)
-      assert.spy(s).was_called_with(match.has_match("\nstack traceback:\n"), match.has_match("%(.+[\\/]busted[\\/]core.lua:line %d+%)"))
+      assert.spy(s).was_called_with(match.has_match("\nstack traceback:\n"), match.has_match("%(.+DebugTools_spec.lua:line %d+%)"))
     end)
 
     it("should NOT include a stacktrace when called without stackTrace true", function()
