@@ -2654,6 +2654,73 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(0, #getPlayingSounds({key = "busted-finish-replaced"}))
   end)
 
+  it("the same music a sysMediaFinished handler plays under the key replaces a finish-ended loop", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local started = {}
+    collect("sysMediaStarted", started)
+    local handler
+    handler = registerAnonymousEventHandler("sysMediaFinished", function(_, _, _, _, key)
+      if key == "busted-finish-replayed" then
+        killAnonymousEventHandler(handler)
+        playMusicFile({name = longSoundFile, key = "busted-finish-replayed"})
+      end
+    end)
+    onCleanup(function()
+      killAnonymousEventHandler(handler)
+      stopMusic({key = "busted-finish-replayed"})
+    end)
+
+    writeSoundFiles()
+    assert.is_true(playMusicFile({name = longSoundFile, finish = 300, loops = -1, key = "busted-finish-replayed"}))
+    waitForCount("sysMediaStarted", started, 2)
+    waitForEvent("sysMediaStarted", quietMilliseconds)
+    assert.equals(2, #started, "the loop started another pass beside the replayed track")
+    assert.equals(1, #getPlayingMusic({key = "busted-finish-replayed"}))
+  end)
+
+  it("a finish-ended loop stays stoppable when a handler crowds the player list between passes", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local started = {}
+    collect("sysMediaStarted", started)
+    local handler
+    handler = registerAnonymousEventHandler("sysMediaFinished", function(_, _, _, _, key)
+      if key == "busted-finish-crowded" then
+        killAnonymousEventHandler(handler)
+        for i = 1, 30 do
+          playSoundFile({name = soundFile, key = "busted-finish-crowd-" .. i})
+        end
+      end
+    end)
+    onCleanup(function() killAnonymousEventHandler(handler) end)
+
+    writeSoundFiles()
+    assert.is_true(playSoundFile({name = longSoundFile, finish = 300, loops = -1, key = "busted-finish-crowded"}))
+    local loopStarts = function()
+      local count = 0
+      for _, event in ipairs(started) do
+        if event.key == "busted-finish-crowded" then
+          count = count + 1
+        end
+      end
+      return count
+    end
+    for _ = 1, 10 do
+      if loopStarts() >= 3 then
+        break
+      end
+      waitForEvent("sysMediaStarted", 1000)
+    end
+    assert.is_true(loopStarts() >= 3, "the loop did not carry on past the crowding handler")
+    stopSounds({key = "busted-finish-crowded"})
+    local startedBeforeStop = loopStarts()
+    waitForEvent("sysMediaStarted", quietMilliseconds)
+    assert.equals(startedBeforeStop, loopStarts(), "a pass started after the loop was stopped")
+  end)
+
   it("a finish at or before the start ends an endless loop after one pass", function()
     if mediaPlaybackUnavailable() then
       return

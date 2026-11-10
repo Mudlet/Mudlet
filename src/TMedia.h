@@ -88,7 +88,7 @@ public:
     {
         // Bumped before the source is touched because setSource() can raise errorOccurred
         // synchronously, and that handler snapshots these counters to arm its own release.
-        ++mClaimGeneration;
+        mClaimGeneration = ++smLastClaim;
         mEndAnnounced = false;
         stopVolumeGlide();
         if (mpVoice) {
@@ -130,7 +130,9 @@ public:
             mMediaPlayer->setSource(QUrl());
         }
     }
+    // Numbered across all players, so claims made since a moment can be told apart.
     quint64 claimGeneration() const { return mClaimGeneration; }
+    static quint64 lastClaim() { return smLastClaim; }
     quint64 continuationGeneration() const { return mContinuationGeneration; }
 
     // One ended playback can be reported from three places - a stop, a load error and the
@@ -346,6 +348,7 @@ private:
     std::unique_ptr<QMediaPlayer> mMediaPlayer;
     std::unique_ptr<TMediaPlaylist> mPlaylist;
     bool initialized = false;
+    inline static quint64 smLastClaim = 0;
     quint64 mClaimGeneration = 0;
     quint64 mContinuationGeneration = 0;
     bool mEndAnnounced = false;
@@ -485,7 +488,7 @@ private:
     std::shared_ptr<TMediaPlayer> getMediaPlayer(TMediaData& mediaData);
     std::shared_ptr<TMediaPlayer> matchMediaPlayer(TMediaData& mediaData);
     bool doesMediaHavePriorityToPlay(TMediaData& mediaData, const QString& absolutePathFileName);
-    bool keyTakenOver(const std::shared_ptr<TMediaPlayer>& player);
+    bool keyClaimedSince(const std::shared_ptr<TMediaPlayer>& player, quint64 claim);
     void matchMediaKeyAndStopMediaVariants(TMediaData& mediaData, const QString& absolutePathFileName);
     // Why a playback ended, which decides whether the player's own state is worth consulting
     // when the deferred release comes around. See releaseMediaSourceAfterEvents().
