@@ -376,6 +376,7 @@ private slots:
     {
         if (mpEditor) {
             mpEditor->setSearchOptions(enums::EditorSearchOptionNone);
+            mpEditor->mSearchVariablesOfferTaken.invalidate();
         }
     }
 
@@ -886,6 +887,29 @@ private slots:
         mpEditor->slot_showVariables();
         search(mLoneNeedle);
         QVERIFY2(offerToSearchVariables(), "a search from the Variables view left variables out without saying so");
+    }
+
+    // Its search fills the panel at once, so a double-click's second click would otherwise open whatever landed under it
+    void test_doubleClickingTheOfferOpensNothingElse()
+    {
+        mpEditor->slot_showVariables();
+        search(mNeedle);
+        QTreeWidgetItem* offer = offerToSearchVariables();
+        QVERIFY(offer);
+        auto* tree = mpEditor->treeWidget_searchResults;
+        tree->scrollToItem(offer);
+        QCoreApplication::processEvents();
+        const QPoint pos = tree->visualItemRect(offer).center();
+        QTest::mouseClick(tree->viewport(), Qt::LeftButton, Qt::NoModifier, pos);
+        QVERIFY(QTest::qWaitFor([this]() {
+            return topLevelResultFor(qsl("Variable")) != nullptr;
+        }));
+        QTreeWidgetItem* landed = tree->itemAt(pos);
+        QVERIFY2(landed && !isNotice(landed), "no result moved under the pointer, so this case tests nothing");
+
+        QTest::mouseClick(tree->viewport(), Qt::LeftButton, Qt::NoModifier, pos);
+        QCoreApplication::processEvents();
+        QCOMPARE(mpEditor->treeWidget_variables->currentItem(), mpEditor->treeWidget_variables->topLevelItem(0));
     }
 
     void test_anEmptyOrUnknownTermProducesNoResults()

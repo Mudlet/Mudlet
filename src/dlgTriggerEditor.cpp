@@ -3084,11 +3084,12 @@ void dlgTriggerEditor::writeSettings()
 
 void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
 {
-    if (!pItem) {
+    if (!pItem || (mSearchVariablesOfferTaken.isValid() && mSearchVariablesOfferTaken.elapsed() < QApplication::doubleClickInterval())) {
         return;
     }
 
     if (pItem->data(0, uiDesign::SearchResultDelegate::RowKindRole).toInt() == uiDesign::SearchResultDelegate::ActionRow) {
+        mSearchVariablesOfferTaken.start();
         mpAction_searchIncludeVariables->setChecked(true);
         slot_toggleSearchIncludeVariables(true);
         // Deferred: searching again clears the tree, and with it the row whose click is still being handled
