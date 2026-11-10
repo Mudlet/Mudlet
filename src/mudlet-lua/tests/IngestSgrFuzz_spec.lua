@@ -263,7 +263,7 @@ describe("fuzz: SGR decoding on the ingest worker and the main thread", function
   end)
 
   teardown(function()
-    -- nil outside MUDLET_TEST_MODE; 0 means the worker never ran and both sides were the main thread
+    -- nil outside MUDLET_TEST_MODE; 0 means the worker never ran, or MUDLET_INGEST_THREAD=verify left its lines uncounted
     local after = getProfileStats().linesParsedAhead
     print(string.format("[IngestSgrFuzz] lines parsed ahead: %s", after and parsedAheadBefore and after - parsedAheadBefore or "unknown"))
     deselect("main")
