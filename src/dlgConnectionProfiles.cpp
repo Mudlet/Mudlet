@@ -2637,6 +2637,26 @@ void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
     slot_itemClicked(pItem);
 }
 
+/*static*/ QString dlgConnectionProfiles::nameForCopy(const QString& name, const QStringList& takenNames)
+{
+    qsizetype digitsStart = name.size();
+    while (digitsStart > 0 && name.at(digitsStart - 1) >= QLatin1Char('0') && name.at(digitsStart - 1) <= QLatin1Char('9')) {
+        --digitsStart;
+    }
+    // Counting on past every taken name cannot overflow from 18 digits; a longer number stays in the stem
+    const qsizetype digitCount = name.size() - digitsStart;
+    const bool numbered = digitCount > 0 && digitCount <= 18;
+    qulonglong number = numbered ? name.mid(digitsStart).toULongLong() : 0;
+    const qsizetype width = numbered ? digitCount : 0;
+    const QString stem = numbered ? name.left(digitsStart) : name;
+
+    QString candidate;
+    do {
+        candidate = stem + QString::number(++number).rightJustified(width, u'0');
+    } while (takenNames.contains(candidate, Qt::CaseInsensitive) || signInRemovalPending(candidate));
+    return candidate;
+}
+
 bool dlgConnectionProfiles::copyProfileWidget(QString& profile_name, QString& oldname, QListWidgetItem*& pItem) const
 {
     profile_name = profile_name_entry->text().trimmed();
@@ -2645,20 +2665,7 @@ bool dlgConnectionProfiles::copyProfileWidget(QString& profile_name, QString& ol
         return false;
     }
 
-    // prepend n+1 to end of the profile name
-    if (profile_name.at(profile_name.size() - 1).isDigit()) {
-        int i = 1;
-        do {
-            profile_name = profile_name.left(profile_name.size() - 1) + QString::number(profile_name.at(profile_name.size() - 1).digitValue() + i++);
-        } while (mProfileList.contains(profile_name) || signInRemovalPending(profile_name));
-    } else {
-        int i = 1;
-        QString profile_name2;
-        do {
-            profile_name2 = profile_name + QString::number(i++);
-        } while (mProfileList.contains(profile_name2) || signInRemovalPending(profile_name2));
-        profile_name = profile_name2;
-    }
+    profile_name = nameForCopy(profile_name, mProfileList);
 
     pItem = new (std::nothrow) QListWidgetItem();
     if (!pItem) {
