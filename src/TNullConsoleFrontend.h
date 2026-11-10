@@ -469,8 +469,8 @@ private:
         // TDockWidget::hasLayoutAlready: whether opening this user window has asked for the saved layout,
         // which a load already running refuses
         bool layoutRequested = false;
-        // TConsole::mDimensions, the grid last reported, and whether the pane was resized while hidden, as its
-        // TTextEdit::resizeEvent() then waits for the pane to show
+        // TConsole::mDimensions and mReportedTimeStampWidth, what was last reported, and whether the pane was
+        // resized while hidden, as its TTextEdit::resizeEvent() then waits for the pane to show
         QSize reportedGrid;
         int reportedTimeStampWidth = 0;
         bool paneResizePending = true;
