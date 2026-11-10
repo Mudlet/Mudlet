@@ -2268,6 +2268,7 @@ describe("Tests UI functions", function()
         "You are standing in a dark forest.",
         "The orc hits you for 14 damage!",
         "You chat with the innkeeper.",
+        "Martha gossips about the mayor's wife.",
         "[combat] 100/120 hp",
         "(12) something that is not a channel",
       }
