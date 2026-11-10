@@ -128,6 +128,12 @@ describe("Networking send functions honour their disconnected/offline contracts"
       assert.is_nil(ok)
       assert.is_true(contains(err, "not connected to game server"))
     end)
+
+    it("treats an explicit nil second argument like an omitted one", function()
+      local ok, err = sendATCP("Char.Login", nil)
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "not connected to game server"), tostring(err))
+    end)
   end)
 
   describe("sendTelnetChannel102", function()
@@ -157,6 +163,38 @@ describe("Networking send functions honour their disconnected/offline contracts"
       local ok, err = sendSocket("noop")
       assert.is_nil(ok)
       assert.is_true(contains(err, "unable to send"))
+    end)
+
+    it("treats an explicit nil second argument like an omitted one", function()
+      local ok, err = sendSocket("noop", nil)
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "unable to send"), tostring(err))
+    end)
+  end)
+
+  describe("send", function()
+    local handlerId
+
+    after_each(function()
+      if handlerId then
+        killAnonymousEventHandler(handlerId)
+        handlerId = nil
+      end
+    end)
+
+    it("treats an explicit nil showOnScreen like an omitted one", function()
+      local seen = {}
+      handlerId = registerAnonymousEventHandler("sysDataSendRequest", function(_, command)
+        seen[#seen + 1] = command
+        denyCurrentSend()
+      end)
+      local command = "sendNilShowOnScreen" .. os.time()
+      assert.is_true(send(command, nil))
+      assert.are.same({command}, seen)
+    end)
+
+    it("still raises a Lua error when showOnScreen is not a boolean", function()
+      assert.has_error(function() send("look", "yes") end)
     end)
   end)
 end)
