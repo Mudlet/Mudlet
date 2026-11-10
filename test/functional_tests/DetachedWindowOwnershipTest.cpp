@@ -698,6 +698,59 @@ private slots:
         QCOMPARE(mudlet::self()->getActiveHost()->getName(), mSecondHostname);
     }
 
+    // While a detached profile is active the main tab bar's current tab no longer stops a repeat of the switch in hand
+    void test_aFocusHandlerAskingForTheSameMainWindowSwitchSwitchesOnce()
+    {
+        QVERIFY(mpDetachedWindow);
+        startProfile(mThirdHostname);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        Host* pFirstHost = HostManager::self()->getHost(mFirstHostname);
+        Host* pSecondHost = HostManager::self()->getHost(mSecondHostname);
+        QVERIFY(pFirstHost && pSecondHost);
+        mudlet::self()->mpTabBar->setCurrentIndex(mudlet::self()->mpTabBar->tabIndex(mThirdHostname));
+        mudlet::self()->activateProfile(pSecondHost);
+        QCOMPARE(mudlet::self()->getActiveHost(), pSecondHost);
+        QCOMPARE(mudlet::self()->mpTabBar->currentIndex(), mudlet::self()->mpTabBar->tabIndex(mThirdHostname));
+        TLuaInterpreter* pLua = pSecondHost->getLuaInterpreter();
+        QVERIFY(pLua->compileAndExecuteScript(qsl("qaFocusLost = 0 "
+                                                  "qaFocusHandler = registerAnonymousEventHandler('sysProfileFocusChangeEvent', function(_, gained) "
+                                                  "if not gained then qaFocusLost = qaFocusLost + 1 if qaFocusLost < 5 then setActiveProfile('%1') end end end)")
+                                                      .arg(mFirstHostname)));
+        auto removeHandler = qScopeGuard([pLua]() {
+            pLua->compileAndExecuteScript(qsl("killAnonymousEventHandler(qaFocusHandler)"));
+        });
+
+        QVERIFY(pLua->compileAndExecuteScript(qsl("assert(setActiveProfile('%1'))").arg(mFirstHostname)));
+        QVERIFY2(pLua->compileAndExecuteScript(qsl("assert(qaFocusLost == 1)")), "the profile being left heard it lost focus more than once");
+        QCOMPARE(mudlet::self()->getActiveHost(), pFirstHost);
+    }
+
+    // A focus handler can move on before the queued hand-off runs, and the keyboard has to stay with the profile it moved to
+    void test_aFocusHandlerSendingTheSwitchOnLeavesTheKeyboardWithTheActiveProfile()
+    {
+        QVERIFY(mpDetachedWindow);
+        Host* pFirstHost = HostManager::self()->getHost(mFirstHostname);
+        Host* pSecondHost = HostManager::self()->getHost(mSecondHostname);
+        QVERIFY(pFirstHost && pFirstHost->mainConsoleView() && pSecondHost && pSecondHost->mainConsoleView());
+        mudlet::self()->activateProfile(pFirstHost);
+        QTest::qWait(200ms);
+        TLuaInterpreter* pLua = pSecondHost->getLuaInterpreter();
+        QVERIFY(pLua->compileAndExecuteScript(qsl("qaFocusGained = 0 "
+                                                  "qaFocusHandler = registerAnonymousEventHandler('sysProfileFocusChangeEvent', function(_, gained) "
+                                                  "if gained then qaFocusGained = qaFocusGained + 1 if qaFocusGained < 5 then setActiveProfile('%1') end end end)")
+                                                      .arg(mFirstHostname)));
+        auto removeHandler = qScopeGuard([pLua]() {
+            pLua->compileAndExecuteScript(qsl("killAnonymousEventHandler(qaFocusHandler)"));
+        });
+
+        QVERIFY(pFirstHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(setActiveProfile('%1'))").arg(mSecondHostname)));
+        QTest::qWait(200ms);
+        QCOMPARE(mudlet::self()->getActiveHost(), pFirstHost);
+        QVERIFY2(QApplication::focusWidget() != static_cast<QWidget*>(pSecondHost->mainConsoleView()->mpCommandLine.data()), "the keyboard went to a profile that is no longer active");
+    }
+
     // A user window stays in the main window, so the command line last used in one cannot take the keyboard from the window just raised
     void test_setActiveProfileGivesTheKeyboardToTheDetachedWindow()
     {

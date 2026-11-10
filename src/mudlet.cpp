@@ -102,6 +102,7 @@
 #include <QMessageBox>
 #include <QPoint>
 #include <QScopeGuard>
+#include <QScopedValueRollback>
 #include <QScreen>
 #include <QScrollBar>
 #include <QSettings>
@@ -4503,12 +4504,7 @@ bool mudlet::setActiveProfileTab(const QString& profileName)
     if (pHost && pHost == mpProfileBeingActivated) {
         return true;
     }
-    auto activateOnce = [this, pHost]() {
-        const QPointer<Host> pOuterActivation = mpProfileBeingActivated;
-        mpProfileBeingActivated = pHost;
-        activateProfile(pHost);
-        mpProfileBeingActivated = pOuterActivation;
-    };
+    const QScopedValueRollback<QPointer<Host>> activating(mpProfileBeingActivated, pHost);
 
     // A detached profile's tab is in its own window, not the main tab bar
     if (TDetachedWindow* pDetachedWindow = mDetachedWindows.value(profileName)) {
@@ -4517,12 +4513,16 @@ bool mudlet::setActiveProfileTab(const QString& profileName)
         pDetachedWindow->activateWindow();
         pDetachedWindow->switchToProfile(profileName);
         // The main tab bar's change of tab is what does this for a profile in the main window
-        activateOnce();
+        activateProfile(pHost);
         // Queued after activateProfile()'s own hand-off, which could give the keyboard to a user window left in the main window
-        QTimer::singleShot(0ms, pDetachedWindow, [pDetachedWindow, pDetachedHost = QPointer<Host>(pHost)]() {
+        QTimer::singleShot(0ms, pDetachedWindow, [this, pDetachedWindow, pDetachedHost = QPointer<Host>(pHost)]() {
+            // A focus-change handler may have moved on to another profile since
+            if (!pDetachedHost || pDetachedHost != mpCurrentActiveHost) {
+                return;
+            }
             pDetachedWindow->raise();
             pDetachedWindow->activateWindow();
-            if (pDetachedHost && pDetachedHost->mainConsoleView()) {
+            if (pDetachedHost->mainConsoleView()) {
                 pDetachedHost->mainConsoleView()->focusActiveCommandLine(pDetachedWindow);
             }
         });
@@ -4531,7 +4531,7 @@ bool mudlet::setActiveProfileTab(const QString& profileName)
     const int index = mpTabBar->tabIndex(profileName);
     // While a detached profile is active the main tab bar keeps its tab current, so selecting that tab again changes nothing
     if (index >= 0 && index == mpTabBar->currentIndex() && mpCurrentActiveHost && mpTabBar->tabIndex(mpCurrentActiveHost->getName()) < 0) {
-        activateOnce();
+        activateProfile(pHost);
         return true;
     }
     mpTabBar->setCurrentIndex(index);
