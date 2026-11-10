@@ -1861,6 +1861,10 @@ describe("Tests DB.lua functions", function()
       assert.are.same({"Ada", "Bram", "Cyra", "Drake", "Eve"}, names(db:fetch(mydb.people, {})))
     end)
 
+    it("db:aggregate over an empty table query counts every row", function()
+      assert.are.equal(5, db:aggregate(mydb.people.name, "COUNT", {}))
+    end)
+
     it("a table query that is not a list of conditions still matches nothing rather than everything", function()
       assert.is_nil(db:fetch(mydb.people, {name = "Ada"}))
     end)
