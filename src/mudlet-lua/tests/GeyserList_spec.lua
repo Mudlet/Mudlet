@@ -285,6 +285,17 @@ describe("Tests functionality of Geyser.List", function()
       assert.are.same({"b", "a"}, names(list))
     end)
 
+    it("sortBy keeps rows that tie in the order they came", function()
+      local list = newList("glSortStable", {sortBy = function(a, b) return a.rank < b.rank end})
+      local expected = {}
+      for i = 1, 20 do
+        row(list, "glSortStable" .. i, 10, {rank = i % 2})
+      end
+      for i = 2, 20, 2 do expected[#expected + 1] = "glSortStable" .. i end
+      for i = 1, 20, 2 do expected[#expected + 1] = "glSortStable" .. i end
+      assert.are.same(expected, names(list))
+    end)
+
     it("a sorted list refuses to move rows, and insertItem follows the sort", function()
       local list = newList("glSorted", {sortBy = reverse})
       local a = row(list, "a")
@@ -382,6 +393,15 @@ describe("Tests functionality of Geyser.List", function()
       assert.are.equal(0, list:getItemCount())
       assert.are.equal(1, list.content:get_height())
       assert.are.equal(1, organized)
+    end)
+
+    it("dismissAll ends its update when an onDismiss raises", function()
+      local list = newList("glDismissRaise")
+      row(list, "a", 10, {onDismiss = function() error("boom") end})
+      assert.has_error(function() list:dismissAll() end)
+      assert.is_falsy(rawget(list, "defer_updates"))
+      row(list, "b", 10)
+      assert.are.equal(10, geometry("b").y)
     end)
 
     it("dismissAll doesn't end an update it didn't start", function()
