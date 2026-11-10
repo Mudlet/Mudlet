@@ -261,6 +261,9 @@ private slots:
     {
         dlgIRC* client = openConnectedClient();
         QVERIFY2(client, "the IRC client could not be opened");
+        const auto restoreAppearance = qScopeGuard([] {
+            mudlet::self()->setAppearance(enums::Appearance::systemSetting);
+        });
         for (const auto appearance : {enums::Appearance::dark, enums::Appearance::light}) {
             mudlet::self()->setAppearance(appearance);
             QCoreApplication::processEvents();
@@ -284,13 +287,16 @@ private slots:
                 }
             }
             const QColor ink = client->lineEdit->palette().color(QPalette::Text);
+            QCOMPARE(ink.name(), uiDesign::themeTokens().text.name());
             const qreal ratio = uiDesign::contrastRatio(ink, QColor(fill));
             QVERIFY2(ratio >= uiDesign::scmTextMinimumRatio,
                      qPrintable(qsl("on the %1 appearance the marked field writes %2 on %3, a contrast of %4:1")
                                         .arg(appearance == enums::Appearance::dark ? qsl("dark") : qsl("light"), ink.name(), QColor(fill).name(), QString::number(ratio, 'f', 2))));
+            // Only typing clears the mark; setText() and clear() leave it for the next pass to see
+            QTest::keyClick(client->lineEdit, Qt::Key_A);
+            QVERIFY2(client->lineEdit->styleSheet().isEmpty(), "typing into the marked field did not clear the mark");
             client->lineEdit->clear();
         }
-        mudlet::self()->setAppearance(enums::Appearance::systemSetting);
     }
 
     // A click must neither load the link into the window nor, unless it is a
