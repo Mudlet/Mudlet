@@ -54,6 +54,23 @@ describe("Tests functionality of Geyser.Gauge", function()
       assert.is_false(gauge.strict)
     end)
 
+    it("fills to the value constraint it was given", function()
+      local gauge = track(Geyser.Gauge:new({name = "ggsValueCons", x = 0, y = 0, width = 200, height = 40, value = 25}))
+      assert.are.equal(25, gauge.value)
+      assert.are.same({x = 0, y = 0, width = 50, height = 40}, geometry("ggsValueCons_front"))
+    end)
+
+    it("fills a vertical gauge from the bottom to the value constraint it was given", function()
+      track(Geyser.Gauge:new({name = "ggsValueConsV", x = 0, y = 0, width = 40, height = 200, value = 25, orientation = "vertical"}))
+      assert.are.same({x = 0, y = 150, width = 40, height = 50}, geometry("ggsValueConsV_front"))
+    end)
+
+    it("caps the value constraint of a strict gauge", function()
+      local gauge = track(Geyser.Gauge:new({name = "ggsValueConsStrict", x = 0, y = 0, width = 200, height = 40, value = 150, strict = true}))
+      assert.are.equal(100, gauge.value)
+      assert.are.equal(200, geometry("ggsValueConsStrict_front").width)
+    end)
+
     it("echoes the message constraint onto the text label", function()
       track(Geyser.Gauge:new({name = "ggsMessage", x = 0, y = 0, width = 100, height = 20, message = "50%"}))
       assert.is_truthy(getLabelText("ggsMessage_text"):find("50%%"))
