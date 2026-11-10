@@ -310,6 +310,84 @@ private slots:
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     }
 
+    // "Set custom color" is offered on a game with artwork too, so the colour
+    // picked there has to be what the entry shows the next time it is listed
+    void test_aCustomColorReplacesTheArtworkUntilItIsReset()
+    {
+        const QColor picked(qsl("#123456"));
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, mGameWithArtwork)));
+        QFile colorFile(MudletApp::getMudletPath(enums::profileDataItemPath, mGameWithArtwork, qsl("profilecolor")));
+        QVERIFY(colorFile.open(QIODevice::WriteOnly | QIODevice::Text));
+        colorFile.write(picked.name().toUtf8());
+        colorFile.close();
+
+        auto* pDialog = new dlgConnectionProfiles();
+        pDialog->show();
+        auto* pTabBar = pDialog->findChild<QTabBar*>(qsl("gamesTabBar"));
+        QVERIFY(pTabBar);
+        pTabBar->setCurrentIndex(1); // "All games"
+        pDialog->fillout_form();
+
+        QListWidgetItem* pItem = listedItem(pDialog, mGameWithArtwork);
+        QVERIFY2(pItem, qPrintable(qsl("'%1' is not listed under 'All games' at all").arg(mGameWithArtwork)));
+        // sampled clear of the rounded corners, the logo and the name
+        const QImage drawn = pItem->icon().pixmap(QSize(120, 30)).toImage();
+        QVERIFY2(drawn.pixelColor(28, 2) == picked,
+                 qPrintable(qsl("'%1' was given the color %2 but is drawn with %3, so the color picked for it was lost").arg(mGameWithArtwork, picked.name(), drawn.pixelColor(28, 2).name())));
+
+        pDialog->listWidget_profiles->setCurrentItem(pItem);
+        pDialog->slot_resetCustomIcon();
+        QVERIFY2(!colorFile.exists(), "resetting the icon left the custom color behind, so the artwork can never come back");
+        pItem = listedItem(pDialog, mGameWithArtwork);
+        QVERIFY(pItem);
+        QVERIFY2(pItem->icon().pixmap(QSize(120, 30)).toImage().pixelColor(28, 2) != picked, "resetting the icon still draws the custom color");
+
+        QDir(MudletApp::getMudletPath(enums::profileHomePath, mGameWithArtwork)).removeRecursively();
+        pDialog->deleteLater();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    }
+
+    // the picture is gone once resetProfileIcon() returns, so a color that will
+    // not go must not leave the list still drawing that picture
+    void test_aResetThatCannotRemoveTheColorStillDropsThePicture()
+    {
+        const QString profileName = qsl("Test-ResetWithStuckColor");
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, profileName)));
+        const QString iconPath = MudletApp::getMudletPath(enums::profileDataItemPath, profileName, qsl("profileicon"));
+        QVERIFY(QFile::copy(mArtworkPath, iconPath));
+        // the copy takes the resource's read-only permissions, and Windows will not delete a read-only file
+        QVERIFY(QFile::setPermissions(iconPath, QFile::ReadOwner | QFile::WriteOwner));
+        QVERIFY2(QFileInfo(iconPath).permissions().testFlag(QFile::WriteOwner), "SETUP: the picture is read-only, so a reset on Windows cannot remove it");
+        // a non-empty folder in its place is something QFile::remove() cannot delete
+        const QString colorPath = MudletApp::getMudletPath(enums::profileDataItemPath, profileName, qsl("profilecolor"));
+        QVERIFY(QDir().mkpath(colorPath));
+        QFile blocker(qsl("%1/blocker").arg(colorPath));
+        QVERIFY(blocker.open(QIODevice::WriteOnly));
+        blocker.close();
+
+        auto* pDialog = new dlgConnectionProfiles();
+        pDialog->show();
+        auto* pTabBar = pDialog->findChild<QTabBar*>(qsl("gamesTabBar"));
+        QVERIFY(pTabBar);
+        pTabBar->setCurrentIndex(0); // "My games"
+        pDialog->fillout_form();
+        QListWidgetItem* pItem = listedItem(pDialog, profileName);
+        QVERIFY2(pItem, qPrintable(qsl("'%1' is not listed under 'My games' at all").arg(profileName)));
+        const QImage pictureShown = pItem->icon().pixmap(QSize(120, 30)).toImage();
+
+        pDialog->listWidget_profiles->setCurrentItem(pItem);
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("couldn't remove custom color file")));
+        pDialog->slot_resetCustomIcon();
+        QVERIFY2(!QFileInfo::exists(iconPath), "SETUP: the reset did not remove the picture, so this case checks nothing");
+        pItem = listedItem(pDialog, profileName);
+        QVERIFY(pItem);
+        QVERIFY2(pItem->icon().pixmap(QSize(120, 30)).toImage() != pictureShown, "the picture was deleted but the list still draws it");
+
+        QDir(MudletApp::getMudletPath(enums::profileHomePath, profileName)).removeRecursively();
+        pDialog->deleteLater();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    }
+
     // the tooltip is rich text, and a description is the plain words of whoever
     // wrote it: markup left in one must not be able to eat the warning that
     // follows it, nor be acted on instead of shown
