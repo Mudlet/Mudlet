@@ -781,21 +781,25 @@ private slots:
     {
         setUpPlayerView();
         hideInfoBox();
-        roomDB()->getRoom(scmEastRoom)->mSymbol = qsl("W");
+        TRoom* pRoom = roomDB()->getRoom(scmEastRoom);
         TArea* pArea = roomDB()->getArea(mAreaId);
 
         for (const bool startInGridMode : {false, true}) {
+            pRoom->mSymbol = qsl("W");
             pArea->gridMode = startInGridMode;
             TMapPainter painter;
             TMapPainter freshPainter;
+            TMapPainter blankPainter;
             TMapPainter::PaintResult result;
             paintedView(painter, playerView(), result);
-            QVERIFY2(painter.symbolPixmapCacheCount() > 0, "no symbol was drawn, so the comparison would prove nothing");
             pArea->gridMode = !startInGridMode;
             const QImage switched = paintedView(painter, result.view, result);
             const QImage fresh = paintedView(freshPainter, playerView(), result);
             const QString name = startInGridMode ? qsl("out-of-grid") : qsl("into-grid");
             QVERIFY2(switched == fresh, qPrintable(saved(switched, name) + qsl("; ") + saved(fresh, name + qsl("-fresh"))));
+            pRoom->mSymbol.clear();
+            const QImage blank = paintedView(blankPainter, playerView(), result);
+            QVERIFY2(fresh != blank, qPrintable(qsl("no symbol was drawn, so the comparison proves nothing: ") + saved(fresh, name + qsl("-fresh"))));
         }
     }
 
