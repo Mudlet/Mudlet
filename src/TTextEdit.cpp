@@ -3181,8 +3181,9 @@ void TTextEdit::showContextMenu(const QPoint& globalPosition)
 
     if (mpConsole->getType() == TConsole::ErrorConsole) {
         QAction* clearErrorConsole = new QAction(tr("Clear console"), popup);
-        connect(clearErrorConsole, &QAction::triggered, this, [=, this]() {
-            mpConsole->buffer.clear();
+        clearErrorConsole->setObjectName(qsl("consoleClearErrorConsole"));
+        connect(clearErrorConsole, &QAction::triggered, this, [this]() {
+            mpConsole->clear();
             mpConsole->print(qsl("%1\n").arg(tr("*** starting new session ***")));
         });
         popup->addAction(clearErrorConsole);
