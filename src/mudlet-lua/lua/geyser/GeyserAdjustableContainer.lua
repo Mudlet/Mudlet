@@ -852,6 +852,7 @@ function Adjustable.Container:detach()
     -- only unregister while it is still ours - the same guard type_delete uses
     local where = self.attached
     self.hiddenAttached = nil
+    self.minimizedAttached = nil
     local attachedTo = Adjustable.Container.Attached and Adjustable.Container.Attached[where]
     if attachedTo and attachedTo[self.name] == self then
         attachedTo[self.name] = nil
@@ -1057,11 +1058,13 @@ function Adjustable.Container:onClickLoad()
 end
 
 --- minimizes the container
--- hides everything beside the title; does nothing if it is already minimized
+-- hides everything beside the title; does nothing if it is already minimized.
+-- One attached to a border gives the border back while minimized, and restore() attaches it again
 function Adjustable.Container:minimize()
     if self.minimized == true then
         return
     end
+    local attached = self.attached
     self.origh = self.height
     self.Inside:hide()
     self:resize(nil, self.buttonsize + 10)
@@ -1070,15 +1073,23 @@ function Adjustable.Container:minimize()
         self:disconnect()
     end
     self:adjustBorder()
+    -- after adjustBorder(), as the detach() it makes forgets this
+    self.minimizedAttached = attached or nil
 end
 
---- restores the container after it was minimized
+--- restores the container after it was minimized, attaching it again to the border it had,
+-- unless it has since been moved too far from that border
 function Adjustable.Container:restore()
     if self.minimized == true then
         self.origh = self.origh or "25%"
         self.Inside:show()
         self:resize(nil,self.origh)
         self.minimized = false
+        local border = self.minimizedAttached
+        self.minimizedAttached = nil
+        if border then
+            self:attachToBorder(border)
+        end
         self:adjustBorder()
     end
 end
@@ -1272,6 +1283,7 @@ function Adjustable.Container:save(slot, dir)
     mytable.locked = self.locked
     mytable.attached = self.attached
     mytable.hiddenAttached = self.hiddenAttached
+    mytable.minimizedAttached = self.minimizedAttached
     mytable.lockStyle = self.pendingLockStyle or self.lockStyle
     mytable.padding = self.padding
     mytable.attachedMargin = self.attachedMargin
@@ -1378,6 +1390,9 @@ function Adjustable.Container:load(slot, dir)
 
     if mytable.attached or mytable.hiddenAttached then
         self:attachToBorder(mytable.attached or mytable.hiddenAttached)
+    end
+    if self.minimized then
+        self.minimizedAttached = mytable.minimizedAttached
     end
 
     self:adjustBorder()
