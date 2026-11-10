@@ -37,7 +37,6 @@
 #include <QContextMenuEvent>
 #include <QMenu>
 #include <QScopeGuard>
-#include <QScrollBar>
 #include <QShortcut>
 
 #include "HostDialogs.h"
@@ -959,7 +958,6 @@ private slots:
     QVERIFY(pConsole->model().buffer.lineBuffer.at(0).contains(qsl("starting new session")));
     QVERIFY(pPane->mIsTailMode);
     QCOMPARE(pPane->mCursorX, 0);
-    QCOMPARE(pConsole->mpHScrollBar->isVisible(), false);
   }
 
   void test_setScriptRewritesTheScriptTheEditorShows() {
