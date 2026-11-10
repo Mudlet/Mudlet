@@ -28,8 +28,7 @@
 #include <QString>
 
 // Undo command for deleting items. Stores XML snapshots of deleted items (including children).
-// Handles single or multiple items efficiently. Nullifies mpHost before deletion to prevent
-// unregistration issues. Undo restores the topmost deleted items, which bring their descendants back.
+// Handles single or multiple items efficiently. Undo restores the topmost deleted items, which bring their descendants back.
 class EditorDeleteItemCommand : public EditorCommand
 {
 public:

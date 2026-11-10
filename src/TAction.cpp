@@ -56,15 +56,16 @@ TAction::~TAction()
 {
     // Each child's removal redraws the bars, which draw this action as a menu
     // of its children; ~Tree() would delete them only once this action's own
-    // members and QObject were gone. Done even without a host, as the editor
-    // clears only this action's before deleting it, not its children's.
+    // members and QObject were gone.
     while (!mpMyChildrenList->empty()) {
         delete mpMyChildrenList->front();
     }
     if (mpHost) {
         mpHost->getActionUnit()->unregisterAction(this);
 
-        if (isTemporary() && !mScript.isEmpty()) {
+        // IDs are never reused, so nothing else frees this global. Only the one compiled under this ID:
+        // one compiled before the ID was assigned is named Action0, which other items share.
+        if (mID > 0 && mFuncName == qsl("Action%1").arg(QString::number(mID))) {
             mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
         }
     }

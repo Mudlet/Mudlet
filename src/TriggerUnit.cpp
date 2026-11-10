@@ -298,7 +298,6 @@ void TriggerUnit::unregisterTrigger(TTrigger* pT)
     // of the end-of-pass reset, so drop its lineage here instead.
     std::replace(mRootNodesAddedWhileProcessing.begin(), mRootNodesAddedWhileProcessing.end(), pT, static_cast<TTrigger*>(nullptr));
     pT->setSameLineChain(0, 0);
-    // Here rather than in ~TTrigger(): the editor deletes a trigger with its mpHost nulled
     forgetOpenTreeNode(pT);
     if (pT->mTreeIndexPosition >= 0) {
         unfileTreeNode(pT);
