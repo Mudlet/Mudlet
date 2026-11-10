@@ -41,6 +41,9 @@
  * And the dock of a deleted user window, which has to leave the main window
  * straight away rather than when its deferred delete gets round to it.
  *
+ * And the search box and buttons every TConsole builds, which only the main
+ * console lays out, so a deleted sub-console must free them itself.
+ *
  * Bootstrap mirrors the other functional tests.
  */
 
@@ -185,8 +188,8 @@ private slots:
         runDeferredDeletes();
     }
 
-    // A sub-console builds the main console's search box and buttons too, without a layout to adopt
-    // them; left parentless they stay listed by QApplication, so every create and delete grew the heap
+    // A sub-console builds its own search box and buttons too, with no layout to adopt them; any it
+    // leaves parentless stay listed by QApplication, so each create and delete would grow the heap
     void test_deletedSubConsolesLeaveNoWidgetsBehind()
     {
         TMainConsole* console = mpHost->mainConsoleView();
@@ -204,9 +207,15 @@ private slots:
         };
         // The first round may create widgets that are kept for reuse
         createAndDelete();
+        if (QTest::currentTestFailed()) {
+            return;
+        }
         const auto widgetsBefore = QApplication::allWidgets().size();
 
         createAndDelete();
+        if (QTest::currentTestFailed()) {
+            return;
+        }
 
         QCOMPARE(QApplication::allWidgets().size(), widgetsBefore);
     }
