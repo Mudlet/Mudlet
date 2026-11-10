@@ -1455,6 +1455,61 @@ private slots:
         QVERIFY2(menu.isNull(), "the menu did not delete itself on closing");
     }
 
+    // A link with one command has no menu of its own, so a right click on it
+    // has to give the console's menu rather than nothing, while a popup link
+    // still gives its own
+    void test_aRightClickOnALinkWithoutAMenuGivesTheConsolesMenu()
+    {
+        mpServer->setWelcomeMessage(qsl("menu test\r\n"));
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        QVERIFY2(waitForTextInBuffer(qsl("menu test")), "the welcome text never reached the buffer");
+
+        mudlet::self()->resize(1200, 800);
+        QTest::qWait(100ms);
+
+        TTextEdit* pane = upperPane();
+        QVERIFY2(pane, "No upper pane available");
+
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(
+                         qsl("clearWindow()\nechoLink('PlainLink', [[ ]], '', true)\necho('\\n')\nechoPopup('PopupLink', {[[ ]], [[ ]]}, {'first', 'second'}, true)\necho('\\n')\n")),
+                 "the echoLink()/echoPopup() calls failed");
+        QVERIFY2(waitForTextInBuffer(qsl("PopupLink")), "the link text never reached the buffer");
+        QTest::qWait(100ms);
+
+        QList<QPoint> overALink;
+        for (int y = pane->mFontHeight / 2; y < pane->height() && overALink.size() < 2; y += pane->mFontHeight) {
+            for (int x = pane->mFontWidth / 2; x < pane->width(); x += pane->mFontWidth) {
+                sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::NoButton, QPointF(x, y));
+                if (pane->cursor().shape() == Qt::PointingHandCursor) {
+                    overALink.append(QPoint(x, y));
+                    break;
+                }
+            }
+        }
+        QVERIFY2(overALink.size() == 2, "the two links were not both found, so the clicks below prove nothing");
+
+        auto menuFromRightClickAt = [&](const QPoint& pos) -> QPointer<QMenu> {
+            for (auto* stale : pane->findChildren<QMenu*>()) {
+                delete stale;
+            }
+            sendMouse(pane, QEvent::MouseButtonPress, Qt::RightButton, Qt::RightButton, pos);
+            sendMouse(pane, QEvent::MouseButtonRelease, Qt::RightButton, Qt::NoButton, pos);
+            return pane->findChildren<QMenu*>().value(0);
+        };
+
+        QPointer<QMenu> plainMenu = menuFromRightClickAt(overALink.at(0));
+        QVERIFY2(plainMenu, "a right click on a link with one command put up no menu at all");
+        QVERIFY2(plainMenu->findChild<QAction*>(qsl("consoleCopy")), "the menu over a link with one command is not the console's own");
+        plainMenu->close();
+
+        QPointer<QMenu> popupMenu = menuFromRightClickAt(overALink.at(1));
+        QVERIFY2(popupMenu, "a right click on a popup link put up no menu");
+        QVERIFY2(!popupMenu->findChild<QAction*>(qsl("consoleCopy")), "a popup link gave the console's menu instead of its own");
+        popupMenu->close();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    }
+
     // #6351: the console actions are keyed on the unique name while the menu
     // entry is labelled with the display name. An entry that handed its label
     // back missed the map, indexed the empty list that left behind and took the
