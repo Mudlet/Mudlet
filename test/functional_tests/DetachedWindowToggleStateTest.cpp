@@ -84,7 +84,7 @@ private slots:
 
         deleteProfileDirectory(mFirstHostname);
         deleteProfileDirectory(mSecondHostname);
-        // Two of them: slot_tabDetachRequested() refuses index 0
+        // Two of them: detachTab() leaves the main window at least one tab
         startProfile(mFirstHostname);
         if (QTest::currentTestFailed()) {
             return;
@@ -178,8 +178,8 @@ private:
     TDetachedWindow* detachProfile(const QString& profileName)
     {
         const int tabIndex = mudlet::self()->mpTabBar->tabIndex(profileName);
-        if (tabIndex < 1) {
-            QTest::qFail(qPrintable(qsl("'%1' is at tab %2, which slot_tabDetachRequested() will not detach").arg(profileName).arg(tabIndex)), __FILE__, __LINE__);
+        if (tabIndex < 0) {
+            QTest::qFail(qPrintable(qsl("'%1' has no tab in the main window").arg(profileName)), __FILE__, __LINE__);
             return nullptr;
         }
         mudlet::self()->slot_tabDetachRequested(tabIndex, QPoint(200, 200));
