@@ -4935,6 +4935,18 @@ describe("Tests one-shot event handlers", function()
       _G.otherSpecOneShotByName = nil
     end)
 
+    it("still hands back the ID of the handler that stays when that is registered again", function()
+      local calls = 0
+      _G.otherSpecOneShotByName = function() calls = calls + 1 end
+      local first = registerAnonymousEventHandler("otherSpecOneShotByName", "otherSpecOneShotByName")
+      local second = registerAnonymousEventHandler("otherSpecOneShotByName", "otherSpecOneShotByName")
+      raiseEvent("otherSpecOneShotByName")
+      killAnonymousEventHandler(first)
+
+      assert.are.equal(first, second)
+      assert.are.equal(1, calls)
+    end)
+
     it("runs once more than the handler that stays, and killing it leaves that one", function()
       local calls = 0
       _G.otherSpecOneShotByName = function() calls = calls + 1 end
