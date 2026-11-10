@@ -26,6 +26,8 @@
 #include <QFileDialog>
 #include <QLineEdit>
 #include <QPointer>
+#include <QPushButton>
+#include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -36,6 +38,7 @@
 #include "ProfileTestHelper.h"
 #include "TLuaInterpreter.h"
 #include "TelnetServerStub.h"
+#include "dlgProfilePreferences.h"
 #include "mudlet.h"
 
 extern "C" {
@@ -210,6 +213,48 @@ private slots:
         QCOMPARE(mDialogFileMode, QFileDialog::Directory);
         QCOMPARE(mDialogStartDir, QDir(start).absolutePath());
         QCOMPARE(luaString(qsl("_picked")), folder);
+    }
+
+    // The app-wide last folder belongs to the other file dialogs, so replays must neither follow nor move it
+    void test_theReplayPickerOpensInTheProfilesLogFolder()
+    {
+        const QString elsewhere = QDir(mPickDir.path()).absolutePath();
+        MudletApp::getQSettings()->setValue(qsl("lastFileDialogLocation"), elsewhere);
+        const QString replay = qsl("%1/picked.dat").arg(elsewhere);
+        QFile touch(replay);
+        QVERIFY(touch.open(QIODevice::WriteOnly));
+        touch.close();
+
+        answerNextFileDialog(replay);
+        mudlet::self()->slot_replay();
+
+        QCOMPARE(mDialogStartDir, QDir(MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, mHostname)).absolutePath());
+        QCOMPARE(MudletApp::getQSettings()->value(qsl("lastFileDialogLocation")).toString(), elsewhere);
+    }
+
+    void test_theLogFolderPickerOpensInTheFolderLogsGoTo()
+    {
+        const QString elsewhere = QDir(mPickDir.path()).absolutePath();
+        MudletApp::getQSettings()->setValue(qsl("lastFileDialogLocation"), elsewhere);
+        const QString custom = qsl("%1/logs").arg(elsewhere);
+        QVERIFY(QDir().mkpath(custom));
+
+        auto* preferences = new dlgProfilePreferences(mudlet::self(), mpHost);
+        const auto closePreferences = qScopeGuard([preferences]() {
+            delete preferences;
+        });
+        preferences->show();
+        QVERIFY(QTest::qWaitForWindowExposed(preferences));
+
+        answerNextFileDialog(custom);
+        preferences->pushButton_whereToLog->click();
+        QCOMPARE(mDialogStartDir, QDir(MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, mHostname)).absolutePath());
+        QCOMPARE(preferences->lineEdit_logFileFolder->text(), custom);
+
+        answerNextFileDialog(elsewhere);
+        preferences->pushButton_whereToLog->click();
+        QCOMPARE(mDialogStartDir, custom);
+        QCOMPARE(MudletApp::getQSettings()->value(qsl("lastFileDialogLocation")).toString(), elsewhere);
     }
 };
 
