@@ -626,13 +626,13 @@ int TLuaInterpreter::getVerifiedInt(lua_State* L, const char* functionName, cons
 }
 
 // A widget keeps its geometry as a QRect, which overflows int on reading back the size of a widget
-// placed or sized near INT_MAX or INT_MIN. Qt bounds a widget's size by QWIDGETSIZE_MAX (2^24 - 1,
-// which only <QWidget> defines) only for one with size limits, so bound every x, y, width and height
-// by it, which keeps QRect's sums in range
+// placed or sized near INT_MAX or INT_MIN. Bounding every x, y, width and height to 2^29 keeps
+// QRect's sums, and a few parents' offsets on top, in range while leaving any size a script could
+// mean, including ones past QWIDGETSIZE_MAX, as given
 int TLuaInterpreter::boundedGeometry(const double value)
 {
-    constexpr double maximumWidgetSize = (1 << 24) - 1;
-    return static_cast<int>(qBound(-maximumWidgetSize, value, maximumWidgetSize));
+    constexpr double maximumGeometry = 1 << 29;
+    return static_cast<int>(qBound(-maximumGeometry, value, maximumGeometry));
 }
 
 // No documentation available in wiki - internal function

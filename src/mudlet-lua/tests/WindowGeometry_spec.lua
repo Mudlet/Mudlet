@@ -175,7 +175,7 @@ describe("getWindowGeometry", function()
 
   -- A widget placed or sized near the int limits would overflow its QRect, so these are bounded
   describe("of a window placed or sized at the edge of the int range", function()
-    local max, limit = 2147483647, 16777215 -- QWIDGETSIZE_MAX
+    local max, limit = 2147483647, 536870912 -- 2^29
 
     local cases = {
       {"a scroll box made again there", deleteScrollBox, {limit, 0, 255, 1}, function(name)
