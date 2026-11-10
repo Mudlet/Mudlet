@@ -25,9 +25,9 @@
   Deletes old profiles/maps/modules in the "current"/"map"/"moduleBackups" folders of the Mudlet home directory.
   The following files are NOT deleted:
   - Files newer than the amount of days specified as an argument to deleteOldProfiles(), or 31 days if not specified.
-  - One file for every month before that. Specifically: The first available file of every month prior to this.
-  - The newest save, which is the one Mudlet loads, however old it is; for modules, only the newest backup in the folder.
-  Setting the second argument to true will delete maps instead of profiles. (e.g. deleteOldProfiles(10, true))
+  - One file for every month before that. Specifically: The first save of every month prior to this; a leftover from an interrupted save does not count.
+  - The newest profile save (.xml) or map (.dat/.json), which is the one Mudlet loads, however old it is. Module backups are never loaded, so there it is just the single newest file in the shared folder.
+  The second argument picks the folder: "profiles", "maps" or "modules". (e.g. deleteOldProfiles(10, "maps"))
   --]]
 
   -- Ensure correct value is passed for second argument
@@ -75,9 +75,9 @@
     keepdays
   ))
 
-  -- The newest files Mudlet would load stay however old they are. An interrupted
-  -- save can leave a newer temporary file behind, which Mudlet skips over, and
-  -- modification times are whole seconds, so every file tied for newest stays.
+  -- Only the extensions Mudlet loads count as saves: an interrupted save can leave a
+  -- temporary file behind, which Mudlet skips. Module backups are never loaded, so
+  -- every file there counts. Times are whole seconds, so every save tied for newest stays.
   local loadedExtensions = {profiles = {xml = true}, maps = {dat = true, json = true}}
   local function loadable(name)
     local extensions = loadedExtensions[delete_folder]
@@ -98,12 +98,12 @@
     local days = math.floor(os.difftime(os.time(), v.last_mod) / 86400)
     local last_mod_month = os.date("%Y/%m", v.last_mod)
     if days &gt; keepdays then
-      -- For profiles older than X days, check if we already kept a table for this month:
+      -- For saves older than X days, check if we already kept one for this month:
       if loadable(v.name) and not table.contains(used_last_mod_months, last_mod_month) then
         -- If not, do nothing and mark this month as "kept".
         used_last_mod_months[#used_last_mod_months+1] = last_mod_month
       elseif not (v.last_mod == newestLoadedTime and loadable(v.name)) then
-        -- Otherwise remove the file:
+        -- Otherwise remove the file, unless it is tied for the newest save:
         local success, errorstring = os.remove(dirpath..slash..v.name)
         if success then
           delnum = delnum + 1
