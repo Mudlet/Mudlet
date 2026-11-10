@@ -145,6 +145,15 @@ list of variables.
 Some seeds abort today: the fuzzers reach bugs that are still open, so treat an
 abort as a finding to reduce and report rather than as a broken harness.
 
+`IngestSgrFuzz_spec.lua` is a differential fuzzer rather than a crash hunter: it
+feeds batches of random lines dense in SGR sequences one read per line, all in one
+read and in one read cut at a random byte, and requires the same text and formats
+from each, so the ingest worker's parse is checked against the main thread's. A
+second run with `MUDLET_INGEST_THREAD=verify` checks differently: the main thread
+then keeps its own parse of every line, so the rounds cannot fail on the worker
+and any line it made differently shows only as a logged
+`TBuffer ingest worker MISMATCH`.
+
 `MapFileFuzz_spec.lua` and `XmlImportFuzz_spec.lua` aim at the file loaders
 instead. The first saves a map in each binary format version the save side
 offers and as JSON, then loads mutated copies of those files; the second imports

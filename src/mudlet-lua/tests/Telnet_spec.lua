@@ -102,6 +102,15 @@ describe("Tests SGR default colour handling", function()
     assert.is_true(getTextFormat("main").bold)
   end)
 
+  -- a 16 colour background from 48;5 marks the colour as no longer the default,
+  -- so bold text after it is drawn in the foreground's bright form
+  it("does not bring back the bright form of a colour set before a full reset", function()
+    feed("\27[0m\27[31mSgrRedL \27[0m\27[1;48;5;4mSgrBoldL\r\n")
+    selectMarker("SgrBoldL")
+    assert.is_false(isAnsiFgColor(3), "the bold text came back as bright red")
+    assert.is_true(isAnsiFgColor(0), "the bold text is not in the default foreground")
+  end)
+
   it("sets a truecolour foreground and background from one sequence", function()
     feed("\27[0m\27[38;2;120;134;94;48;2;85;250;33mSgrTrueI\r\n")
     selectMarker("SgrTrueI")
