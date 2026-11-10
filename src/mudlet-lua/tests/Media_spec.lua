@@ -1441,6 +1441,62 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(1, #getPlayingSounds({key = "busted-media-stop-other-download"}))
   end)
 
+  it("purgeMediaCache keeps a file still downloading from starting once it lands", function()
+    if noFixtureServer() then
+      return
+    end
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local downloadName = "busted-media-purge-download.wav"
+    local downloaded = mediaDirectory .. "/" .. downloadName
+    lfs.mkdir(mediaDirectory)
+    preserveMediaDirectory()
+    onCleanup(function() os.remove(downloaded) end)
+    onCleanup(function() stopSounds() end)
+    local done, started = {}, {}
+    collect("sysDownloadDone", done)
+    collect("sysMediaStarted", started)
+
+    assert.is_true(playSoundFile({name = downloadName, url = fixtureUrl() .. "/media", volume = 60, key = "busted-media-purge-download"}))
+    assert.is_true(purgeMediaCache())
+    -- Otherwise the download fails to save and raises sysDownloadError, so would never play anyway
+    lfs.mkdir(mediaDirectory)
+    waitForCount("sysDownloadDone", done, 1)
+    waitForEvent("sysMediaStarted", quietMilliseconds)
+
+    assert.equals(1, #done)
+    assert.equals(0, #started, "the purge did not reach the file still downloading")
+  end)
+
+  it("an MSP Off keeps an MSP sound still downloading from starting once it lands", function()
+    if noFixtureServer() then
+      return
+    end
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local downloadName = "busted-msp-off-download.wav"
+    local downloaded = mediaDirectory .. "/" .. downloadName
+    lfs.mkdir(mediaDirectory)
+    os.remove(downloaded)
+    onCleanup(function() os.remove(downloaded) end)
+    onCleanup(function() stopSounds() end)
+    feedTelnet("<T_IAC><T_DO><O_MSP>")
+    onCleanup(function() feedTelnet("<T_IAC><T_DONT><O_MSP>") end)
+    local done, started = {}, {}
+    collect("sysDownloadDone", done)
+    collect("sysMediaStarted", started)
+
+    assert.is_true(receiveMSP("!!SOUND(" .. downloadName .. " U=" .. fixtureUrl() .. "/media/)"))
+    assert.is_true(receiveMSP("!!SOUND(Off)"))
+    waitForCount("sysDownloadDone", done, 1)
+    waitForEvent("sysMediaStarted", quietMilliseconds)
+
+    assert.equals(1, #done, "the MSP sound never reached the download, so this proves nothing")
+    assert.equals(0, #started, "the MSP Off did not reach the sound still downloading")
+  end)
+
   it("a play with a priority keeps a lower-priority file still downloading from starting once it lands", function()
     if noFixtureServer() then
       return
