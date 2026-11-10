@@ -1860,16 +1860,29 @@ function db:add(sheet, ...)
     end
   end
 
+  local columns = db.__schema[db_name][s_name].columns
+
   for _, t in ipairs(rows) do
     if t._row_id then
       -- You are not permitted to change a _row_id
       t._row_id = nil
     end
 
+    -- a plain epoch for a datetime field is stored the way db:Timestamp stores it, as the query
+    -- builders compare against that text; built in a copy so the script's own table keeps its number
+    local row = {}
+    for k, v in pairs(t) do
+      local column = columns[k]
+      if type(v) == "number" and type(column) == "table" and column._timestamp ~= nil then
+        v = db:Timestamp(v)
+      end
+      row[k] = v
+    end
+
     local sql = sql_insert:format(
       s_name,
-      db:_sql_fields(t),
-      db:_sql_values(t)
+      db:_sql_fields(row),
+      db:_sql_values(row)
     )
     db:echo_sql(sql)
 

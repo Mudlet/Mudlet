@@ -1222,6 +1222,28 @@ describe("Tests DB.lua functions", function()
 
       db:set(mydb.sheet.seen, 1700000000, db:eq(mydb.sheet.n, 1))
       assert.are.equal(1700000000, db:fetch(mydb.sheet, db:eq(mydb.sheet.n, 1))[1].seen:as_number())
+
+      local row = db:fetch(mydb.sheet, db:eq(mydb.sheet.n, 2))[1]
+      row.seen = 1700000100
+      db:update(mydb.sheet, row)
+      assert.are.equal(1700000100, db:fetch(mydb.sheet, db:eq(mydb.sheet.n, 2))[1].seen:as_number())
+    end)
+
+    it("stores a plain epoch number added to a datetime field so plain epoch queries match it", function()
+      local first = { seen = epochs[1], n = 1 }
+      db:add(mydb.sheet, first)
+      assert.are.equal(epochs[1], first.seen)
+      for n = 2, #epochs do
+        db:add(mydb.sheet, { seen = epochs[n], n = n })
+      end
+
+      assert.are.equal(4, #db:fetch(mydb.sheet, db:gt(mydb.sheet.seen, 1729989000)))
+      db:delete(mydb.sheet, db:lt(mydb.sheet.seen, 1729989000))
+      local kept = {}
+      for _, row in ipairs(db:fetch(mydb.sheet, nil, { mydb.sheet.n })) do
+        kept[#kept + 1] = row.seen:as_number()
+      end
+      assert.are.same({ 1729989000, 1729992600, 1729996200, 1730611800, 1730615400 }, kept)
     end)
   end)
 
