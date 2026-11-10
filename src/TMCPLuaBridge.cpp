@@ -459,8 +459,8 @@ QJsonValue TMCPLuaBridge::luaTableToJson(lua_State* L, int index, int depth, int
     // This pass allocates a set entry per key, so a table with millions of keys costs
     // memory and time before a single value has been rendered - the node budget is only
     // spent in luaToJson(), which this pass never reaches. Stop counting once the table
-    // has already outgrown what the reply may hold; the render below stops at the same
-    // point and leaves the "left out" marker there, so nothing goes missing in silence.
+    // has already outgrown what the reply may hold; the render below stops no later
+    // and leaves the "left out" marker there, so nothing goes missing in silence.
     const int keysWorthCounting = qMax(nodeBudget, 0);
     bool walkCutShort = false;
     lua_pushnil(L);

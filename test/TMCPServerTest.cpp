@@ -1080,6 +1080,7 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
 
         QVERIFY(result.success);
         QVERIFY2(result.text.size() < 5000000, qPrintable(qsl("the reply was %1 characters").arg(result.text.size())));
+        QVERIFY2(result.text.contains(qsl("the rest was left out")), qPrintable(result.text.right(300)));
     }
 
     void testAWideKeyedTableIsCutShortQuickly()
