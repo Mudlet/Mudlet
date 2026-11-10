@@ -167,6 +167,12 @@ public:
         Qt::DockWidgetArea dockArea = Qt::RightDockWidgetArea;
         bool floating = false;
         QString title;
+        // A console's: the line it is scrolled back to, as getScroll() gives it, none while it follows new lines; its
+        // upper pane's columns and rows; whether its scroll bar and its timestamps are shown
+        std::optional<int> scrolledBackTo;
+        QSize grid;
+        bool scrollBar = false;
+        bool timeStamps = false;
         // What its parent is, as a scroll box may share its name with a user window or console
         Kind parentKind = Kind::userWindow;
     };
