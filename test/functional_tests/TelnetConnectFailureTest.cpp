@@ -520,6 +520,11 @@ private slots:
         }
         QVERIFY2(!bufferContains(host, qsl("rejected by server")), "a certificate Mudlet refused was reported as the game rejecting the login");
     }
+
+    void test_aQuickDropAfterAcceptingASelfSignedCertificateIsStillReportedAsARejection() { checkQuickDropAfterAnAcceptedCertificateIsReportedAsARejection(false); }
+
+    // "Ignore all" accepts a certificate whose errors are still on record
+    void test_aQuickDropAfterIgnoringAllCertificateErrorsIsStillReportedAsARejection() { checkQuickDropAfterAnAcceptedCertificateIsReportedAsARejection(true); }
 #endif
 
     // connectToServer() can save an address the open profile is not using, which is the one a game's
@@ -648,6 +653,44 @@ private:
         host->mTelnet.connectIt(qsl("127.0.0.1"), deadPort);
         return deadPort;
     }
+
+#if !defined(QT_NO_SSL)
+    void checkQuickDropAfterAnAcceptedCertificateIsReportedAsARejection(const bool ignoreAll)
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        QVERIFY2(disconnectAndWait(host), "the profile never noticed its own disconnect");
+        const int connectionsBefore = countLines(host, qsl("Secure connection made"));
+        const int disconnectsBefore = countLines(host, qsl("Socket got disconnected"));
+
+        mpServer->setTls(true);
+        host->mSslTsl = true;
+        host->mSslIgnoreSelfSigned = !ignoreAll;
+        host->mSslIgnoreExpired = false;
+        host->mSslIgnoreAll = ignoreAll;
+        host->mTelnet.connectIt(mLocalhost, mPort);
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return countLines(host, qsl("Secure connection made")) > connectionsBefore;
+                         },
+                         20s),
+                 "the stub's certificate was not accepted");
+        // The control: with no certificate error there was nothing accepted that could be mistaken for a refusal
+        QVERIFY2(!host->mTelnet.getSslErrors().isEmpty(), "the stub's certificate raised no error to accept");
+
+        mpServer->dropClient();
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return countLines(host, qsl("Socket got disconnected")) > disconnectsBefore;
+                         },
+                         20s),
+                 "the profile never noticed the game dropping the connection");
+        QVERIFY2(bufferContains(host, qsl("rejected by server")), "a game dropping the player straight after an accepted certificate was not reported as a rejection");
+        for (const auto& sslError : host->mTelnet.getSslErrors()) {
+            QVERIFY2(!bufferContains(host, sslError.errorString()), qPrintable(qsl("an accepted certificate error was reported: \"%1\"").arg(sslError.errorString())));
+        }
+    }
+#endif
 
     [[nodiscard]] bool disconnectAndWait(Host* host)
     {
