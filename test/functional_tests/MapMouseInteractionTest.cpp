@@ -35,6 +35,7 @@
 
 #include <QAction>
 #include <QCursor>
+#include <QFileDialog>
 #include <QFileInfo>
 #include <QInputDialog>
 #include <QLineEdit>
@@ -3500,6 +3501,104 @@ private slots:
 
         QCOMPARE(area()->mMapLabels.size(), 1);
         QVERIFY(map()->isUnsaved());
+    }
+
+    // The dialog opens ready to type the label's text; Enter in the text box
+    // starts a new line, and Enter in the font field saves the label.
+    void test_theLabelDialogTypesIntoTheTextAndEnterSaves()
+    {
+        buildMap();
+        showMapper(false);
+        dragOutALabelBox();
+        QPointer<dlgMapLabel> dialog = mp2dMap->mpDlgMapLabel.data();
+        QVERIFY(dialog);
+        QVERIFY(QTest::qWaitForWindowActive(dialog));
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(dialog->plainTextEdit_labelText));
+
+        QTest::keyClicks(dialog->plainTextEdit_labelText, qsl("Market"));
+        QTest::keyClick(dialog->plainTextEdit_labelText, Qt::Key_Return);
+        QTest::keyClicks(dialog->plainTextEdit_labelText, qsl("Square"));
+        QVERIFY2(dialog && dialog->isVisible(), "Enter in the text box saved the label instead of starting a new line");
+        dialog->lineEdit_font->setFocus();
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(dialog->lineEdit_font));
+        QTest::keyClick(dialog->lineEdit_font, Qt::Key_Return);
+
+        QTRY_VERIFY2(dialog.isNull() || dialog->isHidden(), "Enter did not save the label");
+        QCOMPARE(area()->mMapLabels.size(), 1);
+        QCOMPARE(area()->mMapLabels.first().text, qsl("Market\nSquare"));
+    }
+
+    void test_enterDoesNotSaveAnImageLabelWithNoImage()
+    {
+        buildMap();
+        showMapper(false);
+        dragOutALabelBox();
+        QPointer<dlgMapLabel> dialog = mp2dMap->mpDlgMapLabel;
+        QVERIFY(dialog);
+        QVERIFY(QTest::qWaitForWindowActive(dialog));
+
+        dialog->comboBox_type->setCurrentIndex(1);
+        QVERIFY(!dialog->pushButton_save->isEnabled());
+        dialog->comboBox_type->setFocus();
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(dialog->comboBox_type));
+        QTest::keyClick(dialog->comboBox_type, Qt::Key_Return);
+        QTest::qWait(100);
+        QVERIFY2(dialog && dialog->isVisible(), "Enter saved an image label that has no image");
+        dialog->comboBox_type->setCurrentIndex(0);
+        QVERIFY2(dialog->pushButton_save->isEnabled(), "Save stayed disabled after switching back to a text label");
+        dialog->comboBox_type->setCurrentIndex(1);
+
+        const QString image = mConfigDir.filePath(qsl("label.png"));
+        QPixmap pixmap(8, 8);
+        pixmap.fill(Qt::red);
+        QVERIFY(pixmap.save(image));
+        auto answerFilePicker = [this](const QString& path) {
+            answerNextModalDialog([path](QWidget* pDialog) {
+                auto* picker = qobject_cast<QFileDialog*>(pDialog);
+                if (!picker) {
+                    return false;
+                }
+                if (!path.isEmpty()) {
+                    // Left unanswered, so the fixture closes the picker and the case fails
+                    auto* name = picker->findChild<QLineEdit*>(qsl("fileNameEdit"));
+                    if (!name) {
+                        return false;
+                    }
+                    picker->setDirectory(QFileInfo(path).absolutePath());
+                    name->setText(QFileInfo(path).fileName());
+                }
+                QMetaObject::invokeMethod(static_cast<QDialog*>(picker), path.isEmpty() ? &QDialog::reject : &QDialog::accept, Qt::QueuedConnection);
+                return true;
+            });
+        };
+        // A native picker has no file name field to type into
+        const bool priorNative = QCoreApplication::testAttribute(Qt::AA_DontUseNativeDialogs);
+        QCoreApplication::setAttribute(Qt::AA_DontUseNativeDialogs, true);
+        const auto restoreNative = qScopeGuard([priorNative]() {
+            QCoreApplication::setAttribute(Qt::AA_DontUseNativeDialogs, priorNative);
+        });
+        answerFilePicker(image);
+        QTest::mouseClick(dialog->toolButton_imagePick, Qt::LeftButton);
+        QTRY_COMPARE(dialog->getImagePath(), image);
+        QVERIFY(dialog->pushButton_save->isEnabled());
+
+        answerFilePicker(QString());
+        QTest::mouseClick(dialog->toolButton_imagePick, Qt::LeftButton);
+        QVERIFY2(mModalDialogAnswered, "The file picker did not open a second time");
+        QVERIFY2(dialog->getImagePath() == image, "Cancelling the file picker dropped the chosen image");
+        QVERIFY(dialog->pushButton_save->isEnabled());
+
+        // The same key on the same box saves once there is an image, so the refusal above was Save's
+        dialog->activateWindow();
+        QVERIFY(QTest::qWaitForWindowActive(dialog));
+        dialog->comboBox_type->setFocus();
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(dialog->comboBox_type));
+        QTest::keyClick(dialog->comboBox_type, Qt::Key_Return);
+        QTRY_VERIFY2(dialog.isNull() || dialog->isHidden(), "Enter did not save the image label");
+        QCOMPARE(area()->mMapLabels.size(), 1);
+        QVERIFY(area()->mMapLabels.first().text.isEmpty());
+        const QPixmap& pix = area()->mMapLabels.first().pix;
+        QCOMPARE(pix.toImage().pixelColor(pix.rect().center()), QColor(Qt::red));
     }
 
     // A box is a box whichever corner it was dragged out from: the label goes
