@@ -15104,8 +15104,8 @@ int dlgTriggerEditor::findSearchMatch(const QString& haystack, const QString& ne
             options |= QRegularExpression::CaseInsensitiveOption;
         }
         if (needle != mWholeWordSearchNeedle || options != mWholeWordSearchRegex.patternOptions()) {
-            // Not \b: beside punctuation it demands a word character, so "^You" never matched at a line start,
-            // and \w leaves out combining marks such as the vowel signs of Indic scripts, splitting words at them
+            // Not \b: beside punctuation it demands a word character, so "^You" could not match at a line start,
+            // and \w leaves out some combining marks, such as the spacing vowel signs of Indic scripts
             static const QRegularExpression startsWithWordChar(qsl("^[\\w\\p{M}]"), QRegularExpression::UseUnicodePropertiesOption);
             static const QRegularExpression endsWithWordChar(qsl("[\\w\\p{M}]$"), QRegularExpression::UseUnicodePropertiesOption);
             const QString leading = startsWithWordChar.match(needle).hasMatch() ? qsl("(?<![\\w\\p{M}])") : QString();

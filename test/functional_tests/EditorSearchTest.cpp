@@ -589,7 +589,7 @@ private slots:
         QCOMPARE(totalResultRows(), 0);
     }
 
-    // A letter outside ASCII is part of the word, not an edge of punctuation
+    // Letters and combining marks outside ASCII belong to the word, and characters beyond the BMP are each found
     void test_wholeWordSearchHandlesTextOutsideAscii()
     {
         mpEditor->setSearchOptions(enums::EditorSearchOptionWholeWord);
@@ -603,6 +603,11 @@ private slots:
         // The vowel sign ending "की" is a combining mark, which \w does not cover but still belongs to the word
         search(qsl("की"));
         QCOMPARE(resultsFor(qsl("Script")), QStringList({qsl("Lua 6:4")}));
+        // ...so a vowel sign after or before a match keeps it inside the word
+        search(qsl("क"));
+        QCOMPARE(totalResultRows(), 0);
+        search(qsl("मत"));
+        QCOMPARE(totalResultRows(), 0);
     }
 
     // Variables live in the Lua state rather than in a unit, so they are only
