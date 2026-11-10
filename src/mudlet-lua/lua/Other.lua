@@ -1066,9 +1066,9 @@ do
   local highestHandlerId = 0
   -- Helps us finding the right event handler from an ID.
   local handlerIdsToHandlers = {}
-  -- events a one-shot handler may go on raising for itself after its first call, before it is
-  -- taken to be feeding itself for ever
-  local maxDeferredEvents = 200
+  -- how long a chain of events raised from events a one-shot handler handles may grow before it
+  -- is taken to be feeding itself for ever: about as deep as Lua's C stack lets calls nest
+  local maxDeferredGenerations = 200
 
   -- C function that gets overwritten.
   registerAnonymousEventHandler("*", "dispatchEventToFunctions")
@@ -1131,7 +1131,7 @@ do
     if isOneShot then
       -- wrap the original function to remove itself from the event handler list.
       local origFunc = func
-      local running, deferred = false, {}
+      local running, deferred, generation = false, {}, 0
       func = function(...)
         -- an event it raises itself waits until it has said whether to stay, so one that goes
         -- runs once and one that stays still sees it
@@ -1147,7 +1147,7 @@ do
             end
             return
           end
-          deferred[#deferred + 1] = {n = select("#", ...), ...}
+          deferred[#deferred + 1] = {n = select("#", ...), generation = generation + 1, ...}
           return
         end
         running = true
@@ -1155,26 +1155,26 @@ do
         local ok, keepEvaluating = pcall(origFunc, ...)
         local failed, failure = not ok, keepEvaluating
         local nextEvent, failedEvent = 1, nil
-        local lastEvent = #deferred + maxDeferredEvents
         while ok and keepEvaluating and deferred[nextEvent] and handlerIdsToHandlers[eventHandlerId] do
-          if nextEvent > lastEvent then
+          local args = deferred[nextEvent]
+          if args.generation > maxDeferredGenerations then
             ok, failed = false, true
             failure = string.format("registerAnonymousEventHandler: one-shot handler for '%s' removed as it kept raising events it handles", event)
             break
           end
-          local args = deferred[nextEvent]
+          generation = args.generation
           nextEvent = nextEvent + 1
           ok, keepEvaluating = pcall(origFunc, unpack(args, 1, args.n))
           if not ok then
             failedEvent = args[1]
           end
         end
-        deferred = {}
+        deferred, generation = {}, 0
         running = false
         if not (ok and keepEvaluating) then
           killAnonymousEventHandler(eventHandlerId)
         end
-        -- tostring, as showHandlerError raises on a table; reported last so that cannot skip the cleanup
+        -- tostring, as showHandlerError raises on any non-string; reported after the cleanup so that cannot skip it
         if failedEvent then
           showHandlerError(failedEvent, tostring(keepEvaluating))
         end

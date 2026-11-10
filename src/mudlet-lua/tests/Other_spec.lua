@@ -5016,6 +5016,28 @@ describe("Tests one-shot event handlers", function()
     assert.are.equal(0, #reported)
   end)
 
+  it("keeps a one-shot handler that returns true and raises many events it handles from one it raised", function()
+    local items = 0
+    local id = registerAnonymousEventHandler("*", function(event)
+      if event == "otherSpecOneShotBurstStart" then
+        raiseEvent("otherSpecOneShotBurstLoad")
+      elseif event == "otherSpecOneShotBurstLoad" then
+        for _ = 1, 250 do
+          raiseEvent("otherSpecOneShotBurstItem")
+        end
+      elseif event == "otherSpecOneShotBurstItem" then
+        items = items + 1
+      end
+      return true
+    end, true)
+    raiseEvent("otherSpecOneShotBurstStart")
+    local stillThere = killAnonymousEventHandler(id)
+
+    assert.are.equal(250, items)
+    assert.is_true(stillThere)
+    assert.are.equal(0, #reported)
+  end)
+
   it("reports an error from an event a one-shot handler raised under that event", function()
     local id = registerAnonymousEventHandler("*", function(event)
       if event == "otherSpecOneShotRaisedFails" then
