@@ -1841,14 +1841,20 @@ void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
 
             if (progress > relativeDuration && (endUsed || finishUsed)) {
                 // Stopped first: stop() raises sysMediaFinished synchronously, so its handler runs
-                // before the next pass. A stop it makes empties the playlist, and a track it starts
-                // on this player bumps the claim.
+                // before the next pass. A stop it makes empties the playlist. Reserved meanwhile so a
+                // sound it plays takes another player rather than this loop's; one that still claims
+                // this player bumps the claim.
                 const quint64 claimedAt = lockedPlayer->claimGeneration();
-                lockedPlayer->mediaPlayer()->stop();
-                // A finish position ends one pass of a loop count; a fading stop ends them all.
-                // One at or before the start leaves nothing to play in a pass, so stop outright
-                // rather than cycle through empty passes (forever with loops = -1).
-                if (!endUsed && finishPosition > startPosition && lockedPlayer->claimGeneration() == claimedAt) {
+                {
+                    MediaPlayerReservation reservation;
+                    reservation.reserve(lockedPlayer);
+                    lockedPlayer->mediaPlayer()->stop();
+                }
+                // A finish position ends one pass of a loop count; a fading stop ends them all, as
+                // does another file the handler plays under this key, which a playing track would
+                // have stopped. One at or before the start leaves nothing to play in a pass, so stop
+                // outright rather than cycle through empty passes (forever with loops = -1).
+                if (!endUsed && finishPosition > startPosition && lockedPlayer->claimGeneration() == claimedAt && !keyTakenOver(lockedPlayer)) {
                     playNextPass(lockedPlayer);
                 }
             } else {
@@ -2375,6 +2381,24 @@ bool TMedia::doesMediaHavePriorityToPlay(TMediaData& mediaData, const QString& a
     mpHost->mpMedia->stopMedia(stopMediaData, PriorityStop::Below);
 
     return true;
+}
+
+bool TMedia::keyTakenOver(const std::shared_ptr<TMediaPlayer>& player)
+{
+    const QString key = player->mediaData().mediaKey();
+    if (key.isEmpty()) {
+        return false;
+    }
+
+    for (const auto& otherPlayer : findMediaPlayersByCriteria(player->mediaData())) {
+        // Still loading on a backend that reports PlayingState only once the file has opened.
+        if (otherPlayer && otherPlayer != player && otherPlayer->mediaPlayer()
+            && (otherPlayer->getPlaybackState() == QMediaPlayer::PlayingState || otherPlayer->mediaPlayer()->mediaStatus() == QMediaPlayer::LoadingMedia) && otherPlayer->mediaData().mediaKey() == key
+            && otherPlayer->mediaData().mediaAbsolutePathFileName() != player->mediaData().mediaAbsolutePathFileName()) {
+            return true;
+        }
+    }
+    return false;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#key

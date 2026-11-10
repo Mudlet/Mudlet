@@ -485,6 +485,7 @@ private:
     std::shared_ptr<TMediaPlayer> getMediaPlayer(TMediaData& mediaData);
     std::shared_ptr<TMediaPlayer> matchMediaPlayer(TMediaData& mediaData);
     bool doesMediaHavePriorityToPlay(TMediaData& mediaData, const QString& absolutePathFileName);
+    bool keyTakenOver(const std::shared_ptr<TMediaPlayer>& player);
     void matchMediaKeyAndStopMediaVariants(TMediaData& mediaData, const QString& absolutePathFileName);
     // Why a playback ended, which decides whether the player's own state is worth consulting
     // when the deferred release comes around. See releaseMediaSourceAfterEvents().
