@@ -40,6 +40,12 @@ struct HyperlinkStyling {
     bool isUnderlined = false; // OSC 8 hyperlinks default to no underline (unlike other Mudlet hyperlinks)
     bool isStrikeOut = false;
     bool isOverlined = false;
+    // Which of the five above the style gave; one it left out keeps the text's own formatting
+    bool namesBold = false;
+    bool namesItalic = false;
+    bool namesUnderline = false;
+    bool namesStrikeOut = false;
+    bool namesOverline = false;
     bool hasCustomStyling = false; // Tracks if any custom styling was provided
     bool hasBaseCustomStyling = false; // Tracks if base (non-pseudo-class) styling was provided
 
@@ -95,6 +101,11 @@ struct HyperlinkStyling {
         bool isUnderlined = false;
         bool isStrikeOut = false;
         bool isOverlined = false;
+        bool namesBold = false;
+        bool namesItalic = false;
+        bool namesUnderline = false;
+        bool namesStrikeOut = false;
+        bool namesOverline = false;
         UnderlineStyle underlineStyle = UnderlineSolid;
         bool hasCustomStyling = false;
     };
