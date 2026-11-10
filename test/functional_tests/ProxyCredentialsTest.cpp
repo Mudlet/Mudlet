@@ -48,6 +48,12 @@ private:
     Host* mpHost = nullptr;
     const QString mHostname = qsl("ProxyCredentials-Test");
 
+    void save()
+    {
+        pugi::xml_document doc;
+        XMLexport(mpHost).writeHost(mpHost, doc.append_child("HostPackage"));
+    }
+
 private slots:
     void initTestCase()
     {
@@ -98,21 +104,34 @@ private slots:
         QVERIFY2(proxy->password().isEmpty(), "the cleared password is still offered");
     }
 
-    // An empty password in the profile's XML has it read from secure storage on the next load
+    // The saved profile never holds the password, so loading reads it from secure storage
     void clearedPasswordStaysClearedAfterSaving()
     {
-        const auto save = [this]() {
-            pugi::xml_document doc;
-            XMLexport(mpHost).writeHost(mpHost, doc.append_child("HostPackage"));
-        };
-
-        mpHost->mProxyPassword = qsl("secret");
+        mpHost->setProxyPassword(qsl("secret"));
         save();
         QCOMPARE(CredentialManager::retrieveCredential(mHostname, qsl("proxy")), qsl("secret"));
 
-        mpHost->mProxyPassword.clear();
+        mpHost->setProxyPassword(QString());
         save();
         QVERIFY2(CredentialManager::retrieveCredential(mHostname, qsl("proxy")).isEmpty(), "the cleared password would be loaded again");
+    }
+
+    // A password that could not be read at load leaves the field as empty as one the player cleared
+    void anUnreadablePasswordSurvivesASave()
+    {
+        QVERIFY(CredentialManager::storeCredential(mHostname, qsl("proxy"), qsl("secret")));
+        const QString path = qsl("%1/profiles/%2/passwords/proxy").arg(MudletApp::credentialFilesRoot(), MudletApp::sanitizeForPath(mHostname));
+        QFile file(path);
+        QVERIFY2(file.open(QIODevice::WriteOnly | QIODevice::Truncate), qPrintable(path));
+        file.write("not something that decrypts");
+        file.close();
+        CredentialManager::ReadOutcome outcome = CredentialManager::ReadOutcome::Found;
+        QVERIFY(CredentialManager::retrieveCredential(mHostname, qsl("proxy"), &outcome).isEmpty());
+        QCOMPARE(outcome, CredentialManager::ReadOutcome::Unreadable);
+
+        mpHost->mProxyPassword.clear();
+        save();
+        QVERIFY2(QFile::exists(path), "saving deleted a stored password that only failed to load");
     }
 };
 

@@ -6436,6 +6436,16 @@ std::unique_ptr<QNetworkProxy>& Host::getConnectionProxy()
     return mpConnectionProxy;
 }
 
+void Host::setProxyPassword(const QString& password)
+{
+    // The saved profile never holds it, so loading reads secure storage, which would hand back a cleared one. Only
+    // when one was there to clear: an empty field can also be a password that could not be read at load.
+    if (password.isEmpty() && !mProxyPassword.isEmpty()) {
+        CredentialManager::removeCredential(getName(), qsl("proxy"));
+    }
+    mProxyPassword = password;
+}
+
 void Host::loadSecuredPassword()
 {
     // Use async API for QtKeychain integration with file fallback

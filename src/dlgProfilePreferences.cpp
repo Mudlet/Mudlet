@@ -5043,7 +5043,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                         break;
                     default: {
                     } // There are a significant number of other errors
-                        // that are not handled here!
+                    // that are not handled here!
                     }
                 }
             }
@@ -7392,7 +7392,7 @@ void dlgProfilePreferences::applyAll()
             pHost->mProxyUsername = lineEdit_proxyUsername->text();
         }
         if (mSnapshot.dirty(lineEdit_proxyPassword)) {
-            pHost->mProxyPassword = lineEdit_proxyPassword->text();
+            pHost->setProxyPassword(lineEdit_proxyPassword->text());
         }
 
         //tab security
