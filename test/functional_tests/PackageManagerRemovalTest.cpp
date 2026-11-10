@@ -175,10 +175,12 @@ private slots:
         delete manager;
 
         // One line per file, and the notice is rich text, so only <br> breaks a line
-        QVERIFY2(msg.contains(qsl("also-missing.xml")), qPrintable(qsl("The second refused file was not named: %1").arg(msg)));
+        // The reason repeats the path, so check the name where the line leads with it
+        QVERIFY2(msg.contains(qsl("Failed to import also-missing.xml: ")), qPrintable(qsl("The second refused file was not named: %1").arg(msg)));
         QVERIFY2(msg.count(qsl("<br>")) == 1, qPrintable(qsl("The two refusals are not on lines of their own: %1").arg(msg)));
 
-        QVERIFY2(msg.contains(qsl("no&lt;such&gt;package.xml")), qPrintable(qsl("The refused file was not named, or not escaped for the rich-text notice: %1").arg(msg)));
+        QVERIFY2(msg.contains(qsl("Failed to import no&lt;such&gt;package.xml: ")), qPrintable(qsl("The refused file was not named, or not escaped for the rich-text notice: %1").arg(msg)));
+        QVERIFY2(!msg.contains(qsl("<such>")), qPrintable(qsl("Part of the notice was not escaped for rich text: %1").arg(msg)));
         QVERIFY2(msg.contains(qsl("could not open file")), qPrintable(qsl("The notice did not say why the file was refused: %1").arg(msg)));
     }
 

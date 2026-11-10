@@ -4063,10 +4063,9 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     });
 
     // Every failure below returns a reason, and some callers drop it: the repository
-    // install names only which packages failed, and default-package and module-sync
-    // installs ignore it. Say it here too. Script
-    // installs pass quiet and get the reason back as a return value, so they are
-    // left to report it themselves rather than having it appear unbidden.
+    // install names only which packages failed, and default-package installs ignore
+    // it. Say it here too. Script installs pass quiet and get the reason back as a
+    // return value, so they are left to report it themselves.
     // Not for a module sync: it reinstalls the same archive on every save and reloadModule(),
     // so an unreadable source would repeat the message forever.
     auto fail = [this, &fileName, quiet, thing](const QString& reason) -> std::pair<bool, QString> {
