@@ -2242,7 +2242,6 @@ void TBuffer::parseChunk(
             flushPendingLead();
         }
 
-        // MXP is handed the whole of this character once it is decoded, below
         bool mxpTakesDecodedCharacter = false;
         if (localBufferPosition >= endOfLiteralEntity && mxpProcessorEnabled()) {
             // MXP rewrites the unit in place, so the worker's offsets stop matching it

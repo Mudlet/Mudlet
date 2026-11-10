@@ -333,7 +333,8 @@ describe("Tests the Lua an MXP link runs", function()
 
   -- the text a link wraps reaches it as the game's bytes, which are only
   -- characters once read in the game's encoding
-  for encoding, word in pairs({["UTF-8"] = "épée", ["ISO 8859-1"] = "épée", ["GBK"] = "长剑"}) do
+  -- Big5's 許功蓋 has \ for each trail byte
+  for encoding, word in pairs({["UTF-8"] = "épée", ["ISO 8859-1"] = "épée", ["WINDOWS-1251"] = "меч", ["CP437"] = "épée", ["GBK"] = "长剑", ["BIG5"] = "許功蓋", ["EUC-KR"] = "검"}) do
     describe(("Tests the non-ASCII text a link wraps in %s"):format(encoding), function()
       local original
 
@@ -391,5 +392,31 @@ describe("Tests the Lua an MXP link runs", function()
     end
     feed(("<%s>probe</%s>"):format(probeElement, probeElement))
     assertRunsOnly(mxp and mxp[probeElement:lower()] and mxp[probeElement:lower()].actions, "send", "buy épée")
+  end)
+
+  it("keeps a double-byte character the game split across two packets whole in the text a SEND wraps", function()
+    local original = getServerEncoding()
+    setServerEncoding("GBK")
+    finally(function()
+      setServerEncoding(original)
+    end)
+    -- 长 is B3 A4 in GBK
+    for _, packet in ipairs({"<SEND>buy \179", "\164</SEND>\n"}) do
+      local ok, msg = feedTelnet(packet)
+      assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+    end
+    feed(("<%s>probe</%s>"):format(probeElement, probeElement))
+    assertRunsOnly(mxp and mxp[probeElement:lower()] and mxp[probeElement:lower()].actions, "send", "buy 长")
+  end)
+
+  it("keeps a double-byte character the game recoloured half way through whole in the text a SEND wraps", function()
+    local original = getServerEncoding()
+    setServerEncoding("GBK")
+    finally(function()
+      setServerEncoding(original)
+    end)
+    feedTriggers("<SEND>buy \179\27[31m\164</SEND>\27[0m\n", false)
+    feed(("<%s>probe</%s>"):format(probeElement, probeElement))
+    assertRunsOnly(mxp and mxp[probeElement:lower()] and mxp[probeElement:lower()].actions, "send", "buy 长")
   end)
 end)

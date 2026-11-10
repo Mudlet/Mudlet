@@ -26,7 +26,7 @@ class TMxpLinkTagHandler : public TMxpSingleTagHandler
 {
     bool mIsHrefInContent;
     bool mHintIsHref = false;
-    // The game's bytes, decoded at the end tag so a character split across calls stays whole
+    // Bytes in the session encoding, decoded at the end tag so a character split across calls stays whole
     QByteArray mCurrentTagContent;
     QString mHref;
     int mLinkId;

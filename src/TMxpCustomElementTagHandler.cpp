@@ -51,7 +51,7 @@ TMxpTagHandlerResult TMxpCustomElementTagHandler::handleStartTag(TMxpContext& ct
         mElementsBeingExpanded.insert(key);
         for (const QSharedPointer<MxpNode>& ptr : std::as_const(el.parsedDefinition)) {
             if (!ptr->isTag()) {
-                // Links decode what they wrap as the game's bytes, which this text was decoded from
+                // Handlers take content as the game's bytes, which this text was decoded from
                 ctx.handleContentBytes(TStringUtils::encodeBytes(ptr->asText()->getContent(), client.getEncoding()));
             } else if (ptr->isStartTag()) {
                 // transform the custom tag to the given in the definition

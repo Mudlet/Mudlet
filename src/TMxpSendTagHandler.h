@@ -60,7 +60,7 @@ private:
     bool mIsHrefInContent;
     // Every byte of game text reaches handleContentBytes(), not only what is inside a SEND
     bool mInsideTag = false;
-    // The game's bytes, decoded at the end tag so a character split across calls stays whole
+    // Bytes in the session encoding, decoded at the end tag so a character split across calls stays whole
     QByteArray mCurrentTagContent;
     QString mLastCaption;
     QString mCommand;

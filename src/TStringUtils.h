@@ -47,6 +47,7 @@ public:
     // Shared by the raw tag/content path and the attribute parser so both
     // interpret non-ASCII bytes identically.
     static QString decodeBytes(const std::string& bytes, const QByteArray& encoding);
+
     static QByteArray encodeBytes(const QString& text, const QByteArray& encoding);
 };
 
