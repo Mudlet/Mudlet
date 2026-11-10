@@ -1998,7 +1998,8 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
         return;
     }
 
-    if (eventPos.y() < 10 || eventPos.y() >= height() - 10) {
+    // The lower pane never scrolls, so repeating at its top edge would only pull the upper pane away
+    if ((eventPos.y() < 10 && !mIsLowerPane) || eventPos.y() >= height() - 10) {
         mDragScrollPos = event->position();
         if (!mpDragScrollTimer->isActive()) {
             mpDragScrollTimer->start();

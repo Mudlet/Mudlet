@@ -358,7 +358,7 @@ private:
     mutable bool mHasBlinkingContent = false;
     mutable bool mIsBlinkClientRegistered = false;
     QPointer<QTimer> mpScrollStoppedTimer;
-    // Keeps a drag selection scrolling while the pointer is held at an edge
+    // Replays a move at mDragScrollPos while a drag selection is held at the top or bottom edge
     QTimer* mpDragScrollTimer = nullptr;
     QPointF mDragScrollPos;
     // Maximum of one repaint per paintPaceMs() is allowed via scheduleUpdate().
