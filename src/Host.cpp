@@ -5992,10 +5992,9 @@ void Host::processGMCPDiscordStatus(const QJsonObject& discordInfo)
 
     // The standard sends an icon key as a one-element array, but a bare string is taken too
     const auto iconKey = [&discordInfo](const QString& field) -> QJsonValue {
-        const auto value = discordInfo.value(field);
+        auto value = discordInfo.value(field);
         if (value.isArray()) {
-            const auto keys = value.toArray();
-            return keys.isEmpty() ? QJsonValue(QJsonValue::Undefined) : keys.first();
+            value = value.toArray().first();
         }
         return value.isString() ? value : QJsonValue(QJsonValue::Undefined);
     };
