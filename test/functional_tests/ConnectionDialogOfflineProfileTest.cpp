@@ -40,6 +40,7 @@
 #include "HostManager.h"
 #include "MudletApp.h"
 #include "TGameDetails.h"
+#include "TelnetUri.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
@@ -444,6 +445,36 @@ private slots:
         QVERIFY(MudletApp::writeProfileData(mAddressSavedCatalogProfile, qsl("url"), qsl("elsewhere.example")).first);
         QVERIFY2(pMudlet->findMatchingProfile((*addressSaved).hostUrl, (*addressSaved).port).isEmpty(), "the catalog's address was matched although the player saved another");
         QCOMPARE(pMudlet->findMatchingProfile(qsl("elsewhere.example"), (*addressSaved).port), mAddressSavedCatalogProfile);
+    }
+
+    // A link to an IP address names its profile after the whole address, in characters a profile name may have
+    void test_aTelnetLinkToAnIpAddressMakesAUsableProfileName_data()
+    {
+        QTest::addColumn<QString>("host");
+        QTest::addColumn<QString>("expectedName");
+
+        QTest::newRow("IPv6") << qsl("2001:db8::1") << qsl("2001-db8--1");
+        QTest::newRow("IPv6 loopback") << qsl("::1") << qsl("--1");
+        QTest::newRow("IPv4") << qsl("192.0.2.10") << qsl("192.0.2.10");
+        QTest::newRow("IPv6 zone ID") << qsl("fe80::1%a..b") << qsl("Fe80--1");
+        QTest::newRow("host name") << qsl("game.example.com") << qsl("Game");
+    }
+
+    void test_aTelnetLinkToAnIpAddressMakesAUsableProfileName()
+    {
+        QFETCH(QString, host);
+        QFETCH(QString, expectedName);
+        TelnetUriData uriData;
+        uriData.host = host;
+        uriData.port = 4000;
+
+        const QString name = mudlet::self()->createProfileForUri(uriData);
+        const auto removeProfile = qScopeGuard([&name] {
+            QDir(MudletApp::getMudletPath(enums::profileHomePath, name)).removeRecursively();
+        });
+        QCOMPARE(name, expectedName);
+        QVERIFY2(MudletApp::firstInvalidProfileNameChar(name).isNull() && MudletApp::profileNameUsableAsIs(name), qPrintable(name));
+        QCOMPARE(mudlet::self()->findMatchingProfile(host, 4000), name);
     }
 
     // Opening a profile without the dialog, as autologin, --profile and telnet:// links do, keeps the
