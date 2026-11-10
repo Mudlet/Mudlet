@@ -1455,10 +1455,10 @@ private slots:
         QVERIFY2(menu.isNull(), "the menu did not delete itself on closing");
     }
 
-    // A link that doesn't opensMenu() (one command and no menu title) has no
-    // menu of its own, so a right click on it has to give the console's menu,
-    // while a popup link still gives its own and a disabled or unrevealed
-    // spoiler link gives none
+    // A link for which opensMenu() is false (one command and no extra hint)
+    // has no menu of its own, so a right click on it has to give the console's
+    // menu, while a popup link still gives its own, and a disabled link or an
+    // unrevealed spoiler gives none
     void test_aRightClickOnALinkWithoutAMenuGivesTheConsolesMenu()
     {
         mpServer->setWelcomeMessage(qsl("menu test\r\n"));
@@ -1481,7 +1481,8 @@ private slots:
         const QString st = esc + QLatin1Char('\\');
         const QString osc8Links = qsl("%1]8;;send:x?config={\"disabled\":true}%2DisabledLink%1]8;;%2\n%1]8;;send:x?config={\"spoiler\":true}%2SpoilerLink%1]8;;%2\n").arg(esc, st);
         QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("feedTriggers([==[%1]==])").arg(osc8Links)), "the feedTriggers() call failed");
-        // The unrevealed spoiler is drawn as blanks, so wait for the line fed with it
+        // The unrevealed spoiler is masked in the buffer, so wait for the
+        // DisabledLink line fed in the same call
         QVERIFY2(waitForTextInBuffer(qsl("DisabledLink")), "the link text never reached the buffer");
         host->mEnableOSC8Hyperlinks = osc8WasEnabled;
         QTest::qWait(100ms);
