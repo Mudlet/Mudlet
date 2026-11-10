@@ -1249,11 +1249,14 @@ describe("Tests DB.lua functions", function()
     end)
 
     it("does not turn an epoch outside the datetime range into NULL", function()
+      local function stored()
+        local cur = db.__conn["mydbdstesting"]:execute("SELECT seen FROM sheet WHERE n = 1")
+        local seen = cur:fetch({}, "a").seen
+        cur:close()
+        return seen
+      end
       db:add(mydb.sheet, { seen = 1730615400000, n = 1 })
-      local cur = db.__conn["mydbdstesting"]:execute("SELECT seen FROM sheet WHERE n = 1")
-      local stored = cur:fetch({}, "a").seen
-      cur:close()
-      assert.are.equal(1730615400000, stored)
+      assert.are.equal(1730615400000, stored())
 
       local outside = "outside the epoch range"
       for _, epoch in ipairs({ 1730615400000, 0 / 0, -62167219201 }) do
@@ -1264,7 +1267,7 @@ describe("Tests DB.lua functions", function()
       local ok, err = pcall(db.update, db, mydb.sheet, { _row_id = 1, seen = -62167219201, n = 1 })
       assert.is_false(ok)
       assert.truthy(err:find(outside, 1, true), err)
-      assert.are.same({}, db:fetch(mydb.sheet, db:eq(mydb.sheet.seen, -62167219200)))
+      assert.are.equal(1730615400000, stored())
     end)
   end)
 

@@ -1869,8 +1869,8 @@ function db:add(sheet, ...)
       t._row_id = nil
     end
 
-    -- stored as datetime text like a db:Timestamp: sqlite sorts a raw number below all text, so the
-    -- query builders would never match it. Converted in a copy so the caller's table keeps its number
+    -- stored as datetime text like a db:Timestamp: sqlite sorts a raw number below all text, so db:gt
+    -- and db:eq would never match it and db:lt always would. Converted in a copy so the caller's table keeps its number
     local row = {}
     for k, v in pairs(t) do
       local column = columns[k]
