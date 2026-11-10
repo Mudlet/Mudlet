@@ -397,7 +397,7 @@ TConsoleModel::CommandEcho TConsoleModel::printCommand(QString& msg)
             buffer.appendEmptyLine();
         }
         const bool startsLine = !buffer.lineBuffer.back().isEmpty();
-        notifyPrinted(msg, PrintedInto::committedLine, TChar(mCommandFgColor, mCommandBgColor), startsLine);
+        notifyPrinted(msg, triggerLineInto(), TChar(mCommandFgColor, mCommandBgColor), startsLine);
         if (startsLine) {
             msg.prepend(QChar::LineFeed);
         }
@@ -423,7 +423,7 @@ TConsoleModel::CommandEcho TConsoleModel::printCommand(QString& msg)
         }
         const int down = buffer.wrapLine(lineBeforeNewContent);
         buffer.promptBuffer[lineBeforeNewContent] = false;
-        notifyPrinted(msg + QChar::LineFeed, PrintedInto::committedLine, format);
+        notifyPrinted(msg + QChar::LineFeed, PrintedInto::committedLineEnd, format);
         return {CommandEcho::Kind::PromptLine, lineBeforeNewContent, lineBeforeNewContent + 1 + down};
     }
     msg.append(QChar::LineFeed);
@@ -468,8 +468,12 @@ void TConsoleModel::notifyPrinted(const QString& text, const PrintedInto into, T
     if (mTriggerEngineMode && buffer.triggerPassUnderWay() && mTriggerTextShownElsewhere && mTriggerTextShownElsewhere()) {
         return;
     }
-    const bool endOpenLine = mPrintedMidLine && (startsLine || mPrintedLineEnded || into != mPrintedInto);
-    mPrintedInto = into;
+    const bool atLineEnd = (into == PrintedInto::committedLineEnd);
+    const PrintedInto where = atLineEnd ? PrintedInto::committedLine : into;
+    const bool endOpenLine = mPrintedMidLine && (startsLine || mPrintedLineEnded || where != mPrintedInto);
+    // A piece still open is carried on as it is, and one open below that line stays the last one shown
+    const bool continuesLine = atLineEnd && !startsLine && (!mPrintedMidLine || mPrintedLineEnded);
+    mPrintedInto = where;
     mPrintedMidLine = !text.endsWith(QChar::LineFeed);
     mPrintedLineEnded = false;
     const qsizetype formatted = static_cast<qsizetype>(format.size());
@@ -481,7 +485,7 @@ void TConsoleModel::notifyPrinted(const QString& text, const PrintedInto into, T
     if (endOpenLine) {
         format.insert(0, 1, TChar(format.front()));
     }
-    emit mNotifier.textPrinted(endOpenLine ? QChar::LineFeed + text : text, format);
+    emit mNotifier.textPrinted(endOpenLine ? QChar::LineFeed + text : text, format, continuesLine);
 }
 
 void TConsoleModel::mirrorToStdOut(const QString& text, const TChar& format)
@@ -616,11 +620,19 @@ bool readHeldWrite(const TBuffer& buffer, TConsoleModel::TriggerWrite& write)
     }
     write.to = std::min(write.to, static_cast<int>(buffer.lineBuffer.at(write.lastLine).size()));
     if (text.isEmpty()) {
-        return false;
+        write.text.clear();
+        write.format.clear();
+        return write.blankLine && buffer.lineBuffer.at(write.line).isEmpty();
     }
     write.text = std::move(text);
     write.format = std::move(format);
     return true;
+}
+
+// An empty line that arrived as one, which the receiver has, and not the one a commit leaves for the next
+bool blankLineShown(const TBuffer& buffer, const int line)
+{
+    return line >= 0 && line < buffer.lineBuffer.size() && buffer.lineBuffer.at(line).isEmpty() && buffer.timeBuffer.at(line) >= 0;
 }
 
 bool heldWriteBefore(const TConsoleModel::TriggerWrite& write, const int line, const int from)
@@ -671,7 +683,7 @@ TConsoleModel::MirrorMark TConsoleModel::markTriggerWriteForMirror(const QPoint&
     if (at.y() < 0 || at.y() >= buffer.lineBuffer.size()) {
         return markTriggerAppendForMirror();
     }
-    return {at, static_cast<int>(buffer.lineBuffer.at(at.y()).size()), mLinesCommitted};
+    return {at, static_cast<int>(buffer.lineBuffer.at(at.y()).size()), mLinesCommitted, 0, blankLineShown(buffer, at.y())};
 }
 
 TConsoleModel::MirrorMark TConsoleModel::markTriggerAppendForMirror() const
@@ -679,7 +691,8 @@ TConsoleModel::MirrorMark TConsoleModel::markTriggerAppendForMirror() const
     if (Q_LIKELY(!MudletApp::smMirrorToStdOut) && Q_LIKELY(!lineShownCapturing())) {
         return {};
     }
-    return {endOfBuffer(buffer), -1, mLinesCommitted};
+    const QPoint end = endOfBuffer(buffer);
+    return {end, -1, mLinesCommitted, 0, !mPassCommittedLines && blankLineShown(buffer, end.y())};
 }
 
 void TConsoleModel::holdTriggerWriteForMirror(const MirrorMark& mark)
@@ -710,7 +723,7 @@ void TConsoleModel::holdTriggerWriteForMirror(const MirrorMark& mark)
         end = endOfBuffer(buffer);
     }
     if (forLineShown) {
-        holdTriggerWriteForLineShown(start, end);
+        holdTriggerWriteForLineShown(start, end, mark.ontoBlankLine);
     }
     if (!MudletApp::smMirrorToStdOut) {
         return;
@@ -735,8 +748,13 @@ void TConsoleModel::holdTriggerWriteForMirror(const MirrorMark& mark)
 }
 
 // A write onto a line a pass runs on is sent with that line
-void TConsoleModel::holdTriggerWriteForLineShown(const QPoint& start, const QPoint& end)
+void TConsoleModel::holdTriggerWriteForLineShown(const QPoint& start, const QPoint& end, const bool ontoBlankLine)
 {
+    // Nothing below the write but lines yet to be shown, so the line it began on is the last the receiver has
+    bool lastShown = true;
+    for (int y = end.y() + 1; lastShown && y < buffer.lineBuffer.size(); ++y) {
+        lastShown = buffer.triggerPassRunningOn(y) || (y == buffer.lineBuffer.size() - 1 && buffer.lineBuffer.at(y).isEmpty());
+    }
     for (int y = start.y(); y <= end.y() && y < buffer.lineBuffer.size(); ++y) {
         if (buffer.triggerPassRunningOn(y)) {
             continue;
@@ -744,7 +762,9 @@ void TConsoleModel::holdTriggerWriteForLineShown(const QPoint& start, const QPoi
         const QString& lineText = buffer.lineBuffer.at(y);
         const int from = (y == start.y()) ? start.x() : 0;
         const int to = std::min((y == end.y()) ? end.x() : static_cast<int>(lineText.size()), static_cast<int>(lineText.size()));
-        if (to <= from) {
+        // An empty line the write made and went on below is one the console shows
+        const bool blankLine = lineText.isEmpty() && from == 0 && y < end.y();
+        if (to <= from && !blankLine) {
             continue;
         }
         // Sent in the order the lines show them, as a write may go in above or ahead of one held earlier
@@ -758,13 +778,15 @@ void TConsoleModel::holdTriggerWriteForLineShown(const QPoint& start, const QPoi
             readHeldWrite(buffer, carriedOn);
             continue;
         }
+        const bool ontoShownLine = lastShown && y == start.y() && (from > 0 ? lineText.at(from - 1) != QChar::LineFeed : ontoBlankLine);
         if (index < mTriggerWritesForLineShown.size() && mTriggerWritesForLineShown.at(index).line == y && mTriggerWritesForLineShown.at(index).from == to) {
             TriggerWrite& runInto = mTriggerWritesForLineShown[index];
             runInto.from = from;
+            runInto.ontoShownLine = ontoShownLine;
             readHeldWrite(buffer, runInto);
             continue;
         }
-        TriggerWrite write{QString(), {}, y, from, to, mNextTriggerWriteSerial++, y};
+        TriggerWrite write{QString(), {}, y, from, to, mNextTriggerWriteSerial++, y, false, ontoShownLine, blankLine};
         readHeldWrite(buffer, write);
         mTriggerWritesForLineShown.insert(index, std::move(write));
     }
@@ -924,10 +946,15 @@ void TConsoleModel::heldForLineShownRewrapped(const int firstLine, const QList<R
 QList<TConsoleModel::TriggerWrite> TConsoleModel::takeTriggerWritesForLineShown()
 {
     QList<TriggerWrite> writes;
+    const int lastLine = static_cast<int>(buffer.lineBuffer.size()) - 1;
     for (TriggerWrite& write : mTriggerWritesForLineShown) {
         // A colour, link or style put on it since it was held; kept as held should the line no longer hold it
         if (TriggerWrite now = write; readHeldWrite(buffer, now) && now.text == write.text) {
             write.format = std::move(now.format);
+        }
+        // Only the first can follow the line the receiver was last sent, and only by reaching that line's end
+        if (writes.isEmpty() && write.ontoShownLine && write.line >= 0 && write.line <= lastLine && !write.text.startsWith(QChar::LineFeed)) {
+            write.continuesLine = write.lastLine > write.line || write.to >= buffer.lineBuffer.at(write.line).size();
         }
         if (write.from > 0 && write.text.startsWith(QChar::LineFeed)) {
             write.text.remove(0, 1);
@@ -941,7 +968,7 @@ QList<TConsoleModel::TriggerWrite> TConsoleModel::takeTriggerWritesForLineShown(
                 write.format.erase(write.format.begin() + write.text.size(), write.format.end());
             }
         }
-        if (!write.text.isEmpty()) {
+        if (!write.text.isEmpty() || write.blankLine) {
             writes.append(std::move(write));
         }
     }
@@ -1145,14 +1172,28 @@ void TConsoleModel::echoLink(const QString& text, QStringList& commands, QString
     // the main console's links are coloured against the profile's own background
     const QColor background = (mpHost && mpHost->mainConsoleModelOrNull() == this) ? mpHost->mBgColor : mBgColor;
     const TChar format = useCurrentFormat ? mFormatCurrent : standardLinkFormat(background);
+    const PrintedInto into = triggerLineInto();
     const int link = buffer.addLink(mTriggerEngineMode, text, commands, hints, format, luaReferences);
     const TChar written = withLink(format, link);
     if (mTriggerEngineMode) {
         holdTriggerWriteForMirror(mirrorMark);
-        notifyPrinted(text, PrintedInto::committedLine, written);
+        notifyPrinted(text, into, written);
     } else {
         mirrorToStdOut(text, written);
     }
+}
+
+// Where what a trigger now echoes goes: on the end of a line already there, or below a line feed in it
+TConsoleModel::PrintedInto TConsoleModel::triggerLineInto() const
+{
+    if (buffer.lineBuffer.isEmpty()) {
+        return PrintedInto::committedLine;
+    }
+    // An empty last line is the blank one the pass runs on, or else one an earlier write or a clear left
+    // for what comes next, which the view starts a line for
+    const QString& last = buffer.lineBuffer.back();
+    const bool openAtEnd = last.isEmpty() ? buffer.triggerPassRunningOn(static_cast<int>(buffer.lineBuffer.size()) - 1) : !last.endsWith(QChar::LineFeed);
+    return openAtEnd ? PrintedInto::committedLineEnd : PrintedInto::committedLine;
 }
 
 TConsoleModel::WriteResult TConsoleModel::insertLink(const QString& text, QStringList& commands, QStringList& hints, const bool useCurrentFormat, const QVector<int>& luaReferences)
@@ -1215,6 +1256,7 @@ bool TConsoleModel::echo(QString& text)
         // Line feeds are embedded in the trigger's line rather than starting new lines, so that
         // later echoes and cechoes still land on it; wrapping breaks it at them.
         const MirrorMark mirrorMark = markTriggerAppendForMirror();
+        const PrintedInto into = triggerLineInto();
         const int y = buffer.size() - 1;
         if (y >= 0) {
             QPoint insertPoint(buffer.lineBuffer.at(y).size(), y);
@@ -1223,7 +1265,7 @@ bool TConsoleModel::echo(QString& text)
             buffer.appendLine(text, 0, text.size() - 1, mFormatCurrent.foreground(), mFormatCurrent.background(), mFormatCurrent.allDisplayAttributes());
         }
         holdTriggerWriteForMirror(mirrorMark);
-        notifyPrinted(text, PrintedInto::committedLine, mFormatCurrent);
+        notifyPrinted(text, into, mFormatCurrent);
     } else {
         buffer.append(text, 0, text.size(), mFormatCurrent.foreground(), mFormatCurrent.background(), mFormatCurrent.allDisplayAttributes());
         appended = true;

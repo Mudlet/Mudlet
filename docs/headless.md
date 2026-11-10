@@ -202,17 +202,17 @@ the main console shows them once their triggers have run, with the same argument
 trigger replaced, the colours it changed and what it `echo()`ed into the line, which may hold line feeds,
 and not at all for a line a trigger deleted. Lines a trigger feeds with `feedTriggers()` come after the
 line it ran on, in the order the console shows them, and so does what it writes anywhere else, each piece
-as a line of its own: an `echo()` after `deleteLine()`, `clearWindow()` or a `feedTriggers()`, and the
-command echo of a `send()`. An app that draws the console as the GUI does draws `lineShown`, wrapping each
+as a line of its own: an `echo()` after `clearWindow()` or a `feedTriggers()`, and the command echo of a
+`send()`; an `echo()` after `deleteLine()` comes with `continuesLine`, as below. An app that draws the console as the GUI does draws `lineShown`, wrapping each
 line itself, as for `outputLine`; a line a trigger split with `wrapLine()` comes whole, with the line feeds
 it held, and if a trigger then deletes its first part, what is left of it comes as the line. A change a later
 trigger makes to a line already sent, as by moving the cursor up to it, is not sent again, though what it
 inserts is sent as a line of its own.
 
-The last argument of both, `arrivalMSecs`, is when the line arrived, in milliseconds since the epoch: the
+Their fifth argument, `arrivalMSecs`, is when the line arrived, in milliseconds since the epoch: the
 time the GUI's timestamps show beside it. A line a trigger wrote has the time of the console line it went
 into, its own when it is a line of its own. It is -1 for a line with none. A handler that takes only the
-first three or four arguments may still be connected. `localText` carries no time of its own: it is sent as
+first three, four or five arguments may still be connected. `localText` carries no time of its own: it is sent as
 it is written, so the time its handler runs is when that text was written.
 
 `timeStampsShown()` says whether the main console shows those times beside its lines, as the GUI's
@@ -240,16 +240,37 @@ piece, a line feed being part of the run of what it was written with. An app tha
 it in place of `localText`, as every piece comes in both. A link in text copied from another console's
 buffer (`appendBuffer()`, or text an MXP frame sends on to the main console) is not named.
 
-Drawn that way, the console matches the GUI's but for its layout in these places, where no text is
-missing or doubled:
+`lineShown` and `localTextStyled` end with `continuesLine`, which is true for text the console draws on
+the end of the line that was last sent whole, where an app would otherwise start a line below it:
 
-- The console draws an `echo()` that follows `deleteLine()` on the end of the line above, which was already
-  sent, where `lineShown` sends it as a new line.
-- The console draws a command typed at a prompt on the end of that prompt, as `HP 10> look`, where
-  `lineShown` sends the prompt and `localText` then sends `look` as a piece that the rule above puts on a
-  line of its own. Nothing tells it apart from an alias's `echo()` after a prompt, which the GUI draws below.
-- Blank lines inside what a trigger prints, such as a Lua error of several lines, or the empty command echo
-  of a trigger's `send("")`, are not sent.
+- An `echo()` that follows `deleteLine()` lands on the end of the line above the deleted one, so
+  `lineShown` sends it with `continuesLine`. One that starts with a line feed, or that follows the lines
+  a `feedTriggers()` added, is drawn below and comes without.
+- A command typed at a prompt is drawn on the end of that prompt, as `HP 10> look`: `lineShown` sends the
+  prompt and `localTextStyled` then sends `look` with `continuesLine`. An alias's `echo()` after a prompt,
+  which the console draws below it, comes without, and so does a command typed while other text is
+  still open below the prompt.
+- While `lineShown` is not connected, the first thing a trigger echoes onto its line, which
+  `outputLine` has already sent, comes in `localTextStyled` with `continuesLine`. In that mode
+  `outputLine` also sends the lines a trigger deletes, so after `deleteLine()` the last line the app has
+  is the deleted one, while the console draws the trigger's `echo()` on the line above it. Such an echo
+  comes with `continuesLine` all the same; an app that must match the console there connects
+  `lineShown`, which leaves deleted lines out.
+
+Text drawn on a line of its own comes without it, also where the console's last line is empty: what a
+trigger writes below a command it sent, or below lines it fed, and what follows `clearWindow()`. An
+`echo()` that follows `deleteLine()` and is put into the middle of the line above, as `insertText()` can
+put it, comes without it too, as only text that reaches that line's end is drawn after it. One that
+lands on a blank line above the deleted one comes with it in `lineShown`, and without it in
+`localTextStyled`.
+
+Such a piece is put on the end of the last line the app drew, after the line feed that ends an open
+line is dropped from it as from any other piece. Drawn that way, the console matches the GUI's line for
+line. An app that leaves `continuesLine` out, or connects the plain `localText`, misses no text and
+doubles none: it draws those pieces on lines of their own.
+
+A blank line among what a trigger writes below its line, as the empty command echo of a trigger's
+`send("")` makes, is a line of `lineShown` with no text, as a blank line from the game is.
 
 `mainConsoleCleared` says a script emptied the main console with `clearWindow()` or
 `clearWindow("main")`, so an app empties its own copy of it; a mini console's clear names it in
