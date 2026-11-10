@@ -1308,7 +1308,7 @@ void cTelnet::drainBeforeDisconnection()
     finishDisconnection();
 }
 
-// QTime wraps at midnight, so whole days are counted apart from it
+// QTime cannot hold 24 hours or more, so whole days are counted apart from it
 QString cTelnet::connectionTimeText(const qint64 elapsedMs)
 {
     constexpr qint64 msPerDay = 24 * 60 * 60 * 1000;
@@ -1322,7 +1322,7 @@ QString cTelnet::connectionTimeText(const qint64 elapsedMs)
     if (!days) {
         return clock;
     }
-    //: Connection time of a day or more. %n is the number of whole days, %1 the rest of the time, formatted as hh:mm:ss.zzz
+    //: Connection time of a day or more. %n is the number of whole days, %1 the rest of the time in the connection time format above
     return tr("%n day(s), %1", nullptr, static_cast<int>(days)).arg(clock);
 }
 

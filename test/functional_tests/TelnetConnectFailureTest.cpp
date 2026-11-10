@@ -332,7 +332,7 @@ private slots:
         QCOMPARE(recordedEventCount(host, qsl("sysDisconnectionEvent")), 1);
     }
 
-    // A profile left connected overnight must not report its session as having just begun
+    // A connection of 24 hours or more must keep its whole days rather than wrap back to 00:00:00
     void test_aConnectionTimeOfADayOrMoreKeepsItsDays()
     {
         const QString clock = cTelnet::connectionTimeText(0);
