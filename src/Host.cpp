@@ -911,6 +911,11 @@ void Host::loadMapAndConnect(const bool connect)
     // on the defaults rather than on the profile's own settings
     mTelnet.cacheHostSettings();
 
+    if (!mLoadedOk) {
+        //: Shown after the error saying the profile's save could not be loaded
+        postMessage(QCoreApplication::translate("mudlet", "[ WARN ]  - Profile \"%1\" opened in offline mode, but its profile save could not be loaded.").arg(getName()));
+        return;
+    }
     const QString infoMsg = QCoreApplication::translate("mudlet", "[  OK  ]  - Profile \"%1\" loaded in offline mode.").arg(getName());
     postMessage(infoMsg);
 }
