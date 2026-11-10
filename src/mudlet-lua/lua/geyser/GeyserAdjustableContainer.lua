@@ -1065,9 +1065,12 @@ function Adjustable.Container:minimize()
     if self.minimized == true then
         return
     end
-    -- a hidden container keeps its border for show(), which refuses to attach a minimized one
-    local attached = self.attached or self.hiddenAttached
-    self.hiddenAttached = nil
+    local attached = self.attached or self.hiddenAttached or nil
+    -- restore() takes the border back instead: show() cannot attach a minimized container.
+    -- detach() also kills the resize handler hide() kept for show()
+    if self.hiddenAttached then
+        self:detach()
+    end
     self.origh = self.height
     self.Inside:hide()
     self:resize(nil, self.buttonsize + 10)
@@ -1076,8 +1079,8 @@ function Adjustable.Container:minimize()
         self:disconnect()
     end
     self:adjustBorder()
-    -- after adjustBorder(), as the detach() it makes forgets this
-    self.minimizedAttached = attached or nil
+    -- set after adjustBorder(): the detach() it makes for an attached container clears minimizedAttached
+    self.minimizedAttached = attached
 end
 
 --- restores the container after it was minimized, attaching it again to the border it had,
