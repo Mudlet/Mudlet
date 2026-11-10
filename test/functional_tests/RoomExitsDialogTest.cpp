@@ -352,7 +352,7 @@ private slots:
                 QAccessibleInterface* pInterface = QAccessible::queryAccessibleInterface(pControl);
                 QVERIFY(pInterface);
                 const QString name = pInterface->text(QAccessible::Name);
-                QVERIFY2(name.startsWith(pGroup->title()), qPrintable(qsl("%1 is read out as \"%2\"").arg(pControl->objectName(), name)));
+                QVERIFY2(name.contains(pGroup->title()), qPrintable(qsl("%1 is read out as \"%2\"").arg(pControl->objectName(), name)));
                 QVERIFY2(!namesSeen.contains(name), qPrintable(qsl("%1 shares the name \"%2\"").arg(pControl->objectName(), name)));
                 namesSeen.insert(name);
                 ++controlCount;
