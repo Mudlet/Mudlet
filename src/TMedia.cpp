@@ -443,10 +443,10 @@ void TMedia::stopMedia(TMediaData& mediaData, const PriorityStop priorityStop)
 
         // Whichever way this track is being ended below, it is not to start again. A looping
         // or multi-entry track restarts itself through playNextPass(), at its end or its finish
-        // position, which would undo the stop that was just asked for - on a
-        // StoppedState-first backend EndOfMedia can still be on its way when the stop
-        // arrives. An emptied playlist is what playNextPass() checks, and play() builds a fresh
-        // one whenever this player is picked up again.
+        // position, which would undo the stop that was just asked for - on a StoppedState-first
+        // backend EndOfMedia can still be on its way when the stop arrives. An emptied playlist
+        // is what playNextPass() checks, and play() builds a fresh one whenever this player is
+        // picked up again.
         if (pPlayer->playlist()) {
             pPlayer->playlist()->clear();
         }
@@ -865,7 +865,7 @@ void TMedia::stopAllMediaPlayers()
         const quint64 claimedAt = pPlayer->claimGeneration();
 
         // No loop is to survive this: playNextPass() restarts one from the playlist,
-        // and a StoppedState-first backend can still have that signal on its way.
+        // and a StoppedState-first backend can still have EndOfMedia on its way.
         if (pPlayer->playlist()) {
             pPlayer->playlist()->clear();
         }
@@ -1840,11 +1840,12 @@ void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
             bool actionTaken = false;
 
             if (progress > relativeDuration && (endUsed || finishUsed)) {
-                // Stopped first, so a sysMediaFinished handler acts on a player at rest: a stop it
-                // makes empties the playlist, and a track it starts here takes the claim.
+                // Stopped first: stop() raises sysMediaFinished synchronously, so its handler runs
+                // before the next pass. A stop it makes empties the playlist, and a track it starts
+                // on this player bumps the claim.
                 const quint64 claimedAt = lockedPlayer->claimGeneration();
                 lockedPlayer->mediaPlayer()->stop();
-                // A finish position ends one pass of a loop count; a fade-away stop ends them all.
+                // A finish position ends one pass of a loop count; a fading stop ends them all.
                 // One at or before the start leaves nothing to play in a pass, so stop outright
                 // rather than cycle through empty passes (forever with loops = -1).
                 if (!endUsed && finishPosition > startPosition && lockedPlayer->claimGeneration() == claimedAt) {
@@ -2151,11 +2152,12 @@ void TMedia::releaseMediaSourceAfterEvents(const std::shared_ptr<TMediaPlayer>& 
     QTimer::singleShot(0ms, this, [this, weakPlayer, endedData, claimedAt, continuedAt, playbackStateDecides] {
         const auto lockedPlayer = weakPlayer.lock();
         const bool stillOurs = lockedPlayer && lockedPlayer->claimGeneration() == claimedAt;
-        // Two ways the same playback can have carried on during the deferred turn. On a
-        // StoppedState-first backend the loop restarts from the EndOfMedia handler after the
-        // snapshot above, so the counter is what sees it; on an EndOfMedia-first backend the
-        // restart already happened before the snapshot, so the counter cannot see it and the
-        // player still reporting PlayingState is.
+        // Two ways the same playback can have carried on during the deferred turn. When the
+        // loop restarts through playNextPass() after the snapshot above - from EndOfMedia on a
+        // StoppedState-first backend, or straight after the stop at a finish position - the
+        // counter is what sees it; on an EndOfMedia-first backend the restart already happened
+        // before the snapshot, so the counter cannot see it and the player still reporting
+        // PlayingState is.
         const bool sameMediaContinues =
                 lockedPlayer && (lockedPlayer->continuationGeneration() != continuedAt || (playbackStateDecides && stillOurs && lockedPlayer->getPlaybackState() == QMediaPlayer::PlayingState));
 

@@ -2566,6 +2566,10 @@ describe("Media playback effects with a generated sound file", function()
     assert.is_true(#started >= 3)
     assert.equals(1, #getPlayingMusic({key = "busted-finish-forever"}))
     assert.is_true(stopMusic({key = "busted-finish-forever"}))
+    local startedBeforeStop = #started
+    waitForEvent("sysMediaStarted", quietMilliseconds)
+    assert.equals(startedBeforeStop, #started, "a pass started after the loop was stopped")
+    assert.equals(0, #getPlayingMusic({key = "busted-finish-forever"}))
   end)
 
   it("a sysMediaFinished handler between finish-ended passes can stop the rest", function()
@@ -2590,6 +2594,41 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(0, #getPlayingSounds({key = "busted-finish-stopped"}))
   end)
 
+  it("a track a sysMediaFinished handler starts between finish-ended passes plays out undisturbed", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local finished, started = {}, {}
+    collect("sysMediaFinished", finished)
+    collect("sysMediaStarted", started)
+    local handler
+    handler = registerAnonymousEventHandler("sysMediaFinished", function(_, _, _, _, key)
+      if key == "busted-finish-handed-over" then
+        killAnonymousEventHandler(handler)
+        playSoundFile({name = soundFile, loops = 2, key = "busted-finish-taken-over"})
+      end
+    end)
+    onCleanup(function() killAnonymousEventHandler(handler) end)
+
+    writeSoundFiles()
+    assert.is_true(playSoundFile({name = longSoundFile, finish = 300, loops = 3, key = "busted-finish-handed-over"}))
+    waitForCount("sysMediaFinished", finished, 3)
+    waitForEvent("sysMediaStarted", quietMilliseconds)
+    local counts = {}
+    for _, event in ipairs(finished) do
+      counts["finished " .. event.key] = (counts["finished " .. event.key] or 0) + 1
+    end
+    for _, event in ipairs(started) do
+      counts["started " .. event.key] = (counts["started " .. event.key] or 0) + 1
+    end
+    assert.same({
+      ["started busted-finish-handed-over"] = 1,
+      ["finished busted-finish-handed-over"] = 1,
+      ["started busted-finish-taken-over"] = 2,
+      ["finished busted-finish-taken-over"] = 2,
+    }, counts)
+  end)
+
   it("a finish at or before the start ends an endless loop after one pass", function()
     if mediaPlaybackUnavailable() then
       return
@@ -2605,6 +2644,13 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(1, #started)
     assert.equals(1, #finished)
     assert.equals(0, #getPlayingSounds({key = "busted-finish-backwards"}))
+
+    assert.is_true(playSoundFile({name = longSoundFile, start = 5000, finish = 5000, loops = -1, key = "busted-finish-at-start"}))
+    waitForCount("sysMediaFinished", finished, 2)
+    waitForEvent("sysMediaStarted", quietMilliseconds)
+    assert.equals(2, #started)
+    assert.equals(2, #finished)
+    assert.equals(0, #getPlayingSounds({key = "busted-finish-at-start"}))
   end)
 
   it("a stop asked to fade away leaves the sound playing until the fade runs out", function()
