@@ -1075,7 +1075,8 @@ int main(int argc, char* argv[])
         shouldRegisterTelnet = appSettings->value("telnetHandlerEnabled", false).toBool();
         qDebug() << "main: Headless mode detected, skipping telnet handler registration";
     } else {
-        const bool asked = appSettings->contains("telnetHandlerAsked");
+        // The Settings checkbox saves only telnetHandlerEnabled, and that choice stands too
+        const bool asked = appSettings->contains("telnetHandlerAsked") || appSettings->contains("telnetHandlerEnabled");
         const bool storedEnabled = appSettings->value("telnetHandlerEnabled", false).toBool();
         const bool dontAsk = appSettings->value("telnetHandlerDontAsk", false).toBool();
 
