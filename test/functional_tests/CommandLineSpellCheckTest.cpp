@@ -28,8 +28,8 @@
 //
 // Most words checked here are made up, so no system dictionary can know them
 // and which one is installed cannot change the outcome. The few that are
-// common English words, or near misses of one, rely on any en_US dictionary
-// knowing "look", which init() already requires one to be there for.
+// common English words, or near misses of one, rely on the profile's English
+// dictionary, which init() requires to be there, knowing "look".
 
 #include <QMenu>
 #include <QMouseEvent>
