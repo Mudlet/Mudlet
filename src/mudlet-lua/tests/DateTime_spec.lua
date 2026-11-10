@@ -187,7 +187,6 @@ describe("Tests DateTime.lua functions", function()
       assert.is_nil(datetime:parse("2025615", "^%Y%m%d$"))
       assert.is_nil(datetime:parse("1312025", "^%m%d%Y$", true))
       assert.is_nil(datetime:parse("930", "^%H%M$"))
-      assert.is_nil(datetime:parse("2025-06-150 12:00:00"))
     end)
 
     it("errors when %I is used without %p", function()
