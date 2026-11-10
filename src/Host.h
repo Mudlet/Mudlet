@@ -697,6 +697,7 @@ public:
     void setUseMaxConsoleBufferSize(bool useMax) { mUseMaxConsoleBufferSize = useMax; }
     void updateProxySettings(QNetworkAccessManager* manager);
     std::unique_ptr<QNetworkProxy>& getConnectionProxy();
+    void setProxyPassword(const QString&);
     void updateAnsi16ColorsInTable();
     void updateExtendedAnsiColorsInTable();
     // Store/retrieve all the settings in one call:
