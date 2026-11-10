@@ -4238,7 +4238,7 @@ private slots:
         QVERIFY2(map()->mpRoomDB.get() != pBefore, "loadMap did not replace the room database, so this does not test a load");
         QVERIFY2(map()->mpRoomDB->getArea(mOtherAreaId), "the loaded map's area was deleted without being asked about");
         QVERIFY(map()->mpRoomDB->getRoom(kOtherAreaRoomId));
-        QVERIFY(!mLastWarningText.isEmpty());
+        QCOMPARE(mLastWarningText, qsl("The map changed while you were deciding, so nothing was deleted."));
         QCOMPARE(configuredAreas(), (QStringList{qsl("Default Area (-1)"), mouseAreaRow(), otherAreaRow()}));
     }
 
@@ -4255,7 +4255,7 @@ private slots:
 
         QVERIFY2(map()->mpRoomDB->getArea(mOtherAreaId), "the replacement map's area was deleted without being asked about");
         QVERIFY(map()->mpRoomDB->getRoom(kOtherAreaRoomId));
-        QVERIFY(!mLastWarningText.isEmpty());
+        QCOMPARE(mLastWarningText, qsl("The map changed while you were deciding, so nothing was deleted."));
     }
 
     // The auto-mapper can add rooms while the prompt waits; Yes agreed to delete the rooms it named, no more
@@ -4270,7 +4270,22 @@ private slots:
 
         QVERIFY2(map()->mpRoomDB->getArea(mOtherAreaId), "Yes deleted a room the prompt did not count");
         QVERIFY(map()->mpRoomDB->getRoom(newRoomId));
-        QVERIFY(!mLastWarningText.isEmpty());
+        QCOMPARE(mLastWarningText, qsl("The map changed while you were deciding, so nothing was deleted."));
+    }
+
+    void test_aRoomSwappedIntoTheAreaWhileTheDeletePromptIsUpKeepsItsArea()
+    {
+        showMapWithAnotherArea();
+        QVERIFY(openConfigureAreas());
+        QVERIFY(selectConfiguredArea(otherAreaRow()));
+        const int newRoomId = kOtherAreaRoomId + 1;
+
+        QVERIFY(pressDeleteAndAnswer(
+                QMessageBox::Yes, nullptr, qsl("assert(setRoomArea(%1, %2)); assert(addRoom(%3)); assert(setRoomArea(%3, %4))").arg(kOtherAreaRoomId).arg(mAreaId).arg(newRoomId).arg(mOtherAreaId)));
+
+        QVERIFY2(map()->mpRoomDB->getRoom(newRoomId), "Yes deleted a room the prompt did not describe");
+        QVERIFY(map()->mpRoomDB->getArea(mOtherAreaId));
+        QCOMPARE(mLastWarningText, qsl("The map changed while you were deciding, so nothing was deleted."));
     }
 
     void test_deletingAnEmptyAreaDoesNotAsk()

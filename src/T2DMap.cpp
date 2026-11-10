@@ -2957,20 +2957,20 @@ void T2DMap::slot_configureAreas()
 
         // There is no undo, so taking rooms with it needs a second word; an empty area is cheap to make again
         if (const TArea* pArea = mpMap->mpRoomDB->getArea(areaId)) {
-            if (const auto roomCount = pArea->getAreaRooms().size()) {
+            if (const QSet<int> roomsAsked = pArea->getAreaRooms(); !roomsAsked.isEmpty()) {
                 const QString areaName = mpMap->mpRoomDB->getAreaNamesMap().value(areaId);
                 //: Title of the confirmation shown before deleting an area that still has rooms in it
                 const QString title = tr("Delete area");
                 //: Confirmation before deleting an area from the "Configure Areas" dialog; %1 is the area's name and %n how many rooms are deleted with it
-                const QString question = tr("Delete the area \"%1\" and the %n room(s) in it? This cannot be undone.", nullptr, static_cast<int>(roomCount)).arg(areaName);
+                const QString question = tr("Delete the area \"%1\" and the %n room(s) in it? This cannot be undone.", nullptr, static_cast<int>(roomsAsked.size())).arg(areaName);
                 const TRoomDB* roomDB = mpMap->mpRoomDB.get();
                 const unsigned int mapGeneration = roomDB->mapGeneration();
                 if (QMessageBox::question(dialog, title, question, QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel) != QMessageBox::Yes) {
                     return;
                 }
-                // Scripts keep running while the question is up: they may load another map that reuses this id, or map more rooms into the area
+                // Scripts keep running while the question is up: they may load another map that reuses this id, or move rooms into or out of the area
                 const TArea* pAreaNow = mpMap->mpRoomDB.get() == roomDB && roomDB->mapGeneration() == mapGeneration ? mpMap->mpRoomDB->getArea(areaId) : nullptr;
-                if (!pAreaNow || pAreaNow->getAreaRooms().size() != roomCount) {
+                if (!pAreaNow || pAreaNow->getAreaRooms() != roomsAsked) {
                     repopulate();
                     //: Shown when the map changed while the "Delete area" confirmation was open, so the area was not deleted
                     auto* notice = new QMessageBox(QMessageBox::Information, title, tr("The map changed while you were deciding, so nothing was deleted."), QMessageBox::Ok, dialog);
