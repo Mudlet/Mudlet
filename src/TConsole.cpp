@@ -747,7 +747,9 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         auto* pShortcut_find = new QShortcut(QKeySequence::Find, this);
         pShortcut_find->setContext(Qt::WindowShortcut);
         connect(pShortcut_find, &QShortcut::activated, this, &TConsole::showSearchBar);
+    }
 
+    if (mType & (CentralDebugConsole | ErrorConsole)) {
         // No command line here to take the key and copy for the panes, as the main console's does
         mUpperPane->setFocusPolicy(Qt::ClickFocus);
         mLowerPane->setFocusPolicy(Qt::ClickFocus);
