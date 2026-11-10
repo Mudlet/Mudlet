@@ -175,8 +175,11 @@ void TCommandLine::slot_contentsChange()
 void TCommandLine::insertFromMimeData(const QMimeData* source)
 {
     // Paste, drop and middle-click all land here
-    const UserEditScope userEdit(*this);
-    QPlainTextEdit::insertFromMimeData(source);
+    {
+        const UserEditScope userEdit(*this);
+        QPlainTextEdit::insertFromMimeData(source);
+    }
+    adjustHeight();
 }
 
 bool TCommandLine::claimsShortcutOverride(const QKeyEvent* ke) const
