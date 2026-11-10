@@ -65,6 +65,20 @@ describe("Tests sysConsoleSizeChanged for a mini console", function()
     assert.are.same({shown, grid(name)}, reports)
   end)
 
+  it("reports timestamps turned on while it was hidden once it shows", function()
+    local name = made("specSizeHiddenToggle")
+    finally(function() deleteMiniConsole(name) end)
+    reports = {}
+
+    hideWindow(name)
+    assert.is_true(enableTimeStamps(name))
+    assert.are.same({}, reports)
+    showWindow(name)
+    local shown = grid(name)
+    shown[4] = #"hh:mm:ss.zzz "
+    assert.are.same({shown}, reports)
+  end)
+
   it("reports a resize made while it was hidden once it shows", function()
     local name = made("specSizeHidden")
     finally(function() deleteMiniConsole(name) end)

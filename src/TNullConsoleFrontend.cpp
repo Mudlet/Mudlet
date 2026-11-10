@@ -1162,12 +1162,9 @@ TConsoleModel& TNullConsoleFrontend::addSubConsole(const QString& name, const TW
         QObject::connect(&model.mNotifier, &TConsoleModelNotifier::linesAppended, &model.mNotifier, [this, &model](const int lineCount) {
             reportLinesOverflow(model, lineCount);
         });
-        // As TConsole::applyTimeStamps(), shown or not
+        // As TConsole::applyTimeStamps(), which leaves a hidden pane's report to its showEvent()
         QObject::connect(&model.mNotifier, &TConsoleModelNotifier::timeStampsToggled, &model.mNotifier, [this, name]() {
-            // A hidden pane keeps the size it had until the resize it is owed reaches it
-            if (const auto it = mSubConsoles.find(name); it != mSubConsoles.end() && (!it->second.paneResizePending || paneShown(it->second))) {
-                reportConsoleSize(name);
-            }
+            resizePane(name);
         });
         // As TConsole::bufferCleared() closes the split, which TConsoleModel::clear() has already forgotten
         QObject::connect(&model.mNotifier, &TConsoleModelNotifier::bufferCleared, &model.mNotifier, [this, name, &model]() {
