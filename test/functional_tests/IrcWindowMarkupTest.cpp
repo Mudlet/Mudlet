@@ -287,12 +287,14 @@ private slots:
                 }
             }
             const QColor ink = client->lineEdit->palette().color(QPalette::Text);
-            QCOMPARE(ink.name(), uiDesign::themeTokens().text.name());
+            const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
+            QCOMPARE(ink.name(), tokens.text.name());
+            QCOMPARE(QColor(fill).name(), uiDesign::blend(tokens.field, uiDesign::errorInk(tokens), uiDesign::scmSoftWashStrength).name());
             const qreal ratio = uiDesign::contrastRatio(ink, QColor(fill));
             QVERIFY2(ratio >= uiDesign::scmTextMinimumRatio,
                      qPrintable(qsl("on the %1 appearance the marked field writes %2 on %3, a contrast of %4:1")
                                         .arg(appearance == enums::Appearance::dark ? qsl("dark") : qsl("light"), ink.name(), QColor(fill).name(), QString::number(ratio, 'f', 2))));
-            // Only typing clears the mark; setText() and clear() leave it for the next pass to see
+            // setText() and clear() don't emit textEdited, so only a keystroke drops this pass's mark before the next
             QTest::keyClick(client->lineEdit, Qt::Key_A);
             QVERIFY2(client->lineEdit->styleSheet().isEmpty(), "typing into the marked field did not clear the mark");
             client->lineEdit->clear();
