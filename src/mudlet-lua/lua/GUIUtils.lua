@@ -1977,7 +1977,7 @@ local resets = {
 -- take a color name and turn it into an ANSI escape string
 local function colorToAnsi(colorName)
   local result = ""
-  local cols = colorName:split(":")
+  local cols = colorName:split("[:,]")
   local fore = cols[1]
   local back = cols[2]
   if fore ~= "" then
@@ -2006,19 +2006,19 @@ local function colorToAnsi(colorName)
   return result
 end
 
--- converts decho color information to ansi escape sequences
-local function rgbToAnsi(rgb)
-  local result = ""
-  local cols = rgb:split(":")
-  local fore = cols[1]
-  local back = cols[2]
-  if fore ~= "" then
-    local components = fore:split(",")
-    result = string.format("%s\27[38:2::%s:%s:%sm", result, components[1] or "0", components[2] or "0", components[3] or "0")
+-- converts a decho colour tag to ansi escape sequences, or returns nil when decho would print it as text
+local decimalCapturePattern = _Echos.Patterns.Decimal[2]
+local function rgbToAnsi(tag)
+  local fr, fg, fb, br, bg, bb = decimalCapturePattern:match(tag)
+  if not (fr or br) then
+    return nil
   end
-  if back then
-    local components = back:split(",")
-    result = string.format("%s\27[48:2::%s:%s:%sm", result, components[1] or "0", components[2] or "0", components[3] or "0")
+  local result = ""
+  if fr then
+    result = string.format("\27[38:2::%s:%s:%sm", fr, fg, fb)
+  end
+  if br then
+    result = string.format("%s\27[48:2::%s:%s:%sm", result, br, bg, bb)
   end
   return result
 end
@@ -2057,7 +2057,9 @@ function cecho2ansi(text)
     parts[n] = str
     if color then
       n = n + 1
-      parts[n] = colorToAnsi(color:match("<(.+)>"))
+      -- a tag that names no colour stays as text, as cecho prints it
+      local ansi = colorToAnsi(color:match("<(.+)>"))
+      parts[n] = ansi ~= "" and ansi or color
     end
   end
   return table.concat(parts, "", 1, n)
@@ -2092,7 +2094,7 @@ function decho2ansi(text)
     parts[n] = str
     if color then
       n = n + 1
-      parts[n] = rgbToAnsi(color:match("<(.+)>"))
+      parts[n] = rgbToAnsi(color) or color
     end
     if res then
       n = n + 1

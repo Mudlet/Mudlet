@@ -246,6 +246,18 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       local actual = decho2ansi("<o>overline</o>")
       assert.equals(expected, actual)
     end)
+
+    it("should keep tags that decho prints as text", function()
+      for _, text in ipairs({ "<12> items", "a <1,2> b", "<1,2,3,4>", "<1000,0,0>", "<:>", "x <1:2> y" }) do
+        assert.equals(text, decho2ansi(text))
+      end
+    end)
+
+    it("should only set the parts of a colour the tag gives", function()
+      assert.equals("\27[38:2::1:2:3mfg", decho2ansi("<1,2,3:>fg"))
+      assert.equals("\27[48:2::4:5:6mbg", decho2ansi("<:4,5,6>bg"))
+      assert.equals("\27[38:2::1:2:3m\27[48:2::4:5:6mboth", decho2ansi("<1,2,3:4,5,6,128>both"))
+    end)
   end)
 
   describe("Tests the functionality of hecho2ansi", function()
@@ -330,6 +342,16 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       local expected = "\27[53moverline\27[55m"
       local actual = cecho2ansi("<o>overline</o>")
       assert.equals(expected, actual)
+    end)
+
+    it("should keep tags that cecho prints as text", function()
+      for _, text in ipairs({ "Say <hello> world", "<notacolour:alsonot>", "</foo>", "<:>" }) do
+        assert.equals(text, cecho2ansi(text))
+      end
+    end)
+
+    it("should accept a comma between the colours, as cecho does", function()
+      assert.equals("\27[38:5:1m\27[48:5:4mtext", cecho2ansi("<red,blue>text"))
     end)
   end)
 
