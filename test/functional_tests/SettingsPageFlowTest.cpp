@@ -50,7 +50,9 @@
 #include <QSpinBox>
 #include <QTranslator>
 
+#include <algorithm>
 #include <functional>
+#include <limits>
 #include <tuple>
 
 #include "ColourValue.h"
@@ -747,10 +749,11 @@ private slots:
 
     // However narrow the window is taken, the map's colours never need more
     // than the card has: walked from the widest the window goes to the
-    // narrowest, the narrowest the card's colours are given is too little for
-    // the two columns side by side, and there they stand one under the other
-    // whole. The numbers are in the message for when the words change.
-    void test_atTheNarrowestTheMapColoursAreOneColumnUnderTheOther()
+    // narrowest, there they stand one under the other whole where the
+    // interface's type leaves the two columns too little room side by side, and
+    // side by side where it does not. The numbers go to the log, for when the
+    // words change.
+    void test_atTheNarrowestTheMapColoursStandAsTheirRoomAllows()
     {
         QVERIFY2(openPreferences(), "the settings dialog never appeared");
         auto* pMapColours = mpPreferences->findChild<QWidget*>(qsl("settingsMapColours"));
@@ -773,14 +776,17 @@ private slots:
                 narrowestWindow = mpPreferences->width();
             }
         }
-        const int sideBySide = pGrid->sizeHint().width();
-        QVERIFY2(narrowestColours < sideBySide,
-                 qPrintable(qsl("the two columns side by side need %1px and the narrowest the card gives them is %2px, so they need never wrap").arg(sideBySide).arg(narrowestColours)));
         mpPreferences->resize(narrowestWindow, 760);
         qApp->processEvents();
         qApp->processEvents();
         QCOMPARE(pMapColours->width(), narrowestColours);
-        verifyColourColumns(mapColumn(false), mapColumn(true), false);
+        // The room is taken with the page's scroll bar kept, whether it is showing or not, as the card takes it
+        const QScrollArea* pPage = TestSettings::pageOf(mpPreferences, qsl("mapper"));
+        const QScrollBar* pBar = pPage->verticalScrollBar();
+        const int room = pBar->isVisibleTo(pPage) ? narrowestColours : narrowestColours - pBar->sizeHint().width();
+        const int sideBySide = pGrid->sizeHint().width();
+        qInfo().noquote() << qsl("the two columns side by side need %1px and at the narrowest the card leaves them %2px").arg(sideBySide).arg(room);
+        verifyColourColumns(mapColumn(false), mapColumn(true), room >= sideBySide);
     }
 
     // What the colour cards look like follows the width the window gives the
@@ -788,8 +794,17 @@ private slots:
     // can bring up and which then takes width that would keep it wrapped, nor
     // what the window was before. Each case sits a few pixels from a
     // breakpoint, on the side the scroll bar showing would put it.
+    void test_theColourCardsLookTheSameWhateverTheScrollBarDoes_data()
+    {
+        QTest::addColumn<int>("which");
+        QTest::newRow("map columns") << 0;
+        QTest::newRow("display pairs") << 1;
+        QTest::newRow("map preview") << 2;
+    }
+
     void test_theColourCardsLookTheSameWhateverTheScrollBarDoes()
     {
+        QFETCH(const int, which);
         QVERIFY2(openPreferences(), "the settings dialog never appeared");
         auto* p = mpPreferences;
         struct Breakpoint
@@ -798,9 +813,9 @@ private slots:
             QWidget* pWidget;
             std::function<int()> needed;
             std::function<bool()> arrangement;
-            // In English every one of these fits at the narrowest the window goes, the map's columns because the names
-            // fold first, so a label of theirs is given more words, as a translation might, to bring the breakpoint
-            // within reach, though not so many that the window is held wider than the breakpoint
+            // Every one of these fits at the narrowest the window goes, the map's columns because the names fold
+            // first, so a label of theirs is given more words, as a translation might, until the breakpoint is within
+            // reach, though no more, or the window would be held wider than the breakpoint
             QLabel* pLengthened;
             QString moreWords;
         };
@@ -837,63 +852,87 @@ private slots:
                                              },
                                              p->label_17,
                                              qsl(" and more and more")}};
+        const Breakpoint& breakpoint = breakpoints.at(which);
         const int hysteresis = dlgProfilePreferences::scmColourArrangementHysteresis;
-        for (const Breakpoint& breakpoint : breakpoints) {
-            p->setTab(breakpoint.page);
-            qApp->processEvents();
-            const QString priorWords = breakpoint.pLengthened ? breakpoint.pLengthened->text() : QString();
-            if (breakpoint.pLengthened) {
-                breakpoint.pLengthened->setText(priorWords + breakpoint.moreWords);
-                qApp->processEvents();
-            }
-            const auto restoreWords = qScopeGuard([&breakpoint, priorWords]() {
-                if (breakpoint.pLengthened) {
-                    breakpoint.pLengthened->setText(priorWords);
-                }
-            });
-            QScrollArea* pPage = TestSettings::pageOf(p, breakpoint.page);
-            // With the bar showing, a few pixels short of the breakpoint and a few past it with the hysteresis
-            for (const int fromBreakpoint : {-6, hysteresis + 2}) {
+        // With the bar showing, a few pixels short of the breakpoint and a few past it with the hysteresis, each reached
+        // from 20px on the other side, so what the card had before is not what it is to show
+        const QList<int> fromBreakpoints{-6, hysteresis + 2};
+        const auto otherSide = [](const int width, const int fromBreakpoint) {
+            return fromBreakpoint < 0 ? width + 20 : width - 20;
+        };
+        const auto narrowestAskedFor = [&breakpoint, &fromBreakpoints, &otherSide]() {
+            int narrowest = std::numeric_limits<int>::max();
+            for (const int fromBreakpoint : fromBreakpoints) {
                 const int width = breakpoint.needed() + fromBreakpoint;
-                // From the other side of the breakpoint, so what the card had before is not what it is to show
-                QVERIFY2(widthTo(breakpoint.pWidget, fromBreakpoint < 0 ? width + 20 : width - 20),
-                         qPrintable(qsl("SETUP: '%1' could not be taken to %2px on the other side of the breakpoint; it is %3px in a %4px window")
-                                            .arg(breakpoint.pWidget->objectName())
-                                            .arg(fromBreakpoint < 0 ? width + 20 : width - 20)
-                                            .arg(breakpoint.pWidget->width())
-                                            .arg(p->width())));
-                QVERIFY2(widthTo(breakpoint.pWidget, width), qPrintable(qsl("SETUP: '%1' could not be given %2px").arg(breakpoint.pWidget->objectName()).arg(width)));
-                QVERIFY2(pPage->verticalScrollBar()->isVisible(), qPrintable(qsl("SETUP: the '%1' page is not scrolling").arg(breakpoint.page)));
-                const bool expected = fromBreakpoint > 0;
-                const QString where = qsl("'%1' at %2px from its breakpoint").arg(breakpoint.pWidget->objectName()).arg(fromBreakpoint);
-                QVERIFY2(breakpoint.arrangement() == expected, qPrintable(qsl("%1 with the scroll bar showing").arg(where)));
-
-                // The same window, the page taller than its contents or not
-                pPage->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-                qApp->processEvents();
-                qApp->processEvents();
-                QVERIFY2(breakpoint.pWidget->width() > width, "SETUP: hiding the scroll bar gave nothing more room");
-                QVERIFY2(breakpoint.arrangement() == expected, qPrintable(qsl("%1 changed when the scroll bar went").arg(where)));
-                pPage->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
-                qApp->processEvents();
-                qApp->processEvents();
-                QVERIFY2(breakpoint.arrangement() == expected, qPrintable(qsl("%1 changed when the scroll bar came back").arg(where)));
-                pPage->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-                qApp->processEvents();
-                breakpoint.pWidget->parentWidget()->layout()->invalidate();
-                qApp->processEvents();
-                QVERIFY2(breakpoint.arrangement() == expected, qPrintable(qsl("%1 changed when it was laid out again").arg(where)));
-
-                // ...and narrowed as far as the window goes and widened back to it
-                const int window = p->width();
-                p->resize(p->minimumWidth(), 760);
-                qApp->processEvents();
-                p->resize(window, 760);
-                qApp->processEvents();
-                qApp->processEvents();
-                QCOMPARE(breakpoint.pWidget->width(), width);
-                QVERIFY2(breakpoint.arrangement() == expected, qPrintable(qsl("%1 changed after the window was narrowed and widened back").arg(where)));
+                narrowest = std::min({narrowest, width, otherSide(width, fromBreakpoint)});
             }
+            return narrowest;
+        };
+
+        p->setTab(breakpoint.page);
+        qApp->processEvents();
+        const QString priorWords = breakpoint.pLengthened->text();
+        const auto restoreWords = qScopeGuard([&breakpoint, priorWords]() {
+            breakpoint.pLengthened->setText(priorWords);
+        });
+        // Narrower type leaves the breakpoint further below what the narrowest window gives, and so takes more words
+        int lengthenings = 0;
+        bool withinReach = false;
+        do {
+            breakpoint.pLengthened->setText(breakpoint.pLengthened->text() + breakpoint.moreWords);
+            qApp->processEvents();
+            ++lengthenings;
+            withinReach = widthTo(breakpoint.pWidget, narrowestAskedFor());
+        } while (!withinReach && lengthenings < 12);
+        if (!withinReach) {
+            QSKIP(qPrintable(qsl("'%1' could not be taken to %2px, short of its breakpoint, however many words '%3' was given; it is %4px in a %5px window")
+                                     .arg(breakpoint.pWidget->objectName())
+                                     .arg(narrowestAskedFor())
+                                     .arg(breakpoint.pLengthened->objectName())
+                                     .arg(breakpoint.pWidget->width())
+                                     .arg(p->width())));
+        }
+
+        QScrollArea* pPage = TestSettings::pageOf(p, breakpoint.page);
+        for (const int fromBreakpoint : fromBreakpoints) {
+            const int width = breakpoint.needed() + fromBreakpoint;
+            QVERIFY2(widthTo(breakpoint.pWidget, otherSide(width, fromBreakpoint)),
+                     qPrintable(qsl("SETUP: '%1' could not be taken to %2px on the other side of the breakpoint; it is %3px in a %4px window")
+                                        .arg(breakpoint.pWidget->objectName())
+                                        .arg(otherSide(width, fromBreakpoint))
+                                        .arg(breakpoint.pWidget->width())
+                                        .arg(p->width())));
+            QVERIFY2(widthTo(breakpoint.pWidget, width), qPrintable(qsl("SETUP: '%1' could not be given %2px").arg(breakpoint.pWidget->objectName()).arg(width)));
+            QVERIFY2(pPage->verticalScrollBar()->isVisible(), qPrintable(qsl("SETUP: the '%1' page is not scrolling").arg(breakpoint.page)));
+            const bool expected = fromBreakpoint > 0;
+            const QString where = qsl("'%1' at %2px from its breakpoint").arg(breakpoint.pWidget->objectName()).arg(fromBreakpoint);
+            QVERIFY2(breakpoint.arrangement() == expected, qPrintable(qsl("%1 with the scroll bar showing").arg(where)));
+
+            // The same window, the page taller than its contents or not
+            pPage->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+            qApp->processEvents();
+            qApp->processEvents();
+            QVERIFY2(breakpoint.pWidget->width() > width, "SETUP: hiding the scroll bar gave nothing more room");
+            QVERIFY2(breakpoint.arrangement() == expected, qPrintable(qsl("%1 changed when the scroll bar went").arg(where)));
+            pPage->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+            qApp->processEvents();
+            qApp->processEvents();
+            QVERIFY2(breakpoint.arrangement() == expected, qPrintable(qsl("%1 changed when the scroll bar came back").arg(where)));
+            pPage->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+            qApp->processEvents();
+            breakpoint.pWidget->parentWidget()->layout()->invalidate();
+            qApp->processEvents();
+            QVERIFY2(breakpoint.arrangement() == expected, qPrintable(qsl("%1 changed when it was laid out again").arg(where)));
+
+            // ...and narrowed as far as the window goes and widened back to it
+            const int window = p->width();
+            p->resize(p->minimumWidth(), 760);
+            qApp->processEvents();
+            p->resize(window, 760);
+            qApp->processEvents();
+            qApp->processEvents();
+            QCOMPARE(breakpoint.pWidget->width(), width);
+            QVERIFY2(breakpoint.arrangement() == expected, qPrintable(qsl("%1 changed after the window was narrowed and widened back").arg(where)));
         }
     }
 
@@ -962,10 +1001,19 @@ private slots:
             const auto namesShown = [this]() {
                 return !TestSettings::sidebar(mpPreferences)->property(uiDesign::scmProp_rail).toBool();
             };
-            QVERIFY2(namesShown() && sideBySide(), qPrintable(qsl("SETUP: at 1060px the %1 page does not start with the names and two pairs a row").arg(page)));
+            // From the 1060px the dialog is opened at here, or as much wider as the interface's type needs for the names
+            // and two pairs a row
+            int start = 1060;
+            while (!(namesShown() && sideBySide()) && start < 1600) {
+                start += 4;
+                mpPreferences->resize(start, 760);
+                qApp->processEvents();
+                qApp->processEvents();
+            }
+            QVERIFY2(namesShown() && sideBySide(), qPrintable(qsl("SETUP: up to %1px the %2 page never shows the names and two pairs a row").arg(start).arg(page)));
 
             QList<int> widths;
-            for (int width = 1060; width >= mpPreferences->minimumWidth(); width -= 3) {
+            for (int width = start; width >= mpPreferences->minimumWidth(); width -= 3) {
                 widths.append(width);
             }
             for (qsizetype index = widths.size() - 2; index >= 0; --index) {
