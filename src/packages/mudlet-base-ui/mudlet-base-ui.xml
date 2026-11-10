@@ -643,8 +643,9 @@ local pictureGlyph = "▣"
 
 -- The generic mapper maps nothing until the player has set it up for the game,
 -- so with it the map does not simply appear as they explore
-local function mapPlaceholderText()
-  if table.contains(getPackages(), "generic_mapper") then
+-- sysUninstallPackage arrives while the package is still listed, hence `leaving`
+local function mapPlaceholderText(leaving)
+  if leaving ~= "generic_mapper" and table.contains(getPackages(), "generic_mapper") then
     return "No map yet&lt;br&gt;Type &lt;b&gt;map basics&lt;/b&gt;&lt;br&gt;to start one"
   end
   return "Your map will appear&lt;br&gt;here as you explore"
@@ -2141,6 +2142,16 @@ function BaseUI.standAside(_, packageName)
   end
 end
 
+function BaseUI.refreshMapPlaceholder(packageName, leaving)
+  if packageName == "generic_mapper" and BaseUI.mapPlaceholder then
+    BaseUI.mapPlaceholder:echo(mapPlaceholderText(leaving and packageName), theme.textDim)
+  end
+end
+
+function BaseUI.mapperInstalled(_, packageName)
+  BaseUI.refreshMapPlaceholder(packageName, false)
+end
+
 -- An uninstall of this package and one of the game's own interface arrive on the
 -- same event, so they are told apart here rather than in a handler each.
 function BaseUI.packageRemoved(_, packageName)
@@ -2148,6 +2159,7 @@ function BaseUI.packageRemoved(_, packageName)
     BaseUI.uninstall()
     return
   end
+  BaseUI.refreshMapPlaceholder(packageName, true)
   BaseUI.serverGuiRemoved(nil, packageName)
 end
 
@@ -3395,6 +3407,7 @@ onEvent("AdjustableContainerRepositionFinish", "BaseUI.sectionDropped")
 onEvent("sysWindowResizeEvent", "BaseUI.fitDock")
 onEvent("sysServerGuiInstalled", "BaseUI.standAside")
 onEvent("sysUninstallPackage", "BaseUI.packageRemoved")
+onEvent("sysInstallPackage", "BaseUI.mapperInstalled")
 for _, stat in ipairs(msdpStats) do
   onEvent("msdp." .. stat.current, "BaseUI.updateMsdpVitals")
   onEvent("msdp." .. stat.max, "BaseUI.updateMsdpVitals")

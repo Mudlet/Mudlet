@@ -447,6 +447,27 @@ private slots:
         QVERIFY2(host->mainConsoleView()->buffer.lineBuffer.join(QChar::LineFeed).contains(qsl("quick start guide")), "clicking the placeholder did not show the generic mapper's quick start");
     }
 
+    void test_theMapPlaceholderFollowsTheGenericMapperComingAndGoing()
+    {
+        Host* host = startProfileWithDock();
+        QVERIFY(host);
+        if (!host->mInstalledPackages.contains(qsl("generic_mapper"))) {
+            auto [installed, message] = host->installPackage(qsl(":/packages/generic_mapper/generic_mapper.mpackage"), enums::PackageModuleType::Package, true);
+            QVERIFY2(installed, qPrintable(message));
+        }
+        QVERIFY2(luaTrue(host, qsl("BaseUI.map == nil and BaseUI.mapPlaceholder ~= nil")), "this profile was expected to start with no map data");
+        QVERIFY(runLua(host, qsl("BaseUI.setTheme('ember', true)")));
+        QVERIFY(luaTrue(host, qsl("BaseUI.mapPlaceholder.message:find('map basics', 1, true) ~= nil")));
+
+        QVERIFY(host->uninstallPackage(qsl("generic_mapper"), enums::PackageModuleType::Package, true));
+        QVERIFY2(luaTrue(host, qsl("BaseUI.mapPlaceholder.message:find('map basics', 1, true) == nil")), "the placeholder still names a command whose package was removed");
+
+        auto [installed, message] = host->installPackage(qsl(":/packages/generic_mapper/generic_mapper.mpackage"), enums::PackageModuleType::Package, true);
+        QVERIFY2(installed, qPrintable(message));
+        // install events are raised on the next turn of the event loop
+        QTRY_VERIFY2(luaTrue(host, qsl("BaseUI.mapPlaceholder.message:find('map basics', 1, true) ~= nil")), "the placeholder did not pick up the generic mapper once it was installed");
+    }
+
     // Every floating section is parented to the window rather than to the dock,
     // so hiding the dock leaves them all behind unless each is hidden in its
     // own right.
