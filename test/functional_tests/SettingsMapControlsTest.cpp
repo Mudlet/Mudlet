@@ -52,6 +52,8 @@
 #include "T2DMap.h"
 #include "TMainConsole.h"
 #include "TMap.h"
+#include "TMapView.h"
+#include "TMapViewManager.h"
 #include "TRoomDB.h"
 #include "TelnetServerStub.h"
 #include "dlgMapper.h"
@@ -288,6 +290,43 @@ private slots:
         // each has to be pinned to the size asked for rather than to the other.
         QVERIFY2(qAbs(mpHost->mRoomSize - wanted) < 1.0e-6, qPrintable(qsl("the profile was given a room size of %1 rather than %2").arg(mpHost->mRoomSize).arg(wanted)));
         QVERIFY2(qAbs(p2dMap->rSize - wanted) < 1.0e-6, qPrintable(qsl("the map was given a room size of %1 rather than %2").arg(p2dMap->rSize).arg(wanted)));
+    }
+
+    // An extra map window draws with sizes of its own, so the three size controls must reach it as well as the main mapper
+    void test_theSizeControlsReachAnExtraMapWindow()
+    {
+        if (!mpHost->mpMap->mapper()) {
+            mpHost->showHideOrCreateMapper(true);
+        }
+        TMapViewManager* pManager = mpHost->mpMap->getViewManager();
+        const auto [viewId, message] = pManager->createView(0);
+        const auto closeViews = qScopeGuard([pManager]() {
+            pManager->closeAllViews();
+        });
+        QVERIFY2(pManager->getView(viewId), qPrintable(message));
+        QPointer<T2DMap> pViewMap = pManager->getView(viewId)->get2DMap();
+        QVERIFY(pViewMap);
+
+        QVERIFY2(openPreferences(), "the settings dialog never appeared");
+        const int priorRoom = mpPreferences->spinBox_roomSize->value();
+        const int priorExit = mpPreferences->spinBox_exitSize->value();
+        const int priorBorder = mpPreferences->spinBox_borderSize->value();
+        const auto restore = qScopeGuard([this, priorRoom, priorExit, priorBorder]() {
+            mpPreferences->spinBox_roomSize->setValue(priorRoom);
+            mpPreferences->spinBox_exitSize->setValue(priorExit);
+            mpPreferences->spinBox_borderSize->setValue(priorBorder);
+        });
+
+        const int room = priorRoom == 7 ? 8 : 7;
+        const int exit = priorExit == 3 ? 4 : 3;
+        const int border = priorBorder == 9 ? 10 : 9;
+        // Each is checked on its own: any later change makes the window re-read every size
+        mpPreferences->spinBox_roomSize->setValue(room);
+        QVERIFY2(qAbs(pViewMap->rSize - room / 10.0) < 1.0e-6, qPrintable(qsl("the extra map window kept a room size of %1 rather than %2").arg(pViewMap->rSize).arg(room / 10.0)));
+        mpPreferences->spinBox_exitSize->setValue(exit);
+        QVERIFY2(qAbs(pViewMap->eSize - 50.0 / exit) < 1.0e-6, qPrintable(qsl("the extra map window kept an exit size of %1 rather than %2").arg(pViewMap->eSize).arg(50.0 / exit)));
+        mpPreferences->spinBox_borderSize->setValue(border);
+        QVERIFY2(qAbs(pViewMap->mBSize - 50.0 / border) < 1.0e-6, qPrintable(qsl("the extra map window kept a border size of %1 rather than %2").arg(pViewMap->mBSize).arg(50.0 / border)));
     }
 
     // saveJsonMap() hands a script the reason, so the dialog's own export should not keep it from the player
