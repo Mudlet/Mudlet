@@ -156,7 +156,8 @@ local PACKAGE_FIXTURES = {
 -- with nothing in it; these must arrive from the unmutated file
 local FIXTURE_ITEMS = {
     ["mudlet-spec-buttonskeystimers"] = {
-        { "fuzz timer", "timer" }, { "fuzz key", "keybind" }, { "fuzz push", "button" }, { "fuzz side button", "button" },
+        { "fuzz timer", "timer" }, { "fuzz key", "keybind" }, { "fuzz push", "button" }, { "fuzz menu item", "button" },
+        { "fuzz floating button", "button" }, { "fuzz side button", "button" },
     },
 }
 local BROKEN_ON_PURPOSE = { ["mudlet-spec-brokenscripts"] = true }
