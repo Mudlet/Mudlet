@@ -95,15 +95,21 @@ void TScript::compileAll(bool saveLoadingError)
     }
 }
 
-// A reset closed the Lua state the body ran in, and cleared the event handlers it had registered
-void TScript::markForCompile(const bool registerHandlers)
+// A reset closed the Lua state the body ran in
+void TScript::markForCompile()
 {
     mNeedsToBeCompiled = true;
-    if (registerHandlers) {
-        setEventHandlerList(mEventHandlerList);
-    }
     for (auto* scriptNode : *mpMyChildrenList) {
-        static_cast<TScript*>(scriptNode)->markForCompile(registerHandlers);
+        static_cast<TScript*>(scriptNode)->markForCompile();
+    }
+}
+
+// A reset cleared the event handlers this tree had registered
+void TScript::registerEventHandlers()
+{
+    setEventHandlerList(mEventHandlerList);
+    for (auto* scriptNode : *mpMyChildrenList) {
+        static_cast<TScript*>(scriptNode)->registerEventHandlers();
     }
 }
 

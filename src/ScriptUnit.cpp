@@ -303,15 +303,17 @@ bool ScriptUnit::enableScript(const QString& name)
     // A copy: the bodies compileSwitchedOn() runs can create scripts
     const QMap<int, TScript*> scripts = mScriptMap;
     for (auto script : scripts) {
-        if (script->getName() == name) {
-            script->setIsActive(true);
-            // A body run by an earlier match can uninstall this one's package
-            if (!pendingDeletion(script)) {
-                compileSwitchedOn(script);
-            }
-            found = true;
-            emit mpHost->signal_scriptToggled(script->getID());
+        if (script->getName() != name) {
+            continue;
         }
+        found = true;
+        // A body run by an earlier match can uninstall this one's package, which switches it off
+        if (pendingDeletion(script)) {
+            continue;
+        }
+        script->setIsActive(true);
+        compileSwitchedOn(script);
+        emit mpHost->signal_scriptToggled(script->getID());
     }
     return found;
 }
@@ -385,15 +387,16 @@ void ScriptUnit::compileAll(bool saveLoadingError)
     // Marked up front: TScript::compileAll() only runs the scripts still marked
     if (mpHost->profileResetInProgress()) {
         for (auto script : rootNodes) {
-            script->markForCompile(false);
+            script->markForCompile();
         }
     }
     for (auto script : rootNodes) {
         if (script->isActive()) {
             script->compileAll(saveLoadingError);
         } else if (mpHost->profileResetInProgress()) {
-            // An active script registers its handlers once its body has run, so none is called before then
-            script->markForCompile(true);
+            // An active script registers its handlers once its body has run, so none is called before then.
+            // Not marked again: an earlier body can have set a script in this tree already
+            script->registerEventHandlers();
         }
         mRootsCompiledThisPass.push_back(script);
     }

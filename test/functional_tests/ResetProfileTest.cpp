@@ -766,6 +766,55 @@ private slots:
     delete scriptUnit->getScript(targetId);
   }
 
+  void test_earlierScriptSwitchedOnDuringResetRunsAtOnce() {
+    auto *scriptUnit = mpHost->getScriptUnit();
+    auto [modesId, modesMsg] = mpHost->mLuaInterpreter.createPermScript(
+        qsl("resetEarlierModes"), QString(),
+        qsl("resetEarlierModesRuns = (resetEarlierModesRuns or 0) + 1"));
+    QVERIFY2(modesId > 0, qPrintable(modesMsg));
+    auto [initId, initMsg] = mpHost->mLuaInterpreter.createPermScript(
+        qsl("resetEarlierInit"), QString(),
+        qsl("enableScript('resetEarlierModes') resetEarlierInitSaw = resetEarlierModesRuns or 0"));
+    QVERIFY2(initId > 0, qPrintable(initMsg));
+    scriptUnit->getScript(initId)->setIsActive(true);
+    // The init body's enableScript() switched it on at creation
+    scriptUnit->getScript(modesId)->setIsActive(false);
+
+    performReset();
+
+    QCOMPARE(luaGlobalInt("resetEarlierInitSaw"), 1);
+    QCOMPARE(luaGlobalInt("resetEarlierModesRuns"), 1);
+    delete scriptUnit->getScript(modesId);
+    delete scriptUnit->getScript(initId);
+  }
+
+  void test_scriptSetByAnEarlierBodyDuringResetRunsOnce() {
+    auto *scriptUnit = mpHost->getScriptUnit();
+    // Postponed: the script it sets does not exist yet
+    mpHost->mBlockScriptCompile = true;
+    auto [setterId, setterMsg] = mpHost->mLuaInterpreter.createPermScript(
+        qsl("resetLateSetter"), QString(),
+        qsl("setScript('resetLateChild', 'resetLateChildRuns = (resetLateChildRuns or 0) + 1')"));
+    mpHost->mBlockScriptCompile = false;
+    QVERIFY2(setterId > 0, qPrintable(setterMsg));
+    scriptUnit->getScript(setterId)->setIsActive(true);
+    auto [groupId, groupMsg] = mpHost->mLuaInterpreter.createPermScript(
+        qsl("resetLateGroup"), QString(), QString());
+    QVERIFY2(groupId > 0, qPrintable(groupMsg));
+    auto [childId, childMsg] = mpHost->mLuaInterpreter.createPermScript(
+        qsl("resetLateChild"), qsl("resetLateGroup"), QString());
+    QVERIFY2(childId > 0, qPrintable(childMsg));
+    scriptUnit->getScript(childId)->setIsActive(true);
+
+    performReset();
+
+    QCOMPARE(luaGlobalInt("resetLateChildRuns"), 1);
+    scriptUnit->enableScript(qsl("resetLateGroup"));
+    QCOMPARE(luaGlobalInt("resetLateChildRuns"), 1);
+    delete scriptUnit->getScript(setterId);
+    delete scriptUnit->getScript(groupId);
+  }
+
   void test_scriptSwitchingOnItsOwnGroupLeavesItsSiblingsInOrder() {
     auto [groupId, groupMsg] = mpHost->mLuaInterpreter.createPermScript(
         qsl("resetSiblingOrderGroup"), QString(), QString());
@@ -817,6 +866,8 @@ private slots:
              "the package was not uninstalled");
     QVERIFY2(!luaGlobalIsTrue("resetEnableUninstalledRan"),
              "a script whose package was uninstalled must not run");
+    QVERIFY2(!pPackaged->shouldBeActive(),
+             "a script whose package was uninstalled must stay switched off");
     scriptUnit->doCleanup();
     delete scriptUnit->getScript(uninstallerId);
   }
