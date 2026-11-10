@@ -438,17 +438,22 @@ private slots:
         QCOMPARE(pDlg->checkBox_hidden->checkState(), Qt::PartiallyChecked);
     }
 
-    // Without a buddy label or an accessible name a screen reader reads a field as just "edit"
+    // Without a buddy label or an accessible name a screen reader announces a field by its type alone
     void everyRoomFieldHasAScreenReaderName()
     {
         buildMap();
         auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
 
-        const QList<QWidget*> fields{pDlg->lineEdit_name, pDlg->lineEdit_roomSymbol, pDlg->comboBox_roomSymbol, pDlg->spinBox_weight, pDlg->comboBox_weight, pDlg->spinBox_borderThickness};
+        const QList<QWidget*> fields{pDlg->lineEdit_name, pDlg->lineEdit_roomSymbol, pDlg->spinBox_weight, pDlg->spinBox_borderThickness};
         for (QWidget* pField : fields) {
             QAccessibleInterface* pInterface = QAccessible::queryAccessibleInterface(pField);
             QVERIFY(pInterface);
             QVERIFY2(!pInterface->text(QAccessible::Name).trimmed().isEmpty(), qPrintable(qsl("%1 has no name for a screen reader to announce").arg(pField->objectName())));
+        }
+        // Qt's Unix bridge reports a combo box's current text as its name, so
+        // only the property that Windows and macOS read out can be checked here
+        for (QWidget* pCombo : {static_cast<QWidget*>(pDlg->comboBox_roomSymbol), static_cast<QWidget*>(pDlg->comboBox_weight)}) {
+            QVERIFY2(!pCombo->accessibleName().trimmed().isEmpty(), qPrintable(qsl("%1 has no accessible name").arg(pCombo->objectName())));
         }
     }
 
