@@ -1200,7 +1200,7 @@ describe("Tests the Adjustable.Container mouse handlers", function()
         assert.is_true(math.abs(container:get_x() - originalX) <= 1)
       end)
 
-      -- a single step, so the edge has to stop part way rather than follow the pointer all the way
+      -- one event only: its position is relative to the label, which has not moved yet
       local function dragEdge(grabX, grabY, moveX, moveY)
         container:onClick(container.adjLabel, mouseEvent("LeftButton", grabX, grabY))
         container:onClick(container.adjLabel, mouseEvent("LeftButton", grabX, grabY))
