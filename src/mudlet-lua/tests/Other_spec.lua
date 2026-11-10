@@ -5120,20 +5120,20 @@ describe("Tests one-shot event handlers", function()
     assert.are.equal(1, calls)
   end)
 
-  it("still runs other one-shot handlers for an event one of them raises", function()
+  it("still hands an event a one-shot handler raises to the other handlers", function()
     local first, second = 0, 0
     registerAnonymousEventHandler("otherSpecOneShotPair", function()
       first = first + 1
       raiseEvent("otherSpecOneShotPair")
     end, true)
-    registerAnonymousEventHandler("otherSpecOneShotPair", function()
+    local id = registerAnonymousEventHandler("otherSpecOneShotPair", function()
       second = second + 1
-    end, true)
-    raiseEvent("otherSpecOneShotPair")
+    end)
+    finally(function() killAnonymousEventHandler(id) end)
     raiseEvent("otherSpecOneShotPair")
 
     assert.are.equal(1, first)
-    assert.are.equal(1, second)
+    assert.are.equal(2, second)
   end)
 
   it("hands the event name and arguments to a one-shot handler", function()
