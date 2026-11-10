@@ -659,6 +659,22 @@ private slots:
         QCOMPARE(mudlet::self()->getActiveHost()->getName(), mSecondHostname);
     }
 
+    // The main window's tab stays current while a detached profile is active, so choosing it again emits no change of tab
+    void test_setActiveProfileSwitchesBackFromADetachedProfile()
+    {
+        QVERIFY(mpDetachedWindow);
+        Host* pFirstHost = HostManager::self()->getHost(mFirstHostname);
+        Host* pSecondHost = HostManager::self()->getHost(mSecondHostname);
+        QVERIFY(pFirstHost);
+        QVERIFY(pSecondHost);
+        mudlet::self()->activateProfile(pFirstHost);
+        QVERIFY(pFirstHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(setActiveProfile('%1'))").arg(mSecondHostname)));
+        QCOMPARE(mudlet::self()->getActiveHost(), pSecondHost);
+
+        QVERIFY(pSecondHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(setActiveProfile('%1'))").arg(mFirstHostname)));
+        QCOMPARE(mudlet::self()->getActiveHost(), pFirstHost);
+    }
+
     // The main tab bar's own state stops this for a profile in the main window
     void test_aFocusHandlerAskingForTheSameDetachedSwitchSwitchesOnce()
     {

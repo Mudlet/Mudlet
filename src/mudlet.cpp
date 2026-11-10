@@ -4498,22 +4498,26 @@ int mudlet::profileTabIndex(const QString& profileName) const
 
 bool mudlet::setActiveProfileTab(const QString& profileName)
 {
+    Host* pHost = mHostManager.getHost(profileName);
+    // A focus-change handler asking for this same switch would otherwise raise its event again, without end
+    if (pHost && pHost == mpProfileBeingActivated) {
+        return true;
+    }
+    auto activateOnce = [this, pHost]() {
+        const QPointer<Host> pOuterActivation = mpProfileBeingActivated;
+        mpProfileBeingActivated = pHost;
+        activateProfile(pHost);
+        mpProfileBeingActivated = pOuterActivation;
+    };
+
     // A detached profile's tab is in its own window, not the main tab bar
     if (TDetachedWindow* pDetachedWindow = mDetachedWindows.value(profileName)) {
-        Host* pHost = mHostManager.getHost(profileName);
-        // A focus-change handler asking for this same switch would otherwise raise its event again, without end
-        if (pHost && pHost == mpDetachedProfileBeingActivated) {
-            return true;
-        }
         pDetachedWindow->show();
         pDetachedWindow->raise();
         pDetachedWindow->activateWindow();
         pDetachedWindow->switchToProfile(profileName);
         // The main tab bar's change of tab is what does this for a profile in the main window
-        const QPointer<Host> pOuterActivation = mpDetachedProfileBeingActivated;
-        mpDetachedProfileBeingActivated = pHost;
-        activateProfile(pHost);
-        mpDetachedProfileBeingActivated = pOuterActivation;
+        activateOnce();
         // Queued after activateProfile()'s own hand-off, which could give the keyboard to a user window left in the main window
         QTimer::singleShot(0ms, pDetachedWindow, [pDetachedWindow, pDetachedHost = QPointer<Host>(pHost)]() {
             pDetachedWindow->raise();
@@ -4524,7 +4528,13 @@ bool mudlet::setActiveProfileTab(const QString& profileName)
         });
         return true;
     }
-    mpTabBar->setCurrentIndex(mpTabBar->tabIndex(profileName));
+    const int index = mpTabBar->tabIndex(profileName);
+    // While a detached profile is active the main tab bar keeps its tab current, so selecting that tab again changes nothing
+    if (index >= 0 && index == mpTabBar->currentIndex() && mpCurrentActiveHost && mpTabBar->tabIndex(mpCurrentActiveHost->getName()) < 0) {
+        activateOnce();
+        return true;
+    }
+    mpTabBar->setCurrentIndex(index);
     return true;
 }
 

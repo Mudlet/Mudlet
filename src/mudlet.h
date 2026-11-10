@@ -899,7 +899,7 @@ private:
 
     // Detached windows for profiles
     QMap<QString, QPointer<TDetachedWindow>> mDetachedWindows;
-    QPointer<Host> mpDetachedProfileBeingActivated;
+    QPointer<Host> mpProfileBeingActivated;
     // Every profile in main tab bar order, with each detached one kept behind
     // the tab it followed, so that a reattach can put it back there
     QStringList mMainTabOrder;
