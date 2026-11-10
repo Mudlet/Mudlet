@@ -427,6 +427,38 @@ private slots:
         QVERIFY2(luaTrue(host, qsl("__ui.backX <= 2 and __ui.backY <= 2 and __ui.backW <= 2")), "the mapper did not come back to the top of the dock");
     }
 
+    // A game that offers a map (MMP's Client.Map) can only have it downloaded
+    // from the mapper's own empty state, which the placeholder would cover.
+    void test_aMapTheGameOffersCanBeDownloadedFromTheDock()
+    {
+        Host* host = startProfileWithDock();
+        QVERIFY(host);
+        QVERIFY2(luaTrue(host, qsl("BaseUI.map == nil and BaseUI.mapPlaceholder ~= nil")), "this profile was expected to start with no map data");
+
+        QByteArray offer;
+        offer.append(static_cast<char>(TN_IAC));
+        offer.append(static_cast<char>(TN_SB));
+        offer.append(static_cast<char>(OPT_GMCP));
+        offer.append("Client.Map {\"url\": \"https://example.invalid/game.dat\"}");
+        offer.append(static_cast<char>(TN_IAC));
+        offer.append(static_cast<char>(TN_SE));
+        host->mTelnet.loopbackTest(offer);
+
+        QTRY_VERIFY2_WITH_TIMEOUT(luaQuiet(host, qsl("BaseUI.map ~= nil")), "the game offered a map and the dock kept its placeholder over the mapper", 3000);
+        QVERIFY2(luaTrue(host, qsl("BaseUI.mapPlaceholder.hidden")), "the placeholder is still showing over the mapper");
+        dlgMapper* mapper = host->mainConsoleView() ? host->mainConsoleView()->mpMapper.data() : nullptr;
+        QVERIFY2(mapper, "no mapper widget was created at all");
+        auto* overlay = mapper->findChild<QFrame*>(qsl("emptyStateOverlay"));
+        QVERIFY2(overlay && overlay->isVisible(), "the mapper's empty state is not showing in the dock");
+        QPushButton* downloadButton = nullptr;
+        for (QPushButton* button : overlay->findChildren<QPushButton*>()) {
+            if (button->text() == QCoreApplication::translate("dlgMapper", "Download from game")) {
+                downloadButton = button;
+            }
+        }
+        QVERIFY2(downloadButton && downloadButton->isVisible(), "the dock does not offer the game's map for download");
+    }
+
     // Every floating section is parented to the window rather than to the dock,
     // so hiding the dock leaves them all behind unless each is hidden in its
     // own right.

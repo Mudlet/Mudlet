@@ -2227,6 +2227,19 @@ function BaseUI.mapHasData()
   return roomExists(1) or next(getRooms()) ~= nil
 end
 
+-- MMP: a game that has a map to give says where with Client.Map, and only the
+-- mapper's own empty state has the button that downloads it
+function BaseUI.gameOffersMap()
+  local offers = {}
+  addGmcpNodes({ "client", "map" }, offers)
+  for _, offer in ipairs(offers) do
+    if type(offer.url) == "string" and offer.url ~= "" then
+      return true
+    end
+  end
+  return false
+end
+
 function BaseUI.createMapper()
   BaseUI.map = Geyser.Mapper:new({
     name = "BaseUI_map",
@@ -2236,13 +2249,14 @@ end
 
 -- the embedded mapper shows a clipped "load or create a map" widget while the
 -- profile has no map data, so a placeholder holds its spot until the first
--- room exists (made by a mapping script, a map download or a manual load).
+-- room exists (made by a mapping script, a map download or a manual load), or
+-- until the game offers a map, which only that widget can download.
 -- Cheap to poll: getRooms() stays empty right up until the swap happens.
 function BaseUI.checkMapData(event)
   if not BaseUI.container or BaseUI.map or BaseUI.dormant() then
     return
   end
-  if not BaseUI.mapHasData() then
+  if not BaseUI.mapHasData() and not BaseUI.gameOffersMap() then
     return
   end
   -- a game's Client.GUI package opens or loads the map while it is being installed,
@@ -2346,7 +2360,7 @@ function BaseUI.build()
   paintPictureButton()
   BaseUI.pictureButton:setClickCallback(BaseUI.pictureClicked)
   BaseUI.createSection("map")
-  if BaseUI.mapHasData() then
+  if BaseUI.mapHasData() or BaseUI.gameOffersMap() then
     BaseUI.createMapper()
   else
     BaseUI.mapPlaceholder = Geyser.Label:new({
@@ -3390,6 +3404,8 @@ onEvent("sysMapDownloadEvent", "BaseUI.checkMapData")
 onEvent("sysMapAreaChanged", "BaseUI.checkMapData")
 onEvent("gmcp.Room.Info", "BaseUI.checkMapData")
 onEvent("gmcp.room.info", "BaseUI.checkMapData")
+onEvent("gmcp.Client.Map", "BaseUI.checkMapData")
+onEvent("gmcp.client.map", "BaseUI.checkMapData")
 -- a profile's saved map is loaded after its scripts have run
 onEvent("sysLoadEvent", "BaseUI.checkMapData")
 
