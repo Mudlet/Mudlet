@@ -782,7 +782,7 @@ void TMap::audit()
         }
     }
 
-    // A damaged file can hold a label size the 2D map cannot round to pixels
+    // A damaged file can hold a NaN or infinite label size, which the 2D map cannot round to pixels
     for (auto* pArea : mpRoomDB->getAreaMap()) {
         for (auto& label : pArea->mMapLabels) {
             if (!std::isfinite(label.size.width())) {
