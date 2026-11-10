@@ -3431,7 +3431,9 @@ function map.find_path(roomName,areaName,return_tables)
         end
         return path, dirs
     else
-        if rooms[map.currentRoom] then
+        -- Check the area too, so a same-named room elsewhere never reads as "already in" the one asked for
+        local hereAreaName = rooms[map.currentRoom] and getRoomAreaName(getRoomArea(map.currentRoom))
+        if hereAreaName and (not areaName or string.lower(hereAreaName) == string.lower(areaName)) then
             map.echo("You are already in " .. roomName .. ((areaName and " in " .. areaName) or "") .. ".")
         elseif #dirs &gt; 0 then
             map.echo("Path to " .. roomName .. ((areaName and " in " .. areaName) or "") .. ": " .. table.concat(dirs,", "))
