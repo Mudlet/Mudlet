@@ -1211,6 +1211,16 @@ describe("Tests DB.lua functions", function()
       assert.are.equal(1730615400, db:aggregate(mydb.sheet.seen, "MAX"):as_number())
     end)
 
+    it("aggregates by time across plain epoch numbers and timestamps in one datetime field", function()
+      db:add(mydb.sheet, { seen = db:Timestamp(1720000000), n = 1 })
+      local conn = db.__conn["mydbdstesting"]
+      assert.are.equal(1, conn:execute("INSERT INTO sheet (seen, n) VALUES (1800000000, 2)"))
+      assert.are.equal(1, conn:execute("INSERT INTO sheet (seen, n) VALUES (1600000000, 3)"))
+
+      assert.are.equal(1800000000, db:aggregate(mydb.sheet.seen, "MAX"):as_number())
+      assert.are.equal(1600000000, db:aggregate(mydb.sheet.seen, "MIN"):as_number())
+    end)
+
     it("aggregates to the same epoch as was added", function()
       for n, epoch in ipairs(epochs) do
         db:add(mydb.sheet, { seen = db:Timestamp(epoch), n = n })
