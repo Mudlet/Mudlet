@@ -775,8 +775,8 @@ private slots:
         QVERIFY2(round == fresh, qPrintable(saved(round, qsl("round")) + qsl("; ") + saved(fresh, qsl("round-fresh"))));
     }
 
-    // A grid mode room fills its whole cell, so its symbol is made bigger than a room's elsewhere: switching an area
-    // in or out of grid mode at the same zoom must not reuse the symbols made for the other mode
+    // A grid mode room fills its whole cell, so its symbol is made at a different size: switching an area in or out
+    // of grid mode at the same zoom must not reuse the symbols made for the other mode
     void switchingGridModeRemakesTheSymbols()
     {
         setUpPlayerView();
@@ -790,6 +790,7 @@ private slots:
             TMapPainter freshPainter;
             TMapPainter::PaintResult result;
             paintedView(painter, playerView(), result);
+            QVERIFY2(painter.symbolPixmapCacheCount() > 0, "no symbol was drawn, so the comparison would prove nothing");
             pArea->gridMode = !startInGridMode;
             const QImage switched = paintedView(painter, result.view, result);
             const QImage fresh = paintedView(freshPainter, playerView(), result);
