@@ -49,6 +49,7 @@ public:
 
     void wheelEvent(QWheelEvent* e) override;
     void setViewCenter(int, int, int, int);
+    static float scaleAfterWheel(float scale, int angleDeltaY);
 
     QSize minimumSizeHint() const override;
     QSize sizeHint() const override;
@@ -90,6 +91,7 @@ public:
 
 private:
     bool contextCreationFailed() const;
+    void applyScale();
     void applyBackgroundTranslucency();
     QPointer<Host> mpHost;
     bool is2DView = false;
