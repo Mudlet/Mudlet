@@ -660,7 +660,7 @@ private slots:
     bool offChildReported = false;
     for (int i = 0; i <= buffer.getLastLineNumber(); ++i) {
       reported = reported || buffer.line(i).contains(
-          qsl("failed to run when switched on: \"resetWarnedChild\""));
+          qsl("failed to run when switched on or moved into a switched on group: \"resetWarnedChild\""));
       offChildReported = offChildReported ||
           buffer.line(i).contains(qsl("resetUnwarnedChild"));
     }

@@ -3730,7 +3730,7 @@ void Host::reportScriptsThatFailedToLoad()
 void Host::reportScriptsThatFailedToRun(const QStringList& names)
 {
     //: %1 is the names of the scripts, separated by ", " and each already in its own pair of quotes
-    postMessage(tr("[ WARN ]  - These scripts failed to run when switched on: \"%1\". Open them in the editor to see why.").arg(names.join(qsl("\", \""))));
+    postMessage(tr("[ WARN ]  - These scripts failed to run when switched on or moved into a switched on group: \"%1\". Open them in the editor to see why.").arg(names.join(qsl("\", \""))));
 }
 
 // sanitizePackageName() strips folders and extensions wherever they appear, so a name of nothing else
