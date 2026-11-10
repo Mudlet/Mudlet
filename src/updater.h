@@ -54,7 +54,7 @@ public:
     void checkUpdatesOnStart();
     void manuallyCheckUpdates();
     void showChangelog() const;
-    void showFullChangelog() const;
+    void showFullChangelog();
     void setAutomaticUpdates(bool state);
     bool updateAutomatically() const;
     bool shouldShowChangelog();
@@ -77,6 +77,9 @@ private:
     bool mUpdateInstalled;
     bool mManualCheckInProgress{false};
     bool mRestartInProgress{false};
+    // Held while the Changelog menu entry waits for the feed; only one of the pair ever fires
+    QMetaObject::Connection mChangelogFeedReady;
+    QMetaObject::Connection mChangelogFeedError;
     QSettings* mSettings;
     std::unique_ptr<QTimer> mPeriodicCheck;
 

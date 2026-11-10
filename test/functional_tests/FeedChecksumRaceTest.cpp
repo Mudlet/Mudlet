@@ -520,6 +520,7 @@ private slots:
     void theChangelogDialogFillsInItsOwnLabels();
     void aSupersededDownloadIsFetchedAgain();
     void theChangelogAfterAnUpdateListsWhatTheUpdateBrought();
+    void theChangelogMenuEntryOnlyAnswersItsOwnRequest();
     void aCheckThatFindsNothingWithdrawsTheEarlierOffer();
     void aDownloadedInstallerSurvivesACheckThatFindsNothing();
     void anInstallerTheRunningVersionHasPassedIsNotKept();
@@ -1004,6 +1005,89 @@ void FeedChecksumRaceTest::theChangelogAfterAnUpdateListsWhatTheUpdateBrought()
     QTRY_VERIFY2_WITH_TIMEOUT(
             changelog->toPlainText().contains(installedNotes), qPrintable(qsl("the changelog left out the release the user updated to, it holds \"%1\"").arg(changelog->toPlainText())), waitMs);
     QVERIFY2(!changelog->toPlainText().contains(earlierNotes), qPrintable(qsl("the changelog reached back past the version updated from, it holds \"%1\"").arg(changelog->toPlainText())));
+}
+
+// The Changelog menu entry waits for the feed when it has not loaded - every first use on macOS,
+// where Sparkle does the checking - and let go of only the answer that came. The other then
+// answered a later update check with a changelog or an error box nobody had asked for, and
+// asking twice while the feed loaded opened two changelogs behind two error boxes.
+void FeedChecksumRaceTest::theChangelogMenuEntryOnlyAnswersItsOwnRequest()
+{
+    UpdateHarness harness;
+    QVERIFY2(harness.start(), "the stub update server needs TLS support and a free loopback port");
+    harness.server().setFeedBody(stubReleasesJson(harness.assetBaseUrl(), 1024));
+
+    QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    const QWidgetList widgetsBeforeUpdater = QApplication::topLevelWidgets();
+    QList<QPointer<QWidget>> updaterWidgets;
+    // Runs after ~Updater, as the unparented "Update" button its constructor makes needs
+    const auto destroyUpdaterWidgets = qScopeGuard([&updaterWidgets]() {
+        for (const auto& widget : updaterWidgets) {
+            delete widget.data();
+        }
+    });
+
+    Updater updater(nullptr, &harness.settings());
+    for (auto* widget : QApplication::topLevelWidgets()) {
+        if (!widgetsBeforeUpdater.contains(widget)) {
+            updaterWidgets.append(widget);
+        }
+    }
+    auto* feed = updater.findChild<dblsqd::Feed*>();
+    QVERIFY2(feed, "the Updater no longer parents its Feed to itself, so this test cannot reach it");
+    const auto openChangelogs = [&widgetsBeforeUpdater]() {
+        QList<dblsqd::UpdateDialog*> dialogs;
+        for (auto* widget : QApplication::topLevelWidgets()) {
+            if (auto* dialog = qobject_cast<dblsqd::UpdateDialog*>(widget); dialog && !widgetsBeforeUpdater.contains(widget)) {
+                dialogs << dialog;
+            }
+        }
+        return dialogs;
+    };
+    // Runs before ~Updater, which takes the Feed the dialogs listen to with it
+    const auto closeChangelogs = qScopeGuard([&openChangelogs]() {
+        qDeleteAll(openChangelogs());
+    });
+
+    QSignalSpy feedReady(feed, &dblsqd::Feed::ready);
+    QSignalSpy feedError(feed, &dblsqd::Feed::loadError);
+
+    updater.showFullChangelog();
+    updater.showFullChangelog();
+    QVERIFY2(feedReady.wait(waitMs), qPrintable(qsl("the feed the changelog waits for never loaded. The user was told: %1").arg(whatTheDialogWasTold())));
+    QVERIFY2(mModalBoxes.texts().isEmpty(), qPrintable(qsl("asking for the changelog twice while the feed loaded raised: %1").arg(whatTheDialogWasTold())));
+    QCOMPARE(openChangelogs().size(), 1);
+
+    // Hours later the twice-daily check fails
+    harness.server().setFeedBody("not json");
+    feed->load();
+    QVERIFY2(feedError.wait(waitMs), "the stub's broken feed did not fail to load, so the assertion below would test nothing");
+    QVERIFY2(mModalBoxes.texts().isEmpty(), qPrintable(qsl("a failed update check long after the changelog opened raised: %1").arg(whatTheDialogWasTold())));
+
+    // And the other way round: the changelog cannot load, and a later check succeeds
+    qDeleteAll(openChangelogs());
+    feedError.clear();
+    updater.showFullChangelog();
+    QVERIFY2(feedError.wait(waitMs), "the stub's broken feed did not fail to load for the changelog");
+    QCOMPARE(mModalBoxes.texts().size(), 1);
+    mModalBoxes.clear();
+
+    harness.server().setFeedBody(stubReleasesJson(harness.assetBaseUrl(), 1024));
+    feedReady.clear();
+    feed->load();
+    QVERIFY2(feedReady.wait(waitMs), "the repaired feed never loaded, so the assertion below would test nothing");
+    QVERIFY2(openChangelogs().isEmpty(), "a successful update check opened the changelog that had failed to load earlier");
+    QVERIFY2(mModalBoxes.texts().isEmpty(), qPrintable(qsl("a successful update check raised: %1").arg(whatTheDialogWasTold())));
+
+    // Asked for while an update check is loading the feed, and again checked while it waits:
+    // Feed::load() refuses a second load with an error, but the running one still answers
+    feedReady.clear();
+    feed->load();
+    updater.showFullChangelog();
+    feed->load();
+    QVERIFY2(feedReady.wait(waitMs), "the update check the changelog joined never finished");
+    QVERIFY2(mModalBoxes.texts().isEmpty(), qPrintable(qsl("asking for the changelog during an update check raised: %1").arg(whatTheDialogWasTold())));
+    QCOMPARE(openChangelogs().size(), 1);
 }
 
 // The dialog decides whether there is an update to show from the release the
