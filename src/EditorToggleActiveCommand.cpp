@@ -109,6 +109,9 @@ void EditorToggleActiveCommand::setItemActiveState(int itemID, bool active)
         TScript* pS = mpHost->getScriptUnit()->getScript(itemID);
         if (pS) {
             pS->setIsActive(active);
+            if (pS->isActive()) {
+                mpHost->getScriptUnit()->compileSwitchedOn(pS);
+            }
         } else {
             qWarning() << "EditorToggleActiveCommand::setItemActiveState() - Script" << itemID << "not found";
         }
