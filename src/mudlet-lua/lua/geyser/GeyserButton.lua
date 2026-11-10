@@ -14,8 +14,8 @@
 -- @field downMsg The text to put on the button in the 'down' state.
 -- @field tooltip The text to show when the button is hovered over. For two state buttons will be used for the 'up' tooltip
 -- @field downTooltip The text to show when the button is hovered over while in the 'down' state.
--- @field downCommand The command to send when the two state button is clicked while in the 'down' state. 'downFunction' is also valid and optional function to run when the two state button is clicked while in the 'down' state.
--- @field clickCommand The command to send when the button is clicked. For two state buttons, used when clicking in the 'up' state. Will be skipped if 'clickFunction' is defined.  'clickFunction' is also valid and optional function to run when button clicked. For two state buttons, used when clicking in the 'up' state. If defined takes precedence over clickCommand.
+-- @field downCommand The command to send when the two state button is clicked while in the 'down' state. 'downFunction' is also valid and optional function, or Lua code as a string, to run when the two state button is clicked while in the 'down' state.
+-- @field clickCommand The command to send when the button is clicked. For two state buttons, used when clicking in the 'up' state. Will be skipped if 'clickFunction' is defined.  'clickFunction' is also valid and optional function, or Lua code as a string, to run when button clicked. For two state buttons, used when clicking in the 'up' state. If defined takes precedence over clickCommand.
 -- @field twoState If true, the button will be treated as a two state button, with 'up' and 'down' states.
 -- @field state 'up' or 'down' depending on button state for two state buttons. Will always be 'up' if a single state button.
 -- @field toolTipDuration The amount of time for the tooltip to show. Used for both 'up' and 'down' states.
