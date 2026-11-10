@@ -3820,6 +3820,16 @@ describe("Tests the functionality of packageDrop", function()
     assert.is_true(containsWrapped(text, "Installing '" .. path .. "' failed:"), text)
   end)
 
+  it("ignores a drop whose suffix is not a string, as it always did", function()
+    local mark = getLastLineNumber("main")
+
+    assert.has_no.errors(function()
+      packageDrop("sysDropEvent", fixtureDirectory .. "/mudlet-spec-there-is-no-such-drop.mpackage", 5)
+    end)
+
+    assert.are.equal(mark, getLastLineNumber("main"))
+  end)
+
   it("ignores a file whose type Mudlet does not install", function()
     assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
     local mark = getLastLineNumber("main")
@@ -3895,6 +3905,7 @@ describe("Tests the functionality of packageUrlDrop", function()
       "https://127.0.0.1:1/mudlet-spec-query.mpackage?raw=true",
       "https://127.0.0.1:1/mudlet-spec-fragment.zip#readme",
       "https://127.0.0.1:1/mudlet-spec-both.xml?dl=1#top",
+      "https://127.0.0.1:1/mudlet-spec-versioned.mpackage?v=1.2.3",
     }
 
     for _, url in ipairs(urls) do
@@ -3905,11 +3916,12 @@ describe("Tests the functionality of packageUrlDrop", function()
       {destination = getMudletHomeDir() .. "/mudlet-spec-query.mpackage", url = urls[1]},
       {destination = getMudletHomeDir() .. "/mudlet-spec-fragment.zip", url = urls[2]},
       {destination = getMudletHomeDir() .. "/mudlet-spec-both.xml", url = urls[3]},
+      {destination = getMudletHomeDir() .. "/mudlet-spec-versioned.mpackage", url = urls[4]},
     }, asked)
   end)
 
   it("still hands a URL with no file name in it to the plain installer", function()
-    -- the host's dots must not be taken for the file name's once the query is cut off
+    -- a guard: this already held before query strings were cut off
     local asked = recordDownloads()
 
     local ok, reason = installPackage("http://127.0.0.1:1/mudlet-spec-download?id=5")

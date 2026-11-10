@@ -1395,7 +1395,7 @@ local acceptableSuffix = {"xml", "mpackage", "zip", "trigger"}
 
 -- the installer itself takes these in any case, as in a file called PACKAGE.MPACKAGE
 local function packageSuffix(suffix)
-  return suffix ~= nil and table.contains(acceptableSuffix, suffix:lower())
+  return type(suffix) == "string" and table.contains(acceptableSuffix, suffix:lower())
 end
 
 -- the file name installPackage() downloads a package URL under, or nil when target is not one
