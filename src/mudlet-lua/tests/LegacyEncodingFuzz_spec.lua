@@ -5,9 +5,9 @@
 -- character can arrive as a lead byte at the end of one read and its trail
 -- bytes at the start of the next. Each round sets one encoding, then feeds
 -- the same random lines - valid characters, lone and truncated leads, invalid
--- trail bytes, GB18030 four byte and EUC-JP three byte forms, mixed with
--- ASCII, controls and SGR colours - once as one read and once in reads of one
--- to seven bytes, and requires the same text and getTextFormat() for every
+-- trail bytes, GB18030 and UTF-8 four byte and EUC-JP three byte forms, mixed
+-- with ASCII, controls and SGR colours - once as one read and once in reads of
+-- one to seven bytes, and requires the same text and getTextFormat() for every
 -- character from both.
 --
 -- Run against a sanitizer build, as with the other fuzzers.
@@ -55,7 +55,7 @@ local encodings = {
   {name = "SHIFT_JIS", lead = {0x81, 0xFC}, trail = {0x40, 0xFC}, single = {0xA1, 0xDF}},
   {name = "EUC-JP", lead = {0xA1, 0xFE}, trail = {0xA1, 0xFE}, single = {0x8E, 0x8E}, three = 0x8F},
   {name = "EUC-KR", lead = {0xA1, 0xFE}, trail = {0xA1, 0xFE}},
-  {name = "UTF-8", lead = {0xC2, 0xF4}, trail = {0x80, 0xBF}},
+  {name = "UTF-8", lead = {0xC2, 0xF4}, trail = {0x80, 0xBF}, fourLead = {0xF0, 0xF4}},
 }
 
 -- the encoding the batch being made is in
@@ -94,6 +94,11 @@ local function segment(encoding)
     if encoding.four then
       -- a four byte GB18030 form, or one cut short
       local bytes = inRange({0x81, 0xFE}) .. char(rrange(0x30, 0x39)) .. inRange({0x81, 0xFE}) .. char(rrange(0x30, 0x39))
+      return bytes:sub(1, rrange(2, 4))
+    end
+    if encoding.fourLead and rnd(2) == 0 then
+      -- a four byte UTF-8 character, outside the BMP when valid, or one cut short
+      local bytes = inRange(encoding.fourLead) .. inRange(encoding.trail) .. inRange(encoding.trail) .. inRange(encoding.trail)
       return bytes:sub(1, rrange(2, 4))
     end
     if encoding.three then
