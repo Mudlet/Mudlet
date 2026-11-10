@@ -1577,6 +1577,7 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.is_nil(ok)
       assert.are.equal("roomID " .. a .. " already has an exit in direction 'east', so it cannot have a stub there too", err)
       assert.are.same({}, getExitStubs1(a))
+      assert.is_true(setExitStub(a, "east", false))
       deleteRoom(a); deleteRoom(b)
     end)
 

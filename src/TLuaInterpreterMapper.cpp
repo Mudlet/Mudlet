@@ -4074,10 +4074,12 @@ int TLuaInterpreter::setExitStub(lua_State* L)
         lua_pushstring(L, "setExitStub: direction must be between 1 and 12");
         return lua_error(L);
     }
-    if (status && pR->hasExit(dir)) {
+    const bool refused = status && pR->hasExit(dir);
+    // Called even when refused, as it reports the refusal in the Errors console
+    pR->setExitStub(dir, status);
+    if (refused) {
         return warnArgumentValue(L, __func__, qsl("roomID %1 already has an exit in direction '%2', so it cannot have a stub there too").arg(QString::number(roomId), TRoom::dirCodeToString(dir)));
     }
-    pR->setExitStub(dir, status);
     host.mpMap->updateArea(pR->getArea());
     lua_pushboolean(L, true);
     return 1;

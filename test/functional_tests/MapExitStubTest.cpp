@@ -325,6 +325,32 @@ private slots:
                                      .arg(QString::number(reach, 'f', 1), QString::number(offAxis, 'f', 1), QString::number(halfCell, 'f', 1), saveFrame(frame, frameTag))));
         }
     }
+
+    // Why not a spec: the Errors console is not readable from Lua
+    void test_aRefusedStubIsReportedInTheErrorsConsole()
+    {
+        QSignalSpy printed(mpHost, &Host::signal_errorConsolePrint);
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl(R"(
+            local area = addAreaName("refusedStubArea")
+            local a = createRoomID()
+            addRoom(a)
+            setRoomArea(a, area)
+            local b = createRoomID()
+            addRoom(b)
+            setRoomArea(b, area)
+            setExit(a, b, "east")
+            setExitStub(a, "east", true)
+            deleteRoom(a)
+            deleteRoom(b)
+            deleteArea(area)
+        )")));
+
+        bool reported = false;
+        for (const auto& arguments : printed) {
+            reported = reported || arguments.at(0).toString().contains(qsl("Cannot set exit stub"));
+        }
+        QVERIFY2(reported, "a stub refused because an exit is there printed nothing in the Errors console");
+    }
 };
 
 #include "MapExitStubTest.moc"
