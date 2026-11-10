@@ -1066,7 +1066,8 @@ do
   local highestHandlerId = 0
   -- Helps us finding the right event handler from an ID.
   local handlerIdsToHandlers = {}
-  -- about how deep a one-shot handler could once nest by raising the event it handles
+  -- events a one-shot handler may go on raising for itself after its first call, before it is
+  -- taken to be feeding itself for ever
   local maxDeferredEvents = 200
 
   -- C function that gets overwritten.
@@ -1135,6 +1136,17 @@ do
         -- an event it raises itself waits until it has said whether to stay, so one that goes
         -- runs once and one that stays still sees it
         if running then
+          -- but C++ reads a send request's deny as soon as the event returns
+          if ... == "sysDataSendRequest" then
+            local ok, keepEvaluating = pcall(origFunc, ...)
+            if not (ok and keepEvaluating) then
+              killAnonymousEventHandler(eventHandlerId)
+            end
+            if not ok then
+              error(keepEvaluating, 0)
+            end
+            return
+          end
           deferred[#deferred + 1] = {n = select("#", ...), ...}
           return
         end
@@ -1142,10 +1154,10 @@ do
         -- a handler that errors never asked to stay, so it goes like one that returned nothing
         local ok, keepEvaluating = pcall(origFunc, ...)
         local failed, failure = not ok, keepEvaluating
-        local nextEvent, deferredFailure = 1, nil
+        local nextEvent, failedEvent = 1, nil
+        local lastEvent = #deferred + maxDeferredEvents
         while ok and keepEvaluating and deferred[nextEvent] and handlerIdsToHandlers[eventHandlerId] do
-          -- one that raises an event for every one it handles would otherwise never be done
-          if nextEvent > maxDeferredEvents then
+          if nextEvent > lastEvent then
             ok, failed = false, true
             failure = string.format("registerAnonymousEventHandler: one-shot handler for '%s' removed as it kept raising events it handles", event)
             break
@@ -1154,7 +1166,7 @@ do
           nextEvent = nextEvent + 1
           ok, keepEvaluating = pcall(origFunc, unpack(args, 1, args.n))
           if not ok then
-            deferredFailure = args
+            failedEvent = args[1]
           end
         end
         deferred = {}
@@ -1162,9 +1174,9 @@ do
         if not (ok and keepEvaluating) then
           killAnonymousEventHandler(eventHandlerId)
         end
-        -- reported only once cleaned up, as showHandlerError raises on an error that is not a string
-        if deferredFailure then
-          showHandlerError(deferredFailure[1], tostring(keepEvaluating))
+        -- tostring, as showHandlerError raises on a table; reported last so that cannot skip the cleanup
+        if failedEvent then
+          showHandlerError(failedEvent, tostring(keepEvaluating))
         end
         if failed then
           error(failure, 0)

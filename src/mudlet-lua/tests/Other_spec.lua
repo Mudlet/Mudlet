@@ -4944,6 +4944,7 @@ describe("Tests one-shot event handlers", function()
       seen[#seen + 1] = label
       if label == "outer" then
         raiseEvent("otherSpecOneShotReentrantKeep", "nested")
+        raiseEvent("otherSpecOneShotReentrantKeep", "nested again")
         seen[#seen + 1] = "outer done"
       end
       return true
@@ -4952,7 +4953,7 @@ describe("Tests one-shot event handlers", function()
     raiseEvent("otherSpecOneShotReentrantKeep", "later")
     local stillThere = killAnonymousEventHandler(id)
 
-    assert.are.same({"outer", "outer done", "nested", "later"}, seen)
+    assert.are.same({"outer", "outer done", "nested", "nested again", "later"}, seen)
     assert.is_true(stillThere)
   end)
 
@@ -4980,7 +4981,10 @@ describe("Tests one-shot event handlers", function()
     local calls = 0
     local id = registerAnonymousEventHandler("otherSpecOneShotSelfFeeding", function()
       calls = calls + 1
-      raiseEvent("otherSpecOneShotSelfFeeding")
+      -- a bound of its own, so a missing limit fails this spec instead of hanging the run
+      if calls < 1000 then
+        raiseEvent("otherSpecOneShotSelfFeeding")
+      end
       return true
     end, true)
     raiseEvent("otherSpecOneShotSelfFeeding")
@@ -4991,6 +4995,25 @@ describe("Tests one-shot event handlers", function()
     assert.are.equal(1, #reported)
     assert.are.equal("otherSpecOneShotSelfFeeding", reported[1][1])
     assert.truthy(tostring(reported[1][2]):find("kept raising events it handles", 1, true))
+  end)
+
+  it("keeps a one-shot handler that returns true and raises many events it handles in one go", function()
+    local calls = 0
+    local id = registerAnonymousEventHandler("otherSpecOneShotBulk", function(_, label)
+      calls = calls + 1
+      if label == "start" then
+        for _ = 1, 300 do
+          raiseEvent("otherSpecOneShotBulk", "item")
+        end
+      end
+      return true
+    end, true)
+    raiseEvent("otherSpecOneShotBulk", "start")
+    local stillThere = killAnonymousEventHandler(id)
+
+    assert.are.equal(301, calls)
+    assert.is_true(stillThere)
+    assert.are.equal(0, #reported)
   end)
 
   it("reports an error from an event a one-shot handler raised under that event", function()

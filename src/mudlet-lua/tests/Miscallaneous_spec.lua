@@ -2941,6 +2941,23 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_true(sentSince(mark, "mudletSpecOuterAllowed"), "the nested send's deny stopped the command being handled")
       end)
 
+      it("keeps the deny of a send made by a one-shot handler that stays to that send", function()
+        local handler = registerAnonymousEventHandler("sysDataSendRequest", function(_, sending)
+          if sending:find("^mudletSpecOneShotNestedDenied") then
+            denyCurrentSend()
+          elseif sending:find("^mudletSpecOneShotOuterAllowed") then
+            send("mudletSpecOneShotNestedDenied" .. unencodable, false)
+          end
+          return true
+        end, true)
+        finally(function() killAnonymousEventHandler(handler) end)
+
+        local mark = getLastLineNumber("main")
+        send("mudletSpecOneShotOuterAllowed" .. unencodable, false)
+        assert.is_false(sentSince(mark, "mudletSpecOneShotNestedDenied"), "the nested send was sent although its handler denied it")
+        assert.is_true(sentSince(mark, "mudletSpecOneShotOuterAllowed"), "the nested send's deny stopped the command being handled")
+      end)
+
       describe("outside a send request handler", function()
         it("does not stop the next command", function()
           denyCurrentSend()
