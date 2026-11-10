@@ -3009,10 +3009,12 @@ void TConsole::raiseMudletResizeEvent()
     // and event for the hiding one the two successive showing ones will
     // still get to here - so we also need to check that there HAS been an
     // actual change in the dimensions - and abort if there hasn't:
-    if (mDimensions == characterDimensions) {
+    const int timeStampWidth = showTimeStamps() ? TBuffer::smTimeStampFormat.size() : 0;
+    if (mDimensions == characterDimensions && mReportedTimeStampWidth == timeStampWidth) {
         return;
     }
     mDimensions = characterDimensions;
+    mReportedTimeStampWidth = timeStampWidth;
 
     TEvent mudletEvent{};
     mudletEvent.mArgumentList.append(qsl("sysConsoleSizeChanged"));
@@ -3023,7 +3025,7 @@ void TConsole::raiseMudletResizeEvent()
     mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
     mudletEvent.mArgumentList.append(QString::number(characterDimensions.height()));
     mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    mudletEvent.mArgumentList.append(QString::number(showTimeStamps() ? TBuffer::smTimeStampFormat.size() : 0));
+    mudletEvent.mArgumentList.append(QString::number(timeStampWidth));
     mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
     mpHost->raiseEvent(mudletEvent);
 }

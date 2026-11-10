@@ -1,7 +1,7 @@
--- sysConsoleSizeChanged names a console and its columns and rows, but only
--- once its pane has been resized to a grid it has not reported yet: a font
--- change alone reports nothing, and a pane resized while hidden reports as it
--- shows. With no main window the null view keeps the same rules.
+-- sysConsoleSizeChanged names a console, its columns and rows and the columns
+-- its timestamps take, but only once one of those differs from its last
+-- report: a font change alone reports nothing, and a pane resized while hidden
+-- reports as it shows. With no main window the null view keeps the same rules.
 describe("Tests sysConsoleSizeChanged for a mini console", function()
   local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
   local reports, handler
@@ -49,6 +49,20 @@ describe("Tests sysConsoleSizeChanged for a mini console", function()
     assert.is_true(getRowCount(name) < rows)
     assert.is_true(resizeWindow(name, 300, 200))
     assert.are.same({}, reports)
+  end)
+
+  it("reports the columns its timestamps take as they are turned on and off", function()
+    local name = made("specSizeTimeStamps")
+    finally(function() deleteMiniConsole(name) end)
+    reports = {}
+    local gutter = #"hh:mm:ss.zzz "
+
+    assert.is_true(enableTimeStamps(name))
+    local shown = grid(name)
+    shown[4] = gutter
+    assert.are.same({shown}, reports)
+    assert.is_true(disableTimeStamps(name))
+    assert.are.same({shown, grid(name)}, reports)
   end)
 
   it("reports a resize made while it was hidden once it shows", function()

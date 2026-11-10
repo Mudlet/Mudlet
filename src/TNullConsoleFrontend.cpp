@@ -1236,10 +1236,12 @@ void TNullConsoleFrontend::reportConsoleSize(const QString& name)
     }
     const TConsoleModel& model = *it->second.pModel;
     const QSize grid = model.mGridSize;
-    if (!grid.width() || grid == it->second.reportedGrid) {
+    const int timeStampWidth = model.mShowTimeStamps ? TBuffer::smTimeStampFormat.size() : 0;
+    if (!grid.width() || (grid == it->second.reportedGrid && timeStampWidth == it->second.reportedTimeStampWidth)) {
         return;
     }
     it->second.reportedGrid = grid;
+    it->second.reportedTimeStampWidth = timeStampWidth;
     TEvent event{};
     event.mArgumentList.append(qsl("sysConsoleSizeChanged"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
@@ -1249,7 +1251,7 @@ void TNullConsoleFrontend::reportConsoleSize(const QString& name)
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
     event.mArgumentList.append(QString::number(grid.height()));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    event.mArgumentList.append(QString::number(model.mShowTimeStamps ? TBuffer::smTimeStampFormat.size() : 0));
+    event.mArgumentList.append(QString::number(timeStampWidth));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
     mpHost->raiseEvent(event);
 }
