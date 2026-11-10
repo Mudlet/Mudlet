@@ -205,25 +205,30 @@ private slots:
     {
         buildSelection();
 
+        bool okEnabledWhileOthersUnreadable = true;
         bool okEnabled = false;
         runDialog([&](const QList<QLineEdit*>& edits, QPushButton* ok) {
-            // A corrected typo has to give OK back
+            // A corrected typo has to give OK back, but only once no field is left unreadable
             for (auto* edit : edits) {
                 edit->setText(qsl("abc"));
             }
             edits.at(0)->setText(qsl("-10"));
             edits.at(1)->setText(qsl("20"));
-            edits.at(2)->setText(qsl("7"));
+            okEnabledWhileOthersUnreadable = ok->isEnabled();
+            edits.at(2)->setText(qsl("-3"));
             okEnabled = ok->isEnabled();
             ok->click();
         });
 
+        QVERIFY2(!okEnabledWhileOthersUnreadable, "OK came back while z was still unreadable");
         QVERIFY(okEnabled);
         const int centre = mp2dMap->getCenterSelectedRoomId();
         QVERIFY(centre == scmRoomA || centre == scmRoomB);
         const int dx = -10 - (centre == scmRoomA ? 5 : 8);
         QCOMPARE(roomPosition(scmRoomA), QPoint(5 + dx, 20));
         QCOMPARE(roomPosition(scmRoomB), QPoint(8 + dx, 20));
+        QCOMPARE(roomDB()->getRoom(scmRoomA)->z(), -3);
+        QCOMPARE(roomDB()->getRoom(scmRoomB)->z(), -3);
     }
 };
 
