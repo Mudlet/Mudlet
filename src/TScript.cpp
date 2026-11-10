@@ -145,7 +145,7 @@ bool TScript::compileScript(bool saveLoadingError)
     // this profile's scripts: the top-level Lua body run below (the lua_pcall inside
     // TLuaInterpreter::compile()) can uninstall its own package - a common package
     // auto-updater pattern - and freeing this script mid-compile, or writing to it
-    // after compile() returns (see mNeedsToBeCompiled/mOK_code below and in
+    // after compile() returns (see mOK_code below and mNeedsToBeCompiled in
     // setScript()), is a use-after-free. See ScriptUnit::mProcessingDepth.
     ScriptUnit* pUnit = mpHost->getScriptUnit();
     pUnit->beginProcessing();
