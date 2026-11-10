@@ -63,6 +63,7 @@ public:
     bool readPackageRepositoryFile();
     void resetPackageList();
     QString removePackages(const QStringList& packageNames);
+    QString installPackageFiles(const QStringList& fileNames);
 
 signals:
     void packageManagerClosing(const QString& profileName);

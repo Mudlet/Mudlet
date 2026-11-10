@@ -678,25 +678,32 @@ void dlgPackageManager::slot_installPackageFromFile()
     lastDir = QFileInfo(fileNames.first()).absolutePath();
     settings.setValue(qsl("lastFileDialogLocation"), lastDir);
 
-    QStringList failedPackages;
-
-    for (const QString& fileName : fileNames) {
-        if (mpHost->installPackage(fileName, enums::PackageModuleType::Package).first) {
-            mpHost->waitForProfileSave();
-        } else {
-            const QString baseName = QFileInfo(fileName).fileName();
-            failedPackages << baseName;
-            qWarning() << "dlgPackageManager::slot_installPackageFromFile() ERROR - failed to import" << baseName;
-        }
-    }
-
+    const QString failures = installPackageFiles(fileNames);
     resetPackageList();
     comeBackToFront();
 
-    if (!failedPackages.isEmpty()) {
-        //: Package manager - status message shown when some packages failed to import. %1 is a comma-separated list of package names
-        showImportStatus(tr("Failed to import: %1").arg(failedPackages.join(qsl(", "))));
+    if (!failures.isEmpty()) {
+        showImportStatus(failures);
     }
+}
+
+// Returns the notice naming each file that failed and why, empty if none. The reason
+// otherwise goes only to the main console, behind this window.
+QString dlgPackageManager::installPackageFiles(const QStringList& fileNames)
+{
+    QStringList failures;
+    for (const QString& fileName : fileNames) {
+        // Mid-save, installPackage() answers yes and tries later, leaving no reason to report
+        mpHost->waitForProfileSave();
+        const auto [installed, reason] = mpHost->installPackage(fileName, enums::PackageModuleType::Package);
+        if (installed) {
+            continue;
+        }
+        //: Package manager - one line of the notice listing packages that failed to import. %1 is the file name, %2 the reason it was refused
+        failures << tr("Failed to import %1: %2").arg(QFileInfo(fileName).fileName(), reason).toHtmlEscaped();
+    }
+    // The notice shows rich text
+    return failures.join(qsl("<br>"));
 }
 
 void dlgPackageManager::slot_installPackageFromRepository()

@@ -289,6 +289,41 @@ private slots:
         delete manager;
     }
 
+    // An import asked for while the profile is saving still says why it failed,
+    // not just in the console behind this window once the save is over
+    void test_aFailedImportDuringASaveSaysWhy()
+    {
+        auto* host = startProfile();
+        QVERIFY2(host, "Could not start the profile");
+
+        auto* manager = new dlgModuleManager(nullptr, host);
+        host->saveProfile();
+        QVERIFY2(host->currentlySavingProfile(), "SETUP: the save had already finished, so the import would not have been put off");
+        const QString msg = manager->installModuleFiles(QStringList({qsl("%1/no-such-module.xml").arg(mConfigDir.path())}));
+        host->waitForProfileSave();
+        delete manager;
+
+        QVERIFY2(msg.contains(qsl("could not open file")), qPrintable(qsl("The notice did not say why the file was refused: %1").arg(msg)));
+    }
+
+    // The reason a file was refused otherwise goes only to the main console, behind the dialog
+    void test_aFailedImportSaysWhy()
+    {
+        auto* host = startProfile();
+        QVERIFY2(host, "Could not start the profile");
+
+        auto* manager = new dlgModuleManager(nullptr, host);
+        const QString msg = manager->installModuleFiles(QStringList({qsl("%1/no-such-module.xml").arg(mConfigDir.path()), qsl("%1/also-missing.xml").arg(mConfigDir.path())}));
+        delete manager;
+
+        // The reason repeats the path, so check the name where the line leads with it
+        QVERIFY2(msg.contains(qsl("Failed to import also-missing.xml: ")), qPrintable(qsl("The second refused file was not named: %1").arg(msg)));
+        QVERIFY2(msg.count(QLatin1Char('\n')) == 1, qPrintable(qsl("The two refusals are not on lines of their own: %1").arg(msg)));
+
+        QVERIFY2(msg.contains(qsl("Failed to import no-such-module.xml: ")), qPrintable(qsl("The refused file was not named: %1").arg(msg)));
+        QVERIFY2(msg.contains(qsl("could not open file")), qPrintable(qsl("The notice did not say why the file was refused: %1").arg(msg)));
+    }
+
     // Refusals are gathered into one message: a single module is named on its
     // own, several are listed together
     void test_refusedRemovalsAreReportedTogether()
