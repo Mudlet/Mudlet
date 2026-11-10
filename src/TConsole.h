@@ -367,6 +367,8 @@ private:
     // The size of the TConsole in (normal) "character" cells:
     QSize mDimensions;
     int mReportedTimeStampWidth = 0;
+    // Only a toggle reports on show: a font change, which reports nothing, would otherwise go out then
+    bool mTimeStampReportPending = false;
     // mpMainFrame's palette cannot hold this - it is rebuilt from scratch on every colour change
     QColor& mBorderColor;
     // latches the 'cover' scale failure so a resize drag does not repeat the warning

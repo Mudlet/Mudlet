@@ -51,6 +51,19 @@ describe("Tests sysConsoleSizeChanged for a mini console", function()
     assert.are.same({}, reports)
   end)
 
+  it("reports nothing for a font change when it is hidden and shown again", function()
+    local name = made("specSizeFontShow")
+    finally(function() deleteMiniConsole(name) end)
+    reports = {}
+    local rows = getRowCount(name)
+
+    assert.is_true(setFontSize(name, getFontSize(name) + 6))
+    assert.is_true(getRowCount(name) < rows)
+    hideWindow(name)
+    showWindow(name)
+    assert.are.same({}, reports)
+  end)
+
   it("reports the columns its timestamps take as they are turned on and off", function()
     local name = made("specSizeTimeStamps")
     finally(function() deleteMiniConsole(name) end)
