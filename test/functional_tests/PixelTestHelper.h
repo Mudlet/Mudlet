@@ -20,7 +20,6 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <chrono>
 #include <cstdlib>
 
 #include <QColor>
@@ -33,7 +32,6 @@
 #include <QString>
 #include <QTreeWidgetItem>
 #include <QWidget>
-#include <QtTest/QTest>
 
 #include "enums.h"
 #include "mudlet.h"
@@ -43,10 +41,6 @@
 // CMakeLists.txt does not list. Nothing here may use QVERIFY or QFAIL - both
 // expand to a bare return, ill-formed in a function returning anything.
 namespace TestPixels {
-
-// Each is the longest wait any of the tests that shared the helper needed
-inline constexpr std::chrono::milliseconds scmSettleWait{80};
-inline constexpr std::chrono::milliseconds scmRestyleWait{150};
 
 // Summed rather than per channel: at a pixel blending two flat fills the
 // nearer fill is the one that was painted there
@@ -106,12 +100,11 @@ inline QImage drawnAt(const QIcon& icon, const int size, const QIcon::State stat
     return icon.pixmap(QSize(size, size), QIcon::Normal, state).toImage();
 }
 
-// The posted events first, then the timers a relayout or restyle queues, then
-// what those posted in turn
+// Twice, because what the first pass delivers (a relayout, a restyle) posts
+// events of its own
 inline void settle()
 {
     QCoreApplication::processEvents();
-    QTest::qWait(scmSettleWait);
     QCoreApplication::processEvents();
 }
 
@@ -122,7 +115,6 @@ inline void setAppearanceAndWait(const enums::Appearance appearance, QWidget* pT
 {
     mudlet::self()->setAppearance(appearance);
     QCoreApplication::processEvents();
-    QTest::qWait(scmRestyleWait);
     QCoreApplication::processEvents();
     if (pToPaint) {
         pToPaint->grab();

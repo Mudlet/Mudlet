@@ -47,7 +47,6 @@
 #include <QToolButton>
 #include <QTreeWidget>
 #include <QtTest/QtTest>
-#include <chrono>
 #include <cstdlib>
 
 #include "ChipRow.h"
@@ -66,8 +65,6 @@
 
 #include "GroupedTest.h"
 
-using namespace std::chrono_literals;
-
 class EditorChromeTest : public QObject
 {
     Q_OBJECT
@@ -79,6 +76,9 @@ private:
     Host* mpHost = nullptr;
     enums::Appearance mAppearanceAtStart = enums::Appearance::systemSetting;
     const QString mProfileName = qsl("EditorChrome-Test-Profile");
+    // Read by the walk's dark pass, which saves the heading case a switch to dark and back
+    bool mHeadingRead = false;
+    QString mHeadingMiss;
 
     // Pinned under the measured 127 (dark) and 133 (light), so a walk that stops
     // finding widgets cannot pass as one that found them all in the one ink
@@ -209,7 +209,7 @@ private:
         mpEditor->addAction(false);
         mpEditor->slot_showScripts();
         mpEditor->addScript(false);
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
         QVERIFY2(mpEditor->mpChipRow_scriptEvents != nullptr, "the scripts form has no events row for this walk to read");
         mpEditor->mpChipRow_scriptEvents->setItems({qsl("myOwnEvent"), qsl("sysLoadEvent")});
         QCoreApplication::processEvents();
@@ -243,7 +243,6 @@ private:
             break;
         }
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
         mpEditor->grab();
     }
 
@@ -257,9 +256,7 @@ private:
             QCoreApplication::processEvents();
         }
         mpPreferences->comboBox_appearance->setCurrentIndex(appearance);
-        QCoreApplication::processEvents();
-        QTest::qWait(50ms);
-        QCoreApplication::processEvents();
+        TestPixels::settle();
         mpEditor->grab();
     }
 
@@ -326,9 +323,7 @@ private:
     void restyleWith(const QPalette& palette) const
     {
         QApplication::setPalette(palette);
-        QCoreApplication::processEvents();
-        QTest::qWait(50ms);
-        QCoreApplication::processEvents();
+        TestPixels::settle();
         mpEditor->grab();
     }
 
@@ -394,7 +389,7 @@ private:
             QEvent leave(QEvent::Leave);
             QCoreApplication::sendEvent(pWidget, &leave);
         }
-        QTest::qWait(20ms);
+        QCoreApplication::processEvents();
     }
 
     // Generous: rounded edges and glyphs blend with what is behind them, and more
@@ -425,7 +420,6 @@ private:
         pMenu->popup(where);
         QTest::qWaitForWindowExposed(pMenu);
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
         const QImage shot = pMenu->grab().toImage().convertToFormat(QImage::Format_ARGB32);
         pMenu->hide();
         QCoreApplication::processEvents();
@@ -456,12 +450,11 @@ private:
     }
 
 
-    // The wait lets the button take the hover state and be asked to paint
+    // The pass delivers what taking the hover state posts, a repaint among it
     static void pointAt(QWidget* pWidget, const QPoint& where)
     {
         QTest::mouseMove(pWidget, where);
         QCoreApplication::processEvents();
-        QTest::qWait(30ms);
     }
 
     // A patch rather than a pixel: a wash is a few levels' difference, and one
@@ -536,7 +529,7 @@ private slots:
         mpHost = mSession.host();
 
         mudlet::self()->slot_showTriggerDialog();
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
         mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
         QVERIFY2(mpEditor != nullptr, "Editor dialog should be created");
         mpEditor->resize(1200, 800);
@@ -548,9 +541,9 @@ private slots:
         // holds an item
         mpEditor->slot_showTriggers();
         mpEditor->addTrigger(false);
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
         buildThreePatternRows();
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
         QVERIFY(QTest::qWaitForWindowExposed(mpEditor));
 
         QVERIFY2(paneSeam() != nullptr, "The main splitter has no handle between its two panes");
@@ -603,6 +596,10 @@ private slots:
                 audited += walkTheChrome(appearance.first, tokens.mutedText, misses);
             }
             counts << qsl("%1: %2 things in %3").arg(appearance.first, QString::number(audited), tokens.mutedText.name());
+            if (appearance.second == enums::Appearance::dark) {
+                mHeadingMiss = headingInkMiss();
+                mHeadingRead = true;
+            }
             QVERIFY2(audited >= scmLeastAudited,
                      qPrintable(qsl("only %1 things were read on the %2 appearance, against the %3 this walk reaches - it stopped finding widgets rather than finding them all in one ink")
                                         .arg(QString::number(audited), appearance.first, QString::number(scmLeastAudited))));
@@ -615,28 +612,27 @@ private slots:
         QVERIFY2(misses.isEmpty(), qPrintable(qsl("%1 thing(s) in the editor's chrome are written in something other than the one quiet tone - listed above").arg(QString::number(misses.size()))));
     }
 
-    // A palette a view never draws from would pass the walk above while the tree
-    // paints in the platform's white
-    void test_theTreesHeadingRowIsPaintedInThatSameTone()
+    // Empty when the Triggers heading row is painted in the quiet tone, otherwise what is wrong. Read on the dark
+    // appearance only: on the light one the row holds near-black pixels the walk's palettes do not account for.
+    QString headingInkMiss()
     {
-        // Put back on the way out: the cases after this one read the window under
-        // the appearance the run opened in
-        const auto putBack = qScopeGuard([this]() {
-            setAppearance(mAppearanceAtStart);
-        });
-        setAppearance(enums::Appearance::dark);
-        // The panel shows one tree at a time, and the walk above leaves the last
-        // view up
+        // The panel shows one tree at a time, and the walk leaves the last view up
         enterView(EditorViewType::cmTriggerView);
         const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
 
         QTreeWidget* pTree = mpEditor->treeWidget_triggers;
         QTreeWidgetItem* pHeading = mpEditor->mpTriggerBaseItem;
-        QVERIFY2(pTree && pHeading, "the triggers tree has no heading row to read");
-        QVERIFY2(!pHeading->isSelected(), "the heading row is chosen, so what it is painted in is the accent rather than the chrome tone");
+        if (!pTree || !pHeading) {
+            return qsl("the triggers tree has no heading row to read");
+        }
+        if (pHeading->isSelected()) {
+            return qsl("the heading row is chosen, so what it is painted in is the accent rather than the chrome tone");
+        }
 
         const QRect row = pTree->visualItemRect(pHeading);
-        QVERIFY2(row.width() > 20 && row.height() > 4, "the heading row is too small to read a pixel out of");
+        if (row.width() <= 20 || row.height() <= 4) {
+            return qsl("the heading row is too small to read a pixel out of");
+        }
 
         const QImage shot = mpEditor->grab().toImage();
         // grab() answers a pixmap at the screen's device pixel ratio, so the
@@ -644,7 +640,9 @@ private slots:
         const qreal ratio = shot.width() / static_cast<qreal>(std::max(1, mpEditor->width()));
         const QPoint topLeft = pTree->viewport()->mapTo(mpEditor, row.topLeft());
         const QRect painted = QRect(QPoint(qRound(topLeft.x() * ratio), qRound(topLeft.y() * ratio)), QSize(qRound(row.width() * ratio), qRound(row.height() * ratio))).intersected(shot.rect());
-        QVERIFY2(painted.width() > 8 && painted.height() > 4, "the heading row does not land on the shot of the window");
+        if (painted.width() <= 8 || painted.height() <= 4) {
+            return qsl("the heading row does not land on the shot of the window");
+        }
 
         const auto distanceFromThePane = [&tokens](const QColor& colour) {
             return TestPixels::distance(colour, tokens.pane);
@@ -662,8 +660,29 @@ private slots:
         qInfo().noquote()
                 << qsl("  the Triggers heading is painted %1, against the %2 the editor's chrome is written in, on the %3 the panel is").arg(ink.name(), tokens.mutedText.name(), tokens.pane.name());
         const int off = std::max({std::abs(ink.red() - tokens.mutedText.red()), std::abs(ink.green() - tokens.mutedText.green()), std::abs(ink.blue() - tokens.mutedText.blue())});
-        QVERIFY2(off <= scmInkTolerance,
-                 qPrintable(qsl("the Triggers heading is painted %1, %2 off the %3 every word of the editor's chrome is written in").arg(ink.name(), QString::number(off), tokens.mutedText.name())));
+        if (off > scmInkTolerance) {
+            return qsl("the Triggers heading is painted %1, %2 off the %3 every word of the editor's chrome is written in").arg(ink.name(), QString::number(off), tokens.mutedText.name());
+        }
+        return {};
+    }
+
+    // A palette a view never draws from would pass the walk above while the tree
+    // paints in the platform's white
+    void test_theTreesHeadingRowIsPaintedInThatSameTone()
+    {
+        // Run on its own, without the walk, the case switches to dark itself
+        if (!mHeadingRead) {
+            // Put back on the way out: the cases after this one read the window under
+            // the appearance the run opened in
+            const auto putBack = qScopeGuard([this]() {
+                setAppearance(mAppearanceAtStart);
+            });
+            setAppearance(enums::Appearance::dark);
+            mHeadingMiss = headingInkMiss();
+        }
+        // The cases after this one read the trigger view, which the walk does not end on
+        enterView(EditorViewType::cmTriggerView);
+        QVERIFY2(mHeadingMiss.isEmpty(), qPrintable(mHeadingMiss));
     }
 
     void test_theFormBehindThePatternsIsThePageTone()
@@ -886,7 +905,7 @@ private slots:
         }
 
         QApplication::setPalette(savedPalette);
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
     }
 
     // The tones are mixed from the palette, so both themes are put to the tokens
@@ -928,7 +947,7 @@ private slots:
         }
 
         QApplication::setPalette(savedPalette);
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
     }
 
     void test_aPlainHandleIsOneHairlineBetweenTwoTones()
@@ -1147,13 +1166,13 @@ private slots:
     {
         // The well is on the options strip, which the editor opens closed
         mpEditor->setTriggerOptionsShown(true);
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
 
         QPushButton* pWell = mpEditor->mpTriggersMainArea->pushButtonFgColor;
         QVERIFY2(pWell != nullptr, "The trigger form has no foreground colour button");
         const QColor filled(0, 128, 0);
         pWell->setStyleSheet(dlgTriggerEditor::generateButtonStyleSheet(filled));
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
         QVERIFY2(pWell->isVisible() && pWell->width() > 8 && pWell->height() > 8, "The colour well is not on show, so there is nothing to measure");
 
         const QImage shot = TestPixels::shot(mpEditor);
@@ -1178,7 +1197,7 @@ private slots:
         QVERIFY2(pClear != nullptr, "The trigger form has no button to empty the sound file field");
         // The button is only shown while the trigger has a sound file
         mpEditor->showTriggerSoundFile(qsl("/tmp/EditorChromeTest.wav"));
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
         QVERIFY2(!pClear->icon().isNull(), "The button carries no picture at all");
 
         // A fraction rather than a match, as a 1.5px stroke is antialiased;
@@ -1196,10 +1215,10 @@ private slots:
         };
 
         pClear->setEnabled(true);
-        QTest::qWait(20ms);
+        QCoreApplication::processEvents();
         const qreal lively = strongestInk();
         pClear->setEnabled(false);
-        QTest::qWait(20ms);
+        QCoreApplication::processEvents();
         const qreal quiet = strongestInk();
         qInfo().noquote() << qsl("  the glyph is drawn at %1px; its strongest pixel is %2 of the way from the card to the words switched on and %3 switched off")
                                      .arg(QString::number(pClear->iconSize().width()), QString::number(lively, 'f', 2), QString::number(quiet, 'f', 2));

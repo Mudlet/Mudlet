@@ -261,7 +261,7 @@ private slots:
         buildTheProfilesItems();
 
         mudlet::self()->slot_showTriggerDialog();
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
         mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
         QVERIFY2(mpEditor != nullptr, "Editor dialog should be created");
         mpEditor->resize(1000, 800);
@@ -274,9 +274,9 @@ private slots:
         mpEditor->treeWidget_scripts->clear();
         mpEditor->fillout_form();
         mpEditor->slot_showScripts();
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
         mpEditor->treeWidget_scripts->expandAll();
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
 
         // Checked first: a script that compiled after all would be reported as a
         // fault of the ink rather than of the fixture
@@ -569,7 +569,7 @@ private slots:
         QVERIFY2(trailingEdgeOf(mQuietFolderId).width() > 10, "The tree is too narrow to leave room after the names for a count");
         auto restore = qScopeGuard([pTree]() {
             pTree->expandAll();
-            QTest::qWait(50ms);
+            QCoreApplication::processEvents();
         });
         pTree->setCurrentItem(TestPixels::rowFor(mpEditor->mpScriptsBaseItem, mWantedOnScriptId));
 
@@ -580,11 +580,11 @@ private slots:
         QCOMPARE(pDelegate->switchedOffInside(pTree->indexAt(pTree->visualItemRect(pQuietGroup).center())), 0);
 
         pGroup->setExpanded(true);
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
         const int openInk = inkedPixelsIn(trailingEdgeOf(mScriptFolderId));
         pGroup->setExpanded(false);
         pQuietGroup->setExpanded(false);
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
         const int closedInk = inkedPixelsIn(trailingEdgeOf(mScriptFolderId));
         const int quietInk = inkedPixelsIn(trailingEdgeOf(mQuietFolderId));
         qInfo().noquote() << qsl("  inked pixels at the group's right edge: %1 open, %2 closed; %3 on the closed quiet group").arg(openInk).arg(closedInk).arg(quietInk);
@@ -598,12 +598,14 @@ private slots:
         QVERIFY(pWorking);
         auto switchBackOn = qScopeGuard([this, pWorking]() {
             mpHost->getScriptUnit()->enableScript(pWorking->getName());
-            QTest::qWait(50ms);
+            QCoreApplication::processEvents();
         });
         RowPaintCounter counter(pTree->visualItemRect(pGroup));
         pTree->viewport()->installEventFilter(&counter);
         mpHost->getScriptUnit()->disableScript(pWorking->getName());
-        QTest::qWait(100ms);
+        // Settled, not waited on: the queued icon flush asks for the repaint, which comes on the next pass, and
+        // a wait lets some later repaint of the window satisfy the count with the delegate's hook gone
+        TestPixels::settle();
         pTree->viewport()->removeEventFilter(&counter);
         QCOMPARE(pDelegate->switchedOffInside(groupIndex), 3);
         QVERIFY2(counter.paints > 0, "A script switched off inside the closed group never repainted the group, so the count on screen stays at 2");
@@ -613,7 +615,7 @@ private slots:
     {
         TTreeWidget* pTree = mpEditor->treeWidget_scripts;
         pTree->expandAll();
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
         auto* pDelegate = qobject_cast<uiDesign::EditorTreeDelegate*>(pTree->itemDelegateForIndex(QModelIndex()));
         QVERIFY(pDelegate);
         const auto indexOf = [this, pTree](const int id) {

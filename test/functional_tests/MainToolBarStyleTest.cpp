@@ -85,7 +85,7 @@ private:
     static void windowWidth(const int width)
     {
         mudlet::self()->resize(width, scmWindowHeight);
-        QTest::qWait(50);
+        QCoreApplication::processEvents();
     }
 
     // Tinting goes through premultiplied alpha, which can land a level off
@@ -533,7 +533,7 @@ private slots:
         QVERIFY(QTest::qWaitForWindowExposed(&window));
 
         window.resize(1, 200);
-        QTest::qWait(50);
+        QCoreApplication::processEvents();
         QVERIFY2(pGroup->isHidden() && pSpacer->isHidden(), "the narrowest window left the tail of the bar on show, so the count below proves nothing");
         int hiddenTools = 0;
         for (QToolButton* pButton : pBar->findChildren<QToolButton*>(QString(), Qt::FindDirectChildrenOnly)) {
@@ -564,14 +564,14 @@ private slots:
         QVERIFY2(pMore->isChecked(), "the button did not stay lit while the row is open");
         // QMainWindow animates the bar open, and lays the row out as that ends
         QTRY_COMPARE(hiddenButtons(pBar), 0);
-        QTest::qWait(50);
+        QCoreApplication::processEvents();
         QCOMPARE(pMore->text(), closedWord);
         QVERIFY2(pMore->toolTip() != closedTip, "the tooltip still offers to show buttons that are on show");
 
         pMore->click();
         QVERIFY(!pMore->isChecked());
         QTRY_COMPARE(hiddenButtons(pBar), hidden);
-        QTest::qWait(50);
+        QCoreApplication::processEvents();
         QCOMPARE(pMore->text(), closedWord);
         QCOMPARE(pMore->toolTip(), closedTip);
     }
@@ -588,13 +588,13 @@ private slots:
         windowWidth(scmFoldingWidth);
 
         mudlet::self()->setToolBarIconSize(2);
-        QTest::qWait(50);
+        QCoreApplication::processEvents();
         QCOMPARE(pMore->toolButtonStyle(), Qt::ToolButtonIconOnly);
         QCOMPARE(pMore->iconSize(), pBar->iconSize());
         const int iconOnlyWidth = pBar->property(uiDesign::scmProp_toolBarOverflowExtent).toInt();
 
         mudlet::self()->setToolBarIconSize(3);
-        QTest::qWait(50);
+        QCoreApplication::processEvents();
         QCOMPARE(pMore->toolButtonStyle(), Qt::ToolButtonTextUnderIcon);
         QCOMPARE(pMore->iconSize(), pBar->iconSize());
         QVERIFY2(pBar->property(uiDesign::scmProp_toolBarOverflowExtent).toInt() > iconOnlyWidth, "the button left no more room for a word than for a glyph alone");
@@ -714,7 +714,7 @@ private slots:
 
         QToolBar* pDetachedBar = pDetachedWindow->findChild<QToolBar*>(qsl("detachedMainToolBar"));
         const QString sheet = pDetachedBar ? pDetachedBar->styleSheet() : QString();
-        QTest::qWait(20);
+        QCoreApplication::processEvents();
         const int overflowExtent = pDetachedBar ? pDetachedBar->property(uiDesign::scmProp_toolBarOverflowExtent).toInt() : 0;
         mudlet::self()->slot_tabReattachRequested(mSecondHostname);
 

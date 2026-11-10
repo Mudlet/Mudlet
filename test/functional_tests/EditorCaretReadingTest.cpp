@@ -29,7 +29,6 @@
 #include <QSplitterHandle>
 #include <QStatusBar>
 #include <QtTest/QtTest>
-#include <chrono>
 
 #include "Host.h"
 #include "HostDialogs.h"
@@ -40,8 +39,6 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
-
-using namespace std::chrono_literals;
 
 class EditorCaretReadingTest : public QObject
 {
@@ -74,7 +71,7 @@ private slots:
         mpHost = mSession.host();
 
         mudlet::self()->slot_showTriggerDialog();
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
         mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
         QVERIFY2(mpEditor != nullptr, "Editor dialog should be created");
         mpEditor->resize(1200, 800);
@@ -91,7 +88,7 @@ private slots:
         // A pattern, or the item cannot be saved clean whatever its Lua says
         mpEditor->mTriggerPatternEdit.at(0)->singleLineTextEdit_pattern->setPlainText(qsl("EditorCaretReading"));
         mpEditor->mpSourceEditorEdbee->textDocument()->setText(qsl("-- somewhere for the caret to be\n"));
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
     }
 
     void cleanupTestCase()

@@ -30,7 +30,6 @@
 #include <QRegularExpression>
 #include <QTimeEdit>
 #include <QtTest/QtTest>
-#include <chrono>
 
 #include "Host.h"
 #include "HostDialogs.h"
@@ -43,8 +42,6 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
-
-using namespace std::chrono_literals;
 
 class EditorTimerIntervalTest : public QObject
 {
@@ -119,7 +116,6 @@ private:
     {
         mpEditor->slot_timerSelected(pItem);
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
     }
 
 private slots:
@@ -133,14 +129,14 @@ private slots:
         mpHost = mSession.host();
 
         mudlet::self()->slot_showTriggerDialog();
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
         mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
         QVERIFY2(mpEditor != nullptr, "Editor dialog should be created");
         mpEditor->resize(1100, 900);
 
         mpEditor->slot_showTimers();
         mpEditor->addTimer(false);
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
         mpTimerItem = mpEditor->mpCurrentTimerItem;
         QVERIFY2(mpTimerItem != nullptr, "addTimer() left no current timer item");
 
@@ -211,7 +207,7 @@ private slots:
         mpEditor->mpTimersMainArea->timeEdit_timer_seconds->setTime(QTime(0, 0, 3, 0));
         mpEditor->mpTimersMainArea->timeEdit_timer_msecs->setTime(QTime(0, 0, 0, 4));
         mpEditor->saveTimer();
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
 
         TTimer* pTimer = timerOf(mpTimerItem);
         QVERIFY2(pTimer != nullptr, "the timer is not in the timer unit");
@@ -243,7 +239,7 @@ private slots:
     void test_movingATimerUnderAnotherChangesTheSentence()
     {
         mpEditor->addTimer(false);
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
         QTreeWidgetItem* pMovedItem = mpEditor->mpCurrentTimerItem;
         QVERIFY2(pMovedItem != nullptr && pMovedItem != mpTimerItem, "addTimer() left no new timer to move");
         choose(pMovedItem);
@@ -260,7 +256,6 @@ private slots:
         mpEditor->slot_itemMoved(movedID, oldParentID, newParentID, 0, 0);
         mpHost->getTimerUnit()->reParentTimer(movedID, oldParentID, newParentID, 0, 0);
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
 
         QVERIFY2(pMoved->isOffsetTimer(), "the move did not make the timer an offset timer, so there is nothing for the sentence to say");
         QCOMPARE(shownWords(), wordsOf(onceSentence()));

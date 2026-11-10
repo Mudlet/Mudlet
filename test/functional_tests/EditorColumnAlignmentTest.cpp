@@ -29,7 +29,6 @@
 #include <QFrame>
 #include <QListWidget>
 #include <QtTest/QtTest>
-#include <chrono>
 
 #include "Host.h"
 #include "HostDialogs.h"
@@ -40,8 +39,6 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
-
-using namespace std::chrono_literals;
 
 class EditorColumnAlignmentTest : public QObject
 {
@@ -85,7 +82,7 @@ private slots:
         mpHost = mSession.host();
 
         mudlet::self()->slot_showTriggerDialog();
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
         mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
         QVERIFY2(mpEditor != nullptr, "Editor dialog should be created");
         mpEditor->resize(1000, 800);
@@ -93,7 +90,7 @@ private slots:
         // Something to edit, so the column shows the trigger form rather than an empty page
         mpEditor->slot_showTriggers();
         mpEditor->addTrigger(false);
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
     }
 
     void cleanupTestCase()
@@ -106,7 +103,7 @@ private slots:
     void test_theSearchFieldStartsWhereTheSidebarDoes()
     {
         mpEditor->hideSystemMessageArea();
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
 
         const int sidebar = sidebarFirstRowTop();
         QVERIFY2(sidebar > 0, "the sidebar has no first row to measure");
@@ -118,7 +115,7 @@ private slots:
     void test_theNameRowStartsWhereTheSidebarDoesWithNoNotice()
     {
         mpEditor->hideSystemMessageArea();
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
         QVERIFY2(!mpEditor->mpSystemMessageArea->isVisible(), "the notice is still showing, so the name row is not what leads the column");
 
         const int sidebar = sidebarFirstRowTop();
@@ -128,7 +125,7 @@ private slots:
     void test_theNoticeStartsWhereTheSidebarDoes()
     {
         mpEditor->showInfo(qsl("A notice, so that the column an item is edited in is led by one"));
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
         QVERIFY2(mpEditor->mpSystemMessageArea->isVisible(), "the notice did not come up, so there is nothing to measure");
 
         const int sidebar = sidebarFirstRowTop();
@@ -138,7 +135,7 @@ private slots:
         QVERIFY2(searchFieldTop() == sidebar, qPrintable(drift(qsl("the search field"), searchFieldTop(), sidebar)));
 
         mpEditor->hideSystemMessageArea();
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
     }
 };
 

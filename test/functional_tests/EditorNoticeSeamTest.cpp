@@ -37,7 +37,6 @@
 #include <QTreeWidget>
 #include <QtTest/QtTest>
 #include <algorithm>
-#include <chrono>
 
 #include "EditorPlaceholderButton.h"
 #include "GripSplitter.h"
@@ -57,8 +56,6 @@
 #include "uiDesign.h"
 
 #include "GroupedTest.h"
-
-using namespace std::chrono_literals;
 
 class EditorNoticeSeamTest : public QObject
 {
@@ -252,7 +249,7 @@ private slots:
         mpHost = mSession.host();
 
         mudlet::self()->slot_showTriggerDialog();
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
         mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
         QVERIFY2(mpEditor != nullptr, "Editor dialog should be created");
         mpEditor->resize(scmEditorWidth, scmEditorHeight);

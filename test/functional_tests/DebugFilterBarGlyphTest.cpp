@@ -40,8 +40,6 @@
 #include "mudlet.h"
 #include "uiDesign.h"
 
-using namespace std::chrono_literals;
-
 class DebugFilterBarGlyphTest : public QObject
 {
     Q_OBJECT
@@ -201,14 +199,14 @@ private slots:
         movedPalette.setColor(QPalette::Window, wasDark ? QColor(0xec, 0xec, 0xec) : QColor(0x2c, 0x2c, 0x2e));
         movedPalette.setColor(QPalette::WindowText, wasDark ? QColor(Qt::black) : QColor(Qt::white));
         QApplication::setPalette(movedPalette);
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
 
         const QImage after = TestPixels::drawnAt(pAction->icon(), scmComparisonSize);
         const QImage expectedAfter = expectedPauseGlyph();
         qInfo().noquote() << qsl("  the Pause button was inked %1 and is now %2").arg(TestPixels::inkOf(before), TestPixels::inkOf(after));
 
         QApplication::setPalette(savedPalette);
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
 
         // Checked first: a restyle that did nothing at all could leave the pair below agreeing
         QVERIFY2(before != after, qPrintable(qsl("the palette moved and the bar's picture did not: it is still inked %1").arg(TestPixels::inkOf(after))));
