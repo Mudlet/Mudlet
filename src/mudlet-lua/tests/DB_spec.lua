@@ -1879,8 +1879,9 @@ describe("Tests DB.lua functions", function()
       assert.are.same({"Ada", "Cyra", "Eve"}, names(db:fetch(mydb.people, query)))
     end)
 
-    it("db:OR keeps a nil condition so the query fails rather than dropping it", function()
-      assert.are.equal("(name = 'Ada') OR (nil) OR (name = 'Eve')", db:OR("name = 'Ada'", nil, "name = 'Eve'"))
+    it("db:OR keeps a nil condition so the fetch fails rather than dropping it", function()
+      local query = db:OR(db:eq(mydb.people.name, "Ada"), nil, db:eq(mydb.people.name, "Eve"))
+      assert.is_nil(db:fetch(mydb.people, query))
     end)
 
     it("a table-array query is implicitly ANDed", function()
