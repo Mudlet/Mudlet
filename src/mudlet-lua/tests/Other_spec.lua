@@ -1144,7 +1144,7 @@ describe("Tests Other.lua functions", function()
     end)
 
     it("Should drop the earlier schedule when called again for the same variable", function()
-      timeframe("TIMEFRAME_TEST_VARIABLE", 0.05, 0.1)
+      timeframe("TIMEFRAME_TEST_VARIABLE", 0.05, 0.25)
       timeframe("TIMEFRAME_TEST_VARIABLE", 0.3)
 
       local checked, seen = false, "unset"
