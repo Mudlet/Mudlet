@@ -1072,6 +1072,38 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
         QVERIFY2(result.text.size() < 5000000, qPrintable(qsl("the reply was %1 characters").arg(result.text.size())));
     }
 
+    void testATableCutShortByItsStringsSaysSo()
+    {
+        // The last string rendered can be what overdraws the budget; it comes back whole,
+        // so the table has to say it stopped there or the missing entries vanish unnoticed.
+        const MCPToolResult object = TMCPLuaBridge::runLua(L, qsl("local t = {} for i = 1, 40 do t['k' .. i] = string.rep('x', 99999) end return t"));
+        const MCPToolResult array = TMCPLuaBridge::runLua(L, qsl("local t = {} for i = 1, 40 do t[i] = string.rep('x', 99999) end return t"));
+
+        QVERIFY(object.success);
+        QVERIFY(array.success);
+        QVERIFY2(object.text.contains(qsl("the rest was left out")), qPrintable(object.text.right(300)));
+        QVERIFY2(array.text.contains(qsl("the rest was left out")), qPrintable(array.text.right(300)));
+        QCOMPARE(array.text.count(qsl("the rest was left out")), 1);
+    }
+
+    void testANestedTableCutShortIsMarkedOnce()
+    {
+        const MCPToolResult result = TMCPLuaBridge::runLua(L, qsl("local t = {} for i = 1, 40 do t[i] = string.rep('x', 99999) end return {t}"));
+
+        QVERIFY(result.success);
+        QCOMPARE(result.text.count(qsl("the rest was left out")), 1);
+    }
+
+    void testANumberKeyOfTheLongestSpellingIsBracketedBesideItsStringTwin()
+    {
+        // numberKey()'s longest spelling is 24 characters; a string key that long must still
+        // be looked at for clashes, so the number is bracketed rather than given a #2 suffix.
+        const MCPToolResult result = TMCPLuaBridge::runLua(L, qsl("local t = {} t[-2.2250738585072014e-308] = 'fromNumber' t['-2.2250738585072014e-308'] = 'fromString' return t"));
+
+        QVERIFY2(result.text.contains(qsl("\"[-2.2250738585072014e-308]\":\"fromNumber\"")), qPrintable(result.text));
+        QVERIFY2(result.text.contains(qsl("\"-2.2250738585072014e-308\":\"fromString\"")), qPrintable(result.text));
+    }
+
     void testATableOfLongKeysCostsNoMoreForHavingMoreOfThem()
     {
         // Both run out of budget after the same few keys, so the larger one should cost no
