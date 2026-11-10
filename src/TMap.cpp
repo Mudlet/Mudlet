@@ -777,13 +777,19 @@ void TMap::audit()
                             appendAreaErrorMsg(areaID, tr("[ WARN ] - CONVERTING: cannot convert old style label with id: %1.").arg(i));
                         }
                     }
-                    if ((l.size.width() > std::numeric_limits<qreal>::max()) || (l.size.width() < -std::numeric_limits<qreal>::max())) {
-                        pArea->mMapLabels[i].size.setWidth(l.pix.width());
-                    }
-                    if ((l.size.height() > std::numeric_limits<qreal>::max()) || (l.size.height() < -std::numeric_limits<qreal>::max())) {
-                        pArea->mMapLabels[i].size.setHeight(l.pix.height());
-                    }
                 }
+            }
+        }
+    }
+
+    // A damaged file can hold a label size the 2D map cannot round to pixels
+    for (auto* pArea : mpRoomDB->getAreaMap()) {
+        for (auto& label : pArea->mMapLabels) {
+            if (!std::isfinite(label.size.width())) {
+                label.size.setWidth(label.pix.width());
+            }
+            if (!std::isfinite(label.size.height())) {
+                label.size.setHeight(label.pix.height());
             }
         }
     }
