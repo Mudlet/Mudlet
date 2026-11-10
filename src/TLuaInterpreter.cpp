@@ -721,6 +721,16 @@ int TLuaInterpreter::warnArgumentChoice(lua_State* L, const char* functionName, 
     return warnArgumentValue(L, functionName, qsl("%1 must be %2 or %3, got \"%4\"").arg(argumentName, quoted.join(qsl(", ")), lastChoice, value));
 }
 
+// For an ARGUMENT_TYPE_BYTES event argument, so NULs and non-UTF-8 bytes survive. A leading
+// UTF-8 BOM is dropped: yajl rejects JSON that starts with one
+static QString httpBodyForLua(QByteArray body)
+{
+    if (body.startsWith("\xEF\xBB\xBF")) {
+        body.remove(0, 3);
+    }
+    return QString::fromLatin1(body);
+}
+
 // No documentation available in wiki - internal function
 // Raises additional sysDownloadError Events on failure to process
 // the local file, the second argument is "failureToWriteLocalFile" and besides
@@ -731,16 +741,6 @@ int TLuaInterpreter::warnArgumentChoice(lua_State* L, const char* functionName, 
 // or a QFile::errorString() for the issue at hand
 // Upon success we now give an additional (third value) which gives the number
 // of bytes written into the downloaded file.
-// Pushed as ARGUMENT_TYPE_BYTES so NULs and non-UTF-8 bytes survive. A leading UTF-8
-// BOM is still dropped, as decoding the body as UTF-8 always did: yajl rejects JSON that starts with one
-static QString httpBodyForLua(QByteArray body)
-{
-    if (body.startsWith("\xEF\xBB\xBF")) {
-        body.remove(0, 3);
-    }
-    return QString::fromLatin1(body);
-}
-
 void TLuaInterpreter::slot_httpRequestFinished(QNetworkReply* reply)
 {
     Host* pHost = mpHost;
