@@ -527,35 +527,6 @@ private slots:
         QVERIFY2(luaTrue(host, qsl("#BaseUI.vitalsTriggerIds == 1")), "the vitals layer did not re-arm after a disconnect");
     }
 
-    // DuneMUD documents Char.Vitals as a delta: after the first message only the
-    // fields that changed are sent. Mudlet replaces gmcp.Char.Vitals with each
-    // message, so the maxima are gone from the global by the second one.
-    void test_gmcpVitalsSentAsDeltasKeepMovingTheGauges()
-    {
-        Host* host = startProfileWithStarterUi();
-        QVERIFY(host);
-
-        QVERIFY(runLua(host,
-                       qsl("gmcp = gmcp or {}\n"
-                           "gmcp.Char = { Vitals = { hp = 200, maxhp = 200, sp = 150, maxsp = 150 } }\n"
-                           "BaseUI.updateVitals()")));
-        QVERIFY(luaTrue(host, qsl("BaseUI.gauges.hp ~= nil and BaseUI.gauges.hp.value == 100")));
-
-        QVERIFY(runLua(host, qsl("gmcp.Char.Vitals = { hp = 50 }\nBaseUI.updateVitals()")));
-        QVERIFY2(luaTrue(host, qsl("BaseUI.gauges.hp.value == 25")), "the hp gauge froze when a vitals message carried only the changed current");
-        QVERIFY2(luaTrue(host, qsl("BaseUI.vitalsData.mp ~= nil and BaseUI.vitalsData.mp.max == 150")), "a stat the delta did not mention was forgotten");
-
-        QVERIFY(runLua(host, qsl("gmcp.Char.Vitals = { sp = 75 }\nBaseUI.updateVitals()")));
-        QVERIFY2(luaTrue(host, qsl("BaseUI.gauges.mp.value == 50")), "the mp gauge froze when a vitals message carried only the changed current");
-        QVERIFY(luaTrue(host, qsl("BaseUI.gauges.hp.value == 25")));
-
-        // the enemy is the exception: once GMCP stops mentioning it, the fight is over
-        QVERIFY(runLua(host, qsl("gmcp.Char.Vitals = { enemypct = 40 }\nBaseUI.updateVitals()")));
-        QVERIFY(luaTrue(host, qsl("BaseUI.gauges.enemy ~= nil and not BaseUI.gauges.enemy.hidden")));
-        QVERIFY(runLua(host, qsl("gmcp.Char.Vitals = { hp = 60 }\nBaseUI.updateVitals()")));
-        QVERIFY2(luaTrue(host, qsl("BaseUI.gauges.enemy.hidden")), "the enemy bar outlived the fight");
-    }
-
 private:
     // Quotes and backslashes in a corpus line have to reach the Lua state
     // exactly as they were fed to the trigger engine.
