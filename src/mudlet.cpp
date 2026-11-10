@@ -4500,13 +4500,20 @@ bool mudlet::setActiveProfileTab(const QString& profileName)
 {
     // A detached profile's tab is in its own window, not the main tab bar
     if (TDetachedWindow* pDetachedWindow = mDetachedWindows.value(profileName)) {
+        Host* pHost = mHostManager.getHost(profileName);
+        // A focus-change handler asking for this same switch would otherwise raise its event again, without end
+        if (pHost && pHost == mpDetachedProfileBeingActivated) {
+            return true;
+        }
         pDetachedWindow->show();
         pDetachedWindow->raise();
         pDetachedWindow->activateWindow();
         pDetachedWindow->switchToProfile(profileName);
-        Host* pHost = mHostManager.getHost(profileName);
         // The main tab bar's change of tab is what does this for a profile in the main window
+        const QPointer<Host> pOuterActivation = mpDetachedProfileBeingActivated;
+        mpDetachedProfileBeingActivated = pHost;
         activateProfile(pHost);
+        mpDetachedProfileBeingActivated = pOuterActivation;
         // Queued after activateProfile()'s own hand-off, which could give the keyboard to a user window left in the main window
         QTimer::singleShot(0ms, pDetachedWindow, [pDetachedWindow, pDetachedHost = QPointer<Host>(pHost)]() {
             pDetachedWindow->raise();
