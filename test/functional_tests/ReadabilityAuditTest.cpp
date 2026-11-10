@@ -37,6 +37,7 @@
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QScrollArea>
+#include <QTextEdit>
 #include <QToolButton>
 #include <QTreeWidget>
 #include <QtTest/QtTest>
@@ -142,8 +143,8 @@ private:
     static constexpr int scmLeastAuditedOnTheExporterSelection = 3;
     static constexpr int scmLeastAuditedOnTheExporterDetails = 18;
     static constexpr int scmLeastAuditedOnTheExporterFoot = 3;
-    // Measured at 4; Module Help is disabled with no module chosen
-    static constexpr int scmLeastAuditedInTheModuleManager = 3;
+    // Measured at 6, the explanation and an import failure among them; Module Help is disabled with no module chosen
+    static constexpr int scmLeastAuditedInTheModuleManager = 5;
 
     // A colour well's fill is a value rather than a surface, and its words are
     // chosen against that fill by generateButtonStyleSheet(), so it is not audited
@@ -308,6 +309,13 @@ private:
         QVERIFY(QTest::qWaitForWindowExposed(mpModules));
         QCoreApplication::processEvents();
         QVERIFY2(mpModules->findChild<QWidget*>(qsl("modulesShell")), "the module manager built no shell, so there is nothing to walk");
+        // A failed import is the notice's only words, and it stays up until dismissed
+        QWidget* pNotice = mpModules->findChild<QWidget*>(qsl("modulesNotice"));
+        auto* pNoticeWords = pNotice ? pNotice->findChild<QLabel*>(qsl("notificationAreaMessageBox")) : nullptr;
+        QVERIFY2(pNoticeWords, "the module manager has no notice to show an import failure in");
+        pNoticeWords->setText(qsl("Failed to import: ReadabilityAuditTest.mpackage"));
+        pNotice->show();
+        QCoreApplication::processEvents();
     }
 
     // Through the settings dialog's control, the path a player takes; each window
@@ -401,6 +409,9 @@ private:
         if (const auto* pField = qobject_cast<const QLineEdit*>(pWidget)) {
             return pField->text();
         }
+        if (const auto* pDocument = qobject_cast<const QTextEdit*>(pWidget)) {
+            return pDocument->toPlainText();
+        }
         return QString();
     }
 
@@ -434,6 +445,11 @@ private:
             return readings;
         }
 
+        if (const auto* pDocument = qobject_cast<const QTextEdit*>(pWidget)) {
+            const QWidget* pViewport = pDocument->viewport();
+            return pDocument->toPlainText().isEmpty() ? QList<Reading>{} : QList<Reading>{{qsl("its words"), pDocument->palette().color(group, QPalette::Text), floor, pViewport, pViewport->rect()}};
+        }
+
         if (const auto* pField = qobject_cast<const QLineEdit*>(pWidget); pField && pField->text().isEmpty()) {
             // A placeholder is not text yet, so it is held to the quiet floor
             return pField->placeholderText().isEmpty() ? QList<Reading>{} : QList<Reading>{{qsl("its placeholder"), pField->palette().color(group, QPalette::PlaceholderText), scmQuietFloor}};
@@ -453,7 +469,7 @@ private:
             return true;
         }
         return qobject_cast<const QLabel*>(pWidget) || qobject_cast<const QAbstractButton*>(pWidget) || qobject_cast<const QComboBox*>(pWidget) || qobject_cast<const QLineEdit*>(pWidget)
-               || qobject_cast<const QGroupBox*>(pWidget);
+               || qobject_cast<const QGroupBox*>(pWidget) || qobject_cast<const QTextEdit*>(pWidget);
     }
 
     // A push button keeps the platform's bevel, whose disabled grey is within
