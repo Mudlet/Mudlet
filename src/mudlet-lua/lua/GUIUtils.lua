@@ -2292,6 +2292,8 @@ function ansi2decho(text, ansi_default_color)
   local lastColour = ansi_default_color
   local namesToUse = basicColourNames
   local decorations = {}
+  -- the colours in effect, carried across sequences so 39 and 49 can restore the other one
+  local currentFg, currentBg
 
   -- match each set of ansi tags, ie [0;36;40m and convert to decho equivalent.
   -- this works since both ansi colours and echo don't need closing tags and map to each other
@@ -2317,8 +2319,33 @@ function ansi2decho(text, ansi_default_color)
         output[#output + 1] = "<r>"
         decorations = {}
         fg, bg = nil, nil
+        currentFg, currentBg = nil, nil
         namesToUse = basicColourNames
         lastColour = ansi_default_color
+      elseif code == "39" or code == "49" then
+        -- decho can only return to the default colours together, so reset both and restore the other
+        local foreground = code == "39"
+        -- like 0, a 39 falls through below to take on ansi_default_color
+        formatCodeHandled = not foreground
+        if foreground then
+          fg = nil
+          lastColour = ansi_default_color
+        else
+          bg = nil
+        end
+        if foreground and currentFg or not foreground and currentBg then
+          output[#output + 1] = "<r>"
+          for _, tag in ipairs({"i", "u", "s", "o"}) do
+            if decorations[tag] then
+              output[#output + 1] = "<" .. tag .. ">"
+            end
+          end
+          if foreground then
+            currentFg, bg = nil, bg or currentBg
+          else
+            currentBg, fg = nil, fg or currentFg
+          end
+        end
       elseif code == "1" then
         -- light or bold
         namesToUse = brightColourNames
@@ -2328,10 +2355,12 @@ function ansi2decho(text, ansi_default_color)
       elseif code == "3" then
         formatCodeHandled = true
         output[#output+1] = "<i>"
+        decorations.i = true
       elseif code == "23" then
         -- turn off italics
         formatCodeHandled = true
         output[#output+1] = "</i>"
+        decorations.i = nil
       elseif code == "4" then
         -- underline
         formatCodeHandled = true
@@ -2419,6 +2448,8 @@ function ansi2decho(text, ansi_default_color)
 
       i = i + 1
     end
+
+    currentFg, currentBg = fg or currentFg, bg or currentBg
 
     -- assemble and return the data
     if fg or bg then
