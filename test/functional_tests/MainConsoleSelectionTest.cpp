@@ -382,6 +382,30 @@ private slots:
         QVERIFY2(!pane->mSelectedRegion.isEmpty(), "A real drag failed to create a selection");
     }
 
+    // A drag held still at the top edge keeps scrolling and extending the
+    // selection, and stops once the button is released
+    void test_dragHeldAtTheTopEdgeKeepsScrolling()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "No upper pane available");
+        const int topBefore = pane->imageTopLine();
+        QVERIFY2(topBefore > 20, "Too little scrollback to scroll through");
+
+        const QPointF startPos = QRectF(pane->rect()).center();
+        const QPointF edgePos(startPos.x(), 2);
+        sendMouse(pane, QEvent::MouseButtonPress, Qt::LeftButton, Qt::LeftButton, startPos);
+        sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::LeftButton, edgePos);
+        // A single move scrolls 3 lines; only a repeat while held goes further
+        QTRY_VERIFY2_WITH_TIMEOUT(pane->imageTopLine() < topBefore - 10, "Holding the pointer at the top edge did not keep scrolling", 2000);
+        QVERIFY2(pane->mPA.y() < topBefore - 6, "The selection did not follow the scroll");
+
+        sendMouse(pane, QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, edgePos);
+        QTest::qWait(150ms);
+        const int topAfterRelease = pane->imageTopLine();
+        QTest::qWait(300ms);
+        QCOMPARE(pane->imageTopLine(), topAfterRelease);
+    }
+
     // Regression case for the review fix: once a drag has genuinely selected
     // text, dragging back to the original press cell must collapse the extent
     // instead of leaving the previous selection frozen.

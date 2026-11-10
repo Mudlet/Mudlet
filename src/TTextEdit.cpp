@@ -131,6 +131,17 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
     mpScrollStoppedTimer->setInterval(150ms);
     connect(mpScrollStoppedTimer, &QTimer::timeout, this, &TTextEdit::slot_scrollStoppedTimeout);
 
+    mpDragScrollTimer = new QTimer(this);
+    mpDragScrollTimer->setInterval(50ms);
+    connect(mpDragScrollTimer, &QTimer::timeout, this, [this]() {
+        if (!mMouseTracking) {
+            mpDragScrollTimer->stop();
+            return;
+        }
+        QMouseEvent move(QEvent::MouseMove, mDragScrollPos, mapToGlobal(mDragScrollPos), Qt::NoButton, Qt::LeftButton, QGuiApplication::keyboardModifiers());
+        mouseMoveEvent(&move);
+    });
+
     mpPaintPacer = new QTimer(this);
     mpPaintPacer->setSingleShot(true);
     connect(mpPaintPacer, &QTimer::timeout, this, [this]() {
@@ -1983,6 +1994,15 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
 
     if (!mMouseTracking) {
         return;
+    }
+
+    if (eventPos.y() < 10 || eventPos.y() >= height() - 10) {
+        mDragScrollPos = event->position();
+        if (!mpDragScrollTimer->isActive()) {
+            mpDragScrollTimer->start();
+        }
+    } else {
+        mpDragScrollTimer->stop();
     }
 
     if (eventPos.y() < 10) {

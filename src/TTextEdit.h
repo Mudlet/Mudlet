@@ -358,6 +358,9 @@ private:
     mutable bool mHasBlinkingContent = false;
     mutable bool mIsBlinkClientRegistered = false;
     QPointer<QTimer> mpScrollStoppedTimer;
+    // Keeps a drag selection scrolling while the pointer is held at an edge
+    QTimer* mpDragScrollTimer = nullptr;
+    QPointF mDragScrollPos;
     // Maximum of one repaint per paintPaceMs() is allowed via scheduleUpdate().
     static constexpr int csmPaintPaceMs = 16; // ~60 fps cap
     // The cap instead while more than a screen of lines arrives between frames.
