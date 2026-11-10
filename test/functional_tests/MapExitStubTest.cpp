@@ -21,12 +21,14 @@
  * The 2D mapper paints rooms over the exit lines, stubs included, so a stub
  * only shows where it reaches past its room and the border around it. Those
  * grow with the room size setting, and a room next door covers whatever of
- * the stub reaches it. Each case here checks that the rooms were painted,
- * that at least as much of the stub as its end dot covers still shows, and
- * that it shows along the stub's direction, at least half a cell out.
+ * the stub reaches it. Each painting case here checks that the rooms were
+ * painted, that at least as much of the stub as its end dot covers still
+ * shows, and that it shows along the stub's direction, at least half a cell
+ * out. One more case checks that a refused stub is reported in the Errors
+ * console.
  *
  * Why not a spec: the only evidence is pixels, and the area image export a
- * script can ask for draws no stubs.
+ * script can ask for draws no stubs; nor can a script read the Errors console.
  *
  * Run with: ctest -R MapExitStubTest -V
  */
@@ -326,7 +328,6 @@ private slots:
         }
     }
 
-    // Why not a spec: the Errors console is not readable from Lua
     void test_aRefusedStubIsReportedInTheErrorsConsole()
     {
         QSignalSpy printed(mpHost, &Host::signal_errorConsolePrint);
