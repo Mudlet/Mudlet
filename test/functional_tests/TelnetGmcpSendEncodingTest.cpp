@@ -20,7 +20,7 @@
 // GMCP is UTF-8 JSON whatever encoding the game's text arrives in, and incoming
 // GMCP is always read that way, so what sendGMCP() puts on the socket has to be
 // UTF-8 too: a profile set to ISO 8859-1 must not hand the game Latin-1 bytes
-// inside its JSON, or '?' for what Latin-1 cannot hold.
+// inside its JSON, or a substitute for what Latin-1 cannot hold.
 //
 // The message is a real socket write, waited out by asking for a DO TIMING_MARK
 // afterwards, which Mudlet always answers - so the capture is complete when the
@@ -181,6 +181,17 @@ private slots:
 
         const QByteArray payload = sentGmcpPayload(qsl(R"(sendGMCP("Comm.Say", '{"text": "你好"}'))"));
         QCOMPARE(payload, QByteArray(R"(Comm.Say {"text": "你好"})"));
+    }
+
+    // An ASCII profile never transcoded, so a script's raw bytes still go out as they are
+    void test_asciiProfilePassesRawBytesWithIacDoubled()
+    {
+        QVERIFY(mpHost->mTelnet.setEncoding(QByteArrayLiteral("ASCII"), false).first);
+        sentBytes();
+
+        QVERIFY(luaSucceeds(qsl(R"(sendGMCP("Test.Raw \233\255", "\255"))")));
+        const QByteArray wire = sentBytes();
+        QVERIFY2(wire.contains(QByteArray("Test.Raw \xE9\xFF\xFF \xFF\xFF\xFF\xF0")), qPrintable(QString::fromLatin1(wire.toHex(' '))));
     }
 
     void test_invalidUtf8StillBecomesAReplacementCharacter()

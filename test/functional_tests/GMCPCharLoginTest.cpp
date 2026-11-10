@@ -576,7 +576,7 @@ private slots:
     }
 
     // GMCP is UTF-8 whatever the game's text encoding, so a Latin-1 profile must not send Latin-1
-    // bytes, or '?' for what Latin-1 cannot hold, inside the JSON
+    // bytes, or a substitute for what Latin-1 cannot hold, inside the JSON
     void testCredentialsStayUtf8OnALatin1Game()
     {
         Host* host = connectAndNegotiate();
@@ -1386,6 +1386,23 @@ private slots:
         QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not send the resume form");
         QCOMPARE(sent.value(qsl("provider")).toString(), qsl("discord"));
         QCOMPARE(mpServer->countReceived(qsl("Char.Login.Reconnect")), 0);
+    }
+
+    void testResumeAccountStaysUtf8OnALatin1Game()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        QVERIFY(host->mTelnet.setEncoding(QByteArrayLiteral("ISO 8859-1"), false).first);
+        host->setLogin(QString());
+        host->setPass(QString());
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect"), qsl("{\"account\": \"joão€\", \"provider\": \"discord\"}")));
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\", \"password-credentials\"]}"));
+
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not send the resume form");
+        QCOMPARE(sent.value(qsl("account")).toString(), qsl("joão€"));
     }
 
     void testResumeHintIsNotSentToAServerThatDoesNotOfferOauth()
