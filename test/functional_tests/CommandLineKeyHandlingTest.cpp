@@ -412,8 +412,7 @@ private slots:
         QVERIFY2(waitForServerToReceive("east"), "the second of the two lines never reached the game");
     }
 
-    // An action that hands its line back to the game on the first of several
-    // lines leaves the rest for the game
+    // An action that resets itself on the first of several lines leaves the rest to go to the game
     void test_linesAfterAnActionResetsItselfGoToTheGame()
     {
         TCommandLine* pCommandLine = freshCommandLine();

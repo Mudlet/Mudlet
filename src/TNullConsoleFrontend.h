@@ -613,8 +613,8 @@ private:
     std::optional<QString> mMainCommandLineCompleted;
     // Unlike mMainCommandLineAllSelected, not set by a completion
     bool mMainCommandLineWhollySelected = false;
-    // Whether anything, the frontend's own clear included, wrote to the main line since a send last held it; then
-    // addMainCommandLineHistory() records the line as it is and mainCommandLineSent() leaves it
+    // Whether a script, the player or the frontend's clear of a sent line wrote to the main line since a send last
+    // held it; then addMainCommandLineHistory() records the line as it is and mainCommandLineSent() leaves it
     bool mMainCommandLineRewritten = false;
     // A send emptied the line while hidden input was wanted, which the app has not been told
     bool mMainCommandLineClearPending = false;
