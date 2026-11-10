@@ -840,6 +840,8 @@ private slots:
             QVERIFY(pInterface);
             const QString name = pInterface->text(QAccessible::Name);
             QVERIFY2(!name.trimmed().isEmpty(), qPrintable(qsl("%1 has nothing for a screen reader to announce it as").arg(objectName)));
+            // Before Qt 6.11 an item view's name is its accessibleName alone, with no buddy label fallback
+            QVERIFY2(!pWidget->accessibleName().trimmed().isEmpty(), qPrintable(qsl("%1 is nameless on Qt 6.8 to 6.10").arg(objectName)));
         }
     }
 
