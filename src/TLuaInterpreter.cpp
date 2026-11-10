@@ -3689,6 +3689,10 @@ int TLuaInterpreter::getOS(lua_State* L)
 #elif defined(Q_PROCESSOR_POWER_32)
         lua_pushstring(L, "ppc (32-bit)");
         return 1;
+#elif defined(Q_PROCESSOR_ARM_64)
+        // Before the ARM_V7 test, as Qt defines every older ARM level too on 64-bit ARM
+        lua_pushstring(L, "arm64");
+        return 1;
 #elif defined(Q_PROCESSOR_ARM_V7)
         lua_pushstring(L, "arm7");
         return 1;
