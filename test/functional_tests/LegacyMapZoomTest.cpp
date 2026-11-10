@@ -103,7 +103,7 @@ private slots:
         QVERIFY2(!wheel(QPoint(120, 0)), "a sideways scroll was kept from the widgets around the map");
     }
 
-    void test_aViewButtonResetsTheZoomOnScreen()
+    void test_theWheelAndTheViewButtonsZoomOnScreen()
     {
         BareGLWidget view;
         view.resize(300, 300);
@@ -121,6 +121,10 @@ private slots:
         };
         view.slot_setScale(1000);
         QVERIFY2(qAbs(verticalFieldOfView() - 60.0f * 150.0f / 1300.0f) < 0.1f, "the zoom slider did not reach the projection");
+        QWheelEvent touchpad(QPointF(1, 1), QPointF(1, 1), QPoint(), QPoint(0, 15), Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
+        QCoreApplication::sendEvent(&view, &touchpad);
+        const float touchpadDegrees = verticalFieldOfView();
+        QVERIFY2(qAbs(touchpadDegrees - 60.0f * GLWidget::scaleAfterWheel(150.0f / 1300.0f, 15)) < 0.01f, qPrintable(qsl("a touchpad step left a %1 degree field of view").arg(touchpadDegrees)));
 
         for (auto [button, name] : {std::pair{&GLWidget::slot_defaultView, "Default"}, {&GLWidget::slot_sideView, "Side"}, {&GLWidget::slot_topView, "Top"}}) {
             view.slot_setScale(1000);
