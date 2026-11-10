@@ -1046,8 +1046,7 @@ int main(int argc, char* argv[])
     QSettings* appSettings = MudletApp::getQSettings();
     bool shouldRegisterTelnet = false;
 
-    bool headlessMode =
-            qEnvironmentVariableIsSet("CI") || qEnvironmentVariableIsSet("GITHUB_ACTIONS") || QCoreApplication::arguments().contains("--profile") || QCoreApplication::arguments().contains("--mirror");
+    bool headlessMode = qEnvironmentVariableIsSet("CI") || qEnvironmentVariableIsSet("GITHUB_ACTIONS") || parser.isSet(profileToOpen) || parser.isSet(mirrorToStdout);
 
     bool forceAsk = false;
 #if defined(Q_OS_MACOS)
@@ -1093,6 +1092,7 @@ int main(int argc, char* argv[])
         } else {
             // First time - check if there's an existing handler
             bool existingHandlerFound = false;
+            bool canRegister = true;
 
 #if defined(Q_OS_WIN)
             // Check Windows registry for existing telnet handler
@@ -1106,8 +1106,9 @@ int main(int argc, char* argv[])
             xdgQuery.start(qsl("xdg-mime"), QStringList() << qsl("query") << qsl("default") << qsl("x-scheme-handler/telnet"));
             xdgQuery.waitForFinished(3000);
             if (xdgQuery.error() == QProcess::FailedToStart) {
-                existingHandlerFound = true;
-                qDebug() << "main: Linux telnet handler check: xdg-mime not found (assuming existing handler to ask user)";
+                // Registering needs xdg-mime too; leave telnetHandlerAsked unset so installing it later brings the check back
+                canRegister = false;
+                qDebug() << "main: Linux telnet handler check: xdg-mime not found, so Mudlet cannot register as the handler";
             } else {
                 QString existingHandler = QString::fromUtf8(xdgQuery.readAllStandardOutput()).trimmed();
                 existingHandlerFound = !existingHandler.isEmpty() && !existingHandler.toLower().contains("mudlet");
@@ -1127,7 +1128,9 @@ int main(int argc, char* argv[])
             }
 #endif
 
-            if (existingHandlerFound) {
+            if (!canRegister) {
+                shouldRegisterTelnet = false;
+            } else if (existingHandlerFound) {
                 QMessageBox msgBox;
                 //: Title for the dialog asking if Mudlet should handle telnet:// and telnets:// links
                 msgBox.setWindowTitle(QObject::tr("Telnet Protocol Handler"));
