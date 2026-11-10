@@ -343,10 +343,11 @@ void ScriptUnit::compileSwitchedOn(TScript* pScript)
     pRoot->compileAll();
     mRootsBeingCompiled.pop_back();
     endProcessing();
-    // Load and reset report theirs once the pass ends; this one is outside both, so its own is reported here
+    // Run without saveLoadingError, so the load and reset report never names these. Like that
+    // report, it leaves out a script switched off itself, whose body runs with its group's
     QStringList failed;
     for (auto* pNode : waiting) {
-        if (!pNode->waitingToRun() && !pNode->state() && !pendingDeletion(pNode)) {
+        if (!pNode->waitingToRun() && !pNode->state() && pNode->shouldBeActive() && !pendingDeletion(pNode)) {
             failed << pNode->getName();
         }
     }

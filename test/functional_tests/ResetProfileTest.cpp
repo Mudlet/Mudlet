@@ -646,19 +646,28 @@ private slots:
     auto [id, msg] = mpHost->mLuaInterpreter.createPermScript(
         qsl("resetWarnedChild"), qsl("resetWarnedGroup"), qsl("error('stop')"));
     QVERIFY2(id > 0, qPrintable(msg));
+    auto [offId, offMsg] = mpHost->mLuaInterpreter.createPermScript(
+        qsl("resetUnwarnedChild"), qsl("resetWarnedGroup"), qsl("error('stop')"));
+    QVERIFY2(offId > 0, qPrintable(offMsg));
     mpHost->mBlockScriptCompile = false;
+    mpHost->getScriptUnit()->getScript(id)->setIsActive(true);
 
     performReset();
 
     QVERIFY(mpHost->getScriptUnit()->enableScript(qsl("resetWarnedGroup")));
     TBuffer &buffer = mpHost->mainConsoleModel().buffer;
     bool reported = false;
-    for (int i = 0; i <= buffer.getLastLineNumber() && !reported; ++i) {
-      reported = buffer.line(i).contains(
+    bool offChildReported = false;
+    for (int i = 0; i <= buffer.getLastLineNumber(); ++i) {
+      reported = reported || buffer.line(i).contains(
           qsl("failed to run when switched on: \"resetWarnedChild\""));
+      offChildReported = offChildReported ||
+          buffer.line(i).contains(qsl("resetUnwarnedChild"));
     }
     QVERIFY2(reported, "a body that fails when its script is switched on "
                        "must be reported in the main console");
+    QVERIFY2(!offChildReported, "a script switched off itself is left out, as "
+                                "the load report leaves it out");
     delete mpHost->getScriptUnit()->getScript(groupId);
   }
 
