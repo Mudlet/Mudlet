@@ -6922,7 +6922,7 @@ void dlgProfilePreferences::slot_copyMap()
         qsizetype otherProfileRoomCount;
         qsizetype otherProfileAreaCount;
         int otherProfileVersion;
-        int otherProfileCurrentRoomId; // What we are looking for!
+        int otherProfileCurrentRoomId = 0; // What we are looking for!
         if (pHost->mpMap->retrieveMapFileStats(itOtherProfile.key(), &otherProfileFileUsed, &otherProfileVersion, &otherProfileCurrentRoomId, &otherProfileAreaCount, &otherProfileRoomCount)) {
             qDebug() << "dlgProfilePreference::slot_copyMap() in other INACTIVE profile:" << itOtherProfile.key() << "\n    the file examined was:" << otherProfileFileUsed
                      << "\n    it was of version:" << otherProfileVersion << "\n    it had an area count of:" << otherProfileAreaCount << "\n    it had a room count of:" << otherProfileRoomCount

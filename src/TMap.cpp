@@ -2333,7 +2333,7 @@ bool TMap::restore(QString location)
     return canRestore; //FIXME
 }
 
-// Reads the newest map file from the profile and retrieves some stats and data,
+// Reads the newest binary (.dat) map file from the profile and retrieves some stats and data,
 // including the current player room - was mRoomId in 12 to pre-18 map files and
 // is in mRoomIdHash since then so that it can be reinserted into a map that is
 // copied across (if the room STILL exists)!  This is to avoid a replacement map
@@ -2350,12 +2350,10 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
     if (Host* pProfileHost = HostManager::self() ? HostManager::self()->getHost(profile) : nullptr) {
         pProfileHost->waitForMapAutosave();
     }
-    QString folder;
-    QStringList entries;
-    folder = MudletApp::getMudletPath(enums::profileMapsPath, profile);
-    QDir dir(folder);
-    dir.setSorting(QDir::Time);
-    entries = dir.entryList(QDir::Filters(QDir::Files | QDir::NoDotAndDotDot), QDir::Time);
+    const QString folder = MudletApp::getMudletPath(enums::profileMapsPath, profile);
+    // Only binary maps can be read here: anything else in the folder, such as
+    // a JSON export, is read as a map of nonsense and its player room lost
+    const QStringList entries = QDir(folder).entryList({qsl("*.[dD][aA][tT]")}, QDir::Files, QDir::Time);
 
     if (entries.isEmpty()) {
         return false;
