@@ -671,6 +671,30 @@ private slots:
     delete mpHost->getScriptUnit()->getScript(groupId);
   }
 
+  void test_scriptMovedIntoASwitchedOnGroupRunsItsBody() {
+    auto *scriptUnit = mpHost->getScriptUnit();
+    auto [offId, offMsg] = mpHost->mLuaInterpreter.createPermScript(
+        qsl("resetMoveFromGroup"), QString(), QString());
+    QVERIFY2(offId > 0, qPrintable(offMsg));
+    auto [onId, onMsg] = mpHost->mLuaInterpreter.createPermScript(
+        qsl("resetMoveToGroup"), QString(), QString());
+    QVERIFY2(onId > 0, qPrintable(onMsg));
+    scriptUnit->getScript(onId)->setIsActive(true);
+    auto [id, msg] = mpHost->mLuaInterpreter.createPermScript(
+        qsl("resetMovedScript"), qsl("resetMoveFromGroup"),
+        qsl("resetMovedRuns = (resetMovedRuns or 0) + 1"));
+    QVERIFY2(id > 0, qPrintable(msg));
+    scriptUnit->getScript(id)->setIsActive(true);
+
+    performReset();
+
+    QCOMPARE(luaGlobalInt("resetMovedRuns"), 0);
+    scriptUnit->reParentScript(id, offId, onId, -1, -1);
+    QCOMPARE(luaGlobalInt("resetMovedRuns"), 1);
+    delete scriptUnit->getScript(offId);
+    delete scriptUnit->getScript(onId);
+  }
+
   void test_scriptSwitchingOnItsOwnGroupDuringResetRunsOnce() {
     auto [groupId, groupMsg] = mpHost->mLuaInterpreter.createPermScript(
         qsl("resetDuringSelfEnablingGroup"), QString(), QString());
