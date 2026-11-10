@@ -71,7 +71,6 @@ private:
     void submit();
     void setRevealed(const bool revealed);
     void scrollConsole(const bool up);
-    bool copyConsoleSelection();
     void followRow();
 
     QPointer<Host> mpHost;

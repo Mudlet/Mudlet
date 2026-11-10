@@ -67,6 +67,8 @@ public:
     void clearBlacklist();
     void adjustHeight();
     TConsole* console() const;
+    // Copies the selection made last in any of the profile's windows, else the one in this line's own console
+    bool copyConsoleSelection();
     // Whether everything on the line was typed or pasted by the player, starting
     // from an empty or wholly selected line. A recalled, left-selected or
     // script-written command is not.
