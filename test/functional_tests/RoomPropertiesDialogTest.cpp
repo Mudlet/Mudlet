@@ -450,8 +450,8 @@ private slots:
             QVERIFY(pInterface);
             QVERIFY2(!pInterface->text(QAccessible::Name).trimmed().isEmpty(), qPrintable(qsl("%1 has no name for a screen reader to announce").arg(pField->objectName())));
         }
-        // Qt's Unix bridge reports a combo box's current text as its name, so
-        // only the property that Windows and macOS read out can be checked here
+        // Everywhere but Windows, Qt reports a combo box's current text as its
+        // name, so only the property itself can be checked here
         for (QWidget* pCombo : {static_cast<QWidget*>(pDlg->comboBox_roomSymbol), static_cast<QWidget*>(pDlg->comboBox_weight)}) {
             QVERIFY2(!pCombo->accessibleName().trimmed().isEmpty(), qPrintable(qsl("%1 has no accessible name").arg(pCombo->objectName())));
         }
