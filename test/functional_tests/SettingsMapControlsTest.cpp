@@ -306,8 +306,9 @@ private slots:
         const auto closeViews = qScopeGuard([pManager]() {
             pManager->closeAllViews();
         });
+        QVERIFY2(viewId, qPrintable(message));
         TMapView* pView = pManager->getView(viewId);
-        QVERIFY2(pView, qPrintable(message));
+        QVERIFY(pView);
         QPointer<T2DMap> pViewMap = pView->get2DMap();
         QVERIFY(pViewMap);
 
@@ -330,12 +331,12 @@ private slots:
         const int border = priorBorder == 9 ? 10 : 9;
         // Each is checked on its own: any later change makes the window re-read every size
         mpPreferences->spinBox_roomSize->setValue(room);
-        QVERIFY2(qAbs(pViewMap->rSize - room / 10.0) < 1.0e-6, qPrintable(qsl("the extra map window kept a room size of %1 rather than %2").arg(pViewMap->rSize).arg(room / 10.0)));
+        QCOMPARE(pViewMap->rSize, room / 10.0);
         mpPreferences->spinBox_exitSize->setValue(exit);
-        QVERIFY2(qAbs(pViewMap->eSize - 50.0 / exit) < 1.0e-6, qPrintable(qsl("the extra map window kept an exit size of %1 rather than %2").arg(pViewMap->eSize).arg(50.0 / exit)));
-        QVERIFY2(qAbs(pMainMap->eSize - 50.0 / exit) < 1.0e-6, qPrintable(qsl("the mapper kept an exit size of %1 rather than %2").arg(pMainMap->eSize).arg(50.0 / exit)));
+        QCOMPARE(pViewMap->eSize, 50.0 / exit);
+        QCOMPARE(pMainMap->eSize, 50.0 / exit);
         mpPreferences->spinBox_borderSize->setValue(border);
-        QVERIFY2(qAbs(pViewMap->mBSize - 50.0 / border) < 1.0e-6, qPrintable(qsl("the extra map window kept a border size of %1 rather than %2").arg(pViewMap->mBSize).arg(50.0 / border)));
+        QCOMPARE(pViewMap->mBSize, 50.0 / border);
         mpPreferences->mMapperUseAntiAlias->setChecked(!priorAntiAlias);
         QCOMPARE(pViewMap->mMapperUseAntiAlias, !priorAntiAlias);
         mpPreferences->checkBox_largeAreaExitArrows->setChecked(!priorLargeArrows);

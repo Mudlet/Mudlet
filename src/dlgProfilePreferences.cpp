@@ -9826,11 +9826,11 @@ void dlgProfilePreferences::slot_changeMapperUseAntiAlias(const bool state)
     }
 
     pHost->mMapperUseAntiAlias = state;
-    if (pHost->mpMap && pHost->mpMap->mapper() && pHost->mpMap->mapper()->mp2dMap) {
-        pHost->mpMap->mapper()->mp2dMap->mMapperUseAntiAlias = state;
-        pHost->mpMap->mapper()->mp2dMap->update();
-    }
     if (pHost->mpMap) {
+        if (pHost->mpMap->mapper() && pHost->mpMap->mapper()->mp2dMap) {
+            pHost->mpMap->mapper()->mp2dMap->mMapperUseAntiAlias = state;
+            pHost->mpMap->mapper()->mp2dMap->update();
+        }
         pHost->mpMap->requestMapRepaint();
     }
 }

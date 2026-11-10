@@ -436,6 +436,10 @@ private slots:
         QVERIFY2(!pViewMap->mBubbleMode, "turning round rooms off in the mapper menu left them round in the map window");
         mpMapper->slot_setShowGrid(!showGrid);
         QCOMPARE(pViewMap->mShowGrid, !showGrid);
+        // What setConfig() does: set the profile, then announce it
+        mpHost->mShowRoomID = true;
+        map()->announceMapperSettingChanged(TMap::MapperSetting::ShowRoomIds);
+        QVERIFY2(pViewMap->mShowRoomID, "turning room IDs on through setConfig() left them off in the map window");
 
         pViewMap->addSymbolToPixmapCache(qsl("test-key"), qsl("A"), Qt::white, false);
         QVERIFY2(pViewMap->symbolPixmapCacheCount() > 0, "nothing was cached, so a flush would prove nothing");

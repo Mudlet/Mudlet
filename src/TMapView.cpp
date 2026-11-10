@@ -108,8 +108,8 @@ void TMapView::keyPressEvent(QKeyEvent* event)
     }
 }
 
-// These live on the Host. The mapper menu and some preferences only request a repaint, while
-// others and setConfig() announce the setting, so both signals must lead here
+// The mapper settings live on the Host, and a change to one may come with either
+// requestMapRepaint() or announceMapperSettingChanged(), so both lead here
 void TMapView::followMapperSettings()
 {
     if (!mpHost) {
