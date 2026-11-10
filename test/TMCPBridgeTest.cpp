@@ -110,6 +110,7 @@ private slots:
     void codexEntryFollowsXdgConfigHome();
     void codexMergeIntoEmptyConfig();
     void codexMergeKeepsUserToml();
+    void codexMergeKeepsMainKeysOutOfASubTableWrittenFirst();
     void codexMergeIgnoresHeaderInsideString();
     void codexMergeIgnoresHeaderInsideArray();
     void codexMergeRefusesUnterminatedString();
@@ -880,6 +881,28 @@ void TMCPBridgeTest::codexMergeKeepsUserToml()
     // Replaced in place, once - not removed there and appended again at the end.
     QCOMPARE(merged.count(qsl("[mcp_servers.mudlet]")), qsizetype(1));
     QVERIFY(merged.indexOf(qsl("[mcp_servers.mudlet]")) < merged.indexOf(qsl("[mcp_servers.other]")));
+}
+
+void TMCPBridgeTest::codexMergeKeepsMainKeysOutOfASubTableWrittenFirst()
+{
+    ScopedCodexRedirect redirect;
+    QVERIFY(redirect.tempDir.isValid());
+    // TOML lets a sub-table come before its parent. The rebuilt entry puts the parent's
+    // header first, so the parent's own keys must not end up under the sub-table's header.
+    const QByteArray original = "[mcp_servers.mudlet.env]\n"
+                                "MY_VAR = \"kept\"\n"
+                                "\n"
+                                "[mcp_servers.mudlet]\n"
+                                "command = \"/old/gone/mudlet\"\n"
+                                "args = [\"--mcp-bridge\"]\n"
+                                "enabled = false\n";
+    bool ok = false;
+    const QString merged = QString::fromUtf8(TMCPBridge::mergeCodexConfig(original, qsl("/usr/bin/mudlet"), ok));
+    QVERIFY(ok);
+    const qsizetype enabledAt = merged.indexOf(qsl("enabled = false"));
+    QVERIFY2(enabledAt >= 0, qPrintable(merged));
+    QVERIFY2(enabledAt < merged.indexOf(qsl("[mcp_servers.mudlet.env]")), qPrintable(merged));
+    QVERIFY2(merged.contains(qsl("MY_VAR = \"kept\"")), qPrintable(merged));
 }
 
 void TMCPBridgeTest::codexMergeIgnoresHeaderInsideString()
