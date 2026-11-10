@@ -4209,20 +4209,23 @@ describe("Tests installing a package file from a later Mudlet", function()
     assert.is_false(contains(err, "\n"), tostring(err))
   end)
 
-  -- too big for the int the version's whole part is converted to
+  -- 256 wraps the byte the major version is kept in, and 4294967296, inf and nan are past the int its
+  -- whole part is converted to
   it("refuses one whose version is out of range", function()
     defer(function()
       removeFixturePackage(name)
       os.remove(xml)
     end)
-    writeLaterMudletXml(xml, name, "4294967296")
-    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    for _, version in ipairs({"256", "4294967296", "inf", "nan", "-1", "-0.5"}) do
+      writeLaterMudletXml(xml, name, version)
+      assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
 
-    local err = installExpectingRefusal(installPackage, xml)
+      local err = installExpectingRefusal(installPackage, xml)
 
-    assert.is_true(contains(err, "you need a newer Mudlet"), tostring(err))
-    assert.equals(0, exists(name .. " trigger", "trigger"), "an unreadable file's trigger was installed anyway")
-    assert.is_false(packageInstalled(name))
+      assert.is_true(contains(err, "you need a newer Mudlet"), version .. ": " .. tostring(err))
+      assert.equals(0, exists(name .. " trigger", "trigger"), version .. ": an unreadable file's trigger was installed anyway")
+      assert.is_false(packageInstalled(name), version)
+    end
   end)
 
   it("leaves no empty folders behind when it is installed as a module", function()
