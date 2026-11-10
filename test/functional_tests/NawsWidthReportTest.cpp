@@ -406,6 +406,29 @@ private slots:
         QCOMPARE(mpServer->nawsUpdates(), whileScrolledBack);
     }
 
+    // A shrink too small to take a pixel from the lower pane only moves it up,
+    // and must still leave the game the rows the unsplit window has.
+    void aSmallShrinkWhileScrolledBackReportsTheUnsplitRows()
+    {
+        runLua(mpHost, qsl("for i = 1, 300 do echo('line ' .. i .. '\\n') end"));
+        runLua(mpHost, qsl("scrollUp(50)"));
+        settle();
+        TTextEdit* lower = mpHost->mainConsoleView()->mLowerPane;
+        QVERIFY2(!lower->isHidden(), "scrolling back did not split the window");
+        const int lowerHeight = lower->height();
+
+        mpServer->clearNawsUpdates();
+        mudlet::self()->resize(1200, 799);
+        settle();
+        const auto whileScrolledBack = mpServer->nawsUpdates();
+        const bool lowerOnlyMoved = lower->height() == lowerHeight;
+        runLua(mpHost, qsl("scrollTo()"));
+        settle();
+
+        QVERIFY2(lowerOnlyMoved, "the shrink resized the lower pane, so this case tests nothing");
+        QCOMPARE(mpServer->nawsUpdates(), whileScrolledBack);
+    }
+
     // An overlay along the bottom that covers the whole of the lower pane
     // still leaves the rows above it, scrolled back or not.
     void scrollingBackUnderATallBottomOverlayLeavesTheReportedSizeAlone()

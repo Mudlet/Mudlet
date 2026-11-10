@@ -3250,6 +3250,16 @@ void TTextEdit::resizeEvent(QResizeEvent* event)
     }
 }
 
+// A small shrink can move the lower pane up without resizing it, and the rows
+// measured while it hung below the splitter's new bottom were short
+void TTextEdit::moveEvent(QMoveEvent* event)
+{
+    if (mIsLowerPane && mpConsole && mpConsole->getType() == TConsole::MainConsole) {
+        updateScreenView();
+    }
+    QWidget::moveEvent(event);
+}
+
 void TTextEdit::wheelEvent(QWheelEvent* e)
 {
     // Make the speed up be half of the (upper pane) lines - need to round it so
