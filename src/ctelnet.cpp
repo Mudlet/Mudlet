@@ -4293,6 +4293,12 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             raiseProtocolEvent("sysProtocolDisabled", "channel102");
         }
 
+        // MTTS: a game sends DONT then DO TTYPE around a copyover to restart the
+        // cycle, and its first SEND after that expects the client name again
+        if (option == OPT_TERMINAL_TYPE) {
+            mCycleCountMTTS = 0;
+        }
+
         if (myOptionState.test(idxOption) || (!announcedState.test(idxOption))) {
             sendTelnetOption(TN_WONT, option);
             announcedState.set(idxOption);
