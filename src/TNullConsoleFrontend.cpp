@@ -3512,11 +3512,11 @@ void TNullConsoleFrontend::reportGridSize(const QString& name)
         return;
     }
     QSize size = mpHost->windowRegistry().subConsoleGeometry(name).value_or(QRect()).size();
-    // TConsole::layoutMainDisplay() takes its own command line, in a layer fixed at 31 pixels tall, off the pane
+    // TConsole::layoutMainDisplay() takes its own command line, 31 pixels tall, and the 1px foot seam over it off the pane
     const auto console = mSubConsoles.find(name);
     const auto commandLine = mCommandLines.find(name);
     if (console != mSubConsoles.end() && commandLine != mCommandLines.end() && ownsLine(console->second, commandLine->second) && commandLine->second.shown) {
-        size.setHeight(std::max(0, size.height() - 31));
+        size.setHeight(std::max(0, size.height() - 31 - 1));
     }
     // TConsole's splitter gives a scrolled-back console's upper pane 6 of every 8 pixels its 3px handle leaves,
     // rounded half up: measured in the GUI, as its constructor's 6:1 stretch factors suggest otherwise. A change to
