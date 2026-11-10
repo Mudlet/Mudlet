@@ -4993,7 +4993,7 @@ void cTelnet::setGMCPVariables(QByteArrayView msg)
         return;
     }
 
-    // The package name holds neither separator, so these match it exactly when they would the whole message
+    // The package name holds no separator, so these match it exactly when they would the whole message
     bool serverDeclinedBaseUi = false;
     if (packageMessage.startsWith(qsl("Client.GUI"), Qt::CaseInsensitive)) {
         if (!mpHost->mAcceptServerGUI) {
