@@ -185,6 +185,12 @@ describe("Tests the argument and disconnected contract of sendGMCP", function()
     assert.is_false(contains(err, "%1"), tostring(err))
   end)
 
+  it("treats an explicit nil second argument like an omitted one", function()
+    local ok, err = sendGMCP("Core.Ping", nil)
+    assert.is_nil(ok)
+    assert.is_true(contains(err, "not connected to game server"), tostring(err))
+  end)
+
   it("returns nil and an explanatory message while disconnected", function()
     local ok, err = sendGMCP("External.Discord.Hello")
     assert.is_nil(ok)

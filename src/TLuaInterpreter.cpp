@@ -3563,7 +3563,8 @@ int TLuaInterpreter::sendRaw(lua_State* L)
         return lua_error(L);
     }
     bool wantPrint = true;
-    if (lua_gettop(L) > 1) {
+    // send("command", nil) must behave like send("command"), so a wrapper can pass its own optional argument on
+    if (lua_gettop(L) > 1 && !lua_isnil(L, 2)) {
         wantPrint = getVerifiedBool(L, "send", 2, "showOnScreen", true);
     }
     const QString text{lua_tostring(L, 1)};
@@ -3582,7 +3583,7 @@ int TLuaInterpreter::sendSocket(lua_State* L)
         return lua_error(L);
     }
     bool parseCodes = false;
-    if (lua_gettop(L) > 1) {
+    if (lua_gettop(L) > 1 && !lua_isnil(L, 2)) {
         parseCodes = getVerifiedBool(L, __func__, 2, "parse telnet codes {default = false}", true);
     }
     size_t length = 0;
