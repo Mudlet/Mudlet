@@ -29,6 +29,8 @@
 #include <QDebug>
 #include <QTimer>
 
+#include <algorithm>
+
 TNullSecondaryMapView::TNullSecondaryMapView(Host* pHost, TMap* pMap, TNullMapViews* pViews)
 : QObject(pViews)
 , mpHost(pHost)
@@ -138,19 +140,22 @@ void TNullSecondaryMapView::switchToAnotherArea()
 {
     const QMap<int, QString>& areaNames = mpMap->mpRoomDB->getAreaNamesMap();
     // TMapView's area list, sorted ignoring case, of which it picks the entry it shows or else the first
-    QMap<QString, QString> listedNames;
+    QStringList listedNames;
     for (const auto& [areaId, areaName] : areaNames.asKeyValueRange()) {
         if (areaId == -1 && !mpMap->getDefaultAreaShown()) {
             continue;
         }
-        listedNames.insert(areaName.toLower(), areaName);
+        listedNames.append(areaName);
     }
     if (listedNames.isEmpty()) {
         switchArea(mpMap->getDefaultAreaName());
         return;
     }
+    std::stable_sort(listedNames.begin(), listedNames.end(), [](const QString& a, const QString& b) {
+        return a.compare(b, Qt::CaseInsensitive) < 0;
+    });
     const QString shownName = areaNames.value(mAreaId);
-    const QString pickedName = !shownName.isEmpty() && listedNames.value(shownName.toLower()) == shownName ? shownName : listedNames.first();
+    const QString pickedName = !shownName.isEmpty() && listedNames.contains(shownName) ? shownName : listedNames.first();
     if (!areaNames.key(pickedName, 0)) {
         qWarning() << "TNullSecondaryMapView::switchToAnotherArea() - area" << pickedName << "not found in area names map";
         return;

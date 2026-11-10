@@ -181,6 +181,45 @@ private slots:
         QVERIFY(roomDB()->getAreaNamesMap().contains(doomedView->getCurrentAreaId()));
     }
 
+    // Area names are unique only as written, so two can differ in case alone
+    void test_areasWhoseNamesDifferOnlyInCaseAreBothListed()
+    {
+        map()->mapClear();
+        const int upper = addAreaWithRoom(qsl("Forest"), 1);
+        const int lower = addAreaWithRoom(qsl("forest"), 2);
+        QVERIFY(upper > 0 && lower > 0);
+
+        QPointer<TMapView> view = openView(upper);
+        QVERIFY(view);
+        const QStringList names = areaListOf(view);
+        QVERIFY2(names.contains(qsl("Forest")) && names.contains(qsl("forest")), qPrintable(qsl("the view's area list lost one of them: %1").arg(names.join(qsl(", ")))));
+        auto* comboBox = view->findChild<QComboBox*>();
+        QVERIFY(comboBox);
+        QCOMPARE(comboBox->currentText(), qsl("Forest"));
+
+        emit comboBox->activated(comboBox->findText(qsl("forest")));
+        QCOMPARE(view->getCurrentAreaId(), lower);
+        emit comboBox->activated(comboBox->findText(qsl("Forest")));
+        QCOMPARE(view->getCurrentAreaId(), upper);
+
+        QPointer<TMapView> lowerView = openView(lower);
+        QVERIFY(lowerView);
+        auto* lowerComboBox = lowerView->findChild<QComboBox*>();
+        QVERIFY(lowerComboBox);
+        QCOMPARE(lowerComboBox->currentText(), qsl("forest"));
+        QCOMPARE(lowerView->getCurrentAreaId(), lower);
+
+        // A view whose area goes falls back to the first listed, which the headless view must pick too
+        const int firstTwin = addAreaWithRoom(qsl("aardvark"), 3);
+        const int secondTwin = addAreaWithRoom(qsl("Aardvark"), 4);
+        const int doomed = addAreaWithRoom(qsl("Zulu"), 5);
+        QVERIFY(firstTwin > 0 && secondTwin > 0 && doomed > 0);
+        QPointer<TMapView> doomedView = openView(doomed);
+        QVERIFY(doomedView);
+        QVERIFY(runLua(qsl("assert(deleteArea('Zulu'))")));
+        QCOMPARE(doomedView->getCurrentAreaId(), firstTwin);
+    }
+
     // Once the application palette carries a resolve mask, the view's own
     // setPalette() pins it, so the view has to be told when the scheme changes.
     void test_aColourSchemeChangeReachesEveryMapView()

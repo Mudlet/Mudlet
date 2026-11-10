@@ -868,6 +868,26 @@ centerview(1)
         QVERIFY(session.shutdown(false));
     }
 
+    // Names that differ only in case are listed in area-id order, so a view whose area goes picks the
+    // same one of them as a map window does
+    void test_aViewWhoseAreaGoesFallsBackAsAMapWindowDoes()
+    {
+        const QString name = qsl("Headless Map Area Fallback");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"lua(
+local firstTwin = assert(addAreaName("aardvark"))
+assert(addAreaName("Aardvark"))
+local doomed = assert(addAreaName("Zulu"))
+local view = assert(createMapView(doomed))
+assert(deleteArea("Zulu"))
+headlessFallback = tostring(getMapViewInfo(view).areaId == firstTwin)
+)lua")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessFallback"), qsl("true"));
+        QVERIFY(session.shutdown(false));
+    }
+
     // A press handler may replace the hidden map widget with an embedded mapper while the press still has its view
     void test_aPressHandlerReplacingTheMapWidgetLeavesThePressItsView()
     {
