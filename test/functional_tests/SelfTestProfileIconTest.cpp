@@ -355,6 +355,9 @@ private slots:
         QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, profileName)));
         const QString iconPath = MudletApp::getMudletPath(enums::profileDataItemPath, profileName, qsl("profileicon"));
         QVERIFY(QFile::copy(mArtworkPath, iconPath));
+        // the copy takes the resource's read-only permissions, and Windows will not delete a read-only file
+        QVERIFY(QFile::setPermissions(iconPath, QFile::ReadOwner | QFile::WriteOwner));
+        QVERIFY2(QFileInfo(iconPath).permissions().testFlag(QFile::WriteOwner), "SETUP: the picture is read-only, so a reset on Windows cannot remove it");
         // a non-empty folder in its place is something QFile::remove() cannot delete
         const QString colorPath = MudletApp::getMudletPath(enums::profileDataItemPath, profileName, qsl("profilecolor"));
         QVERIFY(QDir().mkpath(colorPath));
