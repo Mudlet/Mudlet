@@ -55,6 +55,7 @@
 
 #include <QDialog>
 #include <QDockWidget>
+#include <QElapsedTimer>
 #include <QFlag>
 #include <QHash>
 #include <QIcon>
@@ -1075,6 +1076,8 @@ private:
     uiDesign::SearchResultDelegate* mpSearchResultDelegate = nullptr;
     // Its length is how much of each snippet the marker covers
     QString mSearchTerm;
+    // The second click of a double-click on "Search variables too" lands on whichever result its search put there
+    QElapsedTimer mSearchVariablesOfferTaken;
 
     // This has a menu which the following QActions are inserted into:
     QAction* mpAction_searchOptions = nullptr;

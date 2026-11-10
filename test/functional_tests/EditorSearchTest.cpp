@@ -30,6 +30,7 @@
 #include <QTemporaryDir>
 #include <QTreeWidget>
 #include <QScopeGuard>
+#include <QThread>
 #include <QtTest/QtTest>
 #include <chrono>
 
@@ -103,7 +104,23 @@ private:
     static QString typeOf(const QTreeWidgetItem* row) { return row->data(0, uiDesign::SearchResultDelegate::TypeLabelRole).toString(); }
     static QString titleOf(const QTreeWidgetItem* row) { return row->data(0, uiDesign::SearchResultDelegate::TitleRole).toString(); }
     static QString whereOf(const QTreeWidgetItem* row) { return row->data(0, uiDesign::SearchResultDelegate::WhereRole).toString(); }
-    static bool isNotice(const QTreeWidgetItem* row) { return row->data(0, uiDesign::SearchResultDelegate::RowKindRole).toInt() == uiDesign::SearchResultDelegate::NoticeRow; }
+    static bool isNotice(const QTreeWidgetItem* row)
+    {
+        const int kind = row->data(0, uiDesign::SearchResultDelegate::RowKindRole).toInt();
+        return kind == uiDesign::SearchResultDelegate::NoticeRow || kind == uiDesign::SearchResultDelegate::ActionRow;
+    }
+
+    QTreeWidgetItem* offerToSearchVariables() const
+    {
+        auto* results = mpEditor->treeWidget_searchResults;
+        for (int i = 0, total = results->topLevelItemCount(); i < total; ++i) {
+            QTreeWidgetItem* top = results->topLevelItem(i);
+            if (top->data(0, uiDesign::SearchResultDelegate::RowKindRole).toInt() == uiDesign::SearchResultDelegate::ActionRow) {
+                return top;
+            }
+        }
+        return nullptr;
+    }
 
     QStringList resultsFor(const QString& itemType) const
     {
@@ -360,6 +377,7 @@ private slots:
     {
         if (mpEditor) {
             mpEditor->setSearchOptions(enums::EditorSearchOptionNone);
+            mpEditor->mSearchVariablesOfferTaken.invalidate();
         }
     }
 
@@ -838,6 +856,117 @@ private slots:
         mpEditor->slot_sourceReplace();
         mpEditor->slot_sourceReplace();
         QCOMPARE(mpEditor->mpSourceEditorEdbeeDocument->text(), qsl("alpha delta gamma delta\n"));
+    }
+
+    // Variables are only searched when asked for, so a search that leaves them out says so
+    void test_aSearchThatLeftVariablesOutOffersToSearchThemToo()
+    {
+        mpEditor->slot_showScripts();
+        search(qsl("qaSearchVariable"));
+        QVERIFY2(!topLevelResultFor(qsl("Variable")), "a variable was searched without the option being set");
+        QTreeWidgetItem* offer = offerToSearchVariables();
+        QVERIFY2(offer, "finding nothing with variables left out did not offer to search them");
+
+        mpEditor->slot_itemSelectedInSearchResults(offer);
+        QVERIFY(mpEditor->mSearchOptions & enums::EditorSearchOptionIncludeVariables);
+        QVERIFY(mpEditor->mpAction_searchIncludeVariables->isChecked());
+        QVERIFY2(QTest::qWaitFor([this]() {
+                     return topLevelResultFor(qsl("Variable")) != nullptr;
+                 }),
+                 "choosing the offer did not search the variables");
+        QVERIFY2(!offerToSearchVariables(), "the offer stayed once variables were searched");
+    }
+
+    // Outside the Variables view only an empty result needs the offer
+    void test_theOfferOnlyShowsWhereAVariableWasLikelySought()
+    {
+        mpEditor->slot_showScripts();
+        search(mLoneNeedle);
+        QVERIFY(totalResultRows() > 0);
+        QVERIFY2(!offerToSearchVariables(), "a search that found items elsewhere still offered to search variables");
+
+        mpEditor->slot_showVariables();
+        search(mLoneNeedle);
+        QVERIFY2(offerToSearchVariables(), "a search from the Variables view left variables out without saying so");
+    }
+
+    // Its search fills the panel at once, so a double-click's second click would otherwise open whatever landed under it
+    void test_doubleClickingTheOfferOpensNothingElse()
+    {
+        // Waiting for the new results between the clicks must not outlast a double-click on a slow runner
+        const int savedInterval = QApplication::doubleClickInterval();
+        QApplication::setDoubleClickInterval(60000);
+        const auto restoreInterval = qScopeGuard([savedInterval]() {
+            QApplication::setDoubleClickInterval(savedInterval);
+        });
+        mpEditor->slot_showVariables();
+        search(mNeedle);
+        QTreeWidgetItem* offer = offerToSearchVariables();
+        QVERIFY(offer);
+        auto* tree = mpEditor->treeWidget_searchResults;
+        tree->scrollToItem(offer);
+        QCoreApplication::processEvents();
+        const QPoint pos = tree->visualItemRect(offer).center();
+        QTest::mouseClick(tree->viewport(), Qt::LeftButton, Qt::NoModifier, pos);
+        QVERIFY(QTest::qWaitFor([this]() {
+            return topLevelResultFor(qsl("Variable")) != nullptr;
+        }));
+        QTreeWidgetItem* landed = tree->itemAt(pos);
+        QVERIFY2(landed && !isNotice(landed), "no result moved under the pointer, so this case tests nothing");
+
+        QTest::mouseClick(tree->viewport(), Qt::LeftButton, Qt::NoModifier, pos);
+        QCoreApplication::processEvents();
+        QCOMPARE(mpEditor->treeWidget_variables->currentItem(), mpEditor->treeWidget_variables->topLevelItem(0));
+    }
+
+    // A search slower than a double-click must not use up the window that swallows its second click
+    void test_aSlowVariableSearchStillSwallowsTheSecondClick()
+    {
+        const int savedInterval = QApplication::doubleClickInterval();
+        QApplication::setDoubleClickInterval(1000);
+        const auto restoreInterval = qScopeGuard([savedInterval]() {
+            QApplication::setDoubleClickInterval(savedInterval);
+        });
+        mpEditor->slot_showVariables();
+        search(mNeedle);
+        QTreeWidgetItem* offer = offerToSearchVariables();
+        QVERIFY(offer);
+        auto* tree = mpEditor->treeWidget_searchResults;
+        tree->scrollToItem(offer);
+        QCoreApplication::processEvents();
+        const QPoint pos = tree->visualItemRect(offer).center();
+        QTest::mouseClick(tree->viewport(), Qt::LeftButton, Qt::NoModifier, pos);
+        // Stands in for the search itself running longer than the interval
+        QThread::msleep(1200);
+        QVERIFY(QTest::qWaitFor([this]() {
+            return topLevelResultFor(qsl("Variable")) != nullptr;
+        }));
+        QTreeWidgetItem* landed = tree->itemAt(pos);
+        QVERIFY2(landed && !isNotice(landed), "no result moved under the pointer, so this case tests nothing");
+
+        QTest::mouseClick(tree->viewport(), Qt::LeftButton, Qt::NoModifier, pos);
+        QCoreApplication::processEvents();
+        QCOMPARE(mpEditor->treeWidget_variables->currentItem(), mpEditor->treeWidget_variables->topLevelItem(0));
+    }
+
+    void test_theOfferCanBeTakenFromTheKeyboard()
+    {
+        mpEditor->slot_showScripts();
+        search(qsl("qaSearchVariable"));
+        QTreeWidgetItem* offer = offerToSearchVariables();
+        QVERIFY(offer);
+        auto* tree = mpEditor->treeWidget_searchResults;
+        tree->setCurrentItem(offer);
+#if defined(Q_OS_MACOS)
+        // Item views there open an item with Cmd+O, Return being "edit"
+        QTest::keyClick(tree, Qt::Key_O, Qt::ControlModifier);
+#else
+        QTest::keyClick(tree, Qt::Key_Return);
+#endif
+        QVERIFY2(QTest::qWaitFor([this]() {
+                     return topLevelResultFor(qsl("Variable")) != nullptr;
+                 }),
+                 "the platform's activation key on the offer did not search the variables");
     }
 
     void test_anEmptyOrUnknownTermProducesNoResults()
