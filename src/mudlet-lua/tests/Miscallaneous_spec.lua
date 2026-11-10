@@ -143,6 +143,30 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_true(table.contains(validOSNames, osName))
       end)
 
+      it("should name the processor Mudlet was built for", function()
+        local results = {getOS()}
+        local machine
+        if results[1] == "windows" then
+          -- the architecture this process runs as, which is what Mudlet was built for
+          machine = os.getenv("PROCESSOR_ARCHITECTURE")
+        elseif results[1] == "linux" or results[1] == "mac" then
+          local pipe = io.popen("uname -m")
+          machine = pipe and pipe:read("*l")
+          if pipe then
+            pipe:close()
+          end
+        end
+        local expected = ({
+          x86_64 = "x86 (64-bit)", AMD64 = "x86 (64-bit)",
+          aarch64 = "arm64", arm64 = "arm64", ARM64 = "arm64",
+        })[machine or ""]
+        if not expected then
+          pending("no known processor name for this machine: " .. tostring(machine))
+          return
+        end
+        assert.equals(expected, results[#results])
+      end)
+
       it("should not return empty strings", function()
         local osName, osVersion, osType = getOS()
         assert.is_true(osName ~= "")
