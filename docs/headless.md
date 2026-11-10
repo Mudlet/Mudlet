@@ -873,7 +873,19 @@ that is not `shown` or a `position` outside it, which the GUI's mouse could not 
 for a hidden window, as Qt sends one to a widget that hides under the pointer. Once the click-through label
 a held button's press went through has gone, a press, move or release while the button is held, or an
 `enter` or a `leave`, naming it is still taken until the grab ends, and any other event naming it is
-refused. `getMousePosition()`
+refused. On the `mapper` window a `press`, `doubleClick` or `wheel` is `mapPointer()`'s at that
+`position`, as the GUI's map fills its window from the top left, reached through a click-through label
+over it too. What the GUI's map ignores is taken and does nothing, where `mapPointer()` is false: a
+`doubleClick` with any button but the left alone held (`mapPointer()`, which has no `buttons`, takes its
+`button` as the only one held), less than half a notch of the `wheel` and a `wheel`
+turn on a map showing no area. It is false, with the reason in `errorString()`, with no map open, before
+the map is drawn, and while the map was last drawn at another size than its window has, as after a script
+resized the mapper and before the app drew it again, when the `position` would land on other rooms; the
+button of a press the map refused is still held, and `getMousePosition()` has followed it. A `move` with
+the left or middle button held is false too, and with any button held while the map is being edited: in the
+GUI it pans the map, drags out a selection or moves rooms or a label, and the map's drags stay the GUI's.
+Any other `move`, a `release`, an `enter` or a `leave` there is taken and does nothing.
+`getMousePosition()`
 answers with the last point a `pointer()` or `mapPointer()` call took, in the main window's area, other
 than a `leave`'s, whether or not a window ran anything for it, as for the moves of a grab Qt has dropped, from where the
 window was at the press if it has gone since, and with nil and

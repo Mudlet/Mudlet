@@ -53,6 +53,32 @@ private:
     static QColor westColour() { return QColor(200, 30, 30); }
     static QColor eastColour() { return QColor(30, 30, 200); }
 
+    // Rooms 7 and 8 two apart, east and west of each other, in an area of that name, the map centred on 7; and
+    // what a test reads of a speedwalk and of the selection
+    static QString twoRoomsLua(const QString& area)
+    {
+        return qsl(R"lua(
+headlessArea = addAreaName("%1")
+for id, x in pairs({[7] = 0, [8] = 2}) do
+  addRoom(id)
+  setRoomArea(id, headlessArea)
+  setRoomCoordinates(id, x, 0, 0)
+end
+setExit(7, 8, "e")
+setExit(8, 7, "w")
+setMapZoom(10, headlessArea)
+centerview(7)
+function doSpeedWalk() headlessWalk = table.concat(speedWalkDir, ",") .. " to " .. table.concat(speedWalkPath, ",") end
+function headlessSelection()
+  local selection = getMapSelection()
+  local rooms = selection.rooms or {}
+  table.sort(rooms)
+  return table.concat(rooms, ",") .. " centre " .. tostring(selection.center)
+end
+)lua")
+                .arg(area);
+    }
+
     static bool writeProfile(const QString& name)
     {
         const QString saveFolder = MudletApp::getMudletPath(enums::profileXmlFilesPath, name);
@@ -469,27 +495,9 @@ centerview(1)
         QVERIFY(!session.mapPointer(onRoom8));
         QCOMPARE(session.errorString(), qsl("No map is open; a script opens one, as with openMapWidget()."));
 
-        QVERIFY(session.runLua(qsl(R"lua(
-openMapWidget()
-headlessArea = addAreaName("Headless Pointer")
-for id, x in pairs({[7] = 0, [8] = 2}) do
-  addRoom(id)
-  setRoomArea(id, headlessArea)
-  setRoomCoordinates(id, x, 0, 0)
-end
-setExit(7, 8, "e")
-setExit(8, 7, "w")
-setMapZoom(10, headlessArea)
-centerview(7)
+        QVERIFY(session.runLua(qsl("openMapWidget()") + twoRoomsLua(qsl("Headless Pointer")) + qsl(R"lua(
 headlessPresses = 0
 registerAnonymousEventHandler("sysMapWindowMousePressEvent", function() headlessPresses = headlessPresses + 1 end)
-function doSpeedWalk() headlessWalk = table.concat(speedWalkDir, ",") .. " to " .. table.concat(speedWalkPath, ",") end
-function headlessSelection()
-  local selection = getMapSelection()
-  local rooms = selection.rooms or {}
-  table.sort(rooms)
-  return table.concat(rooms, ",") .. " centre " .. tostring(selection.center)
-end
 )lua")));
         QTest::qWait(50);
         QVERIFY(!session.mapPointer(onRoom8));
@@ -587,6 +595,92 @@ registerAnonymousEventHandler("sysMapWindowMousePressEvent", function() headless
         QVERIFY(session.runLua(qsl(R"(hideWindow("uw"))")));
         QVERIFY(session.mapPointer({.position = QPointF(30, 40)}));
         QCOMPARE(luaGlobalString(session.host(), "headlessPressedAt"), qsl("311 171"));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // Rooms 7 and 8 as above, in a mapper 100 by 50 into the main window's area, drawn at its size
+    void test_theWindowsPointerReachesTheMapper()
+    {
+        using Type = THeadlessSession::WindowPointerEvent::Type;
+        const QString name = qsl("Headless Mapper Window Pointer");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        QVERIFY(session.runLua(qsl("createMapper(100, 50, %1, %2)").arg(scmWidth).arg(scmHeight) + twoRoomsLua(qsl("Headless Mapper Window"))
+                               + qsl(R"lua(
+headlessPresses = 0
+registerAnonymousEventHandler("sysMapWindowMousePressEvent", function()
+  headlessPresses = headlessPresses + 1
+  headlessPressedAt = table.concat({getMousePosition()}, " ")
+end)
+createLabel("glass", %1, %2, 50, 50, 1)
+enableClickthrough("glass")
+)lua")
+                                         .arg(100 + scmWidth / 2 - 25)
+                                         .arg(50 + scmHeight / 2 - 25)));
+        QTest::qWait(50);
+        const QPointF onRoom8(scmWidth / 2 + 60, scmHeight / 2);
+        const auto global = [&session](const char* name, const QString& setting = QString()) {
+            session.runLua(setting);
+            return luaGlobalString(session.host(), name);
+        };
+
+        QVERIFY(!session.pointer(qsl("mapper"), {.type = Type::press, .position = onRoom8, .button = Qt::LeftButton, .buttons = Qt::LeftButton}));
+        QCOMPARE(session.errorString(), qsl("The map has not been drawn yet; the position is in what renderMap() drew."));
+        QVERIFY(session.pointer(qsl("mapper"), {.type = Type::release, .position = onRoom8, .button = Qt::LeftButton}));
+        QVERIFY(rendered(session));
+
+        // A press selects the room there and raises the map's event, at that point of the main window's area
+        QVERIFY2(session.pointer(qsl("mapper"), {.type = Type::press, .position = onRoom8, .button = Qt::LeftButton, .buttons = Qt::LeftButton}), qPrintable(session.errorString()));
+        QCOMPARE(global("headlessPresses"), qsl("1"));
+        QCOMPARE(global("headlessPressedAt"), qsl("%1 %2").arg(100 + onRoom8.x()).arg(50 + onRoom8.y()));
+        QCOMPARE(global("headlessSelected", qsl("headlessSelected = headlessSelection()")), qsl("8 centre 8"));
+        // The GUI's drag with the left button would size a selection here, the map being edited, or pan a view-only map
+        QVERIFY(!session.pointer(qsl("mapper"), {.type = Type::move, .position = QPointF(10, 10), .buttons = Qt::LeftButton}));
+        QCOMPARE(session.errorString(), qsl("The map's drags are not available with no main window."));
+        QVERIFY(session.pointer(qsl("mapper"), {.type = Type::release, .position = QPointF(10, 10), .button = Qt::LeftButton}));
+        QVERIFY(session.pointer(qsl("mapper"), {.type = Type::move, .position = QPointF(10, 10)}));
+        QCOMPARE(global("headlessPresses"), qsl("1"));
+
+        // What the GUI's map ignores is taken: a double-click with any button but the left alone held
+        QVERIFY(session.pointer(qsl("mapper"), {.type = Type::doubleClick, .position = onRoom8, .button = Qt::RightButton, .buttons = Qt::RightButton}));
+        QVERIFY(session.pointer(qsl("mapper"), {.type = Type::release, .position = onRoom8, .button = Qt::RightButton}));
+        QVERIFY(session.pointer(qsl("mapper"), {.type = Type::press, .position = onRoom8, .button = Qt::RightButton, .buttons = Qt::RightButton}));
+        // and, while the map is only viewed, a move with the right button held
+        session.host()->mMapViewOnly = true;
+        QVERIFY2(session.pointer(qsl("mapper"), {.type = Type::move, .position = QPointF(10, 10), .buttons = Qt::RightButton}), qPrintable(session.errorString()));
+        session.host()->mMapViewOnly = false;
+        QVERIFY(!session.pointer(qsl("mapper"), {.type = Type::move, .position = QPointF(10, 10), .buttons = Qt::RightButton}));
+        QVERIFY(session.pointer(qsl("mapper"), {.type = Type::doubleClick, .position = onRoom8, .button = Qt::LeftButton, .buttons = Qt::LeftButton | Qt::RightButton}));
+        QVERIFY(session.pointer(qsl("mapper"), {.type = Type::release, .position = onRoom8, .button = Qt::LeftButton, .buttons = Qt::RightButton}));
+        QVERIFY(session.pointer(qsl("mapper"), {.type = Type::release, .position = onRoom8, .button = Qt::RightButton}));
+        QCOMPARE(global("headlessWalk"), QString());
+        QVERIFY(session.pointer(qsl("mapper"), {.type = Type::doubleClick, .position = onRoom8, .button = Qt::LeftButton, .buttons = Qt::LeftButton}));
+        QVERIFY(session.pointer(qsl("mapper"), {.type = Type::release, .position = onRoom8, .button = Qt::LeftButton}));
+        QCOMPARE(global("headlessWalk"), qsl("e to 8"));
+
+        // A click-through label over the mapper passes the press to the map, at the point under it: room 7
+        QVERIFY(session.pointer(qsl("glass"), {.type = Type::press, .position = QPointF(25, 25), .button = Qt::LeftButton, .buttons = Qt::LeftButton}));
+        QVERIFY(session.pointer(qsl("glass"), {.type = Type::release, .position = QPointF(25, 25), .button = Qt::LeftButton}));
+        QCOMPARE(global("headlessPresses"), qsl("3"));
+        QCOMPARE(global("headlessSelected", qsl("headlessSelected = headlessSelection()")), qsl("7 centre 7"));
+
+        // and less than half a notch of the wheel
+        QVERIFY(session.pointer(qsl("mapper"), {.type = Type::wheel, .position = onRoom8, .angleDelta = QPoint(0, 59)}));
+        QCOMPARE(global("headlessZoom", qsl("headlessZoom = getMapZoom()")).toDouble(), 10.0);
+        QVERIFY(session.pointer(qsl("mapper"), {.type = Type::wheel, .position = onRoom8, .angleDelta = QPoint(0, -600)}));
+        const QString zoom = global("headlessZoom", qsl("headlessZoom = getMapZoom()"));
+        QVERIFY2(qFuzzyCompare(zoom.toDouble(), 10.0 * std::pow(1.07, 5)), qPrintable(zoom));
+
+        // A point of a mapper the script has resized is not that point of the map last drawn
+        QVERIFY(session.runLua(qsl("createMapper(100, 50, %1, %2)").arg(scmWidth + 40).arg(scmHeight)));
+        QTest::qWait(50);
+        QVERIFY(!session.pointer(qsl("mapper"), {.type = Type::press, .position = onRoom8, .button = Qt::LeftButton, .buttons = Qt::LeftButton}));
+        QCOMPARE(session.errorString(),
+                 qsl("The map was last drawn at %1 by %2 pixels and its window is %3 by %2; the position is in what renderMap() drew.").arg(scmWidth).arg(scmHeight).arg(scmWidth + 40));
+        QVERIFY(session.pointer(qsl("mapper"), {.type = Type::release, .position = onRoom8, .button = Qt::LeftButton}));
+        QCOMPARE(global("headlessPresses"), qsl("3"));
         QVERIFY(session.shutdown(false));
     }
 
