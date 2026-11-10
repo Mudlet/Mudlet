@@ -14120,7 +14120,19 @@ void dlgTriggerEditor::runScheduledCleanReset()
 
 void dlgTriggerEditor::resetTrees()
 {
-    // Clear all current item pointers BEFORE attempting to save or clear tree widgets
+    // A package or module change or a recompile of every script resets the editor without warning, so keep what was being typed;
+    // an item it removed is looked up by id and skipped. Saving a script runs its body, so only when it was edited.
+    const TScript* pOpenScript = mCurrentView == EditorViewType::cmScriptView ? getScriptFromTreeItem(mpCurrentScriptItem) : nullptr;
+    // The chip row shows a handler a profile file names twice only once
+    QStringList storedHandlers = pOpenScript ? pOpenScript->getEventHandlerList() : QStringList();
+    storedHandlers.removeDuplicates();
+    const bool openScriptUnchanged = pOpenScript && pOpenScript->getScript() == mpSourceEditorEdbeeDocument->text() && pOpenScript->getName() == mpScriptsMainArea->lineEdit_script_name->text()
+                                     && storedHandlers == mpChipRow_scriptEvents->items();
+    if (!openScriptUnchanged) {
+        saveOpenChanges();
+    }
+
+    // Clear all current item pointers before clearing the tree widgets
     // to prevent heap-use-after-free when the tree widgets are cleared
     mpCurrentTriggerItem = nullptr;
     mpCurrentTimerItem = nullptr;
@@ -14128,34 +14140,6 @@ void dlgTriggerEditor::resetTrees()
     mpCurrentScriptItem = nullptr;
     mpCurrentActionItem = nullptr;
     mpCurrentKeyItem = nullptr;
-
-    switch (mCurrentView) {
-    case EditorViewType::cmTriggerView:
-        saveTrigger();
-        break;
-    case EditorViewType::cmTimerView:
-        saveTimer();
-        break;
-    case EditorViewType::cmAliasView:
-        saveAlias();
-        break;
-    case EditorViewType::cmScriptView:
-        saveScript();
-        break;
-    case EditorViewType::cmActionView:
-        saveAction();
-        break;
-    case EditorViewType::cmKeysView:
-        saveKey();
-        break;
-    case EditorViewType::cmVarsView:
-        // FIXME: The switch in here need to handle (or at least treat correctly) the
-        // EditorViewType:cmVarsView case but how is not clear:
-        qWarning().nospace().noquote() << "dlgTriggerEditor::runScheduledCleanReset() WARNING - switch(EditorViewType) not expected to be called for \"EditorViewType::cmVarsView!\"";
-        break;
-    case EditorViewType::cmUnknownView:
-        qWarning().nospace().noquote() << "dlgTriggerEditor::runScheduledCleanReset() WARNING - switch(EditorViewType) not expected to be called for \"EditorViewType::cmUnknownView!\"";
-    }
 
     clearTypeTrees();
     fillout_form();
