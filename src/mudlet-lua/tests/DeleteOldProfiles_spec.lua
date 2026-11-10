@@ -10,6 +10,7 @@ describe("Tests the deleteOldProfiles package", function()
   local specHome = realGetMudletHomeDir():gsub("\\", "/") .. "/delete_old_profiles_spec"
   local folders = {
     profiles = specHome .. "/current",
+    maps = specHome .. "/map",
   }
   local made = {}
 
@@ -44,6 +45,7 @@ describe("Tests the deleteOldProfiles package", function()
   setup(function()
     lfs.mkdir(specHome)
     lfs.mkdir(folders.profiles)
+    lfs.mkdir(folders.maps)
   end)
 
   after_each(removeMade)
@@ -52,6 +54,7 @@ describe("Tests the deleteOldProfiles package", function()
     _G.getMudletHomeDir = realGetMudletHomeDir
     removeMade()
     lfs.rmdir(folders.profiles)
+    lfs.rmdir(folders.maps)
     lfs.rmdir(specHome)
   end)
 
@@ -68,6 +71,22 @@ describe("Tests the deleteOldProfiles package", function()
     assert.is_false(exists("profiles", "2020-03-10#12-00-00.xml"), "an old save that is neither its month's first nor the newest should go")
     assert.is_true(exists("profiles", "2020-03-20#12-00-00.xml"), "the newest save, the one the profile loads, should be kept")
     assert.is_false(exists("profiles", "2020-03-21#12-00-00.xml.AbCdEf"), "a leftover temporary file is not a save, so it should not stand in for the newest one")
+  end)
+
+  it("keeps the newest maps, of either format and any letter case, but not a newer leftover", function()
+    makeFile("maps", "2020-03-01#12-00-00map.dat", 1)
+    makeFile("maps", "2020-03-10#12-00-00map.dat", 10)
+    makeFile("maps", "2020-03-20#12-00-00map.DAT", 20)
+    makeFile("maps", "2020-03-20#12-00-00map.json", 20)
+    makeFile("maps", "2020-03-21#12-00-00map.dat.AbCdEf", 21)
+
+    deleteOld("maps")
+
+    assert.is_true(exists("maps", "2020-03-01#12-00-00map.dat"), "the month's first map should be kept")
+    assert.is_false(exists("maps", "2020-03-10#12-00-00map.dat"), "an old map that is neither its month's first nor the newest should go")
+    assert.is_true(exists("maps", "2020-03-20#12-00-00map.DAT"), "the newest binary map should be kept")
+    assert.is_true(exists("maps", "2020-03-20#12-00-00map.json"), "the newest JSON map should be kept")
+    assert.is_false(exists("maps", "2020-03-21#12-00-00map.dat.AbCdEf"), "a leftover temporary file is not a map")
   end)
 
   it("keeps every save tied for the newest, as Mudlet may load any of them", function()
