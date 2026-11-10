@@ -4843,6 +4843,32 @@ describe("Tests that raiseEvent hands numbers over unchanged", function()
   end)
 end)
 
+describe("Tests anonymous event handlers that raise something other than a string", function()
+  it("still runs the handlers after one that raises a table, and reports it", function()
+    local reportSpy = spy.on(_G, "showHandlerError")
+    local laterRan = false
+    -- handlers for "*" are run after those for the event itself
+    local failing = registerAnonymousEventHandler("otherSpecHandlerRaisesTable", function()
+      error({})
+    end)
+    local later = registerAnonymousEventHandler("*", function(event)
+      if event == "otherSpecHandlerRaisesTable" then
+        laterRan = true
+      end
+    end)
+    finally(function()
+      killAnonymousEventHandler(failing)
+      killAnonymousEventHandler(later)
+      showHandlerError:revert()
+    end)
+
+    raiseEvent("otherSpecHandlerRaisesTable")
+
+    assert.is_true(laterRan)
+    assert.spy(reportSpy).was.called_with("otherSpecHandlerRaisesTable", "error object is a table value")
+  end)
+end)
+
 describe("Tests one-shot event handlers", function()
   local originalShowHandlerError
   local reported
