@@ -2256,6 +2256,7 @@ describe("Tests UI functions", function()
         "You shout, 'hello'",
         "Bob chats, 'hello everyone'",
         'You chat, "test."',
+        "Bob gossips 'anyone around?'",
         "[newbie] Ann: how do I get out of here?",
         "(gossip) Ann: anyone around?",
         "< chat | Ann: anyone around?",
@@ -2267,6 +2268,7 @@ describe("Tests UI functions", function()
         "You are standing in a dark forest.",
         "The orc hits you for 14 damage!",
         "You chat with the innkeeper.",
+        "Martha gossips about the mayor's wife.",
         "[combat] 100/120 hp",
         "(12) something that is not a channel",
       }
