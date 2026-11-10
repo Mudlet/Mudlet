@@ -58,9 +58,6 @@
            <property name="cursor">
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
-           <property name="focusPolicy">
-            <enum>Qt::NoFocus</enum>
-           </property>
            <property name="toolTip">
             <string>&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;</string>
            </property>
@@ -191,9 +188,6 @@
           <widget class="QCheckBox" name="noroute_n">
            <property name="cursor">
             <cursorShape>PointingHandCursor</cursorShape>
-           </property>
-           <property name="focusPolicy">
-            <enum>Qt::NoFocus</enum>
            </property>
            <property name="toolTip">
             <string>&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;</string>
@@ -326,9 +320,6 @@
            <property name="cursor">
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
-           <property name="focusPolicy">
-            <enum>Qt::NoFocus</enum>
-           </property>
            <property name="toolTip">
             <string>&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;</string>
            </property>
@@ -460,9 +451,6 @@
            <property name="cursor">
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
-           <property name="focusPolicy">
-            <enum>Qt::NoFocus</enum>
-           </property>
            <property name="toolTip">
             <string>&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;</string>
            </property>
@@ -593,9 +581,6 @@
           <widget class="QCheckBox" name="noroute_w">
            <property name="cursor">
             <cursorShape>PointingHandCursor</cursorShape>
-           </property>
-           <property name="focusPolicy">
-            <enum>Qt::NoFocus</enum>
            </property>
            <property name="toolTip">
             <string>&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;</string>
@@ -847,9 +832,6 @@
            <property name="cursor">
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
-           <property name="focusPolicy">
-            <enum>Qt::NoFocus</enum>
-           </property>
            <property name="toolTip">
             <string>&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;</string>
            </property>
@@ -977,9 +959,6 @@
           <widget class="QCheckBox" name="noroute_down">
            <property name="cursor">
             <cursorShape>PointingHandCursor</cursorShape>
-           </property>
-           <property name="focusPolicy">
-            <enum>Qt::NoFocus</enum>
            </property>
            <property name="toolTip">
             <string>&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;</string>
@@ -1117,9 +1096,6 @@
            </property>
            <property name="cursor">
             <cursorShape>PointingHandCursor</cursorShape>
-           </property>
-           <property name="focusPolicy">
-            <enum>Qt::NoFocus</enum>
            </property>
            <property name="toolTip">
             <string>&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;</string>
@@ -1264,9 +1240,6 @@
            <property name="cursor">
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
-           <property name="focusPolicy">
-            <enum>Qt::NoFocus</enum>
-           </property>
            <property name="toolTip">
             <string>&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;</string>
            </property>
@@ -1398,9 +1371,6 @@
            <property name="cursor">
             <cursorShape>PointingHandCursor</cursorShape>
            </property>
-           <property name="focusPolicy">
-            <enum>Qt::NoFocus</enum>
-           </property>
            <property name="toolTip">
             <string>&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;</string>
            </property>
@@ -1531,9 +1501,6 @@
           <widget class="QCheckBox" name="noroute_in">
            <property name="cursor">
             <cursorShape>PointingHandCursor</cursorShape>
-           </property>
-           <property name="focusPolicy">
-            <enum>Qt::NoFocus</enum>
            </property>
            <property name="toolTip">
             <string>&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;</string>
@@ -1794,9 +1761,6 @@
           <widget class="QCheckBox" name="noroute_out">
            <property name="cursor">
             <cursorShape>PointingHandCursor</cursorShape>
-           </property>
-           <property name="focusPolicy">
-            <enum>Qt::NoFocus</enum>
            </property>
            <property name="toolTip">
             <string>&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;</string>

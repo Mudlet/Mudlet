@@ -1579,6 +1579,27 @@ void dlgRoomExits::initExit(int direction,
                             QSpinBox* weight,
                             const QString& validExitToolTip)
 {
+    // The checkboxes, door buttons and weight box carry no text and their
+    // tooltips don't name the direction, so without these a screen reader
+    // cannot tell the player which exit a control belongs to
+    const QString directionName = qobject_cast<QGroupBox*>(exitLineEdit->parentWidget())->title();
+    //: Screen reader name for the room number field of one exit in the Room Exits dialog; %1 is the direction, e.g. "Northwest"
+    exitLineEdit->setAccessibleName(tr("%1 exit room ID").arg(directionName));
+    //: Screen reader name for the "No route" checkbox of one exit in the Room Exits dialog; %1 is the direction, e.g. "Northwest"
+    noRoute->setAccessibleName(tr("%1 exit: no route").arg(directionName));
+    //: Screen reader name for the "Stub exit" checkbox of one exit in the Room Exits dialog; %1 is the direction, e.g. "Northwest"
+    stub->setAccessibleName(tr("%1 exit: stub exit").arg(directionName));
+    //: Screen reader name for the weight spin box of one exit in the Room Exits dialog; %1 is the direction, e.g. "Northwest"
+    weight->setAccessibleName(tr("%1 exit weight").arg(directionName));
+    //: Screen reader name for a door type radio button of one exit in the Room Exits dialog; %1 is the direction, e.g. "Northwest"
+    none->setAccessibleName(tr("%1 exit: no door").arg(directionName));
+    //: Screen reader name for a door type radio button of one exit in the Room Exits dialog; %1 is the direction, e.g. "Northwest"
+    open->setAccessibleName(tr("%1 exit: open door").arg(directionName));
+    //: Screen reader name for a door type radio button of one exit in the Room Exits dialog; %1 is the direction, e.g. "Northwest"
+    closed->setAccessibleName(tr("%1 exit: closed door").arg(directionName));
+    //: Screen reader name for a door type radio button of one exit in the Room Exits dialog; %1 is the direction, e.g. "Northwest"
+    locked->setAccessibleName(tr("%1 exit: locked door").arg(directionName));
+
     QString doorAndWeightText; // lowercase, initials for XY-plane, words for others
     switch (direction) {
     case DIR_NORTHWEST:
