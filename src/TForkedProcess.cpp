@@ -70,12 +70,14 @@ void TForkedProcess::slot_finished(int exitCode, QProcess::ExitStatus exitStatus
     Q_UNUSED(exitCode)
     Q_UNUSED(exitStatus)
     running = false;
+    // Hands over a last line that the process ended without a newline
+    slot_receivedData();
 }
 
 void TForkedProcess::slot_receivedData()
 {
     lua_State* L = mpInterpreter->pGlobalLua;
-    while (canReadLine()) {
+    while (canReadLine() || (!running && bytesAvailable() > 0)) {
         // Checked before the line is read, so a line that cannot be handed over stays buffered
         if (!lua_checkstack(L, 2)) {
             std::string e = "not enough Lua stack space to call it with the process's next line of output";
