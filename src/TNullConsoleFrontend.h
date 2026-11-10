@@ -156,8 +156,8 @@ public:
     QStringList mainCommandLineHistory() const;
     // Why the main command line's history file could not be read, if it could not
     std::optional<QString> mainCommandLineHistoryReadError() const;
-    // As TCommandLine::enterCommand(): the line holds what is sent while its aliases run, and is emptied after
-    // if the profile clears it after a send
+    // As TCommandLine::enterCommand(): the line holds what is sent while its aliases run, then is emptied or
+    // selected as the profile says, unless something wrote to it meanwhile
     bool holdMainCommandLineForSend(const QString& line);
     void mainCommandLineSent();
     // As the GUI's command line as it is typed into, or as it is set by a history recall or Tab completion
@@ -613,7 +613,7 @@ private:
     std::optional<QString> mMainCommandLineCompleted;
     // Unlike mMainCommandLineAllSelected, not set by a completion
     bool mMainCommandLineWhollySelected = false;
-    // Whether the line held for a send was written to while it was sent
+    // Whether the main line was written to since the last holdMainCommandLineForSend(), which then leaves it as written
     bool mMainCommandLineRewritten = false;
     // A send emptied the line while hidden input was wanted, which the app has not been told
     bool mMainCommandLineClearPending = false;

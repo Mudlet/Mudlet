@@ -479,6 +479,21 @@ private slots:
         QCOMPARE(pCommandLine->toPlainText(), qsl("specSticky"));
     }
 
+    // A setCmdLineAction() field that shows its committed value again, as
+    // packages' settings fields do, keeps it selected for the next value to replace
+    void test_anActionFieldThatRewritesItsValueKeepsItSelected()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY(runLua(qsl("setCmdLineAction('%1', function(text) printCmdLine('%1', text .. '0') end)").arg(mLineName)));
+
+        type(pCommandLine, qsl("25"));
+        press(pCommandLine, Qt::Key_Return);
+
+        QCOMPARE(pCommandLine->toPlainText(), qsl("250"));
+        QCOMPARE(selection(pCommandLine), qsl("250"));
+    }
+
     // Up walks back through what was sent, Down comes forward again, and the
     // walk stops at the oldest entry rather than running off the end.
     void test_upAndDownWalkTheCommandHistory()

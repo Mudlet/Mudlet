@@ -1167,9 +1167,10 @@ void TCommandLine::enterCommand(QKeyEvent* event)
         }
     }
 
-    // An alias that wrote to the line, say with printCmdLine(), left that for the player to finish,
-    // so it is neither cleared nor selected for the next keystroke to replace
-    const bool scriptWroteLine = document()->revision() != revisionAtSubmit;
+    // A line changed while it was sent, say by an alias's printCmdLine(), is left for the player to finish, so it is
+    // neither cleared nor selected for the next keystroke to replace. A setCmdLineAction() field that writes back
+    // its committed value keeps that selected, as packages' settings fields expect.
+    const bool lineChangedDuringSend = !(mType != enums::MainCommandLine && mActionFunction) && document()->revision() != revisionAtSubmit;
 
     // A line typed past the hidden-input box stays out of the on-disk history
     if (!toPlainText().isEmpty() && (!mpHost->isRemoteEchoingActive() || mpHost->disablePasswordMasking())) {
@@ -1182,7 +1183,7 @@ void TCommandLine::enterCommand(QKeyEvent* event)
         TCommandHistory::add(mHistoryList, toPlainText());
     }
 
-    if (!scriptWroteLine) {
+    if (!lineChangedDuringSend) {
         if (mpHost->mAutoClearCommandLineAfterSend) {
 #if defined(Q_OS_MACOS)
             // clearing the input line on macOS 11.6 makes VoiceOver announce the removed text,

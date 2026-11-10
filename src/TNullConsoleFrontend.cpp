@@ -2316,11 +2316,12 @@ bool TNullConsoleFrontend::replaceCommandLineText(const QString& name, const QSt
 
 bool TNullConsoleFrontend::holdMainCommandLineForSend(const QString& line)
 {
-    mMainCommandLineRewritten = false;
-    // A line typed while the game hides input went through the hidden-input box, past the main line
+    // A line typed while the game hides input went through the hidden-input box, past the main line. It leaves the
+    // flag alone, as an outer send still to finish may have had its line written to.
     if (mpHost->passwordEntryWanted()) {
         return false;
     }
+    mMainCommandLineRewritten = false;
     mMainCommandLineTyped = false;
     mMainCommandLineAllSelected = false;
     mMainCommandLineWhollySelected = false;
@@ -2331,8 +2332,8 @@ bool TNullConsoleFrontend::holdMainCommandLineForSend(const QString& line)
 
 void TNullConsoleFrontend::mainCommandLineSent()
 {
-    // TCommandLine::enterCommand() leaves a line the aliases wrote to the player. Left set for an outer send whose
-    // alias ran this one from the event loop; the next send's holdMainCommandLineForSend() resets it.
+    // As TCommandLine::enterCommand(), a line changed while it was sent is left for the player. The flag outlives
+    // this send so an outer send that ran this one from the event loop leaves it too.
     if (mMainCommandLineRewritten) {
         return;
     }
