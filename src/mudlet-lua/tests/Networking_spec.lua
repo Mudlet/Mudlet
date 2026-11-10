@@ -191,6 +191,13 @@ describe("Networking send functions honour their disconnected/offline contracts"
       local command = "sendNilShowOnScreen" .. os.time()
       assert.is_true(send(command, nil))
       assert.are.same({command}, seen)
+      -- and still echoes it, as an omitted showOnScreen does
+      local last = getLineCount("main")
+      local echoed = false
+      for _, line in ipairs(getLines("main", math.max(0, last - 3), last + 1)) do
+        echoed = echoed or line:find(command, 1, true) ~= nil
+      end
+      assert.is_true(echoed)
     end)
 
     it("still raises a Lua error when showOnScreen is not a boolean", function()
