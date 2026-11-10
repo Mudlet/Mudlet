@@ -1429,9 +1429,11 @@ private slots:
         QTest::qWait(100ms);
 
         int hoveredLink = 0;
+        QPointF overTheLink;
         for (int y = pane->mFontHeight / 2; y < pane->height() && !hoveredLink; y += pane->mFontHeight) {
             for (int x = pane->mFontWidth / 2; x < pane->width(); x += pane->mFontWidth) {
-                sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::NoButton, QPointF(x, y));
+                overTheLink = QPointF(x, y);
+                sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::NoButton, overTheLink);
                 hoveredLink = pane->mpBuffer->getHoveredLink();
                 if (hoveredLink) {
                     break;
@@ -1446,6 +1448,17 @@ private slots:
 
         QCOMPARE(pane->mpBuffer->getHoveredLink(), 0);
         QVERIFY2(pane->mpBuffer->getLinkState(hoveredLink) != Mudlet::HyperlinkStyling::StateHover, "the link kept its hover style after the mouse left the pane");
+
+        // A click holds the hover style off the link until the pointer has left
+        // it, and leaving the pane counts as leaving the link
+        sendMouse(pane, QEvent::MouseButtonPress, Qt::LeftButton, Qt::LeftButton, overTheLink);
+        sendMouse(pane, QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, overTheLink);
+        sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::NoButton, overTheLink);
+        QVERIFY2(pane->mpBuffer->getLinkState(hoveredLink) != Mudlet::HyperlinkStyling::StateHover, "the link took its hover style straight after the click, so the move below proves nothing");
+
+        QApplication::sendEvent(pane, &leave);
+        sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::NoButton, overTheLink);
+        QVERIFY2(pane->mpBuffer->getLinkState(hoveredLink) == Mudlet::HyperlinkStyling::StateHover, "a clicked link stayed without its hover style after the mouse left the pane and came back");
     }
 
     // #3031: the timestamp sits in a gutter to the left of the line's own text,
