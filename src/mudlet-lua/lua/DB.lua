@@ -2738,7 +2738,7 @@ function db:OR(...)
   local parts = {}
 
   -- counted rather than ipairs, which would drop a nil and every condition after it; the "(nil)"
-  -- kept here makes sqlite reject the query, so db:fetch returns nil rather than extra rows
+  -- kept here makes sqlite reject the query, so db:fetch returns nil rather than missing rows
   for i = 1, select("#", ...) do
     -- coerce to strings so db:exp sentinels work here as well as plain expressions
     local expression = tostring((select(i, ...)))
