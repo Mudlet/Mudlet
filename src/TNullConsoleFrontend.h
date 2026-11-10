@@ -470,7 +470,8 @@ private:
         // which a load already running refuses
         bool layoutRequested = false;
         // TConsole::mDimensions and mReportedTimeStampWidth, what was last reported, and whether the pane was
-        // resized while hidden, as its TTextEdit::resizeEvent() then waits for the pane to show
+        // resized or had its timestamps toggled while hidden, as its TTextEdit::resizeEvent() and
+        // TConsole::showEvent() then wait for the pane to show
         QSize reportedGrid;
         int reportedTimeStampWidth = 0;
         bool paneResizePending = true;
