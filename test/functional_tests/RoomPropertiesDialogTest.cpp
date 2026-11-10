@@ -302,15 +302,16 @@ private:
     }
 
     // Left-clicks a colour in the selector, from a timer inside its event
-    // loop, then closes the selector with OK or Cancel
-    void clickAColorInTheRoomColorSelector(dlgRoomProperties* pDlg, const int row, const bool pressOk)
+    // loop, then closes the selector with OK or Cancel; false if the click missed that row
+    bool clickAColorInTheRoomColorSelector(dlgRoomProperties* pDlg, const int row, const bool pressOk)
     {
         using namespace std::chrono_literals;
+        bool clickedTheRow = false;
         auto* selectorDriver = new QTimer(this);
         selectorDriver->setInterval(20ms);
         QElapsedTimer waited;
         waited.start();
-        connect(selectorDriver, &QTimer::timeout, this, [selectorDriver, row, pressOk, &waited]() {
+        connect(selectorDriver, &QTimer::timeout, this, [selectorDriver, row, pressOk, &waited, &clickedTheRow]() {
             auto* selector = qobject_cast<QDialog*>(QApplication::activeModalWidget());
             auto* list = selector ? selector->findChild<QListWidget*>() : nullptr;
             if (!list) {
@@ -323,7 +324,10 @@ private:
                 return;
             }
             selectorDriver->stop();
-            QTest::mouseClick(list->viewport(), Qt::LeftButton, Qt::NoModifier, list->visualItemRect(list->item(row)).center());
+            QListWidgetItem* pItem = list->item(row);
+            const QPoint pos = pItem ? list->visualItemRect(pItem).center() : QPoint();
+            clickedTheRow = pItem && list->itemAt(pos) == pItem;
+            QTest::mouseClick(list->viewport(), Qt::LeftButton, Qt::NoModifier, pos);
             if (pressOk) {
                 selector->accept();
             } else {
@@ -334,6 +338,7 @@ private:
         pDlg->pushButton_setRoomColor->click();
         selectorDriver->stop();
         delete selectorDriver;
+        return clickedTheRow;
     }
 
     // In the grabbed image's pixels, which outnumber the label's on a high-DPI screen
@@ -862,8 +867,8 @@ private slots:
         map()->mCustomEnvColors = {{257, QColor(Qt::red)}, {258, QColor(Qt::blue)}};
 
         auto* pDlg = openDialogOn({scmFirstRoom});
-        clickAColorInTheRoomColorSelector(pDlg, 0, true);
-        clickAColorInTheRoomColorSelector(pDlg, 1, false);
+        QVERIFY2(clickAColorInTheRoomColorSelector(pDlg, 0, true), "the first click did not pick colour 257");
+        QVERIFY2(clickAColorInTheRoomColorSelector(pDlg, 1, false), "the cancelled click did not pick colour 258, so Cancel went untested");
         pDlg->accept();
 
         QCOMPARE(mEmitted.emitCount, 1);

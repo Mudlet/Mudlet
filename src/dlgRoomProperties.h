@@ -26,7 +26,6 @@
 #include "ui_room_properties.h"
 
 #include <QColor>
-#include <QListWidget>
 
 #include <optional>
 

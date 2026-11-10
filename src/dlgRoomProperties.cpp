@@ -29,6 +29,7 @@
 #include "TRoomDB.h"
 
 #include <QColorDialog>
+#include <QListWidget>
 #include <QMenu>
 #include <QPainter>
 
@@ -375,10 +376,7 @@ void dlgRoomProperties::accept()
         changeName = false;
     }
 
-    // Find color to return back
-    //   This is using mChangeRoomColor and mRoomColorNumber which are updated
-    //   immediately when the player changes colors in the dialog (as opposed
-    //   to the other room data here) - They need no further review at this time.
+    // mChangeRoomColor and mRoomColorNumber were already set when the color selector closed with OK
 
     // Find symbol to return back
     const QString newSymbol = getNewSymbol();
