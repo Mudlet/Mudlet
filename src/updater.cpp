@@ -31,6 +31,7 @@
 #include <QPushButton>
 #include <QtConcurrent>
 #include <chrono>
+#include <utility>
 #include "../3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h"
 
 using namespace std::chrono_literals;
@@ -285,13 +286,25 @@ void Updater::showChangelog() const
     changelogDialog->show();
 }
 
-void Updater::showFullChangelog() const
+void Updater::showFullChangelog()
 {
     if (!feed->isReady()) {
-        KDToolBox::connectSingleShot(feed.get(), &dblsqd::Feed::ready, feed.get(), [=, this]() {
+        // Asked again while the feed is still loading: the first request will open it
+        if (mChangelogFeedReady) {
+            return;
+        }
+        // Both go once either answers, or the other would answer some later
+        // update check with a changelog or an error box nobody asked for
+        const auto stopWaiting = [this]() {
+            disconnect(std::exchange(mChangelogFeedReady, {}));
+            disconnect(std::exchange(mChangelogFeedError, {}));
+        };
+        mChangelogFeedReady = connect(feed.get(), &dblsqd::Feed::ready, this, [this, stopWaiting]() {
+            stopWaiting();
             showFullChangelog();
         });
-        KDToolBox::connectSingleShot(feed.get(), &dblsqd::Feed::loadError, feed.get(), [](const QString& error) {
+        mChangelogFeedError = connect(feed.get(), &dblsqd::Feed::loadError, this, [stopWaiting](const QString& error) {
+            stopWaiting();
             qWarning() << "Failed to load feed for changelog:" << error;
             //: Error title for dialog shown when changelog fails to load
             QMessageBox::warning(nullptr,
