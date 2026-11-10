@@ -3774,7 +3774,7 @@ int TLuaInterpreter::getProcessID(lua_State* L)
     return 1;
 }
 
-// lua_pcall() leaves whatever was raised, so error() and error({...}) leave no string to report
+// error() can raise any value or none; only a string or a number has text to report
 static std::string luaErrorText(lua_State* L)
 {
     if (lua_isstring(L, -1)) {
@@ -3879,11 +3879,7 @@ bool TLuaInterpreter::compile(const QString& code, QString& errorMsg, const QStr
         // is how a failure came to be reported as the script's own name.
         // A load can also fail for want of memory, which is no syntax error
         std::string e = loadStatus == LUA_ERRSYNTAX ? "Lua syntax error:" : "Lua error:";
-        if (lua_isstring(L, -1)) {
-            e.append(lua_tostring(L, -1));
-        } else {
-            e.append("error object is a ").append(luaL_typename(L, -1)).append(" value");
-        }
+        e.append(luaErrorText(L));
         errorMsg = qsl("<b>%1</b>").arg(QString::fromStdString(e).toHtmlEscaped());
         if (TDebug::wants(TDebug::Category::Error)) {
             auto& host = getHostFromLua(L);
@@ -4641,22 +4637,14 @@ void TLuaInterpreter::parseJSON(QString& key, const QByteArray& utf8Data, const 
             }
             lua_pushstring(L, tokenList.at(i).toUtf8().constData());
             if (lua_pcall(L, 2, 0, 0)) {
-                std::string e;
-                if (lua_isstring(L, -1)) {
-                    e = "GMCP merge error: ";
-                    e += lua_tostring(L, -1);
-                }
+                std::string e = "GMCP merge error: " + luaErrorText(L);
                 const QString _n = qsl("GMCP merge");
                 const QString _f = qsl("__gmcp_merge_gmcp_sub_tables");
                 logError(e, _n, _f);
             }
         }
     } else {
-        std::string e;
-        if (lua_isstring(L, -1)) {
-            e = "could not decode " + protocol.toStdString() + "." + key.toStdString() + " - any previous value is kept: ";
-            e += lua_tostring(L, -1);
-        }
+        std::string e = "could not decode " + protocol.toStdString() + "." + key.toStdString() + " - any previous value is kept: " + luaErrorText(L);
         const QString _n = "JSON decoder error:";
         const QString _f = "json_to_value";
         logError(e, _n, _f);
@@ -6321,12 +6309,7 @@ bool TLuaInterpreter::callReference(lua_State* L, QString name, int parameters)
     int error = 0;
     error = lua_pcall(L, parameters, LUA_MULTRET, 0);
     if (error) {
-        std::string err = "";
-        if (lua_isstring(L, -1)) {
-            err += lua_tostring(L, -1);
-        } else {
-            err.append("error object is a ").append(luaL_typename(L, -1)).append(" value");
-        }
+        std::string err = luaErrorText(L);
         logError(err, name, qsl("anonymous Lua function"));
         if (TDebug::wants(TDebug::Category::Error)) {
             auto& host = getHostFromLua(L);
