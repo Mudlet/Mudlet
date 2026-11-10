@@ -95,11 +95,11 @@ tempTimer(0.05, "error()")
 tempTimer(0.05, function() raiseEvent("mudletSpecErrorObjectEvent") end)
 tempTimer(0.05, function()
   local stockDecoder = json_to_value
-  json_to_value = function() error({}) end
+  json_to_value = function() error(newproxy()) end
   feedTelnet("\60T_IAC>\60T_SB>\60O_GMCP>Spec.Doc {}\60T_IAC>\60T_SE>")
   json_to_value = stockDecoder
   feedTelnet("\60T_IAC>\60T_SB>\60O_GMCP>Char.Status {}\60T_IAC>\60T_SE>")
-  __gmcp_merge_gmcp_sub_tables = function() error(false) end
+  __gmcp_merge_gmcp_sub_tables = function() error(coroutine.create(print)) end
   feedTelnet("\60T_IAC>\60T_SB>\60O_GMCP>Char.Status {}\60T_IAC>\60T_SE>")
 end)
 tempTimer(0.5, function() raiseGlobalEvent("mudletSpecLuaErrorObjectsConsole", table.concat(getLines("main", 0, getLastLineNumber("main") + 1), "\n")) end)]]
@@ -131,13 +131,16 @@ tempTimer(0.5, function() raiseGlobalEvent("mudletSpecLuaErrorObjectsConsole", t
     end
 
     assert.is_string(consoleText, "the other profile never reported its console")
-    -- word wrap breaks a long error line across console lines
-    local unwrapped = consoleText:gsub("\n", "")
-    assert.is_truthy(unwrapped:find("error object is a table value", 1, true), consoleText)
-    assert.is_truthy(unwrapped:find("error object is a nil value", 1, true), consoleText)
-    assert.is_truthy(unwrapped:find("error object is a boolean value", 1, true), consoleText)
-    assert.is_truthy(unwrapped:find("error object is a function value", 1, true), consoleText)
-    assert.is_truthy(unwrapped:find("any previous value is kept: error object is a table value", 1, true), consoleText)
-    assert.is_truthy(unwrapped:find("GMCP merge error: error object is a boolean value", 1, true), consoleText)
+    -- word wrap breaks a long error line across console lines, at a space or mid-word
+    local squeezed = consoleText:gsub("%s", "")
+    local function shown(text)
+      return squeezed:find((text:gsub("%s", "")), 1, true)
+    end
+    assert.is_truthy(shown("error object is a table value"), consoleText)
+    assert.is_truthy(shown("error object is a nil value"), consoleText)
+    assert.is_truthy(shown("error object is a boolean value"), consoleText)
+    assert.is_truthy(shown("error object is a function value"), consoleText)
+    assert.is_truthy(shown("any previous value is kept: error object is a userdata value"), consoleText)
+    assert.is_truthy(shown("GMCP merge error: error object is a thread value"), consoleText)
   end)
 end)
