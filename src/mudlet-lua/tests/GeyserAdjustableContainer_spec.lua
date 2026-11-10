@@ -4099,6 +4099,50 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       assert.are.equal("20%", container.width)
     end)
 
+    it("keeps a container inside another one where it is when its position turns into pixels", function()
+      local parent = Geyser.Container:new({name = "gapAbsoluteParent", x = 100, y = 80, width = 400, height = 300})
+      finally(function() parent:delete() end)
+      local container = Adjustable.Container:new({name = "gapAbsoluteNested", x = "10%", y = "10%", width = "50%", height = "50%", autoLoad = false, autoSave = false}, parent)
+      containers[#containers + 1] = container
+
+      container:setAbsolute(false, true)
+
+      assert.are.equal("40px", container.x)
+      assert.are.equal("30px", container.y)
+      assert.are.equal(140, container:get_x())
+      assert.are.equal(110, container:get_y())
+    end)
+
+    it("keeps a container that sticks out left of and above its parent where it is when its position turns into pixels", function()
+      local parent = Geyser.Container:new({name = "gapAbsoluteOutParent", x = 100, y = 80, width = 400, height = 300})
+      finally(function() parent:delete() end)
+      local container = Adjustable.Container:new({name = "gapAbsoluteOut", x = "0%-20", y = "0%-30", width = "50%", height = "50%", autoLoad = false, autoSave = false}, parent)
+      containers[#containers + 1] = container
+      assert.are.equal(80, container:get_x())
+      assert.are.equal(50, container:get_y())
+
+      container:setAbsolute(false, true)
+
+      assert.are.equal(80, container:get_x())
+      assert.are.equal(50, container:get_y())
+    end)
+
+    it("keeps a container inside a parent at a fractional position where it is when its position turns into pixels", function()
+      local outer = Geyser.Container:new({name = "gapAbsoluteFracOuter", x = 0, y = 0, width = 1421, height = 1421})
+      finally(function() outer:delete() end)
+      local parent = Geyser.Container:new({name = "gapAbsoluteFracParent", x = "33.33333%", y = "33.33333%", width = "50%", height = "50%"}, outer)
+      local container = Adjustable.Container:new({name = "gapAbsoluteFrac", x = 40, y = 40, width = "50%", height = "50%", autoLoad = false, autoSave = false}, parent)
+      containers[#containers + 1] = container
+      local x, y = container:get_x(), container:get_y()
+
+      container:setAbsolute(false, true)
+
+      assert.are.equal("40px", container.x)
+      assert.are.equal("40px", container.y)
+      assert.are.equal(x, container:get_x())
+      assert.are.equal(y, container:get_y())
+    end)
+
     it("turns the axis its container has a size on into percentages", function()
       local flat = Geyser.Container:new({name = "gapFlatParent", x = 0, y = 0, width = 300, height = 0})
       finally(function() flat:delete() end)
