@@ -35,6 +35,15 @@ describe("Tests DebugTools.lua functions", function()
       assert.spy(s).was_called_with(match.has_match("DebugTools_spec.lua:line " .. line .. "%) This is a test"))
     end)
 
+    it("should still print when it is tail called with nothing beneath it", function()
+      -- a trigger or alias is called straight from C++, as a coroutine's body is
+      local ok, err = coroutine.resume(coroutine.create(function()
+        return printDebug("This is a test")
+      end))
+      assert.is_true(ok, err)
+      assert.spy(s).was_called_with(match.has_match("This is a test"))
+    end)
+
     it("should name a real line when it is tail called", function()
       local function helper()
         return printDebug("This is a test")

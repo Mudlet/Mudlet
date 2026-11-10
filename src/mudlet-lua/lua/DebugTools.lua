@@ -73,10 +73,12 @@ local function printX(options)
   -- unless that was a "return printError(...)", which leaves only a tail call stub there
   local callerLevel = 3
   local dinfo = debug.getinfo(callerLevel, "Sl")
-  while dinfo.what == "tail" do
+  while dinfo and dinfo.what == "tail" do
     callerLevel = callerLevel + 1
     dinfo = debug.getinfo(callerLevel, "Sl")
   end
+  -- a trigger, alias or coroutine whose code is "return printError(...)" has nothing below the stub
+  dinfo = dinfo or debug.getinfo(level, "Sl")
   local header = string.format("(%s:line %s)", dinfo.source, dinfo.currentline)
   if halt then
     header = "\n" .. header
