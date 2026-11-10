@@ -1078,6 +1078,16 @@ void FeedChecksumRaceTest::theChangelogMenuEntryOnlyAnswersItsOwnRequest()
     QVERIFY2(feedReady.wait(waitMs), "the repaired feed never loaded, so the assertion below would test nothing");
     QVERIFY2(openChangelogs().isEmpty(), "a successful update check opened the changelog that had failed to load earlier");
     QVERIFY2(mModalBoxes.texts().isEmpty(), qPrintable(qsl("a successful update check raised: %1").arg(whatTheDialogWasTold())));
+
+    // Asked for while an update check is loading the feed, and again checked while it waits:
+    // Feed::load() refuses a second load with an error, but the running one still answers
+    feedReady.clear();
+    feed->load();
+    updater.showFullChangelog();
+    feed->load();
+    QVERIFY2(feedReady.wait(waitMs), "the update check the changelog joined never finished");
+    QVERIFY2(mModalBoxes.texts().isEmpty(), qPrintable(qsl("asking for the changelog during an update check raised: %1").arg(whatTheDialogWasTold())));
+    QCOMPARE(openChangelogs().size(), 1);
 }
 
 // The dialog decides whether there is an update to show from the release the

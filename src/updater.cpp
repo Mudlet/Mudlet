@@ -303,7 +303,11 @@ void Updater::showFullChangelog()
             stopWaiting();
             showFullChangelog();
         });
-        mChangelogFeedError = connect(feed.get(), &dblsqd::Feed::loadError, this, [stopWaiting](const QString& error) {
+        mChangelogFeedError = connect(feed.get(), &dblsqd::Feed::loadError, this, [this, stopWaiting](const QString& error) {
+            // Feed::load() refusing to start a second load: the one running still answers
+            if (feed->isLoading()) {
+                return;
+            }
             stopWaiting();
             qWarning() << "Failed to load feed for changelog:" << error;
             //: Error title for dialog shown when changelog fails to load
@@ -312,7 +316,9 @@ void Updater::showFullChangelog()
                                  //: Error message shown when changelog fails to load from the server
                                  tr("Could not load the changelog. Please try again later."));
         });
-        feed->load();
+        if (!feed->isLoading()) {
+            feed->load();
+        }
         return;
     }
 
