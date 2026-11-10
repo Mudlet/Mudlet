@@ -1219,7 +1219,10 @@ do
       buffer[i], buffer[i + 1], buffer[i + 2] = nil, nil, nil
       if list[key] == func then
         local success, error = pcall(func, event, ...)
-        if not success then showHandlerError(event, error) end
+        -- the built-in showHandlerError() raises unless given a string or number, which would skip every handler after this one
+        if not success and not pcall(showHandlerError, event, error) then
+          showHandlerError(event, "error object is a " .. type(error) .. " value")
+        end
       end
     end
     dispatchDepth = dispatchDepth - 1
