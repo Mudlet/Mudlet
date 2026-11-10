@@ -1218,8 +1218,10 @@ void dlgProfilePreferences::retranslateShell()
 {
     //: Wordmark at the top of the settings dialog's category sidebar, beside the Mudlet icon
     mpLabel_wordmark->setText(tr("Settings"));
-    //: Placeholder text of the search field at the top of the settings dialog
-    mpLineEdit_search->setPlaceholderText(tr("Find in settings"));
+    //: Placeholder text and accessible name of the search field at the top of the settings dialog
+    const QString findInSettings = tr("Find in settings");
+    mpLineEdit_search->setPlaceholderText(findInSettings);
+    mpLineEdit_search->setAccessibleName(findInSettings);
     //: Accessible name of the list that switches between the settings dialog's categories
     mpListWidget_categories->setAccessibleName(tr("Settings categories"));
     //: Button at the left of the "Search results" heading, leading back to the settings category the search was started from
