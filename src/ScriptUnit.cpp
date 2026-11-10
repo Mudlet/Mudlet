@@ -339,13 +339,12 @@ void ScriptUnit::compileSwitchedOn(TScript* pScript)
         }
     };
     collectWaiting(pRoot);
-    // Keeps the scripts in waiting alive whilst their bodies run: one can uninstall its own package
+    // Keeps the scripts in waiting alive until they are checked below: a body can uninstall its own package
     beginProcessing();
     mRootsBeingCompiled.push_back(pRoot);
     // Only the scripts still waiting to run their body are compiled
     pRoot->compileAll();
     mRootsBeingCompiled.pop_back();
-    endProcessing();
     // Run without saveLoadingError, so the load and reset report never names these. Like that
     // report, it leaves out a script switched off itself, whose body runs with its group's
     QStringList failed;
@@ -354,6 +353,7 @@ void ScriptUnit::compileSwitchedOn(TScript* pScript)
             failed << pNode->getName();
         }
     }
+    endProcessing();
     if (!failed.isEmpty()) {
         mpHost->reportScriptsThatFailedToRun(failed);
     }
