@@ -169,6 +169,37 @@ private:
         pMap->setUnsaved(__func__);
     }
 
+    // 5000 rooms, so that the import lets events run while it is part way through them; left unclosed it fails
+    // only once it has read them all
+    static void writeXmlMap(const QString& path, const bool complete)
+    {
+        QFile file(path);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        QByteArray xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<map>\n <areas>\n  <area id=\"1\" name=\"Imported\"/>\n </areas>\n <rooms>\n";
+        for (int id = 1; id <= 5000; ++id) {
+            xml += qsl("  <room id=\"%1\" area=\"1\" title=\"Imported %1\" environment=\"2\">\n   <coord x=\"%2\" y=\"%3\" z=\"0\"/>\n  </room>\n").arg(id).arg(id % 50).arg(id / 50).toUtf8();
+        }
+        if (complete) {
+            xml += " </rooms>\n</map>\n";
+        }
+        QCOMPARE(file.write(xml), xml.size());
+    }
+
+    // The autosave comes due the first time the import lets events run, and roomsWhenDue is how many rooms the
+    // map then held
+    bool importWithAutosaveDue(const QString& path, QString* errMsg, int& roomsWhenDue)
+    {
+        QTimer ticker;
+        connect(&ticker, &QTimer::timeout, this, [&]() {
+            if (roomsWhenDue < 0 && map()->mapOperationInProgress()) {
+                roomsWhenDue = map()->mpRoomDB->size();
+                mpHost->autoSaveMap();
+            }
+        });
+        ticker.start(0);
+        return mpHost->importMapFile(path, errMsg);
+    }
+
     // Copies this profile's map to the target, whose autosave comes due the first time the dialog reports the
     // given progress. A copy lets events run as it goes, and the autosave runs off a timer.
     struct CopyRun
@@ -357,30 +388,15 @@ private slots:
             return;
         }
         const QString xmlPath = qsl("%1/imported map.xml").arg(mConfigDir.path());
-        {
-            QFile file(xmlPath);
-            QVERIFY(file.open(QIODevice::WriteOnly));
-            QByteArray xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<map>\n <areas>\n  <area id=\"1\" name=\"Imported\"/>\n </areas>\n <rooms>\n";
-            for (int id = 1; id <= 5000; ++id) {
-                xml += qsl("  <room id=\"%1\" area=\"1\" title=\"Imported %1\" environment=\"2\">\n   <coord x=\"%2\" y=\"%3\" z=\"0\"/>\n  </room>\n").arg(id).arg(id % 50).arg(id / 50).toUtf8();
-            }
-            xml += " </rooms>\n</map>\n";
-            QCOMPARE(file.write(xml), xml.size());
+        writeXmlMap(xmlPath, true);
+        if (QTest::currentTestFailed()) {
+            return;
         }
         QVERIFY(map()->isUnsaved());
 
-        QTimer ticker;
-        int roomsWhenDue = -1;
-        connect(&ticker, &QTimer::timeout, this, [&]() {
-            if (roomsWhenDue < 0 && map()->mapOperationInProgress()) {
-                roomsWhenDue = map()->mpRoomDB->size();
-                mpHost->autoSaveMap();
-            }
-        });
-        ticker.start(0);
         QString errMsg;
-        const bool imported = mpHost->importMapFile(xmlPath, &errMsg);
-        ticker.stop();
+        int roomsWhenDue = -1;
+        const bool imported = importWithAutosaveDue(xmlPath, &errMsg, roomsWhenDue);
         QVERIFY2(imported, qPrintable(errMsg));
         QVERIFY2(roomsWhenDue >= 0, "the import let no events run, so this case covers nothing");
         QVERIFY2(roomsWhenDue < 5000, "the import had finished its rooms before the autosave came due");
@@ -389,6 +405,34 @@ private slots:
         QVERIFY2(map()->isUnsaved(), "the autosave put off by the import left the map marked as saved");
 
         const QByteArray expected = serialized(map());
+        mpHost->autoSaveMap();
+        mpHost->waitForMapAutosave();
+        QCOMPARE(readFile(autosavePath(mProfileName)), expected);
+    }
+
+    // A failed import puts the old rooms back without marking the map unsaved, so an autosave taken during it
+    // would leave the player's own changes unsaved
+    void test_autosaveDueDuringAFailedXmlImportKeepsTheMapUnsaved()
+    {
+        buildMap(map());
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        const QString xmlPath = qsl("%1/damaged map.xml").arg(mConfigDir.path());
+        writeXmlMap(xmlPath, false);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        const QByteArray expected = serialized(map());
+
+        QString errMsg;
+        int roomsWhenDue = -1;
+        QVERIFY(!importWithAutosaveDue(xmlPath, &errMsg, roomsWhenDue));
+        QVERIFY2(roomsWhenDue >= 0, "the import let no events run, so this case covers nothing");
+        mpHost->waitForMapAutosave();
+        QVERIFY2(!QFileInfo::exists(autosavePath(mProfileName)), "an autosave was written from a map that failed to import");
+        QVERIFY2(map()->isUnsaved(), "a failed import left the player's own changes marked as saved");
+
         mpHost->autoSaveMap();
         mpHost->waitForMapAutosave();
         QCOMPARE(readFile(autosavePath(mProfileName)), expected);
