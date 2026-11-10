@@ -54,12 +54,8 @@ TForkedProcess::TForkedProcess(TLuaInterpreter* pInterpreter, const QString& pro
 , callBackFunctionRef(callBackReference)
 , mpInterpreter(pInterpreter)
 {
-    // QProcess::finished is overloaded so we have to say which form we are
-    // connecting here. slot_finished() goes first: its last callback can spin
-    // an event loop (a modal dialog) that would run slot_purge() on this
-    // process if it were already queued for deletion
-    connect(this, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this, &TForkedProcess::slot_finished);
-    connect(this, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), mpInterpreter, &TLuaInterpreter::slot_deleteSender);
+    connect(this, &QProcess::finished, this, &TForkedProcess::slot_finished);
+    connect(this, &TForkedProcess::signal_doneWith, mpInterpreter, &TLuaInterpreter::slot_deleteSender);
     connect(this, &QProcess::readyReadStandardOutput, this, &TForkedProcess::slot_receivedData);
 
     setProcessChannelMode(QProcess::MergedChannels);
@@ -72,24 +68,34 @@ void TForkedProcess::slot_finished(int exitCode, QProcess::ExitStatus exitStatus
     Q_UNUSED(exitCode)
     Q_UNUSED(exitStatus)
     running = false;
-    // Hands over a last line that the process ended without a newline
-    slot_receivedData();
+    // A callback still running further up the stack hands over the rest when
+    // it returns, rather than this calling it again inside itself
+    if (mReadDepth == 0) {
+        slot_receivedData();
+    }
 }
 
 void TForkedProcess::slot_receivedData()
 {
     lua_State* L = mpInterpreter->pGlobalLua;
+    ++mReadDepth;
+    // Once the process has ended this also hands over a last line it ended without a newline
     while (canReadLine() || (!running && bytesAvailable() > 0)) {
         // Checked before the line is read, so a line that cannot be handed over stays buffered
         if (!lua_checkstack(L, 2)) {
             std::string e = "not enough Lua stack space to call it with the process's next line of output";
             mpInterpreter->logError(e, qsl("spawn() callback"), qsl("anonymous Lua function"));
-            return;
+            break;
         }
         lua_rawgeti(L, LUA_REGISTRYINDEX, callBackFunctionRef);
         const QByteArray line = readLine();
         lua_pushlstring(L, line.constData(), line.size());
         mpInterpreter->callReference(L, qsl("spawn() callback"), 1);
+    }
+    // Queued for deletion only once no callback is running: slot_purge() could
+    // otherwise free this inside a callback's event loop, under this loop
+    if (--mReadDepth == 0 && !running) {
+        emit signal_doneWith();
     }
 }
 

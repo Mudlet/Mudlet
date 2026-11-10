@@ -202,6 +202,42 @@ describe("spawn", function()
       assert.are.same({"spawnLoopA\n", "spawnLoopB"}, lines)
     end)
 
+    it("should not call the callback again inside itself when the process ends during an event loop", function()
+      if getOS() == "windows" then
+        pending("no POSIX shell to delay the child's output")
+        return
+      end
+      if not os.getenv("MUDLET_TEST_MODE") then
+        pending("waiting for the child's output needs pumpEvents(), which is refused outside MUDLET_TEST_MODE")
+        return
+      end
+
+      local lines, inCallback, nested = {}, false, false
+      local process = spawn(function(line)
+        nested = nested or inCallback
+        inCallback = true
+        table.insert(lines, line)
+        if line == "spawnNestA\n" then
+          -- the child ends, and the purge timer fires, before this returns
+          pumpEvents(2200)
+        end
+        inCallback = false
+      end, "/bin/sh", "-c", "printf 'spawnNestA\\n'; sleep 0.3; printf 'spawnNestB'")
+      finally(function()
+        pumpEvents(2200)
+      end)
+
+      for _ = 1, 500 do
+        if #lines >= 2 or not process.isRunning() then
+          break
+        end
+        pumpEvents(20)
+      end
+
+      assert.is_false(nested)
+      assert.are.same({"spawnNestA\n", "spawnNestB"}, lines)
+    end)
+
   end)
 
   -- Tests that need a profile of their own write one here, load it and take it
