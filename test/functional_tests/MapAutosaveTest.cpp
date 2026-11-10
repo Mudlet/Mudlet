@@ -169,8 +169,7 @@ private:
         pMap->setUnsaved(__func__);
     }
 
-    // 5000 rooms, so that the import lets events run while it is part way through them; left unclosed it fails
-    // only once it has read them all
+    // Left unclosed, the import fails only once it has read every room
     static void writeXmlMap(const QString& path, const bool complete)
     {
         QFile file(path);
