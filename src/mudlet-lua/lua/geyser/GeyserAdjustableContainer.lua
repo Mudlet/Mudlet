@@ -418,11 +418,14 @@ function Adjustable.Container:onMove (label, event)
                     return
                 end
             end
-            local tx, ty = max(0,x1-dx), max(0,y1-dy)
+            local tx, ty = x1-dx, y1-dy
             -- get rid of move/size limits when in scrollbox (as it is scrollable)
             if not(hasScrollBox) then
                 tx, ty = min(tx, winw - w), min(ty, winh - h)
             end
+            -- last, as for a container bigger than its parent the bound above is negative,
+            -- and a negative position is read as one measured from the far edge
+            tx, ty = max(0, tx), max(0, ty)
             tx = make_percent(tx/winw)
             ty = make_percent(ty/winh)
             self:move(tx, ty)
@@ -433,29 +436,29 @@ function Adjustable.Container:onMove (label, event)
             if winw - w < tx+0.1 then self:attachToBorder("right") end
             if winh - h < ty+0.1 then self:attachToBorder("bottom") end--]]
         elseif adjustInfo.move == false and not self.noResize then
-            local w2, h2, x2, y2 = w - dx, h - dy, x1 - dx, y1 - dy
-            local tx, ty, tw, th = x1, y1, w, h
+            local minw, minh = 10, 10
+            if self.container == Geyser and not self.noLimit then minw, minh = 75, 25 end
+            local maxRight, maxBottom = winw, winh
+            if hasScrollBox then maxRight, maxBottom = math.huge, math.huge end
+            -- a negative position is read as one measured from the far edge, so a container partly
+            -- past the parent's top or left edge is shifted back in, or trimmed if that edge is dragged
+            local left, top = max(0, x1), max(0, y1)
+            local right = (adjustInfo.left and x1 or left) + w
+            local bottom = (adjustInfo.top and y1 or top) + h
+            -- a dragged edge stops at the minimum size and at the parent's edge (no right or
+            -- bottom limit in a scroll box) while the opposite edge stays put
             if adjustInfo.top then
-                ty, th = y2, h + dy
+                top = max(0, min(y1 - dy, bottom - minh))
             elseif adjustInfo.bottom then
-                th = h2
+                bottom = min(maxBottom, max(bottom - dy, top + minh))
             end
             if adjustInfo.left then
-                tx, tw = x2, w + dx
+                left = max(0, min(x1 - dx, right - minw))
             elseif adjustInfo.right then
-                tw = w2
+                right = min(maxRight, max(right - dx, left + minw))
             end
-            tx, ty, tw, th = max(0,tx), max(0,ty), max(10,tw), max(10,th)
-            if not(hasScrollBox) then
-                tw, th = min(tw, winw), min(th, winh)
-                tx, ty = min(tx, winw-tw), min(ty, winh-th)
-            end
-            tx = make_percent(tx/winw)
-            ty = make_percent(ty/winh)
-            local minw, minh = 0,0
-            if self.container == Geyser and not self.noLimit then minw, minh = 75,25 end
-            tw,th = max(minw,tw), max(minh,th)
-            tw,th = make_percent(tw/winw), make_percent(th/winh)
+            local tx, ty = make_percent(left/winw), make_percent(top/winh)
+            local tw, th = make_percent(max(minw, right - left)/winw), make_percent(max(minh, bottom - top)/winh)
             -- one pass over the subtree per drag event, where move() then resize()
             -- took two; neither runs here, so an override of either is not invoked
             self.x, self.y, self.width, self.height = tx, ty, tw, th
