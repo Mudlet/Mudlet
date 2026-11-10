@@ -61,15 +61,15 @@ local encodings = {
 -- the encoding the batch being made is in
 local current
 
--- never NUL or CR (the telnet layer drops them), LF (it ends the line), '<' or '>' (feedTelnet()
--- reads those as tag delimiters) or IAC. ICU's SHIFT_JIS
--- maps 0x1A to 0x1C and 0x1C to 0x7F, as IBM's Shift-JIS does, but plain bytes after decoded text in
--- the same read are copied straight into the line, so a cut read changes which a game gets; no game
--- sends them, so they are left out for a round to turn up something else.
 local function safe(byte)
+  -- never NUL or CR (the telnet layer drops them), LF (it ends the line), '<' or '>' (feedTelnet()
+  -- reads those as tag delimiters) or IAC
   if byte == 0 or byte == 10 or byte == 13 or byte == 0x3C or byte == 0x3E or byte == 0xFF then
     return 0x20
   end
+  -- ICU's SHIFT_JIS maps 0x1A to 0x1C and 0x1C to 0x7F, but plain bytes after decoded text in the
+  -- same read are copied straight into the line, so a cut read changes which a game gets; left out
+  -- so this known difference cannot hide another
   if current == "SHIFT_JIS" and (byte == 0x1A or byte == 0x1C) then
     return 0x20
   end
