@@ -31,6 +31,7 @@
 #include <QPushButton>
 #include <QtConcurrent>
 #include <chrono>
+#include <utility>
 #include "../3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h"
 
 using namespace std::chrono_literals;
@@ -179,25 +180,26 @@ void Updater::checkUpdatesOnStart()
 
     mPeriodicCheck->setInterval(12h);
     connect(mPeriodicCheck.get(), &QTimer::timeout, this, [this] {
-        KDToolBox::connectSingleShot(feed.get(), &dblsqd::Feed::ready, this, [this]() {
-            auto updates = feed->getUpdates(dblsqd::Release::getCurrentRelease());
-            qWarning() << "Twice-daily check for updates:" << updates.size() << "update(s) available";
-            if (updates.isEmpty()) {
-                return;
-            }
+        onNextFeedAnswer(
+                [this]() {
+                    auto updates = feed->getUpdates(dblsqd::Release::getCurrentRelease());
+                    qWarning() << "Twice-daily check for updates:" << updates.size() << "update(s) available";
+                    if (updates.isEmpty()) {
+                        return;
+                    }
 
-            if (!updateAutomatically()) {
-                emit signal_updateAvailable(updates.size());
-                return;
-            }
+                    if (!updateAutomatically()) {
+                        emit signal_updateAvailable(updates.size());
+                        return;
+                    }
 
-            if (!downloadReleaseIfValid(updates.first())) {
-                emit signal_updateAvailable(updates.size());
-            }
-        });
-        KDToolBox::connectSingleShot(feed.get(), &dblsqd::Feed::loadError, this, [](const QString& error) {
-            qWarning() << "Twice-daily update check: failed to load feed:" << error;
-        });
+                    if (!downloadReleaseIfValid(updates.first())) {
+                        emit signal_updateAvailable(updates.size());
+                    }
+                },
+                [](const QString& error) {
+                    qWarning() << "Twice-daily update check: failed to load feed:" << error;
+                });
         feed->load();
     });
     mPeriodicCheck->start();
@@ -243,6 +245,25 @@ bool Updater::updateAutomatically() const
 #endif
 }
 
+// Two single-shot connections are not enough: only the one that fires goes, and the
+// other answers some later load that a different caller started
+void Updater::onNextFeedAnswer(const std::function<void()>& onReady, const std::function<void(const QString&)>& onError)
+{
+    auto connections = std::make_shared<std::pair<QMetaObject::Connection, QMetaObject::Connection>>();
+    const auto stopListening = [connections]() {
+        disconnect(connections->first);
+        disconnect(connections->second);
+    };
+    connections->first = connect(feed.get(), &dblsqd::Feed::ready, this, [stopListening, onReady]() {
+        stopListening();
+        onReady();
+    });
+    connections->second = connect(feed.get(), &dblsqd::Feed::loadError, this, [stopListening, onError](const QString& error) {
+        stopListening();
+        onError(error);
+    });
+}
+
 void Updater::manuallyCheckUpdates()
 {
 #if defined(Q_OS_MACOS)
@@ -257,14 +278,15 @@ void Updater::manuallyCheckUpdates()
     mManualCheckInProgress = true;
 
     feed->load();
-    KDToolBox::connectSingleShot(feed.get(), &dblsqd::Feed::ready, this, [this]() {
-        mManualCheckInProgress = false;
-        showDialogManually();
-    });
-    KDToolBox::connectSingleShot(feed.get(), &dblsqd::Feed::loadError, this, [this](const QString& error) {
-        mManualCheckInProgress = false;
-        emit signal_updateCheckFailed(error);
-    });
+    onNextFeedAnswer(
+            [this]() {
+                mManualCheckInProgress = false;
+                showDialogManually();
+            },
+            [this](const QString& error) {
+                mManualCheckInProgress = false;
+                emit signal_updateCheckFailed(error);
+            });
 #endif
 }
 
