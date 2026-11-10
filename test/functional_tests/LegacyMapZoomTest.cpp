@@ -18,14 +18,17 @@
  ***************************************************************************/
 
 /*
- * The original 3D map's field of view is 60 times its scale in degrees: a
- * scale of 0 or below empties the view or turns it upside down, and one
- * towards 3 does the same, so the mouse wheel must stop short of both.
+ * The original 3D map's field of view is 60 times its scale in degrees, and
+ * the view empties or flips at 0 and at 180 degrees, so the mouse wheel must
+ * stop short of both.
  *
  * Run with: ctest -R LegacyMapZoomTest -V
  */
 
 #include <QtTest/QtTest>
+#include <QOffscreenSurface>
+#include <QOpenGLContext>
+#include <QOpenGLFunctions>
 
 #include "glwidget.h"
 
@@ -43,6 +46,7 @@ private slots:
             scale = GLWidget::scaleAfterWheel(scale, -120);
         }
         QVERIFY2(scale > 0.0f, qPrintable(qsl("zooming in left a scale of %1, a field of view of %2 degrees").arg(scale).arg(60.0f * scale)));
+        QCOMPARE(scale, 0.05f);
     }
 
     void test_zoomingOutStopsShortOfAFlippedView()
@@ -52,6 +56,14 @@ private slots:
             scale = GLWidget::scaleAfterWheel(scale, 120);
         }
         QVERIFY2(60.0f * scale < 180.0f, qPrintable(qsl("zooming out left a field of view of %1 degrees").arg(60.0f * scale)));
+        QCOMPARE(scale, 2.5f);
+    }
+
+    void test_aNotchZoomsByTheSameStepAsBefore()
+    {
+        QCOMPARE(GLWidget::scaleAfterWheel(1.0f, -120), 0.97f);
+        QCOMPARE(GLWidget::scaleAfterWheel(1.0f, 120), 1.03f);
+        QCOMPARE(GLWidget::scaleAfterWheel(0.2f, -120), 0.19f);
     }
 
     void test_aTouchpadsSmallStepsAddUpToANotch()
@@ -61,6 +73,28 @@ private slots:
             scale = GLWidget::scaleAfterWheel(scale, 15);
         }
         QCOMPARE(scale, GLWidget::scaleAfterWheel(1.0f, 120));
+    }
+
+    void test_aViewButtonBeforeTheMapHasAContextLeavesOtherContextsAlone()
+    {
+        QOffscreenSurface surface;
+        surface.create();
+        QOpenGLContext other;
+        if (!other.create() || !other.makeCurrent(&surface)) {
+            QSKIP("no OpenGL context can be made here");
+        }
+        auto* gl = other.functions();
+        gl->glViewport(1, 2, 3, 4);
+
+        GLWidget view(nullptr, nullptr);
+        view.slot_topView();
+
+        QVERIFY(QOpenGLContext::currentContext() == &other);
+        GLint viewport[4] = {};
+        gl->glGetIntegerv(GL_VIEWPORT, viewport);
+        other.doneCurrent();
+        QVERIFY2(viewport[0] == 1 && viewport[1] == 2 && viewport[2] == 3 && viewport[3] == 4,
+                 qPrintable(qsl("another context's viewport became %1,%2,%3,%4").arg(viewport[0]).arg(viewport[1]).arg(viewport[2]).arg(viewport[3])));
     }
 };
 

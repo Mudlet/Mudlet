@@ -215,12 +215,16 @@ void GLWidget::slot_setScale(int angle)
     applyScale();
 }
 
-// The projection is only set up in resizeGL(), so a new scale shows nowhere until it runs again
+// paintGL() never sets the projection, so a new scale has no effect until resizeGL() rebuilds it. Without a
+// context makeCurrent() does nothing and the GL calls would land in whichever context is current; Qt's own first
+// resizeGL() picks the scale up instead
 void GLWidget::applyScale()
 {
-    makeCurrent();
-    resizeGL(width(), height());
-    doneCurrent();
+    if (isValid()) {
+        makeCurrent();
+        resizeGL(width(), height());
+        doneCurrent();
+    }
     update();
 }
 
@@ -2230,8 +2234,7 @@ float GLWidget::scaleAfterWheel(const float scale, const int angleDeltaY)
 {
     // Fractional, as touchpads and high-resolution wheels send a notch in many small parts
     const float notches = static_cast<float>(angleDeltaY) / (8.0f * 15.0f);
-    // The field of view is 60 times the scale in degrees: at or past 0 the map vanishes or turns upside down,
-    // and towards 180 it does the same
+    // The field of view is 60 times the scale in degrees, and the view empties or flips at 0 and at 180 degrees
     constexpr float minScale = 0.05f;
     constexpr float maxScale = 2.5f;
     const float step = std::abs(scale) < 0.3f ? 0.01f : 0.03f;
