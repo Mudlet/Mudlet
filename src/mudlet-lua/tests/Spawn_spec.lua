@@ -170,6 +170,38 @@ describe("spawn", function()
       assert.are.same({"spawnTailA\n", "spawnTailB"}, lines)
     end)
 
+    it("should keep the process alive while the last callback runs an event loop", function()
+      if getOS() == "windows" then
+        pending("no POSIX shell to write output without a trailing newline")
+        return
+      end
+      if not os.getenv("MUDLET_TEST_MODE") then
+        pending("waiting for the child's output needs pumpEvents(), which is refused outside MUDLET_TEST_MODE")
+        return
+      end
+
+      local lines = {}
+      local process = spawn(function(line)
+        table.insert(lines, line)
+        if line == "spawnLoopB" then
+          -- past the 2s purge timer, as a modal dialog left open would be
+          pumpEvents(2200)
+        end
+      end, "/bin/sh", "-c", "printf 'spawnLoopA\\nspawnLoopB'")
+      finally(function()
+        pumpEvents(2200)
+      end)
+
+      for _ = 1, 500 do
+        if #lines >= 2 or not process.isRunning() then
+          break
+        end
+        pumpEvents(20)
+      end
+
+      assert.are.same({"spawnLoopA\n", "spawnLoopB"}, lines)
+    end)
+
   end)
 
   -- Tests that need a profile of their own write one here, load it and take it
