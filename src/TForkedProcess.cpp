@@ -55,9 +55,11 @@ TForkedProcess::TForkedProcess(TLuaInterpreter* pInterpreter, const QString& pro
 , mpInterpreter(pInterpreter)
 {
     // QProcess::finished is overloaded so we have to say which form we are
-    // connecting here
-    connect(this, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), mpInterpreter, &TLuaInterpreter::slot_deleteSender);
+    // connecting here. slot_finished() goes first: its last callback can spin
+    // an event loop (a modal dialog) that would run slot_purge() on this
+    // process if it were already queued for deletion
     connect(this, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this, &TForkedProcess::slot_finished);
+    connect(this, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), mpInterpreter, &TLuaInterpreter::slot_deleteSender);
     connect(this, &QProcess::readyReadStandardOutput, this, &TForkedProcess::slot_receivedData);
 
     setProcessChannelMode(QProcess::MergedChannels);
