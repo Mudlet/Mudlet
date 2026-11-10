@@ -99,9 +99,10 @@ static constexpr int csmMaxTableDepth = 12;
 static constexpr int csmMaxNodes = 200000;
 
 // Counting nodes alone does not bound the reply either, because one node can be arbitrarily
-// large: string.rep("x", 3e8) is a single node and 300MB of it. Long strings are cut off,
-// and their length is charged against the node budget as well, so that a table of many
-// merely-large strings cannot add up to the same blow-up one enormous string would.
+// large: string.rep("x", 3e8) is a single node and 300MB of it. Long strings, as values or
+// as keys, are cut off and their length is charged against the node budget as well, so
+// that a table of many merely-large strings cannot add up to the same blow-up one
+// enormous string would.
 static constexpr qsizetype csmMaxStringLength = 100000;
 // A separate, much smaller ceiling for the keys of one table, because QJsonObject keeps its
 // keys sorted and so every insert moves everything after it: measured on this machine,
@@ -458,7 +459,7 @@ QJsonValue TMCPLuaBridge::luaTableToJson(lua_State* L, int index, int depth, int
     QSet<QString> numberKeys;
     // This pass allocates a set entry per key, so a table with millions of keys costs
     // memory and time before a single value has been rendered - the node budget is only
-    // spent in luaToJson(), which this pass never reaches. Stop counting once the table
+    // spent while rendering, which this pass never does. Stop counting once the table
     // has already outgrown what the reply may hold; the render below stops no later
     // and leaves the "left out" marker there, so nothing goes missing in silence.
     const int keysWorthCounting = qMax(nodeBudget, 0);
@@ -469,7 +470,13 @@ QJsonValue TMCPLuaBridge::luaTableToJson(lua_State* L, int index, int depth, int
         // lua_tostring() on a number key would rewrite the key in place, and lua_next()
         // then loses its place in the table - so read numbers without converting them.
         if (lua_type(L, -2) == LUA_TSTRING) {
-            stringKeys.insert(readString(L, -2, csmMaxStringLength));
+            // Only compared against numberKey() spellings, none longer than 24 characters, so
+            // copying a longer key would cost memory for nothing.
+            size_t keyLength = 0;
+            lua_tolstring(L, -2, &keyLength);
+            if (keyLength <= 32) {
+                stringKeys.insert(readString(L, -2, csmMaxStringLength));
+            }
         } else if (lua_type(L, -2) == LUA_TNUMBER) {
             const double number = lua_tonumber(L, -2);
             numberKeys.insert(numberKey(number));

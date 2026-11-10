@@ -1072,6 +1072,17 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
         QVERIFY2(result.text.size() < 5000000, qPrintable(qsl("the reply was %1 characters").arg(result.text.size())));
     }
 
+    void testATableOfLongKeysCostsNoMoreForHavingMoreOfThem()
+    {
+        // Both run out of budget after the same few keys, so the larger one should cost no
+        // more; copying every key to look for number clashes cost ten times the table's size.
+        const QString selfReferencing = qsl("t = {} for i = 1, %1 do t[string.rep('k', 100000) .. i] = t end ");
+        const WalkTimings walks = compareWalks(selfReferencing.arg(30), selfReferencing.arg(300));
+
+        QVERIFY(walks.ok);
+        QVERIFY2(walks.largerMs < 3 * walks.smallerMs + 100, qPrintable(qsl("ten times the keys took %1ms to walk against %2ms").arg(walks.largerMs).arg(walks.smallerMs)));
+    }
+
     void testATableOfLongKeysIsBoundedByHowMuchTextItCarries()
     {
         // Each level of a self-referencing table repeats every one of its keys, so keys
@@ -1080,6 +1091,8 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
 
         QVERIFY(result.success);
         QVERIFY2(result.text.size() < 5000000, qPrintable(qsl("the reply was %1 characters").arg(result.text.size())));
+        // A key costs what a string value of its length does, so roughly 1.6MB fits.
+        QVERIFY2(result.text.size() > 500000, qPrintable(qsl("the reply was %1 characters").arg(result.text.size())));
         QVERIFY2(result.text.contains(qsl("the rest was left out")), qPrintable(result.text.right(300)));
     }
 
