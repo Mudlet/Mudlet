@@ -2402,10 +2402,10 @@ end
 
 -- NOT LUADOC
 -- Converts a UTC "YYYY-MM-DD HH:MM:SS" string, as sqlite's datetime() stores it, to an
--- epoch. Done arithmetically (Howard Hinnant's days_from_civil) rather than through
--- os.time, which can only read local time and is slow enough to dominate a db:fetch.
+-- epoch; a plain number, which db:add or raw SQL can store in a datetime field, already is one.
+-- Done arithmetically (Howard Hinnant's days_from_civil) rather than through os.time, which
+-- can only read local time and is slow enough to dominate a db:fetch.
 function db:_epoch_from_utc(value)
-  -- db:add writes a plain number for a datetime field as it is, and sqlite hands it back as one
   if type(value) == "number" then
     return value
   end
