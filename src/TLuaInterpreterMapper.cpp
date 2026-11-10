@@ -3124,7 +3124,7 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
     // Host is non-copyable and the lambda copies its captures.
     auto* pHost = &host;
     // Shared, as each paint calls a copy of the callback. Paints repeat, and views on different rooms take
-    // turns, so report each error text once; capped, for texts that change on every call
+    // turns, so report each error text once; capped, saying so, for texts that change on every call
     auto reportedErrors = std::make_shared<QSet<QString>>();
     host.mpMap->mMapInfoContributorManager->registerContributor(
             name,
@@ -3150,8 +3150,12 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
                     } else {
                         errorMessage.append("error object is a ").append(luaL_typename(L, -1)).append(" value");
                     }
-                    if (const QString text = QString::fromStdString(errorMessage); reportedErrors->size() < 16 && !reportedErrors->contains(text)) {
+                    constexpr qsizetype maxReportedErrors = 16;
+                    if (const QString text = QString::fromStdString(errorMessage); reportedErrors->size() <= maxReportedErrors && !reportedErrors->contains(text)) {
                         reportedErrors->insert(text);
+                        if (reportedErrors->size() > maxReportedErrors) {
+                            errorMessage.append(" (further errors from this map info are not shown until it is registered again)");
+                        }
                         pHost->getLuaInterpreter()->logError(errorMessage, qsl("map info '%1'").arg(name), qsl("anonymous Lua function"));
                     }
                     if (TDebug::wants(TDebug::Category::Map)) {

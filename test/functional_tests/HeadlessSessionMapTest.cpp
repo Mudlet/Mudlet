@@ -400,7 +400,7 @@ end)
         }
         QCOMPARE(alternatingReports, 2);
 
-        // An error whose text changes on every call is not reported on every paint for ever
+        // An error whose text changes on every call is not reported on every paint for ever, and the last report says so
         QVERIFY(session.runLua(qsl(R"lua(
 headlessChangingCalls = 0
 registerMapInfo("HeadlessFailing", function()
@@ -408,15 +408,19 @@ registerMapInfo("HeadlessFailing", function()
   error("headless changing failure " .. headlessChangingCalls)
 end)
 )lua")));
-        for (int i = 0; i < 20; ++i) {
+        for (int i = 0; i < 40; ++i) {
             QVERIFY2(rendered(session), qPrintable(session.errorString()));
         }
-        QVERIFY(luaGlobalString(session.host(), "headlessChangingCalls").toInt() >= 20);
+        QVERIFY(luaGlobalString(session.host(), "headlessChangingCalls").toInt() >= 40);
         int changingReports = 0;
+        int stoppedNotices = 0;
         for (const QList<QVariant>& arguments : std::as_const(errors)) {
-            changingReports += arguments.at(0).toString().contains(qsl("headless changing failure"));
+            const QString report = arguments.at(0).toString();
+            changingReports += report.contains(qsl("headless changing failure"));
+            stoppedNotices += report.contains(qsl("further errors from this map info are not shown"));
         }
-        QVERIFY2(changingReports < 20, qPrintable(QString::number(changingReports)));
+        QCOMPARE(changingReports, 17);
+        QCOMPARE(stoppedNotices, 1);
         QVERIFY(session.shutdown(false));
     }
 
