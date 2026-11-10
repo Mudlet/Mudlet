@@ -572,6 +572,20 @@ std::optional<qint64> THeadlessSession::labelMade(const QString& name) const
     return record ? std::optional(record->made) : std::nullopt;
 }
 
+void THeadlessSession::noteMapPointer(const QPointF& position)
+{
+    auto* pView = dynamic_cast<TNullConsoleFrontend*>(mpHost->consoleFrontend());
+    if (!pView) {
+        return;
+    }
+    const QList<ScriptWindow> windows = scriptWindows();
+    const auto mapper = std::ranges::find(windows, ScriptWindow::Kind::mapper, &ScriptWindow::kind);
+    // T2DMap fills its window from the top left, so a point of the map is that point of the window
+    if (mapper != windows.cend() && mapper->shown) {
+        pView->setMousePosition(inMainArea(windows, *mapper, position).toPoint());
+    }
+}
+
 bool THeadlessSession::onConsoleText(const ScriptWindow* pWindow, const QPointF& position) const
 {
     if (!pWindow) {
