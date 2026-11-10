@@ -623,9 +623,6 @@ int TLuaInterpreter::createMiniConsole(lua_State* L)
         name = lua_tostring(L, 2);
     } else {
         name = lua_tostring(L, 1);
-        if (isMain(name)) {
-            name.clear();
-        }
     }
 
     Host& host = getHostFromLua(L);
@@ -675,9 +672,6 @@ int TLuaInterpreter::createScrollBox(lua_State* L)
         name = lua_tostring(L, 2);
     } else {
         name = lua_tostring(L, 1);
-        if (isMain(name)) {
-            name.clear();
-        }
     }
 
     const Host& host = getHostFromLua(L);
