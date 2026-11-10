@@ -688,7 +688,7 @@ void dlgPackageManager::slot_installPackageFromFile()
     }
 }
 
-// Each failure's reason also goes to the main console, which is behind this dialog
+// installPackage() also posts its reason to the main console, but that is behind this dialog
 static QString installFailure(const QString& name, const QString& reason)
 {
     if (reason.isEmpty()) {
@@ -704,6 +704,8 @@ QString dlgPackageManager::installPackageFiles(const QStringList& fileNames)
 {
     QStringList failures;
     for (const QString& fileName : fileNames) {
+        // During a save an install is put off and reports success before it has run
+        mpHost->waitForProfileSave();
         if (auto [installed, reason] = mpHost->installPackage(fileName, enums::PackageModuleType::Package); installed) {
             mpHost->waitForProfileSave();
         } else {

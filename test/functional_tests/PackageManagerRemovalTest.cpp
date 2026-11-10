@@ -41,8 +41,10 @@ using namespace std::chrono_literals;
 // loop - a package's sysUninstall handler is free to take a sibling away, and
 // the rows were drawn before any of that.
 //
+// An import that fails has to say why in the same notice.
+//
 // A spec cannot reach this: the dialog is C++ only, with no Lua way to open it
-// or to run its removal.
+// or to run its removal or import.
 class PackageManagerRemovalTest : public QObject
 {
     Q_OBJECT
@@ -125,7 +127,7 @@ private slots:
         QVERIFY2(msg.contains(qsl("no longer installed")) && msg.contains(qsl("removal-b")), qPrintable(qsl("The package that had gone was not named as such: %1").arg(msg)));
     }
 
-    // The reason goes to the main console as well, but that is behind this dialog
+    // Even when a save is running as it is tried, and with the name escaped for the rich-text notice
     void test_aFailedImportSaysWhy()
     {
         auto* host = startProfile();
@@ -133,7 +135,7 @@ private slots:
 
         QTemporaryDir packageDir;
         QVERIFY(packageDir.isValid());
-        const QString packageFile = packageDir.filePath(qsl("import-twice.xml"));
+        const QString packageFile = packageDir.filePath(qsl("import&twice.xml"));
         QFile file(packageFile);
         QVERIFY(file.open(QIODevice::WriteOnly));
         QVERIFY(file.write(R"(<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE MudletPackage><MudletPackage version="1.001"></MudletPackage>)") > 0);
@@ -141,11 +143,13 @@ private slots:
 
         auto* manager = new dlgPackageManager(nullptr, host);
         const QString first = manager->installPackageFiles({packageFile});
+        host->saveProfile();
+        QVERIFY2(host->currentlySavingProfile(), "SETUP: the save had already finished, so the second import could not be put off");
         const QString second = manager->installPackageFiles({packageFile});
         delete manager;
 
         QVERIFY2(first.isEmpty(), qPrintable(qsl("SETUP: the package did not install the first time: %1").arg(first)));
-        QVERIFY2(second.contains(qsl("import-twice.xml")), qPrintable(qsl("The file that failed is not named: %1").arg(second)));
+        QVERIFY2(second.contains(qsl("import&amp;twice.xml")), qPrintable(qsl("The file that failed is not named: %1").arg(second)));
         QVERIFY2(second.contains(qsl("already installed")), qPrintable(qsl("The notice does not say why the import failed: %1").arg(second)));
     }
 
