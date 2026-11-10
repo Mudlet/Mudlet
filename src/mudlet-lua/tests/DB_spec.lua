@@ -1879,6 +1879,11 @@ describe("Tests DB.lua functions", function()
       assert.are.same({"Ada", "Cyra", "Eve"}, names(db:fetch(mydb.people, query)))
     end)
 
+    it("db:OR with a single sub-expression matches just that expression", function()
+      local query = db:OR(db:eq(mydb.people.name, "Ada"))
+      assert.are.same({"Ada"}, names(db:fetch(mydb.people, query)))
+    end)
+
     it("db:OR keeps a nil condition so the fetch fails rather than dropping it", function()
       local query = db:OR(db:eq(mydb.people.name, "Ada"), nil, db:eq(mydb.people.name, "Eve"))
       assert.is_nil(db:fetch(mydb.people, query))
