@@ -1939,7 +1939,8 @@ end
 --- If you don't know SQL well, its best to build the expression.<br/><br/>
 ---
 --- Query may also be a table array of such expressions, if so they will be AND'd together implicitly.
---- An empty table returns every row, the same as a nil query.<br/><br/>
+--- An empty table returns every row, the same as a nil query. A table keyed by field name, such as
+--- {name = "Bob"}, is not a query: it makes db:fetch return nil.<br/><br/>
 ---
 --- The results that are returned are not in any guaranteed order, though they are usually the same order
 --- as the records were inserted. If you want to rely on the order in any way, you must pass a value to the
@@ -1983,7 +1984,7 @@ function db:fetch(sheet, query, order_by, descending)
 
   if query then
     if type(query) == "table" and not query._isExp then
-      -- next(), not #: only {} means no filter, so a hash-style table such as {name = x} still builds invalid SQL
+      -- next(), not #: a hash-style table such as {name = x} must not mean "no filter" and match every row
       if next(query) ~= nil then
         sql = sql .. " WHERE " .. db:AND(unpack(query))
       end

@@ -1857,7 +1857,7 @@ describe("Tests DB.lua functions", function()
       assert.are.same({"Eve"}, names(results))
     end)
 
-    it("an empty table query filters nothing", function()
+    it("an empty table query returns every row", function()
       assert.are.same({"Ada", "Bram", "Cyra", "Drake", "Eve"}, names(db:fetch(mydb.people, {})))
     end)
 
@@ -1865,7 +1865,14 @@ describe("Tests DB.lua functions", function()
       assert.are.equal(5, db:aggregate(mydb.people.name, "COUNT", {}))
     end)
 
-    it("a table query that is not a list of conditions still matches nothing rather than everything", function()
+    it("db:aggregate ANDs a table query of several conditions", function()
+      assert.are.equal(1, db:aggregate(mydb.people.name, "COUNT", {
+        db:eq(mydb.people.city, "Chicago"),
+        db:gt(mydb.people.level, 25),
+      }))
+    end)
+
+    it("a hash-style table query fails with nil rather than returning every row", function()
       assert.is_nil(db:fetch(mydb.people, {name = "Ada"}))
     end)
 
