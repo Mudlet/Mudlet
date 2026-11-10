@@ -4879,7 +4879,28 @@ void TBuffer::decodeSGR(const QStringView sequence)
                 case 55:
                     mOverline = false;
                     break;
-                // 56 to 59 reserved for future standardization
+                // 56 and 57 reserved for future standardization
+                case 58: // Underline colour: not drawn, but its arguments must be stepped over or they read as codes of their own
+                    if (paraIndex + 1 < total) {
+                        switch (parameterStrings.at(paraIndex + 1).toInt()) {
+                        case 5:
+                            paraIndex += 2;
+                            break;
+                        case 2:
+                        case 3:
+                            paraIndex += (haveColorSpaceId ? 5 : 4);
+                            break;
+                        case 4:
+                            paraIndex += (haveColorSpaceId ? 6 : 5);
+                            break;
+                        default:
+                            ++paraIndex;
+                            break;
+                        }
+                    }
+                    break;
+                case 59: // Default underline colour
+                    break;
                 // case 60: // ideogram underline or right side line
                 //    break;
                 // case 61: // ideogram double underline or double right side line
