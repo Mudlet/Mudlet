@@ -848,7 +848,7 @@ bool TMedia::resume(TMediaData mediaData)
 
 void TMedia::stopAllMediaPlayers()
 {
-    // A file still downloading is still saved, but does not start once it lands
+    // A file still downloading must not start once it lands
     for (TMediaData& pending : mMediaDownloads) {
         pending.setMediaVolume(TMediaData::MediaVolumePreload);
     }
@@ -1545,9 +1545,9 @@ void TMedia::slot_writeFile(QNetworkReply* reply)
                 mpHost->raiseEvent(event);
                 mediaData = mMediaDownloads.value(reply);
 
-                // A preload (volume 0) asked for the file to be in the cache, not to be
-                // heard: playMedia() returns before playing one it already has, so a
-                // download must not play the copy it has just made either.
+                // A preload (volume 0), whether asked for or left by a stop, wants the file
+                // cached, not heard: playMedia() returns before playing one it already has,
+                // so a download must not play the copy it has just made either.
                 if (mediaData.mediaVolume() != TMediaData::MediaVolumePreload) {
                     TMedia::play(mediaData);
                 }
