@@ -2216,7 +2216,6 @@ void TNullConsoleFrontend::addMainCommandLineHistory(const QString& sent)
 {
     // The line as it stands, which an alias that clears it leaves nothing of
     const QString command = mMainCommandLineRewritten ? mpHost->windowRegistry().commandLineText(QString()).value_or(QString()) : sent;
-    mMainCommandLineRewritten = false;
     // As TCommandLine::enterCommand(), past the hidden-input box
     if (command.isEmpty() || !mMainCommandLine.writer || (mpHost->isRemoteEchoingActive() && !mpHost->disablePasswordMasking())) {
         return;
@@ -2317,11 +2316,12 @@ bool TNullConsoleFrontend::replaceCommandLineText(const QString& name, const QSt
 
 bool TNullConsoleFrontend::holdMainCommandLineForSend(const QString& line)
 {
-    mMainCommandLineRewritten = false;
-    // A line typed while the game hides input went through the hidden-input box, past the main line
+    // A line typed while the game hides input went through the hidden-input box, past the main line. Such a send
+    // leaves mMainCommandLineRewritten alone, as an outer send still to finish may have had its line written to.
     if (mpHost->passwordEntryWanted()) {
         return false;
     }
+    mMainCommandLineRewritten = false;
     mMainCommandLineTyped = false;
     mMainCommandLineAllSelected = false;
     mMainCommandLineWhollySelected = false;
@@ -2332,7 +2332,12 @@ bool TNullConsoleFrontend::holdMainCommandLineForSend(const QString& line)
 
 void TNullConsoleFrontend::mainCommandLineSent()
 {
-    // TCommandLine::enterCommand() selects a line it keeps
+    // As TCommandLine::enterCommand(), a line changed while it was sent is left for the player. The flag outlives
+    // this send so an outer send that ran this one from the event loop leaves it too.
+    if (mMainCommandLineRewritten) {
+        return;
+    }
+    // TCommandLine::enterCommand() selects a line it keeps as sent
     if (!mpHost->mAutoClearCommandLineAfterSend) {
         mMainCommandLineAllSelected = true;
         mMainCommandLineWhollySelected = true;

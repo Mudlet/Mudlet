@@ -412,6 +412,23 @@ private slots:
         QVERIFY2(waitForServerToReceive("east"), "the second of the two lines never reached the game");
     }
 
+    // An action that resets itself on the first of several lines leaves the rest to go to the game
+    void test_linesAfterAnActionResetsItselfGoToTheGame()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY(runLua(qsl("cmdLineActionSaw = ''")));
+        QVERIFY(runLua(qsl("setCmdLineAction('%1', function(text) cmdLineActionSaw = text resetCmdLineAction('%1') end)").arg(mLineName)));
+
+        type(pCommandLine, qsl("to the action"));
+        press(pCommandLine, Qt::Key_Return, Qt::ShiftModifier);
+        type(pCommandLine, qsl("to the game"));
+        press(pCommandLine, Qt::Key_Return);
+
+        QCOMPARE(luaGlobal("cmdLineActionSaw"), qsl("to the action"));
+        QVERIFY2(waitForServerToReceive("to the game"), qPrintable(qsl("the game never received the second line - it got: %1").arg(QString::fromUtf8(mpServer->received()))));
+    }
+
     // The preference decides what is left in the box afterwards: cleared, or
     // kept and selected so the next thing typed replaces it.
     void test_autoClearPreferenceDecidesWhatIsLeftBehind()
@@ -430,6 +447,119 @@ private slots:
         type(pCleared, qsl("cleared"));
         press(pCleared, Qt::Key_Return);
         QCOMPARE(pCleared->toPlainText(), QString());
+    }
+
+    // An alias that fills the line in for the player, like "t bob" writing
+    // "tell bob ", must not have that cleared, or selected for the next key
+    // to replace.
+    void test_textAnAliasWritesIsLeftForThePlayerToFinish_data()
+    {
+        QTest::addColumn<bool>("autoClear");
+        QTest::newRow("auto-clear off") << false;
+        QTest::newRow("auto-clear on") << true;
+    }
+
+    void test_textAnAliasWritesIsLeftForThePlayerToFinish()
+    {
+        QFETCH(bool, autoClear);
+        mpHost->mAutoClearCommandLineAfterSend = autoClear;
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY(runLua(qsl("specPrefillAlias = tempAlias([[^specPrefill (\\w+)$]], [[printCmdLine('%1', 'tell ' .. matches[2] .. ' ')]])").arg(mLineName)));
+        const auto killPrefillAlias = qScopeGuard([this] {
+            runLua(qsl("killAlias(specPrefillAlias)"));
+        });
+
+        type(pCommandLine, qsl("specPrefill bob"));
+        press(pCommandLine, Qt::Key_Return);
+
+        QCOMPARE(pCommandLine->toPlainText(), qsl("tell bob "));
+        QCOMPARE(selection(pCommandLine), QString());
+        type(pCommandLine, qsl("hi"));
+        QCOMPARE(pCommandLine->toPlainText(), qsl("tell bob hi"));
+    }
+
+    // Writing back the very text that was sent still counts as the script's
+    void test_aCommandAnAliasWritesBackIsLeftAsWritten()
+    {
+        mpHost->mAutoClearCommandLineAfterSend = true;
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY(runLua(qsl("specStickyAlias = tempAlias([[^specSticky$]], [[printCmdLine('%1', 'specSticky')]])").arg(mLineName)));
+        const auto killStickyAlias = qScopeGuard([this] {
+            runLua(qsl("killAlias(specStickyAlias)"));
+        });
+
+        type(pCommandLine, qsl("specSticky"));
+        press(pCommandLine, Qt::Key_Return);
+
+        QCOMPARE(pCommandLine->toPlainText(), qsl("specSticky"));
+    }
+
+    // A setCmdLineAction() field that writes to its line, as packages' settings
+    // fields do, is still cleared or selected for the next value to replace
+    void test_anActionFieldThatWritesItsLineIsClearedOrSelected_data()
+    {
+        QTest::addColumn<bool>("autoClear");
+        QTest::newRow("auto-clear off") << false;
+        QTest::newRow("auto-clear on") << true;
+    }
+
+    void test_anActionFieldThatWritesItsLineIsClearedOrSelected()
+    {
+        QFETCH(const bool, autoClear);
+        mpHost->mAutoClearCommandLineAfterSend = autoClear;
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY(runLua(qsl("setCmdLineAction('%1', function(text) printCmdLine('%1', text .. '0') end)").arg(mLineName)));
+
+        type(pCommandLine, qsl("25"));
+        press(pCommandLine, Qt::Key_Return);
+
+        QCOMPARE(pCommandLine->toPlainText(), autoClear ? QString() : qsl("250"));
+        QCOMPARE(selection(pCommandLine), autoClear ? QString() : qsl("250"));
+    }
+
+    // As does a one-shot field whose action resets itself before writing its value back
+    void test_anActionFieldThatResetsItselfKeepsItsValueSelected()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        mpHost->mAutoClearCommandLineAfterSend = false;
+        QVERIFY(runLua(qsl("setCmdLineAction('%1', function(text) resetCmdLineAction('%1') printCmdLine('%1', text .. '0') end)").arg(mLineName)));
+
+        type(pCommandLine, qsl("25"));
+        press(pCommandLine, Qt::Key_Return);
+
+        QCOMPARE(pCommandLine->toPlainText(), qsl("250"));
+        QCOMPARE(selection(pCommandLine), qsl("250"));
+    }
+
+    // An alias that leaves the line alone has it cleared or selected as usual
+    void test_anAliasThatDoesNotWriteLeavesTheUsualClearOrSelect_data()
+    {
+        QTest::addColumn<bool>("autoClear");
+        QTest::newRow("auto-clear off") << false;
+        QTest::newRow("auto-clear on") << true;
+    }
+
+    void test_anAliasThatDoesNotWriteLeavesTheUsualClearOrSelect()
+    {
+        QFETCH(const bool, autoClear);
+        mpHost->mAutoClearCommandLineAfterSend = autoClear;
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        QVERIFY(runLua(qsl("specQuietAlias = tempAlias([[^specQuiet$]], [[specQuietSaw = getCmdLine('%1')]])").arg(mLineName)));
+        const auto killQuietAlias = qScopeGuard([this] {
+            runLua(qsl("killAlias(specQuietAlias)"));
+        });
+
+        type(pCommandLine, qsl("specQuiet"));
+        press(pCommandLine, Qt::Key_Return);
+
+        QCOMPARE(luaGlobal("specQuietSaw"), qsl("specQuiet"));
+        QCOMPARE(pCommandLine->toPlainText(), autoClear ? QString() : qsl("specQuiet"));
+        QCOMPARE(selection(pCommandLine), autoClear ? QString() : qsl("specQuiet"));
     }
 
     // Up walks back through what was sent, Down comes forward again, and the

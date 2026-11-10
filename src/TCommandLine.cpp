@@ -1149,6 +1149,9 @@ void TCommandLine::enterCommand(QKeyEvent* event)
     // Emit signal for hyperlink visibility triggers before processing the command
     emit commandSubmitted();
 
+    const int revisionAtSubmit = document()->revision();
+    // Taken before the action runs, as it may reset itself
+    const bool actionField = mType != enums::MainCommandLine && mActionFunction;
     QStringList commandList = toPlainText().split(QChar::LineFeed);
 
     for (QString& command : commandList) {
@@ -1166,6 +1169,10 @@ void TCommandLine::enterCommand(QKeyEvent* event)
         }
     }
 
+    // A line changed while it was sent, say by an alias's printCmdLine(), is left for the player to finish. Not so
+    // for a setCmdLineAction() field: packages' settings fields write their value back and expect it replaced.
+    const bool lineChangedDuringSend = !actionField && document()->revision() != revisionAtSubmit;
+
     // A line typed past the hidden-input box stays out of the on-disk history
     if (!toPlainText().isEmpty() && (!mpHost->isRemoteEchoingActive() || mpHost->disablePasswordMasking())) {
         if (mpHost->mAutoClearCommandLineAfterSend) {
@@ -1177,19 +1184,21 @@ void TCommandLine::enterCommand(QKeyEvent* event)
         TCommandHistory::add(mHistoryList, toPlainText());
     }
 
-    if (mpHost->mAutoClearCommandLineAfterSend) {
+    if (!lineChangedDuringSend) {
+        if (mpHost->mAutoClearCommandLineAfterSend) {
 #if defined(Q_OS_MACOS)
-        // clearing the input line on macOS 11.6 makes VoiceOver announce the removed text,
-        // essentially re-announcing everything we've typed. This workaround fixes this behaviour
-        // and does not seem to negatively affect other platforms
-        hide();
+            // clearing the input line on macOS 11.6 makes VoiceOver announce the removed text,
+            // essentially re-announcing everything we've typed. This workaround fixes this behaviour
+            // and does not seem to negatively affect other platforms
+            hide();
 #endif
-        clear();
+            clear();
 #if defined(Q_OS_MACOS)
-        show();
+            show();
 #endif
-    } else {
-        selectAll();
+        } else {
+            selectAll();
+        }
     }
     adjustHeight();
 }
