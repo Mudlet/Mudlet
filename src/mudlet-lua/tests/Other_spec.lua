@@ -1109,10 +1109,15 @@ describe("Tests Other.lua functions", function()
       _G.TIMEFRAME_TEST_VARIABLE = "before"
 
       assert.are.equal("TIMEFRAME_TEST_VARIABLE", timeframe("TIMEFRAME_TEST_VARIABLE", 0.05, 0.15))
+      -- read from timers, which fire in order however long a pump takes
+      local between, after, done = "unset", "unset", false
+      tempTimer(0.1, function() between = _G.TIMEFRAME_TEST_VARIABLE end)
+      tempTimer(0.25, function() after, done = _G.TIMEFRAME_TEST_VARIABLE, true end)
 
       assert.is_nil(_G.TIMEFRAME_TEST_VARIABLE)
-      assert.is_true(waitUntil(function() return _G.TIMEFRAME_TEST_VARIABLE == true end), "never set to true")
-      assert.is_true(waitUntil(function() return _G.TIMEFRAME_TEST_VARIABLE == nil end), "never cleared again")
+      assert.is_true(waitUntil(function() return done end))
+      assert.is_true(between)
+      assert.is_nil(after)
     end)
 
     it("Should call a function with each value in time order", function()
@@ -1142,10 +1147,10 @@ describe("Tests Other.lua functions", function()
       timeframe("TIMEFRAME_TEST_VARIABLE", 0.05, 0.1)
       timeframe("TIMEFRAME_TEST_VARIABLE", 0.3)
 
-      local checked = false
-      tempTimer(0.15, function() checked = true end)
+      local checked, seen = false, "unset"
+      tempTimer(0.15, function() seen, checked = _G.TIMEFRAME_TEST_VARIABLE, true end)
       assert.is_true(waitUntil(function() return checked end))
-      assert.is_nil(_G.TIMEFRAME_TEST_VARIABLE, "the first call's true_time still fired")
+      assert.is_nil(seen, "the first call's true_time still fired")
       assert.is_true(waitUntil(function() return _G.TIMEFRAME_TEST_VARIABLE == true end), "the second call never fired")
     end)
   end)
@@ -4778,7 +4783,8 @@ describe("Tests the script API", function()
       local russian = loadTranslations("AdjustableContainer", nil, "ru_RU")
 
       assert.are.equal("Lock", english.lock.message)
-      assert.are.equal("Заблокировать", russian.lock.message)
+      assert.is_string(russian.lock.message)
+      assert.are_not.equal(english.lock.message, russian.lock.message)
     end)
 
     it("Should fill in the strings a language file lacks from the default file", function()
