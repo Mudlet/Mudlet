@@ -25,13 +25,12 @@
 #include "TNullConsoleFrontend.h"
 #include "utils.h"
 
+#include <QKeySequence>
 #include <QList>
 #include <QMap>
 #include <QPointer>
 #include <QSet>
 #include <QSize>
-
-class QKeySequence;
 
 // The application shell core code sees while there is no main window: before it is made, after it
 // has gone, and in a run with no GUI. Most queries have no value and most actions fail or do nothing,
@@ -117,6 +116,14 @@ public:
         int pulseInterval = 0;
     };
     const QMap<int, AddonCommand>& addonCommands() const { return mAddonCommands; }
+    // The embedding app's own shortcuts with what holds each, refused as the main window refuses its menu keys
+    struct ReservedShortcut
+    {
+        QKeySequence sequence;
+        QString holder;
+    };
+    void setReservedShortcuts(const QList<ReservedShortcut>& shortcuts) { mReservedShortcuts = shortcuts; }
+    const QList<ReservedShortcut>& reservedShortcuts() const { return mReservedShortcuts; }
     // As a click on the main window's button or menu item: false for a disabled or unknown command
     bool activateAddonCommand(int commandId);
     TNullAppFrontendNotifier mNotifier;
@@ -166,6 +173,7 @@ private:
     // over it once the profile is open again
     Layout mClosedProfiles;
     QMap<int, AddonCommand> mAddonCommands;
+    QList<ReservedShortcut> mReservedShortcuts;
     // One sequence for every profile's commands, as the main window's, so an id names one command or nothing
     int mNextAddonCommandId = 1;
     QSet<const Host*> mAddonCommandHosts;
