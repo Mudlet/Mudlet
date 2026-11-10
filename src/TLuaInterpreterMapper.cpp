@@ -3206,6 +3206,7 @@ int TLuaInterpreter::removeCustomLine(lua_State* L)
     // Need to update the TRoom {min|max}_{x|y} settings as they are used during
     // the painting process:
     pR->calcRoomDimensions();
+    host.mpMap->setUnsaved(__func__);
     host.mpMap->updateArea(pR->getArea());
 
     lua_pushboolean(L, true);
