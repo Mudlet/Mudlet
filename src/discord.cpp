@@ -571,9 +571,8 @@ QString Discord::deduceGameName(const QString& address)
     return otherName;
 }
 
-// Returns true in First if this is a MUD we know about (and have an Icon for in
-// on the Mudlet Discord server!) and the deduced name in Second - if the
-// first is true.
+// First: whether this is a game Mudlet's Discord app has an icon for;
+// Second: the deduced name, returned either way
 QPair<bool, QString> Discord::gameIntegrationSupported(const QString& address)
 {
     const QString deducedName = deduceGameName(address);
