@@ -593,6 +593,17 @@ public:
             bool operator==(const Dock&) const = default;
         };
         std::optional<Dock> dock;
+        // These four are a mini console's or user window's. The row it is scrolled back to, as a script's getScroll()
+        // gives it, none while it follows new lines: scrolled back, the GUI splits the console, the upper pane
+        // showing the grid's rows of windowLines() that end just above this row, the lower one the last rows.
+        std::optional<int> scrolledBackTo;
+        // The columns and rows of text its upper pane has room for, which is the whole console while it is not
+        // scrolled back
+        QSize grid;
+        // As enableScrollBar() and disableScrollBar() ask
+        bool scrollBar = false;
+        // Whether each row's time shows beside it, as enableTimeStamps() and disableTimeStamps() ask
+        bool timeStamps = false;
         // The kind of its parent, as a scroll box may share its name with a user window or console; nothing with no
         // parent
         Kind parentKind = Kind::userWindow;
@@ -922,8 +933,9 @@ signals:
     void mainConsoleAreaChanged(const QString& profile, const QSize& grid, const QRect& textRect);
     // What scriptWindows() gives for these names differs from what it gave at profileLoaded or the last of these:
     // a window made, deleted (and so gone from it), moved, resized, shown, hidden, put in another window, raised,
-    // lowered or given another background or font, a label whose labelContent() differs, and those whose place among
-    // their parent's windows moved with it.
+    // lowered or given another background or font, a console scrolled, by a script, pointer()'s wheel, a clear or a
+    // trim of its oldest rows, or whose grid, scroll bar or timestamps changed, a label whose labelContent() differs,
+    // and those whose place among their parent's windows moved with it.
     // From the event loop, sorted, once however many calls in a turn changed them, and not for calls that changed
     // nothing.
     void scriptWindowsChanged(const QString& profile, const QStringList& names);

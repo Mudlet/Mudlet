@@ -1237,6 +1237,132 @@ setLabelOnLeave("u", function() seen[#seen + 1] = "u.leave" end) setLabelWheelCa
         QCOMPARE(luaString(session, qsl("table.concat({getMousePosition()}, ',')")), qsl("130,320"));
         QVERIFY(session.shutdown(false));
     }
+
+    void test_aConsolesScrollIsReadAndTold()
+    {
+        const QString name = qsl("Headless Windows Scroll");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        QVERIFY(session.runLua(qsl(R"lua(
+createMiniConsole("mini", 10, 20, 300, 200)
+createLabel("lbl", 0, 300, 100, 20, 1)
+for i = 1, 40 do echo("mini", "line " .. i .. "\n") end
+)lua")));
+        QCoreApplication::processEvents();
+        QCoreApplication::processEvents();
+        const auto mini = [&session]() {
+            return *session.scriptWindow(qsl("mini"));
+        };
+        const auto luaScroll = [&session]() {
+            return luaString(session, qsl("getScroll('mini')")).toInt();
+        };
+        const QSize whole = mini().grid;
+        QVERIFY(whole.width() > 0 && whole.height() > 0);
+        QCOMPARE(whole.width(), luaString(session, qsl("getColumnCount('mini')")).toInt());
+        QCOMPARE(whole.height(), luaString(session, qsl("getRowCount('mini')")).toInt());
+        QVERIFY(!mini().scrolledBackTo);
+        QVERIFY(!mini().scrollBar);
+        QVERIFY(!mini().timeStamps);
+        // The other kinds have none of it
+        QVERIFY(!session.scriptWindow(qsl("lbl"))->scrolledBackTo);
+        QCOMPARE(session.scriptWindow(qsl("lbl"))->grid, QSize());
+
+        QSignalSpy changes(&session, &THeadlessSession::scriptWindowsChanged);
+        const auto told = [&changes]() {
+            QCoreApplication::processEvents();
+            QCoreApplication::processEvents();
+            QStringList all;
+            for (const QList<QVariant>& change : std::as_const(changes)) {
+                all << change.at(1).toStringList().join(QLatin1Char(','));
+            }
+            changes.clear();
+            return all.join(QLatin1Char(';'));
+        };
+
+        // Scrolled back, the GUI splits the console, so its upper pane has fewer rows
+        QVERIFY(session.runLua(qsl("scrollTo('mini', 3)")));
+        QCOMPARE(told(), qsl("mini"));
+        QCOMPARE(mini().scrolledBackTo, std::optional<int>(3));
+        QCOMPARE(*mini().scrolledBackTo, luaScroll());
+        QVERIFY(mini().grid.height() < whole.height());
+        QCOMPARE(mini().grid.height(), luaString(session, qsl("getRowCount('mini')")).toInt());
+        QVERIFY(session.runLua(qsl("scrollTo('mini', 3)")));
+        QCOMPARE(told(), QString());
+        QVERIFY(session.runLua(qsl("scrollTo('mini', 7)")));
+        QCOMPARE(told(), qsl("mini"));
+        QCOMPARE(mini().scrolledBackTo, std::optional<int>(7));
+
+        // Back to following new lines
+        QVERIFY(session.runLua(qsl("scrollTo('mini')")));
+        QCOMPARE(told(), qsl("mini"));
+        QVERIFY(!mini().scrolledBackTo);
+        QCOMPARE(mini().grid, whole);
+
+        // The app's wheel
+        using Type = THeadlessSession::WindowPointerEvent::Type;
+        QVERIFY(session.pointer(qsl("mini"), {.type = Type::wheel, .position = QPointF(20, 20), .angleDelta = QPoint(0, 120)}));
+        QCOMPARE(told(), qsl("mini"));
+        QVERIFY(mini().scrolledBackTo);
+        QCOMPARE(*mini().scrolledBackTo, luaScroll());
+        QCOMPARE(*mini().scrolledBackTo, luaString(session, qsl("getLineCount('mini')")).toInt() - 3);
+
+        // A clear closes the split
+        QVERIFY(session.runLua(qsl("clearWindow('mini')")));
+        QCOMPARE(told(), qsl("mini"));
+        QVERIFY(!mini().scrolledBackTo);
+        QCOMPARE(mini().grid, whole);
+
+        // A trim of the oldest rows moves the row it is scrolled back to, as a script reads it
+        QVERIFY(session.runLua(qsl("setConsoleBufferSize('mini', 100, 10) for i = 1, 95 do echo('mini', 'row ' .. i .. '\\n') end scrollTo('mini', 50)")));
+        QCOMPARE(told(), qsl("mini"));
+        QCOMPARE(mini().scrolledBackTo, std::optional<int>(50));
+        QVERIFY(session.runLua(qsl("for i = 96, 120 do echo('mini', 'row ' .. i .. '\\n') end")));
+        QVERIFY(luaString(session, qsl("getLineCount('mini')")).toInt() < 120);
+        QCOMPARE(told(), qsl("mini"));
+        QVERIFY(mini().scrolledBackTo);
+        QVERIFY(*mini().scrolledBackTo < 50);
+        QCOMPARE(*mini().scrolledBackTo, luaScroll());
+        // and what a deleteLine() leaves it past is bounded as a script's is
+        QVERIFY(session.runLua(qsl("scrollTo('mini', getLineCount('mini') - 1) for i = 1, 4 do moveCursor('mini', 0, getLineCount('mini')) deleteLine('mini') end")));
+        told();
+        QVERIFY(mini().scrolledBackTo);
+        QCOMPARE(*mini().scrolledBackTo, luaScroll());
+
+        // Rows deleted from the end take the row it is scrolled back to with them
+        QVERIFY(session.runLua(qsl("scrollTo('mini', getLineCount('mini') - 1)")));
+        told();
+        const int beforeDeleting = *mini().scrolledBackTo;
+        QVERIFY(session.runLua(qsl("for i = 1, 4 do moveCursor('mini', 0, getLineCount('mini')) deleteLine('mini') end")));
+        QCOMPARE(told(), qsl("mini"));
+        QVERIFY(*mini().scrolledBackTo < beforeDeleting);
+        QCOMPARE(*mini().scrolledBackTo, luaScroll());
+
+        // A console told not to scroll follows new lines
+        QVERIFY(session.runLua(qsl("disableScrolling('mini')")));
+        QCOMPARE(told(), qsl("mini"));
+        QVERIFY(!mini().scrolledBackTo);
+        QVERIFY(session.runLua(qsl("enableScrolling('mini')")));
+        QCOMPARE(told(), QString());
+
+        QVERIFY(session.runLua(qsl("enableScrollBar('mini')")));
+        QCOMPARE(told(), qsl("mini"));
+        QVERIFY(mini().scrollBar);
+        QVERIFY(session.runLua(qsl("enableScrollBar('mini')")));
+        QCOMPARE(told(), QString());
+        QVERIFY(session.runLua(qsl("disableScrollBar('mini')")));
+        QCOMPARE(told(), qsl("mini"));
+        QVERIFY(!mini().scrollBar);
+
+        QVERIFY(session.runLua(qsl("enableTimeStamps('mini')")));
+        QCOMPARE(told(), qsl("mini"));
+        QVERIFY(mini().timeStamps);
+        QVERIFY(session.runLua(qsl("disableTimeStamps('mini')")));
+        QCOMPARE(told(), qsl("mini"));
+        QVERIFY(!mini().timeStamps);
+        QVERIFY(session.shutdown(false));
+    }
 };
 
 #include "HeadlessSessionWindowsTest.moc"

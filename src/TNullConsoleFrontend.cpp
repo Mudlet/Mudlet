@@ -1181,8 +1181,18 @@ TConsoleModel& TNullConsoleFrontend::addSubConsole(const QString& name, const TW
         QObject::connect(&model.mNotifier, &TConsoleModelNotifier::linesAppended, &model.mNotifier, [this, &model](const int lineCount) {
             reportLinesOverflow(model, lineCount);
         });
+        // A trim of the oldest rows, or rows deleted from the end, moves the line it is scrolled back to
+        const auto noteScroll = [this, &model]() {
+            if (model.mScrolledBackTo) {
+                mWindowNotifier.note();
+            }
+        };
+        QObject::connect(&model.mNotifier, &TConsoleModelNotifier::linesAppended, &model.mNotifier, noteScroll);
+        QObject::connect(&model.mNotifier, &TConsoleModelNotifier::contentEdited, &model.mNotifier, noteScroll);
+        QObject::connect(&model.mNotifier, &TConsoleModelNotifier::linesChanged, &model.mNotifier, noteScroll);
         // As TConsole::applyTimeStamps(), shown or not
         QObject::connect(&model.mNotifier, &TConsoleModelNotifier::timeStampsToggled, &model.mNotifier, [this, name]() {
+            mWindowNotifier.note();
             // A hidden pane keeps the size it had until the resize it is owed reaches it
             if (const auto it = mSubConsoles.find(name); it != mSubConsoles.end() && (!it->second.paneResizePending || paneShown(it->second))) {
                 reportConsoleSize(name);
@@ -1204,6 +1214,7 @@ TConsoleModel& TNullConsoleFrontend::addSubConsole(const QString& name, const TW
         QObject::connect(pNotifier, &TConsoleModelNotifier::contentEdited, pNotifier, noteText);
         // As TConsole::bufferCleared() closes the split, which TConsoleModel::clear() has already forgotten
         QObject::connect(&model.mNotifier, &TConsoleModelNotifier::bufferCleared, &model.mNotifier, [this, name, &model]() {
+            mWindowNotifier.note();
             const QSize before = model.mGridSize;
             reportGridSize(name);
             if (model.mGridSize != before) {
@@ -3598,6 +3609,7 @@ bool TNullConsoleFrontend::setWindowScrollBarVisible(const QString& name, const 
         return false;
     }
     pModel->mScrollBarEnabled = visible;
+    mWindowNotifier.note();
     return true;
 }
 
@@ -3618,6 +3630,7 @@ bool TNullConsoleFrontend::setWindowScrolling(const QString& name, const bool en
     if (kind == TWindowRegistry::SubConsoleKind::MiniConsole || kind == TWindowRegistry::SubConsoleKind::UserWindow) {
         pModel->mScrollingEnabled = enabled;
         if (!enabled && pModel->mScrolledBackTo) {
+            mWindowNotifier.note();
             pModel->mScrolledBackTo.reset();
             reportGridSize(name);
             resizePane(name);
@@ -3632,6 +3645,7 @@ bool TNullConsoleFrontend::scrollWindowTo(const QString& name, const int line, c
     if (!pModel) {
         return false;
     }
+    mWindowNotifier.note();
     const bool wasSplit = pModel->mScrolledBackTo.has_value();
     const int lastLine = pModel->buffer.getLastLineNumber();
     // A buffer is never painted, so a real one never shows itself scrolled back
@@ -3677,6 +3691,7 @@ void TNullConsoleFrontend::reportGridSize(const QString& name)
     }
     const QFontMetricsF metrics(pModel->mUpperPaneFont);
     pModel->mGridSize = QSize(qRound(size.width() / metrics.averageCharWidth()), qRound(size.height() / metrics.lineSpacing()));
+    mWindowNotifier.note();
 }
 
 QFont TNullConsoleFrontend::displayFont() const
@@ -3910,9 +3925,16 @@ std::vector<TNullConsoleFrontend::WindowRecord> TNullConsoleFrontend::windowReco
                            console.pModel->mBgColor,
                            console.pModel->mUpperPaneFont,
                            kind == TWindowRegistry::SubConsoleKind::UserWindow});
-        records.back().parentKind = kindOfParent(console.box.get());
+        WindowRecord& record = records.back();
+        // As Host::windowScroll() bounds it, which a deleteLine() can leave past the end
+        if (console.pModel->mScrolledBackTo) {
+            record.scrolledBackTo = std::clamp(*console.pModel->mScrolledBackTo, 0, console.pModel->buffer.getLastLineNumber());
+        }
+        record.grid = console.pModel->mGridSize;
+        record.scrollBar = console.pModel->mScrollBarEnabled;
+        record.timeStamps = console.pModel->mShowTimeStamps;
+        record.parentKind = kindOfParent(console.box.get());
         if (kind == TWindowRegistry::SubConsoleKind::UserWindow) {
-            WindowRecord& record = records.back();
             record.autoDock = console.autoDock;
             record.dockArea = console.dockArea;
             record.floating = console.floating;
