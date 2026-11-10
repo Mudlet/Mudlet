@@ -3592,6 +3592,12 @@ void mudlet::slot_telnetConnectionStateChanged()
     // the brief "Connecting" (yellow) state.
     updateMainWindowTabIndicators();
     updateDetachedWindowTabIndicators();
+    // A detached window with one profile names its connection state in its title
+    for (const auto& detachedWindow : std::as_const(mDetachedWindows)) {
+        if (detachedWindow) {
+            detachedWindow->updateWindowTitle();
+        }
+    }
 }
 
 // Renders a key sequence for use inside a sentence. NativeText produces the
