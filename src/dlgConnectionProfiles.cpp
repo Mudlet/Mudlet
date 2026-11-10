@@ -2607,18 +2607,29 @@ void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
     QListWidgetItem* pItem;
     const auto oldPassword = character_password_entry->text();
     const CopiedProfileData data = captureProfileData();
+    // with secure storage, stops selecting the copy from blanking the password field and reading its still empty slot;
+    // without, the "password" file the copy takes is read back. A full copy may still be running, and holds the flag until it finishes
+    const bool fullCopyRunning = std::exchange(mCopyingProfile, mCopyingProfile || MudletApp::storingPasswordsSecurely());
     if (!copyProfileWidget(profile_name, oldname, pItem)) {
+        mCopyingProfile = fullCopyRunning;
         return;
     }
     const QDir oldProfileDir(MudletApp::getMudletPath(enums::profileHomePath, oldname));
     if (!oldProfileDir.exists()) {
         saveDefaultProfileCopy(profile_name, data, oldPassword);
+        mCopyingProfile = fullCopyRunning;
         return;
     }
 
     const QDir newProfileDir(MudletApp::getMudletPath(enums::profileHomePath, profile_name));
     newProfileDir.mkpath(newProfileDir.path());
     if (!newProfileDir.exists()) {
+        qWarning().nospace().noquote() << "dlgConnectionProfiles::slot_copyOnlySettingsOfProfile() ERROR - could not create \"" << newProfileDir.path() << "\".";
+        mCopyingProfile = fullCopyRunning;
+        // selects another profile, which shows its own details in place of the source's still in the form
+        delete pItem;
+        //: Shown in the connection dialog when "Copy settings only" could not create the folder for the new profile
+        showNotification(tr("Could not create the new profile folder on your computer."), notificationAreaIconLabelError);
         return;
     }
 
@@ -2635,6 +2646,14 @@ void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
 
     mProfileList << profile_name;
     slot_itemClicked(pItem);
+
+    mCopyingProfile = fullCopyRunning;
+    // before the password is saved, as it clears the notification a failed save shows
+    validateProfile();
+    // the "password" file copied above only holds it when passwords are not stored securely
+    if (MudletApp::storingPasswordsSecurely() && !oldPassword.trimmed().isEmpty()) {
+        writeSecurePassword(profile_name, oldPassword);
+    }
 }
 
 bool dlgConnectionProfiles::copyProfileWidget(QString& profile_name, QString& oldname, QListWidgetItem*& pItem) const
