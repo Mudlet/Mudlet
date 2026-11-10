@@ -1259,9 +1259,10 @@ int TLuaInterpreter::loadReplayFile(lua_State* L, const char* functionName)
 QByteArray TLuaInterpreter::parseTelnetCodes(const QByteArray& input)
 {
     // Increment the version - and document below - any changes to the table:
-    const int tableVersion = 1;
+    const int tableVersion = 2;
     // Changes:
     // 1 - Initial version.
+    // 2 - <DC2> corrected to 0x12.
 
     /*
      * Entry grouping
