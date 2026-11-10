@@ -36,6 +36,8 @@
 #include <QVBoxLayout>
 
 static constexpr int scmModulesInset = uiDesign::scmTabPaneInset * 2;
+// The .ui's grid gave the explanation this much; the table stretches and would take it all
+static constexpr int scmExplanationMinimumHeight = 230;
 static constexpr int scmModulesButtonGlyphSize = 16;
 
 
@@ -389,6 +391,7 @@ void dlgModuleManager::buildShell()
 
     // An explanation to read, not a field to type in, so it loses the sunken box
     textEdit->setFrameShape(QFrame::NoFrame);
+    textEdit->setMinimumHeight(scmExplanationMinimumHeight);
     pShellLayout->addWidget(textEdit);
 
     label_importStatus->hide();

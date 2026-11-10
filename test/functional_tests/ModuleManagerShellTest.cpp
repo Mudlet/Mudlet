@@ -118,6 +118,14 @@ private slots:
         QVERIFY2(mpDialog->helpButton->x() < mpDialog->installButton->x() && mpDialog->installButton->x() < mpDialog->uninstallButton->x(), "the foot no longer reads Module Help, Install, Uninstall");
     }
 
+    // The table stretches, so without the .ui's minimum the explanation would shrink to a scrolling sliver
+    void test_theExplanationKeepsItsHeight()
+    {
+        mpDialog->resize(600, 481);
+        TestPixels::settle();
+        QVERIFY2(mpDialog->textEdit->height() >= 230, qPrintable(qsl("the explanation is %1px tall, short of the 230px the .ui gives it").arg(mpDialog->textEdit->height())));
+    }
+
     // Longer than any status-line timeout, so only the cross can have hidden it
     void test_anImportFailureStaysInTheSharedNoticeUntilDismissed()
     {
