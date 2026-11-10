@@ -22,7 +22,7 @@ Days is optional, the default is 31 days.
 The following files are NOT deleted:
 
 - Files newer than the amount of days specified, or 31 days if not specified.
-- One file for every month before that. Specifically: The first save of every month prior to this; a leftover from an interrupted save does not count. For module backups, every module keeps its own.
+- One file for every month before that. Specifically: The first save of every month prior to this; a leftover from an interrupted save does not count. For module backups, every module name keeps its own; profiles with a module of the same name share it.
 - The newest profile save (.xml) or map (.dat/.json), which is the one Mudlet loads, however old it is. Module backups are never loaded, so there it is the newest backup of every module.
 - A leftover from an interrupted save, when there is no save Mudlet would load.
 - Folders, which are left alone.
