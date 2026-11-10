@@ -77,7 +77,7 @@ bool MudletReplay::start(Host* pHost)
 
     mRunning = true;
     mpHost = pHost;
-    mSpeed = 1;
+    mSpeed = scMinSpeed;
     mElapsedMSecs = 0;
     return true;
 }
