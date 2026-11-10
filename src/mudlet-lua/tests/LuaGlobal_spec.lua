@@ -630,6 +630,7 @@ describe("yajl generators", function()
     assert.are.equal('[\n1\n]\n', yajl.to_string({1}, {indent = "--"}))
     assert.are.equal('[\n1\n]\n', yajl.to_string({1}, {indent = true}))
     assert.are.equal('5\n', yajl.to_string(5, {indent = 2}))
+    assert.are.equal('[1]', yajl.to_string({1}, {indent = false}))
     assert.are.equal('[\n  1\n]\n', yajl.to_string({1}, {indent = "  "}))
     local written = {}
     local generator = yajl.generator({indent = {}, printer = function(text) written[#written + 1] = text end})

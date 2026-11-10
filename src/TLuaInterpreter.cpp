@@ -171,14 +171,14 @@ int checkedYajlGeneratorValue(lua_State* L)
 }
 
 // yajl drops an indent with anything but whitespace in it, then reads the null it left once it
-// indents. Give it no indent instead, in a copy of the options, which gives the same output wherever
-// that did not crash.
+// indents, so hand it an empty indent instead, or none for false
 int checkedYajlIndent(lua_State* L, const int options)
 {
     if (lua_istable(L, options)) {
         lua_getfield(L, options, "indent");
         const char* indent = lua_type(L, -1) == LUA_TSTRING ? lua_tostring(L, -1) : nullptr;
         const bool usable = lua_isnil(L, -1) || (indent && strspn(indent, " \t\n\v\f\r") == strlen(indent));
+        const bool indented = lua_toboolean(L, -1);
         lua_pop(L, 1);
         if (!usable) {
             lua_newtable(L);
@@ -188,7 +188,11 @@ int checkedYajlIndent(lua_State* L, const int options)
                 lua_insert(L, -2);
                 lua_rawset(L, -4);
             }
-            lua_pushliteral(L, "");
+            if (indented) {
+                lua_pushliteral(L, "");
+            } else {
+                lua_pushnil(L);
+            }
             lua_setfield(L, -2, "indent");
             lua_replace(L, options);
         }
