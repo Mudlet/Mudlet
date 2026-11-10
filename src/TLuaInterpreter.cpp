@@ -4374,7 +4374,7 @@ void TLuaInterpreter::adjustCaptureGroupsForReplace(int x, int replacedLength, c
 void TLuaInterpreter::setAtcpTable(const QString& var, const QString& arg)
 {
     lua_State* L = pGlobalLua;
-    lua_getglobal(L, "atcp"); //defined in LuaGlobal.lua
+    lua_getglobal(L, "atcp");
     if (!lua_istable(L, -1)) {
         lua_pop(L, 1);
         lua_newtable(L);
