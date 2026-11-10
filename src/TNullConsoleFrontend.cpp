@@ -552,7 +552,7 @@ QString commandLineSheet(const QColor& background)
 void TConsoleModelSink::printFormatted(const QString& text, const std::vector<TChar>& formatting, const TLinkStore& sourceLinkStore)
 {
     mModel.buffer.appendFormatted(text, formatting, sourceLinkStore);
-    mModel.mirrorToStdOut(text);
+    mModel.mirrorToStdOut(text, TLineFormat(formatting));
 }
 
 void TConsoleModelSink::discardAll()

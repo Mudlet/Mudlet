@@ -100,6 +100,29 @@ private:
         });
     }
 
+    // Each run as "text|foreground|background|styles", a colour of the profile's own as "own", a link as "@"
+    static QString styledPiece(const QString& text, const QList<THeadlessSession::TextRun>& runs)
+    {
+        QStringList parts;
+        int covered = 0;
+        for (const THeadlessSession::TextRun& run : runs) {
+            if (run.start != covered || run.length <= 0) {
+                return qsl("runs out of step at %1 in \"%2\"").arg(run.start).arg(text);
+            }
+            covered += run.length;
+            parts << qsl("%1|%2|%3|%4%5")
+                             .arg(text.mid(run.start, run.length).replace(QChar::LineFeed, qsl("\\n")),
+                                  run.defaultForeground ? qsl("own") : run.foreground.name(),
+                                  run.defaultBackground ? qsl("own") : run.background.name(),
+                                  QString::number(run.styles.toInt()),
+                                  run.link ? qsl("@") : QString());
+        }
+        if (covered != text.size()) {
+            return qsl("runs cover %1 of \"%2\"").arg(covered).arg(text);
+        }
+        return parts.join(qsl(" + "));
+    }
+
 private slots:
     void initTestCase()
     {
@@ -421,6 +444,107 @@ setBackgroundColor("headlessColoursMini", 200, 100, 50)
         QVERIFY(session.shutdown(false));
         QTest::qWait(100);
         QCOMPARE(connecting.count(), 0);
+    }
+
+    void test_whatScriptsEchoComesWithItsColours()
+    {
+        const QString name = qsl("Headless Echo Colours");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QStringList plain;
+        QStringList styled;
+        int linkId = 0;
+        connect(&session, &THeadlessSession::localText, &session, [&plain](const QString&, const QString& text) {
+            plain << text;
+        });
+        connect(&session, &THeadlessSession::localTextStyled, &session, [&](const QString& profile, const QString& text, const QList<THeadlessSession::TextRun>& runs) {
+            QCOMPARE(profile, name);
+            // After the plain signal for the same piece
+            QCOMPARE(plain.count(), styled.count() + 1);
+            QCOMPARE(plain.constLast(), text);
+            styled << styledPiece(text, runs);
+            for (const THeadlessSession::TextRun& run : runs) {
+                if (run.link) {
+                    linkId = run.link;
+                }
+            }
+        });
+        const auto pieces = [&]() {
+            const QStringList taken = styled;
+            styled.clear();
+            plain.clear();
+            return taken.join(qsl(" ; "));
+        };
+        const QString underline = QString::number(THeadlessSession::TextStyles(THeadlessSession::TextStyle::Underline).toInt());
+
+        QVERIFY(session.runLua(qsl(R"lua(cecho("<red>hot<reset> plain\n"))lua")));
+        QCOMPARE(pieces(), qsl("hot|#ff0000|own|0 ;  plain\\n|own|own|0"));
+        QVERIFY(session.runLua(qsl(R"lua(decho("<10,20,30:40,50,60>dd<r>\n"))lua")));
+        QCOMPARE(pieces(), qsl("dd|#0a141e|#28323c|0 ; \\n|own|own|0"));
+        QVERIFY(session.runLua(qsl(R"lua(hecho("#ff00ffpink#r\n"))lua")));
+        QCOMPARE(pieces(), qsl("pink|#ff00ff|own|0 ; \\n|own|own|0"));
+        QVERIFY(session.runLua(qsl(R"lua(setFgColor(0, 255, 0) setBgColor(0, 0, 255) setUnderline(true) echo("go\non") resetFormat() echo("\n"))lua")));
+        QCOMPARE(pieces(), qsl("go\\non|#00ff00|#0000ff|%1 ; \\n|own|own|0").arg(underline));
+
+        // A link in an echo is named, in the colours it was written in
+        QVERIFY(session.runLua(qsl(R"lua(echo("see ") echoLink("here", function() end, "the hint", true) echo("\n"))lua")));
+        QCOMPARE(pieces(), qsl("see |own|own|0 ; here|own|own|0@ ; \\n|own|own|0"));
+        QVERIFY(linkId);
+        const std::optional<THeadlessSession::Link> link = session.link(linkId);
+        QVERIFY(link);
+        QCOMPARE(link->tooltip, qsl("the hint"));
+
+        // A piece that ends a line another left open starts with that line feed, in the colours of what follows
+        QVERIFY(session.runLua(qsl(R"lua(echo("open") moveCursor("main", 0, getLineNumber("main")) setFgColor(255, 0, 0) insertText("in") resetFormat() moveCursorEnd("main") echo("\n"))lua")));
+        QCOMPARE(pieces(), qsl("open|own|own|0 ; \\nin|#ff0000|own|0 ; \\n\\n|own|own|0"));
+
+        // Text copied in from another buffer keeps its colours, but not the ids of that buffer's links
+        QVERIFY(session.runLua(qsl(R"lua(createBuffer("copied")
+cecho("copied", "<red>x")
+echoLink("copied", "lnk", function() end, "a hint", true)
+echo("copied", "\n")
+moveCursor("copied", 0, 0)
+selectCurrentLine("copied")
+copy("copied")
+appendBuffer("main"))lua")));
+        QCOMPARE(pieces(), qsl("x|#ff0000|own|0 + lnk\\n|own|own|0"));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_aCommandsEchoComesWithItsColours()
+    {
+        const QString name = qsl("Headless Command Echo Colours");
+        QVERIFY(writeProfile(name, QString()));
+        QTcpServer server;
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+
+        THeadlessSession session;
+        bool prompted = false;
+        connect(&session, &THeadlessSession::outputLine, &session, [&prompted](const QString&, const QString&, const bool isPrompt) {
+            prompted = prompted || isPrompt;
+        });
+        QStringList styled;
+        connect(&session, &THeadlessSession::localTextStyled, &session, [&styled](const QString&, const QString& text, const QList<THeadlessSession::TextRun>& runs) {
+            // Not the connection's own messages
+            if (!text.startsWith(QLatin1Char('[')) && !text.contains(QLatin1String("connection"))) {
+                styled << styledPiece(text, runs);
+            }
+        });
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"(tempTrigger("Welcome", [[send("from a trigger")]]))")));
+        QTRY_VERIFY_WITH_TIMEOUT(server.hasPendingConnections(), 10000);
+        std::unique_ptr<QTcpSocket> game(server.nextPendingConnection());
+        game->write("Welcome\r\nhp 10> \xff\xf9");
+        QTRY_VERIFY_WITH_TIMEOUT(prompted, 10000);
+        // In a trigger, at the prompt, and below other text, each in the command's own colours
+        QVERIFY(session.submit(qsl("look")));
+        QVERIFY(session.runLua(qsl(R"lua(echo("later\n"))lua")));
+        QVERIFY(session.submit(qsl("again")));
+        QCOMPARE(styled.join(qsl(" ; ")), qsl("from a trigger\\n|#717100|own|0 ; look\\n|#717100|own|0 ; later\\n|own|own|0 ; again\\n|#717100|own|0"));
+        QVERIFY(session.shutdown(false));
     }
 };
 

@@ -1260,7 +1260,7 @@ int TBuffer::getLastLineNumber()
     return 0; //-1;
 }
 
-void TBuffer::addLink(bool trigMode, const QString& text, QStringList& command, QStringList& hint, const TChar& format, const QVector<int>& luaReference)
+int TBuffer::addLink(bool trigMode, const QString& text, QStringList& command, QStringList& hint, const TChar& format, const QVector<int>& luaReference)
 {
     const int id = addLinkToStore(command, hint, luaReference);
 
@@ -1269,6 +1269,7 @@ void TBuffer::addLink(bool trigMode, const QString& text, QStringList& command, 
     } else {
         appendLine(text, 0, text.length(), format.foreground(), format.background(), format.mFlags, id);
     }
+    return id;
 }
 
 int TBuffer::addLinkToStore(const QStringList& links, const QStringList& hints, const QVector<int>& luaReference, const QString& expireName, const int line)

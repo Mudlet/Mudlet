@@ -155,6 +155,7 @@ QObject::connect(session.get(), &THeadlessSession::outputLine,
 });
 QObject::connect(session.get(), &THeadlessSession::localText, [](const QString& profile, const QString& text) {
     // echo(), print(), the commands sent and Mudlet's messages; does not always end a line
+    // (localTextStyled gives the same pieces with their colours)
 });
 QObject::connect(session.get(), &THeadlessSession::quitRequested, [] {
     // A script closed the profile
@@ -192,7 +193,8 @@ asked for (`THeadlessSession::TextStyle`: bold, italic, underline, overline, str
 fast blink, concealed), and says whether each colour is the profile's own, which a frontend may swap
 for its own theme's. A run also names the link it is part of, as "links in the main console and in
 windows" below tells.
-What `echo()` and the like print comes as plain text for now.
+What `echo()` and the like print comes as plain text in `localText`, and with runs of the same kind in
+`localTextStyled`.
 
 `outputLine` carries each line as the game sent it, before the profile's triggers run on it, so a line a
 trigger gags still arrives, and one it rewrites arrives unchanged. `lineShown` carries the same lines as
@@ -230,6 +232,13 @@ piece once: a line of `lineShown` goes below a line `localText` left open, and t
 `lineShown` is not connected, `localText` carries what triggers write too. Connected or let go in a
 handler, `lineShown` takes effect from the next line the game sends, so the line under way and all its
 triggers write go to one stream or the other, never both.
+
+`localTextStyled` follows each piece of `localText` with the same text and the runs it was written in, as
+`outputLine`'s are: the colours of `cecho()`, `decho()`, `hecho()` and `setFgColor()`, the styles, the command
+echo's colours and the link of an `echoLink()`, which `link()` and `followLink()` take. The runs cover the whole
+piece, a line feed being part of the run of what it was written with. An app that draws colours connects
+it in place of `localText`, as every piece comes in both. A link in text copied from another console's
+buffer (`appendBuffer()`, or text an MXP frame sends on to the main console) is not named.
 
 Drawn that way, the console matches the GUI's but for its layout in these places, where no text is
 missing or doubled:

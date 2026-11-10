@@ -3160,7 +3160,7 @@ void writeClipboardInto(TConsoleModel& model, const TBuffer& clipboard, const bo
         model.holdTriggerWriteForMirror(mirrorMark);
     } else if (!inPlace && !clipboard.buffer.empty() && !clipboard.lineBuffer.isEmpty()) {
         // TBuffer::appendBuffer() ends the line it writes
-        model.mirrorToStdOut(clipboard.lineBuffer.constFirst() + QChar::LineFeed);
+        model.mirrorToStdOut(clipboard.lineBuffer.constFirst() + QChar::LineFeed, clipboard.buffer.front());
     }
 }
 } // namespace
