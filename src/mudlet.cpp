@@ -7661,7 +7661,13 @@ void mudlet::slot_updateCheckFailed(const QString& error)
     auto* pHost = getActiveHost();
     if (pHost && pHost->mainConsoleView()) {
         pHost->mainConsoleView()->printSystemMessage(tr("Update check failed. Error: %1\n").arg(error));
+        return;
     }
+
+    //: Title of the message box shown when checking for, downloading or installing a Mudlet update fails while no profile is open
+    auto* pMessageBox = new QMessageBox(QMessageBox::Warning, tr("Update check failed"), error, QMessageBox::Ok, this);
+    pMessageBox->setAttribute(Qt::WA_DeleteOnClose);
+    pMessageBox->open();
 }
 
 void mudlet::slot_showFullChangelog()

@@ -29,6 +29,7 @@
 #include <QAction>
 #include <QDir>
 #include <QImage>
+#include <QMessageBox>
 #include <QTemporaryDir>
 #include <QToolBar>
 #include <QToolButton>
@@ -190,6 +191,25 @@ private slots:
         emit pMudlet->pUpdater->signal_updateAvailable(2);
         QCOMPARE(updateButton()->iconSize(), pMudlet->mpMainToolBar->iconSize());
         pMudlet->setToolBarIconSize(3);
+    }
+
+    // With no profile open there is no console to print the failure in
+    void test_failedCheckWithoutProfileIsShown()
+    {
+        auto* pMudlet = mudlet::self();
+        QVERIFY(!pMudlet->getActiveHost());
+        const QString error = qsl("Could not connect to the update server: Host not found");
+
+        emit pMudlet->pUpdater->signal_updateCheckFailed(error);
+
+        QMessageBox* pShown = nullptr;
+        for (QMessageBox* pBox : pMudlet->findChildren<QMessageBox*>()) {
+            if (pBox->isVisible() && pBox->text() == error) {
+                pShown = pBox;
+            }
+        }
+        QVERIFY2(pShown, "a failed update check with no profile open showed the player nothing");
+        pShown->close();
     }
 
     // The feed keeps listing an installed update until Mudlet restarts into it
