@@ -792,9 +792,22 @@ The list has parents before the windows they hold, and each parent's windows fro
 main window's area's before the docks, so an app that draws it in order draws each window over what it
 should cover. `scriptWindow(name)` reads one,
 the first of that name, and `scriptWindow(name, kind)` the one of that kind, as a console's own command
-line has its console's name. Neither lists buffers, which are never shown, nor the windows of a game's MXP
-frames. Both are empty with no profile open, and may be read from anywhere, a handler of the session's
+line has its console's name. Neither lists buffers, which are never shown. Both are empty with no profile open, and may be read from anywhere, a handler of the session's
 signals included.
+
+The frames a game opens with MXP's `<FRAME>` are in the list too, as kind `mxpFrame`. A frame is a mini
+console in all but who made it: `windowLines()` reads the text a `<DEST>` sent it, `windowTextChanged`
+names it, its links are read and followed and the wheel scrolls it, the same way. Its `geometry` is its
+console's, under the frame's tab header where it has one, in the main window's area or, for a frame
+opened inside another, in that frame, which is its `parent`. An `EXTERNAL` frame is a window of its
+own, so it has `inDock` set, no place and only a size, like a user window the app has not placed; a
+press on it goes on to the main console as the GUI's does, and it and `getMousePosition()` take the
+frame as sitting at the main area's top left corner. Of a
+frame's tabs only `shown` tells: it is set for the page in front and not for the ones behind it; the
+titles are not given. A frame's `<DEST … EOF>` empties it and `<DEST … EOL>` drops its last line before
+the text that follows, so however much one packet brought, `windowTextChanged` names the frame once
+and `windowLines()` then has only what is left. `setMainWindowSize()` does not lay the frames out
+again: they move as the game opens and closes them.
 
 A Geyser gauge, button, or container is not a window of its own: it is the labels and windows it is made
 of, so a gauge is its `_back`, `_front` and `_text` labels, which the list has as any other.
@@ -852,8 +865,8 @@ The range is cut to the rows there are, and a `first` below 0 counts back from t
 `windowLines(name, -40, 40)` is the last 40 rows. A hidden console keeps its text and is read all the
 same. `"main"`, or no name, reads the main console, for an app that redraws its scrollback; what it shows
 as it arrives is still `lineShown`'s to tell. It is empty with no profile open and for any other name: a
-label, a scroll box, a text edit, the mapper, a buffer from `createBuffer()`, which is never shown, and
-the console of one of the game's MXP frames. It may be called from anywhere, but from a handler of
+label, a scroll box, a text edit, the mapper and a buffer from `createBuffer()`, which is never shown. It
+may be called from anywhere, but from a handler of
 `outputLine` or `lineShown` the main console's last row is in the middle of its commit.
 
 `windowTextChanged(profile, windows)` says when to read them again: the names, sorted, of the mini
@@ -961,7 +974,8 @@ Lua specs that fail with no window, so it is the up-to-date list; the main gaps 
   drawn with a font's Private Use Area;
 - the main window's own command line, button bars and docks, which an app draws outside the area
   it gives (see "Embedding it: the main window's size"), and the command line a mini console or user
-  window can show.
+  window can show;
+- the tab header of an MXP frame: the titles of its pages, and a way for the app to bring one forward.
 
 `.github/workflows/headless-lua-tests.yml` runs the Lua specs in `mudlet-headless`, and
 "The Lua specs with no main window" in `platform-builds.md` explains how to reproduce it.

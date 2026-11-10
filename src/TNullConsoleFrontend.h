@@ -85,7 +85,7 @@ public:
     bool removeFromParentTabs(const QString& name, const QString& parentName) override;
     void destroyFrame(const QString& name) override;
     void showFrame(const QString& name) override;
-    void focusFrame(const QString&) override {}
+    void focusFrame(const QString& name) override;
     void setGeometry(const QString& name, const QRect& geometry) override;
     void reportSize() override;
     TPrintSink* sink(const QString& name) const override;
@@ -95,6 +95,10 @@ public:
     // As an external frame's console reports what it holds when it is hidden or shown
     void reportFramesWithin(const QString& name);
     void clear();
+    // The frame whose widget a frame is built inside, empty for the main window and for a window of its own
+    QString host(const QString& name) const;
+    // Where a frame's console is in that widget: under the header of the frame it is a page of, else at its frame's corner
+    QPoint consolePlace(const QString& name) const;
 
 private:
     // A QTabWidget's pages by frame name, the first being the header frame's own console
@@ -117,6 +121,8 @@ private:
     std::map<QString, QString> mHosts;
     // The size each frame's container last laid its console out at
     std::map<QString, QSize> mConsoleSizes;
+    // Each internal frame's container's corner, in the widget it is built inside
+    std::map<QString, QPoint> mPlaces;
 };
 
 // The view a Host has while no real one is attached: before its console is made, after that has
@@ -143,10 +149,11 @@ public:
     // A window a script made, as an app that embeds Mudlet draws it in place of the GUI's widget
     struct WindowRecord
     {
-        enum class Kind { miniConsole, userWindow, label, commandLine, textBox, scrollBox, mapper };
+        enum class Kind { miniConsole, userWindow, label, commandLine, textBox, scrollBox, mapper, mxpFrame };
         QString name;
         Kind kind = Kind::label;
-        // The user window or scroll box it is in, or the console whose own command line it is; empty for the main window
+        // The user window or scroll box it is in, the console whose own command line it is, or the MXP frame an MXP
+        // frame is built inside; empty for the main window
         QString parent;
         // In its parent's pixels; none for a console's own command line, which the console lays out along its bottom
         QRect geometry;
@@ -160,7 +167,7 @@ public:
         QColor background;
         // A default QFont where the window keeps no font of its own
         QFont font;
-        // One of the main window's QDockWidgets rather than a widget in its area
+        // One of the main window's QDockWidgets, or an EXTERNAL MXP frame's own window, rather than a widget in its area
         bool inDock = false;
         // A user window's dock: where openUserWindow() put it, whether the player may dock it, and its title
         bool autoDock = true;
@@ -414,7 +421,7 @@ public:
     bool hasKeyboardFocus() const override { return false; }
     TMxpFrameFrontend& mxpFrames() override { return mMxpFrames; }
     const TMxpFrameFrontend& mxpFrames() const override { return mMxpFrames; }
-    // Every window a script made, in no order; not buffers, which are never shown, nor MXP frames, which are the game's
+    // Every window a script made and every MXP frame of the game, in no order; not buffers, which are never shown
     std::vector<WindowRecord> windowRecords() const;
     // The model of a console windowRecords() lists; null for any other name
     TConsoleModel* listedConsoleModel(const QString& name) const;
@@ -678,7 +685,7 @@ private:
     void reportDisplayFontChange(const QFont& before);
     void raiseFontEvent(const QString& eventName, const QString& subject, const QFont& font);
     void reportGridSize(const QString& name);
-    static bool listsConsole(const SubConsole& console, std::optional<TWindowRegistry::SubConsoleKind> kind);
+    static bool listsConsole(std::optional<TWindowRegistry::SubConsoleKind> kind);
     void reportLinesOverflow(const TConsoleModel& model, int lineCount);
     void resizePane(const QString& name);
     void sendPendingPaneResize(const QString& name);
