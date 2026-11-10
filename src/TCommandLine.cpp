@@ -369,7 +369,6 @@ bool TCommandLine::event(QEvent* event)
             if ((ke->modifiers() & (allModifiers & ~(Qt::ShiftModifier))) == Qt::NoModifier) {
                 // Process as plain <BACKTAB> - (ignoring implicit <SHIFT>)
                 handleTabCompletion(false);
-                adjustHeight();
                 ke->accept();
                 return true;
             }
@@ -1204,6 +1203,7 @@ void TCommandLine::handleTabCompletion(bool direction)
     mudlet::self()->announce(completion->word);
     moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
     mCompletion.setShownLine(toPlainText());
+    adjustHeight();
 }
 
 // Hitting the cursor up key gets you in autocompletion mode.
