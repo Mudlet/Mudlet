@@ -1459,7 +1459,8 @@ void dlgPackageExporter::slot_packageChanged(int index)
     const QString packagePath{MudletApp::getMudletPath(enums::profileHomePath, mpHost->getName())};
     //fill package metadata
     mPackageDataPath.clear();
-    QMap<QString, QString> const packageInfo = mpHost->mPackageInfo.value(packageName);
+    // The list offers installed modules too, and those keep their details apart from packages'
+    const QMap<QString, QString> packageInfo = mpHost->mPackageInfo.contains(packageName) ? mpHost->mPackageInfo.value(packageName) : mpHost->mModuleInfo.value(packageName);
     ui->lineEdit_author->setText(packageInfo.value(qsl("author")));
     const QString icon{packageInfo.value(qsl("icon"))};
     if (!icon.isEmpty()) {
