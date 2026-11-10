@@ -6860,7 +6860,7 @@ std::pair<bool, QString> Host::createMiniConsole(const QString& windowname, cons
 std::pair<bool, QString> Host::createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height) const
 {
     if (name.isEmpty()) {
-        return {false, QLatin1String("a scroll box cannot have an empty string as its name")};
+        return {false, QLatin1String("a scrollbox cannot have an empty string as its name")};
     }
     if (parentWindowMissing(windowname)) {
         return {false, qsl("window '%1' not found").arg(windowname)};
