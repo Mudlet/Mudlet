@@ -221,7 +221,7 @@ void TCommandLine::processInputMethod(QEvent* event)
     // The text being composed is laid out in the line too, so it can wrap before it is committed
     adjustHeight();
 
-    // Text being composed stays out of the document, so only a commit, or the first preedit over a selection, edits the line
+    // The preedit is not in toPlainText(), so only an event that changed the committed text counts as an edit
     if (toPlainText() == before) {
         return;
     }
