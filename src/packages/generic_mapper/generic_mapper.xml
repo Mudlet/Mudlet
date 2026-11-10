@@ -3123,7 +3123,7 @@ local function find_link(name, exits, dir, max_distance)
     -- in lazy mode check_room search only by name
     local x,y,z = getRoomCoordinates(map.currentRoom)
     if map.mapping and x then
-        if max_distance &lt; 1 then
+        if not max_distance or max_distance &lt; 1 then
             max_distance = nil
         else
             max_distance = max_distance - 1
