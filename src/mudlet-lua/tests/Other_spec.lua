@@ -5023,7 +5023,7 @@ describe("Tests one-shot event handlers", function()
     local id = registerAnonymousEventHandler("otherSpecOneShotBulk", function(_, label)
       calls = calls + 1
       if label == "start" then
-        for _ = 1, 300 do
+        for _ = 1, 10001 do
           raiseEvent("otherSpecOneShotBulk", "item")
         end
       end
@@ -5032,7 +5032,7 @@ describe("Tests one-shot event handlers", function()
     raiseEvent("otherSpecOneShotBulk", "start")
     local stillThere = killAnonymousEventHandler(id)
 
-    assert.are.equal(301, calls)
+    assert.are.equal(10002, calls)
     assert.is_true(stillThere)
     assert.are.equal(0, #reported)
   end)
