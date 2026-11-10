@@ -54,9 +54,9 @@ function Geyser.Button:new(cons, container)
     return nil, taken
   end
   setmetatable(me, self)
-  -- setClickFunction/setDownFunction compile Lua code given as a string; kept
-  -- as a string here, it would fail with "attempt to call" on every click.
-  -- Not raised: the constructor never has, so scripts carry on past it.
+  -- setClickFunction/setDownFunction compile Lua code given as a string; left
+  -- as a string, it would fail with "attempt to call" on every click.
+  -- Reported, not raised: scripts passing such code have always got a button back.
   for _, field in ipairs({"clickFunction", "downFunction"}) do
     local code = me[field]
     if type(code) == "string" then
