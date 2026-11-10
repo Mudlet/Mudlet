@@ -2333,7 +2333,7 @@ bool TMap::restore(QString location)
     return canRestore; //FIXME
 }
 
-// Reads the newest map file from the profile and retrieves some stats and data,
+// Reads the newest binary (.dat) map file from the profile and retrieves some stats and data,
 // including the current player room - was mRoomId in 12 to pre-18 map files and
 // is in mRoomIdHash since then so that it can be reinserted into a map that is
 // copied across (if the room STILL exists)!  This is to avoid a replacement map
