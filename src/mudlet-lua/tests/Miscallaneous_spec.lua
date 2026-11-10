@@ -3499,6 +3499,24 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       end)
     end)
 
+    describe("Tests the argument handling of loadProfile", function()
+      it("treats a nil offline mode as not given", function()
+        local ok, result, message = pcall(loadProfile, "mudlet-spec-never-a-profile", nil)
+        assert.is_true(ok, tostring(result))
+        assert.is_nil(result)
+        assert.equals("loadProfile: profile 'mudlet-spec-never-a-profile' does not exist", message)
+
+        ok, result, message = pcall(loadProfile, getProfileName(), nil)
+        assert.is_true(ok, tostring(result))
+        assert.is_nil(result)
+        assert.equals(string.format("loadProfile: profile '%s' is already loaded", getProfileName()), message)
+      end)
+
+      it("still refuses an offline mode that is not a boolean", function()
+        assert.has_error(function() loadProfile("mudlet-spec-never-a-profile", "yes") end)
+      end)
+    end)
+
     -- closeProfile() and resetProfile() only queue the lua_close() of the
     -- caller's state, and a call after them that spins the event loop must not
     -- let it happen underneath: the close or reset waits for the script to
