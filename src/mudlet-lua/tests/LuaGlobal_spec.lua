@@ -623,9 +623,11 @@ describe("yajl generators", function()
     generator:close()
   end)
 
-  it("raise an error for an indent that is not text", function()
+  it("raise an error for an indent that is not whitespace", function()
     assert.has_error(function() yajl.generator({indent = true}) end)
     assert.has_error(function() yajl.to_string({1}, {indent = {}}) end)
+    assert.has_error(function() yajl.to_string({1}, {indent = 2}) end)
+    assert.has_error(function() yajl.to_string({1}, {indent = "--"}) end)
     assert.are.equal('[\n  1\n]\n', yajl.to_string({1}, {indent = "  "}))
   end)
 

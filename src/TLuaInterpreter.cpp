@@ -170,15 +170,17 @@ int checkedYajlGeneratorValue(lua_State* L)
     return forwardToModuleFunction(L);
 }
 
-// lua-yajl hands yajl a null indent string for an indent option that is not text, which yajl reads
+// yajl drops an indent with anything but whitespace in it, then reads the null it left
 int checkedYajlIndent(lua_State* L, const int options)
 {
     if (lua_istable(L, options)) {
         lua_getfield(L, options, "indent");
-        const bool notText = !lua_isnil(L, -1) && !lua_isstring(L, -1);
+        size_t length = 0;
+        const char* indent = lua_type(L, -1) == LUA_TSTRING ? lua_tolstring(L, -1, &length) : nullptr;
+        const bool usable = lua_isnil(L, -1) || (indent && strspn(indent, " \t\n\v\f\r") == length);
         lua_pop(L, 1);
-        if (notText) {
-            return luaL_argerror(L, options, "indent must be a string");
+        if (!usable) {
+            return luaL_argerror(L, options, "indent must be a string of whitespace");
         }
     }
     return forwardToModuleFunction(L);
@@ -8175,8 +8177,6 @@ void TLuaInterpreter::initLuaGlobals()
             mStockJsonToValue = lua_tocfunction(pGlobalLua, -1);
             lua_pop(pGlobalLua, 1);
         }
-        lua_pop(pGlobalLua, 1);
-        lua_getglobal(pGlobalLua, "yajl");
         wrapModuleFunction(pGlobalLua, "generator", checkedYajlGenerator);
         wrapModuleFunction(pGlobalLua, "to_string", checkedYajlToString);
         lua_pop(pGlobalLua, 1);
