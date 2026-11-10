@@ -359,7 +359,7 @@ int TLuaInterpreter::sendGMCP(lua_State* L)
         lua_pushfstring(L, "sendGMCP: bad argument #1 type (message as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
-    const bool hasWhat = lua_gettop(L) > 1;
+    const bool hasWhat = lua_gettop(L) > 1 && !lua_isnil(L, 2);
     if (hasWhat && !lua_isstring(L, 2)) {
         lua_pushfstring(L, "sendGMCP: bad argument #2 type (what as string is optional, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
