@@ -305,7 +305,8 @@ Nothing about a stylesheet can be judged from the source. Grab the window:
 - Run on the real platform, not `QT_QPA_PLATFORM=offscreen`, when the question is how a
   control looks: both appearances are drawn on Fusion on macOS and Windows (`DarkTheme` for
   dark, a plain `MudletProxyStyle` for light) but with the platform's fonts and palette, which
-  offscreen lacks; Linux keeps the desktop's own style for light.
+  offscreen lacks; Linux keeps the desktop's own style for light, and every platform keeps one
+  chosen with `-style` or `QT_STYLE_OVERRIDE`.
 - Sample pixels rather than trusting your eye for a contrast claim; the audit tests show how.
 
 ## Guards to keep green

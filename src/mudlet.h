@@ -133,6 +133,8 @@ public:
     inline static QPointer<TDebugFilterBar> smpDebugFilterBar;
     // adjust Mudlet settings to match Steam's requirements
     inline static bool smSteamMode = false;
+    // Set when a style was given with -style or QT_STYLE_OVERRIDE; the light appearance keeps it on macOS and Windows
+    inline static bool smStyleChosenByPlayer = false;
 
 
     void showEvent(QShowEvent*) override;

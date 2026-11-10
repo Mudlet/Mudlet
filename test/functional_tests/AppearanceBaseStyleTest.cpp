@@ -19,6 +19,7 @@
 
 #include <QDir>
 #include <QProxyStyle>
+#include <QScopeGuard>
 #include <QStyleFactory>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
@@ -32,7 +33,7 @@
 #include "GroupedTest.h"
 
 // On macOS and Windows both appearances are drawn on Fusion, so a dialog keeps its sizes and spacing when the
-// appearance changes
+// appearance changes, unless the player chose a style
 class AppearanceBaseStyleTest : public QObject
 {
     Q_OBJECT
@@ -78,6 +79,7 @@ private slots:
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }
 
+    // Can only fail on macOS and Windows; Linux keeps the recorded style for the light appearance
     void test_theLightAppearanceIsDrawnOnTheDarkOnesBaseStyle()
     {
         mudlet::self()->setAppearance(enums::Appearance::dark);
@@ -91,6 +93,22 @@ private slots:
         // The desktop's own style is kept for the light appearance
         QCOMPARE(light, qsl("windows"));
 #endif
+    }
+
+    // The Windows style from initTestCase stands in for one given with -style
+    void test_aStyleThePlayerChoseIsKeptForTheLightAppearance()
+    {
+        mudlet::smStyleChosenByPlayer = true;
+        auto reset = qScopeGuard([]() {
+            mudlet::smStyleChosenByPlayer = false;
+        });
+
+        mudlet::self()->setAppearance(enums::Appearance::dark);
+        const QString dark = baseStyleName();
+        mudlet::self()->setAppearance(enums::Appearance::light);
+        const QString light = baseStyleName();
+        QCOMPARE(dark, qsl("fusion"));
+        QCOMPARE(light, qsl("windows"));
     }
 };
 

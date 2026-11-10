@@ -55,7 +55,9 @@ dark one on Fusion, 794 widget positions across the settings dialog's twelve
 pages differed between the two (macOS, Qt 6.11.3). A window the design has not
 reached yet takes Fusion's shapes in the light appearance, as it already did in
 the dark one. Linux keeps the desktop's own style for the light appearance,
-since a player there may have chosen it. `AppearanceBaseStyleTest` guards this.
+since a player there may have chosen it, and macOS and Windows keep a style
+the player chose with `-style` or `QT_STYLE_OVERRIDE` for it too.
+`AppearanceBaseStyleTest` guards this.
 
 ### Three tones of depth
 
@@ -344,7 +346,8 @@ style's rather than the design's. `QAbstractButton` reads
 `SH_Button_FocusPolicy` once, in its constructor, and keeps what that style
 answered, and the base style under the app is replaced on every appearance
 change: `DarkTheme` over Fusion for the dark one, a plain `MudletProxyStyle`
-over Fusion for the light one (over the desktop's own style on Linux). Both answer `Qt::StrongFocus` on macOS with Qt 6.11, which is what
+over Fusion for the light one (over the desktop's own style on Linux, or a
+style the player chose). Both answer `Qt::StrongFocus` on macOS with Qt 6.11, which is what
 left the accent sitting on a mark after a click; a platform whose style answered
 `Qt::TabFocus` would have made the same code look correct. The helper reaches
 check boxes, radio buttons, push buttons and checkable cards, and leaves a

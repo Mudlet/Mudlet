@@ -8172,9 +8172,9 @@ void mudlet::setAppearance(const enums::Appearance state, const bool& loading)
             qApp->setStyle(new DarkTheme);
         } else {
 #if defined(Q_OS_MACOS) || defined(Q_OS_WINDOWS)
-            // The dark appearance is drawn on Fusion, and the platform style here sizes and spaces controls its own
-            // way, so on it every window shifted as the appearance changed
-            const QString lightStyle = qsl("Fusion");
+            // On the dark appearance's Fusion, as the platform style here sizes and spaces controls its own way and
+            // every window would shift as the appearance changed; a style the player chose is kept instead
+            const QString lightStyle = smStyleChosenByPlayer ? mDefaultStyle : qsl("Fusion");
 #else
             const QString lightStyle = mDefaultStyle;
 #endif
