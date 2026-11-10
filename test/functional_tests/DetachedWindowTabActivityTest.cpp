@@ -284,6 +284,16 @@ private slots:
         QVERIFY(!disconnectionSpy.isEmpty() || disconnectionSpy.wait(2000));
 
         QVERIFY2(pWindow->windowTitle().endsWith(qsl("Disconnected")), qPrintable(pWindow->windowTitle()));
+
+        QSignalSpy connectingSpy(&pHost->mTelnet, &cTelnet::signal_connecting);
+        pHost->mTelnet.connectIt(mLocalhost, mPort.toInt());
+        QVERIFY(!connectingSpy.isEmpty() || connectingSpy.wait(2000));
+        QVERIFY2(pWindow->windowTitle().endsWith(qsl("Connecting...")), qPrintable(pWindow->windowTitle()));
+
+        QSignalSpy calledOffSpy(&pHost->mTelnet, &cTelnet::signal_connectingCalledOff);
+        pHost->mTelnet.disconnectIt();
+        QVERIFY2(!calledOffSpy.isEmpty(), "disconnecting during the host lookup did not call the connection off");
+        QVERIFY2(pWindow->windowTitle().endsWith(qsl("Disconnected")), qPrintable(pWindow->windowTitle()));
     }
 
     // The main window's marks now come from the same two functions as a detached
