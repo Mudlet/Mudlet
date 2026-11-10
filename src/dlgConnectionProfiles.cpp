@@ -2624,7 +2624,12 @@ void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
     const QDir newProfileDir(MudletApp::getMudletPath(enums::profileHomePath, profile_name));
     newProfileDir.mkpath(newProfileDir.path());
     if (!newProfileDir.exists()) {
+        qWarning().nospace().noquote() << "dlgConnectionProfiles::slot_copyOnlySettingsOfProfile() ERROR - could not create \"" << newProfileDir.path() << "\".";
         mCopyingProfile = fullCopyRunning;
+        // selects another profile, which shows its own details in place of the source's still in the form
+        delete pItem;
+        //: Shown in the connection dialog when "Copy settings only" could not create the folder for the new profile
+        showNotification(tr("Could not create the new profile folder on your computer."), notificationAreaIconLabelError);
         return;
     }
 

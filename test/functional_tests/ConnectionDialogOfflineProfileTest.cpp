@@ -379,6 +379,7 @@ private slots:
 
         dialog()->slot_copyOnlySettingsOfProfile();
         const QString settingsCopy = mSavedProfile + qsl("1");
+        QCOMPARE(saved(settingsCopy, qsl("port")), qsl("4000"));
         QCOMPARE(saved(settingsCopy, qsl("ssl_tsl")), QString::number(Qt::Checked));
     }
 
@@ -412,7 +413,44 @@ private slots:
         QCOMPARE(dialog()->character_password_entry->text(), password);
         QTRY_COMPARE(CredentialManager::retrieveCredential(settingsCopy, qsl("character")), password);
         QVERIFY2(!dialog()->mCopyingProfile, "the settings copy left the copying flag up");
+        QCOMPARE(saved(settingsCopy, qsl("port")), qsl("4000"));
         QVERIFY2(!dialog()->notificationAreaMessageBox->text().contains(qsl("65535")), qPrintable(dialog()->notificationAreaMessageBox->text()));
+
+        // a copy that cannot be made, here for want of a name, must lower the flag too
+        selectProfile(profile);
+        dialog()->profile_name_entry->clear();
+        dialog()->slot_copyOnlySettingsOfProfile();
+        QVERIFY2(!dialog()->mCopyingProfile, "a settings copy that was not made left the copying flag up");
+    }
+
+    // A copy whose folder cannot be made must not be left listed, showing a password nothing saved
+    void test_aSettingsCopyWithNoFolderSaysSo()
+    {
+        QVERIFY2(dialog(), "No connection dialog to test against");
+        const QString profile = qsl("NoFolderCopy-ConnDialogOffline");
+        const QString settingsCopy = profile + qsl("1");
+        const QString blocker = MudletApp::getMudletPath(enums::profileHomePath, settingsCopy);
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, profile)));
+        mudlet::self()->setStorePasswordsSecurely(true);
+        const auto restore = qScopeGuard([profile, blocker]() {
+            mudlet::self()->setStorePasswordsSecurely(false);
+            CredentialManager::removeCredential(profile, qsl("character"));
+            QFile::remove(blocker);
+        });
+        QVERIFY(CredentialManager::storeCredential(profile, qsl("character"), qsl("no-folder-secret")));
+        // a file where the copy's folder belongs makes it impossible to create
+        QFile blockingFile(blocker);
+        QVERIFY(blockingFile.open(QIODevice::WriteOnly));
+        blockingFile.close();
+        dialog()->fillout_form();
+        selectTestProfile();
+        selectProfile(profile);
+        QTRY_COMPARE(dialog()->character_password_entry->text(), qsl("no-folder-secret"));
+
+        dialog()->slot_copyOnlySettingsOfProfile();
+        QVERIFY2(dialog()->findData(*dialog()->listWidget_profiles, settingsCopy, dlgConnectionProfiles::csmNameRole).isEmpty(), "the copy that was not made is still listed");
+        QVERIFY2(dialog()->notificationArea->isVisible() && dialog()->notificationAreaMessageBox->text().contains(qsl("folder")), qPrintable(dialog()->notificationAreaMessageBox->text()));
+        QVERIFY(!dialog()->mCopyingProfile);
     }
 
     // A password the copy could not be given has to say so, not be cleared by the copy's own validation
@@ -458,7 +496,8 @@ private slots:
 
         dialog()->slot_copyOnlySettingsOfProfile();
         QCOMPARE(dialog()->profile_name_entry->text(), settingsCopy);
-        QTRY_COMPARE(dialog()->character_password_entry->text(), saved(settingsCopy, qsl("password")));
+        QCOMPARE(saved(settingsCopy, qsl("password")), qsl("saved-secret"));
+        QTRY_COMPARE(dialog()->character_password_entry->text(), qsl("saved-secret"));
     }
 
     // A settings copy of a game with no folder yet must leave a running full copy's flag up, as every other settings copy does
