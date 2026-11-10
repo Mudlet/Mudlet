@@ -625,6 +625,23 @@ int TLuaInterpreter::getVerifiedInt(lua_State* L, const char* functionName, cons
     return static_cast<int>(lua_tointeger(L, pos));
 }
 
+// A widget keeps its geometry as a QRect, which overflows int on reading back the size of a widget
+// placed or sized near INT_MAX or INT_MIN. Bounding every x, y, width and height to 2^29 keeps
+// QRect's sums, and a few parents' offsets on top, in range while leaving any size a script could
+// mean, including ones past QWIDGETSIZE_MAX, as given
+int TLuaInterpreter::boundedGeometry(const double value)
+{
+    constexpr double maximumGeometry = 1 << 29;
+    return static_cast<int>(qBound(-maximumGeometry, value, maximumGeometry));
+}
+
+// No documentation available in wiki - internal function
+// getVerifiedInt() for a widget's x, y, width or height, bounded as boundedGeometry() explains
+int TLuaInterpreter::getVerifiedGeometry(lua_State* L, const char* functionName, const int pos, const char* publicName)
+{
+    return boundedGeometry(getVerifiedInt(L, functionName, pos, publicName));
+}
+
 // No documentation available in wiki - internal function
 // The non-raising counterpart of getVerifiedFloat and getVerifiedDouble - see checkStringArg()
 bool TLuaInterpreter::checkNumberArg(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
@@ -1888,10 +1905,10 @@ int TLuaInterpreter::getMudletInfo(lua_State* L)
 int TLuaInterpreter::createLabelUserWindow(lua_State* L, const char* windowName, const char* labelName)
 {
     const int n = lua_gettop(L);
-    const int x = getVerifiedInt(L, "createLabel", 3, "label x-coordinate");
-    const int y = getVerifiedInt(L, "createLabel", 4, "label y-coordinate");
-    const int width = getVerifiedInt(L, "createLabel", 5, "label width");
-    const int height = getVerifiedInt(L, "createLabel", 6, "label height");
+    const int x = getVerifiedGeometry(L, "createLabel", 3, "label x-coordinate");
+    const int y = getVerifiedGeometry(L, "createLabel", 4, "label y-coordinate");
+    const int width = getVerifiedGeometry(L, "createLabel", 5, "label width");
+    const int height = getVerifiedGeometry(L, "createLabel", 6, "label height");
 
     bool fillBackground = false;
     if ((!lua_isnumber(L, 7)) && (!lua_isboolean(L, 7))) {
@@ -1933,10 +1950,10 @@ int TLuaInterpreter::createLabelUserWindow(lua_State* L, const char* windowName,
 int TLuaInterpreter::createLabelMainWindow(lua_State* L, const char* labelName)
 {
     const int n = lua_gettop(L);
-    const int x = getVerifiedInt(L, "createLabel", 2, "label x-coordinate");
-    const int y = getVerifiedInt(L, "createLabel", 3, "label y-coordinate");
-    const int width = getVerifiedInt(L, "createLabel", 4, "label width");
-    const int height = getVerifiedInt(L, "createLabel", 5, "label height");
+    const int x = getVerifiedGeometry(L, "createLabel", 2, "label x-coordinate");
+    const int y = getVerifiedGeometry(L, "createLabel", 3, "label y-coordinate");
+    const int width = getVerifiedGeometry(L, "createLabel", 4, "label width");
+    const int height = getVerifiedGeometry(L, "createLabel", 5, "label height");
 
     bool fillBackground = false;
     if ((!lua_isnumber(L, 6)) && (!lua_isboolean(L, 6))) {
