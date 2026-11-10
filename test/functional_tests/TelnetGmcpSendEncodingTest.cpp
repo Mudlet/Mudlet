@@ -194,6 +194,25 @@ private slots:
         QVERIFY2(wire.contains(QByteArray("Test.Raw \xE9\xFF\xFF \xFF\xFF\xFF\xF0")), qPrintable(QString::fromLatin1(wire.toHex(' '))));
     }
 
+    // A packager's MUDLET_VERSION_BUILD can put any text in the build suffix
+    void test_coreHelloVersionIsUtf8OnALatin1Game()
+    {
+        QVERIFY(mpHost->mTelnet.setEncoding(QByteArrayLiteral("ISO 8859-1"), false).first);
+        sentBytes();
+
+        announce(TN_WILL, OPT_GMCP);
+        const QByteArray wire = sentBytes();
+        const QByteArray expected = QByteArray(R"(Core.Hello { "client": "Mudlet", "version": ")") + APP_VERSION + MudletApp::buildSuffix().toUtf8() + QByteArray(R"("})");
+        bool found = false;
+        for (const Subnegotiation& message : subnegotiationsFor(wire, static_cast<unsigned char>(OPT_GMCP))) {
+            if (message.payload.startsWith("Core.Hello ")) {
+                QCOMPARE(message.payload, expected);
+                found = true;
+            }
+        }
+        QVERIFY2(found, "a repeated WILL GMCP did not send Core.Hello again");
+    }
+
     void test_invalidUtf8StillBecomesAReplacementCharacter()
     {
         const QByteArray payload = sentGmcpPayload(qsl(R"(sendGMCP("Test.Raw \255", "\255"))"));
