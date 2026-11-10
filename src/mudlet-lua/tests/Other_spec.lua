@@ -1095,64 +1095,68 @@ describe("Tests Other.lua functions", function()
       killtimeframe("TIMEFRAME_TEST_TABLE.state")
     end)
 
-    local function waitUntil(condition)
-      for _ = 1, 60 do
-        if condition() then
-          return true
+    if not os.getenv("MUDLET_TEST_MODE") then
+      pending("the specs that wait for timeframe's timers - need MUDLET_TEST_MODE for pumpEvents")
+    else
+      local function waitUntil(condition)
+        for _ = 1, 60 do
+          if condition() then
+            return true
+          end
+          pumpEvents(50)
         end
-        pumpEvents(50)
+        return condition()
       end
-      return condition()
+
+      it("Should clear the variable now, set it at true_time and clear it again at nil_time", function()
+        _G.TIMEFRAME_TEST_VARIABLE = "before"
+
+        assert.are.equal("TIMEFRAME_TEST_VARIABLE", timeframe("TIMEFRAME_TEST_VARIABLE", 0.05, 0.15))
+        -- read from timers, which fire in order however long a pump takes
+        local between, after, done = "unset", "unset", false
+        tempTimer(0.1, function() between = _G.TIMEFRAME_TEST_VARIABLE end)
+        tempTimer(0.25, function() after, done = _G.TIMEFRAME_TEST_VARIABLE, true end)
+
+        assert.is_nil(_G.TIMEFRAME_TEST_VARIABLE)
+        assert.is_true(waitUntil(function() return done end))
+        assert.is_true(between)
+        assert.is_nil(after)
+      end)
+
+      it("Should call a function with each value in time order", function()
+        local values = {}
+        local function record(value)
+          values[#values + 1] = tostring(value)
+        end
+
+        assert.are.equal(record, timeframe(record, 0.05, 0.2, { 0.1, "middle" }))
+
+        assert.is_true(waitUntil(function() return #values == 4 end), "got only " .. table.concat(values, ", "))
+        assert.are.same({ "nil", "true", "middle", "nil" }, values)
+      end)
+
+      it("Should not set the variable once killtimeframe has cancelled it", function()
+        _G.TIMEFRAME_TEST_VARIABLE = nil
+        timeframe("TIMEFRAME_TEST_VARIABLE", 0.05)
+        killtimeframe("TIMEFRAME_TEST_VARIABLE")
+
+        local done = false
+        tempTimer(0.2, function() done = true end)
+        assert.is_true(waitUntil(function() return done end))
+        assert.is_nil(_G.TIMEFRAME_TEST_VARIABLE)
+      end)
+
+      it("Should drop the earlier schedule when called again for the same variable", function()
+        timeframe("TIMEFRAME_TEST_VARIABLE", 0.05, 0.25)
+        timeframe("TIMEFRAME_TEST_VARIABLE", 0.3)
+
+        local checked, seen = false, "unset"
+        tempTimer(0.15, function() seen, checked = _G.TIMEFRAME_TEST_VARIABLE, true end)
+        assert.is_true(waitUntil(function() return checked end))
+        assert.is_nil(seen, "the first call's true_time still fired")
+        assert.is_true(waitUntil(function() return _G.TIMEFRAME_TEST_VARIABLE == true end), "the second call never fired")
+      end)
     end
-
-    it("Should clear the variable now, set it at true_time and clear it again at nil_time", function()
-      _G.TIMEFRAME_TEST_VARIABLE = "before"
-
-      assert.are.equal("TIMEFRAME_TEST_VARIABLE", timeframe("TIMEFRAME_TEST_VARIABLE", 0.05, 0.15))
-      -- read from timers, which fire in order however long a pump takes
-      local between, after, done = "unset", "unset", false
-      tempTimer(0.1, function() between = _G.TIMEFRAME_TEST_VARIABLE end)
-      tempTimer(0.25, function() after, done = _G.TIMEFRAME_TEST_VARIABLE, true end)
-
-      assert.is_nil(_G.TIMEFRAME_TEST_VARIABLE)
-      assert.is_true(waitUntil(function() return done end))
-      assert.is_true(between)
-      assert.is_nil(after)
-    end)
-
-    it("Should call a function with each value in time order", function()
-      local values = {}
-      local function record(value)
-        values[#values + 1] = tostring(value)
-      end
-
-      assert.are.equal(record, timeframe(record, 0.05, 0.2, { 0.1, "middle" }))
-
-      assert.is_true(waitUntil(function() return #values == 4 end), "got only " .. table.concat(values, ", "))
-      assert.are.same({ "nil", "true", "middle", "nil" }, values)
-    end)
-
-    it("Should not set the variable once killtimeframe has cancelled it", function()
-      _G.TIMEFRAME_TEST_VARIABLE = nil
-      timeframe("TIMEFRAME_TEST_VARIABLE", 0.05)
-      killtimeframe("TIMEFRAME_TEST_VARIABLE")
-
-      local done = false
-      tempTimer(0.2, function() done = true end)
-      assert.is_true(waitUntil(function() return done end))
-      assert.is_nil(_G.TIMEFRAME_TEST_VARIABLE)
-    end)
-
-    it("Should drop the earlier schedule when called again for the same variable", function()
-      timeframe("TIMEFRAME_TEST_VARIABLE", 0.05, 0.25)
-      timeframe("TIMEFRAME_TEST_VARIABLE", 0.3)
-
-      local checked, seen = false, "unset"
-      tempTimer(0.15, function() seen, checked = _G.TIMEFRAME_TEST_VARIABLE, true end)
-      assert.is_true(waitUntil(function() return checked end))
-      assert.is_nil(seen, "the first call's true_time still fired")
-      assert.is_true(waitUntil(function() return _G.TIMEFRAME_TEST_VARIABLE == true end), "the second call never fired")
-    end)
   end)
 
   describe("Tests the stopwatch family", function()
