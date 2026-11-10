@@ -120,6 +120,64 @@ private slots:
         deleteProfileDirectory(mHostname);
     }
 
+    void test_msspHostnameWithLineEndStillPrompts()
+    {
+#if defined(QT_NO_SSL)
+        QSKIP("Built without SSL support - the TLS upgrade prompt does not exist.");
+#else
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        disconnect(&host->mTelnet, &cTelnet::signal_promptTlsAvailable, nullptr, nullptr);
+
+        QSignalSpy spy(&host->mTelnet, &cTelnet::signal_promptTlsAvailable);
+        QVERIFY(spy.isValid());
+
+        QByteArray data;
+        data.append(TN_IAC);
+        data.append(TN_SB);
+        data.append(OPT_MSSP);
+        data.append(MSSP_VAR);
+        data.append("HOSTNAME");
+        data.append(MSSP_VAL);
+        data.append(mLocalhost.toLatin1());
+        data.append("\r\n");
+        data.append(MSSP_VAR);
+        data.append("TLS");
+        data.append(MSSP_VAL);
+        data.append("48000\r\n");
+        data.append(TN_IAC);
+        data.append(TN_SE);
+        host->mTelnet.loopbackTest(data);
+
+        if (spy.isEmpty()) {
+            QVERIFY2(spy.wait(2s), "A HOSTNAME ending in CR LF suppressed the TLS upgrade prompt.");
+        }
+        QCOMPARE(spy.count(), 1);
+        QCOMPARE(host->mMSSPHostName, mLocalhost);
+        QCOMPARE(host->mMSSPTlsPort, 48000);
+#endif
+    }
+
+    void test_msspTlsSupportedFlagWithLineEndIsNotAPort()
+    {
+#if defined(QT_NO_SSL)
+        QSKIP("Built without SSL support - the TLS upgrade prompt does not exist.");
+#else
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        disconnect(&host->mTelnet, &cTelnet::signal_promptTlsAvailable, nullptr, nullptr);
+
+        QSignalSpy spy(&host->mTelnet, &cTelnet::signal_promptTlsAvailable);
+        QVERIFY(spy.isValid());
+        QByteArray advertise = msspTlsPayload("1\r\n");
+        host->mTelnet.loopbackTest(advertise);
+        QVERIFY2(spy.isEmpty(), "The MSSP 'TLS supported' flag 1 was taken for port 1.");
+        QCOMPARE(host->mMSSPTlsPort, 0);
+#endif
+    }
+
     void test_msspTlsPortEmitsPromptSignal()
     {
 #if defined(QT_NO_SSL)
@@ -687,10 +745,7 @@ private slots:
     }
 
     // Utility function
-    void deleteProfileDirectory(const QString& profileName)
-    {
-        TestProfile::removeProfileDirectory(profileName);
-    }
+    void deleteProfileDirectory(const QString& profileName) { TestProfile::removeProfileDirectory(profileName); }
 
 private:
     // Deliberately not the placeholder range showPackageDownloadProgress()

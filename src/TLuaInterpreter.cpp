@@ -4762,7 +4762,11 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
 
             // A variable can carry several values, with the default one last
             const QString msspVAR = payloadList.first();
-            const QString msspVAL = payloadList.last();
+            // setMSSPVariables() already dropped the CR of each CR LF
+            QString msspVAL = payloadList.last();
+            while (msspVAL.endsWith(QChar::LineFeed)) {
+                msspVAL.chop(1);
+            }
 
             lua_getglobal(L, "mssp");
             lua_pushstring(L, msspVAR.toUtf8().constData());
