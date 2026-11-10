@@ -336,6 +336,51 @@ describe("Console edges", function()
       assert.are.equal("a text edit cannot have an empty string as its name", err)
     end)
 
+    -- The delete functions refuse the empty name, so a widget made under it could never go
+    it("an empty name for a label, a miniconsole or a scroll box", function()
+      local ok, err = createLabel("", 0, 0, 100, 20, 1)
+      assert.is_false(ok)
+      assert.are.equal("a label cannot have an empty string as its name", err)
+
+      ok, err = createLabel("main", "", 0, 0, 100, 20, 1)
+      assert.is_false(ok)
+      assert.are.equal("a label cannot have an empty string as its name", err)
+
+      ok, err = createMiniConsole("", 0, 0, 100, 100)
+      assert.is_false(ok)
+      assert.are.equal("a miniconsole cannot have an empty string as its name", err)
+
+      ok, err = createMiniConsole("main", "", 0, 0, 100, 100)
+      assert.is_false(ok)
+      assert.are.equal("a miniconsole cannot have an empty string as its name", err)
+
+      ok, err = createScrollBox("", 0, 0, 100, 100)
+      assert.is_false(ok)
+      assert.are.equal("a scrollbox cannot have an empty string as its name", err)
+
+      ok, err = createScrollBox("main", "", 0, 0, 100, 100)
+      assert.is_false(ok)
+      assert.are.equal("a scrollbox cannot have an empty string as its name", err)
+      assert.are.equal(select(2, deleteScrollBox("")), err)
+
+      assert.is_nil(windowType(""))
+    end)
+
+    it("a miniconsole or a scroll box named main keeps its name with or without a parent window given", function()
+      finally(function()
+        deleteMiniConsole("main")
+        deleteScrollBox("main")
+      end)
+      assert.is_true(createMiniConsole("main", 0, 0, 100, 100))
+      assert.is_true(deleteMiniConsole("main"))
+      assert.is_true(createMiniConsole("main", "main", 0, 0, 100, 100))
+      assert.is_true(deleteMiniConsole("main"))
+      assert.is_true(createScrollBox("main", 0, 0, 100, 100))
+      assert.is_true(deleteScrollBox("main"))
+      assert.is_true(createScrollBox("main", "main", 0, 0, 100, 100))
+      assert.is_true(deleteScrollBox("main"))
+    end)
+
     it("a command line or a text edit that already exists", function()
       local cmdLine = name("DupCmdLine")
       local textEdit = name("DupTextEdit")
