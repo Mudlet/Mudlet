@@ -663,9 +663,22 @@ describe("Tests functionality of Adjustable.Container", function()
       assert.is_true(getBorderLeft() >= 200)
     end)
 
+    it("attaches a container hidden and then minimized to its border again when it is shown and restored", function()
+      local container = make("gasAttachHideMin", 200)
+      assert.is_true(container:attachToBorder("left"))
+      container:hide()
+      container:minimize()
+      container:show()
+      assert.is_falsy(container.attached)
+
+      container:restore()
+      assert.are.equal("left", container.attached)
+      assert.is_true(getBorderLeft() >= 200)
+    end)
+
     it("leaves a container detached on restore once detach() was called while minimized", function()
       local container = make("gasAttachMinDetach", 200)
-      container:attachToBorder("left")
+      assert.is_true(container:attachToBorder("left"))
       container:minimize()
       container:detach()
 
@@ -675,7 +688,7 @@ describe("Tests functionality of Adjustable.Container", function()
 
     it("leaves a container detached on restore once it was moved away from its border", function()
       local container = make("gasAttachMinMoved", 200)
-      container:attachToBorder("left")
+      assert.is_true(container:attachToBorder("left"))
       container:minimize()
       container:move("60%", nil)
 

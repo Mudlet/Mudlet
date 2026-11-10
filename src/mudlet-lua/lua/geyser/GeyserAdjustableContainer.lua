@@ -1078,7 +1078,7 @@ function Adjustable.Container:minimize()
 end
 
 --- restores the container after it was minimized, attaching it again to the border it had,
--- unless it has since been moved too far from that border
+-- unless detach() was called meanwhile or it has since been moved too far from that border
 function Adjustable.Container:restore()
     if self.minimized == true then
         self.origh = self.origh or "25%"
@@ -1238,7 +1238,10 @@ function Adjustable.Container:show(auto)
     Geyser.Container.show(self, auto)
     closeAllLevels(self.rCLabel)
     if self.hiddenAttached and not (self.hidden or self.auto_hidden) then
-        if self:attachToBorder(self.hiddenAttached) then
+        if self.minimized then
+            -- attachToBorder() refuses a minimized container, so restore() takes the border back
+            self.minimizedAttached, self.hiddenAttached = self.hiddenAttached, nil
+        elseif self:attachToBorder(self.hiddenAttached) then
             -- resizeBorder() only lays the connected containers out again when the window itself changes size
             self:adjustConnectedContainers()
         else
