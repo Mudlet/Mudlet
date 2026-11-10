@@ -943,6 +943,7 @@ end
 
 
 --- Replaces the given wildcard (as a number) with the given text.
+--- Does nothing if that capture group did not match or is empty.
 ---
 --- @usage Replace "goodbye" with "hello" on a trigger of "^You wave (goodbye)\.$"
 ---   <pre>
