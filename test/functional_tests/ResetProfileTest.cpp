@@ -656,14 +656,15 @@ private slots:
 
     QVERIFY(mpHost->getScriptUnit()->enableScript(qsl("resetWarnedGroup")));
     TBuffer &buffer = mpHost->mainConsoleModel().buffer;
-    bool reported = false;
-    bool offChildReported = false;
+    // Joined: the console wraps a long line
+    QString console;
     for (int i = 0; i <= buffer.getLastLineNumber(); ++i) {
-      reported = reported || buffer.line(i).contains(
-          qsl("failed to run when switched on or moved into a switched on group: \"resetWarnedChild\""));
-      offChildReported = offChildReported ||
-          buffer.line(i).contains(qsl("resetUnwarnedChild"));
+      console += buffer.line(i);
     }
+    const bool reported = console.contains(
+        qsl("failed to run when switched on or moved into a switched on "
+            "group: \"resetWarnedChild\""));
+    const bool offChildReported = console.contains(qsl("resetUnwarnedChild"));
     QVERIFY2(reported, "a body that fails when its script is switched on "
                        "must be reported in the main console");
     QVERIFY2(!offChildReported, "a script switched off itself is left out, as "
