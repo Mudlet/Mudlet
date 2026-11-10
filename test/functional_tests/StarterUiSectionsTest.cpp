@@ -427,6 +427,26 @@ private slots:
         QVERIFY2(luaTrue(host, qsl("__ui.backX <= 2 and __ui.backY <= 2 and __ui.backW <= 2")), "the mapper did not come back to the top of the dock");
     }
 
+    // The generic mapper draws nothing until it has been set up for the game, so
+    // a placeholder promising the map as the player explores would never come true.
+    void test_theMapPlaceholderSaysHowToStartTheGenericMapper()
+    {
+        Host* host = startProfileWithDock();
+        QVERIFY(host);
+        if (!host->mInstalledPackages.contains(qsl("generic_mapper"))) {
+            auto [installed, message] = host->installPackage(qsl(":/packages/generic_mapper/generic_mapper.mpackage"), enums::PackageModuleType::Package, true);
+            QVERIFY2(installed, qPrintable(message));
+        }
+        QVERIFY2(luaTrue(host, qsl("BaseUI.map == nil and BaseUI.mapPlaceholder ~= nil")), "this profile was expected to start with no map data");
+        // a look change repaints the placeholder, which is where it picks its text up again
+        QVERIFY(runLua(host, qsl("BaseUI.setTheme('ember', true)")));
+        QVERIFY2(luaTrue(host, qsl("BaseUI.mapPlaceholder.message:find('map basics', 1, true) ~= nil")), "the placeholder does not tell the player how to start the generic mapper");
+
+        QVERIFY(runLua(host, qsl("BaseUI.mapPlaceholderClicked()")));
+        QVERIFY(host->mainConsoleView());
+        QVERIFY2(host->mainConsoleView()->buffer.lineBuffer.join(QChar::LineFeed).contains(qsl("quick start guide")), "clicking the placeholder did not show the generic mapper's quick start");
+    }
+
     // Every floating section is parented to the window rather than to the dock,
     // so hiding the dock leaves them all behind unless each is hidden in its
     // own right.
