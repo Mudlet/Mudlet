@@ -212,7 +212,7 @@ private:
         return image;
     }
 
-    // The device pixels in which two images of the same size differ
+    // The bounding box, in device pixels, of where two images of the same size differ
     static QRect differingPixels(const QImage& a, const QImage& b)
     {
         QRect box;
@@ -623,7 +623,7 @@ private slots:
         QCOMPARE(calls->displayAreaId, mAreaId);
     }
 
-    // On a high-DPI screen a symbol is drawn with every pixel the screen has, at the size and place it has on any other
+    // On a high-DPI screen a symbol is drawn with every pixel the screen has, at the same size and place as on a 1x screen
     void aSymbolIsDrawnAtTheScreensPixelRatio()
     {
         setUpPlayerView();
@@ -667,12 +667,14 @@ private slots:
             paintedView(painter, playerView(), result, from);
             const QImage moved = paintedView(painter, result.view, result, to);
             const QImage fresh = paintedView(freshPainter, playerView(), result, to);
+            QVERIFY(!eastSymbolPixels(to).isEmpty());
+            roomDB()->getRoom(scmEastRoom)->mSymbol = qsl("W");
             const QString name = qsl("moved-%1x-to-%2x").arg(from).arg(to);
             QVERIFY2(moved == fresh, qPrintable(saved(moved, name) + qsl("; ") + saved(fresh, name + qsl("-fresh"))));
         }
     }
 
-    // An area image exported at a zoom has as many pixels in its symbols as it has in its rooms
+    // An area image exported at a zoom draws its symbols at that zoom, not scaled up from 1x
     void anExportedSymbolIsDrawnAtTheExportsZoom()
     {
         setUpPlayerView();
@@ -693,6 +695,21 @@ private slots:
         const QRect symbolPixels = differingPixels(symbol, blank);
         QVERIFY2(!symbolPixels.isEmpty(), qPrintable(saved(symbol, qsl("zoomed-export"))));
         QVERIFY2(hasDetailFinerThanTwoDevicePixels(symbol, symbolPixels), qPrintable(saved(symbol, qsl("zoomed-export"))));
+    }
+
+    // At a zoom so small that a symbol has no device pixels at all, there is nothing to paint it on
+    void anExportTooSmallForItsSymbolsLeavesThemOut()
+    {
+        setUpPlayerView();
+        roomDB()->getRoom(scmEastRoom)->mSymbol = qsl("W");
+        TMapPainter painter;
+        painter.setView(playerView());
+        QObject saveOwner;
+        const QString exportFile = qsl("%1/tiny-export.png").arg(mConfigDir.path());
+        QTest::failOnWarning(QRegularExpression(qsl("^QPainter::")));
+        const auto [exportStarted, exportMessage] = painter.exportArea(mAreaId, exportFile, 0, 0.01, false, &saveOwner);
+        QVERIFY2(exportStarted, qPrintable(exportMessage));
+        QVERIFY(!exported(&saveOwner, exportFile).isNull());
     }
 
     // In grid mode a room fills its whole cell

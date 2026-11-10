@@ -183,13 +183,14 @@ void TMapPainter::addSymbolToPixmapCache(const QString key, const QString text, 
         symbolRectangle = QRectF(0.0, 0.0, mRoomWidth * rSize, mRoomHeight * rSize);
     }
 
-    // Drawn with every pixel the device has, or painting it scales it up and blurs the symbol
+    // At the target's device pixel ratio: a 1x pixmap is scaled up when painted, which makes the symbol blocky or blurred
     const QSize logicalSize = symbolRectangle.toRect().size();
     auto pixmap = new QPixmap((QSizeF(logicalSize) * mSymbolPixmapDevicePixelRatio).toSize());
     pixmap->setDevicePixelRatio(mSymbolPixmapDevicePixelRatio);
     pixmap->fill(Qt::transparent);
 
-    if (symbolRectangle.width() < symbolLowerSizeLimit || symbolRectangle.height() < symbolLowerSizeLimit) {
+    // A tiny export zoom can leave a symbol no device pixels to be painted on
+    if (pixmap->isNull() || symbolRectangle.width() < symbolLowerSizeLimit || symbolRectangle.height() < symbolLowerSizeLimit) {
         // if the space to draw the symbol on is too small then do not create
         // anything on the pixmap as it will be unreadable - instead insert an
         // empty pixmap:
