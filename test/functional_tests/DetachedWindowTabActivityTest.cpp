@@ -266,6 +266,24 @@ private slots:
         QVERIFY2(marked, "with multiview on, text for a profile hidden in a detached window went unmarked");
     }
 
+    // Multiview puts every main window profile on show, so a tab marked before it
+    // was switched on must not go on claiming text the player has not seen
+    void test_multiviewClearsTheMainWindowsMarks()
+    {
+        TTabBar* pTabBar = mudlet::self()->mpTabBar;
+        QCOMPARE(pTabBar->count(), 3);
+        mudlet::self()->activateProfile(mpFirstHost);
+        sendGameText(mpSecondHost);
+        QVERIFY2(pTabBar->tabBold(mSecondHostname), "the tab was never marked, so finding it unmarked afterwards would prove nothing");
+
+        mudlet::self()->slot_multiView(true);
+        const bool stillMarked = pTabBar->tabBold(mSecondHostname);
+        // Put back ahead of the assertion, which returns on failure
+        mudlet::self()->slot_multiView(false);
+
+        QVERIFY2(!stillMarked, "multiview put the profile on show and its tab still claims text the player has not seen");
+    }
+
     // The main window's marks now come from the same two functions as a detached
     // window's, so this is here to see that sharing them cost it nothing
     void test_theMainWindowStillMarksAndClearsItsOwnTabs()

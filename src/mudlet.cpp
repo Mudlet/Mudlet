@@ -7054,6 +7054,12 @@ void mudlet::slot_multiView(const bool state)
         // the active one then make one (the first) the active one:
         slot_tabChanged(0);
     }
+    // Every profile in the main window is now on show, so no tab there has text waiting unseen
+    if (mMultiView) {
+        for (int i = 0, total = mpTabBar->count(); i < total; ++i) {
+            mpTabBar->clearActivity(i);
+        }
+    }
 }
 
 void mudlet::slot_muteSet(const bool apiNotGame, const bool muted)
