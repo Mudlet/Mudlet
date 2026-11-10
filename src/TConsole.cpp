@@ -2244,10 +2244,6 @@ int TConsole::upperPaneWidthFor(const int containerWidth) const
 
 int TConsole::upperPaneHeightFor(const int containerHeight) const
 {
-    // A scrolled-back console also shows the lower pane, and the user-dragged split can't be predicted.
-    if (!mLowerPane->isHidden()) {
-        return -1;
-    }
     int paneHeight = containerHeight - mpTopToolBar->height();
     const QMargins borders = mpHost->borders();
     paneHeight -= borders.top() + borders.bottom();

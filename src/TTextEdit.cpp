@@ -39,6 +39,7 @@
 #include "mudlet.h"
 #include "MudletApp.h"
 #include "TMainConsole.h"
+#include "TSplitter.h"
 #include "utils.h"
 #include "widechar_width.h"
 #include "TTextProperties.h"
@@ -444,10 +445,13 @@ void TTextEdit::updateScreenView()
         // This is the MAIN console - we do not want it to ever disappear!
         mScreenWidth = qMax(40, currentScreenWidth);
 
-        // Note the values in the "parent" Host instance - for the UPPER pane
-        // so that they are available for NAWS:
+        // Note the values in the "parent" Host instance so that they are
+        // available for NAWS. The lower pane is laid out after the upper one,
+        // so it is the one that knows the split's height once both have moved.
         if (!mIsLowerPane) {
-            mpHost->setScreenDimensions(mScreenWidth, mScreenHeight);
+            mpHost->setScreenDimensions(mScreenWidth, mainWindowRows());
+        } else {
+            mpHost->setScreenDimensions(mpHost->mScreenWidth, mpConsole->mUpperPane->mainWindowRows());
         }
     } else {
         mScreenWidth = currentScreenWidth;
@@ -465,6 +469,19 @@ void TTextEdit::updateScreenView()
         forceUpdate();
     }
     mOldScrollPos = mpBuffer->getLastLineNumber();
+}
+
+// Scrolling back splits the main window without making it any shorter, so the
+// game is told the rows of both panes together
+int TTextEdit::mainWindowRows() const
+{
+    const TTextEdit* pLower = mpConsole->mLowerPane;
+    // An overlay can cover all of the lower pane, leaving the upper pane's own bottom the lowest seen
+    const int lowerSeen = pLower && !pLower->isHidden() ? pLower->drawableSize().height() : 0;
+    if (lowerSeen == 0) {
+        return mScreenHeight;
+    }
+    return (height() + mpConsole->splitter->handleWidth() + lowerSeen) / mFontHeight;
 }
 
 // Rows and columns start at the top left corner, so whatever covers that edge
@@ -3231,6 +3248,16 @@ void TTextEdit::resizeEvent(QResizeEvent* event)
     if (mpConsole && !mIsLowerPane && (mpConsole->getType() & (TConsole::MainConsole | TConsole::UserWindow | TConsole::SubConsole))) {
         mpConsole->raiseMudletResizeEvent();
     }
+}
+
+// A small shrink can move the lower pane up without resizing it, and the rows
+// measured while it hung below the splitter's new bottom were short
+void TTextEdit::moveEvent(QMoveEvent* event)
+{
+    if (mIsLowerPane && mpConsole && mpConsole->getType() == TConsole::MainConsole) {
+        updateScreenView();
+    }
+    QWidget::moveEvent(event);
 }
 
 void TTextEdit::wheelEvent(QWheelEvent* e)

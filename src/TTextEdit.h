@@ -81,6 +81,7 @@ public:
     void scrollDown(int lines);
     void wheelEvent(QWheelEvent* e) override;
     void resizeEvent(QResizeEvent* event) override;
+    void moveEvent(QMoveEvent* event) override;
     void changeEvent(QEvent* event) override;
     void mousePressEvent(QMouseEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
@@ -105,6 +106,7 @@ public:
     }
     int getScreenHeight() const { return mScreenHeight; }
     QSize drawableSize() const;
+    int mainWindowRows() const;
     void searchSelectionOnline();
     int getColumnCount() const;
     int getRowCount() const;

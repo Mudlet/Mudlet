@@ -337,7 +337,8 @@ private slots:
 private:
     void createFindBar();
     void positionFindBar();
-    // MainConsole only: subtract the profile's main window borders. Height is -1 when unknown.
+    // MainConsole only: subtract the profile's main window borders. The height spans a
+    // scrollback split as well, since that is what the game is told.
     int upperPaneWidthFor(const int containerWidth) const;
     int upperPaneHeightFor(const int containerHeight) const;
     void syncHostScreenDimensions(const int paneWidthPx, const int paneHeightPx);

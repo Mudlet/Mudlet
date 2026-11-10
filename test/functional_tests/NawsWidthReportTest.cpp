@@ -258,6 +258,7 @@ private slots:
         }
         showTab(mHostname);
         if (mpHost) {
+            runLua(mpHost, qsl("scrollTo() pcall(deleteCommandLine, 'nawsProbeTallBelow')"));
             mpHost->setUserBorders(QMargins());
         }
         mudlet::self()->resize(1200, 800);
@@ -359,6 +360,100 @@ private slots:
 
         QVERIFY2(!updates.isEmpty(), describe(updates).constData());
         QCOMPARE(updates.constLast().width(), 1);
+    }
+
+    // Scrolling back splits the main window in two, but the window is no
+    // shorter, so the game must not be told it is - one that pages its output
+    // to the rows it was given would stop every screenful short.
+    void scrollingBackLeavesTheReportedSizeAlone()
+    {
+        runLua(mpHost, qsl("for i = 1, 300 do echo('line ' .. i .. '\\n') end"));
+        settle();
+        const int rowsBefore = mpHost->mScreenHeight;
+
+        mpServer->clearNawsUpdates();
+        runLua(mpHost, qsl("scrollUp(50)"));
+        settle();
+        QVERIFY2(!mpHost->mainConsoleView()->mLowerPane->isHidden(), "scrolling back did not split the window");
+        QVERIFY2(mpHost->mainConsoleView()->mUpperPane->getScreenHeight() < rowsBefore, "the split did not make the upper pane any shorter");
+        const auto scrolledBack = mpServer->nawsUpdates();
+        runLua(mpHost, qsl("scrollTo()"));
+        settle();
+        QVERIFY2(mpHost->mainConsoleView()->mLowerPane->isHidden(), "scrollTo() did not return to the bottom");
+
+        QVERIFY2(scrolledBack.isEmpty(), describe(scrolledBack).constData());
+        QVERIFY2(mpServer->nawsUpdates().isEmpty(), describe(mpServer->nawsUpdates()).constData());
+    }
+
+    // The split is no reason to stop following the window, which a player can
+    // still resize while reading back.
+    void resizingWhileScrolledBackReportsTheNewSize()
+    {
+        runLua(mpHost, qsl("for i = 1, 300 do echo('line ' .. i .. '\\n') end"));
+        runLua(mpHost, qsl("scrollUp(50)"));
+        settle();
+        QVERIFY2(!mpHost->mainConsoleView()->mLowerPane->isHidden(), "scrolling back did not split the window");
+
+        mpServer->clearNawsUpdates();
+        mudlet::self()->resize(1000, 500);
+        settle();
+        const auto whileScrolledBack = mpServer->nawsUpdates();
+        runLua(mpHost, qsl("scrollTo()"));
+        settle();
+
+        QVERIFY2(!whileScrolledBack.isEmpty(), describe(whileScrolledBack).constData());
+        QCOMPARE(whileScrolledBack.constLast(), QSize(reportableWidth(mpHost), mpHost->mScreenHeight));
+        QCOMPARE(mpServer->nawsUpdates(), whileScrolledBack);
+    }
+
+    // A shrink too small to take a pixel from the lower pane only moves it up,
+    // and must still leave the game the rows the unsplit window has.
+    void aSmallShrinkWhileScrolledBackReportsTheUnsplitRows()
+    {
+        runLua(mpHost, qsl("for i = 1, 300 do echo('line ' .. i .. '\\n') end"));
+        runLua(mpHost, qsl("scrollUp(50)"));
+        settle();
+        TTextEdit* lower = mpHost->mainConsoleView()->mLowerPane;
+        QVERIFY2(!lower->isHidden(), "scrolling back did not split the window");
+        const int lowerHeight = lower->height();
+
+        mpServer->clearNawsUpdates();
+        mudlet::self()->resize(1200, 799);
+        settle();
+        const auto whileScrolledBack = mpServer->nawsUpdates();
+        const bool lowerOnlyMoved = lower->height() == lowerHeight;
+        runLua(mpHost, qsl("scrollTo()"));
+        settle();
+
+        QVERIFY2(lowerOnlyMoved, "the shrink resized the lower pane, so this case tests nothing");
+        QCOMPARE(mpServer->nawsUpdates(), whileScrolledBack);
+    }
+
+    // An overlay along the bottom that covers the whole of the lower pane
+    // still leaves the rows above it, scrolled back or not.
+    void scrollingBackUnderATallBottomOverlayLeavesTheReportedSizeAlone()
+    {
+        const int paneHeight = mpHost->mainConsoleView()->mUpperPane->height();
+        runLua(mpHost,
+               qsl("local width = getMainWindowSize()\n"
+                   "assert(createCommandLine('nawsProbeTallBelow', 0, %1, width + 50, %2))")
+                       .arg(paneHeight - paneHeight / 3)
+                       .arg(paneHeight));
+        runLua(mpHost, qsl("for i = 1, 300 do echo('line ' .. i .. '\\n') end"));
+        // an overlay is measured at the next layout, not when it appears
+        mudlet::self()->resize(1100, 800);
+        settle();
+
+        mpServer->clearNawsUpdates();
+        runLua(mpHost, qsl("scrollUp(50)"));
+        settle();
+        const bool lowerCovered = mpHost->mainConsoleView()->mLowerPane->drawableSize().isEmpty();
+        const auto scrolledBack = mpServer->nawsUpdates();
+        runLua(mpHost, qsl("scrollTo() deleteCommandLine('nawsProbeTallBelow')"));
+        settle();
+
+        QVERIFY2(lowerCovered, "the overlay did not cover the whole lower pane");
+        QVERIFY2(scrolledBack.isEmpty(), describe(scrolledBack).constData());
     }
 
     // Rows start at the top left corner, so an opaque overlay there hides some of
@@ -499,6 +594,31 @@ private slots:
         QCOMPARE(screenSize(mpHost), toldWhileHidden);
         // so coming back gave the game nothing new to re-wrap to
         QVERIFY2(mpServer->nawsUpdates().size() == updates.size(), describe(mpServer->nawsUpdates()).constData());
+    }
+
+    // A profile left scrolled back in a background tab is told the size it
+    // comes back to all the same - its rows do not depend on the split.
+    void aBackgroundedScrolledBackProfileIsToldTheSizeItComesBackTo()
+    {
+        QVERIFY2(ensureSecondProfile(), "the second profile did not load");
+        runLua(mpHost, qsl("if nawsProbeContainer then nawsProbeContainer:detach() end"));
+        runLua(mpHost, qsl("for i = 1, 300 do echo('line ' .. i .. '\\n') end"));
+        runLua(mpHost, qsl("scrollUp(50)"));
+        settle();
+        showTab(mSecondHostname);
+        settle();
+        QVERIFY2(mpHost->mainConsoleView()->isHidden(), "the first profile should be in a background tab by now");
+
+        mpServer->clearNawsUpdates();
+        mudlet::self()->resize(1000, 600);
+        settle();
+        const auto whileHidden = mpServer->nawsUpdates();
+        showTab(mHostname);
+        settle();
+
+        QVERIFY2(!mpHost->mainConsoleView()->mLowerPane->isHidden(), "the profile came back no longer scrolled back");
+        QVERIFY2(!whileHidden.isEmpty(), "the window lost height, but the hidden profile was never told a new size");
+        QCOMPARE(mpServer->nawsUpdates(), whileHidden);
     }
 
     // A script can move its own profile's borders while that profile waits in a
