@@ -288,9 +288,9 @@ void TTextEdit::needUpdate(int y1, int y2)
 void TTextEdit::focusInEvent(QFocusEvent* event)
 {
 #if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
-    // The central debug console's menus never took the grab from the profile's own console
-    const bool centralDebug = mpConsole && mpConsole->getType() == TConsole::CentralDebugConsole;
-    if (!centralDebug && mpHost->caretEnabled() && event->reason() == Qt::PopupFocusReason) {
+    // The central debug console's and the error console's menus never took the grab from the profile's own console
+    const bool borrowsCaretMode = mpConsole && (mpConsole->getType() & (TConsole::CentralDebugConsole | TConsole::ErrorConsole));
+    if (!borrowsCaretMode && mpHost->caretEnabled() && event->reason() == Qt::PopupFocusReason) {
         grabKeyboard();
     }
 #endif
@@ -306,14 +306,14 @@ void TTextEdit::focusOutEvent(QFocusEvent* event)
     // rather than forcing focus to the command line. This pane's own menus only
     // borrow the focus and hand it back on closing, so caret mode stays on; a menu bar's may open a dialog.
     const QWidget* popup = QApplication::activePopupWidget();
-    // The central debug console shares its Host's caret mode without driving it.
-    const bool centralDebug = mpConsole && mpConsole->getType() == TConsole::CentralDebugConsole;
+    // The central debug console and the error console share their Host's caret mode without driving it.
+    const bool borrowsCaretMode = mpConsole && (mpConsole->getType() & (TConsole::CentralDebugConsole | TConsole::ErrorConsole));
     if (event->reason() == Qt::PopupFocusReason && popup && popup->parentWidget() == this) {
 #if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
         // Caret mode's keyboard grab would otherwise beat the popup to every key
         releaseKeyboard();
 #endif
-    } else if (!centralDebug && mpHost->caretEnabled() && event->reason() != Qt::ActiveWindowFocusReason) {
+    } else if (!borrowsCaretMode && mpHost->caretEnabled() && event->reason() != Qt::ActiveWindowFocusReason) {
         mpHost->setCaretEnabled(false);
     }
 
@@ -2284,8 +2284,8 @@ void TTextEdit::slot_popupMenu()
 #endif
         mpConsole->model().runMenuPick(mPopupLinkIndex, mPopupLinkIssue, index - 1);
 #if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
-        const bool centralDebug = mpConsole && mpConsole->getType() == TConsole::CentralDebugConsole;
-        if (!centralDebug && mpHost->caretEnabled() && hasFocus()) {
+        const bool borrowsCaretMode = mpConsole && (mpConsole->getType() & (TConsole::CentralDebugConsole | TConsole::ErrorConsole));
+        if (!borrowsCaretMode && mpHost->caretEnabled() && hasFocus()) {
             grabKeyboard();
         }
 #endif
