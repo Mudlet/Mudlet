@@ -435,6 +435,41 @@ private slots:
         QVERIFY2(dialog()->notificationArea->isVisible() && dialog()->notificationAreaMessageBox->text().contains(settingsCopy), qPrintable(dialog()->notificationAreaMessageBox->text()));
     }
 
+    // A settings copy of a game with no folder yet must leave a running full copy's flag up, as every other settings copy does
+    void test_aSettingsCopyOfAnUnopenedGameKeepsAFullCopyRunning()
+    {
+        QVERIFY2(dialog(), "No connection dialog to test against");
+        const QString profile = qsl("FullCopyRunning-ConnDialogOffline");
+        // not one the other cases use, as its copy will match the game's address
+        const QString unopenedGame = qsl("Clessidra");
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, profile)));
+        QVERIFY(!QDir(MudletApp::getMudletPath(enums::profileHomePath, unopenedGame)).exists());
+        dialog()->fillout_form();
+        selectTestProfile();
+        selectProfile(profile);
+
+        dialog()->slot_copyProfile();
+        QVERIFY(dialog()->mCopyingProfile);
+        const int shownTab = dialog()->mpTabBar->currentIndex();
+        const auto restore = qScopeGuard([this, shownTab, unopenedGame]() {
+            // not the flag, which this case finds dropped while the copy still runs
+            QTest::qWaitFor(
+                    [this]() {
+                        return dialog()->mpCopyProfile->isEnabled();
+                    },
+                    10s);
+            QDir(MudletApp::getMudletPath(enums::profileHomePath, unopenedGame + qsl("1"))).removeRecursively();
+            dialog()->mpTabBar->setCurrentIndex(shownTab);
+        });
+        // only "All games" lists a game that has no folder
+        dialog()->mpTabBar->setCurrentIndex(dlgConnectionProfiles::scmAllGamesTab);
+        selectProfile(unopenedGame);
+        dialog()->slot_copyOnlySettingsOfProfile();
+        QVERIFY2(QDir(MudletApp::getMudletPath(enums::profileHomePath, unopenedGame + qsl("1"))).exists(), "the settings copy was not made");
+        QVERIFY2(dialog()->mCopyingProfile, "the settings copy cleared the flag of the full copy still running");
+        QVERIFY2(waitForTheCopy(), "the copy never finished");
+    }
+
     // A renamed catalog game's new name is not in the catalog either
     void test_aRenamedCatalogGameKeepsItsDetails()
     {

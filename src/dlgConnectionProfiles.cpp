@@ -2617,6 +2617,7 @@ void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
     const QDir oldProfileDir(MudletApp::getMudletPath(enums::profileHomePath, oldname));
     if (!oldProfileDir.exists()) {
         saveDefaultProfileCopy(profile_name, data, oldPassword);
+        mCopyingProfile = fullCopyRunning;
         return;
     }
 
