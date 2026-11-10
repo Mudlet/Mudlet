@@ -8839,8 +8839,9 @@ void dlgTriggerEditor::slot_pastedExtraPatternLines(const QStringList& lines)
     }
 }
 
-void dlgTriggerEditor::slot_lineSpacerChanged(int)
+void dlgTriggerEditor::slot_lineSpacerChanged(int value)
 {
+    Q_UNUSED(value)
     handlePatternChange();
 }
 
