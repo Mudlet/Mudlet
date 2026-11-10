@@ -323,6 +323,13 @@ private slots:
 
         QCOMPARE(discord.gameIntegrationSupported(qsl("www.achaea.com")), qMakePair(true, qsl("achaea")));
         QCOMPARE(discord.gameIntegrationSupported(qsl("game.starmourn.com")), qMakePair(true, qsl("starmourn")));
+        QCOMPARE(discord.gameIntegrationSupported(qsl("mud.achaea.com")).first, false);
+    }
+
+    void testGameIntegrationDropsOnlyTheTopLevelDomain()
+    {
+        Discord discord;
+
         QCOMPARE(discord.gameIntegrationSupported(qsl("avalon.de")), qMakePair(false, qsl("avalon")));
     }
 
