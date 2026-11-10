@@ -69,8 +69,14 @@ local function printX(options)
   table.remove(stackTable,2)
   table.remove(stackTable,2)
   local level = #stackTable + 1
-  -- level 1 is printX and 2 is printError or printDebug, so 3 is the line that called them
-  local dinfo = debug.getinfo(3, "Sl")
+  -- level 1 is printX and 2 is printError or printDebug, so 3 is the line that called them,
+  -- unless that was a "return printError(...)", which leaves only a tail call stub there
+  local callerLevel = 3
+  local dinfo = debug.getinfo(callerLevel, "Sl")
+  while dinfo.what == "tail" do
+    callerLevel = callerLevel + 1
+    dinfo = debug.getinfo(callerLevel, "Sl")
+  end
   local header = string.format("(%s:line %s)", dinfo.source, dinfo.currentline)
   if halt then
     header = "\n" .. header

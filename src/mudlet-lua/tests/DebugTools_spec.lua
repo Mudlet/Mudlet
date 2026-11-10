@@ -35,6 +35,15 @@ describe("Tests DebugTools.lua functions", function()
       assert.spy(s).was_called_with(match.has_match("DebugTools_spec.lua:line " .. line .. "%) This is a test"))
     end)
 
+    it("should name a real line when it is tail called", function()
+      local function helper()
+        return printDebug("This is a test")
+      end
+      local line = debug.getinfo(1, "l").currentline + 1
+      helper()
+      assert.spy(s).was_called_with(match.has_match("DebugTools_spec.lua:line " .. line .. "%) This is a test"))
+    end)
+
     it("should include a stacktrace when called with stackTrace true", function()
       printDebug("This is a test", true)
       assert.spy(s).was_called(1)
