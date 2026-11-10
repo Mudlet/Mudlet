@@ -691,6 +691,18 @@ describe("Downloads and HTTP verbs against the local fixture server", function()
       assert.equals("a\0b\255c", body)
     end)
 
+    it("drops a leading UTF-8 BOM so the body parses as JSON", function()
+      if noFixtureServer() then
+        return
+      end
+      assert.is_true(getHTTP(fixtureUrl("/bom.json")))
+
+      local event, _, body = waitForEvent("sysGetHttpDone", 2000)
+      assert.equals("sysGetHttpDone", event)
+      assert.equals('{"a":1}', body)
+      assert.equals(1, yajl.to_value(body).a)
+    end)
+
     it("sends the custom headers it was given", function()
       if noFixtureServer() then
         return
