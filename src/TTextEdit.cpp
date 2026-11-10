@@ -371,8 +371,9 @@ void TTextEdit::applyPendingScrollBarUpdate()
 void TTextEdit::slot_hScrollBarMoved(int offset)
 {
     if (mpConsole->mHScrollBarEnabled && mpConsole->mpHScrollBar) {
-        updateHorizontalScrollBar();
+        // Move first: the bar update resets the bar to mCursorX
         scrollH(offset);
+        updateHorizontalScrollBar();
     }
 }
 

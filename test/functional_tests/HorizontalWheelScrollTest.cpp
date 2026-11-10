@@ -127,6 +127,17 @@ private slots:
         wheelSideways(upper, 120);
         qApp->processEvents();
         QVERIFY2(bar->value() < afterRight, "swiping left did not scroll back");
+
+        // A fast swipe delivers several events before the next repaint
+        bar->setValue(0);
+        qApp->processEvents();
+        wheelSideways(upper, -120);
+        const int oneStep = bar->value();
+        QVERIFY2(oneStep > 0, "the bar did not follow the swipe before the repaint");
+        wheelSideways(upper, -120);
+        QCOMPARE(bar->value(), 2 * oneStep);
+        qApp->processEvents();
+        QCOMPARE(bar->value(), 2 * oneStep);
     }
 };
 
