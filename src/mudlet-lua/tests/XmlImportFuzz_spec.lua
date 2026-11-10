@@ -152,6 +152,15 @@ local PACKAGE_FIXTURES = {
     "mudlet-spec-buttonskeystimers",
 }
 
+-- The importer skips an element it does not know without an error, so a renamed tag would install cleanly
+-- with nothing in it; these must arrive from the unmutated file
+local FIXTURE_ITEMS = {
+    ["mudlet-spec-buttonskeystimers"] = {
+        { "fuzz timer", "timer" }, { "fuzz key", "keybind" }, { "fuzz push", "button" }, { "fuzz side button", "button" },
+    },
+}
+local BROKEN_ON_PURPOSE = { ["mudlet-spec-brokenscripts"] = true }
+
 local VALUES = {
     "", "0", "1", "-1", "2", "3", "4", "12", "2147483647", "2147483648", "-2147483648", "-2147483649",
     "4294967296", "99999999999999999999", "1e9", "-0", "0x10", " 7 ", "abc", "yes", "true",
@@ -338,6 +347,26 @@ describe("XML import fuzzer", function()
             end
             removePackage()
         end)
+
+        -- Each package fixture must install cleanly unmutated: a broken one would leave its readers
+        -- unfuzzed while this stayed green
+        for _, base in ipairs(corpus) do
+            if base.kind == "package" then
+                record(("0 package %s unmutated"):format(base.name))
+                keepInput(base.data)
+                writeFile(packagePath, base.data)
+                waitForProfileSave()
+                local ok, err = installPackage(packagePath)
+                -- a partly read file still installs, with its read error under the package's name, beside
+                -- any broken items' errors under theirs
+                local clean = ok and (err == nil or BROKEN_ON_PURPOSE[base.name] and not err:find(packageName .. ": ", 1, true))
+                assert.is_truthy(clean, ("%s does not install cleanly unmutated: %s"):format(base.name, tostring(err)))
+                for _, item in ipairs(FIXTURE_ITEMS[base.name] or {}) do
+                    assert.is_true(exists(item[1], item[2]) > 0, ("%s did not bring in %s %q"):format(base.name, item[2], item[1]))
+                end
+                assert.is_true(removePackage(), base.name .. " could not be uninstalled")
+            end
+        end
 
         local imported = 0
         for i = 1, ITERS do
