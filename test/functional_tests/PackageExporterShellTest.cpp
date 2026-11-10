@@ -837,6 +837,10 @@ private slots:
         }
         QVERIFY2(stopped, qPrintable(qsl("the zone was still growing after %1 files, at %2px, so nothing holds it to the room the column has").arg(added).arg(pFiles->height())));
         QVERIFY2(descriptionLow >= descriptionFloor(), qPrintable(qsl("the description was squeezed to %1px on the way, under its %2px floor").arg(descriptionLow).arg(descriptionFloor())));
+        // The zone holds a spare row for dropping onto, so the file that stops
+        // its growth can land in that row and fit exactly - one more cannot
+        addAFile();
+        layoutSettles();
         QVERIFY2(listScrolls(),
                  qPrintable(qsl("the zone stopped growing at %1px with %2 files in it and does not scroll, so the files past the %3rd cannot be reached")
                                     .arg(pFiles->height())
