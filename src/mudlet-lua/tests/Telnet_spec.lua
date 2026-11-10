@@ -3386,14 +3386,33 @@ describe("Tests the atcp table", function()
   -- _G because busted runs each spec in an environment of its own
   it("starts a fresh atcp table when a script has replaced it", function()
     local saved = _G.atcp
-    finally(function() _G.atcp = saved end)
+    local raised
+    local id = registerAnonymousEventHandler("RoomBrief", function(_, value) raised = value end)
+    finally(function()
+      killAnonymousEventHandler(id)
+      _G.atcp = saved
+    end)
 
     local replacements = {n = 2, nil, "not a table"}
     for i = 1, replacements.n do
       _G.atcp = replacements[i]
+      raised = nil
       local ok, msg = feedTelnet("<T_IAC><T_SB><O_ATCP>Room.Brief Spec cave<T_IAC><T_SE>")
       assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
       assert.same({RoomBrief = "Spec cave"}, _G.atcp)
+      assert.equals("Spec cave", raised)
     end
+  end)
+
+  it("keeps the table a script holds and what is already in it", function()
+    local saved = _G.atcp
+    finally(function() _G.atcp = saved end)
+
+    local held = {Existing = "kept"}
+    _G.atcp = held
+    local ok, msg = feedTelnet("<T_IAC><T_SB><O_ATCP>Room.Brief Spec cave<T_IAC><T_SE>")
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+    assert.is_true(rawequal(held, _G.atcp))
+    assert.same({Existing = "kept", RoomBrief = "Spec cave"}, held)
   end)
 end)
