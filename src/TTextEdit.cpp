@@ -2317,6 +2317,8 @@ void TTextEdit::slot_popupMenu()
 
 void TTextEdit::mousePressEvent(QMouseEvent* event)
 {
+    // A drag whose release went elsewhere must not replay its edge position into this press
+    mpDragScrollTimer->stop();
     //new event to get mouse position on the parent window
     auto eventPos = event->position().toPoint();
     auto eventGlobalPos = event->globalPosition().toPoint();
@@ -2967,6 +2969,7 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
     auto eventGlobalPos = event->globalPosition().toPoint();
     if (event->button() == Qt::LeftButton) {
         mMouseTracking = false;
+        mpDragScrollTimer->stop();
         mCtrlSelecting = false;
 
         // Clear active state on mouse release

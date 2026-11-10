@@ -407,6 +407,29 @@ private slots:
         QCOMPARE(pane->imageTopLine(), topAfterRelease);
     }
 
+    void test_pressRightAfterAnEdgeDragDoesNotScroll()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "No upper pane available");
+        const int topBefore = pane->imageTopLine();
+        QVERIFY2(topBefore > 20, "Too little scrollback to scroll through");
+
+        const QPoint middle = pane->rect().center();
+        const QPoint edgePos(middle.x(), 2);
+        QTest::mousePress(pane, Qt::LeftButton, Qt::NoModifier, middle);
+        QTest::mouseMove(pane, edgePos);
+        QTRY_VERIFY2_WITH_TIMEOUT(pane->imageTopLine() < topBefore - 6, "Holding the pointer at the top edge did not keep scrolling", 2000);
+
+        // The next press lands before the repeat's next tick
+        QTest::mouseRelease(pane, Qt::LeftButton, Qt::NoModifier, edgePos);
+        QTest::mousePress(pane, Qt::LeftButton, Qt::NoModifier, middle);
+        const int topAtPress = pane->imageTopLine();
+        QTest::qWait(300ms);
+        const int topAfterWait = pane->imageTopLine();
+        QTest::mouseRelease(pane, Qt::LeftButton, Qt::NoModifier, middle);
+        QCOMPARE(topAfterWait, topAtPress);
+    }
+
     // Regression case for the review fix: once a drag has genuinely selected
     // text, dragging back to the original press cell must collapse the extent
     // instead of leaving the previous selection frozen.
