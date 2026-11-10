@@ -176,6 +176,7 @@ set(TELNET_GROUP_TEST_SOURCES
     TelnetBenchmark.cpp
     TelnetCharsetNegotiationTest.cpp
     TelnetChannel102WireTest.cpp
+    TelnetGmcpSendEncodingTest.cpp
     CrashTestHookTest.cpp
     TelnetConnectFailureTest.cpp
     TelnetConnectLookupRaceTest.cpp

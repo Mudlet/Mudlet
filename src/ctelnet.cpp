@@ -3694,8 +3694,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             output = TN_IAC;
             output += TN_SB;
             output += OPT_GMCP;
-            // MudletApp::buildSuffix() could, conceivably contain a non-ASCII character:
-            output += encodeAndCookBytes(std::string(R"(Core.Hello { "client": "Mudlet", "version": ")") + APP_VERSION + MudletApp::buildSuffix().toUtf8().constData() + std::string(R"("})"));
+            output += coreHelloMessage(MudletApp::buildSuffix());
             output += TN_IAC;
             output += TN_SE;
             socketOutRaw(output);
@@ -5376,7 +5375,7 @@ void cTelnet::atcpComposerSave(QString txt)
             // Escape the text for the GMCP message that we will send to the game, put the result inside of quotes.
             // Backslashes are escaped first because they are contained in the others, then quotes and new lines.
             output += " \"";
-            output += encodeAndCookBytes(txt.replace('\\', QLatin1String(R"(\\)")).replace('\"', QLatin1String(R"(\")")).replace('\n', QLatin1String(R"(\n)")).toStdString());
+            output += escapeIac(txt.replace('\\', QLatin1String(R"(\\)")).replace('\"', QLatin1String(R"(\")")).replace('\n', QLatin1String(R"(\n)")).toStdString());
             output += "\"";
         }
         output += TN_IAC;
@@ -6884,6 +6883,12 @@ std::string cTelnet::encodeAndCookBytes(const std::string& data)
         return escapeIac(TEncodingHelper::encode(QString::fromStdString(data), mEncoding).toStdString());
     }
     return escapeIac(data);
+}
+
+// GMCP is UTF-8 whatever the game's encoding, and a packager's MUDLET_VERSION_BUILD can make the suffix non-ASCII
+std::string cTelnet::coreHelloMessage(const QString& buildSuffix)
+{
+    return escapeIac(std::string(R"(Core.Hello { "client": "Mudlet", "version": ")") + APP_VERSION + buildSuffix.toUtf8().constData() + std::string(R"("})"));
 }
 
 // A lone 0xff byte in outbound data would be read as the start of a telnet

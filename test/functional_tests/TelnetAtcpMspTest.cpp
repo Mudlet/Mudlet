@@ -284,6 +284,8 @@ private slots:
         mpServer->forgetReceived();
     }
 
+    void cleanup() { QVERIFY(mpHost->mTelnet.setEncoding(QByteArrayLiteral("UTF-8"), false).first); }
+
     // The single-line form: everything up to the first space is the variable,
     // the rest its value, and the dots come out of the name so a script can write
     // atcp.RoomBrief.
@@ -412,6 +414,37 @@ private slots:
         // thinking the class is still inside a string, and it then emits no meta
         // object at all - so it stays escaped. Raw strings are fine elsewhere.
         QCOMPARE(sent.first().payload, QByteArray("IRE.Composer.SetBuffer \"a \\\"quoted\\\" back\\\\slash\\nand a second line\""));
+
+        QVERIFY2(QTest::qWaitFor(
+                         []() {
+                             return openComposers().isEmpty();
+                         },
+                         5s),
+                 "saving the composer left its window behind");
+    }
+
+    // GMCP is UTF-8 even when the profile reads the game in another encoding
+    void test_savingTheComposerSendsUtf8OnALatin1Game()
+    {
+        QVERIFY(mpHost->mTelnet.setEncoding(QByteArrayLiteral("ISO 8859-1"), false).first);
+        announce(TN_WILL, static_cast<char>(OPT_GMCP));
+        QVERIFY2(mpHost->mTelnet.isGMCPEnabled(), "GMCP did not turn on, so the composer had nothing to send its buffer over");
+        waitForEverythingSentSoFar();
+        mpServer->forgetReceived();
+
+        feedAtcp("Client.Compose Note");
+        QCOMPARE(openComposers().size(), 1);
+        mpHost->mTelnet.atcpComposerSave(qsl("café ☕"));
+
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return !subnegotiationsFor(mpServer->received(), OPT_GMCP).isEmpty();
+                         },
+                         10s),
+                 "saving the composer sent no GMCP message");
+        const QList<Subnegotiation> sent = subnegotiationsFor(mpServer->received(), OPT_GMCP);
+        QCOMPARE(sent.size(), 1);
+        QCOMPARE(sent.first().payload, QByteArray("IRE.Composer.SetBuffer \"café ☕\""));
 
         QVERIFY2(QTest::qWaitFor(
                          []() {

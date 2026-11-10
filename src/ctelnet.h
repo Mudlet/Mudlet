@@ -240,6 +240,7 @@ public:
     QByteArray decodeBytes(const char*);
     std::string encodeAndCookBytes(const std::string&);
     static std::string escapeIac(std::string data);
+    std::string coreHelloMessage(const QString& buildSuffix);
 
     // Wraps a two-byte Aardwolf 102 subchannel payload in its subnegotiation
     static std::string buildChannel102Message(const std::string& payload);

@@ -575,6 +575,25 @@ private slots:
         QCOMPARE(sent.value(qsl("token_storage")), QJsonValue(true));
     }
 
+    // GMCP is UTF-8 whatever the game's text encoding, so a Latin-1 profile must not send Latin-1
+    // bytes, or a substitute for what Latin-1 cannot hold, inside the JSON
+    void testCredentialsStayUtf8OnALatin1Game()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        QVERIFY(host->mTelnet.setEncoding(QByteArrayLiteral("ISO 8859-1"), false).first);
+        host->setLogin(qsl("joão"));
+        host->setPass(qsl("sécret€"));
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"password-credentials\"]}"));
+
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not send Char.Login.Credentials");
+        QCOMPARE(sent.value(qsl("account")).toString(), qsl("joão"));
+        QCOMPARE(sent.value(qsl("password")).toString(), qsl("sécret€"));
+    }
+
     void testAbsentServerVersionEchoesVersionOne()
     {
         Host* host = connectAndNegotiate();
@@ -1262,6 +1281,24 @@ private slots:
         QVERIFY2(!consoleContains(host, qsl("signed in automatically next time")), "a silent rotation must not be announced as a new opt-in");
     }
 
+    void testReconnectAccountStaysUtf8OnALatin1Game()
+    {
+        Host* host = connectAndNegotiate(true);
+        QVERIFY(host);
+        QVERIFY(host->mTelnet.setEncoding(QByteArrayLiteral("ISO 8859-1"), false).first);
+        host->setLogin(QString());
+        host->setPass(QString());
+        const QString tokenJson = qsl("{\"account\": \"joão€\", \"token\": \"saved-token\"}");
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect"), tokenJson));
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"password-credentials\"]}"));
+
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Reconnect"), sent), "client did not replay the saved token");
+        QCOMPARE(sent.value(qsl("account")).toString(), qsl("joão€"));
+    }
+
     void testSavedTokenIsReplayedWhenOauthIsNotAdvertised()
     {
         // The standard verifies a reconnect token ahead of the advertised methods rather than as one
@@ -1349,6 +1386,23 @@ private slots:
         QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not send the resume form");
         QCOMPARE(sent.value(qsl("provider")).toString(), qsl("discord"));
         QCOMPARE(mpServer->countReceived(qsl("Char.Login.Reconnect")), 0);
+    }
+
+    void testResumeAccountStaysUtf8OnALatin1Game()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        QVERIFY(host->mTelnet.setEncoding(QByteArrayLiteral("ISO 8859-1"), false).first);
+        host->setLogin(QString());
+        host->setPass(QString());
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect"), qsl("{\"account\": \"joão€\", \"provider\": \"discord\"}")));
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\", \"password-credentials\"]}"));
+
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not send the resume form");
+        QCOMPARE(sent.value(qsl("account")).toString(), qsl("joão€"));
     }
 
     void testResumeHintIsNotSentToAServerThatDoesNotOfferOauth()
