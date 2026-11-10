@@ -26,6 +26,7 @@
  */
 
 #include <QAbstractButton>
+#include <QAccessible>
 #include <QAction>
 #include <QApplication>
 #include <QImage>
@@ -301,6 +302,23 @@ private slots:
             mudlet::self()->setAppearance(enums::Appearance::systemSetting);
         }
         mSession.stop();
+    }
+
+    // Qt doesn't use a tooltip or placeholder as the accessible name, so without
+    // one a screen reader announces these controls as just "button" or "edit"
+    void test_theFindBarAndAddTabControlsHaveScreenReaderNames()
+    {
+        QSet<QString> namesSeen;
+        for (const QString& objectName : {qsl("notepadAddTab"), qsl("notepadFindField"), qsl("notepadFindPrevious"), qsl("notepadFindNext"), qsl("notepadFindClose")}) {
+            auto* pControl = mpNotepad->findChild<QWidget*>(objectName);
+            QVERIFY2(pControl, qPrintable(qsl("no %1 in the notepad").arg(objectName)));
+            QAccessibleInterface* pInterface = QAccessible::queryAccessibleInterface(pControl);
+            QVERIFY(pInterface);
+            const QString name = pInterface->text(QAccessible::Name);
+            QVERIFY2(!name.trimmed().isEmpty(), qPrintable(qsl("%1 has no name for a screen reader to announce").arg(objectName)));
+            QVERIFY2(!namesSeen.contains(name), qPrintable(qsl("%1 shares the name \"%2\"").arg(objectName, name)));
+            namesSeen.insert(name);
+        }
     }
 
     // A profile's Lua stylesheet is assigned to the window on every show,
