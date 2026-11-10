@@ -3431,7 +3431,9 @@ function map.find_path(roomName,areaName,return_tables)
         end
         return path, dirs
     else
-        if #dirs &gt; 0 then
+        if rooms[map.currentRoom] then
+            map.echo("You are already in " .. roomName .. ((areaName and " in " .. areaName) or "") .. ".")
+        elseif #dirs &gt; 0 then
             map.echo("Path to " .. roomName .. ((areaName and " in " .. areaName) or "") .. ": " .. table.concat(dirs,", "))
         else
             map.echo("No path found to " .. roomName .. ((areaName and " in " .. areaName) or "") .. ".",false,true)
@@ -4347,6 +4349,10 @@ end
 
 function map.speedwalk(roomID, walkPath, walkDirs)
     roomID = roomID or speedWalkPath[#speedWalkPath]
+    if roomID == map.currentRoom then
+        map.echo("You are already in that room.")
+        return
+    end
     getPath(map.currentRoom, roomID)
     walkPath = speedWalkPath
     walkDirs = speedWalkDir
@@ -4407,7 +4413,8 @@ function doSpeedWalk()
         raiseEvent("sysSpeedwalkStarted")
         map.speedwalk(nil, speedWalkPath, speedWalkDir)
     else
-        map.echo("No path to chosen room found.",false,true)
+        -- Mudlet only calls this once a path is found, so an empty one means the walk starts at its goal
+        map.echo("You are already in that room.")
     end
 end
 
