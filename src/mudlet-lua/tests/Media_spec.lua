@@ -1381,6 +1381,7 @@ describe("Media playback effects with a generated sound file", function()
     waitForCount("sysDownloadDone", done, 1)
     waitForEvent("sysMediaStarted", quietMilliseconds)
 
+    assert.equals(1, #done)
     assert.equals(0, #started)
     assert.equals(0, #getPlayingSounds())
     -- still saved, so the next play of it needs no download
@@ -1438,6 +1439,63 @@ describe("Media playback effects with a generated sound file", function()
     assert.is_true(stopMusic())
     assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 10000)))
     assert.equals(1, #getPlayingSounds({key = "busted-media-stop-other-download"}))
+  end)
+
+  it("a play with a priority keeps a lower-priority file still downloading from starting once it lands", function()
+    if noFixtureServer() then
+      return
+    end
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    local downloadName = "busted-media-priority-download.wav"
+    local downloaded = mediaDirectory .. "/" .. downloadName
+    lfs.mkdir(mediaDirectory)
+    os.remove(downloaded)
+    onCleanup(function() os.remove(downloaded) end)
+    onCleanup(function() stopSounds() end)
+    local done, started = {}, {}
+    collect("sysDownloadDone", done)
+    collect("sysMediaStarted", started)
+
+    assert.is_true(playSoundFile({name = downloadName, url = fixtureUrl() .. "/media", volume = 60, key = "busted-media-priority-download"}))
+    assert.is_true(playSoundFile({name = longSoundFile, volume = 60, priority = 50, key = "busted-media-priority-local"}))
+    waitForCount("sysDownloadDone", done, 1)
+    waitForEvent("sysMediaStarted", quietMilliseconds)
+
+    for _, entry in ipairs(started) do
+      assert.are_not.equals("busted-media-priority-download", entry.key)
+    end
+    assert.equals(0, #getPlayingSounds({key = "busted-media-priority-download"}))
+  end)
+
+  it("a play with a priority leaves a higher-priority file still downloading to play once it lands", function()
+    if noFixtureServer() then
+      return
+    end
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    local downloadName = "busted-media-priority-higher-download.wav"
+    local downloaded = mediaDirectory .. "/" .. downloadName
+    lfs.mkdir(mediaDirectory)
+    os.remove(downloaded)
+    onCleanup(function() os.remove(downloaded) end)
+    onCleanup(function() stopSounds() end)
+    local started = {}
+    collect("sysMediaStarted", started)
+
+    assert.is_true(playSoundFile({name = downloadName, url = fixtureUrl() .. "/media", volume = 60, priority = 80, key = "busted-media-priority-higher"}))
+    assert.is_true(playSoundFile({name = longSoundFile, volume = 60, priority = 50, key = "busted-media-priority-lower-local"}))
+    for _ = 1, 20 do
+      if #getPlayingSounds({key = "busted-media-priority-higher"}) > 0 then
+        break
+      end
+      waitForEvent("sysMediaStarted", 500)
+    end
+    assert.equals(1, #getPlayingSounds({key = "busted-media-priority-higher"}))
   end)
 
   it("loadVideoFile reports a download error for a url it cannot fetch from", function()
@@ -3286,6 +3344,33 @@ describe("Media playback effects with a generated sound file", function()
     -- sysMediaStarted to wait for, so give the player the turns it would need
     pumpEvents(quietMilliseconds)
     assert.equals(0, #started, "a Client.Media.Load played the file it had just fetched")
+  end)
+
+  it("a Client.Media.Stop message keeps a file still downloading from starting once it lands", function()
+    if noFixtureServer() then
+      return
+    end
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local downloadName = "busted-gmcp-stop-download.wav"
+    local downloaded = mediaDirectory .. "/" .. downloadName
+    lfs.mkdir(mediaDirectory)
+    os.remove(downloaded)
+    onCleanup(function() os.remove(downloaded) end)
+    stopGmcpMediaAfterwards()
+
+    local done, started = {}, {}
+    collect("sysDownloadDone", done)
+    collect("sysMediaStarted", started)
+
+    feedGmcp('Client.Media.Play {"name": "' .. downloadName .. '", "url": "' .. fixtureUrl() .. '/media", "key": "busted-gmcp-stop-download"}')
+    feedGmcp('Client.Media.Stop {}')
+    waitForCount("sysDownloadDone", done, 1)
+    pumpEvents(quietMilliseconds)
+
+    assert.equals(1, #done)
+    assert.equals(0, #started, "a Client.Media.Stop did not reach the file still downloading")
   end)
 
   it("a Client.Media.Play message that names the video type is played as a video", function()
