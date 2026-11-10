@@ -410,6 +410,8 @@ public:
     const TMxpFrameFrontend& mxpFrames() const override { return mMxpFrames; }
     // Every window a script made, in no order; not buffers, which are never shown, nor MXP frames, which are the game's
     std::vector<WindowRecord> windowRecords() const;
+    // The model of a console windowRecords() lists; null for any other name
+    const TConsoleModel* listedConsoleModel(const QString& name) const;
     // What a label shows beside its model: the files and cursor a real TLabel keeps in its widget
     struct LabelRecord
     {
@@ -670,6 +672,7 @@ private:
     void reportDisplayFontChange(const QFont& before);
     void raiseFontEvent(const QString& eventName, const QString& subject, const QFont& font);
     void reportGridSize(const QString& name);
+    static bool listsConsole(const SubConsole& console, std::optional<TWindowRegistry::SubConsoleKind> kind);
     void reportLinesOverflow(const TConsoleModel& model, int lineCount);
     void resizePane(const QString& name);
     void sendPendingPaneResize(const QString& name);
