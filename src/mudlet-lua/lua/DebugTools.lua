@@ -39,7 +39,8 @@ end
 -- Documentation: https://wiki.mudlet.org/index.php?title=Manual:Lua_Functions#display
 function display(...)
   local arg = {...}
-  arg.n = table.maxn(arg)
+  -- table.maxn() cannot see a nil at the end, so display(value, nil) would show only the value
+  arg.n = select("#", ...)
   if arg.n > 1 then
     for i = 1, arg.n do
       display(arg[i])

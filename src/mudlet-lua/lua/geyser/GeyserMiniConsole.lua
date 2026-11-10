@@ -459,7 +459,8 @@ end
 --- The same as Mudlet's base display(), but outputs to the miniconsole instead of the main window.
 function Geyser.MiniConsole:display(...)
   local arg = {...}
-  arg.n = table.maxn(arg)
+  -- table.maxn() cannot see a nil at the end, so display(value, nil) would show only the value
+  arg.n = select("#", ...)
   if arg.n > 1 then
     for i = 1, arg.n do
       self:display(arg[i])
