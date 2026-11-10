@@ -96,10 +96,11 @@ QString VariableTreeDelegate::variablePreview(TVar* pVar)
 
     switch (pVar->getValueType()) {
     case LUA_TSTRING: {
-        // A row is one line tall; a paragraph would otherwise show its second
-        // line's indentation
-        QString value = pVar->getValue().section(QChar('\n'), 0, 0).simplified();
-        if (value.length() > scmPreviewCharacterLimit) {
+        // A row is one line tall, so a paragraph shows its first line, marked as cut short
+        const QString whole = pVar->getValue().trimmed();
+        const qsizetype lineEnd = whole.indexOf(QChar('\n'));
+        QString value = whole.left(lineEnd).simplified();
+        if (lineEnd >= 0 || value.length() > scmPreviewCharacterLimit) {
             value = value.left(scmPreviewCharacterLimit) + QChar(0x2026);
         }
         return qsl("\"%1\"").arg(value);
