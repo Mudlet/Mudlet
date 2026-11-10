@@ -65,8 +65,8 @@ private:
     const QString mProfileName = qsl("Test-PackageManagerHeading");
     const QString mLocalhost = qsl("localhost");
     QString mPort;
-    // sorts first in the list (QString order), so it is the package the dialog
-    // opens on even if the profile ever gains others
+    // sorts before every package a new profile comes with, so it is the
+    // package the dialog opens on
     const QString mPackageName = qsl("AptlyNamedPackage");
 
     Host* mpHost = nullptr;
