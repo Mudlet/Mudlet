@@ -1444,13 +1444,26 @@ void TConsole::setConsoleBgColor(int r, int g, int b, int a)
    47 bg white
    49 bg black     */
 
+bool TConsole::usesWheel(const bool up)
+{
+    if ((mType & (UserWindow | SubConsole)) && !mScrollingEnabled) {
+        return false;
+    }
+    // scrollUp() queues its scroll back, so a scrollDown() in between can hide the split and leave the pane scrolled back behind it
+    if (!mLowerPane->isHidden() || !mUpperPane->mIsTailMode) {
+        return true;
+    }
+    // At the bottom, only up can go anywhere; and with every line on screen a split would only show them twice
+    return up && mUpperPane->imageTopLine() != 0;
+}
+
 bool TConsole::scrollDown(int lines)
 {
     if ((mType & (UserWindow | SubConsole)) && !mScrollingEnabled) {
         return false;
     }
 
-    const bool scrolledBack = !mLowerPane->isHidden();
+    const bool scrolledBack = usesWheel(false);
     mUpperPane->scrollDown(lines);
     if (!mUpperPane->mIsTailMode && (mUpperPane->imageTopLine() + mUpperPane->getScreenHeight() >= buffer.lineBuffer.size() - mLowerPane->getRowCount())) {
         mUpperPane->scrollDown(mLowerPane->getRowCount() + 100); // Gets to the bottom
@@ -1470,12 +1483,7 @@ bool TConsole::scrollDown(int lines)
 
 bool TConsole::scrollUp(int lines)
 {
-    if ((mType & (UserWindow | SubConsole)) && !mScrollingEnabled) {
-        return false;
-    }
-
-    // With every line already on screen there is nothing to scroll back to, and a split would only show them twice
-    if (mLowerPane->isHidden() && mUpperPane->imageTopLine() == 0) {
+    if (!usesWheel(true)) {
         return false;
     }
 

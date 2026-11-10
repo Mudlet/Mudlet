@@ -996,6 +996,48 @@ private slots:
         QVERIFY2(pBar->value() < 200, "a turn of the wheel on a label over nothing it could scroll did not scroll the box holding it");
         QVERIFY2(pMini->mLowerPane->isHidden(), "the console under the label split although it could not scroll");
     }
+
+    // A touchpad sends turns too small for a whole line; the console under the label keeps them, or the box would
+    // drift while the console scrolls
+    void test_aSmallTouchpadTurnOnALabelOverAConsoleItCanScrollStaysWithThatConsole()
+    {
+        TMainConsole* pMain = mpHost->mainConsoleView();
+        const QString box = qsl("touchpadLabelBox");
+        const QString mini = qsl("touchpadLabelBoxMini");
+        const QString name = qsl("touchpadInBoxLabel");
+        QVERIFY(pMain->createScrollBox(qsl("main"), box, 40, 90, 300, 120));
+        const auto removeBox = qScopeGuard([this, pMain, box, mini]() {
+            mpHost->deleteMiniConsole(mini);
+            pMain->deleteScrollBox(box);
+        });
+        auto* pBox = pMain->findChild<TScrollBox*>(box);
+        QVERIFY(pBox);
+        TConsole* pMini = pMain->createMiniConsole(box, mini, 0, 0, 280, 600);
+        QVERIFY(pMini);
+        for (int line = 1; line <= 200; ++line) {
+            pMini->print(qsl("LINE %1\n").arg(line));
+        }
+        auto [created, createMessage] = mpHost->createLabel(box, name, 20, 240, 200, 50, true, false);
+        QVERIFY2(created, qPrintable(createMessage));
+        const auto removeLabel = qScopeGuard([pMain, name]() {
+            pMain->deleteLabel(name);
+        });
+        TLabel* pLabel = pMain->labelWidget(name);
+        QVERIFY(pLabel);
+        pLabel->show();
+        pLabel->raise();
+        QScrollBar* pBar = pBox->verticalScrollBar();
+        QTRY_VERIFY2(pBar->maximum() > 200, "the scroll box has nothing to scroll");
+        pBar->setValue(200);
+        qApp->processEvents();
+        QWidget* pWindow = pLabel->window();
+        const QPoint centre = pLabel->mapTo(pWindow, pLabel->rect().center());
+        QVERIFY2(pWindow->childAt(centre) == pLabel, "the label is not under the pointer, so the turn would not reach it");
+
+        QTest::wheelEvent(pWindow->windowHandle(), centre, QPoint(0, 8));
+        qApp->processEvents();
+        QCOMPARE(pBar->value(), 200);
+    }
 };
 
 #include "LabelAnchorInteractionTest.moc"
