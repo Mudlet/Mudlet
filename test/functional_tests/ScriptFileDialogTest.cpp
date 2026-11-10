@@ -221,6 +221,8 @@ private slots:
         const QString elsewhere = QDir(mPickDir.path()).absolutePath();
         // Neither picked from nor started in, so a write from either dialog shows
         const QString lastDir = qsl("%1/lastDir").arg(elsewhere);
+        // Made, as a dialog given a missing folder opens somewhere else and would hide a read of the setting
+        QVERIFY(QDir().mkpath(lastDir));
         MudletApp::getQSettings()->setValue(qsl("lastFileDialogLocation"), lastDir);
         const QString replay = qsl("%1/picked.dat").arg(elsewhere);
         QFile touch(replay);
@@ -238,6 +240,8 @@ private slots:
     {
         const QString elsewhere = QDir(mPickDir.path()).absolutePath();
         const QString lastDir = qsl("%1/lastDir").arg(elsewhere);
+        // Made, as a dialog given a missing folder opens somewhere else and would hide a read of the setting
+        QVERIFY(QDir().mkpath(lastDir));
         MudletApp::getQSettings()->setValue(qsl("lastFileDialogLocation"), lastDir);
         const QString custom = qsl("%1/logs").arg(elsewhere);
         QVERIFY(QDir().mkpath(custom));
