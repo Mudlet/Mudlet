@@ -5,9 +5,10 @@
 -- character can arrive as a lead byte at the end of one read and its trail
 -- bytes at the start of the next. Each round sets one encoding, then feeds
 -- the same random lines - valid characters, lone and truncated leads, invalid
--- trail bytes, GB18030 four byte and EUC-JP three byte forms, mixed with ASCII and SGR colours - once
--- as one read and once in reads of one to seven bytes, and requires the same
--- text and getTextFormat() for every character from both.
+-- trail bytes, GB18030 four byte and EUC-JP three byte forms, mixed with
+-- ASCII, controls and SGR colours - once as one read and once in reads of one
+-- to seven bytes, and requires the same text and getTextFormat() for every
+-- character from both.
 --
 -- Run against a sanitizer build, as with the other fuzzers.
 --
@@ -60,7 +61,8 @@ local encodings = {
 -- the encoding the batch being made is in
 local current
 
--- never NUL, CR, LF, '<' or '>' (feedTelnet() reads those as tag delimiters) or IAC. ICU's SHIFT_JIS
+-- never NUL or CR (the telnet layer drops them), LF (it ends the line), '<' or '>' (feedTelnet()
+-- reads those as tag delimiters) or IAC. ICU's SHIFT_JIS
 -- maps 0x1A to 0x1C and 0x1C to 0x7F, as IBM's Shift-JIS does, but plain bytes after decoded text in
 -- the same read are copied straight into the line, so a cut read changes which a game gets; no game
 -- sends them, so they are left out for a round to turn up something else.
