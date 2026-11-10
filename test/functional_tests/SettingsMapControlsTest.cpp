@@ -338,7 +338,7 @@ private slots:
         QVERIFY2(shown().remove(QChar::Space).contains(qsl("/%1\"").arg(name)), qPrintable(qsl("the console does not show the path as typed: '%1'").arg(shown())));
     }
 
-    // Host::loadMapFile() audits what it loads; the dialog auditing again repeated the audit's console lines after condenseMapLoad() had tidied them away
+    // Host::loadMapFile() audits what it loads, so the dialog must not audit it again
     void test_loadingAMapAuditsItOnce()
     {
         QTemporaryDir dir;
@@ -348,7 +348,7 @@ private slots:
         QVERIFY(pMap->mpRoomDB->addRoom(pMap->createNewRoomID()));
         QVERIFY(mpHost->saveMapFile(path));
         QVERIFY2(openPreferences(), "the settings dialog never appeared");
-        // The first load makes the mapper, which moves the revision on its own
+        // A warm-up load, so a mapper that loading may create is not counted below
         QVERIFY(mpHost->loadMapFile(path));
 
         quint64 before = pMap->revision();
