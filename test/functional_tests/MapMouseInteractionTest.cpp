@@ -3543,34 +3543,32 @@ private slots:
         QTest::keyClick(dialog->comboBox_type, Qt::Key_Return);
         QTest::qWait(100);
         QVERIFY2(dialog && dialog->isVisible(), "Enter saved an image label that has no image");
+        dialog->comboBox_type->setCurrentIndex(0);
+        QVERIFY2(dialog->pushButton_save->isEnabled(), "Save stayed disabled after switching back to a text label");
+        dialog->comboBox_type->setCurrentIndex(1);
 
         const QString image = mConfigDir.filePath(qsl("label.png"));
         QPixmap pixmap(8, 8);
         pixmap.fill(Qt::red);
         QVERIFY(pixmap.save(image));
         auto answerFilePicker = [this](const QString& path) {
-            auto* poll = new QTimer(this);
-            connect(poll, &QTimer::timeout, this, [poll, path]() {
-                QFileDialog* picker = nullptr;
-                for (QWidget* widget : QApplication::topLevelWidgets()) {
-                    if (auto* candidate = qobject_cast<QFileDialog*>(widget); candidate && candidate->isVisible()) {
-                        picker = candidate;
-                    }
-                }
+            answerNextModalDialog([path](QWidget* pDialog) {
+                auto* picker = qobject_cast<QFileDialog*>(pDialog);
                 if (!picker) {
-                    return;
+                    return false;
                 }
-                poll->deleteLater();
-                poll->stop();
                 if (!path.isEmpty()) {
-                    picker->setDirectory(QFileInfo(path).absolutePath());
-                    if (auto* name = picker->findChild<QLineEdit*>(qsl("fileNameEdit"))) {
-                        name->setText(QFileInfo(path).fileName());
+                    // Left unanswered, so the fixture closes the picker and the case fails
+                    auto* name = picker->findChild<QLineEdit*>(qsl("fileNameEdit"));
+                    if (!name) {
+                        return false;
                     }
+                    picker->setDirectory(QFileInfo(path).absolutePath());
+                    name->setText(QFileInfo(path).fileName());
                 }
                 QMetaObject::invokeMethod(static_cast<QDialog*>(picker), path.isEmpty() ? &QDialog::reject : &QDialog::accept, Qt::QueuedConnection);
+                return true;
             });
-            poll->start(20);
         };
         // A native picker has no file name field to type into
         const bool priorNative = QCoreApplication::testAttribute(Qt::AA_DontUseNativeDialogs);
@@ -3586,8 +3584,8 @@ private slots:
         answerFilePicker(QString());
         QTest::mouseClick(dialog->toolButton_imagePick, Qt::LeftButton);
         QTRY_VERIFY(!QApplication::activeModalWidget());
-        QCOMPARE(dialog->getImagePath(), image);
-        QVERIFY2(dialog->pushButton_save->isEnabled(), "Cancelling the file picker dropped the chosen image");
+        QVERIFY2(dialog->getImagePath() == image, "Cancelling the file picker dropped the chosen image");
+        QVERIFY(dialog->pushButton_save->isEnabled());
     }
 
     // A box is a box whichever corner it was dragged out from: the label goes
