@@ -2557,7 +2557,10 @@ describe("Media playback effects with a generated sound file", function()
     collect("sysMediaStarted", started)
 
     writeSoundFiles()
-    assert.is_true(playMusicFile({name = longSoundFile, start = 200, finish = 500, loops = -1, key = "busted-finish-forever"}))
+    -- Each pass is 300ms from 8000ms in, so three starts fit inside waitForCount's
+    -- five seconds only if every later pass also seeks to the start: one from the
+    -- top of the file plays 8300ms before the next begins.
+    assert.is_true(playMusicFile({name = longSoundFile, start = 8000, finish = 8300, loops = -1, key = "busted-finish-forever"}))
     waitForCount("sysMediaStarted", started, 3)
     assert.is_true(#started >= 3)
     assert.equals(1, #getPlayingMusic({key = "busted-finish-forever"}))
