@@ -268,6 +268,27 @@ void THeadlessSession::connectWindowRelays(Host* pHost, const unsigned int run)
                 emit scriptWindowsChanged(profile, names);
             },
             Qt::QueuedConnection);
+    connect(
+            &pView->windowNotifier(),
+            &TWindowNotifier::textChanged,
+            this,
+            [this, run](const QStringList& names) {
+                if (run != mRun || !mpHost || mShuttingDown || !mDeliveredWindows) {
+                    return;
+                }
+                QStringList windows = names;
+                // Deleted since it was noted, or a buffer, which windowLines() does not list
+                windows.removeIf([this](const QString& name) {
+                    return !windowTextModel(name);
+                });
+                if (windows.isEmpty()) {
+                    return;
+                }
+                windows.sort();
+                const QString profile = mProfileName;
+                emit windowTextChanged(profile, windows);
+            },
+            Qt::QueuedConnection);
 }
 
 THeadlessSession::WindowsTold THeadlessSession::windowsNow() const

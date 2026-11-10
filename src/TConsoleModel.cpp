@@ -119,6 +119,7 @@ void TConsoleModel::deleteLineAtCursor()
         P_begin.ry()--;
         P_end.ry()--;
     }
+    emit mNotifier.contentEdited();
 }
 
 void TConsoleModel::clear()

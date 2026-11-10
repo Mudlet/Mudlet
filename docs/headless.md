@@ -242,7 +242,8 @@ missing or doubled:
   of a trigger's `send("")`, are not sent.
 
 `mainConsoleCleared` says a script emptied the main console with `clearWindow()` or
-`clearWindow("main")`, so an app empties its own copy of it; a mini console's clear does not send it.
+`clearWindow("main")`, so an app empties its own copy of it; a mini console's clear names it in
+`windowTextChanged` instead (see "Reading a console's text").
 While it is connected, a clear also ends any line `localText` left open, so the next piece has no line
 feed to drop; without it, as for the CLI, that piece starts with the line feed that ends the open line.
 It is sent between the lines from before and after, so, like `outputLine`, its handler must not call the
@@ -833,6 +834,20 @@ as it arrives is still `lineShown`'s to tell. It is empty with no profile open a
 label, a scroll box, a text edit, the mapper, a buffer from `createBuffer()`, which is never shown, and
 the console of one of the game's MXP frames. It may be called from anywhere, but from a handler of
 `outputLine` or `lineShown` the main console's last row is in the middle of its commit.
+
+`windowTextChanged(profile, windows)` says when to read them again: the names, sorted, of the mini
+consoles and user windows whose rows may differ, hidden ones included. A script edits such a console in
+place, with `moveCursor()` and `insertText()`, `replace()`, `deleteLine()` or `clearWindow()`, so there
+is no stream of its lines as the main console has: the app reads the rows it shows again. A link of the
+console changing, as when it is followed, names it too. It comes from the event loop once a turn, however
+many writes the turn made, so its handler may call the session, and a clear and what was written after it
+are one signal, read as they ended up. For a window made and written to in one turn it follows the
+`scriptWindowsChanged` that lists the window. A new console is named even with nothing written to it,
+as one a script deleted and made again in the same turn, in the same place, is not named in
+`scriptWindowsChanged`, yet its rows and its links' ids are gone. A window written to and deleted in the
+same turn is not named, and the main console never is: `outputLine`, `lineShown`, `localText` and `mainConsoleCleared`
+tell of it. A console's `setBackgroundColor()` is `scriptWindowsChanged`'s to tell, after which
+`defaultBackground` is against the new colour.
 
 The app places user windows, as the GUI's dock layout and the player do. `setUserWindowGeometry(name,
 geometry, floating)` says where it put one, in the main window's pixels, and whether it floats. A new

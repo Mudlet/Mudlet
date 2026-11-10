@@ -460,7 +460,11 @@ struct TConsoleModel
     // report its scroll bar as gone.
     bool mScrollBarEnabled = true;
     QColor mBorderColor = QColorConstants::Black;
-    void wrapLine(int line) { buffer.wrapLine(line, mWrapAt, mIndentCount, mHangingIndentCount); }
+    void wrapLine(int line)
+    {
+        buffer.wrapLine(line, mWrapAt, mIndentCount, mHangingIndentCount);
+        emit mNotifier.contentEdited();
+    }
 
     // The name scripts know this console by. Only the main console, user
     // windows, miniconsoles and buffers can be addressed by scripts, so only
