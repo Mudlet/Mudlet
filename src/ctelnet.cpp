@@ -1322,7 +1322,7 @@ QString cTelnet::connectionTimeText(const qint64 elapsedMs)
     if (!days) {
         return clock;
     }
-    //: Connection time of a day or more. %n is the number of whole days, %1 the rest of the time in the connection time format above
+    //: Connection time of a day or more. %n is the number of whole days, %1 the rest of the time, in the "hh:mm:ss.zzz" connection time format
     return tr("%n day(s), %1", nullptr, static_cast<int>(days)).arg(clock);
 }
 

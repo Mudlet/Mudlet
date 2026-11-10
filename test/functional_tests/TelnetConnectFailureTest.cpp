@@ -332,13 +332,12 @@ private slots:
         QCOMPARE(recordedEventCount(host, qsl("sysDisconnectionEvent")), 1);
     }
 
-    // A connection of 24 hours or more must keep its whole days rather than wrap back to 00:00:00
+    // A connection of 24 hours or more must keep its whole days rather than wrap at 24 hours
     void test_aConnectionTimeOfADayOrMoreKeepsItsDays()
     {
-        const QString clock = cTelnet::connectionTimeText(0);
         QCOMPARE(cTelnet::connectionTimeText(std::chrono::milliseconds(23h + 59min + 59s + 999ms).count()), QTime(23, 59, 59, 999).toString(cTelnet::tr("hh:mm:ss.zzz")));
         QCOMPARE(cTelnet::connectionTimeText(std::chrono::milliseconds(25h + 2s).count()), cTelnet::tr("%n day(s), %1", nullptr, 1).arg(QTime(1, 0, 2).toString(cTelnet::tr("hh:mm:ss.zzz"))));
-        QCOMPARE(cTelnet::connectionTimeText(std::chrono::milliseconds(24h * 40).count()), cTelnet::tr("%n day(s), %1", nullptr, 40).arg(clock));
+        QCOMPARE(cTelnet::connectionTimeText(std::chrono::milliseconds(24h * 40).count()), cTelnet::tr("%n day(s), %1", nullptr, 40).arg(QTime(0, 0).toString(cTelnet::tr("hh:mm:ss.zzz"))));
     }
 
     void test_osc8PresetsEndWithTheConnection()
