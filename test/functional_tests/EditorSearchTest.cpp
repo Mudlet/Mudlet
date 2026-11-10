@@ -682,6 +682,7 @@ private slots:
             mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("qaMultiLineVariable = nil"));
         });
         mpEditor->setSearchOptions(enums::EditorSearchOptionIncludeVariables);
+        mpEditor->slot_showScripts();
         search(qsl("qaBuried"));
 
         QCOMPARE(describeResults(),
