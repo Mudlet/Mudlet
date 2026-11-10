@@ -134,7 +134,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
     mpDragScrollTimer = new QTimer(this);
     mpDragScrollTimer->setInterval(50ms);
     connect(mpDragScrollTimer, &QTimer::timeout, this, [this]() {
-        // The release can go elsewhere, as when the split's lower pane hides under the pointer or a popup opens
+        // A popup or another window can take the release, so the pane never sees it
         if (!mMouseTracking || !isVisible() || !(QGuiApplication::mouseButtons() & Qt::LeftButton)) {
             mpDragScrollTimer->stop();
             mMouseTracking = false;
