@@ -337,6 +337,28 @@ private slots:
         // Spaces dropped, since a wrap can fall inside the path
         QVERIFY2(shown().remove(QChar::Space).contains(qsl("/%1\"").arg(name)), qPrintable(qsl("the console does not show the path as typed: '%1'").arg(shown())));
     }
+
+    // Host::loadMapFile() audits what it loads, so the dialog must not audit it again
+    void test_loadingAMapAuditsItOnce()
+    {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString path = dir.filePath(qsl("audited.dat"));
+        TMap* pMap = mpHost->mpMap.data();
+        QVERIFY(pMap->mpRoomDB->addRoom(pMap->createNewRoomID()));
+        QVERIFY(mpHost->saveMapFile(path));
+        QVERIFY2(openPreferences(), "the settings dialog never appeared");
+        // A warm-up load, so a mapper that loading may create is not counted below
+        QVERIFY(mpHost->loadMapFile(path));
+
+        quint64 before = pMap->revision();
+        QVERIFY(mpHost->loadMapFile(path));
+        const quint64 hostLoadChange = pMap->revision() - before;
+
+        before = pMap->revision();
+        mpPreferences->loadMap(path);
+        QCOMPARE(pMap->revision() - before, hostLoadChange);
+    }
 };
 
 #include "SettingsMapControlsTest.moc"
