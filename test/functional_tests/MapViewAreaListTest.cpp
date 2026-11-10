@@ -196,6 +196,18 @@ private slots:
         auto* comboBox = view->findChild<QComboBox*>();
         QVERIFY(comboBox);
         QCOMPARE(comboBox->currentText(), qsl("Forest"));
+
+        emit comboBox->activated(comboBox->findText(qsl("forest")));
+        QCOMPARE(view->getCurrentAreaId(), lower);
+        emit comboBox->activated(comboBox->findText(qsl("Forest")));
+        QCOMPARE(view->getCurrentAreaId(), upper);
+
+        QPointer<TMapView> lowerView = openView(lower);
+        QVERIFY(lowerView);
+        auto* lowerComboBox = lowerView->findChild<QComboBox*>();
+        QVERIFY(lowerComboBox);
+        QCOMPARE(lowerComboBox->currentText(), qsl("forest"));
+        QCOMPARE(lowerView->getCurrentAreaId(), lower);
     }
 
     // Once the application palette carries a resolve mask, the view's own
