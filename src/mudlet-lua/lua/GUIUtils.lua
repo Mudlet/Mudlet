@@ -2595,13 +2595,11 @@ function xReplace(window, text, type)
   if not str then
     return nil, start
   end
-	if window ~= "main" then
-		replace(window, "")
-    moveCursor(window, start, getLineNumber(window))
-	else
-		replace("")
-    moveCursor(start, getLineNumber())
-	end
+  local blanked, blankError = replace(window, "")
+  if not blanked then
+    return nil, blankError
+  end
+  moveCursor(window, start, getLineNumber(window))
   if type == 'c' then
     return cinsertText(window, text)
   elseif type == 'd' then
