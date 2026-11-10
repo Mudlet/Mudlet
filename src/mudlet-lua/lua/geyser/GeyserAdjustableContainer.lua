@@ -1241,7 +1241,8 @@ end
 -- like position/size and some other variables in your Mudlet Profile Dir/ AdjustableContainer 
 -- to be reliable it is important that the Adjustable.Container has an unique 'name'
 -- @param slot defines a save slot for example a number (1,2,3..) or a string "backup" [optional]
--- @param dir defines save directory [optional]
+-- @param dir defines save directory [optional]; any missing directories in it are created
+-- @return true, or nil and an error message if the settings could not be written
 -- @see Adjustable.Container:load
 function Adjustable.Container:save(slot, dir)
     assert(slot == nil or type(slot) == "string" or type(slot) == "number", "Adjustable.Container.save: bad argument #1 type (slot as string or number expected, got "..type(slot).."!)")
@@ -1281,8 +1282,16 @@ function Adjustable.Container:save(slot, dir)
     mytable.connectedContainers = self.connectedContainers
     mytable.windowname = self.windowname
     mytable.draggedOut = self.draggedOut
+    -- every missing directory on the way, as lfs.mkdir() only makes the last one
+    for separator in dir:gmatch("()[/\\]") do
+        local parent = dir:sub(1, separator - 1)
+        if parent ~= "" and not io.exists(parent) then lfs.mkdir(parent) end
+    end
     if not(io.exists(dir)) then lfs.mkdir(dir) end
-    table.save(saveDir, mainTable)
+    local saved, err = table.save(saveDir, mainTable)
+    if not saved then
+        return nil, string.format("Adjustable.Container.save: couldn't save settings to %s: %s", saveDir, tostring(err))
+    end
     return true
 end
 
