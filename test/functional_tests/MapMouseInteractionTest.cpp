@@ -3538,6 +3538,7 @@ private slots:
         QVERIFY(QTest::qWaitForWindowActive(dialog));
 
         dialog->comboBox_type->setCurrentIndex(1);
+        QVERIFY(!dialog->pushButton_save->isEnabled());
         dialog->comboBox_type->setFocus();
         QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(dialog->comboBox_type));
         QTest::keyClick(dialog->comboBox_type, Qt::Key_Return);
@@ -3583,9 +3584,20 @@ private slots:
 
         answerFilePicker(QString());
         QTest::mouseClick(dialog->toolButton_imagePick, Qt::LeftButton);
-        QTRY_VERIFY(!QApplication::activeModalWidget());
+        QVERIFY2(mModalDialogAnswered, "The file picker did not open a second time");
         QVERIFY2(dialog->getImagePath() == image, "Cancelling the file picker dropped the chosen image");
         QVERIFY(dialog->pushButton_save->isEnabled());
+
+        // The same key on the same box saves once there is an image, so the refusal above was Save's
+        dialog->activateWindow();
+        QVERIFY(QTest::qWaitForWindowActive(dialog));
+        dialog->comboBox_type->setFocus();
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(dialog->comboBox_type));
+        QTest::keyClick(dialog->comboBox_type, Qt::Key_Return);
+        QTRY_VERIFY2(dialog.isNull() || dialog->isHidden(), "Enter did not save the image label");
+        QCOMPARE(area()->mMapLabels.size(), 1);
+        QVERIFY(area()->mMapLabels.first().text.isEmpty());
+        QVERIFY(!area()->mMapLabels.first().pix.isNull());
     }
 
     // A box is a box whichever corner it was dragged out from: the label goes
