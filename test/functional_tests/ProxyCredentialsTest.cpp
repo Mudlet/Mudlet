@@ -27,10 +27,12 @@
 
 #include <memory>
 
+#include "CredentialManager.h"
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
+#include "XMLexport.h"
 
 #include "GroupedTest.h"
 
@@ -94,6 +96,23 @@ private slots:
         QCOMPARE(proxy->hostName(), qsl("second-proxy.example"));
         QVERIFY2(proxy->user().isEmpty(), qPrintable(qsl("the cleared username \"%1\" is still offered").arg(proxy->user())));
         QVERIFY2(proxy->password().isEmpty(), "the cleared password is still offered");
+    }
+
+    // An empty password in the profile's XML has it read from secure storage on the next load
+    void clearedPasswordStaysClearedAfterSaving()
+    {
+        const auto save = [this]() {
+            pugi::xml_document doc;
+            XMLexport(mpHost).writeHost(mpHost, doc.append_child("HostPackage"));
+        };
+
+        mpHost->mProxyPassword = qsl("secret");
+        save();
+        QCOMPARE(CredentialManager::retrieveCredential(mHostname, qsl("proxy")), qsl("secret"));
+
+        mpHost->mProxyPassword.clear();
+        save();
+        QVERIFY2(CredentialManager::retrieveCredential(mHostname, qsl("proxy")).isEmpty(), "the cleared password would be loaded again");
     }
 };
 

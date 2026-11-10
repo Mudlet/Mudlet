@@ -555,7 +555,13 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
 
     if (useSecureStorage) {
         // Modern versions: store in secure storage, clear from XML
-        if (!pHost->mProxyPassword.isEmpty() && !CredentialManager::storeCredential(pHost->getName(), "proxy", pHost->mProxyPassword)) {
+        // A cleared password is removed, as the empty one written below has the next load read secure storage
+        if (pHost->mProxyPassword.isEmpty()) {
+            if (!CredentialManager::removeCredential(pHost->getName(), "proxy")) {
+                //: Shown in the profile's main window when it is saved after its proxy password was cleared, but the old password could not be deleted
+                pHost->postMessage(tr("[ WARN ]  - The cleared proxy password could not be removed, so the next time this profile is loaded it will have the old one again."));
+            }
+        } else if (!CredentialManager::storeCredential(pHost->getName(), "proxy", pHost->mProxyPassword)) {
             //: Shown in the profile's main window when it is saved but its proxy password could not be, for example because there is nowhere to keep the key that encrypts it
             pHost->postMessage(tr("[ WARN ]  - The proxy password could not be saved, so the next time this profile is loaded it will have whichever one was saved before, if any."));
         }
