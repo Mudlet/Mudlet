@@ -911,6 +911,11 @@ QList<QPair<QString, QString>> dlgAboutDialog::buildInfoRows()
     //: This is shown for all other OSes than Windows.
     rows.append({tr("CPU"), QSysInfo::currentCpuArchitecture()});
 #endif
+#if defined(Q_OS_UNIX) && !defined(Q_OS_MACOS)
+    // Window placement, focus and clipboard bugs often differ between Wayland and X11
+    //: Key of the build-information row naming the windowing system Mudlet runs on, such as "wayland" or "xcb" (X11); shown on Linux
+    rows.append({tr("Windowing system"), QGuiApplication::platformName()});
+#endif
     if (Q_UNLIKELY(QLatin1String(qVersion()) != QLatin1String(QT_VERSION_STR))) {
         /*: This is shown when the Qt version used at run-time
  is different to that used during compilation - it is not
