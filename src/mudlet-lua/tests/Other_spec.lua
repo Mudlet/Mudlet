@@ -4813,10 +4813,13 @@ describe("Tests the script API", function()
         pending("counting open files needs /proc")
         return
       end
-      local function openFiles()
+      local function openTranslationFiles()
         local count = 0
-        for _ in lfs.dir("/proc/self/fd") do
-          count = count + 1
+        for fd in lfs.dir("/proc/self/fd") do
+          local target = lfs.symlinkattributes("/proc/self/fd/" .. fd, "target")
+          if target and target:find("mudlet%-lua[_%w]*%.json$") then
+            count = count + 1
+          end
         end
         return count
       end
@@ -4824,13 +4827,12 @@ describe("Tests the script API", function()
       collectgarbage("collect")
       collectgarbage("stop")
       finally(function() collectgarbage("restart") end)
-      local before = openFiles()
 
       for _ = 1, 10 do
         loadTranslations("AdjustableContainer", nil, "ru_RU")
       end
 
-      assert.are.equal(before, openFiles())
+      assert.are.equal(0, openTranslationFiles())
     end)
 
     it("Should reject arguments of the wrong type", function()
