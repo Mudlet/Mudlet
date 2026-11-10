@@ -1845,16 +1845,27 @@ describe("Tests telnet option negotiation", function()
     assert.equals(3, channel102[5])
   end)
 
-  it("starts a fresh channel102 table when a script has cleared it", function()
+  it("starts a fresh channel102 table when a script has replaced it", function()
     local saved = _G.channel102
-    finally(function() _G.channel102 = saved end)
+    local seen
+    local handler = registerAnonymousEventHandler("channel102Message", function(_, variable, value)
+      seen = {variable, value}
+    end)
+    finally(function()
+      killAnonymousEventHandler(handler)
+      feed("<T_IAC><T_DONT><O_AARDWULF>")
+      _G.channel102 = saved
+    end)
 
-    _G.channel102 = nil
     feed("<T_IAC><T_DO><O_AARDWULF>")
-    feed("<T_IAC><T_SB><O_AARDWULF>" .. string.char(5) .. string.char(3) .. "<T_IAC><T_SE>")
-    feed("<T_IAC><T_DONT><O_AARDWULF>")
-
-    assert.same({[5] = 3}, _G.channel102)
+    local replacements = {n = 2, nil, "not a table"}
+    for i = 1, replacements.n do
+      _G.channel102 = replacements[i]
+      seen = nil
+      feed("<T_IAC><T_SB><O_AARDWULF>" .. string.char(5) .. string.char(3) .. "<T_IAC><T_SE>")
+      assert.same({[5] = 3}, _G.channel102)
+      assert.same({5, 3}, seen)
+    end
   end)
 
   it("switches the MXP processor on for the rest of the connection", function()
