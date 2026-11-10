@@ -35,6 +35,12 @@ describe("Tests DebugTools.lua functions", function()
       assert.spy(s).was_called_with(match.has_match("DebugTools_spec.lua:line " .. line .. "%) This is a test"))
     end)
 
+    it("should name the line that called it through pcall", function()
+      local line = debug.getinfo(1, "l").currentline + 1
+      pcall(printDebug, "This is a test")
+      assert.spy(s).was_called_with(match.has_match("DebugTools_spec.lua:line " .. line .. "%) This is a test"))
+    end)
+
     it("should still print when it is tail called with nothing beneath it", function()
       -- a trigger or alias is called straight from C++, as a coroutine's body is
       local ok, err = coroutine.resume(coroutine.create(function()
