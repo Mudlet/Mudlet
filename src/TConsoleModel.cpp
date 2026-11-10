@@ -1488,21 +1488,25 @@ void TConsoleModel::toggleLogging(bool isMessageEnabled)
                     QCoreApplication::translate("TMainConsole", "'Log session starting at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'.")));
         }
     } else {
-        // Logging is being turned off
-        buffer.logRemainingOutput();
-        //: This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale
-        const QString endDateTimeLine = logDateTime.toString(QCoreApplication::translate("TMainConsole", "'Log session ending at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'."));
-        if (mpHost->mIsCurrentLogFileInHtmlFormat) {
-            mLogStream << qsl("<p>%1</p>\n").arg(endDateTimeLine);
-            mLogStream << "  </div></body>\n";
-            mLogStream << "</html>\n";
-        } else {
-            // File is NOT an HTML one but pure text:
-            mLogStream << endDateTimeLine << "\n";
-        }
-        mLogFile.flush();
-        mLogFile.close();
+        closeLogFile();
     }
 
     mpHost->raiseLoggingStateChanged(mLogToLogFile);
+}
+
+void TConsoleModel::closeLogFile()
+{
+    buffer.logRemainingOutput();
+    //: This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale
+    const QString endDateTimeLine = QDateTime::currentDateTime().toString(QCoreApplication::translate("TMainConsole", "'Log session ending at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'."));
+    if (mpHost->mIsCurrentLogFileInHtmlFormat) {
+        mLogStream << qsl("<p>%1</p>\n").arg(endDateTimeLine);
+        mLogStream << "  </div></body>\n";
+        mLogStream << "</html>\n";
+    } else {
+        // File is NOT an HTML one but pure text:
+        mLogStream << endDateTimeLine << "\n";
+    }
+    mLogFile.flush();
+    mLogFile.close();
 }

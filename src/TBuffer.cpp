@@ -7050,8 +7050,8 @@ void TBuffer::logRemainingOutput()
     lastloggedToLine = -1;
 
     // No mLogToLogFile test on purpose: every caller has already decided the
-    // pending line must be flushed - toggleLogging() once it has cleared the
-    // flag, clear() while it is still set, ~Host() either way. The file being open is tested
+    // pending line must be flushed - closeLogFile() once the flag is down or
+    // about to be, clear() while it is still set. The file being open is tested
     // instead, because a QTextStream written to after its device closed latches
     // WriteFailed and then silently keeps every later write in its own buffer,
     // to be replayed into the next log file the moment setDevice() rearms it.

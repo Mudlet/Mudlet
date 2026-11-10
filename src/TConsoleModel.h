@@ -173,6 +173,9 @@ struct TConsoleModel
     // filename format) is profile-wide, so it only acts on the Host's own main
     // model and returns for any other.
     void toggleLogging(bool isMessageEnabled);
+    // Ends the log session in the file and closes it, but leaves the autolog
+    // sentinel, so a profile closed while logging resumes it on its next load
+    void closeLogFile();
     void reportFailedLogStart(const QString& path, const QString& reason);
     // Each flush is a write() to the OS, so lines logged in one pass of the
     // event loop are flushed together once it returns, rather than one by one.
