@@ -1264,6 +1264,13 @@ void cTelnet::slot_socketDisconnected()
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET & 4)
     qDebug().noquote() << "cTelnet::slot_socketDisconnected() INFO - called.";
 #endif
+#if !defined(QT_NO_SSL)
+    // A failed handshake would fail the same way on the other address family's attempt to the same
+    // game, which would then be reported as a second disconnection; a mere drop may be one path's fault
+    if (!mpSocket && mSslHandshakeFailed && mPendingConnectionAttempts > 1) {
+        abortLosingSocket(sender() == &mSocket_ipV4 ? &mSocket_ipV6 : &mSocket_ipV4);
+    }
+#endif
     mLookingUpHost = false;
     mPendingConnectionAttempts = 0;
     // Ahead of the shutdown check below, since the reset() that would otherwise
