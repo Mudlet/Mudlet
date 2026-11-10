@@ -508,12 +508,13 @@ private slots:
     // Nothing is underlined without a dictionary, so nothing is offered either
     void test_rightClickingWithNoDictionaryOffersNoSpellings()
     {
-        const QString dictionary = mpHost->getSpellDic();
-        mpHost->setSpellDic(qsl("qq_QZX"));
-        const bool dictionaryLoaded = mpHost->spellChecker().systemHandle();
         TCommandLine* pCommandLine = freshCommandLine();
         QVERIFY(pCommandLine);
         enterText(pCommandLine, qsl("qzxnodict"));
+        // nothing may return early before the profile's dictionary is put back, or every later init() fails
+        const QString dictionary = mpHost->getSpellDic();
+        mpHost->setSpellDic(qsl("qq_QZX"));
+        const bool dictionaryLoaded = mpHost->spellChecker().systemHandle();
 
         QMenu* pMenu = rightClick(pCommandLine, qsl("qzxnodict"));
         const QString texts = pMenu ? actionTexts(pMenu).join(qsl(" | ")) : QString();
