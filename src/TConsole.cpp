@@ -1529,6 +1529,9 @@ void TConsole::showEvent(QShowEvent* event)
         mAlertOnNewData = false;
     }
     QWidget::showEvent(event); //FIXME-refac: might cause problems
+    if (mType & (MainConsole | UserWindow | SubConsole)) {
+        raiseMudletResizeEvent();
+    }
 }
 
 void TConsole::hideEvent(QHideEvent* event)
@@ -3066,7 +3069,8 @@ void TConsole::applyTimeStamps()
         mpHost->updateDisplayDimensions();
     }
 
-    if (mType & (TConsole::MainConsole | TConsole::UserWindow | TConsole::SubConsole)) {
+    // A hidden pane has yet to take any resize it is owed, so showEvent() reports instead
+    if ((mType & (TConsole::MainConsole | TConsole::UserWindow | TConsole::SubConsole)) && isVisible()) {
         raiseMudletResizeEvent();
     }
 }
