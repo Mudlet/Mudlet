@@ -3680,8 +3680,6 @@ void dlgTriggerEditor::searchVariables(const QString& text)
     if (mCurrentView != EditorViewType::cmVarsView) {
         // repopulateVars can take some time should there be a large number
         // of variables or big tables... 8-(
-        // Blocked, as the row it makes current would load the variables form over the item on show
-        const QSignalBlocker blocker(treeWidget_variables);
         repopulateVars();
     }
 
@@ -10618,6 +10616,8 @@ void dlgTriggerEditor::paintTriggerItem(QTreeWidgetItem* pItem, TTrigger* pT, bo
 
 void dlgTriggerEditor::repopulateVars()
 {
+    // Read from another view - for a search - the row made current must not load the variables form over the item on show
+    const QSignalBlocker blocker(mCurrentView == EditorViewType::cmVarsView ? nullptr : treeWidget_variables);
     treeWidget_variables->setUpdatesEnabled(false);
     mpVarBaseItem = new QTreeWidgetItem(QStringList(tr("Variables")));
     mpVarBaseItem->setTextAlignment(0, Qt::AlignLeft | Qt::AlignVCenter);
