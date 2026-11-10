@@ -198,19 +198,9 @@ private slots:
     void test_coreHelloVersionIsUtf8OnALatin1Game()
     {
         QVERIFY(mpHost->mTelnet.setEncoding(QByteArrayLiteral("ISO 8859-1"), false).first);
-        sentBytes();
 
-        announce(TN_WILL, OPT_GMCP);
-        const QByteArray wire = sentBytes();
-        const QByteArray expected = QByteArray(R"(Core.Hello { "client": "Mudlet", "version": ")") + APP_VERSION + MudletApp::buildSuffix().toUtf8() + QByteArray(R"("})");
-        bool found = false;
-        for (const Subnegotiation& message : subnegotiationsFor(wire, static_cast<unsigned char>(OPT_GMCP))) {
-            if (message.payload.startsWith("Core.Hello ")) {
-                QCOMPARE(message.payload, expected);
-                found = true;
-            }
-        }
-        QVERIFY2(found, "a repeated WILL GMCP did not send Core.Hello again");
+        const std::string hello = mpHost->mTelnet.coreHelloMessage(qsl("-tëst€"));
+        QCOMPARE(QByteArray::fromStdString(hello), QByteArray(R"(Core.Hello { "client": "Mudlet", "version": ")") + APP_VERSION + QByteArray("-tëst€") + QByteArray(R"("})"));
     }
 
     void test_invalidUtf8StillBecomesAReplacementCharacter()
