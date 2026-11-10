@@ -1816,6 +1816,7 @@ end
 ---
 --- Each table is a series of key-value pairs to set the values of the sheet, but if any keys do not exist
 --- then they will be set to nil or the default value. As you can see, all fields are optional.
+--- A datetime field takes a db:Timestamp or a plain epoch number such as os.time().
 ---
 --- @usage Adding one record.
 ---   <pre>
@@ -1868,8 +1869,8 @@ function db:add(sheet, ...)
       t._row_id = nil
     end
 
-    -- a plain epoch for a datetime field is stored the way db:Timestamp stores it, as the query
-    -- builders compare against that text; built in a copy so the script's own table keeps its number
+    -- stored as datetime text like a db:Timestamp: sqlite sorts a raw number below all text, so the
+    -- query builders would never match it. Converted in a copy so the caller's table keeps its number
     local row = {}
     for k, v in pairs(t) do
       local column = columns[k]

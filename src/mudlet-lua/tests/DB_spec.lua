@@ -1233,9 +1233,11 @@ describe("Tests DB.lua functions", function()
       local first = { seen = epochs[1], n = 1 }
       db:add(mydb.sheet, first)
       assert.are.equal(epochs[1], first.seen)
+      local rest = {}
       for n = 2, #epochs do
-        db:add(mydb.sheet, { seen = epochs[n], n = n })
+        rest[#rest + 1] = { seen = epochs[n], n = n }
       end
+      db:add(mydb.sheet, unpack(rest))
 
       assert.are.equal(4, #db:fetch(mydb.sheet, db:gt(mydb.sheet.seen, 1729989000)))
       db:delete(mydb.sheet, db:lt(mydb.sheet.seen, 1729989000))
