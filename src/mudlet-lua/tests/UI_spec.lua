@@ -2786,7 +2786,7 @@ describe("Tests UI functions", function()
       BaseUI.vitalsLock, BaseUI.vitalsData = 3, {}
       local function send(vitals)
         _G.gmcp = { Char = { Vitals = vitals } }
-        BaseUI.updateVitals()
+        raiseEvent("gmcp.Char.Vitals")
       end
 
       send({ hp = 200, maxhp = 200, sp = 150, maxsp = 150 })
@@ -2796,7 +2796,12 @@ describe("Tests UI functions", function()
       send({ maxhp = 250 })
       assert.are.same({ current = 50, max = 250 }, BaseUI.vitalsData.hp)
 
-      -- unlike the stats, an enemy GMCP stops mentioning is gone
+      -- a full reading is newer than a percentage kept from an earlier message
+      send({ nl = 40 })
+      send({ xp = 10, maxxp = 20 })
+      assert.are.same({ current = 10, max = 20 }, BaseUI.vitalsData.xp)
+
+      -- an enemy that GMCP stops mentioning is gone, unlike the other stats
       send({ enemypct = 40 })
       assert.are.same({ percent = 40 }, BaseUI.vitalsData.enemy)
       send({ hp = 60 })

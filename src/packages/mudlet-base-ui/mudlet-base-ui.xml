@@ -2878,7 +2878,12 @@ function BaseUI.applyVitals(source, readings, snapshot)
       local data = BaseUI.vitalsData[stat.key] or {}
       data.current = reading.current or data.current
       data.max = reading.max or data.max
-      data.percent = reading.percent or data.percent
+      -- a snapshot's full current and max are newer than a kept percentage
+      if snapshot and reading.current and reading.max then
+        data.percent = reading.percent
+      else
+        data.percent = reading.percent or data.percent
+      end
       BaseUI.vitalsData[stat.key] = data
     end
   end
