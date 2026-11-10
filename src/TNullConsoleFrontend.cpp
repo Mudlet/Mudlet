@@ -2316,8 +2316,8 @@ bool TNullConsoleFrontend::replaceCommandLineText(const QString& name, const QSt
 
 bool TNullConsoleFrontend::holdMainCommandLineForSend(const QString& line)
 {
-    // A line typed while the game hides input went through the hidden-input box, past the main line. It leaves the
-    // flag alone, as an outer send still to finish may have had its line written to.
+    // A line typed while the game hides input went through the hidden-input box, past the main line. Such a send
+    // leaves mMainCommandLineRewritten alone, as an outer send still to finish may have had its line written to.
     if (mpHost->passwordEntryWanted()) {
         return false;
     }
@@ -2337,7 +2337,7 @@ void TNullConsoleFrontend::mainCommandLineSent()
     if (mMainCommandLineRewritten) {
         return;
     }
-    // TCommandLine::enterCommand() selects a line it keeps
+    // TCommandLine::enterCommand() selects a line it keeps as sent
     if (!mpHost->mAutoClearCommandLineAfterSend) {
         mMainCommandLineAllSelected = true;
         mMainCommandLineWhollySelected = true;

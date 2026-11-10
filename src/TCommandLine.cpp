@@ -1150,10 +1150,11 @@ void TCommandLine::enterCommand(QKeyEvent* event)
     emit commandSubmitted();
 
     const int revisionAtSubmit = document()->revision();
+    const bool runsLuaAction = mType != enums::MainCommandLine && mActionFunction;
     QStringList commandList = toPlainText().split(QChar::LineFeed);
 
     for (QString& command : commandList) {
-        if (mType != enums::MainCommandLine && mActionFunction) {
+        if (runsLuaAction) {
             mpHost->getLuaInterpreter()->callCmdLineAction(mActionFunction, command);
         } else {
             mpHost->send(command);
@@ -1167,10 +1168,9 @@ void TCommandLine::enterCommand(QKeyEvent* event)
         }
     }
 
-    // A line changed while it was sent, say by an alias's printCmdLine(), is left for the player to finish, so it is
-    // neither cleared nor selected for the next keystroke to replace. A setCmdLineAction() field that writes back
-    // its committed value keeps that selected, as packages' settings fields expect.
-    const bool lineChangedDuringSend = !(mType != enums::MainCommandLine && mActionFunction) && document()->revision() != revisionAtSubmit;
+    // A line changed while it was sent, say by an alias's printCmdLine(), is left for the player to finish. Not so
+    // for a setCmdLineAction() field: packages' settings fields write their value back and expect it replaced.
+    const bool lineChangedDuringSend = !runsLuaAction && document()->revision() != revisionAtSubmit;
 
     // A line typed past the hidden-input box stays out of the on-disk history
     if (!toPlainText().isEmpty() && (!mpHost->isRemoteEchoingActive() || mpHost->disablePasswordMasking())) {

@@ -3826,8 +3826,7 @@ registerAnonymousEventHandler("sysDataSendRequest", function(_, command) hiddenS
             QCOMPARE(texts(), (QStringList{qsl("a"), qsl("xb"), qsl("set by the alias")}));
             // Not selected, so the up arrow completes it as typed rather than recalling whole lines
             session.host()->mHighlightHistory = true;
-            session.completeCommandLineFromHistory();
-            QVERIFY2(!session.errorString().contains(qsl("whole line is selected")), qPrintable(session.errorString()));
+            QCOMPARE(session.completeCommandLineFromHistory(), std::optional<QString>(qsl("set by the alias")));
         }
         QCOMPARE(luaGlobalString(session.host(), "headlessAfter"), qsl("[set by the alias]"));
         QVERIFY(session.shutdown(false));
