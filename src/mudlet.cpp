@@ -3064,17 +3064,19 @@ void mudlet::slot_reattachAllDetachedWindows()
 
 void mudlet::slot_toggleAlwaysOnTop()
 {
-    Qt::WindowFlags flags = windowFlags();
-    if (flags & Qt::WindowStaysOnTopHint) {
-        // Remove always on top flag
-        setWindowFlags(flags & ~Qt::WindowStaysOnTopHint);
-        dactionToggleAlwaysOnTop->setChecked(false);
-    } else {
-        // Add always on top flag
-        setWindowFlags(flags | Qt::WindowStaysOnTopHint);
-        dactionToggleAlwaysOnTop->setChecked(true);
+    const bool onTop = !(windowFlags() & Qt::WindowStaysOnTopHint);
+    setWindowStaysOnTop(this, onTop);
+    dactionToggleAlwaysOnTop->setChecked(onTop);
+}
+
+// setWindowFlags() would destroy and recreate the native window, leaving floating docks no longer tied to it, so they
+// drop behind it; the platform window can change this flag in place
+void mudlet::setWindowStaysOnTop(QWidget* window, const bool onTop)
+{
+    window->overrideWindowFlags(window->windowFlags().setFlag(Qt::WindowStaysOnTopHint, onTop));
+    if (QWindow* pWindow = window->windowHandle()) {
+        pWindow->setFlags(window->windowFlags());
     }
-    show(); // Required after changing window flags
 }
 
 void mudlet::slot_minimize()

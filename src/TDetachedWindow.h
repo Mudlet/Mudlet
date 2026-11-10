@@ -294,9 +294,6 @@ private:
     // Flag to track if window is being minimized (to allow hiding during minimize)
     bool mIsBeingMinimized{false};
 
-    // Flag to allow hiding during window flag changes (always on top, etc.)
-    bool mIsChangingWindowFlags{false};
-
     // Flag to prevent duplicate reattach operations on this window
     bool mReattachInProgress{false};
 
