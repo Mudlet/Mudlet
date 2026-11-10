@@ -101,8 +101,9 @@ end
 --- month. With as_epoch, a missing hour is 12 and a missing minute or second is 0, as in os.time(); a partial
 --- date that does not exist (such as "02-29" outside a leap year, or the 31st in a 30-day month) returns nil. <br/><br/>
 ---
---- %d, %m, %H and %I also take a single digit, but only one with no digit beside it, so "^%Y%m%d$" still needs
---- "20250615". A format without ^ matches anywhere in the source, so anchor it when the source holds other numbers. <br/><br/>
+--- %d, %m, %H and %I also take a single digit, but only one with no digit beside it, so "^%Y%m%d$" reads "20250615"
+--- but not "2025615". A field can match part of a longer number, so anchor both ends with ^ and $ when the source holds
+--- other numbers. <br/><br/>
 ---
 --- Supported Format Codes
 ---   </pre>
