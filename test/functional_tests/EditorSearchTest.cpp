@@ -926,11 +926,16 @@ private slots:
         QVERIFY(offer);
         auto* tree = mpEditor->treeWidget_searchResults;
         tree->setCurrentItem(offer);
+#if defined(Q_OS_MACOS)
+        // Item views there open an item with Cmd+O, Return being "edit"
+        QTest::keyClick(tree, Qt::Key_O, Qt::ControlModifier);
+#else
         QTest::keyClick(tree, Qt::Key_Return);
+#endif
         QVERIFY2(QTest::qWaitFor([this]() {
                      return topLevelResultFor(qsl("Variable")) != nullptr;
                  }),
-                 "Enter on the offer did not search the variables");
+                 "the platform's activation key on the offer did not search the variables");
     }
 
     void test_anEmptyOrUnknownTermProducesNoResults()
