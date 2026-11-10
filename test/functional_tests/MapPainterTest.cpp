@@ -775,6 +775,39 @@ private slots:
         QVERIFY2(round == fresh, qPrintable(saved(round, qsl("round")) + qsl("; ") + saved(fresh, qsl("round-fresh"))));
     }
 
+    // A grid mode room fills its whole cell, so its symbol is made at a different size: switching an area in or out
+    // of grid mode at the same zoom must not reuse the symbols made for the other mode
+    void switchingGridModeRemakesTheSymbols()
+    {
+        setUpPlayerView();
+        hideInfoBox();
+        TArea* pArea = roomDB()->getArea(mAreaId);
+
+        // The player's room is drawn apart from the rest in grid mode; a see-through marker leaves its symbol visible
+        map()->mPlayerRoomInnerColor = Qt::transparent;
+        map()->mPlayerRoomOuterColor = Qt::transparent;
+        for (const int roomId : {scmEastRoom, scmWestRoom}) {
+            TRoom* pRoom = roomDB()->getRoom(roomId);
+            for (const bool startInGridMode : {false, true}) {
+                pRoom->mSymbol = qsl("W");
+                pArea->gridMode = startInGridMode;
+                TMapPainter painter;
+                TMapPainter freshPainter;
+                TMapPainter blankPainter;
+                TMapPainter::PaintResult result;
+                paintedView(painter, playerView(), result);
+                pArea->gridMode = !startInGridMode;
+                const QImage switched = paintedView(painter, result.view, result);
+                const QImage fresh = paintedView(freshPainter, playerView(), result);
+                const QString name = qsl("room%1-%2").arg(QString::number(roomId), startInGridMode ? qsl("out-of-grid") : qsl("into-grid"));
+                QVERIFY2(switched == fresh, qPrintable(saved(switched, name) + qsl("; ") + saved(fresh, name + qsl("-fresh"))));
+                pRoom->mSymbol.clear();
+                const QImage blank = paintedView(blankPainter, playerView(), result);
+                QVERIFY2(fresh != blank, qPrintable(qsl("no symbol was drawn, so the comparison proves nothing: ") + saved(fresh, name + qsl("-fresh"))));
+            }
+        }
+    }
+
     // A double-click no room or area exit takes is spent with its frame, or a later one would act on whatever moved
     // under it
     void aClickNothingTakesIsSpentWithItsFrame()
