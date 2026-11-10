@@ -438,9 +438,10 @@ private slots:
         QTest::keyClick(composer->edit, Qt::Key_Backtab, Qt::ControlModifier | Qt::ShiftModifier);
         // macOS reports the physical Ctrl key as Meta
         QTest::keyClick(composer->edit, Qt::Key_Backtab, Qt::MetaModifier | Qt::ShiftModifier);
+        QTest::keyClick(composer->edit, Qt::Key_Backtab, Qt::AltModifier | Qt::ShiftModifier);
         QTest::qWait(100);
         QCOMPARE(openComposers().size(), 1);
-        QVERIFY2(subnegotiationsFor(mpServer->received(), OPT_GMCP).isEmpty(), "Tab or Ctrl+Shift+Tab in the composer saved the draft");
+        QVERIFY2(subnegotiationsFor(mpServer->received(), OPT_GMCP).isEmpty(), "Tab, or Shift+Tab with Ctrl, Meta or Alt, in the composer saved the draft");
 
         QTest::keyClick(composer->edit, Qt::Key_Backtab, Qt::ShiftModifier);
 
@@ -457,6 +458,19 @@ private slots:
                          },
                          5s),
                  "saving the composer left its window behind");
+
+        // Some platforms deliver Shift+Tab as Tab with Shift held rather than as Backtab
+        mpServer->forgetReceived();
+        feedAtcp("Client.Compose Note\nsecond draft");
+        QCOMPARE(openComposers().size(), 1);
+        QTest::keyClick(openComposers().first()->edit, Qt::Key_Tab, Qt::ShiftModifier);
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return !subnegotiationsFor(mpServer->received(), OPT_GMCP).isEmpty();
+                         },
+                         10s),
+                 "Tab with Shift held in the composer sent no GMCP message");
+        QCOMPARE(subnegotiationsFor(mpServer->received(), OPT_GMCP).first().payload, QByteArray("IRE.Composer.SetBuffer \"second draft\""));
     }
 
     // The other arm of the same save: a profile with GMCP turned off sends the
