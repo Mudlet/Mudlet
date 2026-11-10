@@ -19,10 +19,12 @@
 
 /*
  * Each open profile draws its own 2D map, and what one profile's map has
- * drawn must not change how another profile's map draws.
+ * drawn must not change how another profile's map draws. A map also records
+ * where every profile stood, which deleting rooms must keep straight.
  *
  * Why not a spec: a spec runs in the one self-test profile, and the symbol
- * cache and the mapper's area box font are not visible from Lua.
+ * cache, the mapper's area box font, the speedwalk target and other
+ * profiles' locations are not visible from Lua.
  *
  * Run with: ctest -R MapCrossProfileStateTest -V
  */
@@ -205,22 +207,28 @@ private slots:
     void test_deletingRoomsForgetsOnlyTheLocationsInThem_data()
     {
         QTest::addColumn<bool>("oneAtATime");
-        QTest::newRow("removeRoom(int)") << true;
-        QTest::newRow("removeRoom(QSet)") << false;
+        QTest::addColumn<bool>("ownRoomDeleted");
+        QTest::newRow("removeRoom(int), another profile's room deleted") << true << false;
+        QTest::newRow("removeRoom(QSet), another profile's room deleted") << false << false;
+        QTest::newRow("removeRoom(int), this profile's room deleted") << true << true;
+        QTest::newRow("removeRoom(QSet), this profile's room deleted") << false << true;
     }
 
     // A map file is shared by every profile that has stood in it, so a deleted
-    // room can be another profile's location while this profile's survives
+    // room can be one profile's location while another's survives
     void test_deletingRoomsForgetsOnlyTheLocationsInThem()
     {
         QFETCH(bool, oneAtATime);
+        QFETCH(bool, ownRoomDeleted);
         TMap* pMap = mpHostA->mpMap.data();
         pMap->mapClear();
         for (const int id : {1, 2, 3}) {
             QVERIFY(pMap->addRoom(id) && pMap->setRoomArea(id, -1) && pMap->setRoomCoordinates(id, id, 0, 0));
         }
-        pMap->mRoomIdHash[pMap->mProfileName] = 1;
-        pMap->mRoomIdHash[mProfileB] = 2;
+        const QString& deletedProfile = ownRoomDeleted ? pMap->mProfileName : mProfileB;
+        const QString& survivingProfile = ownRoomDeleted ? mProfileB : pMap->mProfileName;
+        pMap->mRoomIdHash[survivingProfile] = 1;
+        pMap->mRoomIdHash[deletedProfile] = 2;
         pMap->mTargetID = 3;
 
         if (oneAtATime) {
@@ -232,8 +240,9 @@ private slots:
         }
 
         QVERIFY(!pMap->mpRoomDB->getRoom(2) && !pMap->mpRoomDB->getRoom(3));
-        QCOMPARE(pMap->mRoomIdHash.value(pMap->mProfileName), 1);
-        QCOMPARE(pMap->mRoomIdHash.value(mProfileB), 0);
+        QCOMPARE(pMap->mRoomIdHash.value(survivingProfile, -1), 1);
+        // Zeroed, not removed: getPlayerRoom() tells a missing entry apart from 0
+        QCOMPARE(pMap->mRoomIdHash.value(deletedProfile, -1), 0);
         QCOMPARE(pMap->mTargetID, 0);
     }
 };
