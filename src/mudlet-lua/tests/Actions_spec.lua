@@ -142,7 +142,8 @@ describe("Packaged toolbar layouts", function()
       }),
       action({name = item("TopPlaced"), folder = "yes", location = 0, custom = "yes", sizeX = 200, sizeY = 40, posX = 0, posY = 0},
              {action({name = item("TopPlacedButton"), sizeX = 90, sizeY = 25, posX = 4, posY = 4})}),
-      -- a damaged or hostile file: laying these out as given would exhaust memory
+      -- a damaged or hostile file: as given, the first exhausts memory when laid out and the second
+      -- overflows clamping its filler offset
       action({name = item("TopHuge"), folder = "yes", location = 0, columns = 2147483647, filler = 2000000000},
              {action({name = item("TopHugeButton")})}),
       action({name = item("TopNegative"), folder = "yes", location = 0, orientation = 1, columns = -2147483648, filler = 5},
@@ -224,6 +225,26 @@ describe("Packaged toolbar layouts", function()
   it("lays out a bar asking for an impossible number of columns", function()
     for _, name in ipairs({"TopHuge", "TopHugeButton", "TopNegative", "TopNegativeButton"}) do
       assert.equals(1, exists(item(name), "button"), name)
+    end
+  end)
+
+  -- the profile keeps what was read, so values tamed only while laying the bar out would come back on every load
+  it("saves a bar asking for an impossible number of columns within the editor's range", function()
+    local path = getMudletHomeDir() .. "/" .. packageName .. "-columns.xml"
+    os.remove(path)
+    finally(function() os.remove(path) end)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save never finished")
+    assert.is_true(saveProfile(getMudletHomeDir(), packageName .. "-columns"))
+    assert.is_true(waitUntil(function() return io.open(path, "rb") ~= nil end, 10000), "the profile save never wrote " .. path)
+    assert.is_true(waitForProfileSaveToPass(), "the profile save never finished")
+    local handle = io.open(path, "rb")
+    local saved = handle:read("*a")
+    handle:close()
+    for name, expected in pairs({TopHuge = {"99", "98"}, TopNegative = {"0", "0"}}) do
+      local at = saved:find("<name>" .. item(name) .. "</name>", 1, true)
+      assert.is_not_nil(at, name .. " was not saved")
+      local columns, filler = saved:match("<buttonColumn>(%-?%d+)</buttonColumn>%s*<buttonFillerOffset>(%-?%d+)</buttonFillerOffset>", at)
+      assert.same(expected, {columns, filler}, name)
     end
   end)
 
