@@ -651,6 +651,60 @@ describe("Tests functionality of Adjustable.Container", function()
       assert.is_nil(Adjustable.Container.Attached.left.gasAttachCaseNew)
     end)
 
+    it("attaches a minimized container to its border again when it is restored", function()
+      local container = make("gasAttachMinRestore", 200)
+      assert.is_true(container:attachToBorder("left"))
+      container:minimize()
+      assert.is_falsy(container.attached)
+      assert.is_true(getBorderLeft() < 200)
+
+      container:restore()
+      assert.are.equal("left", container.attached)
+      assert.is_true(getBorderLeft() >= 200)
+    end)
+
+    it("attaches a container hidden and then minimized to its border again when it is shown and restored", function()
+      local container = make("gasAttachHideMin", 200)
+      assert.is_true(container:attachToBorder("left"))
+      container:hide()
+      container:minimize()
+      container:show()
+      assert.is_falsy(container.attached)
+
+      container:restore()
+      assert.are.equal("left", container.attached)
+      assert.is_true(getBorderLeft() >= 200)
+    end)
+
+    it("stops answering window resizes once a container hidden while attached is minimized", function()
+      local container = make("gasAttachHideMinHandler", 200)
+      assert.is_true(container:attachToBorder("left"))
+      container:hide()
+      assert.is_number(container.resizeHandlerID)
+      container:minimize()
+      assert.is_nil(container.resizeHandlerID)
+    end)
+
+    it("leaves a container detached on restore once detach() was called while minimized", function()
+      local container = make("gasAttachMinDetach", 200)
+      assert.is_true(container:attachToBorder("left"))
+      container:minimize()
+      container:detach()
+
+      container:restore()
+      assert.is_falsy(container.attached)
+    end)
+
+    it("leaves a container detached on restore once it was moved away from its border", function()
+      local container = make("gasAttachMinMoved", 200)
+      assert.is_true(container:attachToBorder("left"))
+      container:minimize()
+      container:move("60%", nil)
+
+      container:restore()
+      assert.is_falsy(container.attached)
+    end)
+
     -- each fractional edge rounds the way the widget's does, so the border ends
     -- where the widget does and neither overlaps the other
     for _, case in ipairs({
@@ -3128,6 +3182,36 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       container:load(nil, scratchDir)
       assert.are.equal(20, container:get_x())
       assert.are.equal(30, container:get_y())
+    end)
+
+    it("attaches a container saved minimized to its border again when restored after loading", function()
+      local container = make("gapMinAttached", {width = 150})
+      assert.is_true(container:attachToBorder("left"))
+      container:minimize()
+      container:save(nil, scratchDir)
+      container:restore()
+      container:detach()
+
+      container:load(nil, scratchDir)
+      assert.is_true(container.minimized)
+      container:restore()
+      assert.are.equal("left", container.attached)
+    end)
+
+    it("attaches a container saved hidden and minimized to its border again when shown and restored after loading", function()
+      local container = make("gapHideMinAttached", {width = 150})
+      assert.is_true(container:attachToBorder("left"))
+      container:hide()
+      container:minimize()
+      container:save(nil, scratchDir)
+      container:show()
+      container:restore()
+      container:detach()
+
+      container:load(nil, scratchDir)
+      container:show()
+      container:restore()
+      assert.are.equal("left", container.attached)
     end)
 
     it("falls back to the default settings for a slot that was never saved", function()
