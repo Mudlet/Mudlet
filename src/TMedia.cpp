@@ -422,10 +422,13 @@ void TMedia::stopMedia(TMediaData& mediaData, const PriorityStop priorityStop)
     };
 
     // A file still downloading has no player yet, and would start once it lands; as a preload it is
-    // still saved, but not played
-    for (TMediaData& pending : mMediaDownloads) {
-        if (pending.mediaProtocol() == mediaData.mediaProtocol() && (mediaData.mediaType() == TMediaData::MediaTypeNotSet || pending.mediaType() == mediaData.mediaType()) && stops(pending)) {
-            pending.setMediaVolume(TMediaData::MediaVolumePreload);
+    // still saved, but not played. A play's priority stop leaves downloads alone: it matches every
+    // name, and scripts rely on a sound they asked for still playing once its download lands.
+    if (priorityStop != PriorityStop::Below) {
+        for (TMediaData& pending : mMediaDownloads) {
+            if (pending.mediaProtocol() == mediaData.mediaProtocol() && (mediaData.mediaType() == TMediaData::MediaTypeNotSet || pending.mediaType() == mediaData.mediaType()) && stops(pending)) {
+                pending.setMediaVolume(TMediaData::MediaVolumePreload);
+            }
         }
     }
 

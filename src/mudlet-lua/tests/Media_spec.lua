@@ -1497,7 +1497,7 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(0, #started, "the MSP Off did not reach the sound still downloading")
   end)
 
-  it("a play with a priority keeps a lower-priority file still downloading from starting once it lands", function()
+  it("a play with a priority leaves lower-priority and unprioritized files still downloading to play once they land", function()
     if noFixtureServer() then
       return
     end
@@ -1505,28 +1505,36 @@ describe("Media playback effects with a generated sound file", function()
       return
     end
     writeSoundFiles()
-    local downloadName = "busted-media-priority-download.wav"
-    local downloaded = mediaDirectory .. "/" .. downloadName
+    local downloads = {
+      {name = "busted-media-priority-lower-download.wav", key = "busted-media-priority-lower-download", priority = 30},
+      {name = "busted-media-priority-unset-download.wav", key = "busted-media-priority-unset-download"},
+    }
     lfs.mkdir(mediaDirectory)
-    os.remove(downloaded)
-    onCleanup(function() os.remove(downloaded) end)
-    onCleanup(function() stopSounds() end)
-    local done, started = {}, {}
-    collect("sysDownloadDone", done)
-    collect("sysMediaStarted", started)
-
-    assert.is_true(playSoundFile({name = downloadName, url = fixtureUrl() .. "/media", volume = 60, priority = 30, key = "busted-media-priority-download"}))
-    assert.is_true(playSoundFile({name = longSoundFile, volume = 60, priority = 50, key = "busted-media-priority-local"}))
-    -- Still playing, it would outrank the download when it lands whether or not the stop reached it
-    assert.is_true(stopSounds({key = "busted-media-priority-local"}))
-    waitForCount("sysDownloadDone", done, 1)
-    waitForEvent("sysMediaStarted", quietMilliseconds)
-
-    assert.equals(1, #done)
-    for _, entry in ipairs(started) do
-      assert.are_not.equals("busted-media-priority-download", entry.key)
+    for _, download in ipairs(downloads) do
+      local downloaded = mediaDirectory .. "/" .. download.name
+      os.remove(downloaded)
+      onCleanup(function() os.remove(downloaded) end)
     end
-    assert.equals(0, #getPlayingSounds({key = "busted-media-priority-download"}))
+    onCleanup(function() stopSounds() end)
+    local done = {}
+    collect("sysDownloadDone", done)
+
+    for _, download in ipairs(downloads) do
+      assert.is_true(playSoundFile({name = download.name, url = fixtureUrl() .. "/media", volume = 60, priority = download.priority, key = download.key}))
+    end
+    assert.is_true(playSoundFile({name = longSoundFile, volume = 60, priority = 50, key = "busted-media-priority-local"}))
+    -- Still playing, it would outrank the lower-priority download when it lands
+    assert.is_true(stopSounds({key = "busted-media-priority-local"}))
+    waitForCount("sysDownloadDone", done, 2)
+    for _, download in ipairs(downloads) do
+      for _ = 1, 20 do
+        if #getPlayingSounds({key = download.key}) > 0 then
+          break
+        end
+        waitForEvent("sysMediaStarted", 500)
+      end
+      assert.equals(1, #getPlayingSounds({key = download.key}), "a play with a priority kept " .. download.name .. " from starting")
+    end
   end)
 
   it("a play with a priority leaves a higher-priority file still downloading to play once it lands", function()
