@@ -1842,10 +1842,14 @@ void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
             bool actionTaken = false;
 
             if (progress > relativeDuration && (endUsed || finishUsed)) {
+                // Stopped first, so a sysMediaFinished handler acts on a player at rest: a stop it
+                // makes empties the playlist, and a track it starts here takes the claim.
+                const quint64 claimedAt = lockedPlayer->claimGeneration();
+                lockedPlayer->mediaPlayer()->stop();
                 // A finish position ends one pass of a loop count; a fade-away stop ends them all.
                 // One at or before the start leaves no pass to play, which would loop with no end.
-                if (endUsed || finishPosition <= startPosition || !playNextPass(lockedPlayer)) {
-                    lockedPlayer->mediaPlayer()->stop();
+                if (!endUsed && finishPosition > startPosition && lockedPlayer->claimGeneration() == claimedAt) {
+                    playNextPass(lockedPlayer);
                 }
             } else {
                 if (fadeInUsed) {

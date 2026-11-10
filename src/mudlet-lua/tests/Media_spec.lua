@@ -2564,6 +2564,26 @@ describe("Media playback effects with a generated sound file", function()
     assert.is_true(stopMusic({key = "busted-finish-forever"}))
   end)
 
+  it("a sysMediaFinished handler between finish-ended passes can stop the rest", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local started = {}
+    collect("sysMediaStarted", started)
+    local handler = registerAnonymousEventHandler("sysMediaFinished", function(_, _, _, _, key)
+      if key == "busted-finish-stopped" then
+        stopSounds({key = "busted-finish-stopped"})
+      end
+    end)
+    onCleanup(function() killAnonymousEventHandler(handler) end)
+
+    writeSoundFiles()
+    assert.is_true(playSoundFile({name = longSoundFile, finish = 300, loops = 3, key = "busted-finish-stopped"}))
+    waitForCount("sysMediaStarted", started, 2)
+    assert.equals(1, #started)
+    assert.equals(0, #getPlayingSounds({key = "busted-finish-stopped"}))
+  end)
+
   it("a stop asked to fade away leaves the sound playing until the fade runs out", function()
     if mediaPlaybackUnavailable() then
       return
