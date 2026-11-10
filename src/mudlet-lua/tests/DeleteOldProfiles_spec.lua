@@ -14,12 +14,12 @@ describe("Tests the deleteOldProfiles package", function()
   }
   local made = {}
 
-  local function makeFile(folder, name, day)
+  local function makeFile(folder, name, day, month)
     local path = folders[folder] .. "/" .. name
     local file = assert(io.open(path, "w"))
     file:write("<MudletPackage/>")
     file:close()
-    local when = os.time({year = 2020, month = 3, day = day, hour = 12})
+    local when = os.time({year = 2020, month = month or 3, day = day, hour = 12})
     assert.is_true(lfs.touch(path, when, when))
     made[#made + 1] = path
   end
@@ -81,6 +81,20 @@ describe("Tests the deleteOldProfiles package", function()
 
     assert.is_true(exists("profiles", "2020-03-20#12-00-00.xml"), "the newest save should be kept")
     assert.is_false(exists("profiles", "2020-03-21#12-00-00.xml.AbCdEf"), "the newest save is its month's kept file, so the leftover should go")
+  end)
+
+  it("keeps a month's first real save rather than an older leftover", function()
+    makeFile("profiles", "2020-02-01#12-00-00.xml.AbCdEf", 1, 2)
+    makeFile("profiles", "2020-02-05#12-00-00.xml", 5, 2)
+    makeFile("profiles", "2020-02-09#12-00-00.xml", 9, 2)
+    makeFile("profiles", "2020-03-20#12-00-00.xml", 20)
+
+    deleteOld("profiles")
+
+    assert.is_true(exists("profiles", "2020-02-05#12-00-00.xml"), "February's first real save should be kept")
+    assert.is_false(exists("profiles", "2020-02-01#12-00-00.xml.AbCdEf"), "a leftover is not a save, so it should not take February's spot")
+    assert.is_false(exists("profiles", "2020-02-09#12-00-00.xml"))
+    assert.is_true(exists("profiles", "2020-03-20#12-00-00.xml"))
   end)
 
   it("keeps every map tied for the newest, whatever its format or letter case, but not a newer leftover", function()

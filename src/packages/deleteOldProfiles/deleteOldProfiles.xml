@@ -99,7 +99,7 @@
     local last_mod_month = os.date("%Y/%m", v.last_mod)
     if days &gt; keepdays then
       -- For profiles older than X days, check if we already kept a table for this month:
-      if not table.contains(used_last_mod_months, last_mod_month) then
+      if loadable(v.name) and not table.contains(used_last_mod_months, last_mod_month) then
         -- If not, do nothing and mark this month as "kept".
         used_last_mod_months[#used_last_mod_months+1] = last_mod_month
       elseif not (v.last_mod == newestLoadedTime and loadable(v.name)) then
