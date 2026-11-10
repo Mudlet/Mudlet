@@ -1816,6 +1816,7 @@ end
 ---
 --- Each table is a series of key-value pairs to set the values of the sheet, but if any keys do not exist
 --- then they will be set to nil or the default value. As you can see, all fields are optional.
+--- A datetime field takes a db:Timestamp or a plain epoch number such as os.time().
 ---
 --- @usage Adding one record.
 ---   <pre>
@@ -1860,16 +1861,29 @@ function db:add(sheet, ...)
     end
   end
 
+  local columns = db.__schema[db_name][s_name].columns
+
   for _, t in ipairs(rows) do
     if t._row_id then
       -- You are not permitted to change a _row_id
       t._row_id = nil
     end
 
+    -- stored as datetime text like a db:Timestamp: sqlite sorts a raw number below all text, so db:gt
+    -- and db:eq would never match it and db:lt always would. Converted in a copy so the caller's table keeps its number
+    local row = {}
+    for k, v in pairs(t) do
+      local column = columns[k]
+      if type(column) == "table" and column._timestamp ~= nil and db:_datetime_epoch(v) then
+        v = db:Timestamp(v)
+      end
+      row[k] = v
+    end
+
     local sql = sql_insert:format(
       s_name,
-      db:_sql_fields(t),
-      db:_sql_values(t)
+      db:_sql_fields(row),
+      db:_sql_values(row)
     )
     db:echo_sql(sql)
 
@@ -2450,6 +2464,12 @@ end
 
 
 
+-- sqlite's datetime() silently gives NULL past 9999 (and for NaN and inf), and before year 0000 it gives a
+-- negative year that db:_epoch_from_utc cannot read back
+function db:_datetime_epoch(value)
+  return type(value) == "number" and value >= -62167219200 and value <= 253402300799
+end
+
 -- NOT LUADOC
 -- The function converts a Lua value into its SQL representation, depending on the
 -- type of the specified field. Strings will be single-quoted (and single-quotes
@@ -2462,12 +2482,17 @@ function db:_coerce(field, value)
   elseif field.type == "number" then
     return tonumber(value) or ("'" .. value .. "'")
   elseif field.type == "datetime" then
-    if value._timestamp == false then
+    if type(value) == "number" then
+      if not db:_datetime_epoch(value) then
+        error(string.format("db: %s is outside the epoch range a datetime field can hold (seconds, not milliseconds?)", tostring(value)), 3)
+      end
+      return "datetime('" .. value .. "', 'unixepoch')"
+    elseif value._timestamp == false then
       return "NULL"
     elseif value._timestamp == "CURRENT_TIMESTAMP" then
       return "datetime('now')"
     else
-      return "datetime('" .. value._timestamp .. "', 'unixepoch')" or "'" .. value .. "'"
+      return "datetime('" .. value._timestamp .. "', 'unixepoch')"
     end
   else
     return "'" .. tostring(value):gsub("'", "''") .. "'"
