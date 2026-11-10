@@ -378,6 +378,7 @@ private slots:
         const auto scrolledBack = mpServer->nawsUpdates();
         runLua(mpHost, qsl("scrollTo()"));
         settle();
+        QVERIFY2(mpHost->mainConsoleView()->mLowerPane->isHidden(), "scrollTo() did not return to the bottom");
 
         QVERIFY2(scrolledBack.isEmpty(), describe(scrolledBack).constData());
         QVERIFY2(mpServer->nawsUpdates().isEmpty(), describe(mpServer->nawsUpdates()).constData());
