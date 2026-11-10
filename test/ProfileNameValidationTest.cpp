@@ -144,7 +144,9 @@ private slots:
         QTest::newRow("zero padded") << qsl("Bot01") << QStringList{qsl("Bot01")} << qsl("Bot02");
         QTest::newRow("zero padded, next taken") << qsl("Char007") << QStringList{qsl("Char007"), qsl("Char008")} << qsl("Char009");
         QTest::newRow("padding outgrown") << qsl("Bot99") << QStringList{qsl("Bot99")} << qsl("Bot100");
-        QTest::newRow("largest number that fits") << qsl("x18446744073709551615") << QStringList{} << qsl("x184467440737095516151");
+        QTest::newRow("longest number counted on") << qsl("x999999999999999999") << QStringList{} << qsl("x1000000000000000000");
+        QTest::newRow("shortest number kept as text") << qsl("x1000000000000000000") << QStringList{} << qsl("x10000000000000000001");
+        QTest::newRow("largest qulonglong kept as text") << qsl("x18446744073709551615") << QStringList{} << qsl("x184467440737095516151");
         QTest::newRow("number too long to count on") << qsl("x99999999999999999999") << QStringList{} << qsl("x999999999999999999991");
     }
 
