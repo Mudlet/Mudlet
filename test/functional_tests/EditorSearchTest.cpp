@@ -258,7 +258,7 @@ private:
         mpHost->getScriptUnit()->registerScript(pScript);
 
         auto* pLongScript = new TScript(qsl("qaMultiLineScript"), mpHost);
-        pLongScript->setScript(qsl("local a = 1\n-- qaLater qaLaterWord\nlocal b = qaLater\n"));
+        pLongScript->setScript(qsl("local a = 1\n-- qaLater qaLaterWord\nlocal b = qaLater\n-- qaCafé qaCaféine\n-- 😀😀\n-- की कीमत\n"));
         mpHost->getScriptUnit()->registerScript(pLongScript);
 
         auto* pTimer = new TTimer(qsl("qaSearchTimer"), QTime(0, 0, 30), mpHost);
@@ -566,6 +566,48 @@ private slots:
         mpEditor->setSearchOptions(enums::EditorSearchOptionWholeWord);
         search(qsl("QALATER"));
         QCOMPARE(resultsFor(qsl("Script")), QStringList({qsl("Lua 2:4"), qsl("Lua 3:11")}));
+    }
+
+    // Patterns and Lua code are full of needles that start or end in punctuation
+    void test_wholeWordSearchFindsNeedlesEdgedWithPunctuation()
+    {
+        mpEditor->setSearchOptions(enums::EditorSearchOptionWholeWord);
+        search(qsl("^%1").arg(mNeedle));
+        QCOMPARE(resultsFor(qsl("Trigger")), QStringList({qsl("Pattern 1")}));
+        QCOMPARE(resultsFor(qsl("Alias")), QStringList({qsl("Pattern")}));
+
+        search(qsl("pattern$"));
+        QCOMPARE(resultsFor(qsl("Trigger")), QStringList({qsl("Pattern 1")}));
+
+        search(qsl("-- qaLater"));
+        QCOMPARE(resultsFor(qsl("Script")), QStringList({qsl("Lua 2:1")}));
+
+        // The end that is a word character still has to finish the word
+        search(qsl("^qaHay"));
+        QCOMPARE(totalResultRows(), 0);
+        search(qsl("tern$"));
+        QCOMPARE(totalResultRows(), 0);
+    }
+
+    // Letters and combining marks outside ASCII belong to the word, and characters beyond the BMP are each found
+    void test_wholeWordSearchHandlesTextOutsideAscii()
+    {
+        mpEditor->setSearchOptions(enums::EditorSearchOptionWholeWord);
+        search(qsl("qaCafé"));
+        QCOMPARE(resultsFor(qsl("Script")), QStringList({qsl("Lua 4:4")}));
+
+        // Each emoji is two UTF-16 code units, and the second one is found after the first
+        search(qsl("😀"));
+        QCOMPARE(resultsFor(qsl("Script")), QStringList({qsl("Lua 5:4"), qsl("Lua 5:6")}));
+
+        // The vowel sign ending "की" is a combining mark, which \w does not cover but still belongs to the word
+        search(qsl("की"));
+        QCOMPARE(resultsFor(qsl("Script")), QStringList({qsl("Lua 6:4")}));
+        // ...so a vowel sign after or before a match keeps it inside the word
+        search(qsl("क"));
+        QCOMPARE(totalResultRows(), 0);
+        search(qsl("मत"));
+        QCOMPARE(totalResultRows(), 0);
     }
 
     // Variables live in the Lua state rather than in a unit, so they are only

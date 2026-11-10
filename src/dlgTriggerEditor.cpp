@@ -15099,13 +15099,23 @@ int dlgTriggerEditor::findSearchMatch(const QString& haystack, const QString& ne
     }
 
     if (mSearchOptions & enums::EditorSearchOptionWholeWord) {
-        QRegularExpression::PatternOptions options = QRegularExpression::NoPatternOption;
+        QRegularExpression::PatternOptions options = QRegularExpression::UseUnicodePropertiesOption;
         if (!(mSearchOptions & enums::EditorSearchOptionCaseSensitive)) {
             options |= QRegularExpression::CaseInsensitiveOption;
         }
         if (needle != mWholeWordSearchNeedle || options != mWholeWordSearchRegex.patternOptions()) {
-            mWholeWordSearchRegex = QRegularExpression(qsl("\\b%1\\b").arg(QRegularExpression::escape(needle)), options);
+            // Not \b: beside punctuation it demands a word character, so "^You" could not match at a line start,
+            // and \w leaves out some combining marks, such as the spacing vowel signs of Indic scripts
+            static const QRegularExpression startsWithWordChar(qsl("^[\\w\\p{M}]"), QRegularExpression::UseUnicodePropertiesOption);
+            static const QRegularExpression endsWithWordChar(qsl("[\\w\\p{M}]$"), QRegularExpression::UseUnicodePropertiesOption);
+            const QString leading = startsWithWordChar.match(needle).hasMatch() ? qsl("(?<![\\w\\p{M}])") : QString();
+            const QString trailing = endsWithWordChar.match(needle).hasMatch() ? qsl("(?![\\w\\p{M}])") : QString();
+            mWholeWordSearchRegex = QRegularExpression(leading + QRegularExpression::escape(needle) + trailing, options);
             mWholeWordSearchNeedle = needle;
+        }
+        // Callers resume one code unit on, which can land inside a surrogate pair where PCRE2 finds nothing
+        if (from > 0 && from < haystack.size() && haystack.at(from).isLowSurrogate()) {
+            ++from;
         }
         const QRegularExpressionMatch match = mWholeWordSearchRegex.match(haystack, from);
         if (match.hasMatch()) {
