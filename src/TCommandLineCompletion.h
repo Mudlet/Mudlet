@@ -58,8 +58,8 @@ public:
     {
         // What the player typed: the line, less the tail the last completion filled in if that is still selected
         QString typed;
-        // The first line of history from the walk's place on that starts with typed; nullopt with none, and the walk
-        // starts again from the newest
+        // The next line of history from the walk's place, older for Up and newer for Down, that starts with typed;
+        // nullopt with none, and the walk starts again from the newest
         std::optional<QString> line;
         bool tailCut = false;
     };

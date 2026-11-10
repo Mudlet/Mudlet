@@ -555,6 +555,20 @@ private slots:
         QCOMPARE(pCommandLine->toPlainText(), qsl("look at sign"));
     }
 
+    // Up's completion of a whole history line leaves nothing selected, so Down banks it at once
+    void test_downBanksALineUpCompletedToItself()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        sendCommand(pCommandLine, qsl("look"));
+        type(pCommandLine, qsl("look"));
+
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look"));
+        press(pCommandLine, Qt::Key_Down);
+        QCOMPARE(pCommandLine->toPlainText(), QString());
+    }
+
     // Once the completion is accepted, the line is the player's own and Down banks it
     void test_downBanksAnAcceptedCompletion()
     {

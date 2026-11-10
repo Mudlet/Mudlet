@@ -1243,7 +1243,8 @@ void TCommandLine::handleAutoCompletion(const bool forward)
 bool TCommandLine::completionTailSelected() const
 {
     const QTextCursor cursor = textCursor();
-    return cursor.selectionStart() == mCompletion.shownLine().size() && cursor.selectionEnd() == toPlainText().size();
+    // A completion that is a whole history line leaves no tail, and the line is then as much the player's as typed text
+    return cursor.hasSelection() && cursor.selectionStart() == mCompletion.shownLine().size() && cursor.selectionEnd() == toPlainText().size();
 }
 
 // cursor up/down: turns on autocompletion mode and cycles through all possible matches
