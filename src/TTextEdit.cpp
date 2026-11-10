@@ -371,8 +371,9 @@ void TTextEdit::applyPendingScrollBarUpdate()
 void TTextEdit::slot_hScrollBarMoved(int offset)
 {
     if (mpConsole->mHScrollBarEnabled && mpConsole->mpHScrollBar) {
-        updateHorizontalScrollBar();
+        // Move first: the bar update resets the bar to mCursorX
         scrollH(offset);
+        updateHorizontalScrollBar();
     }
 }
 
@@ -3267,7 +3268,11 @@ void TTextEdit::wheelEvent(QWheelEvent* e)
         used = true;
     }
 
-    // Space for future use of xDelta
+    if (xDelta != 0 && mpConsole->mHScrollBarEnabled && !mpConsole->mpHScrollBar->isHidden()) {
+        // Qt's convention: a positive x delta scrolls towards the start of the line
+        mpConsole->mpHScrollBar->setValue(mpConsole->mpHScrollBar->value() - xDelta);
+        used = true;
+    }
 
     e->setAccepted(used);
 }
