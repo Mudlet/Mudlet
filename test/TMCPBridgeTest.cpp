@@ -902,7 +902,10 @@ void TMCPBridgeTest::codexMergeKeepsMainKeysOutOfASubTableWrittenFirst()
     const qsizetype enabledAt = merged.indexOf(qsl("enabled = false"));
     QVERIFY2(enabledAt >= 0, qPrintable(merged));
     QVERIFY2(enabledAt < merged.indexOf(qsl("[mcp_servers.mudlet.env]")), qPrintable(merged));
-    QVERIFY2(merged.contains(qsl("MY_VAR = \"kept\"")), qPrintable(merged));
+    QVERIFY2(merged.indexOf(qsl("[mcp_servers.mudlet.env]")) < merged.indexOf(qsl("MY_VAR = \"kept\"")), qPrintable(merged));
+    bool okAgain = false;
+    QCOMPARE(QString::fromUtf8(TMCPBridge::mergeCodexConfig(merged.toUtf8(), qsl("/usr/bin/mudlet"), okAgain)), merged);
+    QVERIFY(okAgain);
 }
 
 void TMCPBridgeTest::codexMergeIgnoresHeaderInsideString()
