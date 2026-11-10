@@ -440,9 +440,12 @@ function Adjustable.Container:onMove (label, event)
             if self.container == Geyser and not self.noLimit then minw, minh = 75, 25 end
             local maxRight, maxBottom = winw, winh
             if hasScrollBox then maxRight, maxBottom = math.huge, math.huge end
+            -- a container partly past the parent's top or left edge is brought back in first,
+            -- as a negative position is read as one measured from the far edge
+            local left, top = max(0, x1), max(0, y1)
+            local right, bottom = left + w, top + h
             -- a dragged edge stops at the parent's edge and at the minimum size while the
             -- opposite edge stays put, rather than pushing the whole container along
-            local left, top, right, bottom = x1, y1, x1 + w, y1 + h
             if adjustInfo.top then
                 top = max(0, min(y1 - dy, bottom - minh))
             elseif adjustInfo.bottom then
