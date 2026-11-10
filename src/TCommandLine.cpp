@@ -904,9 +904,18 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
 
     auto codecName = mpHost->spellChecker().systemCodecName();
     auto handle_system = mpHost->spellChecker().systemHandle();
+    // Spelling entries only for a word the line underlines, which needs a dictionary that lacks it
+    if (!handle_system || codecName.isEmpty()) {
+        return;
+    }
+    // The dictionary used from "the system" may not be UTF-8 encoded so we
+    // will need to transform the UTF-16BE "QString" to the appropriate encoding:
+    const QByteArray encodedText = TEncodingHelper::encode(mSpellCheckedWord, codecName);
+    if (Hunspell_spell(handle_system, encodedText.constData())) {
+        return;
+    }
+
     auto handle_profile = mpHost->spellChecker().userHandle();
-    bool haveAddOption = false;
-    bool haveRemoveOption = false;
     QAction* action_addWord = nullptr;
     QAction* action_removeWord = nullptr;
     QAction* action_dictionarySeparatorLine = nullptr;
@@ -956,35 +965,17 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
     int userSuggestionsCount = 0;
     char** pSystemSuggestionsList = nullptr;
     char** pUserSuggestionsList = nullptr;
-    if (handle_system && !codecName.isEmpty()) {
-        // The dictionary used from "the system" may not be UTF-8 encoded so we
-        // will need to transform the UTF-16BE "QString" to the appropriate encoding:
-        const QByteArray encodedText = TEncodingHelper::encode(mSpellCheckedWord, codecName);
-        if (!Hunspell_spell(handle_system, encodedText.constData())) {
-            // The word is NOT in the main system dictionary:
-            if (handle_profile) {
-                // Have a user dictionary so check it:
-                if (!Hunspell_spell(handle_profile, utf8Text.constData())) {
-                    // The word is NOT in the profile one either - so enable add option
-                    haveAddOption = true;
-                } else {
-                    // However the word is in the profile one - so enable remove option
-                    haveRemoveOption = true;
-                }
-
-                if (haveAddOption) {
-                    action_addWord->setEnabled(true);
-                    connect(action_addWord, &QAction::triggered, this, &TCommandLine::slot_addWord);
-                }
-                if (haveRemoveOption) {
-                    action_removeWord->setEnabled(true);
-                    connect(action_removeWord, &QAction::triggered, this, &TCommandLine::slot_removeWord);
-                }
-            }
+    if (handle_profile) {
+        if (Hunspell_spell(handle_profile, utf8Text.constData())) {
+            action_removeWord->setEnabled(true);
+            connect(action_removeWord, &QAction::triggered, this, &TCommandLine::slot_removeWord);
+        } else {
+            action_addWord->setEnabled(true);
+            connect(action_addWord, &QAction::triggered, this, &TCommandLine::slot_addWord);
         }
-
-        systemSuggestionsCount = Hunspell_suggest(handle_system, &pSystemSuggestionsList, encodedText.constData());
     }
+
+    systemSuggestionsCount = Hunspell_suggest(handle_system, &pSystemSuggestionsList, encodedText.constData());
 
     if (handle_profile) {
         userSuggestionsCount = Hunspell_suggest(handle_profile, &pUserSuggestionsList, utf8Text.constData());
