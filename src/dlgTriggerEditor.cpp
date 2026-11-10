@@ -3553,7 +3553,7 @@ void dlgTriggerEditor::addSearchResult(QTreeWidgetItem*& pParent, const SearchRe
     if (!pParent) {
         pParent = new SearchResultItem(QStringList{row.title});
         if (variable) {
-            setAllSearchData(pParent, row.name, row.variableId, row.what, row.matchStart, row.subInstance);
+            setAllSearchData(pParent, row.name, row.variableId, row.what, row.matchStart, row.instance, row.subInstance);
         } else {
             setAllSearchData(pParent, row.view, row.name, row.id, row.what, row.matchStart, row.instance, row.subInstance);
         }
@@ -3569,7 +3569,7 @@ void dlgTriggerEditor::addSearchResult(QTreeWidgetItem*& pParent, const SearchRe
 
     auto* pItem = new SearchResultItem(QStringList{qsl("%1 %2").arg(row.where, snippet)});
     if (variable) {
-        setAllSearchData(pItem, row.name, row.variableId, row.what, row.matchStart, row.subInstance);
+        setAllSearchData(pItem, row.name, row.variableId, row.what, row.matchStart, row.instance, row.subInstance);
     } else {
         setAllSearchData(pItem, row.view, row.name, row.id, row.what, row.matchStart, row.instance, row.subInstance);
     }
@@ -3758,9 +3758,12 @@ void dlgTriggerEditor::searchVariables(const QString& text)
             // tree widget...
             if (value != QLatin1String("function") && (startPos = findSearchMatch(value, text)) != -1) {
                 // We do not (yet) worry about multiple search results in the "value"
+                const qsizetype lineStart = startPos ? value.lastIndexOf(QChar::LineFeed, startPos - 1) + 1 : 0;
+                const qsizetype lineEnd = value.indexOf(QChar::LineFeed, startPos);
                 row.where = tr("Value");
-                row.snippet = value;
-                row.matchStart = startPos;
+                row.snippet = value.mid(lineStart, lineEnd < 0 ? -1 : lineEnd - lineStart);
+                row.matchStart = startPos - lineStart;
+                row.instance = value.left(lineStart).count(QChar::LineFeed);
                 row.what = SearchResultIsValue;
                 addSearchResult(parent, row);
             }

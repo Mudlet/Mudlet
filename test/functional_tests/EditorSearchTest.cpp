@@ -674,6 +674,31 @@ private slots:
         QCOMPARE(selected->text(0), qsl("qaSearchVariable"));
     }
 
+    // A match on a later line of a string is shown and reached on that line, as one in a script is
+    void test_aMatchInALaterLineOfAVariableValueLeadsToThatLine()
+    {
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("qaMultiLineVariable = \"first line\\nsecond line\\nthird qaBuried line\\nlast\"")));
+        auto removeVariable = qScopeGuard([this]() {
+            mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("qaMultiLineVariable = nil"));
+        });
+        mpEditor->setSearchOptions(enums::EditorSearchOptionIncludeVariables);
+        mpEditor->slot_showScripts();
+        search(qsl("qaBuried"));
+
+        QCOMPARE(describeResults(),
+                 QStringList({
+                         qsl("qaMultiLineVariable||| name=qaMultiLineVariable view=7 type=8 line=2 pos=6 index=0 +"),
+                         qsl("  Value third qaBuried line||| name=qaMultiLineVariable view=7 type=8 line=2 pos=6 index=0"),
+                 }));
+
+        mpEditor->slot_itemSelectedInSearchResults(topLevelResultFor(qsl("Variable")));
+        auto* controller = mpEditor->mpSourceEditorEdbee->controller();
+        QVERIFY(QTest::qWaitFor([controller]() {
+            const size_t caret = controller->textSelection()->range(0).caret();
+            return controller->textDocument()->lineFromOffset(caret) == 2 && controller->textDocument()->columnFromOffsetAndLine(caret, 2) == 6;
+        }));
+    }
+
     // The find box inside the script pane marks every match as the term is
     // typed, so it waits until enough has been typed to be worth a pass over
     // the document - one or two characters match most of a script (#3847).
