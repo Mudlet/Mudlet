@@ -1874,7 +1874,7 @@ function db:add(sheet, ...)
     local row = {}
     for k, v in pairs(t) do
       local column = columns[k]
-      if type(v) == "number" and type(column) == "table" and column._timestamp ~= nil then
+      if type(column) == "table" and column._timestamp ~= nil and db:_datetime_epoch(v) then
         v = db:Timestamp(v)
       end
       row[k] = v
@@ -2464,6 +2464,11 @@ end
 
 
 
+-- sqlite's datetime() silently gives NULL for an epoch outside these bounds, including NaN and inf
+function db:_datetime_epoch(value)
+  return type(value) == "number" and value >= -210866760000 and value <= 253402300799
+end
+
 -- NOT LUADOC
 -- The function converts a Lua value into its SQL representation, depending on the
 -- type of the specified field. Strings will be single-quoted (and single-quotes
@@ -2477,6 +2482,9 @@ function db:_coerce(field, value)
     return tonumber(value) or ("'" .. value .. "'")
   elseif field.type == "datetime" then
     if type(value) == "number" then
+      if not db:_datetime_epoch(value) then
+        error(string.format("db: %s is outside the epoch range a datetime field can hold (seconds, not milliseconds?)", tostring(value)), 3)
+      end
       return "datetime('" .. value .. "', 'unixepoch')"
     elseif value._timestamp == false then
       return "NULL"

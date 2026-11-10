@@ -1247,6 +1247,17 @@ describe("Tests DB.lua functions", function()
       end
       assert.are.same({ 1729989000, 1729992600, 1729996200, 1730611800, 1730615400 }, kept)
     end)
+
+    it("does not turn an epoch outside the datetime range into NULL", function()
+      db:add(mydb.sheet, { seen = 1730615400000, n = 1 })
+      local cur = db.__conn["mydbdstesting"]:execute("SELECT seen FROM sheet WHERE n = 1")
+      local stored = cur:fetch({}, "a").seen
+      cur:close()
+      assert.are.equal(1730615400000, stored)
+
+      assert.has_error(function() db:fetch(mydb.sheet, db:gt(mydb.sheet.seen, 1730615400000)) end)
+      assert.has_error(function() db:fetch(mydb.sheet, db:eq(mydb.sheet.seen, 0 / 0)) end)
+    end)
   end)
 
 
