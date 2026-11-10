@@ -91,9 +91,8 @@ signals:
     // Reaches every 2D map showing this map, the mapper's and each secondary view's
     void signal_roomDeleted(int roomId);
 
-    // Cues for the mapper drawing this map (mpMapper); the colour and symbol
-    // cache ones also reach every secondary map view, and with the 3D mapper
-    // built in so do the repaint and mapper-setting ones.
+    // Cues for the mapper drawing this map (mpMapper); the colour, symbol
+    // cache, repaint and mapper-setting ones also reach every secondary map view.
     void signal_mapperColoursChanged();
     void signal_mapCleared();
     void signal_mapLabelsChanged();

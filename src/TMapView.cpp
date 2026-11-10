@@ -58,6 +58,7 @@ TMapView::TMapView(int viewId, Host* pHost, TMap* pMap, QWidget* parent)
 
     if (mpHost) {
         mp2dMap->init();
+        followMapperSettings();
     }
 
     connect(mpMap, &TMap::signal_areaChanged, this, [this](int areaId) {
@@ -80,6 +81,8 @@ TMapView::TMapView(int viewId, Host* pHost, TMap* pMap, QWidget* parent)
     connect(mpMap, &TMap::signal_mapRepaintRequested, this, repaint3DView);
     connect(mpMap, &TMap::signal_mapperSettingChanged, this, repaint3DView);
 #endif
+    connect(mpMap, &TMap::signal_mapperSettingChanged, this, &TMapView::followMapperSettings);
+    connect(mpMap, &TMap::signal_mapRepaintRequested, this, &TMapView::followMapperSettings);
     connect(mpMap, &TMap::signal_symbolCachesStale, this, [this]() {
         mp2dMap->flushSymbolPixmapCache();
         mp2dMap->update();
@@ -103,6 +106,29 @@ void TMapView::keyPressEvent(QKeyEvent* event)
     if (!pConsole || !pConsole->mpCommandLine || !pConsole->mpCommandLine->takeKeyPress(event)) {
         QWidget::keyPressEvent(event);
     }
+}
+
+// The mapper settings live on the Host, and a change to one may come with either
+// requestMapRepaint() or announceMapperSettingChanged(), so both lead here
+void TMapView::followMapperSettings()
+{
+    if (!mpHost) {
+        return;
+    }
+    mp2dMap->mShowRoomID = mpHost->mShowRoomID;
+    mp2dMap->mBubbleMode = mpHost->mBubbleMode;
+    mp2dMap->mShowGrid = mpHost->mMapperShowGrid;
+    if (mp2dMap->rSize != mpHost->mRoomSize) {
+        // Symbols are cached at the size of the room they were drawn for
+        mp2dMap->flushSymbolPixmapCache();
+        mp2dMap->flushTextLabelPixmapCache();
+        mp2dMap->rSize = mpHost->mRoomSize;
+    }
+    mp2dMap->eSize = mpHost->mLineSize;
+    mp2dMap->mBSize = mpHost->mRoomBorderSize;
+    mp2dMap->mMapperUseAntiAlias = mpHost->mMapperUseAntiAlias;
+    mp2dMap->mLargeAreaExitArrows = mpHost->getLargeAreaExitArrows();
+    mp2dMap->update();
 }
 
 void TMapView::setupUi()

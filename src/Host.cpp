@@ -7978,6 +7978,7 @@ void Host::setLargeAreaExitArrows(const bool state)
         mLargeAreaExitArrows = state;
         if (mpMap) {
             consoleFrontend()->setMapLargeAreaExitArrows(state);
+            mpMap->requestMapRepaint();
         }
     }
 }
