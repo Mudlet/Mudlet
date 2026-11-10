@@ -130,8 +130,12 @@ describe("Tests keybind-related functions", function()
     end)
 
     it("returns -1 and the reason for a body that does not compile, as tempTimer does", function()
+      local probe = tempKey(mudlet.key.F9, "")
+      killKey(probe)
       local id, message = tempKey(mudlet.key.F9, [[send("kick"]])
       assert.are.equal(-1, id, "a key that can never run must not be created")
+      -- IDs are handed out in sequence, so the failed key had the next one
+      assert.are.equal(0, exists(probe + 1, "keybind"), "the key that failed to compile must be removed")
       assert.is_string(message)
       assert.truthy(message:find("unable to compile", 1, true), message)
     end)
