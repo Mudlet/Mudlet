@@ -86,6 +86,9 @@
        </property>
        <item>
         <widget class="QTreeWidget" name="treeWidget_exportSelection">
+         <property name="accessibleName">
+          <string extracomment="Package exporter - name a screen reader announces for the tree of triggers, aliases, scripts and other items to put in the package">Items to export</string>
+         </property>
          <attribute name="headerVisible">
           <bool>false</bool>
          </attribute>
@@ -538,6 +541,9 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
            </item>
            <item>
             <widget class="QListWidget" name="listWidget_addedFiles">
+             <property name="accessibleName">
+              <string extracomment="Package exporter - name a screen reader announces for the list of files shipped inside the package or module">Files to include</string>
+             </property>
              <property name="acceptDrops">
               <bool>true</bool>
              </property>
