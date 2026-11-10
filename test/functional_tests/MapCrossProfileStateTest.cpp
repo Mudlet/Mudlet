@@ -42,6 +42,7 @@
 #include "PortableModeTestHelper.h"
 #include "T2DMap.h"
 #include "TMap.h"
+#include "TRoomDB.h"
 #include "dlgMapper.h"
 #include "mudlet.h"
 
@@ -199,6 +200,41 @@ private slots:
 
         render(pMapperB->mp2dMap);
         QVERIFY(pMapperB->comboBox_showArea->font().strikeOut());
+    }
+
+    void test_deletingRoomsForgetsOnlyTheLocationsInThem_data()
+    {
+        QTest::addColumn<bool>("oneAtATime");
+        QTest::newRow("removeRoom(int)") << true;
+        QTest::newRow("removeRoom(QSet)") << false;
+    }
+
+    // A map file is shared by every profile that has stood in it, so a deleted
+    // room can be another profile's location while this profile's survives
+    void test_deletingRoomsForgetsOnlyTheLocationsInThem()
+    {
+        QFETCH(bool, oneAtATime);
+        TMap* pMap = mpHostA->mpMap.data();
+        pMap->mapClear();
+        for (const int id : {1, 2, 3}) {
+            QVERIFY(pMap->addRoom(id) && pMap->setRoomArea(id, -1) && pMap->setRoomCoordinates(id, id, 0, 0));
+        }
+        pMap->mRoomIdHash[pMap->mProfileName] = 1;
+        pMap->mRoomIdHash[mProfileB] = 2;
+        pMap->mTargetID = 3;
+
+        if (oneAtATime) {
+            QVERIFY(pMap->mpRoomDB->removeRoom(2));
+            QVERIFY(pMap->mpRoomDB->removeRoom(3));
+        } else {
+            QSet<int> doomed{2, 3};
+            pMap->mpRoomDB->removeRoom(doomed);
+        }
+
+        QVERIFY(!pMap->mpRoomDB->getRoom(2) && !pMap->mpRoomDB->getRoom(3));
+        QCOMPARE(pMap->mRoomIdHash.value(pMap->mProfileName), 1);
+        QCOMPARE(pMap->mRoomIdHash.value(mProfileB), 0);
+        QCOMPARE(pMap->mTargetID, 0);
     }
 };
 
