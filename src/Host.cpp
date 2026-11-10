@@ -493,6 +493,13 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     mpMainConsoleModel = std::make_unique<TConsoleModel>(this);
     mpMainConsoleModel->mConsoleName = qsl("main");
     mpMainConsoleModel->mScriptAddressable = true;
+    // As TConsole::showNewLines() follows a write that says it added lines, whatever text is under way
+    connect(&mpMainConsoleModel->mNotifier, &TConsoleModelNotifier::newLinesWritten, this, [this]() {
+        mpNullConsoleFrontend->followNewLines();
+    });
+    connect(&mpMainConsoleModel->mNotifier, &TConsoleModelNotifier::bufferCleared, this, [this]() {
+        mpNullConsoleFrontend->holdNewLinesAfterClear();
+    });
     refreshMainConsoleColors();
 
     mServerWrapFlushTimer.setSingleShot(true);
@@ -7882,7 +7889,8 @@ std::optional<int> Host::windowScroll(const QString& name) const
     const int lastLine = pModel->buffer.getLastLineNumber();
     // Not mUpperPaneCursorY: that is only a copy taken at the last paint, and a pane
     // scrolled back may not paint again before a trim moves the line under it
-    const int line = hasConsoleView() ? pModel->buffer.mCursorY : pModel->mScrolledBackTo.value_or(lastLine);
+    const std::optional<int> heldAt = (pModel == mpMainConsoleModel.get()) ? mpNullConsoleFrontend->newLinesHeldAt() : std::nullopt;
+    const int line = hasConsoleView() ? pModel->buffer.mCursorY : pModel->mScrolledBackTo.value_or(heldAt.value_or(lastLine));
     return {std::max(std::min(line, lastLine), 0)};
 }
 

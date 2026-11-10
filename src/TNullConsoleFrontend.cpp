@@ -3835,6 +3835,10 @@ bool TNullConsoleFrontend::scrollWindowTo(const QString& name, const int line, c
     // A buffer is never painted, so a real one never shows itself scrolled back
     if (toEnd || line >= lastLine) {
         pModel->mScrolledBackTo.reset();
+        // As TMainConsole::scrollWindowTo() puts a scrolled back pane at the end, which incoming text under way then leaves it at
+        if (wasSplit && pModel == &mpHost->mainConsoleModel() && mIncomingTexts > 0) {
+            holdNewLinesAtEnd();
+        }
     } else if (pModel->mScrollingEnabled && mpHost->windowRegistry().subConsoleKind(name) != TWindowRegistry::SubConsoleKind::Buffer) {
         pModel->mScrolledBackTo = line < 0 ? std::max(lastLine + line, 0) : line;
     }
@@ -4007,7 +4011,52 @@ bool TNullConsoleFrontend::setWindowFontSize(const QString& name, const int size
 bool TNullConsoleFrontend::startIncomingText()
 {
     mIncomingTextTimer.restart();
+    ++mIncomingTexts;
+    if (!mNewLinesHeldAt) {
+        holdNewLinesAtEnd();
+    }
     return mpHost->mAlertOnNewData;
+}
+
+// Where TTextEdit::showNewLines() leaves the pane: one past the last line, which windowScroll() caps
+void TNullConsoleFrontend::holdNewLinesAtEnd()
+{
+    TBuffer& buffer = mpHost->mainConsoleModel().buffer;
+    mNewLinesHeldAt = buffer.linesTrimmedTotal() + buffer.size();
+}
+
+// The GUI's pane goes to the end as it is now, and lines the incoming text still has to add leave it there
+void TNullConsoleFrontend::followNewLines()
+{
+    if (mIncomingTexts > 0) {
+        holdNewLinesAtEnd();
+    } else {
+        mNewLinesHeldAt.reset();
+    }
+}
+
+// As TConsole::bufferCleared() puts the pane on what is left, which later lines then leave it at
+void TNullConsoleFrontend::holdNewLinesAfterClear()
+{
+    if (mIncomingTexts > 0 || mNewLinesHeldAt) {
+        holdNewLinesAtEnd();
+    }
+}
+
+std::optional<int> TNullConsoleFrontend::newLinesHeldAt() const
+{
+    if (!mNewLinesHeldAt) {
+        return std::nullopt;
+    }
+    return static_cast<int>(std::max<qint64>(*mNewLinesHeldAt - mpHost->mainConsoleModel().buffer.linesTrimmedTotal(), 0));
+}
+
+// As TConsole::showCommandEcho(), which follows only a command that made lines of its own
+void TNullConsoleFrontend::showCommandEcho(const TConsoleModel::CommandEcho& echo)
+{
+    if (echo.kind == TConsoleModel::CommandEcho::Kind::NewLines) {
+        showNewLines();
+    }
 }
 
 void TNullConsoleFrontend::alertNewData()
@@ -4017,6 +4066,7 @@ void TNullConsoleFrontend::alertNewData()
 
 void TNullConsoleFrontend::finishIncomingText(bool)
 {
+    --mIncomingTexts;
     TConsoleModel& model = mpHost->mainConsoleModel();
     model.mIncomingTextSeconds = mIncomingTextTimer.elapsed() / 1000.0;
     emit model.mNotifier.incomingTextProcessed();

@@ -405,9 +405,15 @@ public:
     bool startIncomingText() override;
     void alertNewData() override;
     void finishIncomingText(bool) override;
-    void finalize() override {}
-    void showNewLines() override {}
-    void showCommandEcho(const TConsoleModel::CommandEcho&) override {}
+    void finalize() override { showNewLines(); }
+    void showNewLines() override { followNewLines(); }
+    // Lets getScroll() follow the main console's last line again
+    void followNewLines();
+    void holdNewLinesAfterClear();
+    void showCommandEcho(const TConsoleModel::CommandEcho& echo) override;
+    // The main console's last line as the incoming text under way began, which is where the GUI's pane
+    // stays until that text is shown; none between such texts
+    std::optional<int> newLinesHeldAt() const;
     void markSelectionDirty() override {}
     void refreshView() const override {}
     void requestRepaintAfterCommand() override {}
@@ -742,6 +748,11 @@ private:
     TWindowNotifier mWindowNotifier;
     std::optional<QPoint> mMousePosition;
     QElapsedTimer mIncomingTextTimer;
+    // Counted from the first line the buffer ever held, so a trim leaves it on its line
+    std::optional<qint64> mNewLinesHeldAt;
+    // Incoming texts under way, one inside another for what a trigger feeds
+    int mIncomingTexts = 0;
+    void holdNewLinesAtEnd();
 };
 
 #endif // MUDLET_TNULLCONSOLEFRONTEND_H

@@ -20,8 +20,6 @@ Failure Media_spec.lua: Media playback effects with a generated sound file a vid
 Failure Media_spec.lua: Media playback effects with a generated sound file playVideoFile plays into the label its key names and the video family reports it
 Failure Media_spec.lua: Media playback effects with a generated sound file playVideoFile starts nothing when its key names no widget to draw into
 Failure Media_spec.lua: Media playback effects with a generated sound file the video pause and stop table forms act only on the key they name
-Failure Trigger_spec.lua: Trigger processing feedTriggers contract scrolls the main console to the lines it feeds from text a trigger feeds, once the game data that fired the trigger is handled
-Failure Trigger_spec.lua: Trigger processing feedTriggers contract scrolls the main console to the lines it feeds from text a trigger feeds, once the pass that fired the trigger ends
 Failure zz_Mapper3DView_spec.lua: Tests show3dMapView with the mapper hidden reads back the mode the hidden mapper will reopen in
 Failure zz_Mapper3DView_spec.lua: Tests the 3D map perspective functions with the modern 3D view showing both are accepted while the modern 3D view shows, and refused for the classic view
 Failure zz_Mapper3DView_spec.lua: Tests the 3D map perspective functions with the modern 3D view showing paints rooms with a symbol, a highlight and a border, in and out of grid mode
