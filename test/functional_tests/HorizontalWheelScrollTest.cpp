@@ -122,11 +122,11 @@ private slots:
         wheelSideways(upper, -120);
         qApp->processEvents();
         const int afterRight = bar->value();
-        QVERIFY2(afterRight > 0, "swiping right did not scroll the long line along");
+        QVERIFY2(afterRight > 0, "a negative x delta did not scroll along the long line");
 
         wheelSideways(upper, 120);
         qApp->processEvents();
-        QVERIFY2(bar->value() < afterRight, "swiping left did not scroll back");
+        QVERIFY2(bar->value() < afterRight, "a positive x delta did not scroll back towards the start");
 
         // A fast swipe delivers several events before the next repaint
         bar->setValue(0);

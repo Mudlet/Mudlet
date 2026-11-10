@@ -3269,7 +3269,7 @@ void TTextEdit::wheelEvent(QWheelEvent* e)
     }
 
     if (xDelta != 0 && mpConsole->mHScrollBarEnabled && !mpConsole->mpHScrollBar->isHidden()) {
-        // A positive delta is a tilt or swipe to the left
+        // Qt's convention: a positive x delta scrolls towards the start of the line
         mpConsole->mpHScrollBar->setValue(mpConsole->mpHScrollBar->value() - xDelta);
         used = true;
     }
