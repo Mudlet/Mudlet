@@ -100,6 +100,17 @@ private:
     static constexpr int scmProseLastNumber = 89;
     QString proseLine(int number) const { return qsl("%1 way off in the distance you faintly hear a grandfather clock strike eleven").arg(number); }
 
+    // The release lands in another window, as when a popup or another application takes it
+    void releaseElsewhere()
+    {
+        QWidget other;
+        other.resize(100, 100);
+        other.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&other));
+        QTest::mouseRelease(&other, Qt::LeftButton, Qt::NoModifier, QPoint(50, 50));
+        QVERIFY(!(QGuiApplication::mouseButtons() & Qt::LeftButton));
+    }
+
     TTextEdit* paneShowingProse()
     {
         QString message;
@@ -420,14 +431,69 @@ private slots:
         QTest::mouseMove(pane, edgePos);
         QTRY_VERIFY2_WITH_TIMEOUT(pane->imageTopLine() < topBefore - 6, "Holding the pointer at the top edge did not keep scrolling", 2000);
 
-        // The next press lands before the repeat's next tick
-        QTest::mouseRelease(pane, Qt::LeftButton, Qt::NoModifier, edgePos);
+        // A release the pane never sees, then a press before the repeat's next tick notices it
+        releaseElsewhere();
         QTest::mousePress(pane, Qt::LeftButton, Qt::NoModifier, middle);
         const int topAtPress = pane->imageTopLine();
         QTest::qWait(300ms);
         const int topAfterWait = pane->imageTopLine();
         QTest::mouseRelease(pane, Qt::LeftButton, Qt::NoModifier, middle);
         QCOMPARE(topAfterWait, topAtPress);
+    }
+
+    void test_edgeScrollStopsWhenTheReleaseGoesElsewhere()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "No upper pane available");
+        const int topBefore = pane->imageTopLine();
+
+        const QPoint middle = pane->rect().center();
+        QTest::mousePress(pane, Qt::LeftButton, Qt::NoModifier, middle);
+        QTest::mouseMove(pane, QPoint(middle.x(), 2));
+        QTRY_VERIFY2_WITH_TIMEOUT(pane->imageTopLine() < topBefore - 6, "Holding the pointer at the top edge did not keep scrolling", 2000);
+
+        releaseElsewhere();
+        QTest::qWait(150ms);
+        const int topAfterRelease = pane->imageTopLine();
+        QTest::qWait(300ms);
+        QCOMPARE(pane->imageTopLine(), topAfterRelease);
+        QVERIFY(!pane->mMouseTracking);
+    }
+
+    void test_edgeScrollStopsWhenThePointerLeavesTheEdge()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "No upper pane available");
+        const int topBefore = pane->imageTopLine();
+
+        const QPoint middle = pane->rect().center();
+        QTest::mousePress(pane, Qt::LeftButton, Qt::NoModifier, middle);
+        QTest::mouseMove(pane, QPoint(middle.x(), 2));
+        QTRY_VERIFY2_WITH_TIMEOUT(pane->imageTopLine() < topBefore - 6, "Holding the pointer at the top edge did not keep scrolling", 2000);
+
+        QTest::mouseMove(pane, middle);
+        const int topAwayFromEdge = pane->imageTopLine();
+        QTest::qWait(300ms);
+        const int topAfterWait = pane->imageTopLine();
+        QTest::mouseRelease(pane, Qt::LeftButton, Qt::NoModifier, middle);
+        QCOMPARE(topAfterWait, topAwayFromEdge);
+    }
+
+    void test_plainPressAfterALostCtrlDragReleaseSelectsFromThePointer()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "No upper pane available");
+
+        const QPoint middle = pane->rect().center();
+        QTest::mousePress(pane, Qt::LeftButton, Qt::ControlModifier, middle);
+        QTest::mouseMove(pane, QPoint(middle.x(), 2));
+        releaseElsewhere();
+        QTest::qWait(150ms);
+
+        QTest::mousePress(pane, Qt::LeftButton, Qt::NoModifier, middle);
+        QTest::mouseMove(pane, middle + QPoint(60, 0));
+        QTest::mouseRelease(pane, Qt::LeftButton, Qt::NoModifier, middle + QPoint(60, 0));
+        QVERIFY2(pane->mPA.x() > 0, "A plain press after a Ctrl-drag whose release was lost still selected whole lines");
     }
 
     // Regression case for the review fix: once a drag has genuinely selected

@@ -2336,9 +2336,8 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         int x = 0;
         y = std::max(y, 0);
 
-        if (event->modifiers() & Qt::ControlModifier) {
-            mCtrlSelecting = true;
-        }
+        // Set either way: a release lost elsewhere leaves the last drag's value behind
+        mCtrlSelecting = event->modifiers().testFlag(Qt::ControlModifier);
 
         bool isOutOfbounds = false;
         if (!mCtrlSelecting && mpConsole->showTimeStamps()) {
