@@ -17,8 +17,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-// isUnsaved(), signal_mapLabelsChanged and the debug console's LuaWarning lines
-// cannot be seen from Lua, so these checks are a functional test, not a spec
+// isUnsaved(), signal_mapLabelsChanged, the debug console's LuaWarning lines and the
+// Create label dialog's colour pickers cannot be reached from Lua, so these checks are a functional test, not a spec
 
 #include <QColorDialog>
 #include <QImage>
