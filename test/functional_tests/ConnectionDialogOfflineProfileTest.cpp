@@ -379,7 +379,6 @@ private slots:
 
         dialog()->slot_copyOnlySettingsOfProfile();
         const QString settingsCopy = mSavedProfile + qsl("1");
-        QCOMPARE(saved(settingsCopy, qsl("port")), qsl("4000"));
         QCOMPARE(saved(settingsCopy, qsl("ssl_tsl")), QString::number(Qt::Checked));
     }
 
@@ -398,15 +397,22 @@ private slots:
             CredentialManager::removeCredential(settingsCopy, qsl("character"));
         });
         QVERIFY(CredentialManager::storeCredential(profile, qsl("character"), password));
+        QVERIFY(MudletApp::writeProfileData(profile, qsl("url"), qsl("example.org")).first);
+        QVERIFY(MudletApp::writeProfileData(profile, qsl("port"), qsl("4000")).first);
         dialog()->fillout_form();
         selectTestProfile();
         selectProfile(profile);
         QTRY_COMPARE(dialog()->character_password_entry->text(), password);
+        // an invalid port is not saved, so the copy does not have it and must not keep its error
+        dialog()->port_entry->setText(qsl("70000"));
+        QVERIFY(dialog()->notificationAreaMessageBox->text().contains(qsl("65535")));
 
         dialog()->slot_copyOnlySettingsOfProfile();
         QCOMPARE(dialog()->profile_name_entry->text(), settingsCopy);
         QCOMPARE(dialog()->character_password_entry->text(), password);
         QTRY_COMPARE(CredentialManager::retrieveCredential(settingsCopy, qsl("character")), password);
+        QVERIFY2(!dialog()->mCopyingProfile, "the settings copy left the copying flag up");
+        QVERIFY2(!dialog()->notificationAreaMessageBox->text().contains(qsl("65535")), qPrintable(dialog()->notificationAreaMessageBox->text()));
     }
 
     // A password the copy could not be given has to say so, not be cleared by the copy's own validation
