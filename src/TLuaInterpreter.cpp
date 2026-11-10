@@ -4786,12 +4786,14 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
             }
             host.raiseEvent(event);
 
+            // A value can end in the line break of a multi-line MSSP block
             if (msspVAR == "HOSTNAME") {
-                host.mMSSPHostName = msspVAL;
+                host.mMSSPHostName = msspVAL.trimmed();
             } else if (msspVAR == "TLS" || msspVAR == "SSL") {
                 // In certain MSSP fields "-1" and "1" denote not supported/supported indicators,
                 // however the port is the standard value here. Ignore those values here.
-                host.mMSSPTlsPort = (msspVAL != "-1" && msspVAL != "1") ? msspVAL.toInt() : 0;
+                const QString port = msspVAL.trimmed();
+                host.mMSSPTlsPort = (port != "-1" && port != "1") ? port.toInt() : 0;
             }
         }
     }
