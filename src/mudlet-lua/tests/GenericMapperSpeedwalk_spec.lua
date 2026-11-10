@@ -129,6 +129,33 @@ describe("Tests that the generic mapper handles a walk to the room the player is
     assert.is_truthy(echoes[1].err)
   end)
 
+  it("still reports no path for a custom speedwalk to another room", function()
+    _G.mudlet = _G.mudlet or {}
+    local savedCustom, savedTo = mudlet.custom_speedwalk, _G.speedWalkTo
+    mudlet.custom_speedwalk, _G.speedWalkTo = true, northRoom
+    _G.speedWalkPath, _G.speedWalkDir = {}, {}
+    local ok, err = pcall(doSpeedWalk)
+    mudlet.custom_speedwalk, _G.speedWalkTo = savedCustom, savedTo
+    assert(ok, err)
+    assert.are.equal(1, #echoes)
+    assert.are.equal("No path to chosen room found.", echoes[1].text)
+    assert.is_truthy(echoes[1].err)
+    assert.are.same({}, sent)
+  end)
+
+  it("says the player is already there for a custom speedwalk to the current room", function()
+    _G.mudlet = _G.mudlet or {}
+    local savedCustom, savedTo = mudlet.custom_speedwalk, _G.speedWalkTo
+    mudlet.custom_speedwalk, _G.speedWalkTo = true, hereRoom
+    _G.speedWalkPath, _G.speedWalkDir = {}, {}
+    local ok, err = pcall(doSpeedWalk)
+    mudlet.custom_speedwalk, _G.speedWalkTo = savedCustom, savedTo
+    assert(ok, err)
+    assert.are.equal(1, #echoes)
+    assert.are.equal("You are already in that room.", echoes[1].text)
+    assert.is_falsy(echoes[1].err)
+  end)
+
   it("still gives the path to another room", function()
     map.find_path("Speedwalk spec north")
     assert.are.equal(1, #echoes)
