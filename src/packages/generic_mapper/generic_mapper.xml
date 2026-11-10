@@ -4349,15 +4349,15 @@ end
 
 function map.speedwalk(roomID, walkPath, walkDirs)
     roomID = roomID or speedWalkPath[#speedWalkPath]
-    if roomID == map.currentRoom then
-        map.echo("You are already in that room.")
-        return
-    end
     getPath(map.currentRoom, roomID)
     walkPath = speedWalkPath
     walkDirs = speedWalkDir
     if #speedWalkPath == 0 then
-        map.echo("No path to chosen room found.",false,true)
+        if roomID == map.currentRoom then
+            map.echo("You are already in that room.")
+        else
+            map.echo("No path to chosen room found.",false,true)
+        end
         return
     end
     table.insert(walkPath, 1, map.currentRoom)
