@@ -465,6 +465,7 @@ void TTextEdit::updateScreenView()
         forceUpdate();
     }
     mOldScrollPos = mpBuffer->getLastLineNumber();
+    mLinesTrimmedAtOldScrollPos = mpBuffer->linesTrimmedTotal();
 }
 
 // Rows and columns start at the top left corner, so whatever covers that edge
@@ -498,9 +499,13 @@ void TTextEdit::showNewLines()
         mpBuffer->mCursorY = mpBuffer->size();
     }
 
-    const int previousOldScrollPos = mOldScrollPos;
+    // A trim off the top of the buffer moves the last line seen up with everything else, and must
+    // not read as the new lines that came in with it being taken away
+    const qint64 linesTrimmed = mpBuffer->linesTrimmedTotal();
+    const int previousOldScrollPos = std::max(0, mOldScrollPos - static_cast<int>(linesTrimmed - mLinesTrimmedAtOldScrollPos));
 
     mOldScrollPos = mpBuffer->getLastLineNumber();
+    mLinesTrimmedAtOldScrollPos = linesTrimmed;
 
     if (!mIsLowerPane) {
         // This is ONLY for the upper pane
