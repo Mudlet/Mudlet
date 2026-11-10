@@ -55,9 +55,11 @@ TMxpTagHandlerResult TMxpEntityTagHandler::handleStartTag(TMxpContext& ctx, TMxp
             definitionList.push_back(value);
             resolver.registerEntity(entity, definitionList.join('|'));
         } else if (tag->hasAttribute("REMOVE")) {
+            // Re-registering a list nothing was removed from would turn an undefined or standard entity into an empty one
             QStringList definitionList = currentList(resolver, entity);
-            definitionList.removeOne(value);
-            resolver.registerEntity(entity, definitionList.join('|'));
+            if (definitionList.removeOne(value)) {
+                resolver.registerEntity(entity, definitionList.join('|'));
+            }
         } else {
             resolver.registerEntity(entity, value);
         }
