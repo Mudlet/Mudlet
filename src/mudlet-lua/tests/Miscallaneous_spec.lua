@@ -149,7 +149,20 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         if results[1] == "windows" then
           -- the architecture this process runs as, which is what Mudlet was built for
           machine = os.getenv("PROCESSOR_ARCHITECTURE")
-        elseif results[1] == "linux" or results[1] == "mac" then
+        elseif results[1] == "linux" then
+          -- e_machine in Mudlet's own ELF header, as `uname -m` names the kernel's
+          -- machine, which a 32-bit build on a 64-bit kernel does not match
+          local exe = io.open("/proc/self/exe", "rb")
+          local header = exe and exe:read(20)
+          if exe then
+            exe:close()
+          end
+          if header and #header == 20 and header:sub(1, 4) == "\127ELF" then
+            local eMachine = header:byte(19) + header:byte(20) * 256
+            machine = ({[3] = "i386", [62] = "x86_64", [183] = "aarch64"})[eMachine]
+              or ("ELF machine " .. eMachine)
+          end
+        elseif results[1] == "mac" then
           local pipe = io.popen("uname -m")
           machine = pipe and pipe:read("*l")
           if pipe then
@@ -157,7 +170,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           end
         end
         local expected = ({
-          x86_64 = "x86 (64-bit)", AMD64 = "x86 (64-bit)",
+          x86_64 = "x86 (64-bit)", AMD64 = "x86 (64-bit)", i386 = "x86 (32-bit)",
           aarch64 = "arm64", arm64 = "arm64", ARM64 = "arm64",
         })[machine or ""]
         if not expected then
