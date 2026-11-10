@@ -824,8 +824,8 @@ void cTelnet::connectIt(const QString& address, int port)
     // After the aborts above, which report the connection they end: an attempt that never
     // connects must not be timed from one that did, which could set off an automatic reconnect
     mConnectionTimer.invalidate();
-    // A Disconnect with no connection to end - offline, or while waiting to retry - is never
-    // cleared by a disconnection, and would pass this attempt's failure off as the user's doing
+    // A Disconnect with no connection to end - offline, waiting to retry, or mid name lookup - is
+    // never cleared by a disconnection, and would pass this attempt's failure off as the user's doing
     mDontReconnect = false;
     mDisconnectRequested = false;
 
