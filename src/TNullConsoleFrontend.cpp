@@ -200,6 +200,70 @@ std::optional<uint> selectorSpecificity(const QStringView selector, const QStrin
     return (element.isEmpty() ? 0 : 1) + uint(classes.size() + pseudos.size()) * 0x10 + uint(ids.size()) * 0x100;
 }
 
+// What QCss::Scanner makes of a backslash in a string and what follows it at index: how much of that it takes, with
+// the text it stands for added to text, or nothing where it reads no sheet at all. Up to six hex digits are one UTF-16
+// code unit; NUL and the line breaks end the string, and digits past U+FFFF are no escape unless the first is one of
+// A to F in upper case, which the scanner reads as itself.
+std::optional<qsizetype> sheetEscape(const QStringView value, const qsizetype index, QString* text)
+{
+    const auto hexDigit = [](const QChar character) {
+        const char16_t unit = character.unicode();
+        return (unit >= u'0' && unit <= u'9') || (unit >= u'a' && unit <= u'f') || (unit >= u'A' && unit <= u'F');
+    };
+    qsizetype digits = 0;
+    while (digits < 6 && index + digits < value.size() && hexDigit(value.at(index + digits))) {
+        ++digits;
+    }
+    bool ok = false;
+    const ushort code = value.mid(index, digits).toUShort(&ok, 16);
+    if (ok && (code == 0 || code == 0xA || code == 0xC || code == 0xD)) {
+        return std::nullopt;
+    }
+    if (digits > 0 && !ok && !(value.at(index) >= u'A' && value.at(index) <= u'F')) {
+        return std::nullopt;
+    }
+    if (text) {
+        text->append(ok ? QChar(code) : value.at(index));
+    }
+    return ok ? digits : 1;
+}
+
+// Whether QCss::Scanner can read every string in a rule; Qt takes nothing from one it cannot, nor from the rules after it
+bool sheetStringsReadable(const QStringView sheet)
+{
+    QChar quote;
+    for (qsizetype at = 0; at < sheet.size(); ++at) {
+        const QChar c = sheet.at(at);
+        if (c == u'\\') {
+            if (quote.isNull() || at + 1 >= sheet.size()) {
+                ++at;
+                continue;
+            }
+            const auto taken = sheetEscape(sheet, at + 1, nullptr);
+            if (!taken) {
+                return false;
+            }
+            const bool carriageReturn = sheet.at(at + 1) == QChar::CarriageReturn;
+            at += *taken;
+            // A backslash takes both halves of a CR LF line break
+            if (carriageReturn && at + 1 < sheet.size() && sheet.at(at + 1) == QChar::LineFeed) {
+                ++at;
+            }
+        } else if (!quote.isNull()) {
+            // A string does not run over a line break that has no backslash ahead of it
+            if (c == QChar::LineFeed || c == QChar::CarriageReturn || c == QChar::FormFeed) {
+                return false;
+            }
+            if (c == quote) {
+                quote = QChar();
+            }
+        } else if (c == u'"' || c == u'\'') {
+            quote = c;
+        }
+    }
+    return quote.isNull();
+}
+
 qsizetype indexOutsideQuotes(const QString& text, const QChar wanted, qsizetype from)
 {
     QChar quote;
@@ -234,7 +298,7 @@ QString sheetDeclarations(const QString& sheet, const QStringList& classNames, c
         }
     }
     if (indexOutsideQuotes(text, u'{', 0) < 0) {
-        return text;
+        return sheetStringsReadable(text) ? text : QString();
     }
     QList<std::pair<uint, QString>> weighted;
     uint order = 0;
@@ -255,14 +319,14 @@ QString sheetDeclarations(const QString& sheet, const QStringList& classNames, c
             for (qsizetype inner = indexOutsideQuotes(text, u'{', open + 1); close >= 0 && inner >= 0 && inner < close; inner = indexOutsideQuotes(text, u'{', inner + 1)) {
                 close = indexOutsideQuotes(text, u'}', close + 1);
             }
-            if (close < 0) {
+            if (close < 0 || !sheetStringsReadable(QStringView(text).mid(at, close - at))) {
                 break;
             }
             at = close + 1;
             continue;
         }
         // The parser stops at the first rule it cannot read, keeping the rules before it
-        if (close < 0 || indexOutsideQuotes(text.left(close), u'{', open + 1) >= 0) {
+        if (close < 0 || indexOutsideQuotes(text.left(close), u'{', open + 1) >= 0 || !sheetStringsReadable(QStringView(text).mid(at, close - at))) {
             break;
         }
         const QString declarations = text.mid(open + 1, close - open - 1);
@@ -282,6 +346,51 @@ QString sheetDeclarations(const QString& sheet, const QStringList& classNames, c
         declarations << block;
     }
     return declarations.join(u';');
+}
+
+// The text a sheet's declarations give a qproperty, as QStyleSheetStyle::setProperties() reads one: its
+// last declaration, and the first term of that
+std::optional<QString> sheetStringProperty(const QString& declarations, const QStringView property)
+{
+    std::optional<QString> found;
+    for (qsizetype at = 0; at < declarations.size();) {
+        const qsizetype semicolon = indexOutsideQuotes(declarations, u';', at);
+        const qsizetype end = semicolon < 0 ? declarations.size() : semicolon;
+        const QStringView declaration = QStringView(declarations).mid(at, end - at);
+        at = end + 1;
+        const qsizetype colon = declaration.indexOf(u':');
+        if (colon < 0) {
+            continue;
+        }
+        const QStringView name = declaration.left(colon).trimmed();
+        const QStringView value = declaration.mid(colon + 1).trimmed();
+        if (value.isEmpty() || !name.startsWith(u"qproperty-", Qt::CaseInsensitive) || name.mid(10) != property) {
+            continue;
+        }
+        QString text;
+        const QChar quote = value.front();
+        if (quote == u'"' || quote == u'\'') {
+            for (qsizetype i = 1; i < value.size() && value.at(i) != quote; ++i) {
+                if (value.at(i) == u'\\' && i + 1 < value.size()) {
+                    const auto taken = sheetEscape(value, i + 1, &text);
+                    if (!taken) {
+                        return std::nullopt;
+                    }
+                    i += *taken;
+                    continue;
+                }
+                text.append(value.at(i));
+            }
+        } else {
+            qsizetype length = 0;
+            while (length < value.size() && !value.at(length).isSpace()) {
+                ++length;
+            }
+            text = value.left(length).toString();
+        }
+        found = text;
+    }
+    return found;
 }
 
 // A box length as QCss::ValueExtractor reads one: px, em, ex or a bare number, and any other unit as 0
@@ -1200,6 +1309,11 @@ void TNullConsoleFrontend::restyleLabel(Label& label, const QString& sheet)
         label.limits = {geometry.minimum, geometry.maximum};
         label.styled = true;
         polishLabel(label);
+        // Qt writes it through QLabel::setText() as it polishes, from the rules that name no state; unlike
+        // TLabel::setText(), that leaves a label already holding the text, and the movie it plays, alone
+        if (const auto text = sheetStringProperty(sheetDeclarations(sheet, classNames, objectName, {}), u"text"); text && *text != label.pModel->mText) {
+            showLabelText(label, *text);
+        }
         setLabelSize(label, label.limits.bounded(model.mGeometry.size()));
     }
     if (label.textLabel && model.mFont != before) {
@@ -1588,7 +1702,7 @@ bool TNullConsoleFrontend::openUserWindow(const QString& name, const bool loadLa
         addSubConsole(name, TWindowRegistry::SubConsoleKind::UserWindow, QString());
         registry.registerDockWidget(name);
         registry.setUserWindowTitle(name, name);
-        registry.setUserWindowStyleSheet(name, mpHost->mProfileStyleSheet);
+        applyUserWindowSheet(name, mpHost->mProfileStyleSheet);
         // There is no layout to dock it into, so it takes the main window's size
         const QSize size = mpHost->mainWindowSize().value_or(QSize());
         registry.setSubConsoleGeometry(name, QRect(QPoint(0, 0), size));
@@ -1647,7 +1761,9 @@ void TNullConsoleFrontend::setProfileStyleSheet(const QString& styleSheet)
     // As TMainConsole::setProfileStyleSheet() restyles every dock, a closed one too. The registry
     // ignores a name with no dock, so mini consoles and buffers keep theirs.
     for (const auto& [name, subConsole] : mSubConsoles) {
-        registry.setUserWindowStyleSheet(name, styleSheet);
+        if (registry.hasDockWidget(name)) {
+            applyUserWindowSheet(name, styleSheet);
+        }
     }
 }
 
@@ -3592,8 +3708,21 @@ std::pair<bool, QString> TNullConsoleFrontend::setUserWindowStyleSheet(const QSt
     if (!mSubConsoles.count(name) || !registry.hasDockWidget(name)) {
         return {false, qsl("userwindow name '%1' not found").arg(name)};
     }
-    registry.setUserWindowStyleSheet(name, userWindowStyleSheet);
+    applyUserWindowSheet(name, userWindowStyleSheet);
     return {true, QString()};
+}
+
+// What a sheet on the dock changes that scripts read back, with no widget for Qt to polish
+void TNullConsoleFrontend::applyUserWindowSheet(const QString& name, const QString& sheet)
+{
+    mpHost->windowRegistry().setUserWindowStyleSheet(name, sheet);
+    static const QStringList dockClasses{qsl("TDockWidget"), qsl("QDockWidget"), qsl("QWidget"), qsl("QObject")};
+    const QString objectName = qsl("dockWindow_%1_%2").arg(mpHost->getName(), name);
+    // As TDockWidget::event() takes the title a qproperty-windowTitle gives the dock
+    if (const auto title = sheetStringProperty(sheetDeclarations(sheet, dockClasses, objectName, {}), u"windowTitle")) {
+        mWindowNotifier.note();
+        mpHost->windowRegistry().setUserWindowTitle(name, *title);
+    }
 }
 
 std::pair<bool, QString> TNullConsoleFrontend::setUserWindowTitle(const QString& name, const QString& text)

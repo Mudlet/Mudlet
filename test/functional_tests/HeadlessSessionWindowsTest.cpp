@@ -462,6 +462,12 @@ setLabelStyleSheet("lbl", "color: red;")
         changes.clear();
         QVERIFY(!session.labelContent(qsl("lbl"))->moviePaused);
         QCOMPARE(session.labelContent(qsl("lbl"))->movieFrame, -1);
+        // A style sheet's empty text is what QLabel::setMovie() left, so QLabel::setText() keeps the movie playing
+        QVERIFY(session.runLua(qsl(R"(setLabelStyleSheet("lbl", 'qproperty-text: "";'))")));
+        QCOMPARE(session.labelContent(qsl("lbl"))->movie, movie);
+        QVERIFY(!session.labelContent(qsl("lbl"))->moviePaused);
+        QVERIFY(session.runLua(qsl(R"(setLabelStyleSheet("lbl", ""))")));
+        changes.clear();
 
         // One that does not loop stops by itself on its last frame, and that is told too
         const QString once = imageDir.filePath(qsl("once.gif"));
