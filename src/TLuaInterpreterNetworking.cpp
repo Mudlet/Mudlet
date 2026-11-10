@@ -365,12 +365,13 @@ int TLuaInterpreter::sendGMCP(lua_State* L)
         return lua_error(L);
     }
 
-    // GMCP is UTF-8 whatever the game's own encoding, as incoming GMCP is read
-    const std::string msg = cTelnet::escapeIac(lua_tostring(L, 1));
+    // GMCP is UTF-8 whatever the game's own encoding, so it skips encodeAndCookBytes();
+    // the round trip still turns invalid UTF-8 into U+FFFD, as UTF-8 profiles always did
+    const std::string msg = cTelnet::escapeIac(QString::fromUtf8(lua_tostring(L, 1)).toStdString());
 
     std::string what;
     if (hasWhat) {
-        what = cTelnet::escapeIac(lua_tostring(L, 2));
+        what = cTelnet::escapeIac(QString::fromUtf8(lua_tostring(L, 2)).toStdString());
     }
 
     std::string output;

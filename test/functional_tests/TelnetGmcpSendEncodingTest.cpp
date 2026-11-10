@@ -183,10 +183,10 @@ private slots:
         QCOMPARE(payload, QByteArray(R"(Comm.Say {"text": "你好"})"));
     }
 
-    void test_iacInTheMessageIsStillDoubled()
+    void test_invalidUtf8StillBecomesAReplacementCharacter()
     {
-        const QByteArray payload = sentGmcpPayload(qsl(R"(sendGMCP("Test.Iac \255"))"));
-        QCOMPARE(payload, QByteArray("Test.Iac \xff", 10));
+        const QByteArray payload = sentGmcpPayload(qsl(R"(sendGMCP("Test.Raw \255", "\255"))"));
+        QCOMPARE(payload, QByteArray("Test.Raw \xEF\xBF\xBD \xEF\xBF\xBD"));
     }
 };
 

@@ -1281,6 +1281,24 @@ private slots:
         QVERIFY2(!consoleContains(host, qsl("signed in automatically next time")), "a silent rotation must not be announced as a new opt-in");
     }
 
+    void testReconnectAccountStaysUtf8OnALatin1Game()
+    {
+        Host* host = connectAndNegotiate(true);
+        QVERIFY(host);
+        QVERIFY(host->mTelnet.setEncoding(QByteArrayLiteral("ISO 8859-1"), false).first);
+        host->setLogin(QString());
+        host->setPass(QString());
+        const QString tokenJson = qsl("{\"account\": \"joão€\", \"token\": \"saved-token\"}");
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect"), tokenJson));
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"password-credentials\"]}"));
+
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Reconnect"), sent), "client did not replay the saved token");
+        QCOMPARE(sent.value(qsl("account")).toString(), qsl("joão€"));
+    }
+
     void testSavedTokenIsReplayedWhenOauthIsNotAdvertised()
     {
         // The standard verifies a reconnect token ahead of the advertised methods rather than as one
