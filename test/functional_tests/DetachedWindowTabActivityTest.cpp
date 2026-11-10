@@ -277,23 +277,23 @@ private slots:
         mudlet::self()->slot_tabDetachRequested(mudlet::self()->mpTabBar->tabIndex(mClosingHostname), QPoint(300, 300));
         TDetachedWindow* pWindow = mudlet::self()->getDetachedWindows().value(mClosingHostname);
         QVERIFY(pWindow);
-        QVERIFY2(pWindow->windowTitle().contains(qsl("Connected to")), qPrintable(pWindow->windowTitle()));
+        QVERIFY2(pWindow->windowTitle().endsWith(QCoreApplication::translate("TDetachedWindow", "Connected to %1").arg(pHost->getUrl())), qPrintable(pWindow->windowTitle()));
 
         QSignalSpy disconnectionSpy(&pHost->mTelnet, &cTelnet::signal_disconnected);
         pHost->mTelnet.disconnectIt();
         QVERIFY(!disconnectionSpy.isEmpty() || disconnectionSpy.wait(2000));
 
-        QVERIFY2(pWindow->windowTitle().endsWith(qsl("Disconnected")), qPrintable(pWindow->windowTitle()));
+        QVERIFY2(pWindow->windowTitle().endsWith(QCoreApplication::translate("TDetachedWindow", "Disconnected")), qPrintable(pWindow->windowTitle()));
 
         QSignalSpy connectingSpy(&pHost->mTelnet, &cTelnet::signal_connecting);
         pHost->mTelnet.connectIt(mLocalhost, mPort.toInt());
         QVERIFY(!connectingSpy.isEmpty() || connectingSpy.wait(2000));
-        QVERIFY2(pWindow->windowTitle().endsWith(qsl("Connecting...")), qPrintable(pWindow->windowTitle()));
+        QVERIFY2(pWindow->windowTitle().endsWith(QCoreApplication::translate("TDetachedWindow", "Connecting...")), qPrintable(pWindow->windowTitle()));
 
         QSignalSpy calledOffSpy(&pHost->mTelnet, &cTelnet::signal_connectingCalledOff);
         pHost->mTelnet.disconnectIt();
         QVERIFY2(!calledOffSpy.isEmpty(), "disconnecting during the host lookup did not call the connection off");
-        QVERIFY2(pWindow->windowTitle().endsWith(qsl("Disconnected")), qPrintable(pWindow->windowTitle()));
+        QVERIFY2(pWindow->windowTitle().endsWith(QCoreApplication::translate("TDetachedWindow", "Disconnected")), qPrintable(pWindow->windowTitle()));
     }
 
     // The main window's marks now come from the same two functions as a detached
