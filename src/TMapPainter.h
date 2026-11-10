@@ -348,6 +348,8 @@ private:
     QCache<QString, QPixmap> mSymbolPixmapCache;
     // The round-room setting the symbol pixmaps were drawn for
     bool mCachedBubbleMode = false;
+    // The device pixel ratio of what the symbol pixmaps were drawn for
+    qreal mSymbolPixmapDevicePixelRatio = 1.0;
     ushort mSymbolFontSize = 1;
     QFont mMapSymbolFont;
 
