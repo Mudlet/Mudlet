@@ -2325,8 +2325,10 @@ void TTextEdit::stopDragScroll()
 void TTextEdit::mousePressEvent(QMouseEvent* event)
 {
     // A drag in either pane whose release went elsewhere would take this press for its button still held
-    mpConsole->mUpperPane->stopDragScroll();
-    mpConsole->mLowerPane->stopDragScroll();
+    if (event->button() == Qt::LeftButton) {
+        mpConsole->mUpperPane->stopDragScroll();
+        mpConsole->mLowerPane->stopDragScroll();
+    }
     //new event to get mouse position on the parent window
     auto eventPos = event->position().toPoint();
     auto eventGlobalPos = event->globalPosition().toPoint();

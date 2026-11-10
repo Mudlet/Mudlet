@@ -549,6 +549,27 @@ private slots:
         QCOMPARE(topAfterHold, topAfterMove);
     }
 
+    void test_otherButtonPressDuringADragKeepsItScrolling()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "No upper pane available");
+
+        const QPoint middle = pane->rect().center();
+        const int topBefore = pane->imageTopLine();
+        QTest::mousePress(pane, Qt::LeftButton, Qt::NoModifier, middle);
+        QTest::mouseMove(pane, QPoint(middle.x(), middle.y() - 20));
+        QTest::mousePress(pane, Qt::BackButton, Qt::NoModifier, QPoint(middle.x(), middle.y() - 20));
+        QTest::mouseRelease(pane, Qt::BackButton, Qt::NoModifier, QPoint(middle.x(), middle.y() - 20));
+        QTest::mouseMove(pane, QPoint(middle.x(), 2));
+        const bool kept = QTest::qWaitFor(
+                [&] {
+                    return pane->imageTopLine() < topBefore - 6;
+                },
+                1000);
+        QTest::mouseRelease(pane, Qt::LeftButton, Qt::NoModifier, QPoint(middle.x(), 2));
+        QVERIFY2(kept, "Pressing another button ended the drag's edge scrolling");
+    }
+
     void test_holdAtTheLowerPaneTopEdgeDoesNotKeepScrollingTheUpperPane()
     {
         TTextEdit* pane = paneShowingProse();
