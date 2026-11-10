@@ -1553,8 +1553,10 @@ function Adjustable.Container:setAbsolute(size_as_absolute, position_as_absolute
     if position_as_absolute then
         -- get_x/get_y are on screen, while x and y are taken from the parent's origin
         local originX, originY = parentFrame(self)
-        -- a negative pixel position is read from the parent's far edge, so "0%-n" keeps one before the origin there
+        -- rounded, as the subtraction can land a hair under a whole pixel that "%dpx" would then truncate;
+        -- a negative pixel position is read from the parent's far edge, so "0%-n" keeps one before the origin
         local function fromOrigin(offset)
+            offset = math.floor(offset + 0.5)
             return offset < 0 and string.format("0%%%d", offset) or offset
         end
         self.x, self.y = fromOrigin(self.get_x() - originX), fromOrigin(self.get_y() - originY)
