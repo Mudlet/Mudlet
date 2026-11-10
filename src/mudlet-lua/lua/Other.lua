@@ -1219,12 +1219,9 @@ do
       buffer[i], buffer[i + 1], buffer[i + 2] = nil, nil, nil
       if list[key] == func then
         local success, error = pcall(func, event, ...)
-        if not success then
-          -- showHandlerError() raises on anything but a string, which would skip every handler after this one
-          if type(error) ~= "string" and type(error) ~= "number" then
-            error = "error object is a " .. type(error) .. " value"
-          end
-          showHandlerError(event, error)
+        -- the built-in showHandlerError() raises on anything but a string, which would skip every handler after this one
+        if not success and not pcall(showHandlerError, event, error) then
+          showHandlerError(event, "error object is a " .. type(error) .. " value")
         end
       end
     end
