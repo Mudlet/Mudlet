@@ -1461,6 +1461,8 @@ describe("Media playback effects with a generated sound file", function()
 
     assert.is_true(playSoundFile({name = downloadName, url = fixtureUrl() .. "/media", volume = 60, priority = 30, key = "busted-media-priority-download"}))
     assert.is_true(playSoundFile({name = longSoundFile, volume = 60, priority = 50, key = "busted-media-priority-local"}))
+    -- Still playing, it would outrank the download when it lands whether or not the stop reached it
+    assert.is_true(stopSounds({key = "busted-media-priority-local"}))
     waitForCount("sysDownloadDone", done, 1)
     waitForEvent("sysMediaStarted", quietMilliseconds)
 
