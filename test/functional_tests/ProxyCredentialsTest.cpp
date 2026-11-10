@@ -47,6 +47,19 @@ private:
     std::unique_ptr<HostManager> mpHostManager;
     Host* mpHost = nullptr;
     const QString mHostname = qsl("ProxyCredentials-Test");
+    bool mInitialised = false;
+
+    // Where XDG_CONFIG_HOME is ignored the credential root is the real one, so the stored password and
+    // its key are removed; only once initTestCase() completed, as a skipped run wrote nothing there.
+    void removeStoredCredentials()
+    {
+        if (!mInitialised) {
+            return;
+        }
+        for (const QString& name : {MudletApp::sanitizeForPath(mHostname), mHostname}) {
+            QDir(qsl("%1/profiles/%2").arg(MudletApp::credentialFilesRoot(), name)).removeRecursively();
+        }
+    }
 
     void save()
     {
@@ -72,10 +85,13 @@ private slots:
         QVERIFY2(HostManager::self()->addHost(mHostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
         mpHost = HostManager::self()->getHost(mHostname);
         QVERIFY2(mpHost, "The profile is not in the pool.");
+        mInitialised = true;
+        removeStoredCredentials();
     }
 
     void cleanupTestCase()
     {
+        removeStoredCredentials();
         mpHost = nullptr;
         mpHostManager.reset();
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
