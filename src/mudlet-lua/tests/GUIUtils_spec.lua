@@ -359,7 +359,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.equals("\27[38:5:1m\27[48:5:4mtext", cecho2ansi("<red,blue>text"))
     end)
 
-    it("should only take ctable numbers and names in the fg:bg form", function()
+    it("should take ctable numbers and names, unlike cecho, but not with a comma", function()
       assert.equals("\27[38:5:3m\27[48:5:4mx", cecho2ansi("<3:4>x"))
       assert.equals("\27[38:5:9m\27[48:5:4mx", cecho2ansi("<light_red:blue>x"))
       assert.equals("\27[48:5:4mx", cecho2ansi("<light_red,blue>x"))

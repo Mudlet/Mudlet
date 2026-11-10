@@ -1990,16 +1990,17 @@ local function colorCodeToAnsi(name, layer, namesOnly)
 end
 
 local colorCapturePattern = _Echos.Patterns.Color[2]
--- converts the inside of a cecho tag to ansi escape sequences, or returns "" when cecho would print the tag as text
+-- converts the inside of a cecho tag to ansi escape sequences, or returns nil when it names no colour
 local function colorToAnsi(tag)
   -- as in cecho, a style or reset code only counts as the whole tag
   if resets[tag] then
     return resets[tag]
   end
   local fore, back = colorCapturePattern:match("<" .. tag .. ">")
-  -- ctable's numbers and extra names are only taken in the fg:bg form; cecho reads <3,4> as text
+  -- unlike cecho, <124> and <light_red:blue> take ctable's numbers and extra names; the comma form keeps to cecho's names
   local namesOnly = tag:find(",", 1, true) ~= nil
-  return colorCodeToAnsi(fore, 38, namesOnly) .. colorCodeToAnsi(back, 48, namesOnly)
+  local ansi = colorCodeToAnsi(fore, 38, namesOnly) .. colorCodeToAnsi(back, 48, namesOnly)
+  return ansi ~= "" and ansi or nil
 end
 
 local decimalCapturePattern = _Echos.Patterns.Decimal[2]
@@ -2053,9 +2054,7 @@ function cecho2ansi(text)
     parts[n] = str
     if color then
       n = n + 1
-      -- a tag that names no colour stays as text, as cecho prints it
-      local ansi = colorToAnsi(color:match("<(.+)>"))
-      parts[n] = ansi ~= "" and ansi or color
+      parts[n] = colorToAnsi(color:match("<(.+)>")) or color
     end
   end
   return table.concat(parts, "", 1, n)
