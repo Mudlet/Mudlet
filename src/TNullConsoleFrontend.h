@@ -567,6 +567,8 @@ private:
         Qt::DockWidgetArea dockArea = Qt::RightDockWidgetArea;
         bool floating = false;
         qint64 deactivated = 0;
+        // A user window's font from before its sheet gave its text one, which clearing the sheet hands back
+        std::optional<QFont> fontBeforeSheet;
     };
     // As TConsole::mpCommandLine tells a console's own command line from another of its name
     static bool ownsLine(const SubConsole& console, const PlainWindow& commandLine) { return commandLine.writer && commandLine.writer == console.ownLine; }
@@ -689,6 +691,8 @@ private:
     std::optional<QFont> consoleFont(const QString& name) const;
     void setSubConsoleFont(const QString& name, const QFont& font);
     void applyUserWindowSheet(const QString& name, const QString& sheet);
+    void applyUserWindowSheetFont(const QString& name, const QString& sheet);
+    QFont subConsoleOwnFont(const QString& name, const TConsoleModel& model) const;
     void reportDisplayFontChange(const QFont& before);
     void raiseFontEvent(const QString& eventName, const QString& subject, const QFont& font);
     void reportGridSize(const QString& name);

@@ -3722,6 +3722,29 @@ void TNullConsoleFrontend::applyUserWindowSheet(const QString& name, const QStri
         mWindowNotifier.note();
         mpHost->windowRegistry().setUserWindowTitle(name, *title);
     }
+    applyUserWindowSheetFont(name, sheet);
+}
+
+void TNullConsoleFrontend::applyUserWindowSheetFont(const QString& name, const QString& sheet)
+{
+    const auto console = mSubConsoles.find(name);
+    if (console == mSubConsoles.end()) {
+        return;
+    }
+    // As TTextEdit::changeEvent() takes the font a sheet gives the window's text for the console's, with no
+    // sysFontChangeEvent; clearing it hands back the font from before, as for a label
+    static const QStringList paneClasses{qsl("TTextEdit"), qsl("QWidget"), qsl("QObject")};
+    const std::optional<QFont> sheetFont = styleSheetFont(sheetDeclarations(sheet, paneClasses, QString(), {qsl("enabled"), qsl("active")}));
+    TConsoleModel& model = *console->second.pModel;
+    QFont font = console->second.fontBeforeSheet.value_or(model.mUpperPaneFont);
+    console->second.fontBeforeSheet = sheetFont ? std::optional<QFont>(font) : std::nullopt;
+    uint mask = font.resolveMask();
+    applySheetFont(font, mask, sheetFont);
+    if (font != model.mUpperPaneFont) {
+        mWindowNotifier.note();
+        model.mUpperPaneFont = font;
+        reportGridSize(name);
+    }
 }
 
 std::pair<bool, QString> TNullConsoleFrontend::setUserWindowTitle(const QString& name, const QString& text)
@@ -3917,6 +3940,16 @@ std::optional<int> TNullConsoleFrontend::consoleColumnWidth(const QString& name)
     return {QFontMetrics(*font).averageCharWidth()};
 }
 
+// The font scripts gave it, which a sheet's font lies over as the widget's does over TConsole's own
+QFont TNullConsoleFrontend::subConsoleOwnFont(const QString& name, const TConsoleModel& model) const
+{
+    const auto console = mSubConsoles.find(name);
+    if (console == mSubConsoles.end()) {
+        return model.mUpperPaneFont;
+    }
+    return console->second.fontBeforeSheet.value_or(model.mUpperPaneFont);
+}
+
 // As TConsole::setFont() changes a sub-console's, and tells scripts of it
 void TNullConsoleFrontend::setSubConsoleFont(const QString& name, const QFont& font)
 {
@@ -3926,6 +3959,11 @@ void TNullConsoleFrontend::setSubConsoleFont(const QString& name, const QFont& f
         return;
     }
     pModel->mUpperPaneFont = font;
+    // A sheet's font stays over the one a script then sets
+    if (const auto console = mSubConsoles.find(name); console != mSubConsoles.end() && console->second.fontBeforeSheet) {
+        console->second.fontBeforeSheet = font;
+        applyUserWindowSheetFont(name, mpHost->windowRegistry().userWindowStyleSheet(name).value_or(QString()));
+    }
     reportGridSize(name);
     if (mpHost->windowRegistry().subConsoleKind(name) == TWindowRegistry::SubConsoleKind::Buffer) {
         return;
@@ -3976,11 +4014,12 @@ std::optional<std::pair<bool, QString>> TNullConsoleFrontend::setWindowFontFamil
     if (!pModel) {
         return {};
     }
-    QFont font = mpHost->createFontWithSettings(family, pModel->mUpperPaneFont.pointSize());
+    const QFont ownFont = subConsoleOwnFont(name, *pModel);
+    QFont font = mpHost->createFontWithSettings(family, ownFont.pointSize());
     if (weight != QFont::Normal) {
         font.setWeight(weight);
     }
-    if (TFontAttributes(font) != TFontAttributes(pModel->mUpperPaneFont)) {
+    if (TFontAttributes(font) != TFontAttributes(ownFont)) {
         setSubConsoleFont(name, font);
     }
     return {{true, QString()}};
@@ -3998,8 +4037,8 @@ bool TNullConsoleFrontend::setWindowFontSize(const QString& name, const int size
     if (!pModel) {
         return false;
     }
-    if (pModel->mUpperPaneFont.pointSize() != size) {
-        TFontAttributes font(pModel->mUpperPaneFont);
+    if (const QFont ownFont = subConsoleOwnFont(name, *pModel); ownFont.pointSize() != size) {
+        TFontAttributes font(ownFont);
         font.mPointSize = size;
         setSubConsoleFont(name, font.makeFont());
     }
