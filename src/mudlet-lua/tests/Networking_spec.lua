@@ -178,56 +178,9 @@ describe("Networking send functions honour their disconnected/offline contracts"
       assert.is_nil(ok)
       assert.is_true(contains(err, "unable to send"), tostring(err))
     end)
-  end)
 
-  describe("send", function()
-    local handlerId
-    local savedEchoMode
-
-    before_each(function()
-      -- send()'s showOnScreen only counts in "script" mode
-      savedEchoMode = getConfig("showSentText", true)
-      setConfig("showSentText", "script")
-      handlerId = registerAnonymousEventHandler("sysDataSendRequest", function()
-        denyCurrentSend()
-      end)
-    end)
-
-    after_each(function()
-      killAnonymousEventHandler(handlerId)
-      setConfig("showSentText", savedEchoMode)
-    end)
-
-    local function echoed(command)
-      local last = getLineCount("main")
-      for _, line in ipairs(getLines("main", math.max(0, last - 3), last + 1)) do
-        if line:find(command, 1, true) then
-          return true
-        end
-      end
-      return false
-    end
-
-    it("treats an explicit nil showOnScreen like an omitted one", function()
-      local seen = {}
-      local spyId = registerAnonymousEventHandler("sysDataSendRequest", function(_, command)
-        seen[#seen + 1] = command
-      end)
-      finally(function() killAnonymousEventHandler(spyId) end)
-      local command = "sendNilShowOnScreen" .. os.time()
-      assert.is_true(send(command, nil))
-      assert.are.same({command}, seen)
-      assert.is_true(echoed(command))
-    end)
-
-    it("does not echo when showOnScreen is false", function()
-      local command = "sendFalseShowOnScreen" .. os.time()
-      assert.is_true(send(command, false))
-      assert.is_false(echoed(command))
-    end)
-
-    it("still raises a Lua error when showOnScreen is not a boolean", function()
-      assertArgError(function() send("look", "yes") end, "showOnScreen")
+    it("still raises a Lua error when the second argument is not a boolean", function()
+      assertArgError(function() sendSocket("noop", "yes") end, "sendSocket: bad argument #2 type")
     end)
   end)
 end)

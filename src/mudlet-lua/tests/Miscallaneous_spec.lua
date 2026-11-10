@@ -2854,6 +2854,11 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         mark = getLastLineNumber("main")
         assert.is_true(send("mudletSpecDefaultCommand"))
         assert.is_true(contains(textFrom(mark), "mudletSpecDefaultCommand"), textFrom(mark))
+
+        -- an explicit nil must count as omitted, so wrappers can pass their own optional argument on
+        mark = getLastLineNumber("main")
+        assert.is_true(send("mudletSpecNilCommand", nil))
+        assert.is_true(contains(textFrom(mark), "mudletSpecNilCommand"), textFrom(mark))
       end)
     end)
 
