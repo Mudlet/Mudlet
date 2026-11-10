@@ -61,14 +61,14 @@ local encodings = {
 local current
 
 -- never NUL, CR, LF, '<' or '>' (feedTelnet() reads those as tag delimiters) or IAC. ICU's SHIFT_JIS
--- swaps 0x1A, 0x1C and 0x7F, as IBM's Shift-JIS does, while a run of plain bytes copied straight into
--- the line keeps them, so where a read was cut decides which a game gets; no game sends them, so they
--- are left out for a round to turn up something else.
+-- maps 0x1A to 0x1C and 0x1C to 0x7F, as IBM's Shift-JIS does, but plain bytes after decoded text in
+-- the same read are copied straight into the line, so a cut read changes which a game gets; no game
+-- sends them, so they are left out for a round to turn up something else.
 local function safe(byte)
   if byte == 0 or byte == 10 or byte == 13 or byte == 0x3C or byte == 0x3E or byte == 0xFF then
     return 0x20
   end
-  if current == "SHIFT_JIS" and (byte == 0x1A or byte == 0x1C or byte == 0x7F) then
+  if current == "SHIFT_JIS" and (byte == 0x1A or byte == 0x1C) then
     return 0x20
   end
   return byte

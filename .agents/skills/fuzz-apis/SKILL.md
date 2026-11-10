@@ -88,8 +88,9 @@ at the edge of the int range - known, and as reachable through `setRoomCoordinat
 so expect those reports from a UBSan run until it is fixed. By 2026-11
 `LegacyEncodingFuzz_spec.lua` had fed ~12k batches through the multibyte decoders (ASan
 and UBSan, seeds 2-5) with whole and split reads decoding alike, once SHIFT_JIS was kept
-off 0x1A, 0x1C and 0x7F: ICU swaps those controls, the bulk copy of plain bytes does not,
-so they come out differently depending on where a read was cut.
+off 0x1A and 0x1C: ICU remaps those controls, but plain bytes after decoded text in the
+same read are copied unchanged, so they come out differently depending on where a read
+was cut.
 
 ## Sanitizer gotchas
 
