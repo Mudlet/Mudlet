@@ -73,6 +73,16 @@ describe("Tests the deleteOldProfiles package", function()
     assert.is_false(exists("profiles", "2020-03-21#12-00-00.xml.AbCdEf"), "a leftover temporary file is not a save, so it should not stand in for the newest one")
   end)
 
+  it("does not let a leftover keep its month's spot when the newest save is the month's only one", function()
+    makeFile("profiles", "2020-03-20#12-00-00.xml", 20)
+    makeFile("profiles", "2020-03-21#12-00-00.xml.AbCdEf", 21)
+
+    deleteOld("profiles")
+
+    assert.is_true(exists("profiles", "2020-03-20#12-00-00.xml"), "the newest save should be kept")
+    assert.is_false(exists("profiles", "2020-03-21#12-00-00.xml.AbCdEf"), "the newest save is its month's kept file, so the leftover should go")
+  end)
+
   it("keeps the newest maps, of either format and any letter case, but not a newer leftover", function()
     makeFile("maps", "2020-03-01#12-00-00map.dat", 1)
     makeFile("maps", "2020-03-10#12-00-00map.dat", 10)
