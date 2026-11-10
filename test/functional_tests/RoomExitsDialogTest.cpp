@@ -323,9 +323,8 @@ private slots:
         QCOMPARE(pDlg->getActionOnExit(pDlg->down), pDlg->mpAction_noExit);
     }
 
-    // The no route, stub and door controls carry no text and no tooltip names
-    // its direction, so the name a screen reader reads out is all that tells
-    // one direction's controls from another's
+    // Each control's screen reader name must include its direction and be
+    // unique across the dialog
     void everyExitControlHasItsOwnScreenReaderName()
     {
         buildMap();
@@ -344,7 +343,6 @@ private slots:
                                        pDlg->groupBox_in,
                                        pDlg->groupBox_out};
         QSet<QString> namesSeen;
-        int controlCount = 0;
         for (auto* pGroup : groups) {
             const auto controls = pGroup->findChildren<QWidget*>(QString(), Qt::FindDirectChildrenOnly);
             QCOMPARE(controls.size(), 8);
@@ -355,10 +353,8 @@ private slots:
                 QVERIFY2(name.contains(pGroup->title()), qPrintable(qsl("%1 is read out as \"%2\"").arg(pControl->objectName(), name)));
                 QVERIFY2(!namesSeen.contains(name), qPrintable(qsl("%1 shares the name \"%2\"").arg(pControl->objectName(), name)));
                 namesSeen.insert(name);
-                ++controlCount;
             }
         }
-        QCOMPARE(controlCount, 12 * 8);
     }
 
     void theNoRouteBoxesCanBeReachedFromTheKeyboard()

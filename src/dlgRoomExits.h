@@ -194,7 +194,6 @@ private slots:
 private:
     static QString generateToolTip(const QString& exitRoomName, const QString& exitAreaName, const bool exitRoomLocked, const bool outOfAreaExit, const int exitRoomWeight);
     void init();
-    void nameExitControlsForScreenReaders();
     void initExit(int direction, int exitId, QLineEdit* exitLineEdit,
                   QCheckBox* noRoute, QCheckBox* stub,
                   QRadioButton* none, QRadioButton* open, QRadioButton* closed, QRadioButton* locked,
