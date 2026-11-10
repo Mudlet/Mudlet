@@ -82,7 +82,7 @@ private slots:
 
         deleteProfileDirectory(mFirstHostname);
         deleteProfileDirectory(mSecondHostname);
-        // Two of them: slot_tabDetachRequested() refuses index 0
+        // Two of them: detachTab() leaves the main window at least one tab
         startProfile(mFirstHostname);
         if (QTest::currentTestFailed()) {
             return;
@@ -112,13 +112,17 @@ private slots:
         }
     }
 
+    void test_leavingFullScreenKeepsTheWindowMaximized_data() { addControlRows(); }
+
     void test_leavingFullScreenKeepsTheWindowMaximized()
     {
+        QFETCH(QString, actionName);
         TDetachedWindow* pWindow = detachProfile(mSecondHostname);
         QVERIFY(pWindow);
-        QAction* pToggle = action(pWindow, qsl("fullscreen_action"));
+        QAction* pToggle = action(pWindow, actionName);
         QVERIFY(pToggle);
         pWindow->setWindowState(Qt::WindowMaximized);
+        QVERIFY(pWindow->windowState() & Qt::WindowMaximized);
 
         pToggle->trigger();
         QVERIFY(pWindow->windowState() & Qt::WindowFullScreen);
@@ -128,12 +132,7 @@ private slots:
         QVERIFY2(pWindow->windowState() & Qt::WindowMaximized, "leaving full screen un-maximized the window");
     }
 
-    void test_bothControlsShowTheStateEitherSet_data()
-    {
-        QTest::addColumn<QString>("actionName");
-        QTest::newRow("Window menu") << qsl("menuFullScreen");
-        QTest::newRow("toolbar") << qsl("fullscreen_action");
-    }
+    void test_bothControlsShowTheStateEitherSet_data() { addControlRows(); }
 
     void test_bothControlsShowTheStateEitherSet()
     {
@@ -142,40 +141,55 @@ private slots:
         QVERIFY(pWindow);
         QAction* pToggle = action(pWindow, actionName);
         QVERIFY(pToggle);
+        QAction* pMenu = action(pWindow, qsl("menuFullScreen"));
+        QAction* pButton = action(pWindow, qsl("fullscreen_action"));
+        QVERIFY(pMenu);
+        QVERIFY(pButton);
 
         pToggle->trigger();
         QVERIFY(pWindow->isFullScreen());
-        QVERIFY(action(pWindow, qsl("menuFullScreen"))->isChecked());
-        QVERIFY(action(pWindow, qsl("fullscreen_action"))->isChecked());
+        QVERIFY(pMenu->isChecked());
+        QVERIFY(pButton->isChecked());
 
         pToggle->trigger();
         QVERIFY(!pWindow->isFullScreen());
-        QVERIFY(!action(pWindow, qsl("menuFullScreen"))->isChecked());
-        QVERIFY(!action(pWindow, qsl("fullscreen_action"))->isChecked());
+        QVERIFY(!pMenu->isChecked());
+        QVERIFY(!pButton->isChecked());
     }
 
     void test_checkmarksFollowAStateChangeMadeOutsideMudlet()
     {
         TDetachedWindow* pWindow = detachProfile(mSecondHostname);
         QVERIFY(pWindow);
+        QAction* pMenu = action(pWindow, qsl("menuFullScreen"));
+        QAction* pButton = action(pWindow, qsl("fullscreen_action"));
+        QVERIFY(pMenu);
+        QVERIFY(pButton);
 
         pWindow->setWindowState(Qt::WindowFullScreen);
-        QVERIFY(action(pWindow, qsl("menuFullScreen"))->isChecked());
-        QVERIFY(action(pWindow, qsl("fullscreen_action"))->isChecked());
+        QVERIFY(pMenu->isChecked());
+        QVERIFY(pButton->isChecked());
 
         pWindow->setWindowState(Qt::WindowNoState);
-        QVERIFY(!action(pWindow, qsl("menuFullScreen"))->isChecked());
-        QVERIFY(!action(pWindow, qsl("fullscreen_action"))->isChecked());
+        QVERIFY(!pMenu->isChecked());
+        QVERIFY(!pButton->isChecked());
     }
 
 private:
+    static void addControlRows()
+    {
+        QTest::addColumn<QString>("actionName");
+        QTest::newRow("Window menu") << qsl("menuFullScreen");
+        QTest::newRow("toolbar") << qsl("fullscreen_action");
+    }
+
     static QAction* action(TDetachedWindow* pWindow, const QString& name) { return pWindow ? pWindow->findChild<QAction*>(name) : nullptr; }
 
     TDetachedWindow* detachProfile(const QString& profileName)
     {
         const int tabIndex = mudlet::self()->mpTabBar->tabIndex(profileName);
-        if (tabIndex < 1) {
-            QTest::qFail(qPrintable(qsl("'%1' is at tab %2, which slot_tabDetachRequested() will not detach").arg(profileName).arg(tabIndex)), __FILE__, __LINE__);
+        if (tabIndex < 0) {
+            QTest::qFail(qPrintable(qsl("'%1' has no tab in the main window").arg(profileName)), __FILE__, __LINE__);
             return nullptr;
         }
         mudlet::self()->slot_tabDetachRequested(tabIndex, QPoint(200, 200));
