@@ -98,6 +98,7 @@ private:
     int mOtherAreaId = 0;
     bool mNamePromptSeen = false;
     QString mLastWarningText;
+    bool mDeletePromptSeen = false;
     const QString mProfileName = qsl("MapMouseInteraction-Test");
     const QString mLocalhost = qsl("localhost");
     QString mPort;
@@ -678,24 +679,46 @@ private:
     }
 
     // Presses Delete and answers the confirmation that deleting an area with
-    // rooms puts up. Reports whether there was one to answer.
-    bool pressDeleteAndAnswer(const QMessageBox::StandardButton answer, T2DMap* p2dMap = nullptr)
+    // rooms puts up. A script given here runs
+    // while it is up, just before it is answered. A box that follows is
+    // dismissed with its text kept in mLastWarningText. Reports whether there
+    // was a confirmation to answer.
+    bool pressDeleteAndAnswer(const QMessageBox::StandardButton answer, T2DMap* p2dMap = nullptr, const QString& scriptWhileUp = QString())
     {
         QPushButton* pButton = configureAreasButton(qsl("Delete"), p2dMap);
         if (!pButton || !pButton->isEnabled()) {
             return false;
         }
-        answerNextModalDialog([answer](QWidget* pDialog) {
+        mDeletePromptSeen = false;
+        mLastWarningText.clear();
+        answerNextModalDialog([this, answer, scriptWhileUp](QWidget* pDialog) {
             auto* pBox = qobject_cast<QMessageBox*>(pDialog);
-            if (!pBox || !pBox->button(answer)) {
+            if (!pBox) {
                 return false;
             }
-            pBox->button(answer)->click();
+            if (!mDeletePromptSeen && pBox->button(QMessageBox::Yes) && pBox->button(QMessageBox::Cancel)) {
+                mDeletePromptSeen = true;
+                if (!scriptWhileUp.isEmpty()) {
+                    runLua(scriptWhileUp);
+                }
+                pBox->button(answer)->click();
+                return false;
+            }
+            mLastWarningText = pBox->text();
+            pBox->accept();
             return true;
         });
         pButton->click();
+        // A notice that follows is opened without blocking, so it is answered after the click returns
+        if (mDeletePromptSeen && answer == QMessageBox::Yes) {
+            QTest::qWaitFor(
+                    [this]() {
+                        return mModalDialogAnswered;
+                    },
+                    300);
+        }
         stopAnsweringModalDialogs();
-        return mModalDialogAnswered;
+        return mDeletePromptSeen;
     }
 
     // Presses Rename or Create and types the name into the prompt it puts up;
@@ -4197,34 +4220,57 @@ private slots:
         QCOMPARE(configuredAreas(), (QStringList{qsl("Default Area (-1)"), mouseAreaRow(), otherAreaRow()}));
     }
 
-    // A script's timer can replace the map while the prompt waits, and the new
-    // map may reuse the area's id; Yes must not delete that one unasked
-    void test_aMapReplacedWhileTheDeletePromptIsUpKeepsItsArea()
+    // Scripts keep running while the prompt waits. A map they load may reuse
+    // the area's id, name and room count; Yes must not delete that one unasked
+    void test_aMapLoadedWhileTheDeletePromptIsUpKeepsItsArea()
+    {
+        showMapWithAnotherArea();
+        QTemporaryDir saveDir;
+        QVERIFY(saveDir.isValid());
+        const QString mapFile = saveDir.filePath(qsl("same.dat"));
+        QVERIFY(runLua(qsl("assert(saveMap([[%1]]))").arg(mapFile)));
+        const TRoomDB* pBefore = map()->mpRoomDB.get();
+        QVERIFY(openConfigureAreas());
+        QVERIFY(selectConfiguredArea(otherAreaRow()));
+
+        QVERIFY(pressDeleteAndAnswer(QMessageBox::Yes, nullptr, qsl("assert(loadMap([[%1]]))").arg(mapFile)));
+
+        QVERIFY2(map()->mpRoomDB.get() != pBefore, "loadMap did not replace the room database, so this does not test a load");
+        QVERIFY2(map()->mpRoomDB->getArea(mOtherAreaId), "the loaded map's area was deleted without being asked about");
+        QVERIFY(map()->mpRoomDB->getRoom(kOtherAreaRoomId));
+        QVERIFY(!mLastWarningText.isEmpty());
+        QCOMPARE(configuredAreas(), (QStringList{qsl("Default Area (-1)"), mouseAreaRow(), otherAreaRow()}));
+    }
+
+    // Clearing the map keeps the same room database, so only its generation shows it was replaced
+    void test_aMapClearedAndRebuiltWhileTheDeletePromptIsUpKeepsItsArea()
     {
         showMapWithAnotherArea();
         QVERIFY(openConfigureAreas());
         QVERIFY(selectConfiguredArea(otherAreaRow()));
-        QPushButton* pButton = configureAreasButton(qsl("Delete"));
-        QVERIFY(pButton && pButton->isEnabled());
-        const int otherAreaId = mOtherAreaId;
-        bool replaced = false;
-        answerNextModalDialog([this, otherAreaId, &replaced](QWidget* pDialog) {
-            auto* pBox = qobject_cast<QMessageBox*>(pDialog);
-            if (!pBox || !pBox->button(QMessageBox::Yes)) {
-                return false;
-            }
-            map()->mpRoomDB->clearMapDB();
-            replaced = map()->mpRoomDB->addArea(otherAreaId, qsl("Replacement")) && map()->addRoom(kOtherAreaRoomId) && map()->setRoomArea(kOtherAreaRoomId, otherAreaId);
-            pBox->button(QMessageBox::Yes)->click();
-            return true;
-        });
-        pButton->click();
-        stopAnsweringModalDialogs();
-        QVERIFY(mModalDialogAnswered);
-        QVERIFY(replaced);
 
-        QVERIFY2(map()->mpRoomDB->getArea(otherAreaId), "the replacement map's area was deleted without being asked about");
+        QVERIFY(pressDeleteAndAnswer(QMessageBox::Yes,
+                                     nullptr,
+                                     qsl("assert(deleteMap()); assert(setAreaName(%1, 'Replacement')); assert(addRoom(%2)); assert(setRoomArea(%2, %1))").arg(mOtherAreaId).arg(kOtherAreaRoomId)));
+
+        QVERIFY2(map()->mpRoomDB->getArea(mOtherAreaId), "the replacement map's area was deleted without being asked about");
         QVERIFY(map()->mpRoomDB->getRoom(kOtherAreaRoomId));
+        QVERIFY(!mLastWarningText.isEmpty());
+    }
+
+    // The auto-mapper can add rooms while the prompt waits; Yes agreed to delete the rooms it named, no more
+    void test_roomsMappedIntoTheAreaWhileTheDeletePromptIsUpKeepItAlive()
+    {
+        showMapWithAnotherArea();
+        QVERIFY(openConfigureAreas());
+        QVERIFY(selectConfiguredArea(otherAreaRow()));
+        const int newRoomId = kOtherAreaRoomId + 1;
+
+        QVERIFY(pressDeleteAndAnswer(QMessageBox::Yes, nullptr, qsl("assert(addRoom(%1)); assert(setRoomArea(%1, %2))").arg(newRoomId).arg(mOtherAreaId)));
+
+        QVERIFY2(map()->mpRoomDB->getArea(mOtherAreaId), "Yes deleted a room the prompt did not count");
+        QVERIFY(map()->mpRoomDB->getRoom(newRoomId));
+        QVERIFY(!mLastWarningText.isEmpty());
     }
 
     void test_deletingAnEmptyAreaDoesNotAsk()

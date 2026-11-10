@@ -2968,9 +2968,14 @@ void T2DMap::slot_configureAreas()
                 if (QMessageBox::question(dialog, title, question, QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel) != QMessageBox::Yes) {
                     return;
                 }
-                // A script may have loaded another map, perhaps reusing this id, while the question was up
-                if (!mpMap->mpRoomDB || mpMap->mpRoomDB.get() != roomDB || roomDB->mapGeneration() != mapGeneration) {
+                // Scripts keep running while the question is up: they may load another map that reuses this id, or map more rooms into the area
+                const TArea* pAreaNow = mpMap->mpRoomDB.get() == roomDB && roomDB->mapGeneration() == mapGeneration ? mpMap->mpRoomDB->getArea(areaId) : nullptr;
+                if (!pAreaNow || pAreaNow->getAreaRooms().size() != roomCount) {
                     repopulate();
+                    //: Shown when the map changed while the "Delete area" confirmation was open, so the area was not deleted
+                    auto* notice = new QMessageBox(QMessageBox::Information, title, tr("The map changed while you were deciding, so nothing was deleted."), QMessageBox::Ok, dialog);
+                    notice->setAttribute(Qt::WA_DeleteOnClose);
+                    notice->open();
                     return;
                 }
             }
