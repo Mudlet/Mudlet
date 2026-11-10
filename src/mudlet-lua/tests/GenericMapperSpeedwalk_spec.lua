@@ -70,7 +70,11 @@ describe("Tests that the generic mapper handles a walk to the room the player is
   end)
 
   it("says the player is already there when gotoRoom() is asked for the player's room", function()
-    centerview(hereRoom)
+    -- centerview() only sets the player room once a map widget has been opened
+    if not centerview(hereRoom) then
+      openMapWidget("r")
+      centerview(hereRoom)
+    end
     gotoRoom(hereRoom)
     assert.are.equal(1, #echoes)
     assert.are.equal("You are already in that room.", echoes[1].text)
@@ -83,6 +87,23 @@ describe("Tests that the generic mapper handles a walk to the room the player is
     assert.are.equal(1, #echoes)
     assert.are.equal("You are already in Speedwalk spec start.", echoes[1].text)
     assert.is_falsy(echoes[1].err)
+  end)
+
+  it("still reports no path when speedwalking to a room it cannot reach", function()
+    local isolatedRoom = makeRoom("Speedwalk spec isolated", 5)
+    map.speedwalk(isolatedRoom)
+    assert.are.equal(1, #echoes)
+    assert.are.equal("No path to chosen room found.", echoes[1].text)
+    assert.is_truthy(echoes[1].err)
+    assert.are.same({}, sent)
+  end)
+
+  it("still reports no path when asked for a path to a room it cannot reach", function()
+    makeRoom("Speedwalk spec isolated", 5)
+    map.find_path("Speedwalk spec isolated")
+    assert.are.equal(1, #echoes)
+    assert.are.equal("No path found to Speedwalk spec isolated.", echoes[1].text)
+    assert.is_truthy(echoes[1].err)
   end)
 
   it("still gives the path to another room", function()
