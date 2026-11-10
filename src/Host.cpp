@@ -4062,9 +4062,9 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         --mPackageInstallsInProgress;
     });
 
-    // Every failure below returns a reason, but default-package installs ignore it, so
-    // say it here as well. Script installs pass quiet and get the reason back as a
-    // return value, so they are left to report it themselves rather than having it
+    // Every failure below returns a reason, but not every caller shows the one it gets
+    // back, so say it here as well. Script installs pass quiet and get the reason back
+    // as a return value, so they are left to report it themselves rather than having it
     // appear unbidden.
     // Not for a module sync: it reinstalls the same archive on every save and reloadModule(),
     // so an unreadable source would repeat the message forever.
