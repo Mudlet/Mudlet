@@ -4353,7 +4353,7 @@ function map.speedwalk(roomID, walkPath, walkDirs)
     walkPath = speedWalkPath
     walkDirs = speedWalkDir
     if #speedWalkPath == 0 then
-        if roomID == map.currentRoom then
+        if tonumber(roomID) == map.currentRoom then
             map.echo("You are already in that room.")
         else
             map.echo("No path to chosen room found.",false,true)

@@ -49,9 +49,18 @@ describe("Tests that the generic mapper handles a walk to the room the player is
   end)
 
   it("says the player is already there when asked to speedwalk to the current room", function()
-    -- left over from a paused walk whose last step has since been taken
-    _G.speedWalkPath, _G.speedWalkDir = {hereRoom}, {"n"}
     map.speedwalk(hereRoom)
+    assert.are.equal(1, #echoes)
+    assert.are.equal("You are already in that room.", echoes[1].text)
+    assert.is_falsy(echoes[1].err)
+    assert.are.same({}, sent)
+  end)
+
+  it("says the player is already there when a paused walk is resumed at its goal", function()
+    -- Mudlet fills speedWalkPath with room IDs as strings
+    _G.speedWalkPath, _G.speedWalkDir = {tostring(hereRoom)}, {"n"}
+    -- what map.resumeSpeedwalk() calls
+    map.speedwalk(nil)
     assert.are.same({}, _G.speedWalkPath)
     assert.are.same({}, _G.speedWalkDir)
     assert.are.equal(1, #echoes)
