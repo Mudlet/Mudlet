@@ -409,6 +409,19 @@ private slots:
         QCOMPARE(mpIrcServer->connectionCount(), connectionsBefore + 1);
     }
 
+    // A script's chat button must bring back a window the player minimized
+    void test_openIrcRestoresAMinimizedWindow()
+    {
+        QVERIFY(storeSettings(mNick, mChannel));
+        QCOMPARE(luaValues(qsl("openIRC()")), qsl("true"));
+        QVERIFY2(mpHost->mpDlgIRC, "openIRC() did not open the IRC window");
+        mpHost->mpDlgIRC->setWindowState(Qt::WindowMaximized | Qt::WindowMinimized);
+
+        QCOMPARE(luaValues(qsl("openIRC()")), qsl("true"));
+        QVERIFY2(!mpHost->mpDlgIRC->isMinimized(), "openIRC() left the IRC window minimized");
+        QVERIFY2(mpHost->mpDlgIRC->isMaximized(), "openIRC() did not leave the window maximized as it was");
+    }
+
     // What the client is using, not what has been stored since
     void test_theGettersReadTheRunningClient()
     {
