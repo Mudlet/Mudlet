@@ -391,15 +391,16 @@ private slots:
         const int topBefore = pane->imageTopLine();
         QVERIFY2(topBefore > 20, "Too little scrollback to scroll through");
 
-        const QPointF startPos = QRectF(pane->rect()).center();
-        const QPointF edgePos(startPos.x(), 2);
-        sendMouse(pane, QEvent::MouseButtonPress, Qt::LeftButton, Qt::LeftButton, startPos);
-        sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::LeftButton, edgePos);
+        // QTest's mouse functions, unlike sendMouse(), go through the application, which the repeat asks whether the button is still held
+        const QPoint startPos = pane->rect().center();
+        const QPoint edgePos(startPos.x(), 2);
+        QTest::mousePress(pane, Qt::LeftButton, Qt::NoModifier, startPos);
+        QTest::mouseMove(pane, edgePos);
         // A single move scrolls 3 lines; only a repeat while held goes further
         QTRY_VERIFY2_WITH_TIMEOUT(pane->imageTopLine() < topBefore - 10, "Holding the pointer at the top edge did not keep scrolling", 2000);
         QVERIFY2(pane->mPA.y() < topBefore - 6, "The selection did not follow the scroll");
 
-        sendMouse(pane, QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, edgePos);
+        QTest::mouseRelease(pane, Qt::LeftButton, Qt::NoModifier, edgePos);
         QTest::qWait(150ms);
         const int topAfterRelease = pane->imageTopLine();
         QTest::qWait(300ms);
