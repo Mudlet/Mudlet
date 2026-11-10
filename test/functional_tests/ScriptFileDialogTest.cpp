@@ -75,6 +75,8 @@ private:
     // seconds so a dialog that never takes the answer fails the test, not hangs it.
     void answerNextFileDialog(const QString& path)
     {
+        // An earlier poll left running would answer this dialog with its own path
+        delete mpPoll;
         mDialogTitle.clear();
         mDialogStartDir.clear();
         auto* poll = new QTimer(this);
@@ -262,6 +264,11 @@ private slots:
         answerNextFileDialog(elsewhere);
         preferences->pushButton_whereToLog->click();
         QCOMPARE(mDialogStartDir, custom);
+        QCOMPARE(preferences->lineEdit_logFileFolder->text(), elsewhere);
+        answerNextFileDialog(MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, mHostname));
+        preferences->pushButton_whereToLog->click();
+        QCOMPARE(preferences->lineEdit_logFileFolder->text(), QString());
+        QVERIFY(!preferences->pushButton_resetLogDir->isEnabled());
         QCOMPARE(MudletApp::getQSettings()->value(qsl("lastFileDialogLocation")).toString(), lastDir);
     }
 };
