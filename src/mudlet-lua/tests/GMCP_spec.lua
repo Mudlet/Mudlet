@@ -228,7 +228,6 @@ describe("Tests the functionality of gmod.reenableModules", function()
 
   after_each(function()
     gmod.disableModule(user, module)
-    gmcp.BustedReenableProbe = nil
   end)
 
   it("Should announce modules enabled before GMCP came up, while the gmcp table is still empty", function()
@@ -247,9 +246,8 @@ describe("Tests the functionality of gmod.reenableModules", function()
     assert.spy(sg).was_called_with(match.has_match("Core.Supports.Add .*" .. module .. " 1"))
   end)
 
-  it("Should re-announce every registered module once GMCP data has arrived", function()
+  it("Should re-announce every registered module", function()
     gmod.enableModule(user, module)
-    gmcp.BustedReenableProbe = {}
     local sg = spy.on(_G, "sendGMCP")
     finally(function() sendGMCP:revert() end)
     gmod.reenableModules()
@@ -257,7 +255,6 @@ describe("Tests the functionality of gmod.reenableModules", function()
   end)
 
   it("Should send nothing when no module is registered", function()
-    gmcp.BustedReenableProbe = {}
     local sg = spy.on(_G, "sendGMCP")
     finally(function() sendGMCP:revert() end)
     -- a module registered by an earlier spec would be re-announced too, so

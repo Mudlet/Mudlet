@@ -85,9 +85,8 @@ function enableModule(user, module)
 end
 
 
--- Send the module list whenever GMCP comes up: modules enabled before then, such as
---   at profile load or on sysConnectionEvent, could not be sent, and a reconnect
---   resets the server's list, so activated modules stay enabled unless explicitly disabled
+-- Runs on every GMCP enable: Mudlet's Core.Supports.Set, sent just before this event, replaces the
+--   server's list, and modules enabled earlier (profile load, sysConnectionEvent) could not be sent
 function gmod.reenableModules()
   local list = {}
   for module, users in pairs(registeredModules) do
