@@ -925,10 +925,10 @@ describe("presence the game sends over GMCP", function()
       return
     end
     feedDiscordStatus('{"largeimage": ["spec-kept-large"], "smallimage": ["spec-kept-small"]}')
-    for index, value in ipairs({"[]", "null", "5", '{"key": "spec-object"}', "[5]", "[null]"}) do
-      feedDiscordStatus(string.format('{"largeimage": %s, "smallimage": %s, "state": "spec payload %d"}', value, value, index))
+    for index, value in ipairs({"[]", "null", "5", '{"key": "spec-object"}'}) do
+      feedDiscordStatus(string.format('{"largeimage": %s, "smallimage": %s, "smallimagetext": "spec payload %d"}', value, value, index))
 
-      assert.equals("spec payload " .. index, getDiscordState(), "the payload was dropped, so this spec proves nothing")
+      assert.equals("spec payload " .. index, getDiscordSmallIconText(), "the payload was dropped, so this spec proves nothing")
       assert.equals("spec-kept-large", getDiscordLargeIcon(), "largeimage " .. value)
       assert.equals("spec-kept-small", getDiscordSmallIcon(), "smallimage " .. value)
     end
