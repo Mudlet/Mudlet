@@ -3597,7 +3597,8 @@ private slots:
         QTRY_VERIFY2(dialog.isNull() || dialog->isHidden(), "Enter did not save the image label");
         QCOMPARE(area()->mMapLabels.size(), 1);
         QVERIFY(area()->mMapLabels.first().text.isEmpty());
-        QVERIFY(!area()->mMapLabels.first().pix.isNull());
+        const QPixmap& pix = area()->mMapLabels.first().pix;
+        QCOMPARE(pix.toImage().pixelColor(pix.rect().center()), QColor(Qt::red));
     }
 
     // A box is a box whichever corner it was dragged out from: the label goes
