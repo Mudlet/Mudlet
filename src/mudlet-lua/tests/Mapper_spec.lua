@@ -6102,11 +6102,16 @@ describe("Tests saveMap and loadMap", function()
       assert.are.equal("true", getRoomUserData(importedRoomA, "feature-shop"))
     end)
 
-    -- the file's <environments> block fills TMap::mEnvColors, which maps an
-    -- environment id to a stock colour index. getCustomEnvColorTable() reads
-    -- mCustomEnvColors, a different map, so there is nothing to read this back
-    -- with from Lua
-    pending("the environment colours an XML map declares have no Lua getter")
+    -- TMap::mEnvColors has no Lua getter, but a JSON export writes it out
+    it("maps each environment the file declares, and nothing else", function()
+      local jsonPath = getMudletHomeDir() .. "/mapper_spec_xml_environments.json"
+      finally(function() os.remove(jsonPath) end)
+      assert.is_true(saveJsonMap(jsonPath))
+      local file = assert(io.open(jsonPath, "r"))
+      local document = yajl.to_value(file:read("*a"))
+      file:close()
+      assert.are.same({["169"] = 8}, document.envToColorMapping)
+    end)
 
     it("keeps the entrances of a room whose ID a later room in the file reuses", function()
       local duplicatePath = getMudletHomeDir() .. "/mapper_spec_duplicate.xml"
@@ -6130,6 +6135,29 @@ describe("Tests saveMap and loadMap", function()
       assert.is_true(loadMap(duplicatePath))
       assert.are.equal(4002, getRoomExits(4001)["north"])
       assert.are.same({4001}, getAllRoomEntrances(4002))
+    end)
+
+    it("reads the rooms and areas that come after the environments", function()
+      local reorderedPath = getMudletHomeDir() .. "/mapper_spec_environments_first.xml"
+      finally(function() os.remove(reorderedPath) end)
+      local file = assert(io.open(reorderedPath, "w"))
+      file:write([[<?xml version="1.0" encoding="UTF-8"?>
+<map>
+  <environments>
+    <environment id="169" color="8"/>
+  </environments>
+  <areas><area id="4001" name="Mapper Spec Environments First Area"/></areas>
+  <rooms>
+    <room id="4001" area="4001" title="After The Environments" environment="169"><coord x="0" y="0" z="0"/></room>
+  </rooms>
+</map>
+]])
+      file:close()
+
+      assert.is_true(loadMap(reorderedPath))
+      assert.is_true(roomExists(importedRoomA))
+      assert.are.equal("After The Environments", getRoomName(importedRoomA))
+      assert.are.equal(4001, getAreaTable()["Mapper Spec Environments First Area"])
     end)
 
     it("throws away the map that was there before the import", function()
