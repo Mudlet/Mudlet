@@ -29,6 +29,7 @@
 #include <QtTest/QtTest>
 
 #include "AlphaColourWell.h"
+#include "PixelTestHelper.h"
 #include "ProfileSessionTestHelper.h"
 #include "dlgMapLabel.h"
 #include "mudlet.h"
@@ -77,6 +78,43 @@ private slots:
         QVERIFY2(pDialog->pushButton_bgColor->text().contains(qsl("20%")), qPrintable(pDialog->pushButton_bgColor->text()));
 
         delete pDialog;
+    }
+
+    // The dialog stays open through a switch, so each well has to take the new appearance's ink and field itself
+    void test_eachWellFollowsAnAppearanceSwitch()
+    {
+        auto* pDialog = new dlgMapLabel(nullptr);
+        pDialog->show();
+        QVERIFY(QTest::qWaitForWindowExposed(pDialog));
+
+        for (const enums::Appearance appearance : {enums::Appearance::dark, enums::Appearance::light, enums::Appearance::dark}) {
+            TestPixels::setAppearanceAndWait(appearance, pDialog);
+            const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
+            const QString name = appearance == enums::Appearance::dark ? qsl("dark") : qsl("light");
+            for (QPushButton* pButton : {pDialog->pushButton_bgColor, pDialog->pushButton_fgColor, pDialog->pushButton_outlineColor}) {
+                QVERIFY2(pButton->styleSheet().contains(qsl("color: %1;").arg(tokens.text.name())),
+                         qPrintable(qsl("on the %1 appearance %2 does not write its words in %3: %4").arg(name, pButton->objectName(), tokens.text.name(), pButton->styleSheet())));
+                // The words and the swatch are the minority of the well; the rest is its field
+                QHash<QRgb, int> histogram;
+                const QImage face = TestPixels::shot(pButton);
+                for (int y = 0; y < face.height(); ++y) {
+                    for (int x = 0; x < face.width(); ++x) {
+                        ++histogram[face.pixel(x, y) | 0xff000000];
+                    }
+                }
+                QRgb commonest = 0;
+                for (auto entry = histogram.cbegin(); entry != histogram.cend(); ++entry) {
+                    if (entry.value() > histogram.value(commonest)) {
+                        commonest = entry.key();
+                    }
+                }
+                QVERIFY2(QColor(commonest).rgb() == tokens.field.rgb(),
+                         qPrintable(qsl("on the %1 appearance %2 is filled with %3, not the field %4").arg(name, pButton->objectName(), QColor(commonest).name(), tokens.field.name())));
+            }
+        }
+
+        delete pDialog;
+        mudlet::self()->setAppearance(enums::Appearance::systemSetting);
     }
 };
 
