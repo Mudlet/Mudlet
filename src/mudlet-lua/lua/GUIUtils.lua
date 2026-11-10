@@ -1976,6 +1976,10 @@ local resets = {
 
 -- take a color name and turn it into an ANSI escape string
 local function colorToAnsi(colorName)
+  -- as in cecho, a style or reset code only counts as the whole tag
+  if resets[colorName] then
+    return resets[colorName]
+  end
   local result = ""
   local cols = colorName:split("[:,]")
   -- cecho takes at most a foreground and a background
@@ -1985,17 +1989,12 @@ local function colorToAnsi(colorName)
   local fore = cols[1]
   local back = cols[2]
   if fore ~= "" then
-    local res = resets[fore]
-    if res then
-      result = result .. res
-    else
-      local colorNumber = ctable[fore]
-      if colorNumber then
-        result = string.format("%s\27[38:5:%sm", result, colorNumber)
-      elseif color_table[fore] then
-        local rgb = color_table[fore]
-        result = string.format("%s\27[38:2::%s:%s:%sm", result, rgb[1], rgb[2], rgb[3])
-      end
+    local colorNumber = ctable[fore]
+    if colorNumber then
+      result = string.format("%s\27[38:5:%sm", result, colorNumber)
+    elseif color_table[fore] then
+      local rgb = color_table[fore]
+      result = string.format("%s\27[38:2::%s:%s:%sm", result, rgb[1], rgb[2], rgb[3])
     end
   end
   if back then

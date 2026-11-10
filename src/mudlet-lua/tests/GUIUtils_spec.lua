@@ -345,9 +345,14 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
 
     it("should keep tags that cecho prints as text", function()
-      for _, text in ipairs({ "Say <hello> world", "<notacolour:alsonot>", "</foo>", "<:>", "<red,blue,green>x", "<red:blue:>x" }) do
+      for _, text in ipairs({ "Say <hello> world", "<notacolour:alsonot>", "</foo>", "<:>", "<red,blue,green>x", "<red:blue:>x", "<b,notacolour>x", "<b:notacolour>x", "<r:notacolour>x" }) do
         assert.equals(text, cecho2ansi(text))
       end
+    end)
+
+    it("should only take a style or reset code that is the whole tag, as cecho does", function()
+      assert.equals("\27[48:5:4mx", cecho2ansi("<r:blue>x"))
+      assert.equals("\27[48:5:4mx", cecho2ansi("<reset,blue>x"))
     end)
 
     it("should accept a comma between the colours, as cecho does", function()
