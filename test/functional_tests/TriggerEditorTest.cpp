@@ -48,6 +48,7 @@
 #include "TTrigger.h"
 #include "TriggerUnit.h"
 #include "TConsole.h"
+#include "TTextEdit.h"
 #include "TMap.h"
 #include "dlgTriggerEditor.h"
 #include "dlgTriggerPatternEdit.h"
@@ -923,6 +924,40 @@ private slots:
     QCOMPARE(colourOf(qsl("qaHandlerProbe")), QColor(Qt::red));
     QCOMPARE(colourOf(qsl("qaLogErrorProbe")), QColor(Qt::red));
     QCOMPARE(colourOf(qsl("qaMapProbe")), QColor(255, 128, 0));
+  }
+
+  // Errors are read by scrolling back through the console, so clearing it
+  // from there has to bring the view back to where new lines arrive
+  void test_clearingAScrolledErrorConsoleShowsTheNewSession() {
+    mudlet::self()->slot_showScriptDialog();
+    QTest::qWait(100ms);
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
+    QVERIFY2(pEditor, "the editor dialog was not created");
+    TConsole *pConsole = pEditor->mpErrorConsole;
+    pConsole->show();
+    for (int i = 0; i < 100; ++i) {
+      pConsole->print(qsl("qaScrollbackProbe %1 %2\n").arg(i).arg(QString(300, QLatin1Char('x'))));
+    }
+    QTest::qWait(100ms);
+    TTextEdit *pPane = pConsole->mUpperPane;
+    pPane->scrollUp(50);
+    pPane->scrollH(100);
+    QTest::qWait(100ms);
+    QVERIFY(!pPane->mIsTailMode);
+    QVERIFY(pPane->mCursorX > 0);
+
+    pPane->showContextMenu(pPane->mapToGlobal(pPane->rect().center()));
+    QMenu *pMenu = pPane->findChildren<QMenu *>().value(0);
+    QVERIFY(pMenu);
+    QAction *pClear = pMenu->findChild<QAction *>(qsl("consoleClearErrorConsole"));
+    QVERIFY(pClear);
+    pClear->trigger();
+    pMenu->close();
+    QTest::qWait(100ms);
+
+    QVERIFY(pConsole->model().buffer.lineBuffer.at(0).contains(qsl("starting new session")));
+    QVERIFY(pPane->mIsTailMode);
+    QCOMPARE(pPane->mCursorX, 0);
   }
 
   void test_setScriptRewritesTheScriptTheEditorShows() {
