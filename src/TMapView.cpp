@@ -216,7 +216,7 @@ void TMapView::updateAreaComboBox()
         }
         areaNames.append(areaName);
     }
-    // Area names only have to differ in case, so "Forest" and "forest" are both listed
+    // Names may differ only in case; stable, so those keep area-id order, as TNullSecondaryMapView mirrors
     std::stable_sort(areaNames.begin(), areaNames.end(), [](const QString& a, const QString& b) {
         return a.compare(b, Qt::CaseInsensitive) < 0;
     });
