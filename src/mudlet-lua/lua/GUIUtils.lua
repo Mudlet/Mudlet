@@ -1974,51 +1974,48 @@ local resets = {
   ["/o"]    = "\27[55m"
 }
 
--- take a color name and turn it into an ANSI escape string
-local function colorToAnsi(colorName)
-  local result = ""
-  local cols = colorName:split(":")
-  local fore = cols[1]
-  local back = cols[2]
-  if fore ~= "" then
-    local res = resets[fore]
-    if res then
-      result = result .. res
-    else
-      local colorNumber = ctable[fore]
-      if colorNumber then
-        result = string.format("%s\27[38:5:%sm", result, colorNumber)
-      elseif color_table[fore] then
-        local rgb = color_table[fore]
-        result = string.format("%s\27[38:2::%s:%s:%sm", result, rgb[1], rgb[2], rgb[3])
-      end
-    end
+local function colorCodeToAnsi(name, layer, namesOnly)
+  if not name or (namesOnly and not color_table[name]) then
+    return ""
   end
-  if back then
-    local colorNumber = ctable[back]
-    if colorNumber then
-      result = string.format("%s\27[48:5:%sm", result, colorNumber)
-    elseif color_table[back] then
-      local rgb = color_table[back]
-      result = string.format("%s\27[48:2::%s:%s:%sm", result, rgb[1], rgb[2], rgb[3])
-    end
+  local colorNumber = ctable[name]
+  if colorNumber then
+    return string.format("\27[%d:5:%sm", layer, colorNumber)
   end
-  return result
+  local rgb = color_table[name]
+  if rgb then
+    return string.format("\27[%d:2::%s:%s:%sm", layer, rgb[1], rgb[2], rgb[3])
+  end
+  return ""
 end
 
--- converts decho color information to ansi escape sequences
-local function rgbToAnsi(rgb)
-  local result = ""
-  local cols = rgb:split(":")
-  local fore = cols[1]
-  local back = cols[2]
-  if fore ~= "" then
-    local components = fore:split(",")
-    result = string.format("%s\27[38:2::%s:%s:%sm", result, components[1] or "0", components[2] or "0", components[3] or "0")
+local colorCapturePattern = _Echos.Patterns.Color[2]
+-- converts the inside of a cecho tag to ansi escape sequences, or returns nil when it names no colour
+local function colorToAnsi(tag)
+  -- as in cecho, a style or reset code only counts as the whole tag
+  if resets[tag] then
+    return resets[tag]
   end
-  if back then
-    local components = back:split(",")
-    result = string.format("%s\27[48:2::%s:%s:%sm", result, components[1] or "0", components[2] or "0", components[3] or "0")
+  local fore, back = colorCapturePattern:match("<" .. tag .. ">")
+  -- unlike cecho, <124> and <light_red:blue> take ctable's numbers and extra names; the comma form keeps to cecho's names
+  local namesOnly = tag:find(",", 1, true) ~= nil
+  local ansi = colorCodeToAnsi(fore, 38, namesOnly) .. colorCodeToAnsi(back, 48, namesOnly)
+  return ansi ~= "" and ansi or nil
+end
+
+local decimalCapturePattern = _Echos.Patterns.Decimal[2]
+-- converts a decho colour tag to ansi escape sequences, or returns nil when decho would print it as text
+local function rgbToAnsi(tag)
+  local fr, fg, fb, br, bg, bb = decimalCapturePattern:match(tag)
+  if not (fr or br) then
+    return nil
+  end
+  local result = ""
+  if fr then
+    result = string.format("\27[38:2::%s:%s:%sm", fr, fg, fb)
+  end
+  if br then
+    result = string.format("%s\27[48:2::%s:%s:%sm", result, br, bg, bb)
   end
   return result
 end
@@ -2057,7 +2054,7 @@ function cecho2ansi(text)
     parts[n] = str
     if color then
       n = n + 1
-      parts[n] = colorToAnsi(color:match("<(.+)>"))
+      parts[n] = colorToAnsi(color:match("<(.+)>")) or color
     end
   end
   return table.concat(parts, "", 1, n)
@@ -2092,7 +2089,7 @@ function decho2ansi(text)
     parts[n] = str
     if color then
       n = n + 1
-      parts[n] = rgbToAnsi(color:match("<(.+)>"))
+      parts[n] = rgbToAnsi(color) or color
     end
     if res then
       n = n + 1
