@@ -75,6 +75,18 @@ private slots:
         QCOMPARE(scale, GLWidget::scaleAfterWheel(1.0f, 120));
     }
 
+    void test_theMapTakesATouchpadsSmallStepButNotASidewaysScroll()
+    {
+        GLWidget view(nullptr, nullptr);
+        auto wheel = [&view](const QPoint angleDelta) {
+            QWheelEvent event(QPointF(1, 1), QPointF(1, 1), QPoint(), angleDelta, Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
+            QCoreApplication::sendEvent(&view, &event);
+            return event.isAccepted();
+        };
+        QVERIFY2(wheel(QPoint(0, 15)), "an eighth of a notch from a touchpad was passed on instead of zooming the map");
+        QVERIFY2(!wheel(QPoint(120, 0)), "a sideways scroll was kept from the widgets around the map");
+    }
+
     void test_zoomingBeforeTheMapHasAContextLeavesOtherContextsAlone()
     {
         QOffscreenSurface surface;
