@@ -26,7 +26,7 @@
   The following files are NOT deleted:
   - Files newer than the amount of days specified as an argument to deleteOldProfiles(), or 31 days if not specified.
   - One file for every month before that. Specifically: The first save of every month prior to this; a leftover from an interrupted save does not count. For module backups, every module keeps its own.
-  - The newest profile save (.xml) or map (.dat/.json), which is the one Mudlet loads, however old it is. Module backups are never loaded, so there it is just the single newest file in the shared folder.
+  - The newest profile save (.xml) or map (.dat/.json), which is the one Mudlet loads, however old it is. Module backups are never loaded, so there it is the newest backup of every module.
   - A leftover from an interrupted save, when there is no save Mudlet would load.
   - Folders, which are left alone.
   The second argument picks the folder: "profiles", "maps" or "modules". (e.g. deleteOldProfiles(10, "maps"))
@@ -65,7 +65,11 @@
     if attributes and attributes.mode == "file" then
       profile_table[#profile_table+1] = {
         name = filename,
-        last_mod = attributes.modification
+        last_mod = attributes.modification,
+        -- every module's backups share one folder, so each module is kept as a series of its own
+        series = delete_folder == "modules"
+          and (filename:match("^(.-)%d%d%d%d%-%d%d%-%d%d#%d%d%-%d%d%-%d%d$") or filename)
+          or ""
       }
     end
   end
@@ -80,10 +84,10 @@
   ))
 
   -- An interrupted save can leave a temporary file behind, which is not a save and does
-  -- not take a month's spot. Mudlet loads the newest .xml profile or .dat/.json map, and
-  -- times are whole seconds, so every save tied for newest stays. Module backups are never
+  -- not take a month's spot. Mudlet loads the newest .xml profile or .dat/.json map; times
+  -- are whole seconds, so it may load any save tied for newest and every one stays.
+  -- XML maps load only from Map history, never on startup. Module backups are never
   -- loaded, so every file there counts as a save.
-  -- XML maps load only from Map history, never on startup.
   local savedExtensions = {profiles = {xml = true}, maps = {dat = true, json = true, xml = true}}
   local loadedExtensions = {profiles = {xml = true}, maps = {dat = true, json = true}}
   local function hasExtension(name, extensions)
@@ -93,29 +97,25 @@
     local extension = name:match("%.([^.]+)$")
     return extension ~= nil and extensions[delete_folder][extension:lower()] == true
   end
-  local newestLoadedTime
+  local newestLoadedTime = {}
   for _, v in ipairs(profile_table) do
     if hasExtension(v.name, loadedExtensions) then
-      newestLoadedTime = v.last_mod
+      newestLoadedTime[v.series] = v.last_mod
     end
   end
 
   for _, v in ipairs(profile_table) do
     local days = math.floor(os.difftime(os.time(), v.last_mod) / 86400)
-    local last_mod_month = os.date("%Y/%m", v.last_mod)
-    -- every module's backups share one folder, so each module keeps a file a month of its own
-    if delete_folder == "modules" then
-      last_mod_month = (v.name:match("^(.-)%d%d%d%d%-%d%d%-%d%d#%d%d%-%d%d%-%d%d$") or v.name) .. "|" .. last_mod_month
-    end
+    local last_mod_month = v.series .. "|" .. os.date("%Y/%m", v.last_mod)
     if days &gt; keepdays then
       -- For saves older than X days, check if we already kept one for this month:
       local saved = hasExtension(v.name, savedExtensions)
       if saved and not table.contains(used_last_mod_months, last_mod_month) then
         -- If not, do nothing and mark this month as "kept".
         used_last_mod_months[#used_last_mod_months+1] = last_mod_month
-      elseif v.last_mod == newestLoadedTime and hasExtension(v.name, loadedExtensions) then
-        -- Keep every save tied for the newest, which Mudlet loads.
-      elseif not saved and not newestLoadedTime then
+      elseif v.last_mod == newestLoadedTime[v.series] and hasExtension(v.name, loadedExtensions) then
+        -- Keep every file tied for the newest; for profiles and maps that is what Mudlet loads.
+      elseif not saved and not newestLoadedTime[v.series] then
         -- With no save Mudlet would load, a leftover may be all that is left to recover by hand.
       else
         local success, errorstring = os.remove(dirpath..slash..v.name)
