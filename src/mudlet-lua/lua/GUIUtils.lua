@@ -1978,6 +1978,10 @@ local resets = {
 local function colorToAnsi(colorName)
   local result = ""
   local cols = colorName:split("[:,]")
+  -- cecho takes at most a foreground and a background
+  if #cols > 2 then
+    return result
+  end
   local fore = cols[1]
   local back = cols[2]
   if fore ~= "" then

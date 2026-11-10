@@ -345,7 +345,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
 
     it("should keep tags that cecho prints as text", function()
-      for _, text in ipairs({ "Say <hello> world", "<notacolour:alsonot>", "</foo>", "<:>" }) do
+      for _, text in ipairs({ "Say <hello> world", "<notacolour:alsonot>", "</foo>", "<:>", "<red,blue,green>x", "<red:blue:>x" }) do
         assert.equals(text, cecho2ansi(text))
       end
     end)
