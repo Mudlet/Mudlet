@@ -87,17 +87,18 @@ QString dlgMapLabel::getImagePath()
 
 void dlgMapLabel::slot_pickFgColor()
 {
-    QSettings& settings = *MudletApp::getQSettings();
     fgColorDialog = new QColorDialog(this);
-    fgColorDialog->setCurrentColor(settings.value("fgColorDialogMapLabel", fgColor).value<QColor>());
+    fgColorDialog->setCurrentColor(fgColor);
     fgColorDialog->setAttribute(Qt::WA_DeleteOnClose);
     //: 2D mapper create label color dialog title
     fgColorDialog->setWindowTitle(tr("Foreground color"));
     fgColorDialog->setOption(QColorDialog::ShowAlphaChannel);
-    connect(fgColorDialog, &QColorDialog::currentColorChanged, this, [&](const QColor& color) {
+    connect(fgColorDialog, &QColorDialog::currentColorChanged, this, [this](const QColor& color) {
         fgColor = color;
-        settings.setValue("fgColorDialogMapLabel", fgColor);
         emit updated();
+    });
+    connect(fgColorDialog, &QColorDialog::colorSelected, this, [](const QColor& color) {
+        MudletApp::getQSettings()->setValue(qsl("fgColorDialogMapLabel"), color);
     });
     auto originalColor = QColor(fgColor);
     connect(fgColorDialog, &QColorDialog::rejected, this, [this, originalColor]() {
@@ -110,17 +111,18 @@ void dlgMapLabel::slot_pickFgColor()
 
 void dlgMapLabel::slot_pickBgColor()
 {
-    QSettings& settings = *MudletApp::getQSettings();
     bgColorDialog = new QColorDialog(this);
-    bgColorDialog->setCurrentColor(settings.value("bgColorDialogMapLabel", bgColor).value<QColor>());
+    bgColorDialog->setCurrentColor(bgColor);
     bgColorDialog->setAttribute(Qt::WA_DeleteOnClose);
     //: 2D mapper create label color dialog title
     bgColorDialog->setWindowTitle(tr("Background color"));
     bgColorDialog->setOption(QColorDialog::ShowAlphaChannel);
-    connect(bgColorDialog, &QColorDialog::currentColorChanged, this, [&](const QColor& color) {
+    connect(bgColorDialog, &QColorDialog::currentColorChanged, this, [this](const QColor& color) {
         bgColor = color;
-        settings.setValue("bgColorDialogMapLabel", bgColor);
         emit updated();
+    });
+    connect(bgColorDialog, &QColorDialog::colorSelected, this, [](const QColor& color) {
+        MudletApp::getQSettings()->setValue(qsl("bgColorDialogMapLabel"), color);
     });
     auto originalColor = QColor(bgColor);
     connect(bgColorDialog, &QColorDialog::rejected, this, [this, originalColor]() {
@@ -133,17 +135,18 @@ void dlgMapLabel::slot_pickBgColor()
 
 void dlgMapLabel::slot_pickOutlineColor()
 {
-    QSettings& settings = *MudletApp::getQSettings();
     outlineColorDialog = new QColorDialog(this);
-    outlineColorDialog->setCurrentColor(settings.value("outlineColorDialogMapLabel", outlineColor).value<QColor>());
+    outlineColorDialog->setCurrentColor(outlineColor);
     outlineColorDialog->setAttribute(Qt::WA_DeleteOnClose);
     //: 2D mapper create label color dialog title
     outlineColorDialog->setWindowTitle(tr("Text outline color"));
     outlineColorDialog->setOption(QColorDialog::ShowAlphaChannel);
-    connect(outlineColorDialog, &QColorDialog::currentColorChanged, this, [&](const QColor& color) {
+    connect(outlineColorDialog, &QColorDialog::currentColorChanged, this, [this](const QColor& color) {
         outlineColor = color;
-        settings.setValue("outlineColorDialogMapLabel", outlineColor);
         emit updated();
+    });
+    connect(outlineColorDialog, &QColorDialog::colorSelected, this, [](const QColor& color) {
+        MudletApp::getQSettings()->setValue(qsl("outlineColorDialogMapLabel"), color);
     });
     auto originalColor = QColor(outlineColor);
     connect(outlineColorDialog, &QColorDialog::rejected, this, [this, originalColor]() {
