@@ -564,8 +564,12 @@ void dlgPackageManager::resetPackageList()
     syncViewBar();
     packageList->clear();
 
+    // The search box keeps its text through an install or removal, so the list keeps its filter
+    const QString searchText = lineEdit_searchBar->text();
     for (const QString& packageName : std::as_const(mpHost->mInstalledPackages)) {
-        packageList->addItem(installedPackageItem(packageName));
+        if (installedPackageMatches(packageName, searchText)) {
+            packageList->addItem(installedPackageItem(packageName));
+        }
     }
 
     populatePackagesWithUpdates();
