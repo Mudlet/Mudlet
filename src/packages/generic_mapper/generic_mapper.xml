@@ -4415,7 +4415,8 @@ function doSpeedWalk()
         raiseEvent("sysSpeedwalkStarted")
         map.speedwalk(nil, speedWalkPath, speedWalkDir)
     elseif mudlet and mudlet.custom_speedwalk and tonumber(speedWalkTo) ~= map.currentRoom then
-        -- Custom speedwalk mode calls this without finding a path, so an empty one says nothing about the goal
+        -- A map click in custom speedwalk mode calls this without finding a path, so only speedWalkTo shows the goal.
+        -- gotoRoom() leaves speedWalkTo alone, so in this mode its walk to the current room still reads as no path
         map.echo("No path to chosen room found.",false,true)
     else
         -- Map clicks and gotoRoom() only get here after a path is found, so empty means we start at the goal.
