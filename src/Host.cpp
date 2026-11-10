@@ -6440,8 +6440,9 @@ void Host::setProxyPassword(const QString& password)
 {
     // The saved profile never holds it, so loading reads secure storage, which would hand back a cleared one. Only
     // when one was there to clear: an empty field can also be a password that could not be read at load.
-    if (password.isEmpty() && !mProxyPassword.isEmpty()) {
-        CredentialManager::removeCredential(getName(), qsl("proxy"));
+    if (password.isEmpty() && !mProxyPassword.isEmpty() && !CredentialManager::removeCredential(getName(), qsl("proxy"))) {
+        //: Shown in the profile's main window when the player cleared the proxy password but the saved copy of it could not be deleted
+        postMessage(tr("[ WARN ]  - The saved proxy password could not be deleted, so the next time this profile is loaded it will have that password again."));
     }
     mProxyPassword = password;
 }

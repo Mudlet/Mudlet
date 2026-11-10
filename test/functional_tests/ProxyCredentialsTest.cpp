@@ -32,6 +32,8 @@
 #include "HostManager.h"
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
+#include "TBuffer.h"
+#include "TConsoleModel.h"
 #include "XMLexport.h"
 
 #include "GroupedTest.h"
@@ -150,6 +152,25 @@ private slots:
         mpHost->setProxyPassword(QString());
         save();
         QVERIFY2(QFile::exists(path), "clearing an empty field deleted a stored password that only failed to load");
+    }
+
+    void aPasswordThatCannotBeDeletedIsReported()
+    {
+        // A directory where the stored password belongs, which QFile::remove() cannot delete even as root
+        const QString path = qsl("%1/profiles/%2/passwords/proxy").arg(MudletApp::credentialFilesRoot(), MudletApp::sanitizeForPath(mHostname));
+        QFile::remove(path);
+        QVERIFY(QDir().mkpath(qsl("%1/blocker").arg(path)));
+
+        mpHost->setProxyPassword(qsl("secret"));
+        mpHost->setProxyPassword(QString());
+
+        TBuffer& buffer = mpHost->mainConsoleModel().buffer;
+        bool warned = false;
+        for (int i = 0; i <= buffer.getLastLineNumber() && !warned; ++i) {
+            warned = buffer.line(i).contains(qsl("proxy password could not be deleted"));
+        }
+        QDir(path).removeRecursively();
+        QVERIFY2(warned, "the player was not told the cleared password will be loaded again");
     }
 };
 
