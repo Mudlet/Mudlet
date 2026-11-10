@@ -59,7 +59,7 @@ private slots:
         QCOMPARE(scale, 2.5f);
     }
 
-    void test_aNotchZoomsByTheSameStepAsBefore()
+    void test_aNotchZoomsByAFixedStep()
     {
         QCOMPARE(GLWidget::scaleAfterWheel(1.0f, -120), 0.97f);
         QCOMPARE(GLWidget::scaleAfterWheel(1.0f, 120), 1.03f);
@@ -75,7 +75,7 @@ private slots:
         QCOMPARE(scale, GLWidget::scaleAfterWheel(1.0f, 120));
     }
 
-    void test_aViewButtonBeforeTheMapHasAContextLeavesOtherContextsAlone()
+    void test_zoomingBeforeTheMapHasAContextLeavesOtherContextsAlone()
     {
         QOffscreenSurface surface;
         surface.create();
@@ -87,6 +87,7 @@ private slots:
         gl->glViewport(1, 2, 3, 4);
 
         GLWidget view(nullptr, nullptr);
+        view.slot_setScale(500);
         view.slot_topView();
 
         QVERIFY(QOpenGLContext::currentContext() == &other);
