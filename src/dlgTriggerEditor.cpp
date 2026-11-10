@@ -1444,6 +1444,11 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH, std::unique_ptr<TConsoleModel> erro
     connect(treeWidget_variables, &QTreeWidget::itemChanged, this, &dlgTriggerEditor::slot_variableChanged);
     connect(treeWidget_variables, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_treeSelectionChanged);
     connect(treeWidget_searchResults, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_itemSelectedInSearchResults);
+    connect(treeWidget_searchResults, &QTreeWidget::itemActivated, this, [this](QTreeWidgetItem* pItem) {
+        if (pItem && pItem->data(0, uiDesign::SearchResultDelegate::RowKindRole).toInt() == uiDesign::SearchResultDelegate::ActionRow) {
+            slot_itemSelectedInSearchResults(pItem);
+        }
+    });
 
     // triggers
     connect(mpTriggersMainArea->lineEdit_trigger_name, &QLineEdit::textEdited, this, &dlgTriggerEditor::slot_itemEdited);

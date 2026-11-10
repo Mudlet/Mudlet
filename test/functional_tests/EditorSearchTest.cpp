@@ -892,6 +892,12 @@ private slots:
     // Its search fills the panel at once, so a double-click's second click would otherwise open whatever landed under it
     void test_doubleClickingTheOfferOpensNothingElse()
     {
+        // Waiting for the new results between the clicks must not outlast a double-click on a slow runner
+        const int savedInterval = QApplication::doubleClickInterval();
+        QApplication::setDoubleClickInterval(60000);
+        const auto restoreInterval = qScopeGuard([savedInterval]() {
+            QApplication::setDoubleClickInterval(savedInterval);
+        });
         mpEditor->slot_showVariables();
         search(mNeedle);
         QTreeWidgetItem* offer = offerToSearchVariables();
@@ -910,6 +916,21 @@ private slots:
         QTest::mouseClick(tree->viewport(), Qt::LeftButton, Qt::NoModifier, pos);
         QCoreApplication::processEvents();
         QCOMPARE(mpEditor->treeWidget_variables->currentItem(), mpEditor->treeWidget_variables->topLevelItem(0));
+    }
+
+    void test_theOfferCanBeTakenFromTheKeyboard()
+    {
+        mpEditor->slot_showScripts();
+        search(qsl("qaSearchVariable"));
+        QTreeWidgetItem* offer = offerToSearchVariables();
+        QVERIFY(offer);
+        auto* tree = mpEditor->treeWidget_searchResults;
+        tree->setCurrentItem(offer);
+        QTest::keyClick(tree, Qt::Key_Return);
+        QVERIFY2(QTest::qWaitFor([this]() {
+                     return topLevelResultFor(qsl("Variable")) != nullptr;
+                 }),
+                 "Enter on the offer did not search the variables");
     }
 
     void test_anEmptyOrUnknownTermProducesNoResults()
