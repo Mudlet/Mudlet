@@ -1174,7 +1174,7 @@ do
         if not (ok and keepEvaluating) then
           killAnonymousEventHandler(eventHandlerId)
         end
-        -- tostring, as showHandlerError raises on any non-string; reported after the cleanup so that cannot skip it
+        -- tostring, as showHandlerError raises on anything but a string or number; reported after the cleanup so that cannot skip it
         if failedEvent then
           showHandlerError(failedEvent, tostring(keepEvaluating))
         end

@@ -5079,9 +5079,9 @@ describe("Tests one-shot event handlers", function()
   end)
 
   it("removes a one-shot handler when an event it raised fails with a non-string error", function()
-    -- like the C function, which raises on anything but a string
+    -- like the C function, which raises on anything but a string or number
     _G.showHandlerError = function(event, message)
-      assert(type(message) == "string", "showHandlerError: bad argument #2 type (error message as string expected)")
+      assert(type(message) == "string" or type(message) == "number", "showHandlerError: bad argument #2 type (error message as string expected)")
       reported[#reported + 1] = {event, message}
     end
     local calls = 0
