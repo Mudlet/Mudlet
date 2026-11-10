@@ -649,44 +649,23 @@ describe("Tests the sound and music MSP asks for", function()
     assert.equals(higher, started[2].file)
   end)
 
-  -- The MSP specification gives a sound no P= a priority of fifty, as the MXP
-  -- <SOUND> tag already does, so it neither talks over a more important sound
-  -- nor plays alongside a less important one.
-  it("gives a !!SOUND subnegotiation with no P= the default priority of fifty", function()
+  -- Most games send no P=, and their overlapping effects must all be heard
+  it("plays a !!SOUND subnegotiation with no P= alongside another with none", function()
     if mediaPlaybackUnavailable() then
       return
     end
-    local above = hold("telnet-default-above")
-    local refused = brief("telnet-default-refused")
-    local below = hold("telnet-default-below")
-    local takingOver = brief("telnet-default-takeover")
+    local first = hold("telnet-unranked-first")
+    local second = brief("telnet-unranked-second")
     local started = watchStarts()
-    local finished = {}
-    collect("sysMediaFinished", finished)
 
-    feedMsp(("!!SOUND(%s P=51)"):format(above))
+    feedMsp(("!!SOUND(%s)"):format(first))
     waitForCount("sysMediaStarted", started, 1)
     assert.equals(1, #started, names(started))
 
-    feedMsp(("!!SOUND(%s)"):format(refused))
-    pump()
-    assert.equals(1, #started, names(started))
-
-    feedMsp("!!SOUND(Off)")
-    waitForCount("sysMediaFinished", finished, 1)
-    finished = {}
-    collect("sysMediaFinished", finished)
-
-    feedMsp(("!!SOUND(%s P=49)"):format(below))
+    feedMsp(("!!SOUND(%s)"):format(second))
     waitForCount("sysMediaStarted", started, 2)
     assert.equals(2, #started, names(started))
-
-    feedMsp(("!!SOUND(%s)"):format(takingOver))
-    waitForCount("sysMediaStarted", started, 3)
-    assert.equals(3, #started, names(started))
-    assert.equals(takingOver, started[3].file)
-    waitForCount("sysMediaFinished", finished, 1)
-    assert.equals(below, finished[1] and finished[1].file, names(finished))
+    assert.equals(second, started[2].file)
   end)
 
   it("restarts music already playing only when the subnegotiation gives C=0", function()

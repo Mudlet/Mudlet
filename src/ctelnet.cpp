@@ -5162,11 +5162,9 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
         return;
     }
 
-    // The spec's defaults for what a request leaves out, as the MXP <SOUND> and <MUSIC> tags apply them
+    // The spec's volume for a request with no V=. Priority stays unset: a default
+    // of fifty would refuse every sound without P= while another one plays.
     mediaData.setMediaVolume(TMediaData::MediaVolumeMax);
-    if (mediaData.mediaType() == TMediaData::MediaTypeSound) {
-        mediaData.setMediaPriority(TMediaData::MediaPriorityDefault);
-    }
 
     // The spec separates parameters by "one or more spaces"
     const QStringList argumentList = transcodedMsg.split(QChar::Space, Qt::SkipEmptyParts);
