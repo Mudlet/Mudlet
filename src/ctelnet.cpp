@@ -6160,6 +6160,7 @@ void cTelnet::slot_processReplayChunk()
     int datalen = loadedBytes;
     std::string cleandata = "";
     recvdGA = false;
+    int forcedOffPrompts = 0;
     for (int i = 0; i < datalen; ++i) {
         char ch = loadBuffer[i];
         if (iac || iac2 || insb || (ch == TN_IAC)) {
@@ -6234,12 +6235,18 @@ void cTelnet::slot_processReplayChunk()
         }
 
         if (recvdGA) {
-            mGA_Driver = true;
-            cleandata.push_back('\n');
             recvdGA = false;
-            gotPrompt(cleandata);
-            cleandata = "";
-            emit signal_promptReceived();
+            if (!mFORCE_GA_OFF) {
+                mGA_Driver = true;
+                // As the socket path does, so a replayed prompt is marked one for isPrompt() and prompt triggers
+                cleandata.push_back('\xff');
+                gotPrompt(cleandata);
+                cleandata = "";
+                emit signal_promptReceived();
+            } else {
+                cleandata.push_back('\n');
+                ++forcedOffPrompts;
+            }
         }
     } //for
 
@@ -6247,6 +6254,9 @@ void cTelnet::slot_processReplayChunk()
         gotRest(cleandata);
     }
     mPromptStartPosted = false;
+    for (int prompt = 0; prompt < forcedOffPrompts; ++prompt) {
+        emit signal_promptReceived();
+    }
 
     if (mpHost) {
         mpHost->finalizeMainConsole();
