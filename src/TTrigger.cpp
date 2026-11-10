@@ -666,8 +666,8 @@ TTrigger::~TTrigger()
         mpHost->getTriggerUnit()->unregisterTrigger(this);
 
         mpHost->mLuaInterpreter.delete_luafunction(mLuaFunctionRef);
-        // Permanent items too, and after a cleared script: IDs are never reused, so nothing else would
-        // free it. Only under this item's own ID, as one compiled before it had an ID shares its name.
+        // IDs are never reused, so nothing else frees this global. Only the one compiled under this ID:
+        // one compiled before the ID was assigned is named Trigger0, which other items share.
         if (mID > 0 && mFuncName == qsl("Trigger%1").arg(QString::number(mID))) {
             mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
         }
@@ -2416,8 +2416,7 @@ bool TTrigger::setScript(const QString& script)
     // Switching from a registered anonymous Lua function (set up by tempTrigger with a
     // function argument) to a script string: release the old function from the Lua
     // registry and leave callback mode. Otherwise execute() keeps calling the stale
-    // function so the new script never runs, and the registry entry leaks - the
-    // destructor would take its mScript-based branch and delete the compiled function.
+    // function so the new script never runs.
     if (mRegisteredAnonymousLuaFunction) {
         if (mpHost) {
             mpHost->mLuaInterpreter.delete_luafunction(mLuaFunctionRef);

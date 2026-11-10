@@ -144,8 +144,8 @@ private slots:
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }
 
-    // The editor's redo of a deletion deletes only the group, with mpHost nulled on
-    // the group alone, so the child unregisters itself from inside the group's teardown
+    // The editor's redo of a deletion deletes only the group, so the child unregisters
+    // itself from inside the group's teardown
     void test_redoingAButtonGroupDeletion()
     {
         ActionUnit* unit = mpHost->getActionUnit();
@@ -209,9 +209,8 @@ private slots:
         QVERIFY(!unit->getTrigger(childID));
     }
 
-    // The editor's redo of a deletion nulls mpHost before deleting, so the trigger's own teardown cannot
-    // reach its unit. One held open below a group must still be gone from what the next line reads of
-    // the open ones; ASan sees it left behind, as does MALLOC_PERTURB_ without it.
+    // A trigger held open below a group, once the editor's redo deletes it, must be gone from what the
+    // next line reads of the open ones; ASan sees it left behind, as does MALLOC_PERTURB_ without it.
     void test_redoingTheDeletionOfATriggerHeldOpen()
     {
         TriggerUnit* unit = mpHost->getTriggerUnit();
