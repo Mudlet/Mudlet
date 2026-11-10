@@ -3618,7 +3618,7 @@ private slots:
 
     // The dialog is not modal, so the mapper can be switched to another area
     // while it is open. The label belongs to the area its box was dragged out
-    // in: typing keeps it there and repaints that area's views, and cancelling
+    // in: typing keeps it there and announces a change to that area, and cancelling
     // takes it back out of there.
     void test_theLabelDialogStaysWithTheAreaItsBoxWasDraggedOutIn()
     {
@@ -3632,7 +3632,7 @@ private slots:
         QVERIFY(map()->addRoom(nextDoorRoomId) && map()->setRoomArea(nextDoorRoomId, otherAreaId) && map()->setRoomCoordinates(nextDoorRoomId, 0, 0, 0));
         mp2dMap->switchArea(otherAreaId);
         QCOMPARE(mp2dMap->mAreaID, otherAreaId);
-        // Announcements are merged until the next event loop pass, so let the switch's own go out first
+        // Announcements are merged until the next event loop pass, so let the one from the label's first draw go out
         QCoreApplication::processEvents();
         QSignalSpy areaChanged(map(), &TMap::signal_areaChanged);
 
