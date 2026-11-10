@@ -63,6 +63,8 @@ THeadlessSession::ScriptWindow::Kind kindOf(const Record::Kind kind)
         return Kind::scrollBox;
     case Record::Kind::mapper:
         return Kind::mapper;
+    case Record::Kind::mxpFrame:
+        return Kind::mxpFrame;
     }
     Q_UNREACHABLE();
 }
@@ -84,7 +86,19 @@ THeadlessSession::ScriptWindow scriptWindowOf(const Record& record, const int st
 // Only these hold other windows, so a label that shares a scroll box's name is not taken for it
 bool holdsWindows(const Record::Kind kind)
 {
-    return kind == Record::Kind::userWindow || kind == Record::Kind::scrollBox || kind == Record::Kind::miniConsole;
+    return kind == Record::Kind::userWindow || kind == Record::Kind::scrollBox || kind == Record::Kind::miniConsole || kind == Record::Kind::mxpFrame;
+}
+
+// An MXP frame's console is a mini console the game made
+bool miniConsole(const THeadlessSession::ScriptWindow::Kind kind)
+{
+    return kind == THeadlessSession::ScriptWindow::Kind::miniConsole || kind == THeadlessSession::ScriptWindow::Kind::mxpFrame;
+}
+
+// A console's text, which a press or the wheel acts on
+bool consoleText(const THeadlessSession::ScriptWindow::Kind kind)
+{
+    return miniConsole(kind) || kind == THeadlessSession::ScriptWindow::Kind::userWindow;
 }
 
 QHash<QString, QList<THeadlessSession::ScriptWindow>> byName(const QList<THeadlessSession::ScriptWindow>& windows)
@@ -616,7 +630,7 @@ bool THeadlessSession::onConsoleText(const ScriptWindow* pWindow, const QPointF&
     if (!pWindow) {
         return mainConsoleTextRect().contains(position.toPoint());
     }
-    return pWindow->kind == ScriptWindow::Kind::miniConsole || pWindow->kind == ScriptWindow::Kind::userWindow;
+    return consoleText(pWindow->kind);
 }
 
 bool THeadlessSession::pointWindow(const QList<ScriptWindow>& windows, const ScriptWindow* pWindow, const WindowPointerEvent& event, const std::optional<bool> pressedOnText)
@@ -638,7 +652,7 @@ bool THeadlessSession::pointWindow(const QList<ScriptWindow>& windows, const Scr
         return pointMapper(*pWindow, event);
     }
     // A command line or text box keeps the mouse for itself
-    if (pWindow && pWindow->kind != Kind::miniConsole && pWindow->kind != Kind::userWindow && pWindow->kind != Kind::scrollBox) {
+    if (pWindow && !miniConsole(pWindow->kind) && pWindow->kind != Kind::userWindow && pWindow->kind != Kind::scrollBox) {
         return true;
     }
     if (event.type == WindowPointerEvent::Type::wheel) {
@@ -674,7 +688,8 @@ void THeadlessSession::pointConsole(const QList<ScriptWindow>& windows, const QS
         if (!pWindow) {
             return;
         }
-        if (pWindow->kind == ScriptWindow::Kind::miniConsole || pWindow->kind == ScriptWindow::Kind::userWindow) {
+        // A frame the game nested others in is a plain widget around them, unless it is an EXTERNAL one's window
+        if (consoleText(pWindow->kind) && (pWindow->kind != ScriptWindow::Kind::mxpFrame || pWindow->inDock)) {
             break;
         }
         at += pWindow->geometry.topLeft();
@@ -723,11 +738,11 @@ bool THeadlessSession::opensConsoleMenu(const QList<ScriptWindow>& windows, cons
     QPoint point = inParent;
     const ScriptWindow* pHit = hitIn(label.parent, point);
     // childAt() goes on into what a scroll box or mini console holds there; a scroll box's own widget is not a console's text
-    while (pHit && (pHit->kind == Kind::scrollBox || pHit->kind == Kind::miniConsole)) {
+    while (pHit && (pHit->kind == Kind::scrollBox || miniConsole(pHit->kind))) {
         point -= pHit->geometry.topLeft();
         const ScriptWindow* pInner = hitIn(pHit->name, point);
         if (!pInner) {
-            return pHit->kind == Kind::miniConsole;
+            return miniConsole(pHit->kind);
         }
         pHit = pInner;
     }
@@ -737,7 +752,7 @@ bool THeadlessSession::opensConsoleMenu(const QList<ScriptWindow>& windows, cons
     if (!pParent) {
         return mainConsoleTextRect().contains(inParent);
     }
-    return pParent->kind == Kind::miniConsole || pParent->kind == Kind::userWindow;
+    return consoleText(pParent->kind);
 }
 
 void THeadlessSession::scrollConsole(const QString& name, const WindowPointerEvent& event)

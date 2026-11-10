@@ -382,6 +382,198 @@ createBuffer("buf")
         QVERIFY(session.shutdown(false));
     }
 
+    void test_theGamesMxpFramesAreListedAndRead()
+    {
+        using Kind = THeadlessSession::ScriptWindow::Kind;
+        const QString name = qsl("Headless Window Text Frames");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        QCoreApplication::processEvents();
+        QSignalSpy windowChanges(&session, &THeadlessSession::scriptWindowsChanged);
+        QSignalSpy textChanges(&session, &THeadlessSession::windowTextChanged);
+        const auto told = [](QSignalSpy& changes) {
+            settle();
+            QStringList all;
+            for (const QList<QVariant>& change : std::as_const(changes)) {
+                all << change.at(1).toStringList().join(QLatin1Char(','));
+            }
+            changes.clear();
+            return all.join(QLatin1Char(';'));
+        };
+        const auto feed = [&session](const QString& text) {
+            return session.runLua(qsl("feedTriggers([[%1]] .. '\\n')").arg(text));
+        };
+        QVERIFY(session.runLua(qsl("setBorderTop(0) setBorderBottom(0) setConfig('specialForceMXPProcessorOn', true)")));
+        told(windowChanges);
+
+        QVERIFY(feed(qsl(R"(<FRAME Name="side" Align="right" Width="200" Height="300">)")));
+        QCOMPARE(told(windowChanges), qsl("side"));
+        std::optional<THeadlessSession::ScriptWindow> side = session.scriptWindow(qsl("side"));
+        QVERIFY(side);
+        QCOMPARE(side->kind, Kind::mxpFrame);
+        QCOMPARE(side->parent, QString());
+        QCOMPARE(side->geometry, QRect(600, 0, 200, 600));
+        QVERIFY(side->shown);
+        QVERIFY(!side->inDock);
+        QVERIFY(!side->grid.isEmpty());
+        // A new frame's text is told, as a new mini console's is
+        QCOMPARE(told(textChanges), qsl("side"));
+
+        // A redirect's text is told and read as a mini console's
+        QVERIFY(feed(qsl("<DEST side>old one</DEST>")));
+        QCOMPARE(told(textChanges), qsl("side"));
+        QCOMPARE(joined(*session.windowLines(qsl("side"), 0, 100)), luaLines(session, qsl("side")));
+        QVERIFY(joined(*session.windowLines(qsl("side"), 0, 100)).contains(qsl("old one")));
+
+        // EOF empties the frame ahead of the text that follows it, however much of that one packet brought
+        QVERIFY(feed(qsl("<DEST side EOF>stale</DEST><DEST side EOF>fresh</DEST>")));
+        QCOMPARE(told(textChanges), qsl("side"));
+        const QString afterEof = joined(*session.windowLines(qsl("side"), 0, 100));
+        QVERIFY2(afterEof.contains(qsl("fresh")) && !afterEof.contains(qsl("stale")) && !afterEof.contains(qsl("old one")), qPrintable(afterEof));
+        QCOMPARE(afterEof, luaLines(session, qsl("side")));
+
+        // EOL drops only the line the frame was left on, which is all an empty redirect does
+        QVERIFY(session.runLua(qsl("echo('side', 'unfinished')")));
+        QCOMPARE(told(textChanges), qsl("side"));
+        QVERIFY(feed(qsl("<DEST side EOL></DEST>")));
+        QCOMPARE(told(textChanges), qsl("side"));
+        const QString afterEol = joined(*session.windowLines(qsl("side"), 0, 100));
+        QVERIFY2(afterEol.contains(qsl("fresh")) && !afterEol.contains(qsl("unfinished")), qPrintable(afterEol));
+        QCOMPARE(afterEol, luaLines(session, qsl("side")));
+
+        // A frame with a title has a tab header over its console, and a frame docked into it is a page behind it
+        QVERIFY(feed(qsl(R"(<FRAME Name="tabs" Title="Tabs" Align="left" Width="200" Height="300">)")));
+        QVERIFY(feed(qsl(R"(<FRAME Name="page" Title="Page" DOCK="tabs" Align="client">)")));
+        told(windowChanges);
+        const std::optional<THeadlessSession::ScriptWindow> tabs = session.scriptWindow(qsl("tabs"));
+        const std::optional<THeadlessSession::ScriptWindow> page = session.scriptWindow(qsl("page"));
+        QVERIFY(tabs && page);
+        QCOMPARE(tabs->geometry, QRect(0, 30, 200, 570));
+        QCOMPARE(page->kind, Kind::mxpFrame);
+        QCOMPARE(page->parent, QString());
+        QCOMPARE(page->geometry.topLeft(), QPoint(0, 30));
+        QCOMPARE(qsl("%1 %2").arg(tabs->shown).arg(page->shown), qsl("0 1"));
+        // A frame opened in a page is in the page's tab
+        QVERIFY(feed(qsl(R"(<DEST page><FRAME Name="nested" Align="bottom" Height="80"></DEST>)")));
+        QCOMPARE(told(windowChanges), qsl("nested"));
+        const std::optional<THeadlessSession::ScriptWindow> nested = session.scriptWindow(qsl("nested"));
+        QVERIFY(nested);
+        QCOMPARE(nested->parent, qsl("page"));
+        QCOMPARE(nested->parentKind, Kind::mxpFrame);
+        QVERIFY(nested->shown);
+
+        // An EXTERNAL frame is a window of its own, and a frame opened in it is placed in it
+        QVERIFY(feed(qsl(R"(<FRAME Name="away" EXTERNAL Width="300" Height="200">)")));
+        QVERIFY(feed(qsl(R"(<DEST away><FRAME Name="inner" Align="bottom" Height="50"></DEST>)")));
+        QCOMPARE(told(windowChanges), qsl("away,inner"));
+        const std::optional<THeadlessSession::ScriptWindow> away = session.scriptWindow(qsl("away"));
+        const std::optional<THeadlessSession::ScriptWindow> inner = session.scriptWindow(qsl("inner"));
+        QVERIFY(away && inner);
+        QVERIFY(away->inDock);
+        QCOMPARE(away->geometry, QRect(0, 0, 300, 200));
+        QCOMPARE(inner->parent, qsl("away"));
+        QCOMPARE(inner->geometry, QRect(0, 150, 300, 50));
+        QVERIFY(session.runLua(qsl("hideWindow('away')")));
+        QCOMPARE(told(windowChanges), qsl("away,inner"));
+        QVERIFY(!session.scriptWindow(qsl("inner"))->shown);
+
+        // A press on a frame's console goes on to the main console, an EXTERNAL frame's at the main area's corner
+        QVERIFY(session.runLua(qsl(R"lua(
+showWindow("away")
+pressed = {}
+registerAnonymousEventHandler("sysWindowMousePressEvent", function(_, button, x, y, window)
+  pressed[#pressed + 1] = string.format("%d %d %s", x, y, window)
+end)
+)lua")));
+        told(windowChanges);
+        using Type = THeadlessSession::WindowPointerEvent::Type;
+        QVERIFY(session.pointer(qsl("side"), {.type = Type::press, .position = QPointF(5, 6), .button = Qt::LeftButton, .buttons = Qt::LeftButton}));
+        QVERIFY(session.pointer(qsl("side"), {.type = Type::release, .position = QPointF(5, 6), .button = Qt::LeftButton}));
+        QVERIFY(session.pointer(qsl("away"), {.type = Type::press, .position = QPointF(7, 8), .button = Qt::LeftButton, .buttons = Qt::LeftButton}));
+        QVERIFY(session.pointer(qsl("away"), {.type = Type::release, .position = QPointF(7, 8), .button = Qt::LeftButton}));
+        // The page's tab is a plain widget, so a press on a frame in it goes on to the main console as well
+        QVERIFY(session.pointer(qsl("nested"), {.type = Type::press, .position = QPointF(3, 4), .button = Qt::LeftButton, .buttons = Qt::LeftButton}));
+        QVERIFY(session.pointer(qsl("nested"), {.type = Type::release, .position = QPointF(3, 4), .button = Qt::LeftButton}));
+        const QPoint inMain = QPoint(3, 4) + page->geometry.topLeft() + nested->geometry.topLeft();
+        QCOMPARE(luaString(session, qsl("table.concat(pressed, ';')")), qsl("605 6 main;7 8 main;%1 %2 main").arg(inMain.x()).arg(inMain.y()));
+
+        // A script that moves a frame's console out of its frame puts it where it said
+        QVERIFY(session.runLua(qsl("openUserWindow('uw') setWindow('uw', 'nested', 10, 20, true)")));
+        told(windowChanges);
+        const std::optional<THeadlessSession::ScriptWindow> moved = session.scriptWindow(qsl("nested"));
+        QVERIFY(moved);
+        QCOMPARE(moved->kind, Kind::mxpFrame);
+        QCOMPARE(moved->parent, qsl("uw"));
+        QCOMPARE(moved->parentKind, Kind::userWindow);
+        QCOMPARE(moved->geometry.topLeft(), QPoint(10, 20));
+
+        // A frame closed and opened again in one packet has lost its rows, though it is the same among the windows
+        told(textChanges);
+        QVERIFY(feed(qsl("<DEST side>kept so far</DEST>")));
+        QCOMPARE(told(textChanges), qsl("side"));
+        QVERIFY(feed(qsl(R"(<FRAME side ACTION="close"><FRAME Name="side" Align="right" Width="200" Height="300">)")));
+        QCOMPARE(told(textChanges), qsl("side"));
+        QVERIFY(!joined(*session.windowLines(qsl("side"), 0, 100)).contains(qsl("kept so far")));
+        told(windowChanges);
+
+        // A focused frame is raised over the others
+        QVERIFY(session.scriptWindow(qsl("tabs"))->stackOrder < session.scriptWindow(qsl("side"))->stackOrder);
+        QVERIFY(feed(qsl(R"(<FRAME tabs ACTION="focus">)")));
+        QVERIFY(told(windowChanges).split(QLatin1Char(',')).contains(qsl("tabs")));
+        QVERIFY(session.scriptWindow(qsl("tabs"))->stackOrder > session.scriptWindow(qsl("side"))->stackOrder);
+        QVERIFY(session.scriptWindow(qsl("page"))->stackOrder > session.scriptWindow(qsl("side"))->stackOrder);
+
+        // Closing a frame takes it off the list, and moves the ones that take its room
+        QVERIFY(feed(qsl(R"(<FRAME Name="second" Align="left" Width="100">)")));
+        QCOMPARE(told(windowChanges), qsl("second"));
+        QCOMPARE(session.scriptWindow(qsl("second"))->geometry, QRect(200, 0, 100, 600));
+        QVERIFY(feed(qsl(R"(<FRAME tabs ACTION="close">)")));
+        QCOMPARE(told(windowChanges), qsl("nested,page,second,tabs"));
+        QCOMPARE(session.scriptWindow(qsl("second"))->geometry, QRect(0, 0, 100, 600));
+        // The frame that was above it is one lower in the stack
+        QVERIFY(feed(qsl(R"(<FRAME side ACTION="close">)")));
+        QCOMPARE(told(windowChanges), qsl("second,side"));
+        QVERIFY(!session.scriptWindow(qsl("side")));
+        QVERIFY(!session.windowLines(qsl("side"), 0, 1));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_aFrameStaysInItsHostsContainerWhenAScriptMovesTheHostsConsole()
+    {
+        using Kind = THeadlessSession::ScriptWindow::Kind;
+        const QString name = qsl("Headless Window Text Frame Host Moved");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        QVERIFY(session.runLua(qsl("setBorderTop(0) setBorderBottom(0) setConfig('specialForceMXPProcessorOn', true)")));
+        const auto feed = [&session](const QString& text) {
+            return session.runLua(qsl("feedTriggers([[%1]] .. '\\n')").arg(text));
+        };
+        QVERIFY(feed(qsl(R"(<FRAME Name="tabs" Title="Tabs" Align="left" Width="200" Height="300">)")));
+        QVERIFY(feed(qsl(R"(<FRAME Name="page" Title="Page" DOCK="tabs" Align="client">)")));
+        QVERIFY(feed(qsl(R"(<DEST page><FRAME Name="nested" Align="bottom" Height="80"></DEST>)")));
+        settle();
+        const std::optional<THeadlessSession::ScriptWindow> page = session.scriptWindow(qsl("page"));
+        const std::optional<THeadlessSession::ScriptWindow> nested = session.scriptWindow(qsl("nested"));
+        QVERIFY(page && nested);
+        QCOMPARE(nested->parent, qsl("page"));
+        const QPoint inMain = page->geometry.topLeft() + nested->geometry.topLeft();
+
+        // TMxpFrameWidgets builds a frame in its host's container, which stays in the tab as the console leaves
+        QVERIFY(session.runLua(qsl("openUserWindow('uw') setWindow('uw', 'page', 10, 20, true)")));
+        settle();
+        QCOMPARE(session.scriptWindow(qsl("page"))->parent, qsl("uw"));
+        const std::optional<THeadlessSession::ScriptWindow> left = session.scriptWindow(qsl("nested"));
+        QVERIFY(left);
+        QCOMPARE(left->kind, Kind::mxpFrame);
+        QCOMPARE(left->parent, QString());
+        QCOMPARE(left->geometry.topLeft(), inMain);
+        QVERIFY(session.shutdown(false));
+    }
+
     void test_eachWayAScriptChangesAConsolesTextIsTold_data()
     {
         QTest::addColumn<QString>("lua");

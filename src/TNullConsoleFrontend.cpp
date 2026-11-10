@@ -56,6 +56,9 @@ namespace {
 // QWIDGETSIZE_MAX, which only <QWidget> defines
 constexpr int maximumWidgetSize = (1 << 24) - 1;
 
+// TMxpFrameWidgets::createInternalFrame()'s allowance for the tab header
+constexpr int tabHeaderHeight = 30;
+
 // As QWidget::resize() bounds a size
 QSize widgetSize(const int width, const int height)
 {
@@ -562,6 +565,7 @@ void TConsoleModelSink::discardAll()
 void TConsoleModelSink::discardLastLine()
 {
     mModel.buffer.clearLastLine();
+    emit mModel.mNotifier.contentEdited();
 }
 
 // TMxpFrameWidgets::frameWidget(): a frame's container, or an external frame's console, which a script's deletion
@@ -572,10 +576,9 @@ bool TNullMxpFrameFrontend::hasFrameWidget(const QString& name) const
     return it != mView.mFrameHolders.end() && it->second;
 }
 
-// TMxpFrameWidgets::createInternalFrame()'s allowance for the tab header
 QSize TNullMxpFrameFrontend::consoleSize(const QString& name, const QSize& frameSize) const
 {
-    const int header = mHeaders.contains(name) ? 30 : 0;
+    const int header = mHeaders.contains(name) ? tabHeaderHeight : 0;
     return QSize(frameSize.width(), frameSize.height() - header).expandedTo(QSize(0, 0));
 }
 
@@ -599,6 +602,7 @@ void TNullMxpFrameFrontend::createInternalFrame(const QString& name, const QStri
         mHeaders[name].pages.push_back(name);
     }
     mHosts[name] = hostName;
+    mPlaces[name] = geometry.topLeft();
     const QSize size = consoleSize(name, geometry.size());
     if (showHeader) {
         mHeaders[name].area = size;
@@ -620,6 +624,7 @@ std::optional<QSize> TNullMxpFrameFrontend::createExternalFrame(const QString& n
 {
     mHeaders.erase(name);
     mHosts[name] = QString();
+    mPlaces.erase(name);
     mView.addFrameConsole(name, size, true, QString(), scrolling);
     return size;
 }
@@ -637,6 +642,7 @@ void TNullMxpFrameFrontend::createTabFrame(const QString& name, const QString&, 
     // A page is in its header's container, wherever that is
     const auto parentHost = mHosts.find(parentName);
     mHosts[name] = parentHost != mHosts.end() ? parentHost->second : QString();
+    mPlaces.erase(name);
     mView.addFrameConsole(name, select ? header->second.area : size, false, parentName, scrolling);
     reportPages();
 }
@@ -672,8 +678,29 @@ void TNullMxpFrameFrontend::removePage(Header& header, const size_t index)
     }
 }
 
+QString TNullMxpFrameFrontend::host(const QString& name) const
+{
+    const auto it = mHosts.find(name);
+    return it != mHosts.end() ? it->second : QString();
+}
+
+QPoint TNullMxpFrameFrontend::consolePlace(const QString& name) const
+{
+    QString frame = name;
+    int header = 0;
+    for (const auto& [headerName, pages] : mHeaders) {
+        if (std::find(pages.pages.cbegin(), pages.pages.cend(), name) != pages.pages.cend()) {
+            frame = headerName;
+            header = tabHeaderHeight;
+        }
+    }
+    const auto place = mPlaces.find(frame);
+    return (place != mPlaces.end() ? place->second : QPoint()) + QPoint(0, header);
+}
+
 void TNullMxpFrameFrontend::reportPages()
 {
+    mView.mWindowNotifier.note();
     QStringList names;
     for (const auto& [name, host] : mHosts) {
         names << name;
@@ -729,6 +756,7 @@ void TNullMxpFrameFrontend::destroyFrame(const QString& name)
     mHeaders.erase(name);
     mHosts.erase(name);
     mConsoleSizes.erase(name);
+    mPlaces.erase(name);
     // QTabWidget takes a deleted page out of its header
     bool removed = false;
     for (auto& [headerName, header] : mHeaders) {
@@ -747,6 +775,10 @@ void TNullMxpFrameFrontend::destroyFrame(const QString& name)
 // Only a container that changes size lays its console out again, so one a script resized keeps that size till then
 void TNullMxpFrameFrontend::setGeometry(const QString& name, const QRect& geometry)
 {
+    if (const auto place = mPlaces.find(name); place != mPlaces.end() && place->second != geometry.topLeft()) {
+        place->second = geometry.topLeft();
+        mView.mWindowNotifier.note();
+    }
     const QSize size = consoleSize(name, geometry.size());
     if (const auto laidOut = mConsoleSizes.find(name); laidOut != mConsoleSizes.end() && laidOut->second == size) {
         return;
@@ -770,12 +802,35 @@ void TNullMxpFrameFrontend::showFrame(const QString& name)
     }
 }
 
+// TMxpFrameWidgets raises the frame's widget, which holds every page of its header; a page's own is in a
+// QStackedWidget, where a raise shows nothing
+void TNullMxpFrameFrontend::focusFrame(const QString& name)
+{
+    if (!hasFrameWidget(name)) {
+        return;
+    }
+    const auto header = mHeaders.find(name);
+    for (const auto& [headerName, other] : mHeaders) {
+        if (headerName != name && std::find(other.pages.cbegin(), other.pages.cend(), name) != other.pages.cend()) {
+            return;
+        }
+    }
+    const std::vector<QString> held = header != mHeaders.end() ? header->second.pages : std::vector<QString>{name};
+    for (const QString& console : held) {
+        if (mView.inOwnFrame(console)) {
+            mView.mSubConsoles[console].stackOrder = ++mView.mTopOfStack;
+        }
+    }
+    mView.mWindowNotifier.note();
+}
+
 // A view that attaches drops every frame console and makes its own frames
 void TNullMxpFrameFrontend::clear()
 {
     mHeaders.clear();
     mHosts.clear();
     mConsoleSizes.clear();
+    mPlaces.clear();
 }
 
 // Nothing lays the main console out, so the main window is all of it
@@ -1439,6 +1494,7 @@ void TNullConsoleFrontend::sizeFrameConsole(const QString& name, const QSize& si
         return;
     }
     mpHost->windowRegistry().setSubConsoleGeometry(name, QRect(QPoint(0, 0), size));
+    mWindowNotifier.note();
     reportGridSize(name);
 }
 
@@ -3884,22 +3940,25 @@ QString TNullConsoleFrontend::parentName(const QString& userWindow, const Scroll
     return userWindow;
 }
 
-bool TNullConsoleFrontend::listsConsole(const SubConsole& console, const std::optional<TWindowRegistry::SubConsoleKind> kind)
+bool TNullConsoleFrontend::listsConsole(const std::optional<TWindowRegistry::SubConsoleKind> kind)
 {
-    return !console.pFrameSink && (kind == TWindowRegistry::SubConsoleKind::MiniConsole || kind == TWindowRegistry::SubConsoleKind::UserWindow);
+    return kind == TWindowRegistry::SubConsoleKind::MiniConsole || kind == TWindowRegistry::SubConsoleKind::UserWindow;
 }
 
 TConsoleModel* TNullConsoleFrontend::listedConsoleModel(const QString& name) const
 {
     const auto it = mSubConsoles.find(name);
-    return it != mSubConsoles.end() && listsConsole(it->second, mpHost->windowRegistry().subConsoleKind(name)) ? it->second.pModel.get() : nullptr;
+    return it != mSubConsoles.end() && listsConsole(mpHost->windowRegistry().subConsoleKind(name)) ? it->second.pModel.get() : nullptr;
 }
 
 std::vector<TNullConsoleFrontend::WindowRecord> TNullConsoleFrontend::windowRecords() const
 {
     using Kind = WindowRecord::Kind;
     const TWindowRegistry& registry = mpHost->windowRegistry();
-    const auto consoleKind = [&registry](const QString& name) {
+    const auto consoleKind = [&registry](const QString& name, const SubConsole& console) {
+        if (console.pFrameSink) {
+            return Kind::mxpFrame;
+        }
         return registry.subConsoleKind(name) == TWindowRegistry::SubConsoleKind::UserWindow ? Kind::userWindow : Kind::miniConsole;
     };
     // As parentName() gives the user window for a box deleted with deleteScrollBox() that its windows still hold
@@ -3912,19 +3971,29 @@ std::vector<TNullConsoleFrontend::WindowRecord> TNullConsoleFrontend::windowReco
     std::vector<WindowRecord> records;
     for (const auto& [name, console] : mSubConsoles) {
         const auto kind = registry.subConsoleKind(name);
-        if (!listsConsole(console, kind)) {
+        if (!listsConsole(kind)) {
             continue;
         }
+        // A frame's console that a script moved out of its frame is where the script put it
+        const bool framed = inOwnFrame(name);
+        const QRect geometry = registry.subConsoleGeometry(name).value_or(QRect());
+        QString frameHost = framed ? mMxpFrames.host(name) : QString();
+        QPoint framePlace = framed ? mMxpFrames.consolePlace(name) : QPoint();
+        // A frame in one whose console a script moved out stays in that one's container, which did not move
+        for (size_t depth = 0; !frameHost.isEmpty() && mSubConsoles.contains(frameHost) && !inOwnFrame(frameHost) && depth <= mSubConsoles.size(); ++depth) {
+            framePlace += mMxpFrames.consolePlace(frameHost);
+            frameHost = mMxpFrames.host(frameHost);
+        }
         records.push_back({name,
-                           consoleKind(name),
-                           parentName(console.userWindow, console.box.get()),
-                           registry.subConsoleGeometry(name).value_or(QRect()),
+                           consoleKind(name, console),
+                           framed ? frameHost : parentName(console.userWindow, console.box.get()),
+                           framed ? QRect(framePlace, geometry.size()) : geometry,
                            console.shown,
-                           console.shown && shownWithin(console.userWindow, console.box.get()),
+                           console.shown && (!framed || mMxpFrames.pageShown(name)) && shownWithin(console.userWindow, console.box.get()),
                            console.stackOrder,
                            console.pModel->mBgColor,
                            console.pModel->mUpperPaneFont,
-                           kind == TWindowRegistry::SubConsoleKind::UserWindow});
+                           kind == TWindowRegistry::SubConsoleKind::UserWindow || (framed && externalFrame(name))});
         WindowRecord& record = records.back();
         // As Host::windowScroll() bounds it, which a deleteLine() can leave past the end
         if (console.pModel->mScrolledBackTo) {
@@ -3933,7 +4002,7 @@ std::vector<TNullConsoleFrontend::WindowRecord> TNullConsoleFrontend::windowReco
         record.grid = console.pModel->mGridSize;
         record.scrollBar = console.pModel->mScrollBarEnabled;
         record.timeStamps = console.pModel->mShowTimeStamps;
-        record.parentKind = kindOfParent(console.box.get());
+        record.parentKind = framed ? (frameHost.isEmpty() ? Kind::userWindow : Kind::mxpFrame) : kindOfParent(console.box.get());
         if (kind == TWindowRegistry::SubConsoleKind::UserWindow) {
             record.autoDock = console.autoDock;
             record.dockArea = console.dockArea;
@@ -3971,7 +4040,7 @@ std::vector<TNullConsoleFrontend::WindowRecord> TNullConsoleFrontend::windowReco
         const bool visible = line.shown && line.layerShown;
         const bool shown = visible && line.consoleShown && (!own || console->second.shown) && shownWithin(line.userWindow, line.box.get());
         records.push_back({name, Kind::commandLine, own ? name : parentName(line.userWindow, line.box.get()), line.geometry, visible, shown, line.stackOrder, QColor(), QFont()});
-        records.back().parentKind = own ? consoleKind(name) : kindOfParent(line.box.get());
+        records.back().parentKind = own ? consoleKind(name, console->second) : kindOfParent(line.box.get());
     }
     for (const auto& [name, textBox] : mTextBoxes) {
         records.push_back({name,

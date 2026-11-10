@@ -550,15 +550,17 @@ public:
     // follows it, the position taken as that point of the "mapper" window, which the GUI's map fills from its top
     // left.
     bool mapPointer(const MapPointerEvent& event);
-    // A window the profile's scripts made, as the GUI would show it, for the app to draw: Mudlet draws none of
-    // them. A Geyser gauge, button or container is the labels and windows it is made of.
+    // A window the profile's scripts made, or the console of an MXP frame the game opened, as the GUI would show
+    // it, for the app to draw: Mudlet draws none of them. A Geyser gauge, button or container is the labels and
+    // windows it is made of. An MXP frame is a mini console in all but who made it: the same text, links, scroll
+    // and pointer. Its tab header is not told, only, in shown, whether its page is the one in front.
     struct ScriptWindow
     {
-        enum class Kind { miniConsole, userWindow, label, commandLine, textBox, scrollBox, mapper };
+        enum class Kind { miniConsole, userWindow, label, commandLine, textBox, scrollBox, mapper, mxpFrame };
         QString name;
         Kind kind = Kind::label;
-        // The user window or scroll box it is in, or the console whose own command line it is; empty for the main
-        // window's area and for a dock
+        // The user window or scroll box it is in, the console whose own command line it is, or the MXP frame an
+        // MXP frame was opened inside; empty for the main window's area, for a dock and for an EXTERNAL MXP frame
         QString parent;
         // In its parent's pixels, from its top left corner, and a dock's in the main window's; none for a console's
         // own command line, which the app lays out along the console's bottom. A user window, with no dock layout to
@@ -577,7 +579,8 @@ public:
         // What a console, label or text box draws its text in; a default QFont for the other kinds
         QFont font;
         // A dock beside the main window's area, docked or floating, rather than a window in it: a user window, or the
-        // map openMapWidget() opened
+        // map openMapWidget() opened. An EXTERNAL MXP frame too, a window of its own that the app places: its
+        // geometry is only its size.
         bool inDock = false;
         // A user window's dock, as openUserWindow() and setUserWindowTitle() gave it, and setUserWindowGeometry()
         // floats or docks it
@@ -593,7 +596,7 @@ public:
             bool operator==(const Dock&) const = default;
         };
         std::optional<Dock> dock;
-        // These four are a mini console's or user window's. The row it is scrolled back to, as a script's getScroll()
+        // These four are a mini console's, user window's or MXP frame's. The row it is scrolled back to, as a script's getScroll()
         // gives it, none while it follows new lines: scrolled back, the GUI splits the console, the upper pane
         // showing the grid's rows of windowLines() that end just above this row, the lower one the last rows.
         std::optional<int> scrolledBackTo;
@@ -611,8 +614,8 @@ public:
         bool operator==(const ScriptWindow&) const = default;
     };
     // Every window the profile's scripts made, parents before what they hold and each parent's windows from the
-    // lowest up, the main window's area's before the docks; not buffers, which are never shown, nor the game's MXP
-    // frames. Empty with no profile open. Read from anywhere, a handler included.
+    // lowest up, the main window's area's before the docks, and the game's MXP frames among them; not buffers, which
+    // are never shown. Empty with no profile open. Read from anywhere, a handler included.
     QList<ScriptWindow> scriptWindows() const;
     // The first of them with the name, or with the name and kind, as a console's own command line has its name
     std::optional<ScriptWindow> scriptWindow(const QString& name, std::optional<ScriptWindow::Kind> kind = std::nullopt) const;
@@ -684,10 +687,10 @@ public:
         int first = 0;
         QList<WindowLine> lines;
     };
-    // Up to count rows of a mini console or user window among scriptWindows(), shown or hidden, or of the main
+    // Up to count rows of a mini console, user window or MXP frame among scriptWindows(), shown or hidden, or of the main
     // console for "main" or no name, from row first, cut to the rows there are; a first below 0 counts back from the
-    // end, so -count is the last count rows. None with no profile open and for any other name: a label, a buffer,
-    // one of the game's MXP frames. A getter, so it may be called from any handler, but from one of outputLine or
+    // end, so -count is the last count rows. None with no profile open and for any other name: a label, a buffer.
+    // A getter, so it may be called from any handler, but from one of outputLine or
     // lineShown the main console's last row is in the middle of its commit.
     std::optional<WindowText> windowLines(const QString& window, int first, int count) const;
     // Where the app put a user window, in the main window's pixels, docked or floating, as the GUI's dock is placed
@@ -939,9 +942,9 @@ signals:
     // From the event loop, sorted, once however many calls in a turn changed them, and not for calls that changed
     // nothing.
     void scriptWindowsChanged(const QString& profile, const QStringList& names);
-    // What windowLines() gives for these mini consoles and user windows may differ: text written, edited,
-    // recoloured, deleted or cleared, a link of theirs changed, or the console new, as one made again under the
-    // name of one deleted in the same turn is. Never the main console, which outputLine, lineShown
+    // What windowLines() gives for these mini consoles, user windows and MXP frames may differ: text written,
+    // edited, recoloured, deleted or cleared, a link of theirs changed, or the console new, as one made again under
+    // the name of one deleted in the same turn is. Never the main console, which outputLine, lineShown
     // and mainConsoleCleared tell of. From the event loop, sorted, once however many writes a turn made, and after
     // the scriptWindowsChanged of a window made in that turn. A handler may call the session.
     void windowTextChanged(const QString& profile, const QStringList& windows);
