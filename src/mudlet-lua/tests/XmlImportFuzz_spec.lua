@@ -149,6 +149,7 @@ local RICH_MAP = [[<?xml version="1.0" encoding="UTF-8"?>
 local PACKAGE_FIXTURES = {
     "mudlet-spec-minimal", "mudlet-spec-nested", "mudlet-spec-varsonly", "mudlet-spec-xmlonly",
     "mudlet-spec-brokenscripts", "mudlet-spec-colorfilter", "mudlet-spec-treeindex", "mudlet-spec-triggerkinds",
+    "mudlet-spec-buttonskeystimers",
 }
 
 local VALUES = {
