@@ -693,9 +693,10 @@ QString dlgPackageManager::installPackageFiles(const QStringList& fileNames)
 {
     QStringList failures;
     for (const QString& fileName : fileNames) {
+        // Mid-save, installPackage() answers yes and tries later, leaving no reason to report
+        mpHost->waitForProfileSave();
         const auto [installed, reason] = mpHost->installPackage(fileName, enums::PackageModuleType::Package);
         if (installed) {
-            mpHost->waitForProfileSave();
             continue;
         }
         //: Package manager - one line of the notice listing packages that failed to import. %1 is the file name, %2 the reason it was refused
