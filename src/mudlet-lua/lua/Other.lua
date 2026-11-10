@@ -1109,7 +1109,8 @@ do
     local existinghandlers = handlers[event]
     if type(func) == "string" then
       local functionString = string.format("return %s(...)", func)
-      local functionExists = findStringEventHandler(existinghandlers, functionString)
+      -- a one-shot is a handler of its own: handing back the ID of one that stays would let killing it end that one
+      local functionExists = not isOneShot and findStringEventHandler(existinghandlers, functionString)
 
       if not functionExists then
         func = assert(loadstring(functionString))
