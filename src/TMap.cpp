@@ -3880,11 +3880,11 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
         return {false, (translatableTexts ? tr("no areas detected") : qsl("no areas detected"))};
     }
 
-    mProgressDialogAreasTotal = qRound(mapObj[QLatin1String("areaCount")].toDouble());
+    mProgressDialogAreasTotal = mapObj[QLatin1String("areaCount")].toInt();
     mProgressDialogAreasCount = 0;
-    mProgressDialogRoomsTotal = qRound(mapObj[QLatin1String("roomCount")].toDouble());
+    mProgressDialogRoomsTotal = mapObj[QLatin1String("roomCount")].toInt();
     mProgressDialogRoomsCount = 0;
-    mProgressDialogLabelsTotal = qRound(mapObj[QLatin1String("labelCount")].toDouble());
+    mProgressDialogLabelsTotal = mapObj[QLatin1String("labelCount")].toInt();
     mProgressDialogLabelsCount = 0;
     mJsonProgressShown.invalidate();
     mMapProgressStandalone = true;
@@ -3924,16 +3924,13 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
         userData = readJsonUserData(mapObj[QLatin1String("userData")].toObject());
     }
     const QString mapSymbolFontText = mapObj[QLatin1String("mapSymbolFontDetails")].toString();
-    // qRound() returns an int, so dividing by an int literal here used to be
-    // integer division and every load rounded the factor to a whole number -
-    // issue #10176, which turned anything below 1.0 into a 0 that stops room
-    // symbols being drawn at all. The 1000 is to keep the value to the three
-    // decimals the preferences offer:
-    const qreal mapSymbolFontFudgeFactor = usableSymbolFontFudgeFactor(qRound(mapObj[QLatin1String("mapSymbolFontFudgeFactor")].toDouble() * 1000.0) / 1000.0);
+    // Not qRound(), whose int overflows on a huge factor; the 1000 keeps the
+    // value to the three decimals the preferences offer:
+    const qreal mapSymbolFontFudgeFactor = usableSymbolFontFudgeFactor(std::round(mapObj[QLatin1String("mapSymbolFontFudgeFactor")].toDouble() * 1000.0) / 1000.0);
     const bool isOnlyMapSymbolFontToBeUsed = mapObj[QLatin1String("onlyMapSymbolFontToBeUsed")].toBool();
-    const int playerRoomStyle = qRound(mapObj[QLatin1String("playerRoomStyle")].toDouble());
-    quint8 const playerRoomOuterDiameterPercentage = qRound(mapObj[QLatin1String("playerRoomOuterDiameterPercentage")].toDouble());
-    quint8 const playerRoomInnerDiameterPercentage = qRound(mapObj[QLatin1String("playerRoomInnerDiameterPercentage")].toDouble());
+    const int playerRoomStyle = mapObj[QLatin1String("playerRoomStyle")].toInt();
+    quint8 const playerRoomOuterDiameterPercentage = mapObj[QLatin1String("playerRoomOuterDiameterPercentage")].toInt();
+    quint8 const playerRoomInnerDiameterPercentage = mapObj[QLatin1String("playerRoomInnerDiameterPercentage")].toInt();
     QColor playerRoomOuterColor;
     QColor playerRoomInnerColor;
 

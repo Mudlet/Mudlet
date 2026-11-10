@@ -616,6 +616,30 @@ describe("Tests the audit of a damaged binary map file", function()
     end)
   end)
 
+  describe("Tests the numbers in a JSON map's header", function()
+    -- they were rounded to an int, which a number beyond int's range overflows
+    it("loads a JSON map whose counts and settings are far beyond the range of an int", function()
+      openMapWidget()
+      local jsonPath = mapDirectory .. "/mapfileaudit_spec_header.json"
+      local area = newArea("MapFileAuditSpecJsonHugeHeader")
+      local room = newRoom(area, 0)
+      assert.is_true(saveJsonMap(jsonPath))
+      local text = readFile(jsonPath)
+      -- each top-level key keeps its original value under a name the reader ignores
+      for _, key in ipairs({"areaCount", "roomCount", "labelCount", "playerRoomStyle",
+                            "playerRoomOuterDiameterPercentage", "playerRoomInnerDiameterPercentage"}) do
+        text = planted(text, ('\n    "%s": '):format(key), ('\n    "%s": -2147483649, "%sWas": '):format(key, key), 1)
+      end
+      text = planted(text, '\n    "mapSymbolFontFudgeFactor": ', '\n    "mapSymbolFontFudgeFactor": 1e300, "fudgeWas": ', 1)
+      writeFile(jsonPath, text)
+      deleteMap()
+      assert.is_true(loadJsonMap(jsonPath))
+      os.remove(jsonPath)
+
+      assert.are.equal(area, getRoomArea(room))
+    end)
+  end)
+
   describe("Tests area IDs and area membership", function()
     it("renumbers an area whose ID is below one and moves its rooms with it", function()
       assert.is_true(setAreaName(distantAreaId, "MapFileAuditSpecBadId"))
