@@ -50,6 +50,8 @@
 #include "MudletInstanceCoordinator.h"
 #include "TAction.h"
 #include "TAlias.h"
+#include "TBuffer.h"
+#include "TConsoleModel.h"
 #include "TEvent.h"
 #include "TKey.h"
 #include "TLabel.h"
@@ -120,6 +122,14 @@ private:
     const bool isTrue = lua_toboolean(L, -1);
     lua_pop(L, 1);
     return isTrue;
+  }
+
+  int luaGlobalInt(const char *name) {
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    lua_getglobal(L, name);
+    const int value = static_cast<int>(lua_tointeger(L, -1));
+    lua_pop(L, 1);
+    return value;
   }
 
   QString bytecodeCachePathFileName() const {
@@ -550,6 +560,7 @@ private slots:
         qsl("resetSelfEnablingRuns = (resetSelfEnablingRuns or 0) + 1 "
             "enableScript('resetSelfEnablingGroup')"));
     QVERIFY2(id > 0, qPrintable(msg));
+    QCOMPARE(luaGlobalInt("resetSelfEnablingRuns"), 1);
     // Creating it ran the body, which switched the group on
     QVERIFY(mpHost->getScriptUnit()->disableScript(
         qsl("resetSelfEnablingGroup")));
@@ -563,6 +574,91 @@ private slots:
     const int runs = static_cast<int>(lua_tointeger(L, -1));
     lua_pop(L, 1);
     QCOMPARE(runs, 1);
+    delete mpHost->getScriptUnit()->getScript(groupId);
+  }
+
+  void test_disabledScriptRunsAfterLoadAndEnable() {
+    auto *scriptUnit = mpHost->getScriptUnit();
+    // As when a profile loads: bodies run in compileAll(), not as each script is read
+    mpHost->mBlockScriptCompile = true;
+    auto *pScript = new TScript(nullptr, mpHost);
+    scriptUnit->registerScript(pScript);
+    pScript->setName(qsl("loadDisabledScript"));
+    pScript->setScript(qsl("function loadDisabledScript() "
+                           "loadDisabledScriptRan = true end"));
+    pScript->setEventHandlerList({qsl("loadDisabledScriptEvent")});
+    mpHost->mBlockScriptCompile = false;
+    scriptUnit->compileAll(true);
+
+    QVERIFY(scriptUnit->enableScript(qsl("loadDisabledScript")));
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    QCOMPARE(luaL_dostring(L, "raiseEvent('loadDisabledScriptEvent')"), 0);
+    QVERIFY2(luaGlobalIsTrue("loadDisabledScriptRan"),
+             "a script switched off at load must answer its event once "
+             "switched on");
+    delete pScript;
+  }
+
+  void test_switchingAScriptOnAgainDoesNotRunItAgain() {
+    auto [id, msg] = mpHost->mLuaInterpreter.createPermScript(
+        qsl("resetToggledScript"), QString(),
+        qsl("resetToggledRuns = (resetToggledRuns or 0) + 1"));
+    QVERIFY2(id > 0, qPrintable(msg));
+
+    performReset();
+
+    auto *scriptUnit = mpHost->getScriptUnit();
+    QVERIFY(scriptUnit->enableScript(qsl("resetToggledScript")));
+    QVERIFY(scriptUnit->disableScript(qsl("resetToggledScript")));
+    QVERIFY(scriptUnit->enableScript(qsl("resetToggledScript")));
+    QCOMPARE(luaGlobalInt("resetToggledRuns"), 1);
+    delete scriptUnit->getScript(id);
+  }
+
+  void test_bodyThatStoppedPartWayIsNotRunAgain() {
+    auto [groupId, groupMsg] = mpHost->mLuaInterpreter.createPermScript(
+        qsl("resetFailingGroup"), QString(), QString());
+    QVERIFY2(groupId > 0, qPrintable(groupMsg));
+    // permScript() refuses a body that fails, as it runs it
+    mpHost->mBlockScriptCompile = true;
+    auto [id, msg] = mpHost->mLuaInterpreter.createPermScript(
+        qsl("resetFailingChild"), qsl("resetFailingGroup"),
+        qsl("resetFailingRuns = (resetFailingRuns or 0) + 1 error('stop')"));
+    QVERIFY2(id > 0, qPrintable(msg));
+    mpHost->mBlockScriptCompile = false;
+
+    performReset();
+
+    auto *scriptUnit = mpHost->getScriptUnit();
+    QVERIFY(scriptUnit->enableScript(qsl("resetFailingGroup")));
+    QVERIFY(scriptUnit->disableScript(qsl("resetFailingGroup")));
+    QVERIFY(scriptUnit->enableScript(qsl("resetFailingGroup")));
+    QCOMPARE(luaGlobalInt("resetFailingRuns"), 1);
+    delete scriptUnit->getScript(groupId);
+  }
+
+  void test_bodyThatFailsWhenSwitchedOnIsReported() {
+    auto [groupId, groupMsg] = mpHost->mLuaInterpreter.createPermScript(
+        qsl("resetWarnedGroup"), QString(), QString());
+    QVERIFY2(groupId > 0, qPrintable(groupMsg));
+    // permScript() refuses a body that fails, as it runs it
+    mpHost->mBlockScriptCompile = true;
+    auto [id, msg] = mpHost->mLuaInterpreter.createPermScript(
+        qsl("resetWarnedChild"), qsl("resetWarnedGroup"), qsl("error('stop')"));
+    QVERIFY2(id > 0, qPrintable(msg));
+    mpHost->mBlockScriptCompile = false;
+
+    performReset();
+
+    QVERIFY(mpHost->getScriptUnit()->enableScript(qsl("resetWarnedGroup")));
+    TBuffer &buffer = mpHost->mainConsoleModel().buffer;
+    bool reported = false;
+    for (int i = 0; i <= buffer.getLastLineNumber() && !reported; ++i) {
+      reported = buffer.line(i).contains(
+          qsl("failed to run when switched on: \"resetWarnedChild\""));
+    }
+    QVERIFY2(reported, "a body that fails when its script is switched on "
+                       "must be reported in the main console");
     delete mpHost->getScriptUnit()->getScript(groupId);
   }
 

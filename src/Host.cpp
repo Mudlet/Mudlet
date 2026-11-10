@@ -3727,6 +3727,12 @@ void Host::reportScriptsThatFailedToLoad()
     postMessage(tr("[ WARN ]  - These scripts failed to run when the profile loaded: \"%1\". Open them in the editor to see why.").arg(names.join(qsl("\", \""))));
 }
 
+void Host::reportScriptsThatFailedToRun(const QStringList& names)
+{
+    //: %1 is the names of the scripts, separated by ", " and each already in its own pair of quotes
+    postMessage(tr("[ WARN ]  - These scripts failed to run when switched on: \"%1\". Open them in the editor to see why.").arg(names.join(qsl("\", \""))));
+}
+
 // sanitizePackageName() strips folders and extensions wherever they appear, so a name of nothing else
 // comes back as "." or ".." ("...mpackage" gives ".."), and the archive is unpacked straight into
 // whatever this settles on - ".." being the folder holding every profile.

@@ -56,6 +56,7 @@ public:
     void compile(bool saveLoadingError = false);
     void compileAll(bool saveLoadingError = false);
     void markForCompile(bool registerHandlers);
+    bool waitingToRun() const { return mNeedsToBeCompiled; }
     bool compileScript(bool saveLoadingError = false);
     void execute();
     QString getScript() const { return mScript; }

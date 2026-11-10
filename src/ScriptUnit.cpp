@@ -326,10 +326,33 @@ void ScriptUnit::compileSwitchedOn(TScript* pScript)
     if (!pRoot->isActive() || std::find(mRootsBeingCompiled.begin(), mRootsBeingCompiled.end(), pRoot) != mRootsBeingCompiled.end()) {
         return;
     }
+    std::vector<TScript*> waiting;
+    const std::function<void(TScript*)> collectWaiting = [&](TScript* pNode) {
+        if (pNode->waitingToRun()) {
+            waiting.push_back(pNode);
+        }
+        for (auto* pChild : *pNode->getChildrenList()) {
+            collectWaiting(static_cast<TScript*>(pChild));
+        }
+    };
+    collectWaiting(pRoot);
+    // Keeps the scripts in waiting alive whilst their bodies run: one can uninstall its own package
+    beginProcessing();
     mRootsBeingCompiled.push_back(pRoot);
     // Only the scripts still waiting to run their body are compiled
     pRoot->compileAll();
     mRootsBeingCompiled.pop_back();
+    endProcessing();
+    // Load and reset report theirs once the pass ends; this one is outside both, so its own is reported here
+    QStringList failed;
+    for (auto* pNode : waiting) {
+        if (!pNode->waitingToRun() && !pNode->state() && !pendingDeletion(pNode)) {
+            failed << pNode->getName();
+        }
+    }
+    if (!failed.isEmpty()) {
+        mpHost->reportScriptsThatFailedToRun(failed);
+    }
 }
 
 bool ScriptUnit::disableScript(const QString& name)
