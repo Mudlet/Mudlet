@@ -1817,7 +1817,7 @@ shell, and none on the dialog.
 
 | Name | What it is |
 | --- | --- |
-| `modulesShell` | Everything on the window, on the page tone, carrying the button recipe, the table's tick and scroll bars, and the explanation under the table as `mutedText` with no box round it. The table's rows and headings are still platform-drawn |
+| `modulesShell` | Everything on the window, on the page tone, carrying the button recipe, the table's ticks and scroll bars, and the explanation under the table as `mutedText` with no box round it and the scroll bar recipe. The table's rows and headings are still platform-drawn |
 | `modulesNotice` | The `dlgSystemMessageArea` under the explanation, which `showImportStatus()` brings out in its warning reading and which stays until dismissed; `label_importStatus` is left hidden and unused |
 | `installButton`, `uninstallButton`, `helpButton` | The `.ui` file's buttons at the trailing end of the foot, carrying `packages-install-file.svg`, `editor-delete.svg` and `about-docs.svg` |
 
