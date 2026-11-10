@@ -129,9 +129,11 @@ private slots:
         QVERIFY(CredentialManager::retrieveCredential(mHostname, qsl("proxy"), &outcome).isEmpty());
         QCOMPARE(outcome, CredentialManager::ReadOutcome::Unreadable);
 
+        // As loading leaves it after an unreadable read, then the preferences applying the empty field
         mpHost->mProxyPassword.clear();
+        mpHost->setProxyPassword(QString());
         save();
-        QVERIFY2(QFile::exists(path), "saving deleted a stored password that only failed to load");
+        QVERIFY2(QFile::exists(path), "clearing an empty field deleted a stored password that only failed to load");
     }
 };
 
