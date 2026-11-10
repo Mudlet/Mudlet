@@ -781,25 +781,30 @@ private slots:
     {
         setUpPlayerView();
         hideInfoBox();
-        TRoom* pRoom = roomDB()->getRoom(scmEastRoom);
         TArea* pArea = roomDB()->getArea(mAreaId);
 
-        for (const bool startInGridMode : {false, true}) {
-            pRoom->mSymbol = qsl("W");
-            pArea->gridMode = startInGridMode;
-            TMapPainter painter;
-            TMapPainter freshPainter;
-            TMapPainter blankPainter;
-            TMapPainter::PaintResult result;
-            paintedView(painter, playerView(), result);
-            pArea->gridMode = !startInGridMode;
-            const QImage switched = paintedView(painter, result.view, result);
-            const QImage fresh = paintedView(freshPainter, playerView(), result);
-            const QString name = startInGridMode ? qsl("out-of-grid") : qsl("into-grid");
-            QVERIFY2(switched == fresh, qPrintable(saved(switched, name) + qsl("; ") + saved(fresh, name + qsl("-fresh"))));
-            pRoom->mSymbol.clear();
-            const QImage blank = paintedView(blankPainter, playerView(), result);
-            QVERIFY2(fresh != blank, qPrintable(qsl("no symbol was drawn, so the comparison proves nothing: ") + saved(fresh, name + qsl("-fresh"))));
+        // The player's room is drawn apart from the rest in grid mode; a see-through marker leaves its symbol visible
+        map()->mPlayerRoomInnerColor = Qt::transparent;
+        map()->mPlayerRoomOuterColor = Qt::transparent;
+        for (const int roomId : {scmEastRoom, scmWestRoom}) {
+            TRoom* pRoom = roomDB()->getRoom(roomId);
+            for (const bool startInGridMode : {false, true}) {
+                pRoom->mSymbol = qsl("W");
+                pArea->gridMode = startInGridMode;
+                TMapPainter painter;
+                TMapPainter freshPainter;
+                TMapPainter blankPainter;
+                TMapPainter::PaintResult result;
+                paintedView(painter, playerView(), result);
+                pArea->gridMode = !startInGridMode;
+                const QImage switched = paintedView(painter, result.view, result);
+                const QImage fresh = paintedView(freshPainter, playerView(), result);
+                const QString name = qsl("room%1-%2").arg(QString::number(roomId), startInGridMode ? qsl("out-of-grid") : qsl("into-grid"));
+                QVERIFY2(switched == fresh, qPrintable(saved(switched, name) + qsl("; ") + saved(fresh, name + qsl("-fresh"))));
+                pRoom->mSymbol.clear();
+                const QImage blank = paintedView(blankPainter, playerView(), result);
+                QVERIFY2(fresh != blank, qPrintable(qsl("no symbol was drawn, so the comparison proves nothing: ") + saved(fresh, name + qsl("-fresh"))));
+            }
         }
     }
 
