@@ -1444,13 +1444,24 @@ void TConsole::setConsoleBgColor(int r, int g, int b, int a)
    47 bg white
    49 bg black     */
 
-bool TConsole::scrollDown(int lines)
+bool TConsole::usesWheel(const bool up)
 {
     if ((mType & (UserWindow | SubConsole)) && !mScrollingEnabled) {
         return false;
     }
+    if (!mLowerPane->isHidden()) {
+        return true;
+    }
+    // With every line already on screen there is nothing to scroll back to, and a split would only show them twice
+    return up && mUpperPane->imageTopLine() != 0;
+}
 
-    const bool scrolledBack = !mLowerPane->isHidden();
+bool TConsole::scrollDown(int lines)
+{
+    if (!usesWheel(false)) {
+        return false;
+    }
+
     mUpperPane->scrollDown(lines);
     if (!mUpperPane->mIsTailMode && (mUpperPane->imageTopLine() + mUpperPane->getScreenHeight() >= buffer.lineBuffer.size() - mLowerPane->getRowCount())) {
         mUpperPane->scrollDown(mLowerPane->getRowCount() + 100); // Gets to the bottom
@@ -1465,17 +1476,12 @@ bool TConsole::scrollDown(int lines)
         mUpperPane->forceUpdate();
     }
     slot_adjustAccessibleNames();
-    return scrolledBack;
+    return true;
 }
 
 bool TConsole::scrollUp(int lines)
 {
-    if ((mType & (UserWindow | SubConsole)) && !mScrollingEnabled) {
-        return false;
-    }
-
-    // With every line already on screen there is nothing to scroll back to, and a split would only show them twice
-    if (mLowerPane->isHidden() && mUpperPane->imageTopLine() == 0) {
+    if (!usesWheel(true)) {
         return false;
     }
 

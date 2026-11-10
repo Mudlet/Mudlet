@@ -263,6 +263,12 @@ private slots:
         wheelOver(box, 120);
         QTest::qWait(50ms);
         QCOMPARE(bar->value(), boxAt);
+        // A touchpad sends turns too small to make a whole line on their own
+        for (const int angle : {8, -8}) {
+            wheelOver(box, angle);
+            QTest::qWait(50ms);
+            QCOMPARE(bar->value(), boxAt);
+        }
 
         for (int turns = 0; !mini->mLowerPane->isHidden(); ++turns) {
             QVERIFY2(turns < 20, "turning the wheel down never brought the mini console back to its bottom");
