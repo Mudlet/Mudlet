@@ -510,7 +510,7 @@ private slots:
     {
         const QString dictionary = mpHost->getSpellDic();
         mpHost->setSpellDic(qsl("qq_QZX"));
-        QVERIFY(!mpHost->spellChecker().systemHandle());
+        const bool dictionaryLoaded = mpHost->spellChecker().systemHandle();
         TCommandLine* pCommandLine = freshCommandLine();
         QVERIFY(pCommandLine);
         enterText(pCommandLine, qsl("qzxnodict"));
@@ -521,6 +521,7 @@ private slots:
             closeMenu(pMenu);
         }
         mpHost->setSpellDic(dictionary);
+        QVERIFY(!dictionaryLoaded);
         QVERIFY2(pMenu, "right-clicking the command line opened no menu");
         QVERIFY2(!texts.contains(TCommandLine::tr("Add to user dictionary")) && !texts.contains(TCommandLine::tr("no suggestions (system)")), qPrintable(texts));
         QVERIFY(mpHost->spellChecker().systemHandle());
