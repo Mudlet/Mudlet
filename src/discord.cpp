@@ -558,13 +558,6 @@ QString Discord::deduceGameName(const QString& address)
         break;
     }
 
-    if (host.endsWith(qsl(".com"))) {
-        otherName = host.left(host.length() - 4);
-    } else if (host.endsWith(qsl(".de"))) {
-        // Handle avalon.de case
-        otherName = host.left(host.length() - 4);
-    }
-
     // Handle the remaining cases where the known URL is something else - like
     // say a fixed IP address stored as a member of the value for the QHash
     // mKnownGames:
@@ -578,9 +571,8 @@ QString Discord::deduceGameName(const QString& address)
     return otherName;
 }
 
-// Returns true in First if this is a MUD we know about (and have an Icon for in
-// on the Mudlet Discord server!) and the deduced name in Second - if the
-// first is true.
+// First: whether this is a game Mudlet's Discord app has an icon for;
+// Second: the deduced name, returned either way
 QPair<bool, QString> Discord::gameIntegrationSupported(const QString& address)
 {
     const QString deducedName = deduceGameName(address);
