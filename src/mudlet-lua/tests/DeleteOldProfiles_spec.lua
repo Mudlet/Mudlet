@@ -31,9 +31,10 @@ describe("Tests the deleteOldProfiles package", function()
   local function makeDirectory(folder, name, day, month)
     local path = folders[folder] .. "/" .. name
     assert(lfs.mkdir(path))
-    local when = os.time({year = 2020, month = month or 3, day = day, hour = 12})
-    assert.is_true(lfs.touch(path, when, when))
     made[#made + 1] = path
+    local when = os.time({year = 2020, month = month or 3, day = day, hour = 12})
+    -- the Windows C runtime may refuse to set a folder's times
+    return lfs.touch(path, when, when) == true
   end
 
   local function deleteOld(folder)
@@ -154,13 +155,16 @@ describe("Tests the deleteOldProfiles package", function()
     assert.is_true(exists("maps", "2020-03-20#12-00-00map.dat"))
   end)
 
-  it("leaves folders alone", function()
-    makeDirectory("maps", "old maps", 1)
+  it("leaves folders alone, and does not let one take its month's spot", function()
+    if not makeDirectory("maps", "old maps", 1) then
+      pending("this platform cannot back-date a folder")
+      return
+    end
     makeFile("maps", "2020-03-05#12-00-00map.dat", 5)
 
     deleteOld("maps")
 
     assert.is_true(lfs.attributes(folders.maps .. "/old maps", "mode") == "directory", "a folder is not a backup, so it should not be removed")
-    assert.is_true(exists("maps", "2020-03-05#12-00-00map.dat"))
+    assert.is_true(exists("maps", "2020-03-05#12-00-00map.dat"), "March's only map should keep March's spot")
   end)
 end)
