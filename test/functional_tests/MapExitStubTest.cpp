@@ -21,12 +21,14 @@
  * The 2D mapper paints rooms over the exit lines, stubs included, so a stub
  * only shows where it reaches past its room and the border around it. Those
  * grow with the room size setting, and a room next door covers whatever of
- * the stub reaches it. Each case here checks that the rooms were painted,
- * that at least as much of the stub as its end dot covers still shows, and
- * that it shows along the stub's direction, at least half a cell out.
+ * the stub reaches it. Each painting case here checks that the rooms were
+ * painted, that at least as much of the stub as its end dot covers still
+ * shows, and that it shows along the stub's direction, at least half a cell
+ * out. One more case checks that a refused stub is reported in the Errors
+ * console.
  *
  * Why not a spec: the only evidence is pixels, and the area image export a
- * script can ask for draws no stubs.
+ * script can ask for draws no stubs; nor can a script read the Errors console.
  *
  * Run with: ctest -R MapExitStubTest -V
  */
@@ -324,6 +326,31 @@ private slots:
             QFAIL(qPrintable(qsl("the stub's dot shows %1 pixels out and %2 off its direction, where half a cell is %3 - the frame is at %4")
                                      .arg(QString::number(reach, 'f', 1), QString::number(offAxis, 'f', 1), QString::number(halfCell, 'f', 1), saveFrame(frame, frameTag))));
         }
+    }
+
+    void test_aRefusedStubIsReportedInTheErrorsConsole()
+    {
+        QSignalSpy printed(mpHost, &Host::signal_errorConsolePrint);
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl(R"(
+            local area = addAreaName("refusedStubArea")
+            local a = createRoomID()
+            addRoom(a)
+            setRoomArea(a, area)
+            local b = createRoomID()
+            addRoom(b)
+            setRoomArea(b, area)
+            setExit(a, b, "east")
+            setExitStub(a, "east", true)
+            deleteRoom(a)
+            deleteRoom(b)
+            deleteArea(area)
+        )")));
+
+        bool reported = false;
+        for (const auto& arguments : printed) {
+            reported = reported || arguments.at(0).toString().contains(qsl("Cannot set exit stub"));
+        }
+        QVERIFY2(reported, "a stub refused because an exit is there printed nothing in the Errors console");
     }
 };
 
