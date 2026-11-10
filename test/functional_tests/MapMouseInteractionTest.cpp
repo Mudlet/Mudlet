@@ -3317,6 +3317,32 @@ private slots:
         QCOMPARE(pEastRoom->y(), -1);
     }
 
+    // The click that puts the rooms down selects whatever room it lands on
+    void test_aMoveFromTheMenuIsAnnouncedForTheAreasOfTheRoomsItMoved()
+    {
+        buildMap();
+        const int otherAreaId = map()->mpRoomDB->addArea(qsl("Next Door"));
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 0.5), pointUnitsFromCentre(1.5, -0.5));
+        QVERIFY(!mp2dMap->mMultiSelectionSet.contains(kNorthRoomId));
+        QVERIFY(map()->setRoomArea(kWestRoomId, otherAreaId));
+        QVERIFY(mp2dMap->mMultiSelectionSet.contains(kWestRoomId));
+        rightClickAt(pointUnitsFromCentre(1, 0));
+        QVERIFY(pickContextMenuItem(qsl("Move")));
+        hoverTo(pointUnitsFromCentre(3, -1));
+        hoverTo(pointUnitsFromCentre(3, -3));
+        QCOMPARE(roomPosition(kWestRoomId), QVector3D(-1, -2, 0));
+        QCoreApplication::sendPostedEvents(map(), QEvent::MetaCall);
+        QSignalSpy announced(map(), &TMap::signal_areaChanged);
+
+        clickAt(pointUnitsFromCentre(0, 1));
+
+        QVERIFY2(!mp2dMap->mRoomBeingMoved, "a click did not put the rooms down");
+        QCoreApplication::sendPostedEvents(map(), QEvent::MetaCall);
+        QCOMPARE(announced.size(), 1);
+        QVERIFY2(announced.constFirst().constFirst().toInt() == -1, "only the clicked room's area was announced, so a view of the other area goes on drawing its moved room where it was");
+    }
+
     // Double-clicking a room walks the player to it along the exits the map
     // knows about, by handing the directions to the profile's doSpeedWalk.
     void test_doubleClickingARoomWalksThereAlongTheKnownExits()

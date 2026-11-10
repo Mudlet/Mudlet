@@ -20,6 +20,7 @@
 #include "RoomMoveDragHandler.h"
 
 #include "TMap.h"
+#include "TRoom.h"
 #include "TRoomDB.h"
 
 #include <QMouseEvent>
@@ -102,7 +103,12 @@ bool RoomMoveDragHandler::handle(T2DMap::MapInteractionContext& context)
     mMapWidget.mRoomMoveLastMapPoint.setY(mMapWidget.mRoomMoveLastMapPoint.y() + dy);
 
     mMapWidget.moveSelectedRoomsBy(dx, dy);
-    mMapWidget.mRoomsMovedByDrag = true;
+    // Gathered as they move, as the click that drops them can change the selection
+    for (const int roomId : std::as_const(mMapWidget.mMultiSelectionSet)) {
+        if (const TRoom* room = roomDb->getRoom(roomId)) {
+            mMapWidget.mAreasMovedByDrag.insert(room->getArea());
+        }
+    }
     mMapWidget.repaint();
 
     return true;

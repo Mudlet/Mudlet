@@ -255,7 +255,7 @@ public:
     bool mRoomBeingMoved = false;
     QPointF mRoomMoveLastMapPoint;
     bool mHasRoomMoveLastMapPoint = false;
-    bool mRoomsMovedByDrag = false;
+    QSet<int> mAreasMovedByDrag;
     bool mRoomMoveViaContextMenu = false;
     // These are the on-screen width and height pixel numbers of the area for a
     // room symbol, (for the non-grid map mode case what gets filled in is

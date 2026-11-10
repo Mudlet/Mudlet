@@ -25,6 +25,7 @@
 #include <QMouseEvent>
 #include <QPointF>
 #include <QRect>
+#include <utility>
 
 RoomMoveActivationHandler::RoomMoveActivationHandler(T2DMap& mapWidget)
 : mMapWidget(mapWidget)
@@ -127,15 +128,8 @@ bool RoomMoveActivationHandler::handle(T2DMap::MapInteractionContext& context)
         context.isRoomBeingMoved = false;
         mMapWidget.mHelpMsg.clear();
         // Announced once on the drop rather than on every step, which would rebuild the 3D view's caches each time
-        if (mMapWidget.mRoomsMovedByDrag) {
-            mMapWidget.mRoomsMovedByDrag = false;
-            // Not mAreaID: the map can follow the player elsewhere mid-drag, and the selection can span areas
-            QSet<int> movedAreas;
-            for (const int roomId : std::as_const(mMapWidget.mMultiSelectionSet)) {
-                if (const TRoom* room = mMapWidget.mpMap->mpRoomDB->getRoom(roomId)) {
-                    movedAreas.insert(room->getArea());
-                }
-            }
+        if (!mMapWidget.mAreasMovedByDrag.isEmpty()) {
+            const QSet<int> movedAreas = std::exchange(mMapWidget.mAreasMovedByDrag, {});
             mMapWidget.mpMap->updateArea(movedAreas.size() == 1 ? *movedAreas.cbegin() : -1);
         }
         mMapWidget.update();

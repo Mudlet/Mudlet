@@ -2752,7 +2752,7 @@ void T2DMap::slot_setArea()
             mpMap->setRoomArea(itSelectedRoom.next(), newAreaId);
         }
         if (!mMultiSelectionSet.isEmpty()) {
-            // The rooms left one area for another, so both must be redrawn
+            // The rooms leave their areas for another, so every area involved must be redrawn
             mpMap->updateArea(-1);
             const auto& targetAreaName = mpMap->mpRoomDB->getAreaNamesMap().value(newAreaId);
             if (!mIsSecondaryView && mpMap->mapper()) {
