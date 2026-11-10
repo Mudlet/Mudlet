@@ -56,6 +56,14 @@ if getProfileName() ~= "Mudlet self-test" then
   errc = errorc
   _G.errorc = nil       -- and set to nil since it is internal only for the following functions.
 end
+-- Mudlet's own Lua files load from beside this one, so a printError() they make is
+-- reported at the script line that called into them
+local libraryDirectory = debug.getinfo(1, "S").source:match("^@(.*[/\\])")
+
+local function inLibrary(source)
+  return libraryDirectory ~= nil and source:sub(2, #libraryDirectory + 1) == libraryDirectory
+end
+
 -- undocumented, internal function
 local function printX(options)
   local errorc = errc and errc or errorc
@@ -69,15 +77,16 @@ local function printX(options)
   table.remove(stackTable,2)
   table.remove(stackTable,2)
   local level = #stackTable + 1
-  -- level 1 is printX and 2 is printError or printDebug, so 3 is the line that called them,
-  -- unless that was a "return printError(...)" or a pcall(), which have no line of their own
+  -- level 1 is printX and 2 is printError or printDebug, so 3 is the line that called them;
+  -- a tail call or a C function such as pcall() has no line, so take the nearest Lua line above it
   local callerLevel = 3
   local dinfo = debug.getinfo(callerLevel, "Sl")
-  while dinfo and (dinfo.what == "tail" or dinfo.what == "C") do
+  while dinfo and (dinfo.what == "tail" or dinfo.what == "C" or inLibrary(dinfo.source)) do
     callerLevel = callerLevel + 1
     dinfo = debug.getinfo(callerLevel, "Sl")
   end
-  -- a trigger, alias or coroutine whose code is "return printError(...)" has nothing below the stub
+  -- called straight from C++, e.g. a trigger whose code is "return printError(...)", there is
+  -- no Lua line to name, so name the outermost frame as the traceback does
   dinfo = dinfo or debug.getinfo(level, "Sl")
   local header = string.format("(%s:line %s)", dinfo.source, dinfo.currentline)
   if halt then

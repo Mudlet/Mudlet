@@ -99,6 +99,17 @@ describe("Tests DebugTools.lua functions", function()
       assert.spy(s).was_called_with(match.has_match("This is a test"), match.has_match("DebugTools_spec.lua:line " .. line .. "%)$"))
     end)
 
+    it("should name the script's line, not Mudlet's own, when Mudlet's Lua reports a mistake", function()
+      local label = "debugToolsSpecTakenName"
+      finally(function()
+        deleteLabel(label)
+      end)
+      assert.is_true(createLabel(label, 0, 0, 10, 10, 1))
+      local line = debug.getinfo(1, "l").currentline + 1
+      assert.is_nil(Geyser.MiniConsole:new({name = label}))
+      assert.spy(s).was_called_with(match.has_match("was not created"), match.has_match("DebugTools_spec.lua:line " .. line .. "%)$"))
+    end)
+
     it("should include a stacktrace when called with stackTrace true", function()
       printError("This is a test", true)
       assert.spy(s).was_called(1)
