@@ -92,6 +92,16 @@ void dlgComposer::init(const QString& newTitle, const QString& newText)
 
 bool dlgComposer::eventFilter(QObject* obj, QEvent* event)
 {
+    if (obj == edit && event->type() == QEvent::KeyPress) {
+        // The Save button's tooltip offers Shift+Tab; left to the editor it would move focus to the read-only title or insert a tab
+        const auto* keyEvent = static_cast<QKeyEvent*>(event);
+        const bool shiftTab = keyEvent->key() == Qt::Key_Backtab || (keyEvent->key() == Qt::Key_Tab && keyEvent->modifiers().testFlag(Qt::ShiftModifier));
+        if (shiftTab && !(keyEvent->modifiers() & (Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier))) {
+            slot_save();
+            return true;
+        }
+    }
+
     if (obj == edit && event->type() == QEvent::KeyPress && mpHost && mpHost->getEnableSpellCheck()) {
         auto* keyEvent = static_cast<QKeyEvent*>(event);
 
