@@ -223,7 +223,7 @@ Adopted (styled through `uiDesign`, guarded by the tests below):
   disabled while there is nothing on it to clear; the picker's first entry does the same act,
   and both ask first when words were typed by hand
 - Module manager `dlgModuleManager` - one shell (`modulesShell`) on the page tone carrying the
-  buttons, now with the package manager's glyphs, the table's ticks and scroll bars, the
+  buttons with the package manager's glyphs, the table's ticks and scroll bars, the
   explanation as `mutedText` without its sunken box, and import failures in the shared notice
   (`modulesNotice`) until dismissed; the table's rows and headings are still platform-drawn
 - Profile tab strip `TTabBar` (main window and detached windows) - chips, the chosen one filled on

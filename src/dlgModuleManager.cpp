@@ -169,11 +169,18 @@ void dlgModuleManager::slot_installModule()
     if (fileNames.isEmpty()) {
         return;
     }
-    // An earlier failure says nothing about this attempt
-    mpNotice->hide();
 
     lastDir = QFileInfo(fileNames.first()).absolutePath();
     settings.setValue(qsl("lastFileDialogLocation"), lastDir);
+
+    installModules(fileNames);
+}
+
+// Split from the slot so it can be tested: the file dialog there blocks
+void dlgModuleManager::installModules(const QStringList& fileNames)
+{
+    // An earlier failure says nothing about this attempt
+    mpNotice->hide();
 
     QStringList failedModules;
 
@@ -183,7 +190,7 @@ void dlgModuleManager::slot_installModule()
         } else {
             const QString baseName = QFileInfo(fileName).fileName();
             failedModules << baseName;
-            qWarning() << "dlgModuleManager::slot_installModule() ERROR - failed to import" << baseName;
+            qWarning() << "dlgModuleManager::installModules() ERROR - failed to import" << baseName;
         }
     }
 
@@ -358,7 +365,8 @@ void dlgModuleManager::slot_helpModule()
     }
 }
 
-// Sheets go on the shell, not the dialog: a profile's Lua stylesheet replaces the dialog's on every show
+// Sheets go on the shell, not the dialog, as in every window that has adopted the design: a sheet
+// on the dialog would be lost to any profile stylesheet given to it
 void dlgModuleManager::buildShell()
 {
     mpShell = new QWidget(this);
@@ -438,7 +446,7 @@ void dlgModuleManager::applyModuleManagerShellStyle()
     uiDesign::keepClickFocusOffControls(mpShell);
 }
 
-// Stays until dismissed: a failure that hid itself after a few seconds could be missed entirely
+// No timeout: a failure that hides itself can go unread. The next install clears it too.
 void dlgModuleManager::showImportStatus(const QString& message)
 {
     if (!mpNotice) {

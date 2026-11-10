@@ -62,6 +62,7 @@ protected:
 private:
     void buildShell();
     void applyModuleManagerShellStyle();
+    void installModules(const QStringList& fileNames);
     void showImportStatus(const QString& message);
     QString moduleHelpUrl(const QString& moduleName) const;
 

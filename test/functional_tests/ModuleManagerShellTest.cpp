@@ -28,6 +28,7 @@
 #include <QAbstractButton>
 #include <QPushButton>
 #include <QTableWidget>
+#include <QTemporaryDir>
 #include <QTextEdit>
 #include <QToolButton>
 #include <QtTest/QtTest>
@@ -88,8 +89,7 @@ private slots:
         mSession.stop();
     }
 
-    // A profile's Lua stylesheet replaces the dialog's own on every show, so
-    // a sheet set there would be lost the first time a script styles dialogs
+    // As in every window that has adopted the design, so a profile stylesheet given to the dialog cannot wipe it
     void test_everyControlIsOnTheShellAndTheSheetIsSetThere()
     {
         QWidget* pShell = shell();
@@ -101,7 +101,7 @@ private slots:
                                  static_cast<QWidget*>(mpDialog->helpButton)}) {
             QVERIFY2(pShell->isAncestorOf(pWidget), qPrintable(qsl("%1 is not inside the shell, so the shell's sheet does not reach it").arg(pWidget->objectName())));
         }
-        QVERIFY2(mpDialog->styleSheet().isEmpty(), "the dialog carries a sheet of its own, which a profile's stylesheet replaces on show");
+        QVERIFY2(mpDialog->styleSheet().isEmpty(), "the dialog carries a sheet of its own, which a profile stylesheet given to the dialog would replace");
 
         const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
         QVERIFY2(pShell->styleSheet().contains(uiDesign::buttonStyleSheet(tokens, qsl("#modulesShell"))), "the shell's sheet does not carry the shared button recipe");
@@ -118,7 +118,7 @@ private slots:
         QVERIFY2(mpDialog->helpButton->x() < mpDialog->installButton->x() && mpDialog->installButton->x() < mpDialog->uninstallButton->x(), "the foot no longer reads Module Help, Install, Uninstall");
     }
 
-    // It used to hide itself after four seconds, so a player who looked away missed it
+    // Longer than any status-line timeout, so only the cross can have hidden it
     void test_anImportFailureStaysInTheSharedNoticeUntilDismissed()
     {
         dlgSystemMessageArea* pNotice = notice();
@@ -136,6 +136,29 @@ private slots:
 
         pNotice->messageAreaCloseButton->click();
         QVERIFY2(!pNotice->isVisible(), "the notice's cross does not dismiss it");
+    }
+
+    void test_aNewInstallClearsAnEarlierFailure()
+    {
+        dlgSystemMessageArea* pNotice = notice();
+        QVERIFY(pNotice);
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+
+        mpDialog->installModules({dir.filePath(qsl("missing<v2>.xml"))});
+        QVERIFY2(pNotice->isVisible(), "a module that could not be imported is not reported");
+        QCOMPARE(pNotice->notificationAreaMessageBox->text(), qsl("Failed to import: missing<v2>.xml"));
+
+        const QString moduleName = qsl("module-manager-shell-install");
+        QFile module(dir.filePath(moduleName + qsl(".xml")));
+        QVERIFY(module.open(QIODevice::WriteOnly));
+        module.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE MudletPackage>\n<MudletPackage version=\"1.001\">\n</MudletPackage>\n");
+        module.close();
+        mpDialog->installModules({module.fileName()});
+        QVERIFY2(mpHost->mInstalledModules.contains(moduleName), "the test module was not installed, so this proves nothing about a successful install");
+        QVERIFY2(!pNotice->isVisible(), "the earlier failure is still on show after an install that succeeded");
+
+        QVERIFY(mpHost->uninstallPackage(moduleName, enums::PackageModuleType::ModuleFromUI));
     }
 
     // Nothing else restyles this window, so the appearance signal alone has to move it
