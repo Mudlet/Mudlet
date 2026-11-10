@@ -1457,7 +1457,8 @@ private slots:
 
     // A link that doesn't opensMenu() (one command and no menu title) has no
     // menu of its own, so a right click on it has to give the console's menu,
-    // while a popup link still gives its own
+    // while a popup link still gives its own and a disabled or unrevealed
+    // spoiler link gives none
     void test_aRightClickOnALinkWithoutAMenuGivesTheConsolesMenu()
     {
         mpServer->setWelcomeMessage(qsl("menu test\r\n"));
@@ -1474,11 +1475,19 @@ private slots:
         QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(
                          qsl("clearWindow()\nechoLink('PlainLink', [[ ]], '', true)\necho('\\n')\nechoPopup('PopupLink', {[[ ]], [[ ]]}, {'first', 'second'}, true)\necho('\\n')\n")),
                  "the echoLink()/echoPopup() calls failed");
-        QVERIFY2(waitForTextInBuffer(qsl("PopupLink")), "the link text never reached the buffer");
+        const bool osc8WasEnabled = host->mEnableOSC8Hyperlinks;
+        host->mEnableOSC8Hyperlinks = true;
+        const QString esc = QString(QChar(0x1B));
+        const QString st = esc + QLatin1Char('\\');
+        const QString osc8Links = qsl("%1]8;;send:x?config={\"disabled\":true}%2DisabledLink%1]8;;%2\n%1]8;;send:x?config={\"spoiler\":true}%2SpoilerLink%1]8;;%2\n").arg(esc, st);
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("feedTriggers([==[%1]==])").arg(osc8Links)), "the feedTriggers() call failed");
+        // The unrevealed spoiler is drawn as blanks, so wait for the line fed with it
+        QVERIFY2(waitForTextInBuffer(qsl("DisabledLink")), "the link text never reached the buffer");
+        host->mEnableOSC8Hyperlinks = osc8WasEnabled;
         QTest::qWait(100ms);
 
         QList<QPoint> overALink;
-        for (int y = pane->mFontHeight / 2; y < pane->height() && overALink.size() < 2; y += pane->mFontHeight) {
+        for (int y = pane->mFontHeight / 2; y < pane->height() && overALink.size() < 4; y += pane->mFontHeight) {
             for (int x = pane->mFontWidth / 2; x < pane->width(); x += pane->mFontWidth) {
                 sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::NoButton, QPointF(x, y));
                 if (pane->cursor().shape() == Qt::PointingHandCursor) {
@@ -1487,7 +1496,7 @@ private slots:
                 }
             }
         }
-        QVERIFY2(overALink.size() == 2, "the two links were not both found, so the clicks below prove nothing");
+        QVERIFY2(overALink.size() == 4, "the four links were not all found, so the clicks below prove nothing");
 
         auto menuFromRightClickAt = [&](const QPoint& pos) -> QPointer<QMenu> {
             for (auto* stale : pane->findChildren<QMenu*>()) {
@@ -1495,18 +1504,25 @@ private slots:
             }
             sendMouse(pane, QEvent::MouseButtonPress, Qt::RightButton, Qt::RightButton, pos);
             sendMouse(pane, QEvent::MouseButtonRelease, Qt::RightButton, Qt::NoButton, pos);
-            return pane->findChildren<QMenu*>().value(0);
+            const auto menus = pane->findChildren<QMenu*>();
+            return menus.size() == 1 ? menus.first() : nullptr;
         };
 
         QPointer<QMenu> plainMenu = menuFromRightClickAt(overALink.at(0));
-        QVERIFY2(plainMenu, "a right click on a link with one command put up no menu at all");
+        QVERIFY2(plainMenu, "a right click on a link with one command did not put up exactly one menu");
         QVERIFY2(plainMenu->findChild<QAction*>(qsl("consoleCopy")), "the menu over a link with one command is not the console's own");
         plainMenu->close();
 
         QPointer<QMenu> popupMenu = menuFromRightClickAt(overALink.at(1));
-        QVERIFY2(popupMenu, "a right click on a popup link put up no menu");
+        QVERIFY2(popupMenu, "a right click on a popup link did not put up exactly one menu");
         QVERIFY2(!popupMenu->findChild<QAction*>(qsl("consoleCopy")), "a popup link gave the console's menu instead of its own");
         popupMenu->close();
+
+        for (int i : {2, 3}) {
+            menuFromRightClickAt(overALink.at(i));
+            QVERIFY2(pane->findChildren<QMenu*>().isEmpty(), qPrintable(qsl("a right click on the %1 link put up a menu").arg(i == 2 ? qsl("disabled") : qsl("unrevealed spoiler"))));
+        }
+        QVERIFY2(waitForTextInBuffer(qsl("SpoilerLink"), 1000), "the right click never revealed the spoiler, so it proves nothing about its menu");
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     }
 
