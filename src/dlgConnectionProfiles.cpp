@@ -2643,14 +2643,16 @@ void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
     while (digitsStart > 0 && name.at(digitsStart - 1) >= QLatin1Char('0') && name.at(digitsStart - 1) <= QLatin1Char('9')) {
         --digitsStart;
     }
-    // Zero, and the whole name kept as the stem, when it has no number or one too long to count on from
-    bool numbered = false;
-    qulonglong number = name.mid(digitsStart).toULongLong(&numbered);
+    // Counting on past every taken name cannot overflow from 18 digits; a longer number stays in the stem
+    const qsizetype digitCount = name.size() - digitsStart;
+    const bool numbered = digitCount > 0 && digitCount <= 18;
+    qulonglong number = numbered ? name.mid(digitsStart).toULongLong() : 0;
+    const qsizetype width = numbered ? digitCount : 0;
     const QString stem = numbered ? name.left(digitsStart) : name;
 
     QString candidate;
     do {
-        candidate = stem + QString::number(++number);
+        candidate = stem + QString::number(++number).rightJustified(width, u'0');
     } while (takenNames.contains(candidate, Qt::CaseInsensitive) || signInRemovalPending(candidate));
     return candidate;
 }
