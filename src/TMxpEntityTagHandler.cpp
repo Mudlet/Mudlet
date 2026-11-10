@@ -20,7 +20,8 @@
 #include "TStringUtils.h"
 
 namespace {
-// An undefined entity resolves to its own name, and an empty one would split into one empty item
+// Only a custom entity holds a list: an undefined one resolves to its own name, a standard one
+// such as &lt; to its character, and an empty one would split into one empty item
 QStringList currentList(const TEntityResolver& resolver, const QString& entity)
 {
     TEntityType type = ENTITY_TYPE_UNKNOWN;
