@@ -2464,9 +2464,10 @@ end
 
 
 
--- sqlite's datetime() silently gives NULL for an epoch outside these bounds, including NaN and inf
+-- sqlite's datetime() silently gives NULL past 9999 (and for NaN and inf), and before year 0000 it gives a
+-- negative year that db:_epoch_from_utc cannot read back
 function db:_datetime_epoch(value)
-  return type(value) == "number" and value >= -210866760000 and value <= 253402300799
+  return type(value) == "number" and value >= -62167219200 and value <= 253402300799
 end
 
 -- NOT LUADOC

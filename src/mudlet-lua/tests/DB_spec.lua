@@ -1255,8 +1255,16 @@ describe("Tests DB.lua functions", function()
       cur:close()
       assert.are.equal(1730615400000, stored)
 
-      assert.has_error(function() db:fetch(mydb.sheet, db:gt(mydb.sheet.seen, 1730615400000)) end)
-      assert.has_error(function() db:fetch(mydb.sheet, db:eq(mydb.sheet.seen, 0 / 0)) end)
+      local outside = "outside the epoch range"
+      for _, epoch in ipairs({ 1730615400000, 0 / 0, -62167219201 }) do
+        local ok, err = pcall(db.gt, db, mydb.sheet.seen, epoch)
+        assert.is_false(ok)
+        assert.truthy(err:find(outside, 1, true), err)
+      end
+      local ok, err = pcall(db.update, db, mydb.sheet, { _row_id = 1, seen = -62167219201, n = 1 })
+      assert.is_false(ok)
+      assert.truthy(err:find(outside, 1, true), err)
+      assert.are.same({}, db:fetch(mydb.sheet, db:eq(mydb.sheet.seen, -62167219200)))
     end)
   end)
 
