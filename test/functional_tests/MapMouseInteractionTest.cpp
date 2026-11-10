@@ -3502,8 +3502,8 @@ private slots:
         QVERIFY(map()->isUnsaved());
     }
 
-    // The dialog opens ready to type the label's text, and Enter away from the
-    // text box saves it rather than opening the first colour picker.
+    // The dialog opens ready to type the label's text; Enter in the text box
+    // starts a new line, and away from it saves rather than opening a colour picker.
     void test_theLabelDialogTypesIntoTheTextAndEnterSaves()
     {
         buildMap();
@@ -3515,13 +3515,16 @@ private slots:
         QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(dialog->plainTextEdit_labelText));
 
         QTest::keyClicks(dialog->plainTextEdit_labelText, qsl("Market"));
+        QTest::keyClick(dialog->plainTextEdit_labelText, Qt::Key_Return);
+        QTest::keyClicks(dialog->plainTextEdit_labelText, qsl("Square"));
+        QVERIFY2(dialog && dialog->isVisible(), "Enter in the text box saved the label instead of starting a new line");
         dialog->lineEdit_font->setFocus();
         QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(dialog->lineEdit_font));
         QTest::keyClick(dialog->lineEdit_font, Qt::Key_Return);
 
         QTRY_VERIFY2(dialog.isNull() || dialog->isHidden(), "Enter did not save the label");
         QCOMPARE(area()->mMapLabels.size(), 1);
-        QCOMPARE(area()->mMapLabels.first().text, qsl("Market"));
+        QCOMPARE(area()->mMapLabels.first().text, qsl("Market\nSquare"));
     }
 
     // A box is a box whichever corner it was dragged out from: the label goes
