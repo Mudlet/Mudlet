@@ -2598,7 +2598,7 @@ function xReplace(window, text, type, wholeLine)
   local blanked, blankError = replace(window, "")
   -- an empty line selects as "", 0, 0, which replace() cannot tell from no selection
   if not blanked and not wholeLine then
-    return nil, blankError
+    return nil, (blankError:gsub("^replace:", (type or "") .. "replace:"))
   end
   moveCursor(window, start, getLineNumber(window))
   if type == 'c' then
