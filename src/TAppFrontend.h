@@ -75,7 +75,7 @@ public:
     virtual void updateMapActionAvailability() = 0;
     virtual bool showTabConnectionIndicators() const = 0;
     virtual void setShowTabConnectionIndicators(bool show) = 0;
-    virtual void alertUser(int milliseconds) = 0;
+    virtual void alertUser(Host& host, int milliseconds) = 0;
     virtual std::optional<QSize> getImageSize(const QString& imageLocation) = 0;
     // -1 for a profile with no tab
     virtual int profileTabIndex(const QString& profileName) const = 0;

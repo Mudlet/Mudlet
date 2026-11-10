@@ -67,7 +67,7 @@ public:
     void updateMapActionAvailability() override {}
     bool showTabConnectionIndicators() const override { return mShowTabConnectionIndicators; }
     void setShowTabConnectionIndicators(bool show) override { mShowTabConnectionIndicators = show; }
-    void alertUser(int) override {}
+    void alertUser(Host&, int) override {}
     std::optional<QSize> getImageSize(const QString& imageLocation) override;
     int profileTabIndex(const QString&) const override { return -1; }
     bool setActiveProfileTab(const QString& profileName) override;

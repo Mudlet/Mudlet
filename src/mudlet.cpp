@@ -3638,8 +3638,8 @@ void mudlet::addConsoleForNewHost(Host* pH)
     // Qt::UniqueConnection cannot dedupe the functor connections below (a documented
     // no-op that also prints a warning); duplicate wiring is instead prevented by
     // the `if (pH->mainConsoleView()) return;` early-return at the top of this function.
-    connect(&pH->mTelnet, &cTelnet::signal_bell, this, [this]() {
-        QApplication::alert(this, 3000);
+    connect(&pH->mTelnet, &cTelnet::signal_bell, this, [this, pH]() {
+        QApplication::alert(profileWindow(pH), 3000);
         if (!mHostManager.media().gameMuted()) {
             QApplication::beep();
         }
@@ -8514,9 +8514,15 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl, const QString& prof
 }
 
 
-void mudlet::alertUser(int milliseconds)
+void mudlet::alertUser(Host& host, int milliseconds)
 {
-    QApplication::alert(this, milliseconds);
+    QApplication::alert(profileWindow(&host), milliseconds);
+}
+
+QWidget* mudlet::profileWindow(Host* pHost)
+{
+    TMainConsole* pConsole = pHost ? pHost->mainConsoleView() : nullptr;
+    return pConsole ? pConsole->window() : this;
 }
 
 void mudlet::announce(const QString& text, const QString& processing, bool isPlain)

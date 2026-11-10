@@ -266,6 +266,20 @@ private slots:
         QVERIFY2(marked, "with multiview on, text for a profile hidden in a detached window went unmarked");
     }
 
+    // alert(), the game's bell and the "new data" alert all ask the window manager
+    // to flag a window; for a profile in a detached window it has to be that one,
+    // as flagging the main window points the player at the wrong game - and does
+    // nothing at all while the main window is the active one.
+    void test_aDetachedProfileAsksForAttentionFromItsOwnWindow()
+    {
+        TDetachedWindow* pWindow = gatherSecondAndThirdIntoOneWindow();
+        QVERIFY(pWindow);
+
+        QCOMPARE(mudlet::self()->profileWindow(mpSecondHost), pWindow);
+        QCOMPARE(mudlet::self()->profileWindow(mpThirdHost), pWindow);
+        QCOMPARE(mudlet::self()->profileWindow(mpFirstHost), mudlet::self());
+    }
+
     // The main window's marks now come from the same two functions as a detached
     // window's, so this is here to see that sharing them cost it nothing
     void test_theMainWindowStillMarksAndClearsItsOwnTabs()
