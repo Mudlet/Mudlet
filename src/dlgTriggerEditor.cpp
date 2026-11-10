@@ -3680,6 +3680,8 @@ void dlgTriggerEditor::searchVariables(const QString& text)
     if (mCurrentView != EditorViewType::cmVarsView) {
         // repopulateVars can take some time should there be a large number
         // of variables or big tables... 8-(
+        // Blocked, as the row it makes current would load the variables form over the item on show
+        const QSignalBlocker blocker(treeWidget_variables);
         repopulateVars();
     }
 
@@ -9369,11 +9371,6 @@ void dlgTriggerEditor::slot_toggleVariableKept()
 
 void dlgTriggerEditor::slot_variableSelected(QTreeWidgetItem* pItem)
 {
-    // A search that includes variables rereads them from any view, and the form on show is then not this one
-    if (mCurrentView != EditorViewType::cmVarsView) {
-        return;
-    }
-
     if (!pItem || treeWidget_variables->indexOfTopLevelItem(pItem) == 0) {
         // Null item or it is for the first row of the tree
         clearVarForm();
@@ -10677,7 +10674,8 @@ void dlgTriggerEditor::updateHiddenVariablesCount()
             }
         }
     }
-    mpLabel_hiddenVariablesCount->setVisible(hiddenCount > 0 && mCurrentView == EditorViewType::cmVarsView);
+    // Beside the switch, which changeView() shows only in the Variables view
+    mpLabel_hiddenVariablesCount->setVisible(hiddenCount > 0 && !checkBox_displayAllVariables->isHidden());
     if (hiddenCount > 0) {
         //: Quiet reading beside the "Show hidden variables" switch over the editor's Variables tree, saying how many variables are hidden right now. %1 is that count.
         mpLabel_hiddenVariablesCount->setText(tr("%1 hidden").arg(hiddenCount));
