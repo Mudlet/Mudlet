@@ -412,6 +412,21 @@ private slots:
         QVERIFY2(waitForServerToReceive("look\r\n"), "the part after the break did not go as a command of its own");
     }
 
+    // A line that is nothing but a Shift+Enter break has no command in it to send.
+    void test_sendingALineOfOnlyAShiftEnterBreakSendsNothing()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        QScopedPointer<dlgNotepad> notepad(new dlgNotepad(mudlet::self()->getActiveHost()));
+        auto* note = editAt(notepad.data(), 0);
+        note->clear();
+        QTest::keyClick(note, Qt::Key_Return, Qt::ShiftModifier);
+        QCOMPARE(note->textCursor().block().text(), QString(QChar::LineSeparator));
+
+        QVERIFY(QMetaObject::invokeMethod(notepad.data(), "slot_sendLine"));
+
+        QVERIFY2(notepad->action_sendLine->isVisible(), "the notepad started sending a line with nothing in it");
+    }
+
     // Stopping is the way out of having sent a long note by mistake, so what is
     // left of it must not carry on arriving.
     void test_stoppingLeavesTheRestOfTheNoteUnsent()
