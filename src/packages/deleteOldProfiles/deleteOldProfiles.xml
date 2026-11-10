@@ -25,9 +25,10 @@
   Deletes old profiles/maps/modules in the "current"/"map"/"moduleBackups" folders of the Mudlet home directory.
   The following files are NOT deleted:
   - Files newer than the amount of days specified as an argument to deleteOldProfiles(), or 31 days if not specified.
-  - One file for every month before that. Specifically: The first save of every month prior to this; a leftover from an interrupted save does not count, and neither does a folder.
+  - One file for every month before that. Specifically: The first save of every month prior to this; a leftover from an interrupted save does not count.
   - The newest profile save (.xml) or map (.dat/.json), which is the one Mudlet loads, however old it is. Module backups are never loaded, so there it is just the single newest file in the shared folder.
-  - A leftover from an interrupted save, when there is no completed save to recover instead.
+  - A leftover from an interrupted save, when there is no save Mudlet would load.
+  - Folders, which are left alone.
   The second argument picks the folder: "profiles", "maps" or "modules". (e.g. deleteOldProfiles(10, "maps"))
   --]]
 
@@ -82,6 +83,7 @@
   -- not take a month's spot. Mudlet loads the newest .xml profile or .dat/.json map, and
   -- times are whole seconds, so every save tied for newest stays. Module backups are never
   -- loaded, so every file there counts as a save.
+  -- XML maps load only from Map history, never on startup.
   local savedExtensions = {profiles = {xml = true}, maps = {dat = true, json = true, xml = true}}
   local loadedExtensions = {profiles = {xml = true}, maps = {dat = true, json = true}}
   local function hasExtension(name, extensions)
@@ -110,7 +112,7 @@
       elseif v.last_mod == newestLoadedTime and hasExtension(v.name, loadedExtensions) then
         -- Keep every save tied for the newest, which Mudlet loads.
       elseif not saved and not newestLoadedTime then
-        -- With no completed save, Mudlet points the player at a leftover to recover from.
+        -- With no save Mudlet would load, a leftover may be all that is left to recover by hand.
       else
         local success, errorstring = os.remove(dirpath..slash..v.name)
         if success then
