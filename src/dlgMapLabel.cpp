@@ -21,12 +21,10 @@
 #include "dlgMapLabel.h"
 #include "AlphaColourWell.h"
 #include "MudletApp.h"
-#include "utils.h"
 #include <QColorDialog>
 #include <QFileDialog>
 #include <QFontDialog>
 #include <QSettings>
-
 
 dlgMapLabel::dlgMapLabel(QWidget* pParentWidget)
 : QDialog(pParentWidget)
