@@ -7385,7 +7385,7 @@ void mudlet::slot_replayStarted()
     connect(mpActionReplaySpeedUp.data(), &QAction::triggered, &mHostManager.replay(), &MudletReplay::speedUp);
     connect(mpActionReplaySpeedDown.data(), &QAction::triggered, &mHostManager.replay(), &MudletReplay::speedDown);
 
-    mpLabelReplaySpeedDisplay->setText(qsl("<font size=25><b>%1</b></font>").arg(tr("Speed: X%1").arg(mHostManager.replay().speed())));
+    slot_replaySpeedChanged(mHostManager.replay().speed());
 
     mpTimerReplay = new QTimer(this);
     mpTimerReplay->setInterval(1s);
@@ -7538,6 +7538,12 @@ void mudlet::slot_replaySpeedChanged(const int speed)
     if (mpLabelReplaySpeedDisplay) {
         mpLabelReplaySpeedDisplay->setText(qsl("<font size=25><b>%1</b></font>").arg(tr("Speed: X%1").arg(speed)));
         mpLabelReplaySpeedDisplay->show();
+    }
+    if (mpActionReplaySpeedUp) {
+        mpActionReplaySpeedUp->setEnabled(speed < MudletReplay::scMaxSpeed);
+    }
+    if (mpActionReplaySpeedDown) {
+        mpActionReplaySpeedDown->setEnabled(speed > MudletReplay::scMinSpeed);
     }
 }
 

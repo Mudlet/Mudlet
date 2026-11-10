@@ -59,9 +59,11 @@ public:
     // The profile playing the replay, which need not be the one in front
     Host* host() const { return mpHost; }
 
+    static constexpr int scMinSpeed = 1;
+    static constexpr int scMaxSpeed = 1024;
     int speed() const { return mSpeed; }
-    // Doubles or halves the speed, between 1 and 1024 times; nothing while no
-    // replay runs
+    // Doubles or halves the speed, between scMinSpeed and scMaxSpeed times;
+    // nothing while no replay runs
     void speedUp();
     void speedDown();
 
@@ -87,7 +89,7 @@ private:
 
     QPointer<Host> mpHost;
     qint64 mElapsedMSecs = 0;
-    int mSpeed = 1;
+    int mSpeed = scMinSpeed;
     bool mRunning = false;
 };
 

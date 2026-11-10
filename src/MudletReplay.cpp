@@ -77,7 +77,7 @@ bool MudletReplay::start(Host* pHost)
 
     mRunning = true;
     mpHost = pHost;
-    mSpeed = 1;
+    mSpeed = scMinSpeed;
     mElapsedMSecs = 0;
     return true;
 }
@@ -101,7 +101,7 @@ void MudletReplay::speedUp()
     if (!mRunning) {
         return;
     }
-    mSpeed = qMin(1024, mSpeed * 2);
+    mSpeed = qMin(scMaxSpeed, mSpeed * 2);
     emit signal_replaySpeedChanged(mSpeed);
 }
 
@@ -110,6 +110,6 @@ void MudletReplay::speedDown()
     if (!mRunning) {
         return;
     }
-    mSpeed = qMax(1, mSpeed / 2);
+    mSpeed = qMax(scMinSpeed, mSpeed / 2);
     emit signal_replaySpeedChanged(mSpeed);
 }
