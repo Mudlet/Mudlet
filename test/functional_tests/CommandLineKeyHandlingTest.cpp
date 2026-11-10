@@ -1187,6 +1187,17 @@ private slots:
         press(pCommandLine, Qt::Key_C, Qt::ControlModifier);
 
         QVERIFY2(pClipboard->text().contains(mainSentinel), qPrintable(qsl("Ctrl+C copied '%1' from a hidden miniconsole rather than the game window's selection").arg(pClipboard->text().left(60))));
+
+        // Selecting on the line after the miniconsole makes the line's text the latest
+        QVERIFY(runLua(qsl("showWindow('copyFromMini')")));
+        pMini->mUpperPane->slot_selectAll();
+        const QString lineText = qsl("qzxcommandlinetext");
+        type(pCommandLine, lineText);
+        pCommandLine->selectAll();
+        QVERIFY2(pMini->mUpperPane->mSelectedRegion.isEmpty(), "selecting on the command line left the miniconsole's selection behind");
+        press(pCommandLine, Qt::Key_C, Qt::ControlModifier);
+
+        QCOMPARE(pClipboard->text(), lineText);
     }
 
     // Switching spell checking off strips the marks from every command line,

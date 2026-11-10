@@ -1270,8 +1270,16 @@ void TCommandLine::historyMove(MoveDirection direction)
 
 void TCommandLine::slot_clearSelection(bool yes)
 {
-    if (yes) {
-        mpConsole->clearSelection();
+    if (!yes) {
+        return;
+    }
+    mpConsole->clearSelection();
+    // The line's own text is now the latest selection, wherever the last one was made
+    if (TMainConsole* pMainConsole = mpHost->mainConsoleView(); pMainConsole && pMainConsole->mpLastSelectedPane) {
+        TTextEdit* pPane = pMainConsole->mpLastSelectedPane;
+        pPane->unHighlight();
+        pPane->mSelectedRegion = QRegion(0, 0, 0, 0);
+        pPane->forceUpdate();
     }
 }
 
