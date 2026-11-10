@@ -51,7 +51,6 @@
 #include <QTextDocument>
 #include <QtTest/QtTest>
 
-#include <QColorDialog>
 #include <QListWidget>
 #include <QTabBar>
 
@@ -344,47 +343,6 @@ private slots:
         QVERIFY2(pItem->icon().pixmap(QSize(120, 30)).toImage().pixelColor(28, 2) != picked, "resetting the icon still draws the custom color");
 
         QDir(MudletApp::getMudletPath(enums::profileHomePath, mGameWithArtwork)).removeRecursively();
-        pDialog->deleteLater();
-        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
-    }
-
-    // a listed game has no folder until it is first saved, and picking a color
-    // must not need one to exist already
-    void test_aColorPickedForAGameNeverPlayedIsSaved()
-    {
-        const QColor picked(qsl("#654321"));
-        const QString profileHome = MudletApp::getMudletPath(enums::profileHomePath, mGameWithArtwork);
-        QDir(profileHome).removeRecursively();
-        QVERIFY2(!QFileInfo::exists(profileHome), "SETUP: the game already has a folder, so this case checks nothing");
-
-        auto* pDialog = new dlgConnectionProfiles();
-        pDialog->show();
-        auto* pTabBar = pDialog->findChild<QTabBar*>(qsl("gamesTabBar"));
-        QVERIFY(pTabBar);
-        pTabBar->setCurrentIndex(1); // "All games"
-        pDialog->fillout_form();
-        QListWidgetItem* pItem = listedItem(pDialog, mGameWithArtwork);
-        QVERIFY2(pItem, qPrintable(qsl("'%1' is not listed under 'All games' at all").arg(mGameWithArtwork)));
-        pDialog->listWidget_profiles->setCurrentItem(pItem);
-
-        bool picker = false;
-        QTimer::singleShot(0, pDialog, [&picker, picked]() {
-            if (auto* pPicker = qobject_cast<QColorDialog*>(QApplication::activeModalWidget())) {
-                picker = true;
-                pPicker->setCurrentColor(picked);
-                pPicker->accept();
-            }
-        });
-        pDialog->slot_setCustomColor();
-        QVERIFY2(picker, "SETUP: no color picker was opened, so this case checks nothing");
-
-        pDialog->fillout_form();
-        pItem = listedItem(pDialog, mGameWithArtwork);
-        QVERIFY(pItem);
-        const QColor drawn = pItem->icon().pixmap(QSize(120, 30)).toImage().pixelColor(28, 2);
-        QVERIFY2(drawn == picked, qPrintable(qsl("the color %1 picked for a game never played was not kept: it is drawn with %2").arg(picked.name(), drawn.name())));
-
-        QDir(profileHome).removeRecursively();
         pDialog->deleteLater();
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     }

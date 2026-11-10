@@ -2357,12 +2357,6 @@ void dlgConnectionProfiles::slot_setCustomColor()
     // theme-fixed: the colour the picker opens on when the profile has none - a value the user is choosing, not chrome
     QColor color = QColorDialog::getColor(getCustomColor(profileName).value_or(QColor(255, 255, 255)));
     if (color.isValid()) {
-        // a listed game has no folder until it is first saved
-        const QString profileHomePath = MudletApp::getMudletPath(enums::profileHomePath, profileName);
-        if (!QDir().mkpath(profileHomePath)) {
-            qWarning() << "dlgConnectionProfiles::slot_setCustomColor: failed to create profile folder" << profileHomePath;
-            return;
-        }
         auto profileColorPath = MudletApp::getMudletPath(enums::profileDataItemPath, profileName, qsl("profilecolor"));
         QSaveFile file(profileColorPath);
         if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
