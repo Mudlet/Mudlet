@@ -186,6 +186,20 @@ describe("Tests functionality of Geyser.ListItem", function()
       assert.is_truthy(getLabelText("gliEcho"):find("AAA", 1, true))
     end)
 
+    it("shows text again that a background image replaced", function()
+      item:echo("AAA")
+      assert.is_true(item:setBackgroundImage(":/icons/mudlet.png"))
+      item:echo("AAA")
+      assert.is_truthy(getLabelText("gliEcho"):find("AAA", 1, true))
+    end)
+
+    it("shows text again that a movie replaced", function()
+      item:echo("AAA")
+      item:setMovie(":/icons/mudlet.png")
+      item:echo("AAA")
+      assert.is_truthy(getLabelText("gliEcho"):find("AAA", 1, true))
+    end)
+
     for _, flavour in ipairs({"cecho", "decho", "hecho"}) do
       it(flavour .. " shows new text and then plain echo replaces it", function()
         assert.is_true(item[flavour](item, "text"))

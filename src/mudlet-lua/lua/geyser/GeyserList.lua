@@ -108,8 +108,17 @@ local function sortRows(list, comparator)
   local byName
 
   if compare then
+    -- table.sort isn't stable, so rows that tie keep the order they had.
+    local position = {}
+    for i, name in ipairs(box.windows) do
+      position[name] = i
+    end
+
     byName = function(a, b)
-      return compare(box.windowList[a], box.windowList[b])
+      local rowA, rowB = box.windowList[a], box.windowList[b]
+      if compare(rowA, rowB) then return true end
+      if compare(rowB, rowA) then return false end
+      return position[a] < position[b]
     end
   end
 
@@ -411,42 +420,48 @@ function Geyser.List:indexOf(item)
   return table.index_of(self.content.windows, nameOf(item))
 end
 
+-- Internal function: runs a function with the layout held back, and ends the update
+-- afterwards even if the function raises, unless one was already running.
+-- @param list The list.
+-- @param fn The function.
+local function holdingLayout(list, fn)
+  -- rawget: what it inherits from Geyser is Geyser's to end.
+  local wasDeferring = rawget(list, "defer_updates")
+
+  list:begin_update()
+  local ok, err = pcall(fn)
+
+  if not wasDeferring then
+    list:end_update()
+  end
+
+  if not ok then
+    error(err, 0)
+  end
+end
+
 --- Deletes every row now, without consulting any `onDismiss`, and without telling
 -- `onSelectionChange` about the selection going with them.
 function Geyser.List:clear()
-  -- rawget: what it inherits from Geyser is Geyser's to end.
-  local wasDeferring = rawget(self, "defer_updates")
-
-  self:begin_update()
-
-  for _, item in ipairs(self:getItems()) do
-    item:delete()
-  end
-
-  if not wasDeferring then
-    self:end_update()
-  end
+  holdingLayout(self, function()
+    for _, item in ipairs(self:getItems()) do
+      item:delete()
+    end
+  end)
 end
 
 --- Dismisses every row: `dismiss()` for those that have it, so that an `onDismiss`
 -- gets its say, and `delete()` for those that don't.
 function Geyser.List:dismissAll()
-  -- rawget: what it inherits from Geyser is Geyser's to end.
-  local wasDeferring = rawget(self, "defer_updates")
-
-  self:begin_update()
-
-  for _, item in ipairs(self:getItems()) do
-    if item.dismiss then
-      item:dismiss()
-    else
-      item:delete()
+  holdingLayout(self, function()
+    for _, item in ipairs(self:getItems()) do
+      if item.dismiss then
+        item:dismiss()
+      else
+        item:delete()
+      end
     end
-  end
-
-  if not wasDeferring then
-    self:end_update()
-  end
+  end)
 end
 
 --- Sorts the list and lays it out again.

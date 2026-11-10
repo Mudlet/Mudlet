@@ -43,7 +43,7 @@ function Geyser.ListItem:new(cons, container)
 
   -- An item built from another would read that one's state through its
   -- metatable; these shadow it. Its own stylesheet is passed on, its stripe isn't.
-  me.deleted, me.dismissing, me.stripe, me.rawEchoed = false, false, false, false
+  me.deleted, me.dismissing, me.stripe, me.textReplaced = false, false, false, false
   me.ownStyleSheet = rawget(me, "stylesheet") or me.ownStyleSheet
   if me.ownStyleSheet and not rawget(me, "stylesheet") then
     me:setStyleSheet()
@@ -171,18 +171,36 @@ end
 -- @param[opt] color The colour to use.
 -- @param[opt] format The format list to use.
 function Geyser.ListItem:echo(message, color, format)
-  local unchanged = not self.rawEchoed and message == rawget(self, "message") and not rawget(self, "echoType")
+  local unchanged = not self.textReplaced and message == rawget(self, "message") and not rawget(self, "echoType")
   if unchanged and not color and not format then return end
 
-  self.rawEchoed = false
+  self.textReplaced = false
   return Geyser.Label.echo(self, message, color, format)
 end
 
 --- Prints raw text to the item, as `Geyser.Label:rawEcho` does.
 -- @param message The text to print.
 function Geyser.ListItem:rawEcho(message)
-  self.rawEchoed = true
+  self.textReplaced = true
   return Geyser.Label.rawEcho(self, message)
+end
+
+--- Sets a background image, as `Geyser.Label:setBackgroundImage` does.
+-- @param imageFileName The image to show.
+-- @return True, or nil and an error message.
+-- @return The error message.
+function Geyser.ListItem:setBackgroundImage(imageFileName)
+  self.textReplaced = true
+  return Geyser.Label.setBackgroundImage(self, imageFileName)
+end
+
+--- Shows a movie, as `Geyser.Label:setMovie` does.
+-- @param fileName The movie to show.
+-- @return True, or nil and an error message.
+-- @return The error message.
+function Geyser.ListItem:setMovie(fileName)
+  self.textReplaced = true
+  return Geyser.Label.setMovie(self, fileName)
 end
 
 -- Internal function: whether a flavoured echo would show what the item already shows.
@@ -191,7 +209,7 @@ end
 -- @param[opt] message The message it is being asked to show.
 -- @return Whether nothing would change.
 local function showing(item, flavour, message)
-  return message ~= nil and not item.rawEchoed and rawget(item, "echoType") == flavour
+  return message ~= nil and not item.textReplaced and rawget(item, "echoType") == flavour
     and rawget(item, "echoMessage") == message and rawget(item, "message") == message
 end
 
@@ -203,7 +221,7 @@ end
 function Geyser.ListItem:cecho(message)
   if showing(self, "cecho", message) then return true end
 
-  self.rawEchoed = false
+  self.textReplaced = false
   return Geyser.Label.cecho(self, message)
 end
 
@@ -215,7 +233,7 @@ end
 function Geyser.ListItem:decho(message)
   if showing(self, "decho", message) then return true end
 
-  self.rawEchoed = false
+  self.textReplaced = false
   return Geyser.Label.decho(self, message)
 end
 
@@ -227,7 +245,7 @@ end
 function Geyser.ListItem:hecho(message)
   if showing(self, "hecho", message) then return true end
 
-  self.rawEchoed = false
+  self.textReplaced = false
   return Geyser.Label.hecho(self, message)
 end
 
