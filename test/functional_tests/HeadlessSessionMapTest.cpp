@@ -360,6 +360,27 @@ end)
             lateReports += arguments.at(0).toString().contains(qsl("headless late failure"));
         }
         QCOMPARE(lateReports, 1);
+
+        // Failing for one room only, as when two views show different rooms, is still the one error
+        QVERIFY(session.runLua(qsl(R"lua(
+addRoom(2)
+setRoomArea(2, getRoomArea(1))
+registerMapInfo("HeadlessFailing", function(roomID)
+  if roomID == 2 then error("headless room failure") end
+  return "fine"
+end)
+)lua")));
+        for (int i = 0; i < 3; ++i) {
+            QVERIFY(session.runLua(qsl("centerview(1)")));
+            QVERIFY2(rendered(session), qPrintable(session.errorString()));
+            QVERIFY(session.runLua(qsl("centerview(2)")));
+            QVERIFY2(rendered(session), qPrintable(session.errorString()));
+        }
+        int roomReports = 0;
+        for (const QList<QVariant>& arguments : std::as_const(errors)) {
+            roomReports += arguments.at(0).toString().contains(qsl("headless room failure"));
+        }
+        QCOMPARE(roomReports, 1);
         QVERIFY(session.shutdown(false));
     }
 
