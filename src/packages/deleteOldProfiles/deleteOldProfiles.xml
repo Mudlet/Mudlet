@@ -84,8 +84,8 @@
   ))
 
   -- An interrupted save can leave a temporary file behind, which is not a save and does
-  -- not take a month's spot. Mudlet loads the newest .xml profile or .dat/.json map; times
-  -- are whole seconds, so it may load any save tied for newest and every one stays.
+  -- not take a month's spot. Mudlet loads the newest .xml profile or .dat/.json map; lfs
+  -- times are whole seconds, so which of several tied saves that is can't be told: all stay.
   -- XML maps load only from Map history, never on startup. Module backups are never
   -- loaded, so every file there counts as a save.
   local savedExtensions = {profiles = {xml = true}, maps = {dat = true, json = true, xml = true}}
