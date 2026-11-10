@@ -624,7 +624,14 @@ describe("Tests the audit of a damaged binary map file", function()
       local area = newArea("MapFileAuditSpecJsonHugeHeader")
       local room = newRoom(area, 0)
       assert.is_true(saveJsonMap(jsonPath))
-      local text = readFile(jsonPath)
+      local original = readFile(jsonPath)
+      local text = original
+      -- binary reloads in later tests do not restore the player marker and font settings
+      finally(function()
+        writeFile(jsonPath, original)
+        loadJsonMap(jsonPath)
+        os.remove(jsonPath)
+      end)
       -- each top-level key keeps its original value under a name the reader ignores
       for _, key in ipairs({"areaCount", "roomCount", "labelCount", "playerRoomStyle",
                             "playerRoomOuterDiameterPercentage", "playerRoomInnerDiameterPercentage"}) do
@@ -634,7 +641,6 @@ describe("Tests the audit of a damaged binary map file", function()
       writeFile(jsonPath, text)
       deleteMap()
       assert.is_true(loadJsonMap(jsonPath))
-      os.remove(jsonPath)
 
       assert.are.equal(area, getRoomArea(room))
     end)
