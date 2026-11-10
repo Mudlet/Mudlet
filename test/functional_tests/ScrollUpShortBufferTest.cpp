@@ -210,6 +210,24 @@ private slots:
         QVERIFY2(!console->mLowerPane->isHidden(), "scrolling back did not open the split-screen scrollback");
     }
 
+    void test_scrollingDownBeforeAQueuedScrollBackStillReachesTheBottom()
+    {
+        TMainConsole* console = startProfile();
+        QVERIFY2(console, "the profile did not start");
+        TTextEdit* upper = console->mUpperPane;
+        for (int line = 1; line <= 3 * upper->getScreenHeight(); ++line) {
+            echoLine(console, line);
+        }
+        // The split opens at once but its scroll back waits for the event loop, after the scroll down
+        console->scrollUp(1);
+        console->scrollDown(1);
+        qApp->processEvents();
+        QVERIFY2(!upper->mIsTailMode, "the queued scroll back did not happen, so this test means nothing");
+
+        console->scrollDown(10000);
+        QVERIFY2(upper->mIsTailMode, "scrolling down did not bring the console back to its bottom");
+    }
+
     // A mini console with all its text on screen, or with scrolling disabled, has no use for a wheel
     // turn, so the scroll box holding it scrolls instead
     void test_aWheelTheMiniConsoleCannotUseScrollsTheScrollBoxHoldingIt_data()

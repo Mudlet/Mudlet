@@ -1449,19 +1449,21 @@ bool TConsole::usesWheel(const bool up)
     if ((mType & (UserWindow | SubConsole)) && !mScrollingEnabled) {
         return false;
     }
-    if (!mLowerPane->isHidden()) {
+    // The pane scrolls back on a queued timer, so it can be scrolled back while the split is still hidden
+    if (!mLowerPane->isHidden() || !mUpperPane->mIsTailMode) {
         return true;
     }
-    // With every line already on screen there is nothing to scroll back to, and a split would only show them twice
+    // At the bottom, only up can go anywhere; and with every line on screen a split would only show them twice
     return up && mUpperPane->imageTopLine() != 0;
 }
 
 bool TConsole::scrollDown(int lines)
 {
-    if (!usesWheel(false)) {
+    if ((mType & (UserWindow | SubConsole)) && !mScrollingEnabled) {
         return false;
     }
 
+    const bool scrolledBack = usesWheel(false);
     mUpperPane->scrollDown(lines);
     if (!mUpperPane->mIsTailMode && (mUpperPane->imageTopLine() + mUpperPane->getScreenHeight() >= buffer.lineBuffer.size() - mLowerPane->getRowCount())) {
         mUpperPane->scrollDown(mLowerPane->getRowCount() + 100); // Gets to the bottom
@@ -1476,7 +1478,7 @@ bool TConsole::scrollDown(int lines)
         mUpperPane->forceUpdate();
     }
     slot_adjustAccessibleNames();
-    return true;
+    return scrolledBack;
 }
 
 bool TConsole::scrollUp(int lines)
