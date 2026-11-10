@@ -1524,6 +1524,10 @@ private slots:
             QVERIFY2(pane->findChildren<QMenu*>().isEmpty(), qPrintable(qsl("a right click on the %1 link put up a menu").arg(i == 2 ? qsl("disabled") : qsl("unrevealed spoiler"))));
         }
         QVERIFY2(waitForTextInBuffer(qsl("SpoilerLink"), 1000), "the right click never revealed the spoiler, so it proves nothing about its menu");
+        QPointer<QMenu> revealedSpoilerMenu = menuFromRightClickAt(overALink.at(3));
+        QVERIFY2(revealedSpoilerMenu, "a right click on a revealed spoiler link did not put up exactly one menu");
+        QVERIFY2(revealedSpoilerMenu->findChild<QAction*>(qsl("consoleCopy")), "a revealed spoiler link did not give the console's menu");
+        revealedSpoilerMenu->close();
 
         // One command, but the menu's tooltip hint makes it a menu of its own
         QPointer<QMenu> oneItemMenu = menuFromRightClickAt(overALink.at(4));
