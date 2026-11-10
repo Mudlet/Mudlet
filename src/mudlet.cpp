@@ -6762,8 +6762,11 @@ QString mudlet::createProfileForUri(const TelnetUriData& uriData)
 {
     QString profileName = uriData.host;
 
-    if (QHostAddress().setAddress(profileName)) {
-        // An IPv6 address's colons cannot be in a profile name, and an IPv4 address's first number alone says little
+    if (QHostAddress address; address.setAddress(profileName)) {
+        // An IPv6 address's colons cannot be in a profile name, and an IPv4 address's first number alone says little.
+        // A zone ID is free text that could hold "..", and names only a network interface on this computer.
+        address.setScopeId(QString());
+        profileName = address.toString();
         for (QChar& c : profileName) {
             if (!MudletApp::scmAllowedProfileNameChars.contains(c)) {
                 c = QLatin1Char('-');

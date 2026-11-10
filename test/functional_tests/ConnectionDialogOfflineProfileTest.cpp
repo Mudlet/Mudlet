@@ -456,6 +456,7 @@ private slots:
         QTest::newRow("IPv6") << qsl("2001:db8::1") << qsl("2001-db8--1");
         QTest::newRow("IPv6 loopback") << qsl("::1") << qsl("--1");
         QTest::newRow("IPv4") << qsl("192.0.2.10") << qsl("192.0.2.10");
+        QTest::newRow("IPv6 zone ID") << qsl("fe80::1%a..b") << qsl("Fe80--1");
         QTest::newRow("host name") << qsl("game.example.com") << qsl("Game");
     }
 
