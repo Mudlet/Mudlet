@@ -46,6 +46,7 @@ public:
     // What a mouse press, the second press of a double-click and a wheel turn at that point of the last render() do
     // to T2DMap, menus and dragging aside
     bool rendered() const { return !mView.mSize.isEmpty(); }
+    QSize renderedSize() const { return mView.mSize; }
     // Whether the last render() laid out an area's rooms, which a press and a wheel turn act on
     bool showsArea() const;
     void press(const QPoint&, Qt::MouseButton, Qt::KeyboardModifiers);
