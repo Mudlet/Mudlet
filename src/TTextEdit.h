@@ -69,6 +69,7 @@ public:
     void drawForeground(QPainter&, const QRect&);
     void showNewLines();
     void forceUpdate();
+    void stopDragScroll();
     // Records that the text of these buffer lines changed where it stands,
     // rather than the whole screen being untrustworthy. Unlike forceUpdate()
     // this keeps the scroll shortcut: the rows the lines land on simply join
@@ -358,7 +359,7 @@ private:
     mutable bool mHasBlinkingContent = false;
     mutable bool mIsBlinkClientRegistered = false;
     QPointer<QTimer> mpScrollStoppedTimer;
-    // Replays a move at mDragScrollPos while a drag selection is held at the top or bottom edge (only the bottom in the lower pane)
+    // Replays a move at mDragScrollPos while a drag selection in the upper pane is held at its top or bottom edge
     QTimer* mpDragScrollTimer = nullptr;
     QPointF mDragScrollPos;
     // Maximum of one repaint per paintPaceMs() is allowed via scheduleUpdate().

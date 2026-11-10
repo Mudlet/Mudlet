@@ -1998,8 +1998,8 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
         return;
     }
 
-    // The lower pane never scrolls, so repeating at its top edge would only pull the upper pane away
-    if ((eventPos.y() < 10 && !mIsLowerPane) || eventPos.y() >= height() - 10) {
+    // The lower pane never scrolls, so a repeat there would only move the upper pane away from the selection
+    if (!mIsLowerPane && (eventPos.y() < 10 || eventPos.y() >= height() - 10)) {
         mDragScrollPos = event->position();
         if (!mpDragScrollTimer->isActive()) {
             mpDragScrollTimer->start();
@@ -2316,10 +2316,17 @@ void TTextEdit::slot_popupMenu()
     mPopupLinkIndex = 0;
 }
 
+void TTextEdit::stopDragScroll()
+{
+    mpDragScrollTimer->stop();
+    mMouseTracking = false;
+}
+
 void TTextEdit::mousePressEvent(QMouseEvent* event)
 {
-    // A drag whose release went elsewhere must not replay its edge position into this press
-    mpDragScrollTimer->stop();
+    // A drag in either pane whose release went elsewhere would take this press for its button still held
+    mpConsole->mUpperPane->stopDragScroll();
+    mpConsole->mLowerPane->stopDragScroll();
     //new event to get mouse position on the parent window
     auto eventPos = event->position().toPoint();
     auto eventGlobalPos = event->globalPosition().toPoint();
