@@ -351,6 +351,11 @@ bool TMap::setRoomArea(int id, int area)
         // instantiate the required TArea structure - this seems a bit twisty
         // and convoluted, but it was how previous code was wired up and we need
         // to retain the API for the lua subsystem...
+    } else if (pR->getArea() == area && pA->getAreaRooms().contains(id)) {
+        // Mapping scripts set the area of every room they arrive in, and redoing
+        // it would make the next path search rebuild the whole map's graph.
+        // A new room's area is -1 before that area holds it, hence the second test.
+        return true;
     }
 
     const bool result = pR->setArea(area);
