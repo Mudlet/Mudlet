@@ -751,6 +751,34 @@ private slots:
         QVERIFY2(QApplication::focusWidget() != static_cast<QWidget*>(pSecondHost->mainConsoleView()->mpCommandLine.data()), "the keyboard went to a profile that is no longer active");
     }
 
+    // The profile left behind can send the switch to another tab of the same window before this one takes over
+    void test_theDetachedWindowShowsTheProfileThatEndsUpActive()
+    {
+        QVERIFY(mpDetachedWindow);
+        startProfile(mThirdHostname);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        mudlet::self()->slot_profileDetachToWindow(mThirdHostname, mpDetachedWindow);
+        QVERIFY2(mudlet::self()->getDetachedWindows().value(mThirdHostname) == mpDetachedWindow, "the third profile did not join the detached window");
+        Host* pFirstHost = HostManager::self()->getHost(mFirstHostname);
+        QVERIFY(pFirstHost);
+        mudlet::self()->activateProfile(pFirstHost);
+        mpDetachedWindow->switchToProfile(mSecondHostname);
+        TLuaInterpreter* pLua = pFirstHost->getLuaInterpreter();
+        QVERIFY(pLua->compileAndExecuteScript(qsl("qaFocusLost = 0 "
+                                                  "qaFocusHandler = registerAnonymousEventHandler('sysProfileFocusChangeEvent', function(_, gained) "
+                                                  "if not gained then qaFocusLost = qaFocusLost + 1 if qaFocusLost < 5 then setActiveProfile('%1') end end end)")
+                                                      .arg(mThirdHostname)));
+        auto removeHandler = qScopeGuard([pLua]() {
+            pLua->compileAndExecuteScript(qsl("killAnonymousEventHandler(qaFocusHandler)"));
+        });
+
+        QVERIFY(pLua->compileAndExecuteScript(qsl("assert(setActiveProfile('%1'))").arg(mSecondHostname)));
+        QVERIFY(mudlet::self()->getActiveHost());
+        QCOMPARE(mpDetachedWindow->getCurrentProfileName(), mudlet::self()->getActiveHost()->getName());
+    }
+
     // A script can ask for a profile whose window the player has minimised
     void test_setActiveProfileRestoresAMinimisedDetachedWindow()
     {
