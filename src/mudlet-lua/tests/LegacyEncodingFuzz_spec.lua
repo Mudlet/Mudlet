@@ -5,7 +5,7 @@
 -- character can arrive as a lead byte at the end of one read and its trail
 -- bytes at the start of the next. Each round sets one encoding, then feeds
 -- the same random lines - valid characters, lone and truncated leads, invalid
--- trail bytes, GB18030 four byte forms, mixed with ASCII and SGR colours - once
+-- trail bytes, GB18030 four byte and EUC-JP three byte forms, mixed with ASCII and SGR colours - once
 -- as one read and once in reads of one to seven bytes, and requires the same
 -- text and getTextFormat() for every character from both.
 --
