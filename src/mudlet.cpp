@@ -6573,17 +6573,16 @@ void mudlet::slot_replay()
         return;
     }
 
-    QSettings& settings = *MudletApp::getQSettings();
-    QString lastDir = settings.value("lastFileDialogLocation", MudletApp::getMudletPath(enums::profileHomePath, pHost->getName())).toString();
+    // Recordings always go to the profile's default log folder, never a custom log folder
+    const QString startDir = MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, pHost->getName());
 
-
-    const QString fileName = QFileDialog::getOpenFileName(this, tr("Select Replay"), lastDir, tr("*.dat"));
+    //: File type filter in the dialog for choosing a replay to play back; keep "(*.dat)" untranslated
+    const QString replayFilter = tr("Mudlet replays (*.dat)");
+    const QString fileName = QFileDialog::getOpenFileName(this, tr("Select Replay"), startDir, replayFilter);
     if (fileName.isEmpty()) {
         // Cancel was hit in QFileDialog::getOpenFileName(...)
         return;
     }
-    lastDir = QFileInfo(fileName).absolutePath();
-    settings.setValue("lastFileDialogLocation", lastDir);
 
     // No third argument causes error messages to be sent to pHost's main console:
     mHostManager.replay().load(pHost, fileName);
