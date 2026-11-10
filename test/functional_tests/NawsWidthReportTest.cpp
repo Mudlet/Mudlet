@@ -258,6 +258,7 @@ private slots:
         }
         showTab(mHostname);
         if (mpHost) {
+            runLua(mpHost, qsl("scrollTo() pcall(deleteCommandLine, 'nawsProbeTallBelow')"));
             mpHost->setUserBorders(QMargins());
         }
         mudlet::self()->resize(1200, 800);
@@ -402,6 +403,7 @@ private slots:
 
         QVERIFY2(!whileScrolledBack.isEmpty(), describe(whileScrolledBack).constData());
         QCOMPARE(whileScrolledBack.constLast(), QSize(reportableWidth(mpHost), mpHost->mScreenHeight));
+        QCOMPARE(mpServer->nawsUpdates(), whileScrolledBack);
     }
 
     // An overlay along the bottom that covers the whole of the lower pane
@@ -569,6 +571,31 @@ private slots:
         QCOMPARE(screenSize(mpHost), toldWhileHidden);
         // so coming back gave the game nothing new to re-wrap to
         QVERIFY2(mpServer->nawsUpdates().size() == updates.size(), describe(mpServer->nawsUpdates()).constData());
+    }
+
+    // A profile left scrolled back in a background tab is told the size it
+    // comes back to all the same - its rows do not depend on the split.
+    void aBackgroundedScrolledBackProfileIsToldTheSizeItComesBackTo()
+    {
+        QVERIFY2(ensureSecondProfile(), "the second profile did not load");
+        runLua(mpHost, qsl("if nawsProbeContainer then nawsProbeContainer:detach() end"));
+        runLua(mpHost, qsl("for i = 1, 300 do echo('line ' .. i .. '\\n') end"));
+        runLua(mpHost, qsl("scrollUp(50)"));
+        settle();
+        showTab(mSecondHostname);
+        settle();
+        QVERIFY2(mpHost->mainConsoleView()->isHidden(), "the first profile should be in a background tab by now");
+
+        mpServer->clearNawsUpdates();
+        mudlet::self()->resize(1000, 600);
+        settle();
+        const auto whileHidden = mpServer->nawsUpdates();
+        showTab(mHostname);
+        settle();
+
+        QVERIFY2(!mpHost->mainConsoleView()->mLowerPane->isHidden(), "the profile came back no longer scrolled back");
+        QVERIFY2(!whileHidden.isEmpty(), "the window lost height, but the hidden profile was never told a new size");
+        QCOMPARE(mpServer->nawsUpdates(), whileHidden);
     }
 
     // A script can move its own profile's borders while that profile waits in a
