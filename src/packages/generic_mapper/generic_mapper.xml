@@ -4413,7 +4413,8 @@ function doSpeedWalk()
         raiseEvent("sysSpeedwalkStarted")
         map.speedwalk(nil, speedWalkPath, speedWalkDir)
     else
-        -- Mudlet only calls this once a path is found, so an empty one means the walk starts at its goal
+        -- Map clicks and gotoRoom() only get here after a path is found, so empty means we start at the goal.
+        -- A script calling this after a failed getPath() lands here too: nothing here can tell the two apart
         map.echo("You are already in that room.")
     end
 end
