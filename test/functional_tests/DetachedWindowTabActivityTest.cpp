@@ -266,6 +266,43 @@ private slots:
         QVERIFY2(marked, "with multiview on, text for a profile hidden in a detached window went unmarked");
     }
 
+    // alert(), the game's bell and the "new data" alert all ask the window manager
+    // to flag a window; for a profile in a detached window it has to be that one,
+    // as flagging the main window points the player at the wrong game - and does
+    // nothing at all while the main window is the active one.
+    void test_aDetachedProfileAsksForAttentionFromItsOwnWindow()
+    {
+        TDetachedWindow* pWindow = gatherSecondAndThirdIntoOneWindow();
+        QVERIFY(pWindow);
+
+        QCOMPARE(mudlet::self()->profileWindow(mpSecondHost), pWindow);
+        QCOMPARE(mudlet::self()->profileWindow(mpThirdHost), pWindow);
+        QCOMPARE(mudlet::self()->profileWindow(mpFirstHost), mudlet::self());
+    }
+
+    // The new data alert is armed when the profile's console is hidden by its
+    // window being minimised, which for a detached profile is not the main window
+    void test_minimisingADetachedWindowArmsItsNewDataAlert()
+    {
+        TDetachedWindow* pWindow = gatherSecondAndThirdIntoOneWindow();
+        QVERIFY(pWindow);
+        pWindow->show();
+        QVERIFY(QTest::qWaitForWindowExposed(pWindow));
+        TMainConsole* pConsole = mpThirdHost->mainConsoleView();
+        QVERIFY(pConsole);
+        QVERIFY(mpThirdHost->mAlertOnNewData);
+        QVERIFY2(!pConsole->startIncomingText(), "the alert was armed while the window was on screen");
+
+        pWindow->showMinimized();
+        QTRY_VERIFY(pWindow->isMinimized());
+        const bool armed = pConsole->startIncomingText();
+        pWindow->showNormal();
+
+        QVERIFY2(armed, "minimising the detached window left its profile's new data alert unarmed");
+        QTRY_VERIFY(pConsole->isVisible());
+        QVERIFY2(!pConsole->startIncomingText(), "the alert stayed armed after the window came back");
+    }
+
     // The main window's marks now come from the same two functions as a detached
     // window's, so this is here to see that sharing them cost it nothing
     void test_theMainWindowStillMarksAndClearsItsOwnTabs()

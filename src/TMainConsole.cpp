@@ -3470,7 +3470,7 @@ bool TMainConsole::startIncomingText()
 
 void TMainConsole::alertNewData()
 {
-    QApplication::alert(mudlet::self(), 0);
+    QApplication::alert(window(), 0);
 }
 
 void TMainConsole::finishIncomingText(const bool carriesText)

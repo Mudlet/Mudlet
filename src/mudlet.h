@@ -151,7 +151,9 @@ public:
     void addConsoleForNewHost(Host*);
     void adjustMenuBarVisibility();
     void adjustToolBarVisibility();
-    void alertUser(int milliseconds) override;
+    void alertUser(Host& host, int milliseconds) override;
+    // The top-level window showing the profile: a detached window once its tab has been torn off
+    QWidget* profileWindow(Host* pHost);
     void announce(const QString& text, const QString& processing = QString(), bool isPlain = false) override;
     void attachDebugArea(const QString&);
     void checkUpdatesOnStart();
