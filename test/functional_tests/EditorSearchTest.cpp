@@ -855,6 +855,12 @@ private slots:
         QCOMPARE(mpEditor->mCurrentView, EditorViewType::cmScriptView);
         QVERIFY2(mpEditor->mpSourceEditorArea->isVisibleTo(mpEditor), "the open script's code was hidden by the variables being reread");
         QVERIFY2(!mpEditor->mpLabel_hiddenVariablesCount->isVisibleTo(mpEditor), "the hidden variables count showed outside the Variables view");
+
+        QTreeWidgetItem* pVariableResult = topLevelResultFor(qsl("Variable"));
+        QVERIFY(pVariableResult);
+        mpEditor->slot_itemSelectedInSearchResults(pVariableResult);
+        QCOMPARE(mpEditor->mCurrentView, EditorViewType::cmVarsView);
+        QVERIFY2(mpEditor->mpLabel_hiddenVariablesCount->isVisibleTo(mpEditor), "the Variables view, reached from a result, did not say how many variables are hidden");
     }
 
     void test_anEmptyOrUnknownTermProducesNoResults()

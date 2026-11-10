@@ -11798,6 +11798,7 @@ void dlgTriggerEditor::show_vars()
     mpSourceEditorArea->show();
     checkBox_displayAllVariables->show();
     checkBox_displayAllVariables->setChecked(showHiddenVars);
+    updateHiddenVariablesCount();
     QTreeWidgetItem* pI = treeWidget_variables->topLevelItem(0);
     if (pI) {
         if (pI->childCount() > 0) {
