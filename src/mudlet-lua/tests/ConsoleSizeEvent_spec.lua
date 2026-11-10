@@ -1,7 +1,8 @@
 -- sysConsoleSizeChanged names a console, its columns and rows and the columns
--- its timestamps take, but only once one of those differs from its last
--- report: a font change alone reports nothing, and a pane resized while hidden
--- reports as it shows. With no main window the null view keeps the same rules.
+-- its timestamps take, when its pane is resized or its timestamps are toggled
+-- and one of those differs from its last report: a font change alone reports
+-- nothing, and a pane resized or toggled while hidden reports as it shows.
+-- With no main window the null view keeps the same rules.
 describe("Tests sysConsoleSizeChanged for a mini console", function()
   local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
   local reports, handler
