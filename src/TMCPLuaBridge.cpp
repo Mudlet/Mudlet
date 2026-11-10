@@ -546,6 +546,9 @@ QJsonValue TMCPLuaBridge::luaTableToJson(lua_State* L, int index, int depth, int
         for (int collision = 2; object.contains(uniqueKey); ++collision) {
             uniqueKey = qsl("%1#%2").arg(key).arg(collision);
         }
+        // Charged like a string value: a table that refers to itself under a long key
+        // repeats that key at every level it is rendered, so ten 10KB keys made a 2GB reply.
+        nodeBudget -= static_cast<int>(uniqueKey.size() / csmStringBytesPerNode);
         object[uniqueKey] = luaToJson(L, lua_gettop(L), depth + 1, nodeBudget);
         lua_pop(L, 1);
         if (nodeBudget < 0 || object.size() >= csmMaxObjectKeys) {

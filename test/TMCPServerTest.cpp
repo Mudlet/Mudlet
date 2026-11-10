@@ -1072,6 +1072,16 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
         QVERIFY2(result.text.size() < 5000000, qPrintable(qsl("the reply was %1 characters").arg(result.text.size())));
     }
 
+    void testATableOfLongKeysIsBoundedByHowMuchTextItCarries()
+    {
+        // Each level of a self-referencing table repeats every one of its keys, so keys
+        // have to be charged like values; uncharged, this reply was 205MB.
+        const MCPToolResult result = TMCPLuaBridge::runLua(L, qsl("local t = {} for i = 1, 10 do t[string.rep('k', 1000) .. i] = t end return t"));
+
+        QVERIFY(result.success);
+        QVERIFY2(result.text.size() < 5000000, qPrintable(qsl("the reply was %1 characters").arg(result.text.size())));
+    }
+
     void testAWideKeyedTableIsCutShortQuickly()
     {
         // QJsonObject keeps its keys sorted, so every insert moves everything after it:
