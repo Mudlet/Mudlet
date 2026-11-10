@@ -3063,6 +3063,9 @@ void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch)
         // Save/restore gives each nested pass its own snapshot; the spare member recycles its allocation:
         TLineFormat savedPassLine;
         savedPassLine.swap(mPreTriggerPassLine);
+        if (Q_LIKELY(mpModel)) {
+            mpModel->mPassCommittedLines = false;
+        }
         mEnclosingTriggerPasses.append(
                 {mPreTriggerPassLineNumber, std::exchange(mDetachedTriggerPassLineText, QString()), std::exchange(mTriggerPassLineEdits, {}), mTriggerPassLineLastSegment, mTriggerPassLineTailFrom});
         const int savedPassLineAsCommitted = mTriggerPassLineAsCommitted;
@@ -3110,6 +3113,13 @@ void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch)
         mPreTriggerPassSnapshotTaken = savedPassSnapshotTaken;
         mPreTriggerPassLineUniformity = savedPassLineUniformity;
         passLineTaken = std::exchange(mTriggerPassLineTaken, savedPassLineTaken);
+        // What the pass around this one writes next lands below this line, not on a piece left open in it
+        if (Q_LIKELY(mpModel)) {
+            mpModel->mPassCommittedLines = !mEnclosingTriggerPasses.isEmpty();
+            if (mpModel->mPassCommittedLines) {
+                mpModel->endPrintedLine();
+            }
+        }
     }
     if (Q_LIKELY(mpModel) && Q_UNLIKELY(mpModel->mNotifier.lineShownConnected())) {
         const bool shown = (passRan ? shownFirst >= 0 : mCommitLineIndices.last() >= 0) && !passLineTaken;

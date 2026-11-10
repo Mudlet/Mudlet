@@ -29,6 +29,7 @@
 #include <QFile>
 #include <QSignalSpy>
 #include <QTcpServer>
+#include <QTcpSocket>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -554,6 +555,190 @@ resetFormat())lua")));
         QVERIFY(session.runLua(qsl(R"lua(echo("later\n"))lua")));
         QVERIFY(session.submit(qsl("again")));
         QCOMPARE(styled.join(qsl(" ; ")), qsl("from a trigger\\n|#717100|own|0 ; look\\n|#717100|own|0 ; later\\n|own|own|0 ; again\\n|#717100|own|0"));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // The console draws these on the end of a line that was already sent whole
+    void test_whatTheConsoleDrawsOnTheLineAboveSaysSo()
+    {
+        const QString name = qsl("Headless Echo Anchor");
+        QVERIFY(writeProfile(name, QString()));
+        QTcpServer server;
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+
+        THeadlessSession session;
+        bool prompted = false;
+        connect(&session, &THeadlessSession::outputLine, &session, [&prompted](const QString&, const QString&, const bool isPrompt) {
+            prompted = prompted || isPrompt;
+        });
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"lua(tempTrigger("Welcome", [[echo(" <tagged>") echo(" <twice>") send("from a trigger")]])
+tempTrigger("Second", [[echo(" <second>")]])
+tempTrigger("Third", [[echo("\n<below>")]]))lua")));
+        QTRY_VERIFY_WITH_TIMEOUT(server.hasPendingConnections(), 10000);
+        std::unique_ptr<QTcpSocket> game(server.nextPendingConnection());
+        QStringList local;
+        connect(&session, &THeadlessSession::localTextStyled, &session, [&local](const QString&, const QString& text, const QList<THeadlessSession::TextRun>&, const bool continuesLine) {
+            local << (continuesLine ? qsl("+") : qsl("|")) + QString(text).replace(QChar::LineFeed, qsl("\\n"));
+        });
+        game->write("Welcome\r\nSecond\r\nThird\r\nhp 10> \xff\xf9");
+        QTRY_VERIFY_WITH_TIMEOUT(prompted, 10000);
+        QVERIFY(session.submit(qsl("look")));
+        QVERIFY(session.runLua(qsl(R"lua(echo("later\n"))lua")));
+        QVERIFY(session.submit(qsl("again")));
+        // The first echo onto a trigger's line and the command typed at the prompt; a piece still open is
+        // carried on without it, and a command below other text is a line of its own
+        QCOMPARE(local.join(QString()), qsl("+ <tagged>| <twice>|\\nfrom a trigger\\n+ <second>+\\n\\n<below>+\\nlook\\n|later\\n|again\\n"));
+
+        QStringList shown;
+        connect(&session, &THeadlessSession::lineShown, &session, [&shown](const QString&, const QString& text, bool, const QList<THeadlessSession::TextRun>&, qint64, const bool continuesLine) {
+            shown << (continuesLine ? qsl("+") : qsl("|")) + QString(text).replace(QChar::LineFeed, qsl("\\n"));
+        });
+        QVERIFY(session.runLua(qsl(R"lua(tempRegexTrigger("^gag and echo$", [[deleteLine() echo(" echoed") echo(" twice")]])
+tempRegexTrigger("^gag and cecho$", [[deleteLine() cecho("\n<red>OUCH")]])
+tempRegexTrigger("^feed and echo$", [[feedTriggers("fed\n") echo("echoed after the feed")]])
+tempRegexTrigger("^send$", [[send("a command")]])
+tempRegexTrigger("^send empty$", [[send("")]])
+tempRegexTrigger("^gag and end$", [[deleteLine() echo("\n")]])
+feedTriggers("before\ngag and echo\nbefore cecho\ngag and cecho\nfeed and echo\nsend\nsend empty\ngag and end\nlast\n"))lua")));
+        // An echo after deleteLine() goes on the line above, unless it starts with a line feed or follows fed
+        // lines; the blank line of an empty command echo is sent, and a line feed that only ends a line is not
+        QCOMPARE(shown.join(QString()), qsl("|before+ echoed twice|before cecho|OUCH|feed and echo|fed|echoed after the feed|send|a command|send empty||last"));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // Text the console draws on a line of its own must not say it joins the line above
+    void test_onlyWhatTheConsoleDrawsOnTheLineAboveSaysSo()
+    {
+        const QString name = qsl("Headless Echo Anchor Lines");
+        QVERIFY(writeProfile(name, QString()));
+        QStringList events;
+        const auto mark = [](const QString& kind, const bool continuesLine, const QString& text) {
+            return kind + (continuesLine ? qsl("+:") : qsl(":")) + QString(text).replace(QChar::LineFeed, qsl("\\n"));
+        };
+        const QString triggers = qsl(R"lua(
+tempRegexTrigger("^two sends$", [[send("a") send("b")]])
+tempRegexTrigger("^send tag$", [[send("a")]])
+tempRegexTrigger("^send tag$", [[echo(" <tag>")]])
+tempRegexTrigger("^sendall$", [[sendAll("n", "e", "look")]])
+tempRegexTrigger("^send echo$", [[send("a") echo("x\n")]])
+tempRegexTrigger("^$", [[if blankLineEchoes then echo("onblank\n") end]])
+tempRegexTrigger("^feed echo$", [[feedTriggers("fed\n") echo("note\n")]])
+tempRegexTrigger("^clear send$", [[clearWindow() send("c")]])
+tempRegexTrigger("^plain$", [[echo(" tag\n")]])
+tempRegexTrigger("^gag echo send$", [[deleteLine() echo(" R5") send("s")]])
+tempRegexTrigger("^gag cecho send$", [[deleteLine() cecho("<red> A") cecho("<blue>B") send("x")]])
+tempRegexTrigger("^gag echo feed$", [[deleteLine() echo(" R8") feedTriggers("fed\n")]])
+tempRegexTrigger("^gag insert$", [[deleteLine() moveCursorEnd() insertText(" I")]])
+tempRegexTrigger("^gag onto blank$", [[deleteLine() echo("R9")]])
+tempRegexTrigger("^nest plain$", [[feedTriggers("inner x\n") echo(" N")]])
+tempRegexTrigger("^inner x$", [[echo(" X")]])
+tempRegexTrigger("^nest sendin$", [[feedTriggers("send tagx\n") echo(" N")]])
+tempRegexTrigger("^nest gagsend$", [[deleteLine() feedTriggers("send tagx\n") echo(" N")]])
+tempRegexTrigger("^send tagx$", [[send("a")]])
+tempRegexTrigger("^nest deep$", [[feedTriggers("mid deep\n") echo(" O")]])
+tempRegexTrigger("^mid deep$", [[feedTriggers("deep none\n")]])
+tempRegexTrigger("^nest ins$", [[feedTriggers("\n") moveCursor("main", 0, getLastLineNumber("main") - 1) insertText("x")]])
+tempRegexTrigger("^gag feed echo$", [[deleteLine() feedTriggers("fed\n") echo("after")]])
+tempRegexTrigger("^current$", [[moveCursor("main", 3, getLineNumber("main") - 1) insertText("X")]])
+)lua");
+        const QStringList fed{qsl(R"(feedTriggers("first\ntwo sends\n"))"),
+                              qsl(R"(feedTriggers("send tag\n"))"),
+                              qsl(R"(feedTriggers("sendall\n"))"),
+                              qsl(R"(feedTriggers("send echo\n"))"),
+                              qsl(R"(feedTriggers("feed echo\n"))"),
+                              qsl(R"(feedTriggers("clear send\n"))"),
+                              qsl(R"(feedTriggers("plain\n"))"),
+                              qsl(R"(feedTriggers("one\ngag echo send\nbelow\n"))"),
+                              qsl(R"(feedTriggers("one\ngag cecho send\nbelow\n"))"),
+                              qsl(R"(feedTriggers("one\ngag echo feed\nbelow\n"))"),
+                              qsl(R"(feedTriggers("one\ngag insert\nbelow\n"))"),
+                              qsl(R"(feedTriggers("one\n\ngag onto blank\nbelow\n"))"),
+                              qsl(R"(feedTriggers("one\ngag feed echo\nbelow\n"))"),
+                              qsl(R"(blankLineEchoes = true feedTriggers("\n"))"),
+                              qsl(R"(feedTriggers("nest plain\n"))"),
+                              qsl(R"(feedTriggers("nest sendin\n"))"),
+                              qsl(R"(feedTriggers("one\nnest gagsend\n"))"),
+                              qsl(R"(feedTriggers("nest deep\n"))"),
+                              qsl(R"(blankLineEchoes = false feedTriggers("nest ins\n"))"),
+                              qsl(R"(feedTriggers("abc\ncurrent\n"))")};
+        const auto run = [&events, &fed](THeadlessSession& session) {
+            QStringList steps;
+            for (const QString& text : fed) {
+                events.clear();
+                if (!session.runLua(text)) {
+                    return QStringList{qsl("the Lua did not run")};
+                }
+                steps << events.join(qsl(" "));
+            }
+            return steps;
+        };
+        {
+            THeadlessSession session;
+            QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+            QVERIFY(session.runLua(triggers));
+            connect(&session, &THeadlessSession::outputLine, &session, [&events, &mark](const QString&, const QString& text, bool) {
+                events << mark(qsl("O"), false, text);
+            });
+            connect(&session, &THeadlessSession::localTextStyled, &session, [&events, &mark](const QString&, const QString& text, const QList<THeadlessSession::TextRun>&, const bool continuesLine) {
+                events << mark(qsl("T"), continuesLine, text);
+            });
+            const QStringList expected{qsl("O:first O:two sends T:a\\n T:b\\n"),
+                                       qsl("O:send tag T:a\\n T: <tag>"),
+                                       qsl("O:sendall T:\\nn\\n T:e\\n T:look\\n"),
+                                       qsl("O:send echo T:a\\n T:x\\n"),
+                                       qsl("O:feed echo O:fed T:note\\n"),
+                                       qsl("O:clear send T:c\\n"),
+                                       qsl("O:plain T+: tag\\n"),
+                                       qsl("O:one O:gag echo send T+: R5 T:\\ns\\n O:below"),
+                                       qsl("O:one O:gag cecho send T+: A T:B T:\\nx\\n O:below"),
+                                       qsl("O:one O:gag echo feed T+: R8 O:fed O:below"),
+                                       qsl("O:one O:gag insert T:\\n I O:below"),
+                                       qsl("O:one O: O:gag onto blank T:\\nR9 O:below"),
+                                       qsl("O:one O:gag feed echo O:fed T:\\nafter O:below"),
+                                       qsl("O: T+:\\nonblank\\n"),
+                                       qsl("O:nest plain O:inner x T+: X T:\\n N"),
+                                       qsl("O:nest sendin O:send tagx T:\\na\\n T: N"),
+                                       qsl("O:one O:nest gagsend O:send tagx T:\\na\\n T: N"),
+                                       qsl("O:nest deep O:mid deep O:deep none T:\\n O"),
+                                       qsl("O:nest ins O: T:\\nx"),
+                                       qsl("O:abc O:current T:\\nX")};
+            QCOMPARE(run(session), expected);
+            QVERIFY(session.shutdown(false));
+        }
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(triggers));
+        connect(&session,
+                &THeadlessSession::lineShown,
+                &session,
+                [&events, &mark](const QString&, const QString& text, bool, const QList<THeadlessSession::TextRun>&, qint64, const bool continuesLine) {
+                    events << mark(qsl("S"), continuesLine, text);
+                });
+        const QStringList expected{qsl("S:first S:two sends S:a S:b"),
+                                   qsl("S:send tag S:a S: <tag>"),
+                                   qsl("S:sendall S:n S:e S:look"),
+                                   qsl("S:send echo S:a S:x"),
+                                   qsl("S:feed echo S:fed S:note"),
+                                   qsl("S:c"),
+                                   qsl("S:plain tag\\n"),
+                                   qsl("S:one S+: R5 S:s S:below"),
+                                   qsl("S:one S+: AB S:x S:below"),
+                                   qsl("S:one S+: R8 S:fed S:below"),
+                                   qsl("S:one S: I S:below"),
+                                   qsl("S:one S: S+:R9 S:below"),
+                                   qsl("S:one S:fed S:after S:below"),
+                                   qsl("S:onblank\\n"),
+                                   qsl("S:nest plain S:inner x X S: N"),
+                                   qsl("S:nest sendin S:send tagx S:a S: N"),
+                                   qsl("S:one S:send tagx S:a S: N"),
+                                   qsl("S:nest deep S:mid deep S:deep none S: O"),
+                                   qsl("S:nest ins S: S+:x"),
+                                   // The pass's own line is sent ahead of what it wrote onto the line above
+                                   qsl("S:abc S:current S:X")};
+        QCOMPARE(run(session), expected);
         QVERIFY(session.shutdown(false));
     }
 };

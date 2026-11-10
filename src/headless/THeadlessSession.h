@@ -778,19 +778,23 @@ signals:
     // Each piece of localText again, after it, with the colours, styles and links it was written in: runs as
     // outputLine's are, a line feed in the text being in the run of what it was written with. An app connects one
     // of the two. A link in text another console's buffer was copied from (appendBuffer(), an MXP frame's text
-    // sent on) is not named.
-    void localTextStyled(const QString& profile, const QString& text, const QList<THeadlessSession::TextRun>& runs);
+    // sent on) is not named. continuesLine is for a piece the console draws on the end of the line last sent
+    // whole, by outputLine or lineShown, and not below it: a command typed at a prompt, or what a trigger
+    // echoes onto its line while lineShown is not connected.
+    void localTextStyled(const QString& profile, const QString& text, const QList<THeadlessSession::TextRun>& runs, bool continuesLine);
     // With the colours the editor's error console prints the piece in; a handler that takes only the first two
     // arguments may be connected
     void errorConsoleText(const QString& profile, const QString& text, const QColor& foreground, const QColor& background);
     // A line of outputLine's as the main console shows it once its triggers have run: with what they replaced,
     // recoloured or wrote into it, which may hold line feeds, and not at all if they deleted it. Lines a trigger
     // feeds follow the line it ran on, as they are shown, and so does what it wrote anywhere else (an echo()
-    // after deleteLine(), clearWindow() or a feedTriggers(), a send()'s command echo), as lines of their own.
+    // after clearWindow() or a feedTriggers(), a send()'s command echo), as lines of their own.
     // Sent whole, before the console wraps it or after a trigger's wrapLine() split it, and not again for a later
     // change to it. Sent mid-write, as outputLine is, with the same arguments; a line a trigger wrote has the time
-    // of the console line it went into, which is when it was written for a line of its own.
-    void lineShown(const QString& profile, const QString& text, bool isPrompt, const QList<THeadlessSession::TextRun>& runs, qint64 arrivalMSecs);
+    // of the console line it went into, which is when it was written for a line of its own. continuesLine is for
+    // text the console draws on the end of the line sent before it, not as a line below: an echo() after
+    // deleteLine(). A handler that takes fewer arguments may be connected.
+    void lineShown(const QString& profile, const QString& text, bool isPrompt, const QList<THeadlessSession::TextRun>& runs, qint64 arrivalMSecs, bool continuesLine);
     // A script emptied the main console, as clearWindow() does; lines from before it that lineShown has yet to
     // send are dropped. Sent mid-write, as outputLine is, so a handler may neither call the session nor run the
     // event loop.
@@ -1104,6 +1108,7 @@ private:
         bool isPrompt = false;
         QList<TextRun> runs;
         qint64 arrivalMSecs = -1;
+        bool continuesLine = false;
     };
     // For each trigger pass under way, outermost first, the lines that passes nested in it have shown
     QList<QList<ShownLine>> mShownLinesOfPasses;
