@@ -551,7 +551,13 @@ bool TLuaInterpreter::checkBoolArg(lua_State* L, const char* functionName, const
         // use lua_tonumber(...) and round because lua_tointeger(...) can return
         // oversized values (long long int?) on Windows which do not always fit
         // into an int:
-        return {true, QString::number(qRound(lua_tonumber(L, pos)))};
+        const double rounded = std::round(lua_tonumber(L, pos));
+        // Converting NaN or a value outside int's range is undefined; an empty
+        // string fails every caller's toInt() check, so they report an invalid ID
+        if (!(rounded >= std::numeric_limits<int>::min() && rounded <= std::numeric_limits<int>::max())) {
+            return {true, QString()};
+        }
+        return {true, QString::number(static_cast<int>(rounded))};
     }
 
     return {false, lua_tostring(L, pos)};
