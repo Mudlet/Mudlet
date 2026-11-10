@@ -337,6 +337,7 @@ describe("Tests GB18030 decoding", function()
 
     assert.equals("你", decoded(bytes(0xC4, 0xE3)))
     assert.same({0xE4C6}, codePoints(decoded(bytes(0xA1, 0x40))), "user defined area 3")
+    assert.same({0xE765}, codePoints(decoded(bytes(0xA7, 0xA0))), "user defined area 3")
   end)
 
   it("rejects a lead byte the encoding has no meaning for", function()
