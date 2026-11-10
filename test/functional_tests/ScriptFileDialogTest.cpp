@@ -219,7 +219,9 @@ private slots:
     void test_theReplayPickerOpensInTheProfilesLogFolder()
     {
         const QString elsewhere = QDir(mPickDir.path()).absolutePath();
-        MudletApp::getQSettings()->setValue(qsl("lastFileDialogLocation"), elsewhere);
+        // Neither picked from nor started in, so a write from either dialog shows
+        const QString lastDir = qsl("%1/lastDir").arg(elsewhere);
+        MudletApp::getQSettings()->setValue(qsl("lastFileDialogLocation"), lastDir);
         const QString replay = qsl("%1/picked.dat").arg(elsewhere);
         QFile touch(replay);
         QVERIFY(touch.open(QIODevice::WriteOnly));
@@ -229,13 +231,14 @@ private slots:
         mudlet::self()->slot_replay();
 
         QCOMPARE(mDialogStartDir, QDir(MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, mHostname)).absolutePath());
-        QCOMPARE(MudletApp::getQSettings()->value(qsl("lastFileDialogLocation")).toString(), elsewhere);
+        QCOMPARE(MudletApp::getQSettings()->value(qsl("lastFileDialogLocation")).toString(), lastDir);
     }
 
     void test_theLogFolderPickerOpensInTheFolderLogsGoTo()
     {
         const QString elsewhere = QDir(mPickDir.path()).absolutePath();
-        MudletApp::getQSettings()->setValue(qsl("lastFileDialogLocation"), elsewhere);
+        const QString lastDir = qsl("%1/lastDir").arg(elsewhere);
+        MudletApp::getQSettings()->setValue(qsl("lastFileDialogLocation"), lastDir);
         const QString custom = qsl("%1/logs").arg(elsewhere);
         QVERIFY(QDir().mkpath(custom));
 
@@ -250,11 +253,12 @@ private slots:
         preferences->pushButton_whereToLog->click();
         QCOMPARE(mDialogStartDir, QDir(MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, mHostname)).absolutePath());
         QCOMPARE(preferences->lineEdit_logFileFolder->text(), custom);
+        QCOMPARE(MudletApp::getQSettings()->value(qsl("lastFileDialogLocation")).toString(), lastDir);
 
         answerNextFileDialog(elsewhere);
         preferences->pushButton_whereToLog->click();
         QCOMPARE(mDialogStartDir, custom);
-        QCOMPARE(MudletApp::getQSettings()->value(qsl("lastFileDialogLocation")).toString(), elsewhere);
+        QCOMPARE(MudletApp::getQSettings()->value(qsl("lastFileDialogLocation")).toString(), lastDir);
     }
 };
 
