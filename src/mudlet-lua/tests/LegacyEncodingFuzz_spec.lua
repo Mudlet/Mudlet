@@ -17,7 +17,7 @@
 --   MUDLET_ENCFUZZ_DUMP    path; each batch is written here, %q quoted, before it is fed
 
 -- Gated like the other fuzzers: busted recurses into the whole tests directory,
--- and this leaves odd text in the main console and changes the server encoding.
+-- and this leaves odd text in the main console and the telnet layer in GA mode.
 if not os.getenv("MUDLET_FUZZ") then
   return
 end
