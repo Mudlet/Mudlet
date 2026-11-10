@@ -92,8 +92,11 @@ describe("Tests that the generic mapper does not read more of the map than a ste
     end)
 
     it("searches the same way when max_search_distance is set to false", function()
+      local areaRooms = spy.on(_G, "getAreaRooms")
+      finally(function() getAreaRooms:revert() end)
       -- "map config max_search_distance false" stores false, which map help config allows
       findLink("One step north", {}, "north", false)
+      assert.spy(areaRooms).was_called(1)
       assert.equals(toRoom, map.currentRoom)
       assert.equals(toRoom, getRoomExits(fromRoom).north)
     end)
