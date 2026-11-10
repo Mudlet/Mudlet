@@ -423,10 +423,16 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                 };
                 connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::lineCommitted, this, &THeadlessSession::lineCommitted);
                 connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::lineShown, this, &THeadlessSession::triggerPassEnded);
-                connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::textPrinted, this, [this](const QString& text) {
+                connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::textPrinted, this, [this, pNewHost](const QString& text, const TLineFormat& format) {
                     const QString profile = mProfileName;
+                    const QList<TextRun> runs = textRuns(text, format, pNewHost->mFgColor, pNewHost->mBgColor);
+                    // The first handler may delete the session
+                    const QPointer<THeadlessSession> stillHere(this);
                     ++gSignalsBeingHandedOut;
                     emit localText(profile, text);
+                    if (stillHere) {
+                        emit localTextStyled(profile, text, runs);
+                    }
                     --gSignalsBeingHandedOut;
                 });
                 connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::bufferCleared, this, [this, model = &pNewHost->mainConsoleModel()]() {

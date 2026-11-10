@@ -775,6 +775,11 @@ signals:
     // messages), and the error console. While lineShown is connected, it leaves out what that sends, as
     // docs/headless.md tells. Sent as written, so a handler may neither call the session nor run the event loop.
     void localText(const QString& profile, const QString& text);
+    // Each piece of localText again, after it, with the colours, styles and links it was written in: runs as
+    // outputLine's are, a line feed in the text being in the run of what it was written with. An app connects one
+    // of the two. A link in text another console's buffer was copied from (appendBuffer(), an MXP frame's text
+    // sent on) is not named.
+    void localTextStyled(const QString& profile, const QString& text, const QList<THeadlessSession::TextRun>& runs);
     // With the colours the editor's error console prints the piece in; a handler that takes only the first two
     // arguments may be connected
     void errorConsoleText(const QString& profile, const QString& text, const QColor& foreground, const QColor& background);

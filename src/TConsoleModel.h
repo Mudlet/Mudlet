@@ -259,16 +259,21 @@ struct TConsoleModel
 
     // For --mirror: copies text to stdout prefixed with the profile and console names. Text may be a
     // line fragment, so what follows the last line feed is held until one arrives. Also tells
-    // mNotifier's textPrinted.
-    void mirrorToStdOut(const QString& text);
+    // mNotifier's textPrinted, as written in format, or in mFormatCurrent.
+    void mirrorToStdOut(const QString& text) { mirrorToStdOut(text, mFormatCurrent); }
+    void mirrorToStdOut(const QString& text, const TChar& format);
+    // For text copied from another buffer, whose links textPrinted then leaves out
+    void mirrorToStdOut(const QString& text, const TLineFormat& format);
     // mirrorToStdOut() without first writing out what triggers wrote and is still held
     void writeMirrorFragments(const QString& text);
     // Where printed text landed: a line already there (the one triggers are running on, one a command was
     // echoed into, or wherever the cursor was moved), or the end.
     enum class PrintedInto { committedLine, end };
     // Tells mNotifier's textPrinted of text, keeping the lines the view shows: a piece left open in one
-    // line is ended before text lands anywhere else.
-    void notifyPrinted(const QString& text, PrintedInto into, bool startsLine = false);
+    // line is ended before text lands anywhere else. format is what text was written in, the last of it for
+    // characters it has none for.
+    void notifyPrinted(const QString& text, PrintedInto into, const TChar& format, bool startsLine = false);
+    void notifyPrinted(const QString& text, PrintedInto into, TLineFormat format, bool startsLine = false);
     // A line was committed or the buffer cleared, so no later text continues the open piece.
     void endPrintedLine() { mPrintedLineEnded = true; }
     // For a view told of a clear, which emptied its copy of the open piece's line too
