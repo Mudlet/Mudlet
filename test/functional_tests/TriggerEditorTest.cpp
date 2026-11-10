@@ -993,6 +993,36 @@ private slots:
     QCOMPARE(mpHost->getScriptUnit()->getScript(ids.front())->getScript(), qsl("-- typed but not saved"));
   }
 
+  // The reset saves whatever view is open, not only scripts
+  void test_editorResetKeepsUnsavedTriggerEdits() {
+    mudlet::self()->slot_showScriptDialog();
+    QTest::qWait(100ms);
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
+    QVERIFY(pEditor);
+    QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(
+        qsl("permSubstringTrigger(\"qaUnsavedTrigger\", \"\", {\"qaUnsavedTrigger\"}, [[-- saved]])")));
+    auto *pTree = pEditor->findChild<QTreeWidget *>(qsl("treeWidget_triggers"));
+    QVERIFY(pTree);
+    QTreeWidgetItem *pItem = nullptr;
+    pEditor->doCleanReset();
+    QVERIFY(QTest::qWaitFor([&]() {
+      const auto found = pTree->findItems(qsl("qaUnsavedTrigger"), Qt::MatchCaseSensitive | Qt::MatchFixedString | Qt::MatchRecursive, 0);
+      pItem = found.isEmpty() ? nullptr : found.first();
+      return pItem != nullptr;
+    }));
+    pEditor->slot_showTriggers();
+    pTree->setCurrentItem(pItem);
+    pEditor->slot_triggerSelected(pItem);
+    pEditor->mpSourceEditorEdbeeDocument->setText(qsl("-- typed but not saved"));
+
+    emit mpHost->signal_editorCleanResetRequested();
+    QTRY_VERIFY(!pEditor->mCleanResetQueued);
+
+    const auto ids = mpHost->getTriggerUnit()->findItems(qsl("qaUnsavedTrigger"));
+    QCOMPARE(ids.size(), 1);
+    QCOMPARE(mpHost->getTriggerUnit()->getTrigger(ids.front())->getScript(), qsl("-- typed but not saved"));
+  }
+
   // Saving a script runs its body, which an untouched script must not get from a reset
   void test_editorResetLeavesAnUneditedScriptUnrun() {
     mudlet::self()->slot_showScriptDialog();
