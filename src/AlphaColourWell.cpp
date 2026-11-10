@@ -108,7 +108,7 @@ void AlphaColourWell::applyLook()
         const auto opacity = [](const int percent) {
             // The number takes three places, so in a fixed-pitch face every well's words are one length and the
             // word as well as the percent sign stands under the one above it
-            //: Words inside a map colour well in the settings, beside a swatch of the colour: how opaque the colour is, %1 being a whole percentage - 100 for a colour that is not see-through at all - padded with spaces to three characters
+            //: Words inside a colour well (a map colour in the settings, a room's border colour in its properties), beside a swatch of the colour: how opaque the colour is, %1 being a whole percentage - 100 for a colour that is not see-through at all - padded with spaces to three characters
             return QCoreApplication::translate("AlphaColourWell", "Opacity %1%").arg(percent, 3);
         };
         words = opacity(qRound(mColour.alphaF() * 100));
