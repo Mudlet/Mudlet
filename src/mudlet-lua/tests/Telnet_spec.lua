@@ -1868,6 +1868,21 @@ describe("Tests telnet option negotiation", function()
     end
   end)
 
+  it("keeps the channel102 table a script holds and what is already in it", function()
+    local saved = _G.channel102
+    finally(function()
+      feed("<T_IAC><T_DONT><O_AARDWULF>")
+      _G.channel102 = saved
+    end)
+
+    local held = {[9] = 1}
+    _G.channel102 = held
+    feed("<T_IAC><T_DO><O_AARDWULF>")
+    feed("<T_IAC><T_SB><O_AARDWULF>" .. string.char(5) .. string.char(3) .. "<T_IAC><T_SE>")
+    assert.is_true(rawequal(held, _G.channel102))
+    assert.same({[9] = 1, [5] = 3}, held)
+  end)
+
   it("switches the MXP processor on for the rest of the connection", function()
     -- the MXP mode escapes only act on data flagged as coming from a server, so
     -- this is a path feedTriggers cannot reach at all
