@@ -39,6 +39,7 @@
 #include <QScopeGuard>
 #include <QShortcut>
 
+#include "ChipRow.h"
 #include "HostDialogs.h"
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
@@ -49,6 +50,7 @@
 #include "TriggerUnit.h"
 #include "TConsole.h"
 #include "TMap.h"
+#include "dlgScriptsMainArea.h"
 #include "dlgTriggerEditor.h"
 #include "dlgTriggerPatternEdit.h"
 #include "SingleLineTextEdit.h"
@@ -1039,6 +1041,31 @@ private slots:
     QTRY_VERIFY(!pEditor->mCleanResetQueued);
 
     QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(qaResetRuns == 0)")));
+  }
+
+  // A script whose body is untouched still counts as edited when its name or event handlers changed
+  void test_editorResetKeepsScriptNameAndHandlerEdits() {
+    mudlet::self()->slot_showScriptDialog();
+    QTest::qWait(100ms);
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
+    QVERIFY(pEditor);
+    QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(
+        qsl("permScript(\"qaRenamedScript\", \"\", \"-- body\")")));
+    QVERIFY(typeIntoScript(pEditor, qsl("qaRenamedScript"), qsl("-- body")));
+    pEditor->mpScriptsMainArea->lineEdit_script_name->setText(qsl("qaRenamedScriptNew"));
+
+    emit mpHost->signal_editorCleanResetRequested();
+    QTRY_VERIFY(!pEditor->mCleanResetQueued);
+    QCOMPARE(mpHost->getScriptUnit()->findItems(qsl("qaRenamedScriptNew")).size(), 1u);
+
+    QVERIFY(typeIntoScript(pEditor, qsl("qaRenamedScriptNew"), qsl("-- body")));
+    pEditor->mpChipRow_scriptEvents->setItems({qsl("qaAddedEvent")});
+
+    emit mpHost->signal_editorCleanResetRequested();
+    QTRY_VERIFY(!pEditor->mCleanResetQueued);
+    const auto ids = mpHost->getScriptUnit()->findItems(qsl("qaRenamedScriptNew"));
+    QCOMPARE(ids.size(), 1u);
+    QCOMPARE(mpHost->getScriptUnit()->getScript(ids.front())->getEventHandlerList(), QStringList{qsl("qaAddedEvent")});
   }
 
   // The chip row shows a handler named twice in the profile file once

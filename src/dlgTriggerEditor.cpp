@@ -14120,7 +14120,7 @@ void dlgTriggerEditor::runScheduledCleanReset()
 
 void dlgTriggerEditor::resetTrees()
 {
-    // A package (un)install or module sync resets the editor without warning, so keep what was being typed;
+    // A package or module change or a recompile of every script resets the editor without warning, so keep what was being typed;
     // an item it removed is looked up by id and skipped. Saving a script runs its body, so only when it was edited.
     const TScript* pOpenScript = mCurrentView == EditorViewType::cmScriptView ? getScriptFromTreeItem(mpCurrentScriptItem) : nullptr;
     // The chip row shows a handler a profile file names twice only once
