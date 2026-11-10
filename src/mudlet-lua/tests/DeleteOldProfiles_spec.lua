@@ -37,6 +37,13 @@ describe("Tests the deleteOldProfiles package", function()
     assert.is_true(ok, err)
   end
 
+  local function removeMade()
+    for _, path in ipairs(made) do
+      os.remove(path)
+    end
+    made = {}
+  end
+
   setup(function()
     lfs.mkdir(specRoot)
     lfs.mkdir(specRoot .. "/profiles")
@@ -45,11 +52,11 @@ describe("Tests the deleteOldProfiles package", function()
     lfs.mkdir(folders.modules)
   end)
 
+  after_each(removeMade)
+
   teardown(function()
     _G.getMudletHomeDir = realGetMudletHomeDir
-    for _, path in ipairs(made) do
-      os.remove(path)
-    end
+    removeMade()
     lfs.rmdir(folders.profiles)
     lfs.rmdir(folders.modules)
     lfs.rmdir(specHome)
@@ -85,5 +92,16 @@ describe("Tests the deleteOldProfiles package", function()
     assert.is_true(exists("modules", "Beta2020-03-05#12-00-00"), "Beta's first backup of the month should be kept")
     assert.is_false(exists("modules", "Alpha2020-03-10#12-00-00"))
     assert.is_false(exists("modules", "Beta2020-03-15#12-00-00"))
+  end)
+
+  it("keeps every save tied for the newest, as Mudlet may load any of them", function()
+    makeFile("profiles", "2020-03-01#12-00-00.xml", 1)
+    makeFile("profiles", "2020-03-20#12-00-00.xml", 20)
+    makeFile("profiles", "autosave.xml", 20)
+
+    deleteOld("profiles")
+
+    assert.is_true(exists("profiles", "2020-03-20#12-00-00.xml"))
+    assert.is_true(exists("profiles", "autosave.xml"))
   end)
 end)
