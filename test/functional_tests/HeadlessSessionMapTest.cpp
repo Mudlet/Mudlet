@@ -339,6 +339,27 @@ registerMapInfo("HeadlessFailing", function() error({}) end)
             tableReports += arguments.at(0).toString().contains(qsl("error object is a table value"));
         }
         QCOMPARE(tableReports, 1);
+
+        // A callback that recovers and then fails again, say once GMCP arrives, has a new error to report
+        QVERIFY(session.runLua(qsl(R"lua(
+headlessMapInfoMode = "early"
+registerMapInfo("HeadlessFailing", function()
+  if headlessMapInfoMode == "early" then error("headless early failure") end
+  if headlessMapInfoMode == "late" then error("headless late failure") end
+  return "fine"
+end)
+)lua")));
+        QVERIFY2(rendered(session), qPrintable(session.errorString()));
+        QVERIFY(session.runLua(qsl(R"lua(headlessMapInfoMode = "working")lua")));
+        QVERIFY2(rendered(session), qPrintable(session.errorString()));
+        QVERIFY(session.runLua(qsl(R"lua(headlessMapInfoMode = "late")lua")));
+        QVERIFY2(rendered(session), qPrintable(session.errorString()));
+        QVERIFY2(rendered(session), qPrintable(session.errorString()));
+        int lateReports = 0;
+        for (const QList<QVariant>& arguments : std::as_const(errors)) {
+            lateReports += arguments.at(0).toString().contains(qsl("headless late failure"));
+        }
+        QCOMPARE(lateReports, 1);
         QVERIFY(session.shutdown(false));
     }
 

@@ -3122,7 +3122,8 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
     auto& host = getHostFromLua(L);
     // Host is non-copyable and the lambda copies its captures.
     auto* pHost = &host;
-    // Shared, as each paint calls a copy of the callback; the paint repeats every error, so report the first
+    // Shared, as each paint calls a copy of the callback; a failing callback fails on every paint, so report
+    // the first error of each run of failures
     auto errorReported = std::make_shared<bool>(false);
     host.mpMap->mMapInfoContributorManager->registerContributor(
             name,
@@ -3181,6 +3182,7 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
                     color = QColor(r, g, b);
                 }
                 lua_settop(L, callerStackTop);
+                *errorReported = false;
                 return MapInfoProperties{isBold, isItalic, text, color};
             },
             L,
