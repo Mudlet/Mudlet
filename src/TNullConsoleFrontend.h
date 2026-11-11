@@ -592,8 +592,10 @@ private:
         // attributes were set on it, and the font each restyle starts again from
         uint fontMask = 0;
         std::optional<QFont> savedFont;
-        // The font properties the label's own sheet declares, if it declares any
+        // The font properties the label's own sheet and its window's declare, if they declare any
         std::optional<QFont> sheetFont;
+        // The sheet of the window it is in, as it was last restyled
+        QString windowSheet;
         // The widths SE_ShapedFrameContents takes off each side under its sheet, as top, right, bottom and left
         std::array<int, 4> frame{};
         SizeLimits limits;
@@ -702,6 +704,8 @@ private:
     void setSubConsoleFont(const QString& name, const QFont& font);
     void applyUserWindowSheet(const QString& name, const QString& sheet);
     void applyUserWindowSheetFont(const QString& name, const QString& sheet);
+    QString windowSheet(const QString& userWindow) const;
+    void restyleWindowContents(const QString& userWindow);
     QFont subConsoleOwnFont(const QString& name, const TConsoleModel& model) const;
     void reportDisplayFontChange(const QFont& before);
     void raiseFontEvent(const QString& eventName, const QString& subject, const QFont& font);
@@ -727,6 +731,8 @@ private:
     // While a hidden user window is removed, the names its deferred deletes are to report
     QStringList* mpDeferredReports = nullptr;
     bool mDroppingWindows = false;
+    // QStyleSheetStyle leaves the main console's widgets on the application's font once it has had a sheet
+    bool mProfileSheetSeen = false;
     // As TCommandLine::playerTypedLine()
     bool mMainCommandLineTyped = false;
     // As the GUI's line once selectAll() has run, so what the player types next replaces it

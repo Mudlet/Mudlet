@@ -897,6 +897,12 @@ trimmed under the row it is scrolled back to.
 - `styleSheet`, as `setLabelStyleSheet()` gave it. Mudlet does not interpret it for the app: drawing what
   it says is the app's to do, or not.
 
+A sheet a script sets on the whole profile (`setProfileStyleSheet()`) or on a user window
+(`setUserWindowStyleSheet()`) reaches the labels and mini consoles inside it as it does on the desktop, for
+what scripts read back: a label's text and `getLabelSizeHint()`, a mini console's font, columns and rows.
+The label's own sheet wins where both speak. Rules are matched on the widget's class, name and state; one
+that names a widget inside another (`QDockWidget QLabel { … }`) is not followed.
+
 A change to any of these names the label in `scriptWindowsChanged`. It is empty for a name that is not a
 label's.
 
