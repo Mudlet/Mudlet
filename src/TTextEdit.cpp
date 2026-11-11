@@ -3258,13 +3258,15 @@ void TTextEdit::wheelEvent(QWheelEvent* e)
     // Store the (rounded) remainder
     mMouseWheelRemainder = QPoint(delta.x() - (15 * xDelta), delta.y() - (15 * yDelta));
 
+    // Left unaccepted, a turn the console has no use for scrolls what holds it, such as a scroll box. A touchpad turn
+    // too small for a whole line is still the console's when it would take a whole one
     bool used = false;
     if (yDelta > 0) {
-        mpConsole->scrollUp(yDelta);
-        used = true;
+        used = mpConsole->scrollUp(yDelta);
     } else if (yDelta < 0) {
-        mpConsole->scrollDown(-yDelta);
-        used = true;
+        used = mpConsole->scrollDown(-yDelta);
+    } else if (e->angleDelta().y() != 0) {
+        used = mpConsole->usesWheel(e->angleDelta().y() > 0);
     }
 
     // Space for future use of xDelta
