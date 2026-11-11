@@ -158,7 +158,6 @@ private:
     {
         mpEditor->slot_showTriggers();
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
     }
 
     void chooseTrigger(TTrigger* pTrigger)
@@ -168,7 +167,6 @@ private:
         mpEditor->treeWidget_triggers->setCurrentItem(pRow);
         mpEditor->slot_triggerSelected(pRow);
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
     }
 
     void chooseTheAlias()
@@ -181,7 +179,6 @@ private:
         mpEditor->treeWidget_aliases->setCurrentItem(pRow);
         mpEditor->slot_aliasSelected(pRow);
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
     }
 
     // QSplitter emits splitterMoved() for a drag and not for setSizes(), so the
@@ -402,7 +399,7 @@ private slots:
     {
         const auto restoreTheWindow = qScopeGuard([this]() {
             mpEditor->resize(scmWindowWidth, scmWindowHeight);
-            QTest::qWait(50ms);
+            QCoreApplication::processEvents();
         });
         enterTheTriggerView();
         chooseTrigger(mpTallTrigger);
@@ -412,7 +409,7 @@ private slots:
         // A quarter of the form's height left for the code pane, well under a third of the panes
         const int codeLeft = std::max(scmSourcePaneFloor + 10, formNeeds / 4);
         mpEditor->resize(scmWindowWidth, scmWindowHeight - (roomy.at(1) - codeLeft));
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
         chooseTrigger(mpShortTrigger);
         chooseTrigger(mpTallTrigger);
 
@@ -437,18 +434,18 @@ private slots:
     {
         const auto restoreTheWindow = qScopeGuard([this]() {
             mpEditor->resize(scmWindowWidth, scmWindowHeight);
-            QTest::qWait(50ms);
+            QCoreApplication::processEvents();
         });
         enterTheTriggerView();
         mpEditor->resize(scmWindowWidth, scmShortWindowHeight);
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
         chooseTrigger(mpTallTrigger);
         const QList<int> chosen = mpSplitter->sizes();
         QVERIFY2(patternsScrolling(), "the eleven rows fit the short window, so the form was fitted rather than held to its share and this case says nothing");
 
         for (const int height : {scmShortWindowHeight + scmShortWindowGrowth, scmShortWindowHeight}) {
             mpEditor->resize(scmWindowWidth, height);
-            QTest::qWait(50ms);
+            QCoreApplication::processEvents();
             const QList<int> sizes = mpSplitter->sizes();
             const int share = formWants();
             qInfo().noquote() << qsl("  chosen at %1, a %2px tall window left the panes at %3 where the form's share is %4px")

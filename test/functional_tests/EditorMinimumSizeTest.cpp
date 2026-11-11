@@ -24,7 +24,6 @@
  */
 
 #include <QtTest/QtTest>
-#include <chrono>
 
 #include "Host.h"
 #include "HostDialogs.h"
@@ -34,8 +33,6 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
-
-using namespace std::chrono_literals;
 
 class EditorMinimumSizeTest : public QObject
 {
@@ -99,7 +96,7 @@ private slots:
         mpHost = mSession.host();
 
         mudlet::self()->slot_showScriptDialog();
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
 
         mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
         QVERIFY2(mpEditor != nullptr, "Editor dialog should be created");

@@ -29,7 +29,6 @@
 #include <QLabel>
 #include <QToolButton>
 #include <QtTest/QtTest>
-#include <chrono>
 
 #include "Host.h"
 #include "HostDialogs.h"
@@ -40,8 +39,6 @@
 #include "uiDesign.h"
 
 #include "GroupedTest.h"
-
-using namespace std::chrono_literals;
 
 class EditorNoticeGlyphTest : public QObject
 {
@@ -77,11 +74,11 @@ private slots:
         mpHost = mSession.host();
 
         mudlet::self()->slot_showTriggerDialog();
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
         mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
         QVERIFY2(mpEditor != nullptr, "Editor dialog should be created");
         mpEditor->resize(1000, 800);
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
     }
 
     void cleanupTestCase()
@@ -97,7 +94,6 @@ private slots:
         //: Placeholder notice a test puts up to read the picture beside it
         mpEditor->showInfo(qsl("A notice with a picture beside it"));
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
 
         QLabel* pGlyphLabel = mpEditor->mpSystemMessageArea->notificationAreaIconLabelInformation;
         QVERIFY2(pGlyphLabel->isVisible(), "the information notice is not showing its picture");
@@ -119,12 +115,10 @@ private slots:
         mpEditor->slot_showTriggers();
         mpEditor->showWarning(qsl("A warning with a picture beside it"), false);
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
         const QString warningRow = describeMiddleRow(mpEditor->mpSystemMessageArea->notificationAreaIconLabelWarning->pixmap().toImage());
 
         mpEditor->showError(qsl("An error with a picture beside it"));
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
         const QString errorRow = describeMiddleRow(mpEditor->mpSystemMessageArea->notificationAreaIconLabelError->pixmap().toImage());
 
         qInfo().noquote() << qsl("  the warning's picture reads %1 and the error's %2").arg(warningRow, errorRow);
@@ -142,7 +136,6 @@ private slots:
         mpEditor->slot_showTriggers();
         mpEditor->showInfo(qsl("A notice the reader can dismiss"));
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
 
         QToolButton* pClose = mpEditor->mpSystemMessageArea->messageAreaCloseButton;
         QVERIFY2(pClose, "the banner has no close button");

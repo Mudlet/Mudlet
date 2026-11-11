@@ -52,8 +52,6 @@
 
 #include "GroupedTest.h"
 
-using namespace std::chrono_literals;
-
 class ConnectionDialogStyleTest : public QObject
 {
     Q_OBJECT
@@ -217,7 +215,6 @@ private slots:
         pDialog->host_name_entry->setText(qsl("mudlet.org"));
         pDialog->port_entry->setText(qsl("23"));
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
 
         for (const QWidget* pContainer : {static_cast<QWidget*>(pDialog->profileAdminArea), static_cast<QWidget*>(pDialog->widget_bottom)}) {
             QVERIFY2(
@@ -421,7 +418,6 @@ private slots:
         pMenu->popup(pDialog->copy_profile_toolbutton->mapToGlobal(QPoint(0, pDialog->copy_profile_toolbutton->height())));
         QVERIFY(QTest::qWaitForWindowExposed(pMenu));
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
         const QImage shot = pMenu->grab().toImage().convertToFormat(QImage::Format_ARGB32);
         pMenu->hide();
         QCoreApplication::processEvents();
@@ -445,7 +441,6 @@ private slots:
         QCoreApplication::processEvents();
         pDialog->port_entry->setText(qsl("12a"));
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
 
         QVERIFY2(pDialog->notificationArea->isVisible(), "a port of \"12a\" left the notice hidden, so there is nothing to read");
 
@@ -500,7 +495,6 @@ private slots:
 
         pDialog->port_entry->setText(qsl("23"));
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
         QVERIFY2(!pDialog->notificationArea->isVisible(), "a port of 23 is valid, and the notice about the invalid one is still up");
     }
 
@@ -584,7 +578,6 @@ private slots:
         QVERIFY2(pTabs && pTabs->count() == 2, "the games list's two tabs are not there to switch between");
         pTabs->setCurrentIndex(1);
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
         QStringList squareOnes;
         int read = 0;
         for (int i = 0, total = pDialog->listWidget_profiles->count(); i < total; ++i) {
@@ -622,7 +615,6 @@ private slots:
         QVERIFY2(pTabs && pTabs->count() == 2, "the games list's two tabs are not there to switch between");
         pTabs->setCurrentIndex(1);
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
         QVERIFY2(pList->count() > 2, qPrintable(qsl("the All games tab carries %1 rows, which is not enough to hover one and choose another").arg(pList->count())));
 
         // A different row is chosen, so the hovered chip shows the ring rather than the frame
@@ -668,7 +660,6 @@ private slots:
         QHoverEvent arrive(QEvent::HoverMove, QPointF(centre), pList->viewport()->mapToGlobal(QPointF(centre)), QPointF(-1, -1));
         QApplication::sendEvent(pList->viewport(), &arrive);
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
 
         QColor ringRead;
         QColor gapRead;
@@ -711,7 +702,6 @@ private slots:
         QHoverEvent leave(QEvent::HoverLeave, QPointF(-1, -1), pList->viewport()->mapToGlobal(QPoint(-1, -1)), QPointF(centre));
         QApplication::sendEvent(pList->viewport(), &leave);
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
 
         QColor leftRead;
         const QImage leftShot = pDialog->grab().toImage();
@@ -721,7 +711,6 @@ private slots:
 
         pTabs->setCurrentIndex(0);
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
     }
 
     // The hover ring's shape and place in green: a solid frame filling the gap met the picture's rounded corner,
@@ -739,7 +728,6 @@ private slots:
         QVERIFY2(!items.isEmpty(), "The test profile is missing from the games list");
         pList->scrollToItem(items.first());
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
 
         const QRect row = pList->visualItemRect(items.first());
         const QRect chip = pDelegate->chipRect(pList, pList->indexFromItem(items.first()));
@@ -890,8 +878,7 @@ private slots:
         QApplication::setFont(QFont(family, larger));
         // The dialog answers its own font change with a call posted for later,
         // which one turn of the loop does not reach
-        QCoreApplication::processEvents();
-        QTest::qWait(50ms);
+        TestPixels::settle();
         const qreal dialogSize = pDialog->font().pointSizeF();
         const QString mismatch = tabFontMismatch(pDialog);
 
@@ -899,7 +886,6 @@ private slots:
         QApplication::setFont(originalCheckBox, "QCheckBox");
         QApplication::setFont(original);
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
 
         QCOMPARE(dialogSize, static_cast<qreal>(larger));
         QVERIFY2(mismatch.isEmpty(), qPrintable(qsl("after the interface font grew: %1").arg(mismatch)));

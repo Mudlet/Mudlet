@@ -26,7 +26,6 @@
 #include <QToolBar>
 #include <QToolButton>
 #include <QtTest/QtTest>
-#include <chrono>
 
 #include "Host.h"
 #include "HostDialogs.h"
@@ -39,8 +38,6 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
-
-using namespace std::chrono_literals;
 
 class EditorActivateActionTest : public QObject
 {
@@ -83,13 +80,13 @@ private slots:
         mpHost = mSession.host();
 
         mudlet::self()->slot_showEditorDialog();
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
         mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
         QVERIFY2(mpEditor != nullptr, "Editor dialog should be created");
         // Wide enough that every button keeps its name
         mpEditor->resize(1600, 700);
         mpEditor->slot_showScripts();
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
     }
 
     void cleanupTestCase()
@@ -188,7 +185,7 @@ private slots:
         QCoreApplication::processEvents();
         const QString hiddenWording = action()->text();
         mpEditor->show();
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
 
         QVERIFY(!pScript->shouldBeActive());
         QCOMPARE(hiddenWording, mpEditor->tr("Activate"));

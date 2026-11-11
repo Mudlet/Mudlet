@@ -32,7 +32,6 @@
 #include <QLineEdit>
 #include <QToolButton>
 #include <QtTest/QtTest>
-#include <chrono>
 
 #include "ChipRow.h"
 #include "Host.h"
@@ -51,8 +50,6 @@
 #include "uiDesign.h"
 
 #include "GroupedTest.h"
-
-using namespace std::chrono_literals;
 
 class EditorEventChipRowTest : public QObject
 {
@@ -243,13 +240,13 @@ private slots:
         mpHost = mSession.host();
 
         mudlet::self()->slot_showScriptDialog();
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
         mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
         QVERIFY2(mpEditor != nullptr, "Editor dialog should be created");
         mpEditor->resize(1100, 900);
         mpEditor->slot_showScripts();
         mpEditor->addScript(false);
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
 
         mpScriptItem = mpEditor->mpCurrentScriptItem;
         QVERIFY2(mpScriptItem != nullptr, "addScript() left no current script item");
@@ -259,13 +256,13 @@ private slots:
         QVERIFY2(pScript != nullptr, "the new script is not in the script unit");
         pScript->setEventHandlerList(startingEvents());
         mpEditor->slot_scriptsSelected(mpScriptItem);
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
 
         // After the reselect, which refills the form and would undo the name; the
         // search cases find the script by its tree row's name
         mpEditor->mpScriptsMainArea->lineEdit_script_name->setText(qsl("ChipRowScript"));
         mpEditor->slot_saveSelectedItem();
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
         QCOMPARE(mpScriptItem->text(0), qsl("ChipRowScript"));
     }
 
@@ -314,7 +311,7 @@ private slots:
         QCOMPARE(row()->items().at(3), qsl("FourthEvent"));
 
         mpEditor->saveScript();
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
         QCOMPARE(savedEvents(), startingEvents() << qsl("FourthEvent"));
     }
 
@@ -381,7 +378,6 @@ private slots:
 
         mpEditor->slot_itemSelectedInSearchResults(pResult);
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
 
         // focusWidget(), not hasFocus(): hasFocus() also needs the window active,
         // which a headless run cannot promise. The jump refills the row from the
@@ -393,8 +389,7 @@ private slots:
     void test_wrappingGrowsTheFormColumn()
     {
         mpEditor->resize(1100, 900);
-        QCoreApplication::processEvents();
-        QTest::qWait(100ms);
+        TestPixels::settle();
         const int oneLine = mpEditor->mpNonCodeWidgets->height();
         const int codeOneLine = mpEditor->mpSourceEditorArea->height();
         const int lineHeight = row()->lineHeight();
@@ -402,8 +397,7 @@ private slots:
                  qPrintable(qsl("the chips already take more than one line at 1100px, so this case has nothing to widen from - the row is %1 tall").arg(row()->height())));
 
         mpEditor->resize(620, 900);
-        QCoreApplication::processEvents();
-        QTest::qWait(100ms);
+        TestPixels::settle();
 
         const int wrapped = mpEditor->mpNonCodeWidgets->height();
         qInfo().noquote() << qsl("  the column is %1 on one line of chips and %2 on two, a chip line being %3").arg(QString::number(oneLine), QString::number(wrapped), QString::number(lineHeight));
@@ -416,26 +410,21 @@ private slots:
 
         mpEditor->resize(1100, 900);
         QCoreApplication::processEvents();
-        QTest::qWait(100ms);
     }
 
     void test_fewerEventsGiveTheRoomBack()
     {
         mpEditor->resize(620, 900);
         QCoreApplication::processEvents();
-        QTest::qWait(100ms);
         mpEditor->hideSystemMessageArea();
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
         QVERIFY2(row()->count() >= 3, "the script under test has lost the events this case needs it to be showing");
         const int withChips = mpEditor->mpNonCodeWidgets->height();
 
         mpEditor->addScript(false);
         QCoreApplication::processEvents();
-        QTest::qWait(100ms);
         mpEditor->hideSystemMessageArea();
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
         QCOMPARE(row()->count(), 0);
         const int withNone = mpEditor->mpNonCodeWidgets->height();
         qInfo().noquote() << qsl("  the column is %1 with the chips and %2 without them").arg(QString::number(withChips), QString::number(withNone));
@@ -443,16 +432,13 @@ private slots:
 
         mpEditor->treeWidget_scripts->setCurrentItem(mpScriptItem);
         QCoreApplication::processEvents();
-        QTest::qWait(100ms);
         mpEditor->hideSystemMessageArea();
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
         QVERIFY2(row()->count() >= 3, "the script's events did not come back with it");
         QCOMPARE(mpEditor->mpNonCodeWidgets->height(), withChips);
 
         mpEditor->resize(1100, 900);
         QCoreApplication::processEvents();
-        QTest::qWait(100ms);
     }
 
     // The cross takes no focus, so the removal itself must commit a half-typed
@@ -528,19 +514,18 @@ private slots:
     {
         mpEditor->addScript(false);
         QCoreApplication::processEvents();
-        QTest::qWait(100ms);
         QTreeWidgetItem* pOtherItem = mpEditor->mpCurrentScriptItem;
         QVERIFY2(pOtherItem != nullptr && pOtherItem != mpScriptItem, "addScript() left no second script to search into");
         mpEditor->mpScriptsMainArea->lineEdit_script_name->setText(qsl("SearchJumpScript"));
         mpEditor->slot_saveSelectedItem();
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
         QCOMPARE(pOtherItem->text(0), qsl("SearchJumpScript"));
         const int otherID = pOtherItem->data(0, Qt::UserRole).toInt();
 
         // Leave the second script before writing its list, or leaving it saves
         // the row's chips over it
         mpEditor->slot_scriptsSelected(mpScriptItem);
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
         TScript* pOther = mpHost->getScriptUnit()->getScript(otherID);
         QVERIFY2(pOther != nullptr, "the second script is not in the script unit");
         pOther->setEventHandlerList({qsl("MyEvent"), qsl("MyEvent"), qsl("OtherEvent")});
@@ -562,7 +547,6 @@ private slots:
 
         mpEditor->slot_itemSelectedInSearchResults(pResult);
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
 
         QCOMPARE(row()->items(), QStringList({qsl("MyEvent"), qsl("OtherEvent")}));
         QCOMPARE(row()->focusWidget(), row()->chipAt(1));
@@ -575,7 +559,6 @@ private slots:
     {
         row()->setItems({qsl("AlphaEvent"), qsl("BetaEvent")});
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
         QCOMPARE(row()->count(), 2);
 
         QLabel* pLead = mpEditor->mpScriptsMainArea->label_script_registered_event_handlers;
@@ -589,7 +572,6 @@ private slots:
         row()->setFont(bigger);
         mpEditor->setFont(bigger);
         QCoreApplication::processEvents();
-        QTest::qWait(100ms);
 
         const int line = row()->lineHeight();
         QVERIFY2(line > wasLine, qPrintable(qsl("a font twelve points larger left a line of chips at %1, which is what it was").arg(QString::number(line))));
@@ -605,19 +587,17 @@ private slots:
         row()->setFont(was);
         mpEditor->setFont(was);
         QCoreApplication::processEvents();
-        QTest::qWait(100ms);
     }
 
     void test_typingOffersTheEventsTheProfileKnows()
     {
         mpEditor->addScript(false);
         QCoreApplication::processEvents();
-        QTest::qWait(100ms);
         QTreeWidgetItem* pOtherItem = mpEditor->mpCurrentScriptItem;
         QVERIFY2(pOtherItem != nullptr && pOtherItem != mpScriptItem, "addScript() left no second script to listen for anything");
         mpEditor->mpScriptsMainArea->lineEdit_script_name->setText(qsl("SuggestionScript"));
         mpEditor->slot_saveSelectedItem();
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
         const int otherID = pOtherItem->data(0, Qt::UserRole).toInt();
 
         auto* pTrigger = new TTrigger(qsl("SuggestionTrigger"), QStringList(), QList<int>(), false, mpHost);
@@ -627,7 +607,7 @@ private slots:
         // Leave the second script before writing its list, or leaving it saves
         // the row over it
         mpEditor->slot_scriptsSelected(mpScriptItem);
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
         TScript* pOther = mpHost->getScriptUnit()->getScript(otherID);
         QVERIFY2(pOther != nullptr, "the second script is not in the script unit");
         pOther->setEventHandlerList({qsl("MyOtherEvent")});
@@ -638,7 +618,7 @@ private slots:
         // Reselecting the same item reloads the form without saving, and hands the
         // row the names to offer
         mpEditor->slot_scriptsSelected(mpScriptItem);
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
         QCOMPARE(row()->items(), startingEvents());
 
         row()->beginAdd();
@@ -670,7 +650,7 @@ private slots:
     void test_theNamesAreGatheredWhenTheFieldOpens()
     {
         mpEditor->slot_scriptsSelected(mpScriptItem);
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
 
         auto* pTrigger = new TTrigger(qsl("LateTrigger"), QStringList(), QList<int>(), false, mpHost);
         pTrigger->registerTrigger();
@@ -690,7 +670,7 @@ private slots:
     void test_aChipKeepsItsLeadingPaddingRightToLeft()
     {
         mpEditor->slot_scriptsSelected(mpScriptItem);
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
         QWidget* pChip = row()->chipAt(0);
         QVERIFY2(pChip != nullptr, "SETUP: the script shows no chip");
         auto* pLabel = pChip->findChild<QLabel*>(qsl("editorChipLabel"));
@@ -786,7 +766,7 @@ private slots:
 
         // The row is handed the names to offer only as a script loads into the form
         mpEditor->slot_scriptsSelected(mpScriptItem);
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
         reopenFieldOn(startingEvents());
         QVERIFY2(field() != nullptr, "beginAdd() did not open the field");
 
@@ -852,7 +832,7 @@ private slots:
         // and only the suggestions handed over after them can set them right
         row()->setSuggestions({});
         mpEditor->slot_scriptsSelected(mpScriptItem);
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
         QCOMPARE(row()->items(), events);
 
         const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
@@ -918,16 +898,16 @@ private slots:
         const QStringList stored{qsl("ready,"), qsl(" padded "), qsl("MyEvent")};
         pScript->setEventHandlerList(stored);
         mpEditor->slot_scriptsSelected(mpScriptItem);
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
         QCOMPARE(row()->items(), stored);
 
         mpEditor->slot_saveSelectedItem();
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
         QCOMPARE(savedEvents(), stored);
 
         pScript->setEventHandlerList(startingEvents());
         mpEditor->slot_scriptsSelected(mpScriptItem);
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
     }
     // A script can build a new name every time it raises one, so only the most recent of those are
     // offered; the game's names stay, and so does a script's name it keeps raising
