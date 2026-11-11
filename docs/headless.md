@@ -760,6 +760,15 @@ There is no `linksChanged` for a window: a link of it followed, revealed or chos
 `windowTextChanged`, and the app reads `windowLink(window, id)` again for the runs it shows. A game's MXP
 `<EXPIRE>` expires only the main console's links, in the GUI too, so a window's links stay as they are.
 
+`pointer()` opens no menu: a right-button release over a console's text raises nothing and shows nothing,
+so the menu the GUI opens there is the app's to show, and these calls are all it needs. The app knows which
+run its pointer is over, as it drew them, and so the link. Over a link whose `menu` is set it lists the
+`items` of `windowLink(window, id)`, under `menuTitle`, and a pick is `followWindowLink(window, id, item)`.
+Over a spoiler not yet revealed the GUI's right click only reveals it, which `followWindowLink(window, id)`
+does; over a `disabled` link, or one whose `menu` is not set, it opens nothing. Anywhere else on the text
+the GUI opens the console's own menu, to copy, select and search, which is the app's to offer over the text
+it drew; the entries a script adds to that menu with `addMouseEvent()` are not listed for the app.
+
 ## Embedding it: the 2D map
 
 `renderMap()` draws the profile's 2D map onto a `QPainter` at the size given, as the GUI's mapper
