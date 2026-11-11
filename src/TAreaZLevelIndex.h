@@ -37,6 +37,8 @@ public:
 
     // Replaces the entire index from a roomId → Z mapping.
     void rebuild(const QHash<int, int>& roomIdToZ);
+    // As above, from room IDs already grouped by Z level.
+    void replace(QHash<int, QSet<int>>&& zToRoomIds) { mIndex = std::move(zToRoomIds); }
 
     // Returns all room IDs on the given Z level, or a stable empty set.
     const QSet<int>& roomsForZ(int z) const;

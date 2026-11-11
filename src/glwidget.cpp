@@ -26,6 +26,7 @@
 
 #include "mudlet.h"
 #include "TArea.h"
+#include "TMainConsole.h"
 #include "TRoomDB.h"
 #include "dlgMapper.h"
 
@@ -48,12 +49,25 @@ GLWidget::GLWidget(TMap* pMap, Host* pHost, QWidget* parent)
 , mpMap(pMap)
 , mpHost(pHost)
 {
-    if (mpHost->mBgColor_2.alpha() < 255) {
-        setAttribute(Qt::WA_OpaquePaintEvent, false);
-        setAttribute(Qt::WA_AlwaysStackOnTop);
-    } else {
-        setAttribute(Qt::WA_OpaquePaintEvent);
+    applyBackgroundTranslucency();
+    if (mpMap) {
+        connect(mpMap, &TMap::signal_mapperSettingChanged, this, [this](const TMap::MapperSetting setting) {
+            if (setting == TMap::MapperSetting::BackgroundColor) {
+                applyBackgroundTranslucency();
+            }
+        });
     }
+}
+
+void GLWidget::applyBackgroundTranslucency()
+{
+    // Only an opaque view may tell Qt that it paints over everything behind it
+    const bool translucent = mpHost && mpHost->mBgColor_2.alpha() < 255;
+    setAttribute(Qt::WA_OpaquePaintEvent, !translucent);
+    setAttribute(Qt::WA_AlwaysStackOnTop, translucent);
+    // Qt asks for the window, not only this widget, to be repainted when stacking on top changes
+    window()->update();
+    update();
 }
 
 QSize GLWidget::minimumSizeHint() const
@@ -222,6 +236,38 @@ void GLWidget::slot_setCameraPositionZ(int angle)
     zRot = angle;
     is2DView = false;
     update();
+}
+
+// QOpenGLWidget retries a context it could not create on every show, resize and paint, and each retry
+// leaks the context that failed (QOpenGLWidgetPrivate::initialize() overwrites it), so ask only once
+bool GLWidget::contextCreationFailed() const
+{
+    return context() && !isValid();
+}
+
+bool GLWidget::event(QEvent* event)
+{
+    if (contextCreationFailed() && (event->type() == QEvent::Show || event->type() == QEvent::WindowChangeInternal)) {
+        return QWidget::event(event);
+    }
+    return QOpenGLWidget::event(event);
+}
+
+void GLWidget::resizeEvent(QResizeEvent* event)
+{
+    if (contextCreationFailed()) {
+        QWidget::resizeEvent(event);
+        return;
+    }
+    QOpenGLWidget::resizeEvent(event);
+}
+
+void GLWidget::paintEvent(QPaintEvent* event)
+{
+    if (contextCreationFailed()) {
+        return;
+    }
+    QOpenGLWidget::paintEvent(event);
 }
 
 void GLWidget::initializeGL()
@@ -2115,7 +2161,7 @@ void GLWidget::mousePressEvent(QMouseEvent* event)
             } else if (mpMap->findPath(mpMap->mRoomIdHash.value(mpMap->mProfileName), mpMap->mTargetID)) {
                 mpMap->mpHost->startSpeedWalk();
             } else {
-                mpMap->mpHost->mpConsole->printSystemMessage(qsl("%1\n").arg(
+                mpMap->mpHost->mainConsoleView()->printSystemMessage(qsl("%1\n").arg(
                         tr("Mapper: Cannot find a path from %1 to %2 using known exits.").arg(QString::number(mpMap->mRoomIdHash.value(mpMap->mProfileName)), QString::number(mpMap->mTargetID))));
             }
             //            else

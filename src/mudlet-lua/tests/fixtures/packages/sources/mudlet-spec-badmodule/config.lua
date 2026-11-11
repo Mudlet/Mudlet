@@ -1,0 +1,5 @@
+mpackage = [[mudlet-spec-module]]
+author = [[Mudlet test suite]]
+title = [[Module fixture whose XML cannot be parsed, for Package_spec.lua]]
+version = [[3.1]]
+description = [[Takes the place of mudlet-spec-module's archive, so a reload of that module unpacks cleanly and then fails to import.]]

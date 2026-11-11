@@ -19,14 +19,14 @@
  ***************************************************************************/
 
 #include "THyperlinkSelectionManager.h"
-#include "TConsole.h"
+#include "LuaLiteral.h"
+#include "utils.h"
 
 #include <QUrl>
 #include <QUrlQuery>
 
-THyperlinkSelectionManager::THyperlinkSelectionManager(TConsole& console)
-: QObject(&console)
-, mpConsole(console)
+THyperlinkSelectionManager::THyperlinkSelectionManager()
+: QObject(nullptr)
 {
 }
 
@@ -83,61 +83,41 @@ void THyperlinkSelectionManager::clearAllSelections()
 
 QString THyperlinkSelectionManager::addSelectedParameter(const QString& command, bool isSelected) const
 {
-    QUrl url(command);
-    QUrlQuery query(url);
+    // Split on '?' by hand rather than parsing the whole thing as a QUrl. This
+    // is a game command, not a URL: QUrl::path() would drop everything after a
+    // '#' (an ordinary character in a MUD command) and would percent-decode a
+    // second time, since the payload was already decoded once when the URI was
+    // parsed. Only the query portion is ours to rewrite.
+    const int queryStart = command.indexOf(QLatin1Char('?'));
+    const QString base = queryStart >= 0 ? command.left(queryStart) : command;
+
+    QUrlQuery query(queryStart >= 0 ? command.mid(queryStart + 1) : QString());
     query.removeQueryItem(qsl("selected"));
     query.addQueryItem(qsl("selected"), isSelected ? qsl("true") : qsl("false"));
 
-    QString cleanCommand = url.path();
-    if (!query.isEmpty()) {
-        cleanCommand += qsl("?") + query.query(QUrl::FullyEncoded);
-    }
-    return cleanCommand;
+    return base + QLatin1Char('?') + query.query(QUrl::FullyEncoded);
 }
 
-QString THyperlinkSelectionManager::modifyUriForSelection(const QString& baseUri, const QString& group, const QString& value) const
+QString THyperlinkSelectionManager::modifyUriForSelection(Mudlet::HyperlinkStyling::ActionScheme scheme, const QString& baseCommand, const QString& group, const QString& value) const
 {
-    // Query the current selection state from our internal state
-    bool isSelected = this->isSelected(group, value);
+    const bool isSelected = this->isSelected(group, value);
+    const QString command = addSelectedParameter(baseCommand, isSelected);
 
 #if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "modifyUriForSelection called with baseUri:" << baseUri << "group:" << group << "value:" << value << "isSelected:" << isSelected;
+    qDebug() << "modifyUriForSelection called with scheme:" << scheme << "baseCommand:" << baseCommand << "group:" << group << "value:" << value << "isSelected:" << isSelected;
 #endif
 
-    // Check if it's a send() or sendCmdLine() call
-    const QString sendPrefix = qsl("send([[");
-    const QString sendSuffix = qsl("]])");
-    const QString sendCmdLinePrefix = qsl("sendCmdLine([[");
-    const QString sendCmdLineSuffix = qsl("]])");
-
-    if (baseUri.startsWith(sendPrefix) && baseUri.endsWith(sendSuffix)) {
-        const int prefixLength = sendPrefix.length();
-        const int suffixLength = sendSuffix.length();
-        QString command = baseUri.mid(prefixLength, baseUri.length() - prefixLength - suffixLength);
-        QString cleanCommand = addSelectedParameter(command, isSelected);
-        QString result = qsl("send([[%1]], false)").arg(cleanCommand);
-#if defined(DEBUG_OSC_PROCESSING)
-        qDebug() << "Modified to:" << result;
-#endif
-        return result;
-    }
-    if (baseUri.startsWith(sendCmdLinePrefix) && baseUri.endsWith(sendCmdLineSuffix)) {
-        const int prefixLength = sendCmdLinePrefix.length();
-        const int suffixLength = sendCmdLineSuffix.length();
-        QString command = baseUri.mid(prefixLength, baseUri.length() - prefixLength - suffixLength);
-        QString cleanCommand = addSelectedParameter(command, isSelected);
-        QString result = qsl("sendCmdLine([[%1]])").arg(cleanCommand);
-#if defined(DEBUG_OSC_PROCESSING)
-        qDebug() << "Modified to:" << result;
-#endif
-        return result;
+    switch (scheme) {
+    case Mudlet::HyperlinkStyling::ActionSend:
+        return qsl("send(%1, false)").arg(LuaLiteral::quote(command));
+    case Mudlet::HyperlinkStyling::ActionPrompt:
+        return qsl("sendCmdLine(%1)").arg(LuaLiteral::quote(command));
+    case Mudlet::HyperlinkStyling::ActionOpenUrl:
+    case Mudlet::HyperlinkStyling::ActionNone:
+        break;
     }
 
-    // For other URI formats (like openUrl), return as-is
-#if defined(DEBUG_OSC_PROCESSING)
-    qDebug() << "No modification - returning as-is";
-#endif
-    return baseUri;
+    return QString();
 }
 
 void THyperlinkSelectionManager::registerGroupMember(const QString& group, const QString& value)

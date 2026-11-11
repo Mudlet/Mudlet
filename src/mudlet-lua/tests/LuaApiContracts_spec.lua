@@ -1,0 +1,1078 @@
+-- Contract tests for the parts of the Lua API where the refusal *is* the
+-- behaviour: which message comes back, whether it arrives as nil plus a reason
+-- or as a raised error, and what the profile looks like afterwards. Scripts
+-- branch on those answers, so changing one is a breaking change even though
+-- nothing about the successful path moved.
+
+local function contains(haystack, needle)
+  return type(haystack) == "string" and haystack:find(needle, 1, true) ~= nil
+end
+
+-- Matching a message substring rather than merely "did it error?" is what
+-- proves the call reached its own argument validation: a function that had
+-- been renamed away would raise "attempt to call a nil value" and satisfy a
+-- bare has_error just as well.
+local function assertArgError(fn, needle)
+  local ok, err = pcall(fn)
+  assert.is_false(ok, "the call was accepted instead of raising")
+  assert.is_true(contains(err, needle), tostring(err))
+end
+
+local function assertRefused(needle, ok, err)
+  assert.is_nil(ok, "the call was accepted instead of refused")
+  assert.is_true(contains(err, needle), tostring(err))
+end
+
+-- Mudlet's own colour numbering predates the ANSI one and interleaves it: 1 is
+-- light black, 2 is black, 3 is light red, 4 is red, and so on up to 16, white.
+-- isAnsiFgColor, isAnsiBgColor and tempColorTrigger all speak it, and the saved
+-- profile format stores it, so renumbering silently changes what every colour
+-- trigger a player already has matches.
+local sgrForIndex = {
+  fg = {90, 30, 91, 31, 92, 32, 93, 33, 94, 34, 95, 35, 96, 36, 97, 37},
+  bg = {100, 40, 101, 41, 102, 42, 103, 43, 104, 44, 105, 45, 106, 46, 107, 47},
+}
+
+describe("Tests the legacy ANSI colour numbering", function()
+
+  local mark
+
+  local function feed(data)
+    local ok, msg = feedTelnet(data)
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+  end
+
+  -- the buffer line the marker landed on, looked for from where this test's own
+  -- output starts so that an earlier test's identical text cannot answer
+  local function lineNumberOf(marker)
+    local last = getLastLineNumber("main")
+    local lines = getLines("main", mark, last + 1)
+    for i = #lines, 1, -1 do
+      if lines[i]:find(marker, 1, true) then
+        return mark + i - 1
+      end
+    end
+    return nil
+  end
+
+  -- isAnsiFgColor and isAnsiBgColor read the first character of the selection
+  local function selectMarker(marker)
+    local line = lineNumberOf(marker)
+    assert.is_truthy(line, "no line carrying '" .. marker .. "' reached the buffer")
+    assert.is_true(moveCursor("main", 0, line))
+    assert.is_true(selectString(marker, 1) >= 0, "'" .. marker .. "' was not selectable on the line it landed on")
+  end
+
+  -- Index 0 is the profile's default colour, and the defaults are white on
+  -- black, so 0 legitimately answers true alongside 16 for a foreground and
+  -- alongside 2 for a background. It is left out of the sweep for that reason.
+  local function assertOnlyColour(reader, index, marker)
+    assert.is_true(reader(index), marker .. " did not answer to colour " .. index)
+    for other = 1, 16 do
+      if other ~= index then
+        assert.is_false(reader(other), marker .. " also answered to colour " .. other)
+      end
+    end
+  end
+
+  local function paintAndSelect(kind, index)
+    local marker = ("AnsiNum%s%d"):format(kind, index)
+    mark = getLastLineNumber("main")
+    feed(("\27[0m\27[%dm%s\r\n"):format(sgrForIndex[kind][index], marker))
+    selectMarker(marker)
+    return marker
+  end
+
+  after_each(function()
+    deselect()
+    -- selecting a marker parks the user cursor partway up the buffer, and every
+    -- spec after this one reads the buffer from wherever it was left
+    moveCursorEnd()
+  end)
+
+  it("gives isAnsiFgColor a distinct number for each foreground colour", function()
+    for index = 1, 16 do
+      local marker = paintAndSelect("fg", index)
+      assertOnlyColour(isAnsiFgColor, index, marker)
+      deselect()
+    end
+  end)
+
+  it("gives isAnsiBgColor a distinct number for each background colour", function()
+    for index = 1, 16 do
+      local marker = paintAndSelect("bg", index)
+      assertOnlyColour(isAnsiBgColor, index, marker)
+      deselect()
+    end
+  end)
+
+  -- the out of range refusals are already pinned, message and all, by
+  -- UI_spec.lua's "isAnsiFgColor/isAnsiBgColor error handling"
+
+  it("raises rather than guessing when the colour number is not a number", function()
+    paintAndSelect("fg", 4)
+    assertArgError(function() return isAnsiFgColor("red") end, "bad argument #1 type")
+    assertArgError(function() return isAnsiBgColor() end, "got no value")
+  end)
+end)
+
+describe("Tests the functionality of tempColorTrigger", function()
+
+  local created
+
+  before_each(function()
+    created = {}
+  end)
+
+  after_each(function()
+    for _, id in ipairs(created) do
+      killTrigger(id)
+    end
+  end)
+
+  local function track(id)
+    created[#created + 1] = id
+    return id
+  end
+
+  it("matches the colour its number names and no other", function()
+    local fired = {}
+    for index = 1, 16 do
+      track(tempColorTrigger(index, -1, function() fired[index] = true end))
+    end
+
+    for index = 1, 16 do
+      for key in pairs(fired) do
+        fired[key] = nil
+      end
+      feedTriggers(("\27[0m\27[%dmColourTriggerNumbering\n"):format(sgrForIndex.fg[index]))
+
+      local hits = {}
+      for key in pairs(fired) do
+        hits[#hits + 1] = key
+      end
+      table.sort(hits)
+      assert.are.same({index}, hits, ("SGR %d should have fired only the colour %d trigger"):format(sgrForIndex.fg[index], index))
+    end
+  end)
+
+  it("refuses to ignore both colours at once, since that would match everything", function()
+    assertRefused("only one of foreground and background colors can be -1", tempColorTrigger(-1, -1, "noop"))
+  end)
+
+  it("refuses an expiry count that would expire the trigger before it ever fires", function()
+    assertRefused("must be greater than zero, got 0", tempColorTrigger(4, -1, "noop", 0))
+    assertRefused("must be greater than zero, got -3", tempColorTrigger(4, -1, "noop", -3))
+  end)
+
+  it("raises on arguments it cannot make sense of, naming the one at fault", function()
+    assertArgError(function() return tempColorTrigger("red", -1, "noop") end, "bad argument #1 type")
+    assertArgError(function() return tempColorTrigger(4, "red", "noop") end, "bad argument #2 type")
+    assertArgError(function() return tempColorTrigger(4, -1, {}) end, "bad argument #3 type")
+    assertArgError(function() return tempColorTrigger(4, -1, "noop", "soon") end, "bad argument #4 value")
+  end)
+
+  -- Trigger IDs come off a counter that only a created trigger advances, so a
+  -- gap in them is the visible trace of a refusal that built something first
+  -- and then walked away from it
+  it("builds nothing when it refuses", function()
+    local first = track(tempColorTrigger(4, -1, "noop"))
+
+    tempColorTrigger(-1, -1, "noop")
+    tempColorTrigger(4, -1, "noop", 0)
+    pcall(function() return tempColorTrigger(4, -1, {}) end)
+    pcall(function() return tempColorTrigger("red", -1, "noop") end)
+
+    assert.are.equal(first + 1, track(tempColorTrigger(4, -1, "noop")), "a refused tempColorTrigger consumed a trigger ID")
+  end)
+end)
+
+describe("Tests the functionality of tempAnsiColorTrigger", function()
+
+  local created
+
+  before_each(function()
+    created = {}
+  end)
+
+  after_each(function()
+    for _, id in ipairs(created) do
+      killTrigger(id)
+    end
+  end)
+
+  -- -1 ignores a colour and -2 matches whatever the profile's default is; the
+  -- messages have to keep saying which is which, because they are the only
+  -- place a script author is told
+  it("names both sentinel colours when refusing one outside the range", function()
+    assertRefused("only -1 (ignore foreground color)", tempAnsiColorTrigger(999, 0, "noop"))
+    assertRefused("only -1 (ignore background color)", tempAnsiColorTrigger(0, 999, "noop"))
+    assertRefused("invalid ANSI color number -3", tempAnsiColorTrigger(-3, 0, "noop"))
+  end)
+
+  it("tells the two ways of ignoring everything apart", function()
+    -- with a background given but also ignored
+    assertRefused("you cannot ignore both foreground and background color", tempAnsiColorTrigger(-1, -1, "noop"))
+    -- with the background left out entirely, which is a different mistake
+    assertRefused("(omitted)", tempAnsiColorTrigger(-1, "noop"))
+    assertRefused("if the background color is omitted", tempAnsiColorTrigger(-1))
+  end)
+
+  it("refuses an expiry count that would expire the trigger before it ever fires", function()
+    assertRefused("must be nil or greater than zero, got 0", tempAnsiColorTrigger(0, 1, "noop", 0))
+  end)
+
+  it("raises on arguments it cannot make sense of, naming the one at fault", function()
+    assertArgError(function() return tempAnsiColorTrigger("red", 0, "noop") end, "bad argument #1 type")
+    -- the background is optional, so it is only read as one when the argument
+    -- count says it must be - hence the expiry count here
+    assertArgError(function() return tempAnsiColorTrigger(0, "red", "noop", 1) end, "bad argument #2 type")
+    assertArgError(function() return tempAnsiColorTrigger(0, 1, {}) end, "bad argument #3 type")
+    assertArgError(function() return tempAnsiColorTrigger(0, 1, "noop", "soon") end, "bad argument #4 value")
+  end)
+
+  it("builds nothing when it refuses", function()
+    local first = tempAnsiColorTrigger(0, 1, "noop")
+    created[#created + 1] = first
+
+    tempAnsiColorTrigger(999, 0, "noop")
+    tempAnsiColorTrigger(-1, -1, "noop")
+    tempAnsiColorTrigger(0, 1, "noop", 0)
+    pcall(function() return tempAnsiColorTrigger(0, 1, {}) end)
+    pcall(function() return tempAnsiColorTrigger("red", 0, "noop") end)
+
+    local second = tempAnsiColorTrigger(0, 1, "noop")
+    created[#created + 1] = second
+    assert.are.equal(first + 1, second, "a refused tempAnsiColorTrigger consumed a trigger ID")
+  end)
+
+  it("accepts a background-only match, which is the one -1 that is allowed", function()
+    local fired = false
+    local id = tempAnsiColorTrigger(-1, 1, function() fired = true end)
+    assert.is_number(id)
+    created[#created + 1] = id
+
+    feedTriggers("\27[0m\27[41mAnsiColourBackgroundOnly\n")
+    assert.is_true(fired, "a background-only trigger did not match a line painted in that background")
+  end)
+end)
+
+describe("Tests what feedTriggers will and will not carry", function()
+
+  local original
+
+  before_each(function()
+    original = getServerEncoding()
+  end)
+
+  after_each(function()
+    setServerEncoding(original)
+  end)
+
+  local function textFrom(mark)
+    return table.concat(getLines("main", mark, getLastLineNumber("main") + 1), "")
+  end
+
+  -- textFrom() joins the lines, so it cannot tell one line from two
+  local function linesFrom(mark)
+    local shown = {}
+    for _, line in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do
+      if line ~= "" then
+        shown[#shown + 1] = line
+      end
+    end
+    return shown
+  end
+
+  it("refuses text the game's encoding cannot carry instead of mangling it", function()
+    assert.is_true(setServerEncoding("ASCII"))
+    local mark = getLastLineNumber("main")
+
+    local ok, err = feedTriggers("FeedEncRejected \195\169\n")
+    assert.is_nil(ok, "text outside the game encoding should be refused")
+    assert.is_true(contains(err, "cannot be conveyed in the current game server encoding of 'ASCII'"), tostring(err))
+    assert.is_false(contains(textFrom(mark), "FeedEncRejected"), "the refused text was put on screen regardless")
+  end)
+
+  it("transcodes into the game's encoding when it can", function()
+    assert.is_true(setServerEncoding("ISO 8859-1"))
+    local mark = getLastLineNumber("main")
+
+    assert.is_true(feedTriggers("FeedEncLatin \195\169\n"))
+    assert.is_true(contains(textFrom(mark), "FeedEncLatin \195\169"), "the accented character did not survive the round trip")
+  end)
+
+  -- The second argument false is the older form: the caller has already encoded
+  -- the bytes themselves, so Mudlet must pass them through untouched rather
+  -- than reading them as UTF-8 and rejecting or double-encoding them
+  it("takes bytes already in the game's encoding when told they are not UTF-8", function()
+    assert.is_true(setServerEncoding("ISO 8859-1"))
+    local mark = getLastLineNumber("main")
+
+    assert.is_true(feedTriggers("FeedEncRaw \233\n", false))
+    assert.is_true(contains(textFrom(mark), "FeedEncRaw \195\169"), "the pre-encoded byte did not arrive as the character it stands for")
+  end)
+
+  -- the game's encoding is UTF-8 for most games today, and then the text is
+  -- already in the form it needs - it has to arrive exactly as it was given
+  it("passes UTF-8 straight through when that is the game's encoding", function()
+    assert.is_true(setServerEncoding("UTF-8"))
+    local mark = getLastLineNumber("main")
+
+    assert.is_true(feedTriggers("FeedEncUtf8 \195\169 \226\130\172\n"))
+    assert.is_true(contains(textFrom(mark), "FeedEncUtf8 \195\169 \226\130\172"), "the UTF-8 text did not arrive unchanged")
+  end)
+
+  -- Each feed is whole, so an escape sequence it leaves unfinished is never
+  -- going to be finished, and must not eat the start of the next feed
+  it("does not finish one feed's unfinished escape sequence with the next feed", function()
+    assert.is_true(setServerEncoding("UTF-8"))
+    local mark = getLastLineNumber("main")
+
+    -- had the open sequence carried over, the "C" would have ended it as its
+    -- final byte and been lost
+    assert.is_true(feedTriggers("FeedHalfEscape \27[5"))
+    assert.is_true(feedTriggers("Cont\n"))
+    assert.same({"FeedHalfEscape Cont"}, linesFrom(mark))
+  end)
+
+  -- a trigger feeding text runs while the feed that fired it is still being
+  -- read, and that text is whole too
+  it("does not finish a nested feed's unfinished escape sequence with the text after it", function()
+    assert.is_true(setServerEncoding("UTF-8"))
+    local trigger = tempExactMatchTrigger("FeedNestOuter", function()
+      feedTriggers("FeedNestFirst \27[5")
+      feedTriggers("Cont sibling\n")
+      feedTriggers("FeedNestLast \27[5")
+    end)
+    finally(function() killTrigger(trigger) end)
+    local mark = getLastLineNumber("main")
+
+    assert.is_true(feedTriggers("FeedNestOuter\nCont outer\n"))
+    assert.same({"FeedNestOuter", "FeedNestFirst Cont sibling", "FeedNestLast Cont outer"}, linesFrom(mark))
+  end)
+
+  it("does not pair one feed's unfinished double byte character with the next feed", function()
+    local original = getServerEncoding()
+    finally(function() setServerEncoding(original) end)
+    assert.is_true(setServerEncoding("BIG5"))
+    local mark = getLastLineNumber("main")
+
+    -- In Big5 0xA4 0x5A is one character. A colour code after the lead byte
+    -- has it held for the trail byte, which a whole feed has no more of.
+    assert.is_true(feedTriggers("FeedHalfBig5 " .. string.char(0xA4) .. "\27[0m", false))
+    assert.is_true(feedTriggers("Z\n", false))
+    assert.same({"FeedHalfBig5 \239\191\189Z"}, linesFrom(mark))
+  end)
+
+  -- A Lua string can hold a NUL and the text after it is still the caller's;
+  -- the NUL itself is dropped, as it is from a game
+  it("carries the text after an embedded NUL", function()
+    assert.is_true(setServerEncoding("UTF-8"))
+    -- end whatever line an earlier spec left open
+    assert.is_true(feedTriggers("\n"))
+    local mark = getLastLineNumber("main")
+
+    assert.is_true(feedTriggers("FeedNulHead\0FeedNulTail\n"))
+    assert.is_true(feedTriggers("FeedNulNext\n"))
+    local lines = getLines("main", mark, getLastLineNumber("main") + 1)
+    assert.same({"FeedNulHeadFeedNulTail", "FeedNulNext", ""}, lines)
+  end)
+
+  -- the transcoding and pre-encoded branches see the text after the NUL is dropped too
+  it("drops an embedded NUL from text it transcodes or takes pre-encoded", function()
+    assert.is_true(setServerEncoding("ISO 8859-1"))
+    assert.is_true(feedTriggers("\n"))
+    local mark = getLastLineNumber("main")
+
+    assert.is_true(feedTriggers("FeedNulLatin \195\169\0Tail\n"))
+    assert.is_true(feedTriggers("FeedNulRaw \233\0Tail\n", false))
+    local lines = getLines("main", mark, getLastLineNumber("main") + 1)
+    assert.same({"FeedNulLatin \195\169Tail", "FeedNulRaw \195\169Tail", ""}, lines)
+  end)
+
+  -- Mudlet drops every carriage return a game sends, so captured output
+  -- replayed through feedTriggers() has to come out the same. Blank lines are
+  -- shown for these, as hiding them would hide a stray one too.
+  local function linesFed(isUtf8, ...)
+    local blankLines = getConfig("blankLinesBehaviour")
+    setConfig("blankLinesBehaviour", "show")
+    finally(function() setConfig("blankLinesBehaviour", blankLines) end)
+    assert.is_true(feedTriggers("\n"))
+    local mark = getLastLineNumber("main")
+    for _, text in ipairs({...}) do
+      assert.is_true(feedTriggers(text, isUtf8))
+    end
+    return getLines("main", mark, getLastLineNumber("main") + 1)
+  end
+
+  it("takes a CR LF line ending as one line ending", function()
+    assert.is_true(setServerEncoding("UTF-8"))
+    assert.same({"FeedCrLfOne", "FeedCrLfTwo", ""}, linesFed(true, "FeedCrLfOne\r\nFeedCrLfTwo\r\n"))
+    assert.same({"FeedCrCrLfOne", "FeedCrCrLfTwo", ""}, linesFed(true, "FeedCrCrLfOne\r\r\nFeedCrCrLfTwo\r\r\n"))
+  end)
+
+  it("keeps a blank line that arrives as CR LF CR LF", function()
+    assert.is_true(setServerEncoding("UTF-8"))
+    assert.same({"FeedCrLfAbove", "", "FeedCrLfBelow", ""}, linesFed(true, "FeedCrLfAbove\r\n\r\nFeedCrLfBelow\r\n"))
+  end)
+
+  it("drops a carriage return part way through the text", function()
+    assert.is_true(setServerEncoding("UTF-8"))
+    assert.same({"FeedCrHeadFeedCrTail", ""}, linesFed(true, "FeedCrHead\rFeedCrTail\n"))
+  end)
+
+  -- a script feeding a line in parts flushes the part it has with one
+  it("keeps a carriage return that ends the text", function()
+    assert.is_true(setServerEncoding("UTF-8"))
+    assert.same({"FeedCrFlushed", ""}, linesFed(true, "FeedCrFlushed\r"))
+    assert.same({"FeedCrFlushedA", "FeedCrFlushedB", ""}, linesFed(true, "FeedCrFlushedA\r", "FeedCrFlushedB\n"))
+  end)
+
+  it("takes a CR LF line ending as one in text it transcodes or takes pre-encoded", function()
+    assert.is_true(setServerEncoding("ISO 8859-1"))
+    assert.same({"FeedCrLfLatin \195\169", "FeedCrLfLatinNext", ""}, linesFed(true, "FeedCrLfLatin \195\169\r\nFeedCrLfLatinNext\r\n"))
+    assert.same({"FeedCrLfRaw \195\169", "FeedCrLfRawNext", ""}, linesFed(false, "FeedCrLfRaw \233\r\nFeedCrLfRawNext\r\n"))
+  end)
+
+  it("raises on arguments it cannot make sense of", function()
+    assertArgError(function() return feedTriggers({}) end, "bad argument #1 type")
+    assertArgError(function() return feedTriggers("FeedEncNever\n", "yes") end, "bad argument #2 type")
+  end)
+end)
+
+-- A raised Lua error is one string, and the places that carry it onwards - the
+-- error console, a script's own logging, a scraper reading either - work a line
+-- at a time, so a newline inside one hides everything after it. The rest of the
+-- API keeps a bad-argument refusal to the single line that names what was
+-- wanted and what arrived.
+describe("Tests the shape of the feeding functions' bad-argument errors", function()
+
+  local feeders = {
+    {name = "feedTriggers", wanted = "imitation game server text as string"},
+    {name = "feedTelnet", wanted = "imitation game server data as string"},
+  }
+
+  -- A case each rather than one loop inside a single it(): the first failure
+  -- ends the test it is in, so sharing one would report a regression in both
+  -- functions as a regression in whichever comes first.
+  for _, feeder in ipairs(feeders) do
+    it(feeder.name .. " refuses a missing argument on one line, in the shape the rest of the API uses", function()
+      local ok, err = pcall(_G[feeder.name])
+      assert.is_false(ok, feeder.name .. " accepted a call with no argument at all")
+      -- contains() is false for anything but a string, so without this the
+      -- newline check below would pass by default on a non-string error object
+      assert.is_string(err, feeder.name .. " raised something other than a message: " .. tostring(err))
+      assert.is_false(contains(err, "\n"), feeder.name .. " split its refusal over more than one line: " .. tostring(err))
+      local expected = feeder.name .. ": bad argument #1 type (" .. feeder.wanted .. " expected, got no value!)"
+      assert.is_true(contains(err, expected), feeder.name .. " did not say " .. expected .. " - it said: " .. tostring(err))
+    end)
+  end
+end)
+
+describe("Tests that the other bad-argument refusals stay on one line", function()
+
+  local cases = {
+    {label = "deleteArea", call = function() return deleteArea({}) end,
+      expected = "deleteArea: bad argument #1 type (area Id as number or area name as string expected, got table!)"},
+    {label = "getRoomAreaName", call = function() return getRoomAreaName({}) end,
+      expected = "getRoomAreaName: bad argument #1 type (area id as number or area name as string expected, got table!)"},
+    {label = "setAreaName", call = function() return setAreaName({}, "x") end,
+      expected = "setAreaName: bad argument #1 type (areaID as number or area name as string expected, got table!)"},
+    {label = "setRoomArea's room", call = function() return setRoomArea("nope", 1) end,
+      expected = "setRoomArea: bad argument #1 type (roomID as number or table of roomIDs expected, got string!)"},
+    {label = "raiseEvent", call = function() return raiseEvent("mudletSpecTwoLine", coroutine.create(function() end)) end,
+      expected = "raiseEvent: bad argument #2 type (string, number, boolean, table, function, or nil expected, got a thread!)"},
+    {label = "raiseGlobalEvent", call = function() return raiseGlobalEvent("mudletSpecTwoLine", {}) end,
+      expected = "raiseGlobalEvent: bad argument #2 type (boolean, number, string or nil expected, got a table!)"},
+    {label = "getMudletVersion's option", call = function() return getMudletVersion("bananas") end,
+      expected = 'getMudletVersion: takes one (optional) argument: "major", "minor", "revision", "build", "string" or "table".'},
+    {label = "getMudletVersion's argument count", call = function() return getMudletVersion("major", "minor") end,
+      expected = 'getMudletVersion: only takes one (optional) argument: "major", "minor", "revision", "build", "string" or "table".'},
+  }
+
+  for _, case in ipairs(cases) do
+    it(case.label .. " refuses on one line", function()
+      local ok, err = pcall(case.call)
+      assert.is_false(ok)
+      assert.is_string(err)
+      assert.is_false(contains(err, "\n"), "split over more than one line: " .. tostring(err))
+      assert.is_true(contains(err, case.expected), "expected " .. case.expected .. " - got: " .. tostring(err))
+    end)
+  end
+
+  it("setRoomArea's area refuses on one line", function()
+    local id = createRoomID()
+    assert.is_true(addRoom(id))
+    finally(function() deleteRoom(id) end)
+    local ok, err = pcall(setRoomArea, id, {})
+    assert.is_false(ok)
+    assert.is_string(err)
+    assert.is_false(contains(err, "\n"), "split over more than one line: " .. tostring(err))
+    local expected = "setRoomArea: bad argument #2 type (areaID as number or area name as string expected, got table!)"
+    assert.is_true(contains(err, expected), "expected " .. expected .. " - got: " .. tostring(err))
+  end)
+
+  it("loadMap's missing map file is reported on one line", function()
+    local ok, err = loadMap("/no/such/mudletSpecOneLine.xml")
+    assert.is_nil(ok)
+    assert.is_string(err)
+    assert.is_false(contains(err, "\n"), "split over more than one line: " .. tostring(err))
+    -- Windows reports the path made absolute, with a drive letter in front
+    local pattern = 'loadMap: bad argument #1 value %(filename used: "%a?:?/no/such/mudletSpecOneLine%.xml" was not found%)%.'
+    assert.is_truthy(err:find(pattern), "expected a match for " .. pattern .. " - got: " .. tostring(err))
+  end)
+end)
+
+describe("Tests that raiseEvent lets go of what it was handed when it refuses", function()
+
+  local function registryEntryCount()
+    local count = 0
+    for _ in pairs(debug.getregistry()) do
+      count = count + 1
+    end
+    return count
+  end
+
+  -- The arguments are taken from the last one down, so a bad argument below a
+  -- table and a function is only reached after both have been anchored.
+  it("keeps nothing in the registry when an earlier argument is refused", function()
+    local function refuse()
+      return pcall(raiseEvent, "mudletSpecRefusedEvent", coroutine.create(function() end), {}, function() end)
+    end
+    -- a warm-up refusal: the registry's free list is created by the first release
+    refuse()
+    collectgarbage()
+    local before = registryEntryCount()
+    for _ = 1, 20 do
+      local ok, err = refuse()
+      assert.is_false(ok)
+      assert.is_true(contains(err, "raiseEvent: bad argument #2 type"), tostring(err))
+    end
+    collectgarbage()
+    assert.are.equal(before, registryEntryCount())
+  end)
+end)
+
+-- Each of these runs code shared with, or copied from, a function of another
+-- name, which is the name its errors would otherwise carry
+describe("Tests that functions sharing an implementation refuse under their own name", function()
+
+  local cases = {
+    {label = "setMiniConsoleFontSize with nothing", call = function() return setMiniConsoleFontSize() end,
+      expected = "setMiniConsoleFontSize: bad argument #2 type (size as number expected, got no value!)"},
+    {label = "setMiniConsoleFontSize with a bad size", call = function() return setMiniConsoleFontSize("main", {}) end,
+      expected = "setMiniConsoleFontSize: bad argument #2 type (size as number expected, got table!)"},
+    {label = "setCommandBackgroundColor", call = function() return setCommandBackgroundColor() end,
+      expected = "setCommandBackgroundColor: bad argument #1 type"},
+    {label = "setCommandForegroundColor", call = function() return setCommandForegroundColor() end,
+      expected = "setCommandForegroundColor: bad argument #1 type"},
+    {label = "loadRawFile", call = function() return loadRawFile(nil) end,
+      expected = "loadRawFile: bad argument #1 type (replay file name as string expected, got nil!)"},
+    {label = "resetLabelToolTip", call = function() return resetLabelToolTip() end,
+      expected = "resetLabelToolTip: bad argument #1 type"},
+    {label = "resetUserWindowTitle", call = function() return resetUserWindowTitle() end,
+      expected = "resetUserWindowTitle: bad argument #1 type"},
+    {label = "cechoPopup", call = function() return cechoPopup("main", "x", 3) end, expected = "cechoPopup: bad argument #2 type"},
+    {label = "dechoPopup", call = function() return dechoPopup("main", "x", 3) end, expected = "dechoPopup: bad argument #2 type"},
+    {label = "hechoPopup", call = function() return hechoPopup("main", "x", 3) end, expected = "hechoPopup: bad argument #2 type"},
+    {label = "cinsertPopup", call = function() return cinsertPopup("main", "x", 3) end, expected = "cinsertPopup: bad argument #2 type"},
+    {label = "dinsertPopup", call = function() return dinsertPopup("main", "x", 3) end, expected = "dinsertPopup: bad argument #2 type"},
+    {label = "hinsertPopup", call = function() return hinsertPopup("main", "x", 3) end, expected = "hinsertPopup: bad argument #2 type"},
+    {label = "cechoPopup given a window", call = function() return cechoPopup("main", "x", "notATable", {"hint"}) end,
+      expected = "cechoPopup: bad argument #3 type"},
+    {label = "cechoLink without a window", call = function() return cechoLink("x", {}, "hint") end, expected = "cechoLink: bad argument #2 type"},
+    {label = "cechoLink formatted, without a window", call = function() return cechoLink("x", "cmd", {}, true) end,
+      expected = "cechoLink: bad argument #3 type"},
+    {label = "cechoLink given a window", call = function() return cechoLink("main", "x", {}, "hint") end, expected = "cechoLink: bad argument #3 type"},
+    {label = "dechoLink", call = function() return dechoLink("x", {}, "hint") end, expected = "dechoLink: bad argument #2 type"},
+    {label = "hechoLink", call = function() return hechoLink("x", {}, "hint") end, expected = "hechoLink: bad argument #2 type"},
+    {label = "cinsertLink", call = function() return cinsertLink("x", {}, "hint") end, expected = "cinsertLink: bad argument #2 type"},
+    {label = "dinsertLink formatted, without a window", call = function() return dinsertLink("x", "cmd", {}, true) end,
+      expected = "dinsertLink: bad argument #3 type"},
+    {label = "hinsertLink given a window", call = function() return hinsertLink("main", "x", {}, "hint") end, expected = "hinsertLink: bad argument #3 type"},
+    {label = "cechoPopup formatted, without a window", call = function() return cechoPopup("x", {"cmd"}, 3, true) end,
+      expected = "cechoPopup: bad argument #3 type"},
+    {label = "cechoPopup with a bad command, without a window", call = function() return cechoPopup("x", {false}, {"hint"}) end,
+      expected = "cechoPopup: bad item #1 in table argument #2 "},
+    {label = "cechoPopup with a bad hint, without a window", call = function() return cechoPopup("x", {"cmd"}, {{}}) end,
+      expected = "cechoPopup: bad item #1 in table argument #3 "},
+    {label = "dinsertPopup with a bad command, given a window", call = function() return dinsertPopup("main", "x", {false}, {"hint"}) end,
+      expected = "dinsertPopup: bad item #1 in table argument #3 "},
+    {label = "cechoPopup short of arguments", call = function() return cechoPopup("x", {"cmd"}) end, expected = "cechoPopup: Insufficient arguments"},
+    {label = "cechoLink with a bad fourth argument", call = function() return cechoLink("w", "t", "c", 5) end, expected = "cechoLink: Improper arguments"},
+    {label = "loadReplay", call = function() return loadReplay(nil) end,
+      expected = "loadReplay: bad argument #1 type (replay file name as string expected, got nil!)"},
+    {label = "setFontSize", call = function() return setFontSize({}) end, expected = "setFontSize: bad argument #1 type (size as number expected, got table!)"},
+    {label = "setMiniConsoleFontSize with a bad window name", call = function() return setMiniConsoleFontSize({}, 10) end,
+      expected = "setMiniConsoleFontSize: bad argument #1 type (window name as string expected, got table)"},
+    {label = "setHexFgColor", call = function() return setHexFgColor("zzzzzz") end, expected = "setHexFgColor needs a 6 digit hex color code."},
+    {label = "setHexBgColor", call = function() return setHexBgColor("main", "zzzzzz") end, expected = "setHexBgColor needs a 6 digit hex color code."},
+  }
+
+  for _, case in ipairs(cases) do
+    it(case.label .. " names itself", function()
+      local ok, err = pcall(case.call)
+      assert.is_false(ok, "the call was accepted instead of raising")
+      assert.is_true(contains(err, case.expected), "expected " .. case.expected .. " - got: " .. tostring(err))
+    end)
+  end
+end)
+
+describe("Tests announce and showNotification", function()
+
+  local processingKinds = {"importantall", "importantmostrecent", "all", "mostrecent", "currentthenmostrecent"}
+
+  -- The message is the only place a script author is told which processing
+  -- styles a screen reader will take, so dropping the list from it removes the
+  -- documentation along with the names
+  it("names every processing style announce accepts when refusing one", function()
+    local ok, err = pcall(announce, "spec announcement", "sideways")
+    assert.is_false(ok, "an unknown processing style should be refused, not passed on")
+    for _, kind in ipairs(processingKinds) do
+      assert.is_true(contains(err, kind), kind .. " was left out of the refusal: " .. tostring(err))
+    end
+  end)
+
+  it("accepts every processing style it lists", function()
+    for _, kind in ipairs(processingKinds) do
+      assert.is_true(pcall(announce, "spec announcement", kind), kind .. " is offered in the refusal but refused when used")
+    end
+    assert.is_true(pcall(announce, "spec announcement"), "the processing style is meant to be optional")
+  end)
+
+  it("raises when there is nothing to announce", function()
+    assertArgError(function() return announce() end, "text to announce as string expected")
+  end)
+
+  -- showNotification's refusals are pinned in Miscallaneous_spec.lua, among the
+  -- other functions whose effect needs a desktop; only the accepted argument
+  -- counts are left to cover
+  it("takes a title on its own, a message with it, and an expiry with both", function()
+    -- getMousePosition() has no answer only when there is no main window
+    if not getMousePosition() then
+      pending("there is no main window to show a notification from")
+    end
+    assert.is_true(showNotification("Mudlet spec notification"))
+    assert.is_true(showNotification("Mudlet spec notification", "with a body"))
+    assert.is_true(showNotification("Mudlet spec notification", "with a body", 1))
+  end)
+
+  it("says so when there is no main window to show a notification from", function()
+    if getMousePosition() then
+      pending("there is a main window")
+    end
+    local shown, err = showNotification("Mudlet spec notification")
+    assert.is_nil(shown)
+    assert.are.equal("the profile has no main window", err)
+  end)
+end)
+
+describe("Tests the functionality of alert", function()
+
+  -- zero is a duration, so the boundary is where the refusal starts rather
+  -- than "anything falsy is rejected"
+  it("takes a duration of zero but refuses one below it", function()
+    assert.is_true(pcall(alert, 0), "zero seconds is a duration, not a mistake")
+    assertArgError(function() return alert(-0.001) end, "is optional but if given must be zero or greater")
+  end)
+
+  it("refuses a NaN duration such as 0/0", function()
+    assertArgError(function() return alert(0/0) end, "is optional but if given must be zero or greater")
+  end)
+
+  it("takes no duration at all", function()
+    assert.is_true(pcall(alert))
+  end)
+
+  it("raises when the duration is not a number", function()
+    assertArgError(function() return alert("soon") end, "alert duration in seconds as number expected")
+  end)
+end)
+
+-- feedTelnet() reads <NAME> markers as the telnet bytes they name, so a script
+-- that wants a literal angle bracket doubles it. The empty string is not data
+-- at all: it asks which version of the marker table this Mudlet has.
+describe("Tests feedTelnet's marker escapes", function()
+
+  local function textFrom(mark)
+    return table.concat(getLines("main", mark, getLastLineNumber("main") + 1), "")
+  end
+
+  it("answers the marker table version for an empty string, and feeds nothing", function()
+    -- end whatever line an earlier spec left open, so that the next line fed
+    -- starts with whatever the version call itself fed
+    assert.is_true(feedTelnet("\n"))
+    local ok, version = feedTelnet("")
+    assert.is_true(ok)
+    assert.is_truthy(tostring(version):match("^feedTelnet: using table version %d+$"), tostring(version))
+
+    -- anything the version call had fed would have no line ending of its own,
+    -- so it would show up at the start of this line
+    assert.is_true(feedTelnet("FeedTelnetAfterVersion\n"))
+    local last = getLastLineNumber("main")
+    local line = getLines("main", last - 1, last)[1]
+    assert.equals("FeedTelnetAfterVersion", line, "asking for the version fed something to the screen")
+  end)
+
+  -- A raw NUL in text reaches the telnet parser, which drops it as it does in a game's text
+  it("feeds the data after an embedded NUL", function()
+    assert.is_true(feedTelnet("\n"))
+    local mark = getLastLineNumber("main")
+    local ok, msg = feedTelnet("FeedTelnetNulHead\0FeedTelnetNulTail\r\n")
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+    assert.same({"FeedTelnetNulHeadFeedTelnetNulTail", ""}, getLines("main", mark, getLastLineNumber("main") + 1))
+  end)
+
+  -- only the empty string asks for the version: a lone NUL is data
+  it("feeds a lone NUL rather than answering the table version", function()
+    local ok, msg = feedTelnet("\0")
+    assert.is_true(ok)
+    assert.is_nil(msg, "a NUL was read as the empty string")
+  end)
+
+  it("reads doubled angle brackets as literal ones rather than as a marker", function()
+    local mark = getLastLineNumber("main")
+    local ok, msg = feedTelnet("FeedTelnetEscaped <<T_IAC>> and <<b>>\n")
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+    assert.is_true(contains(textFrom(mark), "FeedTelnetEscaped <T_IAC> and <b>"), textFrom(mark))
+  end)
+end)
+
+-- The perm*Trigger family all take the name of a parent to create the trigger
+-- in. A parent that is not there is refused outright rather than silently
+-- creating the trigger at the top level, where it would fire unguarded by
+-- whatever group it was meant to sit in.
+describe("Tests the parent argument of the perm*Trigger family", function()
+
+  local missingParent = "mudletSpecNoSuchTriggerParent"
+  local creators = {
+    permRegexTrigger = function(name, parent) return permRegexTrigger(name, parent, {"^mudletSpecNeverSent$"}, "") end,
+    permBeginOfLineStringTrigger = function(name, parent) return permBeginOfLineStringTrigger(name, parent, {"mudletSpecNeverSent"}, "") end,
+    permExactMatchTrigger = function(name, parent) return permExactMatchTrigger(name, parent, {"mudletSpecNeverSent"}, "") end,
+    permPromptTrigger = function(name, parent) return permPromptTrigger(name, parent, "") end,
+    permSubstringTrigger = function(name, parent) return permSubstringTrigger(name, parent, {"mudletSpecNeverSent"}, "") end,
+  }
+
+  for functionName, create in pairs(creators) do
+    it(functionName .. " refuses a parent that does not exist and creates nothing", function()
+      local name = "mudletSpecOrphan" .. functionName
+      assertArgError(function() return create(name, missingParent) end,
+        functionName .. ": cannot create trigger (parent '" .. missingParent .. "' not found)")
+      assert.same({}, findItems(name, "trigger"), "the refused trigger was created anyway")
+    end)
+  end
+
+  -- The profile these run in is saved on exit and reused by the next run, and
+  -- a permanent trigger cannot be deleted from Lua, so a child an earlier run
+  -- made is reused rather than stacked up again under the same name.
+  for functionName, create in pairs(creators) do
+    it(functionName .. " creates the trigger inside the parent it names", function()
+      local group = "mudletSpecParentGroup" .. functionName
+      local name = "mudletSpecChild" .. functionName
+      -- a prompt trigger has no pattern and fires on every prompt, so the
+      -- group is switched off again rather than left to fire for the whole run
+      finally(function() disableTrigger(group) end)
+      local id = findItems(name, "trigger")[1]
+      if not id then
+        assert.is_true(permGroup(group, "trigger"))
+        id = create(name, group)
+      end
+      assert.is_number(id)
+
+      local list = ancestors(id, "trigger")
+      assert.equals(1, #list, "expected exactly the one group the trigger was created in")
+      assert.equals(group, list[1].name)
+    end)
+  end
+
+  -- the other perm* functions that take a parent refuse a missing one the same way
+  local otherCreators = {
+    {functionName = "permAlias", kind = "alias", noun = "alias", create = function(name) return permAlias(name, missingParent, "^mudletSpecNeverSent$", "") end},
+    {functionName = "permTimer", kind = "timer", noun = "timer", create = function(name) return permTimer(name, missingParent, 5, "") end},
+    {functionName = "permScript", kind = "script", noun = "script", create = function(name) return permScript(name, missingParent, "") end},
+    {functionName = "permKey", kind = "keybind", noun = "key", create = function(name) return permKey(name, missingParent, mudlet.key.F12, "") end},
+  }
+  for _, creator in ipairs(otherCreators) do
+    it(creator.functionName .. " refuses a parent that does not exist and creates nothing", function()
+      local name = "mudletSpecOrphan" .. creator.functionName
+      assertArgError(function() return creator.create(name) end,
+        creator.functionName .. ": cannot create " .. creator.noun .. " (parent '" .. missingParent .. "' not found)")
+      assert.same({}, findItems(name, creator.kind), "the refused " .. creator.noun .. " was created anyway")
+    end)
+  end
+end)
+
+describe("Tests the stopwatch lookup by name", function()
+
+  -- a stopwatch can be given by ID or by name, so a name that matches none has
+  -- to be refused by name rather than read as some other stopwatch
+  it("names the stopwatch it could not find", function()
+    local name = "mudletSpecNoSuchStopWatch"
+    for _, functionName in ipairs({"getStopWatchTime", "startStopWatch", "stopStopWatch", "resetStopWatch", "deleteStopWatch", "adjustStopWatch", "getStopWatchBrokenDownTime"}) do
+      -- the second argument is only read by adjustStopWatch, as its adjustment
+      local ok, err = _G[functionName](name, 1)
+      assert.is_nil(ok, functionName .. " accepted a stopwatch that does not exist")
+      assert.equals("stopwatch with name '" .. name .. "' not found", err, functionName)
+    end
+  end)
+
+  it("reads a number given as a string as a name, not as an ID", function()
+    local id = createStopWatch()
+    assert.is_number(id)
+    finally(function() deleteStopWatch(id) end)
+
+    local ok, err = deleteStopWatch(tostring(id))
+    assert.is_nil(ok, "a string of digits was read as the ID of a stopwatch")
+    assert.equals("stopwatch with name '" .. id .. "' not found", err)
+    assert.is_number(getStopWatchTime(id), "the stopwatch with that ID was deleted")
+  end)
+end)
+
+describe("Tests createLabel's flag arguments", function()
+
+  local label = "mudletSpecLabelFlags"
+
+  teardown(function()
+    deleteLabel(label)
+  end)
+
+  it("raises when fillBackground is neither a boolean nor a number", function()
+    assertArgError(function() return createLabel(label, 0, 0, 10, 10, "yes") end,
+      "createLabel: bad argument #6 type (label fillBackground as boolean/number (0/1) expected, got string!)")
+  end)
+
+  it("raises when clickthrough is neither a boolean nor a number", function()
+    assertArgError(function() return createLabel(label, 0, 0, 10, 10, 1, "yes") end,
+      "createLabel: bad argument #7 type (label clickthrough as boolean/number (0/1) expected, got string!)")
+  end)
+
+  it("takes clickthrough as either a boolean or a number", function()
+    assert.is_true(createLabel(label, 0, 0, 10, 10, 1, true))
+    deleteLabel(label)
+    assert.is_true(createLabel(label, 0, 0, 10, 10, 1, 1))
+  end)
+end)
+
+describe("Tests the raised errors for a wrongly typed argument", function()
+
+  it("raises for a module name that is not a string", function()
+    assertArgError(function() return setModulePriority({}, 1) end, "setModulePriority: bad argument #1 type")
+  end)
+
+  it("raises for text to expand that is not a string", function()
+    assertArgError(function() return expandAlias({}) end, "expandAlias: bad argument #1 type (text to parse as string expected, got table!)")
+  end)
+
+  it("raises for an encoding that is not a string", function()
+    assertArgError(function() return setServerEncoding({}) end, "setServerEncoding: bad argument #1 type (newEncoding as string expected, got table!)")
+  end)
+
+  it("raises for a saveProfile file name that is not a string", function()
+    assertArgError(function() return saveProfile(nil, {}) end, "saveProfile: bad argument #2 type")
+  end)
+end)
+
+describe("Tests that the window functions refuse a window that does not exist", function()
+  local unknown = ("specContractsNoSuchWindow-%d-%d"):format(os.time(), math.random(100000))
+  local notFound = ('window "%s" not found'):format(unknown)
+
+  -- an array rather than a keyed table so the specs are always generated in
+  -- the same order
+  local calls = {
+    {"cecho", function() return cecho(unknown, "<red>x\n") end},
+    {"decho", function() return decho(unknown, "<255,0,0>x\n") end},
+    {"hecho", function() return hecho(unknown, "#FF0000x\n") end},
+    {"cechoLink", function() return cechoLink(unknown, "<red>x", "", "") end},
+    {"dechoLink", function() return dechoLink(unknown, "<255,0,0>x", "", "") end},
+    {"hechoLink", function() return hechoLink(unknown, "#FF0000x", "", "") end},
+    {"cinsertLink", function() return cinsertLink(unknown, "<red>x", "", "") end},
+    {"dinsertLink", function() return dinsertLink(unknown, "<255,0,0>x", "", "") end},
+    {"hinsertLink", function() return hinsertLink(unknown, "#FF0000x", "", "") end},
+    {"cechoPopup", function() return cechoPopup(unknown, "<red>x", {""}, {""}) end},
+    {"dechoPopup", function() return dechoPopup(unknown, "<255,0,0>x", {""}, {""}) end},
+    {"hechoPopup", function() return hechoPopup(unknown, "#FF0000x", {""}, {""}) end},
+    {"cinsertPopup", function() return cinsertPopup(unknown, "<red>x", {""}, {""}) end},
+    {"dinsertPopup", function() return dinsertPopup(unknown, "<255,0,0>x", {""}, {""}) end},
+    {"hinsertPopup", function() return hinsertPopup(unknown, "#FF0000x", {""}, {""}) end},
+    {"cinsertText", function() return cinsertText(unknown, "<red>x") end},
+    {"replace", function() return replace(unknown, "x") end},
+    {"replace keepcolor", function() return replace(unknown, "x", true) end},
+    {"replaceLine", function() return replaceLine(unknown, "x") end},
+    {"gagLine", function() return gagLine(unknown) end},
+    {"setHexFgColor", function() return setHexFgColor(unknown, "FF0000") end},
+    {"setHexBgColor", function() return setHexBgColor(unknown, "FF0000") end},
+    {"clearUserWindow", function() return clearUserWindow(unknown) end},
+    {"closeUserWindow", function() return closeUserWindow(unknown) end},
+    {"cut", function() return cut(unknown) end},
+  }
+
+  for _, entry in ipairs(calls) do
+    local functionName, call = entry[1], entry[2]
+    it(functionName .. " answers nil and why, leaving the main console alone", function()
+      echo("main", "\nspecContracts line the call must not touch")
+      moveCursorEnd("main")
+      finally(function() echo("main", "\n") end)
+      local last = getLastLineNumber("main")
+      local line = getCurrentLine("main")
+      assert.are.same({nil, notFound}, {call()})
+      assert.are.equal(last, getLastLineNumber("main"))
+      assert.are.equal(line, getCurrentLine("main"))
+    end)
+  end
+
+  it("enableClickthrough and disableClickthrough answer nil and why", function()
+    local labelNotFound = ("label name '%s' not found"):format(unknown)
+    assert.are.same({nil, labelNotFound}, {enableClickthrough(unknown)})
+    assert.are.same({nil, labelNotFound}, {disableClickthrough(unknown)})
+  end)
+
+  it("hideWindow, moveWindow and resizeWindow name the main console as one they cannot use", function()
+    local refusal = 'window "main" is of type "main", which this function cannot use'
+    assert.are.same({nil, refusal}, {hideWindow("main")})
+    assert.are.same({nil, refusal}, {moveWindow("main", 1, 1)})
+    assert.are.same({nil, refusal}, {resizeWindow("main", 800, 600)})
+  end)
+end)
+
+describe("Tests that cut works on the window it is given", function()
+  it("cuts the selection in that window and leaves the main console alone", function()
+    local window = ("specContractsCut-%d-%d"):format(os.time(), math.random(100000))
+    assert.is_true(createMiniConsole(window, 0, 0, 200, 100))
+    finally(function()
+      deleteMiniConsole(window)
+      deselect("main")
+      echo("main", "\n")
+    end)
+    echo(window, "keep cutme keep")
+    echo("main", "\nspecContracts line cut must not touch")
+    moveCursorEnd("main")
+    selectCurrentLine("main")
+    local line = getCurrentLine("main")
+    assert.is_true(selectString(window, "cutme", 1) > -1)
+
+    assert.are.same({true}, {cut(window)})
+
+    assert.are.same({"keep  keep"}, getLines(window, 0, 1))
+    assert.are.equal(line, getCurrentLine("main"))
+  end)
+
+  it("still cuts from the main console when given something other than a window name", function()
+    finally(function() echo("main", "\n") end)
+    deselect("main")
+    assert.are.same({true}, {cut(nil)})
+    echo("main", "\nspecContracts cutFromMain line")
+    moveCursorEnd("main")
+    assert.is_true(selectString("main", "cutFromMain ", 1) > -1)
+    assert.are.same({true}, {cut(5)})
+    assert.are.equal("specContracts line", getCurrentLine("main"))
+  end)
+end)
+
+describe("Tests that closeUserWindow answers what it did", function()
+  it("answers true for a window it closes", function()
+    local window = ("specContractsClose-%d-%d"):format(os.time(), math.random(100000))
+    assert.is_true(createMiniConsole(window, 0, 0, 200, 100))
+    finally(function() deleteMiniConsole(window) end)
+    assert.are.same({true}, {closeUserWindow(window)})
+  end)
+
+  it("names a label as a window it cannot close", function()
+    local label = ("specContractsCloseLabel-%d-%d"):format(os.time(), math.random(100000))
+    assert.is_true(createLabel(label, 0, 0, 10, 10, 1))
+    finally(function() deleteLabel(label) end)
+    local refusal = ('window "%s" is of type "label", which this function cannot use'):format(label)
+    assert.are.same({nil, refusal}, {closeUserWindow(label)})
+  end)
+end)
+
+describe("Tests that gagLine works on the window it is given", function()
+  it("deletes the line in that window and leaves the main console alone", function()
+    local window = ("specContractsGag-%d-%d"):format(os.time(), math.random(100000))
+    assert.is_true(createMiniConsole(window, 0, 0, 200, 100))
+    finally(function()
+      deleteMiniConsole(window)
+      echo("main", "\n")
+    end)
+    echo(window, "first in the window\nsecond in the window")
+    assert.is_true(moveCursor(window, 0, 0))
+    echo("main", "\nspecContracts line gagLine must not touch")
+    moveCursorEnd("main")
+    local last = getLastLineNumber("main")
+    local line = getCurrentLine("main")
+
+    assert.are.same({true}, {gagLine(window)})
+
+    assert.are.same({"second in the window"}, getLines(window, 0, 1))
+    assert.are.equal(last, getLastLineNumber("main"))
+    assert.are.equal(line, getCurrentLine("main"))
+  end)
+end)
+
+describe("Tests that the window functions answer true for a window that exists", function()
+  local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
+  local window = "specContractsWindow" .. suffix
+  local label = "specContractsLabel" .. suffix
+
+  setup(function()
+    assert.is_true(createMiniConsole(window, 0, 0, 200, 100))
+    assert.is_true(createLabel(label, 0, 0, 50, 20, 1))
+  end)
+
+  teardown(function()
+    deleteMiniConsole(window)
+    deleteLabel(label)
+  end)
+
+  local calls = {
+    {"cecho", function() return cecho(window, "<red>x\n") end},
+    {"decho", function() return decho(window, "<255,0,0>x\n") end},
+    {"hecho", function() return hecho(window, "#FF0000x\n") end},
+    {"cecho to a label", function() return cecho(label, "<red>x") end},
+    {"cechoLink", function() return cechoLink(window, "<red>x", "", "") end},
+    {"dechoLink", function() return dechoLink(window, "<255,0,0>x", "", "") end},
+    {"hechoLink", function() return hechoLink(window, "#FF0000x", "", "") end},
+    {"cinsertLink", function() return cinsertLink(window, "<red>x", "", "") end},
+    {"dinsertLink", function() return dinsertLink(window, "<255,0,0>x", "", "") end},
+    {"hinsertLink", function() return hinsertLink(window, "#FF0000x", "", "") end},
+    {"cechoPopup", function() return cechoPopup(window, "<red>x", {""}, {""}) end},
+    {"dechoPopup", function() return dechoPopup(window, "<255,0,0>x", {""}, {""}) end},
+    {"hechoPopup", function() return hechoPopup(window, "#FF0000x", {""}, {""}) end},
+    {"cinsertPopup", function() return cinsertPopup(window, "<red>x", {""}, {""}) end},
+    {"dinsertPopup", function() return dinsertPopup(window, "<255,0,0>x", {""}, {""}) end},
+    {"hinsertPopup", function() return hinsertPopup(window, "#FF0000x", {""}, {""}) end},
+    {"cinsertText", function() return cinsertText(window, "<red>x") end},
+    {"dinsertText", function() return dinsertText(window, "<255,0,0>x") end},
+    {"hinsertText", function() return hinsertText(window, "#FF0000x") end},
+    {"echoUserWindow", function() return echoUserWindow(window, "x\n") end},
+    {"pasteWindow", function() return pasteWindow(window) end},
+    {"wrapLine", function() return wrapLine(window, 0) end},
+    {"moveWindow", function() return moveWindow(window, 1, 1) end},
+    {"resizeWindow", function() return resizeWindow(window, 200, 100) end},
+    {"hideWindow", function() return hideWindow(window) end},
+    {"setFgColor", function() return setFgColor(window, 255, 0, 0) end},
+    {"setHexFgColor", function() return setHexFgColor(window, "FF0000") end},
+    {"setHexBgColor", function() return setHexBgColor(window, "FF0000") end},
+    {"enableClickthrough", function() return enableClickthrough(label) end},
+    {"disableClickthrough", function() return disableClickthrough(label) end},
+  }
+
+  for _, entry in ipairs(calls) do
+    it(entry[1] .. " answers true", function()
+      assert.are.same({true}, {entry[2]()})
+    end)
+  end
+
+  it("replace and replaceLine answer true", function()
+    echo(window, "\nspecContracts replace me")
+    assert.is_true(moveCursor(window, 0, getLastLineNumber(window)))
+    assert.is_true(selectString(window, "replace", 1) > -1)
+    assert.are.same({true}, {replace(window, "swapped")})
+    assert.are.same({true}, {replaceLine(window, "whole line")})
+    assert.are.equal("whole line", getCurrentLine(window))
+  end)
+
+  it("clearWindow answers nothing, so clearing from the command line prints nothing", function()
+    assert.are.same({}, {clearWindow(window)})
+  end)
+end)

@@ -1,0 +1,432 @@
+/***************************************************************************
+ *   Copyright (C) 2026 by Mudlet Developers                               *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+
+#pragma once
+
+#include <QColor>
+#include <QFlags>
+#include <QList>
+#include <QString>
+#include <QStringList>
+
+class QFont;
+class QIcon;
+class QPixmap;
+class QSize;
+
+// A look for the modern 3D mapper: one renderer draws every style, and a preset
+// says how. A style is picked per profile by its id, which is what
+// setConfig("mapStyle") takes, so an id must never change once released.
+struct MapStyle
+{
+    // What marks a highlighted room
+    enum class HighlightShape {
+        // The 2D map's disc, shading from the room's highlight center color out to its highlight color
+        Disc,
+        // A soft glow over the room, brightest at its middle and fading out past it
+        Glow,
+        // A dashed ring around the room, as a pencil marks a spot on a plan
+        DashedEllipse,
+        // Two thin rings around the room, one inside the other
+        DoubleEllipse,
+        // A broad soft ring on the ground round the room, clear in its middle
+        Halo,
+        // The room's own square or circle filled, as a text screen's cursor fills its cell
+        Cell,
+        // Two bright rings with a faint glow between them, on the ground round the room
+        Rings,
+        // A crisp line in the room's shape on the ground round it, with a faint glow either side of it
+        Outline
+    };
+
+    // What rings the player's room, where the profile keeps the original player room marker
+    enum class PlayerRing {
+        // That marker
+        Profile,
+        // A thin ring in playerColor
+        Thin,
+        // A registration mark in playerColor: a thin ring crossed by two lines that run on past it
+        Crosshair
+    };
+
+    enum class Palette {
+        // Each room in its environment's color, as on the 2D map
+        Environment,
+        // A drafting sheet: rooms filled with the style's background, only faintly tinted by their environment's color, and drawn in its ink
+        Ink,
+        // A text screen: each room's character in its environment's color, lifted where that would vanish into the
+        // dark background, as a terminal shows its black as dark gray
+        Terminal,
+        // A metro map: every room filled white as a station is, its environment's color going to the ring around it
+        Stations,
+        // Each room in its environment's color, softened toward a lit pastel: less saturated, and kept from the
+        // darkest and lightest
+        Soft,
+        // Projected light: every room glowing in its environment's hue, at full strength and kept bright enough to
+        // glow on the dark background; a gray environment glows in the style's ink
+        Light,
+        // Watercolor on paper: every room the paper lightly washed with its environment's hue, so that the ink line
+        // around it and what is drawn on it read; the hue kept, so areas still tell apart
+        Wash,
+        // A painted miniature: each room in its environment's color, a little desaturated, kept from the darkest and
+        // lightest, and warmed, as model paints are
+        Painted
+    };
+
+    enum class Shape {
+        // Round where the profile has round rooms, else square
+        Profile,
+        // Always round, whatever the profile says
+        Round
+    };
+
+    enum class Edges {
+        // A rim around each room on the viewed level, so that level stands apart from the others
+        ViewedLevelRim,
+        // A thin line around each room's top in the style's ink: solid on the viewed level, dashed and dimmed
+        // with no fill on the others
+        InkOutlines,
+        // A metro map's station: a ring just inside each room's edge in ringColor(), and a heavier one in the style's ink
+        // around an interchange, a room with interchangeExits or more exits
+        StationRings,
+        // A base around each room on the viewed level, halfway from the room's color to the background, so the
+        // room reads as a block with shaded sides
+        ViewedLevelBase,
+        // A hologram: no fill, every edge of each room's block and of each exit's bar a glowing line, all added onto what
+        // is behind rather than covering it, so that rooms and levels show through each other
+        GlowingWireframes,
+        // An ink sketch: each room's top a pale lozenge in a wobbly ink line, hatched on the levels above the viewed one
+        // and only dashed on those below, and each exit a brush stroke thinning toward its end, each uneven in a way it
+        // takes from where it stands so that it holds still
+        InkLozenges,
+        // A tabletop model: no rim, each room a block shaded under soft light from above with its top's edges rounded
+        // off, darkening where it meets the ground and casting a soft shadow there, and each exit a low path on the ground
+        ModelBlocks
+    };
+
+    enum class Doors {
+        // The 2D map's door strokes in the door's status color
+        Strokes,
+        // A plan's door: a leaf hinged at the side of the opening and the arc it swings through,
+        // swung open for an open door and shut across the opening for a closed or locked one
+        Swings,
+        // A short bar across the line just outside the room, in the door's status color
+        Bars
+    };
+
+    enum class PlayerMarker {
+        // The profile's ring around the player's room, and a column of light over it
+        Ring,
+        // A bullseye on the player's room, and beside it a pill in the style's ink reading "YOU" on a leader to it,
+        // as on a map at a station's entrance
+        Pill,
+        // The player's room drawn in playerRoomColor(), with a diamond of light in that color hovering over it and
+        // sending out a ring of light each time the player arrives
+        Pulse,
+        // The player's room stamped in playerRoomColor() as a seal on a painting, with a frame cut into it
+        Seal,
+        // A game's pawn in playerRoomColor(), a foot, a body and a ball for a head, standing on the player's room,
+        // which keeps its own color
+        Token
+    };
+
+    enum class Compass {
+        // A disc with a needle in compassNeedle
+        Rose,
+        // An ink arrow with an N at its head, as drawn in a sketch map's corner
+        Arrow
+    };
+
+    enum class Glyphs {
+        // The room's own symbol, drawn on its top
+        RoomSymbols,
+        // No blocks: every room is a character on a grid of character cells half rooms' spacing across, as
+        // RoomAppearance::terminalGlyph() picks, and its exits are rows of line characters in the cells between
+        Terminal
+    };
+
+    enum class PostEffect {
+        NoPostEffects = 0x0,
+        // Every few rows of pixels of what is drawn on the map dimmed, as on a projected image
+        Scanlines = 0x1,
+        // The background drawn as paper, with a faint grain that stays put on the screen
+        PaperGrain = 0x2,
+        // The brightest of what is drawn blurred and added back, so that lines of light glow softly
+        Bloom = 0x4,
+        // The view darkened a little toward its edges and corners, as an old sheet is
+        Vignette = 0x8,
+        // The background a pale sky, light blue at the top of the view fading to a warm haze at its foot
+        Sky = 0x10,
+        // A tilt-shift photograph's shallow focus: sharp in a band across the view through the player, blurring
+        // toward the view's top and foot, so that the map looks like a model seen up close
+        TiltShift = 0x20
+    };
+    Q_DECLARE_FLAGS(PostEffects, PostEffect)
+
+    QString id;
+    Palette palette = Palette::Environment;
+    // How many times a room's width fits in the space between rooms
+    float roomScale = 4.0f;
+    // How many times a room's height fits in its width
+    float roomFlattening = 8.0f;
+    Shape shape = Shape::Profile;
+    Edges edges = Edges::ViewedLevelRim;
+    // Lit blocks are shaded by the scene's light, unlit ones are their flat color
+    bool lit = true;
+    // Invalid for the profile's mapper background color
+    QColor background;
+    // Empty for the map's symbol font
+    QString labelFontFamily;
+    // Used instead of the profile's mapper background where the profile keeps the default black; invalid to keep it
+    QColor defaultBackground;
+    HighlightShape highlightShape = HighlightShape::Disc;
+    // Only for a highlighted room without a valid color of its own: a script's highlightRoom() colors carry meaning
+    QColor highlightColor;
+    // How much bigger than the highlight radius the room was given a shape is drawn, but for the cell
+    float highlightScale = 1.0f;
+    PlayerRing playerRing = PlayerRing::Profile;
+    // The player's ring and the beacon over the player's room, where the profile keeps the original player room
+    // marker; invalid for that marker's red
+    QColor playerColor;
+    // Map labels of text drawn again in labelFontFamily and mapLabelColor without the box behind them, but for what
+    // the label was given on purpose: its own font, a text color with a hue, a box with a hue
+    bool themedMapLabels = false;
+    QColor mapLabelColor;
+    // Around the text of a themed label with no box, so it reads over rooms; invalid for none
+    QColor mapLabelHalo;
+    // In rooms' spacing; 0 for no limit
+    float mapLabelMaxHeight = 0.0f;
+    // Behind the text of a themed label with no box, a rounded tag in this color, as a model's name card; invalid
+    // for none. It takes the place of mapLabelHalo
+    QColor mapLabelPlate;
+    // Behind a room's symbol, a rounded tag in this color, as a model's sign; invalid for none. A symbol given no
+    // color of its own is then drawn to stand out on the tag rather than on the room
+    QColor symbolPlate;
+    // Room names, as quieter annotations: their color where the room was given none of its own, invalid for the
+    // color that stands out on the background, and their size against the usual where the map was given no font
+    QColor roomNameColor;
+    float roomNameScale = 1.0f;
+    // Room names in bold where the map was given no font, as they are where roomNameColor is invalid
+    bool roomNameBold = false;
+    // Around a room's name, a rim in this color, so that it reads over whatever lies under it; see roomNameHaloFor().
+    // Where it is invalid, or the name reads on no rim it allows, the name has the background's rim if labelHalos or
+    // nameHalos is set, else none
+    QColor roomNameHalo;
+    // Invalid for the background, the color that stands out on it, and red
+    QColor compassFace;
+    QColor compassRim;
+    QColor compassNeedle;
+    // The room info box, where the profile keeps the default background for it; invalid for that, and for black or
+    // white text, whichever stands out on the background
+    QColor infoBackground;
+    QColor infoTextColor;
+    // Each room's top shaded from light at its north west to dark at its south east, with a soft shadow on the ground
+    // to its south east
+    bool shadedBlocks = false;
+    // Exits straight up or down drawn dashed, as a stair is on a plan
+    bool dashedStairs = false;
+    PostEffects postEffects;
+    Glyphs glyphs = Glyphs::RoomSymbols;
+    // With the Terminal glyphs, a room with no symbol or stairs shown by the kind of ground its environment is, as
+    // RoomAppearance::groundGlyph() draws it, rather than as #; and a symbol underlined in its room's color
+    bool groundGlyphs = false;
+    // The Ink palette's lines and text; invalid for the profile's exit color
+    QColor ink;
+    // Exit lines' color where it is not ink's, as a terminal's dim text is beside its bright text; invalid for ink
+    QColor exitInk;
+    // How much of its environment's color the Ink palette fills a room with, from none to all of it
+    float inkTint = 0.18f;
+    // The least lightness the Ink palette lifts an environment's color to before tinting with it, so that dark
+    // environments still read as pale washes of their color on the sheet
+    float inkLightness = 0.0f;
+    // The InkOutlines edges' line width, as a part of a room's width
+    float inkOutlineWidth = 0.035f;
+    // A column rising from the player's room
+    bool playerBeacon = true;
+    // The style's lettering: its spacing as a percentage of the font's usual, and whether it is set in capitals
+    qreal labelLetterSpacing = 100.0;
+    bool labelCapitals = false;
+    // Room names side by side are kept only this many spaces apart, which spaced capitals need not to run together
+    qreal roomNameGap = 0.0;
+    // A drafting sheet's title block in a corner of the view: the area's name, and which of its levels is shown
+    bool titleBlock = false;
+    // Each other level shown named, with its count of rooms, beside it at the end of a leader line
+    bool levelCallouts = false;
+    // Invalid to draw the profile's grid, when it shows one; else the style's own, always shown, with its lines
+    // between the rooms and every fifth one stronger
+    QColor gridColor;
+    // Exit lines' width, as a part of the width the profile's exit size gives
+    float exitWidthFactor = 1.0f;
+    Doors doors = Doors::Strokes;
+    // A faint plate under each level's rooms, which tints the background behind rooms filled with it
+    bool floorPlates = true;
+    // A line along the view's foot naming the area, the player's room and the ways out of it, and the room under the
+    // mouse pointer, as a terminal's status line in the profile's ANSI colors
+    bool statusLine = false;
+    PlayerMarker playerMarker = PlayerMarker::Ring;
+    // Exit lines between two rooms of one environment drawn in ringColor() of it, as a metro map draws its lines,
+    // and the rest in exitColor()
+    bool environmentLines = false;
+    // With environmentLines, lines between rooms of two environments; invalid for exitColor()
+    QColor mixedLineColor;
+    // With Edges::StationRings, a station that a line of its own environment reaches ringed in ink, as that line
+    // already shows its environment
+    bool inkRimsOnLines = false;
+    // With Edges::StationRings, a station's ring as a share of its width; an interchange's is wider
+    float stationRing = 0.2f;
+    // Other levels drawn not in place but as platforms over and under the view, each named and showing a few of its
+    // stations, on a dotted shaft from the stair that reaches them
+    bool levelPlatforms = false;
+    // A key to the lines' colors, by the kind of ground each environment is, and to the doors
+    bool lineLegend = false;
+    // The fewest exits that make a room an interchange, as Edges::StationRings draws one; 0 for none
+    int interchangeExits = 0;
+    // Each room built as EnvironmentKit picks for its environment, a room with rooms straight above it a building of
+    // that many storeys, all standing on a wooden board under the viewed level
+    bool environmentKits = false;
+    // With environmentKits, how strongly the viewed level's exits also show as a faint line over the paving, grass
+    // and water that would otherwise hide the paths inlaid in the board; 0 for not at all
+    float pavedPathStrength = 0.0f;
+    // Room names and map labels drawn with a rim of the background around them, so that lines under them do not
+    // run through the text
+    bool labelHalos = false;
+    // Room names and map labels multiplied by this color, to sit back in the scene; invalid for their own colors
+    QColor labelTint;
+    // Brackets in the view's corners and, in its top left, the area's name, levels and rooms, as on a scanner's display
+    bool scannerOverlay = false;
+    // Each room on the viewed level laid in a watercolor wash of washColor() this many rooms' widths across, so that
+    // neighbors of one environment run together into a field of it; 0 for none
+    float washReach = 0.0f;
+    // A small drawing on each room of the viewed level by the kind of ground its environment is, as
+    // EnvironmentKit names it: trees in a forest, waves on water; left out while rooms are too small on screen for it
+    bool environmentMarks = false;
+    Compass compass = Compass::Rose;
+    // A bar along the view's foot showing how far a few rooms are at the view's center
+    bool scaleBar = false;
+    // A note beside the player's room, in playerRoomColor(), saying the player is there
+    bool playerNote = false;
+    // The style's lettering slanted
+    bool labelItalic = false;
+    // Room names stand facing the screen, upright as a printed map's lettering, hung just below their room as it is
+    // drawn; else they lie on the map, where a tilted view slants and squeezes them
+    bool uprightNames = false;
+    // Room names alone drawn with a rim of the background around them, which labelHalos gives map labels too
+    bool nameHalos = false;
+    // A name's rim fading out from the letters as a glow does, rather than ending in an edge
+    bool softNameHalos = false;
+    // Behind the text of a themed label with no box, a patch of this color fading out at its edges, as paper scraped
+    // clean for the lettering, so that rooms and lines under the label do not show through it; invalid for none. It
+    // takes the place of mapLabelHalo
+    QColor mapLabelKnockout;
+    // Rooms and exits on the levels above and below the viewed one drawn in these colors rather than their own, before
+    // they fade, so that those levels read as one quiet layer behind it, still telling above from below; invalid to
+    // keep their own
+    QColor levelsAboveColor;
+    QColor levelsBelowColor;
+
+    QString displayName() const;
+    // Whether this style's player ring and color take the place of the profile's player room marker
+    bool themesPlayerMarker(int profilePlayerRoomStyle, bool strongHighlight) const;
+    // The info box's background, given the profile's
+    QColor infoBackgroundColor(const QColor& profileInfoBackground) const;
+    // A room's border, given the profile's, where the room was given none of its own
+    QColor roomBorderColor(const QColor& profileBorder, const QColor& roomColor, const QColor& background) const;
+    // A room's name color, given the color it was given as user data
+    QColor roomNameColorFor(const QString& roomColorData, const QColor& background) const;
+    // A highlighted room's highlight color, given the one it was highlighted in
+    QColor highlightColorFor(const QColor& roomHighlightColor) const;
+    // For a shape drawn in one color: a script fading the 2D disc out to a clear outer color is shown in its center color
+    QColor highlightColorFor(const QColor& roomHighlightColor, const QColor& roomHighlightCenterColor) const;
+    QColor roomColor(const QColor& environmentColor) const;
+    QColor backgroundColor(const QColor& profileBackground) const;
+    bool roundRooms(bool profileRoundRooms) const;
+    QFont labelFont(const QFont& mapSymbolFont) const;
+    // Sets the style's lettering on a font that has its family
+    void letter(QFont& font) const;
+    // Room IDs are drawn a digit at a time, which letter spacing would leave a gap after
+    QFont roomIdFont(const QFont& mapSymbolFont) const;
+    // How wide a room name is kept clear, given how wide it and a space are drawn
+    qreal roomNameSpan(qreal nameWidth, qreal spaceWidth) const;
+    // roomSymbolColor is the room's own, invalid unless one was set; drawnRoomColor is roomColor()'s
+    QColor symbolColor(const QColor& roomSymbolColor, const QColor& drawnRoomColor) const;
+    // Whether text or a symbol in this color would read on a tag of this one, for mapLabelPlate, symbolPlate and
+    // roomNameHalo
+    static bool readsOnPlate(const QColor& color, const QColor& plate);
+    // The rim round a room's name in this color: roomNameHalo, else black or white where the name would not read on
+    // it, so that a script's light color still shows on a light board; invalid for none of them
+    QColor roomNameHaloFor(const QColor& nameColor) const;
+    // A color laid over an opaque one, as blending draws it
+    static QColor over(const QColor& top, const QColor& under);
+    // The contrast ratio of two opaque colors as WCAG measures it, from 1 for none to 21 for black on white
+    static qreal contrastRatio(const QColor& first, const QColor& second);
+    // The least contrast ratio names and labels are drawn with: WCAG's for body text
+    static constexpr qreal scmLeastTextContrast = 4.5;
+    // What a room name in the style's own color is drawn on, given the profile's background: its rim laid over the
+    // background, else the background; and the name as it shows there, tinted by labelTint
+    QColor roomNameBacking(const QColor& profileBackground) const;
+    QColor shownRoomNameColor(const QColor& profileBackground) const;
+    // The same for a themed map label in the style's own color, on its plate, knockout or halo
+    QColor mapLabelBacking(const QColor& profileBackground) const;
+    QColor shownMapLabelColor(const QColor& profileBackground) const;
+    QColor exitColor(const QColor& profileExitColor) const;
+    QColor roomIdColor(const QColor& drawnRoomColor) const;
+    // roomBorderColor is the room's own, invalid unless one was set; drawnRoomColor is roomColor()'s
+    QColor wireColor(const QColor& roomBorderColor, const QColor& drawnRoomColor) const;
+    // A room's or exit's color on a level other than the viewed one, given the one it is drawn in on the viewed level
+    QColor otherLevelColorFor(const QColor& drawnColor, bool above) const;
+    // How much of its saturation a level other than the viewed one keeps, given how much of its own it would: all of
+    // this style's own color for it, which is already the one hue those levels share
+    float otherLevelSaturation(float levelSaturation, bool above) const;
+    // The player's room, where its marker could not be made
+    QColor playerRoomColor() const;
+    // A ring or a line in an environment's color, made darker or lighter where it would not stand out on backgroundColor()
+    QColor ringColor(const QColor& environmentColor, const QColor& profileBackground) const;
+    // The wash around rooms of an environment: its hue, soft and light enough for ink to read on, and fainter the
+    // grayer it is, as a gray has no color to lay down
+    QColor washColor(const QColor& environmentColor) const;
+
+    // A small picture of the style for picking it: six rooms in its palette, shape and edges joined by its exits, and
+    // the player's room marked as the style marks it, drawn for a screen of that many device pixels to a logical one
+    QPixmap previewPixmap(const QSize& size, qreal devicePixelRatio) const;
+    // previewPixmap() for each ratio of the screens attached, so that it is sharp on every one of them
+    QIcon previewIcon(const QSize& size) const;
+
+    // The Sky post effect's colors at the view's top and foot
+    static constexpr QColor scmSkyTop{207, 226, 238};
+    static constexpr QColor scmSkyFoot{239, 233, 220};
+    // With environmentKits: a building's walls are its environment's color washed this far toward plaster, under a roof
+    // in the color itself; a tree's crown is its environment's color darkened by this much over a trunk of wood; and
+    // the board under the viewed level has a top and a front edge of these
+    static constexpr QColor scmPlaster{236, 224, 200};
+    static constexpr float scmToPlaster = 0.6f;
+    static constexpr QColor scmTrunkColor{107, 74, 42};
+    static constexpr float scmCrownDarkening = 0.6f;
+    static constexpr QColor scmBoardTop{203, 194, 164};
+    static constexpr QColor scmBoardFront{160, 138, 102};
+
+    static QString defaultId();
+    // In the order the preferences list them
+    static const QList<MapStyle>& all();
+    static QStringList ids();
+    // nullptr when no style has that id
+    static const MapStyle* find(const QString& id);
+    static const MapStyle& findOrDefault(const QString& id);
+};
+
+Q_DECLARE_OPERATORS_FOR_FLAGS(MapStyle::PostEffects)

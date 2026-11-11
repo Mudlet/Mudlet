@@ -34,9 +34,16 @@ struct GameDetail
     QString websiteInfo;
     QString icon;
     QString description;
-    // the game's bundled loader installs the game's own full interface, so
-    // the generic starter UI is not preinstalled for it:
-    bool providesOwnUi = false;
+    // how the game installs its own full interface, if it does - the generic
+    // starter UI is then not preinstalled for it:
+    enum class OwnUi {
+        None,
+        // a loader bundled with Mudlet fetches the interface itself
+        BundledLoader,
+        // the game sends a Client.GUI package, often only after login
+        ClientGui
+    };
+    OwnUi ownUi = OwnUi::None;
     // other hostnames the game is reachable under:
     QStringList alternateHostUrls;
 };
@@ -65,14 +72,14 @@ public:
         return result;
     }
 
-    inline static bool gameProvidesOwnUi(const QString& hostUrl)
+    inline static GameDetail::OwnUi gameOwnUi(const QString& hostUrl)
     {
         for (const auto& game : scmDefaultGames) {
-            if (game.providesOwnUi && (!game.hostUrl.compare(hostUrl, Qt::CaseInsensitive) || game.alternateHostUrls.contains(hostUrl, Qt::CaseInsensitive))) {
-                return true;
+            if (game.ownUi != GameDetail::OwnUi::None && (!game.hostUrl.compare(hostUrl, Qt::CaseInsensitive) || game.alternateHostUrls.contains(hostUrl, Qt::CaseInsensitive))) {
+                return game.ownUi;
             }
         }
-        return false;
+        return GameDetail::OwnUi::None;
     }
 
     // clang-format off
@@ -117,8 +124,8 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "If you are interested in a completely free, immersive RP/PK experience, in a vibrant land filled "
                  "with lore/intrigue, where you can forge long-lasting friendships and bitter rivalries, and have an "
                  "opportunity to leave your lasting mark and be remembered forever, then welcome ye to the "
-                 "Abandoned Realms.")
-            },
+                 "Abandoned Realms."),
+            GameDetail::OwnUi::ClientGui},
             {qsl("Avalon.de"), // Name
              qsl("avalon.mud.de"), // address to connect to
              23, // port to connect on
@@ -198,6 +205,54 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
              qsl(":/icons/batmud_mud.png"),
              QString()},
 
+            {qsl("DarkMists"),
+             qsl("darkmists.org"),
+             2222,
+             false,
+             qsl("<a href='https://darkmists.org'>https://darkmists.org</a>"),
+             qsl(":/icons/banner_darkmists.png"),
+             qsl("Dark Mists is a persistent online fantasy world featuring 24 races "
+                 "and 11 classes, 9 of which branch into distinct subclasses, with "
+                 "dozens of quests and hundreds of skills and spells tied to class, "
+                 "subclass, or race. The world is shaped by the players through "
+                 "active clans and a worship system with direct interaction with "
+                 "the Gods of Dark Mists. The Immortals are present in-game and "
+                 "continue developing new content for the world. The community is "
+                 "welcoming and helpful to newcomers while encouraging competition "
+                 "and growth. Houses remain active and provide guidance and support "
+                 "for new and returning players. Roleplay is required and "
+                 "playerkilling is an integral part of character growth, rewarding "
+                 "wit, courage, and ambition. The world continues to evolve with "
+                 "new discoveries and challenges. Come carve out your legacy in "
+                 "Dark Mists."),
+             GameDetail::OwnUi::ClientGui},
+
+            {qsl("DreamLand"),
+             qsl("dreamland.rocks"),
+             9000,
+             false,
+             qsl("<a href='https://dreamland.rocks'>Website</a><br>"
+                 "<a href='https://discord.gg/Ds46EpdKaF'>Discord</a>"),
+             qsl(":/icons/banner_dreamland.png"),
+             qsl("Two gods built Thera as a mirror copy of someone else's world. Several "
+                 "epochs and a great many funerals later, the copy has stopped taking notes "
+                 "and started taking lives."
+                 "\n\n"
+                 "23 races, 13 classes, alignment, ethos and 44 gods and cults add up to "
+                 "over 30,000 builds, and each one plays differently. Every random drop, "
+                 "quest reward and crafted piece sits on one power scale. Forge your own "
+                 "blades, cut gems, ink tattoos. Endless personal quests, 56 area quests, "
+                 "tiered mobs that call their friends and cast at you from the next room, "
+                 "remort, and ten clans, most with skills nobody else gets."
+                 "\n\n"
+                 "The whole game is in English, Ukrainian and Russian: one world, and every "
+                 "player sees it in their own language. Many of our regulars are blind, so "
+                 "everything works with a screen reader. Mudlet gets our own interface on "
+                 "connect: bars, chat tabs and the panels from our web client."
+                 "\n\n"
+                 "Dying is part of the tutorial."),
+             GameDetail::OwnUi::ClientGui},
+
             {qsl("God Wars II"),
              qsl("godwars2.org"),
              3000,
@@ -258,7 +313,8 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "提剑跨骑挥鬼雨，白骨如山鸟惊飞。\n"
                  "尘事如潮人如水，只叹江湖几人回。"
                  "\n\n"
-                 "中文开源武侠MUD炎黄群侠传，游戏包括25大门派和5大世家，正邪只在一念间；近千门武学等你学习，上百种任务随你体验；让自己成为一代宗师，江湖笑，恩怨了。")},
+                 "中文开源武侠MUD炎黄群侠传，游戏包括25大门派和5大世家，正邪只在一念间；近千门武学等你学习，上百种任务随你体验；让自己成为一代宗师，江湖笑，恩怨了。"),
+             GameDetail::OwnUi::ClientGui},
 
             {qsl("Petria"),
              qsl("game.petriamud.com"),
@@ -303,6 +359,31 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "for changes, and the Newbie Council assists new players. Our team of Immortals "
                  "are always willing to answer questions and to help out however necessary. Best "
                  "of all, playing the Realms of Despair is totally FREE!")},
+
+            {qsl("Rites of Passage MUD"),
+             qsl("play.ropmud.com"),
+             4443,
+             false,
+             qsl("<a href='https://ropmud.com/index.html'>Website</a><br>"
+                 "<a href='https://discord.gg/CkYm9WRnyw'>Discord</a>"),
+             qsl(":/icons/banner_ropmud.png"),
+             qsl("Rites of Passage is a PVPVE (Player vs Player vs Environment) MUD where Good "
+                 "and Evil are locked in eternal war. Hunt powerful monsters for legendary "
+                 "loot, then defend it from enemy players hunting you. Every expedition into "
+                 "dangerous territory carries the thrill of both PvE challenge and PvP risk."
+                 "\n\n"
+                 "The environment is deadly - 80+ areas filled with creatures guarding "
+                 "valuable equipment, quests that reward the bold, and a remort system that "
+                 "lets you grow stronger with each life. But the real tension comes from "
+                 "other players. That raid boss you're fighting? The enemy faction might be "
+                 "watching, waiting for you to weaken before they strike. That rare gem "
+                 "you just looted? You'll need to make it home alive."
+                 "\n\n"
+                 "This is a PK MUD. Combat between Good and Evil players isn't just allowed "
+                 "- it's encouraged. Killing enemies earns warpoints, experience, and their "
+                 "gear. Climb the ranks. Make the topten list. Build your reputation through "
+                 "conquest. If you want the risk of PvP combined with challenging "
+                 "environment combat, you've found your home.")},
 
             {qsl("ZombieMUD"),
              qsl("zombiemud.org"),
@@ -407,7 +488,8 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
              qsl(":/icons/midnightsun2.png"),
              qsl("Midnight Sun is a medieval fantasy LPmud that has been around since 1991. We are a "
                  "non-PK, hack-and-slash game, cooperative rather than competitive in nature, and "
-                 "with a strong sense of community.")},
+                 "with a strong sense of community."),
+             GameDetail::OwnUi::ClientGui},
 
             {qsl("Luminari"),
              qsl("luminarimud.com"),
@@ -458,7 +540,8 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "combat is allowed in much of the game. StickMUD was born in Finland in June 1991 "
                  "and is now hosted in Canada. Our diverse community of players and active game "
                  "engineers are ready to welcome new players like you to one of the best text-based "
-                 "multi-player games ever!")},
+                 "multi-player games ever!"),
+             GameDetail::OwnUi::ClientGui},
 
             {qsl("Clessidra"),
              qsl("mud.clessidra.it"),
@@ -487,7 +570,8 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "avanzatissimo sistema di Clan che permettera' guerre e conquiste. Disponibilità di "
                  "mercenari in caso di poca utenza, sistema di produzione/mercato per ottenere "
                  "esclusivi oggetti, un interfaccia grafica per aiutarti a giocare, sia per i novizi "
-                 "che gli esperti. Un MUD che si evolve di continuo.")},
+                 "che gli esperti. Un MUD che si evolve di continuo."),
+             GameDetail::OwnUi::ClientGui},
 
             {qsl("Reinos de Leyenda"),
              qsl("reinosdeleyenda.es"),
@@ -536,7 +620,8 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "completamente de los dioses- y unirte a uno de los reinos que los jugadores se "
                  "encargan de gobernar para explorar un mundo viviente, sumergirte en los misterios "
                  "del océano, dar forma a tu legado, forjar maravillas olvidadas para ti -o tus "
-                 "aliados- y luchar por fe, gloria o dinero.")},
+                 "aliados- y luchar por fe, gloria o dinero."),
+             GameDetail::OwnUi::ClientGui},
 
             {qsl("Fierymud"),
              qsl("fierymud.org"),
@@ -548,14 +633,20 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "players. This new reborne Fiery is a hope to bring back the goals of the past by "
                  "inflicting certain death on unsuspecting players. FieryMUD will continue to grow "
                  "and change through the coming years and those players who seek challenge and "
-                 "possess imagination will come in search of what the 3D world fails to offer them.")},
+                 "possess imagination will come in search of what the 3D world fails to offer them."),
+             GameDetail::OwnUi::ClientGui},
 
+            // Deliberately without artwork: the connection dialog draws an entry only as its artwork, so this
+            // testing aid (it needs Busted, which players lack) is listed and selectable yet invisible, while a
+            // developer can reach it with --profile="Mudlet self-test" or from "My games" in a debug build.
+            // An icon or a generated name plate would show it to everybody.
+            // See https://github.com/Mudlet/Mudlet/issues/6443
             {qsl("Mudlet self-test"),
              qsl("mudlet.org"),
              23,
              false,
              qsl("<a href='https://www.mudlet.org'>www.mudlet.org"),
-             QString(), // TODO: https://github.com/Mudlet/Mudlet/issues/6443
+             QString(), // empty on purpose - see the note above
              qsl("This isn't a game profile, but a special one for testing Mudlet itself using "
                  "Busted. You can also use it as a starting point to create automated tests for your "
                  "own profiles!")},
@@ -607,7 +698,7 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
              qsl(":/icons/carrionfields.png"),
              qsl("Carrion Fields is a unique blend of high-caliber roleplay and complex, hardcore "
                  "player-versus-player combat that has been running continuously, and 100% free, "
-                 "for over 25 years."
+                 "for over 30 years."
                  "\n\n"
                  "Choose from among 21 races, 17 highly customizable classes, and several cabals "
                  "and religions to suit your playstyle and the story you want to tell. Our "
@@ -616,10 +707,10 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "\n\n"
                  "We like to think of ourselves as the Dark Souls of MUDs, with a community that "
                  "is supportive of new players - unforgiving though our world may be. Join us for a "
-                 "real challenge and real rewards: adrenalin-pumping battles, memorable quests run "
+                 "real challenge and real rewards: adrenaline-pumping battles, memorable quests run "
                  "by our volunteer immortal staff, and stories that will stick with you for a "
                  "lifetime."),
-             true}, // CF-loader installs CFGUI
+             GameDetail::OwnUi::BundledLoader}, // CF-loader installs CFGUI
 
             {qsl("Cleft of Dimensions"),
              qsl("cleftofdimensions.net"),
@@ -644,7 +735,8 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "\n\n"
                  "The Cleft opened in July 2000 and has been in active development ever since. We're "
                  "always innovating. Recent features include Discord integration "
-                 "and areas written with artificial intelligence. Check us out!")},
+                 "and areas written with artificial intelligence. Check us out!"),
+             GameDetail::OwnUi::ClientGui},
 
             {qsl("Legends of the Jedi"),
              qsl("legendsofthejedi.com"),
@@ -670,7 +762,8 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "LOTJ offers full PVP in both ground and space combat, governed by a set of rules to "
                  "minimize griefing and ensure that all kills have sufficient in-character cause."
                  "\n\n"
-                 "What role will you play? The legend awaits!")},
+                 "What role will you play? The legend awaits!"),
+             GameDetail::OwnUi::ClientGui},
 
             {qsl("Multi-Users in Middle-earth"),
              qsl("mume.org"),
@@ -686,7 +779,8 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "challenging locations across Middle-earth such as Lothlórien, the Shire, Bree, "
                  "Rivendell, Goblin-town, Mirkwood, Dol Guldur, and the Mines of Moria. The game is "
                  "completely at no cost to play and has been continually enhanced since its "
-                 "inception in the fall of 1991.")},
+                 "inception in the fall of 1991."),
+             GameDetail::OwnUi::ClientGui},
 
             {qsl("MorgenGrauen"),
              qsl("mud.morgengrauen.info"),
@@ -718,7 +812,7 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "Unsere freundliche Spielerschaft hilft Dir gerne bei Deinen ersten Schritten."
                  "\n\n"
                  "Spiel jetzt oder nie!"),
-             true, // mg-loader installs MorgenGrauen's own interface
+             GameDetail::OwnUi::BundledLoader, // mg-loader installs MorgenGrauen's own interface
              {qsl("mg.mud.de"), qsl("mg.morgengrauen.info"), qsl("morgengrauen.info")}},
 
             {qsl("Infinity"),
@@ -732,7 +826,8 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "Infinity LPMud provides willing adventurers and questseekers with a "
                  "venue of original ideas, mind boggling quests, and bloodcurdling "
                  "beasts, spinning into realms of power, magic, and technology, "
-                 "and many players with which to share your adventures.")},
+                 "and many players with which to share your adventures."),
+             GameDetail::OwnUi::ClientGui},
 
             {qsl("Medievia"),
              qsl("medievia.com"),
@@ -763,7 +858,7 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "but it is the most dynamic game ever attempted. The wind affects the ships, where "
                  "fire spreads, and even how some critters smell you if you are upwind from them.\n\n"
                  "Do you dare enter?"),
-             true}, // MedBootstrap installs MedUI
+             GameDetail::OwnUi::BundledLoader}, // MedBootstrap installs MedUI
 
             {qsl("Dragonfire MUD"),
              qsl("dragonfiremud.com"),
@@ -778,7 +873,8 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "\n\n"
                  "Explore realms spanning fantasy, modern, future, and shadowy secrets, hunt dragons "
                  "for experience and loot, and discover hidden areas and guilds. Optional player "
-                 "killing is allowed, and the community welcomes new adventurers and builders alike.")},
+                 "killing is allowed, and the community welcomes new adventurers and builders alike."),
+             GameDetail::OwnUi::ClientGui},
 
             {qsl("Beyond the Void MUD"),
              qsl("voidmud.com"),
@@ -794,7 +890,8 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "Free to play and ready for adventurers, the game emphasizes classic EverQuest "
                  "combat in a modern text-only experience. Build a character with up to three "
                  "classes, pursue epic quests and rebirth bonuses, and enjoy quality-of-life "
-                 "features like a custom Mudlet UI and real-time maps.")},
+                 "features like a custom Mudlet UI and real-time maps."),
+             GameDetail::OwnUi::ClientGui},
 
             {qsl("Pku XKX MUD"),
              qsl("pkuxkx.net"),
@@ -829,7 +926,79 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "player-driven provinces."
                  "\n\n"
                  "Old-school depth. Modern access. New players welcome."),
-             true}, // icesus-loader installs Icesus' own interface
+             GameDetail::OwnUi::BundledLoader}, // icesus-loader installs Icesus' own interface
+            {qsl("PhoenixMUD"),
+             qsl("phoenixmud.net"),
+             4000,
+             false,
+             qsl("<a href='https://phoenixmud.net'>Website</a><br>"
+                 "<a href='https://phoenixmud.net/PhoenixMUD.mpackage'>Mudlet package</a>"),
+             qsl(":/icons/phoenixmud_480x120.png"),
+             qsl("PhoenixMUD is a free classic DikuMUD, online since 1996. 20,685 rooms across "
+                 "276 zones, 16 classes and 15 races, and 400+ levels of progression: 1-100 to "
+                 "Hero, then three full remort climbs."
+                 "\n\n"
+                 "Our official Mudlet package installs itself on connect: GMCP vitals and effects "
+                 "panes, channel routing into chat windows, and an embedded mapper preloaded with "
+                 "the whole world. The browser client adds a World Atlas: a live map with "
+                 "fog-of-war and route-finding."
+                 "\n\n"
+                 "No payment of any kind, and character creation is open. Actively developed, with "
+                 "a friendly community that makes room for newcomers. New players welcome."),
+             GameDetail::OwnUi::ClientGui},
+            {qsl("ClamberMUD"),
+             qsl("clambermud.com"),
+             4445,
+             true,
+             qsl("<a href='https://clambermud.com'>Website</a><br>"
+                 "<a href='https://discord.gg/Mrb44RSsA9'>Discord</a>"),
+             qsl(":/icons/clambermud_480x120.png"),
+             qsl("ClamberMUD is a free LitRPG text game: climb a deadly dungeon tower before your "
+                 "time runs out, on an alien game show nobody agreed to be on."
+                 "\n\n"
+                 "Every run is a new climber with one life and a ticking timer. Fight up through "
+                 "tiers of medieval fantasy, alien worlds, and cosmic horror while the show's host "
+                 "plays your best and worst moments for the viewers. Sponsors back the climbers "
+                 "they like, and retiring climbers unlocks new races and classes, over 100 in all."
+                 "\n\n"
+                 "In Mudlet, the game's own interface installs itself when you log in: a map that "
+                 "draws itself as you explore, health, mana, and movement gauges, a hotbar for "
+                 "your specials, and chat tabs. Free, in live development, for ages 16 and up. "
+                 "New climbers welcome."),
+             GameDetail::OwnUi::ClientGui},
+            {qsl("Fablerift"),
+             qsl("mud.fablerift.net"),
+             4443,
+             true,
+             qsl("<a href='https://fablerift.net/'>Website</a><br>"
+                 "<a href='https://play.fablerift.net/'>Play in the browser</a><br>"
+                 "<a href='https://discord.gg/ecq88z7H9A'>Discord</a>"),
+             qsl(":/icons/fablerift_480x120.png"),
+             qsl("Fablerift is a free multiplayer text RPG in the classic MUD tradition, on one "
+                 "shared server: a name, a password and a colour choice, and you are walking the "
+                 "Mistwood beside everyone else. The browser client and telnet reach the same "
+                 "world, so a player who installed nothing is in the room next to you."
+                 "\n\n"
+                 "Seven regions of forest, coast, desert and frozen peak each carry their own "
+                 "weather, and a day/night cycle changes what comes out after dark. Chop, mine "
+                 "and fish, craft at shared workbenches, and cook meals that keep you warm on the "
+                 "mountain. Classes have their own abilities with mana costs and cooldowns, "
+                 "bosses telegraph their heaviest blows, and a party can clear instanced "
+                 "dungeons - with heroic versions once the story is done. There are guilds, "
+                 "player-to-player trading, a market board that sells while its owner is away, "
+                 "mail with items attached, land you can claim, and a five-chapter story that "
+                 "runs to a final boss."
+                 "\n\n"
+                 "In Mudlet the game's own interface installs itself on login through GMCP "
+                 "Client.GUI: vitals, chat windows with timestamps, clickable text, item and "
+                 "quest panels, and a mapper fed by GMCP Room.Info with fixed coordinates, with "
+                 "the starting region's safe rooms already on your map. GA is on by default "
+                 "after every prompt, and gui off or mudlet off turns the interface back off. "
+                 "Screen-reader, large-text, ASCII-only and colour-free modes are built in."
+                 "\n\n"
+                 "The server is MIT-licensed and self-hostable, so you can run your own world "
+                 "and invite people to it. New players welcome."),
+             GameDetail::OwnUi::ClientGui},
             };
     // clang-format on
 };

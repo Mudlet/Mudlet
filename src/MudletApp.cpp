@@ -1,0 +1,1254 @@
+/***************************************************************************
+ *   Copyright (C) 2017 by WackyWormer - WackyWormer@hotmail.com           *
+ *   Copyright (C) 2017, 2019-2020, 2022 by Stephen Lyons                  *
+ *                                               - slysven@virginmedia.com *
+ *   Copyright (C) 2017, 2021 by Vadim Peretokin - vperetokin@gmail.com    *
+ *   Copyright (C) 2019 by Mike Conley - sousesider@gmail.com              *
+ *   Copyright (C) 2023 by Geert Konijnendijk - geert@konijnendijk.info    *
+ *   Copyright (C) 2024 by ConcurrentCrab                                  *
+ *   Copyright (C) 2025-2026 by Vadim Peretokin                            *
+ *                                            - vadim.peretokin@mudlet.org *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+
+#include "MudletApp.h"
+
+#include "SecureStringUtils.h"
+#include "TGameDetails.h"
+#include "ctelnet.h"
+#include "utils.h"
+
+#include <QCoreApplication>
+#include <QCryptographicHash>
+#include <QDataStream>
+#include <QDebug>
+#include <QDir>
+#include <QFile>
+#include <QFileInfo>
+#include <QHash>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QLibraryInfo>
+#include <QLocale>
+#include <QMutex>
+#include <atomic>
+#include <QNetworkRequest>
+#include <QPointer>
+#include <QProcessEnvironment>
+#include <QRegularExpression>
+#include <QSaveFile>
+#include <QSettings>
+#include <QSslConfiguration>
+#if !defined(QT_NO_SSL)
+#include <QSslSocket>
+#endif
+#include <QStandardPaths>
+#include <QTextStream>
+#include <QTranslator>
+#include <QUrl>
+
+#if defined(Q_OS_UNIX)
+#include <cerrno>
+#include <unistd.h>
+#endif
+
+namespace {
+// Mudlet itself only resolves on the main thread; the locks are for engine
+// callers that may not. They cover the config root and the settings tier;
+// mudletDictionariesInUse is atomic instead, because getMudletPath() writes it
+// from twenty places while holding nothing.
+QMutex configRootMutex;
+QString configRoot;
+// How the root in configRoot was arrived at. Three exclusive states rather than
+// a pair of bools, so "installed but not settled" cannot be written down:
+//   unresolved   - nothing has asked yet, or setConfigPath(QString()) forgot it
+//   selfResolved - getMudletPath() resolved it on first use, before startup got
+//                  a chance to report what the resolution found
+//   installed    - MudletApp::settleConfigRoot() settled it and has reported it
+enum class ConfigRootState { unresolved, selfResolved, installed };
+ConfigRootState configRootState = ConfigRootState::unresolved;
+// Whether the root in force came from a portable.txt that was honoured. A
+// marker naming a root that had to be refused leaves this false, so nothing
+// downstream treats a rejected marker as portable mode.
+bool configRootPortable = false;
+// Set only with the root, by MudletApp::chooseConfigRoot()
+bool configRootChosenByFrontend = false;
+std::atomic<bool> mudletDictionariesInUse = false;
+// The settings store and the interface language get a lock of their own rather
+// than sharing configRootMutex: building the store asks for the config root, and
+// QMutex is not recursive. Nothing held under configRootMutex reaches back for
+// this one, so the order is always settingsMutex and then configRootMutex, and
+// there is no way round the cycle.
+QMutex settingsMutex;
+QPointer<QSettings> smpSettings;
+QHash<QString, QSettings::Status> smEarlySettingsErrors;
+QString smInterfaceLanguage;
+bool smStorePasswordsSecurely = true;
+bool smFirstLaunch = false;
+bool smDarkMode = false;
+
+constexpr int maxPathComponentLength = 50;
+constexpr int pathComponentDigestLength = 16;
+
+// How strongly a directory claims to be Mudlet's config root; the stronger
+// claim wins in xdgConfigDir(), so the order is the contract.
+enum class ConfigDirClaim {
+    absent = 0,
+    // Exists, but holds nothing Mudlet put there - including the stale
+    // Mudlet.conf pre-4.19 Mudlet left in $XDG_CONFIG_HOME/mudlet while its
+    // profiles stayed in ~/.config/mudlet
+    unclaimed = 1,
+    settings = 2,
+    profiles = 3,
+};
+
+ConfigDirClaim configDirClaim(const QString& dir)
+{
+    if (!QDir(dir).exists()) {
+        return ConfigDirClaim::absent;
+    }
+    if (MudletApp::configDirHoldsProfiles(dir)) {
+        return ConfigDirClaim::profiles;
+    }
+    if (QFileInfo::exists(qsl("%1/Mudlet.ini").arg(dir))) {
+        return ConfigDirClaim::settings;
+    }
+    return ConfigDirClaim::unclaimed;
+}
+
+// $XDG_CONFIG_HOME/mudlet claims more than it holds, because creating
+// profiles/ there is the deliberate opt-in into an isolated config root. The
+// legacy dir gets no such credit: an empty profiles/ left behind by deleting
+// the last profile would otherwise outrank a config root in active use.
+ConfigDirClaim xdgConfigDirClaim(const QString& dir)
+{
+    if (QDir(qsl("%1/profiles").arg(dir)).exists()) {
+        return ConfigDirClaim::profiles;
+    }
+    return configDirClaim(dir);
+}
+
+QString pathResolveRelative(const QString& path, const QString& base)
+{
+    if (path.isEmpty() || QDir::isAbsolutePath(path)) {
+        return path;
+    }
+    return QDir::cleanPath(qsl("%1/%2").arg(base, path));
+}
+
+QString markerIn(const QString& dir)
+{
+    return qsl("%1/portable.txt").arg(dir);
+}
+
+QString readMarkerFile(const QString& path)
+{
+    QString line;
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        qWarning() << "mudlet: failed to open file for reading:" << path << file.errorString();
+        return QString();
+    }
+    QTextStream(&file).readLineInto(&line);
+    return line;
+}
+
+// The root a portable.txt names, whether or not it can be used
+QString portableRootNamedBy(const QString& marker, const QString& execDir)
+{
+    QString portPath = readMarkerFile(marker);
+    // Only beside the executable does an empty marker mean "the data is here
+    // too"; the one in the config dir names no such default
+    if (portPath.isEmpty() && marker == markerIn(execDir)) {
+        portPath = qsl("./portable");
+    }
+    return pathResolveRelative(QDir::cleanPath(portPath), execDir);
+}
+
+// The XDG base-dir spec requires an absolute path; a relative (or empty)
+// value must be ignored, which also avoids a surprising CWD-relative root.
+QString xdgTargetDir()
+{
+    const QString xdgConfigHome = qEnvironmentVariable("XDG_CONFIG_HOME");
+    if (xdgConfigHome.isEmpty() || !QDir::isAbsolutePath(xdgConfigHome)) {
+        return QString();
+    }
+    return QDir::cleanPath(qsl("%1/mudlet").arg(xdgConfigHome));
+}
+
+// The installed root, or an empty string when startup has not settled one yet.
+// One locked read rather than a separate ask for the flag and the path, which
+// could otherwise disagree.
+QString installedConfigRoot()
+{
+    const QMutexLocker locker(&configRootMutex);
+    return configRootState == ConfigRootState::installed ? configRoot : QString();
+}
+
+// Paired with every change of the config root rather than left to each caller:
+// getQSettings() hands back an existing store without looking at the root again,
+// so one built under a root that has since been replaced would outlive it and
+// pin every later reader to a Mudlet.ini that no longer governs.
+void discardSettingsStore()
+{
+    const QMutexLocker locker(&settingsMutex);
+    delete smpSettings;
+}
+
+QString settledConfigRoot()
+{
+    const QMutexLocker locker(&configRootMutex);
+    if (configRootState == ConfigRootState::unresolved) {
+        const auto resolution = MudletApp::resolveConfigRoot(MudletApp::executableDir());
+        if (resolution.portableRootRejected) {
+            qWarning().nospace() << "MudletApp::getMudletPath(...) WARN: the portable.txt root cannot be used, so \"" << resolution.path << "\" is in use instead.";
+        }
+        // resolveConfigRoot() promises a non-empty root, but this settles for
+        // the life of the process: an empty one would root every path at "/",
+        // which callers then mkpath(), so it is never what gets remembered
+        configRoot = resolution.path.isEmpty() ? MudletApp::legacyConfigDir() : resolution.path;
+        configRootPortable = resolution.portable && !resolution.portableRootRejected;
+        configRootState = ConfigRootState::selfResolved;
+    }
+    return configRoot;
+}
+
+#if defined(Q_OS_UNIX)
+// What fsync() gives for a file that cannot be synced at all, which QSaveFile::commit() shrugs off too
+bool syncUnsupported(const int error)
+{
+#if EOPNOTSUPP != ENOTSUP
+    if (error == EOPNOTSUPP) {
+        return true;
+    }
+#endif
+    return error == EINVAL || error == EROFS || error == ENOTSUP;
+}
+#endif
+} // namespace
+
+QString MudletApp::executableDir()
+{
+    const QProcessEnvironment systemEnvironment = QProcessEnvironment::systemEnvironment();
+    if (systemEnvironment.contains(qsl("APPIMAGE"))) {
+        return QFileInfo(systemEnvironment.value(qsl("APPIMAGE"))).dir().path();
+    }
+    return QCoreApplication::applicationDirPath();
+}
+
+QString MudletApp::legacyConfigDir()
+{
+    return qsl("%1/.config/mudlet").arg(QDir::homePath());
+}
+
+QString MudletApp::portableMarkerPath(const QString& execDir, const QString& configDir)
+{
+    const QString besideExecutable = markerIn(execDir);
+    if (QFileInfo(besideExecutable).isFile()) {
+        return besideExecutable;
+    }
+    const QString inConfigDir = markerIn(configDir);
+    return QFileInfo(inConfigDir).isFile() ? inConfigDir : QString();
+}
+
+bool MudletApp::portableRootUsable(const QString& path)
+{
+    if (path.isEmpty()) {
+        qWarning().nospace().noquote() << "MudletApp::portableRootUsable(...) WARN: portable.txt names no data directory.";
+        return false;
+    }
+    const QFileInfo pathInfo(path);
+    // isFile()/isDir() follow links, so a dangling symlink is neither - and mkpath() can't create through
+    // one, so it would pass here and then swallow every profile
+    if ((pathInfo.exists() || pathInfo.isSymLink()) && !pathInfo.isDir()) {
+        qWarning().nospace().noquote() << "MudletApp::portableRootUsable(...) WARN: the portable data directory \"" << path << "\" is not a directory.";
+        return false;
+    }
+    const QString parent = pathInfo.dir().path();
+    if (!QFileInfo(parent).isDir()) {
+        qWarning().nospace().noquote() << "MudletApp::portableRootUsable(...) WARN: the portable data directory \"" << path << "\" cannot be created, because its parent \"" << parent
+                                       << "\" does not exist.";
+        return false;
+    }
+    return true;
+}
+
+MudletApp::ConfigDirResolution MudletApp::resolveConfigRoot(const QString& execDir, const QString& configDir)
+{
+    const QString marker = portableMarkerPath(execDir, configDir);
+    if (marker.isEmpty()) {
+        return xdgConfigDir(configDir);
+    }
+    const QString portableRoot = portableRootNamedBy(marker, execDir);
+    if (portableRootUsable(portableRoot)) {
+        return {.path = portableRoot, .portable = true, .portableMarker = marker};
+    }
+    // Never return an unusable root - an empty one roots every path at "/", which callers then mkpath() - so
+    // name the non-portable location, with the marker and what it named, and let each caller decide how loudly to complain.
+    ConfigDirResolution resolution = xdgConfigDir(configDir);
+    resolution.portable = true;
+    resolution.portableRootRejected = true;
+    resolution.portableMarker = marker;
+    resolution.rejectedRoot = portableRoot;
+    return resolution;
+}
+
+MudletApp::ConfigDirResolution MudletApp::xdgConfigDir(const QString& legacyDefault)
+{
+    const QString xdgTarget = xdgTargetDir();
+    if (xdgTarget.isEmpty()) {
+        return {.path = legacyDefault};
+    }
+    if (xdgConfigDirClaim(xdgTarget) < configDirClaim(legacyDefault)) {
+        return {.path = legacyDefault, .migrationPending = true};
+    }
+    // XDG_CONFIG_HOME=$HOME/.config makes both candidates one directory, and a symlinked ~/.config gives one
+    // directory two spellings, which dotfile managers produce exactly. Case-sensitive: over-matching is the safe
+    // side for refusing a folder, not for dropping this warning.
+    const bool shadowing = !sameFolder(legacyDefault, xdgTarget, Qt::CaseSensitive) && configDirHoldsProfiles(legacyDefault);
+    return {.path = xdgTarget, .shadowedProfilesPath = shadowing ? legacyDefault : QString()};
+}
+
+QStringList MudletApp::configRootCandidates(const QString& execDir, const QString& configDir)
+{
+    QStringList candidates;
+    // Both markers: the one beside the executable outranks the config dir's only while it is there
+    for (const QString& marker : {markerIn(execDir), markerIn(configDir)}) {
+        if (!QFileInfo(marker).isFile()) {
+            continue;
+        }
+        if (const QString root = portableRootNamedBy(marker, execDir); !root.isEmpty()) {
+            candidates << root;
+        }
+    }
+    if (const QString xdgTarget = xdgTargetDir(); !xdgTarget.isEmpty()) {
+        candidates << xdgTarget;
+    }
+    candidates << configDir;
+    return candidates;
+}
+
+Qt::CaseSensitivity MudletApp::fileNameCaseSensitivity()
+{
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_MACOS)
+    return Qt::CaseInsensitive;
+#else
+    return Qt::CaseSensitive;
+#endif
+}
+
+QString MudletApp::folderIdentity(const QString& path)
+{
+    if (const QString real = QFileInfo(path).canonicalFilePath(); !real.isEmpty()) {
+        return real;
+    }
+    // A loop of links to nowhere ends here rather than hanging
+    constexpr int maxLinksFollowed = 32;
+    int linksFollowed = 0;
+    QString existing = QDir::cleanPath(path);
+    QStringList rest;
+    while (true) {
+        const QFileInfo info(existing);
+        if (const QString real = info.canonicalFilePath(); !real.isEmpty()) {
+            rest.prepend(real);
+            return QDir::cleanPath(rest.join(u'/'));
+        }
+        // canonicalFilePath() gives nothing for a link to nowhere, which leads where it names once that is made
+        if (const QString target = info.symLinkTarget(); !target.isEmpty() && linksFollowed < maxLinksFollowed) {
+            ++linksFollowed;
+            existing = QDir::cleanPath(target);
+            continue;
+        }
+        if (info.path() == existing) {
+            return QDir::cleanPath(path);
+        }
+        rest.prepend(info.fileName());
+        existing = info.path();
+    }
+}
+
+bool MudletApp::sameFolder(const QString& first, const QString& second, const Qt::CaseSensitivity caseSensitivity)
+{
+    return QString::compare(folderIdentity(first), folderIdentity(second), caseSensitivity) == 0;
+}
+
+bool MudletApp::configDirHoldsProfiles(const QString& dir)
+{
+    if (!QDir(dir).exists()) {
+        return false;
+    }
+    if (!QFileInfo(dir).isReadable()) {
+        return true;
+    }
+    const QDir profiles(qsl("%1/profiles").arg(dir));
+    if (!profiles.exists()) {
+        return false;
+    }
+    // Counted as mudlet.cpp's anyProfilesExist() does, so the two cannot disagree
+    return !QFileInfo(profiles.path()).isReadable() || !profiles.entryList(QDir::Dirs | QDir::NoDotAndDotDot).isEmpty();
+}
+
+MudletApp::ConfigDirResolution MudletApp::settleConfigRoot()
+{
+    const auto resolution = resolveConfigRoot(executableDir());
+    const QString confPath = resolution.path;
+    // The main window also puts a refusal on screen; with no main window this is the only report of it
+    if (resolution.portableRootRejected) {
+        if (resolution.rejectedRoot.isEmpty()) {
+            qWarning().nospace().noquote() << "MudletApp::settleConfigRoot() WARN - \"" << resolution.portableMarker << "\" names no data directory, so \"" << confPath << "\" is in use.";
+        } else {
+            qWarning().nospace().noquote() << "MudletApp::settleConfigRoot() WARN - \"" << resolution.portableMarker << "\" names the data directory \"" << resolution.rejectedRoot
+                                           << "\", which Mudlet cannot use, so \"" << confPath
+                                           << "\" is in use instead. Profiles kept where the marker points will not be listed until it is corrected.";
+        }
+    }
+    if (resolution.migrationPending) {
+        qInfo().nospace() << "MudletApp::settleConfigRoot() INFO: XDG_CONFIG_HOME is set but $XDG_CONFIG_HOME/mudlet holds no profiles, so the existing " << confPath
+                          << " is still in use. Move its contents into $XDG_CONFIG_HOME/mudlet to migrate.";
+    }
+    if (!resolution.shadowedProfilesPath.isEmpty()) {
+        qWarning().nospace() << "MudletApp::settleConfigRoot() WARN: using $XDG_CONFIG_HOME/mudlet (" << confPath << ") because it holds profiles, but " << resolution.shadowedProfilesPath
+                             << " holds profiles as well and they will not be listed. Unset XDG_CONFIG_HOME to use that directory instead.";
+    }
+    qDebug() << "MudletApp::settleConfigRoot() INFO:" << "using config dir:" << confPath;
+    setConfigPath(confPath, resolution.portable && !resolution.portableRootRejected);
+    return resolution;
+}
+
+bool MudletApp::configRootSettled()
+{
+    return !installedConfigRoot().isEmpty();
+}
+
+void MudletApp::setConfigPath(const QString& path, const bool portable)
+{
+    {
+        const QMutexLocker locker(&configRootMutex);
+        configRoot = path;
+        // An empty root is not an answer, so forget it rather than settle on it
+        configRootState = path.isEmpty() ? ConfigRootState::unresolved : ConfigRootState::installed;
+        configRootPortable = !path.isEmpty() && portable;
+        configRootChosenByFrontend = false;
+    }
+    // Must not run again once init() has created the Updater, which keeps using
+    // the settings object this discards
+    discardSettingsStore();
+}
+
+void MudletApp::chooseConfigRoot(const QString& path)
+{
+    setConfigPath(path, true);
+    const QMutexLocker locker(&configRootMutex);
+    configRootChosenByFrontend = !path.isEmpty();
+}
+
+bool MudletApp::configRootChosen()
+{
+    const QMutexLocker locker(&configRootMutex);
+    return configRootState == ConfigRootState::installed && configRootChosenByFrontend;
+}
+
+QString MudletApp::credentialFilesRoot()
+{
+    {
+        const QMutexLocker locker(&configRootMutex);
+        if (configRootState == ConfigRootState::installed && configRootChosenByFrontend) {
+            return qsl("%1/credentials").arg(configRoot);
+        }
+    }
+    return QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
+}
+
+bool MudletApp::usingMudletDictionaries()
+{
+    return mudletDictionariesInUse;
+}
+
+QStringList MudletApp::systemHunspellDictionaryFolders()
+{
+#if defined(Q_OS_FREEBSD)
+    return {qsl("/usr/local/share/hunspell/"), qsl("/usr/share/hunspell/")};
+#elif defined(Q_OS_OPENBSD)
+    return {qsl("/usr/local/share/mozilla-dicts/"), qsl("/usr/share/mozilla-dicts/")};
+#elif defined(Q_OS_LINUX)
+    return {qsl("/usr/share/hunspell/")};
+#else
+    return {};
+#endif
+}
+
+QString MudletApp::sanitizeForPath(const QString& input)
+{
+    static const auto fileSystemUnsafeChars = QRegularExpression(qsl(R"REGEX([/\\:*?"<>|])REGEX"));
+    QString sanitized = input;
+    sanitized.replace(fileSystemUnsafeChars, qsl("_"));
+    if (sanitized.length() > maxPathComponentLength) {
+        const QString digest = QString::fromLatin1(QCryptographicHash::hash(input.toUtf8(), QCryptographicHash::Sha256).toHex()).left(pathComponentDigestLength);
+        sanitized = qsl("%1-%2").arg(sanitized.left(maxPathComponentLength - pathComponentDigestLength - 1), digest);
+    }
+    return sanitized;
+}
+
+QString MudletApp::getMudletPath(const enums::mudletPathType mode, const QString& extra1, const QString& extra2)
+{
+    const QString confPath = settledConfigRoot();
+    switch (mode) {
+    case enums::mainPath:
+        // The root of all mudlet data for the user - does not end in a '/'
+        return confPath;
+    case enums::mainDataItemPath:
+        // Takes one extra argument as a file (or directory) relating to
+        // (profile independent) mudlet data - may end with a '/' if the extra
+        // argument does:
+        return qsl("%1/%2").arg(confPath, extra1);
+    case enums::mainFontsPath:
+        // (Added for 3.5.0) a revised location to store Mudlet provided fonts
+        return qsl("%1/fonts").arg(confPath);
+    case enums::profilesPath:
+        // The directory containing all the saved user's profiles - does not end
+        // in '/'
+        return qsl("%1/profiles").arg(confPath);
+    case enums::profileHomePath:
+        // Takes one extra argument (profile name) that returns the base
+        // directory for that profile - does NOT end in a '/' unless the
+        // supplied profle name does:
+        return qsl("%1/profiles/%2").arg(confPath, extra1);
+    case enums::profileMediaPath:
+        // Takes one extra argument (profile name) that returns the directory
+        // for the profile's cached media files - does NOT end in a '/'
+        return qsl("%1/profiles/%2/media").arg(confPath, extra1);
+    case enums::profileMediaPathFileName:
+        // Takes two extra arguments (profile name, mediaFileName) that returns
+        // the pathFile name for any media file:
+        return qsl("%1/profiles/%2/media/%3").arg(confPath, extra1, extra2);
+    case enums::profileXmlFilesPath:
+        // Takes one extra argument (profile name) that returns the directory
+        // for the profile game save XML files - ends in a '/'
+        return qsl("%1/profiles/%2/current/").arg(confPath, extra1);
+    case enums::profileMapsPath:
+        // Takes one extra argument (profile name) that returns the directory
+        // for the profile game save maps files - does NOT end in a '/'
+        return qsl("%1/profiles/%2/map").arg(confPath, extra1);
+    case enums::profileDateTimeStampedMapPathFileName:
+        // Takes two extra arguments (profile name, dataTime stamp) that returns
+        // the pathFile name for a dateTime stamped map file:
+        return qsl("%1/profiles/%2/map/%3map.dat").arg(confPath, extra1, extra2);
+    case enums::profileDateTimeStampedJsonMapPathFileName:
+        // Takes two extra arguments (profile name, dataTime stamp) that returns
+        // the pathFile name for a dateTime stamped JSON map file:
+        return qsl("%1/profiles/%2/map/%3map.json").arg(confPath, extra1, extra2);
+    case enums::profileMapPathFileName:
+        // Takes two extra arguments (profile name, mapFileName) that returns
+        // the pathFile name for any map file:
+        return qsl("%1/profiles/%2/map/%3").arg(confPath, extra1, extra2);
+    case enums::profileXmlMapPathFileName:
+        // Takes one extra argument (profile name) that returns the pathFile
+        // name for the downloaded IRE Server provided XML map:
+        return qsl("%1/profiles/%2/map.xml").arg(confPath, extra1);
+    case enums::profileDataItemPath:
+        // Takes two extra arguments (profile name, data item) that gives a
+        // path file name for, typically a data item stored as a single item
+        // (binary) profile data) file (ideally these can be moved to a per
+        // profile QSettings file but that is a future pipe-dream on my part
+        // SlySven):
+        return qsl("%1/profiles/%2/%3").arg(confPath, extra1, extra2);
+    case enums::profilePackagePath:
+        // Takes two extra arguments (profile name, package name) returns the
+        // per profile directory used to store (unpacked) package contents
+        // - ends with a '/':
+        return qsl("%1/profiles/%2/%3/").arg(confPath, extra1, extra2);
+    case enums::profilePackagePathFileName:
+        // Takes two extra arguments (profile name, package name) returns the
+        // filename of the XML file that contains the (per profile, unpacked)
+        // package mudlet items in that package/module:
+        return qsl("%1/profiles/%2/%3/%3.xml").arg(confPath, extra1, extra2);
+    case enums::profileReplayAndLogFilesPath:
+        // Takes one extra argument (profile name) that returns the directory
+        // that contains replays (*.dat files) and logs (*.html or *.txt) files
+        // for that profile - does NOT end in '/':
+        return qsl("%1/profiles/%2/log").arg(confPath, extra1);
+    case enums::profileLogErrorsFilePath:
+        // Takes one extra argument (profile name) that returns the pathFileName
+        // to the map auditing report file that is appended to each time a
+        // map is loaded:
+        return qsl("%1/profiles/%2/log/errors.txt").arg(confPath, extra1);
+    case enums::editorWidgetThemePathFile:
+        // Takes one extra argument (theme file name). The legacy file name resolves too, for
+        // a profile whose stored value has not been migrated yet.
+        if (!extra1.compare(scmEditorThemeFileLight, Qt::CaseSensitive) || !extra1.compare(scmEditorThemeFileLegacy, Qt::CaseSensitive)) {
+            return qsl(":/edbee_defaults/%1").arg(scmEditorThemeFileLight);
+        }
+        if (!extra1.compare(scmEditorThemeFileDark, Qt::CaseSensitive)) {
+            return qsl(":/edbee_defaults/%1").arg(scmEditorThemeFileDark);
+        }
+        return qsl("%1/edbee/Colorsublime-Themes-master/themes/%2").arg(confPath, extra1);
+    case enums::editorWidgetThemeJsonFile:
+        // Returns the pathFileName to the external JSON file needed to process
+        // an edbee editor widget theme:
+        return qsl("%1/edbee/Colorsublime-Themes-master/themes.json").arg(confPath);
+    case enums::moduleBackupsPath:
+        // Returns the directory used to store module backups that is used in
+        // when saving/resyncing packages/modules - ends in a '/'
+        return qsl("%1/moduleBackups/").arg(confPath);
+    case enums::qtTranslationsPath:
+        return QLibraryInfo::path(QLibraryInfo::TranslationsPath);
+    case enums::hunspellDictionaryPath:
+        for (const auto& folder : systemHunspellDictionaryFolders()) {
+            if (QFile::exists(qsl("%1%2.aff").arg(folder, extra1))) {
+                mudletDictionariesInUse = false;
+                return folder;
+            }
+        }
+#if defined(Q_OS_MACOS)
+        mudletDictionariesInUse = true;
+        return qsl("%1/../Resources/").arg(QCoreApplication::applicationDirPath());
+#elif defined(Q_OS_FREEBSD)
+        if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
+            // From debug or release subdirectory of a shadow build directory alongside the ./src one:
+            mudletDictionariesInUse = true;
+            return qsl("%1/../../src/").arg(QCoreApplication::applicationDirPath());
+        }
+        if (QFile::exists(qsl("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
+            // From shadow build directory alongside the ./src one:
+            mudletDictionariesInUse = true;
+            return qsl("%1/../src/").arg(QCoreApplication::applicationDirPath());
+        }
+        // From build within ./src
+        mudletDictionariesInUse = true;
+        return qsl("%1/").arg(QCoreApplication::applicationDirPath());
+#elif defined(Q_OS_OPENBSD)
+        // OpenBSD uses dictionary files from Mozilla rather than direct from,
+        // Hunspell, but it does not ship a en_us one so we cannot use that on
+        // the first run to find the rest - instead try for the en_GB one
+        // - some of the entries for some of the locale/language/other parts of
+        // the filesnames seem to be a bit random:
+        if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
+            // From debug or release subdirectory of a shadow build directory alongside the ./src one:
+            mudletDictionariesInUse = true;
+            return qsl("%1/../../src/").arg(QCoreApplication::applicationDirPath());
+        }
+        if (QFile::exists(qsl("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
+            // From shadow build directory alongside the ./src one:
+            mudletDictionariesInUse = true;
+            return qsl("%1/../src/").arg(QCoreApplication::applicationDirPath());
+        }
+        // From build within ./src
+        mudletDictionariesInUse = true;
+        return qsl("%1/").arg(QCoreApplication::applicationDirPath());
+#elif defined(Q_OS_LINUX)
+        if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
+            // From debug or release subdirectory of a shadow build directory
+            // alongside the ./src one. {Typically QMake builds from Qtcreator
+            // with CONFIG containing both 'debug_and_release' and
+            // 'debug_and_release_target' (this is normal also on Windows):
+            mudletDictionariesInUse = true;
+            return qsl("%1/../../src/").arg(QCoreApplication::applicationDirPath());
+        }
+        if (QFile::exists(qsl("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
+            // From shadow build directory alongside the ./src one. {Typically
+            // QMake builds from Qtcreator with CONFIG NOT containing both
+            // 'debug_and_release' and 'debug_and_release_target':
+            mudletDictionariesInUse = true;
+            return qsl("%1/../src/").arg(QCoreApplication::applicationDirPath());
+        }
+        if (QFile::exists(qsl("%1/../../mudlet/src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
+            // From shadow build directory above the ./src one. {Typically
+            // CMake builds from Qtcreator which are outside of the unpacked
+            // source code from a git repo or tarball - which has to have been
+            // unpacked/placed in a directory called 'mudlet'}:
+            mudletDictionariesInUse = true;
+            return qsl("%1/../../mudlet/src/").arg(QCoreApplication::applicationDirPath());
+        }
+        // From build within ./src AND installer builds that bundle
+        // dictionaries in the same directory as the executable:
+        mudletDictionariesInUse = true;
+        return qsl("%1/").arg(QCoreApplication::applicationDirPath());
+#else
+        // Probably Windows!
+        mudletDictionariesInUse = true;
+        if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
+            // From debug or release subdirectory of a shadow build directory alongside the ./src one:
+            return qsl("%1/../../src/").arg(QCoreApplication::applicationDirPath());
+        }
+        if (QFile::exists(qsl("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
+            // From shadow build directory alongside the ./src one:
+            return qsl("%1/../src/").arg(QCoreApplication::applicationDirPath());
+        }
+        // From build within ./src
+        return qsl("%1/").arg(QCoreApplication::applicationDirPath());
+#endif
+    }
+    Q_UNREACHABLE();
+    return QString();
+}
+
+// The legacy name matches no entry in the theme list, which would leave the preferences
+// showing no theme at all
+void MudletApp::migrateBundledEditorTheme(QString& themeName, QString& themeFile)
+{
+    if (!themeName.compare(scmEditorThemeNameLegacy, Qt::CaseSensitive)) {
+        themeName = scmEditorThemeNameLight;
+    }
+    if (!themeFile.compare(scmEditorThemeFileLegacy, Qt::CaseSensitive)) {
+        themeFile = scmEditorThemeFileLight;
+    }
+}
+
+bool MudletApp::editorThemeResolves(const QString& themeFile)
+{
+    if (themeFile.isEmpty()) {
+        return false;
+    }
+    return QFile::exists(getMudletPath(enums::editorWidgetThemePathFile, themeFile));
+}
+
+bool MudletApp::profileDataItemHoldsSecret(const QString& item)
+{
+    // "irc_password" is TIrcClient::PasswordCfgItem
+    return item == qsl("password") || item == qsl("irc_password");
+}
+
+const QString MudletApp::scmAllowedProfileNameChars = qsl(". _()0123456789-#&aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ");
+
+// An embedded U+0000 is indistinguishable from the all-clear sentinel; profileNameUsableAsIs(), which every
+// caller also applies, refuses it
+QChar MudletApp::firstInvalidProfileNameChar(const QString& name)
+{
+    for (const QChar& c : name) {
+        if (!scmAllowedProfileNameChars.contains(c)) {
+            return c;
+        }
+    }
+    return {};
+}
+
+// A lone "." is made entirely of permitted characters, yet every path built from it addresses the profiles
+// directory rather than a profile of its own, as does ".."
+bool MudletApp::profileNameUsableAsIs(const QString& name)
+{
+    static const QRegularExpression unusableChars{qsl(R"REGEX(\.\.|[/\\<>:"|?*\x00-\x1f])REGEX")};
+    return !name.isEmpty() && name != qsl(".") && !name.contains(unusableChars);
+}
+
+QString MudletApp::connectionDetailsProblem(const QString& givenHost, const int port, const bool tls)
+{
+    if (port && !gamePortUsable(port)) {
+        //: %1 is the port number given for a game server
+        return QCoreApplication::translate("MudletApp", "The port %1 is not one a game server can be reached on; it must be from 1 to 65535.").arg(port);
+    }
+    if (tls) {
+#if defined(QT_NO_SSL)
+        // The dialog's own words, which are translated already
+        return QCoreApplication::translate("dlgConnectionProfiles", "Mudlet is not configured for secure connections.");
+#else
+        if (!QSslSocket::supportsSsl()) {
+            return QCoreApplication::translate("dlgConnectionProfiles", "Mudlet can not load support for secure connections.");
+        }
+#endif
+    }
+    const QString host = givenHost.trimmed();
+    if (host.isEmpty()) {
+        return {};
+    }
+    QUrl check;
+    check.setHost(host);
+    if (!check.isValid()) {
+        //: %1 is the game server address given for a profile, %2 why it is not one
+        return QCoreApplication::translate("MudletApp", "\"%1\" is not the address of a game server: %2").arg(host, check.errorString());
+    }
+    if (tls && (cTelnet::isRawIPv4Address(host) || cTelnet::isRawIPv6Address(host))) {
+        //: %1 is the IP address given for a game server that a secure connection was asked for
+        return QCoreApplication::translate("MudletApp", "A secure connection needs the game server's name, not an IP address such as %1, as the server's certificate names it.").arg(host);
+    }
+    return {};
+}
+
+QString MudletApp::readProfileData(const QString& profile, const QString& item)
+{
+    QFile file(MudletApp::getMudletPath(enums::profileDataItemPath, profile, item));
+    if (!file.exists()) {
+        return QString();
+    }
+
+    // An earlier Mudlet wrote these with the umask
+    if (profileDataItemHoldsSecret(item)) {
+        SecureStringUtils::restrictFileToOwner(file.fileName());
+    }
+
+    if (!file.open(QIODevice::ReadOnly)) {
+        qWarning() << "mudlet: failed to open profile data file for reading:" << file.fileName() << file.errorString();
+        return QString();
+    }
+
+    QDataStream ifs(&file);
+    ifs.setVersion(QDataStream::Qt_5_12);
+    QString ret;
+
+    ifs >> ret;
+    file.close();
+    return ret;
+}
+
+QPair<bool, QString> MudletApp::writeProfileData(const QString& profile, const QString& item, const QString& what)
+{
+    const auto failure = [&profile, &item](const QString& reason) {
+        qWarning().noquote().nospace() << "MudletApp::writeProfileData(...) ERROR - writing profile: \"" << profile << "\", item: \"" << item << "\", reason: \"" << reason << "\".";
+        return qMakePair(false, reason);
+    };
+
+    const QString profileHomePath = MudletApp::getMudletPath(enums::profileHomePath, profile);
+    if (!QDir(profileHomePath).exists() && !QDir().mkpath(profileHomePath)) {
+        //: Why a profile setting could not be saved, shown in the connection dialog and returned to Lua scripts; %1 is the folder's path
+        return failure(QCoreApplication::translate("MudletApp", "Could not create profile directory: %1").arg(profileHomePath));
+    }
+
+    QSaveFile file(MudletApp::getMudletPath(enums::profileDataItemPath, profile, item));
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
+        return failure(file.errorString());
+    }
+
+    const bool holdsSecret = profileDataItemHoldsSecret(item);
+    bool narrowAfterCommit = false;
+    if (holdsSecret) {
+        // On the temporary file, before the secret is in it: commit() renames it into place, and a
+        // replaced file's mode would otherwise carry over
+        narrowAfterCommit = !SecureStringUtils::restrictSaveFileToOwner(file);
+    }
+
+    QDataStream ofs(&file);
+    ofs.setVersion(QDataStream::Qt_5_12);
+    ofs << what;
+    // A disk that fills part way through the write leaves no error on the file, only on the
+    // stream, and commit() would rename the truncated file into place
+    if (ofs.status() != QDataStream::Ok || file.error() != QFileDevice::NoError) {
+        //: Why a profile setting could not be saved, shown in the connection dialog and returned to Lua scripts; %1 is the setting's internal name, e.g. description
+        return failure(file.error() == QFileDevice::NoError ? QCoreApplication::translate("MudletApp", "could not write all of the %1 data").arg(item) : file.errorString());
+    }
+#if defined(Q_OS_UNIX)
+    // commit() ignores a failed sync, which is where a quota or network filesystem reports a write that did not land
+    if (::fsync(file.handle()) != 0) {
+        const int syncError = errno;
+        if (!syncUnsupported(syncError)) {
+            return failure(qt_error_string(syncError));
+        }
+    }
+#endif
+    if (!file.commit()) {
+        return failure(file.errorString());
+    }
+
+    if (narrowAfterCommit) {
+        // Some file systems refuse it on the open file but take it by path, which still closes the file for good
+        SecureStringUtils::restrictFileToOwner(file.fileName());
+    } else if (holdsSecret) {
+        // Only checked, so the tests see a narrowing above that went missing instead of this repairing it
+        SecureStringUtils::confirmFileIsOwnerOnly(file.fileName());
+    }
+
+    return qMakePair(true, QString());
+}
+
+QPair<bool, QString> MudletApp::setProfileIcon(const QString& profile, const QString& newIconPath)
+{
+    QDir dir;
+    auto profileIconPath = getMudletPath(enums::profileDataItemPath, profile, qsl("profileicon"));
+    if (QFileInfo::exists(profileIconPath) && !dir.remove(profileIconPath)) {
+        qWarning() << "MudletApp::setProfileIcon() ERROR: couldn't remove existing icon" << profileIconPath;
+        return {false, qsl("couldn't remove existing icon file")};
+    }
+
+    if (!QFile::copy(newIconPath, profileIconPath)) {
+        qWarning() << "MudletApp::setProfileIcon() ERROR: couldn't copy new icon" << newIconPath << " to" << profileIconPath;
+        return {false, qsl("couldn't copy icon file into new location")};
+    }
+
+    return {true, QString()};
+}
+
+QPair<bool, QString> MudletApp::resetProfileIcon(const QString& profile)
+{
+    QDir dir;
+    auto profileIconPath = getMudletPath(enums::profileDataItemPath, profile, qsl("profileicon"));
+    if (QFileInfo::exists(profileIconPath) && !dir.remove(profileIconPath)) {
+        qWarning() << "MudletApp::resetProfileIcon() ERROR: couldn't remove existing icon" << profileIconPath;
+        return {false, qsl("couldn't remove existing icon file")};
+    }
+
+    return {true, QString()};
+}
+
+QString MudletApp::getCanonicalProfileName(const QString& profileName)
+{
+    if (profileName.isEmpty()) {
+        return QString();
+    }
+
+    const QStringList profiles = QDir(MudletApp::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    for (const auto& profile : profiles) {
+        if (profile.compare(profileName, Qt::CaseInsensitive) == 0) {
+            return profile;
+        }
+    }
+
+    const auto it = TGameDetails::findGame(profileName, Qt::CaseInsensitive);
+    if (it != TGameDetails::scmDefaultGames.constEnd()) {
+        return it->name;
+    }
+
+    return QString();
+}
+
+QSettings* MudletApp::getQSettings()
+{
+    const QMutexLocker locker(&settingsMutex);
+    if (smpSettings) {
+        return smpSettings;
+    }
+    // Null until settleConfigRoot() has settled the root and reported what the
+    // resolution found: nothing may write Mudlet.ini before the user has been
+    // told which directory they are about to be running in.
+    const QString root = installedConfigRoot();
+    if (root.isEmpty()) {
+        return nullptr;
+    }
+    // parented to the application, not the main window: the window deletes
+    // itself on close and the Updater keeps using this QSettings past that point.
+    smpSettings = new QSettings(qsl("%1/Mudlet.ini").arg(root), QSettings::IniFormat, QCoreApplication::instance());
+    // See noteEarlySettingsStatus()
+    smpSettings->allKeys();
+    QSettings::Status status = smpSettings->status();
+    if (status == QSettings::NoError) {
+        status = smEarlySettingsErrors.value(smpSettings->fileName(), QSettings::NoError);
+    }
+    if (status != QSettings::NoError) {
+        // A corrupt or unreadable file still builds a perfectly usable-looking
+        // QSettings whose reads all return the caller's default and whose writes
+        // all vanish, so say so rather than let every preference silently reset
+        qWarning().nospace().noquote() << "MudletApp::getQSettings() ERROR - \"" << smpSettings->fileName() << "\" is "
+                                       << (status == QSettings::FormatError ? "not valid INI" : "not readable or writable")
+                                       << ", so settings read from it fall back to defaults and changes to them will not be saved.";
+    }
+    return smpSettings;
+}
+
+void MudletApp::noteEarlySettingsStatus(const QSettings& settings)
+{
+    // Only the section headers are parsed up front; the lines in a section are
+    // parsed, and their errors reported, on its first read
+    settings.allKeys();
+    if (settings.status() == QSettings::NoError) {
+        return;
+    }
+    const QMutexLocker locker(&settingsMutex);
+    smEarlySettingsErrors.insert(settings.fileName(), settings.status());
+}
+
+QSettings::Status MudletApp::earlySettingsStatus(const QString& fileName)
+{
+    const QMutexLocker locker(&settingsMutex);
+    return smEarlySettingsErrors.value(fileName, QSettings::NoError);
+}
+
+QTranslator* MudletApp::loadTranslationsForCommandLine(const bool printAndExitRun, const QString& configRoot)
+{
+    // Not MudletApp::getQSettings(): it stays null until setupConfig(), which a --help or --version run never
+    // reaches. Same file and format as setupConfig() opens - keep the spellings in step.
+    QSettings settings(qsl("%1/Mudlet.ini").arg(configRoot.isEmpty() ? MudletApp::getMudletPath(enums::mainPath) : configRoot), QSettings::IniFormat);
+    noteEarlySettingsStatus(settings);
+    // By name: only the first reader to parse a file is told of a format error, and the reader before this
+    // one, applyHighDpiRoundingPolicyFromConfig()'s, finds its root from argv[0] so it can have parsed another file
+    const QSettings::Status settingsStatus = earlySettingsStatus(settings.fileName());
+    // Other runs have getQSettings() report this, which a print-and-exit run never calls
+    if (printAndExitRun && settingsStatus == QSettings::FormatError) {
+        // Qt keeps every key it could parse, so a language set there may still be in use
+        qWarning().nospace().noquote() << "MudletApp::loadTranslationsForCommandLine() WARNING - \"" << settings.fileName()
+                                       << "\" is not valid INI, so an interface language set in it may have been read wrongly or not at all.";
+    } else if (printAndExitRun && settingsStatus != QSettings::NoError) {
+        qWarning().nospace().noquote() << "MudletApp::loadTranslationsForCommandLine() WARNING - \"" << settings.fileName()
+                                       << "\" is not readable, so any interface language set in it is not used for this text.";
+    }
+    auto interfaceLanguage = settings.value(QLatin1String("interfaceLanguage")).toString();
+    auto userLocale = interfaceLanguage.isEmpty() ? QLocale::system() : QLocale(interfaceLanguage);
+    if (userLocale == QLocale::c()) {
+        // Other runs report a code that names no locale where they read the interface language
+        if (printAndExitRun && !interfaceLanguage.isEmpty()) {
+            qWarning().nospace().noquote() << "MudletApp::loadTranslationsForCommandLine() WARNING - the interface language \"" << interfaceLanguage
+                                           << "\" is not a recognised locale, so the command line text is in English.";
+        }
+        return nullptr;
+    }
+    // We only need the Mudlet translations for the Command Line texts, no need
+    // for any Qt ones. Parented to QCoreApplication::instance(), not qApp, which static-casts
+    // to a QApplication that a print-and-exit run has not created.
+    QTranslator* pMudletTranslator = new QTranslator(QCoreApplication::instance());
+    // If we allow the translations to be outside of the resource file inside
+    // the application executable then this will have to be revised to handle
+    // it:
+    const bool isOk = pMudletTranslator->load(userLocale, qsl("mudlet"), QString("_"), qsl(":/lang"), qsl(".qm"));
+    if (!isOk) {
+        // Only a print-and-exit run prints the text this is about
+        if (printAndExitRun && !interfaceLanguage.isEmpty()) {
+            qWarning().nospace().noquote() << "MudletApp::loadTranslationsForCommandLine() WARNING - no translation could be loaded for the interface language \"" << interfaceLanguage
+                                           << "\", so the command line text is in English.";
+        }
+        delete pMudletTranslator;
+        return nullptr;
+    }
+    QCoreApplication::installTranslator(pMudletTranslator);
+    return pMudletTranslator;
+}
+
+QTranslator* MudletApp::loadTranslationsForRun(const QString& configRoot)
+{
+    // As loadTranslationsForCommandLine(): the settings store is not made yet
+    QSettings settings(qsl("%1/Mudlet.ini").arg(configRoot.isEmpty() ? MudletApp::getMudletPath(enums::mainPath) : configRoot), QSettings::IniFormat);
+    noteEarlySettingsStatus(settings);
+    // The file named for the language exactly, as the main window loads it
+    const QString fileName = qsl(":/lang/mudlet_%1.qm").arg(interfaceLanguageSetting(settings));
+    if (!QFile::exists(fileName)) {
+        return nullptr;
+    }
+    QTranslator* pMudletTranslator = new QTranslator(QCoreApplication::instance());
+    if (!pMudletTranslator->load(fileName)) {
+        delete pMudletTranslator;
+        return nullptr;
+    }
+    QCoreApplication::installTranslator(pMudletTranslator);
+    return pMudletTranslator;
+}
+
+void MudletApp::setDefaultMediaBackend()
+{
+    // FFmpeg plays .ogg/.opus, which the native Windows backend doesn't, and is what Linux gets by Qt's
+    // default. macOS uses it too: only FFmpeg feeds the shared output, TAudioMixer, which keeps Bluetooth
+    // headphones from being claimed for every sound.
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_MACOS)
+    const QByteArray defaultMediaBackend("ffmpeg");
+#else
+    const QByteArray defaultMediaBackend;
+#endif
+    if (defaultMediaBackend.isEmpty()) {
+        return;
+    }
+    if (!qEnvironmentVariableIsEmpty("QT_MEDIA_BACKEND")) {
+        qDebug().noquote().nospace() << "MudletApp::setDefaultMediaBackend() INFO - QT_MEDIA_BACKEND environmental variable is set to: \"" << qgetenv("QT_MEDIA_BACKEND") << "\".";
+        return;
+    }
+    if (qputenv("QT_MEDIA_BACKEND", defaultMediaBackend)) {
+        qDebug().noquote() << "MudletApp::setDefaultMediaBackend() INFO - setting QT_MEDIA_BACKEND environmental variable to:" << defaultMediaBackend;
+    } else {
+        qWarning().noquote() << "MudletApp::setDefaultMediaBackend() WARNING - failed to set QT_MEDIA_BACKEND environmental variable to:" << defaultMediaBackend << ", sound may not work.";
+    }
+}
+
+bool MudletApp::portableRootInUse()
+{
+    {
+        const QMutexLocker locker(&configRootMutex);
+        if (configRootState != ConfigRootState::unresolved) {
+            return configRootPortable;
+        }
+    }
+    // Nothing has settled a root yet, so there is no settled answer to give. Ask
+    // the resolver without settling anything - the credential path reaches this
+    // only before startup, since settleConfigRoot() runs before any profile is
+    // opened.
+    const auto resolution = resolveConfigRoot(executableDir());
+    return resolution.portable && !resolution.portableRootRejected;
+}
+
+QString MudletApp::getInterfaceLanguage()
+{
+    const QMutexLocker locker(&settingsMutex);
+    return smInterfaceLanguage;
+}
+
+QString MudletApp::autodetectPreferredLanguage()
+{
+    return autodetectPreferredLanguage(QLocale::system().uiLanguages());
+}
+
+QString MudletApp::autodetectPreferredLanguage(const QStringList& systemUiLanguages)
+{
+    // en_GB is close enough to en_US to be offered while its translation is still partial
+    QStringList qualityTranslations{qsl("en_GB")};
+    QFile statsFile(qsl(":/translation-stats.json"));
+    if (statsFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        const QJsonObject stats = QJsonDocument::fromJson(statsFile.readAll()).object();
+        for (auto it = stats.constBegin(); it != stats.constEnd(); ++it) {
+            if (it.value().toObject().value(qsl("translated_percent")).toInt() >= scmTranslationGoldStar && QFile::exists(qsl(":/lang/mudlet_%1.qm").arg(it.key()))) {
+                qualityTranslations.append(it.key());
+            }
+        }
+    }
+    return autodetectPreferredLanguage(systemUiLanguages, qualityTranslations);
+}
+
+QString MudletApp::autodetectPreferredLanguage(const QStringList& systemUiLanguages, const QStringList& qualityTranslations)
+{
+    // Qt lists each preference in several forms (pt-Latn-PT, pt-PT, pt-Latn, pt), so a translation of the language for
+    // another territory waits until the forms in that language and script have had their exact match, and an English
+    // preference with no translation of its own ends at the first language after it that is not English
+    bool englishPreferred = false;
+    QString fallback;
+    QLocale::Language fallbackLanguage = QLocale::AnyLanguage;
+    QLocale::Script fallbackScript = QLocale::AnyScript;
+    QStringList seenLanguages;
+    for (QString language : systemUiLanguages) {
+        language.replace(QLatin1Char('-'), QLatin1Char('_'));
+        const QStringList parts = language.split(QLatin1Char('_'));
+        const bool english = parts.constFirst() == qsl("en");
+        const QLocale wanted(language);
+        // QLocale swaps a script it has no data for (ru_Latn) for the language's usual one
+        bool scriptKept = true;
+        for (qsizetype i = 1; i < parts.size(); ++i) {
+            if (parts.at(i).size() == 4) {
+                scriptKept = QLocale::codeToScript(parts.at(i)) == wanted.script();
+            }
+        }
+        if (!fallback.isEmpty() && (wanted.language() != fallbackLanguage || wanted.script() != fallbackScript || !scriptKept)) {
+            return fallback;
+        }
+        if (englishPreferred && !english) {
+            break;
+        }
+        if (qualityTranslations.contains(language)) {
+            return language;
+        }
+        englishPreferred = english;
+        // Qt repeats a bare language after a preference's other forms, where it stands for the usual script: zh after
+        // zh-Hant-HK would be Simplified
+        const bool repeatedBareLanguage = parts.size() == 1 && seenLanguages.contains(parts.constFirst());
+        seenLanguages.append(parts.constFirst());
+        if (!fallback.isEmpty() || english || repeatedBareLanguage || !scriptKept || wanted.language() == QLocale::C) {
+            continue;
+        }
+        for (const QString& code : qualityTranslations) {
+            const QLocale offered(code);
+            if (offered.language() == wanted.language() && offered.script() == wanted.script()) {
+                fallback = code;
+                fallbackLanguage = wanted.language();
+                fallbackScript = wanted.script();
+                break;
+            }
+        }
+    }
+    return fallback.isEmpty() ? qsl("en_US") : fallback;
+}
+
+QString MudletApp::interfaceLanguageSetting(const QSettings& settings)
+{
+    return settings.value(qsl("interfaceLanguage"), autodetectPreferredLanguage()).toString();
+}
+
+void MudletApp::readInterfaceLanguage(const QSettings& settings)
+{
+    const QString language = interfaceLanguageSetting(settings);
+    setInterfaceLanguage(language);
+    if (QLocale(language) == QLocale::c()) {
+        qWarning().nospace().noquote() << "MudletApp::readInterfaceLanguage(...) WARNING - the interface language \"" << language << "\" is not a recognised locale, so the interface is in English.";
+    } else if (!QFile::exists(qsl(":/lang/mudlet_%1.qm").arg(language))) {
+        qWarning().nospace().noquote() << "MudletApp::readInterfaceLanguage(...) WARNING - there is no translation for the interface language \"" << language << "\", so the interface is in English.";
+    }
+}
+
+void MudletApp::setInterfaceLanguage(const QString& language)
+{
+    const QMutexLocker locker(&settingsMutex);
+    smInterfaceLanguage = language;
+}
+
+bool MudletApp::storingPasswordsSecurely()
+{
+    return smStorePasswordsSecurely;
+}
+
+void MudletApp::setStorePasswordsSecurely(const bool storeSecurely)
+{
+    smStorePasswordsSecurely = storeSecurely;
+}
+
+bool MudletApp::firstLaunch()
+{
+    return smFirstLaunch;
+}
+
+void MudletApp::setFirstLaunch(const bool firstLaunch)
+{
+    smFirstLaunch = firstLaunch;
+}
+
+bool MudletApp::darkMode()
+{
+    return smDarkMode;
+}
+
+void MudletApp::setDarkMode(const bool dark)
+{
+    smDarkMode = dark;
+}
+
+const QString& MudletApp::buildSuffix()
+{
+    // Deliberately not a namespace-scope constant: the Qt resource system is
+    // only registered once main() runs, so reading the file any earlier would
+    // silently yield an empty string and make every build look like a release.
+    static const QString appBuild = [] {
+        QFile gitShaFile(qsl(":/app-build.txt"));
+        if (!gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            qWarning() << "MudletApp::buildSuffix() failed to open app-build.txt for reading:" << gitShaFile.errorString();
+            return QString();
+        }
+        return QString::fromUtf8(gitShaFile.readAll()).trimmed();
+    }();
+    return appBuild;
+}
+
+const QString& MudletApp::scmVersion()
+{
+    static const QString version = qsl("Mudlet ") + QString(APP_VERSION) + buildSuffix();
+    return version;
+}
+
+bool MudletApp::release()
+{
+    return buildSuffix().isEmpty();
+}
+
+bool MudletApp::publicTest()
+{
+    return buildSuffix().startsWith(qsl("-ptb"));
+}
+
+bool MudletApp::development()
+{
+    return !release() && !publicTest();
+}
+
+// Enable redirects and HTTPS support for a given url
+void MudletApp::setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request)
+{
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+
+    request.setRawHeader(QByteArray("User-Agent"), qsl("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, buildSuffix()).toUtf8());
+#if !defined(QT_NO_SSL)
+    if (url.scheme() == qsl("https")) {
+        const QSslConfiguration config(QSslConfiguration::defaultConfiguration());
+        request.setSslConfiguration(config);
+    }
+#endif
+}

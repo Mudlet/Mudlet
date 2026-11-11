@@ -1,0 +1,1129 @@
+/***************************************************************************
+ *   Copyright (C) 2026 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+
+// Caret mode: the keyboard-only way around the scrollback that Mudlet offers
+// screen-reader users. TTextEdit::keyPressEvent() is the whole of it - arrow
+// and paging keys walking a caret through the buffer, Tab and Ctrl+bracket
+// walking between links, Return activating the link under the caret, the Menu
+// key offering the choices of a link that carries several commands, and any
+// printable key handing both the character and the focus to the command line.
+//
+// A Lua spec cannot press a key in a console. It can read nothing of this
+// either: the caret's line and column are private C++ state on TTextEdit with
+// no scripting accessor, so even the outcome is invisible from Lua.
+//
+// The Shift and Ctrl branches read QGuiApplication::keyboardModifiers() rather
+// than the event. Qt sets that application-wide state from each key event as it
+// is delivered, so a modifier asked for here reaches those branches just as a
+// real one does - the synthetic press of the modifier key itself that
+// QTest::keyClick() sends first is not what carries it.
+
+#include <QApplication>
+#include <QClipboard>
+#include <QFileInfo>
+#include <QFontDatabase>
+#include <QFontInfo>
+#include <QLineEdit>
+#include <QMenu>
+#include <QScopeGuard>
+#include <QTemporaryDir>
+#include <QtTest/QtTest>
+
+#include <chrono>
+
+#include "Host.h"
+#include "MudletApp.h"
+#include "MudletInstanceCoordinator.h"
+#include "ProfileTestHelper.h"
+#include "TBuffer.h"
+#include "TCommandLine.h"
+#include "TLuaInterpreter.h"
+#include "TMainConsole.h"
+#include "TTextEdit.h"
+#include "TUiTour.h"
+#include "TelnetServerStub.h"
+#include "ctelnet.h"
+#include "mudlet.h"
+#include "utils.h"
+
+#include "GroupedTest.h"
+
+using namespace std::chrono_literals;
+
+class CaretNavigationTest : public QObject
+{
+    Q_OBJECT
+
+private:
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
+    TelnetServerStub* mpServer = nullptr;
+    Host* mpHost = nullptr;
+    const QString mHostname = qsl("Test-Caret-Navigation");
+    const QString mLocalhost = qsl("localhost");
+    // Three lines of known and deliberately unequal lengths, so a column can be
+    // clamped by one and restored by the next
+    const QString mLongLine = qsl("alpha bravo charlie");
+    const QString mShortLine = qsl("short");
+    const QString mLastLine = qsl("delta echo foxtrot golf");
+    const QString mLinkLine = qsl("LINKONE LINKTWO");
+    const QString mPopupLine = qsl("POPUPLINK");
+    // Shorter than every other marker line, so a column taken from the line a
+    // jump started on lands past this one's end
+    const QString mLatestLine = qsl("tail");
+    int mLongLineNumber = -1;
+    int mShortLineNumber = -1;
+    int mLastLineNumber = -1;
+    int mLinkLineNumber = -1;
+    int mPopupLineNumber = -1;
+
+    // setupConfig() consults portable.txt before the XDG logic
+    static bool portableMarkerPresent()
+    {
+        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
+    }
+
+    TTextEdit* pane() const { return mpHost->mainConsoleView()->mUpperPane; }
+
+    TBuffer& consoleBuffer() const { return mpHost->mainConsoleView()->buffer; }
+
+    static void press(TTextEdit* pPane, const Qt::Key key, const Qt::KeyboardModifiers modifiers = Qt::NoModifier) { QTest::keyClick(pPane, key, modifiers); }
+
+    bool runLua(const QString& script) { return mpHost->mLuaInterpreter.compileAndExecuteScript(script); }
+
+    // Handing focus to the command line is done on a chain of single-shot
+    // timers up to 50ms long. Left to fire in a later case, the console's
+    // focus-out handler turns caret mode off in the middle of it.
+    static void drainDeferredFocusChange() { QTest::qWait(80ms); }
+
+    // The menu is parented on the pane and deletes itself when it closes, but
+    // only once the deferred deletion is delivered, so an earlier case's menu
+    // can still be a child when the next one looks.
+    QMenu* openLinkMenu()
+    {
+        for (QMenu* stale : pane()->findChildren<QMenu*>()) {
+            delete stale;
+        }
+        QTest::keyClick(pane(), Qt::Key_Menu);
+        return pane()->findChild<QMenu*>();
+    }
+
+    // A printable key in caret mode goes to the command line of the console it
+    // was pressed in, so a mini console needs one for that to be seen
+    TConsole* miniConsoleWithCommandLine(const QString& name)
+    {
+        if (!runLua(qsl("createMiniConsole('%1', 0, 0, 300, 100)\nenableCommandLine('%1')").arg(name))) {
+            return nullptr;
+        }
+        TConsole* pMini = mpHost->mainConsoleView()->subConsoleWidget(name);
+        return pMini && pMini->mpCommandLine ? pMini : nullptr;
+    }
+
+    static bool activateMainWindow()
+    {
+        mudlet::self()->activateWindow();
+        return QTest::qWaitForWindowActive(mudlet::self());
+    }
+
+    // Through the window, as a real key press arrives: QTest::keyClick() on a
+    // widget hands the event straight to it, past any keyboard grab
+    static QString typeInto(QWidget& window)
+    {
+        auto pEdit = new QLineEdit(&window);
+        window.show();
+        window.activateWindow();
+        if (!QTest::qWaitForWindowActive(&window)) {
+            return qsl("(the window never became active)");
+        }
+        pEdit->setFocus();
+        for (const char key : {'a', 'b', 'c'}) {
+            QTest::keyClick(window.windowHandle(), key);
+        }
+        return pEdit->text();
+    }
+
+    QString luaGlobal(const char* name) const
+    {
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        lua_getglobal(L, name);
+        const QString value = lua_isstring(L, -1) ? QString::fromUtf8(lua_tostring(L, -1)) : QString();
+        lua_pop(L, 1);
+        return value;
+    }
+
+private slots:
+    void initTestCase()
+    {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
+        // A config root of this process's own. Sharing the developer's
+        // ~/.config/mudlet means sharing a profile list, so a second copy of
+        // this test running at the same time is told the name it types is
+        // already in use and never gets an enabled Connect button. Since #9712
+        // the opt-in that makes setupConfig() adopt a directory is
+        // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
+
+#ifdef INCLUDE_FONTS
+        // src/main.cpp extracts the bundled fonts into the config directory and
+        // FontManager picks them up from there, but no test binary runs it, so
+        // on a machine that has not run Mudlet before there is nothing on disk
+        // to pick up and Qt quietly substitutes another family.
+        for (const QString& file : {qsl(":/fonts/ttf-bitstream-vera-1.10/VeraMono.ttf"), qsl(":/fonts/ttf-bitstream-vera-1.10/VeraMoBd.ttf")}) {
+            QVERIFY2(QFontDatabase::addApplicationFont(file) != -1, qPrintable(qsl("Could not register the bundled font %1").arg(file)));
+        }
+        const QFont bundled(qsl("Bitstream Vera Sans Mono"), 10);
+        QCOMPARE(QFontInfo(bundled).family(), qsl("Bitstream Vera Sans Mono"));
+#endif
+
+        mpServer = new TelnetServerStub(qApp);
+        mpServer->start(mLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
+
+        mudlet::start();
+        mudlet::self()->setupConfig();
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        // A config dir of this test's own reads as a brand new installation, so
+        // the first-run interface tour would open over the profile a second
+        // after it loads and take the window's keyboard with it - the keys
+        // below would reach the tour rather than the caret. Written before
+        // init(), which is what stamps an untouched config as a first launch:
+        // a settings file that already holds something is how mudletUsedBefore()
+        // recognises an existing player, which keeps the rest of the first-run
+        // interface away as well.
+        TUiTour::rememberShown();
+        mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
+        mudlet::self()->init();
+        mudlet::self()->setStorePasswordsSecurely(false);
+        QVERIFY2(mudlet::self()->experiencedMudletPlayer(), "the first-run UI would open over these tests and take the window's keyboard");
+        QDir(MudletApp::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
+
+        mpHost = TestProfile::create(mHostname, mLocalhost, QString::number(mpServer->serverPort()));
+        QVERIFY2(mpHost, "Could not create the test profile - see the warning above for the step that timed out.");
+
+        QSignalSpy connected(&mpHost->mTelnet, &cTelnet::signal_connected);
+        if (connected.isEmpty()) {
+            QVERIFY2(connected.wait(15s), "The test profile never connected to the stub server.");
+        }
+
+        mudlet::self()->resize(1200, 800);
+        QTest::qWait(100ms);
+
+        // More lines than fit on the screen, so paging has somewhere to go
+        for (int line = 0; line < 100; ++line) {
+            mpHost->mainConsoleView()->print(qsl("caret filler %1\n").arg(line));
+        }
+        mpHost->mainConsoleView()->print(qsl("%1\n%2\n%3\n").arg(mLongLine, mShortLine, mLastLine));
+        // Two links on one line, with a plain character between them, so
+        // stepping between links has to land on each one's first column
+        QVERIFY(runLua(qsl("caretLinkOne = ''\n"
+                           "caretLinkTwo = ''\n"
+                           "echoLink('LINKONE', [[caretLinkOne = 'ran']], 'the first link')\n"
+                           "echo(' ')\n"
+                           "echoLink('LINKTWO', [[caretLinkTwo = 'ran']], 'the second link')\n"
+                           "echo('\\n')\n"
+                           "caretPopupA = ''\n"
+                           "caretPopupB = ''\n"
+                           "echoPopup('POPUPLINK', {[[caretPopupA = 'a']], [[caretPopupB = 'b']]}, {'first choice', 'second choice'})\n"
+                           "echo('\\n')")));
+        QTest::qWait(100ms);
+        // Last, and only once the profile's own start-up output has stopped
+        // arriving: a line of it landing afterwards would put a second empty
+        // line at the end of the buffer, and Ctrl+End steps over one
+        qsizetype settledLength = -1;
+        for (int attempt = 0; attempt < 50 && settledLength != consoleBuffer().lineBuffer.length(); ++attempt) {
+            settledLength = consoleBuffer().lineBuffer.length();
+            QTest::qWait(200ms);
+        }
+        QVERIFY2(settledLength == consoleBuffer().lineBuffer.length(), "the profile's start-up output never stopped arriving");
+        mpHost->mainConsoleView()->print(qsl("%1\n").arg(mLatestLine));
+
+        mLongLineNumber = consoleBuffer().lineBuffer.indexOf(mLongLine);
+        mShortLineNumber = consoleBuffer().lineBuffer.indexOf(mShortLine);
+        mLastLineNumber = consoleBuffer().lineBuffer.indexOf(mLastLine);
+        mLinkLineNumber = consoleBuffer().lineBuffer.indexOf(mLinkLine);
+        mPopupLineNumber = consoleBuffer().lineBuffer.indexOf(mPopupLine);
+        QVERIFY2(mLongLineNumber > 0, "the marker lines never reached the buffer");
+        QCOMPARE(mShortLineNumber, mLongLineNumber + 1);
+        QCOMPARE(mLastLineNumber, mLongLineNumber + 2);
+        QCOMPARE(mLinkLineNumber, mLongLineNumber + 3);
+        QCOMPARE(mPopupLineNumber, mLongLineNumber + 4);
+        QVERIFY2(consoleBuffer().getLinkIndexAt(mLinkLineNumber, 0) > 0, "echoLink() put no link on the line it printed");
+        QVERIFY2(consoleBuffer().getLinkIndexAt(mLastLineNumber, 0) == 0, "the line before the links carries a link of its own, so stepping forward would find the wrong one");
+    }
+
+    void cleanupTestCase()
+    {
+        mpHost = nullptr;
+        delete mpServer;
+        mpServer = nullptr;
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
+        if (mudlet::self()) {
+            QDir(MudletApp::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
+            delete mudlet::self();
+        }
+        mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
+    }
+
+    void init()
+    {
+        mpHost->setCaretEnabled(true);
+        // Remembered across key presses rather than reset by them, so a column
+        // banked by one test would follow the caret into the next one
+        pane()->mOldCaretColumn = 0;
+        consoleBuffer().setFocusedLink(0);
+    }
+
+    void cleanup()
+    {
+        // Guarded: TConsole::setCaretMode(false) asserts if it is called when
+        // the pane already has its focus proxy back, which a second call does.
+        if (mpHost->caretEnabled()) {
+            mpHost->setCaretEnabled(false);
+        }
+        // A case that moved focus can leave the change undelivered, and it would
+        // otherwise land during the next case - after its init() turned caret
+        // mode back on, so the pane's focusOutEvent turns it straight off again.
+        drainDeferredFocusChange();
+    }
+
+    // Nothing below runs at all unless caret mode is on: without it
+    // keyPressEvent() hands every key straight back to QWidget.
+    void test_withoutCaretModeTheArrowKeysDoNotMoveTheCaret()
+    {
+        mpHost->setCaretEnabled(false);
+        QVERIFY(!mpHost->caretEnabled());
+        pane()->setCaretPosition(mLongLineNumber, 4);
+
+        press(pane(), Qt::Key_Right);
+
+        QCOMPARE(pane()->mCaretColumn, 4);
+
+        // The same key press with caret mode back on, so a press() that never
+        // reached the pane could not be what kept the column still above.
+        // Turning caret mode on parks the caret at the end of the buffer, so
+        // the position has to be set again after it rather than before.
+        mpHost->setCaretEnabled(true);
+        pane()->setCaretPosition(mLongLineNumber, 4);
+        press(pane(), Qt::Key_Right);
+        QCOMPARE(pane()->mCaretColumn, 5);
+    }
+
+    void test_leftAndRightWalkTheCaretAlongALine()
+    {
+        pane()->setCaretPosition(mLongLineNumber, 4);
+
+        press(pane(), Qt::Key_Right);
+        QCOMPARE(pane()->mCaretLine, mLongLineNumber);
+        QCOMPARE(pane()->mCaretColumn, 5);
+
+        press(pane(), Qt::Key_Left);
+        QCOMPARE(pane()->mCaretLine, mLongLineNumber);
+        QCOMPARE(pane()->mCaretColumn, 4);
+    }
+
+    // Off the right-hand end of a line and onto the start of the next.
+    void test_rightAtTheEndOfALineMovesToTheStartOfTheNext()
+    {
+        pane()->setCaretPosition(mLongLineNumber, mLongLine.length() - 1);
+
+        press(pane(), Qt::Key_Right);
+
+        QCOMPARE(pane()->mCaretLine, mShortLineNumber);
+        QCOMPARE(pane()->mCaretColumn, 0);
+    }
+
+    // ...and back off the left-hand end onto the end of the previous one.
+    void test_leftAtTheStartOfALineMovesToTheEndOfThePrevious()
+    {
+        pane()->setCaretPosition(mShortLineNumber, 0);
+
+        press(pane(), Qt::Key_Left);
+
+        QCOMPARE(pane()->mCaretLine, mLongLineNumber);
+        QCOMPARE(pane()->mCaretColumn, mLongLine.length() - 1);
+    }
+
+    void test_upAndDownWalkTheCaretBetweenLines()
+    {
+        pane()->setCaretPosition(mLongLineNumber, 3);
+
+        press(pane(), Qt::Key_Down);
+        QCOMPARE(pane()->mCaretLine, mShortLineNumber);
+        QCOMPARE(pane()->mCaretColumn, 3);
+
+        press(pane(), Qt::Key_Up);
+        QCOMPARE(pane()->mCaretLine, mLongLineNumber);
+        QCOMPARE(pane()->mCaretColumn, 3);
+    }
+
+    // Walking down past a short line must not silently lose the column the user
+    // was in: it is banked, clamped for the short line, and given back once a
+    // line is long enough to hold it again.
+    void test_aColumnLostToAShortLineComesBackOnTheNextLongOne()
+    {
+        pane()->setCaretPosition(mLongLineNumber, 10);
+        QVERIFY2(mShortLine.length() < 10, "the short line is not short enough for the column to be clamped");
+
+        press(pane(), Qt::Key_Down);
+        QCOMPARE(pane()->mCaretLine, mShortLineNumber);
+        QCOMPARE(pane()->mCaretColumn, mShortLine.length() - 1);
+
+        press(pane(), Qt::Key_Down);
+        QCOMPARE(pane()->mCaretLine, mLastLineNumber);
+        QCOMPARE(pane()->mCaretColumn, 10);
+    }
+
+    void test_homeAndEndJumpToTheEndsOfTheCurrentLine()
+    {
+        pane()->setCaretPosition(mLongLineNumber, 7);
+
+        press(pane(), Qt::Key_Home);
+        QCOMPARE(pane()->mCaretLine, mLongLineNumber);
+        QCOMPARE(pane()->mCaretColumn, 0);
+
+        press(pane(), Qt::Key_End);
+        QCOMPARE(pane()->mCaretLine, mLongLineNumber);
+        QCOMPARE(pane()->mCaretColumn, mLongLine.length() - 1);
+    }
+
+    // #9101: Ctrl+End steps over the empty line the next line of game text will
+    // be written into. Taking the column from the line the caret was on rather
+    // than the one it lands on put it past the end of the shorter line it
+    // arrived at, and the caret vanished.
+    void test_ctrlEndJumpsToTheEndOfTheLastLineWithTextOnIt()
+    {
+        // Read live rather than banked in initTestCase(), which a line of output
+        // arriving in between would leave pointing one line short
+        const int latestLine = static_cast<int>(consoleBuffer().lineBuffer.length()) - 2;
+        QCOMPARE(consoleBuffer().lineBuffer.at(latestLine), mLatestLine);
+
+        pane()->setCaretPosition(mLongLineNumber, 0);
+        press(pane(), Qt::Key_End, Qt::ControlModifier);
+
+        QCOMPARE(pane()->mCaretLine, latestLine);
+        QCOMPARE(pane()->mCaretColumn, static_cast<int>(mLatestLine.length()) - 1);
+    }
+
+    // #9393: the first Shift+Arrow anchors the moving end of the selection at
+    // the column the caret moved to. Anchored at the column it came from, the
+    // selection lagged a character behind, so from column 0 a copy straight
+    // afterwards took one character instead of two.
+    void test_theFirstShiftRightSelectsAsFarAsTheCaretMoved()
+    {
+        QApplication::clipboard()->setText(qsl("nothing was copied"));
+        pane()->setCaretPosition(mLongLineNumber, 0);
+
+        press(pane(), Qt::Key_Right, Qt::ShiftModifier);
+        const int columnMovedTo = pane()->mCaretColumn;
+        pane()->slot_copySelectionToClipboard();
+        const QString selected = QApplication::clipboard()->text();
+        // The shift-selection is remembered until a key press without Shift ends
+        // it, and while it is on an unmodified arrow key only clears it rather
+        // than moving the caret - so end it before an assertion can return early
+        // and leave the next case's first arrow key doing nothing.
+        press(pane(), Qt::Key_Right);
+
+        QCOMPARE(columnMovedTo, 1);
+        QCOMPARE(selected, mLongLine.left(2));
+    }
+
+    void test_pageUpAndPageDownMoveByAScreenful()
+    {
+        const int screenful = pane()->getScreenHeight();
+        QVERIFY2(screenful > 1 && screenful < mLongLineNumber, "the screen is not a usable size for paging");
+        pane()->setCaretPosition(mLongLineNumber, 0);
+
+        press(pane(), Qt::Key_PageUp);
+        QCOMPARE(pane()->mCaretLine, mLongLineNumber - screenful);
+
+        press(pane(), Qt::Key_PageDown);
+        QCOMPARE(pane()->mCaretLine, mLongLineNumber);
+    }
+
+    // The ends of the buffer are walls, not places to fall off.
+    // A step onto the last line either way first, so a key press that did
+    // nothing at all could not pass for the wall being there.
+    void test_theCaretStopsAtBothEndsOfTheBuffer()
+    {
+        pane()->setCaretPosition(1, 3);
+        press(pane(), Qt::Key_Up);
+        QCOMPARE(pane()->mCaretLine, 0);
+        press(pane(), Qt::Key_Up);
+        QCOMPARE(pane()->mCaretLine, 0);
+
+        const int lastLineWithText = consoleBuffer().lineBuffer.length() - 1 - (consoleBuffer().lineBuffer.last().isEmpty() ? 1 : 0);
+        pane()->setCaretPosition(lastLineWithText - 1, 0);
+        press(pane(), Qt::Key_Down);
+        QCOMPARE(pane()->mCaretLine, lastLineWithText);
+        press(pane(), Qt::Key_Down);
+        QCOMPARE(pane()->mCaretLine, lastLineWithText);
+
+        press(pane(), Qt::Key_PageDown);
+        QCOMPARE(pane()->mCaretLine, lastLineWithText);
+    }
+
+    // #7933: a printable key pressed while reading the output is meant to be
+    // the start of a command, so caret mode gets out of the way and the
+    // character is delivered to the command line rather than dropped.
+    void test_aPrintableKeyHandsTheCharacterToTheCommandLine()
+    {
+        TCommandLine* pCommandLine = mpHost->mainConsoleView()->mpCommandLine;
+        QVERIFY(pCommandLine);
+        pCommandLine->clear();
+        pane()->setCaretPosition(mLongLineNumber, 0);
+        QVERIFY(mpHost->caretEnabled());
+
+        QTest::keyClick(pane(), 'z');
+
+        QVERIFY2(!mpHost->caretEnabled(), "caret mode is still on, so the console kept the keyboard");
+        QCOMPARE(pCommandLine->toPlainText(), qsl("z"));
+        pCommandLine->clear();
+        drainDeferredFocusChange();
+    }
+
+    // ...but a key that cannot start a command stays with the caret.
+    void test_aCaretKeyIsNotSentToTheCommandLine()
+    {
+        TCommandLine* pCommandLine = mpHost->mainConsoleView()->mpCommandLine;
+        QVERIFY(pCommandLine);
+        pCommandLine->clear();
+        pane()->setCaretPosition(mLongLineNumber, 4);
+
+        press(pane(), Qt::Key_Left);
+
+        QVERIFY2(mpHost->caretEnabled(), "an arrow key turned caret mode off");
+        QCOMPARE(pCommandLine->toPlainText(), QString());
+        QCOMPARE(pane()->mCaretColumn, 3);
+    }
+
+    // The key that leaves caret mode hands the keyboard to the command line,
+    // not to whatever follows the console in Qt's focus chain - with the
+    // main toolbar shown, that is one of its buttons.
+    void test_theCaretShortcutReturnsTheKeyboardToTheCommandLine_data()
+    {
+        QTest::addColumn<QString>("shortcut");
+        QTest::addColumn<int>("key");
+        QTest::addColumn<int>("modifiers");
+        QTest::addColumn<bool>("inMiniConsole");
+        QTest::newRow("tab") << qsl("tab") << static_cast<int>(Qt::Key_Tab) << static_cast<int>(Qt::NoModifier) << false;
+        QTest::newRow("ctrltab") << qsl("ctrltab") << static_cast<int>(Qt::Key_Tab) << static_cast<int>(Qt::ControlModifier) << false;
+        QTest::newRow("f6") << qsl("f6") << static_cast<int>(Qt::Key_F6) << static_cast<int>(Qt::NoModifier) << false;
+        QTest::newRow("tab in a mini console") << qsl("tab") << static_cast<int>(Qt::Key_Tab) << static_cast<int>(Qt::NoModifier) << true;
+    }
+
+    void test_theCaretShortcutReturnsTheKeyboardToTheCommandLine()
+    {
+        QFETCH(QString, shortcut);
+        QFETCH(int, key);
+        QFETCH(int, modifiers);
+        QFETCH(bool, inMiniConsole);
+        TCommandLine* pCommandLine = mpHost->mainConsoleView()->mpCommandLine;
+        QVERIFY(pCommandLine);
+        // Restored however this case ends, or Tab would leave caret mode in every later one
+        const auto savedToolBarVisibility = mudlet::self()->toolBarVisibility();
+        const auto savedShortcut = mpHost->mCaretShortcut;
+        const auto restore = qScopeGuard([this, savedToolBarVisibility, savedShortcut]() {
+            mpHost->mCaretShortcut = savedShortcut;
+            mudlet::self()->setToolBarVisibility(savedToolBarVisibility);
+        });
+        mudlet::self()->setToolBarVisibility(enums::visibleAlways);
+        QVERIFY(runLua(qsl("setConfig('caretShortcut', '%1')").arg(shortcut)));
+        TTextEdit* pPane = pane();
+        if (inMiniConsole) {
+            TConsole* pMini = miniConsoleWithCommandLine(qsl("caretShortcutMini"));
+            QVERIFY(pMini);
+            pPane = pMini->mUpperPane;
+        }
+        QVERIFY(mpHost->caretEnabled());
+
+        press(pPane, static_cast<Qt::Key>(key), static_cast<Qt::KeyboardModifiers>(modifiers));
+        drainDeferredFocusChange();
+
+        QVERIFY2(!mpHost->caretEnabled(), "the caret-mode shortcut did not turn caret mode off");
+        QWidget* const pFocused = QApplication::focusWidget();
+        // The hand-off is to the profile's active command line, which a mini console's need not be
+        const bool onACommandLine = inMiniConsole ? qobject_cast<TCommandLine*>(pFocused) != nullptr : pFocused == pCommandLine;
+        QVERIFY2(onACommandLine, qPrintable(qsl("the keyboard went to %1 rather than the command line").arg(pFocused ? QString::fromLatin1(pFocused->metaObject()->className()) : qsl("nothing"))));
+    }
+
+    // Tab and Shift+Tab are how a screen-reader user finds the links in a page
+    // of output without a mouse.
+    void test_tabAndBacktabStepBetweenTheLinksInTheBuffer()
+    {
+        pane()->setCaretPosition(mLastLineNumber, 0);
+        const int firstLinkColumn = mLinkLine.indexOf(qsl("LINKONE"));
+        const int secondLinkColumn = mLinkLine.indexOf(qsl("LINKTWO"));
+
+        press(pane(), Qt::Key_Tab);
+        QCOMPARE(pane()->mCaretLine, mLinkLineNumber);
+        QCOMPARE(pane()->mCaretColumn, firstLinkColumn);
+
+        press(pane(), Qt::Key_Tab);
+        QCOMPARE(pane()->mCaretLine, mLinkLineNumber);
+        QCOMPARE(pane()->mCaretColumn, secondLinkColumn);
+
+        press(pane(), Qt::Key_Backtab);
+        QCOMPARE(pane()->mCaretLine, mLinkLineNumber);
+        QCOMPARE(pane()->mCaretColumn, firstLinkColumn);
+    }
+
+    // Ctrl+] and Ctrl+[ do the same, for the case where the user has given Tab
+    // away to the caret-mode toggle.
+    void test_ctrlBracketAlsoStepsBetweenLinks()
+    {
+        pane()->setCaretPosition(mLastLineNumber, 0);
+        const int firstLinkColumn = mLinkLine.indexOf(qsl("LINKONE"));
+        const int secondLinkColumn = mLinkLine.indexOf(qsl("LINKTWO"));
+
+        press(pane(), Qt::Key_BracketRight, Qt::ControlModifier);
+        QCOMPARE(pane()->mCaretColumn, firstLinkColumn);
+
+        press(pane(), Qt::Key_BracketRight, Qt::ControlModifier);
+        QCOMPARE(pane()->mCaretColumn, secondLinkColumn);
+
+        press(pane(), Qt::Key_BracketLeft, Qt::ControlModifier);
+        QCOMPARE(pane()->mCaretColumn, firstLinkColumn);
+    }
+
+    // Without the modifier the same keys are ordinary characters, and go to the
+    // command line like any other printable key.
+    void test_aBracketWithoutControlIsJustACharacter()
+    {
+        pane()->setCaretPosition(mLastLineNumber, 0);
+
+        press(pane(), Qt::Key_BracketRight);
+
+        QCOMPARE(pane()->mCaretLine, mLastLineNumber);
+        QCOMPARE(pane()->mCaretColumn, 0);
+        QVERIFY2(!mpHost->caretEnabled(), "a printable key left caret mode on");
+        mpHost->mainConsoleView()->mpCommandLine->clear();
+        drainDeferredFocusChange();
+    }
+
+    // Return on the link under the caret runs it, which is the entire point of
+    // being able to reach it with the keyboard.
+    void test_returnActivatesTheLinkUnderTheCaret()
+    {
+        QVERIFY(runLua(qsl("caretLinkOne = ''")));
+        pane()->setCaretPosition(mLastLineNumber, 0);
+        press(pane(), Qt::Key_Tab);
+        QVERIFY2(consoleBuffer().getFocusedLink() > 0, "no link is focused, so Return has nothing to activate");
+
+        press(pane(), Qt::Key_Return);
+
+        QCOMPARE(luaGlobal("caretLinkOne"), qsl("ran"));
+    }
+
+    // Space is the other activation key: being printable, it must not be handed
+    // to the command line while a link is focused
+    void test_spaceActivatesTheLinkUnderTheCaret()
+    {
+        QVERIFY(runLua(qsl("caretLinkOne = ''")));
+        TCommandLine* pCommandLine = mpHost->mainConsoleView()->mpCommandLine;
+        QVERIFY(pCommandLine);
+        pCommandLine->clear();
+        pane()->setCaretPosition(mLastLineNumber, 0);
+        press(pane(), Qt::Key_Tab);
+        QVERIFY2(consoleBuffer().getFocusedLink() > 0, "no link is focused, so Space has nothing to activate");
+
+        press(pane(), Qt::Key_Space);
+
+        QCOMPARE(luaGlobal("caretLinkOne"), qsl("ran"));
+        QCOMPARE(pCommandLine->toPlainText(), QString());
+        QVERIFY2(mpHost->caretEnabled(), "activating the link took the keyboard away from the caret");
+    }
+
+    // Off a link, Space is just the first character of a command
+    void test_spaceOffALinkGoesToTheCommandLine()
+    {
+        TCommandLine* pCommandLine = mpHost->mainConsoleView()->mpCommandLine;
+        QVERIFY(pCommandLine);
+        pCommandLine->clear();
+        pane()->setCaretPosition(mLongLineNumber, 0);
+        QCOMPARE(consoleBuffer().getFocusedLink(), 0);
+
+        press(pane(), Qt::Key_Space);
+
+        QVERIFY2(!mpHost->caretEnabled(), "caret mode is still on, so the console kept the keyboard");
+        QCOMPARE(pCommandLine->toPlainText(), qsl(" "));
+        pCommandLine->clear();
+        drainDeferredFocusChange();
+    }
+
+    // The focused link is only updated when the caret moves, so once deleteLine()
+    // has taken the caret's line it names a link that is gone
+    void test_spaceAfterDeleteLineTookTheFocusedLinkGoesToTheCommandLine()
+    {
+        TConsole* pMini = miniConsoleWithCommandLine(qsl("caretSpaceDeleted"));
+        QVERIFY(pMini);
+        QVERIFY(runLua(qsl("caretSpaceRan = ''\n"
+                           "for i = 1, 8 do echo('caretSpaceDeleted', 'line ' .. i .. '\\n') end\n"
+                           "echoLink('caretSpaceDeleted', 'GONE', [[caretSpaceRan = 'gone']], '')\necho('caretSpaceDeleted', '\\n')\n"
+                           "echoLink('caretSpaceDeleted', 'KEPT', [[caretSpaceRan = 'kept']], '')\necho('caretSpaceDeleted', '\\n')")));
+        TTextEdit* pMiniPane = pMini->mUpperPane;
+        pMiniPane->setCaretPosition(8, 0);
+        QVERIFY(pMini->buffer.getFocusedLink() > 0);
+        QVERIFY(runLua(qsl("for i = 1, 8 do moveCursor('caretSpaceDeleted', 0, 1) deleteLine('caretSpaceDeleted') end")));
+        QCOMPARE(pMini->buffer.lineBuffer, QStringList({qsl("line 1"), qsl("KEPT"), QString()}));
+        QVERIFY2(pMini->buffer.getFocusedLink() > 0, "deleteLine() cleared the focused link, so Space never meets a stale one");
+
+        press(pMiniPane, Qt::Key_Space);
+
+        QCOMPARE(luaGlobal("caretSpaceRan"), QString());
+        QCOMPARE(pMini->mpCommandLine->toPlainText(), qsl(" "));
+        pMini->mpCommandLine->clear();
+        drainDeferredFocusChange();
+    }
+
+    // Trimming the buffer to its limit moves the text up under a caret that stays put
+    void test_spaceAfterTheBufferTrimMovedTheLinkAwayGoesToTheCommandLine()
+    {
+        TConsole* pMini = miniConsoleWithCommandLine(qsl("caretSpaceTrimmed"));
+        QVERIFY(pMini);
+        QVERIFY(runLua(qsl("caretSpaceRan = ''\n"
+                           "setConsoleBufferSize('caretSpaceTrimmed', 100, 10)\n"
+                           "for i = 1, 90 do echo('caretSpaceTrimmed', 'line ' .. i .. '\\n') end\n"
+                           "echoLink('caretSpaceTrimmed', 'MOVED', [[caretSpaceRan = 'moved']], '')\necho('caretSpaceTrimmed', '\\n')")));
+        const int linkLine = pMini->buffer.lineBuffer.indexOf(qsl("MOVED"));
+        TTextEdit* pMiniPane = pMini->mUpperPane;
+        pMiniPane->setCaretPosition(linkLine, 0);
+        QVERIFY(pMini->buffer.getFocusedLink() > 0);
+        QVERIFY(runLua(qsl("for i = 1, 40 do echo('caretSpaceTrimmed', 'more ' .. i .. '\\n') end")));
+        QVERIFY2(pMini->buffer.lineBuffer.indexOf(qsl("MOVED")) < linkLine, "the buffer was never trimmed, so the link is still under the caret");
+        QCOMPARE(pMini->buffer.getLinkIndexAt(pMiniPane->mCaretLine, pMiniPane->mCaretColumn), 0);
+        QVERIFY2(pMini->buffer.getFocusedLink() > 0, "the trim cleared the focused link, so Space never meets a stale one");
+
+        press(pMiniPane, Qt::Key_Space);
+
+        QCOMPARE(luaGlobal("caretSpaceRan"), QString());
+        QCOMPARE(pMini->mpCommandLine->toPlainText(), qsl(" "));
+        pMini->mpCommandLine->clear();
+        drainDeferredFocusChange();
+    }
+
+    // A link with no command has nothing to activate, and Return ignores it
+    void test_spaceOnALinkWithNoCommandGoesToTheCommandLine()
+    {
+        TConsole* pMini = miniConsoleWithCommandLine(qsl("caretSpaceNoCommand"));
+        QVERIFY(pMini);
+        QVERIFY(runLua(qsl("echoLink('caretSpaceNoCommand', 'EMPTY', '', '')\necho('caretSpaceNoCommand', '\\n')")));
+        TTextEdit* pMiniPane = pMini->mUpperPane;
+        pMiniPane->setCaretPosition(pMini->buffer.lineBuffer.indexOf(qsl("EMPTY")), 0);
+        const int focusedLink = pMini->buffer.getFocusedLink();
+        QVERIFY(focusedLink > 0);
+        pMini->buffer.mLinkStore.getLinks(focusedLink).clear();
+
+        press(pMiniPane, Qt::Key_Space);
+
+        QCOMPARE(pMini->mpCommandLine->toPlainText(), qsl(" "));
+        pMini->mpCommandLine->clear();
+        drainDeferredFocusChange();
+    }
+
+    // With no link under it, Return is not an activation and must not run the
+    // link the caret visited last.
+    void test_returnOffALinkRunsNothing()
+    {
+        QVERIFY(runLua(qsl("caretLinkOne = ''")));
+        pane()->setCaretPosition(mLinkLineNumber, mLinkLine.indexOf(qsl("LINKONE")));
+        QVERIFY(consoleBuffer().getFocusedLink() > 0);
+        pane()->setCaretPosition(mLongLineNumber, 0);
+        QCOMPARE(consoleBuffer().getFocusedLink(), 0);
+
+        press(pane(), Qt::Key_Return);
+
+        QCOMPARE(luaGlobal("caretLinkOne"), QString());
+    }
+
+    // A link carrying more than one command cannot be activated outright, so
+    // the Menu key offers the choice the mouse would get from a right-click.
+    void test_theMenuKeyOffersEachOfALinksCommands()
+    {
+        pane()->setCaretPosition(mPopupLineNumber, 0);
+        QVERIFY2(consoleBuffer().getFocusedLink() > 0, "no link is focused, so there is no menu to open");
+
+        QMenu* pMenu = openLinkMenu();
+
+        QVERIFY2(pMenu, "no menu appeared for a link with more than one command");
+        QStringList offered;
+        for (const QAction* pAction : pMenu->actions()) {
+            offered << pAction->text();
+        }
+        QCOMPARE(offered, QStringList({qsl("first choice"), qsl("second choice")}));
+        pMenu->close();
+    }
+
+    void test_choosingFromTheMenuRunsThatCommand()
+    {
+        QVERIFY(runLua(qsl("caretPopupA = ''\ncaretPopupB = ''")));
+        pane()->setCaretPosition(mPopupLineNumber, 0);
+        QMenu* pMenu = openLinkMenu();
+        QVERIFY(pMenu);
+        QCOMPARE(pMenu->actions().size(), 2);
+
+        pMenu->actions().at(1)->trigger();
+
+        QCOMPARE(luaGlobal("caretPopupB"), qsl("b"));
+        QCOMPARE(luaGlobal("caretPopupA"), QString());
+        pMenu->close();
+    }
+
+    // With only one command there is nothing to choose between, so the same key
+    // runs it rather than opening a menu of one.
+    void test_theMenuKeyActivatesASingleCommandLinkOutright()
+    {
+        QVERIFY(runLua(qsl("caretLinkOne = ''")));
+        pane()->setCaretPosition(mLinkLineNumber, mLinkLine.indexOf(qsl("LINKONE")));
+        QVERIFY(consoleBuffer().getFocusedLink() > 0);
+
+        QMenu* pMenu = openLinkMenu();
+
+        QVERIFY2(!pMenu, "a link with a single command still opened a menu");
+        QCOMPARE(luaGlobal("caretLinkOne"), qsl("ran"));
+    }
+
+    // Activating a link marks it visited, which is what the announcement and
+    // the styling both read. A link of this case's own, because the ones above
+    // have been activated already and would satisfy the assertion without this
+    // key press doing anything.
+    void test_activatingALinkMarksItVisited()
+    {
+        QVERIFY(runLua(qsl("echoLink('LINKTHREE', [[caretLinkThree = 'ran']], 'the third link')\necho('\\n')")));
+        QTest::qWait(100ms);
+        const int line = consoleBuffer().lineBuffer.indexOf(qsl("LINKTHREE"));
+        QVERIFY2(line > 0, "the third link never reached the buffer");
+        // Focus moving to another widget while that wait runs turns caret mode
+        // off through focusOutEvent, and setCaretPosition() then returns
+        // before it focuses a link. Linux and Windows hold the focus with a
+        // keyboard grab that setCaretMode() does not do on macOS, which is why
+        // this only ever failed there. The caret is this case's precondition
+        // rather than its subject, so re-establish it instead of racing it.
+        if (!mpHost->caretEnabled()) {
+            mpHost->setCaretEnabled(true);
+        }
+        pane()->setCaretPosition(line, 0);
+        const int linkIndex = consoleBuffer().getFocusedLink();
+        // Reported in full because this has failed on macOS x86_64 alone and could
+        // not be reproduced elsewhere: the focused link is read out of the TChar
+        // grid, so which of the text and the grid disagreed is the whole diagnosis.
+        QVERIFY2(linkIndex > 0,
+                 qPrintable(qsl("no link focused at line %1 col 0; caret mode %2, text '%3' (%4 chars), grid row %5 cells, lineBuffer %6 lines, buffer %7 lines")
+                                    .arg(line)
+                                    .arg(mpHost->caretEnabled() ? qsl("on") : qsl("off"))
+                                    .arg(consoleBuffer().lineBuffer.at(line))
+                                    .arg(consoleBuffer().lineBuffer.at(line).length())
+                                    .arg(line < static_cast<int>(consoleBuffer().buffer.size()) ? QString::number(consoleBuffer().buffer.at(line).size()) : qsl("out of range"))
+                                    .arg(consoleBuffer().lineBuffer.size())
+                                    .arg(static_cast<int>(consoleBuffer().buffer.size()))));
+        QVERIFY2(!consoleBuffer().isLinkVisited(linkIndex), "the link counts as visited before anything activated it");
+
+        press(pane(), Qt::Key_Return);
+
+        QVERIFY2(consoleBuffer().isLinkVisited(linkIndex), "the activated link was not marked as visited");
+    }
+
+    // Caret mode's keyboard grab on Linux and Windows outranks the active window,
+    // so the script editor this stands in for would get none of these keys.
+    void test_anotherWindowGetsTheKeysWhileCaretModeIsOn()
+    {
+#if !defined(Q_OS_WINDOWS) && !defined(Q_OS_LINUX)
+        QSKIP("only Linux and Windows hold the keyboard in caret mode");
+#endif
+        QVERIFY(activateMainWindow());
+        pane()->setFocus();
+        QVERIFY(mpHost->caretEnabled());
+        QCOMPARE(QWidget::keyboardGrabber(), pane());
+
+        QWidget other;
+        QCOMPARE(typeInto(other), qsl("abc"));
+        QVERIFY2(QWidget::keyboardGrabber() != pane(), "the console still holds the keyboard while another window is active");
+        QVERIFY2(mpHost->caretEnabled(), "switching windows is not leaving the text, so caret mode should stay on");
+
+        QVERIFY(activateMainWindow());
+
+        QCOMPARE(QWidget::keyboardGrabber(), pane());
+        QVERIFY(mpHost->caretEnabled());
+    }
+
+    // A command line in a floating user window turns caret mode on too, and the
+    // grab is taken without the main window ever being the active one.
+    void test_caretModeTurnedOnFromAnotherWindowLetsAThirdHaveTheKeys()
+    {
+#if !defined(Q_OS_WINDOWS) && !defined(Q_OS_LINUX)
+        QSKIP("only Linux and Windows hold the keyboard in caret mode");
+#endif
+        mpHost->setCaretEnabled(false);
+        drainDeferredFocusChange();
+        QWidget floating;
+        floating.show();
+        floating.activateWindow();
+        QVERIFY(QTest::qWaitForWindowActive(&floating));
+        mpHost->setCaretEnabled(true);
+        QCOMPARE(QWidget::keyboardGrabber(), pane());
+
+        QWidget other;
+        QCOMPARE(typeInto(other), qsl("abc"));
+        QVERIFY2(QWidget::keyboardGrabber() != pane(), "the console still holds the keyboard while another window is active");
+
+        QVERIFY(activateMainWindow());
+    }
+
+    // deleteLine() can take a console's last line, leaving no line at all, and
+    // the caret keys indexed that buffer unchecked
+    void test_caretKeysOnAConsoleEmptiedByDeleteLine()
+    {
+        QVERIFY(runLua(qsl("createMiniConsole('caretEmptied', 0, 0, 300, 100)\nclearWindow('caretEmptied')\ndeleteLine('caretEmptied')")));
+        TConsole* pMini = mpHost->mainConsoleView()->subConsoleWidget(qsl("caretEmptied"));
+        QVERIFY(pMini);
+        QVERIFY(pMini->buffer.lineBuffer.isEmpty());
+        TTextEdit* pMiniPane = pMini->mUpperPane;
+
+        press(pMiniPane, Qt::Key_Down);
+        press(pMiniPane, Qt::Key_Right);
+        press(pMiniPane, Qt::Key_End);
+        press(pMiniPane, Qt::Key_End, Qt::ControlModifier);
+
+        QCOMPARE(pMiniPane->mCaretLine, 0);
+        QCOMPARE(pMiniPane->mCaretColumn, 0);
+    }
+
+    // deleteLine() does not move the caret, so deleting lines above it can leave
+    // it below the last line of the buffer
+    void test_caretKeysAfterDeleteLineShortensTheBufferPastTheCaret()
+    {
+        QVERIFY(runLua(qsl("createMiniConsole('caretShortened', 0, 0, 300, 100)\nfor i = 1, 10 do echo('caretShortened', 'line ' .. i .. '\\n') end")));
+        TConsole* pMini = mpHost->mainConsoleView()->subConsoleWidget(qsl("caretShortened"));
+        QVERIFY(pMini);
+        TTextEdit* pMiniPane = pMini->mUpperPane;
+        pMiniPane->setCaretPosition(9, 2);
+
+        QVERIFY(runLua(qsl("for i = 1, 8 do moveCursor('caretShortened', 0, 1) deleteLine('caretShortened') end")));
+        QCOMPARE(pMini->buffer.lineBuffer, QStringList({qsl("line 1"), qsl("line 10"), QString()}));
+        QCOMPARE(pMiniPane->mCaretLine, 9);
+
+        // Back on the last line with text, as turning caret mode on would put it
+        press(pMiniPane, Qt::Key_Right);
+        QCOMPARE(pMiniPane->mCaretLine, 1);
+        QCOMPARE(pMiniPane->mCaretColumn, 1);
+        press(pMiniPane, Qt::Key_End);
+        QCOMPARE(pMiniPane->mCaretLine, 1);
+        QCOMPARE(pMiniPane->mCaretColumn, 6);
+    }
+
+    // Deleting the only line of text leaves just the trailing empty line, which
+    // Ctrl+End skipped past to line -1
+    void test_ctrlEndOnAConsoleLeftWithOnlyItsTrailingLine()
+    {
+        QVERIFY(runLua(qsl("createMiniConsole('caretTrailing', 0, 0, 300, 100)\necho('caretTrailing', 'only\\n')\nmoveCursor('caretTrailing', 0, 0)\ndeleteLine('caretTrailing')")));
+        TConsole* pMini = mpHost->mainConsoleView()->subConsoleWidget(qsl("caretTrailing"));
+        QVERIFY(pMini);
+        QCOMPARE(pMini->buffer.lineBuffer, QStringList({QString()}));
+        TTextEdit* pMiniPane = pMini->mUpperPane;
+
+        press(pMiniPane, Qt::Key_End, Qt::ControlModifier);
+
+        QCOMPARE(pMiniPane->mCaretLine, 0);
+        QCOMPARE(pMiniPane->mCaretColumn, 0);
+    }
+
+    // clearWindow() leaves a Shift selection's anchor on a line that is gone, and
+    // reading the selection then stepped it back a whole batch-delete to line -998
+    void test_extendingAShiftSelectionAcrossAClearedWindow()
+    {
+        QVERIFY(runLua(qsl("createMiniConsole('caretShiftCleared', 0, 0, 300, 100)\nfor i = 1, 10 do echo('caretShiftCleared', 'line ' .. i .. '\\n') end")));
+        TConsole* pMini = mpHost->mainConsoleView()->subConsoleWidget(qsl("caretShiftCleared"));
+        QVERIFY(pMini);
+        TTextEdit* pMiniPane = pMini->mUpperPane;
+        pMiniPane->setCaretPosition(5, 2);
+        press(pMiniPane, Qt::Key_Down, Qt::ShiftModifier);
+        QVERIFY(runLua(qsl("clearWindow('caretShiftCleared')")));
+        QCOMPARE(pMini->buffer.lineBuffer.size(), 1);
+
+        QApplication::clipboard()->setText(qsl("nothing was copied"));
+        press(pMiniPane, Qt::Key_Left, Qt::ShiftModifier);
+        pMiniPane->slot_copySelectionToClipboard();
+        const QString selected = QApplication::clipboard()->text();
+        // The caret is still on a line clearWindow() took, which a plain arrow key reads
+        pMiniPane->setCaretPosition(0, 0);
+        press(pMiniPane, Qt::Key_Right);
+
+        QCOMPARE(selected, QString());
+    }
+
+    // clearWindow() takes away the line the caret is on, and the caret keys read
+    // that line. After the cases that read the original buffer, as it empties it.
+    void test_theCaretKeysStayInsideABufferClearedUnderTheCaret()
+    {
+        for (int line = 0; line < 5; ++line) {
+            mpHost->mainConsoleView()->print(qsl("clear filler %1\n").arg(line));
+        }
+        const int line = static_cast<int>(consoleBuffer().lineBuffer.length()) - 2;
+        QVERIFY(line >= 2);
+        pane()->setCaretPosition(line, 3);
+
+        QVERIFY(runLua(qsl("clearWindow()")));
+        QCOMPARE(consoleBuffer().lineBuffer.length(), 1);
+
+        for (const Qt::Key key : {Qt::Key_End, Qt::Key_Right, Qt::Key_Left}) {
+            press(pane(), key);
+            QCOMPARE(pane()->mCaretLine, 0);
+            QCOMPARE(pane()->mCaretColumn, 0);
+        }
+    }
+
+    // clearWindow() leaves a single empty line, which Ctrl+End cannot step over
+    // the way it does a trailing one, as there is no line before it.
+    void test_ctrlEndInAClearedBufferStaysOnTheOnlyLine()
+    {
+        QVERIFY(runLua(qsl("clearWindow()")));
+        QCOMPARE(consoleBuffer().lineBuffer.length(), 1);
+        pane()->setCaretPosition(0, 0);
+
+        press(pane(), Qt::Key_End, Qt::ControlModifier);
+
+        QCOMPARE(pane()->mCaretLine, 0);
+        QCOMPARE(pane()->mCaretColumn, 0);
+    }
+
+    // Last, as it empties the main console the other cases read. Turning caret
+    // mode on brings the old caret into view before moving it, and with the
+    // buffer emptied by deleteLine() that read the last line of an empty list.
+    void test_turningCaretModeOnAfterDeleteLineEmptiedTheMainConsole()
+    {
+        pane()->setCaretPosition(mLastLineNumber, 0);
+        mpHost->setCaretEnabled(false);
+        QVERIFY(runLua(qsl("clearWindow()\nmoveCursor(0, 0)\ndeleteLine()")));
+        QVERIFY(consoleBuffer().lineBuffer.isEmpty());
+        QVERIFY2(pane()->mCaretLine * QFontMetrics(pane()->font()).height() > pane()->height(), "the caret is not below the screen, so turning caret mode on does not bring it into view");
+
+        mpHost->setCaretEnabled(true);
+
+        QCOMPARE(pane()->mCaretLine, 0);
+        QCOMPARE(pane()->mCaretColumn, 0);
+    }
+
+    // The menu has closed and the pane taken the keyboard back by the time the item runs. The
+    // test platform leaves the window inactive when a popup closes, so that is done by hand here.
+    bool focusPaneInActiveWindow()
+    {
+        mudlet::self()->show();
+        // Repeated: the first attempt can land before a newly shown window is ready to be activated
+        return QTest::qWaitFor(
+                [this] {
+                    pane()->window()->activateWindow();
+                    pane()->setFocus();
+                    return QApplication::activeWindow() == pane()->window() && pane()->hasFocus();
+                },
+                3000);
+    }
+
+    QAction* closeMenuLeavingAnItemToRun(const int item)
+    {
+        if (!focusPaneInActiveWindow()) {
+            qWarning() << "the pane would not take the focus before the menu";
+            return nullptr;
+        }
+        for (QMenu* stale : pane()->findChildren<QMenu*>()) {
+            delete stale;
+        }
+        QTest::keyClick(pane(), Qt::Key_Menu);
+        QMenu* pMenu = pane()->findChild<QMenu*>();
+        if (!pMenu) {
+            qWarning() << "the Menu key opened no menu";
+            return nullptr;
+        }
+        pMenu->hide();
+        if (!focusPaneInActiveWindow()) {
+            qWarning() << "the pane would not take the focus after the menu";
+            return nullptr;
+        }
+        QFocusEvent focusBack(QEvent::FocusIn, Qt::PopupFocusReason);
+        QApplication::sendEvent(pane(), &focusBack);
+        return pMenu->actions().at(item);
+    }
+
+    int printMenuThatOpensADialog()
+    {
+        runLua(qsl("echoPopup('DIALOGLINK', {[[invokeFileDialog(true, 'Pick')]], [[caretPopupB = 'b']]}, {'open', 'other'})\n"
+                   "echo('\\n')"));
+        QTest::qWait(100ms);
+        return consoleBuffer().lineBuffer.lastIndexOf(qsl("DIALOGLINK"));
+    }
+
+    void test_aMenuItemThatOpensADialogGetsTheKeys()
+    {
+        const int line = printMenuThatOpensADialog();
+        QVERIFY(line >= 0);
+        // Only a real key reaches the grabber, and a native dialog would sit there with no timer able to close it
+        QCoreApplication::setAttribute(Qt::AA_DontUseNativeDialogs);
+        const auto nativeBack = qScopeGuard([] {
+            QCoreApplication::setAttribute(Qt::AA_DontUseNativeDialogs, false);
+        });
+        pane()->setCaretPosition(line, 0);
+        QAction* pOpen = closeMenuLeavingAnItemToRun(0);
+        QVERIFY(pOpen);
+
+        QString typed;
+        QTimer whileTheDialogIsOpen;
+        whileTheDialogIsOpen.setInterval(50ms);
+        connect(&whileTheDialogIsOpen, &QTimer::timeout, this, [&whileTheDialogIsOpen, &typed] {
+            QWidget* dialog = QApplication::activeModalWidget();
+            if (!dialog) {
+                return;
+            }
+            whileTheDialogIsOpen.stop();
+            auto* edit = dialog->findChild<QLineEdit*>(qsl("fileNameEdit"));
+            for (const char key : {'x', 'y', 'z'}) {
+                QTest::keyClick(dialog->windowHandle(), key);
+            }
+            typed = edit ? edit->text() : qsl("no file name box");
+            dialog->close();
+        });
+        whileTheDialogIsOpen.start();
+        pOpen->trigger();
+
+        QCOMPARE(typed, qsl("xyz"));
+        QVERIFY2(mpHost->caretEnabled(), "the dialog's keys took the player out of caret mode");
+    }
+
+    void test_aMenuItemLeavesThePaneHoldingTheKeyboard()
+    {
+        const int line = printMenuThatOpensADialog();
+        QVERIFY(line >= 0);
+        QVERIFY(runLua(qsl("caretPopupB = ''")));
+        pane()->setCaretPosition(line, 0);
+        QAction* pOther = closeMenuLeavingAnItemToRun(1);
+        QVERIFY(pOther);
+
+        pOther->trigger();
+
+        QCOMPARE(luaGlobal("caretPopupB"), qsl("b"));
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
+        QCOMPARE(QWidget::keyboardGrabber(), pane());
+#endif
+    }
+};
+
+#include "CaretNavigationTest.moc"
+MUDLET_GROUPED_TEST_MAIN(CaretNavigationTest)

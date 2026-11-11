@@ -32,11 +32,12 @@ class ExitsTreeWidget : public QTreeWidget
 
     friend class RoomIdLineEditDelegate;
     friend class dlgRoomExits;
+    friend class RoomExitsDeletedEditItemTest;
 
     // The indexes that are used to identify the columns in the special exits
     // treewidget have been collected into an enumeration so that we can
-    // tweak them and change all of them correctly - and by making the
-    // dlgRoomExits class a friend that can use the same set as defined here.
+    // tweak them and change all of them correctly - and the friend classes
+    // above can use the same set as defined here.
     // Note that if any of these numbers are modified/extended the
     // corresponding headings in the ./src/ui/room_exits.ui file will need
     // to be adjusted as well - and visa versa:

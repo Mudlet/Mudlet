@@ -19,7 +19,7 @@
  ***************************************************************************/
 
 #include "dlgMapLabel.h"
-#include "mudlet.h"
+#include "MudletApp.h"
 #include "utils.h"
 #include <QColorDialog>
 #include <QFileDialog>
@@ -66,10 +66,8 @@ dlgMapLabel::dlgMapLabel(QWidget* pParentWidget)
     font = QApplication::font();
     font.setStyle(QFont::StyleNormal);
     text = plainTextEdit_labelText->placeholderText();
-    //: Tooltip for font display in map label dialog
-    lineEdit_font->setToolTip(tr("Font size is automatically calculated to fit the label"));
 
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
     fgColor = settings.value("fgColorDialogMapLabel", fgColor).value<QColor>();
     bgColor = settings.value("bgColorDialogMapLabel", bgColor).value<QColor>();
     outlineColor = settings.value("outlineColorDialogMapLabel", outlineColor).value<QColor>();
@@ -89,7 +87,7 @@ QString dlgMapLabel::getImagePath()
 
 void dlgMapLabel::slot_pickFgColor()
 {
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
     fgColorDialog = new QColorDialog(this);
     fgColorDialog->setCurrentColor(settings.value("fgColorDialogMapLabel", fgColor).value<QColor>());
     fgColorDialog->setAttribute(Qt::WA_DeleteOnClose);
@@ -112,7 +110,7 @@ void dlgMapLabel::slot_pickFgColor()
 
 void dlgMapLabel::slot_pickBgColor()
 {
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
     bgColorDialog = new QColorDialog(this);
     bgColorDialog->setCurrentColor(settings.value("bgColorDialogMapLabel", bgColor).value<QColor>());
     bgColorDialog->setAttribute(Qt::WA_DeleteOnClose);
@@ -135,7 +133,7 @@ void dlgMapLabel::slot_pickBgColor()
 
 void dlgMapLabel::slot_pickOutlineColor()
 {
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
     outlineColorDialog = new QColorDialog(this);
     outlineColorDialog->setCurrentColor(settings.value("outlineColorDialogMapLabel", outlineColor).value<QColor>());
     outlineColorDialog->setAttribute(Qt::WA_DeleteOnClose);
@@ -181,7 +179,7 @@ void dlgMapLabel::slot_pickFile()
 {
     //: 2D Mapper create label file dialog title
 
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
     QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
 
     imagePath = QFileDialog::getOpenFileName(nullptr, tr("Select image"), lastDir);
@@ -242,8 +240,16 @@ bool dlgMapLabel::stretchImage()
 
 void dlgMapLabel::slot_updateControls()
 {
-    //: Font display format in map label dialog. %1 is font family name, %2 is style (e.g. "Bold", "Italic"). Size excluded since it auto-scales.
-    lineEdit_font->setText(tr("%1 %2").arg(font.family(), font.styleName()));
+    if (checkBox_scaling->isChecked()) {
+        //: Font display format in map label dialog. %1 is font family name, %2 is style (e.g. "Bold", "Italic"). Size excluded since it auto-scales.
+        lineEdit_font->setText(tr("%1 %2").arg(font.family(), font.styleName()));
+        //: Tooltip for font display in map label dialog
+        lineEdit_font->setToolTip(tr("Font size is automatically calculated to fit the label"));
+    } else {
+        //: Font display format in map label dialog for a label that keeps its size when zooming. %1 is font family name, %2 is font size in points, %3 is style (e.g. "Bold", "Italic").
+        lineEdit_font->setText(tr("%1, %2pt %3").arg(font.family(), QString::number(font.pointSizeF()), font.styleName()));
+        lineEdit_font->setToolTip(QString());
+    }
     pushButton_fgColor->setStyleSheet(BUTTON_STYLESHEET.arg(QString::number(fgColor.red()), QString::number(fgColor.green()), QString::number(fgColor.blue()), QString::number(fgColor.alpha())));
     pushButton_bgColor->setStyleSheet(BUTTON_STYLESHEET.arg(QString::number(bgColor.red()), QString::number(bgColor.green()), QString::number(bgColor.blue()), QString::number(bgColor.alpha())));
     pushButton_outlineColor->setStyleSheet(

@@ -19,14 +19,12 @@
 
 #include "RoomMoveDragHandler.h"
 
-#include "TArea.h"
-#include "TRoom.h"
+#include "TMap.h"
 #include "TRoomDB.h"
 
 #include <QMouseEvent>
 #include <QPointF>
 #include <QRect>
-#include <QSet>
 #include <QtGlobal>
 
 RoomMoveDragHandler::RoomMoveDragHandler(T2DMap& mapWidget)
@@ -80,7 +78,8 @@ bool RoomMoveDragHandler::handle(T2DMap::MapInteractionContext& context)
         return false;
     }
 
-    if (!roomDb->getArea(mMapWidget.mAreaID)) {
+    const TArea* shownArea = roomDb->getArea(mMapWidget.mAreaID);
+    if (!shownArea) {
         return false;
     }
 
@@ -102,42 +101,8 @@ bool RoomMoveDragHandler::handle(T2DMap::MapInteractionContext& context)
     mMapWidget.mRoomMoveLastMapPoint.setX(mMapWidget.mRoomMoveLastMapPoint.x() + dx);
     mMapWidget.mRoomMoveLastMapPoint.setY(mMapWidget.mRoomMoveLastMapPoint.y() + dy);
 
-    QSet<int> dirtyAreas;
-    QSetIterator<int> roomIterator = mMapWidget.mMultiSelectionSet;
-    while (roomIterator.hasNext()) {
-        TRoom* room = roomDb->getRoom(roomIterator.next());
-        if (!room) {
-            continue;
-        }
-
-        room->offset(dx, dy, 0);
-        dirtyAreas.insert(room->getArea());
-
-        QMapIterator<QString, QList<QPointF>> customLineIterator(room->customLines);
-        QMap<QString, QList<QPointF>> updatedLines;
-        while (customLineIterator.hasNext()) {
-            customLineIterator.next();
-            QList<QPointF> points = customLineIterator.value();
-            for (auto& point : points) {
-                const QPointF originalPoint = point;
-                point.setX(static_cast<float>(originalPoint.x() + dx));
-                point.setY(static_cast<float>(originalPoint.y() + dy));
-            }
-            updatedLines.insert(customLineIterator.key(), points);
-        }
-        room->customLines = updatedLines;
-        room->calcRoomDimensions();
-    }
-
-    QSetIterator<int> areaIterator(dirtyAreas);
-    while (areaIterator.hasNext()) {
-        if (auto* area = roomDb->getArea(areaIterator.next())) {
-            area->calcSpan();
-        }
-    }
-
+    mMapWidget.moveSelectedRoomsBy(dx, dy);
     mMapWidget.repaint();
-    mMapWidget.mpMap->setUnsaved(__func__);
 
     return true;
 }

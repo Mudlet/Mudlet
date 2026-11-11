@@ -1,0 +1,1506 @@
+/***************************************************************************
+ *   Copyright (C) 2026 by Vadim Peretokin - vperetokin@mudlet.org         *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+
+#include "LoopbackTlsCertificate.h"
+#include "MudletApp.h"
+#include "updater.h"
+#include "updater/Feed.h"
+#include "updater/Release.h"
+#include "updater/UpdateDialog.h"
+#include "utils.h"
+
+#include <QtTest/QtTest>
+
+#include <QApplication>
+#include <QCryptographicHash>
+#include <QDataStream>
+#include <QDesktopServices>
+#include <QFile>
+#include <QHash>
+#include <QHostAddress>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QLabel>
+#include <QMessageBox>
+#include <QNetworkProxy>
+#include <QPointer>
+#include <QProgressBar>
+#include <QPushButton>
+#include <QScopeGuard>
+#include <QSettings>
+#include <QSslCertificate>
+#include <QSslConfiguration>
+#include <QSslKey>
+#include <QSslSocket>
+#include <QTcpServer>
+#include <QTemporaryDir>
+#include <QTextBrowser>
+#include <QTimer>
+
+#include <functional>
+#include <memory>
+
+using namespace std::chrono_literals;
+
+/*
+ * Regression test for https://github.com/Mudlet/Mudlet/issues/9938 (Sentry
+ * MUDLET-4M): EXCEPTION_ACCESS_VIOLATION_READ at address 0x8 inside
+ * Feed::makeDownloadRequest(), reached from the lambda Feed::fetchChecksums()
+ * connects to the checksum reply.
+ *
+ * Feed::isDownloading() only looked at the download reply, which does not
+ * exist yet while the checksums are being fetched - so a second
+ * downloadRelease() during that window sailed past the guard and started a
+ * second checksum fetch. The update dialog's automatic download and the
+ * twice-daily update check both answer the same Feed::ready(), so the second
+ * call is an ordinary consequence of leaving automatic updates on.
+ *
+ * When the second checksum fetch finished, makeDownloadRequest() found the
+ * first download already in flight and aborted it. abort() delivers finished()
+ * synchronously, so handleDownloadFinished() ran nested inside it and its
+ * cleanupDownloadReply() deleted the reply and set mDownloadReply to nullptr -
+ * the disconnect() meant to prevent that used the wrong overload and unhooked
+ * nothing. makeDownloadRequest() then went on to call
+ * mDownloadReply->deleteLater() on that null pointer, and QObject::deleteLater()
+ * reads d_ptr at offset 8 of `this`: a read of address 0x8.
+ *
+ * The stub server answers the second checksum request late on purpose, so the
+ * first download is guaranteed to be in flight by the time the second lambda
+ * runs. Without the fix this test does not fail an assertion, it segfaults.
+ *
+ * Five of the tests below gate the five signals dblsqd::Feed offers the rest of
+ * Mudlet - ready, loadError, downloadProgress, downloadFinished and
+ * downloadError - by driving each one out of real network traffic and asserting
+ * what UpdateDialog did with it. A Feed signal is only ever waited on here, to
+ * know a check or a download has got that far, and never asserted on: a spy on
+ * the emitter would stay green with the dialog's own connections cut, which is
+ * the failure mode these guard against.
+ */
+
+namespace {
+const auto assetName = qsl("Mudlet-9.9.9-linux-x64.AppImage.tar");
+const auto checksumsName = qsl("SHA256SUMS.txt");
+const auto stubVersion = qsl("9.9.9");
+const auto changelogMarker = qsl("stub release notes");
+constexpr int downloadChunkSize = 8192;
+// Qt throttles QNetworkReply::downloadProgress to one emission per 100ms and
+// drops the rest, so a body written in a single burst arrives as a single
+// emission at completion (measured: exactly one, at completion). That is
+// enough to move a progress bar, but it cannot tell a bar that follows the
+// download from one that only ever jumps to 100% at the end. Dribbling the body
+// out at more than one Qt interval per chunk is what produces the intermediate
+// emissions worth asserting on, and the throttle is why a stalled event loop
+// cannot suppress them: it drops an emission only when the previous one was
+// under 100ms ago, so a stall long enough to merge the chunks is also long
+// enough to guarantee the merged one gets through.
+constexpr int downloadChunkDelayMs = 120;
+
+// Every wait in this file. A healthy run answers each of them in under two
+// seconds; the rest is headroom for an AddressSanitizer build on a loaded
+// runner. QTRY_* spends up to three times what it is given before it fails -
+// once polling, then twice more to build its "would have passed after N ms"
+// message - which is what the ctest TIMEOUT in
+// test/functional_tests/CMakeLists.txt is derived from.
+constexpr int waitMs = 20000;
+
+QJsonObject stubAsset(const QString& name, const QString& url, qint64 size)
+{
+    QJsonObject asset;
+    asset.insert(qsl("name"), name);
+    asset.insert(qsl("browser_download_url"), url);
+    asset.insert(qsl("size"), static_cast<double>(size));
+    return asset;
+}
+
+QJsonObject stubReleaseInfo(const QString& version, const QString& publishedAt, const QString& body, const QString& base, qint64 downloadSize)
+{
+    QJsonObject releaseInfo;
+    releaseInfo.insert(qsl("tag_name"), qsl("Mudlet-") + version);
+    releaseInfo.insert(qsl("published_at"), publishedAt);
+    releaseInfo.insert(qsl("body"), body);
+    releaseInfo.insert(qsl("assets"), QJsonArray({stubAsset(checksumsName, base + checksumsName, 0), stubAsset(assetName, base + assetName, downloadSize)}));
+    return releaseInfo;
+}
+
+QJsonObject stubReleaseInfo(const QString& base, qint64 downloadSize)
+{
+    return stubReleaseInfo(stubVersion, qsl("2026-08-01T00:00:00Z"), changelogMarker, base, downloadSize);
+}
+
+QByteArray stubReleasesJson(const QString& base, qint64 downloadSize)
+{
+    return QJsonDocument(QJsonArray({stubReleaseInfo(base, downloadSize)})).toJson(QJsonDocument::Compact);
+}
+
+QByteArray stubReleasesJson(const QString& version, const QString& base, qint64 downloadSize)
+{
+    return QJsonDocument(QJsonArray({stubReleaseInfo(version, qsl("2026-08-29T07:00:00Z"), changelogMarker, base, downloadSize)})).toJson(QJsonDocument::Compact);
+}
+
+QByteArray stubDownloadPayload()
+{
+    return QByteArray(48 * 1024, 'm');
+}
+} // namespace
+
+// The feed URL is fixed at https://api.github.com, so the only way to answer it
+// locally is to be its proxy and terminate the tunnel's TLS here. Every
+// connection is a QSslSocket left in plaintext until a proxy CONNECT upgrades
+// it, so one port serves both the tunnelled feed request and the plain HTTP
+// asset downloads the release JSON points at
+class StubTcpServer : public QTcpServer
+{
+    Q_OBJECT
+
+public:
+    using QTcpServer::QTcpServer;
+
+protected:
+    void incomingConnection(qintptr socketDescriptor) override
+    {
+        auto* socket = new QSslSocket(this);
+        if (!socket->setSocketDescriptor(socketDescriptor)) {
+            delete socket;
+            return;
+        }
+        socket->setLocalCertificate(QSslCertificate(QByteArray(csmLoopbackCertificatePem)));
+        socket->setPrivateKey(QSslKey(QByteArray(csmLoopbackPrivateKeyPem), QSsl::Rsa));
+        addPendingConnection(socket);
+    }
+};
+
+// A minimum-viable GitHub: it answers the feed request, serves the checksum
+// file, and by default answers the download request with a Content-Length it
+// never satisfies, so that download stays unfinished for the whole test
+class StubFeedServer : public QObject
+{
+    Q_OBJECT
+
+public:
+    explicit StubFeedServer(QObject* parent = nullptr)
+    : QObject(parent)
+    {
+        connect(&mServer, &QTcpServer::newConnection, this, &StubFeedServer::acceptConnections);
+    }
+
+    bool listen() { return mServer.listen(QHostAddress::LocalHost, 0); }
+    quint16 port() const { return mServer.serverPort(); }
+
+    void setFeedBody(const QByteArray& body) { mFeedBody = body; }
+    void setChecksum(const QByteArray& hex) { mChecksum = hex; }
+    // Switches the download from never finishing to this body, delivered in
+    // chunks
+    void setDownloadPayload(const QByteArray& payload) { mDownloadPayload = payload; }
+
+    // Stops the body at this many bytes until releaseDownload() lets the rest
+    // through. That is what makes "the progress bar moved while bytes were
+    // still outstanding" a fact rather than a race against the runner: the
+    // remaining bytes cannot arrive early, so the bar cannot reach its maximum
+    // before the assertion reads it
+    void holdDownloadAfter(int bytes) { mHoldAfter = bytes; }
+    void releaseDownload()
+    {
+        mHoldAfter = -1;
+        if (mHeldSocket) {
+            auto* socket = mHeldSocket.data();
+            mHeldSocket.clear();
+            sendDownloadChunk(socket, mHeldOffset);
+        }
+    }
+
+    int checksumRequests() const { return mChecksumRequests; }
+    int downloadRequests() const { return mDownloadRequests; }
+
+private:
+    void acceptConnections()
+    {
+        while (auto* pending = mServer.nextPendingConnection()) {
+            auto* socket = qobject_cast<QSslSocket*>(pending);
+            connect(socket, &QSslSocket::readyRead, this, [this, socket]() {
+                readRequest(socket);
+            });
+            connect(socket, &QSslSocket::disconnected, socket, &QObject::deleteLater);
+            // A socket that dies mid-header never reaches the removal in
+            // readRequest(), and the address it leaves behind can be handed to
+            // the next socket - which would then inherit a partial request
+            connect(socket, &QObject::destroyed, this, [this, socket]() {
+                mBuffers.remove(socket);
+            });
+        }
+    }
+
+    void readRequest(QSslSocket* socket)
+    {
+        QByteArray& buffer = mBuffers[socket];
+        buffer.append(socket->readAll());
+        const int headerEnd = buffer.indexOf("\r\n\r\n");
+        if (headerEnd < 0) {
+            return;
+        }
+        const QByteArray requestLine = buffer.left(buffer.indexOf("\r\n"));
+        mBuffers.remove(socket);
+
+        if (requestLine.startsWith("CONNECT ")) {
+            socket->write("HTTP/1.1 200 Connection established\r\n\r\n");
+            socket->flush();
+            socket->startServerEncryption();
+            return;
+        }
+
+        // Feed::setRepo() builds /repos/<owner>/<repo>/releases?per_page=N, and
+        // nothing else this stub serves has "/releases" in its path: the asset
+        // and checksum URLs are the port root with a filename appended
+        if (requestLine.contains("/releases")) {
+            sendBody(socket, "application/json", mFeedBody);
+            return;
+        }
+
+        if (requestLine.contains(checksumsName.toLatin1())) {
+            ++mChecksumRequests;
+            // The first answer is immediate so its download is running before
+            // any second one lands; a later one is held back to guarantee that
+            const int delayMs = mChecksumRequests == 1 ? 0 : 300;
+            QTimer::singleShot(delayMs, socket, [this, socket]() {
+                sendBody(socket, "text/plain", mChecksum + "  " + assetName.toLatin1() + "\n");
+            });
+            return;
+        }
+
+        if (requestLine.contains(assetName.toLatin1())) {
+            ++mDownloadRequests;
+            sendDownload(socket);
+            return;
+        }
+
+        socket->write("HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+        socket->disconnectFromHost();
+    }
+
+    static void sendBody(QSslSocket* socket, const QByteArray& contentType, const QByteArray& body)
+    {
+        socket->write("HTTP/1.1 200 OK\r\nContent-Type: " + contentType + "\r\nContent-Length: " + QByteArray::number(body.size()) + "\r\nConnection: close\r\n\r\n");
+        socket->write(body);
+        socket->flush();
+        socket->disconnectFromHost();
+    }
+
+    void sendDownload(QSslSocket* socket)
+    {
+        if (mDownloadPayload.isEmpty()) {
+            socket->write("HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: 4194304\r\nConnection: close\r\n\r\n");
+            socket->write(QByteArray(16, 'x'));
+            socket->flush();
+            return;
+        }
+        socket->write("HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: " + QByteArray::number(mDownloadPayload.size()) + "\r\nConnection: close\r\n\r\n");
+        socket->flush();
+        sendDownloadChunk(socket, 0);
+    }
+
+    void sendDownloadChunk(QSslSocket* socket, int offset)
+    {
+        if (offset >= mDownloadPayload.size()) {
+            socket->disconnectFromHost();
+            return;
+        }
+        if (mHoldAfter >= 0 && offset >= mHoldAfter) {
+            mHeldSocket = socket;
+            mHeldOffset = offset;
+            return;
+        }
+        const int chunk = qMin<int>(downloadChunkSize, mDownloadPayload.size() - offset);
+        socket->write(mDownloadPayload.mid(offset, chunk));
+        socket->flush();
+        QTimer::singleShot(downloadChunkDelayMs, socket, [this, socket, offset, chunk]() {
+            sendDownloadChunk(socket, offset + chunk);
+        });
+    }
+
+    QHash<QSslSocket*, QByteArray> mBuffers;
+    QByteArray mFeedBody{"[]"};
+    QByteArray mChecksum{QByteArray(64, 'a')};
+    QByteArray mDownloadPayload;
+    int mChecksumRequests{0};
+    int mDownloadRequests{0};
+    int mHoldAfter{-1};
+    int mHeldOffset{0};
+    QPointer<QSslSocket> mHeldSocket;
+    // Last on purpose, so it is destroyed first: its child sockets prune
+    // mBuffers as they go, and with the usual declaration order that hash would
+    // already be gone by then
+    StubTcpServer mServer;
+};
+
+// Feed builds its URL from a hardcoded https://api.github.com, so only the feed
+// request is tunnelled through the stub. The asset URLs already name it
+// directly and have to stay direct, or the download would arrive over the same
+// TLS tunnel the feed uses.
+class StubProxyFactory : public QNetworkProxyFactory
+{
+public:
+    explicit StubProxyFactory(quint16 port)
+    : mPort(port)
+    {
+    }
+
+    QList<QNetworkProxy> queryProxy(const QNetworkProxyQuery& query) override
+    {
+        if (query.peerHostName() == qsl("api.github.com")) {
+            return {QNetworkProxy(QNetworkProxy::HttpProxy, qsl("127.0.0.1"), mPort)};
+        }
+        return {QNetworkProxy(QNetworkProxy::NoProxy)};
+    }
+
+private:
+    quint16 mPort;
+};
+
+// UpdateDialog::handleDownloadError() reports through QMessageBox::warning(),
+// which runs a nested event loop of its own - and QTRY_* cannot expire above
+// one, so a box nobody closes hangs the test until QtTest's watchdog kills the
+// process. Closing them from the show event rather than from a poll is what
+// makes that deterministic: the accept is already queued before exec() starts
+// its loop, and every box is caught, not just the first.
+class ModalBoxCatcher : public QObject
+{
+public:
+    QStringList texts() const { return mTexts; }
+    void clear() { mTexts.clear(); }
+
+protected:
+    bool eventFilter(QObject* watched, QEvent* event) override
+    {
+        if (event->type() == QEvent::Show) {
+            if (auto* box = qobject_cast<QMessageBox*>(watched)) {
+                mTexts << box->text();
+                // Deferred rather than immediate: the box is not in its own
+                // event loop yet, and closing it before exec() starts leaves
+                // exec() with nothing to return on
+                QTimer::singleShot(0ms, box, &QMessageBox::accept);
+            }
+        }
+        return QObject::eventFilter(watched, event);
+    }
+
+private:
+    QStringList mTexts;
+};
+
+// Hands each box to a callback that decides when it closes, for a test that
+// needs one held open while something runs inside its event loop
+class ModalBoxHolder : public QObject
+{
+public:
+    explicit ModalBoxHolder(std::function<void(QMessageBox*)> onShown)
+    : mOnShown(std::move(onShown))
+    {
+    }
+
+protected:
+    bool eventFilter(QObject* watched, QEvent* event) override
+    {
+        if (event->type() == QEvent::Show) {
+            if (auto* box = qobject_cast<QMessageBox*>(watched)) {
+                mOnShown(box);
+            }
+        }
+        return QObject::eventFilter(watched, event);
+    }
+
+private:
+    std::function<void(QMessageBox*)> mOnShown;
+};
+
+// What Updater::setupOnLinux() assembles: a Feed and an UpdateDialog listening
+// to it, wired by nothing but their own constructors
+class UpdateHarness
+{
+public:
+    UpdateHarness()
+    : mSettings(mSettingsDir.filePath(qsl("updater-test.ini")), QSettings::IniFormat)
+    {
+    }
+
+    ~UpdateHarness()
+    {
+        // Before the Feed, so a reply abandoned mid-flight cannot reach a
+        // dialog that would answer it with a modal box no event loop is left
+        // to dismiss
+        mDialog.reset();
+        // Feed deliberately leaves a finished download on disk for the next
+        // launch to reuse (#9985), so the test has to collect it
+        const QString downloaded = mFeed.getDownloadFilePath();
+        if (!downloaded.isEmpty()) {
+            QFile::remove(downloaded);
+        }
+        QNetworkProxyFactory::setApplicationProxyFactory(nullptr);
+    }
+
+    bool start()
+    {
+        if (!QSslSocket::supportsSsl() || !mSettingsDir.isValid() || !mServer.listen()) {
+            return false;
+        }
+        QNetworkProxyFactory::setApplicationProxyFactory(new StubProxyFactory(mServer.port()));
+        return true;
+    }
+
+    void openDialog(dblsqd::UpdateDialog::Type type)
+    {
+        // The os and arch Release matches its assets against, so the stub
+        // release offers an installable download whatever the test runs on
+        mFeed.setRepo(qsl("Mudlet"), qsl("Mudlet"), false, qsl("linux"), qsl("x64"));
+        mDialog = std::make_unique<dblsqd::UpdateDialog>(&mFeed, type, &mSettings);
+    }
+
+    QString assetBaseUrl() const { return qsl("http://127.0.0.1:%1/").arg(mServer.port()); }
+    StubFeedServer& server() { return mServer; }
+    QSettings& settings() { return mSettings; }
+    dblsqd::Feed& feed() { return mFeed; }
+    dblsqd::UpdateDialog& dialog() { return *mDialog; }
+
+private:
+    QTemporaryDir mSettingsDir;
+    StubFeedServer mServer;
+    QSettings mSettings;
+    dblsqd::Feed mFeed;
+    std::unique_ptr<dblsqd::UpdateDialog> mDialog;
+};
+
+// Stands in for the system QDesktopServices hands a downloaded installer to,
+// so that a test can see an install was started without anything launching
+class InstallerUrlCatcher : public QObject
+{
+    Q_OBJECT
+
+public:
+    QList<QUrl> urls() const { return mUrls; }
+
+public slots:
+    void openUrl(const QUrl& url) { mUrls << url; }
+
+private:
+    QList<QUrl> mUrls;
+};
+
+class FeedChecksumRaceTest : public QObject
+{
+    Q_OBJECT
+
+private slots:
+    void initTestCase();
+    void init();
+    void cleanupTestCase();
+    void secondDownloadRequestDuringChecksumFetchDoesNotCrash();
+    void feedReadyReachesTheUpdateDialog();
+    void feedLoadErrorReachesTheUpdateDialog();
+    void downloadProgressReachesTheUpdateDialog();
+    void downloadFinishedReachesTheUpdateDialog();
+    void downloadErrorReachesTheUpdateDialog();
+    void offeredVersionFollowsTheLatestRelease();
+    void aFailedCheckIsNotReportedForever();
+    void aCheckThatFoundNothingStillHearsTheNext();
+    void theChangelogDialogFillsInItsOwnLabels();
+    void aSupersededDownloadIsFetchedAgain();
+    void theChangelogAfterAnUpdateListsWhatTheUpdateBrought();
+    void aCheckThatFindsNothingWithdrawsTheEarlierOffer();
+    void aDownloadedInstallerSurvivesACheckThatFindsNothing();
+    void anInstallerTheRunningVersionHasPassedIsNotKept();
+    void aCheckDuringADownloadLeavesTheVersionItIsSavedAs();
+    void aNewerReleaseOfferedDuringADownloadDoesNotRelabelIt();
+    void anUpdateButtonClickIsAnsweredByOneDownload();
+    void aFailedDownloadLeavesTheUpdateButtonUsable();
+    void anInstallerThatWillNotOpenIsNotReportedAsADownloadError();
+    void anUpdateButtonWhoseDownloadFailedIsNotClickedByTheNextDownload();
+    // These can hand the installer over or ask Qt to quit, so they run last
+    void anInstallWhoseDownloadFailedIsNotStartedByTheNextDownload();
+    void aDownloadFinishingBehindTheErrorBoxIsNotInstalled();
+    void anAnsweredUpdateButtonIsNotClickedByTheNextRelease();
+    void aReleaseWithoutChecksumsIsNotOfferedOnQuit();
+    void anInstallAskedForSurvivesACheckDuringItsDownload();
+
+private:
+    // What the dialog told the user, for the failure messages: a bare
+    // QTRY_VERIFY prints its expression and nothing about why the wire stayed
+    // quiet, and the reason is usually already in a warning box the dialog raised
+    QString whatTheDialogWasTold() const { return mModalBoxes.texts().isEmpty() ? qsl("no error was reported to the user") : mModalBoxes.texts().join(qsl("; ")); }
+
+    ModalBoxCatcher mModalBoxes;
+    QSslConfiguration mOriginalSslConfiguration;
+    QString mOriginalApplicationVersion;
+};
+
+void FeedChecksumRaceTest::initTestCase()
+{
+    // Everything set here is process-global, so it is all put back in
+    // cleanupTestCase(). This file is its own binary today, but a grouped one
+    // would carry all of it into every test that followed.
+
+    // Release::getCurrentRelease() reads this, and a test binary has no version
+    // of its own for the stub release to be newer than
+    mOriginalApplicationVersion = QCoreApplication::applicationVersion();
+    QCoreApplication::setApplicationVersion(qsl("1.0.0"));
+
+    // The stub answers for api.github.com with a certificate issued to
+    // localhost, which is only acceptable with verification off
+    mOriginalSslConfiguration = QSslConfiguration::defaultConfiguration();
+    QSslConfiguration configuration = mOriginalSslConfiguration;
+    configuration.setPeerVerifyMode(QSslSocket::VerifyNone);
+    QSslConfiguration::setDefaultConfiguration(configuration);
+
+    qApp->installEventFilter(&mModalBoxes);
+}
+
+void FeedChecksumRaceTest::init()
+{
+    mModalBoxes.clear();
+}
+
+void FeedChecksumRaceTest::cleanupTestCase()
+{
+    qApp->removeEventFilter(&mModalBoxes);
+    QSslConfiguration::setDefaultConfiguration(mOriginalSslConfiguration);
+    QCoreApplication::setApplicationVersion(mOriginalApplicationVersion);
+    // Qt offers no getter for the application proxy factory, so the best that
+    // can be restored is its default of having none
+    QNetworkProxyFactory::setApplicationProxyFactory(nullptr);
+}
+
+void FeedChecksumRaceTest::secondDownloadRequestDuringChecksumFetchDoesNotCrash()
+{
+    StubFeedServer server;
+    QVERIFY2(server.listen(), "the stub update server could not listen on localhost");
+    const QString base = qsl("http://127.0.0.1:%1/").arg(server.port());
+
+    const dblsqd::Release release(stubReleaseInfo(base, 4194304), qsl("linux"), qsl("x64"));
+    QCOMPARE(release.getDownloadUrl().toString(), base + assetName);
+    QCOMPARE(release.getChecksumsUrl().toString(), base + checksumsName);
+
+    dblsqd::Feed feed;
+    QStringList downloadErrors;
+    connect(&feed, &dblsqd::Feed::downloadError, this, [&downloadErrors](const QString& message) {
+        downloadErrors << message;
+    });
+
+    // What the update dialog's automatic download and the twice-daily check do
+    // when both answer the same ready(): the second call lands while the first
+    // is still fetching checksums
+    feed.downloadRelease(release, /*requireChecksums=*/true);
+    feed.downloadRelease(release, /*requireChecksums=*/true);
+
+    // Long enough for a second checksum request, which the stub answers 300ms
+    // late, and the download it would lead to
+    QTest::qWait(800ms);
+
+    QCOMPARE(server.downloadRequests(), 1);
+    QCOMPARE(server.checksumRequests(), 1);
+    QVERIFY2(downloadErrors.isEmpty(), qPrintable(qsl("no download error was expected, got: %1").arg(downloadErrors.join(qsl("; ")))));
+    QVERIFY2(feed.isDownloading(), "the download started by the first request must still be running");
+}
+
+// Feed::ready() -> UpdateDialog::handleFeedReady(). Cut it and the dialog is
+// left showing its loading spinner: nothing tells the user an update exists.
+void FeedChecksumRaceTest::feedReadyReachesTheUpdateDialog()
+{
+    UpdateHarness harness;
+    QVERIFY2(harness.start(), "the stub update server needs TLS support and a free loopback port");
+    harness.server().setFeedBody(stubReleasesJson(harness.assetBaseUrl(), stubDownloadPayload().size()));
+    dblsqd::UpdateDialog::enableAutoDownload(false, &harness.settings());
+
+    harness.openDialog(dblsqd::UpdateDialog::Manual);
+    QSignalSpy readySpy(&harness.dialog(), &dblsqd::UpdateDialog::ready);
+    QVERIFY2(readySpy.wait(waitMs), qPrintable(qsl("the update dialog never became ready - the feed either did not load or did not reach it. It reported: %1").arg(whatTheDialogWasTold())));
+
+    auto* changelog = harness.dialog().findChild<QTextBrowser*>(qsl("labelChangelog"));
+    QVERIFY2(changelog, "the dialog has no child named labelChangelog - update_dialog.ui renamed it");
+    QVERIFY2(changelog->toPlainText().contains(changelogMarker), qPrintable(qsl("the dialog did not build its changelog from the feed, it shows: %1").arg(changelog->toPlainText())));
+
+    // The dialog stays connected to the feed, and only a second load proves it:
+    // without that, the twice-daily check and every manual check after the
+    // first reach nobody
+    harness.feed().load();
+    QVERIFY2(readySpy.wait(waitMs),
+             qPrintable(qsl("a repeated update check never reached the dialog - handleFeedReady() did not re-arm its Feed connections. It reported: %1").arg(whatTheDialogWasTold())));
+}
+
+// Feed::loadError() -> UpdateDialog::handleLoadError(). Cut it and a failed
+// update check leaves the dialog spinning forever with no explanation.
+void FeedChecksumRaceTest::feedLoadErrorReachesTheUpdateDialog()
+{
+    UpdateHarness harness;
+    QVERIFY2(harness.start(), "the stub update server needs TLS support and a free loopback port");
+    harness.server().setFeedBody("<html>an error page served as 200</html>");
+
+    harness.openDialog(dblsqd::UpdateDialog::Manual);
+    // handleLoadError() only rebuilds the interface on a dialog the user can see
+    harness.dialog().show();
+
+    auto* headline = harness.dialog().findChild<QLabel*>(qsl("labelHeadlineNoUpdates"));
+    QVERIFY2(headline, "the dialog has no child named labelHeadlineNoUpdates - update_dialog.ui renamed it");
+    QTRY_COMPARE_WITH_TIMEOUT(headline->text(), qsl("Could not check for updates"), waitMs);
+
+    auto* changelog = harness.dialog().findChild<QTextBrowser*>(qsl("labelChangelog"));
+    QVERIFY2(changelog, "the dialog has no child named labelChangelog - update_dialog.ui renamed it");
+    QVERIFY2(changelog->toPlainText().contains(qsl("Could not read update information from the server")),
+             qPrintable(qsl("the dialog did not show what went wrong, it shows: %1").arg(changelog->toPlainText())));
+
+    // handleLoadError() re-arms its own single-shot connections too, so a check
+    // that failed once does not condemn every check after it. It takes a second
+    // failure to prove: a success would arrive on the ready() connection the
+    // constructor made, which a loadError never consumed, and so would pass with
+    // the re-arm gone. The message differs on purpose, since the dialog is
+    // already in the state the first failure left it in
+    harness.server().setFeedBody(R"({"message":"stub API failure"})");
+    harness.feed().load();
+    QTRY_VERIFY2_WITH_TIMEOUT(
+            changelog->toPlainText().contains(qsl("stub API failure")),
+            qPrintable(qsl("a second failed update check never reached the dialog - handleLoadError() did not re-arm its Feed connections. It still shows: %1").arg(changelog->toPlainText())),
+            waitMs);
+}
+
+// Feed::downloadProgress() -> UpdateDialog::updateProgressBar(). Cut it and a
+// 135MB download runs behind a progress bar that never moves.
+void FeedChecksumRaceTest::downloadProgressReachesTheUpdateDialog()
+{
+    const QByteArray payload = stubDownloadPayload();
+
+    UpdateHarness harness;
+    QVERIFY2(harness.start(), "the stub update server needs TLS support and a free loopback port");
+    harness.server().setFeedBody(stubReleasesJson(harness.assetBaseUrl(), payload.size()));
+    harness.server().setChecksum(QCryptographicHash::hash(payload, QCryptographicHash::Sha256).toHex());
+    harness.server().setDownloadPayload(payload);
+    // Held at half, so the bar has to be seen moving while bytes are still
+    // outstanding. Without the hold the only guaranteed emission is the one at
+    // completion, which a bar that never moved until the end would satisfy too
+    harness.server().holdDownloadAfter(static_cast<int>(payload.size() / 2));
+    // What starts the download: handleFeedReady() acts on this before it builds
+    // the interface the progress bar lives in
+    dblsqd::UpdateDialog::enableAutoDownload(true, &harness.settings());
+
+    harness.openDialog(dblsqd::UpdateDialog::Manual);
+
+    auto* progressBar = harness.dialog().findChild<QProgressBar*>(qsl("progressBar"));
+    QVERIFY2(progressBar, "the dialog has no child named progressBar - update_dialog.ui renamed it");
+    QTRY_VERIFY2_WITH_TIMEOUT(progressBar->value() > 0, qPrintable(qsl("the progress bar never moved. The dialog reported: %1").arg(whatTheDialogWasTold())), waitMs);
+    QCOMPARE(progressBar->maximum(), static_cast<int>(payload.size() / 1024));
+    QVERIFY2(progressBar->value() < progressBar->maximum(),
+             qPrintable(qsl("the bar only moved once the download was over - it read %1 of %2 while half the body was still held back").arg(progressBar->value()).arg(progressBar->maximum())));
+
+    harness.server().releaseDownload();
+    QTRY_COMPARE_WITH_TIMEOUT(progressBar->value(), progressBar->maximum(), waitMs);
+}
+
+// Feed::downloadFinished() -> UpdateDialog::handleDownloadFinished(). Cut it
+// and the finished download is never recorded, so the next launch downloads the
+// same release again and the install button stays disabled.
+void FeedChecksumRaceTest::downloadFinishedReachesTheUpdateDialog()
+{
+    const QByteArray payload = stubDownloadPayload();
+
+    UpdateHarness harness;
+    QVERIFY2(harness.start(), "the stub update server needs TLS support and a free loopback port");
+    harness.server().setFeedBody(stubReleasesJson(harness.assetBaseUrl(), payload.size()));
+    harness.server().setChecksum(QCryptographicHash::hash(payload, QCryptographicHash::Sha256).toHex());
+    harness.server().setDownloadPayload(payload);
+    dblsqd::UpdateDialog::enableAutoDownload(true, &harness.settings());
+
+    harness.openDialog(dblsqd::UpdateDialog::Manual);
+
+    QTRY_VERIFY2_WITH_TIMEOUT(!harness.settings().value(qsl("DBLSQD/updateFilePath")).toString().isEmpty(),
+                              qPrintable(qsl("the finished download was never recorded. The dialog reported: %1").arg(whatTheDialogWasTold())),
+                              waitMs);
+    QCOMPARE(harness.settings().value(qsl("DBLSQD/updateFilePath")).toString(), harness.feed().getDownloadFilePath());
+    QCOMPARE(harness.settings().value(qsl("DBLSQD/updateFileVersion")).toString(), stubVersion);
+}
+
+// Feed::downloadError() -> UpdateDialog::handleDownloadError(). Cut it and a
+// download that failed verification is reported to nobody: the dialog sits
+// there with its buttons disabled by startDownload().
+void FeedChecksumRaceTest::downloadErrorReachesTheUpdateDialog()
+{
+    const QByteArray payload = stubDownloadPayload();
+
+    UpdateHarness harness;
+    QVERIFY2(harness.start(), "the stub update server needs TLS support and a free loopback port");
+    harness.server().setFeedBody(stubReleasesJson(harness.assetBaseUrl(), payload.size()));
+    // A checksum that does not describe what the server sends, which is what a
+    // tampered or truncated download looks like
+    harness.server().setChecksum(QByteArray(64, 'b'));
+    harness.server().setDownloadPayload(payload);
+    dblsqd::UpdateDialog::enableAutoDownload(true, &harness.settings());
+
+    // mModalBoxes, installed for the whole class, reads and closes the warning
+    // box; doing it here with a local timer would leave any box opened while the
+    // harness is being torn down with nothing to close it
+
+    harness.openDialog(dblsqd::UpdateDialog::Manual);
+    QSignalSpy rejectedSpy(&harness.dialog(), &QDialog::rejected);
+
+    QTRY_VERIFY2_WITH_TIMEOUT(!mModalBoxes.texts().isEmpty(), "the download failed verification and nobody was told - no warning box was raised", waitMs);
+    const QString warningText = mModalBoxes.texts().constFirst();
+    QVERIFY2(warningText.contains(qsl("Could not verify download integrity")), qPrintable(qsl("the dialog warned about something else: %1").arg(warningText)));
+    QTRY_COMPARE_WITH_TIMEOUT(rejectedSpy.count(), 1, waitMs);
+}
+
+// Mudlet checks for updates every twelve hours and the dialog outlives every
+// one of those checks, so setupUpdateUi() runs again and again on the same
+// labels. Reported on Discord: a PTB left running offered
+// "4.22.0-ptb-2026-08-29 is available" for days while the changelog below that
+// line, and the build clicking Update installed, were both 5.0.0-ptb-2026-08-31.
+void FeedChecksumRaceTest::offeredVersionFollowsTheLatestRelease()
+{
+    const auto runningVersion = qsl("4.22.0-ptb-2026-08-28-577f4188");
+    const auto firstOffer = qsl("4.22.0-ptb-2026-08-29-e6825824");
+    const auto secondOffer = qsl("5.0.0-ptb-2026-08-31-d48ac516");
+    const auto secondNotes = qsl("notes for the release two days later");
+
+    // Release::getCurrentRelease() reads this: the running PTB the offers are
+    // measured against
+    const QString previousVersion = QCoreApplication::applicationVersion();
+    QCoreApplication::setApplicationVersion(runningVersion);
+    auto restoreVersion = qScopeGuard([previousVersion]() {
+        QCoreApplication::setApplicationVersion(previousVersion);
+    });
+
+    UpdateHarness harness;
+    QVERIFY2(harness.start(), "the stub update server needs TLS support and a free loopback port");
+    harness.server().setFeedBody(QJsonDocument(QJsonArray({stubReleaseInfo(firstOffer, qsl("2026-08-29T07:00:00Z"), changelogMarker, harness.assetBaseUrl(), 1024)})).toJson(QJsonDocument::Compact));
+    dblsqd::UpdateDialog::enableAutoDownload(false, &harness.settings());
+
+    harness.openDialog(dblsqd::UpdateDialog::Manual);
+    QSignalSpy readySpy(&harness.dialog(), &dblsqd::UpdateDialog::ready);
+    QVERIFY2(readySpy.wait(waitMs), qPrintable(qsl("the update dialog never became ready. It reported: %1").arg(whatTheDialogWasTold())));
+
+    auto* info = harness.dialog().findChild<QLabel*>(qsl("labelInfo"));
+    QVERIFY2(info, "the dialog has no child named labelInfo - update_dialog.ui renamed it");
+    QVERIFY2(info->text().contains(firstOffer), qPrintable(qsl("the dialog did not offer the release the feed carried, it says: %1").arg(info->text())));
+
+    // The next PTB replaces it, and the twice-daily check picks it up
+    harness.server().setFeedBody(QJsonDocument(QJsonArray({stubReleaseInfo(secondOffer, qsl("2026-08-31T07:00:00Z"), secondNotes, harness.assetBaseUrl(), 1024)})).toJson(QJsonDocument::Compact));
+    harness.feed().load();
+    QVERIFY2(readySpy.wait(waitMs), qPrintable(qsl("the second update check never reached the dialog. It reported: %1").arg(whatTheDialogWasTold())));
+
+    // What the dialog would install, and what it tells the user it found -
+    // asserted together, because the complaint is that they disagree
+    const QList<dblsqd::Release> updates = harness.feed().getUpdates(dblsqd::Release::getCurrentRelease());
+    QVERIFY2(!updates.isEmpty(), "the second feed offered no installable update at all");
+    QCOMPARE(updates.constFirst().getVersion(), secondOffer);
+
+    auto* changelog = harness.dialog().findChild<QTextBrowser*>(qsl("labelChangelog"));
+    QVERIFY2(changelog, "the dialog has no child named labelChangelog - update_dialog.ui renamed it");
+    QVERIFY2(changelog->toPlainText().contains(secondNotes), qPrintable(qsl("the changelog did not follow the second check, it shows: %1").arg(changelog->toPlainText())));
+
+    QVERIFY2(info->text().contains(secondOffer),
+             qPrintable(qsl("the dialog still offers a release that is no longer the latest: it says \"%1\" while it would install %2").arg(info->text(), updates.constFirst().getVersion())));
+    QVERIFY2(!info->text().contains(firstOffer), qPrintable(qsl("the dialog kept the release it offered before alongside the new one: %1").arg(info->text())));
+    QVERIFY2(info->text().contains(runningVersion), qPrintable(qsl("the dialog stopped naming the version the user is running: %1").arg(info->text())));
+
+    // Every other text the dialog substitutes into comes from the same store,
+    // and an unfilled one renders as its own placeholder or as nothing at all
+    auto* headline = harness.dialog().findChild<QLabel*>(qsl("labelHeadline"));
+    QVERIFY2(headline, "the dialog has no child named labelHeadline - update_dialog.ui renamed it");
+    QVERIFY2(!headline->text().isEmpty() && !headline->text().contains(QLatin1Char('%')), qPrintable(qsl("the headline was left unsubstituted: \"%1\"").arg(headline->text())));
+    QVERIFY2(!harness.dialog().windowTitle().contains(QLatin1Char('%')), qPrintable(qsl("the window title was left unsubstituted: \"%1\"").arg(harness.dialog().windowTitle())));
+}
+
+// handleLoadError() reports a failed check in the same label the up-to-date
+// interface uses, so the next check has to be able to take it back
+void FeedChecksumRaceTest::aFailedCheckIsNotReportedForever()
+{
+    UpdateHarness harness;
+    QVERIFY2(harness.start(), "the stub update server needs TLS support and a free loopback port");
+    harness.server().setFeedBody("<html>an error page served as 200</html>");
+    dblsqd::UpdateDialog::enableAutoDownload(false, &harness.settings());
+
+    harness.openDialog(dblsqd::UpdateDialog::Manual);
+    // handleLoadError() only rebuilds the interface on a dialog the user can see
+    harness.dialog().show();
+
+    auto* failedHeadline = harness.dialog().findChild<QLabel*>(qsl("labelHeadlineNoUpdates"));
+    QVERIFY2(failedHeadline, "the dialog has no child named labelHeadlineNoUpdates - update_dialog.ui renamed it");
+    QTRY_COMPARE_WITH_TIMEOUT(failedHeadline->text(), qsl("Could not check for updates"), waitMs);
+
+    // The next check reaches the server, which reports the user is up to date
+    harness.server().setFeedBody("[]");
+    harness.feed().load();
+    QTRY_VERIFY2_WITH_TIMEOUT(
+            failedHeadline->text().contains(qsl("1.0.0")), qPrintable(qsl("an update check that succeeded is still reported as having failed: %1").arg(failedHeadline->text())), waitMs);
+}
+
+// The check that finds nothing is the common one, so it is the one that has to
+// leave the dialog listening - and it has to leave it listening exactly once,
+// since the dialog answers every connection it holds
+void FeedChecksumRaceTest::aCheckThatFoundNothingStillHearsTheNext()
+{
+    UpdateHarness harness;
+    QVERIFY2(harness.start(), "the stub update server needs TLS support and a free loopback port");
+    harness.server().setFeedBody("<html>an error page served as 200</html>");
+    dblsqd::UpdateDialog::enableAutoDownload(false, &harness.settings());
+
+    harness.openDialog(dblsqd::UpdateDialog::Manual);
+    harness.dialog().show();
+
+    auto* failedHeadline = harness.dialog().findChild<QLabel*>(qsl("labelHeadlineNoUpdates"));
+    QVERIFY2(failedHeadline, "the dialog has no child named labelHeadlineNoUpdates - update_dialog.ui renamed it");
+    QTRY_COMPARE_WITH_TIMEOUT(failedHeadline->text(), qsl("Could not check for updates"), waitMs);
+
+    harness.server().setFeedBody("[]");
+    harness.feed().load();
+    QTRY_VERIFY2_WITH_TIMEOUT(failedHeadline->text().contains(qsl("1.0.0")), qPrintable(qsl("the check that found no update never reached the dialog: %1").arg(failedHeadline->text())), waitMs);
+
+    // And the check after that finds a release, which the dialog has to offer
+    QSignalSpy readySpy(&harness.dialog(), &dblsqd::UpdateDialog::ready);
+    harness.server().setFeedBody(stubReleasesJson(harness.assetBaseUrl(), 1024));
+    harness.feed().load();
+    auto* info = harness.dialog().findChild<QLabel*>(qsl("labelInfo"));
+    QVERIFY2(info, "the dialog has no child named labelInfo - update_dialog.ui renamed it");
+    QTRY_VERIFY2_WITH_TIMEOUT(info->text().contains(stubVersion), qPrintable(qsl("a check that followed one finding no updates never reached the dialog. It shows: %1").arg(info->text())), waitMs);
+    // One connection per signal, however many checks came before: a dialog
+    // holding several answers each of them, rebuilding itself once per answer
+    QCOMPARE(readySpy.count(), 1);
+}
+
+// The changelog dialog Mudlet opens after an update takes its own branch out of
+// handleFeedReady(), and fills in a different pair of labels
+void FeedChecksumRaceTest::theChangelogDialogFillsInItsOwnLabels()
+{
+    UpdateHarness harness;
+    QVERIFY2(harness.start(), "the stub update server needs TLS support and a free loopback port");
+    harness.server().setFeedBody(stubReleasesJson(harness.assetBaseUrl(), 1024));
+
+    harness.openDialog(dblsqd::UpdateDialog::ManualChangelog);
+    QSignalSpy readySpy(&harness.dialog(), &dblsqd::UpdateDialog::ready);
+    QVERIFY2(readySpy.wait(waitMs), qPrintable(qsl("the changelog dialog never became ready. It reported: %1").arg(whatTheDialogWasTold())));
+
+    auto* headline = harness.dialog().findChild<QLabel*>(qsl("labelHeadlineChangelog"));
+    QVERIFY2(headline, "the dialog has no child named labelHeadlineChangelog - update_dialog.ui renamed it");
+    QVERIFY2(!headline->text().isEmpty() && !headline->text().contains(QLatin1Char('%')), qPrintable(qsl("the changelog headline was left unsubstituted: \"%1\"").arg(headline->text())));
+
+    auto* info = harness.dialog().findChild<QLabel*>(qsl("labelInfoChangelog"));
+    QVERIFY2(info, "the dialog has no child named labelInfoChangelog - update_dialog.ui renamed it");
+    QVERIFY2(info->text().contains(qsl("1.0.0")), qPrintable(qsl("the changelog did not name the version the user is running: \"%1\"").arg(info->text())));
+}
+
+// A finished download is remembered in the settings, and the check that finds a
+// newer release deletes the file it left behind - so the dialog has to stop
+// counting that download as done, or the release it now offers is never fetched
+void FeedChecksumRaceTest::aSupersededDownloadIsFetchedAgain()
+{
+    const auto firstOffer = qsl("2.0.0");
+    const auto secondOffer = qsl("3.0.0");
+    const QByteArray payload = stubDownloadPayload();
+
+    UpdateHarness harness;
+    QVERIFY2(harness.start(), "the stub update server needs TLS support and a free loopback port");
+    harness.server().setFeedBody(
+            QJsonDocument(QJsonArray({stubReleaseInfo(firstOffer, qsl("2026-08-29T07:00:00Z"), changelogMarker, harness.assetBaseUrl(), payload.size())})).toJson(QJsonDocument::Compact));
+    harness.server().setChecksum(QCryptographicHash::hash(payload, QCryptographicHash::Sha256).toHex());
+    harness.server().setDownloadPayload(payload);
+    dblsqd::UpdateDialog::enableAutoDownload(true, &harness.settings());
+
+    harness.openDialog(dblsqd::UpdateDialog::Manual);
+    QTRY_COMPARE_WITH_TIMEOUT(harness.settings().value(qsl("DBLSQD/updateFileVersion")).toString(), firstOffer, waitMs);
+
+    harness.server().setFeedBody(
+            QJsonDocument(QJsonArray({stubReleaseInfo(secondOffer, qsl("2026-08-31T07:00:00Z"), changelogMarker, harness.assetBaseUrl(), payload.size())})).toJson(QJsonDocument::Compact));
+    harness.feed().load();
+    QTRY_VERIFY2_WITH_TIMEOUT(harness.settings().value(qsl("DBLSQD/updateFileVersion")).toString() == secondOffer,
+                              qPrintable(qsl("the superseded download still counts as done, so the release the dialog offers was never fetched - it holds \"%1\". The dialog reported: %2")
+                                                 .arg(harness.settings().value(qsl("DBLSQD/updateFileVersion")).toString(), whatTheDialogWasTold())),
+                              waitMs);
+}
+
+// Regression test for #1607: with no version range the dialog lists the releases between the
+// version running and the one it would offer, and right after an update those are the same release,
+// so the changelog came up blank. The version updated from is what makes the range non-empty.
+void FeedChecksumRaceTest::theChangelogAfterAnUpdateListsWhatTheUpdateBrought()
+{
+    const auto installedNotes = qsl("what this update brought");
+    const auto earlierNotes = qsl("what the user already had");
+
+    QTemporaryDir configRoot;
+    QVERIFY2(configRoot.isValid(), qPrintable(configRoot.errorString()));
+    MudletApp::setConfigPath(configRoot.path());
+    // Back to unresolved, which is where this binary starts: nothing else in it asks for a path
+    const auto restoreConfigPath = qScopeGuard([]() {
+        MudletApp::setConfigPath(QString());
+    });
+
+    // Stands in for Updater::recordUpdatedVersion(), which writes this marker when an update is
+    // applied but needs a mudlet instance to find the path. Only the reader is exercised here, so
+    // the stream version has to stay in step with the writer by hand.
+    const QString markerPath = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("mudlet_updated_from"));
+    QFile marker(markerPath);
+    QVERIFY2(marker.open(QIODevice::WriteOnly), qPrintable(marker.errorString()));
+    QDataStream markerStream(&marker);
+    markerStream.setVersion(QDataStream::Qt_5_12);
+    markerStream << qsl("0.9.0");
+    QVERIFY2(markerStream.status() == QDataStream::Ok && marker.flush(), qPrintable(marker.errorString()));
+    marker.close();
+
+    UpdateHarness harness;
+    QVERIFY2(harness.start(), "the stub update server needs TLS support and a free loopback port");
+    // Nothing in the feed is newer than the version running - the state Mudlet starts up in after
+    // an update
+    harness.server().setFeedBody(QJsonDocument(QJsonArray({stubReleaseInfo(qsl("1.0.0"), qsl("2026-08-31T07:00:00Z"), installedNotes, harness.assetBaseUrl(), 1024),
+                                                           stubReleaseInfo(qsl("0.9.0"), qsl("2026-08-01T00:00:00Z"), earlierNotes, harness.assetBaseUrl(), 1024)}))
+                                         .toJson(QJsonDocument::Compact));
+
+    // Addresses are what the two lists below are compared by, so nothing awaiting deletion may be
+    // left to hand one on
+    QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    const QWidgetList widgetsBeforeUpdater = QApplication::topLevelWidgets();
+    QList<QPointer<QWidget>> updaterWidgets;
+    // Runs after ~Updater: the "Update" button the constructor makes is unparented, and only
+    // checkUpdatesOnStart() reaches the addInstallButton() that would give it an owner
+    const auto destroyUpdaterWidgets = qScopeGuard([&updaterWidgets]() {
+        for (const auto& widget : updaterWidgets) {
+            delete widget.data();
+        }
+    });
+
+    Updater updater(nullptr, &harness.settings());
+    updater.showChangelog();
+    for (auto* widget : QApplication::topLevelWidgets()) {
+        if (!widgetsBeforeUpdater.contains(widget)) {
+            updaterWidgets.append(widget);
+        }
+    }
+
+    dblsqd::UpdateDialog* changelogDialog = nullptr;
+    for (const auto& widget : updaterWidgets) {
+        if (auto* dialog = qobject_cast<dblsqd::UpdateDialog*>(widget.data())) {
+            changelogDialog = dialog;
+            break;
+        }
+    }
+    QVERIFY2(changelogDialog, "showChangelog() opened no update dialog");
+    // Runs before ~Updater, which takes the Feed the dialog listens to with it
+    const auto destroyChangelogDialog = qScopeGuard([&changelogDialog]() {
+        delete changelogDialog;
+    });
+
+    QVERIFY2(!QFile::exists(markerPath), "the changelog was built without reading the updated-from marker");
+
+    auto* changelog = changelogDialog->findChild<QTextBrowser*>(qsl("labelChangelog"));
+    QVERIFY2(changelog, "the dialog has no child named labelChangelog - update_dialog.ui renamed it");
+    QTRY_VERIFY2_WITH_TIMEOUT(
+            changelog->toPlainText().contains(installedNotes), qPrintable(qsl("the changelog left out the release the user updated to, it holds \"%1\"").arg(changelog->toPlainText())), waitMs);
+    QVERIFY2(!changelog->toPlainText().contains(earlierNotes), qPrintable(qsl("the changelog reached back past the version updated from, it holds \"%1\"").arg(changelog->toPlainText())));
+}
+
+// The dialog decides whether there is an update to show from the release the
+// last check offered, so a check that finds none has to take that offer back
+void FeedChecksumRaceTest::aCheckThatFindsNothingWithdrawsTheEarlierOffer()
+{
+    UpdateHarness harness;
+    QVERIFY2(harness.start(), "the stub update server needs TLS support and a free loopback port");
+    harness.server().setFeedBody(stubReleasesJson(harness.assetBaseUrl(), 1024));
+    dblsqd::UpdateDialog::enableAutoDownload(false, &harness.settings());
+
+    harness.openDialog(dblsqd::UpdateDialog::Manual);
+    QSignalSpy readySpy(&harness.dialog(), &dblsqd::UpdateDialog::ready);
+    QVERIFY2(readySpy.wait(waitMs), qPrintable(qsl("the update dialog never became ready. It reported: %1").arg(whatTheDialogWasTold())));
+    harness.dialog().showIfUpdatesAvailable();
+    QVERIFY2(harness.dialog().isVisible(), "the first check offered an update and the dialog did not show it, so the assertion below would test nothing");
+    harness.dialog().hide();
+
+    // The release is withdrawn, or its checksums are not up yet
+    QSignalSpy feedReadySpy(&harness.feed(), &dblsqd::Feed::ready);
+    harness.server().setFeedBody("[]");
+    harness.feed().load();
+    QVERIFY2(feedReadySpy.wait(waitMs), qPrintable(qsl("the second update check never finished. The dialog reported: %1").arg(whatTheDialogWasTold())));
+
+    harness.dialog().showIfUpdatesAvailable();
+    QVERIFY2(!harness.dialog().isVisible(), "the dialog offered a release the last check no longer found");
+}
+
+// An empty answer can be a release whose checksums are not up yet, so it is no
+// reason to throw away an installer that is already verified and on disk
+void FeedChecksumRaceTest::aDownloadedInstallerSurvivesACheckThatFindsNothing()
+{
+    const QByteArray payload = stubDownloadPayload();
+
+    UpdateHarness harness;
+    QVERIFY2(harness.start(), "the stub update server needs TLS support and a free loopback port");
+    harness.server().setFeedBody(stubReleasesJson(harness.assetBaseUrl(), payload.size()));
+    harness.server().setChecksum(QCryptographicHash::hash(payload, QCryptographicHash::Sha256).toHex());
+    harness.server().setDownloadPayload(payload);
+    dblsqd::UpdateDialog::enableAutoDownload(true, &harness.settings());
+
+    harness.openDialog(dblsqd::UpdateDialog::Manual);
+    QTRY_COMPARE_WITH_TIMEOUT(harness.settings().value(qsl("DBLSQD/updateFileVersion")).toString(), stubVersion, waitMs);
+    const QString downloaded = harness.settings().value(qsl("DBLSQD/updateFilePath")).toString();
+    QVERIFY2(QFile::exists(downloaded), qPrintable(qsl("the finished download is not at \"%1\", so its survival below would test nothing").arg(downloaded)));
+
+    QSignalSpy feedReadySpy(&harness.feed(), &dblsqd::Feed::ready);
+    harness.server().setFeedBody("[]");
+    harness.feed().load();
+    QVERIFY2(feedReadySpy.wait(waitMs), qPrintable(qsl("the second update check never finished. The dialog reported: %1").arg(whatTheDialogWasTold())));
+
+    QVERIFY2(QFile::exists(downloaded), "a check that found no update deleted the installer an earlier check had downloaded");
+    QCOMPARE(harness.settings().value(qsl("DBLSQD/updateFilePath")).toString(), downloaded);
+    QCOMPARE(harness.settings().value(qsl("DBLSQD/updateFileVersion")).toString(), stubVersion);
+}
+
+// An installer older than the version running is never going to be offered, so
+// a check finding nothing to offer is no reason to keep it on disk
+void FeedChecksumRaceTest::anInstallerTheRunningVersionHasPassedIsNotKept()
+{
+    QTemporaryDir downloadDir;
+    QVERIFY2(downloadDir.isValid(), qPrintable(downloadDir.errorString()));
+    const QString staleInstaller = downloadDir.filePath(qsl("Mudlet-0.0.1-linux-x64.AppImage.tar"));
+    QFile staleFile(staleInstaller);
+    QVERIFY2(staleFile.open(QIODevice::WriteOnly) && staleFile.write("installer") > 0, qPrintable(staleFile.errorString()));
+    staleFile.close();
+
+    UpdateHarness harness;
+    QVERIFY2(harness.start(), "the stub update server needs TLS support and a free loopback port");
+    // What an earlier session's finished download left behind, for a release the
+    // user has since moved past
+    harness.settings().setValue(qsl("DBLSQD/updateFilePath"), staleInstaller);
+    harness.settings().setValue(qsl("DBLSQD/updateFileVersion"), qsl("0.0.1"));
+    harness.server().setFeedBody("[]");
+
+    QSignalSpy feedReadySpy(&harness.feed(), &dblsqd::Feed::ready);
+    harness.openDialog(dblsqd::UpdateDialog::Manual);
+    QVERIFY2(feedReadySpy.wait(waitMs), qPrintable(qsl("the update check never finished. The dialog reported: %1").arg(whatTheDialogWasTold())));
+
+    QVERIFY2(!QFile::exists(staleInstaller), "an installer older than the running version was kept by a check that offered nothing");
+    QVERIFY2(harness.settings().value(qsl("DBLSQD/updateFilePath")).toString().isEmpty(), "the deleted installer is still recorded as the download to reuse");
+}
+
+// The file a download leaves is saved under the release that was downloaded,
+// whatever a check that answers meanwhile goes on to offer
+void FeedChecksumRaceTest::aCheckDuringADownloadLeavesTheVersionItIsSavedAs()
+{
+    const QByteArray payload = stubDownloadPayload();
+
+    UpdateHarness harness;
+    QVERIFY2(harness.start(), "the stub update server needs TLS support and a free loopback port");
+    harness.server().setFeedBody(stubReleasesJson(harness.assetBaseUrl(), payload.size()));
+    harness.server().setChecksum(QCryptographicHash::hash(payload, QCryptographicHash::Sha256).toHex());
+    harness.server().setDownloadPayload(payload);
+    // Held at half, so the second check cannot lose a race against the rest of
+    // the body on a slow runner
+    harness.server().holdDownloadAfter(static_cast<int>(payload.size() / 2));
+    dblsqd::UpdateDialog::enableAutoDownload(true, &harness.settings());
+
+    QSignalSpy progressSpy(&harness.feed(), &dblsqd::Feed::downloadProgress);
+    harness.openDialog(dblsqd::UpdateDialog::Manual);
+    QVERIFY2(progressSpy.wait(waitMs), qPrintable(qsl("the automatic download never started. The dialog reported: %1").arg(whatTheDialogWasTold())));
+
+    QSignalSpy feedReadySpy(&harness.feed(), &dblsqd::Feed::ready);
+    harness.server().setFeedBody("[]");
+    harness.feed().load();
+    QVERIFY2(feedReadySpy.wait(waitMs), qPrintable(qsl("the second update check never finished. The dialog reported: %1").arg(whatTheDialogWasTold())));
+    QVERIFY2(harness.feed().isDownloading(), "the download finished before the second check did, so the check did not land during it");
+    harness.server().releaseDownload();
+
+    QTRY_VERIFY2_WITH_TIMEOUT(
+            !harness.settings().value(qsl("DBLSQD/updateFilePath")).toString().isEmpty(), qPrintable(qsl("the download never finished. The dialog reported: %1").arg(whatTheDialogWasTold())), waitMs);
+    QCOMPARE(harness.settings().value(qsl("DBLSQD/updateFileVersion")).toString(), stubVersion);
+}
+
+// A check that offers a newer release while an older one downloads must not get
+// the older file saved under the newer version: it would be installed as a
+// release it is not, and the newer one would never be fetched
+void FeedChecksumRaceTest::aNewerReleaseOfferedDuringADownloadDoesNotRelabelIt()
+{
+    const QByteArray payload = stubDownloadPayload();
+
+    UpdateHarness harness;
+    QVERIFY2(harness.start(), "the stub update server needs TLS support and a free loopback port");
+    harness.server().setFeedBody(stubReleasesJson(harness.assetBaseUrl(), payload.size()));
+    harness.server().setChecksum(QCryptographicHash::hash(payload, QCryptographicHash::Sha256).toHex());
+    harness.server().setDownloadPayload(payload);
+    harness.server().holdDownloadAfter(static_cast<int>(payload.size() / 2));
+    dblsqd::UpdateDialog::enableAutoDownload(true, &harness.settings());
+
+    QSignalSpy progressSpy(&harness.feed(), &dblsqd::Feed::downloadProgress);
+    harness.openDialog(dblsqd::UpdateDialog::Manual);
+    QVERIFY2(progressSpy.wait(waitMs), qPrintable(qsl("the automatic download never started. The dialog reported: %1").arg(whatTheDialogWasTold())));
+
+    QSignalSpy feedReadySpy(&harness.feed(), &dblsqd::Feed::ready);
+    harness.server().setFeedBody(stubReleasesJson(qsl("9.9.10"), harness.assetBaseUrl(), payload.size()));
+    harness.feed().load();
+    QVERIFY2(feedReadySpy.wait(waitMs), qPrintable(qsl("the second update check never finished. The dialog reported: %1").arg(whatTheDialogWasTold())));
+    QVERIFY2(harness.feed().isDownloading(), "the download finished before the second check did, so the check did not land during it");
+    harness.server().releaseDownload();
+
+    QTRY_VERIFY2_WITH_TIMEOUT(
+            !harness.settings().value(qsl("DBLSQD/updateFilePath")).toString().isEmpty(), qPrintable(qsl("the download never finished. The dialog reported: %1").arg(whatTheDialogWasTold())), waitMs);
+    QCOMPARE(harness.settings().value(qsl("DBLSQD/updateFileVersion")).toString(), stubVersion);
+}
+
+// Clicking Update asks for one install. When its download fails, that request
+// has been answered, and a later automatic download must not act on it
+void FeedChecksumRaceTest::anInstallWhoseDownloadFailedIsNotStartedByTheNextDownload()
+{
+    const QByteArray payload = stubDownloadPayload();
+
+    UpdateHarness harness;
+    QVERIFY2(harness.start(), "the stub update server needs TLS support and a free loopback port");
+    harness.server().setFeedBody(stubReleasesJson(harness.assetBaseUrl(), payload.size()));
+    harness.server().setChecksum(QByteArray(64, 'b'));
+    harness.server().setDownloadPayload(payload);
+    dblsqd::UpdateDialog::enableAutoDownload(false, &harness.settings());
+
+    InstallerUrlCatcher installer;
+    QDesktopServices::setUrlHandler(qsl("file"), &installer, "openUrl");
+    const auto restoreUrlHandler = qScopeGuard([]() {
+        QDesktopServices::unsetUrlHandler(qsl("file"));
+    });
+
+    harness.openDialog(dblsqd::UpdateDialog::Manual);
+    QSignalSpy readySpy(&harness.dialog(), &dblsqd::UpdateDialog::ready);
+    QVERIFY2(readySpy.wait(waitMs), qPrintable(qsl("the update dialog never became ready. It reported: %1").arg(whatTheDialogWasTold())));
+
+    harness.dialog().onButtonInstall();
+    QTRY_VERIFY2_WITH_TIMEOUT(!mModalBoxes.texts().isEmpty(), "the download the user asked for failed verification and nobody was told", waitMs);
+
+    // A clean download of the same release, straight to the Feed: Updater's own
+    // check reaches the dialog first and would clear the install by itself,
+    // hiding whether the failed download did
+    harness.server().setChecksum(QCryptographicHash::hash(payload, QCryptographicHash::Sha256).toHex());
+    const QList<dblsqd::Release> updates = harness.feed().getUpdates(dblsqd::Release::getCurrentRelease());
+    QVERIFY2(!updates.isEmpty(), "the stub feed offered no update to download");
+    harness.feed().downloadRelease(updates.first(), /*requireChecksums=*/true);
+    QTRY_VERIFY2_WITH_TIMEOUT(!harness.settings().value(qsl("DBLSQD/updateFilePath")).toString().isEmpty(),
+                              qPrintable(qsl("the automatic download never finished. The dialog reported: %1").arg(whatTheDialogWasTold())),
+                              waitMs);
+    QCoreApplication::processEvents();
+
+    QVERIFY2(installer.urls().isEmpty(), "the update was handed to the system to install without the user clicking anything");
+}
+
+// What Updater ships: its own Update button, which reaches installButtonClicked
+// rather than startUpdate(). A failed download of the one it asked for must not
+// leave it to be clicked by the next download that succeeds
+void FeedChecksumRaceTest::anUpdateButtonWhoseDownloadFailedIsNotClickedByTheNextDownload()
+{
+    const QByteArray payload = stubDownloadPayload();
+
+    UpdateHarness harness;
+    QVERIFY2(harness.start(), "the stub update server needs TLS support and a free loopback port");
+    harness.server().setFeedBody(stubReleasesJson(harness.assetBaseUrl(), payload.size()));
+    harness.server().setChecksum(QByteArray(64, 'b'));
+    harness.server().setDownloadPayload(payload);
+    dblsqd::UpdateDialog::enableAutoDownload(false, &harness.settings());
+
+    harness.openDialog(dblsqd::UpdateDialog::Manual);
+    auto* updateButton = new QPushButton(qsl("Update"));
+    harness.dialog().addInstallButton(updateButton);
+    QSignalSpy clickedSpy(&harness.dialog(), &dblsqd::UpdateDialog::installButtonClicked);
+    QSignalSpy readySpy(&harness.dialog(), &dblsqd::UpdateDialog::ready);
+    QVERIFY2(readySpy.wait(waitMs), qPrintable(qsl("the update dialog never became ready. It reported: %1").arg(whatTheDialogWasTold())));
+
+    updateButton->click();
+    QTRY_VERIFY2_WITH_TIMEOUT(!mModalBoxes.texts().isEmpty(), "the download the user asked for failed verification and nobody was told", waitMs);
+
+    // Straight to the Feed, for the reason given in the test above
+    harness.server().setChecksum(QCryptographicHash::hash(payload, QCryptographicHash::Sha256).toHex());
+    const QList<dblsqd::Release> updates = harness.feed().getUpdates(dblsqd::Release::getCurrentRelease());
+    QVERIFY2(!updates.isEmpty(), "the stub feed offered no update to download");
+    harness.feed().downloadRelease(updates.first(), /*requireChecksums=*/true);
+    QTRY_VERIFY2_WITH_TIMEOUT(!harness.settings().value(qsl("DBLSQD/updateFilePath")).toString().isEmpty(),
+                              qPrintable(qsl("the automatic download never finished. The dialog reported: %1").arg(whatTheDialogWasTold())),
+                              waitMs);
+    QCoreApplication::processEvents();
+
+    QVERIFY2(clickedSpy.isEmpty(), "the Update button was clicked on the user's behalf by a download they never asked for");
+}
+
+// The error box runs an event loop of its own, and a download can finish
+// inside it - by then the install the failed download was for must be over
+void FeedChecksumRaceTest::aDownloadFinishingBehindTheErrorBoxIsNotInstalled()
+{
+    const QByteArray payload = stubDownloadPayload();
+    const QByteArray goodChecksum = QCryptographicHash::hash(payload, QCryptographicHash::Sha256).toHex();
+
+    UpdateHarness harness;
+    QVERIFY2(harness.start(), "the stub update server needs TLS support and a free loopback port");
+    harness.server().setFeedBody(stubReleasesJson(harness.assetBaseUrl(), payload.size()));
+    harness.server().setChecksum(QByteArray(64, 'b'));
+    harness.server().setDownloadPayload(payload);
+    dblsqd::UpdateDialog::enableAutoDownload(false, &harness.settings());
+
+    InstallerUrlCatcher installer;
+    QDesktopServices::setUrlHandler(qsl("file"), &installer, "openUrl");
+    const auto restoreUrlHandler = qScopeGuard([]() {
+        QDesktopServices::unsetUrlHandler(qsl("file"));
+    });
+
+    harness.openDialog(dblsqd::UpdateDialog::Manual);
+    QSignalSpy readySpy(&harness.dialog(), &dblsqd::UpdateDialog::ready);
+    QVERIFY2(readySpy.wait(waitMs), qPrintable(qsl("the update dialog never became ready. It reported: %1").arg(whatTheDialogWasTold())));
+
+    // The catcher would close the box at once, so it stands aside for this one
+    qApp->removeEventFilter(&mModalBoxes);
+    const auto restoreBoxCatcher = qScopeGuard([this]() {
+        qApp->installEventFilter(&mModalBoxes);
+    });
+    QString errorText;
+    bool laterDownloadFinished = false;
+    ModalBoxHolder holder([&](QMessageBox* box) {
+        // A deadline, so a download that never finishes fails the test rather than hanging it
+        QTimer::singleShot(std::chrono::milliseconds(waitMs), box, &QMessageBox::accept);
+        if (!errorText.isEmpty()) {
+            QTimer::singleShot(0ms, box, &QMessageBox::accept);
+            return;
+        }
+        errorText = box->text();
+        QTimer::singleShot(0ms, box, [&harness, &laterDownloadFinished, &goodChecksum, box]() {
+            harness.server().setChecksum(goodChecksum);
+            // Connected after the dialog, so this runs once the dialog has acted on the download
+            connect(&harness.feed(), &dblsqd::Feed::downloadFinished, box, [&laterDownloadFinished, box]() {
+                laterDownloadFinished = true;
+                QTimer::singleShot(0ms, box, &QMessageBox::accept);
+            });
+            const QList<dblsqd::Release> updates = harness.feed().getUpdates(dblsqd::Release::getCurrentRelease());
+            harness.feed().downloadRelease(updates.first(), /*requireChecksums=*/true);
+        });
+    });
+    qApp->installEventFilter(&holder);
+    const auto removeHolder = qScopeGuard([&holder]() {
+        qApp->removeEventFilter(&holder);
+    });
+
+    harness.dialog().onButtonInstall();
+    QTRY_VERIFY2_WITH_TIMEOUT(!errorText.isEmpty(), "the download the user asked for failed verification and nobody was told", waitMs);
+    QTRY_VERIFY2_WITH_TIMEOUT(laterDownloadFinished, qPrintable(qsl("the download behind the error box never finished. The box said: %1").arg(errorText)), waitMs);
+    QCoreApplication::processEvents();
+
+    QVERIFY2(installer.urls().isEmpty(), "a download that finished while the error was on screen was installed without the user clicking anything");
+}
+
+// The Update button clicked on a download that had already finished answers
+// that download. A later release Updater downloads on its own is not an
+// install the user asked for
+void FeedChecksumRaceTest::anAnsweredUpdateButtonIsNotClickedByTheNextRelease()
+{
+    const QByteArray payload = stubDownloadPayload();
+
+    UpdateHarness harness;
+    QVERIFY2(harness.start(), "the stub update server needs TLS support and a free loopback port");
+    harness.server().setFeedBody(stubReleasesJson(qsl("2.0.0"), harness.assetBaseUrl(), payload.size()));
+    harness.server().setChecksum(QCryptographicHash::hash(payload, QCryptographicHash::Sha256).toHex());
+    harness.server().setDownloadPayload(payload);
+    dblsqd::UpdateDialog::enableAutoDownload(true, &harness.settings());
+
+    InstallerUrlCatcher installer;
+    QDesktopServices::setUrlHandler(qsl("file"), &installer, "openUrl");
+    const auto restoreUrlHandler = qScopeGuard([]() {
+        QDesktopServices::unsetUrlHandler(qsl("file"));
+    });
+
+    harness.openDialog(dblsqd::UpdateDialog::Manual);
+    auto* updateButton = new QPushButton(qsl("Update"));
+    harness.dialog().addInstallButton(updateButton);
+    QSignalSpy clickedSpy(&harness.dialog(), &dblsqd::UpdateDialog::installButtonClicked);
+    QTRY_VERIFY2_WITH_TIMEOUT(harness.settings().value(qsl("DBLSQD/updateFileVersion")).toString() == qsl("2.0.0"),
+                              qPrintable(qsl("the automatic download never finished. The dialog reported: %1").arg(whatTheDialogWasTold())),
+                              waitMs);
+
+    // The user opens the dialog on the finished download and clicks Update
+    QSignalSpy readySpy(&harness.dialog(), &dblsqd::UpdateDialog::ready);
+    harness.feed().load();
+    QVERIFY2(readySpy.wait(waitMs), qPrintable(qsl("the update dialog never became ready. It reported: %1").arg(whatTheDialogWasTold())));
+    updateButton->click();
+    QVERIFY2(clickedSpy.count() == 1, "clicking Update on a finished download did not hand it over");
+
+    // Twelve hours on, Updater's check finds a newer release and downloads it,
+    // connected after the dialog as Updater's is
+    harness.server().setFeedBody(stubReleasesJson(qsl("3.0.0"), harness.assetBaseUrl(), payload.size()));
+    QMetaObject::Connection updaterCheck;
+    updaterCheck = connect(&harness.feed(), &dblsqd::Feed::ready, this, [&harness, &updaterCheck]() {
+        disconnect(updaterCheck);
+        const QList<dblsqd::Release> updates = harness.feed().getUpdates(dblsqd::Release::getCurrentRelease());
+        if (!updates.isEmpty()) {
+            harness.feed().downloadRelease(updates.first(), /*requireChecksums=*/true);
+        }
+    });
+    harness.feed().load();
+    QTRY_VERIFY2_WITH_TIMEOUT(harness.settings().value(qsl("DBLSQD/updateFileVersion")).toString() == qsl("3.0.0"),
+                              qPrintable(qsl("the newer release was never downloaded. The dialog reported: %1").arg(whatTheDialogWasTold())),
+                              waitMs);
+    QCoreApplication::processEvents();
+
+    QVERIFY2(clickedSpy.count() == 1 && installer.urls().isEmpty(),
+             qPrintable(qsl("a release the user never asked for was installed: Update clicked %1 times, installer handed over %2 times").arg(clickedSpy.count()).arg(installer.urls().size())));
+}
+
+// #10325 is reported against quitting: a release whose checksums are not up yet
+// is not one selectUpdates() offers, so the quit path must not show it either
+void FeedChecksumRaceTest::aReleaseWithoutChecksumsIsNotOfferedOnQuit()
+{
+    UpdateHarness harness;
+    QVERIFY2(harness.start(), "the stub update server needs TLS support and a free loopback port");
+    harness.server().setFeedBody(stubReleasesJson(harness.assetBaseUrl(), 1024));
+    dblsqd::UpdateDialog::enableAutoDownload(false, &harness.settings());
+
+    harness.openDialog(dblsqd::UpdateDialog::Manual);
+    QSignalSpy readySpy(&harness.dialog(), &dblsqd::UpdateDialog::ready);
+    QVERIFY2(readySpy.wait(waitMs), qPrintable(qsl("the update dialog never became ready. It reported: %1").arg(whatTheDialogWasTold())));
+
+    QJsonObject withoutChecksums = stubReleaseInfo(harness.assetBaseUrl(), 1024);
+    withoutChecksums.insert(qsl("assets"), QJsonArray({stubAsset(assetName, harness.assetBaseUrl() + assetName, 1024)}));
+    harness.server().setFeedBody(QJsonDocument(QJsonArray({withoutChecksums})).toJson(QJsonDocument::Compact));
+    QSignalSpy feedReadySpy(&harness.feed(), &dblsqd::Feed::ready);
+    harness.feed().load();
+    QVERIFY2(feedReadySpy.wait(waitMs), qPrintable(qsl("the second update check never finished. The dialog reported: %1").arg(whatTheDialogWasTold())));
+    QVERIFY2(harness.feed().getUpdates(dblsqd::Release::getCurrentRelease()).isEmpty(), "the release without checksums was still offered, so the assertion below would test nothing");
+
+    harness.dialog().showIfUpdatesAvailableOrQuit();
+    QVERIFY2(!harness.dialog().isVisible(), "quitting put up an update dialog for a release that is no longer on offer");
+}
+
+// A check that answers while the download the user asked for is still running
+// does not cancel the install that download is for
+void FeedChecksumRaceTest::anInstallAskedForSurvivesACheckDuringItsDownload()
+{
+    const QByteArray payload = stubDownloadPayload();
+
+    UpdateHarness harness;
+    QVERIFY2(harness.start(), "the stub update server needs TLS support and a free loopback port");
+    harness.server().setFeedBody(stubReleasesJson(harness.assetBaseUrl(), payload.size()));
+    harness.server().setChecksum(QCryptographicHash::hash(payload, QCryptographicHash::Sha256).toHex());
+    harness.server().setDownloadPayload(payload);
+    dblsqd::UpdateDialog::enableAutoDownload(false, &harness.settings());
+
+    InstallerUrlCatcher installer;
+    QDesktopServices::setUrlHandler(qsl("file"), &installer, "openUrl");
+    const auto restoreUrlHandler = qScopeGuard([]() {
+        QDesktopServices::unsetUrlHandler(qsl("file"));
+    });
+
+    harness.openDialog(dblsqd::UpdateDialog::Manual);
+    QSignalSpy readySpy(&harness.dialog(), &dblsqd::UpdateDialog::ready);
+    QVERIFY2(readySpy.wait(waitMs), qPrintable(qsl("the update dialog never became ready. It reported: %1").arg(whatTheDialogWasTold())));
+
+    QSignalSpy progressSpy(&harness.feed(), &dblsqd::Feed::downloadProgress);
+    harness.server().holdDownloadAfter(static_cast<int>(payload.size() / 2));
+    harness.dialog().onButtonInstall();
+    QVERIFY2(progressSpy.wait(waitMs), qPrintable(qsl("the download the user asked for never started. The dialog reported: %1").arg(whatTheDialogWasTold())));
+
+    QSignalSpy feedReadySpy(&harness.feed(), &dblsqd::Feed::ready);
+    harness.feed().load();
+    QVERIFY2(feedReadySpy.wait(waitMs), qPrintable(qsl("the second update check never finished. The dialog reported: %1").arg(whatTheDialogWasTold())));
+    QVERIFY2(harness.feed().isDownloading(), "the download finished before the second check did, so the check did not land during it");
+    harness.server().releaseDownload();
+
+    QTRY_COMPARE_WITH_TIMEOUT(installer.urls().size(), 1, waitMs);
+}
+
+// Updater's own Update button goes through installButtonClicked rather than
+// startUpdate(), and a second download of the release must not click it again
+void FeedChecksumRaceTest::anUpdateButtonClickIsAnsweredByOneDownload()
+{
+    const QByteArray payload = stubDownloadPayload();
+
+    UpdateHarness harness;
+    QVERIFY2(harness.start(), "the stub update server needs TLS support and a free loopback port");
+    harness.server().setFeedBody(stubReleasesJson(harness.assetBaseUrl(), payload.size()));
+    harness.server().setChecksum(QCryptographicHash::hash(payload, QCryptographicHash::Sha256).toHex());
+    harness.server().setDownloadPayload(payload);
+    dblsqd::UpdateDialog::enableAutoDownload(false, &harness.settings());
+
+    harness.openDialog(dblsqd::UpdateDialog::Manual);
+    // Owned by the dialog's layout once added, as Updater's is
+    auto* updateButton = new QPushButton(qsl("Update"));
+    harness.dialog().addInstallButton(updateButton);
+    QSignalSpy clickedSpy(&harness.dialog(), &dblsqd::UpdateDialog::installButtonClicked);
+    QSignalSpy readySpy(&harness.dialog(), &dblsqd::UpdateDialog::ready);
+    QVERIFY2(readySpy.wait(waitMs), qPrintable(qsl("the update dialog never became ready. It reported: %1").arg(whatTheDialogWasTold())));
+
+    updateButton->click();
+    QTRY_VERIFY2_WITH_TIMEOUT(clickedSpy.count() == 1, qPrintable(qsl("the download the Update button asked for never finished. The dialog reported: %1").arg(whatTheDialogWasTold())), waitMs);
+
+    QSignalSpy finishedSpy(&harness.feed(), &dblsqd::Feed::downloadFinished);
+    const QList<dblsqd::Release> updates = harness.feed().getUpdates(dblsqd::Release::getCurrentRelease());
+    QVERIFY2(!updates.isEmpty(), "the stub feed offered no update to download");
+    harness.feed().downloadRelease(updates.first(), /*requireChecksums=*/true);
+    QVERIFY2(finishedSpy.wait(waitMs), qPrintable(qsl("the second download never finished. The dialog reported: %1").arg(whatTheDialogWasTold())));
+    QCoreApplication::processEvents();
+
+    QVERIFY2(clickedSpy.count() == 1, qPrintable(qsl("one click on Update was answered %1 times").arg(clickedSpy.count())));
+}
+
+// The buttons are disabled while a download runs, so one that fails has to hand
+// them back, or reopening the dialog offers an Update button nobody can click
+void FeedChecksumRaceTest::aFailedDownloadLeavesTheUpdateButtonUsable()
+{
+    const QByteArray payload = stubDownloadPayload();
+
+    UpdateHarness harness;
+    QVERIFY2(harness.start(), "the stub update server needs TLS support and a free loopback port");
+    harness.server().setFeedBody(stubReleasesJson(harness.assetBaseUrl(), payload.size()));
+    harness.server().setChecksum(QByteArray(64, 'b'));
+    harness.server().setDownloadPayload(payload);
+    dblsqd::UpdateDialog::enableAutoDownload(false, &harness.settings());
+
+    harness.openDialog(dblsqd::UpdateDialog::Manual);
+    auto* updateButton = new QPushButton(qsl("Update"));
+    harness.dialog().addInstallButton(updateButton);
+    QSignalSpy readySpy(&harness.dialog(), &dblsqd::UpdateDialog::ready);
+    QVERIFY2(readySpy.wait(waitMs), qPrintable(qsl("the update dialog never became ready. It reported: %1").arg(whatTheDialogWasTold())));
+    QVERIFY2(updateButton->isEnabled(), "the Update button was disabled before anything was downloaded, so the assertion below would test nothing");
+
+    updateButton->click();
+    QTRY_VERIFY2_WITH_TIMEOUT(!mModalBoxes.texts().isEmpty(), "the download the user asked for failed verification and nobody was told", waitMs);
+
+    readySpy.clear();
+    harness.feed().load();
+    QVERIFY2(readySpy.wait(waitMs), qPrintable(qsl("the next update check never reached the dialog. It reported: %1").arg(whatTheDialogWasTold())));
+    QVERIFY2(updateButton->isEnabled(), "after a failed download the Update button stays disabled, so the user cannot try again");
+}
+
+// A verified installer the system refuses to open was downloaded perfectly well,
+// so the user is told what did fail
+void FeedChecksumRaceTest::anInstallerThatWillNotOpenIsNotReportedAsADownloadError()
+{
+    const QByteArray payload = stubDownloadPayload();
+
+    UpdateHarness harness;
+    QVERIFY2(harness.start(), "the stub update server needs TLS support and a free loopback port");
+    harness.server().setFeedBody(stubReleasesJson(harness.assetBaseUrl(), payload.size()));
+    harness.server().setChecksum(QCryptographicHash::hash(payload, QCryptographicHash::Sha256).toHex());
+    harness.server().setDownloadPayload(payload);
+    dblsqd::UpdateDialog::enableAutoDownload(false, &harness.settings());
+
+    // A handler slot that does not exist is what makes QDesktopServices::openUrl() return false
+    InstallerUrlCatcher installer;
+    QDesktopServices::setUrlHandler(qsl("file"), &installer, "noSuchSlot");
+    const auto restoreUrlHandler = qScopeGuard([]() {
+        QDesktopServices::unsetUrlHandler(qsl("file"));
+    });
+
+    harness.openDialog(dblsqd::UpdateDialog::Manual);
+    QSignalSpy readySpy(&harness.dialog(), &dblsqd::UpdateDialog::ready);
+    QVERIFY2(readySpy.wait(waitMs), qPrintable(qsl("the update dialog never became ready. It reported: %1").arg(whatTheDialogWasTold())));
+
+    harness.dialog().onButtonInstall();
+    QTRY_VERIFY2_WITH_TIMEOUT(!mModalBoxes.texts().isEmpty(), "the installer could not be opened and nobody was told", waitMs);
+    QVERIFY2(mModalBoxes.texts().first().startsWith(qsl("Could not open the downloaded update")),
+             qPrintable(qsl("an installer that would not open was reported as: \"%1\"").arg(mModalBoxes.texts().first())));
+}
+
+QTEST_MAIN(FeedChecksumRaceTest)
+#include "FeedChecksumRaceTest.moc"

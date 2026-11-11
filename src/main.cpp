@@ -30,16 +30,22 @@
 #undef nil
 #endif
 
+#include "HardwareDeviceTypes.h"
 #include "HostManager.h"
+#include "MudletApp.h"
 #include "mudlet.h"
 #include "MudletInstanceCoordinator.h"
+#include "TriggerMatchPool.h"
+#include <algorithm>
 #include <chrono>
+#include <csignal>
 #include <QCheckBox>
 #include <QCommandLineParser>
 #include <QDir>
 #include <QMessageBox>
 #include <QCommandLineOption>
 #include <QPainter>
+#include <QTextLayout>
 #include <iostream>
 #include <memory>
 #include <vector>
@@ -57,47 +63,43 @@
 #include <QScreen>
 #include <QSettings>
 #include <QSplashScreen>
+#include <QSslConfiguration>
 #include <QStringList>
+#if defined(INCLUDE_3DMAPPER)
+#include <QSurfaceFormat>
+#endif
 #include <QTranslator>
-#include "AltFocusMenuBarDisable.h"
+#if defined(Q_OS_WINDOWS)
+#include <QThread>
+#else
+#include <pthread.h>
+#endif
 #include "TAccessibleConsole.h"
+#include "TAccessibleLabel.h"
 #include "TAccessibleTextEdit.h"
 #include "FileOpenHandler.h"
-#include "LsanSuppressions.h"
 #include "SentryWrapper.h"
+#ifdef WITH_SENTRY
+// sentry.h and qScopeGuard are used by the shutdown guard below; SentryWrapper.h needs neither, and
+// only this target has sentry's include path, so no other file can take them from it.
+#include <QtCore/qscopeguard.h>
+#include "sentry.h"
+#endif
 #include "utils.h"
 #include <QFileInfo>
 #include <QGuiApplication>
 #include <QProcessEnvironment>
 #include <QTextStream>
+#ifdef INCLUDE_MCPSERVER
+#include "TMCPBridge.h"
+#include <QCoreApplication>
+#endif
 
 #if defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
 #include <windows.h>
-#include <QThread>
 #endif
 
 using namespace std::chrono_literals;
-
-// These hooks are only consulted when the LeakSanitizer runtime is linked in
-// (USE_SANITIZER builds, i.e. PTBs and testing builds); elsewhere they are two
-// inert functions. They cannot be guarded with an "is ASAN on" macro check:
-// Mudlet only applies -fsanitize=address at link time, so no compiler macro is
-// set, and Qt's qcompilerdetection.h shims __has_feature to 0 on GCC anyway.
-
-// Embeds the suppression list into the binary so leak reports shown to users
-// by testing/PTB builds exclude third-party noise (GPU drivers, font stack)
-// with no LSAN_OPTIONS needed at runtime:
-extern "C" const char* __lsan_default_suppressions()
-{
-    return mudletLsanSuppressions;
-}
-
-// Without this, LeakSanitizer appends a "Suppressions used" summary to every
-// clean exit, which reads like an error to users:
-extern "C" const char* __lsan_default_options()
-{
-    return "print_suppressions=0";
-}
 
 extern void qInitResources_mudlet();
 extern void qInitResources_qm();
@@ -135,19 +137,19 @@ void removeOldNoteColorEmojiFonts()
     // When adding a later version, append the path and version comment of the
     // replaced one comment to this area:
     // Tag: "v2018-04-24-pistol-update"
-    oldNotoFontDirectories << qsl("%1/notocoloremoji-unhinted-2018-04-24-pistol-update").arg(mudlet::getMudletPath(enums::mainFontsPath));
+    oldNotoFontDirectories << qsl("%1/notocoloremoji-unhinted-2018-04-24-pistol-update").arg(MudletApp::getMudletPath(enums::mainFontsPath));
     // Release: "v2019-11-19-unicode12"
-    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2019-11-19-unicode12").arg(mudlet::getMudletPath(enums::mainFontsPath));
+    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2019-11-19-unicode12").arg(MudletApp::getMudletPath(enums::mainFontsPath));
     // Release: "Noto Emoji v2.0238"
-    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2021-07-15-v2.028").arg(mudlet::getMudletPath(enums::mainFontsPath));
+    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2021-07-15-v2.028").arg(MudletApp::getMudletPath(enums::mainFontsPath));
     // Release: "Unicode 14.0"
-    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2021-11-01-v2.034").arg(mudlet::getMudletPath(enums::mainFontsPath));
+    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2021-11-01-v2.034").arg(MudletApp::getMudletPath(enums::mainFontsPath));
     // Release: "Unicode 15.0"
-    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2022-09-16-v2.038").arg(mudlet::getMudletPath(enums::mainFontsPath));
+    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2022-09-16-v2.038").arg(MudletApp::getMudletPath(enums::mainFontsPath));
     // Release: "Unicode 15.1, take 3"
-    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2023-11-30-v2.042").arg(mudlet::getMudletPath(enums::mainFontsPath));
+    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2023-11-30-v2.042").arg(MudletApp::getMudletPath(enums::mainFontsPath));
     // Release: "Unicode 16.0"
-    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2024-10-03-v2.047").arg(mudlet::getMudletPath(enums::mainFontsPath));
+    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2024-10-03-v2.047").arg(MudletApp::getMudletPath(enums::mainFontsPath));
 
     QListIterator<QString> itOldNotoFontDirectory(oldNotoFontDirectories);
     while (itOldNotoFontDirectory.hasNext()) {
@@ -165,28 +167,68 @@ void removeOldNoteColorEmojiFonts()
 #endif // defined(Q_OS_LINUX)
 #endif // defined(INCLUDE_FONTS)
 
-QTranslator* loadTranslationsForCommandLine()
+// Joined so the warm-up thread has fully exited, exit handlers included, before the application object
+// and the statics go. Not QThread on macOS: Qt starts threads detached there, so wait() is no join. Not
+// std::thread on Windows: before Qt 6.9 a watcher thread frees its adopted thread data after the join.
+// pthread_create rather than std::thread, which throws when no thread can be had; the warm-up is optional.
+class TlsWarmup
 {
-    QSettings* pSettings = mudlet::getQSettings();
-    auto interfaceLanguage = pSettings->value(QLatin1String("interfaceLanguage")).toString();
-    auto userLocale = interfaceLanguage.isEmpty() ? QLocale::system() : QLocale(interfaceLanguage);
-    if (userLocale == QLocale::c()) {
-        // nothing found
+public:
+    TlsWarmup() = default;
+    TlsWarmup(const TlsWarmup&) = delete;
+    TlsWarmup& operator=(const TlsWarmup&) = delete;
+    ~TlsWarmup() { join(); }
+
+    void start()
+    {
+#if defined(Q_OS_WINDOWS)
+        if (!mThread) {
+            mThread.reset(QThread::create(warmUp));
+            mThread->start();
+        }
+#else
+        if (!mStarted) {
+            const int error = pthread_create(&mThread, nullptr, &TlsWarmup::run, nullptr);
+            mStarted = error == 0;
+            if (!mStarted) {
+                qWarning().nospace() << "TlsWarmup::start() WARNING - no thread for the TLS warm-up (" << qt_error_string(error) << "), so the first connection will load the CA certificates itself";
+            }
+        }
+#endif
+    }
+
+    void join()
+    {
+#if defined(Q_OS_WINDOWS)
+        if (mThread) {
+            mThread->wait();
+            mThread.reset();
+        }
+#else
+        if (mStarted) {
+            pthread_join(mThread, nullptr);
+            mStarted = false;
+        }
+#endif
+    }
+
+private:
+    static void warmUp() { QSslConfiguration::defaultConfiguration(); }
+
+#if defined(Q_OS_WINDOWS)
+    std::unique_ptr<QThread> mThread;
+#else
+    static void* run(void* argument)
+    {
+        Q_UNUSED(argument)
+        warmUp();
         return nullptr;
     }
-    // We only need the Mudlet translations for the Command Line texts, no need
-    // for any Qt ones:
-    QTranslator* pMudletTranslator = new QTranslator(qApp);
-    // If we allow the translations to be outside of the resource file inside
-    // the application executable then this will have to be revised to handle
-    // it:
-    const bool isOk = pMudletTranslator->load(userLocale, qsl("mudlet"), QString("_"), qsl(":/lang"), qsl(".qm"));
-    if (!isOk) {
-        return nullptr;
-    }
-    QCoreApplication::installTranslator(pMudletTranslator);
-    return pMudletTranslator;
-}
+
+    pthread_t mThread{};
+    bool mStarted = false;
+#endif
+};
 
 #ifdef Q_OS_WINDOWS
 void msys2QtMessageHandler(QtMsgType type, const QMessageLogContext& context, const QString& msg)
@@ -205,56 +247,37 @@ void msys2QtMessageHandler(QtMsgType type, const QMessageLogContext& context, co
 }
 #endif
 
+// The config root for callers that run before mudlet exists. argv[0] is the last resort:
+// a plain command name found via PATH resolves relative to the current directory instead
+// of the binary's, so applicationDirPath() is preferred whenever a QCoreApplication is up
+// to provide it.
+static QString earlyConfigPath(int argc, char* argv[])
+{
+    QString execDir;
+    const QProcessEnvironment sysEnv = QProcessEnvironment::systemEnvironment();
+    if (sysEnv.contains(qsl("APPIMAGE"))) {
+        execDir = QFileInfo(sysEnv.value(qsl("APPIMAGE"))).absolutePath();
+    } else if (QCoreApplication::instance()) {
+        execDir = QCoreApplication::applicationDirPath();
+    } else if (argc > 0) {
+        execDir = QFileInfo(QString::fromLocal8Bit(argv[0])).absolutePath();
+    } else {
+        return {};
+    }
+
+    return MudletApp::resolveConfigRoot(execDir).path;
+}
+
 #if !defined(Q_OS_MACOS)
 // Reads highDpiScaleFactorRoundingPolicy from Mudlet.ini before QApplication
 // creation, since Qt requires this to be set before the application is constructed.
-// Replicates setupConfig() config path detection using argv[0] instead of
-// QCoreApplication::applicationDirPath() which isn't available yet.
 static void applyHighDpiRoundingPolicyFromConfig(int argc, char* argv[])
 {
     if (!qEnvironmentVariableIsEmpty("QT_SCALE_FACTOR_ROUNDING_POLICY")) {
         return;
     }
 
-    QString execDir;
-    const QProcessEnvironment sysEnv = QProcessEnvironment::systemEnvironment();
-    if (sysEnv.contains(qsl("APPIMAGE"))) {
-        execDir = QFileInfo(sysEnv.value(qsl("APPIMAGE"))).absolutePath();
-    } else if (argc > 0) {
-        execDir = QFileInfo(QString::fromLocal8Bit(argv[0])).absolutePath();
-    } else {
-        return;
-    }
-
-    const QString confDirDefault = qsl("%1/.config/mudlet").arg(QDir::homePath());
-    QString confPath;
-
-    const QString markerExecDir = qsl("%1/portable.txt").arg(execDir);
-    const QString markerHomeDir = qsl("%1/portable.txt").arg(confDirDefault);
-
-    if (QFileInfo(markerExecDir).isFile()) {
-        QFile file(markerExecDir);
-        QString portPath;
-        if (file.open(QIODevice::ReadOnly)) {
-            QTextStream(&file).readLineInto(&portPath);
-        }
-        if (portPath.isEmpty()) {
-            portPath = qsl("./portable");
-        }
-        confPath = utils::pathResolveRelative(QDir::cleanPath(portPath), execDir);
-    } else if (QFileInfo(markerHomeDir).isFile()) {
-        QFile file(markerHomeDir);
-        QString portPath;
-        if (file.open(QIODevice::ReadOnly)) {
-            QTextStream(&file).readLineInto(&portPath);
-        }
-        confPath = utils::pathResolveRelative(QDir::cleanPath(portPath), execDir);
-    } else {
-        // Mirror setupConfig()'s XDG_CONFIG_HOME resolution so this early
-        // Mudlet.ini read looks in the same config root.
-        confPath = utils::xdgConfigDir(confDirDefault).path;
-    }
-
+    const QString confPath = earlyConfigPath(argc, argv);
     if (confPath.isEmpty()) {
         return;
     }
@@ -265,6 +288,7 @@ static void applyHighDpiRoundingPolicyFromConfig(int argc, char* argv[])
     }
 
     const QSettings settings(iniPath, QSettings::IniFormat);
+    MudletApp::noteEarlySettingsStatus(settings);
     const QString value = settings.value(qsl("highDpiScaleFactorRoundingPolicy")).toString();
     if (value.isEmpty()) {
         return;
@@ -313,6 +337,22 @@ int main(int argc, char* argv[])
     }
 #endif
 
+    // Claude Desktop and other stdio MCP clients launch `mudlet --mcp-bridge` and talk
+    // JSON-RPC over its stdin/stdout; none of the GUI may come up in that mode. Handled
+    // in every build - a build without the server must still exit rather than open a
+    // Mudlet window each time an AI assistant tries to connect.
+    for (int i = 1; i < argc; ++i) {
+        if (qstrcmp(argv[i], "--mcp-bridge") == 0) {
+#ifdef INCLUDE_MCPSERVER
+            const QCoreApplication app(argc, argv);
+            return TMCPBridge::exec(earlyConfigPath(argc, argv));
+#else
+            std::cerr << "This Mudlet was built without MCP support, so --mcp-bridge is not available." << std::endl;
+            return 1;
+#endif
+        }
+    }
+
 #ifdef WITH_SENTRY
     initSentry();
     auto sentryClose = qScopeGuard([] {
@@ -334,6 +374,171 @@ int main(int argc, char* argv[])
     }
 #endif
 
+    QCommandLineParser parser;
+    // The third (and fourth if provided) arguments are used to populate the
+    // help text that the QCommandLineParser::showHelp(...) would produce
+    // however we do the -h/--help option ourself so these texts are unused
+    // other than that a non-null fourth argument maybe responsible for
+    // making the option take a value that follows it - as such they do not
+    // need to be passed to the translation system.
+    const QCommandLineOption profileToOpen(QStringList() << qsl("p") << qsl("profile"), qsl("Profile to open automatically"), qsl("profile"));
+
+    const QCommandLineOption showHelp(QStringList() << qsl("h") << qsl("help"), qsl("Display help and exit"));
+
+    const QCommandLineOption showVersion(QStringList() << qsl("v") << qsl("version"), qsl("Display version and exit"));
+
+    const QCommandLineOption showSplashscreen(QStringList() << qsl("s") << qsl("splashscreen"), qsl("Show the splash screen when starting"));
+
+    const QCommandLineOption startFullscreen(QStringList() << qsl("f") << qsl("fullscreen"), qsl("Start Mudlet in fullscreen mode"));
+
+    const QCommandLineOption mirrorToStdout(QStringList() << qsl("m") << qsl("mirror"),
+                                            qsl("Copy console output to STDOUT: the main console's game text as it arrives, and what scripts print to any console"));
+
+    QCommandLineOption beQuiet(QStringList() << qsl("q") << qsl("quiet"), qsl("Depricated option, previously used to disable showing the splash screen"));
+    beQuiet.setFlags(QCommandLineOption::HiddenFromHelp);
+
+    const QCommandLineOption onlyPredefinedProfileToShow(
+            QStringList() << qsl("o") << qsl("only"), qsl("Set Mudlet to only show this predefined MUD profile and hide all other predefined ones."), qsl("predefined_game"));
+
+    // long-only, as -o is taken by --only just above
+    const QCommandLineOption openOffline(qsl("offline"), qsl("Open the profiles loaded at startup without connecting to their game server"));
+
+    const QCommandLineOption steamMode(QStringList() << qsl("steammode"), qsl("Adjusts Mudlet settings to match Steam's requirements."));
+
+    // A GUI run is reparsed from the list its QApplication has tidied, so it declares only the Qt options
+    // the help text documents. Keep in step with that text, which also lists --sync, though Qt 6 ignores it.
+    const auto declareOptions = [&](QCommandLineParser& target) {
+        target.addOptions({profileToOpen, showHelp, showVersion, showSplashscreen, startFullscreen, mirrorToStdout, beQuiet, onlyPredefinedProfileToShow, openOffline, steamMode});
+        target.addPositionalArgument(qsl("package"), qsl("Path to .mpackage file"));
+        for (const QString& inheritedName : {qsl("dograb"), qsl("nograb"), qsl("reverse"), qsl("sync"), qsl("widgetcount")}) {
+            QCommandLineOption inheritedOption(inheritedName);
+            inheritedOption.setFlags(QCommandLineOption::HiddenFromHelp);
+            target.addOption(inheritedOption);
+        }
+        for (const QString& inheritedName : {qsl("style"), qsl("stylesheet"), qsl("qmljsdebugger")}) {
+            QCommandLineOption inheritedOption(inheritedName, QString(), inheritedName);
+            inheritedOption.setFlags(QCommandLineOption::HiddenFromHelp);
+            target.addOption(inheritedOption);
+        }
+    };
+    declareOptions(parser);
+
+    // Raw argv: the application object that would tidy it is what this list decides the kind of. Only
+    // ASCII option spellings are read, so the local 8-bit conversion loses nothing looked at here.
+    QStringList commandLineArguments;
+    commandLineArguments.reserve(argc);
+    for (int i = 0; i < argc; ++i) {
+        commandLineArguments << QString::fromLocal8Bit(argv[i]);
+    }
+
+    // Decides the kind of application object before there is one: --help and --version must work with no
+    // display. Single-dash words are read whole, as Qt's own options are still in the list and compacting
+    // would find an 'h' in -stylesheet or a 'v' in -reverse.
+    parser.setSingleDashWordOptionMode(QCommandLineParser::ParseAsLongOptions);
+    bool commandLineReadOk = parser.parse(commandLineArguments);
+    // A word spelled as a group of Mudlet's short options (-qv, -vp Name) is split, so it answers as it would
+    // with a display. No undeclared Qt 6.9 option (-display, -visual...) is spelled as one. Keep both letter
+    // sets in step with the options above. Known gap: a letter outside them (-hx) could be such an option.
+    const QString noValueLetters{qsl("hvsfmq")};
+    const QString valueLetters{qsl("po")};
+    const auto spelledAsFlagGroup = [&noValueLetters, &valueLetters](const QString& name) {
+        if (name.size() < 2) {
+            return false;
+        }
+        for (const QChar letter : name) {
+            if (valueLetters.contains(letter)) {
+                return letter != name.front();
+            }
+            if (!noValueLetters.contains(letter)) {
+                return false;
+            }
+        }
+        return true;
+    };
+    QStringList flagGroups;
+    for (const QString& unknownName : parser.unknownOptionNames()) {
+        if (!spelledAsFlagGroup(unknownName)) {
+            continue;
+        }
+        // --qv reports the same unknown name as -qv; -vp=Name does too, and Qt's compacted reading gives -p
+        // the value after the '=', while -qv=x is an error there
+        const QString word = qsl("-%1").arg(unknownName);
+        const bool takesValue = std::any_of(unknownName.cbegin(), unknownName.cend(), [&valueLetters](const QChar letter) {
+            return valueLetters.contains(letter);
+        });
+        for (const QString& argument : commandLineArguments) {
+            if (argument == word || (takesValue && argument.startsWith(word + QLatin1Char('=')))) {
+                flagGroups << argument;
+            }
+        }
+    }
+    if (!flagGroups.isEmpty()) {
+        QStringList splitArguments;
+        for (qsizetype i = 0; i < commandLineArguments.size(); ++i) {
+            const QString& argument = commandLineArguments.at(i);
+            if (!flagGroups.contains(argument)) {
+                splitArguments << argument;
+                continue;
+            }
+            qsizetype valueLetterAt = 1;
+            while (valueLetterAt < argument.size() && !valueLetters.contains(argument.at(valueLetterAt))) {
+                ++valueLetterAt;
+            }
+            // A trailing -p/-o would take the option after it as its value (-sp --version, -hp --offline), so
+            // it is dropped: such a run only needs the flags read, and other runs are read again later
+            const bool valueLetterDropped = valueLetterAt == argument.size() - 1 && i + 1 < commandLineArguments.size() && commandLineArguments.at(i + 1).startsWith(QLatin1Char('-'));
+            const qsizetype letterCount = std::min(valueLetterAt, argument.size() - 1) - (valueLetterDropped ? 1 : 0);
+            for (const QChar letter : QStringView(argument).sliced(1, letterCount)) {
+                splitArguments << qsl("-%1").arg(letter);
+            }
+            if (valueLetterAt + 1 < argument.size()) {
+                const QString value = argument.sliced(valueLetterAt + 1);
+                splitArguments << (value.startsWith(QLatin1Char('=')) ? value.sliced(1) : value);
+            }
+        }
+        // The print-and-exit reading below has to see the groups split too
+        commandLineArguments = splitArguments;
+        commandLineReadOk = parser.parse(commandLineArguments);
+    }
+    const bool printAndExitOption = parser.isSet(showHelp) || parser.isSet(showVersion);
+    // No application object will strip Qt's options from a print-and-exit run, so it is answered by a parser
+    // that knows all of them: QCoreApplication's, QGuiApplication's, QApplication's and the xcb plugin's.
+    QCommandLineParser printAndExitParser;
+    QCommandLineParser* answeringParser = &parser;
+    if (printAndExitOption) {
+        declareOptions(printAndExitParser);
+        for (const QString& qtName : {qsl("qdebug"), qsl("qdevel"), qsl("testability")}) {
+            QCommandLineOption qtOption(qtName);
+            qtOption.setFlags(QCommandLineOption::HiddenFromHelp);
+            printAndExitParser.addOption(qtOption);
+        }
+        for (const QString& qtName : {qsl("platform"),
+                                      qsl("platformpluginpath"),
+                                      qsl("platformtheme"),
+                                      qsl("plugin"),
+                                      qsl("qwindowgeometry"),
+                                      qsl("qwindowicon"),
+                                      qsl("qwindowtitle"),
+                                      qsl("session"),
+                                      qsl("display"),
+                                      qsl("geometry"),
+                                      qsl("icon"),
+                                      qsl("name"),
+                                      qsl("title"),
+                                      qsl("visual")}) {
+            QCommandLineOption qtOption(qtName, QString(), qtName);
+            qtOption.setFlags(QCommandLineOption::HiddenFromHelp);
+            printAndExitParser.addOption(qtOption);
+        }
+        printAndExitParser.setSingleDashWordOptionMode(QCommandLineParser::ParseAsLongOptions);
+        const bool printAndExitReadOk = printAndExitParser.parse(commandLineArguments);
+        // One of them taking the -h or -v as its value leaves the first reading's answer standing
+        if (printAndExitParser.isSet(showHelp) || printAndExitParser.isSet(showVersion)) {
+            answeringParser = &printAndExitParser;
+            commandLineReadOk = printAndExitReadOk;
+        }
+    }
+
 #if !defined(Q_OS_MACOS)
     applyHighDpiRoundingPolicyFromConfig(argc, argv);
 #endif
@@ -351,88 +556,88 @@ int main(int argc, char* argv[])
     QApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
 #endif // INCLUDE_3DMAPPER
 #endif
-
-    auto app = qobject_cast<QApplication*>(new QApplication(argc, argv));
-
-    QAccessible::installFactory(TAccessibleConsole::consoleFactory);
-    QAccessible::installFactory(TAccessibleTextEdit::textEditFactory);
-
-    // Turn the cursor into the waiting one during startup, so something shows
-    // activity even if the quiet, no splashscreen startup has been used
-    app->setOverrideCursor(QCursor(Qt::WaitCursor));
-    app->setOrganizationName(qsl("Mudlet"));
-
-    QFile gitShaFile(":/app-build.txt");
-    if (!gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        qWarning() << "main: failed to open app-build.txt for reading:" << gitShaFile.errorString();
-    }
-    const QString appBuild = QString::fromUtf8(gitShaFile.readAll()).trimmed();
-
-    const bool releaseVersion = appBuild.isEmpty();
-    const bool publicTestVersion = appBuild.startsWith("-ptb");
-
-    if (publicTestVersion) {
-        app->setApplicationName(qsl("Mudlet Public Test Build"));
-    } else {
-        app->setApplicationName(qsl("Mudlet"));
-    }
-    if (releaseVersion) {
-        app->setApplicationVersion(APP_VERSION);
-    } else {
-        app->setApplicationVersion(QString(APP_VERSION) + appBuild);
-    }
-
-    mudlet::start();
-    // Detect config path before any files are read
-    mudlet::self()->setupConfig();
-
-#if defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
-    auto abortLaunch = runUpdate();
-    if (abortLaunch) {
-        return 0;
+#if defined(INCLUDE_3DMAPPER)
+    {
+        // Qt's Wayland backend otherwise composes windows with OpenGL ES, which cannot share with the 3D views' desktop contexts
+        QSurfaceFormat format = QSurfaceFormat::defaultFormat();
+        format.setRenderableType(QSurfaceFormat::OpenGL);
+        QSurfaceFormat::setDefaultFormat(format);
     }
 #endif
 
-    QPointer<QTranslator> commandLineTranslator(loadTranslationsForCommandLine());
-    QCommandLineParser parser;
-    // The third (and fourth if provided) arguments are used to populate the
-    // help text that the QCommandLineParser::showHelp(...) would produce
-    // however we do the -h/--help option ourself so these texts are unused
-    // other than that a non-null fourth argument maybe responsible for
-    // making the option take a value that follows it - as such they do not
-    // need to be passed to the translation system.
-    const QCommandLineOption profileToOpen(QStringList() << qsl("p") << qsl("profile"), qsl("Profile to open automatically"), qsl("profile"));
-    parser.addOption(profileToOpen);
+    // Loading a platform plugin with no display server aborts, so print-and-exit options get an
+    // application that needs no display. The GUI one stays a raw pointer: its delete at the end of main()
+    // is deliberately ordered against static destruction.
+    std::unique_ptr<QCoreApplication> consoleApp;
+    QApplication* app = nullptr;
+    if (printAndExitOption) {
+        consoleApp = std::make_unique<QCoreApplication>(argc, argv);
+    } else {
+        // Setting the environment is a data race once the application's threads are reading it
+        nameHardwareDeviceTypes();
+        // Read before QApplication takes -style out of argv. An empty value sets no style there either.
+        const QStringList chosenStyles = parser.values(qsl("style"));
+        mudlet::smStyleChosenByPlayer = !qEnvironmentVariableIsEmpty("QT_STYLE_OVERRIDE") || std::any_of(chosenStyles.cbegin(), chosenStyles.cend(), [](const QString& name) {
+            return !name.isEmpty();
+        });
+        app = new QApplication(argc, argv);
+    }
 
-    const QCommandLineOption showHelp(QStringList() << qsl("h") << qsl("help"), qsl("Display help and exit"));
-    parser.addOption(showHelp);
+    if (app) {
+        QAccessible::installFactory(TAccessibleConsole::consoleFactory);
+        QAccessible::installFactory(TAccessibleTextEdit::textEditFactory);
+        QAccessible::installFactory(TAccessibleLabel::labelFactory);
 
-    const QCommandLineOption showVersion(QStringList() << qsl("v") << qsl("version"), qsl("Display version and exit"));
-    parser.addOption(showVersion);
+        // Turn the cursor into the waiting one during startup, so something shows
+        // activity even if the quiet, no splashscreen startup has been used
+        app->setOverrideCursor(QCursor(Qt::WaitCursor));
+    }
+    QCoreApplication::setOrganizationName(qsl("Mudlet"));
 
-    const QCommandLineOption showSplashscreen(QStringList() << qsl("s") << qsl("splashscreen"), qsl("Show the splash screen when starting"));
-    parser.addOption(showSplashscreen);
+    if (MudletApp::publicTest()) {
+        QCoreApplication::setApplicationName(qsl("Mudlet Public Test Build"));
+    } else {
+        QCoreApplication::setApplicationName(qsl("Mudlet"));
+    }
+    if (MudletApp::release()) {
+        QCoreApplication::setApplicationVersion(APP_VERSION);
+    } else {
+        QCoreApplication::setApplicationVersion(QString(APP_VERSION) + MudletApp::buildSuffix());
+    }
 
-    const QCommandLineOption startFullscreen(QStringList() << qsl("f") << qsl("fullscreen"), qsl("Start Mudlet in fullscreen mode"));
-    parser.addOption(startFullscreen);
+    // The first QSslSocket (each cTelnet holds two) makes Qt parse every system CA certificate on the
+    // constructing thread, inside profile load; warming up on another thread now usually finishes first.
+    // Every early return joins it on the way out: the warm-up holds Qt's TLS backend mutex while loading
+    // the plugin, and static destruction tears those down. GUI runs only: on a print-and-exit run it and
+    // this thread fill Qt's unguarded caches at once, which a QCoreApplication leaves empty - a double free.
+    TlsWarmup tlsWarmup;
 
-    const QCommandLineOption mirrorToStdout(QStringList() << qsl("m") << qsl("mirror"), qsl("Mirror output of all consoles to STDOUT"));
-    parser.addOption(mirrorToStdout);
+    if (app) {
+        tlsWarmup.start();
+        mudlet::start();
+        // GUI runs settle the config path here, before any file is read; a
+        // print-and-exit run has MudletApp resolve it on first use instead.
+        mudlet::self()->setupConfig();
 
-    QCommandLineOption beQuiet(QStringList() << qsl("q") << qsl("quiet"), qsl("Depricated option, previously used to disable showing the splash screen"));
-    beQuiet.setFlags(QCommandLineOption::HiddenFromHelp);
-    parser.addOption(beQuiet);
+#if defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
+        auto abortLaunch = runUpdate();
+        if (abortLaunch) {
+            return 0;
+        }
+#endif
+    }
 
-    const QCommandLineOption onlyPredefinedProfileToShow(
-            QStringList() << qsl("o") << qsl("only"), qsl("Set Mudlet to only show this predefined MUD profile and hide all other predefined ones."), qsl("predefined_game"));
-    parser.addOption(onlyPredefinedProfileToShow);
+    QPointer<QTranslator> commandLineTranslator(MudletApp::loadTranslationsForCommandLine(printAndExitOption));
 
-    const QCommandLineOption steamMode(QStringList() << qsl("steammode"), qsl("Adjusts Mudlet settings to match Steam's requirements."));
-    parser.addOption(steamMode);
-
-    parser.addPositionalArgument("package", "Path to .mpackage file");
-
-    const bool parsedCommandLineOk = parser.parse(app->arguments());
+    // A print-and-exit run keeps the verdict above: a second reading may differ, and such a run has no
+    // QApplication for the rest of main() to dereference. Other runs are reparsed from the application's
+    // own list in the usual compacted mode - Qt has removed its own options by then, so none of their
+    // letters can pass for a Mudlet option.
+    bool parsedCommandLineOk = commandLineReadOk;
+    if (!printAndExitOption) {
+        parser.setSingleDashWordOptionMode(QCommandLineParser::ParseAsCompactedShortOptions);
+        parsedCommandLineOk = parser.parse(QCoreApplication::arguments());
+    }
 
     const QString appendLF{qsl("%1\n")};
     const QString append2LF{qsl("%1\n\n")};
@@ -443,14 +648,16 @@ int main(int argc, char* argv[])
 
     if (!parsedCommandLineOk) {
         // Warn of unknown options but tolerate them.
-        // We want the message to be visible for someone launching from command prompt
-        // and will have standard output left on their screen, but still allow program
-        // to start when launched by installer.
+        // We want the message to be visible for someone launching from command prompt,
+        // but on standard error, out of the --version text a script reads, and still
+        // allow program to start when launched by installer.
         // --squirrel-firstrun for example is given for launch at end of install process.
-        std::cout << QCoreApplication::translate("main", "Warning: %1\n").arg(parser.errorText()).toStdString();
+        //: Printed on standard error before a command line Mudlet only partly understood is acted on; %1 is
+        //: the parser's own, untranslated, account of what it did not understand. Keep the trailing newline.
+        std::cerr << QCoreApplication::translate("main", "Warning: %1\n").arg(answeringParser->errorText()).toStdString();
     }
 
-    if (parser.isSet(showHelp)) {
+    if (answeringParser->isSet(showHelp)) {
         // Do "help" action
         texts << appendLF.arg(QCoreApplication::translate("main",
                                                           "Usage: %1 [OPTION...] [FILE] ",
@@ -469,11 +676,25 @@ int main(int argc, char* argv[])
                                                           "                                    predefined game, may be repeated."));
         texts << appendLF.arg(QCoreApplication::translate("main", "       -f, --fullscreen             start Mudlet in fullscreen mode."));
         texts << appendLF.arg(QCoreApplication::translate("main",
+                                                          "       --offline                    open the profiles loaded at startup\n"
+                                                          "                                    without connecting to their game\n"
+                                                          "                                    server."));
+        texts << appendLF.arg(QCoreApplication::translate("main",
                                                           "       --steammode                  adjusts Mudlet settings to match\n"
                                                           "                                    Steam's requirements."));
+#ifdef INCLUDE_MCPSERVER
+        texts << appendLF.arg(QCoreApplication::translate("main",
+                                                          "       --mcp-bridge                 relay MCP requests between an AI\n"
+                                                          "                                    assistant on stdin/stdout, such as\n"
+                                                          "                                    Claude Desktop, and a running Mudlet."));
+#endif
         texts << appendLF.arg(QCoreApplication::translate("main",
                                                           "There are other inherited options that arise from the Qt Libraries which are\n"
                                                           "less likely to be useful for normal use of this application:"));
+        //: Follows the line introducing the Qt options in the --help text; the option names are not translated
+        texts << appendLF.arg(QCoreApplication::translate("main",
+                                                          "Qt 6 ignores --sync and reads the rest with a single dash too, as in -reverse;\n"
+                                                          "it has others not listed here, such as -platform, -session and -qwindowgeometry."));
         // From documentation and from http://qt-project.org/doc/qt-5/qapplication.html:
         texts << appendLF.arg(QCoreApplication::translate("main",
                                                           "       --dograb                     ignore any implicit or explicit -nograb.\n"
@@ -531,20 +752,20 @@ int main(int argc, char* argv[])
         return 0;
     }
 
-    if (parser.isSet(showVersion)) {
+    if (answeringParser->isSet(showVersion)) {
         // Do "version" action - wording and format is quite tightly specified by the coding standards
 #if defined(QT_DEBUG)
         texts << appendLF.arg(QCoreApplication::translate("main",
                                                           "%1 %2%3 (with debug symbols, without optimisations)",
                                                           "%1 is the name of the application like mudlet or Mudlet.exe, %2 is the version number like 3.20 and %3 is a build suffix like -dev")
-                                      .arg(QLatin1String(APP_TARGET), QLatin1String(APP_VERSION), appBuild));
+                                      .arg(QLatin1String(APP_TARGET), QLatin1String(APP_VERSION), MudletApp::buildSuffix()));
 #else  // ! defined(QT_DEBUG)
-        texts << QString::fromStdString(APP_TARGET " " APP_VERSION " " + appBuild.toStdString() + " \n");
+        texts << QString::fromStdString(APP_TARGET " " APP_VERSION " " + MudletApp::buildSuffix().toStdString() + " \n");
 #endif // ! defined(QT_DEBUG)
         texts << appendLF.arg(QCoreApplication::translate("main", "Qt libraries %1 (compilation) %2 (runtime)", "%1 and %2 are version numbers").arg(QLatin1String(QT_VERSION_STR), qVersion()));
         // PLACEMARKER: Date-stamp needing annual update
         texts << appendLF.arg(QCoreApplication::translate("main", "Copyright © 2008-2026  Mudlet developers"));
-        texts << appendLF.arg(QCoreApplication::translate("main", "Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html"));
+        texts << appendLF.arg(QCoreApplication::translate("main", "Licence GPLv3: GNU GPL version 3 - http://gnu.org/licenses/gpl.html"));
         texts << appendLF.arg(QCoreApplication::translate("main",
                                                           "This is free software: you are free to change and redistribute it.\n"
                                                           "There is NO WARRANTY, to the extent permitted by law."));
@@ -612,27 +833,8 @@ int main(int argc, char* argv[])
         commandLineTranslator.clear();
     }
 
-    // Configure the media backend - does not work in mudlet class c'tor.
-    // On Windows, use FFmpeg which supports .ogg/.opus (native backend doesn't).
-    // On macOS, use darwin (AVFoundation) which works better than FFmpeg.
-#if defined(Q_OS_WINDOWS)
-    const QByteArray defaultMediaBackend("ffmpeg");
-#elif defined(Q_OS_MACOS)
-    const QByteArray defaultMediaBackend("darwin");
-#else
-    const QByteArray defaultMediaBackend;
-#endif
-    if (!defaultMediaBackend.isEmpty()) {
-        if (qEnvironmentVariableIsEmpty("QT_MEDIA_BACKEND")) {
-            if (qputenv("QT_MEDIA_BACKEND", defaultMediaBackend)) {
-                qDebug().noquote() << "main(...) INFO - setting QT_MEDIA_BACKEND environmental variable to:" << defaultMediaBackend;
-            } else {
-                qWarning().noquote() << "main(...) WARNING - failed to set QT_MEDIA_BACKEND environmental variable to:" << defaultMediaBackend << ", sound may not work.";
-            }
-        } else {
-            qDebug().noquote().nospace() << "main(...) INFO - QT_MEDIA_BACKEND environmental variable is set to: \"" << qgetenv("QT_MEDIA_BACKEND") << "\".";
-        }
-    }
+    // Does not work in the mudlet class c'tor
+    MudletApp::setDefaultMediaBackend();
 
     QStringList cliProfiles = parser.values(profileToOpen);
 
@@ -645,13 +847,14 @@ int main(int argc, char* argv[])
     }
 
     const QStringList onlyProfiles = parser.values(onlyPredefinedProfileToShow);
+    const bool offlineProfiles = parser.isSet(openOffline);
     const bool showSplash = parser.isSet(showSplashscreen);
-    QImage splashImage = mudlet::getSplashScreen(releaseVersion, publicTestVersion);
+    QImage splashImage = mudlet::getSplashScreen(MudletApp::release(), MudletApp::publicTest());
 
     if (showSplash) {
         QPainter painter(&splashImage);
         unsigned fontSize = 16;
-        const QString sourceVersionText = QString(QCoreApplication::translate("main", "Version: %1").arg(APP_VERSION + appBuild));
+        const QString sourceVersionText = QString(QCoreApplication::translate("main", "Version: %1").arg(APP_VERSION + MudletApp::buildSuffix()));
 
         bool isWithinSpace = false;
         while (!isWithinSpace) {
@@ -716,7 +919,7 @@ int main(int argc, char* argv[])
     }
     app->processEvents();
 
-    const QString homeDirectory = mudlet::getMudletPath(enums::mainPath);
+    const QString homeDirectory = MudletApp::getMudletPath(enums::mainPath);
     const QDir dir;
     bool first_launch = false;
     if (!dir.exists(homeDirectory)) {
@@ -725,11 +928,11 @@ int main(int argc, char* argv[])
     }
 
 #if defined(INCLUDE_FONTS)
-    const QString bitstreamVeraFontDirectory(qsl("%1/ttf-bitstream-vera-1.10").arg(mudlet::getMudletPath(enums::mainFontsPath)));
+    const QString bitstreamVeraFontDirectory(qsl("%1/ttf-bitstream-vera-1.10").arg(MudletApp::getMudletPath(enums::mainFontsPath)));
     if (!dir.exists(bitstreamVeraFontDirectory)) {
         dir.mkpath(bitstreamVeraFontDirectory);
     }
-    const QString ubuntuFontDirectory(qsl("%1/ubuntu-font-family-0.83").arg(mudlet::getMudletPath(enums::mainFontsPath)));
+    const QString ubuntuFontDirectory(qsl("%1/ubuntu-font-family-0.83").arg(MudletApp::getMudletPath(enums::mainFontsPath)));
     if (!dir.exists(ubuntuFontDirectory)) {
         dir.mkpath(ubuntuFontDirectory);
     }
@@ -738,7 +941,7 @@ int main(int argc, char* argv[])
     removeOldNoteColorEmojiFonts();
     // PLACEMARKER: current Noto Color Emoji font directory specification:
     // Release: "Unicode 17.0 update mk1"
-    const QString notoFontDirectory{qsl("%1/noto-color-emoji-2025-09-15-v2.051").arg(mudlet::getMudletPath(enums::mainFontsPath))};
+    const QString notoFontDirectory{qsl("%1/noto-color-emoji-2025-09-15-v2.051").arg(MudletApp::getMudletPath(enums::mainFontsPath))};
     if (!dir.exists(notoFontDirectory)) {
         dir.mkpath(notoFontDirectory);
     }
@@ -845,7 +1048,7 @@ int main(int argc, char* argv[])
     // Only ask user if there's already another handler registered.
     // If no handler exists, register silently (better UX for less technical users).
     // Skip in CI/headless environments to avoid blocking tests.
-    QSettings* appSettings = mudlet::getQSettings();
+    QSettings* appSettings = MudletApp::getQSettings();
     bool shouldRegisterTelnet = false;
 
     bool headlessMode =
@@ -1093,7 +1296,15 @@ int main(int argc, char* argv[])
         splash.finish(mudlet::self());
     }
 
-    mudlet::self()->smMirrorToStdOut = parser.isSet(mirrorToStdout);
+    MudletApp::smMirrorToStdOut = parser.isSet(mirrorToStdout);
+#ifndef Q_OS_WINDOWS
+    if (MudletApp::smMirrorToStdOut) {
+        // Without this a reader that exits first - `mudlet --mirror | head` -
+        // kills Mudlet mid-session on the next line it copies; TConsole::
+        // mirrorToStdOut() turns the write failure into a warning instead.
+        signal(SIGPIPE, SIG_IGN);
+    }
+#endif
     mudlet::smSteamMode = parser.isSet(steamMode);
     if (!onlyProfiles.isEmpty()) {
         mudlet::self()->onlyShowProfiles(onlyProfiles);
@@ -1106,14 +1317,14 @@ int main(int argc, char* argv[])
         });
     }
 
-    QTimer::singleShot(0ms, qApp, [cliProfiles, telnetUri]() {
+    QTimer::singleShot(0ms, qApp, [cliProfiles, telnetUri, offlineProfiles]() {
         // Migrate portable password files to secure storage before any
         // profile dialog or auto-login code runs.  The migration is
         // synchronous (uses static CredentialManager helpers) so it is
         // safe to call here.  Previously this ran on a 2-second timer,
         // which created a race: the connection dialog could open and
         // attempt to load passwords before migration had a chance to run.
-        if (mudlet::self()->storingPasswordsSecurely()) {
+        if (MudletApp::storingPasswordsSecurely()) {
             mudlet::self()->migratePasswordsToSecureStorage();
         }
 
@@ -1122,12 +1333,18 @@ int main(int argc, char* argv[])
         }
 
         // Always load auto-login profiles first
-        mudlet::self()->startAutoLogin(cliProfiles);
+        mudlet::self()->startAutoLogin(cliProfiles, offlineProfiles);
 
         // Then handle telnet URI if provided
         if (!telnetUri.isEmpty()) {
             mudlet::self()->handleTelnetUri(telnetUri);
         }
+
+        // Queued behind the show() slot_showConnectionDialog() queues, so if a
+        // connection dialog is going to open at all it is already up by the time
+        // the notice does. An auto-login profile or a telnet:// URI opens none, and
+        // the notice then sits on the main window instead.
+        QTimer::singleShot(0ms, mudlet::self(), &mudlet::warnAboutRejectedPortableRoot);
     });
 
 #if defined(INCLUDE_UPDATER)
@@ -1147,6 +1364,15 @@ int main(int argc, char* argv[])
     // with some OS's choice of wait cursor - you might wish to temporarily disable
     // the earlier setOverrideCursor() line and this one.
     int result = app->exec();
+
+    // Before the QApplication goes, not just before main() returns: the TLS
+    // plugin loader connects to qApp, so a warm-up still running here would
+    // reach for one that has already been deleted.
+    tlsWarmup.join();
+
+    // Joins the match helpers while the QApplication still exists; see
+    // TriggerMatchPool::shutdown().
+    TriggerMatchPool::shutdown();
 
     // Explicitly delete QApplication BEFORE main() returns to ensure Qt cleanup
     // happens before __cxa_finalize_ranges runs static destructors. This prevents
@@ -1189,12 +1415,12 @@ static bool isFileAccessible(const QString& filePath)
 // Returns true if operation succeeded, false if all retries failed
 static bool tryFileOperationWithRetry(const std::function<bool()>& operation, const QString& operationName, int maxAttempts = 3)
 {
-    const std::chrono::milliseconds retryDelays[] = {5000ms, 15000ms, 30000ms};
+    const std::chrono::milliseconds retryDelays[] = {5s, 15s, 30s};
 
     for (int attempt = 0; attempt < maxAttempts; ++attempt) {
         if (attempt > 0) {
             qWarning() << operationName << "- Attempt" << (attempt + 1) << "of" << maxAttempts << "after" << retryDelays[attempt - 1].count() << "ms delay";
-            QThread::msleep(retryDelays[attempt - 1].count());
+            QThread::sleep(retryDelays[attempt - 1]);
         }
 
         if (operation()) {
@@ -1225,7 +1451,7 @@ bool runUpdate()
     QDir updateDir;
 
     if (updatedInstaller.exists() && updatedInstaller.isFile() && updatedInstaller.isExecutable()) {
-        QSettings* settings = mudlet::getQSettings();
+        QSettings* settings = MudletApp::getQSettings();
         if (!settings->value(qsl("DBLSQD/autoDownload"), true).toBool()) {
             qDebug() << "Auto-download disabled, removing downloaded installer:" << updatedInstaller.absoluteFilePath();
             updateDir.remove(updatedInstaller.absoluteFilePath());

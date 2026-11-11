@@ -22,7 +22,7 @@
 #include "Host.h"
 #include "MMCPServer.h"
 #include "TEvent.h"
-#include "mudlet.h"
+#include "MudletApp.h"
 
 #include <QHostAddress>
 #include <QTcpSocket>
@@ -31,6 +31,12 @@
 #include <chrono>
 
 using namespace std::chrono_literals;
+
+// The most a connected peer may send before it ends a command with 0xff. A
+// real command is a line of chat or game text, or a short list of peers, so
+// 1 MiB is far beyond any of them; without a limit a peer that never sends the
+// terminator makes us buffer until memory runs out.
+static constexpr qsizetype csMaxPeerFrameLength = 1024 * 1024;
 
 QString convertToIPv4(QHostAddress addr)
 {
@@ -45,6 +51,8 @@ QString convertToIPv4(QHostAddress addr)
     return addr.toString();
 }
 
+// A child of the server, so the profile's connections close with it rather
+// than go on reading into a profile that has gone
 MMCPClient::MMCPClient(Host* pHost, MMCPServer* pServer)
 : QObject(pServer)
 , mpHost(pHost)
@@ -66,6 +74,13 @@ MMCPClient::MMCPClient(Host* pHost, MMCPServer* pServer)
     // Setup pending connection timeout
     mPendingTimer.setSingleShot(true);
     connect(&mPendingTimer, &QTimer::timeout, this, &MMCPClient::slot_pendingTimeout);
+}
+
+MMCPClient::~MMCPClient()
+{
+    // Destroying a connected socket emits disconnected(), whose handler would
+    // report to the Host and the server, which may be the ones being destroyed
+    mTcpSocket.disconnect(this);
 }
 
 /**
@@ -413,17 +428,25 @@ void MMCPClient::slot_readData()
         break;
     }
 
-    case Connected:
-        if (!mPeerBuffer.endsWith(static_cast<char>(0xff))) {
-            qDebug().noquote().nospace() << "MMCPClient::slot_readData() INFO - partial buffer received, waiting for the rest...";
-            return;
+    case Connected: {
+        // Handle every command that is complete and keep only the partial one
+        // after them, so the limit below applies to a single command
+        const qsizetype lastEnd = mPeerBuffer.lastIndexOf(static_cast<char>(MMCPChatCommand::End));
+        if (lastEnd != -1) {
+            const QByteArray complete = mPeerBuffer.left(lastEnd + 1);
+            mPeerBuffer.remove(0, lastEnd + 1);
+            handleConnectedState(complete);
         }
 
-        if (!handleConnectedState(mPeerBuffer)) {
-            // We had a partial command in the buffer, wait for more data before clearing the buffer
-            return;
+        if (mPeerBuffer.size() > csMaxPeerFrameLength) {
+            mPeerBuffer.clear();
+            //: %1 is the MMCP peer's name, %2 is the limit in bytes
+            mpHost->postMessage(tr("[ CHAT ]  - %1 sent more than %2 bytes without ending a command, disconnecting.").arg(mPeerName, QString::number(csMaxPeerFrameLength)));
+            mState = Disconnected;
+            disconnect();
         }
-        break;
+        return;
+    }
 
     case Pending:
         // We got something from a pending peer, dont do anything with it
@@ -571,7 +594,7 @@ void MMCPClient::sendVersion()
 {
     QByteArray versionData;
     versionData.append(static_cast<char>(Version));
-    versionData.append(mudlet::self()->scmVersion.toLatin1());
+    versionData.append(MudletApp::scmVersion().toLatin1());
     versionData.append(static_cast<char>(End));
     writeData(versionData);
 }
@@ -597,20 +620,25 @@ bool MMCPClient::setGroup(const QString& group)
  */
 void MMCPClient::writeData(const QString& data)
 {
-    qint64 bytesWritten = mTcpSocket.write(data.toLatin1());
-    if (bytesWritten <= 0) {
-        const QString identifier = mPeerName.isEmpty() ? convertToIPv4(mTcpSocket.peerAddress()) : mPeerName;
-        if (bytesWritten == 0) {
-            qWarning() << "MMCPClient::writeData(QString&) Failed to write data to socket for client " << identifier;
-        } else if (bytesWritten == -1) {
-            qWarning() << "MMCPClient::writeData(QString&) - Failed to write data to socket:" << mTcpSocket.errorString() << " for client " << identifier;
-        }
-    }
+    writeData(data.toLatin1());
 }
 
 void MMCPClient::writeData(const QByteArray& data)
 {
-    qint64 bytesWritten = mTcpSocket.write(data);
+    // MMCP has no way to escape its 0xff terminator, so one inside the payload
+    // would end the frame early and have the peer read what follows as a
+    // command of its own. Text reaches here as Latin-1, where a U+00FF from
+    // any source - game text, a script, a peer's name - becomes 0xff. Only
+    // the last byte may be the terminator; any other 0xff is shown as '?'
+    // rather than dropped, so the loss is visible - in CP1251 that byte is a common Cyrillic letter.
+    QByteArray frame = data;
+    const qsizetype payloadEnd = frame.endsWith(static_cast<char>(End)) ? frame.size() - 1 : frame.size();
+    for (qsizetype i = 0; i < payloadEnd; ++i) {
+        if (frame.at(i) == static_cast<char>(End)) {
+            frame[i] = '?';
+        }
+    }
+    qint64 bytesWritten = mTcpSocket.write(frame);
     if (bytesWritten <= 0) {
         const QString identifier = mPeerName.isEmpty() ? convertToIPv4(mTcpSocket.peerAddress()) : mPeerName;
         if (bytesWritten == 0) {
@@ -1054,7 +1082,7 @@ void MMCPClient::updateSgrState(const std::string &ansiSeq)
  * client version in handleIncomingClientVersion
  *
  */
-void MMCPClient::handleIncomingSnoopData(const char* sData, quint16 len)
+void MMCPClient::handleIncomingSnoopData(const char* sData, qsizetype len)
 {
     const char* inScan = sData;
     const char* inEnd = inScan + len;
@@ -1091,8 +1119,11 @@ void MMCPClient::handleIncomingSnoopData(const char* sData, quint16 len)
                 line = mLastSgrState + line;
             }
 
-            // Append the processed line
-            outputMessage += line;
+            // Drop leading line breaks, such as one after the colour prefix skipped above
+            if (!outputMessage.empty() || !line.empty()) {
+                outputMessage += line;
+                outputMessage += '\n';
+            }
 
             ss.str("");
             ss.clear();
@@ -1141,6 +1172,9 @@ void MMCPClient::handleIncomingSnoopData(const char* sData, quint16 len)
     }
 
     outputMessage += remaining;
+    while (!outputMessage.empty() && outputMessage.back() == '\n') {
+        outputMessage.pop_back();
+    }
 
     if (!outputMessage.empty()) {
 

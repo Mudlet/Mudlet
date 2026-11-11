@@ -22,6 +22,8 @@
 
 #include "dlgTriggerPatternEdit.h"
 
+#include "utils.h"
+
 #include <QAbstractButton>
 #include <QAbstractItemView>
 #include <QAbstractScrollArea>
@@ -30,10 +32,18 @@
 #include <QColor>
 #include <QComboBox>
 #include <QLineEdit>
+#include <QPainter>
 #include <QPalette>
+#include <QStyle>
+#include <QStyleOption>
 #include <QWidget>
 #include <QAction>
 #include <QDebug>
+
+namespace {
+// Must match the trigger form's card radius
+constexpr int scmRowRadius = 6;
+} // namespace
 
 dlgTriggerPatternEdit::dlgTriggerPatternEdit(QWidget* pParentWidget)
 : QWidget(pParentWidget)
@@ -54,13 +64,77 @@ dlgTriggerPatternEdit::dlgTriggerPatternEdit(QWidget* pParentWidget)
         mDefaultPatternEditViewportAutoFillBackground = patternViewport->autoFillBackground();
     }
 
-    // delay the connection so the pattern type is available for the slot
-    connect(comboBox_patternType, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgTriggerPatternEdit::slot_triggerTypeComboBoxChanged, Qt::QueuedConnection);
+    toolButton_deletePattern->installEventFilter(this);
 }
 
-void dlgTriggerPatternEdit::slot_triggerTypeComboBoxChanged(const int index)
+void dlgTriggerPatternEdit::setDeleteGlyph(const QIcon& deleteGlyph)
 {
-    label_colorIcon->setPixmap(comboBox_patternType->itemIcon(index).pixmap(15, 15));
+    mDeleteGlyph = deleteGlyph;
+    updateDeleteGlyph();
+}
+
+void dlgTriggerPatternEdit::setHoverTint(const QColor& hoverTint)
+{
+    mHoverTint = hoverTint;
+    if (mRowHovered) {
+        update();
+    }
+}
+
+bool dlgTriggerPatternEdit::eventFilter(QObject* watched, QEvent* event)
+{
+    if (watched == toolButton_deletePattern && (event->type() == QEvent::FocusIn || event->type() == QEvent::FocusOut)) {
+        mDeleteButtonFocused = event->type() == QEvent::FocusIn;
+        updateDeleteGlyph();
+    }
+
+    return QWidget::eventFilter(watched, event);
+}
+
+void dlgTriggerPatternEdit::updateDeleteGlyph()
+{
+    toolButton_deletePattern->setIcon(mRowHovered || mDeleteButtonFocused ? mDeleteGlyph : QIcon());
+}
+
+void dlgTriggerPatternEdit::paintEvent(QPaintEvent*)
+{
+    QStyleOption styleOption;
+    styleOption.initFrom(this);
+    QPainter painter(this);
+    style()->drawPrimitive(QStyle::PE_Widget, &styleOption, &painter, this);
+
+    // Painted, not a stylesheet rule on a property: a property is only read on a re-polish, which
+    // would rerun the form's whole sheet over the row's controls every time the pointer crosses one
+    if (!mRowHovered || !mHoverTint.isValid()) {
+        return;
+    }
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(mHoverTint);
+    painter.drawRoundedRect(rect(), scmRowRadius, scmRowRadius);
+}
+
+void dlgTriggerPatternEdit::enterEvent(TEnterEvent* event)
+{
+    QWidget::enterEvent(event);
+    setRowHovered(true);
+}
+
+void dlgTriggerPatternEdit::leaveEvent(QEvent* event)
+{
+    QWidget::leaveEvent(event);
+    setRowHovered(false);
+}
+
+void dlgTriggerPatternEdit::setRowHovered(const bool hovered)
+{
+    if (mRowHovered == hovered) {
+        return;
+    }
+
+    mRowHovered = hovered;
+    updateDeleteGlyph();
+    update();
 }
 
 void dlgTriggerPatternEdit::applyThemePalette(const QPalette& editorPalette)
@@ -112,7 +186,6 @@ void dlgTriggerPatternEdit::applyThemePalette(const QPalette& editorPalette)
         }
     };
 
-    applyToWidget(label_colorIcon);
     applyToWidget(label_patternNumber);
     applyToWidget(label_prompt);
     applyToWidget(comboBox_patternType);

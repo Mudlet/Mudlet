@@ -25,13 +25,17 @@
  ***************************************************************************/
 
 
-#include "dlgTriggerEditor.h"
+#include "EditorCommand.h"
+#include "XmlImportReader.h"
+#include "utils.h"
 
+#include <QCoreApplication>
+#include <QElapsedTimer>
 #include <QFile>
 #include <QMap>
+#include <QMargins>
 #include <QMultiHash>
 #include <QPointer>
-#include <QXmlStreamReader>
 
 class Host;
 class TAction;
@@ -43,7 +47,7 @@ class TTrigger;
 class TVar;
 class TRoom;
 
-class XMLimport : public QXmlStreamReader
+class XMLimport : public XmlImportReader
 {
     Q_DECLARE_TR_FUNCTIONS(XMLimport);
 
@@ -52,6 +56,17 @@ public:
     virtual ~XMLimport() {}
     std::pair<bool, QString> importPackage(QFile*, QString packageName = QString(), int moduleFlag = 0, QString* pVersionString = nullptr);
     std::pair<EditorViewType, int> importFromClipboard();
+    // Every error in an item whose Lua body or pattern failed to compile or run, as "<item name>: <error>",
+    // so one item can have several. They are still imported so they can be fixed, so importPackage()'s
+    // result says nothing about them.
+    const QStringList& itemsWithErrors() const { return mItemsWithErrors; }
+    // Each of those items once, by name only, for the console: the error is for the item's author, not the installer.
+    const QStringList& itemsWithErrorNames() const { return mItemsWithErrorNames; }
+    // Whether the file got as far as an item (even one it broke inside), a variable, a help URL or profile settings
+    bool readAnything() const { return gotTrigger || gotTimer || gotAlias || gotKey || gotAction || gotScript || gotOtherContent; }
+    // A save file numbers the sixteen basic colours of a colour pattern its own
+    // way (see XMLexport::remapAnsiToColorNumber()), this turns them back.
+    static void remapColorsToAnsiNumber(QStringList&, const QList<int>&);
 
 private:
     const QString YES = qsl("yes");
@@ -70,6 +85,7 @@ private:
     void readMap();
     void readRoom(QMultiHash<int, int>&, unsigned int*);
     void readRooms(QMultiHash<int, int>&);
+    bool mapProgressDue();
     void readRoomFeature(TRoom*);
     void readRoomFeatures(TRoom*);
     void readEnvColor();
@@ -79,10 +95,11 @@ private:
     void readHelpPackage();
 
     void readUnknownElement(const QString&);
+    void recordItemErrors(const QString& itemName, const QStringList& errors, qsizetype errorsAt, qsizetype namesAt);
 
     void readHost(Host*);
-    bool readHostColorElement(Host*, QStringView elementName);
-    bool readHostBorderElement(QMargins&, QStringView elementName);
+    bool readHostColorElement(Host*, QAnyStringView elementName);
+    bool readHostBorderElement(QMargins&, QAnyStringView elementName);
     void readLegacyMapInfoContributors();
     void readMapInfoContributor();
     void readProfileShortcut();
@@ -103,12 +120,12 @@ private:
     void getVersionString(QString&);
     QString readScriptElement();
 
-    void remapColorsToAnsiNumber(QStringList&, const QList<int>&);
-
     bool readDefaultTrueBool(QString name);
 
     QPointer<Host> mpHost;
     QString mPackageName;
+    QStringList mItemsWithErrors;
+    QStringList mItemsWithErrorNames;
     TTrigger* mpTrigger = nullptr;
     TTimer* mpTimer = nullptr;
     TAlias* mpAlias = nullptr;
@@ -122,8 +139,11 @@ private:
     bool gotKey = false;
     bool gotAction = false;
     bool gotScript = false;
+    // A variable, help URL or profile setting is applied as it is read, so it is there even if the file breaks later
+    bool gotOtherContent = false;
     int module = 0;
     int mMaxRoomId = 0;
+    QElapsedTimer mMapProgressTimer;
     quint8 mVersionMajor = 1;  // 0 to 255
     quint16 mVersionMinor = 0; // 0 to 999 for 3 digit decimal value. Cannot be a quint8 as that only allows x.255 for the decimal
 };

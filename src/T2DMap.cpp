@@ -27,6 +27,7 @@
 
 
 #include "Host.h"
+#include "MudletApp.h"
 #include "TArea.h"
 #include "TConsole.h"
 #include "TEvent.h"
@@ -38,10 +39,13 @@
 #include "LabelInteractionHandler.h"
 #include "MiddleMousePanHandler.h"
 #include "PanInteractionHandler.h"
+#include "RoomAppearance.h"
 #include "RoomContextMenuHandler.h"
 #include "RoomMoveActivationHandler.h"
 #include "RoomMoveDragHandler.h"
 #include "SelectionRectangleHandler.h"
+#include "TMainConsole.h"
+#include "TMapViewManager.h"
 #include "TRoom.h" // For DIR_XXX defines
 #include "TRoomDB.h"
 #include "dlgMapper.h"
@@ -57,23 +61,6 @@
 #include <QAction>
 #include <QCoreApplication>
 #include <QCursor>
-#if defined(Q_OS_LINUX) || defined(Q_OS_MACOS)
-/* The Devuan package for qt6-base-dev (for Qt 6.8.2) - and presumably
- * Debian and Ubuntu are missing the
- * ./include/QtConcurrent/QtConcurrentTask file that contains the single
- * line:
- * #include "qtconcurrenttask.h" // IWYU pragma: export
- *
- * that is present in the Qt on-line installer install (for Qt 6.10.1)
- * - so building Mudlet using the latter succeed whereas it breaks on the
- * GitHub CI runners (qt 6.9.0). So use the less "pretty" direct include.
- * It appears that this is an upstream Qt bug as the MacOS builds (also
- * for Qt 6.9.0) are failing in the same manner. Yet the Windows build
- * using the later Qt 6.11.0 succeed!*/
-#include <qtconcurrenttask.h>
-#else
-#include <QtConcurrentTask>
-#endif
 #include <QMap>
 #include <QMapIterator>
 #include <QMenu>
@@ -97,9 +84,8 @@
 #include <cmath>
 
 #include <algorithm>
-
-#include "mapInfoContributorManager.h"
-
+#include <utility>
+#include <vector>
 
 // qsls cannot be shared so define a common instance to use when
 // there are multiple places where they are used within this file:
@@ -172,7 +158,7 @@ std::optional<int> T2DMap::roomIdAtWidgetPosition(const QPoint& widgetPosition, 
         // all zoom levels.
         const int worldX = qRound(static_cast<double>(mx - fx) / mRoomWidth);
         const int worldY = qRound(static_cast<double>(fy - my) / mRoomHeight);
-        const QSet<int>& cellRooms = area->getGridIndex().roomsAt(mz, worldX, worldY);
+        const TAreaGridIndex::RoomIds& cellRooms = area->getGridIndex().roomsAt(mz, worldX, worldY);
         if (!cellRooms.isEmpty()) {
             return *cellRooms.constBegin();
         }
@@ -222,8 +208,8 @@ QSet<int> T2DMap::roomIdsAtWidgetPosition(const QPoint& widgetPosition, const TA
         // Grid mode: look up the exact cell under the cursor.
         const int worldX = qRound(static_cast<double>(mx - fx) / mRoomWidth);
         const int worldY = qRound(static_cast<double>(fy - my) / mRoomHeight);
-        const QSet<int>& cellRooms = area->getGridIndex().roomsAt(mz, worldX, worldY);
-        return cellRooms;
+        const TAreaGridIndex::RoomIds& cellRooms = area->getGridIndex().roomsAt(mz, worldX, worldY);
+        return QSet<int>(cellRooms.constBegin(), cellRooms.constEnd());
     }
 
     const int halfW = qMax(1, qRound(mRoomWidth * rSize / 2.0));
@@ -250,7 +236,7 @@ QSet<int> T2DMap::roomIdsAtWidgetPosition(const QPoint& widgetPosition, const TA
 
 void T2DMap::prepareSingleClickSelection(MapInteractionContext& context)
 {
-    mMultiRect = QRect(context.widgetPosition, context.widgetPosition);
+    mMultiRect = QRectF(context.widgetPosition, context.widgetPosition);
 
     context.hasClickedRoom = false;
     context.clickedRoomId = 0;
@@ -272,76 +258,147 @@ void T2DMap::prepareSingleClickSelection(MapInteractionContext& context)
         return;
     }
 
-    const float fx = ((xspan / 2.0f) - mMapCenterX) * mRoomWidth;
-    const float fy = ((yspan / 2.0f) - mMapCenterY) * mRoomHeight;
+    const QList<int> hitRooms = TMapPainter::roomsAtPoint(painterView(), *area, context.widgetPosition);
 
-    const int mx = context.widgetPosition.x();
-    const int my = context.widgetPosition.y();
-    const int mz = mMapCenterZ;
+    addClickedRoomsToSelection(hitRooms, context.modifiers);
+}
 
-    // Build the list of rooms under the cursor.  Grid mode uses the spatial
-    // index for an exact cell lookup (works at all zoom levels including
-    // extreme zoom-out where rooms are sub-pixel sized).  Non-grid mode uses
-    // a pixel-distance test with a minimum 1-pixel radius.
+void T2DMap::addClickedRoomsToSelection(const QList<int>& hitRooms, const Qt::KeyboardModifiers modifiers)
+{
+    TMapPainter::addRoomsToSelection(mpMap, mMultiSelectionSet, mMultiSelection, mMultiSelectionHighlightRoomId, hitRooms, modifiers);
+}
+
+void T2DMap::selectRoomFromOtherView(const int roomId, const Qt::KeyboardModifiers modifiers)
+{
+    // As a click on the 2D map: without Ctrl or Shift it starts a new selection
+    if (!modifiers.testFlag(Qt::ControlModifier) && !modifiers.testFlag(Qt::ShiftModifier)) {
+        mMultiSelectionSet.clear();
+    }
     QList<int> hitRooms;
-    if (area->gridMode) {
-        const int worldX = qRound(static_cast<double>(mx - fx) / mRoomWidth);
-        const int worldY = qRound(static_cast<double>(fy - my) / mRoomHeight);
-        for (const int roomId : area->getGridIndex().roomsAt(mz, worldX, worldY)) {
-            hitRooms.append(roomId);
-        }
-    } else {
-        const int halfW = qMax(1, qRound(mRoomWidth * rSize / 2.0));
-        const int halfH = qMax(1, qRound(mRoomHeight * rSize / 2.0));
-        QSetIterator<int> roomIterator(area->getRoomsForZ(mz));
-        while (roomIterator.hasNext()) {
-            const int roomId = roomIterator.next();
-            TRoom* room = mpMap->mpRoomDB->getRoom(roomId);
-            if (!room) {
-                continue;
-            }
-            const int rx = room->x() * mRoomWidth + fx;
-            const int ry = room->y() * -1 * mRoomHeight + fy;
-            if (qAbs(mx - rx) < halfW && qAbs(my - ry) < halfH) {
-                hitRooms.append(roomId);
-            }
-        }
+    if (roomId > 0) {
+        hitRooms.append(roomId);
     }
+    addClickedRoomsToSelection(hitRooms, modifiers);
+    updateSelectionWidget();
+    update();
+}
 
-    for (const int roomId : hitRooms) {
-        const bool hasShift = context.modifiers.testFlag(Qt::ShiftModifier);
-        const bool hasCtrl = context.modifiers.testFlag(Qt::ControlModifier);
-        const bool isAlreadySelected = mMultiSelectionSet.contains(roomId);
+void T2DMap::beginRectangleSelection(const int roomId, const Qt::KeyboardModifiers modifiers)
+{
+    // As SelectionRectangleHandler's press: Ctrl toggles rooms in what was selected before, Shift adds to it
+    const bool hasShift = modifiers.testFlag(Qt::ShiftModifier);
+    const bool hasCtrl = modifiers.testFlag(Qt::ControlModifier);
+    mMultiSelectionBaseSet = mMultiSelectionSet;
+    if (!hasCtrl && !hasShift) {
+        mMultiSelectionSet.clear();
+    }
+    mMultiSelectionAnchorSet.clear();
+    QList<int> hitRooms;
+    if (roomId > 0) {
+        hitRooms.append(roomId);
+    }
+    addClickedRoomsToSelection(hitRooms, modifiers);
+    if (hasShift) {
+        mMultiSelectionAnchorSet = mMultiSelectionSet;
+    }
+    updateSelectionWidget();
+}
 
-        if (hasCtrl) {
-            if (isAlreadySelected && !hasShift) {
-                mMultiSelectionSet.remove(roomId);
+void T2DMap::applyRectangleSelection(const QSet<int>& rectangleSelection, const Qt::KeyboardModifiers modifiers)
+{
+    const QSet<int> previousSelection = mMultiSelectionSet;
+    if (modifiers.testFlag(Qt::ShiftModifier)) {
+        mMultiSelectionSet = mMultiSelectionAnchorSet;
+        mMultiSelectionSet.unite(rectangleSelection);
+    } else if (modifiers.testFlag(Qt::ControlModifier)) {
+        QSet<int> toggledSelection = mMultiSelectionBaseSet;
+        for (const int roomId : rectangleSelection) {
+            if (toggledSelection.contains(roomId)) {
+                toggledSelection.remove(roomId);
             } else {
-                mMultiSelectionSet.insert(roomId);
+                toggledSelection.insert(roomId);
             }
-        } else {
-            mMultiSelectionSet.insert(roomId);
         }
-
-        if (!mMultiSelectionSet.empty()) {
-            mMultiSelection = false;
-        }
+        mMultiSelectionSet = toggledSelection;
+    } else {
+        mMultiSelectionSet = rectangleSelection;
     }
 
-    const int selectionSize = mMultiSelectionSet.size();
-    switch (selectionSize) {
+    switch (mMultiSelectionSet.size()) {
     case 0:
         mMultiSelectionHighlightRoomId = 0;
         break;
     case 1:
-        mMultiSelection = false;
         mMultiSelectionHighlightRoomId = *(mMultiSelectionSet.begin());
         break;
     default:
-        mMultiSelection = false;
         getCenterSelection();
         break;
     }
+
+    if (mMultiSelectionSet.size() > 1) {
+        // Most moves leave the selection as it was, and rebuilding the list
+        // for thousands of rooms takes longer than a mouse move's interval
+        if (mMultiSelectionSet != previousSelection || mMultiSelectionListWidget.isHidden()) {
+            updateSelectionWidget();
+        }
+    } else {
+        mMultiSelectionListWidget.hide();
+    }
+}
+
+void T2DMap::endRectangleSelection()
+{
+    mMultiSelection = false;
+    mMultiSelectionAnchorSet.clear();
+    mMultiSelectionBaseSet.clear();
+    mMultiRect = QRectF();
+    updateSelectionWidget();
+}
+
+void T2DMap::selectRoomsToMove(const QSet<int>& clickedRoomIds, const int roomId)
+{
+    if (!mMultiSelectionSet.contains(roomId)) {
+        mMultiSelectionSet = clickedRoomIds;
+        mMultiSelection = false;
+    }
+    mMultiSelectionHighlightRoomId = roomId;
+}
+
+void T2DMap::moveSelectedRoomsBy(const int dx, const int dy)
+{
+    if ((!dx && !dy) || !mpMap || !mpMap->mpRoomDB) {
+        return;
+    }
+    auto* roomDb = mpMap->mpRoomDB.get();
+    // Rebuilding an area's indexes costs a mouse move's interval on a big map, so it only
+    // beats updating them room by room once nearly every room in the area is moving
+    const TArea* shownArea = roomDb->getArea(mAreaID);
+    const bool rebuildIndexes = shownArea && mMultiSelectionSet.size() * 4 > shownArea->getAreaRooms().size() * 3;
+    QSet<int> dirtyAreas;
+    for (const int roomId : std::as_const(mMultiSelectionSet)) {
+        TRoom* room = roomDb->getRoom(roomId);
+        if (!room) {
+            continue;
+        }
+
+        const int oldX = room->x();
+        const int oldY = room->y();
+        room->offset(dx, dy, 0);
+        if (rebuildIndexes) {
+            dirtyAreas.insert(room->getArea());
+        } else if (auto* area = roomDb->getArea(room->getArea())) {
+            area->moveRoom(roomId, room->z(), oldX, oldY, room->z(), room->x(), room->y());
+        }
+    }
+
+    for (const int areaId : std::as_const(dirtyAreas)) {
+        if (auto* area = roomDb->getArea(areaId)) {
+            area->calcSpan();
+        }
+    }
+
+    mpMap->setUnsaved(__func__);
 }
 
 void T2DMap::InteractionDispatcher::registerHandler(IInteractionHandler* handler, int priority)
@@ -369,13 +426,14 @@ void T2DMap::InteractionDispatcher::registerHandler(IInteractionHandler* handler
     mHandlers.insert(insertIterator, entry);
 }
 
-void T2DMap::registerContextMenu(QMenu* menu)
+void T2DMap::registerContextMenu(QMenu* menu, QWidget* clickTarget)
 {
     if (!menu) {
         return;
     }
 
     mActiveContextMenu = menu;
+    mContextMenuClickTarget = clickTarget ? clickTarget : this;
 
     QObject::connect(menu, &QMenu::aboutToHide, this, [this]() {
         mActiveContextMenu.clear();
@@ -441,9 +499,11 @@ bool T2DMap::eventFilter(QObject* watched, QEvent* event)
                     }
                 }
 
-                const QPoint localPos = mapFromGlobal(globalPos);
+                // This map is hidden while another view of it, which opened the menu, is shown in its place
+                QWidget* target = mContextMenuClickTarget.data();
+                const QPoint localPos = target ? target->mapFromGlobal(globalPos) : QPoint();
 
-                if (rect().contains(localPos)) {
+                if (target && target->rect().contains(localPos)) {
                     auto menu = mActiveContextMenu;
                     mActiveContextMenu.clear();
 
@@ -457,8 +517,8 @@ bool T2DMap::eventFilter(QObject* watched, QEvent* event)
                     auto* pressEvent = new QMouseEvent(QEvent::MouseButtonPress, localPosF, localPosF, globalPosF, button, button, mouseEvent->modifiers());
                     auto* releaseEvent = new QMouseEvent(QEvent::MouseButtonRelease, localPosF, localPosF, globalPosF, button, Qt::NoButton, mouseEvent->modifiers());
 
-                    QCoreApplication::postEvent(this, pressEvent);
-                    QCoreApplication::postEvent(this, releaseEvent);
+                    QCoreApplication::postEvent(target, pressEvent);
+                    QCoreApplication::postEvent(target, releaseEvent);
 
                     return true;
                 }
@@ -475,6 +535,7 @@ const QString& key_icon_dialog_cancel = qsl(":/icons/dialog-cancel.png");
 
 T2DMap::T2DMap(QWidget* parent)
 : QWidget(parent)
+, xyzoom(TMap::scmDefaultXYZoom)
 {
     if (auto* app = qApp) {
         // This allows to forward clicks to widget even if popup menu is opened, therefore e.g. one click is enough to close popup and select room
@@ -520,6 +581,11 @@ T2DMap::T2DMap(QWidget* parent)
 
     mCustomLineSession = std::make_unique<CustomLineSession>(*this);
 
+    // A hands-free pan ends on any other button's press, so this must see every press first.
+    // It consumes only middle-button events.
+    mMiddleMousePanHandler = std::make_unique<MiddleMousePanHandler>(*this);
+    registerInteractionHandler(mMiddleMousePanHandler.get(), 500);
+
     mCustomLineDrawContextMenuHandler = std::make_unique<CustomLineDrawContextMenuHandler>(*this);
     registerInteractionHandler(mCustomLineDrawContextMenuHandler.get(), 450);
 
@@ -547,9 +613,6 @@ T2DMap::T2DMap(QWidget* parent)
     mLabelInteractionHandler = std::make_unique<LabelInteractionHandler>(*this);
     registerInteractionHandler(mLabelInteractionHandler.get(), 150);
 
-    mMiddleMousePanHandler = std::make_unique<MiddleMousePanHandler>(*this);
-    registerInteractionHandler(mMiddleMousePanHandler.get(), 110);
-
     mPanInteractionHandler = std::make_unique<PanInteractionHandler>(*this);
     registerInteractionHandler(mPanInteractionHandler.get(), 100);
 }
@@ -559,6 +622,13 @@ T2DMap::~T2DMap()
     if (auto* app = qApp) {
         app->removeEventFilter(this);
     }
+}
+
+// A dock Qt has no size for takes its content's size hint, and the controls under the
+// map alone are far too small for one.
+QSize T2DMap::sizeHint() const
+{
+    return {400, 400};
 }
 
 void T2DMap::init()
@@ -637,6 +707,27 @@ void T2DMap::slot_shiftZdown()
     update();
 }
 
+void T2DMap::setCompanion3DView(QOpenGLWidget* view)
+{
+#if defined(INCLUDE_3DMAPPER)
+    mpCompanion3DView = view;
+#else
+    Q_UNUSED(view)
+#endif
+}
+
+void T2DMap::set3DViewCenter(const int areaId, const int x, const int y, const int z)
+{
+#if defined(INCLUDE_3DMAPPER)
+    GLWidgetFactory::setViewCenter(mIsSecondaryView ? mpCompanion3DView.data() : mpMap->mpM.data(), areaId, x, y, z);
+#else
+    Q_UNUSED(areaId)
+    Q_UNUSED(x)
+    Q_UNUSED(y)
+    Q_UNUSED(z)
+#endif
+}
+
 void T2DMap::switchArea(const QString& newAreaName)
 {
     Host* pHost = mpHost;
@@ -680,6 +771,7 @@ void T2DMap::switchArea(const QString& newAreaName)
                 areaViewedChangedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
                 areaViewedChangedEvent.mArgumentList.append(QString::number(mAreaID));
                 areaViewedChangedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+                pruneRoomSelectionToArea(areaID);
                 mAreaID = areaID;
                 mLastViewedAreaID = mAreaID;
             }
@@ -696,9 +788,7 @@ void T2DMap::switchArea(const QString& newAreaName)
                 mMapCenterZ = pPlayerRoom->z();
                 xyzoom = mpMap->mpRoomDB->get2DMapZoom(mAreaID);
                 repaint();
-                // Pass the coordinates to the TMap instance to pass to the 3D
-                // mapper
-                mpMap->set3DViewCenter(mAreaID, mMapCenterX, -mMapCenterY, mMapCenterZ);
+                set3DViewCenter(mAreaID, mMapCenterX, -mMapCenterY, mMapCenterZ);
                 if (!areaViewedChangedEvent.mArgumentList.isEmpty()) {
                     mpHost->raiseEvent(areaViewedChangedEvent);
                 }
@@ -862,8 +952,7 @@ void T2DMap::switchArea(const QString& newAreaName)
             }
             xyzoom = mpMap->mpRoomDB->get2DMapZoom(mAreaID);
             repaint();
-            // Pass the coordinates to the TMap instance to pass to the 3D mapper
-            mpMap->set3DViewCenter(mAreaID, mMapCenterX, -mMapCenterY, mMapCenterZ);
+            set3DViewCenter(mAreaID, mMapCenterX, -mMapCenterY, mMapCenterZ);
             if (!areaViewedChangedEvent.mArgumentList.isEmpty()) {
                 mpHost->raiseEvent(areaViewedChangedEvent);
             }
@@ -921,6 +1010,9 @@ std::pair<bool, QString> T2DMap::centerview(int roomId)
         }
     }
 
+    if (mAreaID != areaId) {
+        pruneRoomSelectionToArea(areaId);
+    }
     mAreaID = areaId;
     mLastViewedAreaID = areaId;
     mRoomID = roomId;
@@ -936,2890 +1028,248 @@ std::pair<bool, QString> T2DMap::centerview(int roomId)
     return {true, QString()};
 }
 
-// key format: <QColor.name()><QString of one or more QChars>
-void T2DMap::addSymbolToPixmapCache(const QString key, const QString text, const QColor symbolColor, const bool gridMode)
-{
-    // Some constants used to prevent small, unreadable symbols:
-    static const float symbolLowerSizeLimit = 8.0;
-    static const unsigned int minimumUsableFontSize = 4;
-
-    // Draw onto a rectangle that will fit the room symbol rectangle,
-    // Must tweak the size so it fits within circle when round room symbols are
-    // used and also accommodate fixed sizes for gridmode:
-    QRectF symbolRectangle;
-    if (gridMode && mBubbleMode) {
-        symbolRectangle = QRectF(0.0, 0.0, 0.707 * mRoomWidth, 0.707 * mRoomHeight);
-    } else if (mBubbleMode) {
-        symbolRectangle = QRectF(0.0, 0.0, 0.707 * mRoomWidth * rSize, 0.707 * mRoomHeight * rSize);
-    } else if (gridMode) {
-        symbolRectangle = QRectF(0.0, 0.0, mRoomWidth, mRoomHeight);
-    } else {
-        symbolRectangle = QRectF(0.0, 0.0, mRoomWidth * rSize, mRoomHeight * rSize);
-    }
-
-    auto pixmap = new QPixmap(symbolRectangle.toRect().size());
-    pixmap->fill(Qt::transparent);
-
-    if (symbolRectangle.width() < symbolLowerSizeLimit || symbolRectangle.height() < symbolLowerSizeLimit) {
-        // if the space to draw the symbol on is too small then do not create
-        // anything on the pixmap as it will be unreadable - instead insert an
-        // empty pixmap:
-        mSymbolPixmapCache.insert(key, pixmap);
-        return;
-    }
-
-    QString symbolString = text;
-    QPainter symbolPainter(pixmap);
-    symbolPainter.setPen(symbolColor);
-    symbolPainter.setFont(mpMap->mMapSymbolFont);
-    symbolPainter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing | QPainter::SmoothPixmapTransform, true);
-
-    const QFontMetrics mapSymbolFontMetrics = symbolPainter.fontMetrics();
-    QVector<bool> isUsable;
-    for (const quint32 codePoint : symbolString.toUcs4()) {
-        isUsable.append(mapSymbolFontMetrics.inFontUcs4(codePoint));
-    }
-
-    QFont fontForThisSymbol = mpMap->mMapSymbolFont;
-    const bool needToFallback = isUsable.contains(false);
-    // Oh dear at least one grapheme is not represented in either the selected
-    // or any font as set elsewhere
-    if (needToFallback) {
-        symbolString = QString(QChar::ReplacementCharacter);
-        // Clear the setting that may be forcing only the specified font to be
-        // used, as it may not have the Replacement Character glyph...
-        fontForThisSymbol.setStyleStrategy(static_cast<QFont::StyleStrategy>(mpMap->mMapSymbolFont.styleStrategy() & ~(QFont::NoFontMerging)));
-    }
-
-    const qreal fudgeFactor = symbolRectangle.toRect().width() * mpMap->mMapSymbolFontFudgeFactor;
-    QRectF testRectangle(0, 0, fudgeFactor, fudgeFactor);
-    testRectangle.moveCenter(pixmap->rect().center());
-    QRectF boundaryRect;
-    // Try larger font sizes until it won't fit
-    do {
-        fontForThisSymbol.setPointSize(++mSymbolFontSize);
-        symbolPainter.setFont(fontForThisSymbol);
-        boundaryRect = symbolPainter.boundingRect(pixmap->rect(), Qt::AlignCenter, symbolString);
-        // Use a limit on mSymbolFontSize otherwise some broken fonts can
-        // lock the system into a very slow loop as it gets very large
-    } while (testRectangle.contains(boundaryRect) && mSymbolFontSize < 255);
-    // Then try smaller ones until it will
-    do {
-        fontForThisSymbol.setPointSize(--mSymbolFontSize);
-        symbolPainter.setFont(fontForThisSymbol);
-        boundaryRect = symbolPainter.boundingRect(pixmap->rect(), Qt::AlignCenter, symbolString);
-        // Use a limit on mSymbolFontSize otherwise some broken fonts can
-        // lock the system into a very slow loop as it gets very large
-    } while (!testRectangle.contains(boundaryRect) && mSymbolFontSize > minimumUsableFontSize);
-
-    if (testRectangle.contains(boundaryRect)) {
-        fontForThisSymbol.setPointSize(++mSymbolFontSize);
-        symbolPainter.drawText(pixmap->rect(), Qt::AlignCenter | Qt::TextSingleLine, symbolString);
-    }
-    // Else, it still doesn't fit, must be a long string, too bad, leave
-    // the  pixmap untouched so nothing will be shown when it is used
-
-    if (!mSymbolPixmapCache.insert(key, pixmap)) {
-        qDebug("T2DMap::addSymbolToPixmapCache() ALERT: Map Room Symbol Pixmap cache is full...!");
-    }
-}
-
-void T2DMap::addTextLabelToCache(const QString& key, const TMapLabel& label, const QSize& targetSize)
-{
-    auto pixmap = std::make_unique<QPixmap>(targetSize);
-    pixmap->fill(label.bgColor);
-
-    QPainter painter(pixmap.get());
-    painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing, mMapperUseAntiAlias);
-
-    QFont scaledFont = label.font;
-    QRectF targetRect(0, 0, targetSize.width(), targetSize.height());
-    if (!sizeFontToFitTextInRect(scaledFont, targetRect, label.text, 5, 4.0)) {
-        // Font too small to be legible - fall back to smooth-scaled original pixmap
-        painter.end();
-        pixmap = std::make_unique<QPixmap>(label.pix.scaled(targetSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
-        if (!mTextLabelPixmapCache.insert(key, pixmap.release())) {
-            qWarning("T2DMap::addTextLabelToCache() ALERT: Text Label Pixmap cache is full for key: %s", qUtf8Printable(key));
-        }
-        return;
-    }
-
-    painter.setFont(scaledFont);
-
-    const int labelWidth = targetSize.width();
-    const int labelHeight = targetSize.height();
-
-    if (label.fgColor != label.outlineColor) {
-        QPen outlinePen(label.outlineColor);
-        outlinePen.setCosmetic(mMapperUseAntiAlias);
-        outlinePen.setWidth(1);
-        painter.setPen(outlinePen);
-
-        painter.drawText(QRect(-1, 0, labelWidth, labelHeight), Qt::AlignHCenter | Qt::AlignVCenter, label.text);
-        painter.drawText(QRect(1, 0, labelWidth, labelHeight), Qt::AlignHCenter | Qt::AlignVCenter, label.text);
-        painter.drawText(QRect(0, -1, labelWidth, labelHeight), Qt::AlignHCenter | Qt::AlignVCenter, label.text);
-        painter.drawText(QRect(0, 1, labelWidth, labelHeight), Qt::AlignHCenter | Qt::AlignVCenter, label.text);
-    }
-
-    painter.setPen(label.fgColor);
-    painter.drawText(QRect(0, 0, labelWidth, labelHeight), Qt::AlignHCenter | Qt::AlignVCenter, label.text);
-
-    // End the painter before releasing the pixmap to avoid accessing released memory
-    painter.end();
-    if (!mTextLabelPixmapCache.insert(key, pixmap.release())) {
-        qWarning("T2DMap::addTextLabelToCache() ALERT: Text Label Pixmap cache is full for key: %s", qUtf8Printable(key));
-    }
-}
-
-void T2DMap::drawScaledLabel(QPainter& painter, const QPointF& position, TMapLabel& label, int labelKey, const QRectF& paintRect)
-{
-    const QSize targetSize = paintRect.size().toSize();
-    if (!label.text.isEmpty() && !label.font.family().isEmpty()) {
-        // Include the label's visual content in the cache key so that editing
-        // a label's text, font or colours (e.g. live-previewing from the
-        // create label dialog) invalidates the previously cached rendering:
-        const auto contentHash = qHash(
-                qsl("%1|%2|%3|%4|%5").arg(label.text, label.font.toString(), QString::number(label.fgColor.rgba()), QString::number(label.bgColor.rgba()), QString::number(label.outlineColor.rgba())));
-        const QString cacheKey = qsl("%1_%2_%3x%4_%5").arg(mAreaID).arg(labelKey).arg(targetSize.width()).arg(targetSize.height()).arg(contentHash);
-        if (!mTextLabelPixmapCache.contains(cacheKey)) {
-            addTextLabelToCache(cacheKey, label, targetSize);
-        }
-        if (auto* pix = mTextLabelPixmapCache.object(cacheKey)) {
-            painter.drawPixmap(position, *pix);
-        } else {
-            qWarning("T2DMap::drawScaledLabel() ALERT: Cache lookup failed for label %d in area %d, using fallback", labelKey, mAreaID);
-            painter.drawPixmap(position, label.pix.scaled(targetSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
-        }
-    } else {
-        painter.drawPixmap(position, label.pix.scaled(targetSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
-    }
-    label.clickSize = QSizeF(paintRect.width(), paintRect.height());
-}
-
-/*
- * Helper used to size fonts establishes the font size to use to draw the given
- * sample text centralized inside the given boundary (or rather the boundary
- * reduced by the margin (0-40) as a percentage). This margin is defaulted to
- * 10%.
- */
-bool T2DMap::sizeFontToFitTextInRect(QFont& font, const QRectF& boundaryRect, const QString& text, const quint8 percentageMargin, qreal minFontSize)
-{
-    QFont _font = font;
-
-    if (percentageMargin > 40) {
-        qWarning() << "T2DMap::sizeFontToFitTextInRect(...) percentage margin" << percentageMargin << "exceeded recommended maximum (40%) !";
-    }
-    if (text.isEmpty()) {
-        qWarning() << "T2DMap::sizeFontToFitTextInRect(...) called with no sample text!";
-        return false;
-    }
-
-    qreal fontSize = qMax(minFontSize, font.pointSizeF()); // protect against too-small initial value
-    const QRectF testRect(boundaryRect.width() * (100 - percentageMargin) / 200.0,
-                          boundaryRect.height() * (100 - percentageMargin) / 200.0,
-                          boundaryRect.width() * (100 - percentageMargin) / 100.0,
-                          boundaryRect.height() * (100 - percentageMargin) / 100.);
-
-    // Increase the test font (using somewhat-large steps) until it does not fit any more
-    QRectF neededRect;
-    QPixmap _pixmap(qRound(1.0 + boundaryRect.width()), qRound(1.0 + boundaryRect.height()));
-    QPainter _painter(&_pixmap);
-    do {
-        fontSize *= 1.2;
-        _font.setPointSizeF(fontSize);
-        _painter.setFont(_font);
-
-        neededRect = _painter.boundingRect(testRect, Qt::AlignCenter | Qt::TextSingleLine | Qt::TextIncludeTrailingSpaces, text);
-    } while (testRect.contains(neededRect));
-
-    // Now decrease (using smaller steps) until it fits again
-    bool isSizeTooSmall = false;
-    do {
-        fontSize /= 1.05;
-        _font.setPointSizeF(fontSize);
-        if (fontSize < minFontSize) {
-            isSizeTooSmall = true;
-        }
-
-        _painter.setFont(_font);
-
-        neededRect = _painter.boundingRect(testRect, Qt::AlignCenter | Qt::TextSingleLine | Qt::TextIncludeTrailingSpaces, text);
-    } while ((!isSizeTooSmall) && (!testRect.contains(neededRect)));
-
-    if (isSizeTooSmall) {
-        return false;
-    }
-
-    font.setPointSizeF(fontSize);
-    return true;
-}
-
 // Helper that refactors out code to start a speedwalk:
 void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWalkTargetRoomId)
 {
     mTargetRoomId = speedWalkTargetRoomId;
-    if (mpMap->mpRoomDB->getRoom(speedWalkTargetRoomId)) {
-        mpMap->mTargetID = speedWalkTargetRoomId;
-
-        if (mpHost->checkForCustomSpeedwalk()) {
-            mpHost->startSpeedWalk(speedWalkStartRoomId, speedWalkTargetRoomId);
-        } else if (mpMap->findPath(speedWalkStartRoomId, speedWalkTargetRoomId)) {
-            mpHost->startSpeedWalk();
-        } else {
-            mpHost->mpConsole->printSystemMessage(
-                    qsl("%1\n").arg(tr("Mapper: Cannot find a path from %1 to %2 using known exits.").arg(QString::number(speedWalkStartRoomId), QString::number(speedWalkTargetRoomId))));
-        }
-    }
+    TMapPainter::startSpeedWalk(mpHost, mpMap, speedWalkStartRoomId, speedWalkTargetRoomId);
 }
 
-// This has been refactored to a separate function out of the paintEven() code
-// because we need to use it in two places - one for every room that is not the
-// player's room and then, AFTER all those have been drawn, once for the
-// player's room if it is visible. This is so it is drawn LAST (and any effects,
-// or extra markings for it do not get overwritten by the drawing of the other
-// rooms)...
-void T2DMap::drawRoom(QPainter& painter,
-                      QFont& roomVNumFont,
-                      QFont& mapNameFont,
-                      QPen& pen,
-                      TRoom* pRoom,
-                      const bool isGridMode,
-                      const bool areRoomIdsLegible,
-                      const bool showRoomName,
-                      const int speedWalkStartRoomId,
-                      const float rx,
-                      const float ry,
-                      const QMap<int, QPointF>& areaExitsMap,
-                      const bool showRoomCollision)
+TMapPainter::View T2DMap::painterView() const
 {
-    const int currentRoomId = pRoom->getId();
-    if (pRoom->isHidden()) {
-        return;
+    TMapPainter::View view;
+    view.mpMap = mpMap;
+    view.mpHost = mpHost;
+    view.mSize = size();
+    view.mRoomWidth = mRoomWidth;
+    view.mRoomHeight = mRoomHeight;
+    view.mRX = mRX;
+    view.mRY = mRY;
+    view.rSize = rSize;
+    view.mBSize = mBSize;
+    view.mAreaID = mAreaID;
+    view.mMapCenterZ = mMapCenterZ;
+    view.mShowRoomID = mShowRoomID;
+    view.mMaxRoomIdDigits = mMaxRoomIdDigits;
+    view.mBubbleMode = mBubbleMode;
+    view.mMapperUseAntiAlias = mMapperUseAntiAlias;
+    view.mLargeAreaExitArrows = mLargeAreaExitArrows;
+    view.mPHighlight = mPHighlight;
+    view.mPick = mPick;
+    view.mStartSpeedWalk = mStartSpeedWalk;
+    view.mMultiSelectionSet = mMultiSelectionSet;
+    view.mCustomLinesRoomTo = mCustomLinesRoomTo;
+    view.mCustomLineSelectedRoom = mCustomLineSelectedRoom;
+    view.mCustomLineSelectedExit = mCustomLineSelectedExit;
+    view.mCustomLineSelectedPoint = mCustomLineSelectedPoint;
+    view.mLodExitIndexDisabled = mLodExitIndexDisabled;
+    view.eSize = eSize;
+    view.mRoomID = mRoomID;
+    view.mShiftMode = mShiftMode;
+    view.mMapCenterX = mMapCenterX;
+    view.mMapCenterY = mMapCenterY;
+    view.mIsSecondaryView = mIsSecondaryView;
+    view.mLastViewedAreaID = mLastViewedAreaID;
+    view.xyzoom = xyzoom;
+    view.xspan = xspan;
+    view.yspan = yspan;
+    view.mPrevRoomWidth = mPrevRoomWidth;
+    view.mPrevRoomHeight = mPrevRoomHeight;
+    view.mCachedRoomIdDigitsVersion = mCachedRoomIdDigitsVersion;
+    view.mDrawUpperLowerLevels = mudlet::self() && mudlet::self()->mDrawUpperLowerLevels;
+    view.mShowGrid = mShowGrid;
+    view.mRoomBeingMoved = mRoomBeingMoved;
+    view.mMultiSelection = mMultiSelection;
+    view.mSizeLabel = mSizeLabel;
+    view.mMultiRect = mMultiRect;
+    view.mMultiSelectionHighlightRoomId = mMultiSelectionHighlightRoomId;
+    view.mSelectionListVisible = mMultiSelectionListWidget.isVisible();
+    view.mSelectionListX = mMultiSelectionListWidget.x();
+    view.mSelectionListWidth = mMultiSelectionListWidget.rect().width();
+    view.mPlayerRoomColorGradientStops = mPlayerRoomColorGradientStops;
+    view.mSuppressEmptyStateMessage = mSuppressEmptyStateMessage;
+    view.mHelpMsg = mHelpMsg;
+    view.mFontHeight = mFontHeight;
+    view.isCenterViewCall = isCenterViewCall;
+    if (mMiddleMousePanHandler) {
+        view.mPaintBelowInfoBox = [pHandler = mMiddleMousePanHandler.get()](QPainter& painter) {
+            pHandler->renderIndicator(painter);
+        };
     }
-    pRoom->rendered = false;
-    QRectF roomRectangle;
-    QRectF roomNameRectangle;
-    double realHeight;
-    int borderWidth;
-    if (pRoom->mBorderThickness > 0) {
-        borderWidth = qMax(1, static_cast<int>(pRoom->mBorderThickness / mBSize * mRoomWidth * rSize));
-    } else {
-        borderWidth = qMax(1, static_cast<int>(1 / mBSize * mRoomWidth * rSize));
-    }
-    const bool shouldDrawBorder = (mpHost->mMapperShowRoomBorders || pRoom->mBorderColor.isValid() || pRoom->mBorderThickness > 0) && !isGridMode;
-    bool showThisRoomName = showRoomName;
-    if (isGridMode) {
-        realHeight = mRoomHeight;
-        roomRectangle = QRectF(rx - mRoomWidth / 2.0, ry - mRoomHeight / 2.0, mRoomWidth, mRoomHeight);
-    } else {
-        // this dance is necessary to put the name just below the room rect, later
-        // but we only do this when NOT in grid mode
-        realHeight = mRoomHeight * rSize;
-        roomRectangle = QRectF(rx - (mRoomWidth * rSize) / 2.0, ry - realHeight / 2.0, mRoomWidth * rSize, realHeight);
-        roomNameRectangle = roomRectangle.adjusted(-2000, realHeight, 2000, realHeight);
-    }
-
-    if (showThisRoomName) {
-        showThisRoomName = !pRoom->name.isEmpty() && realHeight > 2 && getUserDataBool(pRoom->userData, ROOM_UI_SHOWNAME, false);
-        if (showThisRoomName) {
-            painter.save();
-            painter.setFont(mapNameFont);
-            roomNameRectangle = painter.boundingRect(roomNameRectangle, Qt::Alignment(Qt::AlignTop | Qt::AlignCenter) | Qt::TextFlag(Qt::TextSingleLine), pRoom->name);
-            painter.restore();
-        }
-    }
-
-    // We should be using the full area for testing for clicks even though
-    // we only show a smaller one if the user has dialed down the room size
-    // on NON-grid mode areas:
-    const QRectF roomClickTestRectangle(QRectF(static_cast<qreal>(rx) - (static_cast<qreal>(mRoomWidth) / 2.0),
-                                               static_cast<qreal>(ry) - (static_cast<qreal>(mRoomHeight) / 2.0),
-                                               static_cast<qreal>(mRoomWidth),
-                                               static_cast<qreal>(mRoomHeight)));
-
-    QColor roomColor;
-    int roomEnvironment = pRoom->environment;
-    if (mpMap->mEnvColors.contains(roomEnvironment)) {
-        roomEnvironment = mpMap->mEnvColors[roomEnvironment];
-    } else {
-        if (!mpMap->mCustomEnvColors.contains(roomEnvironment)) {
-            roomEnvironment = 1;
-        }
-    }
-    // clang-format off
-    switch (roomEnvironment) {
-    case 1:     roomColor = mpHost->mRed_2;             break;
-    case 2:     roomColor = mpHost->mGreen_2;           break;
-    case 3:     roomColor = mpHost->mYellow_2;          break;
-    case 4:     roomColor = mpHost->mBlue_2;            break;
-    case 5:     roomColor = mpHost->mMagenta_2;         break;
-    case 6:     roomColor = mpHost->mCyan_2;            break;
-    case 7:     roomColor = mpHost->mWhite_2;           break;
-    case 8:     roomColor = mpHost->mBlack_2;           break;
-    case 9:     roomColor = mpHost->mLightRed_2;        break;
-    case 10:    roomColor = mpHost->mLightGreen_2;      break;
-    case 11:    roomColor = mpHost->mLightYellow_2;     break;
-    case 12:    roomColor = mpHost->mLightBlue_2;       break;
-    case 13:    roomColor = mpHost->mLightMagenta_2;    break;
-    case 14:    roomColor = mpHost->mLightCyan_2;       break;
-    case 15:    roomColor = mpHost->mLightWhite_2;      break;
-    case 16:    roomColor = mpHost->mLightBlack_2;      break;
-    // clang-format on
-    default: //user defined room color
-        if (mpMap->mCustomEnvColors.contains(roomEnvironment)) {
-            roomColor = mpMap->mCustomEnvColors[roomEnvironment];
-        } else {
-            if (16 < roomEnvironment && roomEnvironment < 232) {
-                quint8 const base = roomEnvironment - 16;
-                quint8 r = base / 36;
-                quint8 g = (base - (r * 36)) / 6;
-                quint8 b = (base - (r * 36)) - (g * 6);
-
-                r = r == 0 ? 0 : (r - 1) * 40 + 95;
-                g = g == 0 ? 0 : (g - 1) * 40 + 95;
-                b = b == 0 ? 0 : (b - 1) * 40 + 95;
-                roomColor = QColor(r, g, b, 255);
-            } else if (231 < roomEnvironment && roomEnvironment < 256) {
-                quint8 const k = ((roomEnvironment - 232) * 10) + 8;
-                roomColor = QColor(k, k, k, 255);
-            }
-        }
-    }
-
-    const bool isRoomSelected = (mPick && roomClickTestRectangle.contains(mPHighlight)) || mMultiSelectionSet.contains(currentRoomId);
-
-    QPen roomPen(Qt::transparent);
-    roomPen.setJoinStyle(Qt::MiterJoin);
-    painter.setBrush(roomColor);
-
-    // Determine if we're actually drawing a border
-    bool isDrawingBorder = false;
-    qreal borderInset = 0.0;
-
-    if (showRoomCollision) {
-        roomPen.setColor(mpHost->mRoomCollisionBorderColor);
-        roomPen.setWidth(borderWidth);
-        borderInset = borderWidth / 2.0;
-        isDrawingBorder = true;
-    } else if (shouldDrawBorder) {
-        roomPen.setWidth(borderWidth);
-        borderInset = borderWidth / 2.0;
-        isDrawingBorder = true;
-        QColor borderColor = pRoom->mBorderColor.isValid() ? pRoom->mBorderColor : mpHost->mRoomBorderColor;
-        if (mRoomWidth >= 12) {
-            roomPen.setColor(borderColor);
-        } else {
-            auto fadingColor = QColor(borderColor);
-            fadingColor.setAlpha(255 * (mRoomWidth / 12));
-            roomPen.setColor(fadingColor);
-        }
-    }
-
-    // Expand the drawing rectangle outward by half the border width so that
-    // after the stroke is drawn (centered on the edge), the visible fill area
-    // matches the original room size and the border grows purely outward
-    const QRectF roomDrawRectangle = roomRectangle.adjusted(-borderInset, -borderInset, borderInset, borderInset);
-
-    if (isRoomSelected) {
-        QLinearGradient selectionBg(roomDrawRectangle.topLeft(), roomDrawRectangle.bottomRight());
-        selectionBg.setColorAt(0.2, roomColor);
-        selectionBg.setColorAt(1, Qt::blue);
-        if (!showRoomCollision && isDrawingBorder) {
-            roomPen.setColor(QColor(255, 50, 50));
-        }
-        painter.setBrush(selectionBg);
-    }
-
-    painter.setPen(roomPen);
-
-    if (mBubbleMode) {
-        // Expand radius by half border width so visible fill stays at original size
-        const float roomRadius = (0.5 * rSize * mRoomWidth) + borderInset;
-        const QPointF roomCenter = QPointF(rx, ry);
-        QPainterPath diameterPath;
-        diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
-        painter.drawPath(diameterPath);
-    } else {
-        painter.drawRect(roomDrawRectangle);
-    }
-
-    if (isRoomSelected) {
-        mPick = false;
-        if (mStartSpeedWalk) {
-            mStartSpeedWalk = false;
-            // This draws a red circle around the room that was chosen as
-            // the target for the speedwalk, but it is only shown for one
-            // paintEvent call and it is not obvious that it is useful, note
-            // that this is the code for a room being clicked on that is
-            // within the area - there is a separate block of code further down
-            // in this method that handles clicking on the out of area exit so
-            // that a speed walk is done to the room in the OTHER area:
-            const float roomRadius = 0.4 * mRoomWidth;
-            const QPointF roomCenter = QPointF(rx, ry);
-            QRadialGradient gradient(roomCenter, roomRadius);
-            gradient.setColorAt(0.95, QColor(255, 0, 0, 150));
-            gradient.setColorAt(0.80, QColor(150, 100, 100, 150));
-            gradient.setColorAt(0.799, QColor(150, 100, 100, 100));
-            gradient.setColorAt(0.7, QColor(255, 0, 0, 200));
-            gradient.setColorAt(0, Qt::white);
-            const QPen transparentPen(Qt::transparent);
-            QPainterPath diameterPath;
-            painter.setBrush(gradient);
-            painter.setPen(transparentPen);
-            diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
-            painter.drawPath(diameterPath);
-
-            initiateSpeedWalk(speedWalkStartRoomId, currentRoomId);
-        }
-    }
-
-    // Do we need to draw the room symbol:
-    if (!(mShowRoomID && areRoomIdsLegible) && !pRoom->mSymbol.isEmpty()) {
-        QColor symbolColor;
-        if (pRoom->mSymbolColor.isValid()) {
-            symbolColor = pRoom->mSymbolColor;
-        } else if (roomColor.lightness() > 127) {
-            symbolColor = Qt::black;
-        } else {
-            symbolColor = Qt::white;
-        }
-        auto pixmapKey = qsl("%1_%2").arg(symbolColor.name(), pRoom->mSymbol);
-        if (!mSymbolPixmapCache.contains(pixmapKey)) {
-            addSymbolToPixmapCache(pixmapKey, pRoom->mSymbol, symbolColor, isGridMode);
-        }
-
-        painter.save();
-        painter.setBackgroundMode(Qt::TransparentMode);
-
-        QPixmap* pix = mSymbolPixmapCache.object(pixmapKey);
-        if (!pix) {
-            qWarning("T2DMap::paintEvent() Alert: mSymbolPixmapCache failure, too many items to cache all of them for: \"%s\"", pRoom->mSymbol.toUtf8().constData());
-        } else {
-            /*
-                * For the non-scaling QPainter::drawPixmap() used now we
-                * have to position the generated pixmap containing the
-                * particular symbol for this room to Y when it would
-                * position it at X - this should be faster than the previous
-                * scaling QPainter::drawPixmap() as that would scale the
-                * pixmap to fit the Room Rectangle!
-                *
-                *                         |<------->| roomRectangle.width()
-                * roomRectangle.topLeft-->X---------+
-                *                         |  Room   |
-                *                         |  Y---+  |
-                *                         |  |Pix|  |
-                *                         |  +---+  |
-                *                         |Rectangle|
-                *                         +---------+
-                *                            |<->|<--symbolRect.width()
-                *            x-offset---->|<>|<-- (roomRectangle.width() - symbolRect.width())/2.0
-                * similarly for the y-offset
-                */
-
-            painter.drawPixmap(QPoint(qRound(roomRectangle.left() + ((roomRectangle.width() - pix->width()) / 2.0)), qRound(roomRectangle.top() + ((roomRectangle.height() - pix->height()) / 2.0))),
-                               *pix);
-        }
-
-        painter.restore();
-    }
-
-    // Do we need to draw the custom (user specified) highlight
-    if (pRoom->highlight) {
-        const float roomRadius = (pRoom->highlightRadius * mRoomWidth) / 2.0;
-        const QPointF roomCenter = QPointF(rx, ry);
-        QRadialGradient gradient(roomCenter, roomRadius);
-        gradient.setColorAt(0.85, pRoom->highlightColor);
-        gradient.setColorAt(0, pRoom->highlightColor2);
-        const QPen transparentPen(Qt::transparent);
-        QPainterPath diameterPath;
-        painter.setBrush(gradient);
-        painter.setPen(transparentPen);
-        diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
-        painter.drawPath(diameterPath);
-    }
-
-    // Do we need to draw the room Id number:
-    if (mShowRoomID && areRoomIdsLegible) {
-        painter.save();
-        QColor roomIdColor;
-        if (roomColor.lightness() > 127) {
-            roomIdColor = QColor(Qt::black);
-        } else {
-            roomIdColor = QColor(Qt::white);
-        }
-        painter.setPen(QPen(roomIdColor));
-        painter.setFont(roomVNumFont);
-        painter.drawText(roomRectangle, Qt::AlignCenter, QString::number(currentRoomId));
-        painter.restore();
-    }
-
-    // If there is a room name, draw it?
-    if (showRoomName) {
-        painter.save();
-
-        const QString namePosData = pRoom->userData.value(ROOM_UI_NAMEPOS);
-        if (!namePosData.isEmpty()) {
-            QPointF nameOffset{0, 0};
-            QStringList posXY = namePosData.split(" ");
-            bool ok1, ok2;
-            double posX, posY;
-
-            switch (posXY.count()) {
-            case 1:
-                // one value: treat as Y offset
-                posY = posXY[0].toDouble(&ok1);
-                if (ok1) {
-                    nameOffset.setY(posY);
-                }
-                break;
-            case 2:
-                posX = posXY[0].toDouble(&ok1);
-                posY = posXY[1].toDouble(&ok2);
-                if (ok1 && ok2) {
-                    nameOffset.setX(posX);
-                    nameOffset.setY(posY);
-                }
-                break;
-            }
-            roomNameRectangle.adjust(mRoomWidth * nameOffset.x(), mRoomHeight * nameOffset.y(), mRoomWidth * nameOffset.x(), mRoomHeight * nameOffset.y());
-        }
-        auto roomNameColor = QColor((mpHost->mBgColor_2.lightness() > 127) ? Qt::black : Qt::white);
-        const QString roomNameColorData = pRoom->userData.value(ROOM_UI_NAMECOLOR);
-        if (!roomNameColorData.isEmpty()) {
-            const QColor userColor(roomNameColorData);
-            if (userColor.isValid()) {
-                roomNameColor = userColor;
-            }
-        }
-        painter.setPen(QPen(roomNameColor));
-        painter.setFont(mapNameFont);
-        painter.drawText(roomNameRectangle, Qt::AlignCenter, pRoom->name);
-        painter.restore();
-    }
-
-    // Change these from const to static to tweak them while running in a debugger...!
-    const float allInsideTipOffsetFactor = 1 / 20.0f;
-    const float upDownXOrYFactor = 1 / 3.1f;
-    const float inOuterXFactor = 1 / 4.5f;
-    const float inUpDownYFactor = 1 / 7.0f;
-    const float outOuterXFactor = 1 / 2.2f;
-    const float outUpDownYFactor = 1 / 5.5f;
-    const float outInterXFactor = 1 / 3.5f;
-    const float outerRealDoorPenThicknessFactor = 0.050f;
-    const float outerStubDoorPenThicknessFactor = 0.025f;
-    const float innerRealDoorPenThicknessFactor = 0.025f;
-    const float innerStubDoorPenThicknessFactor = 0.0125f;
-
-    QColor lc;
-    if (roomColor.lightness() > 127) {
-        lc = QColorConstants::Black;
-    } else {
-        lc = QColorConstants::White;
-    }
-    pen = painter.pen();
-    pen.setColor(lc);
-    pen.setCosmetic(mMapperUseAntiAlias);
-    pen.setCapStyle(Qt::RoundCap);
-    pen.setJoinStyle(Qt::RoundJoin);
-    QPen innerPen = pen;
-    painter.save();
-
-    QBrush innerBrush = painter.brush();
-    innerBrush.setStyle(Qt::NoBrush);
-    if (pRoom->getUp() > 0 || pRoom->exitStubs.contains(DIR_UP)) {
-        QPolygonF poly_up;
-        poly_up.append(QPointF(rx, ry + (mRoomHeight * rSize * allInsideTipOffsetFactor)));
-        poly_up.append(QPointF(rx - (mRoomWidth * rSize * upDownXOrYFactor), ry + (mRoomHeight * rSize * upDownXOrYFactor)));
-        poly_up.append(QPointF(rx + (mRoomWidth * rSize * upDownXOrYFactor), ry + (mRoomHeight * rSize * upDownXOrYFactor)));
-        bool isDoor = true;
-        QBrush brush = painter.brush();
-        switch (pRoom->doors.value(key_up)) {
-        case 1:
-            brush.setColor(mOpenDoorColor);
-            innerPen.setColor(mOpenDoorColor);
-            break;
-        case 2:
-            brush.setColor(mClosedDoorColor);
-            innerPen.setColor(mClosedDoorColor);
-            break;
-        case 3:
-            brush.setColor(mLockedDoorColor);
-            innerPen.setColor(mLockedDoorColor);
-            break;
-        default:
-            brush.setColor(lc);
-            isDoor = false;
-        }
-        if (pRoom->getUp() > 0) {
-            pen.setWidthF(mRoomWidth * rSize * outerRealDoorPenThicknessFactor);
-            innerPen.setWidthF(mRoomWidth * rSize * innerRealDoorPenThicknessFactor);
-            brush.setStyle(Qt::Dense4Pattern);
-        } else {
-            pen.setWidthF(mRoomWidth * rSize * outerStubDoorPenThicknessFactor);
-            innerPen.setWidthF(mRoomWidth * rSize * innerStubDoorPenThicknessFactor);
-            brush.setStyle(Qt::DiagCrossPattern);
-        }
-        painter.setPen(pen);
-        painter.setBrush(brush);
-        painter.drawPolygon(poly_up);
-        if (isDoor) {
-            // Draw a narrower triangle on top of the existing one if there
-            // is a door - to help emphasis the coloured door if the brush
-            // from the main one is not obvious given the main room colour.
-            painter.setPen(innerPen);
-            painter.setBrush(innerBrush);
-            painter.drawPolygon(poly_up);
-        }
-    }
-
-    if (pRoom->getDown() > 0 || pRoom->exitStubs.contains(DIR_DOWN)) {
-        QPolygonF poly_down;
-        poly_down.append(QPointF(rx, ry - (mRoomHeight * rSize * allInsideTipOffsetFactor)));
-        poly_down.append(QPointF(rx - (mRoomWidth * rSize * upDownXOrYFactor), ry - (mRoomHeight * rSize * upDownXOrYFactor)));
-        poly_down.append(QPointF(rx + (mRoomWidth * rSize * upDownXOrYFactor), ry - (mRoomHeight * rSize * upDownXOrYFactor)));
-        bool isDoor = true;
-        QBrush brush = painter.brush();
-        switch (pRoom->doors.value(key_down)) {
-        case 1:
-            brush.setColor(mOpenDoorColor);
-            innerPen.setColor(mOpenDoorColor);
-            break;
-        case 2:
-            brush.setColor(mClosedDoorColor);
-            innerPen.setColor(mClosedDoorColor);
-            break;
-        case 3:
-            brush.setColor(mLockedDoorColor);
-            innerPen.setColor(mLockedDoorColor);
-            break;
-        default:
-            brush.setColor(lc);
-            isDoor = false;
-        }
-        if (pRoom->getDown() > 0) {
-            pen.setWidthF(mRoomWidth * rSize * outerRealDoorPenThicknessFactor);
-            innerPen.setWidthF(mRoomWidth * rSize * innerRealDoorPenThicknessFactor);
-            brush.setStyle(Qt::Dense4Pattern);
-        } else {
-            pen.setWidthF(mRoomWidth * rSize * outerStubDoorPenThicknessFactor);
-            innerPen.setWidthF(mRoomWidth * rSize * innerStubDoorPenThicknessFactor);
-            brush.setStyle(Qt::DiagCrossPattern);
-        }
-        painter.setPen(pen);
-        painter.setBrush(brush);
-        painter.drawPolygon(poly_down);
-        if (isDoor) {
-            painter.setPen(innerPen);
-            painter.setBrush(innerBrush);
-            painter.drawPolygon(poly_down);
-        }
-    }
-
-    if (pRoom->getIn() > 0 || pRoom->exitStubs.contains(DIR_IN)) {
-        QPolygonF poly_in_left;
-        QPolygonF poly_in_right;
-        poly_in_left.append(QPointF(rx - (mRoomWidth * rSize * allInsideTipOffsetFactor), ry));
-        poly_in_left.append(QPointF(rx - (mRoomWidth * rSize * inOuterXFactor), ry + (mRoomHeight * rSize * inUpDownYFactor)));
-        poly_in_left.append(QPointF(rx - (mRoomWidth * rSize * inOuterXFactor), ry - (mRoomHeight * rSize * inUpDownYFactor)));
-        poly_in_right.append(QPointF(rx + (mRoomWidth * rSize * allInsideTipOffsetFactor), ry));
-        poly_in_right.append(QPointF(rx + (mRoomWidth * rSize * inOuterXFactor), ry + (mRoomHeight * rSize * inUpDownYFactor)));
-        poly_in_right.append(QPointF(rx + (mRoomWidth * rSize * inOuterXFactor), ry - (mRoomHeight * rSize * inUpDownYFactor)));
-        bool isDoor = true;
-        QBrush brush = painter.brush();
-        switch (pRoom->doors.value(key_in)) {
-        case 1:
-            brush.setColor(mOpenDoorColor);
-            innerPen.setColor(mOpenDoorColor);
-            break;
-        case 2:
-            brush.setColor(mClosedDoorColor);
-            innerPen.setColor(mClosedDoorColor);
-            break;
-        case 3:
-            brush.setColor(mLockedDoorColor);
-            innerPen.setColor(mLockedDoorColor);
-            break;
-        default:
-            brush.setColor(lc);
-            isDoor = false;
-        }
-        if (pRoom->getIn() > 0) {
-            pen.setWidthF(mRoomWidth * rSize * outerRealDoorPenThicknessFactor);
-            innerPen.setWidthF(mRoomWidth * rSize * innerRealDoorPenThicknessFactor);
-            brush.setStyle(Qt::Dense4Pattern);
-        } else {
-            pen.setWidthF(mRoomWidth * rSize * outerStubDoorPenThicknessFactor);
-            innerPen.setWidthF(mRoomWidth * rSize * innerStubDoorPenThicknessFactor);
-            brush.setStyle(Qt::DiagCrossPattern);
-        }
-        painter.setBrush(brush);
-        painter.setPen(pen);
-        painter.drawPolygon(poly_in_left);
-        painter.drawPolygon(poly_in_right);
-        if (isDoor) {
-            painter.setPen(innerPen);
-            painter.setBrush(innerBrush);
-            painter.drawPolygon(poly_in_left);
-            painter.drawPolygon(poly_in_right);
-        }
-    }
-
-    if (pRoom->getOut() > 0 || pRoom->exitStubs.contains(DIR_OUT)) {
-        QPolygonF poly_out_left;
-        QPolygonF poly_out_right;
-        poly_out_left.append(QPointF(rx - (mRoomWidth * rSize * outOuterXFactor), ry));
-        poly_out_left.append(QPointF(rx - (mRoomWidth * rSize * outInterXFactor), ry + (mRoomHeight * rSize * outUpDownYFactor)));
-        poly_out_left.append(QPointF(rx - (mRoomWidth * rSize * outInterXFactor), ry - (mRoomHeight * rSize * outUpDownYFactor)));
-        poly_out_right.append(QPointF(rx + (mRoomWidth * rSize * outOuterXFactor), ry));
-        poly_out_right.append(QPointF(rx + (mRoomWidth * rSize * outInterXFactor), ry + (mRoomHeight * rSize * outUpDownYFactor)));
-        poly_out_right.append(QPointF(rx + (mRoomWidth * rSize * outInterXFactor), ry - (mRoomHeight * rSize * outUpDownYFactor)));
-        bool isDoor = true;
-        QBrush brush = painter.brush();
-        switch (pRoom->doors.value(key_out)) {
-        case 1:
-            brush.setColor(mOpenDoorColor);
-            innerPen.setColor(mOpenDoorColor);
-            break;
-        case 2:
-            brush.setColor(mClosedDoorColor);
-            innerPen.setColor(mClosedDoorColor);
-            break;
-        case 3:
-            brush.setColor(mLockedDoorColor);
-            innerPen.setColor(mLockedDoorColor);
-            break;
-        default:
-            brush.setColor(lc);
-            isDoor = false;
-        }
-        if (pRoom->getOut() > 0) {
-            pen.setWidthF(mRoomWidth * rSize * outerRealDoorPenThicknessFactor);
-            innerPen.setWidthF(mRoomWidth * rSize * innerRealDoorPenThicknessFactor);
-            brush.setStyle(Qt::Dense4Pattern);
-        } else {
-            pen.setWidthF(mRoomWidth * rSize * outerStubDoorPenThicknessFactor);
-            innerPen.setWidthF(mRoomWidth * rSize * innerStubDoorPenThicknessFactor);
-            brush.setStyle(Qt::DiagCrossPattern);
-        }
-        painter.setBrush(brush);
-        painter.setPen(pen);
-        painter.drawPolygon(poly_out_left);
-        painter.drawPolygon(poly_out_right);
-        if (isDoor) {
-            painter.setPen(innerPen);
-            painter.setBrush(innerBrush);
-            painter.drawPolygon(poly_out_left);
-            painter.drawPolygon(poly_out_right);
-        }
-    }
-
-    painter.restore();
-    if (!isGridMode) {
-        QMapIterator<int, QPointF> it(areaExitsMap);
-        while (it.hasNext()) {
-            it.next();
-            const QPointF roomCenter = it.value();
-            const QRectF dr = QRectF(roomCenter.x(), roomCenter.y(), mRoomWidth * rSize, mRoomHeight * rSize);
-
-            // clang-format off
-            if ((mPick
-                 && mPHighlight.x() >= (dr.x() - mRoomWidth / 3.0)
-                 && mPHighlight.x() <= (dr.x() + mRoomWidth / 3.0)
-                 && mPHighlight.y() >= (dr.y() - mRoomHeight / 3.0)
-                 && mPHighlight.y() <= (dr.y() + mRoomHeight / 3.0))
-                && mStartSpeedWalk) {
-                // clang-format on
-                mStartSpeedWalk = false;
-                // This draws a red circle around the out of area exit that
-                // was chosen as the target for the speedwalk, but it is
-                // only shown for one paintEvent call and it is not obvious
-                // that it is useful, note that there is similar code for a
-                // room being clicked on that is WITHIN the area, that is
-                // above this point in the source code:
-                const float roomRadius = (0.8 * mRoomWidth) / 2.0;
-                QRadialGradient gradient(roomCenter, roomRadius);
-                gradient.setColorAt(0.95, QColor(255, 0, 0, 150));
-                gradient.setColorAt(0.80, QColor(150, 100, 100, 150));
-                gradient.setColorAt(0.799, QColor(150, 100, 100, 100));
-                gradient.setColorAt(0.7, QColor(255, 0, 0, 200));
-                gradient.setColorAt(0, Qt::white);
-                const QPen transparentPen(Qt::transparent);
-                QPainterPath myPath;
-                painter.setBrush(gradient);
-                painter.setPen(transparentPen);
-                myPath.addEllipse(roomCenter, roomRadius, roomRadius);
-                painter.drawPath(myPath);
-
-                mPick = false;
-                initiateSpeedWalk(speedWalkStartRoomId, it.key());
-            }
-        }
-    }
+    return view;
 }
 
-// Grid mode rendering driven by the spatial grid index.
-// Only rooms inside the current viewport rectangle are fetched from the index,
-// reducing the collect phase from O(Z-level rooms) to O(visible cells).
-void T2DMap::drawGridModeRooms(QPainter& painter,
-                               const TArea* pDrawnArea,
-                               const int zLevel,
-                               const int playerRoomId,
-                               const float mRX,
-                               const float mRY,
-                               const float mRoomWidth,
-                               const float mRoomHeight,
-                               const float widgetWidth,
-                               const float widgetHeight,
-                               QFont& roomVNumFont,
-                               bool& isPlayerRoomVisible,
-                               QPointF& playerRoomOnWidgetCoordinates,
-                               bool areRoomIdsLegible,
-                               QString* profileOutput)
+// Only what the frame moved: a map info contributor's Lua may have moved the rest meanwhile
+void T2DMap::applyPaintedView(const TMapPainter::View& before, const TMapPainter::View& after)
 {
-    QElapsedTimer timer;
-    timer.start();
-
-    // Compute viewport bounds in integer map coordinates.
-    // The forward transform is:  rx = room->x() * mRoomWidth + mRX
-    //                            ry = room->y() * -1 * mRoomHeight + mRY
-    // Inverting gives the integer range of rooms that can appear on screen.
-    // A 1-cell margin is added so rooms whose rect straddles the widget edge
-    // are not clipped.
-    const int minX = static_cast<int>(std::floor(static_cast<double>(-mRX) / mRoomWidth)) - 1;
-    const int maxX = static_cast<int>(std::ceil(static_cast<double>(widgetWidth - mRX) / mRoomWidth)) + 1;
-    const int minY = static_cast<int>(std::floor(static_cast<double>(mRY - widgetHeight) / mRoomHeight)) - 1;
-    const int maxY = static_cast<int>(std::ceil(static_cast<double>(mRY) / mRoomHeight)) + 1;
-
-    const qreal timeIndex = timer.nsecsElapsed() / 1000000.0;
-    timer.start();
-
-    // Helper: convert environment ID to QColor (mirrors drawRoom logic).
-    auto envToColor = [this](int env) -> QColor {
-        if (mpMap->mEnvColors.contains(env)) {
-            env = mpMap->mEnvColors[env];
-        } else if (!mpMap->mCustomEnvColors.contains(env)) {
-            env = 1;
-        }
-        switch (env) {
-        case 1:
-            return mpHost->mRed_2;
-        case 2:
-            return mpHost->mGreen_2;
-        case 3:
-            return mpHost->mYellow_2;
-        case 4:
-            return mpHost->mBlue_2;
-        case 5:
-            return mpHost->mMagenta_2;
-        case 6:
-            return mpHost->mCyan_2;
-        case 7:
-            return mpHost->mWhite_2;
-        case 8:
-            return mpHost->mBlack_2;
-        case 9:
-            return mpHost->mLightRed_2;
-        case 10:
-            return mpHost->mLightGreen_2;
-        case 11:
-            return mpHost->mLightYellow_2;
-        case 12:
-            return mpHost->mLightBlue_2;
-        case 13:
-            return mpHost->mLightMagenta_2;
-        case 14:
-            return mpHost->mLightCyan_2;
-        case 15:
-            return mpHost->mLightWhite_2;
-        case 16:
-            return mpHost->mLightBlack_2;
-        default:
-            if (mpMap->mCustomEnvColors.contains(env)) {
-                return mpMap->mCustomEnvColors[env];
-            }
-            if (env > 16 && env < 232) {
-                quint8 const base = env - 16;
-                quint8 r = base / 36;
-                quint8 g = (base - (r * 36)) / 6;
-                quint8 b = (base - (r * 36)) - (g * 6);
-                r = r == 0 ? 0 : (r - 1) * 40 + 95;
-                g = g == 0 ? 0 : (g - 1) * 40 + 95;
-                b = b == 0 ? 0 : (b - 1) * 40 + 95;
-                return QColor(r, g, b, 255);
-            }
-            if (env > 231 && env < 256) {
-                quint8 const k = ((env - 232) * 10) + 8;
-                return QColor(k, k, k, 255);
-            }
-            return mpHost->mBgColor_2;
-        }
-    };
-
-    const TAreaGridIndex& gridIndex = pDrawnArea->getGridIndex();
-    int roomCount = 0;
-
-    // LOD fast path: when rooms are smaller than this pixel threshold their
-    // individual details (collision borders, symbols, vnums) are invisible.
-    // QPainterPath::addRect() costs ~3.6 us per room regardless of room size,
-    // making the normal path unusable at high zoom-out with thousands of rooms.
-    // Writing directly to a QImage scanline is ~10x faster overall.
-    constexpr float cLodPixelThreshold = 4.0f;
-    if (mRoomWidth < cLodPixelThreshold) {
-        const int imgW = static_cast<int>(std::ceil(static_cast<double>(widgetWidth)));
-        const int imgH = static_cast<int>(std::ceil(static_cast<double>(widgetHeight)));
-        QImage lodImage(imgW, imgH, QImage::Format_ARGB32_Premultiplied);
-        lodImage.fill(0); // transparent: background was already rendered beneath us
-
-        // Cache env -> QRgb so envToColor() is called at most once per env ID.
-        QHash<int, QRgb> envColorCache;
-
-        if (mRoomWidth < 1.0f) {
-            // Sub-pixel LOD: each output pixel may cover multiple rooms.
-            // Iterate output pixels and look up the representative room per unique
-            // world cell. Run-length optimizations skip redundant lookups:
-            //   - Row runs: when the same worldY repeats across consecutive output
-            //     rows (common at extreme zoom-out where 1 room spans ~5.8 rows at
-            //     roomSizePx=0.171), duplicate the previous scanline with memcpy.
-            //   - Column runs: when the same worldX repeats across consecutive pixels
-            //     in a row, reuse the previously computed color.
-            // Combined, these reduce unique lookups from ~5.36M to ~4,600 at the
-            // reported zoom level, yielding a ~700x speedup in this branch.
-            int lastWorldY = INT_MIN;
-            for (int py = 0; py < imgH; ++py) {
-                QRgb* line = reinterpret_cast<QRgb*>(lodImage.scanLine(py));
-                const int worldY = static_cast<int>(std::floor(static_cast<double>(mRY - py) / mRoomHeight));
-
-                if (worldY == lastWorldY && py > 0) {
-                    // Same world row as the previous scanline: just copy it.
-                    const QRgb* prevLine = reinterpret_cast<const QRgb*>(lodImage.constScanLine(py - 1));
-                    std::copy_n(prevLine, imgW, line);
-                    continue;
-                }
-                lastWorldY = worldY;
-
-                int lastWorldX = INT_MIN;
-                QRgb currentColor = 0;
-
-                for (int px = 0; px < imgW; ++px) {
-                    const int worldX = static_cast<int>(std::floor(static_cast<double>(px - mRX) / mRoomWidth));
-
-                    if (worldX != lastWorldX) {
-                        lastWorldX = worldX;
-                        currentColor = 0;
-
-                        const QSet<int>& rooms = gridIndex.roomsAt(zLevel, worldX, worldY);
-                        // Iterate to find the first non-hidden room at this cell.
-                        for (const int roomId : rooms) {
-                            TRoom* room = mpMap->mpRoomDB->getRoom(roomId);
-                            if (!room || room->isHidden()) {
-                                continue;
-                            }
-                            ++roomCount;
-                            if (roomId == playerRoomId) {
-                                isPlayerRoomVisible = true;
-                                playerRoomOnWidgetCoordinates = QPointF(static_cast<qreal>(worldX * mRoomWidth + mRX), static_cast<qreal>(worldY * -1.0f * mRoomHeight + mRY));
-                                // Player room drawn by paintEvent; leave pixel transparent.
-                            } else {
-                                const auto colorIt = envColorCache.constFind(room->environment);
-                                if (colorIt != envColorCache.constEnd()) {
-                                    currentColor = *colorIt;
-                                } else {
-                                    currentColor = envToColor(room->environment).rgba();
-                                    envColorCache.insert(room->environment, currentColor);
-                                }
-                            }
-                            break; // Use only the first non-hidden room at this cell.
-                        }
-                    }
-
-                    line[px] = currentColor;
-                }
-            }
-        } else {
-            // Room-driven LOD path for 1.0 <= mRoomWidth < cLodPixelThreshold.
-            // Each room spans >= 1 output pixel; iterate rooms from the grid index.
-            for (const int roomId : gridIndex.roomsInViewport(zLevel, minX, maxX, minY, maxY)) {
-                TRoom* room = mpMap->mpRoomDB->getRoom(roomId);
-                if (!room || room->isHidden()) {
-                    continue;
-                }
-
-                ++roomCount;
-
-                const float rx = room->x() * mRoomWidth + mRX;
-                const float ry = room->y() * -1.0f * mRoomHeight + mRY;
-
-                if (playerRoomId == roomId) {
-                    isPlayerRoomVisible = true;
-                    playerRoomOnWidgetCoordinates = QPointF(static_cast<qreal>(rx), static_cast<qreal>(ry));
-                    continue;
-                }
-
-                // Map the room center to a pixel rect, clamped to image bounds.
-                const int px = static_cast<int>(rx - mRoomWidth * 0.5f);
-                const int py = static_cast<int>(ry - mRoomHeight * 0.5f);
-                const int pw = qMax(1, static_cast<int>(std::ceil(static_cast<double>(mRoomWidth))));
-                const int ph = qMax(1, static_cast<int>(std::ceil(static_cast<double>(mRoomHeight))));
-                const int xStart = qBound(0, px, imgW);
-                const int xEnd = qBound(0, px + pw, imgW);
-                const int yStart = qBound(0, py, imgH);
-                const int yEnd = qBound(0, py + ph, imgH);
-                if (xStart >= xEnd || yStart >= yEnd) {
-                    continue;
-                }
-
-                QRgb colorRgb;
-                const auto colorIt = envColorCache.constFind(room->environment);
-                if (colorIt != envColorCache.constEnd()) {
-                    colorRgb = *colorIt;
-                } else {
-                    colorRgb = envToColor(room->environment).rgba();
-                    envColorCache.insert(room->environment, colorRgb);
-                }
-
-                // Direct scanline writes bypass QPainterPath construction.
-                for (int dy = yStart; dy < yEnd; ++dy) {
-                    QRgb* scanLine = reinterpret_cast<QRgb*>(lodImage.scanLine(dy));
-                    for (int dx = xStart; dx < xEnd; ++dx) {
-                        scanLine[dx] = colorRgb;
-                    }
-                }
-            }
-        }
-
-        const qreal timeCollect = timer.nsecsElapsed() / 1000000.0;
-        timer.start();
-
-        painter.drawImage(0, 0, lodImage);
-
-        // Overlay selected rooms with a blue tint so the selection highlight
-        // is preserved in both LOD paths.  At LOD scales (rooms are < 4px wide)
-        // a real gradient is imperceptible, so we paint a semi-transparent blue
-        // rect over the env-colored pixel(s) to produce the same "env + blue"
-        // appearance as the full-detail selection gradient.
-        if (!mMultiSelectionSet.isEmpty()) {
-            painter.save();
-            painter.setPen(Qt::NoPen);
-            const int roomW = qMax(1, qRound(static_cast<double>(mRoomWidth)));
-            const int roomH = qMax(1, qRound(static_cast<double>(mRoomHeight)));
-            // Semi-transparent blue matches the blue endpoint of the full-detail
-            // QLinearGradient (Qt::blue at alpha ~180 gives an equivalent look
-            // over the env base colour that was already written into lodImage).
-            const QColor selectionTint(0, 0, 255, 180);
-            for (const int selId : std::as_const(mMultiSelectionSet)) {
-                TRoom* room = mpMap->mpRoomDB->getRoom(selId);
-                if (!room || room->z() != zLevel) {
-                    continue;
-                }
-                const int rx = qRound(room->x() * mRoomWidth + mRX);
-                const int ry = qRound(room->y() * -1.0 * mRoomHeight + mRY);
-                const QRect selRect(rx - roomW / 2, ry - roomH / 2, roomW, roomH);
-                if (selRect.intersects(QRect(0, 0, static_cast<int>(widgetWidth), static_cast<int>(widgetHeight)))) {
-                    painter.fillRect(selRect, selectionTint);
-                }
-            }
-            painter.restore();
-        }
-
-        const qreal timeBlit = timer.nsecsElapsed() / 1000000.0;
-
-        if (qEnvironmentVariableIsSet("MUDLET_PROFILE_MAP") && profileOutput) {
-            // Build the profiling string and return it to paintEvent so it can
-            // be printed AFTER phase6Time is captured.  Calling qDebug() here
-            // would inflate phase6 time by 100-200 ms on Windows debug builds.
-            const char* lodPathName = (mRoomWidth < 1.0f) ? "LOD sub-pixel" : "LOD pixel";
-            QDebug dbg(profileOutput);
-            dbg.noquote().nospace() << "drawGridModeRooms (" << lodPathName << ") timing (ms):"
-                                    << " total:" << (timeIndex + timeCollect + timeBlit) << " indexSetup:" << timeIndex << " collect+pixelWrite:" << timeCollect << " imageBlit:" << timeBlit
-                                    << " visibleRooms:" << roomCount << " viewportCells:" << static_cast<qint64>(maxX - minX + 1) * (maxY - minY + 1) << " viewportBounds: x[" << minX << "," << maxX
-                                    << "] y[" << minY << "," << maxY << "]"
-                                    << " roomSizePx:" << mRoomWidth << " gridIndexRooms:" << gridIndex.size() << " gridIndexBytes:" << gridIndex.memoryEstimateBytes();
-        }
-
-        // Handle double-click speedwalk via grid-cell lookup.  The pixel-level
-        // hit test inside drawRoom() is never reached in the LOD path, so we
-        // must resolve the clicked cell here before returning.
-        if (mPick) {
-            const int clickWorldX = qRound(static_cast<double>(mPHighlight.x() - mRX) / mRoomWidth);
-            const int clickWorldY = qRound(static_cast<double>(mRY - mPHighlight.y()) / mRoomHeight);
-            const QSet<int>& clickedRooms = gridIndex.roomsAt(zLevel, clickWorldX, clickWorldY);
-            if (!clickedRooms.isEmpty()) {
-                const int clickedRoomId = *clickedRooms.constBegin();
-                mPick = false;
-                if (mStartSpeedWalk) {
-                    mStartSpeedWalk = false;
-                    initiateSpeedWalk(playerRoomId, clickedRoomId);
-                }
-            } else {
-                mPick = false;
-            }
-        }
-        return;
+    if (after.mShiftMode != before.mShiftMode) {
+        mShiftMode = after.mShiftMode;
     }
-
-    // Full detail path (mRoomWidth >= cLodPixelThreshold): collect rooms grouped
-    // by environment color, then batch-draw using QPainterPath per color group.
-    QHash<int, QList<QRectF>> roomsByEnvironment;
-    QHash<int, QList<QRectF>> collisionRoomsByEnvironment;
-    QList<QPair<TRoom*, QRectF>> decorationRooms;
-    QList<QPair<TRoom*, QRectF>> selectedRooms;
-    QList<QPair<TRoom*, QRectF>> highlightedRooms;
-    QList<QPair<TRoom*, QPointF>> verticalExitRooms;
-
-    const bool showVnums = mShowRoomID && areRoomIdsLegible && mMaxRoomIdDigits > 0;
-
-    for (const auto& [roomId, roomCollision] : gridIndex.roomsInViewportWithCollisions(zLevel, minX, maxX, minY, maxY)) {
-        TRoom* room = mpMap->mpRoomDB->getRoom(roomId);
-        if (!room || room->isHidden()) {
-            continue;
-        }
-
-        const float rx = room->x() * mRoomWidth + mRX;
-        const float ry = room->y() * -1 * mRoomHeight + mRY;
-
-        // Belt-and-suspenders: the viewport bounds above should make this pass
-        // always, but guard against floating-point edge cases at the margin.
-        if (rx < -mRoomWidth || ry < -mRoomHeight || rx > widgetWidth + mRoomWidth || ry > widgetHeight + mRoomHeight) {
-            continue;
-        }
-
-        ++roomCount;
-
-        if (playerRoomId == roomId) {
-            isPlayerRoomVisible = true;
-            playerRoomOnWidgetCoordinates = QPointF(static_cast<qreal>(rx), static_cast<qreal>(ry));
-            continue;
-        }
-
-        const QRectF roomRect(rx - mRoomWidth / 2.0, ry - mRoomHeight / 2.0, mRoomWidth, mRoomHeight);
-
-        if (mMultiSelectionSet.contains(roomId)) {
-            selectedRooms.append({room, roomRect});
-        } else if (roomCollision) {
-            collisionRoomsByEnvironment[room->environment].append(roomRect);
-        } else {
-            roomsByEnvironment[room->environment].append(roomRect);
-        }
-
-        if (room->highlight) {
-            highlightedRooms.append({room, roomRect});
-        }
-
-        if (showVnums || !room->mSymbol.isEmpty()) {
-            decorationRooms.append({room, roomRect});
-        }
-
-        if (room->getUp() > 0 || room->exitStubs.contains(DIR_UP) || room->getDown() > 0 || room->exitStubs.contains(DIR_DOWN) || room->getIn() > 0 || room->exitStubs.contains(DIR_IN)
-            || room->getOut() > 0 || room->exitStubs.contains(DIR_OUT)) {
-            verticalExitRooms.append({room, QPointF(rx, ry)});
-        }
+    if (after.mRoomID != before.mRoomID) {
+        mRoomID = after.mRoomID;
     }
-
-    const qreal timeCollect = timer.nsecsElapsed() / 1000000.0;
-    timer.start();
-
-    // Batch draw normal rooms by environment color.
-    painter.setPen(Qt::NoPen);
-    for (auto it = roomsByEnvironment.constBegin(); it != roomsByEnvironment.constEnd(); ++it) {
-        QPainterPath path;
-        for (const auto& rect : it.value()) {
-            if (mBubbleMode) {
-                path.addEllipse(rect);
-            } else {
-                path.addRect(rect);
-            }
-        }
-        painter.fillPath(path, envToColor(it.key()));
+    if (after.mAreaID != before.mAreaID) {
+        mAreaID = after.mAreaID;
     }
-
-    const qreal timeBatchDraw = timer.nsecsElapsed() / 1000000.0;
-    timer.start();
-
-    // Batch draw collision rooms with a colored border.
-    const int collisionBorderWidth = qMax(1, static_cast<int>(mRoomWidth / 50.0));
-    for (auto it = collisionRoomsByEnvironment.constBegin(); it != collisionRoomsByEnvironment.constEnd(); ++it) {
-        const QColor color = envToColor(it.key());
-        QPainterPath fillPath;
-        for (const auto& rect : it.value()) {
-            if (mBubbleMode) {
-                fillPath.addEllipse(rect);
-            } else {
-                fillPath.addRect(rect);
-            }
-        }
-        painter.fillPath(fillPath, color);
-
-        QPen collisionPen(mpHost->mRoomCollisionBorderColor, collisionBorderWidth);
-        painter.setPen(collisionPen);
-        for (const auto& rect : it.value()) {
-            if (mBubbleMode) {
-                painter.drawEllipse(rect);
-            } else {
-                painter.drawRect(rect);
-            }
-        }
+    if (after.mLastViewedAreaID != before.mLastViewedAreaID) {
+        mLastViewedAreaID = after.mLastViewedAreaID;
     }
-
-    // Draw selected rooms with a gradient fill so they stand out in editing mode.
-    // This mirrors the selection highlight in drawRoom() which is never called for
-    // grid mode rooms.
-    painter.setPen(Qt::NoPen);
-    for (const auto& [room, roomRect] : selectedRooms) {
-        const QColor roomColor = envToColor(room->environment);
-        QLinearGradient selectionBg(roomRect.topLeft(), roomRect.bottomRight());
-        selectionBg.setColorAt(0.2, roomColor);
-        selectionBg.setColorAt(1, Qt::blue);
-        painter.setBrush(selectionBg);
-        if (mBubbleMode) {
-            painter.drawEllipse(roomRect);
-        } else {
-            painter.drawRect(roomRect);
-        }
+    if (after.mMapCenterX != before.mMapCenterX) {
+        mMapCenterX = after.mMapCenterX;
     }
-
-    // Draw custom per-room radial highlights (pRoom->highlight flag).
-    for (const auto& [room, roomRect] : highlightedRooms) {
-        const float roomRadius = (room->highlightRadius * mRoomWidth) / 2.0f;
-        const QPointF roomCenter = roomRect.center();
-        QRadialGradient gradient(roomCenter, roomRadius);
-        gradient.setColorAt(0.85f, room->highlightColor);
-        gradient.setColorAt(0.0f, room->highlightColor2);
-        const QPen transparentPen(Qt::transparent);
-        QPainterPath diameterPath;
-        painter.setBrush(gradient);
-        painter.setPen(transparentPen);
-        diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
-        painter.drawPath(diameterPath);
+    if (after.mMapCenterY != before.mMapCenterY) {
+        mMapCenterY = after.mMapCenterY;
     }
-
-    // Draw vertical exits (up/down/in/out) for grid mode rooms, mirroring drawRoom().
-    if (!verticalExitRooms.isEmpty()) {
-        constexpr float allInsideTipOffsetFactor = 1 / 20.0f;
-        constexpr float upDownXOrYFactor = 1 / 3.1f;
-        constexpr float inOuterXFactor = 1 / 4.5f;
-        constexpr float inUpDownYFactor = 1 / 7.0f;
-        constexpr float outOuterXFactor = 1 / 2.2f;
-        constexpr float outUpDownYFactor = 1 / 5.5f;
-        constexpr float outInterXFactor = 1 / 3.5f;
-        painter.save();
-        for (const auto& [room, center] : verticalExitRooms) {
-            const float rx = center.x();
-            const float ry = center.y();
-            const QColor roomColor = envToColor(room->environment);
-            const QColor lc = (roomColor.lightness() > 127) ? QColorConstants::Black : QColorConstants::White;
-            QPen exitPen;
-            exitPen.setColor(lc);
-            exitPen.setCosmetic(mMapperUseAntiAlias);
-            exitPen.setCapStyle(Qt::RoundCap);
-            exitPen.setJoinStyle(Qt::RoundJoin);
-            QPen innerPen = exitPen;
-            QBrush innerBrush = painter.brush();
-            innerBrush.setStyle(Qt::NoBrush);
-            // Draws one or two polygons with door colouring, matching drawRoom().
-            auto drawExitPoly = [&](const QList<QPolygonF>& polys, int doorVal, bool hasExit) {
-                bool isDoor = true;
-                QBrush brush;
-                switch (doorVal) {
-                case 1:
-                    brush.setColor(mOpenDoorColor);
-                    innerPen.setColor(mOpenDoorColor);
-                    break;
-                case 2:
-                    brush.setColor(mClosedDoorColor);
-                    innerPen.setColor(mClosedDoorColor);
-                    break;
-                case 3:
-                    brush.setColor(mLockedDoorColor);
-                    innerPen.setColor(mLockedDoorColor);
-                    break;
-                default:
-                    brush.setColor(lc);
-                    isDoor = false;
-                    break;
-                }
-                if (hasExit) {
-                    exitPen.setWidthF(mRoomWidth * rSize * 0.050f);
-                    innerPen.setWidthF(mRoomWidth * rSize * 0.025f);
-                    brush.setStyle(Qt::Dense4Pattern);
-                } else {
-                    exitPen.setWidthF(mRoomWidth * rSize * 0.025f);
-                    innerPen.setWidthF(mRoomWidth * rSize * 0.0125f);
-                    brush.setStyle(Qt::DiagCrossPattern);
-                }
-                painter.setPen(exitPen);
-                painter.setBrush(brush);
-                for (const auto& poly : polys) {
-                    painter.drawPolygon(poly);
-                }
-                if (isDoor) {
-                    painter.setPen(innerPen);
-                    painter.setBrush(innerBrush);
-                    for (const auto& poly : polys) {
-                        painter.drawPolygon(poly);
-                    }
-                }
-            };
-
-            if (room->getUp() > 0 || room->exitStubs.contains(DIR_UP)) {
-                QPolygonF poly;
-                poly << QPointF(rx, ry + (mRoomHeight * rSize * allInsideTipOffsetFactor)) << QPointF(rx - (mRoomWidth * rSize * upDownXOrYFactor), ry + (mRoomHeight * rSize * upDownXOrYFactor))
-                     << QPointF(rx + (mRoomWidth * rSize * upDownXOrYFactor), ry + (mRoomHeight * rSize * upDownXOrYFactor));
-                drawExitPoly({poly}, room->doors.value(key_up), room->getUp() > 0);
-            }
-            if (room->getDown() > 0 || room->exitStubs.contains(DIR_DOWN)) {
-                QPolygonF poly;
-                poly << QPointF(rx, ry - (mRoomHeight * rSize * allInsideTipOffsetFactor)) << QPointF(rx - (mRoomWidth * rSize * upDownXOrYFactor), ry - (mRoomHeight * rSize * upDownXOrYFactor))
-                     << QPointF(rx + (mRoomWidth * rSize * upDownXOrYFactor), ry - (mRoomHeight * rSize * upDownXOrYFactor));
-                drawExitPoly({poly}, room->doors.value(key_down), room->getDown() > 0);
-            }
-            if (room->getIn() > 0 || room->exitStubs.contains(DIR_IN)) {
-                QPolygonF left, right;
-                left << QPointF(rx - (mRoomWidth * rSize * allInsideTipOffsetFactor), ry) << QPointF(rx - (mRoomWidth * rSize * inOuterXFactor), ry + (mRoomHeight * rSize * inUpDownYFactor))
-                     << QPointF(rx - (mRoomWidth * rSize * inOuterXFactor), ry - (mRoomHeight * rSize * inUpDownYFactor));
-                right << QPointF(rx + (mRoomWidth * rSize * allInsideTipOffsetFactor), ry) << QPointF(rx + (mRoomWidth * rSize * inOuterXFactor), ry + (mRoomHeight * rSize * inUpDownYFactor))
-                      << QPointF(rx + (mRoomWidth * rSize * inOuterXFactor), ry - (mRoomHeight * rSize * inUpDownYFactor));
-                drawExitPoly({left, right}, room->doors.value(key_in), room->getIn() > 0);
-            }
-            if (room->getOut() > 0 || room->exitStubs.contains(DIR_OUT)) {
-                QPolygonF left, right;
-                left << QPointF(rx - (mRoomWidth * rSize * outOuterXFactor), ry) << QPointF(rx - (mRoomWidth * rSize * outInterXFactor), ry + (mRoomHeight * rSize * outUpDownYFactor))
-                     << QPointF(rx - (mRoomWidth * rSize * outInterXFactor), ry - (mRoomHeight * rSize * outUpDownYFactor));
-                right << QPointF(rx + (mRoomWidth * rSize * outOuterXFactor), ry) << QPointF(rx + (mRoomWidth * rSize * outInterXFactor), ry + (mRoomHeight * rSize * outUpDownYFactor))
-                      << QPointF(rx + (mRoomWidth * rSize * outInterXFactor), ry - (mRoomHeight * rSize * outUpDownYFactor));
-                drawExitPoly({left, right}, room->doors.value(key_out), room->getOut() > 0);
-            }
-        }
-        painter.restore();
+    if (after.mMapCenterZ != before.mMapCenterZ) {
+        mMapCenterZ = after.mMapCenterZ;
     }
-
-    const qreal timeCollision = timer.nsecsElapsed() / 1000000.0;
-    timer.start();
-    // Decoration pass: symbols and V-numbers for rooms that need them.
-    // Runs over the pre-filtered decoration list built during the collect pass,
-    // so no second viewport scan is needed.
-    for (const auto& entry : decorationRooms) {
-        TRoom* room = entry.first;
-        const QRectF& roomRect = entry.second;
-
-        if (!showVnums && !room->mSymbol.isEmpty()) {
-            const QColor roomColor = envToColor(room->environment);
-            QColor symbolColor;
-            if (room->mSymbolColor.isValid()) {
-                symbolColor = room->mSymbolColor;
-            } else {
-                symbolColor = (roomColor.lightness() > 127) ? Qt::black : Qt::white;
-            }
-            const QString pixmapKey = qsl("%1_%2").arg(symbolColor.name(), room->mSymbol);
-            if (!mSymbolPixmapCache.contains(pixmapKey)) {
-                addSymbolToPixmapCache(pixmapKey, room->mSymbol, symbolColor, true);
-            }
-            if (const QPixmap* pix = mSymbolPixmapCache.object(pixmapKey); pix && !pix->isNull()) {
-                painter.save();
-                painter.setBackgroundMode(Qt::TransparentMode);
-                painter.drawPixmap(QPoint(qRound(roomRect.left() + (roomRect.width() - pix->width()) / 2.0), qRound(roomRect.top() + (roomRect.height() - pix->height()) / 2.0)), *pix);
-                painter.restore();
-            }
-        }
-
-        if (showVnums) {
-            const QColor roomColor = envToColor(room->environment);
-            const QColor textColor = (roomColor.lightness() > 127) ? QColor(Qt::black) : QColor(Qt::white);
-            painter.save();
-            painter.setPen(QPen(textColor));
-            painter.setFont(roomVNumFont);
-            painter.drawText(roomRect, Qt::AlignCenter, QString::number(room->getId()));
-            painter.restore();
-        }
+    if (after.xyzoom != before.xyzoom) {
+        xyzoom = after.xyzoom;
     }
-
-    const qreal timeDecor = timer.nsecsElapsed() / 1000000.0;
-
-    // Handle mPick (double-click speedwalk) for grid mode (full-detail path).
-    // Use rounding to snap the click to the nearest room centre — floor() would
-    // miss rooms clicked in the left or bottom half of their cell.
-    if (mPick) {
-        const int clickWorldX = qRound(static_cast<double>(mPHighlight.x() - mRX) / mRoomWidth);
-        const int clickWorldY = qRound(static_cast<double>(mRY - mPHighlight.y()) / mRoomHeight);
-        const QSet<int>& clickedRooms = gridIndex.roomsAt(zLevel, clickWorldX, clickWorldY);
-        if (!clickedRooms.isEmpty()) {
-            const int clickedRoomId = *clickedRooms.constBegin();
-            mPick = false;
-            if (mStartSpeedWalk) {
-                mStartSpeedWalk = false;
-                initiateSpeedWalk(playerRoomId, clickedRoomId);
-            }
-        } else {
-            mPick = false;
-        }
+    if (after.xspan != before.xspan) {
+        xspan = after.xspan;
     }
-
-    if (qEnvironmentVariableIsSet("MUDLET_PROFILE_MAP") && profileOutput) {
-        // Build the profiling string and return it to paintEvent so it can
-        // be printed AFTER phase6Time is captured.  Calling qDebug() here
-        // would inflate phase6 time by 100-200 ms on Windows debug builds.
-        QDebug dbg(profileOutput);
-        dbg.noquote().nospace() << "drawGridModeRooms timing (ms):"
-                                << " total:" << (timeIndex + timeCollect + timeBatchDraw + timeCollision + timeDecor) << " indexSetup:" << timeIndex << " collect(gridIndex):" << timeCollect
-                                << " batchDraw:" << timeBatchDraw << " collision:" << timeCollision << " decor:" << timeDecor << " visibleRooms:" << roomCount
-                                << " viewportCells:" << static_cast<qint64>(maxX - minX + 1) * (maxY - minY + 1) << " viewportBounds: x[" << minX << "," << maxX << "] y[" << minY << "," << maxY << "]"
-                                << " gridIndexRooms:" << gridIndex.size() << " gridIndexBytes:" << gridIndex.memoryEstimateBytes();
+    if (after.yspan != before.yspan) {
+        yspan = after.yspan;
+    }
+    if (after.mRoomWidth != before.mRoomWidth) {
+        mRoomWidth = after.mRoomWidth;
+    }
+    if (after.mRoomHeight != before.mRoomHeight) {
+        mRoomHeight = after.mRoomHeight;
+    }
+    if (after.mPrevRoomWidth != before.mPrevRoomWidth) {
+        mPrevRoomWidth = after.mPrevRoomWidth;
+    }
+    if (after.mPrevRoomHeight != before.mPrevRoomHeight) {
+        mPrevRoomHeight = after.mPrevRoomHeight;
+    }
+    if (after.mRX != before.mRX) {
+        mRX = after.mRX;
+    }
+    if (after.mRY != before.mRY) {
+        mRY = after.mRY;
+    }
+    if (after.mMaxRoomIdDigits != before.mMaxRoomIdDigits) {
+        mMaxRoomIdDigits = after.mMaxRoomIdDigits;
+    }
+    if (after.mCachedRoomIdDigitsVersion != before.mCachedRoomIdDigitsVersion) {
+        mCachedRoomIdDigitsVersion = after.mCachedRoomIdDigitsVersion;
+    }
+    if (after.mPick != before.mPick) {
+        mPick = after.mPick;
+    }
+    if (after.mStartSpeedWalk != before.mStartSpeedWalk) {
+        mStartSpeedWalk = after.mStartSpeedWalk;
     }
 }
 
-// Revised to use a QCache to hold QPixmap * to generated images for room symbols
+void T2DMap::applyPaintResult(const TMapPainter::View& before, const TMapPainter::PaintResult& result)
+{
+    const TMapPainter::View& after = result.view;
+    applyPaintedView(before, after);
+    if (result.selectionPruned) {
+        mMultiSelectionSet = after.mMultiSelectionSet;
+        mMultiSelectionHighlightRoomId = after.mMultiSelectionHighlightRoomId;
+        // The listing is now stale; it gets rebuilt by updateSelectionWidget() on
+        // the next mouse interaction with what, if anything, is still selected:
+        hideSelectionWidget();
+    }
+    mLodExitIndexRoomsHandedOver = result.lodExitIndexRoomsHandedOver;
+}
+
+void T2DMap::takePainterResults()
+{
+    mPick = mPainter.view().mPick;
+    mStartSpeedWalk = mPainter.view().mStartSpeedWalk;
+    mLodExitIndexRoomsHandedOver = mPainter.lodExitIndexRoomsHandedOver();
+}
+
+void T2DMap::addSymbolToPixmapCache(const QString key, const QString text, const QColor symbolColor, const bool gridMode)
+{
+    mPainter.setView(painterView());
+    mPainter.addSymbolToPixmapCache(key, text, symbolColor, gridMode);
+}
+
+void T2DMap::drawScaledLabel(QPainter& painter, const QPointF& position, TMapLabel& label, int labelKey, const QRectF& paintRect)
+{
+    mPainter.setView(painterView());
+    mPainter.drawScaledLabel(painter, position, label, labelKey, paintRect);
+}
+
+void T2DMap::startPendingSpeedWalk()
+{
+    if (const auto pendingSpeedWalk = mPainter.takePendingSpeedWalk()) {
+        initiateSpeedWalk(pendingSpeedWalk->first, pendingSpeedWalk->second);
+    }
+}
+
 void T2DMap::paintEvent(QPaintEvent* e)
 {
     Q_UNUSED(e)
     if (!mpMap || mpHost.isNull()) {
         return;
     }
-    QElapsedTimer renderTimer;
-    renderTimer.start();
-
-    // Single phase timer restarted at each phase boundary.
-    QElapsedTimer phaseTimer;
-    phaseTimer.start();
-    qreal phase1Time = 0, phase2Time = 0, phase3Time = 0, phase4Time = 0, phase5Time = 0, phase6Time = 0, phase7Time = 0;
 
     QPainter painter(this);
     if (!painter.isActive()) {
         return;
     }
 
-    // This is needed so that clicking on an area exit can instigate a
-    // speed-walk to the room in the linked to area...
-    QMap<int, QPointF> areaExitsMap;
-
-    const float widgetWidth = width();
-    const float widgetHeight = height();
-
-    if (widgetWidth < 10 || widgetHeight < 10) {
-        return;
+    const TMapPainter::View view = painterView();
+    TMapPainter::View settled = view;
+    TMapPainter::PaintResult result;
+    // getMapZoom(), setMapZoom() and the like read this widget's area, which the info box's Lua must find already moved
+    mPainter.paintView(painter, view, result, [this, &settled](const TMapPainter::View& frame) {
+        applyPaintedView(settled, frame);
+        settled = frame;
+    });
+    applyPaintResult(settled, result);
+    if (result.pendingSpeedWalk) {
+        initiateSpeedWalk(result.pendingSpeedWalk->first, result.pendingSpeedWalk->second);
     }
 
-    static bool oldBubbleMode = false;
-    if (oldBubbleMode != mBubbleMode) {
-        // If the round/square room selection has changed this will invalidate
-        // all the previously generated pixmaps:
-        flushSymbolPixmapCache();
-        oldBubbleMode = mBubbleMode;
-    }
+    // The area combobox belongs to the main mapper, which a secondary view may exist without
+    if (!mIsSecondaryView && mpMap->mapper()) {
+        QFont _f = mpMap->mapper()->comboBox_showArea->font();
+        if (mAreaWidgetValid) {
+            if (mAreaID == -1                       // the map being shown is the "default" area
+                && !mpMap->getDefaultAreaShown()) { // the area widget is not showing the "default" area
 
-    mSymbolFontSize = 1;
-    mMapSymbolFont = mpMap->mMapSymbolFont;
-    mMapSymbolFont.setBold(false);
-    mMapSymbolFont.setItalic(false);
-    mMapSymbolFont.setUnderline(false);
-    mMapSymbolFont.setOverline(false);
-    mMapSymbolFont.setStrikeOut(false);
-
-    // the room name's font defaults to the symbol's
-    // but may be overridden
-    auto mapNameFont = mpMap->mMapSymbolFont;
-    const QString fontName = mpMap->mUserData.value(ROOM_UI_NAMEFONT);
-    if (!fontName.isEmpty()) {
-        QFont font;
-        if (font.fromString(fontName)) {
-            mapNameFont = font;
-        }
-    }
-    mapNameFont.setBold(false);
-    mapNameFont.setItalic(false);
-    mapNameFont.setUnderline(false);
-    mapNameFont.setOverline(false);
-    mapNameFont.setStrikeOut(false);
-
-    QList<int> exitList;
-    QList<int> oneWayExits;
-    int playerRoomId = mpMap->mRoomIdHash.value(mpMap->mProfileName);
-    TRoom* pPlayerRoom = mpMap->mpRoomDB->getRoom(playerRoomId);
-
-    // try and set the player to a room if we don't have a known location
-    if (!pPlayerRoom && !mpMap->mpRoomDB->isEmpty()) {
-        int randomRoom = mpMap->mpRoomDB->getRoomIDList().constFirst();
-        pPlayerRoom = mpMap->mpRoomDB->getRoom(randomRoom);
-        playerRoomId = pPlayerRoom->getId();
-    }
-    // no rooms at all, let's show an information message instead
-    if (!pPlayerRoom) {
-        if (mSuppressEmptyStateMessage) {
-            return;
-        }
-        painter.save();
-        painter.fillRect(0, 0, width(), height(), Qt::transparent);
-        auto font(painter.font());
-        font.setPointSize(10);
-        painter.setFont(font);
-
-        QString message;
-        if (mpMap->mpRoomDB) {
-            if (mpMap->mpRoomDB->isEmpty()) {
-                message = tr("No rooms in the map - load another one, or start mapping from scratch to begin.");
-            } else {
-                message = tr("You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.", nullptr, mpMap->mpRoomDB->size());
+                mAreaWidgetValid = false; // So the widget CANNOT indicate the correct area
+                // Set the area widget to indicate the area widget is NOT
+                // showing valid text - so make it italic and crossed out
+                _f.setItalic(true);
+                _f.setUnderline(true);
+                _f.setStrikeOut(true);
+                _f.setOverline(true);
             }
         } else {
-            message = tr("You do not have a map yet - load one, or start mapping from scratch to begin.");
-        }
-
-        painter.drawText(0, 0, widgetWidth, widgetHeight, Qt::AlignCenter | Qt::TextWordWrap, message);
-        painter.restore();
-        return;
-    }
-
-    phase1Time = phaseTimer.nsecsElapsed() / 1000000.0;
-    phaseTimer.restart();
-
-    // This is only a safety check to avoid a probably impossible condition, we
-    // have already established that pPlayerRoom is valid so for it to NOT be
-    // in a valid area is unlikely:
-    if (Q_UNLIKELY(!mpMap->mpRoomDB->getArea(pPlayerRoom->getArea()))) {
-        return;
-    }
-
-    if (mRoomID != playerRoomId && mShiftMode) {
-        // Reset the flag if it is set but current player room (playerRoomId)
-        // is not the same as was last used for that (mRoomID):
-        mShiftMode = false;
-    }
-
-    // We declare this here but only populate it if needed below and then send
-    // it at the end of the paintEvent:
-    TEvent areaViewedChangedEvent{};
-
-    // Secondary views don't follow the player - they maintain their own independent view
-    // Track if we're auto-centering on the player (vs user manually panning)
-    const bool centeringOnPlayer = !mIsSecondaryView && ((!mPick && !mShiftMode) || mpMap->mNewMove);
-
-    if (centeringOnPlayer) {
-        mShiftMode = true;
-        // that's of interest only here because the map editor is here ->
-        // map might not be updated, thus I force a map update on centerview()
-        // with mNewRoom
-        mpMap->mNewMove = false;
-
-        mRoomID = playerRoomId;
-        mAreaID = pPlayerRoom->getArea();
-        if (mLastViewedAreaID != mAreaID) {
-            areaViewedChangedEvent.mArgumentList.append(qsl("sysMapAreaChanged"));
-            areaViewedChangedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-            areaViewedChangedEvent.mArgumentList.append(QString::number(mAreaID));
-            areaViewedChangedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-            areaViewedChangedEvent.mArgumentList.append(QString::number(mLastViewedAreaID));
-            areaViewedChangedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-            mLastViewedAreaID = mAreaID;
-        }
-
-        mMapCenterX = pPlayerRoom->x();
-        mMapCenterY = pPlayerRoom->y() * -1;
-        mMapCenterZ = pPlayerRoom->z();
-    }
-
-    TArea* pDrawnArea = mpMap->mpRoomDB->getArea(mAreaID);
-    if (!pDrawnArea) {
-        return;
-    }
-
-    phase2Time = phaseTimer.nsecsElapsed() / 1000000.0;
-    phaseTimer.restart();
-
-    xyzoom = pDrawnArea->get2DMapZoom();
-    if (widgetWidth > widgetHeight) {
-        xspan = xyzoom * (widgetWidth / widgetHeight);
-        yspan = xyzoom;
-    } else {
-        xspan = xyzoom;
-        yspan = xyzoom * (widgetHeight / widgetWidth);
-    }
-
-    // Center map on area when it fits entirely in viewport, but only when
-    // following player movement - not during manual panning or editing.
-    // Off by default; opt in via the mapCenterSmallAreas key in Mudlet.ini.
-    if (mpHost->mMapperCenterSmallAreas && centeringOnPlayer && !mRoomBeingMoved && !mMultiSelection) {
-        const int zLevel = mMapCenterZ;
-
-        // Get area bounds for current Z level (use overall bounds as fallback)
-        const qreal areaMinX = pDrawnArea->xminForZ.value(zLevel, pDrawnArea->min_x);
-        const qreal areaMaxX = pDrawnArea->xmaxForZ.value(zLevel, pDrawnArea->max_x);
-        // Y is inverted in map coordinates
-        const qreal areaMinY = -pDrawnArea->ymaxForZ.value(zLevel, pDrawnArea->max_y);
-        const qreal areaMaxY = -pDrawnArea->yminForZ.value(zLevel, pDrawnArea->min_y);
-
-        const qreal areaWidth = areaMaxX - areaMinX;
-        const qreal areaHeight = areaMaxY - areaMinY;
-
-        if (areaWidth <= xspan && areaHeight <= yspan) {
-            mMapCenterX = (areaMinX + areaMaxX) / 2.0;
-            mMapCenterY = -((areaMinY + areaMaxY) / 2.0);
-        }
-    }
-
-    mRoomWidth = widgetWidth / xspan;
-    mRoomHeight = widgetHeight / yspan;
-
-    if (!qFuzzyCompare(1.0f + mPrevRoomWidth, 1.0f + mRoomWidth) || !qFuzzyCompare(1.0f + mPrevRoomHeight, 1.0f + mRoomHeight)) {
-        flushSymbolPixmapCache();
-        flushTextLabelPixmapCache();
-        mPrevRoomWidth = mRoomWidth;
-        mPrevRoomHeight = mRoomHeight;
-    }
-
-    mRX = qRound(mRoomWidth * ((xspan / 2.0) - mMapCenterX));
-    mRY = qRound(mRoomHeight * ((yspan / 2.0) - mMapCenterY));
-    QFont roomVNumFont = mpMap->mMapSymbolFont;
-
-    bool isFontBigEnoughToShowRoomVnum = false;
-    if (mShowRoomID) {
-        /*
-         * If we are to show the room Id numbers - find out the number of digits
-         * that we will need to use; actually, knowing the digit count is also
-         * useful for the room selection widget so perform this check EVERY time.
-         * TODO: Eventually move this check to the TArea class and just redo it
-         * when areas' room content changes.
-         */
-        int maxUsedRoomId = 0;
-        QSetIterator<int> itRoomId(pDrawnArea->getAreaRooms());
-        while (itRoomId.hasNext()) {
-            maxUsedRoomId = qMax(maxUsedRoomId, itRoomId.next());
-        }
-        mMaxRoomIdDigits = static_cast<quint8>(QString::number(maxUsedRoomId).length());
-
-        QRectF roomTestRect;
-        if (pDrawnArea->gridMode) {
-            roomTestRect = QRectF(0, 0, static_cast<qreal>(mRoomWidth), static_cast<qreal>(mRoomHeight));
-        } else {
-            roomTestRect = QRectF(0, 0, static_cast<qreal>(mRoomWidth) * rSize, static_cast<qreal>(mRoomHeight) * rSize);
-        }
-        static quint8 const roomVnumMargin = 10;
-        roomVNumFont.setBold(true);
-
-        // QFont::PreferOutline will help to select a font that will scale to any
-        // size - which is important for good rendering over a range of sizes
-        // QFont::PreferAntialias will look better - except perhaps at very small
-        // sizes (but we prevent that by checking in the method call afterwards):
-        roomVNumFont.setStyleStrategy(QFont::StyleStrategy(QFont::PreferNoShaping | QFont::PreferAntialias | QFont::PreferOutline));
-
-        isFontBigEnoughToShowRoomVnum = sizeFontToFitTextInRect(roomVNumFont, roomTestRect, qsl("8").repeated(mMaxRoomIdDigits), roomVnumMargin);
-    }
-
-    bool showRoomNames = mpMap->getRoomNamesShown() && !pDrawnArea->gridMode;
-    if (showRoomNames) {
-        /*
-         * Like above, except that we use the room height as the font size.
-         */
-        mapNameFont.setBold(true);
-
-        mapNameFont.setStyleStrategy(QFont::StyleStrategy(QFont::PreferNoShaping | QFont::PreferAntialias | QFont::PreferOutline));
-
-        const double sizeAdjust = 0;
-        mapNameFont.setPointSizeF(static_cast<qreal>(mRoomWidth) * rSize * pow(1.1, sizeAdjust) / 2.0);
-        showRoomNames = (mapNameFont.pointSizeF() > 3.0);
-    }
-
-    const int zLevel = mMapCenterZ;
-
-    const float exitWidth = 1 / eSize * mRoomWidth * rSize;
-
-    painter.fillRect(0, 0, width(), height(), mpHost->mBgColor_2);
-
-    auto pen = painter.pen();
-    pen.setColor(mpHost->mFgColor_2);
-    pen.setWidthF(exitWidth);
-    painter.setRenderHint(QPainter::Antialiasing, mMapperUseAntiAlias);
-    painter.setPen(pen);
-
-    if (mShowGrid && mRoomWidth > 0.0f && mRoomHeight > 0.0f) {
-        painter.save();
-
-        QColor gridColor = mpHost->mMapGridColor;
-
-        QPen gridPen(gridColor);
-        const qreal gridWidth = static_cast<qreal>(mpHost->mMapGridLineSize) * mRoomWidth / 50.0;
-        gridPen.setWidthF(gridWidth);
-        gridPen.setCosmetic(mMapperUseAntiAlias);
-        painter.setPen(gridPen);
-
-        const qreal visibleMinX = mMapCenterX - xspan / 2.0;
-        const qreal visibleMaxX = mMapCenterX + xspan / 2.0;
-        const qreal visibleMinY = -((yspan / 2.0) + mMapCenterY);
-        const qreal visibleMaxY = (yspan / 2.0) - mMapCenterY;
-
-        const int startX = static_cast<int>(std::floor(visibleMinX));
-        const int endX = static_cast<int>(std::ceil(visibleMaxX));
-        for (int gridX = startX; gridX <= endX; ++gridX) {
-            const qreal widgetX = static_cast<qreal>(gridX) * static_cast<qreal>(mRoomWidth) + static_cast<qreal>(mRX);
-            painter.drawLine(QPointF(widgetX, 0.0), QPointF(widgetX, static_cast<qreal>(widgetHeight)));
-        }
-
-        const int startY = static_cast<int>(std::floor(visibleMinY));
-        const int endY = static_cast<int>(std::ceil(visibleMaxY));
-        for (int gridY = startY; gridY <= endY; ++gridY) {
-            const qreal widgetY = static_cast<qreal>(gridY) * -static_cast<qreal>(mRoomHeight) + static_cast<qreal>(mRY);
-            painter.drawLine(QPointF(0.0, widgetY), QPointF(static_cast<qreal>(widgetWidth), widgetY));
-        }
-
-        painter.restore();
-    }
-
-    phase3Time = phaseTimer.nsecsElapsed() / 1000000.0;
-    phaseTimer.restart();
-
-    // Draw label sizing or group selection box
-    if (mSizeLabel) {
-        painter.fillRect(mMultiRect, QColor(250, 190, 0, 190));
-    } else {
-        painter.fillRect(mMultiRect, QColor(190, 190, 190, 60));
-    }
-
-    QPointF playerRoomOnWidgetCoordinates;
-    bool isPlayerRoomVisible = false;
-    // QPoint doesn't work here as the key as it can't be hashed...!
-    QSet<QPair<int, int>> usedRoomPositions;
-
-    if (mudlet::self()->mDrawUpperLowerLevels) {
-        // draw rooms on lower z-level - iterate only the rooms actually on that
-        // level instead of scanning every room in the area
-        const QSet<int>& lowerLevelRooms = pDrawnArea->getRoomsForZ(zLevel - 1);
-        for (const int currentAreaRoom : lowerLevelRooms) {
-            TRoom* room = mpMap->mpRoomDB->getRoom(currentAreaRoom);
-            if (!room) {
-                continue;
-            }
-
-            const float rx = room->x() * mRoomWidth + static_cast<float>(mRX);
-            const float ry = room->y() * -1 * mRoomHeight + static_cast<float>(mRY);
-            if (rx >= 0 && ry >= 0 && rx <= widgetWidth && ry <= widgetHeight) {
-                painter.save();
-                painter.setPen(Qt::NoPen);
-                painter.setBrush(mpHost->mLowerLevelColor);
-                if (mBubbleMode) {
-                    const float roomRadius = 0.5 * rSize * mRoomWidth;
-                    const QPointF roomCenter = QPointF(rx - (roomRadius * rSize * 0.5), ry + (roomRadius * rSize * 0.5));
-                    QPainterPath diameterPath;
-                    diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
-                    painter.drawPath(diameterPath);
-                } else {
-                    painter.drawRect(rx - (mRoomWidth * rSize * 0.8), ry - (mRoomHeight * rSize * 0.2), mRoomWidth * rSize, mRoomHeight * rSize);
-                }
-                painter.restore();
+            if (!(mAreaID == -1 && !mpMap->getDefaultAreaShown())) {
+                mAreaWidgetValid = true; // So the widget CAN now indicate the correct area
+                // Reset to normal
+                _f.setItalic(false);
+                _f.setUnderline(false);
+                _f.setStrikeOut(false);
+                _f.setOverline(false);
             }
         }
 
-        // draw rooms on upper z-level
-        const QSet<int>& upperLevelRooms = pDrawnArea->getRoomsForZ(zLevel + 1);
-        for (const int currentAreaRoom : upperLevelRooms) {
-            TRoom* room = mpMap->mpRoomDB->getRoom(currentAreaRoom);
-            if (!room) {
-                continue;
-            }
-
-            const float rx = room->x() * mRoomWidth + static_cast<float>(mRX);
-            const float ry = room->y() * -1 * mRoomHeight + static_cast<float>(mRY);
-            if (rx >= 0 && ry >= 0 && rx <= widgetWidth && ry <= widgetHeight) {
-                painter.save();
-                painter.setPen(QPen(mpHost->mUpperLevelColor, 1));
-                painter.setBrush(Qt::transparent);
-                if (mBubbleMode) {
-                    const float roomRadius = 0.5 * rSize * mRoomWidth;
-                    const QPointF roomCenter = QPointF(rx + (roomRadius * rSize * 0.5), ry - (roomRadius * rSize * 0.5));
-                    QPainterPath diameterPath;
-                    diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
-                    painter.drawPath(diameterPath);
-                } else {
-                    painter.drawRect(rx - (mRoomWidth * rSize * 0.2), ry - (mRoomHeight * rSize * 0.8), mRoomWidth * rSize, mRoomHeight * rSize);
-                }
-                painter.restore();
-            }
-        }
+        mpMap->mapper()->comboBox_showArea->setFont(_f);
     }
 
-    // Draw the ("background") labels that are on the bottom of the map:
-    QMutableMapIterator<int, TMapLabel> itMapLabel(pDrawnArea->mMapLabels);
-    while (itMapLabel.hasNext()) {
-        itMapLabel.next();
-        auto mapLabel = itMapLabel.value();
-        if (mapLabel.pos.z() != mMapCenterZ) {
-            continue;
-        }
-        QPointF labelPosition;
-        const int labelX = mapLabel.pos.x() * mRoomWidth + mRX;
-        const int labelY = mapLabel.pos.y() * mRoomHeight * -1 + mRY;
 
-        labelPosition.setX(labelX);
-        labelPosition.setY(labelY);
-        const int labelWidth = abs(qRound(mapLabel.size.width() * mRoomWidth));
-        const int labelHeight = abs(qRound(mapLabel.size.height() * mRoomHeight));
-        if (!((0 < labelX || 0 < labelX + labelWidth) && (widgetWidth > labelX || widgetWidth > labelX + labelWidth))) {
-            continue;
-        }
-        if (!((0 < labelY || 0 < labelY + labelHeight) && (widgetHeight > labelY || widgetHeight > labelY + labelHeight))) {
-            continue;
-        }
-
-        QRectF labelPaintRectangle = QRect(mapLabel.pos.x() * mRoomWidth + mRX, mapLabel.pos.y() * mRoomHeight * -1 + mRY, labelWidth, labelHeight);
-        if (!mapLabel.showOnTop) {
-            if (!mapLabel.noScaling) {
-                drawScaledLabel(painter, labelPosition, mapLabel, itMapLabel.key(), labelPaintRectangle);
-            } else {
-                painter.drawPixmap(labelPosition, mapLabel.pix);
-                mapLabel.clickSize = QSizeF(mapLabel.pix.width(), mapLabel.pix.height());
-            }
-            pDrawnArea->mMapLabels[itMapLabel.key()] = mapLabel;
-        }
-
-        if (mapLabel.highlight) {
-            paintLabelHighlight(painter, labelPaintRectangle, mapLabel.clickSize);
-        }
-    }
-
-    phase4Time = phaseTimer.nsecsElapsed() / 1000000.0;
-    phaseTimer.restart();
-
-    // draw room exits
-    if (!pDrawnArea->gridMode) {
-        paintRoomExits(painter, pen, exitList, oneWayExits, pDrawnArea, zLevel, exitWidth, areaExitsMap);
-    }
-
-    phase5Time = phaseTimer.nsecsElapsed() / 1000000.0;
-    phaseTimer.restart();
-
-    // Draw rooms on selected z-level - use batch rendering for grid mode
-    QElapsedTimer getRoomsTimer;
-    getRoomsTimer.start();
-    const QSet<int>& currentLevelRooms = pDrawnArea->getRoomsForZ(zLevel);
-    qreal timeGetRoomsForZ = getRoomsTimer.nsecsElapsed() / 1000000.0;
-    // getRoomsForZ print is deferred to the final profiling block below
-    // to avoid inflating phase6Time with qDebug() overhead on Windows.
-    QString gridModeProfileOutput;
-    QElapsedTimer phase6Sub;
-    phase6Sub.start();
-    painter.save(); // prevent room-drawing state from leaking into labels/info box
-    if (pDrawnArea->gridMode) {
-        // Grid mode: use spatial grid index for O(visible cells) rendering
-        drawGridModeRooms(painter,
-                          pDrawnArea,
-                          zLevel,
-                          playerRoomId,
-                          mRX,
-                          mRY,
-                          mRoomWidth,
-                          mRoomHeight,
-                          widgetWidth,
-                          widgetHeight,
-                          roomVNumFont,
-                          isPlayerRoomVisible,
-                          playerRoomOnWidgetCoordinates,
-                          isFontBigEnoughToShowRoomVnum,
-                          &gridModeProfileOutput);
-    } else {
-        // Non-grid mode: use full-featured per-room rendering
-        for (const int currentAreaRoom : currentLevelRooms) {
-            TRoom* room = mpMap->mpRoomDB->getRoom(currentAreaRoom);
-            if (!room) {
-                continue;
-            }
-
-            const float rx = room->x() * mRoomWidth + static_cast<float>(mRX);
-            const float ry = room->y() * -1 * mRoomHeight + static_cast<float>(mRY);
-            if (rx < 0 || ry < 0 || rx > widgetWidth || ry > widgetHeight) {
-                continue;
-            }
-
-            if (playerRoomId == currentAreaRoom) {
-                // We defer drawing THIS (the player's room) until the end
-                isPlayerRoomVisible = true;
-                playerRoomOnWidgetCoordinates = QPointF(static_cast<qreal>(rx), static_cast<qreal>(ry));
-            } else {
-                // Not the player's room
-                const QPair<int, int> roomPos{room->x(), room->y()};
-                const bool roomCollision = usedRoomPositions.contains(roomPos);
-                usedRoomPositions.insert(roomPos);
-                drawRoom(painter, roomVNumFont, mapNameFont, pen, room, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, rx, ry, areaExitsMap, roomCollision);
-            }
-        }
-    }
-    painter.restore(); // end of room-drawing save
-
-    const qreal timePhase6RoomsDraw = phase6Sub.nsecsElapsed() / 1000000.0;
-    phase6Sub.restart();
-
-    qreal timePhase6DrawRoom = 0.0;
-    qreal timePhase6Gradient = 0.0;
-    painter.save(); // prevent player-room drawing state from leaking into labels/info box
-    if (isPlayerRoomVisible) {
-        // In grid mode use the spatial index (detects collisions even with off-screen rooms).
-        // In non-grid mode the usedRoomPositions set was populated during the room loop above.
-        const bool roomCollision =
-                pDrawnArea->gridMode ? pDrawnArea->getGridIndex().roomsAt(zLevel, pPlayerRoom->x(), pPlayerRoom->y()).size() > 1 : usedRoomPositions.contains({pPlayerRoom->x(), pPlayerRoom->y()});
-        drawRoom(painter,
-                 roomVNumFont,
-                 mapNameFont,
-                 pen,
-                 pPlayerRoom,
-                 pDrawnArea->gridMode,
-                 isFontBigEnoughToShowRoomVnum,
-                 showRoomNames,
-                 playerRoomId,
-                 static_cast<float>(playerRoomOnWidgetCoordinates.x()),
-                 static_cast<float>(playerRoomOnWidgetCoordinates.y()),
-                 areaExitsMap,
-                 roomCollision);
-        timePhase6DrawRoom = phase6Sub.nsecsElapsed() / 1000000.0;
-        phase6Sub.restart();
-
-        painter.save();
-        const QPen transparentPen(Qt::transparent);
-        QPainterPath myPath;
-        // Use the room+border diagonal so 100% fully encompasses the square
-        // (including corners), not just touching the midpoints of the sides
-        const int borderWidth = qMax(1, static_cast<int>(1.0 / mBSize * mRoomWidth * rSize));
-        const double roomVisualSize = static_cast<double>(mRoomWidth) * rSize + 2.0 * borderWidth;
-        const double roomRadius = (mpMap->mPlayerRoomOuterDiameterPercentage / 200.0) * roomVisualSize * M_SQRT2;
-        QRadialGradient gradient(playerRoomOnWidgetCoordinates, roomRadius);
-        if (mpHost->mMapStrongHighlight) {
-            // Never set, no means to except via XMLImport, as dlgMapper class's
-            // slot_toggleStrongHighlight is not wired up to anything
-            const QRectF dr = QRectF(playerRoomOnWidgetCoordinates.x() - (static_cast<double>(mRoomWidth) * rSize) / 2.0,
-                                     playerRoomOnWidgetCoordinates.y() - (static_cast<double>(mRoomHeight) * rSize) / 2.0,
-                                     static_cast<double>(mRoomWidth) * rSize,
-                                     static_cast<double>(mRoomHeight) * rSize);
-            painter.fillRect(dr, QColor(255, 0, 0, 150));
-
-            gradient.setColorAt(0.95, QColor(255, 0, 0, 150));
-            gradient.setColorAt(0.80, QColor(150, 100, 100, 150));
-            gradient.setColorAt(0.799, QColor(150, 100, 100, 100));
-            gradient.setColorAt(0.7, QColor(255, 0, 0, 200));
-            gradient.setColorAt(0, Qt::white);
-            painter.setBrush(gradient);
-            painter.setPen(transparentPen);
-            myPath.addEllipse(playerRoomOnWidgetCoordinates, roomRadius, roomRadius);
-        } else {
-            gradient.setStops(mPlayerRoomColorGradientStops);
-            painter.setBrush(gradient);
-            painter.setPen(transparentPen);
-            myPath.addEllipse(playerRoomOnWidgetCoordinates, roomRadius, roomRadius);
-        }
-        painter.drawPath(myPath);
-        painter.restore();
-        timePhase6Gradient = phase6Sub.nsecsElapsed() / 1000000.0;
-    }
-    painter.restore(); // end of player-room save
-
-    phase6Time = phaseTimer.nsecsElapsed() / 1000000.0;
-    phaseTimer.restart();
-
-    // Draw the ("foreground") labels that are on the top of the map:
-    itMapLabel.toFront();
-    while (itMapLabel.hasNext()) {
-        itMapLabel.next();
-        auto mapLabel = itMapLabel.value();
-
-        if (mapLabel.pos.z() != mMapCenterZ) {
-            continue;
-        }
-        QPointF labelPosition;
-        const int labelX = mapLabel.pos.x() * mRoomWidth + mRX;
-        const int labelY = mapLabel.pos.y() * mRoomHeight * -1 + mRY;
-
-        labelPosition.setX(labelX);
-        labelPosition.setY(labelY);
-        const int labelWidth = abs(qRound(mapLabel.size.width() * mRoomWidth));
-        const int labelHeight = abs(qRound(mapLabel.size.height() * mRoomHeight));
-
-        if (!((0 < labelX || 0 < labelX + labelWidth) && (widgetWidth > labelX || widgetWidth > labelX + labelWidth))) {
-            continue;
-        }
-        if (!((0 < labelY || 0 < labelY + labelHeight) && (widgetHeight > labelY || widgetHeight > labelY + labelHeight))) {
-            continue;
-        }
-        QRectF labelPaintRectangle = QRect(mapLabel.pos.x() * mRoomWidth + mRX, mapLabel.pos.y() * mRoomHeight * -1 + mRY, labelWidth, labelHeight);
-        if (mapLabel.showOnTop) {
-            if (!mapLabel.noScaling) {
-                drawScaledLabel(painter, labelPosition, mapLabel, itMapLabel.key(), labelPaintRectangle);
-            } else {
-                painter.drawPixmap(labelPosition, mapLabel.pix);
-                mapLabel.clickSize = QSizeF(mapLabel.pix.width(), mapLabel.pix.height());
-            }
-            pDrawnArea->mMapLabels[itMapLabel.key()] = mapLabel;
-        }
-        if (mapLabel.highlight) {
-            paintLabelHighlight(painter, labelPaintRectangle, mapLabel.clickSize);
-        }
-    }
-
-    // Draw an indication of the central room of a multi-room selection.
-    // Similar code was used to indicate target of custom exit line selected for
-    // editing but this could not be done there because gridmode areas don't hit
-    // that bit of code and later rooms would overwrite the target...
-    if (mMultiSelectionHighlightRoomId > 0 && mMultiSelectionSet.size() > 1) {
-        TRoom* pR_multiSelectionHighlight = mpMap->mpRoomDB->getRoom(mMultiSelectionHighlightRoomId);
-        if (pR_multiSelectionHighlight) {
-            const float r_mSx = pR_multiSelectionHighlight->x() * mRoomWidth + mRX;
-            const float r_mSy = pR_multiSelectionHighlight->y() * -1 * mRoomHeight + mRY;
-            const QPen savePen = painter.pen();
-            const QBrush saveBrush = painter.brush();
-            const float roomRadius = mRoomWidth * 1.2;
-            const float roomDiagonal = mRoomWidth * 1.2;
-            const QPointF roomCenter = QPointF(r_mSx, r_mSy);
-
-            QPen yellowPen(QColor(255, 255, 50, 192)); // Quarter opaque yellow pen
-            yellowPen.setWidth(mRoomWidth * 0.1);
-            QPainterPath myPath;
-            painter.setPen(yellowPen);
-            painter.setBrush(Qt::NoBrush);
-            myPath.addEllipse(roomCenter, roomRadius, roomRadius);
-            myPath.addEllipse(roomCenter, roomRadius / 2.0, roomRadius / 2.0);
-            myPath.moveTo(r_mSx - roomDiagonal, r_mSy - roomDiagonal);
-            myPath.lineTo(r_mSx + roomDiagonal, r_mSy + roomDiagonal);
-            myPath.moveTo(r_mSx + roomDiagonal, r_mSy - roomDiagonal);
-            myPath.lineTo(r_mSx - roomDiagonal, r_mSy + roomDiagonal);
-            painter.drawPath(myPath);
-            painter.setPen(savePen);
-            painter.setBrush(saveBrush);
-        }
-    }
-
-    if (mMiddleMousePanHandler) {
-        mMiddleMousePanHandler->renderIndicator(painter);
-    }
-
-    QColor infoColor;
-    if (mpHost->mBgColor_2.lightness() > 127) {
-        infoColor = QColor(Qt::black);
-    } else {
-        infoColor = QColor(Qt::white);
-    }
-
-    // The info box always shows the player room unless rooms are explicitly
-    // selected.  playerRoomId is fresh each frame; mRoomID is only updated when
-    // centeringOnPlayer fires and can be stale or zero before first centering.
-    int roomID = playerRoomId;
-    if (!mMultiSelectionSet.empty() && mMultiSelectionHighlightRoomId > 0 && mpMap->mpRoomDB->getRoom(mMultiSelectionHighlightRoomId)) {
-        roomID = mMultiSelectionHighlightRoomId;
-    }
-
-    int xOffset = 10;
-    if (mMultiSelectionListWidget.isVisible()) {
-        xOffset += mMultiSelectionListWidget.x() + mMultiSelectionListWidget.rect().width();
-    }
-
-    phase7Time = phaseTimer.nsecsElapsed() / 1000000.0;
-
-    if (qEnvironmentVariableIsSet("MUDLET_PROFILE_MAP")) {
-        // Accumulate all profiling text into ONE string then emit a single
-        // qDebug() call.  On Windows each qDebug() call invokes OutputDebugString
-        // which can take 5-30 ms when a debugger is attached; batching to one
-        // call reduces that to a fixed per-frame cost of one call.
-        QString profileOut;
-        QDebug pdbg(&profileOut);
-        pdbg.nospace().noquote() << "getRoomsForZ: " << timeGetRoomsForZ << "ms\n";
-        if (!gridModeProfileOutput.isEmpty()) {
-            pdbg << gridModeProfileOutput << "\n";
-        }
-        pdbg << "phase6 subs: roomsDraw=" << timePhase6RoomsDraw << " playerRoom=" << timePhase6DrawRoom << " gradient=" << timePhase6Gradient << " playerVisible=" << isPlayerRoomVisible << "\n";
-        // Comprehensive infoBox diagnostic: shows every condition paintMapInfo
-        // checks so we can see exactly why it produces blank output.
-        auto* mgr = mpMap->mMapInfoContributorManager;
-        const bool roomIDValid = mpMap->mpRoomDB->getRoom(roomID) != nullptr;
-        const bool contribOk = mgr != nullptr && mpHost->mMapInfoContributors.intersects(QSet<QString>(mgr->getContributorKeys().constBegin(), mgr->getContributorKeys().constEnd()));
-        pdbg << "infoBox: roomID=" << roomID << " player=" << playerRoomId << " mRoomID=" << mRoomID << " areaID=" << mAreaID << " selectionSize=" << static_cast<int>(mMultiSelectionSet.size())
-             << " xOffset=" << xOffset << " listWidgetVisible=" << mMultiSelectionListWidget.isVisible() << " listWidgetGeom=" << mMultiSelectionListWidget.x() << "+"
-             << mMultiSelectionListWidget.rect().width() << " widgetWidth=" << width() << " shift=" << mShiftMode << " centerView=" << isCenterViewCall << " playerVisible=" << isPlayerRoomVisible
-             << " roomValid=" << roomIDValid << " contribOk=" << contribOk << " painterHasClip=" << painter.hasClipping() << " painterClipRect=" << painter.clipRegion().boundingRect()
-             << " fontHeight=" << mFontHeight << "\n"
-             << "paintEvent: total=" << renderTimer.elapsed() << " p1=" << phase1Time << " p2=" << phase2Time << " p3=" << phase3Time << " p4=" << phase4Time << " p5=" << phase5Time
-             << " p6=" << phase6Time << " p7=" << phase7Time;
-        qDebug().noquote() << profileOut;
-    }
-
-    dlgMapper::paintMapInfo(renderTimer, painter, mpHost, mpMap, roomID, mAreaID, mMultiSelectionSet.size(), infoColor, xOffset, 20, width(), mFontHeight);
-
-    static bool isAreaWidgetValid = true; // Remember between uses
-    QFont _f = mpMap->mpMapper->comboBox_showArea->font();
-    if (isAreaWidgetValid) {
-        if (mAreaID == -1                       // the map being shown is the "default" area
-            && !mpMap->getDefaultAreaShown()) { // the area widget is not showing the "default" area
-
-            isAreaWidgetValid = false; // So the widget CANNOT indicate the correct area
-            // Set the area widget to indicate the area widget is NOT
-            // showing valid text - so make it italic and crossed out
-            _f.setItalic(true);
-            _f.setUnderline(true);
-            _f.setStrikeOut(true);
-            _f.setOverline(true);
-        }
-    } else {
-        if (!(mAreaID == -1 && !mpMap->getDefaultAreaShown())) {
-            isAreaWidgetValid = true; // So the widget CAN now indicate the correct area
-            // Reset to normal
-            _f.setItalic(false);
-            _f.setUnderline(false);
-            _f.setStrikeOut(false);
-            _f.setOverline(false);
-        }
-    }
-
-    mpMap->mpMapper->comboBox_showArea->setFont(_f);
-
-    if (!mHelpMsg.isEmpty()) {
-        painter.setPen(QColor(255, 155, 50));
-        QFont _f = painter.font();
-        const QFont _f2 = _f;
-        _f.setPointSize(12); // 20 was a little large
-        _f.setBold(true);
-        painter.setFont(_f);
-        const QRect _r = QRect(0, 0, widgetWidth, widgetHeight);
-        painter.drawText(_r, Qt::AlignHCenter | Qt::AlignBottom | Qt::TextWordWrap, mHelpMsg);
-        // Now draw text centered at bottom, so it does not clash with info window
-        painter.setFont(_f2);
-    }
-    // Save the current map zoom for this area
-    pDrawnArea->set2DMapZoom(xyzoom);
-
-    // Check and send view change event if necessary
-    if (!areaViewedChangedEvent.mArgumentList.isEmpty()) {
+    if (result.areaChanged) {
+        TEvent areaViewedChangedEvent{};
+        areaViewedChangedEvent.mArgumentList.append(qsl("sysMapAreaChanged"));
+        areaViewedChangedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        areaViewedChangedEvent.mArgumentList.append(QString::number(result.areaChanged->first));
+        areaViewedChangedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        areaViewedChangedEvent.mArgumentList.append(QString::number(result.areaChanged->second));
+        areaViewedChangedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
         mpHost->raiseEvent(areaViewedChangedEvent);
     }
 }
-
-// This draws two lines at angles to the "exitLine" so as to form what would be
-// an "arrow head" if they were to be extended so as to meet (at the "end" of
-// the "exitLine". Various features of the QPen that is used are redefined
-// as appropriate - but they are restored afterwards so there should be
-// no change to the QPainter as a result of calling this method.
-void T2DMap::drawDoor(QPainter& painter, const TRoom& room, const QString& dirKey, const QLineF& exitLine)
-{
-    // A set of numbers that can be converted to "static" type and be frobbed
-    // during development:
-    const double shortPositionFactor = 0.225;
-    const double middlePositionFactor = 0.95;
-    const double longPositionFactor = 0.45;
-    const double innerThresholdFactor = 0.225;
-    const double outerThresholdFactor = 0.45;
-    const double middleAngleFactor = 165.0;
-    const double middleFiddleFactor = 0.25;
-    const double endAngleFactor = 150.0;
-    const double endFiddleFactor = 0.50;
-    const float doorWidthFactor = 1.5;
-    const bool isShortLine = ((exitLine.length() / (mRoomWidth + mRoomHeight)) < innerThresholdFactor);
-    const bool isLongLine = ((exitLine.length() / (mRoomWidth + mRoomHeight)) > outerThresholdFactor);
-    QLineF line{exitLine};
-    if (isShortLine) {
-        line.setLength(shortPositionFactor * (mRoomWidth + mRoomHeight));
-    } else if (isLongLine) {
-        line.setLength(longPositionFactor * (mRoomWidth + mRoomHeight));
-    } else {
-        line.setLength(middlePositionFactor * line.length());
-    }
-    // The end of "doorLine" is the one nearest the room center
-    QLineF doorLine(line.p2(), line.p1());
-    // This drags that end outwards - so that the door can be positioned in
-    // 1/10 of the overall distance from the end:
-    doorLine.setLength(endFiddleFactor * (mRoomWidth + mRoomHeight));
-    // This line starts at the inner end of doorLine and ends at the outer end:
-    QLineF subDoorLineA{doorLine.p2(), doorLine.p1()};
-    // This swings the outer end anti-clockwise:
-    subDoorLineA.setAngle(doorLine.angle() - endAngleFactor);
-    // This swings another one in the same configuration clockwise:
-    QLineF subDoorLineD{doorLine.p2(), doorLine.p1()};
-    subDoorLineD.setAngle(doorLine.angle() + endAngleFactor);
-
-    // Repeat for an intermediate second pair of lines - a smaller factor puts
-    // these points nearer to the outer edge - but the amount from the
-    // centerline is less:
-    doorLine.setLength(middleFiddleFactor * (mRoomWidth + mRoomHeight));
-    QLineF subDoorLineB{doorLine.p2(), doorLine.p1()};
-    subDoorLineB.setAngle(doorLine.angle() - middleAngleFactor);
-    QLineF subDoorLineC{doorLine.p2(), doorLine.p1()};
-    subDoorLineC.setAngle(doorLine.angle() + middleAngleFactor);
-
-    painter.save();
-    QPen doorPen = painter.pen();
-    doorPen.setWidthF(painter.pen().widthF() * doorWidthFactor);
-    doorPen.setCosmetic(mMapperUseAntiAlias);
-    doorPen.setStyle(Qt::SolidLine);
-    doorPen.setCapStyle(Qt::RoundCap);
-
-    const int doorStatus = room.doors.value(dirKey);
-    if (doorStatus == 1) {
-        doorPen.setColor(mOpenDoorColor);
-    } else if (doorStatus == 2) {
-        doorPen.setColor(mClosedDoorColor);
-    } else {
-        doorPen.setColor(mLockedDoorColor);
-    }
-    painter.setPen(doorPen);
-    painter.drawLine(QLineF(subDoorLineA.p2(), subDoorLineB.p2()));
-    painter.drawLine(QLineF(subDoorLineD.p2(), subDoorLineC.p2()));
-    painter.restore();
-}
-
-void T2DMap::paintRoomExits(QPainter& painter, QPen& pen, QList<int>& exitList, QList<int>& oneWayExits, const TArea* pArea, int zLevel, float exitWidth, QMap<int, QPointF>& areaExitsMap)
-{
-    const float exitArrowScale = (mLargeAreaExitArrows ? 2.0f : 1.0f);
-    const float widgetWidth = width();
-    const float widgetHeight = height();
-
-    int customLineDestinationTarget = 0;
-    if (mCustomLinesRoomTo > 0) {
-        customLineDestinationTarget = mCustomLinesRoomTo;
-    } else if (mCustomLineSelectedRoom > 0 && !mCustomLineSelectedExit.isEmpty()) {
-        TRoom* pSR = mpMap->mpRoomDB->getRoom(mCustomLineSelectedRoom);
-        if (pSR) {
-            if (mCustomLineSelectedExit == key_nw) {
-                customLineDestinationTarget = pSR->getNorthwest();
-            } else if (mCustomLineSelectedExit == key_n) {
-                customLineDestinationTarget = pSR->getNorth();
-            } else if (mCustomLineSelectedExit == key_ne) {
-                customLineDestinationTarget = pSR->getNortheast();
-            } else if (mCustomLineSelectedExit == key_up) {
-                customLineDestinationTarget = pSR->getUp();
-            } else if (mCustomLineSelectedExit == key_w) {
-                customLineDestinationTarget = pSR->getWest();
-            } else if (mCustomLineSelectedExit == key_e) {
-                customLineDestinationTarget = pSR->getEast();
-            } else if (mCustomLineSelectedExit == key_down) {
-                customLineDestinationTarget = pSR->getDown();
-            } else if (mCustomLineSelectedExit == key_sw) {
-                customLineDestinationTarget = pSR->getSouthwest();
-            } else if (mCustomLineSelectedExit == key_s) {
-                customLineDestinationTarget = pSR->getSouth();
-            } else if (mCustomLineSelectedExit == key_se) {
-                customLineDestinationTarget = pSR->getSoutheast();
-            } else if (mCustomLineSelectedExit == key_in) {
-                customLineDestinationTarget = pSR->getIn();
-            } else if (mCustomLineSelectedExit == key_out) {
-                customLineDestinationTarget = pSR->getOut();
-            } else {
-                customLineDestinationTarget = pSR->getSpecialExits().value(mCustomLineSelectedExit);
-            }
-        }
-    }
-    QSetIterator<int> itRoom2(pArea->getRoomsForZ(zLevel));
-    while (itRoom2.hasNext()) {
-        const int _id = itRoom2.next();
-        TRoom* room = mpMap->mpRoomDB->getRoom(_id);
-        if (!room) {
-            continue;
-        }
-        if (room->isHidden()) {
-            continue;
-        }
-        const float rx = room->x() * mRoomWidth + mRX;
-        const float ry = room->y() * -1 * mRoomHeight + mRY;
-
-        if (room->customLines.empty()) {
-            if (rx < 0 || ry < 0 || rx > widgetWidth || ry > widgetHeight) {
-                continue;
-            }
-        } else {
-            const float miny = room->min_y * -1 * mRoomHeight + static_cast<float>(mRY);
-            const float maxy = room->max_y * -1 * mRoomHeight + static_cast<float>(mRY);
-            const float minx = room->min_x * mRoomWidth + static_cast<float>(mRX);
-            const float maxx = room->max_x * mRoomWidth + static_cast<float>(mRX);
-
-            if (!((minx > 0.0 || maxx > 0.0) && (static_cast<float>(widgetWidth) > minx || static_cast<float>(widgetWidth) > maxx))) {
-                continue;
-            }
-
-            if (!((miny > 0.0 || maxy > 0.0) && (static_cast<float>(widgetHeight) > miny || static_cast<float>(widgetHeight) > maxy))) {
-                continue;
-            }
-        }
-
-        room->rendered = true;
-
-        // exitList is a list of the destination rooms reached by exit lines
-        // that are NOT custom exit lines from this room so are places to
-        // which a straight line is to be drawn from the centre of this room
-        // to (now half way for a two-way exit) the center of the exit room,
-        // this does mean that multiple exits to the same room are drawn
-        // on top of each other and that there is no indication from which
-        // exit direction they are for...!
-        exitList.clear();
-        // oneWayExits contain the sub-set of exitList where the opposite
-        // exit from the exit room does NOT return to the current room:
-        oneWayExits.clear();
-        if (!room->customLines.empty()) {
-            // This room has custom exit lines:
-            if (!room->customLines.contains(key_n)) {
-                TRoom* pER = mpMap->mpRoomDB->getRoom(room->getNorth());
-                if (pER && !pER->isHidden()) {
-                    exitList.push_back(room->getNorth());
-                    if (pER->getSouth() != _id) {
-                        oneWayExits.push_back(room->getNorth());
-                    }
-                }
-            }
-            if (!room->customLines.contains(key_ne)) {
-                TRoom* pER = mpMap->mpRoomDB->getRoom(room->getNortheast());
-                if (pER && !pER->isHidden()) {
-                    exitList.push_back(room->getNortheast());
-                    if (pER->getSouthwest() != _id) {
-                        oneWayExits.push_back(room->getNortheast());
-                    }
-                }
-            }
-            if (!room->customLines.contains(key_e)) {
-                TRoom* pER = mpMap->mpRoomDB->getRoom(room->getEast());
-                if (pER && !pER->isHidden()) {
-                    exitList.push_back(room->getEast());
-                    if (pER->getWest() != _id) {
-                        oneWayExits.push_back(room->getEast());
-                    }
-                }
-            }
-            if (!room->customLines.contains(key_se)) {
-                TRoom* pER = mpMap->mpRoomDB->getRoom(room->getSoutheast());
-                if (pER && !pER->isHidden()) {
-                    exitList.push_back(room->getSoutheast());
-                    if (pER->getNorthwest() != _id) {
-                        oneWayExits.push_back(room->getSoutheast());
-                    }
-                }
-            }
-            if (!room->customLines.contains(key_s)) {
-                TRoom* pER = mpMap->mpRoomDB->getRoom(room->getSouth());
-                if (pER && !pER->isHidden()) {
-                    exitList.push_back(room->getSouth());
-                    if (pER->getNorth() != _id) {
-                        oneWayExits.push_back(room->getSouth());
-                    }
-                }
-            }
-            if (!room->customLines.contains(key_sw)) {
-                TRoom* pER = mpMap->mpRoomDB->getRoom(room->getSouthwest());
-                if (pER && !pER->isHidden()) {
-                    exitList.push_back(room->getSouthwest());
-                    if (pER->getNortheast() != _id) {
-                        oneWayExits.push_back(room->getSouthwest());
-                    }
-                }
-            }
-            if (!room->customLines.contains(key_w)) {
-                TRoom* pER = mpMap->mpRoomDB->getRoom(room->getWest());
-                if (pER && !pER->isHidden()) {
-                    exitList.push_back(room->getWest());
-                    if (pER->getEast() != _id) {
-                        oneWayExits.push_back(room->getWest());
-                    }
-                }
-            }
-            if (!room->customLines.contains(key_nw)) {
-                TRoom* pER = mpMap->mpRoomDB->getRoom(room->getNorthwest());
-                if (pER && !pER->isHidden()) {
-                    exitList.push_back(room->getNorthwest());
-                    if (pER->getSoutheast() != _id) {
-                        oneWayExits.push_back(room->getNorthwest());
-                    }
-                }
-            }
-        } else {
-            int exitRoomId = room->getNorth();
-            if (exitRoomId > 0) {
-                TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
-                if (pER && !pER->isHidden()) {
-                    exitList.push_back(exitRoomId);
-                    if (pER->getSouth() != _id) {
-                        oneWayExits.push_back(exitRoomId);
-                    }
-                }
-            }
-            exitRoomId = room->getNortheast();
-            if (exitRoomId > 0) {
-                TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
-                if (pER && !pER->isHidden()) {
-                    exitList.push_back(exitRoomId);
-                    if (pER->getSouthwest() != _id) {
-                        oneWayExits.push_back(exitRoomId);
-                    }
-                }
-            }
-            exitRoomId = room->getEast();
-            if (exitRoomId > 0) {
-                TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
-                if (pER && !pER->isHidden()) {
-                    exitList.push_back(exitRoomId);
-                    if (pER->getWest() != _id) {
-                        oneWayExits.push_back(exitRoomId);
-                    }
-                }
-            }
-            exitRoomId = room->getSoutheast();
-            if (exitRoomId > 0) {
-                TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
-                if (pER && !pER->isHidden()) {
-                    exitList.push_back(exitRoomId);
-                    if (pER->getNorthwest() != _id) {
-                        oneWayExits.push_back(exitRoomId);
-                    }
-                }
-            }
-            exitRoomId = room->getSouth();
-            if (exitRoomId > 0) {
-                TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
-                if (pER && !pER->isHidden()) {
-                    exitList.push_back(exitRoomId);
-                    if (pER->getNorth() != _id) {
-                        oneWayExits.push_back(exitRoomId);
-                    }
-                }
-            }
-            exitRoomId = room->getSouthwest();
-            if (exitRoomId > 0) {
-                TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
-                if (pER && !pER->isHidden()) {
-                    exitList.push_back(exitRoomId);
-                    if (pER->getNortheast() != _id) {
-                        oneWayExits.push_back(exitRoomId);
-                    }
-                }
-            }
-            exitRoomId = room->getWest();
-            if (exitRoomId > 0) {
-                TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
-                if (pER && !pER->isHidden()) {
-                    exitList.push_back(exitRoomId);
-                    if (pER->getEast() != _id) {
-                        oneWayExits.push_back(exitRoomId);
-                    }
-                }
-            }
-            exitRoomId = room->getNorthwest();
-            if (exitRoomId > 0) {
-                TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
-                if (pER && !pER->isHidden()) {
-                    exitList.push_back(exitRoomId);
-                    if (pER->getSoutheast() != _id) {
-                        oneWayExits.push_back(exitRoomId);
-                    }
-                }
-            }
-        }
-
-        if (!room->customLines.empty()) {
-            painter.save();
-            QMapIterator<QString, QList<QPointF>> itk(room->customLines);
-            while (itk.hasNext()) {
-                itk.next();
-                QColor customLineColor;
-                if (_id == mCustomLineSelectedRoom && itk.key() == mCustomLineSelectedExit) {
-                    customLineColor = QColor(255, 155, 55);
-                } else {
-                    customLineColor = room->customLinesColor.value(itk.key(), Qt::red);
-                }
-
-                const float ex = room->x() * mRoomWidth + mRX;
-                const float ey = room->y() * mRoomHeight * -1 + mRY;
-                const QPointF origin = QPointF(ex, ey);
-                // The following sets a point offset from the room center
-                // that depends on the exit direction that the custom line
-                // heads to from the room center - it forms a fixed segment
-                // that cannot be moved - for XY-plane exits:
-                QPointF fixedOffsetPoint;
-                bool isXYPlainExit = false;
-                if (itk.key() == key_n) {
-                    fixedOffsetPoint = QPointF(ex, ey - mRoomHeight / 2.0);
-                    isXYPlainExit = true;
-                } else if (itk.key() == key_ne) {
-                    fixedOffsetPoint = QPointF(ex + mRoomWidth / 2.0, ey - mRoomHeight / 2.0);
-                    isXYPlainExit = true;
-                } else if (itk.key() == key_e) {
-                    fixedOffsetPoint = QPointF(ex + mRoomWidth / 2.0, ey);
-                    isXYPlainExit = true;
-                } else if (itk.key() == key_se) {
-                    fixedOffsetPoint = QPointF(ex + mRoomWidth / 2.0, ey + mRoomHeight / 2.0);
-                    isXYPlainExit = true;
-                } else if (itk.key() == key_s) {
-                    fixedOffsetPoint = QPointF(ex, ey + mRoomHeight / 2.0);
-                    isXYPlainExit = true;
-                } else if (itk.key() == key_sw) {
-                    fixedOffsetPoint = QPointF(ex - mRoomWidth / 2.0, ey + mRoomHeight / 2.0);
-                    isXYPlainExit = true;
-                } else if (itk.key() == key_w) {
-                    fixedOffsetPoint = QPointF(ex - mRoomWidth / 2.0, ey);
-                    isXYPlainExit = true;
-                } else if (itk.key() == key_nw) {
-                    fixedOffsetPoint = QPointF(ex - mRoomWidth / 2.0, ey - mRoomHeight / 2.0);
-                    isXYPlainExit = true;
-                } else {
-                    fixedOffsetPoint = QPointF(ex, ey);
-                }
-                QPen customLinePen = painter.pen();
-                customLinePen.setCosmetic(mMapperUseAntiAlias);
-                customLinePen.setWidthF(exitWidth);
-                customLinePen.setCapStyle(Qt::RoundCap);
-                customLinePen.setJoinStyle(Qt::RoundJoin);
-                customLinePen.setColor(customLineColor);
-                customLinePen.setStyle(room->customLinesStyle.value(itk.key()));
-
-                QVector<QPointF> polyLinePoints;
-                QList<QPointF> const customLinePoints = itk.value();
-                QLineF doorLineSegment;
-                if (!customLinePoints.empty()) {
-                    painter.setPen(customLinePen);
-                    polyLinePoints << origin;
-                    polyLinePoints << fixedOffsetPoint;
-                    for (const QPointF& customLinePoint : customLinePoints) {
-                        polyLinePoints << QPointF(customLinePoint.x() * mRoomWidth + mRX, customLinePoint.y() * mRoomHeight * -1 + mRY);
-                    }
-                    if (polyLinePoints.size() > 2) {
-                        if (isXYPlainExit) {
-                            doorLineSegment = QLineF{polyLinePoints.at(0), polyLinePoints.at(1)};
-                        } else {
-                            // Non-XY-Plane exits have the first two points
-                            // being coincident:
-                            doorLineSegment = QLineF{polyLinePoints.at(1), polyLinePoints.at(2)};
-                        }
-                    } else {
-                        // There must be 2 points ...
-                        doorLineSegment = QLineF{polyLinePoints.at(0), polyLinePoints.at(1)};
-                    }
-                    painter.drawPolyline(polyLinePoints.data(), polyLinePoints.size());
-
-                    if (room->customLinesArrow.value(itk.key())) {
-                        QLineF l0 = QLineF(polyLinePoints.last(), polyLinePoints.at(polyLinePoints.size() - 2));
-                        l0.setLength(exitWidth * 5.0);
-                        const QPointF _p1 = l0.p1();
-                        const QPointF _p2 = l0.p2();
-                        const QLineF l1 = QLineF(l0);
-                        const qreal w1 = l1.angle() - 90.0;
-                        QLineF l2;
-                        l2.setP1(_p2);
-                        l2.setAngle(w1);
-                        l2.setLength(exitWidth * 2.0);
-                        const QPointF _p3 = l2.p2();
-                        l2.setAngle(l2.angle() + 180.0);
-                        const QPointF _p4 = l2.p2();
-                        QPolygonF _poly;
-                        _poly.append(_p1);
-                        _poly.append(_p3);
-                        _poly.append(_p4);
-                        QBrush brush = painter.brush();
-                        brush.setColor(customLineColor);
-                        brush.setStyle(Qt::SolidPattern);
-                        QPen arrowPen = painter.pen();
-                        arrowPen.setCosmetic(mMapperUseAntiAlias);
-                        arrowPen.setStyle(Qt::SolidLine);
-                        painter.setPen(arrowPen);
-                        painter.setBrush(brush);
-                        painter.drawPolygon(_poly);
-                    }
-
-                    if (_id == mCustomLineSelectedRoom && itk.key() == mCustomLineSelectedExit) {
-                        const QPen _savedPen = painter.pen();
-                        QPen _pen;
-                        const QBrush _brush = painter.brush();
-                        painter.setBrush(Qt::NoBrush);
-                        // The first two points in the polyLinePoints are
-                        // fixed for all exit directions and do not get
-                        // circular "handles":
-                        for (int pk = 2, total = polyLinePoints.size(); pk < total; ++pk) {
-                            if (pk == (mCustomLineSelectedPoint + 2)) {
-                                // Draw the selected point in yellow not orange.
-                                _pen = QPen(QColor(255, 255, 55), _savedPen.width(), Qt::SolidLine, Qt::FlatCap, _savedPen.joinStyle());
-                            } else {
-                                _pen = QPen(_savedPen.color(), _savedPen.width(), Qt::SolidLine, Qt::FlatCap, _savedPen.joinStyle());
-                            }
-                            // Draw hollow circles not default filled ones!
-                            painter.setPen(_pen);
-                            painter.drawEllipse(polyLinePoints.at(pk), mRoomWidth / 4.0, mRoomWidth / 4.0);
-                        }
-                        painter.setPen(_savedPen);
-                        painter.setBrush(_brush);
-                    }
-                }
-
-                if (room->doors.value(itk.key())) {
-                    drawDoor(painter, *room, itk.key(), doorLineSegment);
-                }
-            }
-            painter.restore();
-        }
-
-        // draw exit stubs
-        for (const int direction : std::as_const(room->exitStubs)) {
-            if (direction >= DIR_NORTH && direction <= DIR_SOUTHWEST) {
-                // Stubs on non-XY plane exits are handled differently and we
-                // do not support special exit stubs (yet?)
-                const QVector3D uDirection = mpMap->scmUnitVectors.value(direction);
-                const QLineF stubLine(rx, ry, rx + uDirection.x() * 0.5 * mRoomWidth, ry + uDirection.y() * 0.5 * mRoomHeight);
-                const QString doorKey{TRoom::dirCodeToShortString(direction)};
-                // Draw the door lines before we draw the stub or the filled
-                // circle on the end - so that the latter overlays the doors
-                // if they get a bit large (at low exit size numbers)
-                if (room->doors.value(doorKey)) {
-                    drawDoor(painter, *room, doorKey, stubLine);
-                }
-                painter.save();
-                painter.drawLine(stubLine);
-                // Set the fill colour to be what is used for exit lines
-                painter.setBrush(painter.pen().color());
-                // And turn off drawing the border (outline):
-                painter.setPen(Qt::NoPen);
-                QPainterPath stubMarkingCirclePath;
-                const QRectF surroundingRectF(stubLine.p2().x() - 0.1 * mRoomWidth, stubLine.p2().y() - 0.1 * mRoomHeight, 0.2 * mRoomWidth, 0.2 * mRoomHeight);
-                stubMarkingCirclePath.arcTo(surroundingRectF, 0.0, 360.0);
-                // So this should draw a solid filled circle whose diameter
-                // is fixed and not dependent on the exit line thickness:
-                painter.drawPath(stubMarkingCirclePath);
-                painter.restore();
-            }
-        }
-
-        for (const int& k : exitList) {
-            const int rID = k;
-            if (rID <= 0) {
-                continue;
-            }
-
-            bool areaExit;
-
-            TRoom* pE = mpMap->mpRoomDB->getRoom(rID);
-            if (!pE) {
-                continue;
-            }
-
-            areaExit = pE->getArea() != mAreaID;
-            const float ex = pE->x() * mRoomWidth + mRX;
-            const float ey = pE->y() * mRoomHeight * -1 + mRY;
-            const int ez = pE->z();
-
-            const QVector3D p1(ex, ey, ez);
-            const int rz = mMapCenterZ;
-            const QVector3D p2(rx, ry, rz);
-            // This was a QLine (so used integer coordinates), but lets
-            // try with a QLineF as we are using floating point numbers:
-            QLineF line;
-            if (!areaExit) {
-                // Non-area exit:
-                if (!oneWayExits.contains(rID)) {
-                    // Two way exit
-                    const QLineF l0 = QLineF(p2.toPointF(), p1.toPointF());
-                    painter.save();
-                    QPen exitPen = painter.pen();
-                    // We need the line not to extend past the actual end point:
-                    exitPen.setCapStyle(Qt::FlatCap);
-                    painter.drawLine(l0);
-                    painter.restore();
-                } else {
-                    // one way non-area exit - draw arrow
-                    QLineF l0 = QLineF(p2.toPointF(), p1.toPointF());
-                    QLineF k0 = l0;
-                    k0.setLength((l0.length() - exitWidth * 5.0) / 2.0);
-                    const qreal dx = k0.dx();
-                    const qreal dy = k0.dy();
-                    painter.save();
-                    QPen arrowPen = painter.pen();
-                    QPen oneWayLinePen = painter.pen();
-                    QBrush brush = painter.brush();
-
-                    oneWayLinePen.setStyle(Qt::DotLine);
-                    oneWayLinePen.setCapStyle(Qt::SquareCap);
-                    painter.setPen(oneWayLinePen);
-                    painter.drawLine(l0);
-
-                    l0.setLength(exitWidth * 5.0);
-                    const QPointF _p1 = l0.p2();
-                    const QPointF _p2 = l0.p1();
-                    const QLineF l1 = QLineF(l0);
-                    const qreal w1 = l1.angle() - 90.0;
-                    QLineF l2;
-                    l2.setP1(_p2);
-                    l2.setAngle(w1);
-                    l2.setLength(exitWidth * 2.0);
-                    const QPointF _p3 = l2.p2();
-                    l2.setAngle(l2.angle() + 180.0);
-                    const QPointF _p4 = l2.p2();
-                    QPolygonF poly;
-                    poly.append(_p1);
-                    poly.append(_p3);
-                    poly.append(_p4);
-                    arrowPen.setCosmetic(mMapperUseAntiAlias);
-                    arrowPen.setStyle(Qt::SolidLine);
-                    arrowPen.setJoinStyle(Qt::RoundJoin);
-                    arrowPen.setCapStyle(Qt::RoundCap);
-                    brush.setColor(QColor(255, 100, 100));
-                    brush.setStyle(Qt::SolidPattern);
-                    painter.setPen(arrowPen);
-                    painter.setBrush(brush);
-                    painter.drawPolygon(poly.translated(dx, dy));
-
-                    painter.restore();
-                }
-
-            } else {
-                // Area exit:
-                painter.save();
-                QPointF clickPoint;
-                pen = painter.pen();
-                pen.setWidthF(exitWidth);
-                pen.setCapStyle(Qt::RoundCap);
-                pen.setCosmetic(mMapperUseAntiAlias);
-                pen.setColor(mpMap->getColor(k));
-                painter.setPen(pen);
-                if (room->getSouth() == rID) {
-                    line = QLineF(p2.x(), p2.y() + exitArrowScale * mRoomHeight, p2.x(), p2.y());
-                    clickPoint = QPointF(p2.x(), p2.y() + mRoomHeight);
-                } else if (room->getNorth() == rID) {
-                    line = QLineF(p2.x(), p2.y() - exitArrowScale * mRoomHeight, p2.x(), p2.y());
-                    clickPoint = QPointF(p2.x(), p2.y() - mRoomHeight);
-                } else if (room->getWest() == rID) {
-                    line = QLineF(p2.x() - exitArrowScale * mRoomWidth, p2.y(), p2.x(), p2.y());
-                    clickPoint = QPointF(p2.x() - mRoomWidth, p2.y());
-                } else if (room->getEast() == rID) {
-                    line = QLineF(p2.x() + exitArrowScale * mRoomWidth, p2.y(), p2.x(), p2.y());
-                    clickPoint = QPointF(p2.x() + mRoomWidth, p2.y());
-                } else if (room->getNorthwest() == rID) {
-                    line = QLineF(p2.x() - exitArrowScale * mRoomWidth, p2.y() - exitArrowScale * mRoomHeight, p2.x(), p2.y());
-                    clickPoint = QPointF(p2.x() - mRoomWidth, p2.y() - mRoomHeight);
-                } else if (room->getNortheast() == rID) {
-                    line = QLineF(p2.x() + exitArrowScale * mRoomWidth, p2.y() - exitArrowScale * mRoomHeight, p2.x(), p2.y());
-                    clickPoint = QPointF(p2.x() + mRoomWidth, p2.y() - mRoomHeight);
-                } else if (room->getSoutheast() == rID) {
-                    line = QLineF(p2.x() + exitArrowScale * mRoomWidth, p2.y() + exitArrowScale * mRoomHeight, p2.x(), p2.y());
-                    clickPoint = QPointF(p2.x() + mRoomWidth, p2.y() + mRoomHeight);
-                } else if (room->getSouthwest() == rID) {
-                    line = QLineF(p2.x() - exitArrowScale * mRoomWidth, p2.y() + exitArrowScale * mRoomHeight, p2.x(), p2.y());
-                    clickPoint = QPointF(p2.x() - mRoomWidth, p2.y() + mRoomHeight);
-                }
-                areaExitsMap[k] = clickPoint;
-                // line ENDS at the center of the room, and the START sticks out
-                // in the appropriate direction
-
-                // Draw outline first for visibility on matching backgrounds
-                QPen outlinePen = pen;
-                outlinePen.setWidthF(exitWidth + 2.0);
-                outlinePen.setColor((mpHost->mBgColor_2.lightness() > 127) ? Qt::black : Qt::white);
-                painter.setPen(outlinePen);
-                painter.drawLine(line);
-
-                // Draw colored line on top
-                painter.setPen(pen);
-                painter.drawLine(line);
-                QLineF l0 = QLineF(line);
-                if (mLargeAreaExitArrows) {
-                    l0.setLength((mRoomWidth + mRoomHeight) * 0.4);
-                } else {
-                    l0.setLength(exitWidth * 5.0);
-                }
-                const QPointF p1 = l0.p1();
-                const QPointF p2 = l0.p2();
-                const QLineF l1 = QLineF(l0);
-                const qreal w1 = l1.angle() - 90.0;
-                QLineF l2;
-                l2.setP1(p2);
-                l2.setAngle(w1);
-                if (mLargeAreaExitArrows) {
-                    l2.setLength((mRoomWidth + mRoomHeight) * 0.15);
-                } else {
-                    l2.setLength(exitWidth * 2.0);
-                }
-                const QPointF p3 = l2.p2();
-                l2.setAngle(l2.angle() + 180.0);
-                const QPointF p4 = l2.p2();
-                QPolygonF polygon;
-                polygon.append(p1);
-                polygon.append(p3);
-                polygon.append(p4);
-                QBrush brush = painter.brush();
-                brush.setColor(mpMap->getColor(k));
-                brush.setStyle(Qt::SolidPattern);
-                QPen arrowPen = painter.pen();
-                arrowPen.setJoinStyle(Qt::RoundJoin);
-                arrowPen.setCapStyle(Qt::RoundCap);
-                arrowPen.setCosmetic(mMapperUseAntiAlias);
-
-                // Draw outline first for visibility
-                QPen arrowOutlinePen = arrowPen;
-                arrowOutlinePen.setWidthF(2.0);
-                arrowOutlinePen.setColor((mpHost->mBgColor_2.lightness() > 127) ? Qt::black : Qt::white);
-                painter.setPen(arrowOutlinePen);
-                painter.setBrush(Qt::NoBrush);
-                painter.drawPolygon(polygon);
-
-                // Draw filled arrow head on top
-                painter.setPen(Qt::NoPen);
-                painter.setBrush(brush);
-                painter.drawPolygon(polygon);
-                painter.restore();
-            }
-
-            // doors
-            if (!room->doors.empty()) {
-                QString doorKey;
-                int doorStatus = 0;
-                if (room->getSouth() == rID && room->doors.contains(key_s)) {
-                    doorKey = key_s;
-                    doorStatus = room->doors.value(doorKey);
-                } else if (room->getNorth() == rID && room->doors.contains(key_n)) {
-                    doorKey = key_n;
-                    doorStatus = room->doors.value(doorKey);
-                } else if (room->getSouthwest() == rID && room->doors.contains(key_sw)) {
-                    doorKey = key_sw;
-                    doorStatus = room->doors.value(doorKey);
-                } else if (room->getSoutheast() == rID && room->doors.contains(key_se)) {
-                    doorKey = key_se;
-                    doorStatus = room->doors.value(doorKey);
-                } else if (room->getNortheast() == rID && room->doors.contains(key_ne)) {
-                    doorKey = key_ne;
-                    doorStatus = room->doors.value(doorKey);
-                } else if (room->getNorthwest() == rID && room->doors.contains(key_nw)) {
-                    doorKey = key_nw;
-                    doorStatus = room->doors.value(doorKey);
-                } else if (room->getWest() == rID && room->doors.contains(key_w)) {
-                    doorKey = key_w;
-                    doorStatus = room->doors.value(doorKey);
-                } else if (room->getEast() == rID && room->doors.contains(key_e)) {
-                    doorKey = key_e;
-                    doorStatus = room->doors.value(doorKey);
-                }
-                // Else not an XY-plane exit and doorStatus/doorKey will not be
-                // set to a usable value:
-                if (doorStatus && !doorKey.isEmpty()) {
-                    QLineF doorBaseLine;
-                    if (areaExit) {
-                        doorBaseLine = QLineF(line.p2(), line.p1());
-                    } else {
-                        doorBaseLine = QLineF(p2.toPointF(), p1.toPointF());
-                    }
-                    doorBaseLine.setLength(doorBaseLine.length() / 2.0);
-                    drawDoor(painter, *room, doorKey, doorBaseLine);
-                }
-            }
-        } // End of for( exitList )
-
-        // Indicate destination for custom exit line drawing - double size
-        // target yellow hollow circle
-        // Similar code is now also used to indicate center target of
-        // multiple selected rooms but that must be done after all the rooms
-        // have been drawn otherwise later drawn rooms will overwrite the
-        // mark, especially on areas in gridmode.
-        if (customLineDestinationTarget > 0 && customLineDestinationTarget == _id) {
-            const QPen savePen = painter.pen();
-            const QBrush saveBrush = painter.brush();
-            const float roomRadius = mRoomWidth * 1.2;
-            const float roomDiagonal = mRoomWidth * 1.2;
-            const QPointF roomCenter = QPointF(rx, ry);
-
-            QPen yellowPen(QColor(255, 255, 50, 192)); // Quarter opaque yellow pen
-            yellowPen.setWidth(mRoomWidth * 0.1);
-            QPainterPath myPath;
-            painter.setPen(yellowPen);
-            painter.setBrush(Qt::NoBrush);
-            myPath.addEllipse(roomCenter, roomRadius, roomRadius);
-            myPath.addEllipse(roomCenter, roomRadius / 2.0, roomRadius / 2.0);
-            myPath.moveTo(rx - roomDiagonal, ry - roomDiagonal);
-            myPath.lineTo(rx + roomDiagonal, ry + roomDiagonal);
-            myPath.moveTo(rx + roomDiagonal, ry - roomDiagonal);
-            myPath.lineTo(rx - roomDiagonal, ry + roomDiagonal);
-            painter.drawPath(myPath);
-            painter.setPen(savePen);
-            painter.setBrush(saveBrush);
-        }
-    } // end of loop for every room in area
-}
-
 
 void T2DMap::mouseDoubleClickEvent(QMouseEvent* event)
 {
@@ -3851,28 +1301,31 @@ void T2DMap::createLabel(QRectF labelRectangle)
     }
     const int labelId = pArea->createLabelId();
 
-    connect(mpDlgMapLabel, &dlgMapLabel::updated, this, [=, this]() {
-        updateMapLabel(labelRectangle, labelId, pArea);
+    // The map can be replaced while this non-modal dialog is open, so re-find the area by id rather than
+    // keep the pointer, and check the map generation, since a new map reuses area and label ids.
+    const int areaId = mAreaID;
+    const unsigned int mapGeneration = mpMap->mpRoomDB->mapGeneration();
+    connect(mpDlgMapLabel, &dlgMapLabel::updated, this, [this, labelRectangle, labelId, areaId, mapGeneration]() {
+        if (mpMap->mpRoomDB->mapGeneration() != mapGeneration) {
+            return;
+        }
+        if (auto pLabelArea = mpMap->mpRoomDB->getArea(areaId)) {
+            updateMapLabel(labelRectangle, labelId, pLabelArea);
+        }
     });
 
-    connect(mpDlgMapLabel, &dlgMapLabel::rejected, this, [=, this]() mutable {
-        pArea->mMapLabels.remove(labelId);
+    connect(mpDlgMapLabel, &dlgMapLabel::rejected, this, [this, labelId, areaId, mapGeneration]() {
+        if (mpMap->mpRoomDB->mapGeneration() == mapGeneration) {
+            if (auto pLabelArea = mpMap->mpRoomDB->getArea(areaId)) {
+                pLabelArea->mMapLabels.remove(labelId);
+            }
+        }
         update();
     });
 
     mpDlgMapLabel->show();
     mpDlgMapLabel->raise();
     mpDlgMapLabel->updated();
-}
-
-void T2DMap::paintLabelHighlight(QPainter& painter, QRectF labelPaintRectangle, const QSizeF& clickSize)
-{
-    labelPaintRectangle.setSize(clickSize);
-    painter.save();
-    painter.setPen(QPen(QColor(255, 155, 55), 2));
-    painter.setBrush(Qt::NoBrush);
-    painter.drawRect(labelPaintRectangle);
-    painter.restore();
 }
 
 void T2DMap::updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea)
@@ -3894,9 +1347,10 @@ void T2DMap::updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea)
     label.showOnTop = mpDlgMapLabel->isOnTop();
     label.noScaling = mpDlgMapLabel->noScale();
 
-    QPixmap pixmap(static_cast<int>(fabs(labelRectangle.width())), static_cast<int>(fabs(labelRectangle.height())));
+    const QRectF box = labelRectangle.normalized();
+    QPixmap pixmap(static_cast<int>(box.width()), static_cast<int>(box.height()));
     pixmap.fill(Qt::transparent);
-    QRect drawRectangle = labelRectangle.normalized().toRect();
+    QRect drawRectangle = box.toRect();
     drawRectangle.moveTo(0, 0);
     QPainter lp(&pixmap);
     lp.setRenderHint(QPainter::Antialiasing, mMapperUseAntiAlias);
@@ -3931,12 +1385,11 @@ void T2DMap::updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea)
     }
 
     label.pix = pixmap.copy(drawRectangle);
-    auto normalizedLabelRectangle = labelRectangle.normalized();
-    const float mx = (normalizedLabelRectangle.topLeft().x() / mRoomWidth) + mMapCenterX - (xspan / 2.0);
-    const float my = (yspan / 2.0) - (labelRectangle.topLeft().y() / mRoomHeight) - mMapCenterY;
+    const float mx = (box.left() / mRoomWidth) + mMapCenterX - (xspan / 2.0);
+    const float my = (yspan / 2.0) - (box.top() / mRoomHeight) - mMapCenterY;
 
-    const float mx2 = (normalizedLabelRectangle.bottomRight().x() / mRoomWidth) + mMapCenterX - (xspan / 2.0);
-    const float my2 = (yspan / 2.0) - (labelRectangle.bottomRight().y() / mRoomHeight) - mMapCenterY;
+    const float mx2 = (box.right() / mRoomWidth) + mMapCenterX - (xspan / 2.0);
+    const float my2 = (yspan / 2.0) - (box.bottom() / mRoomHeight) - mMapCenterY;
     label.pos = QVector3D(mx, my, mMapCenterZ);
     label.size = QRectF(QPointF(mx, my), QPointF(mx2, my2)).normalized().size();
 
@@ -3961,14 +1414,25 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
     event->accept();
 }
 
+// In a window without the command line the focus would fall to a panel button instead, which keeps arrows and Space
+// for itself; the map handles no keys, so they go on to the mapper around it, which hands them to the command line
+void T2DMap::takeFocusAwayFromTheCommandLine(const Qt::FocusReason reason)
+{
+    TMainConsole* pConsole = mpHost ? mpHost->mainConsoleView() : nullptr;
+    if (pConsole && window() != pConsole->window()) {
+        setFocus(reason);
+    }
+}
+
 bool T2DMap::event(QEvent* event)
 {
-    // NOTE: key events aren't being forwarded to T2DMap because the widget
-    // currently never has focus because it's more comfortable for the user
-    // to always have focus on the command line. If this were to be changed some
-    // day the setFocusPolicy() calls in the constructor need to be uncommented
+    // NOTE: the widget has the focus only in a window without the command line,
+    // as it is more comfortable for the user to always have focus on the command
+    // line, and it handles no key events itself
 
-    if (event->type() == QEvent::KeyPress) {
+    if (event->type() == QEvent::WindowActivate && !window()->focusWidget()) {
+        takeFocusAwayFromTheCommandLine(Qt::ActiveWindowFocusReason);
+    } else if (event->type() == QEvent::KeyPress) {
         //        auto* ke = static_cast<QKeyEvent*>(event);
         //        if (ke->key() == Qt::Key_Delete ) {
         //            if (mCustomLineSelectedRoom != 0  ) {
@@ -4003,10 +1467,8 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
 
     mudlet::self()->activateProfile(mpHost);
     mNewMoveAction = true;
-    TEvent sysMapWindowMousePressEvent{};
-    sysMapWindowMousePressEvent.mArgumentList.append(QLatin1String("sysMapWindowMousePressEvent"));
-    sysMapWindowMousePressEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    mpHost->raiseEvent(sysMapWindowMousePressEvent);
+    TMapPainter::raiseMousePressEvent(mpHost);
+    takeFocusAwayFromTheCommandLine(Qt::MouseFocusReason);
 
     updateSelectionWidget();
     update();
@@ -4079,6 +1541,8 @@ void T2DMap::updateSelectionWidget()
         mIsSelectionSorting = mMultiSelectionListWidget.isSortingEnabled();
         mIsSelectionSortByNames = (mMultiSelectionListWidget.sortColumn() == 1);
         mMultiSelectionListWidget.clear();
+        // The rows are rebuilt from mMultiSelectionSet, which deleted rooms have already left
+        mRoomsToDropFromSelectionWidget.clear();
         // Do NOT sort while inserting items!
         mMultiSelectionListWidget.setSortingEnabled(false);
         QSetIterator<int> itRoom = mMultiSelectionSet;
@@ -4138,7 +1602,7 @@ void T2DMap::slot_createRoom()
         return;
     }
 
-    mpMap->setRoomArea(roomID, mAreaID, false);
+    mpMap->setRoomArea(roomID, mAreaID);
     mpMap->setRoomCoordinates(roomID, mContextMenuClickPosition.x, mContextMenuClickPosition.y, mMapCenterZ);
 
     mpMap->mMapGraphNeedsUpdate = true;
@@ -4197,32 +1661,8 @@ void T2DMap::slot_customLineProperties()
             }
             le_cmd->setText(exit);
             le_fromId->setText(QString::number(room->getId()));
-            if (exit == key_nw) {
-                le_toId->setText(QString::number(room->getNorthwest()));
-            } else if (exit == key_n) {
-                le_toId->setText(QString::number(room->getNorth()));
-            } else if (exit == key_ne) {
-                le_toId->setText(QString::number(room->getNortheast()));
-            } else if (exit == key_up) {
-                le_toId->setText(QString::number(room->getUp()));
-            } else if (exit == key_w) {
-                le_toId->setText(QString::number(room->getWest()));
-            } else if (exit == key_e) {
-                le_toId->setText(QString::number(room->getEast()));
-            } else if (exit == key_down) {
-                le_toId->setText(QString::number(room->getDown()));
-            } else if (exit == key_sw) {
-                le_toId->setText(QString::number(room->getSouthwest()));
-            } else if (exit == key_s) {
-                le_toId->setText(QString::number(room->getSouth()));
-            } else if (exit == key_se) {
-                le_toId->setText(QString::number(room->getSoutheast()));
-            } else if (exit == key_in) {
-                le_toId->setText(QString::number(room->getIn()));
-            } else if (exit == key_out) {
-                le_toId->setText(QString::number(room->getOut()));
-            } else if (room->getSpecialExits().contains(exit)) {
-                le_toId->setText(QString::number(room->getSpecialExits().value(exit)));
+            if (const int destination = TMapPainter::customLineDestination(*room, exit); destination || room->getSpecialExits().contains(exit)) {
+                le_toId->setText(QString::number(destination));
             } else {
                 qWarning().noquote().nospace() << "T2DMap::slot_customLineProperties() WARNING - missing no exit \"" << exit
                                                << "\" to be associated with a custom exit line with that designation in room id " << room->getId();
@@ -4240,11 +1680,20 @@ void T2DMap::slot_customLineProperties()
             mpCurrentLineArrow->setChecked(room->customLinesArrow.value(exit));
             mCurrentLineColor = room->customLinesColor.value(exit);
 
-            mpCurrentLineColor->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(mCurrentLineColor.name()));
+            mpCurrentLineColor->setStyleSheet(mudlet::self()->backgroundOnlyStyleSheet(mCurrentLineColor));
             connect(mpCurrentLineColor, &QAbstractButton::clicked, this, &T2DMap::slot_customLineColor);
             dialog->adjustSize();
 
-            connect(dialog, &QDialog::accepted, this, [this, room, exit]() {
+            // The dialog leaves scripts running, and one may delete the room or its line, or load
+            // another map (a JSON load swaps in a new room database) meanwhile
+            connect(dialog, &QDialog::accepted, this, [this, roomId = room->getId(), exit, roomDB = mpMap->mpRoomDB.get(), mapGeneration = mpMap->mpRoomDB->mapGeneration()]() {
+                if (mpMap->mpRoomDB.get() != roomDB || mpMap->mpRoomDB->mapGeneration() != mapGeneration) {
+                    return;
+                }
+                TRoom* room = mpMap->mpRoomDB->getRoom(roomId);
+                if (!room || !room->customLines.contains(exit)) {
+                    return;
+                }
                 mCurrentLineStyle = static_cast<Qt::PenStyle>(mpCurrentLineStyle->currentData().toInt());
                 room->customLinesStyle[exit] = mCurrentLineStyle;
                 room->customLinesColor[exit] = mCurrentLineColor;
@@ -4269,11 +1718,16 @@ void T2DMap::slot_customLineAddPoint()
     if (!room) {
         return;
     }
+    // The menu stays open while scripts run, so the line may have been removed or shortened since
+    const QList<QPointF> line = room->customLines.value(mCustomLineSelectedExit);
+    if (mCustomLineSelectedPoint < 0 || mCustomLineSelectedPoint >= line.size()) {
+        return;
+    }
 
     QLineF segment;
     if (mCustomLineSelectedPoint > 0) {
-        segment = QLineF(room->customLines.value(mCustomLineSelectedExit).at(mCustomLineSelectedPoint - 1), room->customLines.value(mCustomLineSelectedExit).at(mCustomLineSelectedPoint));
-    } else if (mCustomLineSelectedPoint == 0) {
+        segment = QLineF(line.at(mCustomLineSelectedPoint - 1), line.at(mCustomLineSelectedPoint));
+    } else {
         // The first user manipulable point IS zero - line is drawn to it from a
         // point around room symbol dependent on the exit direction
         // The first segment of custom line stick out half of the distance
@@ -4300,7 +1754,7 @@ void T2DMap::slot_customLineAddPoint()
         } else {
             customLineStartPoint = QPointF(room->x(), room->y());
         }
-        segment = QLineF(customLineStartPoint, room->customLines.value(mCustomLineSelectedExit).at(0));
+        segment = QLineF(customLineStartPoint, line.at(0));
     }
     segment.setLength(segment.length() / 2.0);
     QPointF newPoint = segment.p2();
@@ -4331,11 +1785,16 @@ void T2DMap::slot_customLineRemovePoint()
     if (!room) {
         return;
     }
+    // The menu stays open while scripts run, so the line may have been removed or shortened since
+    const auto pointCount = room->customLines.value(mCustomLineSelectedExit).size();
+    if (mCustomLineSelectedPoint < 0 || mCustomLineSelectedPoint >= pointCount) {
+        return;
+    }
 
     if (mCustomLineSelectedPoint > 0) {
         room->customLines[mCustomLineSelectedExit].removeAt(mCustomLineSelectedPoint);
         mCustomLineSelectedPoint--;
-    } else if (mCustomLineSelectedPoint == 0 && room->customLines.value(mCustomLineSelectedExit).count() > 1) {
+    } else if (pointCount > 1) {
         // The first user manipulable point IS zero - line is drawn to it from a
         // point around room symbol dependent on the exit direction.  We can only
         // allow its deletion if there is at least another one left.
@@ -4514,6 +1973,8 @@ void T2DMap::slot_setPlayerLocation()
 
     const int _newRoomId = *(mMultiSelectionSet.constBegin());
     if (auto* pR = mpMap->mpRoomDB->getRoom(_newRoomId)) {
+        // Read before the event: its Lua handlers can delete the room (or the whole map)
+        const int areaId = pR->getArea();
         // No need to check it is a DIFFERENT room - that is taken care of by en/dis-abling the control
         mpMap->mRoomIdHash[mpMap->mProfileName] = _newRoomId;
         mpMap->mNewMove = true;
@@ -4523,7 +1984,7 @@ void T2DMap::slot_setPlayerLocation()
         manualSetEvent.mArgumentList.append(QString::number(_newRoomId));
         manualSetEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
         mpHost->raiseEvent(manualSetEvent);
-        mpMap->updateArea(pR->getArea());
+        mpMap->updatePlayerArea(areaId);
     }
 }
 
@@ -4553,39 +2014,41 @@ void T2DMap::populateUserContextMenus(QMenu& menu)
     if (!mpMap) {
         return;
     }
+    struct UserEntry
+    {
+        int priority;
+        bool menu;
+        QString uniqueName;
+        QString parent;
+    };
     QMap<QString, QMenu*> userMenus;
-    QMapIterator<QString, QStringList> menuIterator(mpMap->mUserMenus);
-
-    while (menuIterator.hasNext()) {
-        menuIterator.next();
-        const QStringList menuInfo = menuIterator.value();
-        const QString displayName = menuInfo.value(1);
-        auto* userMenu = new QMenu(displayName, &menu);
-        userMenus.insert(menuIterator.key(), userMenu);
+    QList<UserEntry> entries;
+    for (const auto& [uniqueName, menuInfo] : std::as_const(mpMap->mUserMenus).asKeyValueRange()) {
+        userMenus.insert(uniqueName, new QMenu(menuInfo.value(1), &menu));
+        entries.append({mpMap->mUserMenuPriorities.value(uniqueName), true, uniqueName, menuInfo.value(0)});
     }
+    for (const auto& [uniqueName, actionInfo] : std::as_const(mpMap->mUserActions).asKeyValueRange()) {
+        entries.append({mpMap->mUserMenuPriorities.value(uniqueName), false, uniqueName, actionInfo.value(1)});
+    }
+    // Stable: ties keep the default order of menus, then events, each by unique name
+    std::stable_sort(entries.begin(), entries.end(), [](const UserEntry& a, const UserEntry& b) {
+        return a.priority < b.priority;
+    });
 
-    menuIterator.toFront();
-    while (menuIterator.hasNext()) {
-        menuIterator.next();
-        const QStringList menuInfo = menuIterator.value();
-        const QString menuParent = menuInfo.value(0);
-
-        if (auto* childMenu = userMenus.value(menuIterator.key(), nullptr)) {
-            if (menuParent.isEmpty()) {
+    for (const UserEntry& entry : std::as_const(entries)) {
+        const QString& uniqueName = entry.uniqueName;
+        const QString& menuParentKey = entry.parent;
+        if (entry.menu) {
+            QMenu* childMenu = userMenus.value(uniqueName);
+            if (menuParentKey.isEmpty()) {
                 menu.addMenu(childMenu);
-            } else if (auto* parentMenu = userMenus.value(menuParent, nullptr)) {
+            } else if (auto* parentMenu = userMenus.value(menuParentKey, nullptr)) {
                 parentMenu->addMenu(childMenu);
             }
+            continue;
         }
-    }
 
-    QMapIterator<QString, QStringList> actionIterator(mpMap->mUserActions);
-    while (actionIterator.hasNext()) {
-        actionIterator.next();
-        const QString uniqueName = actionIterator.key();
-        const QStringList actionInfo = actionIterator.value();
-        const QString menuParentKey = actionInfo.value(1);
-        const QString displayText = actionInfo.value(2);
+        const QString displayText = mpMap->mUserActions.value(uniqueName).value(2);
 
         auto* action = new QAction(displayText, &menu);
         if (menuParentKey.isEmpty()) {
@@ -4608,8 +2071,12 @@ void T2DMap::slot_userAction(QString uniqueName)
     if (!mpMap) {
         return;
     }
-    TEvent event{};
+    // The menu stays open while scripts run, so removeMapEvent() may have taken the item away since
     const QStringList userEvent = mpMap->mUserActions.value(uniqueName);
+    if (userEvent.isEmpty()) {
+        return;
+    }
+    TEvent event{};
     event.mArgumentList.append(userEvent[0]);
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(uniqueName);
@@ -4638,7 +2105,8 @@ void T2DMap::slot_movePosition()
         return;
     }
 
-    TRoom* pR_start = mpMap->mpRoomDB->getRoom(mMultiSelectionHighlightRoomId);
+    const int startRoomId = mMultiSelectionHighlightRoomId;
+    TRoom* pR_start = mpMap->mpRoomDB->getRoom(startRoomId);
     // pR has already been validated by getCenterSelection() but add explicit check
     if (!pR_start) {
         return;
@@ -4701,7 +2169,10 @@ void T2DMap::slot_movePosition()
         pB_abort->setIcon(QIcon::fromTheme(key_dialog_cancel, QIcon(key_icon_dialog_cancel)));
     }
 
-    if (dialog->exec() == QDialog::Accepted) {
+    const bool accepted = dialog->exec() == QDialog::Accepted;
+    // The dialog's event loop runs scripts, which may delete the room
+    pR_start = mpMap->mpRoomDB->getRoom(startRoomId);
+    if (accepted && pR_start) {
         const int dx = pLEx->text().toInt() - pR_start->x();
         const int dy = pLEy->text().toInt() - pR_start->y();
         const int dz = pLEz->text().toInt() - pR_start->z();
@@ -4762,7 +2233,7 @@ void T2DMap::slot_showPropertiesDialog()
 
     bool isAtLeastOneRoom = false;
     QSetIterator<int> itRoom = mMultiSelectionSet;
-    QSet<TRoom*> roomPtrsSet;
+    QSet<int> roomIdsSet;
 
     QHash<QString, int> usedNames;
     QHash<int, int> usedColors;
@@ -4772,11 +2243,12 @@ void T2DMap::slot_showPropertiesDialog()
     int hiddenRoomCount = 0;
 
     while (itRoom.hasNext()) {
-        TRoom* room = mpMap->mpRoomDB->getRoom(itRoom.next());
+        const int roomId = itRoom.next();
+        TRoom* room = mpMap->mpRoomDB->getRoom(roomId);
         if (!room) {
             continue;
         }
-        roomPtrsSet.insert(room);
+        roomIdsSet.insert(roomId);
         isAtLeastOneRoom = true;
 
         // Scan and count all the different names used
@@ -4837,7 +2309,7 @@ void T2DMap::slot_showPropertiesDialog()
     }
 
     mpDlgRoomProperties = new dlgRoomProperties(mpHost, this);
-    mpDlgRoomProperties->init(usedNames, usedColors, usedSymbols, usedWeights, usedLockStatus, hiddenRoomCount, roomPtrsSet);
+    mpDlgRoomProperties->init(usedNames, usedColors, usedSymbols, usedWeights, usedLockStatus, hiddenRoomCount, roomIdsSet);
     mpDlgRoomProperties->show();
     mpDlgRoomProperties->raise();
     connect(mpDlgRoomProperties, &dlgRoomProperties::signal_save_symbol, this, &T2DMap::slot_setRoomProperties);
@@ -4866,7 +2338,7 @@ void T2DMap::slot_setRoomProperties(bool changeName,
                                     QColor newBorderColor,
                                     bool changeBorderThickness,
                                     int newBorderThickness,
-                                    QSet<TRoom*> rooms)
+                                    QSet<int> roomIds)
 {
     if (newName.isEmpty()) {
         newName = QString();
@@ -4888,14 +2360,16 @@ void T2DMap::slot_setRoomProperties(bool changeName,
         newSymbol = newSymbol.normalized(QString::NormalizationForm_C, QChar::Unicode_10_0);
     }
 
-    QSetIterator<TRoom*> itpRoom(rooms);
-    TRoom* room = nullptr;
-
-    while (itpRoom.hasNext()) {
-        room = itpRoom.next();
+    // The rooms' own area, or -1 (every area) when they span several: they may have been picked on the 3D view
+    // while this map, hidden, shows another
+    std::optional<int> editedAreaId;
+    for (const int roomId : std::as_const(roomIds)) {
+        // The dialog is not modal, so rooms may have gone while it was open
+        TRoom* room = mpMap->mpRoomDB->getRoom(roomId);
         if (!room) {
             continue;
         }
+        editedAreaId = !editedAreaId || *editedAreaId == room->getArea() ? room->getArea() : -1;
         if (changeName) {
             room->name = newName;
         }
@@ -4927,15 +2401,17 @@ void T2DMap::slot_setRoomProperties(bool changeName,
     if (changeWeight || changeLockStatus) {
         mpMap->mMapGraphNeedsUpdate = true;
     }
-    mpMap->updateArea(mAreaID);
+    mpMap->updateArea(editedAreaId.value_or(mAreaID));
     mpMap->setUnsaved(__func__);
 }
 
-void T2DMap::slot_previewBorderProperties(QSet<TRoom*> rooms)
+void T2DMap::slot_previewBorderProperties(QSet<int> roomIds)
 {
-    Q_UNUSED(rooms)
+    Q_UNUSED(roomIds)
     repaint();
     update();
+    // The 3D view keeps what it drew of the area until told the area changed
+    mpMap->updateArea(-1);
 }
 
 void T2DMap::slot_setImage() {}
@@ -4958,7 +2434,8 @@ void T2DMap::slot_spread()
         return;
     }
 
-    TRoom* pR_centerRoom = mpMap->mpRoomDB->getRoom(mMultiSelectionHighlightRoomId);
+    const int centerRoomId = mMultiSelectionHighlightRoomId;
+    TRoom* pR_centerRoom = mpMap->mpRoomDB->getRoom(centerRoomId);
     if (!pR_centerRoom) {
         return;
     }
@@ -4979,6 +2456,12 @@ void T2DMap::slot_spread()
                                             1,    // Step
                                             &isOk);
     if (spread == 1 || !isOk) {
+        return;
+    }
+
+    // The dialog's event loop runs scripts, which may delete the room
+    pR_centerRoom = mpMap->mpRoomDB->getRoom(centerRoomId);
+    if (!pR_centerRoom) {
         return;
     }
 
@@ -5005,7 +2488,7 @@ void T2DMap::slot_spread()
             for (auto& customLinePoint : customLinePoints) {
                 const QPointF movingPoint = customLinePoint;
                 customLinePoint.setX(static_cast<float>((movingPoint.x() - dx) * spread + dx));
-                customLinePoint.setY(static_cast<float>((movingPoint.y() - dx) * spread + dy));
+                customLinePoint.setY(static_cast<float>((movingPoint.y() - dy) * spread + dy));
             }
             newCustomLinePointsMap.insert(itCustomLine.key(), customLinePoints);
         }
@@ -5028,7 +2511,8 @@ void T2DMap::slot_shrink()
         return;
     }
 
-    TRoom* pR_centerRoom = mpMap->mpRoomDB->getRoom(mMultiSelectionHighlightRoomId);
+    const int centerRoomId = mMultiSelectionHighlightRoomId;
+    TRoom* pR_centerRoom = mpMap->mpRoomDB->getRoom(centerRoomId);
     if (!pR_centerRoom) {
         return;
     }
@@ -5049,6 +2533,12 @@ void T2DMap::slot_shrink()
                                             1,    // Step
                                             &isOk);
     if (spread == 1 || !isOk) {
+        return;
+    }
+
+    // The dialog's event loop runs scripts, which may delete the room
+    pR_centerRoom = mpMap->mpRoomDB->getRoom(centerRoomId);
+    if (!pR_centerRoom) {
         return;
     }
 
@@ -5075,7 +2565,7 @@ void T2DMap::slot_shrink()
             for (auto& customLinePoint : customLinePoints) {
                 const QPointF movingPoint = customLinePoint;
                 customLinePoint.setX(static_cast<float>((movingPoint.x() - dx) / spread + dx));
-                customLinePoint.setY(static_cast<float>((movingPoint.y() - dx) / spread + dy));
+                customLinePoint.setY(static_cast<float>((movingPoint.y() - dy) / spread + dy));
             }
             newCustomLinePointsMap.insert(itCustomLine.key(), customLinePoints);
         }
@@ -5114,8 +2604,8 @@ void T2DMap::slot_loadMap()
         return;
     }
 
-    QSettings& settings = *mudlet::getQSettings();
-    QString lastDir = settings.value("lastFileDialogLocation", mudlet::getMudletPath(enums::profileHomePath, mpHost->getName())).toString();
+    QSettings& settings = *MudletApp::getQSettings();
+    QString lastDir = settings.value("lastFileDialogLocation", MudletApp::getMudletPath(enums::profileHomePath, mpHost->getName())).toString();
 
 
     const QString fileName = QFileDialog::getOpenFileName(this,
@@ -5132,9 +2622,9 @@ void T2DMap::slot_loadMap()
     settings.setValue("lastFileDialogLocation", lastDir);
 
     if (fileName.endsWith(qsl(".xml"), Qt::CaseInsensitive)) {
-        mpHost->mpConsole->importMap(fileName);
+        mpHost->importMapFile(fileName);
     } else {
-        mpHost->mpConsole->loadMap(fileName);
+        mpHost->loadMapFile(fileName);
     }
 }
 
@@ -5150,19 +2640,23 @@ void T2DMap::slot_newMap()
         return;
     }
 
-    mpMap->setRoomArea(roomID, -1, false);
+    mpMap->setRoomArea(roomID, -1);
     mpMap->setRoomCoordinates(roomID, 0, 0, 0);
     mpMap->mMapGraphNeedsUpdate = true;
 
     mpMap->mRoomIdHash[mpMap->mProfileName] = roomID;
     mpMap->mNewMove = true;
-    slot_toggleMapViewOnly();
+    if (mMapViewOnly) {
+        slot_toggleMapViewOnly();
+    }
 
     isCenterViewCall = true;
     mpMap->updateArea(-1);
     isCenterViewCall = false;
     mpMap->setUnsaved(__func__);
-    mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
+    if (mpMap->mapper()) {
+        mpMap->mapper()->resetAreaComboBoxToPlayerRoomArea();
+    }
 }
 
 void T2DMap::slot_setArea()
@@ -5229,32 +2723,29 @@ void T2DMap::slot_setArea()
             mpMap->postMessage(tr("[  OK  ]  - Added \"%1\" (%2) area to map.").arg(newAreaName, QString::number(newAreaId)));
             mpMap->setUnsaved(__func__);
 
-            mpMap->mpMapper->updateAreaComboBox();
+            if (mpMap->mapper()) {
+                mpMap->mapper()->updateAreaComboBox();
+            }
         }
         mMultiRect = QRect(0, 0, 0, 0);
         QSetIterator<int> itSelectedRoom = mMultiSelectionSet;
         while (itSelectedRoom.hasNext()) {
-            const int currentRoomId = itSelectedRoom.next();
-            if (itSelectedRoom.hasNext()) { // NOT the last room in set -  so defer some area related recalculations
-                mpMap->setRoomArea(currentRoomId, newAreaId, true);
-            } else {
-                // Is the LAST room, so be careful to do all that is needed to clean
-                // up the affected areas (triggered by last "false" argument in next
-                // line)...
-                if (!(mpMap->setRoomArea(currentRoomId, newAreaId, false))) {
-                    // Failed on the last of multiple room area move so do the missed
-                    // out recalculations for the dirtied areas
-                    auto areaPtrsList{mpMap->mpRoomDB->getAreaPtrList()};
-                    QSet<TArea*> const areaPtrsSet{areaPtrsList.begin(), areaPtrsList.end()};
-                    QSetIterator<TArea*> itpArea{areaPtrsSet};
-                    while (itpArea.hasNext()) {
-                        TArea* pArea = itpArea.next();
-                        pArea->clean();
-                    }
-                }
-                const auto& targetAreaName = mpMap->mpRoomDB->getAreaNamesMap().value(newAreaId);
-                mpMap->mpMapper->comboBox_showArea->setCurrentText(targetAreaName);
-                switchArea(targetAreaName);
+            mpMap->setRoomArea(itSelectedRoom.next(), newAreaId);
+        }
+        if (!mMultiSelectionSet.isEmpty()) {
+            const auto& targetAreaName = mpMap->mpRoomDB->getAreaNamesMap().value(newAreaId);
+            if (!mIsSecondaryView && mpMap->mapper()) {
+                mpMap->mapper()->comboBox_showArea->setCurrentText(targetAreaName);
+            }
+            switchArea(targetAreaName);
+            // The rooms are still selected, so land on them rather than on
+            // whichever room switchArea() would otherwise have picked:
+            TRoom* pCenterRoom = getCenterSelection() ? mpMap->mpRoomDB->getRoom(mMultiSelectionHighlightRoomId) : nullptr;
+            if (pCenterRoom) {
+                mMapCenterX = pCenterRoom->x();
+                mMapCenterY = -pCenterRoom->y();
+                mMapCenterZ = pCenterRoom->z();
+                set3DViewCenter(newAreaId, mMapCenterX, -mMapCenterY, mMapCenterZ);
             }
         }
         update();
@@ -5263,7 +2754,11 @@ void T2DMap::slot_setArea()
     set_room_area_dialog->show();
     set_room_area_dialog->raise();
 
-    arealist_combobox->setCurrentIndex(mpMap->mpMapper->getCurrentShownAreaIndex());
+    if (!mIsSecondaryView && mpMap->mapper()) {
+        arealist_combobox->setCurrentIndex(mpMap->mapper()->getCurrentShownAreaIndex());
+    } else {
+        arealist_combobox->setCurrentIndex(arealist_combobox->findData(QString::number(mAreaID)));
+    }
 }
 
 
@@ -5299,10 +2794,16 @@ void T2DMap::slot_configureAreas()
 
     repopulate();
 
-    const int currentAreaIndex = mpMap->mpMapper ? mpMap->mpMapper->getCurrentShownAreaIndex() : -1;
-    if (currentAreaIndex >= 0 && currentAreaIndex < listWidget->count()) {
-        listWidget->setCurrentRow(currentAreaIndex);
-        listWidget->scrollToItem(listWidget->currentItem(), QAbstractItemView::PositionAtCenter);
+    // mAreaID is the area the map is actually showing; the mapper's dropdown
+    // index can't be used here as it omits the default area when hidden,
+    // while this list always includes it.
+    for (int i = 0; i < listWidget->count(); ++i) {
+        auto* it = listWidget->item(i);
+        if (it && it->data(Qt::UserRole).toInt() == mAreaID) {
+            listWidget->setCurrentRow(i);
+            listWidget->scrollToItem(it, QAbstractItemView::PositionAtCenter);
+            break;
+        }
     }
 
     auto* buttonBar = new QWidget(dialog);
@@ -5370,6 +2871,7 @@ void T2DMap::slot_configureAreas()
             QMessageBox::warning(dialog, tr("Rename failed"), tr("Unable to rename area. Name may be invalid or already in use."));
             return;
         }
+        mpMap->setUnsaved(__func__);
 
         repopulate();
         for (int i = 0; i < listWidget->count(); ++i) {
@@ -5381,11 +2883,20 @@ void T2DMap::slot_configureAreas()
             }
         }
 
-        if (mpMap && mpMap->mpMapper) {
-            mpMap->mpMapper->updateAreaComboBox();
-            if (mpMap->mpMapper->comboBox_showArea) {
-                mpMap->mpMapper->comboBox_showArea->setCurrentText(newName);
+        // Refresh every dropdown that lists area names - the primary
+        // mapper's and every secondary view's, not just whichever one
+        // opened this dialog.
+        if (mpMap && mpMap->mapper()) {
+            mpMap->mapper()->updateAreaComboBox();
+            // Only follow the rename into the dropdown if it's the area the
+            // primary mapper is actually showing - otherwise this would
+            // move the dropdown to an area the map isn't displaying.
+            if (mpMap->mapper()->mp2dMap && areaId == mpMap->mapper()->mp2dMap->getAreaId() && mpMap->mapper()->comboBox_showArea) {
+                mpMap->mapper()->comboBox_showArea->setCurrentText(newName);
             }
+        }
+        if (mpMap && mpMap->getViewManager()) {
+            mpMap->getViewManager()->updateAllViews();
         }
     });
 
@@ -5407,6 +2918,7 @@ void T2DMap::slot_configureAreas()
             QMessageBox::warning(dialog, tr("Create failed"), tr("Unable to create area. Name may be invalid or already in use."));
             return;
         }
+        mpMap->setUnsaved(__func__);
 
         repopulate();
         for (int i = 0; i < listWidget->count(); ++i) {
@@ -5418,11 +2930,11 @@ void T2DMap::slot_configureAreas()
             }
         }
 
-        if (mpMap && mpMap->mpMapper) {
-            mpMap->mpMapper->updateAreaComboBox();
-            if (mpMap->mpMapper->comboBox_showArea) {
-                mpMap->mpMapper->comboBox_showArea->setCurrentIndex(mpMap->mpMapper->getCurrentShownAreaIndex());
-            }
+        if (mpMap && mpMap->mapper()) {
+            mpMap->mapper()->updateAreaComboBox();
+        }
+        if (mpMap && mpMap->getViewManager()) {
+            mpMap->getViewManager()->updateAllViews();
         }
     });
 
@@ -5450,13 +2962,33 @@ void T2DMap::slot_configureAreas()
             QMessageBox::warning(dialog, tr("Delete failed"), tr("Unable to delete area."));
             return;
         }
+        mpMap->setUnsaved(__func__);
 
         repopulate();
-        if (mpMap && mpMap->mpMapper) {
-            mpMap->mpMapper->updateAreaComboBox();
-            if (mpMap->mpMapper->comboBox_showArea) {
-                mpMap->mpMapper->comboBox_showArea->setCurrentIndex(mpMap->mpMapper->getCurrentShownAreaIndex());
+
+        // Refresh every dropdown that lists area names - the primary
+        // mapper's and every secondary view's, not just whichever one
+        // opened this dialog.
+        if (mpMap->mapper()) {
+            mpMap->mapper()->updateAreaComboBox();
+        }
+        if (mpMap->getViewManager()) {
+            mpMap->getViewManager()->updateAllViews();
+        }
+
+        // Every map that was showing the deleted area needs to move off it -
+        // paintEvent() can't draw an area that no longer exists - not just
+        // whichever view opened this dialog.
+        if (mpMap->mapper() && mpMap->mapper()->mp2dMap && mpMap->mapper()->mp2dMap->getAreaId() == areaId) {
+            auto* comboBox = mpMap->mapper()->comboBox_showArea;
+            if (comboBox && comboBox->count() > 0) {
+                mpMap->mapper()->slot_switchArea(comboBox->currentIndex());
+            } else {
+                mpMap->mapper()->mp2dMap->switchArea(mpMap->getDefaultAreaName());
             }
+        }
+        if (mpMap->getViewManager()) {
+            mpMap->getViewManager()->switchViewsShowingArea(areaId);
         }
         update();
     });
@@ -5481,61 +3013,12 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
     event->accept();
 }
 
-// Replacement for getTopLeftCenter - determines a room closest to geometrical
-// mean of all the room selected, the result is stored in the class member
-// mMultiSelectionHighlightRoomId and this returns true on successfully finding
-// such a room
+// Stores the selected room closest to the selection's mean position in
+// mMultiSelectionHighlightRoomId, and returns true on finding one
 bool T2DMap::getCenterSelection()
 {
-    mMultiSelectionHighlightRoomId = 0;
-    if (mMultiSelectionSet.isEmpty()) {
-        return false;
-    }
-
-    QSetIterator<int> itRoom = mMultiSelectionSet;
-    float mean_x = 0.0;
-    float mean_y = 0.0;
-    float mean_z = 0.0;
-    uint processedRoomCount = 0;
-    while (itRoom.hasNext()) {
-        const int currentRoomId = itRoom.next();
-        TRoom* room = mpMap->mpRoomDB->getRoom(currentRoomId);
-        if (!room) {
-            continue;
-        }
-
-        mean_x += (static_cast<float>(room->x() - mean_x)) / ++processedRoomCount;
-        mean_y += (static_cast<float>(room->y() - mean_y)) / processedRoomCount;
-        mean_z += (static_cast<float>(room->z() - mean_z)) / processedRoomCount;
-    }
-
-    if (processedRoomCount) {
-        itRoom.toFront();
-        float closestSquareDistance = -1.0;
-        while (itRoom.hasNext()) {
-            const int currentRoomId = itRoom.next();
-            TRoom* room = mpMap->mpRoomDB->getRoom(currentRoomId);
-            if (!room) {
-                continue;
-            }
-
-            const QVector3D meanToRoom(static_cast<float>(room->x()) - mean_x, static_cast<float>(room->y()) - mean_y, static_cast<float>(room->z()) - mean_z);
-            if (closestSquareDistance < -0.5) {
-                // Don't use an equality to zero test, we are using floats so
-                // need to allow for a little bit of fuzzzyness!
-                closestSquareDistance = meanToRoom.lengthSquared();
-                mMultiSelectionHighlightRoomId = currentRoomId;
-            } else {
-                const float currentRoomSquareDistance = meanToRoom.lengthSquared();
-                if (closestSquareDistance > currentRoomSquareDistance) {
-                    closestSquareDistance = currentRoomSquareDistance;
-                    mMultiSelectionHighlightRoomId = currentRoomId;
-                }
-            }
-        }
-        return true;
-    }
-    return false;
+    mMultiSelectionHighlightRoomId = TMapPainter::selectionCentreRoom(mpMap, mMultiSelectionSet);
+    return mMultiSelectionHighlightRoomId != 0;
 }
 
 void T2DMap::wheelEvent(QWheelEvent* e)
@@ -5555,51 +3038,17 @@ void T2DMap::wheelEvent(QWheelEvent* e)
         return;
     }
 
-    if (!(mpMap->mpRoomDB->getRoom(mRoomID) && mpMap->mpRoomDB->getArea(mAreaID))) {
+    // A secondary view never centred on a room has no mRoomID but must still zoom
+    TArea* pArea = mpMap->mpRoomDB->getArea(mAreaID);
+    if (!pArea) {
+        e->ignore();
         return;
     }
 
-    // Increase rate if control key down - it makes scrolling through
-    // a large number of items in a listwidget's contents easier (that happens
-    // automagically) AND this make it easier to zoom in and out on LARGE area
-    // maps
-    const QPoint delta{e->angleDelta()};
-    const int yDelta = qRound(delta.y() * (e->modifiers() & Qt::ControlModifier ? 5.0 : 1.0) / (8.0 * 15.0));
-    if (yDelta) {
+    if (const std::optional<bool> zoomed =
+                TMapPainter::zoomAtPoint(*pArea, xyzoom, mMapCenterX, mMapCenterY, size(), e->position(), e->angleDelta(), e->modifiers(), mudlet::self()->invertMapZoom())) {
         mPick = false;
-        const qreal oldZoom = xyzoom;
-        // If invert zoom is enabled, use the traditional (inverted) behavior
-        // Otherwise, use modern behavior (non-inverted)
-        const int adjustedYDelta = mudlet::self()->invertMapZoom() ? yDelta : -yDelta;
-        xyzoom = qMax(csmMinXYZoom, xyzoom * pow(1.07, adjustedYDelta));
-        mpMap->mpRoomDB->getArea(mAreaID)->set2DMapZoom(xyzoom);
-
-        if (!qFuzzyCompare(1.0 + oldZoom, 1.0 + xyzoom)) {
-            const float widgetWidth = width();
-            const float widgetHeight = height();
-            float xs = 1.0;
-            float ys = 1.0;
-            if (widgetWidth > 10 && widgetHeight > 10) {
-                if (widgetWidth > widgetHeight) {
-                    xs = (widgetWidth / widgetHeight);
-                } else {
-                    ys = (widgetHeight / widgetWidth);
-                }
-            }
-
-            // mouse pos within the widget
-            const QPointF pos = e->position();
-
-            // Position of the mouse within the map, scaled -1 .. +1
-            // i.e. if the mouse is in the center, nothing changes
-            const float dx = 2.0 * pos.x() / widgetWidth - 1.0;
-            const float dy = 2.0 * pos.y() / widgetHeight - 1.0;
-
-            // now shift the origin by that, scaled by the difference in
-            // zoom factors. Thus the point under the mouse stays in place.
-            mMapCenterX += dx * (oldZoom - xyzoom) / 2.0 * xs;
-            mMapCenterY += dy * (oldZoom - xyzoom) / 2.0 * ys;
-
+        if (*zoomed) {
             flushSymbolPixmapCache();
             flushTextLabelPixmapCache();
             scheduleRender();
@@ -5620,13 +3069,8 @@ std::pair<bool, QString> T2DMap::setMapZoom(const qreal zoom, const int areaId)
         return {false, qsl("no map loaded or no active mapper")};
     }
 
-    if (zoom < csmMinXYZoom) {
-        // That zoom level is too small:
-        // We need to set a non-default precision as otherwise in the corner
-        // case with the default precision we can get something with zoom
-        // being 2.999999 we end up with a confusing:
-        // "zoom 3 is invalid, it must not be less than 3"
-        return {false, qsl("zoom %1 is invalid, it must be at least %2").arg(QString::number(zoom, 'g', 16), QString::number(csmMinXYZoom, 'g', 16))};
+    if (const QString error = TMap::zoomError(zoom); !error.isEmpty()) {
+        return {false, error};
     }
 
     TArea* pArea = nullptr;
@@ -5930,7 +3374,7 @@ void T2DMap::slot_setCustomLine()
     mpCurrentLineStyle->setCurrentIndex(mpCurrentLineStyle->findData(static_cast<int>(mCurrentLineStyle)));
 
     mpCurrentLineArrow->setChecked(mCurrentLineArrow);
-    mpCurrentLineColor->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(mCurrentLineColor.name()));
+    mpCurrentLineColor->setStyleSheet(mudlet::self()->backgroundOnlyStyleSheet(mCurrentLineColor));
     connect(specialExits, &QTreeWidget::itemClicked, this, &T2DMap::slot_setCustomLine2B);
     connect(mpCurrentLineColor, &QAbstractButton::clicked, this, &T2DMap::slot_customLineColor);
     dialog->adjustSize();
@@ -5951,7 +3395,7 @@ void T2DMap::slot_customLineColor()
 
     if (color.isValid()) {
         mCurrentLineColor = color;
-        mpCurrentLineColor->setStyleSheet(mudlet::self()->mBG_ONLY_STYLESHEET.arg(color.name()));
+        mpCurrentLineColor->setStyleSheet(mudlet::self()->backgroundOnlyStyleSheet(color));
     }
 }
 
@@ -6060,6 +3504,8 @@ void T2DMap::slot_setCustomLine2()
 
     QList<QPointF> const list;
     room->customLines[mCustomLinesRoomExit] = list;
+    // Nothing on this path calls calcRoomDimensions(), which would otherwise index the (still empty) line.
+    room->indexCustomLines();
     //    qDebug("T2DMap::slot_setCustomLine2() NORMAL EXIT: %s", qPrintable(exitKey));
     room->customLinesColor[mCustomLinesRoomExit] = mCurrentLineColor;
     /*
@@ -6072,6 +3518,7 @@ void T2DMap::slot_setCustomLine2()
     //    qDebug("   LINE STYLE: %d", mCurrentLineStyle);
     room->customLinesArrow[mCustomLinesRoomExit] = mCurrentLineArrow;
     //    qDebug("   ARROW: %s", mCurrentLineArrow ? "Yes" : "No");
+    mpMap->setUnsaved(__func__);
 
     //: 2D Mapper big, bottom of screen help message
     mHelpMsg = tr("Left-click to add point, right-click to undo/change/finish...");
@@ -6095,6 +3542,8 @@ void T2DMap::slot_setCustomLine2B(QTreeWidgetItem* special_exit, int column)
     }
     QList<QPointF> const _list;
     room->customLines[exit] = _list;
+    // Nothing on this path calls calcRoomDimensions(), which would otherwise index the (still empty) line.
+    room->indexCustomLines();
     //    qDebug("T2DMap::slot_setCustomLine2B() SPECIAL EXIT: %s", qPrintable(exit));
     room->customLinesColor[exit] = mCurrentLineColor;
     /*
@@ -6107,6 +3556,7 @@ void T2DMap::slot_setCustomLine2B(QTreeWidgetItem* special_exit, int column)
     //    qDebug("   LINE STYLE: %d", mCurrentLineStyle);
     room->customLinesArrow[exit] = mCurrentLineArrow;
     //    qDebug("   ARROW: %s", mCurrentLineArrow ? "Yes" : "No");
+    mpMap->setUnsaved(__func__);
     //: 2D Mapper big, bottom of screen help message
     mHelpMsg = tr("Left-click to add point, right-click to undo/change/finish...");
     update();
@@ -6190,43 +3640,7 @@ void T2DMap::setPlayerRoomStyle(const int type)
         return;
     }
 
-    mPlayerRoomColorGradientStops = buildPlayerRoomGradientStops(type, mpMap->mPlayerRoomInnerDiameterPercentage, mpMap->mPlayerRoomInnerColor, mpMap->mPlayerRoomOuterColor);
-}
-
-QGradientStops T2DMap::buildPlayerRoomGradientStops(const int style, const quint8 innerDiameterPercentage, const QColor& innerColor, const QColor& outerColor)
-{
-    const double factor = innerDiameterPercentage / 100.0;
-    const bool solid = (innerDiameterPercentage == 0);
-
-    switch (style) {
-    case 1: // Simple(?) shaded red ring:
-        if (solid) {
-            return {{0.000, QColor(255, 0, 0, 255)}, {0.990, QColor(255, 0, 0, 255)}, {1.000, QColor(255, 0, 0, 0)}};
-        }
-        return {{0.000, QColor(255, 0, 0, 0)}, {factor * 0.980, QColor(255, 0, 0, 0)}, {factor * 1.020, QColor(255, 0, 0, 255)}, {0.980, QColor(255, 0, 0, 255)}, {1.000, QColor(255, 0, 0, 0)}};
-
-    case 2: // Shaded bicolor (blue-yellow - so it ALWAYS contrasts with underlying room color) Ring:
-        if (solid) {
-            return {{0.000, QColor(255, 255, 0, 255)}, {0.990, QColor(0, 0, 255, 255)}, {1.000, QColor(0, 0, 255, 0)}};
-        }
-        return {{0.000, QColor(255, 255, 0, 0)}, {factor * 0.980, QColor(255, 255, 0, 0)}, {factor * 1.020, QColor(255, 255, 0, 255)}, {0.980, QColor(0, 0, 255, 255)}, {1.000, QColor(0, 0, 255, 0)}};
-
-    case 3: { // User set ring:
-        if (solid) {
-            QColor transparentOuter(outerColor);
-            transparentOuter.setAlpha(0);
-            return {{0.000, innerColor}, {0.990, outerColor}, {1.000, transparentOuter}};
-        }
-        QColor transparentInner(innerColor);
-        transparentInner.setAlpha(0);
-        QColor transparentOuter(outerColor);
-        transparentOuter.setAlpha(0);
-        return {{0.000, transparentInner}, {factor * 0.980, transparentInner}, {factor * 1.020, innerColor}, {0.980, outerColor}, {1.000, transparentOuter}};
-    }
-
-    default: // Sort of emulates the original code:
-        return {{0, Qt::white}, {0.7, QColor(255, 0, 0, 200)}, {0.799, QColor(150, 100, 100, 100)}, {0.80, QColor(150, 100, 100, 150)}, {0.95, QColor(255, 0, 0, 150)}};
-    }
+    mPlayerRoomColorGradientStops = RoomAppearance::playerRoomStops(type, mpMap->mPlayerRoomInnerDiameterPercentage, mpMap->mPlayerRoomInnerColor, mpMap->mPlayerRoomOuterColor);
 }
 
 void T2DMap::clearSelection()
@@ -6234,784 +3648,128 @@ void T2DMap::clearSelection()
     if (!mMultiSelection && !mMultiSelectionSet.isEmpty()) {
         mMultiSelectionSet.clear();
         mMultiSelectionHighlightRoomId = 0;
-        mMultiSelectionListWidget.hide();
-        mMultiSelectionListWidget.clear();
+        hideSelectionWidget();
         update();
+    }
+}
+
+void T2DMap::forgetDeletedRoom(const int roomId)
+{
+    // A drag still in progress rebuilds the selection from these on its next move
+    mMultiSelectionBaseSet.remove(roomId);
+    mMultiSelectionAnchorSet.remove(roomId);
+    if (mCustomLinesRoomFrom == roomId || mCustomLinesRoomTo == roomId) {
+        // The id can be reused, and the next click would add a point to that room;
+        // deleting the room the line leads to has already removed its exit
+        if (mpCustomLinesDialog) {
+            mpCustomLinesDialog->reject();
+        } else {
+            mCustomLinesRoomFrom = 0;
+            mCustomLinesRoomTo = 0;
+            mCustomLinesRoomExit.clear();
+        }
+        mHelpMsg.clear();
+        update();
+    }
+    if (mCustomLineSelectedRoom == roomId) {
+        mCustomLineSelectedRoom = 0;
+        mCustomLineSelectedExit.clear();
+        mCustomLineSelectedPoint = -1;
+        update();
+    }
+    // Queued so that deleting many rooms walks the list once, not once per room.
+    // A hidden list is rebuilt before it is shown again.
+    if (!mMultiSelectionListWidget.isHidden() && mMultiSelectionListWidget.topLevelItemCount() > 0) {
+        if (mRoomsToDropFromSelectionWidget.isEmpty()) {
+            QTimer::singleShot(0, this, &T2DMap::pruneDeletedRoomsFromSelectionWidget);
+        }
+        mRoomsToDropFromSelectionWidget.insert(roomId);
+    }
+    if (!mMultiSelectionSet.remove(roomId)) {
+        return;
+    }
+    if (mMultiSelectionHighlightRoomId == roomId) {
+        switch (mMultiSelectionSet.size()) {
+        case 0:
+            mMultiSelectionHighlightRoomId = 0;
+            break;
+        case 1:
+            mMultiSelectionHighlightRoomId = *(mMultiSelectionSet.constBegin());
+            break;
+        default:
+            getCenterSelection();
+        }
+    }
+    update();
+}
+
+void T2DMap::pruneDeletedRoomsFromSelectionWidget()
+{
+    // By id, not by getRoom(): a script may already have made a new room with a deleted one's id
+    const QSet<int> deletedRoomIds = mRoomsToDropFromSelectionWidget;
+    mRoomsToDropFromSelectionWidget.clear();
+    bool rowsRemoved = false;
+    // Removing a selected row would otherwise rebuild mMultiSelectionSet from the rows left
+    mMultiSelectionListWidget.blockSignals(true);
+    for (int row = mMultiSelectionListWidget.topLevelItemCount() - 1; row >= 0; --row) {
+        if (deletedRoomIds.contains(mMultiSelectionListWidget.topLevelItem(row)->text(0).toInt())) {
+            delete mMultiSelectionListWidget.takeTopLevelItem(row);
+            rowsRemoved = true;
+        }
+    }
+    mMultiSelectionListWidget.blockSignals(false);
+    if (mMultiSelectionListWidget.topLevelItemCount() < 2) {
+        hideSelectionWidget();
+        return;
+    }
+    if (!rowsRemoved) {
+        return;
+    }
+    mIsSelectionUsingNames = false;
+    for (int row = 0; row < mMultiSelectionListWidget.topLevelItemCount(); ++row) {
+        if (!mMultiSelectionListWidget.topLevelItem(row)->text(1).isEmpty()) {
+            mIsSelectionUsingNames = true;
+            break;
+        }
+    }
+    mMultiSelectionListWidget.setColumnHidden(1, !mIsSelectionUsingNames);
+    resizeMultiSelectionWidget();
+}
+
+void T2DMap::hideSelectionWidget()
+{
+    mMultiSelectionListWidget.hide();
+    // clear() makes the widget emit itemSelectionChanged() which would in turn
+    // call update() - not something we want when this is reached from within
+    // paintEvent():
+    mMultiSelectionListWidget.blockSignals(true);
+    mMultiSelectionListWidget.clear();
+    mMultiSelectionListWidget.blockSignals(false);
+}
+
+void T2DMap::pruneRoomSelectionToArea(const int areaId)
+{
+    if (TMapPainter::pruneSelectionToArea(mpMap, mMultiSelectionSet, mMultiSelectionHighlightRoomId, areaId)) {
+        // The listing is now stale; it gets rebuilt by updateSelectionWidget() on
+        // the next mouse interaction with what, if anything, is still selected:
+        hideSelectionWidget();
     }
 }
 
 std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel, qreal zoom, bool exportAllZLevels)
 {
-    // Validate zoom parameter
-    if (zoom <= 0.0 || zoom > 10.0) {
-        return {false, qsl("Zoom must be between 0.1 and 10.0")};
-    }
-
     if (!mpMap || mpHost.isNull()) {
         return {false, qsl("Map not initialized")};
     }
 
-    TArea* pArea = mpMap->mpRoomDB->getArea(areaId);
-    if (!pArea) {
-        return {false, qsl("Area %1 not found").arg(areaId)};
-    }
-
-    if (pArea->rooms.isEmpty()) {
-        return {false, qsl("Area %1 contains no rooms").arg(areaId)};
-    }
-
-    // Handle exporting all Z levels if requested
-    if (exportAllZLevels) {
-        if (pArea->zLevels.isEmpty()) {
-            return {false, qsl("Area %1 has no Z levels").arg(areaId)};
-        }
-
-        // Generate filename for each Z level
-        QFileInfo fileInfo(filePath);
-        QString baseFileName = fileInfo.completeBaseName();
-        QString extension = fileInfo.suffix();
-        QString basePath = fileInfo.absolutePath();
-
-        // Export each Z level as a separate file
-        for (const int currentZLevel : std::as_const(pArea->zLevels)) {
-            QString levelFileName = qsl("%1/%2_level_%3.%4").arg(basePath, baseFileName, QString::number(currentZLevel), extension.isEmpty() ? "png" : extension);
-
-            // Recursively call this function for each Z level (without exportAllZLevels flag)
-            auto [success, message] = exportAreaToImage(areaId, levelFileName, currentZLevel, zoom, false);
-            if (!success) {
-                return {false, qsl("Failed to export Z level %1: %2").arg(currentZLevel).arg(message)};
-            }
-        }
-
-        return {true, {}};
-    }
-
-    // Calculate area bounds
-    pArea->calcSpan();
-
-    const int areaWidth = pArea->max_x - pArea->min_x + 1;
-    const int areaHeight = pArea->max_y - pArea->min_y + 1;
-
-
-    if (areaWidth <= 0 || areaHeight <= 0) {
-        return {false, qsl("Area %1 has invalid dimensions").arg(areaId)};
-    }
-
-    // Calculate room size based on area dimensions - auto-sizing approach
-    // Aim for reasonable room sizes that fit well regardless of area size
-    const int targetImageDimension = 1024; // Target around 1024 pixels for the larger dimension
-    const int maxDimension = qMax(areaWidth, areaHeight);
-    const int roomSize = targetImageDimension / maxDimension;
-    const int minRoomSize = 8;
-    const int maxRoomSize = 50; // Prevent rooms from being too large
-    const int finalRoomSize = qBound(minRoomSize, roomSize, maxRoomSize);
-
-    // Calculate image size based on actual area content
-    const int padding = finalRoomSize * 2;
-    const int imageWidth = areaWidth * finalRoomSize + padding * 2;
-    const int imageHeight = areaHeight * finalRoomSize + padding * 2;
-
-    // Calculate offsets to position rooms correctly in the image
-    // Map the area bounds to the image with padding, accounting for Y-axis flip
-    const int exportRX = padding - (pArea->min_x * finalRoomSize);
-    const int exportRY = padding - (pArea->min_y * finalRoomSize);
-
-
-    // Create high-quality image for crisp exports using specified zoom
-    QPixmap pixmap(imageWidth * zoom, imageHeight * zoom);
-    pixmap.setDevicePixelRatio(zoom);
-    pixmap.fill(mpHost->mBgColor_2);
-
-    QPainter painter(&pixmap);
-    if (!painter.isActive()) {
-        return {false, qsl("Failed to create image painter")};
-    }
-
-    // Configure painter
-    if (mMapperUseAntiAlias) {
-        painter.setRenderHint(QPainter::Antialiasing, true);
-        painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
-        painter.setRenderHint(QPainter::TextAntialiasing, true);
-    }
-
-    // Store original coordinate system values to restore later
-    const int originalRX = mRX;
-    const int originalRY = mRY;
-    const float originalRoomWidth = mRoomWidth;
-    const float originalRoomHeight = mRoomHeight;
-
-    // Set class member variables to export coordinate system (Qt handles scaling via devicePixelRatio)
-    mRX = exportRX;
-    mRY = exportRY;
-    // Set mRoomWidth/mRoomHeight for high-quality rendering (Qt handles scaling)
-    mRoomWidth = finalRoomSize;
-    mRoomHeight = finalRoomSize;
-
-    // Set up fonts and pens - use similar approach to paintEvent
-    QFont roomVNumFont = mpMap->mMapSymbolFont;
-    QFont mapNameFont = mpMap->mMapSymbolFont;
-
-    // Get room size factors from host
-    const float eSize = mpHost->mLineSize;
-    const float rSize = mpHost->mRoomSize;
-
-    // Calculate font size based on room dimensions
-    const int fontPixelSize = qMax(6, static_cast<int>(mRoomHeight * rSize / 4.0));
-    roomVNumFont.setPixelSize(fontPixelSize);
-    mapNameFont.setPixelSize(fontPixelSize);
-
-    // Reset symbol font size to match paintEvent behavior (line 1185)
-    mSymbolFontSize = 1;
-
-    // Flush symbol cache to ensure symbols are regenerated with export dimensions
-    flushSymbolPixmapCache();
-
-    // Calculate if room IDs should be legible based on export room size
-    // Similar to logic in paintEvent, but using export dimensions
-    QRectF roomRect(0, 0, finalRoomSize, finalRoomSize);
-    QFont testFont = roomVNumFont;
-    bool areRoomIdsLegible = mShowRoomID && sizeFontToFitTextInRect(testFont, roomRect, qsl("12345"), 10, 7.0);
-
-    QPen pen;
-    pen.setColor(mpHost->mFgColor_2);
-    // Use the same exitWidth calculation as paintEvent (Qt handles scaling via devicePixelRatio)
-    const float exitWidth = 1 / eSize * finalRoomSize * rSize;
-    pen.setWidthF(exitWidth);
-
-    // Use the same Z-level filtering and drawing approach as paintEvent
-    const int exportZLevel = zLevel.has_value() ? zLevel.value() : mMapCenterZ;
-
-    // Draw the ("background") labels that are on the bottom of the map - same as paintEvent
-    QMutableMapIterator<int, TMapLabel> itMapLabel(pArea->mMapLabels);
-    while (itMapLabel.hasNext()) {
-        itMapLabel.next();
-        auto mapLabel = itMapLabel.value();
-        if (mapLabel.pos.z() != exportZLevel) {
-            continue;
-        }
-        // Use export coordinate system for label positioning
-        const int exportRX = padding - (pArea->min_x * finalRoomSize);
-        const int exportRY = padding - (pArea->min_y * finalRoomSize);
-        QPointF labelPosition;
-        const int labelX = mapLabel.pos.x() * finalRoomSize + exportRX;
-        const int labelY = mapLabel.pos.y() * finalRoomSize * -1 + exportRY;
-
-        labelPosition.setX(labelX);
-        labelPosition.setY(labelY);
-        const int labelWidth = abs(qRound(mapLabel.size.width() * finalRoomSize));
-        const int labelHeight = abs(qRound(mapLabel.size.height() * finalRoomSize));
-        if (!((0 < labelX || 0 < labelX + labelWidth) && (imageWidth > labelX || imageWidth > labelX + labelWidth))) {
-            continue;
-        }
-        if (!((0 < labelY || 0 < labelY + labelHeight) && (imageHeight > labelY || imageHeight > labelY + labelHeight))) {
-            continue;
-        }
-
-        QRectF labelPaintRectangle = QRect(labelX, labelY, labelWidth, labelHeight);
-        if (!mapLabel.showOnTop) {
-            if (!mapLabel.noScaling) {
-                painter.drawPixmap(labelPosition, mapLabel.pix.scaled(labelPaintRectangle.size().toSize(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
-                mapLabel.clickSize = QSizeF(labelPaintRectangle.width(), labelPaintRectangle.height());
-            } else {
-                painter.drawPixmap(labelPosition, mapLabel.pix);
-                mapLabel.clickSize = QSizeF(mapLabel.pix.width(), mapLabel.pix.height());
-            }
-            pArea->mMapLabels[itMapLabel.key()] = mapLabel;
-        }
-
-        if (mapLabel.highlight) {
-            paintLabelHighlight(painter, labelPaintRectangle, mapLabel.clickSize);
-        }
-    }
-
-    // Set up area exits map and exit lists (like paintEvent does)
-    QMap<int, QPointF> areaExitsMap;
-    QList<int> exitList;
-    QList<int> oneWayExits;
-
-    // Build exit lists from rooms on current Z-level (like paintEvent does)
-    for (const int roomId : pArea->getRoomsForZ(exportZLevel)) {
-        TRoom* pRoom = mpMap->mpRoomDB->getRoom(roomId);
-        if (!pRoom) {
-            continue;
-        }
-        exitList << roomId;
-    }
-
-
-    // Now draw rooms on Z-level and below (like paintEvent does)
-    int roomsDrawn = 0;
-    int roomsSkipped = 0;
-
-    // First pass: draw rooms on level below (like paintEvent shadow rooms)
-    for (const int roomId : pArea->getRoomsForZ(exportZLevel - 1)) {
-        TRoom* pRoom = mpMap->mpRoomDB->getRoom(roomId);
-        if (!pRoom) {
-            continue;
-        }
-
-        // Use export coordinate system for room positioning
-        const int exportRX = padding - (pArea->min_x * finalRoomSize);
-        const int exportRY = padding - (pArea->min_y * finalRoomSize);
-        const float rx = pRoom->x() * finalRoomSize + exportRX;
-        const float ry = pRoom->y() * -1 * finalRoomSize + exportRY;
-
-        if (rx >= 0 && ry >= 0 && rx <= imageWidth && ry <= imageHeight) {
-            painter.save();
-            painter.setPen(Qt::NoPen);
-            painter.setBrush(QBrush(mpHost->mLowerLevelColor));
-
-            // Draw shadow room using the same approach as paintEvent (lines 1426-1442)
-            const qreal scaledRoomSize = static_cast<qreal>(finalRoomSize) * rSize;
-            if (mBubbleMode) {
-                const QPointF roomCenter(rx, ry);
-                const qreal roomRadius = scaledRoomSize / 2.0;
-                QPainterPath diameterPath;
-                diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
-                painter.drawPath(diameterPath);
-            } else {
-                const QRectF shadowRect(rx - (scaledRoomSize * 0.8), ry - (scaledRoomSize * 0.2), scaledRoomSize, scaledRoomSize);
-                painter.drawRect(shadowRect);
-            }
-            painter.restore();
-            roomsDrawn++;
-        }
-    }
-
-    // Second pass: draw rooms on level above (like paintEvent upper level rooms)
-    for (const int roomId : pArea->getRoomsForZ(exportZLevel + 1)) {
-        TRoom* pRoom = mpMap->mpRoomDB->getRoom(roomId);
-        if (!pRoom) {
-            continue;
-        }
-
-        // Use export coordinate system for room positioning
-        const int exportRX = padding - (pArea->min_x * finalRoomSize);
-        const int exportRY = padding - (pArea->min_y * finalRoomSize);
-        const float rx = pRoom->x() * finalRoomSize + exportRX;
-        const float ry = pRoom->y() * -1 * finalRoomSize + exportRY;
-
-        if (rx >= 0 && ry >= 0 && rx <= imageWidth && ry <= imageHeight) {
-            painter.save();
-            painter.setPen(QPen(mpHost->mUpperLevelColor, 1));
-            painter.setBrush(Qt::transparent);
-
-            // Draw outline room using the same approach as paintEvent (lines 1456-1471)
-            if (mBubbleMode) {
-                const float roomRadius = 0.5 * rSize * finalRoomSize;
-                const QPointF roomCenter = QPointF(rx + (roomRadius * rSize * 0.5), ry - (roomRadius * rSize * 0.5));
-                QPainterPath diameterPath;
-                diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
-                painter.drawPath(diameterPath);
-            } else {
-                painter.drawRect(rx - (finalRoomSize * rSize * 0.2), ry - (finalRoomSize * rSize * 0.8), finalRoomSize * rSize, finalRoomSize * rSize);
-            }
-            painter.restore();
-            roomsDrawn++;
-        }
-    }
-
-    // Third pass: draw room exits (moved to correct position after upper-level rooms)
-    if (!pArea->gridMode) {
-        // paintRoomExits uses width() and height() for visibility filtering, but we need to use imageWidth/imageHeight
-        // Since we can't easily override those methods, we'll create a custom export-specific exit drawing
-
-        // Draw exits using similar logic to paintRoomExits but with export-specific coordinates
-        QSetIterator<int> itRoom2(pArea->getRoomsForZ(exportZLevel));
-        while (itRoom2.hasNext()) {
-            const int roomId = itRoom2.next();
-            TRoom* room = mpMap->mpRoomDB->getRoom(roomId);
-            if (!room) {
-                continue;
-            }
-
-            const float rx = room->x() * finalRoomSize + (padding - (pArea->min_x * finalRoomSize));
-            const float ry = room->y() * -1 * finalRoomSize + (padding - (pArea->min_y * finalRoomSize));
-
-            // Skip rooms that are outside the image bounds
-            if (rx < 0 || ry < 0 || rx > imageWidth || ry > imageHeight) {
-                continue;
-            }
-
-            room->rendered = true;
-
-            // First, draw custom exit lines (if any) - exact logic from paintRoomExits
-            if (!room->customLines.empty()) {
-                painter.save();
-                QMapIterator<QString, QList<QPointF>> itk(room->customLines);
-                while (itk.hasNext()) {
-                    itk.next();
-                    const QString exitKey = itk.key();
-                    QColor customLineColor;
-                    if (roomId == mCustomLineSelectedRoom && exitKey == mCustomLineSelectedExit) {
-                        customLineColor = QColor(255, 155, 55);
-                    } else {
-                        customLineColor = room->customLinesColor.value(exitKey, Qt::red);
-                    }
-
-                    const QPointF origin = QPointF(rx, ry);
-
-                    // Calculate fixed offset point based on exit direction (same logic as paintRoomExits)
-                    QPointF fixedOffsetPoint;
-                    bool isXYPlainExit = false;
-                    if (exitKey == "n") {
-                        fixedOffsetPoint = QPointF(rx, ry - finalRoomSize / 2.0);
-                        isXYPlainExit = true;
-                    } else if (exitKey == "ne") {
-                        fixedOffsetPoint = QPointF(rx + finalRoomSize / 2.0, ry - finalRoomSize / 2.0);
-                        isXYPlainExit = true;
-                    } else if (exitKey == "e") {
-                        fixedOffsetPoint = QPointF(rx + finalRoomSize / 2.0, ry);
-                        isXYPlainExit = true;
-                    } else if (exitKey == "se") {
-                        fixedOffsetPoint = QPointF(rx + finalRoomSize / 2.0, ry + finalRoomSize / 2.0);
-                        isXYPlainExit = true;
-                    } else if (exitKey == "s") {
-                        fixedOffsetPoint = QPointF(rx, ry + finalRoomSize / 2.0);
-                        isXYPlainExit = true;
-                    } else if (exitKey == "sw") {
-                        fixedOffsetPoint = QPointF(rx - finalRoomSize / 2.0, ry + finalRoomSize / 2.0);
-                        isXYPlainExit = true;
-                    } else if (exitKey == "w") {
-                        fixedOffsetPoint = QPointF(rx - finalRoomSize / 2.0, ry);
-                        isXYPlainExit = true;
-                    } else if (exitKey == "nw") {
-                        fixedOffsetPoint = QPointF(rx - finalRoomSize / 2.0, ry - finalRoomSize / 2.0);
-                        isXYPlainExit = true;
-                    } else {
-                        fixedOffsetPoint = QPointF(rx, ry);
-                    }
-
-                    QPen customLinePen = painter.pen();
-                    customLinePen.setCosmetic(mMapperUseAntiAlias);
-                    customLinePen.setWidthF(exitWidth);
-                    customLinePen.setCapStyle(Qt::RoundCap);
-                    customLinePen.setJoinStyle(Qt::RoundJoin);
-                    customLinePen.setColor(customLineColor);
-                    customLinePen.setStyle(room->customLinesStyle.value(exitKey, Qt::SolidLine));
-
-                    QVector<QPointF> polyLinePoints;
-                    const QList<QPointF> customLinePoints = itk.value();
-                    QLineF doorLineSegment;
-
-                    if (!customLinePoints.empty()) {
-                        painter.setPen(customLinePen);
-                        polyLinePoints << origin;
-                        polyLinePoints << fixedOffsetPoint;
-
-                        // Transform custom line points (same as original: customLinePoint.x() * mRoomWidth + mRX)
-                        for (const QPointF& customLinePoint : customLinePoints) {
-                            const float pointX = customLinePoint.x() * finalRoomSize + (padding - (pArea->min_x * finalRoomSize));
-                            const float pointY = customLinePoint.y() * finalRoomSize * -1 + (padding - (pArea->min_y * finalRoomSize));
-                            polyLinePoints << QPointF(pointX, pointY);
-                        }
-
-                        // Determine door line segment for door drawing (same logic as original)
-                        if (polyLinePoints.size() > 2) {
-                            if (isXYPlainExit) {
-                                doorLineSegment = QLineF{polyLinePoints.at(0), polyLinePoints.at(1)};
-                            } else {
-                                // Non-XY-Plane exits have the first two points being coincident:
-                                doorLineSegment = QLineF{polyLinePoints.at(1), polyLinePoints.at(2)};
-                            }
-                        } else {
-                            // There must be 2 points ...
-                            doorLineSegment = QLineF{polyLinePoints.at(0), polyLinePoints.at(1)};
-                        }
-
-                        // Draw the custom polyline
-                        painter.drawPolyline(polyLinePoints.data(), polyLinePoints.size());
-
-                        // Draw arrow if needed (same logic as original)
-                        if (room->customLinesArrow.value(exitKey, false)) {
-                            QLineF arrowLine = QLineF(polyLinePoints.last(), polyLinePoints.at(polyLinePoints.size() - 2));
-                            arrowLine.setLength(exitWidth * 5.0);
-
-                            QLineF arrowHead1 = arrowLine;
-                            arrowHead1.setLength(exitWidth * 3.0);
-                            arrowHead1.setAngle(arrowLine.angle() + 20);
-
-                            QLineF arrowHead2 = arrowLine;
-                            arrowHead2.setLength(exitWidth * 3.0);
-                            arrowHead2.setAngle(arrowLine.angle() - 20);
-
-                            painter.drawLine(arrowHead1);
-                            painter.drawLine(arrowHead2);
-                        }
-
-                        // Draw door if exists on this custom line
-                        if (room->doors.value(exitKey, 0) > 0) {
-                            drawDoor(painter, *room, exitKey, doorLineSegment);
-                        }
-                    }
-                }
-                painter.restore();
-            }
-
-            // Now draw regular exits - use exact same logic as paintRoomExits
-            QList<int> roomExitList;
-            QList<int> roomOneWayExits;
-
-            // Helper function to add exit and check for one-way
-            auto addExitAndCheckOneWay = [&](const QString& dirKey, int exitRoomId) {
-                if (exitRoomId > 0) {
-                    roomExitList.push_back(exitRoomId);
-                    TRoom* exitRoom = mpMap->mpRoomDB->getRoom(exitRoomId);
-                    if (exitRoom) {
-                        // Check if it's a one-way exit (return direction doesn't point back)
-                        bool isOneWay = false;
-                        if (dirKey == "n" && exitRoom->getSouth() != roomId)
-                            isOneWay = true;
-                        else if (dirKey == "s" && exitRoom->getNorth() != roomId)
-                            isOneWay = true;
-                        else if (dirKey == "e" && exitRoom->getWest() != roomId)
-                            isOneWay = true;
-                        else if (dirKey == "w" && exitRoom->getEast() != roomId)
-                            isOneWay = true;
-                        else if (dirKey == "ne" && exitRoom->getSouthwest() != roomId)
-                            isOneWay = true;
-                        else if (dirKey == "nw" && exitRoom->getSoutheast() != roomId)
-                            isOneWay = true;
-                        else if (dirKey == "se" && exitRoom->getNorthwest() != roomId)
-                            isOneWay = true;
-                        else if (dirKey == "sw" && exitRoom->getNortheast() != roomId)
-                            isOneWay = true;
-
-                        if (isOneWay) {
-                            roomOneWayExits.push_back(exitRoomId);
-                        }
-                    }
-                }
-            };
-
-            // Only add regular exits for directions that don't have custom lines (like paintRoomExits)
-            if (!room->customLines.empty()) {
-                // This room has custom lines - only add regular exits for directions without custom lines
-                if (!room->customLines.contains("n")) {
-                    addExitAndCheckOneWay("n", room->getNorth());
-                }
-                if (!room->customLines.contains("ne")) {
-                    addExitAndCheckOneWay("ne", room->getNortheast());
-                }
-                if (!room->customLines.contains("e")) {
-                    addExitAndCheckOneWay("e", room->getEast());
-                }
-                if (!room->customLines.contains("se")) {
-                    addExitAndCheckOneWay("se", room->getSoutheast());
-                }
-                if (!room->customLines.contains("s")) {
-                    addExitAndCheckOneWay("s", room->getSouth());
-                }
-                if (!room->customLines.contains("sw")) {
-                    addExitAndCheckOneWay("sw", room->getSouthwest());
-                }
-                if (!room->customLines.contains("w")) {
-                    addExitAndCheckOneWay("w", room->getWest());
-                }
-                if (!room->customLines.contains("nw")) {
-                    addExitAndCheckOneWay("nw", room->getNorthwest());
-                }
-            } else {
-                // This room has no custom lines - add all regular exits (only 8 cardinal/diagonal directions)
-                addExitAndCheckOneWay("n", room->getNorth());
-                addExitAndCheckOneWay("s", room->getSouth());
-                addExitAndCheckOneWay("e", room->getEast());
-                addExitAndCheckOneWay("w", room->getWest());
-                addExitAndCheckOneWay("ne", room->getNortheast());
-                addExitAndCheckOneWay("nw", room->getNorthwest());
-                addExitAndCheckOneWay("se", room->getSoutheast());
-                addExitAndCheckOneWay("sw", room->getSouthwest());
-            }
-
-            // Draw regular exit lines to destination rooms (same as paintRoomExits logic)
-            for (const int exitRoomId : roomExitList) {
-                if (exitRoomId <= 0)
-                    continue;
-
-                TRoom* exitRoom = mpMap->mpRoomDB->getRoom(exitRoomId);
-                if (!exitRoom)
-                    continue;
-
-                // Determine if this is an area exit (like original paintRoomExits)
-                const bool areaExit = exitRoom->getArea() != areaId;
-                const float exitArrowScale = (mLargeAreaExitArrows ? 2.0f : 1.0f);
-
-                QLineF exitLine;
-                QString doorKey;
-
-                // Determine door key and exit line based on direction
-                if (room->getNorth() == exitRoomId) {
-                    doorKey = "n";
-                    if (areaExit) {
-                        exitLine = QLineF(rx, ry - exitArrowScale * finalRoomSize, rx, ry);
-                    }
-                } else if (room->getSouth() == exitRoomId) {
-                    doorKey = "s";
-                    if (areaExit) {
-                        exitLine = QLineF(rx, ry + exitArrowScale * finalRoomSize, rx, ry);
-                    }
-                } else if (room->getEast() == exitRoomId) {
-                    doorKey = "e";
-                    if (areaExit) {
-                        exitLine = QLineF(rx + exitArrowScale * finalRoomSize, ry, rx, ry);
-                    }
-                } else if (room->getWest() == exitRoomId) {
-                    doorKey = "w";
-                    if (areaExit) {
-                        exitLine = QLineF(rx - exitArrowScale * finalRoomSize, ry, rx, ry);
-                    }
-                } else if (room->getNortheast() == exitRoomId) {
-                    doorKey = "ne";
-                    if (areaExit) {
-                        exitLine = QLineF(rx + exitArrowScale * finalRoomSize, ry - exitArrowScale * finalRoomSize, rx, ry);
-                    }
-                } else if (room->getNorthwest() == exitRoomId) {
-                    doorKey = "nw";
-                    if (areaExit) {
-                        exitLine = QLineF(rx - exitArrowScale * finalRoomSize, ry - exitArrowScale * finalRoomSize, rx, ry);
-                    }
-                } else if (room->getSoutheast() == exitRoomId) {
-                    doorKey = "se";
-                    if (areaExit) {
-                        exitLine = QLineF(rx + exitArrowScale * finalRoomSize, ry + exitArrowScale * finalRoomSize, rx, ry);
-                    }
-                } else if (room->getSouthwest() == exitRoomId) {
-                    doorKey = "sw";
-                    if (areaExit) {
-                        exitLine = QLineF(rx - exitArrowScale * finalRoomSize, ry + exitArrowScale * finalRoomSize, rx, ry);
-                    }
-                }
-
-                if (!areaExit) {
-                    // Same-area exit: draw line to destination room (original logic)
-                    const float exitRoomX = exitRoom->x() * finalRoomSize + (padding - (pArea->min_x * finalRoomSize));
-                    const float exitRoomY = exitRoom->y() * -1 * finalRoomSize + (padding - (pArea->min_y * finalRoomSize));
-
-                    // Skip if destination room is outside the image bounds
-                    if (exitRoomX < 0 || exitRoomY < 0 || exitRoomX > imageWidth || exitRoomY > imageHeight) {
-                        continue;
-                    }
-
-                    exitLine = QLineF(rx, ry, exitRoomX, exitRoomY);
-
-                    if (roomOneWayExits.contains(exitRoomId)) {
-                        // Draw one-way exit with dashed line
-                        QPen oneWayPen = pen;
-                        oneWayPen.setStyle(Qt::DashLine);
-                        painter.setPen(oneWayPen);
-                    } else {
-                        painter.setPen(pen);
-                    }
-
-                    painter.drawLine(exitLine);
-
-                } else {
-                    // Area exit: draw directional stub with arrow (like original paintRoomExits)
-                    painter.save();
-                    QPen areaPen = pen;
-                    areaPen.setWidthF(exitWidth);
-                    areaPen.setCapStyle(Qt::RoundCap);
-                    areaPen.setCosmetic(mMapperUseAntiAlias);
-                    areaPen.setColor(mpMap->getColor(exitRoomId));
-
-                    // Draw outline first for visibility on matching backgrounds
-                    QPen outlinePen = areaPen;
-                    outlinePen.setWidthF(exitWidth + 2.0);
-                    outlinePen.setColor((mpHost->mBgColor_2.lightness() > 127) ? Qt::black : Qt::white);
-                    painter.setPen(outlinePen);
-                    painter.drawLine(exitLine);
-
-                    // Draw colored line on top
-                    painter.setPen(areaPen);
-                    painter.drawLine(exitLine);
-
-                    // Draw arrow head (same logic as original paintRoomExits lines 2298-2333)
-                    QLineF arrowLine = QLineF(exitLine);
-                    if (mLargeAreaExitArrows) {
-                        arrowLine.setLength((finalRoomSize * 2.0) * 0.4);
-                    } else {
-                        arrowLine.setLength(exitWidth * 5.0);
-                    }
-                    const QPointF arrowTip = arrowLine.p1();
-                    const QPointF arrowBase = arrowLine.p2();
-                    const QLineF arrowBaseLine = QLineF(arrowLine);
-                    const qreal arrowAngle = arrowBaseLine.angle() - 90.0;
-
-                    QLineF arrowSide;
-                    arrowSide.setP1(arrowBase);
-                    arrowSide.setAngle(arrowAngle);
-                    if (mLargeAreaExitArrows) {
-                        arrowSide.setLength((finalRoomSize * 2.0) * 0.15);
-                    } else {
-                        arrowSide.setLength(exitWidth * 2.0);
-                    }
-                    const QPointF arrowLeft = arrowSide.p2();
-                    arrowSide.setAngle(arrowSide.angle() + 180.0);
-                    const QPointF arrowRight = arrowSide.p2();
-
-                    QPolygonF arrowHead;
-                    arrowHead.append(arrowTip);
-                    arrowHead.append(arrowLeft);
-                    arrowHead.append(arrowRight);
-
-                    QBrush arrowBrush = painter.brush();
-                    arrowBrush.setColor(mpMap->getColor(exitRoomId));
-                    arrowBrush.setStyle(Qt::SolidPattern);
-                    QPen arrowPen = painter.pen();
-                    arrowPen.setJoinStyle(Qt::RoundJoin);
-                    arrowPen.setCapStyle(Qt::RoundCap);
-                    arrowPen.setCosmetic(mMapperUseAntiAlias);
-
-                    // Draw outline first for visibility
-                    QPen arrowOutlinePen = arrowPen;
-                    arrowOutlinePen.setWidthF(2.0);
-                    arrowOutlinePen.setColor((mpHost->mBgColor_2.lightness() > 127) ? Qt::black : Qt::white);
-                    painter.setPen(arrowOutlinePen);
-                    painter.setBrush(Qt::NoBrush);
-                    painter.drawPolygon(arrowHead);
-
-                    // Draw filled arrow head on top
-                    painter.setPen(Qt::NoPen);
-                    painter.setBrush(arrowBrush);
-                    painter.drawPolygon(arrowHead);
-                    painter.restore();
-                }
-
-                // Draw door if exists on this exit (both area and same-area exits)
-                if (!doorKey.isEmpty() && room->doors.value(doorKey, 0) > 0) {
-                    // Apply half-length reduction like original paintRoomExits
-                    QLineF halfExitLine = exitLine;
-                    halfExitLine.setLength(halfExitLine.length() / 2.0);
-                    drawDoor(painter, *room, doorKey, halfExitLine);
-                }
-            }
-        }
-    }
-
-    // Fourth pass: draw main rooms on current level using existing drawRoom method
-    for (const int roomId : pArea->getRoomsForZ(exportZLevel)) {
-        TRoom* pRoom = mpMap->mpRoomDB->getRoom(roomId);
-        if (!pRoom) {
-            roomsSkipped++;
-            continue;
-        }
-
-        // Use export coordinate system for room positioning
-        const int exportRX = padding - (pArea->min_x * finalRoomSize);
-        const int exportRY = padding - (pArea->min_y * finalRoomSize);
-        const float rx = pRoom->x() * finalRoomSize + exportRX;
-        const float ry = pRoom->y() * -1 * finalRoomSize + exportRY;
-
-        // Debug: Check which rooms are being filtered out
-        if (rx < 0 || ry < 0 || rx > imageWidth || ry > imageHeight) {
-            roomsSkipped++;
-            continue;
-        }
-
-        // Use the existing drawRoom method!
-        drawRoom(painter,
-                 roomVNumFont,
-                 mapNameFont,
-                 pen,
-                 pRoom,
-                 pArea->gridMode,
-                 areRoomIdsLegible,
-                 false /* showRoomNames */,
-                 -1 /* speedWalkStartRoomId */,
-                 rx,
-                 ry,
-                 areaExitsMap,
-                 false /* showRoomCollision */);
-
-        roomsDrawn++;
-    }
-
-
-    // Draw the ("foreground") labels that are on the top of the map - same as paintEvent
-    itMapLabel.toFront(); // Reset the iterator
-    while (itMapLabel.hasNext()) {
-        itMapLabel.next();
-        auto mapLabel = itMapLabel.value();
-        if (mapLabel.pos.z() != exportZLevel) {
-            continue;
-        }
-        // Use export coordinate system for label positioning
-        const int exportRX = padding - (pArea->min_x * finalRoomSize);
-        const int exportRY = padding - (pArea->min_y * finalRoomSize);
-        const int labelX = mapLabel.pos.x() * finalRoomSize + exportRX;
-        const int labelY = mapLabel.pos.y() * finalRoomSize * -1 + exportRY;
-        const int labelWidth = abs(qRound(mapLabel.size.width() * finalRoomSize));
-        const int labelHeight = abs(qRound(mapLabel.size.height() * finalRoomSize));
-
-        if (!((0 < labelX || 0 < labelX + labelWidth) && (imageWidth > labelX || imageWidth > labelX + labelWidth))) {
-            continue;
-        }
-        if (!((0 < labelY || 0 < labelY + labelHeight) && (imageHeight > labelY || imageHeight > labelY + labelHeight))) {
-            continue;
-        }
-        QRectF labelPaintRectangle = QRect(labelX, labelY, labelWidth, labelHeight);
-        if (mapLabel.showOnTop) {
-            QPointF labelPosition(labelX, labelY);
-            if (!mapLabel.noScaling) {
-                painter.drawPixmap(labelPosition, mapLabel.pix.scaled(labelPaintRectangle.size().toSize(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
-                mapLabel.clickSize = QSizeF(labelPaintRectangle.width(), labelPaintRectangle.height());
-            } else {
-                painter.drawPixmap(labelPosition, mapLabel.pix);
-                mapLabel.clickSize = QSize(mapLabel.pix.width(), mapLabel.pix.height());
-            }
-            pArea->mMapLabels[itMapLabel.key()] = mapLabel;
-        }
-        if (mapLabel.highlight) {
-            paintLabelHighlight(painter, labelPaintRectangle, mapLabel.clickSize);
-        }
-    }
-
-    painter.end();
-
-    // Restore the original coordinate system
-    mRX = originalRX;
-    mRY = originalRY;
-    mRoomWidth = originalRoomWidth;
-    mRoomHeight = originalRoomHeight;
-
-    // Prepare for async image save
-    QFileInfo fileInfo(filePath);
-    QString format = fileInfo.suffix().toLower();
-    if (format.isEmpty()) {
-        format = qsl("png");
-    }
-
-    // Clean up any existing export watcher
-    if (mpExportWatcher) {
-        mpExportWatcher->deleteLater();
-    }
-
-    // Create new watcher for this export task
-    mpExportWatcher = new QFutureWatcher<std::pair<bool, QString>>(this);
-    connect(mpExportWatcher, &QFutureWatcher<std::pair<bool, QString>>::finished, this, [this]() {
-        auto result = mpExportWatcher->result();
-        if (!result.first) {
-            // Only show errors, no success messages
-            mpHost->postMessage(tr("[MAP]: %1").arg(result.second));
-        }
-        mpExportWatcher->deleteLater();
-        mpExportWatcher = nullptr;
-    });
-
-    // Start async save task - fire & forget
-    auto future = QtConcurrent::task(&T2DMap::performImageSave).withArguments(this, pixmap, filePath, format).spawn();
-    mpExportWatcher->setFuture(future);
-
-    return {true, {}};
-}
-
-std::pair<bool, QString> T2DMap::performImageSave(const QPixmap& pixmap, const QString& filePath, const QString& format)
-{
-    if (!pixmap.save(filePath, format.toLocal8Bit().data())) {
-        return {false, qsl("Failed to save image to %1").arg(filePath)};
-    }
-
-    return {true, {}};
+    // An info box contributor's Lua can export while a frame is being painted, which goes on with its own view
+    const TMapPainter::View frame = mPainter.view();
+    mPainter.setView(painterView());
+    auto result = mPainter.exportArea(areaId, filePath, zLevel, zoom, exportAllZLevels, this);
+    takePainterResults();
+    mPainter.setView(frame);
+    startPendingSpeedWalk();
+    return result;
 }
 
 void T2DMap::slot_exportAreaToImage()
@@ -7026,13 +3784,13 @@ void T2DMap::slot_exportAreaToImage()
         areaName = mpMap->mpRoomDB->getAreaNamesMap().value(mAreaID, areaName);
     }
 
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
     QString lastDir = settings.value("lastExportAreaImageDirectory", QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).toString();
 
     QString defaultFileName;
     if (!areaName.isEmpty()) {
         // Use sanitized area name for filename
-        defaultFileName = qsl("%1.png").arg(utils::sanitizeForPath(areaName));
+        defaultFileName = qsl("%1.png").arg(MudletApp::sanitizeForPath(areaName));
     } else {
         // Fall back to area ID if no area name
         defaultFileName = qsl("area_%1.png").arg(mAreaID);

@@ -37,7 +37,7 @@ cmake_minimum_required(VERSION 3.25.1)
 
 if(APPLE)
   # minimum supported version by Qt6
-  set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0" CACHE STRING "")
+  set(CMAKE_OSX_DEPLOYMENT_TARGET "13.0" CACHE STRING "")
 endif()
 
 project(mudlet)
@@ -68,17 +68,20 @@ file(GLOB ROOT_FILES_LIST CONFIGURE_DEPENDS
 )
 
 file(GLOB_RECURSE OTHER_FILES_LIST CONFIGURE_DEPENDS
-  .github/**
-  .devcontainer/**
-  .vscode/**
+  .agents/**
+  .clang-format
   .claude/**
+  .devcontainer/**
+  .github/**
+  .signpath/**
+  .vscode/**
   3rdparty/discord/rpc/lib/*
   CI/**
   docker/**
   docs/**
-  .clang-format
   src/.gitignore
   src/mudlet-lua/**
+  templates/**
 )
 
 # It is not clear that the "COMMENT" actually shows up anywhere - so include
@@ -106,6 +109,7 @@ if(WIN32)
   set(APP_TARGET mudlet.exe)
 elseif(APPLE)
   set(APP_TARGET Mudlet)
+  enable_language(OBJCXX)
 else()
   set(APP_TARGET mudlet)
 endif()
@@ -136,7 +140,7 @@ else()
 endif()
 
 # Set APP_VERSION
-set(APP_VERSION 4.22.0)
+set(APP_VERSION 5.1.0)
 
 # Set APP_BUILD based on environment variable MUDLET_VERSION_BUILD. An explicitly
 # empty value must be distinguished from an unset one so release builds (CI exports
@@ -160,12 +164,17 @@ message(STATUS "Value written to app-build.txt file: ${BUILD_VALUE}")
 set(APP_BUILD ${BUILD_VALUE} CACHE STRING "Auto-set during CMake run. Do not alter manually." FORCE)
 
 set(LIB_MUDLET_TARGET "mudlet_core")
+set(LIB_MUDLET_APP_TARGET "mudlet_app")
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 
 # Static analysis support - always included, but only active when configured with
 # -DENABLE_STATIC_ANALYSIS=ON (see cmake/StaticAnalysis.cmake for details)
 include(StaticAnalysis)
+
+# Profile-guided optimisation - inactive unless configured with -DMUDLET_PGO=GENERATE
+# or USE (see cmake/ProfileGuidedOptimization.cmake for the steps)
+include(ProfileGuidedOptimization)
 
 include(IncludeOptionalModule)
 
@@ -182,6 +191,9 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_FONTS
 include_optional_module(ENVIRONMENT_VARIABLE WITH_3DMAPPER
                         OPTION_VARIABLE USE_3DMAPPER
                         READABLE_NAME "3D mapper")
+include_optional_module(ENVIRONMENT_VARIABLE WITH_MCPSERVER
+                        OPTION_VARIABLE USE_MCPSERVER
+                        READABLE_NAME "MCP server")
 include_optional_module(ENVIRONMENT_VARIABLE WITH_SHADER_HOT_RELOAD
                         OPTION_VARIABLE USE_SHADER_HOT_RELOAD
                         READABLE_NAME "shader hot-reloading"
@@ -190,9 +202,40 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_MEMORY_TRACKING
                         OPTION_VARIABLE USE_MEMORY_TRACKING
                         READABLE_NAME "memory tracking"
                         DEFAULT OFF)
+# Off by default on a Linux without Debian's multiarch layout, whose Lua modules
+# live where 3rdparty/lua51 does not look
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND NOT CMAKE_LIBRARY_ARCHITECTURE)
+  set(BUNDLED_LUA_DEFAULT OFF)
+else()
+  set(BUNDLED_LUA_DEFAULT ON)
+endif()
+include_optional_module(ENVIRONMENT_VARIABLE WITH_BUNDLED_LUA
+                        OPTION_VARIABLE USE_BUNDLED_LUA
+                        READABLE_NAME "bundled Lua 5.1"
+                        DEFAULT ${BUNDLED_LUA_DEFAULT})
+# On by default: it links mudlet_core alone, so building it is what proves the core still runs without
+# Qt Widgets, and the teardown tests run it
+include_optional_module(ENVIRONMENT_VARIABLE WITH_HEADLESS
+                        OPTION_VARIABLE USE_HEADLESS
+                        READABLE_NAME "headless runner")
+# Off, only mudlet_core and what links it alone are built, so Qt Widgets need not be installed
+include_optional_module(ENVIRONMENT_VARIABLE WITH_GUI
+                        OPTION_VARIABLE USE_GUI
+                        READABLE_NAME "desktop GUI")
 include_optional_module(ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN
                         OPTION_VARIABLE USE_VARIABLE_SPLASH_SCREEN
                         READABLE_NAME "build-type splash screen")
+# Each of these uses something an Android or iOS build of mudlet_core cannot have; see
+# "Leaving out what a mobile build cannot use" in docs/platform-builds.md
+include_optional_module(ENVIRONMENT_VARIABLE WITH_SPAWN
+                        OPTION_VARIABLE USE_SPAWN
+                        READABLE_NAME "spawn() of processes")
+include_optional_module(ENVIRONMENT_VARIABLE WITH_DISCORD_RPC
+                        OPTION_VARIABLE USE_DISCORD_RPC
+                        READABLE_NAME "Discord RPC library loading")
+include_optional_module(ENVIRONMENT_VARIABLE WITH_SPEECH_ENGINES
+                        OPTION_VARIABLE USE_SPEECH_ENGINES
+                        READABLE_NAME "Vosk and sherpa-onnx speech engine loading")
 
 find_package(Qt6 6.8.2 REQUIRED)
 
@@ -207,13 +250,15 @@ option(BUILD_WITH_QT6 "" ON)
 
 include(InitGitSubmodule)
 
-git_submodule_init(
-  CHECK_FILE "3rdparty/edbee-lib/CMakeLists.txt" SUBMODULE_PATH
-  "3rdparty/edbee-lib" READABLE_NAME "edbee-lib editor widget")
+if(USE_GUI)
+  git_submodule_init(
+    CHECK_FILE "3rdparty/edbee-lib/CMakeLists.txt" SUBMODULE_PATH
+    "3rdparty/edbee-lib" READABLE_NAME "edbee-lib editor widget")
 
   git_submodule_init(
-    CHECK_FILE "3rdparty/qt-tags-widget/CMakeLists.txt" SUBMODULE_PATH
+    CHECK_FILE "3rdparty/qt-tags-widget/src/qtagedit.cpp" SUBMODULE_PATH
     "3rdparty/qt-tags-widget" READABLE_NAME "qt-tags-widget widget")
+endif()
 
 # TODO: On macOS, we need to build qtkeychain from source because Homebrew's
 # qtkeychain package is built against Homebrew's Qt, which is incompatible with
@@ -225,7 +270,15 @@ if(APPLE)
     CHECK_FILE "3rdparty/qtkeychain/CMakeLists.txt"
     SUBMODULE_PATH "3rdparty/qtkeychain"
     READABLE_NAME "QtKeychain")
+  # Building qtkeychain's translations runs lupdate, which rewrites the .ts
+  # files inside the submodule whenever a source is newer than them, so the
+  # submodule shows as modified after every checkout. Mudlet neither bundles
+  # nor loads those catalogues, so skip them. The normal variable overrides the
+  # option() in the subdirectory (CMP0077) and is unset afterwards so the
+  # generic name cannot leak into other 3rdparty projects.
+  set(BUILD_TRANSLATIONS OFF)
   add_subdirectory(3rdparty/qtkeychain)
+  unset(BUILD_TRANSLATIONS)
 endif()
 
 git_submodule_init(
@@ -244,35 +297,108 @@ git_submodule_init(
 
 if(APPLE)
   if(USE_UPDATER)
-    if(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle")
-      message(
-        STATUS "Sparkle is missing, fetching it..."
-      )
-      file(DOWNLOAD "https://github.com/sparkle-project/Sparkle/releases/download/2.7.1/Sparkle-2.7.1.tar.xz" "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle-2.7.1.tar.xz"
+    set(SPARKLE_VERSION "2.10.1")
+    set(SPARKLE_SHA256 "1a856d2a9edb8e628de88121d7be04cf0e2167f8641650b78fca00b14244cf27")
+    set(SPARKLE_DIR "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle")
+    set(SPARKLE_STAMP "${SPARKLE_DIR}/.mudlet-sparkle-version")
+    # A checkout that fetched an older Sparkle keeps it until the stamp says otherwise
+    if(EXISTS "${SPARKLE_DIR}")
+      set(SPARKLE_FETCHED_VERSION "")
+      if(EXISTS "${SPARKLE_STAMP}")
+        file(READ "${SPARKLE_STAMP}" SPARKLE_FETCHED_VERSION)
+      endif()
+      if(NOT SPARKLE_FETCHED_VERSION STREQUAL SPARKLE_VERSION)
+        file(REMOVE_RECURSE "${SPARKLE_DIR}")
+      endif()
+    endif()
+    if(NOT EXISTS "${SPARKLE_DIR}")
+      message(STATUS "Sparkle ${SPARKLE_VERSION} is missing, fetching it...")
+      set(SPARKLE_ARCHIVE "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle-${SPARKLE_VERSION}.tar.xz")
+      file(DOWNLOAD "https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-${SPARKLE_VERSION}.tar.xz" "${SPARKLE_ARCHIVE}"
         TIMEOUT 60  # seconds
         TLS_VERIFY ON
+        # also stops the configure on a failed download, instead of a missing Sparkle::Sparkle later
+        EXPECTED_HASH SHA256=${SPARKLE_SHA256}
       )
-      file(ARCHIVE_EXTRACT INPUT "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle-2.7.1.tar.xz"
-        DESTINATION "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle")
-      file(REMOVE "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle-2.7.1.tar.xz")
+      file(ARCHIVE_EXTRACT INPUT "${SPARKLE_ARCHIVE}" DESTINATION "${SPARKLE_DIR}")
+      file(REMOVE "${SPARKLE_ARCHIVE}")
+      file(WRITE "${SPARKLE_STAMP}" "${SPARKLE_VERSION}")
     endif()
   endif()
 endif()
 
 find_program(CCACHE_FOUND ccache)
 if(CCACHE_FOUND)
-  set(CMAKE_C_COMPILER_LAUNCHER ccache)
-  set(CMAKE_CXX_COMPILER_LAUNCHER ccache)
+  # Checkouts and worktrees only share hits once a base_dir turns their absolute
+  # paths relative, so default it to this checkout unless one is configured
+  execute_process(
+    COMMAND ${CCACHE_FOUND} --get-config base_dir
+    OUTPUT_VARIABLE ccacheBaseDir
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET)
+  if(ccacheBaseDir STREQUAL "")
+    set(MUDLET_CCACHE_ENV "CCACHE_BASEDIR=${CMAKE_SOURCE_DIR}")
+    set(CMAKE_C_COMPILER_LAUNCHER ${CMAKE_COMMAND} -E env ${MUDLET_CCACHE_ENV} ${CCACHE_FOUND})
+    set(CMAKE_CXX_COMPILER_LAUNCHER ${CMAKE_COMMAND} -E env ${MUDLET_CCACHE_ENV} ${CCACHE_FOUND})
+  else()
+    set(CMAKE_C_COMPILER_LAUNCHER ccache)
+    set(CMAKE_CXX_COMPILER_LAUNCHER ccache)
+  endif()
 endif(CCACHE_FOUND)
 
-add_subdirectory(3rdparty/edbee-lib/edbee-lib)
+include(PrecompiledHeaders)
+
+# credit to https://github.com/heavyai/heavydb/blob/72c90bc290b79dd30240da41c103a00720f6b050/CMakeLists.txt#L119
+macro(set_alternate_linker linker)
+  find_program(LINKER_EXECUTABLE ld.${USE_ALTERNATE_LINKER} ${USE_ALTERNATE_LINKER})
+  if(LINKER_EXECUTABLE)
+    if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND "${CMAKE_CXX_COMPILER_VERSION}" VERSION_LESS 12.1.0 AND "${USE_ALTERNATE_LINKER}" STREQUAL "mold")
+      # LINKER_EXECUTABLE will be a full path to ld.mold, so we replace the end of the path, resulting in the relative
+      # libexec/mold dir, and tell GCC to look there first for an override version of executables, in this case, ld
+      string(REPLACE "bin/ld.mold" "libexec/mold" PATH_TO_LIBEXEC_MOLD ${LINKER_EXECUTABLE})
+      add_link_options("-B${PATH_TO_LIBEXEC_MOLD}")
+    else()
+      add_link_options("-fuse-ld=${USE_ALTERNATE_LINKER}")
+    endif()
+  else()
+    message(WARNING "USE_ALTERNATE_LINKER=${USE_ALTERNATE_LINKER} was asked for but no such linker is installed - using the system one")
+    set(USE_ALTERNATE_LINKER "" CACHE STRING "Use alternate linker" FORCE)
+  endif()
+endmacro()
+
+# add_link_options() only reaches directories added after it, and most of the
+# link time is in test/, so this has to come before those subdirectories
+set(USE_ALTERNATE_LINKER "" CACHE STRING "Use alternate linker. Leave empty for system default; alternatives are 'gold', 'lld', 'bfd', 'mold'")
+if(NOT "${USE_ALTERNATE_LINKER}" STREQUAL "")
+  set_alternate_linker(${USE_ALTERNATE_LINKER})
+endif()
+
+if(USE_GUI)
+  add_subdirectory(3rdparty/edbee-lib/edbee-lib)
+  # edbee-lib's AUTOMOC mocs_compilation.cpp hits the same GCC 16
+  # -Wsfinae-incomplete false positives as mudlet_core's (qmetatype.h's
+  # is_complete SFINAE instantiated from one moc file while a type defined in a
+  # later moc file is incomplete). The per-source property used for mudlet_core
+  # does not cross the add_subdirectory() boundary for a generated AUTOMOC file,
+  # so silence the warning on the edbee-lib target itself - PRIVATE so it does
+  # not propagate to mudlet_core. Scoped to GCC: the flag is GCC-only (GCC 15+)
+  # and Clang/MSVC would diagnose the unknown option.
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_compile_options(edbee-lib PRIVATE -Wno-sfinae-incomplete)
+  endif()
+endif()
 add_subdirectory(3rdparty/communi)
-add_subdirectory(3rdparty/qt-tags-widget)
+if(USE_BUNDLED_LUA)
+  add_subdirectory(3rdparty/lua51)
+endif()
 add_subdirectory(translations/translated)
 add_subdirectory(src)
-add_subdirectory(test)
 
-
-set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
-set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE -O3)
-set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_DEBUG -O0)
+option(BUILD_TESTING "Build the test tree" ON)
+if(BUILD_TESTING)
+  if(USE_GUI)
+    add_subdirectory(test)
+  else()
+    message(WARNING "BUILD_TESTING is on, but every test binary links the desktop GUI, so with USE_GUI off no tests are built")
+  endif()
+endif()

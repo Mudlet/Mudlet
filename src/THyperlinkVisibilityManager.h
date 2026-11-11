@@ -22,13 +22,13 @@
 
 #include <QObject>
 #include <QMap>
-#include <QTimer>
-#include <QPointer>
+#include <QSet>
 #include <QString>
 
 #include "THyperlinkStyling.h"
 
-class TConsole;
+class QTimer;
+struct TConsoleModel;
 
 struct TrackedHyperlink
 {
@@ -60,17 +60,29 @@ struct TrackedHyperlink
     bool expireOnPrompt = false;  // GA/EOR telnet signal received
     bool expireOnOutput = false;  // New output after idle gap
     quint32 outputDelayMs = 500;  // Idle gap for output trigger
-    bool expireActivated = false; // Link has been clicked, expire triggers are active
     bool skipFirstPrompt = false; // Skip the immediate prompt after registration
-    bool skipFirstOutput = false; // Skip the first output gap after registration
 };
 
+// Tracks which OSC 8 hyperlinks are concealed and when each is due to change:
+// model state, since concealing rewrites the model's buffer. Redrawing is the
+// view's half - this emits visibilityChanged() and TConsole repaints.
 class THyperlinkVisibilityManager : public QObject
 {
     Q_OBJECT
 
+    // Reads the tracked line numbers and the queued announcement directly - the
+    // announcement is otherwise only observable through a screen reader, and a
+    // line number only through the side effect of revealing the link.
+    friend class TrackedLinkTrimTest;
+    // Brings a tracked link's delay forward, so a reveal that has to outlast a
+    // profile closing is not then waited out in full.
+    friend class HyperlinkModelSplitTest;
+
 public:
-    explicit THyperlinkVisibilityManager(TConsole* pConsole);
+    // The line number of a link kept across a clear whose line the game has not ended yet
+    static constexpr int csmLineStillToCome = -1;
+
+    explicit THyperlinkVisibilityManager(TConsoleModel& model);
     ~THyperlinkVisibilityManager() override;
 
     // Returns true if link should start hidden
@@ -85,16 +97,19 @@ public:
     void concealLink(int linkId);
     void revealLink(int linkId);
     bool isLinkConcealed(int linkId) const;
+    QSet<int> trackedLinkIds() const;
     void removeLinksOnLine(int lineNumber);
-    void adjustLineNumbers(int deletedLineStart, int deletedLineCount);
+    QList<int> adjustLineNumbers(int deletedLineStart, int deletedLineCount);
     void clear();
+    QList<TrackedHyperlink> takeLinks(const QSet<int>& linkIds);
+    void trackAwaitingTheirLine(const QList<TrackedHyperlink>& links);
+    void anchorLinksAwaitingTheirLine(int lineNumber);
 
 signals:
     void visibilityChanged();
 
 private slots:
     void slot_checkTimers();
-    void slot_outputGapExpired();
     void slot_announceHiddenLinks();
 
 private:
@@ -103,16 +118,17 @@ private:
     void performConcealment(TrackedHyperlink& link);
     void performReveal(TrackedHyperlink& link);
     void queueHiddenAnnouncement();
+    void announce(const QString& text);
 
     void processExpireTriggeredLinks(bool input, bool prompt, bool output);
 
-    QPointer<TConsole> mpConsole;
+    TConsoleModel& mModel;
     QMap<int, TrackedHyperlink> mTrackedLinks;
     QTimer* mpTimer = nullptr;
-    QTimer* mpOutputGapTimer = nullptr;
     QTimer* mpAnnouncementTimer = nullptr;
     int mPendingHiddenCount = 0;
     bool mHasTimerBasedLinks = false;
+    bool mHasLinksAwaitingTheirLine = false;
     qint64 mLastDataReceivedMs = 0;
 };
 

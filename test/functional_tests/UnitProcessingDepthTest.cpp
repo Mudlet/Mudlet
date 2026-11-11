@@ -37,6 +37,7 @@
 #include <QScopeGuard>
 #include <QTemporaryDir>
 
+#include "PortableModeTestHelper.h"
 #include "AliasUnit.h"
 #include "Host.h"
 #include "HostManager.h"
@@ -46,12 +47,7 @@
 #include "TLuaInterpreter.h"
 #include "mudlet.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForUnitProcessingDepthTest();
+#include "GroupedTest.h"
 
 class UnitProcessingDepthTest : public QObject
 {
@@ -63,15 +59,14 @@ private:
     QByteArray mSavedXdg;
     Host* mpHost = nullptr;
 
-    // Reads back Lua state through the return value rather than getLuaString(),
-    // which reports an absolute stack slot and so only answers correctly for the
-    // first call in a process.
     bool luaHolds(const QString& condition) { return mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("assert(%1)").arg(condition)); }
 
 private slots:
     void initTestCase()
     {
-        initializeQRCResourcesForUnitProcessingDepthTest();
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
 
         // Keep the test hermetic: resolve the config dir to a temporary
         // directory rather than the user's real profiles.
@@ -86,8 +81,8 @@ private slots:
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
 
-        QVERIFY2(mudlet::self()->getHostManager().addHost(mProfileName, QString(), QString(), QString()), "failed to create the Host");
-        mpHost = mudlet::self()->getHostManager().getHost(mProfileName);
+        QVERIFY2(HostManager::self()->addHost(mProfileName, QString(), QString(), QString()), "failed to create the Host");
+        mpHost = HostManager::self()->getHost(mProfileName);
         QVERIFY(mpHost);
         // A bare Host blocks script compilation until the full profile boot
         // would normally clear this; the items below need to compile:
@@ -234,20 +229,5 @@ private slots:
     }
 };
 
-void initializeQRCResourcesForUnitProcessingDepthTest()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "UnitProcessingDepthTest.moc"
-QTEST_MAIN(UnitProcessingDepthTest)
+MUDLET_GROUPED_TEST_MAIN(UnitProcessingDepthTest)

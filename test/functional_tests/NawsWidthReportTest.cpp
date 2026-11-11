@@ -1,0 +1,614 @@
+/***************************************************************************
+ *   Copyright (C) 2026 by Vadim Peretokin - vperetokin@hey.com            *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+
+#include <QElapsedTimer>
+#include <QPointer>
+#include <QSignalSpy>
+#include <QTemporaryDir>
+#include <QtTest/QtTest>
+#include <algorithm>
+#include <chrono>
+
+#include "PortableModeTestHelper.h"
+#include "Host.h"
+#include "HostManager.h"
+#include "MudletInstanceCoordinator.h"
+#include "MudletApp.h"
+#include "TBuffer.h"
+#include "TLuaInterpreter.h"
+#include "TMainConsole.h"
+#include "TTabBar.h"
+#include "TTextEdit.h"
+#include "TUiTour.h"
+#include "TelnetServerStub.h"
+#include "dlgConnectionProfiles.h"
+#include "mudlet.h"
+
+#include "GroupedTest.h"
+
+using namespace std::chrono_literals;
+
+// What a game is told about the window it is drawing into. The cases that can
+// read the wire do, through TelnetServerStub, rather than trusting the client's
+// own idea of its size - only what reaches the game can wrap the game's output.
+// The ones that assert on Host::mScreenWidth and getMainWindowSize() say so.
+class NawsWidthReportTest : public QObject
+{
+    Q_OBJECT
+
+private:
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
+    TelnetServerStub* mpServer = nullptr;
+    Host* mpHost = nullptr;
+    QPointer<Host> mpSecondHost;
+    // kept across clearNawsUpdates(), as cTelnet only sends a size that differs from it
+    QSize mLastToldSize;
+    const QString mHostname = "NawsWidthFirst";
+    const QString mSecondHostname = "NawsWidthSecond";
+    QString mPort;
+    const QString mLocalhost = "localhost";
+
+    // NAWS_SETTLE_TIME in ctelnet.cpp
+    static constexpr auto scmNawsSettleTime = 300ms;
+
+    // Never armed counts as idle: cTelnet creates the timer on the first resize
+    bool nawsSettleTimerIdle() const
+    {
+        const QTimer* timer = mpHost->mTelnet.mTimerNawsUpdate;
+        return !timer || !timer->isActive();
+    }
+
+    // cTelnet holds a size back until the layout has stopped moving for
+    // NAWS_SETTLE_TIME, so a change has settled once that timer is idle, the size
+    // it owed the game has arrived, and nothing stirs for one more settle time -
+    // a layout step landing late restarts the timer or sends another size. The
+    // first wait lets the change's posted layout passes restart the timer.
+    void settle()
+    {
+        QTest::qWait(scmNawsSettleTime);
+        QElapsedTimer settling;
+        settling.start();
+        while (true) {
+            QVERIFY2(QTest::qWaitFor(
+                             [this]() {
+                                 return nawsSettleTimerIdle();
+                             },
+                             10s),
+                     "the NAWS settle timer never went idle");
+            const QSize due(std::max(1, reportableWidth(mpHost)), mpHost->mScreenHeight);
+            if (due.height() > 0 && due != mLastToldSize) {
+                QTest::qWaitFor(
+                        [this, due]() {
+                            const auto updates = mpServer->nawsUpdates();
+                            return !updates.isEmpty() && updates.constLast() == due;
+                        },
+                        5s);
+            }
+            const auto updatesSoFar = mpServer->nawsUpdates().size();
+            QTest::qWait(scmNawsSettleTime);
+            if (nawsSettleTimerIdle() && mpServer->nawsUpdates().size() == updatesSoFar) {
+                break;
+            }
+            QVERIFY2(settling.elapsed() < 20000, "the window size never stopped changing");
+        }
+        if (!mpServer->nawsUpdates().isEmpty()) {
+            mLastToldSize = mpServer->nawsUpdates().constLast();
+        }
+    }
+
+    void runLua(Host* pHost, const QString& code) const { QVERIFY2(pHost->getLuaInterpreter()->compileAndExecuteScript(code), qPrintable(code)); }
+
+    // 0 for a global that is not a number
+    static int luaGlobalNumber(Host* pHost, const char* name)
+    {
+        lua_State* L = pHost->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, name);
+        const int value = lua_isnumber(L, -1) ? static_cast<int>(lua_tonumber(L, -1)) : 0;
+        lua_pop(L, 1);
+        return value;
+    }
+
+    void showTab(const QString& hostname) const { mudlet::self()->mpTabBar->setCurrentIndex(mudlet::self()->mpTabBar->tabIndex(hostname)); }
+
+    // What a correctly behaving Mudlet would put on the wire for this profile as
+    // things stand - the console's settled width, less the timestamp gutter,
+    // which is drawn outside the space the game gets to write into.
+    int reportableWidth(const Host* pHost) const
+    {
+        const int gutter = pHost->mainConsoleView()->showTimeStamps() ? TBuffer::smTimeStampFormat.size() : 0;
+        return std::min(pHost->mScreenWidth, pHost->mWrapAt) - gutter;
+    }
+
+    static QSize screenSize(const Host* pHost) { return QSize(pHost->mScreenWidth, pHost->mScreenHeight); }
+
+    // The wire carries min(columns, wrapAt) and the console never goes under 40
+    // columns, so only a width strictly between the two can show a prediction
+    // to be right or wrong
+    static bool measurableWidth(const Host* pHost) { return pHost->mScreenWidth > 40 && pHost->mScreenWidth < pHost->mWrapAt; }
+
+    // For a failure message: everything the game was told, in order
+    static QByteArray describe(const QList<QSize>& updates)
+    {
+        QStringList parts;
+        for (const QSize& update : updates) {
+            parts << qsl("%1x%2").arg(update.width()).arg(update.height());
+        }
+        return qsl("NAWS updates: [%1]").arg(parts.join(qsl(", "))).toUtf8();
+    }
+
+    // Cases below run in declaration order but have to stand up on their own
+    // too, since a single one can be named on the grouped binary's command line.
+    // Reports rather than asserts: a QVERIFY here would return from this helper
+    // and leave the case that called it running on a profile that is not there.
+    bool ensureSecondProfile()
+    {
+        if (mpSecondHost) {
+            return true;
+        }
+        if (!QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, mSecondHostname)) || !MudletApp::writeProfileData(mSecondHostname, qsl("url"), mLocalhost).first
+            || !MudletApp::writeProfileData(mSecondHostname, qsl("port"), mPort).first) {
+            return false;
+        }
+        // the second argument is offline, so this profile never opens a
+        // connection of its own - the stub only ever sees the first profile
+        runLua(mpHost, qsl("loadProfile('%1', true)").arg(mSecondHostname));
+        QTest::qWaitFor(
+                [this]() {
+                    mpSecondHost = HostManager::self()->getHost(mSecondHostname);
+                    return !mpSecondHost.isNull();
+                },
+                6s);
+        settle();
+        return !mpSecondHost.isNull();
+    }
+
+private slots:
+    void initTestCase()
+    {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - refusing to touch a portable installation");
+        }
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
+
+        mpServer = new TelnetServerStub(qApp);
+        mpServer->start(mLocalhost, 0);
+        mPort = QString::number(mpServer->serverPort());
+        mudlet::start();
+        mudlet::self()->setupConfig();
+        // A config dir of this test's own reads as a brand new installation, so
+        // the first-run interface would open over the profile a second after it
+        // loads. Written before init(), which is what stamps an untouched config
+        // as a first launch: a settings file that already holds something is how
+        // mudletUsedBefore() recognises an existing player.
+        TUiTour::rememberShown();
+        mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
+        mudlet::self()->init();
+        mudlet::self()->setStorePasswordsSecurely(false);
+        QVERIFY2(mudlet::self()->experiencedMudletPlayer(), "the first-run UI would open over these tests");
+        mudlet::self()->resize(1200, 800);
+
+        QTimer::singleShot(0ms, qApp, [this]() {
+            mudlet::self()->startAutoLogin({});
+            QTest::qWait(100ms);
+            QVERIFY(mudlet::self()->mpConnectionDialog);
+            QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
+            QTest::qWait(100ms);
+            QTest::keyClicks(QApplication::focusWidget(), mHostname);
+            QTest::qWait(100ms);
+            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
+            QTest::qWait(100ms);
+            QTest::keyClicks(QApplication::focusWidget(), mLocalhost);
+            QTest::qWait(100ms);
+            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
+            QTest::qWait(100ms);
+            QTest::keyClicks(QApplication::focusWidget(), mPort);
+            QTest::qWait(100ms);
+            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
+        });
+        QSignalSpy profileLoaded(mudlet::self(), &mudlet::signal_profileLoaded);
+        QVERIFY2(profileLoaded.wait(6s), "the first profile did not finish loading");
+        mpHost = mudlet::self()->getActiveHost();
+        QVERIFY(mpHost);
+
+        // IAC DO NAWS, so the client starts reporting its window size at all
+        mpServer->sendRaw(QByteArray("\xFF\xFD\x1F", 3));
+        // The game asked for the size during negotiation and is entitled to an
+        // answer then, not once some later resize happens to shake one loose.
+        // Without this every case below still passes if the reply never comes.
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return !mpServer->nawsUpdates().isEmpty();
+                         },
+                         5s),
+                 "the client never answered IAC DO NAWS");
+        settle();
+    }
+
+    // Leave the window, the gutter and the borders as the next case expects to
+    // find them, whether this one passed or not - a QCOMPARE returns from the
+    // function, so a restore written at the end of a case does not run when it
+    // fails.
+    void cleanup()
+    {
+        if (mpHost && mpHost->mainConsoleView() && mpHost->mainConsoleView()->showTimeStamps()) {
+            mpHost->mainConsoleView()->slot_toggleTimeStamps(false);
+        }
+        if (mpHost) {
+            runLua(mpHost, qsl("if resizeProbeHandler then killAnonymousEventHandler(resizeProbeHandler) resizeProbeHandler = nil end"));
+        }
+        showTab(mHostname);
+        if (mpHost) {
+            mpHost->setUserBorders(QMargins());
+        }
+        mudlet::self()->resize(1200, 800);
+        settle();
+    }
+
+    void cleanupTestCase()
+    {
+        delete mpServer;
+        mpServer = nullptr;
+        if (mudlet::self()) {
+            delete mudlet::self();
+        }
+        mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
+    }
+
+    // A resize is not one event: the console is laid out, and then any Geyser
+    // container attached to a border re-reserves that border from a timer,
+    // laying it out again at a different width. The game must hear the width
+    // the window settles at, never one it passed through - whatever it is told
+    // is what it wraps its next reply to.
+    void resizeReportsOnlyTheWidthTheWindowSettlesAt()
+    {
+        runLua(mpHost,
+               qsl("nawsProbeContainer = Adjustable.Container:new({name='nawsProbeContainer', x='-30%', y=0, width='30%', height='50%'})\n"
+                   "nawsProbeContainer:attachToBorder('right')"));
+        settle();
+        QVERIFY2(mpHost->borders().right() > 0, "the container did not reserve a border, so there is no second layout step to wait out");
+
+        mpServer->clearNawsUpdates();
+        mudlet::self()->resize(800, 800);
+        settle();
+
+        const auto narrowed = mpServer->nawsUpdates();
+        QVERIFY2(narrowed.size() == 1, describe(narrowed).constData());
+        QCOMPARE(narrowed.constFirst().width(), reportableWidth(mpHost));
+
+        // and the debounce has to re-arm: a timer that only ever fires once
+        // would leave the game wrapping to this width for the rest of the
+        // session, which the single resize above cannot tell apart
+        mpServer->clearNawsUpdates();
+        mudlet::self()->resize(1100, 800);
+        settle();
+
+        const auto widened = mpServer->nawsUpdates();
+        QVERIFY2(widened.size() == 1, describe(widened).constData());
+        QCOMPARE(widened.constFirst().width(), reportableWidth(mpHost));
+        QVERIFY2(widened.constFirst().width() != narrowed.constFirst().width(), "the second resize reported the first one's width");
+    }
+
+    // The same resize with the timestamp gutter showing, which comes off every
+    // width reported and so makes a mid-resize reading narrower still - narrow
+    // enough for a game to wrap its output to about a third of the window.
+    void resizeWithTimestampsShowingReportsOnlyTheSettledWidth()
+    {
+        mpHost->mainConsoleView()->slot_toggleTimeStamps(true);
+        settle();
+
+        mpServer->clearNawsUpdates();
+        mudlet::self()->resize(800, 800);
+        settle();
+
+        const auto updates = mpServer->nawsUpdates();
+        QVERIFY2(updates.size() == 1, describe(updates).constData());
+        QCOMPARE(updates.constFirst().width(), reportableWidth(mpHost));
+    }
+
+    // Showing the gutter is not a resize, but it does take columns away from
+    // the game, so it has to be reported - and reported once.
+    void showingTheTimestampGutterReportsTheColumnsItTakes()
+    {
+        settle();
+        QVERIFY(!mpHost->mainConsoleView()->showTimeStamps());
+        const int withoutGutter = reportableWidth(mpHost);
+
+        mpServer->clearNawsUpdates();
+        mpHost->mainConsoleView()->slot_toggleTimeStamps(true);
+        settle();
+
+        const auto updates = mpServer->nawsUpdates();
+        QVERIFY2(updates.size() == 1, describe(updates).constData());
+        QCOMPARE(updates.constFirst().width(), withoutGutter - TBuffer::smTimeStampFormat.size());
+    }
+
+    // A wrap width no wider than the gutter leaves the game a single column,
+    // never a width of 0 or one that wraps round to a very wide window.
+    void aWrapNarrowerThanTheGutterReportsOneColumn()
+    {
+        settle();
+        const int wrapBefore = mpHost->mWrapAt;
+        mpHost->mainConsoleView()->slot_toggleTimeStamps(true);
+        settle();
+
+        mpServer->clearNawsUpdates();
+        runLua(mpHost, qsl("setWindowWrap('main', 5)"));
+        settle();
+        const auto updates = mpServer->nawsUpdates();
+        runLua(mpHost, qsl("setWindowWrap('main', %1)").arg(wrapBefore));
+
+        QVERIFY2(!updates.isEmpty(), describe(updates).constData());
+        QCOMPARE(updates.constLast().width(), 1);
+    }
+
+    // Rows start at the top left corner, so an opaque overlay there hides some of
+    // them without taking any away from the grid or from what the game is told.
+    void overlaysAlongTheTopAndLeftLeaveTheMainWindowItsSize()
+    {
+        TTextEdit* pane = mpHost->mainConsoleView()->mUpperPane;
+        mpServer->clearNawsUpdates();
+        mudlet::self()->resize(1100, 800);
+        settle();
+        const int bareRows = pane->getScreenHeight();
+        const int bareColumns = pane->mScreenWidth;
+        const QSize bareReported = screenSize(mpHost);
+        const auto bareUpdates = mpServer->nawsUpdates();
+        QVERIFY2(!bareUpdates.isEmpty(), describe(bareUpdates).constData());
+        QVERIFY2(measurableWidth(mpHost), "the window is too narrow to tell a short width from the console's 40 column floor");
+        QCOMPARE(bareRows, pane->height() / QFontMetrics(pane->font()).height());
+        mudlet::self()->resize(1200, 800);
+        settle();
+
+        // both reaching past the edges of the window they will be in
+        runLua(mpHost,
+               qsl("local width, height = getMainWindowSize()\n"
+                   "assert(createCommandLine('nawsProbeAcross', 0, 0, width + 50, math.floor(height / 4)))\n"
+                   "assert(createCommandLine('nawsProbeDown', 0, 0, math.floor(width / 4), height + 50))"));
+        settle();
+        mpServer->clearNawsUpdates();
+        mudlet::self()->resize(1100, 800);
+        settle();
+        const auto coveredUpdates = mpServer->nawsUpdates();
+        const QRect seen = pane->visibleRegion().boundingRect();
+        const int coveredRows = pane->getScreenHeight();
+        const int coveredColumns = pane->mScreenWidth;
+        runLua(mpHost, qsl("deleteCommandLine('nawsProbeAcross') deleteCommandLine('nawsProbeDown')"));
+
+        QVERIFY2(seen.top() > 0 && seen.left() > 0, "the overlays no longer hide the pane's top left corner, so this case tests nothing");
+        QCOMPARE(coveredRows, bareRows);
+        QCOMPARE(coveredColumns, bareColumns);
+        QCOMPARE(screenSize(mpHost), bareReported);
+        QVERIFY2(!coveredUpdates.isEmpty(), describe(coveredUpdates).constData());
+        QCOMPARE(coveredUpdates.constLast(), bareUpdates.constLast());
+    }
+
+    // Ones along the bottom and right edges do cut the grid short, so the newest line stays in sight beside them.
+    void overlaysAlongTheBottomAndRightKeepTheNewestLineInSight()
+    {
+        TTextEdit* pane = mpHost->mainConsoleView()->mUpperPane;
+        const int fontHeight = QFontMetrics(pane->font()).height();
+        const int overlap = 3 * fontHeight;
+        const int overlapWidth = 10 * pane->mFontWidth;
+        mudlet::self()->resize(1100, 800);
+        settle();
+        const QSize target = pane->size();
+        mudlet::self()->resize(1200, 800);
+        settle();
+        runLua(mpHost,
+               qsl("local width, height = getMainWindowSize()\n"
+                   "assert(createCommandLine('nawsProbeBelow', 0, %1, width + 50, %2))\n"
+                   "assert(createCommandLine('nawsProbeBeside', %3, 0, %4, height + 50))")
+                       .arg(target.height() - overlap)
+                       .arg(2 * overlap)
+                       .arg(target.width() - overlapWidth)
+                       .arg(2 * overlapWidth));
+        mudlet::self()->resize(1100, 800);
+        settle();
+        const int rows = pane->getScreenHeight();
+        const int columns = pane->mScreenWidth;
+        const int reportedRows = mpHost->mScreenHeight;
+        const QSize covered = pane->size();
+        const int expectedRows = (target.height() - overlap) / fontHeight;
+        const int expectedColumns = (target.width() - overlapWidth) / pane->mFontWidth;
+        runLua(mpHost, qsl("deleteCommandLine('nawsProbeBelow') deleteCommandLine('nawsProbeBeside')"));
+
+        QCOMPARE(covered, target);
+        QCOMPARE(rows, expectedRows);
+        QCOMPARE(reportedRows, expectedRows);
+        QCOMPARE(columns, expectedColumns);
+    }
+
+    // Lines are drawn down from the top of the pane, so one whose top its parent cuts off
+    // has to keep the rows it cannot show, or its newest line lands out of sight.
+    void aMiniconsoleCutOffAtTheTopKeepsItsNewestLineAtTheBottom()
+    {
+        runLua(mpHost, qsl("assert(createMiniConsole('nawsProbeMini', 0, 0, 400, 400))"));
+        TConsole* mini = mpHost->mainConsoleView()->subConsoleWidget(qsl("nawsProbeMini"));
+        QVERIFY(mini);
+        TTextEdit* pane = mini->mUpperPane;
+        runLua(mpHost, qsl("moveWindow('nawsProbeMini', 0, -200) resizeWindow('nawsProbeMini', 400, 401)"));
+        settle();
+        const QRect seen = pane->visibleRegion().boundingRect();
+        const int rows = pane->getScreenHeight();
+        const int expected = pane->height() / pane->mFontHeight;
+        runLua(mpHost, qsl("deleteMiniConsole('nawsProbeMini')"));
+
+        QVERIFY2(seen.top() > 0, "the main window no longer cuts off the top of the miniconsole, so this case tests nothing");
+        QCOMPARE(rows, expected);
+    }
+
+    // A profile in a background tab has its own borders and its own font, so
+    // the console on screen says nothing about how much room it has. Whatever
+    // it is told while it waits has to be what it finds when it comes back:
+    // anything else re-wraps the backlog the moment the user switches to it.
+    void aBackgroundedProfileIsToldTheSizeItComesBackTo()
+    {
+        QVERIFY2(ensureSecondProfile(), "the second profile did not load");
+
+        // The container from the first case re-reserves its border from a timer
+        // of its own when this profile comes back, which would move the goalposts
+        // between the two readings compared here; this case is about borders
+        // that stay where they were put.
+        runLua(mpHost, qsl("if nawsProbeContainer then nawsProbeContainer:detach() end"));
+        // Borders on this profile only, so the two genuinely differ in how much
+        // of the same window they have to write into
+        runLua(mpHost, qsl("setBorderLeft(150) setBorderRight(150)"));
+        showTab(mSecondHostname);
+        settle();
+        QVERIFY2(mpHost->mainConsoleView()->isHidden(), "the first profile should be in a background tab by now");
+
+        const QSize before = screenSize(mpHost);
+        mpServer->clearNawsUpdates();
+        // narrower and shorter, so a stale row count shows up as well
+        mudlet::self()->resize(1000, 600);
+        settle();
+
+        const QSize toldWhileHidden = screenSize(mpHost);
+        QVERIFY2(measurableWidth(mpHost), "at the 40 column floor or the wrap-at ceiling this case cannot tell a right prediction from a wrong one");
+        QVERIFY2(toldWhileHidden.width() != mpSecondHost->mScreenWidth, "the two profiles have different borders, so they cannot both be this wide");
+        QVERIFY2(toldWhileHidden.height() != before.height(), "the window lost height, but the hidden profile was never told a new row count");
+
+        // and it has to have reached the game, not just the client's own idea
+        // of itself - the profile is still connected while it sits in the tab
+        const auto updates = mpServer->nawsUpdates();
+        QVERIFY2(!updates.isEmpty(), "a backgrounded profile's corrected size never reached its game");
+        QCOMPARE(updates.constLast(), QSize(reportableWidth(mpHost), toldWhileHidden.height()));
+
+        showTab(mHostname);
+        settle();
+        QCOMPARE(screenSize(mpHost), toldWhileHidden);
+        // so coming back gave the game nothing new to re-wrap to
+        QVERIFY2(mpServer->nawsUpdates().size() == updates.size(), describe(mpServer->nawsUpdates()).constData());
+    }
+
+    // A script can move its own profile's borders while that profile waits in a
+    // background tab - a UI reacting to something the game sent, say. No resize
+    // reaches a console that is zero pixels wide, so the game has to be told
+    // from the border change itself, or it wraps to the old size until the
+    // user switches back and it is corrected under them.
+    void aBackgroundedProfileThatMovesItsBordersIsToldTheSizeItComesBackTo()
+    {
+        QVERIFY2(ensureSecondProfile(), "the second profile did not load");
+        runLua(mpHost, qsl("if nawsProbeContainer then nawsProbeContainer:detach() end"));
+        showTab(mSecondHostname);
+        settle();
+        QVERIFY2(mpHost->mainConsoleView()->isHidden(), "the first profile should be in a background tab by now");
+
+        const QSize before = screenSize(mpHost);
+        mpServer->clearNawsUpdates();
+        // The window keeps its size here, so the side borders have to take the
+        // width under the wrap-at ceiling on their own for the wire to show it
+        runLua(mpHost, qsl("setBorderLeft(250) setBorderRight(250) setBorderTop(100)"));
+        settle();
+
+        const auto updates = mpServer->nawsUpdates();
+        QVERIFY2(!updates.isEmpty(), "the game was not told about borders moved while the profile was in the background");
+        const QSize toldWhileHidden = screenSize(mpHost);
+        QVERIFY2(measurableWidth(mpHost), "at the 40 column floor or the wrap-at ceiling this case cannot tell a right prediction from a wrong one");
+        QVERIFY2(toldWhileHidden.height() < before.height(), "the top border took rows away, but the hidden profile was not told fewer");
+        QCOMPARE(updates.constLast(), QSize(reportableWidth(mpHost), toldWhileHidden.height()));
+
+        showTab(mHostname);
+        settle();
+        QCOMPARE(screenSize(mpHost), toldWhileHidden);
+    }
+
+    // The game is told nothing at all for a height of zero, so borders that
+    // leave the profile no rows must not cost it the width it would otherwise
+    // have been told - that is still what its text wraps to.
+    void aBackgroundedProfileLeftNoRowsIsStillToldItsWidth()
+    {
+        QVERIFY2(ensureSecondProfile(), "the second profile did not load");
+        runLua(mpHost, qsl("if nawsProbeContainer then nawsProbeContainer:detach() end"));
+        showTab(mSecondHostname);
+        settle();
+        QVERIFY2(mpHost->mainConsoleView()->isHidden(), "the first profile should be in a background tab by now");
+
+        const int rowsBefore = mpHost->mScreenHeight;
+        QVERIFY(rowsBefore > 0);
+        mpServer->clearNawsUpdates();
+        runLua(mpHost, qsl("setBorderLeft(250) setBorderRight(250) setBorderTop(%1)").arg(mpHost->mainConsoleView()->parentWidget()->height()));
+        settle();
+
+        const auto updates = mpServer->nawsUpdates();
+        QVERIFY2(!updates.isEmpty(), "borders that left no rows cost the game the profile's new width");
+        QVERIFY2(measurableWidth(mpHost), "at the 40 column floor or the wrap-at ceiling this case cannot tell a right prediction from a wrong one");
+        QCOMPARE(updates.constLast(), QSize(reportableWidth(mpHost), rowsBefore));
+    }
+
+    // Moving a border raises sysWindowResizeEvent, and a profile waiting in a
+    // background tab has to be told the room it will have, as it would be on
+    // screen - not a width taken from a console that is zero pixels wide.
+    void aBackgroundedProfileThatMovesItsBordersRaisesTheWidthItComesBackTo()
+    {
+        QVERIFY2(ensureSecondProfile(), "the second profile did not load");
+        runLua(mpHost, qsl("if nawsProbeContainer then nawsProbeContainer:detach() end"));
+        runLua(mpHost,
+               qsl("resizeProbeWidth = nil\n"
+                   "if resizeProbeHandler then killAnonymousEventHandler(resizeProbeHandler) end\n"
+                   "resizeProbeHandler = registerAnonymousEventHandler('sysWindowResizeEvent', function(_, width) resizeProbeWidth = width end)"));
+        // Loading the second profile puts it in front
+        showTab(mHostname);
+        settle();
+        QVERIFY2(!mpHost->mainConsoleView()->isHidden(), "the first profile has to be on screen for the first reading");
+
+        runLua(mpHost, qsl("setBorderLeft(60) setBorderRight(40)"));
+        settle();
+        const int widthOnScreen = luaGlobalNumber(mpHost, "resizeProbeWidth");
+        QVERIFY2(widthOnScreen > 0, "moving a border on screen raised no sysWindowResizeEvent");
+
+        runLua(mpHost, qsl("setBorderLeft(0) setBorderRight(0)"));
+        showTab(mSecondHostname);
+        settle();
+        QVERIFY2(mpHost->mainConsoleView()->isHidden(), "the first profile should be in a background tab by now");
+
+        runLua(mpHost, qsl("resizeProbeWidth = nil setBorderLeft(60) setBorderRight(40)"));
+        const int widthWhileHidden = luaGlobalNumber(mpHost, "resizeProbeWidth");
+        QCOMPARE(widthWhileHidden, widthOnScreen);
+    }
+
+    // Geyser lays every element out against getMainWindowSize(), so a profile
+    // that reads it while in a background tab has to get the window it will
+    // come back to. Resizing while it is away is what separates that from the
+    // size it last had on screen, which is all it used to be able to report.
+    void aBackgroundedProfileReportsTheWindowItWillComeBackTo()
+    {
+        QVERIFY2(ensureSecondProfile(), "the second profile did not load");
+        showTab(mSecondHostname);
+        settle();
+        QVERIFY(mpHost->mainConsoleView()->isHidden());
+
+        mudlet::self()->resize(1000, 800);
+        settle();
+        const QSize whileHidden = mpHost->mainConsoleView()->getMainWindowSize();
+
+        showTab(mHostname);
+        settle();
+        const QSize onceBack = mpHost->mainConsoleView()->getMainWindowSize();
+
+        QCOMPARE(whileHidden, onceBack);
+    }
+};
+
+#include "NawsWidthReportTest.moc"
+MUDLET_GROUPED_TEST_MAIN(NawsWidthReportTest)

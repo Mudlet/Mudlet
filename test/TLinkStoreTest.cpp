@@ -1,3 +1,4 @@
+#include "GroupedTest.h"
 #include <TLinkStore.h>
 #include <QtTest/QtTest>
 
@@ -39,8 +40,11 @@ private slots:
 
         QStringList links;
 
+        QVERIFY(store.pristine());
+
         store.addLinks(links, links);
         QCOMPARE(store.getCurrentLinkID(), 1);
+        QVERIFY(!store.pristine());
 
         store.addLinks(links, links);
         QCOMPARE(store.getCurrentLinkID(), 2);
@@ -53,6 +57,7 @@ private slots:
 
         store.addLinks(links, links);
         QCOMPARE(store.getCurrentLinkID(), 2);
+        QVERIFY(!store.pristine());
     }
 
     void testMaxId()
@@ -263,4 +268,4 @@ private slots:
 };
 
 #include "TLinkStoreTest.moc"
-QTEST_MAIN(TLinkStoreTest)
+MUDLET_GROUPED_TEST_MAIN(TLinkStoreTest)

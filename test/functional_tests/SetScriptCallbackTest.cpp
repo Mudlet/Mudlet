@@ -19,8 +19,8 @@
 
 /*
  * A temp trigger/timer/alias/key created with a function argument stores that
- * function as an anonymous callback in the Lua registry (keyed by the item
- * pointer) and flags mRegisteredAnonymousLuaFunction. Replacing its script via
+ * function as an anonymous callback in the Lua registry (under the reference in
+ * mLuaFunctionRef) and flags mRegisteredAnonymousLuaFunction. Replacing its script via
  * setScript() must leave that callback mode: it has to release the old function
  * from the registry (otherwise the entry leaks, as the destructor's mScript-based
  * branch then deletes the compiled function rather than the callback) and clear
@@ -30,8 +30,13 @@
  * Run with: ctest -R SetScriptCallbackTest -V
  */
 
+#include <QFileInfo>
+#include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include "MudletApp.h"
+#include "PortableModeTestHelper.h"
+#include "ProfileTestHelper.h"
 #include "AliasUnit.h"
 #include "Host.h"
 #include "KeyUnit.h"
@@ -48,6 +53,8 @@
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
+using namespace std::chrono_literals;
+
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
 #include <lua5.1/lauxlib.h>
@@ -60,18 +67,15 @@ extern "C" {
 #endif
 }
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForSetScriptCallbackTest();
+#include "GroupedTest.h"
 
 class SetScriptCallbackTest : public QObject
 {
     Q_OBJECT
 
 private:
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
     Host* mpHost = nullptr;
     const QString mHostname = "SetScriptCallback-Test";
@@ -97,14 +101,12 @@ private:
         return value;
     }
 
-    // The anonymous callback is stored in the Lua registry keyed by the item
-    // pointer; a released callback leaves a nil entry there.
-    bool registryEntryIsNil(void* item)
+    // A released reference's slot is relinked into the free list, so it no longer holds the function
+    bool functionReleased(const int ref)
     {
         lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
-        lua_pushlightuserdata(L, item);
-        lua_rawget(L, LUA_REGISTRYINDEX);
-        const bool result = lua_isnil(L, -1);
+        lua_rawgeti(L, LUA_REGISTRYINDEX, ref);
+        const bool result = !lua_isfunction(L, -1);
         lua_pop(L, 1);
         return result;
     }
@@ -112,13 +114,27 @@ private:
 private slots:
     void initTestCase()
     {
-        initializeQRCResourcesForSetScriptCallbackTest();
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
+        // A config root of this process's own. Sharing the developer's
+        // ~/.config/mudlet means sharing a profile list, so a second copy of
+        // this test running at the same time is told the name it types is
+        // already in use and never gets an enabled Connect button. Since #9712
+        // the opt-in that makes setupConfig() adopt a directory is
+        // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
 
         mpServer = new TelnetServerStub(qApp);
         mpServer->start(mLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -134,8 +150,12 @@ private slots:
         mpHost = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory(mHostname);
-        delete mudlet::self();
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
+        if (mudlet::self()) {
+            deleteProfileDirectory(mHostname);
+            delete mudlet::self();
+        }
+        mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }
 
     // Trigger: execute() gates on the flag, so before the fix the stale function
@@ -155,10 +175,13 @@ private slots:
         runLua(qsl("feedTriggers('setscript_trig\\n')"));
         QCOMPARE(luaInt(qsl("trigOld")), 1);
 
+        const int ref = pTrigger->mLuaFunctionRef;
+        QVERIFY(ref > 0);
         QVERIFY(pTrigger->setScript(qsl("trigNew = trigNew + 1")));
 
         QVERIFY2(!pTrigger->mRegisteredAnonymousLuaFunction, "setScript() must leave registered-function mode");
-        QVERIFY2(registryEntryIsNil(pTrigger), "setScript() must release the old function from the Lua registry (no leak)");
+        QCOMPARE(pTrigger->mLuaFunctionRef, 0);
+        QVERIFY2(functionReleased(ref), "setScript() must release the old function from the Lua registry (no leak)");
 
         // Firing now runs the new script; the stale function must not fire again.
         runLua(qsl("feedTriggers('setscript_trig\\n')"));
@@ -182,10 +205,13 @@ private slots:
         pAlias->execute();
         QCOMPARE(luaInt(qsl("aliasOld")), 1);
 
+        const int ref = pAlias->mLuaFunctionRef;
+        QVERIFY(ref > 0);
         QVERIFY(pAlias->setScript(qsl("aliasNew = aliasNew + 1")));
 
         QVERIFY2(!pAlias->mRegisteredAnonymousLuaFunction, "setScript() must leave registered-function mode");
-        QVERIFY2(registryEntryIsNil(pAlias), "setScript() must release the old function from the Lua registry (no leak)");
+        QCOMPARE(pAlias->mLuaFunctionRef, 0);
+        QVERIFY2(functionReleased(ref), "setScript() must release the old function from the Lua registry (no leak)");
 
         pAlias->execute();
         QCOMPARE(luaInt(qsl("aliasNew")), 1);
@@ -207,10 +233,13 @@ private slots:
         pKey->execute();
         QCOMPARE(luaInt(qsl("keyOld")), 1);
 
+        const int ref = pKey->mLuaFunctionRef;
+        QVERIFY(ref > 0);
         QVERIFY(pKey->setScript(qsl("keyNew = keyNew + 1")));
 
         QVERIFY2(!pKey->mRegisteredAnonymousLuaFunction, "setScript() must leave registered-function mode");
-        QVERIFY2(registryEntryIsNil(pKey), "setScript() must release the old function from the Lua registry (no leak)");
+        QCOMPARE(pKey->mLuaFunctionRef, 0);
+        QVERIFY2(functionReleased(ref), "setScript() must release the old function from the Lua registry (no leak)");
 
         pKey->execute();
         QCOMPARE(luaInt(qsl("keyNew")), 1);
@@ -230,10 +259,13 @@ private slots:
         QVERIFY(pTimer);
         QVERIFY2(pTimer->mRegisteredAnonymousLuaFunction, "callback timer should start in registered-function mode");
 
+        const int ref = pTimer->mLuaFunctionRef;
+        QVERIFY(ref > 0);
         QVERIFY(pTimer->setScript(qsl("noop = 1")));
 
         QVERIFY2(!pTimer->mRegisteredAnonymousLuaFunction, "setScript() must leave registered-function mode");
-        QVERIFY2(registryEntryIsNil(pTimer), "setScript() must release the old function from the Lua registry (no leak)");
+        QCOMPARE(pTimer->mLuaFunctionRef, 0);
+        QVERIFY2(functionReleased(ref), "setScript() must release the old function from the Lua registry (no leak)");
     }
 
     // Clearing a callback item's script with setScript("") must also release the
@@ -252,10 +284,13 @@ private slots:
         runLua(qsl("feedTriggers('setscript_clear\\n')"));
         QCOMPARE(luaInt(qsl("clearOld")), 1);
 
+        const int ref = pTrigger->mLuaFunctionRef;
+        QVERIFY(ref > 0);
         QVERIFY(pTrigger->setScript(QString()));
 
         QVERIFY2(!pTrigger->mRegisteredAnonymousLuaFunction, "setScript(\"\") must leave registered-function mode");
-        QVERIFY2(registryEntryIsNil(pTrigger), "setScript(\"\") must release the old function from the Lua registry (no leak)");
+        QCOMPARE(pTrigger->mLuaFunctionRef, 0);
+        QVERIFY2(functionReleased(ref), "setScript(\"\") must release the old function from the Lua registry (no leak)");
 
         // With no script and no callback, firing must do nothing - the stale function
         // must not run.
@@ -288,46 +323,24 @@ private slots:
         QCOMPARE(luaInt(qsl("plainA")), 1);
     }
 
-    // Helpers (reused from the EnableDisableByNameTest/TFeedTriggersRecursionTest pattern)
+    // Helpers (reused from the TFeedTriggersRecursionTest pattern)
 
     void startProfile(const QString& hostname, const QString& address, const QString& port)
     {
-        QTimer::singleShot(0, qApp, [hostname, address, port]() {
-            mudlet::self()->startAutoLogin({});
-            QTest::qWait(100);
-            QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
-            QTest::qWait(100);
-            QTest::keyClicks(QApplication::focusWidget(), hostname);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
-            QTest::keyClicks(QApplication::focusWidget(), address);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
-            QTest::keyClicks(QApplication::focusWidget(), port);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
-        });
-
-        QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!spy.wait(5000)) {
-            QFAIL("Profile took too long to load.");
-        }
-        auto host = mudlet::self()->getActiveHost();
+        auto host = TestProfile::create(hostname, address, port);
         if (!host) {
             QFAIL("No active host available for the test.");
         }
 
         QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2000)) {
+        if (!spy2.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = mudlet::getMudletPath(enums::profileHomePath, profileName);
+        const QString path = MudletApp::getMudletPath(enums::profileHomePath, profileName);
         QDir dir(path);
 
         if (!dir.exists()) {
@@ -337,20 +350,5 @@ private slots:
     }
 };
 
-void initializeQRCResourcesForSetScriptCallbackTest()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "SetScriptCallbackTest.moc"
-QTEST_MAIN(SetScriptCallbackTest)
+MUDLET_GROUPED_TEST_MAIN(SetScriptCallbackTest)

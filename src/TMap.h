@@ -25,12 +25,10 @@
 
 
 #include "TAstar.h"
-#if defined(INCLUDE_3DMAPPER)
-#include "glwidget_integration.h"
-#endif
 #include "utils.h"
 
 #include <QColor>
+#include <QElapsedTimer>
 #include <QFont>
 #include <QJsonObject>
 #include <QMap>
@@ -57,14 +55,19 @@
 #define DIR_OTHER 13
 
 class dlgMapper;
+class TMapViewFrontend;
+class TMapViewsFrontend;
+class TNullMapViews;
 class Host;
 #if defined(INCLUDE_3DMAPPER)
 class QOpenGLWidget;
 #endif
 class TArea;
+class TAreaGraph;
 class TMapViewManager;
 class TRoom;
 class TRoomDB;
+class TMapLabel;
 class QFile;
 class QNetworkAccessManager;
 class MapInfoContributorManager;
@@ -73,10 +76,39 @@ class TMap : public QObject
 {
     Q_OBJECT
 
+    // Allows the functional test to put recording map views in place of the GUI's:
+    friend class FrontendRoutingContractTest;
+
+public:
+    // Host settings the 2D map keeps a copy of to draw with, and those a 3D view sets itself up from
+    enum class MapperSetting { RoomSize, ExitSize, RoundRooms, ShowRoomIds, ShowGrid, Style, BackgroundColor };
+
 signals:
     void signal_saveErrorChanged(bool hasError);
     void signal_areaChanged(int areaId);
     void signal_mmpMapLocationChanged();
+    void signal_mapSymbolFontChanged();
+    // Reaches every 2D map showing this map, the mapper's and each secondary view's
+    void signal_roomDeleted(int roomId);
+
+    // Cues for the mapper drawing this map (mpMapper); the colour and symbol
+    // cache ones also reach every secondary map view, and with the 3D mapper
+    // built in so do the repaint and mapper-setting ones.
+    void signal_mapperColoursChanged();
+    void signal_mapCleared();
+    void signal_mapLabelsChanged();
+    void signal_mapLoaded(bool showPlayerArea);
+    void signal_mapperShowRequested();
+    void signal_mapDownloadEnded();
+    void signal_symbolCachesStale();
+    void signal_playerRoomStyleChanged();
+    void signal_areaListChanged();
+    void signal_areaRenamed(const QString& oldName, const QString& newName);
+    void signal_playerAreaShowRequested();
+    void signal_defaultAreaVisibilitySet(bool wasShown);
+    void signal_mapInfoContributorsChanged();
+    void signal_mapRepaintRequested();
+    void signal_mapperSettingChanged(TMap::MapperSetting setting);
 
     // Map-progress seam for the libmudlet split (#8681, #9011): the map engine
     // must stay free of Qt Widgets, so it emits these pre-translated payloads for
@@ -99,7 +131,10 @@ public:
     TMap(Host*, const QString&);
     ~TMap();
     void mapClear();
+    void refreshMapperColours();
+    // Returns the new label's id, -1 for an unknown area, or scmUnreadableImageLabel for an image that cannot be read.
     int createMapImageLabel(int area, QString filePath, float x, float y, float z, float width, float height, float zoom, bool showOnTop, bool temporary);
+    static constexpr int scmUnreadableImageLabel = -2;
     int createMapLabel(int area,
                        const QString& text,
                        float x,
@@ -116,15 +151,34 @@ public:
                        QColor outline = Qt::black);
     void deleteMapLabel(int area, int labelID);
     bool addRoom(int id = 0);
-    bool setRoomArea(int id, int area, bool deferAreaRecalculations = false);
+    bool setRoomArea(int id, int area);
     void deleteArea(int id);
     int createNewRoomID(int minimumId = 1);
     void logError(const QString&);
     bool setExit(int from, int to, int dir);
     bool setRoomCoordinates(int id, int x, int y, int z);
+    // After a change to the map: also counts its revision up
     void updateArea(int areaId);
+    // For when only what views read afresh on every paint changed, such as the player's room: unlike updateArea(),
+    // not taken as a change to how the area looks, so a view need not remake what it keeps of it
+    void updatePlayerArea(int areaId);
+    // For updateMap() and a new speedwalk: what a view keeps of the area's look is remade, but the map's revision
+    // stays, as the rooms and exits themselves did not change
+    void refreshArea(int areaId);
+    // For a whole map read in outside TMap, as XMLimport does:
+    void announceMapLoaded(bool showPlayerArea);
+    void requestMapperShown();
+    // For changes the Lua API makes to the map or to the mapper's settings:
+    void announceAreaListChanged();
+    void announceAreaRenamed(const QString& oldName, const QString& newName);
+    void requestPlayerAreaShown();
+    void announceDefaultAreaVisibilitySet(bool wasShown);
+    void announceMapInfoContributorsChanged();
+    void requestMapRepaint();
+    void announceMapperSettingChanged(MapperSetting setting);
 
     void audit();
+    inline static bool smShowMapAuditErrors = false;
 
     QList<int> detectRoomCollisions(int id);
     void setRoom(int);
@@ -132,16 +186,16 @@ public:
     bool gotoRoom(int);
     bool gotoRoom(int, int);
     bool serialize(QDataStream&, int saveVersion = 0);
+    static bool listLengthFits(QDataStream&, qint64 minBytesPerElement);
     bool restore(QString location);
+    static void restoreLabelFontFromUserData(TMapLabel&, int labelId, QMap<QString, QString>& userData);
+    static void restoreLabelOutlineColorFromUserData(TMapLabel&, int labelId, QMap<QString, QString>& userData);
     bool retrieveMapFileStats(QString, QString*, int*, int*, qsizetype*, qsizetype*);
     void initGraph();
     QString connectExitStubByDirection(const int fromRoomId, const int dirType);
     QString connectExitStubByToId(const int fromRoomId, const int toRoomId);
     QString connectExitStubByDirectionAndToId(const int fromRoomId, const int dirType, const int toRoomId);
     void postMessage(QString text);
-
-    // Used by the 2D mapper to send view center coordinates to 3D one
-    void set3DViewCenter(int, int, int, int);
 
     void appendRoomErrorMsg(int, QString, bool isToSetFileViewingRecommended = false);
     void appendAreaErrorMsg(int, QString, bool isToSetFileViewingRecommended = false);
@@ -184,6 +238,42 @@ public:
     void disableTransferProgressCancel();
     void clearTransferProgress();
 
+    // True while a map import, export or download is on the stack. Those pump
+    // QCoreApplication::processEvents() to keep their progress display alive, so anything
+    // delivered from an event loop can find itself running nested inside one -
+    // and destroying this map's Host from there would free the operation's own
+    // "this" (#9520). Whoever would do that has to wait for this to go false.
+    bool mapOperationInProgress() const { return mMapOperationDepth > 0; }
+    // Ask an operation that is in progress to stop at its next opportunity, so
+    // that a caller waiting on the above does not wait for a whole map. Only the
+    // JSON import and export poll this; an XML import or a download runs to its
+    // own end. Asking twice does nothing, which mapOperationAbortRequested()
+    // also lets a caller polling in a loop see.
+    void requestMapOperationAbort();
+    bool mapOperationAbortRequested() const { return mMapOperationAbortRequested; }
+
+    // Held while Lua runs from inside C++ that keeps raw TRoom/TArea pointers across the call (the
+    // exit weight filter while the graph is built, map info contributors while the map is painted),
+    // so the Lua functions that free rooms or areas must refuse while this is held.
+    class ScriptCallbackScope
+    {
+    public:
+        explicit ScriptCallbackScope(TMap* pMap)
+        : mpMap(pMap)
+        {
+            ++mpMap->mScriptCallbackDepth;
+        }
+        ~ScriptCallbackScope() { --mpMap->mScriptCallbackDepth; }
+        ScriptCallbackScope(const ScriptCallbackScope&) = delete;
+        ScriptCallbackScope& operator=(const ScriptCallbackScope&) = delete;
+
+    private:
+        TMap* mpMap = nullptr;
+    };
+    bool scriptCallbackInProgress() const { return mScriptCallbackDepth > 0; }
+    // initGraph() runs the exit weight filter, which must not start another search mid-build.
+    bool graphBuildInProgress() const { return mGraphBuildInProgress; }
+
     // Show which rooms have which symbols:
     QHash<QString, QSet<int>> roomSymbolsHash();
 
@@ -196,10 +286,39 @@ public:
     bool getRoomNamesShown();
     void setRoomNamesShown(bool shown);
 
+    // The 2D map room symbol settings, shared by the preferences dialog and
+    // the Lua API. Each returns whether the setting actually changed:
+    QFont getSymbolFont() const { return mMapSymbolFont; }
+    bool setSymbolFont(const QFont&);
+    bool getOnlySymbolFontUsed() const { return mIsOnlyMapSymbolFontToBeUsed; }
+    bool setOnlySymbolFontUsed(bool);
+    qreal getSymbolFontFudgeFactor() const { return mMapSymbolFontFudgeFactor; }
+    bool setSymbolFontFudgeFactor(qreal);
+    // The range setSymbolFontFudgeFactor() accepts; also what the preferences
+    // spin-box offers. Zero and below blanks every symbol (issue #10176):
+    static constexpr qreal scmMinimumSymbolFontFudgeFactor = 0.50;
+    static constexpr qreal scmMaximumSymbolFontFudgeFactor = 2.00;
+    // The 2D zoom a new area starts at, and the smallest one a view accepts:
+    static constexpr qreal scmDefaultXYZoom = 20.0;
+    static constexpr qreal scmMinXYZoom = 3.0;
+    // Why a script's 2D zoom can't be used, or empty when it can
+    static QString zoomError(qreal zoom);
+    // What an image export to the file is written as, from its suffix
+    static QString exportImageFormat(const QString& filePath);
+    // Why an image export of the area would be refused before it is drawn, or empty when it would not;
+    // for every z level, levelExports takes each level and the file it is written to
+    QString areaExportProblem(int areaId, const QString& filePath, qreal zoom, bool exportAllZLevels, QList<std::pair<int, QString>>& levelExports) const;
+    // Which of the symbols in use would be drawn as the replacement character
+    // if the given font were the symbol font:
+    QStringList symbolsNotInFont(const QFont&);
+
     std::pair<bool, QString> writeJsonMapFile(const QString&);
     std::pair<bool, QString> readJsonMapFile(const QString&, const bool translatableTexts = false);
+    std::pair<bool, QString> importJsonMapFile(const QString&);
     qsizetype getCurrentProgressRoomCount() const { return mProgressDialogRoomsCount; }
     bool incrementJsonProgressDialog(const bool isExportNotImport, const bool isRoomNotLabel, const int increment = 1);
+    // TRoomDB calls this before it deletes an area or clears the map.
+    void areasAboutToBeDeleted();
     QString getDefaultAreaName() const { return mDefaultAreaName; }
     QString getUnnamedAreaName() const { return mUnnamedAreaName; }
 
@@ -213,8 +332,21 @@ public:
     // underlying flag (and by setting a breakpoint on setUnsave() we can
     // determine which bit of code is responsible for changing the flag!)
     void setUnsaved(const char*);
+    // For a change no cache is made from, so nothing is rebuilt for it; a view that may show it still needs asking to repaint
+    void setUnsavedKeepingRevisions(const char*);
     void resetUnsaved() { mUnsavedMap = false; }
+    // Counts up on every change to the map's contents (bar setUnsavedKeepingRevisions() ones) or to the colors it is drawn in, so that a view can tell
+    // whether what it worked out from them last frame still holds
+    quint64 revision() const { return mRevision; }
     bool isUnsaved() const { return mUnsavedMap; }
+    // Bumped by setUnsaved() and whenever the whole map is replaced, so a cache can tell it is stale.
+    quint64 mapRevision() const { return mMapRevision; }
+    // Bumped by updateArea(), for changes such as a room highlighted that mapRevision() misses
+    quint64 appearanceRevision() const { return mAppearanceRevision; }
+    // Bumped by initGraph(), as room locks and exit weights change what findPath() finds without bumping mapRevision()
+    quint64 pathGraphRevision() const { return mPathGraphRevision; }
+    // Call TAreaGraph::refresh() before reading it.
+    TAreaGraph* areaGraph() const { return mpAreaGraph.get(); }
     void setSaveError(bool state);
     bool hasSaveError() const { return mSaveError; }
     void setDefaultAreaShown(bool);
@@ -222,6 +354,7 @@ public:
 
 
     std::unique_ptr<TRoomDB> mpRoomDB;
+    // Made by the GUI when it gives the profile a console, so null without one.
     // Non-owning: Qt parent-child system (TMap as parent) handles lifetime.
     TMapViewManager* mpViewManager = nullptr;
     QMap<int, int> mEnvColors;
@@ -229,6 +362,11 @@ public:
     QString mProfileName;
 
     TMapViewManager* getViewManager() { return mpViewManager; }
+    // Defined in TMapViewManager.cpp, which can see that TMapViewManager is a TMapViewsFrontend.
+    void setViewManager(TMapViewManager* pViewManager);
+    // mpViewManager as core code drives it. Never null: with no manager, mpNullViews, or in the GUI a
+    // frontend that has no views and can make none.
+    TMapViewsFrontend* mapViewsFrontend() const;
 
     // Was a single int mRoomId but that breaks things when maps are
     // copied/shared between profiles - so now we track the profile name
@@ -270,8 +408,12 @@ public:
 #if defined(INCLUDE_3DMAPPER)
     QPointer<QOpenGLWidget> mpM;
 #endif
-    QPointer<dlgMapper> mpMapper;
-    QMap<int, int> roomidToIndex;
+    // Defined in dlgMapper.cpp: both need dlgMapper complete, setMapper() to see it is a TMapViewFrontend.
+    dlgMapper* mapper() const;
+    void setMapper(dlgMapper* pMapper);
+    // mapper() as core code drives it; null when that is.
+    TMapViewFrontend* mapViewFrontend() const { return mpMapViewObject.isNull() ? nullptr : mpMapViewFrontend; }
+    QHash<int, int> roomidToIndex;
 
     // User-registered mapper context menu entries (addMapEvent()/addMapMenu());
     // session-only state, never saved with the map.
@@ -279,14 +421,25 @@ public:
     QMap<QString, QStringList> mUserActions;
     // unique name, List:parent name ("" if null), display name
     QMap<QString, QStringList> mUserMenus;
+    // setMapMenuPriority() values by unique name, shared by a menu and an event of the same name; session-only
+    // like the above, and kept when the entry is removed so that re-adding it puts it back in place.
+    QHash<QString, int> mUserMenuPriorities;
+    // Built-in context menu items hidden with hideMapMenuItem(); session-only like the above.
+    QSet<QString> mHiddenMenuItems;
+    static const QStringList& builtInMenuItemNames();
+    bool menuItemShown(const QString& itemName) const;
+    // The area of the player's room, which a map view opened on no area shows
+    std::optional<int> playerAreaId() const;
 
-    typedef boost::adjacency_list<boost::listS, boost::vecS, boost::directedS, boost::no_property, boost::property<boost::edge_weight_t, cost>> mygraph_t;
+    typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS, boost::no_property, boost::property<boost::edge_weight_t, cost>> mygraph_t;
     typedef boost::property_map<mygraph_t, boost::edge_weight_t>::type WeightMap;
     typedef mygraph_t::vertex_descriptor vertex;
     typedef mygraph_t::edge_descriptor edge_descriptor;
     mygraph_t g;
     QHash<QPair<unsigned int, unsigned int>, route> edgeHash; // For Mudlet to decode BGL edges
     std::vector<location> locations;
+    // Set by initGraph() from the graph it builds, so it is only valid alongside that graph.
+    heuristicScale mHeuristicScale;
     bool mMapGraphNeedsUpdate = true;
     bool mNewMove = true;
 
@@ -381,19 +534,85 @@ public slots:
 
 
 private:
-    void addDirectionalRoute(QHash<unsigned int, route>& bestRoutes,
+    void clearRoutes();
+    void resetSearchState(const std::size_t roomCount);
+
+    // The same object as mpViewManager, set with it by setViewManager().
+    TMapViewsFrontend* mpViewsFrontend = nullptr;
+    // The secondary views of a profile made with no main window, else null. A child, so Qt deletes it.
+    TNullMapViews* mpNullViews = nullptr;
+    QPointer<dlgMapper> mpMapper;
+    // The same object as mpMapper, set with it by setMapper(); read only while mpMapViewObject is set.
+    TMapViewFrontend* mpMapViewFrontend = nullptr;
+    // mpMapViewFrontend as a QObject, so it clears when the view goes. Not mpMapper, so a view that
+    // is not a dlgMapper can stand in its place.
+    QPointer<QObject> mpMapViewObject;
+
+    // A* leaving the route in mSearchPredecessor; see the definition for why not boost::astar_search().
+    bool searchGraph(const vertex start, const vertex goal);
+
+    // Kept between searches. The first three have one entry per room; mSearchTouched lists only
+    // the rooms the last search wrote, so the next resets just those. initGraph() must resync all four.
+    std::vector<vertex> mSearchPredecessor;
+    std::vector<cost> mSearchDistance;
+    std::vector<quint8> mSearchState;
+    std::vector<vertex> mSearchTouched;
+
+    // Held for the whole of a map operation that pumps the event loop, so that
+    // mapOperationInProgress() can tell anything re-entered from that pump that
+    // this map is on the stack. Nested operations are counted, not flagged: an
+    // XML import can start from inside a download's pump.
+    class MapOperationScope
+    {
+    public:
+        explicit MapOperationScope(TMap* pMap)
+        : mpMap(pMap)
+        {
+            if (!mpMap->mMapOperationDepth) {
+                mpMap->mMapOperationAbortRequested = false;
+            }
+            ++mpMap->mMapOperationDepth;
+        }
+        // A load replaces rooms and user data without going through setUnsaved().
+        ~MapOperationScope()
+        {
+            --mpMap->mMapOperationDepth;
+            ++mpMap->mMapRevision;
+        }
+        MapOperationScope(const MapOperationScope&) = delete;
+        MapOperationScope& operator=(const MapOperationScope&) = delete;
+
+    private:
+        TMap* mpMap = nullptr;
+    };
+
+    int mMapOperationDepth = 0;
+    // requestMapOperationAbort() is asked again on every retry of a deferred
+    // profile close, and asking twice would abort a network reply twice over.
+    bool mMapOperationAbortRequested = false;
+    int mScriptCallbackDepth = 0;
+    bool mGraphBuildInProgress = false;
+    quint64 mMapRevision = 0;
+    quint64 mAppearanceRevision = 0;
+    quint64 mPathGraphRevision = 0;
+    // Per map, not per process, or one profile's pending update swallows another's
+    std::optional<int> mPendingAreaId;
+    std::unique_ptr<TAreaGraph> mpAreaGraph;
+
+    void addDirectionalRoute(std::vector<std::pair<int, route>>& bestRoutes,
                              const QMap<QString, int>& exitWeights,
+                             bool recheckTargetLocks,
                              unsigned int source,
                              TRoom* pSourceR,
                              int target,
                              quint8 direction,
-                             const QString& exitKey,
-                             const QSet<unsigned int>& unUsableRoomSet);
+                             const QString& exitKey);
     const QString createFileHeaderLine(QString, QChar);
     void warnIfMapProgressUnwired(const char* context, bool transferPath);
     void writeJsonUserData(QJsonObject&) const;
-    void readJsonUserData(const QJsonObject&);
+    static QMap<QString, QString> readJsonUserData(const QJsonObject&);
     bool validatePotentialMapFile(QFile&, QDataStream&);
+    void flushSymbolCaches();
 
     QStringList mStoredMessages;
 
@@ -424,6 +643,8 @@ private:
     bool mMapProgressIsTransfer = false;
     bool mMapProgressCancelRequested = false;
     int mMapProgressStandaloneMaximum = 0;
+    bool mJsonExportInProgress = false;
+    bool mJsonExportLostAnArea = false;
     // Using during updates of text in progress dialog partially from other
     // classes:
     qsizetype mProgressDialogAreasTotal = 0;
@@ -432,9 +653,12 @@ private:
     qsizetype mProgressDialogRoomsCount = 0;
     qsizetype mProgressDialogLabelsTotal = 0;
     qsizetype mProgressDialogLabelsCount = 0;
+    // When incrementJsonProgressDialog() last showed the counts; invalid until it first does:
+    QElapsedTimer mJsonProgressShown;
 
     // Used to flag whether the map auto-save needs to be done after the next interval:
     bool mUnsavedMap = false;
+    quint64 mRevision = 0;
     // Used to indicate that the last map save attempt failed:
     bool mSaveError = false;
     // Used to hide the default area from casual viewing for those MUDs that

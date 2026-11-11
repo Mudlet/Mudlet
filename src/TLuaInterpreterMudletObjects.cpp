@@ -28,42 +28,38 @@
 // mudlet-object specific functions of TLuaInterpreter, split out separately
 // for convenience and to keep TLuaInterpreter.cpp size reasonable
 
+#include "MudletApp.h"
 #include "TLuaInterpreter.h"
 
-#include "EAction.h"
+#include "EventLoopPump.h"
 #include "Host.h"
+#include "HostManager.h"
+#include "TAction.h"
 #include "TAlias.h"
+#include "TAppFrontend.h"
 #include "TArea.h"
-#include "TCommandLine.h"
-#include "TConsole.h"
+#include "TConsoleFrontend.h"
+#include "TConsoleModel.h"
 #include "TDebug.h"
 #include "TEvent.h"
-#include "TFlipButton.h"
-#include "TForkedProcess.h"
-#include "TLabel.h"
+#include "TKey.h"
 #include "TMap.h"
 #include "TMapLabel.h"
 #include "TMedia.h"
 #include "TRoomDB.h"
-#include "TTabBar.h"
-#include "TTextEdit.h"
+#include "TScript.h"
 #include "TTimer.h"
-#include "dlgComposer.h"
-#include "dlgIRC.h"
-#include "dlgMapper.h"
-#include "dlgModuleManager.h"
-#include "dlgTriggerEditor.h"
+#include "TriggerMatchPool.h"
 #include "mapInfoContributorManager.h"
-#include "mudlet.h"
 #include "TGameDetails.h"
-#if defined(INCLUDE_3DMAPPER)
-#include "glwidget_integration.h"
-#endif
+
+#include <QScopeGuard>
 
 #include <algorithm>
 #include <cmath>
 #include <limits>
 #include <math.h>
+#include <utility>
 
 #ifdef MUDLET_MEMORY_TRACKING
 #if defined(Q_OS_LINUX)
@@ -84,12 +80,8 @@
 #endif // MUDLET_MEMORY_TRACKING
 #include <QCollator>
 #include <QCoreApplication>
-#include <QDesktopServices>
-#include <QEventLoop>
-#include <QFileDialog>
-#include <QTimer>
+#include <QDir>
 #include <QFileInfo>
-#include <QMovie>
 #include <QVector>
 #ifdef QT_TEXTTOSPEECH_LIB
 #include <QTextToSpeech>
@@ -100,18 +92,6 @@ static const char* bad_cmdline_type = "%s: bad argument #%d type (command line n
 static const char* bad_window_value = "window \"%s\" not found";
 static const char* bad_cmdline_value = "command line \"%s\" not found";
 // Not used: static const char *bad_label_value = "label \"%s\" not found";
-
-// No documentation available in wiki - internal function
-static bool isMain(const QString& name)
-{
-    if (name.isEmpty()) {
-        return true;
-    }
-    if (!name.compare(qsl("main"))) {
-        return true;
-    }
-    return false;
-}
 
 // Both timer creators turn the delay into the timer's interval with
 // QTime(0, 0, 0, 0).addMSecs(qRound(time * 1000)), which wraps around the 24
@@ -126,6 +106,43 @@ static bool timerDelayFits(const double time)
 {
     const double msec = std::floor(time * 1000.0 + 0.5);
     return msec >= 0 && msec < 86400000;
+}
+
+// A stopwatch clamps accumulated time, but a single adjustment beyond its whole range is reported as
+// an error. Bounded in the double domain: casting an out-of-range double to qint64 is undefined
+// behaviour. The negated comparison also rejects NaN and infinity.
+static std::pair<bool, qint64> stopWatchAdjustmentAsMilliSeconds(const double adjustment)
+{
+    constexpr double limit = static_cast<double>(stopWatch::csmMaximumMilliSeconds);
+    const double milliSeconds = std::round(adjustment * 1000.0);
+    if (!(milliSeconds >= -limit && milliSeconds <= limit)) {
+        return {false, 0};
+    }
+
+    return {true, static_cast<qint64>(milliSeconds)};
+}
+
+// Lets the creators refuse a pattern that would make an item which never matches; the
+// flags must stay those of TAlias::compileRegex() and TTrigger::setRegexCodeList()
+static QString perlRegexCompileError(const QString& pattern)
+{
+    int errorCode = 0;
+    PCRE2_SIZE errorOffset = 0;
+    const QByteArray utf8 = pattern.toUtf8();
+    pcre2_code* re = pcre2_compile(reinterpret_cast<PCRE2_SPTR>(utf8.constData()), PCRE2_ZERO_TERMINATED, PCRE2_UTF | PCRE2_UCP | PCRE2_MATCH_INVALID_UTF, &errorCode, &errorOffset, nullptr);
+    if (re) {
+        pcre2_code_free(re);
+        return QString();
+    }
+    PCRE2_UCHAR errorBuffer[256];
+    pcre2_get_error_message(errorCode, errorBuffer, sizeof(errorBuffer));
+    return qsl("regex pattern \"%1\" failed to compile at offset %2: %3").arg(pattern, QString::number(errorOffset), QString::fromUtf8(reinterpret_cast<const char*>(errorBuffer)));
+}
+
+// TTrigger::setRegexCodeList() removes every newline before it compiles a pattern
+static QString triggerRegexCompileError(QString pattern)
+{
+    return perlRegexCompileError(pattern.remove(QLatin1Char('\n')));
 }
 
 #define WINDOW_NAME(ARG_L, ARG_pos)                                                                                                                                                                    \
@@ -154,50 +171,19 @@ static bool timerDelayFits(const double time)
         lua_tostring(ARG_L, pos_);                                                                                                                                                                     \
     })
 
-#define CONSOLE_NIL(ARG_L, ARG_name)                                                                                                                                                                   \
-    ({                                                                                                                                                                                                 \
-        auto name_ = (ARG_name);                                                                                                                                                                       \
-        auto console_ = getHostFromLua(ARG_L).findConsole(name_);                                                                                                                                      \
-        console_;                                                                                                                                                                                      \
-    })
+static int windowNotFound(lua_State* L, const QString& name)
+{
+    lua_pushnil(L);
+    lua_pushfstring(L, bad_window_value, name.toUtf8().constData());
+    return 2;
+}
 
-#define CONSOLE(ARG_L, ARG_name)                                                                                                                                                                       \
-    ({                                                                                                                                                                                                 \
-        auto name_ = (ARG_name);                                                                                                                                                                       \
-        auto console_ = getHostFromLua(ARG_L).findConsole(name_);                                                                                                                                      \
-        if (!console_) {                                                                                                                                                                               \
-            lua_pushnil(ARG_L);                                                                                                                                                                        \
-            lua_pushfstring(ARG_L, bad_window_value, name_.toUtf8().constData());                                                                                                                      \
-            return 2;                                                                                                                                                                                  \
-        }                                                                                                                                                                                              \
-        console_;                                                                                                                                                                                      \
-    })
-
-#define COMMANDLINE(ARG_L, ARG_name)                                                                                                                                                                   \
-    ({                                                                                                                                                                                                 \
-        const QString& name_ = (ARG_name);                                                                                                                                                             \
-        auto console_ = getHostFromLua(ARG_L).mpConsole;                                                                                                                                               \
-        auto cmdLine_ = isMain(name_) ? &*console_->mpCommandLine : console_->mSubCommandLineMap.value(name_);                                                                                         \
-        if (!cmdLine_) {                                                                                                                                                                               \
-            lua_pushnil(ARG_L);                                                                                                                                                                        \
-            lua_pushfstring(ARG_L, bad_cmdline_value, name_.toUtf8().constData());                                                                                                                     \
-            return 2;                                                                                                                                                                                  \
-        }                                                                                                                                                                                              \
-        cmdLine_;                                                                                                                                                                                      \
-    })
-
-#define LABEL(ARG_L, ARG_name)                                                                                                                                                                         \
-    ({                                                                                                                                                                                                 \
-        const QString& name_ = (ARG_name);                                                                                                                                                             \
-        auto console_ = getHostFromLua(ARG_L).mpConsole;                                                                                                                                               \
-        auto label_ = console_->mLabelMap.value(name_);                                                                                                                                                \
-        if (!label_) {                                                                                                                                                                                 \
-            lua_pushnil(ARG_L);                                                                                                                                                                        \
-            lua_pushfstring(ARG_L, bad_label_value, name_.toUtf8().constData());                                                                                                                       \
-            return 2;                                                                                                                                                                                  \
-        }                                                                                                                                                                                              \
-        label_;                                                                                                                                                                                        \
-    })
+static int commandLineNotFound(lua_State* L, const QString& name)
+{
+    lua_pushnil(L);
+    lua_pushfstring(L, bad_cmdline_value, name.toUtf8().constData());
+    return 2;
+}
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addCmdLineSuggestion
 int TLuaInterpreter::addCmdLineSuggestion(lua_State* L)
@@ -212,8 +198,11 @@ int TLuaInterpreter::addCmdLineSuggestion(lua_State* L)
         name = CMDLINE_NAME(L, 1);
     }
     const QString text = getVerifiedString(L, __func__, textIndex, "suggestion text");
-    auto pN = COMMANDLINE(L, QString{name});
-    pN->addSuggestion(text);
+    const QString commandLineName{name};
+    const Host& host = getHostFromLua(L);
+    if (!host.consoleFrontend()->addCommandLineSuggestion(commandLineName, text)) {
+        return commandLineNotFound(L, commandLineName);
+    }
     return 0;
 }
 
@@ -232,7 +221,15 @@ int TLuaInterpreter::adjustStopWatch(lua_State* L)
     }
 
     const double adjustment = getVerifiedDouble(L, __func__, 2, "modification in seconds");
-    const bool result = host.adjustStopWatch(watchId, qRound(adjustment * 1000.0));
+    auto [fits, milliSeconds] = stopWatchAdjustmentAsMilliSeconds(adjustment);
+    if (!fits) {
+        return warnArgumentValue(
+                L,
+                __func__,
+                qsl("modification in seconds must be a finite number from -%1 to %1, got %2").arg(QString::number(stopWatch::csmMaximumMilliSeconds / 1000)).arg(QString::number(adjustment, 'g', 17)));
+    }
+
+    const bool result = host.adjustStopWatch(watchId, milliSeconds);
     // This is only likely to fail when a numeric first argument was given:
     if (!result) {
         return warnArgumentValue(L, __func__, csmInvalidStopWatchID.arg(watchId));
@@ -254,15 +251,11 @@ int TLuaInterpreter::appendCmdLine(lua_State* L)
         name = CMDLINE_NAME(L, 1);
     }
     const QString text = getVerifiedString(L, __func__, textIndex, "text to set on command line");
-    auto pN = COMMANDLINE(L, QString{name});
-
-    const QString curText = pN->toPlainText();
-    pN->setPlainText(curText + text);
-    QTextCursor cur = pN->textCursor();
-    cur.clearSelection();
-    cur.movePosition(QTextCursor::EndOfLine);
-    pN->setTextCursor(cur);
-    pN->adjustHeight();
+    const QString commandLineName{name};
+    const Host& host = getHostFromLua(L);
+    if (!host.consoleFrontend()->appendCommandLineText(commandLineName, text)) {
+        return commandLineNotFound(L, commandLineName);
+    }
     return 0;
 }
 
@@ -274,9 +267,11 @@ int TLuaInterpreter::clearCmdLine(lua_State* L)
     if (n >= 1) {
         name = CMDLINE_NAME(L, 1);
     }
-    auto pN = COMMANDLINE(L, QString{name});
-    pN->clear();
-    pN->adjustHeight();
+    const QString commandLineName{name};
+    const Host& host = getHostFromLua(L);
+    if (!host.consoleFrontend()->clearCommandLine(commandLineName)) {
+        return commandLineNotFound(L, commandLineName);
+    }
     return 0;
 }
 
@@ -285,11 +280,14 @@ int TLuaInterpreter::clearCmdLineSuggestions(lua_State* L)
 {
     const int n = lua_gettop(L);
     const char* name = "main";
-    if (n == 1) {
+    if (n >= 1) {
         name = CMDLINE_NAME(L, 1);
     }
-    auto pN = COMMANDLINE(L, QString{name});
-    pN->clearSuggestions();
+    const QString commandLineName{name};
+    const Host& host = getHostFromLua(L);
+    if (!host.consoleFrontend()->clearCommandLineSuggestions(commandLineName)) {
+        return commandLineNotFound(L, commandLineName);
+    }
     return 0;
 }
 
@@ -370,8 +368,11 @@ int TLuaInterpreter::removeCmdLineSuggestion(lua_State* L)
         name = CMDLINE_NAME(L, 1);
     }
     const QString text = getVerifiedString(L, __func__, textIndex, "suggestion text");
-    auto pN = COMMANDLINE(L, QString{name});
-    pN->removeSuggestion(text);
+    const QString commandLineName{name};
+    const Host& host = getHostFromLua(L);
+    if (!host.consoleFrontend()->removeCommandLineSuggestion(commandLineName, text)) {
+        return commandLineNotFound(L, commandLineName);
+    }
     return 0;
 }
 
@@ -401,15 +402,7 @@ int TLuaInterpreter::disableScript(lua_State* L)
     const QString name = getVerifiedString(L, __func__, 1, "script name");
 
     Host& host = getHostFromLua(L);
-    int cnt = 0;
-    QMap<int, TScript*> const scripts = host.getScriptUnit()->getScriptList();
-    for (auto script : scripts) {
-        if (script->getName() == name) {
-            cnt++;
-            script->setIsActive(false);
-        }
-    }
-    if (cnt == 0) {
+    if (!host.getScriptUnit()->disableScript(name)) {
         return warnArgumentValue(L, __func__, qsl("script '%1' not found").arg(name));
     }
 
@@ -463,15 +456,7 @@ int TLuaInterpreter::enableScript(lua_State* L)
     const QString name = getVerifiedString(L, __func__, 1, "script name");
 
     Host& host = getHostFromLua(L);
-    int cnt = 0;
-    QMap<int, TScript*> const scripts = host.getScriptUnit()->getScriptList();
-    for (auto script : scripts) {
-        if (script->getName() == name) {
-            cnt++;
-            script->setIsActive(true);
-        }
-    }
-    if (cnt == 0) {
+    if (!host.getScriptUnit()->enableScript(name)) {
         return warnArgumentValue(L, __func__, qsl("script '%1' not found").arg(name));
     }
 
@@ -524,55 +509,79 @@ int TLuaInterpreter::exists(lua_State* L)
     int count = 0;
     type = type.toLower();
     if (!type.compare(QLatin1String("timer"), Qt::CaseInsensitive)) {
+        auto* pUnit = host.getTimerUnit();
         if (isId) {
-            auto pT = host.getTimerUnit()->getTimer(id);
-            lua_pushnumber(L, static_cast<bool>(pT) ? 1 : 0);
+            auto pT = pUnit->getTimer(id);
+            lua_pushnumber(L, (pT && !pUnit->pendingDeletion(pT)) ? 1 : 0);
             return 1;
         }
 
-        count = host.getTimerUnit()->mLookupTable.count(nameOrId);
+        const auto [begin, end] = pUnit->mLookupTable.equal_range(nameOrId);
+        count = static_cast<int>(std::count_if(begin, end, [pUnit](TTimer* pItem) {
+            return !pUnit->pendingDeletion(pItem);
+        }));
     } else if (!type.compare(QLatin1String("trigger"), Qt::CaseInsensitive)) {
+        auto* pUnit = host.getTriggerUnit();
         if (isId) {
-            auto pT = host.getTriggerUnit()->getTrigger(id);
-            lua_pushnumber(L, static_cast<bool>(pT) ? 1 : 0);
+            auto pT = pUnit->getTrigger(id);
+            lua_pushnumber(L, (pT && !pUnit->pendingDeletion(pT)) ? 1 : 0);
             return 1;
         }
 
-        count = host.getTriggerUnit()->mLookupTable.count(nameOrId);
+        const auto [begin, end] = pUnit->mLookupTable.equal_range(nameOrId);
+        count = static_cast<int>(std::count_if(begin, end, [pUnit](TTrigger* pItem) {
+            return !pUnit->pendingDeletion(pItem);
+        }));
     } else if (!type.compare(QLatin1String("alias"), Qt::CaseInsensitive)) {
+        auto* pUnit = host.getAliasUnit();
         if (isId) {
-            auto pT = host.getAliasUnit()->getAlias(id);
-            lua_pushnumber(L, static_cast<bool>(pT) ? 1 : 0);
+            auto pT = pUnit->getAlias(id);
+            lua_pushnumber(L, (pT && !pUnit->pendingDeletion(pT)) ? 1 : 0);
             return 1;
         }
 
-        count = host.getAliasUnit()->mLookupTable.count(nameOrId);
+        const auto [begin, end] = pUnit->mLookupTable.equal_range(nameOrId);
+        count = static_cast<int>(std::count_if(begin, end, [pUnit](TAlias* pItem) {
+            return !pUnit->pendingDeletion(pItem);
+        }));
     } else if (!type.compare(QLatin1String("keybind"), Qt::CaseInsensitive)) {
+        auto* pUnit = host.getKeyUnit();
         if (isId) {
-            auto pT = host.getKeyUnit()->getKey(id);
-            lua_pushnumber(L, static_cast<bool>(pT) ? 1 : 0);
+            auto pT = pUnit->getKey(id);
+            lua_pushnumber(L, (pT && !pUnit->pendingDeletion(pT)) ? 1 : 0);
             return 1;
         }
 
-        count = host.getKeyUnit()->mLookupTable.count(nameOrId);
+        const auto [begin, end] = pUnit->mLookupTable.equal_range(nameOrId);
+        count = static_cast<int>(std::count_if(begin, end, [pUnit](TKey* pItem) {
+            return !pUnit->pendingDeletion(pItem);
+        }));
     } else if (!type.compare(QLatin1String("button"), Qt::CaseInsensitive)) {
+        auto* pUnit = host.getActionUnit();
         if (isId) {
-            auto pT = host.getActionUnit()->getAction(id);
-            lua_pushnumber(L, static_cast<bool>(pT) ? 1 : 0);
+            auto pT = pUnit->getAction(id);
+            lua_pushnumber(L, (pT && !pUnit->pendingDeletion(pT)) ? 1 : 0);
             return 1;
         }
 
-        count = host.getActionUnit()->findItems(nameOrId).size();
+        const auto ids = pUnit->findItems(nameOrId);
+        count = static_cast<int>(std::count_if(ids.cbegin(), ids.cend(), [pUnit](const int itemId) {
+            return !pUnit->pendingDeletion(pUnit->getAction(itemId));
+        }));
     } else if (!type.compare(QLatin1String("script"), Qt::CaseInsensitive)) {
+        auto* pUnit = host.getScriptUnit();
         if (isId) {
-            auto pT = host.getScriptUnit()->getScript(id);
-            lua_pushnumber(L, static_cast<bool>(pT) ? 1 : 0);
+            auto pT = pUnit->getScript(id);
+            lua_pushnumber(L, (pT && !pUnit->pendingDeletion(pT)) ? 1 : 0);
             return 1;
         }
 
-        count = host.getScriptUnit()->findItems(nameOrId).size();
+        const auto ids = pUnit->findItems(nameOrId);
+        count = static_cast<int>(std::count_if(ids.cbegin(), ids.cend(), [pUnit](const int itemId) {
+            return !pUnit->pendingDeletion(pUnit->getScript(itemId));
+        }));
     } else {
-        return warnArgumentValue(L, __func__, qsl("invalid item type '%1' given, it should be one of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'").arg(type));
+        return warnArgumentChoice(L, __func__, qsl("item type"), csmItemTypes, type);
     }
     // If we get here we have successfully identified a type and have looked for
     // the item type with a specific NAME - so now just return the count of
@@ -595,10 +604,20 @@ int TLuaInterpreter::getKeyCode(lua_State* L)
     Host& host = getHostFromLua(L);
     TKey* pT = nullptr;
 
+    auto* pKeyUnit = host.getKeyUnit();
     if (isId) {
-        pT = host.getKeyUnit()->getKey(id);
+        pT = pKeyUnit->getKey(id);
+        if (pT && pKeyUnit->pendingDeletion(pT)) {
+            pT = nullptr;
+        }
     } else {
-        pT = host.getKeyUnit()->mLookupTable.value(nameOrId);
+        const auto [begin, end] = pKeyUnit->mLookupTable.equal_range(nameOrId);
+        for (auto it = begin; it != end; ++it) {
+            if (!pKeyUnit->pendingDeletion(it.value())) {
+                pT = it.value();
+                break;
+            }
+        }
     }
 
     if (!pT) {
@@ -620,7 +639,7 @@ int TLuaInterpreter::getButtonState(lua_State* L)
         // The original function only works in the script for a push-down button
         // and takes no arguments so provide the backwards compatible behaviour
         // if that is the case:
-        lua_pushnumber(L, host.mpConsole->getButtonState());
+        lua_pushnumber(L, host.mainConsoleModel().mButtonState);
         return 1;
     }
 
@@ -642,9 +661,13 @@ int TLuaInterpreter::getCmdLine(lua_State* L)
     if (n >= 1) {
         name = CMDLINE_NAME(L, 1);
     }
-    auto commandline = COMMANDLINE(L, QString{name});
-    const QString text = commandline->toPlainText();
-    lua_pushstring(L, text.toUtf8().constData());
+    const QString commandLineName{name};
+    const Host& host = getHostFromLua(L);
+    const auto text = host.commandLineText(commandLineName);
+    if (!text) {
+        return commandLineNotFound(L, commandLineName);
+    }
+    lua_pushstring(L, text->toUtf8().constData());
     return 1;
 }
 
@@ -656,12 +679,12 @@ int TLuaInterpreter::getConsoleBufferSize(lua_State* L)
         windowName = WINDOW_NAME(L, 1);
     }
 
-    // The macro will have returned with a nil + error message if the windowName
-    // was not found:
-    auto console = CONSOLE(L, windowName);
-    // Indicate success with two numeric return values:
-    lua_pushnumber(L, console->buffer.mLinesLimit);
-    lua_pushnumber(L, console->buffer.mBatchDeleteSize);
+    auto pModel = getHostFromLua(L).consoleModelNamed(windowName);
+    if (!pModel) {
+        return windowNotFound(L, windowName);
+    }
+    lua_pushnumber(L, pModel->buffer.mLinesLimit);
+    lua_pushnumber(L, pModel->buffer.mBatchDeleteSize);
     return 2;
 }
 
@@ -707,6 +730,74 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
     lua_settable(L, -3);
 
     lua_settable(L, -3); // patterns
+
+    // Whether matching on several threads has paid for this workload, as the statistics report shows it.
+    // App-wide, like the pool itself, so every profile reads the same figures.
+    {
+        const TriggerMatchPool& pool = TriggerMatchPool::instance();
+        const TriggerMatchPool::Report& report = pool.report();
+        lua_pushstring(L, "matchPool");
+        lua_newtable(L);
+        const auto field = [L](const char* name, const double value) {
+            lua_pushstring(L, name);
+            lua_pushnumber(L, value);
+            lua_settable(L, -3);
+        };
+        field("threads", pool.workerCount());
+        field("pooledLines", static_cast<double>(report.pooledLines));
+        field("sampledLines", static_cast<double>(report.sampledLines));
+        field("pooledMicroseconds", static_cast<double>(report.averagePooledNanoseconds()) / 1000.0);
+        field("sampledMicroseconds", static_cast<double>(report.averageSampledNanoseconds()) / 1000.0);
+        field("savedMilliseconds", static_cast<double>(report.savedNanoseconds()) / 1000000.0);
+        const char* verdict = "not enough data";
+        switch (report.verdict()) {
+        case TriggerMatchPool::Report::Verdict::NotEnoughData:
+            break;
+        case TriggerMatchPool::Report::Verdict::WorthIt:
+            verdict = "worth it";
+            break;
+        case TriggerMatchPool::Report::Verdict::AboutEven:
+            verdict = "about even";
+            break;
+        case TriggerMatchPool::Report::Verdict::NotWorthIt:
+            verdict = "not worth it";
+            break;
+        }
+        lua_pushstring(L, "verdict");
+        lua_pushstring(L, verdict);
+        lua_settable(L, -3);
+        lua_settable(L, -3); // matchPool
+    }
+
+    // No documentation available in wiki - test-only, so a spec can confirm a burst reached the parallel prescan
+    if (qEnvironmentVariableIsSet("MUDLET_TEST_MODE")) {
+        lua_pushstring(L, "prescanWorkers");
+        lua_pushnumber(L, TriggerMatchPool::instance().workerCount());
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "prescans");
+        lua_pushnumber(L, static_cast<double>(TriggerMatchPool::instance().prescanCount()));
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "prescanMatchesReused");
+        lua_pushnumber(L, static_cast<double>(TTrigger::prescanMatchesReused()));
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "rootFilterEpoch");
+        lua_pushnumber(L, static_cast<double>(host.getTriggerUnit()->rootFilterEpoch()));
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "unfilterableEpoch");
+        lua_pushnumber(L, static_cast<double>(host.getTriggerUnit()->unfilterableEpoch()));
+        lua_settable(L, -3);
+
+        if (TriggerUnit::treeIndexMode() != TriggerUnit::TreeIndexMode::Off) {
+            lua_pushstring(L, "treeIndexFiled");
+            lua_pushnumber(L, host.getTriggerUnit()->treeIndexFiledCount());
+            lua_settable(L, -3);
+        }
+    }
+
     lua_settable(L, -3); // triggers
 
     // Aliases
@@ -789,6 +880,13 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
     lua_pushnumber(L, activeGifs);
     lua_settable(L, -3);
     lua_settable(L, -3);
+
+    // No documentation available in wiki - test-only, so a spec can confirm a burst was parsed ahead on the ingest worker
+    if (qEnvironmentVariableIsSet("MUDLET_TEST_MODE")) {
+        lua_pushstring(L, "linesParsedAhead");
+        lua_pushnumber(L, static_cast<double>(host.mainConsoleModel().buffer.linesParsedAhead()));
+        lua_settable(L, -3);
+    }
 
     return 1;
 }
@@ -927,38 +1025,6 @@ int TLuaInterpreter::getScript(lua_State* L)
     return 2;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#invokeFileDialog
-int TLuaInterpreter::invokeFileDialog(lua_State* L)
-{
-    const int n = lua_gettop(L);
-    if (!checkBoolArg(L, __func__, 1, "fileOrFolder") || !checkStringArg(L, __func__, 2, "dialogTitle") || (n > 2 && !checkStringArg(L, __func__, 3, "dialogLocation"))) {
-        return lua_error(L);
-    }
-
-    Host& host = getHostFromLua(L);
-    QString location = mudlet::getMudletPath(enums::profileHomePath, host.getName());
-    const bool luaDir = lua_toboolean(L, 1);
-    const QString title{lua_tostring(L, 2)};
-
-    if (n > 2) {
-        const QString target{lua_tostring(L, 3)};
-        const QDir dir(target);
-
-        if (dir.exists()) {
-            location = target;
-        }
-    }
-
-    if (!luaDir) {
-        const QString fileName = QFileDialog::getExistingDirectory(nullptr, title, location);
-        lua_pushstring(L, fileName.toUtf8().constData());
-        return 1;
-    }
-    const QString fileName = QFileDialog::getOpenFileName(nullptr, title, location);
-    lua_pushstring(L, fileName.toUtf8().constData());
-    return 1;
-}
-
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#isActive
 int TLuaInterpreter::isActive(lua_State* L)
 {
@@ -993,7 +1059,7 @@ int TLuaInterpreter::isActive(lua_State* L)
     if (!type.compare(QLatin1String("timer"), Qt::CaseInsensitive)) {
         if (isId) {
             auto pT = host.getTimerUnit()->getTimer(id);
-            cnt = (static_cast<bool>(pT) && (pT->isOffsetTimer() ? pT->shouldBeActive() : pT->isActive()) && (!checkAncestors || pT->shouldAncestorsBeActive())) ? 1 : 0;
+            cnt = (pT && !host.getTimerUnit()->pendingDeletion(pT) && (pT->isOffsetTimer() ? pT->shouldBeActive() : pT->isActive()) && (!checkAncestors || pT->shouldAncestorsBeActive())) ? 1 : 0;
         } else {
             // equal_range visits every same-named item; constFind() + (++it) can
             // start mid-run and skip duplicates on some QMultiMap implementations
@@ -1001,7 +1067,7 @@ int TLuaInterpreter::isActive(lua_State* L)
             for (auto itpItem = begin; itpItem != end; ++itpItem) {
                 auto pT = itpItem.value();
                 // Offset timer have their active state recorded differently
-                if ((pT->isOffsetTimer() ? pT->shouldBeActive() : pT->isActive()) && (!checkAncestors || pT->shouldAncestorsBeActive())) {
+                if (!host.getTimerUnit()->pendingDeletion(pT) && (pT->isOffsetTimer() ? pT->shouldBeActive() : pT->isActive()) && (!checkAncestors || pT->shouldAncestorsBeActive())) {
                     ++cnt;
                 }
             }
@@ -1010,12 +1076,12 @@ int TLuaInterpreter::isActive(lua_State* L)
     } else if (!type.compare(QLatin1String("trigger"), Qt::CaseInsensitive)) {
         if (isId) {
             auto pT = host.getTriggerUnit()->getTrigger(id);
-            cnt = (static_cast<bool>(pT) && pT->isActive()) ? 1 : 0;
+            cnt = (pT && !host.getTriggerUnit()->pendingDeletion(pT) && pT->isActive() && (!checkAncestors || pT->ancestorsActive())) ? 1 : 0;
         } else {
             const auto [begin, end] = host.getTriggerUnit()->mLookupTable.equal_range(nameOrId);
             for (auto itpItem = begin; itpItem != end; ++itpItem) {
                 auto pT = itpItem.value();
-                if (pT->isActive() && (!checkAncestors || pT->ancestorsActive())) {
+                if (!host.getTriggerUnit()->pendingDeletion(pT) && pT->isActive() && (!checkAncestors || pT->ancestorsActive())) {
                     ++cnt;
                 }
             }
@@ -1024,12 +1090,12 @@ int TLuaInterpreter::isActive(lua_State* L)
     } else if (!type.compare(QLatin1String("alias"), Qt::CaseInsensitive)) {
         if (isId) {
             auto pT = host.getAliasUnit()->getAlias(id);
-            cnt = (static_cast<bool>(pT) && pT->isActive()) ? 1 : 0;
+            cnt = (pT && !host.getAliasUnit()->pendingDeletion(pT) && pT->isActive() && (!checkAncestors || pT->ancestorsActive())) ? 1 : 0;
         } else {
             const auto [begin, end] = host.getAliasUnit()->mLookupTable.equal_range(nameOrId);
             for (auto itpItem = begin; itpItem != end; ++itpItem) {
                 auto pT = itpItem.value();
-                if (pT->isActive() && (!checkAncestors || pT->ancestorsActive())) {
+                if (!host.getAliasUnit()->pendingDeletion(pT) && pT->isActive() && (!checkAncestors || pT->ancestorsActive())) {
                     ++cnt;
                 }
             }
@@ -1038,12 +1104,12 @@ int TLuaInterpreter::isActive(lua_State* L)
     } else if (!type.compare(QLatin1String("keybind"), Qt::CaseInsensitive)) {
         if (isId) {
             auto pT = host.getKeyUnit()->getKey(id);
-            cnt = (static_cast<bool>(pT) && pT->isActive()) ? 1 : 0;
+            cnt = (pT && !host.getKeyUnit()->pendingDeletion(pT) && pT->isActive() && (!checkAncestors || pT->ancestorsActive())) ? 1 : 0;
         } else {
             const auto [begin, end] = host.getKeyUnit()->mLookupTable.equal_range(nameOrId);
             for (auto itpItem = begin; itpItem != end; ++itpItem) {
                 auto pT = itpItem.value();
-                if (pT->isActive() && (!checkAncestors || pT->ancestorsActive())) {
+                if (!host.getKeyUnit()->pendingDeletion(pT) && pT->isActive() && (!checkAncestors || pT->ancestorsActive())) {
                     ++cnt;
                 }
             }
@@ -1052,11 +1118,11 @@ int TLuaInterpreter::isActive(lua_State* L)
     } else if (!type.compare(QLatin1String("button"), Qt::CaseInsensitive)) {
         if (isId) {
             auto pT = host.getActionUnit()->getAction(id);
-            cnt = (static_cast<bool>(pT) && pT->isActive()) ? 1 : 0;
+            cnt = (pT && !host.getActionUnit()->pendingDeletion(pT) && pT->isActive() && (!checkAncestors || pT->ancestorsActive())) ? 1 : 0;
         } else {
             QMap<int, TAction*> const actions = host.getActionUnit()->getActionList();
             for (auto action : actions) {
-                if (action->getName() == nameOrId && action->isActive() && (!checkAncestors || action->ancestorsActive())) {
+                if (action->getName() == nameOrId && !host.getActionUnit()->pendingDeletion(action) && action->isActive() && (!checkAncestors || action->ancestorsActive())) {
                     ++cnt;
                 }
             }
@@ -1065,18 +1131,18 @@ int TLuaInterpreter::isActive(lua_State* L)
     } else if (!type.compare(QLatin1String("script"), Qt::CaseInsensitive)) {
         if (isId) {
             auto pT = host.getScriptUnit()->getScript(id);
-            cnt = (static_cast<bool>(pT) && pT->isActive()) ? 1 : 0;
+            cnt = (pT && !host.getScriptUnit()->pendingDeletion(pT) && pT->isActive() && (!checkAncestors || pT->ancestorsActive())) ? 1 : 0;
         } else {
             QMap<int, TScript*> const scripts = host.getScriptUnit()->getScriptList();
             for (auto script : scripts) {
-                if (script->getName() == nameOrId && script->isActive() && (!checkAncestors || script->ancestorsActive())) {
+                if (script->getName() == nameOrId && !host.getScriptUnit()->pendingDeletion(script) && script->isActive() && (!checkAncestors || script->ancestorsActive())) {
                     ++cnt;
                 }
             }
         }
 
     } else {
-        return warnArgumentValue(L, __func__, qsl("invalid item type '%1' given, it should be one (case insensitive) of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'").arg(type));
+        return warnArgumentChoice(L, __func__, qsl("item type"), csmItemTypes, type);
     }
     lua_pushnumber(L, cnt);
     return 1;
@@ -1085,13 +1151,17 @@ int TLuaInterpreter::isActive(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#isPrompt
 int TLuaInterpreter::isPrompt(lua_State* L)
 {
-    const Host& host = getHostFromLua(L);
-    const int userCursorY = host.mpConsole->getLineNumber();
-    if (userCursorY < host.mpConsole->buffer.promptBuffer.size() && userCursorY >= 0) {
-        lua_pushboolean(L, host.mpConsole->buffer.promptBuffer.at(userCursorY));
+    const TConsoleModel& model = getHostFromLua(L).mainConsoleModel();
+    const int userCursorY = model.mUserCursor.y();
+    const int lastLine = static_cast<int>(model.buffer.promptBuffer.size()) - 1;
+    // A trigger that gagged its line, or cleared the window, leaves the cursor past or on the last line left: only
+    // the pass still knows whether the line it ran for was a prompt.
+    const bool engineLineGone = model.mTriggerEngineMode && model.mEngineCursor > lastLine && userCursorY >= lastLine;
+    if (!engineLineGone && userCursorY < model.buffer.promptBuffer.size() && userCursorY >= 0) {
+        lua_pushboolean(L, model.buffer.promptBuffer.at(userCursorY));
         return 1;
     }
-    if (host.mpConsole->mTriggerEngineMode && host.mpConsole->mIsPromptLine) {
+    if (model.mTriggerEngineMode && model.mIsPromptLine) {
         lua_pushboolean(L, true);
     } else {
         lua_pushboolean(L, false);
@@ -1153,6 +1223,9 @@ int TLuaInterpreter::permAlias(lua_State* L)
         const QString name{lua_tostring(L, 1)};
         const QString parent{lua_tostring(L, 2)};
         const QString regex{lua_tostring(L, 3)};
+        if (const QString error = perlRegexCompileError(regex); !error.isEmpty()) {
+            return warnArgumentValue(L, __func__, error);
+        }
         const QString script{lua_tostring(L, 4)};
         auto [aliasId, message] = pLuaInterpreter->startPermAlias(name, parent, regex, script);
         id = aliasId;
@@ -1224,6 +1297,11 @@ int TLuaInterpreter::permRegexTrigger(lua_State* L)
             }
             // removes value, but keeps key for next iteration
             lua_pop(L, 1);
+        }
+        for (const QString& pattern : regList) {
+            if (const QString error = triggerRegexCompileError(pattern); !error.isEmpty()) {
+                return warnArgumentValue(L, __func__, error);
+            }
         }
         const QString name{lua_tostring(L, 1)};
         const QString parent{lua_tostring(L, 2)};
@@ -1451,11 +1529,17 @@ int TLuaInterpreter::permKey(lua_State* L)
         keyModifier = getVerifiedInt(L, __func__, 3, "key modifier", true);
         argIndex++;
     }
-    int keyCode = getVerifiedInt(L, __func__, argIndex, "key code");
+    const int keyCodeIndex = argIndex;
+    int keyCode = getVerifiedInt(L, __func__, keyCodeIndex, "key code");
 
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
     if (pLuaInterpreter->reportInvalidLuaCodeParam(L, "permKey", ++argIndex)) {
+        return lua_error(L);
+    }
+    // -1 is how permGroup() asks for a group
+    if (keyCode != -1 && (keyCode < 0 || keyCode > Qt::Key_unknown)) {
+        lua_pushfstring(L, "permKey: bad argument #%d (%d is not a key code)", keyCodeIndex, keyCode);
         return lua_error(L);
     }
 
@@ -1488,15 +1572,41 @@ int TLuaInterpreter::printCmdLine(lua_State* L)
         name = CMDLINE_NAME(L, 1);
     }
     const QString text = getVerifiedString(L, __func__, textIndex, "text to set on command line");
-
-    auto pN = COMMANDLINE(L, QString{name});
-    pN->setPlainText(text);
-    QTextCursor cur = pN->textCursor();
-    cur.clearSelection();
-    cur.movePosition(QTextCursor::EndOfLine);
-    pN->setTextCursor(cur);
-    pN->adjustHeight();
+    const QString commandLineName{name};
+    const Host& host = getHostFromLua(L);
+    if (!host.consoleFrontend()->replaceCommandLineText(commandLineName, text)) {
+        return commandLineNotFound(L, commandLineName);
+    }
     return 0;
+}
+
+// An event carries its numbers as text. 17 significant digits bring any double
+// back unchanged, and a whole number below 2^53 reads the same either way, but
+// the integer formatter takes a fraction of the time.
+static QString eventNumberText(const double number)
+{
+    if (number == std::trunc(number) && std::abs(number) < 9007199254740992.0) {
+        return QString::number(static_cast<qint64>(number));
+    }
+    return QString::number(number, 'g', 17);
+}
+
+// Text that would not come back from UTF-8 unchanged, or that holds a NUL, which
+// the text argument stops at, travels as bytes so a handler gets exactly what was raised.
+// The event name stays text: handlers are looked up by it.
+static std::pair<QString, int> eventStringArgument(lua_State* L, const int index, const bool eventName)
+{
+    if (eventName) {
+        return {QString::fromUtf8(lua_tostring(L, index)), ARGUMENT_TYPE_STRING};
+    }
+    size_t length = 0;
+    const char* text = lua_tolstring(L, index, &length);
+    const QByteArray bytes(text, static_cast<qsizetype>(length));
+    const QString utf8 = QString::fromUtf8(bytes);
+    if (bytes.contains('\0') || utf8.toUtf8() != bytes) {
+        return {QString::fromLatin1(bytes), ARGUMENT_TYPE_BYTES};
+    }
+    return {utf8, ARGUMENT_TYPE_STRING};
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#raiseEvent
@@ -1504,25 +1614,42 @@ int TLuaInterpreter::raiseEvent(lua_State* L)
 {
     Host& host = getHostFromLua(L);
 
+    const int n = lua_gettop(L);
+    // every argument is vetted before any is taken: lua_error() longjmps past the
+    // TEvent's destructor and leaves the registry refs already taken unreleased
+    for (int i = 1; i <= n; ++i) {
+        switch (lua_type(L, i)) {
+        case LUA_TNUMBER:
+        case LUA_TSTRING:
+        case LUA_TBOOLEAN:
+        case LUA_TNIL:
+        case LUA_TTABLE:
+        case LUA_TFUNCTION:
+            break;
+        default:
+            lua_pushfstring(L, "raiseEvent: bad argument #%d type (string, number, boolean, table, function, or nil expected, got a %s!)", i, luaL_typename(L, i));
+            return lua_error(L);
+        }
+    }
+
     TEvent event{};
 
-    const int n = lua_gettop(L);
     // We go from the top of the stack down, because luaL_ref will
     // only reference the object at the top of the stack
     for (int i = n; i >= 1; i--) {
         switch (lua_type(L, -1)) {
         case LUA_TNUMBER:
-            // https://en.wikipedia.org/wiki/Double-precision_floating-point_format#IEEE_754_double-precision_binary_floating-point_format:_binary64
-            // suggests that 17 decimal digits is the most we can rely on:
-            event.mArgumentList.prepend(QString::number(lua_tonumber(L, -1), 'g', 17));
+            event.mArgumentList.prepend(eventNumberText(lua_tonumber(L, -1)));
             event.mArgumentTypeList.prepend(ARGUMENT_TYPE_NUMBER);
             lua_pop(L, 1);
             break;
-        case LUA_TSTRING:
-            event.mArgumentList.prepend(lua_tostring(L, -1));
-            event.mArgumentTypeList.prepend(ARGUMENT_TYPE_STRING);
+        case LUA_TSTRING: {
+            const auto [text, type] = eventStringArgument(L, -1, i == 1);
+            event.mArgumentList.prepend(text);
+            event.mArgumentTypeList.prepend(type);
             lua_pop(L, 1);
             break;
+        }
         case LUA_TBOOLEAN:
             event.mArgumentList.prepend(QString::number(lua_toboolean(L, -1)));
             event.mArgumentTypeList.prepend(ARGUMENT_TYPE_BOOLEAN);
@@ -1544,12 +1671,7 @@ int TLuaInterpreter::raiseEvent(lua_State* L)
             // luaL_ref pops the object, so we don't have to
             break;
         default:
-            lua_pushfstring(L,
-                            "raiseEvent: bad argument #%d type (string, number, boolean, table,\n"
-                            "function, or nil expected, got a %s!)",
-                            i,
-                            luaL_typename(L, -1));
-            return lua_error(L);
+            Q_UNREACHABLE();
         }
     }
 
@@ -1559,14 +1681,20 @@ int TLuaInterpreter::raiseEvent(lua_State* L)
     return 1;
 }
 
+// A gone Host, a main window that has gone (as once mudlet is past its
+// destructor) or a pool being destroyed is further along than the flags rather
+// than healthier, so each counts as shutting down too. A run that never had a
+// main window is not.
+static bool shuttingDown(const QPointer<Host>& pHost)
+{
+    const HostManager* pool = HostManager::self();
+    return !pHost || pHost->isClosingDown() || TAppFrontend::viewGone() || (pool && pool->goingDown()) || TAppFrontend::instance()->quitting();
+}
+
 // No documentation available in wiki - internal, test-only function
-// Blocks the calling Lua code inside a nested Qt event loop until the named
-// event is raised (returning the event name followed by its arguments, exactly
-// as an event handler would receive them) or the timeout elapses (returning
-// nil and an error message). Timers, networking and other events keep being
-// processed while blocked, which is what lets busted specs observe asynchronous
-// behaviour without sleeps. Gated behind MUDLET_TEST_MODE so it is inert for
-// normal users.
+// Blocks the calling Lua code until the named event is raised, returning the
+// event name and its arguments exactly as an event handler would receive them,
+// or nil and an error message. Timers and networking run on meanwhile.
 int TLuaInterpreter::waitForEvent(lua_State* L)
 {
     if (!qEnvironmentVariableIsSet("MUDLET_TEST_MODE")) {
@@ -1597,36 +1725,33 @@ int TLuaInterpreter::waitForEvent(lua_State* L)
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
 
-    // A profile reset recreates this profile's lua_State (initLuaGlobals() calls
-    // lua_close()), and shutdown destroys the interpreter outright. Either would
-    // free the state L is executing on while we block, so refuse rather than risk
-    // a use-after-free when the nested loop unwinds. resetProfile_phase1() guards
-    // the mirror case where a reset is requested while we are already blocked.
+    // A reset recreates this lua_State and a shutdown destroys the interpreter,
+    // either of which frees the state L runs on mid-wait. resetProfile_phase1()
+    // guards the mirror case, a reset asked for once we are already blocked.
     if (host.profileResetInProgress() || host.isClosingDown()) {
         lua_pushnil(L);
         lua_pushstring(L, "waitForEvent: cannot wait while the profile is being reset or Mudlet is closing");
         return 2;
     }
 
-    QEventLoop loop;
     TEventWait wait;
     wait.mName = eventName;
-    wait.mpLoop = &loop;
     pLuaInterpreter->mPendingEventWaits.append(&wait);
 
-    QTimer timeoutTimer;
-    timeoutTimer.setSingleShot(true);
-    QObject::connect(&timeoutTimer, &QTimer::timeout, &loop, &QEventLoop::quit);
-    timeoutTimer.start(timeoutMs);
+    const QPointer<Host> pHost(&host);
+    const bool stoppedEarly = EventLoopPump::pumpFor(timeoutMs, [&wait, &pHost]() {
+        return wait.mCaptured || shuttingDown(pHost);
+    });
 
-    loop.exec();
-
-    timeoutTimer.stop();
     pLuaInterpreter->mPendingEventWaits.removeAll(&wait);
 
     if (!wait.mCaptured) {
         lua_pushnil(L);
-        lua_pushstring(L, qsl("waitForEvent: timed out after %1ms waiting for event '%2'").arg(QString::number(timeoutMs), eventName).toUtf8().constData());
+        if (stoppedEarly) {
+            lua_pushstring(L, qsl("waitForEvent: gave up waiting for event '%1', Mudlet is shutting down").arg(eventName).toUtf8().constData());
+        } else {
+            lua_pushstring(L, qsl("waitForEvent: timed out after %1ms waiting for event '%2'").arg(QString::number(timeoutMs), eventName).toUtf8().constData());
+        }
         return 2;
     }
 
@@ -1654,6 +1779,60 @@ int TLuaInterpreter::waitForEvent(lua_State* L)
     return argCount;
 }
 
+// No documentation available in wiki - internal, test-only function
+// Keeps Mudlet delivering events for the given number of milliseconds: the
+// sleep a spec wants to let queued work run when there is no named event to
+// wait for.
+int TLuaInterpreter::pumpEvents(lua_State* L)
+{
+    if (!qEnvironmentVariableIsSet("MUDLET_TEST_MODE")) {
+        lua_pushnil(L);
+        lua_pushstring(L, "pumpEvents: only available in test mode (set the MUDLET_TEST_MODE environment variable)");
+        return 2;
+    }
+
+    // The ceiling matches waitForEvent()'s: below busted's per-spec CI timeout,
+    // so a runaway pump fails on its own rather than taking the suite with it.
+    constexpr int defaultTimeoutMs = 50;
+    constexpr int maximumTimeoutMs = 30000;
+    int timeoutMs = defaultTimeoutMs;
+    if (!lua_isnoneornil(L, 1)) {
+        timeoutMs = getVerifiedInt(L, __func__, 1, "duration in milliseconds", true);
+    }
+    timeoutMs = std::clamp(timeoutMs, 0, maximumTimeoutMs);
+
+    Host& host = getHostFromLua(L);
+    TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
+
+    // Same use-after-free waitForEvent() guards, and worse here: the pump is
+    // itself what delivers the zero-timer phase2 is armed on.
+    if (host.profileResetInProgress() || host.isClosingDown()) {
+        lua_pushnil(L);
+        lua_pushstring(L, "pumpEvents: cannot pump while the profile is being reset or Mudlet is closing");
+        return 2;
+    }
+
+    const QPointer<Host> pHost(&host);
+    ++pLuaInterpreter->mEventPumpDepth;
+    const auto pumpGuard = qScopeGuard([pLuaInterpreter]() {
+        --pLuaInterpreter->mEventPumpDepth;
+    });
+    const bool stoppedEarly = EventLoopPump::pumpFor(timeoutMs, [&pHost]() {
+        return shuttingDown(pHost);
+    });
+
+    if (stoppedEarly) {
+        // Ran short, so whatever the caller queued may not have happened - a
+        // spec flushing a profile save needs to hear that, not just get true.
+        lua_pushnil(L);
+        lua_pushstring(L, "pumpEvents: stopped early, Mudlet is shutting down");
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#raiseGlobalEvent
 int TLuaInterpreter::raiseGlobalEvent(lua_State* L)
 {
@@ -1663,6 +1842,21 @@ int TLuaInterpreter::raiseGlobalEvent(lua_State* L)
     if (!n) {
         lua_pushstring(L, "raiseGlobalEvent: missing argument #1 (eventName as, probably, a string expected!)");
         return lua_error(L);
+    }
+
+    // every argument is vetted before the event is built: lua_error() longjmps
+    // past the TEvent's destructor, stranding whatever it has collected by then
+    for (int i = 1; i <= n; ++i) {
+        switch (lua_type(L, i)) {
+        case LUA_TNUMBER:
+        case LUA_TSTRING:
+        case LUA_TBOOLEAN:
+        case LUA_TNIL:
+            break;
+        default:
+            lua_pushfstring(L, "raiseGlobalEvent: bad argument #%d type (boolean, number, string or nil expected, got a %s!)", i, luaL_typename(L, i));
+            return lua_error(L);
+        }
     }
 
     TEvent event{};
@@ -1677,13 +1871,15 @@ int TLuaInterpreter::raiseGlobalEvent(lua_State* L)
         // raiseEvent(...) and not one from another profile! - Slysven
         switch (lua_type(L, i)) {
         case LUA_TNUMBER:
-            event.mArgumentList.append(QString::number(lua_tonumber(L, i), 'g', 17));
+            event.mArgumentList.append(eventNumberText(lua_tonumber(L, i)));
             event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
             break;
-        case LUA_TSTRING:
-            event.mArgumentList.append(lua_tostring(L, i));
-            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        case LUA_TSTRING: {
+            const auto [text, type] = eventStringArgument(L, i, i == 1);
+            event.mArgumentList.append(text);
+            event.mArgumentTypeList.append(type);
             break;
+        }
         case LUA_TBOOLEAN:
             event.mArgumentList.append(QString::number(lua_toboolean(L, i)));
             event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
@@ -1693,19 +1889,16 @@ int TLuaInterpreter::raiseGlobalEvent(lua_State* L)
             event.mArgumentTypeList.append(ARGUMENT_TYPE_NIL);
             break;
         default:
-            lua_pushfstring(L,
-                            "raiseGlobalEvent: bad argument type #%d (boolean, number, string or nil\n"
-                            "expected, got a %s!)",
-                            i,
-                            luaL_typename(L, i));
-            return lua_error(L);
+            // the loop above refused every other type, so a type reaching here
+            // means the two have gone out of step
+            Q_UNREACHABLE();
         }
     }
 
     event.mArgumentList.append(host.getName());
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
 
-    mudlet::self()->getHostManager().postInterHostEvent(&host, event);
+    HostManager::self()->postInterHostEvent(&host, event);
 
     lua_pushboolean(L, true);
     return 1;
@@ -1753,7 +1946,7 @@ int TLuaInterpreter::resetProfileIcon(lua_State* L)
 {
     Host& host = getHostFromLua(L);
 
-    auto [success, message] = mudlet::self()->resetProfileIcon(host.getName());
+    auto [success, message] = MudletApp::resetProfileIcon(host.getName());
     if (!success) {
         return warnArgumentValue(L, __func__, message);
     }
@@ -1802,12 +1995,9 @@ int TLuaInterpreter::setButtonState(lua_State* L)
 
     if (pItem->mButtonState != checked) {
         pItem->mButtonState = checked;
-        if (pItem->mpEAction) {
-            pItem->mpEAction->setChecked(checked);
-        }
-        if (pItem->mpFButton) {
-            pItem->mpFButton->setChecked(checked);
-        }
+        Host& host = getHostFromLua(L);
+        host.consoleFrontend()->setActionButtonChecked(pItem, checked);
+        emit host.signal_buttonsChanged();
         lua_pushboolean(L, true);
         return 1;
     }
@@ -1823,7 +2013,8 @@ int TLuaInterpreter::setConsoleBufferSize(lua_State* L)
     int s = 1;
     const int n = lua_gettop(L);
     const char* windowName = "";
-    if (n > 2) {
+    // three arguments ending in a boolean are the limits and useMaximum, with no name
+    if (n > 3 || (n == 3 && !lua_isboolean(L, 3))) {
         windowName = WINDOW_NAME(L, s++);
     }
 
@@ -1836,32 +2027,18 @@ int TLuaInterpreter::setConsoleBufferSize(lua_State* L)
         useMaximum = lua_toboolean(L, s);
     }
 
-    // The macro will have returned with a nil + error message if the windowName
-    // was not found:
-    auto console = CONSOLE(L, QString{windowName});
+    const QString consoleName{windowName};
     Host& host = getHostFromLua(L);
-
-    if (useMaximum) {
-        // Maximum buffer size is only supported for the main console
-        if (console != host.mpConsole) {
-            return warnArgumentValue(L, __func__, "useMaximum parameter is only supported for the main console");
-        }
-
-        // Use system maximum buffer size instead of the provided linesLimit
-        const int maxBufferSize = console->buffer.getMaxBufferSize();
-        console->buffer.setBufferSize(maxBufferSize, sizeOfBatchDeletion);
-
-        // Update Host settings
-        host.setConsoleBufferSize(maxBufferSize);
-        host.setUseMaxConsoleBufferSize(true);
+    auto pModel = host.consoleModelNamed(consoleName);
+    if (!pModel) {
+        return windowNotFound(L, consoleName);
+    }
+    if (pModel == &host.mainConsoleModel()) {
+        host.setMainConsoleBufferSize(linesLimit, sizeOfBatchDeletion, useMaximum);
+    } else if (useMaximum) {
+        return warnArgumentValue(L, __func__, "useMaximum parameter is only supported for the main console");
     } else {
-        console->buffer.setBufferSize(linesLimit, sizeOfBatchDeletion);
-
-        // Update Host settings if this is the main console
-        if (console == host.mpConsole) {
-            host.setConsoleBufferSize(linesLimit);
-            host.setUseMaxConsoleBufferSize(false);
-        }
+        pModel->buffer.setBufferSize(linesLimit, sizeOfBatchDeletion);
     }
 
     // Indicate success with a true return value:
@@ -1882,7 +2059,7 @@ int TLuaInterpreter::setProfileIcon(lua_State* L)
 
     Host& host = getHostFromLua(L);
 
-    auto [success, message] = mudlet::self()->setProfileIcon(host.getName(), iconPath);
+    auto [success, message] = MudletApp::setProfileIcon(host.getName(), iconPath);
     if (!success) {
         return warnArgumentValue(L, __func__, message);
     }
@@ -2196,9 +2373,8 @@ int TLuaInterpreter::tempAnsiColorTrigger(lua_State* L)
             return 1;
         }
         trigger->mRegisteredAnonymousLuaFunction = true;
-        lua_pushlightuserdata(L, trigger);
         lua_pushvalue(L, codeIndex);
-        lua_settable(L, LUA_REGISTRYINDEX);
+        trigger->mLuaFunctionRef = luaL_ref(L, LUA_REGISTRYINDEX);
     }
 
     lua_pushnumber(L, triggerID);
@@ -2217,6 +2393,9 @@ int TLuaInterpreter::tempAlias(lua_State* L)
     }
 
     const QString regex{lua_tostring(L, 1)};
+    if (const QString error = perlRegexCompileError(regex); !error.isEmpty()) {
+        return warnArgumentValue(L, __func__, error);
+    }
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
 
@@ -2236,9 +2415,8 @@ int TLuaInterpreter::tempAlias(lua_State* L)
             return 1;
         }
         alias->mRegisteredAnonymousLuaFunction = true;
-        lua_pushlightuserdata(L, alias);
         lua_pushvalue(L, 2);
-        lua_settable(L, LUA_REGISTRYINDEX);
+        alias->mLuaFunctionRef = luaL_ref(L, LUA_REGISTRYINDEX);
         lua_pushnumber(L, result);
         return 1;
     }
@@ -2291,9 +2469,8 @@ int TLuaInterpreter::tempBeginOfLineTrigger(lua_State* L)
             return 1;
         }
         trigger->mRegisteredAnonymousLuaFunction = true;
-        lua_pushlightuserdata(L, trigger);
         lua_pushvalue(L, 2);
-        lua_settable(L, LUA_REGISTRYINDEX);
+        trigger->mLuaFunctionRef = luaL_ref(L, LUA_REGISTRYINDEX);
     }
 
     lua_pushnumber(L, triggerID);
@@ -2319,11 +2496,15 @@ int TLuaInterpreter::tempButton(lua_State* L)
     Host& host = getHostFromLua(L);
     TAction* pP = host.getActionUnit()->findAction(toolbar);
     if (!pP) {
-        return 0;
+        return warnArgumentValue(L, __func__, qsl("toolbar '%1' not found").arg(toolbar));
+    }
+    // a button under a plain button is never put on any toolbar
+    if (!pP->isFolder()) {
+        return warnArgumentValue(L, __func__, qsl("'%1' is a button, not a toolbar or menu").arg(toolbar));
     }
     TAction* pT = host.getActionUnit()->findAction(name);
     if (pT) {
-        return 0;
+        return warnArgumentValue(L, __func__, qsl("a button or toolbar named '%1' already exists").arg(name));
     }
     pT = new TAction(pP, &host);
     pT->setName(name);
@@ -2374,13 +2555,13 @@ int TLuaInterpreter::tempButtonToolbar(lua_State* L)
 
     const QString name{lua_tostring(L, 1)};
 
-    if (location > 0) {
+    if (location > 0 && location < std::numeric_limits<int>::max()) {
         location++;
     }
     Host& host = getHostFromLua(L);
     TAction* pT = host.getActionUnit()->findAction(name);
     if (pT) {
-        return 0;
+        return warnArgumentValue(L, __func__, qsl("a button or toolbar named '%1' already exists").arg(name));
     }
 
     //insert a new root item
@@ -2503,9 +2684,8 @@ int TLuaInterpreter::tempColorTrigger(lua_State* L)
             return 1;
         }
         trigger->mRegisteredAnonymousLuaFunction = true;
-        lua_pushlightuserdata(L, trigger);
         lua_pushvalue(L, 3);
-        lua_settable(L, LUA_REGISTRYINDEX);
+        trigger->mLuaFunctionRef = luaL_ref(L, LUA_REGISTRYINDEX);
     } else {
         lua_pushfstring(L, "tempColorTrigger: bad argument #3 type (code to run as a string or a function expected, got %s!)", luaL_typename(L, 3));
         return lua_error(L);
@@ -2580,24 +2760,27 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
     } else {
         bgColor = lua_tostring(L, 6);
     }
+    // Before the trigger of that name is replaced, so a refusal costs it nothing
+    if (!colorTrigger) {
+        if (const QString error = triggerRegexCompileError(pattern); !error.isEmpty()) {
+            return warnArgumentValue(L, __func__, error);
+        }
+    }
 
-    bool highlight;
-    QColor hlFgColor;
-    if (lua_isnumber(L, 9)) {
-        highlight = false;
-    } else {
-        highlight = true;
+    // A number for either highlight color leaves that side of the text as it is, as "transparent" does
+    const bool highlightFg = !lua_isnumber(L, 9);
+    const bool highlightBg = !lua_isnumber(L, 10);
+    const bool highlight = highlightFg || highlightBg;
+    QColor hlFgColor = QColorConstants::Transparent;
+    QColor hlBgColor = QColorConstants::Transparent;
+    if (highlightFg) {
 #if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
         hlFgColor.setNamedColor(lua_tostring(L, 9));
 #else
         hlFgColor = QColor::fromString(lua_tostring(L, 9));
 #endif
     }
-    QColor hlBgColor;
-    if (lua_isnumber(L, 10)) {
-        highlight = false;
-    } else {
-        highlight = true;
+    if (highlightBg) {
 #if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
         hlBgColor.setNamedColor(lua_tostring(L, 10));
 #else
@@ -2606,17 +2789,23 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
     }
 
     QString soundFile;
-    bool playSound;
     if (lua_type(L, 11) == LUA_TSTRING) {
-        playSound = true;
         soundFile = lua_tostring(L, 11);
-    } else {
-        playSound = false;
     }
+    const bool playSound = !soundFile.trimmed().isEmpty();
 
     QStringList patterns;
     QList<int> propertyList;
-    TTrigger* pP = host.getTriggerUnit()->findTrigger(triggerName);
+    // A killed trigger keeps its name until doCleanup(): extending it would revive its patterns in the new one
+    TTrigger* pP = nullptr;
+    auto* pTriggerUnit = host.getTriggerUnit();
+    const auto [begin, end] = pTriggerUnit->mLookupTable.equal_range(triggerName);
+    for (auto it = begin; it != end; ++it) {
+        if (!pTriggerUnit->pendingDeletion(it.value())) {
+            pP = it.value();
+            break;
+        }
+    }
     if (pP) {
         patterns = pP->getPatternsList();
         propertyList = pP->getRegexCodePropertyList();
@@ -2656,9 +2845,8 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
         pT->setScript(QString());
 
         pT->mRegisteredAnonymousLuaFunction = true;
-        lua_pushlightuserdata(L, pT);
         lua_pushvalue(L, 3);
-        lua_settable(L, LUA_REGISTRYINDEX);
+        pT->mLuaFunctionRef = luaL_ref(L, LUA_REGISTRYINDEX);
     }
 
     lua_pushnumber(L, pT->getID());
@@ -2707,9 +2895,8 @@ int TLuaInterpreter::tempExactMatchTrigger(lua_State* L)
             return 1;
         }
         trigger->mRegisteredAnonymousLuaFunction = true;
-        lua_pushlightuserdata(L, trigger);
         lua_pushvalue(L, 2);
-        lua_settable(L, LUA_REGISTRYINDEX);
+        trigger->mLuaFunctionRef = luaL_ref(L, LUA_REGISTRYINDEX);
     }
 
     lua_pushnumber(L, triggerID);
@@ -2726,6 +2913,9 @@ int TLuaInterpreter::tempKey(lua_State* L)
         argIndex++;
     }
     int keyCode = getVerifiedInt(L, __func__, argIndex, "key code");
+    if (keyCode < 0 || keyCode > Qt::Key_unknown) {
+        return warnArgumentValue(L, __func__, qsl("%1 is not a key code").arg(keyCode));
+    }
 
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
@@ -2744,9 +2934,8 @@ int TLuaInterpreter::tempKey(lua_State* L)
             return 1;
         }
         key->mRegisteredAnonymousLuaFunction = true;
-        lua_pushlightuserdata(L, key);
         lua_pushvalue(L, argIndex);
-        lua_settable(L, LUA_REGISTRYINDEX);
+        key->mLuaFunctionRef = luaL_ref(L, LUA_REGISTRYINDEX);
         lua_pushnumber(L, result);
         return 1;
     }
@@ -2787,9 +2976,8 @@ int TLuaInterpreter::tempLineTrigger(lua_State* L)
             return 1;
         }
         trigger->mRegisteredAnonymousLuaFunction = true;
-        lua_pushlightuserdata(L, trigger);
         lua_pushvalue(L, 3);
-        lua_settable(L, LUA_REGISTRYINDEX);
+        trigger->mLuaFunctionRef = luaL_ref(L, LUA_REGISTRYINDEX);
     } else {
         lua_pushfstring(L, "tempLineTrigger: bad argument #3 type (code to run as a string or a function expected, got %s!)", luaL_typename(L, 3));
         return lua_error(L);
@@ -2833,9 +3021,8 @@ int TLuaInterpreter::tempPromptTrigger(lua_State* L)
             return 1;
         }
         trigger->mRegisteredAnonymousLuaFunction = true;
-        lua_pushlightuserdata(L, trigger);
         lua_pushvalue(L, 1);
-        lua_settable(L, LUA_REGISTRYINDEX);
+        trigger->mLuaFunctionRef = luaL_ref(L, LUA_REGISTRYINDEX);
     } else {
         lua_pushfstring(L, "tempPromptTrigger: bad argument #1 type (code to run as a string or a function expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
@@ -2873,6 +3060,9 @@ int TLuaInterpreter::tempRegexTrigger(lua_State* L)
     }
 
     const QString regexPattern{lua_tostring(L, 1)};
+    if (const QString error = triggerRegexCompileError(regexPattern); !error.isEmpty()) {
+        return warnArgumentValue(L, __func__, error);
+    }
     if (lua_isstring(L, 2)) {
         triggerID = pLuaInterpreter->startTempRegexTrigger(regexPattern, lua_tostring(L, 2), expiryCount);
     } else {
@@ -2887,9 +3077,8 @@ int TLuaInterpreter::tempRegexTrigger(lua_State* L)
             return 1;
         }
         trigger->mRegisteredAnonymousLuaFunction = true;
-        lua_pushlightuserdata(L, trigger);
         lua_pushvalue(L, 2);
-        lua_settable(L, LUA_REGISTRYINDEX);
+        trigger->mLuaFunctionRef = luaL_ref(L, LUA_REGISTRYINDEX);
     }
 
     lua_pushnumber(L, triggerID);
@@ -2929,9 +3118,8 @@ int TLuaInterpreter::tempTimer(lua_State* L)
             return 1;
         }
         timer->mRegisteredAnonymousLuaFunction = true;
-        lua_pushlightuserdata(L, timer);
         lua_pushvalue(L, 2);
-        lua_settable(L, LUA_REGISTRYINDEX);
+        timer->mLuaFunctionRef = luaL_ref(L, LUA_REGISTRYINDEX);
         lua_pushnumber(L, result.first);
         return 1;
     }
@@ -2995,9 +3183,8 @@ int TLuaInterpreter::tempTrigger(lua_State* L)
             return 1;
         }
         trigger->mRegisteredAnonymousLuaFunction = true;
-        lua_pushlightuserdata(L, trigger);
         lua_pushvalue(L, 2);
-        lua_settable(L, LUA_REGISTRYINDEX);
+        trigger->mLuaFunctionRef = luaL_ref(L, LUA_REGISTRYINDEX);
     }
 
     lua_pushnumber(L, triggerID);
@@ -3007,8 +3194,8 @@ int TLuaInterpreter::tempTrigger(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getProfiles
 int TLuaInterpreter::getProfiles(lua_State* L)
 {
-    auto& hostManager = mudlet::self()->getHostManager();
-    const QStringList profiles = QDir(mudlet::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    auto* hostManager = HostManager::self();
+    const QStringList profiles = QDir(MudletApp::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
     lua_newtable(L);
 
@@ -3016,12 +3203,12 @@ int TLuaInterpreter::getProfiles(lua_State* L)
         lua_pushstring(L, profile.toUtf8().constData());
         lua_newtable(L);
 
-        QString url = mudlet::self()->readProfileData(profile, qsl("url"));
-        QString port = mudlet::self()->readProfileData(profile, qsl("port"));
-        QString description = mudlet::self()->readProfileData(profile, qsl("description"));
+        QString url = MudletApp::readProfileData(profile, qsl("url"));
+        QString port = MudletApp::readProfileData(profile, qsl("port"));
+        QString description = MudletApp::readProfileData(profile, qsl("description"));
 
-        // if url/port haven't been written to disk yet (which is what happens
-        // when a default profile is opened for the first time), fetch this data from game details
+        // a game from the catalog keeps only the details the player changed on disk, so fetch the
+        // rest from the catalog
         if (url.isEmpty()) {
             auto it = TGameDetails::findGame(profile);
             if (it != TGameDetails::scmDefaultGames.end()) {
@@ -3032,6 +3219,12 @@ int TLuaInterpreter::getProfiles(lua_State* L)
             auto it = TGameDetails::findGame(profile);
             if (it != TGameDetails::scmDefaultGames.end()) {
                 port = QString::number((*it).port);
+            }
+        }
+        if (description.isEmpty()) {
+            auto it = TGameDetails::findGame(profile);
+            if (it != TGameDetails::scmDefaultGames.end()) {
+                description = (*it).description;
             }
         }
 
@@ -3052,7 +3245,7 @@ int TLuaInterpreter::getProfiles(lua_State* L)
         lua_settable(L, -3);
 
 
-        auto host = hostManager.getHost(profile);
+        auto host = hostManager->getHost(profile);
         lua_pushstring(L, "loaded");
         lua_pushboolean(L, host != nullptr);
         lua_settable(L, -3);
@@ -3074,7 +3267,7 @@ int TLuaInterpreter::getProfiles(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadProfile
 int TLuaInterpreter::loadProfile(lua_State* L)
 {
-    auto& hostManager = mudlet::self()->getHostManager();
+    auto* hostManager = HostManager::self();
     if (!checkStringArg(L, __func__, 1, "profile name")) {
         return lua_error(L);
     }
@@ -3091,24 +3284,20 @@ int TLuaInterpreter::loadProfile(lua_State* L)
         return 2;
     }
 
-    const QString profileName = mudlet::self()->getCanonicalProfileName(requestedName);
+    const QString profileName = MudletApp::getCanonicalProfileName(requestedName);
     if (profileName.isEmpty()) {
         lua_pushnil(L);
         lua_pushfstring(L, "loadProfile: profile '%s' does not exist", requestedName.toUtf8().constData());
         return 2;
     }
 
-    if (hostManager.hostLoaded(profileName)) {
+    if (hostManager->hostLoaded(profileName)) {
         lua_pushnil(L);
         lua_pushfstring(L, "loadProfile: profile '%s' is already loaded", profileName.toUtf8().constData());
         return 2;
     }
 
-    bool success = mudlet::self()->loadProfile(profileName, !offline);
-    mudlet::self()->slot_connectionDialogueFinished(profileName, !offline);
-    mudlet::self()->enableToolbarButtons();
-
-    if (!success) {
+    if (!TAppFrontend::instance()->openProfile(profileName, !offline)) {
         lua_pushnil(L);
         lua_pushfstring(L, "loadProfile: failed to load profile '%s'", profileName.toUtf8().constData());
         return 2;
@@ -3121,7 +3310,7 @@ int TLuaInterpreter::loadProfile(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#closeProfile
 int TLuaInterpreter::closeProfile(lua_State* L)
 {
-    auto& hostManager = mudlet::self()->getHostManager();
+    auto* hostManager = HostManager::self();
     QString requestedName;
 
     if (lua_gettop(L) == 0) {
@@ -3131,26 +3320,24 @@ int TLuaInterpreter::closeProfile(lua_State* L)
         requestedName = getVerifiedString(L, __func__, 1, "profile name");
     }
 
-    const QString profileName = mudlet::self()->getCanonicalProfileName(requestedName);
+    const QString profileName = MudletApp::getCanonicalProfileName(requestedName);
     if (profileName.isEmpty()) {
         lua_pushnil(L);
         lua_pushfstring(L, "closeProfile: profile '%s' does not exist", requestedName.toUtf8().constData());
         return 2;
     }
 
-    if (!hostManager.hostLoaded(profileName)) {
+    if (!hostManager->hostLoaded(profileName)) {
         lua_pushnil(L);
         lua_pushfstring(L, "closeProfile: profile '%s' is not loaded", profileName.toUtf8().constData());
         return 2;
     }
 
-    auto profileIndex = mudlet::self()->mpTabBar->tabIndex(profileName);
-    if (profileIndex != -1) {
-        emit mudlet::self() -> mpTabBar->tabCloseRequested(profileIndex);
-        lua_pushboolean(L, true);
-        return 1;
+    if (!TAppFrontend::instance()->requestProfileClose(profileName)) {
+        return 0;
     }
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 #ifdef MUDLET_MEMORY_TRACKING
@@ -3284,9 +3471,9 @@ int TLuaInterpreter::getSubsystemMemoryStats(lua_State* L)
     }
 
     // Main console buffer line count
-    if (host.mpConsole) {
+    if (auto* pModel = host.mainConsoleModelOrNull()) {
         lua_pushstring(L, "console_buffer_lines");
-        lua_pushnumber(L, host.mpConsole->buffer.size());
+        lua_pushnumber(L, pModel->buffer.size());
         lua_settable(L, -3);
     }
 

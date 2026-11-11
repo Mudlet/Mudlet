@@ -25,8 +25,19 @@
 
 
 #include "Host.h"
+#include "KeyUnit.h"
 #include "TDebug.h"
-#include "mudlet.h"
+#include "TLuaInterpreter.h"
+#include "utils.h"
+
+#include <QColor>
+#include <QDebug>
+#include <QFlags>
+#include <QMap>
+#include <QMultiMap>
+#include <QObject>
+
+#include <list>
 
 TKey::TKey(TKey* parent, Host* pHost)
 : Tree<TKey>(parent)
@@ -43,25 +54,25 @@ TKey::TKey(QString name, Host* pHost)
 
 TKey::~TKey()
 {
-    if (!mpHost) {
-        return;
-    }
-    mpHost->getKeyUnit()->unregisterKey(this);
+    if (mpHost) {
+        mpHost->getKeyUnit()->unregisterKey(this);
 
-    if (isTemporary()) {
-        if (mScript.isEmpty()) {
-            mpHost->mLuaInterpreter.delete_luafunction(this);
-        } else {
-            mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
+        if (isTemporary()) {
+            if (mScript.isEmpty()) {
+                mpHost->mLuaInterpreter.delete_luafunction(mLuaFunctionRef);
+            } else {
+                mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
+            }
         }
     }
+
+    deleteChildren();
 }
 
 void TKey::setName(const QString& name)
 {
-    if (!isTemporary()) {
-        mpHost->getKeyUnit()->mLookupTable.remove(mName, this);
-    }
+    // killKey() trusts this table to hold only current names of live keys
+    mpHost->getKeyUnit()->mLookupTable.remove(mName, this);
     mName = name;
     mpHost->getKeyUnit()->mLookupTable.insert(name, this);
 }
@@ -88,7 +99,8 @@ bool TKey::match(const Qt::Key key, const Qt::KeyboardModifiers modifier, const 
             }
         }
 
-        for (auto childKey : *mpMyChildrenList) {
+        for (auto* childKeyNode : *mpMyChildrenList) {
+            auto* childKey = static_cast<TKey*>(childKeyNode);
             if (childKey->match(key, modifier, isToMatchAll)) {
                 if (isToMatchAll) {
                     isAMatch = true;
@@ -100,6 +112,53 @@ bool TKey::match(const Qt::Key key, const Qt::KeyboardModifiers modifier, const 
     }
 
     return isAMatch;
+}
+
+
+const TKey* TKey::firstMatch(const Qt::Key key, const Qt::KeyboardModifiers modifier) const
+{
+    // Also covers the dereference below - isActive() is false once mpMyChildrenList is gone
+    if (!isActive()) {
+        return nullptr;
+    }
+
+    if (!isFolder() && (mKeyCode == key) && (mKeyModifier == modifier)) {
+        return this;
+    }
+
+    for (auto* childKeyNode : *mpMyChildrenList) {
+        auto* childKey = static_cast<TKey*>(childKeyNode);
+        if (const TKey* match = childKey->firstMatch(key, modifier)) {
+            return match;
+        }
+    }
+
+    return nullptr;
+}
+
+const TKey* TKey::firstBinding(const Qt::Key key, const Qt::KeyboardModifiers modifier) const
+{
+    if (!mpMyChildrenList) {
+        return nullptr;
+    }
+
+    if (!isFolder() && (mKeyCode == key) && (mKeyModifier == modifier)) {
+        return this;
+    }
+
+    for (auto* childKeyNode : *mpMyChildrenList) {
+        auto* childKey = static_cast<TKey*>(childKeyNode);
+        if (const TKey* match = childKey->firstBinding(key, modifier)) {
+            return match;
+        }
+    }
+
+    return nullptr;
+}
+
+bool TKey::wouldMatch(const Qt::Key key, const Qt::KeyboardModifiers modifier) const
+{
+    return firstMatch(key, modifier) != nullptr;
 }
 
 
@@ -118,7 +177,8 @@ void TKey::enableKey(const QString& name)
     if (mName == name) {
         setIsActive(true);
     }
-    for (auto key : *mpMyChildrenList) {
+    for (auto* keyNode : *mpMyChildrenList) {
+        auto* key = static_cast<TKey*>(keyNode);
         key->enableKey(name);
     }
 }
@@ -128,7 +188,8 @@ void TKey::disableKey(const QString& name)
     if (mName == name) {
         setIsActive(false);
     }
-    for (auto key : *mpMyChildrenList) {
+    for (auto* keyNode : *mpMyChildrenList) {
+        auto* key = static_cast<TKey*>(keyNode);
         key->disableKey(name);
     }
 }
@@ -137,12 +198,13 @@ void TKey::compileAll()
 {
     mNeedsToBeCompiled = true;
     if (!compileScript()) {
-        if (mudlet::smDebugMode) {
-            TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of key binding:" << mName << "\n" >> mpHost;
+        if (TDebug::wants(TDebug::Category::Error)) {
+            TDebug(Qt::white, Qt::red, TDebug::Category::Error, mName) << "ERROR: Lua compile error. compiling script of key binding:" << mName << "\n" >> mpHost;
         }
         mOK_code = false;
     }
-    for (auto key : *mpMyChildrenList) {
+    for (auto* keyNode : *mpMyChildrenList) {
+        auto* key = static_cast<TKey*>(keyNode);
         key->compileAll();
     }
 }
@@ -151,13 +213,14 @@ void TKey::compile()
 {
     if (mNeedsToBeCompiled) {
         if (!compileScript()) {
-            if (mudlet::smDebugMode) {
-                TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of key binding:" << mName << "\n" >> mpHost;
+            if (TDebug::wants(TDebug::Category::Error)) {
+                TDebug(Qt::white, Qt::red, TDebug::Category::Error, mName) << "ERROR: Lua compile error. compiling script of key binding:" << mName << "\n" >> mpHost;
             }
             mOK_code = false;
         }
     }
-    for (auto key : *mpMyChildrenList) {
+    for (auto* keyNode : *mpMyChildrenList) {
+        auto* key = static_cast<TKey*>(keyNode);
         key->compile();
     }
 }
@@ -171,7 +234,7 @@ bool TKey::setScript(const QString& script)
     // destructor would take its mScript-based branch and delete the compiled function.
     if (mRegisteredAnonymousLuaFunction) {
         if (mpHost) {
-            mpHost->mLuaInterpreter.delete_luafunction(this);
+            mpHost->mLuaInterpreter.delete_luafunction(mLuaFunctionRef);
         }
         mRegisteredAnonymousLuaFunction = false;
     }
@@ -201,7 +264,7 @@ void TKey::validateKeyBinding()
     if (!isFolder() && (mKeyCode == Qt::Key_unknown || mKeyCode == Qt::Key(0))) {
         mOK_init = false;
         //: Error shown in the editor when a key item has no key binding assigned
-        setError(QObject::tr("No key binding set. Click \"Grab New Key\" to assign one."));
+        setError(QObject::tr("No key binding set. Click the key field and press the keys to assign one."));
     } else {
         mOK_init = true;
     }
@@ -219,7 +282,7 @@ void TKey::execute()
     }
 
     if (mRegisteredAnonymousLuaFunction) {
-        mpHost->mLuaInterpreter.call_luafunction(this);
+        mpHost->mLuaInterpreter.call_luafunction(mLuaFunctionRef, mName);
         return;
     }
 
@@ -262,4 +325,37 @@ QString TKey::moduleName(TKey* pKey)
     }
 
     return QString();
+}
+
+void TKey::updateModuleMembership()
+{
+    if (!mpHost || mModuleMasterFolder) {
+        return;
+    }
+    const TKey* pRoot = getRoot();
+    if (pRoot != this) {
+        setModuleMembership(pRoot->mModuleMasterFolder);
+        return;
+    }
+    // An unsynced module's file is never rewritten, so it still holds what was loaded from it
+    const bool heldByItsModule = !mLoadedFromModule.isEmpty() && mpHost->mInstalledModules.contains(mLoadedFromModule) && !mpHost->moduleSavesBack(mLoadedFromModule);
+    setModuleMembership(heldByItsModule);
+}
+
+void TKey::setModuleMembership(const bool member)
+{
+    if (mModuleMasterFolder) {
+        return;
+    }
+    mModuleMember = member;
+    // Uninstalling or reloading a module removes every top-level item with its name as package name
+    if (!member && mpHost && mpHost->mInstalledModules.contains(mPackageName)) {
+        mPackageName.clear();
+    }
+    if (!member) {
+        mLoadedFromModule.clear();
+    }
+    for (auto* pChild : *mpMyChildrenList) {
+        static_cast<TKey*>(pChild)->setModuleMembership(member);
+    }
 }

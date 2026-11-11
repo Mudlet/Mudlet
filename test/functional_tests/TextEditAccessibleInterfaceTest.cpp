@@ -1,0 +1,1139 @@
+/***************************************************************************
+ *   Copyright (C) 2026 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+
+// What a screen reader sees when it asks the main console for its text:
+// TAccessibleTextEdit, Mudlet's QAccessibleTextInterface over the scrollback
+// buffer.
+//
+// A Lua spec cannot reach any of it. The interface is handed to Qt's
+// accessibility bridge by a factory that src/main.cpp installs, it is never
+// exposed to the interpreter, and its whole job is to translate between the
+// buffer's line/column coordinates and the flat character offsets the platform
+// bridges speak - a translation with no Lua-visible consequence at all.
+//
+// The factory is installed here as well because MUDLET_GROUPED_TEST_MAIN (like
+// QTEST_MAIN) never runs main(), so without this Qt would hand back the plain
+// QAccessibleWidget and every case below would be measuring Qt rather than
+// Mudlet.
+//
+// Offsets are derived from the buffer rather than written out, since the
+// console starts with Mudlet's own startup messages ahead of anything this test
+// prints.
+
+#include <QAccessible>
+#include <QClipboard>
+#include <QFileInfo>
+#include <QFontDatabase>
+#include <QFontInfo>
+#include <QScreen>
+#include <QSignalSpy>
+#include <QTemporaryDir>
+#include <QTextBoundaryFinder>
+#include <QtTest/QtTest>
+
+#include <algorithm>
+#include <chrono>
+
+#include "Host.h"
+#include "MudletApp.h"
+#include "MudletInstanceCoordinator.h"
+#include "ProfileTestHelper.h"
+#include "TAccessibleTextEdit.h"
+#include "TMainConsole.h"
+#include "TTextEdit.h"
+#include "TelnetServerStub.h"
+#include "ctelnet.h"
+#include "mudlet.h"
+#include "utils.h"
+
+#include "GroupedTest.h"
+
+using namespace std::chrono_literals;
+
+class TextEditAccessibleInterfaceTest : public QObject
+{
+    Q_OBJECT
+
+private:
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
+    TelnetServerStub* mpServer = nullptr;
+    Host* mpHost = nullptr;
+    const QString mHostname = qsl("Test-Accessible-TextEdit");
+    const QString mLocalhost = qsl("localhost");
+    // Content of its own, so a line can be found by name rather than by index
+    const QString mFirstMarker = qsl("accessible line one");
+    const QString mSecondMarker = qsl("accessible line two");
+    const QString mThirdMarker = qsl("accessible line three");
+
+    // setupConfig() consults portable.txt before the XDG logic
+    static bool portableMarkerPresent()
+    {
+        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
+    }
+
+    TTextEdit* pane() const { return mpHost->mainConsoleView()->mUpperPane; }
+
+    const QStringList& lines() const { return mpHost->mainConsoleView()->buffer.lineBuffer; }
+
+    QString wholeText() const { return lines().join(QChar::LineFeed); }
+
+    int lineOf(const QString& text) const { return lines().indexOf(text); }
+
+    // The offset of the first character of a line, counting the newline that
+    // text() puts between lines.
+    int offsetOfLine(const int line) const
+    {
+        int offset = 0;
+        for (int i = 0; i < line; ++i) {
+            offset += lines().at(i).length() + 1;
+        }
+        return offset;
+    }
+
+    QAccessibleTextInterface* textInterface() const
+    {
+        QAccessibleInterface* pInterface = QAccessible::queryAccessibleInterface(pane());
+        return pInterface ? pInterface->textInterface() : nullptr;
+    }
+
+    // Where the character at an offset is drawn, in the pane's own coordinates
+    QPoint pointOfOffset(const int offset) const
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        return ti ? pane()->mapFromGlobal(ti->characterRect(offset).center()) : QPoint();
+    }
+
+    // TTextEdit counts a click within 300ms of the last one as the next of a
+    // double- or triple-click, so the wait keeps an earlier case's clicks out of it.
+    // It runs events, and text arriving in it scrolls the pane, so take the point
+    // to click only after it.
+    static void waitOutMultiClick() { QTest::qWait(350ms); }
+
+    void clickRepeatedly(const QPoint& where, const int clicks) const
+    {
+        for (int click = 0; click < clicks; ++click) {
+            QTest::mouseClick(pane(), Qt::LeftButton, Qt::NoModifier, where);
+        }
+    }
+
+    void tripleClickLine(const int line) const
+    {
+        waitOutMultiClick();
+        const int fontHeight = pane()->fontMetrics().height();
+        clickRepeatedly(QPoint(pane()->fontMetrics().averageCharWidth() * 2, (line - pane()->imageTopLine()) * fontHeight + fontHeight / 2), 3);
+    }
+
+    QString selectedText() const
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        int start = -1;
+        int end = -1;
+        ti->selection(0, &start, &end);
+        return ti->text(start, end);
+    }
+
+    QString copiedText() const
+    {
+        QGuiApplication::clipboard()->clear();
+        pane()->slot_copySelectionToClipboard();
+        return QGuiApplication::clipboard()->text();
+    }
+
+    // A selected cell is drawn in reverse, so most of it takes the text colour.
+    // The screen is grabbed rather than the widget, which would paint afresh.
+    bool cellIsHighlightedOnScreen(const int offset) const
+    {
+        const QRect rect = textInterface()->characterRect(offset);
+        const QImage cell = QGuiApplication::primaryScreen()->grabWindow(0, rect.x(), rect.y(), rect.width(), rect.height()).toImage();
+        int notBackground = 0;
+        for (int y = 0; y < cell.height(); ++y) {
+            for (int x = 0; x < cell.width(); ++x) {
+                notBackground += QColor(cell.pixel(x, y)) != mpHost->mBgColor;
+            }
+        }
+        return notBackground * 2 > cell.width() * cell.height();
+    }
+
+    bool lineIsOnScreen(const int line) const { return line >= pane()->imageTopLine() && line < pane()->imageTopLine() + pane()->getScreenHeight(); }
+
+    // A sentence running on over a line break, empty lines, abbreviations,
+    // characters outside the BMP or that join onto what is ahead of them, and
+    // Thai, which Qt breaks into words over the digits and lines after it too
+    const QStringList mTrickyLines = {
+            qsl("The quick brown fox. Jumps over"),
+            qsl("the lazy dog"),
+            QString(),
+            qsl("Mr. Smith went to Washington."),
+            qsl("\"Hello!\" she said. (Really.) "),
+            qsl("no terminator here"),
+            qsl("ends with a space. "),
+            qsl("e.g. etc. U.S.A. 3.14, 1,000"),
+            qsl("emoji \U0001F600 flags \U0001F1EC\U0001F1E7\U0001F1EB\U0001F1F7 e\u0301"),
+            qsl("\u0301starts with a combining mark"),
+            qsl("ends lower. and continues"),
+            qsl("ALL CAPS. NEXT"),
+            QString(),
+            qsl("one"),
+            qsl("two."),
+            qsl("\u0E2A\u0E27\u0E31\u0E2A\u0E14\u0E35\u0E04\u0E23\u0E31\u0E1A"),
+            qsl("----"),
+            qsl("12 34"),
+            qsl("> "),
+            qsl("100 200"),
+            qsl("ok"),
+            qsl("HP: 100"),
+            qsl("\u0E2A\u0E27\u0E31\u0E2A\u0E14\u0E35"),
+            QString(),
+            QString(),
+            QString(),
+            qsl("123"),
+            qsl("456"),
+            qsl("after the tricky lines"),
+    };
+
+    void printTrickyLines()
+    {
+        if (lineOf(mTrickyLines.first()) != -1) {
+            return;
+        }
+        for (const QString& line : mTrickyLines) {
+            mpHost->mainConsoleView()->print(line + QChar::LineFeed);
+        }
+    }
+
+    enum class Step { Before, At, After };
+
+    static QList<int> boundariesOf(const QString& all, const QTextBoundaryFinder::BoundaryType type)
+    {
+        QList<int> boundaries;
+        QTextBoundaryFinder finder(type, all);
+        for (qsizetype boundary = finder.position(); boundary != -1; boundary = finder.toNextBoundary()) {
+            boundaries << static_cast<int>(boundary);
+        }
+        return boundaries;
+    }
+
+    // The items between the whole text's boundaries, which is what the interface
+    // has to agree with however much of the text it looks at. An offset is in the
+    // item it starts or is inside of, and the end of the text in the last item.
+    static QString boundaryOverWholeText(const QString& all, const QList<int>& boundaries, const Step step, const int offset, int* start, int* end)
+    {
+        int item = static_cast<int>(std::upper_bound(boundaries.cbegin(), boundaries.cend(), offset) - boundaries.cbegin()) - 1;
+        if (offset == all.length()) {
+            --item;
+        }
+        item += step == Step::Before ? -1 : step == Step::After ? 1 : 0;
+        if (item < 0 || item + 1 >= boundaries.size()) {
+            *start = *end = 0;
+            return QString();
+        }
+        *start = boundaries.at(item);
+        *end = boundaries.at(item + 1);
+        return all.mid(*start, *end - *start);
+    }
+
+private slots:
+    void initTestCase()
+    {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
+        // A config root of this process's own. Sharing the developer's
+        // ~/.config/mudlet means sharing a profile list, so a second copy of
+        // this test running at the same time is told the name it types is
+        // already in use and never gets an enabled Connect button. Since #9712
+        // the opt-in that makes setupConfig() adopt a directory is
+        // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
+
+#ifdef INCLUDE_FONTS
+        // src/main.cpp extracts the bundled fonts into the config directory and
+        // FontManager picks them up from there, but no test binary runs it, so
+        // on a machine that has not run Mudlet before there is nothing on disk
+        // to pick up and Qt quietly substitutes another family.
+        for (const QString& file : {qsl(":/fonts/ttf-bitstream-vera-1.10/VeraMono.ttf"), qsl(":/fonts/ttf-bitstream-vera-1.10/VeraMoBd.ttf")}) {
+            QVERIFY2(QFontDatabase::addApplicationFont(file) != -1, qPrintable(qsl("Could not register the bundled font %1").arg(file)));
+        }
+        const QFont bundled(qsl("Bitstream Vera Sans Mono"), 10);
+        QCOMPARE(QFontInfo(bundled).family(), qsl("Bitstream Vera Sans Mono"));
+#endif
+
+        QAccessible::installFactory(TAccessibleTextEdit::textEditFactory);
+
+        mpServer = new TelnetServerStub(qApp);
+        // The welcome comes on a timer, and a slow machine can take it after the
+        // marker lines, where it scrolls them up a line under a case's clicks
+        mpServer->setSendsWelcome(false);
+        mpServer->start(mLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
+
+        mudlet::start();
+        mudlet::self()->setupConfig();
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
+        mudlet::self()->init();
+        mudlet::self()->setStorePasswordsSecurely(false);
+        QDir(MudletApp::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
+
+        mpHost = TestProfile::create(mHostname, mLocalhost, QString::number(mpServer->serverPort()));
+        QVERIFY2(mpHost, "Could not create the test profile - see the warning above for the step that timed out.");
+
+        QSignalSpy connected(&mpHost->mTelnet, &cTelnet::signal_connected);
+        if (connected.isEmpty()) {
+            QVERIFY2(connected.wait(15s), "The test profile never connected to the stub server.");
+        }
+
+        mudlet::self()->resize(1200, 800);
+        QTest::qWait(100ms);
+
+        // Enough lines that the first ones are scrolled off the top, which is
+        // what the visibility cases need, followed by the three named ones so
+        // they are on screen at the end.
+        for (int line = 0; line < 200; ++line) {
+            mpHost->mainConsoleView()->print(qsl("filler %1\n").arg(line));
+        }
+        mpHost->mainConsoleView()->print(qsl("%1\n%2\n%3\n").arg(mFirstMarker, mSecondMarker, mThirdMarker));
+        QTest::qWait(100ms);
+
+        QVERIFY2(textInterface(), "no QAccessibleTextInterface for the console - the factory never took");
+        QVERIFY2(lineOf(mSecondMarker) > 0, "the marker lines never reached the buffer");
+        QVERIFY2(pane()->imageTopLine() > 0, "the console never scrolled, so nothing here is off screen");
+    }
+
+    void cleanupTestCase()
+    {
+        mpHost = nullptr;
+        delete mpServer;
+        mpServer = nullptr;
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
+        if (mudlet::self()) {
+            QDir(MudletApp::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
+            delete mudlet::self();
+        }
+        mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
+    }
+
+    void cleanup()
+    {
+        if (QAccessibleTextInterface* ti = textInterface()) {
+            ti->removeSelection(0);
+        }
+        // Every case but one needs the marker lines on screen, and the one that
+        // scrolls away from them leaves the view up in the buffer if it fails
+        // part way through.
+        pane()->scrollTo(mpHost->mainConsoleView()->buffer.getLastLineNumber() + 1);
+    }
+
+    // The flat string every other case indexes into: the buffer's lines with a
+    // newline between them, and a length that agrees with it.
+    void test_theTextIsTheWholeBufferJoinedWithNewlines()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        const QString all = wholeText();
+
+        QCOMPARE(ti->characterCount(), all.length());
+        QCOMPARE(ti->text(0, all.length()), all);
+        QVERIFY2(all.contains(mSecondMarker), "the text handed out does not contain what was printed");
+    }
+
+    // A line boundary hands back the whole line the offset sits on, newline and
+    // all, framed by the offsets of its first and last characters.
+    void test_textAtOffsetReturnsTheLineTheOffsetIsOn()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        const int line = lineOf(mSecondMarker);
+        const int lineStart = offsetOfLine(line);
+        int start = 0;
+        int end = 0;
+
+        const QString text = ti->textAtOffset(lineStart + 3, QAccessible::LineBoundary, &start, &end);
+
+        QCOMPARE(text, mSecondMarker + QChar::LineFeed);
+        QCOMPARE(start, lineStart);
+        QCOMPARE(end, lineStart + mSecondMarker.length() + 1);
+    }
+
+    // ...and the before/after forms step a whole line either way.
+    void test_textBeforeAndAfterOffsetStepToTheNeighbouringLines()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        const int lineStart = offsetOfLine(lineOf(mSecondMarker));
+        int start = 0;
+        int end = 0;
+
+        QCOMPARE(ti->textBeforeOffset(lineStart + 3, QAccessible::LineBoundary, &start, &end), mFirstMarker + QChar::LineFeed);
+        QCOMPARE(ti->textAfterOffset(lineStart + 3, QAccessible::LineBoundary, &start, &end), mThirdMarker + QChar::LineFeed);
+    }
+
+    // There is nothing before the first line, or before the first character, or
+    // after the last one, and asking for any of it has to come back empty
+    // rather than walking off the end of the buffer.
+    void test_steppingOffTheEndsOfTheTextComesBackEmpty()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        int start = -1;
+        int end = -1;
+
+        QCOMPARE(ti->textBeforeOffset(0, QAccessible::LineBoundary, &start, &end), QString());
+        QCOMPARE(start, 0);
+        QCOMPARE(end, 0);
+
+        QCOMPARE(ti->textBeforeOffset(0, QAccessible::CharBoundary, &start, &end), QString());
+        QCOMPARE(start, 0);
+        QCOMPARE(end, 0);
+
+        QCOMPARE(ti->textAfterOffset(ti->characterCount() - 1, QAccessible::CharBoundary, &start, &end), QString());
+        QCOMPARE(start, 0);
+        QCOMPARE(end, 0);
+
+        QCOMPARE(ti->textBeforeOffset(0, QAccessible::WordBoundary, &start, &end), QString());
+        QCOMPARE(start, 0);
+        QCOMPARE(end, 0);
+    }
+
+    // A character boundary walks one code unit at a time, which is what a
+    // screen reader's arrow keys ask for.
+    void test_charBoundaryStepsOneCharacterAtATime()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        const QString all = wholeText();
+        const int offset = offsetOfLine(lineOf(mSecondMarker)) + 5;
+        int start = -1;
+        int end = -1;
+
+        QCOMPARE(ti->textAtOffset(offset, QAccessible::CharBoundary, &start, &end), QString(all.at(offset)));
+        QCOMPARE(start, offset);
+        QCOMPARE(end, offset + 1);
+
+        QCOMPARE(ti->textBeforeOffset(offset, QAccessible::CharBoundary, &start, &end), QString(all.at(offset - 1)));
+        QCOMPARE(ti->textAfterOffset(offset, QAccessible::CharBoundary, &start, &end), QString(all.at(offset + 1)));
+    }
+
+    // A word boundary hands back the word the offset is inside.
+    void test_wordBoundaryReturnsTheWordTheOffsetIsIn()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        // "accessible line two", two characters into the first word
+        const int offset = offsetOfLine(lineOf(mSecondMarker)) + 2;
+        int start = -1;
+        int end = -1;
+
+        QCOMPARE(ti->textAtOffset(offset, QAccessible::WordBoundary, &start, &end), qsl("accessible"));
+        QCOMPARE(wholeText().mid(start, end - start), qsl("accessible"));
+    }
+
+    // Ctrl+Left/Right leaves the caret on the first character of a word, so
+    // that word is the one a screen reader has to be given, not the one before
+    void test_wordBoundaryAtTheStartOfAWordReturnsThatWord()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        const QString line = qsl("a well-known word");
+        if (lineOf(line) == -1) {
+            mpHost->mainConsoleView()->print(line + QChar::LineFeed);
+        }
+        const int lineStart = offsetOfLine(lineOf(line));
+        QVERIFY(lineStart > 0);
+
+        struct Expected
+        {
+            int column;
+            QString before;
+            QString at;
+            QString after;
+        };
+        const QList<Expected> cases = {
+                {0, qsl("\n"), qsl("a"), qsl(" ")},
+                {2, qsl(" "), qsl("well"), qsl("-")},
+                {4, qsl(" "), qsl("well"), qsl("-")},
+                {6, qsl("well"), qsl("-"), qsl("known")},
+                {7, qsl("-"), qsl("known"), qsl(" ")},
+                {9, qsl("-"), qsl("known"), qsl(" ")},
+                {13, qsl(" "), qsl("word"), qsl("\n")},
+                // Where Ctrl+Right stops on a line's last word
+                {16, qsl(" "), qsl("word"), qsl("\n")},
+        };
+        for (const Expected& expected : cases) {
+            const int offset = lineStart + expected.column;
+            const QByteArray where = qsl("column %1").arg(expected.column).toUtf8();
+            int start = -1;
+            int end = -1;
+            QVERIFY2(ti->textBeforeOffset(offset, QAccessible::WordBoundary, &start, &end) == expected.before, where.constData());
+            QVERIFY2(wholeText().mid(start, end - start) == expected.before, where.constData());
+            QVERIFY2(ti->textAtOffset(offset, QAccessible::WordBoundary, &start, &end) == expected.at, where.constData());
+            QVERIFY2(wholeText().mid(start, end - start) == expected.at, where.constData());
+            QVERIFY2(ti->textAfterOffset(offset, QAccessible::WordBoundary, &start, &end) == expected.after, where.constData());
+            QVERIFY2(wholeText().mid(start, end - start) == expected.after, where.constData());
+        }
+
+        // What follows the newline depends on what is printed after this line
+        const int lineEnd = lineStart + line.length();
+        int start = -1;
+        int end = -1;
+        QCOMPARE(ti->textAtOffset(lineEnd, QAccessible::WordBoundary, &start, &end), qsl("\n"));
+        QCOMPARE(start, lineEnd);
+        QCOMPARE(ti->textBeforeOffset(lineEnd, QAccessible::WordBoundary, &start, &end), qsl("word"));
+        QCOMPARE(end, lineEnd);
+
+        // The end of the text starts no word, so the one there is the last
+        const int count = ti->characterCount();
+        const QString last = ti->textAtOffset(count, QAccessible::WordBoundary, &start, &end);
+        QVERIFY(start < count);
+        QCOMPARE(end, count);
+        QCOMPARE(last, wholeText().mid(start));
+        const int lastStart = start;
+        ti->textBeforeOffset(count, QAccessible::WordBoundary, &start, &end);
+        QCOMPARE(end, lastStart);
+        QCOMPARE(ti->textAfterOffset(count, QAccessible::WordBoundary, &start, &end), QString());
+        QCOMPARE(start, 0);
+        QCOMPARE(end, 0);
+
+        const QString first = ti->textAtOffset(0, QAccessible::WordBoundary, &start, &end);
+        QVERIFY(!first.isEmpty());
+        QCOMPARE(start, 0);
+        QCOMPARE(end, boundariesOf(wholeText(), QTextBoundaryFinder::Word).at(1));
+    }
+
+    // The same goes for the first character of a sentence
+    void test_sentenceBoundaryAtTheStartOfASentenceReturnsThatSentence()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        const QString line = qsl("First one. Second one.");
+        if (lineOf(line) == -1) {
+            mpHost->mainConsoleView()->print(line + QChar::LineFeed);
+        }
+        const int lineStart = offsetOfLine(lineOf(line));
+        QVERIFY(lineStart > 0);
+        const int secondStart = lineStart + line.indexOf(qsl("Second"));
+        int start = -1;
+        int end = -1;
+
+        for (const int column : {0, 3}) {
+            const QByteArray where = qsl("column %1").arg(column).toUtf8();
+            QVERIFY2(ti->textAtOffset(lineStart + column, QAccessible::SentenceBoundary, &start, &end) == qsl("First one. "), where.constData());
+            QVERIFY2(start == lineStart, where.constData());
+            QVERIFY2(ti->textBeforeOffset(lineStart + column, QAccessible::SentenceBoundary, &start, &end).endsWith(QChar::LineFeed), where.constData());
+            QVERIFY2(end == lineStart, where.constData());
+            QVERIFY2(ti->textAfterOffset(lineStart + column, QAccessible::SentenceBoundary, &start, &end) == qsl("Second one.\n"), where.constData());
+            QVERIFY2(start == secondStart, where.constData());
+        }
+        for (const int column : {11, 15}) {
+            const QByteArray where = qsl("column %1").arg(column).toUtf8();
+            QVERIFY2(ti->textAtOffset(lineStart + column, QAccessible::SentenceBoundary, &start, &end) == qsl("Second one.\n"), where.constData());
+            QVERIFY2(start == secondStart, where.constData());
+            QVERIFY2(ti->textBeforeOffset(lineStart + column, QAccessible::SentenceBoundary, &start, &end) == qsl("First one. "), where.constData());
+            QVERIFY2(start == lineStart && end == secondStart, where.constData());
+        }
+    }
+
+    // Only four of Qt's boundary types are implemented; the rest have to be
+    // refused rather than answered with something made up.
+    void test_anUnsupportedBoundaryTypeIsRefused()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        int start = 0;
+        int end = 0;
+
+        QCOMPARE(ti->textAtOffset(offsetOfLine(lineOf(mSecondMarker)), QAccessible::ParagraphBoundary, &start, &end), QString());
+        QCOMPARE(start, -1);
+        QCOMPARE(end, -1);
+    }
+
+    // An offset past the end of the text is an error, not an empty line.
+    void test_anOffsetPastTheEndOfTheTextIsRefused()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        int start = 0;
+        int end = 0;
+
+        QCOMPARE(ti->textAtOffset(ti->characterCount() + 1, QAccessible::LineBoundary, &start, &end), QString());
+        QCOMPARE(start, -1);
+        QCOMPARE(end, -1);
+    }
+
+    // NoBoundary means "everything from here", and each of the three methods
+    // takes a different slice of the text for it.
+    void test_noBoundaryHandsOutTheTextWholesale()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        const QString all = wholeText();
+        const int offset = offsetOfLine(lineOf(mSecondMarker));
+        int start = -1;
+        int end = -1;
+
+        QCOMPARE(ti->textAfterOffset(offset, QAccessible::NoBoundary, &start, &end), all.mid(offset));
+        QCOMPARE(start, offset);
+        QCOMPARE(end, all.length());
+
+        QCOMPARE(ti->textBeforeOffset(offset, QAccessible::NoBoundary, &start, &end), all.left(offset));
+        QCOMPARE(ti->textAtOffset(offset, QAccessible::NoBoundary, &start, &end), all);
+    }
+
+    // The caret is stored as a line and a column but addressed as an offset, so
+    // the two have to agree in both directions.
+    void test_theCaretPositionRoundTripsThroughACharacterOffset()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        const int line = lineOf(mSecondMarker);
+        const int offset = offsetOfLine(line) + 4;
+        pane()->setCaretPosition(0, 0);
+        QVERIFY2(ti->cursorPosition() != offset, "the caret was already where this was going to put it");
+
+        ti->setCursorPosition(offset);
+
+        QCOMPARE(pane()->mCaretLine, line);
+        QCOMPARE(pane()->mCaretColumn, 4);
+        QCOMPARE(ti->cursorPosition(), offset);
+    }
+
+    // An offset that is not in the text leaves the caret alone rather than
+    // moving it somewhere invented.
+    void test_anInvalidCaretPositionIsIgnored()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        const int offset = offsetOfLine(lineOf(mSecondMarker)) + 4;
+        ti->setCursorPosition(offset);
+        QCOMPARE(ti->cursorPosition(), offset);
+
+        ti->setCursorPosition(-1);
+        QCOMPARE(ti->cursorPosition(), offset);
+
+        ti->setCursorPosition(ti->characterCount() + 1);
+        QCOMPARE(ti->cursorPosition(), offset);
+    }
+
+    // Selecting from the accessibility side has to produce the console's own
+    // selection, and dropping it has to take that away again.
+    void test_addSelectionSelectsTheRangeAndRemoveSelectionClearsIt()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        const int line = lineOf(mSecondMarker);
+        QVERIFY2(lineIsOnScreen(line), "the line being selected is off screen, so no selection region could be built for it");
+        const int start = offsetOfLine(line);
+        QCOMPARE(ti->selectionCount(), 0);
+
+        ti->addSelection(start, start + mSecondMarker.length());
+
+        QCOMPARE(ti->selectionCount(), 1);
+        int reportedStart = -1;
+        int reportedEnd = -1;
+        ti->selection(0, &reportedStart, &reportedEnd);
+        QCOMPARE(reportedStart, start);
+        QVERIFY2(reportedEnd > reportedStart, "the reported selection is empty although a range was selected");
+
+        ti->removeSelection(0);
+
+        QCOMPARE(ti->selectionCount(), 0);
+    }
+
+    // QAccessibleTextInterface's end offset is the first character that is NOT
+    // selected, so text(start, end) has to hand back exactly what was selected -
+    // which is what a screen reader reads out when it announces a selection.
+    // addSelection() stores the last selected cell in mPB, so selection() has
+    // to report one past it, or a one-character selection comes back as an
+    // empty range while selectionCount() still says there is one.
+    void test_theReportedSelectionRoundTripsThroughTheTextItSelected()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        const int line = lineOf(mSecondMarker);
+        QVERIFY2(lineIsOnScreen(line), "the line being selected is off screen, so no selection region could be built for it");
+        const int start = offsetOfLine(line);
+        int reportedStart = -1;
+        int reportedEnd = -1;
+
+        ti->addSelection(start, start + mSecondMarker.length());
+        ti->selection(0, &reportedStart, &reportedEnd);
+
+        QCOMPARE(reportedStart, start);
+        QCOMPARE(ti->text(reportedStart, reportedEnd), mSecondMarker);
+
+        ti->removeSelection(0);
+        ti->addSelection(start, start + 1);
+        ti->selection(0, &reportedStart, &reportedEnd);
+
+        QCOMPARE(ti->selectionCount(), 1);
+        QCOMPARE(reportedEnd - reportedStart, 1);
+    }
+
+    // A triple-click selects a line by leaving mPB one past its last character,
+    // so the reported range must stop at the newline rather than take it in
+    void test_aWholeLineSelectionIsReportedWithoutItsNewline()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        const int line = lineOf(mSecondMarker);
+        QVERIFY2(lineIsOnScreen(line), "the line being selected is off screen, so no selection region could be built for it");
+        int reportedStart = -1;
+        int reportedEnd = -1;
+
+        tripleClickLine(line);
+        QVERIFY2(ti->selectionCount() == 1, "the three clicks selected nothing, so they were not taken as a triple-click");
+        ti->selection(0, &reportedStart, &reportedEnd);
+
+        QCOMPARE(ti->text(reportedStart, reportedEnd), mSecondMarker);
+    }
+
+    // The selections a player makes with the mouse, which store their last
+    // character in mPB just as addSelection() does
+    void test_aMouseSelectionIsReportedWhole()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        const int line = lineOf(mSecondMarker);
+        QVERIFY2(lineIsOnScreen(line), "the line being selected is off screen, so no selection region could be built for it");
+        const int lineStart = offsetOfLine(line);
+        waitOutMultiClick();
+        // "line two" runs from column 11 to 18
+        const QPoint dragFrom = pointOfOffset(lineStart + 11);
+        const QPoint dragTo = pointOfOffset(lineStart + 18);
+
+        QTest::mousePress(pane(), Qt::LeftButton, Qt::NoModifier, dragFrom);
+        QMouseEvent move(QEvent::MouseMove, QPointF(dragTo), pane()->mapToGlobal(QPointF(dragTo)), Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+        QApplication::sendEvent(pane(), &move);
+        QTest::mouseRelease(pane(), Qt::LeftButton, Qt::NoModifier, dragTo);
+        QCOMPARE(selectedText(), qsl("line two"));
+
+        ti->removeSelection(0);
+        waitOutMultiClick();
+        clickRepeatedly(pointOfOffset(lineStart + 3), 2);
+        QCOMPARE(selectedText(), qsl("accessible"));
+    }
+
+    // A double-click on a space or a triple-click on an empty line highlights a
+    // cell but selects no text, and a range with no text in it is no selection
+    void test_aSelectionWithNoTextInItIsNoSelection()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        const int line = lineOf(mSecondMarker);
+        QVERIFY2(lineIsOnScreen(line), "the line being clicked is off screen");
+        const int spaceOffset = offsetOfLine(line) + mSecondMarker.indexOf(QChar::Space);
+        if (!lines().at(lines().size() - 2).isEmpty()) {
+            mpHost->mainConsoleView()->print(qsl("\n"));
+            QTest::qWait(50ms);
+        }
+        const int emptyLine = lines().size() - 2;
+        QVERIFY2(lines().at(emptyLine).isEmpty() && lineIsOnScreen(emptyLine), "no empty line is showing");
+        int reportedStart = -1;
+        int reportedEnd = -1;
+
+        waitOutMultiClick();
+        clickRepeatedly(pointOfOffset(spaceOffset), 2);
+        QVERIFY2(!pane()->mSelectedRegion.isEmpty(), "the two clicks were not taken as a double-click, so no word highlight was built");
+        ti->selection(0, &reportedStart, &reportedEnd);
+        QCOMPARE(ti->selectionCount(), 0);
+        QCOMPARE(reportedStart, 0);
+        QCOMPARE(reportedEnd, 0);
+
+        ti->removeSelection(0);
+        tripleClickLine(emptyLine);
+        QVERIFY2(!pane()->mSelectedRegion.isEmpty(), "the three clicks were not taken as a triple-click, so no line highlight was built");
+        QCOMPARE(ti->selectionCount(), 0);
+
+        for (const int offset : {0, offsetOfLine(line) + 3}) {
+            ti->removeSelection(0);
+            ti->addSelection(offset, offset);
+            ti->selection(0, &reportedStart, &reportedEnd);
+            QCOMPARE(ti->selectionCount(), 0);
+            QCOMPARE(reportedEnd, reportedStart);
+        }
+    }
+
+    // Taking a selection away, or replacing it with an empty range, takes its
+    // highlight off the screen too rather than leaving it drawn
+    void test_removingASelectionTakesItsHighlightOffTheScreen()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        const int line = lineOf(mSecondMarker);
+        QVERIFY2(lineIsOnScreen(line), "the line being selected is off screen, so no highlight could be drawn for it");
+        const int lineStart = offsetOfLine(line);
+        const int cell = lineStart + 12;
+        QVERIFY2(!cellIsHighlightedOnScreen(cell), "the cell looks highlighted with nothing selected, so a highlight cannot be told apart");
+
+        for (const bool emptyRange : {false, true}) {
+            ti->addSelection(lineStart, lineStart + mSecondMarker.length());
+            QTRY_VERIFY2(cellIsHighlightedOnScreen(cell), "the selection was never drawn, so there was no highlight to take off");
+
+            if (emptyRange) {
+                ti->addSelection(lineStart + 3, lineStart + 3);
+            } else {
+                ti->removeSelection(0);
+            }
+            // No waiting: the console repaints on its own soon after, which would hide
+            // a highlight left behind by a removal that never asked for a repaint
+            QCoreApplication::processEvents();
+
+            QVERIFY2(!cellIsHighlightedOnScreen(cell), emptyRange ? "an empty range left the old highlight drawn" : "removeSelection() left the highlight drawn");
+        }
+    }
+
+    // A range that takes in a newline leaves mPB where a whole-line selection
+    // does, yet has to come back with the newline it asked for
+    void test_aSelectionTakingInANewlineRoundTrips()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        const int line = lineOf(mSecondMarker);
+        QVERIFY2(lineIsOnScreen(line), "the line being selected is off screen, so no selection region could be built for it");
+        const int newline = offsetOfLine(line) + mSecondMarker.length();
+        int reportedStart = -1;
+        int reportedEnd = -1;
+
+        ti->removeSelection(0);
+        ti->addSelection(newline, newline + 1);
+        ti->selection(0, &reportedStart, &reportedEnd);
+        QCOMPARE(ti->text(reportedStart, reportedEnd), QString(QChar::LineFeed));
+
+        ti->removeSelection(0);
+        ti->addSelection(offsetOfLine(line), newline + 1);
+        ti->selection(0, &reportedStart, &reportedEnd);
+        QCOMPARE(ti->text(reportedStart, reportedEnd), mSecondMarker + QChar::LineFeed);
+        ti->removeSelection(0);
+    }
+
+    // Copying a selection that takes in a newline copies the newline too, and
+    // copying it as an image, which takes the highlight off while it draws,
+    // leaves the newline in the selection
+    void test_aSelectionTakingInANewlineKeepsItWhenCopied()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        const int line = lineOf(mSecondMarker);
+        QVERIFY2(lineIsOnScreen(line), "the line being selected is off screen, so no selection region could be built for it");
+        const int newline = offsetOfLine(line) + mSecondMarker.length();
+
+        ti->addSelection(offsetOfLine(line), newline + 1);
+        QCOMPARE(copiedText(), mSecondMarker + QChar::LineFeed);
+
+        QVERIFY(QMetaObject::invokeMethod(pane(), "slot_copySelectionToClipboardImage"));
+        QCOMPARE(selectedText(), mSecondMarker + QChar::LineFeed);
+    }
+
+    // A whole-line selection leaves mPB where a range taking in the newline
+    // did, so the newline must not carry over to a triple-click after one
+    void test_aWholeLineSelectionAfterANewlineSelectionLeavesTheNewlineOut()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        const int line = lineOf(mSecondMarker);
+        QVERIFY2(lineIsOnScreen(line), "the line being selected is off screen, so no selection region could be built for it");
+        const int newline = offsetOfLine(line) + mSecondMarker.length();
+
+        ti->addSelection(newline, newline + 1);
+        QCOMPARE(selectedText(), QString(QChar::LineFeed));
+        tripleClickLine(line);
+
+        QCOMPARE(selectedText(), mSecondMarker);
+    }
+
+    // setSelection is addSelection under another name, and both refuse an index
+    // other than the single selection the console supports.
+    void test_setSelectionOnlySupportsTheFirstSelection()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        const int start = offsetOfLine(lineOf(mSecondMarker));
+        QCOMPARE(ti->selectionCount(), 0);
+
+        ti->setSelection(1, start, start + 4);
+        QCOMPARE(ti->selectionCount(), 0);
+
+        ti->setSelection(0, start, start + 4);
+        QCOMPARE(ti->selectionCount(), 1);
+    }
+
+    // Offsets that are not in the text select nothing at all.
+    void test_anInvalidSelectionRangeIsRefused()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        QCOMPARE(ti->selectionCount(), 0);
+
+        ti->addSelection(-1, 5);
+        QCOMPARE(ti->selectionCount(), 0);
+
+        ti->addSelection(0, ti->characterCount() + 1);
+        QCOMPARE(ti->selectionCount(), 0);
+    }
+
+    // The rectangle is what a screen magnifier follows, so it has to be one
+    // character cell wide and sit one cell further right for the next offset.
+    void test_characterRectCoversOneCellAndAdvancesWithTheOffset()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        const int offset = offsetOfLine(lineOf(mSecondMarker)) + 2;
+
+        const QRect first = ti->characterRect(offset);
+        const QRect second = ti->characterRect(offset + 1);
+
+        QVERIFY2(first.isValid() && first.width() > 0 && first.height() > 0, "no rectangle for a character that is on screen");
+        QCOMPARE(second.size(), first.size());
+        QCOMPARE(second.left() - first.left(), first.width());
+        QCOMPARE(second.top(), first.top());
+    }
+
+    // A character that has scrolled off the top has no rectangle at all.
+    void test_characterRectIsEmptyForALineThatIsScrolledOutOfView()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        QVERIFY2(!lineIsOnScreen(0), "the first line is still on screen, so this proves nothing");
+
+        QCOMPARE(ti->characterRect(0), QRect());
+    }
+
+    // The inverse lookup: the point a character was reported at has to lead
+    // back to that character.
+    void test_offsetAtPointFindsTheCharacterUnderIt()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        const int offset = offsetOfLine(lineOf(mSecondMarker)) + 6;
+        const QRect rect = ti->characterRect(offset);
+        QVERIFY(rect.isValid());
+
+        QCOMPARE(ti->offsetAtPoint(rect.center()), offset);
+    }
+
+    // Scrolling on request is how a screen reader follows a caret it moved into
+    // text that is no longer showing.
+    void test_scrollToSubstringBringsAnOffScreenLineIntoView()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        const int line = 5;
+        QVERIFY2(!lineIsOnScreen(line), "the line is already on screen, so this proves nothing");
+
+        ti->scrollToSubstring(offsetOfLine(line), offsetOfLine(line) + 3);
+
+        QVERIFY2(lineIsOnScreen(line), qPrintable(qsl("line %1 is still not showing - the screen starts at line %2").arg(line).arg(pane()->imageTopLine())));
+    }
+
+    // A screen reader measures the text, then asks for it a moment later, and
+    // the buffer can have moved on in between - so an offset past the end is
+    // something that happens rather than a caller's mistake. Before #8752 the
+    // offset resolved to one line past the last line of the buffer and the view
+    // was scrolled there.
+    void test_scrollToSubstringLeavesTheViewAloneForAnOffsetPastTheEnd()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        pane()->scrollTo(lines().length() / 2);
+        const int topLine = pane()->imageTopLine();
+        QVERIFY2(topLine > 0, "the view is at the top of the buffer, where staying put and scrolling to the start look the same");
+        QVERIFY2(!lineIsOnScreen(lines().length() - 1), "the view is already at the end of the buffer, where a scroll to the end would not show");
+
+        ti->scrollToSubstring(ti->characterCount() + 1, ti->characterCount() + 1);
+
+        QCOMPARE(pane()->imageTopLine(), topLine);
+    }
+
+    // The state a bridge reads to decide how to present the widget.
+    void test_stateReportsSelectableMultiLineText()
+    {
+        QAccessibleInterface* pInterface = QAccessible::queryAccessibleInterface(pane());
+        QVERIFY(pInterface);
+
+        const QAccessible::State state = pInterface->state();
+
+        QVERIFY2(state.selectableText, "the console does not report its text as selectable");
+        QVERIFY2(state.multiLine, "the console does not report itself as multi-line");
+        QVERIFY2(state.focusable, "the console does not report itself as focusable");
+    }
+
+    // Cut from the lines a range covers, so it must match cutting the whole
+    // text however the range starts and ends against a line.
+    void test_anyRangeOfTheTextMatchesTheWholeText()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        printTrickyLines();
+        const QString all = wholeText();
+
+        for (int start = offsetOfLine(lineOf(mTrickyLines.first()) - 1); start <= all.length(); ++start) {
+            for (int end = start; end <= all.length(); ++end) {
+                QCOMPARE(ti->text(start, end), all.mid(start, end - start));
+            }
+            QCOMPARE(ti->text(start, start - 1), all.mid(start));
+        }
+        QCOMPARE(ti->text(0, 0), QString());
+        QCOMPARE(ti->text(0, 10), all.left(10));
+    }
+
+    // Looked up over the lines around the offset, so they must find exactly the
+    // boundaries a lookup over the whole text does.
+    void test_wordAndSentenceBoundariesMatchTheWholeText()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        printTrickyLines();
+        const QString all = wholeText();
+        QVERIFY2(lineOf(mTrickyLines.first()) > 4, "the tricky lines are at the top of the buffer, so nothing is ahead of them");
+
+        // The start of the buffer too, where the window is cut short
+        QList<int> offsets;
+        for (int offset = 0; offset <= offsetOfLine(4); ++offset) {
+            offsets << offset;
+        }
+        for (int offset = offsetOfLine(lineOf(mTrickyLines.first()) - 2); offset <= all.length(); ++offset) {
+            offsets << offset;
+        }
+
+        for (const auto type : {QAccessible::WordBoundary, QAccessible::SentenceBoundary}) {
+            const QList<int> boundaries = boundariesOf(all, type == QAccessible::WordBoundary ? QTextBoundaryFinder::Word : QTextBoundaryFinder::Sentence);
+            for (const int offset : std::as_const(offsets)) {
+                for (const Step step : {Step::Before, Step::At, Step::After}) {
+                    int expectedStart = -1;
+                    int expectedEnd = -1;
+                    const QString expected = boundaryOverWholeText(all, boundaries, step, offset, &expectedStart, &expectedEnd);
+                    int start = -1;
+                    int end = -1;
+                    const QString actual = step == Step::Before ? ti->textBeforeOffset(offset, type, &start, &end)
+                                           : step == Step::At   ? ti->textAtOffset(offset, type, &start, &end)
+                                                                : ti->textAfterOffset(offset, type, &start, &end);
+                    const QByteArray where =
+                            qsl("%1 boundary, step %2, offset %3").arg(type == QAccessible::WordBoundary ? qsl("word") : qsl("sentence")).arg(static_cast<int>(step)).arg(offset).toUtf8();
+                    QVERIFY2(actual == expected, where.constData());
+                    QVERIFY2(start == expectedStart && end == expectedEnd, where.constData());
+                }
+            }
+        }
+    }
+
+    // An empty line's word is its own newline, between the newlines either side of it
+    void test_wordBoundaryOnAnEmptyLineIsItsNewline()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        printTrickyLines();
+        const int line = lineOf(qsl("the lazy dog")) + 1;
+        QVERIFY(line > 0);
+        QVERIFY(lines().at(line).isEmpty());
+        const int offset = offsetOfLine(line);
+        int start = -1;
+        int end = -1;
+
+        QCOMPARE(ti->textAtOffset(offset, QAccessible::WordBoundary, &start, &end), qsl("\n"));
+        QCOMPARE(start, offset);
+        QCOMPARE(ti->textBeforeOffset(offset, QAccessible::WordBoundary, &start, &end), qsl("\n"));
+        QCOMPARE(start, offset - 1);
+        QCOMPARE(ti->textAfterOffset(offset, QAccessible::WordBoundary, &start, &end), qsl("Mr"));
+        QCOMPARE(start, offset + 1);
+    }
+
+    // Including the newline at the end of every line, empty ones too
+    void test_charBoundaryMatchesTheWholeTextAtEveryOffset()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        printTrickyLines();
+        const QString all = wholeText();
+        int start = -1;
+        int end = -1;
+
+        for (int offset = offsetOfLine(lineOf(mTrickyLines.first()) - 1); offset < all.length(); ++offset) {
+            QCOMPARE(ti->textAtOffset(offset, QAccessible::CharBoundary, &start, &end), QString(all.at(offset)));
+            QCOMPARE(start, offset);
+            QCOMPARE(end, offset + 1);
+            if (offset + 1 < all.length()) {
+                QCOMPARE(ti->textAfterOffset(offset, QAccessible::CharBoundary, &start, &end), QString(all.at(offset + 1)));
+                QCOMPARE(ti->textBeforeOffset(offset + 1, QAccessible::CharBoundary, &start, &end), QString(all.at(offset)));
+            }
+        }
+    }
+
+    // Everything after or before an offset is cut from the lines it covers too
+    void test_noBoundaryBeforeAndAfterMatchTheWholeTextAtEveryOffset()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        printTrickyLines();
+        const QString all = wholeText();
+        int start = -1;
+        int end = -1;
+
+        for (int offset = offsetOfLine(lineOf(mTrickyLines.first()) - 1); offset <= all.length(); ++offset) {
+            QCOMPARE(ti->textAfterOffset(offset, QAccessible::NoBoundary, &start, &end), all.mid(offset));
+            QCOMPARE(ti->textBeforeOffset(offset, QAccessible::NoBoundary, &start, &end), all.left(offset));
+        }
+    }
+
+    // Last, as it trims the buffer: the lines going off the front leave the
+    // selection on indexes the buffer has moved on from until a copy catches
+    // it up, so the line and its newline have to be found both before the
+    // copy and after it
+    void test_aSelectionTakingInANewlineKeepsItWhenTheBufferIsTrimmed()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        TBuffer& buffer = mpHost->mainConsoleView()->buffer;
+        const int savedLimit = buffer.mLinesLimit;
+        const int savedBatch = buffer.mBatchDeleteSize;
+        const QString marker = qsl("accessible line to trim past");
+        mpHost->mainConsoleView()->print(marker + QChar::LineFeed);
+        QTest::qWait(50ms);
+        const int line = lineOf(marker);
+        QVERIFY2(lineIsOnScreen(line), "the line being selected is off screen, so no selection region could be built for it");
+        ti->addSelection(offsetOfLine(line), offsetOfLine(line) + marker.length() + 1);
+        QCOMPARE(selectedText(), marker + QChar::LineFeed);
+
+        constexpr int batch = 50;
+        buffer.setBufferSize(static_cast<int>(buffer.buffer.size()) + 2, batch);
+        for (int i = 0; i < 5; ++i) {
+            mpHost->mainConsoleView()->print(qsl("trimming %1\n").arg(i));
+        }
+        const bool trimmed = lineOf(marker) == line - batch;
+        const bool stillHighlighted = trimmed && buffer.buffer.at(line - batch).at(0).isSelected();
+        const int countBeforeCopy = ti->selectionCount();
+        const QString selectedBeforeCopy = selectedText();
+        const QString copied = copiedText();
+        const QString selectedAfterCopy = selectedText();
+        buffer.setBufferSize(savedLimit, savedBatch);
+
+        QVERIFY2(trimmed, "the buffer was not trimmed by a whole batch, so nothing here was tested");
+        QVERIFY2(stillHighlighted, "the selected line lost its highlight in the trim, so there was no selection left to report");
+        QCOMPARE(countBeforeCopy, 1);
+        QCOMPARE(selectedBeforeCopy, marker + QChar::LineFeed);
+        QCOMPARE(copied, marker + QChar::LineFeed);
+        QCOMPARE(selectedAfterCopy, marker + QChar::LineFeed);
+    }
+};
+
+#include "TextEditAccessibleInterfaceTest.moc"
+MUDLET_GROUPED_TEST_MAIN(TextEditAccessibleInterfaceTest)

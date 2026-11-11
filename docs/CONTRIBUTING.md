@@ -4,7 +4,9 @@ the free [Github for Desktop](https://desktop.github.com) app to contribute code
 
 # UI design guidelines
 
-Have a look at the [UI design philosophy](UI-design-philosophy.md) when improving Mudlet's interface.
+Have a look at the [UI design philosophy](../UI-design-philosophy.md) when improving Mudlet's interface.
+
+A control with no visible label beside it - one that has only placeholder text, or nothing at all - must have a translatable accessible name saying what it is, as a placeholder is never announced as one. It also needs an accessible description saying what it is for; a line edit's placeholder serves as that when the line edit has none of its own. Set them in the `.ui` file where you can (the `accessibleName` and `accessibleDescription` properties, with an `extracomment` for translators), otherwise with `setAccessibleName()` and `setAccessibleDescription()`. A control that already has a visible label needs neither.
 
 # Coding guidelines
 
@@ -14,6 +16,8 @@ Have a look at the [UI design philosophy](UI-design-philosophy.md) when improvin
 Check https://www.linguistic-antipatterns.com when naming anything to help ensure it can be understood intuitively.
 
 ## AI Coding Assistants
+
+To put an AI agent to work on Mudlet quality - test coverage, fuzzing, performance - see [Improving Mudlet with AI agents](https://wiki.mudlet.org/w/Improving_Mudlet_with_AI_agents) and the ready-made skills in [.agents/skills](https://github.com/Mudlet/Mudlet/tree/development/.agents/skills).
 
 ### Licensing and Legal Requirements
 
@@ -65,13 +69,22 @@ signals:
     void profileChanged(const QString& name);
 ```    
 * in general: write modern C++20 code, but avoid C++ exceptions, templates, and concepts as those have performance/complexity considerations, avoiding which has made Mudlet the success it is today.
-* use clang-format for formatting your code with [.clang-format](https://github.com/Mudlet/Mudlet/blob/development/.clang-format) settings. To get started, check out Clang Format in the [Setting up IDE's](https://wiki.mudlet.org/w/Compiling_Mudlet) section.
-* use clang-tidy linting with [.clang-tidy](https://github.com/Mudlet/Mudlet/blob/development/.clang-tidy) settings. To get started, check out Clang Tidy in the [Setting up IDE's](https://wiki.mudlet.org/w/Compiling_Mudlet) section
+* use clang-format for formatting your code with [.clang-format](https://github.com/Mudlet/Mudlet/blob/development/.clang-format) settings. To get started, check out Clang Format in the [Setting up IDEs](https://wiki.mudlet.org/w/Compiling_Mudlet#Setting_up_IDEs) section.
+* use clang-tidy linting with [.clang-tidy](https://github.com/Mudlet/Mudlet/blob/development/.clang-tidy) settings. To get started, check out Clang Tidy in the [Setting up IDEs](https://wiki.mudlet.org/w/Compiling_Mudlet#Setting_up_IDEs) section
 * additionally, use [clazy]([url](https://github.com/KDE/clazy)) for linting as well
 * use braces {} around all statements (ie, `if`'s and so on), even if they are one line
 * use `qsl()` to wrap Qt strings, this ensures they're created at compile time
 * at the same time, don't use a blank `qsl("")` - use `QString()` in that case
 * escape dynamic label information with .toHtmlEscaped() to ensure safe display ([example](https://github.com/Mudlet/Mudlet/pull/6807/files)).
+* pin every `QDataStream` that reads or writes a Mudlet file with `setVersion(QDataStream::Qt_5_12)` before any data crosses it, on both halves of a reader/writer pair. `QFont`'s binary representation changed at Qt 5.13, so an unpinned stream writes whatever format its Qt defaults to and a Mudlet built against a different Qt misparses it - and the pinned version can only change as a deliberate file format migration. For maps, `TMap::mMinVersion` is separately the oldest map format this build can write, so a Mudlet older than that cannot open what it saves.
+
+## Starter UI
+
+The starter UI (`src/packages/mudlet-base-ui`) is for new players who have not written a script yet. It works out what to show from what the game sends - GMCP, MSDP, prompts, score screens, fight messages - and that is the only way it grows:
+
+* when it misses something a game shows (a health label, a channel tag, an enemy's condition), teach it that format: a label spelling, a shape, a phrase table. Every player of that game benefits, and so does every game sharing the format.
+* do not add functions or events for players' scripts to feed or relabel it. Only a scripter could use them, and a scripter is better served by their own interface; an API also freezes the package's internals, which it needs to keep changing as it learns more games.
+* the `BaseUI.*` functions the package defines are internals, not a scripting interface, and may change in any release.
 
 # Internationalization do's and don'ts
 

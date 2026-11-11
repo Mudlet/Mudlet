@@ -92,12 +92,30 @@ describe("Tests functionality of Geyser.VBox", function()
       track(Geyser.Label:new({name = "gvbThreeB"}, box))
       assert.are.equal(50, geometry("gvbThreeA").height)
       track(Geyser.Label:new({name = "gvbThreeC"}, box))
-      -- a third of the box does not divide into whole pixels, and Mudlet
-      -- truncates the pixel values it is handed
+      -- a third of the box does not divide into whole pixels, so each edge is
+      -- rounded and the children still tile the box from top to bottom
+      local expectedY = 60
       for index, name in ipairs({"gvbThreeA", "gvbThreeB", "gvbThreeC"}) do
-        local expectedY = math.floor(60 + (index - 1) * 100 / 3)
-        assert.are.same({x = 50, y = expectedY, width = 100, height = 33}, geometry(name))
+        local expectedBottom = math.floor(60 + index * 100 / 3 + 0.5)
+        assert.are.same({x = 50, y = expectedY, width = 100, height = expectedBottom - expectedY}, geometry(name))
+        expectedY = expectedBottom
       end
+      assert.are.equal(160, expectedY)
+    end)
+
+    it("tiles children whose shared edges fall on a half pixel", function()
+      -- sixths of 105px meet at 17.5, 35, 52.5, 70 and 87.5
+      local box = track(Geyser.VBox:new({name = "gvbHalf", x = 0, y = 0, width = 50, height = 105}))
+      for index = 1, 6 do
+        track(Geyser.Label:new({name = "gvbHalf" .. index}, box))
+      end
+      local edge = 0
+      for index = 1, 6 do
+        local child = geometry("gvbHalf" .. index)
+        assert.are.equal(edge, child.y, "gvbHalf" .. index .. " starts where the one before it ends")
+        edge = child.y + child.height
+      end
+      assert.are.equal(105, edge)
     end)
 
     it("stretches children over the full width of the box", function()
@@ -125,6 +143,20 @@ describe("Tests functionality of Geyser.VBox", function()
       -- three shares against one out of a four share pool
       assert.are.same({x = 0, y = 0, width = 200, height = 300}, geometry("gvbStretchA"))
       assert.are.same({x = 0, y = 300, width = 200, height = 100}, geometry("gvbStretchB"))
+    end)
+
+    it("keeps a lone child with a stretch factor inside the box", function()
+      local box = track(Geyser.VBox:new({name = "gvbLoneStretch", x = 0, y = 0, width = 200, height = 400}))
+      track(Geyser.Label:new({name = "gvbLoneStretchA", v_stretch_factor = 3}, box))
+      assert.are.same({x = 0, y = 0, width = 200, height = 400}, geometry("gvbLoneStretchA"))
+    end)
+
+    it("gives the survivor the whole box when its stretched sibling is removed", function()
+      local box = track(Geyser.VBox:new({name = "gvbLoneLeft", x = 0, y = 0, width = 200, height = 400}))
+      local plain = track(Geyser.Label:new({name = "gvbLoneLeftA"}, box))
+      track(Geyser.Label:new({name = "gvbLoneLeftB", v_stretch_factor = 2}, box))
+      plain:delete()
+      assert.are.same({x = 0, y = 0, width = 200, height = 400}, geometry("gvbLoneLeftB"))
     end)
   end)
 
@@ -189,6 +221,38 @@ describe("Tests functionality of Geyser.VBox", function()
       assert.is_nil(getWindowGeometry("gvbShrinkB"))
       assert.is_nil(Geyser.windowList.gvbShrink)
     end)
+
+    -- one layout pass per child is what makes tearing a box down quadratic. The
+    -- fixed child is here because contains_fixed short circuits reposition()'s
+    -- check of the deferral, which could let the cost back in for boxes like it
+    it("does not stack the column again for each child it deletes", function()
+      track(Geyser.Label:new({name = "gvbShrinkCostFixed", height = 100, v_policy = Geyser.Fixed}, box))
+      for i = 1, 3 do
+        track(Geyser.Label:new({name = "gvbShrinkCost" .. i}, box))
+      end
+      local organizes = 0
+      local organize = box.organize
+      box.organize = function(...)
+        organizes = organizes + 1
+        return organize(...)
+      end
+      box:delete()
+      assert.are.equal(0, organizes)
+      assert.is_nil(getWindowGeometry("gvbShrinkA"))
+      assert.is_nil(getWindowGeometry("gvbShrinkCost1"))
+    end)
+
+    -- the deferral belongs to the container being deleted, so a box losing a
+    -- whole subtree - one that defers itself on the way out - still re-stacks
+    it("re-stacks the column when a nested box of its own is deleted", function()
+      local nested = track(Geyser.HBox:new({name = "gvbShrinkNested"}, box))
+      track(Geyser.Label:new({name = "gvbShrinkNestedA"}, nested))
+      track(Geyser.Label:new({name = "gvbShrinkNestedB"}, nested))
+      nested:delete()
+      assert.are.same({"gvbShrinkA", "gvbShrinkB"}, box.windows)
+      assert.are.same({x = 0, y = 0, width = 50, height = 300}, geometry("gvbShrinkA"))
+      assert.are.same({x = 0, y = 300, width = 50, height = 300}, geometry("gvbShrinkB"))
+    end)
   end)
 
   describe("Geyser.VBox:reposition", function()
@@ -233,6 +297,18 @@ describe("Tests functionality of Geyser.VBox", function()
       box:show()
       assert.is_true(windowVisible("gvbHideA"))
       assert.is_true(windowVisible("gvbHideB"))
+    end)
+
+    it("starts the whole stack hidden when the box constraints ask for it", function()
+      local box = track(Geyser.VBox:new({name = "gvbHiddenNew", x = 0, y = 0, width = 100, height = 100, hidden = true}))
+      track(Geyser.Label:new({name = "gvbHiddenNewA"}, box))
+      track(Geyser.Label:new({name = "gvbHiddenNewB"}, box))
+      assert.is_true(box.hidden)
+      assert.is_false(windowVisible("gvbHiddenNewA"))
+      assert.is_false(windowVisible("gvbHiddenNewB"))
+      box:show()
+      assert.is_true(windowVisible("gvbHiddenNewA"))
+      assert.is_true(windowVisible("gvbHiddenNewB"))
     end)
   end)
 end)

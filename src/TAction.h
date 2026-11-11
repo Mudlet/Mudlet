@@ -28,19 +28,19 @@
 
 #include <QColor>
 #include <QDebug>
+#include <QDebugStateSaver>
 #include <QIcon>
 #include <QObject>
 #include <QPointer>
+#include <QSize>
+#include <QString>
+#include <QtGlobal>
 
-class EAction;
+#include <algorithm>
+
 class Host;
 class mudlet;
-class TEasyButtonBar;
-class TFlipButton;
 class TLuaInterpreter;
-class TToolBar;
-
-class QMenu;
 
 
 class TAction : public Tree<TAction>, public QObject
@@ -102,10 +102,13 @@ public:
     int getSizeY() const { return mSizeY; }
     QSize getSize() const { return {mSizeX, mSizeY}; }
 
-    void fillMenu(TEasyButtonBar* pT, QMenu* menu);
     void compile();
     bool compileScript();
     void execute();
+    // A click on the button: a push-down button takes the state it was clicked to, any other is left up
+    void press(bool checked);
+    // execute() without sending the button's command, for restoring a push-down button's state
+    void runScript();
     QString getIcon() const { return mIcon; }
     void setIcon(const QString& icon) {
         if (icon != mIcon) {
@@ -144,10 +147,6 @@ public:
     }
 
     bool registerAction();
-    void insertActions(TToolBar* pT, QMenu* menu);
-    void expandToolbar(TToolBar* pT);
-    void insertActions(TEasyButtonBar* pT, QMenu* menu);
-    void expandToolbar(TEasyButtonBar* pT);
     void setDataSaved() {
         if (mpParent) {
             mpParent->setDataSaved();
@@ -164,11 +163,6 @@ public:
     QString packageName(TAction* pAction) const;
     QString moduleName(TAction* pAction) const;
 
-
-    QPointer<TToolBar> mpToolBar;
-    QPointer<TEasyButtonBar> mpEasyButtonBar;
-    QPointer<EAction> mpEAction;
-    QPointer<TFlipButton> mpFButton;
     /* The following was an int but there was confusion over:
      * EITHER: "1" = released/unclicked/up & "2" = pressed/clicked/down,
      * OR:     "1" = pressed/clicked/down  & "0" = released/unclicked/up.
@@ -202,11 +196,16 @@ public:
     QString css;
     QPointer<Host> mpHost;
     bool exportItem = true;
+    // After a move: a member under a module's folder, and at the top level only while its module's file still holds it
+    void updateModuleMembership();
     bool mModuleMasterFolder = false;
+    // The module whose file this was loaded from
+    QString mLoadedFromModule;
     Qt::DockWidgetArea mToolbarLastDockArea = Qt::LeftDockWidgetArea;
     bool mToolbarLastFloatingState = true;
 
 private:
+    void setModuleMembership(bool);
     TAction() = default;
 
     QString mName;

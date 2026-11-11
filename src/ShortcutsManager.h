@@ -34,15 +34,16 @@ class ShortcutsManager : public QObject
     Q_OBJECT
 
 public:
-    explicit ShortcutsManager(QObject* parent = nullptr)
-    : QObject(parent)
-    {
-    }
+    explicit ShortcutsManager(QObject* parent = nullptr);
     ShortcutsManager(ShortcutsManager const&) = delete;
     ShortcutsManager& operator=(ShortcutsManager const&) = delete;
     ShortcutsManager(ShortcutsManager&&) = delete;
     ShortcutsManager& operator=(ShortcutsManager&&) = delete;
-    ~ShortcutsManager();
+    ~ShortcutsManager() override;
+
+    // The application's shortcuts, which each profile copies and saves; null
+    // until the application object has made them, so headless has none
+    static ShortcutsManager* self() { return smpSelf; }
 
     void registerShortcut(const QString&, const QString&, QKeySequence*);
     QStringListIterator iterator();
@@ -52,6 +53,8 @@ public:
     QString getLabel(const QString& key);
 
 private:
+    inline static ShortcutsManager* smpSelf = nullptr;
+
     QList<QString> shortcutKeys;
     // Non-owning: callers retain ownership of the QKeySequence* stored here.
     QMap<QString, QKeySequence*> shortcuts;                    //shortcut key : sequence in use pointer

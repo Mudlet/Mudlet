@@ -20,11 +20,6 @@
 #ifndef SENTRY_WRAPPER_H
 #define SENTRY_WRAPPER_H
 
-#ifdef WITH_SENTRY
-#include <QtCore/qscopeguard.h>
-#include "sentry.h"
-#endif
-
 #include <string>
 
 void initSentry();

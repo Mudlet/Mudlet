@@ -24,6 +24,8 @@
 #include "dlgModuleManager.h"
 
 #include "mudlet.h"
+#include "MudletApp.h"
+#include "TMainConsole.h"
 
 #include <QFileDialog>
 #include <QMessageBox>
@@ -48,7 +50,14 @@ dlgModuleManager::dlgModuleManager(QWidget* parent, Host* pHost)
     connect(helpButton, &QAbstractButton::clicked, this, &dlgModuleManager::slot_helpModule);
     connect(moduleTable, &QTableWidget::itemClicked, this, &dlgModuleManager::slot_moduleClicked);
     connect(moduleTable, &QTableWidget::itemChanged, this, &dlgModuleManager::slot_moduleChanged);
-    connect(mpHost->mpConsole, &QWidget::destroyed, this, &dlgModuleManager::close);
+    connect(mpHost->mainConsoleView(), &QWidget::destroyed, this, &dlgModuleManager::close);
+    connect(mpHost, &Host::signal_packageListChanged, this, &dlgModuleManager::layoutModules);
+    connect(mpHost, &Host::signal_moduleListChangedByScript, this, [this]() {
+        if (moduleTable->isVisible()) {
+            layoutModules();
+        }
+    });
+    connect(mpHost, &Host::signal_moduleSyncChangedByScript, this, &dlgModuleManager::showModuleSync);
     setWindowTitle(tr("Module Manager - %1").arg(mpHost->getName()));
     setAttribute(Qt::WA_DeleteOnClose);
 }
@@ -68,10 +77,7 @@ void dlgModuleManager::layoutModules()
     moduleTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
     moduleTable->verticalHeader()->hide();
     moduleTable->setShowGrid(true);
-    //clear everything
-    for (int i = 0; i <= moduleTable->rowCount(); i++) {
-        moduleTable->removeRow(i);
-    }
+    moduleTable->setRowCount(0);
     //order modules by priority and then alphabetically
     QMap<int, QStringList> mOrder;
     while (it.hasNext()) {
@@ -126,13 +132,28 @@ void dlgModuleManager::layoutModules()
     moduleTable->resizeColumnsToContents();
 }
 
+void dlgModuleManager::showModuleSync(const QString& module, const bool sync)
+{
+    for (int row = 0; row < moduleTable->rowCount(); ++row) {
+        if (auto* nameItem = moduleTable->item(row, 0); !nameItem || nameItem->text() != module) {
+            continue;
+        }
+        if (auto* checkItem = moduleTable->item(row, 2)) {
+            // The host already has the new flag; letting itemChanged through would copy the row's stale priority back
+            const QSignalBlocker blocker(moduleTable);
+            checkItem->setCheckState(sync ? Qt::Checked : Qt::Unchecked);
+        }
+        return;
+    }
+}
+
 void dlgModuleManager::slot_installModule()
 {
     if (!mpHost) {
         return;
     }
 
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
     QString lastDir = settings.value(qsl("lastFileDialogLocation"), QDir::homePath()).toString();
 
     //: Module manager - import modules from file dialog (multi-select enabled)
@@ -148,13 +169,12 @@ void dlgModuleManager::slot_installModule()
     QStringList failedModules;
 
     for (const QString& fileName : fileNames) {
-        auto [success, errorMsg] = mpHost->installPackage(fileName, enums::PackageModuleType::ModuleFromUI);
-        if (success) {
+        if (mpHost->installPackage(fileName, enums::PackageModuleType::ModuleFromUI).first) {
             mpHost->waitForProfileSave();
         } else {
             const QString baseName = QFileInfo(fileName).fileName();
             failedModules << baseName;
-            qWarning() << "dlgModuleManager::slot_installModule() ERROR - failed to import" << baseName << ":" << errorMsg;
+            qWarning() << "dlgModuleManager::slot_installModule() ERROR - failed to import" << baseName;
         }
     }
 
@@ -170,21 +190,72 @@ void dlgModuleManager::slot_installModule()
     }
 }
 
+// Returns what to tell the user about refused removals, empty if none. Split from the slot so the
+// wording can be tested: the dialog has no Lua entry point and the box in the slot blocks.
+QString dlgModuleManager::removeModules(const QStringList& moduleNames)
+{
+    if (!mpHost) {
+        return {};
+    }
+
+    QStringList refusedWhileSaving;
+    QStringList noLongerInstalled;
+    for (const QString& moduleName : moduleNames) {
+        if (mpHost->uninstallPackage(moduleName, enums::PackageModuleType::ModuleFromUI)) {
+            continue;
+        }
+        // Otherwise the module went after the row was drawn (a sibling in this selection can remove it
+        // from its sysUninstall handler), so do not blame a save that is not running.
+        if (mpHost->currentlySavingProfile()) {
+            refusedWhileSaving << moduleName;
+        } else {
+            noLongerInstalled << moduleName;
+        }
+    }
+
+    QStringList sentences;
+    if (refusedWhileSaving.size() == 1) {
+        //: %1 is the name of the module the user asked to remove
+        sentences << tr("\"%1\" could not be removed while the profile is being saved. Please try again in a moment.").arg(refusedWhileSaving.constFirst());
+    } else if (!refusedWhileSaving.isEmpty()) {
+        //: %1 is a comma separated list of the modules that are still installed
+        sentences << tr("These could not be removed while the profile is being saved: %1. Please try again in a moment.").arg(refusedWhileSaving.join(qsl(", ")));
+    }
+    if (noLongerInstalled.size() == 1) {
+        //: %1 is the name of the module the user asked to remove, which turned out not to be installed any more
+        sentences << tr("\"%1\" is no longer installed, so there was nothing to remove.").arg(noLongerInstalled.constFirst());
+    } else if (!noLongerInstalled.isEmpty()) {
+        //: %1 is a comma separated list of the modules that turned out not to be installed any more
+        sentences << tr("These are no longer installed, so there was nothing to remove: %1.").arg(noLongerInstalled.join(qsl(", ")));
+    }
+    return sentences.join(qsl(" "));
+}
+
 void dlgModuleManager::slot_uninstallModule()
 {
     if (!mpHost) {
         return;
     }
 
-    const int cRow = moduleTable->currentRow();
-    QTableWidgetItem* pI = moduleTable->item(cRow, 0);
-    if (pI) {
-        mpHost->uninstallPackage(pI->text(), enums::PackageModuleType::ModuleFromUI);
+    // Read every name before uninstalling: that pumps the event loop while a save finishes, and a handler
+    // that removes a module rebuilds this table, deleting its items.
+    QStringList moduleNames;
+    for (int row = 0; row < moduleTable->rowCount(); ++row) {
+        if (auto* nameItem = moduleTable->item(row, 0); nameItem && nameItem->isSelected()) {
+            moduleNames << nameItem->text();
+        }
     }
-    for (int i = moduleTable->rowCount() - 1; i >= 0; --i) {
-        moduleTable->removeRow(i);
+    if (moduleNames.isEmpty()) {
+        return;
     }
+
+    const QString msg = removeModules(moduleNames);
+    // Rebuild even if refused: only that clears a stale row
     layoutModules();
+    if (!msg.isEmpty()) {
+        //: Title of the dialog that says why one or more modules the user asked to remove were not removed
+        QMessageBox::warning(this, tr("Removal failed"), msg);
+    }
 }
 
 void dlgModuleManager::slot_moduleClicked(QTableWidgetItem* pItem)

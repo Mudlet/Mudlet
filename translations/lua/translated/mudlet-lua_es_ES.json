@@ -88,11 +88,11 @@
     "description": "Download package from Url for installation - %s is source url"
   },
   "Mudlet.prefixOk": {
-    "message": "[ OK ] - ",
+    "message": "[  OK  ]  - ",
     "description": "Start of the line for messages telling the player something is okay. Keep at 12 characters length for nice alignment!"
   },
   "Mudlet.prefixWarn": {
-    "message": "[ ADVERTIR ]  - ",
+    "message": "[ ADVERTENCIA ]  - ",
     "description": "Start of the line for messages warning the player about something. Keep at 12 characters length for nice alignment!"
   },
   "Mudlet.prefixInfo": {

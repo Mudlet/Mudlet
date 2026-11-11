@@ -36,6 +36,11 @@ public:
     EditorViewType viewType() const override { return mViewType; }
     QList<int> affectedItemIDs() const override { return {mItemID}; }
     void remapItemID(int oldID, int newID) override;
+    int id() const override;
+    bool mergeWith(const QUndoCommand* other) override;
+    // Marks this add finished if the save was of its item; const as QUndoStack only hands out const commands
+    void finishAdding(EditorViewType viewType, int itemID) const;
+    bool adding(EditorViewType viewType, int itemID) const { return !mAddFinished && viewType == mViewType && itemID == mItemID; }
 
     // Check if item ID changed during redo (when item was recreated)
     bool didItemIDChange() const { return mOldItemID != -1 && mOldItemID != mItemID; }
@@ -62,6 +67,7 @@ private:
     QString mItemName;
     QString mItemSnapshot;
     mutable bool mSkipFirstRedo = true; // Skip initial redo() called by QUndoStack::push()
+    mutable bool mAddFinished = false;
 
     // Track ID changes for item and all descendants when recreated (oldID -> newID)
     QList<QPair<int, int>> mIDChanges;

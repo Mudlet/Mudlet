@@ -139,6 +139,21 @@ local function activityFrom(action, accept, timeoutMilliseconds)
   return activity
 end
 
+-- How many of the frames recorded after `mark` the fake Discord client could
+-- not decode. The fixture files a frame whose payload is not valid JSON (or not
+-- valid UTF-8, which JSON decoding of the payload requires) as {"raw": <text>}
+-- instead of the parsed object, so this counts exactly the presence updates a
+-- real Discord client would have had to throw away whole.
+local function undecodableFramesAfter(mark)
+  local count = 0
+  for _, frame in ipairs(framesAfter(mark)) do
+    if type(frame.payload) == "table" and frame.payload.raw ~= nil then
+      count = count + 1
+    end
+  end
+  return count
+end
+
 -- How many presence updates have reached the fake Discord client. Counting
 -- SET_ACTIVITY frames rather than all of them keeps an unrelated handshake or
 -- subscription from being mistaken for a presence update.
@@ -367,10 +382,32 @@ describe("setDiscordDetail", function()
     local overlong = string.rep("a", 200)
     local activity = activityFrom(function() setDiscordDetail(overlong) end,
                                   function(seen) return seen.details ~= nil end)
-    assert.equals(127, #activity.details)
-    assert.equals(string.rep("a", 127), activity.details)
+    -- The whole documented 128 bytes, not 127: the buffer holding this used to
+    -- be exactly 128 bytes and lost its last byte to the null terminator
+    -- (#9634).
+    assert.equals(128, #activity.details)
+    assert.equals(string.rep("a", 128), activity.details)
     -- Only what Discord is sent is truncated; Mudlet keeps the whole string.
     assert.equals(overlong, getDiscordDetail())
+  end)
+
+  it("cuts an overlong non-ASCII detail text between characters", function()
+    if not readyForDiscord() then
+      return
+    end
+    -- #9634: the cut used to be made at the byte limit with no regard for
+    -- UTF-8, leaving the last character in the field as a lone lead byte. That
+    -- does not merely damage one field - the payload stops being decodable, so
+    -- the whole SET_ACTIVITY frame is discarded and every well-formed field in
+    -- it goes with it.
+    local mark = frameCount()
+    -- 65 two-byte characters, 130 bytes: two more than the field holds, so the
+    -- cut has to fall inside the 65th character.
+    local activity = activityFrom(function() setDiscordDetail(string.rep("ä", 65)) end,
+                                  function(seen) return seen.details ~= nil end)
+    assert.equals(string.rep("ä", 64), activity.details)
+    assert.equals(128, #activity.details)
+    assert.equals(0, undecodableFramesAfter(mark))
   end)
 end)
 
@@ -458,6 +495,20 @@ describe("setDiscordLargeIcon and setDiscordSmallIcon", function()
                                   function(seen) return seen.assets.small_image ~= nil end)
     assert.equals("shield", activity.assets.small_image)
     assert.equals("shield", getDiscordSmallIcon())
+  end)
+
+  it("sends a full length icon key without dropping its last character", function()
+    if not readyForDiscord() then
+      return
+    end
+    -- #9634: a Discord asset key may be the full 32 bytes the API documents,
+    -- but the buffer was 32 bytes including the terminator, so the last
+    -- character was cut off and the icon never resolved.
+    local key = string.rep("a", 32)
+    local activity = activityFrom(function() setDiscordLargeIcon(key) end,
+                                  function(seen) return seen.assets.large_image ~= "mudlet" end)
+    assert.equals(32, #activity.assets.large_image)
+    assert.equals(key, activity.assets.large_image)
   end)
 
   it("sends the small icon's tooltip text", function()
@@ -811,10 +862,194 @@ describe("setDiscordApplicationID", function()
   end)
 end)
 
-describe("known Discord API defects", function()
-  it("truncates an overlong detail text on a character boundary", function()
-    pending("localDiscordPresence cuts the text at 127 bytes without regard for UTF-8, so 64 "
-            .. "two-byte characters reach Discord as 63 characters plus half of one - the frame is "
-            .. "no longer valid UTF-8. Fix the truncation in discord.cpp, then unpend this")
+describe("an icon key that has to be truncated", function()
+  it("cuts a non-ASCII key between characters and keeps the frame decodable", function()
+    if not readyForDiscord() then
+      return
+    end
+    -- The 32 byte fields cut in the same place as the 128 byte ones, so they
+    -- broke the frame in the same way (#9634). 16 two-byte characters are 32
+    -- bytes, which now fits exactly; a 17th has to go, whole.
+    local mark = frameCount()
+    local activity = activityFrom(function() setDiscordLargeIcon(string.rep("é", 17)) end,
+                                  function(seen) return seen.assets.large_image ~= "mudlet" end)
+    assert.equals(string.rep("é", 16), activity.assets.large_image)
+    assert.equals(32, #activity.assets.large_image)
+    assert.equals(0, undecodableFramesAfter(mark))
+  end)
+end)
+
+-- The other way a presence gets set: the game sends it over GMCP rather than a
+-- script calling setDiscordLargeIcon() and the rest. Only "show game details"
+-- mode acts on these - readyForDiscord() also admits the Mudlet-only mode,
+-- which drops them in processGMCPDiscordStatus().
+describe("presence the game sends over GMCP", function()
+  -- setGMCPTable() files every message it routes, so the presence these feed
+  -- would sit in gmcp for the rest of the run and take GMCP_spec's
+  -- empty-table test out of the totals with it
+  teardown(function()
+    gmcp.External = nil
+    gmcp.external = nil
+    gmcp.EXTERNAL = nil
+  end)
+
+  local function feedDiscordStatus(json)
+    local ok, message = feedTelnet("<T_IAC><T_SB><O_GMCP>External.Discord.Status " .. json .. "<T_IAC><T_SE>")
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(message))
+  end
+
+  it("puts the game's large icon and its tooltip on the large icon, not the small one (#2343)", function()
+    if not readyForDiscord() then
+      return
+    end
+    feedDiscordStatus('{"largeimage": ["spec-large-icon"], "largeimagetext": "spec large tooltip"}')
+
+    assert.equals("spec-large-icon", getDiscordLargeIcon(), "the large icon went to the small slot, or this profile is in 'show Mudlet only' mode, which drops GMCP presence")
+    assert.equals("spec large tooltip", getDiscordLargeIconText())
+    assert.equals("", getDiscordSmallIcon())
+    assert.equals("", getDiscordSmallIconText())
+  end)
+
+  it("takes the presence from a package name in any letter case, as GMCP allows", function()
+    if not readyForDiscord() then
+      return
+    end
+    local ok, message = feedTelnet('<T_IAC><T_SB><O_GMCP>external.discord.status {"state": "lower case package"}<T_IAC><T_SE>')
+    assert.is_true(ok, tostring(message))
+    assert.equals("lower case package", getDiscordState())
+
+    ok, message = feedTelnet('<T_IAC><T_SB><O_GMCP>EXTERNAL.DISCORD.STATUS {"state": "upper case package"}<T_IAC><T_SE>')
+    assert.is_true(ok, tostring(message))
+    assert.equals("upper case package", getDiscordState())
+  end)
+
+  it("reads an elapsed start time the game sent as a string (#9100)", function()
+    if not readyForDiscord() then
+      return
+    end
+    feedDiscordStatus('{"starttime": "1750000000"}')
+
+    local startTime, endTime = getDiscordTimeStamps()
+    assert.equals(1750000000, startTime)
+    assert.equals(0, endTime, "a start time that lands in the end timestamp as well turns the elapsed timer into a countdown")
+  end)
+
+  -- A presence update a script makes after the feed carries the whole presence,
+  -- so it shows whether the party survived on the wire, not only in the getter.
+  local function partyOnTheWire()
+    local activity = activityFrom(function() setDiscordDetail("party check") end,
+                                  function(seen) return seen.details == "party check" end)
+    return activity.party and activity.party.size
+  end
+
+  it("leaves the party alone when the payload says nothing about one (#10724)", function()
+    if not readyForDiscord() then
+      return
+    end
+    assert.is_true(setDiscordParty(4, 12))
+    feedDiscordStatus('{"state": "only a state"}')
+
+    assert.equals("only a state", getDiscordState(), "the payload was dropped, so this spec proves nothing - is this profile in 'show Mudlet only' mode?")
+    local size, maximum = getDiscordParty()
+    assert.equals(4, size, "a payload without a party cleared the party")
+    assert.equals(12, maximum)
+    assert.same({4, 12}, partyOnTheWire())
+  end)
+
+  it("leaves the party alone when the payload's party values are not numbers (#10724)", function()
+    if not readyForDiscord() then
+      return
+    end
+    assert.is_true(setDiscordParty(4, 12))
+    feedDiscordStatus('{"state": "words for numbers", "partysize": "four", "partymax": "twelve"}')
+
+    assert.equals("words for numbers", getDiscordState(), "the payload was dropped, so this spec proves nothing - is this profile in 'show Mudlet only' mode?")
+    local size, maximum = getDiscordParty()
+    assert.equals(4, size, "party values that are not numbers cleared the party")
+    assert.equals(12, maximum)
+    assert.same({4, 12}, partyOnTheWire())
+  end)
+
+  it("keeps the party size when only the maximum is a number (#10724)", function()
+    if not readyForDiscord() then
+      return
+    end
+    assert.is_true(setDiscordParty(4, 12))
+    feedDiscordStatus('{"state": "bigger party", "partysize": "four", "partymax": 20}')
+
+    assert.equals("bigger party", getDiscordState())
+    local size, maximum = getDiscordParty()
+    assert.equals(4, size, "a maximum without a usable size cleared the party")
+    assert.equals(20, maximum)
+
+    feedDiscordStatus('{"partymax": 30}')
+    size, maximum = getDiscordParty()
+    assert.equals(4, size, "a maximum on its own cleared the party")
+    assert.equals(30, maximum)
+  end)
+
+  it("updates the party size alone and keeps the maximum", function()
+    if not readyForDiscord() then
+      return
+    end
+    assert.is_true(setDiscordParty(4, 12))
+    feedDiscordStatus('{"partysize": 5}')
+
+    local size, maximum = getDiscordParty()
+    assert.equals(5, size)
+    assert.equals(12, maximum)
+  end)
+
+  it("sets the party from a payload that carries one", function()
+    if not readyForDiscord() then
+      return
+    end
+    assert.is_true(setDiscordParty(4, 12))
+    feedDiscordStatus('{"partysize": 2, "partymax": 6}')
+
+    local size, maximum = getDiscordParty()
+    assert.equals(2, size)
+    assert.equals(6, maximum)
+  end)
+
+  it("clears the party when the game sends a maximum of 0", function()
+    if not readyForDiscord() then
+      return
+    end
+    assert.is_true(setDiscordParty(4, 12))
+    feedDiscordStatus('{"partymax": 0}')
+
+    local size, maximum = getDiscordParty()
+    assert.equals(0, size)
+    assert.equals(0, maximum)
+    assert.is_nil(partyOnTheWire())
+  end)
+
+  it("clears the party when the game sends null for it", function()
+    if not readyForDiscord() then
+      return
+    end
+    feedDiscordStatus('{"partysize": 3, "partymax": 6}')
+    feedDiscordStatus('{"state": "party over", "partysize": null, "partymax": null}')
+
+    assert.equals("party over", getDiscordState())
+    local size, maximum = getDiscordParty()
+    assert.equals(0, size, "null party values left the old party showing")
+    assert.equals(0, maximum)
+  end)
+
+  it("names the game after the host it connected to, not the profile's saved address", function()
+    if not readyForDiscord() then
+      return
+    end
+    -- Not saved, so the profile keeps its own address; the dropped connection
+    -- still leaves 127.0.0.1 as the host and lets feedTelnet() through
+    connectToServer("127.0.0.1", 1)
+    disconnect()
+    feedDiscordStatus('{"game": "spec game"}')
+
+    assert.equals("Playing localhost", getDiscordDetail())
+    assert.equals("localhost", getDiscordLargeIcon())
+    assert.equals("spec game at 127.0.0.1:1", getDiscordLargeIconText())
   end)
 end)

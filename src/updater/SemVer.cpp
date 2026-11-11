@@ -38,14 +38,28 @@ namespace dblsqd {
 SemVer::SemVer(const QString& version)
 {
     static const QRegularExpression rx(getRegExp());
-    QRegularExpressionMatch match = rx.match(version);
-    if (match.hasMatch()) {
-        mMajor = match.captured(1).toInt();
-        mMinor = match.captured(2).toInt();
-        mPatch = match.captured(3).toInt();
-        mPrerelease = match.captured(4);
-        mValid = true;
+    const QRegularExpressionMatch match = rx.match(version);
+    if (!match.hasMatch()) {
+        return;
     }
+
+    bool majorOk = false;
+    bool minorOk = false;
+    bool patchOk = false;
+    const int major = match.captured(1).toInt(&majorOk);
+    const int minor = match.captured(2).toInt(&minorOk);
+    const int patch = match.captured(3).toInt(&patchOk);
+    // toInt() reads a component too large for an int back as 0, which would sort
+    // the highest version there is below every other one
+    if (!majorOk || !minorOk || !patchOk) {
+        return;
+    }
+
+    mMajor = major;
+    mMinor = minor;
+    mPatch = patch;
+    mPrerelease = match.captured(4);
+    mValid = true;
 }
 
 /*!
@@ -112,8 +126,10 @@ QString SemVer::getRegExp()
 {
     QString v = qsl("(0|[1-9]\\d*)");
     QString p = qsl("(?:-((?:0|[1-9A-Za-z-][0-9A-Za-z-]*)(?:\\.(?:0|[1-9A-Za-z-][0-9A-Za-z-]*))*))?");
-    QString b = qsl("(?:\\+((?:[0-9A-Za-z-]*)(?:\\.(?:[0-9A-Za-z-][0-9A-Za-z-]*))*))?");
-    return qsl("^") + v + qsl("\\.") + v + qsl("\\.") + v + p + b + qsl("$");
+    QString b = qsl("(?:\\+([0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?");
+    // \z rather than $, which matches before a trailing newline as well and so
+    // would read a version out of a string that has a line ending left on it
+    return qsl("\\A") + v + qsl("\\.") + v + qsl("\\.") + v + p + b + qsl("\\z");
 }
 
 } // namespace dblsqd

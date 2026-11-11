@@ -31,6 +31,7 @@ namespace GLWidgetFactory {
 QOpenGLWidget* createGLWidget(TMap* pMap, Host* pHost, QWidget* parent = nullptr);
 bool isCorrectWidgetType(QOpenGLWidget* widget, Host* pHost);
 QString getWidgetTypeName(QOpenGLWidget* widget);
+void setViewCenter(QOpenGLWidget* widget, int areaId, int x, int y, int z);
 }
 
 // Factory functions provide runtime widget creation

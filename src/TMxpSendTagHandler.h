@@ -24,6 +24,8 @@
 #include "TMxpTagHandler.h"
 #include "utils.h"
 
+#include <QStringList>
+
 // <SEND [href=command] [hint=text] [prompt] [expire=name]>
 class TMxpSendTagHandler : public TMxpSingleTagHandler
 {
@@ -40,12 +42,13 @@ public:
     TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
     TMxpTagHandlerResult handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag) override;
 
-    void handleContent(char ch) override;
+    void handleContentBytes(QByteArrayView bytes) override;
 
     QString currentCaption() const { return mLastCaption; }
 
 private:
     void updateHrefInLinks(TMxpClient& client) const;
+    QString actionFor(const QString& command) const;
     void resetCurrentTagContent(TMxpClient& client);
 
     inline static const QString ATTR_HREF = qsl("href");
@@ -55,8 +58,12 @@ private:
     inline static const QString TAG_CONTENT_PLACEHOLDER = qsl("&text;");
 
     bool mIsHrefInContent;
+    // Every byte of game text reaches handleContentBytes(), not only what is inside a SEND
+    bool mInsideTag = false;
     QString mCurrentTagContent;
     QString mLastCaption;
+    QString mCommand;
+    QStringList mHrefs;
     int mLinkId;
 };
 

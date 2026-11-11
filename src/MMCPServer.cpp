@@ -22,7 +22,6 @@
 #include "Host.h"
 #include "MMCP.h"
 #include "MMCPClient.h"
-#include "mudlet.h"
 #include "TEvent.h"
 
 #include <string>
@@ -89,17 +88,17 @@ void MMCPServer::incomingConnection(qintptr socketDescriptor)
 /**
  * Receive mud data from our current session
  */
-void MMCPServer::receiveFromPlayer(std::string& str)
+void MMCPServer::receiveFromPlayer(std::string& str, const bool endsWithPromptMarker)
 {
     if (mSnoopCount > 0) {
-        sendSnoopData(str);
+        sendSnoopData(str, endsWithPromptMarker);
     }
 }
 
 /**
  * Send mud data from our mud to all clients snooping us
  */
-void MMCPServer::sendSnoopData(std::string& lines)
+void MMCPServer::sendSnoopData(std::string& lines, const bool endsWithPromptMarker)
 {
 
     // Split the block into individual lines
@@ -114,6 +113,14 @@ void MMCPServer::sendSnoopData(std::string& lines)
     // clients and the other (outData2) which will be send to all other clients
 
     while (std::getline(iss, line)) {
+        // writeData() would show the prompt marker to the snooper as a '?'
+        if (endsWithPromptMarker && iss.eof() && !line.empty() && line.back() == '\xff') {
+            line.pop_back();
+            // GA straight after a line ending marks no prompt text at all
+            if (line.empty()) {
+                break;
+            }
+        }
         QByteArray outData1, outData2;
         outData1.append(static_cast<char>(SnoopData));
         outData2.append(static_cast<char>(SnoopData));
@@ -122,14 +129,11 @@ void MMCPServer::sendSnoopData(std::string& lines)
         snprintf(colorBuf, sizeof(colorBuf), "%02d%02d\n", 15, 0);
         outData1.append(colorBuf);
 
+        // MMCPClient::writeData() keeps a 0xff in the line from ending the frame
         outData1.append(line.data(), line.size());
         outData2.append(line.data(), line.size());
-
-        // If line already had an 0xff at the end, don't bother adding one back here
-        if (!line.empty() && static_cast<unsigned char>(line.back()) != static_cast<unsigned char>(End)) {
-            outData1.append(static_cast<char>(End));
-            outData2.append(static_cast<char>(End));
-        }
+        outData1.append(static_cast<char>(End));
+        outData2.append(static_cast<char>(End));
 
         QListIterator<QPointer<MMCPClient>> it(mPeersList);
         while (it.hasNext()) {
@@ -1000,7 +1004,7 @@ void MMCPServer::clientMessage(const QString& fromStr, const QString& message)
     if (!mpHost || mpHost->isClosingDown()) {
         // Don't try to process any messages if the profile is dying - otherwise
         // we can get seg. faults when we try to use
-        // TMainConsole::printOnDisplay(...) - I found this the hard way! Slysven
+        // Host::printOnDisplay(...) - I found this the hard way! Slysven
         return;
     }
 
@@ -1023,7 +1027,7 @@ void MMCPServer::clientMessage(const QString& fromStr, const QString& message)
 
     // This uses a UTF-8 encoding:
     std::string trimmedStdStr = coloredStr.toStdString();
-    // The message sent to TMainConsole::printOnDisplay(...) MUST be in the
+    // The message sent to Host::printOnDisplay(...) MUST be in the
     // current Game Server Encoding - so we are going to have to transcode the
     // data if it is anything other than ASCII. Given that the primary usage for
     // MMCP is initially the Medievia MUD and that will be using the custom
@@ -1034,13 +1038,13 @@ void MMCPServer::clientMessage(const QString& fromStr, const QString& message)
         return;
     }
 
-    // TMainConsole::printOnDisplay(...) calls TBuffer::translateToPlainText(...)
+    // Host::printOnDisplay(...) calls TBuffer::translateToPlainText(...)
     // and if the data sent to that does NOT end with a Line-Feed - or certain
     // other end-of-line indications the text does not get flushed to the
     // display until it does - so actually we need to re-append a final
     // line-feed that we may have previously trimmed off!
-    mpHost->mpConsole->printOnDisplay(trimmedStdStr.append(1, '\n'), false);
-    mpHost->mpConsole->finalize();
+    mpHost->printOnDisplay(trimmedStdStr.append(1, '\n'), false);
+    mpHost->finalizeMainConsole();
 }
 
 /**
@@ -1050,14 +1054,49 @@ void MMCPServer::snoopMessage(const std::string& message)
 {
     using namespace AnsiColors;
 
+    // The prefix's reset would take the colour off every line after the first for a
+    // peer whose colour MMCPClient does not track, so the style in force is put back
+    // after it. Bounded, as a peer can send any number of escapes.
+    constexpr std::size_t maxReplayedStyle = 64;
+    std::string activeStyle;
     std::stringstream ss;
     ss << FBLDGRN << ">>" << RST;
-    ss << message << "\n";
+    for (std::size_t i = 0; i < message.size(); ++i) {
+        const char c = message[i];
+        if (c == '\n') {
+            ss << c << FBLDGRN << ">>" << RST << activeStyle;
+            continue;
+        }
+        if (c == '\x1b' && i + 1 < message.size() && message[i + 1] == '[') {
+            std::size_t end = i + 2;
+            while (end < message.size() && message[end] >= 0x20 && message[end] < 0x40) {
+                ++end;
+            }
+            if (end < message.size()) {
+                const std::string sequence = message.substr(i, end - i + 1);
+                if (message[end] == 'm') {
+                    const std::string parameters = message.substr(i + 2, end - i - 2);
+                    const bool resets = parameters.empty() || parameters == "0" || parameters.starts_with("0;");
+                    if (resets || activeStyle.size() + sequence.size() > maxReplayedStyle) {
+                        activeStyle.clear();
+                    }
+                    if (parameters != "0" && !parameters.empty() && sequence.size() <= maxReplayedStyle) {
+                        activeStyle += sequence;
+                    }
+                }
+                ss << sequence;
+                i = end;
+                continue;
+            }
+        }
+        ss << c;
+    }
+    ss << "\n";
 
     std::string outStr = ss.str();
 
-    mpHost->mpConsole->printOnDisplay(outStr, false);
-    mpHost->mpConsole->finalize();
+    mpHost->printOnDisplay(outStr, false);
+    mpHost->finalizeMainConsole();
 }
 
 

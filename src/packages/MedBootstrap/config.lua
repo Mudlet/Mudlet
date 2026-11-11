@@ -12,5 +12,5 @@ later connections.
 
 * [MedUI in the package repository](https://packages.mudlet.org/packages#pkg-MedUI)
 ]]
-version = [[1]]
+version = [[2]]
 created = "2026-08-04T00:00:00+00:00"

@@ -1,0 +1,646 @@
+/***************************************************************************
+ *   Copyright (C) 2026 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+
+/*
+ * The trigger editor, the notepad, the IRC client and the toolbars an action
+ * puts on the main window are created without a Host parent, so nothing
+ * disposes of them along with the profile unless the teardown does it by hand.
+ * Each test takes one of the three orderings a Host goes away in and asserts
+ * the same thing: once the Host is gone, so are its windows. The QPointers
+ * make a leak provable in any build; an AddressSanitizer build additionally
+ * catches a double delete.
+ *
+ * Run with: ctest -R HostChildTeardownTest -V
+ */
+
+#include <QFileInfo>
+#include <QTemporaryDir>
+#include <QtTest/QtTest>
+#include <chrono>
+
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QPlainTextEdit>
+#include <QScopeGuard>
+
+#include "MudletApp.h"
+#include "PortableModeTestHelper.h"
+#include "ProfileTestHelper.h"
+#include "ActionUnit.h"
+#include "Host.h"
+#include "HostDialogs.h"
+#include "HostManager.h"
+#include "MudletInstanceCoordinator.h"
+#include "TAction.h"
+#include "TCommandLine.h"
+#include "TConsole.h"
+#include "TConsoleModel.h"
+#include "TDetachedWindow.h"
+#include "TDockWidget.h"
+#include "TLabel.h"
+#include "TMainConsole.h"
+#include "TScrollBox.h"
+#include "TTabBar.h"
+#include "TToolBar.h"
+#include "TelnetServerStub.h"
+#include "dlgConnectionProfiles.h"
+#include "dlgIRC.h"
+#include "dlgMapper.h"
+#include "dlgNotepad.h"
+#include "dlgTriggerEditor.h"
+#include "mudlet.h"
+
+#include "GroupedTest.h"
+
+using namespace std::chrono_literals;
+
+class HostChildTeardownTest : public QObject
+{
+    Q_OBJECT
+
+private:
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
+    TelnetServerStub* mpServer = nullptr;
+    QString mPort;
+    const QString mLocalhost = qsl("localhost");
+
+    void deleteProfileDirectory(const QString& profileName)
+    {
+        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, profileName));
+        if (dir.exists()) {
+            dir.removeRecursively();
+        }
+    }
+
+    Host* startProfile(const QString& profileName)
+    {
+        deleteProfileDirectory(profileName);
+
+        const QString address = mLocalhost;
+        const QString port = mPort;
+        return TestProfile::create(profileName, address, port);
+    }
+
+    // A root action set to be a floating toolbar is what puts a TToolBar on the
+    // main window, once the unit is asked to regenerate its toolbars.
+    void createToolBarAction(Host* pHost, const QString& name)
+    {
+        auto* pAction = new TAction(name, pHost);
+        pAction->setCommandButtonUp(QString());
+        pAction->setCommandButtonDown(QString());
+        pAction->setIsPushDownButton(false);
+        pAction->setIsFolder(true);
+        pAction->mLocation = 4; // floating/dockable toolbar
+        pAction->mOrientation = 1;
+        pAction->setScript(QString());
+        pAction->setIsActive(true);
+        pAction->registerAction();
+    }
+
+    struct OpenWindows
+    {
+        QPointer<dlgTriggerEditor> editor;
+        QPointer<dlgNotepad> notePad;
+        QPointer<dlgIRC> dlgIrc;
+        // two of them, so that the loop in ~Host() is made to iterate
+        QList<QPointer<TToolBar>> toolBars;
+    };
+
+    OpenWindows openEveryChildWindow(Host* pHost)
+    {
+        OpenWindows windows;
+
+        windows.editor = HostDialogs::editor(pHost);
+
+        mudlet::self()->slot_notes();
+        windows.notePad = HostDialogs::of(pHost).mpNotePad;
+        if (windows.notePad) {
+            if (auto* note = qobject_cast<QPlainTextEdit*>(windows.notePad->tabWidget->widget(0))) {
+                note->setPlainText(csmNoteText);
+            }
+        }
+
+        // built directly rather than through openIrc(), which would connect to
+        // the network
+        pHost->mpDlgIRC = new dlgIRC(pHost);
+        pHost->mpDlgIRC->show();
+        windows.dlgIrc = pHost->mpDlgIRC;
+
+        createToolBarAction(pHost, qsl("HostChildTeardown toolbar"));
+        createToolBarAction(pHost, qsl("HostChildTeardown second toolbar"));
+        pHost->getActionUnit()->updateAllToolbars();
+        for (const auto& pToolBar : pHost->mainConsoleView()->actionToolBars()) {
+            windows.toolBars.append(pToolBar);
+        }
+        return windows;
+    }
+
+    static QStringList windowsLeftBehind(const OpenWindows& windows)
+    {
+        QStringList leftBehind;
+        if (windows.editor) {
+            leftBehind << qsl("the trigger editor");
+        }
+        if (windows.notePad) {
+            leftBehind << qsl("the notepad");
+        }
+        if (windows.dlgIrc) {
+            leftBehind << qsl("the IRC client");
+        }
+        for (const auto& pToolBar : windows.toolBars) {
+            if (pToolBar) {
+                leftBehind << qsl("a toolbar");
+            }
+        }
+        return leftBehind;
+    }
+
+    static bool everyWindowWasOpened(const OpenWindows& windows)
+    {
+        return windows.editor && windows.notePad && windows.dlgIrc && windows.toolBars.size() == 2 && windows.toolBars.at(0) && windows.toolBars.at(1);
+    }
+
+    static inline const QString csmNoteText = qsl("HostChildTeardown note text");
+
+    QString noteContentOnDisk(const QString& profileName) const
+    {
+        QFile file(MudletApp::getMudletPath(enums::profileDataItemPath, profileName, qsl("notes.json")));
+        if (!file.open(QIODevice::ReadOnly)) {
+            return QString();
+        }
+        const QJsonObject root = QJsonDocument::fromJson(file.readAll()).object();
+        const QJsonArray tabs = root.value(qsl("tabs")).toArray();
+        if (tabs.isEmpty()) {
+            return QString();
+        }
+        return tabs.at(0).toObject().value(qsl("content")).toString();
+    }
+
+    OpenWindows mWindowsLeftOpenAtTheEnd;
+    bool mLeftOpenProfileWasSetUp = false;
+    bool mLeftOpenConsoleOutlivedItsHost = false;
+    const QString mProfileLeftOpenAtTheEnd = qsl("HostChildTeardown-LeftOpen");
+
+private slots:
+    void initTestCase()
+    {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
+        // A config root of this process's own. Sharing the developer's
+        // ~/.config/mudlet means sharing a profile list, so a second copy of
+        // this test running at the same time is told the name it types is
+        // already in use and never gets an enabled Connect button. Since #9712
+        // the opt-in that makes setupConfig() adopt a directory is
+        // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
+
+        mpServer = new TelnetServerStub(qApp);
+        mpServer->start(mLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
+        // a stub that failed to bind only warns, and every test would then
+        // report the profile as slow to load instead
+        QVERIFY2(mpServer->serverPort() != 0, "The telnet stub did not start listening");
+        mPort = QString::number(mpServer->serverPort());
+        mudlet::start();
+        mudlet::self()->setupConfig();
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
+        mudlet::self()->init();
+        mudlet::self()->setStorePasswordsSecurely(false);
+    }
+
+    // A test that stops at a failed assertion leaves its Host in the pool, and
+    // getActiveHost() could then hand the next test the wrong one. The profile
+    // the last test leaves open on purpose is deliberately not named here.
+    void cleanup()
+    {
+        for (const QString& profileName : {qsl("HostChildTeardown-NoCloseChildren"),
+                                           qsl("HostChildTeardown-CloseChildren"),
+                                           qsl("HostChildTeardown-HiddenInputBox"),
+                                           qsl("HostChildTeardown-First"),
+                                           qsl("HostChildTeardown-Second"),
+                                           qsl("HostChildTeardown-ViewsFirst"),
+                                           qsl("HostChildTeardown-ViewsFirstStays")}) {
+            if (HostManager::self()->getHost(profileName)) {
+                HostManager::self()->deleteHost(profileName);
+            }
+            deleteProfileDirectory(profileName);
+        }
+    }
+
+    void cleanupTestCase()
+    {
+        delete mpServer;
+        mpServer = nullptr;
+
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
+        if (mudlet::self()) {
+            const QString leftOpenProfilePath = MudletApp::getMudletPath(enums::profileHomePath, mProfileLeftOpenAtTheEnd);
+
+            // The third ordering: a profile still loaded when the main window goes,
+            // so the Host is destroyed with no close of any kind asked for.
+            QVERIFY2(mLeftOpenProfileWasSetUp, "The profile this checks on was never opened, so the check below would pass on null pointers");
+            delete mudlet::self();
+            // Only the editor, the notepad and the IRC client carry weight here:
+            // the toolbars are children of the main window, so ~QWidget frees
+            // them either way.
+            const QStringList leftBehind = windowsLeftBehind(mWindowsLeftOpenAtTheEnd);
+            QVERIFY2(leftBehind.isEmpty(), qPrintable(qsl("Destroying the main window left %1 of the profile that was still loaded behind").arg(leftBehind.join(qsl(" and ")))));
+            QVERIFY2(!mLeftOpenConsoleOutlivedItsHost, "Destroying the main window took the Host of the profile still loaded before its main console");
+
+            QDir(leftOpenProfilePath).removeRecursively();
+        }
+        mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
+    }
+
+    // Its close path is refused once the Host is closing down
+    void test_closingTheProfileWithTheHiddenInputBoxOpenIsSafe()
+    {
+        const QString profileName = qsl("HostChildTeardown-HiddenInputBox");
+        Host* pHost = startProfile(profileName);
+        QVERIFY2(pHost, "Profile took too long to load");
+
+        pHost->setRemoteEchoingActive(true);
+        QVERIFY2(pHost->mainConsoleView()->passwordEntry(), "the box did not open");
+
+        pHost->forceClose();
+        QVERIFY2(pHost->requestClose(), "Closing the profile was refused");
+        const QPointer<Host> hostGuard(pHost);
+        pHost = nullptr;
+        HostManager::self()->deleteHost(profileName);
+        QVERIFY2(hostGuard.isNull(), "The Host outlived deleteHost(), so ~Host() never ran");
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+
+        deleteProfileDirectory(profileName);
+    }
+
+    // Nothing calls closeChildren(): the host pool simply lets go of the Host.
+    // Mudlet reaches this whenever the profile's main console has already gone,
+    // as Host::requestClose() then returns before it gets to closeChildren().
+    void test_destroyingTheHostTakesItsWindowsWithIt()
+    {
+        const QString profileName = qsl("HostChildTeardown-NoCloseChildren");
+        Host* pHost = startProfile(profileName);
+        QVERIFY2(pHost, "Profile took too long to load");
+
+        const OpenWindows windows = openEveryChildWindow(pHost);
+        QVERIFY2(everyWindowWasOpened(windows), "Not all of the profile's windows were opened");
+
+        // forceClose() stops TMainConsole::closeEvent() asking whether to save,
+        // which would block on a modal dialog here
+        pHost->forceClose();
+        pHost->mainConsoleView()->close();
+        QTRY_VERIFY2(!pHost->mainConsoleView(), "The main console did not go away"); // Qt 6 disposes of a WA_DeleteOnClose widget by deleteLater()
+        QVERIFY2(pHost->requestClose(), "Closing the profile was refused");
+        QVERIFY2(HostDialogs::of(pHost).mpNotePad, "requestClose() reached closeChildren() after all - this no longer tests a Host that skips it");
+
+        const QPointer<Host> hostGuard(pHost);
+        pHost = nullptr;
+        HostManager::self()->deleteHost(profileName);
+        QVERIFY2(hostGuard.isNull(), "The Host outlived deleteHost(), so ~Host() never ran");
+
+        const QStringList leftBehind = windowsLeftBehind(windows);
+        QVERIFY2(leftBehind.isEmpty(), qPrintable(qsl("Destroying the Host left %1 behind").arg(leftBehind.join(qsl(" and ")))));
+        // only reaches the disk if ~Host() closed the notepad rather than just
+        // deleting it
+        QCOMPARE(noteContentOnDisk(profileName), csmNoteText);
+
+        deleteProfileDirectory(profileName);
+    }
+
+    // log() holds the latest line back until another arrives, and appendLog() text waits behind it
+    void test_appendLogTextFromTheExitEventReachesTheLog()
+    {
+        const QString profileName = qsl("HostChildTeardown-ExitEventLog");
+        Host* pHost = startProfile(profileName);
+        QVERIFY2(pHost, "Profile took too long to load");
+        auto cleanUp = qScopeGuard([&]() {
+            if (HostManager::self()->getHost(profileName)) {
+                HostManager::self()->deleteHost(profileName);
+            }
+            deleteProfileDirectory(profileName);
+        });
+
+        QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("startLogging(true)")));
+        const QString logFileName = pHost->mainConsoleModel().mLogFileName;
+        QVERIFY2(pHost->mainConsoleModel().mLogToLogFile && !logFileName.isEmpty(), "Logging did not start");
+        QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("registerAnonymousEventHandler('sysExitEvent', function() appendLog('teardown-exit-event-text\\n') end)")));
+
+        pHost->forceClose();
+        QVERIFY2(pHost->requestClose(), "Closing the profile was refused");
+        const QPointer<Host> hostGuard(pHost);
+        pHost = nullptr;
+        HostManager::self()->deleteHost(profileName);
+        QVERIFY2(hostGuard.isNull(), "The Host outlived deleteHost(), so ~Host() never ran");
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+
+        QFile logFile(logFileName);
+        QVERIFY2(logFile.open(QIODevice::ReadOnly | QIODevice::Text), "The log file is not readable");
+        const QString contents = QString::fromUtf8(logFile.readAll());
+        QVERIFY2(contents.contains(qsl("teardown-exit-event-text\n")), qPrintable(qsl("The text sysExitEvent appended never reached the log:\n%1").arg(contents)));
+    }
+
+    // closeChildren() disposes of these windows through deleteLater(), and
+    // mudlet::closeEvent() destroys the Host in the same call stack, so ~Host()
+    // meets windows whose deferred delete has not run yet.
+    void test_closeChildrenFollowedByDestructionIsSafe()
+    {
+        const QString profileName = qsl("HostChildTeardown-CloseChildren");
+        Host* pHost = startProfile(profileName);
+        QVERIFY2(pHost, "Profile took too long to load");
+
+        const OpenWindows windows = openEveryChildWindow(pHost);
+        QVERIFY2(everyWindowWasOpened(windows), "Not all of the profile's windows were opened");
+
+        pHost->forceClose();
+        QVERIFY2(pHost->requestClose(), "Closing the profile was refused");
+        QVERIFY2(windows.notePad, "The notepad was disposed of before this could test what happens when it has not been");
+        // deliberately no event loop turn before this: mudlet::closeEvent() does
+        // not give one either, which is what leaves the deferred deletes pending
+        const QPointer<Host> hostGuard(pHost);
+        pHost = nullptr;
+        HostManager::self()->deleteHost(profileName);
+        QVERIFY2(hostGuard.isNull(), "The Host outlived deleteHost(), so ~Host() never ran");
+
+        // checked before the event loop gets a turn, so that the deletes
+        // closeChildren() deferred cannot be what satisfies it
+        for (const auto& pToolBar : windows.toolBars) {
+            QVERIFY2(pToolBar.isNull(), "Destroying the Host did not delete a toolbar closeChildren() had only queued");
+        }
+
+        // letting what closeChildren() deferred run is where a second delete of
+        // anything ~Host() already took would land
+        QTRY_VERIFY2(windowsLeftBehind(windows).isEmpty(), "Closing and then destroying the Host left one of its windows behind");
+        deleteProfileDirectory(profileName);
+    }
+
+    void test_closingTheProfileTakesItsViewsBeforeTheHost_data()
+    {
+        QTest::addColumn<bool>("detached");
+        QTest::addColumn<bool>("fromLua");
+        QTest::newRow("its tab closed") << false << false;
+        QTest::newRow("closeProfile()") << false << true;
+        QTest::newRow("detached, its window closed") << true << false;
+    }
+
+    // The windows a script makes hold their Host and reach into it as they go, so they have to go before it does
+    void test_closingTheProfileTakesItsViewsBeforeTheHost()
+    {
+        QFETCH(bool, detached);
+        QFETCH(bool, fromLua);
+        const QString profileName = qsl("HostChildTeardown-ViewsFirst");
+        Host* pHost = startProfile(profileName);
+        QVERIFY2(pHost, "Profile took too long to load");
+        // The map dock a detach takes along is the main window's own, so that one there, the console's otherwise
+        if (detached) {
+            mudlet::self()->slot_showMapperDialog();
+        } else {
+            QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("openMapWidget()")));
+        }
+        // A tab only detaches while another is left behind in the main window. The connection dialog does
+        // not come back for a second profile, so it is loaded the way a script loads one.
+        if (detached) {
+            const QString otherName = qsl("HostChildTeardown-ViewsFirstStays");
+            deleteProfileDirectory(otherName);
+            QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, otherName)));
+            QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("loadProfile('%1', true)").arg(otherName)));
+            QTRY_VERIFY2(HostManager::self()->getHost(otherName), "The other profile did not load");
+        }
+        QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(
+                qsl("openUserWindow('vfWindow', false, false, 'f'); createLabel('vfLabel', 0, 0, 50, 50, 1); createMiniConsole('vfMini', 0, 0, 50, 50); createBuffer('vfBuffer'); "
+                    "createCommandLine('vfCommandLine', 0, 0, 50, 20); createScrollBox('vfScrollBox', 0, 0, 100, 100); createLabel('vfScrollBox', 'vfScrollBoxLabel', 0, 0, 20, 20, 1)")));
+        createToolBarAction(pHost, qsl("HostChildTeardown views-first toolbar"));
+        pHost->getActionUnit()->updateAllToolbars();
+        QVERIFY2(!mudlet::smpDebugArea, "Another profile's Central Debug Console is still open");
+        mudlet::self()->attachDebugArea(profileName);
+
+        struct Views
+        {
+            QPointer<QWidget> console;
+            QPointer<QWidget> userWindow;
+            QPointer<QWidget> label;
+            QPointer<QWidget> miniConsole;
+            QPointer<QWidget> buffer;
+            QPointer<QWidget> commandLine;
+            QPointer<QWidget> scrollBox;
+            QPointer<QWidget> scrollBoxLabel;
+            QPointer<QWidget> toolBar;
+            QPointer<QWidget> mapDock;
+            QPointer<QWidget> debugConsole;
+        };
+        Views views;
+        TMainConsole* pConsole = pHost->mainConsoleView();
+        views.console = pConsole;
+        views.userWindow = pConsole->dockWidget(qsl("vfWindow"));
+        views.label = pConsole->labelWidget(qsl("vfLabel"));
+        views.miniConsole = pConsole->subConsoleWidget(qsl("vfMini"));
+        views.buffer = pConsole->subConsoleWidget(qsl("vfBuffer"));
+        views.commandLine = pConsole->subCommandLineWidget(qsl("vfCommandLine"));
+        views.scrollBox = pConsole->mScrollBoxMap.value(qsl("vfScrollBox"));
+        views.scrollBoxLabel = pConsole->labelWidget(qsl("vfScrollBoxLabel"));
+        if (!pConsole->actionToolBars().empty()) {
+            views.toolBar = pConsole->actionToolBars().front().data();
+        }
+        for (auto* pDock : mudlet::self()->findChildren<QDockWidget*>()) {
+            if (auto* pMapper = qobject_cast<dlgMapper*>(pDock->widget()); pMapper && pMapper->getHost() == pHost) {
+                views.mapDock = pDock;
+            }
+        }
+        if (mudlet::smpDebugConsole && mudlet::smpDebugConsole->getHost() == pHost) {
+            views.debugConsole = mudlet::smpDebugConsole.data();
+        }
+        QVERIFY2(views.userWindow && views.label && views.miniConsole && views.buffer && views.commandLine && views.scrollBox && views.scrollBoxLabel && views.toolBar && views.mapDock
+                         && views.debugConsole,
+                 "The script did not make every window");
+
+        if (detached) {
+            mudlet::self()->slot_tabDetachRequested(mudlet::self()->mpTabBar->tabIndex(profileName), QPoint(200, 200));
+            QTRY_VERIFY2(mudlet::self()->getDetachedWindows().value(profileName), "The profile's tab did not detach");
+            QWidget* pDetachedWindow = mudlet::self()->getDetachedWindows().value(profileName);
+            QVERIFY2(views.mapDock->parentWidget() == pDetachedWindow, "The map dock did not move to the detached window");
+        }
+
+        QStringList aliveWithTheHostGone;
+        connect(pHost, &QObject::destroyed, this, [&views, &aliveWithTheHostGone]() {
+            for (const auto& [name, pView] : {std::pair{"the main console", views.console},
+                                              std::pair{"the user window", views.userWindow},
+                                              std::pair{"the label", views.label},
+                                              std::pair{"the mini console", views.miniConsole},
+                                              std::pair{"the buffer", views.buffer},
+                                              std::pair{"the command line", views.commandLine},
+                                              std::pair{"the scroll box", views.scrollBox},
+                                              std::pair{"the label in the scroll box", views.scrollBoxLabel},
+                                              std::pair{"the toolbar", views.toolBar},
+                                              std::pair{"the map dock", views.mapDock},
+                                              std::pair{"the Central Debug Console", views.debugConsole}}) {
+                if (pView) {
+                    aliveWithTheHostGone.append(QString::fromLatin1(name));
+                }
+            }
+        });
+
+        const QPointer<Host> hostGuard(pHost);
+        pHost->forceClose();
+        if (fromLua) {
+            QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("closeProfile()")));
+        } else {
+            mudlet::self()->slot_closeProfileByName(profileName);
+        }
+        pHost = nullptr;
+        QTRY_VERIFY2(hostGuard.isNull(), "The profile did not close");
+        QVERIFY2(aliveWithTheHostGone.isEmpty(), qPrintable(qsl("The Host went before %1").arg(aliveWithTheHostGone.join(qsl(", ")))));
+        deleteProfileDirectory(profileName);
+    }
+
+    void test_aToolBarItsActionNoLongerWantsGoesWithTheProfile()
+    {
+        const QString profileName = qsl("HostChildTeardown-ViewsFirst");
+        Host* pHost = startProfile(profileName);
+        QVERIFY2(pHost, "Profile took too long to load");
+        createToolBarAction(pHost, qsl("HostChildTeardown unwanted toolbar"));
+        pHost->getActionUnit()->updateAllToolbars();
+        TMainConsole* pConsole = pHost->mainConsoleView();
+        QVERIFY2(!pConsole->actionToolBars().empty(), "The action made no toolbar");
+        const QPointer<TToolBar> toolBar = pConsole->actionToolBars().front().data();
+        // Made a button bar instead, which leaves the toolbar to a deleteLater()
+        TAction* pAction = toolBar->mpTAction;
+        pAction->mLocation = 1;
+        pHost->getActionUnit()->updateAllToolbars();
+        QVERIFY2(toolBar, "The toolbar went at once, so nothing is left for the profile to take");
+
+        pHost->forceClose();
+        HostManager::self()->deleteHost(profileName);
+
+        QVERIFY2(!toolBar, "The toolbar outlived its Host");
+        deleteProfileDirectory(profileName);
+    }
+
+    // A second profile gets an editor of its own rather than the first one's,
+    // and opening one profile's notepad, or closing one profile, leaves the
+    // other's dialogs as they were.
+    void test_eachProfileKeepsItsOwnDialogs()
+    {
+        const QString firstName = qsl("HostChildTeardown-First");
+        const QString secondName = qsl("HostChildTeardown-Second");
+        // Closed properly even when an assertion stops the test early: dropping
+        // a Host whose console is still up leaves that console to crash later
+        auto closeBoth = qScopeGuard([&]() {
+            for (const QString& name : {firstName, secondName}) {
+                if (Host* pHost = HostManager::self()->getHost(name)) {
+                    pHost->forceClose();
+                    pHost->requestClose();
+                    HostManager::self()->deleteHost(name);
+                }
+            }
+        });
+
+        Host* pFirst = startProfile(firstName);
+        QVERIFY2(pFirst, "The first profile took too long to load");
+        // The connection dialog does not come back for a second profile, so it
+        // is loaded the way a script loads one
+        deleteProfileDirectory(secondName);
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, secondName)));
+        QVERIFY(pFirst->getLuaInterpreter()->compileAndExecuteScript(qsl("loadProfile('%1', true)").arg(secondName)));
+        QTRY_VERIFY2(HostManager::self()->getHost(secondName), "The second profile did not load");
+        Host* pSecond = HostManager::self()->getHost(secondName);
+
+        const QPointer<dlgTriggerEditor> firstEditor = HostDialogs::editor(pFirst);
+        const QPointer<dlgTriggerEditor> secondEditor = HostDialogs::editor(pSecond);
+        QVERIFY2(firstEditor && secondEditor, "A profile built no editor");
+        QVERIFY2(firstEditor != secondEditor, "Both profiles hold the same editor");
+
+        Host* pActive = mudlet::self()->getActiveHost();
+        QVERIFY(pActive == pFirst || pActive == pSecond);
+        Host* pOther = pActive == pFirst ? pSecond : pFirst;
+        mudlet::self()->slot_notes();
+        QVERIFY2(HostDialogs::of(pActive).mpNotePad, "The notepad did not open for the active profile");
+        QVERIFY2(!HostDialogs::of(pOther).mpNotePad, "Opening one profile's notepad gave the other profile one too");
+
+        pFirst->forceClose();
+        QVERIFY2(pFirst->requestClose(), "Closing the first profile was refused");
+        pFirst = nullptr;
+        HostManager::self()->deleteHost(firstName);
+        QTRY_VERIFY2(firstEditor.isNull(), "Closing the first profile left its editor behind");
+        QVERIFY2(secondEditor, "Closing the first profile took the second profile's editor with it");
+        QCOMPARE(HostDialogs::of(pSecond).mpEditorDialog.data(), secondEditor.data());
+    }
+
+    // ~QWidget destroys a mini console's command line after ~TConsole, and the main console's
+    // destroyed() handler for it looks consoles up by name: the mini console must be gone by then.
+    void test_aMiniConsoleDyingWithItsScrollBoxIsUnlistedBeforeItsCommandLineGoes()
+    {
+        const QString profileName = qsl("HostChildTeardown-ScrollBoxMiniConsole");
+        Host* pHost = startProfile(profileName);
+        QVERIFY2(pHost, "Profile took too long to load");
+        QMetaObject::Connection commandLineGoing;
+        auto cleanUp = qScopeGuard([&]() {
+            // A failed check leaves the command line for deleteHost(), past what its handler reaches
+            disconnect(commandLineGoing);
+            if (HostManager::self()->getHost(profileName)) {
+                pHost->forceClose();
+                pHost->requestClose();
+                HostManager::self()->deleteHost(profileName);
+            }
+            deleteProfileDirectory(profileName);
+        });
+
+        const QString consoleName = qsl("teardownMini");
+        QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("createMiniConsole('%1', 0, 0, 100, 100); createScrollBox('teardownBox', 0, 0, 200, 100); "
+                                                                        "setWindow('teardownBox', '%1'); enableCommandLine('%1')")
+                                                                            .arg(consoleName)));
+        TMainConsole* pMainConsole = pHost->mainConsoleView();
+        const QPointer<TConsole> pMini = pMainConsole->subConsoleWidget(consoleName);
+        QVERIFY2(pMini, "The mini console was not created");
+        auto* pCommandLine = pMini->findChild<TCommandLine*>();
+        QVERIFY2(pCommandLine, "enableCommandLine() gave the mini console no command line");
+
+        bool listedAsItsCommandLineWent = false;
+        commandLineGoing = connect(pCommandLine, &QObject::destroyed, this, [&]() {
+            listedAsItsCommandLineWent = pMainConsole->subConsoleWidget(consoleName) != nullptr;
+        });
+        QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("deleteScrollBox('teardownBox')")));
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+
+        QVERIFY2(pMini.isNull(), "Deleting the scroll box did not take the mini console with it");
+        QVERIFY2(!listedAsItsCommandLineWent, "The main console still listed the mini console while its command line was destroyed");
+    }
+
+    // cleanupTestCase() is what destroys the main window on top of it.
+    void test_leaveAProfileOpenForTheMainWindowToTakeDown()
+    {
+        Host* pHost = startProfile(mProfileLeftOpenAtTheEnd);
+        QVERIFY2(pHost, "Profile took too long to load");
+
+        mWindowsLeftOpenAtTheEnd = openEveryChildWindow(pHost);
+        QVERIFY2(everyWindowWasOpened(mWindowsLeftOpenAtTheEnd), "Not all of the profile's windows were opened");
+        connect(pHost, &QObject::destroyed, this, [this, pConsole = QPointer<TMainConsole>(pHost->mainConsoleView())]() {
+            mLeftOpenConsoleOutlivedItsHost = !pConsole.isNull();
+        });
+        mLeftOpenProfileWasSetUp = true;
+    }
+};
+
+#include "HostChildTeardownTest.moc"
+MUDLET_GROUPED_TEST_MAIN(HostChildTeardownTest)

@@ -35,15 +35,19 @@ if false then
   channel102 = {}
 
 
-  --- Clears the user window or a mini console with the name given as argument.
+  --- Closes (hides) the user window or a mini console with the name given as argument.
   ---
-  --- @param windowName optional
+  --- @param windowName name of the user window or mini console
+  --- @return true, or nil and an error message for a window that does not exist or is not a user window or mini console
   function closeUserWindow(windowName)
   end
 
 
-  --- The <i>command variable</i> holds initial user command e.g. unchanged by any aliases or triggers.
-  --- This is typically used in alias scripts.
+  --- The <i>command variable</i> holds the command that went through the aliases. This is typically used in alias
+  --- scripts, where it holds the command that ran the alias - or the last one the alias's Command field expanded - and
+  --- an expandAlias() call the script makes does not change it. Anywhere else it holds the last command that went
+  --- through the aliases, including one sent by expandAlias(), or, in a script that an alias sets off after an
+  --- expandAlias() call of its own, the alias's command - see expandAlias().
   ---
   --- @see line
   ---
@@ -82,8 +86,11 @@ if false then
 
 
 
-  --- <b><u>TODO</u></b>  cut - TLuaInterpreter::cut
-  function cut()
+  --- Cuts the current selection to the clipboard, removing it from the window.
+  ---
+  --- @param windowName optional name of the window to cut from, the main console if not given
+  --- @return true, or nil and an error message for a window that does not exist
+  function cut(windowName)
   end
 
 
@@ -243,15 +250,33 @@ if false then
   --- to use send( ) inside an alias script to prevent recursion. This will send the data directly and bypass
   --- the alias expansion.
   ---
+  --- Note: expandAlias() leaves the captures of the script that called it alone. The aliases it runs are given the
+  --- expanded command in "command" and their own captures in "matches", and once the call returns the calling script has
+  --- back the "matches" and "multimatches" it had before it - so a capture read after an expandAlias() call is still the
+  --- caller's own. An alias script also gets back the "command" it held from each expandAlias() call it makes while it
+  --- runs. Called from any other script - a trigger, timer, key binding, button or event handler, even one an alias set
+  --- off with raiseEvent() or feedTriggers() - "command" holds the last command expanded, so an alias that sets off such
+  --- a script reads what that script expanded, while such a script reads the alias's own command if the alias has already
+  --- had it back from an expandAlias() call of its own. Once the alias pass is over, "command" holds the last command
+  --- expanded, unless a script has since set it to a different value. A command sent at the command line is still given
+  --- to each alias it runs in "command", unless an earlier one of those aliases has set another command since, or its
+  --- Command field or a script other than an alias that it set off has expanded or set one.
+  ---
+  --- @param command text to process as if it was typed at the command line
+  --- @param echo optional boolean: false keeps the command from being shown; leaving it out or passing nil shows it.
+  ---   It only has an effect while "Show sent commands" is "Script controlled" (the default): "Always" and "Never"
+  ---   override it, as does a game that has taken over the echo (for a password, for instance)
+  ---
   --- @see send
-  function expandAlias(command, print=1)
+  function expandAlias(command, echo)
   end
 
 
 
   --- This function will have Mudlet parse the given text as if it came from the MUD - one great application
   --- is trigger testing. You can use \n to represent a new line. The function also accept ANSI color codes that
-  --- are used in MUDs. A sample table can be found here.
+  --- are used in MUDs. A sample table can be found here. Carriage returns are dropped, as they are from a game, so
+  --- "\r\n" ends a line once; only one that ends the text stays, and commits the line so far.
   ---
   --- @usage Usage of new line characters.
   ---   <pre>
@@ -349,6 +374,10 @@ if false then
 
 
   --- Returns a Lua table with the content of the lines on a per line basis. Absolute line numbers are used.
+  --- Reads from from_line_number up to, but not including, to_line_number. Lines outside the buffer are left out,
+  --- so t[1] is the first requested line that exists: getLines(-5, 2) returns lines 0 and 1 as t[1] and t[2], and a
+  --- range wholly outside the buffer returns an empty table. A reversed range reads downward the same way:
+  --- getLines(3, 1) returns lines 3 and 2 as t[1] and t[2].
   ---
   --- @return section of the content of the screen text buffer. The form of the return value is: Lua_table[relative_linenumber, content]
   function getLines(from_line_number, to_line_number)
@@ -436,8 +465,15 @@ if false then
 
 
 
-  --- <b><u>TODO</u></b>  insertHTML - TLuaInterpreter::insertHTML
-  function insertHTML()
+  --- Inserts text at the cursor position of the main console, like insertText() without a window name.
+  --- The markup is inserted verbatim: HTML is not interpreted. Unlike insertText() it takes no window
+  --- name (a first argument such as "myMiniConsole" is inserted into the main console as text and any
+  --- further arguments are ignored) and it returns nothing.
+  ---
+  --- @param text the text to insert
+  ---
+  --- @see insertText
+  function insertHTML(text)
   end
 
 
@@ -594,16 +630,22 @@ if false then
 
 
   --- <b><u>TODO</u></b>  loadRawFile - TLuaInterpreter::loadRawFile
-  --- in TLuaInterpreter, loadRawFile is established as an alias to
-  --- loadReplay. We override the old name to do nothing instead.
+  --- loads a replay file exactly as loadReplay does, through the same
+  --- TLuaInterpreter::loadReplayFile, but reports errors as loadRawFile.
   function loadRawFile()
   end
 
 
 
-  --- The <i>matches table</i> contains captured group. This available only within trigger context.
+  --- The <i>matches table</i> contains captured group. This available only within trigger and alias context.
   --- First item of matches table (matches[1]) holds current line, all other contains capture groups
   --- defined by regular expression trigger.
+  ---
+  --- A capture group that took no part in the match holds "" when a later group did match, but is left out
+  --- (nil, and #matches is shorter) when no later group matched, so an optional trailing group can be tested
+  --- with <code>if matches[n] then</code>. A named group that took no part is nil under its name.
+  --- This holds for a single match only: aliases and match-all triggers append each further match's groups
+  --- to the same list, so a later match can fill the index an unset trailing group left out.
   ---
   --- @usage Let say that you defined following trigger to detect and get dropped items.
   ---   <pre>
@@ -1020,7 +1062,9 @@ if false then
   ---   </pre>
   ---
   --- @param echoTheValue optional boolean flag (default value is true) which determine if value should
-  ---   be echoed back on client.
+  ---   be echoed back on client. It only has an effect while "Show sent commands" is "Script controlled" (the
+  ---   default): "Always" and "Never" override it, as does a game that has taken over the echo (for a password,
+  ---   for instance)
   ---
   --- @see expandAlias
   --- @see sendAll
@@ -1173,6 +1217,79 @@ if false then
 
 
 
+  --- Names the kind of ground an environment is, for the 3D map styles that draw terrain: diorama builds the
+  --- environment's rooms as it, and terminal and ink wash mark them by it. Without one, the kind is guessed from
+  --- the environment's color: blue is water, green forest, grey, brown and tan road, and any other color a
+  --- building. The kits are saved with the map.
+  ---
+  --- @param environmentID the environment, as setRoomEnv() takes it
+  --- @param kitName one of "plain", "water", "road", "forest" or "building"; nil or "" goes back to guessing
+  --- @return true, or nil and an error message for a kit name it does not know, or when the kits saved in the
+  ---   map user data "system.mapStyle.environmentKits" are not a JSON object, which it leaves alone
+  ---
+  --- @usage Show the lava environment as water, and forget that the swamp environment was named
+  ---   <pre>
+  ---   setMapEnvironmentKit(301, "water")
+  ---   setMapEnvironmentKit(302, nil)
+  ---   </pre>
+  ---
+  --- @see getMapEnvironmentKit, getMapEnvironmentKits
+  function setMapEnvironmentKit(environmentID, kitName)
+  end
+
+
+
+  --- The kind of ground an environment is, for use by 3D map styles that draw terrain.
+  ---
+  --- @param environmentID the environment, as setRoomEnv() takes it
+  --- @return the kit's name, and true when setMapEnvironmentKit() named it or false when it is guessed
+  ---   from the environment's color
+  ---
+  --- @see setMapEnvironmentKit, getMapEnvironmentKits
+  function getMapEnvironmentKit(environmentID)
+  end
+
+
+
+  --- The kits setMapEnvironmentKit() has named, leaving out those guessed from environments' colors and any saved
+  --- entry that cannot be read.
+  ---
+  --- @return a table of kit names keyed by environment ID
+  ---
+  --- @see setMapEnvironmentKit, getMapEnvironmentKit
+  function getMapEnvironmentKits()
+  end
+
+
+
+  --- An environment's color before the map style recolors its rooms (the default style and most others do), where
+  --- getCustomEnvColorTable() lists the colors setCustomEnvColor() was given. A remap in the map file (as IRE games'
+  --- XML maps have) comes first and sends the environment to another. An environment from 1 to 16 that the map
+  --- knows, by a remap onto it or by setCustomEnvColor(), is in the profile's mapper ANSI color, whatever
+  --- setCustomEnvColor() gave it. Any other environment setCustomEnvColor() gave a color is in that color, at any ID,
+  --- 17 to 255 and 0 or below included. One from 17 to 255 the map knows only by a remap is in the 256-color palette.
+  --- Any other is red.
+  ---
+  --- @param environmentID the environment, as setRoomEnv() takes it
+  --- @return red, green, blue and alpha, each 0 to 255, then true when the map gives the environment a color
+  ---   or false when the red is the mapper's fallback
+  ---
+  --- @usage Echo the color of the room the player is in
+  ---   <pre>
+  ---   local room = getPlayerRoom()
+  ---   local environment = room and getRoomEnv(room)
+  ---   if environment then
+  ---     local r, g, b = getMapEnvColor(environment)
+  ---     echo(string.format("#%02x%02x%02x\n", r, g, b))
+  ---   end
+  ---   </pre>
+  ---
+  --- @see setCustomEnvColor, getCustomEnvColorTable
+  function getMapEnvColor(environmentID)
+  end
+
+
+
   --- Wrap line lineNumber of mini console (window) windowName. This function will interpret \n characters,
   --- apply word wrap and display the new lines on the screen. This function may be necessary if you use
   --- deleteLine() and thus erase the entire current line in the buffer, but you want to do some further
@@ -1188,6 +1305,9 @@ if false then
   --- This will effectively have the same result as a call to deleteLine() but the buffer line will not
   --- be entirely removed. Consequently, further calls to echo() etc. sort of functions are possible
   --- without using wrapLine() unnecessarily.
+  ---
+  --- Returns true, or nil and a message when the window does not exist or the line is below 0 or
+  --- more than one past the window's last line.
   function wrapLine()
   end
 

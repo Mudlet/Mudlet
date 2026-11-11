@@ -57,6 +57,9 @@
 #include <chrono>
 #include <zip.h>
 
+#include "MudletApp.h"
+#include "PortableModeTestHelper.h"
+#include "ProfileTestHelper.h"
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
@@ -64,14 +67,9 @@
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
-using namespace std::chrono_literals;
+#include "GroupedTest.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForModuleSaveTeardownTest();
+using namespace std::chrono_literals;
 
 class ModuleSaveTeardownTest : public QObject
 {
@@ -97,7 +95,7 @@ private:
 
     static void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(mudlet::getMudletPath(enums::profileHomePath, profileName));
+        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, profileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
@@ -162,7 +160,7 @@ private:
         return contents;
     }
 
-    QString moduleXmlPath() const { return mudlet::getMudletPath(enums::profilePackagePathFileName, mProfileName, mModuleName); }
+    QString moduleXmlPath() const { return MudletApp::getMudletPath(enums::profilePackagePathFileName, mProfileName, mModuleName); }
 
     static QByteArray readFile(const QString& path)
     {
@@ -194,14 +192,14 @@ private:
         return written;
     }
 
-    QStringList moduleBackupFiles() const { return QDir(mudlet::getMudletPath(enums::moduleBackupsPath)).entryList(QStringList{qsl("%1*").arg(mModuleName)}, QDir::Files); }
+    QStringList moduleBackupFiles() const { return QDir(MudletApp::getMudletPath(enums::moduleBackupsPath)).entryList(QStringList{qsl("%1*").arg(mModuleName)}, QDir::Files); }
 
     // A backup is named after the second it was taken in, and QFile::copy() will not
     // overwrite, so counting backups across two saves in the same second proves
     // nothing. Clearing them first makes "was one taken?" a plain yes or no.
     void clearModuleBackups() const
     {
-        QDir backups(mudlet::getMudletPath(enums::moduleBackupsPath));
+        QDir backups(MudletApp::getMudletPath(enums::moduleBackupsPath));
         for (const auto& backup : moduleBackupFiles()) {
             backups.remove(backup);
         }
@@ -335,30 +333,7 @@ private:
     // Utility function to manually start a profile like a user would do via the GUI
     void startProfile(const QString& profileName, const QString& address, const QString& port)
     {
-        QTimer::singleShot(0ms, qApp, [profileName, address, port]() {
-            mudlet::self()->startAutoLogin({});
-            QTest::qWait(100ms);
-            QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), profileName);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), address);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), port);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
-        });
-
-        QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!spy.wait(5000)) {
-            QFAIL("Profile took too long to load.");
-        }
-
-        mpHost = mudlet::self()->getActiveHost();
+        mpHost = TestProfile::create(profileName, address, port);
         if (!mpHost) {
             QFAIL("No active host available for the test.");
         }
@@ -367,7 +342,9 @@ private:
 private slots:
     void initTestCase()
     {
-        initializeQRCResourcesForModuleSaveTeardownTest();
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
 
         // Keep the test hermetic: point the config dir resolution at a temporary
         // directory instead of the user's real profiles.
@@ -390,7 +367,7 @@ private slots:
         QVERIFY2(mpHost, "No active host after profile creation");
         QVERIFY2(installSyncedModule(), "The fixture module could not be installed");
         // installing a module owes the profile a save; let it come and go
-        QTRY_VERIFY_WITH_TIMEOUT(!mpHost->hasPendingProfileSave(), 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(!mpHost->hasPendingProfileSave(), 5s);
         mpHost->waitForProfileSave();
     }
 
@@ -399,8 +376,11 @@ private slots:
         mpHost = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory(mProfileName);
-        delete mudlet::self();
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
+        if (mudlet::self()) {
+            deleteProfileDirectory(mProfileName);
+            delete mudlet::self();
+        }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }
 
@@ -481,7 +461,7 @@ private slots:
         QVERIFY2(!moduleWasWrittenOut(readFile(moduleXmlPath())), "Closing the profile waited for the module write - this test needs a close that does not");
 
         mpHost = nullptr;
-        mudlet::self()->getHostManager().deleteHost(mProfileName);
+        HostManager::self()->deleteHost(mProfileName);
 
         // Now let the write run against a profile that is gone. Before the fix this
         // kills the run under AddressSanitizer, reaching through the destroyed Host
@@ -504,20 +484,5 @@ private slots:
     }
 };
 
-void initializeQRCResourcesForModuleSaveTeardownTest()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "ModuleSaveTeardownTest.moc"
-QTEST_MAIN(ModuleSaveTeardownTest)
+MUDLET_GROUPED_TEST_MAIN(ModuleSaveTeardownTest)

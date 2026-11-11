@@ -40,6 +40,10 @@
  * Run with: ctest -R cTelnetBufferTest -V
  */
 
+#include <QDataStream>
+#include <QFile>
+#include <QFileInfo>
+#include <QTemporaryDir>
 #include <QtTest/QtTest>
 
 #include <QScopeGuard>
@@ -48,6 +52,13 @@
 #include <cstring>
 #include <memory>
 
+#if defined(Q_OS_LINUX)
+#include <sys/resource.h>
+#endif
+
+#include "MudletApp.h"
+#include "PortableModeTestHelper.h"
+#include "ProfileTestHelper.h"
 #include "MudletInstanceCoordinator.h"
 #include "TMainConsole.h"
 #include "TelnetServerStub.h"
@@ -55,21 +66,27 @@
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
+#include "GroupedTest.h"
+
 using namespace std::chrono_literals;
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForBufferTest();
+// The chunk buffer the replay path reads and the count of bytes in it.
+// cTelnet::loadReplayChunk() fills both before its timer calls
+// slot_processReplayChunk(); they are file-scope globals in ctelnet.cpp rather
+// than members, so a test can stage a chunk in them without a replay file.
+extern char loadBuffer[];
+extern int loadedBytes;
 
 class cTelnetBufferTest : public QObject
 {
     Q_OBJECT
 
 private:
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
+    // The first GA a test feeds switches the profile to GA-driven posting, which later tests must not inherit
+    bool mSavedGaDriver = false;
     Host* mpHost = nullptr;
     const QString mHostname = qsl("BufferTest-Host");
     QString mPort; // assigned the stub's actual ephemeral port in initTestCase()
@@ -79,11 +96,14 @@ private:
     // the one immediately after it that it must leave alone.
     static constexpr char scmTerminatorSlot = '\x7b';
     static constexpr char scmPastTheEnd = '\x7c';
+    // Ordinary text as far as the replay state machine is concerned, so a run
+    // that overran its chunk would append it rather than stop at it.
+    static constexpr char scmReplayCanary = '\x7d';
 
     // True if any line in the main console buffer contains the given substring
     bool bufferContains(const QString& text) const
     {
-        TMainConsole* console = mpHost->mpConsole;
+        TMainConsole* console = mpHost->mainConsoleView();
         for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {
             if (console->buffer.line(i).contains(text)) {
                 return true;
@@ -92,52 +112,189 @@ private:
         return false;
     }
 
+#if defined(Q_OS_LINUX)
+    // Bytes between the top of the main thread's stack mapping and this frame,
+    // which is the distance the kernel holds against RLIMIT_STACK when the
+    // stack grows. The frame address rather than a local's: under
+    // AddressSanitizer a local can live on the fake stack, off in the heap.
+    static qint64 mainThreadStackInUse()
+    {
+        QFile maps(qsl("/proc/self/maps"));
+        if (!maps.open(QIODevice::ReadOnly)) {
+            return -1;
+        }
+        const auto here = reinterpret_cast<quintptr>(__builtin_frame_address(0));
+        for (const QByteArray& line : maps.readAll().split('\n')) {
+            if (!line.endsWith("[stack]")) {
+                continue;
+            }
+            const QByteArray range = line.left(line.indexOf(' '));
+            const quintptr top = range.mid(range.indexOf('-') + 1).toULongLong(nullptr, 16);
+            return static_cast<qint64>(top - here);
+        }
+        return -1;
+    }
+#endif
+
+    // The lines of the main console that carry the given text, so that a
+    // string which ought to have arrived whole shows up as one entry and a
+    // string that got split shows up as several.
+    QStringList linesContaining(const QString& text) const
+    {
+        QStringList lines;
+        TMainConsole* console = mpHost->mainConsoleView();
+        for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {
+            if (console->buffer.line(i).contains(text)) {
+                lines << console->buffer.line(i);
+            }
+        }
+        return lines;
+    }
+
+    // The main console's lines from the first one carrying the given text to
+    // the end, so a blank line slipped in after it shows up as an empty entry.
+    QStringList linesFrom(const QString& text) const
+    {
+        QStringList lines;
+        TMainConsole* console = mpHost->mainConsoleView();
+        for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {
+            if (!lines.isEmpty() || console->buffer.line(i).contains(text)) {
+                lines << console->buffer.line(i);
+            }
+        }
+        return lines;
+    }
+
+    // Stages a chunk in loadBuffer the way loadReplayChunk() does and runs the
+    // replay state machine over it. The byte just past the chunk is a canary
+    // that is not a run boundary, so a run allowed to walk past loadedBytes
+    // would take it into the line: nothing in the replay path writes a
+    // terminator there, unlike processSocketData() which NULs in_buffer[amount]
+    // itself and so cannot be probed this way.
+    void feedReplayChunk(const QByteArray& chunk)
+    {
+        // loadBuffer is BUFFER_SIZE (100000) + 1 bytes; the chunks here are tens
+        QVERIFY(chunk.size() < 1024);
+        std::memcpy(loadBuffer, chunk.constData(), chunk.size());
+        loadBuffer[chunk.size()] = scmReplayCanary;
+        loadedBytes = static_cast<int>(chunk.size());
+        mpHost->mTelnet.slot_processReplayChunk();
+    }
+
+    struct RecordedChunk
+    {
+        qint32 delay = 0;
+        QByteArray bytes;
+    };
+
+    // Records a replay while the reads arrive off the socket as one MCCP
+    // stream, each after a pause, and returns the chunks written to it.
+    enum class StreamStart { Compressed, PlainOfferingMccp1, PlainOfferingMccp2, PlainNotNegotiated };
+
+    QList<RecordedChunk> recordCompressedReads(const QList<QByteArray>& reads, const int pauseMs, const StreamStart start = StreamStart::Compressed)
+    {
+        cTelnet& telnet = mpHost->mTelnet;
+        QTemporaryDir dir;
+        const QString fileName = dir.filePath(qsl("recording.dat"));
+        const auto cleanUp = qScopeGuard([&telnet] {
+            if (telnet.mRecordReplay) {
+                telnet.stopReplayRecording();
+            }
+            if (telnet.mNeedDecompression) {
+                inflateEnd(&telnet.mZstream);
+                telnet.mNeedDecompression = false;
+                telnet.initStreamDecompressor();
+            }
+            telnet.mMCCP_version_1 = false;
+            telnet.mMCCP_version_2 = false;
+            telnet.hisOptionState.reset(static_cast<size_t>(OPT_COMPRESS));
+            telnet.hisOptionState.reset(static_cast<size_t>(OPT_COMPRESS2));
+        });
+        if (!dir.isValid() || !telnet.startReplayRecording(fileName)) {
+            return {};
+        }
+        // the end of an earlier test's stream left a decompressor set up
+        inflateEnd(&telnet.mZstream);
+        if (start == StreamStart::Compressed) {
+            telnet.mNeedDecompression = true;
+            telnet.initStreamDecompressor();
+        } else {
+            // as if the game had been answered DO COMPRESS or DO COMPRESS2
+            telnet.mMCCP_version_1 = start == StreamStart::PlainOfferingMccp1;
+            telnet.mMCCP_version_2 = start == StreamStart::PlainOfferingMccp2;
+        }
+        for (const QByteArray& read : reads) {
+            QTest::qSleep(pauseMs);
+            QByteArray backing = read;
+            backing.append(scmTerminatorSlot);
+            telnet.processSocketData(backing.data(), static_cast<int>(read.size()), false);
+        }
+        // a disconnect while the reads were processed has already saved it
+        if (telnet.mRecordReplay && !telnet.stopReplayRecording()) {
+            return {};
+        }
+
+        QFile file(fileName);
+        if (!file.open(QIODevice::ReadOnly)) {
+            return {};
+        }
+        QDataStream stream(&file);
+        stream.setVersion(QDataStream::Qt_5_12);
+        QList<RecordedChunk> chunks;
+        while (!stream.atEnd()) {
+            RecordedChunk chunk;
+            qint32 amount = 0;
+            stream >> chunk.delay >> amount;
+            if (stream.status() != QDataStream::Ok || amount < 0) {
+                return {};
+            }
+            chunk.bytes.resize(amount);
+            if (stream.readRawData(chunk.bytes.data(), amount) != amount) {
+                return {};
+            }
+            chunks << chunk;
+        }
+        return chunks;
+    }
+
 private slots:
     void initTestCase()
     {
-        initializeQRCResourcesForBufferTest();
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
+        // A config root of this process's own. Sharing the developer's
+        // ~/.config/mudlet means sharing a profile list, so a second copy of
+        // this test running at the same time is told the name it types is
+        // already in use and never gets an enabled Connect button. Since #9712
+        // the opt-in that makes setupConfig() adopt a directory is
+        // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
 
         mpServer = new TelnetServerStub(qApp);
         mpServer->start(mLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
 
-        const QString path = mudlet::getMudletPath(enums::profileHomePath, mHostname);
+        const QString path = MudletApp::getMudletPath(enums::profileHomePath, mHostname);
         QDir(path).removeRecursively();
 
-        QTimer::singleShot(0ms, qApp, [this]() {
-            mudlet::self()->startAutoLogin({});
-            QTest::qWait(100ms);
-            QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), mHostname);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), mLocalhost);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), mPort);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
-        });
-
-        QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!spy.wait(1000)) {
-            QFAIL("Profile took too long to load.");
-        }
-        mpHost = mudlet::self()->getActiveHost();
+        mpHost = TestProfile::create(mHostname, mLocalhost, mPort);
         if (!mpHost) {
             QFAIL("No active host available for the test.");
         }
 
         QSignalSpy spy2(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(500)) {
+        if (mpHost->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && !spy2.wait(8s)) {
             QFAIL("Could not connect with the host.");
         }
     }
@@ -145,15 +302,21 @@ private slots:
     void init()
     {
         QVERIFY(mpHost);
-        QVERIFY(mpHost->mpConsole);
-        mpHost->mpConsole->buffer.clear();
+        QVERIFY(mpHost->mainConsoleView());
+        mpHost->mainConsoleView()->buffer.clear();
+        mSavedGaDriver = mpHost->mTelnet.mGA_Driver;
         // A leaked recursion level is permanent for the profile and eventually
         // turns processSocketData() into a silent no-op, which would make the
         // "nothing was written" assertions below pass for the wrong reason.
         QCOMPARE(mpHost->mTelnet.mDecompressionRecursionDepth, 0);
     }
 
-    void cleanup() { QCOMPARE(mpHost->mTelnet.mDecompressionRecursionDepth, 0); }
+    void cleanup()
+    {
+        mpHost->mTelnet.mGA_Driver = mSavedGaDriver;
+        QCOMPARE(mpHost->mTelnet.mDecompressionRecursionDepth, 0);
+        QVERIFY(!mpHost->mTelnet.mNeedDecompression);
+    }
 
     // The regression test for #1065. processSocketData() is handed `payloadSize`
     // bytes inside a buffer that has two spare bytes after them. It may write
@@ -191,6 +354,192 @@ private slots:
             QVERIFY2(backing.at(payloadSize) == '\0', qPrintable(qsl("processSocketData() did not terminate a %1 byte payload at all.").arg(payloadSize)));
             QVERIFY2(backing.at(payloadSize + 1) == scmPastTheEnd, qPrintable(qsl("processSocketData() wrote past the end of a %1 byte payload.").arg(payloadSize)));
         }
+    }
+
+    // With "Force telnet GA signal interpretation off" the GA branch appended a
+    // newline without clearing recvdGA, so every remaining byte of the read
+    // re-entered it and got its own newline. One buffer is fed here because that
+    // guarantees the GA and the text after it share a read, which is the condition
+    // - a socket write could in principle be split. mFORCE_GA_OFF is set directly
+    // because that is what the preference does: cTelnet copies it from the Host at
+    // connect time.
+    void forcedGaOffKeepsTheRestOfTheReadOnOneLine()
+    {
+        const bool savedForceGaOff = mpHost->mTelnet.mFORCE_GA_OFF;
+        const bool savedGaDriver = mpHost->mTelnet.mGA_Driver;
+        auto restoreFlags = qScopeGuard([this, savedForceGaOff, savedGaDriver]() {
+            mpHost->mTelnet.mFORCE_GA_OFF = savedForceGaOff;
+            mpHost->mTelnet.mGA_Driver = savedGaDriver;
+        });
+        mpHost->mTelnet.mFORCE_GA_OFF = true;
+
+        const QString trailing = qsl("AFTER-THE-GA this must stay on one line");
+        // A leading newline commits any partial line an earlier test left behind,
+        // so the prompt below cannot be glued onto residue.
+        QByteArray data("\r\nHP:100 MP:50 > ");
+        data += TN_IAC;
+        data += TN_GA;
+        data += trailing.toUtf8();
+        data += "\r\n";
+
+        mpHost->mTelnet.processSocketData(data.data(), data.size(), true);
+
+        // Pre-fix every byte after the GA became its own line, so no single line
+        // could hold the whole string: this assertion is the regression guard.
+        QVERIFY2(bufferContains(trailing),
+                 "the text following a GA was split up - recvdGA was not cleared in the "
+                 "mFORCE_GA_OFF branch, so every byte after the GA got its own newline");
+    }
+
+    // Some games end every prompt with both IAC EOR and IAC GA. The second one
+    // ends no new text, so it must neither add a blank line nor count as a
+    // second prompt.
+    void eorThenGaEndOnePrompt()
+    {
+        QSignalSpy prompts(&mpHost->mTelnet, &cTelnet::signal_promptReceived);
+        QByteArray data("\r\nPROMPT_A> ");
+        data += TN_IAC;
+        data += TN_EOR;
+        data += TN_IAC;
+        data += TN_GA;
+        data += "AFTER_A\r\n";
+
+        mpHost->mTelnet.processSocketData(data.data(), data.size(), true);
+
+        QCOMPARE(linesFrom(qsl("PROMPT_A")), (QStringList{qsl("PROMPT_A> "), qsl("AFTER_A"), QString()}));
+        QCOMPARE(prompts.count(), 1);
+    }
+
+    void eorAndGaInSeparateReadsEndOnePrompt()
+    {
+        QSignalSpy prompts(&mpHost->mTelnet, &cTelnet::signal_promptReceived);
+        QByteArray first("\r\nPROMPT_B> ");
+        first += TN_IAC;
+        first += TN_EOR;
+        QByteArray second;
+        second += TN_IAC;
+        second += TN_GA;
+        second += "AFTER_B\r\n";
+
+        mpHost->mTelnet.processSocketData(first.data(), first.size(), true);
+        mpHost->mTelnet.processSocketData(second.data(), second.size(), true);
+
+        QCOMPARE(linesFrom(qsl("PROMPT_B")), (QStringList{qsl("PROMPT_B> "), qsl("AFTER_B"), QString()}));
+        QCOMPARE(prompts.count(), 1);
+    }
+
+    void gaAloneEndsEachPrompt()
+    {
+        QSignalSpy prompts(&mpHost->mTelnet, &cTelnet::signal_promptReceived);
+        QByteArray data("\r\nPROMPT_C> ");
+        data += TN_IAC;
+        data += TN_GA;
+        data += "PROMPT_D> ";
+        data += TN_IAC;
+        data += TN_GA;
+        data += "AFTER_D\r\n";
+
+        mpHost->mTelnet.processSocketData(data.data(), data.size(), true);
+
+        QCOMPARE(linesFrom(qsl("PROMPT_C")), (QStringList{qsl("PROMPT_C> "), qsl("PROMPT_D> "), qsl("AFTER_D"), QString()}));
+        QCOMPARE(prompts.count(), 2);
+    }
+
+    // A game sending only GA ends a prompt with each one, even an empty one
+    void gaRepeatedEndsAPromptEachTime()
+    {
+        QSignalSpy prompts(&mpHost->mTelnet, &cTelnet::signal_promptReceived);
+        QByteArray data("\r\nPROMPT_E> ");
+        data += TN_IAC;
+        data += TN_GA;
+        data += TN_IAC;
+        data += TN_GA;
+        data += "AFTER_E\r\n";
+
+        mpHost->mTelnet.processSocketData(data.data(), data.size(), true);
+
+        QCOMPARE(linesFrom(qsl("PROMPT_E")), (QStringList{qsl("PROMPT_E> "), QString(), qsl("AFTER_E"), QString()}));
+        QCOMPARE(prompts.count(), 2);
+    }
+
+    // A pair with nothing before it is an empty prompt of its own
+    void eorThenGaAfterAPromptEndAnEmptyPrompt()
+    {
+        QSignalSpy prompts(&mpHost->mTelnet, &cTelnet::signal_promptReceived);
+        QByteArray data("\r\nPROMPT_I> ");
+        for (int i = 0; i < 2; ++i) {
+            data += TN_IAC;
+            data += TN_EOR;
+            data += TN_IAC;
+            data += TN_GA;
+        }
+        data += "AFTER_I\r\n";
+
+        mpHost->mTelnet.processSocketData(data.data(), data.size(), true);
+
+        QCOMPARE(linesFrom(qsl("PROMPT_I")), (QStringList{qsl("PROMPT_I> "), QString(), qsl("AFTER_I"), QString()}));
+        QCOMPARE(prompts.count(), 2);
+    }
+
+    void textBetweenEorAndGaEndsTwoPrompts()
+    {
+        QSignalSpy prompts(&mpHost->mTelnet, &cTelnet::signal_promptReceived);
+        QByteArray data("\r\nPROMPT_J> ");
+        data += TN_IAC;
+        data += TN_EOR;
+        data += "PROMPT_K> ";
+        data += TN_IAC;
+        data += TN_GA;
+        data += "AFTER_K\r\n";
+
+        mpHost->mTelnet.processSocketData(data.data(), data.size(), true);
+
+        QCOMPARE(linesFrom(qsl("PROMPT_J")), (QStringList{qsl("PROMPT_J> "), qsl("PROMPT_K> "), qsl("AFTER_K"), QString()}));
+        QCOMPARE(prompts.count(), 2);
+    }
+
+    void eorThenGaEndOnePromptWithGaForcedOff()
+    {
+        const bool savedForceGaOff = mpHost->mTelnet.mFORCE_GA_OFF;
+        auto restoreFlag = qScopeGuard([this, savedForceGaOff]() {
+            mpHost->mTelnet.mFORCE_GA_OFF = savedForceGaOff;
+        });
+        mpHost->mTelnet.mFORCE_GA_OFF = true;
+        QSignalSpy prompts(&mpHost->mTelnet, &cTelnet::signal_promptReceived);
+        QByteArray data("\r\nPROMPT_G> ");
+        data += TN_IAC;
+        data += TN_EOR;
+        data += TN_IAC;
+        data += TN_GA;
+        data += "AFTER_G\r\nPROMPT_H> ";
+        data += TN_IAC;
+        data += TN_EOR;
+        QByteArray next;
+        next += TN_IAC;
+        next += TN_GA;
+        next += "AFTER_H\r\n";
+
+        mpHost->mTelnet.processSocketData(data.data(), data.size(), true);
+        mpHost->mTelnet.processSocketData(next.data(), next.size(), true);
+
+        QCOMPARE(linesFrom(qsl("PROMPT_G")), (QStringList{qsl("PROMPT_G> "), qsl("AFTER_G"), qsl("PROMPT_H> "), qsl("AFTER_H"), QString()}));
+        QCOMPARE(prompts.count(), 2);
+    }
+
+    void replayedEorThenGaEndOnePrompt()
+    {
+        QSignalSpy prompts(&mpHost->mTelnet, &cTelnet::signal_promptReceived);
+        QByteArray chunk("\r\nPROMPT_F> ");
+        chunk += TN_IAC;
+        chunk += TN_EOR;
+        chunk += TN_IAC;
+        chunk += TN_GA;
+        chunk += "AFTER_F\r\n";
+
+        feedReplayChunk(chunk);
+
+        QCOMPARE(linesFrom(qsl("PROMPT_F")), (QStringList{qsl("PROMPT_F> "), qsl("AFTER_F"), QString()}));
+        QCOMPARE(prompts.count(), 1);
     }
 
     // The production route from Lua: feedTelnet() -> loopbackTest() ->
@@ -233,8 +582,8 @@ private slots:
     // took, including the one that refuses the read outright. That refusal is the
     // only exit no other test here reaches, and a level leaked there would be
     // permanent for the profile: once enough have piled up the connection stops
-    // accepting data altogether. Seeding the counter reaches the refusal without
-    // needing a real decompression bomb to recurse.
+    // accepting data altogether. Seeding the counter reaches the refusal, which
+    // otherwise takes processing nested inside the deepest level of a drain.
     //
     // Whether the refusal happened is read off the caller's buffer rather than
     // the warning text: the refusal returns before the NUL terminator is written,
@@ -286,6 +635,347 @@ private slots:
         }
     }
 
+    // The refusal at the cap with a compressed stream running: zlib cannot pick
+    // a stream up past what was dropped, so the stream has to be refused, and
+    // the game offering MCCP again has to bring compression back
+    void aReadRefusedAtTheCapEndsTheCompressedStream()
+    {
+        cTelnet& telnet = mpHost->mTelnet;
+        const auto depthRestoreGuard = qScopeGuard([&telnet] {
+            telnet.mDecompressionRecursionDepth = 0;
+        });
+        QByteArray offer("\xFF\xFB\x56\xFF\xFA\x56\xFF\xF0", 8);
+        telnet.loopbackTest(offer);
+        QVERIFY(telnet.mNeedDecompression);
+
+        QByteArray refused = qCompress(QByteArray("\r\nMCCPREFUSEDATTHECAP\r\n"), 9).mid(4);
+        const int refusedSize = static_cast<int>(refused.size());
+        refused.append(scmTerminatorSlot);
+        telnet.mDecompressionRecursionDepth = cTelnet::scmMaxDecompressionRecursion;
+        telnet.processSocketData(refused.data(), refusedSize, true);
+        telnet.mDecompressionRecursionDepth = 0;
+
+        QVERIFY2(!telnet.mNeedDecompression, "the compressed stream went on past a read of it that was dropped");
+        QVERIFY(!telnet.mMCCP_version_2);
+        QVERIFY(!telnet.hisOptionState.test(OPT_COMPRESS2));
+
+        QByteArray offeredAgain = offer + qCompress(QByteArray("\r\nMCCPOFFEREDAGAIN\r\n"), 9).mid(4);
+        telnet.loopbackTest(offeredAgain);
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return bufferContains(qsl("MCCPOFFEREDAGAIN"));
+                         },
+                         QDeadlineTimer(5s)),
+                 "offering MCCP again did not bring compression back");
+        QVERIFY(!bufferContains(qsl("MCCPREFUSEDATTHECAP")));
+    }
+
+    // Windows builds give the main thread 1 MB of stack, and a compressed read
+    // that inflates past one output buffer drains the rest by re-entering
+    // processSocketData(), so an eight-level drain must not cost a 100 KB frame
+    // per level. Linux enforces RLIMIT_STACK as the main thread grows and
+    // exposes the mapping in /proc, so here the drain gets 700 KB of growth and
+    // a per-level frame overflows it. Elsewhere the drain runs against the real
+    // limit, which eight levels fit in, so Linux is the arm that bites.
+    void deepDecompressionDrainDoesNotGrowTheStack()
+    {
+#if defined(Q_OS_LINUX)
+        rlimit original{};
+        QCOMPARE(getrlimit(RLIMIT_STACK, &original), 0);
+        const auto restoreLimit = qScopeGuard([original] {
+            setrlimit(RLIMIT_STACK, &original);
+        });
+        const qint64 inUse = mainThreadStackInUse();
+        QVERIFY2(inUse > 0, "could not read the main thread's stack mapping");
+        rlimit ceiling = original;
+        ceiling.rlim_cur = static_cast<rlim_t>(inUse) + 700 * 1024;
+        if (original.rlim_max != RLIM_INFINITY && ceiling.rlim_cur > original.rlim_max) {
+            QSKIP("the hard stack limit is below the ceiling this test needs");
+        }
+        QCOMPARE(setrlimit(RLIMIT_STACK, &ceiling), 0);
+#endif
+        // A drain that stops short leaves decompression switched on, and the
+        // tests that follow would then be inflated as zlib data
+        const auto resetDecompression = qScopeGuard([this] {
+            if (mpHost->mTelnet.mNeedDecompression) {
+                inflateEnd(&mpHost->mTelnet.mZstream);
+                mpHost->mTelnet.mNeedDecompression = false;
+                mpHost->mTelnet.initStreamDecompressor();
+            }
+        });
+        // Eight output buffers' worth, stopping just short of filling the last
+        // so the stream ends inside the eighth level and leaves decompression
+        // switched off for the tests that follow.
+        constexpr qsizetype outputBufferSize = 100000; // BUFFER_SIZE in ctelnet.cpp
+        const QByteArray line = QByteArray("mccp drain ").append(87, 'x').append("\r\n");
+        QByteArray text;
+        text.reserve(8 * outputBufferSize);
+        while (text.size() + line.size() <= 8 * outputBufferSize - 10) {
+            text.append(line);
+        }
+        // qCompress() prefixes the zlib stream with the source length
+        const QByteArray compressed = qCompress(text, 9).mid(4);
+        // One socket read's worth, as readPendingSocketData() hands over
+        QVERIFY(compressed.size() < outputBufferSize);
+        QByteArray backing = compressed;
+        backing.append(scmTerminatorSlot);
+
+        mpHost->mTelnet.mNeedDecompression = true;
+        mpHost->mTelnet.initStreamDecompressor();
+        mpHost->mTelnet.processSocketData(backing.data(), static_cast<int>(compressed.size()), true);
+
+        QVERIFY2(!mpHost->mTelnet.mNeedDecompression, "the compressed stream's end was not reached, so the drain stopped short");
+        QVERIFY(bufferContains(qsl("mccp drain")));
+    }
+
+    // Plain text goes into the line a run at a time, and each run stops at the
+    // bytes the parser handles on its own. The bytes checked here are the ones
+    // that end a run: a bell (which rings once each and stays in the text), an
+    // IAC (which starts a telnet command that is not text) and the carriage
+    // return and NUL that are dropped. Lines commit on the newline, and a byte
+    // that a run failed to stop at is either displayed or splits the line.
+    void bellsInsideTextRingOnceEachAndStayInTheLine()
+    {
+        QSignalSpy bells(&mpHost->mTelnet, &cTelnet::signal_bell);
+        QByteArray data = QByteArrayLiteral("\r\nRUN_A\aRUN_B\aRUN_C\r\n");
+
+        mpHost->mTelnet.processSocketData(data.data(), data.size(), true);
+
+        QCOMPARE(bells.count(), 2);
+        QCOMPARE(linesContaining(qsl("RUN_")), QStringList{qsl("RUN_A\aRUN_B\aRUN_C")});
+    }
+
+    void telnetCommandInsideTextIsTakenOutOfIt()
+    {
+        QByteArray data = QByteArrayLiteral("\r\nRUN_D");
+        data += TN_IAC;
+        data += TN_NOP;
+        data += "RUN_E\r\n";
+
+        mpHost->mTelnet.processSocketData(data.data(), data.size(), true);
+
+        QCOMPARE(linesContaining(qsl("RUN_")), QStringList{qsl("RUN_DRUN_E")});
+    }
+
+    void carriageReturnAndNulInsideTextAreDropped()
+    {
+        QByteArray data = QByteArrayLiteral("\r\nRUN_F\r\0RUN_G\0\rRUN_H\r\n");
+
+        mpHost->mTelnet.processSocketData(data.data(), data.size(), true);
+
+        QCOMPARE(linesContaining(qsl("RUN_")), QStringList{qsl("RUN_FRUN_GRUN_H")});
+    }
+
+    // A run that reaches the end of one read stops there and the next read
+    // carries on the same line. This pins the carry-over, not the read bound
+    // itself: processSocketData() writes its own NUL at in_buffer[amount], and
+    // a NUL ends a run, so a run let past the end of the read would stop on
+    // that terminator and append nothing either way. The replay case below,
+    // where nothing writes a terminator, is the one that can plant a canary.
+    void textRunEndingAtTheEndOfAReadContinuesInTheNext()
+    {
+        QByteArray first = QByteArrayLiteral("\r\nRUN_I");
+        QByteArray second = QByteArrayLiteral("RUN_J\r\n");
+
+        mpHost->mTelnet.processSocketData(first.data(), first.size(), true);
+        mpHost->mTelnet.processSocketData(second.data(), second.size(), true);
+
+        QCOMPARE(linesContaining(qsl("RUN_")), QStringList{qsl("RUN_IRUN_J")});
+    }
+
+    // slot_processReplayChunk() runs a second copy of the same state machine
+    // over the chunk loadReplayChunk() leaves in loadBuffer, and it takes its
+    // text in runs too. The bytes checked here are the ones that end a run: an
+    // IAC starting a telnet command, a bell (which this path shows without
+    // ringing, unlike the socket one), and the carriage return and NUL that are
+    // dropped.
+    void replayChunkTextArrivesARunAtATime()
+    {
+        QByteArray chunk = QByteArrayLiteral("\r\nREPLAY_A");
+        chunk += TN_IAC;
+        chunk += TN_NOP;
+        chunk += QByteArrayLiteral("REPLAY_B\aREPLAY_C\r\0REPLAY_D\r\n");
+        const QString expected = qsl("REPLAY_AREPLAY_B\aREPLAY_CREPLAY_D");
+
+        feedReplayChunk(chunk);
+
+        QCOMPARE(linesContaining(qsl("REPLAY_")), QStringList{expected});
+
+        // the same bytes one chunk per byte, which is the byte-at-a-time walk
+        // the loop did before: every run is then one byte long, so this is what
+        // taking them a run at a time has to agree with
+        for (const char ch : chunk) {
+            feedReplayChunk(QByteArray(1, ch));
+        }
+
+        QCOMPARE(linesContaining(qsl("REPLAY_")), (QStringList{expected, expected}));
+    }
+
+    // A run that reaches the end of one chunk stops there and the next chunk
+    // carries on the same line. The canary feedReplayChunk() plants right past
+    // the chunk is ordinary text, so a run that read one byte too far would
+    // show it up in the middle of the line.
+    void replayRunEndingAtTheEndOfAChunkContinuesInTheNext()
+    {
+        feedReplayChunk(QByteArrayLiteral("\r\nREPLAY_E"));
+        feedReplayChunk(QByteArrayLiteral("REPLAY_F\r\n"));
+
+        QCOMPARE(linesContaining(qsl("REPLAY_E")), QStringList{qsl("REPLAY_EREPLAY_F")});
+    }
+
+    // A read can carry nothing but the start of a compressed block, which
+    // inflates to no bytes at all. The wait before it still belongs in the
+    // replay, ahead of the text that arrives next.
+    void compressedReadThatInflatesToNothingIsNotRecorded()
+    {
+        constexpr int pauseMs = 200;
+        const QByteArray text = QByteArrayLiteral("mccp recorded line\r\n");
+        // qCompress() prefixes the zlib stream with the source length
+        const QByteArray compressed = qCompress(text, 9).mid(4);
+
+        const QList<RecordedChunk> chunks = recordCompressedReads({compressed.left(2), compressed.mid(2)}, pauseMs);
+
+        for (const RecordedChunk& chunk : chunks) {
+            QVERIFY2(!chunk.bytes.isEmpty(), "an empty chunk was recorded, which older Mudlets refuse to load");
+        }
+        QCOMPARE(chunks.size(), 1);
+        QCOMPARE(chunks.first().bytes, text);
+        QVERIFY2(chunks.first().delay > pauseMs * 3 / 2, qPrintable(qsl("the text waited %1 ms, so the pause before the empty read was lost").arg(chunks.first().delay)));
+    }
+
+    // One compressed read that inflates to more than an output buffer is
+    // recorded a buffer at a time, and only the first of those waited for it.
+    void compressedReadDrainedInPartsWaitsOnlyOnce()
+    {
+        constexpr int pauseMs = 200;
+        constexpr qsizetype outputBufferSize = 100000; // BUFFER_SIZE in ctelnet.cpp
+        const QByteArray line = QByteArray("mccp burst ").append(87, 'x').append("\r\n");
+        QByteArray text;
+        while (text.size() < outputBufferSize * 5 / 2) {
+            text.append(line);
+        }
+        const QByteArray compressed = qCompress(text, 9).mid(4);
+
+        const QList<RecordedChunk> chunks = recordCompressedReads({compressed}, pauseMs);
+
+        QVERIFY2(chunks.size() >= 3, qPrintable(qsl("%1 chunks were recorded").arg(chunks.size())));
+        QByteArray recorded;
+        for (const RecordedChunk& chunk : chunks) {
+            recorded.append(chunk.bytes);
+        }
+        QVERIFY(recorded == text);
+        QVERIFY(chunks.first().delay >= pauseMs / 2);
+        for (qsizetype i = 1; i < chunks.size(); ++i) {
+            QVERIFY2(chunks.at(i).delay < pauseMs / 2, qPrintable(qsl("chunk %1 waited %2 ms, but it came from the same read as the first").arg(i).arg(chunks.at(i).delay)));
+        }
+    }
+
+    // The end of a compressed stream can inflate to nothing and still bring
+    // plain text in the same read, which waited as long as that read did.
+    void textAfterTheEndOfACompressedStreamKeepsItsWait()
+    {
+        constexpr int pauseMs = 200;
+        const QByteArray text = QByteArrayLiteral("mccp line before the end\r\n");
+        const QByteArray after = QByteArrayLiteral("plain line after the end\r\n");
+        const QByteArray compressed = qCompress(text, 9).mid(4);
+        // the last four bytes are the checksum, which inflates to nothing
+        const QList<RecordedChunk> chunks = recordCompressedReads({compressed.chopped(4), compressed.right(4) + after}, pauseMs);
+
+        QCOMPARE(chunks.size(), 2);
+        QCOMPARE(chunks.first().bytes, text);
+        QCOMPARE(chunks.last().bytes, after);
+        QVERIFY2(chunks.last().delay >= pauseMs / 2, qPrintable(qsl("the plain text waited %1 ms, so the pause before its read was lost").arg(chunks.last().delay)));
+    }
+
+    // Replays play back without a decompressor, so the read that turns MCCP on
+    // has to be recorded as the plain text either side of the compressed part
+    // and what that part inflates to, not the bytes the game sent - see #4922.
+    void readThatStartsCompressionIsRecordedInflated_data()
+    {
+        QTest::addColumn<int>("version");
+        QTest::addColumn<QByteArray>("startSequence");
+        QTest::newRow("MCCP v1") << 1 << QByteArrayLiteral("\xFF\xFA\x55\xFB\xF0");
+        QTest::newRow("MCCP v2") << 2 << QByteArrayLiteral("\xFF\xFA\x56\xFF\xF0");
+    }
+
+    void readThatStartsCompressionIsRecordedInflated()
+    {
+        QFETCH(int, version);
+        QFETCH(QByteArray, startSequence);
+        constexpr int pauseMs = 200;
+        const QByteArray before = QByteArrayLiteral("plain line before mccp\r\n");
+        const QByteArray text = QByteArrayLiteral("mccp line after the start\r\n");
+        const QByteArray after = QByteArrayLiteral("plain line after the end\r\n");
+        const QByteArray compressed = qCompress(text, 9).mid(4);
+
+        const QList<RecordedChunk> chunks =
+                recordCompressedReads({before + startSequence + compressed + after}, pauseMs, version == 1 ? StreamStart::PlainOfferingMccp1 : StreamStart::PlainOfferingMccp2);
+
+        QByteArray recorded;
+        for (const RecordedChunk& chunk : chunks) {
+            QVERIFY2(!chunk.bytes.isEmpty(), "an empty chunk was recorded, which older Mudlets refuse to load");
+            recorded.append(chunk.bytes);
+        }
+        QCOMPARE(recorded, before + text + after);
+        QVERIFY2(chunks.first().delay >= pauseMs / 2, qPrintable(qsl("the read waited %1 ms, so its pause was lost").arg(chunks.first().delay)));
+        for (qsizetype i = 1; i < chunks.size(); ++i) {
+            QVERIFY2(chunks.at(i).delay < pauseMs / 2, qPrintable(qsl("chunk %1 waited %2 ms, but it came from the same read as the first").arg(i).arg(chunks.at(i).delay)));
+        }
+
+        mpHost->mainConsoleView()->buffer.clear();
+        for (const RecordedChunk& chunk : chunks) {
+            feedReplayChunk(chunk.bytes);
+        }
+        QCOMPARE(linesContaining(qsl("mccp line after the start")).size(), 1);
+        QCOMPARE(linesContaining(qsl("plain line after the end")).size(), 1);
+    }
+
+    // The rest of the read can be no more than the start of the compressed
+    // stream, which inflates to nothing; its wait still belongs to the replay.
+    void readEndingInsideTheCompressionStartKeepsItsWait()
+    {
+        constexpr int pauseMs = 200;
+        const QByteArray startSequence = QByteArrayLiteral("\xFF\xFA\x56\xFF\xF0");
+        const QByteArray text = QByteArrayLiteral("mccp line after a split start\r\n");
+        const QByteArray compressed = qCompress(text, 9).mid(4);
+
+        const QList<RecordedChunk> chunks = recordCompressedReads({startSequence + compressed.left(2), compressed.mid(2)}, pauseMs, StreamStart::PlainOfferingMccp2);
+
+        QCOMPARE(chunks.size(), 1);
+        QCOMPARE(chunks.first().bytes, text);
+        QVERIFY2(chunks.first().delay > pauseMs * 3 / 2, qPrintable(qsl("the text waited %1 ms, so the pause before the start was lost").arg(chunks.first().delay)));
+    }
+
+    // The game's WILL can arrive in the same read as the start of its stream
+    void readThatNegotiatesAndStartsCompressionIsRecordedInflated()
+    {
+        const QByteArray will = QByteArrayLiteral("\xFF\xFB\x56");
+        const QByteArray before = QByteArrayLiteral("plain line before mccp\r\n");
+        const QByteArray startSequence = QByteArrayLiteral("\xFF\xFA\x56\xFF\xF0");
+        const QByteArray text = QByteArrayLiteral("mccp line after the negotiation\r\n");
+        const QByteArray compressed = qCompress(text, 9).mid(4);
+
+        const QList<RecordedChunk> chunks = recordCompressedReads({will + before + startSequence + compressed}, 0, StreamStart::PlainNotNegotiated);
+
+        QByteArray recorded;
+        for (const RecordedChunk& chunk : chunks) {
+            recorded.append(chunk.bytes);
+        }
+        QCOMPARE(recorded, will + before + text);
+    }
+
+    // A read holding what looks like the start of a subnegotiation for MCCP,
+    // but not the whole start sequence, is recorded as it arrived.
+    void readThatOnlyLooksLikeCompressionStartIsRecordedWhole()
+    {
+        const QByteArray read = QByteArrayLiteral("plain\xFF\xFA\x56\x01\xFF\xF0line\r\n");
+
+        const QList<RecordedChunk> chunks = recordCompressedReads({read}, 0, StreamStart::PlainOfferingMccp2);
+
+        QCOMPARE(chunks.size(), 1);
+        QCOMPARE(chunks.first().bytes, read);
+    }
+
     // Declared last on purpose: on the unfixed code this trips AddressSanitizer,
     // which aborts the process, so anything after it would never report. The
     // sentinels give it teeth on Windows too, where CI builds without ASan.
@@ -308,26 +998,15 @@ private slots:
         mpHost = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        const QString path = mudlet::getMudletPath(enums::profileHomePath, mHostname);
-        QDir(path).removeRecursively();
-        delete mudlet::self();
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
+        if (mudlet::self()) {
+            const QString path = MudletApp::getMudletPath(enums::profileHomePath, mHostname);
+            QDir(path).removeRecursively();
+            delete mudlet::self();
+        }
+        mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }
 };
 
-void initializeQRCResourcesForBufferTest()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "cTelnetBufferTest.moc"
-QTEST_MAIN(cTelnetBufferTest)
+MUDLET_GROUPED_TEST_MAIN(cTelnetBufferTest)

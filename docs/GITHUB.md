@@ -39,4 +39,4 @@ This directory contains GitHub-specific configuration files and templates that h
 
 ## AI Assistant Integration
 
-This directory includes `copilot-instructions.md` which is part of Mudlet's centralized AI assistant system. For complete information about AI assistant setup, supported tools, and Windows symlink configuration, see **[AI-ASSISTANTS.md](../AI-ASSISTANTS.md)** in the project root.
+This directory includes `copilot-instructions.md` which is part of Mudlet's centralized AI assistant system. For complete information about AI assistant setup, supported tools, and Windows symlink configuration, see **[AI-ASSISTANTS.md](AI-ASSISTANTS.md)**.

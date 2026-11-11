@@ -19,6 +19,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "GroupedTest.h"
 #include <QTest>
 #include "TMxpFormattingTagsHandler.h"
 #include "TMxpStubClient.h"
@@ -127,4 +128,4 @@ private slots:
 };
 
 #include "TMxpFormattingTagsTest.moc"
-QTEST_MAIN(TMxpFormattingTagsTest)
+MUDLET_GROUPED_TEST_MAIN(TMxpFormattingTagsTest)

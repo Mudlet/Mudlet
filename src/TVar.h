@@ -58,6 +58,7 @@ public:
     QString getName() const;
     QString getNewName() const;
     void clearNewName();
+    void abandonNewName();
     int getKeyType() const;
     int getNewKeyType() const;
     int getValueType() const;
@@ -68,6 +69,9 @@ public:
     const void* pKey = nullptr;
     const void* pValue = nullptr;
     bool saved = false;
+    // the outermost table of a second copy a save wrote for another name of a
+    // table, which the saved-table size limit leaves out of its count
+    bool aliasCopy = false;
 
 private:
     bool reference = false;
@@ -80,6 +84,8 @@ private:
     int newKeyType = LUA_TNONE;
     QString nName;
 };
+
+bool TVarLessThan(TVar*, TVar*);
 
 #ifndef QT_NO_DEBUG_STREAM
 inline QDebug& operator<<(QDebug& debug, const TVar* var)

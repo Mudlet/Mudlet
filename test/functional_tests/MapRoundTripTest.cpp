@@ -25,7 +25,7 @@
  * custom exit lines, doors, exit weights, room/area/map-level userData, room
  * environments, non-ASCII names/symbols, negative coordinates and z-levels
  * plus an area map label. It is saved with TMap::serialize (the same
- * QDataStream setup TMainConsole::saveMap uses), loaded into a fresh Host's
+ * QDataStream setup Host::saveMapFile uses), loaded into a fresh Host's
  * map via TMap::restore + audit (the production load path minus the mapper
  * UI) and compared field by field.
  *
@@ -36,12 +36,16 @@
  * Run with: ctest -R MapRoundTripTest -V
  */
 
+#include <QDataStream>
+#include <QFileInfo>
 #include <QtTest/QtTest>
 
 #include <QFile>
 #include <QSaveFile>
 #include <QTemporaryDir>
 
+#include "MudletApp.h"
+#include "PortableModeTestHelper.h"
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
@@ -51,12 +55,14 @@
 #include "TRoomDB.h"
 #include "mudlet.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForMapRoundTripTest();
+#include "GroupedTest.h"
+
+#if defined(Q_OS_UNIX)
+#include <algorithm>
+#include <cerrno>
+#include <csignal>
+#include <sys/resource.h>
+#endif
 
 namespace {
 const int scmRoom1 = 101;
@@ -79,6 +85,15 @@ const QColor scmLabelOutline(1, 2, 3);
 const QColor scmSymbolColor(200, 100, 50);
 const QColor scmBorderColor(10, 200, 30, 128);
 const QColor scmCustomLineColor(10, 20, 30);
+
+// A version 7 room predates the '0'/'1' lock flag the special exit command
+// gained around version 11, and every field the reader added from version 9
+// onward, so its record is short enough to write by hand.
+const int scmPreLockPrefixFormatVersion = 7;
+const QString scmUnprefixedSpecialExit = qsl("open gate");
+
+const int scmNamedOnlyAreaId = 7777;
+const QString scmNamedOnlyAreaName = qsl("Named but absent");
 } // namespace
 
 class MapRoundTripTest : public QObject
@@ -86,6 +101,8 @@ class MapRoundTripTest : public QObject
     Q_OBJECT
 
 private:
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
     Host* mpSource = nullptr;
     Host* mpTarget = nullptr;
     const QString mSourceName = qsl("MapRoundTripSource-Test");
@@ -121,13 +138,9 @@ private:
 
     static QMap<QString, QString> expectedRoom1UserData() { return {{qsl("quest.stage 日本語"), qsl("величина <>&\"' ]]>")}, {qsl("plain"), qsl("value")}}; }
 
-    static QMap<QString, QString> expectedRoom2UserData()
-    {
-        // The border presentation properties travel inside userData (see
-        // TMap::serialize()/TRoom::restore()) so they are part of the
-        // expected representation on both sides of the round trip:
-        return {{qsl("note"), qsl("second <room> & 'data'")}, {ROOM_UI_BORDERCOLOR, scmBorderColor.name(QColor::HexArgb)}, {ROOM_UI_BORDERTHICKNESS, qsl("4")}};
-    }
+    // The border properties travel in the file's copy of the user data (see
+    // TMap::serialize()/TRoom::restore()), never in the live room's:
+    static QMap<QString, QString> expectedRoom2UserData() { return {{qsl("note"), qsl("second <room> & 'data'")}}; }
 
     static AreaBounds captureBounds(TArea* pArea)
     {
@@ -166,7 +179,7 @@ private:
 
         for (const int id : {scmRoom1, scmRoom2, scmRoom3, scmRoom4}) {
             QVERIFY(pMap->addRoom(id));
-            QVERIFY(pMap->setRoomArea(id, id == scmRoom4 ? mAreaB : mAreaA, false));
+            QVERIFY(pMap->setRoomArea(id, id == scmRoom4 ? mAreaB : mAreaA));
         }
         QVERIFY(pMap->setRoomCoordinates(scmRoom1, 0, 0, 0));
         QVERIFY(pMap->setRoomCoordinates(scmRoom2, -3, 7, 0));
@@ -196,6 +209,7 @@ private:
         pR1->customLinesColor.insert(qsl("n"), scmCustomLineColor);
         pR1->customLinesStyle.insert(qsl("n"), Qt::DashLine);
         pR1->customLinesArrow.insert(qsl("n"), true);
+        pR1->calcRoomDimensions();
 
         TRoom* pR2 = pDB->getRoom(scmRoom2);
         QVERIFY(pR2);
@@ -256,9 +270,7 @@ private:
             return false;
         }
         QDataStream out(&file);
-        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            out.setVersion(mudlet::scmQDataStreamFormat_5_12);
-        }
+        out.setVersion(QDataStream::Qt_5_12);
         if (!pMap->serialize(out, saveVersion)) {
             return false;
         }
@@ -276,6 +288,7 @@ private:
         const QByteArray raw = file.readAll();
         QByteArray needleBytes;
         QDataStream out(&needleBytes, QIODevice::WriteOnly);
+        out.setVersion(QDataStream::Qt_5_12);
         out << needle;
         // The length prefix stays in the needle so a key cannot match a longer key it is
         // a byte prefix of ("system.fallback_mapSymbolFont" vs. "...FontFudgeFactor"):
@@ -311,6 +324,19 @@ private:
         }
         QVERIFY(pAreaA->gridMode);
         QCOMPARE(pAreaA->mUserData, expectedAreaAUserData());
+
+        // Nothing on the load path sets out to build the per-area index of
+        // rooms holding custom lines. It falls out of two separate calls made
+        // for something else - the span recalculation at the end of
+        // TMap::restore(), and TArea::clean() during the audit - so cutting
+        // either one leaves it built by the other and every other assertion
+        // here still passing. This is what is left to notice the day the last
+        // one goes: the mapper consults the index only for rooms that are off
+        // screen, so what silently stops being drawn is a custom line running
+        // into view from outside it.
+        QVERIFY2(
+                pAreaA->getCustomLineRoomsForZ(0).contains(scmRoom1),
+                qPrintable(qsl("room %1 holds a custom line but is missing from area A's index for z 0, loaded from format version %2").arg(QString::number(scmRoom1), QString::number(savedVersion))));
 
         TArea* pAreaB = pDB->getArea(mAreaB);
         QVERIFY(pAreaB);
@@ -360,6 +386,11 @@ private:
         QCOMPARE(pR1->customLinesColor, (QMap<QString, QColor>{{qsl("n"), scmCustomLineColor}}));
         QCOMPARE(pR1->customLinesStyle, (QMap<QString, Qt::PenStyle>{{qsl("n"), Qt::DashLine}}));
         QCOMPARE(pR1->customLinesArrow, (QMap<QString, bool>{{qsl("n"), true}}));
+        // The mapper culls a room with custom lines by these, so wrong ones hide the lines.
+        QCOMPARE(pR1->min_x, 0.0);
+        QCOMPARE(pR1->max_x, 3.0);
+        QCOMPARE(pR1->min_y, -2.5);
+        QCOMPARE(pR1->max_y, 4.0);
         // The format 19 leg runs after the format 17/18 ones, so this also
         // guards against a < 19 save leaving a stray system.fallback_symbol
         // entry behind in the live source room's user data:
@@ -438,7 +469,9 @@ private:
         // a symbol color, room 3 is hidden:
         QCOMPARE(mpSource->mpMap->mUserData, expectedMapUserData());
         QCOMPARE(mpSource->mpMap->mpRoomDB->getRoom(scmRoom1)->userData, expectedRoom1UserData());
+        QCOMPARE(mpSource->mpMap->mpRoomDB->getRoom(scmRoom2)->userData, expectedRoom2UserData());
         QVERIFY(mpSource->mpMap->mpRoomDB->getRoom(scmRoom3)->userData.isEmpty());
+        QCOMPARE(mpSource->mpMap->mpRoomDB->getArea(mAreaA)->mUserData, expectedAreaAUserData());
 
         TMap* pTargetMap = mpTarget->mpMap.data();
         pTargetMap->mapClear();
@@ -450,7 +483,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = mudlet::getMudletPath(enums::profileHomePath, profileName);
+        const QString path = MudletApp::getMudletPath(enums::profileHomePath, profileName);
         QDir dir(path);
         if (dir.exists()) {
             dir.removeRecursively();
@@ -460,10 +493,24 @@ private:
 private slots:
     void initTestCase()
     {
-        initializeQRCResourcesForMapRoundTripTest();
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
+        // A config root of this process's own. Sharing the developer's
+        // ~/.config/mudlet means sharing a profile list, so a second copy of
+        // this test running at the same time is told the name it types is
+        // already in use and never gets an enabled Connect button. Since #9712
+        // the opt-in that makes setupConfig() adopt a directory is
+        // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
 
         mudlet::start();
         mudlet::self()->setupConfig();
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -472,12 +519,12 @@ private slots:
 
         QVERIFY(mSaveDir.isValid());
 
-        auto& hostManager = mudlet::self()->getHostManager();
-        QVERIFY2(hostManager.addHost(mSourceName, qsl("23"), QString(), QString()), "failed to create the source Host");
-        mpSource = hostManager.getHost(mSourceName);
+        auto* hostManager = HostManager::self();
+        QVERIFY2(hostManager->addHost(mSourceName, qsl("23"), QString(), QString()), "failed to create the source Host");
+        mpSource = hostManager->getHost(mSourceName);
         QVERIFY(mpSource);
-        QVERIFY2(hostManager.addHost(mTargetName, qsl("23"), QString(), QString()), "failed to create the target Host");
-        mpTarget = hostManager.getHost(mTargetName);
+        QVERIFY2(hostManager->addHost(mTargetName, qsl("23"), QString(), QString()), "failed to create the target Host");
+        mpTarget = hostManager->getHost(mTargetName);
         QVERIFY(mpTarget);
 
         buildSourceMap();
@@ -494,9 +541,13 @@ private slots:
     {
         mpSource = nullptr;
         mpTarget = nullptr;
-        deleteProfileDirectory(mSourceName);
-        deleteProfileDirectory(mTargetName);
-        delete mudlet::self();
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
+        if (mudlet::self()) {
+            deleteProfileDirectory(mSourceName);
+            deleteProfileDirectory(mTargetName);
+            delete mudlet::self();
+        }
+        mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }
 
     void test_roundTripAtDefaultVersion() { roundTripAtVersion(mpSource->mpMap->mDefaultVersion); }
@@ -560,22 +611,212 @@ private slots:
         QCOMPARE(pTargetR1->userData, expectedRoom1UserData());
         QCOMPARE(pTargetR1->mSymbol, qsl("⚔"));
     }
+
+    // Every production caller clears the map before restoring onto it, but
+    // nothing makes that a precondition and restoring onto a populated one used
+    // to leak every colliding room: TRoomDB::addRoom() refuses an id that is
+    // already taken and takes no ownership when it does. Deleting the refused
+    // room is only half the fix - TRoom::restore() has already stamped the
+    // colliding id on it, so ~TRoom() would use that id to evict the room
+    // legitimately holding it. This checks that half; the leak itself is what
+    // the leak-detecting Linux CI build catches.
+    void test_restoringOntoAPopulatedMapKeepsTheRoomsAlreadyThere()
+    {
+        TMap* pSourceMap = mpSource->mpMap.data();
+        const QString fileName = qsl("%1/map_onto_populated.dat").arg(mSaveDir.path());
+        QVERIFY(saveMapToFile(pSourceMap, fileName, pSourceMap->mDefaultVersion));
+
+        TMap* pTargetMap = mpTarget->mpMap.data();
+        pTargetMap->mapClear();
+        QVERIFY(pTargetMap->restore(fileName));
+        pTargetMap->audit();
+        QList<int> roomsAfterFirstLoad = pTargetMap->mpRoomDB->getRoomIDList();
+        std::sort(roomsAfterFirstLoad.begin(), roomsAfterFirstLoad.end());
+        QVERIFY(!roomsAfterFirstLoad.isEmpty());
+
+        // the same file again, this time without clearing first
+        QVERIFY(pTargetMap->restore(fileName));
+        pTargetMap->audit();
+
+        QList<int> roomsAfterSecondLoad = pTargetMap->mpRoomDB->getRoomIDList();
+        std::sort(roomsAfterSecondLoad.begin(), roomsAfterSecondLoad.end());
+        QVERIFY2(roomsAfterSecondLoad == roomsAfterFirstLoad,
+                 qPrintable(qsl("restoring onto a populated map lost rooms: %1 became %2").arg(roomsAfterFirstLoad.size()).arg(roomsAfterSecondLoad.size())));
+
+        // and the rooms that stayed are the real ones, not husks
+        TRoom* pRoom1 = pTargetMap->mpRoomDB->getRoom(scmRoom1);
+        QVERIFY2(pRoom1, "the room that was already there was evicted by the room refused for its id");
+        QCOMPARE(pRoom1->mSymbol, qsl("⚔"));
+        QCOMPARE(pRoom1->userData, expectedRoom1UserData());
+    }
+
+    // A load moves the map generation on, which is how holders of room, area
+    // and label ids (T2DMap's label dialog) tell theirs are stale; a binary
+    // file refused part way leaves that and the rest of the map as they were
+    void test_aRefusedLoadKeepsTheMapAndItsGeneration()
+    {
+        TMap* pSourceMap = mpSource->mpMap.data();
+        const QString fileName = qsl("%1/map_generation.dat").arg(mSaveDir.path());
+        const QString jsonFileName = qsl("%1/map_generation.json").arg(mSaveDir.path());
+        const QString cutFileName = qsl("%1/map_generation_cut.dat").arg(mSaveDir.path());
+        QVERIFY(saveMapToFile(pSourceMap, fileName, pSourceMap->mDefaultVersion));
+        const auto [wrote, writeMessage] = pSourceMap->writeJsonMapFile(jsonFileName);
+        QVERIFY2(wrote, qPrintable(writeMessage));
+        QFile whole(fileName);
+        QVERIFY(whole.open(QIODevice::ReadOnly));
+        const QByteArray data = whole.readAll();
+        QFile cut(cutFileName);
+        QVERIFY(cut.open(QIODevice::WriteOnly));
+        QCOMPARE(cut.write(data.left(data.size() - 3)), data.size() - 3);
+        cut.close();
+
+        TMap* pTargetMap = mpTarget->mpMap.data();
+        pTargetMap->mapClear();
+        unsigned int generation = pTargetMap->mpRoomDB->mapGeneration();
+        QVERIFY(pTargetMap->restore(fileName));
+        QVERIFY2(pTargetMap->mpRoomDB->mapGeneration() > generation, "loading a binary map file did not move the map generation on");
+        generation = pTargetMap->mpRoomDB->mapGeneration();
+        const auto [read, readMessage] = pTargetMap->readJsonMapFile(jsonFileName);
+        QVERIFY2(read, qPrintable(readMessage));
+        QVERIFY2(pTargetMap->mpRoomDB->mapGeneration() > generation, "loading a JSON map file did not move the map generation on");
+        generation = pTargetMap->mpRoomDB->mapGeneration();
+
+        // None of these is what the file holds
+        const TRoomDB* pRoomDB = pTargetMap->mpRoomDB.get();
+        pTargetMap->mMapSymbolFont = QFont(qsl("Bitstream Vera Sans Mono"), 9);
+        pTargetMap->mMapSymbolFontFudgeFactor = 0.75;
+        pTargetMap->mIsOnlyMapSymbolFontToBeUsed = false;
+        pTargetMap->mVersion = 18;
+        pTargetMap->mSaveVersion = 19;
+        QVERIFY2(!pTargetMap->restore(cutFileName), "a binary map file cut short was not refused");
+
+        QCOMPARE(pTargetMap->mpRoomDB.get(), pRoomDB);
+        QCOMPARE(pTargetMap->mpRoomDB->mapGeneration(), generation);
+        QCOMPARE(pTargetMap->mMapSymbolFont.family(), qsl("Bitstream Vera Sans Mono"));
+        QCOMPARE(pTargetMap->mMapSymbolFont.pointSize(), 9);
+        QCOMPARE(pTargetMap->mMapSymbolFontFudgeFactor, 0.75);
+        QVERIFY(!pTargetMap->mIsOnlyMapSymbolFontToBeUsed);
+        QCOMPARE(pTargetMap->mVersion, 18);
+        QCOMPARE(pTargetMap->mSaveVersion, 19);
+    }
+
+    // Maps written before the special exit command gained a '0'/'1' lock flag
+    // in front of it store the bare command, so nothing may be stripped off
+    // (#4574).
+    void test_aSpecialExitFromBeforeTheLockPrefixKeepsItsFirstCharacter()
+    {
+        QByteArray room;
+        QDataStream out(&room, QIODevice::WriteOnly);
+        out.setVersion(QDataStream::Qt_5_12);
+        out << 1 << 0 << 0 << 0; // area, then x, y and z
+        for (int i = 0; i < 12; ++i) {
+            out << -1; // the twelve compass, vertical and in/out exits
+        }
+        out << -1 << 1; // environment, then weight
+        // the rotations and the zoom that format version 8 dropped
+        out << 0.0f << 0.0f << 0.0f << 1.0f;
+        out << qsl("A room from 2010") << false;
+        QMultiMap<int, QString> oldSpecialExits;
+        oldSpecialExits.insert(scmRoom2, scmUnprefixedSpecialExit);
+        out << oldSpecialExits;
+
+        QDataStream in(&room, QIODevice::ReadOnly);
+        in.setVersion(QDataStream::Qt_5_12);
+        TRoom oldRoom(nullptr);
+        oldRoom.restore(in, scmRoom1, scmPreLockPrefixFormatVersion);
+
+        // a fixture that no longer matches the reader would leave the exit out
+        // and pass the comparison below for the wrong reason
+        QCOMPARE(in.status(), QDataStream::Ok);
+        QVERIFY2(in.atEnd(), "the version 7 fixture and TRoom::restore no longer agree on the layout");
+        QCOMPARE(oldRoom.getSpecialExits().value(scmUnprefixedSpecialExit, 0), scmRoom2);
+        QVERIFY2(oldRoom.getSpecialExitLocks().isEmpty(), "a command with no lock flag came back locked");
+    }
+
+#if defined(Q_OS_UNIX)
+    void test_aJsonExportThatCannotBeWrittenIsReported_data()
+    {
+        QTest::addColumn<int>("rooms");
+        QTest::addColumn<qint64>("fileSizeLimit");
+        QTest::addColumn<QString>("reason");
+        // Bigger than the file's write buffer, so the write itself comes up short, with no error on the file
+        QTest::newRow("cut short while writing") << 3000 << qint64(64 * 1024) << qsl("is the disk full?");
+        // Held in the file's write buffer until commit() flushes it, and Qt gives that failure no reason
+        QTest::newRow("cut short while flushing") << 1 << qint64(256) << QString();
+        // The write fails outright, and its reason is gone from the file once commit() returns
+        QTest::newRow("nothing written") << 3000 << qint64(0) << qt_error_string(EFBIG);
+    }
+
+    // A full disk is the usual cause, and the file already there must be left as it was
+    void test_aJsonExportThatCannotBeWrittenIsReported()
+    {
+        QFETCH(int, rooms);
+        QFETCH(qint64, fileSizeLimit);
+        QFETCH(QString, reason);
+        TMap* pTargetMap = mpTarget->mpMap.data();
+        pTargetMap->mapClear();
+        const int areaId = pTargetMap->mpRoomDB->addArea(qsl("Export area"));
+        QVERIFY(areaId > 0);
+        for (int id = 1; id <= rooms; ++id) {
+            QVERIFY(pTargetMap->addRoom(id));
+            QVERIFY(pTargetMap->setRoomArea(id, areaId));
+        }
+        const QString fileName = qsl("%1/cannot_be_written.json").arg(mSaveDir.path());
+        {
+            QFile old(fileName);
+            QVERIFY(old.open(QIODevice::WriteOnly));
+            QCOMPARE(old.write("OLD"), 3);
+        }
+
+        rlimit saved{};
+        QCOMPARE(::getrlimit(RLIMIT_FSIZE, &saved), 0);
+        rlimit limited = saved;
+        limited.rlim_cur = std::min(static_cast<rlim_t>(fileSizeLimit), saved.rlim_max);
+        // Past the limit the kernel also raises SIGXFSZ, whose default action ends the process
+        const auto previousHandler = std::signal(SIGXFSZ, SIG_IGN);
+        const bool applied = ::setrlimit(RLIMIT_FSIZE, &limited) == 0;
+        std::pair<bool, QString> result{true, QString()};
+        if (applied) {
+            result = pTargetMap->writeJsonMapFile(fileName);
+        }
+        const bool restored = ::setrlimit(RLIMIT_FSIZE, &saved) == 0;
+        std::signal(SIGXFSZ, previousHandler);
+        QVERIFY2(applied, "the file size limit could not be set");
+        QVERIFY2(restored, "the file size limit could not be put back");
+
+        QVERIFY2(!result.first, "an export that could not be written was reported as a success");
+        QVERIFY2(result.second.startsWith(qsl("could not export file")), qPrintable(result.second));
+        QVERIFY2(result.second.endsWith(reason), qPrintable(result.second));
+        QFile file(fileName);
+        QVERIFY(file.open(QIODevice::ReadOnly));
+        QCOMPARE(file.readAll(), QByteArray("OLD"));
+        QCOMPARE(QDir(mSaveDir.path()).entryList({qsl("cannot_be_written.json*")}, QDir::Files | QDir::Hidden), QStringList{qsl("cannot_be_written.json")});
+    }
+#endif
+
+    // An area id can reach the load as a name in the map's area table with no
+    // TArea of its own, and the audit is what makes one for it (#989). This
+    // slot wipes the shared target map, so it has to stay last.
+    void test_anAreaTheMapOnlyNamesIsCreatedByTheAudit()
+    {
+        QByteArray areaNames;
+        QDataStream out(&areaNames, QIODevice::WriteOnly);
+        out.setVersion(QDataStream::Qt_5_12);
+        out << QMap<int, QString>{{scmNamedOnlyAreaId, scmNamedOnlyAreaName}};
+
+        TMap* pTargetMap = mpTarget->mpMap.data();
+        pTargetMap->mapClear();
+        QDataStream in(&areaNames, QIODevice::ReadOnly);
+        in.setVersion(QDataStream::Qt_5_12);
+        pTargetMap->mpRoomDB->restoreAreaMap(in);
+        QVERIFY(!pTargetMap->mpRoomDB->getArea(scmNamedOnlyAreaId));
+
+        pTargetMap->audit();
+
+        QVERIFY2(pTargetMap->mpRoomDB->getArea(scmNamedOnlyAreaId), "the area the map named but did not carry was not created");
+        QCOMPARE(pTargetMap->mpRoomDB->getAreaNamesMap().value(scmNamedOnlyAreaId), scmNamedOnlyAreaName);
+    }
 };
 
-void initializeQRCResourcesForMapRoundTripTest()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "MapRoundTripTest.moc"
-QTEST_MAIN(MapRoundTripTest)
+MUDLET_GROUPED_TEST_MAIN(MapRoundTripTest)

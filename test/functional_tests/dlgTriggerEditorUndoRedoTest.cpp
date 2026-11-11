@@ -17,15 +17,24 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QFileInfo>
+#include <QRadioButton>
+#include <QTemporaryDir>
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include "MudletApp.h"
+#include "PortableModeTestHelper.h"
+#include "ProfileTestHelper.h"
+#include "EditorDeleteItemCommand.h"
 #include "EditorUndoStack.h"
 #include "Host.h"
+#include "HostDialogs.h"
 #include "MudletInstanceCoordinator.h"
 #include "TAction.h"
 #include "TAlias.h"
 #include "TKey.h"
+#include "TScript.h"
 #include "TTimer.h"
 #include "TTreeWidget.h"
 #include "TTrigger.h"
@@ -34,38 +43,26 @@
 #include "dlgActionMainArea.h"
 #include "dlgAliasMainArea.h"
 #include "dlgConnectionProfiles.h"
+#include "dlgScriptsMainArea.h"
 #include "dlgTimersMainArea.h"
 #include "dlgTriggerEditor.h"
 #include "dlgTriggerPatternEdit.h"
 #include "dlgTriggersMainArea.h"
 #include "mudlet.h"
 
+#include <QAccessible>
+#include <QTextDocument>
+
+#include "GroupedTest.h"
+
 using namespace std::chrono_literals;
-
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-
-static void initializeQRCResources() {
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-  qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-  qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-  qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-  qInitResources_mudlet();
-  qInitResources_qm();
-}
 
 class dlgTriggerEditorUndoRedoTest : public QObject {
   Q_OBJECT
 
 private:
+  QTemporaryDir mConfigDir;
+  QByteArray mSavedXdg;
   TelnetServerStub *mpServer = nullptr;
   dlgTriggerEditor *mpEditor = nullptr;
   Host *mpHost = nullptr;
@@ -88,6 +85,39 @@ private:
     TTreeWidget *treeWidget() const { return getTreeWidget(); }
   };
 
+  void reParentInModel(EditorViewType viewType, int childID, int oldParentID,
+                       int newParentID, int position) {
+    const auto mode = TreeItemInsertMode::AtPosition;
+    switch (viewType) {
+    case EditorViewType::cmTriggerView:
+      mpHost->getTriggerUnit()->reParentTrigger(childID, oldParentID,
+                                                newParentID, mode, position);
+      break;
+    case EditorViewType::cmTimerView:
+      mpHost->getTimerUnit()->reParentTimer(childID, oldParentID, newParentID,
+                                            mode, position);
+      break;
+    case EditorViewType::cmAliasView:
+      mpHost->getAliasUnit()->reParentAlias(childID, oldParentID, newParentID,
+                                            mode, position);
+      break;
+    case EditorViewType::cmScriptView:
+      mpHost->getScriptUnit()->reParentScript(childID, oldParentID,
+                                              newParentID, mode, position);
+      break;
+    case EditorViewType::cmKeysView:
+      mpHost->getKeyUnit()->reParentKey(childID, oldParentID, newParentID,
+                                        mode, position);
+      break;
+    case EditorViewType::cmActionView:
+      mpHost->getActionUnit()->reParentAction(childID, oldParentID,
+                                              newParentID, mode, position);
+      break;
+    default:
+      QFAIL("No model to move the item in for this view");
+    }
+  }
+
   std::vector<ItemTypeInfo> mItemTypes;
 
   void cleanupAll(const ItemTypeInfo &itemType) {
@@ -104,7 +134,7 @@ private:
 
   void deleteProfileDirectory(const QString &profileName) {
     const QString path =
-        mudlet::getMudletPath(enums::profileHomePath, profileName);
+        MudletApp::getMudletPath(enums::profileHomePath, profileName);
     QDir dir(path);
     if (dir.exists()) {
       dir.removeRecursively();
@@ -113,55 +143,34 @@ private:
 
   void startProfile(const QString &profileName, const QString &address,
                     const QString &port) {
-    QTimer::singleShot(0ms, qApp, [profileName, address, port]() {
-      mudlet::self()->startAutoLogin({});
-      QTest::qWait(100ms);
-
-      // Verify connection dialog is available before UI interactions
-      Q_ASSERT_X(mudlet::self()->mpConnectionDialog, "startProfile",
-                 "Connection dialog not initialized");
-      Q_ASSERT_X(mudlet::self()->mpConnectionDialog->new_profile_button,
-                 "startProfile", "New profile button not found");
-
-      QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button,
-                        Qt::LeftButton);
-      QTest::qWait(100ms);
-
-      Q_ASSERT_X(QApplication::focusWidget(), "startProfile",
-                 "No widget has focus after clicking new profile button");
-
-      QTest::keyClicks(QApplication::focusWidget(), profileName);
-      QTest::qWait(100ms);
-      QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-      QTest::qWait(100ms);
-      QTest::keyClicks(QApplication::focusWidget(), address);
-      QTest::qWait(100ms);
-      QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-      QTest::qWait(100ms);
-      QTest::keyClicks(QApplication::focusWidget(), port);
-      QTest::qWait(100ms);
-      QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
-    });
-
-    QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-    if (!spy.wait(2000)) {
-      QFAIL("Profile took too long to load.");
-    }
-
-    mpHost = mudlet::self()->getActiveHost();
+    mpHost = TestProfile::create(profileName, address, port);
     if (!mpHost) {
       QFAIL("No active host available for the test.");
     }
 
     QSignalSpy spy2(&(mpHost->mTelnet), &cTelnet::signal_connected);
-    if (!spy2.wait(1000)) {
+    if (!spy2.wait(1s)) {
       QFAIL("Could not connect with the host.");
     }
   }
 
 private slots:
   void initTestCase() {
-    initializeQRCResources();
+    if (portableMarkerPresent()) {
+      QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, "
+            "so the config dir cannot be redirected");
+    }
+
+    // A config root of this process's own. Sharing the developer's
+    // ~/.config/mudlet means sharing a profile list, so a second copy of this
+    // test running at the same time is told the name it types is already in
+    // use and never gets an enabled Connect button. Since #9712 the opt-in
+    // that makes setupConfig() adopt a directory is
+    // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+    QVERIFY(mConfigDir.isValid());
+    QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+    mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+    qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
 
     mpServer = new TelnetServerStub(qApp);
     mpServer->start(mLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
@@ -171,6 +180,8 @@ private slots:
     mPort = QString::number(mpServer->serverPort());
     mudlet::start();
     mudlet::self()->setupConfig();
+    QCOMPARE(MudletApp::getMudletPath(enums::mainPath),
+             qsl("%1/mudlet").arg(mConfigDir.path()));
     mudlet::self()->takeOwnershipOfInstanceCoordinator(
         std::make_unique<MudletInstanceCoordinator>(
             "MudletInstanceCoordinator"));
@@ -183,7 +194,7 @@ private slots:
     mudlet::self()->slot_showScriptDialog();
     QTest::qWait(100ms);
 
-    mpEditor = mpHost->mpEditorDialog;
+    mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
     QVERIFY2(mpEditor != nullptr, "Editor dialog should be created");
     QVERIFY2(mpEditor->mpUndoStack != nullptr, "Undo stack should exist");
 
@@ -237,8 +248,13 @@ private slots:
     mpHost = nullptr;
     delete mpServer;
     mpServer = nullptr;
-    deleteProfileDirectory(mProfileName);
-    delete mudlet::self();
+    // Null when initTestCase skipped or failed ahead of mudlet::start()
+    if (mudlet::self()) {
+      deleteProfileDirectory(mProfileName);
+      delete mudlet::self();
+    }
+    mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME")
+                       : qputenv("XDG_CONFIG_HOME", mSavedXdg);
   }
 
   // ========================================================================
@@ -637,6 +653,291 @@ private slots:
     mpEditor->mpUndoStack->clear();
   }
 
+  static int countDescendants(const QTreeWidgetItem *item) {
+    int count = item->childCount();
+    for (int i = 0; i < item->childCount(); ++i) {
+      count += countDescendants(item->child(i));
+    }
+    return count;
+  }
+
+  // Names the first restored descendant whose record the delete command lost track of
+  static QString staleRecord(const EditorDeleteItemCommand *command, const QTreeWidgetItem *item) {
+    const int parentID = item->data(0, Qt::UserRole).toInt();
+    for (int i = 0; i < item->childCount(); ++i) {
+      const QTreeWidgetItem *child = item->child(i);
+      const int childID = child->data(0, Qt::UserRole).toInt();
+      const auto *info = command->getDeletedItemInfo(childID);
+      if (!command->affectedItemIDs().contains(childID) || !info) {
+        return qsl("%1 (ID %2) has no record").arg(child->text(0)).arg(childID);
+      }
+      if (info->parentID != parentID || info->positionInParent != i) {
+        return qsl("%1 (ID %2) is recorded under %3 at %4, not %5 at %6")
+            .arg(child->text(0)).arg(childID).arg(info->parentID).arg(info->positionInParent).arg(parentID).arg(i);
+      }
+      const QString stale = staleRecord(command, child);
+      if (!stale.isEmpty()) {
+        return stale;
+      }
+    }
+    return QString();
+  }
+
+  void testRedoDeletesEverySameNamedItem_data() {
+    QTest::addColumn<int>("itemTypeIndex");
+    QTest::addColumn<QString>("itemTypeName");
+
+    QTest::newRow("Trigger") << 0 << "Trigger";
+    QTest::newRow("Timer") << 1 << "Timer";
+    QTest::newRow("Alias") << 2 << "Alias";
+    QTest::newRow("Script") << 3 << "Script";
+    QTest::newRow("Key") << 4 << "Key";
+    QTest::newRow("Action") << 5 << "Action";
+  }
+
+  // New items all share a default name, so names alone cannot tell them apart
+  void testRedoDeletesEverySameNamedItem() {
+    QFETCH(int, itemTypeIndex);
+    QFETCH(QString, itemTypeName);
+
+    const auto &itemType = mItemTypes[itemTypeIndex];
+    itemType.showView();
+    cleanupAll(itemType);
+
+    itemType.treeWidget()->setCurrentItem(itemType.baseItem());
+    itemType.addFolder();
+    QTreeWidgetItem *folder = itemType.baseItem()->child(0);
+    QVERIFY(folder);
+    for (int i = 0; i < 3; ++i) {
+      itemType.treeWidget()->setCurrentItem(folder);
+      itemType.addItem();
+    }
+    QList<QTreeWidgetItem *> leaves;
+    for (int i = 0; i < folder->childCount(); ++i) {
+      leaves.append(folder->child(i));
+    }
+    itemType.treeWidget()->setCurrentItem(folder);
+    itemType.addFolder();
+    QCOMPARE(folder->childCount(), 4);
+    QTreeWidgetItem *subFolder = nullptr;
+    for (int i = 0; i < folder->childCount(); ++i) {
+      if (!leaves.contains(folder->child(i))) {
+        subFolder = folder->child(i);
+      }
+    }
+    QVERIFY(subFolder);
+    for (int i = 0; i < 2; ++i) {
+      itemType.treeWidget()->setCurrentItem(subFolder);
+      itemType.addItem();
+    }
+    QCOMPARE(countDescendants(folder), 6);
+
+    // Same-named siblings deleted together
+    itemType.treeWidget()->clearSelection();
+    for (int i = 0; i < folder->childCount(); ++i) {
+      if (folder->child(i) != subFolder) {
+        folder->child(i)->setSelected(true);
+      }
+    }
+    mpEditor->slot_deleteItemOrGroup();
+    folder = itemType.baseItem()->child(0);
+    QCOMPARE(countDescendants(folder), 3);
+    mpEditor->mpUndoStack->undo();
+    folder = itemType.baseItem()->child(0);
+    QCOMPARE(countDescendants(folder), 6);
+    mpEditor->mpUndoStack->redo();
+    folder = itemType.baseItem()->child(0);
+    QVERIFY2(countDescendants(folder) == 3,
+             qPrintable(qsl("%1: redo left %2 items, expected 3")
+                            .arg(itemTypeName)
+                            .arg(countDescendants(folder))));
+    mpEditor->mpUndoStack->undo();
+    folder = itemType.baseItem()->child(0);
+    QCOMPARE(countDescendants(folder), 6);
+
+    // A folder whose same-named descendants come back from its snapshot
+    itemType.treeWidget()->clearSelection();
+    itemType.treeWidget()->setCurrentItem(folder);
+    mpEditor->slot_deleteItemOrGroup();
+    QCOMPARE(itemType.baseItem()->childCount(), 0);
+    for (int round = 0; round < 2; ++round) {
+      mpEditor->mpUndoStack->undo();
+      QCOMPARE(itemType.baseItem()->childCount(), 1);
+      QCOMPARE(countDescendants(itemType.baseItem()->child(0)), 6);
+      const auto *command = dynamic_cast<const EditorDeleteItemCommand *>(
+          mpEditor->mpUndoStack->getLastExecutedCommand());
+      QVERIFY(command);
+      const QString stale = staleRecord(command, itemType.baseItem()->child(0));
+      QVERIFY2(stale.isEmpty(), qPrintable(qsl("%1: %2").arg(itemTypeName, stale)));
+      mpEditor->mpUndoStack->redo();
+      QVERIFY2(itemType.baseItem()->childCount() == 0,
+               qPrintable(qsl("%1: redo of the folder delete left %2 items")
+                              .arg(itemTypeName)
+                              .arg(countDescendants(itemType.baseItem()))));
+    }
+
+    cleanupAll(itemType);
+    mpEditor->mpUndoStack->clear();
+  }
+
+  void testUndoDeleteWithTheBaseItemSelected_data() {
+    QTest::addColumn<int>("itemTypeIndex");
+    QTest::addColumn<QString>("itemTypeName");
+
+    QTest::newRow("Trigger") << 0 << "Trigger";
+    QTest::newRow("Timer") << 1 << "Timer";
+    QTest::newRow("Alias") << 2 << "Alias";
+    QTest::newRow("Script") << 3 << "Script";
+    QTest::newRow("Key") << 4 << "Key";
+    QTest::newRow("Action") << 5 << "Action";
+  }
+
+  // As Ctrl+A does, which also selects the base item every top-level item
+  // sits under
+  void testUndoDeleteWithTheBaseItemSelected() {
+    QFETCH(int, itemTypeIndex);
+    QFETCH(QString, itemTypeName);
+
+    const auto &itemType = mItemTypes[itemTypeIndex];
+    itemType.showView();
+    cleanupAll(itemType);
+
+    itemType.treeWidget()->setCurrentItem(itemType.baseItem());
+    itemType.addFolder();
+    QTreeWidgetItem *folder = itemType.baseItem()->child(0);
+    QVERIFY(folder != nullptr);
+    itemType.treeWidget()->setCurrentItem(folder);
+    itemType.addItem();
+    QCOMPARE(folder->childCount(), 1);
+
+    itemType.treeWidget()->clearSelection();
+    itemType.treeWidget()->setCurrentItem(folder, 0,
+                                          QItemSelectionModel::NoUpdate);
+    itemType.baseItem()->setSelected(true);
+    folder->setSelected(true);
+    folder->child(0)->setSelected(true);
+
+    mpEditor->slot_deleteItemOrGroup();
+    QVERIFY2(itemType.baseItem()->childCount() == 0,
+             qPrintable(itemTypeName + ": the folder should be deleted"));
+
+    mpEditor->mpUndoStack->undo();
+    QTreeWidgetItem *restored = itemType.baseItem()->child(0);
+    QVERIFY2(restored != nullptr && restored->childCount() == 1,
+             qPrintable(itemTypeName +
+                        ": undo should bring back the folder and its child"));
+
+    cleanupAll(itemType);
+  }
+
+  void testDeletingManySelectedItemsChangesSelectionOnce_data() {
+    QTest::addColumn<int>("itemTypeIndex");
+    QTest::addColumn<QString>("itemTypeName");
+
+    QTest::newRow("Trigger") << 0 << "Trigger";
+    QTest::newRow("Timer") << 1 << "Timer";
+    QTest::newRow("Alias") << 2 << "Alias";
+    QTest::newRow("Script") << 3 << "Script";
+    QTest::newRow("Key") << 4 << "Key";
+    QTest::newRow("Action") << 5 << "Action";
+  }
+
+  void testDeletingManySelectedItemsChangesSelectionOnce() {
+    QFETCH(int, itemTypeIndex);
+    QFETCH(QString, itemTypeName);
+
+    const auto &itemType = mItemTypes[itemTypeIndex];
+    itemType.showView();
+    cleanupAll(itemType);
+
+    constexpr int itemCount = 30;
+    itemType.treeWidget()->setCurrentItem(itemType.baseItem());
+    itemType.addFolder();
+    QTreeWidgetItem *folder = itemType.baseItem()->child(0);
+    QVERIFY(folder);
+    for (int i = 0; i < itemCount; ++i) {
+      itemType.treeWidget()->setCurrentItem(folder);
+      itemType.addItem();
+    }
+    QCOMPARE(folder->childCount(), itemCount);
+
+    itemType.treeWidget()->clearSelection();
+    for (int i = 0; i < itemCount; ++i) {
+      folder->child(i)->setSelected(true);
+    }
+    itemType.treeWidget()->setCurrentItem(folder->child(itemCount - 1), 0,
+                                          QItemSelectionModel::NoUpdate);
+
+    QSignalSpy selectionSpy(itemType.treeWidget(),
+                            &QTreeWidget::itemSelectionChanged);
+    mpEditor->slot_deleteItemOrGroup();
+
+    QCOMPARE(folder->childCount(), 0);
+    QVERIFY2(selectionSpy.count() <= 1,
+             qPrintable(qsl("%1: selection changed %2 times")
+                            .arg(itemTypeName)
+                            .arg(selectionSpy.count())));
+    QTreeWidgetItem *current = itemType.treeWidget()->currentItem();
+    QVERIFY(current);
+    QVERIFY(current->isSelected());
+    QCOMPARE(itemType.treeWidget()->selectedItems().size(), 1);
+
+    mpEditor->mpUndoStack->undo();
+    QCOMPARE(itemType.baseItem()->child(0)->childCount(), itemCount);
+
+    cleanupAll(itemType);
+    mpEditor->mpUndoStack->clear();
+  }
+
+  void testDeletingAnItemMovesTheCurrentItemToTheOneAbove_data() {
+    QTest::addColumn<int>("itemTypeIndex");
+    QTest::addColumn<QString>("itemTypeName");
+
+    QTest::newRow("Trigger") << 0 << "Trigger";
+    QTest::newRow("Timer") << 1 << "Timer";
+    QTest::newRow("Alias") << 2 << "Alias";
+    QTest::newRow("Script") << 3 << "Script";
+    QTest::newRow("Key") << 4 << "Key";
+    QTest::newRow("Action") << 5 << "Action";
+  }
+
+  // The view only scrolls to, and announces, a current item it is told about
+  void testDeletingAnItemMovesTheCurrentItemToTheOneAbove() {
+    QFETCH(int, itemTypeIndex);
+    QFETCH(QString, itemTypeName);
+
+    const auto &itemType = mItemTypes[itemTypeIndex];
+    itemType.showView();
+    cleanupAll(itemType);
+
+    itemType.treeWidget()->setCurrentItem(itemType.baseItem());
+    itemType.addFolder();
+    QTreeWidgetItem *folder = itemType.baseItem()->child(0);
+    QVERIFY(folder);
+    for (int i = 0; i < 4; ++i) {
+      itemType.treeWidget()->setCurrentItem(folder);
+      itemType.addItem();
+    }
+    QCOMPARE(folder->childCount(), 4);
+
+    QTreeWidgetItem *above = folder->child(1);
+    itemType.treeWidget()->setCurrentItem(folder->child(2));
+
+    QSignalSpy currentSpy(itemType.treeWidget(),
+                          &QTreeWidget::currentItemChanged);
+    mpEditor->slot_deleteItemOrGroup();
+
+    QCOMPARE(folder->childCount(), 3);
+    QCOMPARE(itemType.treeWidget()->currentItem(), above);
+    QVERIFY2(!currentSpy.isEmpty(),
+             qPrintable(itemTypeName + ": the view was never told the "
+                                       "current item changed"));
+    QCOMPARE(currentSpy.last().at(0).value<QTreeWidgetItem *>(), above);
+
+    cleanupAll(itemType);
+    mpEditor->mpUndoStack->clear();
+  }
+
   // ========================================================================
   // CATEGORY 4: ID Remapping
   // ========================================================================
@@ -797,6 +1098,10 @@ private slots:
 
       mpEditor->slot_itemMoved(grandchildID, oldParentID, newParentID,
                                oldPosition, newPosition);
+      // A real drag moves the item in the model too, straight after emitting
+      // itemMoved; without it, undo would list the item under its old parent twice
+      reParentInModel(itemType.viewType, grandchildID, oldParentID,
+                      newParentID, newPosition);
 
       QVERIFY2(parent->childCount() == 3 &&
                    childWithGrandchild->childCount() == 0,
@@ -1629,6 +1934,73 @@ private slots:
     cleanupAll(mItemTypes[1]);
   }
 
+  void testTimerWithoutATimeIsFlagged() {
+    mpEditor->slot_showTimers();
+    cleanupAll(mItemTypes[1]);
+
+    mpEditor->addTimer(false);
+    QVERIFY(mpEditor->mpTimerBaseItem->childCount() > 0);
+
+    QTreeWidgetItem *timer = mpEditor->mpTimerBaseItem->child(0);
+    int timerID = timer->data(0, Qt::UserRole).toInt();
+    TTimer *pTimer = mpHost->getTimerUnit()->getTimer(timerID);
+    QVERIFY(pTimer != nullptr);
+
+    mpEditor->treeWidget_timers->setCurrentItem(timer);
+    mpEditor->slot_timerSelected(timer);
+    mpEditor->mpUndoStack->clear();
+
+    // a new timer has no time yet
+    mpEditor->saveTimer();
+    QVERIFY(!pTimer->state());
+    QVERIFY(!pTimer->getError().isEmpty());
+
+    mpEditor->mpTimersMainArea->timeEdit_timer_seconds->setTime(QTime(0, 0, 2, 0));
+    mpEditor->saveTimer();
+    QVERIFY(pTimer->state());
+
+    // edits of the time made in quick succession would merge into a single undo step
+    mpEditor->mpUndoStack->clear();
+    mpEditor->mpTimersMainArea->timeEdit_timer_seconds->setTime(QTime(0, 0, 0, 0));
+    mpEditor->saveTimer();
+    QVERIFY(!pTimer->state());
+
+    mpEditor->mpUndoStack->undo();
+    QCOMPARE(pTimer->getTime(), QTime(0, 0, 2, 0));
+    QVERIFY(pTimer->state());
+
+    mpEditor->mpUndoStack->redo();
+    QCOMPARE(pTimer->getTime(), QTime(0, 0, 0, 0));
+    QVERIFY(!pTimer->state());
+
+    cleanupAll(mItemTypes[1]);
+  }
+
+  void testTimerMovedUnderATimerNeedsNoTime() {
+    TLuaInterpreter *interpreter = mpHost->getLuaInterpreter();
+    const int parentID = interpreter->startPermTimer(qsl("W2aMoveParent"), QString(), 5, qsl("-- parent")).first;
+    const int zeroID = interpreter->startPermTimer(qsl("W2aMoveZero"), QString(), 0, qsl("-- zero")).first;
+    TTimer *pParent = mpHost->getTimerUnit()->getTimer(parentID);
+    TTimer *pZero = mpHost->getTimerUnit()->getTimer(zeroID);
+    QVERIFY(pParent != nullptr);
+    QVERIFY(pZero != nullptr);
+
+    pZero->validateTime();
+    QVERIFY(!pZero->state());
+
+    // an offset timer fires when its parent does, so it needs no time of its own
+    mpHost->getTimerUnit()->reParentTimer(zeroID, 0, parentID);
+    QVERIFY(pZero->isOffsetTimer());
+    QVERIFY(pZero->state());
+
+    mpHost->getTimerUnit()->reParentTimer(zeroID, parentID, 0);
+    QVERIFY(!pZero->isOffsetTimer());
+    QVERIFY(!pZero->state());
+
+    delete pZero;
+    delete pParent;
+  }
+
   void testTriggerPatternTypeChanges() {
     mpEditor->slot_showTriggers();
     cleanupAll(mItemTypes[0]);
@@ -1932,6 +2304,38 @@ private slots:
              "No items should disappear when undo clicked without changes");
   }
 
+  // Each view relabels the toolbar actions and changes their tooltips, and a
+  // widget with no description of its own reports its tooltip, markup
+  // included, through the accessible interface a screen reader reads.
+  // mudlet::start() installs the filter that prevents this, so this test also
+  // fails if the application stops installing it.
+  void testAccessibleDescriptionsHaveNoMarkup() {
+    static const QRegularExpression htmlTag(qsl(R"(<[/A-Za-z][^>]*>)"));
+    for (const auto &itemType : mItemTypes) {
+      itemType.showView();
+      int richToolTips = 0;
+      const auto widgets = mpEditor->findChildren<QWidget *>();
+      for (auto *widget : widgets) {
+        if (!Qt::mightBeRichText(widget->toolTip())) {
+          continue;
+        }
+        ++richToolTips;
+        QAccessibleInterface *pInterface =
+            QAccessible::queryAccessibleInterface(widget);
+        QVERIFY(pInterface);
+        const QString description = pInterface->text(QAccessible::Description);
+        QVERIFY2(!description.contains(htmlTag),
+                 qPrintable(qsl("%1 in the %2 view has the description \"%3\"")
+                                .arg(widget->objectName(), itemType.name,
+                                     description)));
+      }
+      QVERIFY2(richToolTips > 20,
+               qPrintable(qsl("Only %1 rich tooltips in the %2 view")
+                              .arg(richToolTips)
+                              .arg(itemType.name)));
+    }
+  }
+
   void testTriggerNameWiped() {
     mpEditor->slot_showTriggers();
     cleanupAll(mItemTypes[0]);
@@ -1978,44 +2382,152 @@ private slots:
     cleanupAll(mItemTypes[3]);
   }
 
-  void testMultiTriggerPasteIntoGroup() {
-    mpEditor->slot_showTriggers();
-    cleanupAll(mItemTypes[0]);
+  void testUndoDeleteWhileAScriptHasUnsavedChanges() {
+    mpEditor->slot_showScripts();
+    cleanupAll(mItemTypes[3]);
+    mpEditor->slot_showAliases();
+    cleanupAll(mItemTypes[2]);
 
-    mpEditor->addTrigger(true);
-    QCOMPARE(mpEditor->mpTriggerBaseItem->childCount(), 1);
+    mpEditor->slot_showScripts();
+    mpEditor->addScript(false);
+    QTreeWidgetItem *script = mpEditor->mpScriptsBaseItem->child(0);
+    const int scriptID = script->data(0, Qt::UserRole).toInt();
+    const QString originalName = mpHost->getScriptUnit()->getScript(scriptID)->getName();
 
-    QTreeWidgetItem *group = mpEditor->mpTriggerBaseItem->child(0);
-    int groupID = group->data(0, Qt::UserRole).toInt();
-    TTrigger *pGroup = mpHost->getTriggerUnit()->getTrigger(groupID);
-    QVERIFY(pGroup != nullptr);
+    mpEditor->slot_showAliases();
+    mpEditor->addAlias(false);
+    QTreeWidgetItem *alias = mpEditor->mpAliasBaseItem->child(0);
+    mpEditor->treeWidget_aliases->setCurrentItem(alias);
+    mpEditor->slot_deleteItemOrGroup();
+    QCOMPARE(mpEditor->mpAliasBaseItem->childCount(), 0);
 
-    mpEditor->treeWidget_triggers->setCurrentItem(group);
-    mpEditor->addTrigger(false);
-    mpEditor->addTrigger(false);
-    QCOMPARE(group->childCount(), 2);
+    mpEditor->slot_showScripts();
+    script = mpEditor->mpScriptsBaseItem->child(0);
+    mpEditor->treeWidget_scripts->setCurrentItem(script);
+    mpEditor->slot_scriptsSelected(script);
+    mpEditor->mpScriptsMainArea->lineEdit_script_name->setText(qsl("renamed before undo"));
 
-    // copy both triggers, then paste them into the group
-    mpEditor->treeWidget_triggers->clearSelection();
-    mpEditor->treeWidget_triggers->setCurrentItem(group->child(0));
-    group->child(0)->setSelected(true);
-    group->child(1)->setSelected(true);
-    mpEditor->slot_copyXml();
+    // Undo shows the restored alias, which saves the script edit as a new command and
+    // drops the undone delete from the stack while the undo is still using it
+    mpEditor->mpUndoStack->undo();
+    QCOMPARE(mpEditor->mpAliasBaseItem->childCount(), 1);
+    QCOMPARE(mpHost->getScriptUnit()->getScript(scriptID)->getName(), qsl("renamed before undo"));
 
-    mpEditor->treeWidget_triggers->clearSelection();
-    mpEditor->treeWidget_triggers->setCurrentItem(group);
-    mpEditor->slot_pasteXml();
+    mpEditor->mpUndoStack->undo();
+    QCOMPARE(mpHost->getScriptUnit()->getScript(scriptID)->getName(), originalName);
+    // The nested save must not have left the stack thinking this undo changed nothing
+    QCOMPARE(mpEditor->mpScriptsMainArea->lineEdit_script_name->text(), originalName);
 
-    // each pasted trigger must be linked into the group exactly once
-    QCOMPARE(static_cast<int>(pGroup->getChildrenList()->size()), 4);
+    // Only works if the alias's new ID was remapped onto the earlier add command
+    mpEditor->mpUndoStack->undo();
+    QCOMPARE(mpEditor->mpAliasBaseItem->childCount(), 0);
 
-    // re-render the tree and verify the group shows exactly four children
+    mpEditor->slot_showScripts();
+    cleanupAll(mItemTypes[3]);
+    mpEditor->slot_showAliases();
+    cleanupAll(mItemTypes[2]);
+  }
+
+  void testPasteOntoGroupLandsBeneathIt_data() {
+    QTest::addColumn<int>("itemTypeIndex");
+    QTest::addColumn<int>("copied");
+
+    const QStringList names{qsl("Trigger"), qsl("Timer"), qsl("Alias"),
+                            qsl("Script"), qsl("Key"), qsl("Action")};
+    for (int i = 0; i < names.size(); ++i) {
+      QTest::newRow(qPrintable(names.at(i) + qsl(" x1"))) << i << 1;
+      QTest::newRow(qPrintable(names.at(i) + qsl(" x2"))) << i << 2;
+    }
+  }
+
+  // Every item type pastes beneath a selected group rather than into it (#12177)
+  void testPasteOntoGroupLandsBeneathIt() {
+    QFETCH(int, itemTypeIndex);
+    QFETCH(int, copied);
+
+    const auto &itemType = mItemTypes[itemTypeIndex];
+    itemType.showView();
+    cleanupAll(itemType);
+
+    // A temporary item sits in the unit's list but not in the tree, so the
+    // group's tree row is not its place in that list
+    TLuaInterpreter *interpreter = mpHost->getLuaInterpreter();
+    int tempID = 0;
+    switch (itemType.viewType) {
+    case EditorViewType::cmTriggerView:
+      tempID = interpreter->startTempTrigger(qsl("pasteOrderTemp"), QString());
+      break;
+    case EditorViewType::cmTimerView:
+      tempID = interpreter->startTempTimer(600, QString()).first;
+      break;
+    case EditorViewType::cmAliasView:
+      tempID = interpreter->startTempAlias(qsl("^pasteOrderTemp$"), QString());
+      break;
+    default:
+      break;
+    }
+    QVERIFY(tempID >= 0);
+
+    itemType.addFolder();
+    QCOMPARE(itemType.baseItem()->childCount(), 1);
+    const int groupID = itemType.baseItem()->child(0)->data(0, Qt::UserRole).toInt();
+    itemType.treeWidget()->setCurrentItem(nullptr);
+    itemType.addFolder();
+    QCOMPARE(itemType.baseItem()->childCount(), 2);
+    int siblingID = itemType.baseItem()->child(0)->data(0, Qt::UserRole).toInt();
+    if (siblingID == groupID) {
+      siblingID = itemType.baseItem()->child(1)->data(0, Qt::UserRole).toInt();
+    }
+
     QEnterEvent enterEvent{QPointF(), QPointF(), QPointF()};
     QApplication::sendEvent(mpEditor, &enterEvent);
-    QCOMPARE(mpEditor->mpTriggerBaseItem->childCount(), 1);
-    QCOMPARE(mpEditor->mpTriggerBaseItem->child(0)->childCount(), 4);
+    QTreeWidgetItem *group = itemType.baseItem()->child(0);
+    QCOMPARE(group->data(0, Qt::UserRole).toInt(), groupID);
 
-    cleanupAll(mItemTypes[0]);
+    itemType.treeWidget()->setCurrentItem(group);
+    itemType.addItem();
+    itemType.addItem();
+    QCOMPARE(group->childCount(), 2);
+
+    itemType.treeWidget()->clearSelection();
+    itemType.treeWidget()->setCurrentItem(group->child(0));
+    for (int i = 0; i < copied; ++i) {
+      group->child(i)->setSelected(true);
+    }
+    mpEditor->slot_copyXml();
+
+    itemType.treeWidget()->clearSelection();
+    itemType.treeWidget()->setCurrentItem(group);
+    mpEditor->slot_pasteXml();
+
+    QApplication::sendEvent(mpEditor, &enterEvent);
+    QCOMPARE(itemType.baseItem()->childCount(), 2 + copied);
+    QCOMPARE(itemType.baseItem()->child(0)->data(0, Qt::UserRole).toInt(),
+             groupID);
+    QCOMPARE(itemType.baseItem()->child(0)->childCount(), 2);
+    for (int row = 1; row <= copied; ++row) {
+      const int pastedID =
+          itemType.baseItem()->child(row)->data(0, Qt::UserRole).toInt();
+      QVERIFY2(pastedID != groupID && pastedID != siblingID,
+               "a pasted item did not land right beneath the group");
+    }
+    QCOMPARE(itemType.baseItem()->child(1 + copied)->data(0, Qt::UserRole).toInt(),
+             siblingID);
+
+    cleanupAll(itemType);
+    switch (itemType.viewType) {
+    case EditorViewType::cmTriggerView:
+      mpHost->getTriggerUnit()->killTrigger(QString::number(tempID));
+      break;
+    case EditorViewType::cmTimerView:
+      mpHost->getTimerUnit()->killTimer(QString::number(tempID));
+      break;
+    case EditorViewType::cmAliasView:
+      mpHost->getAliasUnit()->killAlias(QString::number(tempID));
+      break;
+    default:
+      break;
+    }
   }
 
   void testMultiTriggerPasteAfterSibling() {
@@ -2060,86 +2572,6 @@ private slots:
     QCOMPARE(childIDs.at(3), secondID);
 
     cleanupAll(mItemTypes[0]);
-  }
-
-  void testMultiAliasPasteIntoGroup() {
-    mpEditor->slot_showAliases();
-    cleanupAll(mItemTypes[2]);
-
-    mpEditor->addAlias(true);
-    QCOMPARE(mpEditor->mpAliasBaseItem->childCount(), 1);
-
-    QTreeWidgetItem *group = mpEditor->mpAliasBaseItem->child(0);
-    int groupID = group->data(0, Qt::UserRole).toInt();
-    TAlias *pGroup = mpHost->getAliasUnit()->getAlias(groupID);
-    QVERIFY(pGroup != nullptr);
-
-    mpEditor->treeWidget_aliases->setCurrentItem(group);
-    mpEditor->addAlias(false);
-    mpEditor->addAlias(false);
-    QCOMPARE(group->childCount(), 2);
-
-    // copy both aliases, then paste them into the group
-    mpEditor->treeWidget_aliases->clearSelection();
-    mpEditor->treeWidget_aliases->setCurrentItem(group->child(0));
-    group->child(0)->setSelected(true);
-    group->child(1)->setSelected(true);
-    mpEditor->slot_copyXml();
-
-    mpEditor->treeWidget_aliases->clearSelection();
-    mpEditor->treeWidget_aliases->setCurrentItem(group);
-    mpEditor->slot_pasteXml();
-
-    // both pasted aliases must land inside the group, each linked exactly once
-    QCOMPARE(static_cast<int>(pGroup->getChildrenList()->size()), 4);
-
-    // re-render the tree: the group shows four children and none at the root
-    QEnterEvent enterEvent{QPointF(), QPointF(), QPointF()};
-    QApplication::sendEvent(mpEditor, &enterEvent);
-    QCOMPARE(mpEditor->mpAliasBaseItem->childCount(), 1);
-    QCOMPARE(mpEditor->mpAliasBaseItem->child(0)->childCount(), 4);
-
-    cleanupAll(mItemTypes[2]);
-  }
-
-  void testMultiKeyPasteIntoGroup() {
-    mpEditor->slot_showKeys();
-    cleanupAll(mItemTypes[4]);
-
-    mpEditor->addKey(true);
-    QCOMPARE(mpEditor->mpKeyBaseItem->childCount(), 1);
-
-    QTreeWidgetItem *group = mpEditor->mpKeyBaseItem->child(0);
-    int groupID = group->data(0, Qt::UserRole).toInt();
-    TKey *pGroup = mpHost->getKeyUnit()->getKey(groupID);
-    QVERIFY(pGroup != nullptr);
-
-    mpEditor->treeWidget_keys->setCurrentItem(group);
-    mpEditor->addKey(false);
-    mpEditor->addKey(false);
-    QCOMPARE(group->childCount(), 2);
-
-    // copy both keys, then paste them into the group
-    mpEditor->treeWidget_keys->clearSelection();
-    mpEditor->treeWidget_keys->setCurrentItem(group->child(0));
-    group->child(0)->setSelected(true);
-    group->child(1)->setSelected(true);
-    mpEditor->slot_copyXml();
-
-    mpEditor->treeWidget_keys->clearSelection();
-    mpEditor->treeWidget_keys->setCurrentItem(group);
-    mpEditor->slot_pasteXml();
-
-    // both pasted keys must land inside the group, each linked exactly once
-    QCOMPARE(static_cast<int>(pGroup->getChildrenList()->size()), 4);
-
-    // re-render the tree: the group shows four children and none at the root
-    QEnterEvent enterEvent{QPointF(), QPointF(), QPointF()};
-    QApplication::sendEvent(mpEditor, &enterEvent);
-    QCOMPARE(mpEditor->mpKeyBaseItem->childCount(), 1);
-    QCOMPARE(mpEditor->mpKeyBaseItem->child(0)->childCount(), 4);
-
-    cleanupAll(mItemTypes[4]);
   }
 
   // ========================================================================
@@ -2395,7 +2827,213 @@ private slots:
 
     cleanupAll(mItemTypes[2]);
   }
+
+  // The row widgets are a pool that is never reordered, so a move or delete
+  // copies each row's content, and colour captions and spacer counts with it.
+  void testPatternRowMoveDeleteAndMatchMode() {
+    mpEditor->slot_showTriggers();
+    cleanupAll(mItemTypes[0]);
+
+    mpEditor->addTrigger(false);
+    QVERIFY(mpEditor->mpTriggerBaseItem->childCount() > 0);
+
+    QTreeWidgetItem *trigger = mpEditor->mpTriggerBaseItem->child(0);
+    const int triggerID = trigger->data(0, Qt::UserRole).toInt();
+    TTrigger *pT = mpHost->getTriggerUnit()->getTrigger(triggerID);
+    QVERIFY(pT != nullptr);
+
+    mpEditor->treeWidget_triggers->setCurrentItem(trigger);
+    mpEditor->slot_triggerSelected(trigger);
+    mpEditor->mpUndoStack->clear();
+
+    mpEditor->showPatternItems(5);
+    QVERIFY(mpEditor->mTriggerPatternEdit.size() >= 5);
+
+    // Its text is generated rather than typed, and its row carries two captions
+    const QString colorPattern =
+        TTrigger::createColorPatternText(1, TTrigger::scmIgnored);
+
+    // Top down: every content change collapses the rows under the last one that
+    // holds something
+    mpEditor->mTriggerPatternEdit[0]->singleLineTextEdit_pattern->setPlainText(
+        qsl("alpha"));
+    mpEditor->mTriggerPatternEdit[1]->comboBox_patternType->setCurrentIndex(
+        REGEX_COLOR_PATTERN);
+    mpEditor->mTriggerPatternEdit[1]->singleLineTextEdit_pattern->setPlainText(
+        colorPattern);
+    mpEditor->mTriggerPatternEdit[2]->comboBox_patternType->setCurrentIndex(
+        REGEX_LINE_SPACER);
+    mpEditor->mTriggerPatternEdit[2]->spinBox_lineSpacer->setValue(3);
+    mpEditor->mTriggerPatternEdit[3]->comboBox_patternType->setCurrentIndex(
+        REGEX_PROMPT);
+    mpEditor->mTriggerPatternEdit[4]->singleLineTextEdit_pattern->setPlainText(
+        qsl("beta"));
+    QCoreApplication::processEvents();
+    mpEditor->saveTrigger();
+
+    QCOMPARE(pT->getPatternsList(),
+             QStringList({qsl("alpha"), colorPattern, qsl("3"), QString(),
+                          qsl("beta")}));
+    QCOMPARE(pT->getRegexCodePropertyList(),
+             QList<int>({REGEX_SUBSTRING, REGEX_COLOR_PATTERN,
+                         REGEX_LINE_SPACER, REGEX_PROMPT, REGEX_SUBSTRING}));
+
+    // The colour captions are read off the pattern text only on load, so they
+    // are right after a move only if the move carried them
+    const QString colorForeground =
+        mpEditor->mTriggerPatternEdit[1]->pushButton_fgColor->text();
+    const QString colorBackground =
+        mpEditor->mTriggerPatternEdit[1]->pushButton_bgColor->text();
+    QVERIFY(!colorForeground.isEmpty());
+
+    mpEditor->deletePatternRow(0);
+    QCoreApplication::processEvents();
+    mpEditor->saveTrigger();
+
+    QCOMPARE(pT->getPatternsList(),
+             QStringList({colorPattern, qsl("3"), QString(), qsl("beta")}));
+    QCOMPARE(pT->getRegexCodePropertyList(),
+             QList<int>({REGEX_COLOR_PATTERN, REGEX_LINE_SPACER, REGEX_PROMPT,
+                         REGEX_SUBSTRING}));
+    QCOMPARE(mpEditor->mTriggerPatternEdit[0]->pushButton_fgColor->text(),
+             colorForeground);
+    QCOMPARE(mpEditor->mTriggerPatternEdit[0]->pushButton_bgColor->text(),
+             colorBackground);
+    QCOMPARE(mpEditor->mTriggerPatternEdit[1]->spinBox_lineSpacer->value(), 3);
+
+    mpEditor->movePatternRowContent(3, 0);
+    QCoreApplication::processEvents();
+    mpEditor->saveTrigger();
+
+    QCOMPARE(pT->getPatternsList(),
+             QStringList({qsl("beta"), colorPattern, qsl("3"), QString()}));
+    QCOMPARE(pT->getRegexCodePropertyList(),
+             QList<int>({REGEX_SUBSTRING, REGEX_COLOR_PATTERN,
+                         REGEX_LINE_SPACER, REGEX_PROMPT}));
+    QCOMPARE(mpEditor->mTriggerPatternEdit[1]->pushButton_fgColor->text(),
+             colorForeground);
+    QCOMPARE(mpEditor->mTriggerPatternEdit[1]->pushButton_bgColor->text(),
+             colorBackground);
+    QCOMPARE(mpEditor->mTriggerPatternEdit[2]->spinBox_lineSpacer->value(), 3);
+
+    mpEditor->movePatternRowContent(0, 2);
+    QCoreApplication::processEvents();
+    mpEditor->saveTrigger();
+
+    QCOMPARE(pT->getPatternsList(),
+             QStringList({colorPattern, qsl("3"), qsl("beta"), QString()}));
+    QCOMPARE(pT->getRegexCodePropertyList(),
+             QList<int>({REGEX_COLOR_PATTERN, REGEX_LINE_SPACER,
+                         REGEX_SUBSTRING, REGEX_PROMPT}));
+    QCOMPARE(mpEditor->mTriggerPatternEdit[0]->pushButton_fgColor->text(),
+             colorForeground);
+    QCOMPARE(mpEditor->mTriggerPatternEdit[1]->spinBox_lineSpacer->value(), 3);
+
+    const int lastVisible = mpEditor->lastVisiblePatternRow();
+    QVERIFY(lastVisible < mpEditor->mTriggerPatternEdit.size() - 1);
+    mpEditor->movePatternRowContent(0, lastVisible + 1);
+    QCOMPARE(
+        mpEditor->mTriggerPatternEdit[0]->comboBox_patternType->currentIndex(),
+        REGEX_COLOR_PATTERN);
+    QCOMPARE(mpEditor->mTriggerPatternEdit[lastVisible + 1]
+                 ->singleLineTextEdit_pattern->toPlainText(),
+             QString());
+
+    // The radios are a view of spinBox_lineMargin, which save and load read; OR
+    // mode is the spin box's special first value
+    QVERIFY(mpEditor->mpRadioButton_matchAll != nullptr);
+    QCOMPARE(mpEditor->mpTriggersMainArea->spinBox_lineMargin->maximum(),
+             mpEditor->mpSpinBox_matchWithinLines->maximum());
+
+    mpEditor->mpRadioButton_matchAll->setChecked(true);
+    mpEditor->mpSpinBox_matchWithinLines->setValue(7);
+    QCOMPARE(mpEditor->mpTriggersMainArea->spinBox_lineMargin->value(), 7);
+
+    // Past QSpinBox's default maximum of 99, which a hidden control left at the
+    // default would clamp to
+    mpEditor->mpSpinBox_matchWithinLines->setValue(500);
+    QCOMPARE(mpEditor->mpTriggersMainArea->spinBox_lineMargin->value(), 500);
+    QCOMPARE(mpEditor->mpSpinBox_matchWithinLines->value(), 500);
+
+    mpEditor->mpRadioButton_matchAny->setChecked(true);
+    QCOMPARE(mpEditor->mpTriggersMainArea->spinBox_lineMargin->value(), -1);
+    QVERIFY(!mpEditor->mpRadioButton_matchAll->isChecked());
+
+    // Spin box to radios is the path a load or an undo takes
+    mpEditor->mpTriggersMainArea->spinBox_lineMargin->setValue(4);
+    QVERIFY(mpEditor->mpRadioButton_matchAll->isChecked());
+    QVERIFY(!mpEditor->mpRadioButton_matchAny->isChecked());
+    QCOMPARE(mpEditor->mpSpinBox_matchWithinLines->value(), 4);
+
+    mpEditor->mpTriggersMainArea->spinBox_lineMargin->setValue(-1);
+    QVERIFY(mpEditor->mpRadioButton_matchAny->isChecked());
+    QVERIFY(!mpEditor->mpRadioButton_matchAll->isChecked());
+    QCOMPARE(mpEditor->mpSpinBox_matchWithinLines->value(), 0);
+
+    cleanupAll(mItemTypes[0]);
+  }
+
+  void testPatternRowFloorIsOneRow() {
+    mpEditor->slot_showTriggers();
+    cleanupAll(mItemTypes[0]);
+
+    mpEditor->addTrigger(false);
+    QVERIFY(mpEditor->mpTriggerBaseItem->childCount() > 0);
+
+    QTreeWidgetItem *trigger = mpEditor->mpTriggerBaseItem->child(0);
+    const int triggerID = trigger->data(0, Qt::UserRole).toInt();
+    TTrigger *pT = mpHost->getTriggerUnit()->getTrigger(triggerID);
+    QVERIFY(pT != nullptr);
+
+    mpEditor->treeWidget_triggers->setCurrentItem(trigger);
+    mpEditor->slot_triggerSelected(trigger);
+    mpEditor->mpUndoStack->clear();
+
+    QCOMPARE(mpEditor->mVisiblePatternCount, 1);
+    QVERIFY(mpEditor->mpLabel_matchModeHint != nullptr);
+    QVERIFY(!mpEditor->mpWidget_matchModeRows->isEnabled());
+    // isHidden(), not isVisible(): the form may not be on screen
+    QVERIFY(!mpEditor->mpLabel_matchModeHint->isHidden());
+
+    mpEditor->mTriggerPatternEdit[0]->singleLineTextEdit_pattern->setPlainText(
+        qsl("alpha"));
+    QCoreApplication::processEvents();
+    QCOMPARE(mpEditor->mVisiblePatternCount, 1);
+
+    QTest::keyClick(mpEditor->mTriggerPatternEdit[0]->singleLineTextEdit_pattern,
+                    Qt::Key_Return);
+    QCOMPARE(mpEditor->mVisiblePatternCount, 2);
+    QCOMPARE(mpEditor->mTriggerPatternEdit[1]
+                 ->singleLineTextEdit_pattern->toPlainText(),
+             QString());
+
+    mpEditor->mTriggerPatternEdit[1]->singleLineTextEdit_pattern->setPlainText(
+        qsl("beta"));
+    QCoreApplication::processEvents();
+    QCOMPARE(mpEditor->mVisiblePatternCount, 2);
+    // Any/All needs two patterns, so the second one enables the radios and hides the hint
+    QVERIFY(mpEditor->mpWidget_matchModeRows->isEnabled());
+    QVERIFY(mpEditor->mpLabel_matchModeHint->isHidden());
+
+    mpEditor->saveTrigger();
+    QCOMPARE(pT->getPatternsList(), QStringList({qsl("alpha"), qsl("beta")}));
+
+    mpEditor->slot_triggerSelected(trigger);
+    QCOMPARE(mpEditor->mVisiblePatternCount, 2);
+
+    mpEditor->deletePatternRow(1);
+    QCoreApplication::processEvents();
+    QCOMPARE(mpEditor->mVisiblePatternCount, 1);
+    mpEditor->deletePatternRow(0);
+    QCoreApplication::processEvents();
+    QCOMPARE(mpEditor->mVisiblePatternCount, 1);
+    QCOMPARE(mpEditor->mTriggerPatternEdit[0]
+                 ->singleLineTextEdit_pattern->toPlainText(),
+             QString());
+
+    cleanupAll(mItemTypes[0]);
+  }
 };
 
 #include "dlgTriggerEditorUndoRedoTest.moc"
-QTEST_MAIN(dlgTriggerEditorUndoRedoTest)
+MUDLET_GROUPED_TEST_MAIN(dlgTriggerEditorUndoRedoTest)

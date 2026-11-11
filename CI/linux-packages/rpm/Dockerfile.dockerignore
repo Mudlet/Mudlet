@@ -1,0 +1,6 @@
+.git
+**/.git
+/build*
+/cmake-build-*
+.cache
+.claude

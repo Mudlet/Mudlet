@@ -1,0 +1,569 @@
+/***************************************************************************
+ *   Copyright (C) 2026 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+
+/*
+ * A detached profile window's menu shortcuts have to reach their actions. The
+ * hazard is the window's own menubar: QMenuBar grabs a window shortcut for each
+ * menu title's mnemonic, so a title written "&Window" claims Alt+W alongside the
+ * Close profile action that already has it. QShortcutMap reports both as one
+ * ambiguous match and Qt then alternates between them - one press only warns
+ * ("QAction::event: Ambiguous shortcut overload") while the next opens the menu -
+ * so the shortcut looks dead while the same menu entry still works when clicked.
+ * Only detached windows have such mnemonics to collide with.
+ *
+ * Run with: ctest -R DetachedWindowMenuShortcutsTest -V
+ */
+
+#include <QDockWidget>
+#include <QFileInfo>
+#include <QHash>
+#include <QMenu>
+#include <QMenuBar>
+#include <QPointer>
+#include <QSignalSpy>
+#include <QTemporaryDir>
+#include <QTimer>
+#include <QtTest/QtTest>
+#include <chrono>
+#include <functional>
+#include <memory>
+
+#include "MudletApp.h"
+#include "ProfileTestHelper.h"
+#include "Host.h"
+#include "HostManager.h"
+#include "MudletInstanceCoordinator.h"
+#include "ShortcutsManager.h"
+#include "TDetachedWindow.h"
+#include "TTabBar.h"
+#include "TelnetServerStub.h"
+#include "ctelnet.h"
+#include "mudlet.h"
+
+#include "GroupedTest.h"
+
+using namespace std::chrono_literals;
+
+// Set while a test is watching for Qt's ambiguity warning. Which of the two
+// symptoms a given press produces depends on the order the grabs entered
+// QShortcutMap, so this is corroboration - the assertion that cannot be dodged is
+// that the profile actually closed
+static bool sAmbiguityWarningSeen = false;
+static QtMessageHandler sPreviousMessageHandler = nullptr;
+
+static void ambiguityWatchingMessageHandler(QtMsgType type, const QMessageLogContext& context, const QString& message)
+{
+    if (message.contains(qsl("Ambiguous shortcut overload"))) {
+        sAmbiguityWarningSeen = true;
+    }
+    if (sPreviousMessageHandler) {
+        sPreviousMessageHandler(type, context, message);
+    }
+}
+
+class DetachedWindowMenuShortcutsTest : public QObject
+{
+    Q_OBJECT
+
+private:
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
+    TelnetServerStub* mpServer = nullptr;
+    QPointer<TDetachedWindow> mpDetachedWindow;
+    QString mPort;
+    const QString mLocalhost = qsl("localhost");
+    // Each "&" makes a clash if a menu takes it as a mnemonic: the first's with
+    // "&Fullscreen", the second's between the two items of its tab's menu
+    const QString mFirstHostname = qsl("DetachedWindowMenuShortcuts-&First");
+    const QString mSecondHostname = qsl("DetachedWindowMenuShortcuts-&Second");
+
+    // setupConfig() consults portable.txt before the XDG logic
+    static bool portableMarkerPresent()
+    {
+        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
+    }
+
+private slots:
+    void initTestCase()
+    {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
+        // A config root of this process's own. Sharing the developer's
+        // ~/.config/mudlet means sharing a profile list, so a second copy of
+        // this test running at the same time is told the name it types is
+        // already in use and never gets an enabled Connect button. The opt-in
+        // that makes setupConfig() adopt a directory is
+        // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
+
+        mpServer = new TelnetServerStub(qApp);
+        mpServer->start(mLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
+        mPort = QString::number(mpServer->serverPort());
+        mudlet::start();
+        mudlet::self()->setupConfig();
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
+        mudlet::self()->init();
+        mudlet::self()->setStorePasswordsSecurely(false);
+
+        deleteProfileDirectory(mFirstHostname);
+        deleteProfileDirectory(mSecondHostname);
+
+        // Two of them, because slot_tabDetachRequested() refuses index 0
+        startProfile(mFirstHostname);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        startProfile(mSecondHostname);
+    }
+
+    void cleanupTestCase()
+    {
+        delete mpServer;
+        mpServer = nullptr;
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
+        if (mudlet::self()) {
+            deleteProfileDirectory(mFirstHostname);
+            deleteProfileDirectory(mSecondHostname);
+            delete mudlet::self();
+        }
+        mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
+    }
+
+    // A window per test rather than one for the class, so a failure cannot hand
+    // the next test a half-torn-down one. cleanup()'s reattach and
+    // detachSecondProfile()'s leftover check are what hold that up
+    void init() { mpDetachedWindow = detachSecondProfile(); }
+
+    void cleanup()
+    {
+        if (mudlet::self()->getDetachedWindows().contains(mSecondHostname)) {
+            mudlet::self()->slot_tabReattachRequested(mSecondHostname);
+        }
+    }
+
+    // No mnemonic at all rather than no mnemonic that collides today: the
+    // shortcuts are user-assignable, so a title whose letter is free in the
+    // default set is still a shortcut the next rebind can land on
+    void test_noMenuTitleCarriesAMnemonic()
+    {
+        QVERIFY(mpDetachedWindow);
+        QMenuBar* pMenuBar = mpDetachedWindow->menuBar();
+        QVERIFY(pMenuBar);
+
+        // A menubar mnemonic is a shortcut of the whole window, so it stands on an
+        // action of any menu rather than only the one it titles
+        const auto menuBarActions = pMenuBar->actions();
+        QList<const QAction*> allActions;
+        for (const QAction* pMenuAction : menuBarActions) {
+            allActions << shortcutBearingActions(pMenuAction->menu());
+        }
+        QVERIFY2(!allActions.isEmpty(), "no menu action carries a shortcut, so nothing here could tell a live collision from a latent one");
+
+        QStringList offenders;
+        for (const QAction* pMenuAction : menuBarActions) {
+            if (!carriesMnemonic(pMenuAction->text())) {
+                continue;
+            }
+
+            // What QMenuBarPrivate::updateGeometries() would grab for this title.
+            // It enriches the message rather than deciding it, because macOS
+            // compiles mnemonics out (qt_sequence_no_mnemonics) and returns an
+            // empty sequence for every title - which would leave this whole test
+            // asserting nothing on two of the three CI platforms
+            const QKeySequence mnemonic = QKeySequence::mnemonic(pMenuAction->text());
+            if (mnemonic.isEmpty()) {
+                offenders << qsl("\"%1\"").arg(pMenuAction->text());
+                continue;
+            }
+
+            QStringList standingOn;
+            for (const QAction* pAction : allActions) {
+                if (pAction->shortcut() == mnemonic) {
+                    standingOn << qsl("\"%1\"").arg(pAction->text());
+                }
+            }
+            offenders << (standingOn.isEmpty() ? qsl("\"%1\" grabs %2").arg(pMenuAction->text(), mnemonic.toString())
+                                               : qsl("\"%1\" grabs %2, which %3 uses").arg(pMenuAction->text(), mnemonic.toString(), standingOn.join(qsl(" and "))));
+        }
+
+        QVERIFY2(offenders.isEmpty(),
+                 qPrintable(qsl("a detached window's menu titles carry mnemonics, which QMenuBar turns into window shortcuts that Qt then "
+                                "ignores presses of once an action shares one: %1")
+                                    .arg(offenders.join(qsl("; ")))));
+    }
+
+    // Two items with one letter in a menu leave that letter cycling between them
+    // rather than choosing either
+    void test_noTwoItemsInAMenuShareAMnemonic()
+    {
+        QVERIFY(mpDetachedWindow);
+        QMenuBar* pMenuBar = mpDetachedWindow->menuBar();
+        QVERIFY(pMenuBar);
+
+        QList<QMenu*> menus;
+        const auto menuBarActions = pMenuBar->actions();
+        for (const QAction* pMenuAction : menuBarActions) {
+            if (pMenuAction->menu()) {
+                menus << pMenuAction->menu();
+            }
+        }
+        QVERIFY2(!menus.isEmpty(), "the detached window has no menus to check");
+
+        QStringList clashes;
+        for (int i = 0; i < menus.size(); ++i) {
+            QMenu* pMenu = menus.at(i);
+            // What the Window menu lists and what the map item says are only filled in as it opens
+            emit pMenu->aboutToShow();
+            const auto actions = pMenu->actions();
+            for (const QAction* pAction : actions) {
+                if (pAction->menu()) {
+                    menus << pAction->menu();
+                }
+            }
+            clashes << mnemonicClashes(pMenu);
+        }
+        QVERIFY2(clashes.isEmpty(), qPrintable(qsl("menu items of a detached window share a mnemonic: %1").arg(clashes.join(qsl("; ")))));
+    }
+
+    void test_aProfileNameInAMenuCarriesNoMnemonic()
+    {
+        QVERIFY(mpDetachedWindow);
+        auto* pTabBar = mpDetachedWindow->findChild<TTabBar*>();
+        QVERIFY(pTabBar && pTabBar->count() > 0);
+
+        const QStringList tabMenuItems = popupItemTexts([pTabBar]() {
+            emit pTabBar->customContextMenuRequested(pTabBar->tabRect(0).center());
+        });
+        verifyMenuNamesProfile(tabMenuItems, mSecondHostname, 2, qsl("a detached tab's menu"));
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+
+        QMenu* pDetachedWindowMenu = nullptr;
+        const auto menuBarActions = mpDetachedWindow->menuBar()->actions();
+        for (const QAction* pMenuAction : menuBarActions) {
+            if (pMenuAction->menu() && pMenuAction->text() == TDetachedWindow::tr("Window")) {
+                pDetachedWindowMenu = pMenuAction->menu();
+            }
+        }
+        verifyProfileItemsCarryNoMnemonic(pDetachedWindowMenu, qsl("the detached window's Window menu"));
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        verifyProfileItemsCarryNoMnemonic(mudlet::self()->menuWindow, qsl("the main window's Window menu"));
+    }
+
+    // The menu QMainWindow opens on a right-click of the menu bar or a dock's title bar
+    void test_theDockMenuNamesAMapWithItsAmpersand()
+    {
+        QVERIFY(mpDetachedWindow);
+        QAction* pMapAction = nullptr;
+        const auto toolBarActions = mpDetachedWindow->toolBar()->actions();
+        for (QAction* pAction : toolBarActions) {
+            if (pAction->text() == TDetachedWindow::tr("Map")) {
+                pMapAction = pAction;
+            }
+        }
+        QVERIFY2(pMapAction, "the detached window's toolbar has no Map button");
+        pMapAction->trigger();
+        QVERIFY2(mpDetachedWindow->findChild<QDockWidget*>(), "the Map button made no map dock in the detached window");
+
+        // Twice, as each popup rewrites the same toggle actions
+        for (int round = 0; round < 2; ++round) {
+            std::unique_ptr<QMenu> pPopup(mpDetachedWindow->createPopupMenu());
+            QVERIFY(pPopup);
+            QStringList texts;
+            const auto actions = pPopup->actions();
+            for (const QAction* pAction : actions) {
+                texts << pAction->text();
+            }
+            verifyMenuNamesProfile(texts, mSecondHostname, 1, qsl("the detached window's dock menu"));
+            if (QTest::currentTestFailed()) {
+                return;
+            }
+        }
+    }
+
+    void test_theMainWindowTabMenuNamesAProfileWithItsAmpersand()
+    {
+        // Detaching is only offered while the main window holds more than one tab
+        mudlet::self()->slot_tabReattachRequested(mSecondHostname);
+        TTabBar* pTabBar = mudlet::self()->mpTabBar;
+        const int tabIndex = pTabBar->tabIndex(mSecondHostname);
+        QVERIFY2(tabIndex >= 0, "the reattached profile has no tab in the main window");
+
+        const QStringList items = popupItemTexts([pTabBar, tabIndex]() {
+            emit pTabBar->customContextMenuRequested(pTabBar->tabRect(tabIndex).center());
+        });
+        verifyMenuNamesProfile(items, mSecondHostname, 1, qsl("a main window tab's menu"));
+    }
+
+    // The reported symptom, driven the way the user hit it. Last, since it leaves
+    // the profile closed
+    void test_theCloseProfileShortcutClosesTheProfile()
+    {
+        QVERIFY(mpDetachedWindow);
+
+        QKeySequence* pSequence = mudlet::self()->shortcutsManager()->getSequence(qsl("Close profile"));
+        QVERIFY2(pSequence && !pSequence->isEmpty(), "no Close profile shortcut is registered, so this test would prove nothing");
+        const QKeyCombination combination = (*pSequence)[0];
+
+        // detachTab() leaves Host::setFocusOnHostActiveCommandLine()'s zero-timer
+        // queued behind it and that activates the main window, so keep asking
+        // rather than claiming activation once and losing it to a late arrival.
+        // The claim has to be read off the widget layer: the detached window is
+        // parented to the main window, and QWindow::isActive() counts a window as
+        // active whenever its parent is, so qWaitForWindowActive() says yes on
+        // every platform while QShortcutMap is still resolving against the main
+        // window
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             mpDetachedWindow->activateWindow();
+                             return QApplication::activeWindow() == mpDetachedWindow.data();
+                         },
+                         2000ms),
+                 "the detached window never became the active window, so its window shortcuts could not be reached");
+
+        // As a click into its input line does: closing the profile the main
+        // window's menus act on is what has to hand them to the one left there
+        Host* pSecondHost = HostManager::self()->getHost(mSecondHostname);
+        QVERIFY(pSecondHost);
+        mudlet::self()->activateProfile(pSecondHost);
+        QVERIFY2(mudlet::self()->getActiveHost() == pSecondHost, "the detached profile did not become the active one");
+
+        sAmbiguityWarningSeen = false;
+        sPreviousMessageHandler = qInstallMessageHandler(ambiguityWatchingMessageHandler);
+        QTest::keyClick(mpDetachedWindow.data(), combination.key(), combination.keyboardModifiers());
+        const bool ambiguous = sAmbiguityWarningSeen;
+        qInstallMessageHandler(sPreviousMessageHandler);
+        sPreviousMessageHandler = nullptr;
+
+        QVERIFY2(!ambiguous, qPrintable(qsl("Qt called %1 ambiguous, so the press went to the warning rather than to the profile").arg(pSequence->toString())));
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return !mudlet::self()->getDetachedWindows().contains(mSecondHostname);
+                         },
+                         2000ms),
+                 qPrintable(qsl("%1 left the detached profile open").arg(pSequence->toString())));
+
+        // The window goes before the profile, which a zero-timer closes after it
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return !HostManager::self()->getHost(mSecondHostname);
+                         },
+                         2000ms),
+                 "the detached profile's window closed but the profile itself never did");
+        Host* pActiveHost = mudlet::self()->getActiveHost();
+        QVERIFY2(pActiveHost && pActiveHost->getName() == mFirstHostname, "the profile left in the main window did not become the active one");
+        QVERIFY2(mudlet::self()->dactionScriptEditor->isEnabled(), "the main window's profile menu items stayed disabled for the profile left in it");
+    }
+
+private:
+    // Reads shortcut() rather than shortcuts(), so an action given alternates
+    // would only be checked on its primary one
+    QList<const QAction*> shortcutBearingActions(const QMenu* pMenu) const
+    {
+        QList<const QAction*> found;
+        if (!pMenu) {
+            return found;
+        }
+        const auto actions = pMenu->actions();
+        for (const QAction* pAction : actions) {
+            if (!pAction->shortcut().isEmpty()) {
+                found << pAction;
+            }
+            if (pAction->menu()) {
+                found << shortcutBearingActions(pAction->menu());
+            }
+        }
+        return found;
+    }
+
+    // QKeySequence::mnemonic() cannot answer this: macOS compiles mnemonics out,
+    // so it returns an empty sequence for a title that carries one. "&&" is an
+    // escaped ampersand rather than a mnemonic
+    static QChar mnemonicLetter(const QString& text)
+    {
+        for (int i = 0; i < text.size() - 1; ++i) {
+            if (text.at(i) != QLatin1Char('&')) {
+                continue;
+            }
+            if (text.at(i + 1) == QLatin1Char('&')) {
+                ++i;
+                continue;
+            }
+            return text.at(i + 1).toLower();
+        }
+        return {};
+    }
+
+    static bool carriesMnemonic(const QString& title) { return !mnemonicLetter(title).isNull(); }
+
+    // The text as a menu draws it: a lone "&" vanishes and "&&" draws as one
+    static QString shownText(const QString& text)
+    {
+        QString shown;
+        for (int i = 0; i < text.size(); ++i) {
+            if (text.at(i) == QLatin1Char('&') && ++i == text.size()) {
+                break;
+            }
+            shown += text.at(i);
+        }
+        return shown;
+    }
+
+    // exec() does not return until the menu closes, so it is read and closed from inside its event loop
+    QStringList popupItemTexts(const std::function<void()>& openMenu)
+    {
+        bool seen = false;
+        QStringList texts;
+        QTimer popupReader;
+        popupReader.setInterval(0);
+        connect(&popupReader, &QTimer::timeout, this, [&]() {
+            auto* pMenu = qobject_cast<QMenu*>(QApplication::activePopupWidget());
+            if (!pMenu) {
+                return;
+            }
+            seen = true;
+            const auto actions = pMenu->actions();
+            for (const QAction* pAction : actions) {
+                texts << pAction->text();
+            }
+            pMenu->close();
+        });
+        popupReader.start();
+        openMenu();
+        popupReader.stop();
+        if (!seen) {
+            QTest::qFail("no menu opened", __FILE__, __LINE__);
+        }
+        return texts;
+    }
+
+    // None of these menus has a mnemonic of its own, so any one came from the name
+    void verifyMenuNamesProfile(const QStringList& texts, const QString& profileName, const int expectedCount, const QString& where)
+    {
+        int namingItems = 0;
+        QStringList offenders;
+        for (const QString& text : texts) {
+            if (shownText(text).contains(profileName)) {
+                ++namingItems;
+            }
+            if (carriesMnemonic(text)) {
+                offenders << qsl("\"%1\"").arg(text);
+            }
+        }
+        QVERIFY2(namingItems == expectedCount,
+                 qPrintable(qsl("%1 items of %2 show \"%3\" as it is named, not %4: %5").arg(namingItems).arg(where, profileName).arg(expectedCount).arg(texts.join(qsl(", ")))));
+        QVERIFY2(offenders.isEmpty(), qPrintable(qsl("%1 turns the \"&\" of \"%2\" into a mnemonic: %3").arg(where, profileName, offenders.join(qsl(", ")))));
+    }
+
+    // Each profile in a Window menu is an item whose data is the profile's name
+    void verifyProfileItemsCarryNoMnemonic(QMenu* pMenu, const QString& where)
+    {
+        QVERIFY2(pMenu, qPrintable(qsl("%1 was not found").arg(where)));
+        emit pMenu->aboutToShow();
+        int profileItemCount = 0;
+        QStringList offenders;
+        const auto actions = pMenu->actions();
+        for (const QAction* pAction : actions) {
+            if (pAction->data().toString().isEmpty()) {
+                continue;
+            }
+            ++profileItemCount;
+            if (carriesMnemonic(pAction->text()) || !shownText(pAction->text()).contains(pAction->data().toString())) {
+                offenders << qsl("\"%1\"").arg(pAction->text());
+            }
+        }
+        QVERIFY2(profileItemCount == 2, qPrintable(qsl("%1 lists %2 profiles, not both").arg(where).arg(profileItemCount)));
+        QVERIFY2(offenders.isEmpty(), qPrintable(qsl("%1 loses a profile name's \"&\" to a mnemonic: %2").arg(where, offenders.join(qsl(", ")))));
+    }
+
+    static QStringList mnemonicClashes(const QMenu* pMenu)
+    {
+        QHash<QChar, QStringList> itemsByLetter;
+        const auto actions = pMenu->actions();
+        for (const QAction* pAction : actions) {
+            // Qt leaves hidden items out when it matches a pressed letter, and disabled
+            // ones too, but those count here: the same items are enabled again later
+            if (pAction->isSeparator() || !pAction->isVisible()) {
+                continue;
+            }
+            const QChar letter = mnemonicLetter(pAction->text());
+            if (!letter.isNull()) {
+                itemsByLetter[letter] << qsl("\"%1\"").arg(pAction->text());
+            }
+        }
+        QStringList clashes;
+        for (auto it = itemsByLetter.cbegin(); it != itemsByLetter.cend(); ++it) {
+            if (it.value().size() > 1) {
+                clashes << qsl("%1 in \"%2\": %3").arg(it.key(), pMenu->title(), it.value().join(qsl(", ")));
+            }
+        }
+        return clashes;
+    }
+
+    TDetachedWindow* detachSecondProfile()
+    {
+        if (!mudlet::self()->getDetachedWindows().isEmpty()) {
+            QTest::qFail("a detached window was left over from an earlier test", __FILE__, __LINE__);
+            return nullptr;
+        }
+
+        mudlet::self()->slot_tabDetachRequested(1, QPoint(200, 200));
+
+        TDetachedWindow* pDetachedWindow = mudlet::self()->getDetachedWindows().value(mSecondHostname);
+        if (!pDetachedWindow) {
+            // Whichever profile sits at tab 1 is the one that detaches, so say
+            // which one was expected rather than only that nothing appeared
+            QTest::qFail(qPrintable(qsl("detaching tab 1 produced no window for '%1' - the tab order is not what this test assumes").arg(mSecondHostname)), __FILE__, __LINE__);
+        }
+        return pDetachedWindow;
+    }
+
+    void startProfile(const QString& hostname)
+    {
+        auto host = TestProfile::create(hostname, mLocalhost, mPort);
+        if (!host) {
+            QFAIL("No active host available for the test.");
+        }
+
+        QSignalSpy connectionSpy(&(host->mTelnet), &cTelnet::signal_connected);
+        if (!connectionSpy.wait(2s)) {
+            QFAIL("Could not connect with the host.");
+        }
+    }
+
+    void deleteProfileDirectory(const QString& profileName)
+    {
+        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, profileName));
+        if (dir.exists()) {
+            dir.removeRecursively();
+        }
+    }
+};
+
+#include "DetachedWindowMenuShortcutsTest.moc"
+MUDLET_GROUPED_TEST_MAIN(DetachedWindowMenuShortcutsTest)

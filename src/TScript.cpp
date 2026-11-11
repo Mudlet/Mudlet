@@ -27,9 +27,14 @@
 #include "Host.h"
 #include "ScriptUnit.h"
 #include "TDebug.h"
-#include "mudlet.h"
+#include "TLuaInterpreter.h"
 
+#include <QColor>
+#include <QMap>
 #include <QScopeGuard>
+
+#include <list>
+#include <utility>
 
 TScript::TScript(TScript* parent, Host* pHost)
 : Tree<TScript>(parent)
@@ -46,13 +51,14 @@ TScript::TScript(const QString& name, Host* pHost)
 
 TScript::~TScript()
 {
-    if (!mpHost) {
-        return;
+    if (mpHost) {
+        for (const auto& handler : std::as_const(mEventHandlerList)) {
+            mpHost->unregisterEventHandler(handler, this);
+        }
+        mpHost->getScriptUnit()->unregisterScript(this);
     }
-    for (const auto& handler : std::as_const(mEventHandlerList)) {
-        mpHost->unregisterEventHandler(handler, this);
-    }
-    mpHost->getScriptUnit()->unregisterScript(this);
+
+    deleteChildren();
 }
 
 
@@ -86,7 +92,8 @@ void TScript::compileAll(bool saveLoadingError)
         mNeedsToBeCompiled = true;
     }
     compile(saveLoadingError);
-    for (auto script : *mpMyChildrenList) {
+    for (auto* scriptNode : *mpMyChildrenList) {
+        auto* script = static_cast<TScript*>(scriptNode);
         script->compileAll(saveLoadingError);
     }
 }
@@ -103,8 +110,8 @@ void TScript::compile(bool saveLoadingError)
 {
     if (mNeedsToBeCompiled) {
         if (!compileScript(saveLoadingError)) {
-            if (mudlet::smDebugMode) {
-                TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of script:" << mName << "\n" >> mpHost;
+            if (TDebug::wants(TDebug::Category::Error)) {
+                TDebug(Qt::white, Qt::red, TDebug::Category::Error, mName) << "ERROR: Lua compile error. compiling script of script:" << mName << "\n" >> mpHost;
             }
             mOK_code = false;
         }
@@ -117,6 +124,8 @@ bool TScript::setScript(const QString& script)
     mNeedsToBeCompiled = true;
     if (!mpHost->blockScripts()) {
         mOK_code = compileScript();
+        // Even on failure: a body that stopped part way must not be run again by compileAll()
+        mNeedsToBeCompiled = false;
     }
     return mOK_code;
 }
@@ -143,10 +152,21 @@ bool TScript::compileScript(bool saveLoadingError)
         pUnit->endProcessing();
     });
 
+    const QString chunkName = qsl("Script: %1").arg(getName());
+    const TScript* pRoot = this;
+    while (pRoot->getParent()) {
+        pRoot = pRoot->getParent();
+    }
+    // Restored rather than cleared: the body can install a package, and that
+    // package's scripts run their own bodies inside this one
+    const Host::RunningScript outer = std::exchange(mpHost->mRunningScript, {chunkName, pRoot->mPackageName});
     QString error;
-    if (mpHost->mLuaInterpreter.compile(mScript, error, QString("Script: ") + getName())) {
+    const bool compiled = mpHost->mLuaInterpreter.compile(mScript, error, chunkName);
+    mpHost->mRunningScript = outer;
+    if (compiled) {
         mNeedsToBeCompiled = false;
         mOK_code = true;
+        clearLoadingError();
         if (mpHost->mResetProfile) {
             setEventHandlerList(getEventHandlerList());
         }
@@ -241,4 +261,37 @@ bool TScript::checkIfNew()
 void TScript::unmarkAsNew()
 {
     mIsNew = false;
+}
+
+void TScript::updateModuleMembership()
+{
+    if (!mpHost || mModuleMasterFolder) {
+        return;
+    }
+    const TScript* pRoot = getRoot();
+    if (pRoot != this) {
+        setModuleMembership(pRoot->mModuleMasterFolder);
+        return;
+    }
+    // An unsynced module's file is never rewritten, so it still holds what was loaded from it
+    const bool heldByItsModule = !mLoadedFromModule.isEmpty() && mpHost->mInstalledModules.contains(mLoadedFromModule) && !mpHost->moduleSavesBack(mLoadedFromModule);
+    setModuleMembership(heldByItsModule);
+}
+
+void TScript::setModuleMembership(const bool member)
+{
+    if (mModuleMasterFolder) {
+        return;
+    }
+    mModuleMember = member;
+    // Uninstalling or reloading a module removes every top-level item with its name as package name
+    if (!member && mpHost && mpHost->mInstalledModules.contains(mPackageName)) {
+        mPackageName.clear();
+    }
+    if (!member) {
+        mLoadedFromModule.clear();
+    }
+    for (auto* pChild : *mpMyChildrenList) {
+        static_cast<TScript*>(pChild)->setModuleMembership(member);
+    }
 }

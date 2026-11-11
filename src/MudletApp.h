@@ -1,0 +1,308 @@
+#ifndef MUDLET_MUDLETAPP_H
+#define MUDLET_MUDLETAPP_H
+
+/***************************************************************************
+ *   Copyright (C) 2017 by WackyWormer - WackyWormer@hotmail.com           *
+ *   Copyright (C) 2017, 2019-2020, 2022 by Stephen Lyons                  *
+ *                                               - slysven@virginmedia.com *
+ *   Copyright (C) 2017, 2021 by Vadim Peretokin - vperetokin@gmail.com    *
+ *   Copyright (C) 2019 by Mike Conley - sousesider@gmail.com              *
+ *   Copyright (C) 2023 by Geert Konijnendijk - geert@konijnendijk.info    *
+ *   Copyright (C) 2024 by ConcurrentCrab                                  *
+ *   Copyright (C) 2025-2026 by Vadim Peretokin                            *
+ *                                            - vadim.peretokin@mudlet.org *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+
+#include "enums.h"
+
+#include <QPair>
+#include <QSettings>
+#include <QString>
+#include <QStringList>
+
+class QNetworkRequest;
+class QTranslator;
+class QUrl;
+
+// The application-wide services that need no main window: where Mudlet keeps
+// its files, its persistent settings and which build it is. Engine code needs
+// these before - and, headless, without ever - a main window, so they are
+// deliberately not part of class mudlet. The config root, the settings store and
+// the build suffix are settled once and remembered; everything else recomputes on
+// every call.
+//
+// The settings store waits for the config root to be settled: getQSettings()
+// stays null until settleConfigRoot() has run. That reports a refused portable.txt,
+// and no Mudlet.ini may be opened before it has had its chance: a root resolved on
+// first use can be replaced afterwards, but a store opened under one hands out a
+// pointer the Updater keeps for the life of the process. The main window settles
+// it in mudlet::setupConfig(), once it is built and can put that report on screen;
+// any other HostManager settles it as it is made, unless it is settled already.
+class MudletApp
+{
+public:
+    // A bag of statics, never an object
+    MudletApp() = delete;
+
+    struct ConfigDirResolution
+    {
+        QString path;
+        // A portable.txt marker was in force. True even when the root it named had
+        // to be refused, in which case path is the fallback rather than anything
+        // the marker named - so check portableRootRejected before treating path as
+        // the portable location.
+        bool portable = false;
+        // The marker named a root that cannot be used, so path holds the
+        // non-portable location instead. The caller decides how loudly to say so.
+        bool portableRootRejected = false;
+        // The portable.txt that governs, empty when none does, and what it named
+        // when that had to be refused. Carried so a caller can name the file and
+        // the directory without going looking for them a second time.
+        QString portableMarker;
+        QString rejectedRoot;
+        // XDG_CONFIG_HOME is set, but an existing legacy dir was used anyway, so
+        // the caller can hint at the migration
+        bool migrationPending = false;
+        // The legacy default, when it holds profiles that the chosen dir now hides.
+        // The caller has to name it, or those profiles read as gone.
+        QString shadowedProfilesPath;
+    };
+
+    // Every on-disk location Mudlet reads or writes, derived from one config root:
+    // a portable.txt marker beside the executable or in ~/.config/mudlet names it,
+    // otherwise $XDG_CONFIG_HOME/mudlet and then ~/.config/mudlet are tried.
+
+    // Where the running executable lives, or the AppImage when running from one
+    static QString executableDir();
+
+    // ~/.config/mudlet: the pre-XDG default, and the second place a portable.txt
+    // marker is looked for
+    static QString legacyConfigDir();
+
+    // The governing portable.txt, or empty; the one beside the executable outranks the config dir's.
+    // Only stats, so cheap enough to ask on every operation.
+    static QString portableMarkerPath(const QString& execDir, const QString& configDir = legacyConfigDir());
+
+    // Whether a portable.txt's root is usable: non-empty, not an existing non-directory (a dangling symlink
+    // included, as mkpath() can't create through one), and with an existing parent. Warns why it refuses.
+    static bool portableRootUsable(const QString& path);
+
+    // The whole precedence for a given executable directory. Stateless, so the Mudlet.ini read before
+    // QApplication exists can share it. Never returns an empty root: an unusable portable one falls back to
+    // the non-portable location with portableRootRejected set.
+    static ConfigDirResolution resolveConfigRoot(const QString& execDir, const QString& configDir = legacyConfigDir());
+
+    // The XDG leg on its own: $XDG_CONFIG_HOME/mudlet takes a tie with
+    // legacyDefault so that a fresh install lands there
+    static ConfigDirResolution xdgConfigDir(const QString& legacyDefault);
+
+    // Every root resolveConfigRoot() can pick for execDir as what the folders hold changes, not only today's:
+    // the one each portable.txt names, usable now or not, $XDG_CONFIG_HOME/mudlet and configDir
+    static QStringList configRootCandidates(const QString& execDir, const QString& configDir = legacyConfigDir());
+
+    // NTFS and APFS fold case by default; a case-sensitive volume there is then over-matched, which is the safe side
+    static Qt::CaseSensitivity fileNameCaseSensitivity();
+    // A folder by what it is rather than how it is spelled, made or not: the canonical path of its deepest
+    // existing ancestor and the rest, a link to nowhere on the way followed to where it will lead once that is made
+    static QString folderIdentity(const QString& path);
+    static bool sameFolder(const QString& first, const QString& second, Qt::CaseSensitivity caseSensitivity = fileNameCaseSensitivity());
+
+    // A directory that cannot be listed must never read as "nothing here": that
+    // inference is what hides profiles, so assume the strongest content instead.
+    static bool configDirHoldsProfiles(const QString& dir);
+
+    // Whether a root is installed, which getQSettings() needs: settleConfigRoot() has run, or a test put one in
+    static bool configRootSettled();
+
+    // Resolves the root on first use and caches it. setConfigPath() replaces it (that is how settleConfigRoot()
+    // installs the validated root); an empty path forgets it instead.
+    static QString getMudletPath(enums::mudletPathType mode, const QString& extra1 = QString(), const QString& extra2 = QString());
+
+    // Whether the main dictionary files are the ones bundled with Mudlet (true) or
+    // ones provided by the system (false). Settled as a side effect of resolving
+    // enums::hunspellDictionaryPath, so it only answers once that has been asked for.
+    static bool usingMudletDictionaries();
+    // Looked in, in this order, ahead of the dictionaries bundled with Mudlet
+    static QStringList systemHunspellDictionaryFolders();
+
+    // Replaces filesystem-unsafe characters with underscores and bounds the length. A shortened name carries
+    // a digest of the whole input, as callers file data (e.g. passwords) under it and must not collide.
+    static QString sanitizeForPath(const QString& input);
+
+    // Items that hold a password in plain text, which only the owner may read
+    static bool profileDataItemHoldsSecret(const QString& item);
+
+    // What a new profile may be named: ASCII a folder can have on every OS, with the parentheses of a file
+    // manager's copies ("profile (2)"); firstInvalidProfileNameChar() gives the first character outside it,
+    // or a null QChar. profileNameUsableAsIs() is required of every name, those already on disk too: it must
+    // name a folder of its own and have none of the characters sanitizeForPath() rewrites, which
+    // CredentialManager::generateFilePath() refuses, so its password could never be stored.
+    static const QString scmAllowedProfileNameChars;
+    static QChar firstInvalidProfileNameChar(const QString& name);
+    static bool profileNameUsableAsIs(const QString& name);
+    static bool gamePortUsable(int port) { return port >= 1 && port <= 65535; }
+    // Why the connection dialog would not take this game server address and port with TLS as given (which
+    // needs SSL support), translated, or an empty string. The host is trimmed here; none at all, like a port
+    // of 0, is left for the connect to report.
+    static QString connectionDetailsProblem(const QString& host, int port, bool tls);
+
+    static QString readProfileData(const QString& profile, const QString& item);
+
+    // Creates the profile's directory if missing, so writing for a nonexistent profile brings it into being
+    static QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
+    static QPair<bool, QString> setProfileIcon(const QString& profile, const QString& newIconPath);
+    static QPair<bool, QString> resetProfileIcon(const QString& profile);
+
+    // The on-disk spelling of a profile named in any case, or an empty string if
+    // neither an existing profile nor a predefined game goes by that name
+    static QString getCanonicalProfileName(const QString& profileName);
+
+    // The persistent application settings in Mudlet.ini under the config root, or
+    // nullptr until the root has been settled - see the note on the class above.
+    // Callers that can run before settleConfigRoot() have to check. A profile is
+    // made only after it - by a HostManager, or once mudlet::setupConfig() has run -
+    // which Host's constructor asserts, so anything a profile reaches can
+    // dereference it.
+    static QSettings* getQSettings();
+    // For a QSettings that reads Mudlet.ini before getQSettings() exists. Qt hands
+    // a file parsed moments ago to the next QSettings without parsing it again,
+    // and only the one that parsed it hears of a format error, so getQSettings()
+    // would otherwise never report one.
+    static void noteEarlySettingsStatus(const QSettings&);
+    // What noteEarlySettingsStatus() last heard of that file, or NoError
+    static QSettings::Status earlySettingsStatus(const QString& fileName);
+    // For texts printed before there is a window or a profile, in Mudlet.ini's language or else the
+    // system's. Installed on the application; null when there is none. A print-and-exit run warns why not.
+    // configRoot, a root a frontend will choose, is read in place of the one resolved, and not settled.
+    static QTranslator* loadTranslationsForCommandLine(bool printAndExitRun, const QString& configRoot = QString());
+    // For the whole of a run with no main window, in the interface language its pool reports, as the main window
+    // loads its own. Installed on the application; null when there is none. configRoot as above.
+    static QTranslator* loadTranslationsForRun(const QString& configRoot = QString());
+    // FFmpeg on Windows and AVFoundation on macOS over Qt Multimedia's own default, unless QT_MEDIA_BACKEND
+    // names one; before the first media object is made
+    static void setDefaultMediaBackend();
+
+    // Whether the config root in force actually came from a portable.txt. False
+    // when a marker was present but named a root that had to be refused, which is
+    // the distinction a marker stat cannot make - and getting it wrong sends
+    // credentials to portable-mode files on an install running non-portably.
+    static bool portableRootInUse();
+    // Whether the root in force is one a frontend with no window chose for itself, through HostManager
+    static bool configRootChosen();
+    // Where the credential store keeps its files: under a root a frontend chose, so that nothing is shared
+    // with the GUI's, or else AppConfigLocation, which every other root shares
+    static QString credentialFilesRoot();
+
+    // Has default form of "en_US" but can be just an ISO language code e.g. "fr"
+    // for french, without a country designation. Replaces xx in "mudlet_xx.qm" to
+    // provide the translation file for GUI translation.
+    // Read under a lock and so returned by value: a reference would escape it, and
+    // the language is written both at startup, by mudlet::readEarlySettings() or readInterfaceLanguage(), and
+    // later by the preferences dialog.
+    static QString getInterfaceLanguage();
+    // translations done high enough will get a gold star to hide the last few percent
+    // as well as encourage translators to maintain it
+    static constexpr int scmTranslationGoldStar = 95;
+    // What a Mudlet.ini with no interfaceLanguage gets: the first of the system's UI languages with a gold-star
+    // translation of its own, or of its language in the same script (de_DE for de_AT) when no other form of that
+    // preference has one, or en_GB, else en_US - which an English variant with no translation of its own also gets
+    static QString autodetectPreferredLanguage();
+    static QString autodetectPreferredLanguage(const QStringList& systemUiLanguages);
+    // The same rule over the given translations, each a code such as pt_BR
+    static QString autodetectPreferredLanguage(const QStringList& systemUiLanguages, const QStringList& qualityTranslations);
+    static QString interfaceLanguageSetting(const QSettings& settings);
+    // For a pool with no main window, as mudlet::readEarlySettings(); warns of a language that names no locale or has
+    // no translation
+    static void readInterfaceLanguage(const QSettings& settings);
+
+    // Preferences and facts about this run that the main window settles and
+    // profiles consult. Read and written on the main thread only.
+
+    // Whether profile passwords are kept in the system's credential store rather
+    // than in each profile's own files
+    static bool storingPasswordsSecurely();
+    // No profiles existed when this run started
+    static bool firstLaunch();
+    // The interface is drawn dark, whether chosen or by following a dark system theme
+    static bool darkMode();
+    // --mirror: copy each shown console line to stdout, for CI. Main console game text is copied on
+    // arrival, before a trigger can gag or rewrite it; print()/echo() output from any console too.
+    // Read for every line, so a plain flag rather than a call.
+    inline static bool smMirrorToStdOut = false;
+
+    // Which build of Mudlet this is, and how it names itself to the outside world.
+
+    // The suffix CMake writes into :/app-build.txt: empty for an official release,
+    // otherwise MUDLET_VERSION_BUILD (or "-dev" when it is unset) followed by the
+    // commit - so "-ptb", "-dev" and "-test" are all values seen in practice.
+    // Which build that makes it is publicTest() and development()'s answer, not
+    // something to read off the suffix.
+    static const QString& buildSuffix();
+    static const QString& scmVersion();
+    static bool release();
+    static bool publicTest();
+    static bool development();
+    static void setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request);
+
+    // Named as a light/dark pair so the preferences' counterpart lookup switches between
+    // them when the appearance changes
+    static constexpr QLatin1String scmEditorThemeNameLight{"Mudlet Light"};
+    static constexpr QLatin1String scmEditorThemeFileLight{"Mudlet Light.tmTheme"};
+    static constexpr QLatin1String scmEditorThemeNameDark{"Mudlet Dark"};
+    static constexpr QLatin1String scmEditorThemeFileDark{"Mudlet Dark.tmTheme"};
+    // The light theme's names before the pair existed; profiles saved then still carry them
+    static constexpr QLatin1String scmEditorThemeNameLegacy{"Mudlet"};
+    static constexpr QLatin1String scmEditorThemeFileLegacy{"Mudlet.tmTheme"};
+    static void migrateBundledEditorTheme(QString& themeName, QString& themeFile);
+    static bool editorThemeResolves(const QString& themeFile);
+
+private:
+    // Only the main window moves the language or the preferences below in a
+    // running Mudlet: the language follows the preferences dialog through
+    // mudlet::setInterfaceLanguage()
+    friend class mudlet;
+    // So that a pool with no main window can call settleConfigRoot() and take the
+    // password preference from Mudlet.ini, as the main window would
+    friend class HostManager;
+    // Resolving the root once is the point, so the only way to test it is to be
+    // able to forget the answer - which setConfigPath(QString()) does
+    friend class ConfigDirOverrideTest;
+    // Points the root at a scratch directory to seed the updater's version marker
+    friend class FeedChecksumRaceTest;
+    // A fresh scratch config reads as a first launch, which never shows callouts
+    friend class FeatureCalloutTest;
+    // Sets the password preference as Mudlet.ini would, with no main window and no pool
+    friend class CredentialManagerKeychainTest;
+    friend class HeadlessSessionTest;
+    // Discards any settings store built under the previous root - and with it any
+    // pointer a caller cached, so this must not run once init() has handed the
+    // store to the Updater. portable says whether the root came from a
+    // portable.txt that was honoured.
+    static void setConfigPath(const QString& path, bool portable = false);
+    // A root a frontend chose: portable, as its passwords are kept in it
+    static void chooseConfigRoot(const QString& path);
+    // Resolves the config root, logs what the resolution found - a refused portable.txt included - and
+    // installs it through setConfigPath(), after which getQSettings() opens the Mudlet.ini under it.
+    static ConfigDirResolution settleConfigRoot();
+    static void setInterfaceLanguage(const QString& language);
+    static void setStorePasswordsSecurely(bool);
+    static void setFirstLaunch(bool);
+    static void setDarkMode(bool);
+};
+
+#endif // MUDLET_MUDLETAPP_H

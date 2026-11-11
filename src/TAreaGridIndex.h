@@ -23,14 +23,19 @@
 #include <QHash>
 #include <QList>
 #include <QPair>
-#include <QSet>
+#include <QVarLengthArray>
 
-// Three-level spatial index: Z → X → Y → set of room IDs.
+// Three-level spatial index: Z → X → Y → the room IDs in that cell.
 // Used by the 2D map renderer to retrieve only the rooms visible in the
 // current viewport rather than scanning every room in the area.
 class TAreaGridIndex
 {
 public:
+    // Nearly every cell holds one room and a large level has a million cells, so the id lives inline:
+    // a QSet per cell meant a scattered allocation per room, 95% of a viewport query's time.
+    // Ids are unique per cell: addRoom() checks before appending, rebuild() takes QHash keys.
+    using RoomIds = QVarLengthArray<int, 1>;
+
     void addRoom(int id, int z, int x, int y);
     void removeRoom(int id, int z, int x, int y);
     void moveRoom(int id, int fromZ, int fromX, int fromY, int toZ, int toX, int toY);
@@ -41,9 +46,8 @@ public:
     // Replaces the entire index from a pre-bucketed z → (roomId → (x,y)) mapping.
     void rebuild(const QHash<int, QHash<int, QPair<int, int>>>& zToRoomXY);
 
-    // Returns all room IDs at the exact grid cell (z, x, y).
-    // Returns a reference to a stable empty set when the cell is unoccupied.
-    const QSet<int>& roomsAt(int z, int x, int y) const;
+    // Unordered; a stable empty cell when unoccupied.
+    const RoomIds& roomsAt(int z, int x, int y) const;
 
     // Returns all room IDs whose grid cell lies within the inclusive rectangle
     // [minX..maxX] × [minY..maxY] on the given Z level.
@@ -73,10 +77,10 @@ public:
 private:
     int computeMemoryEstimate() const;
 
-    QHash<int, QHash<int, QHash<int, QSet<int>>>> mIndex;
+    QHash<int, QHash<int, QHash<int, RoomIds>>> mIndex;
     int mCachedSize = 0;
     int mCachedMemoryEstimate = 0;
-    static const QSet<int> csmEmptySet;
+    static const RoomIds csmEmptyCell;
 };
 
 #endif // MUDLET_TAREA_GRID_INDEX_H

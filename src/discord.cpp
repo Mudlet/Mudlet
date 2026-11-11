@@ -20,12 +20,14 @@
  ***************************************************************************/
 
 #include "discord.h"
-#include "mudlet.h"
+#include "TAppFrontend.h"
 #include "utils.h"
 
+#include <QCoreApplication>
 #include <QtDebug>
 #include <QHash>
 #include <chrono>
+#include <cstring>
 
 using namespace std::chrono_literals;
 
@@ -62,6 +64,16 @@ Discord::Discord(QObject* parent)
           {"asteria", {"asteriamud.com"}},
   }
 {
+    // The RPC library is one per process, so a second instance stays unloaded
+    if (smpSelf) {
+        qWarning() << "Discord::Discord() WARNING - a Discord already exists, so self() keeps pointing at that one.";
+        return;
+    }
+    // Before the library probe below, which returns early when the Discord RPC
+    // library is absent - self() must still answer in that case.
+    smpSelf = this;
+
+#if defined(INCLUDE_DISCORD_RPC)
 #if defined(Q_OS_WIN64)
     // Only defined on 64 bit Windows
     mpLibrary.reset(new QLibrary(qsl("discord-rpc64")));
@@ -87,7 +99,7 @@ Discord::Discord(QObject* parent)
         const auto msg = mpLibrary->errorString();
         auto notFound = msg.contains(qsl("not found")) || msg.contains(qsl("No such file or directory"));
         qDebug().nospace() << "Could not " << (notFound ? "find" : "load") << " Discord library - searched in:";
-        for (const auto& libraryPath : qApp->libraryPaths()) {
+        for (const auto& libraryPath : QCoreApplication::libraryPaths()) {
             qDebug() << "    " << libraryPath;
         }
         if (!msg.isEmpty() && !notFound) {
@@ -111,14 +123,11 @@ Discord::Discord(QObject* parent)
     // Don't initialize RPC until a profile is loaded - UpdatePresence will
     // call initializeRpc() on demand when there's an active host.
 
-    // mudlet instance is not available in this constructor as it's still being initialised, so postpone the connection
+    // Process Discord callbacks every 50ms once the event loop is running
     QTimer::singleShot(0ms, this, [this]() {
-        Q_ASSERT(mudlet::self());
-        connect(mudlet::self(), &mudlet::signal_tabChanged, this, &Discord::UpdatePresence);
-
-        // process Discord callbacks every 50ms once we are all set up:
         startTimer(50ms);
     });
+#endif
 }
 
 void Discord::initializeRpc()
@@ -153,6 +162,10 @@ Discord::~Discord()
 
     // Clear out the localDiscordPresence collection:
     mPresencePtrs.clear();
+
+    if (smpSelf == this) {
+        smpSelf = nullptr;
+    }
 }
 
 // For all the setters below the caller is supposed to check that they have the
@@ -296,7 +309,7 @@ void Discord::handleDiscordReady(const DiscordUser* request)
     // Don't call UpdatePresence directly from here - re-entering the Discord
     // library from a callback freezes Mudlet. Instead, signal the timer to
     // pick it up on the next tick.
-    mudlet::self()->mDiscord.mPendingPresenceUpdate = true;
+    self()->mPendingPresenceUpdate = true;
 }
 
 void Discord::handleDiscordDisconnected(int errorCode, const char* message)
@@ -330,7 +343,7 @@ void Discord::UpdatePresence()
         return;
     }
 
-    auto pHost = mudlet::self()->getActiveHost();
+    Host* pHost = TAppFrontend::instance()->getActiveHost();
 
     // Don't send any presence when no profile is active or Discord is
     // disabled - showing "Playing Mudlet" would leak information when the
@@ -495,20 +508,23 @@ void Discord::UpdatePresence()
 
 QString Discord::deduceGameName(const QString& address)
 {
+    // Host names are case-insensitive and every known game key and URL is lower case
+    const QString host = address.toLower();
+
     // Handle using localhost as an off-line testing case
-    if (address == QLatin1String("localhost") || address == QLatin1String("127.0.0.1") || address == QLatin1String("::1")) {
+    if (host == QLatin1String("localhost") || host == QLatin1String("127.0.0.1") || host == QLatin1String("::1")) {
         return qsl("localhost");
     }
 
     // Handle the cases where the server url contains the "well-known" Server
     // name - that being the key of the QHash mKnownGames:
-    if (mKnownGames.contains(address)) {
-        return address;
+    if (mKnownGames.contains(host)) {
+        return host;
     }
 
     // Do a bit of URL processing on the (potentially) host url:
     QString otherName;
-    switch (address.count(QChar('.'))) {
+    switch (host.count(QChar('.'))) {
     default:
         // Too complex - abandon
         qDebug().noquote().noquote() << "Discord::deduceGameName(\"" << address << "\") WARN - Unable to deduce MUD name from given address.";
@@ -516,7 +532,7 @@ QString Discord::deduceGameName(const QString& address)
     case 2: {
         // three terms - assume last is a TLD so remove it but the first may be significant
 
-        QStringList fragments = address.split(QChar('.'));
+        QStringList fragments = host.split(QChar('.'));
         fragments.removeLast();
         otherName = fragments.join(QLatin1String("."));
         if (otherName.startsWith(QLatin1String("game."))) {
@@ -534,32 +550,27 @@ QString Discord::deduceGameName(const QString& address)
         break;
     case 1:
         // two terms - assume last is a TLD so remove it
-        otherName = address.split(QChar('.')).first();
+        otherName = host.split(QChar('.')).first();
         break;
     case 0:
         // single term no need to split it
-        otherName = address;
+        otherName = host;
         break;
     }
 
-    if (address.endsWith(qsl(".com"))) {
-        otherName = address.left(address.length() - 4);
-    } else if (address.endsWith(qsl(".de"))) {
+    if (host.endsWith(qsl(".com"))) {
+        otherName = host.left(host.length() - 4);
+    } else if (host.endsWith(qsl(".de"))) {
         // Handle avalon.de case
-        otherName = address.left(address.length() - 4);
+        otherName = host.left(host.length() - 4);
     }
 
     // Handle the remaining cases where the known URL is something else - like
     // say a fixed IP address stored as a member of the value for the QHash
     // mKnownGames:
-    QHashIterator<QString, QVector<QString>> itServer(mKnownGames);
-    while (itServer.hasNext()) {
-        itServer.next();
-        QVectorIterator<QString> itUrl(itServer.value());
-        while (itUrl.hasNext()) {
-            if (itUrl.next().contains(address)) {
-                return itServer.key();
-            }
+    for (const auto& [game, urls] : mKnownGames.asKeyValueRange()) {
+        if (urls.contains(host)) {
+            return game;
         }
     }
 
@@ -688,55 +699,37 @@ DiscordRichPresence localDiscordPresence::convert() const
 void localDiscordPresence::setDetailText(const QString& text)
 {
     const QByteArray utf8Data = text.toUtf8();
-    utils::copyString(mDetails, sizeof(mDetails), utf8Data.constData(), utf8Data.size());
+    utils::copyUtf8String(mDetails, sizeof(mDetails), utf8Data.constData(), utf8Data.size());
 }
 
 void localDiscordPresence::setStateText(const QString& text)
 {
     const QByteArray utf8Data = text.toUtf8();
-    utils::copyString(mState, sizeof(mState), utf8Data.constData(), utf8Data.size());
+    utils::copyUtf8String(mState, sizeof(mState), utf8Data.constData(), utf8Data.size());
 }
 
 void localDiscordPresence::setLargeImageText(const QString& text)
 {
     const QByteArray utf8Data = text.toUtf8();
-    utils::copyString(mLargeImageText, sizeof(mLargeImageText), utf8Data.constData(), utf8Data.size());
+    utils::copyUtf8String(mLargeImageText, sizeof(mLargeImageText), utf8Data.constData(), utf8Data.size());
 }
 
 void localDiscordPresence::setLargeImageKey(const QString& text)
 {
     const QByteArray utf8Data = text.toUtf8();
-    utils::copyString(mLargeImageKey, sizeof(mLargeImageKey), utf8Data.constData(), utf8Data.size());
+    utils::copyUtf8String(mLargeImageKey, sizeof(mLargeImageKey), utf8Data.constData(), utf8Data.size());
 }
 
 void localDiscordPresence::setSmallImageText(const QString& text)
 {
     const QByteArray utf8Data = text.toUtf8();
-    utils::copyString(mSmallImageText, sizeof(mSmallImageText), utf8Data.constData(), utf8Data.size());
+    utils::copyUtf8String(mSmallImageText, sizeof(mSmallImageText), utf8Data.constData(), utf8Data.size());
 }
 
 void localDiscordPresence::setSmallImageKey(const QString& text)
 {
     const QByteArray utf8Data = text.toUtf8();
-    utils::copyString(mSmallImageKey, sizeof(mSmallImageKey), utf8Data.constData(), utf8Data.size());
-}
-
-void localDiscordPresence::setJoinSecret(const QString& text)
-{
-    const QByteArray utf8Data = text.toUtf8();
-    utils::copyString(mJoinSecret, sizeof(mJoinSecret), utf8Data.constData(), utf8Data.size());
-}
-
-void localDiscordPresence::setMatchSecret(const QString& text)
-{
-    const QByteArray utf8Data = text.toUtf8();
-    utils::copyString(mMatchSecret, sizeof(mMatchSecret), utf8Data.constData(), utf8Data.size());
-}
-
-void localDiscordPresence::setSpectateSecret(const QString& text)
-{
-    const QByteArray utf8Data = text.toUtf8();
-    utils::copyString(mSpectateSecret, sizeof(mSpectateSecret), utf8Data.constData(), utf8Data.size());
+    utils::copyUtf8String(mSmallImageKey, sizeof(mSmallImageKey), utf8Data.constData(), utf8Data.size());
 }
 
 bool Discord::usingMudletsDiscordID(Host* pHost) const

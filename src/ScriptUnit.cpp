@@ -26,8 +26,16 @@
 
 #include "Host.h"
 #include "TScript.h"
+#include "Tree.h"
+#include "utils.h"
 
+#include <QLatin1String>
+#include <QSet>
+#include <QStringList>
+
+#include <algorithm>
 #include <functional>
+#include <utility>
 
 /* We need an explicit constructor in this file as the Host class is forward
  * declared in the header file and it is problematic to define any dereferencing
@@ -42,7 +50,8 @@ ScriptUnit::~ScriptUnit()
     for (auto script : mScriptRootNodeList) {
         script->mpHost = nullptr;
         std::function<void(TScript*)> nullifyChildren = [&nullifyChildren](TScript* s) {
-            for (auto child : *s->mpMyChildrenList) {
+            for (auto* childNode : *s->mpMyChildrenList) {
+                auto* child = static_cast<TScript*>(childNode);
                 child->mpHost = nullptr;
                 nullifyChildren(child);
             }
@@ -63,8 +72,9 @@ void ScriptUnit::resetStats()
 
 void ScriptUnit::_uninstall(TScript* pChild, const QString& packageName)
 {
-    std::list<TScript*>* childrenList = pChild->mpMyChildrenList;
-    for (auto script : *childrenList) {
+    std::list<Tree<TScript>*>* childrenList = pChild->mpMyChildrenList;
+    for (auto* scriptNode : *childrenList) {
+        auto* script = static_cast<TScript*>(scriptNode);
         _uninstall(script, packageName);
         uninstallList.append(script);
     }
@@ -111,6 +121,10 @@ void ScriptUnit::doCleanup()
         return;
     }
 
+    if (!hasPendingDeletes()) {
+        return;
+    }
+
     QSet<TScript*> deletedScripts;
     for (auto script : uninstallList) {
         if (!deletedScripts.contains(script)) {
@@ -126,6 +140,13 @@ void ScriptUnit::stopAllTriggers()
     for (auto script : mScriptRootNodeList) {
         script->setIsActive(false);
     }
+}
+
+void ScriptUnit::moveRootNodesToEnd(const std::vector<int>& ids)
+{
+    std::stable_partition(mScriptRootNodeList.begin(), mScriptRootNodeList.end(), [&ids](TScript* pScript) {
+        return std::ranges::find(ids, pScript->getID()) == ids.end();
+    });
 }
 
 void ScriptUnit::addScriptRootNode(TScript* pT, int parentPosition, int childPosition)
@@ -177,6 +198,10 @@ void ScriptUnit::reParentScript(int childID, int oldParentID, int newParentID, i
         pChild->Tree<TScript>::setParent(nullptr);
         addScriptRootNode(pChild, parentPosition, childPosition);
     }
+
+    // The profile save skips a top-level module member and the module save only walks its own
+    // folder, so an item moved out of a module that kept the mark would be saved nowhere
+    pChild->updateModuleMembership();
 }
 
 void ScriptUnit::reParentScript(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position)
@@ -257,10 +282,8 @@ void ScriptUnit::removeScript(TScript* pT)
     if (!pT) {
         return;
     }
-    QMapIterator<QString, QList<TScript*>> it(mpHost->mEventHandlerMap);
-    while (it.hasNext()) {
-        it.next();
-        mpHost->mEventHandlerMap[it.key()].removeAll(pT);
+    for (auto& handlers : mpHost->mEventHandlerMap) {
+        handlers.removeAll(pT);
     }
     mScriptMap.remove(pT->getID());
 }
@@ -269,6 +292,32 @@ void ScriptUnit::removeScript(TScript* pT)
 int ScriptUnit::getNewID()
 {
     return ++mMaxID;
+}
+
+bool ScriptUnit::enableScript(const QString& name)
+{
+    bool found = false;
+    for (auto script : std::as_const(mScriptMap)) {
+        if (script->getName() == name) {
+            script->setIsActive(true);
+            found = true;
+            emit mpHost->signal_scriptToggled(script->getID());
+        }
+    }
+    return found;
+}
+
+bool ScriptUnit::disableScript(const QString& name)
+{
+    bool found = false;
+    for (auto script : std::as_const(mScriptMap)) {
+        if (script->getName() == name) {
+            script->setIsActive(false);
+            found = true;
+            emit mpHost->signal_scriptToggled(script->getID());
+        }
+    }
+    return found;
 }
 
 void ScriptUnit::compileAll(bool saveLoadingError)
@@ -289,9 +338,7 @@ void ScriptUnit::compileAll(bool saveLoadingError)
     // before returning to the event loop, where the 0ms save Host::uninstallPackage()
     // queues would otherwise serialize the still-live "uninstalled" scripts back in:
     doCleanup();
-    if (mpHost->mpEditorDialog) {
-        mpHost->mpEditorDialog->doCleanReset();
-    }
+    emit mpHost->signal_editorCleanResetRequested();
 }
 
 std::vector<int> ScriptUnit::findItems(const QString& name, const bool exactMatch, const bool caseSensitive)
@@ -314,10 +361,24 @@ std::vector<int> ScriptUnit::findItems(const QString& name, const bool exactMatc
     return ids;
 }
 
+bool ScriptUnit::pendingDeletion(TScript* pItem) const
+{
+    if (!hasPendingDeletes()) {
+        return false;
+    }
+    for (auto* pAncestor = pItem; pAncestor; pAncestor = pAncestor->getParent()) {
+        if (uninstallList.contains(pAncestor)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void ScriptUnit::assembleReport(TScript* pItem)
 {
-    std::list<TScript*>* childrenList = pItem->mpMyChildrenList;
-    for (auto pChild : *childrenList) {
+    std::list<Tree<TScript>*>* childrenList = pItem->mpMyChildrenList;
+    for (auto* pChildNode : *childrenList) {
+        auto* pChild = static_cast<TScript*>(pChildNode);
         ++statsItemsTotal;
         if (pChild->isActive()) {
             ++statsActiveItems;

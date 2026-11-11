@@ -18,10 +18,11 @@
  ***************************************************************************/
 
 #include "SentryWrapper.h"
+
 #include "utils.h"
 
 #ifdef WITH_SENTRY
-#include <QFile>
+#include "MudletApp.h"
 #include <QStandardPaths>
 #include "sentry.h"
 #endif
@@ -50,6 +51,13 @@
 void initSentry()
 {
 #ifdef WITH_SENTRY
+    // Never arm crashpad for a test run: the Lua suite runs this binary with MUDLET_TEST_MODE, and a crash
+    // would open MudletCrashReporter's modal dialog (unless "autoSendCrashReports" is AlwaysSend, which no
+    // CI runner has), hanging the job until timeout and sending the report as if a player hit it.
+    if (qEnvironmentVariableIsSet("MUDLET_TEST_MODE")) {
+        return;
+    }
+
     sentry_options_t* options = sentry_options_new();
     std::string runtimeAppDir = getExeDir();
     QString path = QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + "/mudlet/sentry";
@@ -58,12 +66,7 @@ void initSentry()
         return;
     }
 
-    QString appBuild;
-    QFile gitShaFile(qsl(":/app-build.txt"));
-    if (gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        appBuild = QString::fromUtf8(gitShaFile.readAll()).trimmed();
-    }
-    const std::string release = qsl("mudlet@%1%2").arg(APP_VERSION, appBuild).toStdString();
+    const std::string release = qsl("mudlet@%1%2").arg(APP_VERSION, MudletApp::buildSuffix()).toStdString();
 
     sentry_options_set_database_path(options, path.toUtf8().constData());
     sentry_options_set_release(options, release.c_str());
@@ -129,7 +132,10 @@ void crashIfRequested()
     const char* environmentVariable = std::getenv("MUDLET_CRASH_TEST");
 
     if (environmentVariable && *environmentVariable == '1') {
-        int* p = nullptr;
+        // volatile is important: a null write is undefined behaviour and
+        // clang -O2 deletes the branch without it, so the hook would do nothing
+        // on every Windows and macOS release.
+        volatile int* p = nullptr;
         *p = 42;
     }
 }

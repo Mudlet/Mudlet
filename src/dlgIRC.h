@@ -31,7 +31,6 @@
 #include <IrcCommand>
 #include <IrcCommandParser>
 #include <IrcCompleter>
-#include <IrcConnection>
 #include <IrcMessage>
 #include <IrcUserModel>
 
@@ -40,6 +39,7 @@
 #include "utils.h"
 
 class Host;
+class TIrcClient;
 
 class dlgIRC : public QMainWindow, public Ui::irc
 {
@@ -50,46 +50,12 @@ public:
     explicit dlgIRC(Host*);
     ~dlgIRC();
 
-    inline static QString HostNameCfgItem = qsl("irc_host");
-    inline static QString HostPortCfgItem = qsl("irc_port");
-    inline static QString HostSecureCfgItem = qsl("irc_secure");
-    inline static QString NickNameCfgItem = qsl("irc_nick");
-    inline static QString PasswordCfgItem = qsl("irc_password");
-    inline static QString ChannelsCfgItem = qsl("irc_channels");
-    inline static QString DefaultHostName = qsl("irc.libera.chat");
-    inline static int DefaultHostPort = 6667;
-    inline static bool DefaultHostSecure = false;
-    inline static QString DefaultNickName = qsl("Mudlet");
-    inline static QStringList DefaultChannels = QStringList() << qsl("#mudlet");
     inline static int DefaultMessageBufferLimit = 5000;
 
-
-    static QString readIrcHostName(Host* pH);
-    static int readIrcHostPort(Host* pH);
-    static bool readIrcHostSecure(Host* pH);
-    static QString readIrcNickName(Host* pH);
-    static QString readIrcPassword(Host* pH);
-    static QStringList readIrcChannels(Host* pH);
-    static QPair<bool, QString> writeIrcHostName(Host* pH, const QString& hostname);
-    static QPair<bool, QString> writeIrcHostPort(Host* pH, int port);
-    static QPair<bool, QString> writeIrcHostSecure(Host* pH, bool secure);
-    static QPair<bool, QString> writeIrcNickName(Host* pH, const QString& nickname);
-    static QPair<bool, QString> writeIrcPassword(Host* pH, const QString& password);
-    static QPair<bool, QString> writeIrcChannels(Host* pH, const QStringList& channels);
-
-    IrcConnection* connection = nullptr;
-    bool mReadyForSending = false;
     QPair<bool, QString> sendMsg(const QString& target, const QString& message);
-    QString getHostName() const { return mHostName; }
-    int getHostPort() const { return mHostPort; }
-    bool getHostSecure() const { return mHostSecure; }
-    QString getNickName() const { return mNickName; }
-    QString getPassword() const { return mPassword; }
-    QStringList getChannels() const { return mChannels; }
-    QString getConnectedHost() const { return mConnectedHostName; }
-    void ircRestart(bool reloadConfigs = true);
 
 private slots:
+    void slot_clientDestroyed();
     void slot_onConnected();
     void slot_onConnecting();
     void slot_onDisconnected();
@@ -101,14 +67,13 @@ private slots:
     void slot_onBufferRemoved(IrcBuffer* buffer);
     void slot_onBufferActivated(const QModelIndex& index);
     void slot_onUserActivated(const QModelIndex& index);
-    void slot_nickNameRequired(const QString& reserved, QString* alt);
-    void slot_nickNameChanged(const QString& nick);
-    void slot_joinedChannel(IrcJoinMessage* message);
-    void slot_partedChannel(IrcPartMessage* message);
-    void slot_receiveMessage(IrcMessage* message);
+    void slot_nickNameReserved(const QString& reserved, const QString& replacement);
+    void slot_showMessage(IrcBuffer* buffer, IrcMessage* message);
+    void slot_showOwnMessage(IrcMessage* message);
     void slot_onAnchorClicked(const QUrl& link);
     void slot_onHistoryCompletion();
-    void slot_receiveNumericMessage(IrcNumericMessage* msg);
+    void slot_restarting(const QString& reason);
+    void slot_restarted();
 
 private:
     void setClientWindowTitle();
@@ -117,36 +82,22 @@ private:
     void setupBuffers();
     bool processCustomCommand(IrcCommand*);
     void displayHelp(const QString&);
-    void appendHtml(QTextDocument*, const QString&);
-    QString getMessageTarget(IrcMessage*, const QString&);
-    static QString readAppDefaultIrcNick();
-    static void writeAppDefaultIrcNick(const QString&);
+    void appendToDocument(QTextDocument*, const QString&);
     void writeQSettings();
 
     void showEvent(QShowEvent* event) override;
 
     QPointer<Host> mpHost;
+    QPointer<TIrcClient> mpClient;
     bool mIrcStarted = false;
     IrcCompleter* completer = nullptr;
     IrcCommandParser* commandParser = nullptr;
-    IrcBufferModel* bufferModel = nullptr;
     QHash<IrcBuffer*, IrcUserModel*> userModels;
     QHash<IrcBuffer*, QTextDocument*> bufferTexts;
-    QPointer<IrcBuffer> serverBuffer;
     QStringList mInputHistory;
     int mInputHistoryMax = 8;
     int mInputHistoryIdxNext = 0;
     int mInputHistoryIdxCurrent = 0;
-    quint64 mPingStarted = 0;
-    QString mConnectedHostName;
-    QString mHostName;
-    int mHostPort = 0;
-    bool mHostSecure = false;
-    QString mNickName;
-    QString mUserName = qsl("mudlet");
-    QString mPassword;
-    QString mRealName;
-    QStringList mChannels;
     int mMessageBufferLimit = 0;
 };
 

@@ -25,6 +25,8 @@
 
 #include <string>
 
+class QSaveFile;
+
 /**
  * @brief Utility class for secure string operations
  *
@@ -45,12 +47,14 @@
  */
 class SecureStringUtils
 {
+    friend class SecureStringUtilsTest;
+
 public:
     /**
      * @brief Encrypt a string using a profile-specific encryption key
      * @param plaintext The string to encrypt
      * @param profileName Name of the profile (used for key lookup)
-     * @return Base64-encoded encrypted string, or empty string if input is empty
+     * @return Base64-encoded encrypted string, or empty string if input is empty or no key could be stored for the profile
      */
     static QString encryptStringForProfile(const QString& plaintext, const QString& profileName);
 
@@ -58,9 +62,11 @@ public:
      * @brief Decrypt a string using a profile-specific encryption key
      * @param ciphertext Base64-encoded encrypted string
      * @param profileName Name of the profile (used for key lookup)
-     * @return Decrypted plaintext, or empty string if input is empty/invalid
+     * @param usedDerivableKey If given, set to whether only the key anyone can derive from the
+     *        profile name decrypted it, so the caller can re-encrypt it
+     * @return Decrypted plaintext, or empty string if input is empty/invalid or neither key decrypts it
      */
-    static QString decryptStringForProfile(const QString& ciphertext, const QString& profileName);
+    static QString decryptStringForProfile(const QString& ciphertext, const QString& profileName, bool* usedDerivableKey = nullptr);
 
     /**
      * @brief Check if a string appears to be in encrypted format
@@ -109,6 +115,57 @@ public:
      * @return true if in test environment, false otherwise
      */
     static bool isTestEnvironment();
+
+    /**
+     * @brief Best-effort: set a file holding a secret to 0600
+     *
+     * Also called on read, to narrow files left by an earlier Mudlet. Permissions are read back, as a
+     * file system that can't store them reports success.
+     * @param path Path of the file to restrict
+     * @return false when other accounts on the machine can still read the file. On a platform
+     * without such permission bits this returns true, warning once that only the folder protects it.
+     */
+    static bool restrictFileToOwner(const QString& path);
+
+    /**
+     * @brief Best-effort: set a directory holding secrets to 0700
+     *
+     * The same contract as restrictFileToOwner().
+     * @param path Path of the directory to restrict
+     * @return false when other accounts on the machine can still reach into the directory
+     */
+    static bool restrictDirectoryToOwner(const QString& path);
+
+    /**
+     * @brief Check, without changing them, that a file holding a secret has owner-only permissions
+     *
+     * For a file narrowed before the secret went into it. Warns and reports as restrictFileToOwner() does.
+     * @param path Path of the file to check
+     * @return false when other accounts on the machine can read the file
+     */
+    static bool confirmFileIsOwnerOnly(const QString& path);
+
+    /**
+     * @brief Set an open QSaveFile to 0600 now, before the secret is written, and keep it so through commit()
+     *
+     * Never makes the save fail: when the file system refuses, false is returned and the file is committed
+     * with the mode of the one it replaces, or the umask's default, so the caller can try
+     * restrictFileToOwner() on the committed file.
+     * @param file An open QSaveFile
+     * @return false when the narrowing was refused. On a platform without such permission bits this
+     * does nothing and returns true.
+     */
+    static bool restrictSaveFileToOwner(QSaveFile& file);
+
+    /**
+     * @brief The secret that could not be narrowed, forgetting it as it is handed over
+     *
+     * Lets a caller warn that a password it just saved is readable by other accounts. Process-wide, so
+     * a caller reporting on one write asks before it, to discard what came earlier, and again after.
+     * CredentialManager::unprotectedSecretPath() is that answer.
+     * @return Path of that file or directory, empty when nothing failed since it was last asked
+     */
+    static QString takeUnprotectedSecretPath();
 
     // Convenience methods for password storage and retrieval
 
@@ -170,14 +227,22 @@ private:
      * @param iterations Number of PBKDF2 iterations
      * @return 32-byte key
      */
-    static QByteArray generateKey(const QByteArray& password, const QByteArray& salt, int iterations = 10000);
+    static QByteArray generateKey(const QByteArray& password, const QByteArray& salt, int iterations);
 
     /**
      * @brief Get or create a profile-specific encryption key
      * @param profileName Name of the profile
-     * @return 32-byte encryption key for the profile
+     * @return 32-byte encryption key for the profile, or empty if no key could be stored
      */
     static QByteArray getProfileEncryptionKey(const QString& profileName);
+
+    /**
+     * @brief The key older Mudlets encrypted with when no key could be stored, which anyone can derive
+     *        from the profile name - only ever used to decrypt what they wrote
+     * @param profileName Name of the profile
+     * @return 32-byte key
+     */
+    static QByteArray legacyProfileEncryptionKey(const QString& profileName);
 
     /**
      * @brief Load encryption key from profile directory file

@@ -24,36 +24,56 @@
 #include <QSet>
 #include <QWidget>
 
+class QAction;
+class QMenuBar;
+
 // A small dismissible balloon anchored to another widget, used to point out
 // a newly added part of the interface without taking over the screen.
 //
 // Call maybeShow() from the code that owns the anchor widget, at the moment
 // the anchor becomes available; it decides whether this player should still
 // be told about the feature. The balloon goes away for good once the player
-// engages - clicking "Got it" or the anchor itself - and gives up on its own
-// after enough ignored appearances.
+// engages - clicking "Got it" or the anchor itself, or reaching the feature
+// some other way (see dismiss()) - and gives up on its own after enough
+// ignored appearances.
 class TFeatureCallout : public QWidget
 {
     Q_OBJECT
 
 public:
-    TFeatureCallout(const QString& featureId, QWidget* pAnchor, const QString& title, const QString& body);
+    TFeatureCallout(const QString& featureId, QWidget* pAnchor, const QString& title, const QString& body, QAction* pAnchorMenu = nullptr);
 
     static void maybeShow(const QString& featureId, QWidget* pAnchor, const QString& title, const QString& body);
+    // Points at one menu's title in a menu bar rather than at the whole bar
+    static void maybeShow(const QString& featureId, QMenuBar* pMenuBar, QAction* pMenu, const QString& title, const QString& body);
+    // For when the player reaches the feature some other way than the anchor
+    static void dismiss(const QString& featureId);
 
     void showAnchored();
+
+public slots:
+    // A balloon is a tooltip window, which the platforms Mudlet ships on keep
+    // above ordinary windows - including those of whatever application the
+    // player switched to. Public so that the tests can drive the transitions
+    // instead of waiting on a real one:
+    void slot_applicationStateChanged(const Qt::ApplicationState state);
 
 protected:
     void paintEvent(QPaintEvent* event) override;
     bool eventFilter(QObject* watched, QEvent* event) override;
 
 private:
+    static void maybeShowImpl(const QString& featureId, QWidget* pAnchor, QAction* pAnchorMenu, const QString& title, const QString& body);
+    QRect anchorRect() const;
+    bool anchorOnScreen() const;
+    void place();
     void reposition();
     void markDismissed();
 
     QString mFeatureId;
     QPointer<QWidget> mpAnchor;
-    // Read out to screen readers when the balloon appears
+    QPointer<QAction> mpAnchorMenu;
+    // Read out to screen readers the first time the balloon appears
     QString mAnnouncement;
     // Horizontal position of the arrow tip within the balloon, kept in sync
     // with wherever the anchor currently sits on screen
@@ -61,10 +81,18 @@ private:
     // The balloon prefers hanging below the anchor, but flips above it when
     // there is not enough screen space underneath
     bool mArrowOnTop = true;
+    // The balloon is waiting for Mudlet to become the active application
+    // again, rather than having been dealt with by the player
+    bool mWaitingForActivation = false;
+    bool mApplicationActive = true;
+    bool mAnnounced = false;
 
     // Features already pointed out this session, also used to keep several
     // freshly shipped features from ganging up on the player at once
     inline static QSet<QString> smSessionShown;
+
+    // Its cases each need a fresh session budget
+    friend class FeatureCalloutTest;
 };
 
 #endif // MUDLET_TFEATURECALLOUT_H

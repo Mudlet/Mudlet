@@ -26,11 +26,22 @@
 
 #include "Host.h"
 #include "TDebug.h"
-#include "mudlet.h"
+#include "TLuaInterpreter.h"
+#include "TimerUnit.h"
+#include "utils.h"
 
+#include <QColor>
+#include <QDebug>
+#include <QMap>
+#include <QMultiMap>
+#include <QObject>
 #include <QScopeGuard>
+#include <QSet>
+#include <QTimer>
+#include <QVariant>
 
-const char* TTimer::scmProperty_HostName = "HostName";
+#include <list>
+
 const char* TTimer::scmProperty_TTimerId = "TTimerId";
 
 TTimer::TTimer(TTimer* parent, Host* pHost)
@@ -39,8 +50,6 @@ TTimer::TTimer(TTimer* parent, Host* pHost)
 , mpQTimer(new QTimer)
 {
     mpQTimer->stop();
-    mpQTimer->setProperty(scmProperty_HostName, mpHost->getName());
-    mpHost->getTimerUnit()->mQTimerSet.insert(mpQTimer);
     mpQTimer->setProperty(scmProperty_TTimerId, 0);
     mpQTimer->setTimerType(Qt::PreciseTimer);
 }
@@ -53,8 +62,6 @@ TTimer::TTimer(const QString& name, QTime time, Host* pHost, bool repeating)
 , mpQTimer(new QTimer)
 {
     mpQTimer->stop();
-    mpQTimer->setProperty(scmProperty_HostName, mpHost->getName());
-    mpHost->getTimerUnit()->mQTimerSet.insert(mpQTimer);
     mpQTimer->setProperty(scmProperty_TTimerId, 0);
     mRepeating = repeating;
     mpQTimer->setTimerType(Qt::PreciseTimer);
@@ -68,28 +75,28 @@ TTimer::~TTimer()
 
         if (isTemporary()) {
             if (mScript.isEmpty()) {
-                mpHost->mLuaInterpreter.delete_luafunction(this);
+                mpHost->mLuaInterpreter.delete_luafunction(mLuaFunctionRef);
             } else {
                 mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
             }
         }
 
-        mpHost->getTimerUnit()->mQTimerSet.remove(mpQTimer);
         // During normal operation, use deleteLater() for safety
         mpQTimer->deleteLater();
     } else {
         // During shutdown (mpHost is null), delete immediately
         delete mpQTimer;
     }
+
+    deleteChildren();
 }
 
 void TTimer::setName(const QString& name)
 {
-    // temp timers do not need to check for names referring to multiple
-    // timer objects as names=ID -> much faster tempTimer creation
-    if (!isTemporary()) {
-        mpHost->getTimerUnit()->mLookupTable.remove(mName, this);
-    }
+    // Temporary timers are renamed too (a package's from its id to the name it
+    // was saved with), and killTimer() trusts this table to hold only current
+    // names of live timers:
+    mpHost->getTimerUnit()->mLookupTable.remove(mName, this);
     mName = name;
     // Merely for information if needed later:
     mpQTimer->setObjectName(qsl("timer(Host:%1)(TTimerId:%2)").arg(mpHost->getName(), name));
@@ -104,8 +111,30 @@ void TTimer::setTime(QTime time)
     mpQTimer->setInterval(time.msecsSinceStartOfDay());
 }
 
+void TTimer::validateTime()
+{
+    // A repeating zero-interval QTimer fires on every event loop pass. A one-shot tempTimer(0, ...)
+    // (how scripts defer to the next pass) and an offset timer (stops as it fires) may keep a zero time
+    if (!isFolder() && !isTemporary() && !isOffsetTimer() && mTime.msecsSinceStartOfDay() == 0) {
+        mOK_init = false;
+        //: Error shown in the editor when a timer's time is left at zero
+        setError(QObject::tr("No time set - a timer needs a time greater than zero to run"));
+    } else {
+        mOK_init = true;
+    }
+}
+
+bool TTimer::activate()
+{
+    validateTime();
+    return Tree<TTimer>::activate();
+}
+
 bool TTimer::setIsActive(bool b)
 {
+    if (b) {
+        validateTime();
+    }
     const bool condition1 = Tree<TTimer>::setIsActive(b);
     const bool condition2 = canBeUnlocked();
     if (condition1 && condition2) {
@@ -114,6 +143,14 @@ bool TTimer::setIsActive(bool b)
         stop();
     }
     return condition1 && condition2;
+}
+
+bool TTimer::stayActive()
+{
+    if (mpQTimer->isActive() && activate() && canBeUnlocked()) {
+        return true;
+    }
+    return setIsActive(true);
 }
 
 
@@ -134,31 +171,17 @@ void TTimer::stop()
     mpQTimer->stop();
 }
 
-void TTimer::compile()
-{
-    if (mNeedsToBeCompiled) {
-        if (!compileScript()) {
-            if (mudlet::smDebugMode) {
-                TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of timer:" << mName << "\n" >> mpHost;
-            }
-            mOK_code = false;
-        }
-    }
-    for (auto timer : *mpMyChildrenList) {
-        timer->compile();
-    }
-}
-
 void TTimer::compileAll()
 {
     mNeedsToBeCompiled = true;
     if (!compileScript()) {
-        if (mudlet::smDebugMode) {
-            TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of timer:" << mName << "\n" >> mpHost;
+        if (TDebug::wants(TDebug::Category::Error)) {
+            TDebug(Qt::white, Qt::red, TDebug::Category::Error, mName) << "ERROR: Lua compile error. compiling script of timer:" << mName << "\n" >> mpHost;
         }
         mOK_code = false;
     }
-    for (auto timer : *mpMyChildrenList) {
+    for (auto* timerNode : *mpMyChildrenList) {
+        auto* timer = static_cast<TTimer*>(timerNode);
         timer->compileAll();
     }
 }
@@ -167,13 +190,12 @@ bool TTimer::setScript(const QString& script)
 {
     // Switching from a registered anonymous Lua function (set up by tempTimer with a
     // function argument) to a script string: release the old function from the Lua
-    // registry and leave callback mode. Unlike triggers/aliases/keys, TTimer::execute()
-    // keys off mScript rather than the flag, so the new script does run - but without
-    // this the registry entry still leaks, as the destructor would then take its
-    // mScript-based branch and delete the compiled function instead.
+    // registry and leave callback mode. TTimer::execute() picks a temporary timer's
+    // payload by the flag, so it has to be cleared for the new script to run at all,
+    // and the destructor's mScript-based branch would otherwise leak the registry entry.
     if (mRegisteredAnonymousLuaFunction) {
         if (mpHost) {
-            mpHost->mLuaInterpreter.delete_luafunction(this);
+            mpHost->mLuaInterpreter.delete_luafunction(mLuaFunctionRef);
         }
         mRegisteredAnonymousLuaFunction = false;
     }
@@ -225,8 +247,8 @@ void TTimer::execute()
     pUnit->beginProcessing();
     // NB: deliberately only decrements the depth - do NOT add a doCleanup() call
     // here: it would delete `this` (and other deferred timers) while
-    // mudlet::slot_timerFires() still holds the pointer. Deferred deletes are
-    // flushed by slot_timerFires() itself once it is finished with the timer
+    // TimerUnit::timerFired() still holds the pointer. Deferred deletes are
+    // flushed by timerFired() itself once it is finished with the timer
     // (and by the doCleanup() calls in Host::incomingStreamProcessor() and
     // Host::slot_purgeTemps()):
     const auto processingGuard = qScopeGuard([pUnit] {
@@ -239,9 +261,9 @@ void TTimer::execute()
     }
 
     if (isTemporary()) {
-        if (mScript.isEmpty()) {
-            mpHost->mLuaInterpreter.call_luafunction(this);
-        } else {
+        if (mRegisteredAnonymousLuaFunction) {
+            mpHost->mLuaInterpreter.call_luafunction(mLuaFunctionRef, mName);
+        } else if (!mScript.isEmpty()) {
             mpHost->mLuaInterpreter.compileAndExecuteScript(mScript);
         }
 
@@ -253,14 +275,16 @@ void TTimer::execute()
     }
 
     if ((!isFolder() && hasChildren()) || (isOffsetTimer())) {
-        for (auto timer : *mpMyChildrenList) {
+        for (auto* timerNode : *mpMyChildrenList) {
+            auto* timer = static_cast<TTimer*>(timerNode);
             if (timer->isOffsetTimer()) {
                 timer->enableTimer(timer->getID());
             }
         }
+        // Not disableTimer(mID): that would also stop the offset children just armed above
         if (isOffsetTimer()) {
-            disableTimer(mID);
             deactivate();
+            mpQTimer->stop();
         }
     }
 
@@ -298,8 +322,9 @@ void TTimer::enableTimer(int id)
     if (mID == id) {
         if (canBeUnlocked()) {
             if (activate()) {
-                // CHECKME: Should this not also check for a non-empty "command" as well?
-                if (!mScript.isEmpty()) {
+                // Not just script timers: Lua-function tempTimers and command-only timers must also
+                // restart after the emergency stop (#10751)
+                if (hasPayload()) {
                     mpQTimer->start();
                 }
             } else {
@@ -310,12 +335,35 @@ void TTimer::enableTimer(int id)
     }
 
     if (isFolder()) {
-        for (auto timer : *mpMyChildrenList) {
+        for (auto* timerNode : *mpMyChildrenList) {
+            auto* timer = static_cast<TTimer*>(timerNode);
             if (!timer->isOffsetTimer()) {
                 timer->enableTimer(timer->getID());
             }
         }
     }
+}
+
+// Only for the resume, on a timer the emergency stop disarmed: Tree refuses to activate one
+// whose script does not compile, and leaving it disarmed would outlast fixing the script
+bool TTimer::keepArmedWithBrokenScript()
+{
+    if (!mOK_init || mOK_code) {
+        return false;
+    }
+    // Tree keeps mActive to itself and only sets it for a script that compiled
+    mOK_code = true;
+    Tree<TTimer>::activate();
+    mOK_code = false;
+    if (TDebug::wants(TDebug::Category::Error)) {
+        //: Central Debug Console line on resuming from the emergency stop; %1 is the timer's name, %2 the Lua compile error
+        TDebug(Qt::white,
+               Qt::red,
+               TDebug::Category::Error,
+               mName) << QObject::tr("ERROR: timer \"%1\" cannot run until its script compiles: %2\n").arg(mName, TLuaInterpreter::compileErrorAsPlainText(getError()))
+                >> mpHost;
+    }
+    return true;
 }
 
 void TTimer::disableTimer(int id)
@@ -325,8 +373,11 @@ void TTimer::disableTimer(int id)
         mpQTimer->stop();
     }
 
-    for (auto timer : *mpMyChildrenList) {
-        if (!timer->isOffsetTimer() && timer->shouldBeActive()) {
+    // Including offset children: one its parent has already armed would still fire,
+    // and deactivate() leaves their shouldBeActive() alone for the parent to re-arm them
+    for (auto* timerNode : *mpMyChildrenList) {
+        auto* timer = static_cast<TTimer*>(timerNode);
+        if (timer->shouldBeActive()) {
             timer->disableTimer(timer->getID());
         }
     }
@@ -336,8 +387,10 @@ void TTimer::enableTimer()
 {
     if (canBeUnlocked()) {
         if (activate()) {
-            // CHECKME: Should this not also check for a non-empty "command" as well?
-            if (!mScript.isEmpty()) {
+            // An offset timer is armed by its parent firing, via enableTimer(int); starting a
+            // command-only one here would give it a schedule of its own, so it keeps the script-only test
+            const bool startable = isOffsetTimer() ? (!mScript.isEmpty() || mRegisteredAnonymousLuaFunction) : hasPayload();
+            if (startable) {
                 mpQTimer->start();
             }
         } else {
@@ -346,7 +399,8 @@ void TTimer::enableTimer()
         }
     }
     if (!isOffsetTimer()) {
-        for (auto timer : *mpMyChildrenList) {
+        for (auto* timerNode : *mpMyChildrenList) {
+            auto* timer = static_cast<TTimer*>(timerNode);
             if (!timer->isOffsetTimer()) {
                 timer->enableTimer();
             }
@@ -358,41 +412,9 @@ void TTimer::disableTimer()
 {
     deactivate();
     mpQTimer->stop();
-    for (auto timer : *mpMyChildrenList) {
+    for (auto* timerNode : *mpMyChildrenList) {
+        auto* timer = static_cast<TTimer*>(timerNode);
         timer->disableTimer();
-    }
-}
-
-
-void TTimer::enableTimer(const QString& name)
-{
-    if (mName == name) {
-        if (canBeUnlocked()) {
-            if (activate()) {
-                mpQTimer->start();
-            } else {
-                deactivate();
-                mpQTimer->stop();
-            }
-        }
-    }
-
-    if (!isOffsetTimer()) {
-        for (auto timer : *mpMyChildrenList) {
-            timer->enableTimer(timer->getName());
-        }
-    }
-}
-
-void TTimer::disableTimer(const QString& name)
-{
-    if (mName == name) {
-        deactivate();
-        mpQTimer->stop();
-    }
-
-    for (auto timer : *mpMyChildrenList) {
-        timer->disableTimer(timer->getName());
     }
 }
 
@@ -431,19 +453,35 @@ QString TTimer::packageName(TTimer* pTimer)
     return QString();
 }
 
-QString TTimer::moduleName(TTimer* pTimer)
+void TTimer::updateModuleMembership()
 {
-    if (!pTimer) {
-        return QString();
+    if (!mpHost || mModuleMasterFolder) {
+        return;
     }
-
-    if (!pTimer->mPackageName.isEmpty()) {
-        return mpHost->mInstalledModules.contains(pTimer->mPackageName) ? pTimer->mPackageName : QString();
+    const TTimer* pRoot = getRoot();
+    if (pRoot != this) {
+        setModuleMembership(pRoot->mModuleMasterFolder);
+        return;
     }
+    // An unsynced module's file is never rewritten, so it still holds what was loaded from it
+    const bool heldByItsModule = !mLoadedFromModule.isEmpty() && mpHost->mInstalledModules.contains(mLoadedFromModule) && !mpHost->moduleSavesBack(mLoadedFromModule);
+    setModuleMembership(heldByItsModule);
+}
 
-    if (pTimer->getParent()) {
-        return moduleName(pTimer->getParent());
+void TTimer::setModuleMembership(const bool member)
+{
+    if (mModuleMasterFolder) {
+        return;
     }
-
-    return QString();
+    mModuleMember = member;
+    // Uninstalling or reloading a module removes every top-level item with its name as package name
+    if (!member && mpHost && mpHost->mInstalledModules.contains(mPackageName)) {
+        mPackageName.clear();
+    }
+    if (!member) {
+        mLoadedFromModule.clear();
+    }
+    for (auto* pChild : *mpMyChildrenList) {
+        static_cast<TTimer*>(pChild)->setModuleMembership(member);
+    }
 }

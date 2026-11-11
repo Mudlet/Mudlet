@@ -100,11 +100,9 @@ describe("Tests functionality of Geyser.HBox", function()
       assert.are.same({x = 0, y = 0, width = 100, height = 60}, geometry("ghbFixedChild"))
       local dynamic = geometry("ghbDynamic")
       assert.are.equal(200, dynamic.width)
-      -- the dynamic child should start at 100, where the fixed one ends, but
-      -- organize() hands out positions as percentages: a third of 300px comes
-      -- back as 99.999999999999 and Mudlet truncates it, leaving a one pixel
-      -- gap. Pinned so the day the layout is fixed this spec says so.
-      assert.are.equal(99, dynamic.x)
+      -- organize() hands out positions as percentages, so a third of 300px comes
+      -- back as 99.999999999999; the edge is rounded, leaving no gap
+      assert.are.equal(100, dynamic.x)
     end)
 
     it("gives a stretch factor its extra share of the width", function()
@@ -113,6 +111,79 @@ describe("Tests functionality of Geyser.HBox", function()
       track(Geyser.Label:new({name = "ghbStretchB"}, box))
       assert.are.same({x = 0, y = 0, width = 300, height = 100}, geometry("ghbStretchA"))
       assert.are.same({x = 300, y = 0, width = 100, height = 100}, geometry("ghbStretchB"))
+    end)
+
+    it("keeps a lone child with a stretch factor inside the box", function()
+      local box = track(Geyser.HBox:new({name = "ghbLoneStretch", x = 0, y = 0, width = 400, height = 100}))
+      track(Geyser.Label:new({name = "ghbLoneStretchA", h_stretch_factor = 3}, box))
+      assert.are.same({x = 0, y = 0, width = 400, height = 100}, geometry("ghbLoneStretchA"))
+    end)
+
+    it("fills the box with a lone child whose stretch factor is below one", function()
+      -- stretch factors are shares of the box, so a lone child holds all of them
+      local box = track(Geyser.HBox:new({name = "ghbLoneHalf", x = 0, y = 0, width = 400, height = 100}))
+      track(Geyser.Label:new({name = "ghbLoneHalfA", h_stretch_factor = 0.5}, box))
+      assert.are.same({x = 0, y = 0, width = 400, height = 100}, geometry("ghbLoneHalfA"))
+    end)
+
+    it("gives the survivor the whole box when its stretched sibling is removed", function()
+      local box = track(Geyser.HBox:new({name = "ghbLoneLeft", x = 0, y = 0, width = 300, height = 50}))
+      local plain = track(Geyser.Label:new({name = "ghbLoneLeftA"}, box))
+      track(Geyser.Label:new({name = "ghbLoneLeftB", h_stretch_factor = 2}, box))
+      plain:delete()
+      assert.are.same({x = 0, y = 0, width = 300, height = 50}, geometry("ghbLoneLeftB"))
+    end)
+
+    it("tiles children edge to edge when the box does not divide into whole pixels", function()
+      local box = track(Geyser.HBox:new({name = "ghbTile", x = 20, y = 20, width = 100, height = 100}))
+      for index = 1, 3 do
+        track(Geyser.Label:new({name = "ghbTile" .. index}, box))
+      end
+      -- the thirds end at 53.33 and 86.67, so the middle child takes the spare pixel
+      local right = 20
+      for index, width in ipairs({33, 34, 33}) do
+        local child = geometry("ghbTile" .. index)
+        assert.are.equal(right, child.x)
+        assert.are.equal(width, child.width)
+        right = child.x + child.width
+      end
+      assert.are.equal(120, right)
+    end)
+
+    local function assertTiles(prefix, count, left, right)
+      local edge = left
+      for index = 1, count do
+        local child = geometry(prefix .. index)
+        assert.are.equal(edge, child.x, prefix .. index .. " starts where the one before it ends")
+        edge = child.x + child.width
+      end
+      assert.are.equal(right, edge)
+    end
+
+    it("tiles children whose shared edges fall on a half pixel", function()
+      -- sixths of 105px meet at 17.5, 35, 52.5, 70 and 87.5
+      local box = track(Geyser.HBox:new({name = "ghbHalf", x = 0, y = 0, width = 105, height = 20}))
+      for index = 1, 6 do
+        track(Geyser.Label:new({name = "ghbHalf" .. index}, box))
+      end
+      assertTiles("ghbHalf", 6, 0, 105)
+    end)
+
+    it("tiles children of a box that starts on a half pixel", function()
+      local box = track(Geyser.HBox:new({name = "ghbHalfStart", x = "500.5px", y = 0, width = 300, height = 20}))
+      for index = 1, 3 do
+        track(Geyser.Label:new({name = "ghbHalfStart" .. index}, box))
+      end
+      assertTiles("ghbHalfStart", 3, 501, 801)
+    end)
+
+    it("still tiles its children after it is resized", function()
+      local box = track(Geyser.HBox:new({name = "ghbRetile", x = 20, y = 20, width = 100, height = 100}))
+      for index = 1, 3 do
+        track(Geyser.Label:new({name = "ghbRetile" .. index}, box))
+      end
+      box:resize(101, nil)
+      assertTiles("ghbRetile", 3, 20, 121)
     end)
   end)
 
@@ -177,6 +248,80 @@ describe("Tests functionality of Geyser.HBox", function()
       assert.is_nil(getWindowGeometry("ghbShrinkB"))
       assert.is_nil(Geyser.windowList.ghbShrink)
     end)
+
+    -- one layout pass per child is what makes tearing a box down quadratic. The
+    -- fixed child is here because contains_fixed short circuits reposition()'s
+    -- check of the deferral, which could let the cost back in for boxes like it
+    it("does not lay the row out again for each child it deletes", function()
+      track(Geyser.Label:new({name = "ghbShrinkCostFixed", width = 100, h_policy = Geyser.Fixed}, box))
+      for i = 1, 3 do
+        track(Geyser.Label:new({name = "ghbShrinkCost" .. i}, box))
+      end
+      local organizes = 0
+      local organize = box.organize
+      box.organize = function(...)
+        organizes = organizes + 1
+        return organize(...)
+      end
+      box:delete()
+      assert.are.equal(0, organizes)
+      assert.is_nil(getWindowGeometry("ghbShrinkA"))
+      assert.is_nil(getWindowGeometry("ghbShrinkCost1"))
+    end)
+
+    -- the deferral belongs to the container being deleted, so a box losing a
+    -- whole subtree - one that defers itself on the way out - still re-splits
+    it("re-splits the row when a nested box of its own is deleted", function()
+      local nested = track(Geyser.VBox:new({name = "ghbShrinkNested"}, box))
+      track(Geyser.Label:new({name = "ghbShrinkNestedA"}, nested))
+      track(Geyser.Label:new({name = "ghbShrinkNestedB"}, nested))
+      nested:delete()
+      assert.are.same({"ghbShrinkA", "ghbShrinkB"}, box.windows)
+      assert.are.same({x = 0, y = 0, width = 300, height = 50}, geometry("ghbShrinkA"))
+      assert.are.same({x = 300, y = 0, width = 300, height = 50}, geometry("ghbShrinkB"))
+    end)
+
+    -- a cascade that raises leaves the box in the tree, so a box left holding
+    -- the cascade's deferral would silently never lay itself out again
+    it("stops deferring the row when a child's delete raises", function()
+      local doomed = box.windowList.ghbShrinkB
+      local ownDelete = rawget(doomed, "delete")
+      -- put the real delete back before after_each tries to clean the box up
+      finally(function() doomed.delete = ownDelete end)
+      doomed.delete = function() error("delete blew up") end
+      assert.has_error(function() box:delete() end)
+      assert.is_nil(rawget(box, "defer_updates"))
+      local organizes = 0
+      local organize = box.organize
+      box.organize = function(...)
+        organizes = organizes + 1
+        return organize(...)
+      end
+      track(Geyser.Label:new({name = "ghbShrinkAfterRaise"}, box))
+      assert.is_true(organizes > 0)
+    end)
+
+    -- the children the cascade did get through are gone, so the survivors are
+    -- left holding the widths worked out for the child count it started with
+    it("re-splits the row a half finished delete left behind", function()
+      local ownRemove = rawget(box, "remove")
+      -- restored so that after_each can still tear the box down
+      finally(function() box.remove = ownRemove end)
+      -- raising on the second unlink is what puts one child through and strands
+      -- the other, whichever order the cascade happens to walk them in
+      local removals = 0
+      local remove = box.remove
+      box.remove = function(...)
+        removals = removals + 1
+        if removals == 2 then
+          error("remove blew up")
+        end
+        return remove(...)
+      end
+      assert.has_error(function() box:delete() end)
+      assert.are.equal(1, #box.windows)
+      assert.are.same({x = 0, y = 0, width = 600, height = 50}, geometry(box.windows[1]))
+    end)
   end)
 
   describe("Geyser.HBox:reposition", function()
@@ -221,6 +366,14 @@ describe("Tests functionality of Geyser.HBox", function()
       box:show()
       assert.is_true(windowVisible("ghbHideA"))
       assert.is_true(windowVisible("ghbHideB"))
+    end)
+
+    it("keeps a child hidden by its constraints out of view while laying the row out", function()
+      local box = track(Geyser.HBox:new({name = "ghbHiddenNew", x = 0, y = 0, width = 100, height = 100}))
+      track(Geyser.Label:new({name = "ghbHiddenNewA", hidden = true}, box))
+      track(Geyser.Label:new({name = "ghbHiddenNewB"}, box))
+      assert.is_false(windowVisible("ghbHiddenNewA"))
+      assert.is_true(windowVisible("ghbHiddenNewB"))
     end)
   end)
 end)

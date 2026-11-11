@@ -24,21 +24,29 @@
 #include "TMap.h"
 
 #include "Host.h"
+#include "HostManager.h"
+#include "MudletApp.h"
+#include "RoomAppearance.h"
+#include "TAppFrontend.h"
 #include "TArea.h"
-#include "TConsole.h"
+#include "TAreaGraph.h"
 #include "TEvent.h"
 #include "TMapLabel.h"
-#include "TMapViewManager.h"
+#include "TMapViewFrontend.h"
+#include "TMapViewsFrontend.h"
+#include "TNullMapViews.h"
 #include "TRoomDB.h"
 #include "XMLimport.h"
-#include "dlgMapper.h"
 #include "TLuaInterpreter.h"
 #include "mapInfoContributorManager.h"
-#include "mudlet.h"
 
 #include <QBuffer>
+#include <QCoreApplication>
 #include <QDataStream>
 #include <QElapsedTimer>
+#include <QFileInfo>
+#include <QFontMetrics>
+#include <QImageWriter>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -48,15 +56,110 @@
 #include <QPainter>
 #include <QPixmap>
 #include <QSaveFile>
+#include <QScopeGuard>
 #include <QSizeF>
+#include <QtEndian>
+#include <QXmlStreamReader>
+#include <algorithm>
 #include <chrono>
+#include <cmath>
+#include <limits>
+#include <queue>
+#include <tuple>
+
+#ifndef Q_MOC_RUN
+#include <boost/range/iterator_range.hpp>
+#endif
 
 using namespace std::chrono_literals;
 
 namespace {
+// An image label is painted scaled from its pixmap, so past this many pixels a
+// bigger one only costs memory: at 30000 pixels square it is gigabytes.
+constexpr qreal cMaxImageLabelPixels = 4096.0 * 4096.0;
+
+// A map file can carry a room symbol scaling factor that TMap's own setter
+// would refuse - hand-edited, from a third-party tool, or written by a Mudlet
+// whose JSON reader truncated it (issue #10176). Loading cannot go through the
+// setter, which would mark the freshly loaded map as unsaved, so it comes
+// through here instead: 0 and below blanks every room symbol, which is worse
+// than a factor that is merely not what the file said.
+qreal usableSymbolFontFudgeFactor(const qreal fromFile)
+{
+    if (!qIsFinite(fromFile)) {
+        // NaN compares false against both bounds, so qBound() cannot be relied
+        // on to sort it out
+        return 1.0;
+    }
+    return qBound(TMap::scmMinimumSymbolFontFudgeFactor, fromFile, TMap::scmMaximumSymbolFontFudgeFactor);
+}
+
+// Not QFont::PreferNoShaping: Qt's unshaped text path treats Private Use Area
+// code points as unprintable, which blanks every symbol from an icon font.
+QFont::StyleStrategy symbolFontStyleStrategy(const bool onlySymbolFontUsed)
+{
+    return static_cast<QFont::StyleStrategy>((onlySymbolFontUsed ? QFont::NoFontMerging : 0) | QFont::PreferOutline | QFont::PreferAntialias | QFont::PreferQuality);
+}
+
+enum class MapFileCheckResult { ValidMap, NotAMap, ParseError };
+
+struct MapFileCheck
+{
+    MapFileCheckResult result;
+    QString errorString;
+};
+
+// A file holds map data only if its root element is <map>. XMLimport reads a
+// <MudletPackage> document as a package, and anything else - a game's HTML "no
+// map here" page answered with a 200, say - as a well-formed document full of
+// elements it does not recognise: either way it reports success having put no
+// rooms on the map it was asked to fill. A file that is not XML at all is told
+// apart from those, so that a damaged map is not reported as somebody else's
+// web page.
+MapFileCheck fileHoldsMapData(QFile& file)
+{
+    const qint64 startPosition = file.pos();
+    MapFileCheck check{MapFileCheckResult::NotAMap, QString()};
+    QXmlStreamReader reader(&file);
+    while (!reader.atEnd()) {
+        if (reader.readNext() == QXmlStreamReader::StartElement) {
+            // XML allows only one root element, so the first start element is it
+            check.result = (reader.name() == qsl("map")) ? MapFileCheckResult::ValidMap : MapFileCheckResult::NotAMap;
+            break;
+        }
+    }
+
+    if (reader.hasError()) {
+        check.result = MapFileCheckResult::ParseError;
+        check.errorString = reader.errorString();
+    }
+
+    // The reader buffers ahead, so the parse proper has to be given the file
+    // back where it was rather than where the scan above left it
+    file.seek(startPosition);
+    return check;
+}
+
+// For a profile in the GUI before it has its view manager
+class TNullMapViewsFrontend final : public TMapViewsFrontend
+{
+public:
+    std::pair<int, QString> createView(int) override { return {0, qsl("no view manager available")}; }
+    std::pair<bool, QString> closeView(int viewId) override { return {false, qsl("view %1 not found").arg(viewId)}; }
+    int closeAllViews() override { return 0; }
+    TSecondaryMapViewFrontend* view(int) override { return nullptr; }
+    QList<int> getViewIds() const override { return {}; }
+    void updateAllViews() override {}
+    void switchViewsShowingArea(int) override {}
+    void update3DViewAvailability() override {}
+};
+} // anonymous namespace
+
 // Restores font information from userData that was stored during binary serialization.
 // Font data is stored as "family|pointSize|weight|italic" to avoid binary format version changes.
-void restoreLabelFontFromUserData(TMapLabel& label, int labelId, QMap<QString, QString>& userData)
+// Call before restoreLabelOutlineColorFromUserData(), which takes the outline key this reads
+// to tell a label that had no font, whose font it then clears to an empty family.
+void TMap::restoreLabelFontFromUserData(TMapLabel& label, int labelId, QMap<QString, QString>& userData)
 {
     const QString fontKey = qsl("system.labelFont_%1").arg(labelId);
     if (userData.contains(fontKey)) {
@@ -66,11 +169,15 @@ void restoreLabelFontFromUserData(TMapLabel& label, int labelId, QMap<QString, Q
         } else {
             qWarning("TMap: Failed to parse font data for label %d, expected 4 parts but got %lld", labelId, fontParts.size());
         }
+    } else if (userData.contains(qsl("system.labelOutlineColor_%1").arg(labelId))) {
+        // A file that keeps outline colors writes a font for every label with
+        // one, so this label had none, and a default QFont would invent one
+        label.font = QFont(QString());
     }
 }
 
 // Outline color data is stored as "r|g|b|a" to avoid binary format version changes.
-void restoreLabelOutlineColorFromUserData(TMapLabel& label, int labelId, QMap<QString, QString>& userData)
+void TMap::restoreLabelOutlineColorFromUserData(TMapLabel& label, int labelId, QMap<QString, QString>& userData)
 {
     const QString colorKey = qsl("system.labelOutlineColor_%1").arg(labelId);
     if (userData.contains(colorKey)) {
@@ -82,18 +189,27 @@ void restoreLabelOutlineColorFromUserData(TMapLabel& label, int labelId, QMap<QS
         }
     }
 }
-} // anonymous namespace
+
+TMapViewsFrontend* TMap::mapViewsFrontend() const
+{
+    if (mpViewsFrontend) {
+        return mpViewsFrontend;
+    }
+    if (mpNullViews) {
+        return mpNullViews;
+    }
+    static TNullMapViewsFrontend noViews;
+    return &noViews;
+}
 
 TMap::TMap(Host* pH, const QString& profileName)
 : mDefaultAreaName(tr("Default Area"))
 , mUnnamedAreaName(tr("Unnamed Area"))
 , mpRoomDB(std::make_unique<TRoomDB>(this))
-, mpViewManager(new TMapViewManager(pH, this))
 , mpHost(pH)
 , mProfileName(profileName)
+, mpNullViews(TAppFrontend::hasView() ? nullptr : new TNullMapViews(pH, this))
 {
-    restore16ColorSet();
-
     // TODO: https://github.com/Mudlet/Mudlet/issues/6436
     // According to Qt Docs we should really only have one of these
     // (QNetworkAccessManager) for the whole application, but: each profile's
@@ -102,6 +218,7 @@ TMap::TMap(Host* pH, const QString& profileName)
     mpNetworkAccessManager = new QNetworkAccessManager(this);
 
     mMapInfoContributorManager = new MapInfoContributorManager(this, pH);
+    mpAreaGraph = std::make_unique<TAreaGraph>(this);
 
     connect(mpNetworkAccessManager, &QNetworkAccessManager::finished, this, &TMap::slot_replyFinished);
 }
@@ -118,50 +235,83 @@ TMap::~TMap()
     }
 }
 
+// The names scripts pass to hideMapMenuItem(); they are API, so never rename one.
+const QStringList& TMap::builtInMenuItemNames()
+{
+    static const QStringList names{qsl("downloadMap"),
+                                   qsl("loadMap"),
+                                   qsl("createMap"),
+                                   qsl("createRoom"),
+                                   qsl("moveRoom"),
+                                   qsl("configureRoom"),
+                                   qsl("setExits"),
+                                   qsl("createExitLine"),
+                                   qsl("spreadRooms"),
+                                   qsl("shrinkRooms"),
+                                   qsl("deleteRoom"),
+                                   qsl("moveToPosition"),
+                                   qsl("moveToArea"),
+                                   qsl("configureAreas"),
+                                   qsl("createLabel"),
+                                   qsl("exportAreaImage"),
+                                   qsl("setPlayerLocation"),
+                                   qsl("switchMapMode")};
+    return names;
+}
+
+bool TMap::menuItemShown(const QString& itemName) const
+{
+    Q_ASSERT_X(builtInMenuItemNames().contains(itemName), "TMap::menuItemShown", "item name missing from builtInMenuItemNames()");
+    return !mHiddenMenuItems.contains(itemName);
+}
+
+void TMap::refreshMapperColours()
+{
+    ++mRevision;
+    emit signal_mapperColoursChanged();
+}
+
 void TMap::mapClear()
 {
+    ++mRevision;
     mpRoomDB->clearMapDB();
     mEnvColors.clear();
     mRoomIdHash.clear();
-    mTargetID = 0;
-    mPathList.clear();
-    mDirList.clear();
-    mWeightList.clear();
     mCustomEnvColors.clear();
     // Need to restore the default colours:
     restore16ColorSet();
-    roomidToIndex.clear();
-    edgeHash.clear();
-    locations.clear();
-    mMapGraphNeedsUpdate = true;
-    mNewMove = true;
+    clearRoutes();
     mVersion = mDefaultVersion;
     mUserData.clear();
+    ++mMapRevision;
 
     // mSaveVersion is not reset - so that any new Mudlet map file saves are to
     // whatever version was previously set/deduced
 
     // Must also reset the mapper area selection control to reflect that it now
     // only has the "Default Area" after TRoomDB::clearMapDB() has been run.
-    if (mpMapper) {
-        mpMapper->updateAreaComboBox();
+    emit signal_mapCleared();
+}
 
-        auto map = mpMapper->mp2dMap;
-        if (map) {
-            map->mMultiSelectionListWidget.clear();
-            map->mMultiSelectionListWidget.hide();
-        }
-    }
+void TMap::clearRoutes()
+{
+    mTargetID = 0;
+    mPathList.clear();
+    mDirList.clear();
+    mWeightList.clear();
+    roomidToIndex.clear();
+    edgeHash.clear();
+    locations.clear();
+    mMapGraphNeedsUpdate = true;
+    mNewMove = true;
 }
 
 // The supplied message should contain a localised message and no "WARNING:" or other prefixes:
 void TMap::logError(const QString& msg)
 {
-    if (mpHost->mpEditorDialog) {
-        /*: Used to print a map error in the Errors console in the Editor, %1 is the
+    /*: Used to print a map error in the Errors console in the Editor, %1 is the
  message text and a line-feed is also appended.*/
-        mpHost->mpEditorDialog->mpErrorConsole->print(tr("[MAP ERROR:] %1").arg(msg).append(QChar::LineFeed), QColor(255, 128, 0), QColor(Qt::black));
-    }
+    emit mpHost->signal_errorConsolePrint(tr("[MAP ERROR:] %1").arg(msg).append(QChar::LineFeed), QColor(255, 128, 0), QColor(Qt::black));
 }
 
 // Not used:
@@ -179,7 +329,7 @@ void TMap::logError(const QString& msg)
 //    mpHost->mLuaInterpreter.compileAndExecuteScript( script );
 //}
 
-bool TMap::setRoomArea(int id, int area, bool deferAreaRecalculations)
+bool TMap::setRoomArea(int id, int area)
 {
     TRoom* pR = mpRoomDB->getRoom(id);
     if (!pR) {
@@ -203,7 +353,7 @@ bool TMap::setRoomArea(int id, int area, bool deferAreaRecalculations)
         // to retain the API for the lua subsystem...
     }
 
-    const bool result = pR->setArea(area, deferAreaRecalculations);
+    const bool result = pR->setArea(area);
     if (result) {
         mMapGraphNeedsUpdate = true;
         setUnsaved(__func__);
@@ -232,6 +382,10 @@ bool TMap::setRoomCoordinates(int id, int x, int y, int z)
     const int oldY = pR->y();
     const int oldZ = pR->z();
 
+    // Before moveRoom(), which re-measures exits to this room from its stored position; the area
+    // indexes use the coordinates passed in, so they don't mind the order.
+    pR->setCoordinates(x, y, z);
+
     if (oldX != x || oldY != y || oldZ != z) {
         TArea* pA = mpRoomDB->getArea(pR->getArea());
         if (pA) {
@@ -239,8 +393,6 @@ bool TMap::setRoomCoordinates(int id, int x, int y, int z)
             pA->moveRoom(id, oldZ, oldX, oldY, z, x, y);
         }
     }
-
-    pR->setCoordinates(x, y, z);
 
     setUnsaved(__func__);
     return true;
@@ -258,7 +410,6 @@ int compSign(int a, int b)
 // reason why it cannot.
 QString TMap::connectExitStubByDirection(const int fromRoomId, const int dirType)
 {
-    Q_ASSERT_X(scmUnitVectors.contains(dirType), "TMap::connectExitStubByDirection(...)", "there is no unitVector.value() for the given dirType");
     Q_ASSERT_X(scmReverseDirections.contains(dirType), "TMap::connectExitStubByDirection(...)", "there is no scmReverseDirections.value() for the given dirType");
 
     TRoom* pFromR = mpRoomDB->getRoom(fromRoomId);
@@ -276,6 +427,7 @@ QString TMap::connectExitStubByDirection(const int fromRoomId, const int dirType
     }
 
     const int reverseDir = scmReverseDirections.value(dirType);
+    // In and out have no unit vector, and the zero vector they get here matches a room at the same coordinates
     const QVector3D unitVector = scmUnitVectors.value(dirType);
     // QVector3D is composed of floating point values so we need to round them
     // if we want to assign them to integral variables without compiler warnings!
@@ -492,16 +644,7 @@ QString TMap::connectExitStubByDirectionAndToId(const int fromRoomId, const int 
 
 int TMap::createNewRoomID(int minimumId)
 {
-    int _id = 0;
-    if (minimumId > 0) {
-        _id = minimumId - 1;
-    }
-
-    do {
-        ; // Empty loop as increment done in test
-    } while (mpRoomDB->getRoom(++_id));
-
-    return _id;
+    return mpRoomDB->lowestFreeRoomId(std::max(minimumId, 1));
 }
 
 bool TMap::setExit(int from, int to, int dir)
@@ -518,6 +661,9 @@ bool TMap::setExit(int from, int to, int dir)
     }
     if (to < 1) {
         to = -1;
+    }
+    if (to > 0 && pR->getExit(dir) == to && !pR->hasExitStub(dir)) {
+        return mpRoomDB->getArea(pR->getArea()) != nullptr;
     }
 
     bool ret = true;
@@ -563,6 +709,9 @@ bool TMap::setExit(int from, int to, int dir)
         ret = false;
     }
     pR->setExitStub(dir, false);
+    if (ret && to == -1) {
+        pR->removeExitExtras(dir);
+    }
     mMapGraphNeedsUpdate = true;
     TArea* pA = mpRoomDB->getArea(pR->getArea());
     if (!pA) {
@@ -613,7 +762,7 @@ void TMap::audit()
                         // now:
                         const int newID = createMapLabel(areaID, l.text, l.pos.x(), l.pos.y(), l.pos.z(), l.fgColor, l.bgColor, true, false, false, 40.0, 50, std::nullopt, l.fgColor);
                         if (newID > -1) {
-                            if (mudlet::self()->showMapAuditErrors()) {
+                            if (smShowMapAuditErrors) {
                                 const QString msg = tr("[ INFO ] - CONVERTING: old style label, areaID:%1 labelID:%2.").arg(areaID).arg(i);
                                 postMessage(msg);
                             }
@@ -621,7 +770,7 @@ void TMap::audit()
                             pArea->mMapLabels[i] = pArea->mMapLabels.take(newID);
 
                         } else {
-                            if (mudlet::self()->showMapAuditErrors()) {
+                            if (smShowMapAuditErrors) {
                                 const QString msg = tr("[ WARN ] - CONVERTING: cannot convert old style label in area with id: %1,  label id is: %2.").arg(areaID).arg(i);
                                 postMessage(msg);
                             }
@@ -640,6 +789,13 @@ void TMap::audit()
     }
 
     mpRoomDB->auditRooms(roomRemapping, areaRemapping);
+    // The player's room was read from the file under the id the audit just replaced;
+    // 0 is no room at all, not a room 0 the file may also hold
+    for (int& playerRoomId : mRoomIdHash) {
+        if (playerRoomId) {
+            playerRoomId = roomRemapping.value(playerRoomId, playerRoomId);
+        }
+    }
 
     // The second half of old mpRoomDB->initAreasForOldMaps() - needed to fixup
     // all the (TArea *)->areaExits() that were built wrongly previously,
@@ -648,6 +804,8 @@ void TMap::audit()
     QMapIterator<int, TArea*> itArea(mpRoomDB->getAreaMap());
     while (itArea.hasNext()) {
         itArea.next();
+        // The audit bypasses the setters, so no room re-filed its own index entry:
+        itArea.value()->markLodExitIndexDirty();
         itArea.value()->clean();
     }
 
@@ -657,6 +815,8 @@ void TMap::audit()
         appendErrorMsg(infoMsg);
     }
 
+    // It may have removed or renumbered rooms and areas, bypassing the setters that count changes
+    ++mRevision;
     mpHost->getLuaInterpreter()->condenseMapLoad();
 }
 
@@ -730,56 +890,51 @@ bool TMap::gotoRoom(int r1, int r2)
     return findPath(r1, r2);
 }
 
-void TMap::addDirectionalRoute(QHash<unsigned int, route>& bestRoutes,
+void TMap::addDirectionalRoute(std::vector<std::pair<int, route>>& bestRoutes,
                                const QMap<QString, int>& exitWeights,
+                               bool recheckTargetLocks,
                                unsigned int source,
                                TRoom* pSourceR,
                                int target,
                                quint8 direction,
-                               const QString& exitKey,
-                               const QSet<unsigned int>& unUsableRoomSet)
+                               const QString& exitKey)
 {
-    // Skip self-edges and any exits that lead to rooms already known to be unusable.
     if (target <= 0 || static_cast<int>(source) == target) {
         return;
     }
 
-    TLuaInterpreter* interpreter = mpHost ? mpHost->getLuaInterpreter() : nullptr;
-    TLuaInterpreter::ExitWeightFilterResult filterResult;
-    TLuaInterpreter::ExitWeightFilterResult* filterResultPtr = nullptr;
-    if (interpreter && interpreter->hasExitWeightFilter()) {
-        filterResult = interpreter->applyExitWeightFilter(static_cast<int>(source), exitKey);
-        if (filterResult.blocked) {
-            return;
-        }
-        filterResultPtr = &filterResult;
-    }
-
-    const bool filterOverridesBlocks = filterResultPtr && filterResultPtr->weightOverride.has_value();
-
-    if (pSourceR->isLocked && !filterOverridesBlocks) {
+    if (pSourceR->isLocked) {
         return;
     }
 
     const bool isSpecialExit = direction == DIR_OTHER;
 
-    if (!filterOverridesBlocks) {
-        if (isSpecialExit) {
-            if (pSourceR->hasSpecialExitLock(exitKey)) {
-                return;
-            }
-        } else if (pSourceR->hasExitLock(direction)) {
+    if (isSpecialExit) {
+        if (pSourceR->hasSpecialExitLock(exitKey)) {
             return;
         }
-    }
-
-    TRoom* pTargetR = mpRoomDB->getRoom(target);
-    if (!pTargetR) {
+    } else if (pSourceR->hasExitLock(direction)) {
         return;
     }
 
-    if (!filterOverridesBlocks && (pTargetR->isLocked || unUsableRoomSet.contains(target))) {
+    // initGraph() only indexed the rooms that exist and were not locked, so one lookup rules out the rest.
+    const int targetIndex = roomidToIndex.value(target, -1);
+    if (targetIndex < 0) {
         return;
+    }
+    TRoom* pTargetR = locations[targetIndex].pR;
+    if (recheckTargetLocks && pTargetR->isLocked) {
+        return;
+    }
+
+    int cost = exitWeights.value(exitKey, pTargetR->getWeight());
+    TLuaInterpreter* interpreter = mpHost ? mpHost->getLuaInterpreter() : nullptr;
+    if (interpreter && interpreter->hasExitWeightFilter()) {
+        const TLuaInterpreter::ExitWeightFilterResult filterResult = interpreter->applyExitWeightFilter(static_cast<int>(source), exitKey);
+        if (filterResult.blocked) {
+            return;
+        }
+        cost = filterResult.weightOverride.value_or(cost);
     }
 
     route r;
@@ -787,52 +942,65 @@ void TMap::addDirectionalRoute(QHash<unsigned int, route>& bestRoutes,
     if (isSpecialExit) {
         r.specialExitName = exitKey;
     }
-
-    int cost = exitWeights.value(exitKey, pTargetR->getWeight());
-    if (filterOverridesBlocks) {
-        cost = filterResultPtr->weightOverride.value();
-    }
     r.cost = cost;
 
-    if (!bestRoutes.contains(target) || bestRoutes.value(target).cost > r.cost) {
-        bestRoutes.insert(target, r);
+    for (auto& [bestTargetIndex, bestRoute] : bestRoutes) {
+        if (bestTargetIndex == targetIndex) {
+            if (bestRoute.cost > r.cost) {
+                bestRoute = r;
+            }
+            return;
+        }
     }
+    bestRoutes.emplace_back(targetIndex, r);
 }
 
 void TMap::initGraph()
 {
     QElapsedTimer _time;
     _time.start();
+    const ScriptCallbackScope callbackScope(this);
+    mGraphBuildInProgress = true;
+    // Before the build, as the exit weight filter can edit rooms the build has already read
+    mMapGraphNeedsUpdate = false;
     locations.clear();
+    locations.reserve(mpRoomDB->getRoomMap().size());
     roomidToIndex.clear();
-    g.clear();
-    g = mygraph_t();
+    roomidToIndex.reserve(mpRoomDB->getRoomMap().size());
     unsigned int roomCount = 0;
     unsigned int edgeCount = 0;
-    QSet<unsigned int> unUsableRoomSet;
-    TLuaInterpreter* interpreter = mpHost ? mpHost->getLuaInterpreter() : nullptr;
-    const bool exitWeightFilterActive = interpreter && interpreter->hasExitWeightFilter();
-    // Keep track of the unusable rather than the usable ones because that is
-    // hopefully a MUCH smaller set in normal situations!
+    int unusableRoomCount = 0;
+    qsizetype exitCount = 0;
     QHashIterator<int, TRoom*> itRoom = mpRoomDB->getRoomMap();
     while (itRoom.hasNext()) {
         itRoom.next();
         TRoom* pR = itRoom.value();
-        if (itRoom.key() < 1 || !pR) {
-            unUsableRoomSet.insert(itRoom.key());
+        if (itRoom.key() < 1 || !pR || pR->isLocked) {
+            ++unusableRoomCount;
             continue;
         }
-
-        if (pR->isLocked) {
-            unUsableRoomSet.insert(itRoom.key());
-            if (!exitWeightFilterActive) {
-                continue;
-            }
+        for (const int target : {pR->getNorth(),
+                                 pR->getNortheast(),
+                                 pR->getEast(),
+                                 pR->getSoutheast(),
+                                 pR->getSouth(),
+                                 pR->getSouthwest(),
+                                 pR->getWest(),
+                                 pR->getNorthwest(),
+                                 pR->getUp(),
+                                 pR->getDown(),
+                                 pR->getIn(),
+                                 pR->getOut()}) {
+            exitCount += target > 0;
         }
+        exitCount += pR->getSpecialExits().size();
 
         location l;
         l.pR = pR;
         l.id = itRoom.key();
+        l.x = pR->x();
+        l.y = pR->y();
+        l.z = pR->z();
         // locations is std::vector<location> and (locations.at(k)).id will give room ID value
         locations.push_back(l);
         // This command maps usable TRooms (key) to index of entry in locations (for route finding).
@@ -840,75 +1008,214 @@ void TMap::initGraph()
         roomidToIndex.insert(itRoom.key(), roomCount++);
     }
 
-    for (unsigned int i = 0; i < roomCount; ++i) {
+    // Emptied rather than rebuilt, so each room keeps its edge list's storage: freeing it all and allocating
+    // it again cost about a fifth of a rebuild.
+    for (std::size_t i = 0, previousRoomCount = boost::num_vertices(g); i < previousRoomCount; ++i) {
+        boost::clear_out_edges(i, g);
+    }
+    // Only ever the last vertex, which boost removes without renumbering the rest.
+    while (boost::num_vertices(g) > roomCount) {
+        boost::remove_vertex(boost::num_vertices(g) - 1, g);
+    }
+    while (boost::num_vertices(g) < roomCount) {
         boost::add_vertex(g);
     }
 
-    // Now identify the routes between rooms, and pick out the best edges of parallel ones
-    for (auto l : locations) {
+    // The only place g is cleared or grown (deletions and reloads come via mMapGraphNeedsUpdate), so the
+    // only place search state goes stale. A surviving mSearchTouched entry past a shrunken roomCount
+    // would make the next search write out of bounds.
+    resetSearchState(roomCount);
+
+    // Sized from the exits, which bound the edges, as each growth rehashes every edge so far. Not cleared:
+    // overwriting the last build's entries costs less than freeing and reallocating them, and edges that
+    // are gone are never looked up.
+    edgeHash.reserve(exitCount);
+
+    // Now identify the routes between rooms, and pick out the best edges of parallel ones.
+    // A room has a handful of exits, so a reused list beats a hash table built per room.
+    std::vector<std::pair<int, route>> bestRoutes;
+    TLuaInterpreter* interpreter = mpHost ? mpHost->getLuaInterpreter() : nullptr;
+    // The filter is the only script that runs mid-build, and it can lock rooms after they were indexed,
+    // then clear itself.
+    const bool recheckTargetLocks = interpreter && interpreter->hasExitWeightFilter();
+    cost mostChebyshevPerCost = 0;
+    cost mostEuclideanPerCost = 0;
+    bool freeDistance = false;
+    for (std::size_t sourceIndex = 0; sourceIndex < locations.size(); ++sourceIndex) {
+        const location& l = locations[sourceIndex];
         unsigned const int source = l.id;
         TRoom* pSourceR = l.pR;
-        QHash<unsigned int, route> bestRoutes;
-        // key is target (destination room),
-        // value is data we will need to store later,
+        bestRoutes.clear();
         QMap<QString, int> const exitWeights = pSourceR->getExitWeights();
 
-        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getNorth(), DIR_NORTH, qsl("n"), unUsableRoomSet);
-        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getEast(), DIR_EAST, qsl("e"), unUsableRoomSet);
-        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getSouth(), DIR_SOUTH, qsl("s"), unUsableRoomSet);
-        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getWest(), DIR_WEST, qsl("w"), unUsableRoomSet);
-        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getUp(), DIR_UP, qsl("up"), unUsableRoomSet);
-        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getDown(), DIR_DOWN, qsl("down"), unUsableRoomSet);
-        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getNortheast(), DIR_NORTHEAST, qsl("ne"), unUsableRoomSet);
-        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getSoutheast(), DIR_SOUTHEAST, qsl("se"), unUsableRoomSet);
-        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getSouthwest(), DIR_SOUTHWEST, qsl("sw"), unUsableRoomSet);
-        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getNorthwest(), DIR_NORTHWEST, qsl("nw"), unUsableRoomSet);
-        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getIn(), DIR_IN, qsl("in"), unUsableRoomSet);
-        addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getOut(), DIR_OUT, qsl("out"), unUsableRoomSet);
+        addDirectionalRoute(bestRoutes, exitWeights, recheckTargetLocks, source, pSourceR, pSourceR->getNorth(), DIR_NORTH, qsl("n"));
+        addDirectionalRoute(bestRoutes, exitWeights, recheckTargetLocks, source, pSourceR, pSourceR->getEast(), DIR_EAST, qsl("e"));
+        addDirectionalRoute(bestRoutes, exitWeights, recheckTargetLocks, source, pSourceR, pSourceR->getSouth(), DIR_SOUTH, qsl("s"));
+        addDirectionalRoute(bestRoutes, exitWeights, recheckTargetLocks, source, pSourceR, pSourceR->getWest(), DIR_WEST, qsl("w"));
+        addDirectionalRoute(bestRoutes, exitWeights, recheckTargetLocks, source, pSourceR, pSourceR->getUp(), DIR_UP, qsl("up"));
+        addDirectionalRoute(bestRoutes, exitWeights, recheckTargetLocks, source, pSourceR, pSourceR->getDown(), DIR_DOWN, qsl("down"));
+        addDirectionalRoute(bestRoutes, exitWeights, recheckTargetLocks, source, pSourceR, pSourceR->getNortheast(), DIR_NORTHEAST, qsl("ne"));
+        addDirectionalRoute(bestRoutes, exitWeights, recheckTargetLocks, source, pSourceR, pSourceR->getSoutheast(), DIR_SOUTHEAST, qsl("se"));
+        addDirectionalRoute(bestRoutes, exitWeights, recheckTargetLocks, source, pSourceR, pSourceR->getSouthwest(), DIR_SOUTHWEST, qsl("sw"));
+        addDirectionalRoute(bestRoutes, exitWeights, recheckTargetLocks, source, pSourceR, pSourceR->getNorthwest(), DIR_NORTHWEST, qsl("nw"));
+        addDirectionalRoute(bestRoutes, exitWeights, recheckTargetLocks, source, pSourceR, pSourceR->getIn(), DIR_IN, qsl("in"));
+        addDirectionalRoute(bestRoutes, exitWeights, recheckTargetLocks, source, pSourceR, pSourceR->getOut(), DIR_OUT, qsl("out"));
 
         QMapIterator<QString, int> itSpecialExit(pSourceR->getSpecialExits());
         while (itSpecialExit.hasNext()) {
             itSpecialExit.next();
 
-            addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, itSpecialExit.value(), DIR_OTHER, itSpecialExit.key(), unUsableRoomSet);
+            addDirectionalRoute(bestRoutes, exitWeights, recheckTargetLocks, source, pSourceR, itSpecialExit.value(), DIR_OTHER, itSpecialExit.key());
         } // End of while(itSpecialExit.hasNext())
 
         // Now we have eliminated possible duplicate and useless edges we can create and
         // insert the remainder into the BGL graph:
-        QHashIterator<unsigned int, route> itRoute = bestRoutes;
-        while (itRoute.hasNext()) {
-            itRoute.next();
+        // Not part of boost's documented interface, but one allocation per room instead of a regrowth per exit.
+        g.out_edge_list(sourceIndex).reserve(bestRoutes.size());
+        for (const auto& [targetIndex, bestRoute] : bestRoutes) {
             edge_descriptor e;
             bool inserted; // This is always going to be false as it gets set if
                            // we had tried to insert a parallel edge into a graph
                            // that does not support them - but we've just been
                            // and disposed of those already!
-            tie(e, inserted) = add_edge(roomidToIndex.value(source), roomidToIndex.value(itRoute.key()), itRoute.value().cost, g);
-            edgeHash.insert(qMakePair(source, itRoute.key()), itRoute.value());
+            tie(e, inserted) = add_edge(sourceIndex, targetIndex, bestRoute.cost, g);
+            const location& targetLocation = locations[targetIndex];
+            const coordinateSpan edgeSpan = spanBetween(l, targetLocation);
+            if (bestRoute.cost > 0) {
+                mostChebyshevPerCost = std::max(mostChebyshevPerCost, edgeSpan.chebyshev / bestRoute.cost);
+                mostEuclideanPerCost = std::max(mostEuclideanPerCost, edgeSpan.euclidean / bestRoute.cost);
+            } else if (edgeSpan.chebyshev > 0) {
+                freeDistance = true;
+            }
+            edgeHash.insert(qMakePair(source, static_cast<unsigned int>(targetLocation.id)), bestRoute);
             // The key is made from the QPair<edgeSourceRoomId, edgeTargetRoomId>...
             edgeCount++;
         }
-    } // End of foreach(location l, locations)
+    }
 
-    mMapGraphNeedsUpdate = false;
-    qDebug() << "TMap::initGraph() INFO: built graph with:" << locations.size() << "(" << roomCount << ") locations(roomCount), and discarded" << unUsableRoomSet.count()
-             << "other NOT usable rooms and found:" << edgeCount << "distinct, usable edges in:" << _time.nsecsElapsed() * 1.0e-6 << "ms.";
+    mHeuristicScale = heuristicScale();
+    if (!freeDistance) {
+        if (mostChebyshevPerCost > 0) {
+            mHeuristicScale.chebyshev = 1 / mostChebyshevPerCost;
+        }
+        if (mostEuclideanPerCost > 0) {
+            mHeuristicScale.euclidean = 1 / mostEuclideanPerCost;
+        }
+    }
+
+    mGraphBuildInProgress = false;
+    ++mPathGraphRevision;
+    qDebug() << "TMap::initGraph() INFO: built graph with:" << locations.size() << "(" << roomCount << ") locations(roomCount), and discarded" << unusableRoomCount
+             << "other NOT usable rooms and found:" << edgeCount << "distinct, usable edges in:" << _time.nsecsElapsed() * 1.0e-6
+             << "ms, heuristic scale (Chebyshev, euclidean):" << mHeuristicScale.chebyshev << mHeuristicScale.euclidean;
+}
+
+// Refill rather than only resize, or stale values below the old room count survive a shrink.
+void TMap::resetSearchState(const std::size_t roomCount)
+{
+    mSearchPredecessor.resize(roomCount);
+    for (std::size_t i = 0; i < roomCount; ++i) {
+        mSearchPredecessor[i] = i;
+    }
+    mSearchDistance.assign(roomCount, std::numeric_limits<cost>::max());
+    mSearchState.assign(roomCount, 0);
+    mSearchTouched.clear();
+}
+
+// Not boost::astar_search(): it resets four property maps for every room in the map before starting,
+// ~55ms on the 2.3M-room Aetherspace map, 10x an ordinary search. Here state persists across
+// searches and only the rooms the last one wrote are reset.
+bool TMap::searchGraph(const vertex start, const vertex goal)
+{
+    // 0 is unreached. Only 0 and stateExpanded are tested:
+    // writing stateFrontier stops a room being listed in mSearchTouched twice.
+    static constexpr quint8 stateFrontier = 1;
+    static constexpr quint8 stateExpanded = 2;
+
+    // A failed search touches every reachable room, and the list would hold 8 bytes a room for the
+    // session. Past half the map, free it and refill instead, likely cheaper by then too (unmeasured).
+    if (mSearchTouched.size() > mSearchPredecessor.size() / 2) {
+        resetSearchState(mSearchPredecessor.size());
+        std::vector<vertex>().swap(mSearchTouched);
+    } else {
+        for (const vertex touched : mSearchTouched) {
+            mSearchPredecessor[touched] = touched;
+            mSearchDistance[touched] = std::numeric_limits<cost>::max();
+            mSearchState[touched] = 0;
+        }
+        mSearchTouched.clear();
+    }
+
+    const WeightMap weights = boost::get(boost::edge_weight, g);
+    distance_heuristic<mygraph_t, cost, std::vector<location>> heuristic(locations, goal, mHeuristicScale);
+
+    // Estimate, then the negated cost so far, so that ties go to the room furthest along: on a grid
+    // every room in the band of equally short routes ties, and expanding them all swamps the search.
+    typedef std::tuple<cost, cost, vertex> frontierEntry;
+    std::priority_queue<frontierEntry, std::vector<frontierEntry>, std::greater<frontierEntry>> frontier;
+
+    mSearchDistance[start] = 0;
+    mSearchState[start] = stateFrontier;
+    mSearchTouched.push_back(start);
+    frontier.push({heuristic(start), 0, start});
+
+    while (!frontier.empty()) {
+        const vertex current = std::get<2>(frontier.top());
+        frontier.pop();
+        if (mSearchState[current] == stateExpanded) {
+            // Stale duplicate: a cheaper route was queued later.
+            continue;
+        }
+        mSearchState[current] = stateExpanded;
+        if (current == goal) {
+            return true;
+        }
+
+        for (const auto& exit : boost::make_iterator_range(boost::out_edges(current, g))) {
+            const vertex neighbour = boost::target(exit, g);
+            const cost throughCurrent = mSearchDistance[current] + boost::get(weights, exit);
+            if (throughCurrent >= mSearchDistance[neighbour]) {
+                continue;
+            }
+            if (mSearchState[neighbour] == 0) {
+                mSearchTouched.push_back(neighbour);
+            }
+            mSearchDistance[neighbour] = throughCurrent;
+            mSearchPredecessor[neighbour] = current;
+            // Never an expanded room: costs are whole numbers of at least 1 and the heuristic is consistent,
+            // so a room is expanded at its least cost, and its rounding is far below 1.
+            mSearchState[neighbour] = stateFrontier;
+            frontier.push({throughCurrent + heuristic(neighbour), -throughCurrent, neighbour});
+        }
+    }
+
+    return false;
 }
 
 bool TMap::findPath(int from, int to)
 {
-    if (mMapGraphNeedsUpdate) {
-        initGraph();
-    }
-
-    QElapsedTimer t;
-    t.start();
-
     mPathList.clear();
     mDirList.clear();
     mWeightList.clear();
     // Clear the previous path data here so that if the following test is
     // passed, the data is empty - and valid for THAT case!
+
+    if (mGraphBuildInProgress) {
+        return false;
+    }
+
+    if (mMapGraphNeedsUpdate) {
+        initGraph();
+        // Once more if the exit weight filter edited the map mid-build, then no more: a filter that edits
+        // on every build would otherwise rebuild the graph on every search
+        if (mMapGraphNeedsUpdate) {
+            initGraph();
+            mMapGraphNeedsUpdate = false;
+        }
+    }
+
+    QElapsedTimer t;
+    t.start();
 
     if (from == to) {
         return true; // Take a short-cut for trivial "already there" case!
@@ -1003,123 +1310,126 @@ bool TMap::findPath(int from, int to)
         return false;
     }
 
-    std::vector<vertex> p(vertexCount);
-    // Somehow p is an ascending, monotonic series of numbers start at 0, it
-    // seems we have a redundant indirection in play there as p[0]=0, p[1]=1,..., p[n]=n ...!
-    std::vector<cost> d(vertexCount);
-    try {
-        astar_search(g, start, distance_heuristic<mygraph_t, cost, std::vector<location>>(locations, goal), predecessor_map(&p[0]).distance_map(&d[0]).visitor(astar_goal_visitor<vertex>(goal)));
-    } catch (const found_goal&) {
-        qDebug() << "TMap::findPath(" << from << "," << to << ") INFO: time elapsed in A*:" << t.nsecsElapsed() * 1.0e-6 << "ms.";
-        t.restart();
-        if (!roomidToIndex.contains(to)) {
-            qDebug() << "TMap::findPath(" << from << "," << to << ") FAIL: target room not in map graph!";
-            return false;
-        }
-
-        vertex currentVertex = roomidToIndex.value(to);
-        unsigned int currentRoomId = (locations.at(currentVertex)).id;
-
-        // We step through the found path BACKWARDS so advance (well retard)
-        // the "previous" one first, and it will be the SOURCE vertex for the
-        // edge and current will be the TARGET vertex:
-        vertex previousVertex = currentVertex;
-        do {
-            previousVertex = p[currentVertex];
-            if (previousVertex == currentVertex) {
-                qDebug() << "TMap::findPath(" << from << "," << to << ") WARN: unable to build a path in:" << t.nsecsElapsed() * 1.0e-6 << "ms.";
-                mPathList.clear();
-                mDirList.clear();
-                mWeightList.clear(); // Reset any partial results...
-                return false;
-            }
-            const unsigned int previousRoomId = (locations.at(previousVertex)).id;
-            QPair<unsigned int, unsigned int> const edgeRoomIdPair = qMakePair(previousRoomId, currentRoomId);
-            const route r = edgeHash.value(edgeRoomIdPair);
-            mPathList.prepend(currentRoomId);
-            Q_ASSERT_X(r.cost > 0, "TMap::findPath()", "broken path {QPair made from source and target roomIds for a path step NOT found in QHash table of all possible steps.}");
-            // Above was found to be triggered by the situation described in:
-            // https://bugs.launchpad.net/mudlet/+bug/1263447 on 2015-07-17 but
-            // this is because previousVertex was the same as currentVertex after
-            // the "previousVertex = p[currentVertex]" operation at the start of
-            // the do{} loop - added a test for this so should bail out if it
-            // happens - Slysven
-            mWeightList.prepend(r.cost);
-            switch (r.direction) {
-                /*
-                 * Do not translate the directions into the user's locale here,
-                 * that is to be done in the profile specific doSpeedwalk()
-                 * function of the mapper package as the language of the MUD
-                 * need not be the native language of the user - translating
-                 * them here makes the mapper harder to code as it has to
-                 * accommodate all the possible languages the GUI of Mudlet was
-                 * configured to support!
-                 */
-            case DIR_NORTH:
-                mDirList.prepend(qsl("n"));
-                break;
-            case DIR_NORTHEAST:
-                mDirList.prepend(qsl("ne"));
-                break;
-            case DIR_EAST:
-                mDirList.prepend(qsl("e"));
-                break;
-            case DIR_SOUTHEAST:
-                mDirList.prepend(qsl("se"));
-                break;
-            case DIR_SOUTH:
-                mDirList.prepend(qsl("s"));
-                break;
-            case DIR_SOUTHWEST:
-                mDirList.prepend(qsl("sw"));
-                break;
-            case DIR_WEST:
-                mDirList.prepend(qsl("w"));
-                break;
-            case DIR_NORTHWEST:
-                mDirList.prepend(qsl("nw"));
-                break;
-            case DIR_UP:
-                mDirList.prepend(qsl("up"));
-                break;
-            case DIR_DOWN:
-                mDirList.prepend(qsl("down"));
-                break;
-            case DIR_IN:
-                mDirList.prepend(qsl("in"));
-                break;
-            case DIR_OUT:
-                mDirList.prepend(qsl("out"));
-                break;
-            case DIR_OTHER:
-                mDirList.prepend(r.specialExitName);
-                break;
-            default:
-                qWarning().nospace().noquote() << "TMap::findPath(" << from << ", " << to << ") WARNING - found route between rooms (from id: " << previousRoomId << ", to id: " << currentRoomId
-                                               << ") with an invalid DIR_xxxx code: " << r.direction << " - the path will not be valid!";
-            }
-            currentVertex = previousVertex;
-            currentRoomId = previousRoomId;
-        } while (currentVertex != start);
-
-        qDebug() << "TMap::findPath(" << from << "," << to << ") INFO: found path in:" << t.nsecsElapsed() * 1.0e-6 << "ms.";
-        return true;
+    // The check above only bounds searchGraph()'s unchecked indexing if the state matches the graph,
+    // and boost::add_edge() on a vecS graph silently grows it to fit an out-of-range index.
+    if (mSearchPredecessor.size() != vertexCount) {
+        qWarning().nospace().noquote() << "TMap::findPath(" << from << "," << to << ") WARN: search state (" << mSearchPredecessor.size() << ") is out of step with the graph (" << vertexCount
+                                       << ") - resetting it.";
+        resetSearchState(vertexCount);
     }
 
-    qDebug() << "TMap::findPath(" << from << "," << to << ") INFO: did NOT find path in:" << t.nsecsElapsed() * 1.0e-6 << "ms.";
-    return false;
+    if (!searchGraph(start, goal)) {
+        qDebug() << "TMap::findPath(" << from << "," << to << ") INFO: did NOT find path in:" << t.nsecsElapsed() * 1.0e-6 << "ms.";
+        return false;
+    }
+
+    qDebug() << "TMap::findPath(" << from << "," << to << ") INFO: time elapsed in A*:" << t.nsecsElapsed() * 1.0e-6 << "ms.";
+    t.restart();
+
+    vertex currentVertex = goal;
+    unsigned int currentRoomId = (locations.at(currentVertex)).id;
+
+    // We step through the found path BACKWARDS so advance (well retard)
+    // the "previous" one first, and it will be the SOURCE vertex for the
+    // edge and current will be the TARGET vertex:
+    vertex previousVertex = currentVertex;
+    do {
+        previousVertex = mSearchPredecessor[currentVertex];
+        if (previousVertex == currentVertex) {
+            qDebug() << "TMap::findPath(" << from << "," << to << ") WARN: unable to build a path in:" << t.nsecsElapsed() * 1.0e-6 << "ms.";
+            mPathList.clear();
+            mDirList.clear();
+            mWeightList.clear(); // Reset any partial results...
+            return false;
+        }
+        const unsigned int previousRoomId = (locations.at(previousVertex)).id;
+        QPair<unsigned int, unsigned int> const edgeRoomIdPair = qMakePair(previousRoomId, currentRoomId);
+        const route r = edgeHash.value(edgeRoomIdPair);
+        mPathList.prepend(currentRoomId);
+        Q_ASSERT_X(r.cost > 0, "TMap::findPath()", "broken path {QPair made from source and target roomIds for a path step NOT found in QHash table of all possible steps.}");
+        // Above was found to be triggered by the situation described in:
+        // https://bugs.launchpad.net/mudlet/+bug/1263447 on 2015-07-17 but
+        // this is because previousVertex was the same as currentVertex after
+        // the "previousVertex = p[currentVertex]" operation at the start of
+        // the do{} loop - added a test for this so should bail out if it
+        // happens - Slysven
+        mWeightList.prepend(r.cost);
+        switch (r.direction) {
+            /*
+             * Do not translate the directions into the user's locale here,
+             * that is to be done in the profile specific doSpeedwalk()
+             * function of the mapper package as the language of the MUD
+             * need not be the native language of the user - translating
+             * them here makes the mapper harder to code as it has to
+             * accommodate all the possible languages the GUI of Mudlet was
+             * configured to support!
+             */
+        case DIR_NORTH:
+            mDirList.prepend(qsl("n"));
+            break;
+        case DIR_NORTHEAST:
+            mDirList.prepend(qsl("ne"));
+            break;
+        case DIR_EAST:
+            mDirList.prepend(qsl("e"));
+            break;
+        case DIR_SOUTHEAST:
+            mDirList.prepend(qsl("se"));
+            break;
+        case DIR_SOUTH:
+            mDirList.prepend(qsl("s"));
+            break;
+        case DIR_SOUTHWEST:
+            mDirList.prepend(qsl("sw"));
+            break;
+        case DIR_WEST:
+            mDirList.prepend(qsl("w"));
+            break;
+        case DIR_NORTHWEST:
+            mDirList.prepend(qsl("nw"));
+            break;
+        case DIR_UP:
+            mDirList.prepend(qsl("up"));
+            break;
+        case DIR_DOWN:
+            mDirList.prepend(qsl("down"));
+            break;
+        case DIR_IN:
+            mDirList.prepend(qsl("in"));
+            break;
+        case DIR_OUT:
+            mDirList.prepend(qsl("out"));
+            break;
+        case DIR_OTHER:
+            mDirList.prepend(r.specialExitName);
+            break;
+        default:
+            qWarning().nospace().noquote() << "TMap::findPath(" << from << ", " << to << ") WARNING - found route between rooms (from id: " << previousRoomId << ", to id: " << currentRoomId
+                                           << ") with an invalid DIR_xxxx code: " << r.direction << " - the path will not be valid!";
+        }
+        currentVertex = previousVertex;
+        currentRoomId = previousRoomId;
+    } while (currentVertex != start);
+
+    qDebug() << "TMap::findPath(" << from << "," << to << ") INFO: found path in:" << t.nsecsElapsed() * 1.0e-6 << "ms.";
+    return true;
 }
 
 bool TMap::serialize(QDataStream& ofs, int saveVersion)
 {
-    // clamp version values
-    if (saveVersion < 0) {
-        saveVersion = 0;
-    } else if (saveVersion > mMaxVersion) {
-        saveVersion = mMaxVersion;
+    if (saveVersion > mMaxVersion) {
         const QString errMsg = tr("[ ERROR ] - The format version \"%1\" you are trying to save the map with is too new\n"
                                   "for this version of Mudlet. Supported are only formats up to version %2.")
                                        .arg(QString::number(saveVersion), QString::number(mMaxVersion));
+        appendErrorMsgWithNoLf(errMsg, false);
+        postMessage(errMsg);
+        return false;
+    }
+    if (saveVersion != 0 && saveVersion < mMinVersion) {
+        //: Shown when a map save asks for a format version older than this Mudlet can write. %1 is the version asked for, %2 the oldest one supported.
+        const QString errMsg = tr("[ ERROR ] - The format version \"%1\" you are trying to save the map with is too old\n"
+                                  "for this version of Mudlet. Supported are only formats from version %2.")
+                                       .arg(QString::number(saveVersion), QString::number(mMinVersion));
         appendErrorMsgWithNoLf(errMsg, false);
         postMessage(errMsg);
         return false;
@@ -1208,11 +1518,15 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         ofs << pA->pos;
         ofs << pA->isZone;
         ofs << pA->zoneAreaRef;
+        // A local copy so that saving does not modify the live area's user data,
+        // holding only the file-only keys for what this save writes:
+        QMap<QString, QString> userData{pA->mUserData};
+        TArea::dropFileOnlyUserData(userData);
         if (mSaveVersion >= 21) {
             // Revised in version 21 to store the value directly:
             ofs << pA->mLast2DMapZoom;
         } else {
-            pA->mUserData.insert(QLatin1String("system.fallback_map2DZoom"), QString::number(pA->get2DMapZoom()));
+            userData.insert(QLatin1String("system.fallback_map2DZoom"), QString::number(pA->get2DMapZoom()));
         }
         // Store font and outline color info for labels in userData (avoids binary format version change)
         const auto permanentLabelsList{pA->getPermanentLabelIds()};
@@ -1224,13 +1538,13 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
                 }
                 const QString fontKey = qsl("system.labelFont_%1").arg(labelID);
                 const QString fontValue = qsl("%1|%2|%3|%4").arg(label.font.family()).arg(label.font.pointSize()).arg(label.font.weight()).arg(label.font.italic() ? 1 : 0);
-                pA->mUserData.insert(fontKey, fontValue);
+                userData.insert(fontKey, fontValue);
             }
             const QString outlineColorKey = qsl("system.labelOutlineColor_%1").arg(labelID);
             const QString outlineColorValue = qsl("%1|%2|%3|%4").arg(label.outlineColor.red()).arg(label.outlineColor.green()).arg(label.outlineColor.blue()).arg(label.outlineColor.alpha());
-            pA->mUserData.insert(outlineColorKey, outlineColorValue);
+            userData.insert(outlineColorKey, outlineColorValue);
         }
-        ofs << pA->mUserData;
+        ofs << userData;
         if (mSaveVersion >= 21) {
             // Revised in version 21 to store labels within the TArea class:
             // Also we now have temporary labels, so we need to count the
@@ -1373,18 +1687,6 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
             ofs << pR->mSymbolColor;
         }
 
-        // Border properties are stored in userData (not binary stream) to avoid map bloat
-        if (pR->mBorderColor.isValid()) {
-            pR->userData.insert(ROOM_UI_BORDERCOLOR, pR->mBorderColor.name(QColor::HexArgb));
-        } else {
-            pR->userData.remove(ROOM_UI_BORDERCOLOR);
-        }
-        if (pR->mBorderThickness > 0) {
-            pR->userData.insert(ROOM_UI_BORDERTHICKNESS, QString::number(pR->mBorderThickness));
-        } else {
-            pR->userData.remove(ROOM_UI_BORDERTHICKNESS);
-        }
-
         // Formats before 21 carry the hidden flag and symbol color - and
         // formats before 19 the symbol - as user data fallbacks; use a local
         // copy so that saving does not modify the live room's user data.
@@ -1402,6 +1704,17 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         }
         if (mSaveVersion < 19 && !pR->mSymbol.isEmpty()) {
             userData.insert(QLatin1String("system.fallback_symbol"), pR->mSymbol);
+        }
+        // Border properties are stored in userData (not binary stream) to avoid map bloat, in every format
+        if (pR->mBorderColor.isValid()) {
+            userData.insert(ROOM_UI_BORDERCOLOR, pR->mBorderColor.name(QColor::HexArgb));
+        } else {
+            userData.remove(ROOM_UI_BORDERCOLOR);
+        }
+        if (pR->mBorderThickness > 0) {
+            userData.insert(ROOM_UI_BORDERTHICKNESS, QString::number(pR->mBorderThickness));
+        } else {
+            userData.remove(ROOM_UI_BORDERTHICKNESS);
         }
         ofs << userData;
         if (mSaveVersion >= 20) {
@@ -1520,19 +1833,8 @@ bool TMap::validatePotentialMapFile(QFile& file, QDataStream& ifs)
     }
 
     ifs.setDevice(&file);
-    // Is the RUN-TIME version of the Qt libraries equal to or more than
-    // Qt 5.13.0? Then force things to use the backwards compatible format
-    // - for us - of Qt 5.12.0 - this is needed because the way that the
-    // QFont class is stored in a binary format has changed at 5.13 and it
-    // causes crashes when a new version of the Qt libraries tries to read
-    // the older format:
-    if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-        // 18 is the enum value corresponding to QDataStream::Qt_5_12 which
-        // we want to force to be used but we cannot use the enum directly
-        // because it will not be defined in older versions of the Qt
-        // library when the code is compilated:
-        ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
-    }
+    // QFont's binary format changed at Qt 5.13; every Mudlet file stream pins 5.12 for compatibility:
+    ifs.setVersion(QDataStream::Qt_5_12);
     ifs >> version;
     if ((version < 1) || (version > 127)) {
         const QString errMsg = tr("[ ALERT ] - File does not seem to be a Mudlet Map file. The part that indicates\n"
@@ -1594,96 +1896,151 @@ bool TMap::validatePotentialMapFile(QFile& file, QDataStream& ifs)
     return true;
 }
 
+// QDataStream hands a list's length prefix straight to QList::reserve(), so a
+// corrupt one in a map file asks for gigabytes (#10689). Call this before
+// every QList read from a binary map - QSet and QMap readers do not reserve -
+// and read a QMap holding QLists an entry at a time, as TRoom::restore() does.
+// A length the rest of the file could not hold fails the stream. Reads carry
+// on after that, out of step, so the loops over areas, labels and rooms check
+// the status and stop at the end of the record being read.
+bool TMap::listLengthFits(QDataStream& ifs, const qint64 minBytesPerElement)
+{
+    Q_ASSERT(minBytesPerElement > 0);
+    if (ifs.status() != QDataStream::Ok) {
+        return false;
+    }
+    QIODevice* pDevice = ifs.device();
+    // bytesAvailable() is only the rest of the file on a random access device,
+    // so on anything else there is nothing to check against
+    if (!pDevice || pDevice->isSequential()) {
+        return true;
+    }
+    // A four byte length is only right while the stream stays at Qt_5_12:
+    // from Qt_6_7 a larger one can follow it
+    Q_ASSERT(ifs.version() < QDataStream::Qt_6_7);
+    constexpr qint64 lengthSize = sizeof(quint32);
+    quint32 rawLength = 0;
+    if (pDevice->peek(reinterpret_cast<char*>(&rawLength), lengthSize) != lengthSize) {
+        ifs.setStatus(QDataStream::ReadPastEnd);
+        return false;
+    }
+    const quint32 length = qFromBigEndian<quint32>(&rawLength);
+    // Most lists in a map are empty, and bytesAvailable() asks the OS for the file size
+    if (!length) {
+        return true;
+    }
+    const qint64 bytesLeft = pDevice->bytesAvailable() - lengthSize;
+    if (length > bytesLeft / minBytesPerElement) {
+        qWarning().nospace() << "TMap::listLengthFits() WARNING - the list at byte " << pDevice->pos() << " of the map file claims " << length << " entries, more than the " << bytesLeft
+                             << " bytes left could hold; reading stops here.";
+        ifs.setStatus(QDataStream::ReadCorruptData);
+        return false;
+    }
+    return true;
+}
+
 bool TMap::restore(QString location)
 {
+    const MapOperationScope operationScope(this);
     qDebug().noquote().nospace() << "TMap::restore(\"" << location << "\") INFO: restoring map of Profile: \"" << mProfileName << "\" URL: " << mpHost->getUrl();
+    mpHost->waitForMapAutosave();
+
+    if (location.isEmpty()) {
+        // The newest file is not always one that loads - it can have been cut
+        // short or damaged outside Mudlet, or written by a newer Mudlet - so
+        // the next newest that does is the one to fall back on
+        const QString folder = MudletApp::getMudletPath(enums::profileMapsPath, mProfileName);
+        const QStringList entries = QDir(folder).entryList({qsl("*.[dD][aA][tT]"), qsl("*.[jJ][sS][oO][nN]")}, QDir::Files, QDir::Time);
+        for (const QString& entry : entries) {
+            // A closing profile asks for this, and the close waits on it
+            if (mapOperationAbortRequested()) {
+                return false;
+            }
+            const QString fileName = qsl("%1/%2").arg(folder, entry);
+            if (entry != entries.constFirst()) {
+                //: Shown before each older map file of a profile that is tried because a newer one could not be loaded. %1 is the older file's path and name.
+                const QString infoMsg = tr("[ INFO ]  - Trying the next newest map file instead:\n"
+                                           "\"%1\".")
+                                                .arg(fileName);
+                appendErrorMsgWithNoLf(infoMsg);
+                postMessage(infoMsg);
+            }
+            if (!fileName.endsWith(qsl(".json"), Qt::CaseInsensitive)) {
+                if (restore(fileName)) {
+                    return true;
+                }
+            } else {
+                // readJsonMapFile() refuses to start while another JSON import or export, or a map download
+                // with no mapper on screen, is running
+                const bool mapProgressInUse = mMapProgressStandalone;
+                auto [isOk, message] = readJsonMapFile(fileName, true);
+                if (isOk) {
+                    return true;
+                }
+                //: Shown when a JSON map file of a profile could not be loaded. %1 is the reason, %2 the file's path and name.
+                const QString errMsg = tr("[ ALERT ] - Failed to load a Mudlet JSON Map file, reason:\n"
+                                          "%1; the file is:\n"
+                                          "\"%2\".")
+                                               .arg(message, fileName);
+                appendErrorMsgWithNoLf(errMsg);
+                postMessage(errMsg);
+                // Nothing wrong with the file then, so an older one is no better
+                if (mapProgressInUse || mapOperationAbortRequested() || message == tr("aborted by user")) {
+                    //: Shown after a JSON map file of a profile was stopped rather than found damaged, so no older map file is loaded in its place.
+                    const QString stopMsg = tr("[ INFO ]  - No older map file will be tried instead.");
+                    appendErrorMsgWithNoLf(stopMsg);
+                    postMessage(stopMsg);
+                    return false;
+                }
+                //: Shown after a JSON map file of a profile could not be loaded.
+                const QString infoMsg = tr("[ INFO ]  - Ignoring this map file.");
+                appendErrorMsgWithNoLf(infoMsg);
+                postMessage(infoMsg);
+            }
+            // Allow for somethings to be updated - especially on Windows?
+            QCoreApplication::processEvents();
+        }
+        return false;
+    }
 
     QElapsedTimer _time;
     _time.start();
-    QString folder;
-    QStringList entries;
-
-    if (location.isEmpty()) {
-        folder = mudlet::getMudletPath(enums::profileMapsPath, mProfileName);
-        const QDir dir(folder);
-        QStringList filters;
-        filters << qsl("*.[dD][aA][tT]");
-        filters << qsl("*.[jJ][sS][oO][nN]");
-        entries = dir.entryList(filters, QDir::Files, QDir::Time);
-    }
-
-    bool canRestore = true;
-    if (entries.empty() && location.isEmpty()) {
-        canRestore = false;
-    }
-
     QDataStream ifs;
-    QFile file;
-    if (canRestore && (!entries.empty() || !location.isEmpty())) {
-        // We get to here if there is one or more entries OR location is
-        // supplied - if the latter then there is only one file to consider but
-        // if the former we may have to check more than one to find a valid
-        // map file:
-        bool foundValidFile = false;
-        if (location.isEmpty()) {
-            // Look through the entries:
-            QStringListIterator itFileName(entries);
-            auto fileName = qsl("%1/%2").arg(folder, itFileName.next());
-            if (!fileName.endsWith(qsl(".json"), Qt::CaseInsensitive)) {
-                file.setFileName(fileName);
-                if (validatePotentialMapFile(file, ifs)) {
-                    foundValidFile = true;
-                }
+    QFile file(location);
+    const int previousVersion = mVersion;
+    const int previousSaveVersion = mSaveVersion;
+    bool canRestore = validatePotentialMapFile(file, ifs);
 
-            } else {
-                if (auto [isOk, message] = readJsonMapFile(fileName, true); !isOk) {
-                    // Failed to read the JSON file
-                    const QString errMsg = tr("[ ALERT ] - Failed to load a Mudlet JSON Map file, reason:\n"
-                                              "%1; the file is:\n"
-                                              "\"%2\".")
-                                                   .arg(message, fileName);
-                    appendErrorMsgWithNoLf(errMsg);
-                    postMessage(errMsg);
-                    const QString infoMsg = tr("[ INFO ]  - Ignoring this map file.");
-                    appendErrorMsgWithNoLf(infoMsg);
-                    postMessage(infoMsg);
-                } else {
-                    // immediately leave on success:
-                    return true;
-                }
-            }
-
-            // Allow for somethings to be updated - especially on Windows?
-            qApp->processEvents();
-        } else {
-            file.setFileName(location);
-            if (validatePotentialMapFile(file, ifs)) {
-                foundValidFile = true;
-            }
-        }
-        if (!foundValidFile) {
-            canRestore = false;
-        }
-    } else if (canRestore && !location.isEmpty()) {
-        file.setFileName(location);
-        canRestore = validatePotentialMapFile(file, ifs);
-    }
-
+    // Read into a fresh room database, swapped in only once the whole file has
+    // been read, so that one which fails part way leaves the loaded map alone
+    std::unique_ptr<TRoomDB> pNewRoomDB;
+    QMap<int, int> previousEnvColors;
+    QMap<int, QColor> previousCustomEnvColors;
+    QMap<QString, QString> previousUserData;
+    QHash<QString, int> previousRoomIdHash;
+    const QFont previousSymbolFont = mMapSymbolFont;
+    const qreal previousSymbolFontFudgeFactor = mMapSymbolFontFudgeFactor;
+    const bool previousOnlySymbolFontUsed = mIsOnlyMapSymbolFontToBeUsed;
     if (canRestore) {
+        pNewRoomDB = std::make_unique<TRoomDB>(this);
+        previousEnvColors.swap(mEnvColors);
+        previousCustomEnvColors.swap(mCustomEnvColors);
+        previousUserData.swap(mUserData);
+        previousRoomIdHash.swap(mRoomIdHash);
+
         // As all but the room reading have version checks the fact that sub-4
         // files will still be parsed despite canRestore being false is probably OK
         if (mVersion >= 4) {
             ifs >> mEnvColors;
-            mpRoomDB->restoreAreaMap(ifs);
+            pNewRoomDB->restoreAreaMap(ifs);
         }
         if (mVersion >= 5) {
             ifs >> mCustomEnvColors;
         }
         if (mVersion >= 7) {
-            ifs >> mpRoomDB->hashToRoomID;
-            QMap<QString, int>::const_iterator i;
-            for (i = mpRoomDB->hashToRoomID.constBegin(); i != mpRoomDB->hashToRoomID.constEnd(); ++i) {
-                mpRoomDB->roomIDToHash.insert(i.value(), i.key());
+            ifs >> pNewRoomDB->hashToRoomID;
+            for (const auto& [hash, roomId] : pNewRoomDB->hashToRoomID.asKeyValueRange()) {
+                pNewRoomDB->roomIDToHash.insert(roomId, hash);
             }
         }
 
@@ -1738,14 +2095,14 @@ bool TMap::restore(QString location)
             }
         }
 
-        mMapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>((mIsOnlyMapSymbolFontToBeUsed ? QFont::NoFontMerging : 0) | QFont::PreferOutline | QFont::PreferAntialias
-                                                                          | QFont::PreferQuality | QFont::PreferNoShaping));
+        mMapSymbolFont.setStyleStrategy(symbolFontStyleStrategy(mIsOnlyMapSymbolFontToBeUsed));
+        mMapSymbolFontFudgeFactor = usableSymbolFontFudgeFactor(mMapSymbolFontFudgeFactor);
         if (mVersion >= 14) {
             int areaSize = 0;
             ifs >> areaSize;
             // restore area table
-            for (int i = 0; i < areaSize; i++) {
-                auto pA = new TArea(this, mpRoomDB.get());
+            for (int i = 0; i < areaSize && ifs.status() == QDataStream::Ok; i++) {
+                auto pA = new TArea(this, pNewRoomDB.get());
                 int areaID = 0;
                 ifs >> areaID;
                 if (mVersion >= 18) {
@@ -1754,13 +2111,17 @@ bool TMap::restore(QString location)
                     ifs >> pA->rooms;
                 } else {
                     QList<int> oldRoomsList;
-                    ifs >> oldRoomsList;
+                    if (listLengthFits(ifs, sizeof(qint32))) {
+                        ifs >> oldRoomsList;
+                    }
                     pA->rooms = QSet<int>{oldRoomsList.begin(), oldRoomsList.end()};
                 }
                 // Can be useful when analysing suspect map files!
                 //                qDebug() << "TMap::restore(...)" << "Area:" << areaID;
                 //                qDebug() << "Rooms:" << pA->rooms;
-                ifs >> pA->zLevels;
+                if (listLengthFits(ifs, sizeof(qint32))) {
+                    ifs >> pA->zLevels;
+                }
                 ifs >> pA->mAreaExits;
                 ifs >> pA->gridMode;
                 ifs >> pA->max_x;
@@ -1792,13 +2153,12 @@ bool TMap::restore(QString location)
                     ifs >> pA->mUserData;
                 } else if (mVersion >= 17) {
                     ifs >> pA->mUserData;
-                    const qreal fallback_map2DZoom = pA->mUserData.take(QLatin1String("system.fallback_map2DZoom")).toDouble();
-                    pA->mLast2DMapZoom = (fallback_map2DZoom >= T2DMap::csmMinXYZoom) ? fallback_map2DZoom : T2DMap::csmDefaultXYZoom;
+                    pA->set2DMapZoom(pA->mUserData.take(QLatin1String("system.fallback_map2DZoom")).toDouble());
                 }
                 if (mVersion >= 21) {
                     int mapLabelsCount = -1;
                     ifs >> mapLabelsCount;
-                    for (int i = 0; i < mapLabelsCount; ++i) {
+                    for (int i = 0; i < mapLabelsCount && ifs.status() == QDataStream::Ok; ++i) {
                         int labelId = -1;
                         ifs >> labelId;
                         TMapLabel label;
@@ -1815,17 +2175,17 @@ bool TMap::restore(QString location)
                         pA->mMapLabels.insert(labelId, label);
                     }
                 }
-                mpRoomDB->restoreSingleArea(areaID, pA);
+                pNewRoomDB->restoreSingleArea(areaID, pA);
             }
         }
 
-        if (!mpRoomDB->getAreaMap().keys().contains(-1)) {
-            auto pDefaultA = new TArea(this, mpRoomDB.get());
-            mpRoomDB->restoreSingleArea(-1, pDefaultA);
+        if (!pNewRoomDB->getAreaMap().keys().contains(-1)) {
+            auto pDefaultA = new TArea(this, pNewRoomDB.get());
+            pNewRoomDB->restoreSingleArea(-1, pDefaultA);
             const QString defaultAreaInsertionMsg = tr("[ INFO ]  - Default (reset) area (for rooms that have not been assigned to an\n"
                                                        "area) not found, adding reserved -1 id.");
             appendErrorMsgWithNoLf(defaultAreaInsertionMsg, false);
-            if (mudlet::self()->showMapAuditErrors()) {
+            if (smShowMapAuditErrors) {
                 postMessage(defaultAreaInsertionMsg);
             }
         }
@@ -1846,15 +2206,15 @@ bool TMap::restore(QString location)
             int areasWithLabelsTotal = 0;
             ifs >> areasWithLabelsTotal;
             int areasWithLabelsCounter = 0;
-            while (!ifs.atEnd() && areasWithLabelsCounter < areasWithLabelsTotal) {
+            while (!ifs.atEnd() && ifs.status() == QDataStream::Ok && areasWithLabelsCounter < areasWithLabelsTotal) {
                 int areaID = -1;
                 int areaLabelsTotal = 0;
                 ifs >> areaLabelsTotal;
                 // Only used to identify the area for this batch of labels:
                 ifs >> areaID;
                 int areaLabelCounter = 0;
-                auto pA = mpRoomDB->getArea(areaID);
-                while (!ifs.atEnd() && areaLabelCounter < areaLabelsTotal) {
+                auto pA = pNewRoomDB->getArea(areaID);
+                while (!ifs.atEnd() && ifs.status() == QDataStream::Ok && areaLabelCounter < areaLabelsTotal) {
                     int labelID = 0;
                     ifs >> labelID;
                     TMapLabel label;
@@ -1893,13 +2253,52 @@ bool TMap::restore(QString location)
             }
         }
 
-        while (!ifs.atEnd()) {
+        // whatever the labels did not take is for labels that no longer exist
+        for (auto* pA : pNewRoomDB->getAreaMap()) {
+            TArea::dropFileOnlyUserData(pA->mUserData);
+        }
+
+        qsizetype roomsInAreas = 0;
+        for (const auto* pA : pNewRoomDB->getAreaMap()) {
+            roomsInAreas += pA->rooms.size();
+        }
+        pNewRoomDB->reserveEntrances(roomsInAreas);
+
+        // A corrupt stream carries on reading, out of step with the records,
+        // so stop at the first sign of one rather than make rooms of the rest
+        while (!ifs.atEnd() && ifs.status() == QDataStream::Ok) {
             int i = 0;
             ifs >> i;
-            auto pT = new TRoom(mpRoomDB.get());
+            auto pT = new TRoom(pNewRoomDB.get());
             pT->restore(ifs, i, mVersion);
-            mpRoomDB->restoreSingleRoom(i, pT);
+            pNewRoomDB->restoreSingleRoom(i, pT);
         }
+
+        if (ifs.status() != QDataStream::Ok) {
+            //: Shown when a binary map file ends, or stops making sense, part way through. %1 is the file's path and name.
+            const QString errMsg = tr("[ ALERT ] - The map file is truncated or damaged, so it could not be read completely. The file is:\n"
+                                      "\"%1\".")
+                                           .arg(file.fileName());
+            appendErrorMsgWithNoLf(errMsg);
+            postMessage(errMsg);
+            mEnvColors.swap(previousEnvColors);
+            mCustomEnvColors.swap(previousCustomEnvColors);
+            mUserData.swap(previousUserData);
+            mRoomIdHash.swap(previousRoomIdHash);
+            mMapSymbolFont = previousSymbolFont;
+            mMapSymbolFontFudgeFactor = previousSymbolFontFudgeFactor;
+            mIsOnlyMapSymbolFontToBeUsed = previousOnlySymbolFontUsed;
+            mVersion = previousVersion;
+            mSaveVersion = previousSaveVersion;
+            return false;
+        }
+
+        areasAboutToBeDeleted();
+        std::unique_ptr<TRoomDB> previousRoomDB = std::exchange(mpRoomDB, std::move(pNewRoomDB));
+        mpRoomDB->continueGenerationOf(*previousRoomDB);
+        previousRoomDB.reset();
+        clearRoutes();
+        emit signal_mapCleared();
 
         restore16ColorSet();
 
@@ -1920,6 +2319,13 @@ bool TMap::restore(QString location)
         postMessage(okMsg);
         appendErrorMsgWithNoLf(okMsg);
         if (canRestore) {
+            // The symbol settings were assigned to the members directly above,
+            // rather than through the setters, so that loading a map does not
+            // mark it unsaved. Everything mirroring them still has to be told -
+            // the rendered symbol caches and any open preferences dialog - and
+            // only now, with the rooms in place for the glyph usage table:
+            flushSymbolCaches();
+            emit signal_mapSymbolFontChanged();
             return true;
         }
     }
@@ -1941,9 +2347,12 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
         return false;
     }
 
+    if (Host* pProfileHost = HostManager::self() ? HostManager::self()->getHost(profile) : nullptr) {
+        pProfileHost->waitForMapAutosave();
+    }
     QString folder;
     QStringList entries;
-    folder = mudlet::getMudletPath(enums::profileMapsPath, profile);
+    folder = MudletApp::getMudletPath(enums::profileMapsPath, profile);
     QDir dir(folder);
     dir.setSorting(QDir::Time);
     entries = dir.entryList(QDir::Filters(QDir::Files | QDir::NoDotAndDotDot), QDir::Time);
@@ -1967,19 +2376,17 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
     }
     int otherProfileVersion = 0;
     QDataStream ifs(&file);
-    if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-        ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
-    }
+    ifs.setVersion(QDataStream::Qt_5_12);
     ifs >> otherProfileVersion;
 
     const QString infoMsg = tr(R"([ INFO ]  - Checking map file "%1", format version "%2".)").arg(file.fileName()).arg(otherProfileVersion);
     appendErrorMsg(infoMsg, false);
-    if (mudlet::self()->showMapAuditErrors()) {
+    if (smShowMapAuditErrors) {
         postMessage(infoMsg);
     }
 
     if (otherProfileVersion > mDefaultVersion) {
-        if (mudlet::self()->releaseVersion || mudlet::self()->publicTestVersion) {
+        if (MudletApp::release() || MudletApp::publicTest()) {
             // This is a release/public test version - should not support any map file versions higher that it was built for
             if (fileVersion) {
                 *fileVersion = otherProfileVersion;
@@ -2050,12 +2457,14 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
             *areaCount = areaSize;
         }
         // read each area
-        for (qsizetype i = 0; i < areaSize; ++i) {
+        for (qsizetype i = 0; i < areaSize && ifs.status() == QDataStream::Ok; ++i) {
             TArea pA(nullptr, nullptr);
             int areaID;
             ifs >> areaID;
             ifs >> pA.rooms;
-            ifs >> pA.zLevels;
+            if (listLengthFits(ifs, sizeof(qint32))) {
+                ifs >> pA.zLevels;
+            }
             ifs >> pA.mAreaExits;
             ifs >> pA.gridMode;
             ifs >> pA.max_x;
@@ -2091,7 +2500,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
             if (otherProfileVersion >= 21) {
                 int mapLabelsCount = -1;
                 ifs >> mapLabelsCount;
-                for (int i = 0; i < mapLabelsCount; ++i) {
+                for (int i = 0; i < mapLabelsCount && ifs.status() == QDataStream::Ok; ++i) {
                     int labelId = -1;
                     ifs >> labelId;
                     TMapLabel label;
@@ -2133,13 +2542,13 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
         int areasWithLabelsTotal = 0;
         ifs >> areasWithLabelsTotal;
         int areasWithLabelsCounter = 0;
-        while (!ifs.atEnd() && areasWithLabelsCounter < areasWithLabelsTotal) {
+        while (!ifs.atEnd() && ifs.status() == QDataStream::Ok && areasWithLabelsCounter < areasWithLabelsTotal) {
             int areaID = -1;
             int areaLabelsTotal = 0;
             ifs >> areaLabelsTotal;
             ifs >> areaID;
             int areaLabelCounter = 0;
-            while (!ifs.atEnd() && areaLabelCounter < areaLabelsTotal) {
+            while (!ifs.atEnd() && ifs.status() == QDataStream::Ok && areaLabelCounter < areaLabelsTotal) {
                 int labelID;
                 ifs >> labelID;
                 TMapLabel label;
@@ -2169,7 +2578,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
 
     TRoom _pT(nullptr);
     QSet<int> _dummyRoomIdSet;
-    while (!ifs.atEnd()) {
+    while (!ifs.atEnd() && ifs.status() == QDataStream::Ok) {
         int i;
         ifs >> i;
         _pT.restore(ifs, i, otherProfileVersion);
@@ -2223,36 +2632,57 @@ int TMap::createMapLabel(int area,
     label.noScaling = noScaling;
     label.temporary = temporary;
 
-    const QRectF lr = QRectF(0, 0, 2000, 2000);
-    QPixmap pix(lr.size().toSize());
-    pix.fill(Qt::transparent);
-
-    QPainter lp(&pix);
-    lp.fillRect(lr, label.bgColor);
-    lp.setRenderHint(QPainter::Antialiasing);
+    const QRect canvas(0, 0, 2000, 2000);
+    const QRectF textRect(20, 70, 2000, 2000);
+    const int textFlags = Qt::AlignLeft | Qt::AlignTop;
 
     QFont font(fontName.has_value() ? fontName.value() : QString(), fontSize);
     label.font = font;
+
+    // Lays the text out without drawing it, the same way drawText() does, so
+    // only the part of the canvas the label keeps needs allocating and filling
+    QRectF br;
+    {
+        QPixmap probe(1, 1);
+        QPainter probePainter(&probe);
+        probePainter.setFont(font);
+        br = probePainter.boundingRect(textRect, textFlags, label.text);
+    }
+    const QRect brRect = br.normalized().toRect();
+    // QPixmap::copy() clips to the pixmap and copies all of it for an empty rectangle
+    QRect kept = brRect.intersected(canvas);
+    if (kept.isEmpty()) {
+        kept = canvas;
+    }
+
+    QPixmap pix(kept.size());
+    pix.fill(Qt::transparent);
+
+    QPainter lp(&pix);
+    lp.translate(-kept.topLeft());
+    lp.fillRect(canvas, label.bgColor);
+    lp.setRenderHint(QPainter::Antialiasing);
     lp.setFont(font);
 
     QPen outlinePen(label.outlineColor);
     outlinePen.setWidth(1);
     lp.setPen(outlinePen);
 
-    QRectF br;
-
+    // Asking for the bounding rectangle makes Qt lay out every line; without it,
+    // text exactly as tall as textRect is laid out short and left unclipped
+    QRectF drawnBr;
     if (label.fgColor != label.outlineColor) {
-        lp.drawText(QRect(19, 70, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
-        lp.drawText(QRect(21, 70, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
-        lp.drawText(QRect(20, 69, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
-        lp.drawText(QRect(20, 71, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
+        lp.drawText(textRect.translated(-1, 0), textFlags, label.text, &drawnBr);
+        lp.drawText(textRect.translated(1, 0), textFlags, label.text, &drawnBr);
+        lp.drawText(textRect.translated(0, -1), textFlags, label.text, &drawnBr);
+        lp.drawText(textRect.translated(0, 1), textFlags, label.text, &drawnBr);
     }
     lp.setPen(label.fgColor);
-    lp.drawText(QRect(20, 70, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
+    lp.drawText(textRect, textFlags, label.text, &drawnBr);
+    lp.end();
 
     label.size = br.normalized().size();
-    const QRect brRect = br.normalized().toRect();
-    label.pix = pix.copy(brRect.topLeft().x(), brRect.topLeft().y(), brRect.width(), brRect.height());
+    label.pix = pix;
     const QSizeF s = QSizeF(label.size.width() / zoom, label.size.height() / zoom);
     label.size = s;
     label.clickSize = s;
@@ -2260,9 +2690,7 @@ int TMap::createMapLabel(int area,
     const int labelId = pA->createLabelId();
     if (Q_LIKELY(labelId >= 0)) {
         pA->mMapLabels.insert(labelId, label);
-        if (mpMapper) {
-            mpMapper->mp2dMap->update();
-        }
+        emit signal_mapLabelsChanged();
     }
 
     if (!temporary) {
@@ -2287,21 +2715,26 @@ int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, flo
     label.noScaling = false;
     label.temporary = temporary;
 
-    const QRectF drawRect = QRectF(0, 0, static_cast<qreal>(width * zoom), static_cast<qreal>(height * zoom));
+    QSizeF pixSize(static_cast<qreal>(width * zoom), static_cast<qreal>(height * zoom));
+    const qreal pixels = pixSize.width() * pixSize.height();
+    if (qIsFinite(pixels) && pixels > cMaxImageLabelPixels) {
+        pixSize *= std::sqrt(cMaxImageLabelPixels / pixels);
+    }
     const QPixmap imagePixmap = QPixmap(imagePath);
-    QPixmap pix = QPixmap(drawRect.size().toSize());
+    if (imagePixmap.isNull()) {
+        return scmUnreadableImageLabel;
+    }
+    QPixmap pix = QPixmap(pixSize.toSize());
     pix.fill(Qt::transparent);
     QPainter lp(&pix);
-    lp.drawPixmap(QPoint(0, 0), imagePixmap.scaled(drawRect.size().toSize()));
+    lp.drawPixmap(QPoint(0, 0), imagePixmap.scaled(pixSize.toSize()));
     label.size = QSizeF(width, height);
     label.pix = pix;
 
     const int labelId = pA->createLabelId();
     if (Q_LIKELY(labelId >= 0)) {
         pA->mMapLabels.insert(labelId, label);
-        if (mpMapper) {
-            mpMapper->mp2dMap->update();
-        }
+        emit signal_mapLabelsChanged();
     }
 
     if (!temporary) {
@@ -2313,25 +2746,14 @@ int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, flo
 void TMap::deleteMapLabel(int area, int labelId)
 {
     auto pA = mpRoomDB->getArea(area);
-    if (!pA) {
+    if (!pA || !pA->mMapLabels.contains(labelId)) {
         return;
     }
 
-    auto label = pA->mMapLabels.take(labelId);
-    if (!label.pos.isNull() || !label.text.isEmpty() || label.bgColor != QColorConstants::Black || label.fgColor != QColorConstants::Black) {
-        // If any of the above tests are false then we can take it that we do
-        // not have a "default constructed" label - i.e. a real one and not
-        // one that the QMap<T1, T2>::take(const T1&) has created for us in the
-        // absence of an actual TMapLabel.
-        // The TMapLabel default constructor sets the 'temporary' class member
-        // to false so we can safely rely on it being true for a temporary one:
-        if (!label.temporary) {
-            setUnsaved(__func__);
-        }
-        if (mpMapper) {
-            mpMapper->mp2dMap->update();
-        }
+    if (!pA->mMapLabels.take(labelId).temporary) {
+        setUnsaved(__func__);
     }
+    emit signal_mapLabelsChanged();
 }
 
 void TMap::postMessage(const QString text)
@@ -2343,25 +2765,6 @@ void TMap::postMessage(const QString text)
             pHost->postMessage(mStoredMessages.takeFirst());
         }
     }
-}
-
-// Used by the 2D mapper to send view center coordinates to 3D one
-void TMap::set3DViewCenter(const int areaId, const int xPos, const int yPos, const int zPos)
-{
-#if defined(INCLUDE_3DMAPPER)
-    if (mpM) {
-        if (auto* glWidget = dynamic_cast<GLWidget*>(mpM.data())) {
-            glWidget->setViewCenter(areaId, xPos, yPos, zPos);
-        } else if (auto* modernWidget = dynamic_cast<ModernGLWidget*>(mpM.data())) {
-            modernWidget->setViewCenter(areaId, xPos, yPos, zPos);
-        }
-    }
-#else
-    Q_UNUSED(areaId)
-    Q_UNUSED(xPos)
-    Q_UNUSED(yPos)
-    Q_UNUSED(zPos)
-#endif
 }
 
 void TMap::appendRoomErrorMsg(const int roomId, const QString msg, const bool isToSetFileViewingRecommended)
@@ -2475,22 +2878,22 @@ void TMap::pushErrorMessagesToFile(const QString title, const bool isACleanup)
     mapAuditErrors.clear();
     mapAuditAreaErrors.clear();
     mapAuditRoomErrors.clear();
-    if (mIsFileViewingRecommended && (!mudlet::self()->showMapAuditErrors())) {
+    if (mIsFileViewingRecommended && (!smShowMapAuditErrors)) {
         postMessage(tr("[ ALERT ] - At least one thing was detected during that last map operation\n"
                        "that it is recommended that you review the most recent report in\n"
                        "the file:\n"
                        "\"%1\"\n"
                        "- look for the (last) report with the title:\n"
                        "\"%2\".")
-                            .arg(mudlet::getMudletPath(enums::profileLogErrorsFilePath, mProfileName), title));
-    } else if (mIsFileViewingRecommended && mudlet::self()->showMapAuditErrors()) {
+                            .arg(MudletApp::getMudletPath(enums::profileLogErrorsFilePath, mProfileName), title));
+    } else if (mIsFileViewingRecommended && smShowMapAuditErrors) {
         postMessage(tr("[ INFO ]  - The equivalent to the above information about that last map\n"
                        "operation has been saved for review as the most recent report in\n"
                        "the file:\n"
                        "\"%1\"\n"
                        "- look for the (last) report with the title:\n"
                        "\"%2\".")
-                            .arg(mudlet::getMudletPath(enums::profileLogErrorsFilePath, mProfileName), title));
+                            .arg(MudletApp::getMudletPath(enums::profileLogErrorsFilePath, mProfileName), title));
     }
 
     mIsFileViewingRecommended = false;
@@ -2498,6 +2901,7 @@ void TMap::pushErrorMessagesToFile(const QString title, const bool isACleanup)
 
 void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
 {
+    const MapOperationScope operationScope(this);
     Host* pHost = mpHost;
     if (!pHost) {
         return;
@@ -2547,7 +2951,7 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
 
     // Check to ensure we have a map directory to save the map files to.
     const QDir toProfileDir;
-    const QString toProfileDirPathString = mudlet::getMudletPath(enums::profileMapsPath, mProfileName);
+    const QString toProfileDirPathString = MudletApp::getMudletPath(enums::profileMapsPath, mProfileName);
     if (!toProfileDir.mkpath(toProfileDirPathString)) {
         const QString errMsg = tr("[ ERROR ] - Unable to use or create directory to store map.\n"
                                   "Please check that you have permissions/access to:\n"
@@ -2560,10 +2964,10 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
     }
 
     if (localFileName.isEmpty()) {
-        if (url.toString().endsWith(QLatin1String("xml"))) {
-            mLocalMapFileName = mudlet::getMudletPath(enums::profileXmlMapPathFileName, mProfileName);
+        if (url.path().endsWith(QLatin1String("xml"), Qt::CaseInsensitive)) {
+            mLocalMapFileName = MudletApp::getMudletPath(enums::profileXmlMapPathFileName, mProfileName);
         } else {
-            mLocalMapFileName = mudlet::getMudletPath(enums::profileMapPathFileName, mProfileName, qsl("map.dat"));
+            mLocalMapFileName = MudletApp::getMudletPath(enums::profileMapPathFileName, mProfileName, qsl("map.dat"));
         }
     } else {
         mLocalMapFileName = localFileName;
@@ -2571,13 +2975,13 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
 
     QNetworkRequest request = QNetworkRequest(url);
     pHost->updateProxySettings(mpNetworkAccessManager);
-    mudlet::self()->setNetworkRequestDefaults(url, request);
+    MudletApp::setNetworkRequestDefaults(url, request);
 
     mExpectedFileSize = 4000000;
 
     const QString infoMsg = tr("[ INFO ]  - Map download initiated, please wait...");
     postMessage(infoMsg);
-    qApp->processEvents();
+    QCoreApplication::processEvents();
     // Attempts to ensure INFO message gets shown before download is initiated!
 
     mpNetworkReply = mpNetworkAccessManager->get(request);
@@ -2591,7 +2995,7 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
 }
 
 // Called from TLuaInterpreter::loadFile() or dlgProfilePreferences's "loadMap"
-// both via TConsole::importMap( QFile & ) - it is intended to prevent
+// both via Host::importMapFile(...) - it is intended to prevent
 // readXmlMapFile( QFile & ) from being used more than once at a time and to
 // prevent the above callers from using that when a map download is in progress!
 // errMsg if, non-null is for a suitable structured error message to return to
@@ -2639,9 +3043,53 @@ bool TMap::importMap(QFile& file, QString* errMsg)
 
 bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
 {
+    const MapOperationScope operationScope(this);
     Host* pHost = mpHost;
     bool isLocalImport = false;
     if (!pHost) {
+        return false;
+    }
+
+    const MapFileCheck check = fileHoldsMapData(file);
+    if (check.result != MapFileCheckResult::ValidMap) {
+        // Both wordings are built before either is used: which one is wanted turns on what
+        // was wrong with the file, and where it goes turns on who asked, and keeping those
+        // two questions apart is what stops this being four near-identical branches
+        QString luaMessage;
+        QString consoleMessage;
+
+        if (check.result == MapFileCheckResult::ParseError) {
+            //: Error returned by the loadMap() Lua function. %1 is the path and name of the file that was read, %2 is the reason the XML parser gave
+            luaMessage = tr("loadMap: the file:\n"
+                            "\"%1\"\n"
+                            "is damaged or unreadable (%2), so the current map has been left as it was.")
+                                 .arg(file.fileName(), check.errorString);
+            //: Shown in the main console. %1 is the path and name of the file that was read, %2 is the reason the XML parser gave
+            consoleMessage = tr("[ ERROR ] - The file:\n"
+                                "\"%1\"\n"
+                                "is damaged or unreadable (%2) - so the current map has been\n"
+                                "left as it was.")
+                                     .arg(file.fileName(), check.errorString);
+        } else {
+            //: Error returned by the loadMap() Lua function. %1 is the path and name of the file that was read
+            luaMessage = tr("loadMap: the file:\n"
+                            "\"%1\"\n"
+                            "does not contain a map, so the current map has been left as it was.")
+                                 .arg(file.fileName());
+            //: Shown in the main console. %1 is the path and name of the file that was read
+            consoleMessage = tr("[ ERROR ] - The file:\n"
+                                "\"%1\"\n"
+                                "does not contain a map - a game with no map to offer can answer a\n"
+                                "download with an error page instead of one - so the current map has\n"
+                                "been left as it was.")
+                                     .arg(file.fileName());
+        }
+
+        if (errMsg) {
+            *errMsg = luaMessage;
+        } else {
+            postMessage(consoleMessage);
+        }
         return false;
     }
 
@@ -2651,29 +3099,38 @@ bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
         createTransferProgress(tr("Map import"), tr("Importing XML map file for use in %1...").arg(mProfileName), false);
     }
 
-    // It is NOW safe to delete the map as we are in a position to load one
+    // The file is only found to be damaged part way through, so import into a
+    // room database of its own and put this one back if that fails
+    std::unique_ptr<TRoomDB> previousRoomDB = std::exchange(mpRoomDB, std::make_unique<TRoomDB>(this));
+    mpRoomDB->continueGenerationOf(*previousRoomDB);
+    const auto previousEnvColors = mEnvColors;
+    const auto previousCustomEnvColors = mCustomEnvColors;
+    const auto previousRoomIdHash = mRoomIdHash;
+    const auto previousUserData = mUserData;
+    const int previousVersion = mVersion;
     mapClear();
 
     XMLimport reader(pHost);
     auto [success, message] = reader.importPackage(&file);
 
-    if (!mpMapper.isNull() && mpMapper->mp2dMap) {
-        // probably not needed for the download but might be
-        // needed for local file case:
-        mpMapper->mp2dMap->init();
-        // No need to call audit() as XMLimport::importPackage() does it!
-        // audit() produces the successful ending [ OK ] message...!
-        mpMapper->updateAreaComboBox();
-        if (success) {
-            mpMapper->resetAreaComboBoxToPlayerRoomArea();
-        } else {
-            // Failed...
-            if (errMsg) {
-                *errMsg = tr("loadMap: failure to import XML map file, further information may be available\n"
-                             "in main console!");
-            }
-        }
+    if (!success) {
+        areasAboutToBeDeleted();
+        previousRoomDB->continueGenerationOf(*mpRoomDB);
+        std::swap(mpRoomDB, previousRoomDB);
+        mEnvColors = previousEnvColors;
+        mCustomEnvColors = previousCustomEnvColors;
+        mRoomIdHash = previousRoomIdHash;
+        mUserData = previousUserData;
+        mVersion = previousVersion;
+        // The route and the routing graph hold ids and pointers into the rooms the import made
+        clearRoutes();
+        emit signal_mapCleared();
     }
+    previousRoomDB.reset();
+
+    // No need to call audit() as XMLimport::importPackage() does it!
+    // audit() produces the successful ending [ OK ] message...!
+    announceMapLoaded(success);
 
     if (!success && errMsg) {
         *errMsg = tr("loadMap: failure to import XML map file, further information may be available\n"
@@ -2684,9 +3141,7 @@ bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
         clearTransferProgress();
     }
 
-    if (!mpMapper.isNull()) {
-        mpMapper->show();
-    }
+    requestMapperShown();
 
     return success;
 }
@@ -2753,12 +3208,16 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         qWarning() << "TMap::slot_replyFinished( QNetworkReply * ) ERROR - received argument was not the expected stored pointer.";
     }
 
-    if (reply->error() != QNetworkReply::NoError && reply->error() != QNetworkReply::OperationCanceledError) {
-        // Don't report on any errors here as we've already done so in slot_downloadError(...) previously.
+    if (reply->error() != QNetworkReply::NoError) {
+        // Nothing to report here: slot_downloadError(...) has already done so
+        // for a failure, and slot_downloadCancel() for a cancel. Either way the
+        // reply has nothing to give, and writing that over the destination file
+        // and handing it to the map reader would cost the loaded map.
         cleanup();
         return;
-        // else was QNetworkReply::OperationCanceledError and we already handle
-        // THAT in slot_downloadCancel()
+    }
+    if (mpHost) {
+        mpHost->waitForMapAutosave();
     }
     // Separate the two kinds of files to gain QSaveFile's atomic write behavior
     QSaveFile writeFile(mLocalMapFileName);
@@ -2770,7 +3229,8 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         return;
     }
     // The QNetworkReply is Ok here:
-    if (writeFile.write(reply->readAll()) == -1) {
+    // A full disk can cut the write short with no error on the file, and commit() would put the part that landed in place
+    if (const QByteArray downloaded = reply->readAll(); writeFile.write(downloaded) != downloaded.size()) {
         const QString alertMsg = tr("[ ALERT ] - Map download failed, unable to write destination file:\n%1.").arg(mLocalMapFileName);
         postMessage(alertMsg);
         cleanup();
@@ -2802,7 +3262,7 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
     QString parsingFileName;
     if (!readFile.fileName().endsWith(qsl("xml"), Qt::CaseInsensitive)) {
         parsingFileName = readFile.fileName();
-        parsingWasSuccessful = pHost->mpConsole->loadMap(parsingFileName);
+        parsingWasSuccessful = pHost->loadMapFile(parsingFileName);
     } else {
         parsingFileName = mLocalMapFileName;
         if (!readFile.open(QFile::OpenMode(QFile::ReadOnly | QFile::Text))) {
@@ -2829,9 +3289,7 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         const QString alertMsg = tr("[ ERROR ] - Map download problem, failure in parsing destination file:\n%1.").arg(parsingFileName);
         postMessage(alertMsg);
     }
-    if (mpMapper) {
-        mpMapper->updateEmptyStateOverlay();
-    }
+    emit signal_mapDownloadEnded();
     cleanup();
 }
 
@@ -2843,7 +3301,7 @@ void TMap::reportStringToProgressDialog(const QString text)
         // time a little but as the main usage is when parsing XML room data
         // and that can take MORE THAN A MINUTE the activity is essential to
         // inform the user that something IS happening...
-        qApp->processEvents();
+        QCoreApplication::processEvents();
     }
 }
 
@@ -2859,9 +3317,8 @@ void TMap::reportProgressToProgressDialog(const int current, const int maximum)
 
 void TMap::createTransferProgress(const QString& title, const QString& label, bool cancelable)
 {
-    if (mpMapper && mpMapper->isVisible()) {
-        mpMapper->showMapProgress(label, cancelable);
-        connect(mpMapper, &dlgMapper::signal_mapProgressCanceled, this, &TMap::slot_downloadCancel, Qt::UniqueConnection);
+    if (auto* mapper = mapViewFrontend(); mapper && mapper->onScreen()) {
+        mapper->showMapProgress(label, cancelable);
         return;
     }
 
@@ -2877,8 +3334,8 @@ void TMap::updateTransferProgressLabel(const QString& text)
 {
     if (mMapProgressStandalone) {
         emit signal_mapProgressSetLabel(text);
-    } else if (mpMapper) {
-        mpMapper->setMapProgressLabel(text);
+    } else if (auto* mapper = mapViewFrontend()) {
+        mapper->setMapProgressLabel(text);
     }
 }
 
@@ -2887,8 +3344,8 @@ void TMap::updateTransferProgressRange(int minimum, int maximum)
     if (mMapProgressStandalone) {
         mMapProgressStandaloneMaximum = maximum;
         emit signal_mapProgressSetRange(minimum, maximum);
-    } else if (mpMapper) {
-        mpMapper->setMapProgressRange(minimum, maximum);
+    } else if (auto* mapper = mapViewFrontend()) {
+        mapper->setMapProgressRange(minimum, maximum);
     }
 }
 
@@ -2896,8 +3353,8 @@ void TMap::updateTransferProgressValue(int value)
 {
     if (mMapProgressStandalone) {
         emit signal_mapProgressSetValue(value);
-    } else if (mpMapper) {
-        mpMapper->setMapProgressValue(value);
+    } else if (auto* mapper = mapViewFrontend()) {
+        mapper->setMapProgressValue(value);
     }
 }
 
@@ -2906,23 +3363,23 @@ int TMap::transferProgressMaximum() const
     if (mMapProgressStandalone) {
         return mMapProgressStandaloneMaximum;
     }
-    if (mpMapper) {
-        return mpMapper->mapProgressMaximum();
+    if (auto* mapper = mapViewFrontend()) {
+        return mapper->mapProgressMaximum();
     }
     return 0;
 }
 
 bool TMap::hasActiveTransferProgress() const
 {
-    return mMapProgressStandalone || (mpMapper && mpMapper->isMapProgressVisible());
+    return mMapProgressStandalone || (mapViewFrontend() && mapViewFrontend()->isMapProgressVisible());
 }
 
 void TMap::disableTransferProgressCancel()
 {
     if (mMapProgressStandalone) {
         emit signal_mapProgressDisableCancel();
-    } else if (mpMapper) {
-        mpMapper->setMapProgressCancelable(false);
+    } else if (auto* mapper = mapViewFrontend()) {
+        mapper->setMapProgressCancelable(false);
     }
 }
 
@@ -2936,9 +3393,25 @@ void TMap::clearTransferProgress()
         emit signal_mapProgressClose();
         return;
     }
-    if (mpMapper) {
-        disconnect(mpMapper, &dlgMapper::signal_mapProgressCanceled, this, &TMap::slot_downloadCancel);
-        mpMapper->hideMapProgress();
+    if (auto* mapper = mapViewFrontend()) {
+        mapper->hideMapProgress();
+    }
+}
+
+void TMap::requestMapOperationAbort()
+{
+    if (!mMapOperationDepth || mMapOperationAbortRequested) {
+        return;
+    }
+    mMapOperationAbortRequested = true;
+    // Deliberately not slot_mapProgressDialogCancelled(): that is the user
+    // pressing Abort and says so in the console, whereas this is the profile
+    // going away and has no console left to say it to. What it does share is
+    // the flag the JSON import and export poll at their next progress step, and
+    // dropping a download that would otherwise hold the close up on the network.
+    mMapProgressCancelRequested = true;
+    if (mMapProgressIsTransfer && mpNetworkReply) {
+        mpNetworkReply->abort();
     }
 }
 
@@ -2954,6 +3427,10 @@ void TMap::slot_mapProgressDialogCancelled()
 
 void TMap::warnIfMapProgressUnwired(const char* context, const bool transferPath)
 {
+    // The console view is what shows the dialog, so without one there is nothing to wire
+    if (!mpHost || !mpHost->hasConsoleView()) {
+        return;
+    }
     static const QMetaMethod transferStart = QMetaMethod::fromSignal(&TMap::signal_mapTransferProgressStart);
     static const QMetaMethod jsonStart = QMetaMethod::fromSignal(&TMap::signal_mapJsonProgressStart);
     static const QMetaMethod progressClose = QMetaMethod::fromSignal(&TMap::signal_mapProgressClose);
@@ -3014,6 +3491,96 @@ void TMap::setRoomNamesShown(bool shown)
     setUserDataBool(mUserData, ROOM_UI_SHOWNAME, shown);
 }
 
+// The style strategy carries the rendering flags applied when the map was
+// loaded, along with the NoFontMerging bit that mIsOnlyMapSymbolFontToBeUsed
+// owns. A font picked from a font combo-box or named from Lua has neither, so
+// carry the existing strategy (and size) over instead of taking the incoming
+// font wholesale.
+bool TMap::setSymbolFont(const QFont& font)
+{
+    QFont wantedFont = font;
+    wantedFont.setPointSize(mMapSymbolFont.pointSize());
+    wantedFont.setStyleStrategy(mMapSymbolFont.styleStrategy());
+    if (mMapSymbolFont == wantedFont) {
+        return false;
+    }
+
+    mMapSymbolFont = wantedFont;
+    setUnsaved(__func__);
+    flushSymbolCaches();
+    emit signal_mapSymbolFontChanged();
+    return true;
+}
+
+bool TMap::setOnlySymbolFontUsed(const bool onlyUseSelectedFont)
+{
+    if (mIsOnlyMapSymbolFontToBeUsed == onlyUseSelectedFont) {
+        return false;
+    }
+
+    mIsOnlyMapSymbolFontToBeUsed = onlyUseSelectedFont;
+    if (onlyUseSelectedFont) {
+        mMapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(mMapSymbolFont.styleStrategy() | QFont::NoFontMerging));
+    } else {
+        mMapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(mMapSymbolFont.styleStrategy() & ~(QFont::NoFontMerging)));
+    }
+    setUnsaved(__func__);
+    flushSymbolCaches();
+    emit signal_mapSymbolFontChanged();
+    return true;
+}
+
+// The bounds belong here rather than at each caller: a factor of zero or less
+// blanks every room symbol, so nothing may store one whatever route it came in
+// by. NaN needs saying separately because it compares false against both
+// bounds, so a plain range test would pass it through.
+bool TMap::setSymbolFontFudgeFactor(const qreal fudgeFactor)
+{
+    if (!qIsFinite(fudgeFactor) || fudgeFactor < scmMinimumSymbolFontFudgeFactor || fudgeFactor > scmMaximumSymbolFontFudgeFactor) {
+        return false;
+    }
+    if (qFuzzyCompare(mMapSymbolFontFudgeFactor, fudgeFactor)) {
+        return false;
+    }
+
+    mMapSymbolFontFudgeFactor = fudgeFactor;
+    setUnsaved(__func__);
+    flushSymbolCaches();
+    emit signal_mapSymbolFontChanged();
+    return true;
+}
+
+// The same check T2DMap::addSymbolToPixmapCache() makes before it gives up and
+// draws the replacement character instead, asked of the whole map at once. The
+// font is taken as it would be used, so whether font merging is on decides
+// whether the fallbacks count.
+QStringList TMap::symbolsNotInFont(const QFont& font)
+{
+    const QFontMetrics metrics(font);
+    QStringList missingSymbols;
+    const QHash<QString, QSet<int>> symbolsInUse = roomSymbolsHash();
+    for (auto it = symbolsInUse.cbegin(), end = symbolsInUse.cend(); it != end; ++it) {
+        for (const quint32 codePoint : it.key().toUcs4()) {
+            if (RoomAppearance::symbolCodePointNeedsGlyph(codePoint) && !metrics.inFontUcs4(codePoint)) {
+                missingSymbols << it.key();
+                break;
+            }
+        }
+    }
+
+    // roomSymbolsHash() is a QHash, so without this the same map gives a
+    // different order from one call to the next:
+    missingSymbols.sort();
+    return missingSymbols;
+}
+
+// Every 2D map keeps its own cache of rendered symbol pixmaps, so all of them
+// have to be dropped - the main mapper and any secondary map views.
+void TMap::flushSymbolCaches()
+{
+    emit signal_symbolCachesStale();
+}
+
 /*
  * Notes on the format version numbers in JSON files - we use this to track any
  * changes in a major.minor number format, the minor number is to be three
@@ -3032,15 +3599,19 @@ void TMap::setRoomNamesShown(bool shown)
  */
 std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
 {
+    const MapOperationScope operationScope(this);
+    if (mpHost) {
+        mpHost->waitForMapAutosave();
+    }
     QString destination{dest};
 
     if (destination.isEmpty()) {
-        const QString destFolder = mudlet::getMudletPath(enums::profileMapsPath, mProfileName);
+        const QString destFolder = MudletApp::getMudletPath(enums::profileMapsPath, mProfileName);
         const QDir destDir(destFolder);
         if (!destDir.exists()) {
             destDir.mkdir(destFolder);
         }
-        destination = mudlet::getMudletPath(enums::profileDateTimeStampedJsonMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
+        destination = MudletApp::getMudletPath(enums::profileDateTimeStampedJsonMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
     }
 
     if (!destination.endsWith(QLatin1String(".json"), Qt::CaseInsensitive)) {
@@ -3050,6 +3621,12 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     if (mMapProgressStandalone) {
         return {false, qsl("import or export already in progress")};
     }
+
+    mJsonExportInProgress = true;
+    mJsonExportLostAnArea = false;
+    const auto exportEnded = qScopeGuard([this]() {
+        mJsonExportInProgress = false;
+    });
 
     mProgressDialogRoomsTotal = mpRoomDB->getRoomMap().count();
     mProgressDialogAreasTotal = mpRoomDB->getAreaMap().count();
@@ -3079,13 +3656,13 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
                                      tr("Abort"),
                                      static_cast<int>(mProgressDialogRoomsTotal));
     emit signal_mapProgressSetValue(0);
-    qApp->processEvents();
+    QCoreApplication::processEvents();
     QSaveFile file(destination);
     if (!file.open(QFile::OpenMode(QFile::Text | QFile::WriteOnly))) {
         qWarning().noquote().nospace() << "TMap::writeJsonMapFile(...) WARNING - Could not open save file \"" << destination << "\".";
         emit signal_mapProgressClose();
         mMapProgressStandalone = false;
-        return {false, qsl("could not open save file \"%1\", reason: %2").arg(destination.toHtmlEscaped(), file.errorString())};
+        return {false, qsl("could not open save file \"%1\", reason: %2").arg(destination, file.errorString())};
     }
 
     QJsonObject mapObj;
@@ -3106,6 +3683,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     mProgressDialogAreasCount = 0;
     mProgressDialogRoomsCount = 0;
     mProgressDialogLabelsCount = 0;
+    mJsonProgressShown.invalidate();
     bool abort = false;
     QJsonArray areasArray;
     for (const auto area : mpRoomDB->getAreaMap()) {
@@ -3122,6 +3700,9 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
         file.cancelWriting();
         emit signal_mapProgressClose();
         mMapProgressStandalone = false;
+        if (mJsonExportLostAnArea) {
+            return {false, qsl("an area was deleted while the map was being exported")};
+        }
         return {false, qsl("aborted by user")};
     }
 
@@ -3206,15 +3787,40 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     emit signal_mapProgressSetValue(0);
     // Hide the cancel button as we can't stop now:
     emit signal_mapProgressDisableCancel();
-    file.write(QJsonDocument(mapObj).toJson(QJsonDocument::Indented));
-    if (!file.commit()) {
-        qDebug() << "TMap::writeJsonMapFile: error saving JSON map: " << file.errorString();
+    const QByteArray json = QJsonDocument(mapObj).toJson(QJsonDocument::Indented);
+    QString failure;
+    // A full disk can cut the write short with no error on the file, and commit() would put the part that landed in place
+    if (const qint64 written = file.write(json); written != json.size()) {
+        failure = (written < 0 || file.error() != QFileDevice::NoError) ? file.errorString() : qsl("only %1 of %2 bytes could be written, is the disk full?").arg(written).arg(json.size());
+        file.cancelWriting();
+    } else if (!file.commit()) {
+        failure = file.errorString();
     }
 
     emit signal_mapProgressClose();
     mMapProgressStandalone = false;
 
-    return {file.error() == QFileDevice::NoError, ((file.error() == QFileDevice::NoError) ? QString() : qsl("could not export file, reason: %1").arg(file.errorString()))};
+    if (!failure.isEmpty()) {
+        qDebug().noquote() << "TMap::writeJsonMapFile: error saving JSON map to" << destination << ":" << failure;
+        return {false, qsl("could not export file, reason: %1").arg(failure)};
+    }
+    return {true, QString()};
+}
+
+// readJsonMapFile() is also how restore() loads a JSON file, whose caller files
+// the report; an import on its own has to audit the map and file one itself
+std::pair<bool, QString> TMap::importJsonMapFile(const QString& source)
+{
+    //: Title of a report in the map error log file, holding anything left over from before a JSON map import.
+    pushErrorMessagesToFile(tr("Pre-Map JSON importing report"), true);
+    const QDateTime now(QDateTime::currentDateTime());
+    auto result = readJsonMapFile(source);
+    if (result.first) {
+        audit();
+    }
+    //: Title of a report in the map error log file. %1 is the JSON map file, %2 the date and time the import started.
+    pushErrorMessagesToFile(tr(R"(Importing JSON map "%1" at %2 report)").arg(source, now.toString(Qt::ISODate)), true);
+    return result;
 }
 
 // The translatable messages are used within this file and do not need to
@@ -3222,6 +3828,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
 // Lua sub-system and do need to report the file:
 std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool translatableTexts)
 {
+    const MapOperationScope operationScope(this);
     const QString oldDefaultAreaName{mDefaultAreaName};
     const QString oldUnnamedName{mUnnamedAreaName};
 
@@ -3279,6 +3886,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     mProgressDialogRoomsCount = 0;
     mProgressDialogLabelsTotal = qRound(mapObj[QLatin1String("labelCount")].toDouble());
     mProgressDialogLabelsCount = 0;
+    mJsonProgressShown.invalidate();
     mMapProgressStandalone = true;
     mMapProgressIsTransfer = false;
     mMapProgressCancelRequested = false;
@@ -3298,15 +3906,30 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
                                      tr("Abort"),
                                      static_cast<int>(mProgressDialogRoomsTotal));
     emit signal_mapProgressSetValue(0);
-    qApp->processEvents();
+    QCoreApplication::processEvents();
 
+    // A file not written by Mudlet may not give these, and an empty one cannot name an area
     mDefaultAreaName = mapObj[QLatin1String("defaultAreaName")].toString();
+    if (mDefaultAreaName.isEmpty()) {
+        //: Name of the map's default area, the one with id -1, used when a JSON map file does not give one
+        mDefaultAreaName = tr("Default Area");
+    }
     mUnnamedAreaName = mapObj[QLatin1String("anonymousAreaName")].toString();
+    if (mUnnamedAreaName.isEmpty()) {
+        //: Name given to an area that has none, used when a JSON map file does not give one; further such areas get "_001", "_002" and so on appended to it
+        mUnnamedAreaName = tr("Unnamed Area");
+    }
+    QMap<QString, QString> userData;
     if (mapObj.contains(QLatin1String("userData"))) {
-        readJsonUserData(mapObj[QLatin1String("userData")].toObject());
+        userData = readJsonUserData(mapObj[QLatin1String("userData")].toObject());
     }
     const QString mapSymbolFontText = mapObj[QLatin1String("mapSymbolFontDetails")].toString();
-    const float mapSymbolFontFudgeFactor = (qRound(mapObj[QLatin1String("mapSymbolFontFudgeFactor")].toDouble() * 1000.0)) / 1000;
+    // qRound() returns an int, so dividing by an int literal here used to be
+    // integer division and every load rounded the factor to a whole number -
+    // issue #10176, which turned anything below 1.0 into a 0 that stops room
+    // symbols being drawn at all. The 1000 is to keep the value to the three
+    // decimals the preferences offer:
+    const qreal mapSymbolFontFudgeFactor = usableSymbolFontFudgeFactor(qRound(mapObj[QLatin1String("mapSymbolFontFudgeFactor")].toDouble() * 1000.0) / 1000.0);
     const bool isOnlyMapSymbolFontToBeUsed = mapObj[QLatin1String("onlyMapSymbolFontToBeUsed")].toBool();
     const int playerRoomStyle = qRound(mapObj[QLatin1String("playerRoomStyle")].toDouble());
     quint8 const playerRoomOuterDiameterPercentage = qRound(mapObj[QLatin1String("playerRoomOuterDiameterPercentage")].toDouble());
@@ -3369,32 +3992,78 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
 
     auto pNewRoomDB = std::make_unique<TRoomDB>(this);
     bool abort = false;
+    // Named once every other area is in, so that the name given cannot be one a later area has
+    std::vector<std::pair<int, std::unique_ptr<TArea>>> unnamedAreas;
+    QSet<int> namedAreaIds;
+    // Held back until the new map replaces the old one, as an aborted import drops nothing:
+    QStringList droppedRoomWarnings;
     for (int i = 0, total = mapObj.value(QLatin1String("areas")).toArray().count(); i < total; ++i) {
         std::unique_ptr<TArea> pArea = std::make_unique<TArea>(this, pNewRoomDB.get());
-        auto [id, name] = pArea->readJsonArea(mapObj.value(QLatin1String("areas")).toArray(), i);
+        auto [id, name] = pArea->readJsonArea(mapObj.value(QLatin1String("areas")).toArray(), i, droppedRoomWarnings);
         ++mProgressDialogAreasCount;
         if (incrementJsonProgressDialog(false, true, 0)) {
             abort = true;
             break;
         }
+        if (name.isEmpty()) {
+            unnamedAreas.emplace_back(id, std::move(pArea));
+            continue;
+        }
         // This will populate the TRoomDB::areas and TRoomDB::areaNameMap:
-        pNewRoomDB->addArea(pArea.release(), id, name);
+        if (pNewRoomDB->addArea(pArea.get(), id, name)) {
+            pArea.release();
+            namedAreaIds.insert(id);
+        }
     }
     if (abort) {
+        for (auto& unnamedArea : unnamedAreas) {
+            // Never added to pNewRoomDB, so ~TArea() must not try to remove it from there
+            unnamedArea.second->mpRoomDB = nullptr;
+        }
         emit signal_mapProgressClose();
         mMapProgressStandalone = false;
         mDefaultAreaName = oldDefaultAreaName;
         mUnnamedAreaName = oldUnnamedName;
         return {false, (translatableTexts ? tr("aborted by user") : qsl("aborted by user"))};
     }
+    for (auto& [id, pArea] : unnamedAreas) {
+        if (namedAreaIds.contains(id)) {
+            // Added after every named area, it would otherwise displace the named one wherever the file lists it
+            pArea->mpRoomDB = nullptr;
+            //: Shown when a JSON map file has two areas with the same id, one of them with an empty name. %1 is the area's id.
+            const QString dropMsg = tr("[ WARN ]  - The map file has an area with id %1 and no name as well as a named one with that id, only the named one has been kept.").arg(id);
+            appendErrorMsgWithNoLf(dropMsg, false);
+            postMessage(dropMsg);
+            continue;
+        }
+        // TRoomDB::addArea() refuses a blank name, which would lose the area's user data and labels
+        bool defaultAreaNameFree = false;
+        if (id == -1) {
+            // The new TRoomDB's own placeholder -1 already holds the default name, so only another id taking it counts
+            QList<int> idsWithDefaultAreaName = pNewRoomDB->getAreaNamesMap().keys(mDefaultAreaName);
+            idsWithDefaultAreaName.removeAll(-1);
+            defaultAreaNameFree = idsWithDefaultAreaName.isEmpty();
+        }
+        const QString name = defaultAreaNameFree ? mDefaultAreaName : pNewRoomDB->unusedUnnamedAreaName();
+        //: Shown when an area in a JSON map file has an empty name. %1 is the area's id, %2 the name it is given instead.
+        const QString warnMsg = tr(R"([ WARN ]  - The area with id %1 has no name in the map file, so it has been called "%2".)").arg(QString::number(id), name);
+        appendErrorMsgWithNoLf(warnMsg, false);
+        postMessage(warnMsg);
+        if (pNewRoomDB->addArea(pArea.get(), id, name)) {
+            pArea.release();
+        }
+    }
 
+    // Not before the abort check above, so a cancelled import leaves the live map alone:
     mCustomEnvColors.swap(customEnvColors);
+    // 257 to 272 belong to the profile, whatever the file says, as the binary loader also treats them
+    restore16ColorSet();
     mEnvColors.swap(envColors);
+    mUserData.swap(userData);
     mIsOnlyMapSymbolFontToBeUsed = isOnlyMapSymbolFontToBeUsed;
     QFont mapSymbolFont;
     mapSymbolFont.fromString(mapSymbolFontText);
-    mapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>((isOnlyMapSymbolFontToBeUsed ? QFont::NoFontMerging : 0) | QFont::PreferOutline | QFont::PreferAntialias | QFont::PreferQuality
-                                                                     | QFont::PreferNoShaping));
+    mapSymbolFont.setStyleStrategy(symbolFontStyleStrategy(isOnlyMapSymbolFontToBeUsed));
 
     mMapSymbolFont.swap(mapSymbolFont);
     mMapSymbolFontFudgeFactor = mapSymbolFontFudgeFactor;
@@ -3407,13 +4076,32 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     qDebug().nospace().noquote() << "TMap::readJsonMapFile(...) INFO - parsed a file (version: " << formatVersion << ") containing " << mProgressDialogRoomsCount << " rooms.";
 
     // This is it - the point at which the new map gets activated:
-    mpRoomDB = std::move(pNewRoomDB);
+    std::unique_ptr<TRoomDB> previousRoomDB = std::exchange(mpRoomDB, std::move(pNewRoomDB));
+    mpRoomDB->continueGenerationOf(*previousRoomDB);
+    previousRoomDB.reset();
+    ++mMapRevision;
+    ++mRevision;
+    for (const auto& warning : std::as_const(droppedRoomWarnings)) {
+        appendErrorMsgWithNoLf(warning, true);
+        if (smShowMapAuditErrors) {
+            postMessage(warning);
+        }
+    }
+    // The route and the routing graph hold ids and pointers into the rooms just
+    // destroyed, and the bulk deletion skipped the per-room cleanup that flags them
+    clearRoutes();
+    // A JSON file has no binary format version, and audit() converts maps older than 16
+    mVersion = mDefaultVersion;
+    emit signal_mapCleared();
     // Need to update the master copy of these details in the Host class:
     mpHost->setPlayerRoomStyleDetails(mPlayerRoomStyle, mPlayerRoomOuterDiameterPercentage, mPlayerRoomInnerDiameterPercentage, mPlayerRoomOuterColor, mPlayerRoomInnerColor);
     // And redraw the indicator if a 2D map is being shown:
-    if (mpMapper && mpMapper->mp2dMap) {
-        mpMapper->mp2dMap->setPlayerRoomStyle(mPlayerRoomStyle);
-    }
+    emit signal_playerRoomStyleChanged();
+    // As in restore(): the symbol settings above went straight into the members
+    // so that loading does not mark the map unsaved, which leaves the rendered
+    // symbol caches and any open preferences dialog to be told separately:
+    flushSymbolCaches();
+    emit signal_mapSymbolFontChanged();
     emit signal_mapProgressClose();
     mMapProgressStandalone = false;
     return {true, QString()};
@@ -3436,19 +4124,15 @@ void TMap::writeJsonUserData(QJsonObject& obj) const
     obj.insert(QLatin1String("userData"), jsonValue);
 }
 
-// Takes a userData object and parses all its elements
-void TMap::readJsonUserData(const QJsonObject& obj)
+QMap<QString, QString> TMap::readJsonUserData(const QJsonObject& obj)
 {
-    if (obj.isEmpty()) {
-        // Skip doing anything more if there is nothing to do:
-        return;
-    }
-
+    QMap<QString, QString> userData;
     for (auto& key : obj.keys()) {
         if (obj.value(key).isString()) {
-            mUserData.insert(key, obj.value(key).toString());
+            userData.insert(key, obj.value(key).toString());
         }
     }
+    return userData;
 }
 
 // Inserts a color as an array of 3 or 4 ints (cast to doubles) into the
@@ -3489,16 +4173,25 @@ QColor TMap::readJsonColor(const QJsonObject& obj)
     } else {
         colorRGBAArray = obj.value(QLatin1String("color24RGB")).toArray();
     }
+    // Checked before rounding, as rounding a double beyond the range of int is undefined
+    const auto component = [&colorRGBAArray](const int index) {
+        const double value = colorRGBAArray.at(index).toDouble();
+        return (value > -0.5 && value < 255.5) ? qRound(value) : -1;
+    };
     const int size = colorRGBAArray.size();
     if ((size == 3 || size == 4) && colorRGBAArray.at(0).isDouble() && colorRGBAArray.at(1).isDouble() && colorRGBAArray.at(2).isDouble()) {
-        red = qRound(colorRGBAArray.at(0).toDouble());
-        green = qRound(colorRGBAArray.at(1).toDouble());
-        blue = qRound(colorRGBAArray.at(2).toDouble());
-        return QColor(red, green, blue);
-    }
-
-    if (hasAlpha && size == 4 && colorRGBAArray.at(3).isDouble()) {
-        alpha = qRound(colorRGBAArray.at(3).toDouble());
+        red = component(0);
+        green = component(1);
+        blue = component(2);
+        if (red < 0 || green < 0 || blue < 0) {
+            return QColor();
+        }
+        if (hasAlpha && size == 4 && colorRGBAArray.at(3).isDouble()) {
+            // QColor refuses the whole colour for an alpha out of range
+            if (const int value = component(3); value >= 0) {
+                alpha = value;
+            }
+        }
         return QColor(red, green, blue, alpha);
     }
 
@@ -3513,6 +4206,14 @@ bool TMap::incrementJsonProgressDialog(const bool isExportNotImport, const bool 
     } else {
         mProgressDialogLabelsCount += increment;
     }
+
+    // This is called for every ten rooms, and showing the counts - formatting the
+    // label, repainting the dialog and running the event loop so it can be seen
+    // and cancelled - cost several times what reading or writing them did:
+    if (mJsonProgressShown.isValid() && !mJsonProgressShown.hasExpired(50)) {
+        return mMapProgressCancelRequested;
+    }
+    mJsonProgressShown.start();
 
     emit signal_mapProgressSetValue(static_cast<int>(mProgressDialogRoomsCount));
     if (isExportNotImport) {
@@ -3536,33 +4237,207 @@ bool TMap::incrementJsonProgressDialog(const bool isExportNotImport, const bool 
                                                      QString::number(mProgressDialogLabelsCount),
                                                      QString::number(mProgressDialogLabelsTotal)));
     }
-    qApp->processEvents();
+    QCoreApplication::processEvents();
     return mMapProgressCancelRequested;
+}
+
+void TMap::areasAboutToBeDeleted()
+{
+    // The export walks the live areas and pumps the event loop as it goes, so a
+    // script can delete the one it is writing; it stops at its next progress step
+    if (mJsonExportInProgress) {
+        mJsonExportLostAnArea = true;
+        mMapProgressCancelRequested = true;
+    }
+}
+
+void TMap::announceMapLoaded(const bool showPlayerArea)
+{
+    ++mRevision;
+    emit signal_mapLoaded(showPlayerArea);
+}
+
+void TMap::requestMapperShown()
+{
+    emit signal_mapperShowRequested();
+}
+
+void TMap::announceAreaListChanged()
+{
+    emit signal_areaListChanged();
+}
+
+void TMap::announceAreaRenamed(const QString& oldName, const QString& newName)
+{
+    emit signal_areaRenamed(oldName, newName);
+}
+
+void TMap::requestPlayerAreaShown()
+{
+    emit signal_playerAreaShowRequested();
+}
+
+std::optional<int> TMap::playerAreaId() const
+{
+    if (const TRoom* pPlayerRoom = mpRoomDB->getRoom(mRoomIdHash.value(mProfileName))) {
+        return pPlayerRoom->getArea();
+    }
+    return std::nullopt;
+}
+
+void TMap::announceDefaultAreaVisibilitySet(const bool wasShown)
+{
+    emit signal_defaultAreaVisibilitySet(wasShown);
+}
+
+void TMap::announceMapInfoContributorsChanged()
+{
+    emit signal_mapInfoContributorsChanged();
+}
+
+QString TMap::exportImageFormat(const QString& filePath)
+{
+    const QString suffix = QFileInfo(filePath).suffix();
+    return suffix.isEmpty() ? qsl("png") : suffix.toLower();
+}
+
+namespace {
+// The image is written on another thread, too late for the caller to hear of a
+// failure, so the likely causes are checked first; others (a full disk, a name
+// the file system refuses) still only show on the console. A name template for
+// every z level is never written itself, so only what its level files share is
+// checked against it. Returns an empty string when nothing is wrong.
+QString exportTargetProblem(const QString& filePath, const bool nameTemplate)
+{
+    if (filePath.isEmpty()) {
+        return qsl("No file name given");
+    }
+    const QFileInfo targetFileInfo(filePath);
+    if (targetFileInfo.isDir() && (!nameTemplate || targetFileInfo.fileName().isEmpty())) {
+        return qsl("%1 is a directory").arg(targetFileInfo.absoluteFilePath());
+    }
+    const QString directory = targetFileInfo.absolutePath();
+    const QFileInfo directoryInfo(directory);
+    if (!directoryInfo.exists()) {
+        return qsl("Directory %1 does not exist").arg(directory);
+    }
+    if (!directoryInfo.isDir()) {
+        return qsl("%1 is not a directory").arg(directory);
+    }
+    if (targetFileInfo.fileName().isEmpty()) {
+        return qsl("No file name given");
+    }
+    if (!nameTemplate) {
+        if (targetFileInfo.exists() && !targetFileInfo.isWritable()) {
+            return qsl("File %1 is not writable").arg(targetFileInfo.absoluteFilePath());
+        }
+#if !defined(Q_OS_WIN)
+        // Not on Windows: there isWritable() reads a directory's read-only attribute,
+        // which shell folders such as Documents carry and which does not stop a write
+        if (!targetFileInfo.exists() && !directoryInfo.isWritable()) {
+            return qsl("Directory %1 is not writable").arg(directory);
+        }
+#endif
+    }
+    const QString format = TMap::exportImageFormat(filePath);
+    if (!QImageWriter::supportedImageFormats().contains(format.toLatin1())) {
+        return qsl("Image format \"%1\" is not supported").arg(format);
+    }
+    return {};
+}
+} // namespace
+
+QString TMap::areaExportProblem(const int areaId, const QString& filePath, const qreal zoom, const bool exportAllZLevels, QList<std::pair<int, QString>>& levelExports) const
+{
+    if (zoom <= 0.0 || zoom > 10.0) {
+        return qsl("Zoom must be between 0.1 and 10.0");
+    }
+    if (const QString problem = exportTargetProblem(filePath, exportAllZLevels); !problem.isEmpty()) {
+        return problem;
+    }
+    TArea* pArea = mpRoomDB->getArea(areaId);
+    if (!pArea) {
+        return qsl("Area %1 not found").arg(areaId);
+    }
+    if (pArea->rooms.isEmpty()) {
+        return qsl("Area %1 contains no rooms").arg(areaId);
+    }
+    if (!exportAllZLevels) {
+        return {};
+    }
+    if (pArea->zLevels.isEmpty()) {
+        return qsl("Area %1 has no Z levels").arg(areaId);
+    }
+    const QFileInfo fileInfo(filePath);
+    const QString baseFileName = fileInfo.completeBaseName();
+    const QString extension = fileInfo.suffix();
+    const QString basePath = fileInfo.absolutePath();
+    // Collected before any export runs: each export's calcSpan() replaces
+    // zLevels, which would free the list under a loop over it
+    for (const int zLevel : std::as_const(pArea->zLevels)) {
+        const QString levelFileName = qsl("%1/%2_level_%3.%4").arg(basePath, baseFileName, QString::number(zLevel), extension.isEmpty() ? qsl("png") : extension);
+        // Every level is checked before any is queued, so a refusal leaves nothing written
+        if (const QString problem = exportTargetProblem(levelFileName, false); !problem.isEmpty()) {
+            return qsl("Failed to export Z level %1: %2").arg(zLevel).arg(problem);
+        }
+        levelExports.append({zLevel, levelFileName});
+    }
+    return {};
+}
+
+QString TMap::zoomError(const qreal zoom)
+{
+    if (!qIsFinite(zoom)) {
+        return qsl("zoom %1 is invalid, it must be a finite number").arg(QString::number(zoom));
+    }
+    if (zoom < scmMinXYZoom) {
+        // 16 digits, as the default precision shows 2.999999 as 3 and the
+        // message would read "zoom 3 is invalid, it must be at least 3"
+        return qsl("zoom %1 is invalid, it must be at least %2").arg(QString::number(zoom, 'g', 16), QString::number(scmMinXYZoom, 'g', 16));
+    }
+    return QString();
+}
+
+void TMap::requestMapRepaint()
+{
+    // Asked for when a mapper setting changes, which what a view keeps between frames may be made from
+    ++mRevision;
+    emit signal_mapRepaintRequested();
+}
+
+void TMap::announceMapperSettingChanged(const MapperSetting setting)
+{
+    emit signal_mapperSettingChanged(setting);
 }
 
 void TMap::updateArea(int areaId)
 {
-    static bool debounce;
-    if (!debounce) {
-        debounce = true;
-        QTimer::singleShot(0ms, this, [this, areaId]() {
-            debounce = false;
+    ++mAppearanceRevision;
+    ++mRevision;
+    updatePlayerArea(areaId);
+}
 
-#if defined(INCLUDE_3DMAPPER)
-            if (mpM) {
-                mpM->update();
-            }
-#endif
-            if (mpMapper) {
-                if (mpMapper->mp2dMap) {
-                    mpMapper->mp2dMap->mNewMoveAction = true;
-                    mpMapper->mp2dMap->update();
-                }
-            }
+void TMap::refreshArea(int areaId)
+{
+    ++mAppearanceRevision;
+    updatePlayerArea(areaId);
+}
 
-            emit signal_areaChanged(areaId);
-        });
+void TMap::updatePlayerArea(int areaId)
+{
+    if (mPendingAreaId) {
+        // One announcement stands for all made before it goes out, so it names every area if they differ
+        if (*mPendingAreaId != areaId) {
+            mPendingAreaId = -1;
+        }
+        return;
     }
+    mPendingAreaId = areaId;
+    QTimer::singleShot(0ms, this, [this]() {
+        const int pendingAreaId = mPendingAreaId.value_or(-1);
+        mPendingAreaId.reset();
+        emit signal_areaChanged(pendingAreaId);
+    });
 }
 
 QColor TMap::getColor(int id)
@@ -3656,6 +4531,7 @@ QColor TMap::getColor(int id)
 
 void TMap::restore16ColorSet()
 {
+    ++mRevision;
     mCustomEnvColors[257] = mpHost->mRed_2;
     mCustomEnvColors[258] = mpHost->mGreen_2;
     mCustomEnvColors[259] = mpHost->mYellow_2;
@@ -3675,6 +4551,13 @@ void TMap::restore16ColorSet()
 }
 
 void TMap::setUnsaved(const char* fromWhere)
+{
+    setUnsavedKeepingRevisions(fromWhere);
+    ++mMapRevision;
+    ++mRevision;
+}
+
+void TMap::setUnsavedKeepingRevisions(const char* fromWhere)
 {
 #if !defined(DEBUG_MAPAUTOSAVE)
     Q_UNUSED(fromWhere)
@@ -3697,8 +4580,6 @@ void TMap::setDefaultAreaShown(bool state)
 {
     if (mShowDefaultArea != state) {
         mShowDefaultArea = state;
-        if (!mpMapper.isNull()) {
-            mpMapper->updateAreaComboBox();
-        }
+        emit signal_areaListChanged();
     }
 }

@@ -139,6 +139,49 @@ describe("Tests functionality of Geyser.Window", function()
     end)
   end)
 
+  -- setColor paints the window itself rather than the text in it, which is what
+  -- separates it from setBgColor above: the two are read back from different
+  -- getters and must not move each other.
+  describe("Geyser.Window:setColor", function()
+    local function backgroundColor(name)
+      local red, green, blue, alpha = getBackgroundColor(name)
+      return {red, green, blue, alpha}
+    end
+
+    it("paints the window's own background", function()
+      console:setColor(10, 20, 30)
+      assert.are.same({10, 20, 30, 255}, backgroundColor("gwsConsole"))
+    end)
+
+    it("takes a colour name, a hex code and a decho triple", function()
+      console:setColor("green")
+      assert.are.same({0, 255, 0, 255}, backgroundColor("gwsConsole"))
+      console:setColor("#0000ff")
+      assert.are.same({0, 0, 255, 255}, backgroundColor("gwsConsole"))
+      console:setColor("<128,0,128>")
+      assert.are.same({128, 0, 128, 255}, backgroundColor("gwsConsole"))
+    end)
+
+    it("takes an alpha as a fourth component and inside a decho string", function()
+      console:setColor(1, 2, 3, 128)
+      assert.are.same({1, 2, 3, 128}, backgroundColor("gwsConsole"))
+      console:setColor("<4,5,6,64>")
+      assert.are.same({4, 5, 6, 64}, backgroundColor("gwsConsole"))
+    end)
+
+    it("leaves the text colours where they were", function()
+      console:setFgColor("red")
+      console:setBgColor("blue")
+      console:setColor("green")
+      console:echo("unmoved\n")
+      lastLine("gwsConsole")
+      local format = getTextFormat("gwsConsole")
+      assert.are.same({255, 0, 0}, format.foreground)
+      assert.are.same({0, 0, 255}, format.background)
+      assert.are.same({0, 255, 0, 255}, backgroundColor("gwsConsole"))
+    end)
+  end)
+
   describe("Geyser.Window:setTextFormat/setBold/setUnderline/setItalics", function()
     it("starts out with no attributes set", function()
       console:echo("first\n")

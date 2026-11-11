@@ -25,10 +25,16 @@
 class TMxpLinkTagHandler : public TMxpSingleTagHandler
 {
     bool mIsHrefInContent;
+    bool mHintIsHref = false;
     QString mCurrentTagContent;
+    QString mHref;
     int mLinkId;
 
     QString getHref(const MxpStartTag* tag);
+    static QString openableAddress(const QString& href);
+    static QString actionFor(const QString& address);
+
+    inline static const QString TAG_CONTENT_PLACEHOLDER = qsl("&text;");
 
 public:
     TMxpLinkTagHandler()
@@ -40,6 +46,6 @@ public:
     TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
     TMxpTagHandlerResult handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag) override;
 
-    void handleContent(char ch) override;
+    void handleContentBytes(QByteArrayView bytes) override;
 };
 #endif //MUDLET_TMXPLINKTAGHANDLER_H

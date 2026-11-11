@@ -1,0 +1,5 @@
+mpackage = [[mudlet-spec-renamed]]
+author = [[Mudlet test suite]]
+title = [[Fixture that renames itself in config.lua, for Package_spec.lua]]
+version = [[1.0]]
+description = [[The archive is called mudlet-spec-renamer but it installs under the name in this file, which is how an install reaches the checks that ran on the file name with a different name than they saw.]]

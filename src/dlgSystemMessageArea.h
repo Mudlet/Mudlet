@@ -34,8 +34,17 @@ public:
     Q_DISABLE_COPY(dlgSystemMessageArea)
     explicit dlgSystemMessageArea(QWidget*);
 
+    QSize sizeHint() const override;
+    QSize minimumSizeHint() const override;
+
+protected:
+    void resizeEvent(QResizeEvent*) override;
+
 private slots:
     void slot_applyAppearance();
+
+private:
+    QSize heightAtOwnWidth(const QSize& fallback) const;
 };
 
 #endif // MUDLET_DLGSYSTEMMESSAGEAREA_H

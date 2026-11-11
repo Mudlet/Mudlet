@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "GroupedTest.h"
 #include "TMxpEntityTagHandler.h"
 #include "TMxpStubClient.h"
 #include <QTest>
@@ -153,7 +154,7 @@ private slots:
     processInput(processor, input);
 
     QCOMPARE(stub.mHrefs.size(), 1);
-    QCOMPARE(stub.mHrefs[0], "send([[kill street lamp]])");
+    QCOMPARE(stub.mHrefs[0], "send([[\nkill street lamp]])");
 
     QCOMPARE(stub.mHints.size(), 1);
     QCOMPARE(stub.mHints[0], "kill street lamp");
@@ -245,7 +246,7 @@ private slots:
     processInput(mxpProcessor, input);
 
     QCOMPARE(stub.mHrefs.size(), 1);
-    QCOMPARE(stub.mHrefs[0], "send([[examine ob]])");
+    QCOMPARE(stub.mHrefs[0], "send([[\nexamine ob]])");
 
     QCOMPARE(stub.mHints.size(), 1);
     QCOMPARE(stub.mHints[0], "examine");
@@ -253,4 +254,4 @@ private slots:
 };
 
 #include "TMxpEntityTagHandlerTest.moc"
-QTEST_MAIN(TMxpEntityTagHandlerTest)
+MUDLET_GROUPED_TEST_MAIN(TMxpEntityTagHandlerTest)

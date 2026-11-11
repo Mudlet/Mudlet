@@ -91,10 +91,10 @@ TMxpTagHandlerResult TMxpTagProcessor::handleTag(TMxpContext& ctx, TMxpClient& c
     return MXP_TAG_NOT_HANDLED;
 }
 
-void TMxpTagProcessor::handleContent(char ch)
+void TMxpTagProcessor::handleContentBytes(QByteArrayView bytes)
 {
     for (const auto& handler : std::as_const(mRegisteredHandlers)) {
-        handler->handleContent(ch);
+        handler->handleContentBytes(bytes);
     }
 }
 
@@ -115,6 +115,9 @@ TMxpTagProcessor::TMxpTagProcessor()
     // Line spacing tags
     registerHandler(TMxpFeatureOptions({"br", {}}), new TMxpBRTagHandler());
     registerHandler(TMxpFeatureOptions({"hr", {}}), new TMxpHRTagHandler());
+    // TMxpProcessor acts on these two itself
+    mSupportedMxpElements["sbr"] = QVector<QString>();
+    mSupportedMxpElements["nobr"] = QVector<QString>();
 
     // Link tags
     registerHandler(TMxpFeatureOptions({"send", {"href", "hint", "prompt", "expire"}}), new TMxpSendTagHandler());

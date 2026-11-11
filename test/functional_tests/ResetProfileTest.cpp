@@ -31,13 +31,25 @@
  * Run with: ctest -R ResetProfileTest -V
  */
 
+#include <QCryptographicHash>
+#include <QDataStream>
+#include <QFileInfo>
+#include <QStandardPaths>
+#include <QTemporaryDir>
 #include <QtTest/QtTest>
 #include <chrono>
 #include <QMouseEvent>
+#include <QPointer>
+#include <QScopeGuard>
 
+#include "MudletApp.h"
+#include "PortableModeTestHelper.h"
+#include "ProfileTestHelper.h"
 #include "Host.h"
 #include "LuaInterface.h"
 #include "MudletInstanceCoordinator.h"
+#include "TAction.h"
+#include "TAlias.h"
 #include "TEvent.h"
 #include "TKey.h"
 #include "TLabel.h"
@@ -54,6 +66,7 @@
 #include "XMLexport.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
+#include "mapInfoContributorManager.h"
 #include "mudlet.h"
 
 extern "C" {
@@ -68,19 +81,18 @@ extern "C" {
 #endif
 }
 
-using namespace std::chrono_literals;
+#include "GroupedTest.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForResetProfileTest();
+using namespace std::chrono_literals;
 
 class ResetProfileTest : public QObject {
   Q_OBJECT
 
 private:
+  QTemporaryDir mConfigDir;
+  QByteArray mSavedXdg;
+  QTemporaryDir mCacheDir;
+  QByteArray mSavedXdgCache;
   TelnetServerStub *mpServer = nullptr;
   Host *mpHost = nullptr;
   const QString mHostname = "ResetProfile-Test";
@@ -102,6 +114,77 @@ private:
     return count;
   }
 
+  bool luaGlobalIsTrue(const char *name) {
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    lua_getglobal(L, name);
+    const bool isTrue = lua_toboolean(L, -1);
+    lua_pop(L, 1);
+    return isTrue;
+  }
+
+  QString bytecodeCachePathFileName() const {
+    return qsl("%1/lua-bytecode.dat")
+        .arg(QStandardPaths::writableLocation(QStandardPaths::CacheLocation));
+  }
+
+  QHash<QByteArray, QByteArray> readBytecodeCache() const {
+    QHash<QByteArray, QByteArray> entries;
+    QFile file(bytecodeCachePathFileName());
+    if (file.open(QIODevice::ReadOnly)) {
+      QDataStream ifs(&file);
+      ifs.setVersion(QDataStream::Qt_5_12);
+      QByteArray magic;
+      ifs >> magic;
+      // Leaves a cache in a format these tests do not know looking empty
+      if (magic == QByteArrayLiteral("Mudlet Lua bytecode 1")) {
+        ifs >> entries;
+      }
+    }
+    return entries;
+  }
+
+  void writeBytecodeCache(const QHash<QByteArray, QByteArray> &entries) const {
+    QFile file(bytecodeCachePathFileName());
+    QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Truncate));
+    QDataStream ofs(&file);
+    ofs.setVersion(QDataStream::Qt_5_12);
+    ofs << QByteArrayLiteral("Mudlet Lua bytecode 1") << entries;
+  }
+
+  // "ok", or what is wrong with the file and line that functions from
+  // LuaGlobal.lua's files report
+  QString luaGlobalFunctionOrigins() {
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    // A raw string literal here trips up moc
+    const int error = luaL_dostring(
+        L,
+        "local sep = package.config:sub(1, 1)\n"
+        "local function check(fn, file, definition)\n"
+        "  local info = debug.getinfo(fn, \"S\")\n"
+        "  local expected = \"@\" .. nativeLuaGlobalPath .. sep .. (file:gsub(\"/\", sep))\n"
+        "  if info.source ~= expected then\n"
+        "    return \"source \" .. info.source .. \" is not \" .. expected\n"
+        "  end\n"
+        "  local lineNumber = 0\n"
+        "  for line in io.lines(luaGlobalPath .. \"/\" .. file) do\n"
+        "    lineNumber = lineNumber + 1\n"
+        "    if line:find(definition, 1, true) then\n"
+        "      if info.linedefined == lineNumber then\n"
+        "        return nil\n"
+        "      end\n"
+        "      return file .. \" line \" .. info.linedefined .. \" is not \" .. lineNumber\n"
+        "    end\n"
+        "  end\n"
+        "  return definition .. \" is not in \" .. file\n"
+        "end\n"
+        "return check(string.cut, \"StringUtils.lua\", \"function string:cut(\")\n"
+        "  or check(Geyser.Label.new, \"geyser/GeyserLabel.lua\", \"function Geyser.Label:new (\")\n"
+        "  or \"ok\"\n");
+    const QString result = QString::fromUtf8(lua_tostring(L, -1));
+    lua_pop(L, 1);
+    return error ? qsl("error: %1").arg(result) : result;
+  }
+
   int countTempKeys() {
     int count = 0;
     for (auto *key : mpHost->getKeyUnit()->getKeyRootNodeList()) {
@@ -114,13 +197,35 @@ private:
 
 private slots:
   void initTestCase() {
-    initializeQRCResourcesForResetProfileTest();
+    if (portableMarkerPresent()) {
+      QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, "
+            "so the config dir cannot be redirected");
+    }
+
+    // A config root of this process's own. Sharing the developer's
+    // ~/.config/mudlet means sharing a profile list, so a second copy of this
+    // test running at the same time is told the name it types is already in
+    // use and never gets an enabled Connect button. Since #9712 the opt-in
+    // that makes setupConfig() adopt a directory is
+    // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+    QVERIFY(mConfigDir.isValid());
+    QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+    mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+    qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
+    // Where the platform honours it, keeps the bytecode cache this test
+    // tampers with away from the developer's own. Elsewhere the tests use the
+    // real one, which every reset leaves holding freshly compiled entries.
+    QVERIFY(mCacheDir.isValid());
+    mSavedXdgCache = qgetenv("XDG_CACHE_HOME");
+    qputenv("XDG_CACHE_HOME", mCacheDir.path().toUtf8());
 
     mpServer = new TelnetServerStub(qApp);
     mpServer->start(mLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
     mPort = QString::number(mpServer->serverPort());
     mudlet::start();
     mudlet::self()->setupConfig();
+    QCOMPARE(MudletApp::getMudletPath(enums::mainPath),
+             qsl("%1/mudlet").arg(mConfigDir.path()));
     mudlet::self()->takeOwnershipOfInstanceCoordinator(
         std::make_unique<MudletInstanceCoordinator>(
             "MudletInstanceCoordinator"));
@@ -137,8 +242,15 @@ private slots:
     mpHost = nullptr;
     delete mpServer;
     mpServer = nullptr;
-    deleteProfileDirectory(mHostname);
-    delete mudlet::self();
+    // Null when initTestCase skipped or failed ahead of mudlet::start()
+    if (mudlet::self()) {
+      deleteProfileDirectory(mHostname);
+      delete mudlet::self();
+    }
+    mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME")
+                       : qputenv("XDG_CONFIG_HOME", mSavedXdg);
+    mSavedXdgCache.isNull() ? qunsetenv("XDG_CACHE_HOME")
+                            : qputenv("XDG_CACHE_HOME", mSavedXdgCache);
   }
 
   // Per-test cleanup: reset the profile so each test starts from clean state.
@@ -268,6 +380,144 @@ private slots:
     QVERIFY2(found, "Permanent timer not found after reset");
   }
 
+  // A reset closes the Lua state every item's compiled function lived in, and
+  // the units' compileAll() rebuilds them in the new one. An item the user had
+  // switched off at the time has to come back with its function as well, or
+  // switching it on afterwards runs nothing but "attempt to call a nil value".
+  void test_disabledAliasRunsItsScriptAfterResetAndEnable() {
+    auto [id, msg] = mpHost->mLuaInterpreter.startPermAlias(
+        qsl("resetDisabledAlias"), qsl(""), qsl("^resetDisabledAliasProbe$"),
+        qsl("resetDisabledAliasRan = true"));
+    QVERIFY2(id > 0, qPrintable(msg));
+    QVERIFY(mpHost->getAliasUnit()->disableAlias(qsl("resetDisabledAlias")));
+
+    performReset();
+
+    QVERIFY(mpHost->getAliasUnit()->enableAlias(qsl("resetDisabledAlias")));
+    QVERIFY(!luaGlobalIsTrue("resetDisabledAliasRan"));
+    QVERIFY(mpHost->getAliasUnit()->processDataStream(
+        qsl("resetDisabledAliasProbe")));
+    QVERIFY2(luaGlobalIsTrue("resetDisabledAliasRan"),
+             "an alias switched off during a reset must run its script once "
+             "switched back on");
+    QVERIFY(mpHost->getAliasUnit()->disableAlias(qsl("resetDisabledAlias")));
+  }
+
+  void test_disabledTriggerRunsItsScriptAfterResetAndEnable() {
+    auto [id, msg] = mpHost->mLuaInterpreter.startPermSubstringTrigger(
+        qsl("resetDisabledTrigger"), qsl(""),
+        QStringList{qsl("resetDisabledTriggerProbe")},
+        qsl("resetDisabledTriggerRan = true"));
+    QVERIFY2(id > 0, qPrintable(msg));
+    QVERIFY(
+        mpHost->getTriggerUnit()->disableTrigger(qsl("resetDisabledTrigger")));
+
+    performReset();
+
+    QVERIFY(
+        mpHost->getTriggerUnit()->enableTrigger(qsl("resetDisabledTrigger")));
+    QVERIFY(!luaGlobalIsTrue("resetDisabledTriggerRan"));
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    QCOMPARE(luaL_dostring(L, "feedTriggers('resetDisabledTriggerProbe\\n')"),
+             0);
+    QVERIFY2(luaGlobalIsTrue("resetDisabledTriggerRan"),
+             "a trigger switched off during a reset must run its script once "
+             "switched back on");
+    QVERIFY(
+        mpHost->getTriggerUnit()->disableTrigger(qsl("resetDisabledTrigger")));
+  }
+
+  void test_disabledTimerRunsItsScriptAfterResetAndEnable() {
+    // permTimer() makes its timer switched off
+    auto [id, msg] = mpHost->mLuaInterpreter.startPermTimer(
+        qsl("resetDisabledTimer"), qsl(""), 0.05,
+        qsl("resetDisabledTimerRan = true"));
+    QVERIFY2(id > 0, qPrintable(msg));
+    QVERIFY(!mpHost->getTimerUnit()->getTimer(id)->isActive());
+
+    performReset();
+
+    QVERIFY(mpHost->getTimerUnit()->enableTimer(qsl("resetDisabledTimer")));
+    QVERIFY(!luaGlobalIsTrue("resetDisabledTimerRan"));
+    QTRY_VERIFY2_WITH_TIMEOUT(
+        luaGlobalIsTrue("resetDisabledTimerRan"),
+        "a timer switched off during a reset must run its script once "
+        "switched back on",
+        2s);
+    QVERIFY(mpHost->getTimerUnit()->disableTimer(qsl("resetDisabledTimer")));
+  }
+
+  void test_disabledKeyRunsItsScriptAfterResetAndEnable() {
+    QString name = qsl("resetDisabledKey");
+    QString parent;
+    int keyCode = Qt::Key_F11;
+    int modifier = Qt::NoModifier;
+    QString script = qsl("resetDisabledKeyRan = true");
+    auto [id, msg] = mpHost->mLuaInterpreter.startPermKey(name, parent, keyCode,
+                                                          modifier, script);
+    QVERIFY2(id > 0, qPrintable(msg));
+    QVERIFY(mpHost->getKeyUnit()->disableKey(qsl("resetDisabledKey")));
+
+    performReset();
+
+    QVERIFY(mpHost->getKeyUnit()->enableKey(qsl("resetDisabledKey")));
+    QVERIFY(!luaGlobalIsTrue("resetDisabledKeyRan"));
+    QVERIFY(mpHost->getKeyUnit()->processDataStream(Qt::Key_F11,
+                                                     Qt::NoModifier));
+    QVERIFY2(luaGlobalIsTrue("resetDisabledKeyRan"),
+             "a key switched off during a reset must run its script once "
+             "switched back on");
+    QVERIFY(mpHost->getKeyUnit()->disableKey(qsl("resetDisabledKey")));
+  }
+
+  void test_childOfADisabledAliasGroupRunsItsScriptAfterResetAndEnable() {
+    auto *group = new TAlias(qsl("resetDisabledAliasGroup"), mpHost);
+    group->setIsFolder(true);
+    group->setIsActive(false);
+    QVERIFY(mpHost->getAliasUnit()->registerAlias(group));
+    auto *child = new TAlias(group, mpHost);
+    child->setName(qsl("resetDisabledAliasGroupChild"));
+    child->setRegexCode(qsl("^resetDisabledAliasGroupChild$"));
+    child->setIsActive(true);
+    QVERIFY(mpHost->getAliasUnit()->registerAlias(child));
+    QVERIFY(child->setScript(qsl("resetDisabledAliasGroupChildRan = true")));
+
+    performReset();
+
+    group->setIsActive(true);
+    QVERIFY(!luaGlobalIsTrue("resetDisabledAliasGroupChildRan"));
+    QVERIFY(mpHost->getAliasUnit()->processDataStream(
+        qsl("resetDisabledAliasGroupChild")));
+    QVERIFY2(luaGlobalIsTrue("resetDisabledAliasGroupChildRan"),
+             "an alias in a group switched off during a reset must run its "
+             "script once the group is switched back on");
+    delete group;
+  }
+
+  void test_buttonOnAHiddenToolbarRunsItsScriptAfterResetAndShow() {
+    auto *actionUnit = mpHost->getActionUnit();
+    auto *toolbar = new TAction(qsl("resetHiddenToolbar"), mpHost);
+    toolbar->setIsFolder(true);
+    toolbar->setIsActive(true);
+    QVERIFY(actionUnit->registerAction(toolbar));
+    auto *button = new TAction(toolbar, mpHost);
+    button->setName(qsl("resetHiddenToolbarButton"));
+    button->setIsActive(true);
+    QVERIFY(actionUnit->registerAction(button));
+    QVERIFY(button->setScript(qsl("resetHiddenToolbarButtonRan = true")));
+    QVERIFY(actionUnit->hideToolBar(qsl("resetHiddenToolbar")).first);
+
+    performReset();
+
+    QVERIFY(actionUnit->showToolBar(qsl("resetHiddenToolbar")).first);
+    QVERIFY(!luaGlobalIsTrue("resetHiddenToolbarButtonRan"));
+    button->execute();
+    QVERIFY2(luaGlobalIsTrue("resetHiddenToolbarButtonRan"),
+             "a button on a toolbar hidden during a reset must run its script "
+             "once the toolbar is shown again");
+    delete toolbar;
+  }
+
   // -----------------------------------------------------------------------
   // Group 3: Stopwatch Handling (#4715)
   // -----------------------------------------------------------------------
@@ -303,17 +553,104 @@ private slots:
     mpHost->mBlockStopWatchCreation = false;
 
     mpHost->resetProfile_phase1();
-    // mResetProfile is now true — stopwatch creation should be blocked
+    // Blocked until phase2 has the new Lua state ready
     auto result = mpHost->createStopWatch(qsl("blocked_sw"));
     QCOMPARE(result.first, 0);
 
     QCoreApplication::processEvents();
 
     // After phase2, creation should work again
-    mpHost->mBlockStopWatchCreation = false;
     auto result2 = mpHost->createStopWatch(qsl("unblocked_sw"));
     QVERIFY2(result2.first > 0,
              "Stopwatch creation should work after reset completes");
+  }
+
+  void test_scriptCreatesItsStopWatchWhenResetRunsIt() {
+    const QString watchName = qsl("loadTimeStopWatch");
+    mpHost->mBlockStopWatchCreation = false;
+    auto *pScript = new TScript(qsl("stopWatchAtLoadScript"), mpHost);
+    const auto removeScript = qScopeGuard([pScript]() { delete pScript; });
+    pScript->setScript(
+        qsl("loadTimeStopWatchId = createStopWatch(\"%1\")").arg(watchName));
+    mpHost->getScriptUnit()->registerScript(pScript);
+    pScript->setIsActive(true);
+    pScript->compile();
+    QVERIFY(mpHost->findStopWatchId(watchName) > 0);
+
+    performReset();
+
+    const int id = mpHost->findStopWatchId(watchName);
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    lua_getglobal(L, "loadTimeStopWatchId");
+    const int luaId =
+        lua_isnumber(L, -1) ? static_cast<int>(lua_tointeger(L, -1)) : 0;
+    lua_pop(L, 1);
+    QVERIFY2(id > 0,
+             "A script run by the reset should be able to create its stopwatch");
+    QCOMPARE(luaId, id);
+  }
+
+  // The reset's teardown still runs code on the old Lua state (sysMediaFinished
+  // handlers, the DeferredDelete drain used here), and a stopwatch made there
+  // would outlive the reset that was meant to remove it
+  void test_stopWatchCreationStaysBlockedThroughResetTeardown() {
+    const QString watchName = qsl("teardown_sw");
+    QPointer<QObject> doomed = new QObject;
+    int teardownId = -1;
+    const auto destroyedConnection =
+        connect(doomed, &QObject::destroyed, this,
+                [this, &teardownId, watchName]() {
+                  teardownId = mpHost->createStopWatch(watchName).first;
+                });
+    const auto resettingConnection =
+        connect(mpHost, &Host::signal_profileResetting, doomed.data(),
+                &QObject::deleteLater);
+
+    performReset();
+    disconnect(resettingConnection);
+    disconnect(destroyedConnection);
+    const bool drainedByReset = doomed.isNull();
+    delete doomed.data();
+
+    QVERIFY2(drainedByReset,
+             "The reset never drained the deleteLater() posted while it ran");
+    QCOMPARE(teardownId, 0);
+    QCOMPARE(mpHost->findStopWatchId(watchName), 0);
+  }
+
+  // Finalisers on the old Lua state run inside initLuaGlobals()'s lua_close(),
+  // the last point of the teardown
+  void test_stopWatchCreationStaysBlockedInFinalisersRunByReset() {
+    QTemporaryDir markerDir;
+    QVERIFY(markerDir.isValid());
+    const QString markerPath = markerDir.filePath(qsl("finaliser-ran"));
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    lua_pushstring(L, markerPath.toUtf8().constData());
+    lua_setglobal(L, "resetGcMarkerPath");
+    QCOMPARE(luaL_dostring(
+                 L, "resetGcProxy = newproxy(true)\n"
+                    "getmetatable(resetGcProxy).__gc = function()\n"
+                    "  createStopWatch('gc_sw')\n"
+                    "  io.open(resetGcMarkerPath, 'w'):close()\n"
+                    "end"),
+             0);
+
+    performReset();
+
+    QVERIFY2(QFileInfo::exists(markerPath),
+             "The finaliser did not run during the reset");
+    QCOMPARE(mpHost->findStopWatchId(qsl("gc_sw")), 0);
+  }
+
+  void test_refusedResetLeavesStopWatchCreationWorking() {
+    mpHost->mLuaInterpreter.enterNestedEventLoop();
+    const bool started = mpHost->resetProfile_phase1();
+    mpHost->mLuaInterpreter.leaveNestedEventLoop();
+    QVERIFY(!started);
+
+    const auto result =
+        mpHost->createStopWatch(qsl("after_refused_reset"));
+    QVERIFY2(result.first > 0, qPrintable(result.second));
   }
 
   // -----------------------------------------------------------------------
@@ -491,11 +828,11 @@ private slots:
     auto [ok, msg] =
         mpHost->createMiniConsole(qsl("main"), qsl("test_mc"), 0, 0, 100, 100);
     QVERIFY2(ok, qPrintable(msg));
-    QVERIFY(mpHost->mpConsole->mSubConsoleMap.contains(qsl("test_mc")));
+    QVERIFY(mpHost->windowRegistry().hasSubConsole(qsl("test_mc")));
 
     performReset();
 
-    QVERIFY2(!mpHost->mpConsole->mSubConsoleMap.contains(qsl("test_mc")),
+    QVERIFY2(!mpHost->windowRegistry().hasSubConsole(qsl("test_mc")),
              "Mini console should be removed after reset");
   }
 
@@ -503,11 +840,11 @@ private slots:
     auto [ok, msg] = mpHost->createLabel(qsl("main"), qsl("test_label"), 0, 0,
                                          100, 100, true, false);
     QVERIFY2(ok, qPrintable(msg));
-    QVERIFY(mpHost->mpConsole->mLabelMap.contains(qsl("test_label")));
+    QVERIFY(mpHost->mainConsoleView()->labelWidget(qsl("test_label")));
 
     performReset();
 
-    QVERIFY2(!mpHost->mpConsole->mLabelMap.contains(qsl("test_label")),
+    QVERIFY2(!mpHost->mainConsoleView()->labelWidget(qsl("test_label")),
              "Label should be removed after reset");
   }
 
@@ -618,6 +955,71 @@ private slots:
     QVERIFY2(!lua_isnil(L, -1),
              "Geyser framework should be loaded after reset");
     lua_pop(L, 1);
+  }
+
+  void test_resetLoadsLuaGlobalFilesFromBytecodeCache() {
+    QVERIFY2(readBytecodeCache().contains("StringUtils.lua"),
+             "opening the profile should have cached LuaGlobal.lua's files");
+    const QDateTime written =
+        QFileInfo(bytecodeCachePathFileName()).lastModified();
+
+    performReset();
+
+    QCOMPARE(QFileInfo(bytecodeCachePathFileName()).lastModified(), written);
+    QCOMPARE(luaGlobalFunctionOrigins(), qsl("ok"));
+  }
+
+  void test_editedLuaGlobalFileIsRecompiled() {
+    auto entries = readBytecodeCache();
+    QVERIFY(entries.contains("StringUtils.lua"));
+    QVERIFY(entries.contains("TableUtils.lua"));
+    // Another file's bytecode, filed under a source that no longer matches
+    const QByteArray otherSourceHash(20, '\0');
+    entries.insert("StringUtils.lua",
+                   otherSourceHash + entries.value("TableUtils.lua").mid(20));
+    writeBytecodeCache(entries);
+
+    performReset();
+
+    QCOMPARE(luaGlobalFunctionOrigins(), qsl("ok"));
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    lua_getglobal(L, "luaGlobalPath");
+    QFile source(
+        qsl("%1/StringUtils.lua").arg(QString::fromUtf8(lua_tostring(L, -1))));
+    lua_pop(L, 1);
+    QVERIFY(source.open(QIODevice::ReadOnly));
+    QCOMPARE(readBytecodeCache().value("StringUtils.lua").left(20),
+             QCryptographicHash::hash(source.readAll(),
+                                      QCryptographicHash::Sha1));
+  }
+
+  void test_damagedBytecodeIsRecompiled() {
+    auto entries = readBytecodeCache();
+    QVERIFY(entries.contains("StringUtils.lua"));
+    QVERIFY(entries.contains("TableUtils.lua"));
+    // StringUtils.lua's source and bytecode hashes, over bytecode that no
+    // longer matches the second of them
+    const QByteArray damaged = entries.value("StringUtils.lua").left(40) +
+                               entries.value("TableUtils.lua").mid(40);
+    entries.insert("StringUtils.lua", damaged);
+    writeBytecodeCache(entries);
+
+    performReset();
+
+    QCOMPARE(luaGlobalFunctionOrigins(), qsl("ok"));
+    QVERIFY(readBytecodeCache().value("StringUtils.lua") != damaged);
+  }
+
+  void test_unreadableBytecodeCacheIsReplaced() {
+    QFile file(bytecodeCachePathFileName());
+    QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Truncate));
+    file.write("not a bytecode cache");
+    file.close();
+
+    performReset();
+
+    QCOMPARE(luaGlobalFunctionOrigins(), qsl("ok"));
+    QVERIFY(readBytecodeCache().contains("StringUtils.lua"));
   }
 
   void test_gmcpTableFreshAfterReset() {
@@ -738,7 +1140,7 @@ private slots:
     QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
 
     for (int i = 1; i <= kNumLabels; ++i) {
-      auto *pL = mpHost->mpConsole->mLabelMap.value(qsl("cb_label_%1").arg(i));
+      auto *pL = mpHost->mainConsoleView()->labelWidget(qsl("cb_label_%1").arg(i));
       QVERIFY2(pL, qPrintable(qsl("post-reset label cb_label_%1 missing").arg(i)));
       QMouseEvent ev(QEvent::MouseButtonPress, QPointF(1, 1), QPointF(1, 1),
                      QPointF(1, 1), Qt::LeftButton, Qt::LeftButton,
@@ -817,7 +1219,7 @@ private slots:
     mpHost->getLuaInterface()->getVars(false);
 
     const QString xmlPath =
-        mudlet::getMudletPath(enums::profileHomePath, mHostname) +
+        MudletApp::getMudletPath(enums::profileHomePath, mHostname) +
         qsl("/reset-var-test.xml");
     auto writer = std::make_shared<XMLexport>(mpHost);
     QVERIFY(writer->exportPackage(xmlPath, true, false));
@@ -853,6 +1255,145 @@ private slots:
   }
 
   // -----------------------------------------------------------------------
+  // Group 18: MapInfoContributorManager stale lua_State (#10001)
+  // -----------------------------------------------------------------------
+
+  // registerMapInfo() stores the lua_State it was called on plus a registry
+  // reference, and the callback captures that state too, while phase2's
+  // initLuaGlobals() closes it. A contributor left registered across a reset
+  // therefore holds a dangling state: the next killMapInfo()/registerMapInfo()
+  // on that name unrefs into freed memory - which a package that does both in
+  // its init hits from compileAll() later in the same phase2 - and one that
+  // nothing re-registers is called on that state by every later map redraw.
+  void test_luaMapInfoContributorsRemovedByReset() {
+    auto *pManager = mpHost->mpMap->mMapInfoContributorManager;
+    QVERIFY(pManager);
+    QSignalSpy spy(pManager,
+                   &MapInfoContributorManager::signal_contributorsUpdated);
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    QCOMPARE(luaL_dostring(L, "registerMapInfo('reset.contrib', function() "
+                              "return 'info' end)\n"
+                              "registerMapInfo('reset.contrib2', function() "
+                              "return 'info' end)"),
+             0);
+    QVERIFY(pManager->getContributorKeys().contains(qsl("reset.contrib")));
+    QVERIFY(pManager->getContributorKeys().contains(qsl("reset.contrib2")));
+    spy.clear();
+
+    performReset();
+
+    QCOMPARE(mpHost->mpMap->mMapInfoContributorManager, pManager);
+    QVERIFY2(!pManager->getContributorKeys().contains(qsl("reset.contrib")),
+             "Lua map info contributor should not outlive the lua_State it was "
+             "registered on");
+    QVERIFY2(!pManager->getContributorKeys().contains(qsl("reset.contrib2")),
+             "every Lua map info contributor should go, not just one");
+    QVERIFY2(pManager->getContributorKeys().contains(qsl("Short")),
+             "built-in contributors have no Lua reference and must stay");
+    QVERIFY2(pManager->getContributorKeys().contains(qsl("Full")),
+             "built-in contributors have no Lua reference and must stay");
+    QVERIFY2(
+        !spy.isEmpty(),
+        "the mapper rebuilds its info menu from signal_contributorsUpdated");
+  }
+
+  // The reporter's package kills a contributor before re-registering it, and
+  // after a reset that kill is the call that unrefs into the closed state. The
+  // dangling unref is not what fails here without the fix: liblua is linked as
+  // a prebuilt system library and so is not ASan-instrumented, and ASan leaves
+  // freed memory intact by default, so on Linux the read of the closed state
+  // goes unnoticed (on Windows it crashes with an access violation). What goes
+  // red is the kill still finding a contributor - which is also what a fix that
+  // dropped the name from the ordering but left it in the contributor map would
+  // do.
+  void test_mapInfoKillAfterResetFindsNothingToRemove() {
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    QCOMPARE(luaL_dostring(L, "registerMapInfo('reset.stale', function() "
+                              "return 'info' end)"),
+             0);
+
+    performReset();
+
+    lua_State *newL = mpHost->mLuaInterpreter.getLuaGlobalState();
+    QCOMPARE(luaL_dostring(newL,
+                           "resetStaleKilled, resetStaleMessage = "
+                           "killMapInfo('reset.stale')\n"
+                           "registerMapInfo('reset.stale', function() return "
+                           "'info' end)"),
+             0);
+    lua_getglobal(newL, "resetStaleKilled");
+    QVERIFY2(lua_isnil(newL, -1),
+             "the reset should have left killMapInfo() nothing to remove");
+    lua_pop(newL, 1);
+    lua_getglobal(newL, "resetStaleMessage");
+    QVERIFY2(
+        lua_isstring(newL, -1),
+        "killMapInfo() should report the label as missing, as it does on a "
+        "profile that has just been loaded");
+    lua_pop(newL, 1);
+    QVERIFY2(mpHost->mpMap->mMapInfoContributorManager->getContributorKeys()
+                 .contains(qsl("reset.stale")),
+             "re-registering after a reset should work");
+
+    QCOMPARE(luaL_dostring(newL, "killMapInfo('reset.stale')"), 0);
+  }
+
+  // registerMapInfo() can be given a built-in's name, which replaces the
+  // built-in callback. Dropping that on reset must not leave the profile with
+  // fewer contributors than a freshly loaded one has.
+  void test_builtinMapInfoRestoredAfterShadowingContributorDropped() {
+    auto *pManager = mpHost->mpMap->mMapInfoContributorManager;
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    QCOMPARE(luaL_dostring(L, "registerMapInfo('Short', function() return "
+                              "'shadowed' end)"),
+             0);
+
+    performReset();
+
+    QVERIFY2(pManager->getContributorKeys().contains(qsl("Short")),
+             "the built-in contributor should be back once the Lua one that "
+             "replaced it is dropped");
+    QColor color;
+    auto info = pManager->getContributor(qsl("Short"))(0, 0, -1, -1, color);
+    QVERIFY2(info.text.isEmpty(),
+             "'Short' should be Mudlet's own contributor again, which reports "
+             "nothing for a room that does not exist");
+  }
+
+  // Dropping the contributors is only acceptable because the script that
+  // registered them runs again in the same reset, in compileAll(); the enabled
+  // state is the user's saved choice and is deliberately not dropped with them,
+  // so the contributor comes back exactly as it was.
+  void test_scriptRegisteredMapInfoReturnsAfterReset() {
+    auto *pScript = new TScript(qsl("mapInfoRegisteringScript"), mpHost);
+    pScript->setScript(qsl("registerMapInfo('reset.pkg', function() return "
+                           "'info' end)"));
+    mpHost->getScriptUnit()->registerScript(pScript);
+    pScript->setIsActive(true);
+    pScript->compile();
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    QCOMPARE(luaL_dostring(L, "enableMapInfo('reset.pkg')"), 0);
+    QVERIFY(mpHost->mMapInfoContributors.contains(qsl("reset.pkg")));
+
+    performReset();
+
+    lua_State *newL = mpHost->mLuaInterpreter.getLuaGlobalState();
+    QCOMPARE(luaL_dostring(newL, "resetPkgEnabled = getMapInfo()['reset.pkg']"),
+             0);
+    lua_getglobal(newL, "resetPkgEnabled");
+    QVERIFY2(lua_isboolean(newL, -1),
+             "the registering script should have put its contributor back");
+    QVERIFY2(lua_toboolean(newL, -1),
+             "the user's enabled choice should survive the reset");
+    lua_pop(newL, 1);
+
+    // stop the script re-registering into every later test's reset
+    pScript->setScript(qsl(""));
+    pScript->setIsActive(false);
+    QCOMPARE(luaL_dostring(newL, "killMapInfo('reset.pkg')"), 0);
+  }
+
+  // -----------------------------------------------------------------------
   // Helpers (reused from TOscTerminatorTest pattern)
   // -----------------------------------------------------------------------
 
@@ -867,43 +1408,20 @@ private slots:
 
   void startProfile(const QString &hostname, const QString &address,
                     const QString &port) {
-    QTimer::singleShot(0ms, qApp, [hostname, address, port]() {
-      mudlet::self()->startAutoLogin({});
-      QTest::qWait(100ms);
-      QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button,
-                        Qt::LeftButton);
-      QTest::qWait(100ms);
-      QTest::keyClicks(QApplication::focusWidget(), hostname);
-      QTest::qWait(100ms);
-      QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-      QTest::qWait(100ms);
-      QTest::keyClicks(QApplication::focusWidget(), address);
-      QTest::qWait(100ms);
-      QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-      QTest::qWait(100ms);
-      QTest::keyClicks(QApplication::focusWidget(), port);
-      QTest::qWait(100ms);
-      QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
-    });
-
-    QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-    if (!spy.wait(1000)) {
-      QFAIL("Profile took too long to load.");
-    }
-    auto host = mudlet::self()->getActiveHost();
+    auto host = TestProfile::create(hostname, address, port);
     if (!host) {
       QFAIL("No active host available for the test.");
     }
 
     QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
-    if (!spy2.wait(500)) {
+    if (host->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && !spy2.wait(8s)) {
       QFAIL("Could not connect with the host.");
     }
   }
 
   void deleteProfileDirectory(const QString &profileName) {
     const QString path =
-        mudlet::getMudletPath(enums::profileHomePath, profileName);
+        MudletApp::getMudletPath(enums::profileHomePath, profileName);
     QDir dir(path);
 
     if (!dir.exists()) {
@@ -913,19 +1431,5 @@ private slots:
   }
 };
 
-void initializeQRCResourcesForResetProfileTest() {
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-  qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-  qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-  qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-  qInitResources_mudlet();
-  qInitResources_qm();
-}
-
 #include "ResetProfileTest.moc"
-QTEST_MAIN(ResetProfileTest)
+MUDLET_GROUPED_TEST_MAIN(ResetProfileTest)

@@ -17,12 +17,17 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QFileInfo>
+#include <QTemporaryDir>
 #include <QtTest/QtTest>
 
 #include <atomic>
 #include <functional>
 #include <thread>
 
+#include "MudletApp.h"
+#include "PortableModeTestHelper.h"
+#include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TLuaInterpreter.h"
@@ -32,12 +37,9 @@
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResources();
+#include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 // A wrap width that cannot hold a single glyph - because it is zero, because
 // the glyph is wider than the width, or because the indentation uses the width
@@ -51,6 +53,8 @@ class NarrowWindowWrapTest : public QObject
     Q_OBJECT
 
 private:
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
     const QString mHostname = "Test-NarrowWrap";
     QString mPort; // assigned the stub's actual loopback port in init()
@@ -60,7 +64,25 @@ private:
     const QString mWideText = QString(QChar(0x6F22)) + QChar(0x5B57);
 
 private slots:
-    void initTestCase() { initializeQRCResources(); }
+    void initTestCase()
+    {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
+        // A config root of this process's own. Sharing the developer's
+        // ~/.config/mudlet means sharing a profile list, so a second copy of
+        // this test running at the same time is told the name it types is
+        // already in use and never gets an enabled Connect button. Since #9712
+        // the opt-in that makes setupConfig() adopt a directory is
+        // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
+    }
+
+    void cleanupTestCase() { mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg); }
 
     void init()
     {
@@ -72,6 +94,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -139,10 +162,12 @@ private slots:
         startProfile();
         auto* console = createTestMiniConsole();
         QVERIFY(console);
-        runLua(qsl("setWindowWrap('%1', 5)").arg(mMiniConsole));
+        // wrapLine() holds an indent to half the width, which leaves this pair
+        // as the one that still has less room than a wide glyph needs
+        runLua(qsl("setWindowWrap('%1', 2)").arg(mMiniConsole));
         // both, so that whichever of the two a line uses leaves a single column
-        runLua(qsl("setWindowWrapIndent('%1', 4)").arg(mMiniConsole));
-        runLua(qsl("setWindowWrapHangingIndent('%1', 4)").arg(mMiniConsole));
+        runLua(qsl("setWindowWrapIndent('%1', 1)").arg(mMiniConsole));
+        runLua(qsl("setWindowWrapHangingIndent('%1', 1)").arg(mMiniConsole));
 
         runWithWatchdog("echo of a wide glyph with the indent using up the wrap width", [this]() {
             runLua(qsl("echo('%1', '%2\\n')").arg(mMiniConsole, mWideText));
@@ -178,6 +203,7 @@ private slots:
         mpServer->setWelcomeMessage(qsl("HELLO\r\n"));
         startProfile();
         auto* host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
         QVERIFY2(waitForMainConsoleText(qsl("HELLO")), "Welcome text never reached the buffer");
 
         // leave a single column free of the screen width the insert wraps at -
@@ -192,11 +218,11 @@ private slots:
         // append path the cursor at the end of the buffer would take
         const int welcomeLine = mainConsoleLineOf(qsl("HELLO"));
         QVERIFY2(welcomeLine >= 0, "the welcome line went missing from the buffer");
-        QVERIFY2(host->mpConsole->moveCursor(2, welcomeLine), "could not position the user cursor mid-line");
+        QVERIFY2(host->mainConsoleView()->moveCursor(2, welcomeLine), "could not position the user cursor mid-line");
 
         runWithWatchdog("insertText of a wide glyph with the indent using up the screen width", [this, host]() {
             // the newline is what makes the insert re-wrap the line it landed in
-            host->mpConsole->insertText(mWideText + QChar::LineFeed + mWideText);
+            host->mainConsoleView()->insertText(mWideText + QChar::LineFeed + mWideText);
         });
 
         QVERIFY2(mainConsoleContains(mWideText), "the inserted text did not survive wrapping");
@@ -245,6 +271,7 @@ private slots:
     {
         startProfile();
         auto* host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
         runLua(qsl("setWindowWrap(80)"));
         QCOMPARE(host->mWrapAt, 80);
 
@@ -253,12 +280,12 @@ private slots:
         });
 
         QCOMPARE(host->mWrapAt, 80);
-        QCOMPARE(host->mpConsole->getWrapAt(), 80);
+        QCOMPARE(host->mainConsoleView()->getWrapAt(), 80);
     }
 
     void cleanup()
     {
-        const QString profilePath = mudlet::getMudletPath(enums::profileHomePath, mHostname);
+        const QString profilePath = MudletApp::getMudletPath(enums::profileHomePath, mHostname);
 
         // Tear down Mudlet (and with it the live cTelnet connection) before the
         // stub server it is talking to, so the socket is closed from the client
@@ -278,7 +305,7 @@ private:
         std::atomic_bool finished{false};
         std::thread watchdog([&finished, what, timeoutSeconds]() {
             for (int i = 0; i < timeoutSeconds * 10 && !finished.load(); ++i) {
-                QThread::msleep(100);
+                QThread::sleep(100ms);
             }
             if (!finished.load()) {
                 qFatal("%s did not finish within %d seconds - the wrapping is stuck in a loop", what, timeoutSeconds);
@@ -292,6 +319,7 @@ private:
     void runLua(const QString& script)
     {
         auto host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
         host->getLuaInterpreter()->compileAndExecuteScript(script);
     }
 
@@ -300,40 +328,18 @@ private:
     TConsole* createTestMiniConsole()
     {
         runLua(qsl("createMiniConsole('%1', 0, 0, 300, 300)").arg(mMiniConsole));
-        return mudlet::self()->getActiveHost()->mpConsole->mSubConsoleMap.value(mMiniConsole);
+        return mudlet::self()->getActiveHost()->mainConsoleView()->subConsoleWidget(mMiniConsole);
     }
 
     void startProfile()
     {
-        QTimer::singleShot(0, qApp, [this]() {
-            mudlet::self()->startAutoLogin({});
-            QTest::qWait(100);
-            QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
-            QTest::qWait(100);
-            QTest::keyClicks(QApplication::focusWidget(), mHostname);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
-            QTest::keyClicks(QApplication::focusWidget(), mLocalhost);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100);
-            QTest::keyClicks(QApplication::focusWidget(), mPort);
-            QTest::qWait(100);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
-        });
-
-        QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!spy.wait(5000)) {
-            QFAIL("Profile took too long to load.");
-        }
-        auto host = mudlet::self()->getActiveHost();
+        auto host = TestProfile::create(mHostname, mLocalhost, mPort);
         if (!host) {
             QFAIL("No active host available for the test.");
         }
 
         QSignalSpy connectedSpy(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!connectedSpy.wait(2000)) {
+        if (!connectedSpy.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }
@@ -369,7 +375,7 @@ private:
 
     static int mainConsoleLineOf(const QString& text)
     {
-        auto console = mudlet::self()->getActiveHost()->mpConsole;
+        QPointer<TMainConsole> console = mudlet::self()->getActiveHost()->mainConsoleView();
         for (int i = 0, total = console->buffer.getLastLineNumber(); i <= total; ++i) {
             if (console->buffer.line(i).contains(text)) {
                 return i;
@@ -389,7 +395,7 @@ private:
                 timeoutMs);
     }
 
-    void deleteProfileDirectory(const QString& profileName) { deleteDirectory(mudlet::getMudletPath(enums::profileHomePath, profileName)); }
+    void deleteProfileDirectory(const QString& profileName) { deleteDirectory(MudletApp::getMudletPath(enums::profileHomePath, profileName)); }
 
     void deleteDirectory(const QString& path)
     {
@@ -400,20 +406,5 @@ private:
     }
 };
 
-void initializeQRCResources()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "NarrowWindowWrapTest.moc"
-QTEST_MAIN(NarrowWindowWrapTest)
+MUDLET_GROUPED_TEST_MAIN(NarrowWindowWrapTest)

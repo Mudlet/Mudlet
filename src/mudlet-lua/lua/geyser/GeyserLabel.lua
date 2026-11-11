@@ -13,51 +13,92 @@ Geyser.Label = Geyser.Window:new({
   fillBg = 1, })
 Geyser.Label.scrollV = {}
 Geyser.Label.scrollH = {}
+
+-- every span the converters write sets font-weight, font-style and text-decoration,
+-- which overrides a <b>, <i>, <u> or <s> wrapped around them
+local function addLabelTextStyle(resetFormat, ft)
+  resetFormat.bold = resetFormat.bold or ft.bold
+  resetFormat.italic = resetFormat.italic or ft.italics
+  resetFormat.underline = resetFormat.underline or ft.underline
+  resetFormat.strikeout = resetFormat.strikeout or ft.strikethrough
+end
 --- Prints a message to the window.  All parameters are optional and if not
--- specified will use the last set value.
+-- specified will use the last set value. Left out, the message is shown again
+-- the way it was last put up, so one set by decho, hecho or cecho keeps its colours.
 -- @param message The message to print. Can contain html formatting.
 -- @param color The color to use. Accepts color names like "red", decho codes like "<255,0,0>", and hex codes like "#ff0000". If no color formatting is needed it is possible to use 'nocolor' which allows color formatting by using :setStyleSheet
 -- @param format A format list to use. 'c' - center, 'l' - left, 'r' - right,  'b' - bold, 'i' - italics, 'u' - underline, 's' - strikethrough,  '##' - font size.  For example, "cb18" specifies center bold 18pt font be used.  Order doesn't matter.
 function Geyser.Label:echo(message, color, format)
-  message = message or self.message
-  self.message = message
+  -- the setters re-render through here, so a message put up by decho, hecho or
+  -- cecho is shown again through that function rather than as raw markup
+  local replay = not message and self.echoType and self.message == self.echoMessage
+  if not replay then
+    -- false, not nil, so a flavour inherited from a prototype label is shadowed
+    self.echoType = false
+    message = message or self.message
+    self.message = message
+  end
   color = color or self.fgColor
   self.fgColor = color
   if format then self:processFormatString(format) end
+  if replay then
+    -- a colour the plain path would raise on raises here too, before the flavour
+    -- function has a chance to drop the flavour
+    if color ~= "nocolor" then
+      Geyser.Color.hex(color)
+    end
+    local ok, err = Geyser.Label[self.echoType](self)
+    if ok == nil and err ~= nil then
+      debugc(string.format("Geyser.Label:echo(): could not show '%s' again through %s: %s", self.name, self.echoType, tostring(err)))
+    end
+    return
+  end
 
   local ft = self.formatTable
-  local fs = ft.fontSize
-  local alignment = ft.alignment
-  if alignment ~= "" then
-    alignment = string.format([[align="%s" ]], alignment)
+  local fs = ft.fontSize or tostring(self.fontSize)
+  local hex = color ~= "nocolor" and Geyser.Color.hex(color) or nil
+  -- the markup around the message is built from exactly these fields, so a
+  -- label echoed on every prompt builds it once rather than once per line
+  local wrap = self.echoWrap
+  if not (wrap and wrap.alignment == ft.alignment and wrap.bold == ft.bold and wrap.italics == ft.italics
+      and wrap.underline == ft.underline and wrap.strikethrough == ft.strikethrough
+      and wrap.font == self.font and wrap.fontSize == fs) then
+    wrap = {alignment = ft.alignment, bold = ft.bold, italics = ft.italics, underline = ft.underline,
+            strikethrough = ft.strikethrough, font = self.font, fontSize = fs}
+    local open, close = "", ""
+    if ft.bold then
+      open, close = "<b>", "</b>"
+    end
+    if ft.italics then
+      open, close = "<i>" .. open, close .. "</i>"
+    end
+    if ft.underline then
+      open, close = "<u>" .. open, close .. "</u>"
+    end
+    if ft.strikethrough then
+      open, close = "<s>" .. open, close .. "</s>"
+    end
+    if self.font and self.font ~= "" then
+      open, close = string.format('<font face ="%s">', self.font) .. open, close .. "</font>"
+    end
+    local alignment = ft.alignment
+    if alignment ~= "" then
+      alignment = string.format([[align="%s" ]], alignment)
+    end
+    local sized = "font-size: " .. fs .. [[pt; ">]] .. open
+    wrap.colored = [[<div ]] .. alignment .. [[ style="color: ]]
+    wrap.sized = "; " .. sized
+    wrap.uncolored = [[<div ]] .. alignment .. [[ style=" ]] .. sized
+    wrap.close = close .. [[</div>]]
+    self.echoWrap = wrap
   end
-  if ft.bold then
-    message = "<b>" .. message .. "</b>"
+  -- the colour is spliced in on its own, as a script cycling through colours
+  -- changes it on every echo
+  if wrap.open == nil or wrap.hex ~= hex then
+    wrap.open = hex and wrap.colored .. hex .. wrap.sized or wrap.uncolored
+    wrap.hex = hex
   end
-  if ft.italics then
-    message = "<i>" .. message .. "</i>"
-  end
-  if ft.underline then
-    message = "<u>" .. message .. "</u>"
-  end
-  if ft.strikethrough then
-    message = "<s>" .. message .. "</s>"
-  end
-  if self.font and self.font ~= "" then
-    message = string.format('<font face ="%s">%s</font>', self.font, message)
-  end
-  if not fs then
-    fs = tostring(self.fontSize)
-  end
-  if color == "nocolor" then
-    color = [[ style=" ]]
-  else
-    color = [[ style="color: ]] .. Geyser.Color.hex(self.fgColor) .. [[; ]]
-  end
-  fs = "font-size: " .. fs .. "pt; "
-  message = [[<div ]] .. alignment .. color .. fs ..
-  [[">]] .. message .. [[</div>]]
-  echo(self.name, message)
+  echo(self.name, wrap.open .. message .. wrap.close)
   self:autoAdjustSize()
 end
 
@@ -70,19 +111,29 @@ end
 
 --- Prints a message to the label with decho color formatting, preserving label's font size and formatting.
 -- @param message The message to print. Uses decho color codes like "<255,0,0>text" for colors.
+-- @return true, or nil and an error message if the label no longer exists
 function Geyser.Label:decho(message)
   message = message or self.message
-  self.message = message
 
   -- Build resetFormat table using label's actual fgColor, not just stylesheet
-  local resetFormat = getLabelFormat(self.name)
+  local resetFormat, err = getLabelFormat(self.name)
+  if not resetFormat then
+    return nil, err
+  end
+  self.message = message
+  -- the flavour is only set once the message has converted, so a message that
+  -- raises is shown plain by the next setter rather than replayed
+  self.echoType = false
   -- Override foreground with label's fgColor property if set
-  if self.fgColor and self.fgColor ~= "" then
+  if self.fgColor and self.fgColor ~= "" and self.fgColor ~= "nocolor" then
     resetFormat.foreground = Geyser.Color.hex(self.fgColor)
   end
+  addLabelTextStyle(resetFormat, self.formatTable)
 
   -- Convert decho formatted text to HTML, preserving label's colors
   local htmlContent = decho2html(message, resetFormat)
+  self.echoType = "decho"
+  self.echoMessage = message
 
   -- Apply label's formatting settings
   local ft = self.formatTable
@@ -114,23 +165,34 @@ function Geyser.Label:decho(message)
   [[">]] .. htmlContent .. [[</div>]]
   echo(self.name, htmlContent)
   self:autoAdjustSize()
+  return true
 end
 
 --- Prints a message to the label with hecho color formatting, preserving label's font size and formatting.
 -- @param message The message to print. Uses hecho color codes like "|cff0000text" for colors.
+-- @return true, or nil and an error message if the label no longer exists
 function Geyser.Label:hecho(message)
   message = message or self.message
-  self.message = message
 
   -- Build resetFormat table using label's actual fgColor, not just stylesheet
-  local resetFormat = getLabelFormat(self.name)
+  local resetFormat, err = getLabelFormat(self.name)
+  if not resetFormat then
+    return nil, err
+  end
+  self.message = message
+  -- the flavour is only set once the message has converted, so a message that
+  -- raises is shown plain by the next setter rather than replayed
+  self.echoType = false
   -- Override foreground with label's fgColor property if set
-  if self.fgColor and self.fgColor ~= "" then
+  if self.fgColor and self.fgColor ~= "" and self.fgColor ~= "nocolor" then
     resetFormat.foreground = Geyser.Color.hex(self.fgColor)
   end
+  addLabelTextStyle(resetFormat, self.formatTable)
 
   -- Convert hecho formatted text to HTML, preserving label's colors
   local htmlContent = hecho2html(message, resetFormat)
+  self.echoType = "hecho"
+  self.echoMessage = message
 
   -- Apply label's formatting settings
   local ft = self.formatTable
@@ -162,23 +224,34 @@ function Geyser.Label:hecho(message)
   [[">]] .. htmlContent .. [[</div>]]
   echo(self.name, htmlContent)
   self:autoAdjustSize()
+  return true
 end
 
 --- Prints a message to the label with cecho color formatting, preserving label's font size and formatting.
 -- @param message The message to print. Uses cecho color codes like "<red>text" for colors.
+-- @return true, or nil and an error message if the label no longer exists
 function Geyser.Label:cecho(message)
   message = message or self.message
-  self.message = message
 
   -- Build resetFormat table using label's actual fgColor, not just stylesheet
-  local resetFormat = getLabelFormat(self.name)
+  local resetFormat, err = getLabelFormat(self.name)
+  if not resetFormat then
+    return nil, err
+  end
+  self.message = message
+  -- the flavour is only set once the message has converted, so a message that
+  -- raises is shown plain by the next setter rather than replayed
+  self.echoType = false
   -- Override foreground with label's fgColor property if set
-  if self.fgColor and self.fgColor ~= "" then
+  if self.fgColor and self.fgColor ~= "" and self.fgColor ~= "nocolor" then
     resetFormat.foreground = Geyser.Color.hex(self.fgColor)
   end
+  addLabelTextStyle(resetFormat, self.formatTable)
 
   -- Convert cecho formatted text to HTML, preserving label's colors
   local htmlContent = cecho2html(message, resetFormat)
+  self.echoType = "cecho"
+  self.echoMessage = message
 
   -- Apply label's formatting settings
   local ft = self.formatTable
@@ -210,6 +283,7 @@ function Geyser.Label:cecho(message)
   [[">]] .. htmlContent .. [[</div>]]
   echo(self.name, htmlContent)
   self:autoAdjustSize()
+  return true
 end
 
 --- sets the color of the text on the label
@@ -253,22 +327,37 @@ function Geyser.Label:processFormatString(format)
   end
 end
 
---- Sets the font face for the label, use empty string to clear the font and use css/default. Returns true if the font changed, nil+error if not.
+--- Sets the font face for the label, use empty string to clear the font and use css/default.
+-- Returns true whenever it was given a string: an installed family, or a "Family Style"
+-- name, is applied to the label's widget font and remembered as the font database spells
+-- it, while a name the database does not list is passed on to the markup for Qt to
+-- substitute for, with a warning through debugc(). Only a font that is not a string is
+-- refused, with nil+error, and leaves the current font alone. A font inherited from
+-- a label used as a prototype was never set on this label's widget, so it reaches the
+-- markup only - self.font and getFont(self.name) can differ for that one case.
 -- @param font font face to use
 function Geyser.Label:setFont(font)
-  local af = getAvailableFonts()
-  if not (af[font] or font == "") then
-    local err = "Geyser.Label:setFont(): attempt to call setFont with font '" .. font .. "' which is not available, see getAvailableFonts() for valid options\n"
-    err = err .. "In the meantime, we will use a similar font which isn't the one you asked for but we hope is close enough"
-    debugc(err)
+  if type(font) ~= "string" then
+    local err = "font must be a string, got " .. type(font)
+    debugc("Geyser.Label:setFont(): " .. err .. "; the label keeps its current font")
+    return nil, err
+  end
+  if font ~= "" then
+    -- setFont() resolves the name the way it does for every other window (an
+    -- installed family, or a "Family Style" name split into base family and
+    -- weight) and applies it to the label's own widget font
+    local ok, err = setFont(self.name, font)
+    if ok then
+      -- the family as the font database spells it, so what is remembered here and
+      -- what the widget was given cannot drift apart
+      font = getFont(self.name)
+    else
+      debugc("Geyser.Label:setFont(): " .. err .. " - see getAvailableFonts() for valid options. Letting Qt pick the closest match it has")
+    end
   end
   self.font = font
-  -- Apply the profile's antialiasing settings to the label for static font compatibility
-  -- Use existing setFont() function with label name - this handles static fonts and antialiasing
-  if font ~= "" then
-    setFont(self.name, font)
-  end
   self:echo()
+  return true
 end
 
 --- return the size hint (the suggested size) of the label
@@ -439,11 +528,6 @@ function Geyser.Label:setFontSize(fontSize)
   self.formatTable.fontSize = fontSize
   self.format = self.format:gsub("%d", "")
   self.format = self.format .. fontSize
-  -- Apply the profile's antialiasing settings to the label when font size changes
-  -- Use existing setFont() function - it will preserve the font family and apply antialiasing
-  if self.font and self.font ~= "" then
-    setFont(self.name, self.font)
-  end
   self:echo()
 end
 
@@ -484,16 +568,228 @@ function Geyser.Label:clear()
 end
 
 --- Sets a background image for this label.
+-- An SVG file is drawn as a layer behind the label's text or movie, scaled to fit
+-- the label while keeping its proportions and re-rendered crisply on every resize
+-- - see setSvgTint, setSvgRotation and setSvgShear.
+-- It fills the area inside the label's border, and is not clipped to a
+-- border-radius, so a rounded label shows the SVG square in its corners.
+-- Any other image type is drawn at its own size as the label's content, in place
+-- of any text the label is showing. Which of the two it is comes from the file's
+-- content rather than from its name.
+-- resetBackgroundImage takes off the SVG layer, a raster image and a movie in one
+-- call, and leaves the label's text where it is. It also takes the stylesheet's
+-- background-image declarations that are not inside a {...} rule out, see
+-- Geyser.Label:resetBackgroundImage.
+-- An empty imageFileName takes off the SVG layer, a raster image, a movie and any
+-- text, and leaves the stylesheet alone.
+-- Returns true, or nil and an error message when the file cannot be read.
 -- @param imageFileName The image to use for a background image.
 function Geyser.Label:setBackgroundImage (imageFileName)
-  setBackgroundImage(self.name, imageFileName)
+  local ok, err = setBackgroundImage(self.name, imageFileName)
   self:autoAdjustSize()
+  return ok, err
+end
+
+--- Sets a tint color on the label's SVG background image.
+-- Every visible pixel of the SVG takes the given color and keeps its own
+-- transparency, so a multi-color SVG becomes a single-color silhouette.
+-- The tint is a property of the label, not of the document: it can be set before
+-- any SVG is there and applies as soon as one arrives, and no image operation
+-- changes it - it is kept until resetSvgTint is called.
+-- Accepts any color format supported by Geyser.Color.parse:
+-- RGB integers (r, g, b), hex string ("#ff0000"), or named color ("red").
+-- Returns true, or nil and an error message when the color cannot be read.
+-- @param r The red component (0-255), or a color string (e.g. "#ff0000", "red").
+-- @param g The green component (0-255). Omit when using a color string.
+-- @param b The blue component (0-255). Omit when using a color string.
+function Geyser.Label:setSvgTint (r, g, b)
+  -- Geyser.Color.parse returns nil for a component a short hex string like "#ff"
+  -- has no digits for, and raises rather than returning it for the one after that
+  local parsed, red, green, blue = pcall(Geyser.Color.parse, r, g, b)
+  if not (parsed and red and green and blue) then
+    if type(r) == "string" then
+      -- the global resolves colour names itself and explains what it cannot
+      return setSvgTint(self.name, r)
+    end
+    return nil, "setSvgTint: could not parse the colour given"
+  end
+  return setSvgTint(self.name, red, green, blue)
+end
+
+--- Resets the tint color on the label's SVG background image,
+-- restoring the original SVG colors.
+function Geyser.Label:resetSvgTint ()
+  return resetSvgTint(self.name)
+end
+
+--- Sets the rotation angle for the label's SVG background image.
+-- The SVG is rotated around its center; label text and background are unaffected.
+-- Content rotated beyond the label's edges is clipped, so a square image loses
+-- its corners at 45 degrees - a circular design, or padding inside the SVG,
+-- avoids that.
+-- Like the tint, the angle is a property of the label: it can be set before any
+-- SVG is there and applies as soon as one arrives, and no image operation changes
+-- it - it is kept until resetSvgRotation or resetSvgTransform is called.
+-- @param angle Rotation angle in degrees (positive = clockwise).
+function Geyser.Label:setSvgRotation (angle)
+  return setSvgRotation(self.name, angle)
+end
+
+--- Resets the SVG background image rotation to 0 degrees.
+function Geyser.Label:resetSvgRotation ()
+  return resetSvgRotation(self.name)
+end
+
+--- Sets the shear (skew) for the label's SVG background image.
+-- The SVG is sheared around its center; label text and background are unaffected.
+-- As with rotation, content sheared outside the label is clipped.
+-- Like the tint, the shear is a property of the label: it can be set before any
+-- SVG is there and applies as soon as one arrives, and no image operation changes
+-- it - it is kept until resetSvgShear or resetSvgTransform is called.
+-- @param shearX Horizontal shear factor.
+-- @param shearY Vertical shear factor.
+function Geyser.Label:setSvgShear (shearX, shearY)
+  return setSvgShear(self.name, shearX, shearY)
+end
+
+--- Resets the SVG background image shear to (0, 0).
+function Geyser.Label:resetSvgShear ()
+  return resetSvgShear(self.name)
+end
+
+--- Resets all SVG transforms (rotation and shear) but preserves tint.
+function Geyser.Label:resetSvgTransform ()
+  return resetSvgTransform(self.name)
 end
 
 --- Sets a tiled background image for this label.
+-- It replaces the label's stylesheet with a background-image declaration, which
+-- Geyser.Label:resetBackgroundImage takes away again.
 -- @param imageFileName The image to use for a background image.
 function Geyser.Label:setTiledBackgroundImage (imageFileName)
   self:setStyleSheet("background-image: url(" .. imageFileName .. ");")
+end
+
+-- Index just past the quoted string or comment starting at i, or i when none starts there.
+local function pastQuoteOrComment(sheet, i)
+  local c = sheet:sub(i, i)
+  if c == '"' or c == "'" then
+    local j = i + 1
+    while j <= #sheet and sheet:sub(j, j) ~= c do
+      j = j + (sheet:sub(j, j) == "\\" and 2 or 1)
+    end
+    return math.min(j + 1, #sheet + 1)
+  end
+  if c == "/" and sheet:sub(i + 1, i + 1) == "*" then
+    local finish = sheet:find("*/", i + 2, true)
+    return finish and finish + 2 or #sheet + 1
+  end
+  return i
+end
+
+-- The end of the background-image declaration starting at i, or i when none starts there.
+local function pastBackgroundImageDeclaration(sheet, i)
+  if sheet:sub(i, i + 15):lower() ~= "background-image" then
+    return i
+  end
+  local j = i + 16
+  while sheet:sub(j, j):match("^%s$") do
+    j = j + 1
+  end
+  if sheet:sub(j, j) ~= ":" then
+    return i
+  end
+  local parentheses = 0
+  j = j + 1
+  while j <= #sheet do
+    local skipped = pastQuoteOrComment(sheet, j)
+    if skipped ~= j then
+      j = skipped
+    else
+      local c = sheet:sub(j, j)
+      if c == "(" then
+        parentheses = parentheses + 1
+      elseif c == ")" and parentheses > 0 then
+        parentheses = parentheses - 1
+      elseif parentheses == 0 and c == ";" then
+        return j + 1
+      elseif parentheses == 0 and c == "}" then
+        return j
+      end
+      j = j + 1
+    end
+  end
+  return j
+end
+
+-- TLabelModel::styleSheetWithoutBackgroundImage() for a sheet that is not on the label: putting it
+-- there to reset it would apply its min-width, qproperty-* and the like to the label.
+local function styleSheetWithoutBackgroundImage(sheet)
+  local result = {}
+  local copiedUpTo = 1
+  local braces = 0
+  local parentheses = 0
+  local declarationCanStart = true
+  local i = 1
+  while i <= #sheet do
+    local skipped = pastQuoteOrComment(sheet, i)
+    if skipped ~= i then
+      if sheet:sub(i, i) ~= "/" then
+        declarationCanStart = false
+      end
+      i = skipped
+    else
+      local c = sheet:sub(i, i)
+      if c == "(" then
+        parentheses = parentheses + 1
+      elseif c == ")" and parentheses > 0 then
+        parentheses = parentheses - 1
+      end
+      local finish = i
+      if parentheses == 0 and braces == 0 and declarationCanStart then
+        finish = pastBackgroundImageDeclaration(sheet, i)
+      end
+      if finish ~= i then
+        result[#result + 1] = sheet:sub(copiedUpTo, i - 1)
+        copiedUpTo = finish
+        i = finish
+      else
+        if parentheses == 0 then
+          if c == "{" then
+            braces = braces + 1
+          elseif c == "}" and braces > 0 then
+            braces = braces - 1
+          end
+          if not c:match("^%s$") then
+            declarationCanStart = c == ";" or c == "}"
+          end
+        end
+        i = i + 1
+      end
+    end
+  end
+  result[#result + 1] = sheet:sub(copiedUpTo)
+  return table.concat(result)
+end
+
+--- Takes away the label's background image: what setBackgroundImage put there, and every
+-- background-image declaration of its stylesheet that is not inside a {...} rule, such as the one
+-- setTiledBackgroundImage writes - whoever wrote it. An image in a rule, such as a :hover one, the
+-- background shorthand and border-image stay.
+-- Unlike the resetBackgroundImage function, this also takes the image out of the stylesheet the
+-- label remembers, which setStyleSheet() with no argument puts back.
+-- @return true, or nil and a message
+function Geyser.Label:resetBackgroundImage()
+  local ok, err = resetBackgroundImage(self.name)
+  if not ok then
+    return nil, err
+  end
+  -- not a copy of the label's own sheet, which holds the colour setBackgroundColor() adds to it
+  if self.stylesheet then
+    self.stylesheet = styleSheetWithoutBackgroundImage(self.stylesheet)
+  end
+  self:autoAdjustSize()
+  return true
 end
 
 --- Sets a callback to be used when this label is clicked. When this
@@ -501,10 +797,24 @@ end
 -- appended as the final argument (see @{mouseClickEvent})
 -- @param func The function to use.
 -- @param ... Parameters to pass to the function. Must be strings or numbers.
+-- A right-click menu's own click callback ignores a left click, which is all a screen reader's press is,
+-- so its label is a button only when a release callback or a click callback of the script's own can be pressed
+local function menuLabelAutomaticRole(label)
+  return (label.clickCallback == Geyser.Label.onRightClick and not label.releaseCallback) and "text" or ""
+end
+
+-- Applies that role to a menu's label, unless a script chose its role itself
+local function settleMenuLabelRole(label)
+  if label.rightClickMenu and (not label.accessibleRole or label.accessibleRole == "") then
+    setLabelAccessibleRole(label.name, menuLabelAutomaticRole(label))
+  end
+end
+
 function Geyser.Label:setClickCallback (func, ...)
   setLabelClickCallback(self.name, func, ...)
   self.clickCallback = func
   self.clickArgs = { ... }
+  settleMenuLabelRole(self)
 end
 
 --- Sets a callback to be used when this label is double clicked. When this
@@ -514,8 +824,8 @@ end
 -- @param ... Parameters to pass to the function. Must be strings or numbers.
 function Geyser.Label:setDoubleClickCallback (func, ...)
   setLabelDoubleClickCallback(self.name, func, ...)
-  self.doubleclickCallback = func
-  self.doubleclickArgs = { ... }
+  self.doubleClickCallback = func
+  self.doubleClickArgs = { ... }
 end
 
 --- Sets a callback to be used when a mouse click is released over this label. When this
@@ -527,6 +837,7 @@ function Geyser.Label:setReleaseCallback (func, ...)
   setLabelReleaseCallback(self.name, func, ...)
   self.releaseCallback = func
   self.releaseArgs = { ... }
+  settleMenuLabelRole(self)
 end
 
 --- Sets a callback to be used when the mouse cursor is moved over this label. When this
@@ -610,6 +921,45 @@ function Geyser.Label:setToolTip(txt, duration)
   self.toolTipDuration = duration
 end
 
+--- Sets the name a screen reader announces for the label, in place of its text.
+-- Needed for a label that shows only an image or icon. Pass "" to announce its text again.
+-- @param name the name to announce
+-- @return true, or nil and why the label refused it
+function Geyser.Label:setAccessibleName(name)
+  local ok, err = setLabelAccessibleName(self.name, name)
+  if ok then
+    self.accessibleName = name
+  end
+  return ok, err
+end
+
+--- Sets whether a screen reader announces the label as a button or as text.
+-- By default it is a button when it has a click or release callback; use "text" for one whose
+-- callbacks are not a button's, such as a drag handle. Pass "" to decide by its callbacks again.
+-- @param role "button", "text" or ""
+-- @return true, or nil and why the label refused it
+function Geyser.Label:setAccessibleRole(role)
+  local ok, err = setLabelAccessibleRole(self.name, role)
+  if ok then
+    self.accessibleRole = role
+    settleMenuLabelRole(self)
+  end
+  return ok, err
+end
+
+--- Sets whether a screen reader announces the label's new text when it changes, for a label
+-- showing something the player should hear about, such as a status or an alert. Only heard
+-- with the profile's accessibleLabels setting on; text that hasn't changed is not repeated.
+-- @param mode "polite" waits for the screen reader to finish, "assertive" interrupts it, "off" stops announcing
+-- @return true, or nil and why the label refused it
+function Geyser.Label:setLiveRegion(mode)
+  local ok, err = setLabelLiveRegion(self.name, mode)
+  if ok then
+    self.liveRegion = mode
+  end
+  return ok, err
+end
+
 --- Resets the tooltip of the label
 function Geyser.Label:resetToolTip()
   resetLabelToolTip(self.name)
@@ -618,10 +968,14 @@ function Geyser.Label:resetToolTip()
 end
 
 --- Set a predefined mouse cursor shape for this label
--- @param cursorShape the predefined cursorshape as a string
+-- @param cursorShape the name of a predefined cursor shape, or its number in mudlet.cursor
 -- See: <a href="https://wiki.mudlet.org/w/CursorShapes">https://wiki.mudlet.org/w/CursorShapes</a>
+-- @return true, or nil and a message when the label or the shape is refused, leaving cursorShape as it was
 function Geyser.Label:setCursor(cursorShape)
-  setLabelCursor(self.name, cursorShape)
+  local ok, err = setLabelCursor(self.name, cursorShape)
+  if not ok then
+    return nil, err
+  end
   -- Get cursorShape as string
   for k,v in pairs(mudlet.cursor) do
     if cursorShape == v then
@@ -630,6 +984,7 @@ function Geyser.Label:setCursor(cursorShape)
   end
 
   self.cursorShape = cursorShape
+  return true
 end
 
 --- Set a custom mouse cursor shape for this label.
@@ -678,17 +1033,20 @@ function closeNestChildren(label)
   local nLabels = label.nestedLabels
   if nLabels then
     for i, v in pairs(nLabels) do
-      v:hide()
-      if v.nestedLabels then
-        closeNestChildren(v)
-      end
-      if Geyser.Label.scrollV[v.nestParent] then
-        Geyser.Label.scrollV[v.nestParent][1]:hide()
-        Geyser.Label.scrollV[v.nestParent][2]:hide()
-      end
-      if Geyser.Label.scrollH[v.nestParent] then
-        Geyser.Label.scrollH[v.nestParent][1]:hide()
-        Geyser.Label.scrollH[v.nestParent][2]:hide()
+      if type(v) == "table" and v.hide then
+        v:hide()
+        -- a Geyser.Label's hide() closes its own nest, an override of hide() may not
+        if v.nestedLabels and v.hide ~= Geyser.Label.hide then
+          closeNestChildren(v)
+        end
+        if Geyser.Label.scrollV[v.nestParent] then
+          Geyser.Label.scrollV[v.nestParent][1]:hide()
+          Geyser.Label.scrollV[v.nestParent][2]:hide()
+        end
+        if Geyser.Label.scrollH[v.nestParent] then
+          Geyser.Label.scrollH[v.nestParent][1]:hide()
+          Geyser.Label.scrollH[v.nestParent][2]:hide()
+        end
       end
     end
   end
@@ -726,17 +1084,58 @@ function doNestScroll(label)
   bscroll.nestParent:displayNest()
 end
 
+-- getUserWindowSize warns in the Central Debug Console about any other name,
+-- such as a scroll box's or a user window deleted behind Geyser's back
+local function labelWindowSize(windowname)
+  if windowType(windowname) == "userwindow" then
+    local width, height = getUserWindowSize(windowname)
+    if width then
+      return width, height
+    end
+  end
+  return getMainWindowSize()
+end
+
+-- a right click menu level flies out the way its parent item did, unless only
+-- the other side of that item has room for it
+local function fitMenuLevel(parent, windowWidth)
+  local items = parent.nestedLabels
+  local first = items and items[1]
+  if not first or not first.menuName then
+    return
+  end
+  local flyDir = parent.flyDir or first.flyDir
+  if flyDir ~= "R" and flyDir ~= "L" then
+    return
+  end
+  local width = first.get_width()
+  local x = parent.get_x()
+  local fitsRight = x + parent.get_width() + width <= windowWidth
+  local fitsLeft = x - width >= 0
+  if flyDir == "R" and not fitsRight and fitsLeft then
+    flyDir = "L"
+  elseif flyDir == "L" and not fitsLeft and fitsRight then
+    flyDir = "R"
+  end
+  for _, item in ipairs(items) do
+    item.flyDir = flyDir
+  end
+  -- the scroll buttons outlive the menu being closed, so they would keep the side they were made on
+  for _, scrolls in pairs({Geyser.Label.scrollV[parent] or {}, Geyser.Label.scrollH[parent] or {}}) do
+    for _, scroll in ipairs(scrolls) do
+      scroll.flyDir = flyDir
+    end
+  end
+end
+
 --- Displays the nested elements within label, and orients them
 -- appropriately
 -- @param label The name of the label to use
 function Geyser.Label:displayNest()
   local maxDim = {}
   local flyMap = { R = { 1, 0 }, L = { -1, 0 }, T = { 0, -1 }, B = { 0, 1 } }
-  if self.windowname ~= "main" then
-    maxDim["H"], maxDim["V"] = getUserWindowSize(self.windowname)
-  else
-    maxDim["H"], maxDim["V"] = getMainWindowSize()
-  end
+  maxDim["H"], maxDim["V"] = labelWindowSize(self.windowname)
+  fitMenuLevel(self, maxDim["H"])
   local parent = self
   --build a list of the labels we can use until we hit the max
   local nestedLabels = {}
@@ -976,6 +1375,11 @@ function Geyser.Label:new (cons, container)
   cons.type = cons.type or "label"
   cons.nestParent = cons.nestParent or nil
   cons.format = cons.format or ""
+  local taken = mudlet.nameTakenByOtherKind(cons.name, "label", cons.windowname or (container or Geyser).windowname)
+  if taken then
+    printError(string.format("Geyser.Label '%s' was not created: %s", cons.name, taken), false, false)
+    return nil, taken
+  end
 
   -- Call parent's constructor
   local me = self.parent:new(cons, container)
@@ -987,14 +1391,17 @@ function Geyser.Label:new (cons, container)
 
   -- workaround for createLabel possibly being overwritten and not understanding the new parent argument
   -- see https://github.com/Mudlet/Mudlet/issues/3393
+  local ok, err
+  local x, y, width, height = me:pixel_geometry()
   if me.windowname == "main" then
-    createLabel(me.name, me:get_x(), me:get_y(),
-      me:get_width(), me:get_height(), me.fillBg)
+    ok, err = createLabel(me.name, x, y, width, height, me.fillBg)
   else
-    createLabel(me.windowname, me.name, me:get_x(), me:get_y(),
-      me:get_width(), me:get_height(), me.fillBg)
+    ok, err = createLabel(me.windowname, me.name, x, y, width, height, me.fillBg)
   end
--- This only has an effect if add2 is being used as for the standard add method me.hidden and me.auto_hidden is always false at creation/initialisation
+  if not mudlet.elementCreated(me.windowname, me.name, ok, err, "label") then
+    printError(string.format("Geyser.Label '%s' was not created: %s", me.name, err or "unknown error"), false, false)
+  end
+-- Geyser.Container:new() settles the hidden constraint before there is a widget to hide, so the hide is made good here
   if me.hidden or me.auto_hidden then
     hideWindow(me.name)
   end
@@ -1003,7 +1410,19 @@ function Geyser.Label:new (cons, container)
 
   -- Set any defined colors
   Geyser.Color.applyColors(me)
-  me:echo()
+  -- the constraints table is copied wholesale, so a font entry lands in me.font
+  -- without ever reaching the label; clear it first and put it back through
+  -- setFont(), which echoes for itself when it takes the font, and does not when
+  -- it refuses a font that is not a string. Nothing is written to me.font when
+  -- the constraints carry no font: an own field would shadow a prototype's.
+  if cons.font ~= nil then
+    me.font = ""
+    if not me:setFont(cons.font) then
+      me:echo()
+    end
+  else
+    me:echo()
+  end
 
   -- Set up mouse hover as the callback if we have one
   if cons.nestflyout then
@@ -1089,6 +1508,37 @@ function Geyser.Label:new (cons, container)
     me:setToolTip(me.toolTip, me.toolTipDuration)
   end
 
+  -- The constraints were copied onto the label already, so each is cleared before its setter
+  -- applies it, or a value the label refused would stay on the object
+  local accessibleName, accessibleRole, liveRegion = me.accessibleName, me.accessibleRole, me.liveRegion
+  me.accessibleName, me.accessibleRole, me.liveRegion = nil, nil, nil
+  if accessibleName then
+    local ok, err = me:setAccessibleName(accessibleName)
+    if not ok then
+      debugc(string.format("Geyser.Label:new(): accessibleName refused for '%s': %s", me.name, tostring(err)))
+    end
+  end
+
+  if accessibleRole then
+    local ok, err = me:setAccessibleRole(accessibleRole)
+    if not ok then
+      debugc(string.format("Geyser.Label:new(): accessibleRole refused for '%s': %s", me.name, tostring(err)))
+    end
+  end
+
+  if liveRegion then
+    -- setLabelLiveRegion raises on a non-string, which would leave this label half built
+    local ok, err
+    if type(liveRegion) == "string" then
+      ok, err = me:setLiveRegion(liveRegion)
+    else
+      err = string.format("liveRegion must be a string, got %s", type(liveRegion))
+    end
+    if not ok then
+      debugc(string.format("Geyser.Label:new(): liveRegion refused for '%s': %s", me.name, tostring(err)))
+    end
+  end
+
   -- Set clickthrough if included in constructor
   if cons.clickthrough then me:enableClickthrough() end
 
@@ -1098,15 +1548,156 @@ function Geyser.Label:new (cons, container)
   return me
 end
 
---- Deletes the label using the C++ deleteLabel function
--- Note: Nested labels (in nestedLabels array) have their own containers
--- and will be deleted through their container's cascading delete mechanism.
--- The nestedLabels array is for organizational purposes only.
-function Geyser.Label:type_delete()
-  -- Clean up nested label references to avoid dangling references
-  if self.nestedLabels then
-    self.nestedLabels = {}
+-- internal function: hides or shows a label's nested labels and its "More..."
+-- scroll labels along with the label itself, when its container hides or shows it
+local function cascadeToNest(label, method)
+  for _, v in pairs(label.nestedLabels or {}) do
+    if type(v) == "table" and v[method] then
+      v[method](v, true)
+    end
   end
+  for _, scrolls in ipairs({Geyser.Label.scrollV, Geyser.Label.scrollH}) do
+    if scrolls[label] then
+      scrolls[label][1][method](scrolls[label][1], true)
+      scrolls[label][2][method](scrolls[label][2], true)
+    end
+  end
+end
+
+--- Hides the label and closes its open nest. Hidden because its container was,
+-- the nest is hidden along with it instead, and comes back when the container is shown.
+-- @param auto true when the label is hidden because its container was hidden
+function Geyser.Label:hide(auto)
+  if auto then
+    cascadeToNest(self, "hide")
+  elseif self.nestedLabels then
+    closeNestChildren(self)
+  end
+  Geyser.Container.hide(self, auto)
+end
+
+--- Shows the label. Shown because its container was, it also brings back the
+-- nested labels that were hidden along with it.
+-- @param auto true when the label is shown because its container was shown
+function Geyser.Label:show(auto)
+  -- the nest parent's container may still be hidden when this label's own one comes
+  -- back; showing the parent again brings this label back with it. A parent that is
+  -- only closed is not waited on: its nest is closed too and stays hidden, but must
+  -- drop auto_hidden, or opening the parent later could never show it
+  local parent = self.nestParent
+  if auto and parent and parent.auto_hidden then
+    return false
+  end
+  if Geyser.Container.show(self, auto) == false then
+    return false
+  end
+  if auto then
+    cascadeToNest(self, "show")
+  end
+end
+
+-- internal function: a label deleted on its own may share its name with a newer
+-- label by now, and deleting it again would take that label with it
+local function stillRegistered(label)
+  return type(label) == "table" and label.delete and label.container
+    and label.container.windowList[label.name] == label
+end
+
+-- internal function: forgets the "More..." scroll labels a nest keeps in scrolls
+-- (Geyser.Label.scrollV or scrollH) and deletes the ones still registered
+local function deleteScrollLabels(scrolls, owner)
+  local scrollLabels = scrolls[owner]
+  if scrollLabels then
+    scrolls[owner] = nil
+    for _, scrollLabel in ipairs(scrollLabels) do
+      if stillRegistered(scrollLabel) then
+        scrollLabel:delete()
+      end
+    end
+  end
+end
+
+-- internal function: takes a deleted item out of its menu's MenuItems, so that the
+-- next rebuild does not bring it back as a new label without its action or style
+local function forgetMenuItem(menu, item)
+  local items = menu.MenuItems
+  local at = type(items) == "table" and table.index_of(items, item.menuName)
+  if not at then
+    return
+  end
+  table.remove(items, at)
+  if type(items[at]) == "table" then
+    table.remove(items, at)
+  end
+  -- changeMenuIndex goes by these without rebuilding the menu first
+  for i, name in ipairs(items) do
+    if type(name) == "string" and menu.MenuLabels[name] then
+      menu.MenuLabels[name].tblIndex = i
+    end
+  end
+  for i, label in ipairs(menu.nestedLabels) do
+    label.index = i
+  end
+end
+
+--- Deletes the label using the C++ deleteLabel function, along with its nested
+-- labels, its own "More..." scroll labels and its right click menu items.
+-- Nested labels sit in the container addChild was given (by default this label's
+-- user window, or the Geyser root for a label in the main window), so the
+-- cascading delete of this label's container may not reach them.
+function Geyser.Label:type_delete()
+  local parent = self.nestParent
+  local siblings = parent and parent.nestedLabels
+  if siblings then
+    -- a new list rather than table.remove(), so that a script deleting a nest from
+    -- an ipairs() loop over it does not skip every other label
+    local kept, found = {}, false
+    for i = 1, table.maxn(siblings) do
+      if siblings[i] == self then
+        found = true
+      elseif siblings[i] ~= nil then
+        kept[#kept + 1] = siblings[i]
+      end
+    end
+    if found then
+      parent.nestedLabels = kept
+    end
+    if parent.MenuLabels and parent.MenuLabels[self.menuName] == self then
+      parent.MenuLabels[self.menuName] = nil
+      forgetMenuItem(parent, self)
+    end
+  end
+  -- a scroll label deleted on its own, or by the cascade of the container it was
+  -- made in, must not stay cached: the nest would reuse it, and hiding or showing
+  -- the nest parent would act on whichever label has its name now
+  for _, scrolls in ipairs({Geyser.Label.scrollV, Geyser.Label.scrollH}) do
+    local pair = parent and scrolls[parent]
+    if pair and (pair[1] == self or pair[2] == self) then
+      deleteScrollLabels(scrolls, parent)
+    end
+  end
+  if self.nestedLabels then
+    local nested = self.nestedLabels
+    self.nestedLabels = {}
+    -- a menu item can leave nestedLabels and still be a label of this menu: a
+    -- hidden one, or an attach label Adjustable.Container:onEnterAtt left out.
+    -- Emptied first so that its items, going with the whole menu, leave the
+    -- MenuItems list the script handed in as it was.
+    local menuLabels = self.MenuLabels
+    if menuLabels then
+      self.MenuLabels = {}
+    end
+    for _, item in pairs(menuLabels or {}) do
+      nested[#nested + 1] = item
+    end
+    for _, child in pairs(nested) do
+      if stillRegistered(child) then
+        child:delete()
+      end
+    end
+  end
+  deleteScrollLabels(Geyser.Label.scrollV, self)
+  deleteScrollLabels(Geyser.Label.scrollH, self)
   deleteLabel(self.name)
 end
 
@@ -1114,8 +1705,7 @@ end
 function Geyser.Label:new2 (cons, container)
   cons = cons or {}
   cons.useAdd2 = true
-  local me = self:new(cons, container)
-  return me
+  return self:new(cons, container)
 end
 
 --- internal function that adds the "More..." scrollbars
@@ -1174,7 +1764,10 @@ function Geyser.Label:addChild(cons, container)
     flyDir = "L"
     layoutDir = "V"
   end
-  local me = Geyser.Label:new(cons, container)
+  local me, taken = Geyser.Label:new(cons, container)
+  if not me then
+    return nil, taken
+  end
   --this is our parent
   me.nestParent = self
   me:setOnEnter("doNestEnter", me)
@@ -1199,15 +1792,17 @@ function Geyser.Label:addChild(cons, container)
 end
 
 --- Sets label to no longer intercept mouse events
+--- @return true, or nil and an error message if the label no longer exists
 function Geyser.Label:enableClickthrough()
-  enableClickthrough(self.name)
   self.clickthrough = true
+  return enableClickthrough(self.name)
 end
 
 --- Sets label to once again intercept mouse events
+--- @return true, or nil and an error message if the label no longer exists
 function Geyser.Label:disableClickthrough()
-  disableClickthrough(self.name)
   self.clickthrough = false
+  return disableClickthrough(self.name)
 end
 
 -- internal function to change the layout of the rightClick menu if we are at the right edge
@@ -1244,6 +1839,9 @@ local function addElement(self, name, configLabel, myMenu, depth, index, restyle
     nestable = true,
   }
 )
+if not myMenu.MenuLabels[name] then
+  return false
+end
 -- ensure Labels are on the same parent window
 if self.windowname ~= myMenu.MenuLabels[name].windowname then
   if self.windowname == "main" then
@@ -1257,10 +1855,15 @@ if restyle then
   myMenu.MenuLabels[name].stylesheet = nil
 end
 
-local Style = configLabel["Style"..depth] or configLabel["Style"]
-local MenuStyle = myMenu.MenuLabels[name].stylesheet or configLabel["MenuStyle"..depth] or configLabel["MenuStyle"]
-MenuStyle = MenuStyle or configLabel.MenuStyleMode[string.lower(Style)]
-myMenu.MenuLabels[name]:setStyleSheet(MenuStyle)
+-- every addMenuLabel walks the whole menu again, and Qt restyles a label even
+-- when it is handed the sheet it already has, so only unstyled items get one
+if not myMenu.MenuLabels[name].stylesheet then
+  local Style = configLabel["Style"..depth] or configLabel["Style"]
+  local MenuStyle = configLabel["MenuStyle"..depth] or configLabel["MenuStyle"]
+  MenuStyle = MenuStyle or configLabel.MenuStyleMode[string.lower(Style)]
+  myMenu.MenuLabels[name]:setStyleSheet(MenuStyle)
+end
+return true
 end
 
 -- internal function to create the right click Menu Labels
@@ -1275,14 +1878,19 @@ function Geyser.Label:createMenuItems(restyle, MenuItems, configLabel, myMenu, d
   local index = 1
 
   for i = 1, #MenuItems do
-    if type(MenuItems[i]) == "string" and not MenuItems[i].ignore then
-      addElement(self, MenuItems[i], configLabel, myMenu, depth, index, restyle)
-      myMenu.MenuLabels[MenuItems[i]].index = index
-      myMenu.MenuLabels[MenuItems[i]].tblIndex = i
-      index = index + 1
+    -- an item another kind of element holds the name of is left out, Geyser.Label:new having said why
+    if type(MenuItems[i]) == "string"
+      and addElement(self, MenuItems[i], configLabel, myMenu, depth, index, restyle) then
+      local item = myMenu.MenuLabels[MenuItems[i]]
+      item.index = index
+      item.tblIndex = i
+      -- a hidden item is out of nestedLabels, so the items after it move up
+      if not item.ignore then
+        index = index + 1
+      end
     end
     --Ignore all children if parent is hidden
-    if type(MenuItems[i]) == "table" and not MenuItems[i - 1].ignore then
+    if type(MenuItems[i]) == "table" and not MenuItems[i - 1].ignore and myMenu.MenuLabels[MenuItems[i - 1]] then
       myMenu.MenuLabels[MenuItems[i - 1]]:createMenuItems(restyle, MenuItems[i], configLabel, myMenu.MenuLabels[MenuItems[i - 1]], depth + 1)
       myMenu.MenuLabels[MenuItems[i - 1]].isParent = true
     end
@@ -1305,7 +1913,7 @@ end
 function Geyser.Label:onRightClick(event)
   closeAllLevels(self.rightClickMenu)
   if event.button == "RightButton" then
-    local winw = getUserWindowSize(self.windowname)
+    local winw = labelWindowSize(self.windowname)
     local mousepos = self:get_x() + event.x
     local maxdiff = tonumber(self.rightClickMenu.MenuWidth)
     local diff = winw - mousepos
@@ -1344,7 +1952,7 @@ function Geyser.Label:findMenuElement(name, parent, findParent)
     end
     if type(item) == "table" then
       local itemParent = menu[i-1]
-      local element, menuTable = self:findMenuElement(name, parent.MenuLabels[itemParent])
+      local element, menuTable = self:findMenuElement(name, parent.MenuLabels[itemParent], findParent)
       if element then
         return element, menuTable
       end
@@ -1398,23 +2006,60 @@ function Geyser.Label:showMenuLabel(name)
     return
   end
   menuElement.ignore = false
-  table.insert(menuElement.MenuNestTable, menuElement.MenuIndex, menuElement)
+  -- the parent's list, not the one it was hidden from: deleting a sibling replaces it
+  local nestTable = menuElement.nestParent.nestedLabels
+  table.insert(nestTable, math.min(menuElement.MenuIndex, #nestTable + 1), menuElement)
   self:createMenuItems()
+end
+
+local function menuIndexProblem(index, count)
+  if type(index) ~= "number" or index ~= math.floor(index) then
+    return string.format("index must be a whole number, got %s (%s)", tostring(index), type(index))
+  end
+  if index < 1 or index > count then
+    return string.format("index %s out of range (1-%d)", tostring(index), count)
+  end
 end
 
 --- adds a new item to the right click menu
 -- @param name Name of the new menu item.
 -- @param parent name of the parent where the new item will be created in (optional)
--- @param index of the new menu item (optional)
+-- @param index of the new menu item (optional), a whole number from 1 to the number of
+--        items at that level once it is added; any other index adds nothing and returns
+--        false plus a message. Not usable together with a nested
+--        parent: an item is named for the parent it sits in, so the index lookup
+--        misses and raises.
+-- @return true, or false plus a message when the item cannot be added
 function Geyser.Label:addMenuLabel(name, parent, index)
+  if type(name) ~= "string" then
+    return false, "addMenuLabel: needs the name of the item to add as a string, got "..type(name)
+  end
+
   local menuElement, menuParent = self:findMenuElement(parent, self.rightClickMenu, true)
 
-  if parent and not menuParent then
-    error ("showMenuLabel: Couldn't find menu parent "..parent)
+  -- findMenuElement reports failure as nil plus a message, so the second return
+  -- is a string rather than nil when it fails and cannot be tested for absence -
+  -- the element is what has to be checked. With findParent set it only answers
+  -- for a parent that is followed by a submenu table, so a parent declared
+  -- without one lands here as well: appending to it has nowhere to go.
+  if parent and not menuElement then
+    return false, "addMenuLabel: Couldn't find menu parent "..parent
   end
 
   menuElement = menuElement or self.rightClickMenu
   menuParent = menuParent or self.rightClickMenu.MenuItems
+
+  if index then
+    local count = #(menuElement.nestedLabels or {})
+    local existing = menuElement.MenuLabels[name]
+    if not existing or existing.ignore then
+      count = count + 1
+    end
+    local problem = menuIndexProblem(index, count)
+    if problem then
+      return false, "addMenuLabel: "..problem
+    end
+  end
 
   if parent then
     parent = parent.."."
@@ -1433,11 +2078,14 @@ function Geyser.Label:addMenuLabel(name, parent, index)
   if index then
     self:changeMenuIndex(parent..name, index)
   end
+
+  return true
 end
 
 --- changes a right click menu items index
 -- @param name Name of the menu item. If the menu item has a parent name needs to be given as "Parent.MenuItemName"
--- @param index the new index
+-- @param index the new position among the item's siblings, a whole number from 1 to the
+--        number of items at that level; any other index raises an error and leaves the menu as it was
 function Geyser.Label:changeMenuIndex(name, index)
   local menuElement, menuTable = self:findMenuElement(name, self.rightClickMenu)
 
@@ -1446,6 +2094,10 @@ function Geyser.Label:changeMenuIndex(name, index)
   end
 
   local nestTable = menuElement.nestParent.nestedLabels
+  local problem = menuIndexProblem(index, #nestTable)
+  if problem then
+    error("changeMenuIndex: "..problem)
+  end
   local newindex = nestTable[index].tblIndex
 
   -- table index is not the same as index
@@ -1501,12 +2153,16 @@ function Geyser.Label:createRightClickMenu(cons)
 
   cons.Style = cons.Style or "light"
 
-  if not(self.rightClickMenu) then
+  local firstMenu = not self.rightClickMenu
+  if firstMenu then
     self:setClickCallback(self.onRightClick, self)
   end
 
   -- create a label with a nestable=true property as base menu
   self.rightClickMenu = Geyser.Label:new(cons, self)
+  if firstMenu then
+    settleMenuLabelRole(self)
+  end
   self:createMenuItems(nil, cons.MenuItems)
 end
 
@@ -1532,7 +2188,7 @@ end
 -- @table mouseWheelEvent
 
 --- Returns a table in the format of getTextFormat which describes the default formatting created by any stylesheets.
--- which are applied to the label.
+-- which are applied to the label, or nil and an error message if the label no longer exists.
 -- See: <a href="https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelFormat">https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelFormat</a>
 -- See: <a href="https://wiki.mudlet.org/w/Manual:Lua_Functions#getTextFormat">https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelFormat</a>
 function Geyser.Label:getFormat()

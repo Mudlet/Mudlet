@@ -28,11 +28,16 @@
 #include "utils.h" // For NameGroupMatches
 
 #include <QDebug>
+#include <QDebugStateSaver>
 #include <QPointer>
 #include <QSharedPointer>
+#include <QString>
+#include <QVector>
+#include <QtGlobal>
 
 #define PCRE2_CODE_UNIT_WIDTH 8
 #include <pcre2.h>
+#include <QCoreApplication>
 
 class Host;
 
@@ -51,7 +56,6 @@ public:
     void compileRegex();
     QString getName() const { return mName; }
     void setName(const QString& name);
-    void compile();
     bool compileScript();
     void execute();
     QString getScript() const { return mScript; }
@@ -61,13 +65,12 @@ public:
     void setCommand(const QString& command) { mCommand = command; }
     QString getCommand() const { return mCommand; }
     QString packageName(TAlias* pAlias);
-    QString moduleName(TAlias* pAlias);
     bool checkIfNew();
     void unmarkAsNew();
 
 
 
-    bool match(const QString& toMatch);
+    bool match(const QByteArray& haystack);
     bool registerAlias();
 
     TAlias() = default;
@@ -76,17 +79,26 @@ public:
     QString mCommand;
     QString mRegexCode;
     QSharedPointer<pcre2_code> mpRegex;
+    QSharedPointer<pcre2_match_data> mpMatchData;
+    bool mRegexJitCompiled = false;
     QString mScript;
     QPointer<Host> mpHost;
     bool mModuleMember = false;
+    // After a move: a member under a module's folder, and at the top level only while its module's file still holds it
+    void updateModuleMembership();
     bool mModuleMasterFolder = false;
+    // The module whose file this was loaded from
+    QString mLoadedFromModule;
     QString mFuncName;
     bool exportItem = true;
     bool mRegisteredAnonymousLuaFunction = false;
+    // 0 when no function is held; luaL_ref() never returns 0
+    int mLuaFunctionRef = 0;
     QVector<NameGroupMatches> nameCaptures;
     bool mIsNew = true;
 
 private:
+    void setModuleMembership(bool);
     bool mNeedsToBeCompiled = true;
 };
 

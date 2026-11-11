@@ -24,7 +24,10 @@ jobs:
     - name: update text for translation
       uses: Mudlet/lupdate-action@master
       with:
-        args: -recursive ./src/ ./3rdparty/edbee-lib/edbee-lib -ts ./translations/mudlet.ts
+        # -extensions replaces lupdate's default list rather than adding to it, so
+        # the whole default is spelled out here plus mm: Objective-C++ sources are
+        # not scanned by default, and src/AppleSpeechRecognizer.mm has tr() strings.
+        args: -extensions java,jui,ui,c,c++,cc,cpp,cxx,ch,h,h++,hh,hpp,hxx,js,qs,qml,qrc,mm -recursive ./src/ ./3rdparty/edbee-lib/edbee-lib -ts ./translations/mudlet.ts
 
     - name: check if any UI text was modified
       id: getdiff

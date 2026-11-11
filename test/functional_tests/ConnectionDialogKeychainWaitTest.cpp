@@ -1,0 +1,1136 @@
+/***************************************************************************
+ *   Copyright (C) 2026 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+
+/*
+ * What the connection dialog does while a keychain read has not answered yet:
+ * it stays on screen and says so, and the Connect toolbar button can always
+ * bring it back. MUDLET_TEST_MODE keeps CredentialManager on file storage, so
+ * the outstanding read is stood in for by the state the real one sets, and its
+ * answers by calls to the handlers the real one calls.
+ *
+ * Run with: ctest -R ConnectionDialogKeychainWaitTest -V
+ */
+
+#include "PortableModeTestHelper.h"
+#include "CredentialManager.h"
+#include "Host.h"
+#include "MudletInstanceCoordinator.h"
+#include "MudletApp.h"
+#include "TMainConsole.h"
+#include "dlgConnectionProfiles.h"
+#include "mudlet.h"
+
+#include <QtTest/QtTest>
+
+#include <QLabel>
+#include <QLoggingCategory>
+#include <QPointer>
+#include <QScopeGuard>
+#include <QPushButton>
+#include <QSignalBlocker>
+#include <QStandardPaths>
+#include <algorithm>
+#include <chrono>
+
+#include "GroupedTest.h"
+
+using namespace std::chrono_literals;
+
+// The dialog's account of what a load did is all qDebug() lines, which some distributions turn
+// off by default in their shipped qtlogging.ini
+class DialogLogCapture
+{
+public:
+    DialogLogCapture()
+    {
+        smLines.clear();
+        QLoggingCategory::setFilterRules(qsl("default.debug=true"));
+        smPrevious = qInstallMessageHandler(&DialogLogCapture::capture);
+    }
+    ~DialogLogCapture()
+    {
+        qInstallMessageHandler(smPrevious);
+        QLoggingCategory::setFilterRules(QString());
+    }
+    bool saw(const QString& text) const
+    {
+        return std::any_of(smLines.cbegin(), smLines.cend(), [&text](const QString& line) {
+            return line.contains(text);
+        });
+    }
+    QString all() const { return smLines.join(qsl(" | ")); }
+
+private:
+    static void capture(QtMsgType type, const QMessageLogContext& context, const QString& message)
+    {
+        smLines << message;
+        if (smPrevious) {
+            smPrevious(type, context, message);
+        }
+    }
+    inline static QStringList smLines;
+    inline static QtMessageHandler smPrevious = nullptr;
+};
+
+class ConnectionDialogKeychainWaitTest : public QObject
+{
+    Q_OBJECT
+
+private:
+    QTemporaryDir mXdgDir;
+    QByteArray mSavedXdg;
+
+    const QString mProfileName = qsl("ConnDialogKeychain-Test");
+
+    dlgConnectionProfiles* dialog() const { return mudlet::self()->mpConnectionDialog.data(); }
+
+    static void seedProfilePassword(const QString& profile, const QString& password)
+    {
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, profile)));
+        QVERIFY2(MudletApp::writeProfileData(profile, qsl("password"), password).first, "could not seed the profile's password file");
+    }
+
+    static void addProfiles(dlgConnectionProfiles* dlg, const QStringList& profiles, const QString& selected)
+    {
+        const QSignalBlocker blocker(dlg->listWidget_profiles);
+        for (const QString& profile : profiles) {
+            auto* profileItem = new QListWidgetItem(profile, dlg->listWidget_profiles);
+            profileItem->setData(dlgConnectionProfiles::csmNameRole, profile);
+            if (profile == selected) {
+                dlg->listWidget_profiles->setCurrentItem(profileItem);
+            }
+        }
+    }
+
+    static void selectProfile(dlgConnectionProfiles* dlg, const QString& profile)
+    {
+        const QSignalBlocker blocker(dlg->listWidget_profiles);
+        const auto items = dlg->findData(*dlg->listWidget_profiles, profile, dlgConnectionProfiles::csmNameRole);
+        QVERIFY(!items.isEmpty());
+        dlg->listWidget_profiles->setCurrentItem(items.first());
+    }
+
+    // Offline, which queues behind a password load just as Connect does; whether it queued is the
+    // answer. The name field is emptied afterwards so the load that completes the queued request
+    // leaves loadProfile() with no profile to start.
+    static bool loadQueuesBehindThePasswordLoad(dlgConnectionProfiles* dlg, const QString& profile)
+    {
+        {
+            const QSignalBlocker blocker(dlg->profile_name_entry);
+            dlg->profile_name_entry->setText(profile);
+        }
+        dlg->ensurePasswordLoadedThenConnect(false);
+        const bool queued = dlg->mPendingProfileLoad == profile;
+        const QSignalBlocker blocker(dlg->profile_name_entry);
+        dlg->profile_name_entry->clear();
+        return queued;
+    }
+
+    static QStringList queuedLoads(const dlgConnectionProfiles* dlg)
+    {
+        QStringList profiles;
+        for (const auto* timer : dlg->findChildren<QTimer*>()) {
+            const QVariant profile = timer->property("profileName");
+            if (profile.isValid() && timer->isActive()) {
+                profiles << profile.toString();
+            }
+        }
+        return profiles;
+    }
+
+    // Behind the signals, which would otherwise run the whole profile-selected handler
+    static void selectProfileQuietly(dlgConnectionProfiles* dlg, const QString& profile)
+    {
+        const QSignalBlocker blocker(dlg->listWidget_profiles);
+        auto* profileItem = new QListWidgetItem(profile, dlg->listWidget_profiles);
+        profileItem->setData(dlgConnectionProfiles::csmNameRole, profile);
+        dlg->listWidget_profiles->setCurrentItem(profileItem);
+    }
+
+    // What Connect (or Offline) leaves behind while the profile's password is still being read
+    static void queueLoad(dlgConnectionProfiles* dlg, const QString& profile, bool alsoConnect)
+    {
+        dlg->mKeychainOperationProfile = profile;
+        dlg->mPendingProfileLoad = profile;
+        dlg->mPendingConnect = alsoConnect;
+        dlg->showKeychainWait();
+    }
+
+    static bool damageSavedPassword(const QString& profile)
+    {
+        if (!CredentialManager::storeCredential(profile, qsl("character"), qsl("soon_unreadable"))) {
+            return false;
+        }
+        QFile file(qsl("%1/profiles/%2/passwords/character").arg(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation), profile));
+        if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+            return false;
+        }
+        const bool written = file.write("this is not anything Mudlet encrypted") > 0;
+        file.close();
+        return written;
+    }
+
+private slots:
+    void initTestCase()
+    {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - cannot redirect the config dir for this test");
+        }
+
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        QVERIFY(mXdgDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mXdgDir.path()))); // profiles/ = XDG opt-in
+        qputenv("XDG_CONFIG_HOME", mXdgDir.path().toUtf8());
+
+        mudlet::start();
+        mudlet::self()->setupConfig();
+        QVERIFY(MudletApp::getMudletPath(enums::profilesPath).startsWith(mXdgDir.path()));
+        mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
+        mudlet::self()->init();
+        mudlet::self()->setStorePasswordsSecurely(false);
+
+        mudlet::self()->startAutoLogin({});
+        // the dialog is only shown from a queued lambda, so the pointer turning
+        // up is not enough
+        QVERIFY(QTest::qWaitFor(
+                []() {
+                    return mudlet::self()->mpConnectionDialog && mudlet::self()->mpConnectionDialog->isVisible();
+                },
+                5s));
+    }
+
+    void cleanupTestCase()
+    {
+        mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
+        delete mudlet::self();
+    }
+
+    // Connect has to put the dialog back on screen, not just raise a hidden one
+    void test_showConnectionDialogRevealsAHiddenDialog()
+    {
+        auto* dlg = dialog();
+        QVERIFY2(dlg, "No connection dialog to test against");
+
+        dlg->setVisible(false);
+        QVERIFY2(!dlg->isVisible(), "The dialog would not hide, so this test cannot cover the reported behaviour");
+
+        mudlet::self()->slot_showConnectionDialog();
+        QTest::qWait(100ms);
+
+        QVERIFY2(dialog() == dlg, "A second connection dialog was created instead of the existing one being used");
+        QVERIFY2(dlg->isVisible(), "The existing dialog was left hidden, so the Connect button does nothing for the rest of the session");
+    }
+
+    // A read that timed out can still be answered afterwards, and by then the load it was holding
+    // up has run without it: that second answer may fill the password field and nothing else, and
+    // not even that over a password the user typed.
+    void test_aLateKeychainAnswerTouchesNothingButAnUntypedPasswordField()
+    {
+        // A dialog of its own: completing the queued load at the end closes whichever dialog it
+        // runs on, and the shared one is what the case below needs. Never shown, so no keychain
+        // read of its own is ever started.
+        auto* dlg = new dlgConnectionProfiles(mudlet::self());
+
+        // the late answer only considers a field whose profile is still the selected one, so the
+        // list needs the entry that state is about - set behind the signals, which would otherwise
+        // run the whole profile-selected handler
+        {
+            const QSignalBlocker blocker(dlg->listWidget_profiles);
+            auto* profileItem = new QListWidgetItem(mProfileName, dlg->listWidget_profiles);
+            profileItem->setData(dlgConnectionProfiles::csmNameRole, mProfileName);
+            dlg->listWidget_profiles->setCurrentItem(profileItem);
+        }
+        {
+            const QSignalBlocker blocker(dlg->character_password_entry);
+            dlg->character_password_entry->setText(qsl("typed-while-waiting"));
+            // what typing it, rather than a store's answer, leaves behind
+            dlg->character_password_entry->setModified(true);
+        }
+
+        dlg->mKeychainOperationProfile = mProfileName;
+        dlg->mPendingProfileLoad = mProfileName;
+        dlg->mPendingConnect = true;
+        dlg->showKeychainWait();
+
+        dlg->passwordArrivedLate(mProfileName, true, qsl("from-the-keychain"), QString());
+
+        QCOMPARE(dlg->character_password_entry->text(), qsl("typed-while-waiting"));
+        QCOMPARE(dlg->mKeychainOperationProfile, mProfileName);
+        QCOMPARE(dlg->mPendingProfileLoad, mProfileName);
+        QVERIFY2(dlg->mPendingConnect, "the late answer dropped the queued connection");
+        QVERIFY2(dlg->mKeychainWaitShown, "the late answer ended a wait that is still going on");
+
+        // and the read in flight, answering properly, still completes the queued load. loadProfile()
+        // returns at once on an empty profile name, which keeps this from starting a real profile
+        QVERIFY(dlg->profile_name_entry->text().isEmpty());
+        dlg->passwordRetrieved(mProfileName, true, qsl("from-the-keychain"), QString());
+
+        QVERIFY2(dlg->mKeychainOperationProfile.isEmpty(), "the answered read is still recorded as in flight");
+        QVERIFY2(dlg->mPendingProfileLoad.isEmpty(), "the queued load was left queued");
+        QVERIFY2(!dlg->mKeychainWaitShown, "the dialog is still in its waiting-for-the-keychain state");
+
+        dlg->deleteLater();
+    }
+
+    // The other half of the late answer: a field still empty on a dialog nobody has pressed Connect
+    // on yet gets the password, which a Connect then loads the profile with.
+    void test_aLateKeychainAnswerFillsAnEmptyPasswordField()
+    {
+        auto* dlg = new dlgConnectionProfiles(mudlet::self());
+        {
+            const QSignalBlocker blocker(dlg->listWidget_profiles);
+            auto* profileItem = new QListWidgetItem(mProfileName, dlg->listWidget_profiles);
+            profileItem->setData(dlgConnectionProfiles::csmNameRole, mProfileName);
+            dlg->listWidget_profiles->setCurrentItem(profileItem);
+        }
+        QVERIFY2(dlg->character_password_entry->text().isEmpty(), "a fresh dialog's password field is not empty, so this test cannot cover the refill");
+
+        dlg->passwordArrivedLate(mProfileName, true, qsl("from-the-keychain"), QString());
+
+        QCOMPARE(dlg->character_password_entry->text(), qsl("from-the-keychain"));
+        dlg->deleteLater();
+    }
+
+    // At the deadline the lookup answers with the encrypted file's copy when it has one, and a
+    // keychain write leaves that copy as it was: the keychain's late answer is the newer password.
+    void test_aLateKeychainAnswerReplacesTheFilesCopyInTheField()
+    {
+        auto* dlg = new dlgConnectionProfiles(mudlet::self());
+        {
+            const QSignalBlocker blocker(dlg->listWidget_profiles);
+            auto* profileItem = new QListWidgetItem(mProfileName, dlg->listWidget_profiles);
+            profileItem->setData(dlgConnectionProfiles::csmNameRole, mProfileName);
+            dlg->listWidget_profiles->setCurrentItem(profileItem);
+        }
+
+        dlg->mKeychainOperationProfile = mProfileName;
+        dlg->passwordRetrieved(mProfileName, true, qsl("older-file-secret"), QString());
+        QCOMPARE(dlg->character_password_entry->text(), qsl("older-file-secret"));
+
+        dlg->passwordArrivedLate(mProfileName, true, qsl("newer-keychain-secret"), QString());
+
+        QCOMPARE(dlg->character_password_entry->text(), qsl("newer-keychain-secret"));
+        dlg->deleteLater();
+    }
+
+    // Where a portable profile's password actually lives. Since #3121 (2019) the
+    // dialog has written it to the profile's own "password" data file, and
+    // Host::loadPassword still reads it from there - but #7956 replaced the
+    // dialog's read of that file with a read of QSettings, the pre-2019 location,
+    // in both the portable branch and the keychain-came-back-empty fallback. The
+    // password still worked at connect time, so the only symptom was a field that
+    // was always blank for the people who keep passwords out of the keychain.
+    void test_aPortablePasswordInTheProfileFileReachesTheField()
+    {
+        const QString profile = qsl("ConnDialogPortable-Test");
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, profile)));
+        QVERIFY2(MudletApp::writeProfileData(profile, qsl("password"), qsl("portable-secret")).first, "could not seed the profile's password file");
+
+        auto* dlg = new dlgConnectionProfiles(mudlet::self());
+        {
+            const QSignalBlocker blocker(dlg->listWidget_profiles);
+            auto* profileItem = new QListWidgetItem(profile, dlg->listWidget_profiles);
+            profileItem->setData(dlgConnectionProfiles::csmNameRole, profile);
+            dlg->listWidget_profiles->setCurrentItem(profileItem);
+        }
+        QVERIFY2(dlg->character_password_entry->text().isEmpty(), "a fresh dialog's password field is not empty, so this test cannot cover the load");
+
+        dlg->loadPasswordFromSettings(profile);
+
+        QCOMPARE(dlg->character_password_entry->text(), qsl("portable-secret"));
+        dlg->deleteLater();
+    }
+
+    // The pre-2019 location is still a real one - a profile last written by a Mudlet
+    // old enough to keep passwords in mudlet.ini has nothing in its profile
+    // directory - so it stays as the fallback rather than being replaced.
+    void test_aPasswordLeftInTheOldSettingsIsStillFound()
+    {
+        const QString profile = qsl("ConnDialogSettingsOnly-Test");
+        auto& settings = *MudletApp::getQSettings();
+        settings.beginGroup(qsl("profiles/%1").arg(profile));
+        settings.setValue(qsl("password"), qsl("from-the-ini"));
+        settings.endGroup();
+
+        auto* dlg = new dlgConnectionProfiles(mudlet::self());
+        dlg->loadPasswordFromSettings(profile);
+
+        QCOMPARE(dlg->character_password_entry->text(), qsl("from-the-ini"));
+        dlg->deleteLater();
+    }
+
+    // A later read of the same profile that fails falls back on the password kept in the settings,
+    // which is empty for a profile whose password lives in the keychain: it must not wipe the one an
+    // earlier read handed over late.
+    void test_aFailedReadKeepsAPasswordAlreadyInTheField()
+    {
+        auto* dlg = new dlgConnectionProfiles(mudlet::self());
+        {
+            const QSignalBlocker blocker(dlg->listWidget_profiles);
+            auto* profileItem = new QListWidgetItem(mProfileName, dlg->listWidget_profiles);
+            profileItem->setData(dlgConnectionProfiles::csmNameRole, mProfileName);
+            dlg->listWidget_profiles->setCurrentItem(profileItem);
+        }
+        dlg->passwordArrivedLate(mProfileName, true, qsl("from-the-keychain"), QString());
+        QCOMPARE(dlg->character_password_entry->text(), qsl("from-the-keychain"));
+
+        dlg->mKeychainOperationProfile = mProfileName;
+        dlg->passwordRetrieved(mProfileName, false, QString(), qsl("Operation timed out"));
+
+        QCOMPARE(dlg->character_password_entry->text(), qsl("from-the-keychain"));
+        dlg->deleteLater();
+    }
+
+    // An answer for a profile other than the queued one has nothing to run, but the wait it ends
+    // took Connect, Offline, the profile list and the form away: they have to come back, or the
+    // dialog is stuck the way an unanswered read used to leave it.
+    void test_anAnswerForAnotherProfileHandsTheDialogBack()
+    {
+        auto* dlg = new dlgConnectionProfiles(mudlet::self());
+        dlg->validName = true;
+        dlg->validUrl = true;
+        dlg->validPort = true;
+        dlg->connect_button->setEnabled(true);
+        dlg->offline_button->setEnabled(true);
+        dlg->listWidget_profiles->setEnabled(true);
+
+        dlg->mKeychainOperationProfile = qsl("some-other-profile");
+        dlg->mPendingProfileLoad = mProfileName;
+        dlg->mPendingConnect = true;
+        dlg->showKeychainWait();
+        QVERIFY2(!dlg->connect_button->isEnabled(), "the wait did not take Connect away, so this test cannot cover handing it back");
+
+        dlg->passwordRetrieved(qsl("some-other-profile"), true, qsl("its-password"), QString());
+
+        QVERIFY2(dlg->connect_button->isEnabled(), "Connect was left disabled");
+        QVERIFY2(dlg->offline_button->isEnabled(), "Offline was left disabled");
+        QVERIFY2(dlg->listWidget_profiles->isEnabled(), "The profile list was left disabled");
+        QVERIFY2(dlg->tabWidget_connectionInfo->isEnabled(), "The connection details were left locked");
+        QVERIFY2(dlg->profileAdminArea->isEnabled(), "The profile buttons were left locked");
+        QVERIFY2(!dlg->mKeychainWaitShown, "the dialog is still in its waiting-for-the-keychain state");
+        QVERIFY2(dlg->mPendingProfileLoad.isEmpty(), "a load queued for another profile was left queued");
+        QVERIFY2(!dlg->mPendingConnect, "a connection queued for another profile was left queued");
+        QVERIFY2(dlg->mKeychainOperationProfile.isEmpty(), "the answered read is still recorded as in flight");
+        dlg->deleteLater();
+    }
+
+    // A profile picked while another's read is in flight must still have its password loaded once
+    // that read answers, and the timer that asked for it must not be left behind
+    void test_aLoadArrivingDuringAnotherProfilesReadRunsWhenItAnswers()
+    {
+        const QString profile = qsl("ConnDialogDeferredLoad-Test");
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, profile)));
+        QVERIFY2(MudletApp::writeProfileData(profile, qsl("password"), qsl("deferred-secret")).first, "could not seed the profile's password file");
+
+        auto* dlg = new dlgConnectionProfiles(mudlet::self());
+        const QPointer<dlgConnectionProfiles> guard = dlg;
+        auto cleanup = qScopeGuard([&guard]() {
+            delete guard.data();
+        });
+        {
+            const QSignalBlocker blocker(dlg->listWidget_profiles);
+            auto* profileItem = new QListWidgetItem(profile, dlg->listWidget_profiles);
+            profileItem->setData(dlgConnectionProfiles::csmNameRole, profile);
+            dlg->listWidget_profiles->setCurrentItem(profileItem);
+        }
+        dlg->mKeychainOperationProfile = qsl("profile-being-read");
+
+        dlg->schedulePasswordLoad(profile);
+        const QPointer<QTimer> queuedLoad = dlg->findChild<QTimer*>();
+        QVERIFY(queuedLoad);
+        QTest::qWait(50ms);
+        QVERIFY2(dlg->character_password_entry->text().isEmpty(), "the load ran while another profile's read was in flight, so this test cannot cover it waiting");
+        QVERIFY2(!queuedLoad, "the timer of a load that had to wait was left behind");
+
+        dlg->passwordRetrieved(qsl("profile-being-read"), false, QString(), qsl("No stored credentials found"));
+        QVERIFY2(QTest::qWaitFor(
+                         [dlg]() {
+                             return !dlg->character_password_entry->text().isEmpty();
+                         },
+                         2s),
+                 "the load that arrived during the other profile's read never ran");
+        QCOMPARE(dlg->character_password_entry->text(), qsl("deferred-secret"));
+    }
+
+    // Only the profile selected last is loaded once the read in flight answers
+    void test_aDeferredLoadIsForTheProfileSelectedLast()
+    {
+        const QString passed = qsl("ConnDialogDeferredPassed-Test");
+        const QString selected = qsl("ConnDialogDeferredSelected-Test");
+        for (const QString& profile : {passed, selected}) {
+            QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, profile)));
+            QVERIFY(MudletApp::writeProfileData(profile, qsl("password"), qsl("%1-secret").arg(profile)).first);
+        }
+
+        auto* dlg = new dlgConnectionProfiles(mudlet::self());
+        const QPointer<dlgConnectionProfiles> guard = dlg;
+        auto cleanup = qScopeGuard([&guard]() {
+            delete guard.data();
+        });
+        dlg->mKeychainOperationProfile = qsl("profile-being-read");
+        for (const QString& profile : {passed, selected}) {
+            const QSignalBlocker blocker(dlg->listWidget_profiles);
+            auto* profileItem = new QListWidgetItem(profile, dlg->listWidget_profiles);
+            profileItem->setData(dlgConnectionProfiles::csmNameRole, profile);
+            dlg->listWidget_profiles->setCurrentItem(profileItem);
+            dlg->schedulePasswordLoad(profile);
+            QTest::qWait(20ms);
+        }
+
+        dlg->passwordRetrieved(qsl("profile-being-read"), false, QString(), qsl("No stored credentials found"));
+        // one load, not one per profile passed over on the way
+        QCOMPARE(queuedLoads(dlg), QStringList{selected});
+        QVERIFY2(QTest::qWaitFor(
+                         [dlg]() {
+                             return !dlg->character_password_entry->text().isEmpty();
+                         },
+                         2s),
+                 "the load that arrived during the other profile's read never ran");
+        QCOMPARE(dlg->character_password_entry->text(), qsl("%1-secret").arg(selected));
+    }
+
+    // Any read can answer long after the profile was picked, behind a keychain prompt as much as
+    // behind another profile's read: what the player typed since is theirs
+    void test_aLoadAnsweringAfterThePlayerTypedLeavesTheField()
+    {
+        auto* dlg = new dlgConnectionProfiles(mudlet::self());
+        const QPointer<dlgConnectionProfiles> guard = dlg;
+        auto cleanup = qScopeGuard([&guard]() {
+            delete guard.data();
+        });
+        {
+            const QSignalBlocker blocker(dlg->listWidget_profiles);
+            auto* profileItem = new QListWidgetItem(mProfileName, dlg->listWidget_profiles);
+            profileItem->setData(dlgConnectionProfiles::csmNameRole, mProfileName);
+            dlg->listWidget_profiles->setCurrentItem(profileItem);
+        }
+        dlg->mKeychainOperationProfile = mProfileName;
+        {
+            const QSignalBlocker blocker(dlg->character_password_entry);
+            dlg->character_password_entry->setText(qsl("typed-meanwhile"));
+            dlg->character_password_entry->setModified(true);
+        }
+
+        const DialogLogCapture log;
+        dlg->passwordRetrieved(mProfileName, true, qsl("stored-long-ago"), QString());
+        QCOMPARE(dlg->character_password_entry->text(), qsl("typed-meanwhile"));
+        QVERIFY2(!log.saw(qsl("Successfully loaded the saved password")), qPrintable(qsl("the log says a password was loaded that was thrown away: %1").arg(log.all())));
+        QVERIFY2(log.saw(qsl("Keeping the password field as edited")), qPrintable(qsl("nothing logged why the saved password was not used: %1").arg(log.all())));
+    }
+
+    // A password erased while the read was out stays erased, and the erasure is what gets saved
+    void test_aPasswordErasedWhileItWasBeingReadStaysErased()
+    {
+        const QString profile = qsl("ConnDialogErasedPassword-Test");
+        seedProfilePassword(profile, qsl("stored"));
+        auto* dlg = new dlgConnectionProfiles(mudlet::self());
+        const QPointer<dlgConnectionProfiles> guard = dlg;
+        auto cleanup = qScopeGuard([&guard]() {
+            delete guard.data();
+        });
+        addProfiles(dlg, {profile}, profile);
+        dlg->show();
+        QVERIFY(QTest::qWaitForWindowExposed(dlg));
+        dlg->mKeychainOperationProfile = profile;
+        dlg->character_password_entry->setFocus();
+        QTest::keyClicks(dlg->character_password_entry, qsl("x"));
+        QTest::keyClick(dlg->character_password_entry, Qt::Key_Backspace);
+        QVERIFY2(dlg->character_password_entry->isModified() && dlg->character_password_entry->text().isEmpty(), "the field was not left edited and empty, so this test cannot cover it");
+
+        dlg->passwordRetrieved(profile, true, qsl("stored"), QString());
+        QVERIFY2(dlg->character_password_entry->text().isEmpty(), "the password the player erased came back");
+        QVERIFY2(QTest::qWaitFor(
+                         [&profile]() {
+                             return MudletApp::readProfileData(profile, qsl("password")).isEmpty();
+                         },
+                         2s),
+                 "the erased password was saved back");
+    }
+
+    // An answer with nothing in it is logged as such, so an empty field can be told from a load that did not run
+    void test_anEmptyAnswerIsLoggedAsEmpty()
+    {
+        auto* dlg = new dlgConnectionProfiles(mudlet::self());
+        const QPointer<dlgConnectionProfiles> guard = dlg;
+        auto cleanup = qScopeGuard([&guard]() {
+            delete guard.data();
+        });
+        addProfiles(dlg, {mProfileName}, mProfileName);
+        dlg->mKeychainOperationProfile = mProfileName;
+
+        const DialogLogCapture log;
+        dlg->passwordRetrieved(mProfileName, true, QString(), QString());
+        QVERIFY(dlg->character_password_entry->text().isEmpty());
+        QVERIFY2(!log.saw(qsl("Successfully loaded the saved password")), qPrintable(qsl("an empty answer was logged as a loaded password: %1").arg(log.all())));
+        QVERIFY2(log.saw(qsl("Keychain returned empty password")), qPrintable(qsl("an empty answer was not logged as empty: %1").arg(log.all())));
+    }
+
+    // Connect on a profile whose load is queued behind another profile's read has to wait for that
+    // load, or the profile connects without its password
+    void test_connectWaitsForADeferredLoad()
+    {
+        const QString profile = qsl("ConnDialogDeferredConnect-Test");
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, profile)));
+        QVERIFY(MudletApp::writeProfileData(profile, qsl("password"), qsl("deferred-connect-secret")).first);
+
+        auto* dlg = new dlgConnectionProfiles(mudlet::self());
+        const QPointer<dlgConnectionProfiles> guard = dlg;
+        auto cleanup = qScopeGuard([&guard]() {
+            delete guard.data();
+        });
+        addProfiles(dlg, {profile}, profile);
+        dlg->mKeychainOperationProfile = qsl("profile-being-read");
+        dlg->schedulePasswordLoad(profile);
+        QTest::qWait(50ms);
+
+        QString passwordAtConnect;
+        bool connected = false;
+        connect(dlg, &QDialog::accepted, dlg, [&]() {
+            connected = true;
+            passwordAtConnect = dlg->character_password_entry->text();
+        });
+        QVERIFY2(loadQueuesBehindThePasswordLoad(dlg, profile), "the load went ahead without waiting for the password load");
+        QVERIFY2(!connected, "the profile connected while its password load was still queued");
+
+        dlg->passwordRetrieved(qsl("profile-being-read"), false, QString(), qsl("No stored credentials found"));
+        QVERIFY2(!connected, "the profile connected before its own password had been loaded");
+        QVERIFY2(QTest::qWaitFor(
+                         [&connected]() {
+                             return connected;
+                         },
+                         2s),
+                 "the queued Connect was dropped");
+        QCOMPARE(passwordAtConnect, qsl("deferred-connect-secret"));
+    }
+
+    // The other read answering only queues the deferred load: a Connect that lands before that
+    // load runs still has to wait for it
+    void test_connectAsTheOtherReadAnswersWaitsForTheDeferredLoad()
+    {
+        const QString profile = qsl("ConnDialogHandOffConnect-Test");
+        seedProfilePassword(profile, qsl("hand-off-secret"));
+        auto* dlg = new dlgConnectionProfiles(mudlet::self());
+        const QPointer<dlgConnectionProfiles> guard = dlg;
+        auto cleanup = qScopeGuard([&guard]() {
+            delete guard.data();
+        });
+        addProfiles(dlg, {profile}, profile);
+        dlg->mKeychainOperationProfile = qsl("profile-being-read");
+        dlg->schedulePasswordLoad(profile);
+        QTest::qWait(50ms);
+        QString passwordAtConnect;
+        bool connected = false;
+        connect(dlg, &QDialog::accepted, dlg, [&]() {
+            connected = true;
+            passwordAtConnect = dlg->character_password_entry->text();
+        });
+
+        dlg->passwordRetrieved(qsl("profile-being-read"), false, QString(), qsl("No stored credentials found"));
+        QVERIFY2(loadQueuesBehindThePasswordLoad(dlg, profile), "the load went ahead without waiting for the password load");
+        QVERIFY2(!connected, "the profile connected before its own password had been loaded");
+        QVERIFY2(QTest::qWaitFor(
+                         [&connected]() {
+                             return connected;
+                         },
+                         2s),
+                 "the queued Connect was dropped");
+        QCOMPARE(passwordAtConnect, qsl("hand-off-secret"));
+    }
+
+    // A deferred load that finds its profile no longer selected gives up, and a Connect waiting on
+    // it gets the dialog back rather than waiting for good
+    void test_aDroppedDeferredLoadHandsTheDialogBack()
+    {
+        const QString profile = qsl("ConnDialogDroppedDeferred-Test");
+        const QString other = qsl("ConnDialogDroppedDeferredOther-Test");
+        seedProfilePassword(profile, qsl("dropped-secret"));
+        auto* dlg = new dlgConnectionProfiles(mudlet::self());
+        const QPointer<dlgConnectionProfiles> guard = dlg;
+        auto cleanup = qScopeGuard([&guard]() {
+            delete guard.data();
+        });
+        addProfiles(dlg, {profile, other}, profile);
+        dlg->validName = true;
+        dlg->validUrl = true;
+        dlg->validPort = true;
+        dlg->mKeychainOperationProfile = qsl("profile-being-read");
+        dlg->schedulePasswordLoad(profile);
+        QTest::qWait(50ms);
+        QVERIFY2(loadQueuesBehindThePasswordLoad(dlg, profile), "the load went ahead without waiting for the password load");
+        QVERIFY2(dlg->mKeychainWaitShown, "Connect did not wait, so this test cannot cover the wait ending");
+
+        dlg->passwordRetrieved(qsl("profile-being-read"), false, QString(), qsl("No stored credentials found"));
+        selectProfile(dlg, other);
+        QTest::qWait(100ms);
+
+        QVERIFY2(!dlg->mKeychainWaitShown, "the dialog is still waiting for a load that gave up");
+        QVERIFY2(dlg->connect_button->isEnabled(), "Connect was left disabled");
+        QVERIFY2(dlg->listWidget_profiles->isEnabled(), "The profile list was left disabled");
+        QVERIFY2(dlg->mPendingProfileLoad.isEmpty(), "the Connect for a load that gave up was left queued");
+    }
+
+    // Going back to the profile whose read is in flight leaves nothing deferred: that read is the
+    // one the selection now needs
+    void test_goingBackToTheProfileBeingReadDropsTheDeferredLoad()
+    {
+        const QString beingRead = qsl("ConnDialogBackToRead-Test");
+        const QString passed = qsl("ConnDialogBackToReadPassed-Test");
+        seedProfilePassword(passed, qsl("passed-secret"));
+        auto* dlg = new dlgConnectionProfiles(mudlet::self());
+        const QPointer<dlgConnectionProfiles> guard = dlg;
+        auto cleanup = qScopeGuard([&guard]() {
+            delete guard.data();
+        });
+        addProfiles(dlg, {beingRead, passed}, beingRead);
+        dlg->mKeychainOperationProfile = beingRead;
+
+        dlg->schedulePasswordLoad(beingRead);
+        QTest::qWait(20ms);
+        QVERIFY2(dlg->mDeferredPasswordLoadProfile.isEmpty(), "a load of the profile being read was deferred behind its own read");
+
+        selectProfile(dlg, passed);
+        dlg->schedulePasswordLoad(passed);
+        QTest::qWait(20ms);
+        QCOMPARE(dlg->mDeferredPasswordLoadProfile, passed);
+
+        selectProfile(dlg, beingRead);
+        dlg->schedulePasswordLoad(beingRead);
+        QTest::qWait(20ms);
+        QVERIFY2(dlg->mDeferredPasswordLoadProfile.isEmpty(), "the load for the profile passed over is still deferred");
+        QVERIFY2(!dlg->hasPendingKeychainOperation(passed), "a Connect on the profile passed over would wait for a load that cannot fill anything");
+
+        dlg->passwordRetrieved(beingRead, true, qsl("read-secret"), QString());
+        QCOMPARE(queuedLoads(dlg), QStringList());
+        QCOMPARE(dlg->character_password_entry->text(), qsl("read-secret"));
+    }
+
+    // Renaming the profile while its load waits takes the load along to the new name
+    void test_aRenamedProfileStillGetsItsDeferredLoad()
+    {
+        const QString profile = qsl("ConnDialogRenamedDeferred-Test");
+        const QString renamed = qsl("ConnDialogRenamedDeferred2-Test");
+        seedProfilePassword(profile, qsl("renamed-secret"));
+        auto* dlg = new dlgConnectionProfiles(mudlet::self());
+        const QPointer<dlgConnectionProfiles> guard = dlg;
+        auto cleanup = qScopeGuard([&guard]() {
+            delete guard.data();
+        });
+        addProfiles(dlg, {profile}, profile);
+        {
+            const QSignalBlocker blocker(dlg->profile_name_entry);
+            dlg->profile_name_entry->setText(profile);
+        }
+        dlg->mKeychainOperationProfile = qsl("profile-being-read");
+        dlg->schedulePasswordLoad(profile);
+        QTest::qWait(50ms);
+
+        dlg->profile_name_entry->setText(renamed);
+        dlg->slot_saveName();
+        QCOMPARE(dlg->listWidget_profiles->currentItem()->data(dlgConnectionProfiles::csmNameRole).toString(), renamed);
+        QVERIFY2(dlg->hasPendingKeychainOperation(renamed), "a Connect on the renamed profile would not wait for its load");
+
+        dlg->passwordRetrieved(qsl("profile-being-read"), false, QString(), qsl("No stored credentials found"));
+        QVERIFY2(QTest::qWaitFor(
+                         [dlg]() {
+                             return !dlg->character_password_entry->text().isEmpty();
+                         },
+                         2s),
+                 "the renamed profile's deferred load never filled its password");
+        QCOMPARE(dlg->character_password_entry->text(), qsl("renamed-secret"));
+    }
+
+    // So does a rename landing after the other read has answered, before the load it queued has run
+    void test_aRenameAfterTheOtherReadAnswersKeepsTheDeferredLoad()
+    {
+        const QString profile = qsl("ConnDialogRenamedQueued-Test");
+        const QString renamed = qsl("ConnDialogRenamedQueued2-Test");
+        seedProfilePassword(profile, qsl("renamed-queued-secret"));
+        auto* dlg = new dlgConnectionProfiles(mudlet::self());
+        const QPointer<dlgConnectionProfiles> guard = dlg;
+        auto cleanup = qScopeGuard([&guard]() {
+            delete guard.data();
+        });
+        addProfiles(dlg, {profile}, profile);
+        {
+            const QSignalBlocker blocker(dlg->profile_name_entry);
+            dlg->profile_name_entry->setText(profile);
+        }
+        dlg->mKeychainOperationProfile = qsl("profile-being-read");
+        dlg->schedulePasswordLoad(profile);
+        QTest::qWait(50ms);
+
+        dlg->passwordRetrieved(qsl("profile-being-read"), false, QString(), qsl("No stored credentials found"));
+        QCOMPARE(queuedLoads(dlg), QStringList{profile});
+        dlg->profile_name_entry->setText(renamed);
+        dlg->slot_saveName();
+        QCOMPARE(dlg->listWidget_profiles->currentItem()->data(dlgConnectionProfiles::csmNameRole).toString(), renamed);
+
+        QVERIFY2(QTest::qWaitFor(
+                         [dlg]() {
+                             return !dlg->character_password_entry->text().isEmpty();
+                         },
+                         2s),
+                 "the renamed profile's deferred load never filled its password");
+        QCOMPARE(dlg->character_password_entry->text(), qsl("renamed-queued-secret"));
+        QVERIFY2(!dlg->hasPendingKeychainOperation(renamed), "a Connect on the renamed profile would wait for a load that never comes");
+    }
+
+    // and a Connect pressed before that load runs goes ahead once it has
+    void test_connectAfterARenameAsTheOtherReadAnswersGoesAhead()
+    {
+        const QString profile = qsl("ConnDialogRenamedConnect-Test");
+        const QString renamed = qsl("ConnDialogRenamedConnect2-Test");
+        seedProfilePassword(profile, qsl("renamed-connect-secret"));
+        auto* dlg = new dlgConnectionProfiles(mudlet::self());
+        const QPointer<dlgConnectionProfiles> guard = dlg;
+        auto cleanup = qScopeGuard([&guard]() {
+            delete guard.data();
+        });
+        addProfiles(dlg, {profile}, profile);
+        {
+            const QSignalBlocker blocker(dlg->profile_name_entry);
+            dlg->profile_name_entry->setText(profile);
+        }
+        dlg->mKeychainOperationProfile = qsl("profile-being-read");
+        dlg->schedulePasswordLoad(profile);
+        QTest::qWait(50ms);
+        QString passwordAtConnect;
+        bool connected = false;
+        connect(dlg, &QDialog::accepted, dlg, [&]() {
+            connected = true;
+            passwordAtConnect = dlg->character_password_entry->text();
+        });
+
+        dlg->passwordRetrieved(qsl("profile-being-read"), false, QString(), qsl("No stored credentials found"));
+        dlg->profile_name_entry->setText(renamed);
+        dlg->slot_saveName();
+        // checked first, as a Connect that does not wait loads the profile for real
+        QVERIFY2(dlg->hasPendingKeychainOperation(renamed), "a Connect on the renamed profile would not wait for its load");
+        QVERIFY(loadQueuesBehindThePasswordLoad(dlg, renamed));
+        QVERIFY2(QTest::qWaitFor(
+                         [&connected]() {
+                             return connected;
+                         },
+                         2s),
+                 "the queued Connect waits for a load that never comes");
+        QCOMPARE(passwordAtConnect, qsl("renamed-connect-secret"));
+    }
+
+    // Deferral only happens with passwords stored securely, where the deferred load is a read of its
+    // own, and the answer to that read is what has to complete the queued Connect
+    void test_aDeferredSecureLoadCompletesTheQueuedConnect()
+    {
+        const QString profile = qsl("ConnDialogDeferredSecure-Test");
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, profile)));
+        mudlet::self()->setStorePasswordsSecurely(true);
+        auto restoreStorage = qScopeGuard([]() {
+            mudlet::self()->setStorePasswordsSecurely(false);
+        });
+        QVERIFY(CredentialManager::storeCredential(profile, qsl("character"), qsl("secure-secret")));
+        auto* dlg = new dlgConnectionProfiles(mudlet::self());
+        const QPointer<dlgConnectionProfiles> guard = dlg;
+        auto cleanup = qScopeGuard([&guard]() {
+            delete guard.data();
+        });
+        addProfiles(dlg, {profile}, profile);
+        dlg->mKeychainOperationProfile = qsl("profile-being-read");
+        dlg->schedulePasswordLoad(profile);
+        QTest::qWait(50ms);
+        QString passwordAtConnect;
+        bool connected = false;
+        connect(dlg, &QDialog::accepted, dlg, [&]() {
+            connected = true;
+            passwordAtConnect = dlg->character_password_entry->text();
+        });
+        QVERIFY2(loadQueuesBehindThePasswordLoad(dlg, profile), "the load went ahead without waiting for the password load");
+
+        dlg->passwordRetrieved(qsl("profile-being-read"), false, QString(), qsl("No stored credentials found"));
+        QVERIFY2(QTest::qWaitFor(
+                         [&connected]() {
+                             return connected;
+                         },
+                         3s),
+                 "the queued Connect was dropped");
+        QCOMPARE(passwordAtConnect, qsl("secure-secret"));
+    }
+
+    // A saved password that cannot be decrypted is reported, and a Connect waiting on it stops there
+    // so the player sees why and can type it, rather than connect without it
+    void test_anUnreadablePasswordIsReported()
+    {
+        const QString profile = qsl("ConnDialogUnreadable-Test");
+        auto* dlg = new dlgConnectionProfiles(mudlet::self());
+        selectProfileQuietly(dlg, profile);
+        dlg->passwordRetrieved(profile, false, QString(), qsl("No stored credentials found for profile %1").arg(profile));
+        QVERIFY2(!dlg->notificationAreaIconLabelWarning->isVisibleTo(dlg), "a profile with no saved password was warned about it");
+
+        queueLoad(dlg, profile, true);
+        bool connected = false;
+        connect(dlg, &QDialog::accepted, dlg, [&connected]() {
+            connected = true;
+        });
+
+        dlg->passwordRetrieved(profile, false, QString(), CredentialManager::unreadableFileError(profile));
+        QVERIFY2(dlg->notificationAreaIconLabelWarning->isVisibleTo(dlg), qPrintable(dlg->notificationAreaMessageBox->text()));
+        QVERIFY2(dlg->notificationAreaMessageBox->text().contains(qsl("could not be read")), qPrintable(dlg->notificationAreaMessageBox->text()));
+        QVERIFY2(!connected, "the profile connected without the password, and the warning went with the dialog");
+        QVERIFY2(!dlg->mKeychainWaitShown, "the dialog was left waiting");
+        QVERIFY2(dlg->mPendingProfileLoad.isEmpty(), "the Connect was left queued");
+        dlg->deleteLater();
+    }
+
+    // Offline sends no password, so one that cannot be read is no reason to drop the click
+    void test_anUnreadablePasswordDoesNotStopAnOfflineLoad()
+    {
+        const QString profile = qsl("ConnDialogUnreadableOffline-Test");
+        auto* dlg = new dlgConnectionProfiles(mudlet::self());
+        selectProfileQuietly(dlg, profile);
+        queueLoad(dlg, profile, false);
+        bool opened = false;
+        connect(dlg, &QDialog::accepted, dlg, [&opened]() {
+            opened = true;
+        });
+
+        dlg->passwordRetrieved(profile, false, QString(), CredentialManager::unreadableFileError(profile));
+        QVERIFY2(opened, "Offline was pressed and nothing opened");
+        QVERIFY2(dlg->mPendingProfileLoad.isEmpty(), "the Offline load was left queued");
+        dlg->deleteLater();
+    }
+
+    // A password the profile still keeps in its own file fills the field, and that is the one the
+    // load goes on with, so there is nothing to ask the player for
+    void test_aPasswordFoundElsewhereIsUsedWithoutAWarning()
+    {
+        const QString profile = qsl("ConnDialogUnreadableFallback-Test");
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, profile)));
+        auto* dlg = new dlgConnectionProfiles(mudlet::self());
+        dlg->writeProfileData(profile, qsl("password"), qsl("kept-in-the-profile"));
+        selectProfileQuietly(dlg, profile);
+        queueLoad(dlg, profile, true);
+        // loadProfile() returns at once on the empty name field, so the Connect dials nothing
+        bool opened = false;
+        connect(dlg, &QDialog::accepted, dlg, [&opened]() {
+            opened = true;
+        });
+
+        dlg->passwordRetrieved(profile, false, QString(), CredentialManager::unreadableFileError(profile));
+        QCOMPARE(dlg->character_password_entry->text(), qsl("kept-in-the-profile"));
+        QVERIFY2(!dlg->notificationAreaIconLabelWarning->isVisibleTo(dlg), qPrintable(dlg->notificationAreaMessageBox->text()));
+        QVERIFY2(opened, "the load did not go on with the password the profile still had");
+        dlg->deleteLater();
+    }
+
+    // From a damaged file on disk to the warning, through the read the dialog itself starts when a
+    // profile is picked
+    void test_aDamagedPasswordFileOnDiskIsReportedWhenTheProfileIsPicked()
+    {
+        const QString profile = qsl("ConnDialogUnreadableOnDisk-Test");
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, profile)));
+        mudlet::self()->setStorePasswordsSecurely(true);
+        const auto restore = qScopeGuard([profile]() {
+            mudlet::self()->setStorePasswordsSecurely(false);
+            CredentialManager::removeCredential(profile, qsl("character"));
+        });
+        QVERIFY(damageSavedPassword(profile));
+
+        auto* dlg = new dlgConnectionProfiles(mudlet::self());
+        auto* profileItem = new QListWidgetItem(profile, dlg->listWidget_profiles);
+        profileItem->setData(dlgConnectionProfiles::csmNameRole, profile);
+        dlg->listWidget_profiles->setCurrentItem(profileItem);
+
+        QTRY_VERIFY2(dlg->notificationAreaMessageBox->text().contains(qsl("could not be read")), qPrintable(dlg->notificationAreaMessageBox->text()));
+        QVERIFY(dlg->notificationAreaIconLabelWarning->isVisibleTo(dlg));
+        QVERIFY(dlg->character_password_entry->text().isEmpty());
+        dlg->deleteLater();
+    }
+
+    // A read in flight holds up the load of its own profile only: Connect on another profile, with no
+    // load of its own queued behind that read, has nothing to wait for.
+    void test_aReadForAnotherProfileDoesNotHoldUpALoad()
+    {
+        auto* dlg = new dlgConnectionProfiles(mudlet::self());
+        dlg->mKeychainOperationProfile = qsl("profile-being-read");
+
+        QVERIFY2(dlg->hasPendingKeychainOperation(qsl("profile-being-read")), "a load did not wait for the read of its own profile's password");
+        QVERIFY2(!dlg->hasPendingKeychainOperation(mProfileName), "a load was held up behind the read of another profile's password");
+        dlg->deleteLater();
+    }
+
+    // The wait locks the form: an edit would run validateProfile(), which hands Connect and Offline
+    // back and clears the notice, and the queued load reads the fields as they are when it runs. A
+    // field that loses the focus as it is locked still runs that validation, which must not end the
+    // wait either.
+    void test_theWaitLocksTheFormAndValidationCannotEndIt()
+    {
+        auto* dlg = new dlgConnectionProfiles(mudlet::self());
+        {
+            const QSignalBlocker listBlocker(dlg->listWidget_profiles);
+            auto* profileItem = new QListWidgetItem(mProfileName, dlg->listWidget_profiles);
+            profileItem->setData(dlgConnectionProfiles::csmNameRole, mProfileName);
+            dlg->listWidget_profiles->setCurrentItem(profileItem);
+            const QSignalBlocker nameBlocker(dlg->profile_name_entry);
+            dlg->profile_name_entry->setText(mProfileName);
+            const QSignalBlocker hostBlocker(dlg->host_name_entry);
+            dlg->host_name_entry->setText(qsl("localhost"));
+            const QSignalBlocker portBlocker(dlg->port_entry);
+            dlg->port_entry->setText(qsl("4000"));
+        }
+        QVERIFY2(dlg->validateProfile(), "the form does not validate, so this test cannot show validation handing Connect back");
+
+        dlg->mKeychainOperationProfile = mProfileName;
+        dlg->mPendingProfileLoad = mProfileName;
+        dlg->mPendingConnect = true;
+        dlg->showKeychainWait();
+
+        QVERIFY2(!dlg->tabWidget_connectionInfo->isEnabled(), "the connection details could still be edited during the wait");
+        QVERIFY2(!dlg->profileAdminArea->isEnabled(), "profiles could still be added, copied or removed during the wait");
+
+        dlg->validateProfile();
+        QVERIFY2(!dlg->connect_button->isEnabled(), "validating the form during the wait handed Connect back");
+        QVERIFY2(!dlg->offline_button->isEnabled(), "validating the form during the wait handed Offline back");
+        QVERIFY2(!dlg->notificationAreaMessageBox->text().isEmpty(), "validating the form during the wait cleared the notice that explains it");
+
+        dlg->abandonPendingProfileLoad();
+        QVERIFY2(dlg->tabWidget_connectionInfo->isEnabled(), "the connection details were left locked after the wait");
+        QVERIFY2(dlg->profileAdminArea->isEnabled(), "the profile buttons were left locked after the wait");
+        dlg->deleteLater();
+    }
+
+    // Must stay last: the queued load closes the dialog the other tests need.
+    void test_pendingKeychainReadKeepsTheDialogUp()
+    {
+        auto* dlg = dialog();
+        QVERIFY2(dlg, "No connection dialog to test against");
+
+        if (!dlg->isVisible()) {
+            dlg->show();
+            QTest::qWait(100ms);
+        }
+        QVERIFY(dlg->isVisible());
+
+        // set behind the signals: slot_updateName() would run the whole validation and profile
+        // save, which is not what is under test here
+        {
+            const QSignalBlocker blocker(dlg->profile_name_entry);
+            dlg->profile_name_entry->setText(mProfileName);
+        }
+        dlg->validName = true;
+        dlg->validUrl = true;
+        dlg->validPort = true;
+        dlg->connect_button->setEnabled(true);
+        dlg->offline_button->setEnabled(true);
+        dlg->listWidget_profiles->setEnabled(true);
+        dlg->clearNotificationArea();
+
+        // stands in for the read that slot_loadPasswordAsync() would have started
+        dlg->mKeychainOperationProfile = mProfileName;
+
+        dlg->accept();
+
+        QVERIFY2(dlg->isVisible(), "The dialog hid itself while the keychain read was still outstanding");
+        QVERIFY2(!dlg->connect_button->isEnabled(), "Connect stayed usable while the keychain read was outstanding");
+        QVERIFY2(!dlg->offline_button->isEnabled(), "Offline stayed usable while the keychain read was outstanding");
+        QVERIFY2(!dlg->listWidget_profiles->isEnabled(),
+                 "The profile list stayed usable while the keychain read was outstanding, so another profile could be picked that would never load its password");
+        QVERIFY2(dlg->mKeychainWaitShown, "The dialog is not in its waiting-for-the-keychain state");
+        QVERIFY2(!dlg->notificationAreaMessageBox->text().isEmpty(), "The wait is not explained anywhere in the dialog");
+        QCOMPARE(dlg->mPendingProfileLoad, mProfileName);
+        QVERIFY2(dlg->mPendingConnect, "Connect queued a load that would not connect");
+
+        // what the keychain callback does once the read answers
+        dlg->mKeychainOperationProfile.clear();
+        // the profile load itself is another test's business: loadProfile() returns at once on an
+        // empty name, which keeps this from starting a real profile
+        {
+            const QSignalBlocker blocker(dlg->profile_name_entry);
+            dlg->profile_name_entry->clear();
+        }
+
+        QVERIFY2(dlg->completePendingProfileLoad(mProfileName), "The queued load did not run when the keychain read completed");
+
+        // the dialog is on its way out (WA_DeleteOnClose), but deleteLater() cannot have run yet
+        QVERIFY2(!dlg->isVisible(), "The dialog stayed on screen after the queued load ran");
+        QVERIFY2(dlg->connect_button->isEnabled(), "Connect was left disabled");
+        QVERIFY2(dlg->offline_button->isEnabled(), "Offline was left disabled");
+        QVERIFY2(dlg->listWidget_profiles->isEnabled(), "The profile list was left disabled");
+        QVERIFY2(!dlg->mKeychainWaitShown, "The dialog is still in its waiting-for-the-keychain state");
+        QVERIFY2(dlg->mPendingProfileLoad.isEmpty(), "The queued load was left queued");
+        QVERIFY2(!dlg->completePendingProfileLoad(mProfileName), "A keychain answer arriving late ran the queued load a second time");
+    }
+
+    // With nowhere to keep the key that would encrypt it, the password is not saved, and only a log
+    // line would say so
+    void test_aPasswordThatCannotBeSavedIsReported()
+    {
+        const QString profile = qsl("ConnDialogUnsavablePassword-Test");
+        const QString profileKeyDir = qsl("%1/profiles/%2").arg(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation), profile);
+        auto* dlg = new dlgConnectionProfiles(mudlet::self());
+        auto cleanup = qScopeGuard([dlg, profileKeyDir] {
+            dlg->deleteLater();
+            QDir(profileKeyDir).removeRecursively();
+        });
+        // A directory where the key file belongs makes it impossible to write
+        QVERIFY(QDir().mkpath(profileKeyDir + qsl("/encryption_key")));
+        QVERIFY2(dlg->notificationAreaMessageBox->text().isEmpty(), "a fresh dialog already shows a notification, so this test cannot tell whether the failure added one");
+
+        dlg->writeSecurePassword(profile, qsl("cannot-be-protected"));
+
+        QVERIFY2(QTest::qWaitFor(
+                         [dlg]() {
+                             return !dlg->notificationAreaMessageBox->text().isEmpty();
+                         },
+                         5s),
+                 "a password that could not be saved left the dialog saying nothing");
+        QVERIFY(dlg->notificationAreaMessageBox->text().contains(profile));
+        QVERIFY2(!dlg->notificationAreaIconLabelWarning->isHidden(), "the failure is not shown as a warning");
+    }
+
+    // A profile opened without the dialog - at start-up, or from the command line - has only its
+    // console to say why the game is not sent the password, which the auto-login does at its password
+    // step. Last, as the profile stays open.
+    void test_aProfileOpenedWithADamagedPasswordFileSaysSo()
+    {
+        const QString profile = qsl("ConnDialogUnreadableOpened-Test");
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, profile)));
+        mudlet::self()->setStorePasswordsSecurely(true);
+        const auto restore = qScopeGuard([profile]() {
+            mudlet::self()->setStorePasswordsSecurely(false);
+            CredentialManager::removeCredential(profile, qsl("character"));
+        });
+        QVERIFY(damageSavedPassword(profile));
+
+        Host* pHost = mudlet::self()->loadProfile(profile, false);
+        QVERIFY(pHost);
+        mudlet::self()->slot_connectionDialogueFinished(profile, false);
+        QVERIFY2(pHost->mainConsoleView(), "the profile came up without a main console");
+        const auto consoleText = [pHost]() {
+            return pHost->mainConsoleView()->buffer.lineBuffer.join(QChar::Space).simplified();
+        };
+        pHost->setLogin(qsl("player"));
+        // Polled, as the lookup may still be out: until it answers there is nothing to report
+        const auto reportedAtThePasswordStep = [pHost, &consoleText]() {
+            pHost->reportUnreadableSavedPassword();
+            return consoleText().contains(qsl("Could not check for a saved password"));
+        };
+        QTRY_VERIFY2(reportedAtThePasswordStep(), qPrintable(consoleText()));
+    }
+};
+
+#include "ConnectionDialogKeychainWaitTest.moc"
+MUDLET_GROUPED_TEST_MAIN(ConnectionDialogKeychainWaitTest)

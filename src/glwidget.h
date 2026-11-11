@@ -81,11 +81,16 @@ protected:
     void mousePressEvent(QMouseEvent* event) override;
     void mouseMoveEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
+    bool event(QEvent* event) override;
+    void resizeEvent(QResizeEvent* event) override;
+    void paintEvent(QPaintEvent* event) override;
 
 public:
     TMap* mpMap = nullptr;
 
 private:
+    bool contextCreationFailed() const;
+    void applyBackgroundTranslucency();
     QPointer<Host> mpHost;
     bool is2DView = false;
     bool mPanMode = false;

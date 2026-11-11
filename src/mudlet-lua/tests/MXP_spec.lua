@@ -1,9 +1,9 @@
 describe("Tests MXP handling", function()
 
   setup(function()
-    -- feedTelnet cannot negotiate MXP here as the test profile's socket is
-    -- not in the unconnected state, so force the MXP processor on instead -
-    -- that also locks secure mode, letting feedTriggers carry MXP tags
+    -- these specs carry MXP tags in through feedTriggers, so the processor is
+    -- forced on: that is what locks secure mode, which negotiating MXP with a
+    -- server would not do
     setConfig("specialForceMXPProcessorOn", true)
   end)
 
@@ -45,6 +45,892 @@ describe("Tests MXP handling", function()
       assert.is_not_nil(mxp.ritem.sword)
       assert.is_nil(mxp.ritem.Sword)
     end)
+
+    -- The events wait until the packet's text has been through the triggers,
+    -- so a handler sees what the triggers did with the line.
+    it("should raise the element's event after the line's triggers have run", function()
+      local order = {}
+      local triggerId = tempExactMatchTrigger("a snarling kobold", function() order[#order + 1] = "trigger" end)
+      local handlerId = registerAnonymousEventHandler("mxp.rkobold", function() order[#order + 1] = "event" end)
+      feedTriggers([[<!ELEMENT RKobold FLAG="RoomKobold">]] .. "\n")
+      feedTriggers([[<RKobold>a snarling kobold</RKobold>]] .. "\n")
+      killTrigger(triggerId)
+      killAnonymousEventHandler(handlerId)
+
+      assert.are.same({"trigger", "event"}, order)
+    end)
   end)
 
+  describe("Tests the text an MXP line is displayed as", function()
+    local encodingFile = getMudletHomeDir() .. "/encoding"
+    local hadEncodingFile, originalEncoding
+
+    setup(function()
+      -- the payloads below carry their non-ASCII characters as the multi-byte
+      -- sequences a game sends; under another encoding the decoder reassembles
+      -- them into something else and the assertions stop meaning anything.
+      -- setServerEncoding() writes the profile's "encoding" file, and a profile
+      -- that never had one must not be left with one.
+      hadEncodingFile = lfs.attributes(encodingFile, "mode") ~= nil
+      originalEncoding = getServerEncoding()
+      setServerEncoding("UTF-8")
+    end)
+
+    teardown(function()
+      setServerEncoding(originalEncoding)
+      if not hadEncodingFile then
+        os.remove(encodingFile)
+      end
+    end)
+
+    -- The payloads are what a game sends, ESC[#z mode switches and all, but
+    -- those bytes are inert here: TBuffer only acts on them for data flagged as
+    -- coming from a server (TBuffer.cpp's isFromServer gate), which feedTriggers
+    -- is not. Secure mode comes from the forced processor this file turns on.
+    -- feedTelnet would flag the data and run the mode switches, but its ESC[1z
+    -- also makes cTelnet auto-enable MXP, and only a new connection clears that
+    -- flag - the teardown's setConfig cannot, so every later spec file would
+    -- inherit an enabled MXP processor. The tag and entity handling under test
+    -- is the same either way.
+    local function displayedLines(data)
+      local mark = getLastLineNumber("main")
+      feedTriggers(data .. "\n")
+      return getLines("main", mark, getLastLineNumber("main") + 1)
+    end
+
+    -- a whole line, not a substring: an entity that resolved to the wrong thing
+    -- would still be a substring of the line it landed on
+    local function assertLineShown(data, expected)
+      local lines = displayedLines(data)
+      local shown = false
+      for _, line in ipairs(lines) do
+        shown = shown or line == expected
+      end
+      assert.is_true(shown, ("no line reads %q, the console shows:\n%s"):format(expected, table.concat(lines, "\n")))
+    end
+
+    it("takes the tags out of an MXP line", function()
+      assertLineShown("\27[1z<B>Greetings < hunters & sorcerers</B>\27[7z", "Greetings < hunters & sorcerers")
+    end)
+
+    -- text is taken a run of bytes at a time, and a tag or entity has to end
+    -- the run on whichever byte of it it starts
+    it("finds a tag or an entity wherever it falls in a run of text", function()
+      for offset = 0, 8 do
+        local text = "MXPRUN" .. offset .. ("x"):rep(offset)
+        assertLineShown(("\27[1z%s<B>bold</B>%s&lt;"):format(text, text), ("%sbold%s<"):format(text, text))
+      end
+    end)
+
+    it("ends a run of text at a non-ASCII character wherever it falls", function()
+      for offset = 0, 8 do
+        local text = "MXPHIGH" .. offset .. ("x"):rep(offset)
+        assertLineShown(("%sé%s<B>b</B>%s€"):format(text, text, text), ("%sé%sb%s€"):format(text, text, text))
+      end
+    end)
+
+    -- a locked line shows its tags verbatim, so a switch to it that was acted
+    -- on would leave the <B> pair on the line
+    it("ignores an MXP mode switch in text a script fed", function()
+      assertLineShown("\27[2zMXPLOCAL1<B>still parsed</B>", "MXPLOCAL1still parsed")
+    end)
+
+    -- an unescaped & running into a non-ASCII character is not an entity, so
+    -- the raw bytes have to be passed through for the charset decoder to
+    -- reassemble them (follow-up to #9439)
+    it("keeps the non-ASCII bytes around a malformed entity", function()
+      assertLineShown("\27[1zKäse&Brötchen and &Ф too", "Käse&Brötchen and &Ф too")
+    end)
+
+    -- a custom entity whose value is not Latin1 (#9439)
+    it("resolves a custom entity to its non-ASCII value", function()
+      assertLineShown("\27[1z<!ENTITY storm \"Гроза\">The &storm; rages", "The Гроза rages")
+    end)
+
+    -- <HR> is not written out, it is fed back through the parser as a rule of
+    -- its own, so its width is the window's wrap column with a forty column floor
+    it("draws a horizontal rule as wide as the window wraps", function()
+      local width = math.max(getWindowWrap("main"), 40)
+      assertLineShown("\27[1zMXPRULE1<HR>MXPRULE2", ("-"):rep(width))
+    end)
+
+    -- an ANSI escape cannot be part of a tag, so one arriving before the tag
+    -- closed shows what had been read of the tag as plain text and still acts
+    it("shows a tag an escape sequence cut short as the text it was", function()
+      local function rowReading(mark, text)
+        local row
+        for candidate = mark, getLastLineNumber("main") do
+          if getLines("main", candidate, candidate + 1)[1] == text then
+            row = candidate
+          end
+        end
+        return row
+      end
+      local function fgAt(row, column)
+        moveCursor("main", column, row)
+        selectSection("main", column, 1)
+        local colour = {getFgColor("main")}
+        deselect("main")
+        moveCursorEnd("main")
+        return colour
+      end
+
+      -- with no MXP processor the tag would be shown as text anyway
+      local mark = getLastLineNumber("main")
+      feedTriggers("MXPESC0<B>x</B>\n")
+      assert.is_not_nil(rowReading(mark, "MXPESC0x"), "the precondition failed - MXP tags are not being processed")
+
+      mark = getLastLineNumber("main")
+      feedTriggers("MXPESC1<B\27[31mred\27[0m tail\n")
+      local row = rowReading(mark, "MXPESC1<Bred tail")
+      assert.is_not_nil(row, "no line reads \"MXPESC1<Bred tail\"")
+
+      -- the partial tag is shown in the colour in use before the escape
+      -- sequence, and the escape sequence still coloured the text after it
+      local tagStart = #"MXPESC1"
+      local before = fgAt(row, 0)
+      assert.same(before, fgAt(row, tagStart), "the '<'")
+      assert.same(before, fgAt(row, tagStart + 1), "the 'B'")
+      local after = fgAt(row, tagStart + 2)
+      assert.are_not.same(before, after)
+      assert.same(color_table.ansi_001, after)
+    end)
+  end)
+
+  -- A colour name the client does not know gives an invalid QColor, and a
+  -- character keeps its colours as ARGB, where an invalid colour and opaque
+  -- black are both 0xFF000000. So an unknown name has to be dropped before it
+  -- reaches the character: the text keeps the colour it had rather than turning
+  -- black, which a black foreground colour trigger would then match.
+  describe("Tests an MXP colour name the client does not know", function()
+    -- the foreground colour of the text holding the needle, read off the main
+    -- window. selectSection() works on the line the cursor is on and counts
+    -- columns from zero, where string.find() counts from one
+    local function foregroundOf(needle)
+      local lastLine = getLastLineNumber("main")
+      for lineNumber = lastLine, math.max(0, lastLine - 20), -1 do
+        local line = getLines("main", lineNumber, lineNumber + 1)[1]
+        local at = line and line:find(needle, 1, true)
+        if at then
+          moveCursor("main", 0, lineNumber)
+          selectSection("main", at - 1, #needle)
+          local colour = getTextFormat("main").foreground
+          -- a selection left behind is what a later replace() would act on
+          deselect("main")
+          return colour
+        end
+      end
+      return nil
+    end
+
+    local function isBlack(colour)
+      return colour ~= nil and colour[1] == 0 and colour[2] == 0 and colour[3] == 0
+    end
+
+    it("colours the text when it knows the name", function()
+      feedTriggers([[<COLOR fore="red">MXPCOLOUR1 red</COLOR>]] .. "\n")
+      assert.are.same({255, 0, 0}, foregroundOf("MXPCOLOUR1"))
+    end)
+
+    it("leaves the text the colour it had when it does not know the name", function()
+      feedTriggers("MXPCOLOUR2 plain\n")
+      local plain = foregroundOf("MXPCOLOUR2")
+      assert.is_truthy(plain)
+      -- telling an unknown colour from black is the whole point, so a profile
+      -- whose text is black anyway would prove nothing
+      assert.is_false(isBlack(plain), "this profile's own text colour is black, so this case cannot tell the two apart")
+
+      feedTriggers([[<COLOR fore="notacolour">MXPCOLOUR3 unknown</COLOR>]] .. "\n")
+      assert.are.same(plain, foregroundOf("MXPCOLOUR3"))
+    end)
+
+    it("does not turn the text black for a colour trigger to match", function()
+      _G.MxpSpec = {fired = false}
+      -- tempColorTrigger's fossilised remap: argument 2 is colour index 0, black
+      local id = tempColorTrigger(2, -1, function() _G.MxpSpec.fired = true end)
+      assert.is_number(id)
+
+      feedTriggers([[<COLOR fore="notacolour">MXPCOLOUR4 unknown</COLOR>]] .. "\n")
+
+      local fired = _G.MxpSpec.fired
+      -- kill before asserting: a leaked colour trigger matches by colour and
+      -- would fire on the lines later specs feed
+      killTrigger(id)
+      _G.MxpSpec = nil
+      assert.is_false(fired, "an unknown MXP colour name must not leave the text black")
+    end)
+  end)
+
+  -- <DEST> hands the game a print sink other than the main window: everything
+  -- between it and </DEST> goes into the named frame's own console, which is a
+  -- miniconsole registered under the frame's name so Lua can read it back like
+  -- any other window. A frame name that does not resolve is not an error - the
+  -- tag still counts as handled and the text goes to main with only a qWarning
+  -- - so a red spec here is worth checking the frame name over first.
+  describe("Tests output redirected into an MXP frame", function()
+    local frame = "mxpSpecDestFrame"
+
+    local function frameLines()
+      local lineCount = getLineCount(frame)
+      if not lineCount or lineCount < 1 then
+        return {}
+      end
+      return getLines(frame, 0, lineCount + 1)
+    end
+
+    -- the frame line the needle is on, so a redirect that ran two segments
+    -- together on one line can be told from one that kept the break
+    local function frameLineWith(needle)
+      for lineNumber = 0, getLineCount(frame) do
+        local line = getLines(frame, lineNumber, lineNumber + 1)[1]
+        if line and line:find(needle, 1, true) then
+          return lineNumber, line
+        end
+      end
+      return nil
+    end
+
+    local function holds(lines, needle)
+      for _, line in ipairs(lines) do
+        if line:find(needle, 1, true) then
+          return true
+        end
+      end
+      return false
+    end
+
+    -- a redirect that leaked would put its text among the last few main lines,
+    -- and looking back from the end rather than from a saved index keeps that
+    -- true whether or not the main buffer trimmed in between
+    local function mainRecentlyHolds(needle)
+      local lastLine = getLastLineNumber("main")
+      for lineNumber = lastLine, math.max(0, lastLine - 20), -1 do
+        local line = getLines("main", lineNumber, lineNumber + 1)[1]
+        if line and line:find(needle, 1, true) then
+          return true
+        end
+      end
+      return false
+    end
+
+    -- the colour of the first character of the run of text holding the needle,
+    -- read off the main window. selectSection() works on the line the cursor is
+    -- on and counts columns from zero, where string.find() counts from one
+    local function mainColourOf(needle)
+      local lastLine = getLastLineNumber("main")
+      for lineNumber = lastLine, math.max(0, lastLine - 20), -1 do
+        local line = getLines("main", lineNumber, lineNumber + 1)[1]
+        local at = line and line:find(needle, 1, true)
+        if at then
+          moveCursor("main", 0, lineNumber)
+          selectSection("main", at - 1, 1)
+          local colour = getTextFormat("main").foreground
+          -- a selection left behind is what a later replace() would act on
+          deselect("main")
+          return colour
+        end
+      end
+      return nil
+    end
+
+    setup(function()
+      feedTriggers(('<FRAME Name="%s" Align="right" Width="20%%" Height="30%%">'):format(frame) .. "\n")
+    end)
+
+    teardown(function()
+      -- a frame left open would sit in the main window's layout for every later
+      -- spec file, and its console would stay in the window registry
+      feedTriggers(('<FRAME %s ACTION="close">'):format(frame) .. "\n")
+      -- closeFrame() answers true for a name it never had, so the only proof
+      -- the main window got its width back is the console being gone
+      assert.is_nil(windowType(frame))
+    end)
+
+    it("gives the frame a console of its own", function()
+      assert.are.equal("miniconsole", windowType(frame))
+    end)
+
+    it("puts the redirected text in the frame and not in the main window", function()
+      assert.is_true(feedTriggers(('<DEST %s>MXPDEST1 routed away</DEST>'):format(frame) .. "\n"))
+      local _, routed = frameLineWith("MXPDEST1")
+      assert.are.equal("MXPDEST1 routed away", routed, table.concat(frameLines(), "|"))
+      assert.is_false(mainRecentlyHolds("MXPDEST1"))
+    end)
+
+    it("keeps a line break inside the redirect in the frame too", function()
+      assert.is_true(feedTriggers(('<DEST %s>MXPDEST2 first'):format(frame) .. "\nMXPDEST2 second</DEST>\n"))
+      local shown = table.concat(frameLines(), "|")
+      local firstIndex, firstLine = frameLineWith("MXPDEST2 first")
+      local secondIndex, secondLine = frameLineWith("MXPDEST2 second")
+      assert.is_truthy(firstIndex, shown)
+      assert.is_truthy(secondIndex, shown)
+      -- whole lines and adjacent indexes: a redirect that dropped the break
+      -- would still hold both strings, just run together on one line
+      assert.are.equal("MXPDEST2 first", firstLine, shown)
+      assert.are.equal("MXPDEST2 second", secondLine, shown)
+      assert.are.equal(firstIndex + 1, secondIndex, shown)
+      assert.is_false(mainRecentlyHolds("MXPDEST2"))
+    end)
+
+    -- </DEST> resets the text format to the profile's own colours rather than
+    -- restoring whatever was in force, so colour set before the redirect does
+    -- not survive it either
+    it("does not let colour set inside the redirect follow the text back to main", function()
+      -- the colour below is never closed by hand, so if the reset under test is
+      -- the thing severed the main console would stay red for every later spec
+      finally(function() feedTriggers("\027[0m\n") end)
+      assert.is_true(feedTriggers("MXPDEST3 plain\n"))
+      local plainColour = mainColourOf("MXPDEST3 plain")
+      assert.is_truthy(plainColour)
+      assert.is_true(feedTriggers(('<DEST %s>'):format(frame) .. "\027[31mMXPDEST4 red in the frame</DEST>MXPDEST4 back in main\n"))
+      assert.is_true(holds(frameLines(), "MXPDEST4 red in the frame"))
+      assert.are.same(plainColour, mainColourOf("MXPDEST4 back in main"))
+    end)
+
+    -- EOF on the opening tag empties the frame before the redirected text
+    -- lands, so the frame ends up holding only what this redirect wrote
+    it("empties the frame when the redirect carries EOF", function()
+      assert.is_true(feedTriggers(('<DEST %s>MXPDEST5 stale</DEST>'):format(frame) .. "\n"))
+      -- the state EOF is meant to undo, so a frame that was empty anyway
+      -- cannot pass this by accident
+      assert.is_true(holds(frameLines(), "MXPDEST5 stale"))
+      assert.is_true(feedTriggers("MXPDEST12 anchored in main\n"))
+
+      assert.is_true(feedTriggers(('<DEST %s EOF>MXPDEST6 fresh</DEST>'):format(frame) .. "\n"))
+      local shown = table.concat(frameLines(), "|")
+      assert.is_false(holds(frameLines(), "MXPDEST5 stale"), shown)
+      assert.is_true(holds(frameLines(), "MXPDEST6 fresh"), shown)
+      -- an EOF clear that overreached past the frame would take main with it
+      assert.is_true(mainRecentlyHolds("MXPDEST12 anchored in main"))
+    end)
+
+    -- the GUI's clear closes a scrolled-back frame's split screen too
+    it("counts every row of a scrolled-back frame again once EOF empties it", function()
+      for i = 1, 100 do
+        echo(frame, "MXPDEST15 line " .. i .. "\n")
+      end
+      pumpEvents(100)
+      local fullRows = getRowCount(frame)
+      scrollTo(frame, 10)
+      pumpEvents(100)
+      local splitRows = getRowCount(frame)
+
+      assert.is_true(feedTriggers(('<DEST %s EOF>MXPDEST15 fresh</DEST>'):format(frame) .. "\n"))
+      pumpEvents(100)
+      local clearedRows = getRowCount(frame)
+      scrollTo(frame)
+      assert.is_true(splitRows < fullRows, ("%d rows split, %d without"):format(splitRows, fullRows))
+      assert.are.equal(fullRows, clearedRows)
+    end)
+
+    -- EOL discards the part-written line the frame was left sitting on rather
+    -- than continuing it. A redirect closes its own last line, so the open
+    -- line has to come from elsewhere - an echo into the frame leaves one the
+    -- way a game writing a partial line into the frame would.
+    it("drops the frame's unfinished line when the redirect carries EOL", function()
+      echo(frame, "MXPDEST7 unfinished")
+      assert.is_true(holds(frameLines(), "MXPDEST7 unfinished"))
+      assert.is_true(feedTriggers("MXPDEST13 anchored in main\n"))
+
+      assert.is_true(feedTriggers(('<DEST %s EOL>MXPDEST8 after</DEST>'):format(frame) .. "\n"))
+      local shown = table.concat(frameLines(), "|")
+      -- without the clear the redirect continues that line instead, so the
+      -- needle survives as the head of a joined-up line
+      assert.is_false(holds(frameLines(), "MXPDEST7 unfinished"), shown)
+      assert.is_true(holds(frameLines(), "MXPDEST8 after"), shown)
+      assert.is_true(mainRecentlyHolds("MXPDEST13 anchored in main"))
+    end)
+
+    -- a redirect into a frame that was never opened has nowhere else to go,
+    -- so the text stays where it would have been without one
+    it("leaves the text in the main window when the frame it names is not there", function()
+      assert.is_nil(windowType("mxpSpecNoSuchDest"))
+      assert.is_true(feedTriggers("<DEST mxpSpecNoSuchDest>MXPDEST14 stays</DEST>MXPDEST14 after\n"))
+      assert.is_true(mainRecentlyHolds("MXPDEST14 staysMXPDEST14 after"))
+      assert.is_false(holds(frameLines(), "MXPDEST14"))
+    end)
+
+    -- EOL is the narrower of the two: it must leave the finished lines above
+    -- the open one where they are, which is what tells it apart from EOF
+    it("keeps the frame's finished lines when the redirect carries EOL", function()
+      assert.is_true(feedTriggers(('<DEST %s>MXPDEST9 kept</DEST>'):format(frame) .. "\n"))
+      echo(frame, "MXPDEST10 unfinished")
+      assert.is_true(holds(frameLines(), "MXPDEST10 unfinished"))
+      assert.is_true(holds(frameLines(), "MXPDEST9 kept"))
+
+      assert.is_true(feedTriggers(('<DEST %s EOL>MXPDEST11 after</DEST>'):format(frame) .. "\n"))
+      local shown = table.concat(frameLines(), "|")
+      assert.is_true(holds(frameLines(), "MXPDEST9 kept"), shown)
+      assert.is_false(holds(frameLines(), "MXPDEST10 unfinished"), shown)
+    end)
+  end)
+
+  -- An internal frame takes its space out of the main console, and the main
+  -- window's character grid is the only way to see that: getBorderLeft() and
+  -- its friends report the borders the user set, not the ones MXP adds.
+  describe("Tests the frames MXP asks for", function()
+    local function openFrame(name, attributes)
+      feedTriggers(('<FRAME Name="%s" %s>'):format(name, attributes) .. "\n")
+    end
+
+    local function closeFrame(name)
+      feedTriggers(('<FRAME %s ACTION="close">'):format(name) .. "\n")
+    end
+
+    -- everything the main window gained since it was at line `mark`: a tag that
+    -- was refused is still in the stream and shows up here as text
+    local function mainSince(mark)
+      return table.concat(getLines("main", mark, getLastLineNumber("main") + 1), "|")
+    end
+
+    it("takes the columns an internal frame needs from the main window", function()
+      finally(function() closeFrame("mxpSpecLeftFrame") end)
+      local columns, rows = getColumnCount("main"), getRowCount("main")
+
+      openFrame("mxpSpecLeftFrame", 'Align="left" Width="25%" Height="50%"')
+
+      assert.are.equal("miniconsole", windowType("mxpSpecLeftFrame"))
+      assert.is_true(getColumnCount("main") < columns, ("the main window still has %d columns"):format(getColumnCount("main")))
+      assert.are.equal(rows, getRowCount("main"), "a frame down one side took rows as well as columns")
+
+      closeFrame("mxpSpecLeftFrame")
+
+      assert.is_nil(windowType("mxpSpecLeftFrame"))
+      assert.are.equal(columns, getColumnCount("main"), "the main window did not get its columns back")
+    end)
+
+    it("takes rows instead when the frame is along the bottom", function()
+      finally(function() closeFrame("mxpSpecBottomFrame") end)
+      local columns, rows = getColumnCount("main"), getRowCount("main")
+
+      openFrame("mxpSpecBottomFrame", 'Align="bottom" Width="50%" Height="20%"')
+
+      assert.is_true(getRowCount("main") < rows, ("the main window still has %d rows"):format(getRowCount("main")))
+      assert.are.equal(columns, getColumnCount("main"), "a frame along the bottom took columns as well as rows")
+    end)
+
+    -- a height of "5c" is five lines of the profile's font; read as a percentage
+    -- it would be a twentieth of the window, which is nothing like the same
+    it("reads a size given in characters as characters", function()
+      finally(function()
+        closeFrame("mxpSpecCharsFrame")
+        closeFrame("mxpSpecPercentFrame")
+      end)
+      local rows = getRowCount("main")
+
+      openFrame("mxpSpecCharsFrame", 'Align="bottom" Width="50%" Height="5c"')
+      local rowsTakenByCharacters = rows - getRowCount("main")
+      closeFrame("mxpSpecCharsFrame")
+
+      openFrame("mxpSpecPercentFrame", 'Align="bottom" Width="50%" Height="5%"')
+      local rowsTakenByPercent = rows - getRowCount("main")
+
+      assert.is_true(rowsTakenByCharacters > rowsTakenByPercent,
+        ("five characters took %d rows and five percent took %d"):format(rowsTakenByCharacters, rowsTakenByPercent))
+    end)
+
+    -- a "W" is about twice the width of the cells a proportional font is drawn in
+    it("makes a width given in characters hold that many columns on a proportional font", function()
+      local originalFont = getFont("main")
+      finally(function()
+        closeFrame("mxpSpecProportionalFrame")
+        setFont("main", originalFont)
+      end)
+      assert.is_true(setFont("main", "Bitstream Vera Sans"))
+
+      openFrame("mxpSpecProportionalFrame", 'Align="left" Width="20c" Height="50%"')
+
+      local columns = getColumnCount("mxpSpecProportionalFrame")
+      assert.is_true(math.abs(columns - 20) <= 2, ("a frame 20 characters wide holds %d columns"):format(columns))
+    end)
+
+    -- CMUD leaves a frame the player has moved or resized alone when the game
+    -- opens it again, and Mudlet follows it
+    it("leaves a frame that is already open at the size it has", function()
+      finally(function() closeFrame("mxpSpecReopenedFrame") end)
+      openFrame("mxpSpecReopenedFrame", 'Align="left" Width="25%" Height="50%"')
+      local frameColumns = getColumnCount("mxpSpecReopenedFrame")
+      local mainColumns = getColumnCount("main")
+
+      openFrame("mxpSpecReopenedFrame", 'Align="left" Width="60%" Height="90%"')
+
+      assert.are.equal(frameColumns, getColumnCount("mxpSpecReopenedFrame"), "the second tag resized the frame")
+      assert.are.equal(mainColumns, getColumnCount("main"), "the second tag took more of the main window")
+    end)
+
+    -- Laying the frames out again lays out only a console still in its frame, and only one whose frame changes size
+    it("leaves a frame's console at the size a script gave it while the frame keeps its own", function()
+      finally(function()
+        closeFrame("mxpSpecKeptLeft")
+        closeFrame("mxpSpecKeptRight")
+      end)
+      openFrame("mxpSpecKeptLeft", 'Align="left" Width="25%" Height="50%"')
+      openFrame("mxpSpecKeptRight", 'Align="right" Width="20%" Height="30%"')
+      resizeWindow("mxpSpecKeptLeft", 200, 100)
+      local before = {getWindowGeometry("mxpSpecKeptLeft")}
+
+      closeFrame("mxpSpecKeptRight")
+
+      assert.are.same(before, {getWindowGeometry("mxpSpecKeptLeft")})
+    end)
+
+    it("leaves a frame's console a script moved out of the frame where the script put it", function()
+      local home = "mxpSpecMovedHome"
+      finally(function()
+        closeFrame("mxpSpecMovedTop")
+        closeFrame("mxpSpecMovedLeft")
+        deleteMiniConsole("mxpSpecMovedTop")
+        deleteMiniConsole(home)
+      end)
+      openFrame("mxpSpecMovedLeft", 'Align="left" Width="25%" Height="50%"')
+      openFrame("mxpSpecMovedTop", 'Align="top" Height="20%"')
+      openUserWindow(home, false)
+      assert.is_true(setWindow(home, "mxpSpecMovedTop", 10, 10, true))
+      local before = {getWindowGeometry("mxpSpecMovedTop")}
+
+      -- the top frame widens into the space the left one gave up
+      closeFrame("mxpSpecMovedLeft")
+
+      assert.are.same(before, {getWindowGeometry("mxpSpecMovedTop")})
+    end)
+
+    it("gives an external frame a console without taking main window space", function()
+      finally(function() closeFrame("mxpSpecExternalFrame") end)
+      local columns, rows = getColumnCount("main"), getRowCount("main")
+
+      openFrame("mxpSpecExternalFrame", 'EXTERNAL Width="30%" Height="30%"')
+
+      assert.are.equal("miniconsole", windowType("mxpSpecExternalFrame"))
+      assert.are.equal(columns, getColumnCount("main"))
+      assert.are.equal(rows, getRowCount("main"))
+    end)
+
+    it("opens a frame of each kind that does not scroll when the tag says SCROLLING=NO", function()
+      finally(function()
+        closeFrame("mxpSpecStillTab")
+        closeFrame("mxpSpecStillHost")
+        closeFrame("mxpSpecStillExternal")
+        closeFrame("mxpSpecStillInternal")
+        closeFrame("mxpSpecScrolling")
+      end)
+      openFrame("mxpSpecScrolling", 'Align="left" Width="20%" Height="50%"')
+      openFrame("mxpSpecStillInternal", 'Align="bottom" Height="20%" SCROLLING="NO"')
+      openFrame("mxpSpecStillExternal", 'EXTERNAL Width="30%" Height="30%" SCROLLING="NO"')
+      openFrame("mxpSpecStillHost", 'Align="right" Width="30%" Height="50%" TITLE="Host"')
+      openFrame("mxpSpecStillTab", 'DOCK="mxpSpecStillHost" Align="client" TITLE="Tab" SCROLLING="NO"')
+      assert.are.equal("miniconsole", windowType("mxpSpecStillTab"))
+
+      assert.are.same({true, false, false, false}, {
+        scrollingActive("mxpSpecScrolling"),
+        scrollingActive("mxpSpecStillInternal"),
+        scrollingActive("mxpSpecStillExternal"),
+        scrollingActive("mxpSpecStillTab"),
+      })
+    end)
+
+    it("lays the frames nested in an external frame out again when a script resizes it", function()
+      finally(function()
+        closeFrame("mxpSpecGrowInner")
+        closeFrame("mxpSpecGrowOuter")
+      end)
+      openFrame("mxpSpecGrowOuter", 'EXTERNAL Width="300" Height="200"')
+      feedTriggers('<DEST mxpSpecGrowOuter><FRAME Name="mxpSpecGrowInner" Align="top" Height="50%"></DEST>' .. "\n")
+      assert.are.equal("miniconsole", windowType("mxpSpecGrowInner"), "the frame was not nested in the external one")
+      local _, _, _, height = getWindowGeometry("mxpSpecGrowInner")
+
+      resizeWindow("mxpSpecGrowOuter", 300, 400)
+
+      -- A real window resizes once the window system says so
+      local _, _, _, grown = getWindowGeometry("mxpSpecGrowInner")
+      for _ = 1, 40 do
+        if grown > height then
+          break
+        end
+        pumpEvents(50)
+        _, _, _, grown = getWindowGeometry("mxpSpecGrowInner")
+      end
+      assert.is_true(grown > height * 1.5, ("the nested frame stayed %d high, not about %d"):format(grown, height * 2))
+    end)
+
+    -- DOCK names the frame to dock into and ALIGN=CLIENT makes it a tab of that
+    -- frame rather than a window of its own, so it costs the main window nothing
+    it("docks a frame into another as a tab and closes it with its parent", function()
+      finally(function()
+        closeFrame("mxpSpecTabChild")
+        closeFrame("mxpSpecTabParent")
+      end)
+      openFrame("mxpSpecTabParent", 'Align="right" Width="30%" Height="50%" TITLE="Parent"')
+      local columns = getColumnCount("main")
+
+      openFrame("mxpSpecTabChild", 'DOCK="mxpSpecTabParent" Align="client" TITLE="Tab"')
+
+      assert.are.equal("miniconsole", windowType("mxpSpecTabChild"))
+      assert.are.equal(columns, getColumnCount("main"), "the tab took space of its own instead of sharing its parent's")
+
+      closeFrame("mxpSpecTabParent")
+
+      assert.is_nil(windowType("mxpSpecTabChild"), "the tab outlived the frame it was docked into")
+    end)
+
+    -- LEFT and TOP place a frame at a spot of its own instead of along an
+    -- edge, so it floats over the main window rather than taking space from it
+    it("takes no main window space for a frame placed at a position", function()
+      finally(function() closeFrame("mxpSpecPlacedFrame") end)
+      local columns, rows = getColumnCount("main"), getRowCount("main")
+
+      openFrame("mxpSpecPlacedFrame", 'Left="10%" Top="10%" Width="30%" Height="30%"')
+
+      assert.are.equal("miniconsole", windowType("mxpSpecPlacedFrame"))
+      assert.are.equal(columns, getColumnCount("main"))
+      assert.are.equal(rows, getRowCount("main"))
+    end)
+
+    it("takes no main window space for a frame given only a TOP", function()
+      finally(function() closeFrame("mxpSpecTopFrame") end)
+      local columns, rows = getColumnCount("main"), getRowCount("main")
+
+      openFrame("mxpSpecTopFrame", 'Top="10%" Width="30%" Height="30%"')
+
+      assert.are.equal("miniconsole", windowType("mxpSpecTopFrame"))
+      assert.are.equal(columns, getColumnCount("main"))
+      assert.are.equal(rows, getRowCount("main"))
+    end)
+
+    -- the first tab turns its parent into a tab widget; later ones join it, and
+    -- closing one of them leaves the others and the parent alone
+    it("closes one tab of a frame without its sibling or its parent", function()
+      finally(function()
+        closeFrame("mxpSpecTabSecond")
+        closeFrame("mxpSpecTabFirst")
+        closeFrame("mxpSpecTabHost")
+      end)
+      openFrame("mxpSpecTabHost", 'Align="right" Width="30%" Height="50%" TITLE="Host"')
+      openFrame("mxpSpecTabFirst", 'DOCK="mxpSpecTabHost" Align="client" TITLE="First"')
+      openFrame("mxpSpecTabSecond", 'DOCK="mxpSpecTabHost" Align="client" TITLE="Second"')
+      local columns = getColumnCount("main")
+      assert.are.equal("miniconsole", windowType("mxpSpecTabFirst"))
+      assert.are.equal("miniconsole", windowType("mxpSpecTabSecond"))
+      assert.is_true(windowVisible("mxpSpecTabFirst"))
+      assert.is_false(windowVisible("mxpSpecTabSecond"))
+
+      closeFrame("mxpSpecTabFirst")
+
+      assert.is_nil(windowType("mxpSpecTabFirst"))
+      assert.are.equal("miniconsole", windowType("mxpSpecTabSecond"))
+      assert.is_true(windowVisible("mxpSpecTabSecond"), "the tab left showing is not the one that remains")
+      assert.are.equal("miniconsole", windowType("mxpSpecTabHost"))
+      assert.are.equal(columns, getColumnCount("main"), "closing a tab changed the space its parent takes")
+    end)
+
+    -- the parent's own tab is empty, so its first tab comes to the front even
+    -- when a frame was nested in the parent before it
+    it("brings the first tab to the front of a frame that already has one nested in it", function()
+      finally(function()
+        closeFrame("mxpSpecNestTab")
+        closeFrame("mxpSpecNestInner")
+        closeFrame("mxpSpecNestHost")
+      end)
+      openFrame("mxpSpecNestHost", 'Align="right" Width="30%" Height="50%" TITLE="Host"')
+      feedTriggers('<DEST mxpSpecNestHost><FRAME Name="mxpSpecNestInner" Align="bottom" Height="25%"></DEST>' .. "\n")
+      assert.are.equal("miniconsole", windowType("mxpSpecNestInner"), "the frame was not nested in the host")
+
+      openFrame("mxpSpecNestTab", 'DOCK="mxpSpecNestHost" Align="client" TITLE="Tab"')
+
+      assert.are.equal("miniconsole", windowType("mxpSpecNestTab"))
+      assert.is_true(windowVisible("mxpSpecNestTab"), "the first tab was left behind the host's empty one")
+      assert.is_false(windowVisible("mxpSpecNestHost"), "the frame did not dock into the host as a tab")
+    end)
+
+    -- a tab's page lays its console out over all the space under the tabs, whatever size the tag asked for
+    it("gives the tab in front all the space under its frame's tabs as that changes", function()
+      finally(function()
+        closeFrame("mxpSpecAreaSecond")
+        closeFrame("mxpSpecAreaFirst")
+        closeFrame("mxpSpecAreaHost")
+        closeFrame("mxpSpecAreaLeft")
+      end)
+      openFrame("mxpSpecAreaLeft", 'Align="left" Width="20%" Height="50%"')
+      openFrame("mxpSpecAreaHost", 'Align="right" Width="30%" Height="50%" TITLE="Host"')
+      local _, _, areaWidth, areaHeight = getWindowGeometry("mxpSpecAreaHost")
+      openFrame("mxpSpecAreaFirst", 'DOCK="mxpSpecAreaHost" Align="client" TITLE="First"')
+      openFrame("mxpSpecAreaSecond", 'DOCK="mxpSpecAreaHost" Align="client" Width="10%" Height="10%" TITLE="Second"')
+      local _, _, width, height = getWindowGeometry("mxpSpecAreaFirst")
+      assert.are.same({areaWidth, areaHeight}, {width, height}, "the tab in front does not fill the space under the tabs")
+
+      -- the host widens into the space the left frame gave up
+      closeFrame("mxpSpecAreaLeft")
+      local _, _, widerWidth, widerHeight = getWindowGeometry("mxpSpecAreaFirst")
+      assert.is_true(widerWidth > width, "the tab in front did not follow its frame")
+
+      closeFrame("mxpSpecAreaFirst")
+      local _, _, shownWidth, shownHeight = getWindowGeometry("mxpSpecAreaSecond")
+      assert.are.same({widerWidth, widerHeight}, {shownWidth, shownHeight}, "the tab brought to the front does not fill the space")
+    end)
+
+    it("shows the tag as text when the frame it names is not there", function()
+      finally(function() closeFrame("mxpSpecFocusFrame") end)
+      openFrame("mxpSpecFocusFrame", 'Align="left" Width="25%" Height="50%"')
+
+      local mark = getLastLineNumber("main")
+      feedTriggers('<FRAME mxpSpecFocusFrame ACTION="focus">MXPFRAME1 focused' .. "\n")
+      local handled = mainSince(mark)
+      assert.is_truthy(handled:find("MXPFRAME1 focused", 1, true), handled)
+      assert.is_falsy(handled:find("<FRAME", 1, true), handled)
+
+      mark = getLastLineNumber("main")
+      feedTriggers('<FRAME mxpSpecNoSuchFrame ACTION="focus">MXPFRAME2 not focused' .. "\n")
+      local refused = mainSince(mark)
+      assert.is_truthy(refused:find("<FRAME mxpSpecNoSuchFrame", 1, true), refused)
+    end)
+
+    -- closing one that is not there is the exception: it answers as though it
+    -- had been, so a game that closes a frame twice does not print its own tag
+    it("says nothing when asked to close a frame that is not there", function()
+      local mark = getLastLineNumber("main")
+      feedTriggers('<FRAME mxpSpecNeverOpened ACTION="close">MXPFRAME3 closed anyway' .. "\n")
+
+      local shown = mainSince(mark)
+      assert.is_truthy(shown:find("MXPFRAME3 closed anyway", 1, true), shown)
+      assert.is_falsy(shown:find("<FRAME", 1, true), shown)
+    end)
+
+    it("refuses a name that is not a plain word", function()
+      finally(function()
+        closeFrame("mxpSpecDotted.name")
+        closeFrame("mxpSpec spaced")
+      end)
+      local columns = getColumnCount("main")
+
+      local mark = getLastLineNumber("main")
+      feedTriggers('<FRAME Name="mxpSpec spaced" Align="left" Width="25%" Height="50%">MXPFRAME4 spaced' .. "\n")
+
+      assert.is_nil(windowType("mxpSpec spaced"))
+      assert.are.equal(columns, getColumnCount("main"))
+      -- the refusal leaves the tag in the stream rather than eating it silently
+      assert.is_truthy(mainSince(mark):find("<FRAME", 1, true), mainSince(mark))
+
+      feedTriggers('<FRAME Name="mxpSpecDotted.name" Align="left" Width="25%" Height="50%">' .. "\n")
+
+      assert.is_nil(windowType("mxpSpecDotted.name"))
+    end)
+
+    -- a frame given the name of a script's window would take the name over, and
+    -- closing the frame would then leave the script's window unreachable
+    local function windowHolds(name, needle)
+      return table.concat(getLines(name, 0, getLineCount(name) + 1), "|"):find(needle, 1, true) ~= nil
+    end
+
+    it("refuses a frame named like a mini console a script made", function()
+      local name = "mxpSpecScriptMini"
+      finally(function()
+        closeFrame(name)
+        deleteMiniConsole(name)
+      end)
+      createMiniConsole(name, 0, 0, 300, 100)
+      echo(name, "mxpSpecScriptText\n")
+      local columns = getColumnCount("main")
+
+      local mark = getLastLineNumber("main")
+      openFrame(name, 'Align="right" Width="20%" Height="30%"')
+
+      assert.are.equal(columns, getColumnCount("main"), "the frame was opened")
+      assert.is_truthy(mainSince(mark):find("<FRAME", 1, true), mainSince(mark))
+      closeFrame(name)
+      assert.are.equal("miniconsole", windowType(name))
+      assert.is_true(windowHolds(name, "mxpSpecScriptText"), "the name no longer reaches the script's mini console")
+    end)
+
+    it("refuses a frame named like a user window a script made", function()
+      local name = "mxpSpecScriptDock"
+      finally(function()
+        closeFrame(name)
+        deleteMiniConsole(name)
+      end)
+      openUserWindow(name, false)
+      echo(name, "mxpSpecScriptText\n")
+
+      openFrame(name, 'Align="right" Width="20%" Height="30%"')
+
+      assert.are.equal("userwindow", windowType(name))
+      assert.is_true(openUserWindow(name, false))
+      closeFrame(name)
+      assert.are.equal("userwindow", windowType(name))
+      assert.is_true(windowHolds(name, "mxpSpecScriptText"), "the name no longer reaches the script's user window")
+    end)
+
+    -- deleteMiniConsole() works on a frame's console, which frees the name for
+    -- a script's own window while the frame itself is still open
+    it("leaves a mini console a script made in a frame's place when the frame closes", function()
+      local name = "mxpSpecReusedMini"
+      finally(function()
+        closeFrame(name)
+        deleteMiniConsole(name)
+      end)
+      openFrame(name, 'Align="right" Width="20%" Height="30%"')
+      assert.are.equal("miniconsole", windowType(name))
+      assert.is_true(deleteMiniConsole(name))
+      createMiniConsole(name, 0, 0, 300, 100)
+
+      closeFrame(name)
+
+      assert.are.equal("miniconsole", windowType(name))
+      echo(name, "mxpSpecReusedText\n")
+      assert.is_true(windowHolds(name, "mxpSpecReusedText"), "the name no longer reaches the script's mini console")
+    end)
+
+    it("leaves a user window a script made in a frame's place when the frame closes", function()
+      local name = "mxpSpecReusedDock"
+      finally(function()
+        closeFrame(name)
+        deleteMiniConsole(name)
+      end)
+      openFrame(name, 'Align="right" Width="20%" Height="30%"')
+      assert.is_true(deleteMiniConsole(name))
+      assert.is_true(openUserWindow(name, false))
+
+      closeFrame(name)
+
+      assert.are.equal("userwindow", windowType(name))
+      echo(name, "mxpSpecReusedText\n")
+      assert.is_true(windowHolds(name, "mxpSpecReusedText"), "the name no longer reaches the script's user window")
+    end)
+
+    it("stops at twenty frames", function()
+      local names = {}
+      for index = 1, 21 do
+        names[index] = ("mxpSpecLimit%d"):format(index)
+      end
+      finally(function()
+        for _, name in ipairs(names) do
+          closeFrame(name)
+        end
+      end)
+
+      for _, name in ipairs(names) do
+        openFrame(name, 'Align="left" Width="2c" Height="2c"')
+      end
+
+      assert.are.equal("miniconsole", windowType(names[20]), "the twentieth frame was refused")
+      assert.is_nil(windowType(names[21]), "a twenty-first frame was allowed")
+    end)
+
+    -- a frame opened while output is redirected belongs to the frame it was
+    -- redirected into, and comes out of that frame's space rather than the main
+    -- window's
+    it("nests a frame opened inside a redirect in the frame it was redirected to", function()
+      finally(function()
+        closeFrame("mxpSpecNestedInner")
+        closeFrame("mxpSpecNestedOuter")
+      end)
+      openFrame("mxpSpecNestedOuter", 'Align="left" Width="40%" Height="60%"')
+      local columns = getColumnCount("main")
+
+      feedTriggers('<DEST mxpSpecNestedOuter><FRAME Name="mxpSpecNestedInner" Align="left" Width="50%" Height="50%"></DEST>' .. "\n")
+
+      assert.are.equal("miniconsole", windowType("mxpSpecNestedInner"))
+      assert.are.equal(columns, getColumnCount("main"), "the nested frame took main window space of its own")
+      assert.is_true(getColumnCount("mxpSpecNestedInner") < getColumnCount("mxpSpecNestedOuter"),
+        "the nested frame is not inside the one it was opened in")
+    end)
+  end)
 end)

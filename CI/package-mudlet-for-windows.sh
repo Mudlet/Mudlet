@@ -19,7 +19,9 @@
 #   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ###########################################################################
 
-# Version: 2.2.0    Switch from MINGW64 to CLANG64
+# Version: 2.3.0    Move portable ZIP creation out to
+#                   create-portable-zip-for-windows.sh so it runs after signing
+#          2.2.0    Switch from MINGW64 to CLANG64
 #          2.1.0    Remove MINGW32 since upstream no longer supports it
 #          2.0.0    Rework to build on an MSYS2 MINGW64 Github workflow
 #          1.5.0    Change BUILD_TYPE to BUILD_CONFIG to avoid clash with
@@ -37,7 +39,7 @@
 # Windows in a archive file that will be deployed from a github workflow
 
 # To be used AFTER setup-windows-sdk.sh and build-mudlet-for-windows.sh
-# have been run.
+# have been run, and BEFORE create-portable-zip-for-windows.sh.
 
 # Exit codes:
 # 0 - Everything is fine. 8-)
@@ -118,7 +120,7 @@ done
 
 # The location that windeployqt6 puts the Qt translation files by default is
 # "./translations" unfortunately "QLibraryInfo::path(QLibraryInfo::TranslationsPath)"
-# in the calls to "QString mudlet::getMudletPath(const enums::mudletPathType, const QString&, const QString&)"
+# in the calls to "QString MudletApp::getMudletPath(const enums::mudletPathType, const QString&, const QString&)"
 # with "enums::qtTranslationsPath" as the first argument returns:
 # "./share/Qt6/translations" - which means the Qt translations were not getting
 # loaded for our Windows builds:
@@ -224,6 +226,16 @@ for LIB in ${NEEDED_LIBS[@]}; do
 done
 echo "    ... done copying identified libraries."
 
+# Over the MSYS2 lua51.dll the rocks brought in above, as mudlet.exe needs the
+# one it was built with
+if grep -qiE "^USE_BUNDLED_LUA:BOOL=(ON|TRUE|YES|Y|1)[[:space:]]*$" "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/CMakeCache.txt"; then
+  if [ ! -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/lua51.dll" ]; then
+    echo "=== ERROR: Mudlet was built with its own Lua, but its lua51.dll is missing, so the package would carry MSYS2's ==="
+    exit 1
+  fi
+  cp -v -p "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/lua51.dll" .
+fi
+
 echo ""
 echo "Copying Mudlet & Geyser Lua files and the Generic Mapper in..."
 # Using the '/./' notation provides the point at which rsync reproduces the
@@ -236,9 +248,11 @@ rsync -avR "${GITHUB_WORKSPACE_UNIX_PATH}"/src/mudlet-lua/./* ./mudlet-lua/
 echo ""
 
 echo "Copying Lua code formatter Lua files in..."
-# As written it copies every file but it should be polished up to skip unneeded
-# ones:
-rsync -avR "${GITHUB_WORKSPACE_UNIX_PATH}"/3rdparty/lcf/./* ./lcf/
+# The same set as the lcf install() rule in src/CMakeLists.txt; the first
+# matching filter wins, and -m drops directories left with nothing in them:
+rsync -avR -m --exclude='.*' --include='*/' --include='*.lua' \
+    --include='LICENSE*' --include='COPYING*' --exclude='*' \
+    "${GITHUB_WORKSPACE_UNIX_PATH}"/3rdparty/lcf/./* ./lcf/
 echo ""
 
 echo "Copying Lua translation files in..."
@@ -253,48 +267,6 @@ cp -v -p -t . \
     "${GITHUB_WORKSPACE_UNIX_PATH}"/src/*.aff \
     "${GITHUB_WORKSPACE_UNIX_PATH}"/src/*.dic
 
-echo ""
-
-# Create portable version
-echo "Creating portable ZIP package..."
-PORTABLE_ZIP_DIR="${GITHUB_WORKSPACE_UNIX_PATH}/portable-${MSYSTEM}-${BUILD_CONFIG}"
-if [ -d "${PORTABLE_ZIP_DIR}" ]; then
-  rm -rf "${PORTABLE_ZIP_DIR}"
-fi
-mkdir -p "${PORTABLE_ZIP_DIR}"
-
-# Copy all packaged files to portable directory
-cp -r "${PACKAGE_DIR}"/* "${PORTABLE_ZIP_DIR}/"
-
-# Create portable.txt file to enable portable mode (empty file)
-touch "${PORTABLE_ZIP_DIR}/portable.txt"
-echo "Created portable.txt file in: ${PORTABLE_ZIP_DIR}/portable.txt"
-
-# Verify portable.txt was created
-if [ -f "${PORTABLE_ZIP_DIR}/portable.txt" ]; then
-  echo "portable.txt file exists and is ready for packaging"
-  ls -la "${PORTABLE_ZIP_DIR}/portable.txt"
-else
-  echo "ERROR: portable.txt file was not created!"
-  exit 1
-fi
-
-# Create the portable ZIP archive
-cd "${GITHUB_WORKSPACE_UNIX_PATH}" || exit 1
-PORTABLE_ZIP_NAME="Mudlet-portable-${MSYSTEM,,}.zip"
-
-echo "Creating ZIP from directory: $(basename "${PORTABLE_ZIP_DIR}")"
-echo "Contents of portable directory before ZIP creation:"
-ls -la "${PORTABLE_ZIP_DIR}/" | head -20
-
-zip -r "${PORTABLE_ZIP_NAME}" "$(basename "${PORTABLE_ZIP_DIR}")"
-
-# Verify portable.txt is in the ZIP
-echo "Verifying portable.txt is in the ZIP:"
-unzip -l "${PORTABLE_ZIP_NAME}" | grep portable.txt || echo "WARNING: portable.txt not found in ZIP!"
-
-echo ""
-echo "Created portable ZIP: ${GITHUB_WORKSPACE_UNIX_PATH}/${PORTABLE_ZIP_NAME}"
 echo ""
 
 # For debugging purposes:

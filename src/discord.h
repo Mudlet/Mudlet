@@ -29,7 +29,9 @@
 #include <QDebug>
 #include <QTimer>
 #include <QTimerEvent>
+#if defined(INCLUDE_DISCORD_RPC)
 #include <QLibrary>
+#endif
 #include "../3rdparty/discord/rpc/include/discord_register.h"
 #include "../3rdparty/discord/rpc/include/discord_rpc.h"
 
@@ -92,9 +94,6 @@ public:
     void setLargeImageText(const QString&);
     void setSmallImageKey(const QString&);
     void setSmallImageText(const QString&);
-    void setJoinSecret(const QString&);
-    void setMatchSecret(const QString&);
-    void setSpectateSecret(const QString&);
     void setPartySize(const int size) { mPartySize = size; }
     void setPartyMax(const int maximum) { mPartyMax = maximum; }
     DiscordRichPresence convert() const;
@@ -115,20 +114,30 @@ public:
     int8_t getInstance() const { return mInstance; }
 
 private:
-    char mState[128];
-    char mDetails[128];
+    // The limits Discord documents for each field, in bytes (see the struct
+    // comment above). The buffers are one byte larger than the limit they hold:
+    // sized at exactly the limit, the null terminator would take the last byte
+    // and a field of the full documented length would always lose its final
+    // character. Named in the 'k' form the rest of the codebase gives an array
+    // size (TArea.cpp's kPixmapDataLineSize) rather than the 'scm' one it gives
+    // other static class members.
+    static constexpr size_t kTextByteLimit = 128;
+    static constexpr size_t kImageKeyByteLimit = 32;
+
+    char mState[kTextByteLimit + 1];
+    char mDetails[kTextByteLimit + 1];
     int64_t mStartTimestamp = 0;
     int64_t mEndTimestamp = 0;
-    char mLargeImageKey[32];
-    char mLargeImageText[128];
-    char mSmallImageKey[32];
-    char mSmallImageText[128];
-    char mPartyId[128];
+    char mLargeImageKey[kImageKeyByteLimit + 1];
+    char mLargeImageText[kTextByteLimit + 1];
+    char mSmallImageKey[kImageKeyByteLimit + 1];
+    char mSmallImageText[kTextByteLimit + 1];
+    char mPartyId[kTextByteLimit + 1];
     int mPartySize = 0;
     int mPartyMax = 0;
-    char mMatchSecret[128];
-    char mJoinSecret[128];
-    char mSpectateSecret[128];
+    char mMatchSecret[kTextByteLimit + 1];
+    char mJoinSecret[kTextByteLimit + 1];
+    char mSpectateSecret[kTextByteLimit + 1];
     int8_t mInstance = 1;
 };
 
@@ -166,10 +175,14 @@ class Discord : public QObject
 
     // Allows the functional test to simulate the logged-in Discord user:
     friend class TDiscordModeTest;
+    // Checks whether a presence is being published with no main window:
+    friend class HeadlessHostSmokeTest;
 
 public:
     explicit Discord(QObject *parent = nullptr);
     ~Discord() override;
+
+    static Discord* self() { return smpSelf; }
 
     bool libraryLoaded();
     bool usingMudletsDiscordID(Host*) const;
@@ -255,7 +268,9 @@ private:
     // Mudlet:
     QMap<Host*, QString>mHostApplicationIDs;
 
+#if defined(INCLUDE_DISCORD_RPC)
     QScopedPointer<QLibrary> mpLibrary;
+#endif
 
     // Used to hold the per profile data independently of whichever application id
     // it will be used with:
@@ -293,6 +308,8 @@ private:
     static QString smUserName;
     static QString smUserId;
     static QString smAvatar;
+
+    inline static Discord* smpSelf = nullptr;
 };
 
 #endif // DISCORD_H

@@ -5,13 +5,48 @@
 
 
 
+-- Byte index of the last byte of the character starting at i; a byte that does
+-- not start a complete UTF-8 sequence counts as a character of its own.
+local function utf8CharEnd(s, i)
+  local lead = string.byte(s, i)
+  local continuations = lead < 0xC2 and 0 or lead < 0xE0 and 1 or lead < 0xF0 and 2 or lead < 0xF5 and 3 or 0
+  for k = 1, continuations do
+    local byte = string.byte(s, i + k)
+    if not byte or byte < 0x80 or byte > 0xBF then
+      return i
+    end
+  end
+  return i + continuations
+end
+
 --- Documentation: https://wiki.mudlet.org/w/Manual:String_Functions#string.cut
+--- maxLen counts UTF-8 characters (code points), not bytes; each byte that is
+--- not part of a valid UTF-8 sequence counts as one character.
 function string:cut(maxLen)
-  if string.len(self) > maxLen then
-    return string.sub(self, 1, maxLen)
-  else
+  if string.len(self) <= maxLen then
     return self
   end
+  -- plain Lua has no utf8.sub: generate-changelog.lua runs this file outside Mudlet
+  local hasUtf8 = utf8 and utf8.sub and utf8.len
+  if maxLen < 0 then
+    return hasUtf8 and utf8.sub(self, 1, maxLen) or string.sub(self, 1, maxLen)
+  end
+  if hasUtf8 then
+    -- utf8.sub folds a run of stray continuation bytes into the character before
+    -- it, so its result is only trusted when it is valid UTF-8
+    local prefix = utf8.sub(self, 1, maxLen)
+    if utf8.len(prefix) then
+      return prefix
+    end
+  end
+  local last = 0
+  for _ = 1, maxLen do
+    last = utf8CharEnd(self, last + 1)
+    if last >= string.len(self) then
+      return self
+    end
+  end
+  return string.sub(self, 1, last)
 end
 
 
@@ -106,13 +141,33 @@ end
 --- Documentation: https://wiki.mudlet.org/w/Manual:String_Functions#string.trim
 function string:trim()
   if self then
-    -- return only the trimmed string, and not the # of replacements done as well
-    local trimmed = string.gsub(self, "^%s*(.-)%s*$", "%1")
-    return trimmed
+    -- Not "^%s*(.-)%s*$", which retries the trailing %s*$ at every space of
+    -- every run inside the line - quadratic on the long runs that tabular game
+    -- output is full of. An all-space string is answered first, as the second
+    -- pattern would backtrack through it the same way.
+    if string.match(self, "^%s*$") then
+      return ""
+    end
+    return string.match(self, "^%s*(.*%S)")
   else
     return self
   end
 end
+
+local patternEscapes = {
+  ["%"] = "%%",
+  ["^"] = "%^",
+  ["$"] = "%$",
+  ["("] = "%(",
+  [")"] = "%)",
+  ["["] = "%[",
+  ["]"] = "%]",
+  ["."] = "%.",
+  ["*"] = "%*",
+  ["+"] = "%+",
+  ["-"] = "%-",
+  ["?"] = "%?",
+}
 
 --- Documentation: https://wiki.mudlet.org/w/Manual:String_Functions#string.patternEscape
 function string.patternEscape(self)
@@ -121,21 +176,10 @@ function string.patternEscape(self)
   if selfType ~= "string" then
     printError(f"string.patternEscape: bad argument #1 type (string to escape as string expected, got {selfType})", true, true)
   end
-  local replacements = {
-    ["%"] = "%%",
-    ["^"] = "%^",
-    ["$"] = "%$",
-    ["("] = "%(",
-    [")"] = "%)",
-    ["["] = "%[",
-    ["]"] = "%]",
-    ["."] = "%.",
-    ["*"] = "%*",
-    ["+"] = "%+",
-    ["-"] = "%-",
-    ["?"] = "%?",
-  }
-  local escaped = gsub(self, ".", replacements)
+  -- every magic character is punctuation, so %p visits only the bytes that
+  -- could need escaping; any other punctuation is not in the table, and gsub
+  -- leaves a match the table has no entry for as it was
+  local escaped = gsub(self, "%p", patternEscapes)
   return escaped
 end
 
@@ -146,21 +190,7 @@ function utf8.patternEscape(self)
   if selfType ~= "string" then
     printError(f"utf8.patternEscape: bad argument #1 type (string to escape as string expected, got {selfType})", true, true)
   end
-  local replacements = {
-    ["%"] = "%%",
-    ["^"] = "%^",
-    ["$"] = "%$",
-    ["("] = "%(",
-    [")"] = "%)",
-    ["["] = "%[",
-    ["]"] = "%]",
-    ["."] = "%.",
-    ["*"] = "%*",
-    ["+"] = "%+",
-    ["-"] = "%-",
-    ["?"] = "%?",
-  }
-  local escaped = gsub(self, ".", replacements)
+  local escaped = gsub(self, ".", patternEscapes)
   return escaped
 end
 
@@ -179,39 +209,229 @@ if _VERSION == "Lua 5.1" then
   end
 end
 
--- long and inconvenient variable name is to help avoid collisions
--- str (what it was before) was causing f("Hello {str}") to return "Hello Hello {str}"
+local find, sub, concat, type = string.find, string.sub, table.concat, type
+local getinfo, getlocal = debug.getinfo, debug.getlocal
+-- A script can replace tostring with one that changes a local a later name reads
+local fstring_tostring = tostring
+
+-- Compiling a {} block costs far more than running it, so each one is compiled
+-- once and handed this call's environment to run in. Weak, so expressions built
+-- from changing text cannot pile up.
+local fstring_compiled = setmetatable({}, { __mode = "v" })
+
+-- Weak for the same reason: parsed templates built from changing text must not pile up.
+local fstring_templates = setmetatable({}, { __mode = "v" })
+
+-- A bare name skips compilation; keywords such as {nil} or {true} are expressions, not names.
+local fstring_keywords = {}
+for word in ("and break do else elseif end false for function if in local nil not or repeat return then true until while goto"):gmatch("%a+") do
+  fstring_keywords[word] = true
+end
+
+local function fstring_settle(fn, previous_env, ...)
+  setfenv(fn, previous_env)
+  return ...
+end
+
+-- f's first local is its parameter; a frame that starts with it is f's own, whose
+-- internals must not be readable by an f nested in an expression. Rename both together.
+local fstring_param = "supersecretstringvariablenocollision"
+
+-- `level` is counted from this function's own frame. Returns whether it found a local, and its value.
+-- A frame lists a local that shadows another of the same name after it, so the last one counts.
+local function fstring_local(k, level)
+  while getinfo(level, "") ~= nil do
+    local i = 1
+    local found, found_value = false, nil
+    repeat
+      local name, value = getlocal(level, i)
+      if i == 1 and name == fstring_param then
+        break
+      end
+      if name == k then
+        found, found_value = true, value
+      end
+      i = i + 1
+    until name == nil
+    if found then
+      return true, found_value
+    end
+    level = level + 1
+  end
+  return false
+end
+
+-- fstring_local for every name in the set `names` at once, for a template that
+-- is nothing but several names: one walk of the stack rather than one each.
+-- seen[name] holds the level the name was found at, so a later shadowing local in that frame replaces it.
+local function fstring_locals(names, count, level, values, seen)
+  while count > 0 and getinfo(level, "") ~= nil do
+    local i = 1
+    repeat
+      local name, value = getlocal(level, i)
+      if i == 1 and name == fstring_param then
+        break
+      end
+      if names[name] then
+        local found_at = seen[name]
+        if not found_at then
+          seen[name] = level
+          count = count - 1
+          values[name] = value
+        elseif found_at == level then
+          values[name] = value
+        end
+      end
+      i = i + 1
+    until name == nil
+    level = level + 1
+  end
+end
+
+-- Mudlet leaves these out of the globals table until they are first read
+local function fstring_global(outer_env, k)
+  if k == "matches" or k == "multimatches" or k == "line" then
+    return outer_env[k]
+  end
+  return rawget(outer_env, k)
+end
+
+local function fstring_parse(template)
+  local parts, count, position = { names = {}, nameCount = 0, onlyNames = true }, 0, 1
+  while true do
+    local first, last = find(template, "%b{}", position)
+    if not first then
+      break
+    end
+    if first > position then
+      count = count + 1
+      parts[count] = sub(template, position, first - 1)
+    end
+    local code = sub(template, first + 1, last - 1)
+    local name = code:match("^[%a_][%w_]*$") and not fstring_keywords[code] and code or nil
+    if name and not parts.names[name] then
+      parts.names[name] = true
+      parts.nameCount = parts.nameCount + 1
+    end
+    if not name then
+      parts.onlyNames = false
+    end
+    count = count + 1
+    parts[count] = { code = code, name = name }
+    position = last + 1
+  end
+  if count > 0 and position <= #template then
+    parts[count + 1] = sub(template, position)
+  end
+  return parts
+end
+
+--- Documentation: https://wiki.mudlet.org/w/Manual:String_Functions#f
+---
+--- return f(...) is a Lua tail call: the frame of the function or script that wrote it
+--- is gone before f runs, so f cannot see that frame's locals and looks further up the
+--- stack, then in globals. Wrap the call in parentheses, return (f(...)), or assign it
+--- to a local first. A wrapper such as function myf(str) return f(str) end relies on
+--- this to read its own caller's locals.
+---
+--- @usage Without the parentheses, {name} would be read from greet's caller.
+---   <pre>
+---   local function greet()
+---     local name = "Bob"
+---     return (f("Hello {name}"))
+---   end
+---   </pre>
 function f(supersecretstringvariablenocollision)
+  -- The parameter's name must match fstring_param, so no other function's frame is mistaken for f's
   local supersecretstringvariablenocollisiontype = type(supersecretstringvariablenocollision)
   if supersecretstringvariablenocollisiontype ~= "string" then
     error("f: bad argument #1 type (str as string expected, got " .. supersecretstringvariablenocollisiontype .. ")")
   end
+  if not find(supersecretstringvariablenocollision, "{", 1, true) then
+    return supersecretstringvariablenocollision
+  end
+  local parts = fstring_templates[supersecretstringvariablenocollision]
+  if not parts then
+    parts = fstring_parse(supersecretstringvariablenocollision)
+    fstring_templates[supersecretstringvariablenocollision] = parts
+  end
+  if #parts == 0 then
+    return supersecretstringvariablenocollision
+  end
   local outer_env = _ENV or getfenv(1)
-  return (supersecretstringvariablenocollision:gsub("%b{}", function(block)
-    local code = block:match("{(.*)}")
-    local exp_env = {}
-    setmetatable(exp_env, {
-      __index = function(_, k)
-        local stack_level = 5
-        while debug.getinfo(stack_level, "") ~= nil do
-          local i = 1
-          repeat
-            local name, value = debug.getlocal(stack_level, i)
-            if name == k then
-              return value
-            end
-            i = i + 1
-          until name == nil
-          stack_level = stack_level + 1
+  local lookup, values, seen
+  -- Reading every name up front would miss a block that changes a local before a later name is read
+  if parts.onlyNames and parts.nameCount > 1 and tostring == fstring_tostring then
+    values, seen = {}, {}
+    fstring_locals(parts.names, parts.nameCount, 3, values, seen)
+  end
+  local out = {}
+  for i = 1, #parts do
+    local part = parts[i]
+    if type(part) == "string" then
+      out[i] = part
+    elseif part.name then
+      local name = part.name
+      local found, value
+      if seen then
+        found, value = seen[name], values[name]
+      else
+        found, value = fstring_local(name, 3)
+      end
+      if not found then
+        value = fstring_global(outer_env, name)
+      end
+      -- A __tostring that gives nil or false leaves the block as written
+      out[i] = tostring(value) or "{" .. name .. "}"
+      if seen then
+        -- A __tostring can change a local that a later name reads
+        local kind = type(value)
+        if kind == "table" or kind == "userdata" then
+          seen = nil
         end
-        return rawget(outer_env, k)
-      end,
-    })
-    local fn, err = load("return " .. code, "expression `" .. code .. "`", "t", exp_env)
-    if fn then
-      return tostring(fn())
+      end
     else
-      error(err, 0)
+      local code = part.code
+      -- Made on first use and shared by this call's blocks; it reads the stack afresh on every access.
+      lookup = lookup or function(_, k)
+        -- An expression can read from inside functions of its own, so f's frame is
+        -- found rather than counted to, and its caller's locals are the ones searched.
+        -- Level 3 is whatever called the reading function, which is usually f.
+        -- A coroutine started in an expression has a stack of its own, without f in it.
+        local level = 3
+        while getinfo(level, "") and getlocal(level, 1) ~= fstring_param do
+          level = level + 1
+        end
+        local found, value = fstring_local(k, level + 2)
+        if found then
+          return value
+        end
+        return fstring_global(outer_env, k)
+      end
+      local exp_env = setmetatable({}, { __index = lookup })
+      local fn, err
+      if not setfenv then
+        fn, err = load("return " .. code, "expression `" .. code .. "`", "t", exp_env)
+        if not fn then
+          error(err, 0)
+        end
+        out[i] = tostring(fn()) or "{" .. code .. "}"
+      else
+        fn = fstring_compiled[code]
+        if not fn then
+          fn, err = load("return " .. code, "expression `" .. code .. "`", "t", exp_env)
+          if not fn then
+            error(err, 0)
+          end
+          fstring_compiled[code] = fn
+        end
+        -- the same expression can be running further up the stack, from an f() it
+        -- called, and must get its own environment back afterwards
+        local previous_env = getfenv(fn)
+        setfenv(fn, exp_env)
+        out[i] = tostring(fstring_settle(fn, previous_env, fn())) or "{" .. code .. "}"
+      end
     end
-  end))
+  end
+  return concat(out)
 end

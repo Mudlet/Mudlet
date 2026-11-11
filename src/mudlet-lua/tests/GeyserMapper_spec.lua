@@ -220,6 +220,31 @@ describe("Tests functionality of Geyser.Mapper", function()
       assert.are.equal("", mapper.titleText)
     end)
 
+    it("puts the title on the map window while it is on screen", function()
+      local mapper = track(Geyser.Mapper:new({name = "gmpLiveTitle", x = 10, y = 20, width = 300, height = 200, embedded = false}))
+      -- an untitled mapper resets the map window as it is built, so it starts
+      -- on the generated default
+      local generated = getMapWindowTitle()
+      assert.is_truthy(generated:find(getProfileName(), 1, true))
+      assert.is_true(mapper:setTitle("On screen"))
+      assert.are.equal("On screen", getMapWindowTitle())
+      assert.is_true(mapper:resetTitle())
+      assert.are.equal(generated, getMapWindowTitle())
+    end)
+
+    it("titles the map window it opens with the title it was constructed with", function()
+      -- nil means no map window is open, so the one the constructor opens below
+      -- is the one the title is read back from
+      assert.is_nil(getMapWindowTitle())
+      track(Geyser.Mapper:new({
+        name = "gmpBornTitled",
+        x = 10, y = 20, width = 300, height = 200,
+        embedded = false,
+        titleText = "Titled at birth",
+      }))
+      assert.are.equal("Titled at birth", getMapWindowTitle())
+    end)
+
     it("applies a title that was set while the mapper was hidden", function()
       local mapper = track(Geyser.Mapper:new({name = "gmpHiddenTitle", x = 10, y = 20, width = 300, height = 200, embedded = false}))
       mapper:hide()
@@ -267,16 +292,15 @@ describe("Tests functionality of Geyser.Mapper", function()
     end)
   end)
 
-  pending("Geyser.Mapper:setTitle/resetTitle put the text on the map window's title bar - needs a getMapWindowTitle getter")
-
   pending("Geyser.Mapper:setDockPosition docks the map widget against the edge it names - which edge it ended up on is not readable from Lua")
 
   pending("Geyser.Mapper:raise/lower stack the map against the other windows - Mudlet exposes no z-order readback")
 
-  -- An embedded mapper and the dockable map widget are mutually exclusive for
-  -- the life of a profile (TMainConsole::createMapper and Host::openMapWidget
-  -- each refuse when the other one exists), and neither can be destroyed once
-  -- made. Creating an embedded mapper here would take the map widget away from
+  -- An embedded mapper and the dockable map widget are mutually exclusive:
+  -- TMainConsole::createMapper refuses while a map widget is on screen, and
+  -- Host::openMapWidget refuses while anything at all holds TMap::mpMapper. Only
+  -- the map widget can be given up - creating an embedded mapper takes a closed
+  -- one away for good - so doing it here would take the map widget away from
   -- Mapper_spec for the rest of the run.
   pending("Geyser.Mapper embedded in the main console - an embedded mapper cannot be undone, so it cannot be created inside this suite")
 

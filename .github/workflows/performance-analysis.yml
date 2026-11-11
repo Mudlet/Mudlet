@@ -15,7 +15,6 @@ jobs:
       matrix:
         include:
           - buildname: 'pi'
-            qt: '6.9.0'
             triplet: arm64-linux
             compiler: gcc_64
             os: [ self-hosted, pi4 ]
@@ -27,8 +26,8 @@ jobs:
         fetch-depth: 0
         submodules: recursive
 
-    - name: Use CMake 3.30.3
-      uses: lukka/get-cmake@v4.4.0
+    - name: Use the latest CMake
+      uses: lukka/get-cmake@v4.4.5
 
     - name: Install dependencies
       run: |
@@ -36,7 +35,7 @@ jobs:
         sudo apt-get install build-essential git liblua5.1-dev zlib1g-dev libhunspell-dev libpcre2-dev \
           libzip-dev libboost-graph-dev libonig-dev libyajl-dev libpulse-dev lua-filesystem lua-zip \
           lua-sql-sqlite3 qt6-multimedia-dev qt6-tools-dev luarocks ccache libpugixml-dev cmake ninja-build \
-          xvfb libassimp-dev qtkeychain-qt6-dev -y
+          xvfb libassimp-dev qtkeychain-qt6-dev qt6-httpserver-dev qt6-websockets-dev -y
 
         sudo luarocks install lrexlib-pcre2
 

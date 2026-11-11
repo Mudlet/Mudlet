@@ -4,8 +4,23 @@
 
 Mudlet is a cross-platform MUD client built with Qt6 and C++20, providing scripting capabilities in Lua 5.1. The project emphasizes "powerful simplicity" - clean interface with deep customization options.
 
+## Skills
+
+Task-specific instructions live in `.agents/skills/<name>/SKILL.md`, in the [Agent Skills](https://agentskills.io) format. Claude Code, GitHub Copilot, Cursor and OpenAI Codex all read this directory (Claude Code via the `.claude/skills` symlink). Read the relevant one before starting that kind of task rather than working from memory:
+
+- `build-mudlet` - building, rebuilding or running Mudlet on any platform
+- `design-language` - adding or changing anything a user sees in a window, dialog, form, toolbar or icon; the shared recipes, the rules and which windows have adopted them
+- `fuzz-apis` - fuzzing the parsers and scripting API under sanitizer builds
+- `improve-performance` - benchmarking, measurement discipline and finding where time goes
+- `improve-test-coverage` - measuring C++ line coverage and growing the test suite
+- `open-pr` - publishing a branch and opening a pull request upstream
+
 ## Coding standards
 All files should end with a newline character at the end of the file.
+
+### Script backwards compatibility
+
+Don't break existing scripts without the maintainers' explicit approval. Scripts in the wild depend on what the Lua API observably does: the values a function already returns (appending more breaks callers like `table.insert(t, f())`), whether a failure raises an error, where output lands, and lenient handling of bad input - even when the current behaviour is plainly a bug. Back such a change with a scan of the packages in the [Mudlet package repository](https://github.com/Mudlet/mudlet-package-repository) showing nothing relies on the old behaviour. Adding return values to a function that returned nothing, including `nil` plus a message on failure, is not a break, and neither is improving the text of an error that already raises.
 
 ### C++ Conventions
 In general: write modern C++20 code, but avoid C++ exceptions, templates, and concepts as those have performance/complexity considerations, avoiding which has made Mudlet the success it is today.
@@ -72,6 +87,10 @@ QString toastMessage = tr("Banner hidden. <a href='undo'>Undo</a>");
 - Use Qt's parent-child system for automatic cleanup for Qt classes
 - Otherwise, use C++ smart pointers for non-Qt classes
 
+### Binary file formats
+
+Every `QDataStream` that reads or writes a Mudlet file must call `setVersion(QDataStream::Qt_5_12)` before any data crosses it, on both halves of a reader/writer pair - `QFont`'s binary representation changed at Qt 5.13, so that pinned version *is* the on-disk format and changing it breaks file compatibility.
+
 ### Include management
 
 Minimize `#include` directives to reduce build times:
@@ -87,43 +106,49 @@ Minimize `#include` directives to reduce build times:
 - Don't copy includes from similar files without checking if they're needed
 
 ## Key architecture points
-Mudlet is single-threaded - all profiles, triggers, and the Lua engine run on the main thread. The only exception is networking, which is automatically handled in the background by Qt.
+Mudlet is single-threaded - all profiles, triggers, and the Lua engine run on the main thread. There are four exceptions: networking, which Qt handles in the background; sound and the map autosave, both covered below; and `TriggerMatchPool` (`src/TriggerMatchPool.h`), which, when a player has switched it on, during a flood of incoming text asks a few helper threads which triggers *cannot* match a line before the main thread walks them. Everything reachable from `TTrigger::prescanMayFire()` must stay a pure function of the trigger and the line - no counters, no logging, no Lua, nothing that writes beyond the trigger's own prescan result (its verdict, and the match data its regex left for `match_perl()` to reuse) - because it runs on those threads; the main thread still runs every trigger that fires, in order. Its tuning knobs (`triggerMatchThreads` and friends in `Mudlet.ini`, or the `MUDLET_MATCH_*` environment variables that override them for one run) are documented in `docs/platform-builds.md`. Sound and music play through one output, `TAudioMixer` (`src/TAudioMixer.h`), which mixes on a thread of its own and is fed by `TMediaVoice` straight from Qt's decoding threads, so a busy main thread cannot cut the sound out. Nothing those threads reach may touch `TMedia`, Lua or widgets; they hand over rendered audio and read atomics. A map autosave is written on a pool thread by `writeFileAtomically()` (`src/Host.cpp`), given only the bytes and the path, so anything that writes into a profile's map folder or picks a file from it calls that profile's `Host::waitForMapAutosave()` first.
 
-### Core classes (src/ directory)
+`Host` (`src/Host.h`) is the per-profile session object: it owns the Lua interpreter, the trigger units and the console. The name reads like "server", but it is the profile.
 
-- `mudlet.h/cpp` - main application
-- `Host.h/cpp` - game connection management using profiles
-- `ctelnet.h/cpp` - telnet protocol handling
-- `TConsole.h/cpp` - text display and input
-- `TLuaInterpreter.h/cpp` - Lua scripting engine
-- `TMap.h/cpp` - mapping system
-- `src/lua-function-list.json` - autogenerated functions file, do not update
+`src/lua-function-list.json` is autogenerated, do not update it.
 
-### Lua API development
+When the starter UI (`src/packages/mudlet-base-ui`) misses a game's data, teach it to recognise that game's format; never add a function or event for players' scripts to feed it (see "Starter UI" in `docs/CONTRIBUTING.md`).
+
+## Comments
+
+Comments drift from the code they describe, and a stale one misleads worse than none; every comment also costs the reader's time and an agent's context window. Write one only when the code cannot say it, and keep it to a line or two.
+
+Write a comment for a *why* the code can't carry: a Qt/OS/compiler quirk, a workaround, an ordering or thread-safety constraint, a file-format constraint, or why the obvious alternative is wrong.
+
+Don't write comments that:
+
+- restate what the code or a name already says (`// Save the profile` above `saveProfile()`)
+- narrate the change: "previously…", "now…", "no longer…", "fixes #1234 where…", "moved from X". That history belongs in the commit message and PR description
+- label code with banners or section dividers
+- document a function whose signature already says everything
 
 ```cpp
-// Standard Lua function template
-int TLuaInterpreter::functionName(lua_State* L)
-{
-    const QString param = getVerifiedString(L, __func__, 1, "parameter name");
-    // ... implementation
-
-    lua_pushboolean(L, true);
-    return 1; // number of return values
+// Bad: restates the code, and narrates a change nobody reading this file needs
+// Previously we cleared the cache here, but that crashed when the profile closed,
+// so now we check the pointer first and only clear it if it is still valid
+if (mpCache) {
+    mpCache->clear();
 }
+
+// Good: the one fact the code can't show
+// Posted, not sent: the console may be mid-paint when this runs
+QCoreApplication::postEvent(mpConsole, event);
 ```
 
-## Common patterns
+Translator comments (`//:`), tool directives (`NOLINT`, `clang-format off`) and Lua `---` LDoc blocks are not clutter: never remove them to trim comments, but do update them when the string, line or API they describe changes.
 
-### Comments
+## Tests
 
-Don't add comments for obvious code as that increases cognitive load on the reader. Only add comments in unintuitive situations to explain why something was done.
+Two harnesses: Lua specs in `src/mudlet-lua/tests/*_spec.lua` (busted, run in the self-test profile), and C++ functional tests in `test/functional_tests/` (ctest).
 
-### UI components
+Prefer a spec. A functional test statically links `mudlet_core`, so it costs ~250MB and a link step in every build tree unless it joins a grouped per-subsystem binary, where it costs a compile instead; either way each ctest case runs in its own process. Some subsystems have such a group today - the `*_GROUP_TEST_SOURCES` lists in `test/functional_tests/CMakeLists.txt`, which document how to join one. A spec is ~30KB and needs no rebuild at all because `mudlet-lua` loads from disk. Specs are also shared with Mudlet Web, so writing one grows that platform's coverage for free, which a functional test never does. Write a functional test when a spec genuinely cannot reach the behaviour: private C++ state, a path with no Lua entry point, or something that happens before Lua exists. Sanitiser coverage is not one of those reasons, as the spec run exercises the same instrumented binary.
 
-- Dialog classes use `dlg*.h/cpp` naming
-- Follow Qt's Model-View pattern
-- Use Qt's signal/slot mechanism for communication
+Both harnesses fail silently rather than red when the setup is wrong, so confirm a new test fails without the fix before trusting it. A test that bites says nothing about behaviour the change didn't mean to touch, so also run the same probes on the merge base and the branch, and check that every difference is intended.
 
 ## Demo videos
 
@@ -131,10 +156,11 @@ To demonstrate a bug fix or UI change with a screen recording, follow the before
 
 ## Build system notes
 
+- **Before running any `cmake`, `ninja` or `make` command, read the `build-mudlet` skill in `.agents/skills/build-mudlet/SKILL.md`.** It carries the per-platform invocation and the parallelism pitfalls; an unbounded build command can saturate the machine's memory.
 - **Build system**: CMake (handles platform-specific configurations). See https://wiki.mudlet.org/w/Compiling_Mudlet for instructions.
 - Check code quality with clang-tidy using `.clang-tidy` configuration file
 - Allow up to 10mins for a build - it can take a while
-- Building on macOS or Windows, and compile-time debugging defines: see `docs/platform-builds.md`
+- Platform specifics and compile-time debugging defines: see `docs/platform-builds.md`
 
 ### Code formatting
 
@@ -153,11 +179,11 @@ The project uses the `.clang-format` configuration in the repo root. This ensure
 
 ### Static analysis
 
-For complete setup instructions on how to run static analysis during a build, see: https://wiki.mudlet.org/w/Compiling_Mudlet#Static_Analysis
+For complete setup instructions on how to run static analysis during a build, see: https://wiki.mudlet.org/w/Compiling_Mudlet#Static_analysis
 
 ### Git
 
-Do not force-push to remote branches.
+Do not force-push to remote branches, except to restack a `gh stack` chain onto its base for linear history (use `--force-with-lease`).
 
 #### Commit trailers for AI-assisted work
 
@@ -169,22 +195,3 @@ When you (an AI assistant) help produce a commit, the commit message MUST includ
 Before the human signs off, they must have built and manually tested the change to confirm it works. Mudlet developers should not be the first to test AI-generated code. Ask the human to confirm they've tested the PR, and to provide the name and email to use for sign-off; only then add the `Signed-off-by` trailer.
 
 Both trailers go at the end of the commit message. Apply this to every AI-assisted commit, not just the first. See the "AI Coding Assistants" section in `docs/CONTRIBUTING.md` for the full policy.
-
-### Building on Linux
-
-For complete setup instructions, see: https://wiki.mudlet.org/w/Compiling_Mudlet
-
-```bash
-# cd to the right build directory
-cd /path/to/Mudlet/build
-
-# configure (only needed the first time)
-cmake ../ -G Ninja
-
-# Compile using this command and wait up to 10mins for a build. Cmake runs the build in parallel by default, no need to specify number of jobs:
-cmake --build .
-
-# Run Mudlet - it's a visual, desktop application
-cd /path/to/Mudlet/build
-./src/mudlet
-```

@@ -32,7 +32,64 @@
 #include "Host.h"
 #include "TEvent.h"
 #include "TMedia.h"
-#include "mudlet.h"
+
+#include <QDir>
+
+#include <algorithm>
+#include <cmath>
+#include <optional>
+
+namespace {
+// The value on top of the stack as a direction - a word or degrees - spelled as TMedia keeps it.
+// On failure the message is pushed for the caller to raise once its parsing scope is left.
+bool mediaDirectionArg(lua_State* L, const char* func, QString& direction)
+{
+    if (lua_type(L, -1) == LUA_TNUMBER) {
+        direction = TMedia::canonicalMediaDirection(lua_tonumber(L, -1));
+    } else if (lua_type(L, -1) == LUA_TSTRING) {
+        direction = TMedia::canonicalMediaDirection(QString::fromUtf8(lua_tostring(L, -1)));
+    } else {
+        lua_pushfstring(L, "%s: bad argument type for direction (string or number expected, got %s)", func, luaL_typename(L, -1));
+        return false;
+    }
+
+    if (direction.isEmpty()) {
+        lua_pushfstring(L,
+                        "%s: bad argument value for direction (a compass direction such as \"north\" or \"ne\", up, down, ahead, behind, left, right or degrees expected, got \"%s\")",
+                        func,
+                        lua_tostring(L, -1));
+        return false;
+    }
+
+    return true;
+}
+
+// Degrees go back as a number and a named way as its word, as a script can give either.
+void pushMediaDirection(lua_State* L, const QString& direction)
+{
+    bool degrees = false;
+    const int value = direction.toInt(&degrees);
+    if (degrees) {
+        lua_pushinteger(L, value);
+    } else {
+        lua_pushstring(L, direction.toUtf8().constData());
+    }
+}
+
+// -100 (left) to 100 (right), rounded and held to that range. On failure the message is
+// pushed for the caller to raise.
+bool mediaPanArg(lua_State* L, const char* func, int& pan)
+{
+    const double value = lua_tonumber(L, -1);
+    if (std::isnan(value)) {
+        lua_pushfstring(L, "%s: bad argument value for pan (a number from -100 to 100 expected, got nan)", func);
+        return false;
+    }
+    // Clamped before rounding: rounding a number outside int's range is undefined
+    pan = static_cast<int>(std::lround(std::clamp(value, static_cast<double>(TMediaData::MediaPanLeft), static_cast<double>(TMediaData::MediaPanRight))));
+    return true;
+}
+} // namespace
 
 // The argument parsers below hold QStrings and TMediaData while they run, so
 // they type-check with TLuaInterpreter::check...Arg() and leave the raise until
@@ -60,7 +117,7 @@ int TLuaInterpreter::receiveMSP(lua_State* L)
 }
 
 // Private
-int TLuaInterpreter::loadMediaFileAsOrderedArguments(lua_State* L, const char* func)
+int TLuaInterpreter::loadMediaFileAsOrderedArguments(lua_State* L, const char* func, const TMediaData::MediaType mediaType)
 {
     const Host& host = getHostFromLua(L);
     const int numArgs = lua_gettop(L);
@@ -110,6 +167,7 @@ int TLuaInterpreter::loadMediaFileAsOrderedArguments(lua_State* L, const char* f
             }
 
             mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
+            mediaData.setMediaType(mediaType);
             mediaData.setMediaVolume(TMediaData::MediaVolumePreload);
 
             host.mpMedia->playMedia(mediaData);
@@ -125,7 +183,7 @@ int TLuaInterpreter::loadMediaFileAsOrderedArguments(lua_State* L, const char* f
 }
 
 // Private
-int TLuaInterpreter::loadMediaFileAsTableArgument(lua_State* L, const char* func)
+int TLuaInterpreter::loadMediaFileAsTableArgument(lua_State* L, const char* func, const TMediaData::MediaType mediaType)
 {
     const Host& host = getHostFromLua(L);
 
@@ -174,10 +232,11 @@ int TLuaInterpreter::loadMediaFileAsTableArgument(lua_State* L, const char* func
 
         if (!errorPushed) {
             if (mediaData.mediaFileName().isEmpty()) {
-                lua_pushstring(L, R"(loadMusicFile: missing name (add name = "file to play"))");
+                lua_pushfstring(L, R"(%s: missing name (add name = "file to play"))", func);
                 errorPushed = true;
             } else {
                 mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
+                mediaData.setMediaType(mediaType);
                 mediaData.setMediaVolume(TMediaData::MediaVolumePreload);
 
                 host.mpMedia->playMedia(mediaData);
@@ -202,10 +261,10 @@ int TLuaInterpreter::loadMusicFile(lua_State* L)
     }
 
     if (lua_istable(L, 1)) {
-        return loadMediaFileAsTableArgument(L, __func__);
+        return loadMediaFileAsTableArgument(L, __func__, TMediaData::MediaTypeMusic);
     }
 
-    return loadMediaFileAsOrderedArguments(L, __func__);
+    return loadMediaFileAsOrderedArguments(L, __func__, TMediaData::MediaTypeMusic);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadSoundFile
@@ -217,10 +276,10 @@ int TLuaInterpreter::loadSoundFile(lua_State* L)
     }
 
     if (lua_istable(L, 1)) {
-        return loadMediaFileAsTableArgument(L, __func__);
+        return loadMediaFileAsTableArgument(L, __func__, TMediaData::MediaTypeSound);
     }
 
-    return loadMediaFileAsOrderedArguments(L, __func__);
+    return loadMediaFileAsOrderedArguments(L, __func__, TMediaData::MediaTypeSound);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadVideoFile
@@ -236,7 +295,7 @@ int TLuaInterpreter::loadVideoFile(lua_State* L)
         return lua_error(L);
     }
 
-    return loadMediaFileAsTableArgument(L, __func__);
+    return loadMediaFileAsTableArgument(L, __func__, TMediaData::MediaTypeVideo);
 }
 
 // Private
@@ -302,7 +361,7 @@ int TLuaInterpreter::playMusicFileAsOrderedArguments(lua_State* L, const char* f
                 intValue = static_cast<int>(lua_tointeger(L, i));
 
                 if (intValue < 0) {
-                    lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "fadein", intValue);
+                    lua_pushfstring(L, "%s: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", func, "fadein", intValue);
                     errorPushed = true;
                     break;
                 }
@@ -318,7 +377,7 @@ int TLuaInterpreter::playMusicFileAsOrderedArguments(lua_State* L, const char* f
                 intValue = static_cast<int>(lua_tointeger(L, i));
 
                 if (intValue < 0) {
-                    lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "fadeout", intValue);
+                    lua_pushfstring(L, "%s: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", func, "fadeout", intValue);
                     errorPushed = true;
                     break;
                 }
@@ -334,7 +393,7 @@ int TLuaInterpreter::playMusicFileAsOrderedArguments(lua_State* L, const char* f
                 intValue = static_cast<int>(lua_tointeger(L, i));
 
                 if (intValue < 0) {
-                    lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "start", intValue);
+                    lua_pushfstring(L, "%s: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", func, "start", intValue);
                     errorPushed = true;
                     break;
                 }
@@ -396,7 +455,7 @@ int TLuaInterpreter::playMusicFileAsOrderedArguments(lua_State* L, const char* f
                 intValue = static_cast<int>(lua_tointeger(L, i));
 
                 if (intValue < 0) {
-                    lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "finish", intValue);
+                    lua_pushfstring(L, "%s: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", func, "finish", intValue);
                     errorPushed = true;
                     break;
                 }
@@ -442,8 +501,6 @@ int TLuaInterpreter::playMusicFileAsTableArgument(lua_State* L, const char* func
                 break;
             }
 
-            // read the key from a copy: lua_tostring() on the slot itself converts a
-            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key = QString{lua_tostring(L, -1)}.toLower();
             lua_pop(L, 1);
@@ -807,8 +864,6 @@ int TLuaInterpreter::playSoundFileAsTableArgument(lua_State* L, const char* func
                 break;
             }
 
-            // read the key from a copy: lua_tostring() on the slot itself converts a
-            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key = QString{lua_tostring(L, -1)}.toLower();
             lua_pop(L, 1);
@@ -921,6 +976,28 @@ int TLuaInterpreter::playSoundFileAsTableArgument(lua_State* L, const char* func
 
                     mediaData.setMediaPriority(value);
                 }
+            } else if (key == QLatin1String("pan")) {
+                if (!checkNumberArg(L, func, -1, "value for pan")) {
+                    errorPushed = true;
+                    break;
+                }
+
+                int pan = 0;
+                if (!mediaPanArg(L, func, pan)) {
+                    errorPushed = true;
+                    break;
+                }
+
+                mediaData.setMediaPan(pan);
+            } else if (key == QLatin1String("direction")) {
+                QString direction;
+
+                if (!mediaDirectionArg(L, func, direction)) {
+                    errorPushed = true;
+                    break;
+                }
+
+                mediaData.setMediaDirection(direction);
             }
 
             // removes value, but keeps key for next iteration
@@ -969,6 +1046,7 @@ int TLuaInterpreter::playVideoFileAsTableArgument(lua_State* L, const char* func
     Host& host = getHostFromLua(L);
 
     bool errorPushed = false;
+    bool noVideoOutput = false;
     {
         TMediaData mediaData{};
 
@@ -980,8 +1058,6 @@ int TLuaInterpreter::playVideoFileAsTableArgument(lua_State* L, const char* func
                 break;
             }
 
-            // read the key from a copy: lua_tostring() on the slot itself converts a
-            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key{lua_tostring(L, -1)};
             lua_pop(L, 1);
@@ -1091,6 +1167,8 @@ int TLuaInterpreter::playVideoFileAsTableArgument(lua_State* L, const char* func
             if (mediaData.mediaFileName().isEmpty()) {
                 lua_pushstring(L, R"(playVideoFile: missing name (add name = "file to play"))");
                 errorPushed = true;
+            } else if (!host.mpMedia->canShowVideo()) {
+                noVideoOutput = true;
             } else {
                 mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
                 mediaData.setMediaType(TMediaData::MediaTypeVideo);
@@ -1102,8 +1180,211 @@ int TLuaInterpreter::playVideoFileAsTableArgument(lua_State* L, const char* func
     if (errorPushed) {
         return lua_error(L);
     }
+    if (noVideoOutput) {
+        return warnArgumentValue(L, func, "the profile has no main window");
+    }
 
     lua_pushboolean(L, true);
+    return 1;
+}
+
+// Private
+int TLuaInterpreter::updateMediaAsTableArgument(lua_State* L, const char* func, const TMediaData::MediaType mediaType)
+{
+    if (!lua_istable(L, 1)) {
+        lua_pushfstring(L, "%s: needs to be a table", func);
+        return lua_error(L);
+    }
+
+    const Host& host = getHostFromLua(L);
+
+    bool errorPushed = false;
+    {
+        TMediaData mediaData{};
+        std::optional<int> volume;
+        std::optional<int> pan;
+        QString direction;
+        int glideMilliseconds = TMedia::defaultGlideMilliseconds;
+
+        lua_pushnil(L);
+        while (lua_next(L, 1) != 0) {
+            // key at index -2 and value at index -1
+            if (!checkStringArg(L, func, -2, "table keys")) {
+                errorPushed = true;
+                break;
+            }
+
+            lua_pushvalue(L, -2);
+            const QString key = QString{lua_tostring(L, -1)}.toLower();
+            lua_pop(L, 1);
+
+            if (key == QLatin1String("name") || key == QLatin1String("key") || key == QLatin1String("tag")) {
+                if (!checkStringArg(L, func, -1, key == QLatin1String("name") ? "value for name" : key == QLatin1String("key") ? "value for key" : "value for tag")) {
+                    errorPushed = true;
+                    break;
+                }
+
+                QString value{lua_tostring(L, -1)};
+
+                if (key == QLatin1String("name") && !value.isEmpty()) {
+                    if (QDir::homePath().contains('\\')) {
+                        value.replace('/', R"(\)");
+                    } else {
+                        value.replace('\\', "/");
+                    }
+
+                    mediaData.setMediaFileName(value);
+                } else if (key == QLatin1String("key") && !value.isEmpty()) {
+                    mediaData.setMediaKey(value);
+                } else if (key == QLatin1String("tag") && !value.isEmpty()) {
+                    mediaData.setMediaTag(value);
+                }
+            } else if (key == QLatin1String("volume") || key == QLatin1String("duration")) {
+                if (!checkIntArg(L, func, -1, key == QLatin1String("volume") ? "value for volume" : "value for duration")) {
+                    errorPushed = true;
+                    break;
+                }
+
+                const int value = static_cast<int>(lua_tointeger(L, -1));
+
+                if (key == QLatin1String("volume")) {
+                    volume = qBound(static_cast<int>(TMediaData::MediaVolumeMin), value, static_cast<int>(TMediaData::MediaVolumeMax));
+                } else if (value < 0) {
+                    lua_pushfstring(L, "%s: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", func, "duration", value);
+                    errorPushed = true;
+                    break;
+                } else {
+                    glideMilliseconds = value;
+                }
+            } else if (mediaType == TMediaData::MediaTypeSound && key == QLatin1String("pan")) {
+                if (!checkNumberArg(L, func, -1, "value for pan")) {
+                    errorPushed = true;
+                    break;
+                }
+
+                int value = 0;
+                if (!mediaPanArg(L, func, value)) {
+                    errorPushed = true;
+                    break;
+                }
+
+                pan = value;
+            } else if (mediaType == TMediaData::MediaTypeSound && key == QLatin1String("direction")) {
+                if (!mediaDirectionArg(L, func, direction)) {
+                    errorPushed = true;
+                    break;
+                }
+            }
+
+            // removes value, but keeps key for next iteration
+            lua_pop(L, 1);
+        }
+
+        if (!errorPushed) {
+            if (mediaData.mediaFileName().isEmpty() && mediaData.mediaKey().isEmpty() && mediaData.mediaTag().isEmpty()) {
+                return warnArgumentValue(L, func, qsl("no key, name or tag to choose the %1 to update by").arg(mediaType == TMediaData::MediaTypeSound ? qsl("sounds") : qsl("music")));
+            }
+
+            // Music takes no pan or direction, so a call copied from updateSounds would otherwise change nothing and say nothing
+            // updateSounds shipped in 5.1.0 returning true for such a call, so scripts may rely on it
+            if (mediaType == TMediaData::MediaTypeMusic && !volume) {
+                return warnArgumentValue(L, func, qsl("nothing to change (give a volume)"));
+            }
+
+            mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
+            mediaData.setMediaType(mediaType);
+
+            host.mpMedia->updateMedia(mediaData, volume, pan, direction, glideMilliseconds);
+        }
+    }
+
+    if (errorPushed) {
+        return lua_error(L);
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#updateSounds
+int TLuaInterpreter::updateSounds(lua_State* L)
+{
+    return updateMediaAsTableArgument(L, __func__, TMediaData::MediaTypeSound);
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#updateMusic
+int TLuaInterpreter::updateMusic(lua_State* L)
+{
+    return updateMediaAsTableArgument(L, __func__, TMediaData::MediaTypeMusic);
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMediaListener
+int TLuaInterpreter::setMediaListener(lua_State* L)
+{
+    if (!lua_istable(L, 1)) {
+        lua_pushfstring(L, "%s: needs to be a table", __func__);
+        return lua_error(L);
+    }
+
+    const Host& host = getHostFromLua(L);
+    const char* func = __func__;
+
+    bool errorPushed = false;
+    {
+        // In any case, as every other media function's keys are
+        lua_pushnil(L);
+        bool found = false;
+        while (lua_next(L, 1) != 0) {
+            if (lua_type(L, -2) == LUA_TSTRING && QString::fromUtf8(lua_tostring(L, -2)).toLower() == QLatin1String("facing")) {
+                lua_remove(L, -2);
+                found = true;
+                break;
+            }
+            lua_pop(L, 1);
+        }
+        if (!found) {
+            lua_pushnil(L);
+        }
+
+        if (lua_isnil(L, -1)) {
+            lua_pushfstring(L, R"(%s: missing facing (add facing = "east" or a number of degrees))", func);
+            errorPushed = true;
+        } else {
+            QString facing;
+
+            if (lua_type(L, -1) == LUA_TNUMBER) {
+                facing = TMedia::canonicalMediaDirection(lua_tonumber(L, -1));
+            } else if (lua_type(L, -1) == LUA_TSTRING) {
+                facing = TMedia::canonicalMediaDirection(QString::fromUtf8(lua_tostring(L, -1)));
+            } else {
+                lua_pushfstring(L, "%s: bad argument type for facing (string or number expected, got %s)", func, luaL_typename(L, -1));
+                errorPushed = true;
+            }
+
+            if (!errorPushed && (facing.isEmpty() || !host.mpMedia->setListenerFacing(facing, TMedia::FacingSetBy::Script))) {
+                lua_pushfstring(L, "%s: bad argument value for facing (a compass direction or degrees expected, got \"%s\")", func, lua_tostring(L, -1));
+                errorPushed = true;
+            }
+        }
+    }
+
+    if (errorPushed) {
+        return lua_error(L);
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMediaListener
+int TLuaInterpreter::getMediaListener(lua_State* L)
+{
+    const Host& host = getHostFromLua(L);
+
+    lua_newtable(L);
+    lua_pushstring(L, "facing");
+    pushMediaDirection(L, host.mpMedia->listenerFacing());
+    lua_settable(L, -3);
     return 1;
 }
 
@@ -1166,6 +1447,18 @@ void TLuaInterpreter::processPlayingMediaTable(lua_State* L, TMediaData& mediaDa
         if (!matchedMediaData.mediaKey().isEmpty()) {
             lua_pushstring(L, "key");
             lua_pushstring(L, matchedMediaData.mediaKey().toUtf8().constData());
+            lua_settable(L, -3);
+        }
+
+        if (matchedMediaData.mediaPan()) {
+            lua_pushstring(L, "pan");
+            lua_pushinteger(L, *matchedMediaData.mediaPan());
+            lua_settable(L, -3);
+        }
+
+        if (!matchedMediaData.mediaDirection().isEmpty()) {
+            lua_pushstring(L, "direction");
+            pushMediaDirection(L, matchedMediaData.mediaDirection());
             lua_settable(L, -3);
         }
 
@@ -1255,8 +1548,6 @@ int TLuaInterpreter::getPlayingMusicAsTableArgument(lua_State* L, const char* fu
                 break;
             }
 
-            // read the key from a copy: lua_tostring() on the slot itself converts a
-            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key = QString{lua_tostring(L, -1)}.toLower();
             lua_pop(L, 1);
@@ -1421,8 +1712,6 @@ int TLuaInterpreter::getPlayingSoundsAsTableArgument(lua_State* L, const char* f
                 break;
             }
 
-            // read the key from a copy: lua_tostring() on the slot itself converts a
-            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key = QString{lua_tostring(L, -1)}.toLower();
             lua_pop(L, 1);
@@ -1518,8 +1807,6 @@ int TLuaInterpreter::getPlayingVideosAsTableArgument(lua_State* L, const char* f
                 break;
             }
 
-            // read the key from a copy: lua_tostring() on the slot itself converts a
-            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key = QString{lua_tostring(L, -1)}.toLower();
             lua_pop(L, 1);
@@ -1632,6 +1919,18 @@ void TLuaInterpreter::processPausedMediaTable(lua_State* L, TMediaData& mediaDat
             lua_settable(L, -3);
         }
 
+        if (matchedMediaData.mediaPan()) {
+            lua_pushstring(L, "pan");
+            lua_pushinteger(L, *matchedMediaData.mediaPan());
+            lua_settable(L, -3);
+        }
+
+        if (!matchedMediaData.mediaDirection().isEmpty()) {
+            lua_pushstring(L, "direction");
+            pushMediaDirection(L, matchedMediaData.mediaDirection());
+            lua_settable(L, -3);
+        }
+
         lua_settable(L, -3);
     }
 }
@@ -1651,8 +1950,6 @@ int TLuaInterpreter::getPausedSoundsAsTableArgument(lua_State* L, const char* fu
                 break;
             }
 
-            // read the key from a copy: lua_tostring() on the slot itself converts a
-            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key = QString{lua_tostring(L, -1)}.toLower();
             lua_pop(L, 1);
@@ -1678,6 +1975,21 @@ int TLuaInterpreter::getPausedSoundsAsTableArgument(lua_State* L, const char* fu
                 } else if (key == QLatin1String("tag") && !value.isEmpty()) {
                     mediaData.setMediaTag(value);
                 }
+            } else if (key == QLatin1String("priority")) {
+                if (!checkIntArg(L, func, -1, "value for priority")) {
+                    errorPushed = true;
+                    break;
+                }
+
+                int value = static_cast<int>(lua_tointeger(L, -1));
+
+                if (value > TMediaData::MediaPriorityMax) {
+                    value = TMediaData::MediaPriorityMax;
+                } else if (value < TMediaData::MediaPriorityMin) {
+                    value = TMediaData::MediaPriorityMin;
+                }
+
+                mediaData.setMediaPriority(value);
             }
 
             // removes value, but keeps key for next iteration
@@ -1734,8 +2046,6 @@ int TLuaInterpreter::getPausedMusicAsTableArgument(lua_State* L, const char* fun
                 break;
             }
 
-            // read the key from a copy: lua_tostring() on the slot itself converts a
-            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key = QString{lua_tostring(L, -1)}.toLower();
             lua_pop(L, 1);
@@ -1817,8 +2127,6 @@ int TLuaInterpreter::getPausedVideosAsTableArgument(lua_State* L, const char* fu
                 break;
             }
 
-            // read the key from a copy: lua_tostring() on the slot itself converts a
-            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key = QString{lua_tostring(L, -1)}.toLower();
             lua_pop(L, 1);
@@ -1996,8 +2304,6 @@ int TLuaInterpreter::stopMusicAsTableArgument(lua_State* L, const char* func)
                 break;
             }
 
-            // read the key from a copy: lua_tostring() on the slot itself converts a
-            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key = QString{lua_tostring(L, -1)}.toLower();
             lua_pop(L, 1);
@@ -2216,8 +2522,6 @@ int TLuaInterpreter::stopSoundsAsTableArgument(lua_State* L, const char* func)
                 break;
             }
 
-            // read the key from a copy: lua_tostring() on the slot itself converts a
-            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key = QString{lua_tostring(L, -1)}.toLower();
             lua_pop(L, 1);
@@ -2341,8 +2645,6 @@ int TLuaInterpreter::stopVideosAsTableArgument(lua_State* L, const char* func)
                 break;
             }
 
-            // read the key from a copy: lua_tostring() on the slot itself converts a
-            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key = QString{lua_tostring(L, -1)}.toLower();
             lua_pop(L, 1);
@@ -2452,8 +2754,6 @@ int TLuaInterpreter::pauseSoundsAsTableArgument(lua_State* L, const char* func)
                 break;
             }
 
-            // read the key from a copy: lua_tostring() on the slot itself converts a
-            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key = QString{lua_tostring(L, -1)}.toLower();
             lua_pop(L, 1);
@@ -2541,8 +2841,6 @@ int TLuaInterpreter::pauseMusicAsTableArgument(lua_State* L, const char* func)
                 break;
             }
 
-            // read the key from a copy: lua_tostring() on the slot itself converts a
-            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key = QString{lua_tostring(L, -1)}.toLower();
             lua_pop(L, 1);
@@ -2630,8 +2928,6 @@ int TLuaInterpreter::pauseVideosAsTableArgument(lua_State* L, const char* func)
                 break;
             }
 
-            // read the key from a copy: lua_tostring() on the slot itself converts a
-            // numeric key in place, which makes the next lua_next() fail
             lua_pushvalue(L, -2);
             const QString key = QString{lua_tostring(L, -1)}.toLower();
             lua_pop(L, 1);
@@ -2706,6 +3002,12 @@ int TLuaInterpreter::pauseVideos(lua_State* L)
 int TLuaInterpreter::purgeMediaCache(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    lua_pushboolean(L, host.mTelnet.purgeMediaCache());
+    const auto [purged, message] = host.mTelnet.purgeMediaCache();
+
+    if (!purged) {
+        return warnArgumentValue(L, __func__, message);
+    }
+
+    lua_pushboolean(L, true);
     return 1;
 }

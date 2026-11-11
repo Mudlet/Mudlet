@@ -27,6 +27,12 @@
 #include "TRoomDB.h"
 #include "utils.h"
 
+void TMap::setViewManager(TMapViewManager* pViewManager)
+{
+    mpViewManager = pViewManager;
+    mpViewsFrontend = pViewManager;
+}
+
 TMapViewManager::TMapViewManager(Host* pHost, TMap* pMap)
 : QObject(pMap)
 , mpHost(pHost)
@@ -38,7 +44,15 @@ TMapViewManager::TMapViewManager(Host* pHost, TMap* pMap)
 
 TMapViewManager::~TMapViewManager()
 {
-    closeAllViews();
+    // Not closeAllViews(): a view left to deleteLater() would go on drawing, and taking
+    // events for, the TMap being freed around us until the event loop next ran
+    const QList<QPointer<QDockWidget>> dockWidgets = mDockWidgets.values() + mClosingDockWidgets;
+    mDockWidgets.clear();
+    mViews.clear();
+    mClosingDockWidgets.clear();
+    for (const auto& dockWidget : dockWidgets) {
+        delete dockWidget.data();
+    }
 }
 
 std::pair<int, QString> TMapViewManager::createView(int initialAreaId)
@@ -64,12 +78,22 @@ std::pair<int, QString> TMapViewManager::createView(int initialAreaId)
 
     if (initialAreaId > 0) {
         mapView->setArea(initialAreaId);
+    } else if (initialAreaId == 0) {
+        if (const auto playerAreaId = mpMap->playerAreaId()) {
+            mapView->setArea(*playerAreaId);
+        }
     }
 
     mDockWidgets[viewId] = dockWidget;
     mViews[viewId] = mapView;
 
-    connect(dockWidget, &QDockWidget::destroyed, this, &TMapViewManager::slot_viewClosed);
+    // Without this the X button merely hides the window, which Lua would still list
+    dockWidget->setAttribute(Qt::WA_DeleteOnClose);
+    // By the time destroyed() arrives the sender is no longer a QDockWidget and
+    // the QPointer to it is already null, so neither can identify the view
+    connect(dockWidget, &QObject::destroyed, this, [this, viewId]() {
+        forgetView(viewId);
+    });
 
     mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, dockWidget);
     dockWidget->setFloating(true);
@@ -94,9 +118,11 @@ std::pair<bool, QString> TMapViewManager::closeView(int viewId)
     mDockWidgets.remove(viewId);
     mViews.remove(viewId);
 
-    // Note: deleteLater() will trigger the destroyed signal, which is connected to slot_viewClosed().
-    // Since we already removed from tracking maps above, slot_viewClosed() will find viewId == 0
-    // and skip emitting viewClosed again.
+    mClosingDockWidgets.removeIf([](const QPointer<QDockWidget>& closing) {
+        return closing.isNull();
+    });
+    mClosingDockWidgets.append(dockWidget);
+    // Already forgotten, so the destroyed() this brings finds nothing to report again
     dockWidget->deleteLater();
 
     emit viewClosed(viewId);
@@ -130,6 +156,11 @@ TMapView* TMapViewManager::getView(int viewId)
     return nullptr;
 }
 
+TSecondaryMapViewFrontend* TMapViewManager::view(int viewId)
+{
+    return getView(viewId);
+}
+
 QList<int> TMapViewManager::getViewIds() const
 {
     return mViews.keys();
@@ -151,20 +182,30 @@ void TMapViewManager::updateAllViews()
     }
 }
 
-void TMapViewManager::slot_viewClosed()
+void TMapViewManager::switchViewsShowingArea(int areaId)
 {
-    auto* dockWidget = qobject_cast<QDockWidget*>(sender());
-    if (!dockWidget) {
-        qWarning() << "TMapViewManager::slot_viewClosed() - sender is not a QDockWidget";
+    for (const auto& [viewId, view] : mViews.asKeyValueRange()) {
+        Q_UNUSED(viewId)
+        if (view && view->getCurrentAreaId() == areaId) {
+            view->switchToAnotherArea();
+        }
+    }
+}
+
+void TMapViewManager::update3DViewAvailability()
+{
+    for (const auto& view : std::as_const(mViews)) {
+        if (view) {
+            view->update3DViewAvailability();
+        }
+    }
+}
+
+void TMapViewManager::forgetView(int viewId)
+{
+    if (!mDockWidgets.remove(viewId)) {
         return;
     }
-
-    const int viewId = mDockWidgets.key(dockWidget, 0);
-    if (viewId > 0) {
-        mDockWidgets.remove(viewId);
-        mViews.remove(viewId);
-        emit viewClosed(viewId);
-    } else {
-        qWarning() << "TMapViewManager::slot_viewClosed() - dock widget not found in tracking map";
-    }
+    mViews.remove(viewId);
+    emit viewClosed(viewId);
 }

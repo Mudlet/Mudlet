@@ -30,32 +30,17 @@
  * Run with: ctest -R ProfileFolderNameTest -V
  */
 
+#include "MudletApp.h"
+#include "PortableModeTestHelper.h"
 #include "MudletInstanceCoordinator.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
 #include <QtTest/QtTest>
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
+#include "GroupedTest.h"
 
-static void initializeQRCResources()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
+using namespace std::chrono_literals;
 
 class ProfileFolderNameTest : public QObject
 {
@@ -75,20 +60,13 @@ private:
     // has to match against the trimmed folder name to cover this one:
     const QString mPaddedName = qsl("padded café ");
 
-    // setupConfig() consults portable.txt before the XDG logic; skip rather
-    // than run against an unexpected config dir (see ConfigDirOverrideTest).
-    bool portableMarkerPresent() const
-    {
-        return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
-    }
-
     void makeExternalProfileFolder(const QString& name) const
     {
-        QVERIFY(QDir().mkpath(mudlet::getMudletPath(enums::profileHomePath, name)));
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, name)));
         // A folder copied by a file manager carries the original's connection
         // data files with it:
-        QVERIFY(mudlet::self()->writeProfileData(name, qsl("url"), qsl("mudlet.org")).first);
-        QVERIFY(mudlet::self()->writeProfileData(name, qsl("port"), qsl("23")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("mudlet.org")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), qsl("23")).first);
     }
 
     // The Connect and Offline buttons are the only AcceptRole buttons in the
@@ -125,17 +103,16 @@ private slots:
         if (portableMarkerPresent()) {
             QSKIP("portable.txt present - cannot redirect the config dir for this test");
         }
-        initializeQRCResources();
 
         mSavedXdg = qgetenv("XDG_CONFIG_HOME");
         QVERIFY(mXdgDir.isValid());
-        QVERIFY(QDir().mkpath(qsl("%1/mudlet").arg(mXdgDir.path()))); // empty dir = XDG opt-in
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mXdgDir.path()))); // profiles/ = XDG opt-in
         qputenv("XDG_CONFIG_HOME", mXdgDir.path().toUtf8());
 
         mudlet::start();
         mudlet::self()->setupConfig();
         // never touch the user's real profiles:
-        QVERIFY(mudlet::getMudletPath(enums::profilesPath).startsWith(mXdgDir.path()));
+        QVERIFY(MudletApp::getMudletPath(enums::profilesPath).startsWith(mXdgDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -149,7 +126,7 @@ private slots:
                 []() {
                     return mudlet::self()->mpConnectionDialog != nullptr;
                 },
-                5000));
+                5s));
     }
 
     void cleanupTestCase()
@@ -170,7 +147,7 @@ private slots:
             QVERIFY2(button->isEnabled(), qPrintable(qsl("'%1' button is disabled for profile '%2'").arg(button->text(), mCopiedName)));
         }
         // the folder must not have been renamed behind the user's back:
-        QVERIFY(QDir(mudlet::getMudletPath(enums::profileHomePath, mCopiedName)).exists());
+        QVERIFY(QDir(MudletApp::getMudletPath(enums::profileHomePath, mCopiedName)).exists());
     }
 
     void test_folderWithDisallowedCharacterIsNotMangled()
@@ -184,7 +161,7 @@ private slots:
         for (auto* button : buttons) {
             QVERIFY2(button->isEnabled(), qPrintable(qsl("'%1' button is disabled for profile '%2'").arg(button->text(), mForeignName)));
         }
-        QVERIFY(QDir(mudlet::getMudletPath(enums::profileHomePath, mForeignName)).exists());
+        QVERIFY(QDir(MudletApp::getMudletPath(enums::profileHomePath, mForeignName)).exists());
     }
 
     void test_folderWithTrailingWhitespaceIsNotMangled()
@@ -198,7 +175,7 @@ private slots:
         for (auto* button : buttons) {
             QVERIFY2(button->isEnabled(), qPrintable(qsl("'%1' button is disabled for profile '%2'").arg(button->text(), mPaddedName)));
         }
-        QVERIFY(QDir(mudlet::getMudletPath(enums::profileHomePath, mPaddedName)).exists());
+        QVERIFY(QDir(MudletApp::getMudletPath(enums::profileHomePath, mPaddedName)).exists());
     }
 
     // The exemption must not disable validation of names the user types:
@@ -217,5 +194,5 @@ private slots:
     }
 };
 
-QTEST_MAIN(ProfileFolderNameTest)
 #include "ProfileFolderNameTest.moc"
+MUDLET_GROUPED_TEST_MAIN(ProfileFolderNameTest)

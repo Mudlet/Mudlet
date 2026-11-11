@@ -28,6 +28,8 @@
  * Run with: ctest -R TDiscordModeTest -V
  */
 
+#include <QFileInfo>
+#include <QTemporaryDir>
 #include <QtTest/QtTest>
 #include <chrono>
 
@@ -36,6 +38,9 @@
 
 #include <utility>
 
+#include "MudletApp.h"
+#include "PortableModeTestHelper.h"
+#include "ProfileTestHelper.h"
 #include "DiscordIpcServerStub.h"
 #include "MudletInstanceCoordinator.h"
 #include "TLuaInterpreter.h"
@@ -54,26 +59,17 @@ extern "C" {
 #endif
 }
 
-using namespace std::chrono_literals;
+#include "GroupedTest.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-extern void qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-extern void qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-extern void qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-void initializeQRCResourcesForDiscordModeTest();
+using namespace std::chrono_literals;
 
 class TDiscordModeTest : public QObject
 {
     Q_OBJECT
 
 private:
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
     DiscordIpcServerStub* mpDiscordIpcStub = nullptr;
     Host* mpHost = nullptr;
@@ -149,7 +145,7 @@ private:
     // runners.
     bool establishDiscordLogin()
     {
-        auto& discord = mudlet::self()->mDiscord;
+        auto& discord = *Discord::self();
         if (discord.mRpcActive && Discord::getLoggedInUserName() == mDiscordStubUserName) {
             return true;
         }
@@ -164,14 +160,27 @@ private:
                 [this]() {
                     return Discord::getLoggedInUserName() == mDiscordStubUserName;
                 },
-                65000);
+                65s);
         return loggedIn && mpDiscordIpcStub->handshakeCount() > handshakesBefore;
     }
 
 private slots:
     void initTestCase()
     {
-        initializeQRCResourcesForDiscordModeTest();
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
+        // A config root of this process's own. Sharing the developer's
+        // ~/.config/mudlet means sharing a profile list, so a second copy of
+        // this test running at the same time is told the name it types is
+        // already in use and never gets an enabled Connect button. Since #9712
+        // the opt-in that makes setupConfig() adopt a directory is
+        // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
 
         // The discord-rpc library connects to $XDG_RUNTIME_DIR/discord-ipc-0,
         // so the stub must be listening and the environment pointed at it
@@ -187,42 +196,23 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
 
-        const QString path = mudlet::getMudletPath(enums::profileHomePath, mHostname);
+        const QString path = MudletApp::getMudletPath(enums::profileHomePath, mHostname);
         QDir(path).removeRecursively();
 
-        QTimer::singleShot(0ms, qApp, [this]() {
-            mudlet::self()->startAutoLogin({});
-            QTest::qWait(100ms);
-            QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button, Qt::LeftButton);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), mHostname);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), mLocalhost);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-            QTest::qWait(100ms);
-            QTest::keyClicks(QApplication::focusWidget(), mPort);
-            QTest::qWait(100ms);
-            QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
-        });
-
-        QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!spy.wait(1000)) {
-            QFAIL("Profile took too long to load.");
-        }
-        mpHost = mudlet::self()->getActiveHost();
+        mpHost = TestProfile::create(mHostname, mLocalhost, mPort);
         if (!mpHost) {
             QFAIL("No active host available for the test.");
         }
 
+        // The connection can complete before the spy exists, and on a loaded
+        // leak-detection runner it can take seconds
         QSignalSpy spy2(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(500)) {
+        if (mpHost->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && !spy2.wait(8s)) {
             QFAIL("Could not connect with the host.");
         }
 
@@ -230,10 +220,10 @@ private slots:
         // handshake resets the library's internal reconnect backoff (capped at
         // 60s), which the per-test init/shutdown churn below can otherwise
         // inflate. The end-to-end tests reuse this connection where they can.
-        auto& discord = mudlet::self()->mDiscord;
+        auto& discord = *Discord::self();
         if (discord.libraryLoaded() && mpDiscordIpcStub->listening()) {
             mpHost->mDiscordMode = Host::DiscordShowGameDetails;
-            mpHost->mRequiredDiscordUserName.clear();
+            mpHost->setRequiredDiscordUserName(QString());
             QVERIFY2(establishDiscordLogin(), "Discord warm-up handshake did not complete in time");
         }
     }
@@ -241,14 +231,14 @@ private slots:
     void init()
     {
         QVERIFY(mpHost);
-        auto& discord = mudlet::self()->mDiscord;
+        auto& discord = *Discord::self();
         // Restore the default gating state BEFORE resetData(): resetData() calls
         // UpdatePresence() internally, and a Disabled mode or username mismatch
         // left over from the previous test would make that call tear the shared
         // RPC connection down.
         mpHost->mDiscordMode = Host::DiscordShowGameDetails;
         mpHost->mDiscordAccessFlags = Host::DiscordSetSubMask;
-        mpHost->mRequiredDiscordUserName.clear();
+        mpHost->setRequiredDiscordUserName(QString());
         discord.resetData(mpHost);
         // Deliberately do NOT clear Discord::smUserName here: a completed
         // handshake populated it and the reuse check in establishDiscordLogin()
@@ -261,7 +251,7 @@ private slots:
     void testGMCPIgnoredInDisabledMode()
     {
         mpHost->mDiscordMode = Host::DiscordDisabled;
-        auto& discord = mudlet::self()->mDiscord;
+        auto& discord = *Discord::self();
 
         mpHost->processDiscordGMCP(qsl("External.Discord.Status"), qsl(R"({"details":"Exploring the forest","state":"Level 50 Mage"})"));
 
@@ -272,7 +262,7 @@ private slots:
     void testGMCPIgnoredInMudletOnlyMode()
     {
         mpHost->mDiscordMode = Host::DiscordShowMudletOnly;
-        auto& discord = mudlet::self()->mDiscord;
+        auto& discord = *Discord::self();
 
         mpHost->processDiscordGMCP(qsl("External.Discord.Status"), qsl(R"({"details":"Exploring the forest","state":"Level 50 Mage"})"));
 
@@ -283,7 +273,7 @@ private slots:
     void testGMCPProcessedInGameDetailsMode()
     {
         mpHost->mDiscordMode = Host::DiscordShowGameDetails;
-        auto& discord = mudlet::self()->mDiscord;
+        auto& discord = *Discord::self();
 
         mpHost->processDiscordGMCP(qsl("External.Discord.Status"), qsl(R"({"details":"Exploring the forest","state":"Level 50 Mage"})"));
 
@@ -294,7 +284,7 @@ private slots:
     void testGMCPInfoIgnoredOutsideGameDetailsMode()
     {
         mpHost->mDiscordMode = Host::DiscordShowMudletOnly;
-        auto& discord = mudlet::self()->mDiscord;
+        auto& discord = *Discord::self();
 
         mpHost->processDiscordGMCP(qsl("External.Discord.Info"), qsl(R"({"applicationid":"123456789"})"));
 
@@ -307,7 +297,7 @@ private slots:
     void testGMCPSetsServerOrigin()
     {
         mpHost->mDiscordMode = Host::DiscordShowGameDetails;
-        auto& discord = mudlet::self()->mDiscord;
+        auto& discord = *Discord::self();
 
         QVERIFY2(!discord.isServerOrigin(mpHost, Host::DiscordSetDetail), "Detail should not be server-origin before GMCP");
         QVERIFY2(!discord.isServerOrigin(mpHost, Host::DiscordSetState), "State should not be server-origin before GMCP");
@@ -320,7 +310,7 @@ private slots:
 
     void testLuaSetterClearsServerOrigin()
     {
-        auto& discord = mudlet::self()->mDiscord;
+        auto& discord = *Discord::self();
 
         // First, have the server set it
         mpHost->processDiscordGMCP(qsl("External.Discord.Status"), qsl(R"({"details":"Server set this"})"));
@@ -336,7 +326,7 @@ private slots:
 
     void testServerOriginNotSetForUnsentFields()
     {
-        auto& discord = mudlet::self()->mDiscord;
+        auto& discord = *Discord::self();
 
         // Send GMCP with only detail, not state
         mpHost->processDiscordGMCP(qsl("External.Discord.Status"), qsl(R"({"details":"Only details"})"));
@@ -349,7 +339,7 @@ private slots:
 
     void testPrivacyFlagBlocksServerField()
     {
-        auto& discord = mudlet::self()->mDiscord;
+        auto& discord = *Discord::self();
 
         // Server sets detail
         mpHost->processDiscordGMCP(qsl("External.Discord.Status"), qsl(R"({"details":"Secret details","state":"Visible state"})"));
@@ -370,7 +360,7 @@ private slots:
 
     void testGMCPStatusSetsAllFields()
     {
-        auto& discord = mudlet::self()->mDiscord;
+        auto& discord = *Discord::self();
 
         mpHost->processDiscordGMCP(qsl("External.Discord.Status"),
                                    qsl(R"({"details":"Hunting","state":"Level 50","smallimagetext":"Warrior","largeimagetext":"Achaea","starttime":1234567890,"partysize":3,"partymax":6})"));
@@ -394,7 +384,7 @@ private slots:
 
     void testResetDataClearsEverything()
     {
-        auto& discord = mudlet::self()->mDiscord;
+        auto& discord = *Discord::self();
 
         // Set some data via GMCP
         mpHost->processDiscordGMCP(qsl("External.Discord.Status"), qsl(R"({"details":"Test","state":"Test"})"));
@@ -416,7 +406,7 @@ private slots:
 
     void testLuaSetterDeniedWhenDisabled()
     {
-        auto& discord = mudlet::self()->mDiscord;
+        auto& discord = *Discord::self();
         discord.setDetailText(mpHost, qsl("original"));
         mpHost->mDiscordMode = Host::DiscordDisabled;
 
@@ -428,7 +418,7 @@ private slots:
 
     void testLuaResetDeniedWhenDisabled()
     {
-        auto& discord = mudlet::self()->mDiscord;
+        auto& discord = *Discord::self();
         discord.setDetailText(mpHost, qsl("keep me"));
         mpHost->mDiscordMode = Host::DiscordDisabled;
 
@@ -440,7 +430,7 @@ private slots:
 
     void testLuaSetterAndResetDeniedWhenReadOnly()
     {
-        auto& discord = mudlet::self()->mDiscord;
+        auto& discord = *Discord::self();
         if (!discord.libraryLoaded()) {
             QSKIP("Discord RPC library not available - cannot test the read-only gate");
         }
@@ -449,7 +439,7 @@ private slots:
         // Simulate being logged into Discord with a different account than
         // the profile requires - that makes the Lua API read-only:
         Discord::smUserName = qsl("someone_else");
-        mpHost->mRequiredDiscordUserName = qsl("profile_owner");
+        mpHost->setRequiredDiscordUserName(qsl("profile_owner"));
 
         auto [setResult, setError] = evalLua(qsl("setDiscordDetail(\"changed\")"));
         QVERIFY2(!setResult.isValid(), "setter should be denied while the API is read-only");
@@ -464,7 +454,7 @@ private slots:
 
     void testLuaGettersAllowedWhenReadOnly()
     {
-        auto& discord = mudlet::self()->mDiscord;
+        auto& discord = *Discord::self();
         if (!discord.libraryLoaded()) {
             QSKIP("Discord RPC library not available - cannot test the read-only gate");
         }
@@ -475,7 +465,7 @@ private slots:
         discord.setParty(mpHost, 2, 5);
 
         Discord::smUserName = qsl("someone_else");
-        mpHost->mRequiredDiscordUserName = qsl("profile_owner");
+        mpHost->setRequiredDiscordUserName(qsl("profile_owner"));
 
         QCOMPARE(evalLua(qsl("getDiscordSmallIcon()")).first, QVariant(qsl("shield")));
         QCOMPARE(evalLua(qsl("getDiscordSmallIconText()")).first, QVariant(qsl("Guardian")));
@@ -485,7 +475,7 @@ private slots:
 
     void testLuaSetterAndResetAllowedWithWriteAccess()
     {
-        auto& discord = mudlet::self()->mDiscord;
+        auto& discord = *Discord::self();
         if (!discord.libraryLoaded()) {
             QSKIP("Discord RPC library not available - cannot test the write-access path");
         }
@@ -509,7 +499,7 @@ private slots:
 
     void testIpcHandshakeMakesApiReadOnlyEndToEnd()
     {
-        auto& discord = mudlet::self()->mDiscord;
+        auto& discord = *Discord::self();
         if (!discord.libraryLoaded()) {
             QSKIP("Discord RPC library not available - cannot test the IPC handshake");
         }
@@ -528,7 +518,7 @@ private slots:
         QVERIFY2(establishDiscordLogin(), "the discord-rpc handshake did not complete in time");
 
         // The profile demands a different account, so the API turns read-only:
-        mpHost->mRequiredDiscordUserName = qsl("profile_owner");
+        mpHost->setRequiredDiscordUserName(qsl("profile_owner"));
 
         // getDiscordSmallIcon() used to (wrongly) demand write access - it
         // must keep working while the API is read-only:
@@ -537,14 +527,14 @@ private slots:
         auto [setResult, setError] = evalLua(qsl("setDiscordDetail(\"changed\")"));
         QVERIFY2(!setResult.isValid(), "setter should be denied while the API is read-only");
         QVERIFY2(setError.contains(qsl("read-only")), "denial should say the API is read-only");
-        // No need to restore mRequiredDiscordUserName here: the next init()
+        // No need to restore the required Discord username here: the next init()
         // resets the gating state before resetData()'s UpdatePresence() runs, so
         // the shared connection is not torn down on the way into the next test.
     }
 
     void testSetActivityReachesDiscordEndToEnd()
     {
-        auto& discord = mudlet::self()->mDiscord;
+        auto& discord = *Discord::self();
         if (!discord.libraryLoaded()) {
             QSKIP("Discord RPC library not available - cannot test presence delivery");
         }
@@ -566,8 +556,31 @@ private slots:
 
         // discord-rpc serializes SET_ACTIVITY on its own IO thread, so give
         // the frames generous time to arrive:
-        QTRY_COMPARE_WITH_TIMEOUT(lastSetActivity().value(qsl("details")).toString(), qsl("Exploring the IPC stub"), 10000);
-        QTRY_COMPARE_WITH_TIMEOUT(lastSetActivity().value(qsl("state")).toString(), qsl("end-to-end"), 10000);
+        QTRY_COMPARE_WITH_TIMEOUT(lastSetActivity().value(qsl("details")).toString(), qsl("Exploring the IPC stub"), 10s);
+        QTRY_COMPARE_WITH_TIMEOUT(lastSetActivity().value(qsl("state")).toString(), qsl("end-to-end"), 10s);
+    }
+
+    void testTabChangeRefreshesPresenceEndToEnd()
+    {
+        auto& discord = *Discord::self();
+        if (!discord.libraryLoaded()) {
+            QSKIP("Discord RPC library not available - cannot test presence delivery");
+        }
+        if (!mpDiscordIpcStub->listening()) {
+            QSKIP("Discord IPC stub is not listening - cannot test presence delivery");
+        }
+        QCOMPARE(mudlet::self()->getActiveHost(), mpHost);
+        QVERIFY2(establishDiscordLogin(), "the discord-rpc handshake did not complete in time");
+
+        discord.setDetailText(mpHost, qsl("Back on this tab"));
+        QTRY_COMPARE_WITH_TIMEOUT(lastSetActivity().value(qsl("details")).toString(), qsl("Back on this tab"), 10s);
+        mpDiscordIpcStub->clearRecordedFrames();
+
+        // Nothing else sends presence now, so a SET_ACTIVITY can only come from the tab change
+        auto* pMudlet = mudlet::self();
+        emit pMudlet->signal_tabChanged(mpHost->getName());
+
+        QTRY_COMPARE_WITH_TIMEOUT(lastSetActivity().value(qsl("details")).toString(), qsl("Back on this tab"), 10s);
     }
 
     void cleanupTestCase()
@@ -575,28 +588,17 @@ private slots:
         delete mpServer;
         mpServer = nullptr;
         mpHost = nullptr;
-        const QString path = mudlet::getMudletPath(enums::profileHomePath, mHostname);
-        QDir(path).removeRecursively();
-        delete mudlet::self();
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
+        if (mudlet::self()) {
+            const QString path = MudletApp::getMudletPath(enums::profileHomePath, mHostname);
+            QDir(path).removeRecursively();
+            delete mudlet::self();
+        }
         delete mpDiscordIpcStub;
         mpDiscordIpcStub = nullptr;
+        mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }
 };
 
-void initializeQRCResourcesForDiscordModeTest()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
-
 #include "TDiscordModeTest.moc"
-QTEST_MAIN(TDiscordModeTest)
+MUDLET_GROUPED_TEST_MAIN(TDiscordModeTest)

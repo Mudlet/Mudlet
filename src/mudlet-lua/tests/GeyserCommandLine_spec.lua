@@ -132,9 +132,52 @@ describe("Tests functionality of Geyser.CommandLine", function()
       commandLine:setStyleSheet()
       assert.are.equal("background-color: red;", commandLine.stylesheet)
     end)
-  end)
 
-  pending("Geyser.CommandLine:setStyleSheet applies the stylesheet to the widget - needs a getCmdLineStyleSheet getter")
+    it("puts the stylesheet on the widget, not only on the Geyser object", function()
+      local commandLine = track(Geyser.CommandLine:new({name = "gclCssWidget", x = 0, y = 0, width = 100, height = 30}))
+      -- a sub command line is born with a stylesheet built from the profile's
+      -- command line background colour, not with an empty one
+      local born = getCmdLineStyleSheet("gclCssWidget")
+      assert.is_truthy(born:find("QPlainTextEdit{background-color:", 1, true))
+      local mainStyleSheet = getCmdLineStyleSheet()
+      commandLine:setStyleSheet("background-color: rgb(1,2,3);")
+      assert.are.equal("background-color: rgb(1,2,3);", getCmdLineStyleSheet("gclCssWidget"))
+      -- the getter with no name answers for the main command line, which styling
+      -- a named one must leave alone
+      assert.are.equal(mainStyleSheet, getCmdLineStyleSheet())
+    end)
+
+    it("reapplies the remembered stylesheet to the widget when called without one", function()
+      local commandLine = track(Geyser.CommandLine:new({name = "gclCssReapply", x = 0, y = 0, width = 100, height = 30}))
+      commandLine:setStyleSheet("color: rgb(4,5,6);")
+      -- clear the widget behind Geyser's back, so only a second trip through
+      -- setCmdLineStyleSheet can put the remembered sheet back on it
+      assert.is_true(setCmdLineStyleSheet("gclCssReapply", ""))
+      assert.are.equal("", getCmdLineStyleSheet("gclCssReapply"))
+      commandLine:setStyleSheet()
+      assert.are.equal("color: rgb(4,5,6);", getCmdLineStyleSheet("gclCssReapply"))
+    end)
+
+    it("applies a stylesheet given as a constraint to the new widget", function()
+      local commandLine = track(Geyser.CommandLine:new({
+        name = "gclCssCons",
+        x = 0, y = 0, width = 100, height = 30,
+        stylesheet = "color: rgb(7,8,9);",
+      }))
+      assert.are.equal("color: rgb(7,8,9);", getCmdLineStyleSheet("gclCssCons"))
+      assert.are.equal("color: rgb(7,8,9);", commandLine.stylesheet)
+    end)
+
+    it("takes the widget's stylesheet away with the widget", function()
+      local commandLine = track(Geyser.CommandLine:new({name = "gclCssGone", x = 0, y = 0, width = 100, height = 30}))
+      commandLine:setStyleSheet("color: rgb(10,11,12);")
+      assert.are.equal("color: rgb(10,11,12);", getCmdLineStyleSheet("gclCssGone"))
+      commandLine:delete()
+      local sheet, message = getCmdLineStyleSheet("gclCssGone")
+      assert.is_nil(sheet)
+      assert.are.equal("command-line name 'gclCssGone' not found", message)
+    end)
+  end)
 
   describe("Geyser.CommandLine:setAction/resetAction", function()
     it("remembers the action and its arguments, and forgets them again", function()
@@ -183,8 +226,7 @@ describe("Tests functionality of Geyser.CommandLine", function()
 
   describe("Geyser.CommandLine error paths", function()
     it("raises on a constraint it cannot parse, leaving no widget behind", function()
-      -- the object is registered before its constraints are resolved, so the
-      -- failed attempt has to be swept out of the root window list by hand
+      -- swept only if a regression left the refused element registered
       finally(function()
         local zombie = Geyser.windowList.gclBadConstraint
         if zombie then
@@ -195,7 +237,8 @@ describe("Tests functionality of Geyser.CommandLine", function()
         return Geyser.CommandLine:new({name = "gclBadConstraint", x = 0, y = 0, width = true, height = 20})
       end)
       assert.is_false(ok)
-      assert.is_truthy(tostring(message):find("GeyserSetConstraints.lua", 1, true))
+      assert.is_truthy(tostring(message):find("element 'gclBadConstraint' has an invalid width constraint", 1, true))
+      assert.is_nil(Geyser.windowList.gclBadConstraint)
       assert.is_nil(windowType("gclBadConstraint"))
     end)
 

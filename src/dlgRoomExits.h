@@ -84,6 +84,21 @@ private slots:
     void slot_specialRoomExitIdEdited(const QString&) const;
 };
 
+class CommandLineEditDelegate : public QStyledItemDelegate
+{
+    Q_OBJECT
+
+public:
+    explicit CommandLineEditDelegate(const QString& placeholder, QObject* parent = nullptr);
+
+    QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
+    void setEditorData(QWidget* editor, const QModelIndex& index) const override;
+    void setModelData(QWidget* editor, QAbstractItemModel* model, const QModelIndex& index) const override;
+
+private:
+    const QString mPlaceholder;
+};
+
 class TExit
 {
 public:
@@ -116,6 +131,7 @@ class dlgRoomExits : public QDialog, public Ui::room_exits
 {
     Q_OBJECT
     friend class RoomIdLineEditDelegate;
+    friend class RoomExitsDeletedEditItemTest;
 
 public:
     Q_DISABLE_COPY(dlgRoomExits)
@@ -146,6 +162,7 @@ public slots:
     void slot_addSpecialExit();
     void slot_editSpecialExit(QTreeWidgetItem*, int);
     void slot_endEditSpecialExits();
+    void slot_specialExitRowsAboutToBeRemoved(const QModelIndex&, int, int);
     void slot_ne_textEdited(const QString&);
     void slot_n_textEdited(const QString&);
     void slot_nw_textEdited(const QString&);
@@ -209,6 +226,7 @@ private:
     QTreeWidgetItem* mpEditItem = nullptr;
     TRoom* pR = nullptr;
     int mRoomID = 0;
+    quint64 mRoomSerial = 0;
     int mAreaID = 0;
     int mEditColumn = -1;
 

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+	<AliasPackage>
+		<Alias isActive="yes" isFolder="no">
+			<name>mudlet-spec-twobrokenxml alias b</name>
+			<script></script>
+			<command></command>
+			<packageName></packageName>
+			<regex>^mudlet-spec-twobrokenxml b$</regex>
+		</Alias>
+	</AliasPackage>
+	<ScriptPackage>
+		<Script isActive="yes" isFolder="no">
+			<name>twoBrokenXmlB</name>
+		</Alias>
+</MudletPackage>

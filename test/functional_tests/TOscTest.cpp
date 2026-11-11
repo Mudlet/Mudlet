@@ -27,33 +27,41 @@
  * Run with: ctest -R TOscTest -V
  */
 
+#include <QFileInfo>
 #include <QKeyEvent>
+#include <QMenu>
+#include <QTemporaryDir>
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include "LuaLiteral.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletApp.h"
+#include "PortableModeTestHelper.h"
+#include "ProfileTestHelper.h"
 #include "TAccessibleTextEdit.h"
+#include "TCommandLine.h"
 #include "THyperlinkStyling.h"
+#include "THyperlinkVisibilityManager.h"
 #include "TLinkStore.h"
 #include "TMainConsole.h"
+#include "TTextEdit.h"
+#include "TUiTour.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
-using namespace std::chrono_literals;
+#include "GroupedTest.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForOscTest();
+using namespace std::chrono_literals;
 
 class TOscTest : public QObject {
   Q_OBJECT
 
 private:
+  QTemporaryDir mConfigDir;
+  QByteArray mSavedXdg;
   TelnetServerStub *mpServer = nullptr;
   Host *mpHost = nullptr;
   const QString mHostname = "OSC-Test-Host";
@@ -68,13 +76,17 @@ private:
     QTest::qWait(50ms);
   }
 
+  static QString connects(const QString &address) {
+    return qsl("connectFromGameLink(%1)").arg(LuaLiteral::quote(address));
+  }
+
   // Scans backward through the buffer to find the first hyperlink and returns
   // its command list from the link store.
   QStringList findFirstLinkCommands() {
-    if (!mpHost || !mpHost->mpConsole) {
+    if (!mpHost || !mpHost->mainConsoleView()) {
       return {};
     }
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     int linkId = 0;
     for (int line = console->buffer.getLastLineNumber();
          line >= 0 && linkId == 0; --line) {
@@ -89,10 +101,10 @@ private:
   // Scans backward through the buffer to find the first hyperlink and returns
   // its HyperlinkStyling from the link store.
   Mudlet::HyperlinkStyling findFirstLinkStyling() {
-    if (!mpHost || !mpHost->mpConsole) {
+    if (!mpHost || !mpHost->mainConsoleView()) {
       return {};
     }
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     int linkId = 0;
     for (int line = console->buffer.getLastLineNumber();
          line >= 0 && linkId == 0; --line) {
@@ -119,10 +131,10 @@ private:
   // Scans forward through the buffer to find the first hyperlink and returns
   // its (line, column) position, or std::nullopt if none found.
   std::optional<std::pair<int, int>> findFirstLinkPosition() {
-    if (!mpHost || !mpHost->mpConsole) {
+    if (!mpHost || !mpHost->mainConsoleView()) {
       return std::nullopt;
     }
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     for (int line = 0; line <= console->buffer.getLastLineNumber(); ++line) {
       for (int col = 0; col < console->buffer.line(line).length(); ++col) {
         if (console->buffer.getLinkIndexAt(line, col) > 0) {
@@ -136,10 +148,10 @@ private:
   // Scans forward through the buffer to find the first hyperlink and returns
   // its (line, column, linkId), or std::nullopt if none found.
   std::optional<std::tuple<int, int, int>> findFirstLinkPositionWithId() {
-    if (!mpHost || !mpHost->mpConsole) {
+    if (!mpHost || !mpHost->mainConsoleView()) {
       return std::nullopt;
     }
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     for (int line = 0; line <= console->buffer.getLastLineNumber(); ++line) {
       for (int col = 0; col < console->buffer.line(line).length(); ++col) {
         int lid = console->buffer.getLinkIndexAt(line, col);
@@ -154,10 +166,10 @@ private:
   // Scans forward through the buffer to find the nth distinct hyperlink
   // (1-based) and returns its (line, column, linkId), or std::nullopt.
   std::optional<std::tuple<int, int, int>> findNthDistinctLinkPosition(int n) {
-    if (!mpHost || !mpHost->mpConsole) {
+    if (!mpHost || !mpHost->mainConsoleView()) {
       return std::nullopt;
     }
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     QSet<int> seenIds;
     for (int line = 0; line <= console->buffer.getLastLineNumber(); ++line) {
       for (int col = 0; col < console->buffer.line(line).length(); ++col) {
@@ -175,7 +187,7 @@ private:
 
   // Joins all buffer lines into one string.
   QString allBufferText() {
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     QString allText;
     for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {
       allText += console->buffer.line(i);
@@ -183,10 +195,53 @@ private:
     return allText;
   }
 
+  int lineStartingWith(const QString &start) {
+    TMainConsole *console = mpHost->mainConsoleView();
+    for (int i = console->buffer.getLastLineNumber(); i >= 0; --i) {
+      if (console->buffer.line(i).startsWith(start)) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  void feedFromServer(const QString &data) {
+    std::string bytes{data.toStdString()};
+    mpHost->printOnDisplay(bytes, true);
+  }
+
+  // Holds the next line back for joining, as a game that wraps its own output
+  // at 80 columns would have it: prose that ends within reach of the column.
+  void undoServerWrap() {
+    mpHost->mUndoServerWrap = true;
+    mpHost->mUndoServerWrapWidth = 80;
+  }
+
+  // As specialForceMXPProcessorOn has it once connected; cleanup() undoes it
+  void forceMxpOn() {
+    mpHost->setForceMXPProcessorOn(true);
+    mpHost->mMxpProcessor.enable();
+    mpHost->mMxpProcessor.setMode(MXP_MODE_CODE_LOCK_SECURE);
+  }
+
 private slots:
   // Start mudlet and create a profile once for all tests.
   void initTestCase() {
-    initializeQRCResourcesForOscTest();
+    if (portableMarkerPresent()) {
+      QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, "
+            "so the config dir cannot be redirected");
+    }
+
+    // A config root of this process's own. Sharing the developer's
+    // ~/.config/mudlet means sharing a profile list, so a second copy of this
+    // test running at the same time is told the name it types is already in
+    // use and never gets an enabled Connect button. Since #9712 the opt-in
+    // that makes setupConfig() adopt a directory is
+    // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+    QVERIFY(mConfigDir.isValid());
+    QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+    mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+    qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
 
     mpServer = new TelnetServerStub(qApp);
     mpServer->start(mLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
@@ -195,46 +250,36 @@ private slots:
     mPort = QString::number(mpServer->serverPort());
     mudlet::start();
     mudlet::self()->setupConfig();
+    QCOMPARE(MudletApp::getMudletPath(enums::mainPath),
+             qsl("%1/mudlet").arg(mConfigDir.path()));
+    // A config dir of this test's own reads as a brand new installation, so the
+    // first-run interface tour would open over the profile a second after it
+    // loads and take the window's keyboard with it - the link navigation keys
+    // below would reach the tour rather than the console. Written before
+    // init(), which is what stamps an untouched config as a first launch: a
+    // settings file that already holds something is how mudletUsedBefore()
+    // recognises an existing player, which keeps the rest of the first-run
+    // interface away as well.
+    TUiTour::rememberShown();
     mudlet::self()->takeOwnershipOfInstanceCoordinator(
         std::make_unique<MudletInstanceCoordinator>(
             "MudletInstanceCoordinator"));
     mudlet::self()->init();
     mudlet::self()->setStorePasswordsSecurely(false);
+    QVERIFY2(mudlet::self()->experiencedMudletPlayer(),
+             "the first-run UI would open over these tests and take the "
+             "window's keyboard");
 
     const QString path =
-        mudlet::getMudletPath(enums::profileHomePath, mHostname);
+        MudletApp::getMudletPath(enums::profileHomePath, mHostname);
     QDir(path).removeRecursively();
 
-    QTimer::singleShot(0ms, qApp, [this]() {
-      mudlet::self()->startAutoLogin({});
-      QTest::qWait(100ms);
-      QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button,
-                        Qt::LeftButton);
-      QTest::qWait(100ms);
-      QTest::keyClicks(QApplication::focusWidget(), mHostname);
-      QTest::qWait(100ms);
-      QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-      QTest::qWait(100ms);
-      QTest::keyClicks(QApplication::focusWidget(), mLocalhost);
-      QTest::qWait(100ms);
-      QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-      QTest::qWait(100ms);
-      QTest::keyClicks(QApplication::focusWidget(), mPort);
-      QTest::qWait(100ms);
-      QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
-    });
-
-    QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-    if (!spy.wait(1000)) {
-      QFAIL("Profile took too long to load.");
-    }
-    mpHost = mudlet::self()->getActiveHost();
-    if (!mpHost) {
-      QFAIL("No active host available for the test.");
-    }
+    mpHost = TestProfile::create(mHostname, mLocalhost, mPort);
+    QVERIFY2(mpHost, "Could not create the test profile - see the warning above "
+                     "for the step that timed out.");
 
     QSignalSpy spy2(&(mpHost->mTelnet), &cTelnet::signal_connected);
-    if (!spy2.wait(500)) {
+    if (!spy2.wait(5s)) {
       QFAIL("Could not connect with the host.");
     }
   }
@@ -242,8 +287,21 @@ private slots:
   // Clear buffer and link state before each test for isolation.
   void init() {
     QVERIFY(mpHost);
-    QVERIFY(mpHost->mpConsole);
-    mpHost->mpConsole->buffer.clear();
+    QVERIFY(mpHost->mainConsoleView());
+    mpHost->mainConsoleView()->buffer.clear();
+  }
+
+  void cleanup() {
+    if (mpHost && mpHost->mUndoServerWrap) {
+      // A blank line is never a continuation, so it commits anything still
+      // held back rather than leaving it to be joined onto the next test's text
+      feedFromServer(qsl("\n"));
+      mpHost->mUndoServerWrap = false;
+    }
+    if (mpHost && mpHost->getForceMXPProcessorOn()) {
+      mpHost->setForceMXPProcessorOn(false);
+      mpHost->mMxpProcessor.disable();
+    }
   }
 
   // Data-driven test: verifies text after various OSC sequences is displayed
@@ -285,7 +343,7 @@ private slots:
     injectData(message);
 
     // Join all buffer lines since cursor position varies with loopback.
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     QString allText;
     for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {
       allText += console->buffer.line(i);
@@ -324,13 +382,13 @@ private slots:
 
     // First server packet ends in a bare ESC...
     std::string part1{"Before\n\x1b"};
-    mpHost->mpConsole->printOnDisplay(part1, true);
+    mpHost->printOnDisplay(part1, true);
     // ...then locally generated text arrives in between...
     std::string localText{"local tick\n"};
-    mpHost->mpConsole->printOnDisplay(localText, false);
+    mpHost->printOnDisplay(localText, false);
     // ...then the server packet with the rest of the sequence:
     std::string part2{secondPacket.toStdString()};
-    mpHost->mpConsole->printOnDisplay(part2, true);
+    mpHost->printOnDisplay(part2, true);
 
     const QString allText = allBufferText();
     QVERIFY2(!allText.contains(mustNotContain),
@@ -342,6 +400,24 @@ private slots:
                      .arg(allText)));
     QVERIFY2(allText.contains(qsl("local tick")),
              qPrintable(qsl("Locally fed text went missing from: '%1'")
+                            .arg(allText)));
+  }
+
+  // A private/reserved CSI ("CSI ?25l" and friends) split across two server
+  // packets must survive the boundary. The branch that discards such a sequence
+  // has to sit BELOW the incomplete-packet check: above it, the first packet's
+  // "?25" is consumed on its own and the trailing "l" is left to print as text.
+  // CSISPLIT1 in TBufferOSC_spec.lua covers the same split between two local
+  // feeds; this covers the Game Server channel.
+  void test_SplitPrivateCsiSurvivesThePacketBoundary() {
+    std::string part1{"PRIVSPLIT(\x1b[?25"};
+    mpHost->printOnDisplay(part1, true);
+    std::string part2{"l)PRIVSPLIT\n"};
+    mpHost->printOnDisplay(part2, true);
+
+    const QString allText = allBufferText();
+    QVERIFY2(allText.contains(qsl("PRIVSPLIT()PRIVSPLIT")),
+             qPrintable(qsl("A private CSI split across two packets did not survive the boundary: '%1'")
                             .arg(allText)));
   }
 
@@ -360,18 +436,18 @@ private slots:
     // payload is shaped like an OSC colour redefinition for ANSI colour 2 so
     // that wrongly feeding it to the OSC decoder is observable:
     std::string part1{"Before\n\x1bPP2665544"};
-    mpHost->mpConsole->printOnDisplay(part1, true);
+    mpHost->printOnDisplay(part1, true);
 
     // Interleaved local feed carrying a complete OSC colour redefinition for
     // ANSI colour 1 that must be decoded:
     std::string localText{"\x1b]P1223344\x07local tick\n"};
-    mpHost->mpConsole->printOnDisplay(localText, false);
+    mpHost->printOnDisplay(localText, false);
 
     // The server DCS terminator arrives; the payload must be consumed
     // without being decoded:
     std::string part2{"\x07"
                       "After\n"};
-    mpHost->mpConsole->printOnDisplay(part2, true);
+    mpHost->printOnDisplay(part2, true);
 
     const QColor redAfter = mpHost->mRed;
     const QColor greenAfter = mpHost->mGreen;
@@ -440,6 +516,18 @@ private slots:
         << qsl("\x1b]8;;https://example.com/"
                "?%63%6F%6E%66%69%67=value\x1b\\Link\x1b]8;;\x1b\\")
         << QStringList{"%63%6F%6E%66%69%67=value"} << QStringList{};
+    QTest::newRow("keeps a valueless config name")
+        << qsl("\x1b]8;;https://example.com/"
+               "?config&id=42\x1b\\Link\x1b]8;;\x1b\\")
+        << QStringList{"?config&id=42"} << QStringList{};
+    QTest::newRow("keeps a valueless preset name")
+        << qsl("\x1b]8;;https://example.com/"
+               "?preset&page=1\x1b\\Link\x1b]8;;\x1b\\")
+        << QStringList{"?preset&page=1"} << QStringList{};
+    QTest::newRow("unterminated config keeps later params")
+        << qsl("\x1b]8;;https://example.com/"
+               "?config={\"a\":\"x&id=42\x1b\\Link\x1b]8;;\x1b\\")
+        << QStringList{"id=42"} << QStringList{"config="};
     QTest::newRow("send URL strips all query params")
         << qsl("\x1b]8;;send:attack?config=%7B%22style%22%3A%7B%22color%22%3A%"
                "22red%22%7D%7D\x1b\\Attack\x1b]8;;\x1b\\")
@@ -466,6 +554,755 @@ private slots:
                qPrintable(qsl("Did not expect '%1' in: %2")
                               .arg(forbidden, commands.first())));
     }
+  }
+
+  // A percent-encoded reserved parameter name is ordinary URL data, not OSC 8
+  // styling - that is the escape servers are told to use to put a literal
+  // "config" or "preset" parameter in a web URL. The styling parser has to agree
+  // with the URL-stripping path above, which already keeps the encoded name.
+  void test_Osc8UrlParams_EncodedReservedNameIsNotStyling() {
+    const QString encodedConfigName = qsl("%63%6F%6E%66%69%67");
+    injectData(qsl("\x1b]8;;https://example.com/?") + encodedConfigName +
+               qsl("=%7B%22tooltip%22%3A%22URL-DATA%22%2C%22style%22%3A%7B%"
+                   "22color%22%3A%22red%22%7D%7D\x1b\\Encoded\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    int linkId = 0;
+    for (int line = console->buffer.getLastLineNumber();
+         line >= 0 && linkId == 0; --line) {
+      linkId = console->buffer.getLinkIndexAt(line, 0);
+    }
+    QVERIFY2(linkId > 0, "Expected to find a link in the buffer");
+
+    // Had the encoded name been consumed as styling, the hint would be the
+    // config's tooltip ("URL-DATA") instead of the URL Mudlet is about to open
+    const QString tooltip = console->buffer.getLinkTooltip(linkId);
+    QCOMPARE(tooltip, qsl("Open browser to: https://example.com/?") +
+                          encodedConfigName +
+                          qsl("=%7B%22tooltip%22%3A%22URL-DATA%22%2C%22style%"
+                              "22%3A%7B%22color%22%3A%22red%22%7D%7D"));
+    QVERIFY2(!console->getLinkStore().getStyling(linkId).hasCustomStyling,
+             "Encoded 'config' must not apply custom link styling");
+
+    const QStringList commands = console->getLinkStore().getLinksConst(linkId);
+    QVERIFY2(!commands.isEmpty(), "Expected a command for the link");
+    QVERIFY2(commands.first().contains(encodedConfigName),
+             qPrintable(qsl("Expected the encoded parameter to survive into the "
+                            "opened URL: %1")
+                            .arg(commands.first())));
+  }
+
+  // Each row drives the split down a different path: a percent-encoded value
+  // bounded by the next '&', a reserved key that is not the first parameter, a
+  // raw-JSON value, one carrying an unencoded '&' inside a string, and the
+  // '%3D' separator.
+  void test_Osc8ReservedParamShapes_data() {
+    QTest::addColumn<QString>("query");
+    QTest::addColumn<QString>("expectedTooltip");
+    QTest::addColumn<QString>("mustRemainInUrl");
+
+    QTest::newRow("encoded config bounded by a later param")
+        << qsl("?config=%7B%22tooltip%22%3A%22Encoded%20config%22%7D&page=1")
+        << qsl("Encoded config") << qsl("page=1");
+    QTest::newRow("encoded config after another param")
+        << qsl("?page=1&config=%7B%22tooltip%22%3A%22Later%20config%22%7D")
+        << qsl("Later config") << qsl("page=1");
+    QTest::newRow("raw JSON config after another param")
+        << qsl("?page=1&config={\"tooltip\":\"Raw later\"}")
+        << qsl("Raw later") << qsl("page=1");
+    QTest::newRow("raw JSON config with an unencoded ampersand inside a string")
+        << qsl("?config={\"tooltip\":\"Tea & Cake\"}") << qsl("Tea & Cake")
+        << QString();
+    QTest::newRow("encoded separator")
+        << qsl("?config%3D%7B%22tooltip%22%3A%22Encoded%20separator%22%7D")
+        << qsl("Encoded separator") << QString();
+  }
+
+  void test_Osc8ReservedParamShapes() {
+    QFETCH(QString, query);
+    QFETCH(QString, expectedTooltip);
+    QFETCH(QString, mustRemainInUrl);
+
+    injectData(qsl("\x1b]8;;https://example.com/") + query +
+               qsl("\x1b\\Link\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    int linkId = 0;
+    for (int line = console->buffer.getLastLineNumber();
+         line >= 0 && linkId == 0; --line) {
+      linkId = console->buffer.getLinkIndexAt(line, 0);
+    }
+    QVERIFY2(linkId > 0, "Expected to find a link in the buffer");
+
+    QCOMPARE(console->buffer.getLinkTooltip(linkId), expectedTooltip);
+
+    if (!mustRemainInUrl.isEmpty()) {
+      const QStringList commands = console->getLinkStore().getLinksConst(linkId);
+      QVERIFY2(!commands.isEmpty(), "Expected a command for the link");
+      QVERIFY2(commands.first().contains(mustRemainInUrl),
+               qPrintable(qsl("Expected '%1' to survive into the opened URL: %2")
+                              .arg(mustRemainInUrl, commands.first())));
+    }
+  }
+
+  // A config value sent as unencoded JSON can carry '&' inside its strings, so
+  // the whole parameter has to be stripped out of the URL Mudlet opens - not
+  // just the part before the first '&', which leaves a JSON fragment behind.
+  void test_Osc8UnencodedAmpersandInConfigLeavesUrlIntact_data() {
+    QTest::addColumn<QString>("query");
+    QTest::addColumn<QString>("expectedUrl");
+    QTest::addColumn<QString>("expectedTooltip");
+
+    QTest::newRow("config with a raw ampersand, trailing param")
+        << qsl("?config={\"tooltip\":\"A & B\"}&id=42")
+        << qsl("https://example.com/?id=42") << qsl("A & B");
+    QTest::newRow("config with a raw ampersand, no other param")
+        << qsl("?config={\"tooltip\":\"A & B\"}") << qsl("https://example.com/")
+        << qsl("A & B");
+    QTest::newRow("config with a raw ampersand, preceding param")
+        << qsl("?id=42&config={\"tooltip\":\"A & B\"}")
+        << qsl("https://example.com/?id=42") << qsl("A & B");
+    QTest::newRow("config with two raw ampersands")
+        << qsl("?config={\"tooltip\":\"A & B & C\"}&id=42")
+        << qsl("https://example.com/?id=42") << qsl("A & B & C");
+    // A server may encode part of the object and leave the rest raw, so the
+    // braces bounding it can arrive as %7B/%7D while an '&' inside stays literal
+    QTest::newRow("half-encoded config with a raw ampersand")
+        << qsl("?config=%7B%22tooltip%22%3A%22A & B%22%7D&id=42")
+        << qsl("https://example.com/?id=42") << qsl("A & B");
+    QTest::newRow("half-encoded config, no other param")
+        << qsl("?config=%7B%22tooltip%22%3A%22A & B%22%7D")
+        << qsl("https://example.com/") << qsl("A & B");
+    // JSON allows whitespace before the object, and the parser accepts it, so
+    // a value that opens with it is still a config - and since decodeOSC()
+    // strips a reserved parameter on its key alone, refusing it here would
+    // take the styling out of the link and the parameter off the URL both
+    QTest::newRow("config with a leading space")
+        << qsl("?config= {\"tooltip\":\"A & B\"}&id=42")
+        << qsl("https://example.com/?id=42") << qsl("A & B");
+    QTest::newRow("config with a percent-encoded leading space")
+        << qsl("?config=%20%7B%22tooltip%22%3A%22A & B%22%7D&id=42")
+        << qsl("https://example.com/?id=42") << qsl("A & B");
+  }
+
+  void test_Osc8UnencodedAmpersandInConfigLeavesUrlIntact() {
+    QFETCH(QString, query);
+    QFETCH(QString, expectedUrl);
+    QFETCH(QString, expectedTooltip);
+
+    injectData(qsl("\x1b]8;;https://example.com/") + query +
+               qsl("\x1b\\Link\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    int linkId = 0;
+    for (int line = console->buffer.getLastLineNumber();
+         line >= 0 && linkId == 0; --line) {
+      linkId = console->buffer.getLinkIndexAt(line, 0);
+    }
+    QVERIFY2(linkId > 0, "Expected to find a link in the buffer");
+
+    const QStringList commands = console->getLinkStore().getLinksConst(linkId);
+    QVERIFY2(!commands.isEmpty(), "Expected a command for the link");
+    // Compared in full rather than with contains(): the leak this guards against
+    // appends to the URL, so for the row that expects no query at all the
+    // corrupted URL still starts with the expected one. Quoting the expectation
+    // through LuaLiteral means the assertion tracks the command's Lua wrapper
+    // instead of hard-coding it.
+    QCOMPARE(commands.first(),
+             qsl("openUrl(%1)").arg(LuaLiteral::quote(expectedUrl)));
+    // the config itself must still have been consumed as styling
+    QCOMPARE(console->buffer.getLinkTooltip(linkId), expectedTooltip);
+  }
+
+  // Items without send: or prompt: that are not web or mail links go to the
+  // game verbatim, since games may use bare commands that parse as URIs.
+  void test_Osc8MenuItemCommand_data() {
+    QTest::addColumn<QString>("item");
+    QTest::addColumn<QString>("expectedCommand");
+
+    const auto opens = [](const QString &url) {
+      return qsl("openUrl(%1)").arg(LuaLiteral::quote(url));
+    };
+    const auto sends = [](const QString &command) {
+      return qsl("send(%1, false)").arg(LuaLiteral::quote(command));
+    };
+
+    QTest::newRow("a mailto with a field hidden in its address")
+        << qsl("mailto:x%253Fattachment=/etc/hostname%2526@b.com")
+        << sends(qsl("mailto:x%3Fattachment=/etc/hostname%26@b.com"));
+    QTest::newRow("https") << qsl("https://wiki.mudlet.org/w/Main_Page")
+                           << opens(qsl("https://wiki.mudlet.org/w/Main_Page"));
+    QTest::newRow("http") << qsl("http://example.com/")
+                          << opens(qsl("http://example.com/"));
+    QTest::newRow("ftp") << qsl("ftp://files.example.com/pub/")
+                         << opens(qsl("ftp://files.example.com/pub/"));
+    QTest::newRow("scheme in capitals")
+        << qsl("HTTPS://example.com/") << opens(qsl("HTTPS://example.com/"));
+    QTest::newRow("query kept as sent")
+        << qsl("https://example.com/search?q=dragons")
+        << opens(qsl("https://example.com/search?q=dragons"));
+    QTest::newRow("send") << qsl("send:look") << sends(qsl("look"));
+    QTest::newRow("bare command") << qsl("flee") << sends(qsl("flee"));
+    QTest::newRow("file is not opened")
+        << qsl("file:///etc/passwd") << sends(qsl("file:///etc/passwd"));
+    QTest::newRow("mailto")
+        << qsl("mailto:someone@example.com?subject=Hello")
+        << opens(qsl("mailto:someone@example.com?subject=Hello"));
+    QTest::newRow("mailto keeps only its message fields")
+        << qsl("mailto:someone@example.com?subject=Hello&attach=/etc/hostname")
+        << opens(qsl("mailto:someone@example.com?subject=Hello"));
+    QTest::newRow("other scheme sent verbatim")
+        << qsl("steam://run/1") << sends(qsl("steam://run/1"));
+  }
+
+  void test_Osc8MenuItemCommand() {
+    QFETCH(QString, item);
+    QFETCH(QString, expectedCommand);
+
+    injectData(qsl("\x1b]8;;send:look?config={\"menu\":[{\"Item\":\"") + item +
+               qsl("\"}]}\x1b\\Link\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    int linkId = 0;
+    for (int line = console->buffer.getLastLineNumber();
+         line >= 0 && linkId == 0; --line) {
+      linkId = console->buffer.getLinkIndexAt(line, 0);
+    }
+    QVERIFY2(linkId > 0, "Expected to find a link in the buffer");
+
+    const QStringList commands = console->getLinkStore().getLinksConst(linkId);
+    QCOMPARE(commands.size(), 1);
+    QCOMPARE(commands.first(), expectedCommand);
+    // the menu reads its labels after the tooltip, so a missing one shifts
+    // every label onto the wrong command
+    const QStringList hints = console->getLinkStore().getHintsConst(linkId);
+    QCOMPARE(hints.size(), 2);
+    QCOMPARE(hints.last(), qsl("Item"));
+  }
+
+  // Activating a link in a selection group runs the menu item the player
+  // picked; only a link without a menu has its own command rebuilt to carry
+  // the new selected state.
+  void test_Osc8SelectionGroupActivationCommand_data() {
+    QTest::addColumn<QString>("url");
+    QTest::addColumn<QString>("expectedCommand");
+
+    const QString selection =
+        qsl("\"selection\":{\"group\":\"%1\",\"value\":\"v\"}");
+    const auto sends = [](const QString &command) {
+      return qsl("send(%1, false)").arg(LuaLiteral::quote(command));
+    };
+
+    QTest::newRow("no menu")
+        << qsl("send:look?config={%1}").arg(selection.arg(qsl("noMenu")))
+        << sends(qsl("look?selected=true"));
+    QTest::newRow("one-item menu")
+        << qsl("send:look?config={\"menu\":[{\"Attack\":\"send:attack\"}],%1}")
+               .arg(selection.arg(qsl("oneItem")))
+        << sends(qsl("attack"));
+    QTest::newRow("one-item menu with a web link")
+        << qsl("send:look?config={\"menu\":[{\"Wiki\":\"https://wiki.mudlet.org/\"}],%1}")
+               .arg(selection.arg(qsl("oneWebItem")))
+        << qsl("openUrl(%1)").arg(LuaLiteral::quote(qsl("https://wiki.mudlet.org/")));
+    QTest::newRow("two-item menu")
+        << qsl("send:look?config={\"menu\":[{\"Attack\":\"send:attack\"},{\"Flee\":\"send:flee\"}],%1}")
+               .arg(selection.arg(qsl("twoItems")))
+        << sends(qsl("attack"));
+  }
+
+  void test_Osc8SelectionGroupActivationCommand() {
+    QFETCH(QString, url);
+    QFETCH(QString, expectedCommand);
+
+    injectData(qsl("\x1b]8;;") + url + qsl("\x1b\\Link\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    int linkId = 0;
+    for (int line = console->buffer.getLastLineNumber();
+         line >= 0 && linkId == 0; --line) {
+      linkId = console->buffer.getLinkIndexAt(line, 0);
+    }
+    QVERIFY2(linkId > 0, "Expected to find a link in the buffer");
+
+    const Mudlet::HyperlinkStyling styling =
+        console->getLinkStore().getStyling(linkId);
+    QVERIFY(styling.selection.hasSelectionSettings);
+
+    const QStringList commands = console->getLinkStore().getLinksConst(linkId);
+    QVERIFY(!commands.isEmpty());
+    QString command = commands.first();
+    console->model().applyLinkSelection(linkId, command, styling.selection);
+    QCOMPARE(command, expectedCommand);
+  }
+
+  // A | belongs to the label or command it is in; the menu must not be split on it
+  void test_Osc8MenuKeepsPipesInItsItems() {
+    injectData(qsl("\x1b]8;;send:look?config={\"menu\":[{\"A|B\":\"send:one\"},\"-\",{\"Two\":\"send:two|x\"}]}\x1b\\Link\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    int linkId = 0;
+    for (int line = console->buffer.getLastLineNumber();
+         line >= 0 && linkId == 0; --line) {
+      linkId = console->buffer.getLinkIndexAt(line, 0);
+    }
+    QVERIFY2(linkId > 0, "Expected to find a link in the buffer");
+
+    const auto sends = [](const QString &command) {
+      return qsl("send(%1, false)").arg(LuaLiteral::quote(command));
+    };
+    QCOMPARE(console->getLinkStore().getLinksConst(linkId),
+             QStringList({sends(qsl("one")), QString(), sends(qsl("two|x"))}));
+    // hint 0 is the hover tooltip; the menu labels follow it
+    QCOMPARE(console->getLinkStore().getHintsConst(linkId).mid(1),
+             QStringList({qsl("A|B"), QString(), qsl("Two")}));
+  }
+
+  // An empty label keeps its item, and an item with no command is left out,
+  // without moving any other item onto the wrong command
+  void test_Osc8MenuKeepsEmptyLabelsAndDropsEmptyCommands() {
+    injectData(qsl("\x1b]8;;send:look?config={\"menu\":[{\"\":\"send:a\"},{\"Nothing\":\"\"},{\"B\":\"send:b\"}]}\x1b\\Link\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    int linkId = 0;
+    for (int line = console->buffer.getLastLineNumber();
+         line >= 0 && linkId == 0; --line) {
+      linkId = console->buffer.getLinkIndexAt(line, 0);
+    }
+    QVERIFY2(linkId > 0, "Expected to find a link in the buffer");
+
+    const auto sends = [](const QString &command) {
+      return qsl("send(%1, false)").arg(LuaLiteral::quote(command));
+    };
+    QCOMPARE(console->getLinkStore().getLinksConst(linkId),
+             QStringList({sends(qsl("a")), sends(qsl("b"))}));
+    QCOMPARE(console->getLinkStore().getHintsConst(linkId).mid(1),
+             QStringList({QString(), qsl("B")}));
+  }
+
+  // Toggle defaults to true, so it shows that a value that is not a boolean
+  // leaves the default alone, where bold cannot tell that from false.
+  void test_Osc8BooleanForms_data() {
+    QTest::addColumn<QString>("value");
+    QTest::addColumn<bool>("expectedBold");
+    QTest::addColumn<bool>("expectedToggle");
+
+    QTest::newRow("true") << qsl("true") << true << true;
+    QTest::newRow("false") << qsl("false") << false << false;
+    QTest::newRow("string true") << qsl("\"true\"") << true << true;
+    QTest::newRow("string false") << qsl("\"false\"") << false << false;
+    QTest::newRow("string in capitals") << qsl("\"TRUE\"") << true << true;
+    QTest::newRow("string false in capitals") << qsl("\"False\"") << false << false;
+    QTest::newRow("one") << qsl("1") << true << true;
+    QTest::newRow("zero") << qsl("0") << false << false;
+    QTest::newRow("string one") << qsl("\"1\"") << true << true;
+    QTest::newRow("string zero") << qsl("\"0\"") << false << false;
+    QTest::newRow("string with spaces") << qsl("\" true \"") << true << true;
+    QTest::newRow("another number") << qsl("2") << false << true;
+    QTest::newRow("another string") << qsl("\"yes\"") << false << true;
+    QTest::newRow("empty string") << qsl("\"\"") << false << true;
+    QTest::newRow("null") << qsl("null") << false << true;
+  }
+
+  void test_Osc8BooleanForms() {
+    QFETCH(QString, value);
+    QFETCH(bool, expectedBold);
+    QFETCH(bool, expectedToggle);
+
+    injectData(qsl("\x1b]8;;send:look?config={\"style\":{\"bold\":%1},\"selection\":{\"group\":\"booleans\",\"value\":\"x\",\"toggle\":%1}}\x1b\\Link\x1b]8;;\x1b\\").arg(value));
+
+    QVERIFY2(findFirstLinkPositionWithId().has_value(), "the whole link was refused");
+    const Mudlet::HyperlinkStyling styling = findFirstLinkStyling();
+    QCOMPARE(styling.isBold, expectedBold);
+    QCOMPARE(styling.selection.toggle, expectedToggle);
+  }
+
+  void test_Osc8LineStyleStringsAndBooleans_data() {
+    QTest::addColumn<QString>("value");
+    QTest::addColumn<bool>("expectedUnderlined");
+    QTest::addColumn<int>("expectedStyle");
+
+    QTest::newRow("string true") << qsl("\"true\"") << true << static_cast<int>(Mudlet::HyperlinkStyling::UnderlineSolid);
+    QTest::newRow("string false") << qsl("\"false\"") << false << static_cast<int>(Mudlet::HyperlinkStyling::UnderlineSolid);
+    QTest::newRow("one") << qsl("1") << true << static_cast<int>(Mudlet::HyperlinkStyling::UnderlineSolid);
+    QTest::newRow("string zero") << qsl("\"0\"") << false << static_cast<int>(Mudlet::HyperlinkStyling::UnderlineSolid);
+    QTest::newRow("another number") << qsl("2") << false << static_cast<int>(Mudlet::HyperlinkStyling::UnderlineSolid);
+    QTest::newRow("a style") << qsl("\"wavy\"") << true << static_cast<int>(Mudlet::HyperlinkStyling::UnderlineWavy);
+    QTest::newRow("another string") << qsl("\"thick\"") << true << static_cast<int>(Mudlet::HyperlinkStyling::UnderlineSolid);
+  }
+
+  void test_Osc8LineStyleStringsAndBooleans() {
+    QFETCH(QString, value);
+    QFETCH(bool, expectedUnderlined);
+    QFETCH(int, expectedStyle);
+
+    injectData(qsl("\x1b]8;;send:look?config={\"style\":{\"underline\":%1}}\x1b\\Link\x1b]8;;\x1b\\").arg(value));
+
+    QVERIFY2(findFirstLinkPositionWithId().has_value(), "the whole link was refused");
+    const Mudlet::HyperlinkStyling styling = findFirstLinkStyling();
+    QCOMPARE(styling.isUnderlined, expectedUnderlined);
+    QCOMPARE(static_cast<int>(styling.underlineStyle), expectedStyle);
+  }
+
+  void test_Osc8OverlineAndStrikethroughBooleanForms_data() {
+    QTest::addColumn<QString>("value");
+    QTest::addColumn<bool>("expectedOn");
+
+    QTest::newRow("string true") << qsl("\"true\"") << true;
+    QTest::newRow("string false") << qsl("\"false\"") << false;
+    QTest::newRow("string zero") << qsl("\"0\"") << false;
+    QTest::newRow("zero") << qsl("0") << false;
+    QTest::newRow("a style") << qsl("\"dotted\"") << true;
+  }
+
+  void test_Osc8OverlineAndStrikethroughBooleanForms() {
+    QFETCH(QString, value);
+    QFETCH(bool, expectedOn);
+
+    injectData(qsl("\x1b]8;;send:look?config={\"style\":{\"overline\":%1,\"strikethrough\":%1}}\x1b\\Link\x1b]8;;\x1b\\").arg(value));
+
+    QVERIFY2(findFirstLinkPositionWithId().has_value(), "the whole link was refused");
+    const Mudlet::HyperlinkStyling styling = findFirstLinkStyling();
+    QCOMPARE(styling.isOverlined, expectedOn);
+    QCOMPARE(styling.isStrikeOut, expectedOn);
+  }
+
+  void test_Osc8SelectionDisabled_data() {
+    QTest::addColumn<QString>("config");
+    QTest::addColumn<bool>("expectedDisabled");
+
+    QTest::newRow("inside selection") << qsl("{\"selection\":{\"group\":\"poll\",\"value\":\"a\",\"disabled\":true}}") << true;
+    QTest::newRow("at the top level") << qsl("{\"disabled\":true,\"selection\":{\"group\":\"poll\",\"value\":\"b\"}}") << true;
+    QTest::newRow("either one is enough") << qsl("{\"disabled\":false,\"selection\":{\"group\":\"poll\",\"value\":\"c\",\"disabled\":true}}") << true;
+    QTest::newRow("the other one is enough") << qsl("{\"disabled\":true,\"selection\":{\"group\":\"poll\",\"value\":\"e\",\"disabled\":false}}") << true;
+    QTest::newRow("neither") << qsl("{\"selection\":{\"group\":\"poll\",\"value\":\"d\",\"disabled\":false}}") << false;
+  }
+
+  void test_Osc8SelectionDisabled() {
+    QFETCH(QString, config);
+    QFETCH(bool, expectedDisabled);
+
+    injectData(qsl("\x1b]8;;send:vote?config=%1\x1b\\Option\x1b]8;;\x1b\\").arg(config));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    int linkId = 0;
+    for (int line = console->buffer.getLastLineNumber();
+         line >= 0 && linkId == 0; --line) {
+      linkId = console->buffer.getLinkIndexAt(line, 0);
+    }
+    QVERIFY2(linkId > 0, "Expected to find a link in the buffer");
+    QCOMPARE(console->getLinkStore().getStyling(linkId).selection.disabled, expectedDisabled);
+    QCOMPARE(console->buffer.getLinkState(linkId) == Mudlet::HyperlinkStyling::StateDisabled, expectedDisabled);
+
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY(pos.has_value());
+    mpHost->setCaretEnabled(true);
+    const auto caretOff = qScopeGuard([this] { mpHost->setCaretEnabled(false); });
+    console->mUpperPane->setCaretPosition(std::get<0>(*pos), std::get<1>(*pos));
+    QKeyEvent activate(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+    QApplication::sendEvent(console->mUpperPane, &activate);
+    QCOMPARE(console->buffer.isLinkSelected(linkId), !expectedDisabled);
+  }
+
+  void test_Osc8TelnetLinkAsksBeforeConnecting() {
+    injectData(qsl("\x1b]8;;telnet://games.example:4000\x1b\\Visit\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    int linkId = 0;
+    for (int line = console->buffer.getLastLineNumber();
+         line >= 0 && linkId == 0; --line) {
+      linkId = console->buffer.getLinkIndexAt(line, 0);
+    }
+    QVERIFY2(linkId > 0, "Expected to find a link in the buffer");
+    QCOMPARE(console->getLinkStore().getLinksConst(linkId),
+             QStringList(connects(qsl("telnet://games.example:4000"))));
+    QCOMPARE(console->buffer.getLinkTooltip(linkId),
+             qsl("Connect to: telnet://games.example:4000"));
+
+    QString asked;
+    mudlet::self()->mConfirmGameLink = [&asked](const QString &question) {
+      asked = question;
+      return false;
+    };
+    const auto unhook = qScopeGuard([] { mudlet::self()->mConfirmGameLink = nullptr; });
+    mpHost->mLuaInterpreter.compileAndExecuteScript(
+        console->getLinkStore().getLinksConst(linkId).at(0));
+    QTRY_COMPARE(asked, qsl("Connect to games.example:4000?"));
+    QVERIFY2(!mudlet::self()->profileExists(qsl("Games")),
+             "declining still made a profile");
+  }
+
+  void test_Osc8TelnetMenuItemAsksBeforeConnecting() {
+    injectData(qsl("\x1b]8;;send:look?config={\"menu\":[{\"Look\":\"send:look\"},{\"Visit\":\"telnet://games.example:4000\"}]}\x1b\\Menu\x1b]8;;\x1b\\"));
+
+    const QStringList commands = findFirstLinkCommands();
+    QCOMPARE(commands.size(), 2);
+    QCOMPARE(commands.at(1), connects(qsl("telnet://games.example:4000")));
+
+    QString asked;
+    mudlet::self()->mConfirmGameLink = [&asked](const QString &question) {
+      asked = question;
+      return false;
+    };
+    const auto unhook = qScopeGuard([] { mudlet::self()->mConfirmGameLink = nullptr; });
+    mpHost->mLuaInterpreter.compileAndExecuteScript(commands.at(1));
+    QTRY_COMPARE(asked, qsl("Connect to games.example:4000?"));
+  }
+
+  // Typed at the game, an address it could never connect to would be sent as a
+  // command, so the item has nothing to run and shows greyed out
+  void test_Osc8TelnetMenuItemWithoutAHostDoesNothing() {
+    injectData(qsl("\x1b]8;;send:look?config={\"menu\":[{\"Look\":\"send:look\"},{\"Visit\":\"telnet://:4000\"}]}\x1b\\Menu\x1b]8;;\x1b\\"));
+
+    const QStringList commands = findFirstLinkCommands();
+    QCOMPARE(commands.size(), 2);
+    QCOMPARE(commands.at(1), QString());
+  }
+
+  void test_AGameLinkQuestionShowsTheAddressItDials_data() {
+    QTest::addColumn<QString>("uri");
+    QTest::addColumn<QString>("expected");
+
+    QTest::newRow("IPv6 with a zone") << qsl("telnet://[fe80::1%252]:4000") << qsl("Connect to [fe80::1%2]:4000?");
+    QTest::newRow("IPv6") << qsl("telnet://[2001:db8::1]:4000") << qsl("Connect to [2001:db8::1]:4000?");
+    QTest::newRow("a lookalike Unicode host") << qsl("telnet://xn--pple-43d.com:4000") << qsl("Connect to аpple.com:4000 (xn--pple-43d.com)?");
+    QTest::newRow("an ASCII host") << qsl("telnet://games.example:4000") << qsl("Connect to games.example:4000?");
+  }
+
+  void test_AGameLinkQuestionShowsTheAddressItDials() {
+    QFETCH(QString, uri);
+    QFETCH(QString, expected);
+
+    QString asked;
+    mudlet::self()->mConfirmGameLink = [&asked](const QString &question) {
+      asked = question;
+      return false;
+    };
+    const auto unhook = qScopeGuard([] { mudlet::self()->mConfirmGameLink = nullptr; });
+    mudlet::self()->connectFromGameLink(uri);
+    QCOMPARE(asked, expected);
+  }
+
+  // One that could never connect would otherwise say "Connect to" and then do
+  // nothing when clicked
+  void test_Osc8TelnetLinkWithoutAHostIsNotMade() {
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int linksBefore = console->getLinkStore().getCurrentLinkID();
+    injectData(qsl("\x1b]8;;telnet://:4000\x1b\\Visit\x1b]8;;\x1b\\"));
+    QCOMPARE(console->getLinkStore().getCurrentLinkID(), linksBefore);
+  }
+
+  void test_Osc8TelnetsLinkToARawAddressIsNotMade_data() {
+    QTest::addColumn<QString>("uri");
+    QTest::newRow("IPv4") << qsl("telnets://127.0.0.1:4000");
+    QTest::newRow("IPv6") << qsl("telnets://[::1]:4000");
+  }
+
+  void test_Osc8TelnetsLinkToARawAddressIsNotMade() {
+    QFETCH(QString, uri);
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int linksBefore = console->getLinkStore().getCurrentLinkID();
+    injectData(qsl("\x1b]8;;") + uri + qsl("\x1b\\Visit\x1b]8;;\x1b\\"));
+    QCOMPARE(console->getLinkStore().getCurrentLinkID(), linksBefore);
+  }
+
+  // A profile already connected is only brought forward, so the link cannot
+  // set TLS for some later reconnection the player never asked for
+  void test_AGameLinkToAConnectedProfileLeavesItsTlsAlone() {
+    QVERIFY(mpHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectedState);
+    QString asked;
+    mudlet::self()->mConfirmGameLink = [&asked](const QString &question) {
+      asked = question;
+      return true;
+    };
+    const auto unhook = qScopeGuard([] { mudlet::self()->mConfirmGameLink = nullptr; });
+    mudlet::self()->connectFromGameLink(qsl("telnets://%1:%2").arg(mLocalhost, mPort));
+
+    QCOMPARE(asked, qsl("Connect to %1:%2 with your profile %3? It will log in with your saved details.").arg(mLocalhost, mPort, mHostname));
+    QVERIFY(!mpHost->mUseTlsThisSession);
+    QVERIFY(!mpHost->mSslTsl);
+    QVERIFY2(MudletApp::readProfileData(mHostname, qsl("ssl_tsl")).isEmpty(),
+             "the link changed the profile's saved TLS setting");
+  }
+
+  // The question runs an event loop, which carries on running clicks
+  void test_AGameLinkClickedWhileAskingIsNotAskedAgain() {
+    int questions = 0;
+    mudlet::self()->mConfirmGameLink = [&questions](const QString &) {
+      if (++questions == 1) {
+        mudlet::self()->connectFromGameLink(qsl("telnet://games.example:4000"));
+      }
+      return false;
+    };
+    const auto unhook = qScopeGuard([] { mudlet::self()->mConfirmGameLink = nullptr; });
+    mudlet::self()->connectFromGameLink(qsl("telnet://games.example:4000"));
+    QCOMPARE(questions, 1);
+  }
+
+  // A mailto: link keeps its own query, whatever case its scheme is in, losing
+  // only Mudlet's config; its default tooltip says it writes an email
+  void test_Osc8MailtoLink_data() {
+    QTest::addColumn<QString>("uri");
+    QTest::addColumn<QString>("expectedUrl");
+    QTest::addColumn<QString>("expectedTooltip");
+
+    QTest::newRow("with a config")
+        << qsl("mailto:admin@example.com?subject=Hello&config={\"tooltip\":\"Write to us\"}")
+        << qsl("mailto:admin@example.com?subject=Hello") << qsl("Write to us");
+    QTest::newRow("scheme in capitals")
+        << qsl("MAILTO:admin@example.com?subject=Hello")
+        << qsl("mailto:admin@example.com?subject=Hello")
+        << qsl("Write an email to: mailto:admin@example.com?subject=Hello");
+    QTest::newRow("scheme in capitals with a body and a config")
+        << qsl("MAILTO:admin@example.com?subject=Hello&body=Hi&config={\"tooltip\":\"Write to us\"}")
+        << qsl("mailto:admin@example.com?subject=Hello&body=Hi") << qsl("Write to us");
+    QTest::newRow("default tooltip")
+        << qsl("mailto:admin@example.com?subject=Hello")
+        << qsl("mailto:admin@example.com?subject=Hello")
+        << qsl("Write an email to: mailto:admin@example.com?subject=Hello");
+    QTest::newRow("only the recipients and message fields survive")
+        << qsl("mailto:admin@example.com?to=b@example.com&cc=c@example.com&bcc=d@example.com&subject=Hi&body=Text&attach=/etc/hostname&attachment=/etc/passwd&X-Other=1")
+        << qsl("mailto:admin@example.com?to=b@example.com&cc=c@example.com&bcc=d@example.com&subject=Hi&body=Text")
+        << qsl("Write an email to: mailto:admin@example.com?to=b@example.com&cc=c@example.com&bcc=d@example.com&subject=Hi&body=Text");
+    QTest::newRow("recipients only in the query")
+        << qsl("mailto:?to=c@example.com")
+        << qsl("mailto:?to=c@example.com")
+        << qsl("Write an email to: mailto:?to=c@example.com");
+    QTest::newRow("field names in capitals")
+        << qsl("MAILTO:admin@example.com?SUBJECT=Hi&ATTACH=/etc/hostname")
+        << qsl("mailto:admin@example.com?SUBJECT=Hi")
+        << qsl("Write an email to: mailto:admin@example.com?SUBJECT=Hi");
+    QTest::newRow("an encoded field name")
+        << qsl("mailto:admin@example.com?subject=Hi&%61ttach=/etc/hostname")
+        << qsl("mailto:admin@example.com?subject=Hi")
+        << qsl("Write an email to: mailto:admin@example.com?subject=Hi");
+    QTest::newRow("a field hidden behind another separator")
+        << qsl("mailto:admin@example.com?subject=Hi;attach=/etc/hostname")
+        << qsl("mailto:admin@example.com?subject=Hi%3Battach=/etc/hostname")
+        << qsl("Write an email to: mailto:admin@example.com?subject=Hi%3Battach=/etc/hostname");
+    QTest::newRow("nothing left of the query")
+        << qsl("mailto:admin@example.com?attach=/etc/hostname")
+        << qsl("mailto:admin@example.com")
+        << qsl("Write an email to: mailto:admin@example.com");
+    QTest::newRow("a fragment")
+        << qsl("mailto:admin@example.com?subject=Hi#&attach=/etc/hostname")
+        << qsl("mailto:admin@example.com?subject=Hi")
+        << qsl("Write an email to: mailto:admin@example.com?subject=Hi");
+  }
+
+  void test_Osc8MailtoLink() {
+    QFETCH(QString, uri);
+    QFETCH(QString, expectedUrl);
+    QFETCH(QString, expectedTooltip);
+
+    injectData(qsl("\x1b]8;;") + uri + qsl("\x1b\\Email\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    int linkId = 0;
+    for (int line = console->buffer.getLastLineNumber();
+         line >= 0 && linkId == 0; --line) {
+      linkId = console->buffer.getLinkIndexAt(line, 0);
+    }
+    QVERIFY2(linkId > 0, "Expected to find a link in the buffer");
+
+    QCOMPARE(console->getLinkStore().getLinksConst(linkId),
+             QStringList(qsl("openUrl(%1)").arg(LuaLiteral::quote(expectedUrl))));
+    QCOMPARE(console->buffer.getLinkTooltip(linkId), expectedTooltip);
+  }
+
+  void test_Osc8MailtoWithAFieldHiddenInARecipientIsRefused_data() {
+    QTest::addColumn<QString>("uri");
+    QTest::newRow("in the address") << qsl("mailto:x%3Fattachment=/etc/hostname%26@b.com");
+    QTest::newRow("a fragment in the address") << qsl("mailto:x%23y@b.com");
+    QTest::newRow("in a to field") << qsl("mailto:?to=x%3Fattachment=/etc/hostname%26@b.com");
+    QTest::newRow("in a bcc field") << qsl("mailto:a@b.com?bcc=x%26attachment=/etc/hostname@b.com");
+  }
+
+  void test_Osc8MailtoWithAFieldHiddenInARecipientIsRefused() {
+    QFETCH(QString, uri);
+
+    injectData(qsl("\x1b]8;;") + uri + qsl("\x1b\\Email\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    int line = console->buffer.getLastLineNumber();
+    while (line >= 0 && !console->buffer.lineBuffer.at(line).contains(qsl("Email"))) {
+      --line;
+    }
+    QVERIFY2(line >= 0, "the link's text was not printed");
+    QCOMPARE(console->buffer.getLinkIndexAt(line, 0), 0);
+  }
+
+  // A "config" parameter carrying something that is not an object is not a
+  // config, so it must not displace a valid one earlier in the same query.
+  void test_Osc8ValuelessConfigDoesNotDisplaceAValidOne_data() {
+    QTest::addColumn<QString>("query");
+
+    QTest::newRow("second config empty")
+        << qsl("?config={\"tooltip\":\"FIRST\"}&config=");
+    QTest::newRow("second config not an object")
+        << qsl("?config={\"tooltip\":\"FIRST\"}&config=junk");
+    QTest::newRow("second config empty, encoded separator")
+        << qsl("?config={\"tooltip\":\"FIRST\"}&config%3D");
+  }
+
+  void test_Osc8ValuelessConfigDoesNotDisplaceAValidOne() {
+    QFETCH(QString, query);
+
+    injectData(qsl("\x1b]8;;https://example.com/") + query +
+               qsl("\x1b\\Link\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    int linkId = 0;
+    for (int line = console->buffer.getLastLineNumber();
+         line >= 0 && linkId == 0; --line) {
+      linkId = console->buffer.getLinkIndexAt(line, 0);
+    }
+    QVERIFY2(linkId > 0, "Expected to find a link in the buffer");
+
+    QCOMPARE(console->buffer.getLinkTooltip(linkId), qsl("FIRST"));
+  }
+
+  // preset= is matched on its raw key by the same loop as config=, so a
+  // registered preset must still resolve while a percent-encoded name must not.
+  void test_Osc8PresetNameMatchedOnRawKeyOnly() {
+    injectData(qsl("\x1b]8;;preset:danger?config=%7B%22style%22%3A%7B%22color%"
+                   "22%3A%22red%22%7D%7D\x1b\\\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    // Returns 0 when the query produced no link at all. Each caller has to
+    // reject that before asking for styling, because getStyling() answers an
+    // unknown id with a default-constructed styling whose hasCustomStyling is
+    // false - which would let the negative assertion below pass without a link
+    // ever having been created. The buffer is cleared first for the same
+    // reason: the scan runs backwards, so a query that makes no link would
+    // otherwise find the one left by the previous query and be checked against
+    // that instead.
+    auto linkIdFor = [&](const QString &query) {
+      console->buffer.clear();
+      injectData(qsl("\x1b]8;;https://example.com/") + query +
+                 qsl("\x1b\\Link\x1b]8;;\x1b\\"));
+      int linkId = 0;
+      for (int line = console->buffer.getLastLineNumber();
+           line >= 0 && linkId == 0; --line) {
+        linkId = console->buffer.getLinkIndexAt(line, 0);
+      }
+      return linkId;
+    };
+
+    const int rawKeyLink = linkIdFor(qsl("?preset=danger"));
+    QVERIFY2(rawKeyLink > 0, "No link found for ?preset=danger");
+    QVERIFY2(console->getLinkStore().getStyling(rawKeyLink).hasCustomStyling,
+             "A registered preset named by its raw key should style the link");
+
+    const int laterParamLink = linkIdFor(qsl("?page=1&preset=danger"));
+    QVERIFY2(laterParamLink > 0, "No link found for ?page=1&preset=danger");
+    QVERIFY2(console->getLinkStore().getStyling(laterParamLink).hasCustomStyling,
+             "A preset should resolve when it is not the first parameter");
+
+    const int encodedNameLink = linkIdFor(qsl("?%70%72%65%73%65%74=danger"));
+    QVERIFY2(encodedNameLink > 0,
+             "No link found for the percent-encoded preset name");
+    QVERIFY2(!console->getLinkStore().getStyling(encodedNameLink).hasCustomStyling,
+             "A percent-encoded 'preset' name is URL data, not a preset");
   }
 
   // =====================================================================
@@ -639,7 +1476,7 @@ private slots:
     injectData(buildOsc8WithConfig(qsl("send:look stew"),
                                    qsl("[Lamb and Barley Stew]"), config));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     QString allText;
     for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {
       allText += console->buffer.line(i);
@@ -659,7 +1496,7 @@ private slots:
     injectData(qsl("\x1b]8;;send:north\x1b\\North\x1b]8;;\x1b\\ - "
                    "\x1b]8;;send:south\x1b\\South\x1b]8;;\x1b\\"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
 
     // Starting from position 0 (on the first link), findNextLink should find
     // the second
@@ -683,7 +1520,7 @@ private slots:
     // Inject plain text with no links
     injectData(qsl("Just some plain text with no links"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
 
     int outLine = -1, outCol = -1;
     bool found = console->buffer.findNextLink(0, 0, outLine, outCol);
@@ -694,7 +1531,7 @@ private slots:
     // Inject a single link
     injectData(qsl("\x1b]8;;send:look\x1b\\Look around\x1b]8;;\x1b\\"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
 
     // Find where the link starts
     auto pos = findFirstLinkPosition();
@@ -714,7 +1551,7 @@ private slots:
     injectData(qsl("\x1b]8;;send:north\x1b\\North\x1b]8;;\x1b\\ - "
                    "\x1b]8;;send:south\x1b\\South\x1b]8;;\x1b\\"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
 
     // Find the first and second distinct links
     auto first = findNthDistinctLinkPosition(1);
@@ -741,7 +1578,7 @@ private slots:
     // Inject a single link
     injectData(qsl("\x1b]8;;send:look\x1b\\Look\x1b]8;;\x1b\\"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
 
     // Starting from 0,0 there should be no previous link
     int outLine = -1, outCol = -1;
@@ -774,7 +1611,7 @@ private slots:
     injectData(
         buildOsc8WithConfig(qsl("send:look sword"), qsl("[Sword]"), config));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     int linkId = 0;
     for (int line = console->buffer.getLastLineNumber();
          line >= 0 && linkId == 0; --line) {
@@ -787,7 +1624,7 @@ private slots:
   }
 
   void test_GetLinkTooltip_InvalidIndex() {
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
 
     // Index 0 and negative should return empty
     QCOMPARE(console->buffer.getLinkTooltip(0), QString());
@@ -803,7 +1640,7 @@ private slots:
   void test_LinkVisitedState() {
     injectData(qsl("\x1b]8;;send:look\x1b\\Look\x1b]8;;\x1b\\"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     int linkId = 0;
     for (int line = console->buffer.getLastLineNumber();
          line >= 0 && linkId == 0; --line) {
@@ -828,7 +1665,7 @@ private slots:
   void test_LinkAttributes_ExposedInAccessible() {
     injectData(qsl("\x1b]8;;https://example.com\x1b\\Click me\x1b]8;;\x1b\\"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
 
     // Find the link position in the buffer
     auto pos = findFirstLinkPosition();
@@ -865,7 +1702,7 @@ private slots:
   void test_LinkAttributes_NotPresentOnPlainText() {
     injectData(qsl("Just plain text here"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     TTextEdit *pane = console->mUpperPane;
     QVERIFY2(pane, "Expected upper pane to exist");
 
@@ -885,7 +1722,7 @@ private slots:
   void test_LinkAttributes_VisitedState() {
     injectData(qsl("\x1b]8;;send:look\x1b\\Look\x1b]8;;\x1b\\"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
 
     // Find the link
     auto pos = findFirstLinkPositionWithId();
@@ -920,10 +1757,138 @@ private slots:
                 .arg(attrsAfter)));
   }
 
+  // The style has to be on the text from the start, not wait for a click, and
+  // to come back after anything that gives the link another state for a moment.
+  void test_DisabledLinkHasItsStyleFromTheStart() {
+    injectData(qsl("\x1b]8;;send:look?config={\"disabled\":true,\"style\":{\"disabled\":{\"color\":\"#808080\",\"strikethrough\":true}}}\x1b\\Off\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    const auto showsDisabledStyle = [&, line = linkLine, col = linkCol]() {
+      const TChar &ch = console->buffer.buffer.at(line).at(col);
+      return ch.foreground() == QColor(0x80, 0x80, 0x80) && (ch.allDisplayAttributes() & TChar::StrikeOut);
+    };
+
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDisabled);
+    QVERIFY2(showsDisabledStyle(), "the disabled style is not on the text as printed");
+
+    console->buffer.setHoveredLink(linkId);
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDisabled);
+    console->buffer.setHoveredLink(0);
+
+    console->buffer.setFocusedLink(linkId);
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDisabled);
+    console->buffer.setFocusedLink(0);
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDisabled);
+
+    console->buffer.setActiveLink(linkId);
+    console->buffer.setActiveLink(0);
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDisabled);
+    QVERIFY2(showsDisabledStyle(), "the disabled style did not come back");
+  }
+
+  void test_DisabledOutranksSelectedFromTheStart_data() {
+    QTest::addColumn<QString>("selection");
+
+    QTest::newRow("in a group") << qsl("{\"group\":\"ranks\",\"value\":\"a\",\"selected\":true,\"disabled\":true}");
+    QTest::newRow("no group") << qsl("{\"selected\":true,\"disabled\":true}");
+    QTest::newRow("disabled without a group") << qsl("{\"disabled\":true}");
+  }
+
+  void test_DisabledOutranksSelectedFromTheStart() {
+    QFETCH(QString, selection);
+
+    injectData(qsl("\x1b]8;;send:look?config={\"selection\":%1,\"style\":{\"selected\":{\"color\":\"#00ff00\"},\"disabled\":{\"color\":\"#808080\"}}}\x1b\\Off\x1b]8;;\x1b\\").arg(selection));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDisabled);
+    QCOMPARE(console->buffer.buffer.at(linkLine).at(linkCol).foreground(), QColor(0x80, 0x80, 0x80));
+  }
+
+  // The flush marker splits the link's text, and held text commits apart from the link's own line
+  void test_DisabledStyleSurvivesTheLinkBeingSplit() {
+    TMainConsole *console = mpHost->mainConsoleView();
+    const QString link = qsl("\x1b]8;;send:look?config={\"disabled\":true,\"style\":{\"disabled\":{\"color\":\"#808080\"}}}\x1b\\");
+
+    feedFromServer(link + qsl("FLUSHED \r"));
+    feedFromServer(qsl("REST\x1b]8;;\x1b\\\n"));
+    int line = lineStartingWith(qsl("REST"));
+    QVERIFY2(line >= 1, qPrintable(allBufferText()));
+    QCOMPARE(console->buffer.buffer.at(line).at(0).foreground(), QColor(0x80, 0x80, 0x80));
+    const int flushedLine = lineStartingWith(qsl("FLUSHED"));
+    QVERIFY2(flushedLine >= 0, qPrintable(allBufferText()));
+    QCOMPARE(console->buffer.buffer.at(flushedLine).at(0).foreground(), QColor(0x80, 0x80, 0x80));
+
+    undoServerWrap();
+    feedFromServer(QString(64, QLatin1Char('x')) + qsl(" alpha\n"));
+    feedFromServer(qsl("- ") + link + qsl("listed\x1b]8;;\x1b\\\n"));
+    line = lineStartingWith(qsl("- listed"));
+    QVERIFY2(line >= 0, qPrintable(allBufferText()));
+    QCOMPARE(console->buffer.buffer.at(line).at(2).foreground(), QColor(0x80, 0x80, 0x80));
+  }
+
+  void test_DisabledStyleKeepsTheTextsOwnFormatting() {
+    injectData(qsl("\x1b[0m\x1b]8;;send:look?config={\"disabled\":true,\"style\":{\"disabled\":{\"color\":\"#808080\"}}}\x1b\\\x1b[1mOff\x1b[22m\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    const TChar &ch = console->buffer.buffer.at(std::get<0>(*pos)).at(std::get<1>(*pos));
+    QCOMPARE(ch.foreground(), QColor(0x80, 0x80, 0x80));
+    QVERIFY2(ch.allDisplayAttributes() & TChar::Bold, "the disabled style cleared the game's bold");
+  }
+
+  void test_PressingADisabledLinkLeavesItAsPrinted() {
+    injectData(qsl("\x1b[0m\x1b]8;;send:look?config={\"disabled\":true,\"style\":{\"disabled\":{\"strikethrough\":true}}}\x1b\\\x1b[1mOff\x1b[22m\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    const auto attributes = [&, line = linkLine, col = linkCol]() {
+      return console->buffer.buffer.at(line).at(col).allDisplayAttributes();
+    };
+    QVERIFY(attributes() & TChar::StrikeOut);
+
+    console->buffer.setActiveLink(linkId);
+    QVERIFY2(attributes() & TChar::StrikeOut, "pressing the link dropped its disabled style");
+    console->buffer.setActiveLink(0);
+    QVERIFY2(attributes() & TChar::StrikeOut, "releasing the link dropped its disabled style");
+    QVERIFY2(attributes() & TChar::Bold, "releasing the link cleared the game's bold");
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDisabled);
+  }
+
+  void test_DisabledLinkInAGroupKeepsTheTextsOwnFormatting() {
+    injectData(qsl("\x1b[0m\x1b]8;;send:look?config={\"selection\":{\"group\":\"boldgroup\",\"value\":\"off\",\"disabled\":true},\"style\":{\"disabled\":{\"color\":\"#808080\"}}}\x1b\\\x1b[1mOff\x1b[22m\x1b]8;;\x1b\\"));
+    injectData(qsl("after\n"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    const TChar &ch = console->buffer.buffer.at(std::get<0>(*pos)).at(std::get<1>(*pos));
+    QCOMPARE(ch.foreground(), QColor(0x80, 0x80, 0x80));
+    QVERIFY2(ch.allDisplayAttributes() & TChar::Bold, "the group's restyle cleared the game's bold");
+  }
+
+  void test_LinkThatIsNotDisabledStartsInTheDefaultState() {
+    injectData(qsl("\x1b]8;;send:look?config={\"disabled\":false,\"style\":{\"disabled\":{\"color\":\"#808080\"}}}\x1b\\Open\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    QCOMPARE(console->buffer.getLinkState(linkId), Mudlet::HyperlinkStyling::StateDefault);
+  }
+
   void test_LinkAttributes_DisabledState() {
     injectData(qsl("\x1b]8;;send:look\x1b\\Disabled Link\x1b]8;;\x1b\\"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
 
     auto pos = findFirstLinkPositionWithId();
     QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
@@ -955,7 +1920,7 @@ private slots:
   void test_LinkAttributes_SelectedState() {
     injectData(qsl("\x1b]8;;send:look\x1b\\Select Me\x1b]8;;\x1b\\"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
 
     auto pos = findFirstLinkPositionWithId();
     QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
@@ -992,7 +1957,7 @@ private slots:
     injectData(
         qsl("\x1b]8;;https://example.com:8080/path\x1b\\Look\x1b]8;;\x1b\\"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
 
     auto pos = findFirstLinkPosition();
     QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
@@ -1040,7 +2005,7 @@ private slots:
     injectData(qsl("\x1b]8;;https://example.com/"
                    "path;param\\extra\x1b\\Look\x1b]8;;\x1b\\"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
 
     auto pos = findFirstLinkPosition();
     QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
@@ -1094,7 +2059,7 @@ private slots:
     injectData(
         buildOsc8WithConfig(qsl("send:equip sword"), qsl("[Sword]"), config));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
 
     auto pos = findFirstLinkPosition();
     QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
@@ -1134,7 +2099,7 @@ private slots:
     injectData(
         buildOsc8WithConfig(qsl("send:look sword"), qsl("[Sword]"), config));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
 
     // Find the link position
     auto pos = findFirstLinkPosition();
@@ -1162,7 +2127,7 @@ private slots:
   void test_Description_CaretNotOnLink() {
     injectData(qsl("Plain text with no links"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
 
     // Enable caret mode, caret at line 0 col 0 (plain text)
     mpHost->setCaretEnabled(true);
@@ -1198,7 +2163,7 @@ private slots:
     // (start..end describe the contiguous range with these attributes).
     injectData(qsl("\x1b]8;;https://example.com\x1b\\Click me\x1b]8;;\x1b\\"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     auto pos = findFirstLinkPositionWithId();
     QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
     auto [linkLine, linkCol, linkId] = *pos;
@@ -1237,7 +2202,7 @@ private slots:
     // " " between "X" and the link must not be merged with the link's run.
     injectData(qsl("X \x1b]8;;https://example.com\x1b\\L\x1b]8;;\x1b\\"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     auto pos = findFirstLinkPositionWithId();
     QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
     auto [linkLine, linkCol, linkId] = *pos;
@@ -1267,7 +2232,7 @@ private slots:
     // neighbouring run even when they otherwise share styling.
     injectData(qsl("\x1b]8;;https://example.com\x1b\\Hello\x1b]8;;\x1b\\"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     auto pos = findFirstLinkPositionWithId();
     QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
     auto [linkLine, linkCol, linkId] = *pos;
@@ -1312,7 +2277,7 @@ private slots:
     // to the start and rediscover the same link (and report wrapped == true).
     injectData(qsl("\x1b]8;;send:look\x1b\\Look\x1b]8;;\x1b\\ trailing text"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     auto pos = findFirstLinkPositionWithId();
     QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
     auto [linkLine, linkCol, linkId] = *pos;
@@ -1338,7 +2303,7 @@ private slots:
     injectData(qsl("plain leading line"));
     injectData(qsl("\x1b]8;;send:look\x1b\\Look\x1b]8;;\x1b\\"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     auto pos = findFirstLinkPositionWithId();
     QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
     auto [linkLine, linkCol, linkId] = *pos;
@@ -1360,11 +2325,84 @@ private slots:
     QCOMPARE(console->buffer.getLinkIndexAt(outLine, outCol), linkId);
   }
 
+  // A closing popup can leave the window inactive, and only the active window's focus widget hears a popup open
+  bool focusPaneInActiveWindow(TTextEdit *pane) {
+    mudlet::self()->show();
+    pane->window()->activateWindow();
+    pane->setFocus();
+    return QTest::qWaitFor([pane] { return QApplication::activeWindow() == pane->window() && pane->hasFocus(); }, 3000);
+  }
+
+  // The pane's own menu only borrows the focus, so caret mode stays on, and the menu must still get the keys
+  void test_ALinkMenuLeavesCaretModeOn() {
+    injectData(qsl("\x1b]8;;send:look?config={\"menu\":[{\"Look\":\"send:look\"},{\"Wield\":\"send:wield\"}]}\x1b\\Sword\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY(pos.has_value());
+
+    mpHost->setCaretEnabled(true);
+    const auto caretOff = qScopeGuard([this] {
+      if (mpHost->caretEnabled()) {
+        mpHost->setCaretEnabled(false);
+      }
+    });
+    TTextEdit *pane = console->mUpperPane;
+    QVERIFY(focusPaneInActiveWindow(pane));
+    pane->setCaretPosition(std::get<0>(*pos), std::get<1>(*pos));
+    QKeyEvent menuKey(QEvent::KeyPress, Qt::Key_Menu, Qt::NoModifier);
+    QApplication::sendEvent(pane, &menuKey);
+
+    QMenu *menu = pane->findChild<QMenu *>();
+    QVERIFY2(menu && menu->isVisible(), "the Menu key did not open the link's menu");
+    const auto closeMenu = qScopeGuard([pane] {
+      if (QMenu *open = pane->findChild<QMenu *>()) {
+        open->close();
+      }
+    });
+    QVERIFY2(mpHost->caretEnabled(), "opening the menu took the player out of caret mode");
+
+    // Through the window, as a real key arrives: caret mode's keyboard grab would otherwise beat the menu to it
+    const int caretLine = pane->mCaretLine;
+    QTest::keyClick(pane->window()->windowHandle(), Qt::Key_Down);
+    QVERIFY2(menu->activeAction(), "the menu did not get the key");
+    QCOMPARE(pane->mCaretLine, caretLine);
+
+    menu->close();
+    QTRY_VERIFY(!pane->findChild<QMenu *>());
+    QVERIFY2(mpHost->caretEnabled(), "closing the menu took the player out of caret mode");
+    QVERIFY2(pane->hasFocus() || !QApplication::activeWindow(), "the pane did not get the focus back");
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
+    // The test platform leaves the window inactive when a popup closes, so never hands the focus back itself
+    QFocusEvent focusBack(QEvent::FocusIn, Qt::PopupFocusReason);
+    QApplication::sendEvent(pane, &focusBack);
+    QCOMPARE(QWidget::keyboardGrabber(), pane);
+#endif
+  }
+
+  // A menu that isn't the pane's, such as the menu bar's, may open a dialog, which the keyboard grab would keep keys from
+  void test_AnotherWidgetsMenuStillEndsCaretMode() {
+    mpHost->setCaretEnabled(true);
+    const auto caretOff = qScopeGuard([this] {
+      if (mpHost->caretEnabled()) {
+        mpHost->setCaretEnabled(false);
+      }
+    });
+    TTextEdit *pane = mpHost->mainConsoleView()->mUpperPane;
+    QVERIFY(focusPaneInActiveWindow(pane));
+
+    QMenu menu(pane->window());
+    menu.addAction(qsl("Elsewhere"));
+    menu.popup(pane->mapToGlobal(QPoint(1, 1)));
+    const auto closeMenu = qScopeGuard([&menu] { menu.close(); });
+    QVERIFY2(!mpHost->caretEnabled(), "a menu that was not the pane's left caret mode on");
+  }
+
   void test_KeyNav_CtrlBracketRight_MovesToNextLink() {
     injectData(qsl("\x1b]8;;send:north\x1b\\North\x1b]8;;\x1b\\ - "
                    "\x1b]8;;send:south\x1b\\South\x1b]8;;\x1b\\"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     auto first = findNthDistinctLinkPosition(1);
     auto second = findNthDistinctLinkPosition(2);
     QVERIFY(first.has_value() && second.has_value());
@@ -1392,7 +2430,7 @@ private slots:
     injectData(qsl("\x1b]8;;send:north\x1b\\North\x1b]8;;\x1b\\ - "
                    "\x1b]8;;send:south\x1b\\South\x1b]8;;\x1b\\"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     auto first = findNthDistinctLinkPosition(1);
     auto second = findNthDistinctLinkPosition(2);
     QVERIFY(first.has_value() && second.has_value());
@@ -1415,30 +2453,775 @@ private slots:
     mpHost->setCaretEnabled(false);
   }
 
+  // An OSC 8 sequence that opens a link replaces one still open, as the OSC 8
+  // spec has it, even when Mudlet then rejects the new one: the text after it
+  // must not join the open link, nor take on the rejected link's config.
+  void test_ARejectedLinkEndsTheOpenOne_data() {
+    QTest::addColumn<QString>("rejectedLink");
+
+    QTest::newRow("unsupported scheme")
+        << qsl("\x1b]8;;gmcp:Foo\x1b\\");
+    QTest::newRow("unsupported scheme with a spoiler")
+        << qsl("\x1b]8;;gmcp:Foo?config={\"spoiler\":true}\x1b\\");
+    QTest::newRow("unsupported scheme with a selection")
+        << qsl("\x1b]8;;gmcp:Foo?config={\"selection\":{\"group\":\"g\",\"value\":\"v\",\"selected\":true}}\x1b\\");
+  }
+
+  void test_ARejectedLinkEndsTheOpenOne() {
+    QFETCH(QString, rejectedLink);
+
+    injectData(qsl("REJECTED \x1b]8;;send:look\x1b\\Look ") + rejectedLink +
+               qsl("more\x1b]8;;\x1b\\ after\n"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int line = lineStartingWith(qsl("REJECTED"));
+    QVERIFY(line >= 0);
+    QCOMPARE(console->buffer.line(line), qsl("REJECTED Look more after"));
+
+    const int lookLink = console->buffer.getLinkIndexAt(line, 9);
+    QVERIFY2(lookLink > 0, "the link that was open is no longer a link");
+    QCOMPARE(console->getLinkStore().getLinksConst(lookLink),
+             QStringList(qsl("send(%1, false)").arg(LuaLiteral::quote(qsl("look")))));
+    QCOMPARE(console->buffer.getLinkIndexAt(line, 14), 0);
+    QVERIFY(!console->buffer.isLinkSelected(lookLink));
+  }
+
+  // The link that is ended gets its own config, whichever link replaced it
+  void test_AReplacedLinkKeepsItsOwnConfig_data() {
+    QTest::addColumn<QString>("nextLink");
+    QTest::addColumn<bool>("nextIsALink");
+
+    QTest::newRow("rejected") << qsl("\x1b]8;;gmcp:Foo\x1b\\") << false;
+    QTest::newRow("accepted") << qsl("\x1b]8;;send:b\x1b\\") << true;
+  }
+
+  void test_AReplacedLinkKeepsItsOwnConfig() {
+    QFETCH(QString, nextLink);
+    QFETCH(bool, nextIsALink);
+
+    injectData(qsl("SPOIL \x1b]8;;send:a?config={\"spoiler\":true}\x1b\\A ") +
+               nextLink + qsl("more\x1b]8;;\x1b\\\n"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int line = lineStartingWith(qsl("SPOIL"));
+    QVERIFY(line >= 0);
+    QCOMPARE(console->buffer.line(line), qsl("SPOIL   more"));
+
+    const int spoiler = console->buffer.getLinkIndexAt(line, 6);
+    QVERIFY(spoiler > 0);
+    const int next = console->buffer.getLinkIndexAt(line, 8);
+    QCOMPARE(next > 0, nextIsALink);
+    QVERIFY(next != spoiler);
+  }
+
+  // A preset definition registers a style and opens no link, so the open
+  // link carries on through it
+  void test_APresetDefinitionLeavesTheOpenLink() {
+    injectData(qsl("PRESETMID \x1b]8;;send:a\x1b\\A \x1b]8;;preset:mid?config={\"s\":{\"c\":\"red\"}}\x1b\\B\x1b]8;;\x1b\\\n"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int line = lineStartingWith(qsl("PRESETMID"));
+    QVERIFY(line >= 0);
+    const int link = console->buffer.getLinkIndexAt(line, 10);
+    QVERIFY(link > 0);
+    QCOMPARE(console->buffer.getLinkIndexAt(line, 12), link);
+  }
+
+  // Whichever of an MXP link and an OSC 8 link opened inside the other takes
+  // the text it wraps, and the outer one takes back the text after it
+  void test_Osc8LinkInsideAnMxpLink_data() {
+    QTest::addColumn<QString>("inside");
+    // What the second y sends, or empty when it is the MXP link's again
+    QTest::addColumn<QString>("secondSends");
+
+    QTest::newRow("one link")
+        << qsl("\x1b]8;;send:look\x1b\\yy\x1b]8;;\x1b\\") << qsl("look");
+    QTest::newRow("two links")
+        << qsl("\x1b]8;;send:look\x1b\\y\x1b]8;;send:read\x1b\\y\x1b]8;;\x1b\\") << qsl("read");
+    QTest::newRow("a rejected link after an accepted one")
+        << qsl("\x1b]8;;send:look\x1b\\y\x1b]8;;gmcp:Foo\x1b\\y\x1b]8;;\x1b\\") << QString();
+  }
+
+  void test_Osc8LinkInsideAnMxpLink() {
+    QFETCH(QString, inside);
+    QFETCH(QString, secondSends);
+    forceMxpOn();
+
+    feedFromServer(qsl("MXPOSC <SEND \"north\">xx ") + inside +
+                   qsl(" ww</SEND> after\n"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int line = lineStartingWith(qsl("MXPOSC"));
+    QVERIFY(line >= 0);
+    QCOMPARE(console->buffer.line(line), qsl("MXPOSC xx yy ww after"));
+
+    const int sendLink = console->buffer.getLinkIndexAt(line, 7);
+    QVERIFY2(sendLink > 0, "the MXP link's text is not a link");
+    QCOMPARE(console->getLinkStore().getLinksConst(sendLink),
+             QStringList(qsl("send(%1)").arg(LuaLiteral::quote(qsl("north")))));
+    const int osc8Link = console->buffer.getLinkIndexAt(line, 10);
+    QVERIFY2(osc8Link > 0 && osc8Link != sendLink,
+             "the OSC 8 link's text is not its own link");
+    QCOMPARE(console->getLinkStore().getLinksConst(osc8Link),
+             QStringList(qsl("send(%1, false)").arg(LuaLiteral::quote(qsl("look")))));
+    const int secondLink = console->buffer.getLinkIndexAt(line, 11);
+    if (secondSends.isEmpty()) {
+      QCOMPARE(secondLink, sendLink);
+    } else {
+      QVERIFY2(secondLink > 0 && secondLink != sendLink,
+               "the second y is not an OSC 8 link");
+      QCOMPARE(console->getLinkStore().getLinksConst(secondLink),
+               QStringList(qsl("send(%1, false)").arg(LuaLiteral::quote(secondSends))));
+    }
+    QCOMPARE(console->buffer.getLinkIndexAt(line, 12), sendLink);
+    QCOMPARE(console->buffer.getLinkIndexAt(line, 13), sendLink);
+    QCOMPARE(console->buffer.getLinkIndexAt(line, 16), 0);
+  }
+
+  void test_MxpLinkInsideAnOsc8Link() {
+    forceMxpOn();
+
+    feedFromServer(qsl("OSCMXP \x1b]8;;send:look\x1b\\aa <SEND \"north\">xx</SEND> bb\x1b]8;;\x1b\\ after\n"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int line = lineStartingWith(qsl("OSCMXP"));
+    QVERIFY(line >= 0);
+    QCOMPARE(console->buffer.line(line), qsl("OSCMXP aa xx bb after"));
+
+    const int osc8Link = console->buffer.getLinkIndexAt(line, 7);
+    QVERIFY2(osc8Link > 0, "the OSC 8 link's text is not a link");
+    const int sendLink = console->buffer.getLinkIndexAt(line, 10);
+    QVERIFY2(sendLink > 0 && sendLink != osc8Link,
+             "the MXP link's text is not its own link");
+    QCOMPARE(console->getLinkStore().getLinksConst(sendLink),
+             QStringList(qsl("send(%1)").arg(LuaLiteral::quote(qsl("north")))));
+    QCOMPARE(console->buffer.getLinkIndexAt(line, 13), osc8Link);
+    QCOMPARE(console->buffer.getLinkIndexAt(line, 16), 0);
+  }
+
+
+  // An OSC 8 link the game never closes used to stay open for the rest of the
+  // session: every later line carried its id, so a click anywhere ran a command
+  // the server chose, on text that looks exactly like ordinary output. The link
+  // is bounded to the line it began on, the way the MXP parser resets per line
+  // and an abandoned CSI is dropped.
+  void test_AnUnclosedHyperlinkDoesNotClaimLaterLines() {
+    injectData(qsl("\x1b]8;;send:unclosed\x1b\\click me"));
+    injectData(qsl("FOLLOWING LINE"));
+    injectData(qsl("LATER LINE"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int lastLine = console->buffer.getLastLineNumber();
+    // The three lines before the last, which is left empty by the final newline.
+    const int laterLine = lastLine - 1;
+    const int followingLine = lastLine - 2;
+    const int linkLine = lastLine - 3;
+
+    QCOMPARE(console->buffer.line(followingLine).trimmed(), qsl("FOLLOWING LINE"));
+    QCOMPARE(console->buffer.line(laterLine).trimmed(), qsl("LATER LINE"));
+
+    QVERIFY2(console->buffer.getLinkIndexAt(linkLine, 0) > 0,
+             "the text the game did mark as a link is no longer a link at all");
+    QCOMPARE(console->buffer.getLinkIndexAt(followingLine, 0), 0);
+    QCOMPARE(console->buffer.getLinkIndexAt(laterLine, 0), 0);
+  }
+
+  // The same line-end ending finalises the link rather than dropping what it
+  // asked for: a spoiler whose closing sequence never arrives still has its
+  // text set aside and masked on the line it was on, where clearing the state
+  // alone would have left the spoiler on show.
+  void test_AnUnclosedSpoilerIsStillMaskedOnItsLine() {
+    injectData(qsl("\x1b]8;;send:reveal?config={\"spoiler\":true}\x1b\\SECRET"));
+    injectData(qsl("AFTER THE SPOILER"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int lastLine = console->buffer.getLastLineNumber();
+    const int afterLine = lastLine - 1;
+    const int spoilerLine = lastLine - 2;
+
+    QCOMPARE(console->buffer.line(afterLine).trimmed(), qsl("AFTER THE SPOILER"));
+    const int spoilerLinkId = console->buffer.getLinkIndexAt(spoilerLine, 0);
+    QVERIFY2(spoilerLinkId > 0, "the spoiler text the game marked is no longer a link");
+    QVERIFY2(console->buffer.isSpoilerUnrevealed(spoilerLinkId),
+             "the spoiler was not set aside, so its text is on show");
+    QVERIFY2(!console->buffer.line(spoilerLine).contains(qsl("SECRET")),
+             "the spoiler's own text is still visible on the line");
+    QCOMPARE(console->buffer.getLinkIndexAt(afterLine, 0), 0);
+  }
+
+  // The carriage return cTelnet appends when the game falls quiet part way
+  // through a line is not the end of the line, so a link it lands in must
+  // carry on into the text that arrives after it.
+  void test_AFlushMarkerDoesNotEndAnOpenHyperlink_data() {
+    QTest::addColumn<QString>("firstPacket");
+    QTest::addColumn<QString>("secondPacket");
+    QTest::addColumn<QString>("secondPart");
+
+    QTest::newRow("inside the link text")
+        << qsl("\x1b]8;;send:split\x1b\\FLUSHED \r")
+        << qsl("REST\x1b]8;;\x1b\\\n")
+        << qsl("REST");
+    QTest::newRow("right after the opening sequence")
+        << qsl("\x1b]8;;send:split\x1b\\\r")
+        << qsl("WHOLE LINK\x1b]8;;\x1b\\\n")
+        << qsl("WHOLE LINK");
+  }
+
+  void test_AFlushMarkerDoesNotEndAnOpenHyperlink() {
+    QFETCH(QString, firstPacket);
+    QFETCH(QString, secondPacket);
+    QFETCH(QString, secondPart);
+
+    feedFromServer(firstPacket);
+    feedFromServer(secondPacket);
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int secondLine = lineStartingWith(secondPart);
+    QVERIFY2(secondLine >= 0, qPrintable(qsl("'%1' never reached the buffer: '%2'").arg(secondPart, allBufferText())));
+    QVERIFY2(console->buffer.getLinkIndexAt(secondLine, 0) > 0,
+             "the text after the flush marker is no longer part of the link");
+  }
+
+  // A line the game wrapped is held back and joined onto the rest, and a link
+  // broken by that wrap belongs to the one line the player sees.
+  void test_AHyperlinkTheGameWrapsCarriesOnIntoTheJoinedLine() {
+    undoServerWrap();
+    const QString padding(64, QLatin1Char('x'));
+    feedFromServer(padding + qsl(" \x1b]8;;send:wrapped\x1b\\alpha\n"));
+    feedFromServer(qsl("beta tail.\x1b]8;;\x1b\\\n"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int joinedLine = lineStartingWith(padding);
+    QVERIFY2(joinedLine >= 0, qPrintable(qsl("the wrapped line never reached the buffer: '%1'").arg(allBufferText())));
+    QCOMPARE(console->buffer.line(joinedLine), padding + qsl(" alpha beta tail."));
+    const int linkId = console->buffer.getLinkIndexAt(joinedLine, 65);
+    QVERIFY2(linkId > 0, "the half of the link before the wrap is not a link");
+    QCOMPARE(console->buffer.getLinkIndexAt(joinedLine, 71), linkId);
+    QCOMPARE(console->buffer.getLinkIndexAt(joinedLine, 76), linkId);
+  }
+
+  // A link opened after the held text counts its columns from where it
+  // opened, so they have to move along by the held text once it is joined on
+  // in front - or masking a spoiler there blanks the start of the line instead.
+  void test_ASpoilerAfterHeldTextIsMaskedWhereItLandsInTheJoinedLine() {
+    undoServerWrap();
+    const QString heldText = QString(64, QLatin1Char('x')) + qsl(" alpha");
+    feedFromServer(heldText + qsl("\n"));
+    feedFromServer(qsl("\x1b]8;;send:reveal?config={\"spoiler\":true}\x1b\\beta tail.\n"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int joinedLine = lineStartingWith(heldText);
+    QVERIFY2(joinedLine >= 0, qPrintable(qsl("the held text is missing or was masked: '%1'").arg(allBufferText())));
+    QCOMPARE(console->buffer.line(joinedLine), heldText + qsl(" ") + QString(10, QLatin1Char(' ')));
+    QCOMPARE(console->buffer.getLinkIndexAt(joinedLine, 0), 0);
+    QVERIFY2(console->buffer.getLinkIndexAt(joinedLine, 71) > 0, "the spoiler text is no longer a link");
+  }
+
+  // Held text that turns out to be a whole line takes a link it opened with
+  // it: the line after is not clickable, and a spoiler is masked on its own
+  // line rather than at its columns on the next one.
+  void test_AHyperlinkEndsWithHeldTextThatIsCommittedAlone() {
+    undoServerWrap();
+    const QString padding(64, QLatin1Char('x'));
+    feedFromServer(padding + qsl(" \x1b]8;;send:reveal?config={\"spoiler\":true}\x1b\\alpha\n"));
+    // a list entry is never the continuation of the line above
+    feedFromServer(qsl("- a list entry\n"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int heldLine = lineStartingWith(padding);
+    const int nextLine = lineStartingWith(qsl("- a list entry"));
+    QVERIFY2(heldLine >= 0 && nextLine >= 0, qPrintable(qsl("a line is missing: '%1'").arg(allBufferText())));
+    QCOMPARE(console->buffer.line(heldLine), padding + qsl(" ") + QString(5, QLatin1Char(' ')));
+    QVERIFY2(console->buffer.getLinkIndexAt(heldLine, 65) > 0, "the spoiler text is no longer a link");
+    for (int column = 0; column < console->buffer.line(nextLine).size(); ++column) {
+      QCOMPARE(console->buffer.getLinkIndexAt(nextLine, column), 0);
+    }
+  }
+
+  // A link closed while text is held back cannot know its columns in the
+  // joined line yet, so it is registered once the join is settled, at the
+  // columns the held text moved it to - not where a reveal would write over
+  // the held text.
+  void test_AClosedLinkBehindHeldTextIsRegisteredWhereTheJoinPutsIt() {
+    undoServerWrap();
+    const QString heldText = QString(64, QLatin1Char('x')) + qsl(" alpha");
+    feedFromServer(heldText + qsl("\n"));
+    feedFromServer(qsl("\x1b]8;;send:hide?config={\"visibility\":{\"action\":\"reveal\",\"delay\":20000}}\x1b\\beta\x1b]8;;\x1b\\ tail.\n"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int joinedLine = lineStartingWith(heldText);
+    QVERIFY2(joinedLine >= 0, qPrintable(qsl("the held text never reached the buffer: '%1'").arg(allBufferText())));
+    // Concealed where the link landed: the held text in front is untouched
+    QCOMPARE(console->buffer.line(joinedLine), heldText + qsl("      tail."));
+    const int linkId = console->buffer.getLinkIndexAt(joinedLine, 71);
+    QVERIFY2(linkId > 0, "the link text is no longer a link");
+    QVERIFY(console->getHyperlinkVisibilityManager().trackedLinkIds().contains(linkId));
+  }
+
+  bool bufferShows(const QString &text) {
+    TBuffer &buffer = mpHost->mainConsoleView()->buffer;
+    for (int line = 0; line <= buffer.getLastLineNumber(); ++line) {
+      if (buffer.line(line).contains(text)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  QString expireLink(const QString &action, const QString &settings) {
+    return qsl("\x1b]8;;send:look?config={\"visibility\":{\"action\":\"%1\",%2}}\x1b\\Hint\x1b]8;;\x1b\\").arg(action, settings);
+  }
+
+  void test_Osc8ExpireEventsCountFromWhenALinkIsPrinted_data() {
+    QTest::addColumn<QString>("action");
+    QTest::addColumn<QString>("event");
+
+    for (const QString &action : {qsl("conceal"), qsl("reveal"), qsl("reveal-then-conceal")}) {
+      for (const QString &event : {qsl("input"), qsl("prompt"), qsl("output")}) {
+        QTest::addRow("%s on %s", qPrintable(action), qPrintable(event)) << action << event;
+      }
+    }
+  }
+
+  void test_Osc8ExpireEventsCountFromWhenALinkIsPrinted() {
+    QFETCH(QString, action);
+    QFETCH(QString, event);
+    const bool startsVisible = action == qsl("conceal");
+
+    injectData(expireLink(action, qsl("\"expire\":{\"%1\":true,\"outputDelay\":30}").arg(event)));
+    auto &manager = mpHost->mainConsoleView()->getHyperlinkVisibilityManager();
+    QCOMPARE(bufferShows(qsl("Hint")), startsVisible);
+
+    if (event == qsl("input")) {
+      manager.onUserInput();
+    } else if (event == qsl("prompt")) {
+      manager.onPromptReceived();
+      QVERIFY2(bufferShows(qsl("Hint")) == startsVisible, "the prompt ending the link's own output counted");
+      manager.onPromptReceived();
+    } else {
+      QTest::qWait(60ms);
+      manager.onDataReceived();
+    }
+    QCOMPARE(bufferShows(qsl("Hint")), !startsVisible);
+  }
+
+  void test_Osc8ExpiredRevealThenConcealHidesWhenClicked() {
+    injectData(expireLink(qsl("reveal-then-conceal"), qsl("\"expire\":{\"input\":true}")));
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY(pos.has_value());
+    const int linkId = std::get<2>(*pos);
+    auto &manager = mpHost->mainConsoleView()->getHyperlinkVisibilityManager();
+
+    QVERIFY2(!bufferShows(qsl("Hint")), "a link waiting for an event showed at once");
+    manager.onUserInput();
+    QVERIFY(bufferShows(qsl("Hint")));
+    manager.onLinkClicked(linkId);
+    QVERIFY(!bufferShows(qsl("Hint")));
+  }
+
+  void test_Osc8ClickingAConcealLinkWithExpireHidesItAtOnce() {
+    injectData(expireLink(qsl("conceal"), qsl("\"expire\":{\"input\":true}")));
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY(pos.has_value());
+    QVERIFY(bufferShows(qsl("Hint")));
+    mpHost->mainConsoleView()->getHyperlinkVisibilityManager().onLinkClicked(std::get<2>(*pos));
+    QVERIFY(!bufferShows(qsl("Hint")));
+  }
+
+  void test_Osc8AnExpireEventBeatsTheDelay_data() {
+    QTest::addColumn<QString>("action");
+    QTest::addColumn<bool>("showsAfterwards");
+
+    QTest::newRow("conceal") << qsl("conceal") << false;
+    QTest::newRow("reveal") << qsl("reveal") << true;
+  }
+
+  void test_Osc8AnExpireEventBeatsTheDelay() {
+    QFETCH(QString, action);
+    QFETCH(bool, showsAfterwards);
+
+    injectData(expireLink(action, qsl("\"delay\":60000,\"expire\":{\"input\":true}")));
+    QCOMPARE(bufferShows(qsl("Hint")), !showsAfterwards);
+    mpHost->mainConsoleView()->getHyperlinkVisibilityManager().onUserInput();
+    QCOMPARE(bufferShows(qsl("Hint")), showsAfterwards);
+  }
+
+  // A game's prompt arrives in the same read as the text before it, or in a
+  // later one, and either way it is the next prompt that hides the link.
+  void test_Osc8PromptExpiryWithARealGoAhead_data() {
+    QTest::addColumn<bool>("promptInTheSameRead");
+    QTest::addColumn<bool>("forceGaOff");
+    QTest::newRow("same read") << true << false;
+    QTest::newRow("later read") << false << false;
+    QTest::newRow("same read, GA interpretation forced off") << true << true;
+    QTest::newRow("later read, GA interpretation forced off") << false << true;
+  }
+
+  void test_Osc8PromptExpiryWithARealGoAhead() {
+    QFETCH(bool, promptInTheSameRead);
+    QFETCH(bool, forceGaOff);
+    const bool wasGaDriver = mpHost->mTelnet.mGA_Driver;
+    const bool wasForceGaOff = mpHost->mTelnet.mFORCE_GA_OFF;
+    const auto restoreFlags = qScopeGuard([this, wasGaDriver, wasForceGaOff] {
+      mpHost->mTelnet.mGA_Driver = wasGaDriver;
+      mpHost->mTelnet.mFORCE_GA_OFF = wasForceGaOff;
+    });
+    mpHost->mTelnet.mFORCE_GA_OFF = forceGaOff;
+
+    const QByteArray prompt = QByteArray("> ") + QByteArray("\xff\xf9", 2);
+    QByteArray link = (expireLink(qsl("conceal"), qsl("\"expire\":{\"prompt\":true}")) + qsl("\r\n")).toUtf8();
+    if (promptInTheSameRead) {
+      QByteArray read = link + prompt;
+      mpHost->mTelnet.loopbackTest(read);
+    } else {
+      mpHost->mTelnet.loopbackTest(link);
+      QTest::qWait(50ms);
+      QByteArray read = prompt;
+      mpHost->mTelnet.loopbackTest(read);
+    }
+    QTest::qWait(50ms);
+    QVERIFY2(bufferShows(qsl("Hint")), "the link's own prompt hid it");
+
+    QByteArray next = prompt;
+    mpHost->mTelnet.loopbackTest(next);
+    QTest::qWait(50ms);
+    QVERIFY2(!bufferShows(qsl("Hint")), "the next prompt did not hide it");
+  }
+
+  // A trigger reading gmcp has to see the GMCP that came in the same read, as it always has
+  void test_ForcedOffGoAheadLeavesScriptsTheirOrder() {
+    const bool wasForceGaOff = mpHost->mTelnet.mFORCE_GA_OFF;
+    const bool wasGmcpEnabled = mpHost->mEnableGMCP;
+    const auto restoreFlags = qScopeGuard([this, wasForceGaOff, wasGmcpEnabled] {
+      mpHost->mTelnet.mFORCE_GA_OFF = wasForceGaOff;
+      mpHost->mEnableGMCP = wasGmcpEnabled;
+    });
+    mpHost->mTelnet.mFORCE_GA_OFF = true;
+    mpHost->mEnableGMCP = true;
+
+    TLuaInterpreter &lua = mpHost->mLuaInterpreter;
+    lua.compileAndExecuteScript(qsl(R"(
+      forcedOffOrder = ""
+      forcedOffHandler = registerAnonymousEventHandler("gmcp.ForcedOffOrder", function() forcedOffOrder = forcedOffOrder .. "gmcp," end)
+      forcedOffTrigger = tempRegexTrigger("^forcedofftext", function() forcedOffOrder = forcedOffOrder .. "trigger," end)
+    )"));
+    const auto removeHandlers = qScopeGuard([&lua] {
+      lua.compileAndExecuteScript(qsl("killAnonymousEventHandler(forcedOffHandler); killTrigger(forcedOffTrigger)"));
+    });
+
+    QByteArray read = QByteArray("forcedofftext") + QByteArray("\xff\xf9", 2) + QByteArray("\xff\xfa\xc9", 3) + QByteArray("ForcedOffOrder 1") + QByteArray("\xff\xf0", 2);
+    mpHost->mTelnet.loopbackTest(read);
+    QTest::qWait(50ms);
+
+    QCOMPARE(lua.getLuaString(qsl("forcedOffOrder")), qsl("gmcp,trigger,"));
+  }
+
+  void test_Osc8OutputExpiryWaitsForAQuietGap() {
+    // Wide enough that a stalled machine can't turn the burst into a gap
+    feedFromServer(expireLink(qsl("conceal"), qsl("\"expire\":{\"output\":true,\"outputDelay\":1000}")) + qsl("\n"));
+    feedFromServer(qsl("the same burst\n"));
+    QVERIFY2(bufferShows(qsl("Hint")), "the link's own burst of text hid it");
+
+    QTest::qWait(1100ms);
+    feedFromServer(qsl("after a gap\n"));
+    QVERIFY2(!bufferShows(qsl("Hint")), "text after a quiet gap did not hide it");
+  }
+
+  void test_Osc8OutputExpiryIgnoresSteadyOutput() {
+    feedFromServer(expireLink(qsl("conceal"), qsl("\"expire\":{\"output\":true,\"outputDelay\":1000}")) + qsl("\n"));
+    for (int i = 0; i < 8; ++i) {
+      QTest::qWait(150ms);
+      feedFromServer(qsl("steady %1\n").arg(i));
+    }
+    QVERIFY2(bufferShows(qsl("Hint")), "output with no gap in it hid the link once the delay had passed since it was printed");
+  }
+
+  void test_Osc8OutputExpiryCountsFromAScriptPrintedLink() {
+    std::string printed = (expireLink(qsl("conceal"), qsl("\"expire\":{\"output\":true,\"outputDelay\":2000}")) + qsl("\n")).toStdString();
+    mpHost->printOnDisplay(printed, false);
+    QVERIFY(bufferShows(qsl("Hint")));
+    feedFromServer(qsl("the game speaks at once\n"));
+    QVERIFY2(bufferShows(qsl("Hint")), "the first data after a script printed the link hid it");
+  }
+
+  void test_Osc8OutputDelayBelongsToEachLink() {
+    const QString shortDelay = qsl("\x1b]8;;send:a?config={\"visibility\":{\"action\":\"conceal\",\"expire\":{\"output\":true,\"outputDelay\":30}}}\x1b\\Brief\x1b]8;;\x1b\\");
+    const QString longDelay = qsl("\x1b]8;;send:b?config={\"visibility\":{\"action\":\"conceal\",\"expire\":{\"output\":true,\"outputDelay\":60000}}}\x1b\\Lasting\x1b]8;;\x1b\\");
+    feedFromServer(shortDelay + qsl("\n") + longDelay + qsl("\n"));
+    QTest::qWait(60ms);
+    feedFromServer(qsl("after a gap\n"));
+    QVERIFY(!bufferShows(qsl("Brief")));
+    QVERIFY2(bufferShows(qsl("Lasting")), "one link's outputDelay decided another's");
+  }
+
+  // cTelnet posts these with no game text in them, and script output isn't the game's
+  void test_Osc8OutputExpiryIgnoresWhatIsNotGameOutput_data() {
+    QTest::addColumn<QByteArray>("posted");
+    QTest::addColumn<bool>("fromServer");
+
+    QTest::newRow("bare flush marker") << QByteArray("\r") << true;
+    QTest::newRow("empty post at a disconnect") << QByteArray() << true;
+    QTest::newRow("prompt marker alone") << QByteArray("\xff") << true;
+    QTest::newRow("prompt read as a newline") << QByteArray("\n") << true;
+    QTest::newRow("script output") << QByteArray("printed by a script\n") << false;
+  }
+
+  void test_Osc8OutputExpiryIgnoresWhatIsNotGameOutput() {
+    QFETCH(QByteArray, posted);
+    QFETCH(bool, fromServer);
+
+    feedFromServer(expireLink(qsl("conceal"), qsl("\"expire\":{\"output\":true,\"outputDelay\":30}")) + qsl("\n"));
+    QTest::qWait(60ms);
+    std::string data = posted.toStdString();
+    mpHost->printOnDisplay(data, fromServer);
+    QVERIFY2(bufferShows(qsl("Hint")), "something that is not game output hid the link");
+  }
+
+  void test_Osc8ExpiryRemovesWholeLinesInABatch() {
+    const QString wholeLine = qsl("\x1b]8;;send:%1?config={\"visibility\":{\"action\":\"conceal\",\"wholeline\":true,\"expire\":{\"input\":true}}}\x1b\\%2\x1b]8;;\x1b\\");
+    feedFromServer(wholeLine.arg(qsl("a"), qsl("FirstGone")) + qsl("\n") + wholeLine.arg(qsl("b"), qsl("SecondGone")) + qsl("\n") + wholeLine.arg(qsl("c"), qsl("ThirdGone")) + qsl(" ") + wholeLine.arg(qsl("d"), qsl("SameLine")) + qsl("\nThe text that stays\n"));
+    QVERIFY(bufferShows(qsl("SecondGone")));
+
+    mpHost->mainConsoleView()->getHyperlinkVisibilityManager().onUserInput();
+
+    for (const QString &gone : {qsl("FirstGone"), qsl("SecondGone"), qsl("ThirdGone"), qsl("SameLine")}) {
+      QVERIFY2(!bufferShows(gone), qPrintable(gone));
+    }
+    QVERIFY2(bufferShows(qsl("The text that stays")), "a neighbouring line went with the links");
+  }
+
+  void test_Osc8InputExpiryHearsTheInputLine() {
+    injectData(expireLink(qsl("conceal"), qsl("\"expire\":{\"input\":true}")));
+    QVERIFY(bufferShows(qsl("Hint")));
+
+    QVERIFY2(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("send('from a script', false)")), "the script did not run");
+    QVERIFY2(bufferShows(qsl("Hint")), "a script's send() counted as the player's input");
+
+    TCommandLine *commandLine = mpHost->mainConsoleView()->mpCommandLine;
+    QVERIFY(commandLine);
+    QTest::keyClicks(commandLine, qsl("look"));
+    QTest::keyClick(commandLine, Qt::Key_Return);
+    QVERIFY2(!bufferShows(qsl("Hint")), "the player's command did not hide the link");
+  }
+
+  // Every link with visibility settings that closes while text is held keeps
+  // them, including one ended by the link that replaced it.
+  void test_EveryLinkClosedBehindHeldTextKeepsItsVisibility_data() {
+    QTest::addColumn<QString>("prefix");
+    QTest::addColumn<int>("rowOffset");
+    QTest::addColumn<int>("firstColumn");
+
+    // joined onto the held text, after the space the join puts back
+    QTest::newRow("joined") << QString() << 0 << 71;
+    // a list entry is never the continuation of the line above
+    QTest::newRow("committed alone") << qsl("- ") << 1 << 2;
+  }
+
+  void test_EveryLinkClosedBehindHeldTextKeepsItsVisibility() {
+    QFETCH(QString, prefix);
+    QFETCH(int, rowOffset);
+    QFETCH(int, firstColumn);
+
+    undoServerWrap();
+    const QString heldText = QString(64, QLatin1Char('y')) + qsl(" alpha");
+    feedFromServer(heldText + qsl("\n"));
+    const QString reveal = qsl("?config={\"visibility\":{\"action\":\"reveal\",\"delay\":20000}}");
+    feedFromServer(prefix + qsl("\x1b]8;;send:a") + reveal + qsl("\x1b\\beta \x1b]8;;send:b") + reveal +
+                   qsl("\x1b\\gamma\x1b]8;;\x1b\\ tail.\n"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int heldLine = lineStartingWith(heldText);
+    QVERIFY2(heldLine >= 0, qPrintable(qsl("the held text never reached the buffer: '%1'").arg(allBufferText())));
+    const int line = heldLine + rowOffset;
+    const int first = console->buffer.getLinkIndexAt(line, firstColumn);
+    const int second = console->buffer.getLinkIndexAt(line, firstColumn + 5);
+    QVERIFY2(first > 0 && second > 0 && first != second, "the two links are not where they were written");
+    const auto tracked = console->getHyperlinkVisibilityManager().trackedLinkIds();
+    QVERIFY2(tracked.contains(first), "the replaced link lost its visibility settings");
+    QVERIFY2(tracked.contains(second), "the link that replaced it lost its visibility settings");
+  }
+
+  // Held text the next line does not continue is committed on its own, and a
+  // link closed on that next line is then a single-line link at exactly the
+  // columns it recorded - so it keeps its visibility, as it did before held
+  // text was ever considered (raised in review of #11023).
+  void test_AClosedLinkAfterHeldTextCommittedAloneKeepsItsVisibility() {
+    undoServerWrap();
+    const QString heldText = QString(64, QLatin1Char('x')) + qsl(" alpha");
+    feedFromServer(heldText + qsl("\n"));
+    // a list entry is never the continuation of the line above
+    feedFromServer(qsl("- \x1b]8;;send:hide?config={\"visibility\":{\"action\":\"reveal\",\"delay\":20000}}\x1b\\item\x1b]8;;\x1b\\\n"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int heldLine = lineStartingWith(heldText);
+    QVERIFY2(heldLine >= 0, qPrintable(qsl("the held text never reached the buffer: '%1'").arg(allBufferText())));
+    QCOMPARE(console->buffer.line(heldLine), heldText);
+    QCOMPARE(console->buffer.line(heldLine + 1), qsl("-     "));
+    const int linkId = console->buffer.getLinkIndexAt(heldLine + 1, 2);
+    QVERIFY2(linkId > 0, "the link text is no longer a link");
+    QVERIFY2(console->getHyperlinkVisibilityManager().trackedLinkIds().contains(linkId), "the link lost its visibility settings");
+  }
+
+  // A link whose opening sequence comes just before a line break has no text
+  // on that line: it is for the line after it, so the break does not end it
+  // (raised in review of #11023).
+  void test_ALinkOpenedJustBeforeALineBreakIsForTheLineAfterIt() {
+    feedFromServer(qsl("Exits: \x1b]8;;send:north\x1b\\\nnorth\x1b]8;;\x1b\\\nafter\n"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int linkLine = lineStartingWith(qsl("north"));
+    QVERIFY2(linkLine > 0, qPrintable(qsl("the link's line is missing: '%1'").arg(allBufferText())));
+    QVERIFY2(console->buffer.getLinkIndexAt(linkLine, 0) > 0, "the line the link was opened for is plain text");
+    QCOMPARE(console->buffer.getLinkIndexAt(linkLine - 1, 0), 0);
+    QCOMPARE(console->buffer.getLinkIndexAt(linkLine + 1, 0), 0);
+  }
+
+  // The flush marker right after held text, with nothing of the next line
+  // yet, has nothing to carry a link into: the held text ended at the game's
+  // own newline, so a link begun in it ends with it rather than landing on
+  // whatever unrelated line comes next (raised in review of #11023).
+  void test_AFlushMarkerAfterAHeldLineDoesNotCarryItsLinkOn() {
+    undoServerWrap();
+    const QString padding(64, QLatin1Char('x'));
+    feedFromServer(padding + qsl(" \x1b]8;;send:held\x1b\\alpha\n"));
+    feedFromServer(qsl("\r"));
+    feedFromServer(qsl("- a list entry\n"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int heldLine = lineStartingWith(padding);
+    const int nextLine = lineStartingWith(qsl("- a list entry"));
+    QVERIFY2(heldLine >= 0 && nextLine >= 0, qPrintable(qsl("a line is missing: '%1'").arg(allBufferText())));
+    QVERIFY2(console->buffer.getLinkIndexAt(heldLine, 65) > 0, "the held text is no longer a link");
+    for (int column = 0; column < console->buffer.line(nextLine).size(); ++column) {
+      QCOMPARE(console->buffer.getLinkIndexAt(nextLine, column), 0);
+    }
+  }
+
+  // What is accepted: a prompt without GA or EOR that ends inside a link is
+  // indistinguishable, at the flush marker, from a line the game is still
+  // sending, so the link carries on into the one line that follows - and ends
+  // there, where it used to claim every line after it.
+  void test_ALinkOpenAtAPromptWithoutGoAheadReachesOneLineAtMost() {
+    feedFromServer(qsl("HP 10 \x1b]8;;send:x\x1b\\go\r"));
+    feedFromServer(qsl("You arrive.\nLater.\n"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int arriveLine = lineStartingWith(qsl("You arrive."));
+    QVERIFY2(arriveLine > 0, qPrintable(qsl("a line is missing: '%1'").arg(allBufferText())));
+    QCOMPARE(console->buffer.getLinkIndexAt(arriveLine + 1, 0), 0);
+  }
+
+  // A spoiler the flush marker lands in is committed a piece at a time, and
+  // each piece is masked as it goes: the next line is out of reach of the
+  // masking the link gets when it ends. Revealing it restores every piece.
+  void test_ASpoilerSplitByTheFlushMarkerIsMaskedOnEveryLine() {
+    feedFromServer(qsl("\x1b]8;;send:reveal?config={\"spoiler\":true}\x1b\\SEC\r"));
+    feedFromServer(qsl("RET\x1b]8;;\x1b\\ after\n"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    QVERIFY2(!allBufferText().contains(qsl("SEC")) && !allBufferText().contains(qsl("RET")),
+             qPrintable(qsl("part of the spoiler is on show: '%1'").arg(allBufferText())));
+    const int restLine = lineStartingWith(qsl("    after"));
+    QVERIFY2(restLine > 0, qPrintable(qsl("the rest of the spoiler's line is missing: '%1'").arg(allBufferText())));
+    const int linkId = console->buffer.getLinkIndexAt(restLine, 0);
+    QVERIFY2(linkId > 0, "the spoiler text after the flush marker is no longer a link");
+    QCOMPARE(console->buffer.getLinkIndexAt(restLine - 1, 0), linkId);
+
+    console->buffer.revealSpoilerLink(linkId);
+    QCOMPARE(console->buffer.line(restLine - 1), qsl("SEC"));
+    QCOMPARE(console->buffer.line(restLine), qsl("RET after"));
+  }
+
+  // The flush marker commits held text as a line of its own, but it still
+  // does not end a link that began there: the text after carries on in it.
+  void test_AFlushMarkerAfterHeldTextDoesNotEndItsHyperlink() {
+    undoServerWrap();
+    const QString padding(64, QLatin1Char('x'));
+    feedFromServer(padding + qsl(" \x1b]8;;send:held\x1b\\alpha\n"));
+    feedFromServer(qsl("beta \r"));
+    feedFromServer(qsl("tail.\x1b]8;;\x1b\\\n"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int heldLine = lineStartingWith(padding);
+    QVERIFY2(heldLine >= 0, qPrintable(qsl("the held text never reached the buffer: '%1'").arg(allBufferText())));
+    QCOMPARE(console->buffer.line(heldLine + 1), qsl("beta "));
+    QCOMPARE(console->buffer.line(heldLine + 2), qsl("tail."));
+    const int linkId = console->buffer.getLinkIndexAt(heldLine, 65);
+    QVERIFY2(linkId > 0, "the held text is no longer a link");
+    QCOMPARE(console->buffer.getLinkIndexAt(heldLine + 1, 0), linkId);
+    QCOMPARE(console->buffer.getLinkIndexAt(heldLine + 2, 0), linkId);
+  }
+
+  // A spoiler that began in held text and closes before the rest of the line
+  // arrives is masked across the joined line once the two are joined - not at
+  // its held columns in the text after, and not before the join, which would
+  // hide the break the join puts back between them.
+  void test_ASpoilerClosedAcrossHeldTextIsMaskedOnceJoined() {
+    undoServerWrap();
+    const QString padding(64, QLatin1Char('x'));
+    feedFromServer(padding + qsl(" \x1b]8;;send:reveal?config={\"spoiler\":true}\x1b\\alpha\n"));
+    feedFromServer(qsl("beta\x1b]8;;\x1b\\ tail.\n"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int joinedLine = lineStartingWith(padding);
+    QVERIFY2(joinedLine >= 0, qPrintable(qsl("the held text never reached the buffer: '%1'").arg(allBufferText())));
+    QCOMPARE(console->buffer.line(joinedLine), padding + QString(11, QLatin1Char(' ')) + qsl(" tail."));
+    const int linkId = console->buffer.getLinkIndexAt(joinedLine, 65);
+    QVERIFY2(linkId > 0, "the spoiler text is no longer a link");
+
+    console->buffer.revealSpoilerLink(linkId);
+    QCOMPARE(console->buffer.line(joinedLine), padding + qsl(" alpha beta tail."));
+  }
+
+  // An MXP <SEND> inside a spoiler keeps its own link id, so it is left on show
+  // rather than masked: the reveal only restores the spoiler's own characters.
+  void test_AnMxpLinkInsideASpoilerDoesNotGarbleItsReveal_data() {
+    QTest::addColumn<QString>("spoilerEnd");
+
+    QTest::newRow("closed") << qsl("\x1b]8;;\x1b\\ after");
+    QTest::newRow("ended by the next link") << qsl("\x1b]8;;send:next\x1b\\ after\x1b]8;;\x1b\\");
+  }
+
+  void test_AnMxpLinkInsideASpoilerDoesNotGarbleItsReveal() {
+    QFETCH(QString, spoilerEnd);
+
+    const bool mxpWasEnabled = mpHost->mMxpProcessor.isEnabled();
+    mpHost->setForceMXPProcessorOn(true);
+    mpHost->mMxpProcessor.enable();
+    feedFromServer(qsl("SPOILMXP \x1b]8;;send:look?config={\"spoiler\":true}\x1b\\aa <SEND \"north\">nn</SEND> bb") + spoilerEnd + qsl("\n"));
+    if (!mxpWasEnabled) {
+      mpHost->mMxpProcessor.disable();
+    }
+    mpHost->setForceMXPProcessorOn(false);
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int line = lineStartingWith(qsl("SPOILMXP"));
+    QVERIFY2(line >= 0, qPrintable(qsl("the line never reached the buffer: '%1'").arg(allBufferText())));
+    QCOMPARE(console->buffer.line(line), qsl("SPOILMXP    nn    after"));
+    const int linkId = console->buffer.getLinkIndexAt(line, 9);
+    QVERIFY2(linkId > 0, "the spoiler text is no longer a link");
+    const int sendId = console->buffer.getLinkIndexAt(line, 12);
+    QVERIFY2(sendId > 0 && sendId != linkId, "the MXP link inside the spoiler lost its own id");
+
+    console->buffer.revealSpoilerLink(linkId);
+    QCOMPARE(console->buffer.line(line), qsl("SPOILMXP aa nn bb after"));
+  }
+
   void cleanupTestCase() {
     delete mpServer;
     mpServer = nullptr;
     mpHost = nullptr;
-    const QString path =
-        mudlet::getMudletPath(enums::profileHomePath, mHostname);
-    QDir(path).removeRecursively();
-    delete mudlet::self();
+    // Null when initTestCase skipped or failed ahead of mudlet::start()
+    if (mudlet::self()) {
+      const QString path =
+          MudletApp::getMudletPath(enums::profileHomePath, mHostname);
+      QDir(path).removeRecursively();
+      delete mudlet::self();
+    }
+    mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME")
+                       : qputenv("XDG_CONFIG_HOME", mSavedXdg);
   }
 };
 
-void initializeQRCResourcesForOscTest() {
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-  qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-  qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-  qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-  qInitResources_mudlet();
-  qInitResources_qm();
-}
-
 #include "TOscTest.moc"
-QTEST_MAIN(TOscTest)
+MUDLET_GROUPED_TEST_MAIN(TOscTest)

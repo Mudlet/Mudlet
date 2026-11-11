@@ -22,12 +22,16 @@
 
 #include "TEasyButtonBar.h"
 
+#include "EAction.h"
 #include "Host.h"
 #include "TAction.h"
 #include "TConsole.h"
 #include "TFlipButton.h"
+#include "TMainConsole.h"
 
 #include <QGridLayout>
+#include <QIcon>
+#include <QMenu>
 #include <QScopeGuard>
 
 
@@ -120,6 +124,115 @@ void TEasyButtonBar::addButton(TFlipButton* pB)
 }
 
 
+void TEasyButtonBar::addActionButtons(TAction* pAction)
+{
+    // The -1 is needed to compensate for the initial pre-increment to TEasyButtonBar::mItemCount
+    resetItemCount(pAction->getButtonFillerOffset() - 1);
+    for (auto* pTActionNode : *pAction->mpMyChildrenList) {
+        auto* pTAction = static_cast<TAction*>(pTActionNode);
+        if (!pTAction->isActive()) {
+            continue;
+        }
+        const QIcon icon(pTAction->getIcon());
+        const QString name = pTAction->getName();
+        auto pTFlipButton = new TFlipButton(pTAction, pAction->mpHost);
+        pTFlipButton->setIcon(icon);
+        pTFlipButton->setText(name);
+        pTFlipButton->setCheckable(pTAction->isPushDownButton());
+
+        if (pTAction->isPushDownButton()) {
+            pTFlipButton->setChecked(pTAction->mButtonState);
+        } else {
+            // The following was added to ensure a non-Pushdown button is never
+            // left in a checked state - Slysven
+            pTFlipButton->setChecked(false);
+        }
+
+        pTFlipButton->setFlat(pAction->getButtonFlat());
+        // This applies the CSS for THIS TAction to a CHILD's representation on the Toolbar
+        pTFlipButton->setStyleSheet(pAction->css);
+
+        // Restoring a push-down button runs its script whether it is up or down, but
+        // neither of its commands is sent: they belong to a click
+        if (pTAction->isPushDownButton() && pAction->mpHost->mIsProfileLoadingSequence) {
+            qDebug() << "addActionButtons() name=" << pTAction->getName() << " executing script";
+            pTAction->runScript();
+        }
+
+
+        if (pTAction->isFolder()) {
+            auto pNewMenu = new QMenu(pTFlipButton);
+
+            // This applied the CSS for THIS TAction to a CHILD's own menu - is this right
+            // CHECK: consider using the Child's CSS instead for a menu on it
+            // - Slysven:
+            // pNewMenu->setStyleSheet( pTAction->css );
+            pNewMenu->setStyleSheet(pAction->css);
+
+            fillMenu(pTAction, pNewMenu);
+
+            // This has been moved until AFTER the child's menu has been
+            // populated, it was being done straight after pNewMenu was created,
+            // but I think we ought to insert the items into the menu before
+            // applying the menu to the button - Slysven
+            pTFlipButton->setMenu(pNewMenu);
+        }
+
+        pAction->mpHost->mainConsoleView()->replaceActionButton(pTAction, pTFlipButton);
+
+        // Moved to be AFTER the pTAction->mIsFolder test as I think we ought to
+        // add the button to the toolbar AFTER any menu (children) items have
+        // been put on the button - Slysven
+        addButton(pTFlipButton);
+    }
+}
+
+// This seems to be the second half of TEasyButtonBar version of:
+//   TToolBar::addActionToMenu( TAction *, QMenu * )
+// the need for the split is not yet clear to me! - Slysven
+void TEasyButtonBar::fillMenu(TAction* pAction, QMenu* pMenu)
+{
+    for (auto* pTActionNode : *pAction->mpMyChildrenList) {
+        auto* pTAction = static_cast<TAction*>(pTActionNode);
+        if (!pTAction->isActive()) {
+            continue;
+        }
+        mpTAction->mpHost->mainConsoleView()->setActionEasyButtonBar(pAction, this);
+        auto pEAction = new EAction(pAction->mpHost, QIcon(pAction->getIcon()), pTAction->getName(), pTAction->mID);
+        pEAction->setStatusTip(pTAction->getName());
+        pEAction->setCheckable(pTAction->isPushDownButton());
+        if (pTAction->isPushDownButton()) {
+            pEAction->setChecked(pTAction->mButtonState);
+        } else {
+            pEAction->setChecked(false);
+        }
+
+        mpTAction->mpHost->mainConsoleView()->replaceActionMenuEntry(pTAction, pEAction);
+
+        // See addActionButtons()
+        if (pTAction->isPushDownButton() && pAction->mpHost->mIsProfileLoadingSequence) {
+            pTAction->runScript();
+        }
+
+        if (pTAction->isFolder()) {
+            // Deleted along with its entry, see deleteMenuEntryLater() in TMainConsole.cpp
+            auto pNewMenu = new QMenu(this);
+            pEAction->setMenu(pNewMenu);
+
+            // CHECK: consider using the Child's CSS instead for a menu on it
+            // - Slysven:
+            // pNewMenu->setStyleSheet( pTAction->css );
+            pNewMenu->setStyleSheet(pAction->css);
+
+            fillMenu(pTAction, pNewMenu);
+        }
+
+        // Menu is PARENT'S menu pEAction, this line moved to be AFTER child builds its own menu if it is a folder
+        pMenu->addAction(pEAction);
+    }
+}
+
+
 void TEasyButtonBar::finalize()
 {
     if (mpTAction->mUseCustomLayout || !mpTAction->getButtonFillerOffset()) {
@@ -174,17 +287,10 @@ void TEasyButtonBar::slot_pressed(const bool isChecked)
     // entries...
     pB->showMenu();
 
-    if (pA->isPushDownButton()) {
-        // DO NOT MANIPULATE THE BUTTON STATE OURSELF NOW
-        pA->mButtonState = isChecked;
-        pA->mpHost->mpConsole->mButtonState = (pA->mButtonState ? 2 : 1);
-    } else {
-        pA->mButtonState = false;                // Forces a fixup if not correct
-        pB->setChecked(false);                   // This does NOT invoke the clicked() signal!
-        pA->mpHost->mpConsole->mButtonState = 1; // Was effectively 0 but that is wrong
+    if (!pA->isPushDownButton()) {
+        pB->setChecked(false); // This does NOT invoke the clicked() signal!
     }
-
-    pA->execute();
+    pA->press(isChecked);
 }
 
 void TEasyButtonBar::clear()
@@ -197,6 +303,11 @@ void TEasyButtonBar::clear()
     // Transfer the object name to the new instance:
     auto widgetObjectName(mpWidget->objectName());
     mpWidget->setObjectName(QString());
+    // deleteLater() waits for a return to the event loop it was called from, which
+    // a nested processEvents() never is, so until then the old buttons would still
+    // be laid out above the new ones
+    layout()->removeWidget(mpWidget);
+    mpWidget->hide();
     mpWidget->deleteLater();
     mpWidget = pW;
     mpWidget->setObjectName(widgetObjectName);

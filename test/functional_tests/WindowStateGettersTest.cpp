@@ -1,0 +1,375 @@
+/***************************************************************************
+ *   Copyright (C) 2026 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+
+/*
+ * Covers getWindowGeometry() and windowVisible() for a profile that is not the
+ * front tab. Mudlet hides a backgrounded profile's whole console, so the busted
+ * suite structurally cannot reach this: it always runs as the only, front,
+ * profile.
+ */
+
+#include <QFileInfo>
+#include <QSignalSpy>
+#include <QTemporaryDir>
+#include <QtTest/QtTest>
+#include <chrono>
+
+#include "MudletApp.h"
+#include "PortableModeTestHelper.h"
+#include "ProfileTestHelper.h"
+#include "Host.h"
+#include "HostManager.h"
+#include "MudletInstanceCoordinator.h"
+#include "TMainConsole.h"
+#include "TTextEdit.h"
+#include "TelnetServerStub.h"
+#include "ctelnet.h"
+#include "dlgConnectionProfiles.h"
+#include "mudlet.h"
+
+#include "GroupedTest.h"
+
+using namespace std::chrono_literals;
+
+class WindowStateGettersTest : public QObject
+{
+    Q_OBJECT
+
+private:
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
+    TelnetServerStub* mpServer = nullptr;
+    Host* mpBackgroundHost = nullptr;
+    Host* mpFrontHost = nullptr;
+    const QString mBackgroundHostname = qsl("WindowStateGetters-Background");
+    const QString mFrontHostname = qsl("WindowStateGetters-Front");
+    QString mPort;
+    const QString mLocalhost = qsl("localhost");
+    const QString mLabelName = qsl("wsgLabel");
+    const QString mConsoleName = qsl("wsgConsole");
+    const QString mScrollBoxName = qsl("wsgScrollBox");
+    const QString mCmdLineName = qsl("wsgCmdLine");
+    const QString mTextEditName = qsl("wsgTextEdit");
+    const QString mUserWindowName = qsl("wsgUserWindow");
+    const QString mChildLabelName = qsl("wsgChildLabel");
+
+private slots:
+    void initTestCase()
+    {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
+        // A config root of this process's own. Sharing the developer's
+        // ~/.config/mudlet means sharing a profile list, so a second copy of
+        // this test running at the same time is told the name it types is
+        // already in use and never gets an enabled Connect button. Since #9712
+        // the opt-in that makes setupConfig() adopt a directory is
+        // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
+
+        mpServer = new TelnetServerStub(qApp);
+        mpServer->start(mLocalhost, 0);
+        mPort = QString::number(mpServer->serverPort());
+        mudlet::start();
+        mudlet::self()->setupConfig();
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
+        mudlet::self()->init();
+        mudlet::self()->setStorePasswordsSecurely(false);
+
+        deleteProfileDirectory(mBackgroundHostname);
+        deleteProfileDirectory(mFrontHostname);
+
+        startProfile(mBackgroundHostname);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        mpBackgroundHost = HostManager::self()->getHost(mBackgroundHostname);
+        QVERIFY(mpBackgroundHost);
+        QVERIFY(mpBackgroundHost->mainConsoleView());
+
+        startProfile(mFrontHostname);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        mpFrontHost = HostManager::self()->getHost(mFrontHostname);
+        QVERIFY(mpFrontHost);
+        QVERIFY(mpFrontHost->mainConsoleView());
+
+        QVERIFY2(mpBackgroundHost->mainConsoleView()->isHidden(), "opening a second profile did not background the first one, so there is nothing to test here");
+    }
+
+    void cleanupTestCase()
+    {
+        delete mpServer;
+        mpServer = nullptr;
+        mpBackgroundHost = nullptr;
+        mpFrontHost = nullptr;
+        // Null when initTestCase skipped or failed ahead of mudlet::start()
+        if (mudlet::self()) {
+            deleteProfileDirectory(mBackgroundHostname);
+            deleteProfileDirectory(mFrontHostname);
+            delete mudlet::self();
+        }
+        mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
+    }
+
+    void test_backgroundProfileReportsEveryElementTypeAsVisible()
+    {
+        buildElements(mpBackgroundHost);
+
+        for (const QString& name : elementNames()) {
+            assertVisibility(mpBackgroundHost, name, true, qsl("%1 of a backgrounded profile").arg(name));
+        }
+
+        // a hidden user window still has to take its children with it
+        QVERIFY(mpBackgroundHost->hideWindow(mUserWindowName));
+        assertVisibility(mpBackgroundHost, mUserWindowName, false, qsl("a hidden user window"));
+        assertVisibility(mpBackgroundHost, mChildLabelName, false, qsl("a child of a hidden user window"));
+
+        QVERIFY(mpBackgroundHost->hideWindow(mLabelName));
+        assertVisibility(mpBackgroundHost, mLabelName, false, qsl("a label hidden on a backgrounded profile"));
+        QVERIFY(mpBackgroundHost->showWindow(mLabelName));
+        assertVisibility(mpBackgroundHost, mLabelName, true, qsl("a label shown again on a backgrounded profile"));
+    }
+
+    // A backgrounded profile's widgets are all invisible, so setWindow() moving a label into one
+    // shows it without the ShowToParent that would report it
+    void test_backgroundProfileFollowsALabelOutOfAHiddenScrollBox()
+    {
+        const QString scrollBox = qsl("wsgHiddenScrollBox");
+        const QString label = qsl("wsgMovedLabel");
+        mpBackgroundHost->getLuaInterpreter()->compileAndExecuteScript(qsl("createScrollBox('%1', 0, 300, 100, 50)\n"
+                                                                           "createLabel('%1', '%2', 0, 0, 40, 20, 1)\n"
+                                                                           "hideWindow('%1')")
+                                                                               .arg(scrollBox, label));
+        assertVisibility(mpBackgroundHost, label, false, qsl("a label in a hidden scroll box"));
+
+        mpBackgroundHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setWindow('main', '%1', 0, 0, false)").arg(label));
+        assertVisibility(mpBackgroundHost, label, true, qsl("a label moved out of a hidden scroll box without being shown"));
+    }
+
+    void test_frontProfileReportsEveryElementTypeAsVisible()
+    {
+        buildElements(mpFrontHost);
+
+        for (const QString& name : elementNames()) {
+            assertVisibility(mpFrontHost, name, true, qsl("%1 of the front profile").arg(name));
+        }
+
+        QVERIFY(mpFrontHost->hideWindow(mLabelName));
+        assertVisibility(mpFrontHost, mLabelName, false, qsl("a label hidden on the front profile"));
+    }
+
+    void test_mainWindowAnswersBothOfItsNames()
+    {
+        for (const QString& name : {qsl("main"), QString()}) {
+            const auto geometry = mpFrontHost->windowGeometry(name);
+            QVERIFY2(geometry.has_value(), qPrintable(qsl("getWindowGeometry(\"%1\") did not recognise the main window").arg(name)));
+            QCOMPARE(geometry->topLeft(), QPoint(0, 0));
+            QCOMPARE(geometry->size(), mpFrontHost->mainConsoleView()->getMainWindowSize());
+            QVERIFY2(geometry->width() > 0 && geometry->height() > 0, qPrintable(qsl("the main window reported an empty geometry: %1x%2").arg(geometry->width()).arg(geometry->height())));
+
+            assertVisibility(mpFrontHost, name, true, qsl("the front profile's main window"));
+        }
+    }
+
+    void test_backgroundProfileAnswersForItsOwnMainWindow()
+    {
+        assertVisibility(mpBackgroundHost, qsl("main"), true, qsl("a backgrounded profile's main window"));
+
+        // A hidden console is measured by the container it will be shown in
+        const auto geometry = mpBackgroundHost->windowGeometry(qsl("main"));
+        QVERIFY(geometry.has_value());
+        QVERIFY2(geometry->width() > 0 && geometry->height() > 0,
+                 qPrintable(qsl("a backgrounded profile's main window reported an empty geometry: %1x%2").arg(geometry->width()).arg(geometry->height())));
+    }
+
+    // A backgrounded profile's console is hidden, so getMainWindowSize() measures the container it
+    // will be shown in, which resizes with the application window while the console gets no event.
+    void test_backgroundProfileFollowsTheApplicationWindowResizing()
+    {
+        const QSize before = mpBackgroundHost->mainWindowSize().value_or(QSize());
+        const QSize windowSize = mudlet::self()->size();
+        mudlet::self()->resize(windowSize + QSize(-120, -80));
+        QTest::qWait(50);
+
+        const QSize after = mpBackgroundHost->mainWindowSize().value_or(QSize());
+        const QSize measured = mpBackgroundHost->mainConsoleView()->getMainWindowSize();
+        mudlet::self()->resize(windowSize);
+        QTest::qWait(50);
+        QVERIFY2(after != before, "resizing the application window did not change a backgrounded profile's main window size");
+        QCOMPARE(after, measured);
+    }
+
+    // A detached window's background tab is hidden at its full size, so its command line growing is
+    // laid out with no event to report it, just before Lua's resize handlers ask for the size.
+    void test_hiddenConsoleFollowsItsCommandLineGrowing()
+    {
+        TMainConsole* pConsole = mpFrontHost->mainConsoleView();
+        pConsole->hide();
+        const int hiddenWidth = pConsole->width();
+        const QSize before = pConsole->getMainWindowSize();
+
+        mpFrontHost->getLuaInterpreter()->compileAndExecuteScript(qsl("printCmdLine('main', 'one\\ntwo\\nthree\\nfour')"));
+        const QSize grown = mpFrontHost->mainWindowSize().value_or(QSize());
+        const QSize measured = pConsole->getMainWindowSize();
+        mpFrontHost->getLuaInterpreter()->compileAndExecuteScript(qsl("clearCmdLine('main')"));
+        pConsole->show();
+        QTest::qWait(50);
+
+        QVERIFY2(hiddenWidth > 0, "hiding the console took its width, so there is nothing to test here");
+        QVERIFY2(measured.height() < before.height(), "the command line did not grow, so there is nothing to test here");
+        QCOMPARE(grown, measured);
+    }
+
+    // A style sheet's minimum size resizes a hidden command line with no Resize event.
+    void test_hiddenConsoleFollowsItsCommandLineStyleSheet()
+    {
+        TMainConsole* pConsole = mpFrontHost->mainConsoleView();
+        pConsole->hide();
+        const QSize before = pConsole->getMainWindowSize();
+
+        mpFrontHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setCmdLineStyleSheet('main', 'QPlainTextEdit { min-height: 120px; }')"));
+        const QSize styled = mpFrontHost->mainWindowSize().value_or(QSize());
+        const QSize measured = pConsole->getMainWindowSize();
+        mpFrontHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setCmdLineStyleSheet('main', '')"));
+        pConsole->show();
+        QTest::qWait(50);
+
+        QVERIFY2(measured.height() < before.height(), "the style sheet did not grow the command line, so there is nothing to test here");
+        QCOMPARE(styled, measured);
+    }
+
+    void test_gridSizesFollowTheApplicationWindowResizing()
+    {
+        const QSize windowSize = mudlet::self()->size();
+        const QSize before = mpFrontHost->windowGridSize(qsl("main")).value_or(QSize());
+        mudlet::self()->resize(windowSize + QSize(-120, -80));
+        QTest::qWait(50);
+        const QSize after = mpFrontHost->windowGridSize(qsl("main")).value_or(QSize());
+        const QString shrunk = gridSizeMismatches();
+        mudlet::self()->resize(windowSize);
+        QTest::qWait(50);
+
+        QVERIFY2(after != before, "resizing the application window did not change the front profile's grid");
+        QVERIFY2(shrunk.isEmpty(), qPrintable(shrunk));
+        const QString restored = gridSizeMismatches();
+        QVERIFY2(restored.isEmpty(), qPrintable(restored));
+    }
+
+    void test_backgroundGridFollowsAFontSizeChange()
+    {
+        const QSize before = mpBackgroundHost->windowGridSize(mConsoleName).value_or(QSize());
+        mpBackgroundHost->getLuaInterpreter()->compileAndExecuteScript(
+                qsl("wsgFontSizes = {getFontSize('main'), getFontSize('%1')} setFontSize('main', 20) setMiniConsoleFontSize('%1', 20)").arg(mConsoleName));
+        const QSize after = mpBackgroundHost->windowGridSize(mConsoleName).value_or(QSize());
+        const QString enlarged = gridSizeMismatches();
+        mpBackgroundHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setFontSize('main', wsgFontSizes[1]) setMiniConsoleFontSize('%1', wsgFontSizes[2])").arg(mConsoleName));
+        QTest::qWait(50);
+
+        QVERIFY2(after != before, "a bigger font did not change the miniconsole's grid");
+        QVERIFY2(enlarged.isEmpty(), qPrintable(enlarged));
+        const QString restored = gridSizeMismatches();
+        QVERIFY2(restored.isEmpty(), qPrintable(restored));
+    }
+
+    void test_bufferGridMatchesItsPane()
+    {
+        const QString buffer = qsl("wsgBuffer");
+        mpFrontHost->getLuaInterpreter()->compileAndExecuteScript(qsl("createBuffer('%1')").arg(buffer));
+        const TConsole* pConsole = mpFrontHost->mainConsoleView()->subConsoleWidget(buffer);
+        QVERIFY(pConsole);
+        QCOMPARE(mpFrontHost->windowGridSize(buffer).value_or(QSize()), QSize(pConsole->mUpperPane->getColumnCount(), pConsole->mUpperPane->getRowCount()));
+    }
+
+private:
+    // Each profile's main console, miniconsole and user window whose model grid disagrees with its upper pane, as failure text
+    QString gridSizeMismatches() const
+    {
+        QStringList mismatches;
+        for (Host* pHost : {mpBackgroundHost, mpFrontHost}) {
+            for (const QString& name : {qsl("main"), mConsoleName, mUserWindowName}) {
+                TConsole* pConsole = name == qsl("main") ? pHost->mainConsoleView() : pHost->mainConsoleView()->subConsoleWidget(name);
+                if (!pConsole) {
+                    mismatches << qsl("%1 has no '%2'").arg(pHost->getName(), name);
+                    continue;
+                }
+                const QSize live(pConsole->mUpperPane->getColumnCount(), pConsole->mUpperPane->getRowCount());
+                const QSize model = pHost->windowGridSize(name).value_or(QSize());
+                if (model != live) {
+                    mismatches << qsl("%1 '%2' answers %3x%4 but is %5x%6").arg(pHost->getName(), name).arg(model.width()).arg(model.height()).arg(live.width()).arg(live.height());
+                }
+            }
+        }
+        return mismatches.join(qsl("; "));
+    }
+
+    QStringList elementNames() const { return {mLabelName, mConsoleName, mScrollBoxName, mCmdLineName, mTextEditName, mUserWindowName, mChildLabelName}; }
+
+    // built through the Lua API so each profile's own interpreter creates them
+    void buildElements(Host* pHost) const
+    {
+        pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("createLabel('%1', 0, 0, 50, 50, 1)\n"
+                                                                "createMiniConsole('%2', 0, 60, 100, 50)\n"
+                                                                "createScrollBox('%3', 0, 120, 100, 50)\n"
+                                                                "createCommandLine('%4', 0, 180, 100, 30)\n"
+                                                                "createTextEdit('%5', 0, 220, 100, 50)\n"
+                                                                "openUserWindow('%6')\n"
+                                                                "createLabel('%6', '%7', 5, 5, 40, 20, 1)")
+                                                                    .arg(mLabelName, mConsoleName, mScrollBoxName, mCmdLineName, mTextEditName, mUserWindowName, mChildLabelName));
+    }
+
+    void assertVisibility(Host* pHost, const QString& name, const bool expected, const QString& what) const
+    {
+        const auto visible = pHost->windowVisible(name);
+        QVERIFY2(visible.has_value(), qPrintable(qsl("windowVisible() reported %1 as not found").arg(what)));
+        QVERIFY2(*visible == expected, qPrintable(qsl("windowVisible() reported %1 as %2").arg(what, *visible ? qsl("visible") : qsl("hidden"))));
+    }
+
+    void startProfile(const QString& hostname)
+    {
+        const QString address = mLocalhost;
+        const QString port = mPort;
+        auto host = TestProfile::create(hostname, address, port);
+        if (!host) {
+            QFAIL("No active host available for the test.");
+        }
+
+        QSignalSpy connectionSpy(&(host->mTelnet), &cTelnet::signal_connected);
+        if (!connectionSpy.wait(2s)) {
+            QFAIL("Could not connect with the host.");
+        }
+    }
+
+    void deleteProfileDirectory(const QString& profileName)
+    {
+        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, profileName));
+        if (dir.exists()) {
+            dir.removeRecursively();
+        }
+    }
+};
+
+#include "WindowStateGettersTest.moc"
+MUDLET_GROUPED_TEST_MAIN(WindowStateGettersTest)

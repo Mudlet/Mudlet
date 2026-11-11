@@ -24,11 +24,15 @@
 #include "TToolBar.h"
 
 
+#include "EAction.h"
 #include "TAction.h"
 #include "TConsole.h"
 #include "TFlipButton.h"
+#include "TMainConsole.h"
 #include "mudlet.h"
 
+#include <QIcon>
+#include <QMenu>
 #include <QScopeGuard>
 
 
@@ -60,10 +64,10 @@ TToolBar::TToolBar(Host* pHost, TAction* pA, const QString& name, QWidget* pW)
 void TToolBar::resizeEvent(QResizeEvent* e)
 {
     Q_UNUSED(e)
-    if (mpHost.isNull()) {
+    if (!mpHost->mainConsoleView()) {
         return;
     }
-    mpHost->setToolbarLayoutUpdated(this);
+    mpHost->mainConsoleView()->setToolBarLayoutChanged(this);
 }
 
 void TToolBar::setName(const QString& name)
@@ -78,11 +82,13 @@ void TToolBar::setName(const QString& name)
 
 void TToolBar::moveEvent(QMoveEvent* e)
 {
-    if (!mpTAction || mpHost.isNull()) {
+    if (!mpTAction) {
         return;
     }
 
-    mpHost->setToolbarLayoutUpdated(this);
+    if (mpHost->mainConsoleView()) {
+        mpHost->mainConsoleView()->setToolBarLayoutChanged(this);
+    }
 
     if (mRecordMove) {
         mpTAction->mPosX = e->pos().x();
@@ -103,6 +109,11 @@ void TToolBar::slot_topLevelChanged(bool topLevel)
     if (mpTAction) {
         mpTAction->mToolbarLastFloatingState = topLevel;
     }
+}
+
+Host* TToolBar::getHost() const
+{
+    return mpHost;
 }
 
 void TToolBar::addButton(TFlipButton* pB)
@@ -158,6 +169,88 @@ void TToolBar::addButton(TFlipButton* pB)
     connect(pB, &QAbstractButton::clicked, this, &TToolBar::slot_pressed);
 }
 
+void TToolBar::addActionButtons(TAction* pAction)
+{
+    // The -1 is needed to compensate for the initial pre-increment to TToolBar::mItemCount
+    resetItemCount(pAction->getButtonFillerOffset() - 1);
+    for (auto* pTActionNode : *pAction->mpMyChildrenList) {
+        auto* pTAction = static_cast<TAction*>(pTActionNode);
+        if (!pTAction->isActive()) {
+            // This test and conditional loop abort was missing from this method
+            // but is needed so that disabled buttons do not appear on
+            // floating toolbars - possible future scope here to have "disabled"
+            // buttons show in a "greyed-out" state... - Slysven
+            continue;
+        }
+        const QIcon icon(pTAction->getIcon());
+        const QString name = pTAction->getName();
+        auto pTFlipButton = new TFlipButton(pTAction, pAction->mpHost);
+        pTFlipButton->setIcon(icon);
+        pTFlipButton->setText(name);
+        pTFlipButton->setCheckable(pTAction->isPushDownButton());
+
+        if (pTAction->isPushDownButton()) {
+            pTFlipButton->setChecked(pTAction->mButtonState);
+        } else {
+            // The following was added to ensure a non-Pushdown button is never
+            // left in a checked state - Slysven
+            pTFlipButton->setChecked(false);
+        }
+
+        pTFlipButton->setFlat(pAction->getButtonFlat());
+        // This applies the CSS for THIS TAction to a CHILD's representation on the Toolbar
+        pTFlipButton->setStyleSheet(pAction->css);
+
+        if (pTAction->isFolder()) {
+            auto pNewMenu = new QMenu(this);
+            // This applies the CSS for THIS TAction to a CHILD's own menu - is this right
+            pNewMenu->setStyleSheet(pAction->css);
+            // CHECK: Use the Child's CSS instead for a menu on it? - Slysven:
+            // pNewMenu->setStyleSheet( pTAction->css );
+            addActionToMenu(pTAction, pNewMenu);
+            // This has been move until AFTER the child's menu has been
+            // populated, it was being done straight after pNewMenu was created,
+            // but I think we ought to insert the items into the menu before
+            // applying the menu to the button - Slysven
+            pTFlipButton->setMenu(pNewMenu);
+        }
+
+        mpHost->mainConsoleView()->replaceActionButton(pTAction, pTFlipButton);
+
+        // Moved to be AFTER the pTAction->mIsFolder test as I think we ought to
+        // add the button to the toolbar AFTER any menu (children) items have
+        // been put on the button - Slysven
+        addButton(pTFlipButton);
+    }
+}
+
+// This seems to be the TToolBar version of
+// TEasyButtonBar::fillMenu(TAction *, QMenu *)
+// Unlike the other this one seems to introduce an "intermediate" single menu
+// item to which the sub-menu is added.
+void TToolBar::addActionToMenu(TAction* pAction, QMenu* pMenu)
+{
+    mpHost->mainConsoleView()->setActionToolBar(pAction, this);
+    auto pEAction = new EAction(pAction->mpHost, QIcon(pAction->getIcon()), pAction->getName(), pAction->mID);
+    pEAction->setCheckable(pAction->isPushDownButton());
+    pEAction->setChecked(pAction->isPushDownButton() && pAction->mButtonState);
+    pEAction->setStatusTip(pAction->getName());
+    mpHost->mainConsoleView()->replaceActionMenuEntry(pAction, pEAction);
+    pMenu->addAction(pEAction);
+
+    if (pAction->isFolder()) {
+        // Deleted along with its entry, see deleteMenuEntryLater() in TMainConsole.cpp
+        auto pNewMenu = new QMenu(this);
+        pNewMenu->setStyleSheet(pAction->css);
+        pEAction->setMenu(pNewMenu);
+
+        for (auto* childActionNode : *pAction->mpMyChildrenList) {
+            auto* childAction = static_cast<TAction*>(childActionNode);
+            addActionToMenu(childAction, pNewMenu);
+        }
+    }
+}
+
 void TToolBar::finalize()
 {
     if (mpTAction->mUseCustomLayout || !mpTAction->getButtonFillerOffset()) {
@@ -211,20 +304,20 @@ void TToolBar::slot_pressed(const bool isChecked)
     // entries...
     pB->menu();
 
-    if (pA->isPushDownButton()) {
-        pA->mButtonState = isChecked;
-        mpHost->mpConsole->mButtonState = (pA->mButtonState ? 2 : 1); // Was using 1 and 0 but that was wrong
-    } else {
-        pA->mButtonState = false;
-        pB->setChecked(false);               // This does NOT invoke the clicked()!
-        mpHost->mpConsole->mButtonState = 1; // Was effectively 0 but that is wrong
+    if (!pA->isPushDownButton()) {
+        pB->setChecked(false); // This does NOT invoke the clicked()!
     }
-
-    pA->execute();
+    pA->press(isChecked);
 }
 
 void TToolBar::clear()
 {
+    // A folder button's menu is parented to this toolbar, so it would outlive the button
+    for (auto* pButton : mpWidget->findChildren<QPushButton*>(Qt::FindDirectChildrenOnly)) {
+        if (QMenu* pMenu = pButton->menu()) {
+            pMenu->deleteLater();
+        }
+    }
     auto pW = new QWidget(this);
     setWidget(pW);
     mpWidget->deleteLater();
@@ -248,9 +341,6 @@ void TToolBar::clear()
 // Needed to detect mouse clicking on areas not covered by a button or menu:
 void TToolBar::mousePressEvent(QMouseEvent* e)
 {
-    if (mpHost.isNull()) {
-        return;
-    }
     if (e->button() & Qt::AllButtons) {
         // move focus back to the active console / command line
         mpHost->setFocusOnHostActiveCommandLine();

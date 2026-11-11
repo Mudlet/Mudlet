@@ -19,6 +19,8 @@
 
 #include "SecureStringUtils.h"
 
+#include "MudletApp.h"
+
 #include "utils.h"
 
 #include <atomic>
@@ -27,11 +29,12 @@
 #include <QDataStream>
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QObject>
 #include <QRandomGenerator>
 #include <QRegularExpression>
 #include <QSaveFile>
-#include <QStandardPaths>
+#include <QSet>
 #include <QVersionNumber>
 // Qt includes for encryption and SSL availability check
 #include <QCryptographicHash>
@@ -40,6 +43,105 @@
 #ifndef QT_NO_SSL
 #include <QSslSocket>
 #endif
+
+#if defined(Q_OS_UNIX)
+#include <sys/stat.h>
+#endif
+
+namespace {
+// Warned once per path per session, so repeats don't train readers to skip it; kept for the
+// connection dialog, since users never see stderr
+QSet<QString> gPathsWarnedAbout;
+QString gUnprotectedSecretPath;
+
+bool ownerOnlyOrWarn(const QString& path)
+{
+#if defined(Q_OS_UNIX)
+    const QFileDevice::Permissions reachableByOthers =
+            QFileDevice::ReadGroup | QFileDevice::WriteGroup | QFileDevice::ExeGroup | QFileDevice::ReadOther | QFileDevice::WriteOther | QFileDevice::ExeOther;
+
+    // Read back: chmod reports success on a file system that can't store permission bits (FAT, or a
+    // Windows drive mounted into WSL without metadata)
+    const QFileDevice::Permissions applied = QFileInfo(path).permissions();
+
+    if (applied.testFlag(QFileDevice::ReadOwner) && !applied.testAnyFlags(reachableByOthers)) {
+        return true;
+    }
+
+    gUnprotectedSecretPath = path;
+
+    if (!gPathsWarnedAbout.contains(path)) {
+        gPathsWarnedAbout.insert(path);
+        qWarning().nospace().noquote() << "SecureStringUtils: other accounts on this machine can still read \"" << path
+                                       << "\" - it holds a secret, but the file system would not take owner-only permissions for it.";
+    }
+
+    return false;
+#else
+    // No POSIX permission bits here (setPermissions() only toggles read-only), so the secret is only as
+    // protected as its directory - which for a portable install on removable media may be not at all.
+    static bool warnedAboutTheAbsenceOfPermissionBits = false;
+
+    if (!warnedAboutTheAbsenceOfPermissionBits) {
+        warnedAboutTheAbsenceOfPermissionBits = true;
+        qWarning().nospace().noquote() << "SecureStringUtils: this platform has no file permissions to narrow, so a saved password such as \"" << path
+                                       << "\" is protected only by the access control it inherits from the folder holding it.";
+    }
+
+    return true;
+#endif
+}
+
+bool restrictToOwner(const QString& path, const QFileDevice::Permissions ownerPermissions)
+{
+#if defined(Q_OS_UNIX)
+    QFile::setPermissions(path, ownerPermissions);
+#else
+    Q_UNUSED(ownerPermissions)
+#endif
+    return ownerOnlyOrWarn(path);
+}
+} // namespace
+
+bool SecureStringUtils::restrictFileToOwner(const QString& path)
+{
+    return restrictToOwner(path, QFileDevice::ReadOwner | QFileDevice::WriteOwner);
+}
+
+bool SecureStringUtils::restrictDirectoryToOwner(const QString& path)
+{
+    return restrictToOwner(path, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
+}
+
+bool SecureStringUtils::confirmFileIsOwnerOnly(const QString& path)
+{
+    return ownerOnlyOrWarn(path);
+}
+
+bool SecureStringUtils::restrictSaveFileToOwner(QSaveFile& file)
+{
+#if defined(Q_OS_UNIX)
+    // Not QSaveFile::setPermissions() alone: from Qt 6.12 it only records the mode for commit(),
+    // which drops a refusal to apply it, so the save succeeds and the file may stay readable to others
+    if (::fchmod(file.handle(), S_IRUSR | S_IWUSR) != 0) {
+        return false;
+    }
+    // Otherwise commit() on Qt 6.12+ gives the file the mode of the one it replaces, or the umask's
+    // default for a new one; the file system has just taken this mode, so commit() can apply it again
+    file.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner);
+    return true;
+#else
+    Q_UNUSED(file)
+    return true;
+#endif
+}
+
+QString SecureStringUtils::takeUnprotectedSecretPath()
+{
+    QString path;
+    path.swap(gUnprotectedSecretPath);
+    return path;
+}
 
 QString SecureStringUtils::getSSLBackendInfo()
 {
@@ -137,8 +239,11 @@ QByteArray SecureStringUtils::generateKey(const QByteArray& password, const QByt
     // Use iterative SHA-256 hashing to implement PBKDF2-like key derivation
     QByteArray derivedKey = password + salt;
 
+    // Reused, not built each round: where Qt hashes through OpenSSL, every construction looks the
+    // algorithm up again, which over PBKDF2_ITERATIONS rounds takes seconds
+    QCryptographicHash hash(QCryptographicHash::Sha256);
     for (int i = 0; i < iterations; ++i) {
-        QCryptographicHash hash(QCryptographicHash::Sha256);
+        hash.reset();
         hash.addData(derivedKey);
         hash.addData(salt);
         derivedKey = hash.result();
@@ -150,7 +255,7 @@ QByteArray SecureStringUtils::generateKey(const QByteArray& password, const QByt
     } else if (derivedKey.size() < KEY_SIZE) {
         // Extend key if needed by hashing again
         while (derivedKey.size() < KEY_SIZE) {
-            QCryptographicHash hash(QCryptographicHash::Sha256);
+            hash.reset();
             hash.addData(derivedKey);
             derivedKey.append(hash.result());
         }
@@ -238,8 +343,12 @@ QString SecureStringUtils::encryptStringForProfile(const QString& plaintext, con
     return base64Result;
 }
 
-QString SecureStringUtils::decryptStringForProfile(const QString& ciphertext, const QString& profileName)
+QString SecureStringUtils::decryptStringForProfile(const QString& ciphertext, const QString& profileName, bool* usedDerivableKey)
 {
+    if (usedDerivableKey) {
+        *usedDerivableKey = false;
+    }
+
     if (ciphertext.isEmpty() || profileName.isEmpty()) {
         return QString();
     }
@@ -258,27 +367,13 @@ QString SecureStringUtils::decryptStringForProfile(const QString& ciphertext, co
         return QString(); // Unsupported version
     }
 
-    // Extract salt (bytes 1-16)
-    QByteArray salt = encrypted.mid(1, SALT_SIZE);
-
-    // Get profile-specific encryption key
-    QByteArray profileKey = getProfileEncryptionKey(profileName);
-
-    if (profileKey.isEmpty()) {
-        return QString();
-    }
-
-    // Derive encryption key using PBKDF2
-    QByteArray derivedKey = generateKey(profileKey, salt, PBKDF2_ITERATIONS);
-
-    if (derivedKey.isEmpty()) {
-        return QString();
-    }
-
     // Current format: [VERSION:2][SALT:16][NONCE:16][HMAC:32][ENCRYPTED_DATA]
     if (encrypted.size() < 1 + SALT_SIZE + NONCE_SIZE + HMAC_SIZE) {
         return QString(); // Invalid format
     }
+
+    // Extract salt (bytes 1-16)
+    QByteArray salt = encrypted.mid(1, SALT_SIZE);
 
     // Extract nonce (bytes 17-32)
     QByteArray nonce = encrypted.mid(1 + SALT_SIZE, NONCE_SIZE);
@@ -289,13 +384,36 @@ QString SecureStringUtils::decryptStringForProfile(const QString& ciphertext, co
     // Extract encrypted data (bytes 65+)
     QByteArray encryptedData = encrypted.mid(1 + SALT_SIZE + NONCE_SIZE + HMAC_SIZE);
 
-    // Decrypt the data
-    QByteArray decrypted = decryptData(encryptedData, derivedKey, salt, nonce, hmac);
+    const auto decryptWith = [&](QByteArray profileKey) -> QByteArray {
+        if (profileKey.isEmpty()) {
+            return QByteArray();
+        }
+
+        // Derive encryption key using PBKDF2
+        QByteArray derivedKey = generateKey(profileKey, salt, PBKDF2_ITERATIONS);
+        secureByteArrayClear(profileKey);
+
+        if (derivedKey.isEmpty()) {
+            return QByteArray();
+        }
+
+        QByteArray plaintext = decryptData(encryptedData, derivedKey, salt, nonce, hmac);
+        secureByteArrayClear(derivedKey);
+        return plaintext;
+    };
+
+    // No key is created here, as a new one decrypts nothing; the derivable one only reads what older
+    // Mudlets wrote with it, and the HMAC check rejects whichever key is wrong
+    QByteArray decrypted = decryptWith(loadEncryptionKeyFromFile(profileName));
 
     if (decrypted.isEmpty()) {
-        // Securely clear sensitive data before returning
-        secureByteArrayClear(derivedKey);
-        secureByteArrayClear(profileKey);
+        decrypted = decryptWith(legacyProfileEncryptionKey(profileName));
+        if (!decrypted.isEmpty() && usedDerivableKey) {
+            *usedDerivableKey = true;
+        }
+    }
+
+    if (decrypted.isEmpty()) {
         return QString();
     }
 
@@ -305,8 +423,6 @@ QString SecureStringUtils::decryptStringForProfile(const QString& ciphertext, co
     // Clear sensitive data
     secureByteArrayClear(encrypted);
     secureByteArrayClear(salt);
-    secureByteArrayClear(profileKey);
-    secureByteArrayClear(derivedKey);
     secureByteArrayClear(decrypted);
 
     return result;
@@ -337,8 +453,15 @@ QByteArray SecureStringUtils::getProfileEncryptionKey(const QString& profileName
         return newKey;
     }
 
-    // Final fallback to deterministic key if all else fails
-    // This ensures compatibility when profile directory is read-only
+    // Not the derivable key: anyone who knows the profile name could decrypt what it encrypts
+    secureByteArrayClear(newKey);
+    qWarning().nospace().noquote() << "SecureStringUtils::getProfileEncryptionKey() WARNING - no encryption key could be stored for profile \"" << profileName
+                                   << "\", so passwords cannot be saved to its encrypted file.";
+    return QByteArray();
+}
+
+QByteArray SecureStringUtils::legacyProfileEncryptionKey(const QString& profileName)
+{
     QCryptographicHash hash(QCryptographicHash::Sha256);
 
     hash.addData(qsl("Mudlet").toUtf8());
@@ -350,8 +473,7 @@ QByteArray SecureStringUtils::getProfileEncryptionKey(const QString& profileName
 
 QByteArray SecureStringUtils::loadEncryptionKeyFromFile(const QString& profileName)
 {
-    // Build path manually to avoid circular dependencies
-    QString configPath = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
+    QString configPath = MudletApp::credentialFilesRoot();
     QString keyFilePath = QString("%1/profiles/%2/encryption_key").arg(configPath, profileName);
 
     QFile file(keyFilePath);
@@ -359,6 +481,10 @@ QByteArray SecureStringUtils::loadEncryptionKeyFromFile(const QString& profileNa
     if (!file.open(QIODevice::ReadOnly)) {
         return QByteArray(); // File doesn't exist or can't be read
     }
+
+    restrictFileToOwner(keyFilePath);
+    // Only this key and the passwords directory live under the credential files' root, so it is owner-only too
+    restrictDirectoryToOwner(QFileInfo(keyFilePath).absolutePath());
 
     QDataStream ifs(&file);
     // Use compatible data stream format
@@ -383,8 +509,7 @@ bool SecureStringUtils::storeEncryptionKeyToFile(const QString& profileName, con
         return false;
     }
 
-    // Build path manually to avoid circular dependencies
-    QString configPath = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
+    QString configPath = MudletApp::credentialFilesRoot();
     QString profileDir = QString("%1/profiles/%2").arg(configPath, profileName);
     QString keyFilePath = QString("%1/encryption_key").arg(profileDir);
 
@@ -392,16 +517,19 @@ bool SecureStringUtils::storeEncryptionKeyToFile(const QString& profileName, con
     QDir dir;
 
     if (!dir.mkpath(profileDir)) {
-        qDebug().nospace().noquote() << "SecureStringUtils::storeEncryptionKeyToFile() WARNING - could not create profile directory for \"" << profileName
-                                     << "\". Falling back to deterministic key derivation.";
+        qWarning().nospace().noquote() << "SecureStringUtils::storeEncryptionKeyToFile() WARNING - could not create profile directory for \"" << profileName << "\".";
         return false;
     }
+
+    // Before writing, not after: QSaveFile renames its temporary over the target, so the key would be
+    // exposed in between. Nothing but credentials lives in this directory.
+    restrictDirectoryToOwner(profileDir);
 
     QSaveFile file(keyFilePath);
 
     if (!file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
-        qDebug().nospace().noquote() << "SecureStringUtils::storeEncryptionKeyToFile() WARNING - could not create encryption key file for profile \"" << profileName
-                                     << "\", error: " << file.errorString() << ". Falling back to deterministic key derivation.";
+        qWarning().nospace().noquote() << "SecureStringUtils::storeEncryptionKeyToFile() WARNING - could not create encryption key file for profile \"" << profileName
+                                       << "\", error: " << file.errorString() << ".";
         return false;
     }
 
@@ -413,10 +541,12 @@ bool SecureStringUtils::storeEncryptionKeyToFile(const QString& profileName, con
     ofs << base64Key;
 
     if (!file.commit()) {
-        qDebug().nospace().noquote() << "SecureStringUtils::storeEncryptionKeyToFile() WARNING - could not save encryption key file for profile \"" << profileName
-                                     << "\", error: " << file.errorString() << ". Falling back to deterministic key derivation.";
+        qWarning().nospace().noquote() << "SecureStringUtils::storeEncryptionKeyToFile() WARNING - could not save encryption key file for profile \"" << profileName
+                                       << "\", error: " << file.errorString() << ".";
         return false;
     }
+
+    restrictFileToOwner(keyFilePath);
 
     return true;
 }
@@ -534,6 +664,8 @@ bool SecureStringUtils::storePassword(const QString& profileName, const QString&
         return false;
     }
 
+    restrictDirectoryToOwner(dir.absolutePath());
+
     // Encrypt the password
     QString encryptedPassword = encryptStringForProfile(password, profileName);
     if (encryptedPassword.isEmpty()) {
@@ -557,6 +689,8 @@ bool SecureStringUtils::storePassword(const QString& profileName, const QString&
         return false;
     }
 
+    restrictFileToOwner(filePath);
+
     return true;
 }
 
@@ -574,6 +708,8 @@ QString SecureStringUtils::retrievePassword(const QString& profileName, const QS
         return QString();
     }
 
+    restrictFileToOwner(filePath);
+
     QDataStream ifs(&file);
     ifs.setVersion(QDataStream::Qt_5_12);
 
@@ -585,8 +721,14 @@ QString SecureStringUtils::retrievePassword(const QString& profileName, const QS
         return QString();
     }
 
-    // Decrypt the password
-    return decryptStringForProfile(encryptedPassword, profileName);
+    bool usedDerivableKey = false;
+    QString password = decryptStringForProfile(encryptedPassword, profileName, &usedDerivableKey);
+
+    if (usedDerivableKey && !storePassword(profileName, key, password)) {
+        qWarning() << "SecureStringUtils::retrievePassword() - could not re-encrypt the password saved under the derivable key for profile" << profileName;
+    }
+
+    return password;
 }
 
 bool SecureStringUtils::removePassword(const QString& profileName, const QString& key)
@@ -618,8 +760,7 @@ bool SecureStringUtils::hasPassword(const QString& profileName, const QString& k
 
 QString SecureStringUtils::getPasswordFilePath(const QString& profileName, const QString& key)
 {
-    // Use the same profile path structure as mudlet
-    QString configPath = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
+    QString configPath = MudletApp::credentialFilesRoot();
     return QString("%1/profiles/%2/passwords/%3.dat").arg(configPath, profileName, key);
 }
 

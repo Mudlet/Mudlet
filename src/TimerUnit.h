@@ -26,12 +26,18 @@
 
 #include "utils.h"
 
+#include <QHash>
+#include <QList>
+#include <QMap>
 #include <QMultiMap>
 #include <QPointer>
 #include <QSet>
 #include <QString>
+#include <QtGlobal>
 
 #include <list>
+#include <tuple>
+#include <vector>
 
 class Host;
 class TTimer;
@@ -42,10 +48,10 @@ class QTimer;
 // still on the call stack - a timer script calling uninstallPackage() on its own
 // package would otherwise free the very TTimer execute() is running on. Deferred
 // items are flushed by doCleanup() once no timer script is executing - primarily
-// by mudlet::slot_timerFires() right after it finishes with the fired timer, so
+// by timerFired() right after it finishes with the fired timer, so
 // the "uninstalled" objects do not outlive the event loop iteration. This
 // complements the guard in TTimer::execute() and the re-verification of timer
-// existence after execute() in mudlet::slot_timerFires().
+// existence after execute() in timerFired().
 class TimerUnit
 {
     friend class XMLexport;
@@ -58,6 +64,7 @@ public:
     void resetStats();
     void removeAllTempTimers();
     std::list<TTimer*> getTimerRootNodeList() { return mTimerRootNodeList; }
+    QMap<int, TTimer*> getTimerList() { return mTimerMap; }
     TTimer* getTimer(int id);
     TTimer* findFirstTimer(const QString&) const;
     std::vector<int> findItems(const QString& name, const bool exactMatch = true, const bool caseSensitive = true);
@@ -69,6 +76,7 @@ public:
     int remainingTime(const int id) const;
     bool registerTimer(TTimer* pT);
     void unregisterTimer(TTimer* pT);
+    void timerFired(QTimer* pQTimer);
     void reParentTimer(int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1);
     void reParentTimer(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position = 0);
     void stopAllTriggers();
@@ -85,19 +93,15 @@ public:
     int getNewID();
     void uninstall(const QString&);
     void _uninstall(TTimer* pChild, const QString& packageName);
-    void changeHostName(const QString&);
 
 
     QMultiMap<QString, TTimer*> mLookupTable;
     QList<TTimer*> uninstallList;
     QSet<TTimer*> mCleanupSet;
-
-    // This will contain all the QTimers associated with the TTimer instances
-    // it is needed so that should mpHost be renamed we can update them to have
-    // the correct name (which is needed when they fire so the mudlet class
-    // knows when profile they belong to and where to find the TTimer that they
-    // are part of):
-    QSet<QTimer*> mQTimerSet;
+    bool hasPendingDeletes() const { return !mCleanupSet.isEmpty() || !uninstallList.isEmpty(); }
+    // Killed or uninstalled, itself or through an ancestor, but still in the lookup tables until doCleanup(),
+    // which an idle profile may not run for up to a minute
+    bool pendingDeletion(TTimer* pItem) const;
 
 private:
     TimerUnit() = default;
@@ -107,17 +111,25 @@ private:
     void addTimerRootNode(TTimer* pT, int parentPosition = -1, int childPosition = -1);
     void addTimer(TTimer* pT);
     void _removeTimerRootNode(TTimer* pT);
+    void listRootNode(TTimer* pT, std::list<TTimer*>::iterator before);
+    void unlistRootNode(TTimer* pT);
     void _removeTimer(TTimer*);
 
 
     QPointer<Host> mpHost;
     QMap<int, TTimer*> mTimerMap;
     std::list<TTimer*> mTimerRootNodeList;
+    // Where each root node sits in mTimerRootNodeList: std::list::remove() walks the whole list,
+    // which made freeing a batch of temporary timers quadratic
+    QHash<TTimer*, std::list<TTimer*>::iterator> mRootNodePositions;
     int mMaxID = 0;
     bool mModuleMember = false;
     // > 0 whilst a TTimer::execute() is on the call stack; uninstall() and
     // doCleanup() must not delete timers then - see the note above the class:
     int mProcessingDepth = 0;
+    // Ids of the timers with a script that does not compile whose QTimer the emergency stop stopped;
+    // the resume cannot activate() them, so it re-arms these and no others
+    QSet<int> mBrokenScriptTimersStopped;
     int statsActiveItems = 0;
     int statsItemsTotal = 0;
     int statsTempItems = 0;

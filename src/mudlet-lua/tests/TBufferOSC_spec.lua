@@ -1,9 +1,40 @@
--- Test for OSC sequence buffer underflow protection
--- This test verifies the fix for a buffer underflow bug in TBuffer::translateToPlainText()
--- when processing OSC (Operating System Command) sequences at the beginning of a buffer.
+-- How TBuffer::translateToPlainText() handles the out-of-band sequences that
+-- arrive mixed into the game's text: OSC, the DCS/SOS/PM/APC string sequences
+-- and escape sequences that Mudlet does not act on.
 
 describe("Tests TBuffer OSC sequence handling", function()
-  
+
+  -- feedTriggers writes to the main console; fish the line carrying our
+  -- unique marker back out of the buffer to see what actually rendered
+  local function findRecentLine(needle)
+    local lastLine = getLastLineNumber("main")
+    local lines = getLines("main", math.max(0, lastLine - 15), lastLine + 1)
+    for i = #lines, 1, -1 do
+      if lines[i]:find(needle, 1, true) then
+        return lines[i]
+      end
+    end
+    return nil
+  end
+
+  -- the colour a word on that line ended up with, for the cases where the text
+  -- coming out right is not enough and the formatting has to be checked too
+  local function foregroundOf(needle, word)
+    local lastLine = getLastLineNumber("main")
+    local first = math.max(0, lastLine - 15)
+    local lines = getLines("main", first, lastLine + 1)
+    for i = #lines, 1, -1 do
+      if lines[i]:find(needle, 1, true) then
+        moveCursor("main", 0, first + i - 1)
+        assert.are_not.equal(-1, selectString("main", word, 1))
+        local foreground = getTextFormat("main").foreground
+        moveCursorEnd("main")
+        return foreground
+      end
+    end
+    return nil
+  end
+
   describe("Tests the protection against buffer underflow in OSC sequences", function()
     
     it("should handle OSC sequences at buffer start without crashing", function()
@@ -95,19 +126,6 @@ describe("Tests TBuffer OSC sequence handling", function()
 
   describe("Tests ANSI string sequence handling (DCS, SOS, PM, APC)", function()
 
-    -- feedTriggers writes to the main console; fish the line carrying our
-    -- unique marker back out of the buffer to see what actually rendered
-    local function findRecentLine(needle)
-      local lastLine = getLastLineNumber("main")
-      local lines = getLines("main", math.max(0, lastLine - 15), lastLine + 1)
-      for i = #lines, 1, -1 do
-        if lines[i]:find(needle, 1, true) then
-          return lines[i]
-        end
-      end
-      return nil
-    end
-
     it("should swallow an APC sequence terminated by ST", function()
       assert.is_true(feedTriggers("APCST1(\027_secret apc payload\027\\)APCST1\n"))
       assert.equals("APCST1()APCST1", findRecentLine("APCST1"))
@@ -128,15 +146,103 @@ describe("Tests TBuffer OSC sequence handling", function()
       assert.equals("APCBEL1()APCBEL1", findRecentLine("APCBEL1"))
     end)
 
-    it("should swallow an APC sequence split across two packets", function()
+    -- A local feed arrives whole, so a sequence still open at its end ends with
+    -- it rather than swallowing the next feed's text. A sequence the game
+    -- splits is covered by the posting timeout cases in TBufferEncoding_spec.lua.
+    it("should end an APC sequence a local feed leaves open with that feed", function()
       assert.is_true(feedTriggers("APCSPLIT1(\027_first half "))
       assert.is_true(feedTriggers("second half\027\\)APCSPLIT1\n"))
-      assert.equals("APCSPLIT1()APCSPLIT1", findRecentLine("APCSPLIT1"))
+      assert.equals("APCSPLIT1(second half)APCSPLIT1", findRecentLine("APCSPLIT1"))
+    end)
+
+    -- An OSC introducer leaves mGotString alone, so had the last feed's string
+    -- sequence latch been kept, the link would be consumed without decoding. A
+    -- link written concealed shows whether its settings were decoded.
+    it("should decode an OSC sequence in the feed after one that left an APC sequence open", function()
+      local link = "\027]8;;send:look?config={\"visibility\":{\"action\":\"reveal\",\"delay\":3000}}\027\\"
+      assert.is_true(feedTriggers("APCSPLIT3(\027_open"))
+      assert.is_true(feedTriggers("APCSPLIT4(" .. link .. "LOOK\027]8;;\027\\)APCSPLIT4\n"))
+      assert.equals("APCSPLIT3(APCSPLIT4(    )APCSPLIT4", findRecentLine("APCSPLIT4"))
+    end)
+
+    -- feedTelnet(), as only the game stream carries a sequence over to the next packet
+    it("should decode an OSC 8 link whose opener or closer is split between packets", function()
+      finally(function() feedTriggers("\027]8;;\027\\\027[0m\n") end)
+      local open = "\027]8;;send:x?config={\"style\":{\"color\":\"#00ff00\"}}"
+      assert.is_true(feedTelnet("\027[0mOSCSPLIT1(" .. open))
+      assert.is_true(feedTelnet("\027\\link\027]8;;\027\\rest)OSCSPLIT1\r\n"))
+      assert.equals("OSCSPLIT1(linkrest)OSCSPLIT1", findRecentLine("OSCSPLIT1"))
+      assert.are.same({ 0, 255, 0 }, foregroundOf("OSCSPLIT1", "link"))
+      assert.is_true(feedTelnet("OSCSPLIT2(" .. open .. "\027\\link\027]8;"))
+      assert.is_true(feedTelnet(";\027\\rest)OSCSPLIT2\r\n"))
+      assert.are.same({ 0, 255, 0 }, foregroundOf("OSCSPLIT2", "link"))
+      assert.are.same(foregroundOf("OSCSPLIT2", "OSCSPLIT2"), foregroundOf("OSCSPLIT2", "rest"))
+    end)
+
+    -- A link carried past a line break has no text in any line yet, so the trim
+    -- and link sweep that line's commit sets off must leave it be. Its colour
+    -- comes from the link store, so a swept link loses it.
+    it("should keep an OSC 8 link whose line ended before its text, when that line trims the buffer", function()
+      local savedLimit, savedBatch = getConsoleBufferSize("main")
+      finally(function()
+        feedTriggers("\027]8;;\027\\\027[0m\n")
+        setConsoleBufferSize("main", savedLimit, savedBatch)
+      end)
+      -- every trim at this size sweeps, and each commit adds one line
+      setConsoleBufferSize("main", 100, 50)
+      for _ = 1, 300 do
+        if getLastLineNumber("main") == 99 then
+          break
+        end
+        feedTriggers("OSCSWEEP filler\n")
+      end
+      assert.equals(99, getLastLineNumber("main"))
+      assert.is_true(feedTriggers("\027[0mOSCSWEEP1(\027]8;;send:north?config={\"style\":{\"link\":{\"color\":\"#00ff00\"}}}\027\\\n"))
+      assert.is_true(getLastLineNumber("main") < 99, "the line did not trim the buffer, so this test proves nothing")
+      assert.is_true(feedTriggers("north\027]8;;\027\\)OSCSWEEP1\n"))
+      assert.are.same({ 0, 255, 0 }, foregroundOf("OSCSWEEP1", "north"))
+    end)
+
+    it("should not read the rest of a feed, or a later one, inside a sequence a nested feed left open", function()
+      local id = tempExactMatchTrigger("OSCNEST1", [[feedTriggers("\027]0;title")]])
+      finally(function() killTrigger(id) end)
+      assert.is_true(feedTriggers("OSCNEST1\nOSCNEST2(green)OSCNEST2\n"))
+      assert.equals("OSCNEST2(green)OSCNEST2", findRecentLine("OSCNEST2"))
+      assert.is_true(feedTriggers("OSCNEST3(\027[32mgreen\027[0m)OSCNEST3\n"))
+      assert.equals("OSCNEST3(green)OSCNEST3", findRecentLine("OSCNEST3"))
     end)
 
     it("should still render OSC 8 hyperlink text", function()
       assert.is_true(feedTriggers("OSCLINK1(\027]8;;https://example.com\027\\click me\027]8;;\027\\)OSCLINK1\n"))
       assert.equals("OSCLINK1(click me)OSCLINK1", findRecentLine("OSCLINK1"))
+    end)
+
+    -- A link written concealed shows which text joined it. Only a link start over
+    -- the length cap ends the open link: a preset: opens none, and the rest are not OSC 8.
+    describe("an OSC sequence too long to decode inside an open link", function()
+      local concealed = "\027]8;;send:look?config={\"visibility\":{\"action\":\"reveal\",\"delay\":3000}}\027\\"
+      local long = string.rep("z", 5000)
+      after_each(function() feedTriggers("\027]8;;\027\\\n") end)
+
+      it("should end the open link when it starts a link", function()
+        assert.is_true(feedTriggers("OSCLONG1(" .. concealed .. "A\027]8;;send:big?x=" .. long .. "\027\\more\027]8;;\027\\)OSCLONG1\n"))
+        assert.equals("OSCLONG1( more)OSCLONG1", findRecentLine("OSCLONG1"))
+      end)
+
+      it("should end the open link when its parameters run past the cap", function()
+        assert.is_true(feedTriggers("OSCLONG4(" .. concealed .. "A\027]8;id=" .. long .. ";send:big\027\\more\027]8;;\027\\)OSCLONG4\n"))
+        assert.equals("OSCLONG4( more)OSCLONG4", findRecentLine("OSCLONG4"))
+      end)
+
+      it("should leave the open link alone when it is a preset", function()
+        assert.is_true(feedTriggers("OSCLONG2(" .. concealed .. "A\027]8;;preset:big?x=" .. long .. "\027\\more\027]8;;\027\\)OSCLONG2\n"))
+        assert.equals("OSCLONG2(     )OSCLONG2", findRecentLine("OSCLONG2"))
+      end)
+
+      it("should leave the open link alone when it is not OSC 8", function()
+        assert.is_true(feedTriggers("OSCLONG3(" .. concealed .. "A\027]2;" .. long .. "\027\\more\027]8;;\027\\)OSCLONG3\n"))
+        assert.equals("OSCLONG3(     )OSCLONG3", findRecentLine("OSCLONG3"))
+      end)
     end)
 
     it("should still consume OSC color sequences", function()
@@ -149,6 +255,849 @@ describe("Tests TBuffer OSC sequence handling", function()
       assert.equals("STICKY1([not-a-csi)STICKY1", findRecentLine("STICKY1"))
     end)
 
+  end)
+
+  describe("Tests escape sequences that Mudlet does not handle", function()
+
+    local previousEncoding
+
+    -- these tests are not encoding agnostic: feedTriggers transcodes its UTF-8
+    -- argument into the server encoding, so under anything else the "\195\169"
+    -- pairs below reach the parser as a single byte and stop exercising the
+    -- multibyte lead byte that it must not swallow
+    setup(function()
+      previousEncoding = getServerEncoding()
+      setServerEncoding("UTF-8")
+    end)
+
+    teardown(function()
+      setServerEncoding(previousEncoding)
+    end)
+
+    it("should consume the two-byte escapes it recognises", function()
+      assert.is_true(feedTriggers("TWOBYTE1(\027" .. "7|\027" .. "8|\027c)TWOBYTE1\n"))
+      assert.equals("TWOBYTE1(||)TWOBYTE1", findRecentLine("TWOBYTE1"))
+    end)
+
+    it("should keep the byte of a two-byte escape it does not recognise", function()
+      assert.is_true(feedTriggers("UNKNOWN1(\027M\027D\027>\027=)UNKNOWN1\n"))
+      assert.equals("UNKNOWN1(MD>=)UNKNOWN1", findRecentLine("UNKNOWN1"))
+    end)
+
+    it("should consume a character set designation", function()
+      assert.is_true(feedTriggers("CHARSET1(\027(B)CHARSET1\n"))
+      assert.equals("CHARSET1()CHARSET1", findRecentLine("CHARSET1"))
+    end)
+
+    it("should not let a CSI introducer name a character set and start a CSI", function()
+      assert.is_true(feedTriggers("GUARD1(\027([31mred\027[0m)GUARD1\n"))
+      assert.equals("GUARD1(31mred)GUARD1", findRecentLine("GUARD1"))
+    end)
+
+    it("should not let an APC introducer name a character set and start a string sequence", function()
+      assert.is_true(feedTriggers("GUARD2(\027(_payload)GUARD2\n"))
+      assert.equals("GUARD2(payload)GUARD2", findRecentLine("GUARD2"))
+    end)
+
+    it("should restart the sequence when an escape follows a designation", function()
+      assert.is_true(feedTriggers("RELATCH1(\027(\027[31mred\027[0m)RELATCH1\n"))
+      assert.equals("RELATCH1(red)RELATCH1", findRecentLine("RELATCH1"))
+    end)
+
+    it("should keep the letter after a stray escape", function()
+      assert.is_true(feedTriggers("STRAY1(\027ABC)STRAY1\n"))
+      assert.equals("STRAY1(ABC)STRAY1", findRecentLine("STRAY1"))
+    end)
+
+    it("should keep the digit after a stray escape", function()
+      assert.is_true(feedTriggers("STRAY2(\027" .. "1234)STRAY2\n"))
+      assert.equals("STRAY2(1234)STRAY2", findRecentLine("STRAY2"))
+    end)
+
+    it("should keep the text after several stray escapes", function()
+      assert.is_true(feedTriggers("STRAY3(\027A\027BCD)STRAY3\n"))
+      assert.equals("STRAY3(ABCD)STRAY3", findRecentLine("STRAY3"))
+    end)
+
+    it("should keep a run of punctuation after a stray escape", function()
+      assert.is_true(feedTriggers("PUNCT1(\027--- Hello)PUNCT1\n"))
+      assert.equals("PUNCT1(--- Hello)PUNCT1", findRecentLine("PUNCT1"))
+    end)
+
+    it("should keep a space after a stray escape", function()
+      assert.is_true(feedTriggers("PUNCT2(\027 spaced)PUNCT2\n"))
+      assert.equals("PUNCT2( spaced)PUNCT2", findRecentLine("PUNCT2"))
+    end)
+
+    it("should keep a multibyte character that follows a stray escape", function()
+      assert.is_true(feedTriggers("UTF8ESC1(caf\027\195\169)UTF8ESC1\n"))
+      assert.equals("UTF8ESC1(caf\195\169)UTF8ESC1", findRecentLine("UTF8ESC1"))
+    end)
+
+    it("should keep a multibyte character that cannot name a character set", function()
+      assert.is_true(feedTriggers("UTF8ESC2(\027(\195\169)UTF8ESC2\n"))
+      assert.equals("UTF8ESC2(\195\169)UTF8ESC2", findRecentLine("UTF8ESC2"))
+    end)
+
+    it("should keep a line break that follows a stray escape", function()
+      assert.is_true(feedTriggers("NLESC1(\027\nNLESC2)\n"))
+      assert.equals("NLESC1(", findRecentLine("NLESC1"))
+      assert.equals("NLESC2)", findRecentLine("NLESC2"))
+    end)
+
+    it("should keep a line break that cannot name a character set", function()
+      assert.is_true(feedTriggers("NLESC3(\027(\nNLESC4)\n"))
+      assert.equals("NLESC3(", findRecentLine("NLESC3"))
+      assert.equals("NLESC4)", findRecentLine("NLESC4"))
+    end)
+
+    -- as for the APC sequence above, a local feed's trailing escape ends with it
+    it("should not apply a trailing escape to the next local feed", function()
+      assert.is_true(feedTriggers("SPLITESC1(\027"))
+      assert.is_true(feedTriggers("7 then ABC)SPLITESC1\n"))
+      assert.equals("SPLITESC1(7 then ABC)SPLITESC1", findRecentLine("SPLITESC1"))
+    end)
+
+    it("should not apply a trailing designation to the next local feed", function()
+      assert.is_true(feedTriggers("SPLITINT1(\027("))
+      assert.is_true(feedTriggers("B)SPLITINT1\n"))
+      assert.equals("SPLITINT1(B)SPLITINT1", findRecentLine("SPLITINT1"))
+    end)
+
+    it("should not eat a multibyte character starting the next local feed", function()
+      assert.is_true(feedTriggers("SPLITESC2(\027"))
+      assert.is_true(feedTriggers("\195\169)SPLITESC2\n"))
+      assert.equals("SPLITESC2(\195\169)SPLITESC2", findRecentLine("SPLITESC2"))
+    end)
+
+    it("should keep an 8-bit character that follows a stray escape", function()
+      setServerEncoding("ISO 8859-1")
+      assert.is_true(feedTriggers("LATIN1(\027\195\169)LATIN1\n"))
+      assert.equals("LATIN1(\195\169)LATIN1", findRecentLine("LATIN1"))
+      setServerEncoding("UTF-8")
+    end)
+
+  end)
+
+  -- Every byte of a CSI parameter string is in "0-9:;<=>?"; one of '<', '=',
+  -- '>' or '?' in the FIRST byte marks the sequence as private/reserved, which
+  -- Mudlet does not interpret. Consuming a narrower set anywhere leaves the
+  -- tail of such a sequence on screen as game text.
+  describe("Tests private/reserved CSI sequences", function()
+
+    it("should consume a private DEC sequence that hides the cursor", function()
+      assert.is_true(feedTriggers("CSIPRIV1(\027[?25l)CSIPRIV1\n"))
+      assert.equals("CSIPRIV1()CSIPRIV1", findRecentLine("CSIPRIV1"))
+    end)
+
+    it("should consume a private DEC sequence with a multi-digit parameter", function()
+      assert.is_true(feedTriggers("CSIPRIV2(\027[?1049h)CSIPRIV2\n"))
+      assert.equals("CSIPRIV2()CSIPRIV2", findRecentLine("CSIPRIV2"))
+    end)
+
+    it("should consume a reserved sequence introduced by '<'", function()
+      assert.is_true(feedTriggers("CSIPRIV3(\027[<0;10;10M)CSIPRIV3\n"))
+      assert.equals("CSIPRIV3()CSIPRIV3", findRecentLine("CSIPRIV3"))
+    end)
+
+    -- Two feedTriggers() calls cannot express a packet split: a local feed ends
+    -- whatever sequence it leaves open, so the "?25" is dropped with it and the
+    -- "l" is the next feed's text. A split from the game is covered by the
+    -- posting timeout cases in TBufferEncoding_spec.lua.
+    it("should not leak a private sequence a local feed leaves open", function()
+      assert.is_true(feedTriggers("CSISPLIT1(\027[?25"))
+      assert.is_true(feedTriggers("l)CSISPLIT1\n"))
+      assert.equals("CSISPLIT1(l)CSISPLIT1", findRecentLine("CSISPLIT1"))
+    end)
+
+    -- Guards the other direction: an ordinary digit-initial parameter string and
+    -- an empty one must still reach the SGR handler and leave no text behind.
+    it("should still consume a digit-initial SGR sequence", function()
+      assert.is_true(feedTriggers("CSISGR1(\027[0;32mgreen\027[0m)CSISGR1\n"))
+      assert.equals("CSISGR1(green)CSISGR1", findRecentLine("CSISGR1"))
+    end)
+
+    it("should still consume an SGR sequence with no parameters", function()
+      assert.is_true(feedTriggers("CSISGR2(\027[mplain)CSISGR2\n"))
+      assert.equals("CSISGR2(plain)CSISGR2", findRecentLine("CSISGR2"))
+    end)
+
+    -- SlothMUD ends every coloured span with this. '>' is a parameter byte, not
+    -- a terminator, so the "m" is the final byte and nothing may reach the
+    -- screen.
+    it("should consume a reserved byte that appears after the first parameter", function()
+      assert.is_true(feedTriggers("CSIMID1(\027[0;37;4>mtext)CSIMID1\n"))
+      assert.equals("CSIMID1(text)CSIMID1", findRecentLine("CSIMID1"))
+    end)
+
+    it("should consume a reserved byte in the middle of a parameter", function()
+      assert.is_true(feedTriggers("CSIMID2(\027[0;3>7mtext)CSIMID2\n"))
+      assert.equals("CSIMID2(text)CSIMID2", findRecentLine("CSIMID2"))
+    end)
+
+    it("should consume every reserved byte appearing after the first parameter", function()
+      assert.is_true(feedTriggers("CSIMID3(\027[0;37;4<m\027[0;37;4=m\027[0;37;4?m)CSIMID3\n"))
+      assert.equals("CSIMID3()CSIMID3", findRecentLine("CSIMID3"))
+    end)
+
+    -- The parameters either side of the unusable one still have to be applied,
+    -- so both runs have to come out the colour a sequence without it gives.
+    it("should still apply the usable parameters around a reserved byte", function()
+      assert.is_true(feedTriggers("CSIMID4(\027[0;32mgreen\027[0;37;4>mwhite)CSIMID4\n"))
+      assert.equals("CSIMID4(greenwhite)CSIMID4", findRecentLine("CSIMID4"))
+      local green = foregroundOf("CSIMID4", "green")
+      local white = foregroundOf("CSIMID4", "white")
+      assert.are_not.same(green, white)
+
+      assert.is_true(feedTriggers("CSIREF4(\027[0;32mgreen\027[0;37mwhite)CSIREF4\n"))
+      assert.are.same(foregroundOf("CSIREF4", "green"), green)
+      assert.are.same(foregroundOf("CSIREF4", "white"), white)
+    end)
+
+    -- A CSI that never gets a final byte is unusable, but the byte that ends
+    -- the scan is not part of it and has to be left alone.
+    it("should not swallow the escape that ends a sequence with no final byte", function()
+      assert.is_true(feedTriggers("CSINOFIN1(\027[0;4>\027[0mtext)CSINOFIN1\n"))
+      assert.equals("CSINOFIN1(text)CSINOFIN1", findRecentLine("CSINOFIN1"))
+    end)
+
+    it("should not swallow the newline that ends a sequence with no final byte", function()
+      assert.is_true(feedTriggers("CSINOFIN2(\027[0;4>\nCSINOFIN3)\n"))
+      assert.equals("CSINOFIN3)", findRecentLine("CSINOFIN3"))
+    end)
+
+    it("should not swallow the character that ends a sequence with no final byte", function()
+      assert.is_true(feedTriggers("CSINOFIN4(\027[1\195\169)CSINOFIN4\n"))
+      assert.equals("CSINOFIN4(\195\169)CSINOFIN4", findRecentLine("CSINOFIN4"))
+    end)
+
+    -- A private sequence is skipped on a path of its own, which has to take its
+    -- intermediate and final bytes too, and leave the byte that cuts it short.
+    it("should consume a private sequence with an intermediate byte", function()
+      assert.is_true(feedTriggers("CSIPRIV4(\027[?5$pX)CSIPRIV4\n"))
+      assert.equals("CSIPRIV4(X)CSIPRIV4", findRecentLine("CSIPRIV4"))
+    end)
+
+    it("should leave the byte that cuts a private sequence short", function()
+      assert.is_true(feedTriggers("CSIPRIV5(\027[?25\nCSIPRIV6)\n"))
+      assert.equals("CSIPRIV5(", findRecentLine("CSIPRIV5"))
+      assert.equals("CSIPRIV6)", findRecentLine("CSIPRIV6"))
+      assert.is_true(feedTriggers("CSIPRIV7(\027[?25\195\169)CSIPRIV7\n"))
+      assert.equals("CSIPRIV7(\195\169)CSIPRIV7", findRecentLine("CSIPRIV7"))
+    end)
+
+    -- Consuming a reserved byte puts it in front of the SGR decoder, so a
+    -- parameter it has made unreadable must change nothing rather than be
+    -- read as far as it parses or fall back to colour zero.
+    it("should apply nothing from a parameter a reserved byte has broken", function()
+      assert.is_true(feedTriggers("CSIBAD1(\027[0;37mplain\027[1<2mafter)CSIBAD1\n"))
+      assert.equals("CSIBAD1(plainafter)CSIBAD1", findRecentLine("CSIBAD1"))
+      assert.are.same(foregroundOf("CSIBAD1", "plain"), foregroundOf("CSIBAD1", "after"))
+    end)
+
+    it("should apply nothing from a colour index a reserved byte has broken", function()
+      assert.is_true(feedTriggers("CSIBAD2(\027[0;37mplain\027[38;5;1<2mafter)CSIBAD2\n"))
+      assert.equals("CSIBAD2(plainafter)CSIBAD2", findRecentLine("CSIBAD2"))
+      assert.are.same(foregroundOf("CSIBAD2", "plain"), foregroundOf("CSIBAD2", "after"))
+    end)
+
+    -- A CSI carrying an "intermediate" byte (space, or one of "!\"#$%&'()*+,-./")
+    -- is one Mudlet does not act on, so all of it goes up to and including its
+    -- final byte.
+    it("should consume a sequence with an intermediate byte", function()
+      assert.is_true(feedTriggers("CSIINT1(\027[1 pX)CSIINT1\n"))
+      assert.equals("CSIINT1(X)CSIINT1", findRecentLine("CSIINT1"))
+    end)
+
+    -- The intermediate byte is the last byte of the packet, so the final byte
+    -- arrives with the next one and is the "Y".
+    it("should consume an intermediate byte that is the last byte of the data", function()
+      assert.is_true(feedTelnet("CSIINT2(\027[1 "))
+      assert.is_true(feedTelnet("Y)CSIINT2\r\n"))
+      assert.equals("CSIINT2()CSIINT2", findRecentLine("CSIINT2"))
+    end)
+
+    -- A malformed sequence can carry parameter bytes after an intermediate one,
+    -- as a negative number does; those belong to the sequence too.
+    it("should consume a sequence with parameter bytes after its intermediate byte", function()
+      local cases = {
+        {"CSIINT3(\027[1 mAB)CSIINT3", "CSIINT3(AB)CSIINT3"},
+        {"CSIINT4(\027[1+mAB)CSIINT4", "CSIINT4(AB)CSIINT4"},
+        {"CSIINT5(AB\027[-5CCD)CSIINT5", "CSIINT5(ABCD)CSIINT5"},
+        {"CSIINT6(\027[38;5;-1mAB)CSIINT6", "CSIINT6(AB)CSIINT6"},
+        {"CSIINT7(\027[38;2;300;-1;0mAB)CSIINT7", "CSIINT7(AB)CSIINT7"},
+      }
+      for _, case in ipairs(cases) do
+        assert.is_true(feedTriggers(case[1] .. "\n"))
+        assert.equals(case[2], findRecentLine(case[2]:match("^(CSIINT%d)")))
+      end
+    end)
+
+    -- Without its intermediate byte the sequence would be an SGR or a cursor
+    -- movement, so none of it may take effect.
+    it("should not act on a sequence with an intermediate byte", function()
+      assert.is_true(feedTriggers("CSIACT1(\027[0;37mplain\027[1;31 mafter\027[0m)CSIACT1\n"))
+      assert.equals("CSIACT1(plainafter)CSIACT1", findRecentLine("CSIACT1"))
+      assert.are.same(foregroundOf("CSIACT1", "plain"), foregroundOf("CSIACT1", "after"))
+      assert.is_true(feedTriggers("CSIACT2(AB\027[5 CCD)CSIACT2\n"))
+      assert.equals("CSIACT2(ABCD)CSIACT2", findRecentLine("CSIACT2"))
+    end)
+
+    -- The rest of a sequence the last packet cut short is read along with
+    -- the bytes held from it, not as a sequence of its own.
+    it("should not act on the rest of a sequence with an intermediate byte split between packets", function()
+      assert.is_true(feedTelnet("CSIACT3(\027[0;37mplain\027[38;5;-"))
+      assert.is_true(feedTelnet("1mafter\027[0m)CSIACT3\r\n"))
+      assert.equals("CSIACT3(plainafter)CSIACT3", findRecentLine("CSIACT3"))
+      assert.are.same(foregroundOf("CSIACT3", "plain"), foregroundOf("CSIACT3", "after"))
+    end)
+
+    it("should apply an SGR sequence split between packets", function()
+      assert.is_true(feedTelnet("CSIACT4(\027[0;3"))
+      assert.is_true(feedTelnet("2mgreen\027[0m)CSIACT4\r\n"))
+      assert.equals("CSIACT4(green)CSIACT4", findRecentLine("CSIACT4"))
+      assert.is_true(feedTriggers("\027[0mCSIACT5(\027[0;32mgreen\027[0m)CSIACT5\n"))
+      assert.are.same(foregroundOf("CSIACT5", "green"), foregroundOf("CSIACT4", "green"))
+      -- nothing held from an OSC split between packets is left for a CSI to pick up
+      assert.is_true(feedTelnet("CSIACT6(\027]0;title"))
+      assert.is_true(feedTelnet("\7)CSIACT6\r\n"))
+      assert.equals("CSIACT6()CSIACT6", findRecentLine("CSIACT6"))
+      assert.is_true(feedTelnet("CSIACT7(\027["))
+      assert.is_true(feedTelnet("0;32mgreen\027[0m)CSIACT7\r\n"))
+      assert.equals("CSIACT7(green)CSIACT7", findRecentLine("CSIACT7"))
+      assert.are.same(foregroundOf("CSIACT5", "green"), foregroundOf("CSIACT7", "green"))
+    end)
+
+    -- Only a final byte belongs to the sequence: the line ending or character
+    -- that cuts one short is still read as text. A scan that stops at the
+    -- intermediate byte passes these too: they guard the scan that goes past it.
+    it("should leave the byte that cuts a sequence with an intermediate byte short", function()
+      assert.is_true(feedTriggers("CSIINT8(\027[1 \nCSIINT9)\n"))
+      assert.equals("CSIINT8(", findRecentLine("CSIINT8"))
+      assert.equals("CSIINT9)", findRecentLine("CSIINT9"))
+      assert.is_true(feedTriggers("CSIINTA(\027[1 \195\169)CSIINTA\n"))
+      assert.equals("CSIINTA(\195\169)CSIINTA", findRecentLine("CSIINTA"))
+      -- and the same for a private sequence, which is skipped on a path of its own
+      assert.is_true(feedTriggers("CSIINTB(\027[?1 \nCSIINTC)\n"))
+      assert.equals("CSIINTB(", findRecentLine("CSIINTB"))
+      assert.equals("CSIINTC)", findRecentLine("CSIINTC"))
+      assert.is_true(feedTriggers("CSIINTD(\027[?1 \195\169)CSIINTD\n"))
+      assert.equals("CSIINTD(\195\169)CSIINTD", findRecentLine("CSIINTD"))
+    end)
+
+    -- MAX_CSI_SEQUENCE_LENGTH in TBuffer.cpp: past it the sequence is
+    -- thrown away rather than buffered without bound while a server that never
+    -- sends a final byte keeps feeding parameter bytes.
+    local lengthCap = 4096
+
+    -- no-op parameters padding a green one out to the given parameter string
+    -- length, so a discard and a parse can be told apart by the colour - either
+    -- way nothing of the sequence reaches the screen
+    local function paddedGreen(length)
+      local oddPadding = length % 2 == 1 and ";" or ""
+      return string.rep("0;", math.floor((length - 2) / 2)) .. oddPadding .. "32"
+    end
+
+    -- The two lengths either side of the cap, rather than a comfortable margin
+    -- on each side: the check is ">= MAX_CSI_SEQUENCE_LENGTH" on the bytes ahead
+    -- of the final byte, and only these two tell that apart from a ">".
+    it("should still act on a parameter string one byte under the length cap", function()
+      assert.is_true(feedTriggers("\027[0mCSICAP1(\027[" .. paddedGreen(lengthCap - 1) .. "mgreen\027[0m)CSICAP1\n"))
+      assert.equals("CSICAP1(green)CSICAP1", findRecentLine("CSICAP1"))
+      assert.is_true(feedTriggers("\027[0mCSICAP2(green)CSICAP2\n"))
+      assert.are_not.same(foregroundOf("CSICAP1", "green"), foregroundOf("CSICAP2", "green"))
+    end)
+
+    it("should discard a parameter string that is exactly the length cap", function()
+      assert.is_true(feedTriggers("\027[0mCSICAP3(\027[" .. paddedGreen(lengthCap) .. "mgreen\027[0m)CSICAP3\n"))
+      assert.equals("CSICAP3(green)CSICAP3", findRecentLine("CSICAP3"))
+      assert.is_true(feedTriggers("\027[0mCSICAP4(green)CSICAP4\n"))
+      assert.are.same(foregroundOf("CSICAP3", "green"), foregroundOf("CSICAP4", "green"))
+    end)
+
+    -- the discard keeps the line ending that cut the sequence short, whether
+    -- the scan stopped in the parameters or in the intermediate bytes
+    it("should keep the line ending after a sequence it discards for its length", function()
+      for i, filler in ipairs({"1", " "}) do
+        local before, after = ("CSICAPCUT%dA"):format(i), ("CSICAPCUT%dB"):format(i)
+        assert.is_true(feedTriggers(before .. "(\027[" .. string.rep(filler, lengthCap) .. "\n" .. after .. ")\n"))
+        assert.equals(before .. "(", findRecentLine(before))
+        assert.equals(after .. ")", findRecentLine(after))
+      end
+    end)
+
+  end)
+
+  -- CUF (cursor forward) is emulated by writing spaces, as one game uses it
+  describe("Tests the CUF cursor forward sequence", function()
+
+    it("should move forward by the requested number of spaces", function()
+      assert.is_true(feedTriggers("CUF1(\027[3C)CUF1\n"))
+      assert.equals("CUF1(   )CUF1", findRecentLine("CUF1"))
+    end)
+
+    it("should keep its spaces on a line longer than the wrap width", function()
+      local wrapAt = getWindowWrap("main")
+      local seen = {}
+      local trigger = tempRegexTrigger("^CUF5", function()
+        seen[#seen + 1] = line
+      end)
+      setWindowWrap("main", 20)
+      local ok1 = feedTriggers("CUF5" .. string.rep("a", 15) .. "\027[1Cb\n")
+      local ok2 = feedTriggers("CUF5" .. string.rep("c", 11) .. "\027[10Cd\n")
+      setWindowWrap("main", wrapAt)
+      killTrigger(trigger)
+      assert.is_true(ok1)
+      assert.is_true(ok2)
+      assert.equals("CUF5" .. string.rep("a", 15) .. " b", seen[1])
+      assert.equals("CUF5" .. string.rep("c", 11) .. string.rep(" ", 10) .. "d", seen[2])
+    end)
+
+    -- the count comes from the game, so it has to be clamped: this one
+    -- sequence would otherwise ask for about 24GB of spaces. Wrapping drops the
+    -- spaces it breaks at, so the length is read from the line triggers see
+    it("should not move further than 1000 columns", function()
+      local seen
+      local trigger = tempRegexTrigger("^CUF2\\(", function()
+        seen = line
+      end)
+      local ok = feedTriggers("CUF2(\027[999999999C)CUF2\n")
+      killTrigger(trigger)
+      assert.is_true(ok)
+      assert.is_truthy(seen)
+      local spaces = seen:match("^CUF2%(( *)%)CUF2$")
+      assert.is_truthy(spaces, seen:sub(1, 200))
+      assert.is_true(#spaces < 1000, "moved forward " .. #spaces .. " columns")
+    end)
+
+    it("should stop at the right margin over a run of moves", function()
+      local seen
+      local trigger = tempRegexTrigger("^CUF3\\(", function()
+        seen = #line
+      end)
+      local ok = feedTriggers("CUF3(" .. string.rep("\027[1000C", 1000) .. ")CUF3\n")
+      killTrigger(trigger)
+      assert.is_true(ok)
+      assert.is_truthy(seen)
+      assert.is_true(seen <= 1000 + 5, "a run of moves made a line of " .. seen .. " characters")
+    end)
+
+    it("should not move further than 1000 columns when the wrap is wider", function()
+      local wrapAt = getWindowWrap("main")
+      setWindowWrap("main", 5000)
+      local before = getLastLineNumber("main")
+      local ok = feedTriggers("CUF4(\027[999999999C)CUF4\n")
+      setWindowWrap("main", wrapAt)
+      assert.is_true(ok)
+      local text = table.concat(getLines("main", before, getLastLineNumber("main") + 1))
+      local spaces = text:match("CUF4%(( *)%)CUF4")
+      assert.is_truthy(spaces, text:sub(1, 200))
+      assert.is_true(#spaces < 1000, "moved forward " .. #spaces .. " columns with a wrap of 5000")
+    end)
+
+  end)
+
+  -- A line written through TBuffer::appendLine() that holds the documentation
+  -- phrase is dropped whole, and a banner of worked OSC 8 examples goes into
+  -- the main console's buffer instead - whichever console the line was written
+  -- to. Paths that do not reach appendLine() print the phrase as ordinary text:
+  -- anything the game sends, and an echo from inside a trigger. The injection
+  -- is debounced to a second of wall clock and the timestamp it keeps lives on
+  -- the main buffer, so a spec that can follow another's injection waits it out.
+  -- The phrase is built rather than written out below, and kept out of the
+  -- describe and it names, so busted's own report cannot set it off.
+  describe("Tests the OSC 8 documentation helper phrase", function()
+    local phrase = "!osc8-" .. "docs"
+    local otherWindow = "osc8DocsSpecWindow"
+    -- pumpEvents() is inert outside test mode, so the debounce window below
+    -- never elapses and the second injection would be suppressed
+    local testMode = os.getenv("MUDLET_TEST_MODE")
+
+    setup(function()
+      createMiniConsole(otherWindow, 0, 0, 200, 100)
+    end)
+
+    teardown(function()
+      deleteMiniConsole(otherWindow)
+    end)
+
+    -- everything main has been told since the marker line, found by scanning
+    -- back for the marker rather than by holding on to an index: sixty lines of
+    -- banner can push the main buffer over its limit, and the trim that follows
+    -- moves every absolute index
+    local function mainSinceMarker(marker)
+      local lastLine = getLastLineNumber("main")
+      local reversed = {}
+      for lineNumber = lastLine, math.max(0, lastLine - 300), -1 do
+        local line = getLines("main", lineNumber, lineNumber + 1)[1] or ""
+        if line:find(marker, 1, true) then
+          local ordered = {}
+          for index = #reversed, 1, -1 do
+            ordered[#ordered + 1] = reversed[index]
+          end
+          return ordered
+        end
+        reversed[#reversed + 1] = line
+      end
+      return nil
+    end
+
+    local function someLineHolds(lines, needle)
+      for _, line in ipairs(lines) do
+        if line:find(needle, 1, true) then
+          return true
+        end
+      end
+      return false
+    end
+
+    it("writes the worked examples into the main console", function()
+      if not testMode then
+        pending("waiting out the injection debounce needs MUDLET_TEST_MODE")
+        return
+      end
+      echo("OSCDOCSMARKA\n")
+      echo("OSCDOCS1 " .. phrase .. " OSCDOCS2")
+      local injected = mainSinceMarker("OSCDOCSMARKA")
+      if injected and not someLineHolds(injected, "OSC 8 Hyperlink Examples") then
+        -- an earlier spec's injection is still inside the debounce window
+        pumpEvents(1100)
+        echo("OSCDOCSMARKA\n")
+        echo("OSCDOCS1 " .. phrase .. " OSCDOCS2")
+        injected = mainSinceMarker("OSCDOCSMARKA")
+      end
+      assert.is_truthy(injected, "the marker line the examples follow is gone")
+      assert.is_true(#injected > 10, "only " .. #injected .. " lines were injected")
+      assert.is_true(someLineHolds(injected, "OSC 8 Hyperlink Examples"), table.concat(injected, "\n"))
+      assert.is_true(someLineHolds(injected, "wiki.mudlet.org"), table.concat(injected, "\n"))
+      -- what was written goes whole, not just the phrase out of the middle of it
+      assert.is_false(someLineHolds(injected, "OSCDOCS1"))
+      assert.is_false(someLineHolds(injected, "OSCDOCS2"))
+    end)
+
+    it("writes them into main whichever window they were asked for in", function()
+      if not testMode then
+        pending("waiting out the injection debounce needs MUDLET_TEST_MODE")
+        return
+      end
+      pumpEvents(1100)
+      clearWindow(otherWindow)
+      echo("OSCDOCSMARKB\n")
+      echo(otherWindow, phrase)
+      local injected = mainSinceMarker("OSCDOCSMARKB")
+      assert.is_truthy(injected, "the marker line the examples follow is gone")
+      assert.is_true(someLineHolds(injected, "OSC 8 Hyperlink Examples"), table.concat(injected, "\n"))
+      -- and nothing at all in the window the phrase was written to
+      assert.are.equal("", getLines(otherWindow, 0, 1)[1] or "")
+      -- the debounce timestamp lives on the main buffer, so the window the
+      -- phrase arrived in does not get a window of its own
+      echo(phrase)
+      assert.are.equal(#injected, #mainSinceMarker("OSCDOCSMARKB"))
+    end)
+  end)
+
+  -- Of the three visibility actions a link can carry, a delayed reveal is the
+  -- only one that completes without a click: concealment waits to be clicked
+  -- before its timer even starts, and reveal-then-conceal only gets through its
+  -- reveal half unattended. The link is written concealed and the visibility
+  -- manager puts its text back on the first tick of its 100ms poll past the
+  -- delay, so the wait below is not the delay itself. The manager also restores
+  -- the link indices at the same time, which no Lua call can read back - that
+  -- half of the reveal is left to a functional test.
+  describe("Tests OSC 8 hyperlink visibility expiry", function()
+    local function lineHolding(needle)
+      local lastLine = getLastLineNumber("main")
+      for lineNumber = lastLine, math.max(0, lastLine - 20), -1 do
+        local line = getLines("main", lineNumber, lineNumber + 1)[1]
+        if line and line:find(needle, 1, true) then
+          return lineNumber, line
+        end
+      end
+      return nil
+    end
+
+    -- scans the whole buffer, unlike lineHolding()'s 20-line tail
+    local function findLine(needle)
+      for lineNumber = 0, getLastLineNumber("main") do
+        local line = getLines("main", lineNumber, lineNumber + 1)[1]
+        if line and line:find(needle, 1, true) then
+          return lineNumber, line
+        end
+      end
+      return nil
+    end
+
+    local function waitForLine(lineNumber, expected)
+      for _ = 1, 60 do
+        if getLines("main", lineNumber, lineNumber + 1)[1] == expected then
+          return
+        end
+        pumpEvents(50)
+      end
+    end
+
+    -- the buffer size is global state, so restore it even when the body throws or
+    -- a failure here fails an unrelated spec later in the run
+    local function withSmallBuffer(body)
+      local wasLines, wasBatch = getConsoleBufferSize("main")
+      setConsoleBufferSize("main", 100, 20)
+      local ok, err = pcall(body)
+      setConsoleBufferSize("main", wasLines, wasBatch)
+      if not ok then error(err, 0) end
+    end
+
+    it("reveals a link that was written concealed once its delay is up", function()
+      if not os.getenv("MUDLET_TEST_MODE") then
+        -- pumpEvents() is inert outside test mode, so the reveal never fires
+        pending("waiting for the reveal timer needs MUDLET_TEST_MODE")
+        return
+      end
+      local link = "\027]8;;send:osc8reveal?config={\"visibility\":{\"action\":\"reveal\",\"delay\":250}}\027\\HIDDENWORD\027]8;;\027\\"
+      assert.is_true(feedTriggers("OSCREVEAL1(" .. link .. ")OSCREVEAL1\n"))
+      local lineNumber, concealed = lineHolding("OSCREVEAL1")
+      assert.is_truthy(lineNumber, "the line carrying the link never reached the buffer")
+      -- concealment keeps the character count identical so buffer indices stay
+      -- valid, which is why the text is replaced space for space
+      assert.equals("OSCREVEAL1(          )OSCREVEAL1", concealed)
+      waitForLine(lineNumber, "OSCREVEAL1(HIDDENWORD)OSCREVEAL1")
+      assert.equals("OSCREVEAL1(HIDDENWORD)OSCREVEAL1", getLines("main", lineNumber, lineNumber + 1)[1])
+    end)
+
+    it("reveals a link on its own line after the buffer has trimmed", function()
+      if not os.getenv("MUDLET_TEST_MODE") then
+        pending("waiting for the reveal timer needs MUDLET_TEST_MODE")
+        return
+      end
+      withSmallBuffer(function()
+        local link = "\027]8;;send:osc8trim?config={\"visibility\":{\"action\":\"reveal\",\"delay\":250}}\027\\HIDDENWORD\027]8;;\027\\"
+        assert.is_true(feedTriggers("OSCTRIM1(" .. link .. ")OSCTRIM1\n"))
+        local before = findLine("OSCTRIM1")
+        assert.is_truthy(before, "the line carrying the link never reached the buffer")
+
+        for i = 1, 70 do echo("osctrimfiller " .. i .. "\n") end
+        local moved = findLine("OSCTRIM1")
+        assert.is_truthy(moved, "the link's line scrolled out entirely, so this test proves nothing")
+        assert.is_not.equal(before, moved, "the buffer never trimmed, so this test proves nothing")
+
+        waitForLine(moved, "OSCTRIM1(HIDDENWORD)OSCTRIM1")
+        assert.equals("OSCTRIM1(HIDDENWORD)OSCTRIM1", getLines("main", moved, moved + 1)[1])
+      end)
+    end)
+
+    it("does not rewrite an unrelated line when the link's own line was trimmed away", function()
+      if not os.getenv("MUDLET_TEST_MODE") then
+        pending("waiting for the reveal timer needs MUDLET_TEST_MODE")
+        return
+      end
+      withSmallBuffer(function()
+        -- the link has to sit at a LOW buffer index: its stale index is what a
+        -- broken reveal writes to, and a high one falls outside the trimmed buffer
+        -- where performReveal() no-ops instead of corrupting
+        clearWindow()
+        for i = 1, 3 do echo("oscgoneseed " .. i .. "\n") end
+        local link = "\027]8;;send:osc8gone?config={\"visibility\":{\"action\":\"reveal\",\"delay\":250}}\027\\HIDDENWORD\027]8;;\027\\"
+        assert.is_true(feedTriggers("OSCGONE1(" .. link .. ")OSCGONE1\n"))
+        local registeredAt = findLine("OSCGONE1")
+        assert.is_truthy(registeredAt and registeredAt < 20, "the link did not land at a low buffer index")
+
+        -- fillers must be longer than the link's startColumn + length, or
+        -- performReveal() bounds-checks out and the case passes without the fix
+        for i = 1, 260 do echo("oscgonefiller padded out well past the link column " .. i .. "\n") end
+        assert.is_nil(findLine("OSCGONE1"), "the link's line survived, so this test proves nothing")
+
+        local lastLine = getLastLineNumber("main")
+        local snapshot = {}
+        for lineNumber = 0, lastLine do
+          snapshot[lineNumber] = getLines("main", lineNumber, lineNumber + 1)[1]
+        end
+
+        pumpEvents(700)
+        for lineNumber = 0, lastLine do
+          assert.equals(snapshot[lineNumber], getLines("main", lineNumber, lineNumber + 1)[1],
+            "revealing a link whose line was trimmed away rewrote line " .. lineNumber)
+        end
+      end)
+    end)
+
+    -- deleteLine() shifts every line below the one it removes, so a tracked
+    -- link's recorded line number stops matching where its text now sits - the
+    -- same defect as above reached by the route a trigger gag takes.
+    it("does not rewrite an unrelated line after deleteLine() moved the link's line", function()
+      if not os.getenv("MUDLET_TEST_MODE") then
+        pending("waiting for the reveal timer needs MUDLET_TEST_MODE")
+        return
+      end
+      withSmallBuffer(function()
+        clearWindow()
+        for i = 1, 3 do echo("oscdelseed " .. i .. "\n") end
+        local link = "\027]8;;send:osc8del?config={\"visibility\":{\"action\":\"reveal\",\"delay\":250}}\027\\HIDDENWORD\027]8;;\027\\"
+        assert.is_true(feedTriggers("OSCDEL1(" .. link .. ")OSCDEL1\n"))
+        local registeredAt, concealed = findLine("OSCDEL1")
+        assert.is_truthy(registeredAt and registeredAt < 20, "the link did not land at a low buffer index")
+        -- concealment proves the link registered, so there is tracked state to go stale
+        assert.equals("OSCDEL1(          )OSCDEL1", concealed)
+
+        -- fillers must be longer than the link's startColumn + length, or
+        -- performReveal() bounds-checks out and the case passes unfixed
+        for i = 1, 12 do echo("oscdelfiller padded out well past the link column " .. i .. "\n") end
+
+        -- take a line above the link, so everything below it moves up one
+        assert.is_true(moveCursor(0, 0))
+        deleteLine()
+        local movedTo = findLine("OSCDEL1")
+        assert.equals(registeredAt - 1, movedTo, "deleting an earlier line did not move the link's line up")
+
+        local lastLine = getLastLineNumber("main")
+        local snapshot = {}
+        for lineNumber = 0, lastLine do
+          snapshot[lineNumber] = getLines("main", lineNumber, lineNumber + 1)[1]
+        end
+
+        assert.equals("OSCDEL1(          )OSCDEL1", snapshot[movedTo], "the link revealed before its line had moved")
+        waitForLine(movedTo, "OSCDEL1(HIDDENWORD)OSCDEL1")
+        -- the link's own line is the one that should change: it reveals where the
+        -- text actually sits now, and every other line is left alone
+        assert.equals("OSCDEL1(HIDDENWORD)OSCDEL1", getLines("main", movedTo, movedTo + 1)[1],
+          "the reveal did not land on the line the link moved to")
+        for lineNumber = 0, lastLine do
+          if lineNumber ~= movedTo then
+            assert.equals(snapshot[lineNumber], getLines("main", lineNumber, lineNumber + 1)[1],
+              "a link tracked across deleteLine() rewrote line " .. lineNumber)
+          end
+        end
+      end)
+    end)
+
+    -- clearWindow() discards every line, so a tracked link's line number stops
+    -- meaning anything - the same defect as above reached by a second route. The
+    -- buffer is refilled afterwards so a broken reveal has something to overwrite.
+    it("does not rewrite an unrelated line after clearWindow() discarded the link's line", function()
+      if not os.getenv("MUDLET_TEST_MODE") then
+        pending("waiting for the reveal timer needs MUDLET_TEST_MODE")
+        return
+      end
+      withSmallBuffer(function()
+        clearWindow()
+        for i = 1, 3 do echo("oscclrseed " .. i .. "\n") end
+        local link = "\027]8;;send:osc8clr?config={\"visibility\":{\"action\":\"reveal\",\"delay\":250}}\027\\HIDDENWORD\027]8;;\027\\"
+        assert.is_true(feedTriggers("OSCCLR1(" .. link .. ")OSCCLR1\n"))
+        local registeredAt, concealed = findLine("OSCCLR1")
+        assert.is_truthy(registeredAt and registeredAt < 20, "the link did not land at a low buffer index")
+        -- concealment proves the link registered, so there is tracked state for
+        -- clearWindow() to leave behind
+        assert.equals("OSCCLR1(          )OSCCLR1", concealed)
+
+        clearWindow()
+        assert.is_nil(findLine("OSCCLR1"), "clearWindow() left the link's line in the buffer")
+
+        -- fillers must be longer than the link's startColumn + length, or
+        -- performReveal() bounds-checks out and the case passes unfixed
+        for i = 1, 12 do echo("oscclrfiller padded out well past the link column " .. i .. "\n") end
+
+        local lastLine = getLastLineNumber("main")
+        local snapshot = {}
+        for lineNumber = 0, lastLine do
+          snapshot[lineNumber] = getLines("main", lineNumber, lineNumber + 1)[1]
+        end
+
+        pumpEvents(700)
+        for lineNumber = 0, lastLine do
+          assert.equals(snapshot[lineNumber], getLines("main", lineNumber, lineNumber + 1)[1],
+            "a link tracked across clearWindow() rewrote line " .. lineNumber)
+        end
+      end)
+    end)
+  end)
+
+  -- A link the game marks as already selected is drawn in its selected style,
+  -- which takes over from the formatting the game wrapped it in once the line
+  -- it is on is committed - and a flush marker can commit the start of that
+  -- line, link and all, before the rest of it has arrived
+  describe("Tests OSC 8 links that start out selected", function()
+    local italic = "\027[3m"
+    local selectedLink = "\027]8;;send:x?config={\"selection\":{\"group\":\"g\",\"value\":\"v\",\"selected\":true},"
+      .. "\"style\":{\"color\":\"#00ff00\",\"selected\":{\"color\":\"#ff0000\"}}}\027\\"
+    local closeLink = "\027]8;;\027\\\027[0m"
+
+    local function assertSelectedStyle(needle, word)
+      local lastLine = getLastLineNumber("main")
+      local first = math.max(0, lastLine - 15)
+      local lines = getLines("main", first, lastLine + 1)
+      for i = #lines, 1, -1 do
+        if lines[i]:find(needle, 1, true) then
+          moveCursor("main", 0, first + i - 1)
+          assert.are_not.equal(-1, selectString("main", word, 1))
+          local format = getTextFormat("main")
+          moveCursorEnd("main")
+          assert.are.same({ 255, 0, 0 }, format.foreground)
+          assert.is_false(format.italic)
+          return
+        end
+      end
+      error(needle .. " is not on any of the last lines")
+    end
+
+    it("should draw a link in its selected style alone", function()
+      assert.is_true(feedTriggers("SELWHOLE1 " .. italic .. selectedLink .. "picked" .. closeLink .. " SELWHOLE1\n"))
+      assertSelectedStyle("SELWHOLE1", "picked")
+    end)
+
+    it("should draw the part of a link a flush marker committed early in its selected style", function()
+      assert.is_true(feedTriggers("SELFLUSH1 " .. italic .. selectedLink .. "early\r"))
+      assert.is_true(feedTriggers("late" .. closeLink .. " SELFLUSH2\n"))
+      assertSelectedStyle("SELFLUSH1", "early")
+      assertSelectedStyle("SELFLUSH2", "late")
+    end)
+
+    it("should draw the early part in its selected style when a line above it is deleted", function()
+      assert.is_true(feedTriggers("SELDELETE0 a line to delete\n"))
+      assert.is_true(feedTriggers("SELDELETE1 " .. italic .. selectedLink .. "early\r"))
+      local lastLine = getLastLineNumber("main")
+      local doomed
+      for lineNumber = lastLine, math.max(0, lastLine - 3), -1 do
+        if getLines("main", lineNumber, lineNumber + 1)[1]:find("SELDELETE0", 1, true) then
+          doomed = lineNumber
+          break
+        end
+      end
+      assert.is_not_nil(doomed)
+      moveCursor("main", 0, doomed)
+      deleteLine("main")
+      moveCursorEnd("main")
+      assert.is_nil(findRecentLine("SELDELETE0"))
+      assert.is_true(feedTriggers("late" .. closeLink .. " SELDELETE2\n"))
+      assertSelectedStyle("SELDELETE1", "early")
+      assertSelectedStyle("SELDELETE2", "late")
+    end)
+
+    it("should draw the early part in its selected style when the scrollback is trimmed in between", function()
+      local lines, batch = getConsoleBufferSize("main")
+      local trimmedLimit, trimmedBatch = 100, 10
+      setConsoleBufferSize("main", trimmedLimit, trimmedBatch)
+      finally(function()
+        setConsoleBufferSize("main", lines, batch)
+      end)
+      -- the buffer drops a batch of lines whenever it outgrows its limit, so
+      -- once it has, it does so again exactly a batch of lines later
+      local before = getLineCount("main")
+      for _ = 1, 10 * trimmedLimit do
+        feedTriggers("SELTRIM filler\n")
+        local now = getLineCount("main")
+        if now < before then
+          break
+        end
+        before = now
+      end
+      for _ = 1, trimmedBatch - 1 do
+        feedTriggers("SELTRIM filler\n")
+      end
+      before = getLineCount("main")
+      assert.is_true(feedTriggers("SELTRIM1 " .. italic .. selectedLink .. "early\r"))
+      assert.is_true(getLineCount("main") < before)
+      assert.is_true(feedTriggers("late" .. closeLink .. " SELTRIM2\n"))
+      assertSelectedStyle("SELTRIM1", "early")
+      assertSelectedStyle("SELTRIM2", "late")
+    end)
   end)
 
 end)

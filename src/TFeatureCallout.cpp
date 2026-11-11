@@ -20,10 +20,14 @@
 #include "TFeatureCallout.h"
 
 #include "mudlet.h"
+#include "MudletApp.h"
 
+#include <QApplication>
 #include <QEvent>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QMouseEvent>
+#include <QMenuBar>
 #include <QPainter>
 #include <QPainterPath>
 #include <QPushButton>
@@ -52,12 +56,21 @@ QString shownCountKey(const QString& featureId)
 {
     return qsl("whatsNew/%1/shownCount").arg(featureId);
 }
+
+QRect anchorRectFor(QWidget* pAnchor, QAction* pAnchorMenu)
+{
+    if (auto* pMenuBar = qobject_cast<QMenuBar*>(pAnchor); pMenuBar && pAnchorMenu) {
+        return pMenuBar->actionGeometry(pAnchorMenu);
+    }
+    return pAnchor->rect();
+}
 } // namespace
 
-TFeatureCallout::TFeatureCallout(const QString& featureId, QWidget* pAnchor, const QString& title, const QString& body)
+TFeatureCallout::TFeatureCallout(const QString& featureId, QWidget* pAnchor, const QString& title, const QString& body, QAction* pAnchorMenu)
 : QWidget(pAnchor->window(), Qt::ToolTip | Qt::FramelessWindowHint)
 , mFeatureId(featureId)
 , mpAnchor(pAnchor)
+, mpAnchorMenu(pAnchorMenu)
 , mAnnouncement(qsl("%1. %2").arg(title, body))
 {
     setAttribute(Qt::WA_TranslucentBackground);
@@ -95,17 +108,30 @@ TFeatureCallout::TFeatureCallout(const QString& featureId, QWidget* pAnchor, con
     for (QWidget* pWidget = pAnchor; pWidget; pWidget = pWidget->parentWidget()) {
         pWidget->installEventFilter(this);
     }
+
+    mApplicationActive = qGuiApp->applicationState() == Qt::ApplicationActive;
+    connect(qGuiApp, &QGuiApplication::applicationStateChanged, this, &TFeatureCallout::slot_applicationStateChanged);
 }
 
 void TFeatureCallout::maybeShow(const QString& featureId, QWidget* pAnchor, const QString& title, const QString& body)
 {
+    maybeShowImpl(featureId, pAnchor, nullptr, title, body);
+}
+
+void TFeatureCallout::maybeShow(const QString& featureId, QMenuBar* pMenuBar, QAction* pMenu, const QString& title, const QString& body)
+{
+    maybeShowImpl(featureId, pMenuBar, pMenu, title, body);
+}
+
+void TFeatureCallout::maybeShowImpl(const QString& featureId, QWidget* pAnchor, QAction* pAnchorMenu, const QString& title, const QString& body)
+{
     if (!pAnchor) {
         return;
     }
-    auto* settings = mudlet::getQSettings();
+    auto* settings = MudletApp::getQSettings();
     // players installing today experience the current interface as the
     // baseline, so nothing in it is "new" to them
-    if (mudlet::smFirstLaunch) {
+    if (MudletApp::firstLaunch()) {
         settings->setValue(dismissedKey(featureId), true);
         return;
     }
@@ -120,48 +146,118 @@ void TFeatureCallout::maybeShow(const QString& featureId, QWidget* pAnchor, cons
     }
 
     // let the widget holding the anchor settle into its final place first
-    QTimer::singleShot(800ms, pAnchor, [featureId, pAnchor, title, body]() {
-        if (!pAnchor->isVisible()) {
+    QTimer::singleShot(800ms, pAnchor, [featureId, pAnchor, pAnchorMenu = QPointer<QAction>(pAnchorMenu), title, body]() {
+        if (!pAnchor->isVisible() || !pAnchor->rect().contains(anchorRectFor(pAnchor, pAnchorMenu))) {
             return;
         }
-        // the session budget is claimed only once the balloon really appears,
-        // so an anchor that stayed hidden does not use it up - which is why
-        // the check runs again in here
+        if (MudletApp::getQSettings()->value(dismissedKey(featureId), false).toBool()) {
+            return;
+        }
+        // the session budget is claimed here rather than up front, so an
+        // anchor that stayed hidden for the whole delay does not use it up -
+        // which is why the check runs again in here
         if (smSessionShown.contains(featureId) || smSessionShown.size() >= maximumPerSession) {
             return;
         }
         smSessionShown.insert(featureId);
-        auto* settings = mudlet::getQSettings();
-        settings->setValue(shownCountKey(featureId), settings->value(shownCountKey(featureId), 0).toInt() + 1);
-        auto* pCallout = new TFeatureCallout(featureId, pAnchor, title, body);
+        auto* pCallout = new TFeatureCallout(featureId, pAnchor, title, body, pAnchorMenu);
         pCallout->showAnchored();
     });
 }
 
+void TFeatureCallout::dismiss(const QString& featureId)
+{
+    auto* settings = MudletApp::getQSettings();
+    if (!settings->value(dismissedKey(featureId), false).toBool()) {
+        settings->setValue(dismissedKey(featureId), true);
+    }
+    for (QWidget* pWidget : QApplication::topLevelWidgets()) {
+        if (auto* pCallout = qobject_cast<TFeatureCallout*>(pWidget); pCallout && pCallout->mFeatureId == featureId) {
+            pCallout->close();
+        }
+    }
+}
+
 void TFeatureCallout::showAnchored()
 {
-    if (!mpAnchor) {
+    if (!anchorOnScreen()) {
         return;
     }
+    if (!mApplicationActive) {
+        mWaitingForActivation = true;
+        return;
+    }
+    place();
+}
+
+void TFeatureCallout::place()
+{
     adjustSize();
     reposition();
     show();
     raise();
-    mudlet::self()->announce(mAnnouncement);
+    if (!mAnnounced) {
+        mAnnounced = true;
+        // an appearance is only spent once the balloon is really on screen
+        auto* settings = MudletApp::getQSettings();
+        settings->setValue(shownCountKey(mFeatureId), settings->value(shownCountKey(mFeatureId), 0).toInt() + 1);
+        mudlet::self()->announce(mAnnouncement);
+    }
+}
+
+void TFeatureCallout::slot_applicationStateChanged(const Qt::ApplicationState state)
+{
+    mApplicationActive = state == Qt::ApplicationActive;
+    if (!mApplicationActive) {
+        if (isVisible()) {
+            mWaitingForActivation = true;
+            hide();
+            // hide() was measured not to unmap the tooltip window on X11,
+            // leaving the balloon on top of the other application anyway.
+            // Dropping the native window does, and show() builds a fresh one -
+            // done on every platform because it costs nothing to recreate:
+            destroy();
+        }
+        return;
+    }
+    if (!mWaitingForActivation) {
+        return;
+    }
+    mWaitingForActivation = false;
+    if (!anchorOnScreen()) {
+        close();
+        return;
+    }
+    place();
 }
 
 void TFeatureCallout::markDismissed()
 {
-    mudlet::getQSettings()->setValue(dismissedKey(mFeatureId), true);
+    MudletApp::getQSettings()->setValue(dismissedKey(mFeatureId), true);
+}
+
+QRect TFeatureCallout::anchorRect() const
+{
+    return anchorRectFor(mpAnchor, mpAnchorMenu);
+}
+
+// A menu folded into the bar's overflow extension keeps a geometry past the bar's edge
+bool TFeatureCallout::anchorOnScreen() const
+{
+    return mpAnchor && mpAnchor->isVisible() && mpAnchor->rect().contains(anchorRect());
 }
 
 void TFeatureCallout::reposition()
 {
-    if (!mpAnchor || !mpAnchor->isVisible()) {
+    // e.g. a narrowed window folded the menu into the bar's overflow; not a
+    // dismissal, the player never engaged with the balloon
+    if (!anchorOnScreen()) {
+        close();
         return;
     }
-    const QPoint anchorTopCenter = mpAnchor->mapToGlobal(QPoint(mpAnchor->width() / 2, 0));
-    const QPoint anchorBottomCenter = mpAnchor->mapToGlobal(QPoint(mpAnchor->width() / 2, mpAnchor->height()));
+    const QRect target = anchorRect();
+    const QPoint anchorTopCenter = mpAnchor->mapToGlobal(QPoint(target.left() + target.width() / 2, target.top()));
+    const QPoint anchorBottomCenter = mpAnchor->mapToGlobal(QPoint(target.left() + target.width() / 2, target.top() + target.height()));
     const QRect available = mpAnchor->screen()->availableGeometry();
     mArrowOnTop = anchorBottomCenter.y() + 2 + height() <= available.bottom();
     layout()->setContentsMargins(16, mArrowOnTop ? arrowHeight + 12 : 12, 16, mArrowOnTop ? 12 : arrowHeight + 12);
@@ -220,9 +316,9 @@ bool TFeatureCallout::eventFilter(QObject* watched, QEvent* event)
         }
         break;
     case QEvent::MouseButtonPress:
-        // the anchor got clicked, so the feature has been discovered - the
-        // balloon has served its purpose
-        if (watched == mpAnchor) {
+        // the anchor (or the menu it points at) got clicked, so the feature
+        // has been discovered - the balloon has served its purpose
+        if (watched == mpAnchor && anchorRect().contains(static_cast<QMouseEvent*>(event)->position().toPoint())) {
             markDismissed();
             close();
         }

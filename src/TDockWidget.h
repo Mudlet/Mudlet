@@ -36,6 +36,7 @@ public:
     TDockWidget(Host *, const QString &);
     void setTConsole(TConsole*);
     TConsole* getConsole();
+    Host* getHost() const { return mpHost; }
     void setVisible(bool) override;
 
 
@@ -43,6 +44,7 @@ public:
     bool hasLayoutAlready = false;
 
 protected:
+    bool event(QEvent *) override;
     void closeEvent(QCloseEvent *) override;
     void resizeEvent(QResizeEvent *) override;
     void moveEvent(QMoveEvent *) override;

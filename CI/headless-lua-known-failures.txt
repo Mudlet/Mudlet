@@ -1,0 +1,39 @@
+# Specs that fail in mudlet-headless, which has no main window, read by
+# CI/check-headless-lua-failures.py, which says what each line means.
+
+# Need a main window
+Failure AddonCommand_spec.lua: addon commands a shortcut it cannot honour hands out a key as soon as whatever held it is switched off
+Failure AddonCommand_spec.lua: addon commands a shortcut it cannot honour keeps the search's key when it is switched off and on in one turn
+Failure AddonCommand_spec.lua: addon commands a shortcut it cannot honour refuses one Mudlet reserves for a menu command
+Failure AddonCommand_spec.lua: addon commands a shortcut it cannot honour refuses one Mudlet uses for switching profiles, and says what holds it
+Failure AddonCommand_spec.lua: addon commands a shortcut it cannot honour says so when the search is switched on over a command's key
+Failure ConsoleFontsByName_spec.lua: Tests that the font functions find their console by name with a sub-console's name reads the size a style sheet gives a user window's text
+Failure GeyserUserWindow_spec.lua: Tests functionality of Geyser.UserWindow Geyser.UserWindow:new/new2 gives itself a root container sized to the user window
+Failure HostApi_spec.lua: openUserWindow still refuses the name of a mini console inside a deleted user window
+Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests registered map info refuses to delete rooms or areas, or replace the map, from inside a map info callback
+Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests registered map info survives a map info callback that registers and kills contributors while the map is painted
+Failure Mapper_spec.lua: Tests the open and closed states of the map widget docks the map at a usable size with a saved window layout fits a floating map bigger than the screen below the screen's top
+Failure Media_spec.lua: Media playback effects with a generated sound file a Client.Media.Play message that names the video type is played as a video
+Failure Media_spec.lua: Media playback effects with a generated sound file a video asked to close leaves the miniconsole it played in on screen
+Failure Media_spec.lua: Media playback effects with a generated sound file a video asked to close takes its label off screen when it ends
+Failure Media_spec.lua: Media playback effects with a generated sound file a video that never asked to close leaves its label on screen
+Failure Media_spec.lua: Media playback effects with a generated sound file playVideoFile plays into the label its key names and the video family reports it
+Failure Media_spec.lua: Media playback effects with a generated sound file playVideoFile starts nothing when its key names no widget to draw into
+Failure Media_spec.lua: Media playback effects with a generated sound file the video pause and stop table forms act only on the key they name
+Failure Trigger_spec.lua: Trigger processing feedTriggers contract scrolls the main console to the lines it feeds from text a trigger feeds, once the game data that fired the trigger is handled
+Failure Trigger_spec.lua: Trigger processing feedTriggers contract scrolls the main console to the lines it feeds from text a trigger feeds, once the pass that fired the trigger ends
+Failure UI_spec.lua: Widget state getters getUserWindowTitle reports the title a style sheet gives a floating user window
+Failure UI_spec.lua: Window state getters getLabelText reports text a style sheet gives the label
+Failure zz_Mapper3DView_spec.lua: Tests show3dMapView with the mapper hidden reads back the mode the hidden mapper will reopen in
+Failure zz_Mapper3DView_spec.lua: Tests the 3D map perspective functions with the modern 3D view showing both are accepted while the modern 3D view shows, and refused for the classic view
+Failure zz_Mapper3DView_spec.lua: Tests the 3D map perspective functions with the modern 3D view showing paints rooms with a symbol, a highlight and a border, in and out of grid mode
+Failure zz_Mapper3DView_spec.lua: Tests the 3D map perspective functions with the modern 3D view showing setMapZoom keeps its contract while the modern 3D view shows
+Failure zz_Mapper3DView_spec.lua: Tests the blueprint style on an area spread over several levels paints a multi-level area in blueprint and switches back to tiles
+Failure zz_Mapper3DView_spec.lua: Tests the modern 3D mapper surviving context rebuilds floats, redocks and switches back to the classic view
+
+# The app's own chrome: the GUI's main window lays its command line, button bars and docks out around the
+# main console, and an app that embeds Mudlet draws its own outside the area it gives (docs/headless.md)
+Failure WindowGeometry_spec.lua: getWindowGeometry follows a docked user window as the main window lays its dock area out again
+Failure WindowSize_spec.lua: window sizes getMainWindowSize follows a button bar shown along its top
+Failure WindowSize_spec.lua: window sizes getMainWindowSize follows the command line as it grows with its text
+Failure WindowSize_spec.lua: window sizes getRowCount gives up the rows a button bar made along the top takes

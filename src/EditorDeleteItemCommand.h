@@ -22,13 +22,14 @@
 
 #include "EditorCommand.h"
 
+#include <QHash>
 #include <QList>
 #include <QPair>
 #include <QString>
 
 // Undo command for deleting items. Stores XML snapshots of deleted items (including children).
 // Handles single or multiple items efficiently. Nullifies mpHost before deletion to prevent
-// unregistration issues. Sorts items for correct restoration order (parents before children).
+// unregistration issues. Undo restores the topmost deleted items, which bring their descendants back.
 class EditorDeleteItemCommand : public EditorCommand
 {
 public:
@@ -63,6 +64,9 @@ public:
 
 private:
     static QString generateText(EditorViewType viewType, int itemCount, const QString& firstName);
+    int restoreItem(const DeletedItemInfo& info);
+    QList<QPair<QString, int>> restoredChildren(int itemID) const;
+    void adoptRestoredChildren(int oldParentID, int newParentID, QHash<int, QList<int>>& childEntries);
 
     EditorViewType mViewType;
     QList<DeletedItemInfo> mDeletedItems;

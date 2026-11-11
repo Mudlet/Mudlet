@@ -23,30 +23,49 @@
  * Run with: ctest -R TriggerEditorTest -V
  */
 
+#include <QFileInfo>
+#include <QTemporaryDir>
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include <QAbstractItemView>
+#include <QAccessible>
+#include <QAction>
+#include <QComboBox>
+#include <QHeaderView>
 #include <QClipboard>
+#include <QContextMenuEvent>
+#include <QMenu>
+#include <QScopeGuard>
+#include <QShortcut>
 
+#include "HostDialogs.h"
+#include "MudletApp.h"
+#include "PortableModeTestHelper.h"
+#include "ProfileTestHelper.h"
 #include "MudletInstanceCoordinator.h"
+#include "TLuaInterpreter.h"
+#include "TTrigger.h"
+#include "TriggerUnit.h"
+#include "TConsole.h"
+#include "TMap.h"
+#include "dlgTriggerEditor.h"
+#include "dlgTriggerPatternEdit.h"
 #include "SingleLineTextEdit.h"
 #include "TelnetServerStub.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
-using namespace std::chrono_literals;
+#include "GroupedTest.h"
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-void initializeQRCResourcesForTriggerEditorTest();
+using namespace std::chrono_literals;
 
 class TriggerEditorTest : public QObject {
   Q_OBJECT
 
 private:
+  QTemporaryDir mConfigDir;
+  QByteArray mSavedXdg;
   TelnetServerStub *mpServer = nullptr;
   Host *mpHost = nullptr;
   const QString mHostname = "TriggerEditor-Test";
@@ -55,43 +74,20 @@ private:
 
   void startProfile(const QString &hostname, const QString &address,
                     const QString &port) {
-    QTimer::singleShot(0ms, qApp, [hostname, address, port]() {
-      mudlet::self()->startAutoLogin({});
-      QTest::qWait(100ms);
-      QTest::mouseClick(mudlet::self()->mpConnectionDialog->new_profile_button,
-                        Qt::LeftButton);
-      QTest::qWait(100ms);
-      QTest::keyClicks(QApplication::focusWidget(), hostname);
-      QTest::qWait(100ms);
-      QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-      QTest::qWait(100ms);
-      QTest::keyClicks(QApplication::focusWidget(), address);
-      QTest::qWait(100ms);
-      QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
-      QTest::qWait(100ms);
-      QTest::keyClicks(QApplication::focusWidget(), port);
-      QTest::qWait(100ms);
-      QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
-    });
-
-    QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-    if (!spy.wait(1000)) {
-      QFAIL("Profile took too long to load.");
-    }
-    mpHost = mudlet::self()->getActiveHost();
+    mpHost = TestProfile::create(hostname, address, port);
     if (!mpHost) {
       QFAIL("No active host available.");
     }
 
     QSignalSpy spy2(&(mpHost->mTelnet), &cTelnet::signal_connected);
-    if (!spy2.wait(500)) {
+    if (mpHost->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && !spy2.wait(8s)) {
       QFAIL("Could not connect with the host.");
     }
   }
 
   void deleteProfileDirectory(const QString &profileName) {
     const QString path =
-        mudlet::getMudletPath(enums::profileHomePath, profileName);
+        MudletApp::getMudletPath(enums::profileHomePath, profileName);
     QDir dir(path);
     if (dir.exists()) {
       dir.removeRecursively();
@@ -100,13 +96,29 @@ private:
 
 private slots:
   void initTestCase() {
-    initializeQRCResourcesForTriggerEditorTest();
+    if (portableMarkerPresent()) {
+      QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, "
+            "so the config dir cannot be redirected");
+    }
+
+    // A config root of this process's own. Sharing the developer's
+    // ~/.config/mudlet means sharing a profile list, so a second copy of this
+    // test running at the same time is told the name it types is already in
+    // use and never gets an enabled Connect button. Since #9712 the opt-in
+    // that makes setupConfig() adopt a directory is
+    // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+    QVERIFY(mConfigDir.isValid());
+    QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+    mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+    qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
 
     mpServer = new TelnetServerStub(qApp);
     mpServer->start(mLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
     mPort = QString::number(mpServer->serverPort());
     mudlet::start();
     mudlet::self()->setupConfig();
+    QCOMPARE(MudletApp::getMudletPath(enums::mainPath),
+             qsl("%1/mudlet").arg(mConfigDir.path()));
     mudlet::self()->takeOwnershipOfInstanceCoordinator(
         std::make_unique<MudletInstanceCoordinator>(
             "MudletInstanceCoordinator"));
@@ -123,8 +135,13 @@ private slots:
     mpHost = nullptr;
     delete mpServer;
     mpServer = nullptr;
-    deleteProfileDirectory(mHostname);
-    delete mudlet::self();
+    // Null when initTestCase skipped or failed ahead of mudlet::start()
+    if (mudlet::self()) {
+      deleteProfileDirectory(mHostname);
+      delete mudlet::self();
+    }
+    mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME")
+                       : qputenv("XDG_CONFIG_HOME", mSavedXdg);
   }
 
   // Verify that copying text from the pattern editor strips the middle dot
@@ -149,21 +166,882 @@ private slots:
              "Copied text should not contain middle dot formatting marks");
     QCOMPARE(copied, qsl("  ^pattern$  "));
   }
+
+  // Opening the context menu sends the focused editor a FocusOut with
+  // Qt::PopupFocusReason, so a focus-out that drops the selection leaves the
+  // menu's own Copy entry with nothing to copy (#10330)
+  void test_copyFromPatternEditorContextMenu() {
+    SingleLineTextEdit edit;
+    edit.setPlainText(qsl("^pattern$"));
+    edit.show();
+    edit.activateWindow();
+    QVERIFY(QTest::qWaitForWindowActive(&edit));
+    edit.setFocus();
+    QTRY_VERIFY(edit.hasFocus());
+    edit.selectAll();
+
+    QClipboard *clipboard = QGuiApplication::clipboard();
+    QVERIFY(clipboard);
+    clipboard->setText(qsl("previous clipboard contents"));
+
+    // Qt only sends that FocusOut for the first popup, and a menu left open
+    // past a failed assertion would outlive the test
+    QVERIFY2(!QApplication::activePopupWidget(), "a popup was already open");
+    const auto closePopup = qScopeGuard([] {
+      if (auto *popup = QApplication::activePopupWidget()) {
+        popup->close();
+      }
+    });
+
+    const QPoint pos(5, 5);
+    QContextMenuEvent contextMenuEvent(QContextMenuEvent::Mouse, pos,
+                                       edit.viewport()->mapToGlobal(pos));
+    QApplication::sendEvent(edit.viewport(), &contextMenuEvent);
+
+    auto *menu = qobject_cast<QMenu *>(QApplication::activePopupWidget());
+    QVERIFY2(menu, "right-clicking the pattern editor did not open its context menu");
+    auto *copyAction = menu->findChild<QAction *>(qsl("edit-copy"));
+    QVERIFY2(copyAction, "the context menu has no Copy entry named edit-copy");
+    copyAction->trigger();
+
+    QCOMPARE(clipboard->text(), qsl("^pattern$"));
+  }
+
+  // A pattern is one line, and the editor has no way to show a second one, so a
+  // multi-line paste has to be cut down to its first line rather than hiding the
+  // rest of what was pasted (#7633)
+  void test_pastingSeveralLinesIntoAPatternKeepsOnlyTheFirst() {
+    SingleLineTextEdit edit;
+
+    QClipboard *clipboard = QGuiApplication::clipboard();
+    QVERIFY(clipboard);
+    clipboard->setText(qsl("^first pattern$\n^second pattern$"));
+
+    QTest::keyClick(&edit, Qt::Key_V, Qt::ControlModifier);
+
+    QCOMPARE(edit.toPlainText(), qsl("^first pattern$"));
+  }
+
+  // A clipboard of nothing but line breaks has no first line to keep (#10337)
+  void test_pastingOnlyLineBreaksIntoAPatternInsertsNothing() {
+    SingleLineTextEdit edit;
+    edit.setPlainText(qsl("^pattern$"));
+    edit.moveCursor(QTextCursor::End);
+
+    QClipboard *clipboard = QGuiApplication::clipboard();
+    QVERIFY(clipboard);
+    clipboard->setText(qsl("\r\n\n\r\n"));
+
+    QTest::keyClick(&edit, Qt::Key_V, Qt::ControlModifier);
+
+    QCOMPARE(edit.toPlainText(), qsl("^pattern$"));
+  }
+
+  // In the trigger editor the lines after the first go on into the following
+  // empty patterns, past any that take no text or already hold one, adding rows
+  // of the pasted-into pattern's type as they run out (#8175)
+  void test_pastingSeveralLinesIntoATriggerFillsTheFollowingPatterns() {
+    mudlet::self()->slot_showScriptDialog();
+    QTest::qWait(100ms);
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
+    QVERIFY2(pEditor, "the editor dialog was not created");
+
+    auto *pTrigger = new TTrigger(nullptr, mpHost);
+    pTrigger->setName(qsl("qaPasteLines"));
+    pTrigger->setRegexCodeList({qsl("old 1"), qsl("3"), qsl("old 3")},
+                               {REGEX_PERL, REGEX_LINE_SPACER, REGEX_SUBSTRING});
+    QVERIFY(pTrigger->registerTrigger());
+    pEditor->doCleanReset();
+    auto *pTree = pEditor->findChild<QTreeWidget *>(qsl("treeWidget_triggers"));
+    QVERIFY(pTree);
+    QTreeWidgetItem *pItem = nullptr;
+    QVERIFY2(QTest::qWaitFor([&]() {
+      const auto found = pTree->findItems(
+          qsl("qaPasteLines"),
+          Qt::MatchCaseSensitive | Qt::MatchFixedString | Qt::MatchRecursive,
+          0);
+      pItem = found.isEmpty() ? nullptr : found.first();
+      return pItem != nullptr;
+    }), "the editor never rebuilt its tree around the planted trigger");
+    pEditor->slot_showTriggers();
+    pTree->setCurrentItem(pItem);
+    pEditor->slot_triggerSelected(pItem);
+    // A trigger shows only the rows it uses; there is no empty row waiting below them
+    QCOMPARE(pEditor->mVisiblePatternCount, 3);
+
+    auto row = [pEditor](const int index) {
+      return pEditor->mTriggerPatternEdit.at(index);
+    };
+    auto text = [&row](const int index) {
+      return row(index)->singleLineTextEdit_pattern->toPlainText();
+    };
+    auto *pFirst = row(0)->singleLineTextEdit_pattern;
+    pFirst->selectAll();
+    QGuiApplication::clipboard()->setText(qsl("a\r\n  \nb\nc"));
+    QTest::keyClick(pFirst, Qt::Key_V, Qt::ControlModifier);
+
+    QCOMPARE(text(0), qsl("a"));
+    QCOMPARE(row(1)->comboBox_patternType->currentIndex(), REGEX_LINE_SPACER);
+    QCOMPARE(row(1)->spinBox_lineSpacer->value(), 3);
+    QCOMPARE(text(2), qsl("old 3"));
+    QCOMPARE(row(2)->comboBox_patternType->currentIndex(), REGEX_SUBSTRING);
+    QCOMPARE(text(3), qsl("b"));
+    QCOMPARE(row(3)->comboBox_patternType->currentIndex(), REGEX_PERL);
+    QCOMPARE(text(4), qsl("c"));
+    QCOMPARE(row(4)->comboBox_patternType->currentIndex(), REGEX_PERL);
+    QCOMPARE(pEditor->mVisiblePatternCount, 5);
+
+    // Lua code split over several patterns would no longer be the code pasted
+    row(3)->comboBox_patternType->setCurrentIndex(REGEX_LUA_CODE);
+    auto *pLua = row(3)->singleLineTextEdit_pattern;
+    pLua->selectAll();
+    QGuiApplication::clipboard()->setText(qsl("return true\nreturn false"));
+    QTest::keyClick(pLua, Qt::Key_V, Qt::ControlModifier);
+    QCOMPARE(text(3), qsl("return true"));
+    QCOMPARE(text(4), qsl("c"));
+    QCOMPARE(pEditor->mVisiblePatternCount, 5);
+  }
+
+  // The deselect on focus-out exists so a pattern line does not keep showing a
+  // stale selection once another line is being edited, so it has to survive
+  // only the reasons that give focus straight back
+  void test_patternEditorDeselectsOnlyWhenFocusMovesOn() {
+    SingleLineTextEdit edit;
+    edit.setPlainText(qsl("^pattern$"));
+    edit.selectAll();
+
+    QFocusEvent popupFocusOut(QEvent::FocusOut, Qt::PopupFocusReason);
+    QApplication::sendEvent(&edit, &popupFocusOut);
+    QVERIFY2(edit.textCursor().hasSelection(), "a popup taking focus dropped the selection");
+
+    QFocusEvent windowFocusOut(QEvent::FocusOut, Qt::ActiveWindowFocusReason);
+    QApplication::sendEvent(&edit, &windowFocusOut);
+    QVERIFY2(edit.textCursor().hasSelection(), "switching windows dropped the selection");
+
+    QFocusEvent tabFocusOut(QEvent::FocusOut, Qt::TabFocusReason);
+    QApplication::sendEvent(&edit, &tabFocusOut);
+    QVERIFY2(!edit.textCursor().hasSelection(), "focus moving to another widget kept the selection");
+  }
+  // enableTrigger()/disableTrigger() from Lua used to leave the editor's tree
+  // icon stale until something else rebuilt the tree. The repaint is deferred
+  // to the next event-loop turn so a script toggling many triggers per line
+  // pays one tree walk, not one per call - hence the QTRY_ waits.
+  void test_luaToggleRepaintsTheTreeItem() {
+    mudlet::self()->slot_showScriptDialog();
+    QTest::qWait(100ms);
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
+    QVERIFY2(pEditor, "the editor dialog was not created");
+    TLuaInterpreter *pLua = mpHost->getLuaInterpreter();
+    QVERIFY(pLua->compileAndExecuteScript(
+        qsl("permGroup(\"qaToggleFolder\", \"trigger\")\n"
+            "permRegexTrigger(\"qaToggleLeaf\", \"qaToggleFolder\", "
+            "{\"^qa toggle$\"}, \"\")")));
+    pEditor->doCleanReset();
+    QTreeWidgetItem *pLeaf = nullptr;
+    // The tree is a private Ui member; its objectName is what the .ui gives it
+    auto *pTree = pEditor->findChild<QTreeWidget *>(qsl("treeWidget_triggers"));
+    QVERIFY(pTree);
+    QVERIFY2(QTest::qWaitFor([&]() {
+      const auto found = pTree->findItems(
+          qsl("qaToggleLeaf"),
+          Qt::MatchCaseSensitive | Qt::MatchFixedString | Qt::MatchRecursive,
+          0);
+      pLeaf = found.isEmpty() ? nullptr : found.first();
+      return pLeaf != nullptr;
+    }), "the editor never rebuilt its tree around the planted trigger");
+    QTreeWidgetItem *pFolder = pLeaf->parent();
+    QVERIFY(pFolder);
+    // The accessible description is written alongside the icon from the same
+    // computed state, so it stands in for the icon here
+    auto description = [](QTreeWidgetItem *pItem) {
+      return pItem->data(0, Qt::AccessibleDescriptionRole).toString();
+    };
+    const QString active = dlgTriggerEditor::tr("activated");
+    const QString inactive = dlgTriggerEditor::tr("deactivated");
+    const QString activeFolder = dlgTriggerEditor::tr("activated folder");
+    const QString inactiveFolder = dlgTriggerEditor::tr("deactivated folder");
+    const QString inactiveParent = dlgTriggerEditor::tr("%1 in a deactivated group").arg(active);
+    QCOMPARE(description(pLeaf), active);
+
+    QVERIFY(pLua->compileAndExecuteScript(qsl("disableTrigger(\"qaToggleLeaf\")")));
+    QTRY_COMPARE(description(pLeaf), inactive);
+
+    QVERIFY(pLua->compileAndExecuteScript(qsl("enableTrigger(\"qaToggleLeaf\")")));
+    QTRY_COMPARE(description(pLeaf), active);
+
+    // A folder's state greys out everything under it
+    QVERIFY(pLua->compileAndExecuteScript(qsl("disableTrigger(\"qaToggleFolder\")")));
+    QTRY_COMPARE(description(pFolder), inactiveFolder);
+    QCOMPARE(description(pLeaf), inactiveParent);
+
+    // Toggled off and back on within one turn: the tree ends where it started
+    QVERIFY(pLua->compileAndExecuteScript(
+        qsl("enableTrigger(\"qaToggleFolder\")\n"
+            "disableTrigger(\"qaToggleLeaf\")\n"
+            "enableTrigger(\"qaToggleLeaf\")")));
+    QTRY_COMPARE(description(pFolder), activeFolder);
+    QCOMPARE(description(pLeaf), active);
+  }
+
+  // refreshAliasIcon()/refreshTimerIcon()/refreshScriptIcon()/refreshKeyIcon()
+  // were coalesced the same way as refreshTriggerIcon() above. The alias case
+  // is the one worth guarding specifically: a fresh alias stays TAlias::mIsNew
+  // until explicitly saved in the editor, and an earlier version of this fix
+  // painted that "unsaved" disk icon over the active/inactive one on every
+  // Lua-triggered repaint instead of the checkbox this asserts on.
+  void test_luaToggleRepaintsAliasTimerScriptKeyIcons() {
+    mudlet::self()->slot_showScriptDialog();
+    QTest::qWait(100ms);
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
+    QVERIFY2(pEditor, "the editor dialog was not created");
+    TLuaInterpreter *pLua = mpHost->getLuaInterpreter();
+    QVERIFY(pLua->compileAndExecuteScript(
+        qsl("permAlias(\"qaToggleAlias\", \"\", \"^qa toggle alias$\", \"\")\n"
+            "permTimer(\"qaToggleTimer\", \"\", 3600, \"\")\n"
+            "permScript(\"qaToggleScript\", \"\", \"-- deliberately does nothing\")\n"
+            "permKey(\"qaToggleKey\", \"\", mudlet.key.F7, \"\")\n"
+            // permScript()/permTimer() create their item disabled (unlike
+            // permAlias()/permKey()) - enable explicitly for a common baseline.
+            "enableTimer(\"qaToggleTimer\")\n"
+            "enableScript(\"qaToggleScript\")")));
+    pEditor->doCleanReset();
+
+    auto description = [](QTreeWidgetItem *pItem) {
+      return pItem->data(0, Qt::AccessibleDescriptionRole).toString();
+    };
+    const QString active = dlgTriggerEditor::tr("activated");
+    const QString inactive = dlgTriggerEditor::tr("deactivated");
+
+    struct Target {
+      const char *treeName;
+      const char *itemName;
+      const char *enableFn;
+      const char *disableFn;
+      int dlgTriggerEditor::*flushCount;
+      int dlgTriggerEditor::*paintCount;
+    };
+    const Target targets[] = {
+        {"treeWidget_aliases", "qaToggleAlias", "enableAlias", "disableAlias",
+         &dlgTriggerEditor::mAliasIconFlushCount, &dlgTriggerEditor::mAliasIconPaintCount},
+        {"treeWidget_timers", "qaToggleTimer", "enableTimer", "disableTimer",
+         &dlgTriggerEditor::mTimerIconFlushCount, &dlgTriggerEditor::mTimerIconPaintCount},
+        {"treeWidget_scripts", "qaToggleScript", "enableScript", "disableScript",
+         &dlgTriggerEditor::mScriptIconFlushCount, &dlgTriggerEditor::mScriptIconPaintCount},
+        {"treeWidget_keys", "qaToggleKey", "enableKey", "disableKey",
+         &dlgTriggerEditor::mKeyIconFlushCount, &dlgTriggerEditor::mKeyIconPaintCount},
+    };
+
+    for (const auto &target : targets) {
+      auto *pTree = pEditor->findChild<QTreeWidget *>(QString::fromLatin1(target.treeName));
+      QVERIFY(pTree);
+      QTreeWidgetItem *pItem = nullptr;
+      QVERIFY2(QTest::qWaitFor([&]() {
+        const auto found = pTree->findItems(
+            QString::fromLatin1(target.itemName),
+            Qt::MatchCaseSensitive | Qt::MatchFixedString | Qt::MatchRecursive,
+            0);
+        pItem = found.isEmpty() ? nullptr : found.first();
+        return pItem != nullptr;
+      }), qPrintable(qsl("the editor never rebuilt its tree around %1").arg(target.itemName)));
+      QCOMPARE(description(pItem), active);
+
+      // flushCount/paintCount prove the queue and the cacheKey() dedup guard
+      // actually ran, not just that the description ends up correct either
+      // way. Waiting on flushCount itself (rather than on description) is
+      // what forces the wait for the deferred flush in the off-then-on case
+      // below, where the description never changes value across it.
+      int flushBefore = pEditor->*target.flushCount;
+      int paintBefore = pEditor->*target.paintCount;
+      QVERIFY(pLua->compileAndExecuteScript(
+          qsl("%1(\"%2\")").arg(target.disableFn, target.itemName)));
+      QTRY_COMPARE(pEditor->*target.flushCount, flushBefore + 1);
+      QCOMPARE(description(pItem), inactive);
+      QCOMPARE(pEditor->*target.paintCount, paintBefore + 1);
+
+      flushBefore = pEditor->*target.flushCount;
+      paintBefore = pEditor->*target.paintCount;
+      QVERIFY(pLua->compileAndExecuteScript(
+          qsl("%1(\"%2\")").arg(target.enableFn, target.itemName)));
+      QTRY_COMPARE(pEditor->*target.flushCount, flushBefore + 1);
+      QCOMPARE(description(pItem), active);
+      QCOMPARE(pEditor->*target.paintCount, paintBefore + 1);
+
+      // Toggled off and back on within one turn: coalescing must still land
+      // on the correct final state, not the state before the flush ran - in
+      // exactly one flush, and with paintCount unchanged since the final
+      // icon matches the one already shown (the cacheKey() guard earns its
+      // keep here, not just the final description).
+      flushBefore = pEditor->*target.flushCount;
+      paintBefore = pEditor->*target.paintCount;
+      QVERIFY(pLua->compileAndExecuteScript(
+          qsl("%1(\"%3\")\n%2(\"%3\")").arg(target.disableFn, target.enableFn, target.itemName)));
+      QTRY_COMPARE(pEditor->*target.flushCount, flushBefore + 1);
+      QCOMPARE(description(pItem), active);
+      QCOMPARE(pEditor->*target.paintCount, paintBefore);
+    }
+
+    // Two different aliases toggled together must still collapse into one
+    // flush - the queue is drained in a single tree walk per turn regardless
+    // of how many distinct IDs were pending, not one walk per queued ID.
+    QVERIFY(pLua->compileAndExecuteScript(
+        qsl("permAlias(\"qaToggleAlias2\", \"\", \"^qa toggle alias 2$\", \"\")")));
+    pEditor->doCleanReset();
+    auto *pAliasTree = pEditor->findChild<QTreeWidget *>(qsl("treeWidget_aliases"));
+    QVERIFY(pAliasTree);
+    // doCleanReset() defers the actual tree rebuild, so a stale-but-still-
+    // present old item can be found on an early poll and then get deleted
+    // when the deferred rebuild finally runs mid-wait - fetch both pointers
+    // from the same successful poll rather than one qWaitFor per name, so
+    // neither can be invalidated between finding it and using it.
+    QTreeWidgetItem *pAlias1 = nullptr;
+    QTreeWidgetItem *pAlias2 = nullptr;
+    QVERIFY2(QTest::qWaitFor([&]() {
+      const auto found1 = pAliasTree->findItems(qsl("qaToggleAlias"), Qt::MatchCaseSensitive | Qt::MatchFixedString | Qt::MatchRecursive, 0);
+      const auto found2 = pAliasTree->findItems(qsl("qaToggleAlias2"), Qt::MatchCaseSensitive | Qt::MatchFixedString | Qt::MatchRecursive, 0);
+      pAlias1 = found1.isEmpty() ? nullptr : found1.first();
+      pAlias2 = found2.isEmpty() ? nullptr : found2.first();
+      return pAlias1 && pAlias2;
+    }), "the editor never rebuilt its tree around both aliases");
+    QCOMPARE(description(pAlias1), active);
+    QCOMPARE(description(pAlias2), active);
+
+    const int flushBefore = pEditor->mAliasIconFlushCount;
+    const int paintBefore = pEditor->mAliasIconPaintCount;
+    QVERIFY(pLua->compileAndExecuteScript(
+        qsl("disableAlias(\"qaToggleAlias\")\ndisableAlias(\"qaToggleAlias2\")")));
+    QTRY_COMPARE(pEditor->mAliasIconFlushCount, flushBefore + 1);
+    QCOMPARE(description(pAlias1), inactive);
+    QCOMPARE(description(pAlias2), inactive);
+    QCOMPARE(pEditor->mAliasIconPaintCount, paintBefore + 2);
+  }
+
+  // computeScriptIcon() was the only one of the five compute*Icon() helpers
+  // that never consulted ancestorsActive() - so a script under a Lua-disabled
+  // group kept its active icon/description instead of greying out like the
+  // same case already does for triggers, aliases, timers and keys.
+  void test_luaToggleGreysScriptUnderADeactivatedGroup() {
+    mudlet::self()->slot_showScriptDialog();
+    QTest::qWait(100ms);
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
+    QVERIFY2(pEditor, "the editor dialog was not created");
+    TLuaInterpreter *pLua = mpHost->getLuaInterpreter();
+    QVERIFY(pLua->compileAndExecuteScript(
+        qsl("permGroup(\"qaScriptGroup\", \"script\")\n"
+            "permScript(\"qaScriptGroupChild\", \"qaScriptGroup\", \"-- deliberately does nothing\")\n"
+            "enableScript(\"qaScriptGroup\")\n"
+            "enableScript(\"qaScriptGroupChild\")")));
+    pEditor->doCleanReset();
+
+    auto *pTree = pEditor->findChild<QTreeWidget *>(qsl("treeWidget_scripts"));
+    QVERIFY(pTree);
+    QTreeWidgetItem *pLeaf = nullptr;
+    QVERIFY2(QTest::qWaitFor([&]() {
+      const auto found = pTree->findItems(
+          qsl("qaScriptGroupChild"),
+          Qt::MatchCaseSensitive | Qt::MatchFixedString | Qt::MatchRecursive,
+          0);
+      pLeaf = found.isEmpty() ? nullptr : found.first();
+      return pLeaf != nullptr;
+    }), "the editor never rebuilt its tree around the planted script");
+
+    auto description = [](QTreeWidgetItem *pItem) {
+      return pItem->data(0, Qt::AccessibleDescriptionRole).toString();
+    };
+    const QString active = dlgTriggerEditor::tr("activated");
+    const QString inactiveParent = dlgTriggerEditor::tr("%1 in a deactivated group").arg(active);
+    QCOMPARE(description(pLeaf), active);
+
+    QVERIFY(pLua->compileAndExecuteScript(qsl("disableScript(\"qaScriptGroup\")")));
+    QTRY_COMPARE(description(pLeaf), inactiveParent);
+  }
+
+  // A repaint queued while the editor was visible used to be dropped for
+  // good if the editor was hidden before the deferred flush ran: the flush
+  // checked isVisible() to decide whether to do the walk, but cleared the
+  // pending IDs regardless of that check, so nothing repainted them even
+  // once the editor became visible again. showEvent() now flushes anything
+  // still queued when the editor is reshown.
+  void test_luaToggleQueuedWhileHiddenIsNotDroppedOnReshow() {
+    mudlet::self()->slot_showScriptDialog();
+    QTest::qWait(100ms);
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
+    QVERIFY2(pEditor, "the editor dialog was not created");
+    TLuaInterpreter *pLua = mpHost->getLuaInterpreter();
+    QVERIFY(pLua->compileAndExecuteScript(
+        qsl("permAlias(\"qaHiddenRaceAlias\", \"\", \"^qa hidden race$\", \"\")")));
+    pEditor->doCleanReset();
+
+    auto *pTree = pEditor->findChild<QTreeWidget *>(qsl("treeWidget_aliases"));
+    QVERIFY(pTree);
+    QTreeWidgetItem *pItem = nullptr;
+    QVERIFY2(QTest::qWaitFor([&]() {
+      const auto found = pTree->findItems(
+          qsl("qaHiddenRaceAlias"),
+          Qt::MatchCaseSensitive | Qt::MatchFixedString | Qt::MatchRecursive,
+          0);
+      pItem = found.isEmpty() ? nullptr : found.first();
+      return pItem != nullptr;
+    }), "the editor never rebuilt its tree around the planted alias");
+
+    auto description = [](QTreeWidgetItem *pItem) {
+      return pItem->data(0, Qt::AccessibleDescriptionRole).toString();
+    };
+    const QString active = dlgTriggerEditor::tr("activated");
+    const QString inactive = dlgTriggerEditor::tr("deactivated");
+    QCOMPARE(description(pItem), active);
+
+    // Toggle while visible (queues the repaint and arms the deferred flush),
+    // then hide before that flush's 0ms timer fires.
+    QVERIFY(pLua->compileAndExecuteScript(qsl("disableAlias(\"qaHiddenRaceAlias\")")));
+    pEditor->hide();
+    QTest::qWait(50ms);
+    QVERIFY(!pEditor->isVisible());
+    // Still queued, not yet repainted, and not dropped.
+    QVERIFY(pEditor->mPendingAliasIconRefresh.contains(pItem->data(0, Qt::UserRole).toInt()));
+
+    pEditor->show();
+    QTRY_COMPARE(description(pItem), inactive);
+  }
+
+  // The editor is hidden, never deleted, when closed, so an item toggled from
+  // Lua while it is closed must show its new state once it is reopened.
+  void test_luaToggleWhileEditorClosedShowsOnReopen() {
+    mudlet::self()->slot_showScriptDialog();
+    QTest::qWait(100ms);
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
+    QVERIFY2(pEditor, "the editor dialog was not created");
+    TLuaInterpreter *pLua = mpHost->getLuaInterpreter();
+    QVERIFY(pLua->compileAndExecuteScript(
+        qsl("permGroup(\"qaClosedFolder\", \"trigger\")\n"
+            "permRegexTrigger(\"qaClosedLeaf\", \"qaClosedFolder\", {\"^qa closed leaf$\"}, \"\")\n"
+            "permRegexTrigger(\"qaClosedDoomed\", \"qaClosedFolder\", {\"^qa closed doomed$\"}, \"\")\n"
+            "permRegexTrigger(\"qaClosedTrigger\", \"\", {\"^qa closed trigger$\"}, \"\")\n"
+            "permAlias(\"qaClosedAlias\", \"\", \"^qa closed alias$\", \"\")\n"
+            "permTimer(\"qaClosedTimer\", \"\", 3600, \"\")\n"
+            "permGroup(\"qaClosedTimerFolder\", \"timer\")\n"
+            "permTimer(\"qaClosedNestedTimer\", \"qaClosedTimerFolder\", 3600, \"\")\n"
+            "permScript(\"qaClosedScript\", \"\", \"-- deliberately does nothing\")\n"
+            "permKey(\"qaClosedKey\", \"\", mudlet.key.F8, \"\")\n"
+            "enableTimer(\"qaClosedTimer\")\n"
+            "enableTimer(\"qaClosedTimerFolder\")\n"
+            "enableTimer(\"qaClosedNestedTimer\")\n"
+            "enableScript(\"qaClosedScript\")")));
+    pEditor->doCleanReset();
+
+    struct Target {
+      const char *treeName;
+      const char *itemName;
+      const char *enableFn;
+      const char *disableFn;
+      QTreeWidgetItem *pItem = nullptr;
+    };
+    Target targets[] = {
+        {"treeWidget_triggers", "qaClosedTrigger", "enableTrigger", "disableTrigger"},
+        {"treeWidget_aliases", "qaClosedAlias", "enableAlias", "disableAlias"},
+        {"treeWidget_timers", "qaClosedTimer", "enableTimer", "disableTimer"},
+        {"treeWidget_scripts", "qaClosedScript", "enableScript", "disableScript"},
+        {"treeWidget_keys", "qaClosedKey", "enableKey", "disableKey"},
+    };
+    Target leaf{"treeWidget_triggers", "qaClosedLeaf", "enableTrigger", "disableTrigger"};
+    Target nestedTimer{"treeWidget_timers", "qaClosedNestedTimer", "enableTimer", "disableTimer"};
+    auto findItem = [pEditor](const char *treeName, const char *itemName) -> QTreeWidgetItem * {
+      auto *pTree = pEditor->findChild<QTreeWidget *>(QString::fromLatin1(treeName));
+      if (!pTree) {
+        return nullptr;
+      }
+      const auto found = pTree->findItems(QString::fromLatin1(itemName), Qt::MatchCaseSensitive | Qt::MatchFixedString | Qt::MatchRecursive, 0);
+      return found.isEmpty() ? nullptr : found.first();
+    };
+    // doCleanReset() rebuilds later, so take every pointer from one poll
+    auto findAll = [&]() {
+      bool all = true;
+      for (auto *pTarget : {&targets[0], &targets[1], &targets[2], &targets[3], &targets[4], &leaf, &nestedTimer}) {
+        pTarget->pItem = findItem(pTarget->treeName, pTarget->itemName);
+        all = all && pTarget->pItem;
+      }
+      return all;
+    };
+    QVERIFY2(QTest::qWaitFor(findAll), "the editor never rebuilt its trees around the planted items");
+
+    auto description = [](QTreeWidgetItem *pItem) {
+      return pItem->data(0, Qt::AccessibleDescriptionRole).toString();
+    };
+    const QString active = dlgTriggerEditor::tr("activated");
+    const QString inactive = dlgTriggerEditor::tr("deactivated");
+    const QString inactiveParent = dlgTriggerEditor::tr("%1 in a deactivated group").arg(active);
+    // Names every row that is wrong rather than stopping at the first, and
+    // compares the row itself first: a rebuild would both repaint the row and
+    // free the pointer taken before the editor was closed.
+    auto staleRow = [&](const Target &target, const QString &expected, QStringList &stale) {
+      if (findItem(target.treeName, target.itemName) != target.pItem) {
+        stale << qsl("%1 (row rebuilt)").arg(QString::fromLatin1(target.itemName));
+      } else if (description(target.pItem) != expected) {
+        stale << QString::fromLatin1(target.itemName);
+      }
+    };
+    auto staleRows = [&](const QString &expected, const QString &expectedLeaf) {
+      QStringList stale;
+      for (const auto &target : targets) {
+        staleRow(target, expected, stale);
+      }
+      staleRow(leaf, expectedLeaf, stale);
+      return stale;
+    };
+    QCOMPARE(staleRows(active, active), QStringList());
+    QCOMPARE(description(nestedTimer.pItem), active);
+
+    auto runWhileClosed = [&](const QString &script) {
+      pEditor->hide();
+      QCoreApplication::processEvents();
+      QVERIFY(!pEditor->isVisible());
+      QVERIFY(pLua->compileAndExecuteScript(script));
+      QTest::qWait(50ms);
+    };
+    auto toggleAllScript = [&](bool enable) {
+      QString script;
+      for (const auto &target : targets) {
+        script += qsl("%1(\"%2\")\n").arg(QString::fromLatin1(enable ? target.enableFn : target.disableFn), QString::fromLatin1(target.itemName));
+      }
+      return script + (enable ? qsl("enableTrigger(\"qaClosedFolder\")") : qsl("disableTrigger(\"qaClosedFolder\")"));
+    };
+
+    runWhileClosed(toggleAllScript(false));
+    if (QTest::currentTestFailed()) {
+      return;
+    }
+    pEditor->show();
+    QTRY_COMPARE(staleRows(inactive, inactiveParent), QStringList());
+
+    // The accessible description is set on every paint but the icon only when
+    // it changes, so check the icon the reopen painted matches a fresh build.
+    QHash<QString, qint64> repaintedIcons;
+    for (const auto &target : targets) {
+      repaintedIcons.insert(QString::fromLatin1(target.itemName), target.pItem->icon(0).cacheKey());
+    }
+    pEditor->doCleanReset();
+    QTRY_VERIFY(!pEditor->mCleanResetQueued);
+    QVERIFY2(QTest::qWaitFor(findAll), "the editor never rebuilt its trees after the reset");
+    for (const auto &target : targets) {
+      QCOMPARE(repaintedIcons.value(QString::fromLatin1(target.itemName)), target.pItem->icon(0).cacheKey());
+    }
+
+    // Reopen the way the main window's toolbar does.
+    runWhileClosed(toggleAllScript(true));
+    if (QTest::currentTestFailed()) {
+      return;
+    }
+    mudlet::self()->slot_showTriggerDialog();
+    QTRY_COMPARE(staleRows(active, active), QStringList());
+
+    // Temporary items have no tree item, so toggling them while the editor
+    // is closed must not pile their IDs up for the reopen.
+    auto nothingQueued = [pEditor]() {
+      return pEditor->mPendingTriggerIconRefresh.isEmpty() && pEditor->mPendingAliasIconRefresh.isEmpty()
+             && pEditor->mPendingTimerIconRefresh.isEmpty() && pEditor->mPendingScriptIconRefresh.isEmpty()
+             && pEditor->mPendingKeyIconRefresh.isEmpty();
+    };
+    QVERIFY(nothingQueued());
+    runWhileClosed(
+        qsl("local trigger = tempTrigger(\"qa closed temp\", \"\")\n"
+            "local alias = tempAlias(\"^qa closed temp$\", \"\")\n"
+            "local timer = tempTimer(3600, \"\")\n"
+            "local key = tempKey(mudlet.key.F9, \"\")\n"
+            "for i = 1, 3 do\n"
+            "  assert(disableTrigger(tostring(trigger)) and enableTrigger(tostring(trigger)))\n"
+            "  assert(disableAlias(tostring(alias)) and enableAlias(tostring(alias)))\n"
+            "  assert(disableTimer(tostring(timer)) and enableTimer(tostring(timer)))\n"
+            "  assert(disableKey(tostring(key)) and enableKey(tostring(key)))\n"
+            "end\n"
+            "killTrigger(trigger)\n"
+            "killAlias(alias)\n"
+            "killTimer(timer)\n"
+            "killKey(key)"));
+    QVERIFY(nothingQueued());
+
+    // A tree rebuild paints every item from its current state, so it must
+    // leave nothing queued for the reopen to repaint again.
+    QVERIFY(pLua->compileAndExecuteScript(qsl("disableAlias(\"qaClosedAlias\")")));
+    QVERIFY(!nothingQueued());
+    pEditor->doCleanReset();
+    QTRY_VERIFY(nothingQueued());
+    pEditor->show();
+    QVERIFY2(QTest::qWaitFor(findAll), "the editor never rebuilt its trees after the reset");
+    QCOMPARE(description(targets[1].pItem), inactive);
+
+    // A script that both adds an item and toggles one while the editor is
+    // closed leaves the trees stale, so the reopen rebuilds them first.
+    runWhileClosed(
+        qsl("permAlias(\"qaClosedAddedAlias\", \"\", \"^qa closed added$\", \"\")\n"
+            "enableAlias(\"qaClosedAlias\")\n"
+            "disableTrigger(\"qaClosedTrigger\")"));
+    if (QTest::currentTestFailed()) {
+      return;
+    }
+    mudlet::self()->slot_showTriggerDialog();
+    QVERIFY2(QTest::qWaitFor([&]() { return findAll() && findItem("treeWidget_aliases", "qaClosedAddedAlias"); }),
+             "the reopened editor does not show the alias added while it was closed");
+    QCOMPARE(description(targets[0].pItem), inactive);
+    QCOMPARE(description(targets[1].pItem), active);
+    QVERIFY(nothingQueued());
+
+    // The trees leave out only top-level temporary items, so ones nested in a
+    // permanent folder, as a package's XML can mark them, must still repaint.
+    TTrigger *pNestedTrigger = mpHost->getTriggerUnit()->getTrigger(leaf.pItem->data(0, Qt::UserRole).toInt());
+    TTimer *pNestedTimer = mpHost->getTimerUnit()->getTimer(nestedTimer.pItem->data(0, Qt::UserRole).toInt());
+    QTreeWidgetItem *pDoomedItem = findItem("treeWidget_triggers", "qaClosedDoomed");
+    QVERIFY(pDoomedItem);
+    TTrigger *pDoomed = mpHost->getTriggerUnit()->getTrigger(pDoomedItem->data(0, Qt::UserRole).toInt());
+    QVERIFY(pNestedTrigger && pNestedTrigger->getParent());
+    QVERIFY(pNestedTimer && pNestedTimer->getParent());
+    QVERIFY(pDoomed && pDoomed->getParent());
+    pNestedTrigger->setTemporary(true);
+    pNestedTimer->setTemporary(true);
+    pDoomed->setTemporary(true);
+    auto restorePermanent = qScopeGuard([pNestedTrigger, pNestedTimer]() {
+      pNestedTrigger->setTemporary(false);
+      pNestedTimer->setTemporary(false);
+    });
+    auto staleNested = [&](const QString &expected) {
+      QStringList stale;
+      staleRow(leaf, expected, stale);
+      staleRow(nestedTimer, expected, stale);
+      return stale;
+    };
+    // The doomed trigger is queued and then freed while closed, leaving its
+    // row behind for the reopen's walk to skip.
+    runWhileClosed(
+        qsl("assert(disableTrigger(\"qaClosedLeaf\"))\n"
+            "assert(disableTimer(\"qaClosedNestedTimer\"))\n"
+            "assert(disableTrigger(\"qaClosedDoomed\"))\n"
+            "assert(killTrigger(\"qaClosedDoomed\"))"));
+    if (QTest::currentTestFailed()) {
+      return;
+    }
+    mpHost->getTriggerUnit()->doCleanup();
+    QVERIFY(!mpHost->getTriggerUnit()->getTrigger(pDoomedItem->data(0, Qt::UserRole).toInt()));
+    pEditor->show();
+    QTRY_COMPARE(staleNested(inactive), QStringList());
+    QVERIFY(nothingQueued());
+
+    runWhileClosed(
+        qsl("assert(enableTrigger(\"qaClosedLeaf\"))\n"
+            "assert(enableTimer(\"qaClosedNestedTimer\"))"));
+    if (QTest::currentTestFailed()) {
+      return;
+    }
+    pEditor->show();
+    QTRY_COMPARE(staleNested(active), QStringList());
+
+    QVERIFY(pLua->compileAndExecuteScript(
+        qsl("disableTimer(\"qaClosedTimer\")\ndisableTimer(\"qaClosedTimerFolder\")\ndisableKey(\"qaClosedKey\")")));
+  }
+
+  // paintAliasItem()/paintTimerItem()/paintScriptItem()/paintKeyItem() (and
+  // paintTriggerItem() from #10605) used to recompute touchNotification for
+  // every item they painted, including descendants only swept in because an
+  // ancestor folder toggled - so toggling a folder could wipe the shared
+  // notification banner via a descendant that happened to be selected, even
+  // though nothing about that descendant's own error/active state changed.
+  // touchNotification must instead be decided once, by the actually-toggled
+  // item's own selection state, and carried down to its descendants.
+  void test_luaToggleOfFolderDoesNotClearNotificationOfUnrelatedSelectedDescendant() {
+    mudlet::self()->slot_showScriptDialog();
+    QTest::qWait(100ms);
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
+    QVERIFY2(pEditor, "the editor dialog was not created");
+    TLuaInterpreter *pLua = mpHost->getLuaInterpreter();
+    QVERIFY(pLua->compileAndExecuteScript(
+        qsl("permGroup(\"qaNotifyFolder\", \"script\")\n"
+            "permScript(\"qaNotifyLeaf\", \"qaNotifyFolder\", \"-- deliberately does nothing\")\n"
+            "enableScript(\"qaNotifyFolder\")\n"
+            "enableScript(\"qaNotifyLeaf\")")));
+    pEditor->doCleanReset();
+
+    auto *pTree = pEditor->findChild<QTreeWidget *>(qsl("treeWidget_scripts"));
+    QVERIFY(pTree);
+    QTreeWidgetItem *pLeaf = nullptr;
+    QVERIFY2(QTest::qWaitFor([&]() {
+      const auto found = pTree->findItems(
+          qsl("qaNotifyLeaf"),
+          Qt::MatchCaseSensitive | Qt::MatchFixedString | Qt::MatchRecursive,
+          0);
+      pLeaf = found.isEmpty() ? nullptr : found.first();
+      return pLeaf != nullptr;
+    }), "the editor never rebuilt its tree around the planted script");
+
+    // doCleanReset()'s deferred runScheduledCleanReset() always ends on
+    // slot_showTriggers(), so the view has to be switched back to Scripts
+    // again now that the reset has settled, before selecting the leaf makes
+    // it the item that view has open.
+    pEditor->slot_showScripts();
+    pEditor->slot_scriptsSelected(pLeaf);
+    QCOMPARE(pEditor->mCurrentView, EditorViewType::cmScriptView);
+    QCOMPARE(pEditor->mpCurrentScriptItem, pLeaf);
+
+    // Put an unrelated banner up, as if some other diagnostic were showing.
+    pEditor->showError(qsl("an unrelated diagnostic"));
+    QVERIFY(pEditor->mpSystemMessageArea->isVisible());
+
+    const int flushBefore = pEditor->mScriptIconFlushCount;
+    // Toggle the *folder*, not the selected leaf.
+    QVERIFY(pLua->compileAndExecuteScript(qsl("disableScript(\"qaNotifyFolder\")")));
+    QTRY_COMPARE(pEditor->mScriptIconFlushCount, flushBefore + 1);
+    QVERIFY(pEditor->mpSystemMessageArea->isVisible());
+  }
+
+  // Lua's error and debug output, and the map's errors, go to the editor's
+  // error console in the colours each sender picked
+  void test_errorAndDebugLinesReachTheErrorConsole() {
+    mudlet::self()->slot_showScriptDialog();
+    QTest::qWait(100ms);
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
+    QVERIFY2(pEditor, "the editor dialog was not created");
+    TLuaInterpreter *pLua = mpHost->getLuaInterpreter();
+
+    QVERIFY(pLua->compileAndExecuteScript(
+        qsl("debugc(\"qaDebugProbe\")\n"
+            "showHandlerError(\"qaEventProbe\", \"qaHandlerProbe\")")));
+    // On its own and split, as printError() heads its line with the whole
+    // chunk's source
+    QVERIFY(pLua->compileAndExecuteScript(
+        qsl("printError(\"qaPrint\" .. \"ErrorProbe\")")));
+    QVERIFY(!pLua->compileAndExecuteScript(qsl("error(\"qaLogErrorProbe\")")));
+    mpHost->mpMap->logError(qsl("qaMapProbe"));
+
+    const TBuffer &buffer = pEditor->mpErrorConsole->model().buffer;
+    auto colourOf = [&buffer](const QString &probe) {
+      for (int line = 0; line < buffer.lineBuffer.size(); ++line) {
+        if (const int column = buffer.lineBuffer.at(line).indexOf(probe); column >= 0) {
+          return buffer.buffer.at(line).at(column).foreground();
+        }
+      }
+      return QColor();
+    };
+    QCOMPARE(colourOf(qsl("qaDebugProbe")), QColor(Qt::green));
+    QCOMPARE(colourOf(qsl("qaPrintErrorProbe")), QColor(Qt::red));
+    QCOMPARE(colourOf(qsl("qaEventProbe")), QColor(Qt::green));
+    QCOMPARE(colourOf(qsl("qaHandlerProbe")), QColor(Qt::red));
+    QCOMPARE(colourOf(qsl("qaLogErrorProbe")), QColor(Qt::red));
+    QCOMPARE(colourOf(qsl("qaMapProbe")), QColor(255, 128, 0));
+  }
+
+  void test_setScriptRewritesTheScriptTheEditorShows() {
+    mudlet::self()->slot_showScriptDialog();
+    QTest::qWait(100ms);
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
+    QVERIFY2(pEditor, "the editor dialog was not created");
+    TLuaInterpreter *pLua = mpHost->getLuaInterpreter();
+    QVERIFY(pLua->compileAndExecuteScript(
+        qsl("permScript(\"qaShownScript\", \"\", \"-- before\")")));
+    pEditor->doCleanReset();
+
+    auto *pTree = pEditor->findChild<QTreeWidget *>(qsl("treeWidget_scripts"));
+    QVERIFY(pTree);
+    QTreeWidgetItem *pItem = nullptr;
+    QVERIFY2(QTest::qWaitFor([&]() {
+      const auto found = pTree->findItems(
+          qsl("qaShownScript"),
+          Qt::MatchCaseSensitive | Qt::MatchFixedString | Qt::MatchRecursive,
+          0);
+      pItem = found.isEmpty() ? nullptr : found.first();
+      return pItem != nullptr;
+    }), "the editor never rebuilt its tree around the planted script");
+    pEditor->slot_showScripts();
+    pEditor->slot_scriptsSelected(pItem);
+    QCOMPARE(pEditor->mpSourceEditorEdbeeDocument->text(), qsl("-- before"));
+
+    QVERIFY(pLua->compileAndExecuteScript(
+        qsl("setScript(\"qaShownScript\", \"-- after\")")));
+    QCOMPARE(pEditor->mpSourceEditorEdbeeDocument->text(), qsl("-- after"));
+  }
+
+  // Items a script makes are picked up the next time the editor gets the
+  // mouse or the focus, and a recompile of every script rebuilds the trees
+  void test_scriptMadeItemsLeaveTheEditorStale() {
+    mudlet::self()->slot_showScriptDialog();
+    QTest::qWait(100ms);
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
+    QVERIFY2(pEditor, "the editor dialog was not created");
+
+    pEditor->mNeedUpdateData = false;
+    QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(
+        qsl("permAlias(\"qaStaleAlias\", \"\", \"^qa stale$\", \"\")")));
+    QVERIFY2(pEditor->mNeedUpdateData, "the editor was not told a script made an alias");
+
+    QTRY_VERIFY(!pEditor->mCleanResetQueued);
+    mpHost->getScriptUnit()->compileAll();
+    QVERIFY2(pEditor->mCleanResetQueued, "recompiling every script did not rebuild the editor's trees");
+  }
+
+  // The "Script editor" shortcut that opens the editor also takes the player
+  // back to the main window from it, follows a change to it, and stands aside
+  // while a key binding grabs a key (#6980)
+  void test_scriptEditorShortcutLeavesTheEditor() {
+    mudlet::self()->slot_showScriptDialog();
+    QTest::qWait(100ms);
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
+    QVERIFY2(pEditor, "the editor dialog was not created");
+
+    auto it = mpHost->profileShortcuts.find(qsl("Script editor"));
+    QVERIFY(it != mpHost->profileShortcuts.end());
+    const QKeySequence original = *it->second;
+    const QKeySequence changed(Qt::CTRL | Qt::ALT | Qt::Key_F12);
+    auto restore = qScopeGuard([&] {
+      *it->second = original;
+      QMetaObject::invokeMethod(mudlet::self(), "slot_assignShortcutsFromProfile", Q_ARG(Host *, mpHost));
+    });
+
+    const auto shortcutFor = [pEditor](const QKeySequence &sequence) -> QShortcut * {
+      for (auto *pShortcut : pEditor->findChildren<QShortcut *>()) {
+        if (pShortcut->key() == sequence) {
+          return pShortcut;
+        }
+      }
+      return nullptr;
+    };
+
+    QVERIFY2(shortcutFor(original), "the editor has no shortcut back to the main window on the \"Script editor\" key");
+
+    *it->second = changed;
+    QVERIFY(QMetaObject::invokeMethod(mudlet::self(), "slot_assignShortcutsFromProfile", Q_ARG(Host *, mpHost)));
+    QVERIFY2(!shortcutFor(original), "the editor kept the old \"Script editor\" key after it was changed");
+    QShortcut *pShortcut = shortcutFor(changed);
+    QVERIFY2(pShortcut, "the editor did not take up the changed \"Script editor\" key");
+    QVERIFY(pShortcut->isEnabled());
+
+    pEditor->slot_keyGrab();
+    QVERIFY2(!pShortcut->isEnabled(), "the \"Script editor\" key stayed live while a key was being grabbed");
+    QTest::keyClick(pEditor, Qt::Key_Escape);
+    QVERIFY(!pEditor->mIsGrabKey);
+    QVERIFY2(pShortcut->isEnabled(), "the \"Script editor\" key did not come back after grabbing a key");
+  }
+  // A list or tree a screen reader cannot name is announced as a bare "tree"
+  // on Tab, with the item types' header hidden and no label beside it (#6159)
+  void test_itemViewsHaveAccessibleNames() {
+    mudlet::self()->slot_showScriptDialog();
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
+    QVERIFY2(pEditor, "the editor dialog was not created");
+
+    QStringList unnamed;
+    int checked = 0;
+    for (auto *pView : pEditor->findChildren<QAbstractItemView *>()) {
+      // Popups are named by the combo box or field that opens them, and a
+      // header by its sections
+      if (pView->window() != pEditor || qobject_cast<QHeaderView *>(pView) ||
+          qobject_cast<QComboBox *>(pView->parent())) {
+        continue;
+      }
+      ++checked;
+      QAccessibleInterface *pInterface = QAccessible::queryAccessibleInterface(pView);
+      QVERIFY(pInterface);
+      if (pInterface->text(QAccessible::Name).trimmed().isEmpty()) {
+        unnamed << pView->objectName();
+      }
+    }
+    QVERIFY2(checked == 10, qPrintable(qsl("found %1 item views in the editor, expected 10").arg(checked)));
+    QVERIFY2(unnamed.isEmpty(), qPrintable(qsl("item views without an accessible name: %1").arg(unnamed.join(qsl(", ")))));
+  }
 };
 
-void initializeQRCResourcesForTriggerEditorTest() {
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-  qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-  qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-  qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-  qInitResources_mudlet();
-  qInitResources_qm();
-}
-
 #include "TriggerEditorTest.moc"
-QTEST_MAIN(TriggerEditorTest)
+MUDLET_GROUPED_TEST_MAIN(TriggerEditorTest)

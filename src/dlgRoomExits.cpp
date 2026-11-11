@@ -238,6 +238,43 @@ void RoomIdLineEditDelegate::slot_specialRoomExitIdEdited(const QString& text) c
     mpItem->setToolTip(ExitsTreeWidget::colIndex_exitStatus, roomIdToolTipText);
 }
 
+CommandLineEditDelegate::CommandLineEditDelegate(const QString& placeholder, QObject* parent)
+: QStyledItemDelegate(parent)
+, mPlaceholder(placeholder)
+{
+}
+
+QWidget* CommandLineEditDelegate::createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const
+{
+    auto* pEditor = QStyledItemDelegate::createEditor(parent, option, index);
+    if (auto* pLineEdit = qobject_cast<QLineEdit*>(pEditor)) {
+        pLineEdit->setPlaceholderText(mPlaceholder);
+    }
+    // The cell underneath still holds the hint as text, which would show through
+    pEditor->setAutoFillBackground(true);
+    return pEditor;
+}
+
+void CommandLineEditDelegate::setEditorData(QWidget* pEditor, const QModelIndex& index) const
+{
+    QStyledItemDelegate::setEditorData(pEditor, index);
+    auto* pLineEdit = qobject_cast<QLineEdit*>(pEditor);
+    if (pLineEdit && pLineEdit->text() == mPlaceholder) {
+        pLineEdit->clear();
+    }
+}
+
+void CommandLineEditDelegate::setModelData(QWidget* pEditor, QAbstractItemModel* model, const QModelIndex& index) const
+{
+    auto* pLineEdit = qobject_cast<QLineEdit*>(pEditor);
+    if (pLineEdit && pLineEdit->text().trimmed().isEmpty()) {
+        // save() and slot_checkModified() recognise a row with no command by the placeholder
+        model->setData(index, mPlaceholder, Qt::EditRole);
+        return;
+    }
+    QStyledItemDelegate::setModelData(pEditor, model, index);
+}
+
 dlgRoomExits::dlgRoomExits(Host* pH, const int roomNumber, QWidget* pW)
 : QDialog(pW)
 , mpHost(pH)
@@ -279,8 +316,9 @@ dlgRoomExits::dlgRoomExits(Host* pH, const int roomNumber, QWidget* pW)
 
     init();
 
-    specialExits->setItemDelegateForColumn(ExitsTreeWidget::colIndex_exitRoomId, new RoomIdLineEditDelegate);
-    specialExits->setItemDelegateForColumn(ExitsTreeWidget::colIndex_exitWeight, new WeightSpinBoxDelegate);
+    specialExits->setItemDelegateForColumn(ExitsTreeWidget::colIndex_exitRoomId, new RoomIdLineEditDelegate(specialExits));
+    specialExits->setItemDelegateForColumn(ExitsTreeWidget::colIndex_exitWeight, new WeightSpinBoxDelegate(specialExits));
+    specialExits->setItemDelegateForColumn(ExitsTreeWidget::colIndex_command, new CommandLineEditDelegate(mSpecialExitCommandPlaceholder, specialExits));
 }
 
 dlgRoomExits::~dlgRoomExits() = default;
@@ -301,6 +339,23 @@ void dlgRoomExits::slot_endEditSpecialExits()
         mEditColumn = -1;
     }
     specialExits->clearSelection();
+}
+
+// Delete (ExitsTreeWidget::keyPressEvent()) can remove the item being edited.
+void dlgRoomExits::slot_specialExitRowsAboutToBeRemoved(const QModelIndex& parent, const int first, const int last)
+{
+    if (!mpEditItem || parent.isValid()) {
+        return;
+    }
+    for (int row = first; row <= last; ++row) {
+        if (specialExits->topLevelItem(row) == mpEditItem) {
+            mpEditItem = nullptr;
+            mEditColumn = -1;
+            button_endEditing->setDisabled(true);
+            button_addSpecialExit->setEnabled(true);
+            return;
+        }
+    }
 }
 
 void dlgRoomExits::slot_editSpecialExit(QTreeWidgetItem* pI, int column)
@@ -477,7 +532,12 @@ void dlgRoomExits::slot_addSpecialExit()
 void dlgRoomExits::save()
 {
     mpHost->mpMap->mMapGraphNeedsUpdate = true;
-    if (!pR) {
+    // The dialog is not modal, so since init() a script may have deleted the
+    // room, or replaced it with a new one under the same id
+    pR = mpHost->mpMap->mpRoomDB->getRoom(mRoomID);
+    if (!pR || pR->serial() != mRoomSerial) {
+        pR = nullptr;
+        close();
         return;
     }
 
@@ -519,12 +579,6 @@ void dlgRoomExits::save()
 
     // Clean up after any deleted specialExits originally present but not now so
     for (const auto& value : originalExitCmds) {
-        pR->customLinesArrow.remove(value);
-        pR->customLinesColor.remove(value);
-        pR->customLinesStyle.remove(value);
-        pR->customLines.remove(value);
-        pR->setDoor(value, 0);
-        pR->setExitWeight(value, 0);
         pR->setSpecialExit(-1, value);
     }
 
@@ -912,18 +966,22 @@ void dlgRoomExits::save()
         pR->customLines.remove(exitKey);
     }
 
-    pR->setExitLock(DIR_NORTHWEST, noroute_nw->isChecked());
-    pR->setExitLock(DIR_NORTH, noroute_n->isChecked());
-    pR->setExitLock(DIR_NORTHEAST, noroute_ne->isChecked());
-    pR->setExitLock(DIR_UP, noroute_up->isChecked());
-    pR->setExitLock(DIR_WEST, noroute_w->isChecked());
-    pR->setExitLock(DIR_EAST, noroute_e->isChecked());
-    pR->setExitLock(DIR_DOWN, noroute_down->isChecked());
-    pR->setExitLock(DIR_SOUTHWEST, noroute_sw->isChecked());
-    pR->setExitLock(DIR_SOUTH, noroute_s->isChecked());
-    pR->setExitLock(DIR_SOUTHEAST, noroute_se->isChecked());
-    pR->setExitLock(DIR_IN, noroute_in->isChecked());
-    pR->setExitLock(DIR_OUT, noroute_out->isChecked());
+    // A box greys out, still ticked, while its roomID is retyped, so it only counts where an exit or stub was saved
+    const auto saveExitLock = [this](const int dirCode, const QCheckBox* pNoRoute) {
+        pR->setExitLock(dirCode, pNoRoute->isChecked() && (pR->getExit(dirCode) > 0 || pR->hasExitStub(dirCode)));
+    };
+    saveExitLock(DIR_NORTHWEST, noroute_nw);
+    saveExitLock(DIR_NORTH, noroute_n);
+    saveExitLock(DIR_NORTHEAST, noroute_ne);
+    saveExitLock(DIR_UP, noroute_up);
+    saveExitLock(DIR_WEST, noroute_w);
+    saveExitLock(DIR_EAST, noroute_e);
+    saveExitLock(DIR_DOWN, noroute_down);
+    saveExitLock(DIR_SOUTHWEST, noroute_sw);
+    saveExitLock(DIR_SOUTH, noroute_s);
+    saveExitLock(DIR_SOUTHEAST, noroute_se);
+    saveExitLock(DIR_IN, noroute_in);
+    saveExitLock(DIR_OUT, noroute_out);
 
     // return value from checkedId() is -1 for no radio button in group checked,
     //   and then more negative values starting from -2 for each button that was
@@ -981,6 +1039,13 @@ void dlgRoomExits::save()
     if (pA) {
         pA->determineAreaExitsOfRoom(pR->getId());
     }
+
+    // Repaint the mapper so the changed exits/doors/locks show immediately -
+    // without this the map stays stale until the next scroll/pan forces a
+    // paint. updateArea() queues a throttled mp2dMap->update(). Also mark the
+    // map unsaved, since editing exits is a map change.
+    mpHost->mpMap->updateArea(pR->getArea());
+    mpHost->mpMap->setUnsaved(__func__);
 
     close();
 }
@@ -1418,7 +1483,7 @@ void dlgRoomExits::slot_out_textEdited(const QString& text)
 void dlgRoomExits::slot_stub_nw_stateChanged(int state)
 {
     normalStubExitChanged(
-            state, nw, noroute_nw, weight_nw, doortype_none_nw, doortype_open_nw, doortype_closed_nw, doortype_locked_n, utils::richText(tr("Set the number of the room northwest of this one.")));
+            state, nw, noroute_nw, weight_nw, doortype_none_nw, doortype_open_nw, doortype_closed_nw, doortype_locked_nw, utils::richText(tr("Set the number of the room northwest of this one.")));
     slot_checkModified();
 }
 
@@ -1642,6 +1707,7 @@ void dlgRoomExits::init()
     if (!pR) {
         return;
     }
+    mRoomSerial = pR->serial();
 
     roomID->setText(QString::number(mRoomID));
     if (pR->isLocked) {
@@ -1908,6 +1974,7 @@ void dlgRoomExits::init()
     connect(button_addSpecialExit, &QAbstractButton::clicked,                      this, &dlgRoomExits::slot_addSpecialExit);
     connect(specialExits,          &QTreeWidget::itemClicked,                      this, &dlgRoomExits::slot_editSpecialExit);
     connect(specialExits,          &QTreeWidget::itemClicked,                      this, &dlgRoomExits::slot_checkModified);
+    connect(specialExits->model(), &QAbstractItemModel::rowsAboutToBeRemoved,     this, &dlgRoomExits::slot_specialExitRowsAboutToBeRemoved);
     connect(button_endEditing,     &QAbstractButton::clicked,                      this, &dlgRoomExits::slot_endEditSpecialExits);
     connect(button_endEditing,     &QAbstractButton::clicked,                      this, &dlgRoomExits::slot_checkModified);
     connect(nw,                    &QLineEdit::textEdited,                         this, &dlgRoomExits::slot_nw_textEdited);
@@ -1996,7 +2063,6 @@ void dlgRoomExits::init()
     connect(doortype_s,            &QButtonGroup::idClicked,                       this, &dlgRoomExits::slot_checkModified);
     connect(doortype_se,           &QButtonGroup::idClicked,                       this, &dlgRoomExits::slot_checkModified);
     connect(doortype_in,           &QButtonGroup::idClicked,                       this, &dlgRoomExits::slot_checkModified);
-    connect(doortype_down,         &QButtonGroup::idClicked,                       this, &dlgRoomExits::slot_checkModified);
     connect(doortype_out,          &QButtonGroup::idClicked,                       this, &dlgRoomExits::slot_checkModified);
     // clang-format on
 }

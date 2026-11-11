@@ -26,10 +26,19 @@
 
 #include "Host.h"
 #include "TKey.h"
+#include "Tree.h"
+#include "utils.h"
 
+#include <QFlags>
+#include <QLatin1Char>
+#include <QLatin1String>
+#include <QMutableSetIterator>
 #include <QScopeGuard>
+#include <QStringBuilder>
+#include <QStringList>
 
 #include <functional>
+#include <utility>
 
 KeyUnit::KeyUnit(Host* pHost)
 : mRunAllKeyMatches(false)
@@ -49,7 +58,8 @@ KeyUnit::~KeyUnit()
         key->mpHost = nullptr;
         // Also set mpHost to null on all children recursively
         std::function<void(TKey*)> nullifyChildren = [&nullifyChildren](TKey* k) {
-            for (auto child : *k->mpMyChildrenList) {
+            for (auto* childNode : *k->mpMyChildrenList) {
+                auto* child = static_cast<TKey*>(childNode);
                 child->mpHost = nullptr;
                 nullifyChildren(child);
             }
@@ -70,8 +80,9 @@ void KeyUnit::resetStats()
 
 void KeyUnit::_uninstall(TKey* pChild, const QString& packageName)
 {
-    std::list<TKey*>* childrenList = pChild->mpMyChildrenList;
-    for (auto key : *childrenList) {
+    std::list<Tree<TKey>*>* childrenList = pChild->mpMyChildrenList;
+    for (auto* keyNode : *childrenList) {
+        auto* key = static_cast<TKey*>(keyNode);
         _uninstall(key, packageName);
         uninstallList.append(key);
     }
@@ -138,12 +149,49 @@ bool KeyUnit::processDataStream(const Qt::Key key, const Qt::KeyboardModifiers m
     return isMatchFound;
 }
 
+bool KeyUnit::wouldMatch(const Qt::Key key, const Qt::KeyboardModifiers modifiers) const
+{
+    return firstMatch(key, modifiers) != nullptr;
+}
+
+const TKey* KeyUnit::firstMatch(const Qt::Key key, const Qt::KeyboardModifiers modifiers) const
+{
+    for (auto keyObject : mKeyRootNodeList) {
+        if (!keyObject || !keyObject->isActive() || (keyObject->mpHost && keyObject->mpHost->isClosingDown())) {
+            continue;
+        }
+
+        if (const TKey* match = keyObject->firstMatch(key, modifiers)) {
+            return match;
+        }
+    }
+
+    return nullptr;
+}
+
+const TKey* KeyUnit::firstBinding(const Qt::Key key, const Qt::KeyboardModifiers modifiers) const
+{
+    for (auto keyObject : mKeyRootNodeList) {
+        // Only whole top level items are ever queued for deletion; see enableKey()
+        if (!keyObject || mCleanupSet.contains(keyObject) || uninstallList.contains(keyObject)) {
+            continue;
+        }
+
+        if (const TKey* match = keyObject->firstBinding(key, modifiers)) {
+            return match;
+        }
+    }
+
+    return nullptr;
+}
+
 void KeyUnit::compileAll()
 {
+    // Switched off ones as well: a reset has just closed the Lua state their
+    // compiled functions lived in, and switching one back on later does
+    // not compile it again
     for (auto key : mKeyRootNodeList) {
-        if (key->isActive()) {
-            key->compileAll();
-        }
+        key->compileAll();
     }
 }
 
@@ -190,6 +238,19 @@ std::vector<int> KeyUnit::findItems(const QString& name, const bool exactMatch, 
     return ids;
 }
 
+bool KeyUnit::pendingDeletion(TKey* pItem) const
+{
+    if (!hasPendingDeletes()) {
+        return false;
+    }
+    for (auto* pAncestor = pItem; pAncestor; pAncestor = pAncestor->getParent()) {
+        if (mCleanupSet.contains(pAncestor) || uninstallList.contains(pAncestor)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool KeyUnit::enableKey(const QString& name)
 {
     bool found = false;
@@ -198,12 +259,23 @@ bool KeyUnit::enableKey(const QString& name)
     const auto [begin, end] = mLookupTable.equal_range(name);
     for (auto it = begin; it != end; ++it) {
         TKey* pT = it.value();
-        // Unlike the TTriggerUnit version of this code we directly set
-        // the mActive flag (and it shows up in the editor) rather than the
-        // mUserActiveState one (which does not)
-        // So do not use pT->setIsActive(true) here:
+        // A key queued for deletion stays in the lookup table until doCleanup()
+        // frees it - re-activating one resurrects a killKey()ed key, or one
+        // whose package a script uninstalled mid-pass, and it matches the next
+        // key press.
+        if (mCleanupSet.contains(pT) || uninstallList.contains(pT)) {
+            continue;
+        }
+        // enableKey() sets pT active and then walks pT's children for the same
+        // name without re-checking the skip above. That is only safe while no
+        // child key is ever queued for deletion under a live parent: killKey()
+        // and removeAllTempKeys() take root nodes only, and _uninstall() queues
+        // whole subtrees, so a corpse never sits under a parent this loop keeps.
         pT->enableKey(name);
         found = true;
+        if (!pT->isTemporary() || pT->getParent()) {
+            emit mpHost->signal_keyToggled(pT->getID());
+        }
     }
     return found;
 }
@@ -216,35 +288,39 @@ bool KeyUnit::disableKey(const QString& name)
     const auto [begin, end] = mLookupTable.equal_range(name);
     for (auto it = begin; it != end; ++it) {
         TKey* pT = it.value();
-        // Unlike the TTriggerUnit version of this code we directly clear
-        // the mActive flag (and it shows up in the editor) rather than the
-        // mUserActiveState one (which does not)
-        // So do not use pT->setIsActive(false) here:
+        // Walks pT's children for the same name as well - see enableKey()
         pT->disableKey(name);
         found = true;
+        if (!pT->isTemporary() || pT->getParent()) {
+            emit mpHost->signal_keyToggled(pT->getID());
+        }
     }
     return found;
 }
 
 bool KeyUnit::killKey(QString& name)
 {
-    for (auto pChild : mKeyRootNodeList) {
-        if (pChild->getName() != name) {
+    // By the lookup table rather than a walk of every key; see TimerUnit::killTimer()
+    const auto [begin, end] = mLookupTable.equal_range(name);
+    for (auto it = begin; it != end; ++it) {
+        TKey* pChild = it.value();
+        // Only a top level item was ever killable: one inside a group goes with
+        // its group, and freeing it separately as well would free it twice
+        if (pChild->getParent()) {
             continue;
         }
         // Names are not unique, so keep looking rather than give up on the first
-        // same-named key that cannot be killed - a permanent key loaded from the
-        // profile precedes this session's temporaries in this list, and reporting
-        // a failure over it would strand a killable key
+        // same-named key that cannot be killed - a permanent one would strand a
+        // killable temporary
         if (!pChild->isTemporary()) {
             // only temporary Keys can be killed
             continue;
         }
-        // An already killed key is only unlinked from this list once doCleanup()
+        // An already killed key is only unlinked from the lookup table once doCleanup()
         // gets to free it, which cannot happen while a key script is on the call
         // stack - so until then it is still findable by name. Killing it a second
         // time achieves nothing:
-        if (mCleanupSet.contains(pChild)) {
+        if (mCleanupSet.contains(pChild) || uninstallList.contains(pChild)) {
             continue;
         }
         pChild->setIsActive(false);
@@ -274,13 +350,13 @@ void KeyUnit::addKeyRootNode(TKey* pT, int parentPosition, int childPosition, bo
     }
 
     if ((parentPosition == -1) || (childPosition >= static_cast<int>(mKeyRootNodeList.size()))) {
-        mKeyRootNodeList.push_back(pT);
+        listRootNode(pT, mKeyRootNodeList.end());
     } else {
         // insert item at proper position
         int cnt = 0;
         for (auto it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it++) {
             if (cnt >= childPosition) {
-                mKeyRootNodeList.insert(it, pT);
+                listRootNode(pT, it);
                 break;
             }
             cnt++;
@@ -303,7 +379,7 @@ void KeyUnit::reParentKey(int childID, int oldParentID, int newParentID, int par
     if (pOldParent) {
         pOldParent->popChild(pChild);
     } else {
-        mKeyRootNodeList.remove(pChild);
+        unlistRootNode(pChild);
     }
     if (pNewParent) {
         pNewParent->addChild(pChild, parentPosition, childPosition);
@@ -312,6 +388,10 @@ void KeyUnit::reParentKey(int childID, int oldParentID, int newParentID, int par
         pChild->Tree<TKey>::setParent(nullptr);
         addKeyRootNode(pChild, parentPosition, childPosition, true);
     }
+
+    // The profile save skips a top-level module member and the module save only walks its own
+    // folder, so an item moved out of a module that kept the mark would be saved nowhere
+    pChild->updateModuleMembership();
 }
 
 void KeyUnit::reParentKey(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position)
@@ -336,7 +416,23 @@ void KeyUnit::removeKeyRootNode(TKey* pT)
     // session
     mLookupTable.remove(pT->getName(), pT);
     mKeyMap.remove(pT->getID());
-    mKeyRootNodeList.remove(pT);
+    unlistRootNode(pT);
+}
+
+void KeyUnit::listRootNode(TKey* pT, std::list<TKey*>::iterator before)
+{
+    if (!mRootNodePositions.contains(pT)) {
+        mRootNodePositions.insert(pT, mKeyRootNodeList.insert(before, pT));
+    }
+}
+
+void KeyUnit::unlistRootNode(TKey* pT)
+{
+    const auto position = mRootNodePositions.constFind(pT);
+    if (position != mRootNodePositions.cend()) {
+        mKeyRootNodeList.erase(position.value());
+        mRootNodePositions.erase(position);
+    }
 }
 
 TKey* KeyUnit::getKey(int id)
@@ -436,8 +532,9 @@ QString KeyUnit::getKeyName(const Qt::Key keyCode, const Qt::KeyboardModifiers m
 
 void KeyUnit::assembleReport(TKey* pItem)
 {
-    std::list<TKey*>* childrenList = pItem->mpMyChildrenList;
-    for (auto pChild : *childrenList) {
+    std::list<Tree<TKey>*>* childrenList = pItem->mpMyChildrenList;
+    for (auto* pChildNode : *childrenList) {
+        auto* pChild = static_cast<TKey*>(pChildNode);
         ++statsItemsTotal;
         if (pChild->isActive()) {
             ++statsActiveItems;
@@ -480,6 +577,10 @@ void KeyUnit::doCleanup()
         return;
     }
 
+    if (!hasPendingDeletes()) {
+        return;
+    }
+
     QSet<TKey*> deletedKeys;
     QMutableSetIterator<TKey*> itKey(mCleanupSet);
     while (itKey.hasNext()) {
@@ -488,6 +589,9 @@ void KeyUnit::doCleanup()
         deletedKeys.insert(pKey);
         delete pKey;
     }
+    // The drain frees no buckets, so later flushes would re-scan an array sized for the largest batch
+    // ever held. squeeze(), not clear(), keeps anything the drain left behind.
+    mCleanupSet.squeeze();
     // Flush the deletes uninstall() deferred (#9337). uninstallList is ordered
     // children-before-parents and each ~Tree unlinks from its parent, so deleting
     // children first empties the parent's child list (no double free); the seen

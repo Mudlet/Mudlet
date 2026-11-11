@@ -19,34 +19,29 @@
  ***************************************************************************/
 
 #include "THyperlinkVisibilityManager.h"
-#include "TBuffer.h"
-#include "TConsole.h"
-#include "TTextEdit.h"
 #include "Host.h"
-#include "mudlet.h"
-#include "widechar_width.h"
+#include "TBuffer.h"
+#include "TConsoleModel.h"
+#include "TAppFrontend.h"
 
 #include <QAccessible>
 #include <QDateTime>
 #include <QDebug>
+#include <QTimer>
+#include <algorithm>
 #include <chrono>
-#include <limits>
 
 using namespace std::chrono_literals;
 
-THyperlinkVisibilityManager::THyperlinkVisibilityManager(TConsole* pConsole)
+// No QObject parent - the owning TConsoleModel is not one - so the timers below
+// are parented to this manager and die with the model, not with a widget.
+THyperlinkVisibilityManager::THyperlinkVisibilityManager(TConsoleModel& model)
 : QObject(nullptr)
-, mpConsole(pConsole)
+, mModel(model)
 {
-    Q_ASSERT(pConsole);
-
     mpTimer = new QTimer(this);
     mpTimer->setInterval(100ms); // Check every 100ms for timer-based concealments
     connect(mpTimer, &QTimer::timeout, this, &THyperlinkVisibilityManager::slot_checkTimers);
-
-    mpOutputGapTimer = new QTimer(this);
-    mpOutputGapTimer->setSingleShot(true);
-    connect(mpOutputGapTimer, &QTimer::timeout, this, &THyperlinkVisibilityManager::slot_outputGapExpired);
 
     mpAnnouncementTimer = new QTimer(this);
     mpAnnouncementTimer->setSingleShot(true);
@@ -57,7 +52,6 @@ THyperlinkVisibilityManager::THyperlinkVisibilityManager(TConsole* pConsole)
 THyperlinkVisibilityManager::~THyperlinkVisibilityManager()
 {
     mpTimer->stop();
-    mpOutputGapTimer->stop();
     mpAnnouncementTimer->stop();
 }
 
@@ -99,8 +93,8 @@ bool THyperlinkVisibilityManager::registerHyperlink(int linkId, int lineNumber, 
     tracked.expireOnPrompt = styling.visibility.expireOnPrompt;
     tracked.expireOnOutput = styling.visibility.expireOnOutput;
     tracked.outputDelayMs = styling.visibility.outputDelayMs;
-    // expire triggers require clicking the link to activate them
-    // skip flags are set when the link is clicked, not at registration
+    // The next prompt usually ends the output the link arrived in, so it does not count
+    tracked.skipFirstPrompt = tracked.expireOnPrompt;
 
     mTrackedLinks.insert(linkId, tracked);
 
@@ -135,8 +129,8 @@ bool THyperlinkVisibilityManager::registerHyperlink(int linkId, int lineNumber, 
         return false;
     }
 
-    // Handle RevealThenConceal with zero delay - start in Revealed phase so clicking works
-    if (tracked.action == TrackedHyperlink::Action::RevealThenConceal && tracked.delayMs == 0) {
+    // RevealThenConceal with no delay and no expire trigger has nothing to wait for - start Revealed so clicking works
+    if (tracked.action == TrackedHyperlink::Action::RevealThenConceal && tracked.delayMs == 0 && !tracked.expireOnInput && !tracked.expireOnPrompt && !tracked.expireOnOutput) {
 #if defined(DEBUG_OSC_PROCESSING)
         qDebug().noquote() << "[OSC] RevealThenConceal link" << linkId << "has zero delay - starting in Revealed phase";
 #endif
@@ -173,35 +167,15 @@ void THyperlinkVisibilityManager::onLinkClicked(int linkId)
 
     // For conceal actions, clicking activates the concealment
     if (link.action == TrackedHyperlink::Action::Conceal && !link.isConcealed) {
-        const bool hasExpireTriggers = link.expireOnInput || link.expireOnPrompt || link.expireOnOutput;
-
-        if (link.delayMs == 0 && !hasExpireTriggers) {
-            // Immediate concealment (no delay and no expire triggers)
-#if defined(DEBUG_OSC_PROCESSING)
-            qDebug().noquote() << "[OSC] Link" << linkId << "clicked - concealing immediately (no delay, no expire triggers)";
-#endif
+        if (link.delayMs == 0) {
             performConcealment(link);
             emit visibilityChanged();
             return; // Link was removed from map, must not access reference anymore
         }
-        if (link.delayMs > 0 && link.timerActivatedMs == 0) {
-            // Delayed concealment - start timer
+        if (link.timerActivatedMs == 0) {
             link.timerActivatedMs = QDateTime::currentMSecsSinceEpoch();
-#if defined(DEBUG_OSC_PROCESSING)
-            qDebug().noquote() << "[OSC] Link" << linkId << "clicked - timer activated, will conceal in" << link.delayMs << "ms";
-#endif
             mHasTimerBasedLinks = true;
             startTimerIfNeeded();
-        } else if (hasExpireTriggers && !link.expireActivated) {
-            // Expire triggers: clicking activates them
-            // For prompt/output, set skip flags to avoid immediate trigger from server response
-            link.expireActivated = true;
-            link.skipFirstPrompt = link.expireOnPrompt;
-            link.skipFirstOutput = link.expireOnOutput;
-#if defined(DEBUG_OSC_PROCESSING)
-            qDebug().noquote() << "[OSC] Link" << linkId << "clicked - expire triggers activated" << "input:" << link.expireOnInput << "skipPrompt:" << link.skipFirstPrompt
-                               << "skipOutput:" << link.skipFirstOutput;
-#endif
         }
     }
 
@@ -246,62 +220,22 @@ void THyperlinkVisibilityManager::onPromptReceived()
 
 void THyperlinkVisibilityManager::onDataReceived()
 {
-    qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
-
-    // Check if any tracked links have output expiry enabled
-    quint32 minOutputDelay = 0;
-    bool hasOutputLinks = false;
-
-    for (const auto& link : std::as_const(mTrackedLinks)) {
-        if (link.expireOnOutput) {
-            hasOutputLinks = true;
-            if (minOutputDelay == 0 || link.outputDelayMs < minOutputDelay) {
-                minOutputDelay = link.outputDelayMs;
-            }
-        }
-    }
-
-    if (!hasOutputLinks) {
-        mLastDataReceivedMs = currentTime;
+    // A link printed later measures its gap from its own creation, so nothing here needs keeping
+    if (mTrackedLinks.isEmpty()) {
         return;
     }
 
-    // Sammer's "batch" approach: expire links when new data arrives AFTER a gap
-    // This creates the "one batch at a time" effect - old links are hidden when
-    // a new batch of output begins, not during the idle period
-    if (mLastDataReceivedMs > 0 && mpOutputGapTimer && !mpOutputGapTimer->isActive()) {
-        // Gap timer has expired (not active) - this is new data after an idle gap
-        // Trigger output expiry now, at the start of the new batch
-#if defined(DEBUG_OSC_PROCESSING)
-        qDebug().noquote() << "[OSC] New data after gap - triggering output expire (batch transition)";
-#endif
-        processExpireTriggeredLinks(false, false, true);
-    }
+    // Sammer's "batch" approach: links expire when a new batch of output begins, not
+    // during the idle period. Before the stamp below, as the gap is measured from the previous one.
+    processExpireTriggeredLinks(false, false, true);
 
-    mLastDataReceivedMs = currentTime;
-
-    // Start/restart the output gap timer with the minimum delay
-    // Clamp to INT_MAX to prevent truncation when casting to int for QTimer::start()
-    if (mpOutputGapTimer && minOutputDelay > 0) {
-        const quint32 clampedDelay = std::min(minOutputDelay, static_cast<quint32>(std::numeric_limits<int>::max()));
-        mpOutputGapTimer->start(static_cast<int>(clampedDelay));
-    }
-}
-
-void THyperlinkVisibilityManager::slot_outputGapExpired()
-{
-    // Gap timer expired - we are now "in gap state"
-    // The actual expiry will happen when new data arrives (in onDataReceived)
-    // This matches Sammer's "batch" approach: expire old links at the START of
-    // a new batch, not during the idle period
-#if defined(DEBUG_OSC_PROCESSING)
-    qDebug().noquote() << "[OSC] Output gap timer expired - waiting for new data to trigger batch transition";
-#endif
+    mLastDataReceivedMs = QDateTime::currentMSecsSinceEpoch();
 }
 
 void THyperlinkVisibilityManager::processExpireTriggeredLinks(bool input, bool prompt, bool output)
 {
     bool changed = false;
+    const qint64 currentTime = QDateTime::currentMSecsSinceEpoch();
 
     // First pass: collect IDs of links that should be processed for this expire trigger
     QVector<int> linksToProcess;
@@ -309,31 +243,16 @@ void THyperlinkVisibilityManager::processExpireTriggeredLinks(bool input, bool p
     for (auto it = mTrackedLinks.begin(); it != mTrackedLinks.end(); ++it) {
         TrackedHyperlink& link = it.value();
 
-        // Only process links that have been activated by clicking
-        if (!link.expireActivated) {
-            continue;
-        }
-
-        // Handle skipFirstPrompt - skip the immediate prompt from the click action response
         if (prompt && link.skipFirstPrompt) {
             link.skipFirstPrompt = false;
-#if defined(DEBUG_OSC_PROCESSING)
-            qDebug().noquote() << "[OSC] Link" << link.linkId << "skipping first prompt trigger";
-#endif
             continue;
         }
 
-        // Handle skipFirstOutput - skip the immediate output from the click action response
-        if (output && link.skipFirstOutput) {
-            link.skipFirstOutput = false;
-#if defined(DEBUG_OSC_PROCESSING)
-            qDebug().noquote() << "[OSC] Link" << link.linkId << "skipping first output trigger";
-#endif
-            continue;
-        }
+        // A script's print doesn't move mLastDataReceivedMs, so the gap also counts from the link's creation
+        const bool quietForLongEnough = currentTime - std::max(mLastDataReceivedMs, link.creationTimeMs) >= link.outputDelayMs;
 
         // Check if this trigger applies to this link
-        bool shouldTrigger = (input && link.expireOnInput) || (prompt && link.expireOnPrompt) || (output && link.expireOnOutput);
+        const bool shouldTrigger = (input && link.expireOnInput) || (prompt && link.expireOnPrompt) || (output && link.expireOnOutput && quietForLongEnough);
 
         if (shouldTrigger) {
             linksToProcess.append(it.key());
@@ -421,6 +340,11 @@ bool THyperlinkVisibilityManager::isLinkConcealed(int linkId) const
     return mTrackedLinks.value(linkId).isConcealed;
 }
 
+QSet<int> THyperlinkVisibilityManager::trackedLinkIds() const
+{
+    return QSet<int>(mTrackedLinks.keyBegin(), mTrackedLinks.keyEnd());
+}
+
 void THyperlinkVisibilityManager::removeLinksOnLine(int lineNumber)
 {
     QList<int> toRemove;
@@ -438,7 +362,7 @@ void THyperlinkVisibilityManager::removeLinksOnLine(int lineNumber)
     stopTimerIfNotNeeded();
 }
 
-void THyperlinkVisibilityManager::adjustLineNumbers(int deletedLineStart, int deletedLineCount)
+QList<int> THyperlinkVisibilityManager::adjustLineNumbers(int deletedLineStart, int deletedLineCount)
 {
     QList<int> toRemove;
 
@@ -457,17 +381,62 @@ void THyperlinkVisibilityManager::adjustLineNumbers(int deletedLineStart, int de
     }
 
     stopTimerIfNotNeeded();
+    return toRemove;
 }
 
 void THyperlinkVisibilityManager::clear()
 {
     mTrackedLinks.clear();
     mHasTimerBasedLinks = false;
+    mHasLinksAwaitingTheirLine = false;
     mLastDataReceivedMs = 0;
-    if (mpOutputGapTimer) {
-        mpOutputGapTimer->stop();
+    // drop a queued screen-reader announcement rather than name links that have just gone
+    if (mpAnnouncementTimer) {
+        mpAnnouncementTimer->stop();
     }
+    mPendingHiddenCount = 0;
     stopTimerIfNotNeeded();
+}
+
+QList<TrackedHyperlink> THyperlinkVisibilityManager::takeLinks(const QSet<int>& linkIds)
+{
+    QList<TrackedHyperlink> taken;
+    for (const int linkId : linkIds) {
+        if (mTrackedLinks.contains(linkId)) {
+            taken.append(mTrackedLinks.take(linkId));
+        }
+    }
+    return taken;
+}
+
+// Each link keeps its own clock, so a delay still runs from when the link arrived; until its line
+// commits, every action on it misses the buffer's bounds and waits, as on a line not yet ended
+void THyperlinkVisibilityManager::trackAwaitingTheirLine(const QList<TrackedHyperlink>& links)
+{
+    if (links.isEmpty()) {
+        return;
+    }
+    for (TrackedHyperlink link : links) {
+        link.lineNumber = csmLineStillToCome;
+        mTrackedLinks.insert(link.linkId, link);
+    }
+    mHasLinksAwaitingTheirLine = true;
+    mHasTimerBasedLinks = true;
+    startTimerIfNeeded();
+    stopTimerIfNotNeeded();
+}
+
+void THyperlinkVisibilityManager::anchorLinksAwaitingTheirLine(const int lineNumber)
+{
+    if (!mHasLinksAwaitingTheirLine) {
+        return;
+    }
+    for (TrackedHyperlink& link : mTrackedLinks) {
+        if (link.lineNumber == csmLineStillToCome) {
+            link.lineNumber = lineNumber;
+        }
+    }
+    mHasLinksAwaitingTheirLine = false;
 }
 
 void THyperlinkVisibilityManager::slot_checkTimers()
@@ -630,72 +599,32 @@ void THyperlinkVisibilityManager::stopTimerIfNotNeeded()
     }
 }
 
+// An app that embeds Mudlet reads a link's concealment from its link()
+static void noteConcealmentChanged(TConsoleModel& model, const int linkId)
+{
+    if (model.mNotifier.linkChangedConnected()) {
+        emit model.mNotifier.linkChanged(linkId);
+    }
+}
+
 void THyperlinkVisibilityManager::performConcealment(TrackedHyperlink& link)
 {
-    if (!mpConsole) {
-        return;
-    }
-
 #if defined(DEBUG_OSC_PROCESSING)
     qDebug().noquote() << "[OSC] Concealing link" << link.linkId << "deletesEntireLine:" << link.deletesEntireLine;
 #endif
 
-    TBuffer& buffer = mpConsole->buffer;
+    TBuffer& buffer = mModel.buffer;
 
     if (link.deletesEntireLine) {
-        // CRITICAL BUG FIX: Prevent cascade deletion by unregistering ALL links on the target line
-        // before deleting it. This prevents other links from being adjusted to the wrong line
-        // and accidentally triggering on content they shouldn't affect.
-
-        // Capture fields from link before removal to avoid dangling reference
+        // deleteLine() frees `link`, so it is not read after that
         const int targetLine = link.lineNumber;
-        const int currentLinkId = link.linkId;
 
         if (targetLine >= 0 && targetLine < buffer.lineBuffer.size()) {
-            // First, collect all link IDs that are on the same line as the one being deleted
-            QList<int> linksOnTargetLine;
-            for (auto it = mTrackedLinks.begin(); it != mTrackedLinks.end(); ++it) {
-                if (it.value().lineNumber == targetLine) {
-                    linksOnTargetLine.append(it.key());
-                }
-            }
-
-            // Unregister all links on the target line to prevent interference
-            for (int linkId : linksOnTargetLine) {
-                if (linkId != currentLinkId) { // Don't remove the current link yet
-                    mTrackedLinks.remove(linkId);
-#if defined(DEBUG_OSC_PROCESSING)
-                    qDebug().noquote() << "[OSC] Pre-emptively unregistered co-located link" << linkId;
-#endif
-                }
-            }
-
-            // Now delete the line
+            // Unregisters every tracked link on the line and records each link the line held as removed, concealed
+            // ones included, which names them all to an app that embeds Mudlet
             buffer.deleteLine(targetLine);
 
-            mTrackedLinks.remove(currentLinkId);
-
             queueHiddenAnnouncement();
-
-            // SAFE line number adjustment: Only adjust links that are on lines > targetLine
-            // Update in-place to avoid copying the entire map
-            for (auto it = mTrackedLinks.begin(); it != mTrackedLinks.end(); ++it) {
-                if (it.value().lineNumber > targetLine) {
-                    int originalLine = it.value().lineNumber;
-                    it.value().lineNumber--;
-#if defined(DEBUG_OSC_PROCESSING)
-                    qDebug().noquote() << "[OSC] Adjusted link" << it.key() << "from line" << originalLine << "to line" << it.value().lineNumber;
-#endif
-                }
-            }
-
-            // Update display
-            if (mpConsole->mUpperPane) {
-                mpConsole->mUpperPane->update();
-            }
-            if (mpConsole->mLowerPane) {
-                mpConsole->mLowerPane->update();
-            }
 
             // Stop timer if no more timer-based links exist
             bool hasTimers = false;
@@ -726,20 +655,18 @@ void THyperlinkVisibilityManager::performConcealment(TrackedHyperlink& link)
 
                 // Only mark as concealed and update panes after successful text replacement
                 link.isConcealed = true;
+                noteConcealmentChanged(mModel, link.linkId);
 
                 queueHiddenAnnouncement();
-
-                if (mpConsole->mUpperPane) {
-                    mpConsole->mUpperPane->update();
-                }
-                if (mpConsole->mLowerPane) {
-                    mpConsole->mLowerPane->update();
-                }
             }
         }
     }
 }
 
+// Gotcha: the screen-reader announcements below go straight to the app frontend,
+// so unlike the repaint they don't stop when the console does - closing a profile
+// mid-map-import, where closeHost() keeps retrying every 50ms, can announce about
+// a console that has already gone.
 void THyperlinkVisibilityManager::queueHiddenAnnouncement()
 {
     ++mPendingHiddenCount;
@@ -748,27 +675,35 @@ void THyperlinkVisibilityManager::queueHiddenAnnouncement()
 
 void THyperlinkVisibilityManager::slot_announceHiddenLinks()
 {
-    if (mPendingHiddenCount <= 0 || !QAccessible::isActive() || !mudlet::self()) {
+    if (mPendingHiddenCount <= 0) {
         mPendingHiddenCount = 0;
         return;
     }
 
     if (mPendingHiddenCount == 1) {
         //: Screen-reader announcement when an OSC 8 hyperlink is hidden by the visibility manager
-        mudlet::self()->announce(tr("Link hidden"), QString(), true);
+        announce(tr("Link hidden"));
     } else {
         //: Screen-reader announcement when multiple OSC 8 hyperlinks are hidden at once; %n is the count
-        mudlet::self()->announce(tr("%n link(s) hidden", nullptr, mPendingHiddenCount), QString(), true);
+        announce(tr("%n link(s) hidden", nullptr, mPendingHiddenCount));
     }
     mPendingHiddenCount = 0;
 }
 
+// An app that embeds Mudlet has no screen reader of ours to wait on, so it hears
+// these whether or not one is running
+void THyperlinkVisibilityManager::announce(const QString& text)
+{
+    if (QAccessible::isActive()) {
+        TAppFrontend::instance()->announce(text, QString(), true);
+    }
+    if (mModel.mpHost) {
+        emit mModel.mpHost->signal_announcementRequested(text, QString());
+    }
+}
+
 void THyperlinkVisibilityManager::performReveal(TrackedHyperlink& link)
 {
-    if (!mpConsole) {
-        return;
-    }
-
 #if defined(DEBUG_OSC_PROCESSING)
     qDebug().noquote() << "[OSC] Revealing link" << link.linkId;
 #endif
@@ -778,7 +713,7 @@ void THyperlinkVisibilityManager::performReveal(TrackedHyperlink& link)
         return;
     }
 
-    TBuffer& buffer = mpConsole->buffer;
+    TBuffer& buffer = mModel.buffer;
 
     if (link.lineNumber >= 0 && link.lineNumber < buffer.lineBuffer.size()) {
         QString& lineText = buffer.lineBuffer[link.lineNumber];
@@ -788,18 +723,10 @@ void THyperlinkVisibilityManager::performReveal(TrackedHyperlink& link)
             // Restore the link indices so the text is clickable again
             buffer.restoreLinkIndices(link.lineNumber, link.startColumn, link.length, link.linkId);
             link.isConcealed = false;
+            noteConcealmentChanged(mModel, link.linkId);
 
-            if (QAccessible::isActive() && mudlet::self()) {
-                //: Screen-reader announcement when a previously hidden OSC 8 link is revealed; %1 is the original link text
-                mudlet::self()->announce(tr("Link revealed: %1").arg(link.originalText), QString(), true);
-            }
-
-            if (mpConsole->mUpperPane) {
-                mpConsole->mUpperPane->update();
-            }
-            if (mpConsole->mLowerPane) {
-                mpConsole->mLowerPane->update();
-            }
+            //: Screen-reader announcement when a previously hidden OSC 8 link is revealed; %1 is the original link text
+            announce(tr("Link revealed: %1").arg(link.originalText));
         }
     }
 }

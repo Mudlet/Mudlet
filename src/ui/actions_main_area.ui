@@ -16,470 +16,358 @@
     <verstretch>0</verstretch>
    </sizepolicy>
   </property>
-  <property name="minimumSize">
-   <size>
-    <width>0</width>
-    <height>0</height>
-   </size>
-  </property>
-  <layout class="QVBoxLayout" name="verticalLayout_actions_main_area" stretch="0,0,1">
-   <property name="leftMargin">
-    <number>2</number>
-   </property>
-   <property name="topMargin">
-    <number>2</number>
-   </property>
-   <property name="rightMargin">
-    <number>2</number>
-   </property>
-   <property name="bottomMargin">
-    <number>2</number>
-   </property>
-   <item>
-    <widget class="QWidget" name="widget_top" native="true">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
+  <layout class="QGridLayout" name="gridLayout" rowstretch="0,0,0,0,0,0,0,0,0,1" columnstretch="0,1,0">
+   <item row="0" column="0">
+    <widget class="QLabel" name="label_action_name">
+     <property name="text">
+      <string>Name</string>
      </property>
-     <layout class="QHBoxLayout" name="horizontalLayout_top">
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+     <property name="buddy">
+      <cstring>lineEdit_action_name</cstring>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="1">
+    <widget class="QLineEdit" name="lineEdit_action_name">
+     <property name="toolTip">
+      <string>&lt;p&gt;Choose a good, ideally unique, name for your button, menu or toolbar. This will be displayed in the buttons tree.&lt;/p&gt;</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="2">
+    <widget class="QFrame" name="frameId">
+     <property name="frameShape">
+      <enum>QFrame::NoFrame</enum>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout_frameId">
       <property name="leftMargin">
-       <number>1</number>
+       <number>3</number>
       </property>
       <property name="topMargin">
-       <number>1</number>
+       <number>0</number>
       </property>
       <property name="rightMargin">
-       <number>1</number>
+       <number>3</number>
       </property>
       <property name="bottomMargin">
-       <number>1</number>
+       <number>0</number>
       </property>
-      <item>
-       <widget class="QLabel" name="label_action_name">
+      <item alignment="Qt::AlignVCenter">
+       <widget class="QLabel" name="label_idLabel">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
         <property name="text">
-         <string>Name:</string>
+         <string>ID:</string>
         </property>
         <property name="alignment">
          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
         </property>
-        <property name="buddy">
-         <cstring>lineEdit_action_name</cstring>
+        <property name="textInteractionFlags">
+         <set>Qt::NoTextInteraction</set>
         </property>
        </widget>
       </item>
-      <item>
-       <widget class="QLineEdit" name="lineEdit_action_name">
-        <property name="toolTip">
-         <string>&lt;p&gt;Choose a good, ideally unique, name for your button, menu or toolbar. This will be displayed in the buttons tree.&lt;/p&gt;</string>
+      <item alignment="Qt::AlignVCenter">
+       <widget class="QLabel" name="label_idNumber">
+        <property name="enabled">
+         <bool>false</bool>
         </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QFrame" name="frameId">
-        <property name="frameShape">
-         <enum>QFrame::NoFrame</enum>
+        <property name="text">
+         <string/>
         </property>
-        <layout class="QHBoxLayout" name="horizontalLayout_frameId">
-         <property name="leftMargin">
-          <number>3</number>
-         </property>
-         <property name="topMargin">
-          <number>0</number>
-         </property>
-         <property name="rightMargin">
-          <number>3</number>
-         </property>
-         <property name="bottomMargin">
-          <number>0</number>
-         </property>
-         <item alignment="Qt::AlignVCenter">
-          <widget class="QLabel" name="label_idLabel">
-           <property name="enabled">
-            <bool>false</bool>
-           </property>
-           <property name="text">
-            <string>ID:</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-           </property>
-           <property name="textInteractionFlags">
-            <set>Qt::NoTextInteraction</set>
-           </property>
-          </widget>
-         </item>
-         <item alignment="Qt::AlignVCenter">
-          <widget class="QLabel" name="label_idNumber">
-           <property name="enabled">
-            <bool>false</bool>
-           </property>
-           <property name="text">
-            <string/>
-           </property>
-           <property name="textInteractionFlags">
-            <set>Qt::TextSelectableByMouse</set>
-           </property>
-          </widget>
-         </item>
-        </layout>
+        <property name="textInteractionFlags">
+         <set>Qt::TextSelectableByMouse</set>
+        </property>
        </widget>
       </item>
      </layout>
     </widget>
    </item>
-   <item>
-    <widget class="QWidget" name="widget_middle" native="true">
+   <item row="1" column="0">
+    <widget class="QLabel" name="label_action_button_rotation">
+     <property name="text">
+      <string>Rotation</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+     <property name="buddy">
+      <cstring>comboBox_action_button_rotation</cstring>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="1" alignment="Qt::AlignLeft">
+    <widget class="QComboBox" name="comboBox_action_button_rotation">
+     <item>
+      <property name="text">
+       <string>no rotation</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>90° rotation to the left</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>90° rotation to the right</string>
+      </property>
+     </item>
+    </widget>
+   </item>
+   <item row="1" column="2">
+    <widget class="QCheckBox" name="checkBox_action_button_isPushDown">
+     <property name="toolTip">
+      <string>&lt;p&gt;A push-down button stays down when it is pressed and comes back up when it is pressed again, and has a command for each of the two.&lt;/p&gt;</string>
+     </property>
+     <property name="text">
+      <string>Push-down button</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QLabel" name="label_action_button_command_down">
+     <property name="text">
+      <string>Command</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+     <property name="buddy">
+      <cstring>lineEdit_action_button_command_down</cstring>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="1" colspan="2">
+    <widget class="QLineEdit" name="lineEdit_action_button_command_down">
+     <property name="toolTip">
+      <string>&lt;p&gt;Type in one or more commands you want the button to send directly to the game if it is pressed. (Optional)&lt;/p&gt;&lt;p&gt;If this is a &lt;i&gt;push-down&lt;/i&gt; button then this is sent only when the button goes from the &lt;i&gt;up&lt;/i&gt; to &lt;i&gt;down&lt;/i&gt; state.&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissible to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</string>
+     </property>
+     <property name="placeholderText">
+      <string>Text to send to the game as-is (optional)</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="0">
+    <widget class="QLabel" name="label_action_button_command_up">
+     <property name="text">
+      <string>Command up</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+     <property name="buddy">
+      <cstring>lineEdit_action_button_command_up</cstring>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="1" colspan="2">
+    <widget class="QLineEdit" name="lineEdit_action_button_command_up">
+     <property name="toolTip">
+      <string>&lt;p&gt;Type in one or more commands you want the button to send directly to the game when this button goes from the &lt;i&gt;down&lt;/i&gt; to &lt;i&gt;up&lt;/i&gt; state.&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissible to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</string>
+     </property>
+     <property name="placeholderText">
+      <string>Text to send to the game as-is (optional)</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="0">
+    <widget class="QLabel" name="label_action_icon">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="text">
+      <string>Icon</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+     <property name="buddy">
+      <cstring>lineEdit_action_icon</cstring>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="1" colspan="2">
+    <widget class="QLineEdit" name="lineEdit_action_icon">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="cursor">
+      <cursorShape>ForbiddenCursor</cursorShape>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="0">
+    <widget class="QLabel" name="label_action_bar_location">
+     <property name="text">
+      <string>Location</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+     <property name="buddy">
+      <cstring>comboBox_action_bar_location</cstring>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="1" alignment="Qt::AlignLeft">
+    <widget class="QComboBox" name="comboBox_action_bar_location">
+     <property name="toolTip">
+      <string>&lt;p&gt;Which edge of the main window this toolbar is docked against, or whether it floats free of them all.&lt;/p&gt;</string>
+     </property>
+     <item>
+      <property name="text">
+       <string>Top</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Left</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Right</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Floating</string>
+      </property>
+     </item>
+    </widget>
+   </item>
+   <item row="6" column="0">
+    <widget class="QLabel" name="label_action_bar_orientation">
+     <property name="text">
+      <string>Orientation</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+     <property name="buddy">
+      <cstring>comboBox_action_bar_orientation</cstring>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="1" alignment="Qt::AlignLeft">
+    <widget class="QComboBox" name="comboBox_action_bar_orientation">
+     <property name="toolTip">
+      <string>&lt;p&gt;Whether this toolbar's buttons run across it or down it.&lt;/p&gt;</string>
+     </property>
+     <item>
+      <property name="text">
+       <string>Horizontal</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Vertical</string>
+      </property>
+     </item>
+    </widget>
+   </item>
+   <item row="7" column="0">
+    <widget class="QLabel" name="label_action_bar_columns">
+     <property name="text">
+      <string>Rows</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+     <property name="buddy">
+      <cstring>spinBox_action_bar_columns</cstring>
+     </property>
+    </widget>
+   </item>
+   <item row="7" column="1" alignment="Qt::AlignLeft">
+    <widget class="QSpinBox" name="spinBox_action_bar_columns">
+     <property name="toolTip">
+      <string>&lt;p&gt;How many rows of buttons this toolbar is laid out in - or how many columns, where it runs down the window rather than across it.&lt;/p&gt;</string>
+     </property>
+    </widget>
+   </item>
+   <item row="8" column="0">
+    <widget class="QLabel" name="label_action_bar_offsetToFirstButton">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="text">
+      <string>Offset</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+     <property name="buddy">
+      <cstring>spinBox_action_bar_offsetToFirstButton</cstring>
+     </property>
+    </widget>
+   </item>
+   <item row="8" column="1" alignment="Qt::AlignLeft">
+    <widget class="QSpinBox" name="spinBox_action_bar_offsetToFirstButton">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="toolTip">
+      <string>&lt;p&gt;How many places along this toolbar are left empty before the first button.&lt;/p&gt;</string>
+     </property>
+    </widget>
+   </item>
+   <item row="9" column="0">
+    <widget class="QLabel" name="label_action_css">
+     <property name="text">
+      <string>Stylesheet</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+     <property name="buddy">
+      <cstring>plainTextEdit_action_css</cstring>
+     </property>
+    </widget>
+   </item>
+   <item row="9" column="1" colspan="2">
+    <widget class="QPlainTextEdit" name="plainTextEdit_action_css">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
-     <layout class="QHBoxLayout" name="horizontalLayout_middle">
-      <property name="leftMargin">
-       <number>2</number>
-      </property>
-      <property name="rightMargin">
-       <number>2</number>
-      </property>
-      <item>
-       <widget class="QGroupBox" name="groupBox_action_bar">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="minimumSize">
-         <size>
-          <width>0</width>
-          <height>0</height>
-         </size>
-        </property>
-        <property name="maximumSize">
-         <size>
-          <width>16777215</width>
-          <height>16777215</height>
-         </size>
-        </property>
-        <property name="title">
-         <string>Button Bar Properties</string>
-        </property>
-        <layout class="QGridLayout" name="gridLayout_groupBox_action_bar">
-         <item row="0" column="0">
-          <widget class="QLabel" name="label_action_bar_columns">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="text">
-            <string>Number of rows:</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-           </property>
-           <property name="buddy">
-            <cstring>spinBox_action_bar_columns</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="1">
-          <widget class="QSpinBox" name="spinBox_action_bar_columns"/>
-         </item>
-         <item row="1" column="0">
-          <widget class="QLabel" name="label_action_bar_offsetToFirstButton">
-           <property name="enabled">
-            <bool>false</bool>
-           </property>
-           <property name="text">
-            <string>Offset of first button:</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-           </property>
-           <property name="buddy">
-            <cstring>spinBox_action_bar_offsetToFirstButton</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="1">
-          <widget class="QSpinBox" name="spinBox_action_bar_offsetToFirstButton">
-           <property name="enabled">
-            <bool>false</bool>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="0" colspan="2">
-          <widget class="QComboBox" name="comboBox_action_bar_orientation">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <item>
-            <property name="text">
-             <string>Orientation Horizontal</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>Orientation Vertical</string>
-            </property>
-           </item>
-          </widget>
-         </item>
-         <item row="3" column="0" colspan="2">
-          <widget class="QComboBox" name="comboBox_action_bar_location">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <item>
-            <property name="text">
-             <string>Dock Area Top</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>Dock Area Left</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>Dock Area Right</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>Floating Toolbar</string>
-            </property>
-           </item>
-          </widget>
-         </item>
-        </layout>
-       </widget>
-      </item>
-      <item>
-       <widget class="QGroupBox" name="groupBox_action_button_appearance">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="minimumSize">
-         <size>
-          <width>0</width>
-          <height>0</height>
-         </size>
-        </property>
-        <property name="title">
-         <string>Button Properties</string>
-        </property>
-        <layout class="QGridLayout" name="gridLayout_3">
-         <item row="0" column="0">
-          <widget class="QLabel" name="label_action_button_rotation">
-           <property name="text">
-            <string>Button Rotation:</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-           </property>
-           <property name="buddy">
-            <cstring>comboBox_action_button_rotation</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="1">
-          <widget class="QComboBox" name="comboBox_action_button_rotation">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <item>
-            <property name="text">
-             <string>no rotation</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>90° rotation to the left</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>90° rotation to the right</string>
-            </property>
-           </item>
-          </widget>
-         </item>
-         <item row="1" column="0" colspan="2">
-          <widget class="QCheckBox" name="checkBox_action_button_isPushDown">
-           <property name="text">
-            <string>Push down button</string>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="0" alignment="Qt::AlignRight">
-          <widget class="QLabel" name="label_action_button_command_down">
-           <property name="text">
-            <string>Command:</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-           </property>
-           <property name="buddy">
-            <cstring>lineEdit_action_button_command_down</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="1">
-          <widget class="QLineEdit" name="lineEdit_action_button_command_down">
-           <property name="toolTip">
-            <string>&lt;p&gt;Type in one or more commands you want the button to send directly to the game if it is pressed. (Optional)&lt;/p&gt;&lt;p&gt;If this is a &lt;i&gt;push-down&lt;/i&gt; button then this is sent only when the button goes from the &lt;i&gt;up&lt;/i&gt; to &lt;i&gt;down&lt;/i&gt; state.&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissible to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</string>
-           </property>
-           <property name="placeholderText">
-            <string>Text to send to the game as-is (optional)</string>
-           </property>
-          </widget>
-         </item>
-         <item row="3" column="0">
-          <widget class="QLabel" name="label_action_button_command_up">
-           <property name="text">
-            <string>Command (up):</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-           </property>
-           <property name="buddy">
-            <cstring>lineEdit_action_button_command_up</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="3" column="1">
-          <widget class="QLineEdit" name="lineEdit_action_button_command_up">
-           <property name="toolTip">
-            <string>&lt;p&gt;Type in one or more commands you want the button to send directly to the game when this button goes from the &lt;i&gt;down&lt;/i&gt; to &lt;i&gt;up&lt;/i&gt; state.&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissible to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</string>
-           </property>
-           <property name="placeholderText">
-            <string>Text to send to the game as-is (optional)</string>
-           </property>
-          </widget>
-         </item>
-         <item row="4" column="0">
-          <widget class="QLabel" name="label_action_icon">
-           <property name="enabled">
-            <bool>false</bool>
-           </property>
-           <property name="text">
-            <string>Icon</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-           </property>
-           <property name="buddy">
-            <cstring>lineEdit_action_icon</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="4" column="1">
-          <widget class="QLineEdit" name="lineEdit_action_icon">
-           <property name="enabled">
-            <bool>false</bool>
-           </property>
-           <property name="cursor">
-            <cursorShape>ForbiddenCursor</cursorShape>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item>
-    <widget class="QGroupBox" name="groupBox_css">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>70</height>
+      </size>
      </property>
-     <property name="title">
-      <string>Stylesheet:</string>
+     <property name="toolTip">
+      <string>&lt;p&gt;Qt stylesheet rules the button, menu or toolbar is drawn with. Left empty it takes the profile's own look.&lt;/p&gt;</string>
      </property>
-     <layout class="QVBoxLayout" name="verticalLayout_bottom">
-      <property name="spacing">
-       <number>0</number>
-      </property>
-      <property name="leftMargin">
-       <number>0</number>
-      </property>
-      <property name="topMargin">
-       <number>0</number>
-      </property>
-      <property name="rightMargin">
-       <number>0</number>
-      </property>
-      <property name="bottomMargin">
-       <number>0</number>
-      </property>
-      <item>
-       <widget class="QPlainTextEdit" name="plainTextEdit_action_css">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="minimumSize">
-         <size>
-          <width>0</width>
-          <height>70</height>
-         </size>
-        </property>
-        <property name="font">
-         <font>
-          <pointsize>8</pointsize>
-         </font>
-        </property>
-        <property name="tabChangesFocus">
-         <bool>false</bool>
-        </property>
-        <property name="backgroundVisible">
-         <bool>false</bool>
-        </property>
-       </widget>
-      </item>
-     </layout>
+     <property name="tabChangesFocus">
+      <bool>false</bool>
+     </property>
+     <property name="backgroundVisible">
+      <bool>false</bool>
+     </property>
     </widget>
    </item>
   </layout>
-  <zorder>widget_top</zorder>
-  <zorder>groupBox_css</zorder>
-  <zorder>widget_middle</zorder>
  </widget>
  <tabstops>
   <tabstop>lineEdit_action_name</tabstop>
-  <tabstop>spinBox_action_bar_columns</tabstop>
-  <tabstop>spinBox_action_bar_offsetToFirstButton</tabstop>
-  <tabstop>comboBox_action_bar_orientation</tabstop>
-  <tabstop>comboBox_action_bar_location</tabstop>
   <tabstop>comboBox_action_button_rotation</tabstop>
   <tabstop>checkBox_action_button_isPushDown</tabstop>
   <tabstop>lineEdit_action_button_command_down</tabstop>
   <tabstop>lineEdit_action_button_command_up</tabstop>
   <tabstop>lineEdit_action_icon</tabstop>
+  <tabstop>comboBox_action_bar_location</tabstop>
+  <tabstop>comboBox_action_bar_orientation</tabstop>
+  <tabstop>spinBox_action_bar_columns</tabstop>
+  <tabstop>spinBox_action_bar_offsetToFirstButton</tabstop>
   <tabstop>plainTextEdit_action_css</tabstop>
  </tabstops>
  <resources/>

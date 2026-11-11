@@ -45,7 +45,7 @@ public:
     // When set, consecutive commands with the same propertyId within MERGE_TIMEOUT_MS will merge.
     void setPropertyId(const QString& propertyId);
 
-    // Command ID for merging - must match EditorAddItemCommand::CommandId
+    // Also EditorAddItemCommand::id(), so a new item's first save can merge into adding it
     static constexpr int CommandId = 1;
 
     // Allow EditorAddItemCommand to access private members for merging

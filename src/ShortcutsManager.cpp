@@ -20,7 +20,24 @@
 
 #include "ShortcutsManager.h"
 
-ShortcutsManager::~ShortcutsManager() = default;
+#include <QDebug>
+
+ShortcutsManager::ShortcutsManager(QObject* parent)
+: QObject(parent)
+{
+    if (smpSelf) {
+        qWarning() << "ShortcutsManager::ShortcutsManager() WARNING - a ShortcutsManager already exists, so self() keeps pointing at that one.";
+        return;
+    }
+    smpSelf = this;
+}
+
+ShortcutsManager::~ShortcutsManager()
+{
+    if (smpSelf == this) {
+        smpSelf = nullptr;
+    }
+}
 
 void ShortcutsManager::registerShortcut(const QString& key, const QString& translation, QKeySequence* sequence)
 {

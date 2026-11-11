@@ -21,6 +21,7 @@
 #include "TScrollBox.h"
 #include "mudlet.h"
 
+#include <QResizeEvent>
 #include <QtEvents>
 
 

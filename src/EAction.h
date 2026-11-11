@@ -25,7 +25,10 @@
 
 
 #include <QAction>
+#include <QIcon>
 #include <QPointer>
+#include <QString>
+#include <QtGlobal>
 
 class Host;
 

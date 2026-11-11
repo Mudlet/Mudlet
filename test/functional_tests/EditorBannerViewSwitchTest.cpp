@@ -27,11 +27,17 @@
  * Run with: ctest -R EditorBannerViewSwitchTest -V
  */
 
+#include <QFileInfo>
 #include <QSettings>
+#include <QTemporaryDir>
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include "MudletApp.h"
+#include "PortableModeTestHelper.h"
+#include "ProfileTestHelper.h"
 #include "Host.h"
+#include "HostDialogs.h"
 #include "MudletInstanceCoordinator.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
@@ -39,35 +45,19 @@
 #include "dlgSystemMessageArea.h"
 #include "dlgTriggerEditor.h"
 #include "mudlet.h"
+#include "uiDesign.h"
+
+#include "GroupedTest.h"
 
 using namespace std::chrono_literals;
-
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
-
-static void initializeQRCResources()
-{
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
-#ifdef INCLUDE_FONTS
-    qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
-    qInitResources_mudlet_fonts_posix();
-#endif
-#endif
-    qInitResources_mudlet();
-    qInitResources_qm();
-}
 
 class EditorBannerViewSwitchTest : public QObject
 {
     Q_OBJECT
 
 private:
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
     dlgTriggerEditor* mpEditor = nullptr;
     Host* mpHost = nullptr;
@@ -77,7 +67,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = mudlet::getMudletPath(enums::profileHomePath, profileName);
+        const QString path = MudletApp::getMudletPath(enums::profileHomePath, profileName);
         QDir dir(path);
         if (dir.exists() && !dir.removeRecursively()) {
             qWarning() << "deleteProfileDirectory: could not remove" << path << "- later failures may stem from this stale state";
@@ -90,78 +80,27 @@ private:
     // belonging to a real profile is touched)
     void clearBannerSettings()
     {
-        QSettings* settings = mudlet::getQSettings();
+        QSettings* settings = MudletApp::getQSettings();
         settings->remove(qsl("Editor/banner_permanently_hidden/profiles/%1").arg(mProfileName));
     }
 
     void startProfile(const QString& profileName, const QString& address, const QString& port)
     {
-        QTimer::singleShot(0ms, qApp, [profileName, address, port]() {
-            mudlet::self()->startAutoLogin({});
-            QTest::qWait(100ms);
-
-            // Guard every UI step so a setup flake names the failing step in
-            // the log instead of surfacing as a generic profile-load timeout
-            dlgConnectionProfiles* connectionDialog = mudlet::self()->mpConnectionDialog;
-            if (!connectionDialog || !connectionDialog->new_profile_button) {
-                qWarning() << "startProfile: connection dialog did not appear";
-                return;
-            }
-            QTest::mouseClick(connectionDialog->new_profile_button, Qt::LeftButton);
-            QTest::qWait(100ms);
-
-            const auto focusedWidget = [](const char* step) -> QWidget* {
-                QWidget* widget = QApplication::focusWidget();
-                if (!widget) {
-                    qWarning() << "startProfile: no focused widget at step" << step;
-                }
-                return widget;
-            };
-
-            QWidget* nameField = focusedWidget("profile name");
-            if (!nameField) {
-                return;
-            }
-            QTest::keyClicks(nameField, profileName);
-            QTest::qWait(100ms);
-            QTest::keyClick(nameField, Qt::Key_Tab);
-            QTest::qWait(100ms);
-
-            QWidget* addressField = focusedWidget("address");
-            if (!addressField) {
-                return;
-            }
-            QTest::keyClicks(addressField, address);
-            QTest::qWait(100ms);
-            QTest::keyClick(addressField, Qt::Key_Tab);
-            QTest::qWait(100ms);
-
-            QWidget* portField = focusedWidget("port");
-            if (!portField) {
-                return;
-            }
-            QTest::keyClicks(portField, port);
-            QTest::qWait(100ms);
-            QTest::keyClick(portField, Qt::Key_Return);
-        });
-
-        QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!spy.wait(2000)) {
-            QFAIL("Profile took too long to load.");
-        }
-
-        mpHost = mudlet::self()->getActiveHost();
+        mpHost = TestProfile::create(profileName, address, port);
         if (!mpHost) {
             QFAIL("No active host available for the test.");
         }
 
         QSignalSpy spy2(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2000)) {
+        if (!spy2.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }
 
     QString bannerText() const { return mpEditor->mpSystemMessageArea->notificationAreaMessageBox->text(); }
+
+    // The message before its anchors are inked, which is what a dismissal stashes and an undo shows again
+    QString bannerContent() const { return mpEditor->systemMessage(); }
 
     void clickBannerCloseButton()
     {
@@ -172,7 +111,20 @@ private:
 private slots:
     void initTestCase()
     {
-        initializeQRCResources();
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+
+        // A config root of this process's own. Sharing the developer's
+        // ~/.config/mudlet means sharing a profile list, so a second copy of
+        // this test running at the same time is told the name it types is
+        // already in use and never gets an enabled Connect button. Since #9712
+        // the opt-in that makes setupConfig() adopt a directory is
+        // $XDG_CONFIG_HOME/mudlet/profiles, not the mudlet directory alone.
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
 
         mpServer = new TelnetServerStub(qApp);
         mpServer->start(mLocalhost, 0);
@@ -180,6 +132,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -196,19 +149,24 @@ private slots:
         mudlet::self()->slot_showScriptDialog();
         QTest::qWait(100ms);
 
-        mpEditor = mpHost->mpEditorDialog;
+        mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
         QVERIFY2(mpEditor != nullptr, "Editor dialog should be created");
     }
 
     void cleanupTestCase()
     {
-        clearBannerSettings();
         mpEditor = nullptr;
         mpHost = nullptr;
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory(mProfileName);
-        delete mudlet::self();
+        // Null when initTestCase skipped or failed ahead of mudlet::start(), so
+        // there are no settings to clear either
+        if (mudlet::self()) {
+            clearBannerSettings();
+            deleteProfileDirectory(mProfileName);
+            delete mudlet::self();
+        }
+        mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }
 
     // Reset the banner state - in-memory and this profile's persisted
@@ -280,6 +238,7 @@ private slots:
         QTest::qWait(50ms);
         QVERIFY2(mpEditor->mpSystemMessageArea->isVisible(), "Scripts banner should show initially");
         const QString scriptsBanner = bannerText();
+        const QString scriptsBannerContent = bannerContent();
 
         clickBannerCloseButton();
         QVERIFY2(mpEditor->mpSystemMessageArea->isVisible(), "Undo toast should show after dismissing the banner");
@@ -288,7 +247,7 @@ private slots:
         clickBannerCloseButton();
         QVERIFY2(!mpEditor->mpSystemMessageArea->isVisible(), "Closing the undo toast should hide the message area");
         QCOMPARE(mpEditor->mLastDismissedBannerKey, qsl("intro"));
-        QCOMPARE(mpEditor->mLastDismissedBannerContent, scriptsBanner);
+        QCOMPARE(mpEditor->mLastDismissedBannerContent, scriptsBannerContent);
         const QString baseKey = mpEditor->bannerSettingsKey(EditorViewType::cmScriptView, QString());
         QVERIFY2(!mpEditor->mTemporarilyHiddenBanners.contains(baseKey), "Closing the toast must not suppress all banners for the view");
     }
@@ -365,7 +324,35 @@ private slots:
         QVERIFY2(mpEditor->mpSystemMessageArea->isVisible(), "An error shown while the undo toast timer was live must survive a view switch");
         QCOMPARE(bannerText(), errorText);
     }
+
+    // QLabel bakes an anchor's colour into its document at setText(), so a banner
+    // on screen when the appearance changes has to be written again in the new ink
+    void testBannerLinksCarryTheAccentInBothAppearances()
+    {
+        mpEditor->slot_showScripts();
+        QTest::qWait(50ms);
+        QVERIFY2(mpEditor->mpSystemMessageArea->isVisible(), "the Scripts banner is not up, so there is no link to read");
+        QVERIFY2(bannerText().contains(qsl("<a ")), "the Scripts banner carries no anchor, so nothing below is measured");
+
+        mudlet::self()->setAppearance(enums::Appearance::dark);
+        QCoreApplication::processEvents();
+        const QString onDark = uiDesign::themeTokens().accentText.name();
+        const QString bannerOnDark = bannerText();
+
+        mudlet::self()->setAppearance(enums::Appearance::light);
+        QCoreApplication::processEvents();
+        const QString onLight = uiDesign::themeTokens().accentText.name();
+        const QString bannerOnLight = bannerText();
+        mudlet::self()->setAppearance(enums::Appearance::systemSetting);
+
+        QVERIFY2(onDark != onLight, "the two appearances answer the same accent ink, so the checks below cannot tell them apart");
+        QVERIFY2(bannerOnDark.contains(qsl("color: %1").arg(onDark)), qPrintable(qsl("the banner's links are not inked %1 on the dark appearance: \"%2\"").arg(onDark, bannerOnDark)));
+        QVERIFY2(bannerOnLight.contains(qsl("color: %1").arg(onLight)),
+                 qPrintable(qsl("the banner's links are not inked %1 on the light appearance - the appearance change did not re-ink them: \"%2\"").arg(onLight, bannerOnLight)));
+        QVERIFY2(!bannerOnLight.contains(qsl("color: %1").arg(onDark)), qPrintable(qsl("the dark appearance's ink %1 is still in the banner: \"%2\"").arg(onDark, bannerOnLight)));
+        QVERIFY2(!bannerOnLight.contains(qsl("color: inherit")), qPrintable(qsl("an anchor reached the label still saying 'color: inherit', which Qt renders as black: \"%1\"").arg(bannerOnLight)));
+    }
 };
 
 #include "EditorBannerViewSwitchTest.moc"
-QTEST_MAIN(EditorBannerViewSwitchTest)
+MUDLET_GROUPED_TEST_MAIN(EditorBannerViewSwitchTest)

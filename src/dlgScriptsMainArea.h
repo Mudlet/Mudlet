@@ -36,11 +36,9 @@ public:
     // public function allow to trim even when QLineEdit::editingFinished()
     // is not raised. Example: When the user saves without leaving the LineEdit
     void trimName();
-    void trimEventHandlerName();
 
 private slots:
     void slot_editingNameFinished();
-    void slot_editingEventNameFinished();
 };
 
 #endif // MUDLET_DLGSCRIPTSMAINAREA_H

@@ -39,6 +39,8 @@ public:
     ~dlgModuleManager() override;
 
     void layoutModules();
+    void showModuleSync(const QString& module, const bool sync);
+    QString removeModules(const QStringList& moduleNames);
 
 private slots:
     void slot_installModule();

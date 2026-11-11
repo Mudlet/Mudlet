@@ -25,10 +25,18 @@
 
 #include "Host.h"
 #include "TAlias.h"
+#include "TLuaInterpreter.h"
+#include "Tree.h"
+#include "utils.h"
 
+#include <QDebug>
+#include <QLatin1String>
+#include <QMutableSetIterator>
 #include <QScopeGuard>
+#include <QStringList>
 
 #include <functional>
+#include <utility>
 
 /* We need an explicit constructor in this file as the Host class is forward
  * declared in the header file and it is problematic to define any dereferencing
@@ -47,7 +55,8 @@ AliasUnit::~AliasUnit()
         alias->mpHost = nullptr;
         // Also set mpHost to null on all children recursively
         std::function<void(TAlias*)> nullifyChildren = [&nullifyChildren](TAlias* a) {
-            for (auto child : *a->mpMyChildrenList) {
+            for (auto* childNode : *a->mpMyChildrenList) {
+                auto* child = static_cast<TAlias*>(childNode);
                 child->mpHost = nullptr;
                 nullifyChildren(child);
             }
@@ -61,8 +70,9 @@ AliasUnit::~AliasUnit()
 
 void AliasUnit::_uninstall(TAlias* pChild, const QString& packageName)
 {
-    std::list<TAlias*>* childrenList = pChild->mpMyChildrenList;
-    for (auto alias : *childrenList) {
+    std::list<Tree<TAlias>*>* childrenList = pChild->mpMyChildrenList;
+    for (auto* aliasNode : *childrenList) {
+        auto* alias = static_cast<TAlias*>(aliasNode);
         _uninstall(alias, packageName);
         uninstallList.append(alias);
     }
@@ -101,10 +111,11 @@ void AliasUnit::uninstall(const QString& packageName)
 
 void AliasUnit::compileAll()
 {
+    // Switched off ones as well: a reset has just closed the Lua state their
+    // compiled functions lived in, and switching one back on later does
+    // not compile it again
     for (auto alias : mAliasRootNodeList) {
-        if (alias->isActive()) {
-            alias->compileAll();
-        }
+        alias->compileAll();
     }
 }
 
@@ -124,13 +135,13 @@ void AliasUnit::addAliasRootNode(TAlias* pT, int parentPosition, int childPositi
         pT->setID(getNewID());
     }
     if ((parentPosition == -1) || (childPosition >= static_cast<int>(mAliasRootNodeList.size()))) {
-        mAliasRootNodeList.push_back(pT);
+        listRootNode(pT, mAliasRootNodeList.end());
     } else {
         // insert item at proper position
         int cnt = 0;
         for (auto it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it++) {
             if (cnt >= childPosition) {
-                mAliasRootNodeList.insert(it, pT);
+                listRootNode(pT, it);
                 break;
             }
             cnt++;
@@ -155,7 +166,7 @@ void AliasUnit::reParentAlias(int childID, int oldParentID, int newParentID, int
     if (pOldParent) {
         pOldParent->popChild(pChild);
     } else {
-        mAliasRootNodeList.remove(pChild);
+        unlistRootNode(pChild);
     }
 
     if (pNewParent) {
@@ -165,6 +176,10 @@ void AliasUnit::reParentAlias(int childID, int oldParentID, int newParentID, int
         pChild->Tree<TAlias>::setParent(nullptr);
         addAliasRootNode(pChild, parentPosition, childPosition, true);
     }
+
+    // The profile save skips a top-level module member and the module save only walks its own
+    // folder, so an item moved out of a module that kept the mark would be saved nowhere
+    pChild->updateModuleMembership();
 }
 
 void AliasUnit::reParentAlias(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position)
@@ -189,7 +204,23 @@ void AliasUnit::removeAliasRootNode(TAlias* pT)
     // rest of the session
     mLookupTable.remove(pT->getName(), pT);
     mAliasMap.remove(pT->getID());
-    mAliasRootNodeList.remove(pT);
+    unlistRootNode(pT);
+}
+
+void AliasUnit::listRootNode(TAlias* pT, std::list<TAlias*>::iterator before)
+{
+    if (!mRootNodePositions.contains(pT)) {
+        mRootNodePositions.insert(pT, mAliasRootNodeList.insert(before, pT));
+    }
+}
+
+void AliasUnit::unlistRootNode(TAlias* pT)
+{
+    const auto position = mRootNodePositions.constFind(pT);
+    if (position != mRootNodePositions.cend()) {
+        mAliasRootNodeList.erase(position.value());
+        mRootNodePositions.erase(position);
+    }
 }
 
 void AliasUnit::removeAllTempAliases()
@@ -277,16 +308,45 @@ int AliasUnit::getNewID()
 
 bool AliasUnit::processDataStream(const QString& data)
 {
+    // Dropped rather than sent: every sibling expansion still pending would otherwise reach
+    // the game as a command of its own
+    if (mRunawayExpansionStopped) {
+        return true;
+    }
+    if (mProcessingDepth >= scmMaxProcessingDepth) {
+        mRunawayExpansionStopped = true;
+        qWarning().nospace() << "AliasUnit::processDataStream(...) aborting: alias processing recursion reached the limit of " << scmMaxProcessingDepth
+                             << " - probably an alias that expands into itself.";
+        //: %1 is the command being expanded, %2 the depth limit. Shown in the game window when an alias keeps expanding into itself
+        mpHost->postMessage(tr("[ ERROR ] - Alias processing stopped to prevent a crash: \"%1\" was expanded by an alias %2 times in a row, each time producing a command that matched an alias "
+                               "again. It goes to the game unexpanded, and any other command an alias expands further along that chain is discarded. Send from "
+                               "the alias with send() rather than expandAlias(), or give it a pattern that does not match what it sends.")
+                                    .arg(data, QString::number(scmMaxProcessingDepth)));
+        return false;
+    }
+
     TLuaInterpreter* Lua = mpHost->getLuaInterpreter();
-    Lua->set_lua_string(qsl("command"), data);
+    if (Lua->buildingCaptureTables()) {
+        qWarning().nospace() << "AliasUnit::processDataStream(...) WARNING - not expanding " << data
+                             << " as a garbage collection finaliser sent it while the capture tables were being built; it goes to the game unexpanded.";
+        return false;
+    }
+    Lua->setExpandedCommand(data);
     bool state = false;
     //Using copy fixes https://github.com/Mudlet/Mudlet/issues/4297
-    auto copyOfNodeList = mAliasRootNodeList;
+    const std::vector<TAlias*> copyOfNodeList(mAliasRootNodeList.cbegin(), mAliasRootNodeList.cend());
+    // Encoded once for every alias; matching has always stopped at a NUL in the command
+    QByteArray haystack = data.toUtf8();
+    haystack.truncate(qstrlen(haystack.constData()));
 
     mProcessingDepth++;
-    const auto processingGuard = qScopeGuard([this] {
+    const auto processingGuard = qScopeGuard([this, Lua] {
         mProcessingDepth--;
         Q_ASSERT(mProcessingDepth >= 0);
+        if (mProcessingDepth <= 1) {
+            mRunawayExpansionStopped = false;
+        }
+        Lua->settleCommandAfterAliasPass();
         if (mProcessingDepth == 0) {
             doCleanup();
         }
@@ -297,7 +357,7 @@ bool AliasUnit::processDataStream(const QString& data)
             continue;
         }
         // = data.replace( "\n", "" );
-        if (alias->match(data)) {
+        if (alias->match(haystack)) {
             state = true;
         }
     }
@@ -354,6 +414,19 @@ std::vector<int> AliasUnit::findItems(const QString& name, const bool exactMatch
     return ids;
 }
 
+bool AliasUnit::pendingDeletion(TAlias* pItem) const
+{
+    if (!hasPendingDeletes()) {
+        return false;
+    }
+    for (auto* pAncestor = pItem; pAncestor; pAncestor = pAncestor->getParent()) {
+        if (mCleanupSet.contains(pAncestor) || uninstallList.contains(pAncestor)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool AliasUnit::enableAlias(const QString& name)
 {
     bool found = false;
@@ -361,8 +434,19 @@ bool AliasUnit::enableAlias(const QString& name)
     // mid-run and skip duplicates on some QMultiMap implementations
     const auto [begin, end] = mLookupTable.equal_range(name);
     for (auto it = begin; it != end; ++it) {
-        it.value()->setIsActive(true);
+        TAlias* pT = it.value();
+        // An alias queued for deletion stays in the lookup table until
+        // doCleanup() frees it - re-activating one resurrects a killAlias()ed
+        // alias, or one whose package a script uninstalled mid-pass, and it
+        // matches commands again.
+        if (mCleanupSet.contains(pT) || uninstallList.contains(pT)) {
+            continue;
+        }
+        pT->setIsActive(true);
         found = true;
+        if (!pT->isTemporary() || pT->getParent()) {
+            emit mpHost->signal_aliasToggled(pT->getID());
+        }
     }
     return found;
 }
@@ -376,6 +460,9 @@ bool AliasUnit::disableAlias(const QString& name)
     for (auto it = begin; it != end; ++it) {
         it.value()->setIsActive(false);
         found = true;
+        if (!it.value()->isTemporary() || it.value()->getParent()) {
+            emit mpHost->signal_aliasToggled(it.value()->getID());
+        }
     }
     return found;
 }
@@ -383,23 +470,27 @@ bool AliasUnit::disableAlias(const QString& name)
 
 bool AliasUnit::killAlias(const QString& name)
 {
-    for (auto alias : mAliasRootNodeList) {
-        if (alias->getName() != name) {
+    // By the lookup table rather than a walk of every alias; see TimerUnit::killTimer()
+    const auto [begin, end] = mLookupTable.equal_range(name);
+    for (auto it = begin; it != end; ++it) {
+        TAlias* alias = it.value();
+        // Only a top level item was ever killable: one inside a group goes with
+        // its group, and freeing it separately as well would free it twice
+        if (alias->getParent()) {
             continue;
         }
         // Names are not unique, so keep looking rather than give up on the first
-        // same-named alias that cannot be killed - a permanent alias loaded from
-        // the profile precedes this session's temporaries in this list, and
-        // reporting a failure over it would strand a killable alias
+        // same-named alias that cannot be killed - a permanent one would strand
+        // a killable temporary
         if (!alias->isTemporary()) {
             // only temporary Aliases can be killed
             continue;
         }
-        // An already killed alias is only unlinked from this list once doCleanup()
+        // An already killed alias is only unlinked from the lookup table once doCleanup()
         // gets to free it, which cannot happen while an alias script is on the
         // call stack - so until then it is still findable by name. Killing it a
         // second time achieves nothing:
-        if (mCleanupSet.contains(alias)) {
+        if (mCleanupSet.contains(alias) || uninstallList.contains(alias)) {
             continue;
         }
         alias->setIsActive(false);
@@ -411,8 +502,9 @@ bool AliasUnit::killAlias(const QString& name)
 
 void AliasUnit::assembleReport(TAlias* pItem)
 {
-    std::list<TAlias*>* childrenList = pItem->mpMyChildrenList;
-    for (auto pChild : *childrenList) {
+    std::list<Tree<TAlias>*>* childrenList = pItem->mpMyChildrenList;
+    for (auto* pChildNode : *childrenList) {
+        auto* pChild = static_cast<TAlias*>(pChildNode);
         ++statsItemsTotal;
         if (pChild->isActive()) {
             ++statsActiveItems;
@@ -449,6 +541,10 @@ void AliasUnit::doCleanup()
         return;
     }
 
+    if (!hasPendingDeletes()) {
+        return;
+    }
+
     QSet<TAlias*> deletedAliases;
     QMutableSetIterator<TAlias*> itAlias(mCleanupSet);
     while (itAlias.hasNext()) {
@@ -457,6 +553,9 @@ void AliasUnit::doCleanup()
         deletedAliases.insert(pAlias);
         delete pAlias;
     }
+    // The drain frees no buckets, so later flushes would re-scan an array sized for the largest batch
+    // ever held. squeeze(), not clear(), keeps anything the drain left behind.
+    mCleanupSet.squeeze();
     // Flush the deletes uninstall() deferred (#9337). uninstallList is ordered
     // children-before-parents and each ~Tree unlinks from its parent, so deleting
     // children first empties the parent's child list (no double free); the seen

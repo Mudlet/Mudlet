@@ -1,0 +1,56 @@
+# mudlet_core must build without Qt Widgets (#9011): widget code lives in
+# mudlet_app. The compiler only notices a bare <QWidget> in a core file, since
+# Qt's include paths still let <QtWidgets/QWidget> through, and a class used via
+# a transitive include builds fine until Widgets is actually absent. The audit
+# catches both. See cmake/audit-core-widgets.sh.
+name: Check core widget audit
+
+on:
+  push:
+    branches: [master, development, release-*]
+    tags: [Mudlet-*]
+  pull_request:
+    paths:
+      - 'src/**.cpp'
+      - 'src/**.h'
+      - 'src/**.mm'
+      # mudlet_HDRS lists some vendored headers, which the audit scans too
+      - '3rdparty/**.cpp'
+      - '3rdparty/**.h'
+      - 'src/CMakeLists.txt'
+      - 'CMakeLists.txt'
+      - 'cmake/audit-core-widgets.sh'
+      - 'cmake/core-widgets-baseline.txt'
+      - '.github/workflows/core-widgets-audit.yml'
+  workflow_dispatch:
+
+jobs:
+  core-widgets-audit:
+    name: Check mudlet_core does not use Qt Widgets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Qt headers
+        # Only the headers are read, to tell which classes are in QtWidgets.
+        # The count does not change between Qt 6 releases.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends qt6-base-dev
+
+      - name: Audit mudlet_core
+        run: sh cmake/audit-core-widgets.sh --enforce
+
+      - name: Self-test the audit
+        # A count of 0 also comes from an audit that has quietly stopped
+        # matching anything, so prove it still fails on a widget file in core.
+        run: |
+          sed -i 's/^set(mudlet_SRCS$/&\n    mudlet.cpp/' src/CMakeLists.txt
+          grep -A1 '^set(mudlet_SRCS$' src/CMakeLists.txt | grep -q '^    mudlet.cpp$'
+          status=0
+          sh cmake/audit-core-widgets.sh --enforce || status=$?
+          git checkout -- src/CMakeLists.txt
+          if [ "$status" -ne 1 ]; then
+            echo "::error::the audit exited with $status instead of 1 for mudlet.cpp in mudlet_SRCS"
+            exit 1
+          fi

@@ -16,7 +16,7 @@
 			<colorTriggerFgColor>#000000</colorTriggerFgColor>
 			<colorTriggerBgColor>#000000</colorTriggerBgColor>
 			<regexCodeList>
-				<string>raiseEvent("onNewLine")</string>
+				<string>map.eventHandler("onNewLine")</string>
 			</regexCodeList>
 			<regexCodePropertyList>
 				<integer>4</integer>
@@ -335,6 +335,89 @@ setTriggerStayOpen("English Multi-Line Exits Trigger",1)</script>
 				</regexCodePropertyList>
 			</Trigger>
 		</TriggerGroup>
+		<TriggerGroup isActive="yes" isFolder="yes" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+			<name>Swedish Trigger Group</name>
+			<script></script>
+			<triggerType>0</triggerType>
+			<conditonLineDelta>0</conditonLineDelta>
+			<mStayOpen>0</mStayOpen>
+			<mCommand></mCommand>
+			<packageName></packageName>
+			<mFgColor>#ff0000</mFgColor>
+			<mBgColor>#ffff00</mBgColor>
+			<mSoundFile></mSoundFile>
+			<colorTriggerFgColor>#000000</colorTriggerFgColor>
+			<colorTriggerBgColor>#000000</colorTriggerBgColor>
+			<regexCodeList />
+			<regexCodePropertyList />
+			<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+				<name>Swedish Exits Trigger</name>
+				<script>map.captureUntitledRoom(matches[2] or "", "swedish")</script>
+				<triggerType>0</triggerType>
+				<conditonLineDelta>0</conditonLineDelta>
+				<mStayOpen>0</mStayOpen>
+				<mCommand></mCommand>
+				<packageName></packageName>
+				<mFgColor>#ff0000</mFgColor>
+				<mBgColor>#ffff00</mBgColor>
+				<mSoundFile></mSoundFile>
+				<colorTriggerFgColor>#000000</colorTriggerFgColor>
+				<colorTriggerBgColor>#000000</colorTriggerBgColor>
+				<regexCodeList>
+					<string>^\s*Det finns \S+ synliga? väg(?:ar)? härifrån(?::\s*(.+?))?\.?\s*$</string>
+				</regexCodeList>
+				<regexCodePropertyList>
+					<integer>1</integer>
+				</regexCodePropertyList>
+			</Trigger>
+			<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+				<name>Swedish Failed Move Trigger</name>
+				<script>-- only the prompt may come before the reply, so someone saying "Vadå?" is not a failed move
+if map.configs.language == "swedish" and map.promptOnly(line:sub(1, #line - #matches[1])) then
+  raiseEvent("onMoveFail")
+end</script>
+				<triggerType>0</triggerType>
+				<conditonLineDelta>0</conditonLineDelta>
+				<mStayOpen>0</mStayOpen>
+				<mCommand></mCommand>
+				<packageName></packageName>
+				<mFgColor>#ff0000</mFgColor>
+				<mBgColor>#ffff00</mBgColor>
+				<mSoundFile></mSoundFile>
+				<colorTriggerFgColor>#000000</colorTriggerFgColor>
+				<colorTriggerBgColor>#000000</colorTriggerBgColor>
+				<regexCodeList>
+					<string>(?:Eh|Ursäkta|Vadå|Vad menar du)\?$</string>
+					<string>Dörren hindrar dig\.$</string>
+				</regexCodeList>
+				<regexCodePropertyList>
+					<integer>1</integer>
+					<integer>1</integer>
+				</regexCodePropertyList>
+			</Trigger>
+			<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+				<name>Swedish Prompt Trigger</name>
+				<script>map.learnPromptTemplate(matches[2])</script>
+				<triggerType>0</triggerType>
+				<conditonLineDelta>0</conditonLineDelta>
+				<mStayOpen>0</mStayOpen>
+				<mCommand></mCommand>
+				<packageName></packageName>
+				<mFgColor>#ff0000</mFgColor>
+				<mBgColor>#ffff00</mBgColor>
+				<mSoundFile></mSoundFile>
+				<colorTriggerFgColor>#000000</colorTriggerFgColor>
+				<colorTriggerBgColor>#000000</colorTriggerBgColor>
+				<regexCodeList>
+					<string>Din nuvarande prompt är "(.*)"\.?\s*$</string>
+					<string>Du sätter din prompt till "(.*)"\.?\s*$</string>
+				</regexCodeList>
+				<regexCodePropertyList>
+					<integer>1</integer>
+					<integer>1</integer>
+				</regexCodePropertyList>
+			</Trigger>
+		</TriggerGroup>
 	</TriggerPackage>
 	<TimerPackage />
 	<AliasPackage>
@@ -434,7 +517,7 @@ end</script>
 				<script>map.setConfigs("map_window",matches[3],matches[2])</script>
 				<command></command>
 				<packageName></packageName>
-				<regex>^map window (x|y|w|h|origin|shown)(?: ([\w%]+))?</regex>
+				<regex>^map window (x|y|w|h|origin|shown|embedded|dock)(?: ([\w%]+))?</regex>
 			</Alias>
 			<Alias isActive="yes" isFolder="no">
 				<name>Map Translate Config Alias</name>
@@ -442,6 +525,13 @@ end</script>
 				<command></command>
 				<packageName></packageName>
 				<regex>^map translate (\w+) (\w+) (\w+)$</regex>
+			</Alias>
+			<Alias isActive="yes" isFolder="no">
+				<name>Map Language Alias</name>
+				<script>map.setLanguage(matches[2])</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^map language (\w+)$</regex>
 			</Alias>
 		</AliasGroup>
 		<AliasGroup isActive="yes" isFolder="yes">
@@ -689,6 +779,7 @@ map.doLockArea(matches[2])</script>
 -- location of the room. The room ID is optional, it'll move the current
 -- room if you don't provide one.
 
+if not map.require_mapping() then return end
 
 -- want the current room, but we're lost
 if matches[2] == '' and (not map.currentRoom or not map.roomexists(map.currentRoom)) then map.echo("Don't know where we are at the moment.") return end
@@ -763,6 +854,8 @@ map.echo([[Where do you want to move the room to?
 				<script>-- rld or room delete &lt;option&gt; - where option is the location or ID of the room
 -- you'd like to delete
 
+if not map.require_mapping() then return end
+
 -- want the current room, but we're lost
 if not matches[2] and (not map.currentRoom or not map.roomexists(map.currentRoom)) then map.echo("Don't know where we are at the moment.") return end
 
@@ -786,6 +879,8 @@ centerview(map.currentRoom)</script>
 				<name>Set Room Weight Alias</name>
 				<script>-- rw &lt;optional room ID or direction&gt; &lt;weight&gt;, where option is the location
 -- or ID of the room whose weight you'd like to change.
+
+if not map.require_mapping() then return end
 
 local weight = tonumber(matches[3]), room
 if matches[2] == '' then room = map.currentRoom
@@ -822,6 +917,8 @@ end</script>
 -- is a positive number (default for exits is 0). Setting a higher weight will
 -- make the exit be less likely to be used.
 
+if not map.require_mapping() then return end
+
 local room = (matches[2] ~= "" and tonumber(matches[2]) or map.currentRoom)
 
 local weight, exit = tonumber(matches[3]), matches[4]
@@ -840,6 +937,7 @@ map.echo(string.format("Set the weight on the %d room going %s to %s. If it's a 
 				<script>-- rlk or room link &lt;option&gt; [one] - where option will specify the room and exit
 -- to link with. You can also tack on 'one' at the end to make it be a one-way link
 
+if not map.require_mapping() then return end
 
 -- need the current room, but we're lost
 if not map.currentRoom or not map.roomexists(map.currentRoom) then map.echo("Don't know where we are at the moment.") return end
@@ -912,6 +1010,7 @@ centerview(map.currentRoom)</script>
 -- of the exit to unlink. This function will unlink exits both ways, or one way
 -- if there is no incoming exit. 
 
+if not map.require_mapping() then return end
 
 -- need the current room, but we're lost
 if not map.currentRoom or not map.roomexists(map.currentRoom) then map.echo("Don't know where we are at the moment.") return end
@@ -954,6 +1053,8 @@ centerview(map.currentRoom)</script>
 -- Door status can be open or o, closed or c, locked or l, clear or gone.
 -- To delete a room, use clear or gone. Setting doors is one-way - to set
 -- two-way doors, use the alias from the opposite direction.
+
+if not map.require_mapping() then return end
 
 local room = (matches[2] ~= "" and tonumber(matches[2]) or map.currentRoom)
 
@@ -998,6 +1099,8 @@ end</script>
 				<script>-- rcc &lt;character&gt; or rcc &lt;character&gt; &lt;room ID&gt; - where the character is one 
 -- letter/number/symbol.
 
+if not map.require_mapping() then return end
+
 local room = matches[3] or map.currentRoom
 room = tonumber(room) or map.relativeroom(map.currentRoom, room)
 if not room or not map.roomexists(room) then
@@ -1028,6 +1131,8 @@ centerview(map.currentRoom)</script>
 -- spe clear and spe list match on this
 if matches[2] == "clear" or matches[2] == "list" then return end
 
+if not map.require_mapping() then return end
+
 -- need the current room, but we're lost
 if not map.currentRoom or not map.roomexists(map.currentRoom) then map.echo("Don't know where we are at the moment.") return end
 
@@ -1049,6 +1154,8 @@ centerview(map.currentRoom)</script>
 				<script>-- spev &lt;from room&gt; &lt;to room&gt; &lt;command&gt; - This different than spe, which allows
 -- you to link only the current room to another room - this command doesn't
 -- require you to be in the starting room. 
+
+if not map.require_mapping() then return end
 
 local room1, room2 = tonumber(matches[2]), tonumber(matches[3])
 
@@ -1073,6 +1180,8 @@ map.echo(string.format("Added special exit with command '%s' to from %s (%d) to 
 				<script>-- spe clear &lt;option&gt; or exit special clear &lt;option&gt; - where option is the
 -- location or the ID of the room you'd like to clear all special exits in. 
 
+if not map.require_mapping() then return end
+
 -- want the current room, but we're lost
 if not matches[2] and (not map.currentRoom or not map.roomexists(map.currentRoom)) then map.echo("Don't know where we are at the moment.") return end
 
@@ -1094,6 +1203,7 @@ map.echo(string.format("Cleared all special exits in %s (%d).\n", getRoomName(ri
 				<name>Move Room To Another Area Alias</name>
 				<script>-- room area &lt;different area&gt; - will move the current room to another area you're in
 
+if not map.require_mapping() then return end
 map.roomArea(matches[2], matches[3])</script>
 				<command></command>
 				<packageName></packageName>
@@ -1103,6 +1213,7 @@ map.roomArea(matches[2], matches[3])</script>
 				<name>Add a Room Label Alias</name>
 				<script>-- room label &lt;optional another room ID&gt; &lt;optional foreground color&gt; &lt;optional background color&gt; my message
 
+if not map.require_mapping() then return end
 map.roomLabel(matches[2])</script>
 				<command></command>
 				<packageName></packageName>
@@ -1120,6 +1231,7 @@ map.areaLabels(matches[2])</script>
 				<name>Create An Area Alias</name>
 				<script>-- area add &lt;area name&gt; - will create a new area and automatically give it an ID.
 
+if not map.require_mapping() then return end
 local t = getAreaTable(); local tr = {}; for k,v in pairs(t) do tr[v] = k end
 local newid = table.maxn(tr) + 1
 
@@ -1134,6 +1246,7 @@ centerview(map.currentRoom)</script>
 				<name>Delete An Area Alias</name>
 				<script>-- area delete &lt;area name&gt; - will delete the given area
 
+if not map.require_mapping() then return end
 map.deleteArea(matches[2])</script>
 				<command></command>
 				<packageName></packageName>
@@ -1157,6 +1270,7 @@ map.echo("Stopped deleting rooms in the '"..areaname.."'. The area is partially 
 			<Alias isActive="yes" isFolder="no">
 				<name>Rename An Area Alias</name>
 				<script>-- area rename &lt;new area name&gt; - will rename the current area you're in to the new name
+if not map.require_mapping() then return end
 map.renameArea(matches[2])</script>
 				<command></command>
 				<packageName></packageName>
@@ -1169,6 +1283,7 @@ map.renameArea(matches[2])</script>
 -- the feature, which will be set when a map feature is added to a room. 
 -- Note: Map feature names are not allowed to contain numbers. 
 
+if not map.require_mapping() then return end
 map.createMapFeature(matches[2]:trim(), (matches[3] and matches[3]:trim()))</script>
 				<command></command>
 				<packageName></packageName>
@@ -1182,6 +1297,7 @@ map.createMapFeature(matches[2]:trim(), (matches[3] and matches[3]:trim()))</scr
 -- The room number to add the feature to can be given with the optional argument
 -- (note that there is no space between the v and the ID). 
 
+if not map.require_mapping() then return end
 map.roomCreateMapFeature(matches[3], matches[2] == "" and map.currentRoom or tonumber(matches[2]))</script>
 				<command></command>
 				<packageName></packageName>
@@ -1196,6 +1312,7 @@ map.roomCreateMapFeature(matches[3], matches[2] == "" and map.currentRoom or ton
 -- delete the feature from can be given with the optional argument (note that
 -- there is no space between the v and the ID). 
 
+if not map.require_mapping() then return end
 map.roomDeleteMapFeature(matches[3], matches[2] == "" and map.currentRoom or tonumber(matches[2]))</script>
 				<command></command>
 				<packageName></packageName>
@@ -1205,6 +1322,7 @@ map.roomDeleteMapFeature(matches[3], matches[2] == "" and map.currentRoom or ton
 				<name>Delete Map Feature Alias</name>
 				<script>-- feature delete &lt;feature&gt;* deletes a map feature and removes it from all rooms
 
+if not map.require_mapping() then return end
 map.deleteMapFeature(matches[2]:trim())</script>
 				<command></command>
 				<packageName></packageName>
@@ -1260,7 +1378,7 @@ end
 			<script>-- Jor'Mox's Generic Map Script
 -- the script self-updates, changing this value will bring an update to all installations
 -- make sure versions.lua has the latest version in it
-local version = "2.1.9"
+local version = "2.1.10"
 
     -- look into options for non-standard door usage for speedwalk
     -- come up with aliases to set translations and custom exits, add appropriate help info
@@ -1322,6 +1440,8 @@ map.help = {[[
         &lt;link: translate&gt;map translate &lt;english direction&gt; &lt;translated long direction&gt;&lt;/link&gt;
         &lt;link: translate&gt;&lt;translated short direction&gt;&lt;/link&gt; - Sets the provided translations for the
             given english direction word.
+        &lt;link: language&gt;map language &lt;english or swedish&gt;&lt;/link&gt; - Sets all direction translations
+            for a game in that language.
 
     &lt;cyan&gt;Map Information Commands:&lt;reset&gt;
         These commands show detailed information about your current map.
@@ -1341,6 +1461,8 @@ map.help = {[[
 
     &lt;cyan&gt;Map Creation Commands:&lt;reset&gt;
         These are commands used in the process of actually creating a map.
+        Apart from arealock, commands here that change the map only work
+        while mapping is on.
 
         &lt;link: start mapping&gt;start mapping [area name]&lt;/link&gt; - Starts adding content to the map, using
             either the area of the room the user is currently in or the area
@@ -1498,12 +1620,14 @@ map.help.start_mapping = [[
         syntax: &lt;yellow&gt;start mapping [area name]&lt;reset&gt;
 
         This command instructs the script to add new content to the map when it
-        is seen. When first used, an area name is mandatory, so that an area is
-        created for new rooms to be placed in. If used with an area name while
-        the map shows the character within a room on the map, that room will be
-        moved to be in the named area, if it is not already in it. If used
-        without an area name, the room is not moved, and mapping begins in the
-        area the character is currently located in.
+        is seen. On an empty map the area name is optional: new rooms are placed
+        in an area called "New area", which you can rename later with area rename.
+        If used with an area name while the map shows the character within a
+        room on the map, that room will be moved to be in the named area, if it
+        is not already in it. If used without an area name, the room is not
+        moved, and mapping begins in the area the character is currently
+        located in. Commands that edit the map, such as room delete or room
+        link, only work while mapping is on.
 ]]
 map.help.stop_mapping = [[
     &lt;cyan&gt;Stop Mapping&lt;reset&gt;
@@ -1511,7 +1635,8 @@ map.help.stop_mapping = [[
 
         This command instructs the script to stop adding new content until
         mapping is resumed at a later time. The map will continue to perform
-        other functions.
+        other functions, but map creation commands that edit rooms, exits,
+        areas, labels or map features will refuse to run.
 ]]
 map.help.find_prompt = [[
     &lt;cyan&gt;Find Prompt&lt;reset&gt;
@@ -1887,6 +2012,17 @@ map.help.window = [[
             connecting to the game. This may be true or false. If you intend
             to have some other script control the map window, this should be
             set to false.
+
+        &lt;yellow&gt;embedded&lt;reset&gt; - This determines if the map is drawn inside the main
+            window, or in a separate map window that can be moved or docked,
+            like the one the Map button opens. This may be true or false. Once
+            the map has been shown, a change takes effect the next time the
+            profile is opened.
+
+        &lt;yellow&gt;dock&lt;reset&gt; - When the map is not embedded, this is where its window
+            goes, and may be 'floating', 'left', 'right', 'top', or 'bottom'.
+            A floating window is sized and placed by the settings above, as
+            though the main window filled the screen.
 ]]
 map.help.translate = [[
     &lt;yellow&gt;Map Translate&lt;reset&gt;
@@ -1899,6 +2035,20 @@ map.help.translate = [[
         northwest, northeast, southwest, southeast, up, down, in, and out.
         Also you can customize special commands sent to mud like 'look'.
 ]]
+map.help.language = [[
+    &lt;yellow&gt;Map Language&lt;reset&gt;
+        syntax: &lt;yellow&gt;map language &lt;english or swedish&gt;&lt;reset&gt;
+
+        This command sets every direction translation at once, to the words a
+        game in that language uses. On SvenskMUD the mapper picks Swedish by
+        itself, unless you have chosen a language or changed any translation.
+
+        SvenskMUD rooms have no title, so the first sentence of the description
+        names the room. The mapper learns your prompt from the game: it asks
+        with 'prompt' when it has none or stops seeing it, and follows along
+        when you change it with 'prompt &lt;template&gt;'. If it still gets it
+        wrong, set it yourself with &lt;yellow&gt;map prompt&lt;reset&gt;.
+]]
 map.help.quick_start = [[
     &lt;link: quick_start&gt;map basics&lt;/link&gt; (quick start guide)
     ----------------------------------------
@@ -1910,7 +2060,7 @@ map.help.quick_start = [[
 
     1. &lt;link: start mapping&gt;start mapping &lt;optional area name&gt;&lt;/link&gt;
        If both room name and exits are good, you can start mapping! Give it the
-       area name you're currently in, usually optional but required for the first one.
+       area name you're currently in, or leave it out on an empty map to start with "New area".
     2. &lt;link: find prompt&gt;find prompt&lt;/link&gt;
        Room name or exits aren't recognised? Try this command then. It will make
        the script start looking for a prompt using several standard prompt
@@ -2269,7 +2419,7 @@ map.save.move_methods = map.save.move_methods or {}
 map.silentUpdate = map.silentUpdate or true
 
 local oldstring = string
-local string = utf8
+local string = setmetatable({}, {__index = utf8})
 string.format = oldstring.format
 string.trim = oldstring.trim
 string.starts = oldstring.starts
@@ -2296,6 +2446,8 @@ map.defaults = {
         h = "40%",
         origin = "topright",
         shown = false,
+        embedded = true,
+        dock = "floating",
     },
     prompt_test_patterns = {"^%[?%a*%]?&lt;.*&gt;", "^%[.*%]%s*&gt;", "^%w*[%.?!:]*&gt;", "^%[.*%]", "^[Hh][Pp]:.*&gt;"},
     custom_exits = {},  -- format: short_exit = {long_exit, reverse_exit, x_dif, y_dif, z_dif}
@@ -2313,11 +2465,19 @@ map.defaults = {
         wd = 'wd', wu = 'wu', westdown = 'westdown', westup = 'westup',
     },
     debug = false,
-    download_path = "https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/mudlet-lua/lua/generic-mapper",
+    download_path = "https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/packages/generic_mapper",
+}
+
+local language_dirs = {
+    english = {},
+    swedish = {n = 'n', ne = 'nö', nw = 'nv', e = 'ö', w = 'v', s = 's', se = 'sö', sw = 'sv',
+        u = 'u', d = 'ner', ["in"] = 'in', out = 'ut', north = 'norr', northeast = 'nordöst',
+        east = 'öster', west = 'väster', south = 'söder', southeast = 'sydöst', southwest = 'sydväst',
+        northwest = 'nordväst', up = 'upp', down = 'ner', l = 't', look = 'titta'},
 }
 
 local move_queue, lines = {}, {}
-local find_portal, vision_fail, room_detected, random_move, force_portal, find_prompt, downloading, walking, help_shown
+local find_portal, vision_fail, room_detected, random_move, force_portal, find_prompt, await_prompt, downloading, walking, help_shown
 local mt = getmetatable(map) or {}
 
 local exitmap = {
@@ -2364,11 +2524,13 @@ local reverse_dirs = {
 }
 
 local wait_echo = {}
+-- what the game says about its prompt is only believed in reply to a prompt command, so another player cannot set it
+local awaiting_prompt_reply, prompt_seen, untitled_room_seen, asked_for_prompt = false, false, false, {}
 local mapper_tag = "&lt;112,229,0&gt;(&lt;73,149,0&gt;mapper&lt;112,229,0&gt;): &lt;255,255,255&gt;"
 local debug_tag = "&lt;255,165,0&gt;(&lt;200,120,0&gt;debug&lt;255,165,0&gt;): &lt;255,255,255&gt;"
 local err_tag = "&lt;255,0,0&gt;(&lt;178,34,34&gt;error&lt;255,0,0&gt;): &lt;255,255,255&gt;"
 
-local function config()
+local function config(window_changed)
     local defaults = map.defaults
     local configs = map.configs or {}
     local path = profilePath.."/map downloads"
@@ -2395,8 +2557,14 @@ local function config()
         stubmap[v[1]] = count
     end
     -- update to the current download path
-    if map.configs.download_path == "https://raw.githubusercontent.com/JorMox/Mudlet/development/src/mudlet-lua/lua/generic-mapper" then
-        map.configs.download_path = "https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/mudlet-lua/lua/generic-mapper"
+    local old_paths = {
+        "https://raw.githubusercontent.com/JorMox/Mudlet/development/src/mudlet-lua/lua/generic-mapper",
+        "https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/mudlet-lua/lua/generic-mapper",
+    }
+    if table.contains(old_paths, map.configs.download_path) then
+        map.configs.download_path = "https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/packages/generic_mapper"
+    elseif map.configs.download_path == "https://gitee.com/mudlet/Mudlet/raw/development/src/mudlet-lua/lua/generic-mapper" then
+        map.configs.download_path = "https://gitee.com/mudlet/Mudlet/raw/development/src/packages/generic_mapper"
     end
 
     -- setup metatable to store sensitive values
@@ -2430,8 +2598,14 @@ local function config()
     saves.recall = saves.recall or {}
     map.save = saves
 
-    if map.configs.map_window.shown then
-        map.showMap(true)
+    local mapper = Geyser.windowList.my_mapper
+    -- an open map window is left where the player has put it, or closed it from
+    -- its title bar, unless its own settings are what changed
+    if map.configs.map_window.shown and (window_changed or not mapper or mapper.embedded) then
+        map.showMap(true, window_changed)
+    elseif window_changed and mapper and not mapper.embedded then
+        -- a hidden map window takes them when it is next shown, rather than being opened now
+        mapper.pending_settings = true
     end
 end
 
@@ -2488,6 +2662,14 @@ end
 
 local bool_configs = {'stretch_map', 'search_on_look', 'speedwalk_wait', 'speedwalk_random',
     'clear_lines_on_send', 'debug', 'custom_name_search', 'use_translation'}
+local dock_positions = {"floating", "left", "right", "top", "bottom"}
+
+local function echo_if_embedded_deferred()
+    local mapper = Geyser.windowList.my_mapper
+    if mapper and mapper.embedded ~= map.configs.map_window.embedded then
+        map.echo("The map moves there the next time the profile is opened.")
+    end
+end
 -- function intended to be used by an alias to change config values and save them to a file for later
 function map.setConfigs(key, val, sub_key)
     if val == "off" or val == "false" then
@@ -2501,9 +2683,23 @@ function map.setConfigs(key, val, sub_key)
     if tonumber(val) then val = tonumber(val) end
     if not toggle then
         if key == "map_window" then
-            if map.configs.map_window[sub_key] then
+            if sub_key == "dock" then
+                val = type(val) == "string" and val:lower() or val
+                -- not table.contains, which would also match an index such as 1
+                if not table.index_of(dock_positions, val) then
+                    map.echo("Map config dock may be floating, left, right, top, or bottom.", false, true)
+                    return
+                end
+            elseif (sub_key == "embedded" or sub_key == "shown") and type(val) ~= "boolean" then
+                map.echo(string.format("Map config %s may be true or false.", sub_key), false, true)
+                return
+            end
+            if map.configs.map_window[sub_key] ~= nil then
                 map.configs.map_window[sub_key] = val
                 map.echo(string.format("Map config %s set to: %s", sub_key, tostring(val)))
+                if sub_key == "embedded" then
+                    echo_if_embedded_deferred()
+                end
             else
                 map.echo("Unknown map config.",false, true)
             end
@@ -2551,16 +2747,22 @@ function map.setConfigs(key, val, sub_key)
         if (type(map.configs[key]) == "boolean" and table.contains(bool_configs, key)) then
             map.configs[key] = not map.configs[key]
             map.echo(string.format("Config %s set to: %s", key, tostring(map.configs[key])))
-        elseif key == "map_window" and sub_key == "shown" then
-            map.configs.map_window.shown = not map.configs.map_window.shown
-            map.echo(string.format("Map config %s set to: %s", "shown", tostring(map.configs.map_window.shown)))
+        elseif key == "map_window" and sub_key == "dock" then
+            map.echo("Map config dock may be floating, left, right, top, or bottom.", false, true)
+            return
+        elseif key == "map_window" and (sub_key == "shown" or sub_key == "embedded") then
+            map.configs.map_window[sub_key] = not map.configs.map_window[sub_key]
+            map.echo(string.format("Map config %s set to: %s", sub_key, tostring(map.configs.map_window[sub_key])))
+            if sub_key == "embedded" then
+                echo_if_embedded_deferred()
+            end
         else
             map.echo("Unknown configuration.",false,true)
             return
         end
     end
     table.save(profilePath.."/map downloads/configs.lua",map.configs)
-    config()
+    config(key == "map_window")
 end
 
 local function show_err(msg,debug)
@@ -2595,6 +2797,13 @@ function map.echo(what, debug, err, wait)
     end
     print_wait_echoes()
     print_echoes(what, debug, err)
+end
+
+function map.require_mapping()
+    if not map.mapping then
+        map.echo("Not mapping. Use &lt;yellow&gt;start mapping&lt;reset&gt; to edit the map.",false,true)
+    end
+    return map.mapping
 end
 
 local function set_room(roomID)
@@ -2921,13 +3130,7 @@ local function find_link(name, exits, dir, max_distance)
         end
         if not stubmap[dir] or not coordmap[stubmap[dir]] then return end
         local dx,dy,dz = unpack(coordmap[stubmap[dir]])
-        local minx, maxx, miny, maxy, minz, maxz = find_area_limits(map.currentArea)
         local rooms, match, stubs
-        if max_distance then
-            minx, maxx = x - max_distance, x + max_distance
-            miny, maxy = y - max_distance, y + max_distance
-            minz, maxz = z - max_distance, z + max_distance
-        end
         -- find link from room hash first
         if map.prompt.hash then
             local room = getRoomIDbyHash(map.prompt.hash)
@@ -2935,6 +3138,15 @@ local function find_link(name, exits, dir, max_distance)
                 match = room
             end
         else
+            local minx, maxx, miny, maxy, minz, maxz
+            if max_distance then
+                minx, maxx = x - max_distance, x + max_distance
+                miny, maxy = y - max_distance, y + max_distance
+                minz, maxz = z - max_distance, z + max_distance
+            else
+                -- reads every room in the area, so only when the search is unbounded
+                minx, maxx, miny, maxy, minz, maxz = find_area_limits(map.currentArea)
+            end
             repeat
                 x, y, z = x + dx, y + dy, z + dz
                 rooms = getRoomsByPosition(map.currentArea,x,y,z)
@@ -2959,6 +3171,24 @@ local function find_link(name, exits, dir, max_distance)
     end
 end
 
+local function echo_move_queue(what, wait)
+    -- checked here as well as in map.echo, so the queue is not joined on every move with debug off
+    if map.configs.debug then
+        map.echo(string.format("%s - move queue: %s", what, next(move_queue) and table.concat(move_queue, ", ") or "empty"), true, false, wait)
+    end
+end
+
+local function clear_move_queue(why, wait)
+    if next(move_queue) then echo_move_queue(why .. ", dropping the queue", wait) end
+    move_queue = {}
+end
+
+local function queue_move(move, priority)
+    table.insert(move_queue, priority and 1 or #move_queue + 1, move)
+    -- waits for the prompt, as printing now would split the line the command is sent from
+    echo_move_queue("Queued move " .. move, true)
+end
+
 local function move_map()
     -- tries to move the map to the next room
     local move = table.remove(move_queue,1)
@@ -2979,6 +3209,7 @@ local function move_map()
                 end
             end
         end
+        echo_move_queue(move and ("Following move " .. move) or "No move queued, treating it as a random move")
         if find_portal then
             map.find_me(map.currentName,map.currentExits,move)
             find_portal = false
@@ -2989,7 +3220,7 @@ local function move_map()
             force_portal = false
         elseif move == "recall" and map.save.recall[map.character] then
             set_room(map.save.recall[map.character])
-        elseif move == map.configs.lang_dirs['look'] and map.currentRoom and not check_room(map.currentRoom, map.currentName, map.currentExits) then
+        elseif move == "look" and map.currentRoom and not check_room(map.currentRoom, map.currentName, map.currentExits) then
             -- this check isn't working as intended, find out why
             map.find_me(map.currentName,map.currentExits)
         else
@@ -3049,25 +3280,17 @@ local function capture_move_cmd(dir,priority)
         end
     end
     if table.contains(exitmap,dir) or string.starts(dir,"enter ") or dir == "recall" then
-      if dir ~= configs.lang_dirs['look'] then
-        if priority then
-            table.insert(move_queue,1,exitmap[dir] or dir)
-        else
-            table.insert(move_queue,exitmap[dir] or dir)
-        end
+      if dir ~= "look" then
+        queue_move(exitmap[dir] or dir, priority)
       else
         if configs.search_on_look == true then
-          table.insert(move_queue, dir)
+          queue_move(dir)
         end
     end				
     elseif map.currentRoom then
         local special = getSpecialExitsSwap(map.currentRoom) or {}
         if special[dir] then
-            if priority then
-                table.insert(move_queue,1,dir)
-            else
-                table.insert(move_queue,dir)
-            end
+            queue_move(dir, priority)
         end
     end
 end
@@ -3095,7 +3318,7 @@ local function capture_room_info(name, exits)
         for w in string.gmatch(exits,"%a+") do
             if map.configs.use_translation then
                 local dir = map.configs.translate and map.configs.translate[w]
-                if dir then table.insert(map.currentExits,dir) end
+                if dir then table.insert(map.currentExits,exitmap[dir] or dir) end
             else
                 table.insert(map.currentExits,w)
             end
@@ -3126,10 +3349,26 @@ local function find_area(name)
     map.set("currentArea", areaID)
 end
 
+local function forget_position()
+    -- room ids from before the load name unrelated rooms in the loaded map
+    local was_mapping = map.mapping
+    map.set("mapping", false)
+    map.set("currentRoom", nil)
+    map.set("currentArea", nil)
+    map.set("prevRoom", nil)
+    clear_move_queue("Map loaded")
+    random_move = false
+    if was_mapping then
+        map.echo("Mapping off. Use &lt;yellow&gt;map me&lt;reset&gt; to find yourself on the loaded map.")
+    end
+end
+
 function map.load_map(address)
     local path = profilePath .. "/map downloads/map.dat"
     if not address then
-        loadMap(path)
+        if loadMap(path) then
+            forget_position()
+        end
         map.echo("Map reloaded from local copy.")
     else
         if not string.match(address,"/[%a_]+%.dat$") then
@@ -3170,7 +3409,7 @@ function map.set_exit(dir,roomID)
             map.echo("Special exit '" .. dir .. "' now goes to roomID " .. roomID)
         end
     else
-        map.echo("Not mapping",false,true)
+        map.require_mapping()
     end
 end
 
@@ -3221,7 +3460,7 @@ function map.export_area(name)
     tbl.rooms = {}
     tbl.exits = {}
     tbl.special = {}
-    local rname, exits, stubs, doors, special, portals, door_up, door_down, coords, environment, roomChar
+    local rname, exits, stubs, doors, special, portals, door_up, door_down, coords, environment, roomChar, hash
     for k,v in pairs(rooms) do
         rname = getRoomName(v)
         exits = getRoomExits(v)
@@ -3232,8 +3471,9 @@ function map.export_area(name)
 	environment = getRoomEnv(v)
 	roomChar = getRoomChar(v)
         coords = {getRoomCoordinates(v)}
+        hash = getRoomHashByID(v)
         tbl.rooms[v] = {name = rname, coords = coords, exits = exits, stubs = stubs, doors = doors, door_up = door_up,
-            door_down = door_down, door_in = door_in, door_out = door_out, special = special, portals = portals, environment = environment, roomChar = roomChar}
+            door_down = door_down, door_in = door_in, door_out = door_out, special = special, portals = portals, environment = environment, roomChar = roomChar, hash = hash}
         tmp = {}
         for k1,v1 in pairs(exits) do
             if not table.contains(rooms,v1) then
@@ -3269,6 +3509,7 @@ function map.import_area(name)
     local areaID = areas[tbl.name] or addAreaName(tbl.name)
     local rooms = {}
     local ID
+    local hash_conflicts = 0
     for k,v in pairs(tbl.rooms) do
         ID = createRoomID()
         rooms[k] = ID
@@ -3287,6 +3528,15 @@ function map.import_area(name)
         setRoomUserData(ID,"portals",v.portals)
 	setRoomEnv(ID,v.environment)
 	setRoomChar(ID,v.roomChar)
+        -- taking over a hash the map already uses would move the mapper's room
+        -- identification onto this imported copy, so leave those rooms hashless
+        if v.hash then
+            if getRoomIDbyHash(v.hash) == -1 then
+                setRoomIDbyHash(ID,v.hash)
+            else
+                hash_conflicts = hash_conflicts + 1
+            end
+        end
     end
     for k,v in pairs(tbl.rooms) do
         for i,j in pairs(v.exits) do
@@ -3314,6 +3564,9 @@ function map.import_area(name)
     end
     map.fix_portals()
     map.echo("Area " .. tbl.name .. " imported from " .. name)
+    if hash_conflicts > 0 then
+        map.echo(string.format("%d imported room(s) left without a hash, the map already has rooms using those.", hash_conflicts), false, true)
+    end
 end
 
 function map.set_recall()
@@ -3332,12 +3585,13 @@ function map.set_portal(name, is_auto)
             name = string.gsub(name,"^-f ","")
             force_portal = name
         end
-        move_queue = {name}
+        clear_move_queue("Portal set", true)
+        queue_move(name)
         if not is_auto then
             send(name)
         end
     else
-        map.echo("Not mapping",false,true)
+        map.require_mapping()
     end
 end
 
@@ -3356,16 +3610,21 @@ function map.start_mapping(area_name)
         show_err("Room detection not yet working, see &lt;yellow&gt;map basics&lt;reset&gt; for guidance.")
     end
     local rooms
-    move_queue = {}
+    clear_move_queue("Mapping started")
     area_name = area_name ~= "" and area_name or nil
     if map.currentArea and not area_name then
         local areas = getAreaTableSwap()
         area_name = areas[map.currentArea]
     end
     if not area_name then
-        show_err("You haven't started mapping yet, how should the first area be called? Set it with: &lt;yellow&gt;start mapping &lt;area name&gt;&lt;reset&gt;")
+        if roomExists(1) or next(getRooms()) ~= nil then
+            show_err("Not sure where you are on the map yet. Try &lt;yellow&gt;map me&lt;reset&gt;, or name the area with: &lt;yellow&gt;start mapping &lt;area name&gt;&lt;reset&gt;")
+        end
+        area_name = "New area"
+        map.echo("Now mapping in area: " .. area_name .. ". Rename it any time with: &lt;yellow&gt;area rename &lt;new name&gt;&lt;reset&gt;")
+    else
+        map.echo("Now mapping in area: " .. area_name)
     end
-    map.echo("Now mapping in area: " .. area_name)
     map.set("mapping", true)
     find_area(area_name)
     rooms = find_room(map.currentName, map.currentArea)
@@ -3404,7 +3663,7 @@ function map.set_area(name)
             set_room(map.currentRoom)
         end
     else
-        map.echo("Not mapping",false,true)
+        map.require_mapping()
     end
 end
 
@@ -3413,6 +3672,9 @@ function map.set_door(dir,status,one_way)
     if map.mapping then
         if not map.currentRoom then
             show_err("Make Door: No room found.")
+        end
+        if map.configs.use_translation then
+            dir = map.configs.translate[dir] or dir
         end
         dir = exitmap[dir] or dir
         if not stubmap[dir] then
@@ -3446,7 +3708,7 @@ function map.set_door(dir,status,one_way)
         add_door(map.currentRoom,dir,status)
         map.echo(string.format("Adding %s door to the %s", status, dir))
     else
-        map.echo("Not mapping",false,true)
+        map.require_mapping()
     end
 end
 
@@ -3467,7 +3729,7 @@ function map.shift_room(dir)
         centerview(map.currentRoom)
         map.echo("Shifting room",true)
     else
-        map.echo("Not mapping",false,true)
+        map.require_mapping()
     end
 end
 
@@ -3496,7 +3758,7 @@ end
 function map.find_me(name, exits, dir, manual)
     -- tries to locate the player using the current room name and exits, and if provided, direction of movement
     -- if direction of movement is given, narrows down possibilities using previous room info
-    if move ~= "recall" then move_queue = {} end
+    if move ~= "recall" then clear_move_queue("Locating you") end
     -- find from room hash id - map.find_me(nil, nil, nil, false)
     if map.prompt.hash then
         local room = getRoomIDbyHash(map.prompt.hash)
@@ -3583,7 +3845,7 @@ function map.fix_portals()
         end
         map.echo("Portals Fixed")
     else
-        map.echo("Not mapping",false,true)
+        map.require_mapping()
     end
 end
 
@@ -3591,15 +3853,14 @@ function map.merge_rooms()
     -- used to combine essentially identical rooms with the same coordinates
     -- typically, these are generated due to mapping errors
     if map.mapping then
-        map.echo("Merging rooms")
         local x,y,z = getRoomCoordinates(map.currentRoom)
         local rooms = getRoomsByPosition(map.currentArea,x,y,z)
         local exits, portals, room, cmd, curportals
-        local room_count = 1
+        local merged = {}
         for k,v in pairs(rooms) do
             if v ~= map.currentRoom then
                 if getRoomName(v) == getRoomName(map.currentRoom) then
-                    room_count = room_count + 1
+                    merged[#merged + 1] = string.format("%s (#%d)", getRoomName(v), v)
                     for k1,v1 in pairs(getRoomExits(v)) do
                         setExit(map.currentRoom,v1,stubmap[k1])
                         exits = getRoomExits(v1)
@@ -3646,11 +3907,13 @@ function map.merge_rooms()
                 end
             end
         end
-        if room_count &gt; 1 then
-            map.echo(room_count .. " rooms merged", true)
+        if #merged &gt; 0 then
+            map.echo(string.format("Merged %s into %s (#%d)", table.concat(merged, ", "), getRoomName(map.currentRoom), map.currentRoom))
+        else
+            map.echo("No rooms to merge here")
         end
     else
-        map.echo("Not mapping",false,true)
+        map.require_mapping()
     end
 end
 
@@ -3765,6 +4028,7 @@ function map.search_timer_check()
     if find_prompt then
         map.echo("Prompt not auto-detected, use 'map prompt' to set a prompt pattern.",false,true)
         find_prompt = false
+        await_prompt = false
     end
 end
 
@@ -3779,6 +4043,7 @@ function map.make_prompt_pattern(str)
     if not str:starts("^") then str = "^"..str end
     map.save.prompt_pattern[map.character] = str
     find_prompt = false
+    await_prompt = false
     table.save(profilePath .. "/map downloads/map_save.dat",map.save)
     map.echo("Prompt pattern set: " .. str)
 end
@@ -3807,25 +4072,37 @@ function map.make_move_method(str)
     table.save(profilePath .. "/map downloads/map_save.dat",map.save)
 end
 
+local function match_prompt_patterns()
+    for k,v in ipairs(map.configs.prompt_test_patterns) do
+        if string.match(line,v) then
+            map.save.prompt_pattern[map.character] = v
+            table.save(profilePath .. "/map downloads/map_save.dat",map.save)
+            find_prompt = false
+            await_prompt = false
+            map.echo("Prompt found")
+            break
+        end
+    end
+end
+
 local function grab_line()
     table.insert(lines,line)
+    -- unasked, only a line the game itself ends as a prompt (GA/EOR) is safe to test:
+    -- the loosest pattern also matches an ordinary "[ Exits: north ]" line. A status
+    -- prompt shows numbers; a login pager or menu line ended the same way does not
+    if await_prompt and not map.save.prompt_pattern[map.character] and isPrompt() and line:find("%d") then
+        match_prompt_patterns()
+    end
     if map.save.prompt_pattern[map.character] and string.match(line, map.save.prompt_pattern[map.character]) then
         if map.prompt.exits and map.prompt.exits ~= "" then
             raiseEvent("onNewRoom")
         end
+        prompt_seen = true
         print_wait_echoes()
         map.echo("Prompt captured",true)
     end
     if find_prompt then
-        for k,v in ipairs(map.configs.prompt_test_patterns) do
-            if string.match(line,v) then
-                map.save.prompt_pattern[map.character] = v
-                table.save(profilePath .. "/map downloads/map_save.dat",map.save)
-                find_prompt = false
-                map.echo("Prompt found")
-                break
-            end
-        end
+        match_prompt_patterns()
     end
 end
 
@@ -3896,6 +4173,125 @@ local function name_search()
         map.prompt.description = nil
     end
     return room_name
+end
+
+-- for games whose rooms have no title line: the room is named by the first
+-- sentence of the description that came before the exits line
+local function untitled_room_name()
+    local prompt_pattern = map.save.prompt_pattern[map.character]
+    local last = #lines
+    if lines[last] == line then last = last - 1 end
+    -- exits are indented 3; an ASCII minimap left of the text pushes it, exits line included, further right
+    local indent = #string.match(line, "^%s*")
+    local text = {}
+    for i = last, 1, -1 do
+        local cur_line = lines[i]
+        for _, v in ipairs(map.save.ignore_patterns) do
+            cur_line = string.gsub(cur_line, v, "")
+        end
+        local prompt_end = prompt_pattern and select(2, string.find(cur_line, prompt_pattern))
+        if prompt_end then
+            cur_line = string.sub(cur_line, prompt_end + 1)
+        end
+        if indent &gt; 3 then
+            cur_line = string.sub(cur_line, indent + 1)
+        end
+        cur_line = string.trim(cur_line)
+        if cur_line ~= "" then
+            table.insert(text, 1, cur_line)
+        elseif #text &gt; 0 then
+            break
+        end
+        if prompt_end then break end
+    end
+    lines = {}
+    if not prompt_pattern and text[1] then
+        -- a prompt nobody has described to the mapper is still glued on, and prompts rarely have letters
+        text[1] = (string.gsub(text[1], "^[^%a]+", ""))
+        if text[1] == "" then table.remove(text, 1) end
+    end
+    if #text == 0 then return end
+    local description = string.gsub(table.concat(text, " "), "%s+", " ")
+    if map.configs.use_description_matching then
+        map.prompt.description = table.concat(text, "\n")
+    end
+    return string.sub(string.match(description, "^(.-[%.!?])%s") or description, 1, 100)
+end
+
+function map.setLanguage(name)
+    local dirs = language_dirs[string.lower(name or "")]
+    if not dirs then
+        map.echo("Unknown language, choose one of: " .. table.concat(table.keys(language_dirs), ", "), false, true)
+        return
+    end
+    map.configs.language = string.lower(name)
+    map.configs.lang_dirs = table.update(map.defaults.lang_dirs, dirs)
+    map.configs.translate = {}
+    for k, v in pairs(map.configs.lang_dirs) do
+        map.configs.translate[v] = k
+    end
+    table.save(profilePath.."/map downloads/configs.lua", map.configs)
+    map.echo("Directions now use " .. string.lower(name) .. " words.")
+end
+
+local numeric_prompt_tokens = {HP = true, MAXHP = true, MP = true, MAXMP = true}
+
+-- SvenskMUD names the template its prompt is built from, e.g. "&lt;HP&gt;/&lt;MAXHP&gt;hp &lt;MP&gt;/&lt;MAXMP&gt;mp"
+function map.learnPromptTemplate(template)
+    if not awaiting_prompt_reply then return end
+    awaiting_prompt_reply = false
+    if string.trim(template or "") == "" then
+        map.save.prompt_pattern[map.character] = nil
+        table.save(profilePath .. "/map downloads/map_save.dat", map.save)
+        map.echo("Prompt pattern cleared.")
+        return
+    end
+    local last_token = string.match(template, "&lt;([%w_]+)&gt;%s*$")
+    if last_token and not numeric_prompt_tokens[string.upper(last_token)] then
+        map.echo("Your prompt ends in " .. last_token .. ", which runs into the text after it. Set the prompt pattern with 'map prompt'.", false, true)
+        return
+    end
+    local pattern = string.gsub(template, "[%^%$%(%)%%%.%[%]%*%+%-%?]", "%%%0")
+    pattern = string.gsub(pattern, "&lt;([%w_]+)&gt;", function(token)
+        return numeric_prompt_tokens[string.upper(token)] and "%-?%d+" or "%S+"
+    end)
+    map.make_prompt_pattern(pattern)
+end
+
+function map.promptOnly(text)
+    local prompt = map.save.prompt_pattern[map.character]
+    if prompt then
+        text = string.gsub(text, prompt, "")
+    end
+    return not string.find(text, "%a")
+end
+
+local function lang_dirs_untouched()
+    for k, v in pairs(map.defaults.lang_dirs) do
+        if map.configs.lang_dirs[k] ~= v then return false end
+    end
+    return true
+end
+
+function map.captureUntitledRoom(exits, language)
+    if language and not map.configs.language and map.configs.use_translation and lang_dirs_untouched() then
+        map.setLanguage(language)
+    end
+    local name = untitled_room_name()
+    -- a room before this one was followed by a prompt, so not seeing one means the pattern is missing or out of date
+    local stale = untitled_room_seen and not prompt_seen
+    untitled_room_seen, prompt_seen = true, false
+    -- after the name is read: sending clears the lines it is read from
+    if language == "swedish" and not asked_for_prompt[map.character or ""] and (stale or not map.save.prompt_pattern[map.character]) then
+        asked_for_prompt[map.character or ""] = true
+        send("prompt", false)
+    end
+    if not name then
+        map.echo("No room description before the exits line.", true)
+        return
+    end
+    map.prompt.room = name
+    raiseEvent("onNewRoom", exits)
 end
 
 local function handle_exits(exits)
@@ -4076,7 +4472,7 @@ local function check_version()
 end
 
 function map.checkVersion()
-    if #getRooms() &gt; 0 then
+    if roomExists(1) or #getRooms() &gt; 0 then
       map.silentUpdate = false
     end    
     if map.update_timer then
@@ -4110,7 +4506,7 @@ function map.updateVersion()
     downloadFile(path .. file, map.configs.download_path .. file)
 end
 
-function map.showMap(shown)
+function map.showMap(shown, replace)
     local configs = map.configs.map_window
     shown = shown or not configs.shown
     map.configs.map_window.shown = shown
@@ -4136,9 +4532,35 @@ function map.showMap(shown)
             x = "-"..x
         end
     end
-    local mapper = Geyser.Mapper:new({name = "my_mapper", x = x, y = y, w = w, h = h})
-    mapper:resize(w,h)
-    mapper:move(x,y)
+    local previous = Geyser.windowList.my_mapper
+    -- the one map a profile has cannot move between the main window and the map
+    -- window, so a change of embedded waits for the profile to be opened again
+    local embedded = configs.embedded
+    if previous then
+        embedded = previous.embedded
+    end
+    -- a new mapper would put an open map window back where the settings say,
+    -- undoing wherever the player has since moved it
+    if previous and not embedded and not replace and not (shown and previous.pending_settings) then
+        if shown then
+            previous:show()
+        elseif closeMapWidget() then
+            -- already closed just above, so hide() would only fail to close it again
+            previous.hidden = true
+        else
+            -- it was closed from its title bar, which this script does not hear of
+            map.configs.map_window.shown = true
+            previous:show()
+        end
+        return
+    end
+    local dock = not embedded and configs.dock or nil
+    local mapper = Geyser.Mapper:new({name = "my_mapper", x = x, y = y, width = w, height = h,
+        embedded = embedded, dockPosition = dock})
+    if embedded then
+        mapper:resize(w,h)
+        mapper:move(x,y)
+    end
     if shown then
         mapper:show()
     else
@@ -4174,8 +4596,16 @@ function map.sanitizeRoomName(roomtitle)
 end
 
 function map.eventHandler(event, ...)
+    -- the onNewLine Trigger calls this for every line rather than raising an event, which
+    -- would run every "*" handler too, so it is answered first; and naming ... rather
+    -- than reading arg spares Lua 5.1 building an arg table on every call
+    if event == "onNewLine" then
+        grab_line()
+        return
+    end
+    local arg1, arg2 = ...
     if event == "onNewRoom" then
-        handle_exits(arg[1])
+        handle_exits(arg1)
         if walking and map.configs.speedwalk_wait then
             continue_walk(true)
         end
@@ -4186,8 +4616,8 @@ function map.eventHandler(event, ...)
         print_wait_echoes()
         map.echo("Prompt Captured",true)
     elseif event == "onMoveFail" then
-        map.echo("onMoveFail",true)
-        table.remove(move_queue,1)
+        local dropped = table.remove(move_queue,1)
+        echo_move_queue(dropped and ("onMoveFail, dropped move " .. dropped) or "onMoveFail, no move to drop")
     elseif event == "onVisionFail" then
         map.echo("onVisionFail",true)
         vision_fail = true
@@ -4195,25 +4625,29 @@ function map.eventHandler(event, ...)
     elseif event == "onRandomMove" then
         map.echo("onRandomMove",true)
         random_move = true
-        move_queue = {}
+        clear_move_queue("Random move")
     elseif event == "onForcedMove" then
         map.echo("onForcedMove",true)
-        capture_move_cmd(arg[1],arg[2]=="true")
-    elseif event == "onNewLine" then
-        grab_line()
+        capture_move_cmd(arg1,arg2=="true")
     elseif event == "sysDataSendRequest" then
-        capture_move_cmd(arg[1])
+        if string.match(arg1, "^%s*(%S*)") == "prompt" then
+            awaiting_prompt_reply = true
+        end
+        capture_move_cmd(arg1)
         -- check to prevent multiple version checks in a row without user intervention
         if map.update_waiting and map.update_timer then
             map.update_waiting = nil
         -- check to ensure version check cycle is started
-        elseif not map.update_waiting and not map.update_timer then
+        -- with no download path there is nothing to check, and checking reads the whole map
+        elseif not map.update_waiting and not map.update_timer and map.configs.download_path ~= "" then
             map.checkVersion()
         end
     elseif event == "sysDownloadDone" and downloading then
-        local file = arg[1]
+        local file = arg1
         if string.ends(file,"/map.dat") then
-            loadMap(file)
+            if loadMap(file) then
+                forget_position()
+            end
             downloading = false
             map.echo("Map File Loaded.")
         elseif string.ends(file,"/versions.lua") then
@@ -4222,21 +4656,23 @@ function map.eventHandler(event, ...)
             update_version()
         end
     elseif event == "sysDownloadError" and downloading then
-        local file = arg[1]
+        local file = arg1
         if string.ends(file,"/versions.lua") and mudlet.translations.interfacelanguage == "zh_CN" then
             -- update to the current download path for chinese user
-            if map.configs.download_path == "https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/mudlet-lua/lua/generic-mapper" then
-                map.configs.download_path = "https://gitee.com/mudlet/Mudlet/raw/development/src/mudlet-lua/lua/generic-mapper"
+            if map.configs.download_path == "https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/packages/generic_mapper" then
+                map.configs.download_path = "https://gitee.com/mudlet/Mudlet/raw/development/src/packages/generic_mapper"
                 map.checkVersion()
             end
         end
+    elseif event == "sysConnectionEvent" then
+        awaiting_prompt_reply, prompt_seen, untitled_room_seen, asked_for_prompt = false, false, false, {}
     elseif event == "sysLoadEvent" or event == "sysInstall" then
         config()
         raiseEvent("mapperScriptLoaded", "generic_mapper")
     elseif event == "mapOpenEvent" then
+        -- nothing is sent: the map can open at a login screen, which takes any text as the character's name
         if not help_shown and not map.save.prompt_pattern[map.character or ""] then
-            map.find_prompt()
-            send(map.configs.lang_dirs['look'], true)
+            await_prompt = true
             tempTimer(3, function() map.show_help("quick_start"); help_shown = true end)
         end
     elseif event == "mapStop" then
@@ -4244,8 +4680,8 @@ function map.eventHandler(event, ...)
         walking = false
         map.echo("Mapping and speedwalking stopped.")
     elseif event == "sysManualLocationSetEvent" then
-      set_room(arg[1])
-    elseif event == "sysUninstallPackage" and not map.updatingMapper and arg[1] == "generic_mapper" then
+      set_room(arg1)
+    elseif event == "sysUninstallPackage" and not map.updatingMapper and arg1 == "generic_mapper" then
         for _,id in ipairs(map.registeredEvents) do
             killAnonymousEventHandler(id)
         end
@@ -4665,13 +5101,14 @@ function map.roomLook(input)
     echo("  ")
     echo("Clear all labels ")
     setUnderline(true)
-    echoLink("(in area)", 'map.clearLabels(' .. areanum .. ')', '', true)
+    echoLink("(in area)", 'if map.require_mapping() then map.clearLabels(' .. areanum .. ') end', '', true)
     setUnderline(false)
     echo(" ")
     setUnderline(true)
     echoLink(
       "(whole map)",
       [[
+    if not map.require_mapping() then return end
     if not map.clearinglabels then
       map.echo("Are you sure you want to clear all of your labels on this map? If yes, click the link again.")
       map.clearinglabels = true
@@ -5168,7 +5605,7 @@ function map.deleteArea(name, exact)
     for _, name in ipairs(ma) do
       echo("  ")
       setUnderline(true)
-      echoLink(name, [[map.deleteArea("]] .. name .. [[", true)]], "Delete " .. name, true)
+      echoLink(name, [[if map.require_mapping() then map.deleteArea("]] .. name .. [[", true) end]], "Delete " .. name, true)
       setUnderline(false)
       echo("\n")
     end
@@ -5404,7 +5841,7 @@ function map.areaLabels(where, exact)
       echoLink(
         'delete',
         string.format(
-          'deleteMapLabel(%d, %d); map.echo("Deleted label #' .. labelid .. '")', areaid, labelid
+          'if not map.require_mapping() then return end local ok, err = deleteMapLabel(%d, %d); if ok then map.echo("Deleted label #' .. labelid .. '") else map.echo(err, false, true) end', areaid, labelid
         ),
         "Delete label #" .. labelid .. " from " .. getRoomAreaName(areaid)
       )

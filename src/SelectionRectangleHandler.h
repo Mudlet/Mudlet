@@ -35,8 +35,6 @@ private:
     bool handleMouseMove(T2DMap::MapInteractionContext& context) const;
     bool handleMouseRelease(T2DMap::MapInteractionContext& context) const;
 
-    void populateMultiSelectionWidget() const;
-
     T2DMap& mMapWidget;
 };
 
