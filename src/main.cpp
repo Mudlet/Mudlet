@@ -575,6 +575,11 @@ int main(int argc, char* argv[])
     } else {
         // Setting the environment is a data race once the application's threads are reading it
         nameHardwareDeviceTypes();
+        // Read before QApplication takes -style out of argv. An empty value sets no style there either.
+        const QStringList chosenStyles = parser.values(qsl("style"));
+        mudlet::smStyleChosenByPlayer = !qEnvironmentVariableIsEmpty("QT_STYLE_OVERRIDE") || std::any_of(chosenStyles.cbegin(), chosenStyles.cend(), [](const QString& name) {
+            return !name.isEmpty();
+        });
         app = new QApplication(argc, argv);
     }
 

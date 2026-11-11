@@ -43,6 +43,22 @@ application, and a hardcoded colour becomes unreadable the moment it does. Read
 `qApp`'s palette rather than the dialog's own - assigning a stylesheet to a
 widget freezes that widget's palette.
 
+### One base style for both appearances
+
+Changing the appearance changes colours, never sizes or positions. On macOS
+and Windows both appearances are drawn on Fusion: `DarkTheme` over it for the
+dark one, a plain `MudletProxyStyle` over it for the light one
+(`mudlet::setAppearance()`). The platform styles there measure controls their
+own way - spin box heights, the gaps between form rows, the margins round an
+item view's rows - and with the light appearance on the platform style and the
+dark one on Fusion, 794 widget positions across the settings dialog's twelve
+pages differed between the two (macOS, Qt 6.11.3). A window the design has not
+reached yet takes Fusion's shapes in the light appearance, as it already did in
+the dark one. Linux keeps the desktop's own style for the light appearance,
+since a player there may have chosen it, and macOS and Windows keep a style
+the player chose with `-style` or `QT_STYLE_OVERRIDE` for it too.
+`AppearanceBaseStyleTest` guards this.
+
 ### Three tones of depth
 
 `themeTokens()` mixes three surfaces, and which one a rule reaches for is the
@@ -329,8 +345,9 @@ sheet was set on, after setting it - because otherwise the answer is the base
 style's rather than the design's. `QAbstractButton` reads
 `SH_Button_FocusPolicy` once, in its constructor, and keeps what that style
 answered, and the base style under the app is replaced on every appearance
-change: Fusion by way of `DarkTheme` for the dark one, the platform's own for
-the light. Both answer `Qt::StrongFocus` on macOS with Qt 6.11, which is what
+change: `DarkTheme` over Fusion for the dark one, a plain `MudletProxyStyle`
+over Fusion for the light one (over the desktop's own style on Linux, or a
+style the player chose). Both answer `Qt::StrongFocus` on macOS with Qt 6.11, which is what
 left the accent sitting on a mark after a click; a platform whose style answered
 `Qt::TabFocus` would have made the same code look correct. The helper reaches
 check boxes, radio buttons, push buttons and checkable cards, and leaves a
@@ -663,8 +680,8 @@ bar and the `::item` padding beside it. That bold is `SidebarItemDelegate`'s
 rather than the sheet's, because a stylesheet's font on an `::item` never
 reaches the painter, which lays a row's name out in the style option's own font.
 Not a constant, because what a style leaves round an item's text is its own: the
-same row of the same name measures 88px under the dark theme's Fusion proxy and
-96px under the platform style macOS light uses, which leaves two pixels either
+same row of the same name measures 88px under Fusion and 96px under the macOS
+platform style, which leaves two pixels either
 side against four
 (`PM_FocusFrameHMargin`, which `QCommonStyle` then draws the name inside again).
 Held to one number for both, the editor's sidebar drew "Statistics" and

@@ -4411,8 +4411,11 @@ void mudlet::keepFloatingDocksOnScreen()
             continue;
         }
         const QRect available = pScreen->availableGeometry();
-        // The frame is not known before the dock is first shown, so this is what QWidget::restoreGeometry() allows too
-        const int titleBarHeight = pDock->style()->pixelMetric(QStyle::PM_TitleBarHeight, nullptr, pDock);
+        // The frame the window manager put on the dock, once it has been shown; until then the style's metric stands
+        // in, as it does for QWidget::restoreGeometry(). Only the platform's own style sizes title bars like the window
+        // manager does, and the appearances draw on Fusion
+        const int frameAbove = geometry.top() - pDock->frameGeometry().top();
+        const int titleBarHeight = qMax(frameAbove, pDock->style()->pixelMetric(QStyle::PM_TitleBarHeight, nullptr, pDock));
         QRect fitted = geometry;
         fitted.setWidth(qMin(fitted.width(), available.width()));
         fitted.setHeight(qMin(fitted.height(), available.height() - titleBarHeight));
@@ -8168,8 +8171,15 @@ void mudlet::setAppearance(const enums::Appearance state, const bool& loading)
             // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
             qApp->setStyle(new DarkTheme);
         } else {
+#if defined(Q_OS_MACOS) || defined(Q_OS_WINDOWS)
+            // On the dark appearance's Fusion, as the platform style here sizes and spaces controls its own way and
+            // every window would shift as the appearance changed; a style the player chose is kept instead
+            const QString lightStyle = smStyleChosenByPlayer ? mDefaultStyle : qsl("Fusion");
+#else
+            const QString lightStyle = mDefaultStyle;
+#endif
             // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
-            qApp->setStyle(new MudletProxyStyle(mDefaultStyle));
+            qApp->setStyle(new MudletProxyStyle(lightStyle));
         }
     } else {
         // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)

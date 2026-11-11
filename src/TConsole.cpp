@@ -85,24 +85,6 @@ constexpr int footSeamHeight = 1;
 // black console. A style, not a style sheet: a widget's own sheet outranks every rule, so it would drop
 // setProfileStyleSheet() rules. Other styles draw the handle against their own groove, so it is visible
 // already, and keep hover/pressed feedback this painting lacks.
-bool consoleScrollBarStyleWanted()
-{
-    const QStyle* pStyle = QApplication::style();
-    if (!pStyle) {
-        return false;
-    }
-
-    // Mudlet's style is a proxy (MudletProxyStyle or DarkTheme) with no object name; use the base's.
-    QString styleName = pStyle->objectName();
-    if (styleName.isEmpty()) {
-        if (const auto* pProxy = qobject_cast<const QProxyStyle*>(pStyle); pProxy && pProxy->baseStyle()) {
-            styleName = pProxy->baseStyle()->objectName();
-        }
-    }
-    // Not windows10: its opaque handle on a light track has the same contrast on any console.
-    return !styleName.compare(qsl("windows11"), Qt::CaseInsensitive);
-}
-
 class ConsoleScrollBarStyle : public QProxyStyle
 {
 public:
@@ -112,9 +94,7 @@ public:
     {
         const auto* pSlider = qstyleoption_cast<const QStyleOptionSlider*>(pOption);
         const QColor handleColor = pWidget ? pWidget->property(csHandleColorProperty).value<QColor>() : QColor();
-        // Checked here, not at install, so a style switch (the appearance setting) needs no console
-        // told, and a test can stand in a Windows 11 style on any platform.
-        if (control != CC_ScrollBar || !pSlider || !handleColor.isValid() || !consoleScrollBarStyleWanted()) {
+        if (control != CC_ScrollBar || !pSlider || !handleColor.isValid() || !baseIsWindows11()) {
             QProxyStyle::drawComplexControl(control, pOption, pPainter, pWidget);
             return;
         }
@@ -147,6 +127,16 @@ public:
         pPainter->setBrush(handleColor);
         pPainter->drawRoundedRect(handleRect.adjusted(0.5, 0.5, -0.5, -0.5), cornerRadius, cornerRadius);
         pPainter->restore();
+    }
+
+private:
+    // The base, not the application style, draws the bar: QProxyStyle makes it from the -style override or
+    // the desktop's style, never the application's. Not windows10: its opaque handle on a light track has
+    // the same contrast on any console.
+    bool baseIsWindows11() const
+    {
+        const QStyle* pBase = baseStyle();
+        return pBase && !pBase->objectName().compare(qsl("windows11"), Qt::CaseInsensitive);
     }
 };
 
