@@ -314,15 +314,19 @@ above, so turn one off with `-DUSE_SPAWN=OFF` or `WITH_SPAWN=NO` in the environm
 | `USE_DISCORD_RPC` | the `QLibrary` that loads the Discord RPC library, and with it Rich Presence | the Discord functions return `nil` and `"Discord API is not available"`, as when the library is missing; `setDiscordGameUrl()` still works |
 | `USE_SPEECH_ENGINES` | the `QLibrary` loading of the Vosk and sherpa-onnx speech engines | the `stt.*` functions refuse, saying the build cannot load a speech engine library, and `stt.getPlatformKey()` returns `nil`; a platform engine (macOS's own) still works |
 
-`USE_BUILTIN_MUDLET_LUA` goes the other way: off by default except for Android and a browser, it
-builds Mudlet's own Lua files into `mudlet_core`, for an app with no Mudlet installed beside it to read
-them from; see "Embedding it: Mudlet's own Lua files" in `headless.md`.
+`USE_BUILTIN_MUDLET_LUA` and `USE_BUNDLED_LUA_MODULES` go the other way: off by default except for
+Android and a browser, they build Mudlet's own Lua files and the Lua C modules those need into
+`mudlet_core`, for an app with no Mudlet installed beside it to load them from; see "Embedding it:
+Mudlet's own Lua files" in `headless.md`. The modules need SQLite3 (`libsqlite3-dev`) to build.
 
 The `linux-core-minimal` preset turns the options in the table off, along with `USE_MCPSERVER`,
-`USE_UPDATER`, `USE_3DMAPPER` and `WITH_SENTRY`, turns `USE_BUILTIN_MUDLET_LUA` on, and builds only
+`USE_UPDATER`, `USE_3DMAPPER` and `WITH_SENTRY`, turns those two on, and builds only
 `mudlet-headless`. CI builds it on every pull
 request that touches the sources (`.github/workflows/core-mobile-build.yml`), and fails if
-`mudlet_core` still calls into `QProcess`, `QLibrary`, `QLocalServer`, Qt HttpServer or Sentry:
+`mudlet_core` still calls into `QProcess`, `QLibrary`, `QLocalServer`, Qt HttpServer or Sentry. It then
+opens a profile with the checkout's Lua files moved away and nowhere for Lua to find a C module, which
+only a `mudlet_core` that carries both can do, and runs `CI/core-mobile-smoke.lua` in it, which uses each
+module:
 
 ```bash
 cmake --preset linux-core-minimal

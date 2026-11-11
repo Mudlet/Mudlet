@@ -1080,6 +1080,13 @@ target_include_directories(${LIB_MUDLET_TARGET} INTERFACE
     ${CMAKE_CURRENT_BINARY_DIR}/${LIB_MUDLET_TARGET}_autogen/include
 )
 
+if(USE_BUNDLED_LUA_MODULES)
+  # From here, where the libraries the modules link against have been found
+  include(BundledLuaModules)
+  target_link_libraries(${LIB_MUDLET_TARGET} mudlet_lua_modules)
+  set_property(SOURCE TLuaInterpreter.cpp APPEND PROPERTY COMPILE_DEFINITIONS INCLUDE_BUNDLED_LUA_MODULES)
+endif()
+
 if (SYSINFO_LIBRARY)
   target_link_libraries(${LIB_MUDLET_TARGET} ${SYSINFO_LIBRARY} ${KVM_LIBRARY})
 endif (SYSINFO_LIBRARY)

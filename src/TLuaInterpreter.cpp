@@ -95,6 +95,14 @@ using namespace std::chrono_literals;
 
 extern "C" {
 int luaopen_yajl(lua_State*);
+#if defined(INCLUDE_BUNDLED_LUA_MODULES)
+int luaopen_brimworks_zip(lua_State*);
+int luaopen_lfs(lua_State*);
+int luaopen_lpeg(lua_State*);
+int luaopen_luasql_sqlite3(lua_State*);
+int luaopen_rex_pcre2(lua_State*);
+int luaopen_utf8(lua_State*);
+#endif
 }
 
 namespace {
@@ -499,7 +507,18 @@ using PreloadedModules = QList<std::pair<QByteArray, lua_CFunction>>;
 
 PreloadedModules& preloadedModules()
 {
-    static PreloadedModules modules;
+    static PreloadedModules modules{
+#if defined(INCLUDE_BUNDLED_LUA_MODULES)
+            // Under the names initLuaGlobals() requires first
+            {"lfs", luaopen_lfs},
+            {"brimworks.zip", luaopen_brimworks_zip},
+            {"rex_pcre2", luaopen_rex_pcre2},
+            {"luasql.sqlite3", luaopen_luasql_sqlite3},
+            {"lua-utf8", luaopen_utf8},
+            {"yajl", luaopen_yajl},
+            {"lpeg", luaopen_lpeg},
+#endif
+    };
     return modules;
 }
 

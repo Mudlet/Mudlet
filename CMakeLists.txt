@@ -223,6 +223,16 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_BUILTIN_MUDLET_LUA
                         OPTION_VARIABLE USE_BUILTIN_MUDLET_LUA
                         READABLE_NAME "built-in Mudlet Lua files"
                         DEFAULT ${BUILTIN_MUDLET_LUA_DEFAULT})
+# On by default where a program may load no Lua C module from a file; see cmake/BundledLuaModules.cmake
+if(ANDROID OR EMSCRIPTEN)
+  set(BUNDLED_LUA_MODULES_DEFAULT ON)
+else()
+  set(BUNDLED_LUA_MODULES_DEFAULT OFF)
+endif()
+include_optional_module(ENVIRONMENT_VARIABLE WITH_BUNDLED_LUA_MODULES
+                        OPTION_VARIABLE USE_BUNDLED_LUA_MODULES
+                        READABLE_NAME "bundled Lua C modules"
+                        DEFAULT ${BUNDLED_LUA_MODULES_DEFAULT})
 # On by default: it links mudlet_core alone, so building it is what proves the core still runs without
 # Qt Widgets, and the teardown tests run it
 include_optional_module(ENVIRONMENT_VARIABLE WITH_HEADLESS
