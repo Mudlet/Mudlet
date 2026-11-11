@@ -36,7 +36,8 @@ struct GmcpLinkUri
 
 // Parsed on arrival so only what was checked reaches the wire: a game or another player's relayed text wrote it.
 // Takes the whole URI; a menu item's scheme may be in any letter case. From the first '?' on is the link's own parameters.
-std::optional<GmcpLinkUri> parseGmcpLinkUri(const QString& uri);
+// Where it refuses one, whyNot, if given, says which check failed, for the game's developer.
+std::optional<GmcpLinkUri> parseGmcpLinkUri(const QString& uri, QString* whyNot = nullptr);
 
 // The message a selection link sends: its JSON object with "selected" set, replacing any already
 // there. Takes a message from GmcpLinkUri::message() whose data allows a selection.

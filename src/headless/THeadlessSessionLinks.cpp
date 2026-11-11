@@ -119,6 +119,9 @@ THeadlessSession::LinkResult THeadlessSession::followLink(const int link, const 
     if (fromMenu && !items.at(*item).enabled) {
         return LinkResult::disabled;
     }
+    if (model.gmcpCannotSend(link, item.value_or(0), fromMenu)) {
+        return LinkResult::gmcpOff;
+    }
     QString errorText;
     const auto errorCapture = connect(mpHost, &Host::signal_errorConsolePrint, this, [&errorText](const QString& text) {
         errorText = text;

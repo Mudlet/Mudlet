@@ -668,10 +668,14 @@ and `followLink(id, item)` what picking that item from its `menu` does; `item` i
 not yet revealed is only revealed (`revealedSpoiler`), and the next follow runs it; the revealed text is
 not sent, so an app's copy of the line keeps the blanks it was sent with. A `disabled` link, or a menu's
 greyed-out item, runs nothing (`disabled`), nor does a `concealed` one (`concealed`), which the GUI leaves
-no way to click. Otherwise the link is chosen in its selection group, deselecting the rest of an exclusive
-group, and its command or function runs before `followLink()` returns (`ran`); a `send:` link sends, and a
-web link opens through `QDesktopServices::openUrl()`, which an app can route with
-`QDesktopServices::setUrlHandler()`. Where that raises a Lua error the result is `failed`, and
+no way to click. A game's OSC 8 `local:` note is `disabled` too, as the GUI takes no click on it. A
+`gmcp:` link or item while GMCP is off for the connection sends nothing and leaves the link as it was
+(`gmcpOff`). Otherwise the link is chosen in its selection group, deselecting the rest of an exclusive
+group, and its command or function runs before `followLink()` returns (`ran`); a `send:` link sends, a
+`gmcp:` link sends its GMCP message, and a web link opens through `QDesktopServices::openUrl()`, which an
+app can route with `QDesktopServices::setUrlHandler()`. A `local:` link with a `menu` runs nothing without
+an item, as the GUI's click only opens the menu, so the app shows `items`; an item picked straight after
+leaves the selection that follow changed. Where a command raises a Lua error the result is `failed`, and
 `errorString()` gives Lua's message. The link is `visited` after either. `noSuchItem` is for an item the
 link does not have, `unknown` for an id the main console does not hold, as once a game's OSC 8 visibility
 settings have deleted its line, and `refused` for where `submit()` is, a handler included.

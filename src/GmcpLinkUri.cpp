@@ -58,8 +58,15 @@ QString GmcpLinkUri::message() const
     return json.isEmpty() ? name : qsl("%1 %2").arg(name, json);
 }
 
-std::optional<GmcpLinkUri> parseGmcpLinkUri(const QString& uri)
+std::optional<GmcpLinkUri> parseGmcpLinkUri(const QString& uri, QString* whyNot)
 {
+    const auto refuse = [whyNot](const QString& reason) -> std::optional<GmcpLinkUri> {
+        if (whyNot) {
+            *whyNot = reason;
+        }
+        return std::nullopt;
+    };
+
     const qsizetype queryStart = uri.indexOf(QLatin1Char('?'));
     const QString encoded = uri.mid(qstrlen("gmcp:"), queryStart < 0 ? -1 : queryStart - qstrlen("gmcp:"));
     const QString decoded = QUrl::fromPercentEncoding(encoded.toUtf8());
@@ -67,7 +74,7 @@ std::optional<GmcpLinkUri> parseGmcpLinkUri(const QString& uri)
     // Qt's JSON parser lets raw control characters through inside a string; none belongs in a message, and a NUL would cut it short in Lua
     for (const QChar character : decoded) {
         if (character.category() == QChar::Other_Control) {
-            return std::nullopt;
+            return refuse(qsl("it holds a control character"));
         }
     }
 
@@ -76,20 +83,23 @@ std::optional<GmcpLinkUri> parseGmcpLinkUri(const QString& uri)
     link.name = decoded.left(nameEnd);
 
     static const QRegularExpression validName(qsl(R"(\A[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+\z)"));
-    if (link.name.size() > MAX_MESSAGE_NAME_LENGTH || !validName.match(link.name).hasMatch()) {
-        return std::nullopt;
+    if (link.name.size() > MAX_MESSAGE_NAME_LENGTH) {
+        return refuse(qsl("its message name is longer than %1 characters").arg(MAX_MESSAGE_NAME_LENGTH));
+    }
+    if (!validName.match(link.name).hasMatch()) {
+        return refuse(qsl("its message name is not a dotted Package.Message name"));
     }
 
     // Core is the connection's own negotiation and Char.Login carries passwords, and GMCP names are not case sensitive
     const QString lowerName = link.name.toLower();
     if (lowerName.startsWith(qsl("core.")) || lowerName == qsl("char.login") || lowerName.startsWith(qsl("char.login."))) {
-        return std::nullopt;
+        return refuse(qsl("the Core and Char.Login packages may not be sent from a link"));
     }
 
     if (nameEnd >= 0) {
         link.json = decoded.mid(nameEnd + 1).trimmed();
         if (!singleJsonValue(link.json)) {
-            return std::nullopt;
+            return refuse(qsl("its data is not a single JSON value"));
         }
     }
     return link;

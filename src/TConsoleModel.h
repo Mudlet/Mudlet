@@ -221,10 +221,13 @@ struct TConsoleModel
     // (disabled), and gives ran only where runLink() should follow; unknown for no such link. runLink() updates
     // the link's selection group and runs its command item, as TLinkStore::menuItems() indexes them; fromMenu
     // names the Lua a menu pick runs "echoPopup", as the GUI does, and is the only way a local: link with a menu
-    // runs an item. False where there was no such item or its Lua raised an error.
+    // runs an item. False where there was no such item, its Lua raised an error, or gmcpCannotSend() held, which
+    // leaves the link as it was and tells the player why.
     enum class LinkFollowed { ran, revealedSpoiler, disabled, unknown };
     LinkFollowed linkMayRun(int linkIndex);
     bool runLink(int linkIndex, int item, bool fromMenu, bool selectionApplied = false);
+    // A game's gmcp: link or menu item that runLink() would send while GMCP is off for the connection
+    bool gmcpCannotSend(int linkIndex, int item, bool fromMenu) const;
     // runLink() for a menu's pick, unless its link is no longer the one with the TLinkStore::issueOf() the menu
     // was built for. selectionApplied where activating the link opened the menu and already changed its selection.
     void runMenuPick(int linkIndex, qint64 issue, int item, bool selectionApplied = false);

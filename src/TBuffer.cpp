@@ -5283,10 +5283,14 @@ void TBuffer::decodeOSC(const QString& sequence)
                 command = {qsl("sendCmdLine(%1)").arg(LuaLiteral::quote(innerCommand))};
                 hint = {qsl("%1: %2").arg(QObject::tr("Prompt"), UntrustedText::forTarget(innerCommand))};
             } else if (baseUrl.startsWith(qsl("gmcp:"))) {
-                const auto gmcpLink = parseGmcpLinkUri(baseUrl);
+                QString whyNot;
+                const auto gmcpLink = parseGmcpLinkUri(baseUrl, &whyNot);
                 // A selection reports its state in the link's JSON object, so other data leaves it nowhere to go
-                if (!gmcpLink || (mCurrentHyperlinkStyling.selection.hasSelectionSettings && !gmcpLink->dataAllowsSelection())) {
-                    qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - Ignored a gmcp: link that is not valid or may not be sent: \"" << baseUrl << "\"";
+                if (gmcpLink && mCurrentHyperlinkStyling.selection.hasSelectionSettings && !gmcpLink->dataAllowsSelection()) {
+                    whyNot = qsl("a selection link's data has to be a JSON object");
+                }
+                if (!whyNot.isEmpty()) {
+                    qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - Ignored a gmcp: link, as " << whyNot << ": \"" << baseUrl << "\"";
                     return;
                 }
                 const QString message = gmcpLink->message();
@@ -5364,9 +5368,10 @@ void TBuffer::decodeOSC(const QString& sequence)
                     } else if (menuCommand.startsWith(qsl("gmcp:"), Qt::CaseInsensitive)) {
                         // One that is not valid stays in the menu with nothing to run, so it shows greyed out, and is never typed at the game
                         // An item has no parameters of its own, so a '?' here is the game's data, as it would be in a send: item
-                        const auto gmcpItem = parseGmcpLinkUri(QString(menuCommand).replace(QLatin1Char('?'), qsl("%3F")));
+                        QString whyNot;
+                        const auto gmcpItem = parseGmcpLinkUri(QString(menuCommand).replace(QLatin1Char('?'), qsl("%3F")), &whyNot);
                         if (!gmcpItem) {
-                            qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - Greyed out a gmcp: menu item that is not valid or may not be sent: \"" << menuCommand << "\"";
+                            qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - Greyed out a gmcp: menu item, as " << whyNot << ": \"" << menuCommand << "\"";
                         }
                         menuCommands.append(gmcpItem ? qsl("sendGMCP(%1)").arg(LuaLiteral::quote(gmcpItem->message())) : QString());
                         menuHints.append(UntrustedText::forAuthoredText(menuLabel));

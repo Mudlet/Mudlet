@@ -1273,38 +1273,42 @@ private slots:
 
   void test_Osc8GmcpLinkThatIsNotValidIsPlainText_data() {
     QTest::addColumn<QString>("uri");
+    // What the warning says failed, so the game's developer can tell
+    QTest::addColumn<QString>("why");
 
-    QTest::newRow("no name") << qsl("gmcp:");
-    QTest::newRow("one part") << qsl("gmcp:Target");
-    QTest::newRow("empty part") << qsl("gmcp:Game..Set");
-    QTest::newRow("trailing dot") << qsl("gmcp:Game.Set.");
-    QTest::newRow("part starts with a digit") << qsl("gmcp:Game.1Set");
-    QTest::newRow("hyphen") << qsl("gmcp:Game.Set-It");
-    QTest::newRow("name too long") << qsl("gmcp:A.") + QString(127, QLatin1Char('b'));
-    QTest::newRow("space and nothing") << qsl("gmcp:Game.Set%20");
-    QTest::newRow("not JSON") << qsl("gmcp:Game.Set%20rat");
-    QTest::newRow("two values") << qsl("gmcp:Game.Set%201%2C2");
-    QTest::newRow("closes the wrapper") << qsl("gmcp:Game.Set%201%5D%5B2");
-    QTest::newRow("trailing comma") << qsl("gmcp:Game.Set%201%2C");
-    QTest::newRow("a raw query mark cuts the JSON") << qsl("gmcp:Game.Set%20%22a?b%22");
-    QTest::newRow("NUL in the JSON") << qsl("gmcp:Game.Set%20%22a%00b%22");
-    QTest::newRow("newline in the name") << qsl("gmcp:Game.Set%0A");
-    QTest::newRow("newline in the JSON") << qsl("gmcp:Game.Set%20%22a%0Ab%22");
-    QTest::newRow("DEL in the JSON") << qsl("gmcp:Game.Set%20%22a%7Fb%22");
-    QTest::newRow("C1 control in the JSON") << qsl("gmcp:Game.Set%20%22a%C2%85b%22");
-    QTest::newRow("Core") << qsl("gmcp:Core.Hello");
-    QTest::newRow("Core in another case") << qsl("gmcp:cORE.sUPPORTS.Set%20%5B%5D");
-    QTest::newRow("Char.Login message") << qsl("gmcp:Char.Login.Credentials%20%7B%7D");
-    QTest::newRow("Char.Login in another case") << qsl("gmcp:CHAR.LOGIN.Reconnect");
-    QTest::newRow("Char.Login itself") << qsl("gmcp:char.login%20%7B%7D");
-    QTest::newRow("encoded Core") << qsl("gmcp:%43ore.Hello");
-    QTest::newRow("a selection with data that is not an object") << qsl("gmcp:Game.Set%20%22rat%22?config={\"selection\":{\"group\":\"g\",\"value\":\"v\"}}");
-    QTest::newRow("scheme in capitals") << qsl("GMCP:Game.Set");
+    QTest::newRow("no name") << qsl("gmcp:") << qsl("its message name is not a dotted Package.Message name");
+    QTest::newRow("one part") << qsl("gmcp:Target") << qsl("its message name is not a dotted Package.Message name");
+    QTest::newRow("empty part") << qsl("gmcp:Game..Set") << qsl("its message name is not a dotted Package.Message name");
+    QTest::newRow("trailing dot") << qsl("gmcp:Game.Set.") << qsl("its message name is not a dotted Package.Message name");
+    QTest::newRow("part starts with a digit") << qsl("gmcp:Game.1Set") << qsl("its message name is not a dotted Package.Message name");
+    QTest::newRow("hyphen") << qsl("gmcp:Game.Set-It") << qsl("its message name is not a dotted Package.Message name");
+    QTest::newRow("name too long") << qsl("gmcp:A.") + QString(127, QLatin1Char('b')) << qsl("its message name is longer than 128 characters");
+    QTest::newRow("space and nothing") << qsl("gmcp:Game.Set%20") << qsl("its data is not a single JSON value");
+    QTest::newRow("not JSON") << qsl("gmcp:Game.Set%20rat") << qsl("its data is not a single JSON value");
+    QTest::newRow("two values") << qsl("gmcp:Game.Set%201%2C2") << qsl("its data is not a single JSON value");
+    QTest::newRow("closes the wrapper") << qsl("gmcp:Game.Set%201%5D%5B2") << qsl("its data is not a single JSON value");
+    QTest::newRow("trailing comma") << qsl("gmcp:Game.Set%201%2C") << qsl("its data is not a single JSON value");
+    QTest::newRow("a raw query mark cuts the JSON") << qsl("gmcp:Game.Set%20%22a?b%22") << qsl("its data is not a single JSON value");
+    QTest::newRow("NUL in the JSON") << qsl("gmcp:Game.Set%20%22a%00b%22") << qsl("it holds a control character");
+    QTest::newRow("newline in the name") << qsl("gmcp:Game.Set%0A") << qsl("it holds a control character");
+    QTest::newRow("newline in the JSON") << qsl("gmcp:Game.Set%20%22a%0Ab%22") << qsl("it holds a control character");
+    QTest::newRow("DEL in the JSON") << qsl("gmcp:Game.Set%20%22a%7Fb%22") << qsl("it holds a control character");
+    QTest::newRow("C1 control in the JSON") << qsl("gmcp:Game.Set%20%22a%C2%85b%22") << qsl("it holds a control character");
+    QTest::newRow("Core") << qsl("gmcp:Core.Hello") << qsl("the Core and Char.Login packages may not be sent from a link");
+    QTest::newRow("Core in another case") << qsl("gmcp:cORE.sUPPORTS.Set%20%5B%5D") << qsl("the Core and Char.Login packages may not be sent from a link");
+    QTest::newRow("Char.Login message") << qsl("gmcp:Char.Login.Credentials%20%7B%7D") << qsl("the Core and Char.Login packages may not be sent from a link");
+    QTest::newRow("Char.Login in another case") << qsl("gmcp:CHAR.LOGIN.Reconnect") << qsl("the Core and Char.Login packages may not be sent from a link");
+    QTest::newRow("Char.Login itself") << qsl("gmcp:char.login%20%7B%7D") << qsl("the Core and Char.Login packages may not be sent from a link");
+    QTest::newRow("encoded Core") << qsl("gmcp:%43ore.Hello") << qsl("the Core and Char.Login packages may not be sent from a link");
+    QTest::newRow("a selection with data that is not an object") << qsl("gmcp:Game.Set%20%22rat%22?config={\"selection\":{\"group\":\"g\",\"value\":\"v\"}}") << qsl("a selection link's data has to be a JSON object");
+    QTest::newRow("scheme in capitals") << qsl("GMCP:Game.Set") << qsl("unsupported URI scheme");
   }
 
   void test_Osc8GmcpLinkThatIsNotValidIsPlainText() {
     QFETCH(QString, uri);
+    QFETCH(QString, why);
 
+    QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QRegularExpression::escape(why)));
     injectData(qsl("\x1b]8;;") + uri + qsl("\x1b\\Text\x1b]8;;\x1b\\"));
 
     QVERIFY2(!findFirstLinkPositionWithId().has_value(), "a link was made");
@@ -1564,6 +1568,28 @@ private slots:
     QVERIFY2(console->buffer.isLinkSelected(linkId), "choosing an item changed the selection a second time");
     QTRY_VERIFY2(mpServer->receivedSoFar().mid(sentBefore.size()).contains("look"), "choosing an item did not run it");
     QVERIFY(!mpServer->receivedSoFar().mid(sentBefore.size()).contains("wield"));
+  }
+
+  // A player who closes the menu without a pick has done nothing, so the link stays until an item is picked
+  void test_Osc8LocalMenuThatConcealsWaitsForAPick() {
+    injectData(qsl("\x1b]8;;local:?config={\"visibility\":{\"action\":\"conceal\"},\"menu\":[{\"Look\":\"send:look\"}]}\x1b\\Word\x1b]8;;\x1b\\"));
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY(pos.has_value());
+    const int linkId = std::get<2>(*pos);
+    TTextEdit *pane = console->mUpperPane;
+    for (QMenu *stale : pane->findChildren<QMenu *>()) {
+      delete stale;
+    }
+
+    activateLink(pane, *pos, true);
+    QMenu *menu = pane->findChild<QMenu *>();
+    QVERIFY(menu);
+    QVERIFY2(!console->getHyperlinkVisibilityManager().isLinkConcealed(linkId), "opening the menu concealed the link");
+    menu->actions().first()->trigger();
+    menu->close();
+    QTRY_VERIFY(!pane->findChild<QMenu *>());
+    QVERIFY2(console->getHyperlinkVisibilityManager().isLinkConcealed(linkId), "picking an item did not conceal the link");
   }
 
   // The tooltip shares a list with the menu's labels, so revealing must not take them with it
