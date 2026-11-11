@@ -2117,6 +2117,24 @@ void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tC
     }
 }
 
+// No move event reaches the pane once the pointer is outside it, so without
+// this a link left by moving off the pane keeps its hover style
+void TTextEdit::leaveEvent(QEvent* event)
+{
+    if (mpBuffer->getHoveredLink() != 0) {
+        mpBuffer->setHoveredLink(0);
+        forceUpdate();
+        // The panes share the buffer, so the other one may be drawing the link too
+        if (mIsLowerPane) {
+            mpConsole->mUpperPane->forceUpdate();
+        } else if (!mIsTailMode) {
+            mpConsole->mLowerPane->forceUpdate();
+        }
+    }
+    mpBuffer->clearLastClickedLinkIndex();
+    QWidget::leaveEvent(event);
+}
+
 // Returns the index into the relevant TBuffer::lineBuffer of the FIRST QChar
 // of the grapheme under the mouse - it ALSO returns zero (which will probably
 // NOT be a valid index) if there is no valid index to return.

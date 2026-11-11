@@ -1408,6 +1408,82 @@ private slots:
         QCOMPARE(pane->cursor().shape(), Qt::IBeamCursor);
     }
 
+    // Leaving for the command line or another window sends the pane no move
+    // event, only a Leave
+    void test_aLinkStopsBeingHoveredWhenTheMouseLeavesThePane()
+    {
+        mpServer->setWelcomeMessage(qsl("hover test\r\n"));
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        QVERIFY2(waitForTextInBuffer(qsl("hover test")), "the welcome text never reached the buffer");
+
+        mudlet::self()->resize(1200, 800);
+        QTest::qWait(100ms);
+
+        TTextEdit* pane = upperPane();
+        QVERIFY2(pane, "No upper pane available");
+
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("clearWindow()\nechoLink('LinkForHoverTest', [[ ]], '', true)\n")), "the echoLink() call failed");
+        QVERIFY2(waitForTextInBuffer(qsl("LinkForHoverTest")), "the link text never reached the buffer");
+        QTest::qWait(100ms);
+
+        int hoveredLink = 0;
+        QPointF overTheLink;
+        for (int y = pane->mFontHeight / 2; y < pane->height() && !hoveredLink; y += pane->mFontHeight) {
+            for (int x = pane->mFontWidth / 2; x < pane->width(); x += pane->mFontWidth) {
+                overTheLink = QPointF(x, y);
+                sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::NoButton, overTheLink);
+                hoveredLink = pane->mpBuffer->getHoveredLink();
+                if (hoveredLink) {
+                    break;
+                }
+            }
+        }
+        QVERIFY2(hoveredLink > 0, "no pixel of the pane hovered the link, so the leave below proves nothing");
+        QCOMPARE(pane->mpBuffer->getLinkState(hoveredLink), Mudlet::HyperlinkStyling::StateHover);
+
+        // The partial repaint that update() alone gives may reuse the cached
+        // screen and leave the hover ink showing
+        pane->mForceUpdate = false;
+        QEvent leave(QEvent::Leave);
+        QApplication::sendEvent(pane, &leave);
+
+        QCOMPARE(pane->mpBuffer->getHoveredLink(), 0);
+        QVERIFY2(pane->mForceUpdate, "the leave dropped the hover state without asking for the whole pane to be redrawn");
+        QVERIFY2(pane->mpBuffer->getLinkState(hoveredLink) != Mudlet::HyperlinkStyling::StateHover, "the link kept its hover style after the mouse left the pane");
+
+        // A click holds the hover style off the link until the pointer has left
+        // it, and leaving the pane counts as leaving the link
+        sendMouse(pane, QEvent::MouseButtonPress, Qt::LeftButton, Qt::LeftButton, overTheLink);
+        sendMouse(pane, QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, overTheLink);
+        sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::NoButton, overTheLink);
+        QVERIFY2(pane->mpBuffer->getLinkState(hoveredLink) != Mudlet::HyperlinkStyling::StateHover, "the link took its hover style straight after the click, so the move below proves nothing");
+
+        QApplication::sendEvent(pane, &leave);
+        sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::NoButton, overTheLink);
+        QVERIFY2(pane->mpBuffer->getLinkState(hoveredLink) == Mudlet::HyperlinkStyling::StateHover, "a clicked link stayed without its hover style after the mouse left the pane and came back");
+
+        // Both panes draw from one buffer, so leaving the lower pane must redraw
+        // the upper one as well or it keeps showing the link as hovered
+        TTextEdit* lowerPane = pane->mpConsole->mLowerPane;
+        QVERIFY2(lowerPane, "No lower pane available");
+        pane->mForceUpdate = false;
+        QApplication::sendEvent(lowerPane, &leave);
+        QCOMPARE(pane->mpBuffer->getHoveredLink(), 0);
+        QVERIFY2(pane->mForceUpdate, "leaving the lower pane cleared the shared hover without redrawing the upper pane that also shows it");
+
+        // Scrolled back, the lower pane shows the end of the buffer and can be
+        // drawing the link as well
+        pane->mpBuffer->setHoveredLink(hoveredLink);
+        QCOMPARE(pane->mpBuffer->getHoveredLink(), hoveredLink);
+        pane->mIsTailMode = false;
+        lowerPane->mForceUpdate = false;
+        QApplication::sendEvent(pane, &leave);
+        pane->mIsTailMode = true;
+        QCOMPARE(pane->mpBuffer->getHoveredLink(), 0);
+        QVERIFY2(lowerPane->mForceUpdate, "leaving the scrolled-back upper pane cleared the shared hover without redrawing the lower pane that also shows it");
+    }
+
     // #3031: the timestamp sits in a gutter to the left of the line's own text,
     // so a click there is taken to mean the line as a whole and selects all of
     // it the way a Ctrl+click does. Without that, the click lands on the line's
