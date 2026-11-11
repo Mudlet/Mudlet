@@ -833,12 +833,12 @@ void dlgNotepad::slot_sendLine()
         return;
     }
 
-    QTextCursor cursor = textEdit->textCursor();
-    cursor.select(QTextCursor::LineUnderCursor);
-    const QString line = cursor.selectedText();
+    // The block, not QTextCursor::LineUnderCursor: that is only the row a wrapped line shows on screen.
+    // A Shift+Enter break stays inside the block, and goes as its own line as it does in Send all.
+    const QStringList lines = textEdit->textCursor().block().text().split(QChar::LineSeparator);
 
-    if (!line.isEmpty()) {
-        startSendingLines(QStringList{line});
+    if (sendableLineCount(lines) > 0) {
+        startSendingLines(lines);
     }
 }
 
