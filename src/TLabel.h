@@ -44,6 +44,7 @@ class QContextMenuEvent;
 class QMouseEvent;
 class QSvgRenderer;
 class TMainConsole;
+class TTextEdit;
 
 class TLabel : public QLabel
 {
@@ -145,7 +146,9 @@ private:
     // Null for a label in a floating user window, which is a window of its own
     TMainConsole* mainWindowConsole() const;
     bool carriesLink() const;
+    TTextEdit* consolePaneUnder(const QPoint& globalPosition, bool (*passesOn)(const TLabel&));
     bool forwardRightClickToConsole(QMouseEvent* event);
+    bool forwardWheelToConsole(QWheelEvent* event);
     void applyBackgroundColor();
     void showLinkStyledText(const QString& text);
     void reapplyLinkStyle();

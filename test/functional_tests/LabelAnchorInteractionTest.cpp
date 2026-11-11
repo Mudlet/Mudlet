@@ -28,6 +28,7 @@
 #include <QContextMenuEvent>
 #include <QMenu>
 #include <QScopeGuard>
+#include <QScrollBar>
 #include <QSignalSpy>
 #include <QtTest/QtTest>
 #include <QTextDocument>
@@ -40,6 +41,7 @@
 #include "TCommandLine.h"
 #include "TLabel.h"
 #include "TLuaInterpreter.h"
+#include "TScrollBox.h"
 #include "TMainConsole.h"
 #include "TTextEdit.h"
 #include "TelnetServerStub.h"
@@ -135,6 +137,22 @@ private:
         popup->close();
         QTest::qWait(50ms);
         return result;
+    }
+
+    // Sent to the label itself, as Qt delivers a turn of the wheel to the widget under the pointer
+    static bool wheelUpOn(TLabel* pLabel)
+    {
+        const QPointF centre = QRectF(pLabel->rect()).center();
+        QWheelEvent wheel(centre, pLabel->mapToGlobal(centre), QPoint(), QPoint(0, 120), Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
+        QApplication::sendEvent(pLabel, &wheel);
+        return wheel.isAccepted();
+    }
+
+    // Enough lines that the console has scrollback for a turn of the wheel to open
+    void fillConsole(const QString& console) const
+    {
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("for i = 1, 80 do echo('%1', 'line ' .. i .. '\\n') end").arg(console)));
+        QTest::qWait(50ms);
     }
 
 private slots:
@@ -848,6 +866,177 @@ private slots:
 
         QVERIFY2(menuParent == mpHost->mainConsoleView()->mUpperPane, "a right-click on a label over a link opened no menu from the console");
         QVERIFY2(consoleMenu, "a right-click on a label offered the commands of the link it hides");
+    }
+    // A label over the output must not cost the player scrolling it back, unless
+    // the label has a wheel callback of its own to answer with
+    void test_aWheelOnALabelWithoutAWheelCallbackScrollsTheConsoleUnderIt()
+    {
+        TMainConsole* pMain = mpHost->mainConsoleView();
+        const QString name = qsl("wheelForwardLabel");
+        fillConsole(qsl("main"));
+        const auto clearOutput = qScopeGuard([pMain]() {
+            pMain->clearSplit();
+            pMain->buffer.clear();
+        });
+        auto [created, createMessage] = mpHost->createLabel(qsl("main"), name, 50, 100, 200, 50, true, false);
+        QVERIFY2(created, qPrintable(createMessage));
+        const auto removeLabel = qScopeGuard([pMain, name]() {
+            pMain->deleteLabel(name);
+        });
+        TLabel* pLabel = pMain->labelWidget(name);
+        QVERIFY(pLabel);
+        pLabel->show();
+        pLabel->raise();
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setLabelClickCallback('%1', function() end)").arg(name)));
+        QVERIFY2(pMain->mLowerPane->isHidden(), "the console was already scrolled back before the wheel turned");
+
+        QVERIFY2(wheelUpOn(pLabel), "the turn of the wheel was left unused");
+        QVERIFY2(!pMain->mLowerPane->isHidden(), "a turn of the wheel on a label with no wheel callback did not scroll the console under it");
+        QVERIFY2(!pLabel->testAttribute(Qt::WA_TransparentForMouseEvents), "the wheel left the label click-through");
+
+        pMain->clearSplit();
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("qaLabelWheeled = false setLabelWheelCallback('%1', function() qaLabelWheeled = true end)").arg(name)));
+        QVERIFY(wheelUpOn(pLabel));
+        QVERIFY2(luaHolds(qsl("qaLabelWheeled")), "the label's own wheel callback did not run");
+        QVERIFY2(pMain->mLowerPane->isHidden(), "the console scrolled under a label whose own wheel callback answers the wheel");
+    }
+
+    // What scrolls is whatever the label covers, which over a miniconsole is the
+    // miniconsole rather than the main console behind it
+    void test_aWheelOnALabelOverAMiniconsoleScrollsThatConsole()
+    {
+        TMainConsole* pMain = mpHost->mainConsoleView();
+        const QString mini = qsl("wheelUnderLabelMini");
+        const QString name = qsl("wheelOverMiniLabel");
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("createMiniConsole('%1', 40, 90, 300, 120)").arg(mini)));
+        const auto removeMini = qScopeGuard([this, mini]() {
+            mpHost->deleteMiniConsole(mini);
+        });
+        TConsole* pMini = pMain->subConsoleWidget(mini);
+        QVERIFY(pMini);
+        fillConsole(mini);
+        fillConsole(qsl("main"));
+        const auto clearOutput = qScopeGuard([pMain]() {
+            pMain->clearSplit();
+            pMain->buffer.clear();
+        });
+        auto [created, createMessage] = mpHost->createLabel(qsl("main"), name, 50, 100, 200, 50, true, false);
+        QVERIFY2(created, qPrintable(createMessage));
+        const auto removeLabel = qScopeGuard([pMain, name]() {
+            pMain->deleteLabel(name);
+        });
+        TLabel* pLabel = pMain->labelWidget(name);
+        QVERIFY(pLabel);
+        pLabel->show();
+        pLabel->raise();
+
+        QVERIFY(wheelUpOn(pLabel));
+
+        QVERIFY2(!pMini->mLowerPane->isHidden(), "a turn of the wheel on a label over a miniconsole did not scroll that miniconsole");
+        QVERIFY2(pMain->mLowerPane->isHidden(), "a turn of the wheel on a label over a miniconsole scrolled the main console instead");
+    }
+
+    void test_aWheelOnALabelOverNothingToScrollScrollsTheBoxHoldingIt_data()
+    {
+        QTest::addColumn<int>("lines");
+        QTest::addColumn<bool>("scrollingEnabled");
+
+        QTest::newRow("no console under the label") << 0 << true;
+        QTest::newRow("a console with scrolling disabled") << 200 << false;
+        QTest::newRow("a console with nothing to scroll back") << 3 << true;
+    }
+
+    // A turn nothing under the label can use still scrolls whatever holds the label, such as a scroll box
+    void test_aWheelOnALabelOverNothingToScrollScrollsTheBoxHoldingIt()
+    {
+        QFETCH(int, lines);
+        QFETCH(bool, scrollingEnabled);
+        TMainConsole* pMain = mpHost->mainConsoleView();
+        const QString box = qsl("wheelLabelBox");
+        const QString mini = qsl("wheelLabelBoxMini");
+        const QString name = qsl("wheelInBoxLabel");
+        QVERIFY(pMain->createScrollBox(qsl("main"), box, 40, 90, 300, 120));
+        const auto removeBox = qScopeGuard([this, pMain, box, mini]() {
+            mpHost->deleteMiniConsole(mini);
+            pMain->deleteScrollBox(box);
+        });
+        auto* pBox = pMain->findChild<TScrollBox*>(box);
+        QVERIFY(pBox);
+        // Taller than the box, so the box has something to scroll whether or not a console fills it
+        TConsole* pMini = pMain->createMiniConsole(box, mini, 0, 0, 280, 600);
+        QVERIFY(pMini);
+        pMini->setScrolling(scrollingEnabled);
+        if (lines) {
+            for (int line = 1; line <= lines; ++line) {
+                pMini->print(qsl("LINE %1\n").arg(line));
+            }
+        } else {
+            pMini->hide();
+        }
+        auto [created, createMessage] = mpHost->createLabel(box, name, 20, 240, 200, 50, true, false);
+        QVERIFY2(created, qPrintable(createMessage));
+        const auto removeLabel = qScopeGuard([pMain, name]() {
+            pMain->deleteLabel(name);
+        });
+        TLabel* pLabel = pMain->labelWidget(name);
+        QVERIFY(pLabel);
+        pLabel->show();
+        pLabel->raise();
+        QScrollBar* pBar = pBox->verticalScrollBar();
+        QTRY_VERIFY2(pBar->maximum() > 200, "the scroll box has nothing to scroll");
+        pBar->setValue(200);
+        qApp->processEvents();
+        QWidget* pWindow = pLabel->window();
+        const QPoint centre = pLabel->mapTo(pWindow, pLabel->rect().center());
+        QVERIFY2(pWindow->childAt(centre) == pLabel, "the label is not under the pointer, so the turn would not reach it");
+
+        // Spontaneous, as only a turn from the window system goes on to the label's parent when left unused
+        QTest::wheelEvent(pWindow->windowHandle(), centre, QPoint(0, 120));
+
+        QVERIFY2(pBar->value() < 200, "a turn of the wheel on a label over nothing it could scroll did not scroll the box holding it");
+        QVERIFY2(pMini->mLowerPane->isHidden(), "the console under the label split although it could not scroll");
+    }
+
+    // A touchpad sends turns too small for a whole line; the console under the label keeps them, or the box would
+    // drift while the console scrolls
+    void test_aSmallTouchpadTurnOnALabelOverAConsoleItCanScrollStaysWithThatConsole()
+    {
+        TMainConsole* pMain = mpHost->mainConsoleView();
+        const QString box = qsl("touchpadLabelBox");
+        const QString mini = qsl("touchpadLabelBoxMini");
+        const QString name = qsl("touchpadInBoxLabel");
+        QVERIFY(pMain->createScrollBox(qsl("main"), box, 40, 90, 300, 120));
+        const auto removeBox = qScopeGuard([this, pMain, box, mini]() {
+            mpHost->deleteMiniConsole(mini);
+            pMain->deleteScrollBox(box);
+        });
+        auto* pBox = pMain->findChild<TScrollBox*>(box);
+        QVERIFY(pBox);
+        TConsole* pMini = pMain->createMiniConsole(box, mini, 0, 0, 280, 600);
+        QVERIFY(pMini);
+        for (int line = 1; line <= 200; ++line) {
+            pMini->print(qsl("LINE %1\n").arg(line));
+        }
+        auto [created, createMessage] = mpHost->createLabel(box, name, 20, 240, 200, 50, true, false);
+        QVERIFY2(created, qPrintable(createMessage));
+        const auto removeLabel = qScopeGuard([pMain, name]() {
+            pMain->deleteLabel(name);
+        });
+        TLabel* pLabel = pMain->labelWidget(name);
+        QVERIFY(pLabel);
+        pLabel->show();
+        pLabel->raise();
+        QScrollBar* pBar = pBox->verticalScrollBar();
+        QTRY_VERIFY2(pBar->maximum() > 200, "the scroll box has nothing to scroll");
+        pBar->setValue(200);
+        qApp->processEvents();
+        QWidget* pWindow = pLabel->window();
+        const QPoint centre = pLabel->mapTo(pWindow, pLabel->rect().center());
+        QVERIFY2(pWindow->childAt(centre) == pLabel, "the label is not under the pointer, so the turn would not reach it");
+
+        QTest::wheelEvent(pWindow->windowHandle(), centre, QPoint(0, 8));
+        qApp->processEvents();
+        QCOMPARE(pBar->value(), 200);
     }
 };
 
