@@ -160,6 +160,7 @@ set(UNIT_TESTS
     TAreaZLevelIndexTest
     TAreaGridIndexTest
     TKeySequenceEditTest
+    TScrollBoxWidgetTest
     TEncodingHelperTest
     PasswordMigrationTest
     TMediaPathTraversalTest
