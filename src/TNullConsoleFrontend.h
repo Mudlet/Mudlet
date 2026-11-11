@@ -640,10 +640,13 @@ private:
         bool shown = false;
         std::unique_ptr<TNullMapView> pView;
         qint64 stackOrder = 0;
+
+        void setShown(bool show);
     };
     // TMainConsole::raiseWindow(), lowerWindow() and reparentWindow() take "mapper" in any case for it
     bool namesEmbeddedMapper(const QString& name) const { return mpEmbeddedMapper && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive); }
     void copyPlayerRoomStyleToMap();
+    void removeHiddenMapWidget();
     // As QWidget::raise() and lower() among the windows of its parent, in TMainConsole::raiseWindow()'s order of kinds
     bool restack(const QString& name, bool raise);
     QString parentName(const QString& userWindow, const ScrollBox* box) const;

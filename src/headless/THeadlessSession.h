@@ -582,6 +582,16 @@ public:
     // follows it, the position taken as that point of the "mapper" window, which the GUI's map fills from its top
     // left.
     bool mapPointer(const MapPointerEvent& event);
+    // Whether the map is only viewed, not edited, as the item of the GUI map's menu that switches between the two
+    // says and the profile saves; true with no profile open. A getter, so it may be called from any handler.
+    bool mapViewOnly() const;
+    // As picking that item: scripts hear mapModeChangeEvent, with "viewing" or "editing", before this returns, and
+    // mapViewOnlyChanged follows. True too where the map is already so, which raises nothing. False, with
+    // errorString() saying why, while no map is shown (none opened yet, or closed or hidden, and no secondary map
+    // view either), as the GUI's item is on a map, and where submit() is refused. Each map or secondary map view a
+    // script opens in a profile saved as editing raises mapModeChangeEvent with "editing" before it is there, as the
+    // GUI's does, with no mapViewOnlyChanged.
+    bool setMapViewOnly(bool viewOnly);
     // A window the profile's scripts made, or the console of an MXP frame the game opened, as the GUI would show
     // it, for the app to draw: Mudlet draws none of them. A Geyser gauge, button or container is the labels and
     // windows it is made of. An MXP frame is a mini console in all but who made it: the same text, links, scroll
@@ -929,6 +939,9 @@ signals:
     // map, shows it again or replaces it with an embedded mapper. While a map is open, and once a turn of the event
     // loop however many were asked for; from the event loop, so a handler may call renderMap().
     void mapRepaintRequested(const QString& profile);
+    // setMapViewOnly() switched the map between viewing and editing; from inside that call, once the scripts'
+    // handlers of mapModeChangeEvent have run, and not if one of them closed the profile
+    void mapViewOnlyChanged(const QString& profile, bool viewOnly);
     // A replay of this profile, as the GUI's replay toolbar follows it: its start, from a script's loadReplay() or
     // through host(), at 1 times its speed, as every replay starts; each change of its speed, from 1 to 1024 times,
     // which may repeat the speed where a change is clamped; and its end, however it ends, the end of the file included,
