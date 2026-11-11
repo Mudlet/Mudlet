@@ -1390,6 +1390,7 @@ void cTelnet::finishDisconnection()
                 sslErrors.removeAll(QSslError(QSslError::SelfSignedCertificate, cert));
             }
 
+            sslerr = (sslErrors.count() > 0 && !mpHost->mSslIgnoreAll);
             QStringList reasons;
             if (mDontReconnect) {
                 /*: A reason why a connection to a game server ended, could be
@@ -1399,14 +1400,14 @@ void cTelnet::finishDisconnection()
             } else if (handshakeFailedBeforeCertificate) {
                 //: A reason why a connection to a game server ended: the secure (TLS) handshake failed before the game sent a certificate.
                 reasons.append(tr("Secure handshake failed; this game may not support secure connections on this port, if so try turning the option off"));
-            } else if (timeOffset >= 0 && timeOffset < 5000) {
+            } else if (!sslerr && timeOffset >= 0 && timeOffset < 5000) {
+                // With a certificate refused it was Mudlet, not the game, that ended the connection
                 /*: A reason why a connection to a game server ended, could be
  one of several to be listed. This text used in two places,
  ensure the same text is used in both.*/
                 reasons.append(tr("Connection/login attempt rejected by server"));
             }
 
-            sslerr = (sslErrors.count() > 0 && !mpHost->mSslIgnoreAll);
             if (sslerr) {
                 // We also have SSL/TLS errors that are not ones we are ignoring
                 // so do not auto-reconnect:
