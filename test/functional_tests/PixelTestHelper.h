@@ -22,8 +22,10 @@
 
 #include <cstdlib>
 
+#include <QAbstractEventDispatcher>
 #include <QColor>
 #include <QCoreApplication>
+#include <QEventLoop>
 #include <QIcon>
 #include <QImage>
 #include <QPoint>
@@ -100,12 +102,21 @@ inline QImage drawnAt(const QIcon& icon, const int size, const QIcon::State stat
     return icon.pixmap(QSize(size, size), QIcon::Normal, state).toImage();
 }
 
-// Twice, because what the first pass delivers (a relayout, a restyle) posts
-// events of its own
+// A relayout or restyle posts events and zero timers that queue more in turn,
+// and how many passes that chain takes differs by event dispatcher, so this
+// runs until a pass handles nothing. Capped, as a repeating timer never goes quiet.
 inline void settle()
 {
-    QCoreApplication::processEvents();
-    QCoreApplication::processEvents();
+    static constexpr int scmFewestPasses = 2;
+    static constexpr int scmMostPasses = 20;
+    QAbstractEventDispatcher* pDispatcher = QAbstractEventDispatcher::instance();
+    for (int pass = 0; pass < scmMostPasses; ++pass) {
+        QCoreApplication::sendPostedEvents();
+        const bool handled = pDispatcher && pDispatcher->processEvents(QEventLoop::AllEvents);
+        if (!handled && pass + 1 >= scmFewestPasses) {
+            return;
+        }
+    }
 }
 
 // setAppearance() swaps the application style and widgets restyle on the
@@ -114,8 +125,7 @@ inline void settle()
 inline void setAppearanceAndWait(const enums::Appearance appearance, QWidget* pToPaint = nullptr)
 {
     mudlet::self()->setAppearance(appearance);
-    QCoreApplication::processEvents();
-    QCoreApplication::processEvents();
+    settle();
     if (pToPaint) {
         pToPaint->grab();
     }
