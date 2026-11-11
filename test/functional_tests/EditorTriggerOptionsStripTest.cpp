@@ -159,8 +159,6 @@ private:
 
     // Settled twice: the form's new width arrives on the next event-loop pass and the seam's
     // refit on the one after
-    // The strip lays out on posted events alone, so this skips TestPixels::settle()'s fixed wait, which is there
-    // for the slowest of the tests sharing it
     static void settle()
     {
         QCoreApplication::sendPostedEvents();
@@ -313,7 +311,7 @@ private slots:
         QVERIFY2(connected.wait(2s), "Could not connect with the host.");
 
         mudlet::self()->slot_showTriggerDialog();
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
         mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
         QVERIFY2(mpEditor != nullptr, "Editor dialog should be created");
         mpEditor->resize(scmWideStrip + 600, scmTallEditor);

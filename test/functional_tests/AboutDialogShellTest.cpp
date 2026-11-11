@@ -37,6 +37,7 @@
 #include <QScrollBar>
 #include <QStackedWidget>
 #include <QTextBrowser>
+#include <QTimer>
 #include <QToolButton>
 #include <QtTest/QtTest>
 
@@ -163,9 +164,7 @@ private slots:
             // The constructor clamps its opening size to the screen, which
             // offscreen is smaller than either of these
             mpDialog->resize(size);
-            QCoreApplication::processEvents();
-            QTest::qWait(50ms);
-            QCoreApplication::processEvents();
+            TestPixels::settle();
             const int overflow = pMudletPage->horizontalScrollBar()->maximum();
             qInfo().noquote() << qsl("  at %1x%2 the Mudlet page scrolls %3px sideways").arg(QString::number(mpDialog->width()), QString::number(mpDialog->height()), QString::number(overflow));
             QVERIFY2(overflow == 0,
@@ -269,6 +268,15 @@ private slots:
         QVERIFY2(pButton, "the art column has no 'aboutCopyBuildInfo' button");
         const QString resting = pButton->text();
         QVERIFY2(mpDialog->findChild<QPushButton*>(qsl("aboutCopyButton")), "the build information card has no 'aboutCopyButton'");
+        // Shortened, as the case reads that the word comes back rather than when. Long
+        // enough still for the reading straight after the click to see the changed word.
+        auto* pFeedback = mpDialog->findChild<QTimer*>(qsl("aboutCopyFeedback"));
+        QVERIFY2(pFeedback, "the dialog has no 'aboutCopyFeedback' timer to put the button's word back");
+        const auto feedbackInterval = pFeedback->intervalAsDuration();
+        const auto restoreInterval = qScopeGuard([pFeedback, feedbackInterval]() {
+            pFeedback->setInterval(feedbackInterval);
+        });
+        pFeedback->setInterval(200ms);
 
         pButton->click();
         QCoreApplication::processEvents();
@@ -285,8 +293,7 @@ private slots:
         QVERIFY2(lines.first().contains(MudletApp::scmVersion()), qPrintable(qsl("the first line is \"%1\", which does not name the version").arg(lines.first())));
         QVERIFY2(pButton->text() != resting, qPrintable(qsl("the button still reads \"%1\" straight after copying, so nothing says it worked").arg(pButton->text())));
 
-        QTest::qWait(1900ms);
-        QCOMPARE(pButton->text(), resting);
+        QTRY_COMPARE(pButton->text(), resting);
     }
 
     void test_everyThirdPartyRowOpensToItsLicence()
@@ -416,13 +423,11 @@ private slots:
 
         mudlet::self()->setAppearance(enums::Appearance::dark);
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
         const QString onDark = uiDesign::themeTokens().accentText.name();
         const QString footerOnDark = pFooter->text();
 
         mudlet::self()->setAppearance(enums::Appearance::light);
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
         const QString onLight = uiDesign::themeTokens().accentText.name();
         const QString footerOnLight = pFooter->text();
         const QString licenceHtml = mpDialog->findChild<QTextBrowser*>(qsl("textBrowser_license"))->document()->toHtml();

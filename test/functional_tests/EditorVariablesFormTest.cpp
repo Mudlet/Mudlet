@@ -31,7 +31,6 @@
 #include <QStatusBar>
 #include <QTreeWidget>
 #include <QtTest/QtTest>
-#include <chrono>
 
 #include "Host.h"
 #include "HostDialogs.h"
@@ -43,8 +42,6 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
-
-using namespace std::chrono_literals;
 
 class EditorVariablesFormTest : public QObject
 {
@@ -75,7 +72,6 @@ private:
     {
         mpEditor->slot_showVariables();
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
     }
 
     QTreeWidgetItem* rootRow() const { return mpVariablesTree->topLevelItem(0); }
@@ -98,7 +94,6 @@ private:
         mpVariablesTree->setCurrentItem(pItem);
         mpEditor->slot_variableSelected(pItem);
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
     }
 
     // Returns false rather than asserting: QVERIFY expands to a bare return,
@@ -125,17 +120,17 @@ private slots:
         mpHost = mSession.host();
 
         mudlet::self()->slot_showTriggerDialog();
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
         mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
         QVERIFY2(mpEditor != nullptr, "Editor dialog should be created");
         mpEditor->resize(1100, 900);
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
         mpVariablesTree = mpEditor->treeWidget_variables;
         QVERIFY2(mpVariablesTree != nullptr, "the editor has no variables tree");
 
         QVERIFY2(mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("myString = \"north\"; myTable = { a = 1 }")), "the two variables this walks could not be made");
         mpEditor->repopulateVars();
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
         QVERIFY2(showTheStringVariable(), "the Variables view did not show the string variable this walks");
     }
 
@@ -225,7 +220,6 @@ private slots:
 
         mpEditor->slot_showTriggers();
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
         QCOMPARE(pTitle->text(), qsl("Lua script"));
     }
 };

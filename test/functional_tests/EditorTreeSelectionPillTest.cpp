@@ -31,7 +31,6 @@
 #include <QPixmap>
 #include <QTreeWidget>
 #include <QtTest/QtTest>
-#include <chrono>
 #include <cstdlib>
 #include <tuple>
 
@@ -45,8 +44,6 @@
 #include "uiDesign.h"
 
 #include "GroupedTest.h"
-
-using namespace std::chrono_literals;
 
 class EditorTreeSelectionPillTest : public QObject
 {
@@ -98,12 +95,12 @@ private slots:
         mpHost = mSession.host();
 
         mudlet::self()->slot_showTriggerDialog();
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
         mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
         QVERIFY2(mpEditor != nullptr, "Editor dialog should be created");
         mpEditor->resize(1000, 800);
         mpEditor->slot_showTriggers();
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
 
         // addTrigger() adds inside the chosen folder and then chooses the new
         // item, so each nests in the one before
@@ -112,7 +109,7 @@ private slots:
         mpEditor->addTrigger(true);
         mpInnerGroup = tree()->currentItem();
         mpEditor->addTrigger(false);
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
 
         QVERIFY2(mpOuterGroup && mpInnerGroup, "The editor did not make the two groups this test reads a row out of");
         QVERIFY2(mpInnerGroup->parent() == mpOuterGroup, "The second group was not made inside the first, so the row read below is not a nested one");
@@ -126,7 +123,7 @@ private slots:
         // focused tree's current row
         mpEditor->activateWindow();
         tree()->setFocus();
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
         QVERIFY2(tree()->hasFocus(), "The tree does not hold the keyboard, so the state a chosen row is drawn in here is not the one the reader sees");
 
         QVERIFY2(!rowBand(mpInnerGroup).isEmpty(), "The chosen row is not laid out");
@@ -269,7 +266,7 @@ private slots:
         const QPoint hoveredCentre = hoveredBand.center();
         QMouseEvent move(QEvent::MouseMove, QPointF(hoveredCentre), QPointF(hoveredCentre), tree()->viewport()->mapToGlobal(hoveredCentre), Qt::NoButton, Qt::NoButton, Qt::NoModifier);
         QCoreApplication::sendEvent(tree()->viewport(), &move);
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
 
         const QImage shot = TestPixels::shot(mpEditor);
         const QRect chosenBand = rowBand(mpInnerGroup);

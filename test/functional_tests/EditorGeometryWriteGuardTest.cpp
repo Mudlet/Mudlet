@@ -26,7 +26,6 @@
 #include <QGuiApplication>
 #include <QScreen>
 #include <QtTest/QtTest>
-#include <chrono>
 
 #include "Host.h"
 #include "HostDialogs.h"
@@ -37,8 +36,6 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
-
-using namespace std::chrono_literals;
 
 class EditorGeometryWriteGuardTest : public QObject
 {
@@ -114,7 +111,7 @@ private slots:
     void test_anEditorTheUserOpenedStoresWhereItWasLeft()
     {
         mudlet::self()->slot_showEditorDialog();
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
         QVERIFY2(HostDialogs::of(mpHost).mpEditorDialog == mpEditor, "Showing the editor replaced it, so the two halves are not about the same window");
 
         mpEditor->move(mDraggedPos);
