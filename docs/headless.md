@@ -597,6 +597,61 @@ does, that raises `sysProfileFocusChangeEvent` with `false` in the profile it le
 one it brings forward, and shows that profile's Discord presence. A profile whose close has started is
 refused with `false` and a message, and the front stays where it was.
 
+## Embedding it: when the signals come and what a handler may do
+
+Each signal's own rules are with the signal, above and below; this is all of them in one place. Mudlet
+runs on one thread, and the session's signals are emitted on it. Which of three ways a signal comes
+decides what its handler may do.
+
+**Sent mid-write.** `outputLine`, `lineShown`, `mainConsoleCleared`, `localText`, `localTextStyled`,
+`errorConsoleText`, `debugText`, `hiddenInputWanted`, `typedLineMoveRequested`,
+`commandLineTextRequested`, `notificationRequested`, `attentionRequested` and `announcementRequested`
+are sent from inside whatever wrote the text or asked: the read of the game's data, a script, or the
+session call that ran it. That is what keeps them in order with one another. One of them is queued
+all the same: the `attentionRequested` for game text that arrives while the app is minimized is sent
+once the event loop runs, yet its handler is held to these same rules. Their handlers must not
+run the event loop, as a modal dialog does, and must not call the session back: every call that is
+refused where `submit()` is returns false there, with `errorString()` saying to queue the call instead.
+The calls described as getters still answer. A handler may delete the session.
+
+**Sent from the event loop.** Every other signal but the two below is queued, and sent once the event
+loop runs, after the script or call that caused it has returned: `connecting`, `connected`,
+`disconnected`, `quitRequested`, `loggingChanged`, `latencyChanged`, `secureConnectionOffered`,
+`soundsMutedChanged`, `mappingScriptMissing`, `mainWindowResizeRequested`, the package download's,
+map progress's and replay's signals, and the ones that follow a state. Their handlers may call the
+session. Of those that follow a state, some are sent once a turn however many changes it held, naming
+what changed, for the app to read again: `scriptWindowsChanged`, `windowTextChanged`,
+`windowCommandLineTextChanged`, `linksChanged`, `addonCommandsChanged`, `buttonsChanged` and
+`mapRepaintRequested`. The others carry the value as it is when they are sent, and only when it differs
+from the one last sent or the one read at `profileLoaded`: `consoleFontChanged`, `consoleWrapChanged`,
+`consoleColorsChanged`, `timeStampsShownChanged` and `mainConsoleAreaChanged`. So a change made and
+undone within a turn sends nothing, and nothing follows `profileLoaded` for what the load did. A map
+export or import runs the event loop as it goes, so these can arrive while the script that began it
+still runs.
+
+**Sent from inside a call.** `profileLoaded` is the last thing `start()` does before it returns
+`started`, and `mapViewOnlyChanged` comes from inside `setMapViewOnly()`. Their handlers may call the
+session, and delete it.
+
+The order that holds between signals:
+
+- What the load writes is sent from inside `start()`, before `profileLoaded`, so an app that wants it
+  connects before it calls `start()`.
+- For a line from the game, `outputLine` comes before its triggers run and `lineShown` once they have;
+  the lines a trigger feeds come after the line it ran on, in both.
+- Each piece of `localText` is followed at once by its `localTextStyled`.
+- `typedLineMoveRequested` comes just before the `hiddenInputWanted` that turns hiding on.
+- A signal sent mid-write comes before any queued signal for the same script, which waits for the event
+  loop.
+- `connecting` comes before the `connected` or `disconnected` that ends it.
+- `packageDownloadStarted`, `mapProgressStarted` and `replayStarted` each come before their changes, and
+  each has its `…Finished` after them however it ends, unless the session is deleted first.
+- The `scriptWindowsChanged` that lists a window made in a turn comes before the `windowTextChanged`
+  for what that turn wrote in it.
+- Once `shutdown()` is called, a queued signal still waiting is not sent, `quitRequested` included, save
+  `mappingScriptMissing`; what was open (hidden input, logging, a download, a map operation, a replay)
+  has its end from inside `shutdown()`. A session that is deleted instead sends none of those ends.
+
 ## Embedding it: drawing the main console as the GUI does
 
 `lineShown` sends each line whole, so an app that draws the main console as the GUI does wraps it

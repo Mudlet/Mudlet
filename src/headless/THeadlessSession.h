@@ -893,7 +893,8 @@ signals:
     // back to the app; and, with 0, game text that arrives while setWindowMinimized() has the app minimized and the
     // profile asks for a notification when new data arrives while minimized, once each time it is minimized, as the
     // GUI's flash lasts until the player comes back.
-    // Sent as asked, so a handler may neither call the session nor run the event loop.
+    // Sent as asked, but for that last one, which comes from the event loop; for all of them a handler may neither
+    // call the session nor run the event loop.
     void notificationRequested(const QString& profile, const QString& title, const QString& text, std::optional<int> milliseconds);
     void attentionRequested(const QString& profile, int milliseconds);
     // What a script's announce(), or Mudlet on its behalf, asks screen readers to say, as plain text; assertive
