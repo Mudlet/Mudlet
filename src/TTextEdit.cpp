@@ -1195,8 +1195,8 @@ void TTextEdit::drawCustomDecorations(QPainter& painter, const QColor& defaultCo
     QColor overlineColor = defaultColor;
     QColor strikeoutColor = defaultColor;
 
-    if (linkIndex > 0 && mpBuffer->mLinkStore.hasStyling(linkIndex)) {
-        // From the buffer, which adds Mudlet's focus cue to a link the game gave no focus style
+    if (linkIndex > 0 && (mpBuffer->mLinkStore.hasStyling(linkIndex) || mpBuffer->showsFocus(linkIndex))) {
+        // From the buffer, which adds Mudlet's focus cue to a link the game gave no focus style, and to MXP and script links
         const Mudlet::HyperlinkStyling effectiveStyle = mpBuffer->getEffectiveHyperlinkStyling(linkIndex);
 
         if (effectiveStyle.hasUnderlineColor) {
