@@ -1319,6 +1319,8 @@ private slots:
     QTest::newRow("not valid shows greyed out") << qsl("gmcp:Target") << QString();
     QTest::newRow("refused shows greyed out") << qsl("gmcp:Core.Hello") << QString();
     QTest::newRow("capitals are not typed at the game") << qsl("GMCP:Target") << QString();
+    // Encoded once, as a send: item's would be, so it arrives as a '?' that an item has no parameters to start
+    QTest::newRow("a question mark in its data") << qsl("gmcp:Game.Say%20%22why%3F%22") << qsl("sendGMCP(%1)").arg(LuaLiteral::quote(qsl("Game.Say \"why?\"")));
   }
 
   void test_Osc8GmcpMenuItem() {
@@ -1450,6 +1452,11 @@ private slots:
     // Backwards from the link after it, a note is passed over, which leaves that link the only stop
     const bool found = console->buffer.findPreviousLink(std::get<0>(*second), std::get<1>(*second), line, column);
     QCOMPARE(found && std::make_pair(line, column) == std::make_pair(std::get<0>(*first), std::get<1>(*first)), !isNote);
+
+    // Forward from the last link the search wraps to the top, where a note is passed over too
+    bool wrapped = false;
+    const bool wrappedTo = console->buffer.findNextLink(std::get<0>(*second), std::get<1>(*second), line, column, &wrapped);
+    QCOMPARE(wrappedTo && wrapped && std::make_pair(line, column) == std::make_pair(std::get<0>(*first), std::get<1>(*first)), !isNote);
   }
 
   void activateLink(TTextEdit *pane, const std::tuple<int, int, int> &pos, const bool withMouse) {
@@ -1561,16 +1568,23 @@ private slots:
 
   // The tooltip shares a list with the menu's labels, so revealing must not take them with it
   void test_Osc8RevealingASpoilerKeepsItsMenu_data() {
+    QTest::addColumn<QString>("uri");
     QTest::addColumn<QString>("menu");
     QTest::addColumn<int>("items");
-    QTest::newRow("two items") << qsl("[{\"Look\":\"send:look\"},{\"Wield\":\"send:wield\"}]") << 2;
-    QTest::newRow("one item") << qsl("[{\"Look\":\"send:look\"}]") << 1;
+    QTest::addColumn<bool>("opensOnClick");
+    QTest::addColumn<QString>("tooltip");
+    QTest::newRow("two items") << qsl("local:") << qsl("[{\"Look\":\"send:look\"},{\"Wield\":\"send:wield\"}]") << 2 << true << qsl("Click for menu");
+    QTest::newRow("one item") << qsl("local:") << qsl("[{\"Look\":\"send:look\"}]") << 1 << true << qsl("Click for menu");
+    QTest::newRow("send link") << qsl("send:look") << qsl("[{\"Look\":\"send:look\"},{\"Wield\":\"send:wield\"}]") << 2 << false << qsl("Right-click for menu");
   }
 
   void test_Osc8RevealingASpoilerKeepsItsMenu() {
+    QFETCH(QString, uri);
     QFETCH(QString, menu);
     QFETCH(int, items);
-    injectData(qsl("\x1b]8;;local:?config={\"spoiler\":true,\"menu\":%1}\x1b\\Word\x1b]8;;\x1b\\").arg(menu));
+    QFETCH(bool, opensOnClick);
+    QFETCH(QString, tooltip);
+    injectData(qsl("\x1b]8;;%1?config={\"spoiler\":true,\"menu\":%2}\x1b\\Word\x1b]8;;\x1b\\").arg(uri, menu));
 
     TMainConsole *console = mpHost->mainConsoleView();
     auto pos = findFirstLinkPositionWithId();
@@ -1579,8 +1593,8 @@ private slots:
     QVERIFY(console->buffer.isSpoilerUnrevealed(linkId));
     console->buffer.revealSpoilerLink(linkId);
 
-    QVERIFY(console->buffer.linkOpensItsMenu(linkId));
-    QCOMPARE(console->buffer.getLinkTooltip(linkId), qsl("Click for menu"));
+    QCOMPARE(console->buffer.linkOpensItsMenu(linkId), opensOnClick);
+    QCOMPARE(console->buffer.getLinkTooltip(linkId), tooltip);
     const QStringList hints = console->getLinkStore().getHintsConst(linkId);
     QCOMPARE(hints.size(), items + 1);
     QCOMPARE(hints.at(1), qsl("Look"));
@@ -1646,6 +1660,27 @@ private slots:
     QVERIFY2(pane->findChild<QMenu *>(), "the Menu key on a note opened no menu");
   }
 
+  void test_Osc8RightClickingANoteOpensTheConsolesMenu() {
+    injectData(qsl("\x1b]8;;local:?config={\"tooltip\":\"Note\"}\x1b\\Word\x1b]8;;\x1b\\"));
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY(pos.has_value());
+    auto [line, col, linkId] = *pos;
+    TTextEdit *pane = console->mUpperPane;
+    for (QMenu *stale : pane->findChildren<QMenu *>()) {
+      delete stale;
+    }
+    pane->setCaretPosition(line, col);
+    // The caret's position is the bottom left of its cell
+    const QPoint global = pane->caretGlobalPosition() + QPoint(1, -1);
+    const QPointF local = pane->mapFromGlobal(global);
+    QMouseEvent release(QEvent::MouseButtonRelease, local, QPointF(global), Qt::RightButton, Qt::NoButton, Qt::NoModifier);
+    QApplication::sendEvent(pane, &release);
+    const auto closeMenu = qScopeGuard([&] { if (QMenu *open = pane->findChild<QMenu *>()) { open->close(); } });
+    QVERIFY2(!console->buffer.isLinkVisited(linkId), "right-clicking activated the note");
+    QVERIFY2(pane->findChild<QMenu *>(), "right-clicking a note opened no menu");
+  }
+
   void test_Osc8AMenuOfOnlySeparatorsLeavesTheLinksOwnAction() {
     injectData(qsl("\x1b]8;;send:look?config={\"menu\":[\"-\",{\"Nothing\":\"local:\"}]}\x1b\\Text\x1b]8;;\x1b\\"));
     QCOMPARE(findFirstLinkCommands(), QStringList(qsl("send(%1, false)").arg(LuaLiteral::quote(qsl("look")))));
@@ -1685,6 +1720,7 @@ private slots:
     QTest::newRow("radio button") << qsl("local:?config={\"selection\":{\"group\":\"announceA\",\"value\":\"a\"}}") << qsl("radio button, not checked");
     QTest::newRow("radio button checked") << qsl("local:?config={\"selection\":{\"group\":\"announceB\",\"value\":\"a\",\"selected\":true}}") << qsl("radio button, checked");
     QTest::newRow("checkbox") << qsl("local:?config={\"selection\":{\"group\":\"announceC\",\"value\":\"a\",\"exclusive\":false}}") << qsl("checkbox, not checked");
+    QTest::newRow("checkbox checked") << qsl("local:?config={\"selection\":{\"group\":\"announceD\",\"value\":\"a\",\"exclusive\":false,\"selected\":true}}") << qsl("checkbox, checked");
     QTest::newRow("menu") << qsl("local:?config={\"menu\":[{\"Look\":\"send:look\"}]}") << qsl("Click for menu, link, has menu");
     QTest::newRow("disabled") << qsl("send:look?config={\"disabled\":true,\"tooltip\":\"Locked\"}") << qsl("Locked, link, disabled");
   }

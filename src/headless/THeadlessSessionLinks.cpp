@@ -85,6 +85,7 @@ THeadlessSession::LinkResult THeadlessSession::followLink(const int link, const 
     if (!usable()) {
         return LinkResult::refused;
     }
+    const bool selectionApplied = item && link == std::exchange(mLinkWithMenuOpen, 0);
     TConsoleModel& model = mpHost->mainConsoleModel();
     const TLinkStore& store = model.buffer.mLinkStore;
     if (!model.buffer.linkHeld(link)) {
@@ -123,9 +124,12 @@ THeadlessSession::LinkResult THeadlessSession::followLink(const int link, const 
         errorText = text;
     });
     const QPointer<THeadlessSession> self(this);
-    const bool ran = model.runLink(link, item.value_or(0), fromMenu);
+    const bool ran = model.runLink(link, item.value_or(0), fromMenu, selectionApplied);
     disconnect(errorCapture);
     if (ran) {
+        if (self && mpHost && !item && model.buffer.linkOpensItsMenu(link)) {
+            mLinkWithMenuOpen = link;
+        }
         return LinkResult::ran;
     }
     if (self) {

@@ -170,7 +170,7 @@ public:
     int mPopupLinkIndex = 0;
     // Its TLinkStore::issueOf() as the menu was built, as a pick must not run a link that has since taken its id
     qint64 mPopupLinkIssue = 0;
-    // Activating a local: link opens its menu, so choosing an item must not change its selection a second time
+    // Activating a local: link with a menu opens the menu, so choosing an item must not change its selection a second time
     bool mPopupLinkAlreadyActivated = false;
     // How many lines the screen scrolled since it was last rendered.
     int mScrollVector;

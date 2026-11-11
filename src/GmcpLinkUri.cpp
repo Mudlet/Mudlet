@@ -64,7 +64,7 @@ std::optional<GmcpLinkUri> parseGmcpLinkUri(const QString& uri)
     const QString encoded = uri.mid(qstrlen("gmcp:"), queryStart < 0 ? -1 : queryStart - qstrlen("gmcp:"));
     const QString decoded = QUrl::fromPercentEncoding(encoded.toUtf8());
 
-    // Qt's JSON parser lets these through inside a string, and a NUL would cut the message short on its way through Lua
+    // Qt's JSON parser lets raw control characters through inside a string; none belongs in a message, and a NUL would cut it short in Lua
     for (const QChar character : decoded) {
         if (character.category() == QChar::Other_Control) {
             return std::nullopt;
@@ -104,7 +104,7 @@ QString gmcpMessageWithSelected(const QString& message, const bool selected)
         data = singleJsonValue(message.mid(nameEnd + 1)).value_or(QJsonValue()).toObject();
     }
     data[qsl("selected")] = selected;
-    // Qt writes DEL and the C1 controls out raw, which parseGmcpLinkUri() refuses in a message, so they go back to escapes
+    // Qt writes DEL and the C1 controls out raw, so they go back to escapes and what is sent stays a message parseGmcpLinkUri() would accept
     QString json;
     for (const QChar character : QString::fromUtf8(QJsonDocument(data).toJson(QJsonDocument::Compact))) {
         if (character.category() == QChar::Other_Control) {

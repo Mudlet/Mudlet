@@ -450,6 +450,28 @@ tempRegexTrigger("^headless popup$", [[echoPopup(" p", {"headlessPopup = 1", "he
         QVERIFY(session.shutdown(false));
     }
 
+    void test_aLocalMenuLinksSelectionChangesOnceForAFollowAndItsPick()
+    {
+        const QString name = qsl("Headless Follow Local Selection");
+        QVERIFY(writeProfile(name, recordSends()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QVERIFY(session.runLua(
+                feed(qsl("tick: ") + osc8(qsl("local:?config={\"selection\":{\"group\":\"headlessTick\",\"value\":\"v\",\"exclusive\":false},\"menu\":[{\"Look\":\"send:look\"}]}"), qsl("flour")))));
+        const QList<int> links = linksOnLineStarting(output, qsl("tick: "));
+        QCOMPARE(links.size(), 1);
+        QCOMPARE(session.followLink(links.first()), THeadlessSession::LinkResult::ran);
+        QVERIFY(session.link(links.first())->selected);
+        QCOMPARE(session.followLink(links.first(), 0), THeadlessSession::LinkResult::ran);
+        QVERIFY2(session.link(links.first())->selected, "picking from the menu the follow opened changed the selection back");
+        QCOMPARE(luaGlobal(session, "headlessSent"), qsl("look;"));
+        // A pick with no follow before it is a right click's, which changes the selection itself
+        QCOMPARE(session.followLink(links.first(), 0), THeadlessSession::LinkResult::ran);
+        QVERIFY(!session.link(links.first())->selected);
+        QVERIFY(session.shutdown(false));
+    }
+
     void test_followingALinkOfAnExclusiveGroupSelectsOnlyIt()
     {
         const QString name = qsl("Headless Follow Group");

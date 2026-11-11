@@ -5260,7 +5260,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                     }
                 }
             } else {
-                // Every scheme the system does not open, Mudlet's own among them, loses all query parameters
+                // On a scheme the system does not open the whole query is Mudlet's, so a '?' in a gmcp: message has to be percent-encoded
                 int queryStart = baseUrl.indexOf('?');
                 if (queryStart != -1) {
                     baseUrl = baseUrl.left(queryStart);
@@ -5346,7 +5346,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                 QStringList menuHints;
 
                 // Add menu items in pairs (label, command)
-                // The first menu item becomes the primary left-click action (index 0), except on a local: link, where a left click opens the menu
+                // The first menu item becomes the link's own action (index 0), except on a local: link, where activating it opens the menu
                 // All items (including first) appear in the menu (index 1+)
                 for (int i = 0; i < mCurrentHyperlinkMenu.size() - 1; i += 2) {
                     QString menuLabel = mCurrentHyperlinkMenu[i];
@@ -5363,7 +5363,8 @@ void TBuffer::decodeOSC(const QString& sequence)
                         menuHints.append(UntrustedText::forAuthoredText(menuLabel));
                     } else if (menuCommand.startsWith(qsl("gmcp:"), Qt::CaseInsensitive)) {
                         // One that is not valid stays in the menu with nothing to run, so it shows greyed out, and is never typed at the game
-                        const auto gmcpItem = parseGmcpLinkUri(menuCommand);
+                        // An item has no parameters of its own, so a '?' here is the game's data, as it would be in a send: item
+                        const auto gmcpItem = parseGmcpLinkUri(QString(menuCommand).replace(QLatin1Char('?'), qsl("%3F")));
                         if (!gmcpItem) {
                             qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - Greyed out a gmcp: menu item that is not valid or may not be sent: \"" << menuCommand << "\"";
                         }
@@ -5407,12 +5408,11 @@ void TBuffer::decodeOSC(const QString& sequence)
 
                 // For menus, we need tooltip as first hint, then menu labels
                 // This ensures tooltip.size() > commands.size() so only first hint shows in tooltip
-                // But menu labels are available for menu display
                 QStringList finalHints;
                 finalHints.append(linkTooltip); // First: tooltip for hover
-                finalHints.append(menuHints);   // Rest: menu labels for the menu
+                finalHints.append(menuHints);   // Rest: the menu's item labels
 
-                // Every item may have been left out or be a separator, which leaves the link with no menu
+                // Every item may have been left out or be a separator; then the link has no menu and keeps its own action and tooltip
                 bool hasMenuItem = false;
                 for (int i = 0; i < menuCommands.size(); ++i) {
                     hasMenuItem = hasMenuItem || !menuCommands.at(i).isEmpty() || !menuHints.at(i).isEmpty();
@@ -10581,7 +10581,11 @@ void TBuffer::revealSpoilerLink(int linkIndex)
         if (!hints.isEmpty() && hints.first() == QObject::tr("Click to reveal")) {
             // A menu's labels follow the tooltip in the same list, so with a menu only the tooltip is replaced
             if (hints.size() > mLinkStore.getLinksConst(linkIndex).size()) {
-                mLinkStore.getHints(linkIndex).first() = styling.actionScheme == Mudlet::HyperlinkStyling::ActionLocal ? QObject::tr("Click for menu") : QObject::tr("Right-click for menu");
+                mLinkStore.getHints(linkIndex).first() = styling.actionScheme == Mudlet::HyperlinkStyling::ActionLocal
+                                                                 //: Default tooltip on a game's link that opens its menu when clicked, rather than running the menu's first item
+                                                                 ? QObject::tr("Click for menu")
+                                                                 //: Default tooltip on a game's link whose menu opens on a right-click
+                                                                 : QObject::tr("Right-click for menu");
             } else {
                 mLinkStore.getHints(linkIndex).clear();
             }

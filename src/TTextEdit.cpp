@@ -2966,8 +2966,10 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
 
         if (y < static_cast<int>(mpBuffer->buffer.size())) {
             if (x < static_cast<int>(mpBuffer->buffer.at(static_cast<size_t>(y)).size()) && !isOutOfbounds) {
-                if (mpBuffer->buffer.at(static_cast<size_t>(y)).at(static_cast<size_t>(x)).linkIndex()) {
-                    int linkIndex = mpBuffer->buffer.at(static_cast<size_t>(y)).at(static_cast<size_t>(x)).linkIndex();
+                const int cellLinkIndex = mpBuffer->buffer.at(static_cast<size_t>(y)).at(static_cast<size_t>(x)).linkIndex();
+                // A note gets the menu any other text would
+                if (cellLinkIndex && !mpBuffer->linkIsNote(cellLinkIndex)) {
+                    int linkIndex = cellLinkIndex;
 
                     // Check if link is disabled - disabled links don't show context menus
                     Mudlet::HyperlinkStyling hyperlinkStyling = mpBuffer->getEffectiveHyperlinkStyling(linkIndex);
@@ -4263,7 +4265,7 @@ QString TTextEdit::linkAnnouncement(const int linkIndex) const
             role = tr("checkbox, not checked");
         }
     } else {
-        //: Screen reader role for an ordinary link, announced after its tooltip or command
+        //: Screen reader role for an ordinary link, announced after its tooltip or command, or alone when it has neither
         role = tr("link");
     }
 

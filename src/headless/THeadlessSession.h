@@ -241,7 +241,7 @@ public:
     {
         // Plain text, empty for none
         QString tooltip;
-        // A click follows the first item; where menu is set, the GUI's right click lists the items, under menuTitle
+        // A click follows the first item, or on a local: link opens the menu; where menu is set, the GUI's right click lists the items, under menuTitle
         // if that is not empty
         bool menu = false;
         QString menuTitle;
@@ -268,11 +268,13 @@ public:
     std::optional<Link> link(int id) const;
     // Follows a link as a left click on it does, or given an item, as picking that item from its menu does: a
     // spoiler not yet revealed is only revealed (revealedSpoiler); a disabled link, a local: note and a menu's
-    // greyed-out item run nothing (disabled), nor does a link the game's visibility settings have concealed (concealed); and
-    // otherwise its selection group is updated and its command or function runs before this returns, so an
-    // OSC 8 web link opens through QDesktopServices: ran, or failed where that raised a Lua error, which
-    // errorString() gives. noSuchItem: item does not index link()'s items. unknown: an id the main console does
-    // not hold. refused: where submit() is; errorString() says why.
+    // greyed-out item run nothing (disabled), nor does a link the game's visibility settings have concealed
+    // (concealed); and otherwise its selection group is updated and its command or function runs before this
+    // returns, so an OSC 8 web link opens through QDesktopServices: ran, or failed where that raised a Lua error,
+    // which errorString() gives. A local: link with a menu runs nothing without an item, as the GUI's click only
+    // opens the menu, and an item picked straight after leaves the selection that follow changed. noSuchItem: item
+    // does not index link()'s items. unknown: an id the main console does not hold. refused: where submit() is;
+    // errorString() says why.
     enum class LinkResult { ran, revealedSpoiler, disabled, concealed, failed, noSuchItem, unknown, refused };
     LinkResult followLink(int link, std::optional<int> item = std::nullopt);
     // Whether the main console shows each line's time beside it, as the GUI's timestamp button says; false with
@@ -793,6 +795,8 @@ private:
     QPointer<Host> mpHost;
     QString mProfileName;
     QString mErrorString;
+    // A local: link that followLink() last followed without an item, which opened its menu and changed its selection
+    int mLinkWithMenuOpen = 0;
     bool mShuttingDown = false;
     bool mLoadFailed = false;
     bool mRemovingStalePasswords = false;
