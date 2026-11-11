@@ -1455,6 +1455,88 @@ private slots:
         QVERIFY2(menu.isNull(), "the menu did not delete itself on closing");
     }
 
+    // A link for which opensMenu() is false (one command and no extra hint)
+    // has no menu of its own, so a right click on it has to give the console's
+    // menu, while a popup link or one with a one-item menu still gives its own,
+    // and a disabled link or an unrevealed spoiler gives none
+    void test_aRightClickOnALinkWithoutAMenuGivesTheConsolesMenu()
+    {
+        mpServer->setWelcomeMessage(qsl("menu test\r\n"));
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        QVERIFY2(waitForTextInBuffer(qsl("menu test")), "the welcome text never reached the buffer");
+
+        mudlet::self()->resize(1200, 800);
+        QTest::qWait(100ms);
+
+        TTextEdit* pane = upperPane();
+        QVERIFY2(pane, "No upper pane available");
+
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(
+                         qsl("clearWindow()\nechoLink('PlainLink', [[ ]], '', true)\necho('\\n')\nechoPopup('PopupLink', {[[ ]], [[ ]]}, {'first', 'second'}, true)\necho('\\n')\n")),
+                 "the echoLink()/echoPopup() calls failed");
+        const bool osc8WasEnabled = host->mEnableOSC8Hyperlinks;
+        host->mEnableOSC8Hyperlinks = true;
+        const QString esc = QString(QChar(0x1B));
+        const QString st = esc + QLatin1Char('\\');
+        const QString osc8Links = qsl("%1]8;;send:x?config={\"disabled\":true}%2DisabledLink%1]8;;%2\n%1]8;;send:x?config={\"spoiler\":true}%2SpoilerLink%1]8;;%2\n%1]8;;send:x?config={\"menu\":[{"
+                                      "\"Item\":\"send:y\"}]}%2OneItemMenuLink%1]8;;%2\n")
+                                          .arg(esc, st);
+        const bool fed = host->getLuaInterpreter()->compileAndExecuteScript(qsl("feedTriggers([==[%1]==])").arg(osc8Links)) && waitForTextInBuffer(qsl("OneItemMenuLink"));
+        host->mEnableOSC8Hyperlinks = osc8WasEnabled;
+        QVERIFY2(fed, "the OSC 8 links never reached the buffer");
+        QTest::qWait(100ms);
+
+        QList<QPoint> overALink;
+        for (int y = pane->mFontHeight / 2; y < pane->height() && overALink.size() < 5; y += pane->mFontHeight) {
+            for (int x = pane->mFontWidth / 2; x < pane->width(); x += pane->mFontWidth) {
+                sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::NoButton, QPointF(x, y));
+                if (pane->cursor().shape() == Qt::PointingHandCursor) {
+                    overALink.append(QPoint(x, y));
+                    break;
+                }
+            }
+        }
+        QVERIFY2(overALink.size() == 5, "the five links were not all found, so the clicks below prove nothing");
+
+        auto menuFromRightClickAt = [&](const QPoint& pos) -> QPointer<QMenu> {
+            for (auto* stale : pane->findChildren<QMenu*>()) {
+                delete stale;
+            }
+            sendMouse(pane, QEvent::MouseButtonPress, Qt::RightButton, Qt::RightButton, pos);
+            sendMouse(pane, QEvent::MouseButtonRelease, Qt::RightButton, Qt::NoButton, pos);
+            const auto menus = pane->findChildren<QMenu*>();
+            return menus.size() == 1 ? menus.first() : nullptr;
+        };
+
+        QPointer<QMenu> plainMenu = menuFromRightClickAt(overALink.at(0));
+        QVERIFY2(plainMenu, "a right click on a link with one command did not put up exactly one menu");
+        QVERIFY2(plainMenu->findChild<QAction*>(qsl("consoleCopy")), "the menu over a link with one command is not the console's own");
+        plainMenu->close();
+
+        QPointer<QMenu> popupMenu = menuFromRightClickAt(overALink.at(1));
+        QVERIFY2(popupMenu, "a right click on a popup link did not put up exactly one menu");
+        QVERIFY2(!popupMenu->findChild<QAction*>(qsl("consoleCopy")), "a popup link gave the console's menu instead of its own");
+        popupMenu->close();
+
+        for (int i : {2, 3}) {
+            menuFromRightClickAt(overALink.at(i));
+            QVERIFY2(pane->findChildren<QMenu*>().isEmpty(), qPrintable(qsl("a right click on the %1 link put up a menu").arg(i == 2 ? qsl("disabled") : qsl("unrevealed spoiler"))));
+        }
+        QVERIFY2(waitForTextInBuffer(qsl("SpoilerLink"), 1000), "the right click never revealed the spoiler, so it proves nothing about its menu");
+        QPointer<QMenu> revealedSpoilerMenu = menuFromRightClickAt(overALink.at(3));
+        QVERIFY2(revealedSpoilerMenu, "a right click on a revealed spoiler link did not put up exactly one menu");
+        QVERIFY2(revealedSpoilerMenu->findChild<QAction*>(qsl("consoleCopy")), "a revealed spoiler link did not give the console's menu");
+        revealedSpoilerMenu->close();
+
+        // One command, but the menu's tooltip hint makes it a menu of its own
+        QPointer<QMenu> oneItemMenu = menuFromRightClickAt(overALink.at(4));
+        QVERIFY2(oneItemMenu, "a right click on a link with a one-item menu did not put up exactly one menu");
+        QVERIFY2(!oneItemMenu->findChild<QAction*>(qsl("consoleCopy")), "a link with a one-item menu gave the console's menu instead of its own");
+        oneItemMenu->close();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    }
+
     // #6351: the console actions are keyed on the unique name while the menu
     // entry is labelled with the display name. An entry that handed its label
     // back missed the map, indexed the empty list that left behind and took the
