@@ -2090,7 +2090,6 @@ private slots:
     }
   }
 
-  // Each character goes back to its own color, not the first character's
   void test_LeavingAStateKeepsEachCharactersOwnColor_data() {
     QTest::addColumn<QString>("config");
     QTest::addColumn<bool>("byHover");
@@ -2134,7 +2133,256 @@ private slots:
     QCOMPARE(colorAt(linkCol + 1), printedG);
   }
 
-  // setFgColor() on a printed link is the script's choice, which no state the game left unstyled may undo
+  void test_RedrawingALinkKeepsItsTextSelected() {
+    injectData(qsl("\x1b]8;;send:look?config={\"style\":{\"hover\":{\"color\":\"#00ff00\"}}}\x1b\\Look\x1b]8;;\x1b\\ around"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    for (TChar &character : console->buffer.buffer[linkLine].expand()) {
+      if (character.linkIndex() == linkId) {
+        character.select();
+      }
+    }
+
+    console->buffer.setHoveredLink(linkId);
+    QVERIFY2(console->buffer.buffer.at(linkLine).at(linkCol).isSelected(), "drawing the hover style deselected the text");
+    console->buffer.setHoveredLink(0);
+    QVERIFY2(console->buffer.buffer.at(linkLine).at(linkCol).isSelected(), "taking the hover style off deselected the text");
+  }
+
+  void test_AScriptRemovingPartOfALinkLeavesTheRestItsColors() {
+    injectData(qsl("\x1b[0;31m\x1b]8;;send:look?config={\"style\":{\"hover\":{\"color\":\"#00ff00\"}}}\x1b\\R\x1b[34mB\x1b]8;;\x1b\\\x1b[0m end"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    const QColor printedR = console->buffer.buffer.at(linkLine).at(linkCol).foreground();
+    QVERIFY(printedR != console->buffer.buffer.at(linkLine).at(linkCol + 1).foreground());
+
+    // While the hover style is drawn, so the colors under it are the saved ones
+    console->buffer.setHoveredLink(linkId);
+    mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("moveCursor(%1, %2)\nselectSection(%3, 1)\nreplace(\"\")").arg(linkCol).arg(linkLine).arg(linkCol + 1));
+    QCOMPARE(console->buffer.line(linkLine).mid(linkCol, 2), qsl("R "));
+    console->buffer.setHoveredLink(0);
+    QCOMPARE(console->buffer.buffer.at(linkLine).at(linkCol).foreground(), printedR);
+  }
+
+  void test_ALinkWhoseTextNeedsTwoCharactersKeepsEachLookInLine() {
+    injectData(qsl("\x1b[0;31mx\x1b]8;;send:look?config={\"style\":{\"link\":{\"color\":\"#00ff00\"}}}\x1b\\AB\U0001F5E1\x1b]8;;\x1b\\\x1b[0m end"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    const QColor gameColor = console->buffer.buffer.at(linkLine).at(linkCol - 1).foreground();
+    QCOMPARE(console->buffer.buffer.at(linkLine).at(linkCol).foreground(), QColor(0x00, 0xff, 0x00));
+
+    console->buffer.markLinkAsVisited(linkId);
+    QVERIFY2(console->buffer.buffer.at(linkLine).at(linkCol).foreground() == gameColor, "the first character kept the unvisited style");
+    QCOMPARE(console->buffer.buffer.at(linkLine).at(linkCol + 1).foreground(), gameColor);
+  }
+
+  void test_ALinkActivatedFromTheKeyboardWithoutAFocusStyleShowsVisitedAtOnce() {
+    injectData(qsl("\x1b]8;;send:look?config={\"style\":{\"color\":\"#ffffff\",\"visited\":{\"color\":\"#ff00ff\"}}}\x1b\\Look\x1b]8;;\x1b\\ around"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    mpHost->setCaretEnabled(true);
+    const auto caretOff = qScopeGuard([this] { mpHost->setCaretEnabled(false); });
+
+    console->mUpperPane->setCaretPosition(linkLine, linkCol);
+    QKeyEvent activate(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+    QApplication::sendEvent(console->mUpperPane, &activate);
+    QVERIFY(console->buffer.isLinkVisited(linkId));
+    QCOMPARE(console->buffer.buffer.at(linkLine).at(linkCol).foreground(), QColor(0xff, 0x00, 0xff));
+    QVERIFY2(console->buffer.buffer.at(linkLine).at(linkCol).allDisplayAttributes() & TChar::Underline, "the focus cue went when the link was visited");
+  }
+
+  void test_AScriptMovingPartOfALinkIntoAnotherLeavesTheRestItsColors() {
+    injectData(qsl("\x1b[0;31m\x1b]8;;send:look?config={\"style\":{\"hover\":{\"color\":\"#00ff00\"}}}\x1b\\R\x1b[34mB\x1b]8;;\x1b\\\x1b[0m end"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    const QColor printedR = console->buffer.buffer.at(linkLine).at(linkCol).foreground();
+
+    console->buffer.setHoveredLink(linkId);
+    mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("moveCursor(%1, %2)\nselectSection(%3, 1)\nsetLink([[send('other')]], 'Other')").arg(linkCol).arg(linkLine).arg(linkCol + 1));
+    QVERIFY(console->buffer.getLinkIndexAt(linkLine, linkCol + 1) != linkId);
+    console->buffer.setHoveredLink(0);
+    QCOMPARE(console->buffer.buffer.at(linkLine).at(linkCol).foreground(), printedR);
+  }
+
+  void test_AWrappedLinkKeepsEachCharactersOwnColor() {
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int wrapAt = console->buffer.mWrapAt;
+    const int hangingIndent = console->buffer.mWrapHangingIndent;
+    const auto unwrap = qScopeGuard([console, wrapAt, hangingIndent] {
+      console->buffer.setWrapAt(wrapAt);
+      console->buffer.setWrapHangingIndent(hangingIndent);
+    });
+    console->buffer.setWrapAt(10);
+    console->buffer.setWrapHangingIndent(2);
+    injectData(qsl("wrapped \x1b[0;31m\x1b]8;;send:look?config={\"style\":{\"link\":{\"color\":\"#00ff00\"}}}\x1b\\RRRR \x1b[34mBBBB\x1b]8;;\x1b\\\x1b[0m"));
+
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    QCOMPARE(console->buffer.line(linkLine), qsl("  RRRR "));
+    QCOMPARE(console->buffer.line(linkLine + 1), qsl("  BBBB"));
+    QCOMPARE(console->buffer.buffer.at(linkLine).at(2).foreground(), QColor(0x00, 0xff, 0x00));
+    const QColor gameColor = console->buffer.buffer.at(linkLine - 1).at(0).foreground();
+
+    // With no visited style, the game's own colors show again
+    console->buffer.markLinkAsVisited(linkId);
+    for (int column = 0; column < 6; ++column) {
+      QVERIFY2(console->buffer.buffer.at(linkLine).at(column).foreground() != QColor(0x00, 0xff, 0x00), qPrintable(qsl("column %1 kept the unvisited style").arg(column)));
+      QVERIFY(console->buffer.buffer.at(linkLine).at(column).foreground() != gameColor);
+      QCOMPARE(console->buffer.buffer.at(linkLine + 1).at(column).foreground(), console->buffer.buffer.at(linkLine + 1).at(2).foreground());
+    }
+    QVERIFY(console->buffer.buffer.at(linkLine).at(2).foreground() != console->buffer.buffer.at(linkLine + 1).at(2).foreground());
+  }
+
+  void test_ALinkEndingWithHeldTextKeepsItsColors() {
+    undoServerWrap();
+    const QString padding(63, QLatin1Char('x'));
+    feedFromServer(padding + qsl(" \x1b[31mr\x1b]8;;send:look?config={\"style\":{\"link\":{\"color\":\"#00ff00\"}}}\x1b\\alpha\n"));
+    feedFromServer(qsl("\x1b[34m- a list entry\x1b[0m\n"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int heldLine = lineStartingWith(padding);
+    QVERIFY2(heldLine >= 0, qPrintable(qsl("the held line is missing: '%1'").arg(allBufferText())));
+    const int linkId = console->buffer.getLinkIndexAt(heldLine, 65);
+    QVERIFY(linkId > 0);
+    QCOMPARE(console->buffer.buffer.at(heldLine).at(65).foreground(), QColor(0x00, 0xff, 0x00));
+    const QColor red = console->buffer.buffer.at(heldLine).at(64).foreground();
+
+    // With no visited style, the game's own red shows again
+    console->buffer.markLinkAsVisited(linkId);
+    QCOMPARE(console->buffer.buffer.at(heldLine).at(65).foreground(), red);
+    QCOMPARE(console->buffer.buffer.at(heldLine).at(69).foreground(), red);
+  }
+
+  void test_AStateThatTurnsBoldOffGivesTheTextsBoldBackAfter() {
+    injectData(qsl("\x1b[1m\x1b]8;;send:look?config={\"style\":{\"hover\":{\"bold\":false}}}\x1b\\Bold\x1b]8;;\x1b\\\x1b[0m plain"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    const auto bold = [&, line = linkLine, column = linkCol] {
+      return bool(console->buffer.buffer.at(line).at(column).allDisplayAttributes() & TChar::Bold);
+    };
+    QVERIFY(bold());
+
+    console->buffer.setHoveredLink(linkId);
+    QVERIFY2(!bold(), "\"bold\": false left the game's bold on");
+    console->buffer.setHoveredLink(0);
+    QVERIFY2(bold(), "the game's bold did not come back");
+  }
+
+  void test_ATriggerCopyingItsLineGetsTheLinksStyleAtRest() {
+    mpHost->mLuaInterpreter.compileAndExecuteScript(
+        qsl("createMiniConsole('oscTriggerCopy', 0, 0, 300, 100)\noscCopyTrigger = tempRegexTrigger('^Copied ', [[selectCurrentLine()\ncopy()\nappendBuffer('oscTriggerCopy')]])"));
+    const auto removeTrigger = qScopeGuard([this] { mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("killTrigger(oscCopyTrigger)")); });
+    injectData(qsl("Copied \x1b]8;;send:look?config={\"style\":{\"link\":{\"color\":\"#00ff00\"}}}\x1b\\Look\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int line = lineStartingWith(qsl("Copied "));
+    QVERIFY(line >= 0);
+    QCOMPARE(console->buffer.buffer.at(line).at(7).foreground(), QColor(0x00, 0xff, 0x00));
+    TConsole *mini = console->subConsoleWidget(qsl("oscTriggerCopy"));
+    QVERIFY(mini);
+    int copiedLine = -1;
+    for (int i = 0; i <= mini->buffer.getLastLineNumber(); ++i) {
+      if (mini->buffer.line(i).startsWith(qsl("Copied "))) {
+        copiedLine = i;
+      }
+    }
+    QVERIFY2(copiedLine >= 0, "the trigger did not copy its line");
+    QCOMPARE(mini->buffer.buffer.at(copiedLine).at(7).foreground(), QColor(0x00, 0xff, 0x00));
+  }
+
+  void test_ALinkOnALineATriggerFedKeepsItsColorsOnceVisited() {
+    mpHost->mLuaInterpreter.compileAndExecuteScript(qsl(
+        "oscFeedTrigger = tempRegexTrigger('^Feeding$', [[feedTriggers('\\27[34mFed \\27]8;;send:look?config={\"style\":{\"link\":{\"color\":\"#00ff00\"}}}\\27\\\\Look\\27]8;;\\27\\\\\\27[0m\\n')]])"));
+    const auto removeTrigger = qScopeGuard([this] { mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("killTrigger(oscFeedTrigger)")); });
+    injectData(qsl("Feeding"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int line = lineStartingWith(qsl("Fed "));
+    QVERIFY2(line >= 0, qPrintable(qsl("the fed line is missing: '%1'").arg(allBufferText())));
+    const int linkId = console->buffer.getLinkIndexAt(line, 4);
+    QVERIFY(linkId > 0);
+    QCOMPARE(console->buffer.buffer.at(line).at(4).foreground(), QColor(0x00, 0xff, 0x00));
+    const QColor blue = console->buffer.buffer.at(line).at(0).foreground();
+
+    console->buffer.markLinkAsVisited(linkId);
+    QCOMPARE(console->buffer.buffer.at(line).at(4).foreground(), blue);
+  }
+
+  void test_ATriggersColorOnALinkStaysOnceTheLineIsCommitted() {
+    mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("oscRecolorTrigger = tempRegexTrigger('^Recolor ', [[selectString('Look', 1)\nsetFgColor(0, 0, 255)\nresetFormat()]])"));
+    const auto removeTrigger = qScopeGuard([this] { mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("killTrigger(oscRecolorTrigger)")); });
+    injectData(qsl("Recolor \x1b]8;;send:look?config={\"style\":{\"color\":\"#00ff00\"}}\x1b\\Look\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    const int line = lineStartingWith(qsl("Recolor "));
+    QVERIFY(line >= 0);
+    QCOMPARE(console->buffer.buffer.at(line).at(9).foreground(), QColor(0x00, 0x00, 0xff));
+  }
+
+  void test_ALinkConcealedWhileHoveredLeavesNoHoverLook() {
+    injectData(qsl("\x1b]8;;send:look?config={\"visibility\":{\"action\":\"conceal\",\"expire\":{\"input\":true}},\"style\":{\"hover\":{\"bg\":\"#00ff00\"}}}\x1b\\Hint\x1b]8;;\x1b\\"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    const QColor background = console->buffer.buffer.at(linkLine).at(linkCol).background();
+
+    console->buffer.setHoveredLink(linkId);
+    QCOMPARE(console->buffer.buffer.at(linkLine).at(linkCol).background(), QColor(0x00, 0xff, 0x00));
+    console->getHyperlinkVisibilityManager().onLinkClicked(linkId);
+    QVERIFY(!bufferShows(qsl("Hint")));
+    console->buffer.setHoveredLink(0);
+    QCOMPARE(console->buffer.buffer.at(linkLine).at(linkCol).background(), background);
+  }
+
+  void test_ACopiedLinkLosesItsFocusStyleWhenFocusLeaves() {
+    injectData(qsl("\x1b[0;31m\x1b]8;;send:look?config={\"style\":{\"focus-visible\":{\"color\":\"#00ff00\"}}}\x1b\\Look\x1b]8;;\x1b\\ around\x1b[0m"));
+
+    TMainConsole *console = mpHost->mainConsoleView();
+    auto pos = findFirstLinkPositionWithId();
+    QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
+    auto [linkLine, linkCol, linkId] = *pos;
+    const QColor printed = console->buffer.buffer.at(linkLine).at(linkCol).foreground();
+    mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("createMiniConsole('oscCopyFocus', 0, 0, 300, 100)\nmoveCursor(%1, %2)\nselectSection(%1, 4)\ncopy()\nappendBuffer('oscCopyFocus')").arg(linkCol).arg(linkLine));
+    TConsole *mini = console->subConsoleWidget(qsl("oscCopyFocus"));
+    QVERIFY(mini);
+    int copiedLine = -1;
+    for (int i = 0; i <= mini->buffer.getLastLineNumber(); ++i) {
+      if (mini->buffer.line(i).startsWith(qsl("Look"))) {
+        copiedLine = i;
+      }
+    }
+    QVERIFY2(copiedLine >= 0, "the link was not copied");
+    const int copiedLink = mini->buffer.getLinkIndexAt(copiedLine, 0);
+    QVERIFY(copiedLink > 0);
+
+    mini->buffer.setFocusedLink(copiedLink);
+    QCOMPARE(mini->buffer.buffer.at(copiedLine).at(0).foreground(), QColor(0x00, 0xff, 0x00));
+    mini->buffer.setFocusedLink(0);
+    QCOMPARE(mini->buffer.buffer.at(copiedLine).at(0).foreground(), printed);
+  }
+
+  // A script's color on a link survives its states: one without a color leaves it, one with a color gives it back as it ends
   void test_AScriptsColorOnALinkSurvivesItsStates() {
     injectData(qsl("\x1b]8;;send:look?config={\"style\":{\"hover\":{\"color\":\"#00ff00\"}}}\x1b\\Look\x1b]8;;\x1b\\ around"));
 

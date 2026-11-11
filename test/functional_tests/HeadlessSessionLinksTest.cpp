@@ -306,7 +306,23 @@ private slots:
         QCOMPARE(link->items, (QList<THeadlessSession::LinkItem>{item(qsl("Look")), item(qsl("Eat"))}));
         QVERIFY(link->foreground);
         QCOMPARE(*link->foreground, QColor(0x00, 0xff, 0xff));
+        QVERIFY(!link->styles);
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_aLinksStyleGivesOnlyTheStylesItNames()
+    {
+        const QString name = qsl("Headless OSC 8 Styles Given");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QVERIFY(session.runLua(feed(osc8(qsl("send:look?config={\"style\":{\"bold\":false,\"italic\":true}}"), qsl("given")))));
+        const std::optional<THeadlessSession::Link> link = session.link(lastLinkOf(output, qsl("given")));
+        QVERIFY(link);
+        QCOMPARE(link->stylesGiven, THeadlessSession::TextStyles(THeadlessSession::TextStyle::Bold | THeadlessSession::TextStyle::Italic));
         QVERIFY(link->styles);
+        QCOMPARE(*link->styles, THeadlessSession::TextStyles(THeadlessSession::TextStyle::Italic));
         QVERIFY(session.shutdown(false));
     }
 
