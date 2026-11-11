@@ -1308,6 +1308,24 @@ void cTelnet::drainBeforeDisconnection()
     finishDisconnection();
 }
 
+// QTime cannot hold 24 hours or more, so whole days are counted apart from it
+QString cTelnet::connectionTimeText(const qint64 elapsedMs)
+{
+    constexpr qint64 msPerDay = 24 * 60 * 60 * 1000;
+    const QString clock = QTime(0, 0)
+                                  .addMSecs(static_cast<int>(elapsedMs % msPerDay))
+                                  /*: This is the format to be used to show the profile connection time, it follows
+ the rules of the "QDateTime::toString(...)" function and may need
+ modification for some locales, e.g. France, Spain.*/
+                                  .toString(tr("hh:mm:ss.zzz"));
+    const qint64 days = elapsedMs / msPerDay;
+    if (!days) {
+        return clock;
+    }
+    //: Connection time of a day or more. %n is the number of whole days, %1 the rest of the time, in the "hh:mm:ss.zzz" connection time format
+    return tr("%n day(s), %1", nullptr, static_cast<int>(days)).arg(clock);
+}
+
 void cTelnet::finishDisconnection()
 {
     // Rechecked, as a trigger on the last words may have closed the profile
@@ -1357,15 +1375,9 @@ void cTelnet::finishDisconnection()
         mpHost->raiseEvent(event);
     }
 
-    QTime timeDiff(0, 0, 0, 0);
     // If mConnectionTimer has never been started then its ::elapsed() is NOT usable:
     const auto timeOffset = mConnectionTimer.isValid() ? mConnectionTimer.elapsed() : 0;
-    const QString msg = tr("[ INFO ]  - Connection time: %1.")
-                                .arg(timeDiff.addMSecs(timeOffset)
-                                             /*: This is the format to be used to show the profile connection time, it follows
- the rules of the "QDateTime::toString(...)" function and may need
- modification for some locales, e.g. France, Spain.*/
-                                             .toString(tr("hh:mm:ss.zzz")));
+    const QString msg = tr("[ INFO ]  - Connection time: %1.").arg(connectionTimeText(timeOffset));
     inflateEnd(&mZstream);
     mNeedDecompression = false;
     reset();

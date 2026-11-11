@@ -301,6 +301,7 @@ public:
     }
     static bool isRawIPv4Address(const QString&);
     static bool isRawIPv6Address(const QString&);
+    static QString connectionTimeText(qint64 elapsedMs);
     QString assembleTelnetOptionsReport() const;
 
 
