@@ -2569,6 +2569,8 @@ bool TNullConsoleFrontend::replaceCommandLineText(const QString& name, const QSt
     }
     if (!mainCommandLine(name)) {
         mpHost->windowRegistry().setCommandLineText(name, plainText(text));
+        // Told even where Mudlet's copy is unchanged, as the app's line may hold what it has yet to pass on
+        mWindowNotifier.noteCommandLine(name);
     } else if (!mpHost->passwordEntryWanted()) {
         // TMainConsole writes to the hidden-input box over it while the game asks for one
         mMainCommandLineTyped = false;
@@ -2581,6 +2583,64 @@ bool TNullConsoleFrontend::replaceCommandLineText(const QString& name, const QSt
         emit mpHost->signal_commandLineTextRequested(plain);
     }
     return true;
+}
+
+void TNullConsoleFrontend::typeCommandLine(const QString& name, const QString& text)
+{
+    mpHost->windowRegistry().setCommandLineText(name, plainText(text));
+}
+
+bool TNullConsoleFrontend::commandLineShown(const QString& name) const
+{
+    const auto it = mCommandLines.find(name);
+    if (it == mCommandLines.end()) {
+        return false;
+    }
+    const PlainWindow& line = it->second;
+    const auto console = mSubConsoles.find(name);
+    const bool own = line.inConsole && console != mSubConsoles.end() && ownsLine(console->second, line);
+    return line.shown && line.layerShown && line.consoleShown && (!own || console->second.shown) && shownWithin(line.userWindow, line.box.get());
+}
+
+std::optional<int> TNullConsoleFrontend::commandLineAction(const QString& name) const
+{
+    const auto it = mCommandLines.find(name);
+    if (mainCommandLine(name) || it == mCommandLines.end()) {
+        return std::nullopt;
+    }
+    return it->second.action;
+}
+
+const QObject* TNullConsoleFrontend::commandLineInstance(const QString& name) const
+{
+    const auto it = mCommandLines.find(name);
+    return mainCommandLine(name) || it == mCommandLines.end() ? nullptr : it->second.writer.data();
+}
+
+void TNullConsoleFrontend::echoSentCommandLine(const QString& name, QString command)
+{
+    const auto it = mCommandLines.find(name);
+    TConsoleModel* pModel = subConsoleModel(name);
+    if (it == mCommandLines.end() || !it->second.inConsole || it->second.action || !pModel || mpHost->mCommandEchoMode == Host::CommandEchoMode::Never) {
+        return;
+    }
+    pModel->printCommand(command);
+}
+
+void TNullConsoleFrontend::commandLineSent(const QString& name)
+{
+    const auto it = mCommandLines.find(name);
+    if (mainCommandLine(name) || it == mCommandLines.end()) {
+        return;
+    }
+    // The line as it stands, which a script that clears it leaves nothing of
+    const QString text = mpHost->windowRegistry().commandLineText(name).value_or(QString());
+    if (!text.isEmpty() && it->second.writer && (!mpHost->isRemoteEchoingActive() || mpHost->disablePasswordMasking())) {
+        TCommandHistory::add(it->second.writer->history, text);
+    }
+    if (mpHost->mAutoClearCommandLineAfterSend) {
+        replaceCommandLineText(name, QString());
+    }
 }
 
 bool TNullConsoleFrontend::holdMainCommandLineForSend(const QString& line)
@@ -4258,7 +4318,7 @@ std::vector<TNullConsoleFrontend::WindowRecord> TNullConsoleFrontend::windowReco
         const auto console = mSubConsoles.find(name);
         const bool own = line.inConsole && console != mSubConsoles.end() && ownsLine(console->second, line);
         const bool visible = line.shown && line.layerShown;
-        const bool shown = visible && line.consoleShown && (!own || console->second.shown) && shownWithin(line.userWindow, line.box.get());
+        const bool shown = commandLineShown(name);
         records.push_back({name, Kind::commandLine, own ? name : parentName(line.userWindow, line.box.get()), line.geometry, visible, shown, line.stackOrder, QColor(), QFont()});
         records.back().parentKind = own ? consoleKind(name, console->second) : kindOfParent(line.box.get());
     }

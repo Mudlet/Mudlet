@@ -310,6 +310,108 @@ void THeadlessSession::connectWindowRelays(Host* pHost, const unsigned int run)
                 emit windowTextChanged(profile, windows);
             },
             Qt::QueuedConnection);
+    connect(
+            &pView->windowNotifier(),
+            &TWindowNotifier::commandLinesSet,
+            this,
+            [this, run](const QStringList& names) {
+                if (run != mRun || !mpHost || mShuttingDown) {
+                    return;
+                }
+                QStringList commandLines;
+                for (const QString& name : names) {
+                    if (windowCommandLineText(name)) {
+                        commandLines << name;
+                    }
+                }
+                if (commandLines.isEmpty()) {
+                    return;
+                }
+                commandLines.sort();
+                const QString profile = mProfileName;
+                emit windowCommandLineTextChanged(profile, commandLines);
+            },
+            Qt::QueuedConnection);
+}
+
+std::optional<QString> THeadlessSession::windowCommandLineText(const QString& commandLine) const
+{
+    const auto* pView = mpHost ? dynamic_cast<TNullConsoleFrontend*>(mpHost->consoleFrontend()) : nullptr;
+    if (!pView || !pView->commandLineAction(commandLine)) {
+        return std::nullopt;
+    }
+    return mpHost->commandLineText(commandLine);
+}
+
+bool THeadlessSession::setWindowCommandLineText(const QString& commandLine, const QString& text)
+{
+    if (!usable()) {
+        return false;
+    }
+    auto* pView = dynamic_cast<TNullConsoleFrontend*>(mpHost->consoleFrontend());
+    if (!pView || !pView->commandLineAction(commandLine)) {
+        //: Error from a frontend with no window that was given text for a command line, other than the main one, that the profile's scripts have not made; %1 is the name it gave
+        mErrorString = tr("The profile has no command line called \"%1\".").arg(commandLine);
+        return false;
+    }
+    if (!pView->commandLineShown(commandLine)) {
+        //: Error from a frontend with no window that was given text for, or Enter on, a command line that a script has hidden or disabled, which a player could not type on; %1 is its name
+        mErrorString = tr("The command line \"%1\" is not shown, so nothing can be typed on it.").arg(commandLine);
+        return false;
+    }
+    pView->typeCommandLine(commandLine, text);
+    return true;
+}
+
+bool THeadlessSession::submitWindowCommandLine(const QString& commandLine, const QString& line)
+{
+    // A script may run the event loop, where the frontend may delete the session, and not the profile with it
+    const QPointer<THeadlessSession> self(this);
+    if (!setWindowCommandLineText(commandLine, line)) {
+        return false;
+    }
+    const QPointer<Host> pHost = mpHost;
+    const auto view = [&pHost]() {
+        return pHost ? dynamic_cast<TNullConsoleFrontend*>(pHost->consoleFrontend()) : nullptr;
+    };
+    const QStringList commands = pHost->commandLineText(commandLine).value_or(QString()).split(QChar::LineFeed);
+    // TCommandLine::enterCommand() goes on with its own line, so one an action made again under the name gets none
+    const QPointer<const QObject> pLine(view()->commandLineInstance(commandLine));
+    const auto sameLine = [&view, &commandLine, &pLine]() {
+        return pLine && view() && view()->commandLineInstance(commandLine) == pLine.data();
+    };
+    for (const QString& command : commands) {
+        if (!usable()) {
+            return false;
+        }
+        if (!sameLine()) {
+            return true;
+        }
+        const std::optional<int> action = view()->commandLineAction(commandLine);
+        if (!action) {
+            return true;
+        }
+        if (*action) {
+            pHost->getLuaInterpreter()->callCmdLineAction(*action, command);
+        } else {
+            pHost->send(command, true, false);
+            if (pHost) {
+                pHost->playerSentLineFromCommandLine();
+            }
+        }
+        if (!self || !sameLine()) {
+            return true;
+        }
+        view()->echoSentCommandLine(commandLine, command);
+        // The echo can raise sysBufferShrinkEvent, whose handlers may delete the session
+        if (!self) {
+            return true;
+        }
+    }
+    if (sameLine()) {
+        view()->commandLineSent(commandLine);
+    }
+    return true;
 }
 
 THeadlessSession::WindowsTold THeadlessSession::windowsNow() const
