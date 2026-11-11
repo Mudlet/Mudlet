@@ -160,11 +160,14 @@ void MMCPClient::slot_connected()
 
     // The address and port carried in the handshake are our own callback details
     // for the peer to record, not the ones we just dialled - those are theirs and
-    // they know them already
+    // they know them already. A running server is the one to call back, and
+    // mmcp.startServer() can put it on a port other than the saved one; only
+    // when nothing is listening is the saved port the best there is to give.
+    const quint16 callbackPort = mpMMCPServer->isListening() ? mpMMCPServer->serverPort() : mpHost->getMMCPPort();
     QString str = qsl("CHAT:%1\n%2%3")
                           .arg(mpMMCPServer->getChatName(),
                                convertToIPv4(mTcpSocket.localAddress()))
-                          .arg(mpHost->getMMCPPort(), -csMMCPPortFieldWidth);
+                          .arg(callbackPort, -csMMCPPortFieldWidth);
 
     mTcpSocket.write(str.toLatin1());
 
