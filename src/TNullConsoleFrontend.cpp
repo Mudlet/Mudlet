@@ -1816,25 +1816,31 @@ std::pair<bool, QString> TNullConsoleFrontend::createMapper(const QString& windo
     mWindowNotifier.note();
     // As TMainConsole::createMapper(), which only takes a user window: not a scroll box
     const bool wantsMainConsole = windowname.isEmpty() || !windowname.compare(QLatin1String("main"), Qt::CaseInsensitive);
-    if (!wantsMainConsole && !mpHost->windowRegistry().hasDockWidget(windowname)) {
-        return {false, qsl("window '%1' not found").arg(windowname)};
+    const auto refusal = [&]() -> std::optional<std::pair<bool, QString>> {
+        if (!wantsMainConsole && !mpHost->windowRegistry().hasDockWidget(windowname)) {
+            return std::pair{false, qsl("window '%1' not found").arg(windowname)};
+        }
+        if (mMapWidget && mMapWidget->shown) {
+            return std::pair{false, qsl("cannot create mapper. Do you already use a map window?")};
+        }
+        if (!mpEmbeddedMapper && !ownsContainer(windowname)) {
+            // A detached view's user window, which only that view could make a mapper in
+            return noView();
+        }
+        return std::nullopt;
+    };
+    if (const auto refused = refusal()) {
+        return *refused;
     }
-    if (mMapWidget && mMapWidget->shown) {
-        return {false, qsl("cannot create mapper. Do you already use a map window?")};
-    }
-    if (!mpEmbeddedMapper && !ownsContainer(windowname)) {
-        // A detached view's user window, which only that view could make a mapper in
-        return noView();
-    }
-    if (mMapWidget) {
-        // As TMainConsole::createMapper() deleting the hidden map dock leaves QMainWindow its placeholder
-        TAppFrontend::instance()->mapWidgetRemoved(mpHost);
-        // Deferred, as the GUI's dock is: a map info contributor or a mouse press handler drawing this view may be
-        // the caller
-        TNullMapView* pOldView = mMapWidget->pView.release();
-        pOldView->setParent(mpMainHolder.get());
-        pOldView->deleteLater();
-        mMapWidget.reset();
+    removeHiddenMapWidget();
+    const bool makesMapper = !mpEmbeddedMapper;
+    if (makesMapper) {
+        TNullMapView::announceEditing(mpHost);
+        // A handler of that may have opened a map or closed the window
+        if (const auto refused = refusal()) {
+            return *refused;
+        }
+        removeHiddenMapWidget();
     }
     if (!mpEmbeddedMapper) {
         mpEmbeddedMapper = new TNullMapView(mpHost, holderFor(windowname, nullptr));
@@ -1851,6 +1857,9 @@ std::pair<bool, QString> TNullConsoleFrontend::createMapper(const QString& windo
         });
         copyPlayerRoomStyleToMap();
         mpHost->loadMapForNewMapper(true);
+    }
+    // Raised too where a handler of the mode event made the mapper, as the GUI's second createMapper() does
+    if (makesMapper) {
         TEvent mapOpenEvent{};
         mapOpenEvent.mArgumentList.append(QLatin1String("mapOpenEvent"));
         mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
@@ -1862,10 +1871,43 @@ std::pair<bool, QString> TNullConsoleFrontend::createMapper(const QString& windo
     return {true, QString()};
 }
 
+// The map widget has no view while its mode event runs
+void TNullConsoleFrontend::MapWidget::setShown(const bool show)
+{
+    shown = show;
+    if (pView) {
+        pView->setShown(show);
+    }
+}
+
+// As TMainConsole::createMapper() deleting the hidden map dock leaves QMainWindow its placeholder
+void TNullConsoleFrontend::removeHiddenMapWidget()
+{
+    if (!mMapWidget) {
+        return;
+    }
+    TAppFrontend::instance()->mapWidgetRemoved(mpHost);
+    // Deferred, as the GUI's dock is: a map info contributor or a mouse press handler drawing this view may be
+    // the caller
+    if (TNullMapView* pOldView = mMapWidget->pView.release()) {
+        pOldView->setParent(mpMainHolder.get());
+        pOldView->deleteLater();
+    }
+    mMapWidget.reset();
+}
+
 void TNullConsoleFrontend::createMapperDock(const QString& title, const QString&)
 {
     mWindowNotifier.note();
-    mMapWidget = MapWidget{title, QRect(), false, std::make_unique<TNullMapView>(mpHost), ++mTopOfStack};
+    // The widget is there before its map, as the GUI's dock is while dlgMapper's constructor raises the event
+    mMapWidget = MapWidget{title, QRect(), false, nullptr, ++mTopOfStack};
+    TNullMapView::announceEditing(mpHost);
+    // A handler of that may have made a mapper in its place
+    if (!mMapWidget || mMapWidget->pView) {
+        return;
+    }
+    mMapWidget->pView = std::make_unique<TNullMapView>(mpHost);
+    mMapWidget->pView->setShown(mMapWidget->shown);
     copyPlayerRoomStyleToMap();
 }
 
@@ -1912,8 +1954,7 @@ std::pair<bool, QString> TNullConsoleFrontend::placeMapWidget(const QString& are
     }
 
     // Shown before the area is checked, as TMainConsole::placeMapWidget() does
-    mMapWidget->shown = true;
-    mMapWidget->pView->setShown(true);
+    mMapWidget->setShown(true);
     if (area.isEmpty()) {
         return {true, QString()};
     }
@@ -1975,8 +2016,7 @@ void TNullConsoleFrontend::restoreMapWidgetPlacement(const Placement& placement)
         return;
     }
     mMapWidget->geometry = placement.geometry;
-    mMapWidget->shown = placement.shown;
-    mMapWidget->pView->setShown(placement.shown);
+    mMapWidget->setShown(placement.shown);
 }
 
 bool TNullConsoleFrontend::hideMapWidget()
@@ -1985,8 +2025,7 @@ bool TNullConsoleFrontend::hideMapWidget()
     if (!mMapWidget || !mMapWidget->shown) {
         return false;
     }
-    mMapWidget->shown = false;
-    mMapWidget->pView->setShown(false);
+    mMapWidget->setShown(false);
     return true;
 }
 

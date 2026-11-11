@@ -805,6 +805,29 @@ does, and it is refused where `renderMap()` is. Once the map is drawn, and while
 is taken as that point of the `mapper` window among `scriptWindows()`, which the GUI's map fills from its
 top left, so the app draws the map at that window's size for the two to agree.
 
+`setMapViewOnly()` switches the map between viewing and editing, as the item of the GUI map's menu does, and
+`mapViewOnly()` reads which it is; a new profile's map is view-only, and the profile saves it. Scripts hear
+`mapModeChangeEvent` with `"viewing"` or `"editing"` before the call returns, then the session emits
+`mapViewOnlyChanged` and asks for a repaint, as the room's name in the map's info box is trimmed of trailing
+punctuation only while viewing. Editing itself, moving rooms and labels with the mouse, stays the GUI's:
+what the switch changes here is which held-button moves `pointer()` refuses on the `mapper` window (see
+"The windows scripts make"). It is false while no map is shown, none opened yet or the one there closed
+or hidden and no secondary map view (`createMapView()`) open either, as the GUI's item is on each map,
+and refused where `renderMap()` is; asking for the mode the map is already in is true and raises
+nothing. Each map and each secondary map view a script opens in a profile that was saved as editing
+raises `mapModeChangeEvent` with `"editing"` as the GUI's does: before the map is there, so its handler
+finds no mapper yet (`getMapZoom()` gives nil), and before `mapOpenEvent`. No `mapViewOnlyChanged` comes
+for that, so read `mapViewOnly()` at `profileLoaded`.
+
+A `mapModeChangeEvent` handler that itself opens or makes a map while one is being made ends differently
+here, as the GUI orphans a mapper or crashes there. One that calls `createMapper()` during
+`createMapper()` leaves its own mapper, where the GUI keeps the outer call's; one that calls
+`openMapWidget()` or `loadMap()` during `createMapper()` makes that call refuse, where the GUI ends
+with both a map widget and a mapper; one that calls `createMapper()` during `openMapWidget()` leaves
+that mapper, with `mapOpenEvent` raised once for it and once more as `openMapWidget()` ends, and a later
+`openMapWidget()` refuses; and one that deletes the user window the mapper is for makes `createMapper()`
+refuse at once.
+
 ## Embedding it: the windows scripts make
 
 An app has a UI of its own, so it draws the windows a profile's scripts make as well as the main

@@ -20,6 +20,8 @@
 #include "THeadlessSession.h"
 
 #include "Host.h"
+#include "TMap.h"
+#include "TMapViewsFrontend.h"
 #include "TNullConsoleFrontend.h"
 #include "TNullMapView.h"
 
@@ -57,6 +59,41 @@ bool THeadlessSession::mapPointer(const MapPointerEvent& event)
         return false;
     }
     return pointMap(event, event.button, std::nullopt);
+}
+
+bool THeadlessSession::mapViewOnly() const
+{
+    return !mpHost || mpHost->mMapViewOnly;
+}
+
+bool THeadlessSession::setMapViewOnly(const bool viewOnly)
+{
+    if (!usable()) {
+        return false;
+    }
+    auto* pView = dynamic_cast<TNullMapView*>(mpHost->mapViewFrontend());
+    const bool mainShown = pView && pView->shown();
+    // The GUI's item is on a secondary map view as well
+    if (!mainShown && (!mpHost->mpMap || mpHost->mpMap->mapViewsFrontend()->getViewIds().isEmpty())) {
+        //: Error from a frontend with no window that was asked to switch the 2D map between viewing and editing before a script opened one, or after it closed or hid it
+        mErrorString = tr("No map is open; a script opens one, as with openMapWidget().");
+        return false;
+    }
+    if (mpHost->mMapViewOnly == viewOnly) {
+        return true;
+    }
+    const QPointer<THeadlessSession> self(this);
+    const QPointer<Host> pHost(mpHost);
+    const QString profile = mpHost->getName();
+    if (mainShown) {
+        pView->setViewOnly(viewOnly);
+    } else {
+        TNullMapView::switchMode(mpHost, viewOnly);
+    }
+    if (self && pHost && mpHost == pHost && !pHost->isClosingDown()) {
+        emit mapViewOnlyChanged(profile, viewOnly);
+    }
+    return true;
 }
 
 bool THeadlessSession::pointMapper(const ScriptWindow& mapper, const WindowPointerEvent& event)
