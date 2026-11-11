@@ -162,7 +162,7 @@ private slots:
         }
     }
 
-    // The 6x6x6 cube: ANSI 16 + 36r + 6g + b, painted on a 51-per-step ramp
+    // The 6x6x6 cube: ANSI 16 + 36r + 6g + b, in the xterm shades the console draws it in
     void test_rgbSlidersPickFromThe216ColorCube()
     {
         resetTrigger();
@@ -176,7 +176,7 @@ private slots:
         dialog.pushButton_setUsingRgbValue->click();
 
         QCOMPARE(mpTrigger->mColorTriggerFgAnsi, 137);
-        QCOMPARE(mpTrigger->mColorTriggerFgColor, QColor(153, 102, 51));
+        QCOMPARE(mpTrigger->mColorTriggerFgColor, QColor(175, 135, 95));
         QVERIFY(mpTrigger->mColorTrigger);
     }
 

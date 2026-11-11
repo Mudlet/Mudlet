@@ -214,7 +214,7 @@ void dlgColorTrigger::setupBasicButton(QPushButton* pButton, const int ansiColor
 void dlgColorTrigger::slot_rgbColorChanged()
 {
     mRgbAnsiColorNumber = 16 + 36 * horizontalSlider_red->value() + 6 * horizontalSlider_green->value() + horizontalSlider_blue->value();
-    mRgbAnsiColor = QColor(horizontalSlider_red->value() * 51, horizontalSlider_green->value() * 51, horizontalSlider_blue->value() * 51);
+    mRgbAnsiColor = mpTrigger->mpHost->getAnsiColor(mRgbAnsiColorNumber);
     label_rgbValue->setText(qsl("[%1]").arg(QString::number(mRgbAnsiColorNumber)));
     // Use the same stylesheet code as in the main editor and for the basic 16
     // color buttons but because this is a QLabel we need to replace one word in
