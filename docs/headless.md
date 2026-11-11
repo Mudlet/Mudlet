@@ -1200,6 +1200,28 @@ the desktop GUI pumps the event loop from it, for its progress dialog and its Ab
 `cancelMapOperation()` while the operation runs, and anything else posted meanwhile, such as a profile
 close, runs once the operation has returned.
 
+## Embedding it: Mudlet's own Lua files
+
+Much of the scripting API is itself Lua (Geyser, `db:`, the string and table functions and more), in
+`src/mudlet-lua/lua`. Mudlet reads those files from a folder beside the program, or from where
+`make install` puts them, and an app that embeds Mudlet has no such folder. Built with
+`-DUSE_BUILTIN_MUDLET_LUA=ON`, which is the default for Android and for a browser, `mudlet_core`
+carries the files and their translations (`translations/lua`) itself, and loads them ahead of any
+copy on disk, which may be another version of Mudlet's.
+
+Lua's own file functions cannot read from inside the library, and `loadTranslations()` and scripts
+that use `luaGlobalPath` read with them. So the files are unpacked to a folder `mudlet-lua-<hash>` in
+the app's cache folder (`QStandardPaths::CacheLocation`) and loaded from there, and `luaGlobalPath`
+names that folder. The hash is of the files, so a new version of the app unpacks its own, and removes
+the old one's once no Mudlet has loaded it for an hour. A profile that opens to find one of the files gone or of the wrong size, as after the
+system's cache cleaner or a power cut, unpacks them again. Where the cache folder cannot be written,
+the files are loaded straight from the library: `luaGlobalPath` is then `:/builtin/mudlet-lua/lua`,
+which only Qt can read, so Mudlet's own Lua messages stay in English unless the translations are found
+on disk.
+
+With the option on, a change to a file in `src/mudlet-lua/lua` takes a rebuild to reach a profile,
+which is why a desktop build leaves it off.
+
 ## What still needs a window
 
 Some of what a profile can do has nothing to stand in for the GUI's widgets yet, and does nothing,
