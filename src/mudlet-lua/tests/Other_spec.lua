@@ -908,6 +908,18 @@ describe("Tests Other.lua functions", function()
       assert.is_false(mudletOlderThan(unpack(olderVersion)))
       assert.is_false(mudletOlderThan(unpack(currentVersion)))
     end)
+
+    it("compares the minor and patch versions when the major one is the same", function()
+      local major, minor, patch = getMudletVersion("table")
+
+      assert.is_true(mudletOlderThan(major, minor + 1))
+      assert.is_false(mudletOlderThan(major, minor - 1))
+      assert.is_false(mudletOlderThan(major, minor))
+      assert.is_true(mudletOlderThan(major, minor, patch + 1))
+      assert.is_false(mudletOlderThan(major, minor, patch))
+      assert.is_false(mudletOlderThan(major, minor, patch - 1))
+      assert.is_false(mudletOlderThan(major, minor - 1, patch + 1), "a newer minor version outranks the patch")
+    end)
   end)
 
   describe("Tests the functionality of _comp", function()
@@ -1035,7 +1047,7 @@ describe("Tests Other.lua functions", function()
       -- timeframe schedules a real cleanup tempTimer; cancel any pending ones
       -- and clear the test variable.
       killtimeframe("TIMEFRAME_TEST_VARIABLE")
-      TIMEFRAME_TEST_VARIABLE = nil
+      _G.TIMEFRAME_TEST_VARIABLE = nil
     end)
 
     it("Should immediately set variable to true", function()
@@ -1082,6 +1094,69 @@ describe("Tests Other.lua functions", function()
       assert.are.equal("it's on", _G.TIMEFRAME_TEST_TABLE.state)
       killtimeframe("TIMEFRAME_TEST_TABLE.state")
     end)
+
+    if not os.getenv("MUDLET_TEST_MODE") then
+      pending("the specs that wait for timeframe's timers - need MUDLET_TEST_MODE for pumpEvents")
+    else
+      local function waitUntil(condition)
+        for _ = 1, 60 do
+          if condition() then
+            return true
+          end
+          pumpEvents(50)
+        end
+        return condition()
+      end
+
+      it("Should clear the variable now, set it at true_time and clear it again at nil_time", function()
+        _G.TIMEFRAME_TEST_VARIABLE = "before"
+
+        assert.are.equal("TIMEFRAME_TEST_VARIABLE", timeframe("TIMEFRAME_TEST_VARIABLE", 0.05, 0.15))
+        -- read from timers, which fire in order however long a pump takes
+        local between, after, done = "unset", "unset", false
+        tempTimer(0.1, function() between = _G.TIMEFRAME_TEST_VARIABLE end)
+        tempTimer(0.25, function() after, done = _G.TIMEFRAME_TEST_VARIABLE, true end)
+
+        assert.is_nil(_G.TIMEFRAME_TEST_VARIABLE)
+        assert.is_true(waitUntil(function() return done end))
+        assert.is_true(between)
+        assert.is_nil(after)
+      end)
+
+      it("Should call a function with each value in time order", function()
+        local values = {}
+        local function record(value)
+          values[#values + 1] = tostring(value)
+        end
+
+        assert.are.equal(record, timeframe(record, 0.05, 0.2, { 0.1, "middle" }))
+
+        assert.is_true(waitUntil(function() return #values == 4 end), "got only " .. table.concat(values, ", "))
+        assert.are.same({ "nil", "true", "middle", "nil" }, values)
+      end)
+
+      it("Should not set the variable once killtimeframe has cancelled it", function()
+        _G.TIMEFRAME_TEST_VARIABLE = nil
+        timeframe("TIMEFRAME_TEST_VARIABLE", 0.05)
+        killtimeframe("TIMEFRAME_TEST_VARIABLE")
+
+        local done = false
+        tempTimer(0.2, function() done = true end)
+        assert.is_true(waitUntil(function() return done end))
+        assert.is_nil(_G.TIMEFRAME_TEST_VARIABLE)
+      end)
+
+      it("Should drop the earlier schedule when called again for the same variable", function()
+        timeframe("TIMEFRAME_TEST_VARIABLE", 0.05, 0.25)
+        timeframe("TIMEFRAME_TEST_VARIABLE", 0.3)
+
+        local checked, seen = false, "unset"
+        tempTimer(0.15, function() seen, checked = _G.TIMEFRAME_TEST_VARIABLE, true end)
+        assert.is_true(waitUntil(function() return checked end))
+        assert.is_nil(seen, "the first call's true_time still fired")
+        assert.is_true(waitUntil(function() return _G.TIMEFRAME_TEST_VARIABLE == true end), "the second call never fired")
+      end)
+    end
   end)
 
   describe("Tests the stopwatch family", function()
@@ -4705,6 +4780,63 @@ describe("Tests the script API", function()
       local translations, err = loadTranslations("AdjustableContainer", "noSuchTranslationFile")
       assert.is_nil(translations)
       assert.is_truthy(err:find("unable to find 'noSuchTranslationFile.json'", 1, true))
+    end)
+
+    it("Should read the strings of the language it is asked for", function()
+      local english = loadTranslations("AdjustableContainer", nil, "xx_XX")
+      local russian = loadTranslations("AdjustableContainer", nil, "ru_RU")
+
+      assert.are.equal("Lock", english.lock.message)
+      assert.is_string(russian.lock.message)
+      assert.are_not.equal(english.lock.message, russian.lock.message)
+    end)
+
+    it("Should fill in the strings a language file lacks from the default file", function()
+      local folder = getMudletHomeDir() .. "/loadTranslations-spec/"
+      lfs.mkdir(folder)
+      lfs.mkdir(folder .. "translated")
+      local function write(path, text)
+        local file = assert(io.open(path, "w"))
+        file:write(text)
+        file:close()
+      end
+      write(folder .. "strings.json", [[{"Pkg.yes": {"message": "Yes"}, "Pkg.no": {"message": "No"}, "Other.yes": {"message": "Other"}}]])
+      write(folder .. "translated/strings_de_DE.json", [[{"Pkg.yes": {"message": "Ja"}}]])
+      finally(function()
+        os.remove(folder .. "translated/strings_de_DE.json")
+        os.remove(folder .. "strings.json")
+        lfs.rmdir(folder .. "translated")
+        lfs.rmdir(folder)
+      end)
+
+      assert.are.same({ yes = { message = "Ja" }, no = { message = "No" } }, loadTranslations("Pkg", "strings", "de_DE", folder))
+    end)
+
+    it("Should close the files it reads", function()
+      if not lfs.attributes("/proc/self/fd") then
+        pending("counting open files needs /proc")
+        return
+      end
+      local function openTranslationFiles()
+        local count = 0
+        for fd in lfs.dir("/proc/self/fd") do
+          local target = lfs.symlinkattributes("/proc/self/fd/" .. fd, "target")
+          if target and target:find("mudlet%-lua[_%w]*%.json$") then
+            count = count + 1
+          end
+        end
+        return count
+      end
+      -- otherwise a collection could close the handles for it
+      collectgarbage("collect")
+      collectgarbage("stop")
+      finally(function() collectgarbage("restart") end)
+
+      for _ = 1, 10 do
+        loadTranslations("AdjustableContainer", nil, "ru_RU")
+      end
+
+      assert.are.equal(0, openTranslationFiles())
     end)
 
     it("Should reject arguments of the wrong type", function()
