@@ -3431,7 +3431,11 @@ function map.find_path(roomName,areaName,return_tables)
         end
         return path, dirs
     else
-        if #dirs &gt; 0 then
+        -- Check the area too, so a same-named room elsewhere never reads as "already in" the one asked for
+        local hereAreaName = rooms[map.currentRoom] and getRoomAreaName(getRoomArea(map.currentRoom))
+        if hereAreaName and (not areaName or string.lower(hereAreaName) == string.lower(areaName)) then
+            map.echo("You are already in " .. roomName .. ((areaName and " in " .. areaName) or "") .. ".")
+        elseif #dirs &gt; 0 then
             map.echo("Path to " .. roomName .. ((areaName and " in " .. areaName) or "") .. ": " .. table.concat(dirs,", "))
         else
             map.echo("No path found to " .. roomName .. ((areaName and " in " .. areaName) or "") .. ".",false,true)
@@ -4351,7 +4355,11 @@ function map.speedwalk(roomID, walkPath, walkDirs)
     walkPath = speedWalkPath
     walkDirs = speedWalkDir
     if #speedWalkPath == 0 then
-        map.echo("No path to chosen room found.",false,true)
+        if tonumber(roomID) == map.currentRoom then
+            map.echo("You are already in that room.")
+        else
+            map.echo("No path to chosen room found.",false,true)
+        end
         return
     end
     table.insert(walkPath, 1, map.currentRoom)
@@ -4406,8 +4414,14 @@ function doSpeedWalk()
     if #speedWalkPath ~= 0 then
         raiseEvent("sysSpeedwalkStarted")
         map.speedwalk(nil, speedWalkPath, speedWalkDir)
-    else
+    elseif mudlet and mudlet.custom_speedwalk and tonumber(speedWalkTo) ~= map.currentRoom then
+        -- A map click in custom speedwalk mode calls this without finding a path, so only speedWalkTo shows the goal.
+        -- gotoRoom() leaves speedWalkTo alone, so in this mode its walk to the current room still reads as no path
         map.echo("No path to chosen room found.",false,true)
+    else
+        -- Map clicks and gotoRoom() only get here after a path is found, so empty means we start at the goal.
+        -- A script calling this after a failed getPath() lands here too: nothing here can tell the two apart
+        map.echo("You are already in that room.")
     end
 end
 

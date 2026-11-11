@@ -1,0 +1,171 @@
+describe("Tests that the generic mapper handles a walk to the room the player is already in", function()
+  if type(map) ~= "table" or type(map.speedwalk) ~= "function" then
+    it("needs the generic mapper installed", function()
+      pending("the generic mapper is not installed in this profile")
+    end)
+    return
+  end
+
+  local areaId, hereRoom, northRoom
+  local savedCurrentRoom, savedPath, savedDir, savedPlayerRoom
+  local echoes, sent
+
+  local function makeRoom(name, y)
+    local id = createRoomID()
+    addRoom(id)
+    setRoomArea(id, areaId)
+    setRoomCoordinates(id, 0, y, 0)
+    setRoomName(id, name)
+    return id
+  end
+
+  before_each(function()
+    savedCurrentRoom = map.currentRoom
+    savedPath, savedDir = _G.speedWalkPath, _G.speedWalkDir
+    savedPlayerRoom = getPlayerRoom()
+    areaId = addAreaName("genericMapperSpeedwalkSpec")
+    hereRoom = makeRoom("Speedwalk spec start", 0)
+    northRoom = makeRoom("Speedwalk spec north", 1)
+    setExit(hereRoom, northRoom, "n")
+    map.set("currentRoom", hereRoom)
+    echoes, sent = {}, {}
+    stub(map, "echo", function(text, _, err)
+      echoes[#echoes + 1] = {text = text, err = err}
+    end)
+    stub(_G, "send", function(command)
+      sent[#sent + 1] = command
+    end)
+  end)
+
+  after_each(function()
+    map.echo:revert()
+    send:revert()
+    map.set("currentRoom", savedCurrentRoom)
+    _G.speedWalkPath, _G.speedWalkDir = savedPath, savedDir
+    if savedPlayerRoom and roomExists(savedPlayerRoom) then
+      centerview(savedPlayerRoom)
+    end
+    deleteArea(areaId)
+  end)
+
+  it("says the player is already there when asked to speedwalk to the current room", function()
+    map.speedwalk(hereRoom)
+    assert.are.equal(1, #echoes)
+    assert.are.equal("You are already in that room.", echoes[1].text)
+    assert.is_falsy(echoes[1].err)
+    assert.are.same({}, sent)
+  end)
+
+  it("says the player is already there when a paused walk is resumed at its goal", function()
+    -- Mudlet fills speedWalkPath with room IDs as strings
+    _G.speedWalkPath, _G.speedWalkDir = {tostring(hereRoom)}, {"n"}
+    -- what map.resumeSpeedwalk() calls
+    map.speedwalk(nil)
+    assert.are.same({}, _G.speedWalkPath)
+    assert.are.same({}, _G.speedWalkDir)
+    assert.are.equal(1, #echoes)
+    assert.are.equal("You are already in that room.", echoes[1].text)
+    assert.is_falsy(echoes[1].err)
+    assert.are.same({}, sent)
+  end)
+
+  it("says the player is already there when gotoRoom() is asked for the player's room", function()
+    -- centerview() only sets the player room once a map widget has been opened
+    if not centerview(hereRoom) then
+      openMapWidget("r")
+      centerview(hereRoom)
+    end
+    gotoRoom(hereRoom)
+    assert.are.equal(1, #echoes)
+    assert.are.equal("You are already in that room.", echoes[1].text)
+    assert.is_falsy(echoes[1].err)
+    assert.are.same({}, sent)
+  end)
+
+  it("says the player is already there when asked for a path to the current room's name", function()
+    map.find_path("Speedwalk spec start")
+    assert.are.equal(1, #echoes)
+    assert.are.equal("You are already in Speedwalk spec start.", echoes[1].text)
+    assert.is_falsy(echoes[1].err)
+  end)
+
+  it("still reports no path when speedwalking to a room it cannot reach", function()
+    local isolatedRoom = makeRoom("Speedwalk spec isolated", 5)
+    map.speedwalk(isolatedRoom)
+    assert.are.equal(1, #echoes)
+    assert.are.equal("No path to chosen room found.", echoes[1].text)
+    assert.is_truthy(echoes[1].err)
+    assert.are.same({}, sent)
+  end)
+
+  it("still reports no path when asked for a path to a room it cannot reach", function()
+    makeRoom("Speedwalk spec isolated", 5)
+    map.find_path("Speedwalk spec isolated")
+    assert.are.equal(1, #echoes)
+    assert.are.equal("No path found to Speedwalk spec isolated.", echoes[1].text)
+    assert.is_truthy(echoes[1].err)
+  end)
+
+  it("names the area when the player is in the room asked for there", function()
+    map.find_path("Speedwalk spec start", "genericMapperSpeedwalkSpec")
+    assert.are.equal(1, #echoes)
+    assert.are.equal("You are already in Speedwalk spec start in genericMapperSpeedwalkSpec.", echoes[1].text)
+    assert.is_falsy(echoes[1].err)
+  end)
+
+  it("does not say the player is already there when the room asked for is in another area", function()
+    local otherArea = addAreaName("genericMapperSpeedwalkSpecOther")
+    local ok, err = pcall(function()
+      local otherRoom = createRoomID()
+      addRoom(otherRoom)
+      setRoomArea(otherRoom, otherArea)
+      setRoomName(otherRoom, "Speedwalk spec start")
+      map.find_path("Speedwalk spec start", "genericMapperSpeedwalkSpecOther")
+    end)
+    deleteArea(otherArea)
+    assert(ok, err)
+    assert.are.equal(1, #echoes)
+    assert.are.equal("No path found to Speedwalk spec start in genericMapperSpeedwalkSpecOther.", echoes[1].text)
+    assert.is_truthy(echoes[1].err)
+  end)
+
+  it("still reports no path for a custom speedwalk to another room", function()
+    _G.mudlet = _G.mudlet or {}
+    local savedCustom, savedTo = mudlet.custom_speedwalk, _G.speedWalkTo
+    mudlet.custom_speedwalk, _G.speedWalkTo = true, northRoom
+    _G.speedWalkPath, _G.speedWalkDir = {}, {}
+    local ok, err = pcall(doSpeedWalk)
+    mudlet.custom_speedwalk, _G.speedWalkTo = savedCustom, savedTo
+    assert(ok, err)
+    assert.are.equal(1, #echoes)
+    assert.are.equal("No path to chosen room found.", echoes[1].text)
+    assert.is_truthy(echoes[1].err)
+    assert.are.same({}, sent)
+  end)
+
+  it("says the player is already there for a custom speedwalk to the current room", function()
+    _G.mudlet = _G.mudlet or {}
+    local savedCustom, savedTo = mudlet.custom_speedwalk, _G.speedWalkTo
+    mudlet.custom_speedwalk, _G.speedWalkTo = true, hereRoom
+    _G.speedWalkPath, _G.speedWalkDir = {}, {}
+    local ok, err = pcall(doSpeedWalk)
+    mudlet.custom_speedwalk, _G.speedWalkTo = savedCustom, savedTo
+    assert(ok, err)
+    assert.are.equal(1, #echoes)
+    assert.are.equal("You are already in that room.", echoes[1].text)
+    assert.is_falsy(echoes[1].err)
+  end)
+
+  it("still gives the path to another room", function()
+    map.find_path("Speedwalk spec north")
+    assert.are.equal(1, #echoes)
+    assert.are.equal("Path to Speedwalk spec north: n", echoes[1].text)
+  end)
+
+  it("still returns no tables for the current room when a script asks for them", function()
+    local path, dirs = map.find_path("Speedwalk spec start", nil, true)
+    assert.is_nil(path)
+    assert.is_nil(dirs)
+    assert.are.same({}, echoes)
+  end)
+end)
