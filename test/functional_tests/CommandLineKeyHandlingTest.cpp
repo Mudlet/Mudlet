@@ -523,6 +523,150 @@ private slots:
         QCOMPARE(pCommandLine->textCursor().position(), 3);
     }
 
+    // Down after Up's completion steps back to the newer match and then to what was
+    // typed, rather than banking the completed line and clearing the box.
+    void test_downWalksBackThroughUpsCompletions()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        for (const QString& command : {qsl("look"), qsl("north"), qsl("look at sign")}) {
+            sendCommand(pCommandLine, command);
+        }
+        type(pCommandLine, qsl("lo"));
+
+        press(pCommandLine, Qt::Key_Up);
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look"));
+
+        press(pCommandLine, Qt::Key_Down);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look at sign"));
+        QCOMPARE(selection(pCommandLine), qsl("ok at sign"));
+
+        press(pCommandLine, Qt::Key_Down);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("lo"));
+        QVERIFY(selection(pCommandLine).isEmpty());
+
+        // Back on what was typed, Down banks it as it does any fresh text
+        press(pCommandLine, Qt::Key_Down);
+        QCOMPARE(pCommandLine->toPlainText(), QString());
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("lo"));
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look at sign"));
+    }
+
+    // Up's completion to just what was typed, with no newer match left, is the player's own line, so Down banks it at once
+    void test_downBanksALineUpCompletedToItself()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        sendCommand(pCommandLine, qsl("look"));
+        type(pCommandLine, qsl("look"));
+
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look"));
+        press(pCommandLine, Qt::Key_Down);
+        QCOMPARE(pCommandLine->toPlainText(), QString());
+    }
+
+    // Up past a longer match onto one that is just what was typed leaves nothing selected, yet Down still goes back
+    void test_downWalksBackFromACompletionThatIsWhatWasTyped()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        for (const QString& command : {qsl("look"), qsl("north"), qsl("look at sign")}) {
+            sendCommand(pCommandLine, command);
+        }
+        type(pCommandLine, qsl("look"));
+
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look at sign"));
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look"));
+
+        press(pCommandLine, Qt::Key_Down);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look at sign"));
+        QCOMPARE(selection(pCommandLine), qsl(" at sign"));
+        press(pCommandLine, Qt::Key_Down);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look"));
+        press(pCommandLine, Qt::Key_Down);
+        QCOMPARE(pCommandLine->toPlainText(), QString());
+    }
+
+    // With "Highlight history" turned off mid-walk, Down banks the line as it would without one
+    void test_downBanksACompletionOnceHighlightHistoryIsOff()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        sendCommand(pCommandLine, qsl("look at sign"));
+        sendCommand(pCommandLine, qsl("look"));
+        type(pCommandLine, qsl("lo"));
+        press(pCommandLine, Qt::Key_Up);
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look at sign"));
+        mpHost->mHighlightHistory = false;
+        press(pCommandLine, Qt::Key_Down);
+        QCOMPARE(pCommandLine->toPlainText(), QString());
+        press(pCommandLine, Qt::Key_Up);
+        const QString after = pCommandLine->toPlainText();
+        mpHost->mHighlightHistory = true;
+        QCOMPARE(after, qsl("look at sign"));
+    }
+
+    // A key that changes nothing between Up and Down leaves the walk where it was
+    void test_aKeyThatChangesNothingKeepsTheHistoryWalk()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        for (const QString& command : {qsl("look"), qsl("north"), qsl("look at sign")}) {
+            sendCommand(pCommandLine, command);
+        }
+        type(pCommandLine, qsl("lo"));
+        press(pCommandLine, Qt::Key_Up);
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look"));
+        press(pCommandLine, Qt::Key_Shift);
+        QCOMPARE(selection(pCommandLine), qsl("ok"));
+        press(pCommandLine, Qt::Key_Down);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look at sign"));
+    }
+
+    // Up after accepting a completion looks for longer lines from the newest again
+    void test_upAfterAcceptingACompletionSearchesFromTheNewest()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        sendCommand(pCommandLine, qsl("look at sign"));
+        sendCommand(pCommandLine, qsl("look at sign 2"));
+        type(pCommandLine, qsl("lo"));
+
+        press(pCommandLine, Qt::Key_Up);
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look at sign"));
+        press(pCommandLine, Qt::Key_End);
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look at sign 2"));
+        QCOMPARE(selection(pCommandLine), qsl(" 2"));
+    }
+
+    // Once the completion is accepted, the line is the player's own and Down banks it
+    void test_downBanksAnAcceptedCompletion()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        sendCommand(pCommandLine, qsl("look"));
+        sendCommand(pCommandLine, qsl("look at sign"));
+        type(pCommandLine, qsl("lo"));
+
+        press(pCommandLine, Qt::Key_Up);
+        press(pCommandLine, Qt::Key_End);
+        press(pCommandLine, Qt::Key_Down);
+        QCOMPARE(pCommandLine->toPlainText(), QString());
+
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look at sign"));
+    }
+
     // A selection in the middle of the line is the player's own text, not a completion tail.
     void test_upWithAMidLineSelectionKeepsTheTypedText()
     {
