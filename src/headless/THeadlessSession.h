@@ -337,6 +337,23 @@ public:
     // input; a line ended by a go-ahead ahead of the request, even in the same read, has its triggers run on the
     // line as it was, in the GUI too. Refused where submit() is.
     bool setCommandLineText(const QString& text, CommandLineEdit edit = CommandLineEdit::typed);
+    // The same for a command line a script made with createCommandLine(), or a mini console's or user window's own
+    // from enableCommandLine(), which has its console's name; scriptWindows() lists both as Kind::commandLine.
+    // windowCommandLineText() is its text as a script's getCmdLine() reads it, none for a name that is no such
+    // line, the main command line's among them. setWindowCommandLineText() is what the player has typed on it so
+    // far, taken while hidden input is wanted too, as the GUI's box covers only the main line; no
+    // windowCommandLineTextChanged follows it. False for a name that is no such line, for a line that is not shown
+    // (hidden, disabled, or in a window that is hidden), which a player could not type on though a script still
+    // writes to it, and where submit() is refused.
+    std::optional<QString> windowCommandLineText(const QString& commandLine) const;
+    bool setWindowCommandLineText(const QString& commandLine, const QString& text);
+    // Enter on that line, holding this text, each line of it a command: one goes to the function a script's
+    // setCmdLineAction() gave the line, or else through the aliases to the game as submit() sends it, and then a
+    // console's own line echoes it in its console unless the profile never echoes commands. The text joins the
+    // line's history, and the line is then emptied where the profile clears a sent command, which
+    // windowCommandLineTextChanged tells. Before it returns. False as setWindowCommandLineText() is, and when the
+    // profile begins to close part-way; a line a script deletes part-way takes no more commands.
+    bool submitWindowCommandLine(const QString& commandLine, const QString& line);
     // The GUI's replay toolbar, for a replay of the session's profile: pauseReplay() holds it where it is and
     // resumeReplay() lets it carry on, each false unless it is playing or held as it needs; stopReplay() ends it
     // as the toolbar's Stop does, saying so in localText. False with no replay of this profile playing, though one
@@ -929,6 +946,11 @@ signals:
     // hidden input is wanted is lost, as the GUI writes it into its hidden-input box instead. Sent as it is set, so
     // a handler may neither call the session nor run the event loop.
     void commandLineTextRequested(const QString& profile, const QString& text);
+    // A script's printCmdLine(), appendCmdLine() or clearCmdLine() set what windowCommandLineText() gives for
+    // these command lines, or submitWindowCommandLine() emptied them: sent for a write that left Mudlet's copy as
+    // it was too, as the app's line may hold what it has yet to pass on. From the event loop, sorted, each name
+    // once however often it was set in a turn, and only those still there.
+    void windowCommandLineTextChanged(const QString& profile, const QStringList& commandLines);
     // What the player typed ahead of the game's request to hide input has left Mudlet's copy of the line, as the
     // GUI's hidden-input box takes it from its command line: the app moves its input line's text into its hidden
     // input and empties the line. Just before hiddenInputWanted turns on; a handler may neither call the session

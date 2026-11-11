@@ -460,7 +460,7 @@ input while the send's aliases ran, that empty line comes just after `hiddenInpu
 instead, as the GUI's line was emptied behind its hidden-input box. It is sent as it is set, so
 it keeps its place among the game's lines and `hiddenInputWanted`, and a handler may neither call the
 session nor run the event loop. Only the main command line is sent: a line from
-`createCommandLine()` or Geyser is not. Mudlet does not know what the app's user has typed until the
+`createCommandLine()` or `enableCommandLine()` is told by `windowCommandLineTextChanged` (see below). Mudlet does not know what the app's user has typed until the
 app says with `setCommandLineText()`; until then `getCmdLine()` reads what a script or `submit()` last
 set. Nothing is sent:
 
@@ -494,6 +494,31 @@ signals that end hidden input have been handled, not the text it set aside, as a
 `commandLineTextRequested` may have emptied the line meanwhile. The GUI's line does not count such text
 as typed either, though it does count what it puts back from its hidden-input box, which the app hands
 back as typed.
+
+A command line a script made with `createCommandLine()`, and the one `enableCommandLine()` gives a mini
+console or user window, are in `scriptWindows()` as `Kind::commandLine`, the console's own under the
+console's name with no geometry, for the app to draw as an input line of its own. Each is named in three
+calls, which refuse the main command line's names:
+
+- `windowCommandLineText()` is its text, as a script's `getCmdLine()` reads it.
+- `setWindowCommandLineText()` is what the player has typed on it so far, as `setCommandLineText()` is
+  for the main line. It is taken while hidden input is wanted too, as the GUI's hidden-input box covers
+  only the main line. It is false for a line that is not `shown` in `scriptWindows()`: one a script hid
+  or disabled, or whose window is hidden, which a player could not type on. A script still writes to
+  such a line.
+- `submitWindowCommandLine()` is Enter on it. Each line of the text is a command: it is handed to the
+  Lua function `setCmdLineAction()` gave the line, or, with none, goes through the aliases to the game
+  as `submit()` sends it, and a console's own line then echoes it in its console unless the profile
+  never echoes commands. The text joins that line's own history, which is saved with the profile, and
+  the line is emptied if the profile clears the line after a send. A line that a script deletes
+  part-way takes no more of the commands. It is false, and sends nothing, where
+  `setWindowCommandLineText()` is: Enter cannot reach a line that is not shown.
+
+`windowCommandLineTextChanged` names the lines whose text a script's `printCmdLine()`,
+`appendCmdLine()` or `clearCmdLine()` set, or a submit emptied, once a turn of the event loop; the
+app reads each with `windowCommandLineText()`. A write that leaves Mudlet's copy as it was is told too,
+as the main line's is, since the app's line may hold what it has yet to pass on. What the app sets itself is not told back. The history
+of such a line is not offered for the app to walk, nor is Tab completion from its suggestions.
 
 What it guarantees about hidden input is narrow:
 
@@ -1003,8 +1028,7 @@ Lua specs that fail with no window, so it is the up-to-date list; the main gaps 
 - the 3D mapper's view, the 2D map but for an app that calls `renderMap()`, and map symbols
   drawn with a font's Private Use Area;
 - the main window's own command line, button bars and docks, which an app draws outside the area
-  it gives (see "Embedding it: the main window's size"), and the command line a mini console or user
-  window can show;
+  it gives (see "Embedding it: the main window's size");
 - the tab header of an MXP frame: the titles of its pages, and a way for the app to bring one forward.
 
 `.github/workflows/headless-lua-tests.yml` runs the Lua specs in `mudlet-headless`, and

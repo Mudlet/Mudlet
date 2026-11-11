@@ -274,6 +274,16 @@ public:
     bool addCommandLineBlacklistWord(const QString& name, const QString& word) override;
     bool removeCommandLineBlacklistWord(const QString& name, const QString& word) override;
     bool clearCommandLineBlacklist(const QString& name) override;
+    // A command line from createCommandLine() or a console's own, never the main one. typeCommandLine() is the
+    // player's typing, which tells no one; the rest are the parts of TCommandLine::enterCommand(), which runs
+    // scripts between them: the Lua function a line is handed to, 0 for none, a console's echo of a line it sent,
+    // and the history and the emptying after the last line.
+    void typeCommandLine(const QString& name, const QString& text);
+    std::optional<int> commandLineAction(const QString& name) const;
+    // Whether a player could type on it: shown, as is each window it is in, and not disabled
+    bool commandLineShown(const QString& name) const;
+    void echoSentCommandLine(const QString& name, QString command);
+    void commandLineSent(const QString& name);
     const QSet<QString>& mainCommandLineSuggestions() const { return mMainCommandLine.suggestions; }
     const QSet<QString>& mainCommandLineBlacklist() const { return mMainCommandLine.blacklist; }
     // As Tab or Shift+Tab on the GUI's main command line: the line it leaves, set as not typed, or nullopt with nothing

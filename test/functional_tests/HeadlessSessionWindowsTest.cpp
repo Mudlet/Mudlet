@@ -38,6 +38,7 @@
 #include "HostManager.h"
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
+#include "TCommandHistory.h"
 #include "THeadlessSession.h"
 
 #include "GroupedTest.h"
@@ -1361,6 +1362,140 @@ for i = 1, 40 do echo("mini", "line " .. i .. "\n") end
         QVERIFY(session.runLua(qsl("disableTimeStamps('mini')")));
         QCOMPARE(told(), qsl("mini"));
         QVERIFY(!mini().timeStamps);
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_theCommandLinesScriptsMakeAreTypedInAndSent()
+    {
+        const QString name = qsl("Headless Windows Command Lines");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QVERIFY(!session.windowCommandLineText(qsl("own")));
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        QVERIFY(session.runLua(qsl(R"lua(
+createMiniConsole("mini", 10, 20, 300, 200)
+enableCommandLine("mini")
+createCommandLine("own", 0, 300, 200, 30)
+headlessSent, headlessActed = {}, {}
+registerAnonymousEventHandler("sysDataSendRequest", function(_, command) headlessSent[#headlessSent + 1] = command end)
+)lua")));
+        const auto sent = [&session]() {
+            return luaString(session, qsl("table.concat(headlessSent, '|')"));
+        };
+        const auto miniRows = [&session]() {
+            return luaString(session, qsl("table.concat(getLines('mini', 0, getLineCount('mini')), '|')"));
+        };
+        // The notifier's queued call, then the session's queued relay of it
+        const auto settle = []() {
+            QCoreApplication::processEvents();
+            QCoreApplication::processEvents();
+        };
+        // As the profile saves it
+        const auto savedHistory = [&session](const QString& line) {
+            Host* pHost = session.host();
+            emit pHost->signal_saveCommandLinesHistory();
+            QStringList history;
+            QString error;
+            TCommandHistory::read(MudletApp::getMudletPath(enums::profileDataItemPath, pHost->getName(), std::get<0>(pHost->getCmdLineSettings(enums::SubCommandLine, line))), history, error);
+            return history;
+        };
+        QVERIFY(indexOf(session.scriptWindows(), qsl("own"), Kind::commandLine) >= 0);
+        QVERIFY(indexOf(session.scriptWindows(), qsl("mini"), Kind::commandLine) >= 0);
+        for (const QString& other : {QString(), qsl("main"), qsl("nope")}) {
+            QVERIFY(!session.windowCommandLineText(other));
+            QVERIFY(!session.setWindowCommandLineText(other, qsl("x")));
+            QVERIFY(session.errorString().contains(qsl("command line")));
+            QVERIFY(!session.submitWindowCommandLine(other, qsl("x")));
+        }
+        QCOMPARE(sent(), QString());
+        QCOMPARE(session.windowCommandLineText(qsl("own")), std::optional<QString>(QString()));
+
+        QSignalSpy changed(&session, &THeadlessSession::windowCommandLineTextChanged);
+        QVERIFY(session.setWindowCommandLineText(qsl("own"), qsl("typed")));
+        QCOMPARE(luaString(session, qsl("getCmdLine('own')")), qsl("typed"));
+        QCOMPARE(luaString(session, qsl("getCmdLine()")), QString());
+        settle();
+        QCOMPARE(changed.count(), 0);
+
+        QVERIFY(session.runLua(qsl("printCmdLine('own', 'a') appendCmdLine('own', 'b') printCmdLine('mini', 'm') printCmdLine('mini', 'm')")));
+        QCOMPARE(session.windowCommandLineText(qsl("own")), std::optional<QString>(qsl("ab")));
+        QCOMPARE(changed.count(), 0);
+        settle();
+        QCOMPARE(changed.count(), 1);
+        QCOMPARE(changed.at(0).at(0).toString(), name);
+        QCOMPARE(changed.at(0).at(1).toStringList(), QStringList({qsl("mini"), qsl("own")}));
+        changed.clear();
+
+        // Each line through the aliases to the game; the profile keeps a sent line unless told to clear it
+        QVERIFY(session.submitWindowCommandLine(qsl("own"), qsl("north\nsouth")));
+        QCOMPARE(sent(), qsl("north|south"));
+        QCOMPARE(session.windowCommandLineText(qsl("own")), std::optional<QString>(qsl("north\nsouth")));
+        // The whole line joins that line's own history, but not while the game hides what is typed; the file has a
+        // line of its own for each of the line's lines, after the blank one the history starts with
+        QCOMPARE(savedHistory(qsl("own")).join(qsl("|")), qsl("|north|south"));
+        session.host()->setRemoteEchoingActive(true);
+        QVERIFY(session.submitWindowCommandLine(qsl("own"), qsl("secret")));
+        session.host()->setRemoteEchoingActive(false);
+        QCOMPARE(savedHistory(qsl("own")).join(qsl("|")), qsl("|north|south"));
+        QVERIFY(session.setWindowCommandLineText(qsl("own"), qsl("north\nsouth")));
+        QCOMPARE(sent(), qsl("north|south|secret"));
+        QCOMPARE(miniRows(), QString());
+        // A console's own line echoes what it sent in its console
+        QVERIFY(session.submitWindowCommandLine(qsl("mini"), qsl("look")));
+        QCOMPARE(sent(), qsl("north|south|secret|look"));
+        QCOMPARE(miniRows(), qsl("look"));
+        settle();
+        QCOMPARE(changed.count(), 0);
+
+        session.host()->mAutoClearCommandLineAfterSend = true;
+        QVERIFY(session.runLua(qsl(R"lua(
+local function act(text) headlessActed[#headlessActed + 1] = text .. "=" .. getCmdLine("own") end
+setCmdLineAction("own", act)
+setCmdLineAction("mini", act)
+)lua")));
+        QVERIFY(session.submitWindowCommandLine(qsl("own"), qsl("one\ntwo")));
+        QVERIFY(session.submitWindowCommandLine(qsl("mini"), qsl("three")));
+        QCOMPARE(luaString(session, qsl("table.concat(headlessActed, '|')")), qsl("one=one\ntwo|two=one\ntwo|three="));
+        QCOMPARE(sent(), qsl("north|south|secret|look"));
+        QCOMPARE(miniRows(), qsl("look"));
+        QCOMPARE(session.windowCommandLineText(qsl("own")), std::optional<QString>(QString()));
+        QCOMPARE(session.windowCommandLineText(qsl("mini")), std::optional<QString>(QString()));
+        settle();
+        QCOMPARE(changed.count(), 1);
+        QCOMPARE(changed.at(0).at(1).toStringList(), QStringList({qsl("mini"), qsl("own")}));
+
+        // The app's line may hold text Mudlet's copy has not, so a write that leaves the copy as it was is told too
+        changed.clear();
+        QVERIFY(session.runLua(qsl("clearCmdLine('own')")));
+        settle();
+        QCOMPARE(changed.count(), 1);
+        QCOMPARE(changed.at(0).at(1).toStringList(), QStringList({qsl("own")}));
+
+        // A player cannot type on a line that is not shown, so neither can the app; a script still writes to it
+        const QString sentBefore = sent();
+        const QStringList hiders = {qsl("disableCommandLine('mini')"), qsl("hideWindow('mini')"), qsl("hideWindow('own')")};
+        const QStringList showers = {qsl("enableCommandLine('mini')"), qsl("showWindow('mini')"), qsl("showWindow('own')")};
+        const QStringList hidden = {qsl("mini"), qsl("mini"), qsl("own")};
+        for (qsizetype i = 0; i < hiders.size(); ++i) {
+            QVERIFY(session.runLua(hiders.at(i)));
+            QVERIFY2(!session.setWindowCommandLineText(hidden.at(i), qsl("unseen")), qPrintable(hiders.at(i)));
+            QCOMPARE(session.errorString(), qsl("The command line \"%1\" is not shown, so nothing can be typed on it.").arg(hidden.at(i)));
+            QVERIFY2(!session.submitWindowCommandLine(hidden.at(i), qsl("unseen")), qPrintable(hiders.at(i)));
+            QCOMPARE(session.windowCommandLineText(hidden.at(i)), std::optional<QString>(QString()));
+            QVERIFY(session.runLua(qsl("printCmdLine('%1', 'by a script')").arg(hidden.at(i))));
+            QCOMPARE(session.windowCommandLineText(hidden.at(i)), std::optional<QString>(qsl("by a script")));
+            QVERIFY(session.runLua(showers.at(i)));
+            QVERIFY2(session.setWindowCommandLineText(hidden.at(i), QString()), qPrintable(showers.at(i)));
+        }
+        QCOMPARE(sent(), sentBefore);
+        QCOMPARE(luaString(session, qsl("table.concat(headlessActed, '|')")), qsl("one=one\ntwo|two=one\ntwo|three="));
+
+        // A line its own function deletes takes no more commands
+        QVERIFY(session.runLua(qsl("setCmdLineAction('own', function(text) headlessActed = {text} deleteCommandLine('own') end)")));
+        QVERIFY(session.submitWindowCommandLine(qsl("own"), qsl("first\nsecond")));
+        QCOMPARE(luaString(session, qsl("table.concat(headlessActed, '|')")), qsl("first"));
+        QVERIFY(!session.windowCommandLineText(qsl("own")));
         QVERIFY(session.shutdown(false));
     }
 };
