@@ -599,6 +599,27 @@ end)
         QVERIFY(session.shutdown(false));
     }
 
+    void test_aMiniConsoleItsFontEventDeletesIsNotMadeFurther()
+    {
+        const QString name = qsl("Headless Mini Console Font Event");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"lua(
+registerAnonymousEventHandler("sysFontChangeEvent", function(_, window)
+  if window == "gone" then deleteMiniConsole("gone") end
+  if window == "again" and not madeAgain then madeAgain = true deleteMiniConsole("again") createMiniConsole("again", 0, 0, 50, 50) end
+end)
+createMiniConsole("gone", 0, 0, 100, 100)
+createMiniConsole("again", 0, 0, 100, 100)
+)lua")));
+        QCOMPARE(indexOf(session.scriptWindows(), qsl("gone"), Kind::miniConsole), -1);
+        const qsizetype again = indexOf(session.scriptWindows(), qsl("again"), Kind::miniConsole);
+        QVERIFY(again >= 0);
+        QCOMPARE(session.scriptWindows().at(again).geometry.size(), QSize(50, 50));
+        QVERIFY(session.shutdown(false));
+    }
+
     void test_labelsRunTheirCallbacksAsTheGuisMouseDoes()
     {
         const QString name = qsl("Headless Label Pointer");

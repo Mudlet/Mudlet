@@ -1100,8 +1100,10 @@ void TNullConsoleFrontend::createLabel(const QString& windowname, const QString&
     pLabel->setClickThrough(clickThrough);
     pLabel->mGeometry = QRect(QPoint(x, y), widgetSize(width, height));
     auto [userWindow, box] = containerFor(windowname, false);
-    // A real label takes its console's font as it is made, and keeps it as that font changes
-    pLabel->mFont = consoleFont(userWindow).value_or(displayFont());
+    // A real label takes its console's font as it is made, and keeps it as that font changes; under a window's
+    // sheet it starts from the application's, as it does on the main console once the profile has had a sheet
+    const bool windowStyled = userWindow.isEmpty() ? mProfileSheetSeen : !windowSheet(userWindow).isEmpty();
+    pLabel->mFont = windowStyled ? QGuiApplication::font() : consoleFont(userWindow).value_or(displayFont());
     mpHost->windowRegistry().registerLabel(name, pLabel.get());
     mLabels[name] = {std::move(pLabel), userWindow, std::move(box)};
     mLabels[name].stackOrder = ++mTopOfStack;
@@ -1277,14 +1279,16 @@ void TNullConsoleFrontend::restyleLabel(Label& label, const QString& sheet)
 {
     mWindowNotifier.note();
     TLabelModel& model = *label.pModel;
-    if (sheet == model.mStyleSheet && label.repolished && !label.restyleDue && !sheet.contains(qsl("url("), Qt::CaseInsensitive)) {
+    const QString inherited = windowSheet(label.userWindow);
+    if (sheet == model.mStyleSheet && inherited == label.windowSheet && label.repolished && !label.restyleDue && !sheet.contains(qsl("url("), Qt::CaseInsensitive)) {
         return;
     }
     label.restyleDue = false;
     label.repolished = label.styled && !sheet.isEmpty();
     const QFont before = model.mFont;
     model.mStyleSheet = sheet;
-    if (sheet.isEmpty()) {
+    label.windowSheet = inherited;
+    if (sheet.isEmpty() && inherited.isEmpty()) {
         label.sheetFont.reset();
         label.frame.fill(0);
         label.limits = SizeLimits();
@@ -1300,9 +1304,13 @@ void TNullConsoleFrontend::restyleLabel(Label& label, const QString& sheet)
     } else {
         static const QStringList classNames{qsl("TLabel"), qsl("QLabel"), qsl("QFrame"), qsl("QWidget"), qsl("QObject")};
         const QString objectName = qsl("label_%1_%2").arg(mpHost->getName(), model.mName);
+        // The window's sheet first, as a widget's own sheet wins over one it inherits whatever their selectors
+        const auto cascade = [&](const QStringList& heldStates) {
+            return sheetDeclarations(inherited, classNames, objectName, heldStates) + u';' + sheetDeclarations(sheet, classNames, objectName, heldStates);
+        };
         // QStyleSheetStyle::updateStyleSheetFont() asks for the enabled and active states, setGeometry() only for enabled
-        const QString declarations = sheetDeclarations(sheet, classNames, objectName, {qsl("enabled"), qsl("active")});
-        const QString enabledDeclarations = sheetDeclarations(sheet, classNames, objectName, {qsl("enabled")});
+        const QString declarations = cascade({qsl("enabled"), qsl("active")});
+        const QString enabledDeclarations = cascade({qsl("enabled")});
         label.sheetFont = styleSheetFont(declarations);
         label.frame = sheetGeometry(declarations, sheetLengthFont(declarations), 0).frame;
         const SheetGeometry geometry = sheetGeometry(enabledDeclarations, sheetLengthFont(enabledDeclarations), 0);
@@ -1311,7 +1319,7 @@ void TNullConsoleFrontend::restyleLabel(Label& label, const QString& sheet)
         polishLabel(label);
         // Qt writes it through QLabel::setText() as it polishes, from the rules that name no state; unlike
         // TLabel::setText(), that leaves a label already holding the text, and the movie it plays, alone
-        if (const auto text = sheetStringProperty(sheetDeclarations(sheet, classNames, objectName, {}), u"text"); text && *text != label.pModel->mText) {
+        if (const auto text = sheetStringProperty(cascade({}), u"text"); text && *text != label.pModel->mText) {
             showLabelText(label, *text);
         }
         setLabelSize(label, label.limits.bounded(model.mGeometry.size()));
@@ -1662,10 +1670,24 @@ void TNullConsoleFrontend::createBuffer(const QString& name)
 
 void TNullConsoleFrontend::addMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height)
 {
-    addSubConsole(name, TWindowRegistry::SubConsoleKind::MiniConsole, windowname);
+    const TConsoleModel& model = addSubConsole(name, TWindowRegistry::SubConsoleKind::MiniConsole, windowname);
     mpHost->windowRegistry().setSubConsoleGeometry(name, QRect(QPoint(x, y), widgetSize(width, height)));
-    // As TMainConsole::createMiniConsole() sizes its font, which raises sysFontChangeEvent
+    // As TMainConsole::createMiniConsole() sizes its font, which raises sysFontChangeEvent, whose handlers can
+    // delete the console, or make another under its name
     setWindowFontSize(name, 12);
+    const auto made = mSubConsoles.find(name);
+    if (made == mSubConsoles.end() || made->second.pModel.get() != &model) {
+        return;
+    }
+    SubConsole& console = made->second;
+    const QString sheet = windowSheet(console.userWindow);
+    applyUserWindowSheetFont(name, sheet);
+    // A sheet that gives the console a font, not only its text, leaves that font on one made under it once the
+    // sheet has gone
+    static const QStringList consoleClasses{qsl("TConsole"), qsl("QWidget"), qsl("QObject")};
+    if (console.fontBeforeSheet && styleSheetFont(sheetDeclarations(sheet, consoleClasses, QString(), {qsl("enabled"), qsl("active")}))) {
+        console.fontBeforeSheet = console.pModel->mUpperPaneFont;
+    }
     setSubConsoleShown(name, true);
 }
 
@@ -1764,6 +1786,34 @@ void TNullConsoleFrontend::setProfileStyleSheet(const QString& styleSheet)
         if (registry.hasDockWidget(name)) {
             applyUserWindowSheet(name, styleSheet);
         }
+    }
+    mProfileSheetSeen = mProfileSheetSeen || !styleSheet.isEmpty();
+    restyleWindowContents(QString());
+}
+
+// The profile's sheet is on the main console, and a user window's on its dock
+QString TNullConsoleFrontend::windowSheet(const QString& userWindow) const
+{
+    return userWindow.isEmpty() ? mpHost->mProfileStyleSheet : mpHost->windowRegistry().userWindowStyleSheet(userWindow).value_or(QString());
+}
+
+// As Qt restyles the widgets inside one given a sheet: the labels, and the text of the mini consoles
+void TNullConsoleFrontend::restyleWindowContents(const QString& userWindow)
+{
+    for (auto& [name, label] : mLabels) {
+        if (label.userWindow == userWindow) {
+            restyleLabel(label, label.pModel->mStyleSheet);
+        }
+    }
+    QStringList miniConsoles;
+    for (const auto& [name, console] : mSubConsoles) {
+        if (console.userWindow == userWindow && mpHost->windowRegistry().subConsoleKind(name) == TWindowRegistry::SubConsoleKind::MiniConsole) {
+            miniConsoles << name;
+        }
+    }
+    const QString sheet = windowSheet(userWindow);
+    for (const QString& name : std::as_const(miniConsoles)) {
+        applyUserWindowSheetFont(name, sheet);
     }
 }
 
@@ -3493,7 +3543,10 @@ bool TNullConsoleFrontend::reparentLabel(const QString& windowname, const QStrin
 void TNullConsoleFrontend::inheritLabelFont(Label& label, const bool restyle)
 {
     const QFont before = label.pModel->mFont;
-    if (!label.styled) {
+    if (restyle && windowSheet(label.userWindow) != label.windowSheet) {
+        label.restyleDue = true;
+        restyleLabel(label, label.pModel->mStyleSheet);
+    } else if (!label.styled) {
         QFont local = label.pModel->mFont;
         local.setResolveMask(label.fontMask);
         label.pModel->mFont = local.resolve(naturalLabelFont(label));
@@ -3519,14 +3572,18 @@ std::pair<bool, QString> TNullConsoleFrontend::reparentWindow(const QString& win
             return noView();
         }
         QObject* pParent = holderFor(userWindow, box.get());
+        const bool otherWindow = userWindow != it->second.userWindow;
         // A frame's console also moves when it leaves the frame for the window the frame is in
-        const bool moved = userWindow != it->second.userWindow || box != it->second.box || (it->second.holder && it->second.holder->parent() != pParent);
+        const bool moved = otherWindow || box != it->second.box || (it->second.holder && it->second.holder->parent() != pParent);
         if (moved) {
             it->second.stackOrder = ++mTopOfStack;
         }
         it->second.userWindow = userWindow;
         it->second.box = std::move(box);
         it->second.shown = show || (!moved && it->second.shown);
+        if (otherWindow) {
+            applyUserWindowSheetFont(name, windowSheet(userWindow));
+        }
         if (it->second.holder) {
             it->second.holder->setParent(pParent);
         }
@@ -3604,16 +3661,25 @@ std::pair<bool, QString> TNullConsoleFrontend::reparentWindow(const QString& win
 // What a moved scroll box holds goes with it into its user window
 void TNullConsoleFrontend::moveScrollBoxContents(const ScrollBox* box)
 {
+    // QWidget::setParent() restyles the box and all inside it under the sheet of the window it went into
     for (auto& [name, label] : mLabels) {
         if (within(label.box.get(), box) && label.userWindow != box->userWindow) {
             label.userWindow = box->userWindow;
-            inheritLabelFont(label, false);
+            inheritLabelFont(label, windowSheet(label.userWindow) != label.windowSheet);
         }
     }
+    QStringList restyled;
     for (auto& [name, subConsole] : mSubConsoles) {
         if (within(subConsole.box.get(), box)) {
+            if (subConsole.userWindow != box->userWindow && mpHost->windowRegistry().subConsoleKind(name) == TWindowRegistry::SubConsoleKind::MiniConsole) {
+                restyled << name;
+            }
             subConsole.userWindow = box->userWindow;
         }
+    }
+    const QString sheet = windowSheet(box->userWindow);
+    for (const QString& name : std::as_const(restyled)) {
+        applyUserWindowSheetFont(name, sheet);
     }
     for (auto& [name, inner] : mScrollBoxes) {
         if (within(inner->box.get(), box)) {
@@ -3784,6 +3850,7 @@ void TNullConsoleFrontend::applyUserWindowSheet(const QString& name, const QStri
         mpHost->windowRegistry().setUserWindowTitle(name, *title);
     }
     applyUserWindowSheetFont(name, sheet);
+    restyleWindowContents(name);
 }
 
 void TNullConsoleFrontend::applyUserWindowSheetFont(const QString& name, const QString& sheet)
@@ -4025,7 +4092,7 @@ void TNullConsoleFrontend::setSubConsoleFont(const QString& name, const QFont& f
     // A sheet's font stays over the one a script then sets
     if (const auto console = mSubConsoles.find(name); console != mSubConsoles.end() && console->second.fontBeforeSheet) {
         console->second.fontBeforeSheet = font;
-        applyUserWindowSheetFont(name, mpHost->windowRegistry().userWindowStyleSheet(name).value_or(QString()));
+        applyUserWindowSheetFont(name, windowSheet(mpHost->windowRegistry().hasDockWidget(name) ? name : console->second.userWindow));
     }
     reportGridSize(name);
     if (mpHost->windowRegistry().subConsoleKind(name) == TWindowRegistry::SubConsoleKind::Buffer) {
