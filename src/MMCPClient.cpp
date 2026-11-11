@@ -105,13 +105,13 @@ void MMCPClient::disconnect()
 /**
  * Drop the connection without any of the signalling a normal disconnect does.
  * For profile teardown, where the Host this client reports to is about to go
- * away: everything the slots would touch is either dying or already gone.
+ * away: as in the destructor, the socket's signals are cut off first, because
+ * abort() emits disconnected() and that handler reports to the Host.
  */
 void MMCPClient::abortConnection()
 {
     mPendingTimer.stop();
-    blockSignals(true);
-    mTcpSocket.blockSignals(true);
+    mTcpSocket.disconnect(this);
     mTcpSocket.abort();
 }
 

@@ -41,23 +41,11 @@ MMCPServer::MMCPServer(Host* pHost)
 }
 
 /**
- * Last line of defence: this runs from the Host's ~QObject, by which point the
- * Host's own members are gone, so nothing here may touch mpHost. Silence the
- * peers before ~QObject deletes them, so no socket event can reach a slot that
- * would dereference the dead Host. Covers the paths that never reach
- * Host::closeChildren(), which is where peers normally go.
- */
-MMCPServer::~MMCPServer()
-{
-    for (auto* pClient : findChildren<MMCPClient*>(Qt::FindDirectChildrenOnly)) {
-        pClient->abortConnection();
-    }
-}
-
-/**
  * Stop listening and drop every peer. For profile close, while the Host is
  * still whole - not the same as stopServer(), which only stops answering new
- * calls and deliberately leaves existing peers connected.
+ * calls and deliberately leaves existing peers connected. The Host can outlive
+ * closeChildren() by some time with the event loop still running, so the peers
+ * cannot be left for ~MMCPClient() to silence when the Host is finally deleted.
  */
 void MMCPServer::disconnectAll()
 {

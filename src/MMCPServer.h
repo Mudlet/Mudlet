@@ -36,7 +36,7 @@ class MMCPServer : public QTcpServer
 
 public:
     explicit MMCPServer(Host*);
-    ~MMCPServer();
+    ~MMCPServer() = default;
 
     // endsWithPromptMarker: the last byte is the 0xff cTelnet put after a GA/EOR prompt,
     // which a literal 0xff the game sent looks the same as
