@@ -100,6 +100,17 @@ private:
     static constexpr int scmProseLastNumber = 89;
     QString proseLine(int number) const { return qsl("%1 way off in the distance you faintly hear a grandfather clock strike eleven").arg(number); }
 
+    // The release lands in another window of this application, as when a popup takes it
+    void releaseElsewhere()
+    {
+        QWidget other;
+        other.resize(100, 100);
+        other.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&other));
+        QTest::mouseRelease(&other, Qt::LeftButton, Qt::NoModifier, QPoint(50, 50));
+        QVERIFY(!(QGuiApplication::mouseButtons() & Qt::LeftButton));
+    }
+
     TTextEdit* paneShowingProse()
     {
         QString message;
@@ -380,6 +391,220 @@ private slots:
         sendMouse(pane, QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, endPos);
 
         QVERIFY2(!pane->mSelectedRegion.isEmpty(), "A real drag failed to create a selection");
+    }
+
+    // A drag held still at the top edge keeps scrolling and extending the
+    // selection, and stops once the button is released
+    void test_dragHeldAtTheTopEdgeKeepsScrolling()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "No upper pane available");
+        const int topBefore = pane->imageTopLine();
+        QVERIFY2(topBefore > 20, "Too little scrollback to scroll through");
+
+        // The repeat checks QGuiApplication::mouseButtons(), which QTest's mouse functions update and sendMouse() does not
+        const QPoint startPos = pane->rect().center();
+        const QPoint edgePos(startPos.x(), 2);
+        QTest::mousePress(pane, Qt::LeftButton, Qt::NoModifier, startPos);
+        QTest::mouseMove(pane, edgePos);
+        // A single move scrolls 3 lines; only a repeat while held goes further
+        QTRY_VERIFY2_WITH_TIMEOUT(pane->imageTopLine() < topBefore - 10, "Holding the pointer at the top edge did not keep scrolling", 2000);
+        QVERIFY2(pane->mPA.y() < topBefore - 6, "The selection did not follow the scroll");
+
+        QTest::mouseRelease(pane, Qt::LeftButton, Qt::NoModifier, edgePos);
+        QTest::qWait(150ms);
+        const int topAfterRelease = pane->imageTopLine();
+        QTest::qWait(300ms);
+        QCOMPARE(pane->imageTopLine(), topAfterRelease);
+    }
+
+    void test_pressStraightAfterAnEdgeDragDoesNotScroll()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "No upper pane available");
+        const int topBefore = pane->imageTopLine();
+        QVERIFY2(topBefore > 20, "Too little scrollback to scroll through");
+
+        const QPoint middle = pane->rect().center();
+        const QPoint edgePos(middle.x(), 2);
+        QTest::mousePress(pane, Qt::LeftButton, Qt::NoModifier, middle);
+        QTest::mouseMove(pane, edgePos);
+        QTRY_VERIFY2_WITH_TIMEOUT(pane->imageTopLine() < topBefore - 6, "Holding the pointer at the top edge did not keep scrolling", 2000);
+
+        // A release the pane never sees, then a press before the repeat's next tick notices it
+        releaseElsewhere();
+        QTest::mousePress(pane, Qt::LeftButton, Qt::NoModifier, middle);
+        const int topAtPress = pane->imageTopLine();
+        QTest::qWait(300ms);
+        const int topAfterWait = pane->imageTopLine();
+        QTest::mouseRelease(pane, Qt::LeftButton, Qt::NoModifier, middle);
+        QCOMPARE(topAfterWait, topAtPress);
+    }
+
+    void test_pressInTheOtherPaneAfterALostReleaseDoesNotScroll()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "No upper pane available");
+        TConsole* console = mudlet::self()->getActiveHost()->mainConsoleView();
+        TTextEdit* lowerPane = console->mLowerPane;
+
+        const QPoint middle = pane->rect().center();
+        const int topBefore = pane->imageTopLine();
+        QTest::mousePress(pane, Qt::LeftButton, Qt::NoModifier, middle);
+        QTest::mouseMove(pane, QPoint(middle.x(), 2));
+        QTRY_VERIFY2_WITH_TIMEOUT(pane->imageTopLine() < topBefore - 6 && lowerPane->height() > 40, "Holding at the top edge did not scroll back", 2000);
+        releaseElsewhere();
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+
+        // The upper pane's timer sees this press as its own button still held
+        const QPoint lowerMiddle = lowerPane->rect().center();
+        QTest::mousePress(lowerPane, Qt::LeftButton, Qt::NoModifier, lowerMiddle);
+        const int topAfterPress = pane->imageTopLine();
+        QTest::qWait(300ms);
+        const int topAfterWait = pane->imageTopLine();
+        QTest::mouseRelease(lowerPane, Qt::LeftButton, Qt::NoModifier, lowerMiddle);
+        QCOMPARE(topAfterWait, topAfterPress);
+    }
+
+    void test_edgeScrollStopsWhenTheReleaseGoesElsewhere()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "No upper pane available");
+        const int topBefore = pane->imageTopLine();
+
+        const QPoint middle = pane->rect().center();
+        QTest::mousePress(pane, Qt::LeftButton, Qt::NoModifier, middle);
+        QTest::mouseMove(pane, QPoint(middle.x(), 2));
+        QTRY_VERIFY2_WITH_TIMEOUT(pane->imageTopLine() < topBefore - 6, "Holding the pointer at the top edge did not keep scrolling", 2000);
+
+        releaseElsewhere();
+        QTest::qWait(150ms);
+        const int topAfterRelease = pane->imageTopLine();
+        QTest::qWait(300ms);
+        QCOMPARE(pane->imageTopLine(), topAfterRelease);
+        QVERIFY(!pane->mMouseTracking);
+    }
+
+    void test_edgeScrollStopsWhenThePointerLeavesTheEdge()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "No upper pane available");
+        const int topBefore = pane->imageTopLine();
+
+        const QPoint middle = pane->rect().center();
+        QTest::mousePress(pane, Qt::LeftButton, Qt::NoModifier, middle);
+        QTest::mouseMove(pane, QPoint(middle.x(), 2));
+        QTRY_VERIFY2_WITH_TIMEOUT(pane->imageTopLine() < topBefore - 6, "Holding the pointer at the top edge did not keep scrolling", 2000);
+
+        QTest::mouseMove(pane, middle);
+        const int topAwayFromEdge = pane->imageTopLine();
+        QTest::qWait(300ms);
+        const int topAfterWait = pane->imageTopLine();
+        QTest::mouseRelease(pane, Qt::LeftButton, Qt::NoModifier, middle);
+        QCOMPARE(topAfterWait, topAwayFromEdge);
+    }
+
+    void test_edgeScrollStopsWhenThePaneHides()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "No upper pane available");
+
+        const QPoint middle = pane->rect().center();
+        const int topBefore = pane->imageTopLine();
+        QTest::mousePress(pane, Qt::LeftButton, Qt::NoModifier, middle);
+        QTest::mouseMove(pane, QPoint(middle.x(), 2));
+        QTRY_VERIFY2_WITH_TIMEOUT(pane->imageTopLine() < topBefore - 6, "Holding at the top edge did not scroll back", 2000);
+
+        // The button stays held, so only the hidden check can stop the repeat
+        pane->hide();
+        QTest::qWait(100ms);
+        const int topWhileHidden = pane->imageTopLine();
+        QTest::qWait(300ms);
+        const int topLater = pane->imageTopLine();
+        pane->show();
+        QTest::mouseRelease(pane, Qt::LeftButton, Qt::NoModifier, middle);
+        QCOMPARE(topLater, topWhileHidden);
+    }
+
+    void test_holdAtTheLowerPaneBottomEdgeKeepsTheSplitOpen()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "No upper pane available");
+        TConsole* console = mudlet::self()->getActiveHost()->mainConsoleView();
+        TTextEdit* lowerPane = console->mLowerPane;
+        console->scrollUp(10);
+        QTRY_VERIFY2_WITH_TIMEOUT(lowerPane->isVisible() && lowerPane->height() > 40, "Scrolling back did not open the split", 2000);
+
+        const QPoint middle = lowerPane->rect().center();
+        QTest::mousePress(lowerPane, Qt::LeftButton, Qt::NoModifier, middle);
+        QTest::mouseMove(lowerPane, QPoint(middle.x(), lowerPane->height() - 2));
+        const int topAfterMove = pane->imageTopLine();
+        QTest::qWait(300ms);
+        const bool stillOpen = lowerPane->isVisible();
+        const int topAfterHold = pane->imageTopLine();
+        QTest::mouseRelease(lowerPane, Qt::LeftButton, Qt::NoModifier, QPoint(middle.x(), lowerPane->height() - 2));
+        QVERIFY2(stillOpen, "Holding at the lower pane's bottom edge closed the split");
+        QCOMPARE(topAfterHold, topAfterMove);
+    }
+
+    void test_otherButtonPressDuringADragKeepsItScrolling()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "No upper pane available");
+
+        const QPoint middle = pane->rect().center();
+        const int topBefore = pane->imageTopLine();
+        QTest::mousePress(pane, Qt::LeftButton, Qt::NoModifier, middle);
+        QTest::mouseMove(pane, QPoint(middle.x(), middle.y() - 20));
+        QTest::mousePress(pane, Qt::BackButton, Qt::NoModifier, QPoint(middle.x(), middle.y() - 20));
+        QTest::mouseRelease(pane, Qt::BackButton, Qt::NoModifier, QPoint(middle.x(), middle.y() - 20));
+        QTest::mouseMove(pane, QPoint(middle.x(), 2));
+        const bool kept = QTest::qWaitFor(
+                [&] {
+                    return pane->imageTopLine() < topBefore - 6;
+                },
+                1000);
+        QTest::mouseRelease(pane, Qt::LeftButton, Qt::NoModifier, QPoint(middle.x(), 2));
+        QVERIFY2(kept, "Pressing another button ended the drag's edge scrolling");
+    }
+
+    void test_holdAtTheLowerPaneTopEdgeDoesNotKeepScrollingTheUpperPane()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "No upper pane available");
+        TConsole* console = mudlet::self()->getActiveHost()->mainConsoleView();
+        TTextEdit* lowerPane = console->mLowerPane;
+        console->scrollUp(10);
+        QTRY_VERIFY2_WITH_TIMEOUT(lowerPane->isVisible() && lowerPane->height() > 40, "Scrolling back did not open the split", 2000);
+
+        // The lower pane cannot scroll, so repeating there would only drag the upper pane away from the selection
+        const QPoint middle = lowerPane->rect().center();
+        QTest::mousePress(lowerPane, Qt::LeftButton, Qt::NoModifier, middle);
+        QTest::mouseMove(lowerPane, QPoint(middle.x(), 2));
+        const int topAfterMove = pane->imageTopLine();
+        QTest::qWait(300ms);
+        const int topAfterHold = pane->imageTopLine();
+        QTest::mouseRelease(lowerPane, Qt::LeftButton, Qt::NoModifier, QPoint(middle.x(), 2));
+        QCOMPARE(topAfterHold, topAfterMove);
+    }
+
+    void test_plainPressAfterALostCtrlDragReleaseSelectsFromThePointer()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "No upper pane available");
+
+        const QPoint middle = pane->rect().center();
+        QTest::mousePress(pane, Qt::LeftButton, Qt::ControlModifier, middle);
+        QTest::mouseMove(pane, QPoint(middle.x(), 2));
+        releaseElsewhere();
+        QTest::qWait(150ms);
+
+        QTest::mousePress(pane, Qt::LeftButton, Qt::NoModifier, middle);
+        QTest::mouseMove(pane, middle + QPoint(60, 0));
+        QTest::mouseRelease(pane, Qt::LeftButton, Qt::NoModifier, middle + QPoint(60, 0));
+        QVERIFY2(pane->mPA.x() > 0, "A plain press after a Ctrl-drag whose release was lost still selected whole lines");
     }
 
     // Regression case for the review fix: once a drag has genuinely selected
