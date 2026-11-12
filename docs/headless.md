@@ -870,7 +870,11 @@ that is not `shown` or a `position` outside it, which the GUI's mouse could not 
 for a hidden window, as Qt sends one to a widget that hides under the pointer. Once the click-through label
 a held button's press went through has gone, a press, move or release while the button is held, or an
 `enter` or a `leave`, naming it is still taken until the grab ends, and any other event naming it is
-refused.
+refused. `getMousePosition()`
+answers with the last point a `pointer()` call took, in the main window's area, other than a `leave`'s,
+whether or not a window ran anything for it, as for the moves of a grab Qt has dropped, from where the
+window was at the press if it has gone since, and with nil and
+"the profile has no main window" until the first.
 
 ## What still needs a window
 
