@@ -4745,7 +4745,7 @@ void mudlet::endProfileLoad()
 
 void mudlet::forceClose()
 {
-    // Host::forceClose() pumps events, which may close a profile or load a new one
+    // The events delivered after each profile's notice may close a profile or load a new one
     // (a pending telnet URI), so walk snapshots until a pass meets no host unvisited
     QList<QPointer<Host>> visited;
     bool metNewHost = true;
@@ -4761,7 +4761,11 @@ void mudlet::forceClose()
             if (pHost) {
                 visited.append(pHost);
                 metNewHost = true;
-                pHost->forceClose();
+                if (pHost->hasConsoleView()) {
+                    pHost->forceClose();
+                    // So that the notice forceClose() posted is shown before the profile closes
+                    QCoreApplication::processEvents();
+                }
             }
         }
     }

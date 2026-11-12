@@ -592,8 +592,6 @@ void Host::forceClose()
     }
 
     markClosingForced();
-    // Ensure the above is displayed before proceeding...
-    QCoreApplication::processEvents();
 
     // Because we have set the mForcedClose flag above a requestClose()
     // afterwards WILL succeed
@@ -679,7 +677,7 @@ bool Host::closeWithNoView(std::function<void()> closed)
     mLuaInterpreter.enterNestedEventLoop();
     raiseExitEventIfOwed();
     mLuaInterpreter.leaveNestedEventLoop();
-    // Until the save is written, as deletionWouldWait() answers by it
+    // Until the save is written and the connection has ended, as deletionWouldWait() answers by it
     mCloseSaveInFlight = true;
     auto finish = [this, closed = std::move(closed)]() {
         mCloseSaveInFlight = false;
@@ -694,15 +692,21 @@ bool Host::closeWithNoView(std::function<void()> closed)
     // Not one whose save did not load, nor one still loading, which only a close that does not wait for the load
     // reaches: either would write what it holds over its last good save and map, and keeping those is no failure
     if (!mLoadedOk || mIsProfileLoadingSequence) {
-        closeChildren();
-        finish();
+        closeChildren(finish);
         return true;
     }
     // A save still running is waited out first, so the close's own save is taken before the profile is taken apart;
-    // with none, all but the writes happen in this call
+    // with none, all but the writes and the game's own close happen in this call
     whenProfileSaveEnds([this, finish = std::move(finish)]() {
+        // Ends once both the save and the connection have, in whichever order they do
+        auto stillToEnd = std::make_shared<int>(2);
+        auto oneEnded = [stillToEnd, finish]() {
+            if (--*stillToEnd == 0) {
+                finish();
+            }
+        };
         // Saved even with "Auto save on exit" off: nobody can answer the GUI's "Save profile?" here, and the maintainer chose Yes
-        saveForClose([this, finish](const bool saved) {
+        saveForClose([this, oneEnded](const bool saved) {
             // profile.ini even when that failed, as the Host's deletion would otherwise write it with no one to tell
             const bool iniSynced = syncProfileIni();
             if (!iniSynced) {
@@ -712,9 +716,9 @@ bool Host::closeWithNoView(std::function<void()> closed)
                 qWarning().nospace().noquote() << "Host::closeWithNoView() WARNING - \"" << getName() << "\" could not be saved.";
                 emit closeSaveFailed();
             }
-            finish();
+            oneEnded();
         });
-        closeChildren();
+        closeChildren(oneEnded);
     });
     return true;
 }
@@ -1017,7 +1021,7 @@ void Host::finishProfileLoad()
     mIsProfileLoadingSequence = false;
 }
 
-void Host::closeChildren()
+void Host::closeChildren(std::function<void()> connectionEnded)
 {
     mIsClosingDown = true;
     // Drop the profile save a package install/uninstall put off: the close path
@@ -1032,7 +1036,7 @@ void Host::closeChildren()
     // does not commit it while closing either:
     mServerWrapFlushTimer.stop();
     // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
-    mTelnet.terminateConnection(mClosingWithNoView);
+    mTelnet.terminateConnection(std::move(connectionEnded));
 
     stopAllTriggers();
 
