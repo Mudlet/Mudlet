@@ -26,6 +26,7 @@
  */
 
 #include <QRegularExpression>
+#include <QTextDocumentFragment>
 #include <QtTest/QtTest>
 #include <chrono>
 
@@ -38,6 +39,7 @@
 #include "ScriptUnit.h"
 #include "TScript.h"
 #include "TTrigger.h"
+#include "TriggerUnit.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgSystemMessageArea.h"
@@ -241,12 +243,11 @@ private slots:
     {
         mpEditor->slot_showTriggers();
         selectTrigger(qsl("qaBrokenTrigger"));
-        QVERIFY2(mpEditor->mpSystemMessageArea->isVisible(), "selecting a broken trigger shows no error");
-        QVERIFY2(bannerText().contains(qsl("&quot;Trigger: qaBrokenTrigger&quot;]:3:")), qPrintable(bannerText()));
-        QCOMPARE(lineLink(), qsl("mudlet-error-line:3"));
+        // The open item's own compile error is on the code heading rather than the banner, and the heading jumps
+        QCOMPARE(mpEditor->mEditorCompileErrorLine, 3);
 
         moveCaretToStart();
-        emit mpEditor->mpSystemMessageArea->notificationAreaMessageBox->linkActivated(lineLink());
+        mpEditor->jumpToCompileErrorLine();
         QCOMPARE(caretLine(), static_cast<size_t>(2));
     }
 
@@ -264,16 +265,33 @@ private slots:
         QCOMPARE(caretLine(), static_cast<size_t>(2));
     }
 
+    // The banner names the line and says what the compiler said there: the heading note can be cut to the room it has
+    void testActivationFailureSaysWhatTheCompilerSaid()
+    {
+        mpEditor->slot_showTriggers();
+        selectTrigger(qsl("qaBrokenTrigger"));
+        TTrigger* pBroken = mpHost->getTriggerUnit()->findTrigger(qsl("qaBrokenTrigger"));
+        QVERIFY2(pBroken != nullptr, "the broken trigger is not in the trigger unit");
+        const QString plain = QTextDocumentFragment::fromHtml(pBroken->getError()).toPlainText().simplified();
+        const QString compilerSaid = dlgTriggerEditor::csmCompileErrorLineRegex.match(plain).captured(2);
+        QVERIFY2(!compilerSaid.isEmpty(), qPrintable(qsl("SETUP: the planted error is not in the form this case reads: %1").arg(plain)));
+
+        mpEditor->activeToggle_trigger();
+        const QString shown = QTextDocumentFragment::fromHtml(bannerText()).toPlainText().simplified();
+        QVERIFY2(shown.contains(compilerSaid), qPrintable(qsl("the banner reads \"%1\", without what the compiler said: \"%2\"").arg(shown, compilerSaid)));
+        QCOMPARE(lineLink(), qsl("mudlet-error-line:3"));
+    }
+
     // Lua reports an unclosed block on the "end" line that the trigger wraps
     // around its script, one past the script's last line
     void testLinePastTheScriptLandsOnItsLastLine()
     {
         mpEditor->slot_showTriggers();
         selectTrigger(qsl("qaUnclosedTrigger"));
-        QCOMPARE(lineLink(), qsl("mudlet-error-line:3"));
+        QCOMPARE(mpEditor->mEditorCompileErrorLine, 3);
 
         moveCaretToStart();
-        emit mpEditor->mpSystemMessageArea->notificationAreaMessageBox->linkActivated(lineLink());
+        mpEditor->jumpToCompileErrorLine();
         QCOMPARE(caretLine(), static_cast<size_t>(1));
     }
 
@@ -346,8 +364,7 @@ private slots:
         mpEditor->treeWidget_scripts->setCurrentItem(pItem, 0);
         mpEditor->slot_scriptsSelected(pItem);
         QTest::qWait(20ms);
-        QVERIFY2(bannerText().contains(qsl("...&quot;]:2:")), qPrintable(bannerText()));
-        QCOMPARE(lineLink(), qsl("mudlet-error-line:2"));
+        QCOMPARE(mpEditor->mEditorCompileErrorLine, 2);
     }
 
     void testShortenedScriptNameStillLinks()
@@ -358,11 +375,10 @@ private slots:
         mpEditor->treeWidget_scripts->setCurrentItem(pItem, 0);
         mpEditor->slot_scriptsSelected(pItem);
         QTest::qWait(20ms);
-        QVERIFY2(bannerText().contains(qsl("...&quot;]:3:")), qPrintable(bannerText()));
-        QCOMPARE(lineLink(), qsl("mudlet-error-line:3"));
+        QCOMPARE(mpEditor->mEditorCompileErrorLine, 3);
 
         moveCaretToStart();
-        emit mpEditor->mpSystemMessageArea->notificationAreaMessageBox->linkActivated(lineLink());
+        mpEditor->jumpToCompileErrorLine();
         QCOMPARE(caretLine(), static_cast<size_t>(2));
     }
 };

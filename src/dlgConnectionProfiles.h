@@ -26,18 +26,55 @@
 #include "ui_connection_profiles.h"
 #include <functional>
 #include <optional>
+#include <QColor>
 #include <QHash>
 #include <QPointer>
 #include <QRegularExpression>
+#include <QStyledItemDelegate>
 #include <QTimer>
 #include <QKeyEvent>
 
 class QDir;
+class QListView;
 class QTabBar;
 
 namespace pugi {
 class xml_document;
 }
+
+namespace uiDesign {
+struct ThemeTokens;
+}
+
+// Paints the chip itself: QStyledItemDelegate::paint() draws the platform's selection underline,
+// and `::item:hover` / `::item:selected` rules would hand the whole list to Qt's stylesheet style.
+class ProfileChipDelegate : public QStyledItemDelegate
+{
+    Q_OBJECT
+
+public:
+    // The list's surface showing through the gap keeps the ring legible on a bright banner
+    static constexpr int scmChipHaloGap = 2;
+    static constexpr int scmChipHaloWidth = 2;
+
+    explicit ProfileChipDelegate(QObject* parent = nullptr);
+
+    void restyle(const uiDesign::ThemeTokens& tokens);
+    QColor haloInk() const;
+    QColor chosenInk() const;
+
+    // Public so the window's test reads where the halo is drawn rather than guessing
+    QRect chipRect(const QListView* pView, const QModelIndex& index) const;
+
+    void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
+    // Holds the halo inside the item: a view repaints only the item's rectangle on hover
+    // changes, leaving fragments of anything drawn outside it
+    QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const override;
+
+private:
+    QColor mHaloInk;
+    QColor mChosenInk;
+};
 
 class dlgConnectionProfiles : public QDialog, public Ui::connection_profiles
 {
@@ -106,6 +143,7 @@ public slots:
 
 protected:
     bool eventFilter(QObject*, QEvent*) override;
+    bool event(QEvent*) override;
     void showEvent(QShowEvent*) override;
     void loadPasswordFromSettings(const QString& profile_name);
     void ensurePasswordLoadedThenConnect(bool alsoConnect);
@@ -168,11 +206,15 @@ private:
     QPair<bool, QString> saveProfileDetail(const QString& profile, const QString& item, const QString& what);
     void showUnsavedChange(const QString& message, const QString& profile, const QString& item);
     void fitWelcomeMessageToContents();
+    void fitGamesListToItsColumns();
     void continueProfileSave(QListWidgetItem* pItem, const QString& newProfileName, const QString& newProfileHost, const QString& newProfilePort, const int newProfileSslTsl);
     void setItemName(QListWidgetItem*, const QString&) const;
     void setItemTooltip(QListWidgetItem*, const QString& description, const bool iconLoaded) const;
     QIcon customIcon(const QString&, const std::optional<QColor>&) const;
     void addLetterToProfileSearch(const int);
+    void applyConnectionShellStyle();
+    void resolveTabFonts();
+    void setFieldState(QLineEdit* pField, const QString& state);
     void clearNotificationArea();
     void loadPasswordAsync(const QString& profileName);
     // While a keychain read is outstanding the dialog stays up and says so, rather than hiding
@@ -204,13 +246,10 @@ private:
     bool validPort = false;
 
     QStringList mProfileList;
-    QPalette mRegularPalette;
-    QPalette mOKPalette;
-    QPalette mErrorPalette;
-    QPalette mReadOnlyPalette;
     QAction* mpCopyProfile = nullptr;
     // switches the profiles list between the user's own games and the full catalog
     QTabBar* mpTabBar = nullptr;
+    ProfileChipDelegate* mpProfileChipDelegate = nullptr;
     QPushButton* offline_button = nullptr;
     QPushButton* connect_button = nullptr;
     QString mDiscordApplicationId;
@@ -248,6 +287,7 @@ private:
 
 
 private slots:
+    void slot_applyAppearance();
     void slot_activeTabChanged(const int index);
     void slot_skipToGamesList();
     void slot_profileContextMenu(QPoint pos);

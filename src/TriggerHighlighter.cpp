@@ -19,16 +19,24 @@
  ***************************************************************************/
 
 #include "Host.h"
+#include "MudletApp.h"
 #include "TrailingWhitespaceMarker.h"
 #include "TriggerHighlighter.h"
+#include "uiDesign.h"
 #include "edbee/edbee.h"
 #include "edbee/views/texttheme.h"
 #include "edbee/models/textdocumentscopes.h"
 
+namespace {
+// Below body text's 4.5, since the colour is a hint rather than the message, but high enough
+// that a theme's mid-grey comment colour cannot survive on a mid-grey field
+constexpr qreal scmMinimumTokenContrast = 3.5;
+} // namespace
+
 TriggerHighlighter::TriggerHighlighter(QTextDocument* parent)
 : QSyntaxHighlighter(parent)
 {
-    setTheme("Mudlet"); // start with the default theme
+    setTheme(MudletApp::scmEditorThemeNameLight); // start with the default theme
 }
 
 void TriggerHighlighter::setHighlightingEnabled(bool enabled)
@@ -54,17 +62,35 @@ void TriggerHighlighter::highlightBlock(const QString& text)
 
 void TriggerHighlighter::setTheme(const QString& themeName)
 {
+    mThemeName = themeName;
+    rebuildRules();
+}
+
+void TriggerHighlighter::setFieldColors(const QColor& background, const QColor& text)
+{
+    if (mFieldBackground == background && mFieldText == text) {
+        return;
+    }
+    mFieldBackground = background;
+    mFieldText = text;
+    rebuildRules();
+}
+
+void TriggerHighlighter::rebuildRules()
+{
     highlightingRules.clear();
 
     auto edbee = edbee::Edbee::instance();
     auto themeManager = edbee->themeManager();
-    edbee::TextTheme* theme = themeManager->theme(themeName);
+    edbee::TextTheme* theme = themeManager->theme(mThemeName);
     if (!theme) {
+        // A theme whose file is gone is never registered; edbee's own editor paints with the
+        // fallback then, so the rows follow it
         theme = themeManager->fallbackTheme();
     }
 
     // set defaults from chosen theme
-    edbee::TextThemeRule defaultRule("default", "selector", theme->foregroundColor(), theme->backgroundColor(), false, false, false);
+    edbee::TextThemeRule defaultRule("default", "selector", theme->foregroundColor(), QColor(), false, false, false);
     applyFormatting(anchorFormat, &defaultRule);
     applyFormatting(charClassFormat, &defaultRule);
     applyFormatting(escapeCharFormat, &defaultRule);
@@ -114,16 +140,16 @@ void TriggerHighlighter::setTheme(const QString& themeName)
 
 void TriggerHighlighter::applyFormatting(QTextCharFormat& format, edbee::TextThemeRule* rule)
 {
-    QColor foreground = rule->foregroundColor();
-    QColor background = rule->backgroundColor();
+    // Falls back to the field's text colour: an unreadable pattern is worse than an unhighlighted one
+    const QColor foreground = mFieldBackground.isValid() ? uiDesign::readableOn(mFieldBackground, rule->foregroundColor(), mFieldText, scmMinimumTokenContrast) : rule->foregroundColor();
 
     if (foreground.isValid()) {
         format.setForeground(foreground);
     }
 
-    if (background.isValid()) {
-        format.setBackground(background);
-    }
+    // Never the theme's background: a code theme's dark block would draw a pattern row as a black
+    // box on a light form
+    format.clearBackground();
     if (rule->bold()) {
         format.setFontWeight(QFont::Bold);
     } else {

@@ -20,7 +20,7 @@
    <item row="0" column="0">
     <widget class="QLabel" name="label_key_name">
      <property name="text">
-      <string>Name:</string>
+      <string>Name</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -37,7 +37,7 @@
    <item row="0" column="3">
     <widget class="QFrame" name="frameId">
      <property name="frameShape">
-      <enum>QFrame::Box</enum>
+      <enum>QFrame::NoFrame</enum>
      </property>
      <layout class="QHBoxLayout" name="horizontalLayout_frameId">
       <property name="leftMargin">
@@ -87,7 +87,7 @@
    <item row="1" column="0" alignment="Qt::AlignRight">
     <widget class="QLabel" name="label_key_command">
      <property name="text">
-      <string>Command:</string>
+      <string>Command</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -107,7 +107,7 @@
    <item row="2" column="0">
     <widget class="QLabel" name="label_key_binding">
      <property name="text">
-      <string>Key Binding:</string>
+      <string>Key</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -118,13 +118,6 @@
     <widget class="QLineEdit" name="lineEdit_key_binding">
      <property name="readOnly">
       <bool>true</bool>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="2" colspan="2">
-    <widget class="QPushButton" name="pushButton_key_grabKey">
-     <property name="text">
-      <string>Grab New Key</string>
      </property>
     </widget>
    </item>

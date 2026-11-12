@@ -26,12 +26,17 @@
 #include "MudletApp.h"
 #include "Host.h"
 #include "HostDialogs.h"
+#include "mudlet.h"
+#include "ToolBarOverflow.h"
+#include "uiDesign.h"
 #include "utils.h"
 
 #include <QApplication>
 #include <QCloseEvent>
 #include <QDir>
+#include <QEvent>
 #include <QHBoxLayout>
+#include <QIcon>
 #include <QInputDialog>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -42,8 +47,10 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QMenu>
-#include <QPalette>
+#include <QMessageBox>
+#include <QPixmap>
 #include <QPlainTextEdit>
+#include <QProgressBar>
 #include <QSaveFile>
 #include <QScrollBar>
 #include <QShortcut>
@@ -55,6 +62,8 @@
 #include <QTextStream>
 #include <QTimer>
 #include <QToolButton>
+
+#include <algorithm>
 #include <chrono>
 
 using namespace std::chrono;
@@ -63,39 +72,68 @@ const QString jsonNotesFileName{qsl("notes.json")};
 const QString local8BitEncodedNotesFileName{qsl("notes.txt")};
 const QString utf8EncodedNotesFileName{qsl("notes_utf8.txt")};
 
+// Visible across a page of notes, yet short of the full pen that marks the cursor's match
+constexpr qreal scmNotepadQuietMatchWash = 0.35;
+
+// Six lines or fewer reads as a sequence of commands; a longer note sent with no prefix puts prose on the command line
+constexpr int scmNotepadWarnAtLines = 6;
+// QCommonStyle hard-codes this gap between a tool button's icon and its text; no style metric reports it
+constexpr int scmQtToolButtonPictureGap = 4;
+
+// Tighter than the bar's own spacing, which parts one control from the next
+constexpr int scmNotepadReadingGap = 5;
+
+constexpr int scmNotepadReadingDotDiameter = 8;
+
+constexpr int scmNotepadProgressHeight = 4;
+constexpr int scmNotepadProgressWidth = 90;
+
+// No pseudo-state expresses the warning, so the hairline rule selects on this property
+constexpr char scmProp_notepadFieldState[] = "notepadFieldState";
+
+constexpr int scmNotepadFieldCueSize = 20;
+
+// slot_sendNextLine() skips an empty line, so counting it would promise more than the game will see
+static int sendableLineCount(const QStringList& lines)
+{
+    int count = 0;
+    for (const QString& line : lines) {
+        if (!line.isEmpty()) {
+            ++count;
+        }
+    }
+    return count;
+}
+
+// QTextCursor::selectedText() separates lines with U+2029 rather than newlines
+static QStringList linesOf(QString text)
+{
+    return text.replace(QChar::ParagraphSeparator, QChar::LineFeed).split(QChar::LineFeed);
+}
+
 dlgNotepad::dlgNotepad(Host* pH)
 : mpHost(pH)
 {
     setupUi(this);
-    mUiSetupComplete = true;
-    updateSendControlsToggleIcon();
 
+    // Never written to, and an empty one leaves a strip of native drawing under the styled toolbar
+    statusbar->hide();
+
+    setupSendStrip();
     setupAddTabButton();
+
+    // Before restore(), so every tab's close button is caught as it is made
+    uiDesign::prepareTabStrip(tabWidget->tabBar());
 
     tabWidget->tabBar()->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(tabWidget->tabBar(), &QWidget::customContextMenuRequested, this, &dlgNotepad::slot_tabContextMenu);
     connect(tabWidget, &QTabWidget::tabCloseRequested, this, &dlgNotepad::slot_tabCloseRequested);
 
-    //: label for prepended text entry box in notepad
-    label_prependText = new QLabel(tr("Prepend"), this);
-    action_prependTextLabel = toolBar->addWidget(label_prependText);
-    lineEdit_prependText = new QLineEdit(this);
-    lineEdit_prependText->setObjectName(qsl("notepadPrependText"));
-    //: placeholder text for text entry box in notepad - text which gets added before sending a line
-    lineEdit_prependText->setPlaceholderText(tr("Text to prepend to lines"));
-    lineEdit_prependText->setClearButtonEnabled(true);
-    action_prependText = toolBar->addWidget(lineEdit_prependText);
-
-    action_stop = new QAction(tr("Stop"), this);
-    toolBar->addAction(action_stop);
-    action_stop->setEnabled(false);
-
     connect(action_stop, &QAction::triggered, this, &dlgNotepad::slot_stopSending);
     connect(action_sendAll, &QAction::triggered, this, &dlgNotepad::slot_sendAll);
     connect(action_sendLine, &QAction::triggered, this, &dlgNotepad::slot_sendLine);
     connect(action_sendSelection, &QAction::triggered, this, &dlgNotepad::slot_sendSelection);
-    connect(action_toggleSendControls, &QAction::triggered, this, &dlgNotepad::slot_toggleSendControls);
-    connect(action_toggleSendControls, &QAction::triggered, this, &dlgNotepad::saveSettings);
+    connect(lineEdit_prependText, &QLineEdit::textChanged, this, &dlgNotepad::updateNoPrefixWarning);
 
     if (mpHost) {
         restore();
@@ -108,19 +146,158 @@ dlgNotepad::dlgNotepad(Host* pH)
     setupFindBar();
     connect(tabWidget, &QTabWidget::currentChanged, this, &dlgNotepad::slot_currentTabChanged);
 
+    updateSendStrip();
+    applyNotepadShellStyle();
+    connect(mudlet::self(), &mudlet::signal_appearanceChanged, this, &dlgNotepad::slot_applyAppearance);
+
     startTimer(2min);
+}
+
+// QToolBar makes its own QToolButton for each action, so the text-beside-icon style and
+// the accessible name go on that button rather than on the action
+void dlgNotepad::setupSendStrip()
+{
+    //: Button at the foot of the notepad that sends the line the cursor is on to the game
+    action_sendLine->setText(tr("Send line"));
+    //: Tooltip of the notepad's Send line button
+    action_sendLine->setToolTip(tr("Send the line the cursor is on to the game, with the prefix in front of it."));
+    //: Tooltip of the notepad's Send selection button
+    action_sendSelection->setToolTip(tr("Send the selected lines one at a time, the prefix in front of each."));
+    //: Tooltip of the notepad's Send all button
+    action_sendAll->setToolTip(tr("Send every line of this note one at a time, the prefix in front of each."));
+
+    //: Button at the foot of the notepad that stops a send that is running
+    action_stop = new QAction(tr("Stop"), this);
+    //: Tooltip of the notepad's Stop button
+    action_stop->setToolTip(tr("Stop sending. Lines already sent stay sent."));
+
+    mNotepadActionGlyphs = {{action_sendLine, qsl(":/icons/notepad-send-line.svg"), QString()},
+                            {action_sendSelection, qsl(":/icons/notepad-send-selection.svg"), QString()},
+                            {action_sendAll, qsl(":/icons/notepad-send-all.svg"), QString()},
+                            {action_stop, qsl(":/icons/notepad-stop.svg"), QString()}};
+
+    for (QAction* pAction : toolBar->actions()) {
+        if (pAction->isSeparator()) {
+            action_sendControlsSeparator = pAction;
+            break;
+        }
+    }
+
+    //: Word leading the field in the notepad that says what is put in front of every line sent
+    label_prependText = new QLabel(tr("Before each line"), this);
+    label_prependText->setObjectName(qsl("notepadPrefixLabel"));
+    action_prependTextLabel = toolBar->addWidget(label_prependText);
+
+    lineEdit_prependText = new QLineEdit(this);
+    lineEdit_prependText->setObjectName(qsl("notepadPrefixField"));
+    //: Example of what to type into the notepad's prefix field - a game command that takes the rest of the line
+    lineEdit_prependText->setPlaceholderText(tr("e.g. say"));
+    //: Accessible name of the notepad's prefix field, announced by a screen reader
+    lineEdit_prependText->setAccessibleName(tr("Text to put before each line"));
+    //: Tooltip of the notepad's prefix field. "say" and "tell" are game commands and are examples rather than words to translate.
+    mPrefixFieldToolTip = tr("Put this in front of every line sent, for example say or tell Morquin.");
+    lineEdit_prependText->setToolTip(mPrefixFieldToolTip);
+    lineEdit_prependText->setClearButtonEnabled(true);
+
+    // Inside the field rather than on the bar, so the cue takes no room and shows at any width
+    action_prefixWarning = new QAction(this);
+    action_prefixWarning->setObjectName(qsl("notepadPrefixWarning"));
+    action_prefixWarning->setVisible(false);
+    lineEdit_prependText->addAction(action_prefixWarning, QLineEdit::TrailingPosition);
+    // QLineEdit's default Expanding policy would take the room the warning needs; the spacer takes the slack
+    lineEdit_prependText->setSizePolicy(QSizePolicy::Preferred, lineEdit_prependText->sizePolicy().verticalPolicy());
+    action_prependText = toolBar->addWidget(lineEdit_prependText);
+
+    mpLabel_sendingDot = new QLabel(this);
+    mpLabel_sendingDot->setObjectName(qsl("notepadSendingDot"));
+    mpLabel_sendingDot->setFixedSize(scmNotepadReadingDotDiameter, scmNotepadReadingDotDiameter);
+    action_sendingDot = toolBar->addWidget(mpLabel_sendingDot);
+
+    mpLabel_sendingText = new QLabel(this);
+    mpLabel_sendingText->setObjectName(qsl("notepadSendingText"));
+    action_sendingText = toolBar->addWidget(mpLabel_sendingText);
+
+    mpProgressBar_sending = new QProgressBar(this);
+    mpProgressBar_sending->setObjectName(qsl("notepadSendingBar"));
+    // The label beside it already gives the count
+    mpProgressBar_sending->setTextVisible(false);
+    mpProgressBar_sending->setFixedHeight(scmNotepadProgressHeight);
+    mpProgressBar_sending->setFixedWidth(scmNotepadProgressWidth);
+    action_sendingBar = toolBar->addWidget(mpProgressBar_sending);
+
+    toolBar->addAction(action_stop);
+
+    auto* pSpacer = new QWidget(this);
+    pSpacer->setObjectName(qsl("notepadStripSpacer"));
+    pSpacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    uiDesign::markAsShellSurface(pSpacer);
+    toolBar->addWidget(pSpacer);
+
+    mpWidget_noPrefixNote = new QWidget(this);
+    mpWidget_noPrefixNote->setObjectName(qsl("notepadNoPrefixNote"));
+    uiDesign::markAsShellSurface(mpWidget_noPrefixNote);
+    auto* pNoteLayout = new QHBoxLayout(mpWidget_noPrefixNote);
+    pNoteLayout->setContentsMargins(0, 0, 0, 0);
+    pNoteLayout->setSpacing(scmNotepadReadingGap);
+    mpLabel_noPrefixDot = new QLabel(mpWidget_noPrefixNote);
+    mpLabel_noPrefixDot->setObjectName(qsl("notepadNoPrefixDot"));
+    mpLabel_noPrefixDot->setFixedSize(scmNotepadReadingDotDiameter, scmNotepadReadingDotDiameter);
+    pNoteLayout->addWidget(mpLabel_noPrefixDot);
+    mpLabel_noPrefixText = new QLabel(mpWidget_noPrefixNote);
+    mpLabel_noPrefixText->setObjectName(qsl("notepadNoPrefixText"));
+    pNoteLayout->addWidget(mpLabel_noPrefixText);
+    action_noPrefixNote = toolBar->addWidget(mpWidget_noPrefixNote);
+    toolBar->installEventFilter(this);
+
+    // Words beside the glyphs: the glyphs alone do not tell the sends apart
+    const int glyphSize = qRound(toolBar->fontMetrics().height() * 0.9);
+    toolBar->setIconSize(QSize(glyphSize, glyphSize));
+    const QList<QPair<QAction*, QString>> announced{//: Accessible name of the notepad's Send line button, announced by a screen reader
+                                                    {action_sendLine, tr("Send the current line")},
+                                                    //: Accessible name of the notepad's Send selection button, announced by a screen reader
+                                                    {action_sendSelection, tr("Send the selected lines")},
+                                                    //: Accessible name of the notepad's Send all button, announced by a screen reader
+                                                    {action_sendAll, tr("Send all lines")},
+                                                    //: Accessible name of the notepad's Stop button, announced by a screen reader
+                                                    {action_stop, tr("Stop sending")}};
+    for (const auto& button : announced) {
+        if (auto* pButton = qobject_cast<QToolButton*>(toolBar->widgetForAction(button.first))) {
+            pButton->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+            pButton->setAccessibleName(button.second);
+        }
+    }
+
+    setSending(false);
+}
+
+// The platform's tool button font, smaller than a label's on macOS. Read off the application, not a
+// button, which only takes it when polished on first show. Applied through the bar's sheet, since a
+// stylesheet polish re-resolves the font from the parent and drops one set directly.
+// Not a uiDesign::typeSize() step: that scale follows the application font, not the tool button font
+int dlgNotepad::stripWordPointSize() const
+{
+    const qreal buttonSize = QApplication::font("QToolButton").pointSizeF();
+    return std::max(1, qRound(buttonSize > 0.0 ? buttonSize : toolBar->font().pointSizeF()));
 }
 
 void dlgNotepad::setupAddTabButton()
 {
     mpAddTabButton = new QToolButton(this);
-    mpAddTabButton->setText(qsl("+"));
+    mpAddTabButton->setObjectName(qsl("notepadAddTab"));
     mpAddTabButton->setToolTip(tr("Add new note tab (Ctrl+T)"));
+    mpAddTabButton->setAutoRaise(false);
     connect(mpAddTabButton, &QToolButton::clicked, this, &dlgNotepad::slot_addTabClicked);
     tabWidget->setCornerWidget(mpAddTabButton, Qt::TopRightCorner);
 
     auto* newTabShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_T), this);
     connect(newTabShortcut, &QShortcut::activated, this, &dlgNotepad::slot_addTabClicked);
+}
+
+// closeTab() keeps the last note, so a sole tab carries no cross. Toggling the whole bar rather
+// than one tab's button also gives the tab its width back.
+void dlgNotepad::updateTabClosability()
+{
+    tabWidget->setTabsClosable(tabWidget->count() > 1);
 }
 
 void dlgNotepad::setupFindBar()
@@ -132,7 +309,7 @@ void dlgNotepad::setupFindBar()
     layout->setSpacing(2);
 
     mpFindLineEdit = new QLineEdit(mpFindBar);
-    mpFindLineEdit->setObjectName(qsl("notepadFindBox"));
+    mpFindLineEdit->setObjectName(qsl("notepadFindField"));
     //: Placeholder text for the search field in notepad
     mpFindLineEdit->setPlaceholderText(tr("Find"));
     mpFindLineEdit->setClearButtonEnabled(true);
@@ -140,24 +317,18 @@ void dlgNotepad::setupFindBar()
 
     mpFindPrevButton = new QToolButton(mpFindBar);
     mpFindPrevButton->setObjectName(qsl("notepadFindPrevious"));
-    mpFindPrevButton->setIcon(QIcon(qsl(":/icons/export.png")));
     mpFindPrevButton->setToolTip(tr("Find previous"));
-    mpFindPrevButton->setAutoRaise(true);
-    mpFindPrevButton->setMaximumSize(24, 24);
+    mpFindPrevButton->setAutoRaise(false);
 
     mpFindNextButton = new QToolButton(mpFindBar);
     mpFindNextButton->setObjectName(qsl("notepadFindNext"));
-    mpFindNextButton->setIcon(QIcon(qsl(":/icons/import.png")));
     mpFindNextButton->setToolTip(tr("Find next"));
-    mpFindNextButton->setAutoRaise(true);
-    mpFindNextButton->setMaximumSize(24, 24);
+    mpFindNextButton->setAutoRaise(false);
 
     mpFindCloseButton = new QToolButton(mpFindBar);
     mpFindCloseButton->setObjectName(qsl("notepadFindClose"));
-    mpFindCloseButton->setIcon(QIcon(qsl(":/icons/dialog-close.png")));
     mpFindCloseButton->setToolTip(tr("Close find bar"));
-    mpFindCloseButton->setAutoRaise(true);
-    mpFindCloseButton->setMaximumSize(24, 24);
+    mpFindCloseButton->setAutoRaise(false);
 
     layout->addWidget(mpFindLineEdit, 1);
     layout->addWidget(mpFindPrevButton);
@@ -200,6 +371,79 @@ void dlgNotepad::setTabsStyleSheet(const QString& styleSheet)
     }
 }
 
+void dlgNotepad::slot_applyAppearance()
+{
+    applyNotepadShellStyle();
+}
+
+// Sheets go on widgets, not the window: a profile's Lua stylesheet replaces the window's on every show
+void dlgNotepad::applyNotepadShellStyle()
+{
+    const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
+
+    const QString centralRules =
+            qsl("QWidget#centralwidget { background-color: %1; }").arg(tokens.page.name()) + uiDesign::tabBarStyleSheet(qsl("#tabWidget"), tokens)
+            + uiDesign::inputStyleSheet(tokens, qsl("#centralwidget"))
+            + qsl("QWidget#notepadFindBar { background-color: %1; border-top: %2px solid %3; }").arg(tokens.page.name(), QString::number(uiDesign::scmInputBorderWidth), tokens.border.name())
+            // Borderless: a frame round a glyph this small reads as a second control
+            + qsl("QToolButton#notepadAddTab, QWidget#notepadFindBar QToolButton"
+                  " { border: none; border-radius: %1px; background: transparent; padding: 2px; }"
+                  "QToolButton#notepadAddTab:hover, QWidget#notepadFindBar QToolButton:hover { background-color: %2; }")
+                      .arg(QString::number(uiDesign::scmRadiusChip), tokens.hoverSoft);
+    centralwidget->setStyleSheet(centralRules);
+
+    const QColor warningColour = uiDesign::stateColor(uiDesign::scmStateHue_warning, tokens.darkPage);
+    const QColor warningInk = uiDesign::readableOn(tokens.page, warningColour, tokens.text, uiDesign::scmTextMinimumRatio);
+
+    const QString toolBarRules = uiDesign::toolBarStyleSheet(qsl("QToolBar#toolBar"), uiDesign::ToolBarSeam::Top, tokens) + uiDesign::inputStyleSheet(tokens, qsl("QToolBar#toolBar"))
+                                 + qsl("QToolBar#toolBar QLabel { color: %1; }").arg(tokens.mutedText.name())
+                                 + qsl("QToolBar#toolBar QLabel, QToolBar#toolBar QLineEdit { font-size: %1pt; }").arg(QString::number(stripWordPointSize()))
+                                 // After the shared rules, in the border shorthand they write, so it wins the
+                                 // specificity tie against QLineEdit:focus
+                                 + qsl("QToolBar#toolBar QLineEdit[%1=\"warning\"] { border: %2px solid %3; }")
+                                           .arg(QString::fromLatin1(scmProp_notepadFieldState), QString::number(uiDesign::scmInputBorderWidth), warningColour.name())
+                                 // Named down to the label, or the QLabel rule above wins on specificity
+                                 + qsl("QToolBar#toolBar QLabel#notepadSendingText { color: %1; padding: 0px %2px; }").arg(tokens.accentText.name(), QString::number(scmNotepadReadingGap))
+                                 + qsl("QToolBar#toolBar QLabel#notepadNoPrefixText { color: %1; }").arg(warningInk.name())
+                                 + qsl("#notepadSendingBar { border: none; background-color: %1; border-radius: %3px; }"
+                                       "#notepadSendingBar::chunk { background-color: %2; border-radius: %3px; }")
+                                           .arg(tokens.accentSoft, tokens.accent.name(), QString::number(scmNotepadProgressHeight / 2));
+    toolBar->setStyleSheet(toolBarRules);
+    uiDesign::ToolBarOverflow::restyle(toolBar, tokens);
+    alignPrefixLeadWord();
+
+    mpLabel_sendingDot->setStyleSheet(qsl("#notepadSendingDot { background-color: %1; border-radius: %2px; }").arg(tokens.accent.name(), QString::number(scmNotepadReadingDotDiameter / 2)));
+    mpLabel_noPrefixDot->setStyleSheet(qsl("#notepadNoPrefixDot { background-color: %1; border-radius: %2px; }").arg(warningColour.name(), QString::number(scmNotepadReadingDotDiameter / 2)));
+
+    if (action_prefixWarning) {
+        const qreal glyphRatio = lineEdit_prependText->devicePixelRatioF();
+        QPixmap cue = uiDesign::tintedGlyph(uiDesign::glyphPixmap(qsl(":/icons/editor-notice-warning.svg")), warningColour)
+                              .scaled(QSize(scmNotepadFieldCueSize, scmNotepadFieldCueSize) * glyphRatio, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        cue.setDevicePixelRatio(glyphRatio);
+        action_prefixWarning->setIcon(QIcon(cue));
+    }
+
+    uiDesign::restyleToolBarGlyphs(mNotepadActionGlyphs, tokens);
+    mpAddTabButton->setIcon(uiDesign::tintedIcon(qsl(":/icons/editor-add.svg"), tokens));
+    mpFindPrevButton->setIcon(uiDesign::tintedIcon(qsl(":/icons/notepad-chevron-up.svg"), tokens));
+    mpFindNextButton->setIcon(uiDesign::tintedIcon(qsl(":/icons/editor-chevron-down.svg"), tokens));
+    mpFindCloseButton->setIcon(uiDesign::tintedIcon(qsl(":/icons/editor-clear.svg"), tokens));
+
+    uiDesign::keepClickFocusOffControls(centralwidget);
+    uiDesign::keepClickFocusOffControls(toolBar);
+    uiDesign::letPopupsTakeTheFieldsCorner(centralwidget);
+    uiDesign::letPopupsTakeTheFieldsCorner(toolBar);
+
+    mCurrentMatchInk = tokens.marker;
+    mOtherMatchInk = uiDesign::blend(tokens.field, tokens.marker, scmNotepadQuietMatchWash);
+    if (mpFindBar && mpFindBar->isVisible()) {
+        highlightAllMatches();
+    }
+
+    // A theme change can move the font, and with it the room the warning's words need
+    fitNoPrefixNote();
+}
+
 dlgNotepad::~dlgNotepad()
 {
     if (auto* pDialogs = mpHost ? HostDialogs::find(mpHost) : nullptr; pDialogs && pDialogs->mpNotePad) {
@@ -210,6 +454,7 @@ dlgNotepad::~dlgNotepad()
 
 int dlgNotepad::addTab(const QString& name, const QString& content)
 {
+    // The profile's sheet, set on the note itself, beats the central widget's rules where they collide
     auto* textEdit = new QPlainTextEdit(this);
     if (mpHost) {
         textEdit->setFont(mpHost->getDisplayFont());
@@ -229,11 +474,66 @@ int dlgNotepad::addTab(const QString& name, const QString& content)
     connect(textEdit->verticalScrollBar(), &QScrollBar::valueChanged, this, rehighlightIfShown);
     connect(textEdit->verticalScrollBar(), &QScrollBar::rangeChanged, this, rehighlightIfShown);
     textEdit->viewport()->installEventFilter(this);
+    connect(textEdit, &QPlainTextEdit::textChanged, this, &dlgNotepad::updateSendStrip);
+    connect(textEdit, &QPlainTextEdit::selectionChanged, this, &dlgNotepad::updateSelectionReach);
 
     //: Default name for a new note tab
     const QString tabName = name.isEmpty() ? tr("New Note") : name;
     const int index = tabWidget->addTab(textEdit, tabName);
+    updateTabClosability();
     return index;
+}
+
+// save() keeps no copy of a closed note, so one with text is asked about first
+bool dlgNotepad::okToDiscardNotes(const QList<int>& indices)
+{
+    int withText = 0;
+    for (const int index : indices) {
+        if (index < 0 || index >= tabWidget->count()) {
+            continue;
+        }
+        auto* pNote = qobject_cast<QPlainTextEdit*>(tabWidget->widget(index));
+        if (pNote && !pNote->toPlainText().trimmed().isEmpty()) {
+            ++withText;
+        }
+    }
+
+    if (!withText) {
+        return true;
+    }
+
+    QString ask;
+    QString consequence;
+    QString destroy;
+    if (indices.size() == 1) {
+        //: Dialog asking the reader to confirm closing a note that has text in it. %1 is the note's name.
+        ask = tr("Close the note \"%1\"?").arg(tabWidget->tabText(indices.constFirst()));
+        //: Body of the dialog asking the reader to confirm closing a note that has text in it
+        consequence = tr("Its text will be lost. Mudlet keeps no copy of a closed note.");
+        //: Button on that dialog which goes ahead and closes the one note it asked about
+        destroy = tr("Close Note");
+    } else {
+        //: Dialog asking the reader to confirm closing every note but the one they picked
+        ask = tr("Close the other notes?");
+        //: Body of that dialog. %n is how many of the notes being closed have text in them.
+        consequence = tr("Text in %n of them will be lost.", "", withText);
+        //: Button on that dialog which goes ahead and closes every note but the one the reader picked
+        destroy = tr("Close Notes");
+    }
+
+    QMessageBox box(this);
+    box.setIcon(QMessageBox::Warning);
+    // A sheet on this window on macOS rather than a box over the whole application
+    box.setWindowModality(Qt::WindowModal);
+    box.setText(ask);
+    box.setInformativeText(consequence);
+    box.addButton(destroy, QMessageBox::DestructiveRole);
+    box.addButton(QMessageBox::Cancel);
+    box.setDefaultButton(QMessageBox::Cancel);
+    box.setEscapeButton(QMessageBox::Cancel);
+    box.exec();
+
+    return box.buttonRole(box.clickedButton()) == QMessageBox::DestructiveRole;
 }
 
 void dlgNotepad::closeTab(int index)
@@ -246,11 +546,48 @@ void dlgNotepad::closeTab(int index)
         return;
     }
 
+    if (!okToDiscardNotes({index})) {
+        return;
+    }
+
     save();
 
     QWidget* widget = tabWidget->widget(index);
     tabWidget->removeTab(index);
     delete widget;
+    updateTabClosability();
+
+    mNeedToSave = true;
+}
+
+// Removed from the back, since removing a tab renumbers the ones after it
+void dlgNotepad::closeOtherTabs(int keptIndex)
+{
+    if (keptIndex < 0 || keptIndex >= tabWidget->count() || tabWidget->count() <= 1) {
+        return;
+    }
+
+    QList<int> others;
+    for (int i = 0; i < tabWidget->count(); ++i) {
+        if (i != keptIndex) {
+            others.append(i);
+        }
+    }
+
+    if (!okToDiscardNotes(others)) {
+        return;
+    }
+
+    save();
+
+    for (int i = tabWidget->count() - 1; i >= 0; --i) {
+        if (i != keptIndex) {
+            QWidget* widget = tabWidget->widget(i);
+            tabWidget->removeTab(i);
+            delete widget;
+        }
+    }
+    updateTabClosability();
 
     mNeedToSave = true;
 }
@@ -287,6 +624,8 @@ void dlgNotepad::slot_tabContextMenu(const QPoint& pos)
     const int tabIndex = tabWidget->tabBar()->tabAt(pos);
 
     QMenu menu(this);
+    menu.setStyleSheet(uiDesign::menuStyleSheet(uiDesign::themeTokens()));
+    uiDesign::letPopupsTakeTheFieldsCorner(&menu);
 
     //: Context menu action to create a new note tab
     QAction* newTabAction = menu.addAction(tr("New Tab"));
@@ -316,15 +655,7 @@ void dlgNotepad::slot_tabContextMenu(const QPoint& pos)
             //: Context menu action to close all note tabs except the clicked one
             QAction* closeOthersAction = menu.addAction(tr("Close Other Tabs"));
             connect(closeOthersAction, &QAction::triggered, this, [this, tabIndex]() {
-                save();
-                for (int i = tabWidget->count() - 1; i >= 0; --i) {
-                    if (i != tabIndex) {
-                        QWidget* widget = tabWidget->widget(i);
-                        tabWidget->removeTab(i);
-                        delete widget;
-                    }
-                }
-                mNeedToSave = true;
+                closeOtherTabs(tabIndex);
             });
         }
     }
@@ -530,63 +861,225 @@ void dlgNotepad::startSendingLines(const QStringList& lines)
 {
     mLinesToSend = lines;
     mCurrentLineIndex = 0;
+    mLinesSent = 0;
+    mLinesToSendCount = sendableLineCount(lines);
 
     if (!mSendTimer) {
         mSendTimer = new QTimer(this);
         connect(mSendTimer, &QTimer::timeout, this, &dlgNotepad::slot_sendNextLine);
     }
 
-    action_stop->setEnabled(true);
+    setSending(true);
+    updateSendingReading();
+    //: Announced when the notepad starts sending a note to the game. %n is how many lines will go.
+    mudlet::self()->announce(mLinesToSendCount == 1 ? tr("Sending 1 line") : tr("Sending %n lines", "", mLinesToSendCount));
     mSendTimer->start(300ms);
 }
 
 void dlgNotepad::slot_sendNextLine()
 {
     if (mCurrentLineIndex >= mLinesToSend.size()) {
-        mSendTimer->stop();
-        action_stop->setEnabled(false);
+        finishSending(false);
         return;
     }
 
     const QString line = mLinesToSend[mCurrentLineIndex++];
-    if (!line.isEmpty()) {
-        const QString prepend = lineEdit_prependText->text().isEmpty() ? QString() : lineEdit_prependText->text();
-        mpHost->send(prepend + line);
+    if (!line.isEmpty() && mpHost) {
+        mpHost->send(lineEdit_prependText->text() + line);
+        ++mLinesSent;
+        updateSendingReading();
+    }
+
+    if (mCurrentLineIndex >= mLinesToSend.size()) {
+        finishSending(false);
     }
 }
 
 void dlgNotepad::slot_stopSending()
 {
-    if (mSendTimer && mSendTimer->isActive()) {
+    finishSending(true);
+}
+
+void dlgNotepad::updateSendingReading()
+{
+    if (!mpLabel_sendingText || !mpProgressBar_sending) {
+        return;
+    }
+    //: Reading on the notepad's send strip while lines are going to the game. %1 is how many have gone, %2 how many there are in all.
+    mpLabel_sendingText->setText(tr("Sending %1 of %2").arg(QString::number(mLinesSent), QString::number(mLinesToSendCount)));
+    // A zero range makes QProgressBar draw its busy indicator
+    mpProgressBar_sending->setMaximum(qMax(1, mLinesToSendCount));
+    mpProgressBar_sending->setValue(mLinesSent);
+}
+
+void dlgNotepad::finishSending(const bool stopped)
+{
+    if (mSendTimer) {
         mSendTimer->stop();
     }
 
-    action_stop->setEnabled(false);
+    if (mSending) {
+        if (stopped) {
+            //: Announced when a send from the notepad was stopped part way. %1 is how many lines went before it stopped, %2 how many there were in all.
+            mudlet::self()->announce(tr("Stopped after %1 of %2 lines").arg(QString::number(mLinesSent), QString::number(mLinesToSendCount)));
+        } else {
+            //: Announced when the notepad has sent a note to the game. %n is how many lines went.
+            mudlet::self()->announce(mLinesSent == 1 ? tr("Sent 1 line") : tr("Sent %n lines", "", mLinesSent));
+        }
+    }
+
     mLinesToSend.clear();
     mCurrentLineIndex = 0;
+    setSending(false);
 }
 
-void dlgNotepad::slot_toggleSendControls(bool checked)
+// Stop is hidden rather than disabled: while idle there is nothing to stop
+void dlgNotepad::setSending(const bool sending)
 {
-    action_sendAll->setVisible(checked);
-    action_sendLine->setVisible(checked);
-    action_sendSelection->setVisible(checked);
+    mSending = sending;
 
+    action_sendLine->setVisible(!sending);
+    action_sendSelection->setVisible(!sending);
+    action_sendAll->setVisible(!sending);
+    if (action_sendControlsSeparator) {
+        action_sendControlsSeparator->setVisible(!sending);
+    }
     if (action_prependTextLabel) {
-        action_prependTextLabel->setVisible(checked);
+        action_prependTextLabel->setVisible(!sending);
     }
-
     if (action_prependText) {
-        action_prependText->setVisible(checked);
+        action_prependText->setVisible(!sending);
     }
 
+    if (action_sendingDot) {
+        action_sendingDot->setVisible(sending);
+    }
+    if (action_sendingText) {
+        action_sendingText->setVisible(sending);
+    }
+    if (action_sendingBar) {
+        action_sendingBar->setVisible(sending);
+    }
     if (action_stop) {
-        action_stop->setVisible(checked);
+        action_stop->setVisible(sending);
     }
 
-    if (action_toggleSendControls->isChecked() != checked) {
-        action_toggleSendControls->setChecked(checked);
+    updateNoPrefixWarning();
+}
+
+void dlgNotepad::updateSendStrip()
+{
+    auto* pTextEdit = currentTextEdit();
+    mNoteSendableLines = pTextEdit ? sendableLineCount(linesOf(pTextEdit->toPlainText())) : 0;
+    updateSendReach();
+    updateNoPrefixWarning();
+}
+
+void dlgNotepad::updateSendReach()
+{
+    const int inTheNote = mNoteSendableLines;
+
+    // Singular as its own string: with no catalogue loaded Qt applies no plural form and shows "1 lines"
+    //: Button at the foot of the notepad. %n is how many lines of the note would go to the game, one at a time.
+    action_sendAll->setText(inTheNote == 1 ? tr("Send all (1 line)") : tr("Send all (%n lines)", "", inTheNote));
+    action_sendAll->setEnabled(inTheNote > 0);
+
+    updateSelectionReach();
+    alignPrefixLeadWord();
+}
+
+void dlgNotepad::updateSelectionReach()
+{
+    auto* pTextEdit = currentTextEdit();
+    const int inTheSelection = pTextEdit ? sendableLineCount(linesOf(pTextEdit->textCursor().selectedText())) : 0;
+    if (inTheSelection > 0) {
+        //: Button at the foot of the notepad. %n is how many of the note's lines are selected.
+        action_sendSelection->setText(inTheSelection == 1 ? tr("Send selection (1 line)") : tr("Send selection (%n lines)", "", inTheSelection));
+    } else {
+        //: Button at the foot of the notepad, with nothing selected to say a count of
+        action_sendSelection->setText(tr("Send selection"));
     }
+    action_sendSelection->setEnabled(inTheSelection > 0);
+}
+
+// A tool button's sizeHint() slack lands after its word, on the seam's side, while a label's word sits at its edge
+void dlgNotepad::alignPrefixLeadWord()
+{
+    const auto* pSendAll = qobject_cast<const QToolButton*>(toolBar->widgetForAction(action_sendAll));
+    if (!pSendAll || !label_prependText) {
+        return;
+    }
+    const int frame = uiDesign::scmInputBorderWidth + uiDesign::scmToolBarButtonPaddingHorizontal;
+    const int picture = pSendAll->iconSize().width() + scmQtToolButtonPictureGap;
+    const int word = pSendAll->fontMetrics().horizontalAdvance(pSendAll->text());
+    const int afterTheWord = std::max(0, pSendAll->sizeHint().width() - 2 * frame - picture - word);
+    const QMargins held(uiDesign::scmToolBarButtonPaddingHorizontal + afterTheWord, 0, uiDesign::scmToolBarButtonPaddingHorizontal, 0);
+    if (label_prependText->contentsMargins() == held) {
+        return;
+    }
+    label_prependText->setContentsMargins(held);
+    // The margin takes room from the warning, which was fitted to the old width
+    fitNoPrefixNote();
+}
+
+void dlgNotepad::updateNoPrefixWarning()
+{
+    if (!mpWidget_noPrefixNote || !action_noPrefixNote) {
+        return;
+    }
+
+    const int inTheNote = mNoteSendableLines;
+    const bool warn = !mSending && lineEdit_prependText->text().isEmpty() && inTheNote > scmNotepadWarnAtLines;
+
+    mNoPrefixWarningApplies = warn;
+    if (warn) {
+        //: Warning at the foot of the notepad, shown when a long note would be sent with nothing in front of its lines. %n is how many lines the note holds.
+        mNoPrefixNoteText = tr("No prefix, so %n lines go to the game as commands", "", inTheNote);
+        mpWidget_noPrefixNote->setToolTip(mNoPrefixNoteText);
+        fitNoPrefixNote();
+    } else {
+        action_noPrefixNote->setVisible(false);
+    }
+
+    if (action_prefixWarning) {
+        action_prefixWarning->setToolTip(warn ? mNoPrefixNoteText : QString());
+        action_prefixWarning->setVisible(warn);
+    }
+    lineEdit_prependText->setToolTip(warn ? mNoPrefixNoteText : mPrefixFieldToolTip);
+
+    const QString state = warn ? qsl("warning") : QString();
+    if (lineEdit_prependText->property(scmProp_notepadFieldState).toString() != state) {
+        lineEdit_prependText->setProperty(scmProp_notepadFieldState, state.isEmpty() ? QVariant() : QVariant(state));
+        uiDesign::repolish(lineEdit_prependText);
+    }
+}
+
+// QToolBar moves what does not fit into its extension menu, so the words come whole or not at all
+void dlgNotepad::fitNoPrefixNote()
+{
+    if (!mpLabel_noPrefixText || !action_noPrefixNote || !mNoPrefixWarningApplies || mNoPrefixNoteText.isEmpty()) {
+        return;
+    }
+    // QToolBar leaves what it hid out of its sizeHint(), so the reading is shown before measuring
+    action_noPrefixNote->setVisible(true);
+    mpWidget_noPrefixNote->show();
+    mpLabel_noPrefixText->clear();
+    // Layouts cache their size hints until invalidated
+    uiDesign::invalidateLayoutsUpTo(mpLabel_noPrefixText, toolBar);
+    const int roomForTheWords = toolBar->width() - toolBar->sizeHint().width();
+
+    //: Short form of the notepad's no-prefix warning, on the strip where there is no room for the whole sentence, which stays on the tooltip
+    const QStringList forms{mNoPrefixNoteText, tr("No prefix")};
+    for (const QString& words : forms) {
+        mpLabel_noPrefixText->setText(words);
+        if (mpLabel_noPrefixText->sizeHint().width() <= roomForTheWords) {
+            return;
+        }
+    }
+
+    // The action, not the widget: QToolBar shows a widget it has room for again on its next layout
+    mpLabel_noPrefixText->clear();
+    action_noPrefixNote->setVisible(false);
 }
 
 void dlgNotepad::saveSettings()
@@ -595,8 +1088,9 @@ void dlgNotepad::saveSettings()
         return;
     }
 
-    mpHost->writeProfileIniData(qsl("Notepad/SendControlsVisible"), action_toggleSendControls->isChecked() ? qsl("true") : qsl("false"));
     mpHost->writeProfileIniData(qsl("Notepad/WindowState"), QString::fromLatin1(saveState().toBase64()));
+    // A key older versions wrote, which nothing reads
+    mpHost->removeProfileIniData(qsl("Notepad/SendControlsVisible"));
 }
 
 void dlgNotepad::restoreSettings()
@@ -604,16 +1098,6 @@ void dlgNotepad::restoreSettings()
     if (!mpHost) {
         return;
     }
-
-    const QString sendControlsVisibleStr = mpHost->readProfileIniData(qsl("Notepad/SendControlsVisible"));
-    const bool sendControlsVisible = (sendControlsVisibleStr.compare(qsl("true"), Qt::CaseInsensitive) == 0);
-
-    const bool wasBlocked = action_toggleSendControls->signalsBlocked();
-    action_toggleSendControls->blockSignals(true);
-    action_toggleSendControls->setChecked(sendControlsVisible);
-    action_toggleSendControls->blockSignals(wasBlocked);
-
-    slot_toggleSendControls(sendControlsVisible);
 
     const QString windowStateStr = mpHost->readProfileIniData(qsl("Notepad/WindowState"));
     if (!windowStateStr.isEmpty()) {
@@ -627,37 +1111,14 @@ void dlgNotepad::closeEvent(QCloseEvent* event)
     QMainWindow::closeEvent(event);
 }
 
-// The grey arrows the .ui file gives the send controls toggle are all but invisible
-// against a dark background, so use the brighter green ones (which the .ui file already
-// uses for the hovered-over state) there instead. The background colour is what matters,
-// so go by the palette rather than by MudletApp::darkMode() - the latter is only set when
-// Mudlet itself applies its dark theme, yet a dark system theme darkens the notepad as well.
-// The application palette is the one to read: when this runs in response to a style change
-// the widgets have not had the new palette propagated down to them yet
-void dlgNotepad::updateSendControlsToggleIcon()
-{
-    const bool darkBackground = QApplication::palette().color(QPalette::Window).lightness() <= 127;
-
-    QIcon icon;
-    if (darkBackground) {
-        icon.addFile(qsl(":/icons/arrow-right-16x.png"), QSize(), QIcon::Normal, QIcon::Off);
-        icon.addFile(qsl(":/icons/arrow-down-16x.png"), QSize(), QIcon::Normal, QIcon::On);
-    } else {
-        icon.addFile(qsl(":/icons/arrow-right_grey-16x.png"), QSize(), QIcon::Normal, QIcon::Off);
-        icon.addFile(qsl(":/icons/arrow-down_grey-16x.png"), QSize(), QIcon::Normal, QIcon::On);
-        icon.addFile(qsl(":/icons/arrow-right-16x.png"), QSize(), QIcon::Active, QIcon::Off);
-        icon.addFile(qsl(":/icons/arrow-down-16x.png"), QSize(), QIcon::Active, QIcon::On);
-    }
-    action_toggleSendControls->setIcon(icon);
-}
-
+// Under "follow the system" a system theme change emits no signal_appearanceChanged; the style or
+// palette change Qt sends is the only notice
 void dlgNotepad::changeEvent(QEvent* event)
 {
     QMainWindow::changeEvent(event);
 
-    // the appearance can be switched between light and dark while the notepad is open
-    if ((event->type() == QEvent::StyleChange || event->type() == QEvent::PaletteChange) && mUiSetupComplete) {
-        updateSendControlsToggleIcon();
+    if (event->type() == QEvent::StyleChange || event->type() == QEvent::PaletteChange) {
+        applyNotepadShellStyle();
     }
 }
 
@@ -668,6 +1129,11 @@ bool dlgNotepad::eventFilter(QObject* obj, QEvent* event)
             scheduleRehighlight();
         }
     }
+    if (obj == toolBar && event->type() == QEvent::Resize) {
+        fitNoPrefixNote();
+        return QMainWindow::eventFilter(obj, event);
+    }
+
     if (obj == mpFindLineEdit && event->type() == QEvent::KeyPress) {
         auto* keyEvent = static_cast<QKeyEvent*>(event);
         if (keyEvent->key() == Qt::Key_Return || keyEvent->key() == Qt::Key_Enter) {
@@ -747,7 +1213,8 @@ void dlgNotepad::slot_findTextChanged(const QString& text)
 void dlgNotepad::slot_currentTabChanged(int index)
 {
     Q_UNUSED(index)
-    if (mpFindBar->isVisible()) {
+    updateSendStrip();
+    if (mpFindBar && mpFindBar->isVisible()) {
         highlightAllMatches();
     }
 }
@@ -768,11 +1235,6 @@ void dlgNotepad::highlightAllMatches()
     }
 
     const QTextCursor currentCursor = textEdit->textCursor();
-
-    QColor highlightColor(Qt::yellow);
-    highlightColor.setAlpha(100);
-    QColor currentMatchColor(255, 165, 0);
-    currentMatchColor.setAlpha(150);
 
     // Laying out a mark costs about as much as drawing it, and a big note can hold tens of
     // thousands of matches, so only those on screen are marked
@@ -804,9 +1266,9 @@ void dlgNotepad::highlightAllMatches()
             selection.cursor.setPosition(start);
             selection.cursor.setPosition(end, QTextCursor::KeepAnchor);
             if (start == currentCursor.selectionStart() && end == currentCursor.selectionEnd()) {
-                selection.format.setBackground(currentMatchColor);
+                selection.format.setBackground(mCurrentMatchInk);
             } else {
-                selection.format.setBackground(highlightColor);
+                selection.format.setBackground(mOtherMatchInk);
             }
 
             extraSelections.append(selection);

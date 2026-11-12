@@ -25,6 +25,8 @@
 #include <QColor>
 #include <QFlags>
 #include <QFont>
+#include <QHash>
+#include <QKeySequence>
 #include <QList>
 #include <QObject>
 #include <QPoint>
@@ -36,16 +38,20 @@
 #include <QString>
 #include <QStringList>
 
+#include <functional>
 #include <memory>
 #include <optional>
 #include <utility>
 
+struct lua_State;
 class Host;
 class HostManager;
 class QPainter;
 class QSize;
 class QTimer;
 class TBuffer;
+class TConsoleModel;
+class TLineFormat;
 class QKeyEvent;
 class QMimeData;
 class QPoint;
@@ -113,8 +119,9 @@ public:
         bool defaultForeground = false;
         bool defaultBackground = false;
         TextStyles styles;
-        // The main console's link the run is part of, 0 for none; touching links that look alike are runs of their
-        // own. An id names its link while the main console still holds a line with it, after which it may be reused.
+        // The link the run is part of, 0 for none, among those of the console the line is in; touching links that look
+        // alike are runs of their own. An id names its link while that console still holds a line with it, after which
+        // it may be reused.
         int link = 0;
 
         bool operator==(const TextRun&) const = default;
@@ -126,6 +133,13 @@ public:
     // event loop. invalidConfigDir: the configDir is not absolute, cannot be made or is not a folder, or
     // is the GUI's, or another folder, the GUI's or one chosen, is in use; nothing is made.
     enum class StartResult { started, noSuchProfile, invalidName, invalidConnectionDetails, notOpened, loadFailed, poolClosing, invalidConfigDir };
+    Q_ENUM(StartResult)
+
+    // A Lua C module the app has linked in, which a phone or a browser cannot load from a file: require()
+    // finds it under that name ahead of any on disk, in a profile opened or reset afterwards. Given again
+    // for a name, it replaces the earlier one; with no name or no function it is refused. docs/headless.md
+    // lists the modules Mudlet itself requires.
+    static void preloadLuaModule(const QByteArray& name, int (*open)(lua_State*));
 
     explicit THeadlessSession(QObject* parent = nullptr);
     // Closes the profiles unsaved, at once or, while one is busy as for shutdown(), a reset is pending, one is
@@ -141,6 +155,10 @@ public:
     // On loadFailed the profile stays open, its connect called off, for the frontend to close: it takes no
     // commands, Lua or packages, and shutdown() does not save it, so its last good save and map are kept.
     StartResult start(const Options&);
+    // start() without waiting: it returns at once, and startFinished() follows from the event loop with what start()
+    // would have answered and errorString() then. Only a new profile's stale passwords are waited for, in the
+    // credential store; the load itself runs in this call, as in start().
+    void startAsync(const Options&);
     // Why the last call that failed did
     QString errorString() const { return mErrorString; }
     // The font the main console is drawn in, a default QFont with no profile open: read it at profileLoaded, then
@@ -186,7 +204,12 @@ public:
     // part of it or its config.lua could not be read, or an item's Lua failed. A file that cannot be read fails.
     // One whose name, or whose config.lua's, is already installed is left as it is; errorString() says so.
     enum class PackageResult { installed, installedWithErrors, alreadyInstalled, failed };
+    Q_ENUM(PackageResult)
     PackageResult installPackage(const QString& path);
+    // installPackage() without waiting: it returns at once, and packageInstallFinished() follows from the event loop.
+    // A save running now is waited out from the event loop, not in this call. Failed while another install asked
+    // for has not answered.
+    void installPackageAsync(const QString& path);
     // The main window's size in characters, as a resize of the GUI's main window sets it. As there, the borders a
     // script or MXP sets take their room from it, and what they leave is the main console's grid. If the profile
     // has NAWS on and the game asks for it, the game is told the grid from the event loop once it has not changed
@@ -236,7 +259,7 @@ public:
 
         bool operator==(const LinkItem&) const = default;
     };
-    // What a link of the main console offers, as the GUI shows it now
+    // What a link of a console offers, as the GUI shows it now
     struct Link
     {
         // Plain text, empty for none
@@ -266,6 +289,9 @@ public:
     // The link a run names, while the main console holds it; nullopt for 0, an id it does not hold and with no profile
     // open. A getter, so it may be called from any handler.
     std::optional<Link> link(int id) const;
+    // The same for a run of windowLines(): a link of that mini console or user window, each console counting its
+    // own ids, or of the main console for "main" or no name; nullopt too for a name windowLines() refuses
+    std::optional<Link> windowLink(const QString& window, int id) const;
     // Follows a link as a left click on it does, or given an item, as picking that item from its menu does: a
     // spoiler not yet revealed is only revealed (revealedSpoiler); a disabled link, a local: note and a menu's
     // greyed-out item run nothing (disabled), nor does a link the game's visibility settings have concealed
@@ -278,6 +304,9 @@ public:
     // is; errorString() says why.
     enum class LinkResult { ran, revealedSpoiler, disabled, concealed, failed, noSuchItem, unknown, refused, gmcpOff };
     LinkResult followLink(int link, std::optional<int> item = std::nullopt);
+    // The same for a link of that window, shown or hidden, as only the app knows what its pointer can reach;
+    // unknown too for a name windowLines() refuses. What it changes of the link is windowTextChanged's to tell.
+    LinkResult followWindowLink(const QString& window, int link, std::optional<int> item = std::nullopt);
     // Whether the main console shows each line's time beside it, as the GUI's timestamp button says; false with
     // no profile open. A getter, so it may be called from any handler.
     bool timeStampsShown() const;
@@ -330,6 +359,23 @@ public:
     // input; a line ended by a go-ahead ahead of the request, even in the same read, has its triggers run on the
     // line as it was, in the GUI too. Refused where submit() is.
     bool setCommandLineText(const QString& text, CommandLineEdit edit = CommandLineEdit::typed);
+    // The same for a command line a script made with createCommandLine(), or a mini console's or user window's own
+    // from enableCommandLine(), which has its console's name; scriptWindows() lists both as Kind::commandLine.
+    // windowCommandLineText() is its text as a script's getCmdLine() reads it, none for a name that is no such
+    // line, the main command line's among them. setWindowCommandLineText() is what the player has typed on it so
+    // far, taken while hidden input is wanted too, as the GUI's box covers only the main line; no
+    // windowCommandLineTextChanged follows it. False for a name that is no such line, for a line that is not shown
+    // (hidden, disabled, or in a window that is hidden), which a player could not type on though a script still
+    // writes to it, and where submit() is refused.
+    std::optional<QString> windowCommandLineText(const QString& commandLine) const;
+    bool setWindowCommandLineText(const QString& commandLine, const QString& text);
+    // Enter on that line, holding this text, each line of it a command: one goes to the function a script's
+    // setCmdLineAction() gave the line, or else through the aliases to the game as submit() sends it, and then a
+    // console's own line echoes it in its console unless the profile never echoes commands. The text joins the
+    // line's history, and the line is then emptied where the profile clears a sent command, which
+    // windowCommandLineTextChanged tells. Before it returns. False as setWindowCommandLineText() is, and when the
+    // profile begins to close part-way; a line a script deletes part-way takes no more commands.
+    bool submitWindowCommandLine(const QString& commandLine, const QString& line);
     // The GUI's replay toolbar, for a replay of the session's profile: pauseReplay() holds it where it is and
     // resumeReplay() lets it carry on, each false unless it is playing or held as it needs; stopReplay() ends it
     // as the toolbar's Stop does, saying so in localText. False with no replay of this profile playing, though one
@@ -434,6 +480,20 @@ public:
     // with errorString() saying why, for an id that is not a command of the session's profile and for a disabled
     // command, which the GUI does not let be clicked.
     bool activateAddonCommand(int id);
+    // A shortcut the app keeps for itself, and the name a refusal gives for what holds it
+    struct ReservedShortcut
+    {
+        QKeySequence sequence;
+        QString holder;
+
+        bool operator==(const ReservedShortcut&) const = default;
+    };
+    // The shortcuts addCommand() refuses from here on, as the GUI refuses the keys of its own menu: the script
+    // gets nil and '<key> is already taken by "<holder>"'. For every session of the app, as one app holds the
+    // keys, and it replaces the list given before; an empty sequence is left out. A command added earlier
+    // keeps its shortcut. Call it before start() to cover what the profile's packages add as they load.
+    static void setReservedShortcuts(const QList<ReservedShortcut>& shortcuts);
+    static QList<ReservedShortcut> reservedShortcuts();
     // A button on one of the profile's button bars or toolbars, or an entry of a button's menu, as the GUI draws it
     struct Button
     {
@@ -520,7 +580,7 @@ public:
     // errorString() saying why, with no map open, a painter that is not active or a size under 10 by 10 pixels.
     bool renderMap(QPainter& painter, const QSize& size);
     // The pointer, at a position in what renderMap() last drew
-    struct PointerEvent
+    struct MapPointerEvent
     {
         enum class Type {
             press,
@@ -540,8 +600,209 @@ public:
     // speedwalks to the room under it; a wheel turn zooms the area about the pointer. Refused where submit() is.
     // False, with errorString() saying why, with no map open, before the map is drawn, for a double-click with
     // another button, for less than half a notch of the wheel, which the GUI ignores, and for a wheel turn on a
-    // map whose last draw showed no area.
-    bool mapPointer(const PointerEvent& event);
+    // map whose last draw showed no area. Once the map is drawn, and while its window is shown, getMousePosition()
+    // follows it, the position taken as that point of the "mapper" window, which the GUI's map fills from its top
+    // left.
+    bool mapPointer(const MapPointerEvent& event);
+    // Whether the map is only viewed, not edited, as the item of the GUI map's menu that switches between the two
+    // says and the profile saves; true with no profile open. A getter, so it may be called from any handler.
+    bool mapViewOnly() const;
+    // As picking that item: scripts hear mapModeChangeEvent, with "viewing" or "editing", before this returns, and
+    // mapViewOnlyChanged follows. True too where the map is already so, which raises nothing. False, with
+    // errorString() saying why, while no map is shown (none opened yet, or closed or hidden, and no secondary map
+    // view either), as the GUI's item is on a map, and where submit() is refused. Each map or secondary map view a
+    // script opens in a profile saved as editing raises mapModeChangeEvent with "editing" before it is there, as the
+    // GUI's does, with no mapViewOnlyChanged.
+    bool setMapViewOnly(bool viewOnly);
+    // A window the profile's scripts made, or the console of an MXP frame the game opened, as the GUI would show
+    // it, for the app to draw: Mudlet draws none of them. A Geyser gauge, button or container is the labels and
+    // windows it is made of. An MXP frame is a mini console in all but who made it: the same text, links, scroll
+    // and pointer. Its tab header is not told, only, in shown, whether its page is the one in front.
+    struct ScriptWindow
+    {
+        enum class Kind { miniConsole, userWindow, label, commandLine, textBox, scrollBox, mapper, mxpFrame };
+        QString name;
+        Kind kind = Kind::label;
+        // The user window or scroll box it is in, the console whose own command line it is, or the MXP frame an
+        // MXP frame was opened inside; empty for the main window's area, for a dock and for an EXTERNAL MXP frame
+        QString parent;
+        // In its parent's pixels, from its top left corner, and a dock's in the main window's; none for a console's
+        // own command line, which the app lays out along the console's bottom. A user window, with no dock layout to
+        // go in, is at the main window's top left at the size the main window had as it opened, or, if the app had
+        // given no size by then, the one made up from the main console's grid, until setUserWindowGeometry() places it.
+        QRect geometry;
+        // Its own flag, as hideWindow() and showWindow() set it, which hiding what it is in leaves alone
+        bool visible = false;
+        // Whether it shows: visible, and so is each window it is in
+        bool shown = false;
+        // From 0, among the windows of its parent, a higher one drawn over a lower one: one made, raised or moved
+        // into the parent later is higher, a lowered one goes below the rest. The docks count only among themselves.
+        int stackOrder = 0;
+        // A console's background colour, or a label's from setBackgroundColor(); invalid for the other kinds
+        QColor background;
+        // What a console, label or text box draws its text in; a default QFont for the other kinds
+        QFont font;
+        // A dock beside the main window's area, docked or floating, rather than a window in it: a user window, or the
+        // map openMapWidget() opened. An EXTERNAL MXP frame too, a window of its own that the app places: its
+        // geometry is only its size.
+        bool inDock = false;
+        // A user window's dock, as openUserWindow() and setUserWindowTitle() gave it, and setUserWindowGeometry()
+        // floats or docks it
+        struct Dock
+        {
+            // Whether the player may dock it, or only float it
+            bool autoDock = true;
+            // The area openUserWindow() asked for, which setUserWindowGeometry() leaves as it is
+            Qt::DockWidgetArea area = Qt::RightDockWidgetArea;
+            bool floating = false;
+            QString title;
+
+            bool operator==(const Dock&) const = default;
+        };
+        std::optional<Dock> dock;
+        // These four are a mini console's, user window's or MXP frame's. The row it is scrolled back to, as a script's getScroll()
+        // gives it, none while it follows new lines: scrolled back, the GUI splits the console, the upper pane
+        // showing the grid's rows of windowLines() that end just above this row, the lower one the last rows.
+        std::optional<int> scrolledBackTo;
+        // The columns and rows of text its upper pane has room for, which is the whole console while it is not
+        // scrolled back
+        QSize grid;
+        // As enableScrollBar() and disableScrollBar() ask
+        bool scrollBar = false;
+        // Whether each row's time shows beside it, as enableTimeStamps() and disableTimeStamps() ask
+        bool timeStamps = false;
+        // The kind of its parent, as a scroll box may share its name with a user window or console; nothing with no
+        // parent
+        Kind parentKind = Kind::userWindow;
+
+        bool operator==(const ScriptWindow&) const = default;
+    };
+    // Every window the profile's scripts made, parents before what they hold and each parent's windows from the
+    // lowest up, the main window's area's before the docks, and the game's MXP frames among them; not buffers, which
+    // are never shown. Empty with no profile open. Read from anywhere, a handler included.
+    QList<ScriptWindow> scriptWindows() const;
+    // The first of them with the name, or with the name and kind, as a console's own command line has its name
+    std::optional<ScriptWindow> scriptWindow(const QString& name, std::optional<ScriptWindow::Kind> kind = std::nullopt) const;
+    // What a label shows, for the app to draw it as the GUI's QLabel would. Its geometry, background and font are
+    // its ScriptWindow's.
+    struct LabelContent
+    {
+        // The rich text echo() or setLabelText() gave it, its links styled as setLinkStyle() asks; empty while an
+        // image or movie shows in its place
+        QString text;
+        // The file from setBackgroundImage() while it shows: a raster image, which text or a movie takes down, or an
+        // SVG one, drawn under the text in the tint, rotation and shear setLabelSvg*() give it
+        QString image;
+        bool svg = false;
+        QColor svgTint;
+        double svgRotation = 0.0;
+        double svgShearX = 0.0;
+        double svgShearY = 0.0;
+        // The file from setMovie() while it plays or is paused in place of the text
+        QString movie;
+        // Paused by pauseMovie() or played to its end, and then the frame it shows, which setMovieFrame() may have
+        // jumped to; -1 while it plays, as its frames come from the file's own timing
+        bool moviePaused = false;
+        int movieFrame = -1;
+        // In percent of the file's own speed, as setMovieSpeed() gave it
+        int movieSpeed = 100;
+        // The size scaleMovie() gave it, invalid for the file's own
+        QSize movieSize;
+        QString toolTip;
+        // In seconds, as setLabelToolTip() was given it; 0 for the platform's own
+        double toolTipDuration = 0.0;
+        // Unset for the parent's, a shape from setLabelCursor(), or Qt::BitmapCursor for setLabelCustomCursor()'s
+        // file with its hot spot
+        std::optional<Qt::CursorShape> cursor;
+        QString customCursor;
+        QPoint customCursorHotSpot;
+        // The pointer passes through it to what is under it
+        bool clickThrough = false;
+        // What a screen reader says for it, and whether it is told it is a button
+        QString accessibleName;
+        bool accessibleButton = false;
+        // As setLabelStyleSheet() gave it, which Mudlet does not interpret: drawing it is the app's to do or not
+        QString styleSheet;
+
+        bool operator==(const LabelContent&) const = default;
+    };
+    // None for a name that is not a label's
+    std::optional<LabelContent> labelContent(const QString& name) const;
+    // A row of a console as the GUI draws it: one line of its buffer, after the console's wrap
+    struct WindowLine
+    {
+        QString text;
+        bool isPrompt = false;
+        // As outputLine's, the colours a run has by default being the console's own
+        QList<TextRun> runs;
+        // As outputLine's; a row the wrap split off has the time of the line it came from
+        qint64 arrivalMSecs = -1;
+        // Carries on from the row above, which the console's wrap split it off
+        bool wrapped = false;
+
+        bool operator==(const WindowLine&) const = default;
+    };
+    struct WindowText
+    {
+        // How many rows the console holds, the last being the one the next write carries on: one more than a
+        // script's getLineCount() gives
+        int lineCount = 0;
+        // The row lines starts at, from 0 as getLines() counts them
+        int first = 0;
+        QList<WindowLine> lines;
+    };
+    // Up to count rows of a mini console, user window or MXP frame among scriptWindows(), shown or hidden, or of the main
+    // console for "main" or no name, from row first, cut to the rows there are; a first below 0 counts back from the
+    // end, so -count is the last count rows. None with no profile open and for any other name: a label, a buffer.
+    // A getter, so it may be called from any handler, but from one of outputLine or
+    // lineShown the main console's last row is in the middle of its commit.
+    std::optional<WindowText> windowLines(const QString& window, int first, int count) const;
+    // Where the app put a user window, in the main window's pixels, docked or floating, as the GUI's dock is placed
+    // by its layout or the player. A new size raises sysUserWindowResizeEvent and handleWindowResizeEvent, now while
+    // it shows or as it next shows, and is what getUserWindowSize() and getWindowGeometry() read. Refused where
+    // runLua() is, and for a name that is not a user window's.
+    bool setUserWindowGeometry(const QString& name, const QRect& geometry, bool floating);
+    // The dock's close button: hides the user window, as hideWindow() does. Refused as setUserWindowGeometry() is.
+    bool closeUserWindow(const QString& name);
+    // What the app's mouse did over one of the windows, for pointer(); mapPointer() takes a MapPointerEvent
+    struct WindowPointerEvent
+    {
+        enum class Type { press, release, doubleClick, move, enter, leave, wheel };
+        Type type = Type::move;
+        // In the window's pixels, from its top left corner
+        QPointF position;
+        // The button that changed, for a press, release or double-click
+        Qt::MouseButton button = Qt::NoButton;
+        // Those held after it, which for a press or double-click include its own button, given or not
+        Qt::MouseButtons buttons;
+        Qt::KeyboardModifiers modifiers;
+        // A wheel's turn in eighths of a degree, as QWheelEvent::angleDelta() gives it
+        QPoint angleDelta;
+    };
+    // Runs what the GUI's mouse would there: a label's callback for the event, with the event table the GUI gives
+    // it, the pointer passing through a click-through label to what is under it in the same parent. A press or
+    // release that a label has no callback for, or that lands on a mini console, goes on to the console or user
+    // window it is in, as Qt passes it up the widgets, and raises sysWindowMousePressEvent or
+    // sysWindowMouseReleaseEvent there, but for a right-button release that opens a console's menu. "main", or no
+    // name, is the main console, in the pixels of the main window's area. A wheel scrolls the console it turns
+    // over. The pointer is over one label at a time: an event at another is that one's enter, and the last one's
+    // leave, first. As Qt's implicit grab, the window that took a press of a button with no other held, under any
+    // click-through label it was passed through, has every move with a button held, and the release, wherever they
+    // are, until a release leaves no button held, a move has none or such a press comes, and none of them if a label
+    // hid, moved or went meanwhile, or another window went; a label keeps them as the window it is in hides or
+    // moves, and a mini console, user window or scroll box as it hides or moves itself. An enter or leave meanwhile
+    // runs nothing, and a wheel enters nothing. A callback's
+    // Lua error goes to the error console, as the GUI's does, and is not this call's failure. Refused where runLua()
+    // is, for a name no window has, for another window than the one a held button is on or the click-through label
+    // the press went through, and, but for a leave or what that grab takes, for a window that is not shown or a
+    // point outside it. On the "mapper" window a press, double-click or wheel is mapPointer()'s at that point, as the
+    // GUI's map fills its window from the top left, and what the GUI's map ignores is taken and does nothing: a
+    // double-click with any button but the left alone held, less than half a notch of the wheel, a wheel turn on a
+    // map showing no area. It is false with no map open, before the map is drawn, while the map was last drawn at
+    // another size than its window has, and for a move with the left or middle button held or, while the map is
+    // edited, any button, as the map's drags are the GUI's; the button of a press it refused is still held. Any
+    // other move, a release, an enter and a leave do nothing there.
+    bool pointer(const QString& window, const WindowPointerEvent& event);
 
     // sysExitEvent and, if asked, a save for every profile that loaded, then the pool goes. Meanwhile no profile
     // opens, and none dials the game or logs in, a live connection staying for the exit handlers. Refused while a
@@ -549,6 +810,9 @@ public:
     // shutdown(). It may run the event loop; a session the frontend deletes there returns at once, false if the
     // save asked for was not yet made.
     bool shutdown(bool save);
+    // shutdown() without waiting: sysExitEvent runs in this call, and shutdownFinished() follows from the event
+    // loop once the saves are written and the pool has gone. A session deleted meanwhile tells nothing.
+    void shutdownAsync(bool save);
     // The save shutdown(true) makes, with the profiles left running: every profile that loaded, the session's own
     // and ones its scripts opened, writes its save, synced modules, map and profile.ini, and the window layout is written,
     // with no sysExitEvent, so a frontend the system may stop without warning, such as a phone app sent to the
@@ -558,12 +822,20 @@ public:
     // included, or the layout was not, errorString() saying which; a session the frontend deletes in the event
     // loop returns at once, false.
     bool save();
+    // save() without waiting: saveFinished() follows from the event loop once the profiles are written. Failed
+    // while another save asked for has not answered.
+    void saveAsync();
     // The profiles, the session's own or ones its scripts opened, that a close from a script or shutdown()
     // could not save, in the order it failed to
     QStringList unsavedProfiles() const { return mUnsavedProfiles; }
     bool saveFailed() const { return !mUnsavedProfiles.isEmpty(); }
 
 signals:
+    // What the async calls answer; error is errorString() as the call ended, empty when it succeeded
+    void startFinished(THeadlessSession::StartResult result, const QString& error);
+    void packageInstallFinished(const QString& path, THeadlessSession::PackageResult result, const QString& error);
+    void shutdownFinished(bool succeeded, const QString& error);
+    void saveFinished(bool succeeded, const QString& error);
     void profileLoaded(const QString& profile);
     // A line committed to the main console as the game's (what the game sends, feedTriggers(), Mudlet's own
     // OSC 8 examples), before triggers run on it; not what echo(), print() and Mudlet's messages add. A
@@ -578,17 +850,26 @@ signals:
     // messages), and the error console. While lineShown is connected, it leaves out what that sends, as
     // docs/headless.md tells. Sent as written, so a handler may neither call the session nor run the event loop.
     void localText(const QString& profile, const QString& text);
+    // Each piece of localText again, after it, with the colours, styles and links it was written in: runs as
+    // outputLine's are, a line feed in the text being in the run of what it was written with. An app connects one
+    // of the two. A link in text another console's buffer was copied from (appendBuffer(), an MXP frame's text
+    // sent on) is not named. continuesLine is for a piece the console draws on the end of the line last sent
+    // whole, by outputLine or lineShown, and not below it: a command typed at a prompt, or what a trigger
+    // echoes onto its line while lineShown is not connected.
+    void localTextStyled(const QString& profile, const QString& text, const QList<THeadlessSession::TextRun>& runs, bool continuesLine);
     // With the colours the editor's error console prints the piece in; a handler that takes only the first two
     // arguments may be connected
     void errorConsoleText(const QString& profile, const QString& text, const QColor& foreground, const QColor& background);
     // A line of outputLine's as the main console shows it once its triggers have run: with what they replaced,
     // recoloured or wrote into it, which may hold line feeds, and not at all if they deleted it. Lines a trigger
     // feeds follow the line it ran on, as they are shown, and so does what it wrote anywhere else (an echo()
-    // after deleteLine(), clearWindow() or a feedTriggers(), a send()'s command echo), as lines of their own.
+    // after clearWindow() or a feedTriggers(), a send()'s command echo), as lines of their own.
     // Sent whole, before the console wraps it or after a trigger's wrapLine() split it, and not again for a later
     // change to it. Sent mid-write, as outputLine is, with the same arguments; a line a trigger wrote has the time
-    // of the console line it went into, which is when it was written for a line of its own.
-    void lineShown(const QString& profile, const QString& text, bool isPrompt, const QList<THeadlessSession::TextRun>& runs, qint64 arrivalMSecs);
+    // of the console line it went into, which is when it was written for a line of its own. continuesLine is for
+    // text the console draws on the end of the line sent before it, not as a line below: an echo() after
+    // deleteLine(). A handler that takes fewer arguments may be connected.
+    void lineShown(const QString& profile, const QString& text, bool isPrompt, const QList<THeadlessSession::TextRun>& runs, qint64 arrivalMSecs, bool continuesLine);
     // A script emptied the main console, as clearWindow() does; lines from before it that lineShown has yet to
     // send are dropped. Sent mid-write, as outputLine is, so a handler may neither call the session nor run the
     // event loop.
@@ -633,6 +914,7 @@ signals:
     // deleteLine(), clearWindow() or a whole-line concealment, or the console letting go of one no line holds any
     // more after trims; link() gives nullopt once no line holds it.
     // Each id once, in the order they changed. Hover is not sent, the pointer being the app's own. From the event loop.
+    // Only the main console's: a link of a mini console or user window changing names the window in windowTextChanged.
     void linksChanged(const QString& profile, const QList<int>& links);
     // timeStampsShown() changed, by setTimeStampsShown() or a script's enableTimeStamps() or disableTimeStamps() on
     // the main console. From the event loop, with the state as it is then, and only when that differs from the
@@ -644,7 +926,8 @@ signals:
     // back to the app; and, with 0, game text that arrives while setWindowMinimized() has the app minimized and the
     // profile asks for a notification when new data arrives while minimized, once each time it is minimized, as the
     // GUI's flash lasts until the player comes back.
-    // Sent as asked, so a handler may neither call the session nor run the event loop.
+    // Sent as asked, but for that last one, which comes from the event loop; for all of them a handler may neither
+    // call the session nor run the event loop.
     void notificationRequested(const QString& profile, const QString& title, const QString& text, std::optional<int> milliseconds);
     void attentionRequested(const QString& profile, int milliseconds);
     // What a script's announce(), or Mudlet on its behalf, asks screen readers to say, as plain text; assertive
@@ -668,12 +951,13 @@ signals:
     void packageDownloadProgress(const QString& profile, qint64 got, qint64 total);
     void packageDownloadFinished(const QString& profile);
     // A map export, import or download, as the GUI's progress dialog shows it: its title, its first label and the
-    // rooms it goes through, 0 until known; then its label, rooms done and rooms to go through as they change;
-    // then the end, whether it was done, failed or aborted. From the event loop, which an export or import runs
-    // as it goes, so the start and changes can come while the script, or the start() loading a JSON map, still
-    // runs; the end comes once that has returned. A download, which only an app can begin, through host(), runs
-    // on after its script. One still open when its profile closes, or when shutdown() or a later start() lets the
-    // profile go, is ended there; a session being deleted sends no end.
+    // rooms it goes through, 0 until known; then its label, rooms done and rooms to go through as they change; then
+    // the end, whether it was done, failed or aborted. From the event loop, or, for an export or import, at its
+    // progress steps, where only this session's own signals are delivered, so the start and changes can come while
+    // the script, or the start() loading a JSON map, still runs; the end comes once that has returned. A download,
+    // which only an app can begin, through host(), runs on after its script. One still open when its profile
+    // closes, or when shutdown() or a later start() lets the profile go, is ended there; a session being deleted
+    // sends no end.
     void mapProgressStarted(const QString& profile, const QString& title, const QString& label, int maximum);
     void mapProgressChanged(const QString& profile, const QString& label, int value, int maximum);
     void mapProgressFinished(const QString& profile);
@@ -690,6 +974,9 @@ signals:
     // map, shows it again or replaces it with an embedded mapper. While a map is open, and once a turn of the event
     // loop however many were asked for; from the event loop, so a handler may call renderMap().
     void mapRepaintRequested(const QString& profile);
+    // setMapViewOnly() switched the map between viewing and editing; from inside that call, once the scripts'
+    // handlers of mapModeChangeEvent have run, and not if one of them closed the profile
+    void mapViewOnlyChanged(const QString& profile, bool viewOnly);
     // A replay of this profile, as the GUI's replay toolbar follows it: its start, from a script's loadReplay() or
     // through host(), at 1 times its speed, as every replay starts; each change of its speed, from 1 to 1024 times,
     // which may repeat the speed where a change is clamped; and its end, however it ends, the end of the file included,
@@ -707,6 +994,11 @@ signals:
     // hidden input is wanted is lost, as the GUI writes it into its hidden-input box instead. Sent as it is set, so
     // a handler may neither call the session nor run the event loop.
     void commandLineTextRequested(const QString& profile, const QString& text);
+    // A script's printCmdLine(), appendCmdLine() or clearCmdLine() set what windowCommandLineText() gives for
+    // these command lines, or submitWindowCommandLine() emptied them: sent for a write that left Mudlet's copy as
+    // it was too, as the app's line may hold what it has yet to pass on. From the event loop, sorted, each name
+    // once however often it was set in a turn, and only those still there.
+    void windowCommandLineTextChanged(const QString& profile, const QStringList& commandLines);
     // What the player typed ahead of the game's request to hide input has left Mudlet's copy of the line, as the
     // GUI's hidden-input box takes it from its command line: the app moves its input line's text into its hidden
     // input and empties the line. Just before hiddenInputWanted turns on; a handler may neither call the session
@@ -736,6 +1028,20 @@ signals:
     // differ from what was last sent or what they gave at profileLoaded, so a turn that changes them more than once
     // sends them once.
     void mainConsoleAreaChanged(const QString& profile, const QSize& grid, const QRect& textRect);
+    // What scriptWindows() gives for these names differs from what it gave at profileLoaded or the last of these:
+    // a window made, deleted (and so gone from it), moved, resized, shown, hidden, put in another window, raised,
+    // lowered or given another background or font, a console scrolled, by a script, pointer()'s wheel, a clear or a
+    // trim of its oldest rows, or whose grid, scroll bar or timestamps changed, a label whose labelContent() differs,
+    // and those whose place among their parent's windows moved with it.
+    // From the event loop, sorted, once however many calls in a turn changed them, and not for calls that changed
+    // nothing.
+    void scriptWindowsChanged(const QString& profile, const QStringList& names);
+    // What windowLines() gives for these mini consoles, user windows and MXP frames may differ: text written,
+    // edited, recoloured, deleted or cleared, a link of theirs changed, or the console new, as one made again under
+    // the name of one deleted in the same turn is. Never the main console, which outputLine, lineShown
+    // and mainConsoleCleared tell of. From the event loop, sorted, once however many writes a turn made, and after
+    // the scriptWindowsChanged of a window made in that turn. A handler may call the session.
+    void windowTextChanged(const QString& profile, const QStringList& windows);
     // A script's setMainWindowSize() asked for the main window to be this size, for an app that can resize its
     // window to do so. The profile has taken it as setMainWindowSize() would have, so mainConsoleAreaChanged
     // follows if that changed the grid or where the text goes. From the event loop. Its handler may call the
@@ -747,6 +1053,18 @@ signals:
     void mainWindowResizeRequested(const QString& profile, const QSize& pixels);
 
 private:
+    void tellLater(std::function<void()> tell);
+    void beginStart(const Options&, std::function<void(StartResult)> done);
+    std::optional<StartResult> prepareStart(Options&, std::optional<bool>& tls, bool& stalePasswords);
+    StartResult finishStart(const Options&, std::optional<bool> tls, const QString& password);
+    void beginInstallPackage(const QString& path, std::function<void(PackageResult)> done);
+    void finishInstallPackage(const QString& path, std::function<void(PackageResult)> done);
+    // saved is set once the closes that save have begun, for a session deleted after that
+    void beginShutdown(bool save, const std::shared_ptr<bool>& saved, std::function<void(bool)> done);
+    void shutdownOnceResetsEnd(bool save, const std::shared_ptr<bool>& saved, std::function<void(bool)> done);
+    void shutdownOnceReleased(const std::shared_ptr<bool>& saved, std::function<void(bool)> done);
+    void beginSave(std::function<void(bool)> done);
+    void saveEach(QList<QPointer<Host>> profiles, qsizetype closesUnsavedBefore, QStringList unsaved, std::function<void(bool)> done);
     bool storeConnectionDetails(const Options&, std::optional<bool> tls);
     void detachFromHost();
     void connectInputRelays(unsigned int run);
@@ -783,15 +1101,59 @@ private:
     void noteAreaAtLoad();
     void connectLinkRelays(Host*, unsigned int run);
     void sendLinksChanged(unsigned int run);
+    void connectWindowRelays(Host*, unsigned int run);
+    void noteWindowsAtLoad();
+    struct WindowsTold;
+    WindowsTold windowsNow() const;
+    // pWindow is null for the main console; pressedOnText is the grab's, where one has the event. False where the
+    // map refuses it.
+    bool pointWindow(const QList<ScriptWindow>& windows, const ScriptWindow* pWindow, const WindowPointerEvent& event, std::optional<bool> pressedOnText = std::nullopt);
+    // Whether that point of a window, null for the main console, is a console's text, which has its own menu
+    bool onConsoleText(const ScriptWindow* pWindow, const QPointF& position) const;
+    bool pointLabel(const QList<ScriptWindow>& windows, const ScriptWindow& label, const WindowPointerEvent& event);
+    // The window a click-through label passes an event at that point to, null for the main console, and the point
+    // in it
+    std::pair<const ScriptWindow*, QPointF> passedThrough(const QList<ScriptWindow>& windows, const ScriptWindow& label, const QPointF& position) const;
+    // A press or release at that point in a container's area, raised on the console it is in
+    void pointConsole(const QList<ScriptWindow>& windows, const QString& container, const QPointF& position, const WindowPointerEvent& event);
+    // Whether a right-button release on a label with no click or release callback opens the menu of a console's
+    // text under it, as TLabel::forwardRightClickToConsole() does, which takes the release
+    bool opensConsoleMenu(const QList<ScriptWindow>& windows, const ScriptWindow& label, const QPointF& position) const;
+    void scrollConsole(const QString& name, const WindowPointerEvent& event);
+    // Which label of the name the null view has, as its record tells one made again under a name apart
+    std::optional<qint64> labelMade(const QString& name) const;
+    // Whether the window that took the press still has the grab, which Qt drops as a label hides or moves, or as the
+    // window goes
+    bool grabHolds(const QList<ScriptWindow>& windows) const;
+    // The window that has the grab, null for the main console or one gone
+    const ScriptWindow* grabbedWindow(const QList<ScriptWindow>& windows) const;
+    // The null view's count of the window's last making, or for a label its hiding or move into another window
+    std::optional<qint64> deactivated(const ScriptWindow& window) const;
+    // Forgets a hovered label deleted or made again, and leaves one that hid, as Qt does under the pointer, which
+    // runs Lua and is what it returns
+    bool dropHiddenHover(const QList<ScriptWindow>& windows);
+    // Runs the leave of the label the pointer is over, if any, and forgets it; may run Lua
+    void leaveHoveredLabel();
     // duringLoad takes a call while a profile loads, which only one that cannot reach the pool may do
     bool refused(bool duringLoad = false);
     bool usable(bool duringLoad = false);
     // Lua's own message, out of what the GUI's error console shows of it
     static QString luaErrorOf(const QString& consoleText);
+    static QList<TextRun> textRuns(const QString& text, const TLineFormat& format, const QColor& consoleForeground, const QColor& consoleBackground);
+    static qint64 arrivalTime(const TBuffer& buffer, int line);
+    // The console windowLines() reads for the name, null for one it refuses
+    TConsoleModel* windowTextModel(const QString& window) const;
     // False, with errorString() saying why, while the GUI's hidden-input box would not be open
     bool inputHidden(bool sending);
     void noteAlreadyInstalled(const QString& path, const QString& name);
     void relayMapRepaints(Host*, unsigned int run);
+    // What mapPointer() does once it is usable, with the buttons held after the event; pointer() gives the size of
+    // the mapper's window, which the map must have been drawn at, having moved getMousePosition() itself, and what
+    // T2DMap ignores there is taken
+    bool pointMap(const MapPointerEvent& event, Qt::MouseButtons buttons, const std::optional<QSize>& windowSize);
+    // pointer() on the mapper's window
+    bool pointMapper(const ScriptWindow& mapper, const WindowPointerEvent& event);
+    void noteMapPointer(const QPointF& position);
 
     QPointer<Host> mpHost;
     QString mProfileName;
@@ -801,6 +1163,8 @@ private:
     bool mShuttingDown = false;
     bool mLoadFailed = false;
     bool mRemovingStalePasswords = false;
+    bool mInstallingPackage = false;
+    bool mSaving = false;
     bool mSecureConnectionOffered = false;
     // Bumped by each offer, to drop one still queued for the frontend once a later one is made
     unsigned int mSecureConnectionOffer = 0;
@@ -830,6 +1194,8 @@ private:
     bool mMapOperationCancelable = false;
     // The run whose mapRepaintRequested is queued, 0 for none
     unsigned int mMapRepaintQueuedRun = 0;
+    // The context of the map progress relays, so a map operation can deliver them and nothing else queued here
+    QObject mMapProgressRelay;
     QStringList mUnsavedProfiles;
     // Bumped by each start() and shutdown(), to drop a queued quitRequested or other relay owed to the profile
     // before, even one a script closed before shutdown() was called
@@ -845,6 +1211,7 @@ private:
         bool isPrompt = false;
         QList<TextRun> runs;
         qint64 arrivalMSecs = -1;
+        bool continuesLine = false;
     };
     // For each trigger pass under way, outermost first, the lines that passes nested in it have shown
     QList<QList<ShownLine>> mShownLinesOfPasses;
@@ -863,6 +1230,42 @@ private:
     QString mDeliveredLatency;
     // What mainConsoleGrid() and mainConsoleTextRect() gave at profileLoaded, then each mainConsoleAreaChanged
     std::optional<std::pair<QSize, QRect>> mDeliveredMainConsoleArea;
+    // What scriptWindows() and each label's labelContent() gave at profileLoaded, then as each scriptWindowsChanged was sent
+    struct WindowsTold
+    {
+        QList<ScriptWindow> windows;
+        QHash<QString, LabelContent> labels;
+    };
+    std::optional<WindowsTold> mDeliveredWindows;
+    // The label pointer() last had the pointer enter, until it left, and which label of that name it was
+    struct HoveredLabel
+    {
+        QString name;
+        qint64 made = 0;
+    };
+    std::optional<HoveredLabel> mHoveredLabel;
+    // The window that took the press while a button is held, as Qt's qt_button_down; empty and main for the main
+    // console. through is the click-through label the app named for the press, if it passed the press to this one.
+    struct Grab
+    {
+        bool main = false;
+        // Whether the press landed on a console's text, whose TTextEdit then has the release
+        bool text = false;
+        QString name;
+        ScriptWindow::Kind kind = ScriptWindow::Kind::label;
+        QString through;
+        std::optional<qint64> deactivated;
+        // Where the window was in the main window's area at the press, which getMousePosition() follows the held
+        // moves from after it goes, as it does from throughOrigin
+        QPointF origin;
+        // Where the click-through label was in the main window's area at the press, which the held events naming it
+        // follow from after it goes
+        QPointF throughOrigin;
+    };
+    std::optional<Grab> mGrab;
+    // As TTextEdit::mMouseWheelRemainder, the part of a turn too small to scroll a line, per console, with the
+    // console's notifier, as one made again under the name starts at none
+    QHash<QString, std::pair<QPointer<const QObject>, int>> mWheelRemainders;
     // The size a script asked for, and Host's count of that request, while mainWindowResizeRequested's handler runs
     std::optional<std::pair<QSize, quint64>> mAnsweringMainWindowRequest;
     bool mWindowMinimized = false;

@@ -155,6 +155,7 @@ QObject::connect(session.get(), &THeadlessSession::outputLine,
 });
 QObject::connect(session.get(), &THeadlessSession::localText, [](const QString& profile, const QString& text) {
     // echo(), print(), the commands sent and Mudlet's messages; does not always end a line
+    // (localTextStyled gives the same pieces with their colours)
 });
 QObject::connect(session.get(), &THeadlessSession::quitRequested, [] {
     // A script closed the profile
@@ -190,8 +191,10 @@ profiles and `Mudlet.ini` with that GUI (not its passwords), so `start()` warns 
 Each of `outputLine`'s runs covers part of the line, in order, with the colours and styles the game
 asked for (`THeadlessSession::TextStyle`: bold, italic, underline, overline, strike-out, reverse, blink,
 fast blink, concealed), and says whether each colour is the profile's own, which a frontend may swap
-for its own theme's. A run also names the link it is part of, as "links in the main console" below tells.
-What `echo()` and the like print comes as plain text for now.
+for its own theme's. A run also names the link it is part of, as "links in the main console and in
+windows" below tells.
+What `echo()` and the like print comes as plain text in `localText`, and with runs of the same kind in
+`localTextStyled`.
 
 `outputLine` carries each line as the game sent it, before the profile's triggers run on it, so a line a
 trigger gags still arrives, and one it rewrites arrives unchanged. `lineShown` carries the same lines as
@@ -199,17 +202,17 @@ the main console shows them once their triggers have run, with the same argument
 trigger replaced, the colours it changed and what it `echo()`ed into the line, which may hold line feeds,
 and not at all for a line a trigger deleted. Lines a trigger feeds with `feedTriggers()` come after the
 line it ran on, in the order the console shows them, and so does what it writes anywhere else, each piece
-as a line of its own: an `echo()` after `deleteLine()`, `clearWindow()` or a `feedTriggers()`, and the
-command echo of a `send()`. An app that draws the console as the GUI does draws `lineShown`, wrapping each
+as a line of its own: an `echo()` after `clearWindow()` or a `feedTriggers()`, and the command echo of a
+`send()`; an `echo()` after `deleteLine()` comes with `continuesLine`, as below. An app that draws the console as the GUI does draws `lineShown`, wrapping each
 line itself, as for `outputLine`; a line a trigger split with `wrapLine()` comes whole, with the line feeds
 it held, and if a trigger then deletes its first part, what is left of it comes as the line. A change a later
 trigger makes to a line already sent, as by moving the cursor up to it, is not sent again, though what it
 inserts is sent as a line of its own.
 
-The last argument of both, `arrivalMSecs`, is when the line arrived, in milliseconds since the epoch: the
+Their fifth argument, `arrivalMSecs`, is when the line arrived, in milliseconds since the epoch: the
 time the GUI's timestamps show beside it. A line a trigger wrote has the time of the console line it went
 into, its own when it is a line of its own. It is -1 for a line with none. A handler that takes only the
-first three or four arguments may still be connected. `localText` carries no time of its own: it is sent as
+first three, four or five arguments may still be connected. `localText` carries no time of its own: it is sent as
 it is written, so the time its handler runs is when that text was written.
 
 `timeStampsShown()` says whether the main console shows those times beside its lines, as the GUI's
@@ -230,19 +233,48 @@ piece once: a line of `lineShown` goes below a line `localText` left open, and t
 handler, `lineShown` takes effect from the next line the game sends, so the line under way and all its
 triggers write go to one stream or the other, never both.
 
-Drawn that way, the console matches the GUI's but for its layout in these places, where no text is
-missing or doubled:
+`localTextStyled` follows each piece of `localText` with the same text and the runs it was written in, as
+`outputLine`'s are: the colours of `cecho()`, `decho()`, `hecho()` and `setFgColor()`, the styles, the command
+echo's colours and the link of an `echoLink()`, which `link()` and `followLink()` take. The runs cover the whole
+piece, a line feed being part of the run of what it was written with. An app that draws colours connects
+it in place of `localText`, as every piece comes in both. A link in text copied from another console's
+buffer (`appendBuffer()`, or text an MXP frame sends on to the main console) is not named.
 
-- The console draws an `echo()` that follows `deleteLine()` on the end of the line above, which was already
-  sent, where `lineShown` sends it as a new line.
-- The console draws a command typed at a prompt on the end of that prompt, as `HP 10> look`, where
-  `lineShown` sends the prompt and `localText` then sends `look` as a piece that the rule above puts on a
-  line of its own. Nothing tells it apart from an alias's `echo()` after a prompt, which the GUI draws below.
-- Blank lines inside what a trigger prints, such as a Lua error of several lines, or the empty command echo
-  of a trigger's `send("")`, are not sent.
+`lineShown` and `localTextStyled` end with `continuesLine`, which is true for text the console draws on
+the end of the line that was last sent whole, where an app would otherwise start a line below it:
+
+- An `echo()` that follows `deleteLine()` lands on the end of the line above the deleted one, so
+  `lineShown` sends it with `continuesLine`. One that starts with a line feed, or that follows the lines
+  a `feedTriggers()` added, is drawn below and comes without.
+- A command typed at a prompt is drawn on the end of that prompt, as `HP 10> look`: `lineShown` sends the
+  prompt and `localTextStyled` then sends `look` with `continuesLine`. An alias's `echo()` after a prompt,
+  which the console draws below it, comes without, and so does a command typed while other text is
+  still open below the prompt.
+- While `lineShown` is not connected, the first thing a trigger echoes onto its line, which
+  `outputLine` has already sent, comes in `localTextStyled` with `continuesLine`. In that mode
+  `outputLine` also sends the lines a trigger deletes, so after `deleteLine()` the last line the app has
+  is the deleted one, while the console draws the trigger's `echo()` on the line above it. Such an echo
+  comes with `continuesLine` all the same; an app that must match the console there connects
+  `lineShown`, which leaves deleted lines out.
+
+Text drawn on a line of its own comes without it, also where the console's last line is empty: what a
+trigger writes below a command it sent, or below lines it fed, and what follows `clearWindow()`. An
+`echo()` that follows `deleteLine()` and is put into the middle of the line above, as `insertText()` can
+put it, comes without it too, as only text that reaches that line's end is drawn after it. One that
+lands on a blank line above the deleted one comes with it in `lineShown`, and without it in
+`localTextStyled`.
+
+Such a piece is put on the end of the last line the app drew, after the line feed that ends an open
+line is dropped from it as from any other piece. Drawn that way, the console matches the GUI's line for
+line. An app that leaves `continuesLine` out, or connects the plain `localText`, misses no text and
+doubles none: it draws those pieces on lines of their own.
+
+A blank line among what a trigger writes below its line, as the empty command echo of a trigger's
+`send("")` makes, is a line of `lineShown` with no text, as a blank line from the game is.
 
 `mainConsoleCleared` says a script emptied the main console with `clearWindow()` or
-`clearWindow("main")`, so an app empties its own copy of it; a mini console's clear does not send it.
+`clearWindow("main")`, so an app empties its own copy of it; a mini console's clear names it in
+`windowTextChanged` instead (see "Reading a console's text").
 While it is connected, a clear also ends any line `localText` left open, so the next piece has no line
 feed to drop; without it, as for the CLI, that piece starts with the line feed that ends the open line.
 It is sent between the lines from before and after, so, like `outputLine`, its handler must not call the
@@ -317,9 +349,9 @@ the game sends, as the GUI's progress dialog does, and `cancelPackageDownload()`
 
 `mapProgressStarted`, `mapProgressChanged` and `mapProgressFinished` follow a map export, import or
 download, as the GUI's progress dialog does, each change carrying the whole label, the rooms done and the
-rooms to go through. They are sent from the event loop. An export or import runs it as it goes, so its
-start and changes can arrive while the script that began it, or the `start()` that loads a JSON map,
-still runs, but its end arrives only once that has returned. A map download, which only an app can begin,
+rooms to go through. They are sent from the event loop, or, for an export or import, at its progress
+steps, where only the session's own signals are delivered, so its start and changes can arrive while the script that began it, or
+the `start()` that loads a JSON map, still runs, but its end arrives only once that has returned. A map download, which only an app can begin,
 through `host()`, carries on after its script returns.
 
 A map operation or package download still open when its profile closes, or when `shutdown()` or a later
@@ -428,7 +460,7 @@ input while the send's aliases ran, that empty line comes just after `hiddenInpu
 instead, as the GUI's line was emptied behind its hidden-input box. It is sent as it is set, so
 it keeps its place among the game's lines and `hiddenInputWanted`, and a handler may neither call the
 session nor run the event loop. Only the main command line is sent: a line from
-`createCommandLine()` or Geyser is not. Mudlet does not know what the app's user has typed until the
+`createCommandLine()` or `enableCommandLine()` is told by `windowCommandLineTextChanged` (see below). Mudlet does not know what the app's user has typed until the
 app says with `setCommandLineText()`; until then `getCmdLine()` reads what a script or `submit()` last
 set. Nothing is sent:
 
@@ -462,6 +494,31 @@ signals that end hidden input have been handled, not the text it set aside, as a
 `commandLineTextRequested` may have emptied the line meanwhile. The GUI's line does not count such text
 as typed either, though it does count what it puts back from its hidden-input box, which the app hands
 back as typed.
+
+A command line a script made with `createCommandLine()`, and the one `enableCommandLine()` gives a mini
+console or user window, are in `scriptWindows()` as `Kind::commandLine`, the console's own under the
+console's name with no geometry, for the app to draw as an input line of its own. Each is named in three
+calls, which refuse the main command line's names:
+
+- `windowCommandLineText()` is its text, as a script's `getCmdLine()` reads it.
+- `setWindowCommandLineText()` is what the player has typed on it so far, as `setCommandLineText()` is
+  for the main line. It is taken while hidden input is wanted too, as the GUI's hidden-input box covers
+  only the main line. It is false for a line that is not `shown` in `scriptWindows()`: one a script hid
+  or disabled, or whose window is hidden, which a player could not type on. A script still writes to
+  such a line.
+- `submitWindowCommandLine()` is Enter on it. Each line of the text is a command: it is handed to the
+  Lua function `setCmdLineAction()` gave the line, or, with none, goes through the aliases to the game
+  as `submit()` sends it, and a console's own line then echoes it in its console unless the profile
+  never echoes commands. The text joins that line's own history, which is saved with the profile, and
+  the line is emptied if the profile clears the line after a send. A line that a script deletes
+  part-way takes no more of the commands. It is false, and sends nothing, where
+  `setWindowCommandLineText()` is: Enter cannot reach a line that is not shown.
+
+`windowCommandLineTextChanged` names the lines whose text a script's `printCmdLine()`,
+`appendCmdLine()` or `clearCmdLine()` set, or a submit emptied, once a turn of the event loop; the
+app reads each with `windowCommandLineText()`. A write that leaves Mudlet's copy as it was is told too,
+as the main line's is, since the app's line may hold what it has yet to pass on. What the app sets itself is not told back. The history
+of such a line is not offered for the app to walk, nor is Tab completion from its suggestions.
 
 What it guarantees about hidden input is narrow:
 
@@ -539,6 +596,64 @@ front, as a tab is in the GUI, until a script names one with `setActiveProfile()
 does, that raises `sysProfileFocusChangeEvent` with `false` in the profile it leaves and `true` in the
 one it brings forward, and shows that profile's Discord presence. A profile whose close has started is
 refused with `false` and a message, and the front stays where it was.
+
+## Embedding it: when the signals come and what a handler may do
+
+Each signal's own rules are with the signal, above and below; this is all of them in one place. Mudlet
+runs on one thread, and the session's signals are emitted on it. Which of three ways a signal comes
+decides what its handler may do.
+
+**Sent mid-write.** `outputLine`, `lineShown`, `mainConsoleCleared`, `localText`, `localTextStyled`,
+`errorConsoleText`, `debugText`, `hiddenInputWanted`, `typedLineMoveRequested`,
+`commandLineTextRequested`, `notificationRequested`, `attentionRequested` and `announcementRequested`
+are sent from inside whatever wrote the text or asked: the read of the game's data, a script, or the
+session call that ran it. That is what keeps them in order with one another. One of them is queued
+all the same: the `attentionRequested` for game text that arrives while the app is minimized is sent
+once the event loop runs, yet its handler is held to these same rules. Their handlers must not
+run the event loop, as a modal dialog does, and must not call the session back: every call that is
+refused where `submit()` is fails there with its documented refusal result, with `errorString()` saying to
+queue the call instead.
+The calls described as getters still answer. A handler may delete the session.
+
+**Sent from the event loop.** Every other signal but the two below is queued, and sent once the event
+loop runs, after the script or call that caused it has returned: `connecting`, `connected`,
+`disconnected`, `quitRequested`, `loggingChanged`, `latencyChanged`, `secureConnectionOffered`,
+`soundsMutedChanged`, `mappingScriptMissing`, `mainWindowResizeRequested`, the package download's,
+map progress's and replay's signals, and the ones that follow a state. Their handlers may call the
+session. Of those that follow a state, some are sent once a turn however many changes it held, naming
+what changed, for the app to read again: `scriptWindowsChanged`, `windowTextChanged`,
+`windowCommandLineTextChanged`, `linksChanged`, `addonCommandsChanged`, `buttonsChanged` and
+`mapRepaintRequested`. The others carry the value as it is when they are sent, and only when it differs
+from the one last sent or the one read at `profileLoaded`: `consoleFontChanged`, `consoleWrapChanged`,
+`consoleColorsChanged`, `timeStampsShownChanged` and `mainConsoleAreaChanged`. So a change made and
+undone within a turn sends nothing, and nothing follows `profileLoaded` for what the load did. A map
+export or import runs the event loop as it goes, so these can arrive while the script that began it
+still runs.
+
+**Sent from inside a call.** `profileLoaded` is the last thing `start()` does before it returns
+`started`, and `mapViewOnlyChanged` comes from inside `setMapViewOnly()`. Their handlers may call the
+session, and delete it.
+
+The order that holds between signals:
+
+- What the load writes is sent from inside `start()`, before `profileLoaded`, so an app that wants it
+  connects before it calls `start()`.
+- For a line from the game, `outputLine` comes before its triggers run and `lineShown` once they have;
+  the lines a trigger feeds come after the line it ran on, in both.
+- Each piece of `localText` is followed at once by its `localTextStyled`.
+- `typedLineMoveRequested` comes just before the `hiddenInputWanted` that turns hiding on.
+- A signal sent mid-write comes before any queued signal for the same script, which waits for the event
+  loop.
+- `connecting` comes before the `connected` or `disconnected` that ends it.
+- `packageDownloadStarted`, `mapProgressStarted` and `replayStarted` each come before their changes, and
+  each has its `…Finished` after them however it ends, unless the session is deleted first.
+- The `scriptWindowsChanged` that lists a window made in a turn comes before the `windowTextChanged`
+  for what that turn wrote in it.
+- Once `shutdown()` is called, a queued signal still waiting is not sent, `quitRequested` included, save
+  `mappingScriptMissing` and a replay's: those still waiting, `replayStarted` among them, are sent from
+  inside `shutdown()` ahead of its `replayFinished`. What was open (hidden input, logging, a download, a map
+  operation, a replay) has its end from inside `shutdown()`. A session that is deleted instead sends none
+  of those ends.
 
 ## Embedding it: drawing the main console as the GUI does
 
@@ -642,7 +757,7 @@ its own gives the area without them, and gives a smaller one as they grow; the s
 their room from it, so what a script reads of the main window's size changes with them only when the app
 gives a new one.
 
-## Embedding it: links in the main console
+## Embedding it: links in the main console and in windows
 
 Each `TextRun` of `outputLine` and `lineShown` has a `link`: the id of the main console's link the run is
 part of, or 0 for none. A line is split into runs where its link changes as well as where its look does,
@@ -697,6 +812,25 @@ line holds any more each time a quarter of its buffer has been trimmed, and `lin
 then, after which `link()` gives `nullopt` for each at once. Until then, `link()` of a link that only
 trimmed lines held gives `nullopt` too, but reads the whole buffer to find that out.
 
+A mini console or user window has links of its own, from `echoLink("name", …)` and the like, which the
+runs of `windowLines()` name (see "Reading a console's text"). Each console counts its own ids, so an id
+means a link only together with its window: `windowLink(window, id)` and `followWindowLink(window, id)`
+or `followWindowLink(window, id, item)` are the calls above for a link of that window, and with `"main"`
+or no name they are the calls above. They answer `nullopt` and `unknown` for a name `windowLines()`
+refuses. A hidden window's link is still followed, as only the app knows what its pointer can reach.
+There is no `linksChanged` for a window: a link of it followed, revealed or chosen names the window in
+`windowTextChanged`, and the app reads `windowLink(window, id)` again for the runs it shows. A game's MXP
+`<EXPIRE>` expires only the main console's links, in the GUI too, so a window's links stay as they are.
+
+`pointer()` opens no menu: a right-button release over a console's text raises nothing and shows nothing,
+so the menu the GUI opens there is the app's to show, and these calls are all it needs. The app knows which
+run its pointer is over, as it drew them, and so the link. Over a link whose `menu` is set it lists the
+`items` of `windowLink(window, id)`, under `menuTitle`, and a pick is `followWindowLink(window, id, item)`.
+Over a spoiler not yet revealed the GUI's right click only reveals it, which `followWindowLink(window, id)`
+does; over a `disabled` link, or one whose `menu` is not set, it opens nothing. Anywhere else on the text
+the GUI opens the console's own menu, to copy, select and search, which is the app's to offer over the text
+it drew; the entries a script adds to that menu with `addMouseEvent()` are not listed for the app.
+
 ## Embedding it: the 2D map
 
 `renderMap()` draws the profile's 2D map onto a `QPainter` at the size given, as the GUI's mapper
@@ -728,7 +862,397 @@ GUI's preference sets it. What the GUI does with a right press, a drag or a rele
 rooms and labels and sizing a selection, stays the GUI's. It is false, with the reason in
 `errorString()`, before the map is drawn, for a double-click of another button, for less than half a
 notch of the wheel and for a wheel turn on a map whose last draw showed no area, as one with no rooms
-does, and it is refused where `renderMap()` is.
+does, and it is refused where `renderMap()` is. Once the map is drawn, and while its window is `shown`,
+`getMousePosition()` follows each `mapPointer()` call, even one the map does nothing for: the `position`
+is taken as that point of the `mapper` window among `scriptWindows()`, which the GUI's map fills from its
+top left, so the app draws the map at that window's size for the two to agree.
+
+`setMapViewOnly()` switches the map between viewing and editing, as the item of the GUI map's menu does, and
+`mapViewOnly()` reads which it is; a new profile's map is view-only, and the profile saves it. Scripts hear
+`mapModeChangeEvent` with `"viewing"` or `"editing"` before the call returns, then the session emits
+`mapViewOnlyChanged` and asks for a repaint, as the room's name in the map's info box is trimmed of trailing
+punctuation only while viewing. Editing itself, moving rooms and labels with the mouse, stays the GUI's:
+what the switch changes here is which held-button moves `pointer()` refuses on the `mapper` window (see
+"The windows scripts make"). It is false while no map is shown, none opened yet or the one there closed
+or hidden and no secondary map view (`createMapView()`) open either, as the GUI's item is on each map,
+and refused where `renderMap()` is; asking for the mode the map is already in is true and raises
+nothing. Each map and each secondary map view a script opens in a profile that was saved as editing
+raises `mapModeChangeEvent` with `"editing"` as the GUI's does: before the map is there, so its handler
+finds no mapper yet (`getMapZoom()` gives nil), and before `mapOpenEvent`. No `mapViewOnlyChanged` comes
+for that, so read `mapViewOnly()` at `profileLoaded`.
+
+A `mapModeChangeEvent` handler that itself opens or makes a map while one is being made ends differently
+here, as the GUI orphans a mapper or crashes there. One that calls `createMapper()` during
+`createMapper()` leaves its own mapper, where the GUI keeps the outer call's; one that calls
+`openMapWidget()` or `loadMap()` during `createMapper()` makes that call refuse, where the GUI ends
+with both a map widget and a mapper; one that calls `createMapper()` during `openMapWidget()` leaves
+that mapper, with `mapOpenEvent` raised once for it and once more as `openMapWidget()` ends, and a later
+`openMapWidget()` refuses; and one that deletes the user window the mapper is for makes `createMapper()`
+refuse at once.
+
+## Embedding it: the windows scripts make
+
+An app has a UI of its own, so it draws the windows a profile's scripts make as well as the main
+console: mini consoles, user windows, labels, command lines, text edits, scroll boxes and the mapper's
+place. Mudlet draws none of them. The session gives the app what it needs to draw them as the GUI would,
+and the app draws what that says, as it draws the main console from `lineShown`.
+
+`scriptWindows()` lists them as `ScriptWindow`s, each with:
+
+- its `name` and `kind`;
+- its `parent`: the user window or scroll box it is in, or, for a console's own command line from
+  `enableCommandLine()`, that console, whose name it shares; empty for the main window's area, which is
+  what an app gives with `setMainWindowSize()` (see "Embedding it: the main window's size"), and for a
+  dock. Its `parentKind` says which kind of window that is, as a scroll box may share its name with a
+  user window or console;
+- `inDock`, set for a dock: a user window, or the map `openMapWidget()` opened. In the GUI these are
+  docks beside the main window's area, docked or floating, not windows in it, so nothing in the area is
+  under or over them;
+- its `geometry` in its parent's pixels, and a dock's in the main window's. With no dock layout to put
+  it in, a user window is at the main window's top left, at the size the main window had as the user
+  window opened, or, if the app had given no size by then, at the one made up from the main console's
+  grid, and it stays so as the main window changes size, until the app places it with
+  `setUserWindowGeometry()`. A console's own command line has none, as the console lays it out along its
+  bottom;
+- `visible`, its own flag, as `hideWindow()` and `showWindow()` set it, and `shown`, whether it shows:
+  visible, and so is each window it is in. Hiding a user window leaves the labels in it visible, but not
+  shown;
+- `stackOrder`, from 0 among the windows of one parent, a higher one drawn over a lower one. One made
+  later, raised with `raiseWindow()` or moved into the parent with `setWindow()` is higher; one lowered
+  with `lowerWindow()` goes below the rest. The docks count from 0 among themselves, apart from the
+  windows of the main window's area;
+- the `background` colour of a console, or of a label from `setBackgroundColor()`, and the `font` a
+  console, label or text edit draws its text in. The other kinds have an invalid colour and a default
+  font.
+- for a user window, its `dock`: whether the player may dock it (`autoDock`), the `area`
+  `openUserWindow()` asked for, whether it is `floating`, and its `title`, as `openUserWindow()` and
+  `setUserWindowTitle()` gave them. Where the app docks it is the app's: `setUserWindowGeometry()` takes
+  no area, so `area` stays what the script asked for. The other kinds have none.
+- for a mini console or user window, how it is scrolled: `scrolledBackTo`, the row a script's
+  `scrollTo()` or the app's wheel through `pointer()` left it at, as `getScroll()` gives it, and none
+  while it follows new lines. Scrolled back, the GUI splits the console in two: the upper pane shows the
+  rows of `windowLines()` that end just above that row, and the lower one the last rows, as they arrive.
+  `grid` is the columns and rows of text the upper pane has room for, as `getColumnCount()` and
+  `getRowCount()` give them, so the whole console while it is not scrolled back and about three quarters
+  of its height while it is. `scrollBar` is whether `enableScrollBar()` asked for one, and `timeStamps`
+  whether `enableTimeStamps()` has each row's time shown beside it. The other kinds have none of these.
+
+The list has parents before the windows they hold, and each parent's windows from the lowest up, the
+main window's area's before the docks, so an app that draws it in order draws each window over what it
+should cover. `scriptWindow(name)` reads one,
+the first of that name, and `scriptWindow(name, kind)` the one of that kind, as a console's own command
+line has its console's name. Neither lists buffers, which are never shown. Both are empty with no profile open, and may be read from anywhere, a handler of the session's
+signals included.
+
+The frames a game opens with MXP's `<FRAME>` are in the list too, as kind `mxpFrame`. A frame is a mini
+console in all but who made it: `windowLines()` reads the text a `<DEST>` sent it, `windowTextChanged`
+names it, its links are read and followed and the wheel scrolls it, the same way. Its `geometry` is its
+console's, under the frame's tab header where it has one, in the main window's area or, for a frame
+opened inside another, in that frame, which is its `parent`. An `EXTERNAL` frame is a window of its
+own, so it has `inDock` set, no place and only a size, like a user window the app has not placed; a
+press on it goes on to the main console as the GUI's does, and it and `getMousePosition()` take the
+frame as sitting at the main area's top left corner. Of a
+frame's tabs only `shown` tells: it is set for the page in front and not for the ones behind it; the
+titles are not given. A frame's `<DEST … EOF>` empties it and `<DEST … EOL>` drops its last line before
+the text that follows, so however much one packet brought, `windowTextChanged` names the frame once
+and `windowLines()` then has only what is left. `setMainWindowSize()` does not lay the frames out
+again: they move as the game opens and closes them.
+
+A Geyser gauge, button, or container is not a window of its own: it is the labels and windows it is made
+of, so a gauge is its `_back`, `_front` and `_text` labels, which the list has as any other.
+
+`scriptWindowsChanged(profile, names)` says when to read them again: the names, sorted, of the windows
+whose `ScriptWindow` differs from what the list gave at `profileLoaded` or at the last of these. A window
+deleted is gone from the list. Those whose `stackOrder` moved as another was made, deleted, raised or
+lowered are among the names. It comes from the event loop once a turn, however many calls in it changed
+the windows, so a script that makes a gauge and places it is one signal, and a call that changed nothing,
+such as a `moveWindow()` to where the window is, sends none. A console is named as it is scrolled too, by a
+script, the wheel, a `clearWindow()`, which has it follow new lines again, or its oldest rows being
+trimmed under the row it is scrolled back to.
+
+`labelContent(name)` is what a label shows, beside the place, colour and font its `ScriptWindow` has:
+
+- `text`, the rich text `echo()` or `setLabelText()` gave it as Qt's rich text, with its links styled as
+  `setLinkStyle()` asks. A Geyser label's alignment and text colour are in this markup;
+- `image`, the file `setBackgroundImage()` gave it while it shows, with `svg` set for an SVG one, which
+  is drawn under the text in `svgTint`, `svgRotation`, `svgShearX` and `svgShearY`. A raster image takes
+  the text down, as it does in the GUI;
+- `movie`, the file `setMovie()` gave it, while that shows in place of the text, with `moviePaused` as
+  `pauseMovie()` and `startMovie()` leave it, and set too once the movie has played to its end, `movieFrame`,
+  the frame a paused movie shows, which
+  `setMovieFrame()` may have jumped to, and -1 while it plays, `movieSpeed` in percent, as
+  `setMovieSpeed()` gave it, and `movieSize`, the size `scaleMovie()` gave it, invalid for the file's own;
+- `toolTip` and `toolTipDuration`, in seconds, 0 for the platform's own;
+- `cursor`, unset for the parent's, or the shape `setLabelCursor()` gave it, or `Qt::BitmapCursor` with
+  `customCursor` and `customCursorHotSpot` from `setLabelCustomCursor()`;
+- `clickThrough`, as `enableClickthrough()` sets it;
+- `accessibleName` and `accessibleButton`, what a screen reader says for it and whether it is told it is
+  a button;
+- `styleSheet`, as `setLabelStyleSheet()` gave it. Mudlet does not interpret it for the app: drawing what
+  it says is the app's to do, or not.
+
+A sheet a script sets on the whole profile (`setProfileStyleSheet()`) or on a user window
+(`setUserWindowStyleSheet()`) reaches the labels and mini consoles inside it as it does on the desktop, for
+what scripts read back: a label's text and `getLabelSizeHint()`, a mini console's font, columns and rows.
+The label's own sheet wins where both speak. Rules are matched on the widget's class, name and state; one
+that names a widget inside another (`QDockWidget QLabel { … }`) is not followed.
+
+A change to any of these names the label in `scriptWindowsChanged`. It is empty for a name that is not a
+label's.
+
+### Reading a console's text
+
+`windowLines(window, first, count)` gives the text of a mini console or user window, for the app to draw
+in the place its `ScriptWindow` has: up to `count` rows from row `first`, as a `WindowText` with the
+`lineCount` of rows the console holds, the row its `lines` start at as `first`, and the `lines`. A row is
+a line of the console's buffer after its wrap, which is what the GUI paints on one screen row and what a
+script's `getLines()` counts, from 0. The last row is the one the next write carries on, empty after a
+line feed, so `lineCount` is one more than a script's `getLineCount()`, and a cleared console has that one
+empty row. Each `WindowLine` has:
+
+- its `text`, `isPrompt`, `runs` and `arrivalMSecs`, as `outputLine` gives them for the main console. A
+  run's `defaultForeground` and `defaultBackground` are the console's own colours, the background being
+  its `ScriptWindow`'s, and its `link` is a link of that console;
+- `wrapped`, set where the row carries on from the one above, which the console's wrap split it off; such
+  a row has the time of the line it came from.
+
+The range is cut to the rows there are, and a `first` below 0 counts back from the end, so
+`windowLines(name, -40, 40)` is the last 40 rows. A hidden console keeps its text and is read all the
+same. `"main"`, or no name, reads the main console, for an app that redraws its scrollback; what it shows
+as it arrives is still `lineShown`'s to tell. It is empty with no profile open and for any other name: a
+label, a scroll box, a text edit, the mapper and a buffer from `createBuffer()`, which is never shown. It
+may be called from anywhere, but from a handler of
+`outputLine` or `lineShown` the main console's last row is in the middle of its commit.
+
+`windowTextChanged(profile, windows)` says when to read them again: the names, sorted, of the mini
+consoles and user windows whose rows may differ, hidden ones included. A script edits such a console in
+place, with `moveCursor()` and `insertText()`, `replace()`, `deleteLine()` or `clearWindow()`, so there
+is no stream of its lines as the main console has: the app reads the rows it shows again. A link of the
+console changing, as when it is followed, names it too. It comes from the event loop once a turn, however
+many writes the turn made, so its handler may call the session, and a clear and what was written after it
+are one signal, read as they ended up. For a window made and written to in one turn it follows the
+`scriptWindowsChanged` that lists the window. A new console is named even with nothing written to it,
+as one a script deleted and made again in the same turn, in the same place, is not named in
+`scriptWindowsChanged`, yet its rows and its links' ids are gone. A window written to and deleted in the
+same turn is not named, and the main console never is: `outputLine`, `lineShown`, `localText` and `mainConsoleCleared`
+tell of it. A console's `setBackgroundColor()` is `scriptWindowsChanged`'s to tell, after which
+`defaultBackground` is against the new colour.
+
+The app places user windows, as the GUI's dock layout and the player do. `setUserWindowGeometry(name,
+geometry, floating)` says where it put one, in the main window's pixels, and whether it floats. A new
+size raises `sysUserWindowResizeEvent` and `handleWindowResizeEvent`, as the GUI's dock does, at once
+while the window shows or as it next shows, and is what `getUserWindowSize()` and `getWindowGeometry()`
+then give; a move alone raises nothing. If a handler of that event takes the window away, or opens
+another of its name in its place, which the app has not placed, it returns false. `closeUserWindow(name)`
+is the dock's close button: the window is hidden, as `hideWindow()` does, until a script shows it again.
+Both are refused where `runLua()` is, and for a name that is not a user window's.
+
+The app's mouse reaches the windows through `pointer(window, event)`, with a `WindowPointerEvent` (the 2D
+map takes its own `MapPointerEvent` through `mapPointer()`, as "Embedding it: the 2D map" says) in that
+window's pixels: its `type` (`press`, `release`, `doubleClick`, `move`, `enter`, `leave` or `wheel`),
+`position`, the `button` that changed, the `buttons` held after it, which for a press or double-click
+include its own `button` whether or not the app gives it, the `modifiers` and, for a wheel, the
+`angleDelta` in eighths of a degree. `"main"`, or no name, is the main console, as the Lua window
+functions take it, and its `position` is in the pixels of the main window's area, where its labels are
+placed, not of `mainConsoleTextRect()`. On a label it runs the callback `setLabelClickCallback()` and its
+siblings gave for that type, with the event table the GUI's gives, and a double-click with no callback of
+its own runs the click one. As the GUI's mouse does, an event at a label the pointer was not over first
+leaves the one it was over and enters this one, a `leave` goes only to the label the pointer is over, and
+a label `enableClickthrough()` set passes the event to what is under it in the same parent, or to the
+console or user window that parent is; a dock is never under a window of the main window's area. A label
+deleted and made again under its name is a new one, which the pointer has not entered. A press or release
+raises `sysWindowMousePressEvent` or `sysWindowMouseReleaseEvent`, with the button's number, the point
+and the window's name, where the GUI's does: on a user window or the main console itself, and from a mini
+console, or a label with no callback for it, on the console or user window it is in, at the point in that
+one. A right-button release raises nothing where the press was on a console's text, a mini console, a
+user window or the main console inside its borders, or with no press before it is over that, as the GUI
+opens that console's menu instead; one on a scroll box's own area or the main console's borders is
+raised. A right-button release on a label with neither a click nor a release callback raises nothing where
+it is over a console's text either. A double-click raises a press,
+and a wheel scrolls the console it turns over, three lines a notch, one with Shift and half the console
+with Control, and does nothing over a scroll box's own area. As Qt's implicit grab, a press of a button
+with no other held gives the window that took it, which for a click-through label is what is under it,
+every move with a button held and the release, wherever the pointer is, until a release leaves no button
+held, a move comes with none held or another such press comes: the `position` may be outside the window,
+and the app may name the click-through label the press went through instead, even once it has gone, for
+a `position` from where it was at the press. Meanwhile an `enter` or a
+`leave` is taken and runs nothing, and a `wheel` goes to the window it turns over without entering or
+leaving a label, as Qt sends them. A release that ends the grab away from a label leaves it, as Qt does.
+If a label hid, even to show again, or moved into another window, or the window went or was made again
+meanwhile, as a label's own click callback may do, Qt has dropped the grab, so the moves and the release
+the button held are taken and run nothing, whichever window the app names. A label keeps the grab as the
+window it is in hides or moves, as Qt's grab is on the label itself, and its leave comes with
+the release or with the next `pointer()` call. A
+mini console, user window or scroll box keeps it as it hides or moves too, as Qt's grab is on a widget
+inside it, and the release goes to the window it is in by then. A release with no grab held is still
+taken, where Qt sends it nowhere, so an app that missed a press is not refused for it. A label that hides
+under the pointer has its leave with the next `pointer()` call, even one that is refused, where Qt sends
+it as the label hides, and what was under it is entered as the app next names it. A `leave` at a
+click-through label leaves the label the pointer was over through it, whatever its `position`. Three
+things differ from the GUI: a press of a button other than the left or middle one on a console's text is
+raised once, where the GUI's raises it a second time, on the same main console or user window or, for a
+mini console, on the mini console too; a point in a scroll box is taken as if the box were not scrolled and had no frame; and a
+right-button release over a mini console's or user window's own command line, or over the main console's
+scroll bar, is taken as over its text, where the GUI's opens no menu and raises the release. A callback's
+Lua error goes to the error console, as the GUI's does, and `pointer()` still returns true. It is refused
+where `runLua()` is, for a name no window has, for another window than the one a held button is on or the
+click-through label its press went through, and, but for a `leave` or what that grab takes, for a window
+that is not `shown` or a `position` outside it, which the GUI's mouse could not reach; a `leave` is taken
+for a hidden window, as Qt sends one to a widget that hides under the pointer. Once the click-through label
+a held button's press went through has gone, a press, move or release while the button is held, or an
+`enter` or a `leave`, naming it is still taken until the grab ends, and any other event naming it is
+refused. On the `mapper` window a `press`, `doubleClick` or `wheel` is `mapPointer()`'s at that
+`position`, as the GUI's map fills its window from the top left, reached through a click-through label
+over it too. What the GUI's map ignores is taken and does nothing, where `mapPointer()` is false: a
+`doubleClick` with any button but the left alone held (`mapPointer()`, which has no `buttons`, takes its
+`button` as the only one held), less than half a notch of the `wheel` and a `wheel`
+turn on a map showing no area. It is false, with the reason in `errorString()`, with no map open, before
+the map is drawn, and while the map was last drawn at another size than its window has, as after a script
+resized the mapper and before the app drew it again, when the `position` would land on other rooms; the
+button of a press the map refused is still held, and `getMousePosition()` has followed it. A `move` with
+the left or middle button held is false too, and with any button held while the map is being edited: in the
+GUI it pans the map, drags out a selection or moves rooms or a label, and the map's drags stay the GUI's.
+Any other `move`, a `release`, an `enter` or a `leave` there is taken and does nothing.
+`getMousePosition()`
+answers with the last point a `pointer()` or `mapPointer()` call took, in the main window's area, other
+than a `leave`'s, whether or not a window ran anything for it, as for the moves of a grab Qt has dropped, from where the
+window was at the press if it has gone since, and with nil and
+"the profile has no main window" until the first.
+
+## Embedding it: calls that do not wait
+
+`start()`, `installPackage()`, `save()` and `shutdown()` return only once they are done, and run the
+event loop while they wait: for the credential store when a new profile is made, for a profile save
+under way, and for the saves a shutdown writes. A nested event loop runs the app's timers, the game's
+data and the profiles' scripts while the call is still on the stack, and an app that cannot block at
+all, such as one in a browser, has no way to wait. Each has a form that returns at once and answers
+by signal, from the event loop, never during the call, with what the blocking form would have
+returned and `errorString()` as the call ended (empty when it succeeded):
+
+| Call | Answers with |
+| --- | --- |
+| `startAsync(options)` | `startFinished(StartResult, error)` |
+| `installPackageAsync(path)` | `packageInstallFinished(path, PackageResult, error)` |
+| `saveAsync()` | `saveFinished(bool, error)` |
+| `shutdownAsync(save)` | `shutdownFinished(bool, error)` |
+
+```cpp
+QObject::connect(session.get(), &THeadlessSession::startFinished,
+                 [](THeadlessSession::StartResult result, const QString& error) {
+    if (result != THeadlessSession::StartResult::started) {
+        qWarning() << error;
+    }
+});
+session->startAsync(options);
+// Later. A save under way refuses a shutdown, so shut down once it has answered
+QObject::connect(session.get(), &THeadlessSession::saveFinished,
+                 [s = session.get()](bool, const QString&) {
+    s->shutdownAsync(true);          // sysExitEvent runs now; shutdownFinished once the saves are written
+}, Qt::SingleShotConnection);
+session->saveAsync();                // saveFinished once the profiles are on disk
+```
+
+What a call refuses it refuses as the blocking form does, answered the same way. While an install
+waits for a save, another install, a `save()` and a `shutdown()` are refused, and while a save is
+under way another save and a `shutdown()` are, as they are while the blocking forms wait. The
+profile's load still runs inside `startAsync()`, as its scripts run then; only the credential store
+is waited for from the event loop. A session deleted meanwhile answers nothing.
+
+The blocking forms are thin wrappers over these, so `mudlet-headless` and an app that is happy to
+wait see no change.
+
+A save is written on Qt's thread pool and its end reaches the application's thread by signal; a
+close with no main window, as from a script's `closeProfile()`, `closeMudlet()` or `shutdown()`,
+runs `sysExitEvent`, starts its save and takes the profile apart in the call, and the profile is
+deleted once the save is written. `HostManager::closeAllProfiles()` takes a callback for that
+moment. Where there are no threads, as in a single-threaded browser build, or with
+`TBackgroundTask::setRunInline(true)`, the writes, and `unzipAsync()`'s extraction, run in the call
+that asks for them, and their ends still arrive by signal.
+
+`TAppFrontend` has `getOpenFileNameAsync()`, `getExistingDirectoryAsync()` and
+`clipboardTextAsync()`, which answer a callback from the event loop, and `setClipboardText()`,
+beside the blocking file pickers. The answer is a `std::optional<QString>`: an empty string is a
+cancel, and none means no picker could be shown, or the clipboard could not be read, as when a
+browser refuses. Nothing in Mudlet calls them yet, and no Lua function changes: `invokeFileDialog()`
+and `getClipboardText()` still answer at once. With no window the pickers answer none, and the
+clipboard is the system's while there is a `QGuiApplication`, else text the frontend keeps.
+
+### Waits that remain
+
+These still block the application's thread or run a nested event loop:
+
+- the desktop GUI's own close: `TMainConsole`'s close and quit wait for the save with
+  `Host::saveForClose()` and `Host::waitForProfileSave()`, which run the event loop, so the profile is
+  still saved before Mudlet quits; so do the Package Manager, Module Manager and editor while they
+  wait for a save. All of these are the desktop app's, not `mudlet_core`'s callers;
+- Lua's `installPackage()` and `uninstallPackage()`, and `Host::uninstallPackage()` once its
+  `sysUninstall` handlers have started a save, wait out a save so the script gets the real answer. They
+  deliver only that save's own ends, so no timer, game data or other script runs meanwhile, and with
+  the writes run inline they never wait at all;
+- the blocking `THeadlessSession` calls above, which run the event loop until their async form
+  answers;
+- `waitForEvent()`, `pumpEvents()` and `EventLoopPump`, which only the test profile's Lua uses.
+
+As a profile with no window disconnects, `ctelnet.cpp` blocks for up to a second waiting for the game to
+close its end, running no event loop. A reconnect runs none either: the old connection's end is reported
+from within the call, and the new attempt replaces any dial a handler of that report made.
+
+A map's long operations (loading, importing, exporting and auditing a map) run no event loop of their
+own: they emit `TMap::signal_mapProgressRepaintWanted()` where a progress display could repaint, and only
+the desktop GUI pumps the event loop from it, for its progress dialog and its Abort. There
+`THeadlessSession` delivers only its own map progress signals, so a handler of them can still call
+`cancelMapOperation()` while the operation runs, and anything else posted meanwhile, such as a profile
+close, runs once the operation has returned.
+
+## Embedding it: Mudlet's own Lua files
+
+Much of the scripting API is itself Lua (Geyser, `db:`, the string and table functions and more), in
+`src/mudlet-lua/lua`. Mudlet reads those files from a folder beside the program, or from where
+`make install` puts them, and an app that embeds Mudlet has no such folder. Built with
+`-DUSE_BUILTIN_MUDLET_LUA=ON`, which is the default for Android and for a browser, `mudlet_core`
+carries the files and their translations (`translations/lua`) itself, and loads them ahead of any
+copy on disk, which may be another version of Mudlet's.
+
+Lua's own file functions cannot read from inside the library, and `loadTranslations()` and scripts
+that use `luaGlobalPath` read with them. So the files are unpacked to a folder `mudlet-lua-<hash>` in
+the app's cache folder (`QStandardPaths::CacheLocation`) and loaded from there, and `luaGlobalPath`
+names that folder. The hash is of the files, so a new version of the app unpacks its own, and removes
+the old one's once no Mudlet has loaded it for an hour. A profile that opens to find one of the files gone or of the wrong size, as after the
+system's cache cleaner or a power cut, unpacks them again. Where the cache folder cannot be written,
+the files are loaded straight from the library: `luaGlobalPath` is then `:/builtin/mudlet-lua/lua`,
+which only Qt can read, so Mudlet's own Lua messages stay in English unless the translations are found
+on disk.
+
+With the option on, a change to a file in `src/mudlet-lua/lua` takes a rebuild to reach a profile,
+which is why a desktop build leaves it off.
+
+### The Lua C modules
+
+Mudlet's Lua is built on seven C modules, which a desktop Mudlet loads from files as `require()` asks
+for them: `lfs`, `brimworks.zip`, `rex_pcre2`, `luasql.sqlite3`, `lua-utf8`, `yajl` and `lpeg`. Android
+and a browser let no program load code that way. Built with `-DUSE_BUNDLED_LUA_MODULES=ON`, which is
+the default for both, `mudlet_core` carries the seven itself and every profile finds them there with
+nothing for the app to do. They need SQLite3 to link against, besides what `mudlet_core` links anyway.
+
+Configure fetches their sources with git, each pinned to the commit of the release Mudlet's own builds
+install, as `cmake/BundledLuaModules.cmake` lists them; all are under the MIT licence. To build one from
+a copy on disk instead, as where configure has no network, point `FETCHCONTENT_SOURCE_DIR_<NAME>` at
+it, `<NAME>` being the first argument of its `mudlet_bundled_lua_module()` call in capitals, as in
+`-DFETCHCONTENT_SOURCE_DIR_LFS=/src/luafilesystem`.
+
+An app that builds the modules itself leaves that option off, as two copies of a module cannot be
+linked into one program, links its own in and names each before it starts a session:
+
+```cpp
+extern "C" int luaopen_lfs(lua_State*);
+
+THeadlessSession::preloadLuaModule("lfs", luaopen_lfs);
+```
+
+`require()` then finds the module under that name ahead of any on disk, in every profile opened or
+reset afterwards. A module that is missing takes with it what is built on it: without `yajl` none of
+Mudlet's own Lua loads, and without `luasql.sqlite3` `db:create()` raises an error. A C module of the
+app's own, for its scripts to require, is given the same way.
 
 ## What still needs a window
 
@@ -739,8 +1263,8 @@ Lua specs that fail with no window, so it is the up-to-date list; the main gaps 
 - the 3D mapper's view, the 2D map but for an app that calls `renderMap()`, and map symbols
   drawn with a font's Private Use Area;
 - the main window's own command line, button bars and docks, which an app draws outside the area
-  it gives (see "Embedding it: the main window's size"), and the command line a mini console or user
-  window can show.
+  it gives (see "Embedding it: the main window's size");
+- the tab header of an MXP frame: the titles of its pages, and a way for the app to bring one forward.
 
 `.github/workflows/headless-lua-tests.yml` runs the Lua specs in `mudlet-headless`, and
 "The Lua specs with no main window" in `platform-builds.md` explains how to reproduce it.
@@ -856,6 +1380,16 @@ enabled command of the session's profile that is on the menu runs. A command tha
 because `addonCommands()` does not list it and `activateAddonCommand()` does not click it. A keypad key
 matches a shortcut written without the keypad, as in Qt, and a shortcut of more than one key never runs
 from `pressKey()`, which takes one key at a time.
+
+`THeadlessSession::setReservedShortcuts()` tells Mudlet which shortcuts the app keeps for its own menus,
+each a `QKeySequence` with the name of what holds it. The GUI refuses a package the keys of its own
+menu, and with this the app's are refused the same way: `addCommand()` returns `nil` and
+`<key> is already taken by "<holder>"`, so a package picks another key instead of getting one the app
+never passes on. The call is static because the keys are the app's, not one profile's: the list holds
+for every session, each call replaces the one before, and an entry with an empty sequence is left out.
+It is checked as a command is added, so make the call before `start()` to cover what packages add as
+the profile loads; a command added earlier keeps its shortcut. `reservedShortcuts()` gives the list
+back. `mudlet-headless` has no menus and reserves none.
 
 `buttonBars()` lists the profile's button bars and toolbars, the buttons a script makes with
 `tempButtonToolbar()` and `tempButton()` and those a package or the editor adds, as the GUI draws

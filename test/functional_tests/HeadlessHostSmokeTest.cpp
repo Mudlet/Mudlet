@@ -32,6 +32,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QPointer>
+#include <QPromise>
 #include <QScopeGuard>
 #include <QSemaphore>
 #include <QSettings>
@@ -58,6 +59,8 @@
 #include <chrono>
 #include <memory>
 
+#include <zip.h>
+
 #include "CredentialManager.h"
 #include "FontManager.h"
 #include "Host.h"
@@ -65,10 +68,12 @@
 #include "MudletApp.h"
 #include "MudletMedia.h"
 #include "PortableModeTestHelper.h"
+#include "ThreadPoolHold.h"
 #include "ScriptUnit.h"
 #include "SpeechRecognizer.h"
 #include "SpeechRecognizerFactory.h"
 #include "TAppFrontend.h"
+#include "TBackgroundTask.h"
 #include "TConsoleFrontend.h"
 #include "TConsoleModel.h"
 #include "TLabel.h"
@@ -10074,9 +10079,13 @@ headlessDiscord = ok and 'ok' or tostring(err)
             spPool->deleteHost(QString::fromUtf8(lua_tostring(L, 1)));
             return 0;
         });
-        // saveJsonMap() pumps events while it writes, and needs a mapper to count the map as open, as in the GUI
+        // saveJsonMap() lets its progress repaint, which the GUI does by pumping events, and needs a mapper to count
+        // the map as open, as in the GUI
         const QString mapPath = mConfigDir.filePath(qsl("headless-exit-pump.json"));
         QVERIFY(pumping->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(assert(openMapWidget()) function onHeadlessExitPump() dropProfile([[%1]]) saveJsonMap([[%2]]) end)lua").arg(connectedHostname, mapPath)));
+        connect(pumping->mpMap.data(), &TMap::signal_mapProgressRepaintWanted, &receiver, []() {
+            QCoreApplication::processEvents();
+        });
         pumping->registerAnonymousEventHandler(qsl("sysExitEvent"), qsl("onHeadlessExitPump"));
 
         connected->mTelnet.connectIt(qsl("127.0.0.1"), server.serverPort());
@@ -12744,11 +12753,11 @@ headlessAnswer = table.maxn(r) .. " " .. tostring(r[1]) .. " " .. tostring(r[2])
         QCOMPARE(answer(qsl("closeProfile('%1'), getProfiles()['%1'].loaded").arg(target)), qsl("2 true true"));
         QCOMPARE(readRecord(recordPath), qsl("%1 started\n%1 sysLoadEvent\n%1 sysExitEvent\n").arg(target));
         QVERIFY2(pOpened, "The profile went before the event loop ran.");
-        QVERIFY2(!pOpened->currentlySavingProfile(), "closeProfile() returned with the profile's save still running.");
-        QVERIFY2(newestSaveIsComplete(target), "closeProfile() returned before the profile's save was whole on disk.");
-        QCOMPARE(saveCount(target), 2);
+        // Written from the event loop once closeProfile() has returned, and the profile kept until it is
         QVERIFY2(newestMapSaveHoldsRoom(target, 5), "closeProfile() did not save the profile's map.");
         QTRY_VERIFY_WITH_TIMEOUT(!pOpened, 5000);
+        QVERIFY2(newestSaveIsComplete(target), "The profile went before its save was whole on disk.");
+        QCOMPARE(saveCount(target), 2);
         QVERIFY(!HostManager::self()->hostLoaded(target));
         QCOMPARE(answer(qsl("closeProfile('%1')").arg(target)), qsl("2 nil closeProfile: profile '%1' is not loaded").arg(target));
 
@@ -12799,9 +12808,10 @@ headlessRecord("finished")
                                                                                     .arg(other));
         QVERIFY2(ran, "The Lua chunk did not run.");
         QCOMPARE(readRecord(recordPath), qsl("%1 sysExitEvent\n%1 closeProfile true nil\n%2 sysExitEvent\n%1 closeProfile other true\n%1 finished\n").arg(hostname, other));
-        QCOMPARE(saveCount(hostname), 2);
-        QCOMPARE(saveCount(other), 2);
         QVERIFY2(pHost, "The profile went before the event loop ran.");
+        // Written from the event loop, not while the script still ran
+        QTRY_COMPARE_WITH_TIMEOUT(saveCount(hostname), 2, 5000);
+        QTRY_COMPARE_WITH_TIMEOUT(saveCount(other), 2, 5000);
         QTRY_VERIFY_WITH_TIMEOUT(!pHost, 5000);
         QVERIFY(!HostManager::self()->hostLoaded(hostname));
         QTRY_VERIFY_WITH_TIMEOUT(!HostManager::self()->hostLoaded(other), 5000);
@@ -12888,6 +12898,251 @@ headlessRecord("finished")
         HostManager::self()->deleteHost(hostname);
     }
 
+    // With nobody to choose, the pickers answer with no answer, told apart from a cancel, and every answer comes from
+    // the event loop, never to an asker that has gone
+    void test_theNullFrontendAnswersPickersAndTheClipboardFromTheEventLoop()
+    {
+        // Stands in for none in what the callbacks are told
+        static const QString scmNoAnswer = qsl("<no answer>");
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
+        TAppFrontend* pFrontend = TAppFrontend::instance();
+        std::optional<QString> file;
+        std::optional<QString> folder;
+        std::optional<QString> clipboard;
+        pFrontend->getOpenFileNameAsync(qsl("Pick a file"), QDir::tempPath(), this, [&file](const std::optional<QString>& path) {
+            file = path.value_or(scmNoAnswer);
+        });
+        pFrontend->getExistingDirectoryAsync(qsl("Pick a folder"), QDir::tempPath(), this, [&folder](const std::optional<QString>& path) {
+            folder = path.value_or(scmNoAnswer);
+        });
+        pFrontend->setClipboardText(qsl("headless clipboard"));
+        pFrontend->clipboardTextAsync(this, [&clipboard](const std::optional<QString>& text) {
+            clipboard = text.value_or(scmNoAnswer);
+        });
+        QVERIFY2(!file && !folder && !clipboard, "An answer came during the call.");
+        QTRY_VERIFY(file && folder && clipboard);
+        // Not a cancel: nobody could be asked
+        QCOMPARE(*file, scmNoAnswer);
+        QCOMPARE(*folder, scmNoAnswer);
+        QCOMPARE(*clipboard, qsl("headless clipboard"));
+
+        bool told = false;
+        {
+            QObject asker;
+            pFrontend->getOpenFileNameAsync(qsl("Pick a file"), QDir::tempPath(), &asker, [&told](const std::optional<QString>&) {
+                told = true;
+            });
+            pFrontend->clipboardTextAsync(&asker, [&told](const std::optional<QString>&) {
+                told = true;
+            });
+        }
+        QTest::qWait(50);
+        QVERIFY2(!told, "An asker that had gone was told.");
+    }
+
+    // A wait for the module write skips one that reads as neither running nor finished, so one still queued behind
+    // the profile's write must read as running
+    void test_aWriteWaitingForAnEarlierOneReadsAsRunning()
+    {
+        QPromise<bool> earlier;
+        earlier.start();
+        QFuture<bool> later = TBackgroundTask::runAfter({earlier.future()}, []() {
+            return true;
+        });
+        QVERIFY2(later.isRunning(), "A write queued behind an earlier one did not read as running.");
+        QVERIFY(!later.isFinished());
+        earlier.addResult(true);
+        earlier.finish();
+        QTRY_VERIFY_WITH_TIMEOUT(later.isFinished(), 5000);
+        QVERIFY(later.result());
+    }
+
+    // As in a browser build, whose pool never runs a task: the save's writes, and an unzipAsync(), run as they are
+    // asked for, and their ends still reach the main thread by signal
+    void test_backgroundWorkRunsInlineWithNoPoolThread()
+    {
+        QTemporaryDir recordDir;
+        QVERIFY(recordDir.isValid());
+        const QString recordPath = recordDir.filePath(qsl("record.txt"));
+        const QString hostname = qsl("Test-Headless-Host-Background-Work-Inline");
+        QVERIFY(writeRecordingProfile(hostname, true, recordPath));
+        Host* host = HostManager::self()->openProfile(hostname, false);
+        QVERIFY2(host, "The saved profile did not open.");
+        host->waitForProfileSave();
+        const qsizetype savesBefore = saveCount(hostname);
+
+        const QString zipPath = recordDir.filePath(qsl("inline.zip"));
+        {
+            int errorCode = 0;
+            zip* archive = zip_open(zipPath.toUtf8().constData(), ZIP_CREATE | ZIP_TRUNCATE, &errorCode);
+            QVERIFY(archive);
+            static const char contents[] = "unzipped inline";
+            zip_source* source = zip_source_buffer(archive, contents, sizeof(contents) - 1, 0);
+            QVERIFY(source);
+            QVERIFY(zip_file_add(archive, "inline.txt", source, ZIP_FL_OVERWRITE) >= 0);
+            QCOMPARE(zip_close(archive), 0);
+        }
+
+        auto* pool = QThreadPool::globalInstance();
+        const int threads = pool->maxThreadCount();
+        QSemaphore held;
+        QSemaphore release;
+        for (int i = 0; i < threads; ++i) {
+            pool->start([&held, &release]() {
+                held.release();
+                release.acquire();
+            });
+        }
+        const auto freePool = qScopeGuard([&release, threads, pool]() {
+            TBackgroundTask::setRunInline(false);
+            release.release(threads);
+            pool->waitForDone(10000);
+        });
+        QVERIFY(held.tryAcquire(threads, 10000));
+        TBackgroundTask::setRunInline(true);
+
+        QSignalSpy finished(host, &Host::profileSaveFinished);
+        QVERIFY(std::get<0>(host->saveProfile()));
+        QTRY_COMPARE_WITH_TIMEOUT(finished.count(), 1, 5000);
+        QVERIFY(!host->currentlySavingProfile());
+        QCOMPARE(saveCount(hostname), savesBefore + 1);
+        QVERIFY(newestSaveIsComplete(hostname));
+
+        const QString extractTo = recordDir.filePath(qsl("extracted"));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+registerAnonymousEventHandler("sysUnzipDone", function() headlessRecord("sysUnzipDone") end)
+registerAnonymousEventHandler("sysUnzipError", function() headlessRecord("sysUnzipError") end)
+unzipAsync([[%1]], [[%2]])
+)lua")
+                                                                           .arg(zipPath, extractTo)));
+        QTRY_VERIFY_WITH_TIMEOUT(readRecord(recordPath).contains(qsl("sysUnzip")), 5000);
+        QVERIFY(readRecord(recordPath).contains(qsl("%1 sysUnzipDone\n").arg(hostname)));
+        QFile extracted(extractTo + qsl("/inline.txt"));
+        QVERIFY(extracted.open(QIODevice::ReadOnly));
+        QCOMPARE(extracted.readAll(), QByteArray("unzipped inline"));
+
+        // The map's autosave too, whose wait for its write would otherwise never end
+        host->mpMap->addRoom(7);
+        QVERIFY(host->mpMap->isUnsaved());
+        const QString autosave = MudletApp::getMudletPath(enums::profileMapPathFileName, hostname, qsl("autosave.dat"));
+        QFile::remove(autosave);
+        host->autoSaveMap();
+        QVERIFY2(host->mMapAutosaveFuture.isFinished(), "The map's autosave was left for a pool thread.");
+        QVERIFY(QFileInfo(autosave).size() > 0);
+        host->waitForMapAutosave();
+        QVERIFY(!host->mpMap->isUnsaved());
+        HostManager::self()->deleteHost(hostname);
+    }
+
+    // A close from a script or the app returns once sysExitEvent has run, not once the save is written: the wait
+    // ran the event loop under the caller, where timers, game data and Lua went on
+    void test_aCloseDuringASaveReturnsBeforeTheSaveIsWritten()
+    {
+        QTemporaryDir recordDir;
+        QVERIFY(recordDir.isValid());
+        const QString recordPath = recordDir.filePath(qsl("record.txt"));
+        const QString hostname = qsl("Test-Headless-Host-Close-Returns-During-A-Save");
+        QVERIFY(writeRecordingProfile(hostname, true, recordPath));
+        const QPointer<Host> pHost(HostManager::self()->openProfile(hostname, false));
+        QVERIFY2(pHost, "The saved profile did not open.");
+        pHost->waitForProfileSave();
+        const qsizetype savesBefore = saveCount(hostname);
+
+        bool timerRan = false;
+        {
+            const PoolHold hold(std::chrono::seconds(2));
+            QVERIFY(hold.heldAll());
+            QVERIFY(std::get<0>(pHost->saveProfile()));
+            QTimer::singleShot(0, qApp, [&timerRan]() {
+                timerRan = true;
+            });
+            QVERIFY(HostManager::self()->requestProfileClose(hostname));
+            QVERIFY2(!timerRan, "The close ran the event loop while it waited for the save.");
+            QVERIFY2(pHost, "The profile went before its save was written.");
+            QVERIFY(readRecord(recordPath).endsWith(qsl("%1 sysExitEvent\n").arg(hostname)));
+        }
+        QTRY_VERIFY_WITH_TIMEOUT(!pHost, 15000);
+        QVERIFY(timerRan);
+        QCOMPARE(saveCount(hostname), savesBefore + 2);
+        QVERIFY(newestSaveIsComplete(hostname));
+    }
+
+    void test_aCloseSaveAnswersOnceWritten()
+    {
+        QTemporaryDir recordDir;
+        QVERIFY(recordDir.isValid());
+        const QString hostname = qsl("Test-Headless-Host-Close-Save-Answers-Once-Written");
+        QVERIFY(writeRecordingProfile(hostname, true, recordDir.filePath(qsl("record.txt"))));
+        Host* host = HostManager::self()->openProfile(hostname, false);
+        QVERIFY2(host, "The saved profile did not open.");
+        host->waitForProfileSave();
+        const qsizetype savesBefore = saveCount(hostname);
+
+        bool timerRan = false;
+        std::optional<bool> saved;
+        {
+            const PoolHold hold(std::chrono::seconds(2));
+            QVERIFY(hold.heldAll());
+            QTimer::singleShot(0, qApp, [&timerRan]() {
+                timerRan = true;
+            });
+            host->saveForClose([&saved](const bool written) {
+                saved = written;
+            });
+            QVERIFY2(!timerRan, "The save ran the event loop while it waited for its writes.");
+            QVERIFY2(!saved.has_value(), "The save answered before its writes could end.");
+        }
+        QTRY_VERIFY_WITH_TIMEOUT(saved.has_value(), 15000);
+        QVERIFY(*saved);
+        QCOMPARE(saveCount(hostname), savesBefore + 1);
+        QVERIFY(newestSaveIsComplete(hostname));
+        HostManager::self()->deleteHost(hostname);
+    }
+
+    void test_closingEveryProfileAnswersOnceTheirSavesAreWritten()
+    {
+        QTemporaryDir recordDir;
+        QVERIFY(recordDir.isValid());
+        const QString recordPath = recordDir.filePath(qsl("record.txt"));
+        const QString first = qsl("Test-Headless-Host-Close-All-First");
+        const QString second = qsl("Test-Headless-Host-Close-All-Second");
+        QVERIFY(writeRecordingProfile(first, true, recordPath));
+        QVERIFY(writeRecordingProfile(second, true, recordPath));
+        // Its own pool, so the profiles other tests leave open stay
+        auto pool = std::make_unique<HostManager>();
+        const QPointer<Host> pFirst(pool->openProfile(first, false));
+        const QPointer<Host> pSecond(pool->openProfile(second, false));
+        QVERIFY(pFirst && pSecond);
+        pFirst->waitForProfileSave();
+        pSecond->waitForProfileSave();
+        const qsizetype firstSavesBefore = saveCount(first);
+        const qsizetype secondSavesBefore = saveCount(second);
+        QVERIFY(QFile::remove(recordPath));
+
+        bool timerRan = false;
+        bool closed = false;
+        {
+            const PoolHold hold(std::chrono::seconds(2));
+            QVERIFY(hold.heldAll());
+            QVERIFY(std::get<0>(pFirst->saveProfile()));
+            QTimer::singleShot(0, qApp, [&timerRan]() {
+                timerRan = true;
+            });
+            pool->closeAllProfiles([&closed]() {
+                closed = true;
+            });
+            QVERIFY2(!timerRan, "Closing every profile ran the event loop while it waited for their saves.");
+            QVERIFY(!closed);
+            QVERIFY(pFirst && pSecond);
+            QCOMPARE(readRecord(recordPath), qsl("%1 sysExitEvent\n%2 sysExitEvent\n").arg(first, second));
+        }
+        QTRY_VERIFY_WITH_TIMEOUT(closed, 15000);
+        QVERIFY(!pFirst && !pSecond);
+        QCOMPARE(pool->getHostCount(), 0);
+        QCOMPARE(saveCount(first), firstSavesBefore + 2);
+        QCOMPARE(saveCount(second), secondSavesBefore + 1);
+    }
+
     // A close save turned away because the wait gave up on an earlier save, which may predate the session's last
     // changes, fails the close rather than counting that earlier save as written
     void test_aCloseSaveTurnedAwayFailsTheClose()
@@ -12918,7 +13173,7 @@ headlessRecord("finished")
         });
 
         QVERIFY(HostManager::self()->requestProfileClose(hostname));
-        QVERIFY2(closeSaveFailed, "A close whose own save was turned away was not reported as failed.");
+        QTRY_VERIFY2_WITH_TIMEOUT(closeSaveFailed, "A close whose own save was turned away was not reported as failed.", 5000);
         QCOMPARE(saveCount(hostname), savesBefore);
         QTRY_VERIFY_WITH_TIMEOUT(!pHost, 5000);
     }
@@ -13118,7 +13373,7 @@ headlessRecord("finished")
         QCOMPARE(pool->getHostCount(), 0);
     }
 
-    // An embedder may close every profile from a slot that a map operation's event loop runs
+    // An embedder may close every profile from a slot that a map operation's event loop runs, as the GUI's does
     void test_closeAllProfilesUnderAMapOperation()
     {
         static HostManager* spPool = nullptr;
@@ -13135,6 +13390,9 @@ headlessRecord("finished")
                     spPool->closeAllProfiles();
                 },
                 Qt::SingleShotConnection);
+        connect(host->mpMap.data(), &TMap::signal_mapProgressRepaintWanted, this, []() {
+            QCoreApplication::processEvents();
+        });
         QTemporaryDir exportDir;
         QVERIFY(exportDir.isValid());
         const QPointer<Host> pHost(host);
@@ -13143,6 +13401,38 @@ headlessRecord("finished")
         QVERIFY(!exported);
         QCOMPARE(exportMessage, qsl("aborted by user"));
         QTRY_VERIFY_WITH_TIMEOUT(!pHost, 5000);
+    }
+
+    // An embedder's event loop must not run under a script's map save or load; only the GUI's progress dialog pumps
+    void test_jsonMapSaveAndLoadRunNoEventLoop()
+    {
+        auto pool = std::make_unique<HostManager>();
+        const QString hostname = qsl("Test-Headless-Host-Json-Map-No-Pump");
+        QVERIFY2(pool->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = pool->getHost(hostname);
+        QTemporaryDir mapDir;
+        QVERIFY(mapDir.isValid());
+        QSignalSpy repaints(host->mpMap.data(), &TMap::signal_mapProgressRepaintWanted);
+        bool timerRan = false;
+        QTimer::singleShot(0, this, [&timerRan]() {
+            timerRan = true;
+        });
+
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+assert(openMapWidget())
+local area = addAreaName("Headless No Pump Area")
+local room = createRoomID()
+addRoom(room); setRoomArea(room, area)
+headlessSaved = tostring(saveJsonMap([[%1]]))
+headlessLoaded = tostring(loadJsonMap([[%1]]))
+)lua")
+                                                                           .arg(mapDir.filePath(qsl("map.json")))));
+
+        QCOMPARE(luaGlobalString(host, "headlessSaved"), qsl("true"));
+        QCOMPARE(luaGlobalString(host, "headlessLoaded"), qsl("true"));
+        QVERIFY2(!timerRan, "A timer ran while the script saved or loaded the map.");
+        QVERIFY2(repaints.count() >= 4, "The map operations did not offer their progress a chance to repaint.");
+        QTRY_VERIFY_WITH_TIMEOUT(timerRan, 5000);
     }
 
     // Nor one deleted meanwhile while its own script, which asked for the close, still runs
@@ -13193,6 +13483,26 @@ headlessRecord("finished")
         QTRY_VERIFY_WITH_TIMEOUT(!pHost, 5000);
     }
 
+    // Its done promises an empty pool, which an embedder may delete from it
+    void test_closeAllProfilesTellsDoneOnlyOnceAWaitingProfileHasLeft()
+    {
+        auto pool = std::make_unique<HostManager>();
+        HostManager* pPool = pool.get();
+        const QString hostname = qsl("Test-Headless-Host-Close-All-Pumping-Done");
+        QVERIFY2(pool->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = pool->getHost(hostname);
+        host->getLuaInterpreter()->enterNestedEventLoop();
+        std::optional<int> profilesWhenTold;
+        pool->closeAllProfiles([&profilesWhenTold, pPool]() {
+            profilesWhenTold = pPool->getHostCount();
+        });
+        QTest::qWait(100);
+        QVERIFY2(!profilesWhenTold.has_value(), "done ran while a profile running a nested event loop was still in the pool.");
+        host->getLuaInterpreter()->leaveNestedEventLoop();
+        QTRY_VERIFY_WITH_TIMEOUT(profilesWhenTold.has_value(), 5000);
+        QCOMPARE(*profilesWhenTold, 0);
+    }
+
     // A profile an embedder deletes while closing every profile is not then closed, or saved, as well
     void test_closeAllProfilesLeavesAProfileDeletedMeanwhile()
     {
@@ -13213,7 +13523,11 @@ headlessRecord("finished")
         closing->registerAnonymousEventHandler(qsl("sysExitEvent"), qsl("onDeleteOther"));
         QVERIFY2(closing->getLuaInterpreter()->compileAndExecuteScript(qsl("function onDeleteOther() deleteFromPool([[%1]]) end").arg(deletedName)), "The Lua chunk did not run.");
         const QPointer<Host> pClosing(closing);
-        pool->closeAllProfiles();
+        bool closedAll = false;
+        pool->closeAllProfiles([&closedAll]() {
+            closedAll = true;
+        });
+        QTRY_VERIFY_WITH_TIMEOUT(closedAll, 5000);
         QCOMPARE(pool->getHostCount(), 0);
         QVERIFY2(!pClosing, "A profile with no script running outlived its close.");
         QCOMPARE(saveCount(closingName), 1);
@@ -13301,7 +13615,7 @@ headlessRecord("finished")
         QVERIFY(writeRecordingProfile(first, true, recordPath));
         QVERIFY(writeRecordingProfile(second, false, recordPath));
         QVERIFY(writeRecordingProfile(closedFirst, true, recordPath));
-        // The first profile's load asks to quit, then reads a JSON map, which runs the event loop
+        // The first profile's load asks to quit, then reads a JSON map, under which the GUI runs the event loop
         QFile save(qsl("%1/2020-01-01#00-00-00.xml").arg(MudletApp::getMudletPath(enums::profileXmlFilesPath, first)));
         QVERIFY(save.open(QIODevice::ReadOnly));
         QByteArray xml = save.readAll();

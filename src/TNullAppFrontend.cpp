@@ -36,8 +36,10 @@
 #include <QCoreApplication>
 #include <QDataStream>
 #include <QDebug>
+#include <QClipboard>
 #include <QDesktopServices>
 #include <QFile>
+#include <QGuiApplication>
 #include <QKeySequence>
 #include <QList>
 #include <QMap>
@@ -176,6 +178,36 @@ QPointer<const QObject> windowIdentity(const Host* pHost, const QString& name)
     return pModel ? &pModel->mNotifier : nullptr;
 }
 } // namespace
+
+void TNullAppFrontend::getOpenFileNameAsync(const QString&, const QString&, QObject* context, std::function<void(const std::optional<QString>&)> done)
+{
+    QTimer::singleShot(0ms, context, [done = std::move(done)]() {
+        done(std::nullopt);
+    });
+}
+
+void TNullAppFrontend::getExistingDirectoryAsync(const QString&, const QString&, QObject* context, std::function<void(const std::optional<QString>&)> done)
+{
+    QTimer::singleShot(0ms, context, [done = std::move(done)]() {
+        done(std::nullopt);
+    });
+}
+
+void TNullAppFrontend::clipboardTextAsync(QObject* context, std::function<void(const std::optional<QString>&)> done)
+{
+    QTimer::singleShot(0ms, context, [this, done = std::move(done)]() {
+        done(qobject_cast<QGuiApplication*>(QCoreApplication::instance()) ? QGuiApplication::clipboard()->text() : mClipboardText);
+    });
+}
+
+void TNullAppFrontend::setClipboardText(const QString& text)
+{
+    if (qobject_cast<QGuiApplication*>(QCoreApplication::instance())) {
+        QGuiApplication::clipboard()->setText(text);
+        return;
+    }
+    mClipboardText = text;
+}
 
 TAppFrontend* TAppFrontend::nullView()
 {
@@ -358,6 +390,12 @@ QString TNullAppFrontend::addonPlacementRefusal(const CommandRequest& request, c
 {
     if (!request.shortcut.isEmpty()) {
         const QKeySequence sequence(request.shortcut);
+        // Ahead of the commands' own, in the order of mudlet::addonShortcutUsable()
+        for (const ReservedShortcut& reserved : mReservedShortcuts) {
+            if (reserved.sequence == sequence) {
+                return addonShortcutTakenRefusal(sequence, reserved.holder);
+            }
+        }
         for (const AddonCommand& command : mAddonCommands) {
             if (command.request.surfaces == CommandSurface::Toolbar || command.request.shortcut.isEmpty() || QKeySequence(command.request.shortcut) != sequence) {
                 continue;
@@ -670,6 +708,7 @@ void quitOnceRunning()
 }
 
 void closeAllAndQuit();
+void quitOnceClosed();
 
 // Nothing would delete a profile taken out of the pool after the quit, and its script may open another
 void closeAllOnceReleased()
@@ -699,14 +738,20 @@ void closeAllAndQuit()
                 mustWait = true;
                 break;
             }
-            mustWait |= pHost->profileResetInProgress() && !pHost->isClosingDown() && !pHost->getLuaInterpreter()->luaOnStack();
+            mustWait |= pHost->profileResetInProgress() && !pHost->closeStarted() && !pHost->getLuaInterpreter()->luaOnStack();
         }
         if (mustWait) {
             QTimer::singleShot(50ms, closeAllAndQuit);
             return;
         }
-        pool->closeAllProfiles();
+        pool->closeAllProfiles(quitOnceClosed);
+        return;
     }
+    quitOnceClosed();
+}
+
+void quitOnceClosed()
+{
     if (HostManager::releasingProfile()) {
         QTimer::singleShot(50ms, closeAllOnceReleased);
         return;

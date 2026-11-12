@@ -28,6 +28,7 @@
 
 #include "ActionUnit.h"
 #include "AliasUnit.h"
+#include "EventNames.h"
 #include "KeyUnit.h"
 #include "ScriptUnit.h"
 #include "GifTracker.h"
@@ -69,6 +70,7 @@ class xml_document;
 
 class QJsonObject;
 class QKeyEvent;
+class QMouseEvent;
 class QSettings;
 
 class TEvent;
@@ -321,16 +323,23 @@ public:
     bool requestClose();
     // A main console raises sysExitEvent as it closes; a profile that never had one gets it from this.
     void raiseExitEventIfOwed();
-    // The save a close makes without asking: the profile, Mudlet's settings and the map, waited for; false if the
-    // profile or the map failed, or, writing nothing, if the profile is still loading and its map has not loaded yet
+    // The save a close makes without asking: the profile, Mudlet's settings and the map; done is told false if the
+    // profile or the map failed, or, writing nothing, if the profile is still loading and its map has not loaded yet.
+    // It waits for no save: done runs once they are written, or at once when nothing is written.
+    void saveForClose(std::function<void(bool saved)> done);
+    // The same, waited for in waitForProfileSave(), for the desktop GUI's close, which must answer at once
     bool saveForClose();
     // Whether deleting the profile now would pull its Lua state or map from under code still running
     // on them; asks a map operation to stop, so the wait ends.
     bool deletionMustWait();
     // What deletionMustWait() answers, without asking anything to stop
     bool deletionWouldWait() const;
+    // Whether a close with no main window has run sysExitEvent and is still writing its save
+    bool closeSaveInFlight() const { return mCloseSaveInFlight; }
+    // Runs then once that save is written and the close is done: now if none is under way. Never once the Host is gone.
+    void whenCloseSaveEnds(std::function<void()> then);
     // A script, nested event loop, map operation or profile save: what deletionWouldWait() waits for, bar a
-    // reconnect's event loop, which only a deletion must outwait
+    // reconnect on the stack, which only a deletion must outwait
     bool busyRunning() const;
 
     // The profile load, in this order, as the GUI and HostManager::openProfile() run it, the GUI doing its
@@ -353,6 +362,12 @@ public:
     const KeyUnit* getKeyUnit() const { return &mKeyUnit; }
     ScriptUnit* getScriptUnit() { return &mScriptUnit; }
     GifTracker* getGifTracker() { return &mGifTracker; }
+
+    // Sorted case-insensitively, without repeats. Not const: the units hand out
+    // their contents only through non-const accessors.
+    // Reads every item's code, so it is for when the names are about to be offered
+    QList<eventNames::Entry> knownEventNames();
+    static QList<eventNames::Entry> eventNameEntries(const QStringList& names);
 
     void send(QString cmd, bool wantPrint = true, bool dontExpandAliases = false);
 
@@ -489,6 +504,8 @@ public:
     void registerAnonymousEventHandler(const QString& name, const QString& fun);
     void unregisterEventHandler(const QString&, TScript*);
     void raiseEvent(const TEvent& event);
+    // sysWindowMousePressEvent or sysWindowMouseReleaseEvent, for a press or release at a point in that window
+    void raiseWindowMouseEvent(const QString& window, const QMouseEvent& event, bool press);
     // This disables all the triggers/timers/keys in preparation to resetting
     // them - and sets a timer to do resetProfile_phase2() when it is safe to do
     // so. We need to do it this way because a lua script containing the call to
@@ -559,6 +576,7 @@ public:
     // creates.
     void writeProfileIniData(const QString& item, const QString& what);
     QString readProfileIniData(const QString& item);
+    void removeProfileIniData(const QString& item);
     // Now, not from the event loop; false if the file could not be written
     bool syncProfileIni();
     void xmlSaved(const QString& xmlName);
@@ -575,6 +593,9 @@ public:
     // nested in the waiting script. A save that syncs modules still reloads them in the other profiles as
     // it ends, and their scripts can raise a global event that reaches this profile's handlers.
     void waitForProfileSave(bool onlyTheSavesOwnEvents = false);
+    // Runs then once no save is running: now if none is, else from the event loop once the save has ended, or
+    // has gone mProfileSaveNotificationTimeout past its writes without saying so. Never once the Host is gone.
+    void whenProfileSaveEnds(std::function<void()> then);
     inline static const QString scmProfileSaveWatcherName = qsl("profileSaveWatcher");
     // waitForProfileSave() pumps the event loop with this Host still in use on the stack below it
     bool waitingForProfileSave() const { return mProfileSaveWaitDepth > 0; }
@@ -948,8 +969,11 @@ public:
 
 private:
     // A main console's close, for a profile that never had one; it saves, as the GUI's "Yes" does, unless the
-    // profile's save did not load or is still loading. False, doing nothing, for a profile already closing.
-    bool closeWithNoView();
+    // profile's save did not load or is still loading. False, doing nothing, for a profile already closing. It
+    // returns once sysExitEvent has run; closed runs once the save is written, and until then deletionMustWait().
+    bool closeWithNoView(std::function<void()> closed = {});
+    void runSaveEndContinuations();
+    void checkSaveEndWatchdog();
     QSettings& profileIni();
 
     bool mNoAntiAlias = false;
@@ -1211,15 +1235,18 @@ public:
     bool mEditorAutoComplete = true;
 
     // code editor theme for light mode (human-friendly name)
-    QString mEditorTheme = QLatin1String("Mudlet");
+    QString mEditorTheme = QLatin1String("Mudlet Light");
     // code editor theme file for light mode on disk for edbee to load
-    QString mEditorThemeFile = QLatin1String("Mudlet.tmTheme");
+    QString mEditorThemeFile = QLatin1String("Mudlet Light.tmTheme");
     // code editor theme for dark mode (human-friendly name), auto-populated on first dark mode switch
     QString mEditorThemeDark;
     // code editor theme file for dark mode on disk for edbee to load
     QString mEditorThemeFileDark;
+    // Both answer the bundled theme when the profile's own is not on this machine, rather than
+    // edbee's own fallback. Never saved, so reinstalling the chosen theme brings it back.
     QString getEditorTheme() const;
     QString getEditorThemeFile() const;
+    void storedEditorTheme(QString& themeName, QString& themeFile) const;
     void editorThemeChanged();
 
     // search engine URL prefix to search query
@@ -1481,6 +1508,7 @@ signals:
     void signal_scriptToggled(int id);
     void signal_scriptCodeChanged(int id);
     void signal_itemsChangedByScript();
+    void signal_emergencyStopChanged(bool stopped);
     void signal_keyBoundByScript(int id);
     void signal_errorConsolePrint(const QString& text, const QColor& fgColor, const QColor& bgColor);
     // For the profile's module manager, if it has one: a script installed or
@@ -1540,7 +1568,7 @@ private:
         enums::PackageModuleType thing;
         bool operator==(const DeferredUninstall&) const = default;
     };
-    void runUninstallsDeferredByAnInstall(const QList<DeferredUninstall>& deferred);
+    void runUninstallsDeferredByAnInstall(const QList<DeferredUninstall>& deferred, bool waitedForASave = false);
     static void createModuleBackup(const QString& filename, const QString& saveName);
     // A single module queued to be written out during a profile save. Its XML document
     // is built on the main thread (XMLexport::writeModuleXML()); serializing it to disk
@@ -1564,8 +1592,8 @@ private:
     QList<ModuleWriteJob> prepareModuleSaves(bool backup);
     // Writes the prepared module documents (and updates their zips) to disk. Static on
     // purpose: it must keep working after the Host that ordered it has been destroyed,
-    // so it may not reach for any member. Usually a thread pool task, but a waiter in
-    // waitForProfileSave() can steal it onto the main thread, so it must suit either.
+    // so it may not reach for any member. Usually a thread pool task, but where saves run
+    // inline (see TBackgroundTask) it runs on the main thread, so it must suit either.
     // False if a module was not written, with a console line for each in failures.
     static bool writeModuleFiles(const QList<ModuleWriteJob>& jobs, QStringList& failures);
     static bool updateModuleZip(const ModuleWriteJob& job, QString& reason);
@@ -1629,6 +1657,14 @@ private:
     int mProfileSaveWaitDepth = 0;
     // Long enough that reaching it means something is wrong, not that a disk is busy
     std::chrono::milliseconds mProfileSaveNotificationTimeout = std::chrono::seconds(30);
+    QList<std::function<void()>> mSaveEndContinuations;
+    // While mSaveEndContinuations waits: catches a save that has written everything and never says it has ended
+    QTimer mSaveEndWatchdog;
+    std::optional<std::chrono::steady_clock::time_point> mSaveWritesEndedAt;
+    // While the blocking saveForClose() waits, which runs the continuations itself
+    int mSaveEndContinuationsHeld = 0;
+    bool mCloseSaveInFlight = false;
+    QList<std::function<void()>> mCloseEndContinuations;
 
     QFile mErrorLogFile;
 
@@ -1672,6 +1708,19 @@ private:
     std::map<int, std::unique_ptr<stopWatch>> mStopWatchMap;
 
     QMap<QString, QStringList> mAnonymousEventHandlerFunctions;
+
+    void rememberEventName(const QString& name);
+    // Session only: the one record of names a game sends, and of no use to another profile. Its protocols
+    // name a fixed set, so the limit only guards against a game that misbehaves.
+    QSet<QString> mGameEventNamesSeen;
+    static constexpr int scmGameEventNamesLimit = 2000;
+    // Names scripts raise, each with when it was last raised: a script can build a new name every time,
+    // so only the most recent are kept, and one raised again stays
+    QHash<QString, quint64> mScriptEventNamesSeen;
+    quint64 mScriptEventNameTick = 0;
+    static constexpr int scmScriptEventNamesLimit = 200;
+    // Trimmed back to the limit only once this many more have come, so a flood of new names sorts rarely
+    static constexpr int scmScriptEventNamesSlack = 50;
 
     QStringList mActiveModules;
 

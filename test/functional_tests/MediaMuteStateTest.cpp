@@ -129,14 +129,16 @@ private slots:
         MudletMedia::self()->setApiMuted(true);
         QVERIFY(!toolbarAll->isChecked());
         QVERIFY(!menuAll->isChecked());
-        QCOMPARE(button->text(), qsl("Mute all media"));
+        QVERIFY(!button->isChecked());
+        QCOMPARE(toolbarAll->text(), qsl("Mute all media"));
 
+        // The button's caption stays "Sound" either way and its glyph tells the
+        // state, which MainToolBarGlyphTest reads
         MudletMedia::self()->setGameMuted(true);
         QVERIFY(toolbarAll->isChecked());
         QVERIFY(menuAll->isChecked());
         QVERIFY(button->isChecked());
         QCOMPARE(toolbarAll->text(), qsl("Unmute all media"));
-        QCOMPARE(button->text(), qsl("Unmute all media"));
     }
 
     void test_theToolbarAndMenuThrowTheSwitches()

@@ -23,7 +23,9 @@
 #include "dlgSystemMessageArea.h"
 
 #include "mudlet.h"
-#include "MudletApp.h"
+#include "uiDesign.h"
+
+#include <QResizeEvent>
 
 
 dlgSystemMessageArea::dlgSystemMessageArea(QWidget* pParentWidget)
@@ -32,37 +34,58 @@ dlgSystemMessageArea::dlgSystemMessageArea(QWidget* pParentWidget)
     // init generated dialog
     setupUi(this);
 
-    QPixmap holdPixmap;
-    holdPixmap = notificationAreaIconLabelWarning->pixmap(Qt::ReturnByValue);
-    holdPixmap.setDevicePixelRatio(5.3);
-    notificationAreaIconLabelWarning->setPixmap(holdPixmap);
-
-    holdPixmap = notificationAreaIconLabelError->pixmap(Qt::ReturnByValue);
-    holdPixmap.setDevicePixelRatio(5.3);
-    notificationAreaIconLabelError->setPixmap(holdPixmap);
-
-    holdPixmap = notificationAreaIconLabelInformation->pixmap(Qt::ReturnByValue);
-    holdPixmap.setDevicePixelRatio(5.3);
-    notificationAreaIconLabelInformation->setPixmap(holdPixmap);
+    if (QLayout* pNoticeLayout = frame_notificationArea->layout()) {
+        pNoticeLayout->setContentsMargins(uiDesign::scmNoticePaddingHorizontal, uiDesign::scmNoticePaddingVertical, uiDesign::scmNoticePaddingHorizontal, uiDesign::scmNoticePaddingVertical);
+        pNoticeLayout->setSpacing(uiDesign::scmNoticeSpacing);
+    }
+    // The .ui spacer is sized for a 64px picture; it only has to keep the close button on the first line
+    verticalSpacer_closeButton->changeSize(0, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
 
     slot_applyAppearance();
     connect(mudlet::self(), &mudlet::signal_appearanceChanged, this, &dlgSystemMessageArea::slot_applyAppearance);
 }
 
+// A wrapping QLabel's own hint is its height at a narrower width of its choosing, so answer the
+// layout's height-for-width at the width the notice really has
+QSize dlgSystemMessageArea::sizeHint() const
+{
+    return heightAtOwnWidth(QWidget::sizeHint());
+}
+
+QSize dlgSystemMessageArea::minimumSizeHint() const
+{
+    return heightAtOwnWidth(QWidget::minimumSizeHint());
+}
+
+QSize dlgSystemMessageArea::heightAtOwnWidth(const QSize& fallback) const
+{
+    QLayout* pLayout = layout();
+    if (!pLayout || !pLayout->hasHeightForWidth() || width() <= 0) {
+        return fallback;
+    }
+    const int height = pLayout->totalHeightForWidth(width());
+    return height > 0 ? QSize(fallback.width(), height) : fallback;
+}
+
+// A new width wraps to a different number of lines, which changes both hints
+void dlgSystemMessageArea::resizeEvent(QResizeEvent* pEvent)
+{
+    QWidget::resizeEvent(pEvent);
+    if (pEvent->oldSize().width() != pEvent->size().width()) {
+        updateGeometry();
+    }
+}
+
+// Nothing else may set a sheet on this frame: whichever setStyleSheet() lands last wins
 void dlgSystemMessageArea::slot_applyAppearance()
 {
-    const bool darkMode = MudletApp::darkMode();
-    const QString background = darkMode ? qsl("rgb(64, 60, 40)") : qsl("rgb(255, 254, 215)");
-    const QString textColor = darkMode ? qsl("rgb(230, 230, 230)") : qsl("black");
-    frame_notificationArea->setStyleSheet(qsl("QFrame#frame_notificationArea {\n"
-                                              "  border: 3px solid;\n"
-                                              "  border-radius: 6px;\n"
-                                              "  background-color: %1;\n"
-                                              "}\n"
-                                              "\n"
-                                              "QLabel{\n"
-                                              "color: %2;\n"
-                                              "background-color: %1;\n"
-                                              "}")
-                                                  .arg(background, textColor));
+    const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
+    frame_notificationArea->setStyleSheet(uiDesign::noticeStyleSheet(qsl("QFrame#frame_notificationArea"), tokens));
+    // Overrides the 64px full-colour bitmap the .ui file sets on each label
+    uiDesign::applyNoticeGlyph(notificationAreaIconLabelInformation, uiDesign::NoticeKind::Information, tokens);
+    uiDesign::applyNoticeGlyph(notificationAreaIconLabelWarning, uiDesign::NoticeKind::Warning, tokens);
+    uiDesign::applyNoticeGlyph(notificationAreaIconLabelError, uiDesign::NoticeKind::Error, tokens);
+    // On the label itself, not via the frame's descendant rule: the area is hidden while styled, and
+    // the polish when a notice shows it writes the application's ink into the label's palette
+    notificationAreaMessageBox->setStyleSheet(qsl("color: %1;").arg(tokens.mutedText.name()));
 }

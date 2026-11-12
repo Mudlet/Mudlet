@@ -266,7 +266,8 @@ private slots:
     pEditor->slot_showTriggers();
     pTree->setCurrentItem(pItem);
     pEditor->slot_triggerSelected(pItem);
-    QCOMPARE(pEditor->mVisiblePatternCount, 4);
+    // A trigger shows only the rows it uses; there is no empty row waiting below them
+    QCOMPARE(pEditor->mVisiblePatternCount, 3);
 
     auto row = [pEditor](const int index) {
       return pEditor->mTriggerPatternEdit.at(index);
@@ -288,8 +289,7 @@ private slots:
     QCOMPARE(row(3)->comboBox_patternType->currentIndex(), REGEX_PERL);
     QCOMPARE(text(4), qsl("c"));
     QCOMPARE(row(4)->comboBox_patternType->currentIndex(), REGEX_PERL);
-    QCOMPARE(pEditor->mVisiblePatternCount, 6);
-    QVERIFY2(text(5).isEmpty(), "the row waiting for a next pattern was filled");
+    QCOMPARE(pEditor->mVisiblePatternCount, 5);
 
     // Lua code split over several patterns would no longer be the code pasted
     row(3)->comboBox_patternType->setCurrentIndex(REGEX_LUA_CODE);
@@ -299,7 +299,7 @@ private slots:
     QTest::keyClick(pLua, Qt::Key_V, Qt::ControlModifier);
     QCOMPARE(text(3), qsl("return true"));
     QCOMPARE(text(4), qsl("c"));
-    QVERIFY(text(5).isEmpty());
+    QCOMPARE(pEditor->mVisiblePatternCount, 5);
   }
 
   // The deselect on focus-out exists so a pattern line does not keep showing a

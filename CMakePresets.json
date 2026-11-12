@@ -139,7 +139,9 @@
         "USE_MCPSERVER": "OFF",
         "USE_UPDATER": "OFF",
         "USE_3DMAPPER": "OFF",
-        "WITH_SENTRY": "OFF"
+        "WITH_SENTRY": "OFF",
+        "USE_BUILTIN_MUDLET_LUA": "ON",
+        "USE_BUNDLED_LUA_MODULES": "ON"
       }
     },
     {

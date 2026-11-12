@@ -16,11 +16,6 @@
     <height>0</height>
    </size>
   </property>
-  <property name="font">
-   <font>
-    <family>Bitstream Vera Sans</family>
-   </font>
-  </property>
   <property name="windowTitle">
    <string>Select a profile to connect with</string>
   </property>
@@ -107,12 +102,6 @@
            </property>
            <item>
             <widget class="QListWidget" name="listWidget_profiles">
-             <property name="minimumSize">
-              <size>
-               <width>365</width>
-               <height>0</height>
-              </size>
-             </property>
              <property name="accessibleName">
               <string>profiles list</string>
              </property>
@@ -541,11 +530,6 @@
              </item>
              <item row="0" column="1" colspan="2">
               <widget class="QLineEdit" name="profile_name_entry">
-               <property name="font">
-                <font>
-                 <pointsize>9</pointsize>
-                </font>
-               </property>
                <property name="accessibleName">
                 <string>Profile name</string>
                </property>
@@ -575,11 +559,6 @@
                  <height>0</height>
                 </size>
                </property>
-               <property name="font">
-                <font>
-                 <pointsize>9</pointsize>
-                </font>
-               </property>
                <property name="accessibleName">
                 <string>Game server URL</string>
                </property>
@@ -600,23 +579,6 @@
              </item>
              <item row="2" column="1">
               <widget class="QLineEdit" name="port_entry">
-               <property name="minimumSize">
-                <size>
-                 <width>40</width>
-                 <height>0</height>
-                </size>
-               </property>
-               <property name="maximumSize">
-                <size>
-                 <width>50</width>
-                 <height>16777215</height>
-                </size>
-               </property>
-               <property name="font">
-                <font>
-                 <pointsize>9</pointsize>
-                </font>
-               </property>
                <property name="accessibleName">
                 <string>Game server port</string>
                </property>

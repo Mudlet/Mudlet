@@ -30,6 +30,7 @@
 #include "HostManager.h"
 #include "ShortcutsManager.h"
 #include "TAppFrontend.h"
+#include "uiDesign.h"
 #include "utils.h"
 #include <functional>
 #include <memory>
@@ -118,6 +119,7 @@ public:
     ~mudlet() override;
 
     static bool loadEdbeeTheme(const QString& themeName, const QString& themeFile);
+    static bool ensureEdbeeTheme(const QString& themeName, const QString& themeFile);
     static bool loadLuaFunctionList(const QString& fileName = qsl(":/lua-function-list.json"));
     static mudlet* self();
     // This method allows better debugging when mudlet::self() is called inappropriately.
@@ -131,6 +133,8 @@ public:
     inline static QPointer<TDebugFilterBar> smpDebugFilterBar;
     // adjust Mudlet settings to match Steam's requirements
     inline static bool smSteamMode = false;
+    // Set when a style was given with -style or QT_STYLE_OVERRIDE; the light appearance keeps it on macOS and Windows
+    inline static bool smStyleChosenByPlayer = false;
 
 
     void showEvent(QShowEvent*) override;
@@ -217,6 +221,10 @@ public:
     void closeComposer(QObject* composer) override;
     QString getOpenFileName(const QString& title, const QString& location) override;
     QString getExistingDirectory(const QString& title, const QString& location) override;
+    void getOpenFileNameAsync(const QString& title, const QString& location, QObject* context, std::function<void(const std::optional<QString>&)> done) override;
+    void getExistingDirectoryAsync(const QString& title, const QString& location, QObject* context, std::function<void(const std::optional<QString>&)> done) override;
+    void clipboardTextAsync(QObject* context, std::function<void(const std::optional<QString>&)> done) override;
+    void setClipboardText(const QString& text) override;
     void readEarlySettings(const QSettings&);
     void readLateSettings(const QSettings&);
     void refreshTabBar();
@@ -241,6 +249,7 @@ public:
     void setShowIconsOnMenu(const Qt::CheckState);
     void setShowMapAuditErrors(const bool);
     void setInvertMapZoom(const bool);
+    void setColouredIcons(const bool);
     void setShowTabConnectionIndicators(const bool) override;
     int profileTabIndex(const QString& profileName) const override;
     bool setActiveProfileTab(const QString& profileName) override;
@@ -251,12 +260,17 @@ public:
     }
     void setupPreInstallPackages(const QString&, const QString&, const bool);
     void setToolBarIconSize(int);
+    void restyleToolBarIcons();
+    void restyleMainToolBar();
+    static QString toolBarShellStyleSheet(const QString& barSelector);
+    static bool sheetStylesToolBars(const QString& sheet);
     void setToolBarVisibility(enums::controlsVisibility);
     void showChangelogIfUpdated();
     void slot_showConnectionDialog();
     void showConnectionDialog() override { slot_showConnectionDialog(); }
     void setCompactInputLineChecked(Host* pHost, bool checked) override;
     bool invertMapZoom() const { return mInvertMapZoom; }
+    bool colouredIcons() const { return mColouredIcons; }
     bool showTabConnectionIndicators() const override { return mShowTabConnectionIndicators; }
     bool showNotification(const QString& title, const QString& text, std::optional<int> msecs) override;
     bool drawUpperLowerLevels() const override { return mDrawUpperLowerLevels; }
@@ -343,9 +357,8 @@ public:
     std::function<bool(const QString& question)> mConfirmGameLink;
 
     enums::Appearance mAppearance = enums::Appearance::systemSetting;
-    // 1 (of 2) needed to work around a (Windows/MacOs specific QStyleFactory)
-    // issue:
-    QString mBG_ONLY_STYLESHEET;
+    QString backgroundOnlyStyleSheet(const QColor& fill) const;
+    bool mStyleDropsButtonFrame = false;
     // approximate max duration that 'Copy as image' is allowed to take
     // (seconds):
     int mCopyAsImageTimeout = 3;
@@ -379,6 +392,9 @@ public:
     bool mProcessingTelnetUri = false;
     bool mGameLinkQuestionOpen = false;
     QToolBar* mpMainToolBar = nullptr;
+    // Never set on the bar directly: restyleMainToolBar() appends it to the design's rules on the same widget
+    QString mMainToolBarProfileStyleSheet;
+    QList<uiDesign::ActionGlyph> mToolBarGlyphs;
     QPointer<ShortcutsManager> mpShortcutsManager;
     TTabBar* mpTabBar = nullptr;
     // More modern Desktop styles no longer include icons on the buttons in
@@ -402,8 +418,7 @@ public:
     // sysApplicationFocusChangeEvent is raised on a change of that and not on
     // every transition Qt reports between its inactive states
     bool mApplicationActive = true;
-    // 2 (of 2) needed to work around a (Windows/MacOs specific QStyleFactory)
-    // issue:
+    // The caller's arg() fills in the ink, the fill and the hairline, in that order
     QString mTEXT_ON_BG_STYLESHEET;
     int mToolbarIconSize = 0;
     QMap<QString, translation> mTranslationsMap;
@@ -540,6 +555,7 @@ signals:
     void signal_shortcutsChanged();
     void signal_showIconsOnMenusChanged(const Qt::CheckState);
     void signal_showMapAuditErrorsChanged(bool);
+    void signal_colouredIconsChanged(bool);
     void signal_tabChanged(const QString&);
     void signal_toolBarVisibilityChanged(const enums::controlsVisibility);
     void signal_windowStateChanged(const Qt::WindowStates);
@@ -753,6 +769,7 @@ private:
     // read-only value to see if the interface is light or dark. To set the value,
     // use setAppearance instead
     bool mInvertMapZoom = false; // true = old behavior (inverted), false = modern behavior (non-inverted)
+    bool mColouredIcons = false;
     QSplitter* mpSplitter_profileContainer = nullptr;
     // Argument to QDateTime::toString(...) to format the elapsed time display
     // on the mpToolBarReplay:

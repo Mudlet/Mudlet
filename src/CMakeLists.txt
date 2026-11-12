@@ -39,6 +39,41 @@ if(USE_FONTS)
   endif()
 endif()
 
+# Mudlet's Lua files and their translations, laid out as "make install" lays them out. A test loads it
+# too, so it is written whether or not USE_BUILTIN_MUDLET_LUA builds it into mudlet_core.
+set(BUILTIN_LUA_FOLDER "${CMAKE_CURRENT_SOURCE_DIR}/mudlet-lua/lua")
+set(BUILTIN_LUA_TRANSLATIONS_FOLDER "${mudlet_SOURCE_DIR}/translations/lua")
+file(GLOB_RECURSE BUILTIN_LUA_FILES CONFIGURE_DEPENDS
+     RELATIVE "${BUILTIN_LUA_FOLDER}" "${BUILTIN_LUA_FOLDER}/*.lua")
+file(GLOB_RECURSE BUILTIN_LUA_TRANSLATIONS CONFIGURE_DEPENDS
+     RELATIVE "${BUILTIN_LUA_TRANSLATIONS_FOLDER}" "${BUILTIN_LUA_TRANSLATIONS_FOLDER}/*.json")
+if(NOT BUILTIN_LUA_FILES)
+  message(FATAL_ERROR "No Lua files found in ${BUILTIN_LUA_FOLDER}")
+endif()
+# A checkout's path may hold what XML reserves
+foreach(BUILTIN_LUA_PATH BUILTIN_LUA_FOLDER BUILTIN_LUA_TRANSLATIONS_FOLDER)
+  string(REPLACE "&" "&amp;" ${BUILTIN_LUA_PATH} "${${BUILTIN_LUA_PATH}}")
+  string(REPLACE "<" "&lt;" ${BUILTIN_LUA_PATH} "${${BUILTIN_LUA_PATH}}")
+  string(REPLACE ">" "&gt;" ${BUILTIN_LUA_PATH} "${${BUILTIN_LUA_PATH}}")
+endforeach()
+set(BUILTIN_LUA_QRC "<RCC>\n<qresource prefix=\"/builtin/mudlet-lua/lua\">\n")
+foreach(BUILTIN_LUA_FILE ${BUILTIN_LUA_FILES})
+  string(APPEND BUILTIN_LUA_QRC "<file alias=\"${BUILTIN_LUA_FILE}\">${BUILTIN_LUA_FOLDER}/${BUILTIN_LUA_FILE}</file>\n")
+endforeach()
+foreach(BUILTIN_LUA_FILE ${BUILTIN_LUA_TRANSLATIONS})
+  string(APPEND BUILTIN_LUA_QRC
+         "<file alias=\"translations/${BUILTIN_LUA_FILE}\">${BUILTIN_LUA_TRANSLATIONS_FOLDER}/${BUILTIN_LUA_FILE}</file>\n")
+endforeach()
+string(APPEND BUILTIN_LUA_QRC "</qresource>\n</RCC>\n")
+# Only when it changes, as every build would otherwise compile it again
+set(BUILTIN_LUA_QRC_WRITTEN "")
+if(EXISTS "${CMAKE_CURRENT_BINARY_DIR}/mudlet_lua.qrc")
+  file(READ "${CMAKE_CURRENT_BINARY_DIR}/mudlet_lua.qrc" BUILTIN_LUA_QRC_WRITTEN)
+endif()
+if(NOT BUILTIN_LUA_QRC_WRITTEN STREQUAL BUILTIN_LUA_QRC)
+  file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/mudlet_lua.qrc" "${BUILTIN_LUA_QRC}")
+endif()
+
 # Add every .cpp source file that does not need Qt Widgets here, for mudlet_core, kept
 # in alphabetical order (case-insensitive).
 set(mudlet_SRCS
@@ -57,6 +92,7 @@ set(mudlet_SRCS
     EditorUndoStack.cpp
     EnvironmentKit.cpp
     EventLoopPump.cpp
+    EventNames.cpp
     ExitAppearance.cpp
     FontManager.cpp
     GifTracker.cpp
@@ -97,6 +133,7 @@ set(mudlet_SRCS
     TAreaSpanIndex.cpp
     TAreaZLevelIndex.cpp
     TAudioMixer.cpp
+    TBackgroundTask.cpp
     TBuffer.cpp
     TCommandHistory.cpp
     TCommandLineCompletion.cpp
@@ -190,6 +227,11 @@ set(mudlet_SRCS
 # here instead, in mudlet_app, kept in alphabetical order (case-insensitive).
 set(mudlet_app_SRCS
     ../3rdparty/qt-tags-widget/src/qtagedit.cpp
+    AboutLinkButton.cpp
+    AlphaColourWell.cpp
+    AboutSupporterBanner.cpp
+    ChipRow.cpp
+    ContentScrollArea.cpp
     CustomLineDrawContextMenuHandler.cpp
     CustomLineDrawHandler.cpp
     CustomLineEditContextMenuHandler.cpp
@@ -224,8 +266,16 @@ set(mudlet_app_SRCS
     dlgVarsMainArea.cpp
     EAction.cpp
     EditorAutoCompleteFocusHandler.cpp
+    EditorLineMarginDelegate.cpp
+    EditorPlaceholderButton.cpp
+    EditorTreeDelegate.cpp
+    EditorTreeRowDelegate.cpp
+    EditorTreeRowMetrics.cpp
     exitstreewidget.cpp
+    ExporterTreeDelegate.cpp
     FileOpenHandler.cpp
+    FlowLayout.cpp
+    GripSplitter.cpp
     HostDialogs.cpp
     LabelInteractionHandler.cpp
     MiddleMousePanHandler.cpp
@@ -233,11 +283,15 @@ set(mudlet_app_SRCS
     MudletInstanceCoordinator.cpp
     MudletProxyStyle.cpp
     PackageItemDelegate.cpp
+    PairGridLayout.cpp
     PanInteractionHandler.cpp
     RoomContextMenuHandler.cpp
     RoomMoveActivationHandler.cpp
     RoomMoveDragHandler.cpp
+    SearchResultDelegate.cpp
     SelectionRectangleHandler.cpp
+    SidebarItemDelegate.cpp
+    SidebarToggle.cpp
     SingleLineTextEdit.cpp
     T2DMap.cpp
     TAccessibleLabel.cpp
@@ -265,9 +319,12 @@ set(mudlet_app_SRCS
     TTabBar.cpp
     TTextBox.cpp
     TTextEdit.cpp
+    ToolBarOverflow.cpp
     TToolBar.cpp
     TTreeWidget.cpp
     TUiTour.cpp
+    uiDesign.cpp
+    VariableTreeDelegate.cpp
     WideComboBox.cpp
     widgetutils.cpp)
 
@@ -366,6 +423,7 @@ set(mudlet_HDRS
     EnvironmentKit.h
     enums.h
     EventLoopPump.h
+    EventNames.h
     ExitAppearance.h
     FontManager.h
     GifTracker.h
@@ -411,6 +469,7 @@ set(mudlet_HDRS
     TAreaZLevelIndex.h
     TAstar.h
     TAudioMixer.h
+    TBackgroundTask.h
     TBuffer.h
     TCommandHistory.h
     TCommandLineCompletion.h
@@ -501,6 +560,7 @@ set(mudlet_HDRS
     TTimer.h
     TTrigger.h
     TVar.h
+    TWindowNotifier.h
     TWindowRegistry.h
     UntrustedText.h
     utils.h
@@ -515,6 +575,11 @@ set(mudlet_HDRS
 # here instead, in mudlet_app, kept in alphabetical order (case-insensitive).
 set(mudlet_app_HDRS
     ../3rdparty/qt-tags-widget/include/QTagEdit/qtagedit.hpp
+    AboutLinkButton.h
+    AlphaColourWell.h
+    AboutSupporterBanner.h
+    ChipRow.h
+    ContentScrollArea.h
     CustomLineDrawContextMenuHandler.h
     CustomLineDrawHandler.h
     CustomLineEditContextMenuHandler.h
@@ -549,8 +614,16 @@ set(mudlet_app_HDRS
     dlgVarsMainArea.h
     EAction.h
     EditorAutoCompleteFocusHandler.h
+    EditorLineMarginDelegate.h
+    EditorPlaceholderButton.h
+    EditorTreeDelegate.h
+    EditorTreeRowDelegate.h
+    EditorTreeRowMetrics.h
     exitstreewidget.h
+    ExporterTreeDelegate.h
     FileOpenHandler.h
+    FlowLayout.h
+    GripSplitter.h
     HostDialogs.h
     LabelInteractionHandler.h
     MiddleMousePanHandler.h
@@ -558,11 +631,15 @@ set(mudlet_app_HDRS
     MudletInstanceCoordinator.h
     MudletProxyStyle.h
     PackageItemDelegate.h
+    PairGridLayout.h
     PanInteractionHandler.h
     RoomContextMenuHandler.h
     RoomMoveActivationHandler.h
     RoomMoveDragHandler.h
+    SearchResultDelegate.h
     SelectionRectangleHandler.h
+    SidebarItemDelegate.h
+    SidebarToggle.h
     SingleLineTextEdit.h
     T2DMap.h
     TAccessibleConsole.h
@@ -591,9 +668,12 @@ set(mudlet_app_HDRS
     TTabBar.h
     TTextBox.h
     TTextEdit.h
+    ToolBarOverflow.h
     TToolBar.h
     TTreeWidget.h
     TUiTour.h
+    uiDesign.h
+    VariableTreeDelegate.h
     WideComboBox.h
     widgetutils.h)
 
@@ -877,6 +957,10 @@ endif()
 # target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC DEBUG_PLAYER_ICON_CONTROLS)
 
 target_sources(${LIB_MUDLET_TARGET} PUBLIC "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
+if(USE_BUILTIN_MUDLET_LUA)
+  target_sources(${LIB_MUDLET_TARGET} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/mudlet_lua.qrc")
+  set_property(SOURCE TLuaInterpreter.cpp APPEND PROPERTY COMPILE_DEFINITIONS INCLUDE_BUILTIN_MUDLET_LUA)
+endif()
 
 set_target_properties(${LIB_MUDLET_TARGET} PROPERTIES
   AUTOMOC ON AUTORCC ON POSITION_INDEPENDENT_CODE ON
@@ -997,6 +1081,13 @@ target_include_directories(${LIB_MUDLET_TARGET} INTERFACE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_BINARY_DIR}/${LIB_MUDLET_TARGET}_autogen/include
 )
+
+if(USE_BUNDLED_LUA_MODULES)
+  # From here, where the libraries the modules link against have been found
+  include(BundledLuaModules)
+  target_link_libraries(${LIB_MUDLET_TARGET} mudlet_lua_modules)
+  set_property(SOURCE TLuaInterpreter.cpp APPEND PROPERTY COMPILE_DEFINITIONS INCLUDE_BUNDLED_LUA_MODULES)
+endif()
 
 if (SYSINFO_LIBRARY)
   target_link_libraries(${LIB_MUDLET_TARGET} ${SYSINFO_LIBRARY} ${KVM_LIBRARY})

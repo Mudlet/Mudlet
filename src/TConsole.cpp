@@ -44,6 +44,7 @@
 #include "TTextEdit.h"
 #include "dlgMapper.h"
 #include "mudlet.h"
+#include "uiDesign.h"
 
 #include <QAccessibleInterface>
 #include <QAccessibleWidget>
@@ -78,28 +79,12 @@ namespace {
 // Between the text panes and the vertical scroll bar; predictions of pane width must subtract it.
 constexpr int scrollBarSpacing = 1;
 
+constexpr int footSeamHeight = 1;
+
 // Windows 11 colours the handle for the app's colour scheme, not its surface: 45% black, invisible on a
 // black console. A style, not a style sheet: a widget's own sheet outranks every rule, so it would drop
 // setProfileStyleSheet() rules. Other styles draw the handle against their own groove, so it is visible
 // already, and keep hover/pressed feedback this painting lacks.
-bool consoleScrollBarStyleWanted()
-{
-    const QStyle* pStyle = QApplication::style();
-    if (!pStyle) {
-        return false;
-    }
-
-    // Mudlet's style is a proxy (MudletProxyStyle or DarkTheme) with no object name; use the base's.
-    QString styleName = pStyle->objectName();
-    if (styleName.isEmpty()) {
-        if (const auto* pProxy = qobject_cast<const QProxyStyle*>(pStyle); pProxy && pProxy->baseStyle()) {
-            styleName = pProxy->baseStyle()->objectName();
-        }
-    }
-    // Not windows10: its opaque handle on a light track has the same contrast on any console.
-    return !styleName.compare(qsl("windows11"), Qt::CaseInsensitive);
-}
-
 class ConsoleScrollBarStyle : public QProxyStyle
 {
 public:
@@ -109,9 +94,7 @@ public:
     {
         const auto* pSlider = qstyleoption_cast<const QStyleOptionSlider*>(pOption);
         const QColor handleColor = pWidget ? pWidget->property(csHandleColorProperty).value<QColor>() : QColor();
-        // Checked here, not at install, so a style switch (the appearance setting) needs no console
-        // told, and a test can stand in a Windows 11 style on any platform.
-        if (control != CC_ScrollBar || !pSlider || !handleColor.isValid() || !consoleScrollBarStyleWanted()) {
+        if (control != CC_ScrollBar || !pSlider || !handleColor.isValid() || !baseIsWindows11()) {
             QProxyStyle::drawComplexControl(control, pOption, pPainter, pWidget);
             return;
         }
@@ -144,6 +127,16 @@ public:
         pPainter->setBrush(handleColor);
         pPainter->drawRoundedRect(handleRect.adjusted(0.5, 0.5, -0.5, -0.5), cornerRadius, cornerRadius);
         pPainter->restore();
+    }
+
+private:
+    // The base, not the application style, draws the bar: QProxyStyle makes it from the -style override or
+    // the desktop's style, never the application's. Not windows10: its opaque handle on a light track has
+    // the same contrast on any console.
+    bool baseIsWindows11() const
+    {
+        const QStyle* pBase = baseStyle();
+        return pBase && !pBase->objectName().compare(qsl("windows11"), Qt::CaseInsensitive);
     }
 };
 
@@ -516,13 +509,25 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     layerCommandLine->setSizePolicy(sizePolicy);
     layerCommandLine->setFocusPolicy(Qt::NoFocus);
 
-    layerCommandLine->setMaximumHeight(31);
-    layerCommandLine->setMinimumHeight(31);
+    layerCommandLine->setMaximumHeight(commandLineLayerHeight(31));
+    layerCommandLine->setMinimumHeight(commandLineLayerHeight(31));
     layerCommandLine->setMinimumWidth(300);
 
-    layoutLayer2 = new QHBoxLayout(layerCommandLine);
+    mpFootSeam = new QWidget;
+    mpFootSeam->setObjectName(qsl("consoleFootSeam"));
+    mpFootSeam->setFixedHeight(footSeamHeight);
+    mpFootSeam->setAutoFillBackground(true);
+
+    auto commandLineLayerLayout = new QVBoxLayout(layerCommandLine);
+    commandLineLayerLayout->setContentsMargins(0, 0, 0, 0);
+    commandLineLayerLayout->setSpacing(0);
+    if (mType != MainConsole) {
+        commandLineLayerLayout->addWidget(mpFootSeam);
+    }
+    layoutLayer2 = new QHBoxLayout;
     layoutLayer2->setContentsMargins(0, 0, 0, 0);
     layoutLayer2->setSpacing(0);
+    commandLineLayerLayout->addLayout(layoutLayer2);
 
     mpButtonMainLayer = new QWidget;
     mpButtonMainLayer->setObjectName(qsl("mpButtonMainLayer"));
@@ -770,7 +775,14 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         commandSplitter->setCollapsible(0, false); // command line cannot collapse
         commandSplitter->setCollapsible(1, false); // search layer cannot collapse
 
-        centralLayout->addWidget(commandSplitter);
+        mpFoot = new QWidget(this);
+        mpFoot->setObjectName(qsl("consoleFoot"));
+        auto footLayout = new QVBoxLayout(mpFoot);
+        footLayout->setContentsMargins(0, 0, 0, 0);
+        footLayout->setSpacing(0);
+        footLayout->addWidget(mpFootSeam);
+        footLayout->addWidget(commandSplitter);
+        centralLayout->addWidget(mpFoot);
         restoreCommandSearchSettings();
     } else {
         centralLayout->addWidget(layerCommandLine);
@@ -1052,7 +1064,7 @@ void TConsole::resizeEvent(QResizeEvent* event)
 void TConsole::layoutMainDisplay()
 {
     const int x = width() - mpLeftToolBar->width() - mpRightToolBar->width();
-    const int y = height() - mpTopToolBar->height() - mpCommandLine->height();
+    const int y = height() - mpTopToolBar->height() - mpCommandLine->height() - footSeamHeightShown();
     // Move before resizing: resizing first could leave the display overrunning
     // its parent frame, clipping it and making TTextEdit::updateScreenView()
     // undercount the visible rows:
@@ -1088,7 +1100,7 @@ void TConsole::refresh()
 
     // Move before resizing, see comment in layoutMainDisplay():
     mpMainDisplay->move(mBorders.left(), mBorders.top());
-    mpMainDisplay->resize(x - mBorders.left() - mBorders.right(), y - mBorders.top() - mBorders.bottom() - mpCommandLine->height());
+    mpMainDisplay->resize(x - mBorders.left() - mBorders.right(), y - mBorders.top() - mBorders.bottom() - mpCommandLine->height() - footSeamHeightShown());
 
     if (!mpCommandLine.isNull()) {
         mpCommandLine->adjustHeight();
@@ -1317,6 +1329,15 @@ void TConsole::changeColors()
         updateMainFrameTransparency();
     } else {
         Q_ASSERT_X(false, "TConsole::changeColors()", "invalid TConsole type detected");
+    }
+    applyFootSeamColour();
+    // The settings dialog and an import restyle only the main console, yet every foot mixes these colours
+    if (auto pMainConsole = qobject_cast<TMainConsole*>(this); pMainConsole && !mpHost.isNull()) {
+        for (const QString& name : mpHost->windowRegistry().subConsoleNames()) {
+            if (TConsole* pSubConsole = pMainConsole->subConsoleWidget(name)) {
+                pSubConsole->applyFootSeamColour();
+            }
+        }
     }
 
     if (mType != MainConsole) {
@@ -1700,6 +1721,26 @@ bool TConsole::updateWindowBackgroundCoverPixmap()
     return true;
 }
 
+int TConsole::commandLineLayerHeight(const int commandLineHeight) const
+{
+    return mType == MainConsole ? commandLineHeight : commandLineHeight + footSeamHeight;
+}
+
+int TConsole::footSeamHeightShown() const
+{
+    return mpFootSeam && mpFootSeam->isVisibleTo(this) ? footSeamHeight : 0;
+}
+
+void TConsole::applyFootSeamColour()
+{
+    if (!mpFootSeam || mpHost.isNull()) {
+        return;
+    }
+    QPalette seamPalette;
+    seamPalette.setColor(QPalette::Window, uiDesign::blend(mpHost->mCommandLineBgColor, mpHost->mCommandLineFgColor, uiDesign::scmConsoleFootSeamStrength));
+    mpFootSeam->setPalette(seamPalette);
+}
+
 void TConsole::setCmdVisible(bool isVisible)
 {
     const QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
@@ -1728,6 +1769,9 @@ void TConsole::setCmdVisible(bool isVisible)
         }
     } else {
         mpButtonMainLayer->setVisible(false);
+    }
+    if (mpFoot) {
+        mpFoot->setVisible(isVisible);
     }
     layerCommandLine->setVisible(isVisible);
     mpCommandLine->setVisible(isVisible);
@@ -2259,7 +2303,7 @@ QSize TConsole::getMainWindowSize() const
     const QSize consoleSize = predicted ? parentWidget()->size() : size();
     const int toolbarWidth = mpLeftToolBar->width() + mpRightToolBar->width();
     const int toolbarHeight = mpTopToolBar->height();
-    const int commandLineHeight = mpCommandLine->height();
+    const int commandLineHeight = mpCommandLine->height() + footSeamHeightShown();
     const QSize mainWindowSize(consoleSize.width() - toolbarWidth, consoleSize.height() - (commandLineHeight + toolbarHeight));
 
     // A profile being switched to gets its geometry over several events, so in
@@ -2387,105 +2431,7 @@ void TConsole::raiseMudletMousePressOrReleaseEvent(QMouseEvent* event, const boo
         return;
     }
 
-    // Else if NOT the CentralDebugConsole or the ErrorConsole then bring the
-    // focus to the current profile in the main application window:
-    TEvent mudletEvent{};
-    mudletEvent.mArgumentList.append(isPressEvent ? qsl("sysWindowMousePressEvent") : qsl("sysWindowMouseReleaseEvent"));
-    switch (event->button()) {
-    case Qt::LeftButton:
-        mudletEvent.mArgumentList.append(QString::number(1));
-        break;
-    case Qt::RightButton:
-        mudletEvent.mArgumentList.append(QString::number(2));
-        break;
-    case Qt::MiddleButton:
-        mudletEvent.mArgumentList.append(QString::number(3));
-        break;
-    case Qt::BackButton:
-        mudletEvent.mArgumentList.append(QString::number(4));
-        break;
-    case Qt::ForwardButton:
-        mudletEvent.mArgumentList.append(QString::number(5));
-        break;
-    case Qt::TaskButton:
-        mudletEvent.mArgumentList.append(QString::number(6));
-        break;
-    case Qt::ExtraButton4:
-        mudletEvent.mArgumentList.append(QString::number(7));
-        break;
-    case Qt::ExtraButton5:
-        mudletEvent.mArgumentList.append(QString::number(8));
-        break;
-    case Qt::ExtraButton6:
-        mudletEvent.mArgumentList.append(QString::number(9));
-        break;
-    case Qt::ExtraButton7:
-        mudletEvent.mArgumentList.append(QString::number(10));
-        break;
-    case Qt::ExtraButton8:
-        mudletEvent.mArgumentList.append(QString::number(11));
-        break;
-    case Qt::ExtraButton9:
-        mudletEvent.mArgumentList.append(QString::number(12));
-        break;
-    case Qt::ExtraButton10:
-        mudletEvent.mArgumentList.append(QString::number(13));
-        break;
-    case Qt::ExtraButton11:
-        mudletEvent.mArgumentList.append(QString::number(14));
-        break;
-    case Qt::ExtraButton12:
-        mudletEvent.mArgumentList.append(QString::number(15));
-        break;
-    case Qt::ExtraButton13:
-        mudletEvent.mArgumentList.append(QString::number(16));
-        break;
-    case Qt::ExtraButton14:
-        mudletEvent.mArgumentList.append(QString::number(17));
-        break;
-    case Qt::ExtraButton15:
-        mudletEvent.mArgumentList.append(QString::number(18));
-        break;
-    case Qt::ExtraButton16:
-        mudletEvent.mArgumentList.append(QString::number(19));
-        break;
-    case Qt::ExtraButton17:
-        mudletEvent.mArgumentList.append(QString::number(20));
-        break;
-    case Qt::ExtraButton18:
-        mudletEvent.mArgumentList.append(QString::number(21));
-        break;
-    case Qt::ExtraButton19:
-        mudletEvent.mArgumentList.append(QString::number(22));
-        break;
-    case Qt::ExtraButton20:
-        mudletEvent.mArgumentList.append(QString::number(23));
-        break;
-    case Qt::ExtraButton21:
-        mudletEvent.mArgumentList.append(QString::number(24));
-        break;
-    case Qt::ExtraButton22:
-        mudletEvent.mArgumentList.append(QString::number(25));
-        break;
-    case Qt::ExtraButton23:
-        mudletEvent.mArgumentList.append(QString::number(26));
-        break;
-    case Qt::ExtraButton24:
-        mudletEvent.mArgumentList.append(QString::number(27));
-        break;
-    default:
-        mudletEvent.mArgumentList.append(QString::number(0));
-    }
-    QPoint pos = event->position().toPoint();
-    mudletEvent.mArgumentList.append(QString::number(pos.x()));
-    mudletEvent.mArgumentList.append(QString::number(pos.y()));
-    mudletEvent.mArgumentList.append(mConsoleName);
-    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    mpHost->raiseEvent(mudletEvent);
+    mpHost->raiseWindowMouseEvent(mConsoleName, *event, isPressEvent);
 
     // Focus this console's command line, not the "active" one
     // This ensures clicking on a console focuses its own command line

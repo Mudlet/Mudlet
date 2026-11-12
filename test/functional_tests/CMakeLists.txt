@@ -38,12 +38,15 @@ set(WINDOW_GROUP_TEST_SOURCES
     AddonControlsTest.cpp
     AnalyseCharactersTest.cpp
     AsciiLineBreakTest.cpp
+    ConsoleFootSeamTest.cpp
     BlinkRowRepaintTest.cpp
     ConsoleModelExtractionTest.cpp
     ConsoleTextStyleTest.cpp
     CopyAsImageTest.cpp
+    DesignGlyphCacheTest.cpp
     SplitCharacterFormatTest.cpp
     DebugConsoleFilterTest.cpp
+    DebugFilterBarGlyphTest.cpp
     FrontendRefreshSeamTest.cpp
     CommandLineKeyHandlingTest.cpp
     PasswordEntryTest.cpp
@@ -56,16 +59,19 @@ set(WINDOW_GROUP_TEST_SOURCES
     HostConsolePrintTest.cpp
     DetachedWindowTabActivityTest.cpp
     AboutDialogLicencesTest.cpp
+    AboutDialogShellTest.cpp
     AboutMenuReleaseNoticeTest.cpp
+    AppearanceBaseStyleTest.cpp
     LabelAccessibleInterfaceTest.cpp
     LabelAnchorInteractionTest.cpp
     MainWindowTitleTest.cpp
     LabelMovieRefusalTest.cpp
-    TabBarStyleTest.cpp
     CommandLineSpellCheckTest.cpp
     LabelSvgBackgroundTest.cpp
     CaretNavigationTest.cpp
     MainConsoleSelectionTest.cpp
+    MainToolBarGlyphTest.cpp
+    MainToolBarStyleTest.cpp
     TabDetachThresholdTest.cpp
     DetachedWindowDiscordButtonTest.cpp
     MainWindowSizeReportTest.cpp
@@ -75,6 +81,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     SpeechAcrossProfilesTest.cpp
     MudletProxyStyleTest.cpp
     DarkThemeToolBarExtensionTest.cpp
+    ComboListWheelTest.cpp
     DarkThemeItemCheckTest.cpp
     MxpFramePlacementTest.cpp
     MxpDestFrameClearTest.cpp
@@ -82,6 +89,8 @@ set(WINDOW_GROUP_TEST_SOURCES
     MxpWatchdogBufferLifetimeTest.cpp
     NarrowWindowWrapTest.cpp
     NotepadTest.cpp
+    NotepadShellTest.cpp
+    PackageManagerShellTest.cpp
     TabActivityMarkTest.cpp
     MenuShortcutTeardownTest.cpp
     NawsWidthReportTest.cpp
@@ -89,12 +98,14 @@ set(WINDOW_GROUP_TEST_SOURCES
     DetachedWindowToolBarVisibilityTest.cpp
     DetachedWindowMuteStateTest.cpp
     GlobalSettingsFlushTest.cpp
+    AppFrontendAsyncTest.cpp
     PastedLinkStateTest.cpp
     ProfileSwitchMiniconsoleTest.cpp
     RecolouredLineCacheTest.cpp
     TextEditAccessibleInterfaceTest.cpp
     TrackedLinkTrimTest.cpp
     ProfileSwitchShortcutTest.cpp
+    ProfileTabBarStyleTest.cpp
     SubCommandLineLifetimeTest.cpp
     ReplaySpeedClampTest.cpp
     WindowBackgroundTest.cpp
@@ -125,6 +136,7 @@ set(PROFILE_GROUP_TEST_SOURCES
     ConnectionDialogOfflineProfileTest.cpp
     ConnectionDialogOpenProfileTest.cpp
     ConnectionDialogSecureSettingTest.cpp
+    ConnectionDialogStyleTest.cpp
     CredentialFilePermissionsTest.cpp
     DefaultGameDeleteTest.cpp
     DictionaryRoundTripTest.cpp
@@ -214,21 +226,55 @@ set(TRIGGER_GROUP_TEST_SOURCES
 
 # The script editor, and the trigger, variable and script forms it hosts
 set(EDITOR_GROUP_TEST_SOURCES
+    ControlSentenceRowTest.cpp
     dlgTriggerEditorUndoRedoTest.cpp
     EdbeeReinitTest.cpp
+    EditorActivateActionTest.cpp
     EditorAutoCompleteFocusTest.cpp
+    EditorCaretReadingTest.cpp
+    EditorChromeTest.cpp
     EditorClipboardXmlTest.cpp
     EditorEmergencyStopTest.cpp
     EditorBannerViewSwitchTest.cpp
+    EditorCodeHeadingTest.cpp
+    EditorColumnAlignmentTest.cpp
+    EditorColumnFontTest.cpp
+    EditorDefaultSizeTest.cpp
+    EditorEventChipRowTest.cpp
+    EditorFormShellTest.cpp
+    EditorGeometryWriteGuardTest.cpp
+    EditorIconScaleTest.cpp
     EditorErrorLineLinkTest.cpp
     EditorEmptySelectionTest.cpp
     EditorItemXMLHelpersTest.cpp
     ColorTriggerDialogTest.cpp
+    EditorKeyCaptureTest.cpp
+    EditorKeyGrabShortcutsTest.cpp
+    EditorMinimumSizeTest.cpp
+    EditorNoticeGlyphTest.cpp
+    EditorNoticeSeamTest.cpp
+    EditorOptionsPanelDefaultTest.cpp
+    EditorPlacementPersistenceTest.cpp
     EditorReshowTest.cpp
+    EditorSplitterRestoreTest.cpp
+    EditorStatusBarTest.cpp
+    EditorTabAtStartTest.cpp
+    EditorTimerIntervalTest.cpp
+    EditorToolBarOverflowTest.cpp
+    EditorTreeDotClickTest.cpp
+    EditorTreeErrorMarkTest.cpp
+    EditorTreeHeadingIconTest.cpp
+    EditorTreeRowHeightTest.cpp
+    EditorTreeSelectionPillTest.cpp
+    EditorTriggerOptionsStripTest.cpp
+    EditorVariablesFormTest.cpp
+    EditorVariablesTreeTest.cpp
     PackageExporterTest.cpp
     EditorWindowPositionTest.cpp
+    EventNamesTest.cpp
     LuaFunctionListLoadTest.cpp
     MissingEditorThemeTest.cpp
+    ReadabilityAuditTest.cpp
     ScriptEventHandlerLifetimeTest.cpp
     EditorAddItemTest.cpp
     EditorFolderViewTest.cpp
@@ -310,6 +356,7 @@ set(PACKAGE_GROUP_TEST_SOURCES
     ModuleSyncSaveReentryTest.cpp
     PackageDownloadDialogRestyleTest.cpp
     PackageExporterDialogTest.cpp
+    PackageExporterShellTest.cpp
     PackageFolderRemovalTest.cpp
     PackageFontsOnRefusedArchiveTest.cpp
     PackageManagerHeadingTest.cpp
@@ -340,6 +387,7 @@ set(STARTERUI_GROUP_TEST_SOURCES
 # The settings dialog: its sidebar-and-cards shell, the deep links into it, how
 # a change reaches the Host, and what it does with no profile loaded
 set(SETTINGS_GROUP_TEST_SOURCES
+    EditorThemePairTest.cpp
     SettingsAppearanceTest.cpp
     SettingsBannerTest.cpp
     SettingsDeepLinkTest.cpp
@@ -350,12 +398,14 @@ set(SETTINGS_GROUP_TEST_SOURCES
     SettingsLiveSyncTest.cpp
     SettingsMapControlsTest.cpp
     SettingsMonospacedFontsTest.cpp
+    SettingsPageFlowTest.cpp
     SettingsMmcpFlagsTest.cpp
     SettingsRoundTripTest.cpp
     SettingsSearchTest.cpp
     SettingsShellNavigationTest.cpp
     SettingsSpellCheckEnableTest.cpp
     SettingsThemeFetchErrorTest.cpp
+    SidebarToggleTest.cpp
 )
 
 # Teardown: who owns a profile's dialogs and windows, and what becomes of them when it closes
@@ -379,6 +429,10 @@ if(USE_HEADLESS)
     list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessSessionAreaTest.cpp)
     list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessSessionCompletionTest.cpp)
     list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessSessionLinksTest.cpp)
+    list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessSessionWindowsTest.cpp)
+    list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessSessionWindowTextTest.cpp)
+    list(APPEND TEARDOWN_GROUP_TEST_SOURCES BuiltinMudletLuaTest.cpp)
+    list(APPEND TEARDOWN_GROUP_TEST_SOURCES PreloadedLuaModuleTest.cpp)
 endif()
 
 # Sound, music and video, speech in and out, and the rich presence published to Discord
@@ -516,6 +570,17 @@ add_grouped_test_binary(functional_package_tests ${PACKAGE_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_settings_tests ${SETTINGS_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_starterui_tests ${STARTERUI_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_teardown_tests ${TEARDOWN_GROUP_TEST_SOURCES})
+if(USE_HEADLESS)
+    # As a file BuiltinMudletLuaTest registers itself, so that no other test in the binary loads it
+    qt_add_binary_resources(builtin_mudlet_lua_rcc "${mudlet_BINARY_DIR}/src/mudlet_lua.qrc"
+        DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/mudlet-lua.rcc")
+    add_dependencies(functional_teardown_tests builtin_mudlet_lua_rcc)
+    set_property(SOURCE BuiltinMudletLuaTest.cpp APPEND PROPERTY
+        COMPILE_DEFINITIONS BUILTIN_MUDLET_LUA_RCC="${CMAKE_CURRENT_BINARY_DIR}/mudlet-lua.rcc")
+    if(USE_BUILTIN_MUDLET_LUA)
+        set_property(SOURCE BuiltinMudletLuaTest.cpp APPEND PROPERTY COMPILE_DEFINITIONS INCLUDE_BUILTIN_MUDLET_LUA)
+    endif()
+endif()
 # HeadlessHostSmokeTest is not given the Discord library, as most headless embedders
 # will not have one; its Discord cases run again with the bundled one, given it below
 add_test(NAME HeadlessHostSmokeTestWithDiscordLibrary
@@ -534,6 +599,15 @@ add_test(NAME HeadlessHostSmokeTestWithMudletIni
     COMMAND $<TARGET_FILE:functional_teardown_tests> HeadlessHostSmokeTest
         test_profileWithNoMainWindowTakesItsSettingsFromMudletIni)
 list(APPEND allFunctionalTestNames HeadlessHostSmokeTestWithMudletIni)
+# The headless blocking calls run again on Qt's own Unix event dispatcher, which, as Windows' and macOS' do, sleeps
+# once it has sent what was posted, where glib's returns: an answer given from a posted event must still end the wait
+if(USE_HEADLESS AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    add_test(NAME HeadlessSessionTestWithUnixDispatcher
+        COMMAND $<TARGET_FILE:functional_teardown_tests> HeadlessSessionTest test_aFirstLoadInstallsTheDefaultPackages)
+    add_test(NAME HeadlessRunnerTestWithUnixDispatcher
+        COMMAND $<TARGET_FILE:functional_teardown_tests> HeadlessRunnerTest test_linesPastTheBoundAreTypedInOrder)
+    list(APPEND allFunctionalTestNames HeadlessSessionTestWithUnixDispatcher HeadlessRunnerTestWithUnixDispatcher)
+endif()
 add_grouped_test_binary(functional_media_tests ${MEDIA_GROUP_TEST_SOURCES})
 
 # On macOS the app reads its dictionaries from the bundle's Resources folder,
@@ -668,6 +742,15 @@ if(TEST LabelTextureCacheTest)
     set_tests_properties(LabelTextureCacheTest PROPERTIES SKIP_REGULAR_EXPRESSION "SKIP   : LabelTextureCacheTest::initTestCase")
 endif()
 
+# Offscreen's own screen is 800px wide, narrower than the settings dialog at its widest, and a
+# language that lengthens the sidebar's names widens the dialog only as far as its screen allows.
+# The path is relative because Qt splits the platform's arguments at every colon, a drive letter's too.
+if(TEST SettingsShellNavigationTest)
+    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/offscreen-wide-screen.json" "{\"screens\": [{\"name\": \"OffscreenWide\", \"x\": 0, \"y\": 0, \"width\": 1920, \"height\": 1200}]}\n")
+    set_tests_properties(SettingsShellNavigationTest PROPERTIES WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+    set_property(TEST SettingsShellNavigationTest APPEND PROPERTY ENVIRONMENT_MODIFICATION "QT_QPA_PLATFORM=set:offscreen:configfile=offscreen-wide-screen.json")
+endif()
+
 # A buffer's default font gives the same row count for its pane's stale and laid-out
 # heights at 96 DPI; 72 DPI tells them apart
 set_property(TEST WindowStateGettersTest APPEND PROPERTY ENVIRONMENT "QT_FONT_DPI=72")
@@ -702,6 +785,17 @@ endif()
 if(TEST HeadlessSessionTest)
     set_tests_properties(HeadlessSessionTest PROPERTIES TIMEOUT 300)
 endif()
+foreach(test_name HeadlessSessionTestWithUnixDispatcher HeadlessRunnerTestWithUnixDispatcher)
+    if(TEST ${test_name})
+        set_property(TEST ${test_name} APPEND PROPERTY ENVIRONMENT "QT_NO_GLIB=1")
+    endif()
+endforeach()
+if(TEST HeadlessSessionMapTest)
+    set_tests_properties(HeadlessSessionMapTest PROPERTIES TIMEOUT 300)
+endif()
+if(TEST HeadlessSessionCompletionTest)
+    set_tests_properties(HeadlessSessionCompletionTest PROPERTIES TIMEOUT 300)
+endif()
 if(TEST HeadlessSessionOutputTest)
     set_tests_properties(HeadlessSessionOutputTest PROPERTIES TIMEOUT 300)
 endif()
@@ -710,6 +804,12 @@ if(TEST HeadlessSessionAreaTest)
 endif()
 if(TEST HeadlessSessionLinksTest)
     set_tests_properties(HeadlessSessionLinksTest PROPERTIES TIMEOUT 300)
+endif()
+if(TEST HeadlessSessionWindowsTest)
+    set_tests_properties(HeadlessSessionWindowsTest PROPERTIES TIMEOUT 300)
+endif()
+if(TEST HeadlessSessionWindowTextTest)
+    set_tests_properties(HeadlessSessionWindowTextTest PROPERTIES TIMEOUT 300)
 endif()
 
 # Undo/redo tests need a longer timeout due to large batch operations
@@ -829,6 +929,7 @@ set_tests_properties(SettingsAppearanceTest
                      SettingsInstantApplyTest
                      SettingsLiveSyncTest
                      SettingsMapControlsTest
+                     SettingsPageFlowTest
                      SettingsRoundTripTest
                      SettingsSearchTest
                      SettingsShellNavigationTest

@@ -28,6 +28,7 @@
 
 #include "Host.h"
 #include "LuaInterface.h"
+#include "TBackgroundTask.h"
 #include "CredentialManager.h"
 #include "ShortcutsManager.h"
 #include "TAction.h"
@@ -41,7 +42,6 @@
 #include <QSaveFile>
 #include <QRegularExpression>
 #include <QVersionNumber>
-#include <QtConcurrentRun>
 #include <QFutureWatcher>
 #include <QFile>
 #include <QGuiApplication>
@@ -221,9 +221,9 @@ bool XMLexport::exportHost(const QString& filename_pugi_xml)
 void XMLexport::runAsyncSave(const QString& fileName, const QString& xmlSavedKey)
 {
     QPointer<Host> host = mpHost;
-    // Written on the pool thread before the future finishes, read only after it has
+    // Written by the task before the future finishes, read only after it has
     auto reason = std::make_shared<QString>();
-    auto future = QtConcurrent::run([fileName, doc = takeExportDocument(), reason]() {
+    auto future = TBackgroundTask::run([fileName, doc = takeExportDocument(), reason]() {
         return XMLexport::saveXmlDocToFile(fileName, *doc, reason.get());
     });
     // Parented to the profile for the same reason the module save's watcher is: the

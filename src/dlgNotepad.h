@@ -25,6 +25,9 @@
 
 
 #include "ui_notes_editor.h"
+#include "uiDesign.h"
+#include <QColor>
+#include <QList>
 #include <QPointer>
 
 class Host;
@@ -33,6 +36,7 @@ class QEvent;
 class QLabel;
 class QLineEdit;
 class QPlainTextEdit;
+class QProgressBar;
 class QShortcut;
 class QTimer;
 class QTimerEvent;
@@ -43,6 +47,8 @@ class dlgNotepad : public QMainWindow, public Ui::notes_editor
 {
     Q_OBJECT
 
+    friend class NotepadShellTest;
+
 public:
     Q_DISABLE_COPY(dlgNotepad)
     explicit dlgNotepad(Host*);
@@ -52,7 +58,7 @@ public:
     void restore();
     void saveSettings();
     void restoreSettings();
-    void setFont(const QFont &);
+    void setFont(const QFont&);
     void setTabsStyleSheet(const QString& styleSheet);
 
 signals:
@@ -73,42 +79,79 @@ private slots:
     void slot_sendSelection();
     void slot_sendNextLine();
     void slot_stopSending();
-    void slot_toggleSendControls(bool checked);
     void slot_showFindBar();
     void slot_hideFindBar();
     void slot_findNext();
     void slot_findPrevious();
     void slot_findTextChanged(const QString& text);
     void slot_currentTabChanged(int index);
+    void slot_applyAppearance();
 
 private:
-    void timerEvent(QTimerEvent *event) override;
-    void closeEvent(QCloseEvent *event) override;
+    void timerEvent(QTimerEvent* event) override;
+    void closeEvent(QCloseEvent* event) override;
     void changeEvent(QEvent* event) override;
     bool eventFilter(QObject* obj, QEvent* event) override;
     QPlainTextEdit* currentTextEdit() const;
-    void updateSendControlsToggleIcon();
+    void applyNotepadShellStyle();
+    void setupSendStrip();
+    [[nodiscard]] int stripWordPointSize() const;
     void setupAddTabButton();
+    void updateTabClosability();
+    [[nodiscard]] bool okToDiscardNotes(const QList<int>& indices);
+    void closeOtherTabs(int keptIndex);
     void setupFindBar();
     void highlightAllMatches();
     void scheduleRehighlight();
     void clearSearchHighlights();
     bool migrateOldNotesFile();
     void startSendingLines(const QStringList& lines);
+    void updateSendStrip();
+    void updateSendReach();
+    void updateSelectionReach();
+    void alignPrefixLeadWord();
+    void updateNoPrefixWarning();
+    void fitNoPrefixNote();
+    void setSending(const bool sending);
+    void updateSendingReading();
+    void finishSending(const bool stopped);
 
     QPointer<Host> mpHost;
     QToolButton* mpAddTabButton = nullptr;
-    bool mUiSetupComplete = false;
     bool mNeedToSave = false;
     bool mRehighlightPending = false;
+    QColor mCurrentMatchInk;
+    QColor mOtherMatchInk;
     QAction* action_stop = nullptr;
+    QAction* action_sendControlsSeparator = nullptr;
     QAction* action_prependText = nullptr;
     QAction* action_prependTextLabel = nullptr;
     QLabel* label_prependText = nullptr;
     QLineEdit* lineEdit_prependText = nullptr;
+    QAction* action_prefixWarning = nullptr;
+    QString mPrefixFieldToolTip;
+    QAction* action_sendingDot = nullptr;
+    QAction* action_sendingText = nullptr;
+    QAction* action_sendingBar = nullptr;
+    QAction* action_noPrefixNote = nullptr;
+    QLabel* mpLabel_sendingDot = nullptr;
+    QLabel* mpLabel_sendingText = nullptr;
+    QProgressBar* mpProgressBar_sending = nullptr;
+    QWidget* mpWidget_noPrefixNote = nullptr;
+    QLabel* mpLabel_noPrefixDot = nullptr;
+    QLabel* mpLabel_noPrefixText = nullptr;
+    QString mNoPrefixNoteText;
+    // Not action_noPrefixNote's visibility, which fitNoPrefixNote() also clears when no form of the words fits
+    bool mNoPrefixWarningApplies = false;
+    // Counted once per edit or note switch, so a moving selection does not recount the whole note
+    int mNoteSendableLines = 0;
+    QList<uiDesign::ActionGlyph> mNotepadActionGlyphs;
     QStringList mLinesToSend;
     QTimer* mSendTimer = nullptr;
     int mCurrentLineIndex = 0;
+    int mLinesToSendCount = 0;
+    int mLinesSent = 0;
+    bool mSending = false;
 
     QWidget* mpFindBar = nullptr;
     QLineEdit* mpFindLineEdit = nullptr;

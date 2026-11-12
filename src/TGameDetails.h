@@ -966,6 +966,39 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "your specials, and chat tabs. Free, in live development, for ages 16 and up. "
                  "New climbers welcome."),
              GameDetail::OwnUi::ClientGui},
+            {qsl("Fablerift"),
+             qsl("mud.fablerift.net"),
+             4443,
+             true,
+             qsl("<a href='https://fablerift.net/'>Website</a><br>"
+                 "<a href='https://play.fablerift.net/'>Play in the browser</a><br>"
+                 "<a href='https://discord.gg/ecq88z7H9A'>Discord</a>"),
+             qsl(":/icons/fablerift_480x120.png"),
+             qsl("Fablerift is a free multiplayer text RPG in the classic MUD tradition, on one "
+                 "shared server: a name, a password and a colour choice, and you are walking the "
+                 "Mistwood beside everyone else. The browser client and telnet reach the same "
+                 "world, so a player who installed nothing is in the room next to you."
+                 "\n\n"
+                 "Seven regions of forest, coast, desert and frozen peak each carry their own "
+                 "weather, and a day/night cycle changes what comes out after dark. Chop, mine "
+                 "and fish, craft at shared workbenches, and cook meals that keep you warm on the "
+                 "mountain. Classes have their own abilities with mana costs and cooldowns, "
+                 "bosses telegraph their heaviest blows, and a party can clear instanced "
+                 "dungeons - with heroic versions once the story is done. There are guilds, "
+                 "player-to-player trading, a market board that sells while its owner is away, "
+                 "mail with items attached, land you can claim, and a five-chapter story that "
+                 "runs to a final boss."
+                 "\n\n"
+                 "In Mudlet the game's own interface installs itself on login through GMCP "
+                 "Client.GUI: vitals, chat windows with timestamps, clickable text, item and "
+                 "quest panels, and a mapper fed by GMCP Room.Info with fixed coordinates, with "
+                 "the starting region's safe rooms already on your map. GA is on by default "
+                 "after every prompt, and gui off or mudlet off turns the interface back off. "
+                 "Screen-reader, large-text, ASCII-only and colour-free modes are built in."
+                 "\n\n"
+                 "The server is MIT-licensed and self-hostable, so you can run your own world "
+                 "and invite people to it. New players welcome."),
+             GameDetail::OwnUi::ClientGui},
             };
     // clang-format on
 };

@@ -129,6 +129,7 @@ public:
     THyperlinkVisibilityManager& getHyperlinkVisibilityManager() { return mpModel->mHyperlinkVisibilityManager; }
 
     void setCmdVisible(bool);
+    int commandLineLayerHeight(const int commandLineHeight) const;
     void changeColors();
     void scrollDown(int lines);
     void scrollUp(int lines);
@@ -344,6 +345,8 @@ private:
     void raiseFontChangeEvent();
     void restoreCommandSearchSettings();
     void updateScrollBarStyle();
+    void applyFootSeamColour();
+    int footSeamHeightShown() const;
     // Returns whether the lower pane was hidden
     bool showLowerPane();
 
@@ -367,6 +370,9 @@ private:
     QColor& mBorderColor;
     // latches the 'cover' scale failure so a resize drag does not repeat the warning
     bool mWindowBgCoverScaleFailed = false;
+    // In the main console the search box shares commandSplitter, so the seam must span mpFoot
+    QWidget* mpFootSeam = nullptr;
+    QWidget* mpFoot = nullptr;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)

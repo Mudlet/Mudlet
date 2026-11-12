@@ -173,7 +173,9 @@ if [ "${SENTRY_SEND_DEBUG}" = "1" ]; then
       "${MINGW_PACKAGE_PREFIX}-qt6-speech-debug" \
       "${MINGW_PACKAGE_PREFIX}-qt6-imageformats-debug" \
       "${MINGW_PACKAGE_PREFIX}-qt6-tools-debug" \
-      "${MINGW_PACKAGE_PREFIX}-qt6-5compat-debug"; then
+      "${MINGW_PACKAGE_PREFIX}-qt6-5compat-debug" \
+      "${MINGW_PACKAGE_PREFIX}-qt6-websockets-debug" \
+      "${MINGW_PACKAGE_PREFIX}-qt6-httpserver-debug"; then
         break
     fi
 

@@ -353,8 +353,11 @@ private slots:
         QCOMPARE(frame.y(), reservedArea.bottom() + 1 - 80);
         QCOMPARE(mpHost->borders().bottom(), 200);
         // an anchor that does not go through the same formula: the frame has to
-        // clear the command line as well as the reserved strip
-        QCOMPARE(frame.bottom() + 1, mpHost->mainConsoleView()->height() - mpHost->mainConsoleView()->mpCommandLine->height() - 120);
+        // clear the console's foot, the command line and the seam over it, as
+        // well as the reserved strip
+        const QWidget* pFoot = mpHost->mainConsoleView()->findChild<QWidget*>(qsl("consoleFoot"));
+        QVERIFY2(pFoot != nullptr, "the main console has no foot under its text");
+        QCOMPARE(frame.bottom() + 1, pFoot->y() - 120);
     }
 
     // WIDTH defaults to a percentage, which now resolves against the space the
