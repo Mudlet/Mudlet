@@ -76,6 +76,15 @@ bool poolBusy(const HostManager& pool, const bool forDeletion, const bool closes
     return false;
 }
 
+// A save the session asked for is waited for from the event loop, so nothing else marks its profile busy
+bool poolSaving(const HostManager& pool)
+{
+    const auto hosts = pool.hostList();
+    return std::any_of(hosts.cbegin(), hosts.cend(), [](const QSharedPointer<Host>& pHost) {
+        return pHost->currentlySavingProfile();
+    });
+}
+
 // A profile a script closed is still writing its save, which deleting the pool would cut off
 bool poolStillClosing(const HostManager& pool)
 {
@@ -115,14 +124,15 @@ HostManager* gpClosingPool = nullptr;
 int gSignalsBeingHandedOut = 0;
 
 // Closes the profiles, unsaved, once none of those signals is being sent, nothing in the pool is busy or waiting
-// to reset, and no profile taken out of it is still being let go
-void deletePoolOnceIdle(HostManager* pPool)
+// to reset, no profile taken out of it is still being let go and, until savesUntil, no save the session asked for runs
+void deletePoolOnceIdle(HostManager* pPool, const std::optional<std::chrono::steady_clock::time_point> savesUntil = std::nullopt)
 {
     gpClosingPool = pPool;
-    if (gSignalsBeingHandedOut || poolBusy(*pPool, true) || resetPending(*pPool) || HostManager::releasingProfile()) {
+    const bool saving = savesUntil && std::chrono::steady_clock::now() < *savesUntil && poolSaving(*pPool);
+    if (gSignalsBeingHandedOut || poolBusy(*pPool, true) || saving || resetPending(*pPool) || HostManager::releasingProfile()) {
         pPool->markDeletionPending();
-        QTimer::singleShot(50ms, QCoreApplication::instance(), [pPool]() {
-            deletePoolOnceIdle(pPool);
+        QTimer::singleShot(50ms, QCoreApplication::instance(), [pPool, savesUntil]() {
+            deletePoolOnceIdle(pPool, savesUntil);
         });
         return;
     }
@@ -153,45 +163,82 @@ QString hostToConnectTo(const QString& profile, const QString& given)
     return game != TGameDetails::scmDefaultGames.constEnd() ? game->hostUrl : QString();
 }
 
-// Not a QEventLoop: a quit() asked for meanwhile would end it before the answer, which would then write to
-// what the caller waits with once it was gone
+// For the blocking forms alone. Not a QEventLoop: a quit() asked for meanwhile would end it before the answer,
+// which would then write to what the caller waits with once it was gone
 void waitUntil(const std::function<bool()>& answered)
 {
+    // Every dispatcher but glib's (Windows', macOS', QT_NO_GLIB's) begins a pass by sending what was posted, then
+    // sleeps until something new comes; an answer a posted event gave would sleep with it, so the timer wakes it
+    QTimer heartbeat;
+    heartbeat.start(10ms);
     while (!answered()) {
         QCoreApplication::processEvents(QEventLoop::WaitForMoreEvents);
     }
 }
 
-// As the dialog does for a new profile: a password left by a profile deleted outside Mudlet would otherwise
-// be sent to the new game. Only one a lookup finds is removed, so a store that cannot be reached holds up
-// nothing. Empty unless one found could not be removed, else why.
-QString removeStalePasswords(const QString& profile)
+// A step left with a profile, which drops it unrun if it is deleted first: answered once, with true when it
+// ran, or with none, from the session's event loop, when it was dropped. Never once the session is gone.
+class StepOnce
 {
-    CredentialManager store;
-    // One operation at a time, so each starts from the last one's answer
-    for (const QString& key : {qsl("character"), qsl("proxy")}) {
-        std::optional<bool> found;
-        store.credentialExists(profile, key, [&found](const bool exists) {
-            found = exists;
-        });
-        waitUntil([&found]() {
-            return found.has_value();
-        });
-        if (!*found) {
-            continue;
-        }
-        std::optional<QString> failure;
-        store.removePassword(profile, key, [&failure](const bool removed, const QString& error) {
-            failure = removed ? QString() : error;
-        });
-        waitUntil([&failure]() {
-            return failure.has_value();
-        });
-        if (!failure->isEmpty()) {
-            return *failure;
+public:
+    StepOnce(QObject* session, std::function<void(bool ran)> then)
+    : mpSession(session)
+    , mThen(std::move(then))
+    {
+    }
+    ~StepOnce()
+    {
+        if (auto then = std::exchange(mThen, {}); then && mpSession) {
+            // Posted: this may be the profile's destructor
+            QTimer::singleShot(0ms, mpSession.data(), [then]() {
+                then(false);
+            });
         }
     }
-    return QString();
+    void ran()
+    {
+        if (auto then = std::exchange(mThen, {}); then && mpSession) {
+            then(true);
+        }
+    }
+    // For a step that goes on another way, once the session is known to be there
+    bool takeOver()
+    {
+        mThen = {};
+        return !mpSession.isNull();
+    }
+
+private:
+    QPointer<QObject> mpSession;
+    std::function<void(bool)> mThen;
+};
+
+// As the dialog does for a new profile: a password left by a profile deleted outside Mudlet would otherwise
+// be sent to the new game. Only one a lookup finds is removed, so a store that cannot be reached holds up
+// nothing. done is told an empty string unless one found could not be removed, else why. One operation at a
+// time, so each starts from the last one's answer; nothing is told once session is gone, which takes the store.
+void removeStalePasswords(QObject* session, CredentialManager* store, const QString& profile, QStringList keys, std::function<void(const QString&)> done)
+{
+    if (keys.isEmpty()) {
+        store->deleteLater();
+        done(QString());
+        return;
+    }
+    const QString key = keys.takeFirst();
+    store->credentialExists(profile, key, [session, store, profile, key, keys, done](const bool exists) {
+        if (!exists) {
+            removeStalePasswords(session, store, profile, keys, done);
+            return;
+        }
+        store->removePassword(profile, key, [session, store, profile, keys, done](const bool removed, const QString& error) {
+            if (!removed) {
+                store->deleteLater();
+                done(error);
+                return;
+            }
+            removeStalePasswords(session, store, profile, keys, done);
+        });
+    });
 }
 
 // The GUI picks again at every launch by what each candidate holds, so a chosen root filling with profiles
@@ -293,21 +340,86 @@ THeadlessSession::~THeadlessSession()
     // The exit handlers of a pool deleted at once may run the event loop, where the frontend may call it
     mShuttingDown = true;
     // Anything busy is waited for from a timer, not from an event loop run here as shutdown() does
-    deletePoolOnceIdle(mpPool.release());
+    // A save asked for is waited for as the blocking save()'s wait would have been, giving up after as long
+    deletePoolOnceIdle(mpPool.release(), mSaving ? std::optional(std::chrono::steady_clock::now() + std::chrono::seconds(30)) : std::nullopt);
 }
 
 THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
+{
+    const QPointer<THeadlessSession> self(this);
+    std::optional<StartResult> result;
+    beginStart(asked, [&result](const StartResult answer) {
+        result = answer;
+    });
+    waitUntil([&result, &self]() {
+        return result.has_value() || !self;
+    });
+    return result.value_or(StartResult::notOpened);
+}
+
+void THeadlessSession::startAsync(const Options& asked)
+{
+    // The load runs the event loop, where the frontend may delete the session
+    beginStart(asked, [this, self = QPointer<THeadlessSession>(this)](const StartResult answer) {
+        if (!self) {
+            return;
+        }
+        tellLater([this, answer, error = answer == StartResult::started ? QString() : mErrorString]() {
+            emit startFinished(answer, error);
+        });
+    });
+}
+
+void THeadlessSession::tellLater(std::function<void()> tell)
+{
+    // From the event loop, so a frontend never hears an answer before the call that asked for it returns
+    QTimer::singleShot(0ms, this, std::move(tell));
+}
+
+void THeadlessSession::beginStart(const Options& asked, std::function<void(StartResult)> done)
 {
     // Trimmed once, so that what is checked is what is stored and used, as the dialog trims these to check and
     // apply them; a host of only spaces is then none, and a name with spaces round it finds the profile it names
     Options options = asked;
     options.password.clear();
     // A copy of its own, taken before the event loop runs, where the caller may change or clear its own; and
-    // cleared on return, so that nothing kept shares the buffer the caller clears
-    QString password(asked.password.constData(), asked.password.size());
-    const auto clearPassword = qScopeGuard([&password]() {
-        SecureStringUtils::secureStringClear(password);
+    // cleared once the start is over, so that nothing kept shares the buffer the caller clears
+    const std::shared_ptr<QString> password(new QString(asked.password.constData(), asked.password.size()), [](QString* copy) {
+        SecureStringUtils::secureStringClear(*copy);
+        delete copy;
     });
+    std::optional<bool> tls;
+    bool stalePasswords = false;
+    if (const auto refusal = prepareStart(options, tls, stalePasswords)) {
+        done(*refusal);
+        return;
+    }
+    if (!stalePasswords) {
+        done(finishStart(options, tls, *password));
+        return;
+    }
+    // Calls meanwhile are refused as during the load, until the queued load begins: a shutdown() would take the
+    // pool this is about to load into
+    mRemovingStalePasswords = true;
+    removeStalePasswords(this, new CredentialManager(this), mProfileName, {qsl("character"), qsl("proxy")}, [this, options, tls, password, done](const QString& failure) {
+        if (!failure.isEmpty()) {
+            mRemovingStalePasswords = false;
+            mpPool.reset();
+            //: %1 is the name of a new profile, %2 why the credential store kept a password filed under that name by a profile deleted earlier
+            mErrorString = tr("The password filed under \"%1\" by an earlier profile of that name could not be removed: %2").arg(mProfileName, failure);
+            done(StartResult::notOpened);
+            return;
+        }
+        // From the event loop, not from inside the store's callback, as the load may delete the session and the store with it
+        QTimer::singleShot(0ms, this, [this, options, tls, password, done]() {
+            mRemovingStalePasswords = false;
+            done(finishStart(options, tls, *password));
+        });
+    });
+}
+
+std::optional<THeadlessSession::StartResult> THeadlessSession::prepareStart(Options& options, std::optional<bool>& tls, bool& stalePasswords)
+{
     options.profile = options.profile.trimmed();
     options.host = options.host.trimmed();
     options.login = options.login.trimmed();
@@ -372,7 +484,7 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
         mProfileName = name;
     }
     const bool newProfile = !QDir(MudletApp::getMudletPath(enums::profileHomePath, mProfileName)).exists();
-    std::optional<bool> tls = options.tls;
+    tls = options.tls;
     const bool detailsGiven = !options.host.isEmpty() || options.port || tls.has_value();
     // Where a port stored now would change the box, or there is none stored yet
     if (!tls.has_value() && detailsGiven && MudletApp::readProfileData(mProfileName, qsl("port")).trimmed().isEmpty()
@@ -388,24 +500,16 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
             return StartResult::invalidConnectionDetails;
         }
     }
-    // Removing them, and the load, run the event loop, where the frontend may delete the session. Only for a
-    // name of the frontend's own, as the dialog: a game's entry is shared with the GUI and every other config root.
+    // Only for a name of the frontend's own, as the dialog: a game's entry is shared with the GUI and every other
+    // config root
+    stalePasswords = newName && MudletApp::storingPasswordsSecurely();
+    return std::nullopt;
+}
+
+THeadlessSession::StartResult THeadlessSession::finishStart(const Options& options, const std::optional<bool> tls, const QString& password)
+{
+    // The load runs the event loop, where the frontend may delete the session
     const QPointer<THeadlessSession> self(this);
-    if (newName && MudletApp::storingPasswordsSecurely()) {
-        // Calls meanwhile are refused as during the load: a shutdown() would take the pool this is about to load into
-        mRemovingStalePasswords = true;
-        const QString failure = removeStalePasswords(mProfileName);
-        if (!self) {
-            return StartResult::notOpened;
-        }
-        mRemovingStalePasswords = false;
-        if (!failure.isEmpty()) {
-            mpPool.reset();
-            //: %1 is the name of a new profile, %2 why the credential store kept a password filed under that name by a profile deleted earlier
-            mErrorString = tr("The password filed under \"%1\" by an earlier profile of that name could not be removed: %2").arg(mProfileName, failure);
-            return StartResult::notOpened;
-        }
-    }
     if (!storeConnectionDetails(options, tls)) {
         mpPool.reset();
         return StartResult::notOpened;
@@ -1098,66 +1202,117 @@ QString THeadlessSession::luaErrorOf(const QString& consoleText)
 
 THeadlessSession::PackageResult THeadlessSession::installPackage(const QString& path)
 {
+    const QPointer<THeadlessSession> self(this);
+    std::optional<PackageResult> result;
+    beginInstallPackage(path, [&result](const PackageResult answer) {
+        result = answer;
+    });
+    waitUntil([&result, &self]() {
+        return result.has_value() || !self;
+    });
+    return result.value_or(PackageResult::failed);
+}
+
+void THeadlessSession::installPackageAsync(const QString& path)
+{
+    beginInstallPackage(path, [this, self = QPointer<THeadlessSession>(this), path](const PackageResult answer) {
+        if (!self) {
+            return;
+        }
+        tellLater([this, path, answer, error = answer == PackageResult::installed ? QString() : mErrorString]() {
+            emit packageInstallFinished(path, answer, error);
+        });
+    });
+}
+
+void THeadlessSession::beginInstallPackage(const QString& path, std::function<void(PackageResult)> done)
+{
+    if (mInstallingPackage) {
+        qWarning() << "THeadlessSession: installPackage() while another install has not answered is refused; call it once that has";
+        //: Error from a frontend with no window that was asked to install a package before the install it asked for earlier had finished
+        mErrorString = tr("Another package is still being installed; try again once it has been.");
+        done(PackageResult::failed);
+        return;
+    }
     if (!usable()) {
-        return PackageResult::failed;
+        done(PackageResult::failed);
+        return;
     }
     // Before the name is looked for, which a missing file would otherwise pass
     if (QFile file(path); !file.open(QIODevice::ReadOnly)) {
         //: %1 is the path of a package file, %2 is why it could not be installed
         mErrorString = tr("The package \"%1\" could not be installed: %2").arg(path, file.errorString());
-        return PackageResult::failed;
+        done(PackageResult::failed);
+        return;
     }
-    // The install, and the wait for a save, may run the event loop, where the frontend may delete the session
-    const QPointer<THeadlessSession> self(this);
+    mInstallingPackage = true;
+    auto finish = [this, done](const PackageResult answer) {
+        mInstallingPackage = false;
+        done(answer);
+    };
     // A save running now would put the install off until it ends, and answer true before it has happened
-    mpHost->waitForProfileSave();
-    if (!self || !usable()) {
-        return PackageResult::failed;
+    // Dropped with a profile deleted meanwhile, which finishInstallPackage() then finds gone
+    auto step = std::make_shared<StepOnce>(this, [this, path, finish](const bool) {
+        finishInstallPackage(path, finish);
+    });
+    mpHost->whenProfileSaveEnds([step]() {
+        step->ran();
+    });
+}
+
+void THeadlessSession::finishInstallPackage(const QString& path, std::function<void(PackageResult)> done)
+{
+    if (!usable()) {
+        done(PackageResult::failed);
+        return;
     }
     if (mpHost->currentlySavingProfile()) {
         //: %1 is the path of a package file
         mErrorString = tr("The package \"%1\" could not be installed: the profile is still saving.").arg(path);
-        return PackageResult::failed;
+        done(PackageResult::failed);
+        return;
     }
     // Left as it is, so a run that installs it can be run again; one of the same name is taken to be it
     if (const QString name = mpHost->sanitizePackageName(path); mpHost->mInstalledPackages.contains(name)) {
         noteAlreadyInstalled(path, name);
-        return PackageResult::alreadyInstalled;
+        done(PackageResult::alreadyInstalled);
+        return;
     }
+    // The install may run the event loop, where the frontend may delete the session
+    const QPointer<THeadlessSession> self(this);
     QStringList problems;
     const auto [installed, reason] = mpHost->installPackage(path, enums::PackageModuleType::Package, true, &problems);
     if (!self) {
-        return PackageResult::failed;
+        return;
     }
     if (installed) {
         // Host raises sysInstall and sysInstallPackage from one zero timer set before this one, and Qt fires
         // zero timers in the order set, though it does not promise to, so what runs next sees what they did
-        QEventLoop settle;
-        QTimer::singleShot(0ms, &settle, &QEventLoop::quit);
-        settle.exec();
-        if (!self) {
-            return PackageResult::failed;
-        }
-        if (!reason.isEmpty()) {
-            problems.append(reason);
-        }
-        if (problems.isEmpty()) {
-            return PackageResult::installed;
-        }
-        //: %1 is the path of a package file, %2 is what went wrong with the parts of it that are not working
-        mErrorString = tr("The package \"%1\" was installed, but not all of it works: %2").arg(path, problems.join(qsl("; ")));
-        return PackageResult::installedWithErrors;
+        QTimer::singleShot(0ms, this, [this, path, problems, reason, done]() mutable {
+            if (!reason.isEmpty()) {
+                problems.append(reason);
+            }
+            if (problems.isEmpty()) {
+                done(PackageResult::installed);
+                return;
+            }
+            //: %1 is the path of a package file, %2 is what went wrong with the parts of it that are not working
+            mErrorString = tr("The package \"%1\" was installed, but not all of it works: %2").arg(path, problems.join(qsl("; ")));
+            done(PackageResult::installedWithErrors);
+        });
+        return;
     }
     // Its config.lua named it as one already installed
     for (const QString& name : std::as_const(mpHost->mInstalledPackages)) {
         if (reason == Host::packageAlreadyInstalledReason(name)) {
             noteAlreadyInstalled(path, name);
-            return PackageResult::alreadyInstalled;
+            done(PackageResult::alreadyInstalled);
+            return;
         }
     }
     //: %1 is the path of a package file, %2 is why it could not be installed
     mErrorString = tr("The package \"%1\" could not be installed: %2").arg(path, reason);
-    return PackageResult::failed;
+    done(PackageResult::failed);
 }
 
 bool THeadlessSession::setScreenSize(const int columns, const int rows)
@@ -1691,40 +1846,75 @@ void THeadlessSession::noteAlreadyInstalled(const QString& path, const QString& 
 
 bool THeadlessSession::shutdown(const bool save)
 {
+    const QPointer<THeadlessSession> self(this);
+    std::optional<bool> result;
+    const auto saved = std::make_shared<bool>(false);
+    beginShutdown(save, saved, [&result](const bool answer) {
+        result = answer;
+    });
+    waitUntil([&result, &self]() {
+        return result.has_value() || !self;
+    });
+    // A session the frontend deleted meanwhile
+    return result.value_or(!save || *saved);
+}
+
+void THeadlessSession::shutdownAsync(const bool save)
+{
+    beginShutdown(save, std::make_shared<bool>(false), [this, self = QPointer<THeadlessSession>(this)](const bool answer) {
+        if (!self) {
+            return;
+        }
+        tellLater([this, answer, error = answer ? QString() : mErrorString]() {
+            emit shutdownFinished(answer, error);
+        });
+    });
+}
+
+void THeadlessSession::beginShutdown(const bool save, const std::shared_ptr<bool>& saved, std::function<void(bool)> done)
+{
     if (refused()) {
-        return false;
+        done(false);
+        return;
     }
     if (!mpPool) {
         // Shown before a start() that failed, or after the last shutdown(); with a pool, detachFromHost() closes it
         // once the profiles have written their last
         closeDebugConsole();
-        return true;
+        done(true);
+        return;
     }
     if (poolReconnecting(*mpPool)) {
         qWarning() << "THeadlessSession: shutdown() while a profile reconnects is refused; call it once the reconnect has returned";
         //: Error from a frontend with no window that was asked to close its profiles while one was in the middle of reconnecting to its game
         mErrorString = tr("A profile is reconnecting, so its profiles cannot close until that has returned.");
-        return false;
+        done(false);
+        return;
     }
-    if (poolBusy(*mpPool, true, false)) {
+    if (poolBusy(*mpPool, true, false) || mInstallingPackage || mSaving) {
         qWarning() << "THeadlessSession: shutdown() while a profile runs a script or waits for its save is refused; call it once that has returned";
         //: Error from a frontend with no window that was asked to close its profiles while one ran a script or waited for its save to be written
         mErrorString = tr("A profile is running a script or waiting for its save, so its profiles cannot close until that has ended.");
-        return false;
+        done(false);
+        return;
     }
-    // As for TNullAppFrontend's close, a reset asked for first ends first: run in the middle of the close, it
-    // would rebuild the Lua state the exit handlers and the save are using
-    const QPointer<THeadlessSession> self(this);
     mShuttingDown = true;
     gpClosingPool = mpPool.get();
     mpPool->markDeletionPending();
-    while (self && resetPending(*mpPool)) {
-        QCoreApplication::processEvents(QEventLoop::WaitForMoreEvents);
+    shutdownOnceResetsEnd(save, saved, std::move(done));
+}
+
+// As for TNullAppFrontend's close, a reset asked for first ends first: run in the middle of the close, it would
+// rebuild the Lua state the exit handlers and the save are using
+void THeadlessSession::shutdownOnceResetsEnd(const bool save, const std::shared_ptr<bool>& saved, std::function<void(bool)> done)
+{
+    if (resetPending(*mpPool)) {
+        QTimer::singleShot(10ms, this, [this, save, saved, done]() {
+            shutdownOnceResetsEnd(save, saved, done);
+        });
+        return;
     }
-    // A frontend's timer in that loop may have deleted the session, whose profiles then close unsaved
-    if (!self) {
-        return !save;
-    }
+    const QPointer<THeadlessSession> self(this);
     ++mRun;
     // Its end is sent here, and the close below runs the event loop, where it would go on printing
     if (mpHost && mpHost->mTelnet.isReplaying()) {
@@ -1732,96 +1922,154 @@ bool THeadlessSession::shutdown(const bool save)
     }
     // Also for a profile that has gone while its own end waits in the event loop, which the bump drops
     if (!finishOpenProgress()) {
-        return !save;
+        return;
     }
-    if (save) {
-        // Closed unsaved, keeping its last good save and map; any other profile its scripts opened saves as usual
-        if (mLoadFailed && mpHost && mpPool->getHost(mpHost->getName()) == mpHost.data()) {
-            mpPool->deleteHost(mpHost->getName());
-            if (!self) {
-                return false;
+    if (!save) {
+        shutdownOnceReleased(saved, std::move(done));
+        return;
+    }
+    // Closed unsaved, keeping its last good save and map; any other profile its scripts opened saves as usual
+    if (mLoadFailed && mpHost && mpPool->getHost(mpHost->getName()) == mpHost.data()) {
+        mpPool->deleteHost(mpHost->getName());
+        if (!self) {
+            return;
+        }
+    }
+    // Once the closes have begun, a session deleted meanwhile leaves the pool to finish them, saves and all
+    *saved = true;
+    // From the event loop: this is told from inside the pool, which the end of the shutdown deletes
+    mpPool->closeAllProfiles([self, saved, done]() {
+        QTimer::singleShot(0ms, self.data(), [self, saved, done]() {
+            if (self) {
+                self->shutdownOnceReleased(saved, done);
             }
-        }
-        // Shared, as a session deleted meanwhile leaves the pool to finish the closes after this has returned
-        const auto closedAll = std::make_shared<bool>(false);
-        mpPool->closeAllProfiles([closedAll]() {
-            *closedAll = true;
         });
-        while (self && !*closedAll) {
-            QCoreApplication::processEvents(QEventLoop::WaitForMoreEvents);
-        }
+    });
+}
+
+// One a handler took out of the pool is let go from a timer, which must be over before the pool goes, as must a
+// close still writing its save
+void THeadlessSession::shutdownOnceReleased(const std::shared_ptr<bool>& saved, std::function<void(bool)> done)
+{
+    if (HostManager::releasingProfile() || poolStillClosing(*mpPool)) {
+        QTimer::singleShot(10ms, this, [this, saved, done]() {
+            shutdownOnceReleased(saved, done);
+        });
+        return;
     }
-    // One a handler took out of the pool is let go from a timer, which must be over before the pool goes
-    while (self && (HostManager::releasingProfile() || poolStillClosing(*mpPool))) {
-        QCoreApplication::processEvents(QEventLoop::WaitForMoreEvents);
-    }
-    if (!self) {
-        return true;
-    }
+    const QPointer<THeadlessSession> self(this);
     // Its exit handlers may run the event loop
     mpPool.reset();
     gpClosingPool = nullptr;
     if (!self) {
-        return true;
+        return;
     }
     mShuttingDown = false;
     detachFromHost();
     mpHost.clear();
-    return true;
+    done(true);
 }
 
 bool THeadlessSession::save()
 {
+    const QPointer<THeadlessSession> self(this);
+    std::optional<bool> result;
+    beginSave([&result](const bool answer) {
+        result = answer;
+    });
+    waitUntil([&result, &self]() {
+        return result.has_value() || !self;
+    });
+    return result.value_or(false);
+}
+
+void THeadlessSession::saveAsync()
+{
+    beginSave([this, self = QPointer<THeadlessSession>(this)](const bool answer) {
+        if (!self) {
+            return;
+        }
+        tellLater([this, answer, error = answer ? QString() : mErrorString]() {
+            emit saveFinished(answer, error);
+        });
+    });
+}
+
+void THeadlessSession::beginSave(std::function<void(bool)> done)
+{
+    if (mSaving) {
+        qWarning() << "THeadlessSession: save() while another save has not answered is refused; call it once that has";
+        //: Error from a frontend with no window that was asked to save its profiles before the save it asked for earlier had finished
+        mErrorString = tr("The profiles are still being saved; try again once they have been.");
+        done(false);
+        return;
+    }
     if (refused()) {
-        return false;
+        done(false);
+        return;
     }
     if (!mpPool) {
         //: Error from a frontend with no window that has no open profile to send to
         mErrorString = tr("No profile is open.");
-        return false;
+        done(false);
+        return;
     }
-    if (poolBusy(*mpPool, false)) {
+    if (poolBusy(*mpPool, false) || mInstallingPackage) {
         qWarning() << "THeadlessSession: save() while a profile runs a script or waits for its save is refused; call it once that has returned";
         //: Error from a frontend with no window that was asked to save its profiles while one ran a script or waited for its save to be written
         mErrorString = tr("A profile is running a script or waiting for its save, so its profiles cannot be saved until that has ended.");
-        return false;
+        done(false);
+        return;
     }
-    // Each save waits for its writes in the event loop, where a profile may close or the session be deleted
-    const QPointer<THeadlessSession> self(this);
     QList<QPointer<Host>> profiles;
     for (const auto& pHost : mpPool->hostList()) {
         if (pHost->mLoadedOk) {
             profiles.append(pHost.data());
         }
     }
-    const qsizetype closesUnsavedBefore = mUnsavedProfiles.size();
-    QStringList unsaved;
-    for (const QPointer<Host>& pHost : std::as_const(profiles)) {
+    mSaving = true;
+    saveEach(profiles, mUnsavedProfiles.size(), {}, [this, done](const bool answer) {
+        mSaving = false;
+        done(answer);
+    });
+}
+
+// One at a time, as each Host's save is its own; a profile may close meanwhile
+void THeadlessSession::saveEach(QList<QPointer<Host>> profiles, const qsizetype closesUnsavedBefore, QStringList unsaved, std::function<void(bool)> done)
+{
+    while (!profiles.isEmpty()) {
+        const QPointer<Host> pHost = profiles.takeFirst();
         // A close begun meanwhile saves it, or not, as it was asked to
         if (!pHost || pHost->closeStarted()) {
             continue;
         }
         const QString name = pHost->getName();
-        bool saved = pHost->saveForClose();
-        if (!self) {
-            return false;
-        }
-        // The event loop would write it after this returns; a close has the Host's deletion write it
-        if (pHost && !pHost->syncProfileIni()) {
-            saved = false;
-        }
-        if (!saved) {
+        // Dropped with a profile deleted under its save, which was then not written
+        auto step = std::make_shared<StepOnce>(this, [this, name, profiles, closesUnsavedBefore, unsaved, done](const bool) mutable {
             unsaved.append(name);
-        }
+            saveEach(profiles, closesUnsavedBefore, unsaved, done);
+        });
+        pHost->saveForClose([this, pHost, name, profiles, closesUnsavedBefore, unsaved, done, step](bool saved) mutable {
+            if (!step->takeOver()) {
+                return;
+            }
+            // The event loop would write it after this returns; a close has the Host's deletion write it
+            if (pHost && !pHost->syncProfileIni()) {
+                saved = false;
+            }
+            if (!saved) {
+                unsaved.append(name);
+            }
+            saveEach(profiles, closesUnsavedBefore, unsaved, done);
+        });
+        return;
     }
     // A close begun meanwhile names its profile once its save has failed
-    for (const QPointer<Host>& pHost : std::as_const(profiles)) {
-        while (self && pHost && pHost->closeSaveInFlight()) {
-            QCoreApplication::processEvents(QEventLoop::WaitForMoreEvents);
-        }
-    }
-    if (!self) {
-        return false;
+    if (mpPool && poolStillClosing(*mpPool)) {
+        QTimer::singleShot(10ms, this, [this, closesUnsavedBefore, unsaved, done]() {
+            saveEach({}, closesUnsavedBefore, unsaved, done);
+        });
+        return;
     }
     for (const QString& name : mUnsavedProfiles.mid(closesUnsavedBefore)) {
         if (!unsaved.contains(name)) {
@@ -1840,9 +2088,10 @@ bool THeadlessSession::save()
     }
     if (!problems.isEmpty()) {
         mErrorString = problems.join(QLatin1Char(' '));
-        return false;
+        done(false);
+        return;
     }
-    return true;
+    done(true);
 }
 
 // cTelnet makes no other offer until one is answered, and would apply a late answer to whichever connection is

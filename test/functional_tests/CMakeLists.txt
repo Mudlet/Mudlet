@@ -585,6 +585,15 @@ add_test(NAME HeadlessHostSmokeTestWithMudletIni
     COMMAND $<TARGET_FILE:functional_teardown_tests> HeadlessHostSmokeTest
         test_profileWithNoMainWindowTakesItsSettingsFromMudletIni)
 list(APPEND allFunctionalTestNames HeadlessHostSmokeTestWithMudletIni)
+# The headless blocking calls run again on Qt's own Unix event dispatcher, which, as Windows' and macOS' do, sleeps
+# once it has sent what was posted, where glib's returns: an answer given from a posted event must still end the wait
+if(USE_HEADLESS AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    add_test(NAME HeadlessSessionTestWithUnixDispatcher
+        COMMAND $<TARGET_FILE:functional_teardown_tests> HeadlessSessionTest test_aFirstLoadInstallsTheDefaultPackages)
+    add_test(NAME HeadlessRunnerTestWithUnixDispatcher
+        COMMAND $<TARGET_FILE:functional_teardown_tests> HeadlessRunnerTest test_linesPastTheBoundAreTypedInOrder)
+    list(APPEND allFunctionalTestNames HeadlessSessionTestWithUnixDispatcher HeadlessRunnerTestWithUnixDispatcher)
+endif()
 add_grouped_test_binary(functional_media_tests ${MEDIA_GROUP_TEST_SOURCES})
 
 # On macOS the app reads its dictionaries from the bundle's Resources folder,
@@ -762,6 +771,11 @@ endif()
 if(TEST HeadlessSessionTest)
     set_tests_properties(HeadlessSessionTest PROPERTIES TIMEOUT 300)
 endif()
+foreach(test_name HeadlessSessionTestWithUnixDispatcher HeadlessRunnerTestWithUnixDispatcher)
+    if(TEST ${test_name})
+        set_property(TEST ${test_name} APPEND PROPERTY ENVIRONMENT "QT_NO_GLIB=1")
+    endif()
+endforeach()
 if(TEST HeadlessSessionMapTest)
     set_tests_properties(HeadlessSessionMapTest PROPERTIES TIMEOUT 300)
 endif()
