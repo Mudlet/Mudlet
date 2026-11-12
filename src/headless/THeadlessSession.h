@@ -551,8 +551,8 @@ public:
         QString parent;
         // In its parent's pixels, from its top left corner, and a dock's in the main window's; none for a console's
         // own command line, which the app lays out along the console's bottom. A user window, with no dock layout to
-        // go in, is at the main window's top left at the size the main window had as it opened or, if the app had
-        // given no size by then, the one made up from the main console's grid.
+        // go in, is at the main window's top left at the size the main window had as it opened, or, if the app had
+        // given no size by then, the one made up from the main console's grid, until setUserWindowGeometry() places it.
         QRect geometry;
         // Its own flag, as hideWindow() and showWindow() set it, which hiding what it is in leaves alone
         bool visible = false;
@@ -568,6 +568,20 @@ public:
         // A dock beside the main window's area, docked or floating, rather than a window in it: a user window, or the
         // map openMapWidget() opened
         bool inDock = false;
+        // A user window's dock, as openUserWindow() and setUserWindowTitle() gave it, and setUserWindowGeometry()
+        // floats or docks it
+        struct Dock
+        {
+            // Whether the player may dock it, or only float it
+            bool autoDock = true;
+            // The area openUserWindow() asked for, which setUserWindowGeometry() leaves as it is
+            Qt::DockWidgetArea area = Qt::RightDockWidgetArea;
+            bool floating = false;
+            QString title;
+
+            bool operator==(const Dock&) const = default;
+        };
+        std::optional<Dock> dock;
         // The kind of its parent, as a scroll box may share its name with a user window or console; nothing with no
         // parent
         Kind parentKind = Kind::userWindow;
@@ -625,6 +639,13 @@ public:
     };
     // None for a name that is not a label's
     std::optional<LabelContent> labelContent(const QString& name) const;
+    // Where the app put a user window, in the main window's pixels, docked or floating, as the GUI's dock is placed
+    // by its layout or the player. A new size raises sysUserWindowResizeEvent and handleWindowResizeEvent, now while
+    // it shows or as it next shows, and is what getUserWindowSize() and getWindowGeometry() read. Refused where
+    // runLua() is, and for a name that is not a user window's.
+    bool setUserWindowGeometry(const QString& name, const QRect& geometry, bool floating);
+    // The dock's close button: hides the user window, as hideWindow() does. Refused as setUserWindowGeometry() is.
+    bool closeUserWindow(const QString& name);
 
     // sysExitEvent and, if asked, a save for every profile that loaded, then the pool goes. Meanwhile no profile
     // opens, and none dials the game or logs in, a live connection staying for the exit handlers. Refused while a
