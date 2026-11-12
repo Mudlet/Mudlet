@@ -325,6 +325,11 @@ private:
     THeadlessSession& mSession;
 };
 
+void THeadlessSession::preloadLuaModule(const QByteArray& name, int (*open)(lua_State*))
+{
+    TLuaInterpreter::preloadModule(name, open);
+}
+
 THeadlessSession::THeadlessSession(QObject* parent)
 : QObject(parent)
 {

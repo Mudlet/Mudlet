@@ -495,6 +495,14 @@ QString unpackedBuiltinLuaGlobal()
     return luaGlobal;
 }
 
+using PreloadedModules = QList<std::pair<QByteArray, lua_CFunction>>;
+
+PreloadedModules& preloadedModules()
+{
+    static PreloadedModules modules;
+    return modules;
+}
+
 constexpr int scmJsonMaxDepth = 64;
 
 // Repeats yajl.to_value's table operations in its order, unpresized, or pairs() would walk the result
@@ -7383,6 +7391,19 @@ bool TLuaInterpreter::loadLuaModule(QQueue<QString>& resultMsgsQueue, const QStr
     return true;
 }
 
+void TLuaInterpreter::preloadModule(const QByteArray& name, lua_CFunction open)
+{
+    if (name.isEmpty() || !open) {
+        qWarning().noquote() << qsl("TLuaInterpreter::preloadModule() refused the Lua module \"%1\", as it has no name or no function to open it").arg(QString::fromUtf8(name));
+        return;
+    }
+    auto& modules = preloadedModules();
+    modules.removeIf([&name](const auto& module) {
+        return module.first == name;
+    });
+    modules.append({name, open});
+}
+
 // No documentation available in wiki - internal function
 void TLuaInterpreter::insertNativeSeparatorsFunction(lua_State* L)
 {
@@ -7439,6 +7460,14 @@ void TLuaInterpreter::initLuaGlobals()
     storeHostInLua(pGlobalLua, mpHost);
 
     luaL_openlibs(pGlobalLua);
+
+    lua_getglobal(pGlobalLua, "package");
+    lua_getfield(pGlobalLua, -1, "preload");
+    for (const auto& [name, open] : std::as_const(preloadedModules())) {
+        lua_pushcfunction(pGlobalLua, open);
+        lua_setfield(pGlobalLua, -2, name.constData());
+    }
+    lua_pop(pGlobalLua, 2);
 
     lua_pushstring(pGlobalLua, "SESSION");
     lua_pushnumber(pGlobalLua, mHostID);

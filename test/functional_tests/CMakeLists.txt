@@ -432,6 +432,7 @@ if(USE_HEADLESS)
     list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessSessionWindowsTest.cpp)
     list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessSessionWindowTextTest.cpp)
     list(APPEND TEARDOWN_GROUP_TEST_SOURCES BuiltinMudletLuaTest.cpp)
+    list(APPEND TEARDOWN_GROUP_TEST_SOURCES PreloadedLuaModuleTest.cpp)
 endif()
 
 # Sound, music and video, speech in and out, and the rich presence published to Discord

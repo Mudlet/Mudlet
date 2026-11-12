@@ -43,6 +43,7 @@
 #include <optional>
 #include <utility>
 
+struct lua_State;
 class Host;
 class HostManager;
 class QPainter;
@@ -133,6 +134,12 @@ public:
     // is the GUI's, or another folder, the GUI's or one chosen, is in use; nothing is made.
     enum class StartResult { started, noSuchProfile, invalidName, invalidConnectionDetails, notOpened, loadFailed, poolClosing, invalidConfigDir };
     Q_ENUM(StartResult)
+
+    // A Lua C module the app has linked in, which a phone or a browser cannot load from a file: require()
+    // finds it under that name ahead of any on disk, in a profile opened or reset afterwards. Given again
+    // for a name, it replaces the earlier one; with no name or no function it is refused. docs/headless.md
+    // lists the modules Mudlet itself requires.
+    static void preloadLuaModule(const QByteArray& name, int (*open)(lua_State*));
 
     explicit THeadlessSession(QObject* parent = nullptr);
     // Closes the profiles unsaved, at once or, while one is busy as for shutdown(), a reset is pending, one is

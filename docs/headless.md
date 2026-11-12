@@ -1222,6 +1222,24 @@ on disk.
 With the option on, a change to a file in `src/mudlet-lua/lua` takes a rebuild to reach a profile,
 which is why a desktop build leaves it off.
 
+### The Lua C modules
+
+Mudlet's Lua is built on seven C modules, which a desktop Mudlet loads from files as `require()` asks
+for them: `lfs`, `brimworks.zip`, `rex_pcre2`, `luasql.sqlite3`, `lua-utf8`, `yajl` and `lpeg`. Android
+and a browser let no program load code that way, so an app there links the modules in and names each
+before it starts a session:
+
+```cpp
+extern "C" int luaopen_lfs(lua_State*);
+
+THeadlessSession::preloadLuaModule("lfs", luaopen_lfs);
+```
+
+`require()` then finds the module under that name ahead of any on disk, in every profile opened or
+reset afterwards. A module that is missing takes with it what is built on it: without `yajl` none of
+Mudlet's own Lua loads, and without `luasql.sqlite3` `db:create()` raises an error. A C module of the
+app's own, for its scripts to require, is given the same way.
+
 ## What still needs a window
 
 Some of what a profile can do has nothing to stand in for the GUI's widgets yet, and does nothing,
