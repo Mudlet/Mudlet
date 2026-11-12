@@ -1260,7 +1260,7 @@ int TBuffer::getLastLineNumber()
     return 0; //-1;
 }
 
-void TBuffer::addLink(bool trigMode, const QString& text, QStringList& command, QStringList& hint, const TChar& format, const QVector<int>& luaReference)
+int TBuffer::addLink(bool trigMode, const QString& text, QStringList& command, QStringList& hint, const TChar& format, const QVector<int>& luaReference)
 {
     const int id = addLinkToStore(command, hint, luaReference);
 
@@ -1269,6 +1269,7 @@ void TBuffer::addLink(bool trigMode, const QString& text, QStringList& command, 
     } else {
         appendLine(text, 0, text.length(), format.foreground(), format.background(), format.mFlags, id);
     }
+    return id;
 }
 
 int TBuffer::addLinkToStore(const QStringList& links, const QStringList& hints, const QVector<int>& luaReference, const QString& expireName, const int line)
@@ -3062,6 +3063,9 @@ void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch)
         // Save/restore gives each nested pass its own snapshot; the spare member recycles its allocation:
         TLineFormat savedPassLine;
         savedPassLine.swap(mPreTriggerPassLine);
+        if (Q_LIKELY(mpModel)) {
+            mpModel->mPassCommittedLines = false;
+        }
         mEnclosingTriggerPasses.append(
                 {mPreTriggerPassLineNumber, std::exchange(mDetachedTriggerPassLineText, QString()), std::exchange(mTriggerPassLineEdits, {}), mTriggerPassLineLastSegment, mTriggerPassLineTailFrom});
         const int savedPassLineAsCommitted = mTriggerPassLineAsCommitted;
@@ -3109,6 +3113,13 @@ void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch)
         mPreTriggerPassSnapshotTaken = savedPassSnapshotTaken;
         mPreTriggerPassLineUniformity = savedPassLineUniformity;
         passLineTaken = std::exchange(mTriggerPassLineTaken, savedPassLineTaken);
+        // What the pass around this one writes next lands below this line, not on a piece left open in it
+        if (Q_LIKELY(mpModel)) {
+            mpModel->mPassCommittedLines = !mEnclosingTriggerPasses.isEmpty();
+            if (mpModel->mPassCommittedLines) {
+                mpModel->endPrintedLine();
+            }
+        }
     }
     if (Q_LIKELY(mpModel) && Q_UNLIKELY(mpModel->mNotifier.lineShownConnected())) {
         const bool shown = (passRan ? shownFirst >= 0 : mCommitLineIndices.last() >= 0) && !passLineTaken;

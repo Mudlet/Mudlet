@@ -56,6 +56,9 @@ namespace {
 // QWIDGETSIZE_MAX, which only <QWidget> defines
 constexpr int maximumWidgetSize = (1 << 24) - 1;
 
+// TMxpFrameWidgets::createInternalFrame()'s allowance for the tab header
+constexpr int tabHeaderHeight = 30;
+
 // As QWidget::resize() bounds a size
 QSize widgetSize(const int width, const int height)
 {
@@ -197,6 +200,70 @@ std::optional<uint> selectorSpecificity(const QStringView selector, const QStrin
     return (element.isEmpty() ? 0 : 1) + uint(classes.size() + pseudos.size()) * 0x10 + uint(ids.size()) * 0x100;
 }
 
+// What QCss::Scanner makes of a backslash in a string and what follows it at index: how much of that it takes, with
+// the text it stands for added to text, or nothing where it reads no sheet at all. Up to six hex digits are one UTF-16
+// code unit; NUL and the line breaks end the string, and digits past U+FFFF are no escape unless the first is one of
+// A to F in upper case, which the scanner reads as itself.
+std::optional<qsizetype> sheetEscape(const QStringView value, const qsizetype index, QString* text)
+{
+    const auto hexDigit = [](const QChar character) {
+        const char16_t unit = character.unicode();
+        return (unit >= u'0' && unit <= u'9') || (unit >= u'a' && unit <= u'f') || (unit >= u'A' && unit <= u'F');
+    };
+    qsizetype digits = 0;
+    while (digits < 6 && index + digits < value.size() && hexDigit(value.at(index + digits))) {
+        ++digits;
+    }
+    bool ok = false;
+    const ushort code = value.mid(index, digits).toUShort(&ok, 16);
+    if (ok && (code == 0 || code == 0xA || code == 0xC || code == 0xD)) {
+        return std::nullopt;
+    }
+    if (digits > 0 && !ok && !(value.at(index) >= u'A' && value.at(index) <= u'F')) {
+        return std::nullopt;
+    }
+    if (text) {
+        text->append(ok ? QChar(code) : value.at(index));
+    }
+    return ok ? digits : 1;
+}
+
+// Whether QCss::Scanner can read every string in a rule; Qt takes nothing from one it cannot, nor from the rules after it
+bool sheetStringsReadable(const QStringView sheet)
+{
+    QChar quote;
+    for (qsizetype at = 0; at < sheet.size(); ++at) {
+        const QChar c = sheet.at(at);
+        if (c == u'\\') {
+            if (quote.isNull() || at + 1 >= sheet.size()) {
+                ++at;
+                continue;
+            }
+            const auto taken = sheetEscape(sheet, at + 1, nullptr);
+            if (!taken) {
+                return false;
+            }
+            const bool carriageReturn = sheet.at(at + 1) == QChar::CarriageReturn;
+            at += *taken;
+            // A backslash takes both halves of a CR LF line break
+            if (carriageReturn && at + 1 < sheet.size() && sheet.at(at + 1) == QChar::LineFeed) {
+                ++at;
+            }
+        } else if (!quote.isNull()) {
+            // A string does not run over a line break that has no backslash ahead of it
+            if (c == QChar::LineFeed || c == QChar::CarriageReturn || c == QChar::FormFeed) {
+                return false;
+            }
+            if (c == quote) {
+                quote = QChar();
+            }
+        } else if (c == u'"' || c == u'\'') {
+            quote = c;
+        }
+    }
+    return quote.isNull();
+}
+
 qsizetype indexOutsideQuotes(const QString& text, const QChar wanted, qsizetype from)
 {
     QChar quote;
@@ -231,7 +298,7 @@ QString sheetDeclarations(const QString& sheet, const QStringList& classNames, c
         }
     }
     if (indexOutsideQuotes(text, u'{', 0) < 0) {
-        return text;
+        return sheetStringsReadable(text) ? text : QString();
     }
     QList<std::pair<uint, QString>> weighted;
     uint order = 0;
@@ -252,14 +319,14 @@ QString sheetDeclarations(const QString& sheet, const QStringList& classNames, c
             for (qsizetype inner = indexOutsideQuotes(text, u'{', open + 1); close >= 0 && inner >= 0 && inner < close; inner = indexOutsideQuotes(text, u'{', inner + 1)) {
                 close = indexOutsideQuotes(text, u'}', close + 1);
             }
-            if (close < 0) {
+            if (close < 0 || !sheetStringsReadable(QStringView(text).mid(at, close - at))) {
                 break;
             }
             at = close + 1;
             continue;
         }
         // The parser stops at the first rule it cannot read, keeping the rules before it
-        if (close < 0 || indexOutsideQuotes(text.left(close), u'{', open + 1) >= 0) {
+        if (close < 0 || indexOutsideQuotes(text.left(close), u'{', open + 1) >= 0 || !sheetStringsReadable(QStringView(text).mid(at, close - at))) {
             break;
         }
         const QString declarations = text.mid(open + 1, close - open - 1);
@@ -279,6 +346,51 @@ QString sheetDeclarations(const QString& sheet, const QStringList& classNames, c
         declarations << block;
     }
     return declarations.join(u';');
+}
+
+// The text a sheet's declarations give a qproperty, as QStyleSheetStyle::setProperties() reads one: its
+// last declaration, and the first term of that
+std::optional<QString> sheetStringProperty(const QString& declarations, const QStringView property)
+{
+    std::optional<QString> found;
+    for (qsizetype at = 0; at < declarations.size();) {
+        const qsizetype semicolon = indexOutsideQuotes(declarations, u';', at);
+        const qsizetype end = semicolon < 0 ? declarations.size() : semicolon;
+        const QStringView declaration = QStringView(declarations).mid(at, end - at);
+        at = end + 1;
+        const qsizetype colon = declaration.indexOf(u':');
+        if (colon < 0) {
+            continue;
+        }
+        const QStringView name = declaration.left(colon).trimmed();
+        const QStringView value = declaration.mid(colon + 1).trimmed();
+        if (value.isEmpty() || !name.startsWith(u"qproperty-", Qt::CaseInsensitive) || name.mid(10) != property) {
+            continue;
+        }
+        QString text;
+        const QChar quote = value.front();
+        if (quote == u'"' || quote == u'\'') {
+            for (qsizetype i = 1; i < value.size() && value.at(i) != quote; ++i) {
+                if (value.at(i) == u'\\' && i + 1 < value.size()) {
+                    const auto taken = sheetEscape(value, i + 1, &text);
+                    if (!taken) {
+                        return std::nullopt;
+                    }
+                    i += *taken;
+                    continue;
+                }
+                text.append(value.at(i));
+            }
+        } else {
+            qsizetype length = 0;
+            while (length < value.size() && !value.at(length).isSpace()) {
+                ++length;
+            }
+            text = value.left(length).toString();
+        }
+        found = text;
+    }
+    return found;
 }
 
 // A box length as QCss::ValueExtractor reads one: px, em, ex or a bare number, and any other unit as 0
@@ -549,7 +661,7 @@ QString commandLineSheet(const QColor& background)
 void TConsoleModelSink::printFormatted(const QString& text, const std::vector<TChar>& formatting, const TLinkStore& sourceLinkStore)
 {
     mModel.buffer.appendFormatted(text, formatting, sourceLinkStore);
-    mModel.mirrorToStdOut(text);
+    mModel.mirrorToStdOut(text, TLineFormat(formatting));
 }
 
 void TConsoleModelSink::discardAll()
@@ -562,6 +674,7 @@ void TConsoleModelSink::discardAll()
 void TConsoleModelSink::discardLastLine()
 {
     mModel.buffer.clearLastLine();
+    emit mModel.mNotifier.contentEdited();
 }
 
 // TMxpFrameWidgets::frameWidget(): a frame's container, or an external frame's console, which a script's deletion
@@ -572,10 +685,9 @@ bool TNullMxpFrameFrontend::hasFrameWidget(const QString& name) const
     return it != mView.mFrameHolders.end() && it->second;
 }
 
-// TMxpFrameWidgets::createInternalFrame()'s allowance for the tab header
 QSize TNullMxpFrameFrontend::consoleSize(const QString& name, const QSize& frameSize) const
 {
-    const int header = mHeaders.contains(name) ? 30 : 0;
+    const int header = mHeaders.contains(name) ? tabHeaderHeight : 0;
     return QSize(frameSize.width(), frameSize.height() - header).expandedTo(QSize(0, 0));
 }
 
@@ -599,6 +711,7 @@ void TNullMxpFrameFrontend::createInternalFrame(const QString& name, const QStri
         mHeaders[name].pages.push_back(name);
     }
     mHosts[name] = hostName;
+    mPlaces[name] = geometry.topLeft();
     const QSize size = consoleSize(name, geometry.size());
     if (showHeader) {
         mHeaders[name].area = size;
@@ -620,6 +733,7 @@ std::optional<QSize> TNullMxpFrameFrontend::createExternalFrame(const QString& n
 {
     mHeaders.erase(name);
     mHosts[name] = QString();
+    mPlaces.erase(name);
     mView.addFrameConsole(name, size, true, QString(), scrolling);
     return size;
 }
@@ -637,6 +751,7 @@ void TNullMxpFrameFrontend::createTabFrame(const QString& name, const QString&, 
     // A page is in its header's container, wherever that is
     const auto parentHost = mHosts.find(parentName);
     mHosts[name] = parentHost != mHosts.end() ? parentHost->second : QString();
+    mPlaces.erase(name);
     mView.addFrameConsole(name, select ? header->second.area : size, false, parentName, scrolling);
     reportPages();
 }
@@ -672,8 +787,29 @@ void TNullMxpFrameFrontend::removePage(Header& header, const size_t index)
     }
 }
 
+QString TNullMxpFrameFrontend::host(const QString& name) const
+{
+    const auto it = mHosts.find(name);
+    return it != mHosts.end() ? it->second : QString();
+}
+
+QPoint TNullMxpFrameFrontend::consolePlace(const QString& name) const
+{
+    QString frame = name;
+    int header = 0;
+    for (const auto& [headerName, pages] : mHeaders) {
+        if (std::find(pages.pages.cbegin(), pages.pages.cend(), name) != pages.pages.cend()) {
+            frame = headerName;
+            header = tabHeaderHeight;
+        }
+    }
+    const auto place = mPlaces.find(frame);
+    return (place != mPlaces.end() ? place->second : QPoint()) + QPoint(0, header);
+}
+
 void TNullMxpFrameFrontend::reportPages()
 {
+    mView.mWindowNotifier.note();
     QStringList names;
     for (const auto& [name, host] : mHosts) {
         names << name;
@@ -729,6 +865,7 @@ void TNullMxpFrameFrontend::destroyFrame(const QString& name)
     mHeaders.erase(name);
     mHosts.erase(name);
     mConsoleSizes.erase(name);
+    mPlaces.erase(name);
     // QTabWidget takes a deleted page out of its header
     bool removed = false;
     for (auto& [headerName, header] : mHeaders) {
@@ -747,6 +884,10 @@ void TNullMxpFrameFrontend::destroyFrame(const QString& name)
 // Only a container that changes size lays its console out again, so one a script resized keeps that size till then
 void TNullMxpFrameFrontend::setGeometry(const QString& name, const QRect& geometry)
 {
+    if (const auto place = mPlaces.find(name); place != mPlaces.end() && place->second != geometry.topLeft()) {
+        place->second = geometry.topLeft();
+        mView.mWindowNotifier.note();
+    }
     const QSize size = consoleSize(name, geometry.size());
     if (const auto laidOut = mConsoleSizes.find(name); laidOut != mConsoleSizes.end() && laidOut->second == size) {
         return;
@@ -770,12 +911,35 @@ void TNullMxpFrameFrontend::showFrame(const QString& name)
     }
 }
 
+// TMxpFrameWidgets raises the frame's widget, which holds every page of its header; a page's own is in a
+// QStackedWidget, where a raise shows nothing
+void TNullMxpFrameFrontend::focusFrame(const QString& name)
+{
+    if (!hasFrameWidget(name)) {
+        return;
+    }
+    const auto header = mHeaders.find(name);
+    for (const auto& [headerName, other] : mHeaders) {
+        if (headerName != name && std::find(other.pages.cbegin(), other.pages.cend(), name) != other.pages.cend()) {
+            return;
+        }
+    }
+    const std::vector<QString> held = header != mHeaders.end() ? header->second.pages : std::vector<QString>{name};
+    for (const QString& console : held) {
+        if (mView.inOwnFrame(console)) {
+            mView.mSubConsoles[console].stackOrder = ++mView.mTopOfStack;
+        }
+    }
+    mView.mWindowNotifier.note();
+}
+
 // A view that attaches drops every frame console and makes its own frames
 void TNullMxpFrameFrontend::clear()
 {
     mHeaders.clear();
     mHosts.clear();
     mConsoleSizes.clear();
+    mPlaces.clear();
 }
 
 // Nothing lays the main console out, so the main window is all of it
@@ -936,8 +1100,10 @@ void TNullConsoleFrontend::createLabel(const QString& windowname, const QString&
     pLabel->setClickThrough(clickThrough);
     pLabel->mGeometry = QRect(QPoint(x, y), widgetSize(width, height));
     auto [userWindow, box] = containerFor(windowname, false);
-    // A real label takes its console's font as it is made, and keeps it as that font changes
-    pLabel->mFont = consoleFont(userWindow).value_or(displayFont());
+    // A real label takes its console's font as it is made, and keeps it as that font changes; under a window's
+    // sheet it starts from the application's, as it does on the main console once the profile has had a sheet
+    const bool windowStyled = userWindow.isEmpty() ? mProfileSheetSeen : !windowSheet(userWindow).isEmpty();
+    pLabel->mFont = windowStyled ? QGuiApplication::font() : consoleFont(userWindow).value_or(displayFont());
     mpHost->windowRegistry().registerLabel(name, pLabel.get());
     mLabels[name] = {std::move(pLabel), userWindow, std::move(box)};
     mLabels[name].stackOrder = ++mTopOfStack;
@@ -1113,14 +1279,16 @@ void TNullConsoleFrontend::restyleLabel(Label& label, const QString& sheet)
 {
     mWindowNotifier.note();
     TLabelModel& model = *label.pModel;
-    if (sheet == model.mStyleSheet && label.repolished && !label.restyleDue && !sheet.contains(qsl("url("), Qt::CaseInsensitive)) {
+    const QString inherited = windowSheet(label.userWindow);
+    if (sheet == model.mStyleSheet && inherited == label.windowSheet && label.repolished && !label.restyleDue && !sheet.contains(qsl("url("), Qt::CaseInsensitive)) {
         return;
     }
     label.restyleDue = false;
     label.repolished = label.styled && !sheet.isEmpty();
     const QFont before = model.mFont;
     model.mStyleSheet = sheet;
-    if (sheet.isEmpty()) {
+    label.windowSheet = inherited;
+    if (sheet.isEmpty() && inherited.isEmpty()) {
         label.sheetFont.reset();
         label.frame.fill(0);
         label.limits = SizeLimits();
@@ -1136,15 +1304,24 @@ void TNullConsoleFrontend::restyleLabel(Label& label, const QString& sheet)
     } else {
         static const QStringList classNames{qsl("TLabel"), qsl("QLabel"), qsl("QFrame"), qsl("QWidget"), qsl("QObject")};
         const QString objectName = qsl("label_%1_%2").arg(mpHost->getName(), model.mName);
+        // The window's sheet first, as a widget's own sheet wins over one it inherits whatever their selectors
+        const auto cascade = [&](const QStringList& heldStates) {
+            return sheetDeclarations(inherited, classNames, objectName, heldStates) + u';' + sheetDeclarations(sheet, classNames, objectName, heldStates);
+        };
         // QStyleSheetStyle::updateStyleSheetFont() asks for the enabled and active states, setGeometry() only for enabled
-        const QString declarations = sheetDeclarations(sheet, classNames, objectName, {qsl("enabled"), qsl("active")});
-        const QString enabledDeclarations = sheetDeclarations(sheet, classNames, objectName, {qsl("enabled")});
+        const QString declarations = cascade({qsl("enabled"), qsl("active")});
+        const QString enabledDeclarations = cascade({qsl("enabled")});
         label.sheetFont = styleSheetFont(declarations);
         label.frame = sheetGeometry(declarations, sheetLengthFont(declarations), 0).frame;
         const SheetGeometry geometry = sheetGeometry(enabledDeclarations, sheetLengthFont(enabledDeclarations), 0);
         label.limits = {geometry.minimum, geometry.maximum};
         label.styled = true;
         polishLabel(label);
+        // Qt writes it through QLabel::setText() as it polishes, from the rules that name no state; unlike
+        // TLabel::setText(), that leaves a label already holding the text, and the movie it plays, alone
+        if (const auto text = sheetStringProperty(cascade({}), u"text"); text && *text != label.pModel->mText) {
+            showLabelText(label, *text);
+        }
         setLabelSize(label, label.limits.bounded(model.mGeometry.size()));
     }
     if (label.textLabel && model.mFont != before) {
@@ -1439,6 +1616,7 @@ void TNullConsoleFrontend::sizeFrameConsole(const QString& name, const QSize& si
         return;
     }
     mpHost->windowRegistry().setSubConsoleGeometry(name, QRect(QPoint(0, 0), size));
+    mWindowNotifier.note();
     reportGridSize(name);
 }
 
@@ -1492,10 +1670,24 @@ void TNullConsoleFrontend::createBuffer(const QString& name)
 
 void TNullConsoleFrontend::addMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height)
 {
-    addSubConsole(name, TWindowRegistry::SubConsoleKind::MiniConsole, windowname);
+    const TConsoleModel& model = addSubConsole(name, TWindowRegistry::SubConsoleKind::MiniConsole, windowname);
     mpHost->windowRegistry().setSubConsoleGeometry(name, QRect(QPoint(x, y), widgetSize(width, height)));
-    // As TMainConsole::createMiniConsole() sizes its font, which raises sysFontChangeEvent
+    // As TMainConsole::createMiniConsole() sizes its font, which raises sysFontChangeEvent, whose handlers can
+    // delete the console, or make another under its name
     setWindowFontSize(name, 12);
+    const auto made = mSubConsoles.find(name);
+    if (made == mSubConsoles.end() || made->second.pModel.get() != &model) {
+        return;
+    }
+    SubConsole& console = made->second;
+    const QString sheet = windowSheet(console.userWindow);
+    applyUserWindowSheetFont(name, sheet);
+    // A sheet that gives the console a font, not only its text, leaves that font on one made under it once the
+    // sheet has gone
+    static const QStringList consoleClasses{qsl("TConsole"), qsl("QWidget"), qsl("QObject")};
+    if (console.fontBeforeSheet && styleSheetFont(sheetDeclarations(sheet, consoleClasses, QString(), {qsl("enabled"), qsl("active")}))) {
+        console.fontBeforeSheet = console.pModel->mUpperPaneFont;
+    }
     setSubConsoleShown(name, true);
 }
 
@@ -1532,7 +1724,7 @@ bool TNullConsoleFrontend::openUserWindow(const QString& name, const bool loadLa
         addSubConsole(name, TWindowRegistry::SubConsoleKind::UserWindow, QString());
         registry.registerDockWidget(name);
         registry.setUserWindowTitle(name, name);
-        registry.setUserWindowStyleSheet(name, mpHost->mProfileStyleSheet);
+        applyUserWindowSheet(name, mpHost->mProfileStyleSheet);
         // There is no layout to dock it into, so it takes the main window's size
         const QSize size = mpHost->mainWindowSize().value_or(QSize());
         registry.setSubConsoleGeometry(name, QRect(QPoint(0, 0), size));
@@ -1591,7 +1783,37 @@ void TNullConsoleFrontend::setProfileStyleSheet(const QString& styleSheet)
     // As TMainConsole::setProfileStyleSheet() restyles every dock, a closed one too. The registry
     // ignores a name with no dock, so mini consoles and buffers keep theirs.
     for (const auto& [name, subConsole] : mSubConsoles) {
-        registry.setUserWindowStyleSheet(name, styleSheet);
+        if (registry.hasDockWidget(name)) {
+            applyUserWindowSheet(name, styleSheet);
+        }
+    }
+    mProfileSheetSeen = mProfileSheetSeen || !styleSheet.isEmpty();
+    restyleWindowContents(QString());
+}
+
+// The profile's sheet is on the main console, and a user window's on its dock
+QString TNullConsoleFrontend::windowSheet(const QString& userWindow) const
+{
+    return userWindow.isEmpty() ? mpHost->mProfileStyleSheet : mpHost->windowRegistry().userWindowStyleSheet(userWindow).value_or(QString());
+}
+
+// As Qt restyles the widgets inside one given a sheet: the labels, and the text of the mini consoles
+void TNullConsoleFrontend::restyleWindowContents(const QString& userWindow)
+{
+    for (auto& [name, label] : mLabels) {
+        if (label.userWindow == userWindow) {
+            restyleLabel(label, label.pModel->mStyleSheet);
+        }
+    }
+    QStringList miniConsoles;
+    for (const auto& [name, console] : mSubConsoles) {
+        if (console.userWindow == userWindow && mpHost->windowRegistry().subConsoleKind(name) == TWindowRegistry::SubConsoleKind::MiniConsole) {
+            miniConsoles << name;
+        }
+    }
+    const QString sheet = windowSheet(userWindow);
+    for (const QString& name : std::as_const(miniConsoles)) {
+        applyUserWindowSheetFont(name, sheet);
     }
 }
 
@@ -1600,25 +1822,31 @@ std::pair<bool, QString> TNullConsoleFrontend::createMapper(const QString& windo
     mWindowNotifier.note();
     // As TMainConsole::createMapper(), which only takes a user window: not a scroll box
     const bool wantsMainConsole = windowname.isEmpty() || !windowname.compare(QLatin1String("main"), Qt::CaseInsensitive);
-    if (!wantsMainConsole && !mpHost->windowRegistry().hasDockWidget(windowname)) {
-        return {false, qsl("window '%1' not found").arg(windowname)};
+    const auto refusal = [&]() -> std::optional<std::pair<bool, QString>> {
+        if (!wantsMainConsole && !mpHost->windowRegistry().hasDockWidget(windowname)) {
+            return std::pair{false, qsl("window '%1' not found").arg(windowname)};
+        }
+        if (mMapWidget && mMapWidget->shown) {
+            return std::pair{false, qsl("cannot create mapper. Do you already use a map window?")};
+        }
+        if (!mpEmbeddedMapper && !ownsContainer(windowname)) {
+            // A detached view's user window, which only that view could make a mapper in
+            return noView();
+        }
+        return std::nullopt;
+    };
+    if (const auto refused = refusal()) {
+        return *refused;
     }
-    if (mMapWidget && mMapWidget->shown) {
-        return {false, qsl("cannot create mapper. Do you already use a map window?")};
-    }
-    if (!mpEmbeddedMapper && !ownsContainer(windowname)) {
-        // A detached view's user window, which only that view could make a mapper in
-        return noView();
-    }
-    if (mMapWidget) {
-        // As TMainConsole::createMapper() deleting the hidden map dock leaves QMainWindow its placeholder
-        TAppFrontend::instance()->mapWidgetRemoved(mpHost);
-        // Deferred, as the GUI's dock is: a map info contributor or a mouse press handler drawing this view may be
-        // the caller
-        TNullMapView* pOldView = mMapWidget->pView.release();
-        pOldView->setParent(mpMainHolder.get());
-        pOldView->deleteLater();
-        mMapWidget.reset();
+    removeHiddenMapWidget();
+    const bool makesMapper = !mpEmbeddedMapper;
+    if (makesMapper) {
+        TNullMapView::announceEditing(mpHost);
+        // A handler of that may have opened a map or closed the window
+        if (const auto refused = refusal()) {
+            return *refused;
+        }
+        removeHiddenMapWidget();
     }
     if (!mpEmbeddedMapper) {
         mpEmbeddedMapper = new TNullMapView(mpHost, holderFor(windowname, nullptr));
@@ -1635,6 +1863,9 @@ std::pair<bool, QString> TNullConsoleFrontend::createMapper(const QString& windo
         });
         copyPlayerRoomStyleToMap();
         mpHost->loadMapForNewMapper(true);
+    }
+    // Raised too where a handler of the mode event made the mapper, as the GUI's second createMapper() does
+    if (makesMapper) {
         TEvent mapOpenEvent{};
         mapOpenEvent.mArgumentList.append(QLatin1String("mapOpenEvent"));
         mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
@@ -1646,10 +1877,43 @@ std::pair<bool, QString> TNullConsoleFrontend::createMapper(const QString& windo
     return {true, QString()};
 }
 
+// The map widget has no view while its mode event runs
+void TNullConsoleFrontend::MapWidget::setShown(const bool show)
+{
+    shown = show;
+    if (pView) {
+        pView->setShown(show);
+    }
+}
+
+// As TMainConsole::createMapper() deleting the hidden map dock leaves QMainWindow its placeholder
+void TNullConsoleFrontend::removeHiddenMapWidget()
+{
+    if (!mMapWidget) {
+        return;
+    }
+    TAppFrontend::instance()->mapWidgetRemoved(mpHost);
+    // Deferred, as the GUI's dock is: a map info contributor or a mouse press handler drawing this view may be
+    // the caller
+    if (TNullMapView* pOldView = mMapWidget->pView.release()) {
+        pOldView->setParent(mpMainHolder.get());
+        pOldView->deleteLater();
+    }
+    mMapWidget.reset();
+}
+
 void TNullConsoleFrontend::createMapperDock(const QString& title, const QString&)
 {
     mWindowNotifier.note();
-    mMapWidget = MapWidget{title, QRect(), false, std::make_unique<TNullMapView>(mpHost), ++mTopOfStack};
+    // The widget is there before its map, as the GUI's dock is while dlgMapper's constructor raises the event
+    mMapWidget = MapWidget{title, QRect(), false, nullptr, ++mTopOfStack};
+    TNullMapView::announceEditing(mpHost);
+    // A handler of that may have made a mapper in its place
+    if (!mMapWidget || mMapWidget->pView) {
+        return;
+    }
+    mMapWidget->pView = std::make_unique<TNullMapView>(mpHost);
+    mMapWidget->pView->setShown(mMapWidget->shown);
     copyPlayerRoomStyleToMap();
 }
 
@@ -1696,8 +1960,7 @@ std::pair<bool, QString> TNullConsoleFrontend::placeMapWidget(const QString& are
     }
 
     // Shown before the area is checked, as TMainConsole::placeMapWidget() does
-    mMapWidget->shown = true;
-    mMapWidget->pView->setShown(true);
+    mMapWidget->setShown(true);
     if (area.isEmpty()) {
         return {true, QString()};
     }
@@ -1759,8 +2022,7 @@ void TNullConsoleFrontend::restoreMapWidgetPlacement(const Placement& placement)
         return;
     }
     mMapWidget->geometry = placement.geometry;
-    mMapWidget->shown = placement.shown;
-    mMapWidget->pView->setShown(placement.shown);
+    mMapWidget->setShown(placement.shown);
 }
 
 bool TNullConsoleFrontend::hideMapWidget()
@@ -1769,8 +2031,7 @@ bool TNullConsoleFrontend::hideMapWidget()
     if (!mMapWidget || !mMapWidget->shown) {
         return false;
     }
-    mMapWidget->shown = false;
-    mMapWidget->pView->setShown(false);
+    mMapWidget->setShown(false);
     return true;
 }
 
@@ -2397,6 +2658,8 @@ bool TNullConsoleFrontend::replaceCommandLineText(const QString& name, const QSt
     }
     if (!mainCommandLine(name)) {
         mpHost->windowRegistry().setCommandLineText(name, plainText(text));
+        // Told even where Mudlet's copy is unchanged, as the app's line may hold what it has yet to pass on
+        mWindowNotifier.noteCommandLine(name);
     } else if (!mpHost->passwordEntryWanted()) {
         // TMainConsole writes to the hidden-input box over it while the game asks for one
         mMainCommandLineTyped = false;
@@ -2409,6 +2672,64 @@ bool TNullConsoleFrontend::replaceCommandLineText(const QString& name, const QSt
         emit mpHost->signal_commandLineTextRequested(plain);
     }
     return true;
+}
+
+void TNullConsoleFrontend::typeCommandLine(const QString& name, const QString& text)
+{
+    mpHost->windowRegistry().setCommandLineText(name, plainText(text));
+}
+
+bool TNullConsoleFrontend::commandLineShown(const QString& name) const
+{
+    const auto it = mCommandLines.find(name);
+    if (it == mCommandLines.end()) {
+        return false;
+    }
+    const PlainWindow& line = it->second;
+    const auto console = mSubConsoles.find(name);
+    const bool own = line.inConsole && console != mSubConsoles.end() && ownsLine(console->second, line);
+    return line.shown && line.layerShown && line.consoleShown && (!own || console->second.shown) && shownWithin(line.userWindow, line.box.get());
+}
+
+std::optional<int> TNullConsoleFrontend::commandLineAction(const QString& name) const
+{
+    const auto it = mCommandLines.find(name);
+    if (mainCommandLine(name) || it == mCommandLines.end()) {
+        return std::nullopt;
+    }
+    return it->second.action;
+}
+
+const QObject* TNullConsoleFrontend::commandLineInstance(const QString& name) const
+{
+    const auto it = mCommandLines.find(name);
+    return mainCommandLine(name) || it == mCommandLines.end() ? nullptr : it->second.writer.data();
+}
+
+void TNullConsoleFrontend::echoSentCommandLine(const QString& name, QString command)
+{
+    const auto it = mCommandLines.find(name);
+    TConsoleModel* pModel = subConsoleModel(name);
+    if (it == mCommandLines.end() || !it->second.inConsole || it->second.action || !pModel || mpHost->mCommandEchoMode == Host::CommandEchoMode::Never) {
+        return;
+    }
+    pModel->printCommand(command);
+}
+
+void TNullConsoleFrontend::commandLineSent(const QString& name)
+{
+    const auto it = mCommandLines.find(name);
+    if (mainCommandLine(name) || it == mCommandLines.end()) {
+        return;
+    }
+    // The line as it stands, which a script that clears it leaves nothing of
+    const QString text = mpHost->windowRegistry().commandLineText(name).value_or(QString());
+    if (!text.isEmpty() && it->second.writer && (!mpHost->isRemoteEchoingActive() || mpHost->disablePasswordMasking())) {
+        TCommandHistory::add(it->second.writer->history, text);
+    }
+    if (mpHost->mAutoClearCommandLineAfterSend) {
+        replaceCommandLineText(name, QString());
+    }
 }
 
 bool TNullConsoleFrontend::holdMainCommandLineForSend(const QString& line)
@@ -3261,7 +3582,10 @@ bool TNullConsoleFrontend::reparentLabel(const QString& windowname, const QStrin
 void TNullConsoleFrontend::inheritLabelFont(Label& label, const bool restyle)
 {
     const QFont before = label.pModel->mFont;
-    if (!label.styled) {
+    if (restyle && windowSheet(label.userWindow) != label.windowSheet) {
+        label.restyleDue = true;
+        restyleLabel(label, label.pModel->mStyleSheet);
+    } else if (!label.styled) {
         QFont local = label.pModel->mFont;
         local.setResolveMask(label.fontMask);
         label.pModel->mFont = local.resolve(naturalLabelFont(label));
@@ -3287,14 +3611,18 @@ std::pair<bool, QString> TNullConsoleFrontend::reparentWindow(const QString& win
             return noView();
         }
         QObject* pParent = holderFor(userWindow, box.get());
+        const bool otherWindow = userWindow != it->second.userWindow;
         // A frame's console also moves when it leaves the frame for the window the frame is in
-        const bool moved = userWindow != it->second.userWindow || box != it->second.box || (it->second.holder && it->second.holder->parent() != pParent);
+        const bool moved = otherWindow || box != it->second.box || (it->second.holder && it->second.holder->parent() != pParent);
         if (moved) {
             it->second.stackOrder = ++mTopOfStack;
         }
         it->second.userWindow = userWindow;
         it->second.box = std::move(box);
         it->second.shown = show || (!moved && it->second.shown);
+        if (otherWindow) {
+            applyUserWindowSheetFont(name, windowSheet(userWindow));
+        }
         if (it->second.holder) {
             it->second.holder->setParent(pParent);
         }
@@ -3372,16 +3700,25 @@ std::pair<bool, QString> TNullConsoleFrontend::reparentWindow(const QString& win
 // What a moved scroll box holds goes with it into its user window
 void TNullConsoleFrontend::moveScrollBoxContents(const ScrollBox* box)
 {
+    // QWidget::setParent() restyles the box and all inside it under the sheet of the window it went into
     for (auto& [name, label] : mLabels) {
         if (within(label.box.get(), box) && label.userWindow != box->userWindow) {
             label.userWindow = box->userWindow;
-            inheritLabelFont(label, false);
+            inheritLabelFont(label, windowSheet(label.userWindow) != label.windowSheet);
         }
     }
+    QStringList restyled;
     for (auto& [name, subConsole] : mSubConsoles) {
         if (within(subConsole.box.get(), box)) {
+            if (subConsole.userWindow != box->userWindow && mpHost->windowRegistry().subConsoleKind(name) == TWindowRegistry::SubConsoleKind::MiniConsole) {
+                restyled << name;
+            }
             subConsole.userWindow = box->userWindow;
         }
+    }
+    const QString sheet = windowSheet(box->userWindow);
+    for (const QString& name : std::as_const(restyled)) {
+        applyUserWindowSheetFont(name, sheet);
     }
     for (auto& [name, inner] : mScrollBoxes) {
         if (within(inner->box.get(), box)) {
@@ -3536,8 +3873,47 @@ std::pair<bool, QString> TNullConsoleFrontend::setUserWindowStyleSheet(const QSt
     if (!mSubConsoles.count(name) || !registry.hasDockWidget(name)) {
         return {false, qsl("userwindow name '%1' not found").arg(name)};
     }
-    registry.setUserWindowStyleSheet(name, userWindowStyleSheet);
+    applyUserWindowSheet(name, userWindowStyleSheet);
     return {true, QString()};
+}
+
+// What a sheet on the dock changes that scripts read back, with no widget for Qt to polish
+void TNullConsoleFrontend::applyUserWindowSheet(const QString& name, const QString& sheet)
+{
+    mpHost->windowRegistry().setUserWindowStyleSheet(name, sheet);
+    static const QStringList dockClasses{qsl("TDockWidget"), qsl("QDockWidget"), qsl("QWidget"), qsl("QObject")};
+    const QString objectName = qsl("dockWindow_%1_%2").arg(mpHost->getName(), name);
+    // As TDockWidget::event() takes the title a qproperty-windowTitle gives the dock
+    if (const auto title = sheetStringProperty(sheetDeclarations(sheet, dockClasses, objectName, {}), u"windowTitle")) {
+        mWindowNotifier.note();
+        mpHost->windowRegistry().setUserWindowTitle(name, *title);
+    }
+    applyUserWindowSheetFont(name, sheet);
+    restyleWindowContents(name);
+}
+
+void TNullConsoleFrontend::applyUserWindowSheetFont(const QString& name, const QString& sheet)
+{
+    const auto console = mSubConsoles.find(name);
+    if (console == mSubConsoles.end()) {
+        return;
+    }
+    // As TTextEdit::changeEvent() takes the font a sheet gives the window's text for the console's, with no
+    // sysFontChangeEvent; clearing it hands back the font from before, as for a label
+    static const QStringList paneClasses{qsl("TTextEdit"), qsl("QWidget"), qsl("QObject")};
+    // The object name the TConsole constructor gives the upper pane
+    const QString paneName = qsl("upperPane_%1_%2").arg(mpHost->getName(), name);
+    const std::optional<QFont> sheetFont = styleSheetFont(sheetDeclarations(sheet, paneClasses, paneName, {qsl("enabled"), qsl("active")}));
+    TConsoleModel& model = *console->second.pModel;
+    QFont font = console->second.fontBeforeSheet.value_or(model.mUpperPaneFont);
+    console->second.fontBeforeSheet = sheetFont ? std::optional<QFont>(font) : std::nullopt;
+    uint mask = font.resolveMask();
+    applySheetFont(font, mask, sheetFont);
+    if (font != model.mUpperPaneFont) {
+        mWindowNotifier.note();
+        model.mUpperPaneFont = font;
+        reportGridSize(name);
+    }
 }
 
 std::pair<bool, QString> TNullConsoleFrontend::setUserWindowTitle(const QString& name, const QString& text)
@@ -3651,6 +4027,10 @@ bool TNullConsoleFrontend::scrollWindowTo(const QString& name, const int line, c
     // A buffer is never painted, so a real one never shows itself scrolled back
     if (toEnd || line >= lastLine) {
         pModel->mScrolledBackTo.reset();
+        // As TMainConsole::scrollWindowTo() puts a scrolled back pane at the end, which incoming text under way then leaves it at
+        if (wasSplit && pModel == &mpHost->mainConsoleModel() && mIncomingTexts > 0) {
+            holdNewLinesAtEnd();
+        }
     } else if (pModel->mScrollingEnabled && mpHost->windowRegistry().subConsoleKind(name) != TWindowRegistry::SubConsoleKind::Buffer) {
         pModel->mScrolledBackTo = line < 0 ? std::max(lastLine + line, 0) : line;
     }
@@ -3729,6 +4109,16 @@ std::optional<int> TNullConsoleFrontend::consoleColumnWidth(const QString& name)
     return {QFontMetrics(*font).averageCharWidth()};
 }
 
+// The font scripts gave it, which a sheet's font lies over as the widget's does over TConsole's own
+QFont TNullConsoleFrontend::subConsoleOwnFont(const QString& name, const TConsoleModel& model) const
+{
+    const auto console = mSubConsoles.find(name);
+    if (console == mSubConsoles.end()) {
+        return model.mUpperPaneFont;
+    }
+    return console->second.fontBeforeSheet.value_or(model.mUpperPaneFont);
+}
+
 // As TConsole::setFont() changes a sub-console's, and tells scripts of it
 void TNullConsoleFrontend::setSubConsoleFont(const QString& name, const QFont& font)
 {
@@ -3738,6 +4128,11 @@ void TNullConsoleFrontend::setSubConsoleFont(const QString& name, const QFont& f
         return;
     }
     pModel->mUpperPaneFont = font;
+    // A sheet's font stays over the one a script then sets
+    if (const auto console = mSubConsoles.find(name); console != mSubConsoles.end() && console->second.fontBeforeSheet) {
+        console->second.fontBeforeSheet = font;
+        applyUserWindowSheetFont(name, windowSheet(mpHost->windowRegistry().hasDockWidget(name) ? name : console->second.userWindow));
+    }
     reportGridSize(name);
     if (mpHost->windowRegistry().subConsoleKind(name) == TWindowRegistry::SubConsoleKind::Buffer) {
         return;
@@ -3788,11 +4183,12 @@ std::optional<std::pair<bool, QString>> TNullConsoleFrontend::setWindowFontFamil
     if (!pModel) {
         return {};
     }
-    QFont font = mpHost->createFontWithSettings(family, pModel->mUpperPaneFont.pointSize());
+    const QFont ownFont = subConsoleOwnFont(name, *pModel);
+    QFont font = mpHost->createFontWithSettings(family, ownFont.pointSize());
     if (weight != QFont::Normal) {
         font.setWeight(weight);
     }
-    if (TFontAttributes(font) != TFontAttributes(pModel->mUpperPaneFont)) {
+    if (TFontAttributes(font) != TFontAttributes(ownFont)) {
         setSubConsoleFont(name, font);
     }
     return {{true, QString()}};
@@ -3810,8 +4206,8 @@ bool TNullConsoleFrontend::setWindowFontSize(const QString& name, const int size
     if (!pModel) {
         return false;
     }
-    if (pModel->mUpperPaneFont.pointSize() != size) {
-        TFontAttributes font(pModel->mUpperPaneFont);
+    if (const QFont ownFont = subConsoleOwnFont(name, *pModel); ownFont.pointSize() != size) {
+        TFontAttributes font(ownFont);
         font.mPointSize = size;
         setSubConsoleFont(name, font.makeFont());
     }
@@ -3823,7 +4219,52 @@ bool TNullConsoleFrontend::setWindowFontSize(const QString& name, const int size
 bool TNullConsoleFrontend::startIncomingText()
 {
     mIncomingTextTimer.restart();
+    ++mIncomingTexts;
+    if (!mNewLinesHeldAt) {
+        holdNewLinesAtEnd();
+    }
     return mpHost->mAlertOnNewData;
+}
+
+// Where TTextEdit::showNewLines() leaves the pane: one past the last line, which windowScroll() caps
+void TNullConsoleFrontend::holdNewLinesAtEnd()
+{
+    TBuffer& buffer = mpHost->mainConsoleModel().buffer;
+    mNewLinesHeldAt = buffer.linesTrimmedTotal() + buffer.size();
+}
+
+// The GUI's pane goes to the end as it is now, and lines the incoming text still has to add leave it there
+void TNullConsoleFrontend::followNewLines()
+{
+    if (mIncomingTexts > 0) {
+        holdNewLinesAtEnd();
+    } else {
+        mNewLinesHeldAt.reset();
+    }
+}
+
+// As TConsole::bufferCleared() puts the pane on what is left, which later lines then leave it at
+void TNullConsoleFrontend::holdNewLinesAfterClear()
+{
+    if (mIncomingTexts > 0 || mNewLinesHeldAt) {
+        holdNewLinesAtEnd();
+    }
+}
+
+std::optional<int> TNullConsoleFrontend::newLinesHeldAt() const
+{
+    if (!mNewLinesHeldAt) {
+        return std::nullopt;
+    }
+    return static_cast<int>(std::max<qint64>(*mNewLinesHeldAt - mpHost->mainConsoleModel().buffer.linesTrimmedTotal(), 0));
+}
+
+// As TConsole::showCommandEcho(), which follows only a command that made lines of its own
+void TNullConsoleFrontend::showCommandEcho(const TConsoleModel::CommandEcho& echo)
+{
+    if (echo.kind == TConsoleModel::CommandEcho::Kind::NewLines) {
+        showNewLines();
+    }
 }
 
 void TNullConsoleFrontend::alertNewData()
@@ -3833,6 +4274,7 @@ void TNullConsoleFrontend::alertNewData()
 
 void TNullConsoleFrontend::finishIncomingText(bool)
 {
+    --mIncomingTexts;
     TConsoleModel& model = mpHost->mainConsoleModel();
     model.mIncomingTextSeconds = mIncomingTextTimer.elapsed() / 1000.0;
     emit model.mNotifier.incomingTextProcessed();
@@ -3884,22 +4326,25 @@ QString TNullConsoleFrontend::parentName(const QString& userWindow, const Scroll
     return userWindow;
 }
 
-bool TNullConsoleFrontend::listsConsole(const SubConsole& console, const std::optional<TWindowRegistry::SubConsoleKind> kind)
+bool TNullConsoleFrontend::listsConsole(const std::optional<TWindowRegistry::SubConsoleKind> kind)
 {
-    return !console.pFrameSink && (kind == TWindowRegistry::SubConsoleKind::MiniConsole || kind == TWindowRegistry::SubConsoleKind::UserWindow);
+    return kind == TWindowRegistry::SubConsoleKind::MiniConsole || kind == TWindowRegistry::SubConsoleKind::UserWindow;
 }
 
 TConsoleModel* TNullConsoleFrontend::listedConsoleModel(const QString& name) const
 {
     const auto it = mSubConsoles.find(name);
-    return it != mSubConsoles.end() && listsConsole(it->second, mpHost->windowRegistry().subConsoleKind(name)) ? it->second.pModel.get() : nullptr;
+    return it != mSubConsoles.end() && listsConsole(mpHost->windowRegistry().subConsoleKind(name)) ? it->second.pModel.get() : nullptr;
 }
 
 std::vector<TNullConsoleFrontend::WindowRecord> TNullConsoleFrontend::windowRecords() const
 {
     using Kind = WindowRecord::Kind;
     const TWindowRegistry& registry = mpHost->windowRegistry();
-    const auto consoleKind = [&registry](const QString& name) {
+    const auto consoleKind = [&registry](const QString& name, const SubConsole& console) {
+        if (console.pFrameSink) {
+            return Kind::mxpFrame;
+        }
         return registry.subConsoleKind(name) == TWindowRegistry::SubConsoleKind::UserWindow ? Kind::userWindow : Kind::miniConsole;
     };
     // As parentName() gives the user window for a box deleted with deleteScrollBox() that its windows still hold
@@ -3912,19 +4357,29 @@ std::vector<TNullConsoleFrontend::WindowRecord> TNullConsoleFrontend::windowReco
     std::vector<WindowRecord> records;
     for (const auto& [name, console] : mSubConsoles) {
         const auto kind = registry.subConsoleKind(name);
-        if (!listsConsole(console, kind)) {
+        if (!listsConsole(kind)) {
             continue;
         }
+        // A frame's console that a script moved out of its frame is where the script put it
+        const bool framed = inOwnFrame(name);
+        const QRect geometry = registry.subConsoleGeometry(name).value_or(QRect());
+        QString frameHost = framed ? mMxpFrames.host(name) : QString();
+        QPoint framePlace = framed ? mMxpFrames.consolePlace(name) : QPoint();
+        // A frame in one whose console a script moved out stays in that one's container, which did not move
+        for (size_t depth = 0; !frameHost.isEmpty() && mSubConsoles.contains(frameHost) && !inOwnFrame(frameHost) && depth <= mSubConsoles.size(); ++depth) {
+            framePlace += mMxpFrames.consolePlace(frameHost);
+            frameHost = mMxpFrames.host(frameHost);
+        }
         records.push_back({name,
-                           consoleKind(name),
-                           parentName(console.userWindow, console.box.get()),
-                           registry.subConsoleGeometry(name).value_or(QRect()),
+                           consoleKind(name, console),
+                           framed ? frameHost : parentName(console.userWindow, console.box.get()),
+                           framed ? QRect(framePlace, geometry.size()) : geometry,
                            console.shown,
-                           console.shown && shownWithin(console.userWindow, console.box.get()),
+                           console.shown && (!framed || mMxpFrames.pageShown(name)) && shownWithin(console.userWindow, console.box.get()),
                            console.stackOrder,
                            console.pModel->mBgColor,
                            console.pModel->mUpperPaneFont,
-                           kind == TWindowRegistry::SubConsoleKind::UserWindow});
+                           kind == TWindowRegistry::SubConsoleKind::UserWindow || (framed && externalFrame(name))});
         WindowRecord& record = records.back();
         // As Host::windowScroll() bounds it, which a deleteLine() can leave past the end
         if (console.pModel->mScrolledBackTo) {
@@ -3933,7 +4388,7 @@ std::vector<TNullConsoleFrontend::WindowRecord> TNullConsoleFrontend::windowReco
         record.grid = console.pModel->mGridSize;
         record.scrollBar = console.pModel->mScrollBarEnabled;
         record.timeStamps = console.pModel->mShowTimeStamps;
-        record.parentKind = kindOfParent(console.box.get());
+        record.parentKind = framed ? (frameHost.isEmpty() ? Kind::userWindow : Kind::mxpFrame) : kindOfParent(console.box.get());
         if (kind == TWindowRegistry::SubConsoleKind::UserWindow) {
             record.autoDock = console.autoDock;
             record.dockArea = console.dockArea;
@@ -3969,9 +4424,9 @@ std::vector<TNullConsoleFrontend::WindowRecord> TNullConsoleFrontend::windowReco
         const auto console = mSubConsoles.find(name);
         const bool own = line.inConsole && console != mSubConsoles.end() && ownsLine(console->second, line);
         const bool visible = line.shown && line.layerShown;
-        const bool shown = visible && line.consoleShown && (!own || console->second.shown) && shownWithin(line.userWindow, line.box.get());
+        const bool shown = commandLineShown(name);
         records.push_back({name, Kind::commandLine, own ? name : parentName(line.userWindow, line.box.get()), line.geometry, visible, shown, line.stackOrder, QColor(), QFont()});
-        records.back().parentKind = own ? consoleKind(name) : kindOfParent(line.box.get());
+        records.back().parentKind = own ? consoleKind(name, console->second) : kindOfParent(line.box.get());
     }
     for (const auto& [name, textBox] : mTextBoxes) {
         records.push_back({name,

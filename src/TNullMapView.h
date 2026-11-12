@@ -53,6 +53,14 @@ public:
     void doubleClick(const QPoint&);
     // False for less than half a notch, which T2DMap ignores
     bool wheel(const QPointF&, const QPoint& angleDelta, Qt::KeyboardModifiers);
+    // As T2DMap::slot_toggleMapViewOnly(), which raises mapModeChangeEvent
+    void setViewOnly(bool viewOnly);
+    // As T2DMap::init() switches a new map to editing where the profile was saved so, which raises the event too:
+    // called before the map is made, as a GUI handler of it finds no mapper yet
+    static void announceEditing(Host*);
+    // Sets the profile's mode and raises mapModeChangeEvent, with no map view needed
+    static void switchMode(Host*, bool viewOnly);
+    bool shown() const { return mShown; }
 
     bool onScreen() const override { return false; }
     void showMapProgress(const QString&, bool) override {}

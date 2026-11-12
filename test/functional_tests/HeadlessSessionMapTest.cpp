@@ -547,6 +547,144 @@ registerAnonymousEventHandler("sysMapWindowMousePressEvent", function() headless
         QCOMPARE(session.errorString(), qsl("No profile is open."));
     }
 
+    void test_anAppSwitchesTheMapBetweenViewingAndEditing()
+    {
+        const QString name = qsl("Headless Map Mode");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QVERIFY(session.mapViewOnly());
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        // A save from before the setting was kept, as this one, is read as editing
+        QVERIFY(!session.mapViewOnly());
+        QVERIFY(!session.setMapViewOnly(true));
+        QCOMPARE(session.errorString(), qsl("No map is open; a script opens one, as with openMapWidget()."));
+        QVERIFY(!session.mapViewOnly());
+
+        // Each map made in a profile saved as editing says so as it opens, as the GUI's does; one shown again does not
+        QSignalSpy switched(&session, &THeadlessSession::mapViewOnlyChanged);
+        QVERIFY(session.runLua(qsl(R"lua(
+headlessModes = ""
+registerAnonymousEventHandler("mapModeChangeEvent", function(_, mode)
+  headlessModes = headlessModes .. mode .. (getMapZoom() and not headlessWithin and "(mapper);" or ";")
+end)
+registerAnonymousEventHandler("mapOpenEvent", function() headlessModes = headlessModes .. "open;" end)
+headlessArea = addAreaName("Headless Mode Area")
+headlessView = createMapView(headlessArea)
+)lua")));
+        // A secondary map view says so too, and carries the GUI's item
+        QCOMPARE(luaGlobalString(session.host(), "headlessModes"), qsl("editing;"));
+        QVERIFY(session.setMapViewOnly(true));
+        QVERIFY(session.mapViewOnly());
+        QCOMPARE(luaGlobalString(session.host(), "headlessModes"), qsl("editing;viewing;"));
+        QCOMPARE(switched.count(), 1);
+        QVERIFY(session.runLua(qsl("createMapView(headlessArea)")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessModes"), qsl("editing;viewing;"));
+        QVERIFY(session.setMapViewOnly(false));
+        QVERIFY(session.runLua(qsl("closeAllMapViews() headlessModes = ''")));
+        QVERIFY(!session.setMapViewOnly(true));
+        switched.clear();
+
+        // The handler runs before the map is there, as the GUI's does
+        QVERIFY(session.runLua(qsl("openMapWidget() closeMapWidget()")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessModes"), qsl("editing;open;"));
+        QVERIFY(!session.setMapViewOnly(true));
+        QCOMPARE(session.errorString(), qsl("No map is open; a script opens one, as with openMapWidget()."));
+        QVERIFY(!session.mapViewOnly());
+        // A handler that makes the mapper itself leaves that one, and the open event comes twice as in the GUI
+        QVERIFY(session.runLua(qsl(R"lua(
+registerAnonymousEventHandler("mapModeChangeEvent", function()
+  if headlessWithin then return end
+  headlessWithin = true
+  headlessModes = headlessModes .. "in;"
+  createMapper(0, 0, 50, 50)
+  headlessModes = headlessModes .. "out;"
+end)
+createMapper(0, 0, 100, 100)
+)lua")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessModes"), qsl("editing;open;editing;in;editing;open;out;open;"));
+        QCOMPARE(switched.count(), 0);
+
+        QVERIFY(session.setMapViewOnly(true));
+        QCOMPARE(switched.count(), 1);
+        switched.clear();
+        QVERIFY(session.runLua(qsl("headlessModes = ''")));
+        QVERIFY(session.setMapViewOnly(true));
+        QCOMPARE(switched.count(), 0);
+        QCOMPARE(luaGlobalString(session.host(), "headlessModes"), QString());
+        QSignalSpy repaints(&session, &THeadlessSession::mapRepaintRequested);
+        QVERIFY(session.setMapViewOnly(false));
+        QVERIFY(!session.mapViewOnly());
+        QVERIFY(!session.host()->mMapViewOnly);
+        QCOMPARE(luaGlobalString(session.host(), "headlessModes"), qsl("editing;"));
+        QCOMPARE(switched.count(), 1);
+        QCOMPARE(switched.constLast().at(0).toString(), name);
+        QCOMPARE(switched.constLast().at(1).toBool(), false);
+        QTRY_COMPARE(repaints.count(), 1);
+
+        QVERIFY(session.setMapViewOnly(true));
+        QVERIFY(session.mapViewOnly());
+        QCOMPARE(luaGlobalString(session.host(), "headlessModes"), qsl("editing;viewing;"));
+        QCOMPARE(switched.count(), 2);
+        QCOMPARE(switched.constLast().at(1).toBool(), true);
+
+        QVERIFY(session.shutdown(false));
+        QVERIFY(!session.setMapViewOnly(false));
+        QCOMPARE(session.errorString(), qsl("No profile is open."));
+        QVERIFY(session.mapViewOnly());
+    }
+
+    // While the map widget's map is being made the widget is there and its map is not, as in the GUI
+    void test_aModeHandlerReachingTheMapWidgetBeingMadeFindsItThere()
+    {
+        struct Case
+        {
+            QString within;
+            QString outer;
+            QString heard;
+            QString after;
+        };
+        const QList<Case> cases = {
+                {qsl("return openMapWidget()"), qsl("openMapWidget()"), qsl("editing<true>open;"), qsl("true")},
+                {qsl("return closeMapWidget()"), qsl("openMapWidget()"), qsl("editing<nil map widget already closed>open;"), qsl("true")},
+                // One mapper is left: the widget the handler opened and hid goes as one hidden before does
+                {qsl("openMapWidget() return closeMapWidget()"),
+                 qsl("createMapper(0, 0, 100, 100)"),
+                 qsl("editing<editing;open;true>open;"),
+                 qsl("nil cannot create map widget. Do you already use an embedded mapper?")},
+                // The mapper the handler made is left, with mapOpenEvent raised again as the map widget's map loads
+                {qsl("return createMapper(0, 0, 100, 100)"),
+                 qsl("openMapWidget()"),
+                 qsl("editing<editing;open;true>open;"),
+                 qsl("nil cannot create map widget. Do you already use an embedded mapper?")},
+        };
+        int number = 0;
+        for (const Case& item : cases) {
+            const QString name = qsl("Headless Map Mode Within %1").arg(++number);
+            QVERIFY(writeProfile(name));
+            THeadlessSession session;
+            QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+            QVERIFY(!session.mapViewOnly());
+            QVERIFY(session.runLua(qsl(R"lua(
+headlessHeard = ""
+local function said(ok, why) return tostring(ok) .. (why and " " .. why or "") end
+registerAnonymousEventHandler("mapOpenEvent", function() headlessHeard = headlessHeard .. "open;" end)
+registerAnonymousEventHandler("mapModeChangeEvent", function(_, mode)
+  if headlessWithin then headlessHeard = headlessHeard .. mode .. ";" return end
+  headlessWithin = true
+  headlessHeard = headlessHeard .. mode .. "<"
+  local result = said((function() %1 end)())
+  headlessHeard = headlessHeard .. result .. ">"
+end)
+%2
+headlessAfter = said(openMapWidget())
+)lua")
+                                           .arg(item.within, item.outer)));
+            QCOMPARE(luaGlobalString(session.host(), "headlessHeard"), item.heard);
+            QCOMPARE(luaGlobalString(session.host(), "headlessAfter"), item.after);
+            QVERIFY(session.shutdown(false));
+        }
+    }
+
     // The mapper is 100 by 50 into a user window the app put at 200 by 100 of the main window's area
     void test_getMousePositionFollowsTheMapsPointer()
     {

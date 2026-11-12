@@ -423,10 +423,16 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                 };
                 connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::lineCommitted, this, &THeadlessSession::lineCommitted);
                 connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::lineShown, this, &THeadlessSession::triggerPassEnded);
-                connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::textPrinted, this, [this](const QString& text) {
+                connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::textPrinted, this, [this, pNewHost](const QString& text, const TLineFormat& format, const bool continuesLine) {
                     const QString profile = mProfileName;
+                    const QList<TextRun> runs = textRuns(text, format, pNewHost->mFgColor, pNewHost->mBgColor);
+                    // The first handler may delete the session
+                    const QPointer<THeadlessSession> stillHere(this);
                     ++gSignalsBeingHandedOut;
                     emit localText(profile, text);
+                    if (stillHere) {
+                        emit localTextStyled(profile, text, runs, continuesLine);
+                    }
                     --gSignalsBeingHandedOut;
                 });
                 connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::bufferCleared, this, [this, model = &pNewHost->mainConsoleModel()]() {
@@ -2103,7 +2109,7 @@ QList<THeadlessSession::ShownLine> THeadlessSession::takeTriggerWrites(const boo
     }
     const TBuffer& buffer = mpHost->mainConsoleModel().buffer;
     for (const TConsoleModel::TriggerWrite& write : writes) {
-        lines.append({write.text, false, textRuns(write.text, TLineFormat(write.format), mpHost->mFgColor, mpHost->mBgColor), arrivalTime(buffer, write.line)});
+        lines.append({write.text, false, textRuns(write.text, TLineFormat(write.format), mpHost->mFgColor, mpHost->mBgColor), arrivalTime(buffer, write.line), write.continuesLine});
     }
     return lines;
 }
@@ -2114,7 +2120,7 @@ bool THeadlessSession::sendShownLines(const QList<ShownLine>& lines)
     const QString profile = mProfileName;
     for (const ShownLine& line : lines) {
         ++gSignalsBeingHandedOut;
-        emit lineShown(profile, line.text, line.isPrompt, line.runs, line.arrivalMSecs);
+        emit lineShown(profile, line.text, line.isPrompt, line.runs, line.arrivalMSecs, line.continuesLine);
         --gSignalsBeingHandedOut;
         if (!self) {
             return false;

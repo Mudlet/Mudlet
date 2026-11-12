@@ -45,27 +45,16 @@ public:
     }
 
     // The text of the console of that name may have changed
-    void noteText(const QString& name)
-    {
-        if (mTextChanged.isEmpty()) {
-            QMetaObject::invokeMethod(
-                    this,
-                    [this]() {
-                        // First, so that a listener hears of a console made this turn before it hears of its text
-                        tellWindows();
-                        const QStringList names(mTextChanged.cbegin(), mTextChanged.cend());
-                        mTextChanged.clear();
-                        emit textChanged(names);
-                    },
-                    Qt::QueuedConnection);
-        }
-        mTextChanged.insert(name);
-    }
+    void noteText(const QString& name) { noteName(mTextChanged, &TWindowNotifier::textChanged, name); }
+
+    // A script set the text of the command line of that name, or a send emptied it
+    void noteCommandLine(const QString& name) { noteName(mCommandLinesSet, &TWindowNotifier::commandLinesSet, name); }
 
 signals:
     void windowsChanged();
     // In no order, each name once
     void textChanged(const QStringList& names);
+    void commandLinesSet(const QStringList& names);
 
 private:
     void tellWindows()
@@ -76,8 +65,27 @@ private:
         }
     }
 
+    // Told the turn after the first, each name once however often it was noted
+    void noteName(QSet<QString>& names, void (TWindowNotifier::*told)(const QStringList&), const QString& name)
+    {
+        if (names.isEmpty()) {
+            QMetaObject::invokeMethod(
+                    this,
+                    [this, &names, told]() {
+                        // First, so that a listener hears of a console made this turn before it hears of its text
+                        tellWindows();
+                        const QStringList list(names.cbegin(), names.cend());
+                        names.clear();
+                        emit(this->*told)(list);
+                    },
+                    Qt::QueuedConnection);
+        }
+        names.insert(name);
+    }
+
     bool mPending = false;
     QSet<QString> mTextChanged;
+    QSet<QString> mCommandLinesSet;
 };
 
 #endif // MUDLET_TWINDOWNOTIFIER_H

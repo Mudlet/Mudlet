@@ -358,6 +358,12 @@ QString TNullAppFrontend::addonPlacementRefusal(const CommandRequest& request, c
 {
     if (!request.shortcut.isEmpty()) {
         const QKeySequence sequence(request.shortcut);
+        // Ahead of the commands' own, in the order of mudlet::addonShortcutUsable()
+        for (const ReservedShortcut& reserved : mReservedShortcuts) {
+            if (reserved.sequence == sequence) {
+                return addonShortcutTakenRefusal(sequence, reserved.holder);
+            }
+        }
         for (const AddonCommand& command : mAddonCommands) {
             if (command.request.surfaces == CommandSurface::Toolbar || command.request.shortcut.isEmpty() || QKeySequence(command.request.shortcut) != sequence) {
                 continue;

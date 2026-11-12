@@ -63,6 +63,8 @@ THeadlessSession::ScriptWindow::Kind kindOf(const Record::Kind kind)
         return Kind::scrollBox;
     case Record::Kind::mapper:
         return Kind::mapper;
+    case Record::Kind::mxpFrame:
+        return Kind::mxpFrame;
     }
     Q_UNREACHABLE();
 }
@@ -84,7 +86,19 @@ THeadlessSession::ScriptWindow scriptWindowOf(const Record& record, const int st
 // Only these hold other windows, so a label that shares a scroll box's name is not taken for it
 bool holdsWindows(const Record::Kind kind)
 {
-    return kind == Record::Kind::userWindow || kind == Record::Kind::scrollBox || kind == Record::Kind::miniConsole;
+    return kind == Record::Kind::userWindow || kind == Record::Kind::scrollBox || kind == Record::Kind::miniConsole || kind == Record::Kind::mxpFrame;
+}
+
+// An MXP frame's console is a mini console the game made
+bool miniConsole(const THeadlessSession::ScriptWindow::Kind kind)
+{
+    return kind == THeadlessSession::ScriptWindow::Kind::miniConsole || kind == THeadlessSession::ScriptWindow::Kind::mxpFrame;
+}
+
+// A console's text, which a press or the wheel acts on
+bool consoleText(const THeadlessSession::ScriptWindow::Kind kind)
+{
+    return miniConsole(kind) || kind == THeadlessSession::ScriptWindow::Kind::userWindow;
 }
 
 QHash<QString, QList<THeadlessSession::ScriptWindow>> byName(const QList<THeadlessSession::ScriptWindow>& windows)
@@ -296,6 +310,108 @@ void THeadlessSession::connectWindowRelays(Host* pHost, const unsigned int run)
                 emit windowTextChanged(profile, windows);
             },
             Qt::QueuedConnection);
+    connect(
+            &pView->windowNotifier(),
+            &TWindowNotifier::commandLinesSet,
+            this,
+            [this, run](const QStringList& names) {
+                if (run != mRun || !mpHost || mShuttingDown) {
+                    return;
+                }
+                QStringList commandLines;
+                for (const QString& name : names) {
+                    if (windowCommandLineText(name)) {
+                        commandLines << name;
+                    }
+                }
+                if (commandLines.isEmpty()) {
+                    return;
+                }
+                commandLines.sort();
+                const QString profile = mProfileName;
+                emit windowCommandLineTextChanged(profile, commandLines);
+            },
+            Qt::QueuedConnection);
+}
+
+std::optional<QString> THeadlessSession::windowCommandLineText(const QString& commandLine) const
+{
+    const auto* pView = mpHost ? dynamic_cast<TNullConsoleFrontend*>(mpHost->consoleFrontend()) : nullptr;
+    if (!pView || !pView->commandLineAction(commandLine)) {
+        return std::nullopt;
+    }
+    return mpHost->commandLineText(commandLine);
+}
+
+bool THeadlessSession::setWindowCommandLineText(const QString& commandLine, const QString& text)
+{
+    if (!usable()) {
+        return false;
+    }
+    auto* pView = dynamic_cast<TNullConsoleFrontend*>(mpHost->consoleFrontend());
+    if (!pView || !pView->commandLineAction(commandLine)) {
+        //: Error from a frontend with no window that was given text for a command line, other than the main one, that the profile's scripts have not made; %1 is the name it gave
+        mErrorString = tr("The profile has no command line called \"%1\".").arg(commandLine);
+        return false;
+    }
+    if (!pView->commandLineShown(commandLine)) {
+        //: Error from a frontend with no window that was given text for, or Enter on, a command line that a script has hidden or disabled, which a player could not type on; %1 is its name
+        mErrorString = tr("The command line \"%1\" is not shown, so nothing can be typed on it.").arg(commandLine);
+        return false;
+    }
+    pView->typeCommandLine(commandLine, text);
+    return true;
+}
+
+bool THeadlessSession::submitWindowCommandLine(const QString& commandLine, const QString& line)
+{
+    // A script may run the event loop, where the frontend may delete the session, and not the profile with it
+    const QPointer<THeadlessSession> self(this);
+    if (!setWindowCommandLineText(commandLine, line)) {
+        return false;
+    }
+    const QPointer<Host> pHost = mpHost;
+    const auto view = [&pHost]() {
+        return pHost ? dynamic_cast<TNullConsoleFrontend*>(pHost->consoleFrontend()) : nullptr;
+    };
+    const QStringList commands = pHost->commandLineText(commandLine).value_or(QString()).split(QChar::LineFeed);
+    // TCommandLine::enterCommand() goes on with its own line, so one an action made again under the name gets none
+    const QPointer<const QObject> pLine(view()->commandLineInstance(commandLine));
+    const auto sameLine = [&view, &commandLine, &pLine]() {
+        return pLine && view() && view()->commandLineInstance(commandLine) == pLine.data();
+    };
+    for (const QString& command : commands) {
+        if (!usable()) {
+            return false;
+        }
+        if (!sameLine()) {
+            return true;
+        }
+        const std::optional<int> action = view()->commandLineAction(commandLine);
+        if (!action) {
+            return true;
+        }
+        if (*action) {
+            pHost->getLuaInterpreter()->callCmdLineAction(*action, command);
+        } else {
+            pHost->send(command, true, false);
+            if (pHost) {
+                pHost->playerSentLineFromCommandLine();
+            }
+        }
+        if (!self || !sameLine()) {
+            return true;
+        }
+        view()->echoSentCommandLine(commandLine, command);
+        // The echo can raise sysBufferShrinkEvent, whose handlers may delete the session
+        if (!self) {
+            return true;
+        }
+    }
+    if (sameLine()) {
+        view()->commandLineSent(commandLine);
+    }
+    return true;
 }
 
 THeadlessSession::WindowsTold THeadlessSession::windowsNow() const
@@ -616,7 +732,7 @@ bool THeadlessSession::onConsoleText(const ScriptWindow* pWindow, const QPointF&
     if (!pWindow) {
         return mainConsoleTextRect().contains(position.toPoint());
     }
-    return pWindow->kind == ScriptWindow::Kind::miniConsole || pWindow->kind == ScriptWindow::Kind::userWindow;
+    return consoleText(pWindow->kind);
 }
 
 bool THeadlessSession::pointWindow(const QList<ScriptWindow>& windows, const ScriptWindow* pWindow, const WindowPointerEvent& event, const std::optional<bool> pressedOnText)
@@ -638,7 +754,7 @@ bool THeadlessSession::pointWindow(const QList<ScriptWindow>& windows, const Scr
         return pointMapper(*pWindow, event);
     }
     // A command line or text box keeps the mouse for itself
-    if (pWindow && pWindow->kind != Kind::miniConsole && pWindow->kind != Kind::userWindow && pWindow->kind != Kind::scrollBox) {
+    if (pWindow && !miniConsole(pWindow->kind) && pWindow->kind != Kind::userWindow && pWindow->kind != Kind::scrollBox) {
         return true;
     }
     if (event.type == WindowPointerEvent::Type::wheel) {
@@ -674,7 +790,8 @@ void THeadlessSession::pointConsole(const QList<ScriptWindow>& windows, const QS
         if (!pWindow) {
             return;
         }
-        if (pWindow->kind == ScriptWindow::Kind::miniConsole || pWindow->kind == ScriptWindow::Kind::userWindow) {
+        // A frame the game nested others in is a plain widget around them, unless it is an EXTERNAL one's window
+        if (consoleText(pWindow->kind) && (pWindow->kind != ScriptWindow::Kind::mxpFrame || pWindow->inDock)) {
             break;
         }
         at += pWindow->geometry.topLeft();
@@ -723,11 +840,11 @@ bool THeadlessSession::opensConsoleMenu(const QList<ScriptWindow>& windows, cons
     QPoint point = inParent;
     const ScriptWindow* pHit = hitIn(label.parent, point);
     // childAt() goes on into what a scroll box or mini console holds there; a scroll box's own widget is not a console's text
-    while (pHit && (pHit->kind == Kind::scrollBox || pHit->kind == Kind::miniConsole)) {
+    while (pHit && (pHit->kind == Kind::scrollBox || miniConsole(pHit->kind))) {
         point -= pHit->geometry.topLeft();
         const ScriptWindow* pInner = hitIn(pHit->name, point);
         if (!pInner) {
-            return pHit->kind == Kind::miniConsole;
+            return miniConsole(pHit->kind);
         }
         pHit = pInner;
     }
@@ -737,7 +854,7 @@ bool THeadlessSession::opensConsoleMenu(const QList<ScriptWindow>& windows, cons
     if (!pParent) {
         return mainConsoleTextRect().contains(inParent);
     }
-    return pParent->kind == Kind::miniConsole || pParent->kind == Kind::userWindow;
+    return consoleText(pParent->kind);
 }
 
 void THeadlessSession::scrollConsole(const QString& name, const WindowPointerEvent& event)
