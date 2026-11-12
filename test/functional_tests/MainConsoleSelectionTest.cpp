@@ -356,6 +356,61 @@ private slots:
         QVERIFY2(pane->mSelectedRegion.isEmpty(), "A click with no drag left a stray selection in the console (regression of #3922)");
     }
 
+    void test_aPressAndReleaseRaiseTheirButtonPlaceAndWindow()
+    {
+        mpServer->setWelcomeMessage(qsl("ready\r\n"));
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        QVERIFY2(waitForTextInBuffer(qsl("ready")), "The welcome text never reached the buffer");
+        TTextEdit* pane = upperPane();
+        QVERIFY2(pane, "No upper pane available");
+        runLua(qsl("mouseEvents = {}\n"
+                   "local function note(event, button, x, y, window) mouseEvents[#mouseEvents + 1] = string.format('%s %d %d %d %s', event, button, x, y, window) end\n"
+                   "registerAnonymousEventHandler('sysWindowMousePressEvent', note)\n"
+                   "registerAnonymousEventHandler('sysWindowMouseReleaseEvent', note)"));
+
+        const QPointF at(40, 30);
+        sendMouse(pane, QEvent::MouseButtonPress, Qt::LeftButton, Qt::LeftButton, at);
+        sendMouse(pane, QEvent::MouseButtonRelease, Qt::ExtraButton24, Qt::NoButton, at);
+
+        const QPoint inParent = mudlet::self()->getActiveHost()->mainConsoleView()->parentWidget()->mapFromGlobal(pane->mapToGlobal(at.toPoint()));
+        runLua(qsl("mouseEventsSeen = table.concat(mouseEvents, ';')"));
+        lua_State* L = mudlet::self()->getActiveHost()->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, "mouseEventsSeen");
+        const QString seen = QString::fromUtf8(lua_tostring(L, -1));
+        lua_pop(L, 1);
+        QCOMPARE(seen, qsl("sysWindowMousePressEvent 1 %1 %2 main;sysWindowMouseReleaseEvent 27 %1 %2 main").arg(inParent.x()).arg(inParent.y()));
+    }
+
+    void test_aRightButtonReleaseOnTheTextOpensItsMenuAndRaisesNothing()
+    {
+        mpServer->setWelcomeMessage(qsl("ready\r\n"));
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        QVERIFY2(waitForTextInBuffer(qsl("ready")), "The welcome text never reached the buffer");
+        TTextEdit* pane = upperPane();
+        QVERIFY2(pane, "No upper pane available");
+        runLua(qsl("mouseEvents = {}\n"
+                   "local function note(event, button, x, y, window) mouseEvents[#mouseEvents + 1] = string.format('%s %d %d %d %s', event, button, x, y, window) end\n"
+                   "registerAnonymousEventHandler('sysWindowMousePressEvent', note)\n"
+                   "registerAnonymousEventHandler('sysWindowMouseReleaseEvent', note)"));
+
+        const QPointF at(40, 30);
+        sendMouse(pane, QEvent::MouseButtonPress, Qt::RightButton, Qt::RightButton, at);
+        sendMouse(pane, QEvent::MouseButtonRelease, Qt::RightButton, Qt::NoButton, at);
+        QPointer<QMenu> menu = pane->findChildren<QMenu*>().value(0);
+        QVERIFY2(menu, "the right click put up no menu");
+        menu->close();
+
+        const QPoint inParent = mudlet::self()->getActiveHost()->mainConsoleView()->parentWidget()->mapFromGlobal(pane->mapToGlobal(at.toPoint()));
+        runLua(qsl("mouseEventsSeen = table.concat(mouseEvents, ';')"));
+        lua_State* L = mudlet::self()->getActiveHost()->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, "mouseEventsSeen");
+        const QString seen = QString::fromUtf8(lua_tostring(L, -1));
+        lua_pop(L, 1);
+        // QWidget::mousePressEvent() leaves a right press for the console around the text, which raises it again
+        QVERIFY2(seen.startsWith(qsl("sysWindowMousePressEvent 2 %1 %2 main").arg(inParent.x()).arg(inParent.y())), qPrintable(seen));
+        QVERIFY2(!seen.contains(qsl("sysWindowMouseReleaseEvent")), qPrintable(seen));
+    }
+
     // Control case: a genuine drag across cells must still produce a selection,
     // so the fix above does not over-correct.
     void test_dragStillSelects()
