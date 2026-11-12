@@ -494,13 +494,13 @@ bool THeadlessSession::pointer(const QString& window, const WindowPointerEvent& 
                      pTarget ? inMainArea(windows, *pTarget, QPointF()) : QPointF(),
                      pNamed && pTarget != pNamed ? inMainArea(windows, *pNamed, QPointF()) : QPointF()};
     }
-    pointWindow(windows, pTarget, passed, pressedOnText);
+    const bool taken = pointWindow(windows, pTarget, passed, pressedOnText);
     // QApplicationPrivate::sendMouseEvent() leaves the widget that had the grab as a release away from it ends that,
     // which is not a label its release's callback made again under the name
     if (ends && away && self && mpHost && mHoveredLabel && mHoveredLabel->name == pTarget->name && labelMade(pTarget->name) == mHoveredLabel->made) {
         leaveHoveredLabel();
     }
-    return true;
+    return taken;
 }
 
 const THeadlessSession::ScriptWindow* THeadlessSession::grabbedWindow(const QList<ScriptWindow>& windows) const
@@ -594,12 +594,11 @@ bool THeadlessSession::onConsoleText(const ScriptWindow* pWindow, const QPointF&
     return pWindow->kind == ScriptWindow::Kind::miniConsole || pWindow->kind == ScriptWindow::Kind::userWindow;
 }
 
-void THeadlessSession::pointWindow(const QList<ScriptWindow>& windows, const ScriptWindow* pWindow, const WindowPointerEvent& event, const std::optional<bool> pressedOnText)
+bool THeadlessSession::pointWindow(const QList<ScriptWindow>& windows, const ScriptWindow* pWindow, const WindowPointerEvent& event, const std::optional<bool> pressedOnText)
 {
     using Kind = ScriptWindow::Kind;
     if (pWindow && pWindow->kind == Kind::label) {
-        pointLabel(windows, *pWindow, event);
-        return;
+        return pointLabel(windows, *pWindow, event);
     }
     // QWidgetWindow::handleWheelEvent() sends a wheel to the widget under the pointer, which a held button does not
     // enter
@@ -607,23 +606,26 @@ void THeadlessSession::pointWindow(const QList<ScriptWindow>& windows, const Scr
         const QPointer<THeadlessSession> self(this);
         leaveHoveredLabel();
         if (!self || !mpHost) {
-            return;
+            return true;
         }
     }
-    // A command line, text box or mapper keeps the mouse for itself
+    if (pWindow && pWindow->kind == Kind::mapper) {
+        return pointMapper(*pWindow, event);
+    }
+    // A command line or text box keeps the mouse for itself
     if (pWindow && pWindow->kind != Kind::miniConsole && pWindow->kind != Kind::userWindow && pWindow->kind != Kind::scrollBox) {
-        return;
+        return true;
     }
     if (event.type == WindowPointerEvent::Type::wheel) {
         if (!pWindow || pWindow->kind != Kind::scrollBox) {
             scrollConsole(pWindow ? pWindow->name : qsl("main"), event);
         }
-        return;
+        return true;
     }
     // TTextEdit::mouseReleaseEvent() opens its menu for the right button and raises nothing, wherever the grab its
     // press gave it has the release
     if (event.type == WindowPointerEvent::Type::release && event.button == Qt::RightButton && pressedOnText.value_or(onConsoleText(pWindow, event.position))) {
-        return;
+        return true;
     }
     // TTextEdit gives a mini console's press to the widget it is in
     if (pWindow && pWindow->kind != Kind::userWindow) {
@@ -631,6 +633,7 @@ void THeadlessSession::pointWindow(const QList<ScriptWindow>& windows, const Scr
     } else {
         pointConsole(windows, pWindow ? pWindow->name : QString(), event.position, event);
     }
+    return true;
 }
 
 void THeadlessSession::pointConsole(const QList<ScriptWindow>& windows, const QString& container, const QPointF& position, const WindowPointerEvent& event)
@@ -760,7 +763,7 @@ std::pair<const THeadlessSession::ScriptWindow*, QPointF> THeadlessSession::pass
     return {pWindow, at};
 }
 
-void THeadlessSession::pointLabel(const QList<ScriptWindow>& windows, const ScriptWindow& label, const WindowPointerEvent& event)
+bool THeadlessSession::pointLabel(const QList<ScriptWindow>& windows, const ScriptWindow& label, const WindowPointerEvent& event)
 {
     if (const std::optional<LabelContent> content = labelContent(label.name); content && content->clickThrough) {
         WindowPointerEvent passed = event;
@@ -772,8 +775,7 @@ void THeadlessSession::pointLabel(const QList<ScriptWindow>& windows, const Scri
         } else {
             std::tie(pUnder, passed.position) = passedThrough(windows, label, event.position);
         }
-        pointWindow(windows, pUnder, passed);
-        return;
+        return pointWindow(windows, pUnder, passed);
     }
     const QPointF global = inMainArea(windows, label, event.position);
     // Each callback may close the profile, or delete the session from a function the app bound into Lua
@@ -801,7 +803,7 @@ void THeadlessSession::pointLabel(const QList<ScriptWindow>& windows, const Scri
             mHoveredLabel.reset();
             run(label.name, TLabelModel::Callback::leave, QEvent(QEvent::Leave));
         }
-        return;
+        return true;
     }
     // As Qt sends the label it was over its leave, and this one its enter, before the event itself; a wheel while a
     // button is held enters nothing
@@ -812,25 +814,26 @@ void THeadlessSession::pointLabel(const QList<ScriptWindow>& windows, const Scri
         }
         runOwn(TLabelModel::Callback::enter, QEnterEvent(event.position, global, global));
         if (event.type == WindowPointerEvent::Type::enter) {
-            return;
+            return true;
         }
     } else if (event.type == WindowPointerEvent::Type::enter) {
-        return;
+        return true;
     }
     const std::unique_ptr<QEvent> pQtEvent = qtEvent(event, global);
     if (runOwn(labelCallback(event.type), *pQtEvent)) {
-        return;
+        return true;
     }
     // QWidget::mouseDoubleClickEvent() presses again
     if (event.type == WindowPointerEvent::Type::doubleClick && runOwn(TLabelModel::Callback::click, *pQtEvent)) {
-        return;
+        return true;
     }
     if (!self || !mpHost) {
-        return;
+        return true;
     }
     // TLabel::mouseReleaseEvent() gives it to the menu
     if (event.type == WindowPointerEvent::Type::release && event.button == Qt::RightButton && opensConsoleMenu(windows, label, event.position)) {
-        return;
+        return true;
     }
     pointConsole(windows, label.parent, event.position + label.geometry.topLeft(), event);
+    return true;
 }

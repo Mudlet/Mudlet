@@ -679,7 +679,13 @@ public:
     // Lua error goes to the error console, as the GUI's does, and is not this call's failure. Refused where runLua()
     // is, for a name no window has, for another window than the one a held button is on or the click-through label
     // the press went through, and, but for a leave or what that grab takes, for a window that is not shown or a
-    // point outside it.
+    // point outside it. On the "mapper" window a press, double-click or wheel is mapPointer()'s at that point, as the
+    // GUI's map fills its window from the top left, and what the GUI's map ignores is taken and does nothing: a
+    // double-click with any button but the left alone held, less than half a notch of the wheel, a wheel turn on a
+    // map showing no area. It is false with no map open, before the map is drawn, while the map was last drawn at
+    // another size than its window has, and for a move with the left or middle button held or, while the map is
+    // edited, any button, as the map's drags are the GUI's; the button of a press it refused is still held. Any
+    // other move, a release, an enter and a leave do nothing there.
     bool pointer(const QString& window, const WindowPointerEvent& event);
 
     // sysExitEvent and, if asked, a save for every profile that loaded, then the pool goes. Meanwhile no profile
@@ -933,11 +939,12 @@ private:
     void noteWindowsAtLoad();
     struct WindowsTold;
     WindowsTold windowsNow() const;
-    // pWindow is null for the main console; pressedOnText is the grab's, where one has the event
-    void pointWindow(const QList<ScriptWindow>& windows, const ScriptWindow* pWindow, const WindowPointerEvent& event, std::optional<bool> pressedOnText = std::nullopt);
+    // pWindow is null for the main console; pressedOnText is the grab's, where one has the event. False where the
+    // map refuses it.
+    bool pointWindow(const QList<ScriptWindow>& windows, const ScriptWindow* pWindow, const WindowPointerEvent& event, std::optional<bool> pressedOnText = std::nullopt);
     // Whether that point of a window, null for the main console, is a console's text, which has its own menu
     bool onConsoleText(const ScriptWindow* pWindow, const QPointF& position) const;
-    void pointLabel(const QList<ScriptWindow>& windows, const ScriptWindow& label, const WindowPointerEvent& event);
+    bool pointLabel(const QList<ScriptWindow>& windows, const ScriptWindow& label, const WindowPointerEvent& event);
     // The window a click-through label passes an event at that point to, null for the main console, and the point
     // in it
     std::pair<const ScriptWindow*, QPointF> passedThrough(const QList<ScriptWindow>& windows, const ScriptWindow& label, const QPointF& position) const;
@@ -970,6 +977,12 @@ private:
     bool inputHidden(bool sending);
     void noteAlreadyInstalled(const QString& path, const QString& name);
     void relayMapRepaints(Host*, unsigned int run);
+    // What mapPointer() does once it is usable, with the buttons held after the event; pointer() gives the size of
+    // the mapper's window, which the map must have been drawn at, having moved getMousePosition() itself, and what
+    // T2DMap ignores there is taken
+    bool pointMap(const MapPointerEvent& event, Qt::MouseButtons buttons, const std::optional<QSize>& windowSize);
+    // pointer() on the mapper's window
+    bool pointMapper(const ScriptWindow& mapper, const WindowPointerEvent& event);
     void noteMapPointer(const QPointF& position);
 
     QPointer<Host> mpHost;
