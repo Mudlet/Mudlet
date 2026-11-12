@@ -478,6 +478,7 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
                 connectOutputRelays(pNewHost, run);
                 connectAreaRelays(pNewHost, run);
                 connectLinkRelays(pNewHost, run);
+                connectWindowRelays(pNewHost, run);
                 connect(pNewHost, &Host::signal_errorConsolePrint, this, [this](const QString& text, const QColor& foreground, const QColor& background) {
                     const QString profile = mProfileName;
                     ++gSignalsBeingHandedOut;
@@ -866,6 +867,7 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
     mDeliveredConsoleFont = consoleFont();
     noteOutputStateAtLoad();
     noteAreaAtLoad();
+    noteWindowsAtLoad();
     // A copy, as a handler may delete the session while its argument is in use
     const QString profile = mProfileName;
     emit profileLoaded(profile);
