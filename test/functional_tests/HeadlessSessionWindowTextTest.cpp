@@ -27,6 +27,7 @@
 
 #include <QDir>
 #include <QFile>
+#include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -47,6 +48,13 @@ class HeadlessSessionWindowTextTest : public QObject
 private:
     QTemporaryDir mConfigDir;
     QByteArray mSavedXdg;
+
+    // The notifier's queued call, then the session's queued relay of it
+    static void settle()
+    {
+        QCoreApplication::processEvents();
+        QCoreApplication::processEvents();
+    }
 
     static bool writeProfile(const QString& name)
     {
@@ -285,6 +293,140 @@ echo("to the main console\n")
             QVERIFY(main->lines.at(row).runs.at(0).defaultForeground);
             QCOMPARE(main->lines.at(row).runs.at(0).foreground, session.consoleForeground());
         }
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_theWritesOfATurnAreToldOnce()
+    {
+        const QString name = qsl("Headless Window Text Changed");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        QVERIFY(session.runLua(qsl(R"lua(
+createMiniConsole("mini", 10, 20, 300, 200)
+createMiniConsole("another", 10, 220, 300, 200)
+openUserWindow("uw")
+createLabel("lbl", 5, 6, 70, 80, 1)
+createBuffer("buf")
+)lua")));
+        // A new console is told too
+        settle();
+        QSignalSpy changes(&session, &THeadlessSession::windowTextChanged);
+        const auto told = [&changes, &name]() {
+            settle();
+            QStringList all;
+            for (const QList<QVariant>& change : std::as_const(changes)) {
+                all << (change.at(0).toString() == name ? change.at(1).toStringList().join(QLatin1Char(',')) : qsl("for another profile"));
+            }
+            changes.clear();
+            return all.join(QLatin1Char(';'));
+        };
+
+        QVERIFY(session.runLua(qsl("echo('mini', 'one\\n') echo('mini', 'two\\n')")));
+        // From the event loop
+        QVERIFY(changes.isEmpty());
+        QCOMPARE(told(), qsl("mini"));
+        QCOMPARE(told(), QString());
+
+        // Sorted, each once
+        QVERIFY(session.runLua(qsl("echo('uw', 'u\\n') echo('mini', 'three\\n') echo('another', 'a\\n') echo('uw', 'v\\n')")));
+        QCOMPARE(told(), qsl("another,mini,uw"));
+
+        // The main console has its own signals, a label's text is scriptWindowsChanged's, and a buffer is not drawn
+        QVERIFY(session.runLua(qsl("echo('to main\\n') echo('lbl', 'label text') echo('buf', 'buffered\\n') clearWindow() clearWindow('buf')")));
+        QCOMPARE(told(), QString());
+
+        // A hidden window's text still changes
+        QVERIFY(session.runLua(qsl("hideWindow('mini')")));
+        QCOMPARE(told(), QString());
+        QVERIFY(session.runLua(qsl("echo('mini', 'unseen\\n')")));
+        QCOMPARE(told(), qsl("mini"));
+
+        // One written to and deleted in the same turn is not named
+        QVERIFY(session.runLua(qsl("echo('another', 'b\\n') deleteMiniConsole('another')")));
+        QCOMPARE(told(), QString());
+        QVERIFY(session.runLua(qsl("createMiniConsole('another', 10, 220, 300, 200) echo('another', 'b\\n') echo('mini', 'c\\n') deleteMiniConsole('another')")));
+        QCOMPARE(told(), qsl("mini"));
+
+        // One deleted and made again in the same turn has lost its rows, though it is the same among the windows
+        QVERIFY(session.runLua(qsl("hideWindow('mini') deleteMiniConsole('mini') createMiniConsole('mini', 10, 20, 300, 200) hideWindow('mini')")));
+        QCOMPARE(told(), qsl("mini"));
+        QVERIFY(!joined(*session.windowLines(qsl("mini"), 0, 100)).contains(qsl("one")));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_aWindowMadeAndWrittenInOneTurnIsListedBeforeItsTextIsTold()
+    {
+        const QString name = qsl("Headless Window Text Order");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        QVERIFY(session.runLua(qsl("createMiniConsole('mini', 10, 20, 300, 200)")));
+        settle();
+        QStringList told;
+        connect(&session, &THeadlessSession::scriptWindowsChanged, this, [&told, &session](const QString&, const QStringList& names) {
+            told << qsl("windows %1").arg(names.join(QLatin1Char(',')));
+            // A handler reads what it was told of
+            QVERIFY(session.windowLines(qsl("made"), 0, 10));
+        });
+        connect(&session, &THeadlessSession::windowTextChanged, this, [&told, &session](const QString&, const QStringList& names) {
+            told << qsl("text %1 (%2)").arg(names.join(QLatin1Char(',')), session.windowLines(qsl("made"), 0, 1)->lines.at(0).text);
+        });
+        // The write to the window there already comes first, so its text is noted before the new window is
+        QVERIFY(session.runLua(qsl("echo('mini', 'first\\n') createMiniConsole('made', 10, 220, 300, 200) echo('made', 'new\\n')")));
+        QVERIFY(told.isEmpty());
+        settle();
+        QCOMPARE(told.join(QLatin1Char(';')), qsl("windows made;text made,mini (new)"));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_eachWayAScriptChangesAConsolesTextIsTold_data()
+    {
+        QTest::addColumn<QString>("lua");
+        QTest::newRow("echo") << qsl("echo('mini', 'more\\n')");
+        QTest::newRow("cecho") << qsl("cecho('mini', '<red>more\\n')");
+        QTest::newRow("insertText in a line") << qsl("moveCursor('mini', 2, 0) insertText('mini', 'X')");
+        QTest::newRow("insertText at the end") << qsl("moveCursorEnd('mini') insertText('mini', 'X')");
+        QTest::newRow("replace") << qsl("moveCursor('mini', 0, 0) selectString('mini', 'two', 1) replace('mini', '2')");
+        QTest::newRow("setFgColor") << qsl("moveCursor('mini', 0, 0) selectString('mini', 'two', 1) setFgColor('mini', 255, 0, 0)");
+        QTest::newRow("setBgColor") << qsl("moveCursor('mini', 0, 0) selectString('mini', 'two', 1) setBgColor('mini', 255, 0, 0)");
+        QTest::newRow("setItalics") << qsl("moveCursor('mini', 0, 0) selectString('mini', 'two', 1) setItalics('mini', true)");
+        QTest::newRow("deleteLine") << qsl("moveCursor('mini', 0, 1) deleteLine('mini')");
+        QTest::newRow("wrapLine") << qsl("setWindowWrap('mini', 5) wrapLine('mini', 0)");
+        QTest::newRow("clearWindow") << qsl("clearWindow('mini')");
+        QTest::newRow("echoLink") << qsl("echoLink('mini', 'go', [[send('go')]], 'hint')");
+        QTest::newRow("insertLink") << qsl("moveCursor('mini', 2, 0) insertLink('mini', 'go', [[send('go')]], 'hint')");
+        QTest::newRow("setLink") << qsl("moveCursor('mini', 0, 0) selectString('mini', 'two', 1) setLink('mini', [[send('go')]], 'hint')");
+        QTest::newRow("echoPopup") << qsl("echoPopup('mini', 'pick', {[[send('a')]], [[send('b')]]}, {'a', 'b'})");
+        QTest::newRow("appendBuffer") << qsl("moveCursor('mini', 0, 0) selectCurrentLine('mini') copy('mini') appendBuffer('mini')");
+        QTest::newRow("paste") << qsl("moveCursor('mini', 0, 0) selectCurrentLine('mini') copy('mini') moveCursor('mini', 0, 1) paste('mini')");
+        // 100 rows is the least a console keeps
+        QTest::newRow("a trim") << qsl("setConsoleBufferSize('mini', 100, 50) for i = 1, 120 do echo('mini', i .. '\\n') end");
+    }
+
+    void test_eachWayAScriptChangesAConsolesTextIsTold()
+    {
+        QFETCH(QString, lua);
+        const QString name = qsl("Headless Window Text Writers");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        QVERIFY(session.runLua(qsl("createMiniConsole('mini', 10, 20, 300, 200) echo('mini', 'one two three\\nfour five six\\nseven\\n')")));
+        settle();
+        const std::optional<THeadlessSession::WindowText> before = session.windowLines(qsl("mini"), 0, 100);
+        QVERIFY(before);
+        QSignalSpy changes(&session, &THeadlessSession::windowTextChanged);
+        QVERIFY2(session.runLua(lua), qPrintable(session.errorString()));
+        // The row is no audit of the writer unless it changed what an app would draw
+        const std::optional<THeadlessSession::WindowText> after = session.windowLines(qsl("mini"), 0, 100);
+        QVERIFY(after);
+        QVERIFY2(after->lines != before->lines, "the script changed nothing");
+        settle();
+        QCOMPARE(changes.size(), 1);
+        QCOMPARE(changes.at(0).at(1).toStringList(), QStringList{qsl("mini")});
         QVERIFY(session.shutdown(false));
     }
 };
