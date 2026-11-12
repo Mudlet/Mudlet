@@ -1955,8 +1955,10 @@ THeadlessSession::TextStyles textStyles(const TChar& format)
     return styles;
 }
 
+} // namespace
+
 // A split double-byte character (TChar::hasSplitFormat()) is given its left half's format, as one QChar holds both halves
-QList<THeadlessSession::TextRun> textRuns(const QString& text, const TLineFormat& format, const QColor& profileForeground, const QColor& profileBackground)
+QList<THeadlessSession::TextRun> THeadlessSession::textRuns(const QString& text, const TLineFormat& format, const QColor& consoleForeground, const QColor& consoleBackground)
 {
     QList<THeadlessSession::TextRun> runs;
     const int length = std::min(static_cast<qsizetype>(format.size()), text.size());
@@ -1975,8 +1977,8 @@ QList<THeadlessSession::TextRun> textRuns(const QString& text, const TLineFormat
         run.length = end - start;
         run.foreground = first.foreground();
         run.background = first.background();
-        run.defaultForeground = first.foregroundRgba() == profileForeground.rgba();
-        run.defaultBackground = first.backgroundRgba() == profileBackground.rgba();
+        run.defaultForeground = first.foregroundRgba() == consoleForeground.rgba();
+        run.defaultBackground = first.backgroundRgba() == consoleBackground.rgba();
         run.styles = styles;
         run.link = first.linkIndex();
         runs.append(run);
@@ -1986,7 +1988,7 @@ QList<THeadlessSession::TextRun> textRuns(const QString& text, const TLineFormat
 }
 
 // A segment a wrap split off has no time of its own, so takes that of the line it came from
-qint64 arrivalTime(const TBuffer& buffer, int line)
+qint64 THeadlessSession::arrivalTime(const TBuffer& buffer, int line)
 {
     if (line < 0 || line >= buffer.timeBuffer.size()) {
         return -1;
@@ -1997,8 +1999,6 @@ qint64 arrivalTime(const TBuffer& buffer, int line)
     const qint64 time = buffer.timeBuffer.at(line);
     return time < 0 ? -1 : time;
 }
-
-} // namespace
 
 void THeadlessSession::lineCommitted(const int lineIndex)
 {

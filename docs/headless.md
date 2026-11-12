@@ -810,6 +810,30 @@ such as a `moveWindow()` to where the window is, sends none.
 A change to any of these names the label in `scriptWindowsChanged`. It is empty for a name that is not a
 label's.
 
+### Reading a console's text
+
+`windowLines(window, first, count)` gives the text of a mini console or user window, for the app to draw
+in the place its `ScriptWindow` has: up to `count` rows from row `first`, as a `WindowText` with the
+`lineCount` of rows the console holds, the row its `lines` start at as `first`, and the `lines`. A row is
+a line of the console's buffer after its wrap, which is what the GUI paints on one screen row and what a
+script's `getLines()` counts, from 0. The last row is the one the next write carries on, empty after a
+line feed, so `lineCount` is one more than a script's `getLineCount()`, and a cleared console has that one
+empty row. Each `WindowLine` has:
+
+- its `text`, `isPrompt`, `runs` and `arrivalMSecs`, as `outputLine` gives them for the main console. A
+  run's `defaultForeground` and `defaultBackground` are the console's own colours, the background being
+  its `ScriptWindow`'s, and its `link` is a link of that console;
+- `wrapped`, set where the row carries on from the one above, which the console's wrap split it off; such
+  a row has the time of the line it came from.
+
+The range is cut to the rows there are, and a `first` below 0 counts back from the end, so
+`windowLines(name, -40, 40)` is the last 40 rows. A hidden console keeps its text and is read all the
+same. `"main"`, or no name, reads the main console, for an app that redraws its scrollback; what it shows
+as it arrives is still `lineShown`'s to tell. It is empty with no profile open and for any other name: a
+label, a scroll box, a text edit, the mapper, a buffer from `createBuffer()`, which is never shown, and
+the console of one of the game's MXP frames. It may be called from anywhere, but from a handler of
+`outputLine` or `lineShown` the main console's last row is in the middle of its commit.
+
 The app places user windows, as the GUI's dock layout and the player do. `setUserWindowGeometry(name,
 geometry, floating)` says where it put one, in the main window's pixels, and whether it floats. A new
 size raises `sysUserWindowResizeEvent` and `handleWindowResizeEvent`, as the GUI's dock does, at once
