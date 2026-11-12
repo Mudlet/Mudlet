@@ -97,6 +97,7 @@ set(mudlet_SRCS
     TAreaSpanIndex.cpp
     TAreaZLevelIndex.cpp
     TAudioMixer.cpp
+    TBackgroundTask.cpp
     TBuffer.cpp
     TCommandHistory.cpp
     TCommandLineCompletion.cpp
@@ -431,6 +432,7 @@ set(mudlet_HDRS
     TAreaZLevelIndex.h
     TAstar.h
     TAudioMixer.h
+    TBackgroundTask.h
     TBuffer.h
     TCommandHistory.h
     TCommandLineCompletion.h
