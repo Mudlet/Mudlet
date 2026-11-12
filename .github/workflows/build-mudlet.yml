@@ -748,8 +748,8 @@ jobs:
       if: matrix.run_tests == 'true' && runner.os == 'Linux'
       # This leg drives the real discord-rpc library, whose reconnects happen in
       # wall-clock time, so the suite needs a budget of its own: the run itself
-      # takes 300-340s under ASan, and the rest is headroom for a slow runner.
-      timeout-minutes: 12
+      # takes 480-730s under ASan, and the rest is headroom for a slow runner.
+      timeout-minutes: 20
       run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror --offline
       env:
         AUTORUN_BUSTED_TESTS: 'true'
