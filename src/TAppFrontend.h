@@ -22,6 +22,7 @@
 
 #include <QString>
 
+#include <functional>
 #include <optional>
 #include <utility>
 
@@ -111,6 +112,15 @@ public:
     // Each returns an empty string if the player cancels.
     virtual QString getOpenFileName(const QString& title, const QString& location) = 0;
     virtual QString getExistingDirectory(const QString& title, const QString& location) = 0;
+    // The same without waiting for the player, as a browser's picker answers: done is told from the event loop,
+    // never during the call, and not at all once context, which may not be null, is gone; a picker still open then
+    // closes. An empty string if the player cancels, none if no picker could be shown, as with no window.
+    virtual void getOpenFileNameAsync(const QString& title, const QString& location, QObject* context, std::function<void(const std::optional<QString>&)> done) = 0;
+    virtual void getExistingDirectoryAsync(const QString& title, const QString& location, QObject* context, std::function<void(const std::optional<QString>&)> done) = 0;
+    // The clipboard's text, told as those are, as a browser's clipboard answers only that way; none if it could
+    // not be read, as when a browser refuses
+    virtual void clipboardTextAsync(QObject* context, std::function<void(const std::optional<QString>&)> done) = 0;
+    virtual void setClipboardText(const QString& text) = 0;
 
     // Surfaces a command can be placed on. A client with different chrome maps
     // these onto whatever it has; one that has only a menu honours Menu alone.
