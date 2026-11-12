@@ -278,6 +278,101 @@ setWindow("uw", "mapper", 40, 50, true)
         QVERIFY(session.shutdown(false));
     }
 
+    // What a deleted user window held keeps its names until deferred deletes run, as the dock's deleteLater() takes
+    // it on the desktop, but is in no window an app is shown, and a script's later windows of that name stay
+    void test_whatADeletedUserWindowHeldIsInNoWindowTheAppSees()
+    {
+        const QString name = qsl("Headless Windows Held");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        QSignalSpy changes(&session, &THeadlessSession::scriptWindowsChanged);
+        QSignalSpy texts(&session, &THeadlessSession::windowTextChanged);
+        const auto namesTold = [](const QSignalSpy& spy) {
+            QStringList names;
+            for (const QList<QVariant>& emitted : spy) {
+                names << emitted.at(1).toStringList();
+            }
+            return names;
+        };
+        // The first window whose parent is a deleted window's internal key, which an app must never be given
+        const auto underRetiredKey = [&session]() {
+            for (const THeadlessSession::ScriptWindow& window : session.scriptWindows()) {
+                if (window.parent.startsWith(QChar(0))) {
+                    return window.name;
+                }
+            }
+            return QString();
+        };
+        QVERIFY(session.runLua(qsl(R"lua(
+openUserWindow("held")
+createMiniConsole("held", "heldMini", 0, 0, 100, 100)
+createMiniConsole("held", "heldRescued", 0, 0, 100, 100)
+createLabel("held", "heldLabel", 0, 0, 10, 10, 1)
+createScrollBox("held", "heldBox", 0, 0, 50, 50)
+createLabel("heldBox", "heldBoxLabel", 1, 1, 5, 5, 1)
+createScrollBox("held", "heldGoneBox", 0, 0, 50, 50)
+createLabel("heldGoneBox", "heldGoneBoxLabel", 1, 1, 5, 5, 1)
+)lua")));
+        QVERIFY(session.scriptWindow(qsl("heldGoneBoxLabel")));
+        QVERIFY(changes.wait(1000));
+        QCoreApplication::processEvents();
+        changes.clear();
+        texts.clear();
+        QVERIFY(session.runLua(qsl(R"lua(
+deleteScrollBox("heldGoneBox")
+deleteMiniConsole("held")
+echo("heldMini", "after the delete\n")
+echo("heldRescued", "before its rescue\n")
+setWindow("main", "heldRescued", 0, 0, true)
+)lua")));
+        const QStringList held{qsl("heldMini"), qsl("heldLabel"), qsl("heldBox"), qsl("heldBoxLabel"), qsl("heldGoneBoxLabel")};
+        QCOMPARE(luaString(session, qsl("windowType('heldMini')")), qsl("miniconsole"));
+        // Not changes.wait(), whose event loop would run the deferred deletes
+        QCoreApplication::processEvents();
+        QCoreApplication::processEvents();
+        QVERIFY(!changes.isEmpty());
+        const QStringList told = namesTold(changes);
+        const QStringList textTold = namesTold(texts);
+        for (const QString& window : held) {
+            QVERIFY2(!session.scriptWindow(window), qPrintable(window));
+            QVERIFY2(told.contains(window), qPrintable(window + u' ' + told.join(u',')));
+        }
+        QVERIFY(!textTold.contains(qsl("heldMini")));
+        QVERIFY(textTold.contains(qsl("heldRescued")));
+        QVERIFY(!session.windowLines(qsl("heldMini"), 0, 1));
+        QVERIFY(session.windowLines(qsl("heldRescued"), 0, 1));
+        QCOMPARE(underRetiredKey(), QString());
+        std::optional<THeadlessSession::ScriptWindow> rescued = session.scriptWindow(qsl("heldRescued"));
+        QVERIFY(rescued);
+        QCOMPARE(rescued->parent, QString());
+
+        QVERIFY(session.runLua(qsl(R"lua(
+openUserWindow("held")
+createMiniConsole("held", "heldFresh", 0, 0, 100, 100)
+createLabel("held", "heldFreshLabel", 0, 0, 10, 10, 1)
+)lua")));
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        for (const QString& window : held) {
+            QCOMPARE(luaString(session, qsl("windowType('%1')").arg(window)), qsl("nil"));
+        }
+        for (const QString& window : {qsl("heldFresh"), qsl("heldFreshLabel")}) {
+            const std::optional<THeadlessSession::ScriptWindow> fresh = session.scriptWindow(window);
+            QVERIFY2(fresh, qPrintable(window));
+            QCOMPARE(fresh->parent, qsl("held"));
+        }
+        QCOMPARE(luaString(session, qsl("windowType('heldFresh')")), qsl("miniconsole"));
+        QCOMPARE(luaString(session, qsl("windowType('heldRescued')")), qsl("miniconsole"));
+        QVERIFY(session.runLua(qsl(R"(echo("heldFresh", "fresh\n") echo("heldRescued", "still here\n"))")));
+        QVERIFY(session.windowLines(qsl("heldFresh"), 0, 1));
+        rescued = session.scriptWindow(qsl("heldRescued"));
+        QVERIFY(rescued);
+        QCOMPARE(rescued->parent, QString());
+        QCOMPARE(underRetiredKey(), QString());
+        QVERIFY(session.shutdown(false));
+    }
+
     // Columns and rows are counted in the font the main console's text is drawn in, which a profile sheet can give it
     void test_theMainAreaIsCountedInTheMainTextsFont()
     {

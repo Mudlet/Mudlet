@@ -666,8 +666,9 @@ local ok, err = pcall(function()
 
   assert(deleteMiniConsole("headlessWindow") == true, "deleting the user window did not answer true")
   assert(windowType("headlessWindow") == nil, "the deleted user window still has a type")
-  assert(windowType("headlessNested") == nil, "a miniconsole in the user window outlived it")
-  assert(windowType("headlessNestedLabel") == nil, "a label in the user window outlived it")
+  -- As the GUI's dock, which goes in deferred deletes and takes them with it then
+  assert(windowType("headlessNested") == "miniconsole", "a miniconsole in the user window went before deferred deletes")
+  assert(windowType("headlessNestedLabel") == "label", "a label in the user window went before deferred deletes")
 end)
 headlessWindows = ok and 'ok' or tostring(err)
 headlessDeletedNames = table.concat(headlessDeleted, ",")
@@ -675,6 +676,10 @@ headlessDeletedNames = table.concat(headlessDeleted, ",")
 
         QVERIFY2(ran, "The Lua chunk did not run.");
         QCOMPARE(luaGlobalString(host, "headlessWindows"), qsl("ok"));
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QVERIFY2(!host->windowRegistry().subConsoleModel(qsl("headlessNested")), "A miniconsole in the deleted user window outlived deferred deletes.");
+        QVERIFY2(!host->windowRegistry().labelModel(qsl("headlessNestedLabel")), "A label in the deleted user window outlived deferred deletes.");
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(headlessDeletedNames = table.concat(headlessDeleted, ","))lua")));
         // Only what a script deleted, as the GUI raises nothing for what goes with a user window
         QCOMPARE(luaGlobalString(host, "headlessDeletedNames"), qsl("headlessLabel,headlessMini,headlessWindow"));
 
@@ -2289,14 +2294,15 @@ assert(deleteScrollBox("ubLoneBox"))
 ubTypes = tostring(windowType("ubBox")) .. "," .. tostring(windowType("ubLabel")) .. "," .. tostring(windowType("ubLine")) .. "," .. tostring(windowType("ubBoxLine"))
 )lua"));
         QVERIFY2(ran, "The Lua chunk did not run.");
-        QCOMPARE(luaGlobalString(host, "ubTypes"), qsl("nil,nil,nil,nil"));
+        // As the GUI's, where the dock takes them only in deferred deletes
+        QCOMPARE(luaGlobalString(host, "ubTypes"), qsl("scrollbox,label,commandline,commandline"));
+
+        // A main window command line of a scroll box's name is what is left of the name once the box is
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
         QVERIFY(!host->windowRegistry().hasScrollBox(qsl("ubBox")));
         QVERIFY(!host->windowRegistry().hasLabel(qsl("ubLabel")));
         QVERIFY(!host->windowRegistry().hasCommandLine(qsl("ubLine")));
         QVERIFY(!host->windowRegistry().hasCommandLine(qsl("ubBoxLine")));
-
-        // A main window command line of a scroll box's name is what is left of the name once the box is
-        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
         ran = host->getLuaInterpreter()->compileAndExecuteScript(
                 qsl(R"lua(ubShared = tostring(windowType("ubShared")) .. ":" .. table.concat({getWindowGeometry("ubShared")}, ",") .. ":" .. tostring(windowVisible("ubShared")))lua"));
         QVERIFY2(ran, "The Lua chunk after the deferred deletes did not run.");
@@ -9823,7 +9829,8 @@ headlessShrinkLeft = table.concat({tostring(windowType("headlessShrinkBuffer")),
         QVERIFY2(luaGlobalString(host, "headlessShrinks").toInt() >= 2, "A shrink event never reached the handler, so nothing was deleted mid-echo.");
         QCOMPARE(luaGlobalString(host, "headlessShrinkEcho"), qsl("true"));
         QCOMPARE(luaGlobalString(host, "headlessShrinkNestedEcho"), qsl("true"));
-        QCOMPARE(luaGlobalString(host, "headlessShrinkLeft"), qsl("nil,nil,nil"));
+        QCOMPARE(luaGlobalString(host, "headlessShrinkLeft"), qsl("nil,nil,miniconsole"));
+        QVERIFY2(!host->windowRegistry().subConsoleModel(qsl("headlessShrinkNested")), "A miniconsole in the deleted user window outlived deferred deletes.");
         QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(createBuffer("headlessShrinkBuffer"); echo("headlessShrinkBuffer", "made again\n"))lua")));
         const TConsoleModel* remade = host->windowRegistry().subConsoleModel(qsl("headlessShrinkBuffer"));
         QVERIFY2(remade, "A buffer of the deleted one's name could not be made again.");

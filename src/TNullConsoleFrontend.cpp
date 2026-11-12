@@ -1333,6 +1333,7 @@ void TNullConsoleFrontend::dropModels()
         mpHost->windowRegistry().deregisterTextBox(name);
     }
     mTextBoxes.clear();
+    mRetiredWindows.clear();
 }
 
 QString TNullConsoleFrontend::userWindowOrMain(const QString& windowname) const
@@ -1763,61 +1764,22 @@ void TNullConsoleFrontend::removeSubConsole(const QString& name, const bool keep
     }
     const bool userWindow = registry.subConsoleKind(name) == TWindowRegistry::SubConsoleKind::UserWindow;
     const bool shown = it->second.shown;
+    QString retiredKey;
     if (userWindow) {
         // Not as the profile goes, where its close has already saved or held where its windows were, nor as a view
         // takes over, which no script asked for
-        if (!mpHost->isClosingDown() && !mDroppingWindows) {
+        const bool scriptDeleted = !mpHost->isClosingDown() && !mDroppingWindows;
+        if (scriptDeleted) {
             TAppFrontend::instance()->userWindowRemoved(mpHost, name);
         }
         // removeDockWidget() hides a shown dock, which reports what it holds, but a hidden one's report waits for its
         // deferred deletes
         QStringList deferred;
         const QScopedValueRollback deferring(mpDeferredReports, shown ? mpDeferredReports : &deferred);
-        QStringList contents;
-        for (const auto& [childName, child] : mSubConsoles) {
-            if (child.userWindow == name) {
-                contents << childName;
-            }
-        }
-        for (const QString& childName : contents) {
-            removeSubConsole(childName);
-        }
-        contents.clear();
-        for (const auto& [childName, child] : mLabels) {
-            if (child.userWindow == name) {
-                contents << childName;
-            }
-        }
-        for (const QString& childName : contents) {
-            removeLabel(childName);
-        }
-        QStringList boxes;
-        std::erase_if(mScrollBoxes, [&registry, &name, &boxes](const auto& entry) {
-            if (entry.second->userWindow != name) {
-                return false;
-            }
-            registry.deregisterScrollBox(entry.first);
-            boxes << entry.first;
-            return true;
-        });
-        std::erase_if(mCommandLines, [this, &name, &boxes](const auto& entry) {
-            if (entry.second.userWindow != name) {
-                return false;
-            }
-            releaseCommandLine(entry.first, entry.second);
-            boxes << entry.first;
-            return true;
-        });
-        std::erase_if(mTextBoxes, [&registry, &name, &boxes](const auto& entry) {
-            if (entry.second.userWindow != name) {
-                return false;
-            }
-            registry.deregisterTextBox(entry.first);
-            boxes << entry.first;
-            return true;
-        });
-        for (const QString& plainName : boxes) {
-            republishPlainWindow(plainName);
+        if (scriptDeleted) {
+            retiredKey = retireWindowContents(name, it->second);
+        } else {
+            removeWindowContents(name);
         }
         if (!deferred.isEmpty()) {
             auto pRelease = new QObject();
@@ -1844,6 +1806,106 @@ void TNullConsoleFrontend::removeSubConsole(const QString& name, const bool keep
     if (keepWidget || (userWindow && shown)) {
         reportWindowVisibility(name);
     }
+    if (retiredKey.isEmpty()) {
+        return;
+    }
+    if (shown) {
+        reportVisibility(retiredKey, nullptr);
+    }
+    // TMainConsole::deleteMiniConsole() calls the dock's deleteLater(), which takes what it holds with it
+    auto pRelease = new QObject();
+    QObject::connect(pRelease, &QObject::destroyed, mpHost, [this, retiredKey]() {
+        removeWindowContents(retiredKey);
+        mRetiredWindows.erase(retiredKey);
+    });
+    pRelease->deleteLater();
+}
+
+void TNullConsoleFrontend::removeWindowContents(const QString& userWindow)
+{
+    TWindowRegistry& registry = mpHost->windowRegistry();
+    QStringList contents;
+    for (const auto& [childName, child] : mSubConsoles) {
+        if (child.userWindow == userWindow) {
+            contents << childName;
+        }
+    }
+    for (const QString& childName : contents) {
+        removeSubConsole(childName);
+    }
+    contents.clear();
+    for (const auto& [childName, child] : mLabels) {
+        if (child.userWindow == userWindow) {
+            contents << childName;
+        }
+    }
+    for (const QString& childName : contents) {
+        removeLabel(childName);
+    }
+    QStringList boxes;
+    std::erase_if(mScrollBoxes, [&registry, &userWindow, &boxes](const auto& entry) {
+        if (entry.second->userWindow != userWindow) {
+            return false;
+        }
+        registry.deregisterScrollBox(entry.first);
+        boxes << entry.first;
+        return true;
+    });
+    std::erase_if(mCommandLines, [this, &userWindow, &boxes](const auto& entry) {
+        if (entry.second.userWindow != userWindow) {
+            return false;
+        }
+        releaseCommandLine(entry.first, entry.second);
+        boxes << entry.first;
+        return true;
+    });
+    std::erase_if(mTextBoxes, [&registry, &userWindow, &boxes](const auto& entry) {
+        if (entry.second.userWindow != userWindow) {
+            return false;
+        }
+        registry.deregisterTextBox(entry.first);
+        boxes << entry.first;
+        return true;
+    });
+    for (const QString& plainName : boxes) {
+        republishPlainWindow(plainName);
+    }
+}
+
+// As the GUI's dock, which a script's delete leaves alive until the event loop deletes it, keeps what it holds by
+// name and usable, though hidden: they are moved to a key no script can name, which keeps what the window gave them
+QString TNullConsoleFrontend::retireWindowContents(const QString& name, const SubConsole& window)
+{
+    const QString key = QChar(0) + QString::number(++mRetiredWindowCount);
+    mRetiredWindows[key] = {name, windowSheet(name), window.pModel->mUpperPaneFont, window.floating};
+    const auto retire = [&name, &key](QString& userWindow, ScrollBox* box) {
+        if (userWindow != name) {
+            return;
+        }
+        userWindow = key;
+        // A box deleted before the window is out of mScrollBoxes, but holds what it held until its own release
+        for (; box; box = box->box.get()) {
+            if (box->userWindow == name) {
+                box->userWindow = key;
+            }
+        }
+    };
+    for (auto& [childName, child] : mSubConsoles) {
+        retire(child.userWindow, child.box.get());
+    }
+    for (auto& [childName, child] : mLabels) {
+        retire(child.userWindow, child.box.get());
+    }
+    for (auto& [childName, child] : mScrollBoxes) {
+        retire(child->userWindow, child->box.get());
+    }
+    for (auto& [childName, child] : mCommandLines) {
+        retire(child.userWindow, child.box.get());
+    }
+    for (auto& [childName, child] : mTextBoxes) {
+        retire(child.userWindow, child.box.get());
+    }
+    return key;
 }
 
 void TNullConsoleFrontend::addFrameConsole(const QString& name, const QSize& size, const bool external, const QString& hostFrame, const bool scrolling)
@@ -2058,6 +2120,9 @@ void TNullConsoleFrontend::setProfileStyleSheet(const QString& styleSheet)
 // The profile's sheet is on the main console, and a user window's on its dock
 QString TNullConsoleFrontend::windowSheet(const QString& userWindow) const
 {
+    if (const auto retired = mRetiredWindows.find(userWindow); retired != mRetiredWindows.end()) {
+        return retired->second.sheet;
+    }
     return userWindow.isEmpty() ? mpHost->mProfileStyleSheet : mpHost->windowRegistry().userWindowStyleSheet(userWindow).value_or(QString());
 }
 
@@ -2076,10 +2141,17 @@ TNullConsoleFrontend::SheetChain TNullConsoleFrontend::containerSheetChain(const
     if (userWindow.isEmpty()) {
         return consoleFrameChain() + mainConsoleChain(profile);
     }
-    const auto dock = mSubConsoles.find(userWindow);
-    const bool floating = dock != mSubConsoles.end() && dock->second.floating;
-    return {{{qsl("TConsole"), qsl("QWidget"), qsl("QObject")}, qsl("dockWindowConsole_%1_%2").arg(profile, userWindow), {}},
-            {{qsl("TDockWidget"), qsl("QDockWidget"), qsl("QWidget"), qsl("QObject")}, qsl("dockWindow_%1_%2").arg(profile, userWindow), {{qsl("floating"), floating ? qsl("true") : qsl("false")}}},
+    // What a deleted user window held keeps the name and floating its dock had
+    QString window = userWindow;
+    bool floating = false;
+    if (const auto retired = mRetiredWindows.find(userWindow); retired != mRetiredWindows.end()) {
+        window = retired->second.name;
+        floating = retired->second.floating;
+    } else if (const auto dock = mSubConsoles.find(userWindow); dock != mSubConsoles.end()) {
+        floating = dock->second.floating;
+    }
+    return {{{qsl("TConsole"), qsl("QWidget"), qsl("QObject")}, qsl("dockWindowConsole_%1_%2").arg(profile, window), {}},
+            {{qsl("TDockWidget"), qsl("QDockWidget"), qsl("QWidget"), qsl("QObject")}, qsl("dockWindow_%1_%2").arg(profile, window), {{qsl("floating"), floating ? qsl("true") : qsl("false")}}},
             mainWindowNode()};
 }
 
@@ -4482,6 +4554,9 @@ std::optional<QFont> TNullConsoleFrontend::consoleFont(const QString& name) cons
     if (const TConsoleModel* pModel = subConsoleModel(name)) {
         return {pModel->mUpperPaneFont};
     }
+    if (const auto retired = mRetiredWindows.find(name); retired != mRetiredWindows.end()) {
+        return {retired->second.font};
+    }
     return {};
 }
 
@@ -4751,7 +4826,24 @@ bool TNullConsoleFrontend::listsConsole(const std::optional<TWindowRegistry::Sub
 TConsoleModel* TNullConsoleFrontend::listedConsoleModel(const QString& name) const
 {
     const auto it = mSubConsoles.find(name);
-    return it != mSubConsoles.end() && listsConsole(mpHost->windowRegistry().subConsoleKind(name)) ? it->second.pModel.get() : nullptr;
+    if (it == mSubConsoles.end() || !listsConsole(mpHost->windowRegistry().subConsoleKind(name)) || inRetiredWindow(it->second.userWindow, it->second.box.get())) {
+        return nullptr;
+    }
+    return it->second.pModel.get();
+}
+
+// What a deleted user window held, which is in no window an app can show until deferred deletes take it
+bool TNullConsoleFrontend::inRetiredWindow(const QString& userWindow, const ScrollBox* box) const
+{
+    if (mRetiredWindows.contains(userWindow)) {
+        return true;
+    }
+    for (; box; box = box->box.get()) {
+        if (mRetiredWindows.contains(box->userWindow)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 std::vector<TNullConsoleFrontend::WindowRecord> TNullConsoleFrontend::windowRecords() const
@@ -4774,7 +4866,7 @@ std::vector<TNullConsoleFrontend::WindowRecord> TNullConsoleFrontend::windowReco
     std::vector<WindowRecord> records;
     for (const auto& [name, console] : mSubConsoles) {
         const auto kind = registry.subConsoleKind(name);
-        if (!listsConsole(kind)) {
+        if (!listsConsole(kind) || inRetiredWindow(console.userWindow, console.box.get())) {
             continue;
         }
         // A frame's console that a script moved out of its frame is where the script put it
@@ -4814,6 +4906,9 @@ std::vector<TNullConsoleFrontend::WindowRecord> TNullConsoleFrontend::windowReco
         }
     }
     for (const auto& [name, label] : mLabels) {
+        if (inRetiredWindow(label.userWindow, label.box.get())) {
+            continue;
+        }
         records.push_back({name,
                            Kind::label,
                            parentName(label.userWindow, label.box.get()),
@@ -4826,6 +4921,9 @@ std::vector<TNullConsoleFrontend::WindowRecord> TNullConsoleFrontend::windowReco
         records.back().parentKind = kindOfParent(label.box.get());
     }
     for (const auto& [name, box] : mScrollBoxes) {
+        if (inRetiredWindow(box->userWindow, box->box.get())) {
+            continue;
+        }
         records.push_back({name,
                            Kind::scrollBox,
                            parentName(box->userWindow, box->box.get()),
@@ -4840,12 +4938,18 @@ std::vector<TNullConsoleFrontend::WindowRecord> TNullConsoleFrontend::windowReco
     for (const auto& [name, line] : mCommandLines) {
         const auto console = mSubConsoles.find(name);
         const bool own = line.inConsole && console != mSubConsoles.end() && ownsLine(console->second, line);
+        if (own ? inRetiredWindow(console->second.userWindow, console->second.box.get()) : inRetiredWindow(line.userWindow, line.box.get())) {
+            continue;
+        }
         const bool visible = line.shown && line.layerShown;
         const bool shown = commandLineShown(name);
         records.push_back({name, Kind::commandLine, own ? name : parentName(line.userWindow, line.box.get()), line.geometry, visible, shown, line.stackOrder, QColor(), QFont()});
         records.back().parentKind = own ? consoleKind(name, console->second) : kindOfParent(line.box.get());
     }
     for (const auto& [name, textBox] : mTextBoxes) {
+        if (inRetiredWindow(textBox.userWindow, textBox.box.get())) {
+            continue;
+        }
         records.push_back({name,
                            Kind::textBox,
                            parentName(textBox.userWindow, textBox.box.get()),
