@@ -1226,8 +1226,18 @@ which is why a desktop build leaves it off.
 
 Mudlet's Lua is built on seven C modules, which a desktop Mudlet loads from files as `require()` asks
 for them: `lfs`, `brimworks.zip`, `rex_pcre2`, `luasql.sqlite3`, `lua-utf8`, `yajl` and `lpeg`. Android
-and a browser let no program load code that way, so an app there links the modules in and names each
-before it starts a session:
+and a browser let no program load code that way. Built with `-DUSE_BUNDLED_LUA_MODULES=ON`, which is
+the default for both, `mudlet_core` carries the seven itself and every profile finds them there with
+nothing for the app to do. They need SQLite3 to link against, besides what `mudlet_core` links anyway.
+
+Configure fetches their sources with git, each pinned to the commit of the release Mudlet's own builds
+install, as `cmake/BundledLuaModules.cmake` lists them; all are under the MIT licence. To build one from
+a copy on disk instead, as where configure has no network, point `FETCHCONTENT_SOURCE_DIR_<NAME>` at
+it, `<NAME>` being the first argument of its `mudlet_bundled_lua_module()` call in capitals, as in
+`-DFETCHCONTENT_SOURCE_DIR_LFS=/src/luafilesystem`.
+
+An app that builds the modules itself leaves that option off, as two copies of a module cannot be
+linked into one program, links its own in and names each before it starts a session:
 
 ```cpp
 extern "C" int luaopen_lfs(lua_State*);

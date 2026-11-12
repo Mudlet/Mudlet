@@ -15,6 +15,7 @@ on:
       - 'cmake/**'
       - 'CMakeLists.txt'
       - 'CMakePresets.json'
+      - 'CI/core-mobile-smoke.lua'
       - '.github/workflows/core-mobile-build.yml'
   workflow_dispatch:
 
@@ -55,6 +56,7 @@ jobs:
             libpcre2-dev \
             libpugixml-dev \
             libpulse-dev \
+            libsqlite3-dev \
             libyajl-dev \
             libzip-dev \
             lua5.1 \
@@ -113,3 +115,24 @@ jobs:
 
       - name: Run mudlet-headless
         run: build-linux-core-minimal/src/mudlet-headless --version
+
+      - name: Open a profile with nothing of Mudlet's on disk
+        # As an app that embeds mudlet_core runs: the checkout's Lua files are moved away and Lua is given
+        # nowhere to find a C module, so a profile's Lua can only come from the library. The checks are one
+        # piece of Lua and the close another, as a piece that fails makes the exit status 1.
+        timeout-minutes: 5
+        run: |
+          mv src/mudlet-lua/lua "$RUNNER_TEMP/mudlet-lua"
+          status=0
+          LUA_CPATH='/nonexistent/?.so' timeout -k 10 120 build-linux-core-minimal/src/mudlet-headless \
+            -p Embedded --host example.org --port 23 --offline --no-stdin --config-dir "$RUNNER_TEMP/embedded" \
+            -e 'dofile("CI/core-mobile-smoke.lua")' -e 'closeMudlet()' > "$RUNNER_TEMP/embedded.log" 2>&1 || status=$?
+          cat "$RUNNER_TEMP/embedded.log"
+          if [ "$status" -ne 0 ]; then
+            echo "::error::mudlet-headless exited with status $status"
+            exit 1
+          fi
+          if grep -q 'Cannot find Lua module' "$RUNNER_TEMP/embedded.log"; then
+            echo "::error::a Lua C module was not found in mudlet_core"
+            exit 1
+          fi
