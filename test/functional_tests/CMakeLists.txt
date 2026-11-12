@@ -431,6 +431,7 @@ if(USE_HEADLESS)
     list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessSessionLinksTest.cpp)
     list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessSessionWindowsTest.cpp)
     list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessSessionWindowTextTest.cpp)
+    list(APPEND TEARDOWN_GROUP_TEST_SOURCES BuiltinMudletLuaTest.cpp)
 endif()
 
 # Sound, music and video, speech in and out, and the rich presence published to Discord
@@ -568,6 +569,17 @@ add_grouped_test_binary(functional_package_tests ${PACKAGE_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_settings_tests ${SETTINGS_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_starterui_tests ${STARTERUI_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_teardown_tests ${TEARDOWN_GROUP_TEST_SOURCES})
+if(USE_HEADLESS)
+    # As a file BuiltinMudletLuaTest registers itself, so that no other test in the binary loads it
+    qt_add_binary_resources(builtin_mudlet_lua_rcc "${mudlet_BINARY_DIR}/src/mudlet_lua.qrc"
+        DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/mudlet-lua.rcc")
+    add_dependencies(functional_teardown_tests builtin_mudlet_lua_rcc)
+    set_property(SOURCE BuiltinMudletLuaTest.cpp APPEND PROPERTY
+        COMPILE_DEFINITIONS BUILTIN_MUDLET_LUA_RCC="${CMAKE_CURRENT_BINARY_DIR}/mudlet-lua.rcc")
+    if(USE_BUILTIN_MUDLET_LUA)
+        set_property(SOURCE BuiltinMudletLuaTest.cpp APPEND PROPERTY COMPILE_DEFINITIONS INCLUDE_BUILTIN_MUDLET_LUA)
+    endif()
+endif()
 # HeadlessHostSmokeTest is not given the Discord library, as most headless embedders
 # will not have one; its Discord cases run again with the bundled one, given it below
 add_test(NAME HeadlessHostSmokeTestWithDiscordLibrary
