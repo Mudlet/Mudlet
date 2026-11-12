@@ -538,6 +538,47 @@ public:
     // another button, for less than half a notch of the wheel, which the GUI ignores, and for a wheel turn on a
     // map whose last draw showed no area.
     bool mapPointer(const MapPointerEvent& event);
+    // A window the profile's scripts made, as the GUI would show it, for the app to draw: Mudlet draws none of
+    // them. A Geyser gauge, button or container is the labels and windows it is made of.
+    struct ScriptWindow
+    {
+        enum class Kind { miniConsole, userWindow, label, commandLine, textBox, scrollBox, mapper };
+        QString name;
+        Kind kind = Kind::label;
+        // The user window or scroll box it is in, or the console whose own command line it is; empty for the main
+        // window's area and for a dock
+        QString parent;
+        // In its parent's pixels, from its top left corner, and a dock's in the main window's; none for a console's
+        // own command line, which the app lays out along the console's bottom. A user window, with no dock layout to
+        // go in, is at the main window's top left at the size the main window had as it opened or, if the app had
+        // given no size by then, the one made up from the main console's grid.
+        QRect geometry;
+        // Its own flag, as hideWindow() and showWindow() set it, which hiding what it is in leaves alone
+        bool visible = false;
+        // Whether it shows: visible, and so is each window it is in
+        bool shown = false;
+        // From 0, among the windows of its parent, a higher one drawn over a lower one: one made, raised or moved
+        // into the parent later is higher, a lowered one goes below the rest. The docks count only among themselves.
+        int stackOrder = 0;
+        // A console's background colour, or a label's from setBackgroundColor(); invalid for the other kinds
+        QColor background;
+        // What a console, label or text box draws its text in; a default QFont for the other kinds
+        QFont font;
+        // A dock beside the main window's area, docked or floating, rather than a window in it: a user window, or the
+        // map openMapWidget() opened
+        bool inDock = false;
+        // The kind of its parent, as a scroll box may share its name with a user window or console; nothing with no
+        // parent
+        Kind parentKind = Kind::userWindow;
+
+        bool operator==(const ScriptWindow&) const = default;
+    };
+    // Every window the profile's scripts made, parents before what they hold and each parent's windows from the
+    // lowest up, the main window's area's before the docks; not buffers, which are never shown, nor the game's MXP
+    // frames. Empty with no profile open. Read from anywhere, a handler included.
+    QList<ScriptWindow> scriptWindows() const;
+    // The first of them with the name, or with the name and kind, as a console's own command line has its name
+    std::optional<ScriptWindow> scriptWindow(const QString& name, std::optional<ScriptWindow::Kind> kind = std::nullopt) const;
 
     // sysExitEvent and, if asked, a save for every profile that loaded, then the pool goes. Meanwhile no profile
     // opens, and none dials the game or logs in, a live connection staying for the exit handlers. Refused while a
