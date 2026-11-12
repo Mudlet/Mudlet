@@ -94,7 +94,9 @@ THeadlessSession::LinkResult THeadlessSession::followWindowLink(const QString& w
         return LinkResult::refused;
     }
     TConsoleModel* pModel = windowTextModel(window);
-    const bool selectionApplied = item && link == std::exchange(mLinkWithMenuOpen, 0);
+    // Each console numbers its links apart, so the menu must have opened in this one
+    const std::pair<QPointer<const QObject>, int> menuOpen = std::exchange(mLinkWithMenuOpen, {});
+    const bool selectionApplied = item && pModel && menuOpen.first == &pModel->mNotifier && menuOpen.second == link;
     if (!pModel || !pModel->buffer.linkHeld(link)) {
         return LinkResult::unknown;
     }
@@ -140,7 +142,7 @@ THeadlessSession::LinkResult THeadlessSession::followWindowLink(const QString& w
     disconnect(errorCapture);
     if (ran) {
         if (self && mpHost && !item && model.buffer.linkOpensItsMenu(link)) {
-            mLinkWithMenuOpen = link;
+            mLinkWithMenuOpen = {&model.mNotifier, link};
         }
         return LinkResult::ran;
     }

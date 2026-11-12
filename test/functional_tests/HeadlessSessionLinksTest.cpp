@@ -472,6 +472,34 @@ tempRegexTrigger("^headless popup$", [[echoPopup(" p", {"headlessPopup = 1", "he
         QVERIFY(session.shutdown(false));
     }
 
+    void test_aMenuOpenedInOneWindowLeavesAPickInAnotherToChangeItsSelection()
+    {
+        const QString name = qsl("Headless Follow Local Selection Windows");
+        QVERIFY(writeProfile(name, recordSends()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QVERIFY(session.runLua(qsl("createMiniConsole('mini', 10, 20, 300, 200)\n"
+                                   "tempRegexTrigger('^tick: ', [[selectCurrentLine() copy() appendBuffer('mini')]])")));
+        QVERIFY(session.runLua(
+                feed(qsl("tick: ") + osc8(qsl("local:?config={\"selection\":{\"group\":\"headlessTick\",\"value\":\"v\",\"exclusive\":false},\"menu\":[{\"Look\":\"send:look\"}]}"), qsl("flour")))));
+        const QList<int> links = linksOnLineStarting(output, qsl("tick: "));
+        QCOMPARE(links.size(), 1);
+        const std::optional<THeadlessSession::WindowText> rows = session.windowLines(qsl("mini"), 0, 1);
+        QVERIFY(rows);
+        QCOMPARE(rows->lines.size(), 1);
+        const int inMini = rows->lines.at(0).runs.constLast().link;
+        QCOMPARE(inMini, links.first());
+        QVERIFY(session.windowLink(qsl("mini"), inMini)->menu);
+
+        QCOMPARE(session.followLink(links.first()), THeadlessSession::LinkResult::ran);
+        QVERIFY(session.link(links.first())->selected);
+        QCOMPARE(session.followWindowLink(qsl("mini"), inMini, 0), THeadlessSession::LinkResult::ran);
+        QVERIFY2(session.windowLink(qsl("mini"), inMini)->selected, "a pick in the mini console was taken for one from the main console's menu");
+        QVERIFY(session.link(links.first())->selected);
+        QVERIFY(session.shutdown(false));
+    }
+
     void test_followingALinkOfAnExclusiveGroupSelectsOnlyIt()
     {
         const QString name = qsl("Headless Follow Group");

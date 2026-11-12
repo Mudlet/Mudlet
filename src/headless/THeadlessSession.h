@@ -1158,8 +1158,9 @@ private:
     QPointer<Host> mpHost;
     QString mProfileName;
     QString mErrorString;
-    // A local: link that followLink() last followed without an item, which opened its menu and changed its selection
-    int mLinkWithMenuOpen = 0;
+    // A local: link that followWindowLink() last followed without an item, which opened its menu and changed its
+    // selection, with its console's notifier, as one made again under the name starts with no menu open
+    std::pair<QPointer<const QObject>, int> mLinkWithMenuOpen;
     bool mShuttingDown = false;
     bool mLoadFailed = false;
     bool mRemovingStalePasswords = false;
