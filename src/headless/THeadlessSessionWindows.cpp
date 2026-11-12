@@ -70,6 +70,10 @@ THeadlessSession::ScriptWindow::Kind kindOf(const Record::Kind kind)
 THeadlessSession::ScriptWindow scriptWindowOf(const Record& record, const int stackOrder)
 {
     THeadlessSession::ScriptWindow window{record.name, kindOf(record.kind), record.parent, record.geometry, record.visible, record.shown, stackOrder, record.background, record.font, record.inDock};
+    window.scrolledBackTo = record.scrolledBackTo;
+    window.grid = record.grid;
+    window.scrollBar = record.scrollBar;
+    window.timeStamps = record.timeStamps;
     window.parentKind = kindOf(record.parentKind);
     if (record.kind == Record::Kind::userWindow) {
         window.dock = THeadlessSession::ScriptWindow::Dock{record.autoDock, record.dockArea, record.floating, record.title};

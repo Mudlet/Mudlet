@@ -779,6 +779,14 @@ and the app draws what that says, as it draws the main console from `lineShown`.
   `openUserWindow()` asked for, whether it is `floating`, and its `title`, as `openUserWindow()` and
   `setUserWindowTitle()` gave them. Where the app docks it is the app's: `setUserWindowGeometry()` takes
   no area, so `area` stays what the script asked for. The other kinds have none.
+- for a mini console or user window, how it is scrolled: `scrolledBackTo`, the row a script's
+  `scrollTo()` or the app's wheel through `pointer()` left it at, as `getScroll()` gives it, and none
+  while it follows new lines. Scrolled back, the GUI splits the console in two: the upper pane shows the
+  rows of `windowLines()` that end just above that row, and the lower one the last rows, as they arrive.
+  `grid` is the columns and rows of text the upper pane has room for, as `getColumnCount()` and
+  `getRowCount()` give them, so the whole console while it is not scrolled back and about three quarters
+  of its height while it is. `scrollBar` is whether `enableScrollBar()` asked for one, and `timeStamps`
+  whether `enableTimeStamps()` has each row's time shown beside it. The other kinds have none of these.
 
 The list has parents before the windows they hold, and each parent's windows from the lowest up, the
 main window's area's before the docks, so an app that draws it in order draws each window over what it
@@ -796,7 +804,9 @@ whose `ScriptWindow` differs from what the list gave at `profileLoaded` or at th
 deleted is gone from the list. Those whose `stackOrder` moved as another was made, deleted, raised or
 lowered are among the names. It comes from the event loop once a turn, however many calls in it changed
 the windows, so a script that makes a gauge and places it is one signal, and a call that changed nothing,
-such as a `moveWindow()` to where the window is, sends none.
+such as a `moveWindow()` to where the window is, sends none. A console is named as it is scrolled too, by a
+script, the wheel, a `clearWindow()`, which has it follow new lines again, or its oldest rows being
+trimmed under the row it is scrolled back to.
 
 `labelContent(name)` is what a label shows, beside the place, colour and font its `ScriptWindow` has:
 
