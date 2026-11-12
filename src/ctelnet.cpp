@@ -992,9 +992,13 @@ void cTelnet::readUntilTheGameCloses(std::function<void()> ended)
         disconnectIt();
         ended();
     };
-    connect(mpSocket, &QIODevice::readyRead, pDeadline, [this]() {
+    connect(mpSocket, &QIODevice::readyRead, pDeadline, [this, pDeadline, finish]() {
         if (mpSocket) {
             mpSocket->readAll();
+        }
+        // Qt's Windows dispatcher serves socket notifiers ahead of timers, so a game that keeps sending holds the timeout off
+        if (pDeadline->remainingTime() == 0) {
+            finish();
         }
     });
     connect(mpSocket, &QAbstractSocket::stateChanged, pDeadline, [finish](const QAbstractSocket::SocketState state) {
