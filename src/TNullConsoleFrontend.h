@@ -405,6 +405,24 @@ public:
     const TMxpFrameFrontend& mxpFrames() const override { return mMxpFrames; }
     // Every window a script made, in no order; not buffers, which are never shown, nor MXP frames, which are the game's
     std::vector<WindowRecord> windowRecords() const;
+    // What a label shows beside its model: the files and cursor a real TLabel keeps in its widget
+    struct LabelRecord
+    {
+        // Each only while the label shows it: a raster background, which text or a movie takes down, or an SVG one
+        QString image;
+        bool svg = false;
+        QString movie;
+        bool moviePaused = false;
+        int movieFrame = -1;
+        int movieSpeed = 100;
+        QSize movieSize;
+        double toolTipDuration = 0.0;
+        // Unset, a shape of Qt::CursorShape, or Qt::BitmapCursor for a custom one from its file
+        std::optional<Qt::CursorShape> cursor;
+        QString customCursor;
+        QPoint customCursorHotSpot;
+    };
+    std::optional<LabelRecord> labelRecord(const QString& name) const;
     TWindowNotifier& windowNotifier() { return mWindowNotifier; }
 
 private:
@@ -544,6 +562,13 @@ private:
         // TLabel::mpSvgRenderer's default size, as an SVG background image paints under the content
         std::optional<QSize> svgSize;
         qint64 stackOrder = 0;
+        // The files whose sizes those are, and the movie's is its own
+        QString pixmapPath;
+        QString svgPath;
+        double toolTipDuration = 0.0;
+        std::optional<Qt::CursorShape> cursor;
+        QString customCursor;
+        QPoint customCursorHotSpot;
     };
     struct MapWidget
     {

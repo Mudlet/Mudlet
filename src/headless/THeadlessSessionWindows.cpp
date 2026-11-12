@@ -22,6 +22,7 @@
 #include "THeadlessSession.h"
 
 #include "Host.h"
+#include "TLabelModel.h"
 #include "TNullConsoleFrontend.h"
 #include "TWindowNotifier.h"
 
@@ -80,22 +81,19 @@ QHash<QString, QList<THeadlessSession::ScriptWindow>> byName(const QList<THeadle
     return named;
 }
 
-QStringList changedNames(const QList<THeadlessSession::ScriptWindow>& before, const QList<THeadlessSession::ScriptWindow>& after)
+QStringList changedNames(const QHash<QString, QList<THeadlessSession::ScriptWindow>>& before, const QHash<QString, QList<THeadlessSession::ScriptWindow>>& after)
 {
-    const auto namedBefore = byName(before);
-    const auto namedAfter = byName(after);
     QStringList names;
-    for (auto it = namedBefore.cbegin(); it != namedBefore.cend(); ++it) {
-        if (namedAfter.value(it.key()) != it.value()) {
+    for (auto it = before.cbegin(); it != before.cend(); ++it) {
+        if (after.value(it.key()) != it.value()) {
             names << it.key();
         }
     }
-    for (auto it = namedAfter.cbegin(); it != namedAfter.cend(); ++it) {
-        if (!namedBefore.contains(it.key())) {
+    for (auto it = after.cbegin(); it != after.cend(); ++it) {
+        if (!before.contains(it.key())) {
             names << it.key();
         }
     }
-    names.sort();
     return names;
 }
 
@@ -167,19 +165,74 @@ void THeadlessSession::connectWindowRelays(Host* pHost, const unsigned int run)
                 if (run != mRun || !mpHost || !mDeliveredWindows) {
                     return;
                 }
-                QList<ScriptWindow> windows = scriptWindows();
-                const QStringList names = changedNames(*mDeliveredWindows, windows);
+                WindowsTold now = windowsNow();
+                QStringList names = changedNames(byName(mDeliveredWindows->windows), byName(now.windows));
+                for (auto it = now.labels.cbegin(); it != now.labels.cend(); ++it) {
+                    if (const auto told = mDeliveredWindows->labels.constFind(it.key()); told != mDeliveredWindows->labels.cend() && *told != it.value()) {
+                        names << it.key();
+                    }
+                }
                 if (names.isEmpty()) {
                     return;
                 }
-                mDeliveredWindows = std::move(windows);
+                names.removeDuplicates();
+                names.sort();
+                mDeliveredWindows = std::move(now);
                 const QString profile = mProfileName;
                 emit scriptWindowsChanged(profile, names);
             },
             Qt::QueuedConnection);
 }
 
+THeadlessSession::WindowsTold THeadlessSession::windowsNow() const
+{
+    WindowsTold now{scriptWindows(), {}};
+    for (const ScriptWindow& window : std::as_const(now.windows)) {
+        if (window.kind != ScriptWindow::Kind::label) {
+            continue;
+        }
+        // The list is the null view's and the content the registry's model, which could disagree
+        if (std::optional<LabelContent> content = labelContent(window.name)) {
+            now.labels.insert(window.name, std::move(*content));
+        }
+    }
+    return now;
+}
+
 void THeadlessSession::noteWindowsAtLoad()
 {
-    mDeliveredWindows = scriptWindows();
+    mDeliveredWindows = windowsNow();
+}
+
+std::optional<THeadlessSession::LabelContent> THeadlessSession::labelContent(const QString& name) const
+{
+    const auto* pView = mpHost ? dynamic_cast<TNullConsoleFrontend*>(mpHost->consoleFrontend()) : nullptr;
+    const std::optional<TNullConsoleFrontend::LabelRecord> record = pView ? pView->labelRecord(name) : std::nullopt;
+    const TLabelModel* pModel = record ? mpHost->windowRegistry().labelModel(name) : nullptr;
+    if (!pModel) {
+        return std::nullopt;
+    }
+    LabelContent content;
+    content.text = pModel->mText;
+    content.image = record->image;
+    content.svg = record->svg;
+    content.svgTint = pModel->mSvgTintColor;
+    content.svgRotation = pModel->mSvgRotation;
+    content.svgShearX = pModel->mSvgShearX;
+    content.svgShearY = pModel->mSvgShearY;
+    content.movie = record->movie;
+    content.moviePaused = record->moviePaused;
+    content.movieFrame = record->movieFrame;
+    content.movieSpeed = record->movieSpeed;
+    content.movieSize = record->movieSize;
+    content.toolTip = pModel->mToolTip;
+    content.toolTipDuration = record->toolTipDuration;
+    content.cursor = record->cursor;
+    content.customCursor = record->customCursor;
+    content.customCursorHotSpot = record->customCursorHotSpot;
+    content.clickThrough = pModel->mClickThrough;
+    content.accessibleName = pModel->effectiveAccessibleName();
+    content.accessibleButton = pModel->actsAsButton();
+    content.styleSheet = pModel->mStyleSheet;
+    return content;
 }
