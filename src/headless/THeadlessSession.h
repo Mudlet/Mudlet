@@ -537,7 +537,9 @@ public:
     // speedwalks to the room under it; a wheel turn zooms the area about the pointer. Refused where submit() is.
     // False, with errorString() saying why, with no map open, before the map is drawn, for a double-click with
     // another button, for less than half a notch of the wheel, which the GUI ignores, and for a wheel turn on a
-    // map whose last draw showed no area.
+    // map whose last draw showed no area. Once the map is drawn, and while its window is shown, getMousePosition()
+    // follows it, the position taken as that point of the "mapper" window, which the GUI's map fills from its top
+    // left.
     bool mapPointer(const MapPointerEvent& event);
     // A window the profile's scripts made, as the GUI would show it, for the app to draw: Mudlet draws none of
     // them. A Geyser gauge, button or container is the labels and windows it is made of.
@@ -968,6 +970,7 @@ private:
     bool inputHidden(bool sending);
     void noteAlreadyInstalled(const QString& path, const QString& name);
     void relayMapRepaints(Host*, unsigned int run);
+    void noteMapPointer(const QPointF& position);
 
     QPointer<Host> mpHost;
     QString mProfileName;

@@ -539,6 +539,57 @@ end
         QCOMPARE(session.errorString(), qsl("No profile is open."));
     }
 
+    // The mapper is 100 by 50 into a user window the app put at 200 by 100 of the main window's area
+    void test_getMousePositionFollowsTheMapsPointer()
+    {
+        using Pointer = THeadlessSession::MapPointerEvent;
+        const QString name = qsl("Headless Map Mouse Position");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        QVERIFY(session.runLua(qsl(R"lua(
+openUserWindow("uw")
+createMapper("uw", 100, 50, %1, %2)
+headlessArea = addAreaName("Headless Mouse Position")
+addRoom(7)
+setRoomArea(7, headlessArea)
+setRoomCoordinates(7, 0, 0, 0)
+centerview(7)
+function headlessMouse()
+  local x, y = getMousePosition()
+  return tostring(x) .. " " .. tostring(y)
+end
+registerAnonymousEventHandler("sysMapWindowMousePressEvent", function() headlessPressedAt = headlessMouse() end)
+)lua")
+                                       .arg(scmWidth)
+                                       .arg(scmHeight)));
+        QVERIFY(session.setUserWindowGeometry(qsl("uw"), QRect(200, 100, 550, 450), false));
+        QTest::qWait(50);
+        const auto mouse = [&session]() {
+            session.runLua(qsl("headlessMouseNow = headlessMouse()"));
+            return luaGlobalString(session.host(), "headlessMouseNow");
+        };
+
+        // Not before the map is drawn, which the position is in
+        QVERIFY(!session.mapPointer({.position = QPointF(30, 40)}));
+        QCOMPARE(mouse(), qsl("nil the profile has no main window"));
+        QVERIFY(rendered(session));
+        // What the press raises already reads where it was
+        QVERIFY(session.mapPointer({.position = QPointF(30, 40)}));
+        QCOMPARE(luaGlobalString(session.host(), "headlessPressedAt"), qsl("330 190"));
+        QVERIFY(session.mapPointer({.type = Pointer::Type::wheel, .position = QPointF(10, 20), .angleDelta = QPoint(0, -600)}));
+        QCOMPARE(mouse(), qsl("310 170"));
+        // The pointer is there whether or not the map does anything for it
+        QVERIFY(!session.mapPointer({.type = Pointer::Type::doubleClick, .position = QPointF(11, 21), .button = Qt::RightButton}));
+        QCOMPARE(mouse(), qsl("311 171"));
+        // but the GUI's mouse could not be over a mapper that does not show
+        QVERIFY(session.runLua(qsl(R"(hideWindow("uw"))")));
+        QVERIFY(session.mapPointer({.position = QPointF(30, 40)}));
+        QCOMPARE(luaGlobalString(session.host(), "headlessPressedAt"), qsl("311 171"));
+        QVERIFY(session.shutdown(false));
+    }
+
     // Rooms 7 and 8 in one area and room 9 in another, with the map widget open: a selection loses a room deleted
     // from the map, and the rooms left behind when the shown map follows the player into another area, as the GUI's
     void test_aSelectionLosesDeletedRoomsAndThoseLeftBehind()
