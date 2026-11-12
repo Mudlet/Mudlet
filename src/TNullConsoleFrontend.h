@@ -411,7 +411,7 @@ public:
     // Every window a script made, in no order; not buffers, which are never shown, nor MXP frames, which are the game's
     std::vector<WindowRecord> windowRecords() const;
     // The model of a console windowRecords() lists; null for any other name
-    const TConsoleModel* listedConsoleModel(const QString& name) const;
+    TConsoleModel* listedConsoleModel(const QString& name) const;
     // What a label shows beside its model: the files and cursor a real TLabel keeps in its widget
     struct LabelRecord
     {
