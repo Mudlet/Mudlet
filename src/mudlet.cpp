@@ -3303,7 +3303,8 @@ void mudlet::closeHost(const QString& name)
     // script is still running, and destroying the Host would lua_close() the
     // state under it. Likewise a Host::waitForProfileSave(), whose pump runs
     // with the Host it waits on - and its caller - still on the stack, and a
-    // reconnect's pump in cTelnet::connectIt(). Retried on a timer rather than
+    // reconnect in cTelnet::connectIt() whose aborted connection's report ran
+    // the close. Retried on a timer rather than
     // immediately: the retry would otherwise land back in the same pump,
     // spinning until the operation ends instead of letting it get there.
     if (pH->deletionMustWait()) {

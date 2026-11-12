@@ -1187,9 +1187,11 @@ These still block the application's thread or run a nested event loop:
   the writes run inline they never wait at all;
 - the blocking `THeadlessSession` calls above, which run the event loop until their async form
   answers;
-- `waitForEvent()`, `pumpEvents()` and `EventLoopPump`, which only the test profile's Lua uses;
-- the connection's bounded waits in `ctelnet.cpp`: one event loop pass while a reconnect lets the old
-  sockets abort, and, as a profile disconnects, up to a second waiting for the game to close its end.
+- `waitForEvent()`, `pumpEvents()` and `EventLoopPump`, which only the test profile's Lua uses.
+
+As a profile with no window disconnects, `ctelnet.cpp` blocks for up to a second waiting for the game to
+close its end, running no event loop. A reconnect runs none either: the old connection's end is reported
+from within the call, and the new attempt replaces any dial a handler of that report made.
 
 A map's long operations (loading, importing, exporting and auditing a map) run no event loop of their
 own: they emit `TMap::signal_mapProgressRepaintWanted()` where a progress display could repaint, and only

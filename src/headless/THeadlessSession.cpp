@@ -55,12 +55,12 @@ using namespace std::chrono_literals;
 
 namespace {
 
-// Answers to a secure port offer under way: cTelnet may reconnect and run the event loop while on the stack
+// Answers to a secure port offer under way: cTelnet may reconnect, and report the connection it ends, while on the stack
 int gConnectionsBeingChanged = 0;
 
 // TNullAppFrontend's close waits only for a load, a nested event loop and a save wait, and leaves a running
 // script or map operation to deletionMustWait(); deleting the whole pool cannot wait that way, so all count here.
-// A save deletes nothing, so a reconnect's event loop holds up only a deletion. A close still writing its save
+// A save deletes nothing, so a reconnect on the stack holds up only a deletion. A close still writing its save
 // holds up a deletion too, but not shutdown(), which waits for it.
 bool poolBusy(const HostManager& pool, const bool forDeletion, const bool closesCount = true)
 {
@@ -68,7 +68,7 @@ bool poolBusy(const HostManager& pool, const bool forDeletion, const bool closes
         return true;
     }
     for (const auto& pHost : pool.hostList()) {
-        const bool deletionWaits = closesCount ? pHost->deletionWouldWait() : pHost->busyRunning() || pHost->mTelnet.connectRunningEventLoop();
+        const bool deletionWaits = closesCount ? pHost->deletionWouldWait() : pHost->busyRunning() || pHost->mTelnet.reconnectOnStack();
         if (forDeletion ? deletionWaits : pHost->busyRunning()) {
             return true;
         }
@@ -98,7 +98,7 @@ bool poolStillClosing(const HostManager& pool)
 bool poolReconnecting(const HostManager& pool)
 {
     for (const auto& pHost : pool.hostList()) {
-        if (pHost->mTelnet.connectRunningEventLoop()) {
+        if (pHost->mTelnet.reconnectOnStack()) {
             return true;
         }
     }
