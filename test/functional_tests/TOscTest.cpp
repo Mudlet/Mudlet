@@ -1514,7 +1514,11 @@ private slots:
 
     QMenu *menu = pane->findChild<QMenu *>();
     QVERIFY2(menu && menu->isVisible(), "activating the link did not open its menu");
-    const auto closeMenu = qScopeGuard([&] { if (QMenu *open = pane->findChild<QMenu *>()) { open->close(); } });
+    const auto closeMenu = qScopeGuard([&] {
+      if (QMenu *open = pane->findChild<QMenu *>()) {
+        open->close();
+      }
+    });
     QStringList labels;
     for (QAction *action : menu->actions()) {
       labels << action->text();
@@ -1681,7 +1685,11 @@ private slots:
     QCOMPARE(console->buffer.getFocusedLink(), linkId);
 
     QTest::keyClick(pane, Qt::Key_Menu);
-    const auto closeMenu = qScopeGuard([&] { if (QMenu *open = pane->findChild<QMenu *>()) { open->close(); } });
+    const auto closeMenu = qScopeGuard([&] {
+      if (QMenu *open = pane->findChild<QMenu *>()) {
+        open->close();
+      }
+    });
     QVERIFY2(!console->buffer.isLinkVisited(linkId), "the Menu key activated the note");
     QVERIFY2(pane->findChild<QMenu *>(), "the Menu key on a note opened no menu");
   }
@@ -1702,7 +1710,11 @@ private slots:
     const QPointF local = pane->mapFromGlobal(global);
     QMouseEvent release(QEvent::MouseButtonRelease, local, QPointF(global), Qt::RightButton, Qt::NoButton, Qt::NoModifier);
     QApplication::sendEvent(pane, &release);
-    const auto closeMenu = qScopeGuard([&] { if (QMenu *open = pane->findChild<QMenu *>()) { open->close(); } });
+    const auto closeMenu = qScopeGuard([&] {
+      if (QMenu *open = pane->findChild<QMenu *>()) {
+        open->close();
+      }
+    });
     QVERIFY2(!console->buffer.isLinkVisited(linkId), "right-clicking activated the note");
     QVERIFY2(pane->findChild<QMenu *>(), "right-clicking a note opened no menu");
   }
@@ -2594,7 +2606,7 @@ private slots:
     QCOMPARE(focused.underlineColor, QColor(0, 120, 215));
 
     console->mUpperPane->setCaretPosition(linkLine, linkCol + qsl("Look ").size());
-    QCOMPARE(bool(attributes() & TChar::Underline), underlinedByTheGame);
+    QCOMPARE(static_cast<bool>(attributes() & TChar::Underline), underlinedByTheGame);
     QVERIFY2(attributes() & TChar::Bold, "losing focus took the game's bold off the link");
   }
 
@@ -2807,7 +2819,7 @@ private slots:
     QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
     auto [linkLine, linkCol, linkId] = *pos;
     const auto bold = [&, line = linkLine, column = linkCol] {
-      return bool(console->buffer.buffer.at(line).at(column).allDisplayAttributes() & TChar::Bold);
+      return static_cast<bool>(console->buffer.buffer.at(line).at(column).allDisplayAttributes() & TChar::Bold);
     };
     QVERIFY(bold());
 
