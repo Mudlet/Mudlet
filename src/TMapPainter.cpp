@@ -28,6 +28,7 @@
 #include "Host.h"
 #include "RoomAppearance.h"
 #include "TArea.h"
+#include "TBackgroundTask.h"
 #include "TEvent.h"
 #include "TMap.h"
 #include "TMapLabel.h"
@@ -49,23 +50,6 @@
 #include <QRadialGradient>
 #include <QSetIterator>
 #include <QVector3D>
-#if defined(Q_OS_LINUX) || defined(Q_OS_MACOS)
-/* The Devuan package for qt6-base-dev (for Qt 6.8.2) - and presumably
- * Debian and Ubuntu are missing the
- * ./include/QtConcurrent/QtConcurrentTask file that contains the single
- * line:
- * #include "qtconcurrenttask.h" // IWYU pragma: export
- *
- * that is present in the Qt on-line installer install (for Qt 6.10.1)
- * - so building Mudlet using the latter succeed whereas it breaks on the
- * GitHub CI runners (qt 6.9.0). So use the less "pretty" direct include.
- * It appears that this is an upstream Qt bug as the MacOS builds (also
- * for Qt 6.9.0) are failing in the same manner. Yet the Windows build
- * using the later Qt 6.11.0 succeed!*/
-#include <qtconcurrenttask.h>
-#else
-#include <QtConcurrentTask>
-#endif
 
 #include <algorithm>
 #include <climits>
@@ -4125,10 +4109,10 @@ std::pair<bool, QString> TMapPainter::exportArea(int areaId, const QString& file
 
     // Each export has a watcher of its own: several can be in flight at once,
     // from calls made back to back or one per z level
-    auto* pWatcher = new QFutureWatcher<std::pair<bool, QString>>(saveOwner);
-    QObject::connect(pWatcher, &QFutureWatcher<std::pair<bool, QString>>::finished, saveOwner, [pWatcher, pHost = QPointer<Host>(mpHost), profileName = mpHost->getName()]() {
-        const auto [saved, errorMessage] = pWatcher->result();
-        if (!saved) {
+    auto* pWatcher = new QFutureWatcher<QString>(saveOwner);
+    QObject::connect(pWatcher, &QFutureWatcher<QString>::finished, saveOwner, [pWatcher, pHost = QPointer<Host>(mpHost), profileName = mpHost->getName()]() {
+        const QString errorMessage = pWatcher->result();
+        if (!errorMessage.isEmpty()) {
             // This view can outlive its profile, which may have closed before the save reported back
             if (pHost) {
                 pHost->postMessage(QCoreApplication::translate("T2DMap", "[MAP]: %1").arg(errorMessage));
@@ -4139,17 +4123,13 @@ std::pair<bool, QString> TMapPainter::exportArea(int areaId, const QString& file
         pWatcher->deleteLater();
     });
 
-    auto future = QtConcurrent::task(&TMapPainter::performImageSave).withArguments(pixmap, filePath, TMap::exportImageFormat(filePath)).spawn();
-    pWatcher->setFuture(future);
-
-    return {true, {}};
-}
-
-std::pair<bool, QString> TMapPainter::performImageSave(const QPixmap& pixmap, const QString& filePath, const QString& format)
-{
-    if (!pixmap.save(filePath, format.toLocal8Bit().data())) {
-        return {false, qsl("Failed to save image to %1").arg(filePath)};
-    }
+    // A QImage, as only the GUI thread may use a QPixmap
+    pWatcher->setFuture(TBackgroundTask::runForReason([image = pixmap.toImage(), filePath, format = TMap::exportImageFormat(filePath)]() {
+        if (!image.save(filePath, format.toLocal8Bit().constData())) {
+            return qsl("Failed to save image to %1").arg(filePath);
+        }
+        return QString();
+    }));
 
     return {true, {}};
 }
