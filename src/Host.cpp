@@ -7986,7 +7986,7 @@ std::optional<QSize> Host::mainWindowSize() const
         if (mMainAreaPixels) {
             return mMainAreaPixels;
         }
-        const QFontMetrics metrics(consoleFrontend()->displayFont());
+        const QFontMetrics metrics(consoleFrontend()->mainTextFont());
         const QSize cells = mainAreaCells();
         return {QSize(cells.width() * metrics.averageCharWidth(), cells.height() * metrics.height())};
     }
@@ -8056,7 +8056,7 @@ std::optional<int> Host::windowFontSize(const QString& name) const
         return {};
     }
     if (pModel == mpMainConsoleModel.get() && !hasConsoleView()) {
-        return {consoleFrontend()->displayFont().pointSize()};
+        return {consoleFrontend()->mainTextFont().pointSize()};
     }
     return {pModel->mUpperPaneFont.pointSize()};
 }
@@ -8267,7 +8267,7 @@ void Host::layOutMainAreaWithNoView(const MainAreaChange change)
         mMainAreaCells = QSize(mScreenWidth, mScreenHeight);
     }
     const QSize textArea = mainTextRectWithNoView().size();
-    const QFontMetrics metrics(consoleFrontend()->displayFont());
+    const QFontMetrics metrics(consoleFrontend()->mainTextFont());
     // As TTextEdit::updateScreenView() counts it, and NAWS carries no more than 16 bits
     const int columns = std::clamp(textArea.width() / std::max(1, metrics.averageCharWidth()), 40, 65535);
     const int rows = std::clamp(textArea.height() / std::max(1, metrics.height()), 1, 65535);
@@ -8303,7 +8303,7 @@ void Host::layOutMainAreaWithNoView(const MainAreaChange change)
 
 std::pair<bool, QString> Host::resizeMainWindowWithNoView(const QSize& pixels)
 {
-    const QFontMetrics metrics(consoleFrontend()->displayFont());
+    const QFontMetrics metrics(consoleFrontend()->mainTextFont());
     const qint64 columns = pixels.width() / std::max(1, metrics.averageCharWidth());
     const qint64 rows = pixels.height() / std::max(1, metrics.height());
     if (columns < 1 || columns > 65535 || rows < 1 || rows > 65535) {

@@ -997,6 +997,14 @@ and state, on what it is inside (`QDockWidget QLabel { … }`, `#MainFrame > QLa
 command line or text box its size limits from its own sheet, and a user window's title from a
 `qproperty-windowTitle`.
 
+The profile's sheet gives the main console's text a font as it gives a mini console's: `getFontSize("main")`,
+and the columns and rows the main area holds when the app has given its size in pixels, follow it. The
+profile's display font (`getFont("main")`, the main console's `sysFontChangeEvent`) stays the one scripts set,
+where on the desktop a rule that styles the main console itself changes it too. A rule that reaches a console
+itself (`TConsole { … }`, and `QWidget { … }` or bare declarations, which reach its text too) lies over each
+font a script then sets on that console, and its text keeps that font once the sheet is cleared, until a
+script sets another, as on the desktop.
+
 A change to any of these names the label in `scriptWindowsChanged`. It is empty for a name that is not a
 label's.
 

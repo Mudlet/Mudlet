@@ -881,6 +881,13 @@ void applySheetFont(QFont& font, uint& mask, const std::optional<QFont>& sheetFo
     mask = styled.resolveMask();
 }
 
+QFont withSheetFont(QFont font, const std::optional<QFont>& sheetFont)
+{
+    uint mask = font.resolveMask();
+    applySheetFont(font, mask, sheetFont);
+    return font;
+}
+
 // QLabel::sizeHint() for a label with no margin, indent or word wrap, as TLabel's are, inside the frame its sheet gives it
 QSize labelSizeHint(const QFont& font, const QString& text, const bool textLabel, const std::array<int, 4>& frame)
 {
@@ -1268,6 +1275,13 @@ void TNullConsoleFrontend::followView(QObject* view)
     });
 }
 
+// Lays nothing out: the main area keeps what the view made of it until the null view measures it again
+void TNullConsoleFrontend::resumeMainText()
+{
+    mMainConsoleSheetFont.reset();
+    mMainTextSheetFont = profileMainTextSheetFont();
+}
+
 void TNullConsoleFrontend::resumeMainCommandLine()
 {
     // A view detached by setMainConsoleView(nullptr) asks for this again as it goes
@@ -1602,6 +1616,7 @@ TConsoleModel& TNullConsoleFrontend::addSubConsole(const QString& name, const TW
     mSubConsoles[name].holder = pHolder;
     mSubConsoles[name].stackOrder = ++mTopOfStack;
     mSubConsoles[name].deactivated = ++mDeactivations;
+    mSubConsoles[name].scriptFont = model.mUpperPaneFont;
     // As ~TConsole takes one that goes with the widget holding it, such as a frame nested in a deleted one, out
     // of the registry; the QPointer may already be cleared
     QObject::connect(pHolder, &QObject::destroyed, mpHost, [this, name, pHolder]() {
@@ -1935,14 +1950,7 @@ void TNullConsoleFrontend::addMiniConsole(const QString& windowname, const QStri
     if (made == mSubConsoles.end() || made->second.pModel.get() != &model) {
         return;
     }
-    SubConsole& console = made->second;
-    const QString sheet = windowSheet(console.userWindow);
-    applyUserWindowSheetFont(name, sheet);
-    // A sheet that gives the console a font, not only its text, leaves that font on one made under it once the
-    // sheet has gone
-    if (console.fontBeforeSheet && styleSheetFont(sheetDeclarations(sheet, consoleSheetChain(name), {qsl("enabled"), qsl("active")}))) {
-        console.fontBeforeSheet = console.pModel->mUpperPaneFont;
-    }
+    applyUserWindowSheetFont(name, windowSheet(made->second.userWindow));
     setSubConsoleShown(name, true);
 }
 
@@ -2043,6 +2051,7 @@ void TNullConsoleFrontend::setProfileStyleSheet(const QString& styleSheet)
         }
     }
     mProfileSheetSeen = mProfileSheetSeen || !styleSheet.isEmpty();
+    restyleMainText();
     restyleWindowContents(QString());
 }
 
@@ -2077,6 +2086,9 @@ TNullConsoleFrontend::SheetChain TNullConsoleFrontend::containerSheetChain(const
 // A user window's console, which is in its dock, or a mini console, which TMainConsole::createMiniConsole() names
 TNullConsoleFrontend::SheetChain TNullConsoleFrontend::consoleSheetChain(const QString& name) const
 {
+    if (name == qsl("main")) {
+        return mainConsoleChain(mpHost->getName());
+    }
     const auto console = mSubConsoles.find(name);
     const SheetNode node{{qsl("TConsole"), qsl("QWidget"), qsl("QObject")}, name, {}};
     if (console == mSubConsoles.end()) {
@@ -4428,6 +4440,40 @@ QFont TNullConsoleFrontend::displayFont() const
     return mpHost->displayFontWithNoView();
 }
 
+QFont TNullConsoleFrontend::mainTextFont() const
+{
+    return withSheetFont(withSheetFont(displayFont(), mMainConsoleSheetFont), mMainTextSheetFont);
+}
+
+std::optional<QFont> TNullConsoleFrontend::profileMainTextSheetFont() const
+{
+    return sheetFontFor(mpHost->mProfileStyleSheet, paneSheetChain(qsl("main")));
+}
+
+// As a polish gives the main console's text the font the profile's sheet names for it, and lays it out again
+void TNullConsoleFrontend::restyleMainText()
+{
+    const QFont before = mainTextFont();
+    mMainTextSheetFont = profileMainTextSheetFont();
+    if (mainTextFont() != before) {
+        mpHost->layOutMainAreaWithNoView(Host::MainAreaChange::font);
+    }
+}
+
+// As TConsole::refreshView() gives the text the main console's font, over which a sheet that styles the console lies,
+// and which the text keeps once that sheet has gone
+void TNullConsoleFrontend::changeDisplayFont(const std::function<void()>& change)
+{
+    const QFont before = displayFont();
+    const std::optional<QFont> consoleSheetFont = mMainConsoleSheetFont;
+    mMainConsoleSheetFont = sheetFontFor(mpHost->mProfileStyleSheet, consoleSheetChain(qsl("main")));
+    change();
+    if (TFontAttributes(displayFont()) == TFontAttributes(before)) {
+        mMainConsoleSheetFont = consoleSheetFont;
+    }
+    reportDisplayFontChange(before);
+}
+
 std::optional<QFont> TNullConsoleFrontend::consoleFont(const QString& name) const
 {
     if (name.isEmpty() || name == qsl("main")) {
@@ -4439,9 +4485,18 @@ std::optional<QFont> TNullConsoleFrontend::consoleFont(const QString& name) cons
     return {};
 }
 
+// The font a console's text is drawn in, which for the main console a profile sheet can make other than its own
+std::optional<QFont> TNullConsoleFrontend::consoleTextFont(const QString& name) const
+{
+    if (name.isEmpty() || name == qsl("main")) {
+        return {mainTextFont()};
+    }
+    return consoleFont(name);
+}
+
 std::optional<QSize> TNullConsoleFrontend::consoleFontSize(const QString& name) const
 {
-    const auto font = consoleFont(name);
+    const auto font = consoleTextFont(name);
     if (!font) {
         return {};
     }
@@ -4451,42 +4506,51 @@ std::optional<QSize> TNullConsoleFrontend::consoleFontSize(const QString& name) 
 
 std::optional<int> TNullConsoleFrontend::consoleColumnWidth(const QString& name) const
 {
-    const auto font = consoleFont(name);
+    const auto font = consoleTextFont(name);
     if (!font) {
         return {};
     }
     return {QFontMetrics(*font).averageCharWidth()};
 }
 
-// The font scripts gave it, which a sheet's font lies over as the widget's does over TConsole's own
-QFont TNullConsoleFrontend::subConsoleOwnFont(const QString& name, const TConsoleModel& model) const
+// The sheet over a sub-console's widget: a buffer has no widget for one to reach
+QString TNullConsoleFrontend::consoleWindowSheet(const QString& name) const
 {
     const auto console = mSubConsoles.find(name);
-    if (console == mSubConsoles.end()) {
-        return model.mUpperPaneFont;
+    if (console == mSubConsoles.end() || mpHost->windowRegistry().subConsoleKind(name) == TWindowRegistry::SubConsoleKind::Buffer) {
+        return QString();
     }
-    return console->second.fontBeforeSheet.value_or(model.mUpperPaneFont);
+    return windowSheet(mpHost->windowRegistry().hasDockWidget(name) ? name : console->second.userWindow);
+}
+
+// As TConsole::refreshView() gives its text the console's font, over which a sheet that styles the console lies
+QFont TNullConsoleFrontend::underConsoleSheet(const QString& name, const QFont& font) const
+{
+    return withSheetFont(font, sheetFontFor(consoleWindowSheet(name), consoleSheetChain(name)));
 }
 
 // As TConsole::setFont() changes a sub-console's, and tells scripts of it
 void TNullConsoleFrontend::setSubConsoleFont(const QString& name, const QFont& font)
 {
     mWindowNotifier.note();
-    TConsoleModel* pModel = subConsoleModel(name);
-    if (!pModel) {
+    const auto console = mSubConsoles.find(name);
+    if (console == mSubConsoles.end() || !console->second.pModel) {
         return;
     }
-    pModel->mUpperPaneFont = font;
+    console->second.scriptFont = font;
+    // The text keeps that font once the sheet has gone, until a script sets another
+    const QFont ownFont = underConsoleSheet(name, font);
+    console->second.pModel->mUpperPaneFont = ownFont;
     // A sheet's font stays over the one a script then sets
-    if (const auto console = mSubConsoles.find(name); console != mSubConsoles.end() && console->second.fontBeforeSheet) {
-        console->second.fontBeforeSheet = font;
-        applyUserWindowSheetFont(name, windowSheet(mpHost->windowRegistry().hasDockWidget(name) ? name : console->second.userWindow));
+    if (console->second.fontBeforeSheet) {
+        console->second.fontBeforeSheet = ownFont;
+        applyUserWindowSheetFont(name, consoleWindowSheet(name));
     }
     reportGridSize(name);
     if (mpHost->windowRegistry().subConsoleKind(name) == TWindowRegistry::SubConsoleKind::Buffer) {
         return;
     }
-    raiseFontEvent(qsl("sysFontChangeEvent"), name, font);
+    raiseFontEvent(qsl("sysFontChangeEvent"), name, ownFont);
 }
 
 // As TConsole::setFont() and Host::updateConsolesFont() tell scripts of a new main console font
@@ -4523,21 +4587,24 @@ std::optional<std::pair<bool, QString>> TNullConsoleFrontend::setWindowFontFamil
         if (weight != QFont::Normal) {
             font.setWeight(weight);
         }
-        const QFont before = displayFont();
-        const auto result = mpHost->setDisplayFont(font, Host::DisplayFontChange::UserChoice);
-        reportDisplayFontChange(before);
+        std::pair<bool, QString> result;
+        changeDisplayFont([this, &font, &result]() {
+            result = mpHost->setDisplayFont(font, Host::DisplayFontChange::UserChoice);
+        });
         return {result};
     }
-    TConsoleModel* pModel = subConsoleModel(name);
-    if (!pModel) {
+    const auto console = mSubConsoles.find(name);
+    if (console == mSubConsoles.end() || !console->second.pModel) {
         return {};
     }
-    const QFont ownFont = subConsoleOwnFont(name, *pModel);
-    QFont font = mpHost->createFontWithSettings(family, ownFont.pointSize());
+    // TMainConsole::setWindowFontFamily() keeps the size of the widget's font, which a sheet that styles the
+    // console lies over, and TConsole::setFont() compares the new font with the one scripts gave it
+    const QFont scriptFont = console->second.scriptFont;
+    QFont font = mpHost->createFontWithSettings(family, underConsoleSheet(name, scriptFont).pointSize());
     if (weight != QFont::Normal) {
         font.setWeight(weight);
     }
-    if (TFontAttributes(font) != TFontAttributes(ownFont)) {
+    if (TFontAttributes(font) != TFontAttributes(scriptFont)) {
         setSubConsoleFont(name, font);
     }
     return {{true, QString()}};
@@ -4546,17 +4613,18 @@ std::optional<std::pair<bool, QString>> TNullConsoleFrontend::setWindowFontFamil
 bool TNullConsoleFrontend::setWindowFontSize(const QString& name, const int size)
 {
     if (name.isEmpty() || name == qsl("main")) {
-        const QFont before = displayFont();
-        mpHost->setDisplayFontSize(size);
-        reportDisplayFontChange(before);
+        changeDisplayFont([this, size]() {
+            mpHost->setDisplayFontSize(size);
+        });
         return true;
     }
-    TConsoleModel* pModel = subConsoleModel(name);
-    if (!pModel) {
+    const auto console = mSubConsoles.find(name);
+    if (console == mSubConsoles.end() || !console->second.pModel) {
         return false;
     }
-    if (const QFont ownFont = subConsoleOwnFont(name, *pModel); ownFont.pointSize() != size) {
-        TFontAttributes font(ownFont);
+    // As TConsole::setFontSize() compares with and builds from the font scripts gave it
+    if (console->second.scriptFont.pointSize() != size) {
+        TFontAttributes font(console->second.scriptFont);
         font.mPointSize = size;
         setSubConsoleFont(name, font.makeFont());
     }

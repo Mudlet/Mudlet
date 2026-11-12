@@ -742,6 +742,47 @@ nullViewItemAfter = tostring(removeCommandLineMenuEvent("main", "nullViewItem"))
         QCOMPARE(nullViewItemAfter, qsl("nil"));
     }
 
+    // While a view has the profile its sheet goes to the view, and the console the view replaced takes the font a
+    // sheet gave it with it
+    void test_nullViewMainTextFollowsTheSheetAViewWasGiven()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QPointer<TMainConsole> console = host->mainConsoleView();
+        QVERIFY2(console, "The active host has no main console.");
+
+        host->setMainConsoleView(nullptr);
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+mainTextBase = getFontSize("main")
+assert(setProfileStyleSheet("TTextEdit { font-size: 20pt; }"))
+mainTextStyled = getFontSize("main")
+)lua")));
+        host->setMainConsoleView(console);
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(assert(setProfileStyleSheet("")))lua")));
+        host->setMainConsoleView(nullptr);
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+mainTextAfterView = getFontSize("main")
+assert(setProfileStyleSheet("TConsole { font-size: 23pt; }"))
+setFontSize("main", mainTextBase + 1)
+setFontSize("main", mainTextBase)
+mainConsoleStyled = getFontSize("main")
+)lua")));
+        host->setMainConsoleView(console);
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(assert(setProfileStyleSheet("")))lua")));
+        host->setMainConsoleView(nullptr);
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+mainTextSizes = table.concat({mainTextBase, mainTextStyled, mainTextAfterView, mainConsoleStyled, getFontSize("main")}, ",")
+)lua")));
+        host->setMainConsoleView(console);
+
+        lua_State* L = host->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, "mainTextSizes");
+        const QString sizes = QString::fromUtf8(lua_tostring(L, -1));
+        lua_pop(L, 1);
+        QCOMPARE(sizes, qsl("%1,20,%1,23,%1").arg(sizes.section(u',', 0, 0)));
+    }
+
     // What scripts are told while the profile has no view. The label is made first, so that its answers
     // come from the missing view rather than a missing label.
     void test_luaCallsWithNoConsoleSayWhy()
