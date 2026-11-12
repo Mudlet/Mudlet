@@ -3699,6 +3699,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
         connect(pMap, &TMap::signal_mapProgressSetValue, pConsole, &TMainConsole::setMapProgressDialogValue, Qt::UniqueConnection);
         connect(pMap, &TMap::signal_mapProgressDisableCancel, pConsole, &TMainConsole::disableMapProgressDialogCancel, Qt::UniqueConnection);
         connect(pMap, &TMap::signal_mapProgressClose, pConsole, &TMainConsole::closeMapProgressDialog, Qt::UniqueConnection);
+        connect(pMap, &TMap::signal_mapProgressRepaintWanted, pConsole, &TMainConsole::repaintMapProgressDialog, Qt::UniqueConnection);
     }
 
     if (pH->mpMedia) {

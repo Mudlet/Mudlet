@@ -279,6 +279,7 @@ public:
     void setMapProgressDialogValue(int value);
     void disableMapProgressDialogCancel();
     void closeMapProgressDialog();
+    void repaintMapProgressDialog();
     void createMapperDock(const QString& title, const QString& objectName) override;
     void showNewMapperDock() override;
     std::pair<bool, QString> placeMapWidget(const QString& area, int x, int y, int width, int height) override;

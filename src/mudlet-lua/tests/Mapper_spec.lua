@@ -5510,8 +5510,8 @@ describe("Tests saveMap and loadMap", function()
       assertKept(rooms, area, "Only In The Loaded Map")
     end)
 
-    -- A JSON export pumps the event loop as it goes, which runs timers - and
-    -- whatever they load - in the middle of it
+    -- The main window pumps the event loop as a JSON export goes, to repaint its
+    -- progress dialog, which runs timers - and whatever they load - in the middle of it
     local function loadDuringJsonExport(load)
       local exportPath = getMudletHomeDir() .. "/mapper_spec_export_under_load.json"
       local loadResult = "never ran"
@@ -5522,6 +5522,9 @@ describe("Tests saveMap and loadMap", function()
       -- An export that never pumped would leave the load to fire in a later spec
       killTimer(timer)
       os.remove(exportPath)
+      if loadResult == "never ran" then
+        pending("with no main window a JSON export runs no event loop, so nothing can load a map during it")
+      end
       return exported, message, loadResult
     end
 

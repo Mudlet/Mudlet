@@ -10079,9 +10079,13 @@ headlessDiscord = ok and 'ok' or tostring(err)
             spPool->deleteHost(QString::fromUtf8(lua_tostring(L, 1)));
             return 0;
         });
-        // saveJsonMap() pumps events while it writes, and needs a mapper to count the map as open, as in the GUI
+        // saveJsonMap() lets its progress repaint, which the GUI does by pumping events, and needs a mapper to count
+        // the map as open, as in the GUI
         const QString mapPath = mConfigDir.filePath(qsl("headless-exit-pump.json"));
         QVERIFY(pumping->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(assert(openMapWidget()) function onHeadlessExitPump() dropProfile([[%1]]) saveJsonMap([[%2]]) end)lua").arg(connectedHostname, mapPath)));
+        connect(pumping->mpMap.data(), &TMap::signal_mapProgressRepaintWanted, &receiver, []() {
+            QCoreApplication::processEvents();
+        });
         pumping->registerAnonymousEventHandler(qsl("sysExitEvent"), qsl("onHeadlessExitPump"));
 
         connected->mTelnet.connectIt(qsl("127.0.0.1"), server.serverPort());
@@ -13369,7 +13373,7 @@ unzipAsync([[%1]], [[%2]])
         QCOMPARE(pool->getHostCount(), 0);
     }
 
-    // An embedder may close every profile from a slot that a map operation's event loop runs
+    // An embedder may close every profile from a slot that a map operation's event loop runs, as the GUI's does
     void test_closeAllProfilesUnderAMapOperation()
     {
         static HostManager* spPool = nullptr;
@@ -13386,6 +13390,9 @@ unzipAsync([[%1]], [[%2]])
                     spPool->closeAllProfiles();
                 },
                 Qt::SingleShotConnection);
+        connect(host->mpMap.data(), &TMap::signal_mapProgressRepaintWanted, this, []() {
+            QCoreApplication::processEvents();
+        });
         QTemporaryDir exportDir;
         QVERIFY(exportDir.isValid());
         const QPointer<Host> pHost(host);
@@ -13394,6 +13401,38 @@ unzipAsync([[%1]], [[%2]])
         QVERIFY(!exported);
         QCOMPARE(exportMessage, qsl("aborted by user"));
         QTRY_VERIFY_WITH_TIMEOUT(!pHost, 5000);
+    }
+
+    // An embedder's event loop must not run under a script's map save or load; only the GUI's progress dialog pumps
+    void test_jsonMapSaveAndLoadRunNoEventLoop()
+    {
+        auto pool = std::make_unique<HostManager>();
+        const QString hostname = qsl("Test-Headless-Host-Json-Map-No-Pump");
+        QVERIFY2(pool->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = pool->getHost(hostname);
+        QTemporaryDir mapDir;
+        QVERIFY(mapDir.isValid());
+        QSignalSpy repaints(host->mpMap.data(), &TMap::signal_mapProgressRepaintWanted);
+        bool timerRan = false;
+        QTimer::singleShot(0, this, [&timerRan]() {
+            timerRan = true;
+        });
+
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+assert(openMapWidget())
+local area = addAreaName("Headless No Pump Area")
+local room = createRoomID()
+addRoom(room); setRoomArea(room, area)
+headlessSaved = tostring(saveJsonMap([[%1]]))
+headlessLoaded = tostring(loadJsonMap([[%1]]))
+)lua")
+                                                                           .arg(mapDir.filePath(qsl("map.json")))));
+
+        QCOMPARE(luaGlobalString(host, "headlessSaved"), qsl("true"));
+        QCOMPARE(luaGlobalString(host, "headlessLoaded"), qsl("true"));
+        QVERIFY2(!timerRan, "A timer ran while the script saved or loaded the map.");
+        QVERIFY2(repaints.count() >= 4, "The map operations did not offer their progress a chance to repaint.");
+        QTRY_VERIFY_WITH_TIMEOUT(timerRan, 5000);
     }
 
     // Nor one deleted meanwhile while its own script, which asked for the close, still runs
@@ -13576,7 +13615,7 @@ unzipAsync([[%1]], [[%2]])
         QVERIFY(writeRecordingProfile(first, true, recordPath));
         QVERIFY(writeRecordingProfile(second, false, recordPath));
         QVERIFY(writeRecordingProfile(closedFirst, true, recordPath));
-        // The first profile's load asks to quit, then reads a JSON map, which runs the event loop
+        // The first profile's load asks to quit, then reads a JSON map, under which the GUI runs the event loop
         QFile save(qsl("%1/2020-01-01#00-00-00.xml").arg(MudletApp::getMudletPath(enums::profileXmlFilesPath, first)));
         QVERIFY(save.open(QIODevice::ReadOnly));
         QByteArray xml = save.readAll();

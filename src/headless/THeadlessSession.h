@@ -940,12 +940,13 @@ signals:
     void packageDownloadProgress(const QString& profile, qint64 got, qint64 total);
     void packageDownloadFinished(const QString& profile);
     // A map export, import or download, as the GUI's progress dialog shows it: its title, its first label and the
-    // rooms it goes through, 0 until known; then its label, rooms done and rooms to go through as they change;
-    // then the end, whether it was done, failed or aborted. From the event loop, which an export or import runs
-    // as it goes, so the start and changes can come while the script, or the start() loading a JSON map, still
-    // runs; the end comes once that has returned. A download, which only an app can begin, through host(), runs
-    // on after its script. One still open when its profile closes, or when shutdown() or a later start() lets the
-    // profile go, is ended there; a session being deleted sends no end.
+    // rooms it goes through, 0 until known; then its label, rooms done and rooms to go through as they change; then
+    // the end, whether it was done, failed or aborted. From the event loop, or, for an export or import, at its
+    // progress steps, where only this session's own signals are delivered, so the start and changes can come while
+    // the script, or the start() loading a JSON map, still runs; the end comes once that has returned. A download,
+    // which only an app can begin, through host(), runs on after its script. One still open when its profile
+    // closes, or when shutdown() or a later start() lets the profile go, is ended there; a session being deleted
+    // sends no end.
     void mapProgressStarted(const QString& profile, const QString& title, const QString& label, int maximum);
     void mapProgressChanged(const QString& profile, const QString& label, int value, int maximum);
     void mapProgressFinished(const QString& profile);
@@ -1180,6 +1181,8 @@ private:
     bool mMapOperationCancelable = false;
     // The run whose mapRepaintRequested is queued, 0 for none
     unsigned int mMapRepaintQueuedRun = 0;
+    // The context of the map progress relays, so a map operation can deliver them and nothing else queued here
+    QObject mMapProgressRelay;
     QStringList mUnsavedProfiles;
     // Bumped by each start() and shutdown(), to drop a queued quitRequested or other relay owed to the profile
     // before, even one a script closed before shutdown() was called

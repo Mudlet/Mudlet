@@ -765,11 +765,16 @@ THeadlessSession::StartResult THeadlessSession::finishStart(const Options& optio
                 connect(pMap, &TMap::signal_mapProgressClose, this, [this]() {
                     mMapOperationCancelable = false;
                 });
-                // Queued, as the export or import that sends it is under way
+                // Queued, as the export or import that sends it is under way, and delivered where it would let a
+                // progress dialog repaint: only these, so no timer, game data or other script runs under the
+                // operation, yet a handler can still call cancelMapOperation() in time
+                connect(pMap, &TMap::signal_mapProgressRepaintWanted, this, [this]() {
+                    QCoreApplication::sendPostedEvents(&mMapProgressRelay, QEvent::MetaCall);
+                });
                 connect(
                         pMap,
                         &TMap::signal_mapTransferProgressStart,
-                        this,
+                        &mMapProgressRelay,
                         [this, run](const QString& title, const QString& label) {
                             if (run == mRun) {
                                 startMapProgress(title, label, 0);
@@ -779,7 +784,7 @@ THeadlessSession::StartResult THeadlessSession::finishStart(const Options& optio
                 connect(
                         pMap,
                         &TMap::signal_mapJsonProgressStart,
-                        this,
+                        &mMapProgressRelay,
                         [this, run](const QString& title, const QString& label, const QString&, const int maximum) {
                             if (run == mRun) {
                                 startMapProgress(title, label, maximum);
@@ -789,7 +794,7 @@ THeadlessSession::StartResult THeadlessSession::finishStart(const Options& optio
                 connect(
                         pMap,
                         &TMap::signal_mapProgressSetLabel,
-                        this,
+                        &mMapProgressRelay,
                         [this, run](const QString& label) {
                             if (run == mRun) {
                                 mMapProgressLabel = label;
@@ -801,7 +806,7 @@ THeadlessSession::StartResult THeadlessSession::finishStart(const Options& optio
                 connect(
                         pMap,
                         &TMap::signal_mapProgressSetRange,
-                        this,
+                        &mMapProgressRelay,
                         [this, run](const int, const int maximum) {
                             if (run == mRun) {
                                 mMapProgressMaximum = maximum;
@@ -813,7 +818,7 @@ THeadlessSession::StartResult THeadlessSession::finishStart(const Options& optio
                 connect(
                         pMap,
                         &TMap::signal_mapProgressSetValue,
-                        this,
+                        &mMapProgressRelay,
                         [this, run](const int value) {
                             if (run == mRun) {
                                 mMapProgressValue = value;
@@ -825,7 +830,7 @@ THeadlessSession::StartResult THeadlessSession::finishStart(const Options& optio
                 connect(
                         pMap,
                         &TMap::signal_mapProgressClose,
-                        this,
+                        &mMapProgressRelay,
                         [this, run]() {
                             if (const auto profile = std::exchange(mMapProgressFor, std::nullopt); run == mRun && profile) {
                                 emit mapProgressFinished(*profile);
@@ -836,7 +841,7 @@ THeadlessSession::StartResult THeadlessSession::finishStart(const Options& optio
                 connect(
                         pMap,
                         &TMap::signal_mapTransferProgressStart,
-                        this,
+                        &mMapProgressRelay,
                         [this, run](const QString&, const QString&, const QString& cancelText) {
                             if (run == mRun && mMapProgressFor && cancelText.isEmpty()) {
                                 const QString profile = *mMapProgressFor;
@@ -847,7 +852,7 @@ THeadlessSession::StartResult THeadlessSession::finishStart(const Options& optio
                 connect(
                         pMap,
                         &TMap::signal_mapProgressDisableCancel,
-                        this,
+                        &mMapProgressRelay,
                         [this, run]() {
                             if (run == mRun && mMapProgressFor) {
                                 const QString profile = *mMapProgressFor;
