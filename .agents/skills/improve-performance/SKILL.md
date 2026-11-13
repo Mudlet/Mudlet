@@ -22,7 +22,7 @@ inline.
    take the top entry.
 2. **Build a benchmark-safe tree.** Never benchmark a sanitizer build - ASan roughly
    halves text throughput - and the default is to have one, because
-   `src/cmake/EnableSanitizers.cmake` defaults `USE_SANITIZER` to `address`.
+   `src/cmake/EnableSanitizers.cmake` defaults `USE_SANITIZER` to `address` (to none for Android).
    - Linux: `linux-debug-nosan` (plain `linux-debug` IS an ASan build).
    - macOS: `macos-debug-nosan`, same trap with the same preset naming.
    - Windows: `windows-debug` is already safe - `src/CMakeLists.txt` skips
