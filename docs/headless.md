@@ -1268,6 +1268,22 @@ reset afterwards. A module that is missing takes with it what is built on it: wi
 Mudlet's own Lua loads, and without `luasql.sqlite3` `db:create()` raises an error. A C module of the
 app's own, for its scripts to require, is given the same way.
 
+## Embedding it: spell-check dictionaries
+
+A profile spell-checks against a Hunspell dictionary, a `<name>.aff` and a `<name>.dic`, which a
+desktop Mudlet finds among the system's or beside the program. A phone has neither, so an app that
+carries dictionaries names their folder before it starts a session:
+
+```cpp
+THeadlessSession::setDictionaryFolder(appDataFolder + qsl("/dictionaries"));
+```
+
+Every dictionary a profile opens afterwards is looked for there first, where both its files must be,
+then among the system's, and never beside the program: one in neither folder is not available.
+Hunspell reads the files with plain file calls, so the folder must be a real one, such as one the
+app copies its dictionaries into from its package; a `:/` or `assets:/` path is refused, and
+`setDictionaryFolder()` returns `false`.
+
 ## What still needs a window
 
 Some of what a profile can do has nothing to stand in for the GUI's widgets yet, and does nothing,

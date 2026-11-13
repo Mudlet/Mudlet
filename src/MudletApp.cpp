@@ -29,6 +29,7 @@
 
 #include "SecureStringUtils.h"
 #include "TGameDetails.h"
+#include "TSpellChecker.h"
 #include "ctelnet.h"
 #include "utils.h"
 
@@ -68,11 +69,13 @@
 
 namespace {
 // Mudlet itself only resolves on the main thread; the locks are for engine
-// callers that may not. They cover the config root and the settings tier;
-// mudletDictionariesInUse is atomic instead, because getMudletPath() writes it
-// from twenty places while holding nothing.
+// callers that may not. They cover the config root, the app's dictionary
+// folder and the settings tier; mudletDictionariesInUse is atomic instead,
+// because getMudletPath() writes it from twenty places while holding nothing.
 QMutex configRootMutex;
 QString configRoot;
+// Ends in a '/', as the hunspellDictionaryPath folders do; empty when no app named one
+QString appDictionaryFolder;
 // How the root in configRoot was arrived at. Three exclusive states rather than
 // a pair of bools, so "installed but not settled" cannot be written down:
 //   unresolved   - nothing has asked yet, or setConfigPath(QString()) forgot it
@@ -197,6 +200,12 @@ QString installedConfigRoot()
 {
     const QMutexLocker locker(&configRootMutex);
     return configRootState == ConfigRootState::installed ? configRoot : QString();
+}
+
+QString lockedAppDictionaryFolder()
+{
+    const QMutexLocker locker(&configRootMutex);
+    return appDictionaryFolder;
 }
 
 // Paired with every change of the config root rather than left to each caller:
@@ -473,6 +482,18 @@ QString MudletApp::credentialFilesRoot()
     return QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
 }
 
+bool MudletApp::setAppDictionaryFolder(const QString& folder)
+{
+    // Hunspell opens the files itself, so it cannot read what only Qt's file engines can, as :/ and assets:/
+    if (!folder.isEmpty() && !QFileInfo(folder).isNativePath()) {
+        qWarning().nospace().noquote() << "MudletApp::setAppDictionaryFolder(...) WARN: Hunspell cannot read dictionaries from \"" << folder << "\", as it is not a real folder.";
+        return false;
+    }
+    const QMutexLocker locker(&configRootMutex);
+    appDictionaryFolder = folder.isEmpty() ? QString() : qsl("%1/").arg(QDir::cleanPath(folder));
+    return true;
+}
+
 bool MudletApp::usingMudletDictionaries()
 {
     return mudletDictionariesInUse;
@@ -606,12 +627,22 @@ QString MudletApp::getMudletPath(const enums::mudletPathType mode, const QString
         return qsl("%1/moduleBackups/").arg(confPath);
     case enums::qtTranslationsPath:
         return QLibraryInfo::path(QLibraryInfo::TranslationsPath);
-    case enums::hunspellDictionaryPath:
+    case enums::hunspellDictionaryPath: {
+        const QString appFolder = lockedAppDictionaryFolder();
+        // Both files, as a partial copy there would otherwise hide a usable one among the system's
+        if (!appFolder.isEmpty() && TSpellChecker::dictionaryUsable(appFolder, extra1)) {
+            mudletDictionariesInUse = true;
+            return appFolder;
+        }
         for (const auto& folder : systemHunspellDictionaryFolders()) {
             if (QFile::exists(qsl("%1%2.aff").arg(folder, extra1))) {
                 mudletDictionariesInUse = false;
                 return folder;
             }
+        }
+        if (!appFolder.isEmpty()) {
+            mudletDictionariesInUse = true;
+            return appFolder;
         }
 #if defined(Q_OS_MACOS)
         mudletDictionariesInUse = true;
@@ -691,6 +722,7 @@ QString MudletApp::getMudletPath(const enums::mudletPathType mode, const QString
         // From build within ./src
         return qsl("%1/").arg(QCoreApplication::applicationDirPath());
 #endif
+    }
     }
     Q_UNREACHABLE();
     return QString();

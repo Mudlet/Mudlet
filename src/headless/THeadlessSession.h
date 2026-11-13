@@ -140,6 +140,10 @@ public:
     // for a name, it replaces the earlier one; with no name or no function it is refused. docs/headless.md
     // lists the modules Mudlet itself requires.
     static void preloadLuaModule(const QByteArray& name, int (*open)(lua_State*));
+    // A real folder of <name>.aff/.dic Hunspell dictionaries the app carries, searched ahead of the system's and in place
+    // of Mudlet's bundled ones by every dictionary opened afterwards. Refused (false) for a :/ or assets:/ path, which
+    // Hunspell cannot read; empty forgets it.
+    static bool setDictionaryFolder(const QString& folder);
 
     explicit THeadlessSession(QObject* parent = nullptr);
     // Closes the profiles unsaved, at once or, while one is busy as for shutdown(), a reset is pending, one is

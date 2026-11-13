@@ -31,6 +31,7 @@
 #include <QDirIterator>
 #include <QElapsedTimer>
 #include <QFile>
+#include <QFileInfo>
 #include <QFontDatabase>
 #include <QFontMetrics>
 #include <QRawFont>
@@ -279,6 +280,13 @@ end))lua")
         });
     }
 
+    static auto forgetAppDictionaryFolderAfterwards()
+    {
+        return qScopeGuard([]() {
+            THeadlessSession::setDictionaryFolder(QString());
+        });
+    }
+
     static QString luaGlobalString(Host* host, const char* name)
     {
         lua_State* L = host->getLuaInterpreter()->getLuaGlobalState();
@@ -473,6 +481,69 @@ private slots:
         QVERIFY(session.runLua(qsl("headlessMutes = tostring(getConfig('muteMediaAPI')) .. ' ' .. tostring(getConfig('muteMediaGame'))")));
         QCOMPARE(luaGlobalString(session.host(), "headlessMutes"), qsl("true true"));
         QVERIFY(session.shutdown(false));
+    }
+
+    void test_aDictionaryFolderTheAppNamesIsUsed()
+    {
+        const QTemporaryDir dictionaries;
+        const auto forget = forgetAppDictionaryFolderAfterwards();
+        QVERIFY(dictionaries.isValid());
+        const QString dictionaryName = Host::startingSpellDic();
+        QVERIFY(writeFile(dictionaries.filePath(qsl("%1.aff").arg(dictionaryName)), "SET UTF-8\n"));
+        QVERIFY(writeFile(dictionaries.filePath(qsl("%1.dic").arg(dictionaryName)), "1\nzorblax\n"));
+        QVERIFY(THeadlessSession::setDictionaryFolder(dictionaries.path()));
+
+        const QString name = qsl("Headless App Dictionary");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl("headlessSpelled = tostring(spellCheckWord('zorblax')) .. ' ' .. tostring(spellCheckWord('blorzax'))")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessSpelled"), qsl("true false"));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_aDictionaryFolderTheAppNamesStandsInForTheBundledOnes()
+    {
+        const QTemporaryDir dictionaries;
+        const auto forget = forgetAppDictionaryFolderAfterwards();
+        QVERIFY(dictionaries.isValid());
+        const QString folder = dictionaries.path() + u'/';
+        const QString missing = qsl("zz_NOWHERE");
+        // Each bundled path is written from the program's folder (some go on with ../). Not compared with a path read
+        // at the start, which an earlier test that failed to forget its folder would already have changed
+        const QString besideTheProgram = QCoreApplication::applicationDirPath() + u'/';
+
+        QVERIFY(THeadlessSession::setDictionaryFolder(folder));
+        QCOMPARE(MudletApp::getMudletPath(enums::hunspellDictionaryPath, missing), folder);
+        QVERIFY(!THeadlessSession::setDictionaryFolder(qsl(":/")));
+        QCOMPARE(MudletApp::getMudletPath(enums::hunspellDictionaryPath, missing), folder);
+        QVERIFY(THeadlessSession::setDictionaryFolder(QString()));
+        const QString forgotten = MudletApp::getMudletPath(enums::hunspellDictionaryPath, missing);
+        QVERIFY2(forgotten.startsWith(besideTheProgram), qPrintable(forgotten));
+    }
+
+    void test_aDictionaryFolderTheAppNamesComesBeforeTheSystems()
+    {
+        QString systemDictionary;
+        for (const auto& folder : MudletApp::systemHunspellDictionaryFolders()) {
+            const QStringList found = QDir(folder).entryList({qsl("*.aff")}, QDir::Files);
+            if (!found.isEmpty()) {
+                systemDictionary = QFileInfo(found.constFirst()).completeBaseName();
+                break;
+            }
+        }
+        if (systemDictionary.isEmpty()) {
+            QSKIP("This machine has no system Hunspell dictionary for the app's to come before");
+        }
+        const QTemporaryDir dictionaries;
+        const auto forget = forgetAppDictionaryFolderAfterwards();
+        QVERIFY(dictionaries.isValid());
+        QVERIFY(writeFile(dictionaries.filePath(qsl("%1.aff").arg(systemDictionary)), "SET UTF-8\n"));
+        QVERIFY(THeadlessSession::setDictionaryFolder(dictionaries.path()));
+        QVERIFY(MudletApp::getMudletPath(enums::hunspellDictionaryPath, systemDictionary) != dictionaries.path() + u'/');
+
+        QVERIFY(writeFile(dictionaries.filePath(qsl("%1.dic").arg(systemDictionary)), "1\nzorblax\n"));
+        QCOMPARE(MudletApp::getMudletPath(enums::hunspellDictionaryPath, systemDictionary), dictionaries.path() + u'/');
     }
 
     void test_waitsRunWithNoMainWindow()
