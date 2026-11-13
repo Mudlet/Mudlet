@@ -28,10 +28,6 @@ set(EXE_MUDLET_TARGET "mudlet_executable")
 set(mudlet_RCCS mudlet.qrc)
 configure_file("${mudlet_SOURCE_DIR}/translations/translated/qm.qrc" "${mudlet_BINARY_DIR}/translations/translated/qm.qrc" COPYONLY)
 
-if(USE_VARIABLE_SPLASH_SCREEN)
-  list(APPEND mudlet_RCCS additional_splash_screens.qrc)
-endif()
-
 if(USE_FONTS)
   list(APPEND mudlet_RCCS mudlet_fonts_common.qrc)
   if(CMAKE_SYSTEM_NAME STREQUAL Linux OR CMAKE_SYSTEM_NAME STREQUAL FreeBSD)
@@ -1147,10 +1143,6 @@ if(USE_SPEECH_ENGINES)
   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_SPEECH_ENGINES)
 endif()
 
-if(USE_VARIABLE_SPLASH_SCREEN)
-  target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_VARIABLE_SPLASH_SCREEN)
-endif()
-
 target_compile_options(${LIB_MUDLET_TARGET} PUBLIC -Wno-deprecated)
 
 # The widgets: main window, dialogs, consoles, map views and editors.
@@ -1166,6 +1158,11 @@ if(USE_GUI)
     AUTOUIC ON AUTOUIC_SEARCH_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/ui"
     AUTOMOC ON AUTORCC ON POSITION_INDEPENDENT_CODE ON
     AUTOGEN_ORIGIN_DEPENDS OFF)
+  # Only the desktop GUI shows a splash, so these images stay out of mudlet_core and mudlet-headless
+  if(USE_VARIABLE_SPLASH_SCREEN)
+    target_sources(${LIB_MUDLET_APP_TARGET} PRIVATE additional_splash_screens.qrc)
+    target_compile_definitions(${LIB_MUDLET_APP_TARGET} PUBLIC INCLUDE_VARIABLE_SPLASH_SCREEN)
+  endif()
   if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     set_property(SOURCE "${CMAKE_CURRENT_BINARY_DIR}/${LIB_MUDLET_APP_TARGET}_autogen/mocs_compilation.cpp"
                  APPEND PROPERTY COMPILE_OPTIONS -Wno-sfinae-incomplete)

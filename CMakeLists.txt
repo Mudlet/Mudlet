@@ -256,6 +256,9 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN
                         OPTION_VARIABLE USE_VARIABLE_SPLASH_SCREEN
                         READABLE_NAME "build-type splash screen"
                         DEFAULT ${DESKTOP_ONLY_DEFAULT})
+if(USE_VARIABLE_SPLASH_SCREEN AND NOT USE_GUI)
+  message(STATUS "USE_VARIABLE_SPLASH_SCREEN=ON is ignored: with USE_GUI=OFF no target shows a splash")
+endif()
 # Each of these uses something an Android or iOS build of mudlet_core cannot have; see
 # "Leaving out what a mobile build cannot use" in docs/platform-builds.md
 include_optional_module(ENVIRONMENT_VARIABLE WITH_SPAWN
