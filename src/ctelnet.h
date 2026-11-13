@@ -50,6 +50,7 @@
 
 #include <bitset>
 #include <chrono>
+#include <functional>
 #include <iostream>
 #include <memory>
 #include <queue>
@@ -287,8 +288,9 @@ public:
     // a keychain read the user only answered by then. Sends it only while the game is provably
     // still waiting at that prompt, see the definition.
     void sendOutstandingAutoLoginPassword();
-    // The wait blocks, so is only for a profile with no window to freeze
-    void terminateConnection(bool waitForTheGameToClose);
+    // With ended, the game's last data is read from the event loop until it closes too, or a second has passed,
+    // and ended then runs: only a profile with no window, whose close nobody sees, waits that long
+    void terminateConnection(std::function<void()> ended = {});
     bool reconnectOnStack() const { return mReconnectsOnStack > 0; }
     bool packageDownloadRunning() const;
     bool currentlySecure() const
@@ -416,6 +418,8 @@ private:
 #endif
 
     void abandonHostLookup();
+    void readWhatIsLeft();
+    void readUntilTheGameCloses(std::function<void()> ended);
     // Calls off a lookup, dial or login still to come; a live connection stays, for the exit handlers
     void abandonConnectionAttempt();
 

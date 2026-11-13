@@ -52,7 +52,6 @@
 #include <QCoreApplication>
 #include <QDataStream>
 #include <QDateTime>
-#include <QDeadlineTimer>
 #include <QDir>
 #include <QFileInfo>
 #include <QJsonDocument>
@@ -929,38 +928,88 @@ static void stopSending(const qintptr socketDescriptor)
 #endif
 }
 
+// Bounded, as there may be no event loop turn before the socket goes
+void cTelnet::readWhatIsLeft()
+{
+    for (int reads = 0; reads < 16 && mpSocket->state() == QAbstractSocket::ConnectedState && (mpSocket->bytesAvailable() > 0 || mpSocket->waitForReadyRead(0)); ++reads) {
+        mpSocket->readAll();
+    }
+}
+
 //The Host class wants us to end the connection (Profile is closing)
-void cTelnet::terminateConnection(const bool waitForTheGameToClose)
+void cTelnet::terminateConnection(std::function<void()> ended)
 {
 #if !defined(QT_NO_SSL)
     if (mCurrent_sslTsl) {
         abortConnection();
-    } else {
-#endif
-        // The reads below re-enter the socket's slots, which return early once the profile is closing down
-        Q_ASSERT(!mpHost || mpHost->isClosingDown());
-        // ConnectedState only: Qt reads nothing from a closing socket
-        if (mpSocket && mpSocket->state() == QAbstractSocket::ConnectedState) {
-            // What was sent last, as from sysExitEvent, waits for the event loop, which may not run again first
-            mpSocket->flush();
-            // Unread incoming data makes our close a reset, as does data the game sends after it, and a Windows
-            // peer then discards what it has received but not read, the line just sent included. Bounded, as a
-            // game may never stop sending, nor close.
-            if (waitForTheGameToClose && mpSocket->bytesToWrite() == 0) {
-                stopSending(mpSocket->socketDescriptor());
-                const QDeadlineTimer deadline(1s);
-                while (!deadline.hasExpired() && mpSocket->state() == QAbstractSocket::ConnectedState && mpSocket->waitForReadyRead(static_cast<int>(deadline.remainingTime()))) {
-                    mpSocket->readAll();
-                }
-            }
-            for (int reads = 0; reads < 16 && mpSocket->state() == QAbstractSocket::ConnectedState && (mpSocket->bytesAvailable() > 0 || mpSocket->waitForReadyRead(0)); ++reads) {
-                mpSocket->readAll();
-            }
+        if (ended) {
+            ended();
         }
-        disconnectIt();
-#if !defined(QT_NO_SSL)
+        return;
     }
 #endif
+    // The reads below re-enter the socket's slots, which return early once the profile is closing down
+    Q_ASSERT(!mpHost || mpHost->isClosingDown());
+    // ConnectedState only: Qt reads nothing from a closing socket
+    if (mpSocket && mpSocket->state() == QAbstractSocket::ConnectedState) {
+        // What was sent last, as from sysExitEvent, waits for the event loop, which may not run again first
+        mpSocket->flush();
+        // Unread incoming data makes our close a reset, as does data the game sends after it, and a Windows
+        // peer then discards what it has received but not read, the line just sent included
+        if (ended && mpSocket->bytesToWrite() == 0) {
+            stopSending(mpSocket->socketDescriptor());
+            readUntilTheGameCloses(std::move(ended));
+            return;
+        }
+        readWhatIsLeft();
+    }
+    disconnectIt();
+    if (ended) {
+        ended();
+    }
+}
+
+// Bounded, as a game may never stop sending, nor close
+void cTelnet::readUntilTheGameCloses(std::function<void()> ended)
+{
+    // Nothing reconnects meanwhile, as disconnectIt() will not have been called until this ends
+    mDontReconnect = true;
+    mDisconnectRequested = true;
+    mTimerFailedConnectionRetry->stop();
+    // The context of every connection below, so they go with it, or with this cTelnet
+    auto* pDeadline = new QTimer(this);
+    pDeadline->setSingleShot(true);
+    auto finished = std::make_shared<bool>(false);
+    auto finish = [this, pDeadline, finished, ended = std::move(ended)]() {
+        if (std::exchange(*finished, true)) {
+            return;
+        }
+        pDeadline->stop();
+        pDeadline->deleteLater();
+        if (mpSocket && mpSocket->state() == QAbstractSocket::ConnectedState) {
+            readWhatIsLeft();
+        }
+        disconnectIt();
+        ended();
+    };
+    connect(mpSocket, &QIODevice::readyRead, pDeadline, [this, pDeadline, finish]() {
+        if (mpSocket) {
+            mpSocket->readAll();
+        }
+        // Qt's Windows dispatcher serves socket notifiers ahead of timers, so a game that keeps sending holds the timeout off
+        if (pDeadline->remainingTime() == 0) {
+            finish();
+        }
+    });
+    connect(mpSocket, &QAbstractSocket::stateChanged, pDeadline, [finish](const QAbstractSocket::SocketState state) {
+        if (state != QAbstractSocket::ConnectedState) {
+            finish();
+        }
+    });
+    connect(pDeadline, &QTimer::timeout, pDeadline, finish);
+    pDeadline->start(1s);
+    // What arrived before the half-close, which no readyRead may announce again
+    mpSocket->readAll();
 }
 
 // A connection attempt that never reaches the game - refused, unreachable, or timed out - leaves

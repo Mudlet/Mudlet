@@ -2031,6 +2031,77 @@ tempKey(mudlet.keymodifier.Control + mudlet.keymodifier.Alt, mudlet.key.S, [[hea
         QVERIFY(session.shutdown(false));
     }
 
+    // A profile with no view waits for its game to close too before its close ends, or its unread data would make
+    // that close a reset, but it waits from the event loop: an app that closes it is not held up meanwhile
+    void test_aCloseWaitsForTheGameWithoutHoldingTheApp()
+    {
+        const QString name = qsl("Headless Close Waits");
+        QVERIFY(writeProfile(name, QString()));
+        QTcpServer server;
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+
+        THeadlessSession session;
+        QSignalSpy connected(&session, &THeadlessSession::connected);
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        QTRY_VERIFY_WITH_TIMEOUT(server.hasPendingConnections(), 10000);
+        std::unique_ptr<QTcpSocket> game(server.nextPendingConnection());
+        QTRY_COMPARE_WITH_TIMEOUT(connected.size(), 1, 10000);
+        // A game that never sees the profile stop sending, so never closes: Qt stops reading a socket whose read
+        // buffer is full, and nothing here empties it
+        game->setReadBufferSize(1);
+        QVERIFY(session.submit(qsl("look")));
+        QTRY_VERIFY_WITH_TIMEOUT(game->bytesAvailable() > 0, 10000);
+
+        QSignalSpy shutDown(&session, &THeadlessSession::shutdownFinished);
+        QElapsedTimer took;
+        took.start();
+        session.shutdownAsync(true);
+        QVERIFY2(took.elapsed() < 500, qPrintable(qsl("shutdownAsync() held the app for %1 ms waiting for the game to close").arg(took.elapsed())));
+        QVERIFY(shutDown.isEmpty());
+        QTRY_COMPARE_WITH_TIMEOUT(shutDown.size(), 1, 10000);
+        QVERIFY2(shutDown.first().at(0).toBool(), qPrintable(shutDown.first().at(1).toString()));
+        // The second the close gives a game that does not close, so it did wait for this one
+        QVERIFY2(took.elapsed() >= 900, qPrintable(qsl("The close ended after %1 ms, without waiting for the game").arg(took.elapsed())));
+    }
+
+    // Bites on Windows, whose event dispatcher serves socket notifiers ahead of timers
+    void test_aCloseEndsOnTimeWhileTheGameKeepsSending()
+    {
+        const QString name = qsl("Headless Close Flooded");
+        QVERIFY(writeProfile(name, QString()));
+        QTcpServer server;
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+
+        THeadlessSession session;
+        QSignalSpy connected(&session, &THeadlessSession::connected);
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        QTRY_VERIFY_WITH_TIMEOUT(server.hasPendingConnections(), 10000);
+        std::unique_ptr<QTcpSocket> game(server.nextPendingConnection());
+        QTRY_COMPARE_WITH_TIMEOUT(connected.size(), 1, 10000);
+        game->setReadBufferSize(1);
+        QVERIFY(session.submit(qsl("look")));
+        QTRY_VERIFY_WITH_TIMEOUT(game->bytesAvailable() > 0, 10000);
+
+        const QByteArray chunk(16 * 1024, 'x');
+        connect(game.get(), &QIODevice::bytesWritten, game.get(), [pGame = game.get(), chunk]() {
+            if (pGame->bytesToWrite() < chunk.size()) {
+                pGame->write(chunk);
+            }
+        });
+        game->write(chunk);
+
+        QSignalSpy shutDown(&session, &THeadlessSession::shutdownFinished);
+        QElapsedTimer took;
+        took.start();
+        session.shutdownAsync(true);
+        QTRY_COMPARE_WITH_TIMEOUT(shutDown.size(), 1, 10000);
+        QVERIFY2(took.elapsed() < 3000, qPrintable(qsl("The close took %1 ms while the game kept sending").arg(took.elapsed())));
+    }
+
     // As the GUI's replay toolbar holds, resumes and stops it, and only for a replay of the session's profile
     void test_aReplayIsPausedResumedAndStopped()
     {
