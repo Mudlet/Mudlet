@@ -1583,14 +1583,15 @@ QVector<QPointF> TMapPainter::exitLinePath(const TRoom& room, const ExitToPaint&
         }
     }
 
-    QVector<QPointF> path{from};
-    if (!liesAhead(room, exit.direction, destination)) {
-        path << stubEnd(from, exit.direction);
-        if (leavesByStub) {
-            *leavesByStub = true;
-        }
+    // One end bending turns the line off the other end's axis too, so then both leave through their stubs
+    if (liesAhead(room, exit.direction, destination) && (!backDirection || liesAhead(destination, backDirection, room))) {
+        return {from, to};
     }
-    if (backDirection && !liesAhead(destination, backDirection, room)) {
+    QVector<QPointF> path{from, stubEnd(from, exit.direction)};
+    if (leavesByStub) {
+        *leavesByStub = true;
+    }
+    if (backDirection) {
         path << stubEnd(to, backDirection);
     }
     path << to;
@@ -2225,29 +2226,8 @@ void TMapPainter::paintRoomExits(QPainter& painter,
             if (!room->doors.empty()) {
                 QString doorKey;
                 int doorStatus = 0;
-                if (room->getSouth() == rID && room->doors.contains(key_s)) {
-                    doorKey = key_s;
-                    doorStatus = room->doors.value(doorKey);
-                } else if (room->getNorth() == rID && room->doors.contains(key_n)) {
-                    doorKey = key_n;
-                    doorStatus = room->doors.value(doorKey);
-                } else if (room->getSouthwest() == rID && room->doors.contains(key_sw)) {
-                    doorKey = key_sw;
-                    doorStatus = room->doors.value(doorKey);
-                } else if (room->getSoutheast() == rID && room->doors.contains(key_se)) {
-                    doorKey = key_se;
-                    doorStatus = room->doors.value(doorKey);
-                } else if (room->getNortheast() == rID && room->doors.contains(key_ne)) {
-                    doorKey = key_ne;
-                    doorStatus = room->doors.value(doorKey);
-                } else if (room->getNorthwest() == rID && room->doors.contains(key_nw)) {
-                    doorKey = key_nw;
-                    doorStatus = room->doors.value(doorKey);
-                } else if (room->getWest() == rID && room->doors.contains(key_w)) {
-                    doorKey = key_w;
-                    doorStatus = room->doors.value(doorKey);
-                } else if (room->getEast() == rID && room->doors.contains(key_e)) {
-                    doorKey = key_e;
+                if (const QString key = TRoom::dirCodeToShortString(exit.direction); room->doors.contains(key)) {
+                    doorKey = key;
                     doorStatus = room->doors.value(doorKey);
                 }
                 // Else not an XY-plane exit and doorStatus/doorKey will not be
@@ -3852,13 +3832,13 @@ std::pair<bool, QString> TMapPainter::exportArea(int areaId, const QString& file
             }
 
             // Now draw regular exits - use exact same logic as paintRoomExits
-            QList<int> roomExitList;
+            QList<std::pair<int, QString>> roomExitList;
             QList<int> roomOneWayExits;
 
             // Helper function to add exit and check for one-way
             auto addExitAndCheckOneWay = [&](const QString& dirKey, int exitRoomId) {
                 if (exitRoomId > 0) {
-                    roomExitList.push_back(exitRoomId);
+                    roomExitList.push_back({exitRoomId, dirKey});
                     TRoom* exitRoom = mpMap->mpRoomDB->getRoom(exitRoomId);
                     if (exitRoom) {
                         // Check if it's a one-way exit (return direction doesn't point back)
@@ -3927,7 +3907,7 @@ std::pair<bool, QString> TMapPainter::exportArea(int areaId, const QString& file
             }
 
             // Draw regular exit lines to destination rooms, leaving out those a straight custom line already draws
-            for (const int exitRoomId : roomExitList) {
+            for (const auto& [exitRoomId, exitKey] : roomExitList) {
                 if (exitRoomId <= 0)
                     continue;
 
@@ -3946,50 +3926,50 @@ std::pair<bool, QString> TMapPainter::exportArea(int areaId, const QString& file
                 int direction = 0;
 
                 // Determine door key and exit line based on direction
-                if (room->getNorth() == exitRoomId) {
-                    doorKey = "n";
+                if (exitKey == QLatin1String("n")) {
+                    doorKey = exitKey;
                     direction = DIR_NORTH;
                     if (areaExit) {
                         exitLine = QLineF(rx, ry - exitArrowScale * finalRoomSize, rx, ry);
                     }
-                } else if (room->getSouth() == exitRoomId) {
-                    doorKey = "s";
+                } else if (exitKey == QLatin1String("s")) {
+                    doorKey = exitKey;
                     direction = DIR_SOUTH;
                     if (areaExit) {
                         exitLine = QLineF(rx, ry + exitArrowScale * finalRoomSize, rx, ry);
                     }
-                } else if (room->getEast() == exitRoomId) {
-                    doorKey = "e";
+                } else if (exitKey == QLatin1String("e")) {
+                    doorKey = exitKey;
                     direction = DIR_EAST;
                     if (areaExit) {
                         exitLine = QLineF(rx + exitArrowScale * finalRoomSize, ry, rx, ry);
                     }
-                } else if (room->getWest() == exitRoomId) {
-                    doorKey = "w";
+                } else if (exitKey == QLatin1String("w")) {
+                    doorKey = exitKey;
                     direction = DIR_WEST;
                     if (areaExit) {
                         exitLine = QLineF(rx - exitArrowScale * finalRoomSize, ry, rx, ry);
                     }
-                } else if (room->getNortheast() == exitRoomId) {
-                    doorKey = "ne";
+                } else if (exitKey == QLatin1String("ne")) {
+                    doorKey = exitKey;
                     direction = DIR_NORTHEAST;
                     if (areaExit) {
                         exitLine = QLineF(rx + exitArrowScale * finalRoomSize, ry - exitArrowScale * finalRoomSize, rx, ry);
                     }
-                } else if (room->getNorthwest() == exitRoomId) {
-                    doorKey = "nw";
+                } else if (exitKey == QLatin1String("nw")) {
+                    doorKey = exitKey;
                     direction = DIR_NORTHWEST;
                     if (areaExit) {
                         exitLine = QLineF(rx - exitArrowScale * finalRoomSize, ry - exitArrowScale * finalRoomSize, rx, ry);
                     }
-                } else if (room->getSoutheast() == exitRoomId) {
-                    doorKey = "se";
+                } else if (exitKey == QLatin1String("se")) {
+                    doorKey = exitKey;
                     direction = DIR_SOUTHEAST;
                     if (areaExit) {
                         exitLine = QLineF(rx + exitArrowScale * finalRoomSize, ry + exitArrowScale * finalRoomSize, rx, ry);
                     }
-                } else if (room->getSouthwest() == exitRoomId) {
-                    doorKey = "sw";
+                } else if (exitKey == QLatin1String("sw")) {
+                    doorKey = exitKey;
                     direction = DIR_SOUTHWEST;
                     if (areaExit) {
                         exitLine = QLineF(rx - exitArrowScale * finalRoomSize, ry + exitArrowScale * finalRoomSize, rx, ry);

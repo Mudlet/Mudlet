@@ -38,6 +38,8 @@
 #include "TFlipButton.h"
 #include "TLabel.h"
 #include "TMap.h"
+#include "TMapView.h"
+#include "TMapViewManager.h"
 #include "TMedia.h"
 #include "TMxpFrameWidgets.h"
 #include "TNullConsoleFrontend.h"
@@ -3897,13 +3899,19 @@ void TMainConsole::setMapLargeAreaExitArrows(const bool enabled)
 
 void TMainConsole::setMapDirectionalExitLines(const bool enabled)
 {
-    auto* mapper = mpHost->mpMap->mapper();
-    if (!mapper || !mapper->mp2dMap) {
-        return;
+    // Each 2D map keeps its own copy, taken when it was made
+    if (auto* mapper = mpHost->mpMap->mapper(); mapper && mapper->mp2dMap) {
+        mapper->mp2dMap->mDirectionalExitLines = enabled;
+        mapper->mp2dMap->update();
     }
-
-    mapper->mp2dMap->mDirectionalExitLines = enabled;
-    mapper->mp2dMap->update();
+    if (TMapViewManager* pViewManager = mpHost->mpMap->getViewManager()) {
+        for (const int viewId : pViewManager->getViewIds()) {
+            if (TMapView* pView = pViewManager->getView(viewId); pView && pView->get2DMap()) {
+                pView->get2DMap()->mDirectionalExitLines = enabled;
+                pView->get2DMap()->update();
+            }
+        }
+    }
 }
 
 void TMainConsole::requestMapRepaint()
