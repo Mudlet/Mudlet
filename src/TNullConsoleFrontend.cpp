@@ -108,14 +108,26 @@ bool knownPseudoState(const QString& name)
     return known.contains(name, Qt::CaseInsensitive);
 }
 
-// The specificity QCss::StyleSelector::matchRule() weighs a selector by that matches a widget of these classes, most
-// derived first, in the pseudo-states held, or nothing. A combinator or an attribute selector other than a class is
-// not matched.
-std::optional<uint> selectorSpecificity(const QStringView selector, const QStringList& classNames, const QString& objectName, const QStringList& heldStates)
+// One basic selector of a QCss::Selector, and how it relates to the one after it: ' ' for an ancestor, '>' for the
+// parent, '+' or '~' for a sibling, or nothing for the last
+struct BasicSelector
+{
+    QString element;
+    QStringList ids;
+    // An attribute's name, its test ('=', '~', '|', '^', '$' or '*', or nothing for any value) and the value tested
+    QList<std::tuple<QString, QChar, QString>> attributes;
+    QList<std::pair<QString, bool>> pseudos;
+    QChar relationToNext;
+};
+
+// A selector as QCss::Parser::parseSelector() reads one, or nothing for one it cannot
+std::optional<QList<BasicSelector>> parseSelector(const QStringView selector)
 {
     qsizetype at = 0;
-    // QCss takes a backslash as escaping the character after it, and reads no hex escape
-    const auto ident = [&selector, &at]() {
+    // QCss takes a backslash as escaping the character after it, and reads no hex escape. Any name but the one after
+    // a '#' is an IDENT, which may not start with a digit; one that does is read as no name
+    const auto ident = [&selector, &at](const bool hash = false) {
+        const qsizetype from = at;
         QString name;
         while (at < selector.size()) {
             const QChar next = selector.at(at);
@@ -129,59 +141,245 @@ std::optional<uint> selectorSpecificity(const QStringView selector, const QStrin
                 break;
             }
         }
+        if (!hash && !name.isEmpty()) {
+            const qsizetype first = selector.at(from) == u'-' ? from + 1 : from;
+            const QChar start = first < at ? selector.at(first) : QChar();
+            if (start != u'\\' && start != u'_' && !start.isLetter() && start.unicode() < 0x80) {
+                at = from;
+                return QString();
+            }
+        }
         return name;
     };
-    QString element;
-    if (at < selector.size() && selector.at(at) == u'*') {
-        ++at;
-    } else {
-        element = ident();
-    }
-    QStringList ids;
-    QStringList classes;
-    QList<std::pair<QString, bool>> pseudos;
-    while (at < selector.size()) {
-        const QChar marker = selector.at(at++);
-        if (marker == u'#' || marker == u'.') {
-            const QString name = ident();
-            if (name.isEmpty()) {
-                return std::nullopt;
-            }
-            (marker == u'#' ? ids : classes) << name;
-        } else if (marker == u':') {
-            if (at < selector.size() && selector.at(at) == u':') {
-                ++at;
-            }
-            const bool negated = at < selector.size() && selector.at(at) == u'!';
-            if (negated) {
-                ++at;
-            }
-            const QString name = ident();
-            if (name.isEmpty() || (at < selector.size() && selector.at(at) == u'(')) {
-                return std::nullopt;
-            }
-            pseudos.append({name, negated});
+    const auto skipSpace = [&selector, &at]() {
+        const qsizetype from = at;
+        while (at < selector.size() && selector.at(at).isSpace()) {
+            ++at;
+        }
+        return at > from;
+    };
+    QList<BasicSelector> basicSelectors;
+    while (true) {
+        BasicSelector basic;
+        bool named = false;
+        if (at < selector.size() && selector.at(at) == u'*') {
+            ++at;
+            named = true;
         } else {
+            basic.element = ident();
+            named = !basic.element.isEmpty();
+        }
+        bool more = false;
+        while (at < selector.size()) {
+            const QChar marker = selector.at(at);
+            if (marker == u'#' || marker == u'.') {
+                ++at;
+                const QString name = ident(marker == u'#');
+                if (name.isEmpty()) {
+                    return std::nullopt;
+                }
+                if (marker == u'#') {
+                    basic.ids << name;
+                } else {
+                    basic.attributes.append({qsl("class"), u'~', name});
+                }
+            } else if (marker == u'[') {
+                ++at;
+                skipSpace();
+                const QString name = ident();
+                skipSpace();
+                if (name.isEmpty() || at >= selector.size()) {
+                    return std::nullopt;
+                }
+                QChar test;
+                QString value;
+                if (selector.at(at) != u']') {
+                    if (selector.at(at) != u'=') {
+                        test = selector.at(at++);
+                        if (!QStringView(u"~|^$*").contains(test) || at >= selector.size() || selector.at(at) != u'=') {
+                            return std::nullopt;
+                        }
+                    } else {
+                        test = u'=';
+                    }
+                    ++at;
+                    skipSpace();
+                    if (at < selector.size() && (selector.at(at) == u'"' || selector.at(at) == u'\'')) {
+                        const QChar quote = selector.at(at++);
+                        while (at < selector.size() && selector.at(at) != quote) {
+                            if (selector.at(at) == u'\\' && at + 1 < selector.size()) {
+                                value += selector.at(at + 1);
+                                at += 2;
+                            } else {
+                                value += selector.at(at++);
+                            }
+                        }
+                        if (at++ >= selector.size()) {
+                            return std::nullopt;
+                        }
+                    } else if (value = ident(); value.isEmpty()) {
+                        return std::nullopt;
+                    }
+                    skipSpace();
+                }
+                if (at >= selector.size() || selector.at(at) != u']') {
+                    return std::nullopt;
+                }
+                ++at;
+                basic.attributes.append({name, test, value});
+            } else if (marker == u':') {
+                ++at;
+                if (at < selector.size() && selector.at(at) == u':') {
+                    ++at;
+                }
+                const bool negated = at < selector.size() && selector.at(at) == u'!';
+                if (negated) {
+                    ++at;
+                }
+                QString name = ident();
+                if (name.isEmpty()) {
+                    return std::nullopt;
+                }
+                // QCss::Parser::parsePseudo() reads a function of one IDENT, whose pseudo is no state but a sub-control
+                if (at < selector.size() && selector.at(at) == u'(') {
+                    ++at;
+                    skipSpace();
+                    const QString argument = ident();
+                    skipSpace();
+                    if (argument.isEmpty() || at >= selector.size() || selector.at(at) != u')') {
+                        return std::nullopt;
+                    }
+                    ++at;
+                    name += u'(' + argument + u')';
+                }
+                basic.pseudos.append({name, negated});
+            } else {
+                break;
+            }
+            more = true;
+        }
+        if (!named && !more) {
             return std::nullopt;
         }
-    }
-    if (element.isEmpty() && ids.isEmpty() && classes.isEmpty() && pseudos.isEmpty() && !selector.startsWith(u'*')) {
-        return std::nullopt;
-    }
-    if ((!element.isEmpty() && !classNames.contains(element)) || (!ids.isEmpty() && ids != QStringList{objectName})) {
-        return std::nullopt;
-    }
-    for (const QString& name : std::as_const(classes)) {
-        if (name != classNames.first()) {
+        const bool spaced = skipSpace();
+        if (at < selector.size() && QStringView(u"+>~").contains(selector.at(at))) {
+            basic.relationToNext = selector.at(at++);
+            skipSpace();
+        } else if (spaced) {
+            basic.relationToNext = u' ';
+        } else if (at < selector.size()) {
             return std::nullopt;
         }
+        basicSelectors << basic;
+        if (at >= selector.size()) {
+            return basicSelectors;
+        }
     }
+}
+
+std::optional<QString> attributeValue(const QString& name, const TNullConsoleFrontend::SheetNode& node)
+{
+    // QStyleSheetStyleSelector takes a null value for no attribute; a label's text is null until set, and again once
+    // QLabel::clear() has run
+    if (name == QLatin1String("objectName")) {
+        return node.objectName.isNull() ? std::nullopt : std::optional<QString>(node.objectName);
+    }
+    for (const auto& [property, value] : node.properties) {
+        if (property == name) {
+            return value.isNull() ? std::nullopt : std::optional<QString>(value);
+        }
+    }
+    if (name == QLatin1String("class")) {
+        return node.classNames.first();
+    }
+    return std::nullopt;
+}
+
+// QCss::StyleSelector::basicSelectorMatches()'s tests of an attribute's value
+bool attributeTestHolds(const QChar test, const QString& value, const QString& wanted)
+{
+    switch (test.unicode()) {
+    case 0:
+        return true;
+    case u'=':
+        return value == wanted;
+    case u'~':
+        return QStringView(value).split(u' ').contains(QStringView(wanted));
+    case u'|':
+        return value == wanted || value.startsWith(wanted + u'-');
+    case u'^':
+        return value.startsWith(wanted);
+    case u'$':
+        return value.endsWith(wanted);
+    case u'*':
+        return value.contains(wanted);
+    default:
+        return false;
+    }
+}
+
+// QCss::StyleSelector::basicSelectorMatches(), which leaves the pseudo-states to the caller
+bool basicSelectorMatches(const BasicSelector& basic, const TNullConsoleFrontend::SheetNode& node)
+{
+    for (const auto& [name, test, wanted] : basic.attributes) {
+        const std::optional<QString> value = attributeValue(name, node);
+        if (!value || !attributeTestHolds(test, *value, wanted)) {
+            return false;
+        }
+    }
+    return (basic.element.isEmpty() || node.classNames.contains(basic.element)) && (basic.ids.isEmpty() || basic.ids == QStringList{node.objectName});
+}
+
+// The specificity QCss::StyleSelector::matchRule() weighs a selector by that matches the first widget of the chain in
+// the pseudo-states held, or nothing
+std::optional<uint> selectorSpecificity(const QList<BasicSelector>& basics, const TNullConsoleFrontend::SheetChain& chain, const QStringList& heldStates)
+{
+    if (chain.isEmpty()) {
+        return std::nullopt;
+    }
+    const auto matches = [&basics, &chain](const qsizetype index, const qsizetype depth) {
+        return basicSelectorMatches(basics.at(index), chain.at(depth));
+    };
+    // QCss::BasicSelector::MatchNextSelectorIfAncestor and MatchNextSelectorIfIndirectAdjecent, which may try further on
+    const auto indirect = [](const QChar relation) {
+        return relation == u' ' || relation == u'~';
+    };
+    bool match = false;
+    if (basics.size() == 1) {
+        match = basics.first().relationToNext.isNull() && matches(0, 0);
+    } else {
+        // QCss::StyleSelector::selectorMatches(), which never goes back to try another ancestor for a basic selector
+        // it has matched
+        qsizetype index = basics.size() - 1;
+        qsizetype depth = 0;
+        do {
+            match = matches(index, depth);
+            if (!match && (index == basics.size() - 1 || !indirect(basics.at(index).relationToNext))) {
+                break;
+            }
+            if (match && --index < 0) {
+                break;
+            }
+            // QStyleSheetStyleSelector gives a widget no previous sibling
+            const QChar relation = basics.at(index).relationToNext;
+            depth = relation == u' ' || relation == u'>' ? depth + 1 : chain.size();
+            if (depth >= chain.size()) {
+                match = false;
+                break;
+            }
+        } while (match || indirect(basics.at(index).relationToNext));
+    }
+    if (!match) {
+        return std::nullopt;
+    }
+    // Only the last basic selector's states are the widget's; any other's are not looked at
+    const QList<std::pair<QString, bool>>& pseudos = basics.last().pseudos;
     if (!pseudos.isEmpty() && !knownPseudoState(pseudos.first().first)) {
         return std::nullopt;
     }
     // Selector::pseudoClass(): an unknown state past the first drops the states before it, but not the negated ones
     bool statesHold = true;
-    for (const auto& [name, negated] : std::as_const(pseudos)) {
+    for (const auto& [name, negated] : pseudos) {
         if (!knownPseudoState(name)) {
             statesHold = true;
             break;
@@ -197,7 +395,38 @@ std::optional<uint> selectorSpecificity(const QStringView selector, const QStrin
     if (!statesHold) {
         return std::nullopt;
     }
-    return (element.isEmpty() ? 0 : 1) + uint(classes.size() + pseudos.size()) * 0x10 + uint(ids.size()) * 0x100;
+    uint specificity = 0;
+    for (const BasicSelector& basic : basics) {
+        specificity += (basic.element.isEmpty() ? 0 : 1) + uint(basic.attributes.size() + basic.pseudos.size()) * 0x10 + uint(basic.ids.size()) * 0x100;
+    }
+    return specificity;
+}
+
+const QStringList& widgetClasses()
+{
+    static const QStringList classes{qsl("QWidget"), qsl("QObject")};
+    return classes;
+}
+
+TNullConsoleFrontend::SheetNode mainWindowNode()
+{
+    return {{qsl("mudlet"), qsl("QMainWindow"), qsl("QWidget"), qsl("QObject")}, qsl("main_window"), {}};
+}
+
+// A console's frame, core pane and two base frames, as the TConsole constructor nests them
+TNullConsoleFrontend::SheetChain consoleFrameChain()
+{
+    return {{widgetClasses(), qsl("MainFrame"), {}}, {widgetClasses(), QString(), {}}, {widgetClasses(), QString(), {}}, {widgetClasses(), QString(), {}}};
+}
+
+// The main console, then the profile's splitter, its container and the frame that holds that
+TNullConsoleFrontend::SheetChain mainConsoleChain(const QString& profile)
+{
+    return {{{qsl("TMainConsole"), qsl("TConsole"), qsl("QWidget"), qsl("QObject")}, profile, {{qsl("HostName"), profile}}},
+            {{qsl("QSplitter"), qsl("QFrame"), qsl("QWidget"), qsl("QObject")}, QString(), {}},
+            {widgetClasses(), QString(), {}},
+            {widgetClasses(), QString(), {}},
+            mainWindowNode()};
 }
 
 // What QCss::Scanner makes of a backslash in a string and what follows it at index: how much of that it takes, with
@@ -285,10 +514,27 @@ qsizetype indexOutsideQuotes(const QString& text, const QChar wanted, qsizetype 
     return -1;
 }
 
-// The declarations of a widget's own sheet that reach it in the pseudo-states held, in the order QStyleSheetStyle
-// applies them. A sheet that is not a list of rules is QStyleSheetStyle's "* { sheet }"; @-rules apply
+// The comma-separated selectors of a rule, or nothing if QCss::Parser cannot read one of them
+std::optional<QList<QList<BasicSelector>>> parseSelectors(const QString& selectors)
+{
+    QList<QList<BasicSelector>> parsed;
+    for (qsizetype from = 0; from <= selectors.size();) {
+        const qsizetype comma = indexOutsideQuotes(selectors, u',', from);
+        const qsizetype end = comma < 0 ? selectors.size() : comma;
+        const auto basics = parseSelector(QStringView(selectors).mid(from, end - from).trimmed());
+        if (!basics) {
+            return std::nullopt;
+        }
+        parsed << *basics;
+        from = end + 1;
+    }
+    return parsed;
+}
+
+// The declarations of a sheet that reach the first widget of the chain in the pseudo-states held, in the order
+// QStyleSheetStyle applies them. A sheet that is not a list of rules is QStyleSheetStyle's "* { sheet }"; @-rules apply
 // to no widget.
-QString sheetDeclarations(const QString& sheet, const QStringList& classNames, const QString& objectName, const QStringList& heldStates)
+QString sheetDeclarations(const QString& sheet, const TNullConsoleFrontend::SheetChain& chain, const QStringList& heldStates)
 {
     QString text = sheet;
     for (qsizetype open = indexOutsideQuotes(text, u'/', 0); open >= 0; open = indexOutsideQuotes(text, u'/', open + 1)) {
@@ -325,13 +571,17 @@ QString sheetDeclarations(const QString& sheet, const QStringList& classNames, c
             at = close + 1;
             continue;
         }
-        // The parser stops at the first rule it cannot read, keeping the rules before it
+        // The parser stops at the first rule it cannot read, a selector included, keeping the rules before it
         if (close < 0 || indexOutsideQuotes(text.left(close), u'{', open + 1) >= 0 || !sheetStringsReadable(QStringView(text).mid(at, close - at))) {
             break;
         }
+        const auto parsed = parseSelectors(text.mid(at, open - at));
+        if (!parsed) {
+            break;
+        }
         const QString declarations = text.mid(open + 1, close - open - 1);
-        for (const QString& selector : text.mid(at, open - at).split(u',')) {
-            if (const auto specificity = selectorSpecificity(QStringView(selector).trimmed(), classNames, objectName, heldStates)) {
+        for (const QList<BasicSelector>& basics : *parsed) {
+            if (const auto specificity = selectorSpecificity(basics, chain, heldStates)) {
                 weighted.append({order + *specificity * 0x100, declarations});
             }
         }
@@ -346,6 +596,12 @@ QString sheetDeclarations(const QString& sheet, const QStringList& classNames, c
         declarations << block;
     }
     return declarations.join(u';');
+}
+
+// QStyleSheetStyle::updateStyleSheetFont() asks for the enabled and active states
+std::optional<QFont> sheetFontFor(const QString& sheet, const TNullConsoleFrontend::SheetChain& chain)
+{
+    return styleSheetFont(sheetDeclarations(sheet, chain, {qsl("enabled"), qsl("active")}));
 }
 
 // The text a sheet's declarations give a qproperty, as QStyleSheetStyle::setProperties() reads one: its
@@ -1289,6 +1545,7 @@ void TNullConsoleFrontend::restyleLabel(Label& label, const QString& sheet)
     model.mStyleSheet = sheet;
     label.windowSheet = inherited;
     if (sheet.isEmpty() && inherited.isEmpty()) {
+        label.sheetChain.clear();
         label.sheetFont.reset();
         label.frame.fill(0);
         label.limits = SizeLimits();
@@ -1302,11 +1559,10 @@ void TNullConsoleFrontend::restyleLabel(Label& label, const QString& sheet)
             label.sizeHint.reset();
         }
     } else {
-        static const QStringList classNames{qsl("TLabel"), qsl("QLabel"), qsl("QFrame"), qsl("QWidget"), qsl("QObject")};
-        const QString objectName = qsl("label_%1_%2").arg(mpHost->getName(), model.mName);
+        label.sheetChain = labelSheetChain(label);
         // The window's sheet first, as a widget's own sheet wins over one it inherits whatever their selectors
         const auto cascade = [&](const QStringList& heldStates) {
-            return sheetDeclarations(inherited, classNames, objectName, heldStates) + u';' + sheetDeclarations(sheet, classNames, objectName, heldStates);
+            return sheetDeclarations(inherited, label.sheetChain, heldStates) + u';' + sheetDeclarations(sheet, label.sheetChain, heldStates);
         };
         // QStyleSheetStyle::updateStyleSheetFont() asks for the enabled and active states, setGeometry() only for enabled
         const QString declarations = cascade({qsl("enabled"), qsl("active")});
@@ -1684,8 +1940,7 @@ void TNullConsoleFrontend::addMiniConsole(const QString& windowname, const QStri
     applyUserWindowSheetFont(name, sheet);
     // A sheet that gives the console a font, not only its text, leaves that font on one made under it once the
     // sheet has gone
-    static const QStringList consoleClasses{qsl("TConsole"), qsl("QWidget"), qsl("QObject")};
-    if (console.fontBeforeSheet && styleSheetFont(sheetDeclarations(sheet, consoleClasses, QString(), {qsl("enabled"), qsl("active")}))) {
+    if (console.fontBeforeSheet && styleSheetFont(sheetDeclarations(sheet, consoleSheetChain(name), {qsl("enabled"), qsl("active")}))) {
         console.fontBeforeSheet = console.pModel->mUpperPaneFont;
     }
     setSubConsoleShown(name, true);
@@ -1797,11 +2052,79 @@ QString TNullConsoleFrontend::windowSheet(const QString& userWindow) const
     return userWindow.isEmpty() ? mpHost->mProfileStyleSheet : mpHost->windowRegistry().userWindowStyleSheet(userWindow).value_or(QString());
 }
 
+// What a widget made in a user window, a scroll box or the main window's area is inside, from its parent out, as
+// probed in the GUI: TMainConsole::parentWidgetFor() puts it in a box's widget, a user window's console or the main
+// console's frame
+TNullConsoleFrontend::SheetChain TNullConsoleFrontend::containerSheetChain(const QString& userWindow, const ScrollBox* box) const
+{
+    const QString profile = mpHost->getName();
+    if (box) {
+        SheetChain chain{{{qsl("TScrollBoxWidget"), qsl("QWidget"), qsl("QObject")}, QString(), {}},
+                         {widgetClasses(), qsl("qt_scrollarea_viewport"), {}},
+                         {{qsl("TScrollBox"), qsl("QScrollArea"), qsl("QAbstractScrollArea"), qsl("QFrame"), qsl("QWidget"), qsl("QObject")}, parentName(userWindow, box), {}}};
+        return chain + containerSheetChain(box->userWindow, box->box.get());
+    }
+    if (userWindow.isEmpty()) {
+        return consoleFrameChain() + mainConsoleChain(profile);
+    }
+    const auto dock = mSubConsoles.find(userWindow);
+    const bool floating = dock != mSubConsoles.end() && dock->second.floating;
+    return {{{qsl("TConsole"), qsl("QWidget"), qsl("QObject")}, qsl("dockWindowConsole_%1_%2").arg(profile, userWindow), {}},
+            {{qsl("TDockWidget"), qsl("QDockWidget"), qsl("QWidget"), qsl("QObject")}, qsl("dockWindow_%1_%2").arg(profile, userWindow), {{qsl("floating"), floating ? qsl("true") : qsl("false")}}},
+            mainWindowNode()};
+}
+
+// A user window's console, which is in its dock, or a mini console, which TMainConsole::createMiniConsole() names
+TNullConsoleFrontend::SheetChain TNullConsoleFrontend::consoleSheetChain(const QString& name) const
+{
+    const auto console = mSubConsoles.find(name);
+    const SheetNode node{{qsl("TConsole"), qsl("QWidget"), qsl("QObject")}, name, {}};
+    if (console == mSubConsoles.end()) {
+        return {node};
+    }
+    if (mpHost->windowRegistry().hasDockWidget(name)) {
+        return containerSheetChain(name, nullptr);
+    }
+    return SheetChain{node} + containerSheetChain(console->second.userWindow, console->second.box.get());
+}
+
+// The upper pane of a console, in its splitter, layer, display and frame, as the TConsole constructor lays them out
+TNullConsoleFrontend::SheetChain TNullConsoleFrontend::paneSheetChain(const QString& name) const
+{
+    const QString profile = mpHost->getName();
+    const SheetChain chain{{{qsl("TTextEdit"), qsl("QWidget"), qsl("QObject")}, qsl("upperPane_%1_%2").arg(profile, name), {}},
+                           {{qsl("TSplitter"), qsl("QSplitter"), qsl("QFrame"), qsl("QWidget"), qsl("QObject")}, qsl("splitter_%1_%2").arg(profile, name), {}},
+                           {widgetClasses(), qsl("layer"), {}},
+                           {widgetClasses(), qsl("MainDisplay"), {}}};
+    return chain + consoleFrameChain() + consoleSheetChain(name);
+}
+
+TNullConsoleFrontend::SheetChain TNullConsoleFrontend::labelSheetChain(const Label& label) const
+{
+    const SheetNode node{
+            {qsl("TLabel"), qsl("QLabel"), qsl("QFrame"), qsl("QWidget"), qsl("QObject")}, qsl("label_%1_%2").arg(mpHost->getName(), label.pModel->mName), {{qsl("text"), label.pModel->mText}}};
+    return SheetChain{node} + containerSheetChain(label.userWindow, label.box.get());
+}
+
+// A console's own command line is in the console's command line layer; any other in the window it was made in
+TNullConsoleFrontend::SheetChain TNullConsoleFrontend::plainWindowSheetChain(const QString& name, const PlainWindow& window, const bool commandLine) const
+{
+    const SheetNode node{{commandLine ? qsl("TCommandLine") : qsl("TTextBox"), qsl("QPlainTextEdit"), qsl("QAbstractScrollArea"), qsl("QFrame"), qsl("QWidget"), qsl("QObject")},
+                         (commandLine ? qsl("commandLine_%1_%2") : qsl("textEdit_%1_%2")).arg(mpHost->getName(), name),
+                         {}};
+    if (window.inConsole) {
+        return SheetChain{node, {widgetClasses(), QString(), {}}} + consoleSheetChain(name);
+    }
+    return SheetChain{node} + containerSheetChain(window.userWindow, window.box.get());
+}
+
 // As Qt restyles the widgets inside one given a sheet: the labels, and the text of the mini consoles
 void TNullConsoleFrontend::restyleWindowContents(const QString& userWindow)
 {
     for (auto& [name, label] : mLabels) {
         if (label.userWindow == userWindow) {
+            // Qt repolishes them all even for the sheet they had, which matches a label's text again
+            label.restyleDue = true;
             restyleLabel(label, label.pModel->mStyleSheet);
         }
     }
@@ -3197,11 +3520,7 @@ bool TNullConsoleFrontend::setTextBoxStyleSheet(const QString& name, const QStri
 void TNullConsoleFrontend::restylePlainWindow(const QString& name, PlainWindow& window, const bool commandLine)
 {
     mWindowNotifier.note();
-    static const QStringList textBoxClasses{qsl("TTextBox"), qsl("QPlainTextEdit"), qsl("QAbstractScrollArea"), qsl("QFrame"), qsl("QWidget"), qsl("QObject")};
-    static const QStringList commandLineClasses{qsl("TCommandLine"), qsl("QPlainTextEdit"), qsl("QAbstractScrollArea"), qsl("QFrame"), qsl("QWidget"), qsl("QObject")};
-    const QString objectName = (commandLine ? qsl("commandLine_%1_%2") : qsl("textEdit_%1_%2")).arg(mpHost->getName(), name);
-    const QString declarations =
-            sheetDeclarations(window.styleSheet, commandLine ? commandLineClasses : textBoxClasses, objectName, {qsl("enabled"), window.readOnly ? qsl("read-only") : qsl("editable")});
+    const QString declarations = sheetDeclarations(window.styleSheet, plainWindowSheetChain(name, window, commandLine), {qsl("enabled"), window.readOnly ? qsl("read-only") : qsl("editable")});
     // QFusionStyle's PM_DefaultFrameWidth, which a native border takes
     const SheetGeometry geometry = sheetGeometry(declarations, sheetLengthFont(declarations), 1);
     window.limits = {geometry.minimum, geometry.maximum};
@@ -3577,12 +3896,23 @@ bool TNullConsoleFrontend::reparentLabel(const QString& windowname, const QStrin
     return true;
 }
 
+// Whether the rules over a label differ from those it was last restyled under
+bool TNullConsoleFrontend::labelSheetsMoved(const Label& label) const
+{
+    return windowSheet(label.userWindow) != label.windowSheet || (label.styled && labelSheetChain(label) != label.sheetChain);
+}
+
+bool TNullConsoleFrontend::paneSheetsMoved(const QString& name, const SubConsole& console) const
+{
+    return paneSheetChain(name) != console.paneChain;
+}
+
 // A label whose parent changed, or whose parent's parent did: a styled one keeps its font unless it
 // is the one restyled, and any other takes its new parent's for what it does not set itself
 void TNullConsoleFrontend::inheritLabelFont(Label& label, const bool restyle)
 {
     const QFont before = label.pModel->mFont;
-    if (restyle && windowSheet(label.userWindow) != label.windowSheet) {
+    if (restyle && labelSheetsMoved(label)) {
         label.restyleDue = true;
         restyleLabel(label, label.pModel->mStyleSheet);
     } else if (!label.styled) {
@@ -3620,7 +3950,7 @@ std::pair<bool, QString> TNullConsoleFrontend::reparentWindow(const QString& win
         it->second.userWindow = userWindow;
         it->second.box = std::move(box);
         it->second.shown = show || (!moved && it->second.shown);
-        if (otherWindow) {
+        if (otherWindow || paneSheetsMoved(name, it->second)) {
             applyUserWindowSheetFont(name, windowSheet(userWindow));
         }
         if (it->second.holder) {
@@ -3629,6 +3959,9 @@ std::pair<bool, QString> TNullConsoleFrontend::reparentWindow(const QString& win
         if (const auto line = mCommandLines.find(name); line != mCommandLines.end() && ownsLine(it->second, line->second)) {
             line->second.userWindow = it->second.userWindow;
             line->second.box = it->second.box;
+            if (moved && !line->second.styleSheet.isEmpty()) {
+                restylePlainWindow(name, line->second, true);
+            }
         }
         moveSubConsole(name, x, y);
         reportWindowVisibility(name);
@@ -3653,8 +3986,8 @@ std::pair<bool, QString> TNullConsoleFrontend::reparentWindow(const QString& win
                 window->writer->setParent(holderFor(window->userWindow, window->box.get()));
             }
             // QWidget::setParent() restyles a text edit it moves, in its read-only state now
-            if (const auto textBox = mTextBoxes.find(name); moved && textBox != mTextBoxes.end() && &textBox->second == window) {
-                restylePlainWindow(name, textBox->second, false);
+            if (moved) {
+                restylePlainWindow(name, *window, mCommandLines.contains(name));
             }
             movePlainWindow(name, x, y);
             reportWindowVisibility(name);
@@ -3685,54 +4018,74 @@ std::pair<bool, QString> TNullConsoleFrontend::reparentWindow(const QString& win
     if (moved) {
         it->second->stackOrder = ++mTopOfStack;
     }
+    const QString fromWindow = it->second->userWindow;
     it->second->userWindow = userWindow;
     it->second->box = std::move(box);
     it->second->shown = show || (!moved && it->second->shown);
     if (it->second->holder) {
         it->second->holder->setParent(holderFor(it->second->userWindow, it->second->box.get()));
     }
-    moveScrollBoxContents(it->second.get());
+    moveScrollBoxContents(it->second.get(), fromWindow);
     movePlainWindow(name, x, y);
     reportVisibility(QString(), it->second.get());
     return {true, QString()};
 }
 
 // What a moved scroll box holds goes with it into its user window
-void TNullConsoleFrontend::moveScrollBoxContents(const ScrollBox* box)
+void TNullConsoleFrontend::moveScrollBoxContents(const ScrollBox* box, const QString& fromWindow)
 {
-    // QWidget::setParent() restyles the box and all inside it under the sheet of the window it went into
-    for (auto& [name, label] : mLabels) {
-        if (within(label.box.get(), box) && label.userWindow != box->userWindow) {
-            label.userWindow = box->userWindow;
-            inheritLabelFont(label, windowSheet(label.userWindow) != label.windowSheet);
-        }
-    }
-    QStringList restyled;
-    for (auto& [name, subConsole] : mSubConsoles) {
-        if (within(subConsole.box.get(), box)) {
-            if (subConsole.userWindow != box->userWindow && mpHost->windowRegistry().subConsoleKind(name) == TWindowRegistry::SubConsoleKind::MiniConsole) {
-                restyled << name;
-            }
-            subConsole.userWindow = box->userWindow;
-        }
-    }
-    const QString sheet = windowSheet(box->userWindow);
-    for (const QString& name : std::as_const(restyled)) {
-        applyUserWindowSheetFont(name, sheet);
-    }
+    // QWidget::setParent() restyles the box and all inside it under the sheet of the window it went into, and
+    // under the rules that name what it is now inside, but only where a sheet was or is over it: with none,
+    // QWidgetPrivate::inheritStyle() leaves what it holds unpolished
+    const auto underSheet = [this](const QString& userWindow) {
+        return !mpHost->mProfileStyleSheet.isEmpty() || !windowSheet(userWindow).isEmpty();
+    };
+    const bool repolish = underSheet(fromWindow) || underSheet(box->userWindow);
     for (auto& [name, inner] : mScrollBoxes) {
         if (within(inner->box.get(), box)) {
             inner->userWindow = box->userWindow;
         }
     }
+    for (auto& [name, label] : mLabels) {
+        if (!within(label.box.get(), box)) {
+            continue;
+        }
+        const bool otherWindow = label.userWindow != box->userWindow;
+        label.userWindow = box->userWindow;
+        const bool restyle = repolish && labelSheetsMoved(label);
+        if (otherWindow || restyle) {
+            inheritLabelFont(label, restyle);
+        }
+    }
+    QStringList restyled;
+    for (auto& [name, subConsole] : mSubConsoles) {
+        if (within(subConsole.box.get(), box)) {
+            subConsole.userWindow = box->userWindow;
+            if (mpHost->windowRegistry().subConsoleKind(name) == TWindowRegistry::SubConsoleKind::MiniConsole) {
+                restyled << name;
+            }
+        }
+    }
+    const QString sheet = windowSheet(box->userWindow);
+    for (const QString& name : std::as_const(restyled)) {
+        if (const auto console = mSubConsoles.find(name); console != mSubConsoles.end() && paneSheetsMoved(name, console->second)) {
+            applyUserWindowSheetFont(name, sheet);
+        }
+    }
     for (auto& [name, commandLine] : mCommandLines) {
         if (within(commandLine.box.get(), box)) {
             commandLine.userWindow = box->userWindow;
+            if (repolish && !commandLine.styleSheet.isEmpty()) {
+                restylePlainWindow(name, commandLine, true);
+            }
         }
     }
     for (auto& [name, textBox] : mTextBoxes) {
         if (within(textBox.box.get(), box)) {
             textBox.userWindow = box->userWindow;
+            if (repolish && !textBox.styleSheet.isEmpty()) {
+                restylePlainWindow(name, textBox, false);
+            }
         }
     }
     if (within(mpEmbeddedMapperBox.get(), box)) {
@@ -3881,10 +4234,8 @@ std::pair<bool, QString> TNullConsoleFrontend::setUserWindowStyleSheet(const QSt
 void TNullConsoleFrontend::applyUserWindowSheet(const QString& name, const QString& sheet)
 {
     mpHost->windowRegistry().setUserWindowStyleSheet(name, sheet);
-    static const QStringList dockClasses{qsl("TDockWidget"), qsl("QDockWidget"), qsl("QWidget"), qsl("QObject")};
-    const QString objectName = qsl("dockWindow_%1_%2").arg(mpHost->getName(), name);
-    // As TDockWidget::event() takes the title a qproperty-windowTitle gives the dock
-    if (const auto title = sheetStringProperty(sheetDeclarations(sheet, dockClasses, objectName, {}), u"windowTitle")) {
+    // As TDockWidget::event() takes the title a qproperty-windowTitle gives the dock, which is outside its console
+    if (const auto title = sheetStringProperty(sheetDeclarations(sheet, containerSheetChain(name, nullptr).mid(1), {}), u"windowTitle")) {
         mWindowNotifier.note();
         mpHost->windowRegistry().setUserWindowTitle(name, *title);
     }
@@ -3900,10 +4251,8 @@ void TNullConsoleFrontend::applyUserWindowSheetFont(const QString& name, const Q
     }
     // As TTextEdit::changeEvent() takes the font a sheet gives the window's text for the console's, with no
     // sysFontChangeEvent; clearing it hands back the font from before, as for a label
-    static const QStringList paneClasses{qsl("TTextEdit"), qsl("QWidget"), qsl("QObject")};
-    // The object name the TConsole constructor gives the upper pane
-    const QString paneName = qsl("upperPane_%1_%2").arg(mpHost->getName(), name);
-    const std::optional<QFont> sheetFont = styleSheetFont(sheetDeclarations(sheet, paneClasses, paneName, {qsl("enabled"), qsl("active")}));
+    console->second.paneChain = paneSheetChain(name);
+    const std::optional<QFont> sheetFont = sheetFontFor(sheet, console->second.paneChain);
     TConsoleModel& model = *console->second.pModel;
     QFont font = console->second.fontBeforeSheet.value_or(model.mUpperPaneFont);
     console->second.fontBeforeSheet = sheetFont ? std::optional<QFont>(font) : std::nullopt;

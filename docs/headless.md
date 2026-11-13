@@ -990,8 +990,12 @@ trimmed under the row it is scrolled back to.
 A sheet a script sets on the whole profile (`setProfileStyleSheet()`) or on a user window
 (`setUserWindowStyleSheet()`) reaches the labels and mini consoles inside it as it does on the desktop, for
 what scripts read back: a label's text and `getLabelSizeHint()`, a mini console's font, columns and rows.
-The label's own sheet wins where both speak. Rules are matched on the widget's class, name and state; one
-that names a widget inside another (`QDockWidget QLabel { … }`) is not followed.
+The label's own sheet wins where both speak. Rules are matched as Qt matches them: on the widget's class, name
+and state, on what it is inside (`QDockWidget QLabel { … }`, `#MainFrame > QLabel { … }`), and on its properties
+(`QLabel[text="…"] { … }`). The properties known are `objectName`, `class`, a label's `text`, the main console's
+`HostName` and a user window's `floating`; a rule that names any other reaches nothing. The same matching gives a
+command line or text box its size limits from its own sheet, and a user window's title from a
+`qproperty-windowTitle`.
 
 A change to any of these names the label in `scriptWindowsChanged`. It is empty for a name that is not a
 label's.

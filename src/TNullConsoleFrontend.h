@@ -476,6 +476,18 @@ public:
     bool placeUserWindow(const QString& name, const QRect& geometry, bool floating);
     bool userWindow(const QString& name) const;
 
+    // A widget as a style sheet's selectors see it: its classes, most derived first, its object name, and the properties
+    // a selector can name that are modelled here
+    struct SheetNode
+    {
+        QStringList classNames;
+        QString objectName;
+        QList<std::pair<QString, QString>> properties;
+        bool operator==(const SheetNode&) const = default;
+    };
+    // A widget, then each widget it is in out to the main window
+    using SheetChain = QList<SheetNode>;
+
 private:
     friend class TNullMxpFrameFrontend;
 
@@ -581,6 +593,8 @@ private:
         qint64 deactivated = 0;
         // A user window's font from before its sheet gave its text one, which clearing the sheet hands back
         std::optional<QFont> fontBeforeSheet;
+        // Where the text was last styled; a move that puts it somewhere else restyles it
+        SheetChain paneChain;
     };
     // As TConsole::mpCommandLine tells a console's own command line from another of its name
     static bool ownsLine(const SubConsole& console, const PlainWindow& commandLine) { return commandLine.writer && commandLine.writer == console.ownLine; }
@@ -596,8 +610,9 @@ private:
         std::optional<QFont> savedFont;
         // The font properties the label's own sheet and its window's declare, if they declare any
         std::optional<QFont> sheetFont;
-        // The sheet of the window it is in, as it was last restyled
+        // The sheet of the window it is in, and where the label was, as it was last restyled
         QString windowSheet;
+        SheetChain sheetChain;
         // The widths SE_ShapedFrameContents takes off each side under its sheet, as top, right, bottom and left
         std::array<int, 4> frame{};
         SizeLimits limits;
@@ -689,7 +704,9 @@ private:
     void republishPlainWindow(const QString& name);
     static bool within(const ScrollBox* container, const ScrollBox* box);
     void removeScrollBoxContents(const ScrollBox* box);
-    void moveScrollBoxContents(const ScrollBox* box);
+    void moveScrollBoxContents(const ScrollBox* box, const QString& fromWindow);
+    bool labelSheetsMoved(const Label& label) const;
+    bool paneSheetsMoved(const QString& name, const SubConsole& console) const;
     void inheritLabelFont(Label& label, bool restyle);
     void showLabelText(Label& label, const QString& shown);
     static void updateShownContent(Label& label);
@@ -710,6 +727,11 @@ private:
     void applyUserWindowSheet(const QString& name, const QString& sheet);
     void applyUserWindowSheetFont(const QString& name, const QString& sheet);
     QString windowSheet(const QString& userWindow) const;
+    SheetChain containerSheetChain(const QString& userWindow, const ScrollBox* box) const;
+    SheetChain consoleSheetChain(const QString& name) const;
+    SheetChain paneSheetChain(const QString& name) const;
+    SheetChain labelSheetChain(const Label& label) const;
+    SheetChain plainWindowSheetChain(const QString& name, const PlainWindow& window, bool commandLine) const;
     void restyleWindowContents(const QString& userWindow);
     QFont subConsoleOwnFont(const QString& name, const TConsoleModel& model) const;
     void reportDisplayFontChange(const QFont& before);
