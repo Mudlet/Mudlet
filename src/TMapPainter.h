@@ -83,6 +83,7 @@ struct TMapPainterView
     bool mBubbleMode = false;
     bool mMapperUseAntiAlias = true;
     bool mLargeAreaExitArrows = false;
+    bool mDirectionalExitLines = false;
     double eSize = 3.0;
     // The room the view was last centred on, and whether it has since been panned away from the player
     int mRoomID = 0;
@@ -213,6 +214,7 @@ public:
         bool oneWay = false;
         // A straight custom line between the two rooms draws this exit's line, but not this room's door on it.
         bool drawnByCustomLine = false;
+        int direction = 0;
     };
 
     // Below this many pixels per room, both room loops just fill the environment colour, dropping border,
@@ -324,6 +326,9 @@ public:
     int roomBorderWidth(const TRoom&) const;
     void paintRoomExits(QPainter&, QPen&, QList<ExitToPaint>& exitList, const TArea*, int zLevel, const QRect& roomBounds, const QList<int>& viewportRooms, float exitWidth, QMap<int, QPointF>&);
     void drawDoor(QPainter&, const TRoom&, const QString&, const QLineF&);
+    // From the room's center to the destination's: straight, or, with mDirectionalExitLines, leaving each end in its
+    // exit's direction when the other room does not lie that way
+    QVector<QPointF> exitLinePath(const TRoom& room, const ExitToPaint& exit, const QPointF& from, const QPointF& to, bool* leavesByStub = nullptr) const;
 
     // Draws an area at a size of its own into an image file, written on a pool thread; how that goes is reported to
     // the profile. The returned pair says whether the export started, or why not.

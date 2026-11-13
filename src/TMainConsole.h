@@ -295,6 +295,7 @@ public:
     void setMapperShown(bool shown) override;
     void setMapperPanelVisible(bool visible) override;
     void setMapLargeAreaExitArrows(bool enabled) override;
+    void setMapDirectionalExitLines(bool enabled) override;
     void requestMapRepaint() override;
     void requestRepaintAfterCommand() override;
     void regenerateToolBars(const std::list<TAction*>& rootActions) override;

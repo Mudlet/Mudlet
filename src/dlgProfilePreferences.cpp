@@ -2461,12 +2461,14 @@ void dlgProfilePreferences::reflowMapperCards()
     hBoxLayout_groupBox_downloadMapOptions->setDirection(QBoxLayout::TopToBottom);
     hBoxLayout_groupBox_downloadMapOptions->addWidget(makeFlowRow(groupBox_downloadMapOptions, qsl("settingsMapperRow_downloadMap"), {label_11, buttonDownloadMap}));
 
-    // Two columns of three, each as wide as its own longest words; the second goes under the first, whole,
+    // Two columns, each as wide as its own longest words; the second goes under the first, whole,
     // once they no longer fit side by side, and lines up with the top of the first while they do
     QWidget* pLeadingChoices =
             makeFlowPiece(groupBox_mapViewOptions, qsl("settingsMapViewLeadingChoices"), QBoxLayout::TopToBottom, {mMapperUseAntiAlias, checkBox_drawUpperLowerLevels, checkBox_invertMapZoom});
-    QWidget* pTrailingChoices = makeFlowPiece(
-            groupBox_mapViewOptions, qsl("settingsMapViewTrailingChoices"), QBoxLayout::TopToBottom, {checkbox_mMapperShowRoomBorders, checkBox_largeAreaExitArrows, checkBox_showDefaultArea});
+    QWidget* pTrailingChoices = makeFlowPiece(groupBox_mapViewOptions,
+                                              qsl("settingsMapViewTrailingChoices"),
+                                              QBoxLayout::TopToBottom,
+                                              {checkbox_mMapperShowRoomBorders, checkBox_largeAreaExitArrows, checkBox_directionalExitLines, checkBox_showDefaultArea});
     QList<QWidget*> mapViewRows{makeFlowRow(groupBox_mapViewOptions, qsl("settingsMapViewChoices"), {pLeadingChoices, pTrailingChoices}, scmChoiceGroupGap, uiDesign::FlowLayout::LineAlignment::Top)};
 #if defined(INCLUDE_3DMAPPER)
     mapViewRows.append(makeFlowRow(groupBox_mapViewOptions, qsl("settingsMapperRow_mapStyle"), {label_mapStyle, comboBox_mapStyle}));
@@ -5157,6 +5159,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         comboBox_caretModeKey->setCurrentIndex(static_cast<int>(pHost->mCaretShortcut));
     }
     checkBox_largeAreaExitArrows->setChecked(pHost->getLargeAreaExitArrows());
+    checkBox_directionalExitLines->setChecked(pHost->getDirectionalExitLines());
     {
         const QSignalBlocker blocker(comboBox_mapStyle);
         // Kept from the last time round, as this runs again each time the dialog is activated and the pictures
@@ -5270,6 +5273,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(mIsToLogInHtml, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeLogFileAsHtml, Qt::UniqueConnection);
     connect(doubleSpinBox_networkPacketTimeout, qOverload<double>(&QDoubleSpinBox::valueChanged), this, &dlgProfilePreferences::slot_setPostingTimeout, Qt::UniqueConnection);
     connect(checkBox_largeAreaExitArrows, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_changeLargeAreaExitArrows, Qt::UniqueConnection);
+    connect(checkBox_directionalExitLines, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_changeDirectionalExitLines, Qt::UniqueConnection);
     connect(checkBox_invertMapZoom, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_changeInvertMapZoom, Qt::UniqueConnection);
 
     // Console buffer settings
@@ -9783,6 +9787,16 @@ void dlgProfilePreferences::slot_changeLargeAreaExitArrows(const bool state)
     }
 
     pHost->setLargeAreaExitArrows(state);
+}
+
+void dlgProfilePreferences::slot_changeDirectionalExitLines(const bool state)
+{
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+
+    pHost->setDirectionalExitLines(state);
 }
 
 void dlgProfilePreferences::slot_changeInvertMapZoom(const bool state)

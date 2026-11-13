@@ -650,6 +650,7 @@ void T2DMap::init()
     flushSymbolPixmapCache();
     flushTextLabelPixmapCache();
     mLargeAreaExitArrows = mpHost->getLargeAreaExitArrows();
+    mDirectionalExitLines = mpHost->getDirectionalExitLines();
 }
 
 void T2DMap::scheduleRender()
@@ -1054,6 +1055,7 @@ TMapPainter::View T2DMap::painterView() const
     view.mBubbleMode = mBubbleMode;
     view.mMapperUseAntiAlias = mMapperUseAntiAlias;
     view.mLargeAreaExitArrows = mLargeAreaExitArrows;
+    view.mDirectionalExitLines = mDirectionalExitLines;
     view.mPHighlight = mPHighlight;
     view.mPick = mPick;
     view.mStartSpeedWalk = mStartSpeedWalk;

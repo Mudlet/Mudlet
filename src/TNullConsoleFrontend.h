@@ -401,6 +401,7 @@ public:
     void setMapperShown(bool) override {}
     void setMapperPanelVisible(bool) override {}
     void setMapLargeAreaExitArrows(bool) override {}
+    void setMapDirectionalExitLines(bool) override {}
     void requestMapRepaint() override {}
     void regenerateToolBars(const std::list<TAction*>&) override {}
     void regenerateEasyButtonBars(const std::list<TAction*>&) override {}

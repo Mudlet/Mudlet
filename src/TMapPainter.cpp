@@ -1538,6 +1538,65 @@ static bool withinViewportBounds(const QRect& bounds, const int x, const int y)
 // Of the dot on the end of an exit stub, as a fraction of a room's spacing
 static constexpr qreal cStubDotRadius = 0.1;
 
+QVector<QPointF> TMapPainter::exitLinePath(const TRoom& room, const ExitToPaint& exit, const QPointF& from, const QPointF& to, bool* leavesByStub) const
+{
+    if (leavesByStub) {
+        *leavesByStub = false;
+    }
+    const auto onCompass = [](const int direction) {
+        return direction >= DIR_NORTH && direction <= DIR_SOUTHWEST;
+    };
+    if (!mDirectionalExitLines || !exit.destination || !onCompass(exit.direction)) {
+        return {from, to};
+    }
+    const TRoom& destination = *exit.destination;
+    // A straight line already leaves origin in that direction when other lies on the ray from it
+    const auto liesAhead = [](const TRoom& origin, const int direction, const TRoom& other) {
+        const QVector3D unit = TMap::scmUnitVectors.value(direction);
+        const qint64 ux = qRound(unit.x());
+        const qint64 uy = qRound(unit.y());
+        // scmUnitVectors has y increasing southward, room coordinates northward
+        const qint64 dx = qint64{other.x()} - origin.x();
+        const qint64 dy = qint64{origin.y()} - other.y();
+        if ((ux == 0) != (dx == 0) || (uy == 0) != (dy == 0) || ux * dx < 0 || uy * dy < 0) {
+            return false;
+        }
+        return ux == 0 || uy == 0 || qAbs(dx) == qAbs(dy);
+    };
+    // The same fixed point a custom line in that direction starts from, so the two meet up
+    const auto stubEnd = [&](const QPointF& center, const int direction) {
+        const QVector3D unit = TMap::scmUnitVectors.value(direction);
+        return QPointF(center.x() + unit.x() * mRoomWidth / 2.0, center.y() + unit.y() * mRoomHeight / 2.0);
+    };
+
+    // The way back in, preferring the reverse direction, so both rooms of a two-way exit draw the same path
+    int backDirection = 0;
+    const int reverse = TMap::scmReverseDirections.value(exit.direction);
+    if (destination.getExit(reverse) == room.getId()) {
+        backDirection = reverse;
+    } else {
+        for (int direction = DIR_NORTH; direction <= DIR_SOUTHWEST; ++direction) {
+            if (destination.getExit(direction) == room.getId()) {
+                backDirection = direction;
+                break;
+            }
+        }
+    }
+
+    QVector<QPointF> path{from};
+    if (!liesAhead(room, exit.direction, destination)) {
+        path << stubEnd(from, exit.direction);
+        if (leavesByStub) {
+            *leavesByStub = true;
+        }
+    }
+    if (backDirection && !liesAhead(destination, backDirection, room)) {
+        path << stubEnd(to, backDirection);
+    }
+    path << to;
+    return path;
+}
+
 void TMapPainter::paintRoomExits(QPainter& painter,
                                  QPen& pen,
                                  QList<ExitToPaint>& exitList,
@@ -1677,49 +1736,49 @@ void TMapPainter::paintRoomExits(QPainter& painter,
             if (!room->customLines.contains(key_n)) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(room->getNorth());
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, room->getNorth(), pER->getSouth() != _id});
+                    exitList.push_back({pER, room->getNorth(), pER->getSouth() != _id, false, DIR_NORTH});
                 }
             }
             if (!room->customLines.contains(key_ne)) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(room->getNortheast());
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, room->getNortheast(), pER->getSouthwest() != _id});
+                    exitList.push_back({pER, room->getNortheast(), pER->getSouthwest() != _id, false, DIR_NORTHEAST});
                 }
             }
             if (!room->customLines.contains(key_e)) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(room->getEast());
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, room->getEast(), pER->getWest() != _id});
+                    exitList.push_back({pER, room->getEast(), pER->getWest() != _id, false, DIR_EAST});
                 }
             }
             if (!room->customLines.contains(key_se)) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(room->getSoutheast());
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, room->getSoutheast(), pER->getNorthwest() != _id});
+                    exitList.push_back({pER, room->getSoutheast(), pER->getNorthwest() != _id, false, DIR_SOUTHEAST});
                 }
             }
             if (!room->customLines.contains(key_s)) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(room->getSouth());
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, room->getSouth(), pER->getNorth() != _id});
+                    exitList.push_back({pER, room->getSouth(), pER->getNorth() != _id, false, DIR_SOUTH});
                 }
             }
             if (!room->customLines.contains(key_sw)) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(room->getSouthwest());
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, room->getSouthwest(), pER->getNortheast() != _id});
+                    exitList.push_back({pER, room->getSouthwest(), pER->getNortheast() != _id, false, DIR_SOUTHWEST});
                 }
             }
             if (!room->customLines.contains(key_w)) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(room->getWest());
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, room->getWest(), pER->getEast() != _id});
+                    exitList.push_back({pER, room->getWest(), pER->getEast() != _id, false, DIR_WEST});
                 }
             }
             if (!room->customLines.contains(key_nw)) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(room->getNorthwest());
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, room->getNorthwest(), pER->getSoutheast() != _id});
+                    exitList.push_back({pER, room->getNorthwest(), pER->getSoutheast() != _id, false, DIR_NORTHWEST});
                 }
             }
         } else {
@@ -1727,56 +1786,56 @@ void TMapPainter::paintRoomExits(QPainter& painter,
             if (exitRoomId > 0) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, exitRoomId, pER->getSouth() != _id});
+                    exitList.push_back({pER, exitRoomId, pER->getSouth() != _id, false, DIR_NORTH});
                 }
             }
             exitRoomId = room->getNortheast();
             if (exitRoomId > 0) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, exitRoomId, pER->getSouthwest() != _id});
+                    exitList.push_back({pER, exitRoomId, pER->getSouthwest() != _id, false, DIR_NORTHEAST});
                 }
             }
             exitRoomId = room->getEast();
             if (exitRoomId > 0) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, exitRoomId, pER->getWest() != _id});
+                    exitList.push_back({pER, exitRoomId, pER->getWest() != _id, false, DIR_EAST});
                 }
             }
             exitRoomId = room->getSoutheast();
             if (exitRoomId > 0) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, exitRoomId, pER->getNorthwest() != _id});
+                    exitList.push_back({pER, exitRoomId, pER->getNorthwest() != _id, false, DIR_SOUTHEAST});
                 }
             }
             exitRoomId = room->getSouth();
             if (exitRoomId > 0) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, exitRoomId, pER->getNorth() != _id});
+                    exitList.push_back({pER, exitRoomId, pER->getNorth() != _id, false, DIR_SOUTH});
                 }
             }
             exitRoomId = room->getSouthwest();
             if (exitRoomId > 0) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, exitRoomId, pER->getNortheast() != _id});
+                    exitList.push_back({pER, exitRoomId, pER->getNortheast() != _id, false, DIR_SOUTHWEST});
                 }
             }
             exitRoomId = room->getWest();
             if (exitRoomId > 0) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, exitRoomId, pER->getEast() != _id});
+                    exitList.push_back({pER, exitRoomId, pER->getEast() != _id, false, DIR_WEST});
                 }
             }
             exitRoomId = room->getNorthwest();
             if (exitRoomId > 0) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, exitRoomId, pER->getSoutheast() != _id});
+                    exitList.push_back({pER, exitRoomId, pER->getSoutheast() != _id, false, DIR_NORTHWEST});
                 }
             }
         }
@@ -1994,6 +2053,8 @@ void TMapPainter::paintRoomExits(QPainter& painter,
             // This was a QLine (so used integer coordinates), but lets
             // try with a QLineF as we are using floating point numbers:
             QLineF line;
+            bool leavesByStub = false;
+            const QVector<QPointF> path = areaExit ? QVector<QPointF>{} : exitLinePath(*room, exit, p2.toPointF(), p1.toPointF(), &leavesByStub);
             if (!areaExit && !exit.drawnByCustomLine) {
                 // Non-area exit:
                 // Exits to the same room overlap, so one being one-way arrows them all.
@@ -2010,11 +2071,16 @@ void TMapPainter::paintRoomExits(QPainter& painter,
                     // /restore() to protect - removed along with the QPen
                     // copy that was never installed via setPen() and so
                     // never actually took effect.
-                    const QLineF l0 = QLineF(p2.toPointF(), p1.toPointF());
-                    painter.drawLine(l0);
+                    painter.drawPolyline(path.data(), path.size());
                 } else {
-                    // one way non-area exit - draw arrow
-                    QLineF l0 = QLineF(p2.toPointF(), p1.toPointF());
+                    // one way non-area exit - draw arrow, on the longest leg of a bent line
+                    QLineF l0;
+                    for (qsizetype i = 1; i < path.size(); ++i) {
+                        const QLineF leg(path.at(i - 1), path.at(i));
+                        if (leg.length() > l0.length()) {
+                            l0 = leg;
+                        }
+                    }
                     QLineF k0 = l0;
                     k0.setLength((l0.length() - exitWidth * 5.0) / 2.0);
                     const qreal dx = k0.dx();
@@ -2027,7 +2093,7 @@ void TMapPainter::paintRoomExits(QPainter& painter,
                     oneWayLinePen.setStyle(Qt::DotLine);
                     oneWayLinePen.setCapStyle(Qt::SquareCap);
                     painter.setPen(oneWayLinePen);
-                    painter.drawLine(l0);
+                    painter.drawPolyline(path.data(), path.size());
 
                     l0.setLength(exitWidth * 5.0);
                     const QPointF _p1 = l0.p2();
@@ -2191,9 +2257,11 @@ void TMapPainter::paintRoomExits(QPainter& painter,
                     if (areaExit) {
                         doorBaseLine = QLineF(line.p2(), line.p1());
                     } else {
-                        doorBaseLine = QLineF(p2.toPointF(), p1.toPointF());
+                        doorBaseLine = QLineF(path.at(0), path.at(1));
                     }
-                    doorBaseLine.setLength(doorBaseLine.length() / 2.0);
+                    if (!leavesByStub) {
+                        doorBaseLine.setLength(doorBaseLine.length() / 2.0);
+                    }
                     drawDoor(painter, *room, doorKey, doorBaseLine);
                 }
             }
@@ -3872,46 +3940,57 @@ std::pair<bool, QString> TMapPainter::exportArea(int areaId, const QString& file
                 const float exitArrowScale = (mLargeAreaExitArrows ? 2.0f : 1.0f);
 
                 QLineF exitLine;
+                QLineF doorLine;
+                bool leavesByStub = false;
                 QString doorKey;
+                int direction = 0;
 
                 // Determine door key and exit line based on direction
                 if (room->getNorth() == exitRoomId) {
                     doorKey = "n";
+                    direction = DIR_NORTH;
                     if (areaExit) {
                         exitLine = QLineF(rx, ry - exitArrowScale * finalRoomSize, rx, ry);
                     }
                 } else if (room->getSouth() == exitRoomId) {
                     doorKey = "s";
+                    direction = DIR_SOUTH;
                     if (areaExit) {
                         exitLine = QLineF(rx, ry + exitArrowScale * finalRoomSize, rx, ry);
                     }
                 } else if (room->getEast() == exitRoomId) {
                     doorKey = "e";
+                    direction = DIR_EAST;
                     if (areaExit) {
                         exitLine = QLineF(rx + exitArrowScale * finalRoomSize, ry, rx, ry);
                     }
                 } else if (room->getWest() == exitRoomId) {
                     doorKey = "w";
+                    direction = DIR_WEST;
                     if (areaExit) {
                         exitLine = QLineF(rx - exitArrowScale * finalRoomSize, ry, rx, ry);
                     }
                 } else if (room->getNortheast() == exitRoomId) {
                     doorKey = "ne";
+                    direction = DIR_NORTHEAST;
                     if (areaExit) {
                         exitLine = QLineF(rx + exitArrowScale * finalRoomSize, ry - exitArrowScale * finalRoomSize, rx, ry);
                     }
                 } else if (room->getNorthwest() == exitRoomId) {
                     doorKey = "nw";
+                    direction = DIR_NORTHWEST;
                     if (areaExit) {
                         exitLine = QLineF(rx - exitArrowScale * finalRoomSize, ry - exitArrowScale * finalRoomSize, rx, ry);
                     }
                 } else if (room->getSoutheast() == exitRoomId) {
                     doorKey = "se";
+                    direction = DIR_SOUTHEAST;
                     if (areaExit) {
                         exitLine = QLineF(rx + exitArrowScale * finalRoomSize, ry + exitArrowScale * finalRoomSize, rx, ry);
                     }
                 } else if (room->getSouthwest() == exitRoomId) {
                     doorKey = "sw";
+                    direction = DIR_SOUTHWEST;
                     if (areaExit) {
                         exitLine = QLineF(rx - exitArrowScale * finalRoomSize, ry + exitArrowScale * finalRoomSize, rx, ry);
                     }
@@ -3928,18 +4007,24 @@ std::pair<bool, QString> TMapPainter::exportArea(int areaId, const QString& file
                     }
 
                     exitLine = QLineF(rx, ry, exitRoomX, exitRoomY);
+                    ExitToPaint exit;
+                    exit.destination = exitRoom;
+                    exit.destinationId = exitRoomId;
+                    exit.direction = direction;
+                    const QVector<QPointF> path = exitLinePath(*room, exit, exitLine.p1(), exitLine.p2(), &leavesByStub);
+                    doorLine = QLineF(path.at(0), path.at(1));
 
                     if (roomOneWayExits.contains(exitRoomId)) {
                         // Draw one-way exit with dashed line
                         QPen oneWayPen = pen;
                         oneWayPen.setStyle(Qt::DashLine);
                         painter.setPen(oneWayPen);
-                        painter.drawLine(exitLine);
+                        painter.drawPolyline(path.data(), path.size());
                     } else {
                         // Also for a line left out: the door drawn below takes its width from this pen
                         painter.setPen(pen);
                         if (!customLineRunsStraightTo(*room, *exitRoom) && !(exitRoom->z() == exportZLevel && customLineRunsStraightTo(*exitRoom, *room))) {
-                            painter.drawLine(exitLine);
+                            painter.drawPolyline(path.data(), path.size());
                         }
                     }
 
@@ -4018,8 +4103,10 @@ std::pair<bool, QString> TMapPainter::exportArea(int areaId, const QString& file
                 // Draw door if exists on this exit (both area and same-area exits)
                 if (!doorKey.isEmpty() && room->doors.value(doorKey, 0) > 0) {
                     // Apply half-length reduction like original paintRoomExits
-                    QLineF halfExitLine = exitLine;
-                    halfExitLine.setLength(halfExitLine.length() / 2.0);
+                    QLineF halfExitLine = areaExit ? exitLine : doorLine;
+                    if (!leavesByStub) {
+                        halfExitLine.setLength(halfExitLine.length() / 2.0);
+                    }
                     drawDoor(painter, *room, doorKey, halfExitLine);
                 }
             }

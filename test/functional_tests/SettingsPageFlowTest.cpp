@@ -476,7 +476,7 @@ private slots:
     }
 
     // Each column is as wide as its own longest words, not as the longest of
-    // all six, and the second moves under the first whole the moment one pixel
+    // all of them, and the second moves under the first whole the moment one pixel
     // is missing - never a check box at a time
     void test_theMapViewCheckBoxesAreTwoColumnsThatStackWhole()
     {
@@ -489,7 +489,8 @@ private slots:
         QVERIFY2(pFlow, "the two columns are not laid out by a flow, so the second cannot move under the first");
 
         const QList<QCheckBox*> leadingBoxes{mpPreferences->mMapperUseAntiAlias, mpPreferences->checkBox_drawUpperLowerLevels, mpPreferences->checkBox_invertMapZoom};
-        const QList<QCheckBox*> trailingBoxes{mpPreferences->checkbox_mMapperShowRoomBorders, mpPreferences->checkBox_largeAreaExitArrows, mpPreferences->checkBox_showDefaultArea};
+        const QList<QCheckBox*> trailingBoxes{
+                mpPreferences->checkbox_mMapperShowRoomBorders, mpPreferences->checkBox_largeAreaExitArrows, mpPreferences->checkBox_directionalExitLines, mpPreferences->checkBox_showDefaultArea};
         for (const auto& [pGroup, boxes] : {std::pair{pLeading, leadingBoxes}, std::pair{pTrailing, trailingBoxes}}) {
             int widest = 0;
             for (auto* pBox : boxes) {

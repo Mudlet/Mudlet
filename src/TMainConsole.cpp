@@ -3895,6 +3895,17 @@ void TMainConsole::setMapLargeAreaExitArrows(const bool enabled)
     mapper->mp2dMap->update();
 }
 
+void TMainConsole::setMapDirectionalExitLines(const bool enabled)
+{
+    auto* mapper = mpHost->mpMap->mapper();
+    if (!mapper || !mapper->mp2dMap) {
+        return;
+    }
+
+    mapper->mp2dMap->mDirectionalExitLines = enabled;
+    mapper->mp2dMap->update();
+}
+
 void TMainConsole::requestMapRepaint()
 {
     auto* mapper = mpHost->mpMap->mapper();
