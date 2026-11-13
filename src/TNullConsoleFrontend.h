@@ -670,6 +670,7 @@ private:
     // As QWidget::raise() and lower() among the windows of its parent, in TMainConsole::raiseWindow()'s order of kinds
     bool restack(const QString& name, bool raise);
     QString parentName(const QString& userWindow, const ScrollBox* box) const;
+    bool inRetiredWindow(const QString& userWindow, const ScrollBox* box) const;
     void showEmbeddedMapper();
     void reportEmbeddedMapperVisibility();
     QMovie* shownMovie(const QString& name) const;
@@ -681,6 +682,8 @@ private:
     TConsoleModel& addSubConsole(const QString& name, TWindowRegistry::SubConsoleKind kind, const QString& windowname);
     // keepWidget for a console whose widget outlives its place in the registry, with its own command line
     void removeSubConsole(const QString& name, bool keepWidget = false);
+    void removeWindowContents(const QString& userWindow);
+    QString retireWindowContents(const QString& name, const SubConsole& window);
     void addFrameConsole(const QString& name, const QSize& size, bool external, const QString& hostFrame, bool scrolling);
     void sizeFrameConsole(const QString& name, const QSize& size);
     // False for a frame's console a script has moved out of the frame
@@ -768,6 +771,16 @@ private:
     // While a hidden user window is removed, the names its deferred deletes are to report
     QStringList* mpDeferredReports = nullptr;
     bool mDroppingWindows = false;
+    // What a deleted user window gave the windows it held, which live on until deferred deletes run
+    struct RetiredWindow
+    {
+        QString name;
+        QString sheet;
+        QFont font;
+        bool floating = false;
+    };
+    std::map<QString, RetiredWindow> mRetiredWindows;
+    int mRetiredWindowCount = 0;
     // QStyleSheetStyle leaves the main console's widgets on the application's font once it has had a sheet
     bool mProfileSheetSeen = false;
     // What a profile sheet that styles the main console gave its text when the display font last changed, and the font

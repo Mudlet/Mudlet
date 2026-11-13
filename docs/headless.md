@@ -940,6 +940,12 @@ the first of that name, and `scriptWindow(name, kind)` the one of that kind, as 
 line has its console's name. Neither lists buffers, which are never shown. Both are empty with no profile open, and may be read from anywhere, a handler of the session's
 signals included.
 
+When a script deletes a user window, the windows it held go on as in the GUI, where the dock is only
+destroyed once control is back in the event loop: until then they keep their names, scripts can still use
+them, and the sheet and font the window gave them, but they are not shown and the list leaves them out, as
+they are in no window an app can show. One a script moves out with `setWindow()` before then stays, and
+is listed again where it went; the rest go when the session's event loop next runs.
+
 The frames a game opens with MXP's `<FRAME>` are in the list too, as kind `mxpFrame`. A frame is a mini
 console in all but who made it: `windowLines()` reads the text a `<DEST>` sent it, `windowTextChanged`
 names it, its links are read and followed and the wheel scrolls it, the same way. Its `geometry` is its
