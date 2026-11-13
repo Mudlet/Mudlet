@@ -160,10 +160,10 @@ setup or teardown needs one should pend instead, as the checker will not accept 
 
 ## Sanitizers and static analysis
 
-Sanitizers are enabled on every non-Windows build; `USE_SANITIZER` defaults to `address`, and a
-Release build type does not turn them off on its own - `<platform>-release` clears the variable
-explicitly. Use the `-tsan` / `-ubsan` / `-nosan` presets to change the choice, or pass a CMake
-list — semicolon-separated, not comma-separated — such as `-DUSE_SANITIZER="Address;Undefined"`.
+Sanitizers are enabled on every non-Windows build but Android; `USE_SANITIZER` defaults to `address`,
+and a Release build type does not turn them off on its own - `<platform>-release` clears the variable
+explicitly. Use the `-tsan` / `-ubsan` / `-nosan` presets to change the choice, or pass a CMake list —
+semicolon-separated, not comma-separated — such as `-DUSE_SANITIZER="Address;Undefined"`.
 A comma-separated value is read as a single name, which silently skips the per-sanitizer options
 such as `-fno-omit-frame-pointer`.
 
@@ -269,7 +269,8 @@ accepted by CMake and silently ignored; use `-DUSE_UPDATER=OFF`, or set `WITH_UP
 environment. A `USE_*` value already in the cache - from `-D` or an earlier configure of the same
 build tree - takes precedence over the `WITH_*` environment variable, so changing the environment
 of an existing build tree has no effect; pass `-DUSE_*` instead. Shader hot-reloading and memory
-tracking default to OFF, the rest to ON.
+tracking default to OFF, the rest to ON, except that for Android the 3D mapper, MCP server and
+build-type splash screen default to OFF (see "Leaving out what a mobile build cannot use").
 
 This applies only to those seven. Other `WITH_*` names are ordinary options: `WITH_SENTRY` and
 `SENTRY_SEND_DEBUG` are declared with `option()` and are set on the command line as normal.
@@ -279,8 +280,8 @@ This applies only to those seven. Other `WITH_*` names are ordinary options: `WI
 The MCP server is the one optional module that needs Qt modules the rest of Mudlet does not, so it
 is the one that fails at configure time rather than silently doing nothing when they are missing:
 `src/CMakeLists.txt` does `find_package(Qt6 COMPONENTS HttpServer REQUIRED)` only under
-`USE_MCPSERVER`, which is on by default. Qt HttpServer in turn pulls in Qt WebSockets, and
-distributions package the two separately, so install both:
+`USE_MCPSERVER`, which is on by default except for Android. Qt HttpServer in turn pulls in Qt
+WebSockets, and distributions package the two separately, so install both:
 
 | Environment | Packages |
 | --- | --- |
@@ -313,6 +314,12 @@ above, so turn one off with `-DUSE_SPAWN=OFF` or `WITH_SPAWN=NO` in the environm
 | `USE_SPAWN` | `TForkedProcess`, the `QProcess` behind `spawn()` | `spawn()` raises an error, as when a process fails to start |
 | `USE_DISCORD_RPC` | the `QLibrary` that loads the Discord RPC library, and with it Rich Presence | the Discord functions return `nil` and `"Discord API is not available"`, as when the library is missing; `setDiscordGameUrl()` still works |
 | `USE_SPEECH_ENGINES` | the `QLibrary` loading of the Vosk and sherpa-onnx speech engines | the `stt.*` functions refuse, saying the build cannot load a speech engine library, and `stt.getPlatformKey()` returns `nil`; a platform engine (macOS's own) still works |
+
+For Android they default to OFF, as do `USE_MCPSERVER`, `USE_3DMAPPER`, `USE_GUI` and
+`USE_VARIABLE_SPLASH_SCREEN`, and `USE_SANITIZER` defaults to none instead of `address`, so a
+configure with the NDK's toolchain file needs none of them named. Each can still be turned on
+there but `USE_GUI` and `USE_3DMAPPER`: Android has no Qt DBus for the desktop GUI, and no desktop
+OpenGL or GLU for the 3D mapper. `USE_MCPSERVER` needs Qt HttpServer for Android installed.
 
 `USE_BUILTIN_MUDLET_LUA` and `USE_BUNDLED_LUA_MODULES` go the other way: off by default except for
 Android and a browser, they build Mudlet's own Lua files and the Lua C modules those need into

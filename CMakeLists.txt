@@ -185,15 +185,24 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_UPDATER
                                           "Windows"
                                           "Darwin")
 
+# DEFAULT for the options below that pass it: Android cannot build what each brings, or has no use for it
+if(ANDROID)
+  set(DESKTOP_ONLY_DEFAULT OFF)
+else()
+  set(DESKTOP_ONLY_DEFAULT ON)
+endif()
+
 include_optional_module(ENVIRONMENT_VARIABLE WITH_FONTS
                         OPTION_VARIABLE USE_FONTS
                         READABLE_NAME "fonts")
 include_optional_module(ENVIRONMENT_VARIABLE WITH_3DMAPPER
                         OPTION_VARIABLE USE_3DMAPPER
-                        READABLE_NAME "3D mapper")
+                        READABLE_NAME "3D mapper"
+                        DEFAULT ${DESKTOP_ONLY_DEFAULT})
 include_optional_module(ENVIRONMENT_VARIABLE WITH_MCPSERVER
                         OPTION_VARIABLE USE_MCPSERVER
-                        READABLE_NAME "MCP server")
+                        READABLE_NAME "MCP server"
+                        DEFAULT ${DESKTOP_ONLY_DEFAULT})
 include_optional_module(ENVIRONMENT_VARIABLE WITH_SHADER_HOT_RELOAD
                         OPTION_VARIABLE USE_SHADER_HOT_RELOAD
                         READABLE_NAME "shader hot-reloading"
@@ -241,21 +250,26 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_HEADLESS
 # Off, only mudlet_core and what links it alone are built, so Qt Widgets need not be installed
 include_optional_module(ENVIRONMENT_VARIABLE WITH_GUI
                         OPTION_VARIABLE USE_GUI
-                        READABLE_NAME "desktop GUI")
+                        READABLE_NAME "desktop GUI"
+                        DEFAULT ${DESKTOP_ONLY_DEFAULT})
 include_optional_module(ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN
                         OPTION_VARIABLE USE_VARIABLE_SPLASH_SCREEN
-                        READABLE_NAME "build-type splash screen")
+                        READABLE_NAME "build-type splash screen"
+                        DEFAULT ${DESKTOP_ONLY_DEFAULT})
 # Each of these uses something an Android or iOS build of mudlet_core cannot have; see
 # "Leaving out what a mobile build cannot use" in docs/platform-builds.md
 include_optional_module(ENVIRONMENT_VARIABLE WITH_SPAWN
                         OPTION_VARIABLE USE_SPAWN
-                        READABLE_NAME "spawn() of processes")
+                        READABLE_NAME "spawn() of processes"
+                        DEFAULT ${DESKTOP_ONLY_DEFAULT})
 include_optional_module(ENVIRONMENT_VARIABLE WITH_DISCORD_RPC
                         OPTION_VARIABLE USE_DISCORD_RPC
-                        READABLE_NAME "Discord RPC library loading")
+                        READABLE_NAME "Discord RPC library loading"
+                        DEFAULT ${DESKTOP_ONLY_DEFAULT})
 include_optional_module(ENVIRONMENT_VARIABLE WITH_SPEECH_ENGINES
                         OPTION_VARIABLE USE_SPEECH_ENGINES
-                        READABLE_NAME "Vosk and sherpa-onnx speech engine loading")
+                        READABLE_NAME "Vosk and sherpa-onnx speech engine loading"
+                        DEFAULT ${DESKTOP_ONLY_DEFAULT})
 
 find_package(Qt6 6.8.2 REQUIRED)
 
