@@ -59,6 +59,7 @@ public:
     bool isPending() { return mState == Pending; }
 
     void disconnect();
+    void abortConnection();
 
     void snoop();
 
@@ -67,6 +68,7 @@ public:
     const QString& getVersion() const { return mPeerVersion; }
     QString host();
     quint16 port();
+    bool hasCallbackEndpoint() const;
 
     //Property Accessors/Mutators
     int id() const { return mId; }

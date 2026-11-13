@@ -44,6 +44,7 @@ public:
 
     QPair<bool, QString> startServer(quint16);
     QPair<bool, QString> stopServer();
+    void disconnectAll();
 
     QPair<bool, QString> call(const QString&);
     QPair<bool, QString> call(const QString&, int);
