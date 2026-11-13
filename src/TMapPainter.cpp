@@ -1545,10 +1545,10 @@ void TMapPainter::paintRoomExits(QPainter& painter,
     int maxSkippableSpan = 0;
     if (lodTier && mRoomWidth > 0.0f && mRoomHeight > 0.0f) {
         const auto exitDropped = [&](const int span) {
-            return float(span) * mRoomWidth <= lodBlobSize.width() && float(span) * mRoomHeight <= lodBlobSize.height();
+            return static_cast<float>(span) * mRoomWidth <= lodBlobSize.width() && static_cast<float>(span) * mRoomHeight <= lodBlobSize.height();
         };
-        const double unitsAcrossBlob = qMin(lodBlobSize.width() / double(mRoomWidth), lodBlobSize.height() / double(mRoomHeight));
-        maxSkippableSpan = int(qBound(0.0, std::floor(unitsAcrossBlob), double(INT_MAX / 2)));
+        const double unitsAcrossBlob = qMin(lodBlobSize.width() / static_cast<double>(mRoomWidth), lodBlobSize.height() / static_cast<double>(mRoomHeight));
+        maxSkippableSpan = static_cast<int>(qBound(0.0, std::floor(unitsAcrossBlob), static_cast<double>(INT_MAX / 2)));
         while (maxSkippableSpan > 0 && !exitDropped(maxSkippableSpan)) {
             --maxSkippableSpan;
         }
@@ -1574,7 +1574,7 @@ void TMapPainter::paintRoomExits(QPainter& painter,
     mLodExitIndexRoomsHandedOver = -1;
     if (!mLodExitIndexDisabled && maxSkippableSpan > 0 && pArea->lodVisibleExitRoomCount(zLevel, maxSkippableSpan) < viewportRooms.size()) {
         roomsToPaint = pArea->lodVisibleExitRooms(zLevel, maxSkippableSpan);
-        mLodExitIndexRoomsHandedOver = int(roomsToPaint.size());
+        mLodExitIndexRoomsHandedOver = static_cast<int>(roomsToPaint.size());
         QSet<int> alreadyListed{roomsToPaint.cbegin(), roomsToPaint.cend()};
         for (const int customLineRoomId : pArea->getCustomLineRoomsForZ(zLevel)) {
             // All of them: the index only covers exits drawn as plain lines.
@@ -1643,8 +1643,8 @@ void TMapPainter::paintRoomExits(QPainter& painter,
             if (!lodTier || pDestination->getArea() != mAreaID) {
                 return true;
             }
-            const float xReach = float(qAbs(qint64{pDestination->x()} - room->x())) * mRoomWidth;
-            const float yReach = float(qAbs(qint64{pDestination->y()} - room->y())) * mRoomHeight;
+            const float xReach = static_cast<float>(qAbs(qint64{pDestination->x()} - room->x())) * mRoomWidth;
+            const float yReach = static_cast<float>(qAbs(qint64{pDestination->y()} - room->y())) * mRoomHeight;
             return xReach > lodBlobSize.width() || yReach > lodBlobSize.height();
         };
 
