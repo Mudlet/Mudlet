@@ -119,11 +119,11 @@ inline void put(const ScratchMap<Value>& map, std::size_t key, const Value& valu
     map.mpTouched->push_back(key);
 }
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
+extern int qInitResources_mudlet();
+extern int qInitResources_qm();
+extern int qInitResources_additional_splash_screens();
+extern int qInitResources_mudlet_fonts_common();
+extern int qInitResources_mudlet_fonts_posix();
 static void initializeQRCResources();
 
 class PathfindBenchmark : public QObject
