@@ -43,7 +43,8 @@ if [[ -n "$missing" ]]; then
 fi
 
 # require() alone misses the buffer_free clash, so load libssh first as Mudlet does
-ssh_library="$(ldconfig -p | awk '$1 == "libssh.so.4" {print $NF; exit}')"
+# awk reads to the end: leaving early would kill ldconfig with SIGPIPE, which pipefail makes fatal
+ssh_library="$(ldconfig -p | awk '$1 == "libssh.so.4" && !path {path = $NF} END {print path}')"
 [[ -n "$ssh_library" ]] || { echo "libssh.so.4 is not installed" >&2; exit 1; }
 LD_PRELOAD="$ssh_library" lua5.1 - <<'LUA'
 local rex = require('rex_pcre2')
