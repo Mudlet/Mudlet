@@ -763,8 +763,7 @@ find_package(Qt6 6.8.2 REQUIRED
                Multimedia
                Network
                OpenGL
-               Svg
-               Concurrent)
+               Svg)
 if(USE_GUI)
   find_package(Qt6 6.8.2 REQUIRED
       COMPONENTS MultimediaWidgets
@@ -782,8 +781,7 @@ find_package(Qt6 COMPONENTS TextToSpeech QUIET)
 message(STATUS "Qt version: ${Qt6Core_VERSION}")
 
 set(QT_MAJOR_VERSION 6)
-set(QT_LIBS Qt6::Concurrent
-              Qt6::Core
+set(QT_LIBS Qt6::Core
               Qt6::Core5Compat
               Qt6::Gui
               Qt6::Network
@@ -795,6 +793,18 @@ set(QT_APP_LIBS Qt6::MultimediaWidgets
                 Qt6::OpenGLWidgets
                 Qt6::UiTools
                 Qt6::Widgets)
+
+# A Qt built without threads, as for a browser, has no Concurrent; TBackgroundTask runs the core's file work
+# inline there
+if(QT_FEATURE_concurrent)
+  find_package(Qt6 6.8.2 REQUIRED COMPONENTS Concurrent)
+  list(APPEND QT_LIBS Qt6::Concurrent)
+endif()
+
+# The host's rcc compresses with zstd, which a browser build's QtCore cannot read back
+if(EMSCRIPTEN)
+  list(APPEND CMAKE_AUTORCC_OPTIONS --no-zstd)
+endif()
 
 if(USE_MCPSERVER)
   list(APPEND QT_LIBS Qt6::HttpServer)
