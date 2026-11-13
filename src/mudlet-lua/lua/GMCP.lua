@@ -85,13 +85,9 @@ function enableModule(user, module)
 end
 
 
--- Send the module list again on reconnect, so activated modules stay enabled during
---   a session unless explicitly disabled
+-- Runs on every GMCP enable: modules enabled before GMCP was up (profile load, sysConnectionEvent)
+--   could not be sent, and a Core.Supports.Set from Mudlet replaces the server's list
 function gmod.reenableModules()
-  if not next(gmcp) then
-    return
-  end
-
   local list = {}
   for module, users in pairs(registeredModules) do
     list[#list + 1] = module .. " 1"
