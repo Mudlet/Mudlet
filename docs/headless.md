@@ -1218,6 +1218,12 @@ the desktop GUI pumps the event loop from it, for its progress dialog and its Ab
 `cancelMapOperation()` while the operation runs, and anything else posted meanwhile, such as a profile
 close, runs once the operation has returned.
 
+## Embedding it: Mudlet's own resources
+
+`mudlet_core` is a static library, and the linker keeps a Qt resource from one only if something
+names it. `THeadlessSession` names Mudlet's own (its `:/` images, translations and fonts), so a
+program that uses it has them, registered before `main()` runs, and has nothing to call for them.
+
 ## Embedding it: Mudlet's own Lua files
 
 Much of the scripting API is itself Lua (Geyser, `db:`, the string and table functions and more), in

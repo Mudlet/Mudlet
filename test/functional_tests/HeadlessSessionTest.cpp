@@ -456,6 +456,43 @@ private slots:
         QCOMPARE(session.start({.profile = qsl("Headless Second Try"), .connect = false}), THeadlessSession::StartResult::started);
     }
 
+    void test_theSessionRegistersMudletsOwnResources()
+    {
+        QStringList paths{qsl(":/icons/mudlet.png"), qsl(":/lang/mudlet_de_DE.qm")};
+#ifdef INCLUDE_FONTS
+        paths << qsl(":/fonts/ttf-bitstream-vera-1.10/Vera.ttf");
+#ifdef INCLUDE_EMOJI_FONT
+        paths << qsl(":/fonts/noto-color-emoji-2025-09-15-v2.051/LICENSE");
+#endif
+#endif
+        const auto reregister = qScopeGuard([]() {
+            Q_INIT_RESOURCE(mudlet);
+            Q_INIT_RESOURCE(qm);
+#ifdef INCLUDE_FONTS
+            Q_INIT_RESOURCE(mudlet_fonts_common);
+#ifdef INCLUDE_EMOJI_FONT
+            Q_INIT_RESOURCE(mudlet_fonts_posix);
+#endif
+#endif
+        });
+        Q_CLEANUP_RESOURCE(mudlet);
+        Q_CLEANUP_RESOURCE(qm);
+#ifdef INCLUDE_FONTS
+        Q_CLEANUP_RESOURCE(mudlet_fonts_common);
+#ifdef INCLUDE_EMOJI_FONT
+        Q_CLEANUP_RESOURCE(mudlet_fonts_posix);
+#endif
+#endif
+        for (const auto& path : paths) {
+            QVERIFY2(!QFile::exists(path), qPrintable(path));
+        }
+
+        const THeadlessSession session;
+        for (const auto& path : paths) {
+            QVERIFY2(QFile::exists(path), qPrintable(path));
+        }
+    }
+
     // Mudlet.ini is read by the first pool alone, so the media mutes go from each pool to the next, as through
     // a name the frontend got wrong
     void test_theMediaMutesOutliveThePool()
