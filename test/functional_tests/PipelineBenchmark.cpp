@@ -1861,7 +1861,7 @@ static void initializeQRCResources()
 #endif
 #ifdef INCLUDE_FONTS
     qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
+#ifdef INCLUDE_EMOJI_FONT
     qInitResources_mudlet_fonts_posix();
 #endif
 #endif
