@@ -84,8 +84,10 @@ public:
         // For this run only; nothing stores it
         QString password;
         // An absolute path, made if need be: the folder that holds the profiles, Mudlet.ini and the passwords
-        // stored for them, in place of the GUI's folder and the system's keychain. Settled once a process, so a
-        // later start() may name it again, but no other, nor leave it out for the GUI's. Never the GUI's folder.
+        // stored for them, in place of the GUI's folder and the system's keychain, except in an Android app with
+        // a Java VM registered with Qt (docs/headless.md), whose profile passwords go to the KeyStore unless
+        // Mudlet.ini keeps them in the folder. Settled once a process, so a later start() may name it again, but
+        // no other, nor leave it out for the GUI's. Never the GUI's folder.
         QString configDir;
     };
 

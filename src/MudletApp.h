@@ -201,8 +201,9 @@ public:
     // names one; before the first media object is made
     static void setDefaultMediaBackend();
 
-    // Whether the config root in force actually came from a portable.txt. False
-    // when a marker was present but named a root that had to be refused, which is
+    // Whether the config root in force keeps its passwords out of the keychain, in the credential
+    // store's encrypted files: one an honoured portable.txt named, or one a frontend chose that keeps them.
+    // False when a marker was present but named a root that had to be refused, which is
     // the distinction a marker stat cannot make - and getting it wrong sends
     // credentials to portable-mode files on an install running non-portably.
     static bool portableRootInUse();
@@ -295,11 +296,13 @@ private:
     friend class HeadlessSessionTest;
     // Discards any settings store built under the previous root - and with it any
     // pointer a caller cached, so this must not run once init() has handed the
-    // store to the Updater. portable says whether the root came from a
-    // portable.txt that was honoured.
+    // store to the Updater. portable says whether the root keeps its passwords out
+    // of the keychain, as portableRootInUse() reports it.
     static void setConfigPath(const QString& path, bool portable = false);
-    // A root a frontend chose: portable, as its passwords are kept in it
-    static void chooseConfigRoot(const QString& path);
+    // A root a frontend chose, portable when it keeps its passwords in its own files rather than the keychain
+    static void chooseConfigRoot(const QString& path, bool keepsPasswords = chosenRootKeepsPasswords());
+    // False only in an Android app with a Java VM registered with Qt, whose chosen root may then use the KeyStore
+    static bool chosenRootKeepsPasswords();
     // Resolves the config root, logs what the resolution found - a refused portable.txt included - and
     // installs it through setConfigPath(), after which getQSettings() opens the Mudlet.ini under it.
     static ConfigDirResolution settleConfigRoot();

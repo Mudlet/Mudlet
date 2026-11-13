@@ -29,8 +29,8 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
-#include <QPointer>
 #include <QSaveFile>
+#include <QSettings>
 #include <QDataStream>
 #include <QScopeGuard>
 #include <QRegularExpression>
@@ -39,6 +39,8 @@
 #include <QVersionNumber>
 
 #include <algorithm>
+#include <cerrno>
+#include <cstring>
 #include <memory>
 #include <optional>
 #include <utility>
@@ -48,24 +50,59 @@
 #include <qt6keychain/keychain.h>
 #endif
 
+#if !defined(Q_OS_WIN)
+#include <sys/stat.h>
+#endif
+
 namespace {
-// Whether a delete job's result means the credential is not left behind. EntryNotFound (nothing
-// to delete) and NoBackendAvailable/NotImplemented (the keychain isn't the store here, so the
+// A chosen root the keychain is open to, which only an Android app makes (the player's preference may still
+// keep its passwords in files): the KeyStore there is shared with every other root the app may name
+bool keychainServesAChosenRoot()
+{
+    return MudletApp::configRootChosen() && !MudletApp::portableRootInUse();
+}
+
+// QtKeychain's Android backend keeps each entry in QSettings(service) and passes over that file without an error when
+// it cannot be read: a read answers EntryNotFound and a delete NoError. Under a chosen root that is the store failing.
+// A file that does not parse cannot be told here: QSettings reports that only to the object that parsed it, QtKeychain's.
+QString keychainStoreFailure(const QKeychain::Job& job)
+{
+    if (!keychainServesAChosenRoot()) {
+        return QString();
+    }
+    const QSettings store(job.service());
+    return store.status() == QSettings::NoError ? QString() : qsl("the keychain's store %1 could not be opened").arg(store.fileName());
+}
+
+// Whether a delete job's result means the credential is not left behind, with why not in why. EntryNotFound
+// (nothing to delete) and NoBackendAvailable/NotImplemented (the keychain isn't the store here, so the
 // file fallback is authoritative) are not failures; anything else is a genuine failure to remove
 // an entry that may still exist.
-bool keychainDeleteSucceeded(const QKeychain::Job& job)
+bool keychainDeleteSucceeded(const QKeychain::Job& job, QString* why = nullptr)
 {
     const QKeychain::Error error = job.error();
-#if !defined(Q_OS_DARWIN) && !defined(Q_OS_WIN)
-    // libsecret reports a Secret Service missing from D-Bus as OtherError, where KWallet says
-    // NoBackendAvailable; on Apple platforms and Windows the store is part of the OS, so there it is the entry's own failure
+    if (error == QKeychain::NoError) {
+        const QString failure = keychainStoreFailure(job);
+        if (why) {
+            *why = failure;
+        }
+        return failure.isEmpty();
+    }
+#if !defined(Q_OS_DARWIN) && !defined(Q_OS_WIN) && !defined(Q_OS_ANDROID)
+    // libsecret reports a Secret Service missing from D-Bus as OtherError, where KWallet says NoBackendAvailable. On
+    // Apple platforms and Windows the store is part of the OS, and on Android OtherError is the entry's KeyStore key or
+    // QtKeychain's settings file failing, so there it is the entry's own failure
     if (error == QKeychain::OtherError) {
         // Logged all the same: an entry saved in a session that had the keychain is still in it
         qWarning().noquote() << "CredentialManager: could not reach the keychain to remove an entry, so taking it to hold none:" << job.errorString();
         return true;
     }
 #endif
-    return error == QKeychain::NoError || error == QKeychain::EntryNotFound || error == QKeychain::NoBackendAvailable || error == QKeychain::NotImplemented;
+    const bool succeeded = error == QKeychain::EntryNotFound || error == QKeychain::NoBackendAvailable || error == QKeychain::NotImplemented;
+    if (!succeeded && why) {
+        *why = job.errorString();
+    }
+    return succeeded;
 }
 
 // Worded so a caller can tell a refused argument from a storage failure
@@ -97,6 +134,35 @@ bool fileWrittenAfter(const QString& path, const QString& otherPath)
     const QFileInfo otherInfo(otherPath);
 
     return info.exists() && (!otherInfo.exists() || info.lastModified() > otherInfo.lastModified());
+}
+
+// Why filePath, not found, may still be there, or empty when Mudlet takes it as absent. Not on Windows, which has no
+// search permission: the nearest folder that does show, if it has none, hides everything below it. Under a chosen
+// root the keychain serves, where the file is read before the keychain, so does any failure to look at the file
+// itself but its absence - a refusal from the security module, an I/O error.
+QString whatHides(const QString& filePath)
+{
+#if defined(Q_OS_WIN)
+    Q_UNUSED(filePath)
+    return QString();
+#else
+    QString folderPath = QFileInfo(filePath).absolutePath();
+    while (!QFileInfo::exists(folderPath) && QFileInfo(folderPath).absolutePath() != folderPath) {
+        folderPath = QFileInfo(folderPath).absolutePath();
+    }
+    if (const QFileInfo folder(folderPath); folder.exists() && !folder.isExecutable()) {
+        return qsl("the folder %1 does not let Mudlet look inside it").arg(folderPath);
+    }
+    if (keychainServesAChosenRoot()) {
+        struct stat info = {};
+        if (::stat(QFile::encodeName(filePath).constData(), &info) != 0) {
+            if (const int error = errno; error != ENOENT && error != ENOTDIR) {
+                return qsl("looking at %1 failed: %2").arg(filePath, QString::fromLocal8Bit(std::strerror(error)));
+            }
+        }
+    }
+    return QString();
+#endif
 }
 
 bool writeCredentialFile(const QString& filePath, const QString& profileName, const QString& credential)
@@ -163,7 +229,14 @@ bool readFoundNothing(QKeychain::Error error)
 // each of them costs another prompt to ask.
 bool readWasRefusedOutright(QKeychain::Error error)
 {
+#if defined(Q_OS_ANDROID)
+    // The KeyStore keys QtKeychain makes need no unlock and raise no prompt, so a refusal window would spare the
+    // player nothing: its AccessDenied is a KeyStore that would not open, or an entry's key it could not get
+    Q_UNUSED(error)
+    return false;
+#else
     return error == QKeychain::AccessDenied || error == QKeychain::AccessDeniedByUser;
+#endif
 }
 
 // Starts a job nobody waits on, detached from the start. It is never abandoned, for the reason
@@ -337,6 +410,12 @@ bool CredentialManager::isOperationValid() const
     return hook;
 }
 
+/*static*/ std::optional<QString>& CredentialManager::readTextForTesting()
+{
+    static std::optional<QString> text;
+    return text;
+}
+
 /*static*/ bool CredentialManager::profileStoragePreferred()
 {
     return profileStorageOverrideForTesting().value_or(!MudletApp::storingPasswordsSecurely());
@@ -496,7 +575,11 @@ void CredentialManager::retrievePassword(
         return;
     }
 
-    if (shouldUseKeychain(profileName) || (scope == StoreScope::EveryStore && keychainMayHoldAnEarlierCopy())) {
+    // Under a chosen root the keychain serves, a file copy is never older than the keychain's unless a save to
+    // it reported failure: a save the keychain does not take, or does not give back on a read, writes one, and
+    // one it gives back removes it. So while there is one it is the answer, readable or not.
+    const bool fileCopyAnswers = keychainServesAChosenRoot() && fileCopyExists(profileName, key);
+    if (!fileCopyAnswers && (shouldUseKeychain(profileName) || (scope == StoreScope::EveryStore && keychainMayHoldAnEarlierCopy()))) {
         auto lookup = std::make_shared<Lookup>();
         lookup->profileName = profileName;
         lookup->key = key;
@@ -626,7 +709,7 @@ void CredentialManager::retrievePassword(
 
         runLookupStage(lookup, 0);
     } else {
-        // Use SecureStringUtils directly (portable/test mode)
+        // Use SecureStringUtils directly (portable/test mode, or the file copy above)
         ReadOutcome failure = ReadOutcome::NothingStored;
         QString password = retrieveCredentialFromFile(profileName, key, &failure);
         bool success = !password.isEmpty();
@@ -851,9 +934,15 @@ void CredentialManager::runLookupStage(const LookupPtr& lookup, std::size_t inde
         const auto deleteJob = qScopeGuard([job]() {
             job->deleteLater();
         });
-        const QKeychain::Error error = job->error();
+        QKeychain::Error error = job->error();
         QString password = (error == QKeychain::NoError) ? job->textData() : QString();
-        const QString errorString = job->errorString();
+        QString errorString = job->errorString();
+        if (error == QKeychain::EntryNotFound) {
+            if (QString failure = keychainStoreFailure(*job); !failure.isEmpty()) {
+                error = QKeychain::OtherError;
+                errorString = std::move(failure);
+            }
+        }
         if (lookup->answered) {
             SecureStringUtils::secureStringClear(password);
             return;
@@ -1130,7 +1219,7 @@ void CredentialManager::removePassword(const QString& profileName, const QString
         removeCredential(service, key, profileName, combinedCallback);
     } else {
         // The file is where the preference says this credential lives, and it is cleared first
-        const bool fileSuccess = removeCredentialFromFile(profileName, key);
+        const bool fileSuccess = dropFileCopies(profileName, key);
 
         // A credential stored before the preference changed is still in the keychain, in whichever
         // layout put it there, and forgetting has to mean forgetting: with the preference pointing
@@ -1244,59 +1333,106 @@ void CredentialManager::storeCredential(const QString& service, const QString& a
     // Set up timeout
     setupTimeout();
 
+    // Answers the caller once the keychain has: taken when it holds the password (refusal is then not used),
+    // fileCopyLeft when a copy read in its place could not be removed
+    const auto settle = [this, service, account, password, profileName](bool taken, const QString& refusal, bool fileCopyLeft) {
+        cleanupTimeout();
+
+        bool success = taken;
+        QString errorMessage;
+
+        // If keychain failed, try file storage fallback
+        if (!success) {
+            bool fileSuccess = storeCredentialToFileForThisOperation(profileName, account, password);
+
+            if (fileSuccess) {
+                success = true;
+                mKeychainRefusal = refusal.isEmpty() ? qsl("unknown keychain error") : refusal;
+                qDebug() << "CredentialManager: Password stored to encrypted file storage";
+            } else {
+                errorMessage = qsl("Both keychain and encrypted file storage failed. Keychain error: %1").arg(refusal);
+            }
+        } else {
+            qDebug() << "CredentialManager: Password stored to keychain service:" << service;
+            if (fileCopyLeft) {
+                success = false;
+                errorMessage = qsl("Stored in the keychain, but a copy in the encrypted files, which is the one read, could not be removed or cannot be looked at");
+            }
+            // Deliberately not clearing this profile's refusal window: on macOS an item this
+            // application owns is written without a prompt while reading an existing one
+            // whose ACL does not name this binary still prompts, so a write says nothing
+            // about read access. Clearing it here would put the prompt the window exists to
+            // spare the player straight back in front of them, in the very flow it was
+            // added for - a token written on connect between two lookups.
+        }
+
+        // Final validity check before calling callback
+        if (mCurrentCallback && isOperationValid()) {
+            auto callback = mCurrentCallback; // Copy callback to avoid use-after-free
+            mCurrentCallback = nullptr;
+            mCurrentJob = nullptr;
+
+            callback(success, errorMessage);
+        }
+    };
+
+    const auto stillAwaited = [this]() {
+        if (isOperationValid()) {
+            return true;
+        }
+        qWarning().noquote() << "CredentialManager: dropped the answer to the" << mCurrentOperationDescription << "- the application is shutting down, so its caller is not told the outcome";
+        return false;
+    };
+
+    // Under a chosen root the keychain serves, a file copy is read before the keychain, so it goes only once a read
+    // gives back what was written: QtKeychain's Android backend reports a write its settings file never took as done.
+    // That read is this operation's own job, so one still unanswered at the timeout proves nothing and the copy stays.
+    const bool readsBack = keychainServesAChosenRoot();
+
     // Connect signals with queued connection for safety
     connect(
             writeJob,
             &QKeychain::WritePasswordJob::finished,
             this,
-            [this, writeJob, service, account, password, profileName]() {
-                // Early exit if operation is no longer valid
-                if (!isOperationValid()) {
-                    qWarning().noquote() << "CredentialManager: dropped the answer to the" << mCurrentOperationDescription
-                                         << "- the application is shutting down, so its caller is not told the outcome";
-                    writeJob->deleteLater();
+            [this, writeJob, settle, stillAwaited, readsBack, service, account, password, profileName]() {
+                writeJob->deleteLater();
+                if (!stillAwaited()) {
+                    return;
+                }
+                if (writeJob->error() != QKeychain::NoError) {
+                    qWarning().noquote() << "CredentialManager: the keychain refused the" << mCurrentOperationDescription << "- using encrypted file storage instead:" << writeJob->errorString();
+                    settle(false, writeJob->errorString(), false);
+                    return;
+                }
+                if (!readsBack) {
+                    settle(true, QString(), false);
                     return;
                 }
 
-                cleanupTimeout();
-
-                bool success = (writeJob->error() == QKeychain::NoError);
-                QString errorMessage = success ? QString() : writeJob->errorString();
-
-                // If keychain failed, try file storage fallback
-                if (!success) {
-                    qWarning().noquote() << "CredentialManager: the keychain refused the" << mCurrentOperationDescription << "- using encrypted file storage instead:" << errorMessage;
-
-                    bool fileSuccess = storeCredentialToFileForThisOperation(profileName, account, password);
-
-                    if (fileSuccess) {
-                        success = true;
-                        mKeychainRefusal = errorMessage.isEmpty() ? qsl("unknown keychain error") : errorMessage;
-                        errorMessage = QString(); // Clear error message on successful fallback
-                        qDebug() << "CredentialManager: Password stored to encrypted file storage";
-                    } else {
-                        errorMessage = qsl("Both keychain and encrypted file storage failed. Keychain error: %1").arg(errorMessage);
-                    }
-                } else {
-                    qDebug() << "CredentialManager: Password stored to keychain service:" << service;
-                    // Deliberately not clearing this profile's refusal window: on macOS an item this
-                    // application owns is written without a prompt while reading an existing one
-                    // whose ACL does not name this binary still prompts, so a write says nothing
-                    // about read access. Clearing it here would put the prompt the window exists to
-                    // spare the player straight back in front of them, in the very flow it was
-                    // added for - a token written on connect between two lookups.
-                }
-
-                // Final validity check before calling callback
-                if (mCurrentCallback && isOperationValid()) {
-                    auto callback = mCurrentCallback; // Copy callback to avoid use-after-free
-                    mCurrentCallback = nullptr;
-                    mCurrentJob = nullptr;
-
-                    callback(success, errorMessage);
-                }
-
-                writeJob->deleteLater();
+                auto* check = new QKeychain::ReadPasswordJob(service, this);
+                check->setKey(service);
+                trackCurrentJob(check);
+                mCurrentOperationDescription = qsl("read back of the %1").arg(mCurrentOperationDescription);
+                connect(
+                        check,
+                        &QKeychain::ReadPasswordJob::finished,
+                        this,
+                        [this, check, settle, stillAwaited, account, password, profileName]() {
+                            check->deleteLater();
+                            if (!stillAwaited()) {
+                                return;
+                            }
+                            const bool readOk = check->error() == QKeychain::NoError;
+                            if (!readOk || readTextForTesting().value_or(check->textData()) != password) {
+                                const QString why = readOk ? qsl("the entry holds something other than what was written") : qsl("reading the entry back failed: %1").arg(check->errorString());
+                                qWarning().noquote() << "CredentialManager: the" << mCurrentOperationDescription << "did not give the password back - using encrypted file storage instead:" << why;
+                                settle(false, why, false);
+                                return;
+                            }
+                            settle(true, QString(), !dropFileCopies(profileName, account));
+                        },
+                        Qt::QueuedConnection);
+                startJob(check);
             },
             Qt::QueuedConnection); // Use queued connection for additional safety
 
@@ -1355,8 +1491,8 @@ void CredentialManager::removeCredential(const QString& service, const QString& 
 
                 cleanupTimeout();
 
-                const bool primarySuccess = keychainDeleteSucceeded(*deleteJob);
-                const QString primaryError = primarySuccess ? QString() : deleteJob->errorString();
+                QString primaryError;
+                const bool primarySuccess = keychainDeleteSucceeded(*deleteJob, &primaryError);
                 deleteJob->deleteLater();
 
 #if defined(Q_OS_WIN)
@@ -1412,7 +1548,7 @@ void CredentialManager::removeCredential(const QString& service, const QString& 
 
 void CredentialManager::finishRemoveCredential(const QString& account, const QString& profileName, bool keychainSuccess, const QString& keychainError)
 {
-    const bool fileSuccess = removeCredentialFromFile(profileName, account);
+    const bool fileSuccess = dropFileCopies(profileName, account);
 
     // A removal only succeeds if the credential is gone from every store it could be in: a hard
     // keychain error means an entry may still be readable, so it must not be masked by the file
@@ -1683,19 +1819,8 @@ QString CredentialManager::retrieveCredentialFromFile(const QString& profileName
             if (failure) {
                 *failure = ReadOutcome::Unreadable;
             }
-        } else if (failure) {
-#if !defined(Q_OS_WIN)
-            // A folder without search permission hides everything below it, so "not there" is not proof of
-            // absence: check the nearest folder that does show. Not on Windows, which has no search permission.
-            QString folderPath = QFileInfo(filePath).absolutePath();
-            while (!QFileInfo::exists(folderPath) && QFileInfo(folderPath).absolutePath() != folderPath) {
-                folderPath = QFileInfo(folderPath).absolutePath();
-            }
-            const QFileInfo folder(folderPath);
-            if (folder.exists() && !folder.isExecutable()) {
-                *failure = ReadOutcome::Unreadable;
-            }
-#endif
+        } else if (failure && !whatHides(filePath).isEmpty()) {
+            *failure = ReadOutcome::Unreadable;
         }
 
         return QString();
@@ -1786,7 +1911,13 @@ QString CredentialManager::generateServiceName(const QString& profileName, const
 
     // Use SHA-256 hash to generate unique service names that won't collide
     // even when profile names differ only in special characters
-    QByteArray data = qsl("%1:%2").arg(profileName, key).toUtf8();
+    QString hashed = qsl("%1:%2").arg(profileName, key);
+    // Its own entries, or a new profile there would remove a password another root keeps for the same name; by
+    // what the folder is, so that a spelling of it through a symlink finds them
+    if (keychainServesAChosenRoot()) {
+        hashed.prepend(qsl("%1:").arg(MudletApp::folderIdentity(MudletApp::credentialFilesRoot())));
+    }
+    QByteArray data = hashed.toUtf8();
     QByteArray hash = QCryptographicHash::hash(data, QCryptographicHash::Sha256);
     QString hashHex = QString::fromLatin1(hash.toHex()).left(16);
 
@@ -1927,6 +2058,28 @@ QString CredentialManager::ourLegacyFilePath(const QString& profileName, const Q
     SecureStringUtils::secureStringClear(existing);
 
     return ours ? generateLegacyFilePath(profileName, key) : QString();
+}
+
+bool CredentialManager::fileCopyExists(const QString& profileName, const QString& key)
+{
+    const QString filePath = generateFilePath(profileName, key);
+    if (!filePath.isEmpty()) {
+        if (QFileInfo::exists(filePath)) {
+            return true;
+        }
+        if (const QString hider = whatHides(filePath); !hider.isEmpty()) {
+            qWarning().noquote() << "CredentialManager:" << hider << "- so a" << key << "credential for profile" << profileName
+                                 << "saved there can be neither read, nor removed, nor passed over for the keychain";
+            return true;
+        }
+    }
+    return !ourLegacyFilePath(profileName, key).isEmpty();
+}
+
+bool CredentialManager::dropFileCopies(const QString& profileName, const QString& key)
+{
+    const bool removed = removeCredentialFromFile(profileName, key);
+    return keychainServesAChosenRoot() ? !fileCopyExists(profileName, key) : removed;
 }
 
 void CredentialManager::removeLegacyFileCredential(const QString& profileName, const QString& key)

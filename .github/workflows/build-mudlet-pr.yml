@@ -438,6 +438,24 @@ jobs:
         # detection cases must run on their private session bus rather than skip.
         MUDLET_TEST_REQUIRE_DBUS: 1
 
+    # The keychain cases that hand a folder to another user need root that file permissions
+    # still bind, so they skip in the step above. Here they, and the cases that need a file
+    # refused to its owner, fail rather than skip
+    - name: (Linux) Rerun the keychain tests as root bound by file permissions
+      if: runner.os == 'Linux' && matrix.run_tests == 'true'
+      working-directory: '${{runner.workspace}}/b/ninja'
+      run: |
+        # Root without CAP_DAC_READ_SEARCH needs search permission on the runner's home to reach Qt
+        sudo chmod o+x "$HOME"
+        # Owned by root: without CAP_DAC_OVERRIDE root cannot write into the runner's folders
+        home=$(sudo mktemp -d)
+        sudo env HOME="$home" XDG_CONFIG_HOME="$home/config" XDG_CACHE_HOME="$home/cache" \
+          QT_QPA_PLATFORM=offscreen ASAN_OPTIONS=detect_leaks=0 MUDLET_TEST_REQUIRE_UNPRIVILEGED_ROOT=1 \
+          setpriv --inh-caps=-dac_override,-dac_read_search,-fowner \
+            --bounding-set=-dac_override,-dac_read_search,-fowner \
+          test/unit_tests CredentialManagerKeychainTest
+        sudo rm -rf "$home"
+
     # The macOS C++ tests run alongside the Lua tests further down, which need the
     # packaged app - and packaging moves src/mudlet.app, which AppStartupTeardownTest and
     # HeadlessVersionTest launch and whose Info.plist MacOSUsageStringsTest reads. A clone

@@ -255,7 +255,8 @@ bool aFolderTheGUICouldPick(const QString& dir)
 }
 
 // Empty if dir, cleaned, can be the config root, or for none the GUI's can, else why not. The GUI's own folder
-// is never one: its profiles' passwords are in the keychain or AppConfigLocation, where a chosen one does not look.
+// is never one: its profiles' passwords are in AppConfigLocation, which a chosen one does not read, or in the
+// keychain under the default root's names, which an Android app's chosen one does not save under.
 QString configDirProblem(const QString& dir)
 {
     if (!dir.isEmpty() && !QDir::isAbsolutePath(dir)) {

@@ -41,7 +41,9 @@ class ReadPasswordJob;
  * @brief Secure credential management with QtKeychain integration and encrypted file fallback
  *
  * This class provides a comprehensive credential management system following the principle:
- * "QtKeychain first, encrypted file fallback". It offers both asynchronous and legacy APIs.
+ * "QtKeychain first, encrypted file fallback" - except under an Android app's chosen root, where a file
+ * copy, while there is one, is read instead (see retrievePassword()). It offers both asynchronous and
+ * legacy APIs.
  *
  * RECOMMENDED: Async API (QtKeychain + fallback)
  * - Primary storage: System keychain (macOS Keychain, Windows Credential Store, Linux Secret Service)
@@ -187,6 +189,12 @@ private:
     // cannot be opened or decrypted, or Unavailable when no valid path can be made
     static QString retrieveCredentialFromFile(const QString& profileName, const QString& key, ReadOutcome* failure = nullptr);
     static bool removeCredentialFromFile(const QString& profileName, const QString& key);
+    // This profile's: under the current name readable or not, one that cannot be looked at included; under the
+    // older name only one it decrypts, the only kind a save or a forget can prove its own and remove
+    static bool fileCopyExists(const QString& profileName, const QString& key);
+    // removeCredentialFromFile(), except that under a chosen root the keychain serves it is true only once no copy
+    // is left that retrievePassword() reads in the keychain's place
+    static bool dropFileCopies(const QString& profileName, const QString& key);
 
     // One place a lookup may find the password: a keychain entry, or the encrypted file. recover
     // re-files a password found there under the current name.
@@ -310,6 +318,8 @@ private:
     std::function<bool(QKeychain::Job*)> mJobStartHook;
     // Test-only: the hook every manager made from then on starts with, for one the code under test makes itself
     static std::function<bool(QKeychain::Job*)>& jobStartHookForTesting();
+    // Test-only: what a read the hook answered holds, which QtKeychain gives a test no way to set
+    static std::optional<QString>& readTextForTesting();
 
     // Destruction flag to prevent operations during cleanup
     bool mShuttingDown = false;

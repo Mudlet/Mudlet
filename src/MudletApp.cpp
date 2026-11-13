@@ -66,6 +66,9 @@
 #include <cerrno>
 #include <unistd.h>
 #endif
+#if defined(Q_OS_ANDROID)
+#include <QJniEnvironment>
+#endif
 
 namespace {
 // Mudlet itself only resolves on the main thread; the locks are for engine
@@ -458,9 +461,26 @@ void MudletApp::setConfigPath(const QString& path, const bool portable)
     discardSettingsStore();
 }
 
-void MudletApp::chooseConfigRoot(const QString& path)
+bool MudletApp::chosenRootKeepsPasswords()
 {
-    setConfigPath(path, true);
+#if defined(Q_OS_ANDROID)
+    // An app's KeyStore has no GUI to share it with. A bare executable has no JavaVM, which QJniEnvironment
+    // dereferences unchecked on QtKeychain's first JNI call.
+    return QJniEnvironment::javaVM() == nullptr;
+#else
+    // The keychain files entries by profile name, so it would share them with a GUI profile of the same name
+    return true;
+#endif
+}
+
+void MudletApp::chooseConfigRoot(const QString& path, const bool keepsPasswords)
+{
+    setConfigPath(path, keepsPasswords);
+#if defined(Q_OS_ANDROID)
+    if (!path.isEmpty() && keepsPasswords) {
+        qInfo().noquote() << "MudletApp: no Java VM is registered with Qt, so the passwords for" << path << "are kept in its credentials folder, not the KeyStore";
+    }
+#endif
     const QMutexLocker locker(&configRootMutex);
     configRootChosenByFrontend = !path.isEmpty();
 }
