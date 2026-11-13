@@ -135,10 +135,10 @@ public:
     enum class StartResult { started, noSuchProfile, invalidName, invalidConnectionDetails, notOpened, loadFailed, poolClosing, invalidConfigDir };
     Q_ENUM(StartResult)
 
-    // A Lua C module the app has linked in, which a phone or a browser cannot load from a file: require()
-    // finds it under that name ahead of any on disk, in a profile opened or reset afterwards. Given again
-    // for a name, it replaces the earlier one; with no name or no function it is refused. docs/headless.md
-    // lists the modules Mudlet itself requires.
+    // A Lua C module the app has linked in, for a platform where require() cannot load it from a file (a browser,
+    // or Android under Qt's default packaging): require() finds it under that name ahead of any on disk, in a
+    // profile opened or reset afterwards. Given again for a name, it replaces the earlier one; with no name or no
+    // function it is refused. docs/headless.md lists the modules Mudlet itself requires.
     static void preloadLuaModule(const QByteArray& name, int (*open)(lua_State*));
     // A real folder of <name>.aff/.dic Hunspell dictionaries the app carries, searched ahead of the system's and in place
     // of Mudlet's bundled ones by every dictionary opened afterwards. Refused (false) for a :/ or assets:/ path, which
