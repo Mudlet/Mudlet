@@ -135,7 +135,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
 
       it("should return a valid OS name as first value", function()
         local validOSNames = {
-          "windows", "mac", "linux", "cygwin", "hurd",
+          "windows", "mac", "linux", "android", "cygwin", "hurd",
           "freebsd", "kfreebsd", "openbsd", "netbsd",
           "bsd4", "unix", "unknown"
         }
