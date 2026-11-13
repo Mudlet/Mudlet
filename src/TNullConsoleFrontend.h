@@ -195,6 +195,8 @@ public:
     // its parent. Once the view goes, these make it again, so the view's last setting is still saved.
     void followView(QObject* view);
     void resumeMainCommandLine();
+    // As the view goes: the profile's sheet went to it, and the console it replaced took its sheet's font with it
+    void resumeMainText();
     // As the main command line keeps a sent line, as its aliases left it, unless the game hid what was typed; a
     // line nothing wrote to since holdMainCommandLineForSend() is kept as sent
     void addMainCommandLineHistory(const QString& sent);
@@ -363,6 +365,7 @@ public:
     void setProfileStyleSheet(const QString& styleSheet) override;
     void applyBorders() override;
     QFont displayFont() const override;
+    QFont mainTextFont() const override;
     void setFont(const QFont&) override {}
     void setFontSize(int) override {}
     bool setSubConsoleBackgroundColor(const QString& name, const QColor& color) override;
@@ -591,6 +594,8 @@ private:
         Qt::DockWidgetArea dockArea = Qt::RightDockWidgetArea;
         bool floating = false;
         qint64 deactivated = 0;
+        // TConsole::mDisplayFontDetails, the font scripts gave it, which a sheet that styles the console lies over
+        QFont scriptFont;
         // A user window's font from before its sheet gave its text one, which clearing the sheet hands back
         std::optional<QFont> fontBeforeSheet;
         // Where the text was last styled; a move that puts it somewhere else restyles it
@@ -723,6 +728,7 @@ private:
     void reportVisibility(const QString& changedWindow, const ScrollBox* changedBox);
     void reportWindowVisibility(const QString& name);
     std::optional<QFont> consoleFont(const QString& name) const;
+    std::optional<QFont> consoleTextFont(const QString& name) const;
     void setSubConsoleFont(const QString& name, const QFont& font);
     void applyUserWindowSheet(const QString& name, const QString& sheet);
     void applyUserWindowSheetFont(const QString& name, const QString& sheet);
@@ -733,8 +739,12 @@ private:
     SheetChain labelSheetChain(const Label& label) const;
     SheetChain plainWindowSheetChain(const QString& name, const PlainWindow& window, bool commandLine) const;
     void restyleWindowContents(const QString& userWindow);
-    QFont subConsoleOwnFont(const QString& name, const TConsoleModel& model) const;
+    QString consoleWindowSheet(const QString& name) const;
+    QFont underConsoleSheet(const QString& name, const QFont& font) const;
     void reportDisplayFontChange(const QFont& before);
+    void restyleMainText();
+    std::optional<QFont> profileMainTextSheetFont() const;
+    void changeDisplayFont(const std::function<void()>& change);
     void raiseFontEvent(const QString& eventName, const QString& subject, const QFont& font);
     void reportGridSize(const QString& name);
     static bool listsConsole(std::optional<TWindowRegistry::SubConsoleKind> kind);
@@ -760,6 +770,10 @@ private:
     bool mDroppingWindows = false;
     // QStyleSheetStyle leaves the main console's widgets on the application's font once it has had a sheet
     bool mProfileSheetSeen = false;
+    // What a profile sheet that styles the main console gave its text when the display font last changed, and the font
+    // one gives the text itself
+    std::optional<QFont> mMainConsoleSheetFont;
+    std::optional<QFont> mMainTextSheetFont;
     // As TCommandLine::playerTypedLine()
     bool mMainCommandLineTyped = false;
     // As the GUI's line once selectAll() has run, so what the player types next replaces it

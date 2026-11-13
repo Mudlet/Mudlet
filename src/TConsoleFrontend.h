@@ -217,6 +217,8 @@ public:
     // Lays the console out again for Host's current borders and raises sysWindowResizeEvent with the room they leave.
     virtual void applyBorders() = 0;
     virtual QFont displayFont() const = 0;
+    // The font of the main console's text, which a profile style sheet can make other than displayFont()
+    virtual QFont mainTextFont() const { return displayFont(); }
     virtual void setFont(const QFont& font) = 0;
     virtual void setFontSize(int size) = 0;
 

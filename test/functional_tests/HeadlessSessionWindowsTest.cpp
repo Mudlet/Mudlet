@@ -278,6 +278,27 @@ setWindow("uw", "mapper", 40, 50, true)
         QVERIFY(session.shutdown(false));
     }
 
+    // Columns and rows are counted in the font the main console's text is drawn in, which a profile sheet can give it
+    void test_theMainAreaIsCountedInTheMainTextsFont()
+    {
+        const QString name = qsl("Headless Windows Main Text");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        const auto grid = [&session]() {
+            return QSize(luaString(session, qsl("getColumnCount('main')")).toInt(), luaString(session, qsl("getRowCount('main')")).toInt());
+        };
+        const QSize base = grid();
+        QVERIFY(!base.isEmpty());
+        QVERIFY(session.runLua(qsl(R"(setProfileStyleSheet("TMainConsole TTextEdit { font-size: 20pt; }"))")));
+        const QSize styled = grid();
+        QVERIFY2(styled.width() < base.width() && styled.height() < base.height(), qPrintable(qsl("%1x%2 %3x%4").arg(styled.width()).arg(styled.height()).arg(base.width()).arg(base.height())));
+        QVERIFY(session.runLua(qsl(R"(setProfileStyleSheet(""))")));
+        QCOMPARE(grid(), base);
+        QVERIFY(session.shutdown(false));
+    }
+
     void test_aTurnsChangesAreToldOnce()
     {
         const QString name = qsl("Headless Windows Changes");

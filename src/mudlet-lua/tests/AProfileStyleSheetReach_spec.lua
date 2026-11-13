@@ -324,8 +324,63 @@ describe("Application and profile style sheets reach what is inside", function()
     assert.are.equal(20, select(4, getWindowGeometry(line)))
   end)
 
+  it("gives the main console's text the font the sheet names for it, and keeps one that styled the console", function()
+    local original = getFontSize("main")
+    finally(function()
+      setProfileStyleSheet("")
+      -- by way of another size, as a size the console already has changes nothing
+      setFontSize("main", original + 1)
+      setFontSize("main", original)
+    end)
+    local function sizes(sheet)
+      setFontSize("main", 12)
+      assert.is_true(setProfileStyleSheet(sheet))
+      local seen = {getFontSize("main")}
+      setFontSize("main", 9)
+      seen[#seen + 1] = getFontSize("main")
+      assert.is_true(setProfileStyleSheet(""))
+      seen[#seen + 1] = getFontSize("main")
+      setFontSize("main", 12)
+      seen[#seen + 1] = getFontSize("main")
+      return seen
+    end
+    assert.are.same({20, 20, 9, 12}, sizes("TMainConsole TTextEdit { font-size: 20pt; }"))
+    -- a sheet that styles the console gives its font to the text with each font a script sets
+    assert.are.same({20, 20, 20, 12}, sizes("QWidget { font-size: 20pt; }"))
+    assert.are.same({12, 20, 20, 12}, sizes("TConsole { font-size: 20pt; }"))
+    assert.are.same({12, 9, 9, 12}, sizes("QLabel { font-size: 20pt; }"))
+  end)
+
+  it("gives a mini console the font of a sheet that styles the console, over one a script sets", function()
+    local window = sheetWindows("ConsoleFont")
+    local mini, inside = window .. "Mini", window .. "MiniInside"
+    assert.is_true(setProfileStyleSheet("TConsole { font-size: 21pt; }"))
+    assert.is_true(setUserWindowStyleSheet(window, "QWidget { font-size: 21pt; }"))
+    createMiniConsole(mini, 0, 60, 200, 100)
+    createMiniConsole(window, inside, 0, 30, 200, 100)
+    assert.are.same({21, 21}, {getFontSize(mini), getFontSize(inside)})
+    setMiniConsoleFontSize(mini, 9)
+    setMiniConsoleFontSize(inside, 9)
+    assert.are.same({21, 21}, {getFontSize(mini), getFontSize(inside)})
+    assert.is_true(setProfileStyleSheet(""))
+    assert.is_true(setUserWindowStyleSheet(window, ""))
+    assert.are.same({21, 21}, {getFontSize(mini), getFontSize(inside)})
+    -- TConsole::setFontSize() compares with the size scripts gave, which the sheet only lay over
+    setMiniConsoleFontSize(mini, 9)
+    setMiniConsoleFontSize(inside, 9)
+    assert.are.same({21, 21}, {getFontSize(mini), getFontSize(inside)})
+    setMiniConsoleFontSize(mini, 10)
+    setMiniConsoleFontSize(inside, 10)
+    assert.are.same({10, 10}, {getFontSize(mini), getFontSize(inside)})
+    -- A new family takes the size of the console's font, sheet and all
+    assert.is_true(setProfileStyleSheet("TConsole { font-size: 21pt; }"))
+    setFont(mini, getFont(mini))
+    assert.is_true(setProfileStyleSheet(""))
+    assert.are.equal(21, getFontSize(mini))
+  end)
+
   it("leaves none of the windows the tests above made", function()
-    for _, tag in ipairs({"Moved", "MovedLabel", "MovedBox", "Selectors", "Properties", "Panes", "IntoBox", "PaneIntoBox"}) do
+    for _, tag in ipairs({"Moved", "MovedLabel", "MovedBox", "Selectors", "Properties", "Panes", "IntoBox", "PaneIntoBox", "ConsoleFont"}) do
       local window = "uiSheet" .. tag .. suffix
       for _, name in ipairs({window, window .. "Other", window .. "MiniMoved", window .. "Own", window .. "Main", window .. "Inside", window .. "Box", window .. "BoxLabel", window .. "BoxMini", window .. "Mini", window .. "MiniInside", window .. "PlainLine", window .. "Line"}) do
         assert.is_nil(windowType(name), name)
