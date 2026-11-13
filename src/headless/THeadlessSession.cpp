@@ -333,6 +333,15 @@ void THeadlessSession::preloadLuaModule(const QByteArray& name, int (*open)(lua_
 THeadlessSession::THeadlessSession(QObject* parent)
 : QObject(parent)
 {
+    // Naming them is what keeps them in a static link; registering a resource again is harmless
+    Q_INIT_RESOURCE(mudlet);
+    Q_INIT_RESOURCE(qm);
+#ifdef INCLUDE_FONTS
+    Q_INIT_RESOURCE(mudlet_fonts_common);
+#ifdef INCLUDE_EMOJI_FONT
+    Q_INIT_RESOURCE(mudlet_fonts_posix);
+#endif
+#endif
 }
 
 THeadlessSession::~THeadlessSession()

@@ -141,6 +141,8 @@ public:
     // lists the modules Mudlet itself requires.
     static void preloadLuaModule(const QByteArray& name, int (*open)(lua_State*));
 
+    // Names mudlet_core's own Qt resources (":/" images, translations and fonts), so a program linking it statically
+    // keeps them; Qt registers them before main() runs
     explicit THeadlessSession(QObject* parent = nullptr);
     // Closes the profiles unsaved, at once or, while one is busy as for shutdown(), a reset is pending, one is
     // still being let go or one of its signals is being sent, from the event loop once that is over; a

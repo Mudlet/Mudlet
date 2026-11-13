@@ -36,6 +36,7 @@ if(USE_FONTS)
   list(APPEND mudlet_RCCS mudlet_fonts_common.qrc)
   if(CMAKE_SYSTEM_NAME STREQUAL Linux OR CMAKE_SYSTEM_NAME STREQUAL FreeBSD)
     list(APPEND mudlet_RCCS mudlet_fonts_posix.qrc)
+    set(INCLUDE_EMOJI_FONT ON)
   endif()
 endif()
 
@@ -980,6 +981,10 @@ endif()
 
 if(USE_FONTS)
   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_FONTS)
+  # Code tests this, not Q_OS_LINUX, which Qt defines for Android too
+  if(INCLUDE_EMOJI_FONT)
+    target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_EMOJI_FONT)
+  endif()
 endif()
 
 if(UNIX)
