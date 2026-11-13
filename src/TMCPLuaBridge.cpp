@@ -99,9 +99,10 @@ static constexpr int csmMaxTableDepth = 12;
 static constexpr int csmMaxNodes = 200000;
 
 // Counting nodes alone does not bound the reply either, because one node can be arbitrarily
-// large: string.rep("x", 3e8) is a single node and 300MB of it. Long strings are cut off,
-// and their length is charged against the node budget as well, so that a table of many
-// merely-large strings cannot add up to the same blow-up one enormous string would.
+// large: string.rep("x", 3e8) is a single node and 300MB of it. Long strings, as values or
+// as keys, are cut off and their length is charged against the node budget as well, so
+// that a table of many merely-large strings cannot add up to the same blow-up one
+// enormous string would.
 static constexpr qsizetype csmMaxStringLength = 100000;
 // A separate, much smaller ceiling for the keys of one table, because QJsonObject keeps its
 // keys sorted and so every insert moves everything after it: measured on this machine,
@@ -404,8 +405,7 @@ QJsonValue TMCPLuaBridge::luaToJson(lua_State* L, int index, int depth, int& nod
     }
 
     if (--nodeBudget < 0) {
-        //: Stands in for the rest of a Lua value that was too big to send to an AI model.
-        return QJsonValue(tr("<too much data, the rest was left out>"));
+        return QJsonValue(leftOutMarker());
     }
 
     switch (lua_type(L, index)) {
@@ -458,9 +458,9 @@ QJsonValue TMCPLuaBridge::luaTableToJson(lua_State* L, int index, int depth, int
     QSet<QString> numberKeys;
     // This pass allocates a set entry per key, so a table with millions of keys costs
     // memory and time before a single value has been rendered - the node budget is only
-    // spent in luaToJson(), which this pass never reaches. Stop counting once the table
-    // has already outgrown what the reply may hold; the render below stops at the same
-    // point and leaves the "left out" marker there, so nothing goes missing in silence.
+    // spent while rendering, which this pass never does. Stop counting once the table
+    // has already outgrown what the reply may hold; the render below stops no later
+    // and leaves the "left out" marker there, so nothing goes missing in silence.
     const int keysWorthCounting = qMax(nodeBudget, 0);
     bool walkCutShort = false;
     lua_pushnil(L);
@@ -469,7 +469,13 @@ QJsonValue TMCPLuaBridge::luaTableToJson(lua_State* L, int index, int depth, int
         // lua_tostring() on a number key would rewrite the key in place, and lua_next()
         // then loses its place in the table - so read numbers without converting them.
         if (lua_type(L, -2) == LUA_TSTRING) {
-            stringKeys.insert(readString(L, -2, csmMaxStringLength));
+            // Only compared against numberKey() spellings, none longer than 24 characters, so
+            // copying a longer key would cost memory for nothing.
+            size_t keyLength = 0;
+            lua_tolstring(L, -2, &keyLength);
+            if (keyLength <= 24) {
+                stringKeys.insert(readString(L, -2, csmMaxStringLength));
+            }
         } else if (lua_type(L, -2) == LUA_TNUMBER) {
             const double number = lua_tonumber(L, -2);
             numberKeys.insert(numberKey(number));
@@ -501,12 +507,13 @@ QJsonValue TMCPLuaBridge::luaTableToJson(lua_State* L, int index, int depth, int
         QJsonArray array;
         for (int i = 1; i <= length; ++i) {
             lua_rawgeti(L, index, i);
-            array.append(luaToJson(L, lua_gettop(L), depth + 1, nodeBudget));
+            const QJsonValue value = luaToJson(L, lua_gettop(L), depth + 1, nodeBudget);
+            array.append(value);
             lua_pop(L, 1);
             if (nodeBudget < 0) {
-                // luaToJson() has just appended the "left out" marker, so the reader is
-                // told where the value stops. Running the loop out would append another
-                // copy of that same marker for every element still to come.
+                if (i < length && !carriesLeftOutMarker(value)) {
+                    array.append(leftOutMarker());
+                }
                 break;
             }
         }
@@ -546,20 +553,42 @@ QJsonValue TMCPLuaBridge::luaTableToJson(lua_State* L, int index, int depth, int
         for (int collision = 2; object.contains(uniqueKey); ++collision) {
             uniqueKey = qsl("%1#%2").arg(key).arg(collision);
         }
-        object[uniqueKey] = luaToJson(L, lua_gettop(L), depth + 1, nodeBudget);
+        // Charged like a string value: a table that refers to itself under a long key
+        // repeats that key at every level it is rendered, so ten 10KB keys made a 2GB reply.
+        nodeBudget -= static_cast<int>(uniqueKey.size() / csmStringBytesPerNode);
+        const QJsonValue value = luaToJson(L, lua_gettop(L), depth + 1, nodeBudget);
+        object[uniqueKey] = value;
         lua_pop(L, 1);
         if (nodeBudget < 0 || object.size() >= csmMaxObjectKeys) {
-            // Leaving a lua_next() walk early means popping the key it is holding, which
-            // the loop would otherwise have handed back on the next call.
-            lua_pop(L, 1);
+            // One more step tells whether anything is actually left out: when the budget
+            // runs out on the last entry, nothing after it is missing, so no marker is added.
+            if (lua_next(L, index) == 0) {
+                break;
+            }
+            lua_pop(L, 2);
             if (nodeBudget >= 0) {
                 //: Stands in for the keys of a Lua table that were too many to send to an AI model.
                 object[tr("<too many keys, the rest were left out>")] = QJsonValue();
+            } else if (!carriesLeftOutMarker(value)) {
+                object[leftOutMarker()] = QJsonValue();
             }
             break;
         }
     }
     return object;
+}
+
+QString TMCPLuaBridge::leftOutMarker()
+{
+    //: Stands in for the rest of a Lua value that was too big to send to an AI model.
+    return tr("<too much data, the rest was left out>");
+}
+
+bool TMCPLuaBridge::carriesLeftOutMarker(const QJsonValue& value)
+{
+    // A table marks only what it left out of itself, and a string that overdrew the budget
+    // comes back whole, so only the marker standing in for the value says the rest is gone.
+    return value == QJsonValue(leftOutMarker());
 }
 
 QString TMCPLuaBridge::readString(lua_State* L, int index, qsizetype limit)
