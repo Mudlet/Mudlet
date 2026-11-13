@@ -769,7 +769,8 @@ has let go, so an app that keeps older lines than the console does should not re
 `link(id)` says what a link offers, as the GUI shows it: its `tooltip`, as plain text; its `items`,
 one for each thing it can run, each with the label the GUI gives it, and marked as greyed out where it
 has nothing to run or as a separator where it has no label either; and `menu`, where the GUI's right
-click lists the items, under `menuTitle` if that is set. A click follows the first item. It also gives
+click lists the items, under `menuTitle` if that is set. A click follows the first item, or on a `local:`
+link with a `menu` opens the menu. It also gives
 the link's state (a `spoiler` and whether it is `revealed`, `disabled`, `concealed` by the game's OSC 8
 visibility settings, which leave blanks in its place in the GUI, `visited`, and `selected` in its group),
 and how the GUI paints the link in that state, which may differ from its runs as they were sent: a

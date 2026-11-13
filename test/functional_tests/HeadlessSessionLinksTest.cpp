@@ -438,6 +438,7 @@ tempRegexTrigger("^headless popup$", [[echoPopup(" p", {"headlessPopup = 1", "he
 
         const QList<int> note = linksOnLineStarting(output, qsl("note: "));
         QCOMPARE(note.size(), 1);
+        QVERIFY(session.link(note.first())->disabled);
         QCOMPARE(session.followLink(note.first()), THeadlessSession::LinkResult::disabled);
         QVERIFY(!session.link(note.first())->visited);
 
@@ -497,6 +498,86 @@ tempRegexTrigger("^headless popup$", [[echoPopup(" p", {"headlessPopup = 1", "he
         QCOMPARE(session.followWindowLink(qsl("mini"), inMini, 0), THeadlessSession::LinkResult::ran);
         QVERIFY2(session.windowLink(qsl("mini"), inMini)->selected, "a pick in the mini console was taken for one from the main console's menu");
         QVERIFY(session.link(links.first())->selected);
+
+        QCOMPARE(session.followWindowLink(qsl("mini"), inMini), THeadlessSession::LinkResult::ran);
+        QVERIFY(!session.windowLink(qsl("mini"), inMini)->selected);
+        QCOMPARE(session.followWindowLink(qsl("mini"), inMini, 0), THeadlessSession::LinkResult::ran);
+        QVERIFY2(!session.windowLink(qsl("mini"), inMini)->selected, "picking from the menu the mini console's follow opened changed the selection back");
+        QVERIFY(session.link(links.first())->selected);
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_aPickTheMenuCouldNotMakeLeavesItOpen()
+    {
+        const QString name = qsl("Headless Follow Local Refused Pick");
+        QVERIFY(writeProfile(name, recordSends()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QVERIFY(session.runLua(
+                feed(qsl("tick: ")
+                     + osc8(qsl("local:?config={\"selection\":{\"group\":\"headlessTick\",\"value\":\"v\",\"exclusive\":false},\"menu\":[{\"Look\":\"send:look\"},{\"Hello\":\"gmcp:Core.Hello\"}]}"),
+                            qsl("flour")))));
+        const QList<int> links = linksOnLineStarting(output, qsl("tick: "));
+        QCOMPARE(links.size(), 1);
+        const int tick = links.first();
+        QVERIFY(!session.link(tick)->items.at(1).enabled);
+        QCOMPARE(session.followLink(tick), THeadlessSession::LinkResult::ran);
+        QVERIFY(session.link(tick)->selected);
+        QCOMPARE(session.followLink(tick, 1), THeadlessSession::LinkResult::disabled);
+        QCOMPARE(session.followLink(tick, 0), THeadlessSession::LinkResult::ran);
+        QVERIFY2(session.link(tick)->selected, "a greyed-out item closed the menu, so the pick after it changed the selection back");
+        QCOMPARE(session.followLink(tick), THeadlessSession::LinkResult::ran);
+        QVERIFY(!session.link(tick)->selected);
+        QCOMPARE(session.followLink(tick, 2), THeadlessSession::LinkResult::noSuchItem);
+        QCOMPARE(session.followLink(tick, 0), THeadlessSession::LinkResult::ran);
+        QVERIFY2(!session.link(tick)->selected, "an item the link does not have closed the menu, so the pick after it changed the selection back");
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_followingAnotherLinkClosesTheMenu()
+    {
+        const QString name = qsl("Headless Follow Local Then Another");
+        QVERIFY(writeProfile(name, recordSends()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QVERIFY(session.runLua(
+                feed(qsl("tick: ") + osc8(qsl("local:?config={\"selection\":{\"group\":\"headlessTick\",\"value\":\"v\",\"exclusive\":false},\"menu\":[{\"Look\":\"send:look\"}]}"), qsl("flour")))));
+        QVERIFY(session.runLua(feed(qsl("go: ") + osc8(qsl("send:north"), qsl("north")))));
+        const QList<int> tick = linksOnLineStarting(output, qsl("tick: "));
+        const QList<int> go = linksOnLineStarting(output, qsl("go: "));
+        QCOMPARE(tick.size(), 1);
+        QCOMPARE(go.size(), 1);
+        QCOMPARE(session.followLink(tick.first()), THeadlessSession::LinkResult::ran);
+        QVERIFY(session.link(tick.first())->selected);
+        QCOMPARE(session.followLink(go.first()), THeadlessSession::LinkResult::ran);
+        QCOMPARE(session.followLink(tick.first(), 0), THeadlessSession::LinkResult::ran);
+        QVERIFY2(!session.link(tick.first())->selected, "a pick after another link was followed was taken for one from the menu");
+        QCOMPARE(luaGlobal(session, "headlessSent"), qsl("north;look;"));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_aLinkThatTookTheIdOfOneWhoseMenuOpenedChangesItsSelectionOnAPick()
+    {
+        const QString name = qsl("Headless Follow Local Reused Id");
+        QVERIFY(writeProfile(name, recordSends()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        const QString tickUri = qsl("local:?config={\"selection\":{\"group\":\"headlessTick\",\"value\":\"v\",\"exclusive\":false},\"menu\":[{\"Look\":\"send:look\"}]}");
+        QVERIFY(session.runLua(feed(qsl("tick: ") + osc8(tickUri, qsl("flour")))));
+        const QList<int> tick = linksOnLineStarting(output, qsl("tick: "));
+        QCOMPARE(tick.size(), 1);
+        QCOMPARE(session.followLink(tick.first()), THeadlessSession::LinkResult::ran);
+        // The store holds 20000 ids, so the link fed after this many more takes this one's
+        QVERIFY(session.runLua(qsl("for i = 1, 19999 do echoLink('x', '', '') end")));
+        QVERIFY(session.runLua(feed(qsl("again: ") + osc8(tickUri, qsl("flour")))));
+        const QList<int> again = linksOnLineStarting(output, qsl("again: "));
+        QCOMPARE(again, tick);
+        QVERIFY(!session.link(tick.first())->selected);
+        QCOMPARE(session.followLink(tick.first(), 0), THeadlessSession::LinkResult::ran);
+        QVERIFY2(session.link(tick.first())->selected, "a pick on the link that took the id was taken for one from the old link's menu");
         QVERIFY(session.shutdown(false));
     }
 

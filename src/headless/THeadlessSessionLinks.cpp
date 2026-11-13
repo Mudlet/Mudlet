@@ -52,7 +52,7 @@ std::optional<THeadlessSession::Link> THeadlessSession::windowLink(const QString
     }
     link.spoiler = styling.isSpoiler;
     link.revealed = styling.isSpoiler && !buffer.isSpoilerUnrevealed(id);
-    link.disabled = styling.selection.disabled;
+    link.disabled = styling.selection.disabled || buffer.linkIsNote(id);
     link.concealed = model.mHyperlinkVisibilityManager.isLinkConcealed(id);
     link.visited = buffer.isLinkVisited(id);
     link.selected = buffer.isLinkSelected(id);
@@ -94,9 +94,9 @@ THeadlessSession::LinkResult THeadlessSession::followWindowLink(const QString& w
         return LinkResult::refused;
     }
     TConsoleModel* pModel = windowTextModel(window);
-    // Each console numbers its links apart, so the menu must have opened in this one
-    const std::pair<QPointer<const QObject>, int> menuOpen = std::exchange(mLinkWithMenuOpen, {});
-    const bool selectionApplied = item && pModel && menuOpen.first == &pModel->mNotifier && menuOpen.second == link;
+    // Each console numbers its links apart, so the menu must have opened on this link of this one
+    const MenuOpen menuOpen = std::exchange(mLinkWithMenuOpen, {});
+    const bool selectionApplied = item && pModel && menuOpen.console == &pModel->mNotifier && menuOpen.link == link && menuOpen.issue == pModel->buffer.mLinkStore.issueOf(link);
     if (!pModel || !pModel->buffer.linkHeld(link)) {
         return LinkResult::unknown;
     }
@@ -104,6 +104,8 @@ THeadlessSession::LinkResult THeadlessSession::followWindowLink(const QString& w
     const TLinkStore& store = model.buffer.mLinkStore;
     const QList<TLinkStore::MenuItem> items = store.menuItems(link);
     if (item && (*item < 0 || *item >= items.size())) {
+        // A pick the menu could not have made leaves it open
+        mLinkWithMenuOpen = menuOpen;
         return LinkResult::noSuchItem;
     }
     // Its characters are blanked and carry no link, so no click reaches it
@@ -128,6 +130,7 @@ THeadlessSession::LinkResult THeadlessSession::followWindowLink(const QString& w
     // the GUI's menu greys out an item with nothing to run
     const bool fromMenu = item && store.opensMenu(link);
     if (fromMenu && !items.at(*item).enabled) {
+        mLinkWithMenuOpen = menuOpen;
         return LinkResult::disabled;
     }
     if (model.gmcpCannotSend(link, item.value_or(0), fromMenu)) {
@@ -142,7 +145,7 @@ THeadlessSession::LinkResult THeadlessSession::followWindowLink(const QString& w
     disconnect(errorCapture);
     if (ran) {
         if (self && mpHost && !item && model.buffer.linkOpensItsMenu(link)) {
-            mLinkWithMenuOpen = {&model.mNotifier, link};
+            mLinkWithMenuOpen = {&model.mNotifier, link, store.issueOf(link)};
         }
         return LinkResult::ran;
     }
