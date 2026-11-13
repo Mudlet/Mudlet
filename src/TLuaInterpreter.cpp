@@ -3938,6 +3938,11 @@ int TLuaInterpreter::getOS(lua_State* L)
     lua_pushstring(L, "mac");
     lua_pushstring(L, QSysInfo::productVersion().toUtf8().constData());
     return 2 + pushProcessor();
+#elif defined(Q_OS_ANDROID)
+    // Before Q_OS_LINUX, which Android also defines
+    lua_pushstring(L, "android");
+    lua_pushstring(L, QSysInfo::productVersion().toUtf8().constData());
+    return 2 + pushProcessor();
 #elif defined(Q_OS_LINUX)
     lua_pushstring(L, "linux");
     lua_pushstring(L, QSysInfo::productVersion().toUtf8().constData());
