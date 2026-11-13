@@ -133,12 +133,16 @@ public:
     // installs the validated root); an empty path forgets it instead.
     static QString getMudletPath(enums::mudletPathType mode, const QString& extra1 = QString(), const QString& extra2 = QString());
 
-    // Whether the main dictionary files are the ones bundled with Mudlet (true) or
-    // ones provided by the system (false). Settled as a side effect of resolving
+    // Whether the main dictionary files are bundled with Mudlet or named by the app (true),
+    // or provided by the system (false). Settled as a side effect of resolving
     // enums::hunspellDictionaryPath, so it only answers once that has been asked for.
     static bool usingMudletDictionaries();
     // Looked in, in this order, ahead of the dictionaries bundled with Mudlet
     static QStringList systemHunspellDictionaryFolders();
+    // Where an app that embeds Mudlet keeps the Hunspell dictionaries it carries: looked in first, and in place of
+    // those bundled with Mudlet. Refused (false) for a path only Qt's file engines can read (:/, assets:/), which
+    // Hunspell cannot open; empty forgets it.
+    static bool setAppDictionaryFolder(const QString& folder);
 
     // Replaces filesystem-unsafe characters with underscores and bounds the length. A shortened name carries
     // a digest of the whole input, as callers file data (e.g. passwords) under it and must not collide.

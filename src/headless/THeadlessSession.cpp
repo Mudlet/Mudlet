@@ -330,6 +330,11 @@ void THeadlessSession::preloadLuaModule(const QByteArray& name, int (*open)(lua_
     TLuaInterpreter::preloadModule(name, open);
 }
 
+bool THeadlessSession::setDictionaryFolder(const QString& folder)
+{
+    return MudletApp::setAppDictionaryFolder(folder);
+}
+
 THeadlessSession::THeadlessSession(QObject* parent)
 : QObject(parent)
 {
