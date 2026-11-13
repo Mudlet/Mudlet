@@ -262,6 +262,12 @@ find_package(Qt6 6.8.2 REQUIRED)
 # Find Core5Compat for third-party libraries (communi, edbee-lib) that still need it
 find_package(Qt6 COMPONENTS Core5Compat REQUIRED)
 
+# AUTORCC runs the host's rcc, which compresses with zstd, and a Qt built without zstd, as Qt for
+# Android is, cannot read that back. qt_add_library() and qt_add_executable() pass this themselves.
+if(DEFINED QT_FEATURE_zstd AND NOT QT_FEATURE_zstd)
+  list(APPEND CMAKE_AUTORCC_OPTIONS --no-zstd)
+endif()
+
 find_package(Lua 5.1 EXACT)
 
 # Set Qt version for edbee-lib
