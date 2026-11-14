@@ -136,23 +136,29 @@ bool TMediaVoice::unsupported()
     if (otherBackendNamed()) {
         return true;
     }
-    if (qEnvironmentVariable("QT_MEDIA_BACKEND").isEmpty() && !smProbePassed) {
-        probeUnnamedBackend();
+    // Audio can arrive after the check timed out, when the main thread was held up past it
+    if (smProbePassed) {
+        return false;
+    }
+    if (smProbeFailed) {
         return true;
     }
-    return false;
+    startProbe();
+    // FFmpeg named is trusted until the check says otherwise, so the first sounds are mixed
+    return qEnvironmentVariable("QT_MEDIA_BACKEND").isEmpty();
 }
 
 void TMediaVoice::probeBackend()
 {
-    if (qEnvironmentVariable("QT_MEDIA_BACKEND").isEmpty()) {
-        probeUnnamedBackend();
+    if (!otherBackendNamed()) {
+        startProbe();
     }
 }
 
 // Plays the probe sound once, through a buffer output alone: if any audio comes out, the backend
-// feeds the shared output and later players are mixed. Until then they keep outputs of their own.
-void TMediaVoice::probeUnnamedBackend()
+// feeds the shared output and later players are mixed; if none does in time, every player keeps an
+// output of its own. Until then a backend nobody named keeps them on outputs of their own.
+void TMediaVoice::startProbe()
 {
     if (smProbeStarted.exchange(true)) {
         return;
@@ -162,7 +168,7 @@ void TMediaVoice::probeUnnamedBackend()
     // A file, not a QBuffer: Qt before 6.12.1 never frees the 32 KB it reads a device through
     auto* source = new QTemporaryFile(QDir::temp().filePath(qsl("mudlet-media-probe-XXXXXX.wav")), player);
     if (!source->open() || source->write(probeWav()) == -1 || !source->flush()) {
-        qWarning().noquote() << "TMediaVoice WARNING - could not write the sound that checks the media backend, so each sound plays through an output of its own.";
+        qWarning().noquote() << "TMediaVoice WARNING - could not write the sound that checks the media backend, so it goes unchecked.";
         player->deleteLater();
         return;
     }
@@ -176,6 +182,7 @@ void TMediaVoice::probeUnnamedBackend()
         }
     });
     QTimer::singleShot(probeLimit, player, [player]() {
+        smProbeFailed = true;
         qWarning().noquote() << "TMediaVoice WARNING - this media backend hands over no audio to mix, so each sound plays through an output of its own.";
         player->deleteLater();
     });

@@ -124,7 +124,7 @@ private slots:
     void test_aGameThatSendsMediaHasTheBackendCheckedBeforeItsFirstSound()
     {
         if (!qEnvironmentVariable("QT_MEDIA_BACKEND").isEmpty()) {
-            QSKIP("A backend is named, so there is nothing to check before the first sound.");
+            QSKIP("A backend is named: TMediaPanTest checks what starts the check of FFmpeg named, and this class checks its first sound next.");
         }
         QVERIFY2(!TMediaVoice::probeStarted(), "Something checked the backend before the game said anything.");
         QVERIFY2(QTest::qWaitFor(
@@ -157,6 +157,20 @@ private slots:
 
         TMediaData first = clipData(writeClip(qsl("first.wav"), 3000), TMediaData::MediaTypeSound);
         media()->playMedia(first);
+        QCOMPARE(media()->playersMixed(), 1);
+    }
+
+    // Second, so nothing has checked the backend yet. FFmpeg named is trusted while its check runs, so a sound
+    // played before the check answers is mixed from its start.
+    void test_aSoundPlayedWhileFFmpegIsCheckedIsMixed()
+    {
+        if (qEnvironmentVariable("QT_MEDIA_BACKEND") != qsl("ffmpeg")) {
+            QSKIP("Only FFmpeg named is trusted before its check answers.");
+        }
+        QVERIFY2(!TMediaVoice::probeStarted(), "Something checked the backend before the first sound.");
+        TMediaData data = clipData(writeClip(qsl("unchecked.wav"), 3000), TMediaData::MediaTypeSound);
+        media()->playMedia(data);
+        QVERIFY(TMediaVoice::probeStarted());
         QCOMPARE(media()->playersMixed(), 1);
     }
 
@@ -418,11 +432,11 @@ private slots:
         QCOMPARE(TAudioMixer::self()->timesRanDry(), ranDryBefore);
     }
 
-    // Once the check of a backend nobody named has answered, every sound is mixed
+    // Once the check has answered, every sound is mixed
     void test_aCheckedBackendMixesTheFirstSound()
     {
-        if (!qEnvironmentVariable("QT_MEDIA_BACKEND").isEmpty()) {
-            QSKIP("A backend is named, so there is nothing to check before the first sound.");
+        if (const QString backend = qEnvironmentVariable("QT_MEDIA_BACKEND"); !backend.isEmpty() && backend != qsl("ffmpeg")) {
+            QSKIP("A backend other than FFmpeg is named, so it is never checked.");
         }
         TMediaVoice::probeBackend();
         QVERIFY(TMediaVoice::probeStarted());
@@ -442,7 +456,8 @@ private slots:
     // A backend that is known not to feed a voice keeps every player on an output of its own
     void test_aBackendThatCannotFeedTheMixKeepsOutputsOfItsOwn()
     {
-        if (backendFeedsTheMix()) {
+        // Skipped on what the check found, not on the decision under test that is made from it
+        if (backendFeedsTheMix() && TMediaVoice::probePassed()) {
             QSKIP("This Qt Multimedia backend feeds the shared output, so there is no fallback to see.");
         }
         TMediaData data = clipData(writeClip(qsl("fallback.wav"), 3000), TMediaData::MediaTypeSound);
@@ -484,21 +499,22 @@ private:
 
     QString noMixingReason() const
     {
-        return qsl("This Qt Multimedia backend (\"%1\") does not feed the shared output, so every player keeps an output of its own. Needs Qt's FFmpeg backend.")
+        return qsl("The media backend Qt loaded for QT_MEDIA_BACKEND=\"%1\" does not feed the shared output, so every player keeps an output of its own. "
+                   "Needs Qt's FFmpeg backend, which a Qt built without it replaces with another.")
                 .arg(QString::fromLocal8Bit(qgetenv("QT_MEDIA_BACKEND")));
     }
 
-    // Asking starts the one-time probe of a backend nobody named, which takes a moment to answer
+    // Asking starts the one-time probe, which takes a moment to answer; a backend other than FFmpeg is never
+    // probed. FFmpeg named is not taken on trust here: a Qt without it plays through another backend.
     static bool backendFeedsTheMix()
     {
-        if (!qEnvironmentVariable("QT_MEDIA_BACKEND").isEmpty()) {
-            return !TMediaVoice::unsupported();
-        }
-        return QTest::qWaitFor(
+        const bool answered = QTest::qWaitFor(
                 []() {
-                    return !TMediaVoice::unsupported();
+                    TMediaVoice::unsupported();
+                    return TMediaVoice::probePassed() || TMediaVoice::probeFailed() || !TMediaVoice::probeStarted();
                 },
                 QDeadlineTimer(6s));
+        return answered && !TMediaVoice::unsupported();
     }
 
     bool waitForQueuedAudio() const
