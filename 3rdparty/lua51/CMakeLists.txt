@@ -57,6 +57,12 @@ else()
   if(NOT APPLE)
     target_link_libraries(lua51 PRIVATE m)
   endif()
+  # The NDK's _FORTIFY_SOURCE=2 has bionic size a buffer by the struct member it was reached through, so
+  # svalue(), just past a GCObject's TString member, reads as 0 bytes: strchr() on one in lgc.c aborts in
+  # luaL_openlibs. Level 1 sizes whole allocations, unknown for Lua's strings, and keeps every other check.
+  if(ANDROID)
+    target_compile_options(lua51 PRIVATE -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1)
+  endif()
 endif()
 
 set_target_properties(lua51 PROPERTIES C_STANDARD 99 C_EXTENSIONS ON)
