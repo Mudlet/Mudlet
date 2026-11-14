@@ -6610,9 +6610,16 @@ void Host::lookUpSecuredPassword(CredentialManager* credManager)
             "character",
             [this, credManager](bool success, const QString& password, const QString& errorMessage, CredentialManager::ReadOutcome outcome) {
                 securedPasswordAnswered(success, password, errorMessage, outcome == CredentialManager::ReadOutcome::TimedOut);
+#if defined(Q_OS_ANDROID)
+                // Not a timeout, as a timed-out read can still be answered late. Unavailable too: on Android that is
+                // not the desktop's missing service but a KeyStore error, such as an entry whose key is gone or that
+                // would not decrypt.
+                mSecuredPasswordUnreadable = outcome == CredentialManager::ReadOutcome::Unreadable || outcome == CredentialManager::ReadOutcome::Unavailable;
+#else
                 // Only a refusal: a timed-out read can still be answered late. Not for Unavailable: a desktop
                 // with no keychain service says so on every load, password or not.
                 mSecuredPasswordUnreadable = outcome == CredentialManager::ReadOutcome::Unreadable;
+#endif
 
                 // Clean up the credential manager
                 credManager->deleteLater();
@@ -6631,9 +6638,15 @@ void Host::reportUnreadableSavedPassword()
     }
     mSecuredPasswordUnreadable = false;
     // A refusal does not say a password is there, so the message doesn't either
+#if defined(Q_OS_ANDROID)
+    // The KeyStore has nothing to unlock, so there is no unlock advice
+    //: Shown in the profile's console when the automatic login reaches its password step and Mudlet could not check for a saved character password, in Android's KeyStore or its encrypted file, so none is sent
+    postMessage(tr("[ WARN ]  - Could not check for a saved password, so none will be sent automatically. Type your password when the game asks for it."));
+#else
     //: Shown in the profile's console when the automatic login reaches its password step and Mudlet could not check for a saved character password, e.g. because the computer's password manager is locked, so none is sent
     postMessage(tr("[ WARN ]  - Could not check for a saved password, so none will be sent automatically. "
                    "If your computer's password manager is locked, unlock it and reopen the profile; otherwise type your password when the game asks for it."));
+#endif
 }
 
 void Host::securedPasswordAnswered(bool success, const QString& password, const QString& errorMessage, bool timedOut)

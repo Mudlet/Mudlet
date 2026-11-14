@@ -20,10 +20,12 @@
 #include "GroupedTest.h"
 #include <CredentialManager.h>
 #include <MudletApp.h>
+#include <SecureStringUtils.h>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QScopeGuard>
+#include <QSettings>
 #include <QtTest/QtTest>
 #include <QCryptographicHash>
 #include <QRegularExpression>
@@ -37,6 +39,9 @@
 #endif
 
 #include <memory>
+#if !defined(Q_OS_WIN)
+#include <unistd.h>
+#endif
 
 using namespace std::chrono_literals;
 
@@ -117,6 +122,23 @@ private slots:
     void testALateAnswerIsDroppedOnceWhatAskedForItHasGone();
     void testALateAnswerHandsOverThePassword();
     void testALateAnswerFollowsTheFilesOlderCopy();
+    void testAChosenRootsKeychainEntriesAreItsOwn();
+    void testAChosenRootsEntriesAreNamedForTheFolderNotItsSpelling();
+    void testAChosenRootReadsTheSaveItsKeychainRefusedFirst();
+    void testAnUnreadableFileUnderAChosenRootIsNotPassedOverForTheKeychain_data();
+    void testAnUnreadableFileUnderAChosenRootIsNotPassedOverForTheKeychain();
+    void testUnderAChosenRootAKeychainStoreThatWillNotOpenIsNotTakenForAnEmptyOne_data();
+    void testUnderAChosenRootAKeychainStoreThatWillNotOpenIsNotTakenForAnEmptyOne();
+    void testOnlyAnOlderNamedCopyTheProfileDecryptsAnswersFirstUnderAChosenRoot_data();
+    void testOnlyAnOlderNamedCopyTheProfileDecryptsAnswersFirstUnderAChosenRoot();
+    void testUnderAChosenRootTheFileCopyGoesOnlyOnceTheKeychainGivesTheSaveBack_data();
+    void testUnderAChosenRootTheFileCopyGoesOnlyOnceTheKeychainGivesTheSaveBack();
+    void testUnderAChosenRootNeitherASaveNorAForgetSucceedsWhileACopyIsStillRead_data();
+    void testUnderAChosenRootNeitherASaveNorAForgetSucceedsWhileACopyIsStillRead();
+    void testUnderAChosenRootAnAnswerAfterTheTimeoutLeavesTheFileCopy_data();
+    void testUnderAChosenRootAnAnswerAfterTheTimeoutLeavesTheFileCopy();
+    void testTheForgetCheckUnderAChosenRootAsksTheKeychainOnlyWhenItServesIt_data();
+    void testTheForgetCheckUnderAChosenRootAsksTheKeychainOnlyWhenItServesIt();
 
 private:
     QTemporaryDir mConfigDir;
@@ -248,11 +270,17 @@ QString describeDeletes(const QList<QPair<QString, QString>>& deletes)
     return described.join(QStringLiteral(", "));
 }
 
-QString expectedServiceName(const QString& profileName, const QString& key)
+// chosenRoot: a root whose passwords go to the keychain. Resolved here with canonicalFilePath(), not
+// MudletApp::folderIdentity(), so a change there is caught too
+QString expectedServiceName(const QString& profileName, const QString& key, const QString& chosenRoot = QString())
 {
     static const QRegularExpression sanitizePattern(QStringLiteral(R"REGEX([^\w\-\.])REGEX"));
 
-    const QByteArray data = QStringLiteral("%1:%2").arg(profileName, key).toUtf8();
+    QString hashed = QStringLiteral("%1:%2").arg(profileName, key);
+    if (!chosenRoot.isEmpty()) {
+        hashed.prepend(QFileInfo(chosenRoot).canonicalFilePath() + QStringLiteral("/credentials:"));
+    }
+    const QByteArray data = hashed.toUtf8();
     const QString hashHex = QString::fromLatin1(QCryptographicHash::hash(data, QCryptographicHash::Sha256).toHex()).left(16);
 
     auto sanitize = [](QString input) {
@@ -609,6 +637,9 @@ private:
     QKeychain::Error mNotFoundError = QKeychain::EntryNotFound;
 };
 
+enum class HiddenCopy { CannotDecrypt, OlderNamedThatStays, FolderHidesIt, CannotBeLookedAt };
+enum class Settling { Save, Forget, ForgetPreferredFilesAlone };
+
 struct Answer
 {
     int count = 0;
@@ -628,6 +659,58 @@ std::shared_ptr<Answer> startRetrieval(CredentialManager& manager, const QString
         answer->error = error;
     });
     return answer;
+}
+
+std::shared_ptr<Answer> startStore(CredentialManager& manager, const QString& profile, const QString& key, const QString& password)
+{
+    auto answer = std::make_shared<Answer>();
+    manager.storePassword(profile, key, password, [answer](bool success, const QString& error) {
+        ++answer->count;
+        answer->success = success;
+        answer->error = error;
+    });
+    return answer;
+}
+
+// Forgets as removePassword() does, answering every keychain delete it makes with deleteAnswer
+std::shared_ptr<Answer> forgetAnsweringDeletes(CredentialManager& manager,
+                                               JobStaller& staller,
+                                               const QString& profile,
+                                               const QString& key,
+                                               const CredentialManager::StoreScope scope = CredentialManager::StoreScope::EveryStore,
+                                               const QKeychain::Error deleteAnswer = QKeychain::EntryNotFound)
+{
+    staller.stallEvery<QKeychain::DeletePasswordJob>();
+    auto answer = std::make_shared<Answer>();
+    manager.removePassword(
+            profile,
+            key,
+            [answer](bool success, const QString& error) {
+                ++answer->count;
+                answer->success = success;
+                answer->error = error;
+            },
+            scope);
+    int answered = 0;
+    // The caller's waitForAnswer() says whether it came
+    static_cast<void>(QTest::qWaitFor(
+            [&staller, &answered, answer, deleteAnswer]() {
+                while (staller.stalledCount() > answered) {
+                    JobStaller::answer(staller.waitForStalled(answered++), deleteAnswer, QStringLiteral("synthetic: the keychain's answer to a delete"));
+                }
+                return answer->count > 0;
+            },
+            kWaitMs));
+    return answer;
+}
+
+bool writeEncryptedCopy(const QString& path, const QString& profile, const QString& secret)
+{
+    if (!QDir().mkpath(QFileInfo(path).absolutePath())) {
+        return false;
+    }
+    QFile file(path);
+    return file.open(QIODevice::WriteOnly) && file.write(SecureStringUtils::encryptStringForProfile(secret, profile).toUtf8()) > 0;
 }
 
 bool waitForAnswer(const std::shared_ptr<Answer>& answer, int timeoutMs = kWaitMs)
@@ -676,6 +759,8 @@ std::shared_ptr<TimedAnswers> startTimedRetrieval(CredentialManager& manager, co
 
 Q_DECLARE_METATYPE(QKeychain::Error)
 Q_DECLARE_METATYPE(CredentialManager::ReadOutcome)
+Q_DECLARE_METATYPE(HiddenCopy)
+Q_DECLARE_METATYPE(Settling)
 
 void CredentialManagerKeychainTest::initTestCase()
 {
@@ -719,6 +804,7 @@ void CredentialManagerKeychainTest::init()
     // cases after it
     CredentialManager::forgetStoreRefusal();
     CredentialManager::profileStorageOverrideForTesting().reset();
+    CredentialManager::readTextForTesting().reset();
     MudletApp::setStorePasswordsSecurely(true);
     const QString runId = QUuid::createUuid().toString(QUuid::Id128).left(8);
     mProfile = QStringLiteral("MudletKCTest-%1").arg(runId);
@@ -727,6 +813,8 @@ void CredentialManagerKeychainTest::init()
 
 void CredentialManagerKeychainTest::cleanup()
 {
+    // A test that chose a root would otherwise name every later test's entries after it
+    MudletApp::setConfigPath(QString());
     // On every platform, and here rather than only at the end of each test, so a test that fails part
     // way through leaves nothing behind in the keychain of whoever runs the suite. The encrypted-file
     // copy goes too: it lives under AppConfigLocation, which does not follow XDG_CONFIG_HOME everywhere.
@@ -1389,12 +1477,7 @@ void CredentialManagerKeychainTest::testAStoreTheKeychainRefusesSaysItWentToTheF
     CredentialManager manager;
     manager.mJobStartHook = staller.hook();
 
-    const auto answer = std::make_shared<Answer>();
-    manager.storePassword(mProfile, mKey, QStringLiteral("refused-secret"), [answer](bool success, const QString& error) {
-        ++answer->count;
-        answer->success = success;
-        answer->error = error;
-    });
+    const auto answer = startStore(manager, mProfile, mKey, QStringLiteral("refused-secret"));
     QKeychain::Job* store = staller.waitForStalled();
     QVERIFY2(store, "the store never reached the keychain, so this run tested nothing");
     JobStaller::answer(store, QKeychain::AccessDenied, QStringLiteral("synthetic: keychain refused the write"));
@@ -1407,12 +1490,7 @@ void CredentialManagerKeychainTest::testAStoreTheKeychainRefusesSaysItWentToTheF
 
     // The next store on the same manager reports only its own outcome
     CredentialManager::profileStorageOverrideForTesting() = true;
-    const auto second = std::make_shared<Answer>();
-    manager.storePassword(mProfile, mKey, QStringLiteral("file-secret"), [second](bool success, const QString& error) {
-        ++second->count;
-        second->success = success;
-        second->error = error;
-    });
+    const auto second = startStore(manager, mProfile, mKey, QStringLiteral("file-secret"));
     QVERIFY(waitForAnswer(second));
     QVERIFY2(second->success, qPrintable(second->error));
     QVERIFY2(manager.keychainRefusal().isEmpty(), "a store that never asked the keychain still reported the previous store's refusal");
@@ -1455,7 +1533,7 @@ bool storeThenCorrupt(const QString& profile, const QString& key)
     if (!CredentialManager::storeCredential(profile, key, QStringLiteral("soon_unreadable"))) {
         return false;
     }
-    QFile file(QStringLiteral("%1/profiles/%2/passwords/%3").arg(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation), profile, key));
+    QFile file(QStringLiteral("%1/profiles/%2/passwords/%3").arg(MudletApp::credentialFilesRoot(), profile, key));
     if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
         return false;
     }
@@ -2240,6 +2318,496 @@ void CredentialManagerKeychainTest::testALateAnswerFollowsTheFilesOlderCopy()
     QCOMPARE(answers->late->password, newer);
     QCOMPARE(answers->first->count, 1);
     QCOMPARE(answers->late->count, 1);
+}
+
+// What an Android app's chosen root does with the KeyStore, which every root the app names shares
+void CredentialManagerKeychainTest::testAChosenRootsKeychainEntriesAreItsOwn()
+{
+    QTemporaryDir first;
+    QTemporaryDir second;
+    QVERIFY(first.isValid() && second.isValid());
+    QStringList othersEntries{expectedServiceName(mProfile, mKey)};
+
+    for (const QTemporaryDir* root : {&first, &second}) {
+        MudletApp::chooseConfigRoot(root->path(), false);
+        const QString entry = expectedServiceName(mProfile, mKey, root->path());
+        JobStaller watcher;
+        watcher.answerOtherReadsNotFound();
+        CredentialManager manager;
+        manager.mJobStartHook = watcher.hook();
+        QVERIFY(waitForAnswer(startRetrieval(manager, mProfile, mKey)));
+
+        QVERIFY2(!watcher.reads().isEmpty(), "the keychain was never asked, so this run tested nothing");
+        QCOMPARE(watcher.reads().constFirst().first, entry);
+        for (const auto& read : watcher.reads()) {
+            QVERIFY2(!othersEntries.contains(read.first), "a new profile here would remove the password another root keeps for the same name");
+        }
+
+        // As THeadlessSession's removeStalePasswords() does for a profile new to this root
+        const auto removed = forgetAnsweringDeletes(manager, watcher, mProfile, mKey);
+        QVERIFY(waitForAnswer(removed));
+        QVERIFY2(removed->success, qPrintable(removed->error));
+        QVERIFY2(watcher.deletes().contains(qMakePair(entry, entry)), qPrintable(describeDeletes(watcher.deletes())));
+        // The colliding format's name is the same for every root, but no Android build ever wrote that layout
+        for (const auto& removal : watcher.deletes()) {
+            QVERIFY2(!othersEntries.contains(removal.first), "a new profile here removed the password another root keeps for the same name");
+        }
+        othersEntries << entry;
+    }
+}
+
+// A second name for the folder, as a symlink gives
+void CredentialManagerKeychainTest::testAChosenRootsEntriesAreNamedForTheFolderNotItsSpelling()
+{
+#if defined(Q_OS_WIN)
+    QSKIP("QFile::link() makes a shortcut on Windows, not a second name for the folder");
+#endif
+    QTemporaryDir parent;
+    QVERIFY(parent.isValid());
+    const QString folder = parent.filePath(QStringLiteral("files"));
+    const QString alias = parent.filePath(QStringLiteral("alias"));
+    QVERIFY(QDir().mkpath(folder));
+    QVERIFY(QFile::link(folder, alias));
+
+    // So the passwords saved under one spelling of the folder are found under the other
+    const QString expected = expectedServiceName(mProfile, mKey, folder);
+    for (const QString& spelling : {folder, alias}) {
+        MudletApp::chooseConfigRoot(spelling, false);
+        JobStaller watcher;
+        watcher.answerOtherReadsNotFound();
+        CredentialManager manager;
+        manager.mJobStartHook = watcher.hook();
+        QVERIFY(waitForAnswer(startRetrieval(manager, mProfile, mKey)));
+        QVERIFY2(!watcher.reads().isEmpty(), "the keychain was never asked, so this run tested nothing");
+        QCOMPARE(watcher.reads().constFirst().first, expected);
+    }
+}
+
+void CredentialManagerKeychainTest::testAChosenRootReadsTheSaveItsKeychainRefusedFirst()
+{
+    QTemporaryDir root;
+    QVERIFY(root.isValid());
+    MudletApp::chooseConfigRoot(root.path(), false);
+
+    JobStaller staller;
+    staller.stallEvery<QKeychain::WritePasswordJob>();
+    staller.answerOtherReadsNotFound();
+    CredentialManager manager;
+    manager.mJobStartHook = staller.hook();
+    const auto stored = startStore(manager, mProfile, mKey, QStringLiteral("refused-secret"));
+    QKeychain::Job* store = staller.waitForStalled();
+    QVERIFY2(store, "the store never reached the keychain, so this run tested nothing");
+    JobStaller::answer(store, QKeychain::AccessDenied, QStringLiteral("synthetic: the KeyStore refused the write"));
+    QVERIFY(waitForAnswer(stored));
+    QVERIFY2(stored->success, qPrintable(stored->error));
+    QVERIFY(!manager.keychainRefusal().isEmpty());
+    QVERIFY2(QDir(root.filePath(QStringLiteral("credentials/profiles"))).exists(), "the password the keychain refused was not kept under the chosen root");
+
+    const auto answer = startRetrieval(manager, mProfile, mKey);
+    QVERIFY(waitForAnswer(answer));
+    QCOMPARE(answer->password, QStringLiteral("refused-secret"));
+    QVERIFY2(staller.reads().isEmpty(), "the keychain was read first, where an older copy would hide the password it refused");
+}
+
+void CredentialManagerKeychainTest::testAnUnreadableFileUnderAChosenRootIsNotPassedOverForTheKeychain_data()
+{
+    QTest::addColumn<HiddenCopy>("copy");
+    QTest::newRow("a file it cannot decrypt") << HiddenCopy::CannotDecrypt;
+    QTest::newRow("a file its folder hides") << HiddenCopy::FolderHidesIt;
+    QTest::newRow("a file that cannot be looked at") << HiddenCopy::CannotBeLookedAt;
+}
+
+void CredentialManagerKeychainTest::testAnUnreadableFileUnderAChosenRootIsNotPassedOverForTheKeychain()
+{
+    QFETCH(HiddenCopy, copy);
+    QTemporaryDir root;
+    QVERIFY(root.isValid());
+    MudletApp::chooseConfigRoot(root.path(), false);
+    QVERIFY(storeThenCorrupt(mProfile, mKey));
+    const QString path = CredentialManager::generateFilePath(mProfile, mKey);
+    const QString folder = QFileInfo(path).absolutePath();
+    const auto reopen = qScopeGuard([&folder]() {
+        QFile::setPermissions(folder, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
+    });
+    switch (copy) {
+    case HiddenCopy::CannotDecrypt:
+        break;
+    case HiddenCopy::FolderHidesIt:
+        QVERIFY(QFile::setPermissions(folder, QFileDevice::ReadOwner | QFileDevice::WriteOwner));
+        if (QFileInfo::exists(path)) {
+            QSKIP("folder permissions cannot hide a file here (Windows, or running as root)");
+        }
+        break;
+    case HiddenCopy::CannotBeLookedAt:
+#if defined(Q_OS_WIN)
+        QSKIP("QFile::link() makes a shortcut on Windows, not a link stat() follows");
+#endif
+        // A link to itself, which stat() fails on with ELOOP
+        QVERIFY(QFile::remove(path) && QFile::link(path, path));
+        break;
+    case HiddenCopy::OlderNamedThatStays:
+        QFAIL("not a row of this test");
+    }
+
+    JobStaller watcher;
+    watcher.answerOtherReadsNotFound();
+    CredentialManager manager;
+    manager.mJobStartHook = watcher.hook();
+    const auto answers = startTimedRetrieval(manager, mProfile, mKey, nullptr);
+    QVERIFY(waitForAnswer(answers->first));
+    QCOMPARE(answers->outcome, CredentialManager::ReadOutcome::Unreadable);
+    QVERIFY2(watcher.reads().isEmpty(), "the keychain was read past an unreadable file, which is read before the keychain, so an older copy the keychain holds would be the password sent");
+}
+
+void CredentialManagerKeychainTest::testOnlyAnOlderNamedCopyTheProfileDecryptsAnswersFirstUnderAChosenRoot_data()
+{
+    QTest::addColumn<bool>("decrypts");
+    QTest::newRow("a copy the profile decrypts") << true;
+    QTest::newRow("a copy that will not open") << false;
+}
+
+// Only a copy the profile decrypts is provably its own, so only that one can be removed by a save or a forget
+void CredentialManagerKeychainTest::testOnlyAnOlderNamedCopyTheProfileDecryptsAnswersFirstUnderAChosenRoot()
+{
+    QFETCH(bool, decrypts);
+    QTemporaryDir root;
+    QVERIFY(root.isValid());
+    MudletApp::chooseConfigRoot(root.path(), false);
+    // The older name cut a profile's name to its first 50 characters
+    const QString profile = QString(50, QLatin1Char('u')) + mProfile;
+    const QString legacyPath = CredentialManager::generateLegacyFilePath(profile, mKey);
+    QVERIFY(!legacyPath.isEmpty());
+    if (decrypts) {
+        QVERIFY(writeEncryptedCopy(legacyPath, profile, QStringLiteral("older-named-secret")));
+    } else {
+        // QFile cannot open a folder, even for root
+        QVERIFY(QDir().mkpath(legacyPath + QStringLiteral("/kept")));
+    }
+
+    JobStaller watcher;
+    watcher.answerOtherReadsNotFound();
+    CredentialManager manager;
+    manager.mJobStartHook = watcher.hook();
+    const auto answer = startRetrieval(manager, profile, mKey);
+    QVERIFY(waitForAnswer(answer));
+    if (decrypts) {
+        QCOMPARE(answer->password, QStringLiteral("older-named-secret"));
+        QVERIFY2(watcher.reads().isEmpty(), "the keychain was read before the profile's own copy in the file, which is read first");
+    } else {
+        QVERIFY2(!watcher.reads().isEmpty(), "a copy nothing can remove kept the keychain from being read, so no save or forget could ever reach it");
+    }
+}
+
+void CredentialManagerKeychainTest::testUnderAChosenRootTheFileCopyGoesOnlyOnceTheKeychainGivesTheSaveBack_data()
+{
+    QTest::addColumn<bool>("chosenRoot");
+    QTest::addColumn<QKeychain::Error>("readBackError");
+    QTest::addColumn<QString>("readBack");
+    QTest::newRow("the default root") << false << QKeychain::NoError << QString();
+    QTest::newRow("a read gives the save back") << true << QKeychain::NoError << QStringLiteral("newer-secret");
+    QTest::newRow("a read gives back something else") << true << QKeychain::NoError << QStringLiteral("older-secret");
+    QTest::newRow("a read finds nothing") << true << QKeychain::EntryNotFound << QString();
+}
+
+// A write answered with NoError is all QtKeychain's Android backend gives even when its settings file never took it
+void CredentialManagerKeychainTest::testUnderAChosenRootTheFileCopyGoesOnlyOnceTheKeychainGivesTheSaveBack()
+{
+    QFETCH(bool, chosenRoot);
+    QFETCH(QKeychain::Error, readBackError);
+    QFETCH(QString, readBack);
+    QTemporaryDir root;
+    QVERIFY(root.isValid());
+    if (chosenRoot) {
+        MudletApp::chooseConfigRoot(root.path(), false);
+    }
+    QVERIFY(CredentialManager::storeCredential(mProfile, mKey, QStringLiteral("older-secret")));
+
+    JobStaller staller;
+    staller.stallEvery<QKeychain::WritePasswordJob>();
+    staller.answerOtherReadsNotFound(readBackError);
+    CredentialManager::readTextForTesting() = readBack;
+    CredentialManager manager;
+    manager.mJobStartHook = staller.hook();
+    const auto stored = startStore(manager, mProfile, mKey, QStringLiteral("newer-secret"));
+    QKeychain::Job* store = staller.waitForStalled();
+    QVERIFY2(store, "the store never reached the keychain, so this run tested nothing");
+    store->emitFinished();
+    QVERIFY(waitForAnswer(stored));
+    QVERIFY2(stored->success, qPrintable(stored->error));
+    const QString inTheFile = CredentialManager::retrieveCredential(mProfile, mKey);
+    if (!chosenRoot) {
+        // The default root reads the keychain first, and leaves the file copy as it always has
+        QCOMPARE(inTheFile, QStringLiteral("older-secret"));
+        QVERIFY2(staller.reads().isEmpty(), "the default root read a save back");
+    } else {
+        const QString entry = expectedServiceName(mProfile, mKey, root.path());
+        QCOMPARE(staller.reads(), (QList<QPair<QString, QString>>{{entry, entry}}));
+        if (readBack == QStringLiteral("newer-secret")) {
+            QVERIFY2(inTheFile.isEmpty(), "the older copy is still in the file, which answers before the keychain");
+            QVERIFY(manager.keychainRefusal().isEmpty());
+        } else {
+            QVERIFY2(inTheFile == QStringLiteral("newer-secret"), "the keychain did not give the save back, yet the file copy, the one read, does not hold it");
+            QVERIFY(!manager.keychainRefusal().isEmpty());
+        }
+    }
+}
+
+void CredentialManagerKeychainTest::testUnderAChosenRootNeitherASaveNorAForgetSucceedsWhileACopyIsStillRead_data()
+{
+    QTest::addColumn<Settling>("settling");
+    QTest::addColumn<HiddenCopy>("copy");
+    const std::pair<Settling, const char*> settlings[] = {{Settling::Save, "a save"}, {Settling::Forget, "a forget"}, {Settling::ForgetPreferredFilesAlone, "a forget of the preferred files alone"}};
+    const std::pair<HiddenCopy, const char*> copies[] = {{HiddenCopy::OlderNamedThatStays, "an older-named copy that will not go"},
+                                                         {HiddenCopy::FolderHidesIt, "a folder that hides the file"},
+                                                         {HiddenCopy::CannotBeLookedAt, "a file that cannot be looked at"}};
+    for (const auto& [settling, settlingName] : settlings) {
+        for (const auto& [copy, copyName] : copies) {
+            QTest::addRow("%s, %s", settlingName, copyName) << settling << copy;
+        }
+    }
+}
+
+void CredentialManagerKeychainTest::testUnderAChosenRootNeitherASaveNorAForgetSucceedsWhileACopyIsStillRead()
+{
+    QFETCH(Settling, settling);
+    QFETCH(HiddenCopy, copy);
+    const bool olderNamed = copy == HiddenCopy::OlderNamedThatStays;
+    QTemporaryDir root;
+    QVERIFY(root.isValid());
+    MudletApp::chooseConfigRoot(root.path(), false);
+    // The older name cut a profile's name to its first 50 characters
+    const QString profile = QString(50, QLatin1Char('u')) + mProfile;
+    const QString path = olderNamed ? CredentialManager::generateLegacyFilePath(profile, mKey) : CredentialManager::generateFilePath(profile, mKey);
+    const QString folder = QFileInfo(path).absolutePath();
+    const auto reopen = qScopeGuard([&folder]() {
+#if !defined(Q_OS_WIN)
+        [[maybe_unused]] const int handedBack = ::chown(QFile::encodeName(folder).constData(), ::geteuid(), ::getegid());
+#endif
+        QFile::setPermissions(folder, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
+    });
+    switch (copy) {
+    case HiddenCopy::FolderHidesIt:
+        QVERIFY(writeEncryptedCopy(path, profile, QStringLiteral("older-secret")));
+        QVERIFY(QFile::setPermissions(folder, QFileDevice::ReadOwner | QFileDevice::WriteOwner));
+        if (QFileInfo::exists(path)) {
+            QSKIP("folder permissions bind nobody here (Windows, or running as root)");
+        }
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("the folder %1 does not let Mudlet look inside it").arg(QRegularExpression::escape(folder))));
+        break;
+    case HiddenCopy::OlderNamedThatStays: {
+#if defined(Q_OS_WIN)
+        QSKIP("needs a folder Mudlet does not own");
+#else
+        QVERIFY(writeEncryptedCopy(path, profile, QStringLiteral("older-secret")));
+        // Mudlet opens a folder it owns up again before removing the copy, so only one it does not own keeps it
+        const auto openToRead = QFileDevice::ReadOwner | QFileDevice::ExeOwner | QFileDevice::ReadGroup | QFileDevice::ExeGroup | QFileDevice::ReadOther | QFileDevice::ExeOther;
+        QVERIFY(QFile::setPermissions(folder, openToRead));
+        if (::chown(QFile::encodeName(folder).constData(), 65534, 65534) != 0 || QFileInfo(folder).isWritable() || QFile::setPermissions(folder, openToRead)) {
+            if (qEnvironmentVariableIsSet("MUDLET_TEST_REQUIRE_UNPRIVILEGED_ROOT")) {
+                QFAIL("MUDLET_TEST_REQUIRE_UNPRIVILEGED_ROOT is set, but the folder was not put out of Mudlet's reach (needs root without CAP_DAC_OVERRIDE and CAP_FOWNER)");
+            }
+            QSKIP("needs root without CAP_DAC_OVERRIDE and CAP_FOWNER, to hand the folder to another user");
+        }
+#endif
+        break;
+    }
+    case HiddenCopy::CannotBeLookedAt:
+#if defined(Q_OS_WIN)
+        QSKIP("QFile::link() makes a shortcut on Windows, not a link stat() follows");
+#endif
+        // A link to itself, which stat() fails on with ELOOP
+        QVERIFY(QDir().mkpath(folder) && QFile::link(path, path));
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("looking at %1 failed").arg(QRegularExpression::escape(path))));
+        break;
+    case HiddenCopy::CannotDecrypt:
+        QFAIL("not a row of this test");
+    }
+
+    JobStaller staller;
+    staller.answerOtherReadsNotFound(QKeychain::NoError);
+    CredentialManager::readTextForTesting() = QStringLiteral("newer-secret");
+    CredentialManager manager;
+    manager.mJobStartHook = staller.hook();
+    std::shared_ptr<Answer> answer;
+    switch (settling) {
+    case Settling::Save: {
+        staller.stallEvery<QKeychain::WritePasswordJob>();
+        answer = startStore(manager, profile, mKey, QStringLiteral("newer-secret"));
+        QKeychain::Job* store = staller.waitForStalled();
+        QVERIFY2(store, "the store never reached the keychain, so this run tested nothing");
+        store->emitFinished();
+        break;
+    }
+    case Settling::Forget:
+    case Settling::ForgetPreferredFilesAlone: {
+        // Only this scope leaves the answer to the files' own removal: every store's forget also asks the keychain,
+        // whose answer checks the files again
+        const bool filesAlone = settling == Settling::ForgetPreferredFilesAlone;
+        CredentialManager::profileStorageOverrideForTesting() = filesAlone;
+        answer = forgetAnsweringDeletes(manager, staller, profile, mKey, filesAlone ? CredentialManager::StoreScope::PreferredStore : CredentialManager::StoreScope::EveryStore);
+        break;
+    }
+    }
+    QVERIFY(waitForAnswer(answer));
+    QVERIFY2(!answer->success, "reported done while a copy that is read in place of the keychain stays");
+}
+
+void CredentialManagerKeychainTest::testUnderAChosenRootAnAnswerAfterTheTimeoutLeavesTheFileCopy_data()
+{
+    QTest::addColumn<bool>("readBackLate");
+    QTest::addColumn<bool>("taken");
+    QTest::newRow("the write, taken") << false << true;
+    QTest::newRow("the write, refused") << false << false;
+    QTest::newRow("the read back, giving the save back") << true << true;
+}
+
+// The save was reported as failed, so an answer nobody waits for proves nothing and the file copy, read first, stays
+void CredentialManagerKeychainTest::testUnderAChosenRootAnAnswerAfterTheTimeoutLeavesTheFileCopy()
+{
+    QFETCH(bool, readBackLate);
+    QFETCH(bool, taken);
+    QTemporaryDir root;
+    QVERIFY(root.isValid());
+    MudletApp::chooseConfigRoot(root.path(), false);
+    QVERIFY(CredentialManager::storeCredential(mProfile, mKey, QStringLiteral("older-secret")));
+
+    JobStaller staller;
+    if (readBackLate) {
+        staller.stallEvery<QKeychain::Job>();
+    } else {
+        staller.stallEvery<QKeychain::WritePasswordJob>();
+        staller.answerOtherReadsNotFound(QKeychain::NoError);
+    }
+    CredentialManager::readTextForTesting() = QStringLiteral("newer-secret");
+    CredentialManager manager;
+    manager.mJobStartHook = staller.hook();
+    manager.mOperationTimeoutMs = 300;
+    const auto stored = startStore(manager, mProfile, mKey, QStringLiteral("newer-secret"));
+    QPointer<QKeychain::Job> late = staller.waitForStalled(0);
+    QVERIFY2(late, "the store never reached the keychain, so this run tested nothing");
+    if (readBackLate) {
+        late->emitFinished();
+        late = staller.waitForStalled(1);
+        QVERIFY2(late, "the save was never read back, so this run tested nothing");
+    }
+    QVERIFY(waitForAnswer(stored));
+    QVERIFY2(!stored->success, "the save was answered before the keychain had");
+
+    // The manager's next operation is not this save's to answer
+    const auto next = startStore(manager, mProfile, mKey + QStringLiteral("-next"), QStringLiteral("next-secret"));
+    QVERIFY(staller.waitForStalled(readBackLate ? 2 : 1));
+    if (taken) {
+        late->emitFinished();
+    } else {
+        JobStaller::answer(late, QKeychain::AccessDenied, QStringLiteral("synthetic: the KeyStore refused the write late"));
+    }
+    QTRY_VERIFY(!late);
+    QCoreApplication::processEvents();
+    QVERIFY2(CredentialManager::retrieveCredential(mProfile, mKey) == QStringLiteral("older-secret"),
+             "an answer that came after the save had timed out changed the file copy, which is read before the keychain");
+    QCOMPARE(next->count, 0);
+}
+
+// QtKeychain's Android backend keeps each entry in QSettings(service), and passes over that file without an error when
+// it cannot be read: a read answers EntryNotFound and a delete NoError
+void CredentialManagerKeychainTest::testUnderAChosenRootAKeychainStoreThatWillNotOpenIsNotTakenForAnEmptyOne_data()
+{
+    QTest::addColumn<bool>("forget");
+    QTest::addColumn<bool>("unreadable");
+    QTest::newRow("a read, no store file") << false << false;
+    QTest::newRow("a read, a store file Mudlet cannot read") << false << true;
+    QTest::newRow("a forget, no store file") << true << false;
+    QTest::newRow("a forget, a store file Mudlet cannot read") << true << true;
+}
+
+void CredentialManagerKeychainTest::testUnderAChosenRootAKeychainStoreThatWillNotOpenIsNotTakenForAnEmptyOne()
+{
+#if !defined(Q_OS_LINUX)
+    QSKIP("QSettings keeps its native format in an INI file, as it does on Android, only on Linux");
+#else
+    QFETCH(bool, forget);
+    QFETCH(bool, unreadable);
+    QTemporaryDir root;
+    QVERIFY(root.isValid());
+    MudletApp::chooseConfigRoot(root.path(), false);
+    const QString storePath = QSettings(expectedServiceName(mProfile, mKey, root.path())).fileName();
+    const auto removeStore = qScopeGuard([&storePath]() {
+        QFile::setPermissions(storePath, QFileDevice::ReadOwner | QFileDevice::WriteOwner);
+        QFile::remove(storePath);
+    });
+    if (unreadable) {
+        QVERIFY(QDir().mkpath(QFileInfo(storePath).absolutePath()));
+        QFile store(storePath);
+        QVERIFY(store.open(QIODevice::WriteOnly));
+        QVERIFY(store.write("[General]\nentry=1\n") > 0);
+        store.close();
+        QVERIFY(QFile::setPermissions(storePath, QFileDevice::Permissions()));
+        if (QFile(storePath).open(QIODevice::ReadOnly)) {
+            if (qEnvironmentVariableIsSet("MUDLET_TEST_REQUIRE_UNPRIVILEGED_ROOT")) {
+                QFAIL("MUDLET_TEST_REQUIRE_UNPRIVILEGED_ROOT is set, but a file denied to its owner could still be read");
+            }
+            QSKIP("needs root without CAP_DAC_OVERRIDE and CAP_DAC_READ_SEARCH, or another user, for a file Mudlet cannot read");
+        }
+    }
+
+    JobStaller staller;
+    staller.answerOtherReadsNotFound();
+    CredentialManager manager;
+    manager.mJobStartHook = staller.hook();
+    if (forget) {
+        const auto answer = forgetAnsweringDeletes(manager, staller, mProfile, mKey, CredentialManager::StoreScope::EveryStore, QKeychain::NoError);
+        QVERIFY(waitForAnswer(answer));
+        QVERIFY2(!staller.deletes().isEmpty(), "the keychain was never asked, so this run tested nothing");
+        if (unreadable) {
+            QVERIFY2(!answer->success, "a forget was reported done while the keychain's store, which it could not open, may still hold the entry");
+            QVERIFY2(answer->error.contains(storePath), qPrintable(answer->error));
+        } else {
+            QVERIFY2(answer->success, qPrintable(answer->error));
+        }
+        return;
+    }
+    const auto answers = startTimedRetrieval(manager, mProfile, mKey, nullptr);
+    QVERIFY(waitForAnswer(answers->first));
+    QVERIFY2(!staller.reads().isEmpty(), "the keychain was never asked, so this run tested nothing");
+    if (unreadable) {
+        QVERIFY2(answers->outcome == CredentialManager::ReadOutcome::Unavailable,
+                 qPrintable(QStringLiteral("a keychain store that would not open was taken for one that holds nothing: %1").arg(answers->first->error)));
+        QVERIFY2(answers->first->error.contains(storePath), qPrintable(answers->first->error));
+    } else {
+        QCOMPARE(answers->outcome, CredentialManager::ReadOutcome::NothingStored);
+    }
+#endif
+}
+
+void CredentialManagerKeychainTest::testTheForgetCheckUnderAChosenRootAsksTheKeychainOnlyWhenItServesIt_data()
+{
+    QTest::addColumn<bool>("keepsPasswords");
+    QTest::newRow("a root that keeps its passwords") << true;
+    QTest::newRow("an Android app's root") << false;
+}
+
+void CredentialManagerKeychainTest::testTheForgetCheckUnderAChosenRootAsksTheKeychainOnlyWhenItServesIt()
+{
+    QFETCH(bool, keepsPasswords);
+    QTemporaryDir root;
+    QVERIFY(root.isValid());
+    MudletApp::chooseConfigRoot(root.path(), keepsPasswords);
+    CredentialManager::profileStorageOverrideForTesting() = true;
+
+    JobStaller watcher;
+    watcher.answerOtherReadsNotFound();
+    CredentialManager manager;
+    manager.mJobStartHook = watcher.hook();
+    std::optional<bool> exists;
+    manager.credentialExists(
+            mProfile,
+            mKey,
+            [&exists](bool found) {
+                exists = found;
+            },
+            CredentialManager::StoreScope::EveryStore);
+    QTRY_VERIFY(exists.has_value());
+    QCOMPARE(watcher.reads().isEmpty(), keepsPasswords);
 }
 
 MUDLET_GROUPED_TEST_GUILESS_MAIN(CredentialManagerKeychainTest)

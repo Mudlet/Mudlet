@@ -188,6 +188,23 @@ path that leads to one, even before it is made. Not caught: a portable install w
 beside another executable, and a GUI run under another HOME. Naming one of their folders shares its
 profiles and `Mudlet.ini` with that GUI (not its passwords), so `start()` warns when a folder it accepts already holds profiles.
 
+In an Android app the profiles' passwords are kept by QtKeychain instead, as they are without a
+`configDir`: encrypted with a key in the app's own KeyStore, unless its `Mudlet.ini` sets
+`storePasswordsSecurely` to false, which keeps them in the folder. The KeyStore is the app's own, so there
+is no GUI to share it with, and each folder's entries are named for that folder, with symbolic links
+resolved, so a profile of the same name in another one keeps its own; name it by the same path on every
+run. Moving the folder leaves those passwords behind, as only the files under `credentials/` go with it,
+and restoring the app's data without its KeyStore keys leaves them unreadable: Mudlet says so in the
+profile's console when it would have sent one, and the player types it again. A proxy password stays under
+`credentials/`, as the GUI keeps its own in a file. While a password is under `credentials/`, that copy is
+the one read and the KeyStore is not: a save the KeyStore takes and gives back on a read removes it, and
+one it refuses or does not give back is kept there instead, with a warning in the log. A save it does not
+answer in time is reported as failed, and leaves any copy already there as the one read. A save or a forget
+that cannot remove that copy, or cannot look for it, is reported as failed.
+With no Java VM registered with Qt - `mudlet-headless` run as a bare executable, or an app that does not
+load Qt Core through `System.loadLibrary` - the KeyStore cannot be reached, so the folder keeps them all
+under `credentials/`, and the log says so.
+
 Each of `outputLine`'s runs covers part of the line, in order, with the colours and styles the game
 asked for (`THeadlessSession::TextStyle`: bold, italic, underline, overline, strike-out, reverse, blink,
 fast blink, concealed), and says whether each colour is the profile's own, which a frontend may swap

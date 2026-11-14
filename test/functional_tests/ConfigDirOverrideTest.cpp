@@ -772,6 +772,39 @@ private slots:
         MudletApp::setConfigPath(QString());
     }
 
+    // The credential store keeps passwords out of the keychain while portableRootInUse() says so
+    void test_aChosenRootKeepsItsPasswordsWhereItIsTold_data()
+    {
+        QTest::addColumn<bool>("keepsPasswords");
+        QTest::newRow("in its own files") << true;
+        QTest::newRow("in the keychain, as an Android app's does") << false;
+    }
+
+    void test_aChosenRootKeepsItsPasswordsWhereItIsTold()
+    {
+        QFETCH(bool, keepsPasswords);
+        QTemporaryDir root;
+        QVERIFY(root.isValid());
+        const auto forget = qScopeGuard([]() {
+            MudletApp::setConfigPath(QString());
+        });
+
+        MudletApp::chooseConfigRoot(root.path(), keepsPasswords);
+        QVERIFY(MudletApp::configRootChosen());
+        QCOMPARE(MudletApp::portableRootInUse(), keepsPasswords);
+        // Under it either way: the store itself, or the keychain's fallback
+        QCOMPARE(MudletApp::credentialFilesRoot(), qsl("%1/credentials").arg(root.path()));
+    }
+
+    void test_aChosenRootKeepsItsPasswordsOffAndroid()
+    {
+#if defined(Q_OS_ANDROID)
+        QSKIP("an Android app's go to the KeyStore");
+#else
+        QVERIFY2(MudletApp::chosenRootKeepsPasswords(), "the GUI shares the keychain, so a chosen root has to keep its passwords in its own folder");
+#endif
+    }
+
     // --- mudlet::setupConfig() end-to-end wiring ------------------------------
 
     void test_setupConfigUsesPreCreatedXdgTarget()
