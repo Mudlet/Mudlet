@@ -569,6 +569,23 @@ private slots:
         mSession.stop();
     }
 
+    // First, ahead of any appearance switch: a switch inks the trees again, which would hide a window that
+    // opened without its ink
+    void test_theTreesHeadingRowIsInkedAsTheWindowOpens()
+    {
+        const QString miss = headingInkMiss();
+        QVERIFY2(miss.isEmpty(), qPrintable(qsl("before any appearance change: %1").arg(miss)));
+        // The palette too, for the trees not on show
+        const QColor mutedText = uiDesign::themeTokens().mutedText;
+        QStringList misses;
+        for (const QTreeWidget* pTree : mpEditor->findChildren<QTreeWidget*>()) {
+            if (pTree->palette().color(QPalette::Text) != mutedText) {
+                misses << qsl("%1 in %2").arg(pTree->objectName(), pTree->palette().color(QPalette::Text).name());
+            }
+        }
+        QVERIFY2(misses.isEmpty(), qPrintable(qsl("trees that open with their rows inked in something other than the chrome's %1: %2").arg(mutedText.name(), misses.join(qsl(", ")))));
+    }
+
     // One list at the end: stopping at the first miss would take a run per miss
     // to clear
     void test_everyWordOutsideAFieldIsTheOneQuietTone()
@@ -612,8 +629,7 @@ private slots:
         QVERIFY2(misses.isEmpty(), qPrintable(qsl("%1 thing(s) in the editor's chrome are written in something other than the one quiet tone - listed above").arg(QString::number(misses.size()))));
     }
 
-    // Empty when the Triggers heading row is painted in the quiet tone, otherwise what is wrong. Read on the dark
-    // appearance only: on the light one the row holds near-black pixels the walk's palettes do not account for.
+    // Empty when the Triggers heading row is painted in the quiet tone, otherwise what is wrong
     QString headingInkMiss()
     {
         // The panel shows one tree at a time, and the walk leaves the last view up
