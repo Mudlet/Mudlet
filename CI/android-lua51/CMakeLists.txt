@@ -1,5 +1,5 @@
-# The bundled Lua 5.1 as an Android build gets it, and a program that opens its libraries. Linked
-# statically against bionic, the program runs on a Linux x86_64 host without an emulator; see check.sh.
+# Builds Lua through 3rdparty/lua51's own CMakeLists, so it gets the flags Mudlet's Android build does.
+# Linked statically against bionic, the program runs on a Linux x86_64 host without an emulator.
 cmake_minimum_required(VERSION 3.25)
 project(android-lua51 C)
 

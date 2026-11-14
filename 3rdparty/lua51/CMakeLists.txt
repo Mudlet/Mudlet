@@ -57,10 +57,9 @@ else()
   if(NOT APPLE)
     target_link_libraries(lua51 PRIVATE m)
   endif()
-  # The NDK's _FORTIFY_SOURCE=2 sizes svalue() by the GCObject TString member it points past: 0 bytes, so
-  # lgc.c's strchr() on a weak table's __mode aborts (luaL_openlibs makes one). _FORTIFY_SOURCE=1 checks
-  # against whole allocations, unknown for Lua's strings. An option, not a definition, to follow the NDK's
-  # -D in CMAKE_C_FLAGS; SHELL: so that de-duplicating options cannot leave only the -U.
+  # The NDK's _FORTIFY_SOURCE=2 sizes svalue() as 0 bytes (the GCObject member it points past), so lgc.c's
+  # strchr() on a weak table's __mode aborts in luaL_openlibs; =1 sizes whole allocations, unknown here. An
+  # option to follow the NDK's -D; SHELL: so CMake cannot de-duplicate our -D away and leave the -U last.
   if(ANDROID)
     target_compile_options(lua51 PRIVATE "SHELL:-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1")
   endif()
