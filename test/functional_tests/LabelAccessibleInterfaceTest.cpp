@@ -818,6 +818,32 @@ private slots:
         QTRY_COMPARE(QApplication::focusWidget(), pane());
     }
 
+    // macOS sends Ctrl+Tab only as a possible shortcut, with no key press after it, and a QWidget would take the
+    // press that stands in for it to step the focus to the next button
+    void test_ctrlTabFromAButtonTurnsCaretModeOnOnMacOS()
+    {
+#if !defined(Q_OS_MACOS)
+        QSKIP("only macOS delivers Ctrl+Tab without a key press");
+#else
+        auto restore = qScopeGuard([this]() {
+            mpHost->mCaretShortcut = Host::CaretShortcut::None;
+            tearDownLinksAndButtons();
+        });
+        QVERIFY(setUpLinksAndButtons());
+        mpHost->mCaretShortcut = Host::CaretShortcut::CtrlTab;
+
+        key(Qt::Key_Tab);
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(label()));
+        // As QNSView sends it: the native Tab key code, then nothing if the override is claimed
+        QKeyEvent override(QEvent::ShortcutOverride, Qt::Key_Tab, Qt::MetaModifier, 0, 0x30, 0, qsl("\t"));
+        override.ignore();
+        QApplication::sendEvent(label(), &override);
+        QVERIFY(override.isAccepted());
+        QTRY_VERIFY2(mpHost->caretEnabled(), "Ctrl+Tab from a focused button did not turn caret mode on");
+        QTRY_COMPARE(QApplication::focusWidget(), pane());
+#endif
+    }
+
     // A keybinding pressed on a button sends the keyboard to the command line, which goes on reclaiming it for a
     // moment afterwards; the caret shortcut pressed straight after has to keep it
     void test_theCaretShortcutRightAfterAKeybindingStays()

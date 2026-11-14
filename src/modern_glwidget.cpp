@@ -424,6 +424,17 @@ bool ModernGLWidget::event(QEvent* event)
             return true;
         }
     }
+#if defined(Q_OS_MACOS)
+    // QWidget::event() steps the focus on a Tab unless Command or Option is held, so while the keys pan a Ctrl+Tab
+    // would not reach keyPressEvent()
+    if (event->type() == QEvent::KeyPress) {
+        auto* keyEvent = static_cast<QKeyEvent*>(event);
+        if ((keyEvent->key() == Qt::Key_Tab || keyEvent->key() == Qt::Key_Backtab) && (keyEvent->modifiers() & Qt::MetaModifier)) {
+            keyPressEvent(keyEvent);
+            return true;
+        }
+    }
+#endif
     // The keys go on to the command line, so it must also win the shortcuts it wins with focus of its own
     if (event->type() == QEvent::ShortcutOverride) {
         if (searchKeyed(static_cast<QKeyEvent*>(event))) {
@@ -435,6 +446,7 @@ bool ModernGLWidget::event(QEvent* event)
         TCommandLine* pCommandLine = commandLine();
         if (!searching && pCommandLine && pCommandLine->claimsShortcutOverride(static_cast<QKeyEvent*>(event))) {
             event->accept();
+            TCommandLine::pressClaimedControlTab(this, static_cast<QKeyEvent*>(event));
             return true;
         }
     }

@@ -4375,10 +4375,11 @@ bool TTextEdit::event(QEvent* event)
         // While caret mode is active its shortcut (Tab, Ctrl+Tab or F6) must
         // beat any application-wide QShortcut - the profile-switching ones
         // use Ctrl+Tab by default and all of them can be remapped onto these
-        // keys - so claim it here to make it arrive as a KeyPress for the
-        // caret-toggling code in keyPressEvent():
+        // keys - so claim it here, and on macOS post the KeyPress Cocoa
+        // withholds, for the caret-toggling code in keyPressEvent():
         if (mpHost->caretEnabled() && mpHost->caretShortcutMatches(ke)) {
             ke->accept();
+            TCommandLine::pressClaimedControlTab(this, ke);
             return true;
         }
     }

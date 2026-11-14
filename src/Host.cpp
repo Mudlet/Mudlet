@@ -8203,13 +8203,19 @@ void Host::setCaretEnabled(bool enabled)
 bool Host::caretShortcutMatches(const QKeyEvent* ke) const
 {
     constexpr Qt::KeyboardModifiers allModifiers = Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier | Qt::KeypadModifier | Qt::GroupSwitchModifier;
+#if defined(Q_OS_MACOS)
+    // The Ctrl key arrives as Qt::MetaModifier on macOS, where Qt::ControlModifier is Command
+    constexpr Qt::KeyboardModifier controlKey = Qt::MetaModifier;
+#else
+    constexpr Qt::KeyboardModifier controlKey = Qt::ControlModifier;
+#endif
     switch (mCaretShortcut) {
     case CaretShortcut::None:
         return false;
     case CaretShortcut::Tab:
-        return ke->key() == Qt::Key_Tab && !(ke->modifiers() & Qt::ControlModifier);
+        return ke->key() == Qt::Key_Tab && !(ke->modifiers() & controlKey);
     case CaretShortcut::CtrlTab:
-        return ke->key() == Qt::Key_Tab && (ke->modifiers() & Qt::ControlModifier);
+        return ke->key() == Qt::Key_Tab && (ke->modifiers() & controlKey);
     case CaretShortcut::F6:
         return ke->key() == Qt::Key_F6 && (ke->modifiers() & allModifiers) == Qt::NoModifier;
     }

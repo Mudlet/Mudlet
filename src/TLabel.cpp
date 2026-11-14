@@ -812,8 +812,16 @@ bool TLabel::event(QEvent* event)
     // The caret shortcut has to beat an application-wide QShortcut on the same key, as in TTextEdit::event()
     if (event->type() == QEvent::ShortcutOverride && mainWindowConsole() && hasFocus() && mpHost->caretShortcutMatches(static_cast<QKeyEvent*>(event))) {
         event->accept();
+        TCommandLine::pressClaimedControlTab(this, static_cast<QKeyEvent*>(event));
         return true;
     }
+#if defined(Q_OS_MACOS)
+    // QWidget::event() steps the focus on a Tab unless Command or Option is held, so a Ctrl+Tab would not reach keyPressEvent()
+    if (event->type() == QEvent::KeyPress && (static_cast<QKeyEvent*>(event)->modifiers() & Qt::MetaModifier) && mpHost->caretShortcutMatches(static_cast<QKeyEvent*>(event))) {
+        keyPressEvent(static_cast<QKeyEvent*>(event));
+        return true;
+    }
+#endif
     if (event->type() == QEvent::ToolTipChange) {
         mpModel->setToolTip(toolTip());
     }

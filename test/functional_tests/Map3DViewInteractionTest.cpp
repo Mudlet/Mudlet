@@ -138,6 +138,13 @@ protected:
 };
 } // namespace
 
+// Qt::ControlModifier is Command on macOS, where the Ctrl key arrives as Qt::MetaModifier
+#if defined(Q_OS_MACOS)
+static constexpr Qt::KeyboardModifier controlKey = Qt::MetaModifier;
+#else
+static constexpr Qt::KeyboardModifier controlKey = Qt::ControlModifier;
+#endif
+
 class Map3DViewInteractionTest : public QObject
 {
     Q_OBJECT
@@ -969,7 +976,7 @@ private slots:
         mpHost->mCaretShortcut = Host::CaretShortcut::CtrlTab;
         QTest::mouseClick(pModern, Qt::LeftButton, Qt::NoModifier, pixelOfRoom(pModern, kPlayerRoomId));
 
-        QKeyEvent caretShortcut(QEvent::ShortcutOverride, Qt::Key_Tab, Qt::ControlModifier);
+        QKeyEvent caretShortcut(QEvent::ShortcutOverride, Qt::Key_Tab, controlKey);
         QVERIFY(mpHost->mainConsoleView()->mpCommandLine->claimsShortcutOverride(&caretShortcut));
         caretShortcut.ignore();
         QCoreApplication::sendEvent(pModern, &caretShortcut);
@@ -986,7 +993,7 @@ private slots:
         auto* pSearchBox = pModern->findChild<QLineEdit*>();
         QVERIFY(pSearchBox);
         QTRY_VERIFY(pSearchBox->hasFocus());
-        QKeyEvent searching(QEvent::ShortcutOverride, Qt::Key_Tab, Qt::ControlModifier);
+        QKeyEvent searching(QEvent::ShortcutOverride, Qt::Key_Tab, controlKey);
         searching.ignore();
         QCoreApplication::sendEvent(pSearchBox, &searching);
         QVERIFY(!searching.isAccepted());
@@ -1100,7 +1107,7 @@ private slots:
         QTest::addColumn<int>("shortcut");
         QTest::addColumn<int>("modifiers");
         QTest::newRow("Tab") << static_cast<int>(Host::CaretShortcut::Tab) << static_cast<int>(Qt::NoModifier);
-        QTest::newRow("Ctrl+Tab") << static_cast<int>(Host::CaretShortcut::CtrlTab) << static_cast<int>(Qt::ControlModifier);
+        QTest::newRow("Ctrl+Tab") << static_cast<int>(Host::CaretShortcut::CtrlTab) << static_cast<int>(controlKey);
     }
 
     void test_theCaretKeyWorksAfterAClick()
@@ -1125,6 +1132,33 @@ private slots:
         QTest::keyClick(static_cast<QWidget*>(nullptr), Qt::Key_Tab, static_cast<Qt::KeyboardModifiers>(modifiers));
         QCoreApplication::processEvents();
         QVERIFY2(mpHost->caretEnabled(), qPrintable(qsl("focus went to %1").arg(QDebug::toString(QApplication::focusWidget()))));
+    }
+
+    // macOS sends Ctrl+Tab only as a possible shortcut, with no key press after it, and a QWidget would take the
+    // press that stands in for it to step the focus while the view's keys pan
+    void test_ctrlTabArrivingOnlyAsAShortcutWorksWhileTheKeysPan()
+    {
+#if !defined(Q_OS_MACOS)
+        QSKIP("only macOS delivers Ctrl+Tab without a key press");
+#else
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        const auto restore = qScopeGuard([this]() {
+            mpHost->mCaretShortcut = Host::CaretShortcut::None;
+            if (mpHost->caretEnabled()) {
+                mpHost->setCaretEnabled(false);
+            }
+        });
+        mpHost->mCaretShortcut = Host::CaretShortcut::CtrlTab;
+        QVERIFY(focusFromTheKeyboard(pModern));
+
+        // As QNSView sends it: the native Tab key code, then nothing if the override is claimed
+        QKeyEvent override(QEvent::ShortcutOverride, Qt::Key_Tab, controlKey, 0, 0x30, 0, qsl("\t"));
+        override.ignore();
+        QCoreApplication::sendEvent(pModern, &override);
+        QVERIFY(override.isAccepted());
+        QTRY_VERIFY2(mpHost->caretEnabled(), qPrintable(qsl("focus went to %1").arg(QDebug::toString(QApplication::focusWidget()))));
+#endif
     }
 
     // Keypad keys go on to the command line's key bindings even while the view pans with the other keys
