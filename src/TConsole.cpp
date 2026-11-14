@@ -998,7 +998,8 @@ void TConsole::resizeEvent(QResizeEvent* event)
             for (const auto& otherHostPtr : *HostManager::self()) {
                 Host* otherHost = otherHostPtr.data();
                 if (otherHost && otherHost != mpHost.data() && otherHost->mainConsoleView()) {
-                    otherHost->mainConsoleView()->syncHiddenScreenDimensions();
+                    // Queued: it runs that profile's resize handlers, which could close this profile mid-resize
+                    QTimer::singleShot(0ms, otherHost->mainConsoleView(), &TConsole::syncHiddenScreenDimensions);
                 }
             }
         }
@@ -2294,6 +2295,16 @@ void TConsole::syncHiddenScreenDimensions()
     if (mpHost->mainConsoleView()) {
         mpHost->mainConsoleView()->mxpFrameWidgets().reportSize();
     }
+    // Text received while hidden wraps at whatever scripts last laid out, so tell them the size this console comes back to
+    const QSize size = getMainWindowSize();
+    if (size == mOldSize) {
+        return;
+    }
+    mOldSize = size;
+    mpHost->windowRegistry().setMainWindowSize(size);
+    mBorders = mpHost->borders();
+    mpHost->getLuaInterpreter()->call(qsl("handleWindowResizeEvent"), qsl("WindowResizeEvent"));
+    raiseMudletSysWindowResizeEvent(container->width() - (mpLeftToolBar->width() + mpRightToolBar->width()), container->height() - mpTopToolBar->height());
 }
 
 QSize TConsole::getMainWindowSize() const
