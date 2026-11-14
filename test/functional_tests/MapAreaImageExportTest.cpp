@@ -32,6 +32,7 @@
 #include <QFutureWatcher>
 #include <QImage>
 #include <QScopeGuard>
+#include <QSemaphore>
 #include <QTemporaryDir>
 #include <QThreadPool>
 #include <QtTest/QtTest>
@@ -42,6 +43,7 @@
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "T2DMap.h"
+#include "TBackgroundTask.h"
 #include "TMap.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
@@ -200,7 +202,7 @@ private slots:
         QVERIFY2(exported, qPrintable(message));
         QVERIFY(exportsInFlight(mp2dMap));
 
-        // The export hands the actual file write to a QtConcurrent task
+        // The export hands the actual file write to a background task
         QImage exportedImage;
         QTRY_VERIFY2_WITH_TIMEOUT(exportedImage.load(filePath), "the exported image could not be read back", 10s);
         // The file lands inside QPixmap::save(), before the task reports back,
@@ -363,6 +365,46 @@ private slots:
         QTRY_VERIFY_WITH_TIMEOUT(!exportsInFlight(mp2dMap), 10s);
         QVERIFY(!QImage(firstPath).isNull());
         QVERIFY(!QImage(secondPath).isNull());
+    }
+
+    // An embedding app with no worker threads to spare has background work run
+    // inline, and the export's file write is that work too
+    void anExportSavesBeforeReturningWhenBackgroundTasksRunInline()
+    {
+        map()->mapClear();
+        int areaId = 0;
+        addOneRoomArea(map(), qsl("Exported inline"), areaId);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+
+        // With every pool thread held, a write handed to the pool could not
+        // have landed by the time the export returns
+        auto* pool = QThreadPool::globalInstance();
+        const int threads = pool->maxThreadCount();
+        QSemaphore held;
+        QSemaphore release;
+        for (int i = 0; i < threads; ++i) {
+            pool->start([&held, &release]() {
+                held.release();
+                release.acquire();
+            });
+        }
+        const auto freePool = qScopeGuard([&release, threads, pool]() {
+            TBackgroundTask::setRunInline(false);
+            release.release(threads);
+            pool->waitForDone(10000);
+        });
+        QVERIFY(held.tryAcquire(threads, 10000));
+        TBackgroundTask::setRunInline(true);
+
+        const QString exportDir = qsl("%1/exports-inline").arg(mConfigDir.path());
+        QVERIFY(QDir().mkpath(exportDir));
+        const QString filePath = qsl("%1/inline.png").arg(exportDir);
+        const auto [exported, message] = mp2dMap->exportAreaToImage(areaId, filePath);
+        QVERIFY2(exported, qPrintable(message));
+        QVERIFY2(!QImage(filePath).isNull(), "the export left its file write to the thread pool although background tasks run inline");
+        QTRY_VERIFY_WITH_TIMEOUT(!exportsInFlight(mp2dMap), 10s);
     }
 
     // A map view can outlive its profile - closeHost() only deleteLater()s the
