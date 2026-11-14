@@ -30,7 +30,9 @@
 #include <QDockWidget>
 #include <QOpenGLContext>
 #include <QSignalSpy>
+#include <QSurfaceFormat>
 #include <QTemporaryDir>
+#include <QWindow>
 #include <QtTest/QtTest>
 
 #include "Host.h"
@@ -49,6 +51,7 @@
 #include "ctelnet.h"
 #include "dlgMapper.h"
 #include "glwidget.h"
+#include "glwidget_integration.h"
 #include "modern_glwidget.h"
 #include "mudlet.h"
 
@@ -820,6 +823,8 @@ private slots:
         pMapper->show3DView(true);
         auto* pMain3D = qobject_cast<ModernGLWidget*>(pMapper->glWidget);
         QVERIFY(pMain3D);
+        // Stand in for views that started: one that could not start stays opaque whatever the background, which would hide what this checks
+        const auto mainStarted = standInForAViewThatStarted(pMain3D);
 
         TMapViewManager* pManager = map()->getViewManager();
         QVERIFY(pManager);
@@ -836,6 +841,7 @@ private slots:
         pView->show3DView(true);
         ModernGLWidget* pView3D = pView->get3DView();
         QVERIFY(pView3D);
+        const auto viewStarted = standInForAViewThatStarted(pView3D);
         GLWidget classic3D(map(), mpHost);
         QVERIFY2(drawsOpaque(pMain3D) && drawsOpaque(pView3D) && drawsOpaque(&classic3D), "a 3D view over an opaque background does not start out opaque");
 
@@ -848,6 +854,104 @@ private slots:
         QVERIFY2(drawsOpaque(pMain3D), "the mapper's 3D view still draws as see-through over an opaque background");
         QVERIFY2(drawsOpaque(pView3D), "a createMapView() 3D view still draws as see-through over an opaque background");
         QVERIFY2(drawsOpaque(&classic3D), "the classic 3D view still draws as see-through over an opaque background");
+    }
+    // Qt draws a view stacked on top over its own children, so the message in place of the map would be hidden
+    void test_aViewThatCouldNotStartStaysOpaqueOverATranslucentBackground()
+    {
+        dlgMapper* pMapper = mapperShowing2DAtThePlayer();
+        QVERIFY(pMapper);
+        pMapper->show3DView(true);
+        auto* pModern = qobject_cast<ModernGLWidget*>(pMapper->glWidget);
+        QVERIFY(pModern);
+        const QString failureBefore = pModern->mFailureMessage;
+        const bool labelShownBefore = pModern->mpFailureLabel && !pModern->mpFailureLabel->isHidden();
+        const QColor priorBackground = mpHost->mBgColor_2;
+        const auto restore = qScopeGuard([this, pMapper, pModern, failureBefore, labelShownBefore, priorBackground]() {
+            pModern->mFailureMessage = failureBefore;
+            if (pModern->mpFailureLabel) {
+                pModern->mpFailureLabel->setVisible(labelShownBefore);
+            }
+            runLua(qsl("setMapBackgroundColor(%1, %2, %3, %4)").arg(priorBackground.red()).arg(priorBackground.green()).arg(priorBackground.blue()).arg(priorBackground.alpha()));
+            pMapper->show3DView(false);
+        });
+        pModern->mFailureMessage.clear();
+        QCOMPARE(runLua(qsl("setMapBackgroundColor(0, 0, 0, 100)")), QString());
+        QVERIFY2(drawsSeeThrough(pModern), "a started 3D view does not draw see-through over a translucent background, so what follows proves nothing");
+
+        // As on macOS, where the view finds out it cannot be shown once the background is already translucent
+        pModern->showFailure(qsl("could not start"));
+        QVERIFY2(drawsOpaque(pModern), "a 3D view that has just said why it could not start stacks on top of its message");
+        QCOMPARE(runLua(qsl("setMapBackgroundColor(0, 0, 0, 90)")), QString());
+        QVERIFY2(drawsOpaque(pModern), "a 3D view showing why it could not start stacks on top of its message once the background changes");
+    }
+
+    // macOS will not share a core profile context with a legacy one, so a window's first 3D view must leave it asking for that view's profile;
+    // the offscreen platform has no context to refuse, so this checks the format asked for
+    void test_aWindowsFirst3DViewSetsTheProfileTheWindowAsksFor()
+    {
+#if !defined(Q_OS_MACOS)
+        QSKIP("only macOS refuses to share between a core profile context and a legacy one");
+#else
+        const QSurfaceFormat defaultBefore = QSurfaceFormat::defaultFormat();
+        const auto restore = qScopeGuard([this, defaultBefore]() {
+            QSurfaceFormat::setDefaultFormat(defaultBefore);
+            mpHost->setExperimentEnabled(qsl("experiment.3dmap.modernmapper"), true);
+        });
+        for (const bool modern : {true, false}) {
+            QVERIFY(mpHost->setExperimentEnabled(qsl("experiment.3dmap.modernmapper"), modern).first);
+            QWidget window;
+            window.winId();
+            // As the mapper is, a widget inside the window rather than the window itself
+            auto* pInside = new QWidget(&window);
+            QOpenGLWidget* pView = GLWidgetFactory::createGLWidget(map(), mpHost, pInside);
+            QCOMPARE(qobject_cast<ModernGLWidget*>(pView) != nullptr, modern);
+            const QString said = modern ? qsl("the modern view") : qsl("the classic view");
+            const QSurfaceFormat asked = window.windowHandle()->requestedFormat();
+            if (modern) {
+                QVERIFY2(asked.profile() == QSurfaceFormat::CoreProfile && asked.version() >= qMakePair(3, 2), "a window whose first 3D view is the modern one does not ask for a core profile");
+                QVERIFY2(QSurfaceFormat::defaultFormat().profile() == QSurfaceFormat::CoreProfile, "a window made after the modern view would not ask for a core profile");
+            } else {
+                QVERIFY2(asked.profile() == QSurfaceFormat::NoProfile && asked.version() < qMakePair(3, 2), "a window whose first 3D view is the classic one does not ask for a legacy context");
+                QVERIFY2(QSurfaceFormat::defaultFormat().profile() == QSurfaceFormat::NoProfile, "a window made after the classic view would not ask for a legacy context");
+            }
+
+            // The window composes with what it got first, so the other kind of view made later must not change what it asks for
+            window.windowHandle()->setSurfaceType(QSurface::OpenGLSurface);
+            GLWidgetFactory::matchWindowTo3DView(pInside, !modern);
+            QVERIFY2(window.windowHandle()->requestedFormat().profile() == asked.profile(), qPrintable(qsl("a window already composing %1 was switched to the other profile").arg(said)));
+        }
+#endif
+    }
+
+    // A createMapView() window is its own, made without the mapper's 3D view having been opened
+    void test_aMapViewsWindowAsksForTheModernViewsProfile()
+    {
+#if !defined(Q_OS_MACOS)
+        QSKIP("only macOS refuses to share between a core profile context and a legacy one");
+#else
+        const QSurfaceFormat defaultBefore = QSurfaceFormat::defaultFormat();
+        QSurfaceFormat legacy = defaultBefore;
+        legacy.setVersion(2, 0);
+        legacy.setProfile(QSurfaceFormat::NoProfile);
+        QSurfaceFormat::setDefaultFormat(legacy);
+        TMapViewManager* pManager = map()->getViewManager();
+        QVERIFY(pManager);
+        const auto [viewId, error] = pManager->createView(mPlayerAreaId);
+        QVERIFY2(viewId, qPrintable(error));
+        const auto restore = qScopeGuard([pManager, viewId = viewId, defaultBefore]() {
+            pManager->closeView(viewId);
+            QSurfaceFormat::setDefaultFormat(defaultBefore);
+        });
+        TMapView* pView = pManager->getView(viewId);
+        QVERIFY(pView);
+        pView->show3DView(true);
+        ModernGLWidget* pView3D = pView->get3DView();
+        QVERIFY(pView3D);
+        QWindow* pWindow = pView3D->window()->windowHandle();
+        QVERIFY2(pWindow, "the map view's window was not made");
+        const QSurfaceFormat asked = pWindow->requestedFormat();
+        QVERIFY2(asked.profile() == QSurfaceFormat::CoreProfile && asked.version() >= qMakePair(3, 2), "a createMapView() window showing the modern 3D view does not ask for a core profile");
+#endif
     }
 };
 

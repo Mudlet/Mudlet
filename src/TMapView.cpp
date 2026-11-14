@@ -28,6 +28,7 @@
 #include "TRoomDB.h"
 #include "utils.h"
 #if defined(INCLUDE_3DMAPPER)
+#include "glwidget_integration.h"
 #include "modern_glwidget.h"
 #endif
 
@@ -390,6 +391,7 @@ void TMapView::show3DView(const bool show)
         return;
     }
     if (show && !mp3DView) {
+        GLWidgetFactory::matchWindowTo3DView(this, true);
         auto* view = new ModernGLWidget(mpMap, mpHost, this);
         view->setObjectName(qsl("mapView3D_%1").arg(mViewId));
         view->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
