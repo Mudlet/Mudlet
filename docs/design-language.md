@@ -1608,7 +1608,7 @@ Stylesheets select on these; setting one after the widget is shown needs an
 | `aboutChipLit` | ...and that chip filled with the accent, which the build channel is |
 | `aboutButton` | An ordinary push button on this dialog |
 | `aboutCopied` | ...one of them for the moment after it has copied |
-| `aboutPrimaryButton` | The one button that is an invitation rather than a control |
+| `aboutPrimaryButton` | The one button that is an invitation rather than a control - the Patreon button, which also carries `uiPrimaryButton` for its look and its states; this property gives it only its bold word and taller face, so its rule writes no colour |
 | `aboutNavGlyph` | Which file a navigation button's glyph is re-inked from |
 | `aboutRestingText` | What a Copy button reads when it is not saying "Copied" |
 | `aboutRichText` | The text a label was given, before its links were inked |
@@ -1626,12 +1626,15 @@ New) and `widget_bottom` (the skip button and the button box):
 | `uiMenuButton` | Shared, not this window's: on Copy, which stays a `QToolButton` so its trailing half can open a menu - see "Buttons" |
 
 The two buttons the button box builds at runtime are named so that a test can
-reach them: `connectButton` and `offlineButton`. Connect keeps
-`setDefault(true)`, and the one rule this window writes of its own -
-`QPushButton:default:enabled` - is what fills it with the accent wash the About
-dialog's primary button carries. The `:enabled` half of that selector matters:
-without it a Connect the validator has switched off would sit lit rather than
-falling back to the shared disabled look.
+reach them: `connectButton` and `offlineButton`. Connect carries
+`uiDesign::scmProp_primaryButton`, as the package exporter's Export button
+does, so the shared recipe draws it as the window's one primary act, and that
+recipe's own `:disabled` rule gives a Connect the validator has switched off the
+ordinary unavailable look rather than leaving it lit. Pressed, it lays
+`hoverSoft` over its deepened wash and inks its word with
+`uiDesign::primaryPressedInk()`, walked on from `accentText` for that one
+fill, so `accentText` itself need not move for every other place it is drawn.
+It keeps `setDefault(true)`, so Return still means Connect.
 
 A field holding a value that cannot be changed carries no property of its own.
 It is drawn by the `:read-only` pseudo-state, which Qt evaluates at paint time,
@@ -2076,9 +2079,9 @@ readable-but-wrong tone would otherwise pass.
 connection dialog's two tabs and its buttons to the recipes: both containers
 holding a button carry a sheet with the push button rules in it, Copy carries
 `uiMenuButton` and is named by a rule of its own, Connect is still the dialog's
-default button and the sheet says what a default button is filled with, and the
-New button's top edge is read off a grab of the window and has to be the
-design's hairline rather than a platform bevel. Both pages carry a sheet built on
+default button and carries `uiPrimaryButton`, which the row's sheet has a rule
+for, and the New button's top edge is read off a grab of the window and has to
+be the design's hairline rather than a platform bevel. Both pages carry a sheet built on
 the `field` surface, the three Connect-to fields are at the dialog's own font
 rather than the 9pt the `.ui` pinned them at, the port field is wide enough for
 five digits and what the recipe leaves either side of them, and a port or a
@@ -2133,6 +2136,12 @@ the strip's check box the same way, so the two windows are held to the same
 mark. Both grab the *window* rather than the control: a control that paints no
 background of its own is grabbed against its own palette, and the card or column
 that actually shows through beside the mark is only in a grab that holds it too.
+`PrimaryButtonStatesTest` draws a primary and a plain push button through the
+style at rest, under the pointer and pressed, under Fusion and the dark theme:
+the primary's hover has to sit nearer the accent than its rest, its press apart
+from its hover, `accentText` has to clear `scmTextMinimumRatio` on the hover and
+`primaryPressedInk()` on the press, and the plain button's three states have to
+stay apart.
 
 **Adding a surface to the design language means adding it to both**: its files
 to `scannedFiles()` in the scan, and its window to the walk in the audit.

@@ -502,6 +502,39 @@ QString rgbaText(const QColor& color, const qreal alpha)
 {
     return qsl("rgba(%1, %2, %3, %4)").arg(QString::number(color.red()), QString::number(color.green()), QString::number(color.blue()), QString::number(alpha, 'f', 3));
 }
+
+// over laid on under as one translucent colour, so a single rule still lays the pair on whatever surface is beneath
+QColor layered(const QColor& under, const QColor& over)
+{
+    const qreal alpha = over.alphaF() + under.alphaF() * (1.0 - over.alphaF());
+    if (alpha <= 0.0) {
+        return under;
+    }
+    const auto channel = [&](const qreal overChannel, const qreal underChannel) {
+        return (overChannel * over.alphaF() + underChannel * under.alphaF() * (1.0 - over.alphaF())) / alpha;
+    };
+    return QColor::fromRgbF(channel(over.redF(), under.redF()), channel(over.greenF(), under.greenF()), channel(over.blueF(), under.blueF()), alpha);
+}
+
+QColor lightnessLimit(const bool darkSurface)
+{
+    return darkSurface ? QColor(Qt::white) : QColor(Qt::black); // theme-fixed: the ends of the lightness axis an ink is walked along, not colours of a theme
+}
+
+// From started towards limit in scmReadabilitySteps steps, stopping at the first that reads on every wash
+QColor walkedToReadOn(const QList<QColor>& washes, const QColor& started, const QColor& limit)
+{
+    const auto readsOnEveryWash = [&washes](const QColor& ink) {
+        return std::all_of(washes.cbegin(), washes.cend(), [&ink](const QColor& wash) {
+            return contrastRatio(ink, wash) >= scmTextMinimumRatio;
+        });
+    };
+    QColor ink = started;
+    for (int step = 1; step <= scmReadabilitySteps && !readsOnEveryWash(ink); ++step) {
+        ink = blend(started, limit, static_cast<qreal>(step) / scmReadabilitySteps);
+    }
+    return ink;
+}
 } // namespace
 
 QString rgba(const QColor& color, const qreal alpha)
@@ -543,7 +576,7 @@ QColor readableOn(const QColor& background, const QColor& wanted, const QColor& 
     }
     // Towards the end of the lightness axis rather than the text colour: the hue says what this is, so only the
     // lightness is spent
-    const QColor limit = background.lightness() < 128 ? QColor(Qt::white) : QColor(Qt::black); // theme-fixed: the ends of the lightness axis walked along below, not colours of a theme
+    const QColor limit = lightnessLimit(background.lightness() < 128);
     for (int step = 1; step <= scmReadabilitySteps; ++step) {
         const QColor moved = blend(wanted, limit, static_cast<qreal>(step) / scmReadabilitySteps);
         if (contrastRatio(background, moved) >= minimumRatio) {
@@ -604,19 +637,12 @@ ThemeTokens themeTokens(const QPalette& themePalette)
     }
     // Drawn on an accent wash wherever it appears, so walked until it reads on the deepest one over each surface
     {
-        const QColor limit = tokens.darkPage ? QColor(Qt::white) : QColor(Qt::black); // theme-fixed: the ends of the lightness axis walked along below, not colours of a theme
+        const QColor limit = lightnessLimit(tokens.darkPage);
         const QColor started = blend(tokens.accent, limit, tokens.darkPage ? scmAccentTextLiftOnDark : scmAccentTextDropOnLight);
-        const QList<QColor> washes{
-                blend(tokens.page, tokens.accent, scmAccentWashStrength), blend(tokens.pane, tokens.accent, scmAccentWashStrength), blend(tokens.card, tokens.accent, scmAccentWashStrength)};
-        const auto readsOnEveryWash = [&washes](const QColor& ink) {
-            return std::all_of(washes.cbegin(), washes.cend(), [&ink](const QColor& wash) {
-                return contrastRatio(ink, wash) >= scmTextMinimumRatio;
-            });
-        };
-        tokens.accentText = started;
-        for (int step = 1; step <= scmReadabilitySteps && !readsOnEveryWash(tokens.accentText); ++step) {
-            tokens.accentText = blend(started, limit, static_cast<qreal>(step) / scmReadabilitySteps);
-        }
+        tokens.accentText = walkedToReadOn(
+                {blend(tokens.page, tokens.accent, scmAccentWashStrength), blend(tokens.pane, tokens.accent, scmAccentWashStrength), blend(tokens.card, tokens.accent, scmAccentWashStrength)},
+                started,
+                limit);
     }
     tokens.marker = QColor::fromHslF(scmMarkerHue, scmMarkerSaturation, tokens.darkPage ? scmMarkerLightnessOnDark : scmMarkerLightnessOnLight);
     // Mixed once as colours and written out of them, so the sheet a rule carries
@@ -639,6 +665,15 @@ QColor stateColor(const qreal hue, const bool darkPage)
 QColor errorInk(const ThemeTokens& tokens)
 {
     return readableOn(tokens.separator, stateColor(scmStateHue_error, tokens.darkPage), tokens.text, scmTextMinimumRatio);
+}
+
+QColor primaryPressedInk(const ThemeTokens& tokens)
+{
+    QList<QColor> washes;
+    for (const QColor& surface : {tokens.page, tokens.pane, tokens.card}) {
+        washes << blend(blend(surface, tokens.accent, scmAccentWashStrength), tokens.text, scmHoverWashStrength);
+    }
+    return walkedToReadOn(washes, tokens.accentText, lightnessLimit(tokens.darkPage));
 }
 
 QString scrollBarStyleSheet(const QString& selectorPrefix, const ThemeTokens& tokens, const QColor& surface)
@@ -1184,11 +1219,15 @@ QString buttonStyleSheet(const ThemeTokens& tokens, const QString& selectorPrefi
         }
     }
 
-    // Last, to win the specificity tie with the resting rules; its own :hover and :disabled follow, or the shared ones
-    // would lose to its resting rule on order alone
+    // Last, to win the specificity tie with the resting rules; its own :hover, :pressed and :disabled follow, or the
+    // shared ones would lose to its resting rule on order alone. :pressed after :hover, which still matches while held
+    QColor deepenedWash = tokens.accent;
+    deepenedWash.setAlphaF(scmAccentWashStrength);
     const QString primary = scoped({qsl("QPushButton[%1=\"true\"]").arg(QString::fromLatin1(scmProp_primaryButton))});
     rules += primary + qsl(" { background-color: %1; color: %2; border: %3px solid %4; }").arg(tokens.accentSoft, tokens.accentText.name(), QString::number(scmInputBorderWidth), tokens.accent.name())
-             + scoped({qsl("QPushButton[%1=\"true\"]:hover").arg(QString::fromLatin1(scmProp_primaryButton))}) + qsl(" { background-color: %1; }").arg(tokens.hoverSoft)
+             + scoped({qsl("QPushButton[%1=\"true\"]:hover").arg(QString::fromLatin1(scmProp_primaryButton))}) + qsl(" { background-color: %1; }").arg(rgba(deepenedWash))
+             + scoped({qsl("QPushButton[%1=\"true\"]:pressed").arg(QString::fromLatin1(scmProp_primaryButton))})
+             + qsl(" { background-color: %1; color: %2; }").arg(rgba(layered(deepenedWash, tokens.hoverWash)), primaryPressedInk(tokens).name())
              + scoped({qsl("QPushButton[%1=\"true\"]:disabled").arg(QString::fromLatin1(scmProp_primaryButton))})
              + qsl(" { color: %1; border: %3px solid %2; background-color: %4; }")
                        .arg(tokens.disabledText.name(), disabledBorderColour(tokens).name(), QString::number(scmInputBorderWidth), disabledFieldColour(tokens).name());
