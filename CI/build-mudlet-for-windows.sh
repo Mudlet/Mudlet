@@ -19,7 +19,8 @@
 #   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ###########################################################################
 
-# Version: 3.4.0    Build profile-guided when MUDLET_PGO_BUILD is set
+# Version: 3.5.0    Link profile-guided builds with ThinLTO
+#          3.4.0    Build profile-guided when MUDLET_PGO_BUILD is set
 #          3.3.0    Fail the script when CMake configuration or build fails
 #          3.2.0    Configure from the ci-windows CMake preset
 #          3.1.0    Switch from MINGW64 to CLANG64
@@ -148,11 +149,14 @@ fi
 
 # A profile-guided build (releases and PTBs) builds twice: first the instrumented benchmarks
 # CI/pgo-train.sh runs to record the profile, then Mudlet built against it.
-# Only the benchmarks in the first pass, as building mudlet would send the
-# instrumented binary's debug files to Sentry.
+# Only the benchmarks in the first pass: pgo-train.sh runs nothing else, and each LTO link is slow.
 if [ "${MUDLET_PGO_BUILD}" = "true" ]; then
+  # ThinLTO, not full LTO: full LTO runs the runner out of memory once the second pass links every
+  # test binary, each of which links all of Mudlet. The cache skips code generation that comes out identical.
+  LTO_ARGS=(-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON "-DCMAKE_EXE_LINKER_FLAGS=-Wl,--thinlto-cache-dir=thinlto-cache")
   echo "Building the instrumented pass of a profile-guided build ..."
-  if ! cmake --preset ci-windows -DMUDLET_PGO=GENERATE; then
+  # Line tables are enough to train on; full debug info makes these three LTO links far slower
+  if ! cmake --preset ci-windows -DMUDLET_PGO=GENERATE -DSENTRY_SEND_DEBUG=0 "${LTO_ARGS[@]}"; then
     echo "=== ERROR: CMake configuration of the instrumented pass failed ==="
     exit 4
   fi
@@ -164,7 +168,7 @@ if [ "${MUDLET_PGO_BUILD}" = "true" ]; then
     echo "=== ERROR: the profile-guided training run failed ==="
     exit 6
   fi
-  PGO_ARGS=(-DMUDLET_PGO=USE)
+  PGO_ARGS=(-DMUDLET_PGO=USE "${LTO_ARGS[@]}")
 else
   PGO_ARGS=()
 fi
