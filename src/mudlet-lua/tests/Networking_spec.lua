@@ -2752,6 +2752,36 @@ describe("The IRC configuration functions round-trip through the profile", funct
         assert.is_string(channel)
       end
     end)
+
+    it("keep the nick they make up when no nick was ever set", function()
+      -- with neither the profile's nick nor the last-used one on disk a nick is
+      -- made up, and it must stay the same nick: restartIrc() reads it again
+      local profileNickFile = getMudletHomeDir() .. "/irc_nick"
+      local lastUsedNickFile = getMudletHomeDir() .. "/../../irc_nick"
+      local nick = getIrcNick()
+      local file = io.open(lastUsedNickFile, "rb")
+      local lastUsedNick = file and file:read("*a")
+      if file then
+        file:close()
+      end
+      finally(function()
+        setIrcNick(nick)
+        if lastUsedNick then
+          local restored = io.open(lastUsedNickFile, "wb")
+          restored:write(lastUsedNick)
+          restored:close()
+        else
+          os.remove(lastUsedNickFile)
+        end
+      end)
+
+      os.remove(profileNickFile)
+      os.remove(lastUsedNickFile)
+      local madeUp = getIrcNick()
+      assert.is_truthy(madeUp:match("^Mudlet%d+$"), madeUp)
+      assert.equals(madeUp, getIrcNick())
+      assert.equals(madeUp, getConfig("ircNickName"))
+    end)
   end)
 
   describe("setIrcNick", function()
