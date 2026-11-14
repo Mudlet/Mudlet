@@ -69,6 +69,7 @@
 #include <QToolTip>
 #include <QVector2D>
 #include <QVBoxLayout>
+#include <QWindow>
 #include <QVector2D>
 #include <algorithm>
 #include <array>
@@ -97,7 +98,7 @@ ModernGLWidget::ModernGLWidget(TMap* pMap, Host* pHost, QWidget* parent)
 , mIndexBuffer(QOpenGLBuffer::IndexBuffer)
 , mpHost(pHost)
 {
-    // Per widget rather than application wide, so the classic 3D view keeps its compatibility profile context
+    // Per widget, as the classic 3D view takes the default format for its compatibility profile context
     QSurfaceFormat format = QSurfaceFormat::defaultFormat();
     format.setVersion(3, 3);
     format.setProfile(QSurfaceFormat::CoreProfile);
@@ -524,6 +525,7 @@ void ModernGLWidget::showFailure(const QString& message, const QString& advice)
     const QString tryClassic = tr("Turn off \"Modern 3D mapper\" in <a href=\"settings\">Settings</a>, Advanced, Experiments to try the classic 3D view; if that stays blank too, use the 2D map.");
     mpFailureLabel->setText(qsl("<p>%1</p><p>%2</p>").arg(message.toHtmlEscaped(), advice.isEmpty() ? tryClassic : advice.toHtmlEscaped()));
     mpFailureLabel->show();
+    applyStacking();
 }
 
 void ModernGLWidget::initializeGL()
@@ -535,9 +537,20 @@ void ModernGLWidget::initializeGL()
     if (mpFailureLabel) {
         mpFailureLabel->hide();
     }
+    applyStacking();
 
     // Reparenting to another window replaces the context, and everything made in the old one goes with it
     connect(context(), &QOpenGLContext::aboutToBeDestroyed, this, &ModernGLWidget::cleanup);
+
+    // Qt asks for every QOpenGLWidget's context to share with its window's, and drops the share when the platform refuses it; the window then
+    // shows its own texture with the same id. A window not yet composing with OpenGL has nothing to share, which grabFramebuffer() allows
+    if (const QWindow* pWindow = window()->windowHandle(); pWindow && pWindow->surfaceType() == QSurface::OpenGLSurface && !context()->shareContext()) {
+        //: Shown in place of the 3D map when the window cannot show what the modern 3D mapper draws
+        showFailure(tr("The modern 3D mapper cannot show its map in this window."),
+                    //: Second paragraph of the message shown in place of the 3D map when the window cannot show what the modern 3D mapper draws
+                    tr("On macOS this happens when the classic 3D view was opened in the same window first, from this profile or another. Restart Mudlet to use the modern 3D mapper here."));
+        return;
+    }
 
     const QSurfaceFormat actualFormat = context()->format();
     if (actualFormat.version() < qMakePair(3, 3)) {
@@ -3339,8 +3352,14 @@ void ModernGLWidget::applyStyle()
     if (mapStyle().playerMarker != MapStyle::PlayerMarker::Pulse) {
         stopPulse();
     }
-    // Only an opaque view may tell Qt that it paints over everything behind it
-    const bool translucent = backgroundColor().alpha() < 255;
+    applyStacking();
+}
+
+void ModernGLWidget::applyStacking()
+{
+    // Only an opaque view may tell Qt that it paints over everything behind it; a failure's message is a child, which
+    // Qt draws under a view stacked on top
+    const bool translucent = backgroundColor().alpha() < 255 && mFailureMessage.isEmpty();
     setAttribute(Qt::WA_OpaquePaintEvent, !translucent);
     setAttribute(Qt::WA_AlwaysStackOnTop, translucent);
     // Qt asks for the window, not only this widget, to be repainted when stacking on top changes
