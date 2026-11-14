@@ -153,7 +153,7 @@ fi
 if [ "${MUDLET_PGO_BUILD}" = "true" ]; then
   # ThinLTO, not full LTO: full LTO runs the runner out of memory once the second pass links every
   # test binary, each of which links all of Mudlet. The cache skips code generation that comes out identical.
-  LTO_ARGS=(-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON -DCMAKE_EXE_LINKER_FLAGS=-Wl,--thinlto-cache-dir=thinlto-cache)
+  LTO_ARGS=(-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON "-DCMAKE_EXE_LINKER_FLAGS=-Wl,--thinlto-cache-dir=thinlto-cache")
   echo "Building the instrumented pass of a profile-guided build ..."
   # Line tables are enough to train on; full debug info makes these three LTO links far slower
   if ! cmake --preset ci-windows -DMUDLET_PGO=GENERATE -DSENTRY_SEND_DEBUG=0 "${LTO_ARGS[@]}"; then
