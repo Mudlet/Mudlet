@@ -2058,12 +2058,15 @@ void TMapPainter::paintRoomExits(QPainter& painter,
             const QVector<QPointF> path = areaExit ? QVector<QPointF>{} : exitLinePath(*room, exit, p2.toPointF(), p1.toPointF(), &leavesByStub);
             if (!areaExit && !exit.drawnByCustomLine) {
                 // Non-area exit:
-                // Exits to the same room overlap, so one being one-way arrows them all.
-                bool oneWayToDestination = false;
-                for (const ExitToPaint& other : exitList) {
-                    if (other.oneWay && other.destinationId == rID) {
-                        oneWayToDestination = true;
-                        break;
+                // Straight exits to the same room overlap, so one being one-way arrows them all. A bent one is
+                // drawn apart and keeps its own.
+                bool oneWayToDestination = exit.oneWay;
+                if (path.size() == 2) {
+                    for (const ExitToPaint& other : exitList) {
+                        if (other.oneWay && other.destinationId == rID && exitLinePath(*room, other, p2.toPointF(), p1.toPointF()).size() == 2) {
+                            oneWayToDestination = true;
+                            break;
+                        }
                     }
                 }
                 if (!oneWayToDestination) {
@@ -3833,7 +3836,7 @@ std::pair<bool, QString> TMapPainter::exportArea(int areaId, const QString& file
 
             // Now draw regular exits - use exact same logic as paintRoomExits
             QList<std::pair<int, QString>> roomExitList;
-            QList<int> roomOneWayExits;
+            QList<std::pair<int, QString>> roomOneWayExits;
 
             // Helper function to add exit and check for one-way
             auto addExitAndCheckOneWay = [&](const QString& dirKey, int exitRoomId) {
@@ -3861,7 +3864,7 @@ std::pair<bool, QString> TMapPainter::exportArea(int areaId, const QString& file
                             isOneWay = true;
 
                         if (isOneWay) {
-                            roomOneWayExits.push_back(exitRoomId);
+                            roomOneWayExits.push_back({exitRoomId, dirKey});
                         }
                     }
                 }
@@ -3994,7 +3997,24 @@ std::pair<bool, QString> TMapPainter::exportArea(int areaId, const QString& file
                     const QVector<QPointF> path = exitLinePath(*room, exit, exitLine.p1(), exitLine.p2(), &leavesByStub);
                     doorLine = QLineF(path.at(0), path.at(1));
 
-                    if (roomOneWayExits.contains(exitRoomId)) {
+                    // Straight exits to the same room overlap, so one being one-way dashes them all. A bent one is
+                    // drawn apart and keeps its own.
+                    bool oneWay = roomOneWayExits.contains({exitRoomId, exitKey});
+                    if (path.size() == 2) {
+                        for (const auto& [otherRoomId, otherKey] : roomOneWayExits) {
+                            ExitToPaint other = exit;
+                            for (int otherDirection = DIR_NORTH; otherDirection <= DIR_SOUTHWEST; ++otherDirection) {
+                                if (TRoom::dirCodeToShortString(otherDirection) == otherKey) {
+                                    other.direction = otherDirection;
+                                }
+                            }
+                            if (otherRoomId == exitRoomId && exitLinePath(*room, other, exitLine.p1(), exitLine.p2()).size() == 2) {
+                                oneWay = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (oneWay) {
                         // Draw one-way exit with dashed line
                         QPen oneWayPen = pen;
                         oneWayPen.setStyle(Qt::DashLine);
