@@ -462,6 +462,8 @@ private:
     QString getNewEnvironOSCHyperlinksSelection();
     QString getNewEnvironOSCHyperlinksSpoiler();
     QString getNewEnvironOSCHyperlinksDisabled();
+    QString getNewEnvironOSCHyperlinksGmcp();
+    QString getNewEnvironOSCHyperlinksLocal();
     QString getNewEnvironScreenReader();
     QString getNewEnvironTruecolor();
     QString getNewEnvironTLS();

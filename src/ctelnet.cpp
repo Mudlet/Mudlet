@@ -2896,6 +2896,16 @@ QString cTelnet::getNewEnvironOSCHyperlinksDisabled()
     return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
 }
 
+QString cTelnet::getNewEnvironOSCHyperlinksGmcp()
+{
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
+}
+
+QString cTelnet::getNewEnvironOSCHyperlinksLocal()
+{
+    return mpHost->mEnableOSC8Hyperlinks ? qsl("1") : qsl("0");
+}
+
 bool cTelnet::oscHyperlinkConfigFeatureEnabled()
 {
     return getNewEnvironOSCHyperlinksStyleBasic() == qsl("1") || getNewEnvironOSCHyperlinksStyleStates() == qsl("1") || getNewEnvironOSCHyperlinksTooltip() == qsl("1")
@@ -2979,6 +2989,8 @@ QMap<QString, QPair<bool, QString>> cTelnet::getNewEnvironDataMap()
     newEnvironDataMap.insert(qsl("OSC_HYPERLINKS_SELECTION"), qMakePair(isUserVar, getNewEnvironOSCHyperlinksSelection()));
     newEnvironDataMap.insert(qsl("OSC_HYPERLINKS_SPOILER"), qMakePair(isUserVar, getNewEnvironOSCHyperlinksSpoiler()));
     newEnvironDataMap.insert(qsl("OSC_HYPERLINKS_DISABLED"), qMakePair(isUserVar, getNewEnvironOSCHyperlinksDisabled()));
+    newEnvironDataMap.insert(qsl("OSC_HYPERLINKS_GMCP"), qMakePair(isUserVar, getNewEnvironOSCHyperlinksGmcp()));
+    newEnvironDataMap.insert(qsl("OSC_HYPERLINKS_LOCAL"), qMakePair(isUserVar, getNewEnvironOSCHyperlinksLocal()));
     newEnvironDataMap.insert(qsl("SCREEN_READER"), qMakePair(isUserVar, getNewEnvironScreenReader()));
     newEnvironDataMap.insert(qsl("TRUECOLOR"), qMakePair(isUserVar, getNewEnvironTruecolor()));
     newEnvironDataMap.insert(qsl("TLS"), qMakePair(isUserVar, getNewEnvironTLS()));

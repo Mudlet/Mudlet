@@ -59,6 +59,7 @@
 #include "dlgProfilePreferences.h"
 #include "mudlet.h"
 #include "TMainConsole.h"
+#include "TTextEdit.h"
 #include "utils.h"
 
 #include "GroupedTest.h"
@@ -551,6 +552,175 @@ private slots:
                  "the client never sent Core.Supports.Set");
         QVERIFY2(supports.contains(qsl(R"("Client.Media 2")")), qPrintable(supports));
         QVERIFY2(supports.contains(qsl(R"("Char.Login 2")")), qPrintable(supports));
+    }
+
+    QStringList gmcpLinkCommands(Host* host)
+    {
+        QByteArray link("\x1b]8;;gmcp:IRE.Target.Set%20%22rat%22\x1b\\GMCP_LINK\x1b]8;;\x1b\\\r\n");
+        host->mTelnet.loopbackTest(link);
+        TMainConsole* console = host->mainConsoleView();
+        int linkId = 0;
+        for (int line = console->buffer.getLastLineNumber(); line >= 0 && linkId == 0; --line) {
+            linkId = console->buffer.getLinkIndexAt(line, 0);
+        }
+        return linkId ? console->getLinkStore().getLinksConst(linkId) : QStringList();
+    }
+
+    // Prints the link and presses Return on it, the way a keyboard player activates one
+    void activateGmcpLink(Host* host, QByteArray link, const int times)
+    {
+        host->mTelnet.loopbackTest(link);
+        TMainConsole* console = host->mainConsoleView();
+        for (int line = console->buffer.getLastLineNumber(); line >= 0; --line) {
+            if (console->buffer.getLinkIndexAt(line, 0)) {
+                host->setCaretEnabled(true);
+                console->mUpperPane->setCaretPosition(line, 0);
+                for (int i = 0; i < times; ++i) {
+                    QKeyEvent activate(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+                    QApplication::sendEvent(console->mUpperPane, &activate);
+                }
+                host->setCaretEnabled(false);
+                return;
+            }
+        }
+    }
+
+    void testAGmcpSelectionLinkTellsTheGameItsState()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        activateGmcpLink(host,
+                         QByteArray("\x1b]8;;gmcp:Game.Pref.Set%20%7B%22pref%22%3A%22hints%22%7D?config={\"selection\":{\"group\":\"prefs\",\"value\":\"hints\",\"exclusive\":false}}\x1b\\GMCP_"
+                                    "LINK\x1b]8;;\x1b\\\r\n"),
+                         2);
+
+        const QString selected = qsl(R"(Game.Pref.Set {"pref":"hints","selected":true})");
+        const QString cleared = qsl(R"(Game.Pref.Set {"pref":"hints","selected":false})");
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return mpServer->receivedGmcp().contains(cleared);
+                         },
+                         3000),
+                 qPrintable(mpServer->receivedGmcp().join(QChar::LineFeed)));
+        QCOMPARE(mpServer->receivedGmcp().count(selected), 1);
+        QVERIFY(mpServer->receivedGmcp().indexOf(selected) < mpServer->receivedGmcp().indexOf(cleared));
+    }
+
+    // Once a link has a menu its own URI is not used, so its selection has no callback to send
+    void testAOneItemMenuOnAGmcpSelectionLinkSendsTheItem()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        activateGmcpLink(
+                host,
+                QByteArray("\x1b]8;;gmcp:Game.Base?config={\"selection\":{\"group\":\"oneItem\",\"value\":\"v\"},\"menu\":[{\"Pick\":\"gmcp:Game.Chosen\"}]}\x1b\\GMCP_LINK\x1b]8;;\x1b\\\r\n"),
+                1);
+
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return mpServer->receivedGmcp().contains(qsl("Game.Chosen"));
+                         },
+                         3000),
+                 "the item was not sent");
+        QTest::qWait(100);
+        for (const QString& message : mpServer->receivedGmcp()) {
+            QVERIFY2(!message.startsWith(qsl("Game.Base")), qPrintable(message));
+        }
+    }
+
+    void testAGmcpLinkSendsOneMessageAndTypesNothing()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        const QStringList commands = gmcpLinkCommands(host);
+        QCOMPARE(commands.size(), 1);
+
+        host->mLuaInterpreter.compileAndExecuteScript(commands.first());
+        const auto sent = [this]() {
+            return mpServer->receivedGmcp().count(qsl("IRE.Target.Set \"rat\""));
+        };
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return sent() > 0;
+                         },
+                         3000),
+                 "the message never reached the game");
+        QTest::qWait(100);
+        QCOMPARE(sent(), 1);
+        QVERIFY2(!mpServer->receivedText().contains("IRE.Target"), "the message was typed at the game");
+    }
+
+    // With GMCP off the message has nowhere to go, and it must not be typed at the game instead
+    void testAGmcpLinkSendsNothingWhileGmcpIsOff()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        const QStringList commands = gmcpLinkCommands(host);
+        QCOMPARE(commands.size(), 1);
+
+        host->mEnableGMCP = false;
+        const int connections = mpServer->connectionCount();
+        host->mTelnet.reconnect();
+        QVERIFY(QTest::qWaitFor(
+                [&]() {
+                    return mpServer->connectionCount() > connections;
+                },
+                5000));
+        QVERIFY(QTest::qWaitFor(
+                [&]() {
+                    return host->mTelnet.getConnectionState() == QAbstractSocket::ConnectedState;
+                },
+                5000));
+        QTest::qWait(200);
+        QVERIFY(!host->mTelnet.isGMCPEnabled());
+        host->mLuaInterpreter.compileAndExecuteScript(commands.first());
+        QTest::qWait(200);
+        QCOMPARE(mpServer->receivedGmcp().count(qsl("IRE.Target.Set \"rat\"")), 0);
+        QVERIFY2(!mpServer->receivedText().contains("IRE.Target"), "the message was typed at the game");
+    }
+
+    // The game never hears of the click, so the link must not look chosen or followed, and the player is told why
+    void testAGmcpLinkClickedWhileGmcpIsOffChangesNothingAndSaysWhy()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        host->mEnableGMCP = false;
+        const int connections = mpServer->connectionCount();
+        host->mTelnet.reconnect();
+        QVERIFY(QTest::qWaitFor(
+                [&]() {
+                    return mpServer->connectionCount() > connections;
+                },
+                5000));
+        QVERIFY(QTest::qWaitFor(
+                [&]() {
+                    return host->mTelnet.getConnectionState() == QAbstractSocket::ConnectedState;
+                },
+                5000));
+        QTest::qWait(200);
+        QVERIFY(!host->mTelnet.isGMCPEnabled());
+
+        activateGmcpLink(host,
+                         QByteArray("\x1b]8;;gmcp:Game.Pref.Set%20%7B%22pref%22%3A%22hints%22%7D?config={\"selection\":{\"group\":\"offPrefs\",\"value\":\"hints\",\"exclusive\":false}}\x1b\\GMCP_"
+                                    "LINK\x1b]8;;\x1b\\\r\n"),
+                         1);
+        TMainConsole* console = host->mainConsoleView();
+        int linkId = 0;
+        for (int line = console->buffer.getLastLineNumber(); line >= 0 && linkId == 0; --line) {
+            linkId = console->buffer.getLinkIndexAt(line, 0);
+        }
+        QVERIFY(linkId);
+        QVERIFY2(!console->buffer.isLinkVisited(linkId), "the link was marked followed");
+        QVERIFY2(!console->getHyperlinkSelectionManager().isSelected(qsl("offPrefs"), qsl("hints")), "the link was shown as chosen");
+        const auto told = [console]() {
+            for (int line = console->buffer.getLastLineNumber(); line >= 0; --line) {
+                if (console->buffer.lineBuffer.value(line).contains(qsl("GMCP is off for this profile"))) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        QVERIFY2(QTest::qWaitFor(told, 3000), "the player was not told why nothing happened");
     }
 
     // ---- Char.Login.Credentials / hand-off ---------------------------------

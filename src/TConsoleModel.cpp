@@ -1082,21 +1082,39 @@ TConsoleModel::LinkFollowed TConsoleModel::linkMayRun(const int linkIndex)
     return LinkFollowed::ran;
 }
 
-bool TConsoleModel::runLink(const int linkIndex, const int item, const bool fromMenu)
+bool TConsoleModel::runLink(const int linkIndex, const int item, const bool fromMenu, const bool selectionApplied)
 {
     const QStringList commands = buffer.mLinkStore.getLinksConst(linkIndex);
     if (!mpHost || item < 0 || item >= commands.size()) {
         return false;
     }
+    // Checked before anything changes, so a selection the game never hears of is not shown as chosen
+    if (gmcpCannotSend(linkIndex, item, fromMenu)) {
+        if (mpHost->mEnableGMCP) {
+            //: Shown when the player clicks a game's link that sends a GMCP message, and the game did not agree to GMCP on this connection
+            mpHost->postMessage(QCoreApplication::translate("TConsoleModel", "[ INFO ]  - This link sends a GMCP message, which the game has not turned on for this connection."));
+        } else {
+            //: Shown when the player clicks a game's link that sends a GMCP message while GMCP is off in this profile's preferences; the path names the Preferences tab and group
+            mpHost->postMessage(QCoreApplication::translate(
+                    "TConsoleModel", "[ INFO ]  - This link sends a GMCP message, and GMCP is off for this profile. Turn it on under Preferences, General, Game protocols, and reconnect."));
+        }
+        return false;
+    }
     QString command = commands.at(item);
     const int luaReference = buffer.mLinkStore.getReference(linkIndex).value(item, 0);
     const Mudlet::HyperlinkStyling styling = buffer.mLinkStore.getStyling(linkIndex);
-    if (styling.selection.hasSelectionSettings) {
+    if (styling.selection.hasSelectionSettings && !selectionApplied) {
         applyLinkSelection(linkIndex, command, styling.selection);
     }
-    mHyperlinkVisibilityManager.onLinkClicked(linkIndex);
+    // Opening the menu hides nothing, or the link would be gone with nothing picked
+    if (fromMenu || !buffer.linkOpensItsMenu(linkIndex)) {
+        mHyperlinkVisibilityManager.onLinkClicked(linkIndex);
+    }
     bool ran = false;
-    if (luaReference) {
+    if (!fromMenu && buffer.linkOpensItsMenu(linkIndex)) {
+        // Activating it runs no item: the caller opens its menu, and only a pick from that runs one
+        ran = true;
+    } else if (luaReference) {
         ran = mpHost->mLuaInterpreter.callAnonymousFunction(luaReference, fromMenu ? qsl("echoPopup") : qsl("echoLink"));
     } else {
         // An empty command runs nothing, which is no error
@@ -1106,10 +1124,20 @@ bool TConsoleModel::runLink(const int linkIndex, const int item, const bool from
     return ran;
 }
 
-void TConsoleModel::runMenuPick(const int linkIndex, const qint64 issue, const int item)
+bool TConsoleModel::gmcpCannotSend(const int linkIndex, const int item, const bool fromMenu) const
+{
+    const QStringList commands = buffer.mLinkStore.getLinksConst(linkIndex);
+    if (!mpHost || item < 0 || item >= commands.size() || !buffer.mLinkStore.hasStyling(linkIndex) || (!fromMenu && buffer.linkOpensItsMenu(linkIndex))) {
+        return false;
+    }
+    // Only an OSC 8 link has styling, and its commands are the ones TBuffer::decodeOSC() wrote
+    return commands.at(item).startsWith(qsl("sendGMCP(")) && mpHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectedState && !mpHost->mTelnet.isGMCPEnabled();
+}
+
+void TConsoleModel::runMenuPick(const int linkIndex, const qint64 issue, const int item, const bool selectionApplied)
 {
     if (buffer.mLinkStore.issueOf(linkIndex) == issue) {
-        runLink(linkIndex, item, true);
+        runLink(linkIndex, item, true, selectionApplied);
     }
 }
 
@@ -1139,8 +1167,20 @@ void TConsoleModel::applyLinkSelection(const int linkIndex, QString& command, co
         }
     }
 
+    // The pointer, a pressed button and focus outrank being selected, so a link in one of those states keeps it
+    const auto stateFor = [this](int link, bool linkSelected) {
+        const auto current = buffer.getLinkState(link);
+        if (current == Mudlet::HyperlinkStyling::StateDisabled || current == Mudlet::HyperlinkStyling::StateActive || current == Mudlet::HyperlinkStyling::StateHover) {
+            return current;
+        }
+        if (buffer.showsFocus(link)) {
+            return Mudlet::HyperlinkStyling::StateFocusVisible;
+        }
+        return linkSelected ? Mudlet::HyperlinkStyling::StateSelected : Mudlet::HyperlinkStyling::StateDefault;
+    };
+
     buffer.setLinkSelected(linkIndex, selected);
-    buffer.setLinkState(linkIndex, selected ? Mudlet::HyperlinkStyling::StateSelected : Mudlet::HyperlinkStyling::StateDefault);
+    buffer.setLinkState(linkIndex, stateFor(linkIndex, selected));
     buffer.updateLinkCharacters(linkIndex);
 
     if (!mHyperlinkSelectionManager.isGroupExclusive(group)) {
@@ -1156,7 +1196,7 @@ void TConsoleModel::applyLinkSelection(const int linkIndex, QString& command, co
         const QList<int> memberLinks = buffer.mLinkStore.getLinkIdsByGroupValue(group, member);
         for (const int memberLink : memberLinks) {
             buffer.setLinkSelected(memberLink, memberSelected);
-            buffer.setLinkState(memberLink, memberSelected ? Mudlet::HyperlinkStyling::StateSelected : Mudlet::HyperlinkStyling::StateDefault);
+            buffer.setLinkState(memberLink, stateFor(memberLink, memberSelected));
             buffer.updateLinkCharacters(memberLink);
         }
     }

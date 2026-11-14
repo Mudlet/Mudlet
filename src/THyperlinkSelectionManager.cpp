@@ -19,6 +19,7 @@
  ***************************************************************************/
 
 #include "THyperlinkSelectionManager.h"
+#include "GmcpLinkUri.h"
 #include "LuaLiteral.h"
 #include "utils.h"
 
@@ -112,7 +113,10 @@ QString THyperlinkSelectionManager::modifyUriForSelection(Mudlet::HyperlinkStyli
         return qsl("send(%1, false)").arg(LuaLiteral::quote(command));
     case Mudlet::HyperlinkStyling::ActionPrompt:
         return qsl("sendCmdLine(%1)").arg(LuaLiteral::quote(command));
+    case Mudlet::HyperlinkStyling::ActionGmcp:
+        return qsl("sendGMCP(%1)").arg(LuaLiteral::quote(gmcpMessageWithSelected(baseCommand, isSelected)));
     case Mudlet::HyperlinkStyling::ActionOpenUrl:
+    case Mudlet::HyperlinkStyling::ActionLocal:
     case Mudlet::HyperlinkStyling::ActionNone:
         break;
     }
