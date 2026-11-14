@@ -762,6 +762,18 @@ describe("Downloads and HTTP verbs against the local fixture server", function()
       assert.is_true(contains(body, "body=file body with no data argument"), body)
     end)
 
+    it("sends data holding NUL and non-UTF-8 bytes unchanged", function()
+      if noFixtureServer() then
+        return
+      end
+      -- a binary part of a multipart form, say
+      assert.is_true(postHTTP("a\0b\255c", fixtureUrl("/echo")))
+
+      local event, _, body = waitForEvent("sysPostHttpDone", 2000)
+      assert.equals("sysPostHttpDone", event)
+      assert.is_true(contains(body, "bodyhex=610062ff63\n"), body)
+    end)
+
     it("raises sysPostHttpError when the endpoint refuses the verb", function()
       if noFixtureServer() then
         return
