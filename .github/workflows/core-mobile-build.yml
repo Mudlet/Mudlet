@@ -16,6 +16,7 @@ on:
       - 'CMakeLists.txt'
       - 'CMakePresets.json'
       - 'CI/core-mobile-smoke.lua'
+      - 'CI/android-lua51/**'
       - '.github/workflows/core-mobile-build.yml'
   workflow_dispatch:
 
@@ -153,3 +154,16 @@ jobs:
             echo "::error::a Lua C module was not found in mudlet_core"
             exit 1
           fi
+
+  android-lua51:
+    name: Run the bundled Lua 5.1 under Android's FORTIFY
+    runs-on: ubuntu-22.04
+    if: ${{ github.repository_owner == 'Mudlet' }}
+    concurrency:
+      group: ${{ github.workflow }}-lua51-${{ github.event.pull_request.number || github.run_id }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build Lua 5.1 for Android and run it
+        run: CI/android-lua51/check.sh "${ANDROID_NDK_LATEST_HOME:?the runner image has no Android NDK}" "$RUNNER_TEMP/android-lua51"
