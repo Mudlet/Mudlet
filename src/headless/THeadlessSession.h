@@ -287,11 +287,12 @@ public:
         bool visited = false;
         // Chosen, in its selection group
         bool selected = false;
-        // How the GUI paints the link in its state now, which may differ from its runs as sent: each is empty where
-        // the run's own applies, and styles replaces only the run's bold, italic, underline, overline and strike-out
+        // How the GUI paints the link in its state now; each is empty where the run's own applies. styles turns on or
+        // off those of bold, italic, underline, overline and strike-out in stylesGiven, and the run keeps the rest.
         std::optional<QColor> foreground;
         std::optional<QColor> background;
         std::optional<TextStyles> styles;
+        TextStyles stylesGiven;
     };
     // The link a run names, while the main console holds it; nullopt for 0, an id it does not hold and with no profile
     // open. A getter, so it may be called from any handler.

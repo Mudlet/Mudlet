@@ -56,7 +56,7 @@ std::optional<THeadlessSession::Link> THeadlessSession::windowLink(const QString
     link.concealed = model.mHyperlinkVisibilityManager.isLinkConcealed(id);
     link.visited = buffer.isLinkVisited(id);
     link.selected = buffer.isLinkSelected(id);
-    // As TBuffer::updateLinkCharacters() paints the link's characters
+    // As TBuffer::drawingOf() turns the style into what goes on the characters
     if (styling.hasCustomStyling) {
         if (styling.hasForegroundColor) {
             link.foreground = styling.foregroundColor;
@@ -65,12 +65,20 @@ std::optional<THeadlessSession::Link> THeadlessSession::windowLink(const QString
             link.background = styling.backgroundColor;
         }
         TextStyles styles;
-        styles.setFlag(TextStyle::Bold, styling.isBold);
-        styles.setFlag(TextStyle::Italic, styling.isItalic);
-        styles.setFlag(TextStyle::Underline, styling.isUnderlined);
-        styles.setFlag(TextStyle::Overline, styling.isOverlined);
-        styles.setFlag(TextStyle::StrikeOut, styling.isStrikeOut);
-        link.styles = styles;
+        const auto give = [&styles, &link](const TextStyle style, const bool names, const bool on) {
+            if (names || on) {
+                link.stylesGiven.setFlag(style);
+                styles.setFlag(style, on);
+            }
+        };
+        give(TextStyle::Bold, styling.namesBold, styling.isBold);
+        give(TextStyle::Italic, styling.namesItalic, styling.isItalic);
+        give(TextStyle::Underline, styling.namesUnderline, styling.isUnderlined);
+        give(TextStyle::Overline, styling.namesOverline, styling.isOverlined);
+        give(TextStyle::StrikeOut, styling.namesStrikeOut, styling.isStrikeOut);
+        if (link.stylesGiven.toInt()) {
+            link.styles = styles;
+        }
     }
     return link;
 }

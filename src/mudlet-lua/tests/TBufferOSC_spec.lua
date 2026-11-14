@@ -1009,10 +1009,9 @@ describe("Tests TBuffer OSC sequence handling", function()
     end)
   end)
 
-  -- A link the game marks as already selected is drawn in its selected style,
-  -- which takes over from the formatting the game wrapped it in once the line
-  -- it is on is committed - and a flush marker can commit the start of that
-  -- line, link and all, before the rest of it has arrived
+  -- A link the game marks as selected shows its selected style over the game's
+  -- own formatting once its line is committed, even when a flush marker
+  -- commits the start of the line first
   describe("Tests OSC 8 links that start out selected", function()
     local italic = "\027[3m"
     local selectedLink = "\027]8;;send:x?config={\"selection\":{\"group\":\"g\",\"value\":\"v\",\"selected\":true},"
@@ -1030,14 +1029,14 @@ describe("Tests TBuffer OSC sequence handling", function()
           local format = getTextFormat("main")
           moveCursorEnd("main")
           assert.are.same({ 255, 0, 0 }, format.foreground)
-          assert.is_false(format.italic)
+          assert.is_true(format.italic)
           return
         end
       end
       error(needle .. " is not on any of the last lines")
     end
 
-    it("should draw a link in its selected style alone", function()
+    it("should draw a link in its selected style over the game's formatting", function()
       assert.is_true(feedTriggers("SELWHOLE1 " .. italic .. selectedLink .. "picked" .. closeLink .. " SELWHOLE1\n"))
       assertSelectedStyle("SELWHOLE1", "picked")
     end)

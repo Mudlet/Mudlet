@@ -2710,6 +2710,8 @@ void TConsole::setCaretMode(bool enabled)
         Q_ASSERT_X(!mUpperPane->focusProxy(), "TConsole:setCaretMode(false) FAIL", "About to set a focusPolicy but there is a focusProxy in place that will get it instead!");
         mUpperPane->setFocusPolicy(Qt::ClickFocus);
         setProxyForFocus(mpCommandLine);
+        // Only the caret gives a link focus, so the link it was on stops showing it
+        buffer.setFocusedLink(0);
         // Carefull - if there is a FocusProxy for this element then IT gets the policy
     }
 }
