@@ -20,7 +20,7 @@ cmake --build "$build" --parallel "$(nproc)"
 # A __*_chk reference in lgc.c is one of its strchr(svalue(...)) calls, which abort. lstrlib.c's fortified
 # calls show that FORTIFY is on at all, without which the lgc.c check would pass for nothing.
 undefined=$("$nm" -A --undefined-only "$build/lua51/liblua51.a")
-chk_in() { sed -n "s/.*:$1\.o: *U //p" <<< "$undefined" | grep -E '^__.+_chk$' | grep -v '^__stack_chk_' || true; }
+chk_in() { sed -En "s/.*:$1\.o: *U (__.+_chk)$/\1/p" <<< "$undefined"; }
 [ -n "$(chk_in lstrlib.c)" ] \
     || { echo "lstrlib.c makes no fortified call: is the NDK no longer building with _FORTIFY_SOURCE?" >&2; exit 1; }
 found=$(chk_in lgc.c)
