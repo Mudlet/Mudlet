@@ -22,11 +22,14 @@
 
 
 #include "dlgRoomProperties.h"
+#include "ColourValue.h"
 #include "Host.h"
 #include "RoomAppearance.h"
 #include "TMap.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
+#include "mudlet.h"
+#include "uiDesign.h"
 
 #include <QColorDialog>
 #include <QMenu>
@@ -39,6 +42,31 @@ dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
 {
     // init generated dialog
     setupUi(this);
+
+    // Compact, as the colour rows in the settings are, so a colour row looks the same wherever it stands
+    mpSymbolColour = new uiDesign::ColourValue(widget_symbolColor, uiDesign::ColourRowSize::Compact);
+    mpSymbolColour->setObjectName(qsl("roomPropertiesSymbolColour"));
+    //: Room properties dialog, screen reader name of the field showing the room symbol's color as a code, which a code can be typed into
+    mpSymbolColour->setAccessibleName(tr("Symbol color"));
+    //: Room properties dialog, in the field for the room symbol's color while no color was chosen for it: the symbol is then drawn in black or white, whichever stands out against the room
+    mpSymbolColour->setDefaultWord(tr("Automatic"));
+    horizontalLayout_widget_symbolColor->insertWidget(horizontalLayout_widget_symbolColor->indexOf(pushButton_setSymbolColor), mpSymbolColour);
+    mpBorderColour = new uiDesign::ColourValue(widget_borderColor, uiDesign::ColourRowSize::Compact);
+    mpBorderColour->setObjectName(qsl("roomPropertiesBorderColour"));
+    //: Room properties dialog, screen reader name of the field showing the room border's color as a code, which a code can be typed into
+    mpBorderColour->setAccessibleName(tr("Border color"));
+    horizontalLayout_widget_borderColor->insertWidget(horizontalLayout_widget_borderColor->indexOf(pushButton_setBorderColor), mpBorderColour);
+    horizontalLayout_widget_borderColor->insertWidget(horizontalLayout_widget_borderColor->indexOf(pushButton_setBorderColor), mpBorderColour->opacityBox());
+    mpBorderColour->opacityBox()->setObjectName(qsl("roomPropertiesBorderOpacity"));
+    mpSymbolColour->setChooseButton(pushButton_setSymbolColor);
+    mpBorderColour->setChooseButton(pushButton_setBorderColor);
+    restyleColourRows();
+    connect(mudlet::self(), &mudlet::signal_appearanceChanged, this, &dlgRoomProperties::restyleColourRows);
+    // A typed colour goes the way one chosen in the colours window does
+    connect(mpSymbolColour, &uiDesign::ColourValue::colourEntered, this, &dlgRoomProperties::slot_symbolColorSelected);
+    connect(mpSymbolColour, &uiDesign::ColourValue::defaultEntered, this, &dlgRoomProperties::slot_resetSymbolColor);
+    connect(mpBorderColour, &uiDesign::ColourValue::colourEntered, this, &dlgRoomProperties::slot_borderColorSelected);
+    connect(mpBorderColour, &uiDesign::ColourValue::defaultEntered, this, &dlgRoomProperties::slot_resetBorderColor);
 
     connect(lineEdit_roomSymbol, &QLineEdit::textChanged, this, &dlgRoomProperties::slot_updatePreview);
     connect(comboBox_roomSymbol, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgRoomProperties::slot_symbolComboBoxItemChanged);
@@ -179,11 +207,7 @@ void dlgRoomProperties::init(
     // Configure border display
     selectedBorderColor = pFirstRoom->mBorderColor;
     mBorderThickness = pFirstRoom->mBorderThickness;
-
-    // Set button background to show current color
-    if (selectedBorderColor.isValid()) {
-        pushButton_setBorderColor->setStyleSheet(qsl("background-color: %1").arg(selectedBorderColor.name()));
-    }
+    showBorderColour();
 
     // Set thickness spinbox
     spinBox_borderThickness->setValue(mBorderThickness);
@@ -498,13 +522,19 @@ void dlgRoomProperties::slot_updatePreview()
 {
     auto realSymbolColor = selectedSymbolColor.isValid() ? selectedSymbolColor : defaultSymbolColor();
     QString newSymbol = getNewSymbol();
-    if (newSymbol == multipleValuesPlaceholder) {
+    const bool symbolsDiffer = newSymbol == multipleValuesPlaceholder;
+    if (symbolsDiffer) {
         newSymbol = QString();
-        pushButton_setSymbolColor->setStyleSheet(QString());
-    } else {
-        pushButton_setSymbolColor->setStyleSheet(
-                qsl("background-color: %1; color: %2; border: 1px solid; border-radius: 1px;").arg(realSymbolColor.name(), backgroundBasedColor(realSymbolColor).name()));
     }
+    // Rooms with different symbols show no one colour until one is decided for all of them
+    if (symbolsDiffer && !mSymbolColorWasChanged) {
+        mpSymbolColour->clear();
+    } else if (selectedSymbolColor.isValid()) {
+        mpSymbolColour->setColour(selectedSymbolColor);
+    } else {
+        mpSymbolColour->setDefault(realSymbolColor);
+    }
+    pushButton_resetSymbolColor->setEnabled(resetOffered(selectedSymbolColor));
     const bool roundRoom = mpHost->mBubbleMode;
     label_preview->setStyleSheet(qsl("background-color: %1; border: %2; border-radius: %3px;")
                                          .arg(mRoomColor.name(),
@@ -554,6 +584,39 @@ void dlgRoomProperties::slot_resetSymbolColor()
     selectedSymbolColor = QColor();
     mSymbolColorWasChanged = true;
     slot_updatePreview();
+}
+
+void dlgRoomProperties::restyleColourRows()
+{
+    const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
+    for (QWidget* pRow : {widget_symbolColor, widget_borderColor}) {
+        const QString row = qsl("#%1").arg(pRow->objectName());
+        pRow->setStyleSheet(uiDesign::inputStyleSheet(tokens, row) + uiDesign::buttonStyleSheet(tokens, row));
+    }
+    for (QPushButton* pChoose : {pushButton_setSymbolColor, pushButton_setBorderColor}) {
+        uiDesign::setColourButtonGlyph(pChoose, uiDesign::ColourButton::Choose, tokens, uiDesign::ColourRowSize::Compact);
+    }
+    for (QPushButton* pReset : {pushButton_resetSymbolColor, pushButton_resetBorderColor}) {
+        uiDesign::setColourButtonGlyph(pReset, uiDesign::ColourButton::Reset, tokens, uiDesign::ColourRowSize::Compact);
+    }
+}
+
+// The field shows the first room's colour, and the other rooms of a selection may carry colours of their own
+bool dlgRoomProperties::resetOffered(const QColor& chosen) const
+{
+    return mRoomIds.size() > 1 || chosen.isValid();
+}
+
+void dlgRoomProperties::showBorderColour()
+{
+    // A room with no border colour of its own is drawn in the map's, so the field shows that code, not a word
+    mpBorderColour->setDefaultWord(mpHost->mRoomBorderColor.name(QColor::HexRgb).toUpper());
+    if (selectedBorderColor.isValid()) {
+        mpBorderColour->setColour(selectedBorderColor);
+    } else {
+        mpBorderColour->setDefault(mpHost->mRoomBorderColor);
+    }
+    pushButton_resetBorderColor->setEnabled(resetOffered(selectedBorderColor));
 }
 
 QColor dlgRoomProperties::backgroundBasedColor(QColor background)
@@ -725,7 +788,7 @@ void dlgRoomProperties::slot_borderColorSelected(const QColor& color)
 {
     selectedBorderColor = color;
     mBorderColorWasChanged = true;
-    pushButton_setBorderColor->setStyleSheet(qsl("background-color: %1").arg(color.name()));
+    showBorderColour();
     emitBorderPreview();
 }
 
@@ -733,7 +796,7 @@ void dlgRoomProperties::slot_resetBorderColor()
 {
     selectedBorderColor = QColor();
     mBorderColorWasChanged = true;
-    pushButton_setBorderColor->setStyleSheet(QString());
+    showBorderColour();
     emitBorderPreview();
 }
 

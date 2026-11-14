@@ -25,7 +25,9 @@
  * Run with: ctest -R SettingsRoundTripTest -V
  */
 
+#include <algorithm>
 #include <functional>
+#include <tuple>
 
 #include <QDir>
 #include <QTemporaryDir>
@@ -36,10 +38,12 @@
 #include <QComboBox>
 #include <QFontComboBox>
 #include <QFontDatabase>
+#include <QKeySequence>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPointer>
 #include <QPushButton>
+#include <QRegularExpression>
 #include <QSettings>
 #include <QSignalSpy>
 #include <QSpinBox>
@@ -51,6 +55,7 @@
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "SettingsTestHelper.h"
+#include "ColourValue.h"
 #include "Host.h"
 #include "MMCP.h"
 #include "MudletInstanceCoordinator.h"
@@ -129,6 +134,208 @@ private:
 #endif
 
     bool runLua(const QString& code) const { return mpHost->getLuaInterpreter()->compileAndExecuteScript(code); }
+
+    // The player room marker's settings are the map's and the Host's both, so a case changing them puts both back
+    void restorePlayerRoomLater()
+    {
+        const QColor priorMapOuterColor = mpHost->mpMap->mPlayerRoomOuterColor;
+        const QColor priorMapInnerColor = mpHost->mpMap->mPlayerRoomInnerColor;
+        const quint8 priorMapStyle = mpHost->mpMap->mPlayerRoomStyle;
+        quint8 priorStyle = 0;
+        quint8 priorOuter = 0;
+        quint8 priorInner = 0;
+        QColor priorOuterColor;
+        QColor priorInnerColor;
+        mpHost->getPlayerRoomStyleDetails(priorStyle, priorOuter, priorInner, priorOuterColor, priorInnerColor);
+        restoreLater([=, this]() {
+            mpHost->mpMap->mPlayerRoomOuterColor = priorMapOuterColor;
+            mpHost->mpMap->mPlayerRoomInnerColor = priorMapInnerColor;
+            mpHost->mpMap->mPlayerRoomStyle = priorMapStyle;
+            mpHost->setPlayerRoomStyleDetails(priorStyle, priorOuter, priorInner, priorOuterColor, priorInnerColor);
+        });
+    }
+
+    std::pair<QColor, QColor> hostPlayerRoomColours() const
+    {
+        quint8 style = 0;
+        quint8 outer = 0;
+        quint8 inner = 0;
+        QColor outerColor;
+        QColor innerColor;
+        mpHost->getPlayerRoomStyleDetails(style, outer, inner, outerColor, innerColor);
+        return {outerColor, innerColor};
+    }
+
+    uiDesign::ColourValue* ringColour(const QString& ring) const { return mpPreferences->findChild<uiDesign::ColourValue*>(qsl("settingsPlayerRoom%1Colour").arg(ring)); }
+    QSpinBox* ringOpacity(const QString& ring) const { return mpPreferences->findChild<QSpinBox*>(qsl("settingsPlayerRoom%1Opacity").arg(ring)); }
+
+    // Types into a field or a spin box, ending with key
+    static void typeInto(QWidget* pField, const QString& typed, const Qt::Key key)
+    {
+        pField->setFocus();
+        if (auto* pLineEdit = qobject_cast<QLineEdit*>(pField)) {
+            pLineEdit->selectAll();
+        } else if (auto* pSpinBox = qobject_cast<QSpinBox*>(pField)) {
+            pSpinBox->selectAll();
+        }
+        if (typed.isEmpty()) {
+            QTest::keyClick(pField, Qt::Key_Backspace);
+        } else {
+            QTest::keyClicks(pField, typed);
+        }
+        QTest::keyClick(pField, key);
+    }
+
+    // Across the middle of the swatch at the field's leading edge, which is as far in from that edge as from the top
+    static bool showsTheBoardThrough(QWidget* pField)
+    {
+        const QImage image = pField->grab().toImage();
+        const qreal ratio = image.devicePixelRatio();
+        const int middle = pField->height() / 2;
+        // Inside the swatch's hairline, which spans the field's height less 2 * (hairline + inset) pixels
+        const int reach = middle - 5;
+        QList<int> lightness;
+        for (int x = middle - reach; x <= middle + reach; ++x) {
+            lightness.append(image.pixelColor(QPointF(x * ratio, (pField->height() / 2) * ratio).toPoint()).lightness());
+        }
+        const auto [darkest, lightest] = std::minmax_element(lightness.cbegin(), lightness.cend());
+        return *lightest - *darkest > 24;
+    }
+
+    using colourCardColour = std::pair<QString, QColor*>;
+    // Every colour of the two colour cards by the name its button carries after "pushButton_", and where the profile keeps it
+    QList<colourCardColour> colourCardColours() const
+    {
+        Host* h = mpHost;
+        return {{qsl("foreground_color"), &h->mFgColor},
+                {qsl("background_color"), &h->mBgColor},
+                {qsl("command_line_foreground_color"), &h->mCommandLineFgColor},
+                {qsl("command_line_background_color"), &h->mCommandLineBgColor},
+                {qsl("command_foreground_color"), &h->mCommandFgColor},
+                {qsl("command_background_color"), &h->mCommandBgColor},
+                {qsl("black"), &h->mBlack},
+                {qsl("lBlack"), &h->mLightBlack},
+                {qsl("red"), &h->mRed},
+                {qsl("lRed"), &h->mLightRed},
+                {qsl("green"), &h->mGreen},
+                {qsl("lGreen"), &h->mLightGreen},
+                {qsl("yellow"), &h->mYellow},
+                {qsl("lYellow"), &h->mLightYellow},
+                {qsl("blue"), &h->mBlue},
+                {qsl("lBlue"), &h->mLightBlue},
+                {qsl("magenta"), &h->mMagenta},
+                {qsl("lMagenta"), &h->mLightMagenta},
+                {qsl("cyan"), &h->mCyan},
+                {qsl("lCyan"), &h->mLightCyan},
+                {qsl("white"), &h->mWhite},
+                {qsl("lWhite"), &h->mLightWhite},
+                {qsl("background_color_2"), &h->mBgColor_2},
+                {qsl("mapInfoBg"), &h->mMapInfoBg},
+                {qsl("roomBorderColor"), &h->mRoomBorderColor},
+                {qsl("upperLevelColor"), &h->mUpperLevelColor},
+                {qsl("roomCollisionBorderColor"), &h->mRoomCollisionBorderColor},
+                {qsl("lowerLevelColor"), &h->mLowerLevelColor},
+                {qsl("foreground_color_2"), &h->mFgColor_2},
+                {qsl("mapGridColor"), &h->mMapGridColor},
+                {qsl("black_2"), &h->mBlack_2},
+                {qsl("Lblack_2"), &h->mLightBlack_2},
+                {qsl("red_2"), &h->mRed_2},
+                {qsl("Lred_2"), &h->mLightRed_2},
+                {qsl("green_2"), &h->mGreen_2},
+                {qsl("Lgreen_2"), &h->mLightGreen_2},
+                {qsl("yellow_2"), &h->mYellow_2},
+                {qsl("Lyellow_2"), &h->mLightYellow_2},
+                {qsl("blue_2"), &h->mBlue_2},
+                {qsl("Lblue_2"), &h->mLightBlue_2},
+                {qsl("magenta_2"), &h->mMagenta_2},
+                {qsl("Lmagenta_2"), &h->mLightMagenta_2},
+                {qsl("cyan_2"), &h->mCyan_2},
+                {qsl("Lcyan_2"), &h->mLightCyan_2},
+                {qsl("white_2"), &h->mWhite_2},
+                {qsl("Lwhite_2"), &h->mLightWhite_2}};
+    }
+
+    uiDesign::ColourValue* colourField(const QString& stem) const { return mpPreferences->findChild<uiDesign::ColourValue*>(qsl("settingsColour_%1").arg(stem)); }
+
+    // What scripts read from color_table for that key, as the colour it holds
+    QColor colorTableEntry(const char* key) const
+    {
+        lua_State* L = mpHost->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, "color_table");
+        lua_getfield(L, -1, key);
+        QColor colour;
+        if (lua_istable(L, -1)) {
+            int channels[3] = {0, 0, 0};
+            for (int index = 1; index <= 3; ++index) {
+                lua_rawgeti(L, -1, index);
+                channels[index - 1] = static_cast<int>(lua_tointeger(L, -1));
+                lua_pop(L, 1);
+            }
+            colour = QColor(channels[0], channels[1], channels[2]);
+        }
+        lua_pop(L, 2);
+        return colour;
+    }
+
+    // How many pixels of a widget's own drawing are exactly that colour
+    static int pixelsOf(QWidget* pWidget, const QColor& colour)
+    {
+        const QImage image = pWidget->grab().toImage();
+        int count = 0;
+        for (int y = 0; y < image.height(); ++y) {
+            for (int x = 0; x < image.width(); ++x) {
+                count += image.pixelColor(x, y).rgb() == colour.rgb();
+            }
+        }
+        return count;
+    }
+
+    // Counts the times a widget is drawn on screen, which grab() never shows: it draws the widget afresh each time
+    class PaintCounter : public QObject
+    {
+    public:
+        explicit PaintCounter(QWidget* pWidget) { pWidget->installEventFilter(this); }
+        int count() const { return mCount; }
+        void reset() { mCount = 0; }
+
+    protected:
+        bool eventFilter(QObject* pWatched, QEvent* pEvent) override
+        {
+            mCount += pEvent->type() == QEvent::Paint;
+            return QObject::eventFilter(pWatched, pEvent);
+        }
+
+    private:
+        int mCount = 0;
+    };
+
+    // Where the words in a spin box start and end across its field, from the first and last columns holding a
+    // pixel unlike the field's own ground; -1 where there are none
+    static std::pair<int, int> inkAcross(QSpinBox* pBox)
+    {
+        const QImage image = pBox->grab().toImage();
+        const qreal ratio = image.devicePixelRatio();
+        const QRect field = pBox->findChild<QLineEdit*>()->geometry();
+        const auto at = [&image, ratio](const int x, const int y) {
+            return image.pixelColor(QPointF(x * ratio, y * ratio).toPoint());
+        };
+        const QColor ground = at(field.left() + 2, field.top() + 1);
+        int start = -1;
+        int end = -1;
+        for (int x = field.left() + 2; x <= field.right(); ++x) {
+            for (int y = field.top() + 1; y < field.bottom(); ++y) {
+                const QColor pixel = at(x, y);
+                if (qAbs(pixel.red() - ground.red()) + qAbs(pixel.green() - ground.green()) + qAbs(pixel.blue() - ground.blue()) > 120) {
+                    if (start < 0) {
+                        start = x;
+                    }
+                    end = x;
+                    break;
+                }
+            }
+        }
+        return {start, end};
+    }
 
     int settingChangedCount(const char* key) const
     {
@@ -935,6 +1142,142 @@ private slots:
         mpHost->getPlayerRoomStyleDetails(hostStyle, hostOuter, hostInner, hostOuterColor, hostInnerColor);
         QCOMPARE(hostOuterColor, outerColor);
         QCOMPARE(hostInnerColor, innerColor);
+        // ...and the field beside each button shows it
+        QCOMPARE(ringColour(qsl("Outer"))->text(), qsl("#0C2238"));
+        QCOMPARE(ringColour(qsl("Inner"))->text(), qsl("#412B15"));
+    }
+
+    // Each ring's colour is a field showing the map's colour as a code, with its opacity beside it, then the button
+    // opening the colours window; the diameters are named by labels of their own, and the colours are only offered
+    // while the custom ring is the marker
+    void test_thePlayerRoomColoursAreFieldsBesideTheButtonsThatChooseThem()
+    {
+        QVERIFY2(mpHost->mpMap, "the profile has no map, so the player room controls are never enabled");
+        restorePlayerRoomLater();
+        mpHost->mpMap->mPlayerRoomOuterColor = QColor(12, 34, 56);
+        mpHost->mpMap->mPlayerRoomInnerColor = QColor(200, 40, 80, 153);
+
+        openPreferences();
+        mpPreferences->setTab(qsl("mapper"));
+        uiDesign::ColourValue* pOuter = ringColour(qsl("Outer"));
+        uiDesign::ColourValue* pInner = ringColour(qsl("Inner"));
+        QVERIFY2(pOuter && pInner && ringOpacity(qsl("Outer")) && ringOpacity(qsl("Inner")), "the Player room marker card has no colour fields with their opacities");
+        QCOMPARE(pOuter->text(), qsl("#0C2238"));
+        QCOMPARE(pInner->text(), qsl("#C82850"));
+        QCOMPARE(ringOpacity(qsl("Outer"))->value(), 100);
+        QCOMPARE(ringOpacity(qsl("Inner"))->value(), 60);
+        for (QPushButton* pChoose : {mpPreferences->pushButton_playerRoomPrimaryColor, mpPreferences->pushButton_playerRoomSecondaryColor}) {
+            QVERIFY2(pChoose->text().isEmpty() && !pChoose->icon().isNull(), qPrintable(qsl("%1 is not a glyph button: '%2'").arg(pChoose->objectName(), pChoose->text())));
+        }
+        QCOMPARE(mpPreferences->pushButton_playerRoomPrimaryColor->accessibleName(), qsl("Outer ring color"));
+        // The compact row of the colour cards, the diameters held to it so each ring's row is one height
+        for (QWidget* pPiece : QList<QWidget*>{pOuter,
+                                               pInner,
+                                               ringOpacity(qsl("Outer")),
+                                               ringOpacity(qsl("Inner")),
+                                               mpPreferences->pushButton_playerRoomPrimaryColor,
+                                               mpPreferences->pushButton_playerRoomSecondaryColor,
+                                               mpPreferences->spinBox_playerRoomOuterDiameter,
+                                               mpPreferences->spinBox_playerRoomInnerDiameter}) {
+            QVERIFY2(pPiece->height() == uiDesign::scmColourWellHeight,
+                     qPrintable(qsl("%1 is %2px tall, the colour cards' rows %3px").arg(pPiece->objectName()).arg(pPiece->height()).arg(uiDesign::scmColourWellHeight)));
+        }
+
+        const QList<std::pair<QString, QSpinBox*>> diameters{{qsl("Outer"), mpPreferences->spinBox_playerRoomOuterDiameter}, {qsl("Inner"), mpPreferences->spinBox_playerRoomInnerDiameter}};
+        for (const auto& [ring, pDiameter] : diameters) {
+            QVERIFY2(pDiameter->prefix().isEmpty(), qPrintable(qsl("the %1 diameter still carries its name inside the box: '%2'").arg(ring, pDiameter->prefix())));
+            QCOMPARE(pDiameter->suffix(), qsl("%"));
+            auto* pLabel = mpPreferences->findChild<QLabel*>(qsl("settingsPlayerRoom%1DiameterLabel").arg(ring));
+            QVERIFY2(pLabel && pLabel->buddy() == pDiameter && pLabel->text() == qsl("Diameter"), qPrintable(qsl("the %1 diameter has no label of its own").arg(ring)));
+        }
+
+        QComboBox* pStyle = mpPreferences->comboBox_playerRoomStyle;
+        for (const int style : {1, 0, 3}) {
+            pStyle->setCurrentIndex(style);
+            for (const QString& ring : {qsl("Outer"), qsl("Inner")}) {
+                const QString where = qsl("style %1, %2 ring").arg(QString::number(style), ring);
+                QVERIFY2(ringColour(ring)->isEnabled() == (style == 3), qPrintable(qsl("%1: the colour field does not follow the style").arg(where)));
+                QVERIFY2(ringOpacity(ring)->isEnabled() == (style == 3), qPrintable(qsl("%1: the opacity does not follow the style").arg(where)));
+                QVERIFY2(mpPreferences->findChild<QLabel*>(qsl("settingsPlayerRoom%1RingLabel").arg(ring))->isEnabled() == (style == 3),
+                         qPrintable(qsl("%1: the ring's name does not follow the style").arg(where)));
+            }
+            QVERIFY2(mpPreferences->findChild<QLabel*>(qsl("settingsPlayerRoomInnerDiameterLabel"))->isEnabled() == (style != 0),
+                     qPrintable(qsl("style %1: the inner diameter's label does not follow its box").arg(style)));
+        }
+    }
+
+    // A code typed into a ring's field goes to the map and the Host as a colour chosen in the colours window does,
+    // and only the colour is typed, so the ring stays as see-through as it was
+    void test_aTypedPlayerRoomColourReachesTheMapAndTheHostTogether()
+    {
+        QVERIFY2(mpHost->mpMap, "the profile has no map, so the player room controls are never enabled");
+        restorePlayerRoomLater();
+        mpHost->mpMap->mPlayerRoomInnerColor = QColor(200, 40, 80, 153);
+
+        openPreferences();
+        mpPreferences->setTab(qsl("mapper"));
+        mpPreferences->comboBox_playerRoomStyle->setCurrentIndex(3);
+        uiDesign::ColourValue* pInner = ringColour(qsl("Inner"));
+        QVERIFY(pInner && pInner->isEnabled());
+        typeInto(pInner, qsl("#00ff00"), Qt::Key_Return);
+        QCOMPARE(pInner->text(), qsl("#00FF00"));
+        QCOMPARE(mpHost->mpMap->mPlayerRoomInnerColor, QColor(0, 255, 0, 153));
+        QCOMPARE(hostPlayerRoomColours().second, QColor(0, 255, 0, 153));
+    }
+
+    // A number typed into a ring's opacity sets how see-through it is and keeps its colour, and the swatch shows the
+    // board through it; the box follows a colour chosen in the colours window too
+    void test_aTypedPlayerRoomOpacityReachesTheMapAndTheHostTogether()
+    {
+        QVERIFY2(mpHost->mpMap, "the profile has no map, so the player room controls are never enabled");
+        restorePlayerRoomLater();
+        mpHost->mpMap->mPlayerRoomOuterColor = QColor(12, 34, 56);
+
+        openPreferences();
+        mpPreferences->setTab(qsl("mapper"));
+        mpPreferences->comboBox_playerRoomStyle->setCurrentIndex(3);
+        uiDesign::ColourValue* pOuter = ringColour(qsl("Outer"));
+        QVERIFY(pOuter && pOuter->isEnabled());
+        QVERIFY2(!showsTheBoardThrough(pOuter), "the opaque outer ring's swatch shows the board through it");
+        typeInto(ringOpacity(qsl("Outer")), qsl("60"), Qt::Key_Return);
+        QCOMPARE(mpHost->mpMap->mPlayerRoomOuterColor, QColor(12, 34, 56, 153));
+        QCOMPARE(hostPlayerRoomColours().first, QColor(12, 34, 56, 153));
+        QCOMPARE(pOuter->text(), qsl("#0C2238"));
+        QVERIFY2(showsTheBoardThrough(pOuter), "the see-through outer ring's swatch does not show the board through it");
+
+        mpColorDialogTimer = TestSettings::pickInTheNextColorDialog(this, QColor(1, 2, 3, 51));
+        mpPreferences->pushButton_playerRoomPrimaryColor->click();
+        QCOMPARE(pOuter->text(), qsl("#010203"));
+        QCOMPARE(ringOpacity(qsl("Outer"))->value(), 20);
+    }
+
+    void test_aRingFieldPutsBackWhatIsNotAWholeColour_data()
+    {
+        QTest::addColumn<QString>("typed");
+        QTest::addColumn<int>("key");
+        QTest::newRow("an unfinished code") << qsl("#12") << static_cast<int>(Qt::Key_Return);
+        QTest::newRow("a code left at Escape") << qsl("#123456") << static_cast<int>(Qt::Key_Escape);
+        // There is no Reset on this card, so there is no default for an emptied field to go back to
+        QTest::newRow("an emptied field") << QString() << static_cast<int>(Qt::Key_Return);
+    }
+
+    void test_aRingFieldPutsBackWhatIsNotAWholeColour()
+    {
+        QFETCH(QString, typed);
+        QFETCH(int, key);
+        QVERIFY2(mpHost->mpMap, "the profile has no map, so the player room controls are never enabled");
+        restorePlayerRoomLater();
+        mpHost->mpMap->mPlayerRoomOuterColor = QColor(12, 34, 56);
+
+        openPreferences();
+        mpPreferences->setTab(qsl("mapper"));
+        mpPreferences->comboBox_playerRoomStyle->setCurrentIndex(3);
+        uiDesign::ColourValue* pOuter = ringColour(qsl("Outer"));
+        QVERIFY(pOuter && pOuter->isEnabled());
+        typeInto(pOuter, typed, static_cast<Qt::Key>(key));
+        QCOMPARE(pOuter->text(), qsl("#0C2238"));
+        QVERIFY2(mpPreferences->isVisible(), "the key that ended the edit closed the settings");
+        QCOMPARE(mpHost->mpMap->mPlayerRoomOuterColor, QColor(12, 34, 56));
     }
 
     // Resetting the colours puts back every one of the sixteen ANSI colours and
@@ -993,6 +1336,461 @@ private slots:
 
         for (const ColorReset& reset : resets) {
             QVERIFY2(*reset.pColor == reset.expected, reset.name);
+        }
+    }
+
+    // Every colour of the Main display's and the map's colour cards is a field
+    // showing the profile's colour as its code, beside the button choosing it,
+    // which shows only a glyph and carries the colour's name. Each colour is
+    // given one of its own first, so a field filled from the wrong one shows.
+    void test_everyColourOfTheColourCardsIsAFieldShowingTheProfilesColour()
+    {
+        const QList<colourCardColour> colours = colourCardColours();
+        QList<QColor> priorColours;
+        for (const auto& [stem, pHeld] : colours) {
+            priorColours.append(*pHeld);
+        }
+        restoreLater([colours, priorColours]() {
+            for (int index = 0; index < colours.size(); ++index) {
+                *colours.at(index).second = priorColours.at(index);
+            }
+        });
+        const QStringList seeThrough{qsl("background_color"), qsl("background_color_2"), qsl("mapInfoBg"), qsl("upperLevelColor"), qsl("lowerLevelColor"), qsl("mapGridColor")};
+        for (int index = 0; index < colours.size(); ++index) {
+            *colours.at(index).second = QColor(5 * index, 250 - 5 * index, (37 * index) % 256, seeThrough.contains(colours.at(index).first) ? 200 : 255);
+        }
+
+        openPreferences();
+        for (const auto& [stem, pHeld] : colours) {
+            uiDesign::ColourValue* pField = colourField(stem);
+            auto* pChoose = mpPreferences->findChild<QPushButton*>(qsl("pushButton_%1").arg(stem));
+            QVERIFY2(pField && pChoose, qPrintable(qsl("'%1' has no field beside its button").arg(stem)));
+            QVERIFY2(pField->text() == pHeld->name(QColor::HexRgb).toUpper(), qPrintable(qsl("'%1' shows '%2' for the profile's %3").arg(stem, pField->text(), pHeld->name(QColor::HexArgb))));
+            QCOMPARE(pField->colour(), *pHeld);
+            QVERIFY2(pChoose->text().isEmpty() && !pChoose->icon().isNull(), qPrintable(qsl("'%1' is not a glyph button").arg(pChoose->objectName())));
+            QVERIFY2(!pChoose->accessibleName().isEmpty() && pChoose->accessibleName() == pField->accessibleName(),
+                     qPrintable(qsl("'%1' is named '%2' and its field '%3'").arg(stem, pChoose->accessibleName(), pField->accessibleName())));
+            QCOMPARE(pChoose->toolTip(), qsl("Choose %1…").arg(pField->accessibleName()));
+        }
+        QCOMPARE(mpPreferences->findChildren<uiDesign::ColourValue*>(QRegularExpression(qsl("^settingsColour_"))).size(), colours.size());
+        // What the .ui file said about a colour now describes the field showing it
+        QVERIFY2(colourField(qsl("foreground_color"))->toolTip().contains(qsl("foreground color used by default")), qPrintable(colourField(qsl("foreground_color"))->toolTip()));
+    }
+
+    // A code typed into a console colour's field goes where one chosen in the
+    // colours window goes: to the profile, and to the color_table scripts read
+    void test_aTypedConsoleColourReachesTheProfileAndTheScripts()
+    {
+        const QColor priorLightRed = mpHost->mLightRed;
+        restoreLater([this, priorLightRed]() {
+            mpHost->mLightRed = priorLightRed;
+            mpHost->updateAnsi16ColorsInTable();
+        });
+
+        openPreferences();
+        mpPreferences->setTab(qsl("mainDisplay"));
+        uiDesign::ColourValue* pLightRed = colourField(qsl("lRed"));
+        QVERIFY(pLightRed && pLightRed->isEnabled());
+        typeInto(pLightRed, qsl("#1a2b3c"), Qt::Key_Return);
+        QCOMPARE(pLightRed->text(), qsl("#1A2B3C"));
+        QCOMPARE(mpHost->mLightRed, QColor(0x1A, 0x2B, 0x3C));
+        QCOMPARE(colorTableEntry("ansi_009"), QColor(0x1A, 0x2B, 0x3C));
+    }
+
+    // ...and so does one typed into one of a card's own colours, the map's
+    // background telling the map's widgets as the colours window does
+    void test_aTypedNamedColourReachesTheProfile()
+    {
+        QVERIFY2(mpHost->mpMap, "the profile has no map to announce the background to");
+        const QColor priorForeground = mpHost->mFgColor;
+        const QColor priorMapBackground = mpHost->mBgColor_2;
+        const QColor priorMapRed = mpHost->mRed_2;
+        restoreLater([this, priorForeground, priorMapBackground, priorMapRed]() {
+            mpHost->mFgColor = priorForeground;
+            mpHost->mBgColor_2 = priorMapBackground;
+            mpHost->mRed_2 = priorMapRed;
+            mpHost->mpMap->restore16ColorSet();
+        });
+
+        openPreferences();
+        mpPreferences->setTab(qsl("mainDisplay"));
+        typeInto(colourField(qsl("foreground_color")), qsl("#FEDCBA"), Qt::Key_Return);
+        QCOMPARE(mpHost->mFgColor, QColor(0xFE, 0xDC, 0xBA));
+
+        mpPreferences->setTab(qsl("mapper"));
+        QSignalSpy announced(mpHost->mpMap.data(), &TMap::signal_mapperSettingChanged);
+        typeInto(colourField(qsl("background_color_2")), qsl("#123"), Qt::Key_Return);
+        QCOMPARE(mpHost->mBgColor_2, QColor(0x11, 0x22, 0x33));
+        QCOMPARE(announced.count(), 1);
+
+        // The rooms are drawn from the map's own copy of the sixteen, which the colours window renews as well
+        typeInto(colourField(qsl("red_2")), qsl("#0A0B0C"), Qt::Key_Return);
+        QCOMPARE(mpHost->mRed_2, QColor(0x0A, 0x0B, 0x0C));
+        QCOMPARE(mpHost->mpMap->mCustomEnvColors.value(257), QColor(0x0A, 0x0B, 0x0C));
+    }
+
+    // The five map colours that may be see-through each have an opacity box,
+    // and a number typed into it changes how see-through the colour is and
+    // nothing else; the box follows a colour chosen in the colours window
+    void test_aTypedMapOpacityKeepsTheColour()
+    {
+        QVERIFY2(mpHost->mpMap, "the profile has no map to announce the background to");
+        const QColor priorGrid = mpHost->mMapGridColor;
+        const QColor priorBackground = mpHost->mBgColor_2;
+        restoreLater([this, priorGrid, priorBackground]() {
+            mpHost->mMapGridColor = priorGrid;
+            mpHost->mBgColor_2 = priorBackground;
+        });
+        mpHost->mMapGridColor = QColor(10, 20, 30, 64);
+        mpHost->mBgColor_2 = QColor(70, 80, 90);
+
+        openPreferences();
+        mpPreferences->setTab(qsl("mapper"));
+        for (const QString& stem : {qsl("background_color_2"), qsl("mapInfoBg"), qsl("upperLevelColor"), qsl("lowerLevelColor"), qsl("mapGridColor")}) {
+            QVERIFY2(mpPreferences->findChild<QSpinBox*>(qsl("settingsOpacity_%1").arg(stem)), qPrintable(qsl("'%1' has no opacity box").arg(stem)));
+        }
+        auto* pOpacity = mpPreferences->findChild<QSpinBox*>(qsl("settingsOpacity_mapGridColor"));
+        QCOMPARE(pOpacity->value(), 25);
+        typeInto(pOpacity, qsl("50"), Qt::Key_Return);
+        QCOMPARE(mpHost->mMapGridColor, QColor(10, 20, 30, 128));
+        QCOMPARE(colourField(qsl("mapGridColor"))->text(), qsl("#0A141E"));
+
+        mpColorDialogTimer = TestSettings::pickInTheNextColorDialog(this, QColor(1, 2, 3, 51));
+        mpPreferences->pushButton_mapGridColor->click();
+        QCOMPARE(mpHost->mMapGridColor, QColor(1, 2, 3, 51));
+        QCOMPARE(colourField(qsl("mapGridColor"))->text(), qsl("#010203"));
+        QCOMPARE(pOpacity->value(), 20);
+
+        // The map's background tells the map's widgets, as one chosen in the colours window does
+        QSignalSpy announced(mpHost->mpMap.data(), &TMap::signal_mapperSettingChanged);
+        typeInto(mpPreferences->findChild<QSpinBox*>(qsl("settingsOpacity_background_color_2")), qsl("60"), Qt::Key_Return);
+        QCOMPARE(mpHost->mBgColor_2, QColor(70, 80, 90, 153));
+        QCOMPARE(colourField(qsl("background_color_2"))->text(), qsl("#46505A"));
+        QCOMPARE(announced.count(), 1);
+    }
+
+    // ...and so has the Main display's background
+    void test_aTypedDisplayBackgroundOpacityKeepsTheColour()
+    {
+        const QColor priorBackground = mpHost->mBgColor;
+        restoreLater([this, priorBackground]() {
+            mpHost->mBgColor = priorBackground;
+            mpHost->mainConsoleView()->changeColors();
+        });
+        mpHost->mBgColor = QColor(40, 50, 60);
+
+        openPreferences();
+        mpPreferences->setTab(qsl("mainDisplay"));
+        auto* pOpacity = mpPreferences->findChild<QSpinBox*>(qsl("settingsOpacity_background_color"));
+        QVERIFY2(pOpacity, "the Main display's background has no opacity box");
+        QCOMPARE(pOpacity->value(), 100);
+        typeInto(pOpacity, qsl("40"), Qt::Key_Return);
+        QCOMPARE(mpHost->mBgColor, QColor(40, 50, 60, 102));
+        QCOMPARE(colourField(qsl("background_color"))->text(), qsl("#28323C"));
+    }
+
+    // The preview beside the sixteen colours is drawn in the profile's colours
+    // and drawn again whenever one changes - typed, chosen in the colours window
+    // or put back by Reset all - so what it shows is never the colour before
+    void test_thePreviewsFollowTheColours()
+    {
+        const QColor priorCommandBackground = mpHost->mCommandBgColor;
+        const QColor priorMapGreen = mpHost->mGreen_2;
+        restoreLater([this, priorCommandBackground, priorMapGreen]() {
+            mpHost->mCommandBgColor = priorCommandBackground;
+            mpHost->mGreen_2 = priorMapGreen;
+            mpHost->mpMap->restore16ColorSet();
+        });
+
+        openPreferences();
+        const QList<std::tuple<QString, QString, QString, QPushButton*, QPushButton*>> previews{
+                {qsl("mainDisplay"), qsl("settingsDisplayColoursPreview"), qsl("command_background_color"), mpPreferences->pushButton_command_background_color, mpPreferences->pushButton_resetColors},
+                {qsl("mapper"), qsl("settingsMapColoursPreview"), qsl("green_2"), mpPreferences->pushButton_green_2, mpPreferences->reset_colors_button_2}};
+        for (const auto& [page, previewName, stem, pChoose, pReset] : previews) {
+            mpPreferences->setTab(page);
+            QCoreApplication::processEvents();
+            auto* pPreview = mpPreferences->findChild<QWidget*>(previewName);
+            QVERIFY2(pPreview && pPreview->isVisible(), qPrintable(qsl("there is no preview on show on the '%1' page").arg(page)));
+            // A widget scrolled out of sight is never drawn, however often it asks to be
+            TestSettings::pageOf(mpPreferences, page)->ensureWidgetVisible(pPreview, 0, 0);
+            QCoreApplication::processEvents();
+            PaintCounter paints(pPreview);
+            // The window draws itself again as the colours window hands the activation back, a second or so later, and
+            // that is no answer to a colour; counting starts once the preview has gone a while without being drawn
+            const auto settleThenCount = [&paints]() {
+                for (int wait = 0; wait < 20; ++wait) {
+                    paints.reset();
+                    QTest::qWait(300);
+                    if (paints.count() == 0) {
+                        return;
+                    }
+                }
+            };
+            settleThenCount();
+
+            const QColor typed(0x12, 0xAB, 0x34);
+            typeInto(colourField(stem), typed.name(), Qt::Key_Return);
+            QTRY_VERIFY2(paints.count() > 0, qPrintable(qsl("the '%1' preview was not drawn again for a typed colour").arg(page)));
+            QVERIFY2(pixelsOf(pPreview, typed) > 20, qPrintable(qsl("the '%1' preview does not show the typed %2").arg(page, typed.name())));
+
+            const QColor chosen(0xAB, 0x12, 0x34);
+            settleThenCount();
+            mpColorDialogTimer = TestSettings::pickInTheNextColorDialog(this, chosen);
+            pChoose->click();
+            QTRY_VERIFY2(paints.count() > 0, qPrintable(qsl("the '%1' preview was not drawn again for a chosen colour").arg(page)));
+            QCOMPARE(pixelsOf(pPreview, typed), 0);
+            QVERIFY2(pixelsOf(pPreview, chosen) > 20, qPrintable(qsl("the '%1' preview does not show the chosen %2").arg(page, chosen.name())));
+
+            settleThenCount();
+            pReset->click();
+            QTRY_VERIFY2(paints.count() > 0, qPrintable(qsl("the '%1' preview was not drawn again on Reset all").arg(page)));
+            QCOMPARE(pixelsOf(pPreview, chosen), 0);
+        }
+    }
+
+    // The line over the preview's command line is the one the console draws over its own, in the command line's colours
+    void test_theDisplayPreviewSeamMatchesTheConsole()
+    {
+        const QColor priorBackground = mpHost->mCommandLineBgColor;
+        const QColor priorForeground = mpHost->mCommandLineFgColor;
+        restoreLater([this, priorBackground, priorForeground]() {
+            mpHost->mCommandLineBgColor = priorBackground;
+            mpHost->mCommandLineFgColor = priorForeground;
+            mpHost->mainConsoleView()->changeColors();
+        });
+
+        openPreferences();
+        mpPreferences->setTab(qsl("mainDisplay"));
+        QCoreApplication::processEvents();
+        typeInto(colourField(qsl("command_line_background_color")), qsl("#000064"), Qt::Key_Return);
+        typeInto(colourField(qsl("command_line_foreground_color")), qsl("#fa0000"), Qt::Key_Return);
+        QCoreApplication::processEvents();
+        auto* pSeam = mpHost->mainConsoleView()->findChild<QWidget*>(qsl("consoleFootSeam"));
+        QVERIFY2(pSeam, "the console has no seam over its command line");
+        const QColor seam = pSeam->palette().color(QPalette::Window);
+        QVERIFY2(seam != QColor(0x00, 0x00, 0x64) && seam != QColor(0xfa, 0x00, 0x00), qPrintable(seam.name()));
+
+        auto* pPreview = mpPreferences->findChild<QWidget*>(qsl("settingsDisplayColoursPreview"));
+        QVERIFY2(pPreview && pPreview->isVisible(), "there is no display preview on show");
+        TestSettings::pageOf(mpPreferences, qsl("mainDisplay"))->ensureWidgetVisible(pPreview, 0, 0);
+        QCoreApplication::processEvents();
+        const int seamPixels = pixelsOf(pPreview, seam);
+        QVERIFY2(seamPixels >= pPreview->width() / 2, qPrintable(qsl("the preview shows %1 pixels of the console's seam colour %2 across %3").arg(seamPixels).arg(seam.name()).arg(pPreview->width())));
+    }
+
+    // Every colour field's swatch stands for the Choose beside it, so a click on a swatch picks in the colours window
+    void test_aClickOnASwatchChoosesInTheColoursWindow()
+    {
+        const QColor priorCommandBackground = mpHost->mCommandBgColor;
+        restoreLater([this, priorCommandBackground]() {
+            mpHost->mCommandBgColor = priorCommandBackground;
+        });
+        openPreferences();
+        const QList<uiDesign::ColourValue*> fields = mpPreferences->findChildren<uiDesign::ColourValue*>();
+        QCOMPARE(fields.size(), 48);
+        for (const uiDesign::ColourValue* pField : fields) {
+            QVERIFY2(pField->chooseButton(), qPrintable(qsl("%1 has no Choose for its swatch to stand for").arg(pField->objectName())));
+        }
+        QCOMPARE(ringColour(qsl("Outer"))->chooseButton(), mpPreferences->pushButton_playerRoomPrimaryColor);
+
+        mpPreferences->setTab(qsl("mainDisplay"));
+        QCoreApplication::processEvents();
+        uiDesign::ColourValue* pField = colourField(qsl("command_background_color"));
+        TestSettings::pageOf(mpPreferences, qsl("mainDisplay"))->ensureWidgetVisible(pField, 0, 0);
+        QCoreApplication::processEvents();
+        const QColor chosen(0x21, 0x43, 0x65);
+        mpColorDialogTimer = TestSettings::pickInTheNextColorDialog(this, chosen);
+        const int middle = pField->height() / 2;
+        QTest::mouseClick(pField, Qt::LeftButton, Qt::NoModifier, QPoint(middle, middle));
+        QTRY_COMPARE(mpHost->mCommandBgColor, chosen);
+        QCOMPARE(pField->text(), chosen.name().toUpper());
+    }
+
+    // The map preview's grid is drawn with the map's own pen: as wide as the grid width setting makes it against a
+    // room, so a thin grid in the map is a thin grid in the preview
+    void test_theMapPreviewGridFollowsTheGridWidth()
+    {
+        const QColor priorGrid = mpHost->mMapGridColor;
+        const QColor priorBackground = mpHost->mBgColor_2;
+        const double priorWidth = mpHost->mMapGridLineSize;
+        const bool priorAntiAlias = mpHost->mMapperUseAntiAlias;
+        restoreLater([this, priorGrid, priorBackground, priorWidth, priorAntiAlias]() {
+            mpHost->mMapGridColor = priorGrid;
+            mpHost->mBgColor_2 = priorBackground;
+            mpHost->mMapGridLineSize = priorWidth;
+            mpHost->mMapperUseAntiAlias = priorAntiAlias;
+        });
+        mpHost->mBgColor_2 = QColor(Qt::black);
+        mpHost->mMapperUseAntiAlias = true;
+
+        openPreferences();
+        mpPreferences->setTab(qsl("mapper"));
+        QCoreApplication::processEvents();
+        auto* pPreview = mpPreferences->findChild<QWidget*>(qsl("settingsMapColoursPreview"));
+        QVERIFY2(pPreview && pPreview->isVisible(), "there is no map preview on show");
+        TestSettings::pageOf(mpPreferences, qsl("mapper"))->ensureWidgetVisible(pPreview, 0, 0);
+        QCoreApplication::processEvents();
+        // Everything but the grid stays put, so what a grid adds is what the picture gains over one without it
+        const auto brightness = [pPreview]() {
+            const QImage picture = pPreview->grab().toImage();
+            qint64 sum = 0;
+            for (int y = 0; y < picture.height(); ++y) {
+                for (int x = 0; x < picture.width(); ++x) {
+                    sum += qGray(picture.pixel(x, y));
+                }
+            }
+            return sum;
+        };
+        mpHost->mMapGridColor = QColor(255, 255, 255, 0);
+        const qint64 noGrid = brightness();
+        mpHost->mMapGridColor = QColor(Qt::white);
+
+        mpPreferences->doubleSpinBox_gridSize->setValue(0.5);
+        QCoreApplication::processEvents();
+        const qint64 thin = brightness() - noGrid;
+        mpPreferences->doubleSpinBox_gridSize->setValue(5.0);
+        QCoreApplication::processEvents();
+        const qint64 thick = brightness() - noGrid;
+        QVERIFY2(thin > 0, "the map preview shows no grid");
+        QVERIFY2(thick > 3 * thin, qPrintable(qsl("the grid at width 5 adds %1 to the preview's brightness, at width 0.5 %2").arg(thick).arg(thin)));
+    }
+
+    // The map preview's rooms are measured as the map measures them: as large as the room size setting makes them
+    // against a cell, bordered as thickly as the border size makes it, and bordered only while borders are shown
+    void test_theMapPreviewRoomsFollowTheFeatureSizes()
+    {
+        const QColor priorGreen = mpHost->mGreen_2;
+        const QColor priorBorder = mpHost->mRoomBorderColor;
+        const double priorRoomSize = mpHost->mRoomSize;
+        const double priorBorderSize = mpHost->mRoomBorderSize;
+        const bool priorShowBorders = mpHost->mMapperShowRoomBorders;
+        const bool priorAntiAlias = mpHost->mMapperUseAntiAlias;
+        restoreLater([this, priorGreen, priorBorder, priorRoomSize, priorBorderSize, priorShowBorders, priorAntiAlias]() {
+            mpHost->mGreen_2 = priorGreen;
+            mpHost->mRoomBorderColor = priorBorder;
+            mpHost->mRoomSize = priorRoomSize;
+            mpHost->mRoomBorderSize = priorBorderSize;
+            mpHost->mMapperShowRoomBorders = priorShowBorders;
+            mpHost->mMapperUseAntiAlias = priorAntiAlias;
+            mpHost->mpMap->restore16ColorSet();
+        });
+        const QColor green(0x12, 0xAB, 0x34);
+        const QColor border(0xAB, 0x34, 0x12);
+        mpHost->mGreen_2 = green;
+        mpHost->mRoomBorderColor = border;
+        // Every edge on whole pixels, so the colours can be counted exactly
+        mpHost->mMapperUseAntiAlias = false;
+
+        openPreferences();
+        mpPreferences->setTab(qsl("mapper"));
+        QCoreApplication::processEvents();
+        auto* pPreview = mpPreferences->findChild<QWidget*>(qsl("settingsMapColoursPreview"));
+        QVERIFY2(pPreview && pPreview->isVisible(), "there is no map preview on show");
+        mpPreferences->checkbox_mMapperShowRoomBorders->setChecked(true);
+
+        mpPreferences->spinBox_roomSize->setValue(3);
+        const int smallRoom = pixelsOf(pPreview, green);
+        mpPreferences->spinBox_roomSize->setValue(9);
+        const int largeRoom = pixelsOf(pPreview, green);
+        QVERIFY2(smallRoom > 0 && largeRoom > 4 * smallRoom, qPrintable(qsl("a room covers %1 pixels at room size 3 and %2 at room size 9").arg(smallRoom).arg(largeRoom)));
+
+        mpPreferences->spinBox_borderSize->setValue(1);
+        const int thinBorders = pixelsOf(pPreview, border);
+        mpPreferences->spinBox_borderSize->setValue(11);
+        const int thickBorders = pixelsOf(pPreview, border);
+        QVERIFY2(thinBorders > 0 && thickBorders > 2 * thinBorders, qPrintable(qsl("the borders cover %1 pixels at border size 1 and %2 at border size 11").arg(thinBorders).arg(thickBorders)));
+
+        mpPreferences->checkbox_mMapperShowRoomBorders->setChecked(false);
+        QCOMPARE(pixelsOf(pPreview, border), 0);
+    }
+
+    // Each of the sixteen environment colours has a room on show in the map preview, so a change to any of them shows
+    void test_theMapPreviewShowsEveryEnvironmentColour()
+    {
+        const QList<std::pair<QString, QColor Host::*>> environment{{qsl("mBlack_2"), &Host::mBlack_2},
+                                                                    {qsl("mLightBlack_2"), &Host::mLightBlack_2},
+                                                                    {qsl("mRed_2"), &Host::mRed_2},
+                                                                    {qsl("mLightRed_2"), &Host::mLightRed_2},
+                                                                    {qsl("mGreen_2"), &Host::mGreen_2},
+                                                                    {qsl("mLightGreen_2"), &Host::mLightGreen_2},
+                                                                    {qsl("mYellow_2"), &Host::mYellow_2},
+                                                                    {qsl("mLightYellow_2"), &Host::mLightYellow_2},
+                                                                    {qsl("mBlue_2"), &Host::mBlue_2},
+                                                                    {qsl("mLightBlue_2"), &Host::mLightBlue_2},
+                                                                    {qsl("mMagenta_2"), &Host::mMagenta_2},
+                                                                    {qsl("mLightMagenta_2"), &Host::mLightMagenta_2},
+                                                                    {qsl("mCyan_2"), &Host::mCyan_2},
+                                                                    {qsl("mLightCyan_2"), &Host::mLightCyan_2},
+                                                                    {qsl("mWhite_2"), &Host::mWhite_2},
+                                                                    {qsl("mLightWhite_2"), &Host::mLightWhite_2}};
+        QList<QColor> priorColours;
+        for (const auto& [name, pHeld] : environment) {
+            priorColours.append(mpHost->*pHeld);
+        }
+        const bool priorAntiAlias = mpHost->mMapperUseAntiAlias;
+        restoreLater([this, environment, priorColours, priorAntiAlias]() {
+            for (int index = 0; index < environment.size(); ++index) {
+                mpHost->*environment.at(index).second = priorColours.at(index);
+            }
+            mpHost->mMapperUseAntiAlias = priorAntiAlias;
+            mpHost->mpMap->restore16ColorSet();
+        });
+        // Every edge on whole pixels, so a room's own colour is there to count
+        mpHost->mMapperUseAntiAlias = false;
+
+        openPreferences();
+        mpPreferences->setTab(qsl("mapper"));
+        QCoreApplication::processEvents();
+        auto* pPreview = mpPreferences->findChild<QWidget*>(qsl("settingsMapColoursPreview"));
+        QVERIFY2(pPreview && pPreview->isVisible(), "there is no map preview on show");
+        const QColor marker(0x13, 0xA7, 0x5D);
+        QVERIFY2(pixelsOf(pPreview, marker) == 0, "SETUP: the map preview already shows the colour standing out");
+        QStringList unseen;
+        for (const auto& [name, pHeld] : environment) {
+            const QColor prior = mpHost->*pHeld;
+            mpHost->*pHeld = marker;
+            if (pixelsOf(pPreview, marker) == 0) {
+                unseen.append(name);
+            }
+            mpHost->*pHeld = prior;
+        }
+        QVERIFY2(unseen.isEmpty(), qPrintable(qsl("the map preview shows no room in %1").arg(unseen.join(qsl(", ")))));
+    }
+
+    // The diameters and the opacities are percentages standing one over the
+    // other: each pair one width whatever it holds, every value right-aligned so
+    // the percent signs line up, and the widest a box can hold in its middle
+    void test_thePlayerRoomPercentagesLineUp()
+    {
+        QVERIFY2(mpHost->mpMap, "the profile has no map, so the player room controls are never enabled");
+        restorePlayerRoomLater();
+        mpHost->mpMap->mPlayerRoomOuterColor = QColor(12, 34, 56);
+        mpHost->mpMap->mPlayerRoomInnerColor = QColor(200, 40, 80, 153);
+
+        openPreferences();
+        mpPreferences->setTab(qsl("mapper"));
+        mpPreferences->comboBox_playerRoomStyle->setCurrentIndex(3);
+        QSpinBox* pOuter = mpPreferences->spinBox_playerRoomOuterDiameter;
+        QSpinBox* pInner = mpPreferences->spinBox_playerRoomInnerDiameter;
+        pOuter->setValue(pOuter->maximum());
+        pInner->setValue(80);
+        QCoreApplication::processEvents();
+        QCOMPARE(pOuter->size(), pInner->size());
+        const QList<std::pair<QSpinBox*, QSpinBox*>> pairs{{pOuter, pInner}, {ringOpacity(qsl("Outer")), ringOpacity(qsl("Inner"))}};
+        QCOMPARE(pairs.last().first->value(), 100);
+        QCOMPARE(pairs.last().second->value(), 60);
+        for (const auto& [pWidest, pShorter] : pairs) {
+            QCOMPARE(pWidest->alignment() & Qt::AlignHorizontal_Mask, Qt::AlignRight);
+            const auto [widestStart, widestEnd] = inkAcross(pWidest);
+            const auto [shorterStart, shorterEnd] = inkAcross(pShorter);
+            QVERIFY2(widestStart >= 0 && shorterStart >= 0, qPrintable(qsl("no words found in '%1' or '%2'").arg(pWidest->objectName(), pShorter->objectName())));
+            QVERIFY2(qAbs(widestEnd - shorterEnd) <= 1,
+                     qPrintable(qsl("'%1' ends at %2px and '%3' at %4px, so their percent signs do not line up").arg(pWidest->text()).arg(widestEnd).arg(pShorter->text()).arg(shorterEnd)));
+            QVERIFY2(shorterStart > widestStart, qPrintable(qsl("'%1' does not start after the wider '%2'").arg(pShorter->text(), pWidest->text())));
+            const QRect field = pWidest->findChild<QLineEdit*>()->geometry();
+            const int leading = widestStart - field.left();
+            const int trailing = field.right() - widestEnd;
+            QVERIFY2(qAbs(leading - trailing) <= 2, qPrintable(qsl("'%1' stands %2px from the field's leading edge and %3px from its trailing one").arg(pWidest->text()).arg(leading).arg(trailing)));
         }
     }
 

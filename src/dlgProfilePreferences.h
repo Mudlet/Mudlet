@@ -54,6 +54,9 @@ class TTimer;
 class TTrigger;
 
 namespace uiDesign {
+class ColourValue;
+class ConsoleColourPreview;
+class MapColourPreview;
 class SidebarToggle;
 struct ThemeTokens;
 }
@@ -252,11 +255,17 @@ private:
     void setColors();
     void setColors2();
     void setButtonAndProfileColor(QPushButton*, QColor&, bool allowAlpha = false);
+    void takeColour(QPushButton* pChoose, QColor& held, const QColor& colour);
     void setPlayerRoomColor(QPushButton*, QColor&);
+    void passOnPlayerRoomColour(const bool outer);
+    void showPlayerRoomColours();
+    void offerPlayerRoomControls(const int style);
     // After a colour dialog, however it was closed: macOS's native colour panel hands the activation to the
     // application's main window as it closes, which leaves the settings behind it with nothing focused
     void returnFromColourDialog(QWidget* pClicked);
-    void setButtonColor(QPushButton*, const QColor&, const bool hasAlpha = false);
+    // On the field beside the button that chooses it; an invalid colour leaves the field blank
+    void showColour(QPushButton* pChoose, const QColor& colour);
+    void takeAsShown(QWidget* pControl);
     void loadEditorTab();
     void populateThemesList();
     void populateScriptsList();
@@ -368,6 +377,8 @@ private:
     void reflowWideCards();
     void reflowMapperCards();
     void reflowColourCards();
+    void nameColourControls();
+    void arrangeColourCards();
     void reflowGeneralCards();
     void reflowPrivacyCards();
     void reflowDisplayOptionsCard();
@@ -388,6 +399,8 @@ private:
         int collapseBelow = 0;
         int fullyExpanded = 0;
         int narrowest = 0;
+        // What a window with no remembered size opens at, before the cap
+        int opening = 0;
     };
     SidebarWidths sidebarWidths() const;
     // What the sidebar is drawn at with its names showing, measured off the
@@ -570,6 +583,38 @@ private:
     QPointer<QLabel> mpLabel_securityHeadline;
     QPointer<QLabel> mpLabel_securityDetail;
     QPointer<QLabel> mpLabel_securityLink;
+    QLabel* mpLabel_playerRoomOuterRing = nullptr;
+    uiDesign::ColourValue* mpColourValue_playerRoomOuter = nullptr;
+    QLabel* mpLabel_playerRoomOuterDiameter = nullptr;
+    QLabel* mpLabel_playerRoomInnerRing = nullptr;
+    uiDesign::ColourValue* mpColourValue_playerRoomInner = nullptr;
+    QLabel* mpLabel_playerRoomInnerDiameter = nullptr;
+    // One colour of the two colour cards: the words naming it, the button opening the colours window on it, where
+    // the profile keeps it, and the field showing it
+    struct ProfileColour
+    {
+        QLabel* pName = nullptr;
+        QPushButton* pChoose = nullptr;
+        QColor Host::* pHeld = nullptr;
+        bool seeThrough = false;
+        uiDesign::ColourValue* pValue = nullptr;
+    };
+    // The card's own colours first, then the sixteen console colours, each one's light twin after it
+    QList<ProfileColour> mDisplayColours;
+    QList<ProfileColour> mMapColours;
+    QLabel* mpLabel_displayColoursNormal = nullptr;
+    QLabel* mpLabel_displayColoursLight = nullptr;
+    QLabel* mpLabel_mapColoursNormal = nullptr;
+    QLabel* mpLabel_mapColoursLight = nullptr;
+    // Each colour card's grid, and its console colours' table with the preview beside it
+    QWidget* mpWidget_displayColours = nullptr;
+    QWidget* mpWidget_mapColours = nullptr;
+    QWidget* mpWidget_displayConsoleColours = nullptr;
+    QWidget* mpWidget_mapConsoleColours = nullptr;
+    uiDesign::ConsoleColourPreview* mpConsoleColourPreview = nullptr;
+    uiDesign::MapColourPreview* mpMapColourPreview = nullptr;
+    // How far past the width an arrangement of a colour card needs the page has to be before the card takes it up
+    static constexpr int scmColourArrangementHysteresis = 4;
     // What every anchor on this dialog currently carries, since the colour is
     // written into the text rather than answered by a palette
     QColor mInkedLinkColour;

@@ -45,6 +45,7 @@ class QObject;
 class QPainter;
 class QPalette;
 class QRect;
+class QSpinBox;
 class QTabBar;
 class QTimer;
 class QWidget;
@@ -265,6 +266,9 @@ void keepClickFocusOffControls(QWidget* pRoot);
 void letPopupsTakeTheFieldsCorner(QWidget* pRoot);
 
 inline constexpr int scmInputContentHeight = 22;
+// A colour well beside a form's controls shows a value rather than taking one in, so it is smaller than a field
+inline constexpr int scmColourWellWidth = 40;
+inline constexpr int scmColourWellHeight = 22;
 inline constexpr int scmInputPaddingVertical = 2;
 inline constexpr int scmInputPaddingHorizontal = 6;
 inline constexpr int scmInputBorderWidth = 1;
@@ -273,6 +277,15 @@ inline constexpr int scmInputStepperWidth = 16;
 // A window drawing its own split button pads its words clear of this itself: no selector can ask whether a button
 // carries a menu.
 inline constexpr int scmInputDropDownWidth = 18;
+
+// Spin boxes standing one above another and holding the same kind of number, an opacity or a diameter: one fixed
+// size for all of them, each value right-aligned so the suffixes line up down the column, and inset from the
+// trailing edge so the widest value any of them can hold sits in the middle. Kept so across font and style changes.
+// Call once per group.
+void fitNumberBoxes(const QList<QSpinBox*>& boxes, const int height);
+// The input and button recipes set a styled field's or button's min-height again at every polish; this puts the
+// widget back to a height of its own after each, as a compact colour row needs
+void holdHeight(QWidget* pWidget, const int height);
 
 qreal contrastRatio(const QColor& first, const QColor& second);
 
@@ -375,6 +388,9 @@ void paintAccentBar(QPainter* pPainter, const QRect& row, const QColor& accent, 
 
 // Fills through the alpha channel, keeping antialiased edges that recolouring pixels would harden
 QPixmap tintedGlyph(const QPixmap& source, const QColor& color);
+
+// What a colour that may be see-through is painted over, so its transparency shows the board through it
+QPixmap checkerboardTile(const qreal devicePixelRatio);
 
 // Lucide authors at 2, which reads heavy at toolbar and editor sizes; the glyphs ship as SVG so the weight is set
 // here.

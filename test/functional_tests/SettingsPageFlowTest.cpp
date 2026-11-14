@@ -25,8 +25,9 @@
  * drops to the next line only when that row runs out of room. Check boxes that
  * sat side by side are columns that stay whole, side by side while both fit and
  * one under the other when they do not. The two colour cards, the Main
- * display's and the map's, are one grid of label-and-well pairs, two to a row
- * with every well one width, and one to a row where two do not fit.
+ * display's and the map's, are one grid of label-and-row pairs, two to a row
+ * with every row one width, and one to a row where two do not fit; under them
+ * the console colours are a table with a preview beside it.
  *
  * Run with: ctest -R SettingsPageFlowTest -V
  */
@@ -37,22 +38,27 @@
 
 #include <QCheckBox>
 #include <QComboBox>
-#include <QFontInfo>
 #include <QGroupBox>
+#include <QGuiApplication>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
 #include <QScopeGuard>
 #include <QScrollArea>
 #include <QScrollBar>
+#include <QSettings>
+#include <QSpinBox>
 #include <QTranslator>
 
+#include <algorithm>
+#include <functional>
+#include <limits>
 #include <tuple>
 
+#include "ColourValue.h"
 #include "FlowLayout.h"
 #include "MudletApp.h"
 #include "PairGridLayout.h"
-#include "PixelTestHelper.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "SettingsTestHelper.h"
@@ -270,161 +276,154 @@ private:
                  qPrintable(qsl("the German '%1' page needs %2px at 13pt, past the 640px reading column").arg(page).arg(pColumn->minimumSizeHint().width())));
     }
 
-    // Both states of a colour grid: every well one width, the leading wells
+    // The field showing a colour of the two colour cards, by the button that chooses it
+    uiDesign::ColourValue* fieldOf(const QPushButton* pChoose) const
+    {
+        return mpPreferences->findChild<uiDesign::ColourValue*>(qsl("settingsColour_%1").arg(pChoose->objectName().remove(qsl("pushButton_"))));
+    }
+
+    // Both states of a colour grid: every row one width, the leading rows
     // down one edge and the trailing down another, two pairs to a row; or one
-    // pair to a row, in order, every well down the one edge
-    void verifyColourGrid(const QList<std::pair<QLabel*, QPushButton*>>& pairs, const bool twoPairs)
+    // pair to a row, in order, every row down the one edge
+    void verifyColourGrid(const QList<std::pair<QLabel*, QWidget*>>& pairs, const bool twoPairs)
     {
         const int width = pairs.first().second->width();
         for (int index = 0; index < pairs.size(); ++index) {
-            const auto& [pLabel, pWell] = pairs.at(index);
-            QVERIFY2(pWell->width() == width, qPrintable(qsl("the well '%1' is %2px wide where the first is %3px").arg(pWell->objectName()).arg(pWell->width()).arg(width)));
-            QVERIFY2(levelWith(pWell, pLabel) && pWell->geometry().left() > pLabel->geometry().right(), qPrintable(qsl("'%1' is not level with the well after it").arg(pLabel->objectName())));
-            QPushButton* pAlignedWell = pairs.at(twoPairs ? index % 2 : 0).second;
-            QVERIFY2(pWell->geometry().left() == pAlignedWell->geometry().left(),
-                     qPrintable(qsl("the well '%1' starts at %2px, out of line with '%3' at %4px")
-                                        .arg(pWell->objectName())
-                                        .arg(pWell->geometry().left())
-                                        .arg(pAlignedWell->objectName())
-                                        .arg(pAlignedWell->geometry().left())));
+            const auto& [pLabel, pRow] = pairs.at(index);
+            QVERIFY2(pRow->width() == width, qPrintable(qsl("the row '%1' is %2px wide where the first is %3px").arg(pRow->objectName()).arg(pRow->width()).arg(width)));
+            QVERIFY2(levelWith(pRow, pLabel) && pRow->geometry().left() > pLabel->geometry().right(), qPrintable(qsl("'%1' is not level with the row after it").arg(pLabel->objectName())));
+            QWidget* pAlignedRow = pairs.at(twoPairs ? index % 2 : 0).second;
+            QVERIFY2(pRow->geometry().left() == pAlignedRow->geometry().left(),
+                     qPrintable(qsl("the row '%1' starts at %2px, out of line with '%3' at %4px")
+                                        .arg(pRow->objectName())
+                                        .arg(pRow->geometry().left())
+                                        .arg(pAlignedRow->objectName())
+                                        .arg(pAlignedRow->geometry().left())));
             if (index == 0) {
                 continue;
             }
-            QPushButton* pBefore = pairs.at(index - 1).second;
+            QWidget* pBefore = pairs.at(index - 1).second;
             if (twoPairs && index % 2) {
-                QVERIFY2(levelWith(pWell, pBefore) && pLabel->geometry().left() > pBefore->geometry().right(),
-                         qPrintable(qsl("two pairs to a row, '%1' is not beside '%2'").arg(pWell->objectName(), pBefore->objectName())));
+                QVERIFY2(levelWith(pRow, pBefore) && pLabel->geometry().left() > pBefore->geometry().right(),
+                         qPrintable(qsl("two pairs to a row, '%1' is not beside '%2'").arg(pRow->objectName(), pBefore->objectName())));
             } else {
-                QVERIFY2(pWell->geometry().top() > pBefore->geometry().bottom(), qPrintable(qsl("'%1' does not start a row under '%2'").arg(pWell->objectName(), pBefore->objectName())));
+                QVERIFY2(pRow->geometry().top() > pBefore->geometry().bottom(), qPrintable(qsl("'%1' does not start a row under '%2'").arg(pRow->objectName(), pBefore->objectName())));
             }
         }
     }
 
-    // Each well that may hold a see-through colour as tall and as wide as the
-    // plain one beside it; inside it a square swatch with the field showing
-    // round it by the well's 3px padding, the colour over a checkerboard - both
-    // the board's black and its white showing through a translucent one - under
-    // a hairline in the border token, and then the field again, carrying the
-    // words saying how opaque the colour is
-    void verifyAlphaWells(const QList<std::tuple<QPushButton*, QPushButton*, QColor>>& wells)
+    // A column of the map's own colours, each label with the row it names, read down
+    QList<std::pair<QLabel*, QWidget*>> mapColumn(const bool trailing)
     {
-        QGroupBox* pCard = mpPreferences->groupBox_mapperColors;
-        const QImage card = pCard->grab().toImage();
-        const qreal ratio = card.devicePixelRatio();
-        const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
-        const auto pixelAt = [&card, ratio](const QPoint& point) {
-            return card.pixelColor((QPointF(point) * ratio).toPoint());
-        };
-        constexpr int inset = 3;
-        constexpr int trailingPadding = 6;
-        QList<int> wordsEnd;
-        QList<int> wordsStart;
-        for (const auto& [pAlpha, pPlain, colour] : wells) {
-            QVERIFY2(pAlpha->height() == pPlain->height() && pAlpha->width() == pPlain->width(),
-                     qPrintable(qsl("the see-through well '%1' is %2x%3 beside the plain '%4' at %5x%6")
-                                        .arg(pAlpha->objectName())
-                                        .arg(pAlpha->width())
-                                        .arg(pAlpha->height())
-                                        .arg(pPlain->objectName())
-                                        .arg(pPlain->width())
-                                        .arg(pPlain->height())));
-            // ...in a fixed-pitch face, so the digits are one width, a step smaller than the words beside the well
-            QVERIFY2(QFontInfo(pAlpha->font()).fixedPitch(),
-                     qPrintable(qsl("the words in '%1' are set in %2, which is not a fixed-pitch face").arg(pAlpha->objectName(), QFontInfo(pAlpha->font()).family())));
-            QCOMPARE(pAlpha->font().pointSize(), uiDesign::typeSize(uiDesign::TypeStep::Caption));
-            QVERIFY2(pAlpha->font().pointSizeF() < pPlain->font().pointSizeF(),
-                     qPrintable(qsl("the words in '%1' are %2pt, no smaller than the %3pt beside them").arg(pAlpha->objectName()).arg(pAlpha->font().pointSizeF()).arg(pPlain->font().pointSizeF())));
-            // Never narrower than the widest words need, whichever these are
-            QCOMPARE(pAlpha->sizeHint().width(), std::get<0>(wells.first())->sizeHint().width());
+        auto* p = mpPreferences;
+        const QList<std::tuple<QLabel*, QPushButton*, bool>> column =
+                trailing ? QList<std::tuple<QLabel*, QPushButton*, bool>>{{p->label_4, p->pushButton_roomBorderColor, false},
+                                                                          {p->label_pushButton_roomCollisionBorderColor, p->pushButton_roomCollisionBorderColor, false},
+                                                                          {p->label_39, p->pushButton_foreground_color_2, false}}
+                         : QList<std::tuple<QLabel*, QPushButton*, bool>>{{p->label_40, p->pushButton_background_color_2, true},
+                                                                          {p->label_mapInfoBg, p->pushButton_mapInfoBg, true},
+                                                                          {p->label_upperLevelColor, p->pushButton_upperLevelColor, true},
+                                                                          {p->label_lowerLevelColor, p->pushButton_lowerLevelColor, true},
+                                                                          {p->label_mapGridColor, p->pushButton_mapGridColor, true}};
+        QList<std::pair<QLabel*, QWidget*>> rows;
+        for (const auto& [pLabel, pChoose, seeThrough] : column) {
+            verifyColourRow(pChoose, seeThrough);
+            if (QTest::currentTestFailed()) {
+                return {};
+            }
+            [&]() {
+                QCOMPARE(pLabel->buddy(), fieldOf(pChoose));
+            }();
+            rows.append({pLabel, fieldOf(pChoose)->parentWidget()});
+        }
+        return rows;
+    }
 
-            const auto over = [&colour](const int ground) {
-                const qreal alpha = colour.alphaF();
-                return QColor(qRound(colour.red() * alpha + ground * (1 - alpha)), qRound(colour.green() * alpha + ground * (1 - alpha)), qRound(colour.blue() * alpha + ground * (1 - alpha)));
-            };
-            const QColor overBlack = over(0);
-            const QColor overWhite = over(255);
-            const auto onTheBoard = [&](const QPoint& point) {
-                return TestPixels::readsAs(pixelAt(point), overBlack, 3) || TestPixels::readsAs(pixelAt(point), overWhite, 3);
-            };
-            const auto verifyIs = [&](const QPoint& point, const QColor& wanted, const QString& where) {
-                QVERIFY2(TestPixels::readsAs(pixelAt(point), wanted, 3), qPrintable(qsl("%1 in '%2' is %3 rather than %4").arg(where, pAlpha->objectName(), pixelAt(point).name(), wanted.name())));
-            };
-            const QPoint origin = pAlpha->mapTo(pCard, QPoint(0, 0));
-            // Inside the well's hairline, and the swatch inset in that
-            const QRect inside(origin.x() + 1, origin.y() + 1, pAlpha->width() - 2, pAlpha->height() - 2);
-            const QRect swatch(inside.left() + inset, inside.top() + inset, inside.height() - 2 * inset, inside.height() - 2 * inset);
-            const QPoint centre = swatch.center();
-            QVERIFY2(onTheBoard(centre), qPrintable(qsl("the middle of the swatch in '%1' is %2, not the colour").arg(pAlpha->objectName(), pixelAt(centre).name())));
-            // Square: the colour runs to just inside the swatch's far edge, which carries its hairline
-            QVERIFY2(onTheBoard(QPoint(swatch.right() - 1, centre.y())), qPrintable(qsl("the swatch in '%1' ends before it is as wide as it is tall").arg(pAlpha->objectName())));
-            verifyIs(QPoint(swatch.left(), centre.y()), tokens.border, qsl("the swatch's leading edge"));
-            verifyIs(QPoint(swatch.right(), centre.y()), tokens.border, qsl("the swatch's trailing edge"));
-            verifyIs(QPoint(centre.x(), swatch.top()), tokens.border, qsl("the swatch's top edge"));
-            // The words end at the trailing padding: the last ink across the well's middle stands there
-            int inkEnd = -1;
-            for (int x = inside.right() - 1; x > swatch.right() && inkEnd < 0; --x) {
-                for (int y = inside.top() + inset; y <= inside.bottom() - inset; ++y) {
-                    if (!TestPixels::readsAs(pixelAt(QPoint(x, y)), tokens.field, 3)) {
-                        inkEnd = x;
-                        break;
-                    }
-                }
-            }
-            const int contentEnd = inside.right() - trailingPadding;
-            // A last glyph's antialiased edge can stand a pixel past its advance, as "%" does in Windows' fixed-pitch faces
-            QVERIFY2(inkEnd <= contentEnd + 1 && inkEnd >= contentEnd - 3,
-                     qPrintable(qsl("the words in '%1' end at %2px, not at the trailing padding at %3px").arg(pAlpha->objectName()).arg(inkEnd - inside.left()).arg(contentEnd - inside.left())));
-            wordsEnd.append(inkEnd);
-            // ...and where they start, the first ink past the field after the swatch
-            int inkStart = -1;
-            for (int x = swatch.right() + 2; x < inside.right() && inkStart < 0; ++x) {
-                for (int y = inside.top() + inset; y <= inside.bottom() - inset; ++y) {
-                    if (!TestPixels::readsAs(pixelAt(QPoint(x, y)), tokens.field, 3)) {
-                        inkStart = x;
-                        break;
-                    }
-                }
-            }
-            wordsStart.append(inkStart);
-            // ...and the field all round it
-            verifyIs(QPoint(swatch.right() + 2, centre.y()), tokens.field, qsl("just past the swatch"));
-            verifyIs(QPoint(centre.x(), inside.top() + 1), tokens.field, qsl("the margin above the swatch"));
-            verifyIs(QPoint(centre.x(), inside.bottom() - 1), tokens.field, qsl("the margin below the swatch"));
-            verifyIs(QPoint(inside.left() + 1, centre.y()), tokens.field, qsl("the margin before the swatch"));
-            if (QTest::currentTestFailed() || colour.alpha() == 255) {
-                continue;
-            }
-            // The board shows through: both of its inks inside the hairline
-            bool sawBlack = false;
-            bool sawWhite = false;
-            for (int y = swatch.top() + 1; y < swatch.bottom(); ++y) {
-                for (int x = swatch.left() + 1; x < swatch.right(); ++x) {
-                    sawBlack |= TestPixels::readsAs(pixelAt(QPoint(x, y)), overBlack, 3);
-                    sawWhite |= TestPixels::readsAs(pixelAt(QPoint(x, y)), overWhite, 3);
-                }
-            }
-            QVERIFY2(sawBlack && sawWhite,
-                     qPrintable(qsl("the swatch in '%1' does not show the checkerboard through its translucent colour: over black %2, over white %3")
-                                        .arg(pAlpha->objectName())
-                                        .arg(sawBlack)
-                                        .arg(sawWhite)));
+    // By the rows, which share a parent where the fields in them do not
+    bool mapSideBySide() const { return levelWith(fieldOf(mpPreferences->pushButton_roomBorderColor)->parentWidget(), fieldOf(mpPreferences->pushButton_background_color_2)->parentWidget()); }
+
+    bool displayTwoPairsToARow() const { return levelWith(fieldOf(mpPreferences->pushButton_background_color)->parentWidget(), fieldOf(mpPreferences->pushButton_foreground_color)->parentWidget()); }
+
+    // Resizes the window until the widget is that wide, the sidebar folding or not as it will on the way
+    bool widthTo(QWidget* pWidget, const int width)
+    {
+        for (int attempt = 0; attempt < 4 && pWidget->width() != width; ++attempt) {
+            mpPreferences->resize(mpPreferences->width() + width - pWidget->width(), 760);
+            qApp->processEvents();
+            qApp->processEvents();
         }
-        // ...so down a column of wells both the word and the percent sign stand under the one above
-        for (int index = 1; index < wordsEnd.size(); ++index) {
-            const QPushButton* pWell = std::get<0>(wells.at(index));
-            const QPushButton* pFirst = std::get<0>(wells.first());
-            if (pWell->mapTo(pCard, QPoint(0, 0)).x() != pFirst->mapTo(pCard, QPoint(0, 0)).x()) {
-                continue;
+        return pWidget->width() == width;
+    }
+
+    // The map's two columns: side by side, each read down and the trailing
+    // one's rows level with the leading one's, the leading one the longer; or
+    // one under the other, the leading column whole and then the trailing one,
+    // never the two taking turns
+    void verifyColourColumns(const QList<std::pair<QLabel*, QWidget*>>& leading, const QList<std::pair<QLabel*, QWidget*>>& trailing, const bool sideBySide)
+    {
+        QVERIFY2(!trailing.isEmpty() && leading.size() >= trailing.size(), "SETUP: the two columns are not there to compare");
+        const QList<std::pair<QLabel*, QWidget*>> all = leading + trailing;
+        for (const auto& [pLabel, pRow] : all) {
+            QVERIFY2(levelWith(pRow, pLabel) && pRow->geometry().left() > pLabel->geometry().right(), qPrintable(qsl("'%1' is not level with the row after it").arg(pLabel->objectName())));
+        }
+        if (sideBySide) {
+            for (int index = 0; index < leading.size(); ++index) {
+                const auto& [pLabel, pRow] = leading.at(index);
+                QCOMPARE(pRow->geometry().left(), leading.first().second->geometry().left());
+                if (index > 0) {
+                    QVERIFY2(pRow->geometry().top() > leading.at(index - 1).second->geometry().bottom(),
+                             qPrintable(qsl("'%1' is not under '%2'").arg(pRow->objectName(), leading.at(index - 1).second->objectName())));
+                }
+                if (index >= trailing.size()) {
+                    continue;
+                }
+                const auto& [pTrailingLabel, pTrailingRow] = trailing.at(index);
+                QVERIFY2(levelWith(pTrailingRow, pRow) && pTrailingLabel->geometry().left() > pRow->geometry().right(),
+                         qPrintable(qsl("side by side, '%1' is not beside '%2'").arg(pTrailingRow->objectName(), pRow->objectName())));
+                // The console colours' Light column stands a pair's gap from Normal's, 24px, and the columns above as far
+                const int between = pTrailingLabel->geometry().left() - pRow->geometry().right() - 1;
+                QVERIFY2(between >= 24, qPrintable(qsl("side by side, '%1' stands %2px from '%3'").arg(pTrailingLabel->objectName()).arg(between).arg(pRow->objectName())));
+                QCOMPARE(pTrailingRow->geometry().left(), trailing.first().second->geometry().left());
             }
-            QVERIFY2(qAbs(wordsEnd.at(index) - wordsEnd.first()) <= 1,
-                     qPrintable(qsl("the words in '%1' end at %2px and in '%3' at %4px").arg(pWell->objectName()).arg(wordsEnd.at(index)).arg(pFirst->objectName()).arg(wordsEnd.first())));
-            QVERIFY2(qAbs(wordsStart.at(index) - wordsStart.first()) <= 1,
-                     qPrintable(qsl("the words in '%1' start at %2px and in '%3' at %4px").arg(pWell->objectName()).arg(wordsStart.at(index)).arg(pFirst->objectName()).arg(wordsStart.first())));
+            return;
         }
-        // ...which they do because the number takes three places, so every well's words are one length
-        for (const auto& [pAlpha, pPlain, colour] : wells) {
-            QCOMPARE(pAlpha->text(), qsl("Opacity %1%").arg(qRound(colour.alphaF() * 100), 3));
+        for (int index = 1; index < all.size(); ++index) {
+            const QWidget* pRow = all.at(index).second;
+            const QWidget* pAbove = all.at(index - 1).second;
+            QVERIFY2(pRow->geometry().left() == all.first().second->geometry().left() && pRow->geometry().top() > pAbove->geometry().bottom(),
+                     qPrintable(qsl("one under the other, '%1' does not come straight under '%2'").arg(pRow->objectName(), pAbove->objectName())));
         }
+    }
+
+    // A colour's row: its field, then its opacity box where it may be
+    // see-through, then the button choosing it, level with one another and at a
+    // colour well's height, so the card is no taller than its wells made it
+    void verifyColourRow(QPushButton* pChoose, const bool seeThrough)
+    {
+        uiDesign::ColourValue* pField = fieldOf(pChoose);
+        QVERIFY2(pField, qPrintable(qsl("'%1' has no field beside it").arg(pChoose->objectName())));
+        QWidget* pRow = pField->parentWidget();
+        QCOMPARE(pChoose->parentWidget(), pRow);
+        auto* pOpacity = mpPreferences->findChild<QSpinBox*>(qsl("settingsOpacity_%1").arg(pChoose->objectName().remove(qsl("pushButton_"))));
+        QVERIFY2(bool(pOpacity) == seeThrough, qPrintable(qsl("'%1' %2 an opacity box").arg(pField->objectName(), seeThrough ? qsl("has no") : qsl("has"))));
+        QList<QWidget*> inOrder{pField};
+        if (pOpacity) {
+            QCOMPARE(pOpacity->parentWidget(), pRow);
+            inOrder.append(pOpacity);
+        }
+        inOrder.append(pChoose);
+        for (int index = 0; index < inOrder.size(); ++index) {
+            QWidget* pPart = inOrder.at(index);
+            QVERIFY2(pPart->height() == uiDesign::scmColourWellHeight,
+                     qPrintable(qsl("'%1' is %2px tall, not a colour well's %3px").arg(pPart->objectName()).arg(pPart->height()).arg(uiDesign::scmColourWellHeight)));
+            QVERIFY2(levelWith(pPart, pField), qPrintable(qsl("'%1' is not level with '%2'").arg(pPart->objectName(), pField->objectName())));
+            if (index > 0) {
+                QVERIFY2(pPart->geometry().left() > inOrder.at(index - 1)->geometry().right(),
+                         qPrintable(qsl("'%1' does not follow '%2'").arg(pPart->objectName(), inOrder.at(index - 1)->objectName())));
+            }
+        }
+        QCOMPARE(pChoose->width(), pChoose->height());
+        QVERIFY2(pChoose->text().isEmpty() && !pChoose->icon().isNull(), qPrintable(qsl("'%1' is not a glyph button").arg(pChoose->objectName())));
     }
 
 private slots:
@@ -635,10 +634,13 @@ private slots:
         }
     }
 
-    // The Main display's colours and the map's are one recipe. The map's
-    // twelve and sixteen colours, the two kinds of well among them: two pairs
-    // to a row with every well the one width where two fit, and one pair to a
-    // row one pixel short of that
+    // The Main display's colours and the map's are one recipe: each of a
+    // card's own colours a label and a row. The Main display's are pairs that
+    // belong on a row together, two to a row where they fit and one to a row
+    // in the same order where they do not. The map's are two columns read down,
+    // the five that may be see-through all in the leading one, so their
+    // opacity boxes stand one over the other: side by side where they fit, and
+    // where they do not, the trailing column under the leading one whole.
     void test_theColourCardsAreOneGridThatDropsToOnePairARow()
     {
         QVERIFY2(openPreferences(), "the settings dialog never appeared");
@@ -649,74 +651,582 @@ private slots:
         QVERIFY2(pGrid && dynamic_cast<uiDesign::PairGridLayout*>(pDisplayColours->layout()), "the two colour cards are not laid out by the one grid");
 
         auto* p = mpPreferences;
-        const QList<std::pair<QLabel*, QPushButton*>> colours{{p->label_39, p->pushButton_foreground_color_2},
-                                                              {p->label_40, p->pushButton_background_color_2},
-                                                              {p->label_4, p->pushButton_roomBorderColor},
-                                                              {p->label_mapInfoBg, p->pushButton_mapInfoBg},
-                                                              {p->label_lowerLevelColor, p->pushButton_lowerLevelColor},
-                                                              {p->label_upperLevelColor, p->pushButton_upperLevelColor},
-                                                              {p->label_pushButton_roomCollisionBorderColor, p->pushButton_roomCollisionBorderColor},
-                                                              {p->label_mapGridColor, p->pushButton_mapGridColor}};
-        const QList<std::pair<QLabel*, QPushButton*>> ansiColours{{p->label_17, p->pushButton_black_2},
-                                                                  {p->label_49, p->pushButton_Lblack_2},
-                                                                  {p->label_42, p->pushButton_red_2},
-                                                                  {p->label_50, p->pushButton_Lred_2},
-                                                                  {p->label_43, p->pushButton_green_2},
-                                                                  {p->label_51, p->pushButton_Lgreen_2},
-                                                                  {p->label_48, p->pushButton_yellow_2},
-                                                                  {p->label_52, p->pushButton_Lyellow_2},
-                                                                  {p->label_44, p->pushButton_blue_2},
-                                                                  {p->label_53, p->pushButton_Lblue_2},
-                                                                  {p->label_45, p->pushButton_magenta_2},
-                                                                  {p->label_54, p->pushButton_Lmagenta_2},
-                                                                  {p->label_46, p->pushButton_cyan_2},
-                                                                  {p->label_55, p->pushButton_Lcyan_2},
-                                                                  {p->label_47, p->pushButton_white_2},
-                                                                  {p->label_56, p->pushButton_Lwhite_2}};
-        // Three see-through colours, so the board shows through them, and one opaque one
-        const QList<std::tuple<QPushButton*, QPushButton*, QColor>> alphaWells{{p->pushButton_mapInfoBg, p->pushButton_roomBorderColor, QColor(200, 40, 80, 160)},
-                                                                               {p->pushButton_lowerLevelColor, p->pushButton_foreground_color_2, QColor(40, 90, 200, 204)},
-                                                                               {p->pushButton_upperLevelColor, p->pushButton_background_color_2, QColor(30, 160, 60)},
-                                                                               {p->pushButton_mapGridColor, p->pushButton_roomCollisionBorderColor, QColor(220, 180, 20, 77)}};
-        for (const auto& [pAlpha, pPlain, colour] : alphaWells) {
-            p->setButtonColor(pAlpha, colour, true);
+        const QList<std::pair<QLabel*, QWidget*>> leading = mapColumn(false);
+        const QList<std::pair<QLabel*, QWidget*>> trailing = mapColumn(true);
+        if (QTest::currentTestFailed()) {
+            return;
         }
-        qApp->processEvents();
 
         const int twoPairs = pGrid->sizeHint().width();
         QVERIFY2(pMapColours->width() >= twoPairs,
-                 qPrintable(qsl("the card gives the colours %1px, less than the %2px two pairs to a row need, so the wide case cannot be shown").arg(pMapColours->width()).arg(twoPairs)));
+                 qPrintable(qsl("the card gives the colours %1px, less than the %2px the two columns side by side need, so the wide case cannot be shown").arg(pMapColours->width()).arg(twoPairs)));
         for (const bool wide : {true, false}) {
-            verifyColourGrid(colours, wide);
-            verifyColourGrid(ansiColours, wide);
-            verifyAlphaWells(alphaWells);
+            verifyColourColumns(leading, trailing, wide);
             if (QTest::currentTestFailed()) {
                 return;
             }
-            QCOMPARE(p->pushButton_black_2->geometry().left(), p->pushButton_foreground_color_2->geometry().left());
-            // Reset ends the card on its trailing edge: across the trailing half
-            // two pairs to a row, and at its own width one pair to a row
+            // ...the see-through ones in the leading column, their opacity boxes one above the other
+            const int opacityX = p->findChild<QSpinBox*>(qsl("settingsOpacity_background_color_2"))->mapTo(pMapColours, QPoint(0, 0)).x();
+            for (const QString& stem : {qsl("mapInfoBg"), qsl("upperLevelColor"), qsl("lowerLevelColor"), qsl("mapGridColor")}) {
+                QCOMPARE(p->findChild<QSpinBox*>(qsl("settingsOpacity_%1").arg(stem))->mapTo(pMapColours, QPoint(0, 0)).x(), opacityX);
+            }
+            // Reset ends the card on its trailing edge: across the trailing
+            // column side by side, and at its own width one under the other
             QPushButton* pReset = p->reset_colors_button_2;
             QCOMPARE(pReset->geometry().right(), pMapColours->width() - 1);
             if (wide) {
-                QCOMPARE(pReset->geometry().left(), p->label_40->geometry().left());
-                // A pixel narrower, so both parities of what the two controls share are seen
+                QCOMPARE(pReset->geometry().left(), p->label_4->geometry().left());
+                // A pixel narrower, so both parities of what the two columns share are seen
                 QGroupBox* pCard = p->groupBox_mapperColors;
-                QVERIFY2(pMapColours->width() > twoPairs, "SETUP: the card has no pixel to spare above two pairs to a row");
+                QVERIFY2(pMapColours->width() > twoPairs, "SETUP: the card has no pixel to spare above the two columns side by side");
                 pCard->setMaximumWidth(cardChrome(pCard, pMapColours) + pMapColours->width() - 1);
                 qApp->processEvents();
                 QCOMPARE(pReset->geometry().right(), pMapColours->width() - 1);
-                QCOMPARE(pReset->geometry().left(), p->label_40->geometry().left());
+                QCOMPARE(pReset->geometry().left(), p->label_4->geometry().left());
             } else {
                 QCOMPARE(pReset->width(), pReset->sizeHint().width());
                 break;
             }
             QGroupBox* pCard = p->groupBox_mapperColors;
             const int narrow = cardChrome(pCard, pMapColours) + twoPairs - 1;
-            QVERIFY2(pCard->minimumSizeHint().width() <= narrow, "the map colours card cannot be narrowed below two pairs to a row");
+            QVERIFY2(pCard->minimumSizeHint().width() <= narrow, "the map colours card cannot be narrowed below the two columns side by side");
             pCard->setMaximumWidth(narrow);
             qApp->processEvents();
             QCOMPARE(pMapColours->width(), twoPairs - 1);
+        }
+        p->groupBox_mapperColors->setMaximumWidth(QWIDGETSIZE_MAX);
+
+        p->setTab(qsl("mainDisplay"));
+        qApp->processEvents();
+        const QList<std::tuple<QLabel*, QPushButton*, bool>> displayColours{{p->label_foreground_color, p->pushButton_foreground_color, false},
+                                                                            {p->label_background_color, p->pushButton_background_color, true},
+                                                                            {p->label_command_line_foreground_color, p->pushButton_command_line_foreground_color, false},
+                                                                            {p->label_command_line_background_color, p->pushButton_command_line_background_color, false},
+                                                                            {p->label_command_foreground_color, p->pushButton_command_foreground_color, false},
+                                                                            {p->label_command_background_color, p->pushButton_command_background_color, false}};
+        QList<std::pair<QLabel*, QWidget*>> displayRows;
+        for (const auto& [pLabel, pChoose, seeThrough] : displayColours) {
+            verifyColourRow(pChoose, seeThrough);
+            if (QTest::currentTestFailed()) {
+                return;
+            }
+            displayRows.append({pLabel, fieldOf(pChoose)->parentWidget()});
+        }
+        auto* pDisplayGrid = dynamic_cast<uiDesign::PairGridLayout*>(pDisplayColours->layout());
+        const int displayTwoPairs = pDisplayGrid->sizeHint().width();
+        verifyColourGrid(displayRows, true);
+        QGroupBox* pDisplayCard = p->groupBox_displayColors;
+        pDisplayCard->setMaximumWidth(cardChrome(pDisplayCard, pDisplayColours) + displayTwoPairs - 1);
+        qApp->processEvents();
+        verifyColourGrid(displayRows, false);
+        pDisplayCard->setMaximumWidth(QWIDGETSIZE_MAX);
+    }
+
+    // Tab goes down the map's leading column and then the trailing one, as they are read
+    void test_tabGoesDownTheMapsLeadingColumnFirst()
+    {
+        QVERIFY2(openPreferences(), "the settings dialog never appeared");
+        QList<QWidget*> fields;
+        QStringList expected;
+        for (const bool trailing : {false, true}) {
+            for (const auto& [pLabel, pRow] : mapColumn(trailing)) {
+                fields.append(pLabel->buddy());
+                expected.append(pLabel->buddy()->objectName());
+            }
+        }
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        QStringList reached;
+        QWidget* pStop = fields.first();
+        for (int step = 0; step < 1000 && reached.size() < fields.size(); ++step, pStop = pStop->nextInFocusChain()) {
+            if (fields.contains(pStop)) {
+                reached.append(pStop->objectName());
+            }
+        }
+        QCOMPARE(reached, expected);
+    }
+
+    // However narrow the window is taken, the map's colours never need more
+    // than the card has: walked from the widest the window goes to the
+    // narrowest, there they stand one under the other whole where the
+    // interface's type leaves the two columns too little room side by side, and
+    // side by side where it does not. The numbers go to the log, for when the
+    // words change.
+    void test_atTheNarrowestTheMapColoursStandAsTheirRoomAllows()
+    {
+        QVERIFY2(openPreferences(), "the settings dialog never appeared");
+        auto* pMapColours = mpPreferences->findChild<QWidget*>(qsl("settingsMapColours"));
+        auto* pGrid = dynamic_cast<uiDesign::PairGridLayout*>(pMapColours->layout());
+        mpPreferences->resize(mpPreferences->sidebarWidths().fullyExpanded + 400, 760);
+        qApp->processEvents();
+        int narrowestColours = pMapColours->width();
+        int narrowestWindow = mpPreferences->width();
+        for (int width = mpPreferences->width(); width > mpPreferences->minimumWidth() - 8; width -= 8) {
+            mpPreferences->resize(std::max(width, mpPreferences->minimumWidth()), 760);
+            qApp->processEvents();
+            qApp->processEvents();
+            QVERIFY2(pMapColours->width() >= pGrid->minimumSize().width(),
+                     qPrintable(qsl("in a %1px window the map's colours have %2px, less than the %3px one column needs")
+                                        .arg(mpPreferences->width())
+                                        .arg(pMapColours->width())
+                                        .arg(pGrid->minimumSize().width())));
+            if (pMapColours->width() < narrowestColours) {
+                narrowestColours = pMapColours->width();
+                narrowestWindow = mpPreferences->width();
+            }
+        }
+        mpPreferences->resize(narrowestWindow, 760);
+        qApp->processEvents();
+        qApp->processEvents();
+        QCOMPARE(pMapColours->width(), narrowestColours);
+        // The room is taken with the page's scroll bar kept, whether it is showing or not, as the card takes it
+        const QScrollArea* pPage = TestSettings::pageOf(mpPreferences, qsl("mapper"));
+        const QScrollBar* pBar = pPage->verticalScrollBar();
+        const int room = pBar->isVisibleTo(pPage) ? narrowestColours : narrowestColours - pBar->sizeHint().width();
+        const int sideBySide = pGrid->sizeHint().width();
+        qInfo().noquote() << qsl("the two columns side by side need %1px and at the narrowest the card leaves them %2px").arg(sideBySide).arg(room);
+        verifyColourColumns(mapColumn(false), mapColumn(true), room >= sideBySide);
+    }
+
+    // What the colour cards look like follows the width the window gives the
+    // page and nothing else: not the page's scroll bar, which a card that wraps
+    // can bring up and which then takes width that would keep it wrapped, nor
+    // what the window was before. Each case sits a few pixels from a
+    // breakpoint, on the side the scroll bar showing would put it.
+    void test_theColourCardsLookTheSameWhateverTheScrollBarDoes_data()
+    {
+        QTest::addColumn<int>("which");
+        QTest::newRow("map columns") << 0;
+        QTest::newRow("display pairs") << 1;
+        QTest::newRow("map preview") << 2;
+    }
+
+    void test_theColourCardsLookTheSameWhateverTheScrollBarDoes()
+    {
+        QFETCH(const int, which);
+        QVERIFY2(openPreferences(), "the settings dialog never appeared");
+        auto* p = mpPreferences;
+        struct Breakpoint
+        {
+            QString page;
+            QWidget* pWidget;
+            std::function<int()> needed;
+            std::function<bool()> arrangement;
+            // Every one of these fits at the narrowest the window goes, the map's columns because the names fold
+            // first, so a label of theirs is given more words, as a translation might, until the breakpoint is within
+            // reach, though no more, or the window would be held wider than the breakpoint
+            QLabel* pLengthened;
+            QString moreWords;
+        };
+        auto* pMapColours = p->findChild<QWidget*>(qsl("settingsMapColours"));
+        auto* pDisplayColours = p->findChild<QWidget*>(qsl("settingsDisplayColours"));
+        auto* pMapTable = p->findChild<QWidget*>(qsl("settingsMapConsoleColours"));
+        const QList<Breakpoint> breakpoints{{qsl("mapper"),
+                                             pMapColours,
+                                             [pMapColours]() {
+                                                 return pMapColours->layout()->sizeHint().width();
+                                             },
+                                             [this]() {
+                                                 return mapSideBySide();
+                                             },
+                                             p->label_mapInfoBg,
+                                             qsl(" and more")},
+                                            {qsl("mainDisplay"),
+                                             pDisplayColours,
+                                             [pDisplayColours]() {
+                                                 return pDisplayColours->layout()->sizeHint().width();
+                                             },
+                                             [this]() {
+                                                 return displayTwoPairsToARow();
+                                             },
+                                             p->label_command_line_background_color,
+                                             qsl(" and more")},
+                                            {qsl("mapper"),
+                                             pMapTable,
+                                             [p, pMapTable]() {
+                                                 return p->findChild<QWidget*>(qsl("settingsMapConsoleColoursTable"))->sizeHint().width() + pMapTable->layout()->spacing() + 200;
+                                             },
+                                             [p]() {
+                                                 return !p->findChild<QWidget*>(qsl("settingsMapColoursPreview"))->isHidden();
+                                             },
+                                             p->label_17,
+                                             qsl(" and more and more")}};
+        const Breakpoint& breakpoint = breakpoints.at(which);
+        const int hysteresis = dlgProfilePreferences::scmColourArrangementHysteresis;
+        // With the bar showing, a few pixels short of the breakpoint and a few past it with the hysteresis, each reached
+        // from 20px on the other side, so what the card had before is not what it is to show
+        const QList<int> fromBreakpoints{-6, hysteresis + 2};
+        const auto otherSide = [](const int width, const int fromBreakpoint) {
+            return fromBreakpoint < 0 ? width + 20 : width - 20;
+        };
+        const auto narrowestAskedFor = [&breakpoint, &fromBreakpoints, &otherSide]() {
+            int narrowest = std::numeric_limits<int>::max();
+            for (const int fromBreakpoint : fromBreakpoints) {
+                const int width = breakpoint.needed() + fromBreakpoint;
+                narrowest = std::min({narrowest, width, otherSide(width, fromBreakpoint)});
+            }
+            return narrowest;
+        };
+
+        p->setTab(breakpoint.page);
+        qApp->processEvents();
+        const QString priorWords = breakpoint.pLengthened->text();
+        const auto restoreWords = qScopeGuard([&breakpoint, priorWords]() {
+            breakpoint.pLengthened->setText(priorWords);
+        });
+        // Narrower type leaves the breakpoint further below what the narrowest window gives, and so takes more words
+        int lengthenings = 0;
+        bool withinReach = false;
+        do {
+            breakpoint.pLengthened->setText(breakpoint.pLengthened->text() + breakpoint.moreWords);
+            qApp->processEvents();
+            ++lengthenings;
+            withinReach = widthTo(breakpoint.pWidget, narrowestAskedFor());
+        } while (!withinReach && lengthenings < 12);
+        if (!withinReach) {
+            QSKIP(qPrintable(qsl("'%1' could not be taken to %2px, short of its breakpoint, however many words '%3' was given; it is %4px in a %5px window")
+                                     .arg(breakpoint.pWidget->objectName())
+                                     .arg(narrowestAskedFor())
+                                     .arg(breakpoint.pLengthened->objectName())
+                                     .arg(breakpoint.pWidget->width())
+                                     .arg(p->width())));
+        }
+
+        QScrollArea* pPage = TestSettings::pageOf(p, breakpoint.page);
+        for (const int fromBreakpoint : fromBreakpoints) {
+            const int width = breakpoint.needed() + fromBreakpoint;
+            QVERIFY2(widthTo(breakpoint.pWidget, otherSide(width, fromBreakpoint)),
+                     qPrintable(qsl("SETUP: '%1' could not be taken to %2px on the other side of the breakpoint; it is %3px in a %4px window")
+                                        .arg(breakpoint.pWidget->objectName())
+                                        .arg(otherSide(width, fromBreakpoint))
+                                        .arg(breakpoint.pWidget->width())
+                                        .arg(p->width())));
+            QVERIFY2(widthTo(breakpoint.pWidget, width), qPrintable(qsl("SETUP: '%1' could not be given %2px").arg(breakpoint.pWidget->objectName()).arg(width)));
+            QVERIFY2(pPage->verticalScrollBar()->isVisible(), qPrintable(qsl("SETUP: the '%1' page is not scrolling").arg(breakpoint.page)));
+            const bool expected = fromBreakpoint > 0;
+            const QString where = qsl("'%1' at %2px from its breakpoint").arg(breakpoint.pWidget->objectName()).arg(fromBreakpoint);
+            QVERIFY2(breakpoint.arrangement() == expected, qPrintable(qsl("%1 with the scroll bar showing").arg(where)));
+
+            // The same window, the page taller than its contents or not
+            pPage->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+            qApp->processEvents();
+            qApp->processEvents();
+            QVERIFY2(breakpoint.pWidget->width() > width, "SETUP: hiding the scroll bar gave nothing more room");
+            QVERIFY2(breakpoint.arrangement() == expected, qPrintable(qsl("%1 changed when the scroll bar went").arg(where)));
+            pPage->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+            qApp->processEvents();
+            qApp->processEvents();
+            QVERIFY2(breakpoint.arrangement() == expected, qPrintable(qsl("%1 changed when the scroll bar came back").arg(where)));
+            pPage->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+            qApp->processEvents();
+            breakpoint.pWidget->parentWidget()->layout()->invalidate();
+            qApp->processEvents();
+            QVERIFY2(breakpoint.arrangement() == expected, qPrintable(qsl("%1 changed when it was laid out again").arg(where)));
+
+            // ...and narrowed as far as the window goes and widened back to it
+            const int window = p->width();
+            p->resize(p->minimumWidth(), 760);
+            qApp->processEvents();
+            p->resize(window, 760);
+            qApp->processEvents();
+            qApp->processEvents();
+            QCOMPARE(breakpoint.pWidget->width(), width);
+            QVERIFY2(breakpoint.arrangement() == expected, qPrintable(qsl("%1 changed after the window was narrowed and widened back").arg(where)));
+        }
+    }
+
+    // A window with no size remembered opens wide enough for the map's colours
+    // to stand in their two columns beside the sidebar's names, and no wider
+    // than the 1060px it ever opened at; one with a size remembered opens at
+    // that size, and the columns follow it
+    void test_theWindowOpensWithTheMapColoursSideBySide()
+    {
+        QSettings* pSettings = MudletApp::getQSettings();
+        const QVariant priorGeometry = pSettings->value(qsl("profilePreferencesGeometry"));
+        const auto restoreGeometry = qScopeGuard([pSettings, priorGeometry]() {
+            if (priorGeometry.isValid()) {
+                pSettings->setValue(qsl("profilePreferencesGeometry"), priorGeometry);
+            } else {
+                pSettings->remove(qsl("profilePreferencesGeometry"));
+            }
+        });
+        const auto open = [this]() {
+            mpPreferences = new dlgProfilePreferences(mudlet::self(), mpHost);
+            mpPreferences->show();
+            QVERIFY(QTest::qWaitForWindowExposed(mpPreferences));
+            mpPreferences->setTab(qsl("mapper"));
+            qApp->processEvents();
+            qApp->processEvents();
+        };
+
+        pSettings->remove(qsl("profilePreferencesGeometry"));
+        open();
+        const int opened = mpPreferences->width();
+        QVERIFY2(opened <= 1060, qPrintable(qsl("the window opened %1px wide, past the 1060px it opens at at most").arg(opened)));
+        QVERIFY2(!TestSettings::sidebar(mpPreferences)->property(uiDesign::scmProp_rail).toBool(), qPrintable(qsl("the window opened %1px wide with the sidebar's names folded").arg(opened)));
+        QVERIFY2(mapSideBySide(), qPrintable(qsl("the window opened %1px wide with the map's colours one column under the other").arg(opened)));
+        verifyColourColumns(mapColumn(false), mapColumn(true), true);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+
+        // Remembered at the narrowest the window goes, which fits on the small screen an offscreen test has: the
+        // window keeps it, and the columns are what that width gives them
+        const int remembered = mpPreferences->minimumWidth();
+        mpPreferences->resize(remembered, 760);
+        qApp->processEvents();
+        pSettings->setValue(qsl("profilePreferencesGeometry"), mpPreferences->saveGeometry());
+        delete mpPreferences;
+        mpPreferences = nullptr;
+        open();
+        QCOMPARE(mpPreferences->width(), remembered);
+        auto* pMapColours = mpPreferences->findChild<QWidget*>(qsl("settingsMapColours"));
+        const bool sideBySide = pMapColours->width() >= pMapColours->layout()->sizeHint().width() + dlgProfilePreferences::scmColourArrangementHysteresis;
+        verifyColourColumns(mapColumn(false), mapColumn(true), sideBySide);
+    }
+
+    // Narrowed a few pixels at a time and widened again, a page with a colour card folds the sidebar's names before
+    // the card drops to one pair a row, and each changes once: the other way round, the card stacked and then spread
+    // out again as the names went
+    void test_theNamesFoldBeforeAColourCardStacks()
+    {
+        MudletApp::getQSettings()->setValue(qsl("settingsSidebarLabelsShown"), true);
+        for (const QString& page : {qsl("mapper"), qsl("mainDisplay")}) {
+            QVERIFY2(openPreferences(page), "the settings dialog never appeared");
+            const bool mapper = page == qsl("mapper");
+            const auto sideBySide = [this, mapper]() {
+                return mapper ? mapSideBySide() : displayTwoPairsToARow();
+            };
+            const auto namesShown = [this]() {
+                return !TestSettings::sidebar(mpPreferences)->property(uiDesign::scmProp_rail).toBool();
+            };
+            // From the 1060px the dialog is opened at here, or as much wider as the interface's type needs for the names
+            // and two pairs a row
+            int start = 1060;
+            while (!(namesShown() && sideBySide()) && start < 1600) {
+                start += 4;
+                mpPreferences->resize(start, 760);
+                qApp->processEvents();
+                qApp->processEvents();
+            }
+            QVERIFY2(namesShown() && sideBySide(), qPrintable(qsl("SETUP: up to %1px the %2 page never shows the names and two pairs a row").arg(start).arg(page)));
+
+            QList<int> widths;
+            for (int width = start; width >= mpPreferences->minimumWidth(); width -= 3) {
+                widths.append(width);
+            }
+            for (qsizetype index = widths.size() - 2; index >= 0; --index) {
+                widths.append(widths.at(index));
+            }
+            int namesChanges = 0;
+            int arrangementChanges = 0;
+            bool hadNames = true;
+            bool hadTwo = true;
+            for (const int width : widths) {
+                mpPreferences->resize(width, 760);
+                qApp->processEvents();
+                qApp->processEvents();
+                const bool names = namesShown();
+                const bool two = sideBySide();
+                QVERIFY2(!names || two, qPrintable(qsl("at %1px the %2 page shows the names with its colours one pair a row").arg(width).arg(page)));
+                namesChanges += names != hadNames;
+                arrangementChanges += two != hadTwo;
+                hadNames = names;
+                hadTwo = two;
+            }
+            // Down and back up: at most one change each way
+            QVERIFY2(namesChanges <= 2 && arrangementChanges <= 2,
+                     qPrintable(qsl("on the %1 page the names changed %2 times and the colours' arrangement %3 times").arg(page).arg(namesChanges).arg(arrangementChanges)));
+            delete mpPreferences;
+            mpPreferences = nullptr;
+        }
+    }
+
+    // A width at the breakpoint keeps what it had: two columns side by side
+    // are taken up a few pixels past the width they need and given up only
+    // below it, so a window held right there cannot flip between them
+    void test_aWidthAtTheBreakpointKeepsTheArrangementItHad()
+    {
+        QVERIFY2(openPreferences(), "the settings dialog never appeared");
+        auto* pMapColours = mpPreferences->findChild<QWidget*>(qsl("settingsMapColours"));
+        QGroupBox* pCard = mpPreferences->groupBox_mapperColors;
+        const int needed = pMapColours->layout()->sizeHint().width();
+        const int hysteresis = dlgProfilePreferences::scmColourArrangementHysteresis;
+        const int chrome = cardChrome(pCard, pMapColours);
+        for (const auto& [width, sideBySide] : {std::pair{needed - 1, false},
+                                                std::pair{needed, false},
+                                                std::pair{needed + hysteresis - 1, false},
+                                                std::pair{needed + hysteresis, true},
+                                                std::pair{needed, true},
+                                                std::pair{needed - 1, false}}) {
+            pCard->setMaximumWidth(chrome + width);
+            qApp->processEvents();
+            qApp->processEvents();
+            QCOMPARE(pMapColours->width(), width);
+            QVERIFY2(mapSideBySide() == sideBySide,
+                     qPrintable(qsl("at %1px against the %2px needed the map's columns are %3").arg(width).arg(needed).arg(mapSideBySide() ? qsl("side by side") : qsl("one under the other"))));
+        }
+        pCard->setMaximumWidth(QWIDGETSIZE_MAX);
+    }
+
+    // The sixteen console colours under the divider of both cards: a heading
+    // over each column, then a row for each of the eight names, its normal
+    // colour under Normal and its light twin under Light. The light twin's own
+    // label is gone from the card, and its field and button carry its name.
+    void test_theConsoleColoursAreATableOfNormalAndLight()
+    {
+        QVERIFY2(openPreferences(qsl("mainDisplay")), "the settings dialog never appeared");
+        auto* p = mpPreferences;
+        struct Table
+        {
+            QString page;
+            QString prefix;
+            QList<std::tuple<QLabel*, QPushButton*, QLabel*, QPushButton*>> rows;
+        };
+        const QList<Table> tables{{qsl("mainDisplay"),
+                                   qsl("settingsDisplay"),
+                                   {{p->label_black, p->pushButton_black, p->label_lBlack, p->pushButton_lBlack},
+                                    {p->label_red, p->pushButton_red, p->label_lRed, p->pushButton_lRed},
+                                    {p->label_green, p->pushButton_green, p->label_lGreen, p->pushButton_lGreen},
+                                    {p->label_yellow, p->pushButton_yellow, p->label_lYellow, p->pushButton_lYellow},
+                                    {p->label_blue, p->pushButton_blue, p->label_lBlue, p->pushButton_lBlue},
+                                    {p->label_magenta, p->pushButton_magenta, p->label_lMagenta, p->pushButton_lMagenta},
+                                    {p->label_cyan, p->pushButton_cyan, p->label_lCyan, p->pushButton_lCyan},
+                                    {p->label_white, p->pushButton_white, p->label_lWhite, p->pushButton_lWhite}}},
+                                  {qsl("mapper"),
+                                   qsl("settingsMap"),
+                                   {{p->label_17, p->pushButton_black_2, p->label_49, p->pushButton_Lblack_2},
+                                    {p->label_42, p->pushButton_red_2, p->label_50, p->pushButton_Lred_2},
+                                    {p->label_43, p->pushButton_green_2, p->label_51, p->pushButton_Lgreen_2},
+                                    {p->label_48, p->pushButton_yellow_2, p->label_52, p->pushButton_Lyellow_2},
+                                    {p->label_44, p->pushButton_blue_2, p->label_53, p->pushButton_Lblue_2},
+                                    {p->label_45, p->pushButton_magenta_2, p->label_54, p->pushButton_Lmagenta_2},
+                                    {p->label_46, p->pushButton_cyan_2, p->label_55, p->pushButton_Lcyan_2},
+                                    {p->label_47, p->pushButton_white_2, p->label_56, p->pushButton_Lwhite_2}}}};
+        const QStringList names{qsl("Black"), qsl("Red"), qsl("Green"), qsl("Yellow"), qsl("Blue"), qsl("Magenta"), qsl("Cyan"), qsl("White")};
+        for (const Table& table : tables) {
+            p->setTab(table.page);
+            qApp->processEvents();
+            auto* pTable = p->findChild<QWidget*>(qsl("%1ConsoleColoursTable").arg(table.prefix));
+            auto* pNormal = p->findChild<QLabel*>(qsl("%1ColoursNormal").arg(table.prefix));
+            auto* pLight = p->findChild<QLabel*>(qsl("%1ColoursLight").arg(table.prefix));
+            QVERIFY2(pTable && pNormal && pLight, qPrintable(qsl("the '%1' page has no table of console colours with its two headings").arg(table.page)));
+            QCOMPARE(pNormal->text(), qsl("Normal"));
+            QCOMPARE(pLight->text(), qsl("Light"));
+            QVERIFY(pNormal->isVisible() && pLight->isVisible());
+            const auto at = [pTable](const QWidget* pWidget) {
+                return QRect(pWidget->mapTo(pTable, QPoint(0, 0)), pWidget->size());
+            };
+            QWidget* pRowAbove = pNormal;
+            for (int row = 0; row < table.rows.size(); ++row) {
+                const auto& [pName, pChoose, pLightName, pLightChoose] = table.rows.at(row);
+                uiDesign::ColourValue* pField = fieldOf(pChoose);
+                uiDesign::ColourValue* pLightField = fieldOf(pLightChoose);
+                QVERIFY2(pField && pLightField, qPrintable(qsl("'%1' or '%2' has no field").arg(pChoose->objectName(), pLightChoose->objectName())));
+                const QString where = qsl("%1, row %2").arg(table.page).arg(row);
+                QVERIFY2(pName->isVisible() && pName->text().startsWith(names.at(row)), qPrintable(qsl("%1 is not named '%2' once: '%3'").arg(where, names.at(row), pName->text())));
+                QVERIFY2(pLightName->isHidden(), qPrintable(qsl("%1: the light twin's own label '%2' is still on the card").arg(where, pLightName->text())));
+                QCOMPARE(pName->buddy(), pField);
+                for (QWidget* pPart : {static_cast<QWidget*>(pField), static_cast<QWidget*>(pChoose), static_cast<QWidget*>(pLightField), static_cast<QWidget*>(pLightChoose)}) {
+                    QVERIFY2(pPart->isVisible() && qAbs(at(pPart).center().y() - at(pName).center().y()) <= 1,
+                             qPrintable(qsl("%1: '%2' is not on the row of its name").arg(where, pPart->objectName())));
+                    QCOMPARE(pPart->height(), uiDesign::scmColourWellHeight);
+                }
+                QVERIFY2(at(pName).top() > at(pRowAbove).bottom(), qPrintable(qsl("%1 is not under the row before it").arg(where)));
+                pRowAbove = pName;
+                QVERIFY2(at(pField).left() > at(pName).right() && at(pChoose).left() > at(pField).right(), qPrintable(qsl("%1: the name, the field and its button are out of order").arg(where)));
+                QCOMPARE(at(pField).left(), at(pNormal).left());
+                QCOMPARE(at(pLightField).left(), at(pLight).left());
+                QVERIFY2(at(pLightField).left() > at(pChoose).right(), qPrintable(qsl("%1: the light colour does not stand after the normal one").arg(where)));
+                // Named in full where the column heading cannot be heard
+                const QString lightName = qsl("Light %1").arg(names.at(row).toLower());
+                QCOMPARE(pLightField->accessibleName(), lightName);
+                QCOMPARE(pLightChoose->accessibleName(), lightName);
+                QCOMPARE(pLightChoose->toolTip(), qsl("Choose %1…").arg(lightName));
+                QCOMPARE(pField->accessibleName(), names.at(row));
+            }
+        }
+    }
+
+    // The preview takes the room the table leaves, as tall as the table and
+    // never taller, so the card is no taller for it; where too little is left
+    // to show anything by, it goes rather than dropping under the table
+    void test_theColourPreviewStandsBesideTheTableOrNotAtAll()
+    {
+        QVERIFY2(openPreferences(qsl("mainDisplay")), "the settings dialog never appeared");
+        const QList<std::tuple<QString, QString, QGroupBox*>> cards{{qsl("mainDisplay"), qsl("settingsDisplay"), mpPreferences->groupBox_displayColors},
+                                                                    {qsl("mapper"), qsl("settingsMap"), mpPreferences->groupBox_mapperColors}};
+        for (const auto& [page, prefix, pCard] : cards) {
+            mpPreferences->setTab(page);
+            qApp->processEvents();
+            auto* pBeside = mpPreferences->findChild<QWidget*>(qsl("%1ConsoleColours").arg(prefix));
+            auto* pTable = mpPreferences->findChild<QWidget*>(qsl("%1ConsoleColoursTable").arg(prefix));
+            auto* pPreview = mpPreferences->findChild<QWidget*>(qsl("%1ColoursPreview").arg(prefix));
+            QVERIFY2(pBeside && pTable && pPreview, qPrintable(qsl("the '%1' page has no preview beside its console colours").arg(page)));
+            QVERIFY2(pPreview->isVisible(), qPrintable(qsl("the '%1' preview is hidden in a %2px card").arg(page).arg(pCard->width())));
+            QVERIFY2(!pPreview->accessibleName().isEmpty(), "the preview has no name for a screen reader");
+            QCOMPARE(pPreview->geometry().top(), pTable->geometry().top());
+            QVERIFY2(pPreview->height() <= pTable->height(), qPrintable(qsl("the '%1' preview is %2px tall beside a %3px table").arg(page).arg(pPreview->height()).arg(pTable->height())));
+            QCOMPARE(pPreview->height(), pTable->height());
+            QVERIFY(pPreview->geometry().left() > pTable->geometry().right());
+            QCOMPARE(pPreview->geometry().right(), pBeside->width() - 1);
+            QCOMPARE(pBeside->height(), pTable->height());
+
+            // Narrowed to exactly the room a useful preview needs and then a pixel under it, and widened back: it
+            // comes back a few pixels past that room, so a width right at it keeps what it had
+            const int gap = pPreview->geometry().left() - pTable->geometry().right() - 1;
+            const int room = pTable->sizeHint().width() + gap + 200;
+            const int chrome = pCard->width() - pBeside->width();
+            const int hysteresis = dlgProfilePreferences::scmColourArrangementHysteresis;
+            for (const auto& [width, shown] :
+                 {std::pair{room, true}, std::pair{room - 1, false}, std::pair{room, false}, std::pair{room + hysteresis - 1, false}, std::pair{room + hysteresis, true}}) {
+                pCard->setMaximumWidth(chrome + width);
+                qApp->processEvents();
+                qApp->processEvents();
+                QCOMPARE(pBeside->width(), width);
+                QVERIFY2(pPreview->isVisible() == shown,
+                         qPrintable(qsl("with %1px beside a %2px table the '%3' preview is %4")
+                                            .arg(width - pTable->width() - gap)
+                                            .arg(pTable->width())
+                                            .arg(page, pPreview->isVisible() ? qsl("shown") : qsl("hidden"))));
+                QCOMPARE(pBeside->height(), pTable->height());
+            }
+            pCard->setMaximumWidth(QWIDGETSIZE_MAX);
+            qApp->processEvents();
+        }
+    }
+
+    // The colour cards' rows were wells a line of words and 8px tall; they are
+    // now fields at the 22px such a well comes to under macOS's 13pt face, and
+    // the table adds its line of headings. The heights compared against were
+    // measured with the wells, in this 1060px dialog: offscreen the Main
+    // display's card was 434px and the map's 442px, under cocoa 448px and
+    // 456px. Each card is to stay within 12px of that: the headings add a line
+    // of words and a row gap (21px offscreen), and each of the 11 or 12 rows
+    // gives back what its well was taller than 22px (1px offscreen, 2px under
+    // cocoa) - about 10px taller offscreen and level under cocoa. The wells
+    // stood the map's eight four to a column, where its leading column holds
+    // five, so that card is allowed one row more on top of that.
+    void test_theColourCardsStayAsTallAsTheirWellsMadeThem()
+    {
+#if !defined(Q_OS_MACOS)
+        QSKIP("the heights compared against were measured with macOS's interface face");
+#endif
+        const bool offscreen = QGuiApplication::platformName() == qsl("offscreen");
+        if (!offscreen && QGuiApplication::platformName() != qsl("cocoa")) {
+            QSKIP("the heights compared against were measured offscreen and under cocoa");
+        }
+        QVERIFY2(openPreferences(qsl("mainDisplay")), "the settings dialog never appeared");
+        const QList<std::tuple<QString, QGroupBox*, int, int>> cards{{qsl("mainDisplay"), mpPreferences->groupBox_displayColors, offscreen ? 434 : 448, 0},
+                                                                     {qsl("mapper"), mpPreferences->groupBox_mapperColors, offscreen ? 442 : 456, 1}};
+        for (const auto& [page, pCard, before, rowsAdded] : cards) {
+            mpPreferences->setTab(page);
+            qApp->processEvents();
+            const int row = fieldOf(mpPreferences->pushButton_mapInfoBg)->parentWidget()->geometry().top() - fieldOf(mpPreferences->pushButton_background_color_2)->parentWidget()->geometry().top();
+            const int allowed = before + rowsAdded * row;
+            QVERIFY2(qAbs(pCard->height() - allowed) <= 12,
+                     qPrintable(qsl("the '%1' card is %2px tall, where its wells made it %3px and its rows add %4px").arg(pCard->title()).arg(pCard->height()).arg(before).arg(rowsAdded * row)));
         }
     }
 

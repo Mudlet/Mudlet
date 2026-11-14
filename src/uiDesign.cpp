@@ -1045,6 +1045,165 @@ QString inputStyleSheet(const ThemeTokens& tokens, const QString& selectorPrefix
 }
 
 namespace {
+
+// What QLineEdit leaves for its cursor at either end of its text
+constexpr int scmLineEditCursorRoom = 2;
+// ...and how far inside its trailing edge right-aligned text ends: that room, and as much again that QLineEdit keeps
+// for the cursor drawn after the last character
+constexpr int scmRightAlignedTextRoom = 2 * scmLineEditCursorRoom;
+
+QLineEdit* editFieldOf(const QSpinBox* pBox)
+{
+    return pBox->findChild<QLineEdit*>(QString(), Qt::FindDirectChildrenOnly);
+}
+
+class NumberBoxFit : public QObject
+{
+public:
+    NumberBoxFit(const QList<QSpinBox*>& boxes, const int height)
+    : QObject(boxes.first())
+    , mHeight(height)
+    {
+        for (QSpinBox* pBox : boxes) {
+            mBoxes.append(pBox);
+            pBox->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+            pBox->installEventFilter(this);
+            if (QLineEdit* pEdit = editFieldOf(pBox)) {
+                pEdit->installEventFilter(this);
+            }
+            // As holdHeight(): a box's first Polish reaches the filter before the style does
+            pBox->ensurePolished();
+        }
+        fit();
+    }
+
+protected:
+    bool eventFilter(QObject* pWatched, QEvent* pEvent) override
+    {
+        switch (pEvent->type()) {
+        // A styled spin box is given the input recipe's min-height again at each polish
+        case QEvent::Polish:
+        case QEvent::StyleChange:
+        case QEvent::FontChange:
+            if (qobject_cast<QSpinBox*>(pWatched)) {
+                fit();
+            }
+            break;
+        case QEvent::Resize:
+        case QEvent::LayoutDirectionChange:
+            if (auto* pEdit = qobject_cast<QLineEdit*>(pWatched)) {
+                insetFromTrailingEdge(pEdit);
+            }
+            break;
+        default:
+            break;
+        }
+        return QObject::eventFilter(pWatched, pEvent);
+    }
+
+private:
+    [[nodiscard]] int widestValue() const
+    {
+        int widest = 0;
+        for (const QSpinBox* pBox : mBoxes) {
+            if (!pBox) {
+                continue;
+            }
+            const QFontMetrics metrics(pBox->font());
+            for (const int value : {pBox->minimum(), pBox->maximum()}) {
+                widest = std::max(widest, metrics.horizontalAdvance(pBox->prefix() + pBox->locale().toString(value) + pBox->suffix()));
+            }
+        }
+        return widest;
+    }
+
+    // As wide as the widest value needs, where a spin box measures itself for far more
+    void fit()
+    {
+        const int width = 2 * (scmInputBorderWidth + scmInputPaddingHorizontal + scmLineEditCursorRoom) + widestValue() + scmInputStepperWidth;
+        for (QSpinBox* pBox : std::as_const(mBoxes)) {
+            if (!pBox) {
+                continue;
+            }
+            pBox->setFixedSize(width, mHeight);
+            if (QLineEdit* pEdit = editFieldOf(pBox)) {
+                insetFromTrailingEdge(pEdit);
+            }
+        }
+    }
+
+    // So the widest value is centred in the field, and a shorter one ends where it does
+    void insetFromTrailingEdge(QLineEdit* pEdit) const
+    {
+        const int inset = std::max(0, (pEdit->width() - widestValue()) / 2 - scmRightAlignedTextRoom);
+        if (pEdit->layoutDirection() == Qt::RightToLeft) {
+            pEdit->setTextMargins(inset, 0, 0, 0);
+        } else {
+            pEdit->setTextMargins(0, 0, inset, 0);
+        }
+    }
+
+    QList<QPointer<QSpinBox>> mBoxes;
+    const int mHeight;
+};
+
+class HeldHeight : public QObject
+{
+public:
+    HeldHeight(QWidget* pWidget, const int height)
+    : QObject(pWidget)
+    , mHeight(height)
+    {
+        pWidget->installEventFilter(this);
+    }
+
+    void hold(QWidget* pWidget, const int height)
+    {
+        mHeight = height;
+        pWidget->setFixedHeight(height);
+    }
+
+protected:
+    bool eventFilter(QObject* pWatched, QEvent* pEvent) override
+    {
+        if (pEvent->type() == QEvent::Polish || pEvent->type() == QEvent::StyleChange) {
+            static_cast<QWidget*>(pWatched)->setFixedHeight(mHeight);
+        }
+        return QObject::eventFilter(pWatched, pEvent);
+    }
+
+private:
+    int mHeight;
+};
+
+} // namespace
+
+void fitNumberBoxes(const QList<QSpinBox*>& boxes, const int height)
+{
+    if (!boxes.isEmpty()) {
+        new NumberBoxFit(boxes, height);
+    }
+}
+
+void holdHeight(QWidget* pWidget, const int height)
+{
+    // Not findChild(): without Q_OBJECT of its own, a HeldHeight is any QObject to the meta-object system
+    HeldHeight* pHeld = nullptr;
+    for (QObject* pChild : pWidget->children()) {
+        if ((pHeld = dynamic_cast<HeldHeight*>(pChild))) {
+            break;
+        }
+    }
+    if (!pHeld) {
+        pHeld = new HeldHeight(pWidget, height);
+    }
+    // Polished first: a widget's first Polish reaches the filter before the style, which then puts a sheet's
+    // min-height back over the hold
+    pWidget->ensurePolished();
+    pHeld->hold(pWidget, height);
+}
+
+namespace {
 struct ChoiceMarkInks
 {
     QColor outline;
@@ -1641,6 +1800,16 @@ QPixmap tintedGlyph(const QPixmap& source, const QColor& color)
     painter.fillRect(glyph.rect(), color);
     painter.end();
     return glyph;
+}
+
+// Black and white squares four pixels on a side. The picture's own squares are
+// three times as tall as they are wide, as it was drawn to be squeezed into a
+// 3:1 icon, so it is squeezed by the same amount here.
+QPixmap checkerboardTile(const qreal devicePixelRatio)
+{
+    QPixmap tile = QPixmap(qsl(":/icons/black_white_transparent_check_1x3_ratio.png")).scaled(QSize(48, 16) * devicePixelRatio, Qt::IgnoreAspectRatio, Qt::FastTransformation);
+    tile.setDevicePixelRatio(devicePixelRatio);
+    return tile;
 }
 
 namespace {

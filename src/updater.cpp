@@ -81,10 +81,6 @@ static void cleanupSquirrelTempFiles()
 
 Updater::Updater(QObject* parent, QSettings* settings, bool testVersion)
 : QObject(parent)
-#if !defined(Q_OS_MACOS)
-//: Label for the update/restart button in the main toolbar
-, mpInstallOrRestart(new QPushButton(tr("Update")))
-#endif
 , mUpdateInstalled(false)
 {
     Q_ASSERT_X(settings, "updater", "QSettings object is required for the updater to work");
@@ -425,7 +421,7 @@ void Updater::setupOnWindows()
     // finally, create the dblsqd objects. Constructing the UpdateDialog triggers the update check
     updateDialog = new dblsqd::UpdateDialog(feed.get(), updateAutomatically() ? dblsqd::UpdateDialog::OnLastWindowClosed : dblsqd::UpdateDialog::Manual, mSettings);
     //: Label for the update button shown in the update dialog
-    mpInstallOrRestart->setText(tr("Update"));
+    mpInstallOrRestart = new QPushButton(tr("Update"));
     updateDialog->addInstallButton(mpInstallOrRestart);
     connect(updateDialog, &dblsqd::UpdateDialog::installButtonClicked, this, &Updater::slot_installOrRestartClicked);
 }
@@ -470,7 +466,7 @@ void Updater::setupOnLinux()
     // finally, create the dblsqd objects. Constructing the UpdateDialog triggers the update check
     updateDialog = new dblsqd::UpdateDialog(feed.get(), updateAutomatically() ? dblsqd::UpdateDialog::OnLastWindowClosed : dblsqd::UpdateDialog::Manual, mSettings);
     //: Label for the update button shown in the update dialog
-    mpInstallOrRestart->setText(tr("Update"));
+    mpInstallOrRestart = new QPushButton(tr("Update"));
     updateDialog->addInstallButton(mpInstallOrRestart);
     connect(updateDialog, &dblsqd::UpdateDialog::installButtonClicked, this, &Updater::slot_installOrRestartClicked);
 }
@@ -726,14 +722,17 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
 #elif defined(Q_OS_WINDOWS)
         finishSetup();
 #endif
-        if (mUpdateInstalled) {
-            //: Label for the button shown after the update has been downloaded and installed, prompting user to restart
-            mpInstallOrRestart->setText(tr("Restart to apply update"));
-        } else {
-            //: Label for the update button shown when the update installation failed
-            mpInstallOrRestart->setText(tr("Update failed"));
+        // Gone with the update dialog if Mudlet is quitting
+        if (mpInstallOrRestart) {
+            if (mUpdateInstalled) {
+                //: Label for the button shown after the update has been downloaded and installed, prompting user to restart
+                mpInstallOrRestart->setText(tr("Restart to apply update"));
+            } else {
+                //: Label for the update button shown when the update installation failed
+                mpInstallOrRestart->setText(tr("Update failed"));
+            }
+            mpInstallOrRestart->setEnabled(true);
         }
-        mpInstallOrRestart->setEnabled(true);
         watcher->deleteLater();
     });
     watcher->setFuture(future);

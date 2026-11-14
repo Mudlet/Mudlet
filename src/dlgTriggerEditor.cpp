@@ -213,8 +213,6 @@ static constexpr int scmEditorSearchResultIndent = 14;
 static constexpr int scmEditorCodeHeaderGlyphSize = 13;
 static constexpr int scmEditorCodeHeaderInset = 4;
 
-static constexpr int scmEditorColorWellHeight = 22;
-static constexpr int scmEditorColorWellWidth = 40;
 static constexpr int scmEditorRowControlGap = 8;
 static constexpr int scmEditorOptionRowGap = 24;
 // Wide enough for the toolbar's labels and the trigger options strip on one line; restoreWindowGeometry()
@@ -15641,7 +15639,7 @@ void dlgTriggerEditor::buildTriggerOptionsStrip()
                           tr("The colour behind the matched text. Choose Keep in the picker to leave the game's own."));
     for (QPushButton* pWell : {pForm->pushButtonFgColor, pForm->pushButtonBgColor}) {
         pWell->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-        pWell->setFixedSize(scmEditorColorWellWidth, scmEditorColorWellHeight);
+        pWell->setFixedSize(uiDesign::scmColourWellWidth, uiDesign::scmColourWellHeight);
         pHighlightLayout->addWidget(pWell);
     }
     pHighlightLayout->insertWidget(0, pForm->checkBox_triggerColorizer);
