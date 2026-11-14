@@ -2710,6 +2710,9 @@ QString cTelnet::getNewEnvironValueSystemType()
     systemType = qsl("WIN32");
 #elif (defined(Q_OS_MACOS))
     systemType = qsl("MACOS");
+#elif defined(Q_OS_ANDROID)
+    // Before Q_OS_LINUX, which Android also defines
+    systemType = qsl("ANDROID");
 #elif defined(Q_OS_LINUX)
     systemType = qsl("LINUX");
 #elif defined(Q_OS_HURD)
