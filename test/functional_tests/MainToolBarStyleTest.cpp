@@ -88,6 +88,9 @@ private:
         QCoreApplication::processEvents();
     }
 
+    // A PTB's "Report issue" button makes the bar too long for a scmWindowWidth window
+    static int wideWidth() { return qMax(scmWindowWidth, mudlet::self()->width() - theBar()->width() + theBar()->sizeHint().width()); }
+
     // Tinting goes through premultiplied alpha, which can land a level off
     static bool sameInk(const QColor& first, const QColor& second)
     {
@@ -380,10 +383,10 @@ private slots:
         QToolButton* pMore = overflowButton(pBar);
         QVERIFY2(pMore, "the bar has no overflow button");
         const auto restore = qScopeGuard([]() {
-            windowWidth(scmWindowWidth);
+            windowWidth(wideWidth());
         });
 
-        windowWidth(scmWindowWidth);
+        windowWidth(wideWidth());
         QVERIFY2(!pMore->isVisible(), "the overflow button is on show on a window every button fits in");
 
         for (const enums::Appearance appearance : {enums::Appearance::dark, enums::Appearance::light}) {
@@ -413,7 +416,7 @@ private slots:
             // Wider, not narrower: the window's minimum width can sit just under the folding width
             int wider = scmFoldingWidth;
             int fewer = hidden;
-            while (fewer == hidden && wider < scmWindowWidth) {
+            while (fewer == hidden && wider < wideWidth()) {
                 wider += 20;
                 windowWidth(wider);
                 fewer = hiddenButtons(pBar);
@@ -425,7 +428,7 @@ private slots:
         }
         TestPixels::setAppearanceAndWait(enums::Appearance::systemSetting);
 
-        windowWidth(scmWindowWidth);
+        windowWidth(wideWidth());
         QVERIFY2(!pMore->isVisible(), "the overflow button stayed after the window grew back");
     }
 
@@ -439,7 +442,7 @@ private slots:
         const auto restore = qScopeGuard([&buttonFont]() {
             QApplication::setFont(buttonFont, "QToolButton");
             mudlet::self()->restyleMainToolBar();
-            windowWidth(scmWindowWidth);
+            windowWidth(wideWidth());
         });
 
         QFont smaller = buttonFont;
@@ -461,10 +464,11 @@ private slots:
         QToolBar* pBar = theBar();
         QLayout* pLayout = pBar->layout();
         const auto restore = qScopeGuard([]() {
-            windowWidth(scmWindowWidth);
+            windowWidth(wideWidth());
         });
-        windowWidth(scmWindowWidth);
+        windowWidth(wideWidth());
         QVERIFY2(pBar->styleSheet().contains(qsl("QToolBarExtension { padding-left: 0px; padding-right: 0px; }")), "the overflow button has its side padding back");
+        QVERIFY2(!overflowButton(pBar)->isVisible(), "the bar folded on a window wide enough for every button, so the widths below are not its full ones");
 
         QHash<const QWidget*, int> fullWidths;
         for (int i = 0; i < pLayout->count(); ++i) {
@@ -475,7 +479,7 @@ private slots:
         }
 
         int foldedWidths = 0;
-        for (int width = scmWindowWidth; width > 0; width -= 2) {
+        for (int width = wideWidth(); width > 0; width -= 2) {
             mudlet::self()->resize(width, scmWindowHeight);
             // The bar lays out on the posted resize and layout request; no timer is involved
             QCoreApplication::sendPostedEvents();
@@ -550,7 +554,7 @@ private slots:
             if (pMore->isChecked()) {
                 pMore->click();
             }
-            windowWidth(scmWindowWidth);
+            windowWidth(wideWidth());
         });
         windowWidth(scmFoldingWidth);
         QVERIFY2(pMore->popupMode() != QToolButton::InstantPopup, "this window's height left Qt offering a menu rather than a row");
@@ -583,7 +587,7 @@ private slots:
         const int was = mudlet::self()->mToolbarIconSize;
         const auto restore = qScopeGuard([was]() {
             mudlet::self()->setToolBarIconSize(was);
-            windowWidth(scmWindowWidth);
+            windowWidth(wideWidth());
         });
         windowWidth(scmFoldingWidth);
 
