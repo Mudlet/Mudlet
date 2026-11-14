@@ -1249,10 +1249,12 @@ which is why a desktop build leaves it off.
 ### The Lua C modules
 
 Mudlet's Lua is built on seven C modules, which a desktop Mudlet loads from files as `require()` asks
-for them: `lfs`, `brimworks.zip`, `rex_pcre2`, `luasql.sqlite3`, `lua-utf8`, `yajl` and `lpeg`. Android
-and a browser let no program load code that way. Built with `-DUSE_BUNDLED_LUA_MODULES=ON`, which is
-the default for both, `mudlet_core` carries the seven itself and every profile finds them there with
-nothing for the app to do. They need SQLite3 to link against, besides what `mudlet_core` links anyway.
+for them: `lfs`, `brimworks.zip`, `rex_pcre2`, `luasql.sqlite3`, `lua-utf8`, `yajl` and `lpeg`. Under
+Qt 6's default packaging Android keeps an app's libraries inside the APK, where `require()` cannot read
+them, and a browser lets no program load code from files. Built with `-DUSE_BUNDLED_LUA_MODULES=ON`,
+which is the default for both, `mudlet_core` carries the seven itself and every profile finds them
+there with nothing for the app to do. They need SQLite3 to link against, besides what `mudlet_core`
+links anyway.
 
 Configure fetches their sources with git, each pinned to the commit of the release Mudlet's own builds
 install, as `cmake/BundledLuaModules.cmake` lists them; all are under the MIT licence. To build one from
@@ -1272,7 +1274,11 @@ THeadlessSession::preloadLuaModule("lfs", luaopen_lfs);
 `require()` then finds the module under that name ahead of any on disk, in every profile opened or
 reset afterwards. A module that is missing takes with it what is built on it: without `yajl` none of
 Mudlet's own Lua loads, and without `luasql.sqlite3` `db:create()` raises an error. A C module of the
-app's own, for its scripts to require, is given the same way.
+app's own, for its scripts to require, is given the same way. An app built with
+`QT_ANDROID_LEGACY_PACKAGING`, whose libraries Android unpacks to a folder, can instead ship one as
+`libfoo.so` for `require("foo")`, as `package.cpath` then names that folder. It is built with plain
+`add_library()`, since `qt_add_library()` adds the ABI to the file name. This has not yet been tried
+on a device.
 
 ## Embedding it: spell-check dictionaries
 
