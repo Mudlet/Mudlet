@@ -852,8 +852,8 @@ jobs:
   # Every development build saves its ccache under a new per-commit key and only
   # the newest is ever restored, so the older ones would sit in the 10GB quota
   # until GitHub's least-recently-used eviction, which is as likely to drop a
-  # current entry that only development builds restore. The Windows workflow
-  # saves under the same scheme and is swept here too.
+  # current entry that only development builds restore. The Windows and
+  # WebAssembly workflows save under the same scheme and are swept here too.
   # Deliberately not `needs: compile-mudlet`: that would queue it for a runner only
   # once the slowest leg ends, often long after later pushes have built. Started
   # alongside the builds, it keeps the previous push's entries, which they restore.

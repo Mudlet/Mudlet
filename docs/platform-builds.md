@@ -342,6 +342,88 @@ cmake --preset linux-core-minimal
 cmake --build --preset linux-core-minimal
 ```
 
+## WebAssembly
+
+`mudlet-headless` builds for the browser (#9011) with Emscripten 3.1.70 against Qt 6.9.0's
+`wasm_singlethread` kit (Qt for WebAssembly without threads), with the `qt5compat`, `qtmultimedia`
+and `qtspeech` modules. It takes its tools (moc, rcc, lrelease) from the desktop Qt of the same
+version, the host kit. The build also runs host tools: a Lua 5.1 that can load the `lua-yajl` rock
+(`CI/install-lua-rocks.sh lua-yajl`; without it the translation statistics come out empty),
+`ninja`, `make`, `cmake`, `curl` and `git`, a host C++ compiler (Boost's bootstrap builds `b2` with
+it), and Node for the smoke test below. With [aqtinstall](https://github.com/miurahr/aqtinstall):
+
+```bash
+aqt install-qt all_os wasm 6.9.0 wasm_singlethread -m qt5compat qtmultimedia qtspeech -O ~/Qt
+aqt install-qt linux desktop 6.9.0 linux_gcc_64 -m qt5compat qtmultimedia qtspeech -O ~/Qt
+```
+
+`CI/build-wasm-dependencies.sh` builds the libraries Mudlet and its bundled Lua C modules link,
+SQLite among them, from pinned and checksummed sources, into a prefix of your choosing, and skips
+any that this same script, yajl patch and emcc already built there. The prefix must hold these
+libraries alone, as a desktop build may search one such as `~/.local`: the script refuses a
+directory holding anything it did not build, and a non-Emscripten configure fails if it finds zlib
+or PCRE2 there through `CMAKE_PREFIX_PATH` (cache or environment). The `wasm-headless` preset reads
+the wasm kit from `QT_ROOT_DIR`, the host kit from `QT_HOST_PATH` and that prefix, as an absolute
+path, from `MUDLET_WASM_DEPS`, and fails to configure without them or with a prefix the script has
+not finished. A build directory keeps the toolchain and the libraries it was first configured with,
+so after correcting `QT_ROOT_DIR` or changing `MUDLET_WASM_DEPS`, configure with
+`cmake --fresh --preset wasm-headless`. It warns when another version of the script built the
+prefix; rerun the script then. From scratch:
+
+```bash
+/path/to/emsdk/emsdk install 3.1.70
+/path/to/emsdk/emsdk activate 3.1.70
+source /path/to/emsdk/emsdk_env.sh
+export QT_ROOT_DIR=~/Qt/6.9.0/wasm_singlethread QT_HOST_PATH=~/Qt/6.9.0/gcc_64
+export MUDLET_WASM_DEPS=~/mudlet-wasm-deps
+CI/build-wasm-dependencies.sh "$MUDLET_WASM_DEPS"
+cmake --preset wasm-headless
+cmake --build --preset wasm-headless
+```
+
+The preset turns off what `linux-core-minimal` does (see the previous section), keeps the bundled
+Lua C modules and mudlet-lua, and builds only `mudlet-headless`, in Release, into
+`build-wasm-headless/src/` as `mudlet-headless.js`, `mudlet-headless.wasm` and `qtloader.js`.
+
+Qt for WebAssembly needs a DOM, so the result runs in a browser rather than in Node.
+`CI/wasm-headless-smoke.js` serves it to headless Chromium through Playwright and exits 0 two
+seconds after the program prints the expected line, if the page still answers then, as a hung page
+prints nothing. It fails on an error line before then, any of the script's `failureMarkers`: a Lua C
+module or mudlet-lua that does not load, a Lua error, or a package or module that did not load whole
+or has a script or pattern that does not work.
+
+Given only the build directory, it runs a probe that exercises mudlet-lua, PCRE2's Unicode tables,
+SQLite, yajl, LPeg and Hunspell (through the profile's own dictionary, as the browser has no system
+one), saves the profile, downloads a file the page serves and unzips an archive it serves through
+lua-zip (see the script). As this is the one 32-bit
+build CI runs, the probe also loads a map desktop Mudlet saved, and its own save of that map, and
+fails unless both export the JSON desktop did and the reloaded map gives the routes `Mapper_spec.lua`
+expects of it; a change to the default map format version means making both files again, as
+`src/mudlet-lua/tests/fixtures/maps/README.md` says:
+
+```bash
+npm install --prefix ~/mudlet-playwright playwright@1.63.0
+~/mudlet-playwright/node_modules/.bin/playwright install chromium
+NODE_PATH=~/mudlet-playwright/node_modules node CI/wasm-headless-smoke.js build-wasm-headless/src
+```
+
+Given an expected line after the directory, which must not be blank, it passes the rest of its
+arguments to `mudlet-headless` instead of the probe's. Its header lists its exit codes; 3 means it
+could not run the program at all, not that the build failed.
+
+The page seeds `Mudlet.ini` with `storePasswordsSecurely=false` and `interfaceLanguage=en_US` (the
+script says why). `mudlet-headless` does not exit by itself in a browser, so a run without the
+line fails after `WASM_SMOKE_TIMEOUT` seconds (120 by default). `.github/workflows/wasm-build.yml`
+builds and runs this on every push to `development` and every pull request that touches the
+sources, caching the dependency prefix, and once a week builds that prefix from scratch. It links
+with Emscripten's runtime checks, which the preset leaves out, so that a stack overflow or a read or
+write through a null pointer aborts the run instead of going unnoticed; they make the module about
+a tenth larger. To do the same, configure with:
+
+```bash
+cmake --preset wasm-headless -DCMAKE_EXE_LINKER_FLAGS="-sASSERTIONS=1 -sSTACK_OVERFLOW_CHECK=2 -sSAFE_HEAP=1"
+```
+
 ## Debugging options
 
 `src/CMakeLists.txt` contains commented debugging defines for development (search "Debugging code inclusions"):
