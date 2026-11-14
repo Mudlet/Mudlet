@@ -70,7 +70,6 @@
 // A Qt Resource Collection in a static library only reaches the executable if something here names it
 extern void qInitResources_mudlet();
 extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
 extern void qInitResources_mudlet_fonts_common();
 extern void qInitResources_mudlet_fonts_posix();
 
@@ -80,9 +79,6 @@ enum ExitCode { exitOk = 0, exitFailed = 1, exitUsage = 2, exitOutputFailed = 3,
 
 void initializeQRCResources()
 {
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
 #ifdef INCLUDE_FONTS
     qInitResources_mudlet_fonts_common();
 #ifdef INCLUDE_EMOJI_FONT

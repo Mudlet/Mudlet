@@ -320,6 +320,8 @@ For Android they default to OFF, as do `USE_MCPSERVER`, `USE_3DMAPPER`, `USE_GUI
 configure with the NDK's toolchain file needs none of them named. Each can still be turned on
 there but `USE_GUI` and `USE_3DMAPPER`: Android has no Qt DBus for the desktop GUI, and no desktop
 OpenGL or GLU for the 3D mapper. `USE_MCPSERVER` needs Qt HttpServer for Android installed.
+With `USE_GUI` off, as on Android, `USE_VARIABLE_SPLASH_SCREEN` has no effect, and configure says
+so: its images go into the desktop GUI, not `mudlet_core` or `mudlet-headless`.
 
 `USE_BUILTIN_MUDLET_LUA` and `USE_BUNDLED_LUA_MODULES` go the other way: off by default except for
 Android and a browser, they build Mudlet's own Lua files and the Lua C modules those need into
