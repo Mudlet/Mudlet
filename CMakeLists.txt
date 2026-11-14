@@ -304,7 +304,8 @@ endif()
 # qtkeychain package is built against Homebrew's Qt, which is incompatible with
 # the Qt installed by jurplel/install-qt-action in CI.
 # See: https://github.com/Mudlet/Mudlet/issues/8875
-if(APPLE)
+# A browser build has no system copy to use either.
+if(APPLE OR EMSCRIPTEN)
   set(USE_OWN_QTKEYCHAIN ON)
   git_submodule_init(
     CHECK_FILE "3rdparty/qtkeychain/CMakeLists.txt"

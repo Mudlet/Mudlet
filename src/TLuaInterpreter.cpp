@@ -66,7 +66,6 @@
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDesktopServices>
-#include <QFutureWatcher>
 #include <QGuiApplication>
 #include <QSettings>
 #include <QStandardPaths>
@@ -7151,14 +7150,13 @@ int TLuaInterpreter::unzipAsync(lua_State* L)
     // Extraction can outlast the profile, or this lua_State across a resetProfile(), so the
     // watcher goes with the Host and reaches it directly rather than through L
     Host* pHost = &getHostFromLua(L);
-    auto future = TBackgroundTask::run([zipLocation, extractLocation, temporaryPath = temporaryDir.path()]() {
+    const TBackgroundResult result = TBackgroundTask::run([zipLocation, extractLocation, temporaryPath = temporaryDir.path()]() {
         return utils::unzip(zipLocation, extractLocation, temporaryPath);
     });
-    auto watcher = new QFutureWatcher<bool>(pHost);
-    connect(watcher, &QFutureWatcher<bool>::finished, watcher, [pHost, watcher, future, zipLocation, extractLocation]() {
+    result.whenFinished(pHost, QString(), [pHost, result, zipLocation, extractLocation]() {
         TEvent event{};
 
-        if (future.result()) {
+        if (result.succeeded()) {
             event.mArgumentList.append(qsl("sysUnzipDone"));
             event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         } else {
@@ -7171,9 +7169,7 @@ int TLuaInterpreter::unzipAsync(lua_State* L)
         event.mArgumentList.append(extractLocation);
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         pHost->raiseEvent(event);
-        watcher->deleteLater();
     });
-    watcher->setFuture(future);
 
     lua_pushboolean(L, true);
     return 1;

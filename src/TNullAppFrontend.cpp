@@ -695,11 +695,21 @@ namespace {
 bool sForceClosePending = false;
 bool sQuitPending = false;
 
+bool eventLoopRunning()
+{
+#if QT_CONFIG(thread)
+    return QThread::currentThread()->loopLevel() > 0;
+#else
+    // The browser's own loop runs from the start
+    return true;
+#endif
+}
+
 // quit() ends only a running exec() and does nothing from an event loop pump before one, which is
 // where an embedder loading profiles meets this. A nested loop before exec() still loses it.
 void quitOnceRunning()
 {
-    if (QThread::currentThread()->loopLevel() == 0) {
+    if (!eventLoopRunning()) {
         QTimer::singleShot(50ms, quitOnceRunning);
         return;
     }
@@ -759,7 +769,7 @@ void quitOnceClosed()
     sForceClosePending = false;
     if (!sQuitPending) {
         sQuitPending = true;
-        if (QThread::currentThread()->loopLevel() == 0) {
+        if (!eventLoopRunning()) {
             qDebug() << "TNullAppFrontend::armForceClose() INFO - no event loop is running yet, so the quit waits for one";
         }
         quitOnceRunning();
