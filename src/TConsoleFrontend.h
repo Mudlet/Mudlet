@@ -266,6 +266,7 @@ public:
     virtual void setMapperShown(bool shown) = 0;
     virtual void setMapperPanelVisible(bool visible) = 0;
     virtual void setMapLargeAreaExitArrows(bool enabled) = 0;
+    virtual void setMapDirectionalExitLines(bool enabled) = 0;
     // Also repaints the map's 3D view, if one is open.
     virtual void requestMapRepaint() = 0;
 

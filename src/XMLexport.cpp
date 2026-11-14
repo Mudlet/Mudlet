@@ -619,6 +619,10 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         host.append_attribute("Large2DMapAreaExitArrows") = "yes";
     }
 
+    if (pHost->getDirectionalExitLines()) {
+        host.append_attribute("Directional2DMapExitLines") = "yes";
+    }
+
     { // Blocked so that indentation reflects that of the XML file
         host.append_child("name").text().set(pHost->mHostName.toUtf8().constData());
 

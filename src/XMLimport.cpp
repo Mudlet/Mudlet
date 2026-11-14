@@ -1169,6 +1169,7 @@ void XMLimport::readHost(Host* pHost)
         // The default (and for map/profile files from before 4.15.0):
         pHost->setLargeAreaExitArrows(false);
     }
+    pHost->setDirectionalExitLines(attributes().value(qsl("Directional2DMapExitLines")) == YES);
 
     QMargins borders;
 

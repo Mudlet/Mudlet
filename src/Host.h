@@ -291,6 +291,8 @@ public:
     ControlCharacterMode getControlCharacterMode() const { return mControlCharacter; }
     bool getLargeAreaExitArrows() const { return mLargeAreaExitArrows; }
     void setLargeAreaExitArrows(const bool);
+    bool getDirectionalExitLines() const { return mDirectionalExitLines; }
+    void setDirectionalExitLines(const bool);
     // As setConfig("mapStyle") takes it
     const QString& mapStyle() const;
     const MapStyle& mapStylePreset() const { return *mpMapStyle; }
@@ -1833,6 +1835,7 @@ private:
     ControlCharacterMode mControlCharacter = ControlCharacterMode::AsIs;
 
     bool mLargeAreaExitArrows = false;
+    bool mDirectionalExitLines = false;
     // Never null, so the renderer can read it per room without a lookup
     const MapStyle* mpMapStyle = nullptr;
     bool mEditorShowBidi = true;
