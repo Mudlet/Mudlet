@@ -274,6 +274,7 @@ function Geyser.List:new(cons, container)
   -- Every way out of the list comes through here: delete, changeContainer, and
   -- adding the item to another container.
   function content:remove(window)
+    local wasSelected = me.selected[window.name]
     me.selected[window.name] = nil
 
     -- The stripe was this list's; a row going elsewhere leaves it behind.
@@ -283,6 +284,11 @@ function Geyser.List:new(cons, container)
 
     Geyser.remove(self, window)
     me:fit()
+
+    -- Last, so a callback that raises can't leave the row half removed.
+    if wasSelected and me.onSelectionChange then
+      me.onSelectionChange(me, window, false)
+    end
   end
 
   me.content = content
@@ -429,19 +435,31 @@ local function holdingLayout(list, fn)
   local wasDeferring = rawget(list, "defer_updates")
 
   list:begin_update()
-  local ok, err = pcall(fn)
+
+  -- Not pcall: Lua 5.1 can't yield across one, and an onDismiss may yield. fn runs
+  -- in a coroutine of its own instead, and its yields are passed on to ours.
+  local co = coroutine.create(fn)
+  local results = {coroutine.resume(co)}
+
+  while results[1] and coroutine.status(co) == "suspended" do
+    if not coroutine.running() then
+      results = {false, "attempt to yield from outside a coroutine"}
+      break
+    end
+    local passed = {coroutine.yield(unpack(results, 2, table.maxn(results)))}
+    results = {coroutine.resume(co, unpack(passed, 1, table.maxn(passed)))}
+  end
 
   if not wasDeferring then
     list:end_update()
   end
 
-  if not ok then
-    error(err, 0)
+  if not results[1] then
+    error(results[2], 0)
   end
 end
 
---- Deletes every row now, without consulting any `onDismiss`, and without telling
--- `onSelectionChange` about the selection going with them.
+--- Deletes every row now, without consulting any `onDismiss`.
 function Geyser.List:clear()
   holdingLayout(self, function()
     for _, item in ipairs(self:getItems()) do
