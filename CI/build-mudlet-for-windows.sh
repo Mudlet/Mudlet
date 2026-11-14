@@ -149,11 +149,10 @@ fi
 
 # A profile-guided build (releases and PTBs) builds twice: first the instrumented benchmarks
 # CI/pgo-train.sh runs to record the profile, then Mudlet built against it.
-# Only the benchmarks in the first pass, as building mudlet would send the
-# instrumented binary's debug files to Sentry.
+# Only the benchmarks in the first pass: pgo-train.sh runs nothing else, and each LTO link is slow.
 if [ "${MUDLET_PGO_BUILD}" = "true" ]; then
-  # ThinLTO, not full LTO: full LTO runs the runner out of memory linking the ~19 test binaries.
-  # The cache lets those binaries reuse each other's code generation for the shared Mudlet code.
+  # ThinLTO, not full LTO: full LTO runs the runner out of memory once the second pass links every
+  # test binary, each of which links all of Mudlet. The cache skips code generation that comes out identical.
   LTO_ARGS=(-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON -DCMAKE_EXE_LINKER_FLAGS=-Wl,--thinlto-cache-dir=thinlto-cache)
   echo "Building the instrumented pass of a profile-guided build ..."
   # Line tables are enough to train on; full debug info makes these three LTO links far slower
@@ -169,15 +168,14 @@ if [ "${MUDLET_PGO_BUILD}" = "true" ]; then
     echo "=== ERROR: the profile-guided training run failed ==="
     exit 6
   fi
-  PGO_ARGS=(-DMUDLET_PGO=USE)
+  PGO_ARGS=(-DMUDLET_PGO=USE "${LTO_ARGS[@]}")
 else
   PGO_ARGS=()
-  LTO_ARGS=()
 fi
 
 # The flags live in CMakePresets.json, and the preset picks WITH_SENTRY,
 # SENTRY_DSN and SENTRY_SEND_DEBUG up out of the environment the workflow set
-if ! cmake --preset ci-windows "${PGO_ARGS[@]}" "${LTO_ARGS[@]}"; then
+if ! cmake --preset ci-windows "${PGO_ARGS[@]}"; then
   echo "=== ERROR: CMake configuration failed ==="
   exit 4
 fi
