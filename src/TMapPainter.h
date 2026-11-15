@@ -215,6 +215,8 @@ public:
         // A straight custom line between the two rooms draws this exit's line, but not this room's door on it.
         bool drawnByCustomLine = false;
         int direction = 0;
+        // The destination draws its way back as a custom line, which then also draws this exit when it is bent
+        bool returnDrawnByCustomLine = false;
     };
 
     // Below this many pixels per room, both room loops just fill the environment colour, dropping border,
@@ -228,6 +230,9 @@ public:
     static void paintLabelHighlight(QPainter& painter, QRectF labelPaintRectangle, const QSizeF& clickSize);
     static int customLineDestination(const TRoom& room, const QString& key);
     static bool customLineRunsStraightTo(const TRoom& owner, const TRoom& other);
+    // Whether exit's destination leads back through the opposite exit and draws that one as a custom line, which then
+    // shows the two-way connection a bent plain line would draw again beside it
+    static bool returnExitHasCustomLine(const TRoom& room, const ExitToPaint& exit);
 
     void flushSymbolPixmapCache() { mSymbolPixmapCache.clear(); }
     qsizetype symbolPixmapCacheCount() const { return mSymbolPixmapCache.size(); }

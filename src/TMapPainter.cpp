@@ -133,6 +133,15 @@ int TMapPainter::customLineDestination(const TRoom& room, const QString& key)
     return room.getSpecialExits().value(key);
 }
 
+bool TMapPainter::returnExitHasCustomLine(const TRoom& room, const ExitToPaint& exit)
+{
+    if (!exit.destination) {
+        return false;
+    }
+    const int reverse = TMap::scmReverseDirections.value(exit.direction);
+    return reverse && exit.destination->getExit(reverse) == room.getId() && exit.destination->customLines.contains(TRoom::dirCodeToShortString(reverse));
+}
+
 // Whether owner has a custom line for an exit to other that runs straight to its centre, so a plain line between them
 // would cover it, show through its gaps or run beside it. The line's fixed first half-room segment may leave that line.
 bool TMapPainter::customLineRunsStraightTo(const TRoom& owner, const TRoom& other)
@@ -1857,6 +1866,7 @@ void TMapPainter::paintRoomExits(QPainter& painter,
             exit.drawnByCustomLine = !exit.oneWay
                                      && (customLineRunsStraightTo(*room, *pDestination)
                                          || (customLineRooms.contains(exit.destinationId) && exitsReachWidget(pDestination) && customLineRunsStraightTo(*pDestination, *room)));
+            exit.returnDrawnByCustomLine = customLineRooms.contains(exit.destinationId) && exitsReachWidget(pDestination) && returnExitHasCustomLine(*room, exit);
         }
 
         if (!room->customLines.empty()) {
@@ -2066,8 +2076,9 @@ void TMapPainter::paintRoomExits(QPainter& painter,
             QLineF line;
             bool leavesByStub = false;
             const QVector<QPointF> path = areaExit ? QVector<QPointF>{} : exitLinePath(*room, exit, p2.toPointF(), p1.toPointF(), &leavesByStub);
-            // A straight custom line covers only a straight exit line, not one bent through its stubs
-            if (!areaExit && (!exit.drawnByCustomLine || path.size() > 2)) {
+            // A straight custom line covers only a straight exit line; a bent one only the custom line of its way back does
+            const bool drawnByCustomLine = path.size() > 2 ? exit.returnDrawnByCustomLine : exit.drawnByCustomLine;
+            if (!areaExit && !drawnByCustomLine) {
                 // Non-area exit:
                 // Straight exits to the same room overlap, so one being one-way arrows them all. A bent one is
                 // drawn apart and keeps its own.
@@ -4034,8 +4045,10 @@ std::pair<bool, QString> TMapPainter::exportArea(int areaId, const QString& file
                     } else {
                         // Also for a line left out: the door drawn below takes its width from this pen
                         painter.setPen(pen);
-                        // A straight custom line covers only a straight exit line, not one bent through its stubs
-                        if (path.size() > 2 || (!customLineRunsStraightTo(*room, *exitRoom) && !(exitRoom->z() == exportZLevel && customLineRunsStraightTo(*exitRoom, *room)))) {
+                        // A straight custom line covers only a straight exit line; a bent one only the custom line of its way back does
+                        const bool drawnByCustomLine = path.size() > 2 ? exitRoom->z() == exportZLevel && returnExitHasCustomLine(*room, exit)
+                                                                       : customLineRunsStraightTo(*room, *exitRoom) || (exitRoom->z() == exportZLevel && customLineRunsStraightTo(*exitRoom, *room));
+                        if (!drawnByCustomLine) {
                             drawExitPath(painter, path);
                         }
                     }
