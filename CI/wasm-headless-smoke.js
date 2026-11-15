@@ -58,6 +58,8 @@ function defaultProbe() {
     .filter(Boolean)
     .map(Number)
     .sort((a, b) => a - b);
+  // Shared with build-cross-platform-map.lua and Mapper_spec.lua, so fixtures remade with a change to it hold here too
+  const normaliser = fs.readFileSync(path.join(mapFixtureDir, "normalise-map-json.lua"), "utf8");
   const probeLua = [
     'smokeHome = getMudletHomeDir() .. "/"',
     'smokeFile = smokeHome .. "smoke-download.js"',
@@ -71,13 +73,7 @@ function defaultProbe() {
     'function smokeRead(file) local f = assert(io.open(file, "rb")) local text = f:read("*a") f:close() return text end',
     'function smokeSave() local ok, file = saveProfile() assert(ok, file) ' +
       'assert(smokeRead(file):find("<MudletPackage", 1, true), file .. " holds no profile") assert(os.remove(file)) end',
-    // QFile::Text writes CRLF on Windows; QFont::toString() gains fields across Qt versions, and CI runs desktop on
-    // 6.11.3 and the browser on 6.9.0; a label's PNG comes out a few pixel bytes apart in the browser build, so only
-    // whether it has one is kept
-    'function smokeNormalised(json) return (json:gsub("\\r\\n", "\\n")' +
-      ':gsub([[("mapSymbolFontDetails": "]] .. ([[[^,"]*,]]):rep(15) .. [[[^,"]*)[^"]*"]], [[%1"]])' +
-      ':gsub([=[("image": %[)([^%]]*)]=], ' +
-      'function(open, lines) return open .. (lines:find([["]]) and [["<png>"]] or "") end)) end',
+    `smokeNormalised = (function() ${normaliser}\nend)()`,
     'function smokeJson(map) local ok, err = loadMap(map) assert(ok, "loadMap(" .. map .. ") failed: " .. tostring(err)) ' +
       'assert(saveJsonMap(smokeMapJson)) local json = smokeRead(smokeMapJson) assert(os.remove(smokeMapJson)) ' +
       'return smokeNormalised(json) end',
@@ -99,8 +95,8 @@ function defaultProbe() {
       'if got ~= want then error(string.format("getPath(%d, %d) gave %s, not %s", from, to, got, want)) end end',
     // The routes Mapper_spec.lua checks on desktop: 3's down exit, room 5 and 5's special exit up are locked; with 3's
     // down exit and room 5 unlocked, the route crosses the weighted exit, the weighted room and 4's special exit down,
-    // which it cannot once that one is locked, as findPath() checks only the start room's exits itself; and of two
-    // routes to 3 it takes the cheaper, not the one with fewer steps
+    // until that one is locked past the start room, where findPath() leaves the lock to the graph; and of two routes
+    // to 3 it takes the cheaper, not the one with fewer steps
     'function smokeRoutes() smokeRoute(4, 1, "up,s,w weighing 3") smokeRoute(1, 4, "no route") ' +
       'smokeRoute(4, 5, "no route") assert(lockExit(3, "d", false)) assert(lockRoom(5, false)) ' +
       'smokeRoute(1, 5, "e,n,down,climb down the well weighing 12") ' +
@@ -127,9 +123,10 @@ function defaultProbe() {
       'smokeStage("archive unzipped") end',
     // Hunspell through the profile's own dictionary, as the browser has no system one
     'function smokeSpellCheck() local word = "smokewibble" ' +
-      'assert(spellCheckWord(word, true) == false, word .. " is in a new profile\'s dictionary") ' +
+      'local known, err = spellCheckWord(word, true) assert(known ~= nil, err) ' +
+      'assert(known == false, word .. " is in a new profile\'s dictionary") ' +
       'assert(addWordToDictionary(word)) assert(spellCheckWord(word, true), word .. " was added but is not known") ' +
-      'local suggested = table.concat(spellSuggestWord("smokewibbel", true), ",") ' +
+      'local suggested = table.concat(assert(spellSuggestWord("smokewibbel", true)), ",") ' +
       'assert(suggested == word, "Hunspell suggested \\"" .. suggested .. "\\" for smokewibbel") ' +
       'smokeStage("spell checked") end',
     'registerNamedRegexTrigger("smoke", "ping", [[^ping (\\d) \\p{Greek}+$]], function() smokeStage("trigger fired") ' +
@@ -209,6 +206,8 @@ const [expected, ...args] = rest.length ? rest : ["lua says 2", ...defaultProbe(
 // language is pinned, as "[ ERROR ]" is translated and Mudlet follows the browser's language once
 // that language's translation is complete enough.
 const settings = "[General]\nstorePasswordsSecurely=false\ninterfaceLanguage=en_US\n";
+// Escaped, as an argument holding "</script>" would end the page's script element
+const pageArguments = JSON.stringify(args).replace(/</g, "\\u003c");
 
 const page = `<!doctype html>
 <html><head><meta charset="utf-8"><title>mudlet-headless</title></head>
@@ -217,7 +216,7 @@ const page = `<!doctype html>
 <script src="mudlet-headless.js"></script>
 <script>
 qtLoad({
-  arguments: ${JSON.stringify(args)},
+  arguments: ${pageArguments},
   print: (t) => console.log("[out] " + t),
   printErr: (t) => console.log("[err] " + t),
   preRun: [(m) => {
@@ -238,17 +237,21 @@ qtLoad({
   const { chromium } = require("playwright");
   browser = await chromium.launch();
   // A tab that crashes is mudlet-headless failing; the browser process itself going is not
-  const gone = (what) => { if (!closing) { harnessFailed(what); } };
+  function gone(what) {
+    if (!closing) {
+      harnessFailed(what);
+    }
+  }
   browser.on("disconnected", () => gone("Chromium quit"));
   let finish;
   const finished = new Promise((resolve) => (finish = resolve));
   let seen = false;
   // A failure after the settle comes once the wait is over, and must still fail the run
   let failed = false;
-  const fail = () => {
+  function fail() {
     failed = true;
     finish(false);
-  };
+  }
   const timer = setTimeout(() => {
     console.log(`[timeout] after ${timeoutSeconds}s`);
     finish(false);
