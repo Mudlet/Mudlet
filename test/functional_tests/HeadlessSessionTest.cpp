@@ -6905,6 +6905,44 @@ registerAnonymousEventHandler("sysLoadEvent", function() feedTriggers("fed by sy
         QVERIFY(session.shutdown(false));
     }
 
+    void test_configSavedComesForAWriteItsHandlerMakes_data()
+    {
+        QTest::addColumn<bool>("closing");
+        QTest::newRow("from the event loop") << false;
+        QTest::newRow("from a shutdown") << true;
+    }
+
+    // As a C++ app's handler storing a password or the connection details as it copies the folder would
+    void test_configSavedComesForAWriteItsHandlerMakes()
+    {
+        QFETCH(bool, closing);
+        const QString name = closing ? qsl("Headless Config Saved Handler Close") : qsl("Headless Config Saved Handler");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QTest::qWait(100);
+        QStringList seen;
+        connect(&session, &THeadlessSession::configSaved, this, [&seen, name]() {
+            seen.append(MudletApp::readProfileData(name, qsl("url")));
+            if (seen.size() == 1) {
+                MudletApp::writeProfileData(name, qsl("url"), qsl("y"));
+            }
+        });
+
+        if (closing) {
+            QVERIFY(session.shutdown(true));
+        } else {
+            QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("x")).first);
+        }
+        QTRY_COMPARE_WITH_TIMEOUT(seen.size(), 2, 15000);
+        QCOMPARE(seen.constLast(), qsl("y"));
+        QTest::qWait(100);
+        QCOMPARE(seen.size(), 2);
+        if (!closing) {
+            QVERIFY(session.shutdown(false));
+        }
+    }
+
     void test_aStartFromTheShutdownsConfigSavedIsRefused_data()
     {
         QTest::addColumn<bool>("async");
