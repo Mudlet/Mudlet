@@ -31,9 +31,9 @@
 // loaded four times in one tab, which keeps IndexedDB between loads. The first run saves an alias, a map room and a
 // setting with the page not syncing; the second finds none of them, saves them again and is reloaded once the page has
 // synced on Mudlet's signal; the third finds them, makes another alias and room it never saves and quits, so only the
-// shutdown's own save and signal can keep them, and its page's handler for that signal throws once it has started the
-// sync, which Mudlet must log and carry on from to a clean exit; and the fourth finds all of them. It passes as the
-// default does, once the fourth says so.
+// shutdown's own save and signal can keep them, and its page's handler for that signal, the first after the line its
+// exit handler prints, throws once it has started the sync, which Mudlet must log and carry on from to a clean exit;
+// and the fourth finds all of them. It passes as the default does, once the fourth says so.
 // It exits 2 if its arguments, the directory or WASM_SMOKE_TIMEOUT are wrong; and 3 if it could not
 // run the program at all: playwright does not load, Chromium does not start or quits, the page does
 // not load, the game does not start or this script fails. It needs the playwright package on
@@ -316,18 +316,21 @@ const keepChange =
   'assert(setConfig("showTabConnectionIndicators", true)) assert(saveProfile()) assert(saveMap())';
 const keepAll = "keep: all kept";
 const keepSaved = "keep: saved";
+// Printed once the shutdown has begun, after which the only signal is its own
+const keepClosing = "keep: closing";
 const keepSaveRun = (sync, why) => ({ sync, lua: [keepNothing(why), keepChange, `echo("${keepSaved}\\n")`], done: keepSaved });
-// Each run's steps, whether the page syncs, the line its last step prints, and what the page's handler throws
+// Each run's steps, whether the page syncs, the line its last step prints, and what the page's handler throws and when
 const keepRuns = [
   keepSaveRun(false, "a new browser context already holds the profile"),
   keepSaveRun(true, "a reload kept what the page never synced"),
   {
     sync: true,
     quits: true,
-    fault: "the page's handler failed, as the smoke test has it do",
+    fault: { after: keepClosing, message: "the page's handler failed, as the smoke test has it do" },
     lua: [
       keepFound,
       'permAlias("keepAlias2", "", "^keep2$", "") addRoom(4243) setRoomArea(4243, getRoomArea(4242))',
+      `registerAnonymousEventHandler("sysExitEvent", function() echo("${keepClosing}\\n") end)`,
       'feedTriggers("standard output has gone\\n")',
     ],
   },
@@ -401,7 +404,7 @@ async function keepProfiles() {
         if (!exitedCleanly(status)) {
           finish(false);
         }
-      } else if (current.fault && !faultLogged && text === `mudletConfigSaved() failed: Error: ${current.fault}`) {
+      } else if (current.fault && !faultLogged && text === `mudletConfigSaved() failed: Error: ${current.fault.message}`) {
         faultLogged = true;
       } else if (failureMarkers.some((marker) => text.includes(marker))) {
         finish(false);

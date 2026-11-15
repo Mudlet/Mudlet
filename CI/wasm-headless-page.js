@@ -64,8 +64,9 @@ function scriptValue(value) {
 // a CI/wasm-telnet-relay.js URL, the page makes the profile's game connection through it, as docs/headless.md has it.
 // With keep, { dir, sync, fault }, the page keeps the folder dir in IndexedDB as docs/headless.md has it, loading it before
 // the program starts and, if sync, saving it each time the program says it wrote there, which it prints as
-// "[config saved]"; it prints "[synced]" once a save has ended with none due after it. With fault, the first time the
-// program says so the page throws an Error with that message once it has started the save.
+// "[config saved]"; it prints "[synced]" once a save has ended with none due after it. With fault, { after, message },
+// the first time the program says so after printing the line after, the page throws an Error with message once it has
+// started the save.
 function page({ args, environment = {}, staged = false, clockJump = null, stdoutGone = false, relay = null, keep = null }) {
   return `<!doctype html>
 <html><head><meta charset="utf-8"><title>mudlet-headless</title></head>
@@ -94,6 +95,9 @@ function output(prefix) {
     console.log(prefix + t);
     if (clockJump && t === clockJump.line) {
       clockOffset += clockJump.seconds * 1000;
+    }
+    if (keep?.fault && t === keep.fault.after) {
+      faultArmed = true;
     }
   };
 }
@@ -156,6 +160,7 @@ function relayTransport() {
 const keep = ${scriptValue(keep)};
 let syncing = false;
 let syncAgain = false;
+let faultArmed = false;
 let faulted = false;
 function syncConfig() {
   if (syncing) {
@@ -192,9 +197,9 @@ let program;
       ? () => {
           console.log("[config saved]");
           syncConfig();
-          if (keep.fault && !faulted) {
+          if (faultArmed && !faulted) {
             faulted = true;
-            throw new Error(keep.fault);
+            throw new Error(keep.fault.message);
           }
         }
       : undefined,
