@@ -7116,7 +7116,7 @@ int TLuaInterpreter::performHttpRequest(lua_State* L, const char* functionName, 
         break;
     default:
         reply = host.mLuaInterpreter.mpFileDownloader->sendCustomRequest(request, QByteArray{verb}, fileToUpload.isEmpty() ? dataToPost.toUtf8() : fileToUpload);
-    };
+    }
 
     if (TDebug::wants(TDebug::Category::Network)) {
         TDebug(Qt::white, Qt::blue, TDebug::Category::Network) << functionName << ": script is uploading data to " << reply->url().toString() << "\n" >> &host;

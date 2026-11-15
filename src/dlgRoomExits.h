@@ -108,22 +108,22 @@ public:
     int door = 0;
     int weight = 0;
 
-    friend bool operator==( TExit &a, TExit &b )
+    friend bool operator==(TExit& a, TExit& b)
     {
         return a.destination == b.destination
                  && a.door == b.door
                  && a.hasNoRoute == b.hasNoRoute
                  && a.hasStub == b.hasStub
-                 && a.weight == b.weight ;
+                 && a.weight == b.weight;
     }
 
-    friend bool operator!=( TExit &a, TExit &b )
+    friend bool operator!=(TExit& a, TExit& b)
     {
         return a.destination != b.destination
                  || a.door != b.door
                  || a.hasNoRoute != b.hasNoRoute
                  || a.hasStub != b.hasStub
-                 || a.weight != b.weight ;
+                 || a.weight != b.weight;
     }
 };
 

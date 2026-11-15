@@ -5969,8 +5969,8 @@ private slots:
                                             qPrintable(motion),
                                             step,
                                             ms,
-                                            static_cast<long long>(widget.mLabelTextureCache.imageTexturesMade() - madeBefore),
-                                            static_cast<long long>(widget.mRoomTexturesInUse.size()),
+                                            static_cast<qint64>(widget.mLabelTextureCache.imageTexturesMade() - madeBefore),
+                                            static_cast<qint64>(widget.mRoomTexturesInUse.size()),
                                             widget.mRenderCommandQueue.getCommandCount());
                             }
                         }

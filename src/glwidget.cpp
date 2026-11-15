@@ -562,10 +562,10 @@ void GLWidget::paintGL()
                     glEnable(GL_LIGHTING);
                     glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, planeColor[ef]);
                     glMateriali(GL_FRONT, GL_SHININESS, 1);
-                    glColor4f(0.3, 0.3, 0.3, 1.0); /*planeColor[ef][0],
-                              planeColor[ef][1],
-                              planeColor[ef][2],
-                              planeColor[ef][3]);*/
+                    glColor4f(0.3, 0.3, 0.3, 1.0); // planeColor[ef][0],
+                                                   // planeColor[ef][1],
+                                                   // planeColor[ef][2],
+                                                   // planeColor[ef][3]);
                 }
                 for (const int k : exitList) {
                     bool areaExit = false;
@@ -1022,11 +1022,10 @@ void GLWidget::paintGL()
                         glEnable(GL_LIGHT1);
                         glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, planeColor2[ef]);
                         glMateriali(GL_FRONT, GL_SHININESS, 1); //gut:36
-                        glColor4f(0.3, 0.3, 0.3, 1.0);          /*planeColor2[ef][0],
-                                  planeColor2[ef][1],
-                                  planeColor2[ef][2],
-                                  planeColor2[ef][3])*/
-                        ;
+                        glColor4f(0.3, 0.3, 0.3, 1.0);          // planeColor2[ef][0],
+                                                                // planeColor2[ef][1],
+                                                                // planeColor2[ef][2],
+                                                                // planeColor2[ef][3])
                     }
                     glBegin(GL_LINES);
                     if (!areaExit) {
