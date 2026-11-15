@@ -22,6 +22,9 @@ const failureMarkers = [
 // Where the page puts what mudlet-headless printed, ahead of the text
 const outputPrefixes = /^\[(out|err)\] /;
 
+// What the page's game connection puts either side of the bytes it hands received(), outside the view of them
+const pagePadding = "the page's padding";
+
 // "[ ERROR ]" is translated, and Mudlet follows the browser's language once its translation is complete enough
 const settings = "[General]\ninterfaceLanguage=en_US\n";
 
@@ -89,34 +92,38 @@ function output(prefix) {
   };
 }
 const relay = ${scriptValue(relay)};
-// The first connection's write() throws, the second hands received() the Blob a WebSocket gives on its default
-// binaryType, and the rest hand it a DataView into the middle of a larger buffer. Mudlet must close the first two
-// itself, as the profile, told they ended, asks for no close(); the page fails the run if it is asked to dial while
-// the last connection is still open.
+const padding = new TextEncoder().encode(${scriptValue(`\r\n${pagePadding}\r\n`)});
+// The first connection's write() throws, and it hands received() a DataView into the middle of a larger buffer, whose
+// padding either side shows as a line of its own if Mudlet reads past the view. The second hands it the Blob a
+// WebSocket gives on its default binaryType, and the rest the ArrayBuffer it gives otherwise. Mudlet must close the
+// first two itself, as the profile, told they ended, asks for no close(); the page fails the run if it is asked to dial
+// while the last connection is still open.
 function relayTransport() {
   let socket = null;
   let dials = 0;
   return {
     dial(host, port, tlsRequested, connection) {
-      ++dials;
-      console.log("[transport] dial " + dials + " to " + host + ":" + port + (tlsRequested ? " with TLS asked for" : ""));
+      const attempt = ++dials;
+      console.log("[transport] dial " + attempt + " to " + host + ":" + port + (tlsRequested ? " with TLS asked for" : ""));
       if (socket && socket.readyState <= WebSocket.OPEN) {
         console.log("[transport] FAILED: asked to dial while the last connection was still open");
       }
       socket = new WebSocket(relay + "?host=" + encodeURIComponent(host) + "&port=" + port);
-      if (dials !== 2) {
+      if (attempt !== 2) {
         socket.binaryType = "arraybuffer";
       }
       socket.onopen = () => connection.connected();
       socket.onmessage = (e) => {
-        if (dials === 2) {
+        if (attempt !== 1) {
           connection.received(e.data);
           return;
         }
         const data = new Uint8Array(e.data);
-        const padded = new Uint8Array(data.length + 2).fill(0x58);
-        padded.set(data, 1);
-        connection.received(new DataView(padded.buffer, 1, data.length));
+        const padded = new Uint8Array(padding.length + data.length + padding.length);
+        padded.set(padding);
+        padded.set(data, padding.length);
+        padded.set(padding, padding.length + data.length);
+        connection.received(new DataView(padded.buffer, padding.length, data.length));
       };
       socket.onclose = (e) => connection.closed(e.reason || "the relay closed the connection with code " + e.code);
     },
@@ -250,4 +257,4 @@ async function openPage({ what, dir, html, serve = () => null, onConsole, onFail
   return tab;
 }
 
-module.exports = { failureMarkers, outputPrefixes, requireBuild, timeoutFrom, page, parseExit, exitedCleanly, openPage, closeBrowser };
+module.exports = { failureMarkers, outputPrefixes, pagePadding, requireBuild, timeoutFrom, page, parseExit, exitedCleanly, openPage, closeBrowser };

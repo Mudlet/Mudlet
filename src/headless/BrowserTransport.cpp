@@ -62,7 +62,7 @@ EM_JS(void, pageDial, (double id, const char* host, int port, int tlsRequested),
             } else if (ArrayBuffer.isView(bytes)) {
                 bytes = new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
             } else {
-                var given = bytes === null ? "null" : typeof bytes === "object" ? Object.prototype.toString.call(bytes).slice(8, -1) : typeof bytes;
+                var given = Object.prototype.toString.call(bytes).slice(8, -1);
                 connection.fail("connection.received() takes an ArrayBuffer or a view of one such as a Uint8Array, not " + given
                                 + (given === "Blob" ? " (is the WebSocket binaryType \"arraybuffer\"?)" : ""));
                 return;

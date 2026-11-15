@@ -22,8 +22,10 @@
 // GMCP, sends vitals and a line a trigger answers, and hangs up once the answer arrives. The page's
 // first two connections fail as CI/wasm-headless-page.js describes, and the profile reconnects after
 // each. It passes as the default does, once the disconnect handler finds the third connection played
-// the game, and then only if Mudlet reported both failures, the page was never asked to dial while a
-// connection was open, and the game received Mudlet's agreement to GMCP and the trigger's command.
+// the game, and then only if Mudlet logged both failures to the browser's console and gave each as
+// the reason on its own, logged no other, never showed the page's padding, the page was never asked
+// to dial while a connection was open, and the game received Mudlet's agreement to GMCP and the
+// trigger's command.
 // It exits 2 if its arguments, the directory or WASM_SMOKE_TIMEOUT are wrong; and 3 if it could not
 // run the program at all: playwright does not load, Chromium does not start or quits, the page does
 // not load, the game does not start or this script fails. It needs the playwright package on
@@ -33,7 +35,7 @@ const { spawn } = require("child_process");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
-const { failureMarkers, outputPrefixes, requireBuild, timeoutFrom, page, parseExit, openPage, closeBrowser } = require("./wasm-headless-page");
+const { failureMarkers, outputPrefixes, pagePadding, requireBuild, timeoutFrom, page, parseExit, openPage, closeBrowser } = require("./wasm-headless-page");
 const { startRelay } = require("./wasm-telnet-relay");
 
 const fixtureDir = path.join(__dirname, "..", "src", "mudlet-lua", "tests", "fixtures");
@@ -203,11 +205,13 @@ async function startGame(directory) {
   throw new Error("the telnet fixture did not listen within 10s");
 }
 
-// The faults the page makes, as Mudlet reports them on the console
+// The faults the page makes, as Mudlet logs them to the browser's console after this prefix and gives them as the
+// reason the connection ended on its own console
 const pageFaults = [
-  "mudletTransport: mudletTransport.write() failed: ",
-  "mudletTransport: connection.received() takes an ArrayBuffer or a view of one such as a Uint8Array, not Blob",
+  "mudletTransport.write() failed: ",
+  "connection.received() takes an ArrayBuffer or a view of one such as a Uint8Array, not Blob",
 ];
+const faultLogged = "mudletTransport: ";
 const pageFailed = "[transport] FAILED";
 
 function gameArgs(port) {
@@ -217,7 +221,6 @@ function gameArgs(port) {
     'registerAnonymousEventHandler("sysConnectionEvent", function() gameConnections = gameConnections + 1 gameHp = nil gameTriggered = nil ' +
       'gameStage("connection " .. gameConnections .. " made") end)',
     'registerAnonymousEventHandler("gmcp.Char.Vitals", function() gameHp = gmcp.Char.Vitals.hp gameStage("vitals received") end)',
-    // Anchored, so a byte the page pads its data with that reached the profile stops it
     'tempRegexTrigger("^A dragon arrives", function() gameTriggered = true gameStage("trigger fired") send("kill dragon") end)',
     'registerAnonymousEventHandler("sysDisconnectionEvent", function() if gameConnections < 3 then gameStage("connection " .. gameConnections .. " ended") reconnect() ' +
       `elseif gameTriggered and gameHp == 42 then echo("${gameOver}\\n") else gameStage("disconnected before the game was played") end end)`,
@@ -306,7 +309,8 @@ if (playing) {
   let finish;
   const finished = new Promise((resolve) => (finish = resolve));
   let seen = false;
-  const faultsSeen = new Set();
+  const faultsLogged = new Set();
+  const faultsShown = new Set();
   // A failure after the settle comes once the wait is over, and must still fail the run
   let failed = false;
   function fail() {
@@ -332,10 +336,18 @@ if (playing) {
         seen = true;
         clearTimeout(timer);
         setTimeout(() => finish(true), settleMs);
-      } else if (markers.some((marker) => text.includes(marker)) || (playing && text.startsWith(pageFailed))) {
+      } else if (markers.some((marker) => text.includes(marker)) || (playing && (text.startsWith(pageFailed) || text.includes(pagePadding)))) {
         fail();
-      } else if (playing) {
-        pageFaults.filter((fault) => text.startsWith(fault)).forEach((fault) => faultsSeen.add(fault));
+      } else if (playing && text.startsWith(faultLogged)) {
+        // Any other is a fault of Mudlet's, such as received() refusing what the page gave it
+        const fault = pageFaults.find((fault) => text.startsWith(faultLogged + fault));
+        if (fault) {
+          faultsLogged.add(fault);
+        } else {
+          fail();
+        }
+      } else if (playing && outputPrefixes.test(text)) {
+        pageFaults.filter((fault) => text.includes(fault)).forEach((fault) => faultsShown.add(fault));
       }
     },
     onFailure: (text) => {
@@ -354,11 +366,18 @@ if (playing) {
       console.log(`[hung] the page ran no task within ${answerMs / 1000}s`);
     }
   }
-  const unreported = playing && answeredInTime && !failed ? pageFaults.filter((fault) => !faultsSeen.has(fault)) : [];
-  for (const fault of unreported) {
-    console.log(`[transport] Mudlet never reported "${fault}"`);
+  const gameChecked = playing && answeredInTime && !failed;
+  const unreported = [];
+  for (const fault of gameChecked ? pageFaults : []) {
+    if (!faultsLogged.has(fault)) {
+      unreported.push(`Mudlet never logged "${faultLogged}${fault}"`);
+    }
+    if (!faultsShown.has(fault)) {
+      unreported.push(`Mudlet never gave "${fault}" as the reason the connection ended`);
+    }
   }
-  const missing = playing && answeredInTime && !failed && !unreported.length ? gameReceived(gameDir) : null;
+  unreported.forEach((what) => console.log(`[transport] ${what}`));
+  const missing = gameChecked && !unreported.length ? gameReceived(gameDir) : null;
   if (missing) {
     console.log(`[game] never received ${missing}`);
   }
