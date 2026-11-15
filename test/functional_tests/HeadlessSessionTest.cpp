@@ -273,6 +273,8 @@ end))lua")
         return saves.isEmpty() ? QString() : readFile(saveFolder.filePath(saves.constLast()));
     }
 
+    static QString headlessLayoutPath() { return MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutHeadless.dat")); }
+
     // pumpEvents() and waitForEvent() answer only in test mode
     static auto inTestMode()
     {
@@ -6512,7 +6514,7 @@ registerAnonymousEventHandler("sysLoadEvent", function() feedTriggers("fed by sy
     {
         const QString name = qsl("Headless Save Layout");
         QVERIFY(writeProfile(name, QString()));
-        const QString layoutPath = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutHeadless.dat"));
+        const QString layoutPath = headlessLayoutPath();
         QFile::remove(layoutPath);
         THeadlessSession session;
         QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
@@ -6657,7 +6659,7 @@ registerAnonymousEventHandler("sysLoadEvent", function() feedTriggers("fed by sy
         QFETCH(bool, written);
         const QString name = written ? qsl("Headless Config Saved Autosave Written") : qsl("Headless Config Saved Autosave Writing");
         QVERIFY(writeProfile(name, QString()));
-        const QString layoutPath = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutHeadless.dat"));
+        const QString layoutPath = headlessLayoutPath();
         const auto removeLayout = qScopeGuard([layoutPath]() {
             QFile::remove(layoutPath);
         });
@@ -6714,23 +6716,23 @@ registerAnonymousEventHandler("sysLoadEvent", function() feedTriggers("fed by sy
         QFETCH(QString, write);
         const QString name = qsl("Headless Config Saved %1").arg(write);
         QVERIFY(writeProfile(name, QString()));
-        const QString credential = qsl("%1/profiles/%2/passwords/character").arg(MudletApp::credentialFilesRoot(), MudletApp::sanitizeForPath(name));
-        const QString signIn = MudletApp::getMudletPath(enums::profileDataItemPath, name, qsl("reconnect"));
-        QString file = credential;
+        QString file;
         if (write == qsl("layout")) {
-            file = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutHeadless.dat"));
+            file = headlessLayoutPath();
             QFile::remove(file);
         } else if (write == qsl("profile data")) {
             file = MudletApp::getMudletPath(enums::profileDataItemPath, name, qsl("url"));
         } else if (write == qsl("sign-in forgotten")) {
-            file = signIn;
+            file = MudletApp::getMudletPath(enums::profileDataItemPath, name, qsl("reconnect"));
+        } else {
+            file = qsl("%1/profiles/%2/passwords/character").arg(MudletApp::credentialFilesRoot(), MudletApp::sanitizeForPath(name));
         }
         THeadlessSession session;
         QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
         QTest::qWait(100);
         const auto onDisk = [&file]() {
-            QFile onDisk(file);
-            return onDisk.open(QIODevice::ReadOnly) ? std::optional(onDisk.readAll()) : std::nullopt;
+            QFile current(file);
+            return current.open(QIODevice::ReadOnly) ? std::optional(current.readAll()) : std::nullopt;
         };
         QList<std::optional<QByteArray>> seen;
         connect(&session, &THeadlessSession::configSaved, this, [&seen, &onDisk]() {
@@ -6802,9 +6804,12 @@ registerAnonymousEventHandler("sysLoadEvent", function() feedTriggers("fed by sy
     {
         const QString name = qsl("Headless Config Saved Session Save");
         QVERIFY(writeProfile(name, QString()));
-        const QString layoutPath = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutHeadless.dat"));
+        const QString layoutPath = headlessLayoutPath();
         const QString iniPath = MudletApp::getMudletPath(enums::profileDataItemPath, name, qsl("profile.ini"));
         QFile::remove(layoutPath);
+        const auto removeLayout = qScopeGuard([layoutPath]() {
+            QFile::remove(layoutPath);
+        });
         THeadlessSession session;
         QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
         QVERIFY(session.runLua(qsl(R"lua(permAlias("headlessSessionSaveAlias", "", "^xyzzy$", ""))lua")));
@@ -6829,7 +6834,6 @@ registerAnonymousEventHandler("sysLoadEvent", function() feedTriggers("fed by sy
         QTest::qWait(100);
         QCOMPARE(seen, QStringList({qsl("profile, profile.ini, layout")}));
         QVERIFY(session.shutdown(false));
-        QFile::remove(layoutPath);
     }
 
     // As a script that ran while another profile's save waited for its writes could

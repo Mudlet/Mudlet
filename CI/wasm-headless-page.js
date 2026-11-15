@@ -217,8 +217,9 @@ let program;
             console.log("[abort] the config folder did not load from IndexedDB: " + error);
             return;
           }
-          if (!m.FS.analyzePath(keep.dir + "/Mudlet.ini").exists) {
-            m.FS.writeFile(keep.dir + "/Mudlet.ini", ${scriptValue(settings)});
+          const ini = keep.dir + "/Mudlet.ini";
+          if (!m.FS.analyzePath(ini).exists) {
+            m.FS.writeFile(ini, ${scriptValue(settings)});
           }
           m.removeRunDependency("config folder");
         });

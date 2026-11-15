@@ -1400,11 +1400,11 @@ void Host::waitForMapAutosave()
     mMapAutosave.waitForFinished();
     mMapAutosaveResultPending = false;
     const QString failure = mMapAutosave.reason();
-    if (!failure.isEmpty()) {
+    if (failure.isEmpty()) {
+        TAppFrontend::instance()->configWritten();
+    } else {
         qDebug().noquote() << "Error autosaving map to" << MudletApp::getMudletPath(enums::profileMapPathFileName, mHostName, qsl("autosave.dat")) << ":" << failure;
         mpMap->setUnsavedKeepingRevisions(__func__);
-    } else {
-        TAppFrontend::instance()->configWritten();
     }
     mpMap->setSaveError(!failure.isEmpty());
 }

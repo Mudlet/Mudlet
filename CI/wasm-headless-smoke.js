@@ -43,7 +43,7 @@ const { spawn } = require("child_process");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
-const { failureMarkers, outputPrefixes, pagePadding, requireBuild, timeoutFrom, page, parseExit, openPage, closeBrowser } = require("./wasm-headless-page");
+const { failureMarkers, outputPrefixes, pagePadding, requireBuild, timeoutFrom, page, parseExit, exitedCleanly, openPage, closeBrowser } = require("./wasm-headless-page");
 const { startRelay } = require("./wasm-telnet-relay");
 
 const fixtureDir = path.join(__dirname, "..", "src", "mudlet-lua", "tests", "fixtures");
@@ -315,18 +315,12 @@ const keepChange =
   'permAlias("keepAlias", "", "^keep$", "") addRoom(4242) setRoomArea(4242, addAreaName("keep")) ' +
   'assert(setConfig("showTabConnectionIndicators", true)) assert(saveProfile()) assert(saveMap())';
 const keepAll = "keep: all kept";
+const keepSaved = "keep: saved";
+const keepSaveRun = (sync, why) => ({ sync, lua: [keepNothing(why), keepChange, `echo("${keepSaved}\\n")`], done: keepSaved });
 // Each run's steps, whether the page syncs, the line its last step prints, and what the page's handler throws
 const keepRuns = [
-  {
-    sync: false,
-    lua: [keepNothing("a new browser context already holds the profile"), keepChange, 'echo("keep: saved\\n")'],
-    done: "keep: saved",
-  },
-  {
-    sync: true,
-    lua: [keepNothing("a reload kept what the page never synced"), keepChange, 'echo("keep: saved\\n")'],
-    done: "keep: saved",
-  },
+  keepSaveRun(false, "a new browser context already holds the profile"),
+  keepSaveRun(true, "a reload kept what the page never synced"),
   {
     sync: true,
     quits: true,
@@ -401,13 +395,13 @@ async function keepProfiles() {
       console.log(text);
       const status = parseExit(text);
       const line = text.replace(outputPrefixes, "");
-      const { fault } = keepRuns[run];
-      if (status && keepRuns[run].quits) {
+      const current = keepRuns[run];
+      if (status && current.quits) {
         exited = true;
-        if (status.code !== 0 || status.crashed) {
+        if (!exitedCleanly(status)) {
           finish(false);
         }
-      } else if (fault && !faultLogged && text === `mudletConfigSaved() failed: Error: ${fault}`) {
+      } else if (current.fault && !faultLogged && text === `mudletConfigSaved() failed: Error: ${current.fault}`) {
         faultLogged = true;
       } else if (failureMarkers.some((marker) => text.includes(marker))) {
         finish(false);
@@ -419,10 +413,10 @@ async function keepProfiles() {
       } else if (line === keepAll) {
         clearTimeout(timer);
         setTimeout(() => finish(true), settleMs);
-      } else if (line === keepRuns[run].done) {
+      } else if (line === current.done) {
         // The signal comes from the event loop, after the step. With no sync, the reload waits as long again as that
         // takes, so it comes after the signal the page ignores
-        if (keepRuns[run].sync) {
+        if (current.sync) {
           done = true;
         } else {
           setTimeout(() => {
