@@ -383,8 +383,7 @@ void TLabel::mousePressEvent(QMouseEvent* event)
         takenByQt = event->isAccepted();
     }
 
-    if (mClickFunction) {
-        mpHost->getLuaInterpreter()->callLabelCallbackEvent(mClickFunction, event);
+    if (model().runCallback(TLabelModel::Callback::click, *event)) {
         // The use of accept() here prevents the propagation of the event to
         // any parent, e.g. the containing TConsole
         event->accept();
@@ -396,8 +395,7 @@ void TLabel::mousePressEvent(QMouseEvent* event)
 
 void TLabel::mouseDoubleClickEvent(QMouseEvent* event)
 {
-    if (mDoubleClickFunction) {
-        mpHost->getLuaInterpreter()->callLabelCallbackEvent(mDoubleClickFunction, event);
+    if (model().runCallback(TLabelModel::Callback::doubleClick, *event)) {
         event->accept();
     } else {
         QWidget::mouseDoubleClickEvent(event);
@@ -418,8 +416,7 @@ void TLabel::mouseReleaseEvent(QMouseEvent* event)
         mudlet::self()->activateProfile(mpHost);
     }
 
-    if (mReleaseFunction) {
-        mpHost->getLuaInterpreter()->callLabelCallbackEvent(mReleaseFunction, event);
+    if (model().runCallback(TLabelModel::Callback::release, *event)) {
         event->accept();
     } else if (!takenByQt && !mClickFunction && event->button() == Qt::RightButton && forwardRightClickToConsole(event)) {
         event->accept();
@@ -471,8 +468,7 @@ void TLabel::mouseMoveEvent(QMouseEvent* event)
         QLabel::mouseMoveEvent(event);
     }
 
-    if (mMoveFunction) {
-        mpHost->getLuaInterpreter()->callLabelCallbackEvent(mMoveFunction, event);
+    if (model().runCallback(TLabelModel::Callback::move, *event)) {
         event->accept();
     } else {
         QWidget::mouseMoveEvent(event);
@@ -481,8 +477,7 @@ void TLabel::mouseMoveEvent(QMouseEvent* event)
 
 void TLabel::wheelEvent(QWheelEvent* event)
 {
-    if (mWheelFunction) {
-        mpHost->getLuaInterpreter()->callLabelCallbackEvent(mWheelFunction, event);
+    if (model().runCallback(TLabelModel::Callback::wheel, *event)) {
         event->accept();
     } else {
         QWidget::wheelEvent(event);
@@ -504,8 +499,7 @@ void TLabel::endLinkHover()
 void TLabel::leaveEvent(QEvent* event)
 {
     endLinkHover();
-    if (mLeaveFunction) {
-        mpHost->getLuaInterpreter()->callLabelCallbackEvent(mLeaveFunction, event);
+    if (model().runCallback(TLabelModel::Callback::leave, *event)) {
         event->accept();
     } else {
         QWidget::leaveEvent(event);
@@ -514,8 +508,7 @@ void TLabel::leaveEvent(QEvent* event)
 
 void TLabel::enterEvent(TEnterEvent* event)
 {
-    if (mEnterFunction) {
-        mpHost->getLuaInterpreter()->callLabelCallbackEvent(mEnterFunction, event);
+    if (model().runCallback(TLabelModel::Callback::enter, *event)) {
         event->accept();
     } else {
         QWidget::enterEvent(event);

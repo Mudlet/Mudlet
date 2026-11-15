@@ -33,6 +33,7 @@
 
 #include <QImage>
 #include <QPainter>
+#include <QPointer>
 #include <QSettings>
 #include <QTimer>
 
@@ -77,6 +78,33 @@ void TNullMapView::requestRepaint()
     if (auto* pFrontend = dynamic_cast<TNullConsoleFrontend*>(mpHost->consoleFrontend()); pFrontend && pFrontend->mMapRepaintRequested) {
         pFrontend->mMapRepaintRequested();
     }
+}
+
+void TNullMapView::setViewOnly(const bool viewOnly)
+{
+    const QPointer<TNullMapView> self(this);
+    switchMode(mpHost, viewOnly);
+    if (self) {
+        requestRepaint();
+    }
+}
+
+void TNullMapView::announceEditing(Host* pHost)
+{
+    if (!pHost->mMapViewOnly) {
+        switchMode(pHost, false);
+    }
+}
+
+void TNullMapView::switchMode(Host* pHost, const bool viewOnly)
+{
+    pHost->mMapViewOnly = viewOnly;
+    TEvent mapModeEvent{};
+    mapModeEvent.mArgumentList.append(qsl("mapModeChangeEvent"));
+    mapModeEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mapModeEvent.mArgumentList.append(viewOnly ? qsl("viewing") : qsl("editing"));
+    mapModeEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    pHost->raiseEvent(mapModeEvent);
 }
 
 void TNullMapView::setShown(const bool shown)

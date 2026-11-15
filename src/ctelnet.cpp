@@ -52,7 +52,6 @@
 #include <QCoreApplication>
 #include <QDataStream>
 #include <QDateTime>
-#include <QDeadlineTimer>
 #include <QDir>
 #include <QFileInfo>
 #include <QJsonDocument>
@@ -753,16 +752,15 @@ void cTelnet::connectIt(const QString& address, int port)
         finishDisconnection();
     }
 
-    // Set early - before the recursion-on-busy-socket block below - so the
-    // QCoreApplication::processEvents() call there cannot leave the indicator
-    // briefly showing Disconnected during a reconnect.
+    // For a socket the aborts below stop while it is still connecting, which
+    // reports no disconnection to clear it
     mLookingUpHost = true;
 
     mTimerFailedConnectionRetry->stop();
     // Cleared before the aborts below so that a socket erroring as it is torn
     // down cannot be counted against the attempt being started here:
     mPendingConnectionAttempts = 0;
-    // Done before the processEvents() below so that call cannot deliver a
+    // Done before the aborts below so that their reports cannot meet a lookup
     // result for a server this one has already replaced.
     abandonHostLookup();
 
@@ -791,8 +789,9 @@ void cTelnet::connectIt(const QString& address, int port)
     }
 
     if (mSocket_ipV4.state() != QAbstractSocket::UnconnectedState || mSocket_ipV6.state() != QAbstractSocket::UnconnectedState) {
-        // One of the sockets (at least) is not ready - so take care of that:
-        // CHECKME: do we also need to block the sockets from emitting signals here?
+        // Held so the profile outlives this: each abort reports the connection it ends, and a handler of that
+        // may close the profile
+        ++mReconnectsOnStack;
         if (mSocket_ipV4.state() != QAbstractSocket::UnconnectedState) {
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET & 4)
             qDebug().noquote().nospace() << "cTelnet::cTelnet::connectIt(" << address << ", " << port << ") INFO - IPv4 socket not disconnected, aborting exisiting connection.";
@@ -805,18 +804,28 @@ void cTelnet::connectIt(const QString& address, int port)
 #endif
             mSocket_ipV6.abort();
         }
-        // Since at least one of them was not ready lets give them a chance to
-        // sort themselves out. Held so the profile outlives this: a close posted
-        // earlier, as by closeMudlet(), may run in it.
-        ++mConnectEventLoops;
-        QCoreApplication::processEvents();
-        --mConnectEventLoops;
+        if (mDisconnectionPending && mDecompressionRecursionDepth == 0) {
+            // Input still to be read held the report back; it is finished here, where the close check below covers
+            // what its handlers do
+            mDisconnectionPending = false;
+            finishDisconnection();
+        }
+        --mReconnectsOnStack;
         if (!mpHost || mpHost->closeStarted() || mpHost->deletionPending()) {
             mLookingUpHost = false;
             return;
         }
-
-        // This looks less than ideal - recursively calling ourselves?
+        if (mSocket_ipV4.state() != QAbstractSocket::UnconnectedState || mSocket_ipV6.state() != QAbstractSocket::UnconnectedState) {
+            // abort() resets a socket at once, but a handler of its report may have dialled again: tried from the
+            // event loop rather than by running one here
+            QTimer::singleShot(0ms, this, [this, address, port]() {
+                if (mpHost && !mpHost->closeStarted() && !mDisconnectRequested) {
+                    connectIt(address, port);
+                }
+            });
+            return;
+        }
+        // Afresh, as the reports of the aborts above may have changed what was set up for this attempt
         connectIt(address, port);
         return;
     }
@@ -919,38 +928,88 @@ static void stopSending(const qintptr socketDescriptor)
 #endif
 }
 
+// Bounded, as there may be no event loop turn before the socket goes
+void cTelnet::readWhatIsLeft()
+{
+    for (int reads = 0; reads < 16 && mpSocket->state() == QAbstractSocket::ConnectedState && (mpSocket->bytesAvailable() > 0 || mpSocket->waitForReadyRead(0)); ++reads) {
+        mpSocket->readAll();
+    }
+}
+
 //The Host class wants us to end the connection (Profile is closing)
-void cTelnet::terminateConnection(const bool waitForTheGameToClose)
+void cTelnet::terminateConnection(std::function<void()> ended)
 {
 #if !defined(QT_NO_SSL)
     if (mCurrent_sslTsl) {
         abortConnection();
-    } else {
-#endif
-        // The reads below re-enter the socket's slots, which return early once the profile is closing down
-        Q_ASSERT(!mpHost || mpHost->isClosingDown());
-        // ConnectedState only: Qt reads nothing from a closing socket
-        if (mpSocket && mpSocket->state() == QAbstractSocket::ConnectedState) {
-            // What was sent last, as from sysExitEvent, waits for the event loop, which may not run again first
-            mpSocket->flush();
-            // Unread incoming data makes our close a reset, as does data the game sends after it, and a Windows
-            // peer then discards what it has received but not read, the line just sent included. Bounded, as a
-            // game may never stop sending, nor close.
-            if (waitForTheGameToClose && mpSocket->bytesToWrite() == 0) {
-                stopSending(mpSocket->socketDescriptor());
-                const QDeadlineTimer deadline(1s);
-                while (!deadline.hasExpired() && mpSocket->state() == QAbstractSocket::ConnectedState && mpSocket->waitForReadyRead(static_cast<int>(deadline.remainingTime()))) {
-                    mpSocket->readAll();
-                }
-            }
-            for (int reads = 0; reads < 16 && mpSocket->state() == QAbstractSocket::ConnectedState && (mpSocket->bytesAvailable() > 0 || mpSocket->waitForReadyRead(0)); ++reads) {
-                mpSocket->readAll();
-            }
+        if (ended) {
+            ended();
         }
-        disconnectIt();
-#if !defined(QT_NO_SSL)
+        return;
     }
 #endif
+    // The reads below re-enter the socket's slots, which return early once the profile is closing down
+    Q_ASSERT(!mpHost || mpHost->isClosingDown());
+    // ConnectedState only: Qt reads nothing from a closing socket
+    if (mpSocket && mpSocket->state() == QAbstractSocket::ConnectedState) {
+        // What was sent last, as from sysExitEvent, waits for the event loop, which may not run again first
+        mpSocket->flush();
+        // Unread incoming data makes our close a reset, as does data the game sends after it, and a Windows
+        // peer then discards what it has received but not read, the line just sent included
+        if (ended && mpSocket->bytesToWrite() == 0) {
+            stopSending(mpSocket->socketDescriptor());
+            readUntilTheGameCloses(std::move(ended));
+            return;
+        }
+        readWhatIsLeft();
+    }
+    disconnectIt();
+    if (ended) {
+        ended();
+    }
+}
+
+// Bounded, as a game may never stop sending, nor close
+void cTelnet::readUntilTheGameCloses(std::function<void()> ended)
+{
+    // Nothing reconnects meanwhile, as disconnectIt() will not have been called until this ends
+    mDontReconnect = true;
+    mDisconnectRequested = true;
+    mTimerFailedConnectionRetry->stop();
+    // The context of every connection below, so they go with it, or with this cTelnet
+    auto* pDeadline = new QTimer(this);
+    pDeadline->setSingleShot(true);
+    auto finished = std::make_shared<bool>(false);
+    auto finish = [this, pDeadline, finished, ended = std::move(ended)]() {
+        if (std::exchange(*finished, true)) {
+            return;
+        }
+        pDeadline->stop();
+        pDeadline->deleteLater();
+        if (mpSocket && mpSocket->state() == QAbstractSocket::ConnectedState) {
+            readWhatIsLeft();
+        }
+        disconnectIt();
+        ended();
+    };
+    connect(mpSocket, &QIODevice::readyRead, pDeadline, [this, pDeadline, finish]() {
+        if (mpSocket) {
+            mpSocket->readAll();
+        }
+        // Qt's Windows dispatcher serves socket notifiers ahead of timers, so a game that keeps sending holds the timeout off
+        if (pDeadline->remainingTime() == 0) {
+            finish();
+        }
+    });
+    connect(mpSocket, &QAbstractSocket::stateChanged, pDeadline, [finish](const QAbstractSocket::SocketState state) {
+        if (state != QAbstractSocket::ConnectedState) {
+            finish();
+        }
+    });
+    connect(pDeadline, &QTimer::timeout, pDeadline, finish);
+    pDeadline->start(1s);
+    // What arrived before the half-close, which no readyRead may announce again
+    mpSocket->readAll();
 }
 
 // A connection attempt that never reaches the game - refused, unreachable, or timed out - leaves
@@ -2651,6 +2710,9 @@ QString cTelnet::getNewEnvironValueSystemType()
     systemType = qsl("WIN32");
 #elif (defined(Q_OS_MACOS))
     systemType = qsl("MACOS");
+#elif defined(Q_OS_ANDROID)
+    // Before Q_OS_LINUX, which Android also defines
+    systemType = qsl("ANDROID");
 #elif defined(Q_OS_LINUX)
     systemType = qsl("LINUX");
 #elif defined(Q_OS_HURD)

@@ -32,7 +32,10 @@
 
 #include <QtEvents>
 
+#include <QLabel>
 #include <QPainter>
+#include <QVBoxLayout>
+#include <QWindow>
 #ifdef Q_OS_MACOS
 #include <OpenGL/glu.h>
 #else
@@ -61,8 +64,9 @@ GLWidget::GLWidget(TMap* pMap, Host* pHost, QWidget* parent)
 
 void GLWidget::applyBackgroundTranslucency()
 {
-    // Only an opaque view may tell Qt that it paints over everything behind it
-    const bool translucent = mpHost && mpHost->mBgColor_2.alpha() < 255;
+    // Only an opaque view may tell Qt that it paints over everything behind it; the message in place of the map is a
+    // child, which Qt draws under a view stacked on top
+    const bool translucent = mpHost && mpHost->mBgColor_2.alpha() < 255 && !(mpUnsharedLabel && !mpUnsharedLabel->isHidden());
     setAttribute(Qt::WA_OpaquePaintEvent, !translucent);
     setAttribute(Qt::WA_AlwaysStackOnTop, translucent);
     // Qt asks for the window, not only this widget, to be repainted when stacking on top changes
@@ -272,6 +276,29 @@ void GLWidget::paintEvent(QPaintEvent* event)
 
 void GLWidget::initializeGL()
 {
+    // Qt drops the share with the window's context when the platform refuses it, as macOS does once the modern 3D mapper's core profile has
+    // been opened in the same window; a window not yet composing with OpenGL has nothing to share, which grabFramebuffer() allows
+    if (const QWindow* pWindow = window()->windowHandle(); pWindow && pWindow->surfaceType() == QSurface::OpenGLSurface && !context()->shareContext()) {
+        if (!mpUnsharedLabel) {
+            mpUnsharedLabel = new QLabel(this);
+            mpUnsharedLabel->setAlignment(Qt::AlignCenter);
+            mpUnsharedLabel->setWordWrap(true);
+            mpUnsharedLabel->setAutoFillBackground(true);
+            mpUnsharedLabel->setMargin(16);
+            auto* layout = new QVBoxLayout(this);
+            layout->setContentsMargins(0, 0, 0, 0);
+            layout->addWidget(mpUnsharedLabel);
+        }
+        //: Shown in place of the classic 3D map when the window cannot show what the view draws; on macOS this follows opening the modern 3D mapper in the same window
+        mpUnsharedLabel->setText(tr("The classic 3D view cannot show its map in this window. On macOS this happens when the modern 3D mapper was opened in the same window first, "
+                                    "from this profile or another. Restart Mudlet to use the classic 3D view here."));
+        mpUnsharedLabel->show();
+        qWarning() << "GLWidget: the window cannot show this 3D view, as its context could not share with the window's";
+    } else if (mpUnsharedLabel) {
+        mpUnsharedLabel->hide();
+    }
+    applyBackgroundTranslucency();
+
     const QColor color(mpHost->mBgColor_2);
     glClearColor(color.redF(), color.greenF(), color.blueF(), color.alphaF());
     xRot = 1;

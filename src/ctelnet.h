@@ -50,6 +50,7 @@
 
 #include <bitset>
 #include <chrono>
+#include <functional>
 #include <iostream>
 #include <memory>
 #include <queue>
@@ -287,9 +288,10 @@ public:
     // a keychain read the user only answered by then. Sends it only while the game is provably
     // still waiting at that prompt, see the definition.
     void sendOutstandingAutoLoginPassword();
-    // The wait blocks, so is only for a profile with no window to freeze
-    void terminateConnection(bool waitForTheGameToClose);
-    bool connectRunningEventLoop() const { return mConnectEventLoops > 0; }
+    // With ended, the game's last data is read from the event loop until it closes too, or a second has passed,
+    // and ended then runs: only a profile with no window, whose close nobody sees, waits that long
+    void terminateConnection(std::function<void()> ended = {});
+    bool reconnectOnStack() const { return mReconnectsOnStack > 0; }
     bool packageDownloadRunning() const;
     bool currentlySecure() const
     {
@@ -374,6 +376,7 @@ private:
     // Lets the functional test drive the real download entry point and inspect
     // the in-flight reply, reproducing the dialog-swap cancellation cascade.
     friend class TelnetTlsPromptTest;
+    friend class HeadlessSessionTest;
 
     // Waits for the auto-login's password step to mark a password as owed, and
     // checks that a game's greeting asked for SGA and that a late password
@@ -415,6 +418,8 @@ private:
 #endif
 
     void abandonHostLookup();
+    void readWhatIsLeft();
+    void readUntilTheGameCloses(std::function<void()> ended);
     // Calls off a lookup, dial or login still to come; a live connection stays, for the exit handlers
     void abandonConnectionAttempt();
 
@@ -561,7 +566,7 @@ private:
     // True between connectIt() and slot_socketHostFound, so
     // getConnectionState() reports HostLookupState during DNS lookup.
     bool mLookingUpHost = false;
-    int mConnectEventLoops = 0;
+    int mReconnectsOnStack = 0;
     // How many of the connection attempts started for the current connect - one per address
     // family the lookup turned up - have yet to succeed or fail.
     int mPendingConnectionAttempts = 0;
