@@ -855,10 +855,8 @@ signals:
     void packageInstallFinished(const QString& path, THeadlessSession::PackageResult result, const QString& error);
     void shutdownFinished(bool succeeded, const QString& error);
     void saveFinished(bool succeeded, const QString& error);
-    // Mudlet wrote into Options::configDir and those files are complete: a profile, map or Mudlet.ini save, with the
-    // modules and packages a save writes, the map's autosave, stored connection details or passwords. One for a burst,
-    // from the event loop once no profile save is still running; a shutdown that wrote sends just one, after its last
-    // write and before shutdown() returns or shutdownFinished comes. See "Keeping the profiles" in docs/headless.md
+    // What Mudlet wrote into Options::configDir is complete: one for an event loop turn's writes, a save or a shutdown;
+    // a shutdown's comes before shutdown() returns or shutdownFinished. See "Keeping the profiles" in docs/headless.md
     void configSaved();
     void profileLoaded(const QString& profile);
     // A line committed to the main console as the game's (what the game sends, feedTriggers(), Mudlet's own

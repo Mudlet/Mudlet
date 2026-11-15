@@ -711,18 +711,19 @@ It comes once the files are written:
 - a map save, by `saveMap()` or a profile save, and the map's autosave, which is written on Qt's
   thread pool; in a single-threaded browser build that write runs in the call, and its end, and so the
   signal, still comes from the event loop;
-- a `Mudlet.ini` save, a script's `saveWindowLayout()`, the connection details a profile stores (its
-  game, port, login and the like) and a password stored or removed under `credentials/`.
+- a `Mudlet.ini` save, a script's `saveWindowLayout()`, the connection details a profile stores or
+  forgets (its game, port, login and the like) and a password stored or removed under `credentials/`.
 
 Not followed by it: files a script writes itself (`io`, `lfs`, `table.save()`), logs, replays, the
 media cache, map exports to JSON or an image, downloads, maps included, the spell-check dictionary, a
 profile deleted, and anything written by a session deleted with its profiles open instead of shut down.
 
-Writes close together send one: it comes from the event loop once no profile save is still being
-written, so a save that writes the profile, its modules, `Mudlet.ini` and the map over several turns
-sends one, after the last. A shutdown that wrote sends just one, once its profiles have closed and their
-saves are written, before `shutdown()` returns or `shutdownFinished` comes, so an app that copies the
-folder then has all the run wrote.
+Writes in one turn of the event loop send one, and so do writes while a profile save or `save()` is
+still running: the signal comes from the event loop once none is, so a save that writes the profile, its
+modules, `Mudlet.ini` and the map over several turns sends one, after the last. Writes in separate turns
+with no save running send one each. A shutdown that wrote sends just one, once its profiles have closed
+and their saves are written, before `shutdown()` returns or `shutdownFinished` comes, so an app that
+copies the folder then has all the run wrote.
 
 In a browser, `mudlet-headless` calls `mudletConfigSaved()` on the object given to `qtLoad()` for each
 `configSaved`, and a page keeps the folder in IndexedDB with Emscripten's IDBFS, which the build links:
@@ -732,23 +733,38 @@ const dir = "/mudlet";
 let program;
 let syncing = false;
 let syncAgain = false;
+let retry;
+let settle;
+let synced = Promise.resolve();  // settles once all Mudlet wrote is in IndexedDB
 function sync() {
+  clearTimeout(retry);
   if (syncing) {
     syncAgain = true;
     return;
   }
   syncing = true;
+  syncAgain = false;
+  if (!settle) {
+    synced = new Promise((resolve) => (settle = resolve));
+  }
   program.FS.syncfs(false, (error) => {
     syncing = false;
     if (error) {
-      console.error(error);  // the next one tries again
-    }
-    if (syncAgain) {
-      syncAgain = false;
+      console.error("Could not keep the profiles, trying again:", error);
+      retry = setTimeout(sync, 2000);
+    } else if (syncAgain) {
       sync();
+    } else {
+      settle();
+      settle = undefined;
     }
   });
 }
+addEventListener("beforeunload", (event) => {
+  if (settle) {
+    event.preventDefault();  // the browser asks the player to stay
+  }
+});
 await qtLoad({
   arguments: ["-p", "My MUD", "--config-dir", dir],
   mudletConfigSaved: sync,
@@ -758,9 +774,11 @@ await qtLoad({
     m.FS.mount(m.FS.filesystems.IDBFS, {}, dir);
     m.addRunDependency("config folder");  // main() waits for this
     m.FS.syncfs(true, (error) => {
-      if (!error) {
-        m.removeRunDependency("config folder");
+      if (error) {
+        document.body.textContent = `The saved profiles could not be read: ${error}`;
+        return;
       }
+      m.removeRunDependency("config folder");
     });
   }],
   qt: { /* entryFunction, containerElements and the rest, as for any Qt program */ },
@@ -769,13 +787,15 @@ await qtLoad({
 
 1. Mount IDBFS on the folder in `preRun` and fill it from IndexedDB with `FS.syncfs(true)`. That
    answers later, so a run dependency holds `main()` back until it has; one that fails here leaves
-   Mudlet unstarted rather than starting it on an empty folder whose first save writes over the
-   player's.
+   Mudlet unstarted, and says so, rather than starting it on an empty folder whose first save writes
+   over the player's.
 2. Name the folder with `--config-dir`. The GUI's own config folder is refused, as everywhere.
 3. On each `mudletConfigSaved()`, copy the folder back with `FS.syncfs(false)`, one at a time: IDBFS
-   runs overlapping syncs side by side, so one asked for while another runs waits for it.
+   runs overlapping syncs side by side, so one asked for while another runs waits for it. One that
+   fails is tried again after a while, as the run's last write may have no signal after it.
 4. When the run ends, as by `closeMudlet()`, the last `mudletConfigSaved()` comes before Qt's
-   `onExit`, and its sync ends after it; keep the page open until it has.
+   `onExit`, and its sync ends after it: wait for `synced` before closing or leaving the page. Until
+   it settles, `beforeunload` has the browser ask the player to stay.
 
 A reload or a closed tab loses what was written since the last sync ended, as a page cannot wait for
 IndexedDB as it unloads. WasmFS's OPFS backend is not an option: it needs threads or JSPI, which this
