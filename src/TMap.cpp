@@ -2832,7 +2832,6 @@ void TMap::pushErrorMessagesToFile(const QString title, const bool isACleanup)
     QListIterator<QString> itMapMsg(mapAuditErrors);
     while (itMapMsg.hasNext()) {
         pHost->mErrorLogStream << itMapMsg.next() << QLatin1Char('\n');
-        ;
     }
 
     pHost->mErrorLogStream << createFileHeaderLine(tr("Area issues"), QLatin1Char('='));
@@ -2867,7 +2866,6 @@ void TMap::pushErrorMessagesToFile(const QString title, const bool isACleanup)
         QListIterator<QString> itMapRoomMsg(itRoomsMsg.value());
         while (itMapRoomMsg.hasNext()) {
             pHost->mErrorLogStream << itMapRoomMsg.next() << QLatin1Char('\n');
-            ;
         }
     }
 

@@ -424,7 +424,8 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
                     case 3:
                         ++zCount;
                         break;
-                    default:; // No-op
+                    default: // No-op
+                        break;
                     }
                 }
                 lua_pop(L, 1);
@@ -540,7 +541,8 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
                 case 3:
                     z.append(static_cast<int>(lua_tonumber(L, -1)));
                     break;
-                default:; // No-op
+                default: // No-op
+                    break;
                 }
                 lua_pop(L, 1);
             }
