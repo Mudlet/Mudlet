@@ -3917,6 +3917,9 @@ int TLuaInterpreter::getOS(lua_State* L)
 #elif defined(Q_PROCESSOR_ARM_V5)
         lua_pushstring(L, "arm5");
         return 1;
+#elif defined(Q_PROCESSOR_WASM)
+        lua_pushstring(L, QT_POINTER_SIZE == 8 ? "wasm (64-bit)" : "wasm (32-bit)");
+        return 1;
 #else
         return 0;
 #endif
