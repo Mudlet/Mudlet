@@ -20,7 +20,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
- #include "utils.h"
+#include "utils.h"
 
 inline const uint16_t csDefaultMMCPHostPort{4050};
 inline constexpr int csMMCPGroupFieldWidth{15};
