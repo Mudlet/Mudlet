@@ -559,6 +559,11 @@ private slots:
 
         T2DMap* p2dMap = showAreaAtTheOrigin(areaId);
         QVERIFY(p2dMap);
+        // Only straight lines share a path: bent, the northeast exit leaves through its own stub and crosses the custom line
+        const bool directionalExitLines = std::exchange(p2dMap->mDirectionalExitLines, false);
+        const auto restore = qScopeGuard([p2dMap, directionalExitLines]() {
+            p2dMap->mDirectionalExitLines = directionalExitLines;
+        });
         const Frame frame = renderMapFrame(p2dMap);
         QCOMPARE(p2dMap->getAreaId(), areaId);
         QVERIFY(frame.pixelsPerUnit > 10.0);
