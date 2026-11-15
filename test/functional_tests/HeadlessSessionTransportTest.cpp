@@ -380,6 +380,37 @@ tempTrigger("A dragon arrives", function() dragonSeen = "yes" send("kill dragon"
         QVERIFY(session.shutdown(false));
     }
 
+    // As a socket's abort() discards what was not yet read from it
+    void test_aReconnectDropsTheOldConnectionsUnreadText()
+    {
+        const QString name = qsl("Headless Transport Reconnect Mid-Flood");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QSignalSpy dials(&session, &THeadlessSession::transportDialRequested);
+        QSignalSpy connected(&session, &THeadlessSession::connected);
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QCOMPARE(session.start({.profile = name, .connect = true, .supplyTransport = true}), THeadlessSession::StartResult::started);
+        QTRY_COMPARE_WITH_TIMEOUT(dials.size(), 1, 10000);
+        session.transportConnected(lastDial(dials));
+        QTRY_COMPARE_WITH_TIMEOUT(connected.size(), 1, 10000);
+        QVERIFY(session.runLua(qsl(R"lua(tempTrigger("first flood line", function() reconnect() end))lua")));
+
+        // Over one read's worth, so the tail is still unread when the trigger reconnects
+        QByteArray flood("first flood line\r\n");
+        while (flood.size() < 150000) {
+            flood += "The crowd roars as the champion enters the arena.\r\n";
+        }
+        session.transportReceived(lastDial(dials), flood + "old tail\r\n");
+        QTRY_COMPARE_WITH_TIMEOUT(dials.size(), 2, 10000);
+        session.transportConnected(lastDial(dials));
+        QTRY_COMPARE_WITH_TIMEOUT(connected.size(), 2, 10000);
+        session.transportReceived(lastDial(dials), "new\r\n");
+        QTRY_VERIFY_WITH_TIMEOUT(texts(output).contains(qsl("new")), 10000);
+        QTest::qWait(100);
+        QVERIFY(!texts(output).contains(qsl("old tail")));
+        QVERIFY(session.shutdown(false));
+    }
+
     void test_aScriptThatReconnectsOnDisconnectionStillSeesWhy()
     {
         const QString name = qsl("Headless Transport Reconnecting Script");
