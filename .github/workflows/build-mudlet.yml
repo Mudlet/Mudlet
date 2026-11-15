@@ -400,6 +400,7 @@ jobs:
       if: runner.os == 'Linux' && env.MUDLET_PGO_BUILD == 'true'
       env:
         LLVM_VERSION: '23'
+        HARDENING_FLAGS: '-fstack-protector-strong -fstack-clash-protection -fcf-protection -D_FORTIFY_SOURCE=2'
       run: |
         wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc > /dev/null
         codename=$(lsb_release -cs)
@@ -409,8 +410,17 @@ jobs:
         sudo apt-get install -y "clang-${LLVM_VERSION}" "lld-${LLVM_VERSION}" "llvm-${LLVM_VERSION}" "libclang-rt-${LLVM_VERSION}-dev"
         # Unversioned clang, ld.lld for USE_ALTERNATE_LINKER and llvm-profdata for CI/pgo-train.sh
         echo "/usr/lib/llvm-${LLVM_VERSION}/bin" >> "$GITHUB_PATH"
-        echo "CC=clang" >> "$GITHUB_ENV"
-        echo "CXX=clang++" >> "$GITHUB_ENV"
+        {
+          echo "CC=clang"
+          echo "CXX=clang++"
+          # Ubuntu's GCC hardens every build by default (these flags, -z now, --as-needed) and Clang does not. Set in
+          # the environment, not with -D, so the sentry-native ExternalProject gets them too
+          echo "CFLAGS=${HARDENING_FLAGS}"
+          echo "CXXFLAGS=${HARDENING_FLAGS}"
+          # -fuse-ld=lld because try_compile takes these flags but not USE_ALTERNATE_LINKER's add_link_options, and
+          # the system ld rejects the ThinLTO cache, which saves ~9 min of links
+          echo "LDFLAGS=-fuse-ld=lld -Wl,--thinlto-cache-dir=thinlto-cache -Wl,-z,now -Wl,--as-needed"
+        } >> "$GITHUB_ENV"
         # Clang takes the newest GCC it finds; a newer one than this would raise the AppImage's GLIBCXX floor
         selected=$("/usr/lib/llvm-${LLVM_VERSION}/bin/clang++" -v 2>&1 | grep '^Selected GCC installation' || true)
         echo "${selected}"
@@ -472,9 +482,7 @@ jobs:
       with:
         configurePreset: ${{ runner.os == 'macOS' && ((matrix.build_tests == 'false' && env.MUDLET_PGO_BUILD != 'true') && 'ci-macos-no-tests' || 'ci-macos') || 'ci-linux' }}
         buildPreset: ${{ runner.os == 'macOS' && ((matrix.build_tests == 'false' && env.MUDLET_PGO_BUILD != 'true') && 'ci-macos-no-tests' || 'ci-macos') || 'ci-linux' }}
-        # The ThinLTO cache saves ~9 min of links. -fuse-ld=lld is repeated because project()'s try_compile
-        # links with the system ld, which rejects the cache flag, before USE_ALTERNATE_LINKER takes effect
-        configurePresetAdditionalArgs: ${{ runner.os == 'Linux' && env.MUDLET_PGO_BUILD == 'true' && '[''-DUSE_ALTERNATE_LINKER=lld'', ''-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON'', ''-DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld -Wl,--thinlto-cache-dir=thinlto-cache'']' || '[]' }}
+        configurePresetAdditionalArgs: ${{ runner.os == 'Linux' && env.MUDLET_PGO_BUILD == 'true' && '[''-DUSE_ALTERNATE_LINKER=lld'', ''-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON'']' || '[]' }}
         buildPresetAdditionalArgs: ${{ env.MUDLET_PGO_BUILD == 'true' && '[''--target'', ''PipelineBenchmark'', ''MapRenderBenchmark'', ''PathfindBenchmark'']' || '[]' }}
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '

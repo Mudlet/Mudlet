@@ -106,9 +106,9 @@ as what CI passes — set them to match the job being reproduced:
 | `SENTRY_SEND_DEBUG` | `0` | `1` |
 | `MUDLET_PGO` | empty | `GENERATE` for the first pass on macOS and the Linux build that ships (Windows passes it with `-D`); see below |
 
-The Linux build that ships also configures with Clang 23 and adds `-DUSE_ALTERNATE_LINKER=lld`,
-`-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON` and `-DCMAKE_EXE_LINKER_FLAGS=...`; the *Build Mudlet* step
-in `build-mudlet.yml` has the exact values.
+The Linux build that ships also configures with the Clang and the `CFLAGS`, `CXXFLAGS` and `LDFLAGS`
+that the *(Linux) Install Clang for the profile-guided build* step in `build-mudlet.yml` sets, and
+adds `-DUSE_ALTERNATE_LINKER=lld` and `-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON`.
 
 ```bash
 USE_SANITIZER=Address cmake --preset ci-linux
@@ -242,11 +242,12 @@ measured as noise.
 
 CI builds all three releases this way with Clang, and links the Windows and Linux ones with ThinLTO.
 Linux takes Clang 23 from apt.llvm.org but compiles against GCC 12's libstdc++, so the AppImage
-still runs on Ubuntu 22.04; the workflow fails if Clang would pick a newer GCC's. Measured end to
+still runs on Ubuntu 22.04; the workflow fails if Clang would pick another GCC's. It also passes the
+hardening flags Ubuntu's GCC adds by default and Clang does not. Measured end to
 end on the Linux release configuration, 16 interleaved rounds at each of three code layouts, Clang
 23 with the profile and ThinLTO took 0.85 of the time GCC 12 with the profile did on a replayed
 session with 46 triggers, 0.90 on the same session with none and 0.91 on svof. Full LTO was no
-faster and needs 6.4 GB per link; GCC 12 with LTO took 0.91, 0.95 and 0.99. GCC 12's profile alone
+faster and needs 6.4 GB per link; adding LTO to GCC 12 with the profile took 0.91, 0.95 and 0.99. GCC 12's profile alone
 took 0.89, 0.89 and 0.94 of the time of a plain GCC 12 build, drew the Aetherspace map within
 noise, and took 1.00 to 1.05 of the time to search for paths on four maps. Map drawing and path
 searches have not been measured on the Clang build; with PipelineBenchmark as the only training,
