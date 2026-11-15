@@ -32,12 +32,17 @@
  * Run with: ctest -R TelnetLargeBurstTest -V
  */
 
+#include <QScopeGuard>
 #include <QTemporaryDir>
+#include <QtNetwork/QSslCertificate>
+#include <QtNetwork/QSslKey>
+#include <QtNetwork/QSslSocket>
 #include <QtTest/QtTest>
 
 #include <algorithm>
 #include <memory>
 
+#include "LoopbackTlsCertificate.h"
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
@@ -52,6 +57,38 @@
 
 using namespace std::chrono_literals;
 
+namespace {
+class TlsCapableTelnetServerStub : public TelnetServerStub
+{
+public:
+    using TelnetServerStub::TelnetServerStub;
+    // For the connections accepted from then on
+    void setTls(const bool tls) { mTls = tls; }
+
+protected:
+    void incomingConnection(qintptr socketDescriptor) override
+    {
+        if (!mTls) {
+            TelnetServerStub::incomingConnection(socketDescriptor);
+            return;
+        }
+        auto* socket = new QSslSocket(this);
+        if (!socket->setSocketDescriptor(socketDescriptor)) {
+            delete socket;
+            return;
+        }
+        socket->setLocalCertificate(QSslCertificate(QByteArray(csmLoopbackCertificatePem)));
+        socket->setPrivateKey(QSslKey(QByteArray(csmLoopbackPrivateKeyPem), QSsl::Rsa));
+        socket->startServerEncryption();
+        // Writes made ahead of the handshake wait for it
+        addPendingConnection(socket);
+    }
+
+private:
+    bool mTls = false;
+};
+} // namespace
+
 class TelnetLargeBurstTest : public QObject
 {
     Q_OBJECT
@@ -59,7 +96,7 @@ class TelnetLargeBurstTest : public QObject
 private:
     QTemporaryDir mConfigDir;
     QByteArray mSavedXdg;
-    TelnetServerStub* mpServer = nullptr;
+    TlsCapableTelnetServerStub* mpServer = nullptr;
     Host* mpHost = nullptr;
     const QString mHostname = qsl("LargeBurst-Host");
     const QString mLocalhost = qsl("localhost");
@@ -164,6 +201,21 @@ private:
         if (mpHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectedState) {
             return true;
         }
+        return dial();
+    }
+
+    // Replaces a live connection too
+    bool connectEncrypted(const bool encrypted)
+    {
+        mpServer->setTls(encrypted);
+        mpHost->mSslTsl = encrypted;
+        // The stub's certificate is self-signed
+        mpHost->mSslIgnoreAll = encrypted;
+        return dial();
+    }
+
+    bool dial()
+    {
         QSignalSpy connected(&(mpHost->mTelnet), &cTelnet::signal_connected);
         QSignalSpy accepted(mpServer, &QTcpServer::newConnection);
         mpHost->mTelnet.connectIt(mLocalhost, mpServer->serverPort());
@@ -339,7 +391,7 @@ private slots:
         mSavedXdg = qgetenv("XDG_CONFIG_HOME");
         qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
 
-        mpServer = new TelnetServerStub(qApp);
+        mpServer = new TlsCapableTelnetServerStub(qApp);
         mpServer->start(mLocalhost, 0);
         mudlet::start();
         mudlet::self()->setupConfig();
@@ -577,6 +629,25 @@ private slots:
                  qPrintable(qsl("the event loop stood still for %1 lines of a flood, when one read is at most %2.").arg(smMostFloodLinesAheadOfAnEvent).arg(linesInOneRead())));
         // 1 MB is what slot_socketConnected() asks of Qt's read buffer
         QVERIFY2(smMostTextHeldByQt <= 1024 * 1024, qPrintable(qsl("Qt was holding %1 bytes of a flood.").arg(smMostTextHeldByQt)));
+    }
+
+    // QSslSocket emits readyRead() for each record it decrypts, many in one turn, with nothing
+    // left to read in between. The tests after this one run over a plain connection again.
+    void theEventLoopTurnsWhileAFloodIsTakenInOverTls()
+    {
+        const auto backToPlain = qScopeGuard([this] {
+            connectEncrypted(false);
+        });
+        QVERIFY2(connectEncrypted(true), "could not connect to the game over TLS");
+        QVERIFY(mpHost->mTelnet.mpSocket->isEncrypted());
+        QVERIFY(sendFloodAndWait());
+
+        QCOMPARE(smFloodLines, scmFloodLineCount);
+        QVERIFY2(smFloodLineOutOfPlace < 0, qPrintable(qsl("burst line %1 is out of order.").arg(smFloodLineOutOfPlace)));
+        QCOMPARE(mpHost->mTelnet.getConnectionState(), QAbstractSocket::ConnectedState);
+        QVERIFY2(floodTookOneReadPerTurn(), qPrintable(floodTurnsReport()));
+        QVERIFY2(smMostFloodLinesAheadOfAnEvent <= 2 * linesInOneRead(),
+                 qPrintable(qsl("the event loop stood still for %1 lines of a flood, when one read is at most %2.").arg(smMostFloodLinesAheadOfAnEvent).arg(linesInOneRead())));
     }
 
     // A trigger's nested event loop can queue a read during a queued read, and two would then

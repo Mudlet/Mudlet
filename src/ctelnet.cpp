@@ -6340,6 +6340,12 @@ void cTelnet::slot_socketReadyToBeRead()
         return;
     }
     readPendingSocketData();
+    // Queued even with nothing left to read: QSslSocket emits readyRead() for each record it decrypts,
+    // many in one turn, and those after this one have to wait for the next turn
+    if (!mReadPending) {
+        mReadPending = true;
+        QMetaObject::invokeMethod(this, &cTelnet::readPendingSocketData, Qt::QueuedConnection);
+    }
 }
 
 // Requeues itself for what is left after one BUFFER_SIZE read, or deferred by a drain: readyRead()
@@ -6374,7 +6380,11 @@ bool cTelnet::readSocketDataOnce()
         std::array<char, BUFFER_SIZE + 10> in_buffer;
 
         amount = static_cast<int>(mpSocket->read(in_buffer.data(), BUFFER_SIZE));
-        processSocketData(in_buffer.data(), amount);
+        // The read queued behind every readyRead() finds nothing once a burst is in, and inside a
+        // trigger's nested event loop at the depth cap that would warn of lost data
+        if (amount > 0) {
+            processSocketData(in_buffer.data(), amount);
+        }
     }
 
     // amount > 0 as well as bytesAvailable(): a read that yields nothing while the
