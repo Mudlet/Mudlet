@@ -288,12 +288,13 @@ end
 function db:_shared_connection(db_name)
   local path = db:_resolve_database_path(db_name)
   for other_name, other_conn in pairs(db.__conn) do
-    -- A deleted file leaves this name's own connection in __conn. Matching it
-    -- here reuses that handle, and the next add hears "readonly database"
-    -- instead of creating the file again.
+    -- A deleted file leaves a connection in __conn, this name's or another
+    -- name's. Matching it reuses that handle, and the next add hears
+    -- "readonly database" instead of creating the file again.
     if other_name ~= db_name
         and other_conn and other_conn ~= "SQLite3 connection (closed)"
-        and db.__path[other_name] == path then
+        and db.__path[other_name] == path
+        and io.exists(path) then
       return other_conn
     end
   end
@@ -876,13 +877,17 @@ function db:create(db_name, sheets, force)
     local conn = db:_shared_connection(db_name)
     local err
     if not conn then
+      -- connect creates a missing file, so the existence check has to come
+      -- first. A released Mudlet file opened under its own name must keep
+      -- the id it already has, or a digit name can no longer find it.
+      local created_file = not io.exists(path)
       conn, err = db.__env:connect(path)
       if not conn then
         error("db:create could not open the database file for "..db_name..": "..tostring(err), 2)
       end
       -- Autocommit is still on, so the header write lands before the first
       -- transaction. A legacy file we only fell back to keeps its old id.
-      if path == db:_database_path(db_name) then
+      if created_file and path == db:_database_path(db_name) then
         db:_mark_new_naming(conn)
       end
       conn:setautocommit(false)
