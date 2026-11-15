@@ -6989,6 +6989,58 @@ registerAnonymousEventHandler("sysLoadEvent", function() feedTriggers("fed by sy
         QVERIFY(!HostManager::self());
     }
 
+    void test_deletingTheSessionFromTheShutdownsConfigSaved_data()
+    {
+        QTest::addColumn<bool>("async");
+        QTest::newRow("shutdown") << false;
+        QTest::newRow("shutdownAsync") << true;
+    }
+
+    // As a page done with its last sync could; without ASan, the block that takes the session's memory catches the
+    // shutdown writing to it
+    void test_deletingTheSessionFromTheShutdownsConfigSaved()
+    {
+        QFETCH(const bool, async);
+        const QString name = async ? qsl("Headless Config Saved Async Delete") : qsl("Headless Config Saved Delete");
+        QVERIFY(writeProfile(name, QString()));
+        QObject owner;
+        auto* pSession = new THeadlessSession(&owner);
+        const QPointer<THeadlessSession> session(pSession);
+        QCOMPARE(pSession->start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QTest::qWait(100);
+        static constexpr unsigned char sentinel = 0xA5;
+        std::unique_ptr<unsigned char[]> reused;
+        bool reusesTheSession = false;
+        bool finished = false;
+        connect(pSession, &THeadlessSession::configSaved, this, [pSession, &reused, &reusesTheSession]() {
+            const void* freed = pSession;
+            delete pSession;
+            reused.reset(new unsigned char[sizeof(THeadlessSession)]);
+            std::fill_n(reused.get(), sizeof(THeadlessSession), sentinel);
+            reusesTheSession = reused.get() == freed;
+        });
+        connect(pSession, &THeadlessSession::shutdownFinished, this, [&finished]() {
+            finished = true;
+        });
+
+        if (async) {
+            pSession->shutdownAsync(true);
+            QTRY_VERIFY_WITH_TIMEOUT(!session, 15000);
+        } else {
+            QVERIFY(pSession->shutdown(true));
+            QVERIFY(!session);
+        }
+        QTest::qWait(100);
+        QVERIFY(!finished);
+        QVERIFY(!HostManager::self());
+        if (reusesTheSession) {
+            const bool untouched = std::all_of(reused.get(), reused.get() + sizeof(THeadlessSession), [](const unsigned char byte) {
+                return byte == sentinel;
+            });
+            QVERIFY2(untouched, "the shutdown wrote to the session its configSaved handler deleted");
+        }
+    }
+
     // As a script that ran while another profile's save waited for its writes could
     void test_aProfileThatCloseFailedToSaveDuringASaveIsNamed()
     {
