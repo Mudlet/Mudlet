@@ -106,6 +106,10 @@ as what CI passes — set them to match the job being reproduced:
 | `SENTRY_SEND_DEBUG` | `0` | `1` |
 | `MUDLET_PGO` | empty | `GENERATE` for the first pass on macOS and the Linux build that ships (Windows passes it with `-D`); see below |
 
+The Linux build that ships also configures with Clang 23 and adds `-DUSE_ALTERNATE_LINKER=lld`,
+`-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON` and `-DCMAKE_EXE_LINKER_FLAGS=...`; the *Build Mudlet* step
+in `build-mudlet.yml` has the exact values.
+
 ```bash
 USE_SANITIZER=Address cmake --preset ci-linux
 ```
@@ -236,14 +240,17 @@ the mapper too - with it, those came out at 0.97, 0.99 and 0.97. Hand-placed `Q_
 hints are not a substitute - removing all of Mudlet's, or adding more to the hottest branches,
 measured as noise.
 
-CI builds all three releases this way: macOS and Windows with Clang, Linux with the GCC 12 it
-already uses. Switching Linux to Clang would trade one for the other: with PipelineBenchmark as the
-only training, profile-guided Clang beat plain GCC on the trained paths (triggers 0.90, text 0.86)
-but not on svof (0.98, noise), and was slower at 2D map rendering (1.08 to 1.24), plain Clang being
-slower than GCC there to begin with. Measured end to end on the Linux release configuration
-rather than through PipelineBenchmark's slots, GCC 12 with the profile took 0.89 of the time on a
-replayed session with 46 triggers, 0.89 on the same session with none and 0.94 on svof, drew the
-Aetherspace map within noise, and took 1.00 to 1.05 of the time to search for paths on four maps.
+CI builds all three releases this way with Clang, and links the Windows and Linux ones with ThinLTO.
+Linux takes Clang 23 from apt.llvm.org but compiles against GCC 12's libstdc++, so the AppImage
+still runs on Ubuntu 22.04; the workflow fails if Clang would pick a newer GCC's. Measured end to
+end on the Linux release configuration, 16 interleaved rounds at each of three code layouts, Clang
+23 with the profile and ThinLTO took 0.85 of the time GCC 12 with the profile did on a replayed
+session with 46 triggers, 0.90 on the same session with none and 0.91 on svof. Full LTO was no
+faster and needs 6.4 GB per link; GCC 12 with LTO took 0.91, 0.95 and 0.99. GCC 12's profile alone
+took 0.89, 0.89 and 0.94 of the time of a plain GCC 12 build, drew the Aetherspace map within
+noise, and took 1.00 to 1.05 of the time to search for paths on four maps. Map drawing and path
+searches have not been measured on the Clang build; with PipelineBenchmark as the only training,
+profile-guided Clang without LTO took 1.08 to 1.24 of plain GCC's time at 2D map rendering.
 
 The first pass builds only the instrumented benchmarks - building `mudlet` would send the
 instrumented binary's debug files to Sentry - and the second builds everything against the profile,
