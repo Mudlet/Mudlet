@@ -205,13 +205,13 @@ async function startGame(directory) {
   throw new Error("the telnet fixture did not listen within 10s");
 }
 
+const faultLogged = "mudletTransport: ";
 // The faults the page makes, as Mudlet logs them to the browser's console after this prefix and gives them as the
 // reason the connection ended on its own console
 const pageFaults = [
   "mudletTransport.write() failed: ",
   "connection.received() takes an ArrayBuffer or a view of one such as a Uint8Array, not Blob",
 ];
-const faultLogged = "mudletTransport: ";
 const pageFailed = "[transport] FAILED";
 
 function gameArgs(port) {
@@ -340,7 +340,7 @@ if (playing) {
         fail();
       } else if (playing && text.startsWith(faultLogged)) {
         // Any other is a fault of Mudlet's, such as received() refusing what the page gave it
-        const fault = pageFaults.find((fault) => text.startsWith(faultLogged + fault));
+        const fault = pageFaults.find((known) => text.startsWith(faultLogged + known));
         if (fault) {
           faultsLogged.add(fault);
         } else {
@@ -368,12 +368,14 @@ if (playing) {
   }
   const gameChecked = playing && answeredInTime && !failed;
   const unreported = [];
-  for (const fault of gameChecked ? pageFaults : []) {
-    if (!faultsLogged.has(fault)) {
-      unreported.push(`Mudlet never logged "${faultLogged}${fault}"`);
-    }
-    if (!faultsShown.has(fault)) {
-      unreported.push(`Mudlet never gave "${fault}" as the reason the connection ended`);
+  if (gameChecked) {
+    for (const fault of pageFaults) {
+      if (!faultsLogged.has(fault)) {
+        unreported.push(`Mudlet never logged "${faultLogged}${fault}"`);
+      }
+      if (!faultsShown.has(fault)) {
+        unreported.push(`Mudlet never gave "${fault}" as the reason the connection ended`);
+      }
     }
   }
   unreported.forEach((what) => console.log(`[transport] ${what}`));

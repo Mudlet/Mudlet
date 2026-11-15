@@ -114,16 +114,16 @@ function relayTransport() {
       }
       socket.onopen = () => connection.connected();
       socket.onmessage = (e) => {
-        if (attempt !== 1) {
+        if (attempt === 1) {
+          const data = new Uint8Array(e.data);
+          const padded = new Uint8Array(padding.length + data.length + padding.length);
+          padded.set(padding);
+          padded.set(data, padding.length);
+          padded.set(padding, padding.length + data.length);
+          connection.received(new DataView(padded.buffer, padding.length, data.length));
+        } else {
           connection.received(e.data);
-          return;
         }
-        const data = new Uint8Array(e.data);
-        const padded = new Uint8Array(padding.length + data.length + padding.length);
-        padded.set(padding);
-        padded.set(data, padding.length);
-        padded.set(padding, padding.length + data.length);
-        connection.received(new DataView(padded.buffer, padding.length, data.length));
       };
       socket.onclose = (e) => connection.closed(e.reason || "the relay closed the connection with code " + e.code);
     },
