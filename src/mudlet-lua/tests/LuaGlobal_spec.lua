@@ -590,6 +590,10 @@ end)
 describe("a file renamed over another", function()
   -- As QSaveFile replaces a file; see src/headless/emscripten-rename-fix.js for why a browser build needs this
   it("is gone once removed", function()
+    if getOS() == "windows" then
+      pending("Windows' rename() will not replace an existing file")
+      return
+    end
     local target = getMudletHomeDir() .. "/renamed-over.txt"
     local source = target .. ".new"
     finally(function()
