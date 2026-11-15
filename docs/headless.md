@@ -687,8 +687,9 @@ byte 255 that starts every telnet command would become two), so the page convert
 source sends. A `Blob`, which a WebSocket delivers unless its `binaryType` is `"arraybuffer"`, is
 refused too. When `received()` refuses, or `dial()` or `write()` throws, Mudlet logs the error to the
 console, calls the page's `close()`, since the profile asks for none of a connection it is told has
-ended, and ends the connection with the error as the reason. `CI/wasm-headless-smoke.js
---game-connection` connects through a WebSocket relay this way.
+ended, and ends the connection with the error as the reason. A `dial()` or `write()` that returns a
+promise which rejects is treated as one that throws. `CI/wasm-headless-smoke.js --game-connection`
+connects through a WebSocket relay this way.
 
 ## Embedding it: when the signals come and what a handler may do
 

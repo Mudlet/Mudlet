@@ -41,7 +41,8 @@ EM_JS(int, pageHasTransport, (), {
 
 // Each dial hands the page a connection of its own, whose calls do nothing once the profile has closed it or dialled
 // again, and whose reports carry the id the profile gave the dial. The profile asks for no close() of a connection it
-// is told has ended, so when the page's code throws or hands over what is not bytes, the page's close() is called here.
+// is told has ended, so when the page's code throws, rejects or hands over what is not bytes, the page's close() is
+// called here.
 EM_JS(void, pageDial, (double id, const char* host, int port, int tlsRequested), {
     if (Module.mudletConnection) {
         Module.mudletConnection.live = false;
@@ -93,11 +94,16 @@ EM_JS(void, pageDial, (double id, const char* host, int port, int tlsRequested),
     };
     Module.mudletConnection = connection;
     try {
-        Module.mudletTransport.dial(UTF8ToString(host), port, tlsRequested !== 0, {
+        var dialled = Module.mudletTransport.dial(UTF8ToString(host), port, tlsRequested !== 0, {
             connected: connection.connected,
             received: connection.received,
             closed: connection.closed
         });
+        if (dialled && typeof dialled.then === "function") {
+            dialled.then(undefined, function(e) {
+                connection.fail("mudletTransport.dial() failed: " + e);
+            });
+        }
     } catch (e) {
         connection.fail("mudletTransport.dial() failed: " + e);
     }
@@ -109,7 +115,12 @@ EM_JS(void, pageWrite, (const char* data, int length), {
         return;
     }
     try {
-        Module.mudletTransport.write(HEAPU8.slice(data, data + length));
+        var written = Module.mudletTransport.write(HEAPU8.slice(data, data + length));
+        if (written && typeof written.then === "function") {
+            written.then(undefined, function(e) {
+                connection.fail("mudletTransport.write() failed: " + e);
+            });
+        }
     } catch (e) {
         connection.fail("mudletTransport.write() failed: " + e);
     }
