@@ -4310,9 +4310,9 @@ local function handle_exits(exits)
     end
 end
 
-local continue_walk, timerID
+local continue_walk, timerID, walk_hold
 continue_walk = function(new_room)
-    if not walking then return end
+    if not walking or walk_hold then return end
     -- calculate wait time until next command, with randomness
     local wait = map.configs.speedwalk_delay or 0
     if wait &gt; 0 and map.configs.speedwalk_random then
@@ -4343,6 +4343,42 @@ continue_walk = function(new_room)
         if timerID then killTimer(timerID) end
         timerID = tempTimer(wait, function() continue_walk() end)
     end
+end
+
+local function release_walk_hold()
+    if walk_hold then
+        killTimer(walk_hold)
+        walk_hold = nil
+    end
+end
+
+-- Holds the walk for seconds, or a random time from seconds to maxSeconds, then walks on from wherever the character
+-- got to, so a move the game refused in the meantime is tried again
+function map.customwalkdelay(seconds, maxSeconds)
+    if type(seconds) ~= "number" or not (seconds &gt;= 0) then
+        error("map.customwalkdelay: bad argument #1 (seconds as a number of 0 or more expected, got " .. tostring(seconds) .. ")", 2)
+    end
+    if maxSeconds ~= nil and (type(maxSeconds) ~= "number" or not (maxSeconds &gt;= seconds)) then
+        error("map.customwalkdelay: bad argument #2 (maxSeconds as a number no less than seconds expected, got " .. tostring(maxSeconds) .. ")", 2)
+    end
+    if not walking then
+        return nil, "not speedwalking step by step - with speedwalk_delay 0 and speedwalk_wait off the whole path is sent at once"
+    end
+    if maxSeconds then
+        seconds = seconds + math.random() * (maxSeconds - seconds)
+    end
+    if timerID then
+        killTimer(timerID)
+        timerID = nil
+    end
+    release_walk_hold()
+    walk_hold = tempTimer(seconds, function()
+        walk_hold = nil
+        if walking then
+            map.speedwalk()
+        end
+    end)
+    return seconds
 end
 
 function map.speedwalk(roomID, walkPath, walkDirs)
@@ -4414,6 +4450,7 @@ end
 function map.pauseSpeedwalk()
     if #speedWalkDir ~= 0 then
         walking = false
+        release_walk_hold()
         raiseEvent("sysSpeedwalkPaused")
         map.echo("Speedwalking paused.")
     else
@@ -4435,6 +4472,7 @@ end
 function map.stopSpeedwalk()
     if #speedWalkDir ~= 0 then
         walking = false
+        release_walk_hold()
         map.walkDirs, speedWalkDir, speedWalkPath, speedWalkWeight = {}, {}, {}, {}
         raiseEvent("sysSpeedwalkStopped")
         map.echo("Speedwalking stopped.")
@@ -4678,6 +4716,7 @@ function map.eventHandler(event, ...)
     elseif event == "mapStop" then
         map.set("mapping", false)
         walking = false
+        release_walk_hold()
         map.echo("Mapping and speedwalking stopped.")
     elseif event == "sysManualLocationSetEvent" then
       set_room(arg1)
