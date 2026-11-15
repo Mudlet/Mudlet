@@ -179,6 +179,7 @@ QPair<bool, QString> removeMetadataFromProfile(const QString& profileName)
     }
     QFile file(path);
     if (file.remove()) {
+        TAppFrontend::instance()->configWritten();
         return qMakePair(true, QString());
     }
     return qMakePair(false, file.errorString());
