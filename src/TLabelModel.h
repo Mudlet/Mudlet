@@ -55,6 +55,7 @@ struct TLabelModel
 
     // The name a screen reader hears: the one a script gave it, else its text, else its tooltip
     QString effectiveAccessibleName() const;
+    QString effectiveAccessibleName(const QString& shownText) const;
     // The label's text as a screen reader would say it
     QString spokenText() const;
     bool namedByToolTip() const;

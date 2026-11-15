@@ -106,6 +106,8 @@ private:
 
     inline static QList<QAccessible::Event> smEvents;
     inline static QList<std::pair<QString, QAccessible::AnnouncementPoliteness>> smAnnouncements;
+    // What a screen reader asking at once would hear as the new name
+    inline static QStringList smNamesAtNameChange;
     inline static QObject* smWatched = nullptr;
 
     static void recordEvent(QAccessibleEvent* event)
@@ -114,6 +116,10 @@ private:
             return;
         }
         smEvents.append(event->type());
+        if (event->type() == QAccessible::NameChanged) {
+            QAccessibleInterface* pInterface = event->accessibleInterface();
+            smNamesAtNameChange.append(pInterface ? pInterface->text(QAccessible::Name) : QString());
+        }
         if (event->type() == QAccessible::Announcement) {
             const auto* announcement = static_cast<QAccessibleAnnouncementEvent*>(event);
             smAnnouncements.append({announcement->message(), announcement->politeness()});
@@ -125,6 +131,7 @@ private:
     {
         smEvents.clear();
         smAnnouncements.clear();
+        smNamesAtNameChange.clear();
         smWatched = object;
         QAccessible::installUpdateHandler(recordEvent);
         QAccessible::setActive(true);
@@ -1153,6 +1160,7 @@ private slots:
 
         QVERIFY(runLua(qsl("echo('%1', 'Attack ready')").arg(mLabelName)));
         QVERIFY2(smEvents.contains(QAccessible::NameChanged), "the new text was not announced as the focused label's name");
+        QVERIFY2(!smNamesAtNameChange.isEmpty() && smNamesAtNameChange.last() == qsl("Attack ready"), qPrintable(qsl("asked at once, the name was: %1").arg(smNamesAtNameChange.join(qsl(" | ")))));
         QCOMPARE(smAnnouncements.size(), 0);
 
         // Read as the name while it waited out the interval, it is not read again once the focus has gone
@@ -1183,6 +1191,7 @@ private slots:
         QVERIFY(runLua(qsl("setLabelStyleSheet('%1', [[qproperty-text: \"HP 30\";]])").arg(mLabelName)));
         QTRY_COMPARE(smAnnouncements.size(), 1);
         QCOMPARE(smAnnouncements.at(0).first, qsl("HP 30"));
+        QVERIFY2(smNamesAtNameChange.contains(qsl("HP 30")), qPrintable(qsl("asked at once, the name was: %1").arg(smNamesAtNameChange.join(qsl(" | ")))));
 
         // Restyled with its text left alone, as a gauge is recoloured at low health, it says nothing
         QTest::qWait(1500);
