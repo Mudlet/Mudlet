@@ -95,18 +95,21 @@ const relay = ${scriptValue(relay)};
 const padding = new TextEncoder().encode(${scriptValue(`\r\n${pagePadding}\r\n`)});
 // The first connection's write() throws, and it hands received() a DataView into the middle of a larger buffer, whose
 // padding either side shows as a line of its own if Mudlet reads past the view. The second hands it the Blob a
-// WebSocket gives on its default binaryType, and the rest the ArrayBuffer it gives otherwise. Mudlet must close the
-// first two itself, as the profile, told they ended, asks for no close(); the page fails the run if it is asked to dial
-// while the last connection is still open.
+// WebSocket gives on its default binaryType, and the rest the ArrayBuffer it gives otherwise. dial() is async, and the
+// third's rejects. Mudlet must close the first three itself, as the profile, told they ended, asks for no close(); the
+// page fails the run if it is asked to dial while the last connection is still open.
 function relayTransport() {
   let socket = null;
   let dials = 0;
   return {
-    dial(host, port, tlsRequested, connection) {
+    async dial(host, port, tlsRequested, connection) {
       const attempt = ++dials;
       console.log("[transport] dial " + attempt + " to " + host + ":" + port + (tlsRequested ? " with TLS asked for" : ""));
       if (socket && socket.readyState <= WebSocket.OPEN) {
         console.log("[transport] FAILED: asked to dial while the last connection was still open");
+      }
+      if (attempt === 3) {
+        throw new Error("the page could not reach the game (a fault the smoke test makes)");
       }
       socket = new WebSocket(relay + "?host=" + encodeURIComponent(host) + "&port=" + port);
       if (attempt !== 2) {

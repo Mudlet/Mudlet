@@ -20,12 +20,12 @@
 // With --game-connection, the page makes the profile's connection, as docs/headless.md has a page do,
 // over a WebSocket to CI/wasm-telnet-relay.js and on to CI/telnet-fixture-server.py; that game offers
 // GMCP, sends vitals and a line a trigger answers, and hangs up once the answer arrives. The page's
-// first two connections fail as CI/wasm-headless-page.js describes, and the profile reconnects after
-// each. It passes as the default does, once the disconnect handler finds the third connection played
-// the game, and then only if Mudlet logged both failures to the browser's console and gave each as
-// the reason on its own, logged no other, never showed the page's padding, the page was never asked
-// to dial while a connection was open, and the game received Mudlet's agreement to GMCP and the
-// trigger's command.
+// first three connections fail as CI/wasm-headless-page.js describes, and the profile reconnects
+// after each. It passes as the default does, once the disconnect handler finds the next connection
+// played the game, and then only if Mudlet logged all three failures to the browser's console and
+// gave each as the reason on its own, logged no other, never showed the page's padding, the page was
+// never asked to dial while a connection was open, and the game received Mudlet's agreement to GMCP
+// and the trigger's command.
 // It exits 2 if its arguments, the directory or WASM_SMOKE_TIMEOUT are wrong; and 3 if it could not
 // run the program at all: playwright does not load, Chromium does not start or quits, the page does
 // not load, the game does not start or this script fails. It needs the playwright package on
@@ -210,6 +210,7 @@ const faultLogged = "mudletTransport: ";
 // reason the connection ended on its own console
 const pageFaults = [
   "mudletTransport.write() failed: ",
+  "mudletTransport.dial() failed: ",
   "connection.received() takes an ArrayBuffer or a view of one such as a Uint8Array, not Blob",
 ];
 const pageFailed = "[transport] FAILED";
@@ -330,12 +331,16 @@ if (playing) {
     onConsole: (text) => {
       console.log(text);
       const status = quitting ? parseExit(text) : null;
+      const shown = playing && outputPrefixes.test(text) ? pageFaults.filter((fault) => text.includes(fault)) : [];
       if (status) {
         finish(status.code === quitStatus && !status.crashed);
       } else if (!quitting && text.replace(outputPrefixes, "") === expected) {
         seen = true;
         clearTimeout(timer);
         setTimeout(() => finish(true), settleMs);
+      } else if (shown.length) {
+        // Even on the "[ ERROR ]" line that gives a failed dial's reason
+        shown.forEach((fault) => faultsShown.add(fault));
       } else if (markers.some((marker) => text.includes(marker)) || (playing && (text.startsWith(pageFailed) || text.includes(pagePadding)))) {
         fail();
       } else if (playing && text.startsWith(faultLogged)) {
@@ -346,8 +351,6 @@ if (playing) {
         } else {
           fail();
         }
-      } else if (playing && outputPrefixes.test(text)) {
-        pageFaults.filter((fault) => text.includes(fault)).forEach((fault) => faultsShown.add(fault));
       }
     },
     onFailure: (text) => {
