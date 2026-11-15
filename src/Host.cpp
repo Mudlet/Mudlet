@@ -3220,7 +3220,9 @@ static void saveMainConsoleTimeStamps(const QString& hostName, const bool shown)
 {
     const auto filePath = MudletApp::getMudletPath(enums::profileDataItemPath, hostName, qsl("autotimestamp"));
     if (!shown) {
-        QFile::remove(filePath);
+        if (QFile::remove(filePath)) {
+            TAppFrontend::instance()->configWritten();
+        }
         return;
     }
     QSaveFile file(filePath);
@@ -3230,7 +3232,9 @@ static void saveMainConsoleTimeStamps(const QString& hostName, const bool shown)
     }
     if (!file.commit()) {
         qWarning() << "Host: error saving timestamp state:" << file.errorString();
+        return;
     }
+    TAppFrontend::instance()->configWritten();
 }
 
 std::optional<bool> Host::setWindowTimeStamps(const QString& name, const bool shown)
@@ -4012,6 +4016,7 @@ QString Host::setPackageInfo(const QString& packageName, const QString& info, co
     if (const QString error = writePackageConfig(MudletApp::getMudletPath(enums::profilePackagePath, getName(), packageName), details); !error.isEmpty()) {
         return qsl("could not save the details of package '%1', so nothing was changed: %2").arg(packageName, error);
     }
+    TAppFrontend::instance()->configWritten();
     mPackageInfo[packageName] = details;
     return {};
 }

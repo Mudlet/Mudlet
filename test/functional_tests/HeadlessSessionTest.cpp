@@ -6708,6 +6708,11 @@ registerAnonymousEventHandler("sysLoadEvent", function() feedTriggers("fed by sy
         QTest::newRow("a password stored") << qsl("password stored");
         QTest::newRow("a password removed") << qsl("password removed");
         QTest::newRow("a sign-in forgotten") << qsl("sign-in forgotten");
+        QTest::newRow("package details") << qsl("package details");
+        QTest::newRow("timestamps shown and hidden") << qsl("timestamps");
+        QTest::newRow("logging on the next load, then not") << qsl("autolog");
+        QTest::newRow("a profile icon set and reset") << qsl("profile icon");
+        QTest::newRow("a rejected token's record dropped") << qsl("rejected token");
     }
 
     // No profile save follows these to send the signal for them
@@ -6724,11 +6729,52 @@ registerAnonymousEventHandler("sysLoadEvent", function() feedTriggers("fed by sy
             file = MudletApp::getMudletPath(enums::profileDataItemPath, name, qsl("url"));
         } else if (write == qsl("sign-in forgotten")) {
             file = MudletApp::getMudletPath(enums::profileDataItemPath, name, qsl("reconnect"));
+        } else if (write == qsl("package details")) {
+            file = MudletApp::getMudletPath(enums::profilePackagePath, name, qsl("headlessDetails")) + qsl("/config.lua");
+        } else if (write == qsl("timestamps")) {
+            file = MudletApp::getMudletPath(enums::profileDataItemPath, name, qsl("autotimestamp"));
+        } else if (write == qsl("autolog")) {
+            file = MudletApp::getMudletPath(enums::profileDataItemPath, name, qsl("autolog"));
+        } else if (write == qsl("profile icon")) {
+            file = MudletApp::getMudletPath(enums::profileDataItemPath, name, qsl("profileicon"));
+        } else if (write == qsl("rejected token")) {
+            file = MudletApp::getMudletPath(enums::profileDataItemPath, name, qsl("reconnect-rejected"));
         } else {
             file = qsl("%1/profiles/%2/passwords/character").arg(MudletApp::credentialFilesRoot(), MudletApp::sanitizeForPath(name));
         }
+        // The token goes to a keychain that answers a turn after the sign-in's record is written, so the rejected
+        // token's record goes after the signal for that
+        const bool keychain = write == qsl("rejected token");
+        const bool storedSecurely = MudletApp::storingPasswordsSecurely();
+        const QByteArray testMode = qgetenv("MUDLET_TEST_MODE");
+        const auto restore = qScopeGuard([keychain, storedSecurely, testMode]() {
+            if (keychain) {
+                CredentialManager::jobStartHookForTesting() = nullptr;
+                CredentialManager::forgetStoreRefusal();
+                qputenv("MUDLET_TEST_MODE", testMode);
+                MudletApp::setStorePasswordsSecurely(storedSecurely);
+            }
+        });
+        if (keychain) {
+            MudletApp::setStorePasswordsSecurely(true);
+            qunsetenv("MUDLET_TEST_MODE");
+            CredentialManager::jobStartHookForTesting() = [](QKeychain::Job* job) {
+                const QKeychain::Error error = qobject_cast<QKeychain::ReadPasswordJob*>(job) ? QKeychain::EntryNotFound : QKeychain::NoError;
+                QTimer::singleShot(100, job, [job, error]() {
+                    job->emitFinishedWithError(error, QString());
+                });
+                return false;
+            };
+        }
         THeadlessSession session;
         QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        if (write == qsl("package details")) {
+            const QString packagePath = mConfigDir.filePath(qsl("headlessDetails.xml"));
+            QVERIFY(writeFile(packagePath, packageXml(QByteArray())));
+            QSignalSpy installSaved(&session, &THeadlessSession::configSaved);
+            QCOMPARE(session.installPackage(packagePath), THeadlessSession::PackageResult::installed);
+            QTRY_VERIFY_WITH_TIMEOUT(!installSaved.isEmpty(), 15000);
+        }
         QTest::qWait(100);
         const auto onDisk = [&file]() {
             QFile current(file);
@@ -6745,6 +6791,18 @@ registerAnonymousEventHandler("sysLoadEvent", function() feedTriggers("fed by sy
             QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("x")).first);
         } else if (write == qsl("sign-in forgotten")) {
             QVERIFY(MudletApp::writeProfileData(name, qsl("reconnect"), qsl(R"({"account":"headless"})")).first);
+        } else if (write == qsl("package details")) {
+            QVERIFY(session.runLua(qsl(R"lua(assert(setPackageInfo("headlessDetails", "author", "Headless")))lua")));
+        } else if (write == qsl("timestamps")) {
+            QVERIFY(session.setTimeStampsShown(true));
+        } else if (write == qsl("autolog")) {
+            QVERIFY(session.runLua(qsl("assert(startLogging(true))")));
+        } else if (write == qsl("profile icon")) {
+            const QString icon = mConfigDir.filePath(qsl("headlessIcon.png"));
+            QVERIFY(writeFile(icon, QByteArrayLiteral("not checked")));
+            QVERIFY(session.runLua(qsl(R"lua(assert(setProfileIcon("%1")))lua").arg(icon)));
+        } else if (write == qsl("rejected token")) {
+            QVERIFY(MudletApp::writeProfileData(name, qsl("reconnect-rejected"), qsl("00ff")).first);
         } else {
             QVERIFY(storePassword(name, qsl("character"), qsl("secret")));
         }
@@ -6766,10 +6824,21 @@ registerAnonymousEventHandler("sysLoadEvent", function() feedTriggers("fed by sy
             });
             QTRY_VERIFY_WITH_TIMEOUT(forgotten.has_value(), 10000);
             QVERIFY(*forgotten);
+        } else if (write == qsl("timestamps")) {
+            QVERIFY(session.setTimeStampsShown(false));
+        } else if (write == qsl("autolog")) {
+            QVERIFY(session.runLua(qsl("assert(startLogging(false))")));
+        } else if (write == qsl("profile icon")) {
+            QVERIFY(session.runLua(qsl("assert(resetProfileIcon())")));
+        } else if (write == qsl("rejected token")) {
+            // Its record goes once the token that replaces it is stored
+            session.host()->mpAuth->handleAuthGMCP(qsl("Char.Login.Default"), qsl(R"({"type": ["password-credentials"]})"));
+            session.host()->mpAuth->handleAuthGMCP(qsl("Char.Login.Token"), qsl(R"({"account": "headless", "token": "fresh", "secure_only": true})"));
+            QTRY_VERIFY_WITH_TIMEOUT(!onDisk().has_value(), 10000);
         }
-        if (write == qsl("password removed") || write == qsl("sign-in forgotten")) {
-            QTRY_COMPARE_WITH_TIMEOUT(seen.size(), 2, 15000);
-            QVERIFY2(!seen.constLast().has_value() && !onDisk().has_value(), qPrintable(file));
+        if (QStringList{qsl("password removed"), qsl("sign-in forgotten"), qsl("timestamps"), qsl("autolog"), qsl("profile icon"), qsl("rejected token")}.contains(write)) {
+            QTRY_VERIFY_WITH_TIMEOUT(seen.size() > 1 && !seen.constLast().has_value(), 15000);
+            QVERIFY2(!onDisk().has_value(), qPrintable(file));
         }
         QVERIFY(session.shutdown(false));
         if (write == qsl("layout")) {

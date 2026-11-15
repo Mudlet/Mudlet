@@ -23,6 +23,7 @@
 
 #include "Host.h"
 #include "MudletApp.h"
+#include "TAppFrontend.h"
 #include "TDebug.h"
 
 #include <QCoreApplication>
@@ -1370,11 +1371,9 @@ void removeAutologSentinel(const QString& path)
     if (!sentinel.exists()) {
         return;
     }
-    if (sentinel.isDir()) {
-        QDir().rmdir(path);
-        return;
+    if (sentinel.isDir() ? QDir().rmdir(path) : QFile::remove(path)) {
+        TAppFrontend::instance()->configWritten();
     }
-    QFile::remove(path);
 }
 } // namespace
 
@@ -1427,6 +1426,7 @@ void TConsoleModel::toggleLogging(bool isMessageEnabled)
         }
         QTextStream out(&file);
         file.close();
+        TAppFrontend::instance()->configWritten();
 
         QString directoryLogFile;
         QString logFileName;

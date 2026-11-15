@@ -712,7 +712,9 @@ It comes once the files are written:
   thread pool; in a single-threaded browser build that write runs in the call, and its end, and so the
   signal, still comes from the event loop;
 - a `Mudlet.ini` save, a script's `saveWindowLayout()`, the connection details a profile stores or
-  forgets (its game, port, login and the like) and a password stored or removed under `credentials/`.
+  forgets (its game, port, login and the like) and a password stored or removed under `credentials/`;
+- a package's details set by `setPackageInfo()`, the profile's icon, and whether its next load shows
+  the main console's timestamps or logs it.
 
 Not followed by it: files a script writes itself (`io`, `lfs`, `table.save()`), logs, replays, the
 media cache, map exports to JSON or an image, downloads, maps included, the spell-check dictionary, a
