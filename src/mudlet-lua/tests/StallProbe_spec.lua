@@ -48,9 +48,10 @@ describe("stall probe for #12926", function()
     if lfs.attributes(fixtureMarker) then
       removeTree(profileDirectory)
     end
-    lfs.mkdir(profileDirectory)
+    assert.is_nil(lfs.attributes(profileDirectory), "a profile named " .. name .. " already exists and is not this spec's to delete")
+    assert.is_true(lfs.mkdir(profileDirectory), "could not make the profile directory " .. profileDirectory)
     io.open(fixtureMarker, "w"):close()
-    lfs.mkdir(profileDirectory .. "/current")
+    assert.is_true(lfs.mkdir(profileDirectory .. "/current"))
     local file = io.open(profileDirectory .. "/current/2026-01-01#00-00-00.xml", "w")
     file:write(string.format([[<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE MudletPackage>
