@@ -28,6 +28,7 @@
 #include "MudletApp.h"
 
 #include "SecureStringUtils.h"
+#include "TAppFrontend.h"
 #include "TGameDetails.h"
 #include "TSpellChecker.h"
 #include "ctelnet.h"
@@ -911,6 +912,7 @@ QPair<bool, QString> MudletApp::writeProfileData(const QString& profile, const Q
         SecureStringUtils::confirmFileIsOwnerOnly(file.fileName());
     }
 
+    TAppFrontend::instance()->configWritten();
     return qMakePair(true, QString());
 }
 

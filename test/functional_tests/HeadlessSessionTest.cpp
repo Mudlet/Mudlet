@@ -265,6 +265,13 @@ end))lua")
 
     static qsizetype saveCount(const QString& name) { return QDir(MudletApp::getMudletPath(enums::profileXmlFilesPath, name)).entryList(QStringList{qsl("*.xml")}, QDir::Files).size(); }
 
+    static QString newestSave(const QString& name)
+    {
+        const QDir saveFolder(MudletApp::getMudletPath(enums::profileXmlFilesPath, name));
+        const QStringList saves = saveFolder.entryList(QStringList{qsl("*.xml")}, QDir::Files, QDir::Name);
+        return saves.isEmpty() ? QString() : readFile(saveFolder.filePath(saves.constLast()));
+    }
+
     // pumpEvents() and waitForEvent() answer only in test mode
     static auto inTestMode()
     {
@@ -6522,6 +6529,117 @@ registerAnonymousEventHandler("sysLoadEvent", function() feedTriggers("fed by sy
         layoutFile.close();
         QVERIFY(session.shutdown(false));
         QFile::remove(layoutPath);
+    }
+
+    // An app keeping the folder elsewhere, as a browser page syncing it to IndexedDB does, copies it as the signal comes
+    void test_configSavedComesOnceTheProfileSaveIsOnDisk()
+    {
+        const QString name = qsl("Headless Config Saved");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QTest::qWait(100);
+        QStringList seen;
+        connect(&session, &THeadlessSession::configSaved, this, [&seen, name]() {
+            seen.append(newestSave(name));
+        });
+
+        QVERIFY(session.runLua(qsl(R"lua(permAlias("headlessOnDiskAlias", "", "^xyzzy$", ""))lua")));
+        {
+            const PoolHold hold(std::chrono::seconds(1));
+            QVERIFY(hold.heldAll());
+            QVERIFY(std::get<0>(session.host()->saveProfile()));
+            QTest::qWait(300);
+            QVERIFY2(seen.isEmpty(), "configSaved came before the profile was written.");
+        }
+        QTRY_COMPARE_WITH_TIMEOUT(seen.size(), 1, 15000);
+        QVERIFY2(seen.constLast().contains(qsl("headlessOnDiskAlias")) && seen.constLast().trimmed().endsWith(qsl("</MudletPackage>")), qPrintable(seen.constLast().right(200)));
+
+        // A script's save writes Mudlet.ini at once and the profile on a pool thread: one signal, once both are written
+        QVERIFY(session.runLua(qsl(R"lua(permAlias("headlessBurstAlias", "", "^plugh$", ""))lua")));
+        {
+            const PoolHold hold(std::chrono::seconds(1));
+            QVERIFY(hold.heldAll());
+            QVERIFY(session.runLua(qsl("saveProfile()")));
+            QTest::qWait(300);
+            QCOMPARE(seen.size(), 1);
+        }
+        QTRY_COMPARE_WITH_TIMEOUT(seen.size(), 2, 15000);
+        QVERIFY2(seen.constLast().contains(qsl("headlessBurstAlias")), qPrintable(seen.constLast().right(200)));
+        QTest::qWait(100);
+        QCOMPARE(seen.size(), 2);
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_configSavedComesOnceTheMapIsOnDisk()
+    {
+        const QString name = qsl("Headless Config Saved Map");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QTest::qWait(100);
+        const QString mapsFolder = MudletApp::getMudletPath(enums::profileMapsPath, name);
+        QList<QMap<QString, QByteArray>> seen;
+        connect(&session, &THeadlessSession::configSaved, this, [&seen, mapsFolder]() {
+            seen.append(filesUnder(mapsFolder));
+        });
+
+        QVERIFY(session.runLua(qsl("local area = addAreaName('headlessConfigSaved'); addRoom(9101); setRoomArea(9101, area); saveMap()")));
+        QTRY_COMPARE_WITH_TIMEOUT(seen.size(), 1, 15000);
+        QCOMPARE(seen.constFirst(), filesUnder(mapsFolder));
+
+        QVERIFY(session.runLua(qsl("addRoom(9102); setRoomArea(9102, getRoomArea(9101))")));
+        {
+            const PoolHold hold(std::chrono::seconds(1));
+            QVERIFY(hold.heldAll());
+            session.host()->autoSaveMap();
+            QTest::qWait(300);
+            QCOMPARE(seen.size(), 1);
+        }
+        QTRY_COMPARE_WITH_TIMEOUT(seen.size(), 2, 15000);
+        QVERIFY(seen.constLast().contains(qsl("autosave.dat")));
+        QCOMPARE(seen.constLast(), filesUnder(mapsFolder));
+        QTest::qWait(100);
+        QCOMPARE(seen.size(), 2);
+        // After the counts: the pool it reads in writes the window layout as it goes
+        QVERIFY(newestMapHoldsRooms(name, {9101}));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_configSavedComesOnceAShutdownHasWritten_data()
+    {
+        QTest::addColumn<bool>("async");
+        QTest::newRow("shutdown") << false;
+        QTest::newRow("shutdownAsync") << true;
+    }
+
+    // A browser's run ends as the shutdown does, so the signal cannot wait for the event loop
+    void test_configSavedComesOnceAShutdownHasWritten()
+    {
+        QFETCH(bool, async);
+        const QString name = async ? qsl("Headless Config Saved Async Close") : qsl("Headless Config Saved Close");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"lua(permAlias("headlessClosingAlias", "", "^xyzzy$", ""))lua")));
+        QTest::qWait(100);
+        QStringList events;
+        connect(&session, &THeadlessSession::configSaved, this, [&events, name]() {
+            events.append(newestSave(name).contains(qsl("headlessClosingAlias")) ? qsl("configSaved") : qsl("configSaved before the save"));
+        });
+        connect(&session, &THeadlessSession::shutdownFinished, this, [&events]() {
+            events.append(qsl("shutdownFinished"));
+        });
+
+        if (async) {
+            session.shutdownAsync(true);
+            QTRY_VERIFY_WITH_TIMEOUT(events.contains(qsl("shutdownFinished")), 15000);
+        } else {
+            QVERIFY(session.shutdown(true));
+            events.append(qsl("returned"));
+        }
+        QTest::qWait(100);
+        QCOMPARE(events, QStringList({qsl("configSaved"), async ? qsl("shutdownFinished") : qsl("returned")}));
     }
 
     // As a script that ran while another profile's save waited for its writes could

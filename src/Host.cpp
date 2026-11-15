@@ -468,6 +468,9 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
                 }
             },
             Qt::QueuedConnection);
+    connect(this, &Host::profileSaveFinished, this, []() {
+        TAppFrontend::instance()->configWritten();
+    });
     connect(this, &Host::signal_forceMXPProcessorOnChanged, this, [this](bool enabled) {
         if (enabled) {
             if (!mMxpProcessor.isEnabled()) {
@@ -1177,6 +1180,7 @@ bool Host::saveMapFile(const QString& location, int saveVersion)
     if (saved) {
         mpMap->resetUnsaved();
         mpMap->setSaveError(false);
+        TAppFrontend::instance()->configWritten();
     } else {
         mpMap->setSaveError(true);
     }
@@ -1398,6 +1402,8 @@ void Host::waitForMapAutosave()
     if (!failure.isEmpty()) {
         qDebug().noquote() << "Error autosaving map to" << MudletApp::getMudletPath(enums::profileMapPathFileName, mHostName, qsl("autosave.dat")) << ":" << failure;
         mpMap->setUnsavedKeepingRevisions(__func__);
+    } else {
+        TAppFrontend::instance()->configWritten();
     }
     mpMap->setSaveError(!failure.isEmpty());
 }

@@ -408,6 +408,9 @@ THeadlessSession::THeadlessSession(QObject* parent)
     Q_INIT_RESOURCE(mudlet_fonts_posix);
 #endif
 #endif
+    if (auto* pView = dynamic_cast<TNullAppFrontend*>(TAppFrontend::instance())) {
+        connect(&pView->mNotifier, &TNullAppFrontendNotifier::configWritten, this, &THeadlessSession::noteConfigWritten);
+    }
 }
 
 THeadlessSession::~THeadlessSession()
@@ -454,6 +457,31 @@ void THeadlessSession::tellLater(std::function<void()> tell)
 {
     // From the event loop, so a frontend never hears an answer before the call that asked for it returns
     QTimer::singleShot(0ms, this, std::move(tell));
+}
+
+void THeadlessSession::noteConfigWritten()
+{
+    if (mConfigSavedPending) {
+        return;
+    }
+    mConfigSavedPending = true;
+    QTimer::singleShot(0ms, this, &THeadlessSession::tellConfigSaved);
+}
+
+// A save writes the profile, its modules, Mudlet.ini and the map in turns of the event loop, so the signal waits for
+// all of them
+void THeadlessSession::tellConfigSaved()
+{
+    // A shutdown sends it once its last write is done, as a browser's run ends with the shutdown
+    if (!mConfigSavedPending || mShuttingDown) {
+        return;
+    }
+    if (mSaving || (mpPool && poolSaving(*mpPool))) {
+        QTimer::singleShot(10ms, this, &THeadlessSession::tellConfigSaved);
+        return;
+    }
+    mConfigSavedPending = false;
+    emit configSaved();
 }
 
 void THeadlessSession::beginStart(const Options& asked, std::function<void(StartResult)> done)
@@ -2058,6 +2086,13 @@ void THeadlessSession::shutdownOnceReleased(const std::shared_ptr<bool>& saved, 
     mShuttingDown = false;
     detachFromHost();
     mpHost.clear();
+    if (mConfigSavedPending) {
+        mConfigSavedPending = false;
+        emit configSaved();
+        if (!self) {
+            return;
+        }
+    }
     done(true);
 }
 

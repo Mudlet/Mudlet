@@ -350,6 +350,6 @@ void THeadlessSession::connectCommandRelays(const unsigned int run)
 void THeadlessSession::disconnectCommandRelays()
 {
     if (auto* pView = dynamic_cast<TNullAppFrontend*>(TAppFrontend::instance())) {
-        disconnect(&pView->mNotifier, nullptr, this, nullptr);
+        disconnect(&pView->mNotifier, &TNullAppFrontendNotifier::addonCommandsChanged, this, nullptr);
     }
 }

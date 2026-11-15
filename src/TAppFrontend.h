@@ -99,6 +99,9 @@ public:
     virtual void profileClosing(Host*) {}
     // By self()'s pool as it ends, and by any pool ending while self() answers with none, once its Hosts are gone.
     virtual void profilesClosed() {}
+    // Once something written into the folder holding the profiles and Mudlet.ini is there: a profile, map or settings
+    // save, stored connection details or a password. Several may come for one save.
+    virtual void configWritten() {}
     virtual bool quitting() const = 0;
     // Loads and starts the profile and, if connect, connects it; false if it could not be loaded.
     virtual bool openProfile(const QString& profileName, bool connect) = 0;
