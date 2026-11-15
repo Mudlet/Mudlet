@@ -988,7 +988,7 @@ int run(int argc, char* argv[])
         quitAsked = true;
 #if defined(Q_OS_WASM)
         // A timer fires only from the browser's own loop, never from an event loop pump, so the close starts where
-        // exec() would have returned
+        // exec() would have returned; not 0ms, which Qt posts as an event instead of starting a timer
         if (closeInBrowser) {
             QTimer::singleShot(1ms, app, std::exchange(closeInBrowser, {}));
         }
