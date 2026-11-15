@@ -394,12 +394,12 @@ jobs:
          # The one job that builds without precompiled headers, so a missing #include still fails somewhere
          echo "CMAKE_DISABLE_PRECOMPILE_HEADERS=ON" >> $GITHUB_ENV
 
-    # A profile-guided Linux build uses Clang with ThinLTO, which runs faster than GCC (docs/platform-builds.md).
-    # It still compiles against GCC's libstdc++, so the AppImage keeps running on Ubuntu 22.04.
+    # A profile-guided Linux build uses Clang with ThinLTO, as Mudlet runs faster built that way than with GCC (docs/platform-builds.md).
     - name: (Linux) Install Clang for the profile-guided build
       if: runner.os == 'Linux' && env.MUDLET_PGO_BUILD == 'true'
       env:
         LLVM_VERSION: '23'
+        GCC_VERSION: ${{matrix.gcc_compiler_version}}
         HARDENING_FLAGS: '-fstack-protector-strong -fstack-clash-protection -fcf-protection -D_FORTIFY_SOURCE=2'
       run: |
         wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc > /dev/null
@@ -418,15 +418,15 @@ jobs:
           # takes CFLAGS in place of its own; CMake's build-type -O3 comes after it and wins
           echo "CFLAGS=-O2 ${HARDENING_FLAGS}"
           echo "CXXFLAGS=${HARDENING_FLAGS}"
-          # -fuse-ld=lld because try_compile and the sentry-native ExternalProject take these flags but not
-          # USE_ALTERNATE_LINKER's add_link_options, and the system ld rejects the ThinLTO cache, which saves ~9 min of links
+          # -fuse-ld=lld because try_compile and sentry-native miss USE_ALTERNATE_LINKER's add_link_options, and the
+          # system ld rejects --thinlto-cache-dir; the cache saves ~9 min of links
           echo "LDFLAGS=-fuse-ld=lld -Wl,--thinlto-cache-dir=thinlto-cache -Wl,-z,now -Wl,--as-needed"
         } >> "$GITHUB_ENV"
-        # Clang takes the newest GCC it finds; a newer one than this would raise the AppImage's GLIBCXX floor
+        # Clang takes the newest GCC it finds; a newer one than this would raise the AppImage's GLIBCXX floor past Ubuntu 22.04
         selected=$("/usr/lib/llvm-${LLVM_VERSION}/bin/clang++" -v 2>&1 | grep '^Selected GCC installation' || true)
         echo "${selected}"
-        if [ "${selected}" != "Selected GCC installation: /usr/lib/gcc/x86_64-linux-gnu/${{matrix.gcc_compiler_version}}" ]; then
-          echo "::error::Clang would build against another libstdc++ than GCC ${{matrix.gcc_compiler_version}}'s"
+        if [ "${selected}" != "Selected GCC installation: /usr/lib/gcc/x86_64-linux-gnu/${GCC_VERSION}" ]; then
+          echo "::error::Clang would build against another libstdc++ than GCC ${GCC_VERSION}'s"
           exit 1
         fi
 
@@ -487,8 +487,8 @@ jobs:
         buildPresetAdditionalArgs: ${{ env.MUDLET_PGO_BUILD == 'true' && '[''--target'', ''PipelineBenchmark'', ''MapRenderBenchmark'', ''PathfindBenchmark'']' || '[]' }}
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
-        # The run-varying half of the ci-linux/ci-macos presets - everything else about the
-        # configuration, bar the Linux profile-guided toolchain above, lives in CMakePresets.json
+        # The run-varying half of the ci-linux/ci-macos presets - everything else
+        # about the configuration lives in CMakePresets.json
         CMAKE_BUILD_TYPE: ${{ (startsWith(github.ref, 'refs/tags/Mudlet-') || (matrix.pgo == 'true' && github.event.inputs.pgo == 'true')) && 'Release' || '' }}
         MUDLET_PGO: ${{ env.MUDLET_PGO_BUILD == 'true' && 'GENERATE' || '' }}
         USE_SANITIZER: ${{ matrix.enable_asan == 'true' && !startsWith(github.ref, 'refs/tags/Mudlet-') && github.event.inputs.pgo != 'true' && 'Address' || '' }}

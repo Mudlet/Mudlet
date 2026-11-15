@@ -108,7 +108,7 @@ as what CI passes — set them to match the job being reproduced:
 
 The Linux build that ships also takes the `PATH`, `CC`, `CXX`, `CFLAGS`, `CXXFLAGS` and `LDFLAGS`
 that the *(Linux) Install Clang for the profile-guided build* step in `build-mudlet.yml` sets, and
-adds `-DUSE_ALTERNATE_LINKER=lld` and `-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON`.
+passes `-DUSE_ALTERNATE_LINKER=lld` in place of the preset's `mold`, plus `-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON`.
 
 ```bash
 USE_SANITIZER=Address cmake --preset ci-linux
