@@ -210,11 +210,8 @@ if (!(timeoutSeconds > 0 && timeoutSeconds <= maxTimeoutSeconds)) {
 }
 const [expected, ...args] = rest.length ? rest : ["lua says 2", ...defaultProbe()];
 
-// Reading a password from the system keychain waits in a nested event loop, which Qt for
-// WebAssembly cannot run without asyncify, so passwords are kept in the profile instead. The
-// language is pinned, as "[ ERROR ]" is translated and Mudlet follows the browser's language once
-// that language's translation is complete enough.
-const settings = "[General]\nstorePasswordsSecurely=false\ninterfaceLanguage=en_US\n";
+// "[ ERROR ]" is translated, and Mudlet follows the browser's language once its translation is complete enough
+const settings = "[General]\ninterfaceLanguage=en_US\n";
 // Escaped, as an argument holding "</script>" would end the page's script element
 const pageArguments = JSON.stringify(args).replace(/</g, "\\u003c");
 

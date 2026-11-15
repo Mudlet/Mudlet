@@ -421,8 +421,10 @@ Given an expected line after the directory, which must not be blank, it passes t
 arguments to `mudlet-headless` instead of the probe's. Its header lists its exit codes; 3 means it
 could not run the program at all, not that the build failed.
 
-The page seeds `Mudlet.ini` with `storePasswordsSecurely=false` and `interfaceLanguage=en_US` (the
-script says why). `mudlet-headless` ends in a browser as it does on the desktop, which the page
+The page seeds `Mudlet.ini` with `interfaceLanguage=en_US` (the script says why). A browser build
+keeps passwords in the profile unless `storePasswordsSecurely` says otherwise, as reading the
+browser's keychain waits on a nested event loop that Qt for WebAssembly cannot run without
+asyncify. `mudlet-headless` ends in a browser as it does on the desktop, which the page
 reports as an `[exit]` line, so a run that ends before the line fails, and one that never prints it
 fails after `WASM_SMOKE_TIMEOUT` seconds (120 by default). `.github/workflows/wasm-build.yml`
 builds and runs this on every push to `development` and every pull request that touches the
