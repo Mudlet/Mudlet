@@ -593,6 +593,19 @@ describe("Tests the generic mapper's map.customwalkdelay", function()
     assert.equals(tostring(rooms[3]), tostring(speedWalkPath[#speedWalkPath]))
   end)
 
+  it("walks to a destination chosen during the hold once the hold ends", function()
+    map.speedwalk(rooms[3])
+    map.customwalkdelay(1)
+    map.speedwalk(rooms[2])
+    assert.equals(1, #sent)
+    local paths = spy.on(_G, "getPath")
+    finally(function() getPath:revert() end)
+    liveTimers()[1].fn()
+    assert.equals(2, #sent)
+    -- a one-step walk is over, and speedWalkPath emptied, once its step is sent
+    assert.spy(paths).was_called_with(rooms[1], rooms[2])
+  end)
+
   it("picks a time from the range when given a second number", function()
     map.speedwalk(rooms[3])
     for _ = 1, 20 do

@@ -4310,7 +4310,7 @@ local function handle_exits(exits)
     end
 end
 
-local continue_walk, timerID, walk_hold
+local continue_walk, timerID, walk_hold, held_destination
 continue_walk = function(new_room)
     if not walking or walk_hold then return end
     -- calculate wait time until next command, with randomness
@@ -4373,11 +4373,11 @@ function map.customwalkdelay(seconds, maxSeconds)
     end
     release_walk_hold()
     -- speedWalkPath is global, and looking up any other route in the meantime replaces it
-    local destination = speedWalkPath[#speedWalkPath]
+    held_destination = speedWalkPath[#speedWalkPath]
     walk_hold = tempTimer(seconds, function()
         walk_hold = nil
         if walking then
-            map.speedwalk(destination)
+            map.speedwalk(held_destination)
         end
     end)
     return seconds
@@ -4385,6 +4385,12 @@ end
 
 function map.speedwalk(roomID, walkPath, walkDirs)
     roomID = roomID or speedWalkPath[#speedWalkPath]
+    -- a walk chosen during a hold sets off when the hold ends
+    if walk_hold then
+        held_destination = roomID
+        walking = true
+        return
+    end
     getPath(map.currentRoom, roomID)
     walkPath = speedWalkPath
     walkDirs = speedWalkDir
