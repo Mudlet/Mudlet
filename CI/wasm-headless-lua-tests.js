@@ -15,7 +15,7 @@
 
 const fs = require("fs");
 const path = require("path");
-const { failureMarkers, outputPrefixes, settings, requireBuild, timeoutFrom, page, openPage, closeBrowser } = require("./wasm-headless-page");
+const { failureMarkers, outputPrefixes, requireBuild, timeoutFrom, page, parseExit, exitedCleanly, openPage, closeBrowser } = require("./wasm-headless-page");
 
 const repo = path.join(__dirname, "..");
 const testsPath = "/mudlet/src/mudlet-lua/tests";
@@ -88,7 +88,7 @@ const environment = {
   await openPage({
     what: "Lua test runner",
     dir,
-    html: page({ args, settings, environment, staged: true }),
+    html: page({ args, environment, staged: true }),
     serve: (file) => {
       if (file === "/stage.json") {
         return { contentType: "application/json", body: JSON.stringify([...staged.keys()]) };
@@ -99,9 +99,9 @@ const environment = {
       console.log(text);
       const line = text.replace(outputPrefixes, "");
       log.write(line + "\n");
-      const exited = /^\[exit\] (.*)$/.exec(text);
-      if (exited) {
-        exitStatus = JSON.parse(exited[1]);
+      const status = parseExit(text);
+      if (status) {
+        exitStatus = status;
         finish(true);
       } else if (line === specsStart) {
         started = true;
@@ -122,7 +122,7 @@ const environment = {
   clearTimeout(timer);
   await closeBrowser();
   await new Promise((resolve) => log.end(resolve));
-  if (passed && (exitStatus.crashed || exitStatus.code !== 0)) {
+  if (passed && !exitedCleanly(exitStatus)) {
     console.error(`mudlet-headless exited with ${JSON.stringify(exitStatus)}`);
     passed = false;
   } else if (passed && !summarised) {

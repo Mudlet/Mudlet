@@ -51,12 +51,12 @@ function scriptValue(value) {
   return JSON.stringify(value).replace(/</g, "\\u003c");
 }
 
-// The page that starts mudlet-headless with args, a Mudlet.ini of settings and the environment given. With staged,
+// The page that starts mudlet-headless with args, the Mudlet.ini above and the environment given. With staged,
 // it first fetches stage.json, a list of absolute paths, and each of them from stage/<path>, and writes them into
 // the program's file system before it starts. It prints "[exit] " and the exit status when the program ends. With
 // clockJump, { line, seconds }, Date.now() and performance.now() jump that many seconds ahead once the program prints
 // that line; with stdoutGone, writing to standard output fails as it does once a pipe's reader has gone.
-function page({ args, settings, environment = {}, staged = false, clockJump = null, stdoutGone = false }) {
+function page({ args, environment = {}, staged = false, clockJump = null, stdoutGone = false }) {
   return `<!doctype html>
 <html><head><meta charset="utf-8"><title>mudlet-headless</title></head>
 <body><div id="screen" style="width:800px;height:600px"></div>
@@ -89,7 +89,7 @@ function output(prefix) {
 }
 let program;
 (async () => {
-  const staged = ${staged} ? await Promise.all((await (await fetch("stage.json")).json()).map(async (file) => {
+  const staged = ${scriptValue(Boolean(staged))} ? await Promise.all((await (await fetch("stage.json")).json()).map(async (file) => {
     const response = await fetch("stage" + file.split("/").map(encodeURIComponent).join("/"));
     if (!response.ok) {
       throw new Error("could not stage " + file + ": " + response.status);
@@ -111,7 +111,7 @@ let program;
     }],
     // The standard streams are opened after preRun, and main() runs after this
     onRuntimeInitialized: () => {
-      if (${stdoutGone}) {
+      if (${scriptValue(Boolean(stdoutGone))}) {
         const stdout = program.FS.getStream(1);
         // 64 is EPIPE as Emscripten numbers it
         stdout.stream_ops = { ...stdout.stream_ops, write: () => { throw new program.FS.ErrnoError(64); } };
@@ -128,6 +128,16 @@ let program;
 </script>
 </body></html>
 `;
+}
+
+// The exit status the page printed, if text is that line; null otherwise
+function parseExit(text) {
+  const exited = /^\[exit\] (.*)$/.exec(text);
+  return exited ? JSON.parse(exited[1]) : null;
+}
+
+function exitedCleanly(status) {
+  return status.code === 0 && !status.crashed;
 }
 
 let browser;
@@ -192,4 +202,4 @@ async function openPage({ what, dir, html, serve = () => null, onConsole, onFail
   return tab;
 }
 
-module.exports = { failureMarkers, outputPrefixes, settings, requireBuild, timeoutFrom, page, openPage, closeBrowser };
+module.exports = { failureMarkers, outputPrefixes, requireBuild, timeoutFrom, page, parseExit, exitedCleanly, openPage, closeBrowser };

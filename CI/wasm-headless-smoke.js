@@ -20,7 +20,7 @@
 
 const fs = require("fs");
 const path = require("path");
-const { failureMarkers, outputPrefixes, settings, requireBuild, timeoutFrom, page, openPage, closeBrowser } = require("./wasm-headless-page");
+const { failureMarkers, outputPrefixes, requireBuild, timeoutFrom, page, parseExit, exitedCleanly, openPage, closeBrowser } = require("./wasm-headless-page");
 
 const fixtureDir = path.join(__dirname, "..", "src", "mudlet-lua", "tests", "fixtures");
 const mapFixtureDir = path.join(fixtureDir, "maps");
@@ -188,7 +188,12 @@ if (rest.length && !rest[0].trim()) {
 }
 requireBuild(dir);
 const timeoutSeconds = timeoutFrom("WASM_SMOKE_TIMEOUT", 120);
-const [expected, ...args] = quitting ? [null, ...quitArgs] : rest.length ? rest : ["lua says 2", ...defaultProbe()];
+const probing = !rest.length;
+let expected = null;
+let args = quitArgs;
+if (!quitting) {
+  [expected, ...args] = probing ? ["lua says 2", ...defaultProbe()] : rest;
+}
 
 (async () => {
   let finish;
@@ -207,15 +212,13 @@ const [expected, ...args] = quitting ? [null, ...quitArgs] : rest.length ? rest 
   const tab = await openPage({
     what: "smoke test",
     dir,
-    html: page({ args, settings, clockJump: rest.length ? null : clockJump, stdoutGone: quitting }),
+    html: page({ args, clockJump: probing ? clockJump : null, stdoutGone: quitting }),
     serve: (file) => fixtureFile(path.basename(file)),
     onConsole: (text) => {
       console.log(text);
-      const exited = quitting && /^\[exit\] (.*)$/.exec(text);
-      if (exited) {
-        const status = JSON.parse(exited[1]);
-        clearTimeout(timer);
-        finish(status.code === 0 && !status.crashed);
+      const status = quitting && parseExit(text);
+      if (status) {
+        finish(exitedCleanly(status));
       } else if (!quitting && text.replace(outputPrefixes, "") === expected) {
         seen = true;
         clearTimeout(timer);
