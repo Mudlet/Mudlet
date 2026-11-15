@@ -84,8 +84,10 @@ public:
         // For this run only; nothing stores it
         QString password;
         // An absolute path, made if need be: the folder that holds the profiles, Mudlet.ini and the passwords
-        // stored for them, in place of the GUI's folder and the system's keychain. Settled once a process, so a
-        // later start() may name it again, but no other, nor leave it out for the GUI's. Never the GUI's folder.
+        // stored for them, in place of the GUI's folder and the system's keychain, except in an Android app with
+        // a Java VM registered with Qt (docs/headless.md), whose profile passwords go to the KeyStore unless
+        // Mudlet.ini keeps them in the folder. Settled once a process, so a later start() may name it again, but
+        // no other, nor leave it out for the GUI's. Never the GUI's folder.
         QString configDir;
     };
 
@@ -135,10 +137,10 @@ public:
     enum class StartResult { started, noSuchProfile, invalidName, invalidConnectionDetails, notOpened, loadFailed, poolClosing, invalidConfigDir };
     Q_ENUM(StartResult)
 
-    // A Lua C module the app has linked in, which a phone or a browser cannot load from a file: require()
-    // finds it under that name ahead of any on disk, in a profile opened or reset afterwards. Given again
-    // for a name, it replaces the earlier one; with no name or no function it is refused. docs/headless.md
-    // lists the modules Mudlet itself requires.
+    // A Lua C module the app has linked in, for a platform where require() cannot load it from a file (a browser,
+    // or Android under Qt's default packaging): require() finds it under that name ahead of any on disk, in a
+    // profile opened or reset afterwards. Given again for a name, it replaces the earlier one; with no name or no
+    // function it is refused. docs/headless.md lists the modules Mudlet itself requires.
     static void preloadLuaModule(const QByteArray& name, int (*open)(lua_State*));
     // A real folder of <name>.aff/.dic Hunspell dictionaries the app carries, searched ahead of the system's and in place
     // of Mudlet's bundled ones by every dictionary opened afterwards. Refused (false) for a :/ or assets:/ path, which
@@ -285,11 +287,12 @@ public:
         bool visited = false;
         // Chosen, in its selection group
         bool selected = false;
-        // How the GUI paints the link in its state now, which may differ from its runs as sent: each is empty where
-        // the run's own applies, and styles replaces only the run's bold, italic, underline, overline and strike-out
+        // How the GUI paints the link in its state now; each is empty where the run's own applies. styles turns on or
+        // off those of bold, italic, underline, overline and strike-out in stylesGiven, and the run keeps the rest.
         std::optional<QColor> foreground;
         std::optional<QColor> background;
         std::optional<TextStyles> styles;
+        TextStyles stylesGiven;
     };
     // The link a run names, while the main console holds it; nullopt for 0, an id it does not hold and with no profile
     // open. A getter, so it may be called from any handler.

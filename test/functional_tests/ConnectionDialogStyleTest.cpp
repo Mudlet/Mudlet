@@ -254,7 +254,8 @@ private slots:
         auto* pConnect = pDialog->findChild<QPushButton*>(qsl("connectButton"));
         QVERIFY2(pConnect, "the Connect button is not there to be read");
         QVERIFY2(pConnect->isDefault(), "Connect is not the dialog's default button, so Return no longer reaches it");
-        QVERIFY2(pDialog->widget_bottom->styleSheet().contains(qsl(":default")), "the button row's sheet says nothing about the default button, so Connect reads as one control among four");
+        QVERIFY2(pConnect->property(uiDesign::scmProp_primaryButton).toBool(), "Connect does not carry the primary-button property, so it reads as one control among four");
+        QVERIFY2(pDialog->widget_bottom->styleSheet().contains(qsl("[%1=\"true\"]").arg(QString::fromLatin1(uiDesign::scmProp_primaryButton))), "the button row's sheet has no primary rule");
 
         // A platform bevel is a gradient that lands nowhere near this tone; the
         // top edge's middle is a straight run of the line, not its rounded corner

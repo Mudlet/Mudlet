@@ -898,6 +898,7 @@ private:
     QFont terminalGlyphFont(const MapStyle& style) const;
     bool groundGlyphShown(const QFont& font, const QString& glyph);
     void reportContextCreationFailure();
+    void applyStacking();
     bool contextCreationFailed() const;
     void startSmoothTransition(int targetAID, int targetX, int targetY, int targetZ);
     void stopSmoothTransition();
