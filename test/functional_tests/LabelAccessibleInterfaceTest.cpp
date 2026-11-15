@@ -1217,6 +1217,11 @@ private slots:
         QCOMPARE(smAnnouncements.size(), 3);
         QTRY_COMPARE(smAnnouncements.size(), 4);
         QCOMPARE(smAnnouncements.at(3).first, qsl("HP 45"));
+
+        // Hidden and shown again before the interval ends, it does not go on to say what was waiting
+        QVERIFY(runLua(qsl("echo('%1', 'HP 44'); hideWindow('%1'); showWindow('%1')").arg(mLabelName)));
+        QTest::qWait(1500);
+        QCOMPARE(smAnnouncements.size(), 4);
     }
 
     void test_aLabelIsQuietUnlessLiveWithAccessibleLabelsOn()

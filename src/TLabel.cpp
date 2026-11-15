@@ -859,6 +859,10 @@ void TLabel::changeEvent(QEvent* event)
 // QWidget::event() doesn't pass ToolTipChange on to changeEvent()
 bool TLabel::event(QEvent* event)
 {
+    // Qt sends it for a hidden parent too, and text waiting when a label goes from view is stale once it is back
+    if (event->type() == QEvent::Hide) {
+        mAnnouncementPending = false;
+    }
     // The caret shortcut has to beat an application-wide QShortcut on the same key, as in TTextEdit::event()
     if (event->type() == QEvent::ShortcutOverride && mainWindowConsole() && hasFocus() && mpHost->caretShortcutMatches(static_cast<QKeyEvent*>(event))) {
         event->accept();
