@@ -16,16 +16,18 @@
 // the game a line while standard output has gone, as a pipe's has once its reader exits, which asks
 // for the quit before the event loop runs; it exits 0 once the program ends with status 0, and 1 on
 // another status, an error line first or the timeout. --quit-after-lua-error does the same after an
-// -e step that raises an error, so it wants status 1 and takes that error's line as no failure. It
+// -e step that raises an error, so it wants status 1 and takes that error's line as no failure.
 // With --game-connection, the page makes the profile's connection, as docs/headless.md has a page do,
 // over a WebSocket to CI/wasm-telnet-relay.js and on to CI/telnet-fixture-server.py; that game offers
-// GMCP, sends vitals and a line a trigger answers, and hangs up once the answer arrives. It passes as
-// the default does, once the disconnect handler finds all of that came, and then only if the game
-// received Mudlet's agreement to GMCP and the trigger's command. It exits 2 if its arguments, the
-// directory or WASM_SMOKE_TIMEOUT are wrong; and 3 if it could not run the program at all: playwright
-// does not load, Chromium does not start or quits, the page does not load, the game does not start or
-// this script fails. It needs the playwright package on NODE_PATH and its Chromium installed, and
-// python3 for --game-connection.
+// GMCP, sends vitals and a line a trigger answers, and hangs up once the answer arrives. The page's
+// first two connections fail as CI/wasm-headless-page.js describes, and the profile reconnects after
+// each. It passes as the default does, once the disconnect handler finds the third connection played
+// the game, and then only if Mudlet reported both failures, the page was never asked to dial while a
+// connection was open, and the game received Mudlet's agreement to GMCP and the trigger's command.
+// It exits 2 if its arguments, the directory or WASM_SMOKE_TIMEOUT are wrong; and 3 if it could not
+// run the program at all: playwright does not load, Chromium does not start or quits, the page does
+// not load, the game does not start or this script fails. It needs the playwright package on
+// NODE_PATH and its Chromium installed, and python3 for --game-connection.
 
 const { spawn } = require("child_process");
 const fs = require("fs");
@@ -201,14 +203,24 @@ async function startGame(directory) {
   throw new Error("the telnet fixture did not listen within 10s");
 }
 
+// The faults the page makes, as Mudlet reports them on the console
+const pageFaults = [
+  "mudletTransport: mudletTransport.write() failed: ",
+  "mudletTransport: connection.received() takes an ArrayBuffer or a view of one such as a Uint8Array, not Blob",
+];
+const pageFailed = "[transport] FAILED";
+
 function gameArgs(port) {
   const gameLua = [
     'function gameStage(stage) echo("game: " .. stage .. "\\n") end',
-    'registerAnonymousEventHandler("sysConnectionEvent", function() gameConnected = true gameStage("connected") end)',
+    "gameConnections = 0",
+    'registerAnonymousEventHandler("sysConnectionEvent", function() gameConnections = gameConnections + 1 gameHp = nil gameTriggered = nil ' +
+      'gameStage("connection " .. gameConnections .. " made") end)',
     'registerAnonymousEventHandler("gmcp.Char.Vitals", function() gameHp = gmcp.Char.Vitals.hp gameStage("vitals received") end)',
-    'tempTrigger("A dragon arrives", function() gameTriggered = true gameStage("trigger fired") send("kill dragon") end)',
-    'registerAnonymousEventHandler("sysDisconnectionEvent", function() if gameConnected and gameTriggered and gameHp == 42 then ' +
-      `echo("${gameOver}\\n") else gameStage("disconnected before the game was played") end end)`,
+    // Anchored, so a byte the page pads its data with that reached the profile stops it
+    'tempRegexTrigger("^A dragon arrives", function() gameTriggered = true gameStage("trigger fired") send("kill dragon") end)',
+    'registerAnonymousEventHandler("sysDisconnectionEvent", function() if gameConnections < 3 then gameStage("connection " .. gameConnections .. " ended") reconnect() ' +
+      `elseif gameTriggered and gameHp == 42 then echo("${gameOver}\\n") else gameStage("disconnected before the game was played") end end)`,
   ];
   return ["-p", "WasmGame", "--host", "127.0.0.1", "--port", String(port), "--no-tls", "--no-stdin", ...gameLua.flatMap((code) => ["-e", code])];
 }
@@ -294,6 +306,7 @@ if (playing) {
   let finish;
   const finished = new Promise((resolve) => (finish = resolve));
   let seen = false;
+  const faultsSeen = new Set();
   // A failure after the settle comes once the wait is over, and must still fail the run
   let failed = false;
   function fail() {
@@ -319,8 +332,10 @@ if (playing) {
         seen = true;
         clearTimeout(timer);
         setTimeout(() => finish(true), settleMs);
-      } else if (markers.some((marker) => text.includes(marker))) {
+      } else if (markers.some((marker) => text.includes(marker)) || (playing && text.startsWith(pageFailed))) {
         fail();
+      } else if (playing) {
+        pageFaults.filter((fault) => text.startsWith(fault)).forEach((fault) => faultsSeen.add(fault));
       }
     },
     onFailure: (text) => {
@@ -339,11 +354,15 @@ if (playing) {
       console.log(`[hung] the page ran no task within ${answerMs / 1000}s`);
     }
   }
-  const missing = playing && answeredInTime && !failed ? gameReceived(gameDir) : null;
+  const unreported = playing && answeredInTime && !failed ? pageFaults.filter((fault) => !faultsSeen.has(fault)) : [];
+  for (const fault of unreported) {
+    console.log(`[transport] Mudlet never reported "${fault}"`);
+  }
+  const missing = playing && answeredInTime && !failed && !unreported.length ? gameReceived(gameDir) : null;
   if (missing) {
     console.log(`[game] never received ${missing}`);
   }
-  const passed = (quitting ? settled : answeredInTime) && !failed && !missing;
+  const passed = (quitting ? settled : answeredInTime) && !failed && !unreported.length && !missing;
   await closeBrowser();
   relay?.close();
   if (game && game.exitCode === null && game.signalCode === null) {

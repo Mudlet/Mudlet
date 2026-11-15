@@ -89,18 +89,41 @@ function output(prefix) {
   };
 }
 const relay = ${scriptValue(relay)};
+// The first connection's write() throws, the second hands received() the Blob a WebSocket gives on its default
+// binaryType, and the rest hand it a DataView into the middle of a larger buffer. Mudlet must close the first two
+// itself, as the profile, told they ended, asks for no close(); the page fails the run if it is asked to dial while
+// the last connection is still open.
 function relayTransport() {
   let socket = null;
+  let dials = 0;
   return {
     dial(host, port, tlsRequested, connection) {
-      console.log("[transport] dial " + host + ":" + port + (tlsRequested ? " with TLS asked for" : ""));
+      ++dials;
+      console.log("[transport] dial " + dials + " to " + host + ":" + port + (tlsRequested ? " with TLS asked for" : ""));
+      if (socket && socket.readyState <= WebSocket.OPEN) {
+        console.log("[transport] FAILED: asked to dial while the last connection was still open");
+      }
       socket = new WebSocket(relay + "?host=" + encodeURIComponent(host) + "&port=" + port);
-      socket.binaryType = "arraybuffer";
+      if (dials !== 2) {
+        socket.binaryType = "arraybuffer";
+      }
       socket.onopen = () => connection.connected();
-      socket.onmessage = (e) => connection.received(new Uint8Array(e.data));
+      socket.onmessage = (e) => {
+        if (dials === 2) {
+          connection.received(e.data);
+          return;
+        }
+        const data = new Uint8Array(e.data);
+        const padded = new Uint8Array(data.length + 2).fill(0x58);
+        padded.set(data, 1);
+        connection.received(new DataView(padded.buffer, 1, data.length));
+      };
       socket.onclose = (e) => connection.closed(e.reason || "the relay closed the connection with code " + e.code);
     },
     write(bytes) {
+      if (dials === 1) {
+        throw new Error("the page could not send (a fault the smoke test makes)");
+      }
       socket.send(bytes);
     },
     close() {

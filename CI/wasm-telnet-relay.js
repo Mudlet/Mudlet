@@ -16,7 +16,7 @@ function frame(opcode, payload) {
   const length = payload.length;
   let header;
   if (length < 126) {
-    header = Buffer.from([0x80 | opcode, length]);
+    header = Buffer.from([0, length]);
   } else if (length < 65536) {
     header = Buffer.alloc(4);
     header[1] = 126;
