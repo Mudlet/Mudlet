@@ -579,45 +579,19 @@ end)
         QVERIFY(session.shutdown(false));
     }
 
-    // As a page whose WebSocket send fails may: the end comes after the rest of the text being read
-    void test_aConnectionEndedFromInsideAWriteEndsAfterTheTextBeingRead()
+    void test_aConnectionEndedFromATriggerEndsAfterTheTextBeingRead_data()
     {
-        const QString name = qsl("Headless Transport Closed While Writing");
-        QVERIFY(writeProfile(name));
-        THeadlessSession session;
-        QSignalSpy dials(&session, &THeadlessSession::transportDialRequested);
-        QSignalSpy connected(&session, &THeadlessSession::connected);
-        QSignalSpy disconnected(&session, &THeadlessSession::disconnected);
-        QCOMPARE(session.start({.profile = name, .connect = true, .supplyTransport = true}), THeadlessSession::StartResult::started);
-        QTRY_COMPARE_WITH_TIMEOUT(dials.size(), 1, 10000);
-        session.transportConnected(lastDial(dials));
-        QTRY_COMPARE_WITH_TIMEOUT(connected.size(), 1, 10000);
-        connect(&session, &THeadlessSession::transportWriteRequested, &session, [&session, &dials](const QString&, const QByteArray& data) {
-            if (data.contains("quit")) {
-                session.transportClosed(lastDial(dials), qsl("bye"));
-            }
-        });
-        QVERIFY(session.runLua(qsl(R"lua(
-seen = ""
-registerAnonymousEventHandler("sysDisconnectionEvent", function() seenAtDisconnection = seen end)
-tempRegexTrigger("^[AB]$", function()
-  seen = seen .. matches[1]
-  if matches[1] == "A" then
-    send("quit")
-  end
-end)
-)lua")));
-
-        session.transportReceived(lastDial(dials), "A\r\nB\r\n");
-        QTRY_COMPARE_WITH_TIMEOUT(disconnected.size(), 1, 10000);
-        QCOMPARE(luaGlobal(session, "seenAtDisconnection"), qsl("AB"));
-        QVERIFY(session.shutdown(false));
+        QTest::addColumn<QString>("afterSend");
+        // As a page whose WebSocket send fails may
+        QTest::newRow("from inside a write") << QString();
+        // cTelnet takes the close up from the event loop, here the trigger's, after its read has emptied the input
+        QTest::newRow("during the trigger's event loop") << qsl("pumpEvents(50)");
     }
 
-    // The close is taken up by the trigger's event loop, after its read has emptied the connection's input
-    void test_aConnectionEndedDuringATriggersEventLoopEndsAfterTheTextBeingRead()
+    void test_aConnectionEndedFromATriggerEndsAfterTheTextBeingRead()
     {
-        const QString name = qsl("Headless Transport Closed In A Nested Loop");
+        QFETCH(const QString, afterSend);
+        const QString name = qsl("Headless Transport Closed %1").arg(QString::fromLatin1(QTest::currentDataTag()));
         QVERIFY(writeProfile(name));
         THeadlessSession session;
         QSignalSpy dials(&session, &THeadlessSession::transportDialRequested);
@@ -643,10 +617,11 @@ tempRegexTrigger("^[AB]$", function()
   seen = seen .. matches[1]
   if matches[1] == "A" then
     send("quit")
-    pumpEvents(50)
+    %1
   end
 end)
-)lua")));
+)lua")
+                                       .arg(afterSend)));
 
         session.transportReceived(lastDial(dials), "A\r\nB\r\n");
         QTRY_COMPARE_WITH_TIMEOUT(disconnected.size(), 1, 10000);

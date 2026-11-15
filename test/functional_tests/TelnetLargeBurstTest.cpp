@@ -555,18 +555,17 @@ private slots:
         QVERIFY(lua->compileAndExecuteScript(qsl(R"(
             nestedSeen = ""
             registerAnonymousEventHandler("sysDisconnectionEvent", function() nestedSeenAtDisconnection = nestedSeen end, true)
-            nestedTrigger = tempRegexTrigger("^NESTED LINE [AB]$", function()
-                nestedSeen = nestedSeen .. matches[1]:sub(-1)
-                if matches[1] == "NESTED LINE A" then
+            tempRegexTrigger("^NESTED LINE ([AB])$", function()
+                nestedSeen = nestedSeen .. matches[2]
+                if matches[2] == "A" then
                     spinNestedEventLoop()
                 end
-            end)
+            end, 2)
         )")));
 
         mpServer->sendRaw("NESTED LINE A\r\nNESTED LINE B\r\n");
         mpServer->closeClient();
         QVERIFY2(disconnected.wait(15s), "the game closing the connection was never noticed");
-        QVERIFY(lua->compileAndExecuteScript(qsl("killTrigger(nestedTrigger)")));
 
         lua_State* L = lua->getLuaGlobalState();
         lua_getglobal(L, "nestedSeenAtDisconnection");
