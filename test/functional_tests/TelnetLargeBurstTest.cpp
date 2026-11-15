@@ -769,15 +769,18 @@ private slots:
     void aPartialLineFedFromATriggerIsKept_data()
     {
         QTest::addColumn<QString>("fed");
-        QTest::newRow("on a line the posting timer shows") << qsl("FED TO THE TRIGGER");
-        QTest::newRow("on a whole line") << qsl(R"(FED TO THE TRIGGER\r\n)");
-        QTest::newRow("on a whole line and a partial line") << qsl(R"(FED TO THE TRIGGER\r\nOUTER PARTIAL)");
+        QTest::addColumn<QString>("partialLine");
+        QTest::newRow("on a line the posting timer shows") << qsl("FED TO THE TRIGGER") << qsl("PARTIAL FROM THE TRIGGER");
+        QTest::newRow("on a whole line") << qsl(R"(FED TO THE TRIGGER\r\n)") << qsl("PARTIAL FROM THE TRIGGER");
+        // The rest of the outer feed continues the line the trigger left unfinished, as text from the game would
+        QTest::newRow("on a whole line and a partial line") << qsl(R"(FED TO THE TRIGGER\r\nOUTER PARTIAL)") << qsl("PARTIAL FROM THE TRIGGEROUTER PARTIAL");
     }
 
     // Offline, as feedTelnet() is refused on a connection
     void aPartialLineFedFromATriggerIsKept()
     {
         QFETCH(QString, fed);
+        QFETCH(QString, partialLine);
         if (mpHost->mTelnet.getConnectionState() != QAbstractSocket::UnconnectedState) {
             QSignalSpy disconnected(&(mpHost->mTelnet), &cTelnet::signal_disconnected);
             mpHost->mTelnet.disconnectIt();
@@ -786,6 +789,8 @@ private slots:
         mpHost->mainConsoleView()->buffer.clear();
         TLuaInterpreter* lua = mpHost->getLuaInterpreter();
         QVERIFY(lua->compileAndExecuteScript(qsl(R"(
+            outerPartialStartedALine = false
+            outerPartialTrigger = tempRegexTrigger("^OUTER PARTIAL", function() outerPartialStartedALine = true end)
             tempRegexTrigger("^FED TO THE TRIGGER", function() feedTelnet("LINE FROM THE TRIGGER\r\nPARTIAL FROM THE TRIGGER") end, 1)
             feedTelnet("%1")
         )")
@@ -796,9 +801,22 @@ private slots:
         while (timer.durationElapsed() < 15s && !bufferContains(qsl("PARTIAL FROM THE TRIGGER"))) {
             QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
         }
-        const bool kept = bufferContains(qsl("PARTIAL FROM THE TRIGGER"));
-        QVERIFY(lua->compileAndExecuteScript(qsl(R"(feedTelnet("\r\n"))")));
-        QVERIFY2(kept, "the partial line the trigger fed was lost");
+        const int partial = lastLineContaining(qsl("PARTIAL FROM THE TRIGGER"));
+        const QString shown = partial >= 0 ? mpHost->mainConsoleView()->buffer.line(partial) : QString();
+        const int outerPartial = lastLineContaining(qsl("OUTER PARTIAL"));
+        QVERIFY(lua->compileAndExecuteScript(qsl(R"(
+            feedTelnet("\r\n")
+            killTrigger(outerPartialTrigger)
+        )")));
+        lua_State* L = lua->getLuaGlobalState();
+        lua_getglobal(L, "outerPartialStartedALine");
+        const bool outerPartialStartedALine = lua_toboolean(L, -1);
+        lua_pop(L, 1);
+        QVERIFY2(partial >= 0, "the partial line the trigger fed was lost");
+        QCOMPARE(shown, partialLine);
+        QCOMPARE(partial, lastLineContaining(qsl("LINE FROM THE TRIGGER")) + 1);
+        QCOMPARE(outerPartial, partialLine.contains(qsl("OUTER PARTIAL")) ? partial : -1);
+        QVERIFY2(!outerPartialStartedALine, "the rest of the outer feed started a line of its own");
     }
 
     // A replay can run on a live connection, sharing the text held back from the game
