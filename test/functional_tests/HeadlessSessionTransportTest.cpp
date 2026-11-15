@@ -149,6 +149,8 @@ tempTrigger("A dragon arrives", function() dragonSeen = "yes" send("kill dragon"
         QTRY_COMPARE_WITH_TIMEOUT(connected.size(), 1, 10000);
         QCOMPARE(luaGlobal(session, "connectionEvent"), qsl("yes"));
         QCOMPARE(session.host()->mTelnet.getConnectionState(), QAbstractSocket::ConnectedState);
+        QVERIFY(session.runLua(qsl("local _, _, connected = getConnectionInfo() connectionInfo = tostring(connected)")));
+        QCOMPARE(luaGlobal(session, "connectionInfo"), qsl("true"));
 
         session.transportReceived(lastDial(dials), IAC_WILL_GMCP + "Welcome to the game!\r\n");
         QTRY_VERIFY_WITH_TIMEOUT(written(writes).contains(IAC_DO_GMCP), 10000);
@@ -190,6 +192,7 @@ tempTrigger("A dragon arrives", function() dragonSeen = "yes" send("kill dragon"
         QTRY_COMPARE_WITH_TIMEOUT(dials.size(), 1, 10000);
         session.transportConnected(lastDial(dials));
         QTRY_COMPARE_WITH_TIMEOUT(connected.size(), 1, 10000);
+        QVERIFY(session.runLua(qsl(R"lua(registerAnonymousEventHandler("sysDisconnectionEvent", function() disconnections = (disconnections or 0) + 1 end))lua")));
 
         // Reported before the close, taken up after it: about a connection the profile has let go
         session.transportReceived(lastDial(dials), "too late\r\n");
@@ -214,6 +217,9 @@ tempTrigger("A dragon arrives", function() dragonSeen = "yes" send("kill dragon"
         QTRY_VERIFY2_WITH_TIMEOUT(texts(local).join(QString()).contains(qsl("Unable to connect to game.example:4000 - Connection refused")), qPrintable(texts(local).join(QString())), 10000);
         QCOMPARE(connected.size(), 1);
         QCOMPARE(session.host()->mTelnet.getConnectionState(), QAbstractSocket::UnconnectedState);
+        // The failed dial is reported as an ended connection, as a socket's is
+        QTRY_COMPARE_WITH_TIMEOUT(disconnected.size(), 2, 10000);
+        QCOMPARE(luaGlobal(session, "disconnections"), qsl("2"));
         QVERIFY(session.shutdown(false));
     }
 
@@ -301,6 +307,32 @@ tempTrigger("A dragon arrives", function() dragonSeen = "yes" send("kill dragon"
         QVERIFY(session.runLua(qsl("reconnect()")));
         QTRY_COMPARE_WITH_TIMEOUT(connected.size(), 1, 10000);
         QCOMPARE(dials.size(), 2);
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_theGamesLastWordsAfterAFloodAreShown()
+    {
+        const QString name = qsl("Headless Transport Flood");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QSignalSpy dials(&session, &THeadlessSession::transportDialRequested);
+        QSignalSpy connected(&session, &THeadlessSession::connected);
+        QSignalSpy disconnected(&session, &THeadlessSession::disconnected);
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QCOMPARE(session.start({.profile = name, .connect = true, .supplyTransport = true}), THeadlessSession::StartResult::started);
+        QTRY_COMPARE_WITH_TIMEOUT(dials.size(), 1, 10000);
+        session.transportConnected(lastDial(dials));
+        QTRY_COMPARE_WITH_TIMEOUT(connected.size(), 1, 10000);
+
+        // More than one read takes, and the end reported with it
+        QByteArray flood;
+        while (flood.size() < 250000) {
+            flood += "The crowd roars as the champion enters the arena.\r\n";
+        }
+        session.transportReceived(lastDial(dials), flood + "Goodbye\r\n");
+        session.transportClosed(lastDial(dials));
+        QTRY_COMPARE_WITH_TIMEOUT(disconnected.size(), 1, 30000);
+        QCOMPARE(texts(output).constLast(), qsl("Goodbye"));
         QVERIFY(session.shutdown(false));
     }
 
