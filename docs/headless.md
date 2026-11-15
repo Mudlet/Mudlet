@@ -691,6 +691,97 @@ ended, and ends the connection with the error as the reason. A `dial()` or `writ
 promise which rejects is treated as one that throws. `CI/wasm-headless-smoke.js --game-connection`
 connects through a WebSocket relay this way.
 
+## Embedding it: keeping the profiles
+
+An app that keeps `options.configDir` somewhere Mudlet does not write to itself, such as a browser
+page whose files are in memory until it copies them into IndexedDB, copies the folder each time
+`configSaved` comes:
+
+```cpp
+QObject::connect(session.get(), &THeadlessSession::configSaved, []() {
+    // What Mudlet wrote into configDir since the last one is complete on disk
+});
+```
+
+It comes once the files are written:
+
+- a profile save: a script's `saveProfile()`, `save()`, the save that follows installing or removing a
+  package or module, or a profile's close, with the profile, its synced modules, its packages' files,
+  `profile.ini` and the command line histories;
+- a map save, by `saveMap()` or a profile save, and the map's autosave, which is written on Qt's
+  thread pool; in a single-threaded browser build that write runs in the call, and its end, and so the
+  signal, still comes from the event loop;
+- a `Mudlet.ini` save, a script's `saveWindowLayout()`, the connection details a profile stores (its
+  game, port, login and the like) and a password stored or removed under `credentials/`.
+
+Not followed by it: files a script writes itself (`io`, `lfs`, `table.save()`), logs, replays, the
+media cache, map exports to JSON or an image, downloads, maps included, the spell-check dictionary, a
+profile deleted, and anything written by a session deleted with its profiles open instead of shut down.
+
+Writes close together send one: it comes from the event loop once no profile save is still being
+written, so a save that writes the profile, its modules, `Mudlet.ini` and the map over several turns
+sends one, after the last. A shutdown that wrote sends just one, once its profiles have closed and their
+saves are written, before `shutdown()` returns or `shutdownFinished` comes, so an app that copies the
+folder then has all the run wrote.
+
+In a browser, `mudlet-headless` calls `mudletConfigSaved()` on the object given to `qtLoad()` for each
+`configSaved`, and a page keeps the folder in IndexedDB with Emscripten's IDBFS, which the build links:
+
+```js
+const dir = "/mudlet";
+let program;
+let syncing = false;
+let syncAgain = false;
+function sync() {
+  if (syncing) {
+    syncAgain = true;
+    return;
+  }
+  syncing = true;
+  program.FS.syncfs(false, (error) => {
+    syncing = false;
+    if (error) {
+      console.error(error);  // the next one tries again
+    }
+    if (syncAgain) {
+      syncAgain = false;
+      sync();
+    }
+  });
+}
+await qtLoad({
+  arguments: ["-p", "My MUD", "--config-dir", dir],
+  mudletConfigSaved: sync,
+  preRun: [(m) => {
+    program = m;
+    m.FS.mkdirTree(dir);
+    m.FS.mount(m.FS.filesystems.IDBFS, {}, dir);
+    m.addRunDependency("config folder");  // main() waits for this
+    m.FS.syncfs(true, (error) => {
+      if (!error) {
+        m.removeRunDependency("config folder");
+      }
+    });
+  }],
+  qt: { /* entryFunction, containerElements and the rest, as for any Qt program */ },
+});
+```
+
+1. Mount IDBFS on the folder in `preRun` and fill it from IndexedDB with `FS.syncfs(true)`. That
+   answers later, so a run dependency holds `main()` back until it has; one that fails here leaves
+   Mudlet unstarted rather than starting it on an empty folder whose first save writes over the
+   player's.
+2. Name the folder with `--config-dir`. The GUI's own config folder is refused, as everywhere.
+3. On each `mudletConfigSaved()`, copy the folder back with `FS.syncfs(false)`, one at a time: IDBFS
+   runs overlapping syncs side by side, so one asked for while another runs waits for it.
+4. When the run ends, as by `closeMudlet()`, the last `mudletConfigSaved()` comes before Qt's
+   `onExit`, and its sync ends after it; keep the page open until it has.
+
+A reload or a closed tab loses what was written since the last sync ended, as a page cannot wait for
+IndexedDB as it unloads. WasmFS's OPFS backend is not an option: it needs threads or JSPI, which this
+build has neither of, and cannot be linked beside IDBFS. `CI/wasm-headless-smoke.js --persistence`
+keeps profiles across reloads this way, and checks a reload without the sync loses them.
+
 ## Embedding it: when the signals come and what a handler may do
 
 Each signal's own rules are with the signal, above and below; this is all of them in one place. Mudlet
@@ -713,10 +804,10 @@ delete the session.
 **Sent from the event loop.** Every other signal but the two below is queued, and sent once the event
 loop runs, after the script or call that caused it has returned: `connecting`, `connected`,
 `disconnected`, `quitRequested`, `loggingChanged`, `latencyChanged`, `secureConnectionOffered`,
-`soundsMutedChanged`, `mappingScriptMissing`, `mainWindowResizeRequested`, the package download's,
-map progress's and replay's signals, and the ones that follow a state. Their handlers may call the
-session. Of those that follow a state, some are sent once a turn however many changes it held, naming
-what changed, for the app to read again: `scriptWindowsChanged`, `windowTextChanged`,
+`soundsMutedChanged`, `mappingScriptMissing`, `mainWindowResizeRequested`, `configSaved`, the package
+download's, map progress's and replay's signals, and the ones that follow a state. Their handlers may
+call the session. Of those that follow a state, some are sent once a turn however many changes it held,
+naming what changed, for the app to read again: `scriptWindowsChanged`, `windowTextChanged`,
 `windowCommandLineTextChanged`, `linksChanged`, `addonCommandsChanged`, `buttonsChanged` and
 `mapRepaintRequested`. The others carry the value as it is when they are sent, and only when it differs
 from the one last sent or the one read at `profileLoaded`: `consoleFontChanged`, `consoleWrapChanged`,
@@ -748,7 +839,8 @@ The order that holds between signals:
   `mappingScriptMissing` and a replay's: those still waiting, `replayStarted` among them, are sent from
   inside `shutdown()` ahead of its `replayFinished`. What was open (hidden input, logging, a download, a map
   operation, a replay) has its end from inside `shutdown()`. A session that is deleted instead sends none
-  of those ends.
+  of those ends. A `configSaved` still waiting, or due for what the shutdown wrote, comes once, at its
+  end, before `shutdown()` returns or `shutdownFinished` comes.
 
 ## Embedding it: drawing the main console as the GUI does
 

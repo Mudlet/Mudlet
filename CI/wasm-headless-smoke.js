@@ -7,6 +7,7 @@
 //   node CI/wasm-headless-smoke.js <dir> --quit-while-loading
 //   node CI/wasm-headless-smoke.js <dir> --quit-after-lua-error
 //   node CI/wasm-headless-smoke.js <dir> --game-connection
+//   node CI/wasm-headless-smoke.js <dir> --persistence
 //
 // Given only the directory, it runs the probe below and expects "lua says 2". It exits 0 then; 1 if
 // before then an error line comes (a package with a part that does not work included), or the
@@ -26,6 +27,12 @@
 // browser's console and gave each as the reason on its own, logged no other, never showed the page's
 // padding, the page was never asked to dial while a connection was open, and the game received
 // Mudlet's terminal type, NUL byte and all, its agreement to GMCP and the trigger's command.
+// With --persistence, the page keeps the profiles' folder in IndexedDB, as docs/headless.md has a page do, and is
+// loaded four times in one tab, which keeps IndexedDB between loads. The first run saves an alias, a map room and a
+// setting with the page not syncing; the second finds none of them, saves them again and is reloaded once the page has
+// synced on Mudlet's signal; the third finds them, makes another alias and room it never saves and quits, so only the
+// shutdown's own save and signal can keep them; and the fourth finds all of them. It passes as the default does, once
+// the fourth says so.
 // It exits 2 if its arguments, the directory or WASM_SMOKE_TIMEOUT are wrong; and 3 if it could not
 // run the program at all: playwright does not load, Chromium does not start or quits, the page does
 // not load, the game does not start or this script fails. It needs the playwright package on
@@ -255,12 +262,13 @@ const [dir, ...rest] = process.argv.slice(2);
 const failingStep = rest[0] === "--quit-after-lua-error";
 const quitting = failingStep || rest[0] === "--quit-while-loading";
 const playing = rest[0] === "--game-connection";
+const keeping = rest[0] === "--persistence";
 // 1 is exitFailed in src/headless/main.cpp
 const quitStatus = failingStep ? 1 : 0;
-if (!dir || ((quitting || playing) && rest.length > 1)) {
+if (!dir || ((quitting || playing || keeping) && rest.length > 1)) {
   console.error(
     "usage: node CI/wasm-headless-smoke.js <dir holding mudlet-headless.js> " +
-      "[<expected line> [mudlet-headless arguments...] | --quit-while-loading | --quit-after-lua-error | --game-connection]",
+      "[<expected line> [mudlet-headless arguments...] | --quit-while-loading | --quit-after-lua-error | --game-connection | --persistence]",
   );
   process.exit(2);
 }
@@ -288,7 +296,144 @@ if (playing) {
   [expected, ...args] = probing ? ["lua says 2", ...defaultProbe()] : rest;
 }
 
+const keepArgs = ["-p", "WasmKeep", "--host", "mudlet.org", "--port", "23", "--offline", "--no-stdin", "--config-dir", "/mudlet"];
+const keepFirst = 'exists("keepAlias", "alias") > 0, roomExists(4242), getConfig("showTabConnectionIndicators")';
+const keepChange =
+  'permAlias("keepAlias", "", "^keep$", "") addRoom(4242) setRoomArea(4242, addAreaName("keep")) ' +
+  'assert(setConfig("showTabConnectionIndicators", true)) assert(saveProfile()) assert(saveMap())';
+const keepAll = "keep: all kept";
+// Each run's steps, whether the page syncs, and the line its last step prints
+const keepRuns = [
+  {
+    sync: false,
+    lua: [`local a, r, s = ${keepFirst} assert(not (a or r or s), "a new browser context already holds the profile")`, keepChange, 'echo("keep: saved\\n")'],
+    done: "keep: saved",
+  },
+  {
+    sync: true,
+    lua: [`local a, r, s = ${keepFirst} assert(not (a or r or s), "a reload kept what the page never synced")`, keepChange, 'echo("keep: saved\\n")'],
+    done: "keep: saved",
+  },
+  {
+    sync: true,
+    quits: true,
+    lua: [
+      `local a, r, s = ${keepFirst} assert(a and r and s, "a reload lost what the page synced on Mudlet's signal")`,
+      'permAlias("keepAlias2", "", "^keep2$", "") addRoom(4243) setRoomArea(4243, getRoomArea(4242))',
+      'feedTriggers("standard output has gone\\n")',
+    ],
+  },
+  {
+    sync: true,
+    lua: [
+      `local a, r, s = ${keepFirst} assert(a and r and s, "a reload lost what the page synced on Mudlet's signal")`,
+      'assert(exists("keepAlias2", "alias") > 0 and roomExists(4243), "a reload lost what only the shutdown saved")',
+      `echo("${keepAll}\\n")`,
+    ],
+  },
+];
+
+async function keepProfiles() {
+  let run = 0;
+  let finish;
+  const finished = new Promise((resolve) => (finish = resolve));
+  // Per run: its done line, Mudlet's signal after it, its exit, and whether a sync is due or running
+  let done = false;
+  let signalled = false;
+  let exited = null;
+  let syncDue = false;
+  let tab = null;
+  let reloading = false;
+  const timer = setTimeout(() => {
+    console.log(`[timeout] after ${timeoutSeconds}s`);
+    finish(false);
+  }, timeoutSeconds * 1000);
+  function check() {
+    const current = keepRuns[run];
+    if (!tab || reloading || !(current.quits ? exited && !syncDue : done && (!current.sync || (signalled && !syncDue)))) {
+      return;
+    }
+    reloading = true;
+    run += 1;
+    done = false;
+    signalled = false;
+    exited = null;
+    syncDue = false;
+    console.log(`[reload] run ${run + 1} of ${keepRuns.length}`);
+    tab.goto("http://localhost/index.html").then(() => {
+      reloading = false;
+      check();
+    });
+  }
+  tab = await openPage({
+    what: "smoke test",
+    dir,
+    html: () => {
+      const current = keepRuns[run];
+      const args = [...keepArgs, ...current.lua.flatMap((code) => ["-e", code])];
+      return page({ args, keep: { dir: "/mudlet", sync: current.sync }, stdoutGone: Boolean(current.quits) });
+    },
+    onConsole: (text) => {
+      console.log(text);
+      const status = parseExit(text);
+      const line = text.replace(outputPrefixes, "");
+      if (status && keepRuns[run].quits) {
+        exited = status;
+        if (status.code !== 0 || status.crashed) {
+          finish(false);
+        }
+      } else if (failureMarkers.some((marker) => text.includes(marker))) {
+        finish(false);
+      } else if (text === "[config saved]") {
+        syncDue = true;
+        signalled = done;
+      } else if (text === "[synced]") {
+        syncDue = false;
+      } else if (line === keepAll && run === keepRuns.length - 1) {
+        clearTimeout(timer);
+        setTimeout(() => finish(true), settleMs);
+      } else if (line === keepRuns[run].done) {
+        // The signal comes from the event loop, after the step. With no sync, the reload waits as long again as that
+        // takes, so it comes after the signal the page ignores
+        if (keepRuns[run].sync) {
+          done = true;
+        } else {
+          setTimeout(() => {
+            done = true;
+            check();
+          }, 1000);
+        }
+      }
+      check();
+    },
+    onFailure: (text) => {
+      console.log(text);
+      finish(false);
+    },
+  });
+  check();
+  const settled = await finished;
+  clearTimeout(timer);
+  let answeredInTime = false;
+  if (settled) {
+    const noAnswer = new Promise((resolve) => setTimeout(() => resolve(false), answerMs));
+    const answered = tab.evaluate(() => new Promise((resolve) => setTimeout(() => resolve(true), 0)));
+    answeredInTime = await Promise.race([answered, noAnswer]).catch(() => false);
+    if (!answeredInTime) {
+      console.log(`[hung] the page ran no task within ${answerMs / 1000}s`);
+    }
+  }
+  await closeBrowser();
+  if (!answeredInTime) {
+    console.error(`mudlet-headless did not keep the profile across reloads (run ${run + 1} of ${keepRuns.length})`);
+  }
+  process.exit(answeredInTime ? 0 : 1);
+}
+
 (async () => {
+  if (keeping) {
+    return keepProfiles();
+  }
   let relay = null;
   let game = null;
   let gameDir = null;
