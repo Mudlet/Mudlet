@@ -515,6 +515,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mMapperShowGrid") = pHost->mMapperShowGrid ? "yes" : "no";
     host.append_attribute("mMapperStitchAreas") = pHost->mMapperStitchAreas ? "yes" : "no";
     host.append_attribute("mMapperShowRoomBorders") = pHost->mMapperShowRoomBorders ? "yes" : "no";
+    host.append_attribute("mMapperShowSpecialExitMarkers") = pHost->mMapperShowSpecialExitMarkers ? "yes" : "no";
     host.append_attribute("mVersionInTTYPE") = pHost->mVersionInTTYPE ? "yes" : "no";
     host.append_attribute("mPromptedForVersionInTTYPE") = pHost->mPromptedForVersionInTTYPE ? "yes" : "no";
     host.append_attribute("mForceMXPProcessorOn") = pHost->getForceMXPProcessorOn() ? "yes" : "no";

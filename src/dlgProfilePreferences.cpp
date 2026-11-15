@@ -2465,8 +2465,10 @@ void dlgProfilePreferences::reflowMapperCards()
     // once they no longer fit side by side, and lines up with the top of the first while they do
     QWidget* pLeadingChoices =
             makeFlowPiece(groupBox_mapViewOptions, qsl("settingsMapViewLeadingChoices"), QBoxLayout::TopToBottom, {mMapperUseAntiAlias, checkBox_drawUpperLowerLevels, checkBox_invertMapZoom});
-    QWidget* pTrailingChoices = makeFlowPiece(
-            groupBox_mapViewOptions, qsl("settingsMapViewTrailingChoices"), QBoxLayout::TopToBottom, {checkbox_mMapperShowRoomBorders, checkBox_largeAreaExitArrows, checkBox_showDefaultArea});
+    QWidget* pTrailingChoices = makeFlowPiece(groupBox_mapViewOptions,
+                                              qsl("settingsMapViewTrailingChoices"),
+                                              QBoxLayout::TopToBottom,
+                                              {checkbox_mMapperShowRoomBorders, checkBox_showSpecialExitMarkers, checkBox_largeAreaExitArrows, checkBox_showDefaultArea});
     QList<QWidget*> mapViewRows{makeFlowRow(groupBox_mapViewOptions, qsl("settingsMapViewChoices"), {pLeadingChoices, pTrailingChoices}, scmChoiceGroupGap, uiDesign::FlowLayout::LineAlignment::Top)};
 #if defined(INCLUDE_3DMAPPER)
     mapViewRows.append(makeFlowRow(groupBox_mapViewOptions, qsl("settingsMapperRow_mapStyle"), {label_mapStyle, comboBox_mapStyle}));
@@ -4414,6 +4416,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_mForceMXPProcessorOn->setChecked(pHost->getForceMXPProcessorOn());
     mMapperUseAntiAlias->setChecked(pHost->mMapperUseAntiAlias);
     checkbox_mMapperShowRoomBorders->setChecked(pHost->mMapperShowRoomBorders);
+    checkBox_showSpecialExitMarkers->setChecked(pHost->mMapperShowSpecialExitMarkers);
     checkBox_drawUpperLowerLevels->setChecked(mudlet::self()->mDrawUpperLowerLevels);
     acceptServerGUI->setChecked(pHost->mAcceptServerGUI);
     acceptServerMedia->setChecked(pHost->mAcceptServerMedia);
@@ -4924,6 +4927,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         connect(spinBox_borderSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_borderSizeChanged, Qt::UniqueConnection);
         connect(doubleSpinBox_gridSize, qOverload<double>(&QDoubleSpinBox::valueChanged), this, &dlgProfilePreferences::slot_gridSizeChanged, Qt::UniqueConnection);
         connect(checkbox_mMapperShowRoomBorders, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_changeMapperShowRoomBorders, Qt::UniqueConnection);
+        connect(checkBox_showSpecialExitMarkers, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_changeMapperShowSpecialExitMarkers, Qt::UniqueConnection);
         connect(checkBox_drawUpperLowerLevels, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_changeDrawUpperLowerLevels, Qt::UniqueConnection);
         connect(mMapperUseAntiAlias, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_changeMapperUseAntiAlias, Qt::UniqueConnection);
     } else {
@@ -5497,6 +5501,7 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(checkBox_largeAreaExitArrows, &QCheckBox::toggled, nullptr, nullptr);
     disconnect(checkBox_invertMapZoom, &QCheckBox::toggled, nullptr, nullptr);
     disconnect(checkbox_mMapperShowRoomBorders, &QCheckBox::toggled, nullptr, nullptr);
+    disconnect(checkBox_showSpecialExitMarkers, &QCheckBox::toggled, nullptr, nullptr);
     disconnect(checkBox_drawUpperLowerLevels, &QCheckBox::toggled, nullptr, nullptr);
     disconnect(mMapperUseAntiAlias, &QCheckBox::toggled, nullptr, nullptr);
     if (mpDoubleSpinBox_mapSymbolFontFudge) {
@@ -5524,6 +5529,7 @@ void dlgProfilePreferences::clearHostDetails()
     checkBox_mForceMXPProcessorOn->setChecked(false);
     mMapperUseAntiAlias->setChecked(false);
     checkbox_mMapperShowRoomBorders->setChecked(false);
+    checkBox_showSpecialExitMarkers->setChecked(false);
     checkBox_drawUpperLowerLevels->setChecked(false);
     acceptServerGUI->setChecked(false);
     acceptServerMedia->setChecked(false);
@@ -7306,6 +7312,9 @@ void dlgProfilePreferences::applyAll()
         }
         if (mSnapshot.dirty(checkbox_mMapperShowRoomBorders)) {
             pHost->mMapperShowRoomBorders = checkbox_mMapperShowRoomBorders->isChecked();
+        }
+        if (mSnapshot.dirty(checkBox_showSpecialExitMarkers)) {
+            pHost->mMapperShowSpecialExitMarkers = checkBox_showSpecialExitMarkers->isChecked();
         }
         if (mSnapshot.dirty(checkBox_drawUpperLowerLevels)) {
             pMudlet->setDrawUpperLowerLevels(checkBox_drawUpperLowerLevels->isChecked());
@@ -9810,6 +9819,19 @@ void dlgProfilePreferences::slot_changeMapperShowRoomBorders(const bool state)
     pHost->mMapperShowRoomBorders = state;
     if (pHost->mpMap && pHost->mpMap->mapper() && pHost->mpMap->mapper()->mp2dMap) {
         pHost->mpMap->mapper()->repaintMaps();
+    }
+}
+
+void dlgProfilePreferences::slot_changeMapperShowSpecialExitMarkers(const bool state)
+{
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+
+    pHost->mMapperShowSpecialExitMarkers = state;
+    if (pHost->mpMap) {
+        pHost->mpMap->refreshArea(-1);
     }
 }
 

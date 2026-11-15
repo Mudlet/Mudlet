@@ -1450,7 +1450,8 @@ GLuint ModernGLWidget::selectionTexture(const bool round)
 GLuint ModernGLWidget::exitMarkerTexture(const TRoom& room, const QColor& roomColor)
 {
     // Most rooms have none, and finding that out needs no key built for every room every frame
-    bool anyMarker = false;
+    const bool specialExitMarker = mpHost && mpHost->mMapperShowSpecialExitMarkers && !room.getSpecialExits().isEmpty();
+    bool anyMarker = specialExitMarker;
     for (const int direction : {DIR_UP, DIR_DOWN, DIR_IN, DIR_OUT}) {
         anyMarker = anyMarker || room.getExit(direction) > 0 || room.exitStubs.contains(direction);
     }
@@ -1459,7 +1460,7 @@ GLuint ModernGLWidget::exitMarkerTexture(const TRoom& room, const QColor& roomCo
     }
     const QString markers = exitMarkerKey(room);
     const QColor markerColor = ExitAppearance::contrastColor(roomColor);
-    const QString key = qsl("markers|%1|%2").arg(markerColor.name(), markers);
+    const QString key = qsl("markers|%1|%2|%3").arg(markerColor.name(), markers, specialExitMarker ? qsl("s") : QString());
     if (const GLuint texture = cachedRoomTexture(key)) {
         return texture;
     }
@@ -1473,6 +1474,9 @@ GLuint ModernGLWidget::exitMarkerTexture(const TRoom& room, const QColor& roomCo
     QPen pen;
     const qreal center = scmRoomTextureSize / 2.0;
     ExitAppearance::paintExitMarkers(painter, pen, room, center, center, scmRoomTextureSize, scmRoomTextureSize, roomColor, false);
+    if (specialExitMarker) {
+        ExitAppearance::paintSpecialExitMarker(painter, center, center, scmRoomTextureSize, scmRoomTextureSize, false);
+    }
     painter.end();
     return addRoomTexture(key, image);
 }
@@ -3746,6 +3750,7 @@ ModernGLWidget::SceneInputs ModernGLWidget::sceneInputs() const
     inputs.drawUpperLowerLevels = mudlet::self() && mudlet::self()->drawUpperLowerLevels();
     inputs.inOutStubs = mpHost->experimentEnabled(qsl("experiment.render-in-out-exits"));
     inputs.largeAreaExitArrows = mpHost->getLargeAreaExitArrows();
+    inputs.specialExitMarkers = mpHost->mMapperShowSpecialExitMarkers;
     inputs.borderColor = mpHost->mRoomBorderColor;
     inputs.background = backgroundColor();
     inputs.foreground = mpHost->mFgColor_2;
