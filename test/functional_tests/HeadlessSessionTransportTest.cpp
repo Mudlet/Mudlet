@@ -45,6 +45,16 @@ const QByteArray IAC_WILL_GMCP("\xff\xfb\xc9", 3);
 const QByteArray IAC_DO_GMCP("\xff\xfd\xc9", 3);
 const QByteArray IAC_SB_GMCP("\xff\xfa\xc9", 3);
 const QByteArray IAC_SE("\xff\xf0", 2);
+// In the order KaVir's protocol handler announces its options, which is how Mudlet recognises it
+const QByteArray KAVIR_ANNOUNCEMENTS("\xff\xfd\x18"  // DO TERMINAL-TYPE
+                                     "\xff\xfd\x1f"  // DO NAWS
+                                     "\xff\xfb\x2a"  // WILL CHARSET
+                                     "\xff\xfb\x45"  // WILL MSDP
+                                     "\xff\xfb\x46"  // WILL MSSP
+                                     "\xff\xfb\xc8"  // WILL ATCP
+                                     "\xff\xfb\x5a"  // WILL MSP
+                                     "\xff\xfb\x5b", // WILL MXP
+                                     24);
 } // namespace
 
 class HeadlessSessionTransportTest : public QObject
@@ -537,6 +547,35 @@ end)
         session.transportReceived(lastDial(dials), "A\r\nB\r\n");
         QTRY_COMPARE_WITH_TIMEOUT(disconnected.size(), 1, 10000);
         QCOMPARE(luaGlobal(session, "seenAtDisconnection"), qsl("AB"));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // As over a socket, the game is dialled again so that it hears Mudlet's version in the terminal type
+    void test_aKaVirGameIsReconnected()
+    {
+        const QString name = qsl("Headless Transport KaVir");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QSignalSpy dials(&session, &THeadlessSession::transportDialRequested);
+        QSignalSpy connected(&session, &THeadlessSession::connected);
+        QSignalSpy local(&session, &THeadlessSession::localText);
+        QStringList requests;
+        connect(&session, &THeadlessSession::transportDialRequested, &session, [&requests]() {
+            requests << qsl("dial");
+        });
+        connect(&session, &THeadlessSession::transportCloseRequested, &session, [&requests]() {
+            requests << qsl("close");
+        });
+        QCOMPARE(session.start({.profile = name, .connect = true, .supplyTransport = true}), THeadlessSession::StartResult::started);
+        QTRY_COMPARE_WITH_TIMEOUT(dials.size(), 1, 10000);
+        session.transportConnected(lastDial(dials));
+        QTRY_COMPARE_WITH_TIMEOUT(connected.size(), 1, 10000);
+        local.clear();
+
+        session.transportReceived(lastDial(dials), KAVIR_ANNOUNCEMENTS);
+        QTRY_COMPARE_WITH_TIMEOUT(requests, QStringList({qsl("dial"), qsl("close"), qsl("dial")}), 10000);
+        QVERIFY2(printed(local).contains(qsl("[ INFO ]  - This game appears to use KaVir's protocol handler")), qPrintable(printed(local)));
+        QVERIFY(session.host()->mVersionInTTYPE);
         QVERIFY(session.shutdown(false));
     }
 };
