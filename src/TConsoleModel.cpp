@@ -1371,7 +1371,8 @@ void removeAutologSentinel(const QString& path)
     if (!sentinel.exists()) {
         return;
     }
-    if (sentinel.isDir() ? QDir().rmdir(path) : QFile::remove(path)) {
+    const bool removed = sentinel.isDir() ? QDir().rmdir(path) : QFile::remove(path);
+    if (removed) {
         TAppFrontend::instance()->configWritten();
     }
 }

@@ -249,11 +249,11 @@ void forgetRejectedToken(const QString& profileName)
     if (!record.exists()) {
         return;
     }
-    if (record.remove()) {
-        TAppFrontend::instance()->configWritten();
-    } else {
+    if (!record.remove()) {
         qWarning().noquote() << "GMCP Char.Login - could not remove the record of a rejected token for profile" << profileName << ":" << record.errorString();
+        return;
     }
+    TAppFrontend::instance()->configWritten();
 }
 
 } // namespace

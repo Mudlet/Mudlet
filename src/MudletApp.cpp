@@ -936,12 +936,11 @@ QPair<bool, QString> MudletApp::setProfileIcon(const QString& profile, const QSt
 
 QPair<bool, QString> MudletApp::resetProfileIcon(const QString& profile)
 {
-    QDir dir;
     auto profileIconPath = getMudletPath(enums::profileDataItemPath, profile, qsl("profileicon"));
     if (!QFileInfo::exists(profileIconPath)) {
         return {true, QString()};
     }
-    if (!dir.remove(profileIconPath)) {
+    if (!QFile::remove(profileIconPath)) {
         qWarning() << "MudletApp::resetProfileIcon() ERROR: couldn't remove existing icon" << profileIconPath;
         return {false, qsl("couldn't remove existing icon file")};
     }
