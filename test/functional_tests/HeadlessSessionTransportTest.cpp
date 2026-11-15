@@ -46,6 +46,7 @@ const QByteArray IAC_DO_GMCP("\xff\xfd\xc9", 3);
 const QByteArray IAC_SB_GMCP("\xff\xfa\xc9", 3);
 const QByteArray IAC_SE("\xff\xf0", 2);
 const QByteArray IAC_DO_TTYPE("\xff\xfd\x18", 3);
+const QByteArray IAC_WILL_TTYPE("\xff\xfb\x18", 3);
 const QByteArray IAC_SB_TTYPE_SEND("\xff\xfa\x18\x01\xff\xf0", 6);
 // Its NUL, the IS code, would end a write that stops at the first one
 const QByteArray IAC_SB_TTYPE_IS_MUDLET("\xff\xfa\x18\x00MUDLET\xff\xf0", 12);
@@ -640,6 +641,67 @@ end)
         QVERIFY2(printed(local).contains(qsl("[ INFO ]  - This game appears to use KaVir's protocol handler")), qPrintable(printed(local)));
         QVERIFY(session.host()->mVersionInTTYPE);
         QVERIFY(session.shutdown(false));
+    }
+
+    // The reply to the game's negotiation is written from the read of its data, with no script running to hold
+    // the profiles back, so only the request's own handling keeps them for the rest of that read
+    void test_aSessionDeletedFromAWriteRequestOutlivesTheWrite()
+    {
+        const QString name = qsl("Headless Transport Deleted While Writing");
+        QVERIFY(writeProfile(name));
+        QObject owner;
+        auto* pSession = new THeadlessSession(&owner);
+        const QPointer<THeadlessSession> session(pSession);
+        QSignalSpy dials(pSession, &THeadlessSession::transportDialRequested);
+        QSignalSpy connected(pSession, &THeadlessSession::connected);
+        QCOMPARE(pSession->start({.profile = name, .connect = true, .supplyTransport = true}), THeadlessSession::StartResult::started);
+        QTRY_COMPARE_WITH_TIMEOUT(dials.size(), 1, 10000);
+        pSession->transportConnected(lastDial(dials));
+        QTRY_COMPARE_WITH_TIMEOUT(connected.size(), 1, 10000);
+        const QPointer<Host> profile(pSession->host());
+        bool profileOutlivedDeletion = false;
+        connect(pSession, &THeadlessSession::transportWriteRequested, pSession, [pSession, &profile, &profileOutlivedDeletion](const QString&, const QByteArray& data) {
+            if (data.contains(IAC_WILL_TTYPE)) {
+                delete pSession;
+                profileOutlivedDeletion = !profile.isNull();
+            }
+        });
+
+        pSession->transportReceived(lastDial(dials), IAC_DO_TTYPE);
+        QTRY_VERIFY2_WITH_TIMEOUT(session.isNull(), "SETUP: no WILL TTYPE was written in reply", 10000);
+        QVERIFY2(profileOutlivedDeletion, "the profiles went while the write was still being made");
+        QTRY_VERIFY_WITH_TIMEOUT(profile.isNull(), 10000);
+        QTest::qWait(200);
+        QVERIFY(!HostManager::self());
+    }
+
+    // A script's disconnect() holds the profiles back itself; KaVir's redial closes from the event loop, where nothing does
+    void test_aSessionDeletedFromACloseRequestOutlivesTheClose()
+    {
+        const QString name = qsl("Headless Transport Deleted While Closing");
+        QVERIFY(writeProfile(name));
+        QObject owner;
+        auto* pSession = new THeadlessSession(&owner);
+        const QPointer<THeadlessSession> session(pSession);
+        QSignalSpy dials(pSession, &THeadlessSession::transportDialRequested);
+        QSignalSpy connected(pSession, &THeadlessSession::connected);
+        QCOMPARE(pSession->start({.profile = name, .connect = true, .supplyTransport = true}), THeadlessSession::StartResult::started);
+        QTRY_COMPARE_WITH_TIMEOUT(dials.size(), 1, 10000);
+        pSession->transportConnected(lastDial(dials));
+        QTRY_COMPARE_WITH_TIMEOUT(connected.size(), 1, 10000);
+        const QPointer<Host> profile(pSession->host());
+        bool profileOutlivedDeletion = false;
+        connect(pSession, &THeadlessSession::transportCloseRequested, pSession, [pSession, &profile, &profileOutlivedDeletion]() {
+            delete pSession;
+            profileOutlivedDeletion = !profile.isNull();
+        });
+
+        pSession->transportReceived(lastDial(dials), KAVIR_ANNOUNCEMENTS);
+        QTRY_VERIFY2_WITH_TIMEOUT(session.isNull(), "SETUP: the game was not redialled", 10000);
+        QVERIFY2(profileOutlivedDeletion, "the profiles went while the connection was still being closed");
+        QTRY_VERIFY_WITH_TIMEOUT(profile.isNull(), 10000);
+        QTest::qWait(200);
+        QVERIFY(!HostManager::self());
     }
 };
 
