@@ -20,22 +20,27 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "TCommandLineCompletion.h"
 #include "TConsoleFrontend.h"
 #include "TMxpFrameFrontend.h"
 #include "TNullMapView.h"
 #include "TPrintSink.h"
+#include "TWindowNotifier.h"
 #include "TWindowRegistry.h"
 #include "utils.h"
 
 #include <QColor>
+#include <QElapsedTimer>
 #include <QObject>
 #include <QPoint>
 #include <QPointer>
 #include <QRect>
+#include <QSet>
 #include <QSize>
 #include <QString>
 
 #include <array>
+#include <functional>
 #include <map>
 #include <memory>
 #include <vector>
@@ -80,7 +85,7 @@ public:
     bool removeFromParentTabs(const QString& name, const QString& parentName) override;
     void destroyFrame(const QString& name) override;
     void showFrame(const QString& name) override;
-    void focusFrame(const QString&) override {}
+    void focusFrame(const QString& name) override;
     void setGeometry(const QString& name, const QRect& geometry) override;
     void reportSize() override;
     TPrintSink* sink(const QString& name) const override;
@@ -90,6 +95,10 @@ public:
     // As an external frame's console reports what it holds when it is hidden or shown
     void reportFramesWithin(const QString& name);
     void clear();
+    // The frame whose widget a frame is built inside, empty for the main window and for a window of its own
+    QString host(const QString& name) const;
+    // Where a frame's console is in that widget: under the header of the frame it is a page of, else at its frame's corner
+    QPoint consolePlace(const QString& name) const;
 
 private:
     // A QTabWidget's pages by frame name, the first being the header frame's own console
@@ -112,6 +121,8 @@ private:
     std::map<QString, QString> mHosts;
     // The size each frame's container last laid its console out at
     std::map<QString, QSize> mConsoleSizes;
+    // Each internal frame's container's corner, in the widget it is built inside
+    std::map<QString, QPoint> mPlaces;
 };
 
 // The view a Host has while no real one is attached: before its console is made, after that has
@@ -135,6 +146,44 @@ public:
         friend QDataStream& operator>>(QDataStream&, Placement&);
     };
 
+    // A window a script made, as an app that embeds Mudlet draws it in place of the GUI's widget
+    struct WindowRecord
+    {
+        enum class Kind { miniConsole, userWindow, label, commandLine, textBox, scrollBox, mapper, mxpFrame };
+        QString name;
+        Kind kind = Kind::label;
+        // The user window or scroll box it is in, the console whose own command line it is, or the MXP frame an MXP
+        // frame is built inside; empty for the main window
+        QString parent;
+        // In its parent's pixels; none for a console's own command line, which the console lays out along its bottom
+        QRect geometry;
+        // Its own flag, which a hidden parent leaves alone
+        bool visible = false;
+        // QWidget::isVisibleTo() the main window: visible, and so is every window it is in
+        bool shown = false;
+        // Among the windows of one parent, a higher one is drawn over a lower one
+        qint64 stackOrder = 0;
+        // Invalid where the window keeps no colour of its own
+        QColor background;
+        // A default QFont where the window keeps no font of its own
+        QFont font;
+        // One of the main window's QDockWidgets, or an EXTERNAL MXP frame's own window, rather than a widget in its area
+        bool inDock = false;
+        // A user window's dock: where openUserWindow() put it, whether the player may dock it, and its title
+        bool autoDock = true;
+        Qt::DockWidgetArea dockArea = Qt::RightDockWidgetArea;
+        bool floating = false;
+        QString title;
+        // A console's: the line it is scrolled back to, as getScroll() gives it, none while it follows new lines; its
+        // upper pane's columns and rows; whether its scroll bar and its timestamps are shown
+        std::optional<int> scrolledBackTo;
+        QSize grid;
+        bool scrollBar = false;
+        bool timeStamps = false;
+        // What its parent is, as a scroll box may share its name with a user window or console
+        Kind parentKind = Kind::userWindow;
+    };
+
     explicit TNullConsoleFrontend(Host* pHost);
     // Virtual, as Host deletes whichever view it holds as this type
     virtual ~TNullConsoleFrontend();
@@ -146,6 +195,8 @@ public:
     // its parent. Once the view goes, these make it again, so the view's last setting is still saved.
     void followView(QObject* view);
     void resumeMainCommandLine();
+    // As the view goes: the profile's sheet went to it, and the console it replaced took its sheet's font with it
+    void resumeMainText();
     // As the main command line keeps a sent line, as its aliases left it, unless the game hid what was typed; a
     // line nothing wrote to since holdMainCommandLineForSend() is kept as sent
     void addMainCommandLineHistory(const QString& sent);
@@ -161,6 +212,8 @@ public:
     // As TMainConsole::openPasswordEntry(): a line typed ahead of the prompt that opens the box goes into it. True
     // if it took one.
     bool hiddenInputOpened();
+    // As TCommandLine::enterCommand() empties the line behind the box, the empty line a send could not report
+    void hiddenInputClosed();
     bool ownsContainer(const QString& windowname) const;
     bool subConsoleShown(const QString& name) const;
     void reportUserWindowVisibility();
@@ -217,12 +270,41 @@ public:
     bool clearCommandLine(const QString& name) override { return replaceCommandLineText(name, QString()); }
     // Only typing and tab completion read what these set, and with no view nothing is typed
     bool selectCommandLineText(const QString& name) override;
-    bool addCommandLineSuggestion(const QString& name, const QString&) override { return ownsCommandLine(name); }
-    bool removeCommandLineSuggestion(const QString& name, const QString&) override { return ownsCommandLine(name); }
-    bool clearCommandLineSuggestions(const QString& name) override { return ownsCommandLine(name); }
-    bool addCommandLineBlacklistWord(const QString& name, const QString&) override { return ownsCommandLine(name); }
-    bool removeCommandLineBlacklistWord(const QString& name, const QString&) override { return ownsCommandLine(name); }
-    bool clearCommandLineBlacklist(const QString& name) override { return ownsCommandLine(name); }
+    bool addCommandLineSuggestion(const QString& name, const QString& word) override;
+    bool removeCommandLineSuggestion(const QString& name, const QString& word) override;
+    bool clearCommandLineSuggestions(const QString& name) override;
+    bool addCommandLineBlacklistWord(const QString& name, const QString& word) override;
+    bool removeCommandLineBlacklistWord(const QString& name, const QString& word) override;
+    bool clearCommandLineBlacklist(const QString& name) override;
+    // A command line from createCommandLine() or a console's own, never the main one. typeCommandLine() is the
+    // player's typing, which tells no one; the rest are the parts of TCommandLine::enterCommand(), which runs
+    // scripts between them: the Lua function a line is handed to, 0 for none, a console's echo of a line it sent,
+    // and the history and the emptying after the last line.
+    void typeCommandLine(const QString& name, const QString& text);
+    std::optional<int> commandLineAction(const QString& name) const;
+    // The line under the name, which one deleted and made again under it is not
+    const QObject* commandLineInstance(const QString& name) const;
+    // Whether a player could type on it: shown, as is each window it is in, and not disabled
+    bool commandLineShown(const QString& name) const;
+    void echoSentCommandLine(const QString& name, QString command);
+    void commandLineSent(const QString& name);
+    const QSet<QString>& mainCommandLineSuggestions() const { return mMainCommandLine.suggestions; }
+    const QSet<QString>& mainCommandLineBlacklist() const { return mMainCommandLine.blacklist; }
+    // As Tab or Shift+Tab on the GUI's main command line: the line it leaves, set as not typed, or nullopt with nothing
+    // to complete
+    std::optional<QString> tabCompleteMainCommandLine(bool forward);
+    // As Up on a line typed into the GUI's main command line with "Highlight history" on, the completed tail taken as
+    // still selected: the line it leaves, set as not typed, or nullopt if it is left as it was
+    std::optional<QString> historyCompleteMainCommandLine();
+    // As the GUI's line once Escape, a recall, a kept send or a script has selected all of it, so its Up recalls whole
+    // lines rather than completing what was typed
+    bool mainCommandLineWhollySelected() const { return mMainCommandLineWhollySelected; }
+    // As Escape on the GUI's line ends the cycle
+    void resetMainCommandLineCompletion()
+    {
+        mMainCommandLineCompletion.reset();
+        mMainCommandLineCompletion.restartHistoryWalk();
+    }
     bool addCommandLineMenuItem(const QString& name, const QString& label, const QString& eventName) override;
     std::optional<bool> removeCommandLineMenuItem(const QString& name, const QString& label) override;
     bool setCommandLineSavesHistory(const QString& name, bool savesHistory) override;
@@ -260,9 +342,8 @@ public:
     bool hidePlainWindow(const QString& name) override { return setPlainWindowShown(name, false); }
     bool resizePlainWindow(const QString& name, int width, int height) override;
     bool movePlainWindow(const QString& name, int x, int y) override;
-    // No Lua call reads the stacking order back, so these only answer whether the window exists
-    bool raiseWindow(const QString& name) override { return holdsWindow(name) || namesEmbeddedMapper(name); }
-    bool lowerWindow(const QString& name) override { return raiseWindow(name); }
+    bool raiseWindow(const QString& name) override { return restack(name, true); }
+    bool lowerWindow(const QString& name) override { return restack(name, false); }
     std::pair<bool, QString> reparentWindow(const QString& windowname, const QString& name, int x, int y, bool show) override;
     bool setWindowScrollBarVisible(const QString& name, bool visible) override;
     bool setWindowHorizontalScrollBarVisible(const QString& name, bool visible) override;
@@ -282,8 +363,9 @@ public:
     void setBorderColor(const QColor& color) override;
     void changeColors() override {}
     void setProfileStyleSheet(const QString& styleSheet) override;
-    void applyBorders() override {}
+    void applyBorders() override;
     QFont displayFont() const override;
+    QFont mainTextFont() const override;
     void setFont(const QFont&) override {}
     void setFontSize(int) override {}
     bool setSubConsoleBackgroundColor(const QString& name, const QColor& color) override;
@@ -292,7 +374,6 @@ public:
     bool setSubConsoleCommandBackgroundColor(const QString& name, const QColor& color) override;
     bool setSubConsoleCommandForegroundColor(const QString& name, const QColor& color) override;
     void changeSubConsoleColors(const QString&) override {}
-    // The embedded mapper's position, size and visibility are not kept, as no Lua call reads them back
     std::pair<bool, QString> createMapper(const QString& windowname, int, int, int, int) override;
     void createMapperDock(const QString& title, const QString&) override;
     void showNewMapperDock() override;
@@ -309,6 +390,8 @@ public:
     // A map widget or an embedded mapper, either of which a real view would draw the map in
     bool hasMapper() const { return mapView() != nullptr; }
     TMapViewFrontend* mapView() const { return mpEmbeddedMapper ? mpEmbeddedMapper.data() : mMapWidget ? mMapWidget->pView.get() : nullptr; }
+    // Called by the map view where the GUI asks T2DMap for an update(), for an app that draws the map
+    std::function<void()> mMapRepaintRequested;
     void restoreOwnMapper() override {}
     // TMainConsole shows the dlgMapper drawing the map after a load; a closed map widget's dock keeps it hidden
     void showLoadedMap() override { showEmbeddedMapper(); }
@@ -334,12 +417,18 @@ public:
     void discardToolBarLayoutChanges() override {}
     void setDockLayoutChanged(const QString&) override {}
     bool clearDockLayoutChanged(const QString&) override { return false; }
-    bool startIncomingText() override { return false; }
-    void alertNewData() override {}
-    void finishIncomingText(bool) override {}
-    void finalize() override {}
-    void showNewLines() override {}
-    void showCommandEcho(const TConsoleModel::CommandEcho&) override {}
+    bool startIncomingText() override;
+    void alertNewData() override;
+    void finishIncomingText(bool) override;
+    void finalize() override { showNewLines(); }
+    void showNewLines() override { followNewLines(); }
+    // Lets getScroll() follow the main console's last line again
+    void followNewLines();
+    void holdNewLinesAfterClear();
+    void showCommandEcho(const TConsoleModel::CommandEcho& echo) override;
+    // The main console's last line as the incoming text under way began, which is where the GUI's pane
+    // stays until that text is shown; none between such texts
+    std::optional<int> newLinesHeldAt() const;
     void markSelectionDirty() override {}
     void refreshView() const override {}
     void requestRepaintAfterCommand() override {}
@@ -349,10 +438,58 @@ public:
     void setF3SearchEnabled(bool) override {}
     void setCompactInputLine(bool) override {}
     void setCaretMode(bool) override {}
-    QPoint mousePosition() const override { return QPoint(); }
+    std::optional<QPoint> mousePosition() const override { return mMousePosition; }
     bool hasKeyboardFocus() const override { return false; }
     TMxpFrameFrontend& mxpFrames() override { return mMxpFrames; }
     const TMxpFrameFrontend& mxpFrames() const override { return mMxpFrames; }
+    // Every window a script made and every MXP frame of the game, in no order; not buffers, which are never shown
+    std::vector<WindowRecord> windowRecords() const;
+    // The model of a console windowRecords() lists; null for any other name
+    TConsoleModel* listedConsoleModel(const QString& name) const;
+    // What a label shows beside its model: the files and cursor a real TLabel keeps in its widget
+    struct LabelRecord
+    {
+        // Each only while the label shows it: a raster background, which text or a movie takes down, or an SVG one
+        QString image;
+        bool svg = false;
+        QString movie;
+        bool moviePaused = false;
+        int movieFrame = -1;
+        int movieSpeed = 100;
+        QSize movieSize;
+        double toolTipDuration = 0.0;
+        // Unset, a shape of Qt::CursorShape, or Qt::BitmapCursor for a custom one from its file
+        std::optional<Qt::CursorShape> cursor;
+        QString customCursor;
+        QPoint customCursorHotSpot;
+        // Which label of its name it is: one deleted and made again under the name has another
+        qint64 made = 0;
+    };
+    std::optional<LabelRecord> labelRecord(const QString& name) const;
+    // A label's model while it is made, or once deleted till deferred deletes run, as the GUI's TLabel is
+    bool holdsLabelModel(const TLabelModel* pModel) const;
+    // Changes as the label of the name is made, hides or moves into another window, or as the console or scroll box
+    // of the name is made, as Qt drops the mouse's grab of a widget then (QWidgetPrivate::deactivateWidgetCleanup());
+    // that of a console or box is on a widget inside it, which its hide or move leaves alone
+    std::optional<qint64> deactivated(const QString& name, bool label) const;
+    TWindowNotifier& windowNotifier() { return mWindowNotifier; }
+    // Where the app last said its pointer was, in the main window's area
+    void setMousePosition(const QPoint& position) { mMousePosition = position; }
+    // Where an app put a user window's dock, as the GUI's dock is moved and resized by its layout or the player
+    bool placeUserWindow(const QString& name, const QRect& geometry, bool floating);
+    bool userWindow(const QString& name) const;
+
+    // A widget as a style sheet's selectors see it: its classes, most derived first, its object name, and the properties
+    // a selector can name that are modelled here
+    struct SheetNode
+    {
+        QStringList classNames;
+        QString objectName;
+        QList<std::pair<QString, QString>> properties;
+        bool operator==(const SheetNode&) const = default;
+    };
+    // A widget, then each widget it is in out to the main window
+    using SheetChain = QList<SheetNode>;
 
 private:
     friend class TNullMxpFrameFrontend;
@@ -392,6 +529,8 @@ private:
         std::shared_ptr<ScrollBox> box;
         bool shown = true;
         QPointer<QObject> holder;
+        qint64 stackOrder = 0;
+        qint64 deactivated = 0;
     };
     // A window made inside a user window goes with it, as a real one is its dock's child widget, though
     // out of the registry at once rather than when deferred deletes run.
@@ -409,6 +548,9 @@ private:
         int action = 0;
         // A command line's TCommandLine::contextMenuItems, event names by label
         std::map<QString, QString> menuItems;
+        // A command line's TCommandLine::commandLineSuggestions and tabCompleteBlacklist
+        QSet<QString> suggestions;
+        QSet<QString> blacklist;
         QPointer<HistoryWriter> writer;
         // A console's own command line, still in TConsole::layerCommandLine, which TConsole::setCmdVisible() shows
         // and hides with it
@@ -420,6 +562,7 @@ private:
         // QPlainTextEdit::isReadOnly() and the window's own sheet, which its limits depend on
         bool readOnly = false;
         QString styleSheet;
+        qint64 stackOrder = 0;
     };
     struct SubConsole
     {
@@ -441,6 +584,22 @@ private:
         // TDockWidget::hasLayoutAlready: whether opening this user window has asked for the saved layout,
         // which a load already running refuses
         bool layoutRequested = false;
+        // TConsole::mDimensions, the grid last reported, and whether the pane was resized while hidden, as its
+        // TTextEdit::resizeEvent() then waits for the pane to show
+        QSize reportedGrid;
+        bool paneResizePending = true;
+        qint64 stackOrder = 0;
+        // QDockWidget::allowedAreas() being all of them, the area it was last docked in, and isFloating()
+        bool autoDock = true;
+        Qt::DockWidgetArea dockArea = Qt::RightDockWidgetArea;
+        bool floating = false;
+        qint64 deactivated = 0;
+        // TConsole::mDisplayFontDetails, the font scripts gave it, which a sheet that styles the console lies over
+        QFont scriptFont;
+        // A user window's font from before its sheet gave its text one, which clearing the sheet hands back
+        std::optional<QFont> fontBeforeSheet;
+        // Where the text was last styled; a move that puts it somewhere else restyles it
+        SheetChain paneChain;
     };
     // As TConsole::mpCommandLine tells a console's own command line from another of its name
     static bool ownsLine(const SubConsole& console, const PlainWindow& commandLine) { return commandLine.writer && commandLine.writer == console.ownLine; }
@@ -454,8 +613,11 @@ private:
         // attributes were set on it, and the font each restyle starts again from
         uint fontMask = 0;
         std::optional<QFont> savedFont;
-        // The font properties the label's own sheet declares, if it declares any
+        // The font properties the label's own sheet and its window's declare, if they declare any
         std::optional<QFont> sheetFont;
+        // The sheet of the window it is in, and where the label was, as it was last restyled
+        QString windowSheet;
+        SheetChain sheetChain;
         // The widths SE_ShapedFrameContents takes off each side under its sheet, as top, right, bottom and left
         std::array<int, 4> frame{};
         SizeLimits limits;
@@ -480,6 +642,16 @@ private:
         std::optional<QSize> pixmapSize;
         // TLabel::mpSvgRenderer's default size, as an SVG background image paints under the content
         std::optional<QSize> svgSize;
+        qint64 stackOrder = 0;
+        // The files whose sizes those are, and the movie's is its own
+        QString pixmapPath;
+        QString svgPath;
+        double toolTipDuration = 0.0;
+        std::optional<Qt::CursorShape> cursor;
+        QString customCursor;
+        QPoint customCursorHotSpot;
+        qint64 made = 0;
+        qint64 deactivated = 0;
     };
     struct MapWidget
     {
@@ -487,10 +659,18 @@ private:
         QRect geometry;
         bool shown = false;
         std::unique_ptr<TNullMapView> pView;
+        qint64 stackOrder = 0;
+
+        void setShown(bool show);
     };
     // TMainConsole::raiseWindow(), lowerWindow() and reparentWindow() take "mapper" in any case for it
     bool namesEmbeddedMapper(const QString& name) const { return mpEmbeddedMapper && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive); }
     void copyPlayerRoomStyleToMap();
+    void removeHiddenMapWidget();
+    // As QWidget::raise() and lower() among the windows of its parent, in TMainConsole::raiseWindow()'s order of kinds
+    bool restack(const QString& name, bool raise);
+    QString parentName(const QString& userWindow, const ScrollBox* box) const;
+    bool inRetiredWindow(const QString& userWindow, const ScrollBox* box) const;
     void showEmbeddedMapper();
     void reportEmbeddedMapperVisibility();
     QMovie* shownMovie(const QString& name) const;
@@ -502,6 +682,8 @@ private:
     TConsoleModel& addSubConsole(const QString& name, TWindowRegistry::SubConsoleKind kind, const QString& windowname);
     // keepWidget for a console whose widget outlives its place in the registry, with its own command line
     void removeSubConsole(const QString& name, bool keepWidget = false);
+    void removeWindowContents(const QString& userWindow);
+    QString retireWindowContents(const QString& name, const SubConsole& window);
     void addFrameConsole(const QString& name, const QSize& size, bool external, const QString& hostFrame, bool scrolling);
     void sizeFrameConsole(const QString& name, const QSize& size);
     // False for a frame's console a script has moved out of the frame
@@ -515,10 +697,14 @@ private:
     QString userWindowOrMain(const QString& windowname) const;
     std::pair<QString, std::shared_ptr<ScrollBox>> containerFor(const QString& windowname, bool scrollBoxFirst) const;
     bool shownWithin(const QString& userWindow, const ScrollBox* box) const;
+    bool paneShown(const SubConsole& console) const { return console.shown && shownWithin(console.userWindow, console.box.get()); }
     bool setPlainWindowShown(const QString& name, bool shown);
     bool ownsCommandLine(const QString& name) const;
     PlainWindow* commandLineNamed(const QString& name);
     void releaseCommandLine(const QString& name, const PlainWindow& commandLine);
+    // typeMainCommandLine() less its end of Tab's cycle, for a completion to leave its line with
+    void writeMainCommandLine(const QString& plain, bool playerTyped);
+    void endMainCommandLineCompletion();
     QObject* holderFor(const QString& userWindow, const ScrollBox* box) const;
     HistoryWriter* makeHistoryWriter(QObject* parent, const QString& name, const QString& fileName, bool savesHistory);
     void dropModels();
@@ -526,7 +712,9 @@ private:
     void republishPlainWindow(const QString& name);
     static bool within(const ScrollBox* container, const ScrollBox* box);
     void removeScrollBoxContents(const ScrollBox* box);
-    void moveScrollBoxContents(const ScrollBox* box);
+    void moveScrollBoxContents(const ScrollBox* box, const QString& fromWindow);
+    bool labelSheetsMoved(const Label& label) const;
+    bool paneSheetsMoved(const QString& name, const SubConsole& console) const;
     void inheritLabelFont(Label& label, bool restyle);
     void showLabelText(Label& label, const QString& shown);
     static void updateShownContent(Label& label);
@@ -543,10 +731,30 @@ private:
     void reportVisibility(const QString& changedWindow, const ScrollBox* changedBox);
     void reportWindowVisibility(const QString& name);
     std::optional<QFont> consoleFont(const QString& name) const;
+    std::optional<QFont> consoleTextFont(const QString& name) const;
     void setSubConsoleFont(const QString& name, const QFont& font);
+    void applyUserWindowSheet(const QString& name, const QString& sheet);
+    void applyUserWindowSheetFont(const QString& name, const QString& sheet);
+    QString windowSheet(const QString& userWindow) const;
+    SheetChain containerSheetChain(const QString& userWindow, const ScrollBox* box) const;
+    SheetChain consoleSheetChain(const QString& name) const;
+    SheetChain paneSheetChain(const QString& name) const;
+    SheetChain labelSheetChain(const Label& label) const;
+    SheetChain plainWindowSheetChain(const QString& name, const PlainWindow& window, bool commandLine) const;
+    void restyleWindowContents(const QString& userWindow);
+    QString consoleWindowSheet(const QString& name) const;
+    QFont underConsoleSheet(const QString& name, const QFont& font) const;
     void reportDisplayFontChange(const QFont& before);
+    void restyleMainText();
+    std::optional<QFont> profileMainTextSheetFont() const;
+    void changeDisplayFont(const std::function<void()>& change);
     void raiseFontEvent(const QString& eventName, const QString& subject, const QFont& font);
     void reportGridSize(const QString& name);
+    static bool listsConsole(std::optional<TWindowRegistry::SubConsoleKind> kind);
+    void reportLinesOverflow(const TConsoleModel& model, int lineCount);
+    void resizePane(const QString& name);
+    void sendPendingPaneResize(const QString& name);
+    void reportConsoleSize(const QString& name);
 
     Host* mpHost = nullptr;
     TNullMxpFrameFrontend mMxpFrames{*this};
@@ -554,7 +762,7 @@ private:
     std::map<QString, Label> mLabels;
     std::map<QString, std::shared_ptr<ScrollBox>> mScrollBoxes;
     std::map<QString, PlainWindow> mCommandLines;
-    // Only its menu items and history writer, as its text, sheet and setting are in the registry
+    // Only its menu items, words for Tab and history writer, as its text, sheet and setting are in the registry
     PlainWindow mMainCommandLine;
     std::map<QString, PlainWindow> mTextBoxes;
     std::vector<std::unique_ptr<TConsoleModel>> mRetiredConsoles;
@@ -563,12 +771,36 @@ private:
     // While a hidden user window is removed, the names its deferred deletes are to report
     QStringList* mpDeferredReports = nullptr;
     bool mDroppingWindows = false;
+    // What a deleted user window gave the windows it held, which live on until deferred deletes run
+    struct RetiredWindow
+    {
+        QString name;
+        QString sheet;
+        QFont font;
+        bool floating = false;
+    };
+    std::map<QString, RetiredWindow> mRetiredWindows;
+    int mRetiredWindowCount = 0;
+    // QStyleSheetStyle leaves the main console's widgets on the application's font once it has had a sheet
+    bool mProfileSheetSeen = false;
+    // What a profile sheet that styles the main console gave its text when the display font last changed, and the font
+    // one gives the text itself
+    std::optional<QFont> mMainConsoleSheetFont;
+    std::optional<QFont> mMainTextSheetFont;
     // As TCommandLine::playerTypedLine()
     bool mMainCommandLineTyped = false;
     // As the GUI's line once selectAll() has run, so what the player types next replaces it
     bool mMainCommandLineAllSelected = false;
+    // TCommandLine's own, for Tab and Up
+    TCommandLineCompletion mMainCommandLineCompletion;
+    // The line a completion last left, which the app handing back does not edit, until the cycle ends
+    std::optional<QString> mMainCommandLineCompleted;
+    // Unlike mMainCommandLineAllSelected, not set by a completion
+    bool mMainCommandLineWhollySelected = false;
     // Whether the line held for a send was written to while it was sent
     bool mMainCommandLineRewritten = false;
+    // A send emptied the line while hidden input was wanted, which the app has not been told
+    bool mMainCommandLineClearPending = false;
     // The main window, which holds what a script makes in it
     std::unique_ptr<QObject> mpMainHolder = std::make_unique<QObject>();
     // TMxpFrameWidgets' container widget of each frame, which holds the frame's console until a script moves it
@@ -580,6 +812,21 @@ private:
     QString mEmbeddedMapperWindow;
     std::shared_ptr<ScrollBox> mpEmbeddedMapperBox;
     bool mEmbeddedMapperShown = false;
+    QRect mEmbeddedMapperGeometry;
+    qint64 mEmbeddedMapperStackOrder = 0;
+    // As a QWidget made or reparented goes on top of its siblings, and a lowered one below them
+    qint64 mTopOfStack = 0;
+    qint64 mBottomOfStack = 0;
+    qint64 mLabelsMade = 0;
+    qint64 mDeactivations = 0;
+    TWindowNotifier mWindowNotifier;
+    std::optional<QPoint> mMousePosition;
+    QElapsedTimer mIncomingTextTimer;
+    // Counted from the first line the buffer ever held, so a trim leaves it on its line
+    std::optional<qint64> mNewLinesHeldAt;
+    // Incoming texts under way, one inside another for what a trigger feeds
+    int mIncomingTexts = 0;
+    void holdNewLinesAtEnd();
 };
 
 #endif // MUDLET_TNULLCONSOLEFRONTEND_H

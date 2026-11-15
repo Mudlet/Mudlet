@@ -35,18 +35,15 @@
 #include "mudlet.h"
 
 #include <QApplication>
-#include <QElapsedTimer>
 #include <QEvent>
 #include <QFileDialog>
 #include <QFileInfo>
-#include <QFontMetrics>
 #include <QFrame>
 #include <QKeyEvent>
 #include <QLabel>
 #include <QListWidget>
 #include <QMenu>
 #include <QMessageBox>
-#include <QPainter>
 #include <QProgressBar>
 #include <QProgressDialog>
 #include <QPushButton>
@@ -297,6 +294,9 @@ void dlgMapper::connectMapCues()
             break;
         case TMap::MapperSetting::Style:
             update3DView();
+            break;
+        case TMap::MapperSetting::BackgroundColor:
+            repaintMaps();
             break;
         }
     });
@@ -1148,117 +1148,6 @@ void dlgMapper::recreate3DWidget()
 
     glWidget->setVisible(was3DMode);
 #endif
-}
-
-int dlgMapper::paintMapInfo(const QElapsedTimer& renderTimer,
-                            QPainter& painter,
-                            Host* pHost,
-                            TMap* pMap,
-                            int roomID,
-                            int displayAreaId,
-                            int selectionSize,
-                            QColor& infoColor,
-                            int xOffset,
-                            int yOffset,
-                            int widgetWidth,
-                            int fontHeight,
-                            const QColor& background,
-                            const QString& fontFamily)
-{
-    if (!pMap || !pMap->mMapInfoContributorManager || !pHost) {
-        return yOffset;
-    }
-
-    QList<QString> contributorList = pMap->mMapInfoContributorManager->getContributorKeys();
-    QSet<QString> const contributorKeys{contributorList.begin(), contributorList.end()};
-    if (!contributorKeys.intersects(pHost->mMapInfoContributors)) {
-        return yOffset;
-    }
-
-    TRoom* pRoom = pMap->mpRoomDB->getRoom(roomID);
-    if (!pRoom) {
-        return yOffset;
-    }
-
-    const int initialYOffset = yOffset;
-    const QColor infoBackground = background.isValid() ? background : pHost->mMapInfoBg;
-
-    painter.save();
-    QFont font = pHost->getDisplayFont();
-    if (!fontFamily.isEmpty()) {
-        font.setFamily(fontFamily);
-        fontHeight = QFontMetrics(font).height();
-    }
-    painter.setFont(font);
-
-    // The caller holds raw TRoom/TArea pointers across this, and a Lua contributor can
-    // register or kill contributors, so walk a copy and skip any that went away.
-    const TMap::ScriptCallbackScope callbackScope(pMap);
-    const QList<QString> keys = pMap->mMapInfoContributorManager->getContributorKeys();
-    for (const auto& key : keys) {
-        if (pHost->mMapInfoContributors.contains(key)) {
-            const MapInfoCallback contributor = pMap->mMapInfoContributorManager->getContributor(key);
-            if (!contributor) {
-                continue;
-            }
-            auto properties = contributor(roomID, selectionSize, pRoom->getArea(), displayAreaId, infoColor);
-            if (!properties.color.isValid()) {
-                properties.color = infoColor;
-            }
-            yOffset += paintMapInfoContributor(painter, xOffset, yOffset, properties, infoBackground, fontHeight, widgetWidth);
-        }
-    }
-
-#ifdef QT_DEBUG
-    yOffset += paintMapInfoContributor(
-            painter, xOffset, yOffset, {false, false, QObject::tr("render time: %1S").arg(renderTimer.nsecsElapsed() * 1.0e-9, 0, 'f', 3), infoColor}, infoBackground, fontHeight, widgetWidth);
-#else
-    Q_UNUSED(renderTimer)
-#endif
-
-    painter.restore();
-
-    if (yOffset > initialYOffset) {
-        painter.fillRect(xOffset, initialYOffset - 10, widgetWidth - 10 - xOffset, 10, infoBackground);
-    }
-    return yOffset;
-}
-
-int dlgMapper::paintMapInfoContributor(QPainter& painter, int xOffset, int yOffset, const MapInfoProperties& properties, QColor bgColor, int fontHeight, int widgetWidth)
-{
-    if (properties.text.isEmpty()) {
-        return 0;
-    }
-
-    painter.save();
-    auto infoText = properties.text.trimmed();
-    auto font = painter.font();
-    font.setBold(properties.isBold);
-    font.setItalic(properties.isItalic);
-    painter.setFont(font);
-    // Set the pen before calling boundingRect: Qt6's drawTextItem early-returns
-    // when pen().style() == Qt::NoPen, which causes boundingRect to return
-    // height=0 and makes drawText render nothing (grey box with no text).
-    painter.setPen(properties.color);
-    const int infoHeight = fontHeight;
-    QRect testRect;
-    QRect mapInfoRect = QRect(xOffset, yOffset, widgetWidth - 10 - xOffset, infoHeight);
-    testRect = painter.boundingRect(mapInfoRect.left() + 10,
-                                    mapInfoRect.top(),
-                                    mapInfoRect.width() - 20,
-                                    mapInfoRect.height() - 20,
-                                    Qt::Alignment(Qt::AlignTop | Qt::AlignLeft) | Qt::TextFlag(Qt::TextWordWrap | Qt::TextIncludeTrailingSpaces),
-                                    infoText);
-    mapInfoRect.setHeight(testRect.height() + 10);
-    painter.fillRect(mapInfoRect, bgColor);
-    painter.drawText(mapInfoRect.left() + 10,
-                     mapInfoRect.top(),
-                     mapInfoRect.width() - 20,
-                     mapInfoRect.height() - 10,
-                     Qt::Alignment(Qt::AlignTop | Qt::AlignLeft) | Qt::TextFlag(Qt::TextWordWrap | Qt::TextIncludeTrailingSpaces),
-                     infoText);
-    painter.restore();
-    return mapInfoRect.height();
 }
 
 void dlgMapper::slot_setupMapperMenu()

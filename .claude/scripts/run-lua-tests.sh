@@ -164,6 +164,8 @@ export QT_QPA_PLATFORM=xcb
 export GDK_BACKEND=x11
 export LD_LIBRARY_PATH="$WS/3rdparty/discord/rpc/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export DBUS_SESSION_BUS_ADDRESS='disabled:'
+# An inherited value stops Mudlet naming its own, which Media_spec.lua checks
+unset QT_FFMPEG_DECODING_HW_DEVICE_TYPES QT_FFMPEG_ENCODING_HW_DEVICE_TYPES
 export TESTS_DIRECTORY="${TESTS_DIRECTORY:-$WS/src/mudlet-lua/tests}"
 export QUIT_MUDLET_AFTER_TESTS=true
 # The trigger match pool is off by default; CI switches it on so TriggerFlood_spec.lua runs rather than pends

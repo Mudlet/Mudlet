@@ -128,8 +128,7 @@ private:
     {
         OpenWindows windows;
 
-        // loading the profile opened this one already
-        windows.editor = HostDialogs::of(pHost).mpEditorDialog;
+        windows.editor = HostDialogs::editor(pHost);
 
         mudlet::self()->slot_notes();
         windows.notePad = HostDialogs::of(pHost).mpNotePad;
@@ -567,9 +566,9 @@ private slots:
         QTRY_VERIFY2(HostManager::self()->getHost(secondName), "The second profile did not load");
         Host* pSecond = HostManager::self()->getHost(secondName);
 
-        const QPointer<dlgTriggerEditor> firstEditor = HostDialogs::of(pFirst).mpEditorDialog;
-        const QPointer<dlgTriggerEditor> secondEditor = HostDialogs::of(pSecond).mpEditorDialog;
-        QVERIFY2(firstEditor && secondEditor, "Loading a profile did not open its editor");
+        const QPointer<dlgTriggerEditor> firstEditor = HostDialogs::editor(pFirst);
+        const QPointer<dlgTriggerEditor> secondEditor = HostDialogs::editor(pSecond);
+        QVERIFY2(firstEditor && secondEditor, "A profile built no editor");
         QVERIFY2(firstEditor != secondEditor, "Both profiles hold the same editor");
 
         Host* pActive = mudlet::self()->getActiveHost();
@@ -586,6 +585,46 @@ private slots:
         QTRY_VERIFY2(firstEditor.isNull(), "Closing the first profile left its editor behind");
         QVERIFY2(secondEditor, "Closing the first profile took the second profile's editor with it");
         QCOMPARE(HostDialogs::of(pSecond).mpEditorDialog.data(), secondEditor.data());
+    }
+
+    // ~QWidget destroys a mini console's command line after ~TConsole, and the main console's
+    // destroyed() handler for it looks consoles up by name: the mini console must be gone by then.
+    void test_aMiniConsoleDyingWithItsScrollBoxIsUnlistedBeforeItsCommandLineGoes()
+    {
+        const QString profileName = qsl("HostChildTeardown-ScrollBoxMiniConsole");
+        Host* pHost = startProfile(profileName);
+        QVERIFY2(pHost, "Profile took too long to load");
+        QMetaObject::Connection commandLineGoing;
+        auto cleanUp = qScopeGuard([&]() {
+            // A failed check leaves the command line for deleteHost(), past what its handler reaches
+            disconnect(commandLineGoing);
+            if (HostManager::self()->getHost(profileName)) {
+                pHost->forceClose();
+                pHost->requestClose();
+                HostManager::self()->deleteHost(profileName);
+            }
+            deleteProfileDirectory(profileName);
+        });
+
+        const QString consoleName = qsl("teardownMini");
+        QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("createMiniConsole('%1', 0, 0, 100, 100); createScrollBox('teardownBox', 0, 0, 200, 100); "
+                                                                        "setWindow('teardownBox', '%1'); enableCommandLine('%1')")
+                                                                            .arg(consoleName)));
+        TMainConsole* pMainConsole = pHost->mainConsoleView();
+        const QPointer<TConsole> pMini = pMainConsole->subConsoleWidget(consoleName);
+        QVERIFY2(pMini, "The mini console was not created");
+        auto* pCommandLine = pMini->findChild<TCommandLine*>();
+        QVERIFY2(pCommandLine, "enableCommandLine() gave the mini console no command line");
+
+        bool listedAsItsCommandLineWent = false;
+        commandLineGoing = connect(pCommandLine, &QObject::destroyed, this, [&]() {
+            listedAsItsCommandLineWent = pMainConsole->subConsoleWidget(consoleName) != nullptr;
+        });
+        QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("deleteScrollBox('teardownBox')")));
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+
+        QVERIFY2(pMini.isNull(), "Deleting the scroll box did not take the mini console with it");
+        QVERIFY2(!listedAsItsCommandLineWent, "The main console still listed the mini console while its command line was destroyed");
     }
 
     // cleanupTestCase() is what destroys the main window on top of it.

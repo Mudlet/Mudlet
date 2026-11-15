@@ -28,7 +28,11 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include <QAbstractItemView>
+#include <QAccessible>
 #include <QAction>
+#include <QComboBox>
+#include <QHeaderView>
 #include <QClipboard>
 #include <QContextMenuEvent>
 #include <QMenu>
@@ -46,6 +50,7 @@
 #include "TConsole.h"
 #include "TMap.h"
 #include "dlgTriggerEditor.h"
+#include "dlgTriggerPatternEdit.h"
 #include "SingleLineTextEdit.h"
 #include "TelnetServerStub.h"
 #include "dlgConnectionProfiles.h"
@@ -230,6 +235,71 @@ private slots:
     QTest::keyClick(&edit, Qt::Key_V, Qt::ControlModifier);
 
     QCOMPARE(edit.toPlainText(), qsl("^pattern$"));
+  }
+
+  // In the trigger editor the lines after the first go on into the following
+  // empty patterns, past any that take no text or already hold one, adding rows
+  // of the pasted-into pattern's type as they run out (#8175)
+  void test_pastingSeveralLinesIntoATriggerFillsTheFollowingPatterns() {
+    mudlet::self()->slot_showScriptDialog();
+    QTest::qWait(100ms);
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
+    QVERIFY2(pEditor, "the editor dialog was not created");
+
+    auto *pTrigger = new TTrigger(nullptr, mpHost);
+    pTrigger->setName(qsl("qaPasteLines"));
+    pTrigger->setRegexCodeList({qsl("old 1"), qsl("3"), qsl("old 3")},
+                               {REGEX_PERL, REGEX_LINE_SPACER, REGEX_SUBSTRING});
+    QVERIFY(pTrigger->registerTrigger());
+    pEditor->doCleanReset();
+    auto *pTree = pEditor->findChild<QTreeWidget *>(qsl("treeWidget_triggers"));
+    QVERIFY(pTree);
+    QTreeWidgetItem *pItem = nullptr;
+    QVERIFY2(QTest::qWaitFor([&]() {
+      const auto found = pTree->findItems(
+          qsl("qaPasteLines"),
+          Qt::MatchCaseSensitive | Qt::MatchFixedString | Qt::MatchRecursive,
+          0);
+      pItem = found.isEmpty() ? nullptr : found.first();
+      return pItem != nullptr;
+    }), "the editor never rebuilt its tree around the planted trigger");
+    pEditor->slot_showTriggers();
+    pTree->setCurrentItem(pItem);
+    pEditor->slot_triggerSelected(pItem);
+    // A trigger shows only the rows it uses; there is no empty row waiting below them
+    QCOMPARE(pEditor->mVisiblePatternCount, 3);
+
+    auto row = [pEditor](const int index) {
+      return pEditor->mTriggerPatternEdit.at(index);
+    };
+    auto text = [&row](const int index) {
+      return row(index)->singleLineTextEdit_pattern->toPlainText();
+    };
+    auto *pFirst = row(0)->singleLineTextEdit_pattern;
+    pFirst->selectAll();
+    QGuiApplication::clipboard()->setText(qsl("a\r\n  \nb\nc"));
+    QTest::keyClick(pFirst, Qt::Key_V, Qt::ControlModifier);
+
+    QCOMPARE(text(0), qsl("a"));
+    QCOMPARE(row(1)->comboBox_patternType->currentIndex(), REGEX_LINE_SPACER);
+    QCOMPARE(row(1)->spinBox_lineSpacer->value(), 3);
+    QCOMPARE(text(2), qsl("old 3"));
+    QCOMPARE(row(2)->comboBox_patternType->currentIndex(), REGEX_SUBSTRING);
+    QCOMPARE(text(3), qsl("b"));
+    QCOMPARE(row(3)->comboBox_patternType->currentIndex(), REGEX_PERL);
+    QCOMPARE(text(4), qsl("c"));
+    QCOMPARE(row(4)->comboBox_patternType->currentIndex(), REGEX_PERL);
+    QCOMPARE(pEditor->mVisiblePatternCount, 5);
+
+    // Lua code split over several patterns would no longer be the code pasted
+    row(3)->comboBox_patternType->setCurrentIndex(REGEX_LUA_CODE);
+    auto *pLua = row(3)->singleLineTextEdit_pattern;
+    pLua->selectAll();
+    QGuiApplication::clipboard()->setText(qsl("return true\nreturn false"));
+    QTest::keyClick(pLua, Qt::Key_V, Qt::ControlModifier);
+    QCOMPARE(text(3), qsl("return true"));
+    QCOMPARE(text(4), qsl("c"));
+    QCOMPARE(pEditor->mVisiblePatternCount, 5);
   }
 
   // The deselect on focus-out exists so a pattern line does not keep showing a
@@ -944,6 +1014,32 @@ private slots:
     QTest::keyClick(pEditor, Qt::Key_Escape);
     QVERIFY(!pEditor->mIsGrabKey);
     QVERIFY2(pShortcut->isEnabled(), "the \"Script editor\" key did not come back after grabbing a key");
+  }
+  // A list or tree a screen reader cannot name is announced as a bare "tree"
+  // on Tab, with the item types' header hidden and no label beside it (#6159)
+  void test_itemViewsHaveAccessibleNames() {
+    mudlet::self()->slot_showScriptDialog();
+    dlgTriggerEditor *pEditor = HostDialogs::of(mpHost).mpEditorDialog;
+    QVERIFY2(pEditor, "the editor dialog was not created");
+
+    QStringList unnamed;
+    int checked = 0;
+    for (auto *pView : pEditor->findChildren<QAbstractItemView *>()) {
+      // Popups are named by the combo box or field that opens them, and a
+      // header by its sections
+      if (pView->window() != pEditor || qobject_cast<QHeaderView *>(pView) ||
+          qobject_cast<QComboBox *>(pView->parent())) {
+        continue;
+      }
+      ++checked;
+      QAccessibleInterface *pInterface = QAccessible::queryAccessibleInterface(pView);
+      QVERIFY(pInterface);
+      if (pInterface->text(QAccessible::Name).trimmed().isEmpty()) {
+        unnamed << pView->objectName();
+      }
+    }
+    QVERIFY2(checked == 10, qPrintable(qsl("found %1 item views in the editor, expected 10").arg(checked)));
+    QVERIFY2(unnamed.isEmpty(), qPrintable(qsl("item views without an accessible name: %1").arg(unnamed.join(qsl(", ")))));
   }
 };
 

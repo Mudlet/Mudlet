@@ -88,10 +88,12 @@ private:
     const QString mLocalhost = qsl("localhost");
     QString mPort;
     QByteArray mServedArchive;
-    // A message shaped like a real theme-fetch failure, set on the label by hand
-    // for the layout tests: what they test is that the label wraps it. Kept in
-    // step with the wording built at dlgProfilePreferences::maybeDownloadEditorThemes().
-    const QString mError = qsl("Could not update themes: Error transferring https://github.com/Colorsublime/Colorsublime-Themes/archive/master.zip - server replied: Not Found");
+    // A message shaped like a real theme-fetch failure as a German player reads it, set on the label
+    // by hand for the layout tests: what they test is that the label wraps it. The English wording fits
+    // on one line with Windows' fonts at the default size; this one needs wrapping with any platform's.
+    // Kept in step with the wording built at dlgProfilePreferences::maybeDownloadEditorThemes().
+    const QString mError = qsl("Die Themes konnten nicht aktualisiert werden: Beim Herunterladen von https://github.com/Colorsublime/Colorsublime-Themes/archive/master.zip trat ein Fehler auf - Die "
+                               "Antwort des Servers ist: Nicht gefunden");
 
     void selectCategory(const QString& key)
     {

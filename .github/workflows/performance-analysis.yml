@@ -26,8 +26,8 @@ jobs:
         fetch-depth: 0
         submodules: recursive
 
-    - name: Use CMake 3.30.3
-      uses: lukka/get-cmake@v4.4.4
+    - name: Use the latest CMake
+      uses: lukka/get-cmake@v4.4.5
 
     - name: Install dependencies
       run: |

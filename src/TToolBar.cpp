@@ -233,6 +233,7 @@ void TToolBar::addActionToMenu(TAction* pAction, QMenu* pMenu)
     mpHost->mainConsoleView()->setActionToolBar(pAction, this);
     auto pEAction = new EAction(pAction->mpHost, QIcon(pAction->getIcon()), pAction->getName(), pAction->mID);
     pEAction->setCheckable(pAction->isPushDownButton());
+    pEAction->setChecked(pAction->isPushDownButton() && pAction->mButtonState);
     pEAction->setStatusTip(pAction->getName());
     mpHost->mainConsoleView()->replaceActionMenuEntry(pAction, pEAction);
     pMenu->addAction(pEAction);
@@ -303,16 +304,10 @@ void TToolBar::slot_pressed(const bool isChecked)
     // entries...
     pB->menu();
 
-    if (pA->isPushDownButton()) {
-        pA->mButtonState = isChecked;
-        mpHost->mainConsoleView()->mButtonState = (pA->mButtonState ? 2 : 1); // Was using 1 and 0 but that was wrong
-    } else {
-        pA->mButtonState = false;
-        pB->setChecked(false);                       // This does NOT invoke the clicked()!
-        mpHost->mainConsoleView()->mButtonState = 1; // Was effectively 0 but that is wrong
+    if (!pA->isPushDownButton()) {
+        pB->setChecked(false); // This does NOT invoke the clicked()!
     }
-
-    pA->execute();
+    pA->press(isChecked);
 }
 
 void TToolBar::clear()

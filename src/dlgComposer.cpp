@@ -35,6 +35,7 @@
 #include <QKeyEvent>
 #include <QMenu>
 #include <QMouseEvent>
+#include <QSettings>
 #include <QTextCursor>
 
 
@@ -53,6 +54,19 @@ dlgComposer::dlgComposer(Host* pH)
     connect(edit, &QWidget::customContextMenuRequested, this, &dlgComposer::slot_contextMenu);
 
     setAttribute(Qt::WA_DeleteOnClose);
+
+    const QByteArray geometry = MudletApp::getQSettings()->value(qsl("composerGeometry")).toByteArray();
+    if (!geometry.isEmpty()) {
+        restoreGeometry(geometry);
+    }
+}
+
+// In the destructor rather than closeEvent(): a profile closing with the composer up deletes it without a close
+dlgComposer::~dlgComposer()
+{
+    if (QSettings* settings = MudletApp::getQSettings()) {
+        settings->setValue(qsl("composerGeometry"), saveGeometry());
+    }
 }
 
 void dlgComposer::slot_cancel()

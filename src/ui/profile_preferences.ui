@@ -917,7 +917,20 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="0" colspan="5">
+          <item row="1" column="1" colspan="4">
+           <widget class="QCheckBox" name="checkBox_monospacedFontsOnly">
+            <property name="toolTip">
+             <string>&lt;p&gt;List only fonts whose characters all have the same width, which keeps columns of text from games lined up. While the font in use is not one of them, every font is listed.&lt;/p&gt;</string>
+            </property>
+            <property name="accessibleDescription">
+             <string>List only fonts whose characters all have the same width, which keeps columns of text from games lined up. While the font in use is not one of them, every font is listed.</string>
+            </property>
+            <property name="text">
+             <string>Show only monospaced fonts</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0" colspan="5">
            <widget class="QLabel" name="label_invalidFontError">
             <property name="font">
              <font>
@@ -929,7 +942,7 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="0" colspan="5">
+          <item row="3" column="0" colspan="5">
            <widget class="QLabel" name="label_variableWidthFontWarning">
             <property name="font">
              <font>
@@ -1648,6 +1661,19 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
+          <item row="4" column="0" colspan="2">
+           <widget class="QCheckBox" name="checkBox_showTimeStamps">
+            <property name="toolTip">
+             <string extracomment="Tooltip of the profile preference that shows the time each line arrived at the start of every line in the main window. &quot;Toggle time stamps&quot; must match the translation of that button's tooltip">&lt;p&gt;Shows the time each line arrived at the start of every line in the main window. This is the same setting as the main window's &quot;Toggle time stamps&quot; button.&lt;/p&gt;</string>
+            </property>
+            <property name="accessibleDescription">
+             <string extracomment="Accessibility-friendly description of the profile preference that shows the time each line arrived at the start of every line in the main window. &quot;Toggle time stamps&quot; must match the translation of that button's tooltip">Shows the time each line arrived at the start of every line in the main window. This is the same setting as the main window's &quot;Toggle time stamps&quot; button.</string>
+            </property>
+            <property name="text">
+             <string extracomment="Label of the profile preference that shows the time each line arrived at the start of every line in the main window">Show timestamps</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -1719,6 +1745,12 @@ you can use it but there could be issues with aligning columns of text</string>
           </item>
           <item row="1" column="0">
            <widget class="QComboBox" name="code_editor_theme_selection_combobox">
+            <property name="accessibleName">
+             <string extracomment="Screen reader name of the editor color theme picker on the Editor page of the settings, which has no visible label of its own">Editor theme</string>
+            </property>
+            <property name="accessibleDescription">
+             <string extracomment="Screen reader description of the editor color theme picker on the Editor page of the settings">Color theme the script editor is drawn in</string>
+            </property>
             <property name="editable">
              <bool>true</bool>
             </property>
@@ -1726,11 +1758,20 @@ you can use it but there could be issues with aligning columns of text</string>
           </item>
           <item row="1" column="1">
            <widget class="QComboBox" name="script_preview_combobox">
+            <property name="accessibleName">
+             <string extracomment="Screen reader name of the picker for the script shown as the theme preview on the Editor page of the settings, which has no visible label of its own">Script to preview</string>
+            </property>
+            <property name="accessibleDescription">
+             <string extracomment="Screen reader description of the picker for the script shown as the theme preview on the Editor page of the settings">One of your scripts to show in the editor theme preview</string>
+            </property>
             <property name="editable">
              <bool>true</bool>
             </property>
             <property name="sizeAdjustPolicy">
-             <enum>QComboBox::SizeAdjustPolicy::AdjustToContents</enum>
+             <enum>QComboBox::SizeAdjustPolicy::AdjustToMinimumContentsLengthWithIcon</enum>
+            </property>
+            <property name="minimumContentsLength">
+             <number>24</number>
             </property>
            </widget>
           </item>
@@ -1939,10 +1980,10 @@ you can use it but there could be issues with aligning columns of text</string>
           <item row="2" column="0" colspan="2">
            <widget class="QCheckBox" name="checkBox_folderView">
             <property name="toolTip">
-             <string>&lt;p&gt;Adds a &lt;b&gt;Folders&lt;/b&gt; button to the editor's item toolbar. It shows triggers, aliases, scripts, timers, keys and buttons together, grouped by folder. Folders with the same name in different item types are shown as one folder.&lt;/p&gt;</string>
+             <string>&lt;p&gt;Adds a &lt;b&gt;Folders&lt;/b&gt; entry to the editor's sidebar. It shows triggers, aliases, scripts, timers, keys and buttons together, grouped by folder. Folders with the same name in different item types are shown as one folder.&lt;/p&gt;</string>
             </property>
             <property name="accessibleDescription">
-             <string>Adds a Folders button to the editor's item toolbar. It shows triggers, aliases, scripts, timers, keys and buttons together, grouped by folder. Folders with the same name in different item types are shown as one folder.</string>
+             <string>Adds a Folders entry to the editor's sidebar. It shows triggers, aliases, scripts, timers, keys and buttons together, grouped by folder. Folders with the same name in different item types are shown as one folder.</string>
             </property>
             <property name="text">
              <string>Show a Folders view of all item types</string>
@@ -5736,6 +5777,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>fontComboBox_displayFont</tabstop>
   <tabstop>spinBox_displayFontSize</tabstop>
   <tabstop>checkBox_antiAlias</tabstop>
+  <tabstop>checkBox_monospacedFontsOnly</tabstop>
   <tabstop>topBorderHeight</tabstop>
   <tabstop>bottomBorderHeight</tabstop>
   <tabstop>leftBorderWidth</tabstop>
@@ -5750,6 +5792,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>checkBox_useWideAmbiguousEastAsianGlyphs</tabstop>
   <tabstop>checkBox_showTabConnectionIndicators</tabstop>
   <tabstop>checkBox_enableTextAnalyzer</tabstop>
+  <tabstop>checkBox_showTimeStamps</tabstop>
   <tabstop>checkBox_echoLuaErrors</tabstop>
   <tabstop>comboBox_controlCharacterHandling</tabstop>
   <tabstop>code_editor_theme_selection_combobox</tabstop>

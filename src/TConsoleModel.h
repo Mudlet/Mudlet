@@ -41,6 +41,7 @@
 #include <functional>
 #include <optional>
 #include <tuple>
+#include <utility>
 
 class Host;
 
@@ -215,6 +216,20 @@ struct TConsoleModel
     bool setSelectionDisplayAttributes(TChar::AttributeFlags attributes, bool enabled);
     // Makes the selected run a link, taking over the commands' Lua registry references.
     bool setLink(const QStringList& commands, const QStringList& hints, const QVector<int>& luaReferences);
+    // What a click, Enter or a menu pick does to a link, in two halves so a view can do its own part between
+    // them. linkMayRun() reveals a spoiler not yet revealed (revealedSpoiler) or marks a disabled link
+    // (disabled), and gives ran only where runLink() should follow; unknown for no such link. runLink() updates
+    // the link's selection group and runs its command item, as TLinkStore::menuItems() indexes them; fromMenu
+    // names the Lua a menu pick runs "echoPopup", as the GUI does. False where there was no such item or its Lua
+    // raised an error.
+    enum class LinkFollowed { ran, revealedSpoiler, disabled, unknown };
+    LinkFollowed linkMayRun(int linkIndex);
+    bool runLink(int linkIndex, int item, bool fromMenu);
+    // runLink() for a menu's pick, unless its link is no longer the one with the TLinkStore::issueOf() the menu
+    // was built for
+    void runMenuPick(int linkIndex, qint64 issue, int item);
+    // Selects the link in its group, rewriting a single-command link's command for the value chosen
+    void applyLinkSelection(int linkIndex, QString& command, const Mudlet::HyperlinkStyling::SelectionSettings& selection);
 
     // Client output, appended at the end of the buffer and copied to --mirror. The view showing the
     // model brings the new lines into view (TConsole::showNewLines()).
@@ -244,16 +259,22 @@ struct TConsoleModel
 
     // For --mirror: copies text to stdout prefixed with the profile and console names. Text may be a
     // line fragment, so what follows the last line feed is held until one arrives. Also tells
-    // mNotifier's textPrinted.
-    void mirrorToStdOut(const QString& text);
+    // mNotifier's textPrinted, as written in format, or in mFormatCurrent.
+    void mirrorToStdOut(const QString& text) { mirrorToStdOut(text, mFormatCurrent); }
+    void mirrorToStdOut(const QString& text, const TChar& format);
+    // For text copied from another buffer, whose links textPrinted then leaves out
+    void mirrorToStdOut(const QString& text, const TLineFormat& format);
     // mirrorToStdOut() without first writing out what triggers wrote and is still held
     void writeMirrorFragments(const QString& text);
     // Where printed text landed: a line already there (the one triggers are running on, one a command was
-    // echoed into, or wherever the cursor was moved), or the end.
-    enum class PrintedInto { committedLine, end };
+    // echoed into, or wherever the cursor was moved), the end of such a line, or the end.
+    enum class PrintedInto { committedLine, committedLineEnd, end };
     // Tells mNotifier's textPrinted of text, keeping the lines the view shows: a piece left open in one
-    // line is ended before text lands anywhere else.
-    void notifyPrinted(const QString& text, PrintedInto into, bool startsLine = false);
+    // line is ended before text lands anywhere else. format is what text was written in, the last of it for
+    // characters it has none for.
+    void notifyPrinted(const QString& text, PrintedInto into, const TChar& format, bool startsLine = false);
+    void notifyPrinted(const QString& text, PrintedInto into, TLineFormat format, bool startsLine = false);
+    PrintedInto triggerLineInto() const;
     // A line was committed or the buffer cleared, so no later text continues the open piece.
     void endPrintedLine() { mPrintedLineEnded = true; }
     // For a view told of a clear, which emptied its copy of the open piece's line too
@@ -278,6 +299,8 @@ struct TConsoleModel
         int linesCommitted = 0;
         // How many characters from start a replace took out
         int removed = 0;
+        // start is on an empty line the game sent, not one left for the next line to fill
+        bool ontoBlankLine = false;
     };
     MirrorMark markTriggerWriteForMirror(const QPoint& at) const;
     MirrorMark markTriggerAppendForMirror() const;
@@ -295,11 +318,17 @@ struct TConsoleModel
         // Ordered as held, so what a print's own append held is known from what was held before it
         quint64 serial = 0;
         int lastLine = -1;
+        // Set as it is taken: the console shows it on the end of the line that was last before it
+        bool continuesLine = false;
+        // It began on the end of a line that was already whole, with nothing shown below that line
+        bool ontoShownLine = false;
+        // An empty line of its own, kept while nothing is written onto it
+        bool blankLine = false;
     };
     // In the order the lines show them, each as a line of its own: the line feed it may open the line it
     // was written onto with, or close it with, dropped; read with the formatting the line has now
     QList<TriggerWrite> takeTriggerWritesForLineShown();
-    void holdTriggerWriteForLineShown(const QPoint& start, const QPoint& end);
+    void holdTriggerWriteForLineShown(const QPoint& start, const QPoint& end, bool ontoBlankLine = false);
     // An edit of line y at x, of removed characters taken out and inserted put in, that changed held writes:
     // they are read back as the line now shows them. False if it touched none, so it is held as one of its own.
     bool editHeldWritesForLineShown(int y, int x, int removed, int inserted);
@@ -354,8 +383,8 @@ struct TConsoleModel
     // triggers run over this console's line it goes onto that line, which is shown once they are
     // done; otherwise it is appended, and this answers true for the view to show the new lines.
     bool echo(QString& text);
-    // Puts text in place of the selected run.
-    void replace(const QString& text);
+    // Puts text in place of the selected run, in the colours of its first character when keepColor is set.
+    void replace(const QString& text, bool keepColor);
     // The WCAG contrast ratio, which link colours here and TConsole's scroll bar are both chosen by.
     static double contrastRatio(const QColor& first, const QColor& second);
 
@@ -399,24 +428,33 @@ struct TConsoleModel
     // leaves the gutter out of the width it reports, so this has to be readable
     // with no view.
     bool mShowTimeStamps = false;
+    // How long the last pass of incoming text took to process, in seconds, as the GUI's latency box shows it;
+    // only the null view keeps it.
+    double mIncomingTextSeconds = 0.0;
 
     // The width and indents wrapLine() rewraps a line to. The buffer keeps its
     // own copy, which wraps text as it arrives, so always set them through
     // these setters to keep the two the same.
     void setWrapAt(int pos)
     {
-        mWrapAt = pos;
         buffer.setWrapAt(pos);
+        if (std::exchange(mWrapAt, pos) != pos) {
+            emit mNotifier.wrapChanged();
+        }
     }
     void setIndentCount(int count)
     {
-        mIndentCount = count;
         buffer.setWrapIndent(count);
+        if (std::exchange(mIndentCount, count) != count) {
+            emit mNotifier.wrapChanged();
+        }
     }
     void setHangingIndentCount(int count)
     {
-        mHangingIndentCount = count;
         buffer.setWrapHangingIndent(count);
+        if (std::exchange(mHangingIndentCount, count) != count) {
+            emit mNotifier.wrapChanged();
+        }
     }
     int mWrapAt = 100;
     int mIndentCount = 0;
@@ -436,7 +474,11 @@ struct TConsoleModel
     // report its scroll bar as gone.
     bool mScrollBarEnabled = true;
     QColor mBorderColor = QColorConstants::Black;
-    void wrapLine(int line) { buffer.wrapLine(line, mWrapAt, mIndentCount, mHangingIndentCount); }
+    void wrapLine(int line)
+    {
+        buffer.wrapLine(line, mWrapAt, mIndentCount, mHangingIndentCount);
+        emit mNotifier.contentEdited();
+    }
 
     // The name scripts know this console by. Only the main console, user
     // windows, miniconsoles and buffers can be addressed by scripts, so only
@@ -462,6 +504,8 @@ struct TConsoleModel
     bool mMirrorTriggerWriteEndedLine = false;
     // Lines committed, so a write that committed some (the OSC 8 documentation) is known
     int mLinesCommitted = 0;
+    // The trigger pass under way had lines committed inside it, so the receiver's last line is one of those
+    bool mPassCommittedLines = false;
     QList<TriggerWrite> mTriggerWritesForLineShown;
     quint64 mNextTriggerWriteSerial = 0;
     // Where each print under way started, innermost last

@@ -1571,10 +1571,26 @@ int TLuaInterpreter::getColumnNumber(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCurrentLine
 int TLuaInterpreter::getCurrentLine(lua_State* L)
 {
-    const QString windowName{WINDOW_NAME(L, 1)};
+    // A leading boolean is the flag with the window left out, as resetBackgroundImage() takes it
+    const char* name = "";
+    int flagPos = 1;
+    if (lua_type(L, 1) != LUA_TBOOLEAN) {
+        name = WINDOW_NAME(L, 1);
+        flagPos = 2;
+    }
+    bool fullErrorReporting = false;
+    // A trailing nil was ignored before the flag existed, so it still means the default
+    if (lua_gettop(L) >= flagPos && !lua_isnil(L, flagPos)) {
+        fullErrorReporting = getVerifiedBool(L, __func__, flagPos, "enableFullErrorReporting {default = false}", true);
+    }
+    // Built after the last check that can raise: lua_error() longjmps past its destructor
+    const QString windowName{name};
     auto pModel = getHostFromLua(L).consoleModelNamed(windowName);
     if (!pModel) {
-        // the next line should be "pushnil"; compatibility with old bugs and all that
+        if (fullErrorReporting) {
+            return windowNotFound(L, windowName);
+        }
+        // Bug compatibility: scripts may test the first value against this string, so it stays the default
         lua_pushstring(L, "ERROR: mini console does not exist");
         lua_pushfstring(L, bad_window_value, windowName.toUtf8().constData());
         return 2;
@@ -1772,9 +1788,8 @@ int TLuaInterpreter::getMainConsoleWidth(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     const QFont font = host.hasConsoleView() ? host.getDisplayFont() : host.displayFontWithNoView();
-    int fw = QFontMetrics(font).averageCharWidth();
-    fw *= host.mWrapAt + 1;
-    lua_pushnumber(L, fw);
+    const qint64 averageCharWidth = QFontMetrics(font).averageCharWidth();
+    lua_pushnumber(L, averageCharWidth * (qint64{host.mWrapAt} + 1));
     return 1;
 }
 
@@ -1806,15 +1821,13 @@ int TLuaInterpreter::getMouseEvents(lua_State* L)
 int TLuaInterpreter::getMousePosition(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
-
-    if (!host.hasConsoleView()) {
+    const std::optional<QPoint> pos = host.consoleFrontend()->mousePosition();
+    if (!pos) {
         return warnArgumentValue(L, __func__, no_main_window_value);
     }
 
-    const QPoint pos = host.consoleFrontend()->mousePosition();
-
-    lua_pushnumber(L, pos.x());
-    lua_pushnumber(L, pos.y());
+    lua_pushnumber(L, pos->x());
+    lua_pushnumber(L, pos->y());
 
     return 2;
 }
@@ -2696,10 +2709,12 @@ int TLuaInterpreter::replace(lua_State* L)
     if (n > 1) {
         windowName = WINDOW_NAME(L, s++);
     }
-    const QString text = getVerifiedString(L, __func__, s, "with");
+    const QString text = getVerifiedString(L, __func__, s++, "with");
+    // Not getVerifiedBool(): replace(window, text, keepColor) has always taken any truthy keepColor
+    const bool keepColor = n > 2 && lua_toboolean(L, s);
     const QString consoleName{windowName};
     Host& host = getHostFromLua(L);
-    if (!host.replaceWindowText(consoleName, text)) {
+    if (!host.replaceWindowText(consoleName, text, keepColor)) {
         return windowNotFoundOrUnsupported(L, host, consoleName);
     }
     lua_pushboolean(L, true);
@@ -3367,6 +3382,7 @@ int TLuaInterpreter::setButtonStyleSheet(lua_State* L)
     }
     // updateAllToolbars() rebuilds every button bar, too slow for scripts that restyle a button on each prompt
     bool rebuild = false;
+    bool restyled = false;
     for (auto actionId : actionIds) {
         auto action = host.getActionUnit()->getAction(actionId);
         if (!action) {
@@ -3374,6 +3390,7 @@ int TLuaInterpreter::setButtonStyleSheet(lua_State* L)
         }
         action->css = css;
         if (host.consoleFrontend()->restyleActionButton(action)) {
+            restyled = true;
             continue;
         }
         // Without this a floating toolbar skips its rebuild
@@ -3382,6 +3399,8 @@ int TLuaInterpreter::setButtonStyleSheet(lua_State* L)
     }
     if (rebuild) {
         host.getActionUnit()->updateAllToolbars();
+    } else if (restyled) {
+        emit host.signal_buttonsChanged();
     }
     lua_pushboolean(L, 1);
     return 1;
@@ -4073,8 +4092,8 @@ int TLuaInterpreter::setMainWindowSize(lua_State* L)
 {
     const int x1 = getVerifiedInt(L, __func__, 1, "mainWidth");
     const int y1 = getVerifiedInt(L, __func__, 2, "mainHeight");
-    if (!TAppFrontend::instance()->resizeMainWindow(x1, y1)) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
+    if (const auto [resized, problem] = TAppFrontend::instance()->resizeMainWindow(&getHostFromLua(L), x1, y1); !resized) {
+        return problem.isEmpty() ? warnArgumentValue(L, __func__, no_main_window_value) : warnArgumentValue(L, __func__, problem);
     }
     lua_pushboolean(L, true);
     return 1;

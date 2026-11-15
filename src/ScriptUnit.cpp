@@ -198,6 +198,10 @@ void ScriptUnit::reParentScript(int childID, int oldParentID, int newParentID, i
         pChild->Tree<TScript>::setParent(nullptr);
         addScriptRootNode(pChild, parentPosition, childPosition);
     }
+
+    // The profile save skips a top-level module member and the module save only walks its own
+    // folder, so an item moved out of a module that kept the mark would be saved nowhere
+    pChild->updateModuleMembership();
 }
 
 void ScriptUnit::reParentScript(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position)

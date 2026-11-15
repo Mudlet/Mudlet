@@ -80,7 +80,10 @@ jobs:
             gcc_compiler_version: 14
             qt: '6.11.3'
             ccache_id: ubuntu-clang
-          # No tests: none branch on host architecture, so the arm64 job covers them on a faster pool.
+          # Homebrew no longer bottles for Intel: this job pours the Sonoma bottles the image's frozen Homebrew still
+          # names (HOMEBREW_NO_AUTO_UPDATE), and uses the pcre2, sqlite, libzip and oniguruma the image preinstalls.
+          # No tests: only the getOS processor spec branches on host architecture, and the Linux and Windows jobs run
+          # it on x86_64, so the arm64 job covers the rest on a faster pool.
           - os: macos-15-intel
             buildname: 'macos (x86_64)'
             compiler: clang_64
@@ -89,6 +92,8 @@ jobs:
             deploy: 'deploy'
             build_tests: 'false'
             pgo: 'true'
+          # macOS 15, not 26: bundled Homebrew libraries carry the minos of the macOS they were bottled for
+          # (15.0 here, 26.0 on macos-26), whatever CMAKE_OSX_DEPLOYMENT_TARGET says.
           - os: macos-15
             buildname: 'macos (arm64) / c++, lua tests'
             compiler: clang_64
@@ -299,15 +304,15 @@ jobs:
         echo "LUA_PATH=$LUA_PATH" >> $GITHUB_ENV
         echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
 
-    - name: (Linux) Restore xcb-util-cursor 0.1.5 cache
+    - name: (Linux) Restore xcb-util-cursor 0.1.6 cache
       id: cache-xcb-cursor
       if: runner.os == 'Linux'
       uses: actions/cache/restore@v6
       with:
         path: ${{runner.workspace}}/xcb-util-cursor-stage
-        key: xcb-util-cursor-0.1.5-${{matrix.os}}-${{runner.arch}}
+        key: xcb-util-cursor-0.1.6-${{matrix.os}}-${{runner.arch}}
 
-    - name: (Linux) Build xcb-util-cursor 0.1.5
+    - name: (Linux) Build xcb-util-cursor 0.1.6
       timeout-minutes: 5
       if: runner.os == 'Linux' && steps.cache-xcb-cursor.outputs.cache-hit != 'true'
       run: |
@@ -316,23 +321,23 @@ jobs:
         # Several mirrors, each retried: xorg.freedesktop.org served an expired
         # TLS certificate on 2026-07-28, breaking every CI run
         for url in \
-          https://xorg.freedesktop.org/archive/individual/lib/xcb-util-cursor-0.1.5.tar.xz \
-          https://www.x.org/releases/individual/lib/xcb-util-cursor-0.1.5.tar.xz \
-          https://xcb.freedesktop.org/dist/xcb-util-cursor-0.1.5.tar.xz
+          https://xorg.freedesktop.org/archive/individual/lib/xcb-util-cursor-0.1.6.tar.xz \
+          https://www.x.org/releases/individual/lib/xcb-util-cursor-0.1.6.tar.xz \
+          https://xcb.freedesktop.org/dist/xcb-util-cursor-0.1.6.tar.xz
         do
           for attempt in 1 2 3; do
-            if wget -q --connect-timeout=10 --read-timeout=30 --tries=3 --waitretry=5 -O xcb-util-cursor-0.1.5.tar.xz "$url"; then
+            if wget -q --connect-timeout=10 --read-timeout=30 --tries=3 --waitretry=5 -O xcb-util-cursor-0.1.6.tar.xz "$url"; then
               break 2
             fi
             echo "::warning::download attempt $attempt from $url failed, retrying..."
             sleep $((attempt * 5))
           done
         done
-        # Checksum from https://lists.x.org/archives/xorg-announce/2023-October/003428.html
+        # Checksum from https://lists.x.org/archives/xorg-announce/2025-September/003625.html
         # also fails the step if every mirror was unreachable
-        echo "0caf99b0d60970f81ce41c7ba694e5eaaf833227bb2cbcdb2f6dc9666a663c57  xcb-util-cursor-0.1.5.tar.xz" | sha256sum -c
-        tar xf xcb-util-cursor-0.1.5.tar.xz
-        cd xcb-util-cursor-0.1.5
+        echo "fdeb8bd127873519be5cc70dcd0d3b5d33b667877200f9925a59fdcad8f7a933  xcb-util-cursor-0.1.6.tar.xz" | sha256sum -c
+        tar xf xcb-util-cursor-0.1.6.tar.xz
+        cd xcb-util-cursor-0.1.6
 
         # Configure and build
         ./configure --prefix=/usr --libdir=/usr/lib/x86_64-linux-gnu
@@ -342,16 +347,16 @@ jobs:
         # from this tree whether it was built here or restored from the cache
         make DESTDIR="${{runner.workspace}}/xcb-util-cursor-stage" install
 
-    - name: (Linux) Save xcb-util-cursor 0.1.5 cache
+    - name: (Linux) Save xcb-util-cursor 0.1.6 cache
       if: >-
         runner.os == 'Linux' && github.ref_name == 'development'
         && steps.cache-xcb-cursor.outputs.cache-hit != 'true'
       uses: actions/cache/save@v6
       with:
         path: ${{runner.workspace}}/xcb-util-cursor-stage
-        key: xcb-util-cursor-0.1.5-${{matrix.os}}-${{runner.arch}}
+        key: xcb-util-cursor-0.1.6-${{matrix.os}}-${{runner.arch}}
 
-    - name: (Linux) Install xcb-util-cursor 0.1.5
+    - name: (Linux) Install xcb-util-cursor 0.1.6
       if: runner.os == 'Linux'
       run: |
         # Install system-wide (replaces Ubuntu 22.04's buggy 0.1.1)
@@ -364,10 +369,10 @@ jobs:
       timeout-minutes: 5
       if: runner.os == 'Linux'
       env:
-        MOLD_VERSION: '2.41.0'
+        MOLD_VERSION: '3.0.0'
         # mold publishes no checksum manifest, so this is the hash of the
         # pinned asset as downloaded - re-verify it by hand when bumping
-        MOLD_SHA256: 'a3696680d99e692970590a178bc3a33d78d60d1c6dc9db7a11b557b02b751f5d'
+        MOLD_SHA256: '6c90d4a474c7c0409dfb575be03a5345878ac14fdba18de8b40fa58c60121189'
       run: |
         # Ubuntu 22.04 only packages mold 1.0.3, so take it from upstream
         curl -fsSL --retry 3 --retry-delay 5 --connect-timeout 10 --max-time 120 -o mold.tar.gz \
@@ -388,6 +393,42 @@ jobs:
          echo "WITH_FONTS=no" >> $GITHUB_ENV
          # The one job that builds without precompiled headers, so a missing #include still fails somewhere
          echo "CMAKE_DISABLE_PRECOMPILE_HEADERS=ON" >> $GITHUB_ENV
+
+    # A profile-guided Linux build uses Clang with ThinLTO, as Mudlet runs faster built that way than with GCC (docs/platform-builds.md).
+    - name: (Linux) Install Clang for the profile-guided build
+      if: runner.os == 'Linux' && env.MUDLET_PGO_BUILD == 'true'
+      env:
+        LLVM_VERSION: '23'
+        GCC_VERSION: ${{matrix.gcc_compiler_version}}
+        HARDENING_FLAGS: '-fstack-protector-strong -fstack-clash-protection -fcf-protection -D_FORTIFY_SOURCE=2'
+      run: |
+        wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc > /dev/null
+        codename=$(lsb_release -cs)
+        echo "deb http://apt.llvm.org/${codename}/ llvm-toolchain-${codename}-${LLVM_VERSION} main" | sudo tee /etc/apt/sources.list.d/llvm.list
+        sudo apt-get update
+        # libclang-rt, which holds the profile runtime the instrumented link needs, is only a Recommends
+        sudo apt-get install -y "clang-${LLVM_VERSION}" "lld-${LLVM_VERSION}" "llvm-${LLVM_VERSION}" "libclang-rt-${LLVM_VERSION}-dev"
+        # Unversioned clang, ld.lld for USE_ALTERNATE_LINKER and llvm-profdata for CI/pgo-train.sh
+        echo "/usr/lib/llvm-${LLVM_VERSION}/bin" >> "$GITHUB_PATH"
+        {
+          echo "CC=clang"
+          echo "CXX=clang++"
+          # Ubuntu's GCC adds these flags, -z now and --as-needed to every build by default and Clang does not. Set in
+          # the environment, not with -D, so the sentry-native ExternalProject gets them too. -O2 because LuaRocks
+          # takes CFLAGS in place of its own; CMake's build-type -O3 comes after it and wins
+          echo "CFLAGS=-O2 ${HARDENING_FLAGS}"
+          echo "CXXFLAGS=${HARDENING_FLAGS}"
+          # -fuse-ld=lld because try_compile and sentry-native miss USE_ALTERNATE_LINKER's add_link_options, and the
+          # system ld rejects --thinlto-cache-dir; the cache saves ~9 min of links
+          echo "LDFLAGS=-fuse-ld=lld -Wl,--thinlto-cache-dir=thinlto-cache -Wl,-z,now -Wl,--as-needed"
+        } >> "$GITHUB_ENV"
+        # Clang takes the newest GCC it finds; a newer one than this would raise the AppImage's GLIBCXX floor past Ubuntu 22.04
+        selected=$("/usr/lib/llvm-${LLVM_VERSION}/bin/clang++" -v 2>&1 | grep '^Selected GCC installation' || true)
+        echo "${selected}"
+        if [ "${selected}" != "Selected GCC installation: /usr/lib/gcc/x86_64-linux-gnu/${GCC_VERSION}" ]; then
+          echo "::error::Clang would build against another libstdc++ than GCC ${GCC_VERSION}'s"
+          exit 1
+        fi
 
     # Saves are keyed per commit, so the primary key deliberately matches no entry
     # and every restore prefix-matches the newest. A profile-guided build skips it:
@@ -442,6 +483,9 @@ jobs:
       with:
         configurePreset: ${{ runner.os == 'macOS' && ((matrix.build_tests == 'false' && env.MUDLET_PGO_BUILD != 'true') && 'ci-macos-no-tests' || 'ci-macos') || 'ci-linux' }}
         buildPreset: ${{ runner.os == 'macOS' && ((matrix.build_tests == 'false' && env.MUDLET_PGO_BUILD != 'true') && 'ci-macos-no-tests' || 'ci-macos') || 'ci-linux' }}
+        # CMake's IPO is ThinLTO on Clang: full LTO ran no faster and its links swapped on the runners.
+        # Each test binary links all of Mudlet, so the LTO cache (on Linux, in LDFLAGS above) reuses their shared code generation.
+        configurePresetAdditionalArgs: ${{ env.MUDLET_PGO_BUILD != 'true' && '[]' || (runner.os == 'Linux' && '[''-DUSE_ALTERNATE_LINKER=lld'', ''-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON'']' || '[''-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON'', ''-DCMAKE_EXE_LINKER_FLAGS=-Wl,-cache_path_lto,lto-cache'']') }}
         buildPresetAdditionalArgs: ${{ env.MUDLET_PGO_BUILD == 'true' && '[''--target'', ''PipelineBenchmark'', ''MapRenderBenchmark'', ''PathfindBenchmark'']' || '[]' }}
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
@@ -512,6 +556,7 @@ jobs:
       if: env.MUDLET_PGO_BUILD == 'true'
       run: |
         ${{github.workspace}}/CI/pgo-train.sh ${{runner.workspace}}/b/ninja
+        # Reconfigures the first pass's tree, so its LTO options carry over
         cmake -B ${{runner.workspace}}/b/ninja -DMUDLET_PGO=USE -DBUILD_TESTING=${{ matrix.build_tests == 'false' && 'OFF' || 'ON' }}
         cmake --build ${{runner.workspace}}/b/ninja
       env:
@@ -593,9 +638,12 @@ jobs:
       if: env.RELEASE_ASSET_PATH
       with:
         name: release-asset-${{ runner.os }}-${{ runner.arch }}
+        # The speech engine paths are unset when that asset was skipped, and blank lines are ignored
         path: |
           ${{ env.RELEASE_ASSET_PATH }}
           ${{ env.RELEASE_ASSET_SHA256_PATH }}
+          ${{ env.SPEECH_ENGINES_ASSET_PATH }}
+          ${{ env.SPEECH_ENGINES_ASSET_SHA256_PATH }}
         retention-days: 3
 
     - name: Export release metadata
@@ -741,8 +789,8 @@ jobs:
       if: matrix.run_tests == 'true' && runner.os == 'Linux'
       # This leg drives the real discord-rpc library, whose reconnects happen in
       # wall-clock time, so the suite needs a budget of its own: the run itself
-      # takes 300-340s under ASan, and the rest is headroom for a slow runner.
-      timeout-minutes: 12
+      # takes 480-730s under ASan, and the rest is headroom for a slow runner.
+      timeout-minutes: 20
       run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror --offline
       env:
         AUTORUN_BUSTED_TESTS: 'true'
@@ -844,8 +892,8 @@ jobs:
   # Every development build saves its ccache under a new per-commit key and only
   # the newest is ever restored, so the older ones would sit in the 10GB quota
   # until GitHub's least-recently-used eviction, which is as likely to drop a
-  # current entry that only development builds restore. The Windows workflow
-  # saves under the same scheme and is swept here too.
+  # current entry that only development builds restore. The Windows and
+  # WebAssembly workflows save under the same scheme and are swept here too.
   # Deliberately not `needs: compile-mudlet`: that would queue it for a runner only
   # once the slowest leg ends, often long after later pushes have built. Started
   # alongside the builds, it keeps the previous push's entries, which they restore.

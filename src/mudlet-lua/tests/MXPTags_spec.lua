@@ -189,6 +189,46 @@ describe("Tests the tags MXP handles", function()
       local joined = table.concat(lines, "\n")
       assert.is_true(joined:find("mxpBreakFirst\nmxpBreakSecond", 1, true) ~= nil, joined)
     end)
+
+    it("shows an SBR tag as a space", function()
+      local joined = table.concat(linesFor("mxpSoftBreakFirst<SBR>mxpSoftBreakSecond"), "\n")
+      assert.is_true(joined:find("mxpSoftBreakFirst mxpSoftBreakSecond", 1, true) ~= nil, joined)
+    end)
+
+    it("keeps an unfinished entity in front of the space an SBR tag gives", function()
+      local joined = table.concat(linesFor("mxpSoftBreakAT&T<SBR>mxpSoftBreakAmp"), "\n")
+      assert.is_true(joined:find("mxpSoftBreakAT&T mxpSoftBreakAmp", 1, true) ~= nil, joined)
+    end)
+
+    it("styles the space an SBR tag gives like the text around it", function()
+      feed("<B>mxpSoftBreakBold<SBR>mxpSoftBreakAfter</B>")
+      -- the format of the space in front of the word
+      assert.is_true(formatOf(" mxpSoftBreakAfter").bold)
+    end)
+
+    it("keeps the space an SBR tag gives in the text a SEND wraps", function()
+      local event = sendEvent("<SEND>mxpSoftBreakLink<SBR>mxpSoftBreakTail</SEND>")
+      assert.is_table(event)
+      assert.are.equal("mxpSoftBreakLink mxpSoftBreakTail", event.text)
+      assert.are.same({"send([[\nmxpSoftBreakLink mxpSoftBreakTail]])"}, event.actions)
+    end)
+
+    -- the specs that join lines are in MxpParsing_spec.lua, which feeds the
+    -- game's data: only a game's newline is ignored for a NOBR
+    it("does not join a line of locally fed text to the next with a NOBR tag", function()
+      local joined = table.concat(linesFor("mxpNoBreakLocal<NOBR>\nmxpNoBreakLocalNext"), "\n")
+      assert.is_true(joined:find("mxpNoBreakLocal\nmxpNoBreakLocalNext", 1, true) ~= nil, joined)
+    end)
+
+    it("reads SBR and NOBR in lower case too", function()
+      local joined = table.concat(linesFor("mxpSoftBreakLower<sbr>mxpSoftBreakLowerNext<nobr>"), "\n")
+      assert.is_true(joined:find("mxpSoftBreakLower mxpSoftBreakLowerNext\n", 1, true) ~= nil, joined)
+    end)
+
+    it("keeps the characters either side of an SBR tag whole", function()
+      local joined = table.concat(linesFor("mxpSoftBreakCafé<SBR>naïve"), "\n")
+      assert.is_true(joined:find("mxpSoftBreakCafé naïve", 1, true) ~= nil, joined)
+    end)
   end)
 
   -- A <SEND> hands Lua the command it would run, the hint it would show and the
@@ -414,7 +454,7 @@ describe("Tests the tags MXP handles", function()
       local sent = replyTo("<SUPPORT>")
       assert.are.equal(1, #sent)
       assert.is_true(sent[1]:find("^\27%[1z<SUPPORTS ") ~= nil, sent[1])
-      for _, element in ipairs({"+send", "+send.href", "+frame", "+color.fore"}) do
+      for _, element in ipairs({"+send", "+send.href", "+frame", "+color.fore", "+sbr", "+nobr"}) do
         assert.is_true(sent[1]:find(element .. " ", 1, true) ~= nil or sent[1]:find(element .. ">", 1, true) ~= nil,
           ("%s missing from %s"):format(element, sent[1]))
       end

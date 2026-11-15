@@ -517,7 +517,7 @@ end</script>
 				<script>map.setConfigs("map_window",matches[3],matches[2])</script>
 				<command></command>
 				<packageName></packageName>
-				<regex>^map window (x|y|w|h|origin|shown)(?: ([\w%]+))?</regex>
+				<regex>^map window (x|y|w|h|origin|shown|embedded|dock)(?: ([\w%]+))?</regex>
 			</Alias>
 			<Alias isActive="yes" isFolder="no">
 				<name>Map Translate Config Alias</name>
@@ -2012,6 +2012,17 @@ map.help.window = [[
             connecting to the game. This may be true or false. If you intend
             to have some other script control the map window, this should be
             set to false.
+
+        &lt;yellow&gt;embedded&lt;reset&gt; - This determines if the map is drawn inside the main
+            window, or in a separate map window that can be moved or docked,
+            like the one the Map button opens. This may be true or false. Once
+            the map has been shown, a change takes effect the next time the
+            profile is opened.
+
+        &lt;yellow&gt;dock&lt;reset&gt; - When the map is not embedded, this is where its window
+            goes, and may be 'floating', 'left', 'right', 'top', or 'bottom'.
+            A floating window is sized and placed by the settings above, as
+            though the main window filled the screen.
 ]]
 map.help.translate = [[
     &lt;yellow&gt;Map Translate&lt;reset&gt;
@@ -2435,6 +2446,8 @@ map.defaults = {
         h = "40%",
         origin = "topright",
         shown = false,
+        embedded = true,
+        dock = "floating",
     },
     prompt_test_patterns = {"^%[?%a*%]?&lt;.*&gt;", "^%[.*%]%s*&gt;", "^%w*[%.?!:]*&gt;", "^%[.*%]", "^[Hh][Pp]:.*&gt;"},
     custom_exits = {},  -- format: short_exit = {long_exit, reverse_exit, x_dif, y_dif, z_dif}
@@ -2517,7 +2530,7 @@ local mapper_tag = "&lt;112,229,0&gt;(&lt;73,149,0&gt;mapper&lt;112,229,0&gt;): 
 local debug_tag = "&lt;255,165,0&gt;(&lt;200,120,0&gt;debug&lt;255,165,0&gt;): &lt;255,255,255&gt;"
 local err_tag = "&lt;255,0,0&gt;(&lt;178,34,34&gt;error&lt;255,0,0&gt;): &lt;255,255,255&gt;"
 
-local function config()
+local function config(window_changed)
     local defaults = map.defaults
     local configs = map.configs or {}
     local path = profilePath.."/map downloads"
@@ -2585,8 +2598,14 @@ local function config()
     saves.recall = saves.recall or {}
     map.save = saves
 
-    if map.configs.map_window.shown then
-        map.showMap(true)
+    local mapper = Geyser.windowList.my_mapper
+    -- an open map window is left where the player has put it, or closed it from
+    -- its title bar, unless its own settings are what changed
+    if map.configs.map_window.shown and (window_changed or not mapper or mapper.embedded) then
+        map.showMap(true, window_changed)
+    elseif window_changed and mapper and not mapper.embedded then
+        -- a hidden map window takes them when it is next shown, rather than being opened now
+        mapper.pending_settings = true
     end
 end
 
@@ -2643,6 +2662,14 @@ end
 
 local bool_configs = {'stretch_map', 'search_on_look', 'speedwalk_wait', 'speedwalk_random',
     'clear_lines_on_send', 'debug', 'custom_name_search', 'use_translation'}
+local dock_positions = {"floating", "left", "right", "top", "bottom"}
+
+local function echo_if_embedded_deferred()
+    local mapper = Geyser.windowList.my_mapper
+    if mapper and mapper.embedded ~= map.configs.map_window.embedded then
+        map.echo("The map moves there the next time the profile is opened.")
+    end
+end
 -- function intended to be used by an alias to change config values and save them to a file for later
 function map.setConfigs(key, val, sub_key)
     if val == "off" or val == "false" then
@@ -2656,9 +2683,23 @@ function map.setConfigs(key, val, sub_key)
     if tonumber(val) then val = tonumber(val) end
     if not toggle then
         if key == "map_window" then
-            if map.configs.map_window[sub_key] then
+            if sub_key == "dock" then
+                val = type(val) == "string" and val:lower() or val
+                -- not table.contains, which would also match an index such as 1
+                if not table.index_of(dock_positions, val) then
+                    map.echo("Map config dock may be floating, left, right, top, or bottom.", false, true)
+                    return
+                end
+            elseif (sub_key == "embedded" or sub_key == "shown") and type(val) ~= "boolean" then
+                map.echo(string.format("Map config %s may be true or false.", sub_key), false, true)
+                return
+            end
+            if map.configs.map_window[sub_key] ~= nil then
                 map.configs.map_window[sub_key] = val
                 map.echo(string.format("Map config %s set to: %s", sub_key, tostring(val)))
+                if sub_key == "embedded" then
+                    echo_if_embedded_deferred()
+                end
             else
                 map.echo("Unknown map config.",false, true)
             end
@@ -2706,16 +2747,22 @@ function map.setConfigs(key, val, sub_key)
         if (type(map.configs[key]) == "boolean" and table.contains(bool_configs, key)) then
             map.configs[key] = not map.configs[key]
             map.echo(string.format("Config %s set to: %s", key, tostring(map.configs[key])))
-        elseif key == "map_window" and sub_key == "shown" then
-            map.configs.map_window.shown = not map.configs.map_window.shown
-            map.echo(string.format("Map config %s set to: %s", "shown", tostring(map.configs.map_window.shown)))
+        elseif key == "map_window" and sub_key == "dock" then
+            map.echo("Map config dock may be floating, left, right, top, or bottom.", false, true)
+            return
+        elseif key == "map_window" and (sub_key == "shown" or sub_key == "embedded") then
+            map.configs.map_window[sub_key] = not map.configs.map_window[sub_key]
+            map.echo(string.format("Map config %s set to: %s", sub_key, tostring(map.configs.map_window[sub_key])))
+            if sub_key == "embedded" then
+                echo_if_embedded_deferred()
+            end
         else
             map.echo("Unknown configuration.",false,true)
             return
         end
     end
     table.save(profilePath.."/map downloads/configs.lua",map.configs)
-    config()
+    config(key == "map_window")
 end
 
 local function show_err(msg,debug)
@@ -3124,6 +3171,24 @@ local function find_link(name, exits, dir, max_distance)
     end
 end
 
+local function echo_move_queue(what, wait)
+    -- checked here as well as in map.echo, so the queue is not joined on every move with debug off
+    if map.configs.debug then
+        map.echo(string.format("%s - move queue: %s", what, next(move_queue) and table.concat(move_queue, ", ") or "empty"), true, false, wait)
+    end
+end
+
+local function clear_move_queue(why, wait)
+    if next(move_queue) then echo_move_queue(why .. ", dropping the queue", wait) end
+    move_queue = {}
+end
+
+local function queue_move(move, priority)
+    table.insert(move_queue, priority and 1 or #move_queue + 1, move)
+    -- waits for the prompt, as printing now would split the line the command is sent from
+    echo_move_queue("Queued move " .. move, true)
+end
+
 local function move_map()
     -- tries to move the map to the next room
     local move = table.remove(move_queue,1)
@@ -3144,6 +3209,7 @@ local function move_map()
                 end
             end
         end
+        echo_move_queue(move and ("Following move " .. move) or "No move queued, treating it as a random move")
         if find_portal then
             map.find_me(map.currentName,map.currentExits,move)
             find_portal = false
@@ -3215,24 +3281,16 @@ local function capture_move_cmd(dir,priority)
     end
     if table.contains(exitmap,dir) or string.starts(dir,"enter ") or dir == "recall" then
       if dir ~= "look" then
-        if priority then
-            table.insert(move_queue,1,exitmap[dir] or dir)
-        else
-            table.insert(move_queue,exitmap[dir] or dir)
-        end
+        queue_move(exitmap[dir] or dir, priority)
       else
         if configs.search_on_look == true then
-          table.insert(move_queue, dir)
+          queue_move(dir)
         end
     end				
     elseif map.currentRoom then
         local special = getSpecialExitsSwap(map.currentRoom) or {}
         if special[dir] then
-            if priority then
-                table.insert(move_queue,1,dir)
-            else
-                table.insert(move_queue,dir)
-            end
+            queue_move(dir, priority)
         end
     end
 end
@@ -3298,7 +3356,7 @@ local function forget_position()
     map.set("currentRoom", nil)
     map.set("currentArea", nil)
     map.set("prevRoom", nil)
-    move_queue = {}
+    clear_move_queue("Map loaded")
     random_move = false
     if was_mapping then
         map.echo("Mapping off. Use &lt;yellow&gt;map me&lt;reset&gt; to find yourself on the loaded map.")
@@ -3527,7 +3585,8 @@ function map.set_portal(name, is_auto)
             name = string.gsub(name,"^-f ","")
             force_portal = name
         end
-        move_queue = {name}
+        clear_move_queue("Portal set", true)
+        queue_move(name)
         if not is_auto then
             send(name)
         end
@@ -3551,7 +3610,7 @@ function map.start_mapping(area_name)
         show_err("Room detection not yet working, see &lt;yellow&gt;map basics&lt;reset&gt; for guidance.")
     end
     local rooms
-    move_queue = {}
+    clear_move_queue("Mapping started")
     area_name = area_name ~= "" and area_name or nil
     if map.currentArea and not area_name then
         local areas = getAreaTableSwap()
@@ -3699,7 +3758,7 @@ end
 function map.find_me(name, exits, dir, manual)
     -- tries to locate the player using the current room name and exits, and if provided, direction of movement
     -- if direction of movement is given, narrows down possibilities using previous room info
-    if move ~= "recall" then move_queue = {} end
+    if move ~= "recall" then clear_move_queue("Locating you") end
     -- find from room hash id - map.find_me(nil, nil, nil, false)
     if map.prompt.hash then
         local room = getRoomIDbyHash(map.prompt.hash)
@@ -4447,7 +4506,7 @@ function map.updateVersion()
     downloadFile(path .. file, map.configs.download_path .. file)
 end
 
-function map.showMap(shown)
+function map.showMap(shown, replace)
     local configs = map.configs.map_window
     shown = shown or not configs.shown
     map.configs.map_window.shown = shown
@@ -4473,9 +4532,35 @@ function map.showMap(shown)
             x = "-"..x
         end
     end
-    local mapper = Geyser.Mapper:new({name = "my_mapper", x = x, y = y, w = w, h = h})
-    mapper:resize(w,h)
-    mapper:move(x,y)
+    local previous = Geyser.windowList.my_mapper
+    -- the one map a profile has cannot move between the main window and the map
+    -- window, so a change of embedded waits for the profile to be opened again
+    local embedded = configs.embedded
+    if previous then
+        embedded = previous.embedded
+    end
+    -- a new mapper would put an open map window back where the settings say,
+    -- undoing wherever the player has since moved it
+    if previous and not embedded and not replace and not (shown and previous.pending_settings) then
+        if shown then
+            previous:show()
+        elseif closeMapWidget() then
+            -- already closed just above, so hide() would only fail to close it again
+            previous.hidden = true
+        else
+            -- it was closed from its title bar, which this script does not hear of
+            map.configs.map_window.shown = true
+            previous:show()
+        end
+        return
+    end
+    local dock = not embedded and configs.dock or nil
+    local mapper = Geyser.Mapper:new({name = "my_mapper", x = x, y = y, width = w, height = h,
+        embedded = embedded, dockPosition = dock})
+    if embedded then
+        mapper:resize(w,h)
+        mapper:move(x,y)
+    end
     if shown then
         mapper:show()
     else
@@ -4531,8 +4616,8 @@ function map.eventHandler(event, ...)
         print_wait_echoes()
         map.echo("Prompt Captured",true)
     elseif event == "onMoveFail" then
-        map.echo("onMoveFail",true)
-        table.remove(move_queue,1)
+        local dropped = table.remove(move_queue,1)
+        echo_move_queue(dropped and ("onMoveFail, dropped move " .. dropped) or "onMoveFail, no move to drop")
     elseif event == "onVisionFail" then
         map.echo("onVisionFail",true)
         vision_fail = true
@@ -4540,7 +4625,7 @@ function map.eventHandler(event, ...)
     elseif event == "onRandomMove" then
         map.echo("onRandomMove",true)
         random_move = true
-        move_queue = {}
+        clear_move_queue("Random move")
     elseif event == "onForcedMove" then
         map.echo("onForcedMove",true)
         capture_move_cmd(arg1,arg2=="true")

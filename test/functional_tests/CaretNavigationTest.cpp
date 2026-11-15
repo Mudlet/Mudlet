@@ -39,7 +39,9 @@
 #include <QFileInfo>
 #include <QFontDatabase>
 #include <QFontInfo>
+#include <QLineEdit>
 #include <QMenu>
+#include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -131,6 +133,29 @@ private:
         }
         TConsole* pMini = mpHost->mainConsoleView()->subConsoleWidget(name);
         return pMini && pMini->mpCommandLine ? pMini : nullptr;
+    }
+
+    static bool activateMainWindow()
+    {
+        mudlet::self()->activateWindow();
+        return QTest::qWaitForWindowActive(mudlet::self());
+    }
+
+    // Through the window, as a real key press arrives: QTest::keyClick() on a
+    // widget hands the event straight to it, past any keyboard grab
+    static QString typeInto(QWidget& window)
+    {
+        auto pEdit = new QLineEdit(&window);
+        window.show();
+        window.activateWindow();
+        if (!QTest::qWaitForWindowActive(&window)) {
+            return qsl("(the window never became active)");
+        }
+        pEdit->setFocus();
+        for (const char key : {'a', 'b', 'c'}) {
+            QTest::keyClick(window.windowHandle(), key);
+        }
+        return pEdit->text();
     }
 
     QString luaGlobal(const char* name) const
@@ -492,6 +517,56 @@ private slots:
         QCOMPARE(pane()->mCaretColumn, 3);
     }
 
+    // The key that leaves caret mode hands the keyboard to the command line,
+    // not to whatever follows the console in Qt's focus chain - with the
+    // main toolbar shown, that is one of its buttons.
+    void test_theCaretShortcutReturnsTheKeyboardToTheCommandLine_data()
+    {
+        QTest::addColumn<QString>("shortcut");
+        QTest::addColumn<int>("key");
+        QTest::addColumn<int>("modifiers");
+        QTest::addColumn<bool>("inMiniConsole");
+        QTest::newRow("tab") << qsl("tab") << static_cast<int>(Qt::Key_Tab) << static_cast<int>(Qt::NoModifier) << false;
+        QTest::newRow("ctrltab") << qsl("ctrltab") << static_cast<int>(Qt::Key_Tab) << static_cast<int>(Qt::ControlModifier) << false;
+        QTest::newRow("f6") << qsl("f6") << static_cast<int>(Qt::Key_F6) << static_cast<int>(Qt::NoModifier) << false;
+        QTest::newRow("tab in a mini console") << qsl("tab") << static_cast<int>(Qt::Key_Tab) << static_cast<int>(Qt::NoModifier) << true;
+    }
+
+    void test_theCaretShortcutReturnsTheKeyboardToTheCommandLine()
+    {
+        QFETCH(QString, shortcut);
+        QFETCH(int, key);
+        QFETCH(int, modifiers);
+        QFETCH(bool, inMiniConsole);
+        TCommandLine* pCommandLine = mpHost->mainConsoleView()->mpCommandLine;
+        QVERIFY(pCommandLine);
+        // Restored however this case ends, or Tab would leave caret mode in every later one
+        const auto savedToolBarVisibility = mudlet::self()->toolBarVisibility();
+        const auto savedShortcut = mpHost->mCaretShortcut;
+        const auto restore = qScopeGuard([this, savedToolBarVisibility, savedShortcut]() {
+            mpHost->mCaretShortcut = savedShortcut;
+            mudlet::self()->setToolBarVisibility(savedToolBarVisibility);
+        });
+        mudlet::self()->setToolBarVisibility(enums::visibleAlways);
+        QVERIFY(runLua(qsl("setConfig('caretShortcut', '%1')").arg(shortcut)));
+        TTextEdit* pPane = pane();
+        if (inMiniConsole) {
+            TConsole* pMini = miniConsoleWithCommandLine(qsl("caretShortcutMini"));
+            QVERIFY(pMini);
+            pPane = pMini->mUpperPane;
+        }
+        QVERIFY(mpHost->caretEnabled());
+
+        press(pPane, static_cast<Qt::Key>(key), static_cast<Qt::KeyboardModifiers>(modifiers));
+        drainDeferredFocusChange();
+
+        QVERIFY2(!mpHost->caretEnabled(), "the caret-mode shortcut did not turn caret mode off");
+        QWidget* const pFocused = QApplication::focusWidget();
+        // The hand-off is to the profile's active command line, which a mini console's need not be
+        const bool onACommandLine = inMiniConsole ? qobject_cast<TCommandLine*>(pFocused) != nullptr : pFocused == pCommandLine;
+        QVERIFY2(onACommandLine, qPrintable(qsl("the keyboard went to %1 rather than the command line").arg(pFocused ? QString::fromLatin1(pFocused->metaObject()->className()) : qsl("nothing"))));
+    }
+
     // Tab and Shift+Tab are how a screen-reader user finds the links in a page
     // of output without a mouse.
     void test_tabAndBacktabStepBetweenTheLinksInTheBuffer()
@@ -738,8 +813,8 @@ private slots:
         QTest::qWait(100ms);
         const int line = consoleBuffer().lineBuffer.indexOf(qsl("LINKTHREE"));
         QVERIFY2(line > 0, "the third link never reached the buffer");
-        // Anything that takes focus off the pane while that wait runs turns caret
-        // mode off through focusOutEvent, and setCaretPosition() then returns
+        // Focus moving to another widget while that wait runs turns caret mode
+        // off through focusOutEvent, and setCaretPosition() then returns
         // before it focuses a link. Linux and Windows hold the focus with a
         // keyboard grab that setCaretMode() does not do on macOS, which is why
         // this only ever failed there. The caret is this case's precondition
@@ -766,6 +841,52 @@ private slots:
         press(pane(), Qt::Key_Return);
 
         QVERIFY2(consoleBuffer().isLinkVisited(linkIndex), "the activated link was not marked as visited");
+    }
+
+    // Caret mode's keyboard grab on Linux and Windows outranks the active window,
+    // so the script editor this stands in for would get none of these keys.
+    void test_anotherWindowGetsTheKeysWhileCaretModeIsOn()
+    {
+#if !defined(Q_OS_WINDOWS) && !defined(Q_OS_LINUX)
+        QSKIP("only Linux and Windows hold the keyboard in caret mode");
+#endif
+        QVERIFY(activateMainWindow());
+        pane()->setFocus();
+        QVERIFY(mpHost->caretEnabled());
+        QCOMPARE(QWidget::keyboardGrabber(), pane());
+
+        QWidget other;
+        QCOMPARE(typeInto(other), qsl("abc"));
+        QVERIFY2(QWidget::keyboardGrabber() != pane(), "the console still holds the keyboard while another window is active");
+        QVERIFY2(mpHost->caretEnabled(), "switching windows is not leaving the text, so caret mode should stay on");
+
+        QVERIFY(activateMainWindow());
+
+        QCOMPARE(QWidget::keyboardGrabber(), pane());
+        QVERIFY(mpHost->caretEnabled());
+    }
+
+    // A command line in a floating user window turns caret mode on too, and the
+    // grab is taken without the main window ever being the active one.
+    void test_caretModeTurnedOnFromAnotherWindowLetsAThirdHaveTheKeys()
+    {
+#if !defined(Q_OS_WINDOWS) && !defined(Q_OS_LINUX)
+        QSKIP("only Linux and Windows hold the keyboard in caret mode");
+#endif
+        mpHost->setCaretEnabled(false);
+        drainDeferredFocusChange();
+        QWidget floating;
+        floating.show();
+        floating.activateWindow();
+        QVERIFY(QTest::qWaitForWindowActive(&floating));
+        mpHost->setCaretEnabled(true);
+        QCOMPARE(QWidget::keyboardGrabber(), pane());
+
+        QWidget other;
+        QCOMPARE(typeInto(other), qsl("abc"));
+        QVERIFY2(QWidget::keyboardGrabber() != pane(), "the console still holds the keyboard while another window is active");
+
+        QVERIFY(activateMainWindow());
     }
 
     // deleteLine() can take a console's last line, leaving no line at all, and
@@ -900,6 +1021,107 @@ private slots:
 
         QCOMPARE(pane()->mCaretLine, 0);
         QCOMPARE(pane()->mCaretColumn, 0);
+    }
+
+    // The menu has closed and the pane taken the keyboard back by the time the item runs. The
+    // test platform leaves the window inactive when a popup closes, so that is done by hand here.
+    bool focusPaneInActiveWindow()
+    {
+        mudlet::self()->show();
+        // Repeated: the first attempt can land before a newly shown window is ready to be activated
+        return QTest::qWaitFor(
+                [this] {
+                    pane()->window()->activateWindow();
+                    pane()->setFocus();
+                    return QApplication::activeWindow() == pane()->window() && pane()->hasFocus();
+                },
+                3000);
+    }
+
+    QAction* closeMenuLeavingAnItemToRun(const int item)
+    {
+        if (!focusPaneInActiveWindow()) {
+            qWarning() << "the pane would not take the focus before the menu";
+            return nullptr;
+        }
+        for (QMenu* stale : pane()->findChildren<QMenu*>()) {
+            delete stale;
+        }
+        QTest::keyClick(pane(), Qt::Key_Menu);
+        QMenu* pMenu = pane()->findChild<QMenu*>();
+        if (!pMenu) {
+            qWarning() << "the Menu key opened no menu";
+            return nullptr;
+        }
+        pMenu->hide();
+        if (!focusPaneInActiveWindow()) {
+            qWarning() << "the pane would not take the focus after the menu";
+            return nullptr;
+        }
+        QFocusEvent focusBack(QEvent::FocusIn, Qt::PopupFocusReason);
+        QApplication::sendEvent(pane(), &focusBack);
+        return pMenu->actions().at(item);
+    }
+
+    int printMenuThatOpensADialog()
+    {
+        runLua(qsl("echoPopup('DIALOGLINK', {[[invokeFileDialog(true, 'Pick')]], [[caretPopupB = 'b']]}, {'open', 'other'})\n"
+                   "echo('\\n')"));
+        QTest::qWait(100ms);
+        return consoleBuffer().lineBuffer.lastIndexOf(qsl("DIALOGLINK"));
+    }
+
+    void test_aMenuItemThatOpensADialogGetsTheKeys()
+    {
+        const int line = printMenuThatOpensADialog();
+        QVERIFY(line >= 0);
+        // Only a real key reaches the grabber, and a native dialog would sit there with no timer able to close it
+        QCoreApplication::setAttribute(Qt::AA_DontUseNativeDialogs);
+        const auto nativeBack = qScopeGuard([] {
+            QCoreApplication::setAttribute(Qt::AA_DontUseNativeDialogs, false);
+        });
+        pane()->setCaretPosition(line, 0);
+        QAction* pOpen = closeMenuLeavingAnItemToRun(0);
+        QVERIFY(pOpen);
+
+        QString typed;
+        QTimer whileTheDialogIsOpen;
+        whileTheDialogIsOpen.setInterval(50ms);
+        connect(&whileTheDialogIsOpen, &QTimer::timeout, this, [&whileTheDialogIsOpen, &typed] {
+            QWidget* dialog = QApplication::activeModalWidget();
+            if (!dialog) {
+                return;
+            }
+            whileTheDialogIsOpen.stop();
+            auto* edit = dialog->findChild<QLineEdit*>(qsl("fileNameEdit"));
+            for (const char key : {'x', 'y', 'z'}) {
+                QTest::keyClick(dialog->windowHandle(), key);
+            }
+            typed = edit ? edit->text() : qsl("no file name box");
+            dialog->close();
+        });
+        whileTheDialogIsOpen.start();
+        pOpen->trigger();
+
+        QCOMPARE(typed, qsl("xyz"));
+        QVERIFY2(mpHost->caretEnabled(), "the dialog's keys took the player out of caret mode");
+    }
+
+    void test_aMenuItemLeavesThePaneHoldingTheKeyboard()
+    {
+        const int line = printMenuThatOpensADialog();
+        QVERIFY(line >= 0);
+        QVERIFY(runLua(qsl("caretPopupB = ''")));
+        pane()->setCaretPosition(line, 0);
+        QAction* pOther = closeMenuLeavingAnItemToRun(1);
+        QVERIFY(pOther);
+
+        pOther->trigger();
+
+        QCOMPARE(luaGlobal("caretPopupB"), qsl("b"));
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
+        QCOMPARE(QWidget::keyboardGrabber(), pane());
+#endif
     }
 };
 

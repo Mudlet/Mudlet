@@ -83,10 +83,10 @@ void dlgActionMainArea::slot_setMaximumValueForOffset(const int value)
 void dlgActionMainArea::slot_setColumnsOrRowsCountText(const int index)
 {
     if (index > 0) {
-        //: A toolbar is being set to vertical orientation - so multiple rows of this number of columns
-        label_action_bar_columns->setText(tr("Number of columns:"));
+        //: The word leading the row that sets how many columns of buttons a toolbar standing on its side is laid out in. One word, since it leads a row of the Buttons form.
+        label_action_bar_columns->setText(tr("Columns"));
     } else {
-        //: A toolbar is being set to horizontal orientation - so multiple columns of this number of rows
-        label_action_bar_columns->setText(tr("Number of rows:"));
+        //: The word leading the row that sets how many rows of buttons a toolbar running across the window is laid out in. One word, since it leads a row of the Buttons form.
+        label_action_bar_columns->setText(tr("Rows"));
     }
 }
