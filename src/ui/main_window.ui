@@ -99,10 +99,12 @@
     <addaction name="dactionShowMap"/>
     <addaction name="dactionInputLine"/>
     <addaction name="dactionNotepad"/>
+    <addaction name="separator"/>
     <addaction name="dactionPackageManager"/>
-    <addaction name="dactionReplay"/>
     <addaction name="dactionModuleManager"/>
     <addaction name="dactionPackageExporter"/>
+    <addaction name="separator"/>
+    <addaction name="dactionReplay"/>
     <addaction name="dactionToggleReplay"/>
     <addaction name="dactionToggleLogging"/>
     <addaction name="dactionToggleEmergencyStop"/>
