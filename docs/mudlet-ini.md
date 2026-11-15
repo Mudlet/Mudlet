@@ -59,13 +59,15 @@ if (QSettings* settings = MudletApp::getQSettings()) {
 
 ## Keys
 
-"When" is when a changed value takes effect. Preferences labels are quoted as they appear in English.
+"When" is when Mudlet reads the key from the file, so when a hand edit takes effect. A change made through a control
+in "Set from" (Preferences, a toolbar, a menu, Lua) normally applies at once and is written to the file for the next
+read. Preferences labels are quoted as they appear in English.
 
 ### Application and startup
 
 | Key | Type | Default | Set from | When | Meaning |
 | --- | --- | --- | --- | --- | --- |
-| `interfaceLanguage` | locale code | first system language with a complete translation, else `en_US` | Preferences "Interface language:" | startup, live from Preferences | UI translation |
+| `interfaceLanguage` | locale code | first system language with a complete translation, else `en_US` | Preferences "Interface language:" | startup | UI translation |
 | `firstLaunchDate` | ISO-8601 UTC | none | written once, on the first run with no profiles and an empty file | read once per run | Older than a few months marks an experienced player: no tours or first-run hints |
 | `enableMultiViewMode` | bool | false | "MultiView" toolbar button | startup | Show several profiles side by side |
 | `storePasswordsSecurely` | bool | true | Preferences "Store character login passwords in:" | startup (migrates the passwords) | OS keychain (true) or plain text in the profile (false) |
@@ -91,7 +93,7 @@ if (QSettings* settings = MudletApp::getQSettings()) {
 
 | Key | Type | Default | Set from | When | Meaning |
 | --- | --- | --- | --- | --- | --- |
-| `appearance` | int: 0 system, 1 light, 2 dark | 0 | Preferences "Appearance" | startup, live | Light or dark theme |
+| `appearance` | int: 0 system, 1 light, 2 dark | 0 | Preferences "Appearance" | startup | Light or dark theme |
 | `showIconsInMenus` | `Qt::CheckState` | 1 (follow the system) | Preferences "Show icons on menus" | startup | Icons in menus |
 | `menuBarAltKeyNavigation` | int: 0 with a screen reader, 1 always, 2 never | 0 | Preferences "Pressing Alt on its own moves focus to the menu bar:" | startup | Alt alone focuses the menu bar |
 | `colouredIcons` | bool | false | Preferences "Colored icons" | startup | Colored toolbar icons |
