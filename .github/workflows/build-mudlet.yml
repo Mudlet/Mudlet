@@ -413,12 +413,13 @@ jobs:
         {
           echo "CC=clang"
           echo "CXX=clang++"
-          # Ubuntu's GCC hardens every build by default (these flags, -z now, --as-needed) and Clang does not. Set in
-          # the environment, not with -D, so the sentry-native ExternalProject gets them too
-          echo "CFLAGS=${HARDENING_FLAGS}"
+          # Ubuntu's GCC adds these flags, -z now and --as-needed to every build by default and Clang does not. Set in
+          # the environment, not with -D, so the sentry-native ExternalProject gets them too. -O2 because LuaRocks
+          # takes CFLAGS in place of its own; CMake's build-type -O3 comes after it and wins
+          echo "CFLAGS=-O2 ${HARDENING_FLAGS}"
           echo "CXXFLAGS=${HARDENING_FLAGS}"
-          # -fuse-ld=lld because try_compile takes these flags but not USE_ALTERNATE_LINKER's add_link_options, and
-          # the system ld rejects the ThinLTO cache, which saves ~9 min of links
+          # -fuse-ld=lld because try_compile and the sentry-native ExternalProject take these flags but not
+          # USE_ALTERNATE_LINKER's add_link_options, and the system ld rejects the ThinLTO cache, which saves ~9 min of links
           echo "LDFLAGS=-fuse-ld=lld -Wl,--thinlto-cache-dir=thinlto-cache -Wl,-z,now -Wl,--as-needed"
         } >> "$GITHUB_ENV"
         # Clang takes the newest GCC it finds; a newer one than this would raise the AppImage's GLIBCXX floor

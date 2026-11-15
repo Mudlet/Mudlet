@@ -106,7 +106,7 @@ as what CI passes — set them to match the job being reproduced:
 | `SENTRY_SEND_DEBUG` | `0` | `1` |
 | `MUDLET_PGO` | empty | `GENERATE` for the first pass on macOS and the Linux build that ships (Windows passes it with `-D`); see below |
 
-The Linux build that ships also configures with the Clang and the `CFLAGS`, `CXXFLAGS` and `LDFLAGS`
+The Linux build that ships also takes the `PATH`, `CC`, `CXX`, `CFLAGS`, `CXXFLAGS` and `LDFLAGS`
 that the *(Linux) Install Clang for the profile-guided build* step in `build-mudlet.yml` sets, and
 adds `-DUSE_ALTERNATE_LINKER=lld` and `-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON`.
 
