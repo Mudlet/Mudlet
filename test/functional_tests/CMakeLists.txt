@@ -875,6 +875,10 @@ set_tests_properties(TelnetNewEnvironTest TelnetOptionsReportTest TelnetAtcpMspT
 # full profile load and every close a full save, so it needs a longer timeout
 set_tests_properties(ProfileLifecycleTest PROPERTIES TIMEOUT 300)
 
+# MissingDisplayFontTest opens, reopens and closes profiles across some fifty cases;
+# a macOS runner takes 45s of the default 60s, and a busy one ran out
+set_tests_properties(MissingDisplayFontTest PROPERTIES TIMEOUT 300)
+
 # FeedChecksumRaceTest passes in about 5 seconds, so this timeout is only ever
 # reached by a run that is already failing - and that run has to be allowed to
 # finish, because the assertion message is the whole point of the file. Its
