@@ -8196,6 +8196,13 @@ void Host::setCaretEnabled(bool enabled)
     consoleFrontend()->setCaretMode(enabled);
 }
 
+#if defined(Q_OS_MACOS)
+// The Ctrl key arrives as Qt::MetaModifier on macOS, where Qt::ControlModifier is Command
+static constexpr Qt::KeyboardModifier caretControlKey = Qt::MetaModifier;
+#else
+static constexpr Qt::KeyboardModifier caretControlKey = Qt::ControlModifier;
+#endif
+
 // Whether this key press is the one selected in the accessibility preferences
 // to toggle caret mode - such a press must reach the caret-toggling key
 // handlers instead of being swallowed by an application-wide QShortcut,
@@ -8203,12 +8210,7 @@ void Host::setCaretEnabled(bool enabled)
 bool Host::caretShortcutMatches(const QKeyEvent* ke) const
 {
     constexpr Qt::KeyboardModifiers allModifiers = Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier | Qt::KeypadModifier | Qt::GroupSwitchModifier;
-#if defined(Q_OS_MACOS)
-    // The Ctrl key arrives as Qt::MetaModifier on macOS, where Qt::ControlModifier is Command
-    constexpr Qt::KeyboardModifier controlKey = Qt::MetaModifier;
-#else
-    constexpr Qt::KeyboardModifier controlKey = Qt::ControlModifier;
-#endif
+    constexpr Qt::KeyboardModifier controlKey = caretControlKey;
     switch (mCaretShortcut) {
     case CaretShortcut::None:
         return false;
@@ -8220,6 +8222,21 @@ bool Host::caretShortcutMatches(const QKeyEvent* ke) const
         return ke->key() == Qt::Key_F6 && (ke->modifiers() & allModifiers) == Qt::NoModifier;
     }
     return false;
+}
+
+QKeyCombination Host::caretShortcutCombination(const CaretShortcut shortcut)
+{
+    switch (shortcut) {
+    case CaretShortcut::None:
+        return QKeyCombination::fromCombined(0);
+    case CaretShortcut::Tab:
+        return QKeyCombination(Qt::Key_Tab);
+    case CaretShortcut::CtrlTab:
+        return QKeyCombination(caretControlKey, Qt::Key_Tab);
+    case CaretShortcut::F6:
+        return QKeyCombination(Qt::Key_F6);
+    }
+    return QKeyCombination::fromCombined(0);
 }
 
 void Host::setFocusOnHostActiveCommandLine()

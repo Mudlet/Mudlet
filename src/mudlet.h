@@ -147,6 +147,9 @@ public:
     void activateProfile(Host*);
     void switchToProfileTab(int index);
     bool profileSwitchShortcutMatches(const QKeyEvent*) const;
+    static QString keySequenceForProse(const QKeySequence&);
+    // What the balloon says when a second game opens: the keys that switch games for this profile
+    QString profileSwitchingTip(const Host*) const;
     bool profileSwitchShortcutMatches(const Qt::Key, const Qt::KeyboardModifiers) const;
     void takeOwnershipOfInstanceCoordinator(std::unique_ptr<MudletInstanceCoordinator>);
     MudletInstanceCoordinator* getInstanceCoordinator();
