@@ -246,6 +246,30 @@ tempTrigger("A dragon arrives", function() dragonSeen = "yes" send("kill dragon"
         QCOMPARE(closes.size(), 1);
     }
 
+    // A dial answered just before the profiles close, and taken up in an exit handler's event loop, is not
+    // announced to a profile on its way out
+    void test_aConnectionMadeAsTheProfileClosesIsNotAnnounced()
+    {
+        const QString name = qsl("Headless Transport Closed While Dialling");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QSignalSpy dials(&session, &THeadlessSession::transportDialRequested);
+        QSignalSpy writes(&session, &THeadlessSession::transportWriteRequested);
+        QSignalSpy closes(&session, &THeadlessSession::transportCloseRequested);
+        QCOMPARE(session.start({.profile = name, .connect = true, .supplyTransport = true}), THeadlessSession::StartResult::started);
+        QTRY_COMPARE_WITH_TIMEOUT(dials.size(), 1, 10000);
+        QVERIFY(session.runLua(qsl(R"lua(
+registerAnonymousEventHandler("sysExitEvent", function() pumpEvents(50) end)
+registerAnonymousEventHandler("sysConnectionEvent", function() send("hello") end)
+)lua")));
+
+        session.transportConnected(lastDial(dials));
+        // Saved, as an unsaved close runs the exit handlers once the pool is going, where they cannot pump
+        QVERIFY(session.shutdown(true));
+        QCOMPARE(closes.size(), 1);
+        QVERIFY(!written(writes).contains("hello"));
+    }
+
     // An app whose socket reports its end some time after it was told to close it: that report is about the
     // connection closed, not the one dialled straight after
     void test_aLateReportOfAClosedConnectionIsNotTheNextOnes()
