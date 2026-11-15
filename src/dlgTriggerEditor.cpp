@@ -1190,10 +1190,14 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH, std::unique_ptr<TConsoleModel> erro
 
     QAction* importAction = new QAction(QIcon(qsl(":/icons/import.png")), tr("Import"), this);
     importAction->setEnabled(true);
+    //: Tooltip of the script editor toolbar's Import button
+    importAction->setToolTip(qsl("<p>%1</p>%2").arg(importAction->text(), tr("<p>Install a package from a .mpackage, .zip or .xml file into this profile</p>")));
     connect(importAction, &QAction::triggered, this, &dlgTriggerEditor::slot_import);
 
     mpExportAction = new QAction(QIcon(qsl(":/icons/export.png")), tr("Export"), this);
     mpExportAction->setEnabled(true);
+    //: Tooltip of the script editor toolbar's Export button
+    mpExportAction->setToolTip(qsl("<p>%1</p>%2").arg(mpExportAction->text(), tr("<p>Save the selected item, with everything in it if it is a group, as an .xml file</p>")));
     connect(mpExportAction, &QAction::triggered, this, &dlgTriggerEditor::slot_export);
 
     mpCreateModuleAction = new QAction(QIcon(qsl(":/icons/package-exporter.png")), tr("Create Module"), this);
