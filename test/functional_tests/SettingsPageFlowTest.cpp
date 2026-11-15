@@ -405,7 +405,7 @@ private:
         QWidget* pRow = pField->parentWidget();
         QCOMPARE(pChoose->parentWidget(), pRow);
         auto* pOpacity = mpPreferences->findChild<QSpinBox*>(qsl("settingsOpacity_%1").arg(pChoose->objectName().remove(qsl("pushButton_"))));
-        QVERIFY2(bool(pOpacity) == seeThrough, qPrintable(qsl("'%1' %2 an opacity box").arg(pField->objectName(), seeThrough ? qsl("has no") : qsl("has"))));
+        QVERIFY2((pOpacity != nullptr) == seeThrough, qPrintable(qsl("'%1' %2 an opacity box").arg(pField->objectName(), seeThrough ? qsl("has no") : qsl("has"))));
         QList<QWidget*> inOrder{pField};
         if (pOpacity) {
             QCOMPARE(pOpacity->parentWidget(), pRow);
