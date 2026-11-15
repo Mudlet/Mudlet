@@ -180,6 +180,8 @@ public:
     QSize getMainWindowSize() const;
     // For a MainConsole hidden by a tab switch, which gets no resize events: NAWS-reports its restored size.
     void syncHiddenScreenDimensions();
+    // What a MainConsole hidden by a tab switch will measure when it comes back
+    QSize sizeComingBackTo() const;
     ConsoleType getType() const { return mType; }
     virtual void setProfileName(const QString&);
     void setCaretMode(bool enabled);
@@ -337,8 +339,8 @@ private:
     void createFindBar();
     void positionFindBar();
     // MainConsole only: subtract the profile's main window borders. Height is -1 when unknown.
-    int upperPaneWidthFor(const int containerWidth) const;
-    int upperPaneHeightFor(const int containerHeight) const;
+    int upperPaneWidthFor(const int consoleWidth) const;
+    int upperPaneHeightFor(const int consoleHeight) const;
     void syncHostScreenDimensions(const int paneWidthPx, const int paneHeightPx);
     void createSearchOptionIcon();
     void raiseFontChangeEvent();
@@ -350,6 +352,10 @@ private:
     ConsoleType mType = UnknownType;
     // the size the last resize reported to Lua
     QSize mOldSize;
+    // This console's and the main window's sizes as it was put away behind another profile. Each profile shows only
+    // its own docks, so the shared container says nothing of them; they keep their size as the window resizes, though.
+    QSize mSizeWhenHidden;
+    QSize mWindowSizeWhenHidden;
     // only ever written from a size that was really measured, so what
     // getMainWindowSize() falls back to while the console is hidden or too small
     // to measure cannot be a size the window never had

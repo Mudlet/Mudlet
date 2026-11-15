@@ -979,8 +979,8 @@ void TConsole::resizeEvent(QResizeEvent* event)
     if (!upperPane.isEmpty()) {
         syncHostScreenDimensions(upperPane.width(), -1);
 
-        // Background-tab consoles share this container but get no resize event, so size them from here.
-        // A detached profile has its own window.
+        // Background-tab consoles get no resize event, so this one's is their cue to predict the size they come back
+        // to again. A detached profile has its own window.
         mudlet* const app = mudlet::self();
         if (app && !app->getDetachedWindows().contains(mpHost->getName())) {
             for (const auto& otherHostPtr : *HostManager::self()) {
@@ -1503,6 +1503,19 @@ void TConsole::showEvent(QShowEvent* event)
 
 void TConsole::hideEvent(QHideEvent* event)
 {
+    // Spontaneous when the window is minimized, which hides no profile behind another. Only a console alone in the
+    // main window is put away at the size it comes back to: one leaving multi-view still has its share of the
+    // container, and a detached window's profiles are sized by that window. A console too small to measure is
+    // mid-switch, and the size it had before still stands.
+    if (mType == MainConsole && !event->spontaneous()) {
+        const QWidget* container = parentWidget();
+        if (!container || container->window() != mudlet::self() || size() != container->size()) {
+            mSizeWhenHidden = QSize();
+        } else if (width() >= 50 && height() > 0) {
+            mSizeWhenHidden = size();
+            mWindowSizeWhenHidden = mudlet::self()->size();
+        }
+    }
     if (mType & (MainConsole | Buffer)) {
         if (mudlet::self()->mWindowMinimized) {
             if (mpHost->mAlertOnNewData) {
@@ -2175,11 +2188,11 @@ void TConsole::slot_searchBufferDown()
     print(qsl("%1\n").arg(tr("No search results, sorry!")));
 }
 
-// A background tab's console is resized to nothing with stale panes, so it can't be measured, but every
-// main-window console shares one container. Each term mirrors resizeEvent(), in order; keep them in step.
-int TConsole::upperPaneWidthFor(const int containerWidth) const
+// A background tab's console is resized to nothing with stale panes, so it can't be measured, and is sized from
+// sizeComingBackTo() instead. Each term mirrors resizeEvent(), in order; keep them in step.
+int TConsole::upperPaneWidthFor(const int consoleWidth) const
 {
-    int paneWidth = containerWidth - (mpLeftToolBar->width() + mpRightToolBar->width());
+    int paneWidth = consoleWidth - (mpLeftToolBar->width() + mpRightToolBar->width());
     // Not mBorders: it is only refreshed on layout, so is stale for a background console.
     const QMargins borders = mpHost->borders();
     paneWidth -= borders.left() + borders.right();
@@ -2189,13 +2202,13 @@ int TConsole::upperPaneWidthFor(const int containerWidth) const
     return qMax(0, paneWidth);
 }
 
-int TConsole::upperPaneHeightFor(const int containerHeight) const
+int TConsole::upperPaneHeightFor(const int consoleHeight) const
 {
     // A scrolled-back console also shows the lower pane, and the user-dragged split can't be predicted.
     if (!mLowerPane->isHidden()) {
         return -1;
     }
-    int paneHeight = containerHeight - mpTopToolBar->height();
+    int paneHeight = consoleHeight - mpTopToolBar->height();
     const QMargins borders = mpHost->borders();
     paneHeight -= borders.top() + borders.bottom();
     if (mpCommandLine) {
@@ -2246,7 +2259,8 @@ void TConsole::syncHiddenScreenDimensions()
     if (!app || app->getDetachedWindows().contains(mpHost->getName())) {
         return;
     }
-    syncHostScreenDimensions(upperPaneWidthFor(container->width()), upperPaneHeightFor(container->height()));
+    const QSize comingBackTo = sizeComingBackTo();
+    syncHostScreenDimensions(upperPaneWidthFor(comingBackTo.width()), upperPaneHeightFor(comingBackTo.height()));
     // so that an MXP frame opened meanwhile is placed in the window it comes back to
     if (mpHost->mainConsoleView()) {
         mpHost->mainConsoleView()->mxpFrameWidgets().reportSize();
@@ -2260,14 +2274,23 @@ void TConsole::syncHiddenScreenDimensions()
     mpHost->windowRegistry().setMainWindowSize(size);
     mBorders = mpHost->borders();
     mpHost->getLuaInterpreter()->call(qsl("handleWindowResizeEvent"), qsl("WindowResizeEvent"));
-    raiseMudletSysWindowResizeEvent(container->width() - (mpLeftToolBar->width() + mpRightToolBar->width()), container->height() - mpTopToolBar->height());
+    raiseMudletSysWindowResizeEvent(comingBackTo.width() - (mpLeftToolBar->width() + mpRightToolBar->width()), comingBackTo.height() - mpTopToolBar->height());
+}
+
+QSize TConsole::sizeComingBackTo() const
+{
+    const QWidget* container = parentWidget();
+    if (!mSizeWhenHidden.isValid() || !container || container->window() != mudlet::self()) {
+        return container ? container->size() : size();
+    }
+    return mSizeWhenHidden + (mudlet::self()->size() - mWindowSizeWhenHidden);
 }
 
 QSize TConsole::getMainWindowSize() const
 {
-    // A console hidden by a tab switch can't be measured, but the container it returns to can.
+    // A console hidden by a tab switch can't be measured, but the size it comes back to can be predicted.
     const bool predicted = mType == MainConsole && isHidden() && parentWidget();
-    const QSize consoleSize = predicted ? parentWidget()->size() : size();
+    const QSize consoleSize = predicted ? sizeComingBackTo() : size();
     const int toolbarWidth = mpLeftToolBar->width() + mpRightToolBar->width();
     const int toolbarHeight = mpTopToolBar->height();
     const int commandLineHeight = mpCommandLine->height();
