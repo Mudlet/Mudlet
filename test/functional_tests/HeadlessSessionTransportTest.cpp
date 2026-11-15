@@ -514,6 +514,31 @@ registerAnonymousEventHandler("sysConnectionEvent", function() send("hello") end
         QVERIFY(session.shutdown(false));
     }
 
+    // A Disconnect while dialling ends no connection to clear it, so the next connection made must
+    void test_aDisconnectWhileDiallingIsNotBlamedForTheNextConnectionsEnd()
+    {
+        const QString name = qsl("Headless Transport Disconnected While Dialling");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QSignalSpy dials(&session, &THeadlessSession::transportDialRequested);
+        QSignalSpy connected(&session, &THeadlessSession::connected);
+        QSignalSpy local(&session, &THeadlessSession::localText);
+        QCOMPARE(session.start({.profile = name, .connect = true, .supplyTransport = true}), THeadlessSession::StartResult::started);
+        QTRY_COMPARE_WITH_TIMEOUT(dials.size(), 1, 10000);
+        QVERIFY(session.runLua(qsl("disconnect()")));
+        QVERIFY(session.runLua(qsl("reconnect()")));
+        QCOMPARE(dials.size(), 2);
+        session.transportConnected(lastDial(dials));
+        QTRY_COMPARE_WITH_TIMEOUT(connected.size(), 1, 10000);
+        local.clear();
+
+        session.transportClosed(lastDial(dials), qsl("kicked"));
+        QTRY_VERIFY2_WITH_TIMEOUT(printed(local).contains(qsl("[ ALERT ] - Socket got disconnected")), qPrintable(printed(local)), 10000);
+        QVERIFY2(printed(local).contains(qsl(" kicked\n")), qPrintable(printed(local)));
+        QVERIFY2(!printed(local).contains(qsl("User Disconnected")), qPrintable(printed(local)));
+        QVERIFY(session.shutdown(false));
+    }
+
     // As a socket's readyRead() is never emitted from inside its own handler
     void test_dataReportedDuringATriggersEventLoopWaitsItsTurn()
     {
