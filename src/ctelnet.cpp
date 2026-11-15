@@ -5845,16 +5845,16 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
     const int inputLength = length;
 
     mZstream.avail_in = length;
-    mZstream.next_in = (Bytef*)in_buffer;
+    mZstream.next_in = reinterpret_cast<Bytef*>(in_buffer);
 
     mZstream.avail_out = BUFFER_SIZE;
-    mZstream.next_out = (Bytef*)out_buffer;
+    mZstream.next_out = reinterpret_cast<Bytef*>(out_buffer);
 
     int zval = inflate(&mZstream, Z_SYNC_FLUSH);
     int outSize = BUFFER_SIZE - mZstream.avail_out;
 
     length = mZstream.avail_in;
-    in_buffer = (char*)mZstream.next_in;
+    in_buffer = reinterpret_cast<char*>(mZstream.next_in);
 
     // Drop the borrowed caller-buffer pointers now that inflate() is done with
     // them: mZstream is a member, so leaving them set would keep it referencing
@@ -6271,9 +6271,8 @@ void cTelnet::slot_processReplayChunk()
                 } else if (ch == TN_IAC) {
                     iac = true;
                 }
-            } else
-            //8. IAC fol. by something else than IAC, SB, SE, DO, DONT, WILL, WONT
-            {
+            } else {
+                //8. IAC fol. by something else than IAC, SB, SE, DO, DONT, WILL, WONT
                 iac = false;
                 command += ch;
                 processTelnetCommand(command);
@@ -6752,7 +6751,7 @@ Some data loss is likely - please mention this problem to the game admins.)",
             i = runEnd - 1;
             forgetPromptEnd();
         }
-    MAIN_LOOP_END:;
+    MAIN_LOOP_END:
         if (recvdGA) {
             if (!mFORCE_GA_OFF) {
                 mGA_Driver = true;
