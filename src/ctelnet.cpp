@@ -1689,13 +1689,17 @@ void cTelnet::finishDisconnection()
             } else if (mpSocket && QAbstractSocket::SslHandshakeFailedError == mpSocket->error()) {
                 //: A reason why a connection to a game server ended.
                 reason = tr("Secure connections not supported by this game on this port; try turning the option off");
+            } else if (!mpSocket && !transportCloseReason.isEmpty()) {
+                // Unlike a socket's error string, which says little of an early close, the app's reason says what
+                // happened, such as its own fault or its gateway failing to reach the game
+                reason = transportCloseReason;
             } else if (timeOffset >= 0 && timeOffset < 5000) {
                 /*: A reason why a connection to a game server ended, could be
  one of several to be listed. This text used in two places,
  ensure the same text is used in both.*/
                 reason = tr("Connection/login attempt rejected by server");
-            } else {
-                reason = mpSocket ? mpSocket->errorString() : transportCloseReason;
+            } else if (mpSocket) {
+                reason = mpSocket->errorString();
             }
 
             if (reason.isEmpty()) {

@@ -384,7 +384,9 @@ tempTrigger("A dragon arrives", function() dragonSeen = "yes" send("kill dragon"
 
         session.transportClosed(lastDial(dials), qsl("gone"));
         QTRY_COMPARE_WITH_TIMEOUT(dials.size(), 2, 10000);
-        QVERIFY2(printed(local).contains(qsl("[ ALERT ] - Socket got disconnected")), qPrintable(printed(local)));
+        // The app's reason, though the connection lasted under the five seconds that blame the game for a socket's end
+        QVERIFY2(printed(local).contains(qsl("[ ALERT ] - Socket got disconnected, for reason:\n")), qPrintable(printed(local)));
+        QVERIFY2(printed(local).contains(qsl(" gone\n")), qPrintable(printed(local)));
         QVERIFY(session.shutdown(false));
     }
 

@@ -647,7 +647,7 @@ for the connection. Once the app answers `transportConnected()`, the profile ann
 game ending it is the app's `transportClosed()`; the profile ending it (`disconnect()`, a reconnect,
 closing the profile) is `transportCloseRequested`, after which no report about it is due. A dial
 answered with `transportClosed()` fails as an unreachable game does, with the reason in Mudlet's
-message.
+message, and a connection that ends with a reason gives it in the disconnection message.
 
 A report is dropped unless it names the profile's current connection: the one last dialled, and not
 closed since. A reconnect closes one connection and dials the next in the same breath, so an app whose
