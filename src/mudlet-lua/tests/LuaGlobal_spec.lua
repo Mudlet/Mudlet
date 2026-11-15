@@ -586,3 +586,27 @@ describe("lfs directory objects", function()
     assert.has_error(function() dir:next() end)
   end)
 end)
+
+describe("a file renamed over another", function()
+  -- As QSaveFile replaces a file; see src/headless/emscripten-rename-fix.js for why a browser build needs this
+  it("is gone once removed", function()
+    local target = getMudletHomeDir() .. "/renamed-over.txt"
+    local source = target .. ".new"
+    finally(function()
+      os.remove(source)
+      os.remove(target)
+    end)
+    for path, text in pairs({[target] = "old", [source] = "new"}) do
+      local file = assert(io.open(path, "w"))
+      file:write(text)
+      file:close()
+    end
+    assert(os.rename(source, target))
+    local file = assert(io.open(target))
+    local text = file:read("*a")
+    file:close()
+    assert.equals("new", text)
+    assert(os.remove(target))
+    assert.is_nil(lfs.attributes(target, "mode"))
+  end)
+end)
