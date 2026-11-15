@@ -447,6 +447,9 @@ jobs:
       with:
         configurePreset: ${{ runner.os == 'macOS' && ((matrix.build_tests == 'false' && env.MUDLET_PGO_BUILD != 'true') && 'ci-macos-no-tests' || 'ci-macos') || 'ci-linux' }}
         buildPreset: ${{ runner.os == 'macOS' && ((matrix.build_tests == 'false' && env.MUDLET_PGO_BUILD != 'true') && 'ci-macos-no-tests' || 'ci-macos') || 'ci-linux' }}
+        # CMake's IPO is ThinLTO on Clang: full LTO ran no faster and its links swapped on the runners.
+        # Each test binary links all of Mudlet, so -cache_path_lto reuses the code generation they share.
+        configurePresetAdditionalArgs: ${{ runner.os == 'macOS' && env.MUDLET_PGO_BUILD == 'true' && '[''-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON'', ''-DCMAKE_EXE_LINKER_FLAGS=-Wl,-cache_path_lto,lto-cache'']' || '[]' }}
         buildPresetAdditionalArgs: ${{ env.MUDLET_PGO_BUILD == 'true' && '[''--target'', ''PipelineBenchmark'', ''MapRenderBenchmark'', ''PathfindBenchmark'']' || '[]' }}
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
@@ -517,6 +520,7 @@ jobs:
       if: env.MUDLET_PGO_BUILD == 'true'
       run: |
         ${{github.workspace}}/CI/pgo-train.sh ${{runner.workspace}}/b/ninja
+        # Reconfigures the first pass's tree, so its LTO options carry over
         cmake -B ${{runner.workspace}}/b/ninja -DMUDLET_PGO=USE -DBUILD_TESTING=${{ matrix.build_tests == 'false' && 'OFF' || 'ON' }}
         cmake --build ${{runner.workspace}}/b/ninja
       env:
