@@ -660,6 +660,22 @@ passed on. A profile set to connect securely still connects: `tlsRequested` tell
 honour it, such as through a `wss://` proxy that dials the game with TLS, and Mudlet says in the
 console that it treats the connection as not secure.
 
+In a browser, `mudlet-headless` makes the page's connection the profile's when the object given to
+`qtLoad()` has a `mudletTransport`:
+
+```js
+mudletTransport: {
+  // connection: { connected(), received(bytes), closed(reason) }, to call as the connection goes
+  dial(host, port, tlsRequested, connection) {},
+  write(bytes) {},   // a Uint8Array
+  close() {},        // after which connection's calls do nothing
+}
+```
+
+`received()` takes a `Uint8Array` or an `ArrayBuffer`. Each dial gets a connection of its own, so a
+late event of an old socket cannot reach a new one; a throw from `dial()` or `write()` ends the
+connection with the error as the reason.
+
 ## Embedding it: when the signals come and what a handler may do
 
 Each signal's own rules are with the signal, above and below; this is all of them in one place. Mudlet
