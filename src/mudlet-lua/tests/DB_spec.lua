@@ -46,6 +46,10 @@ describe("Tests DB.lua functions", function()
       os.remove(db_path("rvwqmid"))
       os.remove(db_path("rvwqmid1"))
       os.remove(db_path("rvwqmid2"))
+      os.remove(db_path("logstamptestingonly"))
+      os.remove(db_path("logstamptestingonly2"))
+      os.remove(db_path("logsharetestingonly"))
+      os.remove(db_path("logsharetestingonly2"))
     end
 
     local function names_in(database)
@@ -216,6 +220,41 @@ describe("Tests DB.lua functions", function()
 
       plain = db:create("rvwqcap", schema)
       assert.are.same({"plain"}, names_in(plain))
+    end)
+
+    it("keeps rows a released Mudlet stored when the digit-free name is opened", function()
+      -- Development wrote the digit name into the stripped file and left no
+      -- application_id. Opening the digit-free name must not hide those rows.
+      local plain = db:create("logstamptestingonly", schema)
+      db:add(plain.sheet, {name = "fromdigit"})
+      db:close()
+      db:_clear_new_naming_mark(db_path("logstamptestingonly"))
+
+      db:create("logstamptestingonly", schema)
+      local digit = db:create("logstamptestingonly2", schema)
+      assert.are.same({"fromdigit"}, names_in(digit))
+      assert.is_falsy(io.exists(db_path("logstamptestingonly2")))
+      db:close()
+
+      digit = db:create("logstamptestingonly2", schema)
+      assert.are.same({"fromdigit"}, names_in(digit))
+    end)
+
+    it("recreates a shared file after it is deleted while another name holds it", function()
+      local plain = db:create("logsharetestingonly", schema)
+      db:add(plain.sheet, {name = "kept"})
+      db:close()
+      db:_clear_new_naming_mark(db_path("logsharetestingonly"))
+
+      db:create("logsharetestingonly2", schema)
+      os.remove(db_path("logsharetestingonly"))
+      if io.exists(db_path("logsharetestingonly")) then
+        pending("this platform keeps a database file that is still open")
+      end
+
+      local again = db:create("logsharetestingonly", schema)
+      assert.is_true(db:add(again.sheet, {name = "rebuilt"}))
+      assert.are.same({"rebuilt"}, names_in(again))
     end)
 
     it("does not hand a new digit name the connection of an already open one", function()
