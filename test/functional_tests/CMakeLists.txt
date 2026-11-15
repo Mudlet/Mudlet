@@ -119,6 +119,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     ScriptFileDialogTest.cpp
     OpaqueConsolePaintTest.cpp
     ConnectButtonIconsTest.cpp
+    PrimaryButtonStatesTest.cpp
 )
 
 # Profiles: their config dir, their folders, and loading, saving and deleting them

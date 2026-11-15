@@ -36,7 +36,7 @@ mudlet_bundled_lua_module(lrexlib
 
 mudlet_bundled_lua_module(luautf8
   GIT_REPOSITORY https://github.com/starwing/luautf8.git
-  GIT_TAG 08b0fc930f5a52eff36348ed1ea39aadfc697fa6 # 0.2.1
+  GIT_TAG a845c5b7f89995b7e1f10e34608fd2fa37ea9d87 # 0.3.0
   SOURCES lutf8lib.c)
 
 mudlet_bundled_lua_module(lua_zip

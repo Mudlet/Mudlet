@@ -913,8 +913,6 @@ private:
     bool parseVisibilitySettings(const QString& jsonString, Mudlet::HyperlinkStyling::VisibilitySettings& settings, QString* errorDetails = nullptr);
     // Helper function for parsing color values (hex, named, rgb)
     QColor parseColorValue(const QString& value);
-    // Accessibility enhancements for hyperlink styling
-    void applyAccessibilityEnhancements(Mudlet::HyperlinkStyling& styling);
 
     // The model this buffer is the text of. The hyperlink managers, the
     // current format and the console background are read off it, and whatever
@@ -1157,7 +1155,51 @@ private:
     QMap<int, bool> mVisitedLinks;
     QMap<int, bool> mLinkSelectionState;
     QMap<int, QColor> mLinkOriginalBackgrounds;
-    QMap<int, TChar> mLinkOriginalCharacters;
+    // The colors and flags a link's style puts on its characters
+    struct LinkDrawing
+    {
+        QRgb foreground = 0;
+        QRgb background = 0;
+        bool hasForeground = false;
+        bool hasBackground = false;
+        TChar::AttributeFlags setFlags = TChar::None;
+        TChar::AttributeFlags clearedFlags = TChar::None;
+
+        bool operator==(const LinkDrawing&) const = default;
+    };
+    struct LinkLook
+    {
+        // Each of the link's characters in buffer order as printed, and as scripts changed it since: saveLinkLooks()
+        // saves them as a line is committed, updateLinkCharacters() any it finds unsaved
+        QList<TChar> printed;
+        // What was last drawn over them, so a redraw takes back that and no more
+        LinkDrawing drawing;
+    };
+    QMap<int, LinkLook> mLinkLooks;
+    LinkDrawing drawingFor(int linkIndex, Mudlet::HyperlinkStyling::LinkState state) const;
+    static LinkDrawing drawingOf(const Mudlet::HyperlinkStyling& styling);
+    // The base and :any-link styles, which every state shares, drawn as the link's text prints
+    LinkDrawing printDrawing(int linkIndex) const;
+    int mPrintDrawingLinkId = 0;
+    LinkDrawing mPrintDrawing;
+    Mudlet::HyperlinkStyling getEffectiveHyperlinkStyling(int linkIndex, Mudlet::HyperlinkStyling::LinkState state) const;
+    static void applyDrawing(TChar& character, const LinkDrawing& drawing);
+    // The character with the drawing taken off: as printed, with whatever a script changed since
+    static TChar undrawn(const TChar& character, const TChar& printed, const LinkDrawing& drawing);
+    // The state a link returns to once the pointer, a pressed button and the caret have left it
+    Mudlet::HyperlinkStyling::LinkState restingState(int linkIndex) const;
+    void saveLinkLooks(int fromLine, int toLine);
+    void drawLinkCharacters(int linkIndex, const LinkDrawing& drawing, int fromLine);
+    void forgetLooksOfRemovedCharacters(int y, int from, int to);
+    // What copyInto() works out once for each link it copies
+    struct LinkCopy
+    {
+        // How many of the link's characters with a saved look are left from the copy's point to the end of the buffer
+        qsizetype fromHere = 0;
+        LinkDrawing resting;
+    };
+    // The link's character as it shows once the pointer, a pressed button and the caret have left it
+    TChar restingCharacter(const TChar& character, int line, int column, QHash<int, LinkCopy>& links) const;
     QMap<int, QString> mLinkOriginalText;
     int mCurrentHoveredLinkIndex = 0; // Which link is currently hovered (0 = none)
     int mCurrentActiveLinkIndex = 0;  // Which link is currently being clicked (0 = none)
@@ -1237,6 +1279,8 @@ public:
     void setHoveredLink(int linkIndex);
     void setActiveLink(int linkIndex);
     void setFocusedLink(int linkIndex);
+    // Whether the link has the caret on it, so its focus style or Mudlet's focus cue shows
+    bool showsFocus(int linkIndex) const;
     void markLinkAsVisited(int linkIndex);
     bool isLinkVisited(int linkIndex) const;
     void setLinkSelected(int linkIndex, bool selected);

@@ -68,11 +68,10 @@
 #endif
 
 // A Qt Resource Collection in a static library only reaches the executable if something here names it
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
+extern int qInitResources_mudlet();
+extern int qInitResources_qm();
+extern int qInitResources_mudlet_fonts_common();
+extern int qInitResources_mudlet_fonts_posix();
 
 namespace {
 
@@ -80,9 +79,6 @@ enum ExitCode { exitOk = 0, exitFailed = 1, exitUsage = 2, exitOutputFailed = 3,
 
 void initializeQRCResources()
 {
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
 #ifdef INCLUDE_FONTS
     qInitResources_mudlet_fonts_common();
 #ifdef INCLUDE_EMOJI_FONT
@@ -387,6 +383,9 @@ struct InputChannel
     std::function<void(const QString&)> onEnd;
 };
 
+// The reader runs on a thread of its own, so a Qt built without threads (a browser build) has none of it and
+// leaves standard input unread, as with --no-stdin
+#if QT_CONFIG(thread)
 constexpr int scmMaxQueuedLines = 1024;
 
 // Hands a line, or the end of the input with the reason a failed read gives, to the main thread; false once
@@ -495,6 +494,7 @@ void readStandardInput(const std::shared_ptr<InputChannel>& channel)
     }
     postInput(channel, failure, true);
 }
+#endif
 
 QString uncaughtSignalsMessage(const QString& reason)
 {
@@ -848,8 +848,13 @@ int main(int argc, char* argv[])
         return exitOk;
     }
 
-    // Nothing is drawn, so no display is needed unless one is asked for
+    // Nothing is drawn, so no display is needed unless one is asked for. In a browser the page is the display,
+    // and Qt's wasm platform the only one there is.
+#if defined(Q_OS_WASM)
+    const bool platformChosenHere = false;
+#else
     const bool platformChosenHere = qEnvironmentVariableIsEmpty("QT_QPA_PLATFORM");
+#endif
     if (platformChosenHere) {
         qputenv("QT_QPA_PLATFORM", "offscreen");
     }
@@ -1103,8 +1108,10 @@ int main(int argc, char* argv[])
             return;
         }
         readerStarted = true;
+#if QT_CONFIG(thread)
         input->receiver = inputReceiver.get();
         std::thread(readStandardInput, input).detach();
+#endif
     };
     QObject::connect(session.get(), &THeadlessSession::connected, app, [&everConnected, &startReading]() {
         everConnected = true;

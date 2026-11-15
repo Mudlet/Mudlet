@@ -143,6 +143,42 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_true(table.contains(validOSNames, osName))
       end)
 
+      it("should report the processor the build runs on", function()
+        local results = {getOS()}
+        local osName, processor = results[1], results[#results]
+        -- byte 9 of a Lua 5.1 bytecode header is sizeof(size_t)
+        local header = string.dump(function() end)
+        assert.equals("\27Lua\81", header:sub(1, 5))
+        local processorBytes = {
+          ["x86 (64-bit)"] = 8, ["ppc (64-bit)"] = 8, ["arm (64-bit)"] = 8, ia64 = 8,
+          ["x86 (32-bit)"] = 4, ["ppc (32-bit)"] = 4, arm7 = 4, arm6 = 4, arm5 = 4,
+        }
+        local sizeTBytes = string.byte(header, 9)
+        assert.equals(sizeTBytes, processorBytes[processor], tostring(processor))
+
+        local machine
+        -- 64-bit builds only: uname -m names the kernel's machine, which a 32-bit build on a 64-bit kernel doesn't match
+        if sizeTBytes == 8 then
+          if osName == "windows" then
+            machine = os.getenv("PROCESSOR_ARCHITECTURE")
+          elseif (osName == "mac" or osName == "linux") and io.popen then
+            local pipe = io.popen("uname -m")
+            if pipe then
+              machine = pipe:read("*l")
+              pipe:close()
+            end
+          end
+        end
+        local machineProcessor = {
+          x86_64 = "x86 (64-bit)", AMD64 = "x86 (64-bit)",
+          aarch64 = "arm (64-bit)", arm64 = "arm (64-bit)", ARM64 = "arm (64-bit)",
+        }
+        local expectedProcessor = machineProcessor[machine]
+        if expectedProcessor then
+          assert.equals(expectedProcessor, processor)
+        end
+      end)
+
       it("should not return empty strings", function()
         local osName, osVersion, osType = getOS()
         assert.is_true(osName ~= "")
