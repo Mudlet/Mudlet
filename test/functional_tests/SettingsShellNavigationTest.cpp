@@ -1461,33 +1461,53 @@ private slots:
         auto* pNote = mpPreferences->findChild<QLabel*>(qsl("settingsCaretKeyClash"));
         QVERIFY(pNote);
         ShortcutsManager* pManager = mudlet::self()->mpShortcutsManager;
+        const QString nextLabel = pManager->getLabel(qsl("Next profile"));
+        const QString previousLabel = pManager->getLabel(qsl("Previous profile"));
         TKeySequenceEdit* pNextProfile = nullptr;
+        TKeySequenceEdit* pPreviousProfile = nullptr;
         for (auto* pEdit : mpPreferences->findChildren<TKeySequenceEdit*>()) {
             const QWidget* pNamed = pEdit->focusProxy() ? pEdit->focusProxy() : pEdit;
-            if (pNamed->accessibleName() == pManager->getLabel(qsl("Next profile"))) {
+            if (pNamed->accessibleName() == nextLabel) {
                 pNextProfile = pEdit;
+            } else if (pNamed->accessibleName() == previousLabel) {
+                pPreviousProfile = pEdit;
             }
         }
-        QVERIFY2(pNextProfile, "the Shortcuts page has no editor for the next profile shortcut");
-        const QKeySequence savedSequence = pNextProfile->keySequence();
+        QVERIFY2(pNextProfile && pPreviousProfile, "the Shortcuts page has no editor for the next or previous profile shortcut");
+        const QKeySequence savedNext = pNextProfile->keySequence();
+        const QKeySequence savedPrevious = pPreviousProfile->keySequence();
         const int savedChoice = mpPreferences->comboBox_caretModeKey->currentIndex();
         // Put back before the apply timer runs, so nothing reaches the profile
-        const auto restore = qScopeGuard([this, pNextProfile, savedSequence, savedChoice]() {
-            pNextProfile->setKeySequence(savedSequence);
+        const auto restore = qScopeGuard([this, pNextProfile, pPreviousProfile, savedNext, savedPrevious, savedChoice]() {
+            pNextProfile->setKeySequence(savedNext);
             emit pNextProfile->editingFinished();
+            pPreviousProfile->setKeySequence(savedPrevious);
+            emit pPreviousProfile->editingFinished();
             mpPreferences->comboBox_caretModeKey->setCurrentIndex(savedChoice);
         });
+        const auto setShortcut = [](TKeySequenceEdit* pEdit, const QKeySequence& sequence) {
+            pEdit->setKeySequence(sequence);
+            emit pEdit->editingFinished();
+        };
 
         mpPreferences->comboBox_caretModeKey->setCurrentIndex(static_cast<int>(Host::CaretShortcut::CtrlTab));
-        QVERIFY(!pNote->isHidden());
-        pNextProfile->setKeySequence(QKeySequence(Qt::Key_F7));
-        emit pNextProfile->editingFinished();
-        QVERIFY2(pNote->isHidden(), qPrintable(qsl("moving the next profile shortcut off Ctrl+Tab left the note up: %1").arg(pNote->text())));
+        setShortcut(pNextProfile, QKeySequence(Qt::Key_F7));
+        setShortcut(pPreviousProfile, QKeySequence(Qt::Key_F8));
+        QVERIFY2(pNote->isHidden(), qPrintable(qsl("moving both profile shortcuts off Ctrl+Tab left the note up: %1").arg(pNote->text())));
+
+        // The caret key takes Ctrl+Tab with more modifiers held, and a sequence never gets past its first press
+        setShortcut(pPreviousProfile, QKeySequence(Host::caretShortcutCombination(Host::CaretShortcut::CtrlTab).keyboardModifiers() | Qt::ShiftModifier | Qt::Key_Tab));
+        QVERIFY2(!pNote->isHidden(), "Ctrl+Shift+Tab, which the Ctrl+Tab caret key takes, was not said to clash");
+        QVERIFY2(pNote->text().contains(previousLabel) && !pNote->text().contains(nextLabel), qPrintable(pNote->text()));
+        setShortcut(pPreviousProfile, QKeySequence(Qt::Key_F8));
+        const QKeyCombination ctrlTab = Host::caretShortcutCombination(Host::CaretShortcut::CtrlTab);
+        setShortcut(pNextProfile, QKeySequence(ctrlTab, QKeyCombination(Qt::Key_F7)));
+        QVERIFY2(!pNote->isHidden(), "a shortcut starting with Ctrl+Tab, which the caret key takes, was not said to clash");
+        QVERIFY2(pNote->text().contains(nextLabel), qPrintable(pNote->text()));
 
         mpPreferences->comboBox_caretModeKey->setCurrentIndex(static_cast<int>(Host::CaretShortcut::F6));
         QVERIFY(pNote->isHidden());
-        pNextProfile->setKeySequence(QKeySequence(Qt::Key_F6));
-        emit pNextProfile->editingFinished();
+        setShortcut(pNextProfile, QKeySequence(Qt::Key_F6));
         QVERIFY2(!pNote->isHidden(), "moving the next profile shortcut onto F6, the caret mode key, said nothing");
     }
 

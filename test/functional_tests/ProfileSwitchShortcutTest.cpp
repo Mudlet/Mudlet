@@ -308,6 +308,18 @@ private slots:
         const QString tip = mudlet::self()->profileSwitchingTip(mpHost);
         QVERIFY2(!tip.contains(nextKey), qPrintable(qsl("the tip offers %1, the caret mode key: %2").arg(nextKey, tip)));
         QVERIFY2(tip.contains(firstKey), qPrintable(tip));
+
+        // The Ctrl+Tab caret key takes Ctrl+Tab with Alt held too
+        QKeySequence* pNext = mudlet::self()->mpShortcutsManager->getSequence(qsl("Next profile"));
+        QVERIFY(pNext);
+        const QKeySequence savedNext = *pNext;
+        const auto restoreNext = qScopeGuard([pNext, savedNext]() {
+            *pNext = savedNext;
+        });
+        *pNext = QKeySequence(nextProfileModifier | Qt::AltModifier | Qt::Key_Tab);
+        const QString altKey = mudlet::keySequenceForProse(*pNext);
+        const QString altTip = mudlet::self()->profileSwitchingTip(mpHost);
+        QVERIFY2(!altTip.contains(altKey), qPrintable(qsl("the tip offers %1, which the caret mode key takes: %2").arg(altKey, altTip)));
     }
 
     // macOS sends Ctrl+Tab only as a possible shortcut, with no key press after it, so the claim alone has to run the binding

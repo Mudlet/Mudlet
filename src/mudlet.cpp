@@ -3621,8 +3621,8 @@ QString mudlet::keySequenceForProse(const QKeySequence& sequence)
 
 QString mudlet::profileSwitchingTip(const Host* pHost) const
 {
-    // The caret mode key wins over a shortcut on the same key while the input line or main window has the keyboard
-    if (pHost && QKeySequence(Host::caretShortcutCombination(pHost->mCaretShortcut)) == mKeySequenceNextProfile) {
+    // The caret mode key wins over a shortcut whose press it takes while the input line or main window has the keyboard
+    if (pHost && !mKeySequenceNextProfile.isEmpty() && Host::caretShortcutMatches(pHost->mCaretShortcut, mKeySequenceNextProfile[0])) {
         //: Shown in a balloon when a second game opens and the profile's caret mode key is also the key for the next game. %1 and %2 are keyboard shortcuts, e.g. Ctrl+1 and Ctrl+9 (Command-1 and Command-9 on macOS)
         return tr("Press %1 through %2 to jump straight to one of your open games. You can change these keys in the preferences.")
                 .arg(keySequenceForProse(mKeySequencesSwitchToProfile.front()), keySequenceForProse(mKeySequencesSwitchToProfile.back()));

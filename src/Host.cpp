@@ -8209,17 +8209,24 @@ static constexpr Qt::KeyboardModifier caretControlKey = Qt::ControlModifier;
 // which the user could have remapped onto any of these keys:
 bool Host::caretShortcutMatches(const QKeyEvent* ke) const
 {
+    return caretShortcutMatches(mCaretShortcut, ke->keyCombination());
+}
+
+bool Host::caretShortcutMatches(const CaretShortcut shortcut, const QKeyCombination combination)
+{
     constexpr Qt::KeyboardModifiers allModifiers = Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier | Qt::KeypadModifier | Qt::GroupSwitchModifier;
     constexpr Qt::KeyboardModifier controlKey = caretControlKey;
-    switch (mCaretShortcut) {
+    const Qt::Key key = combination.key();
+    const Qt::KeyboardModifiers modifiers = combination.keyboardModifiers();
+    switch (shortcut) {
     case CaretShortcut::None:
         return false;
     case CaretShortcut::Tab:
-        return ke->key() == Qt::Key_Tab && !(ke->modifiers() & controlKey);
+        return key == Qt::Key_Tab && !(modifiers & controlKey);
     case CaretShortcut::CtrlTab:
-        return ke->key() == Qt::Key_Tab && (ke->modifiers() & controlKey);
+        return key == Qt::Key_Tab && (modifiers & controlKey);
     case CaretShortcut::F6:
-        return ke->key() == Qt::Key_F6 && (ke->modifiers() & allModifiers) == Qt::NoModifier;
+        return key == Qt::Key_F6 && (modifiers & allModifiers) == Qt::NoModifier;
     }
     return false;
 }

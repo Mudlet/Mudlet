@@ -9842,8 +9842,8 @@ void dlgProfilePreferences::slot_changeMapperUseAntiAlias(const bool state)
     }
 }
 
-// The caret mode key wins over a Mudlet shortcut on the same key while the input line or the main window has the
-// keyboard, so the shortcut stops working there. Read from the shortcuts as they are being edited, not as saved.
+// The caret mode key wins over a Mudlet shortcut whose first press it takes while the input line or the main window
+// has the keyboard, so the shortcut stops working there. Read from the shortcuts as they are being edited, not as saved.
 void dlgProfilePreferences::updateCaretKeyClashNote()
 {
     const auto choice = static_cast<Host::CaretShortcut>(qMax(0, comboBox_caretModeKey->currentIndex()));
@@ -9854,8 +9854,10 @@ void dlgProfilePreferences::updateCaretKeyClashNote()
         auto keys = manager->iterator();
         while (keys.hasNext()) {
             const QString key = keys.next();
-            if (currentShortcuts.value(key) == caretKey) {
-                holders.append(qsl("'%1'").arg(manager->getLabel(key)));
+            // The caret key takes a press with more modifiers too, and the first press of a sequence never gets past it
+            const QKeySequence sequence = currentShortcuts.value(key);
+            if (!sequence.isEmpty() && Host::caretShortcutMatches(choice, sequence[0])) {
+                holders.append(qsl("'%1' (%2)").arg(manager->getLabel(key), mudlet::keySequenceForProse(sequence)));
             }
         }
     }
@@ -9864,9 +9866,10 @@ void dlgProfilePreferences::updateCaretKeyClashNote()
         mpLabel_caretKeyClash->clear();
         return;
     }
-    //: Under the caret mode key in the accessibility settings when that key is also one of Mudlet's shortcuts, which then stops working there. %1 is the key, e.g. Ctrl+Tab (Control-Tab on macOS), %2 the shortcuts' names, each quoted
-    mpLabel_caretKeyClash->setText(tr("%1 is also the shortcut for %2. While the input line or the main window has the keyboard, %1 moves between the input line and the main window instead.")
-                                           .arg(mudlet::keySequenceForProse(caretKey), holders.join(qsl(", "))));
+    //: Under the caret mode key in the accessibility settings when a press of it is also how one of Mudlet's shortcuts starts, which then stops working there. %1 is the shortcuts' names, each quoted and followed by its key in brackets, %2 the caret mode key, e.g. Ctrl+Tab (Control-Tab on macOS)
+    mpLabel_caretKeyClash->setText(
+            tr("%1 cannot be used while the input line or the main window has the keyboard: %2, the caret mode key, takes the press and moves between the input line and the main window instead.")
+                    .arg(holders.join(qsl(", ")), mudlet::keySequenceForProse(caretKey)));
     mpLabel_caretKeyClash->show();
 }
 
