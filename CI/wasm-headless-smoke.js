@@ -18,14 +18,14 @@
 // another status, an error line first or the timeout. --quit-after-lua-error does the same after an
 // -e step that raises an error, so it wants status 1 and takes that error's line as no failure.
 // With --game-connection, the page makes the profile's connection, as docs/headless.md has a page do,
-// over a WebSocket to CI/wasm-telnet-relay.js and on to CI/telnet-fixture-server.py; that game offers
-// GMCP, sends vitals and a line a trigger answers, and hangs up once the answer arrives. The page's
-// first three connections fail as CI/wasm-headless-page.js describes, and the profile reconnects
-// after each. It passes as the default does, once the disconnect handler finds the next connection
-// played the game, and then only if Mudlet logged all three failures to the browser's console and
-// gave each as the reason on its own, logged no other, never showed the page's padding, the page was
-// never asked to dial while a connection was open, and the game received Mudlet's agreement to GMCP
-// and the trigger's command.
+// over a WebSocket to CI/wasm-telnet-relay.js and on to CI/telnet-fixture-server.py; that game asks
+// for the terminal type, offers GMCP, sends vitals and a line a trigger answers, and hangs up once
+// the answer arrives. The page's first three connections fail as CI/wasm-headless-page.js describes,
+// and the profile reconnects after each. It passes as the default does, once the disconnect handler
+// finds the next connection played the game, and then only if Mudlet logged all three failures to the
+// browser's console and gave each as the reason on its own, logged no other, never showed the page's
+// padding, the page was never asked to dial while a connection was open, and the game received
+// Mudlet's terminal type, NUL byte and all, its agreement to GMCP and the trigger's command.
 // It exits 2 if its arguments, the directory or WASM_SMOKE_TIMEOUT are wrong; and 3 if it could not
 // run the program at all: playwright does not load, Chromium does not start or quits, the page does
 // not load, the game does not start or this script fails. It needs the playwright package on
@@ -178,9 +178,10 @@ function defaultProbe() {
 }
 
 const hex = (text) => Buffer.from(text).toString("hex");
+const terminalTypeSent = "fffa1800" + hex("MUDLET") + "fff0";
 const gmcpAgreed = "fffdc9";
 const gameCommand = "kill dragon\r\n";
-const gameGreeting = "fffbc9" + "fffac9" + hex('Char.Vitals {"hp": 42}') + "fff0" + hex("A dragon arrives.\r\n");
+const gameGreeting = "fffd18" + "fffa1801fff0" + "fffbc9" + "fffac9" + hex('Char.Vitals {"hp": 42}') + "fff0" + hex("A dragon arrives.\r\n");
 const gameOver = "the game hung up";
 
 // Resolves to the fixture's process and port once it accepts connections
@@ -232,6 +233,9 @@ function gameArgs(port) {
 // What the game received that it should have, or the first thing missing
 function gameReceived(directory) {
   const received = JSON.parse(fs.readFileSync(path.join(directory, "capture.json"), "utf8")).received;
+  if (!received.includes(terminalTypeSent)) {
+    return "IAC SB TTYPE IS MUDLET IAC SE";
+  }
   if (!received.includes(gmcpAgreed)) {
     return "IAC DO GMCP";
   }

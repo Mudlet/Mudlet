@@ -426,9 +426,10 @@ exits, and passes once the run ends with status 0, as the desktop's does; that q
 before the event loop runs. `--quit-after-lua-error` does the same after an `-e` step that raises an
 error, and passes once the run ends with status 1. With `--game-connection`, the page makes the
 profile's connection, as "Embedding it: the game connection" in `headless.md` has a page do, over a
-WebSocket to `CI/wasm-telnet-relay.js` and on to `CI/telnet-fixture-server.py`, which offers GMCP,
-sends a line a trigger answers and hangs up once the answer arrives; it passes once the profile has
-seen all of that and the game received the answer. The page's first three connections fail on
+WebSocket to `CI/wasm-telnet-relay.js` and on to `CI/telnet-fixture-server.py`, which asks for the
+terminal type, offers GMCP, sends a line a trigger answers and hangs up once the answer arrives; it
+passes once the profile has seen all of that and the game received the terminal type, whose NUL byte
+must cross the page's connection, and the answer. The page's first three connections fail on
 purpose, in this order: one with a `write()` that throws, one handing `received()` a `Blob` and one
 whose `dial()` returns a promise that rejects. The run also wants Mudlet to have reported each, in
 the browser's console and as the reason on its own, and closed each before the next dial. The first
