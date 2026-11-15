@@ -258,6 +258,16 @@ const settleMs = 2000;
 // A page stuck in a loop prints nothing, so after the settle it must still run a task within this
 const answerMs = 5000;
 
+async function pageAnswers(tab) {
+  const noAnswer = new Promise((resolve) => setTimeout(() => resolve(false), answerMs));
+  const answered = tab.evaluate(() => new Promise((resolve) => setTimeout(() => resolve(true), 0)));
+  const answeredInTime = await Promise.race([answered, noAnswer]).catch(() => false);
+  if (!answeredInTime) {
+    console.log(`[hung] the page ran no task within ${answerMs / 1000}s`);
+  }
+  return answeredInTime;
+}
+
 const [dir, ...rest] = process.argv.slice(2);
 const failingStep = rest[0] === "--quit-after-lua-error";
 const quitting = failingStep || rest[0] === "--quit-while-loading";
@@ -298,6 +308,8 @@ if (playing) {
 
 const keepArgs = ["-p", "WasmKeep", "--host", "mudlet.org", "--port", "23", "--offline", "--no-stdin", "--config-dir", "/mudlet"];
 const keepFirst = 'exists("keepAlias", "alias") > 0, roomExists(4242), getConfig("showTabConnectionIndicators")';
+const keepNothing = (why) => `local a, r, s = ${keepFirst} assert(not (a or r or s), "${why}")`;
+const keepFound = `local a, r, s = ${keepFirst} assert(a and r and s, "a reload lost what the page synced on Mudlet's signal")`;
 const keepChange =
   'permAlias("keepAlias", "", "^keep$", "") addRoom(4242) setRoomArea(4242, addAreaName("keep")) ' +
   'assert(setConfig("showTabConnectionIndicators", true)) assert(saveProfile()) assert(saveMap())';
@@ -306,19 +318,19 @@ const keepAll = "keep: all kept";
 const keepRuns = [
   {
     sync: false,
-    lua: [`local a, r, s = ${keepFirst} assert(not (a or r or s), "a new browser context already holds the profile")`, keepChange, 'echo("keep: saved\\n")'],
+    lua: [keepNothing("a new browser context already holds the profile"), keepChange, 'echo("keep: saved\\n")'],
     done: "keep: saved",
   },
   {
     sync: true,
-    lua: [`local a, r, s = ${keepFirst} assert(not (a or r or s), "a reload kept what the page never synced")`, keepChange, 'echo("keep: saved\\n")'],
+    lua: [keepNothing("a reload kept what the page never synced"), keepChange, 'echo("keep: saved\\n")'],
     done: "keep: saved",
   },
   {
     sync: true,
     quits: true,
     lua: [
-      `local a, r, s = ${keepFirst} assert(a and r and s, "a reload lost what the page synced on Mudlet's signal")`,
+      keepFound,
       'permAlias("keepAlias2", "", "^keep2$", "") addRoom(4243) setRoomArea(4243, getRoomArea(4242))',
       'feedTriggers("standard output has gone\\n")',
     ],
@@ -326,7 +338,7 @@ const keepRuns = [
   {
     sync: true,
     lua: [
-      `local a, r, s = ${keepFirst} assert(a and r and s, "a reload lost what the page synced on Mudlet's signal")`,
+      keepFound,
       'assert(exists("keepAlias2", "alias") > 0 and roomExists(4243), "a reload lost what only the shutdown saved")',
       `echo("${keepAll}\\n")`,
     ],
@@ -340,7 +352,7 @@ async function keepProfiles() {
   // Per run: its done line, Mudlet's signal after it, its exit, and whether a sync is due or running
   let done = false;
   let signalled = false;
-  let exited = null;
+  let exited = false;
   let syncDue = false;
   let tab = null;
   let reloading = false;
@@ -348,16 +360,22 @@ async function keepProfiles() {
     console.log(`[timeout] after ${timeoutSeconds}s`);
     finish(false);
   }, timeoutSeconds * 1000);
-  function check() {
+  function runOver() {
     const current = keepRuns[run];
-    if (!tab || reloading || !(current.quits ? exited && !syncDue : done && (!current.sync || (signalled && !syncDue)))) {
+    if (current.quits) {
+      return exited && !syncDue;
+    }
+    return done && (!current.sync || (signalled && !syncDue));
+  }
+  function check() {
+    if (!tab || reloading || !runOver()) {
       return;
     }
     reloading = true;
     run += 1;
     done = false;
     signalled = false;
-    exited = null;
+    exited = false;
     syncDue = false;
     console.log(`[reload] run ${run + 1} of ${keepRuns.length}`);
     tab.goto("http://localhost/index.html").then(() => {
@@ -378,7 +396,7 @@ async function keepProfiles() {
       const status = parseExit(text);
       const line = text.replace(outputPrefixes, "");
       if (status && keepRuns[run].quits) {
-        exited = status;
+        exited = true;
         if (status.code !== 0 || status.crashed) {
           finish(false);
         }
@@ -389,7 +407,7 @@ async function keepProfiles() {
         signalled = done;
       } else if (text === "[synced]") {
         syncDue = false;
-      } else if (line === keepAll && run === keepRuns.length - 1) {
+      } else if (line === keepAll) {
         clearTimeout(timer);
         setTimeout(() => finish(true), settleMs);
       } else if (line === keepRuns[run].done) {
@@ -414,15 +432,7 @@ async function keepProfiles() {
   check();
   const settled = await finished;
   clearTimeout(timer);
-  let answeredInTime = false;
-  if (settled) {
-    const noAnswer = new Promise((resolve) => setTimeout(() => resolve(false), answerMs));
-    const answered = tab.evaluate(() => new Promise((resolve) => setTimeout(() => resolve(true), 0)));
-    answeredInTime = await Promise.race([answered, noAnswer]).catch(() => false);
-    if (!answeredInTime) {
-      console.log(`[hung] the page ran no task within ${answerMs / 1000}s`);
-    }
-  }
+  const answeredInTime = settled && (await pageAnswers(tab));
   await closeBrowser();
   if (!answeredInTime) {
     console.error(`mudlet-headless did not keep the profile across reloads (run ${run + 1} of ${keepRuns.length})`);
@@ -510,15 +520,7 @@ async function keepProfiles() {
   });
   const settled = await finished;
   clearTimeout(timer);
-  let answeredInTime = false;
-  if (settled && !quitting) {
-    const noAnswer = new Promise((resolve) => setTimeout(() => resolve(false), answerMs));
-    const answered = tab.evaluate(() => new Promise((resolve) => setTimeout(() => resolve(true), 0)));
-    answeredInTime = await Promise.race([answered, noAnswer]).catch(() => false);
-    if (!answeredInTime) {
-      console.log(`[hung] the page ran no task within ${answerMs / 1000}s`);
-    }
-  }
+  const answeredInTime = settled && !quitting && (await pageAnswers(tab));
   const gameChecked = playing && answeredInTime && !failed;
   const unreported = [];
   if (gameChecked) {
