@@ -312,91 +312,6 @@ static void applyHighDpiRoundingPolicyFromConfig(int argc, char* argv[])
 }
 #endif // !defined(Q_OS_MACOS)
 
-// TEMPORARY, not for merging (#12926): prints the main thread's stack when it misses its heartbeat
-#if defined(Q_OS_LINUX) || defined(Q_OS_MACOS)
-#include <QDateTime>
-#include <QTimer>
-#include <atomic>
-#include <csignal>
-#include <cstdio>
-#include <execinfo.h>
-#include <thread>
-#include <unistd.h>
-#if defined(__SANITIZE_ADDRESS__)
-#define MUDLET_STALL_WATCHDOG_ASAN 1
-#elif defined(__has_feature)
-#if __has_feature(address_sanitizer)
-#define MUDLET_STALL_WATCHDOG_ASAN 1
-#endif
-#endif
-#if defined(MUDLET_STALL_WATCHDOG_ASAN)
-#include <sanitizer/common_interface_defs.h>
-#endif
-namespace {
-std::atomic<qint64> stallWatchdogHeartbeat{0};
-pthread_t stallWatchdogMainThread;
-
-void stallWatchdogDumpStack(int)
-{
-#if defined(MUDLET_STALL_WATCHDOG_ASAN)
-    __sanitizer_print_stack_trace();
-#else
-    void* frames[96];
-    const int count = backtrace(frames, 96);
-    backtrace_symbols_fd(frames, count, STDERR_FILENO);
-#endif
-    static constexpr char endOfStack[] = "STALL-WATCHDOG end of stack\n";
-    [[maybe_unused]] const auto written = write(STDERR_FILENO, endOfStack, sizeof(endOfStack) - 1);
-}
-
-void startStallWatchdog()
-{
-    stallWatchdogMainThread = pthread_self();
-#if !defined(MUDLET_STALL_WATCHDOG_ASAN)
-    // backtrace() can allocate as it loads its unwinder on first use, which it must not do in the handler
-    void* warmUp[1];
-    backtrace(warmUp, 1);
-#endif
-    signal(SIGUSR2, stallWatchdogDumpStack);
-    auto* heartbeat = new QTimer(qApp);
-    QObject::connect(heartbeat, &QTimer::timeout, []() {
-        stallWatchdogHeartbeat = QDateTime::currentMSecsSinceEpoch();
-    });
-    heartbeat->start(50);
-    stallWatchdogHeartbeat = QDateTime::currentMSecsSinceEpoch();
-    std::thread([]() {
-        qint64 stalledSince = 0;
-        int dumpsThisStall = 0;
-        int dumps = 0;
-        while (dumps < 60) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            const qint64 last = stallWatchdogHeartbeat;
-            const qint64 stale = QDateTime::currentMSecsSinceEpoch() - last;
-            if (last != stalledSince) {
-                if (dumpsThisStall) {
-                    fprintf(stderr,
-                            "STALL-WATCHDOG heartbeat back at %s after %lld ms\n",
-                            qPrintable(QDateTime::currentDateTimeUtc().toString(qsl("hh:mm:ss.zzz"))),
-                            static_cast<long long>(last - stalledSince));
-                }
-                stalledSince = last;
-                dumpsThisStall = 0;
-            }
-            if ((dumpsThisStall == 0 && stale > 1000) || (dumpsThisStall == 1 && stale > 4000)) {
-                ++dumpsThisStall;
-                ++dumps;
-                fprintf(stderr,
-                        "STALL-WATCHDOG at %s the main thread has missed its heartbeat for %lld ms - its stack:\n",
-                        qPrintable(QDateTime::currentDateTimeUtc().toString(qsl("hh:mm:ss.zzz"))),
-                        static_cast<long long>(stale));
-                pthread_kill(stallWatchdogMainThread, SIGUSR2);
-            }
-        }
-    }).detach();
-}
-} // namespace
-#endif
-
 int main(int argc, char* argv[])
 {
     initializeQRCResources();
@@ -668,11 +583,6 @@ int main(int argc, char* argv[])
         app = new QApplication(argc, argv);
     }
 
-#if defined(Q_OS_LINUX) || defined(Q_OS_MACOS)
-    if (app && qEnvironmentVariableIsSet("MUDLET_TEST_MODE")) {
-        startStallWatchdog();
-    }
-#endif
     if (app) {
         QAccessible::installFactory(TAccessibleConsole::consoleFactory);
         QAccessible::installFactory(TAccessibleTextEdit::textEditFactory);
