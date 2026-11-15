@@ -1538,6 +1538,16 @@ static bool withinViewportBounds(const QRect& bounds, const int x, const int y)
 // Of the dot on the end of an exit stub, as a fraction of a room's spacing
 static constexpr qreal cStubDotRadius = 0.1;
 
+// drawPolyline() is 2-3x slower than drawLine(), and almost every exit path is a straight line
+static void drawExitPath(QPainter& painter, const QVector<QPointF>& path)
+{
+    if (path.size() == 2) {
+        painter.drawLine(path.at(0), path.at(1));
+    } else {
+        painter.drawPolyline(path.data(), path.size());
+    }
+}
+
 QVector<QPointF> TMapPainter::exitLinePath(const TRoom& room, const ExitToPaint& exit, const QPointF& from, const QPointF& to, bool* leavesByStub) const
 {
     if (leavesByStub) {
@@ -2076,7 +2086,7 @@ void TMapPainter::paintRoomExits(QPainter& painter,
                     // /restore() to protect - removed along with the QPen
                     // copy that was never installed via setPen() and so
                     // never actually took effect.
-                    painter.drawPolyline(path.data(), path.size());
+                    drawExitPath(painter, path);
                 } else {
                     // one way non-area exit - draw arrow, on the longest leg of a bent line
                     QLineF l0;
@@ -2098,7 +2108,7 @@ void TMapPainter::paintRoomExits(QPainter& painter,
                     oneWayLinePen.setStyle(Qt::DotLine);
                     oneWayLinePen.setCapStyle(Qt::SquareCap);
                     painter.setPen(oneWayLinePen);
-                    painter.drawPolyline(path.data(), path.size());
+                    drawExitPath(painter, path);
 
                     l0.setLength(exitWidth * 5.0);
                     const QPointF _p1 = l0.p2();
@@ -4020,13 +4030,13 @@ std::pair<bool, QString> TMapPainter::exportArea(int areaId, const QString& file
                         QPen oneWayPen = pen;
                         oneWayPen.setStyle(Qt::DashLine);
                         painter.setPen(oneWayPen);
-                        painter.drawPolyline(path.data(), path.size());
+                        drawExitPath(painter, path);
                     } else {
                         // Also for a line left out: the door drawn below takes its width from this pen
                         painter.setPen(pen);
                         // A straight custom line covers only a straight exit line, not one bent through its stubs
                         if (path.size() > 2 || (!customLineRunsStraightTo(*room, *exitRoom) && !(exitRoom->z() == exportZLevel && customLineRunsStraightTo(*exitRoom, *room)))) {
-                            painter.drawPolyline(path.data(), path.size());
+                            drawExitPath(painter, path);
                         }
                     }
 
