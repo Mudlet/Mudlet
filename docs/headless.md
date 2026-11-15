@@ -828,7 +828,9 @@ loop runs, after the script or call that caused it has returned: `connecting`, `
 `disconnected`, `quitRequested`, `loggingChanged`, `latencyChanged`, `secureConnectionOffered`,
 `soundsMutedChanged`, `mappingScriptMissing`, `mainWindowResizeRequested`, `configSaved`, the package
 download's, map progress's and replay's signals, and the ones that follow a state. Their handlers may
-call the session. Of those that follow a state, some are sent once a turn however many changes it held,
+call the session, except while `shutdown()` sends them from inside itself, as the order below has it:
+the session refuses their calls then as it does any made during the shutdown, a `start()` with
+`poolClosing`. Of those that follow a state, some are sent once a turn however many changes it held,
 naming what changed, for the app to read again: `scriptWindowsChanged`, `windowTextChanged`,
 `windowCommandLineTextChanged`, `linksChanged`, `addonCommandsChanged`, `buttonsChanged` and
 `mapRepaintRequested`. The others carry the value as it is when they are sent, and only when it differs
@@ -861,8 +863,8 @@ The order that holds between signals:
   `mappingScriptMissing` and a replay's: those still waiting, `replayStarted` among them, are sent from
   inside `shutdown()` ahead of its `replayFinished`. What was open (hidden input, logging, a download, a map
   operation, a replay) has its end from inside `shutdown()`. A session that is deleted instead sends none
-  of those ends. A `configSaved` still waiting, or due for what the shutdown wrote, comes once, at its
-  end, before `shutdown()` returns or `shutdownFinished` comes.
+  of those ends. A `configSaved` still waiting, or due for what the shutdown wrote, comes once from
+  inside `shutdown()`, at its end, before it returns or `shutdownFinished` comes.
 
 ## Embedding it: drawing the main console as the GUI does
 

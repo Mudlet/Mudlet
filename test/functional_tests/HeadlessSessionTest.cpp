@@ -6905,6 +6905,48 @@ registerAnonymousEventHandler("sysLoadEvent", function() feedTriggers("fed by sy
         QVERIFY(session.shutdown(false));
     }
 
+    void test_aStartFromTheShutdownsConfigSavedIsRefused_data()
+    {
+        QTest::addColumn<bool>("async");
+        QTest::newRow("shutdown") << false;
+        QTest::newRow("shutdownAsync") << true;
+    }
+
+    // That one is sent from inside the shutdown, which refuses calls until it is over
+    void test_aStartFromTheShutdownsConfigSavedIsRefused()
+    {
+        QFETCH(bool, async);
+        const QString name = async ? qsl("Headless Config Saved Async Restart") : qsl("Headless Config Saved Restart");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QTest::qWait(100);
+        QStringList events;
+        connect(&session, &THeadlessSession::configSaved, this, [&session, &events, name]() {
+            if (events.isEmpty()) {
+                events.append(QString::fromLatin1(QMetaEnum::fromType<THeadlessSession::StartResult>().valueToKey(static_cast<int>(session.start({.profile = name, .connect = false})))));
+            }
+        });
+        connect(&session, &THeadlessSession::profileLoaded, this, [&events]() {
+            events.append(qsl("profileLoaded"));
+        });
+        connect(&session, &THeadlessSession::shutdownFinished, this, [&events](const bool shutDown) {
+            events.append(shutDown ? qsl("shutdownFinished") : qsl("shutdownFinished(false)"));
+        });
+
+        if (async) {
+            session.shutdownAsync(true);
+            QTRY_VERIFY_WITH_TIMEOUT(events.contains(qsl("shutdownFinished")), 15000);
+        } else {
+            QVERIFY(session.shutdown(true));
+            events.append(qsl("returned"));
+        }
+        QTest::qWait(100);
+        QCOMPARE(events, QStringList({qsl("poolClosing"), async ? qsl("shutdownFinished") : qsl("returned")}));
+        QVERIFY(!session.host());
+        QVERIFY(!HostManager::self());
+    }
+
     // As a script that ran while another profile's save waited for its writes could
     void test_aProfileThatCloseFailedToSaveDuringASaveIsNamed()
     {

@@ -531,7 +531,7 @@ std::optional<THeadlessSession::StartResult> THeadlessSession::prepareStart(Opti
     options.profile = options.profile.trimmed();
     options.host = options.host.trimmed();
     options.login = options.login.trimmed();
-    if (gpClosingPool) {
+    if (gpClosingPool || mShuttingDown) {
         //: Error from a frontend with no window that was asked to open a profile while those it closed were still closing
         mErrorString = tr("The profiles closed earlier are still closing; try again once they have.");
         return StartResult::poolClosing;
@@ -2083,9 +2083,9 @@ void THeadlessSession::shutdownOnceReleased(const std::shared_ptr<bool>& saved, 
     if (!self) {
         return;
     }
-    mShuttingDown = false;
     detachFromHost();
     mpHost.clear();
+    // Still shutting down, so its handler's calls are refused as during the rest of the shutdown
     if (mConfigSavedPending) {
         mConfigSavedPending = false;
         emit configSaved();
@@ -2093,6 +2093,7 @@ void THeadlessSession::shutdownOnceReleased(const std::shared_ptr<bool>& saved, 
             return;
         }
     }
+    mShuttingDown = false;
     done(true);
 }
 
