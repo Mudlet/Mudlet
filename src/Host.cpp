@@ -468,6 +468,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
                 }
             },
             Qt::QueuedConnection);
+    // After the queued one above, so the configSaved this asks for queues behind the continuations writing profile.ini
     connect(this, &Host::profileSaveFinished, this, []() {
         TAppFrontend::instance()->configWritten();
     });
