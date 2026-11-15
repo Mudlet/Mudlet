@@ -33,6 +33,7 @@
 #include <optional>
 
 class Host;
+class QEvent;
 class QSvgRenderer;
 
 // How a change of a label's text is announced to a screen reader, as ARIA's aria-live
@@ -92,6 +93,10 @@ struct TLabelModel
     void setWheel(const int func);
     void setEnter(const int func);
     void setLeave(const int func);
+    enum class Callback { click, doubleClick, release, move, wheel, enter, leave };
+    // What TLabel's mouse handlers do with the callbacks: runs that one with the event, or nothing and false where
+    // the label has none, so the event goes on to what the label is in
+    bool runCallback(Callback callback, const QEvent& event) const;
 
     // What TLabel::setBackgroundColor() restyles a label with: the sheet with its background-color
     // declarations given the colour, or the colour's appended.

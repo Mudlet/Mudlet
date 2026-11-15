@@ -338,7 +338,8 @@ private:
     void paintFrame(QPainter&, PaintResult&, const std::function<void(const View&)>& viewSettled);
     void resolveAreaExitClick(QPainter&, const QMap<int, QPointF>& areaExitsMap, const int speedWalkStartRoomId);
     void spendClick();
-    static std::pair<bool, QString> performImageSave(const QPixmap& pixmap, const QString& filePath, const QString& format);
+    // Why the save failed, empty when it did not
+    static QString performImageSave(const QPixmap& pixmap, const QString& filePath, const QString& format);
     int width() const { return mSize.width(); }
     int height() const { return mSize.height(); }
 

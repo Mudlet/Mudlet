@@ -480,6 +480,7 @@ void Host::setMainConsoleView(TMainConsole* view)
         mpNullConsoleFrontend->followView(view);
     } else if (mpConsole) {
         mpNullConsoleFrontend->resumeMainCommandLine();
+        mpNullConsoleFrontend->resumeMainText();
     }
     mpConsole = view;
     mpConsoleFrontend = view;
@@ -2590,7 +2591,7 @@ bool TMainConsole::setTextBoxTabMovesFocus(const QString& name, bool tabMovesFoc
     return true;
 }
 
-QPoint TMainConsole::mousePosition() const
+std::optional<QPoint> TMainConsole::mousePosition() const
 {
     return mpMainFrame->mapFromGlobal(QCursor::pos());
 }
@@ -3692,6 +3693,12 @@ void TMainConsole::disableMapProgressDialogCancel()
         }
         mpMapProgressDialog->setCancelButton(nullptr);
     }
+}
+
+// Runs with the map operation on the stack; see TMap::mapOperationInProgress()
+void TMainConsole::repaintMapProgressDialog()
+{
+    QCoreApplication::processEvents();
 }
 
 void TMainConsole::closeMapProgressDialog()

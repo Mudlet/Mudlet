@@ -211,6 +211,7 @@ void TriggerMatchPool::configure(const Settings& settings)
 
 void TriggerMatchPool::startHelpers(const int wanted)
 {
+#if QT_CONFIG(thread)
     if (wanted < 2) {
         return;
     }
@@ -250,6 +251,10 @@ void TriggerMatchPool::startHelpers(const int wanted)
         }
         mThreads.push_back(std::move(thread));
     }
+#else
+    // No helpers to ask, so the main thread walks every trigger, as with one CPU
+    Q_UNUSED(wanted)
+#endif
 }
 
 TriggerMatchPool::Report::Verdict TriggerMatchPool::Report::verdict() const

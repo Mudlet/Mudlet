@@ -29,6 +29,7 @@
 #include <QFile>
 #include <QSignalSpy>
 #include <QTcpServer>
+#include <QTcpSocket>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -98,6 +99,29 @@ private:
         connect(&session, &THeadlessSession::disconnected, &session, [&events]() {
             events << qsl("disconnected");
         });
+    }
+
+    // Each run as "text|foreground|background|styles", a colour of the profile's own as "own", a link as "@"
+    static QString styledPiece(const QString& text, const QList<THeadlessSession::TextRun>& runs)
+    {
+        QStringList parts;
+        int covered = 0;
+        for (const THeadlessSession::TextRun& run : runs) {
+            if (run.start != covered || run.length <= 0) {
+                return qsl("runs out of step at %1 in \"%2\"").arg(run.start).arg(text);
+            }
+            covered += run.length;
+            parts << qsl("%1|%2|%3|%4%5")
+                             .arg(text.mid(run.start, run.length).replace(QChar::LineFeed, qsl("\\n")),
+                                  run.defaultForeground ? qsl("own") : run.foreground.name(),
+                                  run.defaultBackground ? qsl("own") : run.background.name(),
+                                  QString::number(run.styles.toInt()),
+                                  run.link ? qsl("@") : QString());
+        }
+        if (covered != text.size()) {
+            return qsl("runs cover %1 of \"%2\"").arg(covered).arg(text);
+        }
+        return parts.join(qsl(" + "));
     }
 
 private slots:
@@ -421,6 +445,301 @@ setBackgroundColor("headlessColoursMini", 200, 100, 50)
         QVERIFY(session.shutdown(false));
         QTest::qWait(100);
         QCOMPARE(connecting.count(), 0);
+    }
+
+    void test_whatScriptsEchoComesWithItsColours()
+    {
+        const QString name = qsl("Headless Echo Colours");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QStringList plain;
+        QStringList styled;
+        int linkId = 0;
+        connect(&session, &THeadlessSession::localText, &session, [&plain](const QString&, const QString& text) {
+            plain << text;
+        });
+        connect(&session, &THeadlessSession::localTextStyled, &session, [&](const QString& profile, const QString& text, const QList<THeadlessSession::TextRun>& runs) {
+            QCOMPARE(profile, name);
+            // After the plain signal for the same piece
+            QCOMPARE(plain.count(), styled.count() + 1);
+            QCOMPARE(plain.constLast(), text);
+            styled << styledPiece(text, runs);
+            for (const THeadlessSession::TextRun& run : runs) {
+                if (run.link) {
+                    linkId = run.link;
+                }
+            }
+        });
+        const auto pieces = [&]() {
+            const QStringList taken = styled;
+            styled.clear();
+            plain.clear();
+            return taken.join(qsl(" ; "));
+        };
+        const QString underline = QString::number(THeadlessSession::TextStyles(THeadlessSession::TextStyle::Underline).toInt());
+
+        QVERIFY(session.runLua(qsl(R"lua(cecho("<red>hot<reset> plain\n"))lua")));
+        QCOMPARE(pieces(), qsl("hot|#ff0000|own|0 ;  plain\\n|own|own|0"));
+        QVERIFY(session.runLua(qsl(R"lua(decho("<10,20,30:40,50,60>dd<r>\n"))lua")));
+        QCOMPARE(pieces(), qsl("dd|#0a141e|#28323c|0 ; \\n|own|own|0"));
+        QVERIFY(session.runLua(qsl(R"lua(hecho("#ff00ffpink#r\n"))lua")));
+        QCOMPARE(pieces(), qsl("pink|#ff00ff|own|0 ; \\n|own|own|0"));
+        QVERIFY(session.runLua(qsl(R"lua(setFgColor(0, 255, 0) setBgColor(0, 0, 255) setUnderline(true) echo("go\non") resetFormat() echo("\n"))lua")));
+        QCOMPARE(pieces(), qsl("go\\non|#00ff00|#0000ff|%1 ; \\n|own|own|0").arg(underline));
+
+        // A link in an echo is named, in the colours it was written in
+        QVERIFY(session.runLua(qsl(R"lua(echo("see ") echoLink("here", function() end, "the hint", true) echo("\n"))lua")));
+        QCOMPARE(pieces(), qsl("see |own|own|0 ; here|own|own|0@ ; \\n|own|own|0"));
+        QVERIFY(linkId);
+        const std::optional<THeadlessSession::Link> link = session.link(linkId);
+        QVERIFY(link);
+        QCOMPARE(link->tooltip, qsl("the hint"));
+
+        // A piece that ends a line another left open starts with that line feed, in the colours of what follows
+        QVERIFY(session.runLua(qsl(R"lua(echo("open") moveCursor("main", 0, getLineNumber("main")) setFgColor(255, 0, 0) insertText("in") resetFormat() moveCursorEnd("main") echo("\n"))lua")));
+        QCOMPARE(pieces(), qsl("open|own|own|0 ; \\nin|#ff0000|own|0 ; \\n\\n|own|own|0"));
+
+        // Text copied in from another buffer keeps its colours, but not the ids of that buffer's links
+        QVERIFY(session.runLua(qsl(R"lua(createBuffer("copied")
+cecho("copied", "<red>x")
+echoLink("copied", "lnk", function() end, "a hint", true)
+echo("copied", "\n")
+moveCursor("copied", 0, 0)
+selectCurrentLine("copied")
+copy("copied")
+appendBuffer("main"))lua")));
+        QCOMPARE(pieces(), qsl("x|#ff0000|own|0 + lnk\\n|own|own|0"));
+
+        // An echo is told in the colours it was written in, though a handler its write ran changed them
+        QVERIFY(session.runLua(qsl(R"lua(setConsoleBufferSize("main", 100, 10)
+shrunk = 0
+registerAnonymousEventHandler("sysBufferShrinkEvent", function() shrunk = shrunk + 1 setFgColor(255, 0, 0) end)
+for i = 1, 150 do resetFormat() echo("x\n") end
+resetFormat())lua")));
+        QVERIFY(session.runLua(qsl("assert(shrunk > 0)")));
+        const QString echoed = pieces();
+        QVERIFY2(!echoed.contains(qsl("#ff0000")), qPrintable(echoed));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_aCommandsEchoComesWithItsColours()
+    {
+        const QString name = qsl("Headless Command Echo Colours");
+        QVERIFY(writeProfile(name, QString()));
+        QTcpServer server;
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+
+        THeadlessSession session;
+        bool prompted = false;
+        connect(&session, &THeadlessSession::outputLine, &session, [&prompted](const QString&, const QString&, const bool isPrompt) {
+            prompted = prompted || isPrompt;
+        });
+        QStringList styled;
+        connect(&session, &THeadlessSession::localTextStyled, &session, [&styled](const QString&, const QString& text, const QList<THeadlessSession::TextRun>& runs) {
+            // Not the connection's own messages
+            if (!text.startsWith(QLatin1Char('[')) && !text.contains(QLatin1String("connection"))) {
+                styled << styledPiece(text, runs);
+            }
+        });
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"(tempTrigger("Welcome", [[send("from a trigger")]]))")));
+        QTRY_VERIFY_WITH_TIMEOUT(server.hasPendingConnections(), 10000);
+        std::unique_ptr<QTcpSocket> game(server.nextPendingConnection());
+        game->write("Welcome\r\nhp 10> \xff\xf9");
+        QTRY_VERIFY_WITH_TIMEOUT(prompted, 10000);
+        // In a trigger, at the prompt, and below other text, each in the command's own colours
+        QVERIFY(session.submit(qsl("look")));
+        QVERIFY(session.runLua(qsl(R"lua(echo("later\n"))lua")));
+        QVERIFY(session.submit(qsl("again")));
+        QCOMPARE(styled.join(qsl(" ; ")), qsl("from a trigger\\n|#717100|own|0 ; look\\n|#717100|own|0 ; later\\n|own|own|0 ; again\\n|#717100|own|0"));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // The console draws these on the end of a line that was already sent whole
+    void test_whatTheConsoleDrawsOnTheLineAboveSaysSo()
+    {
+        const QString name = qsl("Headless Echo Anchor");
+        QVERIFY(writeProfile(name, QString()));
+        QTcpServer server;
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+
+        THeadlessSession session;
+        bool prompted = false;
+        connect(&session, &THeadlessSession::outputLine, &session, [&prompted](const QString&, const QString&, const bool isPrompt) {
+            prompted = prompted || isPrompt;
+        });
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"lua(tempTrigger("Welcome", [[echo(" <tagged>") echo(" <twice>") send("from a trigger")]])
+tempTrigger("Second", [[echo(" <second>")]])
+tempTrigger("Third", [[echo("\n<below>")]]))lua")));
+        QTRY_VERIFY_WITH_TIMEOUT(server.hasPendingConnections(), 10000);
+        std::unique_ptr<QTcpSocket> game(server.nextPendingConnection());
+        QStringList local;
+        connect(&session, &THeadlessSession::localTextStyled, &session, [&local](const QString&, const QString& text, const QList<THeadlessSession::TextRun>&, const bool continuesLine) {
+            local << (continuesLine ? qsl("+") : qsl("|")) + QString(text).replace(QChar::LineFeed, qsl("\\n"));
+        });
+        game->write("Welcome\r\nSecond\r\nThird\r\nhp 10> \xff\xf9");
+        QTRY_VERIFY_WITH_TIMEOUT(prompted, 10000);
+        QVERIFY(session.submit(qsl("look")));
+        QVERIFY(session.runLua(qsl(R"lua(echo("later\n"))lua")));
+        QVERIFY(session.submit(qsl("again")));
+        // The first echo onto a trigger's line and the command typed at the prompt; a piece still open is
+        // carried on without it, and a command below other text is a line of its own
+        QCOMPARE(local.join(QString()), qsl("+ <tagged>| <twice>|\\nfrom a trigger\\n+ <second>+\\n\\n<below>+\\nlook\\n|later\\n|again\\n"));
+
+        QStringList shown;
+        connect(&session, &THeadlessSession::lineShown, &session, [&shown](const QString&, const QString& text, bool, const QList<THeadlessSession::TextRun>&, qint64, const bool continuesLine) {
+            shown << (continuesLine ? qsl("+") : qsl("|")) + QString(text).replace(QChar::LineFeed, qsl("\\n"));
+        });
+        QVERIFY(session.runLua(qsl(R"lua(tempRegexTrigger("^gag and echo$", [[deleteLine() echo(" echoed") echo(" twice")]])
+tempRegexTrigger("^gag and cecho$", [[deleteLine() cecho("\n<red>OUCH")]])
+tempRegexTrigger("^feed and echo$", [[feedTriggers("fed\n") echo("echoed after the feed")]])
+tempRegexTrigger("^send$", [[send("a command")]])
+tempRegexTrigger("^send empty$", [[send("")]])
+tempRegexTrigger("^gag and end$", [[deleteLine() echo("\n")]])
+feedTriggers("before\ngag and echo\nbefore cecho\ngag and cecho\nfeed and echo\nsend\nsend empty\ngag and end\nlast\n"))lua")));
+        // An echo after deleteLine() goes on the line above, unless it starts with a line feed or follows fed
+        // lines; the blank line of an empty command echo is sent, and a line feed that only ends a line is not
+        QCOMPARE(shown.join(QString()), qsl("|before+ echoed twice|before cecho|OUCH|feed and echo|fed|echoed after the feed|send|a command|send empty||last"));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // Text the console draws on a line of its own must not say it joins the line above
+    void test_onlyWhatTheConsoleDrawsOnTheLineAboveSaysSo()
+    {
+        const QString name = qsl("Headless Echo Anchor Lines");
+        QVERIFY(writeProfile(name, QString()));
+        QStringList events;
+        const auto mark = [](const QString& kind, const bool continuesLine, const QString& text) {
+            return kind + (continuesLine ? qsl("+:") : qsl(":")) + QString(text).replace(QChar::LineFeed, qsl("\\n"));
+        };
+        const QString triggers = qsl(R"lua(
+tempRegexTrigger("^two sends$", [[send("a") send("b")]])
+tempRegexTrigger("^send tag$", [[send("a")]])
+tempRegexTrigger("^send tag$", [[echo(" <tag>")]])
+tempRegexTrigger("^sendall$", [[sendAll("n", "e", "look")]])
+tempRegexTrigger("^send echo$", [[send("a") echo("x\n")]])
+tempRegexTrigger("^$", [[if blankLineEchoes then echo("onblank\n") end]])
+tempRegexTrigger("^feed echo$", [[feedTriggers("fed\n") echo("note\n")]])
+tempRegexTrigger("^clear send$", [[clearWindow() send("c")]])
+tempRegexTrigger("^plain$", [[echo(" tag\n")]])
+tempRegexTrigger("^gag echo send$", [[deleteLine() echo(" R5") send("s")]])
+tempRegexTrigger("^gag cecho send$", [[deleteLine() cecho("<red> A") cecho("<blue>B") send("x")]])
+tempRegexTrigger("^gag echo feed$", [[deleteLine() echo(" R8") feedTriggers("fed\n")]])
+tempRegexTrigger("^gag insert$", [[deleteLine() moveCursorEnd() insertText(" I")]])
+tempRegexTrigger("^gag onto blank$", [[deleteLine() echo("R9")]])
+tempRegexTrigger("^nest plain$", [[feedTriggers("inner x\n") echo(" N")]])
+tempRegexTrigger("^inner x$", [[echo(" X")]])
+tempRegexTrigger("^nest sendin$", [[feedTriggers("send tagx\n") echo(" N")]])
+tempRegexTrigger("^nest gagsend$", [[deleteLine() feedTriggers("send tagx\n") echo(" N")]])
+tempRegexTrigger("^send tagx$", [[send("a")]])
+tempRegexTrigger("^nest deep$", [[feedTriggers("mid deep\n") echo(" O")]])
+tempRegexTrigger("^mid deep$", [[feedTriggers("deep none\n")]])
+tempRegexTrigger("^nest ins$", [[feedTriggers("\n") moveCursor("main", 0, getLastLineNumber("main") - 1) insertText("x")]])
+tempRegexTrigger("^gag feed echo$", [[deleteLine() feedTriggers("fed\n") echo("after")]])
+tempRegexTrigger("^current$", [[moveCursor("main", 3, getLineNumber("main") - 1) insertText("X")]])
+)lua");
+        const QStringList fed{qsl(R"(feedTriggers("first\ntwo sends\n"))"),
+                              qsl(R"(feedTriggers("send tag\n"))"),
+                              qsl(R"(feedTriggers("sendall\n"))"),
+                              qsl(R"(feedTriggers("send echo\n"))"),
+                              qsl(R"(feedTriggers("feed echo\n"))"),
+                              qsl(R"(feedTriggers("clear send\n"))"),
+                              qsl(R"(feedTriggers("plain\n"))"),
+                              qsl(R"(feedTriggers("one\ngag echo send\nbelow\n"))"),
+                              qsl(R"(feedTriggers("one\ngag cecho send\nbelow\n"))"),
+                              qsl(R"(feedTriggers("one\ngag echo feed\nbelow\n"))"),
+                              qsl(R"(feedTriggers("one\ngag insert\nbelow\n"))"),
+                              qsl(R"(feedTriggers("one\n\ngag onto blank\nbelow\n"))"),
+                              qsl(R"(feedTriggers("one\ngag feed echo\nbelow\n"))"),
+                              qsl(R"(blankLineEchoes = true feedTriggers("\n"))"),
+                              qsl(R"(feedTriggers("nest plain\n"))"),
+                              qsl(R"(feedTriggers("nest sendin\n"))"),
+                              qsl(R"(feedTriggers("one\nnest gagsend\n"))"),
+                              qsl(R"(feedTriggers("nest deep\n"))"),
+                              qsl(R"(blankLineEchoes = false feedTriggers("nest ins\n"))"),
+                              qsl(R"(feedTriggers("abc\ncurrent\n"))")};
+        const auto run = [&events, &fed](THeadlessSession& session) {
+            QStringList steps;
+            for (const QString& text : fed) {
+                events.clear();
+                if (!session.runLua(text)) {
+                    return QStringList{qsl("the Lua did not run")};
+                }
+                steps << events.join(qsl(" "));
+            }
+            return steps;
+        };
+        {
+            THeadlessSession session;
+            QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+            QVERIFY(session.runLua(triggers));
+            connect(&session, &THeadlessSession::outputLine, &session, [&events, &mark](const QString&, const QString& text, bool) {
+                events << mark(qsl("O"), false, text);
+            });
+            connect(&session, &THeadlessSession::localTextStyled, &session, [&events, &mark](const QString&, const QString& text, const QList<THeadlessSession::TextRun>&, const bool continuesLine) {
+                events << mark(qsl("T"), continuesLine, text);
+            });
+            const QStringList expected{qsl("O:first O:two sends T:a\\n T:b\\n"),
+                                       qsl("O:send tag T:a\\n T: <tag>"),
+                                       qsl("O:sendall T:\\nn\\n T:e\\n T:look\\n"),
+                                       qsl("O:send echo T:a\\n T:x\\n"),
+                                       qsl("O:feed echo O:fed T:note\\n"),
+                                       qsl("O:clear send T:c\\n"),
+                                       qsl("O:plain T+: tag\\n"),
+                                       qsl("O:one O:gag echo send T+: R5 T:\\ns\\n O:below"),
+                                       qsl("O:one O:gag cecho send T+: A T:B T:\\nx\\n O:below"),
+                                       qsl("O:one O:gag echo feed T+: R8 O:fed O:below"),
+                                       qsl("O:one O:gag insert T:\\n I O:below"),
+                                       qsl("O:one O: O:gag onto blank T:\\nR9 O:below"),
+                                       qsl("O:one O:gag feed echo O:fed T:\\nafter O:below"),
+                                       qsl("O: T+:\\nonblank\\n"),
+                                       qsl("O:nest plain O:inner x T+: X T:\\n N"),
+                                       qsl("O:nest sendin O:send tagx T:\\na\\n T: N"),
+                                       qsl("O:one O:nest gagsend O:send tagx T:\\na\\n T: N"),
+                                       qsl("O:nest deep O:mid deep O:deep none T:\\n O"),
+                                       qsl("O:nest ins O: T:\\nx"),
+                                       qsl("O:abc O:current T:\\nX")};
+            QCOMPARE(run(session), expected);
+            QVERIFY(session.shutdown(false));
+        }
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(triggers));
+        connect(&session,
+                &THeadlessSession::lineShown,
+                &session,
+                [&events, &mark](const QString&, const QString& text, bool, const QList<THeadlessSession::TextRun>&, qint64, const bool continuesLine) {
+                    events << mark(qsl("S"), continuesLine, text);
+                });
+        const QStringList expected{qsl("S:first S:two sends S:a S:b"),
+                                   qsl("S:send tag S:a S: <tag>"),
+                                   qsl("S:sendall S:n S:e S:look"),
+                                   qsl("S:send echo S:a S:x"),
+                                   qsl("S:feed echo S:fed S:note"),
+                                   qsl("S:c"),
+                                   qsl("S:plain tag\\n"),
+                                   qsl("S:one S+: R5 S:s S:below"),
+                                   qsl("S:one S+: AB S:x S:below"),
+                                   qsl("S:one S+: R8 S:fed S:below"),
+                                   qsl("S:one S: I S:below"),
+                                   qsl("S:one S: S+:R9 S:below"),
+                                   qsl("S:one S:fed S:after S:below"),
+                                   qsl("S:onblank\\n"),
+                                   qsl("S:nest plain S:inner x X S: N"),
+                                   qsl("S:nest sendin S:send tagx S:a S: N"),
+                                   qsl("S:one S:send tagx S:a S: N"),
+                                   qsl("S:nest deep S:mid deep S:deep none S: O"),
+                                   qsl("S:nest ins S: S+:x"),
+                                   // The pass's own line is sent ahead of what it wrote onto the line above
+                                   qsl("S:abc S:current S:X")};
+        QCOMPARE(run(session), expected);
+        QVERIFY(session.shutdown(false));
     }
 };
 
