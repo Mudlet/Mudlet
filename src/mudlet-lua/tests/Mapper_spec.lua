@@ -3581,10 +3581,10 @@ describe("Tests mapper functions against a shared fixture", function()
     end)
 
     it("a component too large for an int hard-errors rather than wrapping", function()
-      -- getVerifiedInt() reads a Lua number as a 64 bit integer and refuses one
-      -- that will not fit an int, which is a separate refusal from the type
-      -- check above and from the 0-255 range check: without it the value would
-      -- be truncated into range and silently accepted.
+      -- getVerifiedInt() refuses a Lua number that will not fit an int, which is
+      -- a separate refusal from the type check above and from the 0-255 range
+      -- check: without it the value would be truncated into range and silently
+      -- accepted.
       local ok, err = pcall(function() setMapBackgroundColor(2 ^ 40, 0, 0) end)
       assert.is_false(ok)
       assert.is_truthy(tostring(err):find("integer over/under-flow", 1, true), tostring(err))
