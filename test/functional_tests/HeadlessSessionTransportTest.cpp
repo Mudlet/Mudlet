@@ -45,6 +45,10 @@ const QByteArray IAC_WILL_GMCP("\xff\xfb\xc9", 3);
 const QByteArray IAC_DO_GMCP("\xff\xfd\xc9", 3);
 const QByteArray IAC_SB_GMCP("\xff\xfa\xc9", 3);
 const QByteArray IAC_SE("\xff\xf0", 2);
+const QByteArray IAC_DO_TTYPE("\xff\xfd\x18", 3);
+const QByteArray IAC_SB_TTYPE_SEND("\xff\xfa\x18\x01\xff\xf0", 6);
+// Its NUL, the IS code, would end a write that stops at the first one
+const QByteArray IAC_SB_TTYPE_IS_MUDLET("\xff\xfa\x18\x00MUDLET\xff\xf0", 12);
 // In the order KaVir's protocol handler announces its options, which is how Mudlet recognises it
 const QByteArray KAVIR_ANNOUNCEMENTS("\xff\xfd\x18"  // DO TERMINAL-TYPE
                                      "\xff\xfd\x1f"  // DO NAWS
@@ -164,8 +168,9 @@ tempTrigger("A dragon arrives", function() dragonSeen = "yes" send("kill dragon"
         QVERIFY(session.runLua(qsl("local _, _, connected = getConnectionInfo() connectionInfo = tostring(connected)")));
         QCOMPARE(luaGlobal(session, "connectionInfo"), qsl("true"));
 
-        session.transportReceived(lastDial(dials), IAC_WILL_GMCP + "Welcome to the game!\r\n");
+        session.transportReceived(lastDial(dials), IAC_DO_TTYPE + IAC_SB_TTYPE_SEND + IAC_WILL_GMCP + "Welcome to the game!\r\n");
         QTRY_VERIFY_WITH_TIMEOUT(written(writes).contains(IAC_DO_GMCP), 10000);
+        QVERIFY2(written(writes).contains(IAC_SB_TTYPE_IS_MUDLET), written(writes).toHex(' ').constData());
         // A chunk split inside the subnegotiation, as a connection may split it
         const QByteArray gmcp = IAC_SB_GMCP + R"(Char.Vitals {"hp": 42})" + IAC_SE;
         session.transportReceived(lastDial(dials), gmcp.left(9));
