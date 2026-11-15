@@ -598,6 +598,17 @@ void forwardResize([[maybe_unused]] int signalNumber)
     errno = savedErrno;
 }
 
+bool outputIsTerminal()
+{
+#if defined(Q_OS_WASM)
+    // Emscripten calls standard output a terminal, but it goes to the page's console, which shows escape codes as text
+    // and has no size for the game to follow
+    return false;
+#else
+    return ::isatty(STDOUT_FILENO);
+#endif
+}
+
 // In characters, of the terminal standard output goes to; none for a file or a pipe
 std::optional<QSize> terminalSize()
 {
@@ -941,7 +952,7 @@ int main(int argc, char* argv[])
 #if !defined(Q_OS_WINDOWS)
             // Not on Windows, whose console shows the codes as text unless told otherwise. NO_COLOR as
             // https://no-color.org/ asks.
-            coloured = ::isatty(STDOUT_FILENO) && qEnvironmentVariableIsEmpty("NO_COLOR") && qgetenv("TERM") != "dumb";
+            coloured = outputIsTerminal() && qEnvironmentVariableIsEmpty("NO_COLOR") && qgetenv("TERM") != "dumb";
 #endif
         } else if (when != qsl("never")) {
             //: Command line error of the headless runner; %1 is what was given; auto, always and never are not to be translated
@@ -1135,7 +1146,7 @@ int main(int argc, char* argv[])
                 session->setScreenSize(size->width(), size->height());
             }
         };
-        if (::isatty(STDOUT_FILENO)) {
+        if (outputIsTerminal()) {
             if (const QString problem = catchResizes(); !problem.isEmpty()) {
                 //: Warning from the headless runner; %1 is the system's reason
                 errors.report(QCoreApplication::translate("headless", "cannot catch SIGWINCH, so the game will not be told when the terminal is resized: %1").arg(problem));
