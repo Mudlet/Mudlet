@@ -184,6 +184,12 @@ add_dependencies(copy_sentry sentry_native)
 add_dependencies(${EXE_MUDLET_TARGET} copy_sentry)
 
 if(APPLE)
+    # dsymutil reads the debug info from the objects the linker used, and ld64 deletes the ones LTO
+    # makes unless told where to keep them
+    if(CMAKE_INTERPROCEDURAL_OPTIMIZATION)
+        file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/mudlet-lto")
+        target_link_options(${EXE_MUDLET_TARGET} PRIVATE "LINKER:-object_path_lto,${CMAKE_CURRENT_BINARY_DIR}/mudlet-lto")
+    endif()
     if(CMAKE_BUILD_TYPE STREQUAL "Release")
         add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
             COMMAND dsymutil $<TARGET_FILE:${EXE_MUDLET_TARGET}> -o $<TARGET_FILE:${EXE_MUDLET_TARGET}>.dSYM
