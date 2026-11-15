@@ -108,7 +108,8 @@ as what CI passes — set them to match the job being reproduced:
 
 The Linux build that ships also takes the `PATH`, `CC`, `CXX`, `CFLAGS`, `CXXFLAGS` and `LDFLAGS`
 that the *(Linux) Install Clang for the profile-guided build* step in `build-mudlet.yml` sets, and
-passes `-DUSE_ALTERNATE_LINKER=lld` in place of the preset's `mold`, plus `-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON`.
+passes `-DUSE_ALTERNATE_LINKER=lld` in place of the preset's `mold`, plus
+`-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON`.
 
 ```bash
 USE_SANITIZER=Address cmake --preset ci-linux
@@ -243,15 +244,16 @@ measured as noise.
 CI builds all three releases this way with Clang, and links the Windows and Linux ones with ThinLTO.
 Linux takes Clang 23 from apt.llvm.org but compiles against GCC 12's libstdc++, so the AppImage
 still runs on Ubuntu 22.04; the workflow fails if Clang would pick another GCC's. It also passes the
-hardening flags Ubuntu's GCC adds by default and Clang does not. Measured end to
-end on the Linux release configuration, 16 interleaved rounds at each of three code layouts, Clang
-23 with the profile and ThinLTO took 0.85 of the time GCC 12 with the profile did on a replayed
-session with 46 triggers, 0.90 on the same session with none and 0.91 on svof. Full LTO was no
-faster and needs 6.4 GB per link; adding LTO to GCC 12 with the profile took 0.91, 0.95 and 0.99. GCC 12's profile alone
-took 0.89, 0.89 and 0.94 of the time of a plain GCC 12 build, drew the Aetherspace map within
-noise, and took 1.00 to 1.05 of the time to search for paths on four maps. Map drawing and path
-searches have not been measured on the Clang build; with PipelineBenchmark as the only training,
-profile-guided Clang without LTO took 1.08 to 1.24 of plain GCC's time at 2D map rendering.
+hardening flags Ubuntu's GCC adds by default and Clang does not, which cost Clang 1 to 4%. Measured
+end to end on the Linux release configuration, 16 interleaved rounds at each of three code layouts,
+Clang 23 with the profile, ThinLTO and that hardening took 0.85 of the time GCC 12 with the profile
+did on a replayed session with 46 triggers, 0.93 on the same session with none and 0.93 on svof.
+Full LTO was no faster than ThinLTO and needs 6.4 GB per link; adding LTO to GCC 12 with the profile
+took 0.91, 0.95 and 0.99. GCC 12's profile alone took 0.89, 0.89 and 0.94 of the time of a plain
+GCC 12 build, drew the Aetherspace map within noise, and took 1.00 to 1.05 of the time to search for
+paths on four maps. Map drawing and path searches have not been measured on the Clang build; with
+PipelineBenchmark as the only training, profile-guided Clang without LTO took 1.08 to 1.24 of plain
+GCC's time at 2D map rendering.
 
 The first pass builds only the instrumented benchmarks - building `mudlet` would send the
 instrumented binary's debug files to Sentry - and the second builds everything against the profile,
