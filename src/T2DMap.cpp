@@ -650,7 +650,7 @@ void T2DMap::init()
     flushSymbolPixmapCache();
     flushTextLabelPixmapCache();
     mLargeAreaExitArrows = mpHost->getLargeAreaExitArrows();
-    mDirectionalExitLines = mpHost->getDirectionalExitLines();
+    mDirectionalExitLines = TMapPainter::directionalExitLinesEnabled();
 }
 
 void T2DMap::scheduleRender()

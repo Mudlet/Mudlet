@@ -199,7 +199,7 @@ void TNullMapView::render(QPainter& painter, const QSize& size)
     view.mShowRoomID = mpHost->mShowRoomID;
     view.mBubbleMode = mpHost->mBubbleMode;
     view.mLargeAreaExitArrows = mpHost->getLargeAreaExitArrows();
-    view.mDirectionalExitLines = mpHost->getDirectionalExitLines();
+    view.mDirectionalExitLines = TMapPainter::directionalExitLinesEnabled();
     view.mDrawUpperLowerLevels = TAppFrontend::instance()->drawUpperLowerLevels();
     view.mPlayerRoomColorGradientStops = RoomAppearance::playerRoomStops(pMap->mPlayerRoomStyle, pMap->mPlayerRoomInnerDiameterPercentage, pMap->mPlayerRoomInnerColor, pMap->mPlayerRoomOuterColor);
     if (mPendingZoom) {
@@ -338,7 +338,7 @@ std::pair<bool, QString> TNullMapView::exportAreaToImage(const int areaId, const
     view.mShowRoomID = mpHost->mShowRoomID;
     view.mBubbleMode = mpHost->mBubbleMode;
     view.mLargeAreaExitArrows = mpHost->getLargeAreaExitArrows();
-    view.mDirectionalExitLines = mpHost->getDirectionalExitLines();
+    view.mDirectionalExitLines = TMapPainter::directionalExitLinesEnabled();
     view.mAreaID = shownAreaId();
     if (const TRoom* pCentredRoom = mpHost->mpMap->mpRoomDB->getRoom(centredRoomId())) {
         view.mMapCenterZ = pCentredRoom->z();

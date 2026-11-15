@@ -26,6 +26,7 @@
 
 #include "ExitAppearance.h"
 #include "Host.h"
+#include "MudletApp.h"
 #include "RoomAppearance.h"
 #include "TArea.h"
 #include "TEvent.h"
@@ -47,6 +48,7 @@
 #include <QPainterPath>
 #include <QPointer>
 #include <QRadialGradient>
+#include <QSettings>
 #include <QSetIterator>
 #include <QVector3D>
 #if defined(Q_OS_LINUX) || defined(Q_OS_MACOS)
@@ -131,6 +133,12 @@ int TMapPainter::customLineDestination(const TRoom& room, const QString& key)
         }
     }
     return room.getSpecialExits().value(key);
+}
+
+bool TMapPainter::directionalExitLinesEnabled()
+{
+    QSettings* settings = MudletApp::getQSettings();
+    return !settings || settings->value(qsl("directionalExitLines"), true).toBool();
 }
 
 bool TMapPainter::returnExitHasCustomLine(const TRoom& room, const ExitToPaint& exit)

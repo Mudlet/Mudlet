@@ -8139,16 +8139,6 @@ void Host::setLargeAreaExitArrows(const bool state)
     }
 }
 
-void Host::setDirectionalExitLines(const bool state)
-{
-    if (mDirectionalExitLines != state) {
-        mDirectionalExitLines = state;
-        if (mpMap) {
-            consoleFrontend()->setMapDirectionalExitLines(state);
-        }
-    }
-}
-
 const QString& Host::mapStyle() const
 {
     return mpMapStyle->id;

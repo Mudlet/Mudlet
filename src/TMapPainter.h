@@ -233,6 +233,8 @@ public:
     // Whether exit's destination leads back through the opposite exit and draws that one as a custom line, which then
     // shows the two-way connection a bent plain line would draw again beside it
     static bool returnExitHasCustomLine(const TRoom& room, const ExitToPaint& exit);
+    // directionalExitLines in Mudlet.ini, on unless set to false there; read when a view is made
+    static bool directionalExitLinesEnabled();
 
     void flushSymbolPixmapCache() { mSymbolPixmapCache.clear(); }
     qsizetype symbolPixmapCacheCount() const { return mSymbolPixmapCache.size(); }

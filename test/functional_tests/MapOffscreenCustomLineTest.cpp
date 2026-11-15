@@ -968,6 +968,11 @@ private slots:
         QVERIFY(pRoomDB->getRoom(3612)->setExit(3611, DIR_WEST));
         T2DMap* p2dMap = showAreaAtTheOrigin(areaId);
         QVERIFY(p2dMap);
+        // Bent, the northeast exit leaves through its own stub and the custom line no longer covers it
+        const bool directionalExitLines = std::exchange(p2dMap->mDirectionalExitLines, false);
+        const auto restore = qScopeGuard([p2dMap, directionalExitLines]() {
+            p2dMap->mDirectionalExitLines = directionalExitLines;
+        });
 
         const int withoutLines = countInExport(p2dMap, areaId, qsl("export-lines-without"), plainLineColoured);
         QVERIFY(withoutLines >= 0);
