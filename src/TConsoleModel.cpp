@@ -1090,13 +1090,17 @@ bool TConsoleModel::runLink(const int linkIndex, const int item, const bool from
     }
     // Checked before anything changes, so a selection the game never hears of is not shown as chosen
     if (gmcpCannotSend(linkIndex, item, fromMenu)) {
-        if (mpHost->mEnableGMCP) {
-            //: Shown when the player clicks a game's link that sends a GMCP message, and the game did not agree to GMCP on this connection
-            mpHost->postMessage(QCoreApplication::translate("TConsoleModel", "[ INFO ]  - This link sends a GMCP message, which the game has not turned on for this connection."));
-        } else {
+        // GMCP off in the preferences first: connecting alone would not let the message through
+        if (!mpHost->mEnableGMCP) {
             //: Shown when the player clicks a game's link that sends a GMCP message while GMCP is off in this profile's preferences; the path names the Preferences tab and group
             mpHost->postMessage(QCoreApplication::translate(
                     "TConsoleModel", "[ INFO ]  - This link sends a GMCP message, and GMCP is off for this profile. Turn it on under Preferences, General, Game protocols, and reconnect."));
+        } else if (mpHost->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState) {
+            //: Shown when the player clicks a game's link that sends a GMCP message while the profile is not connected
+            mpHost->postMessage(QCoreApplication::translate("TConsoleModel", "[ INFO ]  - This link sends a GMCP message, which can only reach the game while connected."));
+        } else {
+            //: Shown when the player clicks a game's link that sends a GMCP message, and the game did not agree to GMCP on this connection
+            mpHost->postMessage(QCoreApplication::translate("TConsoleModel", "[ INFO ]  - This link sends a GMCP message, which the game has not turned on for this connection."));
         }
         return false;
     }
@@ -1131,7 +1135,7 @@ bool TConsoleModel::gmcpCannotSend(const int linkIndex, const int item, const bo
         return false;
     }
     // Only an OSC 8 link has styling, and its commands are the ones TBuffer::decodeOSC() wrote
-    return commands.at(item).startsWith(qsl("sendGMCP(")) && mpHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectedState && !mpHost->mTelnet.isGMCPEnabled();
+    return commands.at(item).startsWith(qsl("sendGMCP(")) && (mpHost->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState || !mpHost->mTelnet.isGMCPEnabled());
 }
 
 void TConsoleModel::runMenuPick(const int linkIndex, const qint64 issue, const int item, const bool selectionApplied)

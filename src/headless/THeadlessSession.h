@@ -307,9 +307,9 @@ public:
     // returns, so an OSC 8 web link opens through QDesktopServices: ran, or failed where that raised a Lua error,
     // which errorString() gives. A local: link with a menu runs nothing without an item, as the GUI's click only
     // opens the menu, and an item picked straight after leaves the selection that follow changed. A gmcp: link or
-    // item while GMCP is off for the connection sends nothing and leaves the link as it was (gmcpOff). noSuchItem:
-    // item does not index link()'s items. unknown: an id the main console does not hold. refused: where submit()
-    // is; errorString() says why.
+    // item while GMCP is off for the connection, or with no connection, sends nothing and leaves the link as it was
+    // (gmcpOff). noSuchItem: item does not index link()'s items. unknown: an id the main console does not hold.
+    // refused: where submit() is; errorString() says why.
     enum class LinkResult { ran, revealedSpoiler, disabled, concealed, failed, noSuchItem, unknown, refused, gmcpOff };
     LinkResult followLink(int link, std::optional<int> item = std::nullopt);
     // The same for a link of that window, shown or hidden, as only the app knows what its pointer can reach;

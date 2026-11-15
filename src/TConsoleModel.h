@@ -226,7 +226,7 @@ struct TConsoleModel
     enum class LinkFollowed { ran, revealedSpoiler, disabled, unknown };
     LinkFollowed linkMayRun(int linkIndex);
     bool runLink(int linkIndex, int item, bool fromMenu, bool selectionApplied = false);
-    // A game's gmcp: link or menu item that runLink() would send while GMCP is off for the connection
+    // A game's gmcp: link or menu item that runLink() would send while GMCP is off for the connection, or with no connection
     bool gmcpCannotSend(int linkIndex, int item, bool fromMenu) const;
     // runLink() for a menu's pick, unless its link is no longer the one with the TLinkStore::issueOf() the menu
     // was built for. selectionApplied where activating the link opened the menu and already changed its selection.

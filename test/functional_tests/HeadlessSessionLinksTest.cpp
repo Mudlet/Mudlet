@@ -535,6 +535,32 @@ tempRegexTrigger("^headless popup$", [[echoPopup(" p", {"headlessPopup = 1", "he
         QVERIFY(session.shutdown(false));
     }
 
+    // With no connection sendGMCP() sends nothing, so a gmcp: link, clicked or picked from its menu, is left as it was
+    void test_aGmcpLinkWithNoConnectionIsLeftAsItWas()
+    {
+        const QString name = qsl("Headless Follow Gmcp Unconnected");
+        QVERIFY(writeProfile(name, recordSends()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QVERIFY(session.runLua(feed(qsl("hint: ") + osc8(qsl("gmcp:Game.Pref.Set?config={\"selection\":{\"group\":\"headlessHints\",\"value\":\"on\",\"exclusive\":false}}"), qsl("hints"))
+                                    + qsl(" mode: ")
+                                    + osc8(qsl("gmcp:Game.Mode?config={\"selection\":{\"group\":\"headlessMode\",\"value\":\"m\",\"exclusive\":false},"
+                                               "\"menu\":[{\"Fast\":\"gmcp:Game.Mode.Fast\"},{\"Slow\":\"gmcp:Game.Mode.Slow\"}]}"),
+                                           qsl("mode")))));
+        const QList<int> links = linksOnLineStarting(output, qsl("hint: "));
+        QCOMPARE(links.size(), 2);
+
+        QCOMPARE(session.followLink(links.at(0)), THeadlessSession::LinkResult::gmcpOff);
+        QVERIFY2(!session.link(links.at(0))->visited, "the link was marked followed");
+        QVERIFY2(!session.link(links.at(0))->selected, "the link was shown as chosen");
+
+        QCOMPARE(session.followLink(links.at(1), 1), THeadlessSession::LinkResult::gmcpOff);
+        QVERIFY2(!session.link(links.at(1))->visited, "the link was marked followed for a pick from its menu");
+        QVERIFY2(!session.link(links.at(1))->selected, "the link was shown as chosen for a pick from its menu");
+        QVERIFY(session.shutdown(false));
+    }
+
     void test_followingAnotherLinkClosesTheMenu()
     {
         const QString name = qsl("Headless Follow Local Then Another");

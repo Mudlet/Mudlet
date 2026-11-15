@@ -650,7 +650,8 @@ private slots:
         QVERIFY2(!mpServer->receivedText().contains("IRE.Target"), "the message was typed at the game");
     }
 
-    // With GMCP off the message has nowhere to go, and it must not be typed at the game instead
+    // Runs the link's command as a script could, not as a click: with GMCP off the message has nowhere to go, and it
+    // must not be typed at the game instead. gmcpCannotSend() stops a click before this; see the next two tests.
     void testAGmcpLinkSendsNothingWhileGmcpIsOff()
     {
         Host* host = connectAndNegotiate();
@@ -715,6 +716,41 @@ private slots:
         const auto told = [console]() {
             for (int line = console->buffer.getLastLineNumber(); line >= 0; --line) {
                 if (console->buffer.lineBuffer.value(line).contains(qsl("GMCP is off for this profile"))) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        QVERIFY2(QTest::qWaitFor(told, 3000), "the player was not told why nothing happened");
+    }
+
+    // With no connection sendGMCP() sends nothing, as with GMCP off, so a click must change nothing there either
+    void testAGmcpLinkClickedWhileDisconnectedChangesNothingAndSaysWhy()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        host->mTelnet.disconnectIt();
+        QVERIFY(QTest::qWaitFor(
+                [&]() {
+                    return host->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState;
+                },
+                5000));
+
+        activateGmcpLink(host,
+                         QByteArray("\x1b]8;;gmcp:Game.Pref.Set%20%7B%22pref%22%3A%22hints%22%7D?config={\"selection\":{\"group\":\"offlinePrefs\",\"value\":\"hints\",\"exclusive\":false}}\x1b\\GMCP_"
+                                    "LINK\x1b]8;;\x1b\\\r\n"),
+                         1);
+        TMainConsole* console = host->mainConsoleView();
+        int linkId = 0;
+        for (int line = console->buffer.getLastLineNumber(); line >= 0 && linkId == 0; --line) {
+            linkId = console->buffer.getLinkIndexAt(line, 0);
+        }
+        QVERIFY(linkId);
+        QVERIFY2(!console->buffer.isLinkVisited(linkId), "the link was marked followed");
+        QVERIFY2(!console->getHyperlinkSelectionManager().isSelected(qsl("offlinePrefs"), qsl("hints")), "the link was shown as chosen");
+        const auto told = [console]() {
+            for (int line = console->buffer.getLastLineNumber(); line >= 0; --line) {
+                if (console->buffer.lineBuffer.value(line).contains(qsl("can only reach the game while connected"))) {
                     return true;
                 }
             }

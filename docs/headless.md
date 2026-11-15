@@ -802,8 +802,8 @@ not yet revealed is only revealed (`revealedSpoiler`), and the next follow runs 
 not sent, so an app's copy of the line keeps the blanks it was sent with. A `disabled` link, or a menu's
 greyed-out item, runs nothing (`disabled`), nor does a `concealed` one (`concealed`), which the GUI leaves
 no way to click. A game's OSC 8 `local:` note is `disabled` too, as the GUI takes no click on it. A
-`gmcp:` link or item while GMCP is off for the connection sends nothing and leaves the link as it was
-(`gmcpOff`). Otherwise the link is chosen in its selection group, deselecting the rest of an exclusive
+`gmcp:` link or item while GMCP is off for the connection, or with no connection, sends nothing and
+leaves the link as it was (`gmcpOff`). Otherwise the link is chosen in its selection group, deselecting the rest of an exclusive
 group, and its command or function runs before `followLink()` returns (`ran`); a `send:` link sends, a
 `gmcp:` link sends its GMCP message, and a web link opens through `QDesktopServices::openUrl()`, which an
 app can route with `QDesktopServices::setUrlHandler()`. A `local:` link with a `menu` runs nothing without
