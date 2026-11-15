@@ -6703,22 +6703,24 @@ registerAnonymousEventHandler("sysLoadEvent", function() feedTriggers("fed by sy
     void test_configSavedComesOnceAWriteOutsideASaveIsOnDisk_data()
     {
         QTest::addColumn<QString>("write");
-        QTest::newRow("saveWindowLayout()") << qsl("layout");
-        QTest::newRow("connection details") << qsl("profile data");
-        QTest::newRow("a password stored") << qsl("password stored");
-        QTest::newRow("a password removed") << qsl("password removed");
-        QTest::newRow("a sign-in forgotten") << qsl("sign-in forgotten");
-        QTest::newRow("package details") << qsl("package details");
-        QTest::newRow("timestamps shown and hidden") << qsl("timestamps");
-        QTest::newRow("logging on the next load, then not") << qsl("autolog");
-        QTest::newRow("a profile icon set and reset") << qsl("profile icon");
-        QTest::newRow("a rejected token's record dropped") << qsl("rejected token");
+        QTest::addColumn<bool>("thenRemoved");
+        QTest::newRow("saveWindowLayout()") << qsl("layout") << false;
+        QTest::newRow("connection details") << qsl("profile data") << false;
+        QTest::newRow("a password stored") << qsl("password stored") << false;
+        QTest::newRow("a password removed") << qsl("password removed") << true;
+        QTest::newRow("a sign-in forgotten") << qsl("sign-in forgotten") << true;
+        QTest::newRow("package details") << qsl("package details") << false;
+        QTest::newRow("timestamps shown and hidden") << qsl("timestamps") << true;
+        QTest::newRow("logging on the next load, then not") << qsl("autolog") << true;
+        QTest::newRow("a profile icon set and reset") << qsl("profile icon") << true;
+        QTest::newRow("a rejected token's record dropped") << qsl("rejected token") << true;
     }
 
     // No profile save follows these to send the signal for them
     void test_configSavedComesOnceAWriteOutsideASaveIsOnDisk()
     {
         QFETCH(QString, write);
+        QFETCH(bool, thenRemoved);
         const QString name = qsl("Headless Config Saved %1").arg(write);
         QVERIFY(writeProfile(name, QString()));
         QString file;
@@ -6834,9 +6836,8 @@ registerAnonymousEventHandler("sysLoadEvent", function() feedTriggers("fed by sy
             // Its record goes once the token that replaces it is stored
             session.host()->mpAuth->handleAuthGMCP(qsl("Char.Login.Default"), qsl(R"({"type": ["password-credentials"]})"));
             session.host()->mpAuth->handleAuthGMCP(qsl("Char.Login.Token"), qsl(R"({"account": "headless", "token": "fresh", "secure_only": true})"));
-            QTRY_VERIFY_WITH_TIMEOUT(!onDisk().has_value(), 10000);
         }
-        if (QStringList{qsl("password removed"), qsl("sign-in forgotten"), qsl("timestamps"), qsl("autolog"), qsl("profile icon"), qsl("rejected token")}.contains(write)) {
+        if (thenRemoved) {
             QTRY_VERIFY_WITH_TIMEOUT(seen.size() > 1 && !seen.constLast().has_value(), 15000);
             QVERIFY2(!onDisk().has_value(), qPrintable(file));
         }
@@ -6959,10 +6960,11 @@ registerAnonymousEventHandler("sysLoadEvent", function() feedTriggers("fed by sy
         THeadlessSession session;
         QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
         QTest::qWait(100);
+        std::optional<THeadlessSession::StartResult> restart;
         QStringList events;
-        connect(&session, &THeadlessSession::configSaved, this, [&session, &events, name]() {
-            if (events.isEmpty()) {
-                events.append(QString::fromLatin1(QMetaEnum::fromType<THeadlessSession::StartResult>().valueToKey(static_cast<int>(session.start({.profile = name, .connect = false})))));
+        connect(&session, &THeadlessSession::configSaved, this, [&session, &restart, name]() {
+            if (!restart) {
+                restart = session.start({.profile = name, .connect = false});
             }
         });
         connect(&session, &THeadlessSession::profileLoaded, this, [&events]() {
@@ -6980,7 +6982,9 @@ registerAnonymousEventHandler("sysLoadEvent", function() feedTriggers("fed by sy
             events.append(qsl("returned"));
         }
         QTest::qWait(100);
-        QCOMPARE(events, QStringList({qsl("poolClosing"), async ? qsl("shutdownFinished") : qsl("returned")}));
+        QVERIFY(restart.has_value());
+        QCOMPARE(*restart, THeadlessSession::StartResult::poolClosing);
+        QCOMPARE(events, QStringList({async ? qsl("shutdownFinished") : qsl("returned")}));
         QVERIFY(!session.host());
         QVERIFY(!HostManager::self());
     }
