@@ -132,6 +132,10 @@ static_assert(NETWORK_LATENCY_MAX_STALL > NETWORK_LATENCY_BEAT, "a reading has t
 
 constexpr size_t BUFFER_SIZE = 100000L;
 
+// Process-wide, so no profile is handed an id another had: an app's late report about a closed profile's connection
+// cannot then pass for the next profile's. Main thread only
+static quint64 lastTransportConnection = 0;
+
 // buffer[from] must not be a byte this stops at: a zero-length run would leave the caller's loop on
 // the same byte forever, so both callers need a branch for each of them, even one that only appends it.
 static int textRunEnd(const char* buffer, const int from, const int to)
@@ -1153,7 +1157,7 @@ void cTelnet::takeUpTransportReport(const quint64 connection, std::function<void
     QMetaObject::invokeMethod(
             this,
             [this, connection, report = std::move(report)]() {
-                if (connection == mTransportGeneration) {
+                if (connection == mTransportConnection) {
                     report();
                 }
             },
@@ -1188,12 +1192,10 @@ void cTelnet::dialTransport()
                        "not secure."));
     }
     // Before the dial, as the transport may answer from inside it
-    ++mTransportGeneration;
-    mTransportInput.clear();
-    mTransportInputRead = 0;
+    forgetTransportConnection();
     mTransportCloseReason.clear();
     mTransportState = TransportState::Dialling;
-    mpTransport->dial(mTransportGeneration, mHostUrl, mHostPort, tlsRequested);
+    mpTransport->dial(mTransportConnection, mHostUrl, mHostPort, tlsRequested);
 }
 
 // A connection that was made is reported ended here and now, as a socket's disconnectFromHost() or abort() reports it
@@ -1203,9 +1205,7 @@ void cTelnet::closeTransport()
         return;
     }
     const bool wasConnected = mTransportState == TransportState::Connected;
-    ++mTransportGeneration;
-    mTransportInput.clear();
-    mTransportInputRead = 0;
+    forgetTransportConnection();
     mTransportState = wasConnected ? TransportState::Closed : TransportState::Idle;
     if (mpTransport) {
         mpTransport->close();
@@ -1213,6 +1213,13 @@ void cTelnet::closeTransport()
     if (wasConnected) {
         slot_socketDisconnected();
     }
+}
+
+void cTelnet::forgetTransportConnection()
+{
+    mTransportConnection = ++lastTransportConnection;
+    mTransportInput.clear();
+    mTransportInputRead = 0;
 }
 
 void cTelnet::transportConnected()

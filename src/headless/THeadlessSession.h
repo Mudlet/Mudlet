@@ -816,7 +816,8 @@ public:
     // With Options::supplyTransport, what the app's connection to the game reports: that it was made, each chunk the
     // game sent, in order, and that it ended or could not be made, with why if known. Each names the connection
     // transportDialRequested gave, and is dropped unless that is the profile's current one: a report about a
-    // connection the profile has since closed or dialled again in place of does nothing, however late it comes.
+    // connection the profile has since closed or dialled again in place of does nothing, however late it comes, nor
+    // does one about an earlier profile's, as no two dials in a process are given the same id.
     // Callable from anywhere, a handler included, as the profile takes them up from the event loop.
     void transportConnected(quint64 connection);
     void transportReceived(quint64 connection, const QByteArray& data);

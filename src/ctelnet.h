@@ -521,6 +521,7 @@ private:
     void announceConnection();
     void dialTransport();
     void closeTransport();
+    void forgetTransportConnection();
     void takeUpTransportReport(quint64 connection, std::function<void()> report);
     void transportConnected();
     void transportReceived(const QByteArray& data);
@@ -579,9 +580,8 @@ private:
     QPointer<TGameTransport> mpTransport;
     // Closed: the connection has ended but finishDisconnection() is still to run, as for mpSocket
     TransportState mTransportState = TransportState::Idle;
-    // Moved on by each dial and close; a dial hands it to the transport as its connection's id, and a report
-    // carrying any other is about a connection since closed, so is dropped
-    quint64 mTransportGeneration = 0;
+    // The id dial() gave the connection last dialled; a close moves it on too, so a report carrying any other is dropped
+    quint64 mTransportConnection = 0;
     // What the transport has delivered and processSocketData() not yet taken, as a socket buffers it
     QByteArray mTransportInput;
     qsizetype mTransportInputRead = 0;

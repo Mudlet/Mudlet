@@ -95,6 +95,8 @@ private:
         return result;
     }
 
+    static QString printed(const QSignalSpy& spy) { return texts(spy).join(QString()); }
+
     static QString luaGlobal(THeadlessSession& session, const char* name)
     {
         lua_State* L = session.host()->getLuaInterpreter()->getLuaGlobalState();
@@ -214,7 +216,7 @@ tempTrigger("A dragon arrives", function() dragonSeen = "yes" send("kill dragon"
         QTest::qWait(100);
         QCOMPARE(connected.size(), 1);
         session.transportClosed(lastDial(dials), qsl("Connection refused"));
-        QTRY_VERIFY2_WITH_TIMEOUT(texts(local).join(QString()).contains(qsl("Unable to connect to game.example:4000 - Connection refused")), qPrintable(texts(local).join(QString())), 10000);
+        QTRY_VERIFY2_WITH_TIMEOUT(printed(local).contains(qsl("Unable to connect to game.example:4000 - Connection refused")), qPrintable(printed(local)), 10000);
         QCOMPARE(connected.size(), 1);
         QCOMPARE(session.host()->mTelnet.getConnectionState(), QAbstractSocket::UnconnectedState);
         // The failed dial is reported as an ended connection, as a socket's is
@@ -238,7 +240,7 @@ tempTrigger("A dragon arrives", function() dragonSeen = "yes" send("kill dragon"
         session.transportConnected(lastDial(dials));
         QTRY_COMPARE_WITH_TIMEOUT(connected.size(), 1, 10000);
         QVERIFY(!session.host()->mTelnet.currentlySecure());
-        QVERIFY2(texts(local).join(QString()).contains(qsl("Mudlet cannot tell whether it is encrypted")), qPrintable(texts(local).join(QString())));
+        QVERIFY2(printed(local).contains(qsl("Mudlet cannot tell whether it is encrypted")), qPrintable(printed(local)));
         // Closing the profile ends the app's connection too
         QVERIFY(session.shutdown(false));
         QCOMPARE(closes.size(), 1);
@@ -279,8 +281,37 @@ tempTrigger("A dragon arrives", function() dragonSeen = "yes" send("kill dragon"
         QTest::qWait(100);
         session.transportConnected(lastDial(dials));
         QTRY_COMPARE_WITH_TIMEOUT(connected.size(), 3, 10000);
-        QVERIFY2(!texts(local).join(QString()).contains(qsl("Unable to connect")), qPrintable(texts(local).join(QString())));
+        QVERIFY2(!printed(local).contains(qsl("Unable to connect")), qPrintable(printed(local)));
         QCOMPARE(dials.size(), 4);
+        QVERIFY(session.shutdown(false));
+    }
+
+    // Nor is it the next profile's, whose first dial a connection id handed out per profile would repeat
+    void test_aLateReportOfTheLastProfilesConnectionIsNotTheNextOnes()
+    {
+        const QString name = qsl("Headless Transport Last Profile");
+        const QString next = qsl("Headless Transport Next Profile");
+        QVERIFY(writeProfile(name));
+        QVERIFY(writeProfile(next));
+        THeadlessSession session;
+        QSignalSpy dials(&session, &THeadlessSession::transportDialRequested);
+        QSignalSpy connected(&session, &THeadlessSession::connected);
+        QSignalSpy local(&session, &THeadlessSession::localText);
+        QCOMPARE(session.start({.profile = name, .connect = true, .supplyTransport = true}), THeadlessSession::StartResult::started);
+        QTRY_COMPARE_WITH_TIMEOUT(dials.size(), 1, 10000);
+        const quint64 first = lastDial(dials);
+        session.transportConnected(first);
+        QTRY_COMPARE_WITH_TIMEOUT(connected.size(), 1, 10000);
+        QVERIFY(session.shutdown(false));
+
+        QCOMPARE(session.start({.profile = next, .connect = true, .supplyTransport = true}), THeadlessSession::StartResult::started);
+        QTRY_COMPARE_WITH_TIMEOUT(dials.size(), 2, 10000);
+        session.transportClosed(first, qsl("closed by the app"));
+        QTest::qWait(100);
+        session.transportConnected(lastDial(dials));
+        QTRY_VERIFY2_WITH_TIMEOUT(connected.size() == 2, qPrintable(printed(local)), 10000);
+        QVERIFY2(!printed(local).contains(qsl("Unable to connect")), qPrintable(printed(local)));
+        QVERIFY(lastDial(dials) != first);
         QVERIFY(session.shutdown(false));
     }
 
@@ -303,7 +334,7 @@ tempTrigger("A dragon arrives", function() dragonSeen = "yes" send("kill dragon"
             }
         });
         QCOMPARE(session.start({.profile = name, .connect = true, .supplyTransport = true}), THeadlessSession::StartResult::started);
-        QTRY_VERIFY2_WITH_TIMEOUT(texts(local).join(QString()).contains(qsl("Unable to connect to game.example:4000 - Connection refused")), qPrintable(texts(local).join(QString())), 10000);
+        QTRY_VERIFY2_WITH_TIMEOUT(printed(local).contains(qsl("Unable to connect to game.example:4000 - Connection refused")), qPrintable(printed(local)), 10000);
         QVERIFY(session.runLua(qsl("reconnect()")));
         QTRY_COMPARE_WITH_TIMEOUT(connected.size(), 1, 10000);
         QCOMPARE(dials.size(), 2);
@@ -353,7 +384,7 @@ tempTrigger("A dragon arrives", function() dragonSeen = "yes" send("kill dragon"
 
         session.transportClosed(lastDial(dials), qsl("gone"));
         QTRY_COMPARE_WITH_TIMEOUT(dials.size(), 2, 10000);
-        QVERIFY2(texts(local).join(QString()).contains(qsl("[ ALERT ] - Socket got disconnected")), qPrintable(texts(local).join(QString())));
+        QVERIFY2(printed(local).contains(qsl("[ ALERT ] - Socket got disconnected")), qPrintable(printed(local)));
         QVERIFY(session.shutdown(false));
     }
 

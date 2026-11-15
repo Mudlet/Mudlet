@@ -28,9 +28,9 @@
 // platform with no raw TCP such as a browser. It carries the telnet byte stream and nothing else:
 // how the bytes reach the game is the application's business, so cTelnet never calls it secure.
 // write() and close() are for the connection last dialled. Each signal carries the id dial() gave
-// its connection, and may be emitted at any time, even from inside dial(), write() or close():
-// cTelnet takes them up from the event loop and drops any whose connection it has since closed,
-// however late it comes.
+// its connection, which no other dial in the process is given, and may be emitted at any time, even
+// from inside dial(), write() or close(): cTelnet takes them up from the event loop and drops any
+// not about the connection it last dialled and has not closed since, however late it comes.
 class TGameTransport : public QObject
 {
     Q_OBJECT
