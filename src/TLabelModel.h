@@ -67,15 +67,21 @@ struct TLabelModel
     void setAccessibleName(const QString& name);
     void setAccessibleButton(std::optional<bool> button);
     void setClickThrough(bool clickThrough);
-    // Nothing to tell the view: a live region is heard only when the text next changes
-    void setLiveRegion(TLabelLiveRegion liveRegion) { mLiveRegion = liveRegion; }
+    // The view speaks or drops any text still waiting out its pacing
+    void setLiveRegion(TLabelLiveRegion liveRegion)
+    {
+        if (liveRegion != mLiveRegion) {
+            mLiveRegion = liveRegion;
+            accessibilityChanged(AccessibilityChange::LiveRegion);
+        }
+    }
     // The view's copies of what the label shows, which name it unless a script named it
     void setText(const QString& text);
     void setToolTip(const QString& toolTip);
 
     // KeyboardAccess: the profile's accessibleLabels setting changed
-    enum class AccessibilityChange { Name, Role, KeyboardAccess };
-    // Set by the widget, if there is one, to update its focus policy and tell assistive technology of a change
+    enum class AccessibilityChange { Name, Role, KeyboardAccess, LiveRegion };
+    // Set by the widget, if there is one, to update its focus policy, tell assistive technology of a change and pace its announcements
     std::function<void(AccessibilityChange)> mAccessibilityChanged;
     void accessibilityChanged(AccessibilityChange change) const;
 
