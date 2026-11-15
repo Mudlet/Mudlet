@@ -360,7 +360,7 @@ and `qtspeech` modules. It takes its tools (moc, rcc, lrelease) from the desktop
 version, the host kit. The build also runs host tools: a Lua 5.1 that can load the `lua-yajl` rock
 (`CI/install-lua-rocks.sh lua-yajl`; without it the translation statistics come out empty),
 `ninja`, `make`, `cmake`, `curl` and `git`, a host C++ compiler (Boost's bootstrap builds `b2` with
-it), and Node for the smoke test below. With [aqtinstall](https://github.com/miurahr/aqtinstall):
+it), and Node for the smoke test and specs below. With [aqtinstall](https://github.com/miurahr/aqtinstall):
 
 ```bash
 aqt install-qt all_os wasm 6.9.0 wasm_singlethread -m qt5compat qtmultimedia qtspeech -O ~/Qt
@@ -424,14 +424,36 @@ could not run the program at all, not that the build failed.
 The page seeds `Mudlet.ini` with `interfaceLanguage=en_US` (the script says why). A browser build
 keeps passwords in the profile unless `storePasswordsSecurely` says otherwise, as reading the
 browser's keychain waits on a nested event loop that Qt for WebAssembly cannot run without
-asyncify. `mudlet-headless` ends in a browser as it does on the desktop, which the page
-reports as an `[exit]` line, so a run that ends before the line fails, and one that never prints it
-fails after `WASM_SMOKE_TIMEOUT` seconds (120 by default). `.github/workflows/wasm-build.yml`
-builds and runs this on every push to `development` and every pull request that touches the
-sources, caching the dependency prefix, and once a week builds that prefix from scratch. It links
-with Emscripten's runtime checks, which the preset leaves out, so that a stack overflow or a read or
-write through a null pointer aborts the run instead of going unnoticed; they make the module about
-a tenth larger. To do the same, configure with:
+asyncify. `mudlet-headless` ends in a browser as it does on the desktop, which the page reports as
+an `[exit]` line, so a run that ends before the line fails, and one that never prints it fails
+after `WASM_SMOKE_TIMEOUT` seconds (120 by default).
+
+`CI/wasm-headless-lua-tests.js` runs the Lua specs in the browser as `headless-lua-tests.yml` runs
+them on the desktop, with the same arguments and environment, and writes what the run printed to a
+log. `CI/fetch-wasm-busted.sh` fetches busted and the pure-Lua modules it needs, pinned and
+checksummed; `CI/wasm-busted-shims/system.lua` stands in for its one C module. The runner copies
+those, the specs and the package one of them installs into the page. It exits 0 once the run ends
+with busted's summary, whatever failed; `CI/check-headless-lua-failures.py` then checks the failures
+against the desktop's list and `CI/wasm-lua-known-failures.txt`, which adds the browser's own and
+takes off desktop ones that do not get as far as failing there:
+
+```bash
+CI/fetch-wasm-busted.sh ~/mudlet-wasm-busted
+NODE_PATH=~/mudlet-playwright/node_modules node CI/wasm-headless-lua-tests.js build-wasm-headless/src ~/mudlet-wasm-busted /tmp/wasm-lua-tests.log
+python3 CI/check-headless-lua-failures.py /tmp/wasm-lua-tests.log CI/headless-lua-known-failures.txt CI/wasm-lua-known-failures.txt
+```
+
+Most of the browser's own failures wait for a timer. Without asyncify Qt for WebAssembly fires its
+timers only once the page hands the browser its thread back, and busted runs every spec in one call,
+so `pumpEvents()` and `waitForEvent()` deliver posted events but never a timer, a network reply or a
+media event. `WASM_LUA_TESTS_TRACE=1` prints each test's name as it starts, which names the one a
+hang is in, and `WASM_LUA_TESTS_ONLY=<spec file>` runs that file alone.
+
+`.github/workflows/wasm-build.yml` builds and runs both on every push to `development` and every
+pull request that touches the sources, caching the dependency prefix, and once a week builds that
+prefix from scratch. It links with Emscripten's runtime checks, which the preset leaves out, so that
+a stack overflow or a read or write through a null pointer aborts the run instead of going
+unnoticed; they make the module about a tenth larger. To do the same, configure with:
 
 ```bash
 cmake --preset wasm-headless -DCMAKE_EXE_LINKER_FLAGS="-sASSERTIONS=1 -sSTACK_OVERFLOW_CHECK=2 -sSAFE_HEAP=1"
