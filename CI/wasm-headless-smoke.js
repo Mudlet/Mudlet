@@ -5,6 +5,7 @@
 //   node CI/wasm-headless-smoke.js <dir holding mudlet-headless.js>
 //   node CI/wasm-headless-smoke.js <dir> <expected line> [mudlet-headless arguments...]
 //   node CI/wasm-headless-smoke.js <dir> --quit-while-loading
+//   node CI/wasm-headless-smoke.js <dir> --quit-after-lua-error
 //
 // Given only the directory, it runs the probe below and expects "lua says 2". It exits 0 then; 1 if
 // before then an error line comes (a package with a part that does not work included), or the
@@ -13,10 +14,11 @@
 // what counts as an error line and how an exit shows. With --quit-while-loading, an -e step feeds
 // the game a line while standard output has gone, as a pipe's has once its reader exits, which asks
 // for the quit before the event loop runs; it exits 0 once the program ends with status 0, and 1 on
-// another status, an error line first or the timeout. It exits 2 if its arguments, the directory
-// or WASM_SMOKE_TIMEOUT are wrong; and 3 if it could not run the program at all: playwright does
-// not load, Chromium does not start or quits, the page does not load or this script fails. It needs
-// the playwright package on NODE_PATH and its Chromium installed.
+// another status, an error line first or the timeout. --quit-after-lua-error does the same after an
+// -e step that raises an error, so it wants status 1 and takes that error's line as no failure. It
+// exits 2 if its arguments, the directory or WASM_SMOKE_TIMEOUT are wrong; and 3 if it could not run
+// the program at all: playwright does not load, Chromium does not start or quits, the page does not
+// load or this script fails. It needs the playwright package on NODE_PATH and its Chromium installed.
 
 const fs = require("fs");
 const path = require("path");
@@ -166,18 +168,16 @@ const settleMs = 2000;
 // A page stuck in a loop prints nothing, so after the settle it must still run a task within this
 const answerMs = 5000;
 
-// The -e step feeds the game a line, which goes to standard output, so its failure asks for the quit before exec()
-const quitArgs = [
-  "-p", "WasmSmokeQuit", "--host", "mudlet.org", "--port", "23", "--offline", "--no-stdin",
-  "-e", 'feedTriggers("standard output has gone\\n")',
-];
+// exitFailed in src/headless/main.cpp
+const failedStatus = 1;
 
 const [dir, ...rest] = process.argv.slice(2);
-const quitting = rest[0] === "--quit-while-loading";
+const failingStep = rest[0] === "--quit-after-lua-error";
+const quitting = failingStep || rest[0] === "--quit-while-loading";
 if (!dir || (quitting && rest.length > 1)) {
   console.error(
     "usage: node CI/wasm-headless-smoke.js <dir holding mudlet-headless.js> " +
-      "[<expected line> [mudlet-headless arguments...] | --quit-while-loading]",
+      "[<expected line> [mudlet-headless arguments...] | --quit-while-loading | --quit-after-lua-error]",
   );
   process.exit(2);
 }
@@ -188,6 +188,14 @@ if (rest.length && !rest[0].trim()) {
 }
 requireBuild(dir);
 const timeoutSeconds = timeoutFrom("WASM_SMOKE_TIMEOUT", 120);
+// The last -e step feeds the game a line, which goes to standard output, so its failure asks for the quit before exec()
+const quitArgs = [
+  "-p", "WasmSmokeQuit", "--host", "mudlet.org", "--port", "23", "--offline", "--no-stdin",
+  ...(failingStep ? ["-e", 'error("smoke")'] : []),
+  "-e", 'feedTriggers("standard output has gone\\n")',
+];
+// The failing step's error, on the error console, is no failure
+const markers = failingStep ? failureMarkers.filter((marker) => marker !== "[ERROR:]") : failureMarkers;
 const probing = !rest.length;
 let expected = null;
 let args = quitArgs;
@@ -218,12 +226,12 @@ if (!quitting) {
       console.log(text);
       const status = quitting && parseExit(text);
       if (status) {
-        finish(exitedCleanly(status));
+        finish(failingStep ? status.code === failedStatus && !status.crashed : exitedCleanly(status));
       } else if (!quitting && text.replace(outputPrefixes, "") === expected) {
         seen = true;
         clearTimeout(timer);
         setTimeout(() => finish(true), settleMs);
-      } else if (failureMarkers.some((marker) => text.includes(marker))) {
+      } else if (markers.some((marker) => text.includes(marker))) {
         fail();
       }
     },
@@ -247,7 +255,7 @@ if (!quitting) {
   await closeBrowser();
   if (!passed) {
     if (quitting) {
-      console.error("mudlet-headless did not end with status 0 once standard output had gone");
+      console.error(`mudlet-headless did not end with status ${failingStep ? failedStatus : 0} once standard output had gone`);
     } else {
       const what = seen ? "failed after printing" : "did not print";
       console.error(`mudlet-headless ${what} "${expected}"`);
