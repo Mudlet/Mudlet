@@ -303,6 +303,27 @@ tempTrigger("A dragon arrives", function() dragonSeen = "yes" send("kill dragon"
         QCOMPARE(dials.size(), 2);
         QVERIFY(session.shutdown(false));
     }
+
+    void test_aScriptThatReconnectsOnDisconnectionStillSeesWhy()
+    {
+        const QString name = qsl("Headless Transport Reconnecting Script");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QSignalSpy dials(&session, &THeadlessSession::transportDialRequested);
+        QSignalSpy connected(&session, &THeadlessSession::connected);
+        QSignalSpy local(&session, &THeadlessSession::localText);
+        QCOMPARE(session.start({.profile = name, .connect = true, .supplyTransport = true}), THeadlessSession::StartResult::started);
+        QTRY_COMPARE_WITH_TIMEOUT(dials.size(), 1, 10000);
+        session.transportConnected(lastDial(dials));
+        QTRY_COMPARE_WITH_TIMEOUT(connected.size(), 1, 10000);
+        QVERIFY(session.runLua(qsl(R"lua(registerAnonymousEventHandler("sysDisconnectionEvent", function() reconnect() end))lua")));
+        local.clear();
+
+        session.transportClosed(lastDial(dials), qsl("gone"));
+        QTRY_COMPARE_WITH_TIMEOUT(dials.size(), 2, 10000);
+        QVERIFY2(texts(local).join(QString()).contains(qsl("[ ALERT ] - Socket got disconnected")), qPrintable(texts(local).join(QString())));
+        QVERIFY(session.shutdown(false));
+    }
 };
 
 #include "HeadlessSessionTransportTest.moc"

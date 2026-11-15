@@ -1538,6 +1538,10 @@ void cTelnet::finishDisconnection()
 #if !defined(QT_NO_SSL)
     bool sslerr = false;
 #endif
+    // Taken before any trigger or handler below runs: one that reconnects starts a dial, which the transport's state
+    // then shows instead of the connection that ended
+    const bool adopted = connectionAdopted();
+    const QString transportCloseReason = mTransportCloseReason;
 
     // A drain's deferred input was read before the connection closed, and no
     // later read will come to take it in
@@ -1664,9 +1668,9 @@ void cTelnet::finishDisconnection()
                 postMessage(tr("[ ALERT ] - Socket got disconnected."));
             }
 
-        } else if (connectionAdopted()) {
+        } else if (adopted) {
 #else
-        if (connectionAdopted()) {
+        if (adopted) {
 #endif
             // We were not connecting securely
             QString reason;
@@ -1684,7 +1688,7 @@ void cTelnet::finishDisconnection()
  ensure the same text is used in both.*/
                 reason = tr("Connection/login attempt rejected by server");
             } else {
-                reason = mpSocket ? mpSocket->errorString() : mTransportCloseReason;
+                reason = mpSocket ? mpSocket->errorString() : transportCloseReason;
             }
 
             if (reason.isEmpty()) {
