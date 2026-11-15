@@ -4,12 +4,16 @@
 //
 //   node CI/wasm-headless-smoke.js <dir holding mudlet-headless.js>
 //   node CI/wasm-headless-smoke.js <dir> <expected line> [mudlet-headless arguments...]
+//   node CI/wasm-headless-smoke.js <dir> --quit-while-loading
 //
 // Given only the directory, it runs the probe below and expects "lua says 2". It exits 0 then; 1 if
 // before then an error line comes (a package with a part that does not work included), or the
 // program exits, aborts, crashes or raises a page error, if the page then does not answer, or if
 // WASM_SMOKE_TIMEOUT seconds (default 120) pass without the line; CI/wasm-headless-page.js lists
-// what counts as an error line and how an exit shows. It exits 2 if its arguments, the directory
+// what counts as an error line and how an exit shows. With --quit-while-loading, an -e step feeds
+// the game a line while standard output has gone, as a pipe's has once its reader exits, which asks
+// for the quit before the event loop runs; it exits 0 once the program ends with status 0, and 1 on
+// another status, an error line first or the timeout. It exits 2 if its arguments, the directory
 // or WASM_SMOKE_TIMEOUT are wrong; and 3 if it could not run the program at all: playwright does
 // not load, Chromium does not start or quits, the page does not load or this script fails. It needs
 // the playwright package on NODE_PATH and its Chromium installed.
@@ -162,11 +166,18 @@ const settleMs = 2000;
 // A page stuck in a loop prints nothing, so after the settle it must still run a task within this
 const answerMs = 5000;
 
+// The -e step feeds the game a line, which goes to standard output, so its failure asks for the quit before exec()
+const quitArgs = [
+  "-p", "WasmSmokeQuit", "--host", "mudlet.org", "--port", "23", "--offline", "--no-stdin",
+  "-e", 'feedTriggers("standard output has gone\\n")',
+];
+
 const [dir, ...rest] = process.argv.slice(2);
-if (!dir) {
+const quitting = rest[0] === "--quit-while-loading";
+if (!dir || (quitting && rest.length > 1)) {
   console.error(
     "usage: node CI/wasm-headless-smoke.js <dir holding mudlet-headless.js> " +
-      "[<expected line> [mudlet-headless arguments...]]",
+      "[<expected line> [mudlet-headless arguments...] | --quit-while-loading]",
   );
   process.exit(2);
 }
@@ -177,7 +188,7 @@ if (rest.length && !rest[0].trim()) {
 }
 requireBuild(dir);
 const timeoutSeconds = timeoutFrom("WASM_SMOKE_TIMEOUT", 120);
-const [expected, ...args] = rest.length ? rest : ["lua says 2", ...defaultProbe()];
+const [expected, ...args] = quitting ? [null, ...quitArgs] : rest.length ? rest : ["lua says 2", ...defaultProbe()];
 
 (async () => {
   let finish;
@@ -196,11 +207,16 @@ const [expected, ...args] = rest.length ? rest : ["lua says 2", ...defaultProbe(
   const tab = await openPage({
     what: "smoke test",
     dir,
-    html: page({ args, settings, clockJump: rest.length ? null : clockJump }),
+    html: page({ args, settings, clockJump: rest.length ? null : clockJump, stdoutGone: quitting }),
     serve: (file) => fixtureFile(path.basename(file)),
     onConsole: (text) => {
       console.log(text);
-      if (text.replace(outputPrefixes, "") === expected) {
+      const exited = quitting && /^\[exit\] (.*)$/.exec(text);
+      if (exited) {
+        const status = JSON.parse(exited[1]);
+        clearTimeout(timer);
+        finish(status.code === 0 && !status.crashed);
+      } else if (!quitting && text.replace(outputPrefixes, "") === expected) {
         seen = true;
         clearTimeout(timer);
         setTimeout(() => finish(true), settleMs);
@@ -216,7 +232,7 @@ const [expected, ...args] = rest.length ? rest : ["lua says 2", ...defaultProbe(
   const settled = await finished;
   clearTimeout(timer);
   let answeredInTime = false;
-  if (settled) {
+  if (settled && !quitting) {
     const noAnswer = new Promise((resolve) => setTimeout(() => resolve(false), answerMs));
     const answered = tab.evaluate(() => new Promise((resolve) => setTimeout(() => resolve(true), 0)));
     answeredInTime = await Promise.race([answered, noAnswer]).catch(() => false);
@@ -224,11 +240,15 @@ const [expected, ...args] = rest.length ? rest : ["lua says 2", ...defaultProbe(
       console.log(`[hung] the page ran no task within ${answerMs / 1000}s`);
     }
   }
-  const passed = answeredInTime && !failed;
+  const passed = (quitting ? settled : answeredInTime) && !failed;
   await closeBrowser();
   if (!passed) {
-    const what = seen ? "failed after printing" : "did not print";
-    console.error(`mudlet-headless ${what} "${expected}"`);
+    if (quitting) {
+      console.error("mudlet-headless did not end with status 0 once standard output had gone");
+    } else {
+      const what = seen ? "failed after printing" : "did not print";
+      console.error(`mudlet-headless ${what} "${expected}"`);
+    }
   }
   process.exit(passed ? 0 : 1);
 })();

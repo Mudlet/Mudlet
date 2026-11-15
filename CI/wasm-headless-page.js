@@ -55,8 +55,8 @@ function scriptValue(value) {
 // it first fetches stage.json, a list of absolute paths, and each of them from stage/<path>, and writes them into
 // the program's file system before it starts. It prints "[exit] " and the exit status when the program ends. With
 // clockJump, { line, seconds }, Date.now() and performance.now() jump that many seconds ahead once the program prints
-// that line.
-function page({ args, settings, environment = {}, staged = false, clockJump = null }) {
+// that line; with stdoutGone, writing to standard output fails as it does once a pipe's reader has gone.
+function page({ args, settings, environment = {}, staged = false, clockJump = null, stdoutGone = false }) {
   return `<!doctype html>
 <html><head><meta charset="utf-8"><title>mudlet-headless</title></head>
 <body><div id="screen" style="width:800px;height:600px"></div>
@@ -87,6 +87,7 @@ function output(prefix) {
     }
   };
 }
+let program;
 (async () => {
   const staged = ${staged} ? await Promise.all((await (await fetch("stage.json")).json()).map(async (file) => {
     const response = await fetch("stage" + file.split("/").map(encodeURIComponent).join("/"));
@@ -100,6 +101,7 @@ function output(prefix) {
     print: output("[out] "),
     printErr: output("[err] "),
     preRun: [(m) => {
+      program = m;
       m.FS.mkdirTree("/home/web_user/.config/mudlet");
       m.FS.writeFile("/home/web_user/.config/mudlet/Mudlet.ini", ${scriptValue(settings)});
       for (const [file, data] of staged) {
@@ -107,6 +109,14 @@ function output(prefix) {
         m.FS.writeFile(file, data);
       }
     }],
+    // The standard streams are opened after preRun, and main() runs after this
+    onRuntimeInitialized: () => {
+      if (${stdoutGone}) {
+        const stdout = program.FS.getStream(1);
+        // 64 is EPIPE as Emscripten numbers it
+        stdout.stream_ops = { ...stdout.stream_ops, write: () => { throw new program.FS.ErrnoError(64); } };
+      }
+    },
     qt: {
       entryFunction: window.mudlet_headless_executable_entry,
       containerElements: [document.getElementById("screen")],

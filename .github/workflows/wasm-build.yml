@@ -186,6 +186,10 @@ jobs:
         timeout-minutes: 5
         run: NODE_PATH="$RUNNER_TEMP/playwright/node_modules" node CI/wasm-headless-smoke.js build-wasm-headless/src
 
+      - name: Quit while loading in the browser
+        timeout-minutes: 5
+        run: NODE_PATH="$RUNNER_TEMP/playwright/node_modules" node CI/wasm-headless-smoke.js build-wasm-headless/src --quit-while-loading
+
       - name: Fetch busted for the browser
         timeout-minutes: 5
         run: CI/fetch-wasm-busted.sh "$RUNNER_TEMP/wasm-busted"
