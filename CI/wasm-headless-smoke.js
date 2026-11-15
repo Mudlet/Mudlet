@@ -6,6 +6,7 @@
 //   node CI/wasm-headless-smoke.js <dir> <expected line> [mudlet-headless arguments...]
 //   node CI/wasm-headless-smoke.js <dir> --quit-while-loading
 //   node CI/wasm-headless-smoke.js <dir> --quit-after-lua-error
+//   node CI/wasm-headless-smoke.js <dir> --game-connection
 //
 // Given only the directory, it runs the probe below and expects "lua says 2". It exits 0 then; 1 if
 // before then an error line comes (a package with a part that does not work included), or the
@@ -16,13 +17,22 @@
 // for the quit before the event loop runs; it exits 0 once the program ends with status 0, and 1 on
 // another status, an error line first or the timeout. --quit-after-lua-error does the same after an
 // -e step that raises an error, so it wants status 1 and takes that error's line as no failure. It
-// exits 2 if its arguments, the directory or WASM_SMOKE_TIMEOUT are wrong; and 3 if it could not run
-// the program at all: playwright does not load, Chromium does not start or quits, the page does not
-// load or this script fails. It needs the playwright package on NODE_PATH and its Chromium installed.
+// With --game-connection, the page makes the profile's connection, as docs/headless.md has a page do,
+// over a WebSocket to CI/wasm-telnet-relay.js and on to CI/telnet-fixture-server.py; that game offers
+// GMCP, sends vitals and a line a trigger answers, and hangs up once the answer arrives. It passes as
+// the default does, once the disconnect handler finds all of that came, and then only if the game
+// received Mudlet's agreement to GMCP and the trigger's command. It exits 2 if its arguments, the
+// directory or WASM_SMOKE_TIMEOUT are wrong; and 3 if it could not run the program at all: playwright
+// does not load, Chromium does not start or quits, the page does not load, the game does not start or
+// this script fails. It needs the playwright package on NODE_PATH and its Chromium installed, and
+// python3 for --game-connection.
 
+const { spawn } = require("child_process");
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
 const { failureMarkers, outputPrefixes, requireBuild, timeoutFrom, page, parseExit, openPage, closeBrowser } = require("./wasm-headless-page");
+const { startRelay } = require("./wasm-telnet-relay");
 
 const fixtureDir = path.join(__dirname, "..", "src", "mudlet-lua", "tests", "fixtures");
 const mapFixtureDir = path.join(fixtureDir, "maps");
@@ -163,6 +173,58 @@ function defaultProbe() {
   ];
 }
 
+const hex = (text) => Buffer.from(text).toString("hex");
+const gmcpAgreed = "fffdc9";
+const gameCommand = "kill dragon\r\n";
+const gameGreeting = "fffbc9" + "fffac9" + hex('Char.Vitals {"hp": 42}') + "fff0" + hex("A dragon arrives.\r\n");
+const gameOver = "the game hung up";
+
+// Resolves to the fixture's process and port once it accepts connections
+async function startGame(directory) {
+  const game = spawn("python3", [path.join(__dirname, "telnet-fixture-server.py")], {
+    env: { ...process.env, MUDLET_TEST_TELNET_DIR: directory, MUDLET_TEST_TELNET_GREETING_HEX: gameGreeting, MUDLET_TEST_TELNET_HANG_UP_HEX: hex(gameCommand) },
+    stdio: ["ignore", "inherit", "inherit"],
+  });
+  let exited = null;
+  game.on("exit", (code, signal) => (exited = signal ?? code));
+  const portFile = path.join(directory, "port");
+  for (let waited = 0; waited < 10000; waited += 50) {
+    if (exited !== null) {
+      throw new Error(`the telnet fixture ended with ${exited} before it listened`);
+    }
+    if (fs.existsSync(portFile)) {
+      return { game, port: Number(fs.readFileSync(portFile, "utf8")) };
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  game.kill();
+  throw new Error("the telnet fixture did not listen within 10s");
+}
+
+function gameArgs(port) {
+  const gameLua = [
+    'function gameStage(stage) echo("game: " .. stage .. "\\n") end',
+    'registerAnonymousEventHandler("sysConnectionEvent", function() gameConnected = true gameStage("connected") end)',
+    'registerAnonymousEventHandler("gmcp.Char.Vitals", function() gameHp = gmcp.Char.Vitals.hp gameStage("vitals received") end)',
+    'tempTrigger("A dragon arrives", function() gameTriggered = true gameStage("trigger fired") send("kill dragon") end)',
+    'registerAnonymousEventHandler("sysDisconnectionEvent", function() if gameConnected and gameTriggered and gameHp == 42 then ' +
+      `echo("${gameOver}\\n") else gameStage("disconnected before the game was played") end end)`,
+  ];
+  return ["-p", "WasmGame", "--host", "127.0.0.1", "--port", String(port), "--no-tls", "--no-stdin", ...gameLua.flatMap((code) => ["-e", code])];
+}
+
+// What the game received that it should have, or the first thing missing
+function gameReceived(directory) {
+  const received = JSON.parse(fs.readFileSync(path.join(directory, "capture.json"), "utf8")).received;
+  if (!received.includes(gmcpAgreed)) {
+    return "IAC DO GMCP";
+  }
+  if (!received.includes(hex(gameCommand))) {
+    return JSON.stringify(gameCommand);
+  }
+  return null;
+}
+
 // Failures can come after the expected line: mpkg's package-list request, refused below, can report back after it
 const settleMs = 2000;
 // A page stuck in a loop prints nothing, so after the settle it must still run a task within this
@@ -171,12 +233,13 @@ const answerMs = 5000;
 const [dir, ...rest] = process.argv.slice(2);
 const failingStep = rest[0] === "--quit-after-lua-error";
 const quitting = failingStep || rest[0] === "--quit-while-loading";
+const playing = rest[0] === "--game-connection";
 // 1 is exitFailed in src/headless/main.cpp
 const quitStatus = failingStep ? 1 : 0;
-if (!dir || (quitting && rest.length > 1)) {
+if (!dir || ((quitting || playing) && rest.length > 1)) {
   console.error(
     "usage: node CI/wasm-headless-smoke.js <dir holding mudlet-headless.js> " +
-      "[<expected line> [mudlet-headless arguments...] | --quit-while-loading | --quit-after-lua-error]",
+      "[<expected line> [mudlet-headless arguments...] | --quit-while-loading | --quit-after-lua-error | --game-connection]",
   );
   process.exit(2);
 }
@@ -198,11 +261,30 @@ const markers = failingStep ? failureMarkers.filter((marker) => marker !== "[ERR
 const probing = !rest.length;
 let expected = null;
 let args = quitArgs;
-if (!quitting) {
+if (playing) {
+  expected = gameOver;
+} else if (!quitting) {
   [expected, ...args] = probing ? ["lua says 2", ...defaultProbe()] : rest;
 }
 
 (async () => {
+  let relay = null;
+  let gameDir = null;
+  if (playing) {
+    gameDir = fs.mkdtempSync(path.join(os.tmpdir(), "mudlet-wasm-game-"));
+    try {
+      const { game, port } = await startGame(gameDir);
+      process.on("exit", () => {
+        game.kill();
+        fs.rmSync(gameDir, { recursive: true, force: true });
+      });
+      relay = await startRelay({ gamePort: port, log: (text) => console.log("[relay] " + text) });
+      args = gameArgs(port);
+    } catch (error) {
+      console.error(`the smoke test itself failed: ${error?.stack ?? error}`);
+      process.exit(3);
+    }
+  }
   let finish;
   const finished = new Promise((resolve) => (finish = resolve));
   let seen = false;
@@ -219,8 +301,9 @@ if (!quitting) {
   const tab = await openPage({
     what: "smoke test",
     dir,
-    html: page({ args, clockJump: probing ? clockJump : null, stdoutGone: quitting }),
+    html: page({ args, clockJump: probing ? clockJump : null, stdoutGone: quitting, relay: relay?.url }),
     serve: (file) => fixtureFile(path.basename(file)),
+    reachLoopback: playing,
     onConsole: (text) => {
       console.log(text);
       const status = quitting ? parseExit(text) : null;
@@ -250,8 +333,13 @@ if (!quitting) {
       console.log(`[hung] the page ran no task within ${answerMs / 1000}s`);
     }
   }
-  const passed = (quitting ? settled : answeredInTime) && !failed;
+  const missing = playing && answeredInTime && !failed ? gameReceived(gameDir) : null;
+  if (missing) {
+    console.log(`[game] never received ${missing}`);
+  }
+  const passed = (quitting ? settled : answeredInTime) && !failed && !missing;
   await closeBrowser();
+  relay?.close();
   if (!passed) {
     if (quitting) {
       console.error(`mudlet-headless did not end with status ${quitStatus} once standard output had gone`);

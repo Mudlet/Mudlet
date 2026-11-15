@@ -55,8 +55,9 @@ function scriptValue(value) {
 // it first fetches stage.json, a list of absolute paths, and each of them from stage/<path>, and writes them into
 // the program's file system before it starts. It prints "[exit] " and the exit status when the program ends. With
 // clockJump, { line, seconds }, Date.now() and performance.now() jump that many seconds ahead once the program prints
-// that line; with stdoutGone, writing to standard output fails as it does once a pipe's reader has gone.
-function page({ args, environment = {}, staged = false, clockJump = null, stdoutGone = false }) {
+// that line; with stdoutGone, writing to standard output fails as it does once a pipe's reader has gone. With relay,
+// a CI/wasm-telnet-relay.js URL, the page makes the profile's game connection through it, as docs/headless.md has it.
+function page({ args, environment = {}, staged = false, clockJump = null, stdoutGone = false, relay = null }) {
   return `<!doctype html>
 <html><head><meta charset="utf-8"><title>mudlet-headless</title></head>
 <body><div id="screen" style="width:800px;height:600px"></div>
@@ -87,6 +88,28 @@ function output(prefix) {
     }
   };
 }
+const relay = ${scriptValue(relay)};
+function relayTransport() {
+  let socket = null;
+  return {
+    dial(host, port, tlsRequested, connection) {
+      console.log("[transport] dial " + host + ":" + port + (tlsRequested ? " with TLS asked for" : ""));
+      socket = new WebSocket(relay + "?host=" + encodeURIComponent(host) + "&port=" + port);
+      socket.binaryType = "arraybuffer";
+      socket.onopen = () => connection.connected();
+      socket.onmessage = (e) => connection.received(new Uint8Array(e.data));
+      socket.onclose = (e) => connection.closed(e.reason || "the relay closed the connection with code " + e.code);
+    },
+    write(bytes) {
+      socket.send(bytes);
+    },
+    close() {
+      console.log("[transport] close");
+      socket.onclose = socket.onmessage = null;
+      socket.close();
+    },
+  };
+}
 let program;
 (async () => {
   const staged = ${scriptValue(Boolean(staged))} ? await Promise.all((await (await fetch("stage.json")).json()).map(async (file) => {
@@ -98,6 +121,7 @@ let program;
   })) : [];
   await qtLoad({
     arguments: ${scriptValue(args)},
+    mudletTransport: relay ? relayTransport() : undefined,
     print: output("[out] "),
     printErr: output("[err] "),
     preRun: [(m) => {
@@ -157,8 +181,9 @@ async function harnessFailed(what, error) {
 
 // Opens html at http://localhost/index.html, answering the page's requests with serve(path): a file's path, a
 // response for Playwright's route.fulfill() or null, for the file of that name in dir. onConsole gets each console line; onFailure the crash of the tab or an
-// error the page raised. A harness failure exits 3, naming what.
-async function openPage({ what, dir, html, serve = () => null, onConsole, onFailure }) {
+// error the page raised. A harness failure exits 3, naming what. With reachLoopback, the page may open WebSockets to
+// 127.0.0.1, which Chromium otherwise refuses a page whose address it never looked up; Playwright does not route them.
+async function openPage({ what, dir, html, serve = () => null, onConsole, onFailure, reachLoopback = false }) {
   process.on("uncaughtException", (error) => harnessFailed(what, error));
   process.on("unhandledRejection", (error) => harnessFailed(what, error));
   const { chromium } = require("playwright");
@@ -171,7 +196,7 @@ async function openPage({ what, dir, html, serve = () => null, onConsole, onFail
     }
   }
   browser.on("disconnected", () => gone("Chromium quit"));
-  const tab = await browser.newPage();
+  const tab = await browser.newPage({ permissions: reachLoopback ? ["local-network-access"] : [] });
   tab.on("close", () => gone("the page was closed"));
   tab.on("console", (message) => onConsole(message.text()));
   tab.on("pageerror", (error) => onFailure("[pageerror] " + (error.stack ?? error.message)));

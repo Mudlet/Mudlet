@@ -424,7 +424,11 @@ arguments to `mudlet-headless` instead of the probe's. With `--quit-while-loadin
 the game a line from an `-e` step while standard output has gone, as a pipe's has once its reader
 exits, and passes once the run ends with status 0, as the desktop's does; that quit is asked for
 before the event loop runs. `--quit-after-lua-error` does the same after an `-e` step that raises an
-error, and passes once the run ends with status 1. Its header lists its exit codes; 3 means it could
+error, and passes once the run ends with status 1. With `--game-connection`, the page makes the
+profile's connection, as "Embedding it: the game connection" in `headless.md` has a page do, over a
+WebSocket to `CI/wasm-telnet-relay.js` and on to `CI/telnet-fixture-server.py`, which offers GMCP,
+sends a line a trigger answers and hangs up once the answer arrives; it passes once the profile has
+seen all of that and the game received the answer. Its header lists its exit codes; 3 means it could
 not run the program at all, not that the build failed.
 
 The page seeds `Mudlet.ini` with `interfaceLanguage=en_US` (the script says why). A browser build

@@ -22,6 +22,8 @@ on:
       - 'CI/wasm-headless-smoke.js'
       - 'CI/wasm-headless-page.js'
       - 'CI/wasm-headless-lua-tests.js'
+      - 'CI/wasm-telnet-relay.js'
+      - 'CI/telnet-fixture-server.py'
       - 'CI/fetch-wasm-busted.sh'
       - 'CI/wasm-busted-shims/**'
       - 'CI/check-headless-lua-failures.py'
@@ -193,6 +195,10 @@ jobs:
       - name: Quit with a failed step in the browser
         timeout-minutes: 5
         run: NODE_PATH="$RUNNER_TEMP/playwright/node_modules" node CI/wasm-headless-smoke.js build-wasm-headless/src --quit-after-lua-error
+
+      - name: Play a game over the page's connection in the browser
+        timeout-minutes: 5
+        run: NODE_PATH="$RUNNER_TEMP/playwright/node_modules" node CI/wasm-headless-smoke.js build-wasm-headless/src --game-connection
 
       - name: Fetch busted for the browser
         timeout-minutes: 5

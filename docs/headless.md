@@ -674,7 +674,8 @@ mudletTransport: {
 
 `received()` takes a `Uint8Array` or an `ArrayBuffer`. Each dial gets a connection of its own, so a
 late event of an old socket cannot reach a new one; a throw from `dial()` or `write()` ends the
-connection with the error as the reason.
+connection with the error as the reason. `CI/wasm-headless-smoke.js --game-connection` connects
+through a WebSocket relay this way.
 
 ## Embedding it: when the signals come and what a handler may do
 
