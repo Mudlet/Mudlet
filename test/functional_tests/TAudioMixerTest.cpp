@@ -172,6 +172,22 @@ private slots:
         media()->playMedia(data);
         QVERIFY(TMediaVoice::probeStarted());
         QCOMPARE(media()->playersMixed(), 1);
+
+        // Stopped before its silence could move it, and played again once the check has answered, the sound reuses
+        // its player: mixed only if the check found audio coming through, as a new player would be
+        media()->stopMedia(data);
+        QVERIFY2(QTest::qWaitFor(
+                         []() {
+                             return TMediaVoice::probePassed() || TMediaVoice::probeFailed();
+                         },
+                         QDeadlineTimer(6s)),
+                 "The check of the backend never answered.");
+        media()->playMedia(data);
+        QCOMPARE(media()->mediaPlayerCount(), 1);
+        QCOMPARE(media()->playersMixed(), TMediaVoice::probePassed() ? 1 : 0);
+        // The voice it left is deleted later, and has to go before cleanup() takes the player: Qt 6.12 leaves a
+        // detached QAudioBufferOutput pointing at its player, so one deleted after the player crashes
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     }
 
     // Video keeps an output of its own, timed against its picture; the rest are mixed

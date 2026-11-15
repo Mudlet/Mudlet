@@ -251,15 +251,16 @@ public:
     // hands over no audio keeps it on an output of its own.
     bool setMixed(bool mixed)
     {
+        // A player mixed while FFmpeg named was still being checked is moved off once the check found no audio
+        if (mixed && TMediaVoice::unsupported()) {
+            mixed = false;
+        }
         if (!mMediaPlayer || mixed == (mpVoice != nullptr)) {
             return mpVoice != nullptr;
         }
         // Its timer steps the output being replaced
         stopVolumeGlide();
         if (mixed) {
-            if (TMediaVoice::unsupported()) {
-                return false;
-            }
             QAudioOutput* oldOutput = mMediaPlayer->audioOutput();
             mpVoice = std::make_unique<TMediaVoice>(mMediaPlayer.get());
             mpVoice->setGain(oldOutput ? oldOutput->volume() : 1.0f, 0);
