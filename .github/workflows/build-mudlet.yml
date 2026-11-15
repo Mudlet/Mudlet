@@ -450,7 +450,7 @@ jobs:
         buildPresetAdditionalArgs: ${{ env.MUDLET_PGO_BUILD == 'true' && '[''--target'', ''PipelineBenchmark'', ''MapRenderBenchmark'', ''PathfindBenchmark'']' || '[]' }}
         # ThinLTO, not full LTO: full LTO swaps on the runner, and the arm64 job links every test binary.
         # -cache_path_lto skips the code generation those links share. The USE pass's cmake -B keeps both.
-        configurePresetAdditionalArgs: ${{ (runner.os == 'macOS' && env.MUDLET_PGO_BUILD == 'true') && '[''-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON'', ''-DCMAKE_EXE_LINKER_FLAGS=-Wl,-cache_path_lto,lto-cache'']' || '[]' }}
+        configurePresetAdditionalArgs: ${{ runner.os == 'macOS' && env.MUDLET_PGO_BUILD == 'true' && '[''-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON'', ''-DCMAKE_EXE_LINKER_FLAGS=-Wl,-cache_path_lto,lto-cache'']' || '[]' }}
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
         # The run-varying half of the ci-linux/ci-macos presets - everything else

@@ -110,11 +110,9 @@ if(WIN32)
 elseif(APPLE)
   set(APP_TARGET Mudlet)
   enable_language(OBJCXX)
-  # ENABLE_EXPORTS adds nothing here, as ld64 exports an executable's globals anyway - but LTO drops the
-  # Lua API that only the C modules scripts load call, unless ld64 is told to keep it
-  foreach(lang C CXX OBJCXX)
-    set(CMAKE_EXE_EXPORTS_${lang}_FLAG "-Wl,-export_dynamic")
-  endforeach()
+  # CMake's ENABLE_EXPORTS passes no flag to ld64, which exports an executable's globals anyway - but LTO
+  # then drops Lua API functions that only runtime-loaded Lua C modules call
+  set(CMAKE_EXE_EXPORTS_CXX_FLAG "-Wl,-export_dynamic")
 else()
   set(APP_TARGET mudlet)
 endif()
