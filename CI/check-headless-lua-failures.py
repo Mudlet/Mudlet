@@ -84,7 +84,13 @@ class Known:
             elif match.group(1):
                 self.taken_off[match.group(2)] += 1
             else:
-                self.entries[text] += 1
+                self.entries[match.group(2)] += 1
+
+
+def totals(lists):
+    listed = sum((known.entries for known in lists), collections.Counter())
+    taken_off = sum((known.taken_off for known in lists), collections.Counter())
+    return listed, taken_off
 
 
 def write_known(path, known, others, run):
@@ -118,7 +124,7 @@ def report(problems, title, items):
 def main(argv):
     write = argv[-1:] == ["--write"]
     paths = argv[2:-1] if write else argv[2:]
-    if len(argv) < 3 or not paths or "--write" in paths:
+    if not paths or "--write" in paths:
         print(__doc__.strip().split("\n\n")[2])
         return 2
     log_path = argv[1]
@@ -127,8 +133,7 @@ def main(argv):
         print(f"The busted run in {log_path} did not finish - it crashed, hung or never started.")
         return 1
     lists = [Known(path) for path in paths]
-    listed = sum((known.entries for known in lists), collections.Counter())
-    taken_off = sum((known.taken_off for known in lists), collections.Counter())
+    listed, taken_off = totals(lists)
     known = listed - taken_off
     named = " or ".join(paths)
 
@@ -149,7 +154,8 @@ def main(argv):
         if problems:
             print(f"{paths[-1]} was not written.")
             return 1
-        others = sum((each.entries for each in lists[:-1]), collections.Counter()) - sum((each.taken_off for each in lists[:-1]), collections.Counter())
+        listed_before, taken_off_before = totals(lists[:-1])
+        others = listed_before - taken_off_before
         added = write_known(paths[-1], lists[-1], others, run)
         print(f"Wrote {paths[-1]} for {sum(run.entries.values())} known failures, {len(added)} lines of it new.")
         return 0
