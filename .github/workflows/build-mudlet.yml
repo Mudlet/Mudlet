@@ -82,7 +82,8 @@ jobs:
             ccache_id: ubuntu-clang
           # Homebrew no longer bottles for Intel: this job pours the Sonoma bottles the image's frozen Homebrew still
           # names (HOMEBREW_NO_AUTO_UPDATE), and uses the pcre2, sqlite, libzip and oniguruma the image preinstalls.
-          # No tests: none branch on host architecture, so the arm64 job covers them on a faster pool.
+          # No tests: only the getOS processor spec branches on host architecture, and the Linux and Windows jobs run
+          # it on x86_64, so the arm64 job covers the rest on a faster pool.
           - os: macos-15-intel
             buildname: 'macos (x86_64)'
             compiler: clang_64

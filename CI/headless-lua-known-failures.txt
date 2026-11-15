@@ -8,7 +8,6 @@ Failure AddonCommand_spec.lua: addon commands a shortcut it cannot honour refuse
 Failure AddonCommand_spec.lua: addon commands a shortcut it cannot honour refuses one Mudlet uses for switching profiles, and says what holds it
 Failure AddonCommand_spec.lua: addon commands a shortcut it cannot honour says so when the search is switched on over a command's key
 Failure GeyserUserWindow_spec.lua: Tests functionality of Geyser.UserWindow Geyser.UserWindow:new/new2 gives itself a root container sized to the user window
-Failure HostApi_spec.lua: openUserWindow still refuses the name of a mini console inside a deleted user window
 Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests registered map info refuses to delete rooms or areas, or replace the map, from inside a map info callback
 Failure Mapper_spec.lua: Tests mapper functions against a shared fixture Tests registered map info survives a map info callback that registers and kills contributors while the map is painted
 Failure Mapper_spec.lua: Tests the open and closed states of the map widget docks the map at a usable size with a saved window layout fits a floating map bigger than the screen below the screen's top

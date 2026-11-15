@@ -1607,7 +1607,8 @@ private:
     void timerEvent(QTimerEvent* event) override;
     void autoSaveMap();
     void autoSaveMapInBackground(const QString& path);
-    void closeChildren();
+    // connectionEnded, for a close with no view, has the connection wait from the event loop for the game to close too
+    void closeChildren(std::function<void()> connectionEnded = {});
     void installModulesList(const QStringList&);
     void setupSandboxedLuaState(lua_State* L);
 

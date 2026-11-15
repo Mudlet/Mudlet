@@ -283,6 +283,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mBufferSearchOptions(enums::BufferSearchOptionNone)
 , mpDlgIRC(nullptr)
 , mMMCPServer(nullptr)
+, mMMCPChatName(csDefaultMMCPChatName)
 , mMMCPChatPort(csDefaultMMCPHostPort)
 , mMMCPChatPrefix(csDefaultChatPrefix)
 , mMMCPAutostartServer(false)
@@ -592,8 +593,6 @@ void Host::forceClose()
     }
 
     markClosingForced();
-    // Ensure the above is displayed before proceeding...
-    QCoreApplication::processEvents();
 
     // Because we have set the mForcedClose flag above a requestClose()
     // afterwards WILL succeed
@@ -679,7 +678,7 @@ bool Host::closeWithNoView(std::function<void()> closed)
     mLuaInterpreter.enterNestedEventLoop();
     raiseExitEventIfOwed();
     mLuaInterpreter.leaveNestedEventLoop();
-    // Until the save is written, as deletionWouldWait() answers by it
+    // Until the save is written and the connection has ended, as deletionWouldWait() answers by it
     mCloseSaveInFlight = true;
     auto finish = [this, closed = std::move(closed)]() {
         mCloseSaveInFlight = false;
@@ -694,15 +693,21 @@ bool Host::closeWithNoView(std::function<void()> closed)
     // Not one whose save did not load, nor one still loading, which only a close that does not wait for the load
     // reaches: either would write what it holds over its last good save and map, and keeping those is no failure
     if (!mLoadedOk || mIsProfileLoadingSequence) {
-        closeChildren();
-        finish();
+        closeChildren(finish);
         return true;
     }
     // A save still running is waited out first, so the close's own save is taken before the profile is taken apart;
-    // with none, all but the writes happen in this call
+    // with none, all but the writes and the game's own close happen in this call
     whenProfileSaveEnds([this, finish = std::move(finish)]() {
+        // Ends once both the save and the connection have, in whichever order they do
+        auto stillToEnd = std::make_shared<int>(2);
+        auto oneEnded = [stillToEnd, finish]() {
+            if (--*stillToEnd == 0) {
+                finish();
+            }
+        };
         // Saved even with "Auto save on exit" off: nobody can answer the GUI's "Save profile?" here, and the maintainer chose Yes
-        saveForClose([this, finish](const bool saved) {
+        saveForClose([this, oneEnded](const bool saved) {
             // profile.ini even when that failed, as the Host's deletion would otherwise write it with no one to tell
             const bool iniSynced = syncProfileIni();
             if (!iniSynced) {
@@ -712,9 +717,9 @@ bool Host::closeWithNoView(std::function<void()> closed)
                 qWarning().nospace().noquote() << "Host::closeWithNoView() WARNING - \"" << getName() << "\" could not be saved.";
                 emit closeSaveFailed();
             }
-            finish();
+            oneEnded();
         });
-        closeChildren();
+        closeChildren(oneEnded);
     });
     return true;
 }
@@ -1017,7 +1022,7 @@ void Host::finishProfileLoad()
     mIsProfileLoadingSequence = false;
 }
 
-void Host::closeChildren()
+void Host::closeChildren(std::function<void()> connectionEnded)
 {
     mIsClosingDown = true;
     // Drop the profile save a package install/uninstall put off: the close path
@@ -1032,7 +1037,16 @@ void Host::closeChildren()
     // does not commit it while closing either:
     mServerWrapFlushTimer.stop();
     // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
-    mTelnet.terminateConnection(mClosingWithNoView);
+    mTelnet.terminateConnection(std::move(connectionEnded));
+
+    if (mMMCPServer) {
+        // The peers have to go while the Host is still whole, as their slots
+        // report through it. The server itself is left alone: it dies with the
+        // Host through the QObject parent chain, whereas deleting it here would
+        // let a Lua handler further down this function lazily make another one
+        // on a profile that is on its way out.
+        mMMCPServer->disconnectAll();
+    }
 
     stopAllTriggers();
 
@@ -6320,10 +6334,10 @@ void Host::initMMCPServer()
 }
 
 
-// Return the MMCP chat name for this host
+// Return the MMCP chat name for this host, fall back to the default name if empty.
 const QString& Host::getMMCPChatName() const
 {
-    return mMMCPChatName;
+    return mMMCPChatName.isEmpty() ? csDefaultMMCPChatName : mMMCPChatName;
 }
 
 // Validate and set the MMCP chat name, notify connected peers, and update GUI.
@@ -6335,18 +6349,21 @@ bool Host::setMMCPChatName(const QString& name)
         return false;
     }
 
+    // Clearing the name in the preferences set value back to default
+    const QString newName = name.isEmpty() ? csDefaultMMCPChatName : name;
+
     // If the name is unchanged, no need to update or emit signals
-    if (mMMCPChatName == name) {
+    if (mMMCPChatName == newName) {
         return true;
     }
 
-    mMMCPChatName = name;
+    mMMCPChatName = newName;
 
     if (mMMCPServer) {
-        mMMCPServer->chatName(name);
+        mMMCPServer->chatName(newName);
     }
 
-    emit mmcpChatNameChanged(name);
+    emit mmcpChatNameChanged(newName);
     return true;
 }
 
@@ -6606,9 +6623,16 @@ void Host::lookUpSecuredPassword(CredentialManager* credManager)
             "character",
             [this, credManager](bool success, const QString& password, const QString& errorMessage, CredentialManager::ReadOutcome outcome) {
                 securedPasswordAnswered(success, password, errorMessage, outcome == CredentialManager::ReadOutcome::TimedOut);
+#if defined(Q_OS_ANDROID)
+                // Not a timeout, as a timed-out read can still be answered late. Unavailable too: on Android that is
+                // not the desktop's missing service but a KeyStore error, such as an entry whose key is gone or that
+                // would not decrypt.
+                mSecuredPasswordUnreadable = outcome == CredentialManager::ReadOutcome::Unreadable || outcome == CredentialManager::ReadOutcome::Unavailable;
+#else
                 // Only a refusal: a timed-out read can still be answered late. Not for Unavailable: a desktop
                 // with no keychain service says so on every load, password or not.
                 mSecuredPasswordUnreadable = outcome == CredentialManager::ReadOutcome::Unreadable;
+#endif
 
                 // Clean up the credential manager
                 credManager->deleteLater();
@@ -6627,9 +6651,15 @@ void Host::reportUnreadableSavedPassword()
     }
     mSecuredPasswordUnreadable = false;
     // A refusal does not say a password is there, so the message doesn't either
+#if defined(Q_OS_ANDROID)
+    // The KeyStore has nothing to unlock, so there is no unlock advice
+    //: Shown in the profile's console when the automatic login reaches its password step and Mudlet could not check for a saved character password, in Android's KeyStore or its encrypted file, so none is sent
+    postMessage(tr("[ WARN ]  - Could not check for a saved password, so none will be sent automatically. Type your password when the game asks for it."));
+#else
     //: Shown in the profile's console when the automatic login reaches its password step and Mudlet could not check for a saved character password, e.g. because the computer's password manager is locked, so none is sent
     postMessage(tr("[ WARN ]  - Could not check for a saved password, so none will be sent automatically. "
                    "If your computer's password manager is locked, unlock it and reopen the profile; otherwise type your password when the game asks for it."));
+#endif
 }
 
 void Host::securedPasswordAnswered(bool success, const QString& password, const QString& errorMessage, bool timedOut)
@@ -7986,7 +8016,7 @@ std::optional<QSize> Host::mainWindowSize() const
         if (mMainAreaPixels) {
             return mMainAreaPixels;
         }
-        const QFontMetrics metrics(consoleFrontend()->displayFont());
+        const QFontMetrics metrics(consoleFrontend()->mainTextFont());
         const QSize cells = mainAreaCells();
         return {QSize(cells.width() * metrics.averageCharWidth(), cells.height() * metrics.height())};
     }
@@ -8056,7 +8086,7 @@ std::optional<int> Host::windowFontSize(const QString& name) const
         return {};
     }
     if (pModel == mpMainConsoleModel.get() && !hasConsoleView()) {
-        return {consoleFrontend()->displayFont().pointSize()};
+        return {consoleFrontend()->mainTextFont().pointSize()};
     }
     return {pModel->mUpperPaneFont.pointSize()};
 }
@@ -8267,7 +8297,7 @@ void Host::layOutMainAreaWithNoView(const MainAreaChange change)
         mMainAreaCells = QSize(mScreenWidth, mScreenHeight);
     }
     const QSize textArea = mainTextRectWithNoView().size();
-    const QFontMetrics metrics(consoleFrontend()->displayFont());
+    const QFontMetrics metrics(consoleFrontend()->mainTextFont());
     // As TTextEdit::updateScreenView() counts it, and NAWS carries no more than 16 bits
     const int columns = std::clamp(textArea.width() / std::max(1, metrics.averageCharWidth()), 40, 65535);
     const int rows = std::clamp(textArea.height() / std::max(1, metrics.height()), 1, 65535);
@@ -8303,7 +8333,7 @@ void Host::layOutMainAreaWithNoView(const MainAreaChange change)
 
 std::pair<bool, QString> Host::resizeMainWindowWithNoView(const QSize& pixels)
 {
-    const QFontMetrics metrics(consoleFrontend()->displayFont());
+    const QFontMetrics metrics(consoleFrontend()->mainTextFont());
     const qint64 columns = pixels.width() / std::max(1, metrics.averageCharWidth());
     const qint64 rows = pixels.height() / std::max(1, metrics.height());
     if (columns < 1 || columns > 65535 || rows < 1 || rows > 65535) {

@@ -70,7 +70,6 @@
 // A Qt Resource Collection in a static library only reaches the executable if something here names it
 extern void qInitResources_mudlet();
 extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
 extern void qInitResources_mudlet_fonts_common();
 extern void qInitResources_mudlet_fonts_posix();
 
@@ -80,12 +79,9 @@ enum ExitCode { exitOk = 0, exitFailed = 1, exitUsage = 2, exitOutputFailed = 3,
 
 void initializeQRCResources()
 {
-#ifdef INCLUDE_VARIABLE_SPLASH_SCREEN
-    qInitResources_additional_splash_screens();
-#endif
 #ifdef INCLUDE_FONTS
     qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
+#ifdef INCLUDE_EMOJI_FONT
     qInitResources_mudlet_fonts_posix();
 #endif
 #endif
@@ -115,9 +111,11 @@ void beginStop()
     gStopDeadlineMs.compare_exchange_strong(notYet, steadyMs() + scmStopWaitMs);
 }
 
+using PollEvents = decltype(pollfd::events);
+
 // What poll() answers for the descriptor once it is ready, or 0 with errno set; EINTR for a write the stop's
 // time ran out on
-short waitFor(const int descriptor, const short events)
+PollEvents waitFor(const int descriptor, const PollEvents events)
 {
     const bool writing = events & POLLOUT;
     pollfd ready[2] = {{descriptor, events, 0}, {gSignalPipe[0], POLLIN, 0}};
@@ -152,7 +150,7 @@ bool waitToWrite(const int descriptor)
 }
 
 // Waits out a descriptor inherited non-blocking, as from a parent that set it on a terminal it shares
-bool retryAfterWaiting(const int descriptor, const short events)
+bool retryAfterWaiting(const int descriptor, const PollEvents events)
 {
     if (errno == EINTR) {
         return true;
@@ -161,7 +159,7 @@ bool retryAfterWaiting(const int descriptor, const short events)
         return false;
     }
     const int waited = errno;
-    const short answered = waitFor(descriptor, events);
+    const auto answered = waitFor(descriptor, events);
     if (!answered) {
         if (errno != EINTR) {
             errno = waited;
@@ -587,7 +585,7 @@ QStringList catchStopSignals()
     return problems;
 }
 
-void forwardResize(int)
+void forwardResize([[maybe_unused]] int signalNumber)
 {
     const int savedErrno = errno;
     const char byte = 0;

@@ -31,6 +31,7 @@
 #include <QDirIterator>
 #include <QElapsedTimer>
 #include <QFile>
+#include <QFileInfo>
 #include <QFontDatabase>
 #include <QFontMetrics>
 #include <QRawFont>
@@ -279,6 +280,13 @@ end))lua")
         });
     }
 
+    static auto forgetAppDictionaryFolderAfterwards()
+    {
+        return qScopeGuard([]() {
+            THeadlessSession::setDictionaryFolder(QString());
+        });
+    }
+
     static QString luaGlobalString(Host* host, const char* name)
     {
         lua_State* L = host->getLuaInterpreter()->getLuaGlobalState();
@@ -448,6 +456,43 @@ private slots:
         QCOMPARE(session.start({.profile = qsl("Headless Second Try"), .connect = false}), THeadlessSession::StartResult::started);
     }
 
+    void test_theSessionRegistersMudletsOwnResources()
+    {
+        QStringList paths{qsl(":/icons/mudlet.png"), qsl(":/lang/mudlet_de_DE.qm")};
+#ifdef INCLUDE_FONTS
+        paths << qsl(":/fonts/ttf-bitstream-vera-1.10/Vera.ttf");
+#ifdef INCLUDE_EMOJI_FONT
+        paths << qsl(":/fonts/noto-color-emoji-2025-09-15-v2.051/LICENSE");
+#endif
+#endif
+        const auto reregister = qScopeGuard([]() {
+            Q_INIT_RESOURCE(mudlet);
+            Q_INIT_RESOURCE(qm);
+#ifdef INCLUDE_FONTS
+            Q_INIT_RESOURCE(mudlet_fonts_common);
+#ifdef INCLUDE_EMOJI_FONT
+            Q_INIT_RESOURCE(mudlet_fonts_posix);
+#endif
+#endif
+        });
+        Q_CLEANUP_RESOURCE(mudlet);
+        Q_CLEANUP_RESOURCE(qm);
+#ifdef INCLUDE_FONTS
+        Q_CLEANUP_RESOURCE(mudlet_fonts_common);
+#ifdef INCLUDE_EMOJI_FONT
+        Q_CLEANUP_RESOURCE(mudlet_fonts_posix);
+#endif
+#endif
+        for (const auto& path : paths) {
+            QVERIFY2(!QFile::exists(path), qPrintable(path));
+        }
+
+        const THeadlessSession session;
+        for (const auto& path : paths) {
+            QVERIFY2(QFile::exists(path), qPrintable(path));
+        }
+    }
+
     // Mudlet.ini is read by the first pool alone, so the media mutes go from each pool to the next, as through
     // a name the frontend got wrong
     void test_theMediaMutesOutliveThePool()
@@ -473,6 +518,69 @@ private slots:
         QVERIFY(session.runLua(qsl("headlessMutes = tostring(getConfig('muteMediaAPI')) .. ' ' .. tostring(getConfig('muteMediaGame'))")));
         QCOMPARE(luaGlobalString(session.host(), "headlessMutes"), qsl("true true"));
         QVERIFY(session.shutdown(false));
+    }
+
+    void test_aDictionaryFolderTheAppNamesIsUsed()
+    {
+        const QTemporaryDir dictionaries;
+        const auto forget = forgetAppDictionaryFolderAfterwards();
+        QVERIFY(dictionaries.isValid());
+        const QString dictionaryName = Host::startingSpellDic();
+        QVERIFY(writeFile(dictionaries.filePath(qsl("%1.aff").arg(dictionaryName)), "SET UTF-8\n"));
+        QVERIFY(writeFile(dictionaries.filePath(qsl("%1.dic").arg(dictionaryName)), "1\nzorblax\n"));
+        QVERIFY(THeadlessSession::setDictionaryFolder(dictionaries.path()));
+
+        const QString name = qsl("Headless App Dictionary");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl("headlessSpelled = tostring(spellCheckWord('zorblax')) .. ' ' .. tostring(spellCheckWord('blorzax'))")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessSpelled"), qsl("true false"));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_aDictionaryFolderTheAppNamesStandsInForTheBundledOnes()
+    {
+        const QTemporaryDir dictionaries;
+        const auto forget = forgetAppDictionaryFolderAfterwards();
+        QVERIFY(dictionaries.isValid());
+        const QString folder = dictionaries.path() + u'/';
+        const QString missing = qsl("zz_NOWHERE");
+        // Each bundled path is written from the program's folder (some go on with ../). Not compared with a path read
+        // at the start, which an earlier test that failed to forget its folder would already have changed
+        const QString besideTheProgram = QCoreApplication::applicationDirPath() + u'/';
+
+        QVERIFY(THeadlessSession::setDictionaryFolder(folder));
+        QCOMPARE(MudletApp::getMudletPath(enums::hunspellDictionaryPath, missing), folder);
+        QVERIFY(!THeadlessSession::setDictionaryFolder(qsl(":/")));
+        QCOMPARE(MudletApp::getMudletPath(enums::hunspellDictionaryPath, missing), folder);
+        QVERIFY(THeadlessSession::setDictionaryFolder(QString()));
+        const QString forgotten = MudletApp::getMudletPath(enums::hunspellDictionaryPath, missing);
+        QVERIFY2(forgotten.startsWith(besideTheProgram), qPrintable(forgotten));
+    }
+
+    void test_aDictionaryFolderTheAppNamesComesBeforeTheSystems()
+    {
+        QString systemDictionary;
+        for (const auto& folder : MudletApp::systemHunspellDictionaryFolders()) {
+            const QStringList found = QDir(folder).entryList({qsl("*.aff")}, QDir::Files);
+            if (!found.isEmpty()) {
+                systemDictionary = QFileInfo(found.constFirst()).completeBaseName();
+                break;
+            }
+        }
+        if (systemDictionary.isEmpty()) {
+            QSKIP("This machine has no system Hunspell dictionary for the app's to come before");
+        }
+        const QTemporaryDir dictionaries;
+        const auto forget = forgetAppDictionaryFolderAfterwards();
+        QVERIFY(dictionaries.isValid());
+        QVERIFY(writeFile(dictionaries.filePath(qsl("%1.aff").arg(systemDictionary)), "SET UTF-8\n"));
+        QVERIFY(THeadlessSession::setDictionaryFolder(dictionaries.path()));
+        QVERIFY(MudletApp::getMudletPath(enums::hunspellDictionaryPath, systemDictionary) != dictionaries.path() + u'/');
+
+        QVERIFY(writeFile(dictionaries.filePath(qsl("%1.dic").arg(systemDictionary)), "1\nzorblax\n"));
+        QCOMPARE(MudletApp::getMudletPath(enums::hunspellDictionaryPath, systemDictionary), dictionaries.path() + u'/');
     }
 
     void test_waitsRunWithNoMainWindow()
@@ -2029,6 +2137,77 @@ tempKey(mudlet.keymodifier.Control + mudlet.keymodifier.Alt, mudlet.key.S, [[hea
         QTest::qWait(100);
         QVERIFY(!game->readAll().contains("north"));
         QVERIFY(session.shutdown(false));
+    }
+
+    // A profile with no view waits for its game to close too before its close ends, or its unread data would make
+    // that close a reset, but it waits from the event loop: an app that closes it is not held up meanwhile
+    void test_aCloseWaitsForTheGameWithoutHoldingTheApp()
+    {
+        const QString name = qsl("Headless Close Waits");
+        QVERIFY(writeProfile(name, QString()));
+        QTcpServer server;
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+
+        THeadlessSession session;
+        QSignalSpy connected(&session, &THeadlessSession::connected);
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        QTRY_VERIFY_WITH_TIMEOUT(server.hasPendingConnections(), 10000);
+        std::unique_ptr<QTcpSocket> game(server.nextPendingConnection());
+        QTRY_COMPARE_WITH_TIMEOUT(connected.size(), 1, 10000);
+        // A game that never sees the profile stop sending, so never closes: Qt stops reading a socket whose read
+        // buffer is full, and nothing here empties it
+        game->setReadBufferSize(1);
+        QVERIFY(session.submit(qsl("look")));
+        QTRY_VERIFY_WITH_TIMEOUT(game->bytesAvailable() > 0, 10000);
+
+        QSignalSpy shutDown(&session, &THeadlessSession::shutdownFinished);
+        QElapsedTimer took;
+        took.start();
+        session.shutdownAsync(true);
+        QVERIFY2(took.elapsed() < 500, qPrintable(qsl("shutdownAsync() held the app for %1 ms waiting for the game to close").arg(took.elapsed())));
+        QVERIFY(shutDown.isEmpty());
+        QTRY_COMPARE_WITH_TIMEOUT(shutDown.size(), 1, 10000);
+        QVERIFY2(shutDown.first().at(0).toBool(), qPrintable(shutDown.first().at(1).toString()));
+        // The second the close gives a game that does not close, so it did wait for this one
+        QVERIFY2(took.elapsed() >= 900, qPrintable(qsl("The close ended after %1 ms, without waiting for the game").arg(took.elapsed())));
+    }
+
+    // Bites on Windows, whose event dispatcher serves socket notifiers ahead of timers
+    void test_aCloseEndsOnTimeWhileTheGameKeepsSending()
+    {
+        const QString name = qsl("Headless Close Flooded");
+        QVERIFY(writeProfile(name, QString()));
+        QTcpServer server;
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+
+        THeadlessSession session;
+        QSignalSpy connected(&session, &THeadlessSession::connected);
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        QTRY_VERIFY_WITH_TIMEOUT(server.hasPendingConnections(), 10000);
+        std::unique_ptr<QTcpSocket> game(server.nextPendingConnection());
+        QTRY_COMPARE_WITH_TIMEOUT(connected.size(), 1, 10000);
+        game->setReadBufferSize(1);
+        QVERIFY(session.submit(qsl("look")));
+        QTRY_VERIFY_WITH_TIMEOUT(game->bytesAvailable() > 0, 10000);
+
+        const QByteArray chunk(16 * 1024, 'x');
+        connect(game.get(), &QIODevice::bytesWritten, game.get(), [pGame = game.get(), chunk]() {
+            if (pGame->bytesToWrite() < chunk.size()) {
+                pGame->write(chunk);
+            }
+        });
+        game->write(chunk);
+
+        QSignalSpy shutDown(&session, &THeadlessSession::shutdownFinished);
+        QElapsedTimer took;
+        took.start();
+        session.shutdownAsync(true);
+        QTRY_COMPARE_WITH_TIMEOUT(shutDown.size(), 1, 10000);
+        QVERIFY2(took.elapsed() < 3000, qPrintable(qsl("The close took %1 ms while the game kept sending").arg(took.elapsed())));
     }
 
     // As the GUI's replay toolbar holds, resumes and stops it, and only for a replay of the session's profile

@@ -3909,6 +3909,10 @@ int TLuaInterpreter::getOS(lua_State* L)
 #elif defined(Q_PROCESSOR_POWER_32)
         lua_pushstring(L, "ppc (32-bit)");
         return 1;
+#elif defined(Q_PROCESSOR_ARM_64)
+        // Before the _V7 case: Qt also defines Q_PROCESSOR_ARM_V7, _V6 and _V5 for 64-bit ARM
+        lua_pushstring(L, "arm (64-bit)");
+        return 1;
 #elif defined(Q_PROCESSOR_ARM_V7)
         lua_pushstring(L, "arm7");
         return 1;
@@ -3936,6 +3940,11 @@ int TLuaInterpreter::getOS(lua_State* L)
     return 2 + pushProcessor();
 #elif defined(Q_OS_MACOS)
     lua_pushstring(L, "mac");
+    lua_pushstring(L, QSysInfo::productVersion().toUtf8().constData());
+    return 2 + pushProcessor();
+#elif defined(Q_OS_ANDROID)
+    // Before Q_OS_LINUX, which Android also defines
+    lua_pushstring(L, "android");
     lua_pushstring(L, QSysInfo::productVersion().toUtf8().constData());
     return 2 + pushProcessor();
 #elif defined(Q_OS_LINUX)
@@ -8250,7 +8259,17 @@ void TLuaInterpreter::initLuaGlobals()
     additionalCPaths << qsl("%1/?.so").arg(profilePath);
 #endif
 
-#if defined(Q_OS_LINUX)
+#if defined(Q_OS_ANDROID)
+    // appPath holds only the APK's lib*.so files, flat. Unless they are extracted it is <apk>!/lib/<abi>,
+    // where Lua's fopen() check of each candidate can never find a module.
+    if (appPath.contains(QLatin1String("!/"))) {
+        qInfo().noquote().nospace()
+                << "TLuaInterpreter::initLuaGlobals() INFO - package.cpath has no entry for " << appPath
+                << ", as require() cannot load a module from inside the APK: extract the app's libraries (QT_ANDROID_LEGACY_PACKAGING) or give Lua C modules to THeadlessSession::preloadLuaModule()";
+    } else {
+        additionalCPaths << qsl("%1/lib?.so").arg(appPath);
+    }
+#elif defined(Q_OS_LINUX)
     // AppInstaller on Linux would like the C search path to also be set to
     // a ./lib sub-directory of the current binary directory:
     additionalCPaths << qsl("%1/lib/?.so").arg(appPath);

@@ -480,6 +480,7 @@ void Host::setMainConsoleView(TMainConsole* view)
         mpNullConsoleFrontend->followView(view);
     } else if (mpConsole) {
         mpNullConsoleFrontend->resumeMainCommandLine();
+        mpNullConsoleFrontend->resumeMainText();
     }
     mpConsole = view;
     mpConsoleFrontend = view;

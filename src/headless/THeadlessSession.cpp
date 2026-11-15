@@ -255,7 +255,8 @@ bool aFolderTheGUICouldPick(const QString& dir)
 }
 
 // Empty if dir, cleaned, can be the config root, or for none the GUI's can, else why not. The GUI's own folder
-// is never one: its profiles' passwords are in the keychain or AppConfigLocation, where a chosen one does not look.
+// is never one: its profiles' passwords are in AppConfigLocation, which a chosen one does not read, or in the
+// keychain under the default root's names, which an Android app's chosen one does not save under.
 QString configDirProblem(const QString& dir)
 {
     if (!dir.isEmpty() && !QDir::isAbsolutePath(dir)) {
@@ -330,9 +331,23 @@ void THeadlessSession::preloadLuaModule(const QByteArray& name, int (*open)(lua_
     TLuaInterpreter::preloadModule(name, open);
 }
 
+bool THeadlessSession::setDictionaryFolder(const QString& folder)
+{
+    return MudletApp::setAppDictionaryFolder(folder);
+}
+
 THeadlessSession::THeadlessSession(QObject* parent)
 : QObject(parent)
 {
+    // Naming them is what keeps them in a static link; registering a resource again is harmless
+    Q_INIT_RESOURCE(mudlet);
+    Q_INIT_RESOURCE(qm);
+#ifdef INCLUDE_FONTS
+    Q_INIT_RESOURCE(mudlet_fonts_common);
+#ifdef INCLUDE_EMOJI_FONT
+    Q_INIT_RESOURCE(mudlet_fonts_posix);
+#endif
+#endif
 }
 
 THeadlessSession::~THeadlessSession()

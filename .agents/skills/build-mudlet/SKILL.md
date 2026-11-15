@@ -261,7 +261,7 @@ miss in every other checkout: put such defines on the source files that read the
 share nothing between checkouts: the header records its build tree's path and fails to load from
 another, so `cmake/PrecompiledHeaders.cmake` turns `base_dir` off for those targets.
 
-**Sanitizers are on by default** on every non-Windows build, regardless of build type
+**Sanitizers are on by default** on every non-Windows build but Android, regardless of build type
 (`src/cmake/EnableSanitizers.cmake` defaults `USE_SANITIZER` to `address`). They cost both compile
 time and runtime speed. Use a `-nosan` or `-release` preset when not chasing a memory bug; both
 clear `USE_SANITIZER` explicitly, because a Release build type alone does not.

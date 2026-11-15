@@ -188,6 +188,23 @@ path that leads to one, even before it is made. Not caught: a portable install w
 beside another executable, and a GUI run under another HOME. Naming one of their folders shares its
 profiles and `Mudlet.ini` with that GUI (not its passwords), so `start()` warns when a folder it accepts already holds profiles.
 
+In an Android app the profiles' passwords are kept by QtKeychain instead, as they are without a
+`configDir`: encrypted with a key in the app's own KeyStore, unless its `Mudlet.ini` sets
+`storePasswordsSecurely` to false, which keeps them in the folder. The KeyStore is the app's own, so there
+is no GUI to share it with, and each folder's entries are named for that folder, with symbolic links
+resolved, so a profile of the same name in another one keeps its own; name it by the same path on every
+run. Moving the folder leaves those passwords behind, as only the files under `credentials/` go with it,
+and restoring the app's data without its KeyStore keys leaves them unreadable: Mudlet says so in the
+profile's console when it would have sent one, and the player types it again. A proxy password stays under
+`credentials/`, as the GUI keeps its own in a file. While a password is under `credentials/`, that copy is
+the one read and the KeyStore is not: a save the KeyStore takes and gives back on a read removes it, and
+one it refuses or does not give back is kept there instead, with a warning in the log. A save it does not
+answer in time is reported as failed, and leaves any copy already there as the one read. A save or a forget
+that cannot remove that copy, or cannot look for it, is reported as failed.
+With no Java VM registered with Qt - `mudlet-headless` run as a bare executable, or an app that does not
+load Qt Core through `System.loadLibrary` - the KeyStore cannot be reached, so the folder keeps them all
+under `credentials/`, and the log says so.
+
 Each of `outputLine`'s runs covers part of the line, in order, with the colours and styles the game
 asked for (`THeadlessSession::TextStyle`: bold, italic, underline, overline, strike-out, reverse, blink,
 fast blink, concealed), and says whether each colour is the profile's own, which a frontend may swap
@@ -945,6 +962,12 @@ the first of that name, and `scriptWindow(name, kind)` the one of that kind, as 
 line has its console's name. Neither lists buffers, which are never shown. Both are empty with no profile open, and may be read from anywhere, a handler of the session's
 signals included.
 
+When a script deletes a user window, the windows it held go on as in the GUI, where the dock is only
+destroyed once control is back in the event loop: until then they keep their names, scripts can still use
+them, and the sheet and font the window gave them, but they are not shown and the list leaves them out, as
+they are in no window an app can show. One a script moves out with `setWindow()` before then stays, and
+is listed again where it went; the rest go when the session's event loop next runs.
+
 The frames a game opens with MXP's `<FRAME>` are in the list too, as kind `mxpFrame`. A frame is a mini
 console in all but who made it: `windowLines()` reads the text a `<DEST>` sent it, `windowTextChanged`
 names it, its links are read and followed and the wheel scrolls it, the same way. Its `geometry` is its
@@ -995,8 +1018,20 @@ trimmed under the row it is scrolled back to.
 A sheet a script sets on the whole profile (`setProfileStyleSheet()`) or on a user window
 (`setUserWindowStyleSheet()`) reaches the labels and mini consoles inside it as it does on the desktop, for
 what scripts read back: a label's text and `getLabelSizeHint()`, a mini console's font, columns and rows.
-The label's own sheet wins where both speak. Rules are matched on the widget's class, name and state; one
-that names a widget inside another (`QDockWidget QLabel { … }`) is not followed.
+The label's own sheet wins where both speak. Rules are matched as Qt matches them: on the widget's class, name
+and state, on what it is inside (`QDockWidget QLabel { … }`, `#MainFrame > QLabel { … }`), and on its properties
+(`QLabel[text="…"] { … }`). The properties known are `objectName`, `class`, a label's `text`, the main console's
+`HostName` and a user window's `floating`; a rule that names any other reaches nothing. The same matching gives a
+command line or text box its size limits from its own sheet, and a user window's title from a
+`qproperty-windowTitle`.
+
+The profile's sheet gives the main console's text a font as it gives a mini console's: `getFontSize("main")`,
+and the columns and rows the main area holds when the app has given its size in pixels, follow it. The
+profile's display font (`getFont("main")`, the main console's `sysFontChangeEvent`) stays the one scripts set,
+where on the desktop a rule that styles the main console itself changes it too. A rule that reaches a console
+itself (`TConsole { … }`, and `QWidget { … }` or bare declarations, which reach its text too) lies over each
+font a script then sets on that console, and its text keeps that font once the sheet is cleared, until a
+script sets another, as on the desktop.
 
 A change to any of these names the label in `scriptWindowsChanged`. It is empty for a name that is not a
 label's.
@@ -1205,6 +1240,12 @@ the desktop GUI pumps the event loop from it, for its progress dialog and its Ab
 `cancelMapOperation()` while the operation runs, and anything else posted meanwhile, such as a profile
 close, runs once the operation has returned.
 
+## Embedding it: Mudlet's own resources
+
+`mudlet_core` is a static library, and the linker keeps a Qt resource from one only if something
+names it. `THeadlessSession` names Mudlet's own (its `:/` images, translations and fonts), so a
+program that uses it has them, registered before `main()` runs, and has nothing to call for them.
+
 ## Embedding it: Mudlet's own Lua files
 
 Much of the scripting API is itself Lua (Geyser, `db:`, the string and table functions and more), in
@@ -1230,10 +1271,12 @@ which is why a desktop build leaves it off.
 ### The Lua C modules
 
 Mudlet's Lua is built on seven C modules, which a desktop Mudlet loads from files as `require()` asks
-for them: `lfs`, `brimworks.zip`, `rex_pcre2`, `luasql.sqlite3`, `lua-utf8`, `yajl` and `lpeg`. Android
-and a browser let no program load code that way. Built with `-DUSE_BUNDLED_LUA_MODULES=ON`, which is
-the default for both, `mudlet_core` carries the seven itself and every profile finds them there with
-nothing for the app to do. They need SQLite3 to link against, besides what `mudlet_core` links anyway.
+for them: `lfs`, `brimworks.zip`, `rex_pcre2`, `luasql.sqlite3`, `lua-utf8`, `yajl` and `lpeg`. Under
+Qt 6's default packaging Android keeps an app's libraries inside the APK, where `require()` cannot read
+them, and a browser lets no program load code from files. Built with `-DUSE_BUNDLED_LUA_MODULES=ON`,
+which is the default for both, `mudlet_core` carries the seven itself and every profile finds them
+there with nothing for the app to do. They need SQLite3 to link against, besides what `mudlet_core`
+links anyway.
 
 Configure fetches their sources with git, each pinned to the commit of the release Mudlet's own builds
 install, as `cmake/BundledLuaModules.cmake` lists them; all are under the MIT licence. To build one from
@@ -1253,7 +1296,27 @@ THeadlessSession::preloadLuaModule("lfs", luaopen_lfs);
 `require()` then finds the module under that name ahead of any on disk, in every profile opened or
 reset afterwards. A module that is missing takes with it what is built on it: without `yajl` none of
 Mudlet's own Lua loads, and without `luasql.sqlite3` `db:create()` raises an error. A C module of the
-app's own, for its scripts to require, is given the same way.
+app's own, for its scripts to require, is given the same way. An app built with
+`QT_ANDROID_LEGACY_PACKAGING`, whose libraries Android unpacks to a folder, can instead ship one as
+`libfoo.so` for `require("foo")`, as `package.cpath` then names that folder. It is built with plain
+`add_library()`, since `qt_add_library()` adds the ABI to the file name. This has not yet been tried
+on a device.
+
+## Embedding it: spell-check dictionaries
+
+A profile spell-checks against a Hunspell dictionary, a `<name>.aff` and a `<name>.dic`, which a
+desktop Mudlet finds among the system's or beside the program. A phone has neither, so an app that
+carries dictionaries names their folder before it starts a session:
+
+```cpp
+THeadlessSession::setDictionaryFolder(appDataFolder + qsl("/dictionaries"));
+```
+
+Every dictionary a profile opens afterwards is looked for there first, where both its files must be,
+then among the system's, and never beside the program: one in neither folder is not available.
+Hunspell reads the files with plain file calls, so the folder must be a real one, such as one the
+app copies its dictionaries into from its package; a `:/` or `assets:/` path is refused, and
+`setDictionaryFolder()` returns `false`.
 
 ## What still needs a window
 

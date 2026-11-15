@@ -2606,7 +2606,7 @@ private slots:
     QCOMPARE(focused.underlineColor, QColor(0, 120, 215));
 
     console->mUpperPane->setCaretPosition(linkLine, linkCol + qsl("Look ").size());
-    QCOMPARE(static_cast<bool>(attributes() & TChar::Underline), underlinedByTheGame);
+    QCOMPARE(bool(attributes() & TChar::Underline), underlinedByTheGame);
     QVERIFY2(attributes() & TChar::Bold, "losing focus took the game's bold off the link");
   }
 
@@ -2819,7 +2819,7 @@ private slots:
     QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
     auto [linkLine, linkCol, linkId] = *pos;
     const auto bold = [&, line = linkLine, column = linkCol] {
-      return static_cast<bool>(console->buffer.buffer.at(line).at(column).allDisplayAttributes() & TChar::Bold);
+      return bool(console->buffer.buffer.at(line).at(column).allDisplayAttributes() & TChar::Bold);
     };
     QVERIFY(bold());
 

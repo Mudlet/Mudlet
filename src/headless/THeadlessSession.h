@@ -84,8 +84,10 @@ public:
         // For this run only; nothing stores it
         QString password;
         // An absolute path, made if need be: the folder that holds the profiles, Mudlet.ini and the passwords
-        // stored for them, in place of the GUI's folder and the system's keychain. Settled once a process, so a
-        // later start() may name it again, but no other, nor leave it out for the GUI's. Never the GUI's folder.
+        // stored for them, in place of the GUI's folder and the system's keychain, except in an Android app with
+        // a Java VM registered with Qt (docs/headless.md), whose profile passwords go to the KeyStore unless
+        // Mudlet.ini keeps them in the folder. Settled once a process, so a later start() may name it again, but
+        // no other, nor leave it out for the GUI's. Never the GUI's folder.
         QString configDir;
     };
 
@@ -135,12 +137,18 @@ public:
     enum class StartResult { started, noSuchProfile, invalidName, invalidConnectionDetails, notOpened, loadFailed, poolClosing, invalidConfigDir };
     Q_ENUM(StartResult)
 
-    // A Lua C module the app has linked in, which a phone or a browser cannot load from a file: require()
-    // finds it under that name ahead of any on disk, in a profile opened or reset afterwards. Given again
-    // for a name, it replaces the earlier one; with no name or no function it is refused. docs/headless.md
-    // lists the modules Mudlet itself requires.
+    // A Lua C module the app has linked in, for a platform where require() cannot load it from a file (a browser,
+    // or Android under Qt's default packaging): require() finds it under that name ahead of any on disk, in a
+    // profile opened or reset afterwards. Given again for a name, it replaces the earlier one; with no name or no
+    // function it is refused. docs/headless.md lists the modules Mudlet itself requires.
     static void preloadLuaModule(const QByteArray& name, int (*open)(lua_State*));
+    // A real folder of <name>.aff/.dic Hunspell dictionaries the app carries, searched ahead of the system's and in place
+    // of Mudlet's bundled ones by every dictionary opened afterwards. Refused (false) for a :/ or assets:/ path, which
+    // Hunspell cannot read; empty forgets it.
+    static bool setDictionaryFolder(const QString& folder);
 
+    // Names mudlet_core's own Qt resources (":/" images, translations and fonts), so a program linking it statically
+    // keeps them; Qt registers them before main() runs
     explicit THeadlessSession(QObject* parent = nullptr);
     // Closes the profiles unsaved, at once or, while one is busy as for shutdown(), a reset is pending, one is
     // still being let go or one of its signals is being sent, from the event loop once that is over; a
