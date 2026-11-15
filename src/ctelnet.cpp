@@ -132,10 +132,6 @@ static_assert(NETWORK_LATENCY_MAX_STALL > NETWORK_LATENCY_BEAT, "a reading has t
 
 constexpr size_t BUFFER_SIZE = 100000L;
 
-// Process-wide, so no profile is handed an id another had: an app's late report about a closed profile's connection
-// cannot then pass for the next profile's. Main thread only
-static quint64 lastTransportConnection = 0;
-
 // buffer[from] must not be a byte this stops at: a zero-length run would leave the caller's loop on
 // the same byte forever, so both callers need a branch for each of them, even one that only appends it.
 static int textRunEnd(const char* buffer, const int from, const int to)
@@ -1193,7 +1189,6 @@ void cTelnet::dialTransport()
     }
     // Before the dial, as the transport may answer from inside it
     forgetTransportConnection();
-    mTransportCloseReason.clear();
     mTransportState = TransportState::Dialling;
     mpTransport->dial(mTransportConnection, mHostUrl, mHostPort, tlsRequested);
 }
@@ -1217,9 +1212,12 @@ void cTelnet::closeTransport()
 
 void cTelnet::forgetTransportConnection()
 {
-    mTransportConnection = ++lastTransportConnection;
+    // Process-wide, so an app's late report about a closed profile's connection cannot pass for the next profile's
+    static quint64 lastConnection = 0;
+    mTransportConnection = ++lastConnection;
     mTransportInput.clear();
     mTransportInputRead = 0;
+    mTransportCloseReason.clear();
 }
 
 void cTelnet::transportConnected()

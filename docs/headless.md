@@ -652,8 +652,8 @@ message, and a connection that ends with a reason gives it in the disconnection 
 A report is dropped unless it names the profile's current connection: the one last dialled, and not
 closed since. A reconnect closes one connection and dials the next in the same breath, so an app whose
 old socket reports its end late, after `transportCloseRequested`, cannot have that taken for news of
-the new one. No two dials in a process are given the same id, so neither can a late report about the
-connection of a profile that has since closed, when the session starts another.
+the new one. Ids are unique within the process, so a late report about a closed profile's connection
+cannot be taken for the next profile's either.
 
 The reports are taken up from the event loop, so they may be made from a handler of the three
 signals, which are sent mid-write and may call nothing else of the session. Only the profile

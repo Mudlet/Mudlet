@@ -27,10 +27,9 @@
 // A game connection made by the application embedding Mudlet in place of cTelnet's sockets, for a
 // platform with no raw TCP such as a browser. It carries the telnet byte stream and nothing else:
 // how the bytes reach the game is the application's business, so cTelnet never calls it secure.
-// write() and close() are for the connection last dialled. Each signal carries the id dial() gave
-// its connection, which no other dial in the process is given, and may be emitted at any time, even
-// from inside dial(), write() or close(): cTelnet takes them up from the event loop and drops any
-// not about the connection it last dialled and has not closed since, however late it comes.
+// write() and close() are for the connection last dialled. Each signal carries the id dial() was handed for its
+// connection, unique within the process, and may be emitted at any time, even from inside dial(), write() or close():
+// cTelnet takes them up from the event loop and drops any not about the connection it last dialled and has not closed since.
 class TGameTransport : public QObject
 {
     Q_OBJECT
