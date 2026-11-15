@@ -22,7 +22,9 @@
 
 #include <QString>
 
+#include <functional>
 #include <optional>
+#include <utility>
 
 class Host;
 class QObject;
@@ -58,6 +60,8 @@ public:
     virtual void showOptionsDialog(const QString& tab, Host* pHost) = 0;
     virtual void showConnectionDialog() = 0;
     virtual void handleTelnetUri(const QString& uri) = 0;
+    // A link from a game to a telnet:// or telnets:// address: asks the player first, always.
+    virtual void connectFromGameLink(const QString& uri) = 0;
     // Only the profile in the active tab drives the menu's checkbox.
     virtual void setCompactInputLineChecked(Host* pHost, bool checked) = 0;
     // closeMudlet(): asks, from the event loop, for every profile to close and save and then the application to quit
@@ -79,8 +83,9 @@ public:
     // With no main window, false for a profile not in the pool or whose close has started, leaving the front as it was
     virtual bool setActiveProfileTab(const QString& profileName) = 0;
     virtual void setAppStyleSheet(const QString& styleSheet) = 0;
-    // false when there is no window to resize
-    virtual bool resizeMainWindow(int width, int height) = 0;
+    // The GUI resizes its one window, whichever profile asks; with no window, the asking profile's own area. With
+    // no window either, false and no message; refused, false and why.
+    virtual std::pair<bool, QString> resizeMainWindow(Host*, int width, int height) = 0;
     virtual bool loadWindowLayout() = 0;
     virtual bool layoutLoading() const = 0;
     // Saves even if quitting already saved the layout; if this save fails, quitting saves it again.
@@ -107,6 +112,15 @@ public:
     // Each returns an empty string if the player cancels.
     virtual QString getOpenFileName(const QString& title, const QString& location) = 0;
     virtual QString getExistingDirectory(const QString& title, const QString& location) = 0;
+    // The same without waiting for the player, as a browser's picker answers: done is told from the event loop,
+    // never during the call, and not at all once context, which may not be null, is gone; a picker still open then
+    // closes. An empty string if the player cancels, none if no picker could be shown, as with no window.
+    virtual void getOpenFileNameAsync(const QString& title, const QString& location, QObject* context, std::function<void(const std::optional<QString>&)> done) = 0;
+    virtual void getExistingDirectoryAsync(const QString& title, const QString& location, QObject* context, std::function<void(const std::optional<QString>&)> done) = 0;
+    // The clipboard's text, told as those are, as a browser's clipboard answers only that way; none if it could
+    // not be read, as when a browser refuses
+    virtual void clipboardTextAsync(QObject* context, std::function<void(const std::optional<QString>&)> done) = 0;
+    virtual void setClipboardText(const QString& text) = 0;
 
     // Surfaces a command can be placed on. A client with different chrome maps
     // these onto whatever it has; one that has only a menu honours Menu alone.

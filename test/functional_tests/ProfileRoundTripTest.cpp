@@ -647,6 +647,16 @@ private slots:
             legacyXml.replace(from, to);
         }
 
+        // Saved before the bundled code theme became a Light and Dark pair, in either half
+        for (const auto& [attribute, legacy] : {std::pair{qsl("mEditorTheme"), qsl("Mudlet")},
+                                                std::pair{qsl("mEditorThemeFile"), qsl("Mudlet.tmTheme")},
+                                                std::pair{qsl("mEditorThemeDark"), qsl("Mudlet")},
+                                                std::pair{qsl("mEditorThemeFileDark"), qsl("Mudlet.tmTheme")}}) {
+            const QRegularExpression stored(qsl("\\b%1=\"[^\"]*\"").arg(attribute));
+            QVERIFY2(legacyXml.count(stored) == 1, qPrintable(qsl("the export does not hold %1 exactly once").arg(attribute)));
+            legacyXml.replace(stored, qsl("%1=\"%2\"").arg(attribute, legacy));
+        }
+
         QTemporaryDir legacyDir;
         QVERIFY(legacyDir.isValid());
         const QString legacyPath = qsl("%1/legacy.xml").arg(legacyDir.path());
@@ -805,6 +815,15 @@ private slots:
     // not as invisible: readHostColorElement()'s hasAttribute() guard is the
     // whole of that behaviour (an absent attribute's toInt() would otherwise
     // silently default to 0, making the mapper stop drawing these levels).
+    // Read off the members: getEditorTheme() would hide an unmigrated name, since the old file name still resolves
+    void test_aProfileSavedBeforeTheThemePairLoadsOnTheLightTheme()
+    {
+        QCOMPARE(mpLegacyTarget->mEditorTheme, QString(MudletApp::scmEditorThemeNameLight));
+        QCOMPARE(mpLegacyTarget->mEditorThemeFile, QString(MudletApp::scmEditorThemeFileLight));
+        QCOMPARE(mpLegacyTarget->mEditorThemeDark, QString(MudletApp::scmEditorThemeNameLight));
+        QCOMPARE(mpLegacyTarget->mEditorThemeFileDark, QString(MudletApp::scmEditorThemeFileLight));
+    }
+
     void test_legacyProfileWithoutAlphaAttributeDefaultsToOpaque()
     {
         QCOMPARE(mpLegacyTarget->mLowerLevelColor, QColor(30, 60, 90, 255));

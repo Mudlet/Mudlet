@@ -24,8 +24,14 @@
 #include "dlgPackageExporter.h"
 #include "ui_dlgPackageExporter.h"
 
+#include "ChipRow.h"
+#include "ExporterTreeDelegate.h"
+#include "GripSplitter.h"
 #include "Host.h"
+#include "LuaLiteral.h"
 #include "MudletApp.h"
+#include "dlgSystemMessageArea.h"
+#include "mudlet.h"
 #include "TAction.h"
 #include "TAlias.h"
 #include "TKey.h"
@@ -36,20 +42,54 @@
 
 #include <QSaveFile>
 #include <QtConcurrentRun>
+#include <QAbstractItemModel>
 #include <QDesktopServices>
 #include <QDirIterator>
 #include <QFileDialog>
+#include <QFontMetrics>
 #include <QFutureWatcher>
+#include <QGroupBox>
+#include <QHBoxLayout>
 #include <QInputDialog>
+#include <QLabel>
 #include <QMessageBox>
 #include <QMimeData>
+#include <QResizeEvent>
 #include <QSettings>
+#include <QShowEvent>
+#include <QSplitter>
 #include <QStandardPaths>
+#include <QTextDocumentFragment>
 #include <QTimer>
+#include <QToolButton>
 #include <QUrl>
+#include <QVBoxLayout>
+#include <QtMath>
+#include <algorithm>
 #include <chrono>
 
 using namespace std::chrono_literals;
+
+static constexpr int scmExporterColumnInset = uiDesign::scmTabPaneInset;
+// Matches PackageItemDelegate::cRowGutter, so the two windows' rows line up
+static constexpr int scmExporterRowGutter = uiDesign::scmAccentBarWidth + 5;
+static constexpr int scmExporterIconSize = 48;
+// Set on the icon box while an image it would take is dragged over it
+static constexpr char scmProp_iconDropTarget[] = "exporterIconDropTarget";
+static constexpr int scmExporterIconGlyphSize = 24;
+static constexpr int scmExporterButtonGlyphSize = 16;
+// No version string anybody writes needs more room than this
+static constexpr int scmExporterVersionWidth = 120;
+// Only until the first layout: fitAssetsList() measures the height off the rows from then on
+static constexpr int scmExporterDropZoneHeight = 64;
+static constexpr int scmExporterDescriptionLines = 4;
+static constexpr int scmExporterDropZoneLines = 2;
+// A monospaced face reads larger than the proportional words beside it at one size
+static constexpr qreal scmExporterPathFontScale = 0.9;
+static constexpr int scmExporterTreeShareDenominator = 3;
+static constexpr int scmExporterWidth = 880;
+static constexpr int scmExporterHeight = 640;
+static constexpr char scmExporterSplitterKey[] = "packageExporterSplitterState";
 
 // We are now using code that won't work with really old versions of libzip;
 // some of the error handling was improved in 1.0 . Unfortunately libzip 1.7.0
@@ -66,8 +106,9 @@ dlgPackageExporter::dlgPackageExporter(QWidget* parent, Host* pHost)
 {
     ui->setupUi(this);
     ui->splitter_metadataAssets->hide();
-    ui->Icon->hide();
     ui->pushButton_removeIcon->hide();
+
+    mFreshVersion = ui->lineEdit_version->text();
 
     mpExportSelection = ui->treeWidget_exportSelection;
     mpSelectionText = ui->groupBox_exportSelection;
@@ -112,6 +153,8 @@ dlgPackageExporter::dlgPackageExporter(QWidget* parent, Host* pHost)
     connect(ui->lineEdit_author, &QLineEdit::textChanged, this, &dlgPackageExporter::checkToEnableExportButton);
     connect(ui->lineEdit_title, &QLineEdit::textChanged, this, &dlgPackageExporter::checkToEnableExportButton);
     connect(ui->lineEdit_version, &QLineEdit::textChanged, this, &dlgPackageExporter::checkToEnableExportButton);
+    // For the start-over button, which checkToEnableExportButton() also refreshes
+    connect(ui->lineEdit_helpUrl, &QLineEdit::textChanged, this, &dlgPackageExporter::checkToEnableExportButton);
     connect(ui->textEdit_description, &QTextEdit::textChanged, this, &dlgPackageExporter::checkToEnableExportButton);
     connect(this, &dlgPackageExporter::signal_exportLocationChanged, this, &dlgPackageExporter::slot_updateLocationPlaceholder);
     slot_updateLocationPlaceholder();
@@ -125,12 +168,17 @@ dlgPackageExporter::dlgPackageExporter(QWidget* parent, Host* pHost)
     ui->listWidget_addedFiles->installEventFilter(this);
     ui->comboBox_dependencies->installEventFilter(this);
     ui->textEdit_description->installEventFilter(this);
+    ui->widget_icon->setAcceptDrops(true);
+    ui->widget_icon->installEventFilter(this);
 
     // default package template - prevent clearing of text upon click
     dlgPackageExporter* te_parent = static_cast<dlgPackageExporter*>(topLevelWidget());
     te_parent->mPlainDescription = ui->textEdit_description->toPlainText();
 
+    buildShell();
+
     populateDependencies();
+    syncDependencyChips();
 
     listTriggers();
     listAliases();
@@ -145,6 +193,7 @@ dlgPackageExporter::dlgPackageExporter(QWidget* parent, Host* pHost)
     // Set the previous details if saved
     QSettings& settings = *MudletApp::getQSettings();
     auto packageAuthor = settings.value(qsl("packageAuthor"), QString()).toString();
+    mFreshAuthor = packageAuthor;
     if (!packageAuthor.isEmpty()) {
         ui->lineEdit_author->setText(packageAuthor);
     }
@@ -155,10 +204,25 @@ dlgPackageExporter::dlgPackageExporter(QWidget* parent, Host* pHost)
     // being closed:
     connect(mpHost, &QObject::destroyed, this, &dlgPackageExporter::slot_cancelExport);
     connect(mpHost, &QObject::destroyed, this, &dlgPackageExporter::close);
+
+    applyPackageExporterShellStyle();
+    connect(mudlet::self(), &mudlet::signal_appearanceChanged, this, &dlgPackageExporter::slot_applyAppearance);
+
+    // Last: the description must already hold its template
+    mFreshDescription = ui->textEdit_description->toPlainText();
+    refreshStartOverButton();
 }
 
 dlgPackageExporter::~dlgPackageExporter()
 {
+    // The files list's model still emits while ~QWidget deletes the children, after
+    // this class is torn down, so its connections to member slots are cut here
+    if (ui && ui->listWidget_addedFiles) {
+        if (QAbstractItemModel* pModel = ui->listWidget_addedFiles->model()) {
+            disconnect(pModel, nullptr, this, nullptr);
+        }
+    }
+
     // An export still in flight loses its finished handler along with this dialog
     if (!mExportRunning) {
         return;
@@ -204,6 +268,798 @@ void dlgPackageExporter::recheckEveryExportButton()
     }
 }
 
+// Every .ui control keeps its object name and connections: the other exporter tests press them
+void dlgPackageExporter::buildShell()
+{
+    resize(scmExporterWidth, scmExporterHeight);
+
+    // So the column tones reach the window's edges and the seam runs its whole height
+    ui->verticalLayout->setContentsMargins(0, 0, 0, 0);
+    ui->verticalLayout->setSpacing(0);
+
+    ui->label_or->hide();
+    //: Package exporter - prompt in the empty name field
+    ui->lineEdit_packageName->setPlaceholderText(tr("Package name"));
+    uiDesign::markAsShellSurface(ui->widget_newOrExistingPackageName);
+    ui->horizontalLayout_packageName->setContentsMargins(scmExporterColumnInset, scmExporterColumnInset, scmExporterColumnInset, scmExporterColumnInset);
+
+    mpButton_startOver = new QPushButton(ui->widget_newOrExistingPackageName);
+    mpButton_startOver->setObjectName(qsl("exporterStartOverButton"));
+    //: Package exporter - button on the top row that puts every field, tick, chip, picture and file back to how the window opened; disabled while there is nothing to clear
+    mpButton_startOver->setText(tr("Clear all fields and selections"));
+    //: Package exporter - tooltip on the button that clears every field, tick and file
+    mpButton_startOver->setToolTip(tr("Puts every field, tick and file back to how the window opened"));
+    connect(mpButton_startOver, &QAbstractButton::clicked, this, &dlgPackageExporter::requestStartOver);
+    ui->horizontalLayout_packageName->insertWidget(0, mpButton_startOver);
+    ui->horizontalLayout_packageName->insertStretch(1, 1);
+
+    buildSelectionColumn();
+    buildDetailsColumn();
+    buildFoot();
+
+    uiDesign::removeFromLayoutTree(ui->verticalLayout, ui->splitter_metadata);
+    ui->splitter_metadata->hide();
+    ui->frame_metadata->hide();
+    ui->pushButton_openInfos->hide();
+
+    mpSplitter = new uiDesign::GripSplitter(Qt::Horizontal, this);
+    mpSplitter->setObjectName(qsl("exporterSplitter"));
+    uiDesign::markAsShellSurface(mpSplitter);
+    mpSplitter->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    mpSplitter->setChildrenCollapsible(false);
+    mpSplitter->addWidget(mpSelectionColumn);
+    mpSplitter->addWidget(mpDetailsColumn);
+    // Per pane as well: QSplitter::isCollapsible() answers a pane never told with
+    // the default, not with what setChildrenCollapsible() set
+    mpSplitter->setCollapsible(0, false);
+    mpSplitter->setCollapsible(1, false);
+    mpSplitter->setStretchFactor(0, 0);
+    mpSplitter->setStretchFactor(1, 1);
+    ui->verticalLayout->insertWidget(1, mpSplitter);
+    ui->verticalLayout->addWidget(mpFoot);
+
+    showModeWords();
+    showSelectionCount(0);
+    slot_updateLocationPlaceholder();
+}
+
+void dlgPackageExporter::buildSelectionColumn()
+{
+    mpSelectionColumn = new QWidget(this);
+    mpSelectionColumn->setObjectName(qsl("exporterSelectionColumn"));
+    uiDesign::markAsShellSurface(mpSelectionColumn);
+    auto* pColumn = new QVBoxLayout(mpSelectionColumn);
+    pColumn->setContentsMargins(scmExporterColumnInset, scmExporterColumnInset, scmExporterColumnInset, scmExporterColumnInset);
+
+    mpLabel_selectionHeading = new QLabel(mpSelectionColumn);
+    mpLabel_selectionHeading->setObjectName(qsl("exporterSelectionHeading"));
+    mpLabel_selectionCount = new QLabel(mpSelectionColumn);
+    mpLabel_selectionCount->setObjectName(qsl("exporterSelectionCount"));
+    auto* pHeadingRow = new QHBoxLayout();
+    pHeadingRow->setContentsMargins(0, 0, 0, 0);
+    pHeadingRow->addWidget(mpLabel_selectionHeading);
+    pHeadingRow->addWidget(mpLabel_selectionCount);
+    pHeadingRow->addStretch(1);
+    pColumn->addLayout(pHeadingRow);
+
+    uiDesign::removeFromLayoutTree(ui->horizontalLayout, ui->treeWidget_exportSelection);
+    pColumn->addWidget(ui->treeWidget_exportSelection, 1);
+
+    // The item-row recipe already tells rows apart; banding would be a second cue
+    ui->treeWidget_exportSelection->setAlternatingRowColors(false);
+    // Rows elide, so there is nothing to scroll to sideways
+    ui->treeWidget_exportSelection->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    mpTreeDelegate = new ExporterTreeDelegate(this);
+    ui->treeWidget_exportSelection->setItemDelegate(mpTreeDelegate);
+
+    mpLabel_selectionHint = new QLabel(mpSelectionColumn);
+    mpLabel_selectionHint->setObjectName(qsl("exporterSelectionHint"));
+    mpLabel_selectionHint->setWordWrap(true);
+    //: Package exporter - caption under the tree of things to export
+    mpLabel_selectionHint->setText(tr("Ticking a folder takes everything in it. Right-click a folder to take the folder alone.")
+                                   + QChar(' ')
+                                   //: Package exporter - second sentence of the caption under the tree of things to export, about a folder that carries the package's own name
+                                   + tr("A folder named after the package is made again on install, so only what is inside it goes in."));
+    pColumn->addWidget(mpLabel_selectionHint);
+}
+
+void dlgPackageExporter::buildDetailsColumn()
+{
+    mpDetailsColumn = new QWidget(this);
+    mpDetailsColumn->setObjectName(qsl("exporterDetailsColumn"));
+    uiDesign::markAsShellSurface(mpDetailsColumn);
+    auto* pColumn = new QVBoxLayout(mpDetailsColumn);
+    pColumn->setContentsMargins(scmExporterColumnInset, scmExporterColumnInset, scmExporterColumnInset, scmExporterColumnInset);
+
+    mpLabel_detailsHeading = new QLabel(mpDetailsColumn);
+    mpLabel_detailsHeading->setObjectName(qsl("exporterDetailsHeading"));
+    mpLabel_detailsHint = new QLabel(mpDetailsColumn);
+    mpLabel_detailsHint->setObjectName(qsl("exporterDetailsHint"));
+    //: Package exporter - note beside the heading over the package's details, saying none of the fields under it are required
+    mpLabel_detailsHint->setText(tr("Everything here is optional"));
+    auto* pHeadingRow = new QHBoxLayout();
+    pHeadingRow->setContentsMargins(0, 0, 0, 0);
+    pHeadingRow->addWidget(mpLabel_detailsHeading);
+    pHeadingRow->addWidget(mpLabel_detailsHint);
+    pHeadingRow->addStretch(1);
+    pColumn->addLayout(pHeadingRow);
+
+    const auto stackedField = [](QWidget* pLabel, QWidget* pField) {
+        auto* pStack = new QVBoxLayout();
+        pStack->setContentsMargins(0, 0, 0, 0);
+        pStack->addWidget(pLabel);
+        pStack->addWidget(pField);
+        return pStack;
+    };
+
+    uiDesign::removeFromLayoutTree(ui->horizontalLayout_packageName, ui->lineEdit_packageName);
+    mpLabel_nameCaption = new QLabel(mpDetailsColumn);
+    mpLabel_nameCaption->setObjectName(qsl("exporterNameLabel"));
+    mpLabel_nameCaption->setBuddy(ui->lineEdit_packageName);
+    pColumn->addLayout(stackedField(mpLabel_nameCaption, ui->lineEdit_packageName));
+
+    for (QWidget* pWidget : {static_cast<QWidget*>(ui->label_author),
+                             static_cast<QWidget*>(ui->lineEdit_author),
+                             static_cast<QWidget*>(ui->label_version),
+                             static_cast<QWidget*>(ui->lineEdit_version),
+                             static_cast<QWidget*>(ui->label_shortDescription),
+                             static_cast<QWidget*>(ui->lineEdit_title),
+                             static_cast<QWidget*>(ui->label_helpUrl),
+                             static_cast<QWidget*>(ui->lineEdit_helpUrl),
+                             static_cast<QWidget*>(ui->label_icon),
+                             static_cast<QWidget*>(ui->widget_icon),
+                             static_cast<QWidget*>(ui->label_requiredPackages),
+                             static_cast<QWidget*>(ui->label_detailedDescription),
+                             static_cast<QWidget*>(ui->textEdit_description)}) {
+        uiDesign::removeFromLayoutTree(ui->gridLayout_metadata, pWidget);
+    }
+
+    //: Package exporter - prompt in the empty author field
+    ui->lineEdit_author->setPlaceholderText(tr("Your name"));
+    ui->lineEdit_version->setFixedWidth(scmExporterVersionWidth);
+    auto* pAuthorRow = new QHBoxLayout();
+    pAuthorRow->setContentsMargins(0, 0, 0, 0);
+    pAuthorRow->addLayout(stackedField(ui->label_author, ui->lineEdit_author), 1);
+    pAuthorRow->addLayout(stackedField(ui->label_version, ui->lineEdit_version), 0);
+    pColumn->addLayout(pAuthorRow);
+
+    //: Package exporter - word over the field holding the package's one-line summary
+    ui->label_shortDescription->setText(tr("In one line"));
+    //: Package exporter - prompt in the empty one-line summary field
+    ui->lineEdit_title->setPlaceholderText(tr("What it does, for the package manager's list"));
+    pColumn->addLayout(stackedField(ui->label_shortDescription, ui->lineEdit_title));
+
+    //: Package exporter - word over the field holding the address of the package's help page
+    ui->label_helpUrl->setText(tr("Help page"));
+    buildIconRow();
+    auto* pHelpRow = new QHBoxLayout();
+    pHelpRow->setContentsMargins(0, 0, 0, 0);
+    pHelpRow->addLayout(stackedField(ui->label_helpUrl, ui->lineEdit_helpUrl), 1);
+    pHelpRow->addLayout(stackedField(ui->label_icon, ui->widget_icon), 0);
+    pColumn->addLayout(pHelpRow);
+
+    //: Package exporter - word over the row of packages this one needs to be installed alongside
+    ui->label_requiredPackages->setText(tr("Needs these packages"));
+    mpChipRow_dependencies = new uiDesign::ChipRow(mpDetailsColumn);
+    mpChipRow_dependencies->setObjectName(qsl("exporterDependencies"));
+    mpChipRow_dependencies->setAddWords(
+            //: Package exporter - button at the end of the row of required packages, which opens a field for another one
+            tr("Add package"),
+            //: Package exporter - tooltip on the button that opens the field for another package this one needs
+            tr("Name another package this one needs"),
+            //: Package exporter - prompt in the field a required package's name is typed into
+            tr("package name"));
+    mpChipRow_dependencies->setChipWords(
+            //: Package exporter - accessible name of one package in the row of packages this one needs; %1 is that package's name
+            tr("Required package %1"),
+            //: Package exporter - tooltip on the cross that takes one package off the row of packages this one needs; %1 is that package's name
+            tr("No longer needs %1"));
+    connect(mpChipRow_dependencies, &uiDesign::ChipRow::itemsChanged, this, &dlgPackageExporter::slot_dependencyChipsChanged);
+    // Hidden, not removed: the export reads comboBox_dependencies and the other
+    // exporter tests drive these
+    ui->DependencyList->hide();
+    ui->pushButton_addDependency->hide();
+    ui->pushButton_removeDependency->hide();
+    ui->comboBox_dependencies->hide();
+    pColumn->addLayout(stackedField(ui->label_requiredPackages, mpChipRow_dependencies));
+
+    //: Package exporter - word over the package's full description
+    ui->label_detailedDescription->setText(tr("Description"));
+    mpLabel_descriptionHint = new QLabel(mpDetailsColumn);
+    mpLabel_descriptionHint->setObjectName(qsl("exporterDescriptionHint"));
+    //: Package exporter - note beside the Description word, saying where the words are read and what they may be written in
+    mpLabel_descriptionHint->setText(tr("shown in the package manager, Markdown works"));
+    auto* pDescriptionHead = new QHBoxLayout();
+    pDescriptionHead->setContentsMargins(0, 0, 0, 0);
+    pDescriptionHead->addWidget(ui->label_detailedDescription);
+    pDescriptionHead->addWidget(mpLabel_descriptionHint);
+    pDescriptionHead->addStretch(1);
+    ui->textEdit_description->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
+    auto* pDescription = new QVBoxLayout();
+    pDescription->setContentsMargins(0, 0, 0, 0);
+    pDescription->addLayout(pDescriptionHead);
+    pDescription->addWidget(ui->textEdit_description, 1);
+    pColumn->addLayout(pDescription, 1);
+
+    buildAssetsRow();
+    pColumn->addWidget(ui->widget_assets);
+    mpDetailsColumn->installEventFilter(this);
+}
+
+void dlgPackageExporter::buildIconRow()
+{
+    ui->Icon->setFixedSize(scmExporterIconSize, scmExporterIconSize);
+    // The pixmap arrives scaled; scaling it again in the label undoes that
+    ui->Icon->setScaledContents(false);
+    ui->Icon->setAlignment(Qt::AlignCenter);
+    ui->Icon->show();
+
+    //: Package exporter - button that opens a file picker for the package's picture
+    ui->pushButton_addIcon->setText(tr("Choose an icon"));
+    ui->pushButton_addIcon->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+    ui->pushButton_removeIcon->setText(QString());
+    ui->pushButton_removeIcon->setMaximumWidth(QWIDGETSIZE_MAX);
+    ui->pushButton_removeIcon->setFixedSize(uiDesign::scmInputHeight, uiDesign::scmInputHeight);
+    //: Package exporter - the button that takes the chosen picture off the package again, read out to a screen reader and shown as its tooltip
+    const QString removeIconWord = tr("Remove the icon");
+    ui->pushButton_removeIcon->setAccessibleName(removeIconWord);
+    ui->pushButton_removeIcon->setToolTip(removeIconWord);
+
+    // A disabled label is announced as unavailable; the caption tone quietens it instead
+    ui->label->setEnabled(true);
+    //: Package exporter - note beside the icon box saying what size of picture to hand it, and that an image file can be dropped on the box. Keep the line break: the note stands beside a box two lines tall
+    ui->label->setText(tr("512 x 512 works best\nor drop an image here"));
+
+    // The .ui pads the row for a drop outline drawn around it; the box itself shows the drop now, and the padding
+    // set the row two pixels off the help page field beside it
+    ui->horizontalLayout_2->setContentsMargins(0, 0, 0, 0);
+    uiDesign::removeFromLayoutTree(ui->horizontalLayout_2, ui->Icon);
+    ui->horizontalLayout_2->insertWidget(0, ui->Icon);
+    ui->horizontalLayout_2->addStretch(1);
+}
+
+void dlgPackageExporter::buildAssetsRow()
+{
+    //: Package exporter - word over the list of files shipped inside the package
+    ui->label_assets->setText(tr("Files to ship with it"));
+    mpLabel_assetsHint = new QLabel(ui->widget_assets);
+    mpLabel_assetsHint->setObjectName(qsl("exporterAssetsHint"));
+    //: Package exporter - note beside the Files word, giving examples of what a package ships
+    mpLabel_assetsHint->setText(tr("images, sounds, fonts"));
+    uiDesign::removeFromLayoutTree(ui->verticalLayout_4, ui->label_assets);
+    auto* pAssetsHead = new QHBoxLayout();
+    pAssetsHead->setContentsMargins(0, 0, 0, 0);
+    pAssetsHead->addWidget(ui->label_assets);
+    pAssetsHead->addWidget(mpLabel_assetsHint);
+    pAssetsHead->addStretch(1);
+    ui->verticalLayout_4->insertLayout(0, pAssetsHead);
+    // Fixed: a growing row would take spare column height, and fitAssetsList()
+    // assumes only the description and the list share it
+    ui->widget_assets->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+
+    // A QListWidget's size hint asks for about 200px, taken out of the description
+    ui->listWidget_addedFiles->setFixedHeight(scmExporterDropZoneHeight);
+    mpLabel_assetsEmpty = new QLabel(ui->listWidget_addedFiles->viewport());
+    mpLabel_assetsEmpty->setObjectName(qsl("exporterAssetsEmpty"));
+    mpLabel_assetsEmpty->setAlignment(Qt::AlignCenter);
+    //: Package exporter - prompt on the empty zone the files to ship are dropped on
+    mpLabel_assetsEmpty->setText(tr("Drop files or folders here"));
+    // Or the prompt swallows the drop it is inviting
+    mpLabel_assetsEmpty->setAttribute(Qt::WA_TransparentForMouseEvents);
+    auto* pViewportLayout = new QVBoxLayout(ui->listWidget_addedFiles->viewport());
+    pViewportLayout->setContentsMargins(0, 0, 0, 0);
+    pViewportLayout->addWidget(mpLabel_assetsEmpty);
+    // Through the model: QListWidget has no signal for an added item. The model
+    // emits while ~QWidget tears the window down, after this class is gone, so the
+    // lambda holds the two widgets as QPointers rather than `this`.
+    const QPointer<QLabel> pPrompt = mpLabel_assetsEmpty;
+    const QPointer<QListWidget> pFiles = ui->listWidget_addedFiles;
+    const auto promptFollowsTheList = [pPrompt, pFiles]() {
+        if (pPrompt && pFiles) {
+            pPrompt->setVisible(pFiles->count() == 0);
+        }
+    };
+    QAbstractItemModel* pModel = ui->listWidget_addedFiles->model();
+    connect(pModel, &QAbstractItemModel::rowsInserted, mpLabel_assetsEmpty, promptFollowsTheList);
+    connect(pModel, &QAbstractItemModel::rowsRemoved, mpLabel_assetsEmpty, promptFollowsTheList);
+    connect(pModel, &QAbstractItemModel::modelReset, mpLabel_assetsEmpty, promptFollowsTheList);
+    // Member slots, so the destructor cuts these for the same reason
+    connect(pModel, &QAbstractItemModel::rowsInserted, this, &dlgPackageExporter::refreshStartOverButton);
+    connect(pModel, &QAbstractItemModel::rowsRemoved, this, &dlgPackageExporter::refreshStartOverButton);
+    connect(pModel, &QAbstractItemModel::modelReset, this, &dlgPackageExporter::refreshStartOverButton);
+    connect(pModel, &QAbstractItemModel::rowsInserted, this, &dlgPackageExporter::fitAssetsList);
+    connect(pModel, &QAbstractItemModel::rowsRemoved, this, &dlgPackageExporter::fitAssetsList);
+    connect(pModel, &QAbstractItemModel::modelReset, this, &dlgPackageExporter::fitAssetsList);
+    showAssetsPrompt();
+
+    //: Package exporter - button that opens a file picker for the files to ship with the package
+    ui->addFiles->setText(tr("Add files"));
+    ui->addFiles->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+    // Leading edge, not centred: the row starts where the field above it does
+    for (QSpacerItem* pSpacer : {ui->horizontalSpacer_2, ui->horizontalSpacer}) {
+        if (const int at = ui->horizontalLayout_3->indexOf(pSpacer); at >= 0) {
+            delete ui->horizontalLayout_3->takeAt(at);
+        }
+    }
+    mpLabel_assetsDropHint = new QLabel(ui->widget_addFilesButton);
+    mpLabel_assetsDropHint->setObjectName(qsl("exporterAssetsDropHint"));
+    //: Package exporter - note beside the Add files button, saying the list takes a drop as well
+    mpLabel_assetsDropHint->setText(tr("or drop them on the list"));
+    ui->horizontalLayout_3->setSpacing(uiDesign::scmNoticeSpacing);
+    ui->horizontalLayout_3->addWidget(mpLabel_assetsDropHint);
+    ui->horizontalLayout_3->addStretch(1);
+}
+
+void dlgPackageExporter::buildFoot()
+{
+    mpFoot = new QWidget(this);
+    mpFoot->setObjectName(qsl("exporterFoot"));
+    uiDesign::markAsShellSurface(mpFoot);
+    auto* pFootLayout = new QVBoxLayout(mpFoot);
+    pFootLayout->setContentsMargins(scmExporterColumnInset, scmExporterColumnInset, scmExporterColumnInset, scmExporterColumnInset);
+
+    mpLabel_saveCaption = new QLabel(mpFoot);
+    mpLabel_saveCaption->setObjectName(qsl("exporterSaveCaption"));
+    mpLabel_savePath = new QLabel(mpFoot);
+    mpLabel_savePath->setObjectName(qsl("exporterSavePath"));
+    // A QLabel's minimum width is its whole text, which would hold the window that
+    // wide; fitSavePath() elides it to the room instead
+    mpLabel_savePath->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+
+    // lineEdit_filePath stays hidden: tests read the export location off its placeholder
+    uiDesign::removeFromLayoutTree(ui->horizontalLayout_4, ui->pushButton_packageLocation);
+    uiDesign::removeFromLayoutTree(ui->verticalLayout, ui->widget_exportLocation);
+    ui->widget_exportLocation->hide();
+    ui->lineEdit_filePath->hide();
+
+    auto* pSaveRow = new QHBoxLayout();
+    pSaveRow->setContentsMargins(0, 0, 0, 0);
+    pSaveRow->addWidget(mpLabel_saveCaption);
+    pSaveRow->addWidget(mpLabel_savePath, 1);
+    pSaveRow->addWidget(ui->pushButton_packageLocation);
+    pFootLayout->addLayout(pSaveRow);
+
+    // infoLabel stays hidden and written to: the exporter tests read results off it
+    uiDesign::removeFromLayoutTree(ui->verticalLayout, ui->infoLabel);
+    ui->infoLabel->hide();
+    mpNotice = new dlgSystemMessageArea(mpFoot);
+    mpNotice->setObjectName(qsl("exporterNotice"));
+    mpNotice->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Maximum);
+    if (QLayout* pNoticeLayout = mpNotice->layout()) {
+        pNoticeLayout->setContentsMargins(0, 0, 0, 0);
+    }
+    mpNotice->hide();
+    mpNotice->notificationAreaMessageBox->setOpenExternalLinks(true);
+    mpNotice->notificationAreaMessageBox->setTextInteractionFlags(Qt::TextBrowserInteraction);
+    connect(mpNotice->messageAreaCloseButton, &QAbstractButton::clicked, mpNotice, &QWidget::hide);
+    pFootLayout->addWidget(mpNotice);
+
+    uiDesign::removeFromLayoutTree(ui->verticalLayout, ui->buttonBox);
+    pFootLayout->addWidget(ui->buttonBox);
+
+    mExportButton->setProperty(uiDesign::scmProp_primaryButton, true);
+    uiDesign::repolish(mExportButton);
+}
+
+void dlgPackageExporter::showModeWords()
+{
+    if (!mpLabel_selectionHeading || !mpLabel_nameCaption) {
+        return;
+    }
+    if (mIsModuleCreationMode) {
+        //: Package exporter - heading over the tree of things to include, while a module is being made
+        mpLabel_selectionHeading->setText(tr("Select items to include in module"));
+        //: Package exporter - heading over the module's own details
+        mpLabel_detailsHeading->setText(tr("About the module"));
+        //: Package exporter - word over the first field of the form, which the module is named in
+        mpLabel_nameCaption->setText(tr("Module name"));
+        //: Package exporter - caption in the foot, before the path the module is written to
+        mpLabel_saveCaption->setText(tr("Saves into the profile as"));
+    } else {
+        //: This is the text shown at the top of a groupbox initially and when there is NO items to export in the Package exporter dialogue.
+        mpLabel_selectionHeading->setText(tr("Select what to export"));
+        //: Package exporter - heading over the package's own details
+        mpLabel_detailsHeading->setText(tr("About the package"));
+        //: Package exporter - word over the first field of the form, which the package is named in
+        mpLabel_nameCaption->setText(tr("Package name"));
+        //: Package exporter - caption in the foot, before the path the package is written to
+        mpLabel_saveCaption->setText(tr("Saves to"));
+    }
+    //: Package exporter - button in the foot that opens a picker for where the package is written
+    ui->pushButton_packageLocation->setText(tr("Change folder"));
+}
+
+void dlgPackageExporter::showSelectionCount(const int itemsToExport)
+{
+    if (!mpLabel_selectionCount) {
+        return;
+    }
+    // Separate strings: with no translation loaded, Qt does not pluralise a numerus form
+    if (itemsToExport == 1) {
+        //: Package exporter - chip beside the heading over the tree while exactly one thing is ticked
+        mpLabel_selectionCount->setText(tr("1 item"));
+    } else if (itemsToExport > 1) {
+        //: Package exporter - chip beside the heading over the tree, saying how many things are ticked. %n is that count, two or more.
+        mpLabel_selectionCount->setText(tr("%n items", nullptr, itemsToExport));
+    } else {
+        //: Package exporter - chip beside the heading over the tree while nothing at all is ticked
+        mpLabel_selectionCount->setText(tr("nothing yet"));
+    }
+    mpLabel_selectionCount->setProperty("exporterCountEmpty", itemsToExport <= 0);
+    uiDesign::repolish(mpLabel_selectionCount);
+}
+
+// comboBox_dependencies is what the export writes, so it stays the one record of
+// what the package needs and the chip row is a view over it
+void dlgPackageExporter::syncDependencyChips()
+{
+    if (!mpChipRow_dependencies) {
+        return;
+    }
+    QStringList required;
+    required.reserve(ui->comboBox_dependencies->count());
+    for (int index = 0; index < ui->comboBox_dependencies->count(); ++index) {
+        required << ui->comboBox_dependencies->itemText(index);
+    }
+    mpChipRow_dependencies->setItems(required);
+    refreshDependencySuggestions();
+    refreshStartOverButton();
+}
+
+void dlgPackageExporter::refreshDependencySuggestions()
+{
+    if (!mpChipRow_dependencies) {
+        return;
+    }
+    QList<uiDesign::Suggestion> offers;
+    offers.reserve(std::max(0, ui->DependencyList->count() - 1));
+    // Row zero of that picker is its own prompt rather than a package
+    for (int index = 1; index < ui->DependencyList->count(); ++index) {
+        //: Package exporter - word beside a package name the exporter offers as something this package could need
+        offers.append({ui->DependencyList->itemText(index), tr("installed")});
+    }
+    mpChipRow_dependencies->setSuggestions(offers);
+}
+
+// Mirrors the hidden "-" button's bookkeeping on DependencyList
+void dlgPackageExporter::slot_dependencyChipsChanged()
+{
+    const QStringList required = mpChipRow_dependencies->items();
+    QStringList wasRequired;
+    wasRequired.reserve(ui->comboBox_dependencies->count());
+    for (int index = 0; index < ui->comboBox_dependencies->count(); ++index) {
+        wasRequired << ui->comboBox_dependencies->itemText(index);
+    }
+    for (const QString& name : std::as_const(wasRequired)) {
+        if (!required.contains(name) && ui->DependencyList->findText(name) < 0) {
+            ui->DependencyList->addItem(name);
+        }
+    }
+    for (const QString& name : std::as_const(required)) {
+        if (const int at = ui->DependencyList->findText(name); at > 0) {
+            ui->DependencyList->removeItem(at);
+        }
+    }
+
+    const QSignalBlocker held(ui->comboBox_dependencies);
+    ui->comboBox_dependencies->clear();
+    ui->comboBox_dependencies->addItems(required);
+    refreshDependencySuggestions();
+    refreshStartOverButton();
+}
+
+// Text kept because a QLabel bakes a link's colour in at setText()
+void dlgPackageExporter::showNotice(const QString& richText, const uiDesign::NoticeKind kind)
+{
+    if (!mpNotice) {
+        return;
+    }
+    mNoticeRichText = richText;
+    mpNotice->notificationAreaIconLabelError->setVisible(kind == uiDesign::NoticeKind::Error);
+    mpNotice->notificationAreaIconLabelWarning->setVisible(kind == uiDesign::NoticeKind::Warning);
+    mpNotice->notificationAreaIconLabelInformation->setVisible(kind == uiDesign::NoticeKind::Information);
+    mpNotice->notificationAreaMessageBox->setText(uiDesign::withLinkColour(richText, uiDesign::themeTokens().accentText));
+    mpNotice->show();
+}
+
+// Elided from the left: the last folders and the file name are what a reader needs
+void dlgPackageExporter::fitSavePath()
+{
+    if (!mpLabel_savePath) {
+        return;
+    }
+    mpLabel_savePath->setToolTip(mSavePathShown);
+    const int room = mpLabel_savePath->width();
+    if (room <= 0) {
+        mpLabel_savePath->setText(mSavePathShown);
+        return;
+    }
+    mpLabel_savePath->setText(QFontMetrics(mpLabel_savePath->font()).elidedText(mSavePathShown, Qt::ElideLeft, room));
+}
+
+// frameWidth() ignores a stylesheet border, so measure against the viewport
+static int chromeAround(const QAbstractScrollArea* pArea)
+{
+    const int measured = pArea->height() - pArea->viewport()->height();
+    return measured > 0 ? measured : 2 * uiDesign::scmInputBorderWidth;
+}
+
+// The description and this list are the column's only flexing rows
+void dlgPackageExporter::fitAssetsList()
+{
+    if (mFittingAssets || !ui || !ui->listWidget_addedFiles || !ui->textEdit_description) {
+        return;
+    }
+    QListWidget* pFiles = ui->listWidget_addedFiles;
+    QTextEdit* pDescription = ui->textEdit_description;
+    // Nothing to measure before layout, and a guess here would be undone by the first pass
+    if (!pFiles->isVisible() || !pDescription->isVisible() || pFiles->height() <= 0 || pDescription->height() <= 0) {
+        return;
+    }
+
+    // Nothing styles the items, so an empty list's row is the font's line height
+    const int rowHeight = pFiles->count() > 0 ? pFiles->sizeHintForRow(0) : QFontMetrics(pFiles->font()).height();
+    if (rowHeight <= 0) {
+        return;
+    }
+    const int listChrome = chromeAround(pFiles);
+    const int wanted = (pFiles->count() + 1) * rowHeight + listChrome;
+    const int floorOfList = scmExporterDropZoneLines * rowHeight + listChrome;
+    const int floorOfDescription = QFontMetrics(pDescription->font()).lineSpacing() * scmExporterDescriptionLines + qRound(2 * pDescription->document()->documentMargin()) + chromeAround(pDescription);
+    const int room = pDescription->height() + pFiles->height();
+    const int cap = std::max(floorOfList, room - floorOfDescription);
+    const int listHeight = std::clamp(wanted, floorOfList, cap);
+
+    pDescription->setMinimumHeight(floorOfDescription);
+    if (pFiles->minimumHeight() == listHeight && pFiles->maximumHeight() == listHeight) {
+        return;
+    }
+    mFittingAssets = true;
+    pFiles->setFixedHeight(listHeight);
+    mFittingAssets = false;
+}
+
+// Leaves carry no glyph: the unit heading they stand under already says what they are
+static void markTreeFolders(QTreeWidgetItem* pItem, const QIcon& folderGlyph, const int topFolderMark)
+{
+    for (int child = 0; child < pItem->childCount(); ++child) {
+        QTreeWidgetItem* pChild = pItem->child(child);
+        pChild->setIcon(0, pChild->childCount() > 0 || pChild->data(0, Qt::UserRole) == topFolderMark ? folderGlyph : QIcon());
+        markTreeFolders(pChild, folderGlyph, topFolderMark);
+    }
+}
+
+// Walked here rather than set where the rows are built, so an appearance change re-inks them
+void dlgPackageExporter::restyleTreeIcons(const uiDesign::ThemeTokens& tokens)
+{
+    const QStringList unitGlyphs{qsl(":/icons/editor-triggers.svg"),
+                                 qsl(":/icons/editor-aliases.svg"),
+                                 qsl(":/icons/editor-timers.svg"),
+                                 qsl(":/icons/editor-scripts.svg"),
+                                 qsl(":/icons/editor-keys.svg"),
+                                 qsl(":/icons/editor-buttons.svg")};
+    const QIcon folderGlyph = uiDesign::tintedIcon(qsl(":/icons/editor-folder.svg"), tokens);
+
+    // QTreeWidget::itemChanged fires for an icon too, and its slot hands each row's
+    // check state down to the children
+    const QSignalBlocker held(mpExportSelection);
+    for (int top = 0; top < mpExportSelection->topLevelItemCount() && top < unitGlyphs.size(); ++top) {
+        QTreeWidgetItem* pTop = mpExportSelection->topLevelItem(top);
+        pTop->setIcon(0, uiDesign::tintedIcon(unitGlyphs.at(top), tokens));
+        markTreeFolders(pTop, folderGlyph, isTopFolder);
+    }
+    mpExportSelection->setIconSize(QSize(scmExporterButtonGlyphSize, scmExporterButtonGlyphSize));
+}
+
+void dlgPackageExporter::showIconPlaceholder(const uiDesign::ThemeTokens& tokens)
+{
+    const qreal ratio = ui->Icon->devicePixelRatioF();
+    QPixmap glyph = uiDesign::tintedGlyph(uiDesign::glyphPixmap(qsl(":/icons/packages-package.svg")), tokens.mutedText)
+                            .scaled(QSize(scmExporterIconGlyphSize, scmExporterIconGlyphSize) * ratio, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    glyph.setDevicePixelRatio(ratio);
+    ui->Icon->setPixmap(glyph);
+}
+
+void dlgPackageExporter::showChosenIcon()
+{
+    const qreal ratio = ui->Icon->devicePixelRatioF();
+    // Through a QIcon, so the .ico and .icns files the picker offers are read at all
+    QPixmap chosen = mPackageIconPath.isEmpty() ? QPixmap() : QIcon(mPackageIconPath).pixmap(QSize(scmExporterIconSize, scmExporterIconSize) * ratio);
+    ui->Icon->clear();
+    if (chosen.isNull()) {
+        showIconPlaceholder(uiDesign::themeTokens());
+        ui->pushButton_removeIcon->hide();
+    } else {
+        chosen = chosen.scaled(QSize(scmExporterIconSize, scmExporterIconSize) * ratio, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        chosen.setDevicePixelRatio(ratio);
+        ui->Icon->setPixmap(chosen);
+        ui->pushButton_removeIcon->show();
+    }
+    refreshStartOverButton();
+}
+
+void dlgPackageExporter::showAssetsPrompt()
+{
+    if (mpLabel_assetsEmpty) {
+        mpLabel_assetsEmpty->setVisible(ui->listWidget_addedFiles->count() == 0);
+    }
+}
+
+// Not on the dialog: mudlet replaces a dialog's sheet with the profile's Lua stylesheet on show
+void dlgPackageExporter::applyPackageExporterShellStyle()
+{
+    const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
+    const QString captionSize = QString::number(uiDesign::typeSize(uiDesign::TypeStep::Caption));
+    const QString hairline = QString::number(uiDesign::scmInputBorderWidth);
+
+    ui->widget_newOrExistingPackageName->setStyleSheet(qsl("#widget_newOrExistingPackageName { background-color: %1; }").arg(tokens.page.name())
+                                                       + uiDesign::inputStyleSheet(tokens, qsl("#widget_newOrExistingPackageName"))
+                                                       + uiDesign::buttonStyleSheet(tokens, qsl("#widget_newOrExistingPackageName")));
+
+    // A transparent hairline on the filled count chip, so it does not shift when emptied
+    const QString leftRules =
+            qsl("#exporterSelectionColumn { background-color: %1; }").arg(tokens.pane.name()) + qsl("#exporterSelectionHeading { color: %1; background: transparent; }").arg(tokens.mutedText.name())
+            + qsl("#exporterSelectionHint { color: %1; background: transparent; font-size: %2pt; }").arg(tokens.mutedText.name(), captionSize)
+            + qsl("#exporterSelectionCount { color: %1; background-color: %2; border: %3px solid transparent; border-radius: %4px; padding: 0px %5px; }")
+                      .arg(tokens.accentText.name(), tokens.accentSoft, hairline, QString::number(uiDesign::scmRadiusChip))
+                      .arg(QString::number(uiDesign::scmItemRowPaddingTrailing))
+            + qsl("#exporterSelectionCount[exporterCountEmpty=\"true\"] { color: %1; background: transparent; border: %2px solid %3; }").arg(tokens.mutedText.name(), hairline, tokens.border.name());
+    mpSelectionColumn->setStyleSheet(leftRules);
+    mpLabel_selectionCount->setFont(uiDesign::chipFont(mpLabel_selectionCount));
+
+    const QString treeSelector = qsl("QTreeWidget#treeWidget_exportSelection");
+    ui->treeWidget_exportSelection->setStyleSheet(uiDesign::itemRowStyleSheet(treeSelector, tokens, tokens.pane, scmExporterRowGutter) + uiDesign::itemCheckMarkStyleSheet(treeSelector, tokens)
+                                                  + uiDesign::treeBranchStyleSheet(treeSelector, tokens, tokens.pane) + uiDesign::scrollBarStyleSheet(treeSelector, tokens, tokens.pane));
+    // In the palette too: the view draws row text from it, and the platform's
+    // answers white on the accent's wash
+    QPalette rowInks = ui->treeWidget_exportSelection->palette();
+    rowInks.setColor(QPalette::Text, tokens.text);
+    rowInks.setColor(QPalette::HighlightedText, tokens.accentText);
+    ui->treeWidget_exportSelection->setPalette(rowInks);
+
+    // Named one by one rather than every QLabel: the chips and the drop-zone prompt
+    // are labels too, and neither is a caption
+    const QStringList captionLabels{qsl("#exporterNameLabel"),
+                                    qsl("#label_author"),
+                                    qsl("#label_version"),
+                                    qsl("#label_shortDescription"),
+                                    qsl("#label_helpUrl"),
+                                    qsl("#label_icon"),
+                                    qsl("#label_requiredPackages"),
+                                    qsl("#label_detailedDescription"),
+                                    qsl("#label_assets"),
+                                    qsl("#label"),
+                                    qsl("#exporterDetailsHint"),
+                                    qsl("#exporterDescriptionHint"),
+                                    qsl("#exporterAssetsHint"),
+                                    qsl("#exporterAssetsDropHint")};
+    const QString rightRules =
+            qsl("#exporterDetailsColumn { background-color: %1; }").arg(tokens.page.name()) + uiDesign::inputStyleSheet(tokens, qsl("#exporterDetailsColumn"))
+            + uiDesign::buttonStyleSheet(tokens, qsl("#exporterDetailsColumn")) + uiDesign::choiceStyleSheet(tokens, qsl("#exporterDetailsColumn")) + captionLabels.join(qsl(", "))
+            + qsl(" { color: %1; background: transparent; font-size: %2pt; }").arg(tokens.mutedText.name(), captionSize)
+            + qsl("#exporterDetailsHeading { color: %1; background: transparent; }").arg(tokens.mutedText.name())
+            // Dashed, not the input recipe's solid hairline: the dashed edge says it takes a drop
+            + qsl("#Icon { background-color: %1; border: %2px dashed %3; border-radius: %4px; }").arg(tokens.card.name(), hairline, tokens.border.name(), QString::number(uiDesign::scmRadiusInput))
+            + qsl("#Icon[%1=\"true\"] { background-color: %2; border-color: %3; }").arg(QLatin1String(scmProp_iconDropTarget), tokens.accentSoft, tokens.accent.name())
+            + qsl("#exporterDetailsColumn QListWidget#listWidget_addedFiles { background-color: %1; color: %2; border: %3px dashed %4; border-radius: %5px; }")
+                      .arg(tokens.field.name(), tokens.text.name(), hairline, tokens.border.name(), QString::number(uiDesign::scmRadiusInput))
+            // A label, not a placeholder, so held to the text contrast floor
+            + qsl("#exporterAssetsEmpty { color: %1; background: transparent; }").arg(uiDesign::readableOn(tokens.field, tokens.disabledText, tokens.text, uiDesign::scmTextMinimumRatio).name())
+            + uiDesign::scrollBarStyleSheet(qsl("#textEdit_description"), tokens, tokens.field)
+            + uiDesign::scrollBarStyleSheet(qsl("#listWidget_addedFiles"), tokens, tokens.field)
+            // Last: the chip rules and the caption rule are equally specific, so the later wins
+            + uiDesign::ChipRow::styleSheetFor(tokens);
+    mpDetailsColumn->setStyleSheet(rightRules);
+
+    // A QTextDocument takes its colours only from its own default stylesheet
+    ui->textEdit_description->document()->setDefaultStyleSheet(qsl("body { color: %1; }"
+                                                                   "h1, h2, h3, h4, h5, h6 { color: %1; }"
+                                                                   "h1 { font-size: %6pt; }"
+                                                                   "h2 { font-size: %7pt; }"
+                                                                   "h3, h4, h5, h6 { font-size: %8pt; }"
+                                                                   "a { color: %2; }"
+                                                                   "pre, code { background-color: %3; color: %1; border: %4px solid %5; }")
+                                                                       .arg(tokens.text.name(), tokens.accentText.name(), tokens.page.name(), hairline, tokens.border.name())
+                                                                       .arg(QString::number(uiDesign::typeSize(uiDesign::TypeStep::Display)),
+                                                                            QString::number(uiDesign::typeSize(uiDesign::TypeStep::Title)),
+                                                                            QString::number(uiDesign::typeSize(uiDesign::TypeStep::Body))));
+
+    const QString footRules = qsl("#exporterFoot { background-color: %1; border-top: %2px solid %3; }").arg(tokens.page.name(), hairline, tokens.separator.name())
+                              + uiDesign::buttonStyleSheet(tokens, qsl("#exporterFoot"))
+                              + qsl("#exporterSaveCaption { color: %1; background: transparent; font-size: %2pt; }").arg(tokens.mutedText.name(), captionSize)
+                              + qsl("#exporterSavePath { color: %1; background: transparent; }").arg(tokens.text.name());
+    mpFoot->setStyleSheet(footRules);
+    mpLabel_savePath->setFont(uiDesign::fixedPitchFont(font(), scmExporterPathFontScale));
+    fitSavePath();
+
+    // The handle paints each neighbour's tone up to its hairline and cannot read a
+    // stylesheet fill, so each column names its own
+    mpSelectionColumn->setProperty(uiDesign::scmProp_paneTone, tokens.pane);
+    mpDetailsColumn->setProperty(uiDesign::scmProp_paneTone, tokens.page);
+    if (mpSplitter && mpSplitter->handle(1)) {
+        mpSplitter->handle(1)->update();
+    }
+
+    // Glyphs are inked per appearance and do not follow a theme change by themselves
+    restyleTreeIcons(tokens);
+    showChosenIcon();
+    mExportButton->setIcon(uiDesign::tintedIcon(qsl(":/icons/editor-export.svg"), tokens));
+    ui->addFiles->setIcon(uiDesign::tintedIcon(qsl(":/icons/editor-add.svg"), tokens));
+    ui->pushButton_removeIcon->setIcon(uiDesign::tintedIcon(qsl(":/icons/editor-clear.svg"), tokens));
+    for (QAbstractButton* pButton : {static_cast<QAbstractButton*>(mExportButton.data()), static_cast<QAbstractButton*>(ui->addFiles), static_cast<QAbstractButton*>(ui->pushButton_removeIcon)}) {
+        pButton->setIconSize(QSize(scmExporterButtonGlyphSize, scmExporterButtonGlyphSize));
+    }
+    if (QToolButton* pClose = mpNotice ? mpNotice->messageAreaCloseButton : nullptr) {
+        pClose->setIcon(uiDesign::tintedIcon(qsl(":/icons/editor-clear.svg"), tokens));
+        pClose->setIconSize(QSize(scmExporterButtonGlyphSize, scmExporterButtonGlyphSize));
+    }
+    if (mpNotice && !mNoticeRichText.isEmpty()) {
+        mpNotice->notificationAreaMessageBox->setText(uiDesign::withLinkColour(mNoticeRichText, tokens.accentText));
+    }
+
+    if (mpChipRow_dependencies) {
+        mpChipRow_dependencies->restyleGlyphs(tokens);
+        mpChipRow_dependencies->restyleSuggestions(tokens);
+    }
+    if (mpTreeDelegate) {
+        mpTreeDelegate->restyle(tokens);
+    }
+
+    for (QWidget* pContainer : {ui->widget_newOrExistingPackageName, mpSelectionColumn, mpDetailsColumn, mpFoot}) {
+        uiDesign::keepClickFocusOffControls(pContainer);
+        uiDesign::letPopupsTakeTheFieldsCorner(pContainer);
+    }
+
+    // Last: it measures off the fonts and borders set above
+    fitAssetsList();
+}
+
+void dlgPackageExporter::slot_applyAppearance()
+{
+    applyPackageExporterShellStyle();
+}
+
+void dlgPackageExporter::showEvent(QShowEvent* event)
+{
+    QDialog::showEvent(event);
+    // macOS drops geometry set before a native window is shown; first show only, or a reshow undoes a drag
+    if (!mSplitterRestored) {
+        mSplitterRestored = true;
+        restoreColumnSplit();
+    }
+    fitSavePath();
+    fitAssetsList();
+}
+
+void dlgPackageExporter::resizeEvent(QResizeEvent* event)
+{
+    QDialog::resizeEvent(event);
+    fitSavePath();
+}
+
+void dlgPackageExporter::restoreColumnSplit()
+{
+    if (!mpSplitter) {
+        return;
+    }
+
+    QSettings* pSettings = MudletApp::getQSettings();
+    const QByteArray saved = pSettings ? pSettings->value(QString::fromLatin1(scmExporterSplitterKey)).toByteArray() : QByteArray();
+    if (!saved.isEmpty() && mpSplitter->restoreState(saved)) {
+        // restoreState() also restores the serialized handle width, which a state
+        // saved by another Mudlet version may have different
+        mpSplitter->setHandleWidth(uiDesign::GripSplitter::scmHandleThickness);
+        return;
+    }
+
+    const int across = mpSplitter->width() - uiDesign::GripSplitter::scmHandleThickness;
+    if (across <= 0) {
+        return;
+    }
+    const int tree = std::max(mpSelectionColumn->minimumWidth(), across / scmExporterTreeShareDenominator);
+    mpSplitter->setSizes({tree, across - tree});
+}
+
 void dlgPackageExporter::setModuleCreationMode(bool isModule)
 {
     mIsModuleCreationMode = isModule;
@@ -212,13 +1068,17 @@ void dlgPackageExporter::setModuleCreationMode(bool isModule)
         setWindowTitle(tr("Create Module - %1").arg(mpHost->getName()));
 
         // Update UI elements for module creation
-        ui->lineEdit_packageName->setPlaceholderText(tr("Enter module name"));
+        //: Package exporter - prompt in the empty name field while a module is being made
+        ui->lineEdit_packageName->setPlaceholderText(tr("Module name"));
+        //: Screen reader name of the field the module to create is named in, which has no visible label of its own
+        ui->lineEdit_packageName->setAccessibleName(tr("Module name"));
+        //: Screen reader description of the field the module to create is named in
+        ui->lineEdit_packageName->setAccessibleDescription(tr("Name to create the module under"));
 
         // Update button text to be module-specific
         mExportButton->setText(tr("Create Module"));
 
-        // Update export location button text
-        ui->pushButton_packageLocation->setText(tr("Select where to save module"));
+        showModeWords();
 
         // Update the groupbox title for module creation
         ui->groupBox_exportSelection->setTitle(tr("Select items to include in module"));
@@ -233,6 +1093,8 @@ void dlgPackageExporter::setModuleCreationMode(bool isModule)
 
         // Update the export location widget to be more descriptive
         ui->lineEdit_filePath->setPlaceholderText(tr("Module location"));
+        //: Screen reader name of the read-only field showing where the module will be saved, which has no visible label of its own
+        ui->lineEdit_filePath->setAccessibleName(tr("Module save location"));
 
         // Update info label if visible
         ui->infoLabel->setText(QString());
@@ -262,6 +1124,7 @@ void dlgPackageExporter::setModuleCreationMode(bool isModule)
         }
         // Reconnect the signal (though it's not needed in module creation mode)
         connect(ui->packageList, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &dlgPackageExporter::slot_packageChanged);
+        refreshDependencySuggestions();
 
         // Clear the default package template text and set module-specific template
         ui->textEdit_description->clear();
@@ -277,6 +1140,10 @@ void dlgPackageExporter::setModuleCreationMode(bool isModule)
                                                   "### See Also\n\n"
                                                   "Further reading material, e.g., links to documentation or forum posts.\n\n"
                                                   "* https://wiki.mudlet.org/w/Manual:Modules"));
+
+        // In this mode startOver() puts back the module template, not the package one
+        mFreshDescription = ui->textEdit_description->toPlainText();
+        refreshStartOverButton();
 
         // Focus on the module name input
         ui->lineEdit_packageName->setFocus();
@@ -441,7 +1308,11 @@ void dlgPackageExporter::appendToDetails(const QString& what, const QString& val
     } else {
         mPackageComment.append(qsl("    %1: %2\n").arg(what, value));
     }
-    mPackageConfig.append(qsl("%1 = [[%2]]\n").arg(what, value));
+    // Only a value the plain [[...]] would end early, reopen, or strip a leading newline from gets
+    // the escalated form: the package repository's upload site reads the plain one as text
+    const bool plainLiteralHoldsIt =
+            !value.contains(qsl("]]")) && !value.contains(qsl("[[")) && !value.endsWith(QLatin1Char(']')) && !value.startsWith(QLatin1Char('\n')) && !value.startsWith(QLatin1Char('\r'));
+    mPackageConfig.append(qsl("%1 = %2\n").arg(what, plainLiteralHoldsIt ? qsl("[[%1]]").arg(value) : LuaLiteral::quote(value)));
 }
 
 void dlgPackageExporter::recurseTree(QTreeWidgetItem* pItem, QList<QTreeWidgetItem*>& treeList)
@@ -479,8 +1350,8 @@ void dlgPackageExporter::populateDependencies()
     const QSignalBlocker blocker(ui->packageList);
     const QString previousSelection = ui->packageList->currentText();
     ui->packageList->clear();
-    //: First item in package selection dropdown - when selected, allows updating an existing installed package
-    ui->packageList->addItem(tr("update installed package"));
+    //: First item in package selection dropdown - choosing one of the packages under it fills this form in from a package that is already installed, and ticks what it holds in the tree
+    ui->packageList->addItem(tr("Start from an installed package"));
     ui->packageList->addItems(mpHost->mInstalledPackages);
 
     ui->DependencyList->addItems(mpHost->mInstalledPackages);
@@ -494,6 +1365,7 @@ void dlgPackageExporter::populateDependencies()
     if (previousIndex >= 0) {
         ui->packageList->setCurrentIndex(previousIndex);
     }
+    refreshDependencySuggestions();
 }
 
 void dlgPackageExporter::slot_addDependency()
@@ -506,6 +1378,7 @@ void dlgPackageExporter::slot_addDependency()
     ui->comboBox_dependencies->addItem(text);
     ui->DependencyList->removeItem(index);
     ui->comboBox_dependencies->setCurrentIndex(ui->comboBox_dependencies->count() - 1);
+    syncDependencyChips();
 }
 
 void dlgPackageExporter::slot_removeDependency()
@@ -517,18 +1390,20 @@ void dlgPackageExporter::slot_removeDependency()
     }
     ui->DependencyList->addItem(text);
     ui->comboBox_dependencies->removeItem(index);
+    syncDependencyChips();
 }
 
 void dlgPackageExporter::slot_packageChanged(int index)
 {
-    const QString packageName = ui->packageList->currentText();
-    uncheckAllChildren();
-    if (index != 0) {
-        ui->lineEdit_packageName->setText(packageName);
-    } else {
-        ui->lineEdit_packageName->setText(mPackageName);
+    if (index == 0) {
+        // Before uncheckAllChildren(): nothing may change until requestStartOver() has its answer
+        requestStartOver();
         return;
     }
+
+    const QString packageName = ui->packageList->currentText();
+    uncheckAllChildren();
+    ui->lineEdit_packageName->setText(packageName);
 
     //check package/module items
     QTreeWidgetItem* top = mpTriggers;
@@ -579,25 +1454,19 @@ void dlgPackageExporter::slot_packageChanged(int index)
             item->setCheckState(0, Qt::Checked);
         }
     }
+    refreshFolderMarks();
 
     const QString packagePath{MudletApp::getMudletPath(enums::profileHomePath, mpHost->getName())};
     //fill package metadata
-    mPackageIconPath.clear();
     mPackageDataPath.clear();
     QMap<QString, QString> const packageInfo = mpHost->mPackageInfo.value(packageName);
     ui->lineEdit_author->setText(packageInfo.value(qsl("author")));
     const QString icon{packageInfo.value(qsl("icon"))};
     if (!icon.isEmpty()) {
-        mPackageIconPath = qsl("%1/%2/.mudlet/Icon/%3").arg(packagePath, packageName, icon);
-        ui->Icon->show();
-        ui->pushButton_removeIcon->show();
+        useIcon(qsl("%1/%2/.mudlet/Icon/%3").arg(packagePath, packageName, icon));
     } else {
-        ui->Icon->hide();
-        ui->pushButton_removeIcon->hide();
+        slot_removeIcon();
     }
-    const QIcon myIcon(mPackageIconPath);
-    ui->Icon->clear();
-    ui->Icon->setPixmap(myIcon.pixmap(ui->Icon->size()));
     ui->lineEdit_title->setText(packageInfo.value(qsl("title")));
     mPlainDescription = packageInfo.value(qsl("description"));
     QString description{mPlainDescription};
@@ -612,39 +1481,139 @@ void dlgPackageExporter::slot_packageChanged(int index)
     if (!dependencies.at(0).isEmpty()) {
         ui->comboBox_dependencies->addItems(dependencies);
     }
+    syncDependencyChips();
     //get files and folders from package
     ui->listWidget_addedFiles->clear();
     const QFileInfo info(qsl("%1/%2/").arg(packagePath, packageName));
-    if (!info.exists()) {
+    if (info.exists()) {
+        mPackageDataPath = qsl("%1/%2/.mudlet").arg(packagePath, packageName);
+        QDirIterator it(info.absoluteFilePath(), QDir::NoDotAndDotDot | QDir::Hidden | QDir::AllEntries);
+        QStringList ignore;
+        // .mudlet is rebuilt on export from the icon and description, see copyPackageDataToTmp()
+        ignore << QLatin1String("config.lua") << qsl("%1.xml").arg(packageName) << qsl(".mudlet");
+        while (it.hasNext()) {
+            const QFileInfo f(it.next());
+            if (ignore.contains(f.fileName(), Qt::CaseInsensitive)) {
+                continue;
+            }
+            ui->listWidget_addedFiles->addItem(f.absoluteFilePath());
+        }
+    }
+
+    mLoadedWords.name = ui->lineEdit_packageName->text();
+    mLoadedWords.author = ui->lineEdit_author->text();
+    mLoadedWords.title = ui->lineEdit_title->text();
+    mLoadedWords.helpUrl = ui->lineEdit_helpUrl->text();
+    mLoadedWords.version = ui->lineEdit_version->text();
+    mLoadedWords.description = ui->textEdit_description->toPlainText();
+    mPackageListWasAt = index;
+    refreshStartOverButton();
+}
+
+bool dlgPackageExporter::formIsFresh() const
+{
+    // <= 0: in module mode the picker is emptied, which leaves it at -1
+    return ui->lineEdit_packageName->text().isEmpty() && ui->packageList->currentIndex() <= 0 && ui->lineEdit_author->text() == mFreshAuthor && ui->lineEdit_title->text().isEmpty()
+           && ui->lineEdit_helpUrl->text().isEmpty() && ui->lineEdit_version->text() == mFreshVersion && ui->textEdit_description->toPlainText() == mFreshDescription && mDescriptionImages.isEmpty()
+           && ui->comboBox_dependencies->count() == 0 && mPackageIconPath.isEmpty() && ui->listWidget_addedFiles->count() == 0 && countCheckedItems() == 0;
+}
+
+bool dlgPackageExporter::formHasTypedWords() const
+{
+    const auto typedHere = [](const QString& reads, const QString& fresh, const QString& loaded) {
+        return reads != fresh && reads != loaded;
+    };
+    return typedHere(ui->lineEdit_packageName->text(), QString(), mLoadedWords.name) || typedHere(ui->lineEdit_author->text(), mFreshAuthor, mLoadedWords.author)
+           || typedHere(ui->lineEdit_title->text(), QString(), mLoadedWords.title) || typedHere(ui->lineEdit_helpUrl->text(), QString(), mLoadedWords.helpUrl)
+           || typedHere(ui->lineEdit_version->text(), mFreshVersion, mLoadedWords.version) || typedHere(ui->textEdit_description->toPlainText(), mFreshDescription, mLoadedWords.description);
+}
+
+void dlgPackageExporter::startOver()
+{
+    ui->lineEdit_packageName->clear();
+    {
+        // Or the picker re-enters slot_packageChanged()
+        const QSignalBlocker held(ui->packageList);
+        ui->packageList->setCurrentIndex(0);
+    }
+    ui->lineEdit_author->setText(mFreshAuthor);
+    ui->lineEdit_title->clear();
+    ui->lineEdit_helpUrl->clear();
+    ui->lineEdit_version->setText(mFreshVersion);
+    ui->textEdit_description->setPlainText(mFreshDescription);
+    mPlainDescription = mFreshDescription;
+    mDescriptionImages.clear();
+    ui->comboBox_dependencies->clear();
+    populateDependencies();
+    syncDependencyChips();
+    mPackageIconPath.clear();
+    mPackageDataPath.clear();
+    showChosenIcon();
+    ui->listWidget_addedFiles->clear();
+    uncheckAllChildren();
+    refreshFolderMarks();
+    mLoadedWords = LoadedWords();
+    mPackageListWasAt = 0;
+    if (mpNotice) {
+        mpNotice->hide();
+    }
+    mNoticeRichText.clear();
+    slot_updateLocationPlaceholder();
+    refreshStartOverButton();
+}
+
+void dlgPackageExporter::requestStartOver()
+{
+    if (formHasTypedWords()) {
+        QMessageBox msgBox(this);
+        msgBox.setIcon(QMessageBox::Question);
+        msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+        msgBox.setDefaultButton(QMessageBox::No);
+        msgBox.setEscapeButton(QMessageBox::No);
+        //: Title of the dialog asking whether to clear every field of the package exporter
+        msgBox.setWindowTitle(tr("Start over?"));
+        //: Package exporter - asked before every field, tick and file on the form is cleared
+        msgBox.setText(tr("Clear everything and start over?"));
+        //: Package exporter - shown under the 'clear everything' question, saying what is lost by answering it
+        msgBox.setInformativeText(tr("The words you typed here will be lost."));
+        // On the buttons: QMessageBox::setButtonText() is deprecated since Qt 6.2
+        //: Package exporter - the answer to the 'clear everything' question that goes ahead and clears the form
+        msgBox.button(QMessageBox::Yes)->setText(tr("Clear everything"));
+        //: Package exporter - the answer to the 'clear everything' question that leaves the form as it stands
+        msgBox.button(QMessageBox::No)->setText(tr("Keep editing"));
+        if (msgBox.exec() != QMessageBox::Yes) {
+            // From the picker's first entry the picker has already moved: put it back
+            // on the package whose words are still on the form
+            if (ui->packageList->currentIndex() == 0 && mPackageListWasAt > 0) {
+                const QSignalBlocker held(ui->packageList);
+                ui->packageList->setCurrentIndex(mPackageListWasAt);
+            }
+            refreshStartOverButton();
+            return;
+        }
+    }
+    startOver();
+}
+
+void dlgPackageExporter::refreshStartOverButton()
+{
+    if (!mpButton_startOver) {
         return;
     }
-    mPackageDataPath = qsl("%1/%2/.mudlet").arg(packagePath, packageName);
-    QDirIterator it(info.absoluteFilePath(), QDir::NoDotAndDotDot | QDir::Hidden | QDir::AllEntries);
-    QStringList ignore;
-    // .mudlet is rebuilt on export from the icon and description, see copyPackageDataToTmp()
-    ignore << QLatin1String("config.lua") << qsl("%1.xml").arg(packageName) << qsl(".mudlet");
-    while (it.hasNext()) {
-        const QFileInfo f(it.next());
-        if (ignore.contains(f.fileName(), Qt::CaseInsensitive)) {
-            continue;
-        }
-        ui->listWidget_addedFiles->addItem(f.absoluteFilePath());
-    }
+    mpButton_startOver->setEnabled(!formIsFresh());
 }
 
 void dlgPackageExporter::slot_updateLocationPlaceholder()
 {
     const auto packageName = ui->lineEdit_packageName->text();
-    QString path;
-    if (packageName.isEmpty()) {
-        path = tr("Export to %1").arg(getActualPath());
-    } else {
-        path = tr("Export to %1").arg(qsl("%1/%2.mpackage").arg(getActualPath(), packageName));
-    }
+    const QString where = packageName.isEmpty() ? getActualPath() : qsl("%1/%2.mpackage").arg(getActualPath(), packageName);
 
     checkToEnableExportButton();
 
-    ui->lineEdit_filePath->setPlaceholderText(path);
+    ui->lineEdit_filePath->setPlaceholderText(tr("Export to %1").arg(where));
+    // Without "Export to": the caption beside the path says that
+    mSavePathShown = where;
+    fitSavePath();
 }
 
 void dlgPackageExporter::checkToEnableExportButton()
@@ -679,6 +1648,9 @@ void dlgPackageExporter::checkToEnableExportButton()
         mExportButton->setEnabled(!mExportingPackage);
         mExportButton->setToolTip(tr("Export package"));
     }
+
+    // Every field reaches here on each keystroke
+    refreshStartOverButton();
 }
 
 void dlgPackageExporter::slot_importIcon()
@@ -697,19 +1669,50 @@ void dlgPackageExporter::slot_importIcon()
         mPackagePath = lastDir;
         emit signal_exportLocationChanged(mPackagePath);
     }
+    useIcon(fileName);
+}
+
+void dlgPackageExporter::useIcon(const QString& fileName)
+{
     mPackageIconPath = fileName;
-    const QIcon myIcon(mPackageIconPath);
-    ui->Icon->clear();
-    ui->Icon->setPixmap(myIcon.pixmap(ui->Icon->size()));
-    ui->Icon->show();
-    ui->pushButton_removeIcon->show();
+    showChosenIcon();
+}
+
+QString dlgPackageExporter::iconFileFromDrop(const QDropEvent* event)
+{
+    // The same file types slot_importIcon() offers in its picker
+    static const QStringList iconSuffixes{qsl("png"), qsl("jpg"), qsl("jpeg"), qsl("bmp"), qsl("tif"), qsl("ico"), qsl("icns")};
+    if (!(event->possibleActions() & Qt::CopyAction) || !event->mimeData() || !event->mimeData()->hasUrls()) {
+        return QString();
+    }
+    const QList<QUrl> urls = event->mimeData()->urls();
+    if (urls.size() != 1 || !urls.first().isLocalFile()) {
+        return QString();
+    }
+    const QFileInfo info(urls.first().toLocalFile());
+    if (!info.isFile() || !iconSuffixes.contains(info.suffix(), Qt::CaseInsensitive)) {
+        return QString();
+    }
+    return info.absoluteFilePath();
+}
+
+// Shown on the icon box, where the picture lands, in the accent the files drop zone's dashed edge stands for
+void dlgPackageExporter::setIconDropHighlight(const bool highlight)
+{
+    if (mIconDropHighlight != highlight) {
+        mIconDropHighlight = highlight;
+        ui->Icon->setProperty(scmProp_iconDropTarget, highlight);
+        // A property selector is matched when the sheet is applied, not when the property changes
+        ui->Icon->style()->unpolish(ui->Icon);
+        ui->Icon->style()->polish(ui->Icon);
+        ui->Icon->update();
+    }
 }
 
 void dlgPackageExporter::slot_removeIcon()
 {
     mPackageIconPath.clear();
-    ui->Icon->hide();
-    ui->pushButton_removeIcon->hide();
+    showChosenIcon();
 }
 
 void dlgPackageExporter::showRenderedDescription()
@@ -737,6 +1740,12 @@ void dlgPackageExporter::showRenderedDescription()
 
 bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
 {
+    // Queued: the fit has to measure after the layout has run for the new size
+    if (obj == mpDetailsColumn && evt->type() == QEvent::Resize) {
+        QMetaObject::invokeMethod(this, &dlgPackageExporter::fitAssetsList, Qt::QueuedConnection);
+        return false;
+    }
+
     if (evt->type() == QEvent::KeyPress) {
         QKeyEvent* keyEvent = static_cast<QKeyEvent*>(evt);
         //add dependencies by writing them and pressing enter
@@ -762,6 +1771,43 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
             mPlainDescription = ui->textEdit_description->toPlainText();
             showRenderedDescription();
             return false;
+        }
+    }
+
+    if (obj == ui->widget_icon) {
+        switch (evt->type()) {
+        case QEvent::DragEnter:
+        case QEvent::DragMove: {
+            auto* moveEvent = static_cast<QDragMoveEvent*>(evt);
+            if (iconFileFromDrop(moveEvent).isEmpty()) {
+                moveEvent->ignore();
+                setIconDropHighlight(false);
+                return true;
+            }
+            // A move would tell the source to delete the file it handed over
+            moveEvent->setDropAction(Qt::CopyAction);
+            moveEvent->accept();
+            setIconDropHighlight(true);
+            return true;
+        }
+        case QEvent::DragLeave:
+            setIconDropHighlight(false);
+            return true;
+        case QEvent::Drop: {
+            setIconDropHighlight(false);
+            auto* dropEvent = static_cast<QDropEvent*>(evt);
+            const QString fileName = iconFileFromDrop(dropEvent);
+            if (fileName.isEmpty()) {
+                dropEvent->ignore();
+                return true;
+            }
+            dropEvent->setDropAction(Qt::CopyAction);
+            dropEvent->accept();
+            useIcon(fileName);
+            return true;
+        }
+        default:
+            break;
         }
     }
 
@@ -840,7 +1886,7 @@ void dlgPackageExporter::slot_exportPackage()
     if (mpTriggers) {
         QTreeWidgetItemIterator it(mpTriggers);
         while (*it) {
-            if ((*it)->checkState(0) == Qt::Checked) {
+            if ((*it)->checkState(0) == Qt::Checked && !packageFolder(*it)) {
                 hasSelectedItems = true;
                 break;
             }
@@ -852,7 +1898,7 @@ void dlgPackageExporter::slot_exportPackage()
     if (!hasSelectedItems && mpTimers) {
         QTreeWidgetItemIterator it(mpTimers);
         while (*it) {
-            if ((*it)->checkState(0) == Qt::Checked) {
+            if ((*it)->checkState(0) == Qt::Checked && !packageFolder(*it)) {
                 hasSelectedItems = true;
                 break;
             }
@@ -864,7 +1910,7 @@ void dlgPackageExporter::slot_exportPackage()
     if (!hasSelectedItems && mpAliases) {
         QTreeWidgetItemIterator it(mpAliases);
         while (*it) {
-            if ((*it)->checkState(0) == Qt::Checked) {
+            if ((*it)->checkState(0) == Qt::Checked && !packageFolder(*it)) {
                 hasSelectedItems = true;
                 break;
             }
@@ -876,7 +1922,7 @@ void dlgPackageExporter::slot_exportPackage()
     if (!hasSelectedItems && mpButtons) {
         QTreeWidgetItemIterator it(mpButtons);
         while (*it) {
-            if ((*it)->checkState(0) == Qt::Checked) {
+            if ((*it)->checkState(0) == Qt::Checked && !packageFolder(*it)) {
                 hasSelectedItems = true;
                 break;
             }
@@ -888,7 +1934,7 @@ void dlgPackageExporter::slot_exportPackage()
     if (!hasSelectedItems && mpScripts) {
         QTreeWidgetItemIterator it(mpScripts);
         while (*it) {
-            if ((*it)->checkState(0) == Qt::Checked) {
+            if ((*it)->checkState(0) == Qt::Checked && !packageFolder(*it)) {
                 hasSelectedItems = true;
                 break;
             }
@@ -900,7 +1946,7 @@ void dlgPackageExporter::slot_exportPackage()
     if (!hasSelectedItems && mpKeys) {
         QTreeWidgetItemIterator it(mpKeys);
         while (*it) {
-            if ((*it)->checkState(0) == Qt::Checked) {
+            if ((*it)->checkState(0) == Qt::Checked && !packageFolder(*it)) {
                 hasSelectedItems = true;
                 break;
             }
@@ -1037,8 +2083,7 @@ void dlgPackageExporter::slot_exportPackage()
                              false);
         assetsFuture.cancel();
         releaseExportLock();
-        mExportRunning = false;
-        QApplication::restoreOverrideCursor();
+        endExportRun();
         return;
     }
     checkWriteability.close();
@@ -1076,7 +2121,8 @@ void dlgPackageExporter::slot_exportPackage()
                     displayResultMessage(errorMsg, false);
                 } else {
                     // If in module creation mode, automatically install the module
-                    if (mIsModuleCreationMode) {
+                    // - unless its profile has closed meanwhile
+                    if (mIsModuleCreationMode && mpHost) {
                         // If a module of this name is already installed, the user
                         // confirmed overwriting it before the export began (see the
                         // overwrite prompt in slot_exportPackage), so remove the old
@@ -1094,8 +2140,7 @@ void dlgPackageExporter::slot_exportPackage()
                                 displayResultMessage(tr("Module \"%1\" exported but failed to uninstall existing version").arg(mPackageName.toHtmlEscaped()), false);
                                 mCancelButton->setVisible(false);
                                 mCloseButton->setVisible(true);
-                                mExportRunning = false;
-                                QApplication::restoreOverrideCursor();
+                                endExportRun();
                                 mpZipWatcher = nullptr;
                                 watcher->deleteLater();
                                 return;
@@ -1125,8 +2170,7 @@ void dlgPackageExporter::slot_exportPackage()
                 }
                 mCancelButton->setVisible(false);
                 mCloseButton->setVisible(true);
-                mExportRunning = false;
-                QApplication::restoreOverrideCursor();
+                endExportRun();
 
                 // Clean up the watcher
                 mpZipWatcher = nullptr;
@@ -1142,8 +2186,7 @@ void dlgPackageExporter::slot_exportPackage()
         releaseExportLock();
         mCancelButton->setVisible(false);
         mCloseButton->setVisible(true);
-        mExportRunning = false;
-        QApplication::restoreOverrideCursor();
+        endExportRun();
     }
 
     // save settings for future reuse
@@ -1291,9 +2334,11 @@ void dlgPackageExporter::exportXml(bool& isOk,
         if (!pTrigger) {
             continue;
         }
-        if (item->checkState(0) == Qt::Unchecked) {
+        // A dash only says something inside is ticked, and XMLimport remakes a package folder
+        const bool goesIn = item->checkState(0) == Qt::Checked && !packageFolder(item);
+        if (!goesIn) {
             pTrigger->exportItem = false;
-        } else if (item->checkState(0) == Qt::Checked && pTrigger->mModuleMasterFolder) {
+        } else if (pTrigger->mModuleMasterFolder) {
             pTrigger->mModuleMasterFolder = false;
             modTriggerMap.insert(item, pTrigger->getID());
         }
@@ -1305,9 +2350,10 @@ void dlgPackageExporter::exportXml(bool& isOk,
         if (!pTimer) {
             continue;
         }
-        if (item->checkState(0) == Qt::Unchecked) {
+        const bool goesIn = item->checkState(0) == Qt::Checked && !packageFolder(item);
+        if (!goesIn) {
             pTimer->exportItem = false;
-        } else if (item->checkState(0) == Qt::Checked && pTimer->mModuleMasterFolder) {
+        } else if (pTimer->mModuleMasterFolder) {
             pTimer->mModuleMasterFolder = false;
             modTimerMap.insert(item, pTimer->getID());
         }
@@ -1319,9 +2365,10 @@ void dlgPackageExporter::exportXml(bool& isOk,
         if (!pAlias) {
             continue;
         }
-        if (item->checkState(0) == Qt::Unchecked) {
+        const bool goesIn = item->checkState(0) == Qt::Checked && !packageFolder(item);
+        if (!goesIn) {
             pAlias->exportItem = false;
-        } else if (item->checkState(0) == Qt::Checked && pAlias->mModuleMasterFolder) {
+        } else if (pAlias->mModuleMasterFolder) {
             pAlias->mModuleMasterFolder = false;
             modAliasMap.insert(item, pAlias->getID());
         }
@@ -1333,9 +2380,10 @@ void dlgPackageExporter::exportXml(bool& isOk,
         if (!pAction) {
             continue;
         }
-        if (item->checkState(0) == Qt::Unchecked) {
+        const bool goesIn = item->checkState(0) == Qt::Checked && !packageFolder(item);
+        if (!goesIn) {
             pAction->exportItem = false;
-        } else if (item->checkState(0) == Qt::Checked && pAction->mModuleMasterFolder) {
+        } else if (pAction->mModuleMasterFolder) {
             pAction->mModuleMasterFolder = false;
             modActionMap.insert(item, pAction->getID());
         }
@@ -1347,9 +2395,10 @@ void dlgPackageExporter::exportXml(bool& isOk,
         if (!pScript) {
             continue;
         }
-        if (item->checkState(0) == Qt::Unchecked) {
+        const bool goesIn = item->checkState(0) == Qt::Checked && !packageFolder(item);
+        if (!goesIn) {
             pScript->exportItem = false;
-        } else if (item->checkState(0) == Qt::Checked && pScript->mModuleMasterFolder) {
+        } else if (pScript->mModuleMasterFolder) {
             pScript->mModuleMasterFolder = false;
             modScriptMap.insert(item, pScript->getID());
         }
@@ -1361,9 +2410,10 @@ void dlgPackageExporter::exportXml(bool& isOk,
         if (!pKey) {
             continue;
         }
-        if (item->checkState(0) == Qt::Unchecked) {
+        const bool goesIn = item->checkState(0) == Qt::Checked && !packageFolder(item);
+        if (!goesIn) {
             pKey->exportItem = false;
-        } else if (item->checkState(0) == Qt::Checked && pKey->mModuleMasterFolder) {
+        } else if (pKey->mModuleMasterFolder) {
             pKey->mModuleMasterFolder = false;
             modKeyMap.insert(item, pKey->getID());
         }
@@ -1767,6 +2817,7 @@ void dlgPackageExporter::slot_openPackageLocation()
 void uncheckRecursive(QTreeWidgetItem* item)
 {
     item->setCheckState(0, Qt::Unchecked);
+    item->setData(0, dlgPackageExporter::scmForcedInRole, false);
     for (int i = 0; i < item->childCount(); i++) {
         uncheckRecursive(item->child(i));
     }
@@ -1783,7 +2834,7 @@ void dlgPackageExporter::uncheckAllChildren()
 
 int dlgPackageExporter::countRecursive(QTreeWidgetItem* item, int count) const
 {
-    count = count + (item->checkState(0) == Qt::Checked ? 1 : 0);
+    count = count + (item->checkState(0) == Qt::Checked && !packageFolder(item) ? 1 : 0);
     for (int i = 0; i < item->childCount(); i++) {
         count = countRecursive(item->child(i), count);
     }
@@ -1808,12 +2859,8 @@ void dlgPackageExporter::checkChildren(QTreeWidgetItem* item) const
     if (!mCheckChildren) {
         return;
     }
-    const QString packageName = ui->packageList->currentText();
-    auto checkState = item->checkState(0);
-    // Don't check top folder if it has the same name as the package
-    if (item->text(0) == packageName && item->data(0, Qt::UserRole) == isTopFolder) {
-        item->setCheckState(0, Qt::Unchecked);
-    }
+    // A dash is derived, never handed down: clicking a dashed folder asks for all of it
+    const auto checkState = item->checkState(0) == Qt::PartiallyChecked ? Qt::Checked : item->checkState(0);
 
     for (int i = 0; i < item->childCount(); i++) {
         item->child(i)->setCheckState(0, checkState);
@@ -1850,6 +2897,68 @@ TScript* dlgPackageExporter::scriptOf(const QMap<QTreeWidgetItem*, int>& map, QT
 TKey* dlgPackageExporter::keyOf(const QMap<QTreeWidgetItem*, int>& map, QTreeWidgetItem* item) const
 {
     return map.contains(item) ? mpHost->getKeyUnit()->getKey(map.value(item)) : nullptr;
+}
+
+bool dlgPackageExporter::packageFolder(const QTreeWidgetItem* pItem) const
+{
+    if (!pItem || !pItem->parent() || pItem->parent()->parent() || pItem->data(0, Qt::UserRole) != isTopFolder || pItem->data(0, scmForcedInRole).toBool()) {
+        return false;
+    }
+    // Only the picked installed package's: a folder that merely shares the typed name is the user's own, with patterns
+    // or CSS XMLimport would not make again
+    return ui->packageList->currentIndex() > 0 && pItem->text(0) == ui->packageList->currentText();
+}
+
+static bool everythingUnderIsTicked(const QTreeWidgetItem* pItem)
+{
+    for (int child = 0; child < pItem->childCount(); ++child) {
+        const QTreeWidgetItem* pChild = pItem->child(child);
+        if (pChild->checkState(0) != Qt::Checked || !everythingUnderIsTicked(pChild)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool dlgPackageExporter::refreshFolderMark(QTreeWidgetItem* pItem)
+{
+    bool tickedInside = false;
+    for (int child = 0; child < pItem->childCount(); ++child) {
+        tickedInside = refreshFolderMark(pItem->child(child)) || tickedInside;
+    }
+
+    if (packageFolder(pItem)) {
+        const bool allOfIt = pItem->childCount() > 0 && everythingUnderIsTicked(pItem);
+        pItem->setCheckState(0, allOfIt ? Qt::Checked : (tickedInside ? Qt::PartiallyChecked : Qt::Unchecked));
+        // XMLimport makes this folder again, so its own tick counts for nothing above
+        return tickedInside;
+    }
+
+    if (pItem->childCount() == 0) {
+        return pItem->checkState(0) == Qt::Checked;
+    }
+
+    // A folder ticked itself keeps it: that is the extra nesting a right-click asks for
+    if (pItem->checkState(0) == Qt::Checked) {
+        return true;
+    }
+    pItem->setCheckState(0, tickedInside ? Qt::PartiallyChecked : Qt::Unchecked);
+    return tickedInside;
+}
+
+void dlgPackageExporter::refreshFolderMarks()
+{
+    if (!mpExportSelection) {
+        return;
+    }
+    // Or slot_recountItems() runs checkChildren(), which hands the derived state down
+    const QSignalBlocker held(mpExportSelection);
+    for (int top = 0; top < mpExportSelection->topLevelItemCount(); ++top) {
+        QTreeWidgetItem* pTop = mpExportSelection->topLevelItem(top);
+        for (int child = 0; child < pTop->childCount(); ++child) {
+            refreshFolderMark(pTop->child(child));
+        }
+    }
 }
 
 void dlgPackageExporter::recurseTriggers(TTrigger* trig, QTreeWidgetItem* qTrig)
@@ -2131,24 +3240,27 @@ void dlgPackageExporter::listTimers()
 void dlgPackageExporter::displayResultMessage(const QString& html, const bool isSuccessMessage)
 {
     if (!isSuccessMessage) {
-        // Light coral red error message - #FF6B6B has good contrast on both light and dark backgrounds
-        ui->infoLabel->setText(qsl("<p><font color='#FF6B6B'><b><big>%1</big><b></font></p>").arg(html));
+        if (mDeleteWhenExportEnds) {
+            // Closed mid-export, so this hidden dialog goes without anyone seeing its label
+            qWarning().noquote().nospace() << "dlgPackageExporter WARNING - exporting \"" << mPackageName
+                                           << "\" failed after its dialog was closed: " << QTextDocumentFragment::fromHtml(html).toPlainText();
+        }
+        ui->infoLabel->setText(qsl("<p>%1</p>").arg(html));
+        showNotice(html, uiDesign::NoticeKind::Error);
         return;
     }
 
-    // Big BLACK (Green would be hard for most common colour blind people to
-    // tell from Red, and Blue would likely hide the URL) success message:
-    ui->infoLabel->setText(qsl("<p><b><big>%1</big><b></p>"
-                               "<p>%2</p>")
-                                   .arg(html,
-                                        /*:
+    const QString told = qsl("<p>%1</p>"
+                             "<p>%2</p>")
+                                 .arg(html,
+                                      /*:
                             Only the text outside of the 'a' (HTML anchor) tags PLUS the verb
                             'upload' in between them in the source text, (associated with uploading
                             the resulting package to the Mudlet forums) should be translated.
                             */
-                                        tr("Why not <a href=\"https://packages.mudlet.org/upload\">upload</a> your package for other Mudlet users?")));
-    ui->infoLabel->setTextInteractionFlags(Qt::TextBrowserInteraction);
-    ui->infoLabel->setOpenExternalLinks(true);
+                                      tr("Why not <a href=\"https://packages.mudlet.org/upload\">upload</a> your package for other Mudlet users?"));
+    ui->infoLabel->setText(told);
+    showNotice(told, uiDesign::NoticeKind::Information);
 }
 
 void dlgPackageExporter::slot_recountItems(QTreeWidgetItem* item)
@@ -2159,6 +3271,7 @@ void dlgPackageExporter::slot_recountItems(QTreeWidgetItem* item)
         QTimer::singleShot(0ms, this, [this]() {
             mRecountPending = false;
 
+            refreshFolderMarks();
             const int itemsToExport = countCheckedItems();
             if (itemsToExport) {
                 //: This is the text shown at the top of a groupbox when there is %n (one or more) items to export in the Package exporter dialogue; the initial (and when there is no items selected) is a separate text.
@@ -2167,6 +3280,9 @@ void dlgPackageExporter::slot_recountItems(QTreeWidgetItem* item)
                 //: This is the text shown at the top of a groupbox initially and when there is NO items to export in the Package exporter dialogue.
                 mpSelectionText->setTitle(tr("Select what to export"));
             }
+            // The hidden box's title above is still written: the dialog's tests read the count off it
+            showSelectionCount(itemsToExport);
+            refreshStartOverButton();
         });
     }
 }
@@ -2180,7 +3296,12 @@ void dlgPackageExporter::slot_rightClickOnItems(const QPoint& point)
         return;
     }
     mCheckChildren = false;
-    if (item->checkState(0) == Qt::Checked) {
+    // The package's own folder goes in whole, its patterns or CSS with it, only this way
+    if (packageFolder(item)) {
+        item->setData(0, scmForcedInRole, true);
+        item->setCheckState(0, Qt::Checked);
+    } else if (item->checkState(0) == Qt::Checked) {
+        item->setData(0, scmForcedInRole, false);
         item->setCheckState(0, Qt::Unchecked);
     } else {
         item->setCheckState(0, Qt::Checked);
@@ -2213,6 +3334,17 @@ dlgPackageExporterDescription::dlgPackageExporterDescription(QWidget* pW)
 }
 
 dlgPackageExporterDescription::~dlgPackageExporterDescription() {}
+
+// In lines of the current font rather than pixels, so a stylesheet or a larger
+// font still leaves room to write
+QSize dlgPackageExporterDescription::minimumSizeHint() const
+{
+    constexpr int minimumLines = 10;
+    const int textHeight = minimumLines * fontMetrics().lineSpacing() + qCeil(2 * document()->documentMargin());
+    // contentsMargins() already holds the frame's width
+    const QMargins margins = viewportMargins() + contentsMargins();
+    return {QTextEdit::minimumSizeHint().width(), textHeight + margins.top() + margins.bottom()};
+}
 
 bool dlgPackageExporterDescription::canInsertFromMimeData(const QMimeData* source) const
 {
@@ -2280,8 +3412,35 @@ void dlgPackageExporterDescription::restoreRenderedDescription()
     }
 }
 
+void dlgPackageExporter::endExportRun()
+{
+    mExportRunning = false;
+    QApplication::restoreOverrideCursor();
+    if (mDeleteWhenExportEnds) {
+        deleteLater();
+    }
+}
+
+// Close, Escape and the window's own close button all come through here
+void dlgPackageExporter::done(int result)
+{
+    // The export reports, and installs a module, through this dialog, so it outlives the closing until the export ends
+    if (mExportRunning && mpHost && testAttribute(Qt::WA_DeleteOnClose)) {
+        setAttribute(Qt::WA_DeleteOnClose, false);
+        mDeleteWhenExportEnds = true;
+        // Heard directly, as whether close() reaches a hidden window's closeEvent() depends on its platform window
+        connect(mpHost, &QObject::destroyed, this, &QObject::deleteLater);
+    }
+    QDialog::done(result);
+}
+
 void dlgPackageExporter::closeEvent(QCloseEvent* event)
 {
+    if (mpSplitter) {
+        if (QSettings* pSettings = MudletApp::getQSettings()) {
+            pSettings->setValue(QString::fromLatin1(scmExporterSplitterKey), mpSplitter->saveState());
+        }
+    }
     if (mpHost) {
         emit packageExporterClosing(mpHost->getName());
     }

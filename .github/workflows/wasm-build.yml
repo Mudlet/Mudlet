@@ -1,0 +1,180 @@
+# mudlet-headless built with Emscripten against a Qt for WebAssembly that has no
+# threads, and run in headless Chromium, so the browser build of mudlet_core (#9011)
+# keeps compiling, linking and running Lua. See "WebAssembly" in
+# docs/platform-builds.md.
+name: Build mudlet-headless for WebAssembly
+
+on:
+  push:
+    branches: [development]
+  pull_request:
+    paths:
+      - 'src/**'
+      - '3rdparty/**'
+      - 'cmake/**'
+      - 'translations/translated/CMakeLists.txt'
+      - 'translations/translated/generate-translation-stats.lua'
+      - 'CMakeLists.txt'
+      - 'CMakePresets.json'
+      - 'CI/build-wasm-dependencies.sh'
+      - 'CI/install-lua-rocks.sh'
+      - 'CI/yajl-cmake-fix.patch'
+      - 'CI/wasm-headless-smoke.js'
+      - '.github/workflows/wasm-build.yml'
+  # Builds the libraries from their downloads rather than the cache, so a dead
+  # download URL shows up before the cache entry is evicted
+  schedule:
+    - cron: '23 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  wasm-headless:
+    name: Build and run mudlet-headless for WebAssembly
+    runs-on: ubuntu-22.04
+    if: ${{ github.repository_owner == 'Mudlet' }}
+    # Per run outside pull requests: a group shared by every push cancels each queued push's job
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+    env:
+      # The version Qt 6.9.0 for WebAssembly was built with, which its libraries need
+      EMSDK_VERSION: '3.1.70'
+      PLAYWRIGHT_VERSION: '1.63.0'
+      CCACHE_MAXSIZE: 500M
+      # Only pushes to development save the ccache; every other build restores it read-only
+      SAVE_CCACHE: ${{ github.event_name == 'push' }}
+      CCACHE_COMPRESSLEVEL: ${{ github.event_name == 'push' && '19' || '1' }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Install Emscripten
+        timeout-minutes: 15
+        run: |
+          git clone --depth 1 --branch "$EMSDK_VERSION" https://github.com/emscripten-core/emsdk.git "$RUNNER_TEMP/emsdk"
+          "$RUNNER_TEMP/emsdk/emsdk" install "$EMSDK_VERSION"
+          "$RUNNER_TEMP/emsdk/emsdk" activate "$EMSDK_VERSION"
+          source "$RUNNER_TEMP/emsdk/emsdk_env.sh"
+          echo "EMSDK=$EMSDK" >> "$GITHUB_ENV"
+          echo "EMSDK_NODE=$EMSDK_NODE" >> "$GITHUB_ENV"
+          echo "$EMSDK/upstream/emscripten" >> "$GITHUB_PATH"
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          # CI/build-wasm-dependencies.sh pins the PCRE2 this version bundles
+          version: '6.9.0'
+          host: all_os
+          target: wasm
+          arch: wasm_singlethread
+          dir: ${{ runner.workspace }}
+          # Uncached for the reason build-mudlet.yml gives
+          cache: false
+          modules: qt5compat qtmultimedia qtspeech
+
+      # Lua and lua-yajl write the translation statistics that mudlet.qrc embeds, set up as
+      # build-mudlet.yml's Linux job does
+      - name: Install Lua
+        uses: leafo/gh-actions-lua@v13
+        with:
+          luaVersion: '5.1.5'
+          buildCache: false
+
+      - name: Install LuaRocks
+        uses: leafo/gh-actions-luarocks@v6
+
+      - name: Install dependencies and set paths
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ccache libyajl-dev ninja-build
+          CI/install-lua-rocks.sh lua-yajl
+          eval "$(luarocks path --local --lua-version 5.1)"
+          echo "LUA_PATH=$LUA_PATH" >> "$GITHUB_ENV"
+          echo "LUA_CPATH=$LUA_CPATH" >> "$GITHUB_ENV"
+          echo "MUDLET_WASM_DEPS=${{ runner.workspace }}/wasm-deps" >> "$GITHUB_ENV"
+          echo "CCACHE_DIR=${{ runner.workspace }}/ccache" >> "$GITHUB_ENV"
+
+      - name: Restore the wasm libraries
+        id: wasm-deps
+        if: github.event_name != 'schedule'
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ env.MUDLET_WASM_DEPS }}
+          key: wasm-deps-${{ env.EMSDK_VERSION }}-${{ hashFiles('CI/build-wasm-dependencies.sh', 'CI/yajl-cmake-fix.patch') }}
+
+      - name: Build the wasm libraries
+        if: steps.wasm-deps.outputs.cache-hit != 'true'
+        timeout-minutes: 20
+        run: CI/build-wasm-dependencies.sh "$MUDLET_WASM_DEPS"
+
+      - name: Save the wasm libraries
+        if: >-
+          steps.wasm-deps.outputs.cache-hit != 'true' && github.ref_name == 'development'
+          && github.event_name != 'schedule'
+        uses: actions/cache/save@v6
+        with:
+          path: ${{ env.MUDLET_WASM_DEPS }}
+          key: ${{ steps.wasm-deps.outputs.cache-primary-key }}
+
+      - name: Restore ccache
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ccache-wasm-sha-
+          restore-keys: ccache-wasm-sha-
+
+      # As build-mudlet.yml does for the builds that save the ccache
+      - name: Recompress the restored ccache
+        if: env.SAVE_CCACHE == 'true'
+        run: |
+          ccache --recompress 19
+          echo "CCACHE_BUILD_START=$(date +%s)" >> "$GITHUB_ENV"
+
+      # The preset reads QT_ROOT_DIR and QT_HOST_PATH (set by install-qt-action) and
+      # MUDLET_WASM_DEPS; the runtime checks make memory errors fail the smoke test
+      - name: Configure
+        run: |
+          test -d "${QT_HOST_PATH:?install-qt-action did not set QT_HOST_PATH}"
+          cmake --preset wasm-headless -DCMAKE_EXE_LINKER_FLAGS="-sASSERTIONS=1 -sSTACK_OVERFLOW_CHECK=2 -sSAFE_HEAP=1"
+
+      # generate-translation-stats.lua, run by the configure, writes {} when it cannot load lua-yajl
+      - name: Check the translation statistics were generated
+        run: |
+          grep -q '"translated_percent"' translations/translated/translation-stats.json \
+            || { echo "::error::translation-stats.json holds no statistics; is lua-yajl installed?"; exit 1; }
+
+      - name: Build
+        run: |
+          ccache --zero-stats
+          cmake --build --preset wasm-headless
+          ccache --show-stats
+
+      # What this build left untouched it no longer compiles; see build-mudlet.yml
+      - name: Trim the ccache to what this build used
+        if: success() && env.CCACHE_BUILD_START
+        run: ccache --evict-older-than "$(( $(date +%s) - CCACHE_BUILD_START + 60 ))s"
+
+      - name: Save ccache
+        if: always() && env.SAVE_CCACHE == 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ccache-wasm-sha-${{ github.sha }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Install Playwright and Chromium
+        timeout-minutes: 10
+        run: |
+          npm install --no-save --prefix "$RUNNER_TEMP/playwright" "playwright@$PLAYWRIGHT_VERSION"
+          "$RUNNER_TEMP/playwright/node_modules/.bin/playwright" install --with-deps --only-shell chromium
+
+      - name: Run Lua in the browser
+        timeout-minutes: 5
+        run: NODE_PATH="$RUNNER_TEMP/playwright/node_modules" node CI/wasm-headless-smoke.js build-wasm-headless/src

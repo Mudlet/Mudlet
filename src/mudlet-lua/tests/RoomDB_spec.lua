@@ -202,6 +202,15 @@ describe("Tests the room and area database behind the map", function()
       assert.are.equal(missingRoomId, createRoomID(missingRoomId))
     end)
 
+    it("createRoomID refuses a minimum with no free number at or above it", function()
+      local highest = 2147483647
+      assert.is_true(addRoom(highest))
+      finally(function() deleteRoom(highest) end)
+
+      assert.are.same({nil, "no free room ID at or above 2147483647"}, {createRoomID(highest)})
+      assert.are.equal(highest - 1, createRoomID(highest - 1))
+    end)
+
     it("createRoomID still hands back a hole after a call with a minimum above it", function()
       local hole = createRoomID()
       assert.is_true(addRoom(hole))
@@ -576,22 +585,50 @@ describe("Tests the room and area database behind the map", function()
       assert.is_nil(getExitWeights(from)["heave"])
     end)
 
-    it("clearSpecialExits leaves the weight of a normal exit a special exit is named after", function()
+    -- A door, weight and custom line on "n", which a special exit of that name shares
+    local function decorateNorth(room)
+      assert.is_true(setDoor(room, "n", 2))
+      assert.is_true(setExitWeight(room, "n", 7))
+      assert.is_true(addCustomLine(room, {{0, 0.5, 0}}, "n", "dot line", {255, 0, 0}, false))
+    end
+
+    local function assertNorthDecorated(room)
+      assert.are.equal(2, getDoors(room)["n"])
+      assert.are.equal(7, getExitWeights(room)["n"])
+      assert.is_table(getCustomLines(room)["n"])
+    end
+
+    it("removeSpecialExit leaves the door, weight and custom line of a normal exit it is named after", function()
+      local from = makeRoom(areaHome, 34, 1, 0)
+      local to = makeRoom(areaHome, 35, 1, 0)
+      finally(function() deleteRoom(from); deleteRoom(to) end)
+
+      assert.is_true(setExit(from, to, "n"))
+      decorateNorth(from)
+      assert.is_true(addSpecialExit(from, to, "n"))
+
+      assert.is_true(removeSpecialExit(from, "n"))
+
+      assert.are.equal(to, getRoomExits(from)["north"])
+      assertNorthDecorated(from)
+    end)
+
+    it("clearSpecialExits leaves the door, weight and custom line of a normal exit a special exit is named after", function()
       local from = makeRoom(areaHome, 29, 1, 0)
       local to = makeRoom(areaHome, 30, 1, 0)
       finally(function() deleteRoom(from); deleteRoom(to) end)
 
       assert.is_true(setExit(from, to, "n"))
-      assert.is_true(setExitWeight(from, "n", 7))
+      decorateNorth(from)
       assert.is_true(addSpecialExit(from, to, "n"))
 
       clearSpecialExits(from)
 
       assert.are.equal(to, getRoomExits(from)["north"])
-      assert.are.equal(7, getExitWeights(from)["n"])
+      assertNorthDecorated(from)
     end)
 
-    it("deleting the room a special exit leads to leaves the weight of a normal exit it is named after", function()
+    it("deleting the room a special exit leads to leaves the door, weight and custom line of a normal exit it is named after", function()
       local from = makeRoom(areaHome, 31, 1, 0)
       local to = makeRoom(areaHome, 32, 1, 0)
       local gone = makeRoom(areaHome, 33, 1, 0)
@@ -601,13 +638,27 @@ describe("Tests the room and area database behind the map", function()
       end)
 
       assert.is_true(setExit(from, to, "n"))
-      assert.is_true(setExitWeight(from, "n", 7))
+      decorateNorth(from)
       assert.is_true(addSpecialExit(from, gone, "n"))
 
       assert.is_true(deleteRoom(gone))
 
       assert.is_nil(getSpecialExitsSwap(from)["n"])
-      assert.are.equal(7, getExitWeights(from)["n"])
+      assertNorthDecorated(from)
+    end)
+
+    it("removeSpecialExit leaves the door of a stub it is named after", function()
+      local from = makeRoom(areaHome, 36, 1, 0)
+      local to = makeRoom(areaHome, 37, 1, 0)
+      finally(function() deleteRoom(from); deleteRoom(to) end)
+
+      setExitStub(from, "s", true)
+      assert.is_true(setDoor(from, "s", 3))
+      assert.is_true(addSpecialExit(from, to, "s"))
+
+      assert.is_true(removeSpecialExit(from, "s"))
+
+      assert.are.equal(3, getDoors(from)["s"])
     end)
 
     it("clearSpecialExits takes the room off its area's list of exits", function()

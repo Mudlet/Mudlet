@@ -238,6 +238,43 @@ void RoomIdLineEditDelegate::slot_specialRoomExitIdEdited(const QString& text) c
     mpItem->setToolTip(ExitsTreeWidget::colIndex_exitStatus, roomIdToolTipText);
 }
 
+CommandLineEditDelegate::CommandLineEditDelegate(const QString& placeholder, QObject* parent)
+: QStyledItemDelegate(parent)
+, mPlaceholder(placeholder)
+{
+}
+
+QWidget* CommandLineEditDelegate::createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const
+{
+    auto* pEditor = QStyledItemDelegate::createEditor(parent, option, index);
+    if (auto* pLineEdit = qobject_cast<QLineEdit*>(pEditor)) {
+        pLineEdit->setPlaceholderText(mPlaceholder);
+    }
+    // The cell underneath still holds the hint as text, which would show through
+    pEditor->setAutoFillBackground(true);
+    return pEditor;
+}
+
+void CommandLineEditDelegate::setEditorData(QWidget* pEditor, const QModelIndex& index) const
+{
+    QStyledItemDelegate::setEditorData(pEditor, index);
+    auto* pLineEdit = qobject_cast<QLineEdit*>(pEditor);
+    if (pLineEdit && pLineEdit->text() == mPlaceholder) {
+        pLineEdit->clear();
+    }
+}
+
+void CommandLineEditDelegate::setModelData(QWidget* pEditor, QAbstractItemModel* model, const QModelIndex& index) const
+{
+    auto* pLineEdit = qobject_cast<QLineEdit*>(pEditor);
+    if (pLineEdit && pLineEdit->text().trimmed().isEmpty()) {
+        // save() and slot_checkModified() recognise a row with no command by the placeholder
+        model->setData(index, mPlaceholder, Qt::EditRole);
+        return;
+    }
+    QStyledItemDelegate::setModelData(pEditor, model, index);
+}
+
 dlgRoomExits::dlgRoomExits(Host* pH, const int roomNumber, QWidget* pW)
 : QDialog(pW)
 , mpHost(pH)
@@ -281,6 +318,7 @@ dlgRoomExits::dlgRoomExits(Host* pH, const int roomNumber, QWidget* pW)
 
     specialExits->setItemDelegateForColumn(ExitsTreeWidget::colIndex_exitRoomId, new RoomIdLineEditDelegate(specialExits));
     specialExits->setItemDelegateForColumn(ExitsTreeWidget::colIndex_exitWeight, new WeightSpinBoxDelegate(specialExits));
+    specialExits->setItemDelegateForColumn(ExitsTreeWidget::colIndex_command, new CommandLineEditDelegate(mSpecialExitCommandPlaceholder, specialExits));
 }
 
 dlgRoomExits::~dlgRoomExits() = default;
@@ -541,12 +579,6 @@ void dlgRoomExits::save()
 
     // Clean up after any deleted specialExits originally present but not now so
     for (const auto& value : originalExitCmds) {
-        pR->customLinesArrow.remove(value);
-        pR->customLinesColor.remove(value);
-        pR->customLinesStyle.remove(value);
-        pR->customLines.remove(value);
-        pR->setDoor(value, 0);
-        pR->setExitWeight(value, 0);
         pR->setSpecialExit(-1, value);
     }
 

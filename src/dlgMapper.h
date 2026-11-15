@@ -35,7 +35,6 @@ class QFrame;
 class QLabel;
 class QProgressBar;
 class QPushButton;
-struct MapInfoProperties;
 #if defined(INCLUDE_3DMAPPER)
 #include "glwidget_integration.h"
 class QOpenGLWidget;
@@ -118,25 +117,6 @@ public slots:
     void updateInfoMenu();
     void slot_showSaveWarningMenu();
     void slot_saveErrorChanged(bool hasError);
-
-    // Returns where the box ends, down from the top
-    static int paintMapInfo(const QElapsedTimer& renderTimer,
-                            QPainter& painter,
-                            Host* pHost,
-                            TMap* pMap,
-                            int roomID,
-                            int displayAreaId,
-                            int selectionSize,
-                            QColor& infoColor,
-                            int xOffset,
-                            int yOffset,
-                            int widgetWidth,
-                            int fontHeight,
-                            // Invalid for the profile's info box background
-                            const QColor& background = QColor(),
-                            // Empty for the profile's display font's
-                            const QString& fontFamily = QString());
-    static int paintMapInfoContributor(QPainter& painter, int xOffset, int yOffset, const MapInfoProperties& properties, QColor bgColor, int fontHeight, int widgetWidth);
 
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override;

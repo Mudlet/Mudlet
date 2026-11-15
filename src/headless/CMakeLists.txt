@@ -21,7 +21,16 @@
 # a process of its own, so that a phone app can link it as the terminal runner below does.
 add_library(mudlet_headless STATIC
     THeadlessSession.cpp
+    THeadlessSessionArea.cpp
+    THeadlessSessionInput.cpp
+    THeadlessSessionCommands.cpp
     THeadlessSession.h
+    THeadlessSessionOutput.cpp
+    THeadlessSessionCompletion.cpp
+    THeadlessSessionLinks.cpp
+    THeadlessSessionMap.cpp
+    THeadlessSessionWindows.cpp
+    THeadlessSessionWindowText.cpp
 )
 set_target_properties(mudlet_headless PROPERTIES AUTOMOC ON POSITION_INDEPENDENT_CODE ON)
 target_include_directories(mudlet_headless INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
@@ -34,9 +43,9 @@ else()
 endif()
 
 # A console program on Windows too, unlike mudlet_executable, so that its standard streams work
-add_executable(mudlet_headless_executable main.cpp)
+add_executable(mudlet_headless_executable main.cpp ../HardwareDeviceTypes.h)
 target_compile_definitions(mudlet_headless_executable PRIVATE APP_TARGET="${HEADLESS_APP_TARGET}")
-target_link_libraries(mudlet_headless_executable mudlet_headless mudlet_lsan_hooks)
+target_link_libraries(mudlet_headless_executable PRIVATE mudlet_headless mudlet_lsan_hooks)
 set_target_properties(mudlet_headless_executable PROPERTIES
   OUTPUT_NAME mudlet-headless
   # Beside the GUI's binary, which on Windows has the Qt libraries deployed next to it
@@ -48,8 +57,12 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   # RPATH finds it beside our Qt. The GUI loads it through Qt Widgets, first on its link line.
   target_link_options(mudlet_headless_executable PRIVATE "LINKER:--disable-new-dtags")
 endif()
+# A browser build starts through Qt's own loader, which this sets up as qt_add_executable() would
+if(EMSCRIPTEN)
+  qt_finalize_target(mudlet_headless_executable)
+endif()
 if(WIN32)
-  target_link_libraries(mudlet_headless_executable ws2_32)
+  target_link_libraries(mudlet_headless_executable PRIVATE ws2_32)
   if(MINGW)
     # See mudlet_executable: Qt's WinMain library can drop off the link line, and main() is called directly
     set_target_properties(mudlet_headless_executable PROPERTIES qt_no_entrypoint ON)

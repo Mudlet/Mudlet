@@ -376,5 +376,13 @@ describe("Tests that the timestamp and wrap functions find their console by name
       assert.are.equal(74, getWindowWrap(""))
       assert.are.equal(columnWidth * 75, getMainConsoleWidth())
     end)
+
+    it("works out the main console's width for the widest wrap it accepts", function()
+      assert.is_true(setWindowWrap("main", 70))
+      local columnWidth = getMainConsoleWidth() / 71
+
+      assert.is_true(setWindowWrap("main", 2147483647))
+      assert.are.equal(columnWidth * 2147483648, getMainConsoleWidth())
+    end)
   end)
 end)

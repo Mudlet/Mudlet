@@ -148,7 +148,7 @@ private slots:
         QVERIFY2(luaGrammar, "Lua grammar gone after mudlet reconstruction - initEdbee()'s once-guard left edbee unprimed");
         // the editor picks its grammar by filename, so that path must agree
         QCOMPARE(edbee->grammarManager()->detectGrammarWithFilename(qsl("Buck.lua")), luaGrammar);
-        QVERIFY2(edbee->themeManager()->theme(qsl("Mudlet")), "Mudlet editor theme gone after mudlet reconstruction");
+        QVERIFY2(edbee->themeManager()->theme(MudletApp::scmEditorThemeNameLight), "Mudlet editor theme gone after mudlet reconstruction");
 
         startProfile(mProfileName, mLocalhost, mPort);
         if (QTest::currentTestFailed()) {

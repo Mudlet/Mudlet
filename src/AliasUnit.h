@@ -54,6 +54,7 @@ public:
     ~AliasUnit();
 
     std::list<TAlias*> getAliasRootNodeList() { return mAliasRootNodeList; }
+    QMap<int, TAlias*> getAliasList() { return mAliasMap; }
     TAlias* getAlias(int id);
     void compileAll();
     TAlias* findFirstAlias(const QString& name);

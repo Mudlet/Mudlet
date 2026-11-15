@@ -278,8 +278,8 @@ end
 local function removeFixturePackage(name)
   if packageInstalled(name) then
     assert.is_true(waitForProfileSaveToPass(), "a profile save never finished, so this uninstall would be refused")
-    -- uninstallPackage() refuses while a profile save is in progress, and the
-    -- installs here start one, so keep asking until it takes
+    -- uninstallPackage() still refuses while a profile save outlasts its wait,
+    -- so keep asking until it takes
     assert.is_true(waitUntil(function() return uninstallPackage(name) == true end, 5000),
                    "could not uninstall the fixture package " .. name)
     -- let the profile save that uninstallPackage() queues run now, rather than
@@ -884,6 +884,35 @@ describe("Tests the functionality of installPackage", function()
     assert.is_false(containsWrapped(textFrom(mark), "Package install failed"), textFrom(mark))
   end)
 
+  it("reports a failed install in English when Mudlet's translations cannot be found, looking for them once", function()
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local realLocale, realLoadTranslations = mudlet.Locale, _G.loadTranslations
+    defer(function() mudlet.Locale, _G.loadTranslations = realLocale, realLoadTranslations end)
+    local english = realLoadTranslations("Mudlet", nil, "en_US")
+    local loads = 0
+    mudlet.Locale = nil
+    _G.loadTranslations = function()
+      loads = loads + 1
+      return nil, "unable to find 'mudlet-lua.json'"
+    end
+    local package = fixtureDirectory .. "/mudlet-spec-notazip.mpackage"
+    local module = fixtureDirectory .. "/mudlet-spec-there-is-no-such-module.mpackage"
+    local mark = getLastLineNumber("main")
+
+    verbosePackageInstall(package)
+    verboseModuleInstall(module)
+
+    assert.equals(1, loads)
+    local text = textFrom(mark)
+    local packageFailed = english.prefixWarn.message .. string.format(english.packageInstallFail.message, package, "could not unzip package")
+    local moduleFailed = english.prefixWarn.message .. string.format(english.moduleInstallFail.message, module, "could not open file")
+    assert.is_true(containsWrapped(text, packageFailed), text)
+    assert.is_true(containsWrapped(text, moduleFailed), text)
+    for key, entry in pairs(english) do
+      assert.equals(entry.message, mudlet.Locale[key] and mudlet.Locale[key].message, key)
+    end
+  end)
+
   it("runs nothing else in the middle of the script that is waiting out a profile save", function()
     assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
     local seen = {}
@@ -1167,6 +1196,74 @@ describe("Tests the package info accessors", function()
     it("adds a field the package did not declare", function()
       assert.is_true(setPackageInfo(minimalPackage, "spec-added", "yes"))
       assert.equals("yes", getPackageInfo(minimalPackage, "spec-added"))
+    end)
+
+    -- A profile reads a package's details from its config.lua as it loads, so that is what has to hold them
+    local function savedPackageInfo(name)
+      local file = io.open(getMudletHomeDir() .. "/" .. name .. "/config.lua", "r")
+      if not file then
+        return nil
+      end
+      local chunk = assert(loadstring(file:read("*a")))
+      file:close()
+      local globals = {}
+      globals._G = globals
+      setfenv(chunk, globals)
+      chunk()
+      local details = {}
+      for key, value in pairs(globals) do
+        if type(value) == "string" then
+          details[key] = value
+        end
+      end
+      return details
+    end
+
+    it("saves what it sets for a package from an archive to be there after a restart", function()
+      local name = "mudlet-spec-dotted"
+      withFixturePackage(name)
+
+      assert.is_true(setPackageInfo(name, "version", "2.0"))
+      assert.is_true(setPackageInfo(name, "spec-hash", 'a]]b"c\\d\ne\r\1f]'))
+      assert.is_true(setPackageInfo(name, "end", "a Lua keyword"))
+      -- "_G" names the table a config.lua sets details in, and "globals" once named it too
+      assert.is_true(setPackageInfo(name, "globals", "not a table"))
+      assert.is_true(setPackageInfo(name, "_G", "not a table either"))
+      assert.is_true(setPackageInfo(name, "end\n", "a Lua keyword and a newline"))
+
+      assert.same(getPackageInfo(name), savedPackageInfo(name))
+    end)
+
+    it("saves what it sets for a package from an XML file, which has no config.lua of its own", function()
+      local name = "mudlet-spec-plainxml"
+      local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+      defer(function()
+        removeFixturePackage(name)
+        os.remove(xml)
+      end)
+      writePackageXml(xml, '<ScriptPackage />')
+      installAndConfirm(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
+      assert.is_nil(savedPackageInfo(name), "SETUP: a package from an XML file now comes with a config.lua")
+
+      assert.is_true(setPackageInfo(name, "version", "1.2"))
+
+      assert.same({mpackage = name, version = "1.2"}, savedPackageInfo(name))
+      assert.same(savedPackageInfo(name), getPackageInfo(name), "the details differ from what a restart reads back")
+    end)
+
+    it("returns nil+msg and changes nothing when the details cannot be saved, however often it is asked", function()
+      local name = "mudlet-spec-noconfig"
+      withFixturePackage(name)
+      local blocker = getMudletHomeDir() .. "/" .. name .. "/config.lua"
+      assert.is_true(lfs.mkdir(blocker), "SETUP: could not put a folder where config.lua goes")
+      defer(function() lfs.rmdir(blocker) end)
+
+      for attempt = 1, 2 do
+        local ok, err = setPackageInfo(name, "version", "2.0")
+        assert.is_nil(ok, "attempt " .. attempt .. " reported a save that did not happen")
+        assert.is_true(contains(err, "could not save the details of package '" .. name .. "'"), tostring(err))
+        assert.equals("", getPackageInfo(name, "version"), "attempt " .. attempt .. " changed a detail it could not save")
+      end
     end)
 
     it("returns nil+msg for a package that is not installed", function()
@@ -1839,8 +1936,8 @@ describe("Tests a package that uninstalls itself", function()
     installFixturePackage("mudlet-spec-selfuninstall")
     assert.equals(1, exists("mudletSpecSelfUninstallHandler", "script"))
 
-    -- the handler's uninstallPackage() declines while the save the install
-    -- started is still running, so raise until the package is really gone
+    -- the handler's uninstallPackage() can be refused by a save that outlasts
+    -- its wait, so raise until the package is really gone
     assert.is_true(waitUntil(function()
       mudletSpecSelfUninstallRan = nil
       mudletSpecSelfUninstallSecondRan = nil
@@ -1920,7 +2017,7 @@ describe("Tests what a package that uninstalls itself mid-pass can still see", f
       _G.mudletSpecMidpassRemoved, _G.mudletSpecMidpassSeen, _G.mudletSpecMidpassCommand = nil, nil, nil
     end)
 
-    -- the uninstall is refused while the install's profile save runs, so fire until it takes
+    -- the uninstall can be refused by a profile save that outlasts its wait, so fire until it takes
     assert.is_true(waitUntil(function()
       assert.is_true(waitForProfileSaveToPass(), "a profile save was still running after 5s")
       feedTriggers("\nmudlet_spec_midpass_fire\n")
@@ -2722,17 +2819,32 @@ describe("Tests uninstalling a package while the profile is being saved", functi
     assert.equals(0, exists(minimalPackage .. " alias", "alias"), "the package's alias outlived its uninstall")
   end)
 
-  it("returns nil and says why for an installed package while a save is running", function()
+  it("waits out a profile save and uninstalls an installed package", function()
     withFixturePackage(minimalPackage)
     assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
     -- the save stays running until the event loop next turns, which nothing below lets it do
     assert.is_true(saveProfile())
 
     local ok, err = uninstallPackage(minimalPackage)
+    -- the cleanup skips this for a package that is already gone, and it must not start inside a later spec
+    runTheQueuedProfileSave()
 
-    assert.is_nil(ok)
-    assert.is_true(contains(err, "profile save is in progress"), tostring(err))
-    assert.is_true(packageInstalled(minimalPackage), "a refused uninstall took the package away")
+    assert.is_true(ok, tostring(err))
+    assert.is_false(packageInstalled(minimalPackage), "the package stayed listed after the uninstall answered")
+    assert.equals(0, exists(minimalPackage .. " alias", "alias"), "the package's alias outlived its uninstall")
+  end)
+
+  it("waits out a profile save and uninstalls an installed module", function()
+    withFixtureModule(moduleName)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    assert.is_true(saveProfile())
+
+    local removed = uninstallModule(moduleName)
+    runTheQueuedProfileSave()
+
+    assert.is_true(removed)
+    assert.is_false(moduleInstalled(moduleName), "the module stayed listed after the uninstall answered")
+    assert.equals(0, exists(moduleName .. " alias", "alias"), "the module's alias outlived its uninstall")
   end)
 
   -- retrying a package that is not installed never works, so a running save must not be given as the reason
@@ -2871,8 +2983,8 @@ end)
 describe("Tests installing an archive whose package XML cannot be read", function()
   it("says the package's contents could not be read", function()
     local name = "mudlet-spec-badxml"
-    -- the install queues a save of its own, and uninstallPackage() is refused
-    -- while one runs, so use the helper that keeps asking
+    -- the install queues a save of its own, so use the helper that sees it
+    -- through before uninstalling
     defer(function() removeFixturePackage(name) end)
 
     assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
@@ -7710,7 +7822,7 @@ describe("Tests the game loader packages", function()
 
     raiseEvent("sysConnectionEvent")
     assert.are.same({ { path, loader.url } }, downloads, "connecting did not start the download")
-    -- the loader uninstalls itself, which is refused while a profile save runs
+    -- the loader uninstalls itself, which a profile save that outlasts its wait can refuse
     assert.is_true(waitForProfileSaveToPass(), "a profile save never finished")
     return downloads, path
   end

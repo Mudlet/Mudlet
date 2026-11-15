@@ -50,6 +50,18 @@
 
 using namespace std::chrono_literals;
 
+// Before Qt 6.10, QAccessible::setActive() only told activation observers and left the
+// platform inactive, so with no screen reader isActive() stays false and TLabel rightly
+// announces nothing; Qt 6.10 made it activate the platform accessibility
+#if QT_VERSION < QT_VERSION_CHECK(6, 10, 0)
+#define SKIP_UNLESS_ACCESSIBILITY_ACTIVE()                                                                                                                                                             \
+    if (!QAccessible::isActive()) {                                                                                                                                                                    \
+        QSKIP("before Qt 6.10, QAccessible::setActive(true) does not make isActive() true without a screen reader");                                                                                   \
+    }
+#else
+#define SKIP_UNLESS_ACCESSIBILITY_ACTIVE()
+#endif
+
 // Unnamed namespace: other tests in the same grouped binary have a PaintCounter of their own
 namespace {
 class PaintCounter : public QObject
@@ -1038,6 +1050,7 @@ private slots:
         auto restore = qScopeGuard([this]() {
             stopListening();
         });
+        SKIP_UNLESS_ACCESSIBILITY_ACTIVE()
         QVERIFY(runLua(qsl("setConfig('accessibleLabels', true); assert(setLabelLiveRegion('%1', 'polite'))").arg(mLabelName)));
 
         QVERIFY(runLua(qsl("echo('%1', '<b>HP</b> 50')").arg(mLabelName)));
@@ -1063,6 +1076,7 @@ private slots:
         auto restore = qScopeGuard([this]() {
             stopListening();
         });
+        SKIP_UNLESS_ACCESSIBILITY_ACTIVE()
         QVERIFY(runLua(qsl("setConfig('accessibleLabels', true); setLabelAccessibleName('%1', 'Health'); assert(setLabelLiveRegion('%1', 'polite'))").arg(mLabelName)));
 
         QVERIFY(runLua(qsl("echo('%1', 'HP 50')").arg(mLabelName)));
@@ -1079,6 +1093,7 @@ private slots:
             stopListening();
             runLua(qsl("showWindow('%1')").arg(mLabelName));
         });
+        SKIP_UNLESS_ACCESSIBILITY_ACTIVE()
         QVERIFY(runLua(qsl("setConfig('accessibleLabels', true); assert(setLabelLiveRegion('%1', 'polite')); hideWindow('%1')").arg(mLabelName)));
 
         QVERIFY(runLua(qsl("echo('%1', 'HP 50')").arg(mLabelName)));

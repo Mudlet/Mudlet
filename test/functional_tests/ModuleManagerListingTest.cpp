@@ -17,7 +17,9 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QMessageBox>
 #include <QTemporaryDir>
+#include <QTimer>
 #include <QtTest/QtTest>
 
 #include "Host.h"
@@ -248,7 +250,102 @@ private slots:
         delete manager;
     }
 
+    // Ctrl-clicking a second module adds it to the selection, and the remove
+    // button then takes away every selected module, not just the last clicked
+    void test_removingSeveralSelectedModulesRemovesThemAll()
+    {
+        auto* host = startProfile();
+        QVERIFY2(host, "Could not start the profile");
+        listModules(host);
+
+        mudlet::self()->slot_moduleManager();
+        dlgModuleManager* manager = HostDialogs::of(host).mpModuleManager;
+        QVERIFY2(manager, "The module manager did not open for the profile");
+        manager->show();
+        QVERIFY(QTest::qWaitForWindowExposed(manager));
+
+        QVERIFY2(clickModule(manager, qsl("listing-b"), Qt::NoModifier), "SETUP: the first module to remove is not listed");
+        QVERIFY2(clickModule(manager, qsl("listing-d"), Qt::ControlModifier), "SETUP: the second module to remove is not listed");
+        // A refused removal opens a modal box, which would hang the test rather than fail it
+        bool warned = false;
+        auto* boxCloser = new QTimer(manager);
+        connect(boxCloser, &QTimer::timeout, boxCloser, [&warned]() {
+            if (auto* box = qobject_cast<QMessageBox*>(QApplication::activeModalWidget())) {
+                warned = true;
+                box->reject();
+            }
+        });
+        boxCloser->start(50ms);
+        manager->uninstallButton->click();
+        boxCloser->stop();
+        QVERIFY2(!warned, "A selected module's removal was refused");
+
+        QCOMPARE(rowNames(manager), QStringList({qsl("listing-a"), qsl("listing-c")}));
+        QVERIFY(!host->mInstalledModules.contains(qsl("listing-b")));
+        QVERIFY(!host->mInstalledModules.contains(qsl("listing-d")));
+        QVERIFY(host->mInstalledModules.contains(qsl("listing-a")));
+        QVERIFY(host->mInstalledModules.contains(qsl("listing-c")));
+
+        delete manager;
+    }
+
+    // Refusals are gathered into one message: a single module is named on its
+    // own, several are listed together
+    void test_refusedRemovalsAreReportedTogether()
+    {
+        auto* host = startProfile();
+        QVERIFY2(host, "Could not start the profile");
+        listModules(host);
+
+        auto* manager = new dlgModuleManager(nullptr, host);
+        for (const QString& gone : {qsl("listing-b"), qsl("listing-c")}) {
+            host->mInstalledModules.remove(gone);
+            host->mModulePriorities.remove(gone);
+        }
+
+        QCOMPARE(manager->removeModules(QStringList({qsl("listing-a"), qsl("listing-b"), qsl("listing-c")})),
+                 qsl("These are no longer installed, so there was nothing to remove: listing-b, listing-c."));
+        QVERIFY2(!host->mInstalledModules.contains(qsl("listing-a")), "The module still installed was not removed alongside the ones already gone");
+
+        QCOMPARE(manager->removeModules(QStringList({qsl("listing-b")})), qsl("\"listing-b\" is no longer installed, so there was nothing to remove."));
+        QCOMPARE(manager->removeModules(QStringList({qsl("listing-d")})), QString());
+
+        delete manager;
+    }
+
+    // A save really running is still the thing to say, naming every module
+    // it turned away
+    void test_aRemovalRefusedByASaveStillSaysSo()
+    {
+        auto* host = startProfile();
+        QVERIFY2(host, "Could not start the profile");
+        listModules(host);
+
+        auto* manager = new dlgModuleManager(nullptr, host);
+        host->saveProfile();
+        QVERIFY2(host->currentlySavingProfile(), "SETUP: the save had already finished, so nothing would be refused for it");
+
+        QCOMPARE(manager->removeModules(QStringList({qsl("listing-a")})), qsl("\"listing-a\" could not be removed while the profile is being saved. Please try again in a moment."));
+        QCOMPARE(manager->removeModules(QStringList({qsl("listing-a"), qsl("listing-b")})),
+                 qsl("These could not be removed while the profile is being saved: listing-a, listing-b. Please try again in a moment."));
+        QVERIFY(host->mInstalledModules.contains(qsl("listing-a")));
+        QVERIFY(host->mInstalledModules.contains(qsl("listing-b")));
+
+        host->waitForProfileSave();
+        delete manager;
+    }
+
 private:
+    bool clickModule(dlgModuleManager* manager, const QString& name, const Qt::KeyboardModifiers modifiers)
+    {
+        auto* item = manager->moduleTable->item(rowNames(manager).indexOf(name), 0);
+        if (!item) {
+            return false;
+        }
+        QTest::mouseClick(manager->moduleTable->viewport(), Qt::LeftButton, modifiers, manager->moduleTable->visualItemRect(item).center());
+        return true;
+    }
+
     Host* startProfile()
     {
         auto host = TestProfile::create(mpHostname, mpLocalhost, mpPort);

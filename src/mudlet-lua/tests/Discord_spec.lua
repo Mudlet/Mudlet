@@ -889,6 +889,8 @@ describe("presence the game sends over GMCP", function()
   -- empty-table test out of the totals with it
   teardown(function()
     gmcp.External = nil
+    gmcp.external = nil
+    gmcp.EXTERNAL = nil
   end)
 
   local function feedDiscordStatus(json)
@@ -906,6 +908,19 @@ describe("presence the game sends over GMCP", function()
     assert.equals("spec large tooltip", getDiscordLargeIconText())
     assert.equals("", getDiscordSmallIcon())
     assert.equals("", getDiscordSmallIconText())
+  end)
+
+  it("takes the presence from a package name in any letter case, as GMCP allows", function()
+    if not readyForDiscord() then
+      return
+    end
+    local ok, message = feedTelnet('<T_IAC><T_SB><O_GMCP>external.discord.status {"state": "lower case package"}<T_IAC><T_SE>')
+    assert.is_true(ok, tostring(message))
+    assert.equals("lower case package", getDiscordState())
+
+    ok, message = feedTelnet('<T_IAC><T_SB><O_GMCP>EXTERNAL.DISCORD.STATUS {"state": "upper case package"}<T_IAC><T_SE>')
+    assert.is_true(ok, tostring(message))
+    assert.equals("upper case package", getDiscordState())
   end)
 
   it("reads an elapsed start time the game sent as a string (#9100)", function()

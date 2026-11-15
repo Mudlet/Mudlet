@@ -78,8 +78,7 @@ bool MudletReplay::start(Host* pHost)
     mRunning = true;
     mpHost = pHost;
     mSpeed = 1;
-    // A null QTime would stay null through addMSecs(), so start a millisecond in
-    mElapsed.setHMS(0, 0, 0, 1);
+    mElapsedMSecs = 0;
     return true;
 }
 

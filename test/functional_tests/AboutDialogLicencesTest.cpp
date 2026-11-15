@@ -25,8 +25,10 @@
  */
 
 #include <QDir>
+#include <QLabel>
 #include <QTemporaryDir>
-#include <QTextBrowser>
+#include <QTextDocumentFragment>
+#include <QToolButton>
 #include <QtTest/QtTest>
 
 #include "MudletApp.h"
@@ -86,23 +88,40 @@ private slots:
     // Lucide's icons are under the ISC licence, which only permits Mudlet to
     // ship them while the permission notice travels with them; a one-line
     // mention of the project does not discharge that (#10961). The notice is
-    // the assertion that holds under translation - the header around it,
-    // lucide.dev included, is inside a tr().
+    // the assertion that holds under translation - the line over it, lucide.dev
+    // included, is inside a tr().
     void test_theThirdPartyTabCarriesTheLucideLicence()
     {
-        const QString shown = mpDialog->textBrowser_license_3rdparty->toPlainText();
-        QVERIFY2(shown.contains(qsl("lucide.dev")), "the third party tab does not credit Lucide at all");
+        QWidget* pRow = nullptr;
+        for (QToolButton* pToggle : mpDialog->findChildren<QToolButton*>(qsl("aboutThirdPartyToggle"))) {
+            if (pToggle->text() == qsl("Lucide")) {
+                // The toggle sits in the row's head, and the head in the row
+                pRow = pToggle->parentWidget() ? pToggle->parentWidget()->parentWidget() : nullptr;
+                break;
+            }
+        }
+        QVERIFY2(pRow && pRow->objectName() == qsl("aboutThirdPartyRow"), "the third party page has no row for Lucide at all");
+        auto* pCredit = pRow->findChild<QLabel*>(qsl("aboutThirdPartyCopyright"));
+        auto* pLicence = pRow->findChild<QLabel*>(qsl("aboutThirdPartyBody"));
+        QVERIFY2(pCredit && pLicence, "the Lucide row has no credit line or no licence under it");
+
+        const QString credited = QTextDocumentFragment::fromHtml(pCredit->text()).toPlainText();
+        const QString shown = QTextDocumentFragment::fromHtml(pLicence->text()).toPlainText();
+        QVERIFY2(credited.contains(qsl("lucide.dev")), "the third party page does not credit Lucide at all");
         QVERIFY2(shown.contains(qsl("Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted")),
-                 "the third party tab credits Lucide without carrying the ISC permission notice that lets Mudlet ship it");
+                 "the third party page credits Lucide without carrying the ISC permission notice that lets Mudlet ship it");
     }
 
     // The supporters are named alongside a link to the page that lets anyone
-    // join them, and a QTextBrowser swallows a link it is not told to hand to
-    // the browser, so the only thing the link did was nothing (#2927).
+    // join them, and a widget swallows a link it is not told to hand to the
+    // browser, so the only thing the link did was nothing (#2927).
     void test_theSupportersTabHandsItsLinksToTheBrowser()
     {
-        QVERIFY2(mpDialog->textBrowser_supporters->toHtml().contains(qsl("patreon.com")), "the supporters tab carries no link at all, so the property below has nothing to matter to");
-        QVERIFY2(mpDialog->textBrowser_supporters->openExternalLinks(), "a link on the supporters tab goes nowhere");
+        auto* pIntro = mpDialog->findChild<QLabel*>(qsl("aboutSupportersIntro"));
+        QVERIFY2(pIntro, "the supporters page has no 'aboutSupportersIntro'");
+        QVERIFY2(pIntro->text().contains(qsl("patreon.com")), "the supporters page carries no link at all, so the properties below have nothing to matter to");
+        QVERIFY2(pIntro->openExternalLinks(), "a link on the supporters page goes nowhere");
+        QVERIFY2(pIntro->textInteractionFlags().testFlag(Qt::LinksAccessibleByMouse), "a link on the supporters page cannot be clicked");
     }
 };
 

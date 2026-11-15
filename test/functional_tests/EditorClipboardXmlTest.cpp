@@ -116,6 +116,35 @@ private:
                });
     }
 
+    QTreeWidgetItem* itemIn(EditorViewType view, const QString& name) const
+    {
+        const QList<QTreeWidgetItem*> found = treeFor(view)->findItems(name, Qt::MatchCaseSensitive | Qt::MatchFixedString | Qt::MatchRecursive, 0);
+        return found.isEmpty() ? nullptr : found.first();
+    }
+
+    void openFolders()
+    {
+        mpEditor->slot_showAliases();
+        QTreeWidgetItem* pAliasFolder = itemIn(EditorViewType::cmAliasView, qsl("qaClipAliasFolder"));
+        QVERIFY2(pAliasFolder, "the alias folder is not in its tree");
+        pAliasFolder->setExpanded(true);
+
+        mpEditor->slot_showTriggers();
+        QTreeWidgetItem* pTriggerFolder = itemIn(EditorViewType::cmTriggerView, qsl("qaClipTriggerFolder"));
+        QVERIFY2(pTriggerFolder, "the trigger folder is not in its tree");
+        pTriggerFolder->setExpanded(true);
+    }
+
+    void verifyFoldersStillOpen(const char* rebuiltBy)
+    {
+        QTreeWidgetItem* pTriggerFolder = itemIn(EditorViewType::cmTriggerView, qsl("qaClipTriggerFolder"));
+        QVERIFY(pTriggerFolder);
+        QVERIFY2(pTriggerFolder->isExpanded(), qPrintable(qsl("%1 collapsed an open trigger folder").arg(rebuiltBy)));
+        QTreeWidgetItem* pAliasFolder = itemIn(EditorViewType::cmAliasView, qsl("qaClipAliasFolder"));
+        QVERIFY(pAliasFolder);
+        QVERIFY2(pAliasFolder->isExpanded(), qPrintable(qsl("%1 collapsed an open alias folder").arg(rebuiltBy)));
+    }
+
     void showView(EditorViewType view)
     {
         switch (view) {
@@ -192,6 +221,23 @@ private:
         pSecondTrigger->setName(qsl("qaClipTriggerTwo"));
         pSecondTrigger->setRegexCodeList({qsl("^qaClipTriggerTwo$")}, {REGEX_PERL});
         QVERIFY(pSecondTrigger->registerTrigger());
+
+        auto* pTriggerFolder = new TTrigger(nullptr, mpHost);
+        pTriggerFolder->setName(qsl("qaClipTriggerFolder"));
+        pTriggerFolder->setIsFolder(true);
+        QVERIFY(pTriggerFolder->registerTrigger());
+        auto* pTriggerInFolder = new TTrigger(pTriggerFolder, mpHost);
+        pTriggerInFolder->setName(qsl("qaClipTriggerInFolder"));
+        pTriggerInFolder->setRegexCodeList({qsl("^qaClipTriggerInFolder$")}, {REGEX_PERL});
+        QVERIFY(pTriggerInFolder->registerTrigger());
+
+        auto* pAliasFolder = new TAlias(qsl("qaClipAliasFolder"), mpHost);
+        pAliasFolder->setIsFolder(true);
+        QVERIFY(mpHost->getAliasUnit()->registerAlias(pAliasFolder));
+        auto* pAliasInFolder = new TAlias(pAliasFolder, mpHost);
+        pAliasInFolder->setName(qsl("qaClipAliasInFolder"));
+        pAliasInFolder->setRegexCode(qsl("^qaClipAliasInFolder$"));
+        QVERIFY(pAliasInFolder->registerAlias());
 
         auto* pAlias = new TAlias(qsl("qaClipAlias"), mpHost);
         pAlias->setRegexCode(qsl("^qaClipAlias$"));
@@ -277,9 +323,9 @@ private slots:
         QVERIFY2(mpEditor, "the editor dialog was not created");
 
         populateProfile();
-        // The editor built its trees while the profile loaded, so items added
-        // behind its back only appear after the rebuild that Host asks for when
-        // a package is installed
+        // The editor built its trees as it opened, so items added behind its
+        // back only appear after the rebuild that Host asks for when a package
+        // is installed
         mpEditor->doCleanReset();
         QVERIFY2(waitForTreeToHold(EditorViewType::cmTriggerView, qsl("qaClipTrigger")), "the editor never rebuilt its trees around the items this test planted");
     }
@@ -491,6 +537,39 @@ private slots:
 
         mpEditor->mpUndoStack->redo();
         QCOMPARE(countNamed(EditorViewType::cmTriggerView, qsl("qaClipTrigger")), before + 1);
+    }
+
+    // A paste rebuilds every tree, which must not fold up the folders a player had open
+    void test_pastingKeepsOpenFoldersOpen()
+    {
+        openFolders();
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        QVERIFY(selectInTree(EditorViewType::cmTriggerView, {qsl("qaClipTrigger")}));
+        const int before = countNamed(EditorViewType::cmTriggerView, qsl("qaClipTrigger"));
+        mpEditor->slot_copyXml();
+        mpEditor->slot_pasteXml();
+        QCOMPARE(countNamed(EditorViewType::cmTriggerView, qsl("qaClipTrigger")), before + 1);
+
+        verifyFoldersStillOpen("pasting a trigger");
+    }
+
+    // So does the rebuild Host asks for when a script or package adds an item
+    void test_aRebuildForANewItemKeepsOpenFoldersOpen()
+    {
+        openFolders();
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        auto* pTrigger = new TTrigger(nullptr, mpHost);
+        pTrigger->setName(qsl("qaClipTriggerFromScript"));
+        pTrigger->setRegexCodeList({qsl("^qaClipTriggerFromScript$")}, {REGEX_PERL});
+        QVERIFY(pTrigger->registerTrigger());
+        mpEditor->doCleanReset();
+        QVERIFY2(waitForTreeToHold(EditorViewType::cmTriggerView, qsl("qaClipTriggerFromScript")), "the editor never rebuilt its trees around the new trigger");
+
+        verifyFoldersStillOpen("rebuilding the trees for a new trigger");
     }
 
     // A script creating an item rebuilds the editor's trees, which used to leave

@@ -37,8 +37,9 @@ jobs:
     name: ubuntu / gcc / lua tests with no main window
     runs-on: ubuntu-22.04
     if: ${{ github.repository_owner == 'Mudlet' }}
+    # Per run outside pull requests: a group shared by every push cancels each queued push's job
     concurrency:
-      group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+      group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
       cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     env:
       LUA_VERSION: '5.1.5'
@@ -128,9 +129,9 @@ jobs:
     - name: Install mold linker
       timeout-minutes: 5
       env:
-        MOLD_VERSION: '2.41.0'
+        MOLD_VERSION: '3.0.0'
         # Kept in step with build-mudlet-pr.yml, which says how it was taken
-        MOLD_SHA256: 'a3696680d99e692970590a178bc3a33d78d60d1c6dc9db7a11b557b02b751f5d'
+        MOLD_SHA256: '6c90d4a474c7c0409dfb575be03a5345878ac14fdba18de8b40fa58c60121189'
       run: |
         curl -fsSL --retry 3 --retry-delay 5 --connect-timeout 10 --max-time 120 -o mold.tar.gz \
           "https://github.com/rui314/mold/releases/download/v${MOLD_VERSION}/mold-${MOLD_VERSION}-x86_64-linux.tar.gz"

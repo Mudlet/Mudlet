@@ -404,6 +404,25 @@ describe("Tests MXP handling", function()
       assert.is_true(mainRecentlyHolds("MXPDEST12 anchored in main"))
     end)
 
+    -- the GUI's clear closes a scrolled-back frame's split screen too
+    it("counts every row of a scrolled-back frame again once EOF empties it", function()
+      for i = 1, 100 do
+        echo(frame, "MXPDEST15 line " .. i .. "\n")
+      end
+      pumpEvents(100)
+      local fullRows = getRowCount(frame)
+      scrollTo(frame, 10)
+      pumpEvents(100)
+      local splitRows = getRowCount(frame)
+
+      assert.is_true(feedTriggers(('<DEST %s EOF>MXPDEST15 fresh</DEST>'):format(frame) .. "\n"))
+      pumpEvents(100)
+      local clearedRows = getRowCount(frame)
+      scrollTo(frame)
+      assert.is_true(splitRows < fullRows, ("%d rows split, %d without"):format(splitRows, fullRows))
+      assert.are.equal(fullRows, clearedRows)
+    end)
+
     -- EOL discards the part-written line the frame was left sitting on rather
     -- than continuing it. A redirect closes its own last line, so the open
     -- line has to come from elsewhere - an echo into the frame leaves one the

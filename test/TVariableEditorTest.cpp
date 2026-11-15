@@ -1524,8 +1524,8 @@ private slots:
         keptItem->setCheckState(0, Qt::Checked);
         QVERIFY2(bigItem->checkState(0) == Qt::Checked, "Qt hands the tick to the untickable child all the same");
 
-        // the sweep TTreeWidget::mouseReleaseEvent() runs over each ticked row
-        // and everything under it
+        // the sweep dlgTriggerEditor::slot_toggleVariableKept() runs over each
+        // ticked row and everything under it
         QList<QTreeWidgetItem*> sweep;
         tree.getAllChildren(holderItem, sweep);
         tree.getAllChildren(keptItem, sweep);
@@ -1576,9 +1576,8 @@ private slots:
         QVERIFY2(!childItemNamed(rootItem, qsl("dotHolderTable")), "while the table the walk hid stays hidden");
     }
 
-    // ...and that row is greyed out and untickable, with the reason on it: the
-    // save keys variables by the dotted path, so this one cannot be saved.
-    void testTheRowOfAGlobalWithADotInItsNameIsGreyedWithAReason()
+    // The save keys variables by the dotted path
+    void testTheRowOfAGlobalWithADotInItsNameIsRefusedWithAReason()
     {
         execLua(qsl("_G['greyed.global'] = 'value' plainSaveable = 'value'"));
         interface->getVars(false);
@@ -1591,7 +1590,7 @@ private slots:
         QTreeWidgetItem* dottedItem = childItemNamed(rootItem, qsl("greyed.global"));
         QVERIFY(dottedItem);
         QVERIFY2(!(dottedItem->flags() & Qt::ItemIsUserCheckable), "the row must not offer a tick that cannot be honoured");
-        QCOMPARE(dottedItem->foreground(0).color(), QColor("grey"));
+        QVERIFY2(!dottedItem->data(0, Qt::ForegroundRole).isValid(), "the row must carry no colour of its own: a brush is a colour rather than a role, and no theme change would ever re-derive it");
         QVERIFY2(!dottedItem->toolTip(0).isEmpty(), "the row has to say why it cannot be saved");
 
         QTreeWidgetItem* plainItem = childItemNamed(rootItem, qsl("plainSaveable"));

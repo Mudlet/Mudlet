@@ -11,28 +11,16 @@
    </rect>
   </property>
   <property name="sizePolicy">
-   <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+   <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
-  </property>
-  <property name="minimumSize">
-   <size>
-    <width>0</width>
-    <height>100</height>
-   </size>
-  </property>
-  <property name="maximumSize">
-   <size>
-    <width>16777215</width>
-    <height>100</height>
-   </size>
   </property>
   <layout class="QGridLayout" name="gridLayout" columnstretch="0,1,0,0,0">
    <item row="0" column="0">
     <widget class="QLabel" name="label_alias_name">
      <property name="text">
-      <string>Name:</string>
+      <string>Name</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -41,18 +29,6 @@
    </item>
    <item row="0" column="1" colspan="3">
     <widget class="QLineEdit" name="lineEdit_alias_name">
-     <property name="minimumSize">
-      <size>
-       <width>0</width>
-       <height>21</height>
-      </size>
-     </property>
-     <property name="maximumSize">
-      <size>
-       <width>16777215</width>
-       <height>21</height>
-      </size>
-     </property>
      <property name="toolTip">
       <string>choose a unique name for your alias; it will show in the tree and is needed for scripting.</string>
      </property>
@@ -110,20 +86,8 @@
    </item>
    <item row="1" column="0">
     <widget class="QLabel" name="label_alias_pattern">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="minimumSize">
-      <size>
-       <width>67</width>
-       <height>0</height>
-      </size>
-     </property>
      <property name="text">
-      <string>Pattern:</string>
+      <string>Pattern</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -132,20 +96,8 @@
    </item>
    <item row="2" column="0" alignment="Qt::AlignRight">
     <widget class="QLabel" name="label_alias_command">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="minimumSize">
-      <size>
-       <width>50</width>
-       <height>0</height>
-      </size>
-     </property>
      <property name="text">
-      <string>Command:</string>
+      <string>Command</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -154,18 +106,6 @@
    </item>
    <item row="2" column="1" colspan="4">
     <widget class="QLineEdit" name="lineEdit_alias_command">
-     <property name="minimumSize">
-      <size>
-       <width>0</width>
-       <height>21</height>
-      </size>
-     </property>
-     <property name="maximumSize">
-      <size>
-       <width>16777215</width>
-       <height>21</height>
-      </size>
-     </property>
      <property name="toolTip">
       <string>&lt;p&gt;Enter one or more commands to use if the given command matches the pattern. (Optional)&lt;/p&gt;&lt;p&gt;This could be another alias or a command to send directly to the game. For complex commands that require modification of variables within this profile, use a Lua script in the editor area below instead. It's possible to use both this field and a Lua script - the contents of this field will be used before running the script.&lt;/p&gt;</string>
      </property>
@@ -176,18 +116,6 @@
    </item>
    <item row="1" column="1" colspan="4">
     <widget class="QLineEdit" name="lineEdit_alias_pattern">
-     <property name="minimumSize">
-      <size>
-       <width>0</width>
-       <height>21</height>
-      </size>
-     </property>
-     <property name="maximumSize">
-      <size>
-       <width>16777215</width>
-       <height>21</height>
-      </size>
-     </property>
      <property name="toolTip">
       <string>enter a perl regex pattern for your alias; alias are triggers on your input</string>
      </property>
@@ -200,8 +128,8 @@
  </widget>
  <tabstops>
   <tabstop>lineEdit_alias_name</tabstop>
-  <tabstop>lineEdit_alias_pattern</tabstop>
   <tabstop>lineEdit_alias_command</tabstop>
+  <tabstop>lineEdit_alias_pattern</tabstop>
  </tabstops>
  <resources/>
  <connections/>

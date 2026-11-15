@@ -82,7 +82,8 @@ public:
     Q_DECLARE_FLAGS(ConsoleType, ConsoleTypeFlag)
 
     Q_DISABLE_COPY(TConsole)
-    explicit TConsole(Host*, const QString&, const ConsoleType type = UnknownType, QWidget* parent = nullptr);
+    // A model handed in keeps its own name, and may already hold lines
+    explicit TConsole(Host*, const QString&, const ConsoleType type = UnknownType, QWidget* parent = nullptr, std::unique_ptr<TConsoleModel> handedModel = {});
     ~TConsole() override;
 
     void reset();
@@ -128,6 +129,7 @@ public:
     THyperlinkVisibilityManager& getHyperlinkVisibilityManager() { return mpModel->mHyperlinkVisibilityManager; }
 
     void setCmdVisible(bool);
+    int commandLineLayerHeight(const int commandLineHeight) const;
     void changeColors();
     void scrollDown(int lines);
     void scrollUp(int lines);
@@ -343,6 +345,8 @@ private:
     void raiseFontChangeEvent();
     void restoreCommandSearchSettings();
     void updateScrollBarStyle();
+    void applyFootSeamColour();
+    int footSeamHeightShown() const;
     // Returns whether the lower pane was hidden
     bool showLowerPane();
 
@@ -366,6 +370,9 @@ private:
     QColor& mBorderColor;
     // latches the 'cover' scale failure so a resize drag does not repeat the warning
     bool mWindowBgCoverScaleFailed = false;
+    // In the main console the search box shares commandSplitter, so the seam must span mpFoot
+    QWidget* mpFootSeam = nullptr;
+    QWidget* mpFoot = nullptr;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)

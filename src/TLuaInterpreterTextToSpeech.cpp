@@ -43,6 +43,7 @@
 #include "TTimer.h"
 #include "mapInfoContributorManager.h"
 
+#include <algorithm>
 #include <chrono>
 #include <limits>
 #include <math.h>
@@ -76,6 +77,9 @@ static bool speechInterrupting = false;
 // How long an engine is given to start the utterance that interrupted another
 // before a Ready held back on its account is taken at face value after all.
 static constexpr std::chrono::milliseconds scmInterruptedSpeechGrace{250};
+// Built once: listing them walks the engine through every locale, which is slow
+// on some engines and can disturb one that is speaking.
+static QList<QVoice> speechAllVoices;
 
 static const QTextToSpeech::State TEXT_TO_SPEECH_ERROR_STATE = QTextToSpeech::State::Error;
 
@@ -116,6 +120,45 @@ void TLuaInterpreter::ttsBuild()
 
     connect(speechUnit, &QTextToSpeech::stateChanged, &TLuaInterpreter::ttsStateChanged);
     return;
+}
+
+static QList<QVoice> ttsAllVoices()
+{
+    if (!speechAllVoices.isEmpty()) {
+        return speechAllVoices;
+    }
+
+    // availableVoices() only lists the current locale. Its voices stay first so
+    // the indexes scripts already use keep pointing at the same voices.
+    QList<QVoice> voices = speechUnit->availableVoices();
+    // Switching locale stops some engines mid-utterance, so the other locales
+    // wait until nothing is being spoken.
+    if (speechUnit->state() != QTextToSpeech::State::Ready || !speechQueue.isEmpty()) {
+        return voices;
+    }
+
+    const QLocale startLocale = speechUnit->locale();
+    const QVoice startVoice = speechUnit->voice();
+    QList<QLocale> locales = speechUnit->availableLocales();
+    // Engines may list their locales in a different order on every run
+    std::sort(locales.begin(), locales.end(), [](const QLocale& left, const QLocale& right) {
+        return left.bcp47Name() < right.bcp47Name();
+    });
+    // Not findVoices(): that hides the engine's state changes from ttsStateChanged
+    // while it walks the locales, and leaves speech-dispatcher on the last one.
+    for (const QLocale& locale : locales) {
+        speechUnit->setLocale(locale);
+        // An engine that refuses a locale keeps listing the voices it had
+        for (const QVoice& voice : speechUnit->availableVoices()) {
+            if (!voices.contains(voice)) {
+                voices.append(voice);
+            }
+        }
+    }
+    speechUnit->setLocale(startLocale);
+    speechUnit->setVoice(startVoice);
+    speechAllVoices = voices;
+    return voices;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsSkip
@@ -290,14 +333,13 @@ int TLuaInterpreter::ttsGetQueue(lua_State* L)
     TLuaInterpreter::ttsBuild();
 
     if (lua_gettop(L) > 0) {
-        int index = getVerifiedInt(L, __func__, 1, "index");
-        index--;
-        if (index < 0 || index >= speechQueue.size()) {
+        const int index = getVerifiedInt(L, __func__, 1, "index");
+        if (index < 1 || index > speechQueue.size()) {
             lua_pushboolean(L, false);
             return 1;
         }
 
-        lua_pushstring(L, speechQueue.at(index).toUtf8().constData());
+        lua_pushstring(L, speechQueue.at(index - 1).toUtf8().constData());
         return 1;
     }
 
@@ -349,7 +391,7 @@ int TLuaInterpreter::ttsGetState(lua_State* L)
 int TLuaInterpreter::ttsGetVoices(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
-    QVector<QVoice> const speechVoices = speechUnit->availableVoices();
+    const QList<QVoice> speechVoices = ttsAllVoices();
     int i = 0;
     lua_newtable(L);
     for (const QVoice& voice : speechVoices) {
@@ -598,7 +640,7 @@ int TLuaInterpreter::ttsSetVoiceByIndex(lua_State* L)
     int index = getVerifiedInt(L, __func__, 1, "voice as index number");
     index--;
 
-    QVector<QVoice> speechVoices = speechUnit->availableVoices();
+    const QList<QVoice> speechVoices = ttsAllVoices();
     if (index < 0 || index >= speechVoices.size()) {
         lua_pushboolean(L, false);
         return 1;
@@ -623,7 +665,13 @@ int TLuaInterpreter::ttsSetVoiceByName(lua_State* L)
     TLuaInterpreter::ttsBuild();
     const QString nextVoice = getVerifiedString(L, __func__, 1, "voice");
 
-    QVector<QVoice> const speechVoices = speechUnit->availableVoices();
+    // A name can be shared by voices of several locales, so the current one's wins.
+    QList<QVoice> speechVoices = speechUnit->availableVoices();
+    if (std::none_of(speechVoices.cbegin(), speechVoices.cend(), [&nextVoice](const QVoice& voice) {
+            return voice.name() == nextVoice;
+        })) {
+        speechVoices = ttsAllVoices();
+    }
     for (const auto& voice : speechVoices) {
         if (voice.name() == nextVoice) {
             speechUnit->setVoice(voice);

@@ -326,8 +326,23 @@ local function fstring_parse(template)
   return parts
 end
 
--- Must match fstring_param: an unusual name, so no other function's frame is mistaken for f's
+--- Documentation: https://wiki.mudlet.org/w/Manual:String_Functions#f
+---
+--- return f(...) is a Lua tail call: the frame of the function or script that wrote it
+--- is gone before f runs, so f cannot see that frame's locals and looks further up the
+--- stack, then in globals. Wrap the call in parentheses, return (f(...)), or assign it
+--- to a local first. A wrapper such as function myf(str) return f(str) end relies on
+--- this to read its own caller's locals.
+---
+--- @usage Without the parentheses, {name} would be read from greet's caller.
+---   <pre>
+---   local function greet()
+---     local name = "Bob"
+---     return (f("Hello {name}"))
+---   end
+---   </pre>
 function f(supersecretstringvariablenocollision)
+  -- The parameter's name must match fstring_param, so no other function's frame is mistaken for f's
   local supersecretstringvariablenocollisiontype = type(supersecretstringvariablenocollision)
   if supersecretstringvariablenocollisiontype ~= "string" then
     error("f: bad argument #1 type (str as string expected, got " .. supersecretstringvariablenocollisiontype .. ")")

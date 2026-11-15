@@ -469,6 +469,76 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
         QCOMPARE(errorOf(reply).value(qsl("code")).toInt(), static_cast<int>(TMCPServer::InvalidRequest));
     }
 
+    void testABatchIsAnInvalidRequestRatherThanAParseError()
+    {
+        // The body parses fine, so a parse error would send the client hunting for broken
+        // JSON that is not there - and its message read "JSON parse error: no error occurred".
+        const QByteArray batch = '[' + bodyFor(qsl("tools/list")) + ']';
+
+        const MCPReply reply = server->handleMessage(batch, headersFor(qsl("tools/list")));
+
+        QCOMPARE(reply.status, StatusCode::BadRequest);
+        QCOMPARE(errorOf(reply).value(qsl("code")).toInt(), static_cast<int>(TMCPServer::InvalidRequest));
+        QVERIFY(reply.body.value(qsl("id")).isNull());
+    }
+
+    void testARequestWithoutAMethodIsAnInvalidRequest_data()
+    {
+        QTest::addColumn<QJsonValue>("method");
+        QTest::newRow("missing") << QJsonValue(QJsonValue::Undefined);
+        QTest::newRow("number") << QJsonValue(5);
+        QTest::newRow("null") << QJsonValue(QJsonValue::Null);
+    }
+
+    void testARequestWithoutAMethodIsAnInvalidRequest()
+    {
+        QFETCH(QJsonValue, method);
+        QJsonObject message = QJsonDocument::fromJson(bodyFor(qsl("tools/list"), QJsonObject(), QJsonValue(7))).object();
+        message.remove(qsl("method"));
+        if (!method.isUndefined()) {
+            message[qsl("method")] = method;
+        }
+
+        const MCPReply reply = server->handleMessage(QJsonDocument(message).toJson(QJsonDocument::Compact), headersFor(QString()));
+
+        QCOMPARE(reply.status, StatusCode::BadRequest);
+        QCOMPARE(errorOf(reply).value(qsl("code")).toInt(), static_cast<int>(TMCPServer::InvalidRequest));
+        QCOMPARE(reply.body.value(qsl("id")).toInt(), 7);
+    }
+
+    void testAnIdThatIsNeitherAStringNorANumberIsAnInvalidRequest_data()
+    {
+        QTest::addColumn<QJsonValue>("id");
+        QTest::newRow("boolean") << QJsonValue(true);
+        QTest::newRow("object") << QJsonValue(QJsonObject{{qsl("n"), 1}});
+        QTest::newRow("array") << QJsonValue(QJsonArray{1});
+    }
+
+    void testAnIdThatIsNeitherAStringNorANumberIsAnInvalidRequest()
+    {
+        QFETCH(QJsonValue, id);
+
+        const MCPReply reply = server->handleMessage(bodyFor(qsl("tools/list"), QJsonObject(), id), headersFor(qsl("tools/list")));
+
+        QCOMPARE(reply.status, StatusCode::BadRequest);
+        QCOMPARE(errorOf(reply).value(qsl("code")).toInt(), static_cast<int>(TMCPServer::InvalidRequest));
+        // An id that cannot be one is not echoed: the client never sent a usable one.
+        QVERIFY(reply.body.value(qsl("id")).isNull());
+    }
+
+    void testANonJsonRpc2MessageDoesNotEchoAnUnusableId()
+    {
+        QJsonObject message;
+        message[qsl("jsonrpc")] = qsl("1.0");
+        message[qsl("id")] = QJsonObject{{qsl("n"), 1}};
+        message[qsl("method")] = qsl("tools/list");
+
+        const MCPReply reply = server->handleMessage(QJsonDocument(message).toJson(QJsonDocument::Compact), headersFor(qsl("tools/list")));
+
+        QCOMPARE(errorOf(reply).value(qsl("code")).toInt(), static_cast<int>(TMCPServer::InvalidRequest));
+        QVERIFY(reply.body.value(qsl("id")).isNull());
+    }
+
     void testNotificationIsAcknowledgedWithoutABody()
     {
         const MCPReply reply = server->handleMessage(bodyFor(qsl("notifications/whatever"), QJsonObject(), QJsonValue()), headersFor(qsl("notifications/whatever")));

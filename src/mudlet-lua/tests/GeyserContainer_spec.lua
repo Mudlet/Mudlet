@@ -1031,6 +1031,12 @@ describe("Tests functionality of Geyser.Container", function()
       -- the stretch factor counts as three shares against one, so a share is a quarter
       assert.are.equal(100, container:calculate_dynamic_window_size().height)
     end)
+
+    it("divides by the stretch factor of a lone window", function()
+      local container = track(Geyser.Container:new({name = "gcsDyn6", x = 0, y = 0, width = 400, height = 300}))
+      track(Geyser.Label:new({name = "gcsDyn6A", h_stretch_factor = 2, v_stretch_factor = 3}, container))
+      assert.are.same({width = 200, height = 100}, container:calculate_dynamic_window_size())
+    end)
   end)
 
   describe("Geyser.Container:flash", function()
@@ -1443,6 +1449,86 @@ describe("Tests functionality of Geyser.Container", function()
 
     it("uses the type it is given in the name", function()
       assert.is_truthy(Geyser.nameGen("gauge"):find("^anon_gauge_%d+$"))
+    end)
+  end)
+
+  -- Each warning is latched to the line that made the element, so every
+  -- element here is made on a line of its own
+  describe("an element created without a name", function()
+    local warnings, realDebugc
+
+    before_each(function()
+      warnings = {}
+      -- forgotten, so the suite can run again in the same session
+      local warnedLocations = upvalue(Geyser.anonymousName, "warnedLocations")
+      for location in pairs(warnedLocations) do
+        warnedLocations[location] = nil
+      end
+      realDebugc = _G.debugc
+      _G.debugc = function(message)
+        if tostring(message):find("without a name", 1, true) then
+          warnings[#warnings + 1] = message
+        end
+      end
+    end)
+
+    after_each(function()
+      _G.debugc = realDebugc
+    end)
+
+    it("warns in the debug console, naming the element and its kind", function()
+      local label = track(Geyser.Label:new({x = 0, y = 0, width = 10, height = 10}))
+      assert.are.equal(1, #warnings)
+      assert.is_truthy(warnings[1]:find(label.name, 1, true))
+      assert.is_truthy(warnings[1]:find("'label'", 1, true))
+      -- the code that made it, not the Geyser constructors in between
+      assert.is_truthy(warnings[1]:find("GeyserContainer_spec.lua:%d+"))
+    end)
+
+    it("warns once for a line of code that makes many", function()
+      for _ = 1, 3 do
+        track(Geyser.Label:new({x = 0, y = 0, width = 10, height = 10}))
+      end
+      assert.are.equal(1, #warnings)
+    end)
+
+    it("tells apart scripts whose names differ only past where Lua cuts them short", function()
+      local shared = "Script: " .. string.rep("a long script name both share ", 3)
+      for _, suffix in ipairs({"one", "two"}) do
+        local chunk = assert(loadstring("local label = Geyser.Label:new({x = 0, y = 0, width = 10, height = 10}) return label", shared .. suffix))
+        track(chunk())
+      end
+      assert.are.equal(2, #warnings)
+    end)
+
+    it("warns once for each kind of element, whatever its constructor chain", function()
+      track(Geyser.Container:new({x = 0, y = 0, width = 10, height = 10}))
+      track(Geyser.Gauge:new({x = 0, y = 0, width = 10, height = 10}))
+      track(Geyser.Button:new({x = 0, y = 0, width = 10, height = 10}))
+      track(Geyser.UserWindow:new({x = 10, y = 10, width = 100, height = 100}))
+      track(Geyser.MiniConsole:new({x = 0, y = 0, width = 10, height = 10}))
+      track(Geyser.HBox:new({x = 0, y = 0, width = 10, height = 10}))
+      track(Adjustable.Container:new({x = 0, y = 0, width = 100, height = 100, autoLoad = false, autoSave = false}))
+      -- new2 hands over to new in a tail call
+      track(Geyser.Label:new2({x = 0, y = 0, width = 10, height = 10}))
+      local kinds = {"container", "gauge", "button", "userwindow", "miniConsole", "hbox", "adjustablecontainer", "label"}
+      assert.are.equal(#kinds, #warnings)
+      for i, kind in ipairs(kinds) do
+        assert.is_truthy(warnings[i]:find("'" .. kind .. "'", 1, true), warnings[i])
+        assert.is_truthy(warnings[i]:find("GeyserContainer_spec.lua:%d+"), warnings[i])
+      end
+    end)
+
+    it("says nothing for named elements or the children Geyser makes for them", function()
+      track(Geyser.Label:new({name = "gcsUnnamedLabel", x = 0, y = 0, width = 10, height = 10}))
+      track(Geyser.Container:new({name = "gcsUnnamedContainer", x = 0, y = 0, width = 10, height = 10}))
+      track(Geyser.Gauge:new({name = "gcsUnnamedGauge", x = 0, y = 0, width = 10, height = 10}))
+      track(Geyser.Button:new({name = "gcsUnnamedButton", x = 0, y = 0, width = 10, height = 10}))
+      track(Geyser.UserWindow:new({name = "gcsUnnamedUserWindow", x = 10, y = 10, width = 100, height = 100}))
+      track(Adjustable.Container:new({name = "gcsUnnamedAdjustable", x = 0, y = 0, width = 100, height = 100, autoLoad = false, autoSave = false}))
+      local menu = track(Geyser.Label:new({name = "gcsUnnamedMenu", x = 0, y = 0, width = 10, height = 10}))
+      menu:createRightClickMenu({MenuItems = {"one", "two"}})
+      assert.are.same({}, warnings)
     end)
   end)
 
