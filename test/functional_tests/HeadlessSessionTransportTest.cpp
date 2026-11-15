@@ -449,6 +449,41 @@ end)
         QCOMPARE(lines, QStringList({qsl("A"), qsl("B"), qsl("C")}));
         QVERIFY(session.shutdown(false));
     }
+
+    // As a page whose WebSocket send fails may: the end comes after the rest of the text being read
+    void test_aConnectionEndedFromInsideAWriteEndsAfterTheTextBeingRead()
+    {
+        const QString name = qsl("Headless Transport Closed While Writing");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QSignalSpy dials(&session, &THeadlessSession::transportDialRequested);
+        QSignalSpy connected(&session, &THeadlessSession::connected);
+        QSignalSpy disconnected(&session, &THeadlessSession::disconnected);
+        QCOMPARE(session.start({.profile = name, .connect = true, .supplyTransport = true}), THeadlessSession::StartResult::started);
+        QTRY_COMPARE_WITH_TIMEOUT(dials.size(), 1, 10000);
+        session.transportConnected(lastDial(dials));
+        QTRY_COMPARE_WITH_TIMEOUT(connected.size(), 1, 10000);
+        connect(&session, &THeadlessSession::transportWriteRequested, &session, [&session, &dials](const QString&, const QByteArray& data) {
+            if (data.contains("quit")) {
+                session.transportClosed(lastDial(dials), qsl("bye"));
+            }
+        });
+        QVERIFY(session.runLua(qsl(R"lua(
+seen = ""
+registerAnonymousEventHandler("sysDisconnectionEvent", function() seenAtDisconnection = seen end)
+tempRegexTrigger("^[AB]$", function()
+  seen = seen .. matches[1]
+  if matches[1] == "A" then
+    send("quit")
+  end
+end)
+)lua")));
+
+        session.transportReceived(lastDial(dials), "A\r\nB\r\n");
+        QTRY_COMPARE_WITH_TIMEOUT(disconnected.size(), 1, 10000);
+        QCOMPARE(luaGlobal(session, "seenAtDisconnection"), qsl("AB"));
+        QVERIFY(session.shutdown(false));
+    }
 };
 
 #include "HeadlessSessionTransportTest.moc"
