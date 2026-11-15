@@ -4372,10 +4372,12 @@ function map.customwalkdelay(seconds, maxSeconds)
         timerID = nil
     end
     release_walk_hold()
+    -- speedWalkPath is global, and looking up any other route in the meantime replaces it
+    local destination = speedWalkPath[#speedWalkPath]
     walk_hold = tempTimer(seconds, function()
         walk_hold = nil
         if walking then
-            map.speedwalk()
+            map.speedwalk(destination)
         end
     end)
     return seconds

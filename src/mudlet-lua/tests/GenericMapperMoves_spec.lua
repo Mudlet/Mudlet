@@ -584,6 +584,15 @@ describe("Tests the generic mapper's map.customwalkdelay", function()
     assert.equals(sent[1], sent[2])
   end)
 
+  it("walks on to where it was going after another route was looked up during the hold", function()
+    map.speedwalk(rooms[3])
+    map.customwalkdelay(1)
+    getPath(rooms[1], rooms[2])
+    liveTimers()[1].fn()
+    -- getPath fills speedWalkPath with room ids as strings
+    assert.equals(tostring(rooms[3]), tostring(speedWalkPath[#speedWalkPath]))
+  end)
+
   it("picks a time from the range when given a second number", function()
     map.speedwalk(rooms[3])
     for _ = 1, 20 do
