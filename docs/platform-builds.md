@@ -409,7 +409,9 @@ lua-zip (see the script). As this is the one 32-bit build CI runs, the probe als
 function refuses an integer argument an int cannot hold, then loads a map desktop Mudlet saved, and
 its own save of that map, and fails unless both export the JSON desktop did and the reloaded map
 gives the routes `Mapper_spec.lua` expects of it; a change to the default map format version means
-making both files again, as `src/mudlet-lua/tests/fixtures/maps/README.md` says:
+making both files again, as `src/mudlet-lua/tests/fixtures/maps/README.md` says. Last, the page moves
+its clocks 2200 seconds on and the probe checks that `os.clock()` moved on with them, which
+Emscripten's own `clock()` stops doing 2147 seconds after its first call:
 
 ```bash
 npm install --prefix ~/mudlet-playwright playwright@1.63.0

@@ -1,6 +1,7 @@
 -- What busted takes from luasystem, a C module a browser build cannot load: the time for its reports,
--- a monotonic clock for durations, and sleep(). Emscripten's clock() counts from performance.now(),
--- so it goes on through the time a page spends waiting, which a process's CPU time would not.
+-- a monotonic clock for durations, and sleep(). A browser build's os.clock() is the seconds since the
+-- page loaded, from performance.now(), so it goes on through the time a page spends waiting, which a
+-- process's CPU time would not.
 local system = {}
 
 function system.gettime()

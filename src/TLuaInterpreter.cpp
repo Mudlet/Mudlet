@@ -90,6 +90,10 @@
 #include <cstring>
 #include <limits>
 
+#if defined(Q_OS_WASM)
+#include <emscripten/emscripten.h>
+#endif
+
 using namespace std::chrono_literals;
 
 extern "C" {
@@ -664,6 +668,16 @@ bool pushJsonValue(lua_State* L, const QByteArray& json, int& error)
     }
     return true;
 }
+
+#if defined(Q_OS_WASM)
+// Emscripten's clock() is wall time in a 32-bit clock_t, which wraps 2147 seconds after its first call; a browser has
+// no CPU time either, so this is the seconds since the page loaded
+int browserClock(lua_State* L)
+{
+    lua_pushnumber(L, emscripten_get_now() / 1000.0);
+    return 1;
+}
+#endif
 
 } // namespace
 
@@ -7483,6 +7497,12 @@ void TLuaInterpreter::initLuaGlobals()
     storeHostInLua(pGlobalLua, mpHost);
 
     luaL_openlibs(pGlobalLua);
+#if defined(Q_OS_WASM)
+    lua_getglobal(pGlobalLua, "os");
+    lua_pushcfunction(pGlobalLua, browserClock);
+    lua_setfield(pGlobalLua, -2, "clock");
+    lua_pop(pGlobalLua, 1);
+#endif
 
     lua_getglobal(pGlobalLua, "package");
     lua_getfield(pGlobalLua, -1, "preload");

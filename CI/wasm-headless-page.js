@@ -53,8 +53,10 @@ function scriptValue(value) {
 
 // The page that starts mudlet-headless with args, a Mudlet.ini of settings and the environment given. With staged,
 // it first fetches stage.json, a list of absolute paths, and each of them from stage/<path>, and writes them into
-// the program's file system before it starts. It prints "[exit] " and the exit status when the program ends.
-function page({ args, settings, environment = {}, staged = false }) {
+// the program's file system before it starts. It prints "[exit] " and the exit status when the program ends. With
+// clockJump, { line, seconds }, Date.now() and performance.now() jump that many seconds ahead once the program prints
+// that line.
+function page({ args, settings, environment = {}, staged = false, clockJump = null }) {
   return `<!doctype html>
 <html><head><meta charset="utf-8"><title>mudlet-headless</title></head>
 <body><div id="screen" style="width:800px;height:600px"></div>
@@ -69,6 +71,22 @@ window.addEventListener("unhandledrejection", (e) => {
     e.preventDefault();
   }
 });
+const clockJump = ${scriptValue(clockJump)};
+let clockOffset = 0;
+if (clockJump) {
+  const dateNow = Date.now;
+  const performanceNow = performance.now.bind(performance);
+  Date.now = () => dateNow() + clockOffset;
+  performance.now = () => performanceNow() + clockOffset;
+}
+function output(prefix) {
+  return (t) => {
+    console.log(prefix + t);
+    if (clockJump && t === clockJump.line) {
+      clockOffset += clockJump.seconds * 1000;
+    }
+  };
+}
 (async () => {
   const staged = ${staged} ? await Promise.all((await (await fetch("stage.json")).json()).map(async (file) => {
     const response = await fetch("stage" + file.split("/").map(encodeURIComponent).join("/"));
@@ -79,8 +97,8 @@ window.addEventListener("unhandledrejection", (e) => {
   })) : [];
   await qtLoad({
     arguments: ${scriptValue(args)},
-    print: (t) => console.log("[out] " + t),
-    printErr: (t) => console.log("[err] " + t),
+    print: output("[out] "),
+    printErr: output("[err] "),
     preRun: [(m) => {
       m.FS.mkdirTree("/home/web_user/.config/mudlet");
       m.FS.writeFile("/home/web_user/.config/mudlet/Mudlet.ini", ${scriptValue(settings)});

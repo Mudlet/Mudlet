@@ -32,6 +32,11 @@ function fixtureFile(name) {
   return null;
 }
 
+// Emscripten's clock() wraps 2147 seconds after its first call, so the page moves its clocks on past that when the
+// probe prints this stage, and os.clock() must move on with them
+const clockStage = "moving the clocks on";
+const clockJump = { line: `smoke: ${clockStage}`, seconds: 2200 };
+
 // The trigger comes from the last file LuaGlobal.lua loads, and each step reaches a library the browser build links
 // itself; the maps desktop Mudlet saved (src/mudlet-lua/tests/fixtures/maps/README.md) check the one 32-bit build CI
 // runs. Each save removes its file, as two saves in the same second write the same file.
@@ -93,6 +98,12 @@ function defaultProbe() {
       'assert(saveMap(smokeMapSave, smokeMapVersion or 0)) ' +
       'smokeSameJson("this build\'s save of " .. smokeMap, smokeJson(smokeMapSave), smokeGolden) assert(os.remove(smokeMapSave)) ' +
       'smokeStage("reload compared") smokeRoutes() end',
+    // Waits for the jump through the epoch, as the page sees the stage line once it is printed
+    'function smokeClock(done) local before, epoch = os.clock(), getEpoch() ' +
+      `smokeStage("${clockStage}") local function check() ` +
+      `if getEpoch() - epoch < ${clockJump.seconds} then tempTimer(0.05, check) return end local after = os.clock() ` +
+      `if after < before + ${clockJump.seconds} then error(string.format("os.clock() went from %.2f to %.2f as the clocks ` +
+      `moved on ${clockJump.seconds} seconds", before, after)) end smokeStage("clock moved on") done() end check() end`,
     // lua-zip, through mudlet-lua's unzip()
     'function smokeUnzip() local folder = smokeHome .. "smoke-unzip" lfs.mkdir(folder) ' +
       'local ok, err = unzip(smokeZip, folder) assert(ok, "unzip(" .. smokeZip .. ") failed: " .. tostring(err)) ' +
@@ -135,7 +146,7 @@ function defaultProbe() {
       'elseif file == smokeMap then smokeStage("map downloaded") ' +
       'assert(downloadFile(smokeGolden, "http://localhost/" .. smokeMapName .. ".json")) ' +
       'elseif file == smokeGolden then smokeStage("golden downloaded") smokeMapCheck() ' +
-      'if #smokeMaps > 0 then smokeNextMap() else echo("lua says " .. smokeSum .. "\\n") end end end)',
+      'if #smokeMaps > 0 then smokeNextMap() else smokeClock(function() echo("lua says " .. smokeSum .. "\\n") end) end end end)',
     'registerAnonymousEventHandler("sysDownloadError", function(_, message, file) ' +
       'if file == smokeFile or file == smokeZip or file == smokeMap or file == smokeGolden then error(message) end end)',
     'local id, err = tempTimer(0, [[feedTriggers("ping 1 λ\\n")]]) assert(id ~= -1, err)',
@@ -185,7 +196,7 @@ const [expected, ...args] = rest.length ? rest : ["lua says 2", ...defaultProbe(
   const tab = await openPage({
     what: "smoke test",
     dir,
-    html: page({ args, settings }),
+    html: page({ args, settings, clockJump: rest.length ? null : clockJump }),
     serve: (file) => fixtureFile(path.basename(file)),
     onConsole: (text) => {
       console.log(text);
