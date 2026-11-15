@@ -277,6 +277,50 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_SPEECH_ENGINES
                         READABLE_NAME "Vosk and sherpa-onnx speech engine loading"
                         DEFAULT ${DESKTOP_ONLY_DEFAULT})
 
+# Where CI/build-wasm-dependencies.sh keeps its stamps, under the prefix it built
+set(MUDLET_WASM_DEPS_STAMPS_SUBDIR share/mudlet-wasm-deps)
+if(EMSCRIPTEN)
+  block(PROPAGATE CMAKE_FIND_ROOT_PATH MUDLET_WASM_DEPS_DIR)
+    # Emscripten finds libraries only under CMAKE_FIND_ROOT_PATH, so the prefixes the
+    # dependencies were built into (CI/build-wasm-dependencies.sh) are made roots too
+    list(PREPEND CMAKE_FIND_ROOT_PATH $CACHE{CMAKE_PREFIX_PATH})
+    foreach(wasm_deps_prefix $CACHE{CMAKE_PREFIX_PATH})
+      # A relative one would be resolved against the source directory by the preset's configure, but against the build
+      # directory when a build configures again
+      if(NOT IS_ABSOLUTE "${wasm_deps_prefix}")
+        message(FATAL_ERROR "CMAKE_PREFIX_PATH entry \"${wasm_deps_prefix}\" is relative: MUDLET_WASM_DEPS, which the "
+                            "wasm-headless preset reads, must be an absolute path")
+      endif()
+      if(IS_DIRECTORY "${wasm_deps_prefix}/${MUDLET_WASM_DEPS_STAMPS_SUBDIR}")
+        set(MUDLET_WASM_DEPS_DIR "${wasm_deps_prefix}")
+        break()
+      endif()
+    endforeach()
+    set(wasm_deps_stamps "${MUDLET_WASM_DEPS_DIR}/${MUDLET_WASM_DEPS_STAMPS_SUBDIR}")
+    # The script writes this stamp last, so a run that stopped partway leaves none
+    set(wasm_deps_complete "${wasm_deps_stamps}/complete")
+    if(NOT MUDLET_WASM_DEPS_DIR OR NOT EXISTS "${wasm_deps_complete}")
+      message(FATAL_ERROR "No CMAKE_PREFIX_PATH entry holds every library CI/build-wasm-dependencies.sh builds: "
+                          "run it to the end, and set MUDLET_WASM_DEPS, which the wasm-headless preset reads, to its "
+                          "prefix")
+    endif()
+    set(wasm_deps_script "${CMAKE_SOURCE_DIR}/CI/build-wasm-dependencies.sh")
+    set(wasm_deps_patch "${CMAKE_SOURCE_DIR}/CI/yajl-cmake-fix.patch")
+    # So a build reconfigures when the script or patch changes, or when a rerun of the script removes the stamp or
+    # writes it anew, both of which change the stamp's directory
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${wasm_deps_stamps}" "${wasm_deps_script}"
+                 "${wasm_deps_patch}")
+    # The stamp ends with the hashes of the script and yajl patch that built the prefix
+    file(SHA256 "${wasm_deps_script}" wasm_deps_script_hash)
+    file(SHA256 "${wasm_deps_patch}" wasm_deps_patch_hash)
+    file(STRINGS "${wasm_deps_complete}" wasm_deps_build_id LIMIT_COUNT 1)
+    if(NOT wasm_deps_build_id MATCHES " script-${wasm_deps_script_hash} yajl-patch-${wasm_deps_patch_hash}$")
+      message(WARNING "${MUDLET_WASM_DEPS_DIR} was built by another version of CI/build-wasm-dependencies.sh or its "
+                      "yajl patch; rerun the script on it")
+    endif()
+  endblock()
+endif()
+
 find_package(Qt6 6.8.2 REQUIRED)
 
 # Find Core5Compat for third-party libraries (communi, edbee-lib) that still need it
