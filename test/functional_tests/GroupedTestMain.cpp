@@ -29,6 +29,11 @@
 #include <QStringList>
 
 #include <cstdio>
+#if defined(Q_OS_MACOS)
+#include <cstdlib>
+#include <string>
+#include <unistd.h>
+#endif
 
 extern void qInitResources_mudlet();
 extern void qInitResources_qm();
@@ -96,6 +101,34 @@ int main(int argc, char* argv[])
                 qUtf8Printable(QStringList(registry().keys()).join(QLatin1Char(' '))));
         return 2;
     }
+
+#if defined(Q_OS_MACOS)
+    // AppConfigLocation, where a case's profiles keep their keys and passwords, and CacheLocation are built from the
+    // home directory CoreFoundation reports, and only CFFIXED_USER_HOME moves it. ctest sets it for every case; run by
+    // hand, a case would otherwise write under the real ~/Library. Set before anything asks Foundation for that home.
+    if (qEnvironmentVariableIsEmpty("CFFIXED_USER_HOME")) {
+        const char* tmp = getenv("TMPDIR");
+        std::string home = tmp && *tmp ? tmp : "/tmp";
+        if (home.back() != '/') {
+            home += '/';
+        }
+        home += "mudlet-test-home-XXXXXX";
+        if (!mkdtemp(home.data())) {
+            fprintf(stderr, "%s: CFFIXED_USER_HOME is unset and no home of its own could be made, so set it before running this.\n", argv[0]);
+            return 2;
+        }
+        setenv("CFFIXED_USER_HOME", home.c_str(), 1);
+        fprintf(stderr, "CFFIXED_USER_HOME was unset, so this run keeps its config under %s\n", home.c_str());
+#if defined(MUDLET_FUNCTIONAL_TEST_GROUP)
+        // As ctest gives every functional case: this home has no login keychain, and a write to the keychain from it
+        // asks the person running the test whether to reset their own
+        if (qEnvironmentVariableIsEmpty("MUDLET_TEST_MODE")) {
+            setenv("MUDLET_TEST_MODE", "1", 1);
+            fprintf(stderr, "MUDLET_TEST_MODE was unset, so this run keeps credentials off the keychain as ctest's do\n");
+        }
+#endif
+    }
+#endif
 
     // qExec skips argv[0] and reads every later argument that is not an option
     // as a test function to run, so the class name has to take argv[0]'s place

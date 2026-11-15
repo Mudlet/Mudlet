@@ -18,15 +18,16 @@
 # the first sweep needs none.
 #
 # Sweep 1 - no config root named after a candidate exists in the real home. Needs
-# no binary and no run of its own, so it covers the grouped sources too, and it is
-# the sweep that means something on macOS.
+# no binary and no run of its own, so it covers the grouped sources too.
 #
 # Sweep 2 - each candidate at the top of test/, run on its own - through the
 # shared unit_tests binary when it links Mudlet - with a home
 # directory of its own and without the XDG_CONFIG_HOME that ctest hands it (see
-# test/CMakeLists.txt): the point is what happens to somebody running the binary
-# by hand. What that proves differs by platform, because the platforms do not
-# resolve AppConfigLocation the same way; see the two branches below.
+# test/CMakeLists.txt). What that proves differs by platform, because the platforms
+# do not resolve AppConfigLocation the same way; see the two branches below.
+#
+# Sweep 3, macOS only - one unit_tests case run as a developer would, with no
+# CFFIXED_USER_HOME, must keep its store under the home its main() makes for itself.
 
 set -uo pipefail
 
@@ -129,9 +130,9 @@ for source in ${candidates[@]+"${candidates[@]}"}; do
   written="$(find "${home}" -mindepth 1 | sed "s|${home}/||" | sort)"
   if [[ ${MACOS} -eq 1 ]]; then
     # A test cannot redirect AppConfigLocation on macOS: it is built from the home
-    # directory Foundation reports, which no variable the test process sets moves -
+    # directory Foundation reports, which nothing a test's own code sets moves -
     # qputenv("XDG_CONFIG_HOME") included, since macOS QStandardPaths never reads
-    # it. So "the sandbox stayed empty" is not a property any test here can have,
+    # it - and main() only makes a home when CFFIXED_USER_HOME is unset, as here it is not. So "the sandbox stayed empty" is not a property any test here can have,
     # and requiring it would pass by describing the platform rather than the test.
     # What is checkable is that the sandbox holds the store rather than the real
     # home does, which is what the ctest environment relies on, so that is what is
@@ -160,6 +161,52 @@ for source in ${candidates[@]+"${candidates[@]}"}; do
   fi
 done
 
+# ---- sweep 3: a grouped binary run by hand, as a developer would ------------
+# Run without CFFIXED_USER_HOME, a grouped binary's main() (GroupedTestMain.cpp) makes a home of its own on macOS
+# and names it on stderr, or the case would file its store under the real ~/Library/Preferences
+HAND_RUN=0
+if [[ ${MACOS} -eq 1 && -x "${BINARY_DIR}/unit_tests" ]]; then
+  for source in ${candidates[@]+"${candidates[@]}"}; do
+    name="$(basename "${source}" .cpp)"
+    if [[ "$(dirname "${source}")" != "${SOURCE_DIR}" ]] || ! grep -q 'MUDLET_GROUPED_TEST' "${source}"; then
+      continue
+    fi
+    real="${HOME}/Library/Preferences/${name}"
+    failuresBefore=${FAILURES}
+    existed=0
+    [[ -e "${real}" ]] && existed=1
+    env -u CFFIXED_USER_HOME -u XDG_CONFIG_HOME -u XDG_DATA_HOME -u XDG_CACHE_HOME \
+        QT_QPA_PLATFORM=offscreen DBUS_SESSION_BUS_ADDRESS='disabled:' ASAN_OPTIONS=detect_leaks=0 \
+        "${BINARY_DIR}/unit_tests" "${name}" > "${WORK_DIR}/${name}.hand.log" 2>&1
+    status=$?
+    given="$(sed -n 's/^CFFIXED_USER_HOME was unset, so this run keeps its config under //p' "${WORK_DIR}/${name}.hand.log")"
+    if [[ ${existed} -eq 0 && -e "${real}" ]]; then
+      echo "FAIL: ${name}, run by hand without CFFIXED_USER_HOME, filed a config root at ${real}" >&2
+      # This run made it, so it is this run's to take away
+      rm -rf "${real}"
+      FAILURES=$((FAILURES + 1))
+    elif [[ -z "${given}" || ! -d "${given}/Library/Preferences/${name}" ]]; then
+      echo "FAIL: ${name}, run by hand without CFFIXED_USER_HOME, did not keep its store under a home of its own" >&2
+      FAILURES=$((FAILURES + 1))
+    fi
+    if [[ ${status} -ne 0 ]]; then
+      echo "FAIL: ${name}, run by hand, exited ${status}" >&2
+      FAILURES=$((FAILURES + 1))
+    fi
+    # The work directory goes with the script, so a failure's log is shown now or not at all
+    if [[ ${FAILURES} -gt ${failuresBefore} ]]; then
+      cat "${WORK_DIR}/${name}.hand.log" >&2
+    fi
+    [[ -n "${given}" && "${given}" == */mudlet-test-home-* ]] && rm -rf "${given}"
+    HAND_RUN=1
+    break
+  done
+  if [[ ${HAND_RUN} -eq 0 ]]; then
+    echo "FAIL: no unit_tests case reaches the credential store, so nothing checked a grouped binary run by hand" >&2
+    FAILURES=$((FAILURES + 1))
+  fi
+fi
+
 # A pattern that matches nothing would otherwise report a clean sweep
 if [[ ${CANDIDATES} -lt 5 || ${CHECKED} -lt 4 ]]; then
   echo "FAIL: ${CANDIDATES} candidate(s) found and ${CHECKED} run, so this would pass whatever they write" >&2
@@ -171,7 +218,7 @@ fi
 if [[ ${MACOS} -eq 1 && ${CONTAINED} -eq 0 && ${FAILURES} -eq 0 ]]; then
   echo "FAIL: no candidate's credential store turned up under the home directory it was given," >&2
   echo "      so CFFIXED_USER_HOME did not move AppConfigLocation and a clean home proves nothing." >&2
-  echo "      If these tests now redirect on macOS as well, this check needs rewriting rather than" >&2
+  echo "      If a test's own code comes to redirect it while CFFIXED_USER_HOME is set, this check needs rewriting rather than" >&2
   echo "      deleting - sweep 1 is still what keeps the home clean." >&2
   FAILURES=$((FAILURES + 1))
 fi
