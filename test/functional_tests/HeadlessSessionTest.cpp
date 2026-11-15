@@ -6642,6 +6642,61 @@ registerAnonymousEventHandler("sysLoadEvent", function() feedTriggers("fed by sy
         QCOMPARE(events, QStringList({qsl("configSaved"), async ? qsl("shutdownFinished") : qsl("returned")}));
     }
 
+    void test_configSavedComesOnceAShutdownEndsAMapAutosave_data()
+    {
+        QTest::addColumn<bool>("written");
+        QTest::newRow("still writing") << false;
+        QTest::newRow("written, its end not yet heard") << true;
+    }
+
+    // The next start loads autosave.dat as the newest map, so a page that never synced it would load an older one. A
+    // newer Mudlet's window layout, which the close leaves as it is, keeps the close from writing anything else.
+    void test_configSavedComesOnceAShutdownEndsAMapAutosave()
+    {
+        QFETCH(bool, written);
+        const QString name = written ? qsl("Headless Config Saved Autosave Written") : qsl("Headless Config Saved Autosave Writing");
+        QVERIFY(writeProfile(name, QString()));
+        const QString layoutPath = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutHeadless.dat"));
+        const auto removeLayout = qScopeGuard([layoutPath]() {
+            QFile::remove(layoutPath);
+        });
+        {
+            QFile layout(layoutPath);
+            QVERIFY(layout.open(QIODevice::WriteOnly));
+            QDataStream out(&layout);
+            out.setVersion(QDataStream::Qt_5_12);
+            out << quint32(0x4d574c48) << quint32(2);
+        }
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl("local area = addAreaName('headlessAutosaveAtShutdown'); addRoom(9201); setRoomArea(9201, area)")));
+        QTest::qWait(100);
+        const QString mapsFolder = MudletApp::getMudletPath(enums::profileMapsPath, name);
+        QStringList events;
+        QMap<QString, QByteArray> seen;
+        connect(&session, &THeadlessSession::configSaved, this, [&events, &seen, mapsFolder]() {
+            seen = filesUnder(mapsFolder);
+            events.append(seen.contains(qsl("autosave.dat")) ? qsl("configSaved") : qsl("configSaved before the autosave"));
+        });
+
+        {
+            const PoolHold hold(std::chrono::seconds(1));
+            QVERIFY(hold.heldAll());
+            session.host()->autoSaveMap();
+            if (!written) {
+                QVERIFY(session.shutdown(false));
+                events.append(qsl("returned"));
+            }
+        }
+        if (written) {
+            QVERIFY(session.shutdown(false));
+            events.append(qsl("returned"));
+        }
+        QTest::qWait(100);
+        QCOMPARE(events, QStringList({qsl("configSaved"), qsl("returned")}));
+        QCOMPARE(seen, filesUnder(mapsFolder));
+    }
+
     // As a script that ran while another profile's save waited for its writes could
     void test_aProfileThatCloseFailedToSaveDuringASaveIsNamed()
     {
