@@ -5701,6 +5701,35 @@ private slots:
         QCOMPARE(markers, (QStringList{qsl("00200"), qsl("02300")}));
     }
 
+    // A terminal's character shows no special exit, so the dot for one is drawn while the setting is on
+    void test_terminalMarksASpecialExitWhileItsDotIsShownWithoutGL()
+    {
+        constexpr int kSpecialRoomId = 4;
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        QVERIFY(addRoomAt(kSpecialRoomId, areaId, 4, 0, 0));
+        map()->mpRoomDB->getRoom(kSpecialRoomId)->setSpecialExit(kPlayerRoomId, qsl("enter portal"));
+        const auto restore = qScopeGuard([this]() {
+            mpHost->mMapperShowSpecialExitMarkers = true;
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("terminal")));
+        const auto markersDrawn = [this, areaId]() {
+            ModernGLWidget widget(map(), mpHost);
+            queueFrame(widget, areaId);
+            QStringList markers;
+            for (const QString& key : std::as_const(widget.mRoomTexturesInUse)) {
+                if (key.startsWith(qsl("markers|"))) {
+                    markers.append(key.section(QLatin1Char('|'), 2));
+                }
+            }
+            return markers;
+        };
+        QCOMPARE(markersDrawn(), QStringList{qsl("0000|s")});
+        mpHost->mMapperShowSpecialExitMarkers = false;
+        QCOMPARE(markersDrawn(), QStringList());
+    }
+
     // A script may fade a 2D highlight out from its center with a clear outer color, which a one-color shape would draw unseen
     void test_aClearHighlightColorGivesWayToItsCenterColorWithoutGL()
     {

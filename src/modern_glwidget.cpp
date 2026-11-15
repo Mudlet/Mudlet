@@ -1460,7 +1460,10 @@ GLuint ModernGLWidget::exitMarkerTexture(const TRoom& room, const QColor& roomCo
     }
     const QString markers = exitMarkerKey(room);
     const QColor markerColor = ExitAppearance::contrastColor(roomColor);
-    const QString key = qsl("markers|%1|%2|%3").arg(markerColor.name(), markers, specialExitMarker ? qsl("s") : QString());
+    QString key = qsl("markers|%1|%2").arg(markerColor.name(), markers);
+    if (specialExitMarker) {
+        key.append(qsl("|s"));
+    }
     if (const GLuint texture = cachedRoomTexture(key)) {
         return texture;
     }
@@ -2460,7 +2463,8 @@ void ModernGLWidget::renderRooms()
         }
 
         // A terminal's room is only its character, and a wireframe has no fill, so their markers stand out from the background instead
-        const GLuint markerTexture = !detailed ? 0 : (terminal ? (terminalMarkersNeeded(*pR) ? exitMarkerTexture(*pR, background) : 0) : exitMarkerTexture(*pR, wireframes ? background : roomColor));
+        const bool terminalMarkers = terminalMarkersNeeded(*pR) || (mpHost->mMapperShowSpecialExitMarkers && !pR->getSpecialExits().isEmpty());
+        const GLuint markerTexture = !detailed ? 0 : (terminal ? (terminalMarkers ? exitMarkerTexture(*pR, background) : 0) : exitMarkerTexture(*pR, wireframes ? background : roomColor));
         if (markerTexture) {
             GeometryData& batch = decals.markers[markerTexture];
             batch.textureId = markerTexture;
