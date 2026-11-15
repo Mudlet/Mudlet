@@ -67,6 +67,14 @@
 #include <unistd.h>
 #endif
 
+#if defined(Q_OS_WASM)
+#include <QTimer>
+
+#include <emscripten.h>
+
+using namespace std::chrono_literals;
+#endif
+
 // A Qt Resource Collection in a static library only reaches the executable if something here names it
 extern int qInitResources_mudlet();
 extern int qInitResources_qm();
@@ -767,9 +775,7 @@ int usageError(const QString& message)
     return exitUsage;
 }
 
-} // namespace
-
-int main(int argc, char* argv[])
+int run(int argc, char* argv[])
 {
 #if !defined(Q_OS_WINDOWS)
     // One of these the run began without would be the next descriptor opened, such as Qt's event descriptor,
@@ -973,9 +979,22 @@ int main(int argc, char* argv[])
     auto session = std::make_unique<THeadlessSession>();
     // quit() does nothing before exec() runs, and a load that pumps events can ask for one before then
     bool quitAsked = false;
-    const auto quit = [&quitAsked]() {
+#if defined(Q_OS_WASM)
+    // exec() never returns in a browser, so a quit starts the close that follows it on the desktop; set once the
+    // steps have run
+    std::function<void()> closeInBrowser;
+#endif
+    const auto quit = [&]() {
         quitAsked = true;
+#if defined(Q_OS_WASM)
+        // A timer fires only from the browser's own loop, never from an event loop pump, so the close starts where
+        // exec() would have returned
+        if (closeInBrowser) {
+            QTimer::singleShot(1ms, app, std::exchange(closeInBrowser, {}));
+        }
+#else
         QCoreApplication::quit();
+#endif
     };
     ErrorStream& errors = errorStream();
     const QtMessageHandler previousMessageHandler = qInstallMessageHandler(logThroughErrorStream);
@@ -1133,6 +1152,22 @@ int main(int argc, char* argv[])
         startReading();
     });
 
+    const auto endRun = [&]() {
+        errors.endLine();
+        session.reset();
+#if defined(Q_OS_WINDOWS)
+        SetConsoleCtrlHandler(forwardConsoleEvent, FALSE);
+#else
+        signalNotifier.reset();
+#endif
+
+        // Joins the match helpers while the application object still exists; see TriggerMatchPool::shutdown()
+        TriggerMatchPool::shutdown();
+        delete app;
+        qInstallMessageHandler(previousMessageHandler);
+        return exitCode;
+    };
+
     bool luaFailed = false;
     bool packageFailed = false;
     const THeadlessSession::StartResult started = session->start(options);
@@ -1212,46 +1247,73 @@ int main(int argc, char* argv[])
             everConnected = true;
         }
         startReading();
+        const auto beforeShutdown = [&]() {
+            // One that ended a wait on standard output may still be in the pipe, its notifier not run since; it still
+            // decides the exit status.
+            drainStopSignals();
+#if !defined(Q_OS_WINDOWS)
+            resizeNotifier.reset();
+#endif
+            if (linesNotSent) {
+                //: Error from the headless runner; %1 is how many lines of standard input sent the game something while there was no connection, which was lost
+                errors.report(QCoreApplication::translate("headless", "standard input was read while there was no connection to the game to send it to; lines not sent: %1").arg(linesNotSent));
+            }
+            {
+                const QMutexLocker lock(&input->mutex);
+                input->receiver = nullptr;
+                input->drained.wakeAll();
+            }
+            inputReceiver.reset();
+        };
+        const auto afterShutdown = [&](const bool shutDown) {
+            if (!shutDown) {
+                errors.report(session->errorString());
+            } else {
+                for (const QString& profile : session->unsavedProfiles()) {
+                    //: Error from the headless runner when a profile it closed could not be saved; %1 is its name
+                    errors.report(QCoreApplication::translate("headless", "The profile \"%1\" could not be saved.").arg(profile));
+                }
+            }
+            // As --help gives it
+            if (!shutDown || session->saveFailed()) {
+                exitCode = exitFailed;
+            } else if (stopSignal) {
+                exitCode = exitSignalBase + stopSignal;
+            } else if (outputError && outputError != EPIPE && outputError != EINTR) {
+                exitCode = exitOutputFailed;
+            } else if (disconnected) {
+                exitCode = exitDisconnected;
+            } else if (luaFailed || packageFailed || stepsNotSent > 0 || inputFailed || inputDropped) {
+                exitCode = exitFailed;
+            }
+        };
+#if defined(Q_OS_WASM)
+        // Queued, as the end of the run deletes the session that sends it. The page reads the status from its exit.
+        QObject::connect(
+                session.get(),
+                &THeadlessSession::shutdownFinished,
+                app,
+                [&](const bool shutDown) {
+                    afterShutdown(shutDown);
+                    emscripten_force_exit(endRun());
+                },
+                Qt::QueuedConnection);
+        closeInBrowser = [&]() {
+            beforeShutdown();
+            session->shutdownAsync(true);
+        };
+        if (quitAsked) {
+            quit();
+        }
+        // Hands the page back to the browser, keeping this stack, and does not return
+        app->exec();
+#else
         if (!quitAsked) {
             exitCode = app->exec();
         }
-        // One that ended a wait on standard output may still be in the pipe, its notifier not run since; it still
-        // decides the exit status.
-        drainStopSignals();
-#if !defined(Q_OS_WINDOWS)
-        resizeNotifier.reset();
+        beforeShutdown();
+        afterShutdown(session->shutdown(true));
 #endif
-        if (linesNotSent) {
-            //: Error from the headless runner; %1 is how many lines of standard input sent the game something while there was no connection, which was lost
-            errors.report(QCoreApplication::translate("headless", "standard input was read while there was no connection to the game to send it to; lines not sent: %1").arg(linesNotSent));
-        }
-        {
-            const QMutexLocker lock(&input->mutex);
-            input->receiver = nullptr;
-            input->drained.wakeAll();
-        }
-        inputReceiver.reset();
-        const bool shutDown = session->shutdown(true);
-        if (!shutDown) {
-            errors.report(session->errorString());
-        } else {
-            for (const QString& profile : session->unsavedProfiles()) {
-                //: Error from the headless runner when a profile it closed could not be saved; %1 is its name
-                errors.report(QCoreApplication::translate("headless", "The profile \"%1\" could not be saved.").arg(profile));
-            }
-        }
-        // As --help gives it
-        if (!shutDown || session->saveFailed()) {
-            exitCode = exitFailed;
-        } else if (stopSignal) {
-            exitCode = exitSignalBase + stopSignal;
-        } else if (outputError && outputError != EPIPE && outputError != EINTR) {
-            exitCode = exitOutputFailed;
-        } else if (disconnected) {
-            exitCode = exitDisconnected;
-        } else if (luaFailed || packageFailed || stepsNotSent > 0 || inputFailed || inputDropped) {
-            exitCode = exitFailed;
-        }
     } else {
         // A new profile's name, connection details that the connection dialog would not take, or the config
         // folder came from the command line
@@ -1270,17 +1332,17 @@ int main(int argc, char* argv[])
             errors.report(QCoreApplication::translate("headless", "The profile \"%1\" could not be saved.").arg(profile));
         }
     }
-    errors.endLine();
-    session.reset();
-#if defined(Q_OS_WINDOWS)
-    SetConsoleCtrlHandler(forwardConsoleEvent, FALSE);
-#else
-    signalNotifier.reset();
-#endif
+    return endRun();
+}
 
-    // Joins the match helpers while the application object still exists; see TriggerMatchPool::shutdown()
-    TriggerMatchPool::shutdown();
-    delete app;
-    qInstallMessageHandler(previousMessageHandler);
-    return exitCode;
+} // namespace
+
+int main(int argc, char* argv[])
+{
+#if defined(Q_OS_WASM)
+    // Returning from main() leaves a browser's page running with its status unread
+    emscripten_force_exit(run(argc, argv));
+#else
+    return run(argc, argv);
+#endif
 }

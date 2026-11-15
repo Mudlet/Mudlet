@@ -8,10 +8,10 @@
 // Given only the directory, it runs the probe below and expects "lua says 2". It exits 0 then; 1 if
 // before then an error line comes (a package with a part that does not work included), or the
 // program exits, aborts, crashes or raises a page error, if the page then does not answer, or if
-// WASM_SMOKE_TIMEOUT seconds (default 120) pass without the line. "[exit]" covers an abort and a
-// failed start; Qt keeps the runtime alive, so a plain exit only shows in a build linked with
-// -sASSERTIONS, as CI's is, which says "program exited (". It exits 2 if its arguments, the directory
-// or WASM_SMOKE_TIMEOUT are wrong; and 3 if it could not run the program at all: playwright does
+// WASM_SMOKE_TIMEOUT seconds (default 120) pass without the line. "[exit]" covers an abort, a
+// failed start and the program's end; an exit() the runtime outlives, as Qt keeps it alive, only
+// shows in a build linked with -sASSERTIONS, as CI's is, which says "program exited (". It exits 2
+// if its arguments, the directory or WASM_SMOKE_TIMEOUT are wrong; and 3 if it could not run the program at all: playwright does
 // not load, Chromium does not start or quits, the page does not load or this script fails. It needs
 // the playwright package on NODE_PATH and its Chromium installed.
 

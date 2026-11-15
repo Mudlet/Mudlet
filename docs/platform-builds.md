@@ -422,8 +422,9 @@ arguments to `mudlet-headless` instead of the probe's. Its header lists its exit
 could not run the program at all, not that the build failed.
 
 The page seeds `Mudlet.ini` with `storePasswordsSecurely=false` and `interfaceLanguage=en_US` (the
-script says why). `mudlet-headless` does not exit by itself in a browser, so a run without the
-line fails after `WASM_SMOKE_TIMEOUT` seconds (120 by default). `.github/workflows/wasm-build.yml`
+script says why). `mudlet-headless` ends in a browser as it does on the desktop, which the page
+reports as an `[exit]` line, so a run that ends before the line fails, and one that never prints it
+fails after `WASM_SMOKE_TIMEOUT` seconds (120 by default). `.github/workflows/wasm-build.yml`
 builds and runs this on every push to `development` and every pull request that touches the
 sources, caching the dependency prefix, and once a week builds that prefix from scratch. It links
 with Emscripten's runtime checks, which the preset leaves out, so that a stack overflow or a read or
