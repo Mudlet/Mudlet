@@ -22,9 +22,28 @@ const failureMarkers = [
 // Where the page puts what mudlet-headless printed, ahead of the text
 const outputPrefixes = /^\[(out|err)\] /;
 
-// Empty when dir holds a build, else the files it lacks
-function missingFiles(dir) {
-  return ["mudlet-headless.js", "mudlet-headless.wasm", "qtloader.js"].filter((file) => !fs.existsSync(path.join(dir, file)));
+// "[ ERROR ]" is translated, and Mudlet follows the browser's language once its translation is complete enough
+const settings = "[General]\ninterfaceLanguage=en_US\n";
+
+// Exits 2 unless dir holds a build
+function requireBuild(dir) {
+  const missing = ["mudlet-headless.js", "mudlet-headless.wasm", "qtloader.js"].filter((file) => !fs.existsSync(path.join(dir, file)));
+  if (missing.length) {
+    console.error(`${dir} has no ${missing.join(", ")}`);
+    process.exit(2);
+  }
+}
+
+// The seconds the environment variable gives, or fallback when it is unset; exits 2 when it is not a timeout
+function timeoutFrom(variable, fallback) {
+  const seconds = Number(process.env[variable] || fallback);
+  // setTimeout() takes at most 2^31 - 1 ms and fires after 1 ms for anything longer
+  const maxSeconds = 2147483;
+  if (!(seconds > 0 && seconds <= maxSeconds)) {
+    console.error(`${variable} must be a number of seconds above 0 and at most ${maxSeconds}, not "${process.env[variable]}"`);
+    process.exit(2);
+  }
+  return seconds;
 }
 
 // Script text for the page: JSON, escaped, as an argument holding "</script>" would end the page's script element
@@ -127,7 +146,6 @@ async function openPage({ what, dir, html, serve = () => null, onConsole, onFail
     if (url.origin !== origin) {
       return route.abort();
     }
-    const name = path.basename(url.pathname);
     if (url.pathname === "/index.html") {
       return route.fulfill({ contentType: "text/html", body: html });
     }
@@ -135,7 +153,7 @@ async function openPage({ what, dir, html, serve = () => null, onConsole, onFail
     if (typeof served === "object" && served !== null) {
       return route.fulfill(served);
     }
-    const file = served ?? path.join(dir, name);
+    const file = served ?? path.join(dir, path.basename(url.pathname));
     if (!fs.existsSync(file)) {
       return route.fulfill({ status: 404 });
     }
@@ -146,4 +164,4 @@ async function openPage({ what, dir, html, serve = () => null, onConsole, onFail
   return tab;
 }
 
-module.exports = { failureMarkers, outputPrefixes, missingFiles, page, openPage, closeBrowser };
+module.exports = { failureMarkers, outputPrefixes, settings, requireBuild, timeoutFrom, page, openPage, closeBrowser };

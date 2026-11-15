@@ -16,7 +16,7 @@
 
 const fs = require("fs");
 const path = require("path");
-const { failureMarkers, outputPrefixes, missingFiles, page, openPage, closeBrowser } = require("./wasm-headless-page");
+const { failureMarkers, outputPrefixes, settings, requireBuild, timeoutFrom, page, openPage, closeBrowser } = require("./wasm-headless-page");
 
 const fixtureDir = path.join(__dirname, "..", "src", "mudlet-lua", "tests", "fixtures");
 const mapFixtureDir = path.join(fixtureDir, "maps");
@@ -164,25 +164,10 @@ if (rest.length && !rest[0].trim()) {
   console.error("the expected line must not be blank");
   process.exit(2);
 }
-const missing = missingFiles(dir);
-if (missing.length) {
-  console.error(`${dir} has no ${missing.join(", ")}`);
-  process.exit(2);
-}
-const timeoutSeconds = Number(process.env.WASM_SMOKE_TIMEOUT || 120);
-// setTimeout() takes at most 2^31 - 1 ms and fires after 1 ms for anything longer
-const maxTimeoutSeconds = 2147483;
-if (!(timeoutSeconds > 0 && timeoutSeconds <= maxTimeoutSeconds)) {
-  console.error(
-    `WASM_SMOKE_TIMEOUT must be a number of seconds above 0 and at most ${maxTimeoutSeconds}, ` +
-      `not "${process.env.WASM_SMOKE_TIMEOUT}"`,
-  );
-  process.exit(2);
-}
+requireBuild(dir);
+const timeoutSeconds = timeoutFrom("WASM_SMOKE_TIMEOUT", 120);
 const [expected, ...args] = rest.length ? rest : ["lua says 2", ...defaultProbe()];
 
-// "[ ERROR ]" is translated, and Mudlet follows the browser's language once its translation is complete enough
-const settings = "[General]\ninterfaceLanguage=en_US\n";
 (async () => {
   let finish;
   const finished = new Promise((resolve) => (finish = resolve));

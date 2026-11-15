@@ -15,7 +15,7 @@
 
 const fs = require("fs");
 const path = require("path");
-const { failureMarkers, outputPrefixes, missingFiles, page, openPage, closeBrowser } = require("./wasm-headless-page");
+const { failureMarkers, outputPrefixes, settings, requireBuild, timeoutFrom, page, openPage, closeBrowser } = require("./wasm-headless-page");
 
 const repo = path.join(__dirname, "..");
 const testsPath = "/mudlet/src/mudlet-lua/tests";
@@ -30,25 +30,12 @@ if (!logFile || extra.length) {
   console.error("usage: node CI/wasm-headless-lua-tests.js <dir holding mudlet-headless.js> <busted dir> <log file>");
   process.exit(2);
 }
-const missing = missingFiles(dir);
-if (missing.length) {
-  console.error(`${dir} has no ${missing.join(", ")}`);
-  process.exit(2);
-}
+requireBuild(dir);
 if (!fs.existsSync(path.join(bustedDir, "busted", "core.lua"))) {
   console.error(`${bustedDir} holds no busted; fill it with CI/fetch-wasm-busted.sh`);
   process.exit(2);
 }
-const timeoutSeconds = Number(process.env.WASM_LUA_TESTS_TIMEOUT || 3600);
-// setTimeout() takes at most 2^31 - 1 ms and fires after 1 ms for anything longer
-const maxTimeoutSeconds = 2147483;
-if (!(timeoutSeconds > 0 && timeoutSeconds <= maxTimeoutSeconds)) {
-  console.error(
-    `WASM_LUA_TESTS_TIMEOUT must be a number of seconds above 0 and at most ${maxTimeoutSeconds}, ` +
-      `not "${process.env.WASM_LUA_TESTS_TIMEOUT}"`,
-  );
-  process.exit(2);
-}
+const timeoutSeconds = timeoutFrom("WASM_LUA_TESTS_TIMEOUT", 3600);
 
 // The page's path of each file it is given, to the file here
 const staged = new Map();
@@ -86,8 +73,6 @@ const environment = {
   QUIT_MUDLET_AFTER_TESTS: "true",
   LUA_PATH: `${bustedPath}/?.lua;${bustedPath}/?/init.lua;;`,
 };
-// "[ ERROR ]" is translated, and Mudlet follows the browser's language once its translation is complete enough
-const settings = "[General]\ninterfaceLanguage=en_US\n";
 
 (async () => {
   const log = fs.createWriteStream(logFile);
@@ -108,7 +93,7 @@ const settings = "[General]\ninterfaceLanguage=en_US\n";
       if (file === "/stage.json") {
         return { contentType: "application/json", body: JSON.stringify([...staged.keys()]) };
       }
-      return file.startsWith("/stage/") ? staged.get(file.slice("/stage".length)) ?? "" : null;
+      return file.startsWith("/stage/") ? staged.get(file.slice("/stage".length)) ?? { status: 404 } : null;
     },
     onConsole: (text) => {
       console.log(text);
