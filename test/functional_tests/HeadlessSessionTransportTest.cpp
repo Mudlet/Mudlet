@@ -256,12 +256,23 @@ tempTrigger("A dragon arrives", function() dragonSeen = "yes" send("kill dragon"
         QSignalSpy dials(&session, &THeadlessSession::transportDialRequested);
         QSignalSpy connected(&session, &THeadlessSession::connected);
         QSignalSpy local(&session, &THeadlessSession::localText);
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
         QCOMPARE(session.start({.profile = name, .connect = true, .supplyTransport = true}), THeadlessSession::StartResult::started);
         QTRY_COMPARE_WITH_TIMEOUT(dials.size(), 1, 10000);
         connect(&session, &THeadlessSession::transportCloseRequested, &session, [&session, &dials]() {
-            QTimer::singleShot(0, &session, [&session, closing = lastDial(dials)]() {
+            const quint64 closing = lastDial(dials);
+            QTimer::singleShot(0, &session, [&session, closing]() {
                 session.transportClosed(closing, qsl("closed by the app"));
             });
+            // Game text the old socket had read, reported once the next connection is up
+            connect(
+                    &session,
+                    &THeadlessSession::connected,
+                    &session,
+                    [&session, closing]() {
+                        session.transportReceived(closing, "stale\r\n");
+                    },
+                    Qt::SingleShotConnection);
         });
         session.transportConnected(lastDial(dials));
         QTRY_COMPARE_WITH_TIMEOUT(connected.size(), 1, 10000);
@@ -283,6 +294,8 @@ tempTrigger("A dragon arrives", function() dragonSeen = "yes" send("kill dragon"
         QTRY_COMPARE_WITH_TIMEOUT(connected.size(), 3, 10000);
         QVERIFY2(!printed(local).contains(qsl("Unable to connect")), qPrintable(printed(local)));
         QCOMPARE(dials.size(), 4);
+        QTest::qWait(100);
+        QVERIFY2(!texts(output).contains(qsl("stale")), qPrintable(texts(output).join(QChar::LineFeed)));
         QVERIFY(session.shutdown(false));
     }
 
