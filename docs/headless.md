@@ -678,10 +678,16 @@ mudletTransport: {
 }
 ```
 
-`received()` takes a `Uint8Array` or an `ArrayBuffer`. Each dial gets a connection of its own, so a
-late event of an old socket cannot reach a new one; a throw from `dial()` or `write()` ends the
-connection with the error as the reason. `CI/wasm-headless-smoke.js --game-connection` connects
-through a WebSocket relay this way.
+Each dial gets a connection of its own, so a late event of an old socket cannot reach a new one, and
+the page's `close()` is called at most once for it, never after its `closed()`. `received()` takes an
+`ArrayBuffer` or any view of one, such as a `Uint8Array` or a `DataView`. It refuses anything else,
+strings included: telnet is a byte stream, and a string has no one way back to bytes (as UTF-8, the
+byte 255 that starts every telnet command would become two), so the page converts as it knows its
+source sends. A `Blob`, which a WebSocket delivers unless its `binaryType` is `"arraybuffer"`, is
+refused too. When `received()` refuses, or `dial()` or `write()` throws, Mudlet logs the error to the
+console, calls the page's `close()`, since the profile asks for none of a connection it is told has
+ended, and ends the connection with the error as the reason. `CI/wasm-headless-smoke.js
+--game-connection` connects through a WebSocket relay this way.
 
 ## Embedding it: when the signals come and what a handler may do
 

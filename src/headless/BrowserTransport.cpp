@@ -40,7 +40,8 @@ EM_JS(int, pageHasTransport, (), {
 });
 
 // Each dial hands the page a connection of its own, whose calls do nothing once the profile has closed it or dialled
-// again, and whose reports carry the id the profile gave the dial
+// again, and whose reports carry the id the profile gave the dial. The profile asks for no close() of a connection it
+// is told has ended, so when the page's code throws or hands over what is not bytes, the page's close() is called here.
 EM_JS(void, pageDial, (double id, const char* host, int port, int tlsRequested), {
     if (Module.mudletConnection) {
         Module.mudletConnection.live = false;
@@ -53,45 +54,74 @@ EM_JS(void, pageDial, (double id, const char* host, int port, int tlsRequested),
             }
         },
         received: function(bytes) {
-            if (connection.live) {
-                Module.mudletTransportReceived(id, bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes));
+            if (!connection.live) {
+                return;
             }
+            if (bytes instanceof ArrayBuffer) {
+                bytes = new Uint8Array(bytes);
+            } else if (ArrayBuffer.isView(bytes)) {
+                bytes = new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+            } else {
+                var given = bytes === null ? "null" : typeof bytes === "object" ? Object.prototype.toString.call(bytes).slice(8, -1) : typeof bytes;
+                connection.fail("connection.received() takes an ArrayBuffer or a view of one such as a Uint8Array, not " + given
+                                + (given === "Blob" ? " (is the WebSocket binaryType \"arraybuffer\"?)" : ""));
+                return;
+            }
+            Module.mudletTransportReceived(id, bytes);
         },
         closed: function(reason) {
             if (connection.live) {
                 connection.live = false;
-                Module.mudletTransportClosed(id, reason === undefined || reason === null ? "" : String(reason));
+                Module.mudletTransportClosed(id, reason == null ? "" : String(reason));
             }
+        },
+        fail: function(reason) {
+            if (!connection.live) {
+                return;
+            }
+            console.error("mudletTransport: " + reason);
+            connection.live = false;
+            try {
+                Module.mudletTransport.close();
+            } catch (e) {
+                console.error("mudletTransport.close() failed: " + e);
+            }
+            setTimeout(function() {
+                Module.mudletTransportClosed(id, reason);
+            }, 0);
         }
     };
     Module.mudletConnection = connection;
     try {
-        Module.mudletTransport.dial(UTF8ToString(host), port, tlsRequested !== 0, connection);
+        Module.mudletTransport.dial(UTF8ToString(host), port, tlsRequested !== 0, {
+            connected: connection.connected,
+            received: connection.received,
+            closed: connection.closed
+        });
     } catch (e) {
-        setTimeout(function() {
-            connection.closed("mudletTransport.dial() failed: " + e);
-        }, 0);
+        connection.fail("mudletTransport.dial() failed: " + e);
     }
 });
 
 EM_JS(void, pageWrite, (const char* data, int length), {
+    var connection = Module.mudletConnection;
+    if (!connection || !connection.live) {
+        return;
+    }
     try {
         Module.mudletTransport.write(HEAPU8.slice(data, data + length));
     } catch (e) {
-        var connection = Module.mudletConnection;
-        if (connection) {
-            setTimeout(function() {
-                connection.closed("mudletTransport.write() failed: " + e);
-            }, 0);
-        }
+        connection.fail("mudletTransport.write() failed: " + e);
     }
 });
 
 EM_JS(void, pageClose, (), {
-    if (Module.mudletConnection) {
-        Module.mudletConnection.live = false;
-        Module.mudletConnection = null;
+    var connection = Module.mudletConnection;
+    Module.mudletConnection = null;
+    if (!connection || !connection.live) {
+        return;
     }
+    connection.live = false;
     try {
         Module.mudletTransport.close();
     } catch (e) {
