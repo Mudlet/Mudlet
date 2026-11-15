@@ -81,6 +81,7 @@ class QNetworkReply;
 class QTimer;
 
 class Host;
+class TGameTransport;
 
 
 const char TN_BELL = static_cast<char>(7);
@@ -181,6 +182,9 @@ public:
     void reconnect();
     void disconnectIt();
     void abortConnection();
+    // Connections are then made through pTransport, which stays its owner's, instead of the sockets;
+    // set before connecting, and nullptr goes back to the sockets
+    void setTransport(TGameTransport* pTransport);
     // Second argument needs to be set false when sending password to prevent
     // it being sniffed by scripts/packages. Third argument marks game commands
     // (whether typed at the command line or sent by a script) as opposed to
@@ -508,6 +512,17 @@ private:
     void sendCurrentNAWS();
     void readPendingSocketData();
     bool readSocketDataOnce();
+    bool connectionAdopted() const;
+    qint64 unreadBytes() const;
+    bool connectionUnderway() const;
+    void noteConnectionMade();
+    void announceConnection();
+    void dialTransport();
+    void closeTransport();
+    void takeUpTransportReport(std::function<void()> report);
+    void transportConnected();
+    void transportReceived(const QByteArray& data);
+    void transportClosed(const QString& reason);
     void drainBeforeDisconnection();
     void finishDisconnection();
     QString parseGUIVersionFromJSON(const QJsonObject& json);
@@ -558,6 +573,16 @@ private:
     // user answers (slot_tlsUpgradeResponse()).
     bool mTlsUpgradePromptInFlight = false;
 #endif
+    enum class TransportState { Idle, Dialling, Connected, Closed };
+    QPointer<TGameTransport> mpTransport;
+    // Closed: the connection has ended but finishDisconnection() is still to run, as for mpSocket
+    TransportState mTransportState = TransportState::Idle;
+    // Moved on by each dial and close, so a report queued about an earlier connection is dropped
+    quint64 mTransportGeneration = 0;
+    // What the transport has delivered and processSocketData() not yet taken, as a socket buffers it
+    QByteArray mTransportInput;
+    qsizetype mTransportInputRead = 0;
+    QString mTransportCloseReason;
     // Could be a URL ("www.game.com") or an IPv4 address ("192.168.1.1") or an
     // IPv6 address ("2001:db8::1"):
     QString mHostUrl;

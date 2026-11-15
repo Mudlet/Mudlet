@@ -37,6 +37,7 @@
 #include "TConsoleModel.h"
 #include "TDebug.h"
 #include "TEvent.h"
+#include "TGameTransport.h"
 #include "TMap.h"
 #include "TMedia.h"
 #include "TRoomDB.h"
@@ -368,6 +369,10 @@ cTelnet::~cTelnet()
             mSocket_ipV4.disconnectFromHost();
             mSocket_ipV4.abort();
         }
+    }
+
+    if (mpTransport && connectionUnderway()) {
+        mpTransport->close();
     }
 
     // Disconnect all signal connections to prevent callbacks during destruction
@@ -715,6 +720,9 @@ void cTelnet::abandonConnectionAttempt()
     if (mpSocket != &mSocket_ipV6 && mSocket_ipV6.state() != QAbstractSocket::UnconnectedState) {
         abortLosingSocket(&mSocket_ipV6);
     }
+    if (mTransportState == TransportState::Dialling) {
+        closeTransport();
+    }
 }
 
 // cTelnet keeps its own copies of these two Host flags. connectIt() refreshes
@@ -788,7 +796,7 @@ void cTelnet::connectIt(const QString& address, int port)
         }
     }
 
-    if (mSocket_ipV4.state() != QAbstractSocket::UnconnectedState || mSocket_ipV6.state() != QAbstractSocket::UnconnectedState) {
+    if (connectionUnderway()) {
         // Held so the profile outlives this: each abort reports the connection it ends, and a handler of that
         // may close the profile
         ++mReconnectsOnStack;
@@ -804,6 +812,7 @@ void cTelnet::connectIt(const QString& address, int port)
 #endif
             mSocket_ipV6.abort();
         }
+        closeTransport();
         if (mDisconnectionPending && mDecompressionRecursionDepth == 0) {
             // Input still to be read held the report back; it is finished here, where the close check below covers
             // what its handlers do
@@ -815,7 +824,7 @@ void cTelnet::connectIt(const QString& address, int port)
             mLookingUpHost = false;
             return;
         }
-        if (mSocket_ipV4.state() != QAbstractSocket::UnconnectedState || mSocket_ipV6.state() != QAbstractSocket::UnconnectedState) {
+        if (connectionUnderway()) {
             // abort() resets a socket at once, but a handler of its report may have dialled again: tried from the
             // event loop rather than by running one here
             QTimer::singleShot(0ms, this, [this, address, port]() {
@@ -840,6 +849,10 @@ void cTelnet::connectIt(const QString& address, int port)
 
     mHostUrl = address;
     mHostPort = port;
+    if (mpTransport) {
+        dialTransport();
+        return;
+    }
     // Detect raw IPv6 addresses - as they need to be wrapped in '['...']'
 
     /*: For an IPv6 address (which is composed of hex-digits and colons) if we
@@ -883,7 +896,7 @@ void cTelnet::disconnectIt()
     mLookingUpHost = false;
     mTimerFailedConnectionRetry->stop();
     mFailedConnectionCount = 0;
-    const bool lookingUpHost = mHostLookupId != -1;
+    const bool lookingUpHost = mHostLookupId != -1 || mTransportState == TransportState::Dialling;
     // There is no socket yet while the name lookup is outstanding, so without
     // this a Disconnect during the lookup is followed by the connection being
     // made anyway when the result arrives.
@@ -892,6 +905,7 @@ void cTelnet::disconnectIt()
         // This will write out any pending data before it disconnects...
         mpSocket->disconnectFromHost();
     }
+    closeTransport();
     if (lookingUpHost) {
         emit signal_connectingCalledOff(mpHost);
     }
@@ -916,6 +930,7 @@ void cTelnet::abortConnection()
     } else {
         // Anything to do here?
     }
+    closeTransport();
 }
 
 // Natively, as Qt cannot half-close a socket
@@ -1112,6 +1127,146 @@ void cTelnet::handleFailedConnection()
     mTimerFailedConnectionRetry->start(delay);
 }
 
+void cTelnet::setTransport(TGameTransport* pTransport)
+{
+    if (mpTransport) {
+        disconnect(mpTransport, nullptr, this, nullptr);
+    }
+    mpTransport = pTransport;
+    if (!pTransport) {
+        return;
+    }
+    connect(pTransport, &TGameTransport::connected, this, [this]() {
+        takeUpTransportReport([this]() {
+            transportConnected();
+        });
+    });
+    connect(pTransport, &TGameTransport::received, this, [this](const QByteArray& data) {
+        takeUpTransportReport([this, data]() {
+            transportReceived(data);
+        });
+    });
+    connect(pTransport, &TGameTransport::closed, this, [this](const QString& reason) {
+        takeUpTransportReport([this, reason]() {
+            transportClosed(reason);
+        });
+    });
+}
+
+// From the event loop, as a socket's signals come: a report made from inside a write would otherwise land in the
+// middle of whatever was writing
+void cTelnet::takeUpTransportReport(std::function<void()> report)
+{
+    QMetaObject::invokeMethod(
+            this,
+            [this, generation = mTransportGeneration, report = std::move(report)]() {
+                if (generation == mTransportGeneration) {
+                    report();
+                }
+            },
+            Qt::QueuedConnection);
+}
+
+// Dialling or connected, by either a socket or the transport; what connectIt() has to end before it dials
+bool cTelnet::connectionUnderway() const
+{
+    return mSocket_ipV4.state() != QAbstractSocket::UnconnectedState || mSocket_ipV6.state() != QAbstractSocket::UnconnectedState || mTransportState == TransportState::Dialling
+           || mTransportState == TransportState::Connected;
+}
+
+// In place of the name lookup and the dials it leads to, which are the application's to make
+void cTelnet::dialTransport()
+{
+    mLookingUpHost = false;
+    // Never claimed for a connection whose route Mudlet cannot see, so secure-only GMCP tokens are withheld from it
+#if !defined(QT_NO_SSL)
+    mCurrent_sslTsl = false;
+#endif
+    const bool tlsRequested = mpHost && (mpHost->mSslTsl || mpHost->mUseTlsThisSession);
+    const QString displayAddress = isRawIPv6Address(mHostUrl) ? tr("[%1]").arg(mHostUrl) : mHostUrl;
+    //: %1 is a URL for the Game Server; %2 is the port number.
+    postMessage(tr("[ INFO ]  - Attempting an open connection to %1:%2 ...").arg(displayAddress, QString::number(mHostPort)));
+    if (tlsRequested) {
+        //: Shown when a profile set to connect securely is connected by the application Mudlet runs inside, such as a web page, which alone knows whether its connection to the game is encrypted
+        postMessage(tr("[ WARN ]  - This profile is set to connect securely, but the application running Mudlet makes this connection and Mudlet cannot tell whether it is encrypted, so treats it as "
+                       "not secure."));
+    }
+    ++mTransportGeneration;
+    mTransportInput.clear();
+    mTransportInputRead = 0;
+    mTransportCloseReason.clear();
+    mTransportState = TransportState::Dialling;
+    mpTransport->dial(mHostUrl, mHostPort, tlsRequested);
+}
+
+// A connection that was made is reported ended here and now, as a socket's disconnectFromHost() or abort() reports it
+void cTelnet::closeTransport()
+{
+    const TransportState state = mTransportState;
+    if (state != TransportState::Dialling && state != TransportState::Connected) {
+        return;
+    }
+    ++mTransportGeneration;
+    mTransportInput.clear();
+    mTransportInputRead = 0;
+    mTransportState = state == TransportState::Connected ? TransportState::Closed : TransportState::Idle;
+    if (mpTransport) {
+        mpTransport->close();
+    }
+    if (state == TransportState::Connected) {
+        slot_socketDisconnected();
+    }
+}
+
+void cTelnet::transportConnected()
+{
+    if (mTransportState != TransportState::Dialling || !mpHost || mpHost->isClosingDown()) {
+        return;
+    }
+    mTransportState = TransportState::Connected;
+    noteConnectionMade();
+    reset();
+    //: Shown when the connection made by the application Mudlet runs inside, such as a web page, has reached the game
+    postMessage(tr("[  OK  ]  - Connection made."));
+    announceConnection();
+}
+
+void cTelnet::transportReceived(const QByteArray& data)
+{
+    if (mTransportState != TransportState::Connected) {
+        return;
+    }
+    mTransportInput.append(data);
+    slot_socketReadyToBeRead();
+}
+
+void cTelnet::transportClosed(const QString& reason)
+{
+    if (mTransportState == TransportState::Connected) {
+        mTransportState = TransportState::Closed;
+        mTransportCloseReason = reason;
+        slot_socketDisconnected();
+        return;
+    }
+    if (mTransportState != TransportState::Dialling) {
+        return;
+    }
+    mTransportState = TransportState::Idle;
+    if (!mpHost || mpHost->isClosingDown()) {
+        return;
+    }
+    const QString displayAddress = isRawIPv6Address(mHostUrl) ? tr("[%1]").arg(mHostUrl) : mHostUrl;
+    //: The reason given when the application Mudlet runs inside, such as a web page, could not reach the game and did not say why
+    const QString why = reason.isEmpty() ? tr("no reason was given") : reason;
+    /*: %1 is the URL or the IP address (suitably wrapped if it is an IPv6 one) of the Game
+ Server, %2 is the port number and %3 is the reason the connection could not be made,
+ as reported by the operating system, e.g. "Connection refused".*/
+    postMessage(tr("[ ERROR ] - Unable to connect to %1:%2 - %3.\n"
+                   "Check your internet connection and the details entered for the game server.")
+                        .arg(displayAddress, QString::number(mHostPort), why));
+    handleFailedConnection();
+}
+
 void cTelnet::slot_send_login()
 {
     if (!mpHost->getLogin().isEmpty()) {
@@ -1245,17 +1400,7 @@ void cTelnet::slot_socketConnected()
         return;
     }
 
-    mPendingConnectionAttempts = 0;
-    mFailedConnectionCount = 0;
-    // A connection has been made, so whatever ended the last one is spent. Left standing from a
-    // Disconnect pressed while there was nothing to disconnect, it would inhibit the automatic
-    // reconnect after this connection ends and blame that ending on the user.
-    mDontReconnect = false;
-    mDisconnectRequested = false;
-#if !defined(QT_NO_SSL)
-    // The other address family's attempt may have failed its handshake first
-    mSslHandshakeFailed = false;
-#endif
+    noteConnectionMade();
 
     // Which socket is this? Once we know, set mpSocket to point at it and
     // disable the other one from doing anything more
@@ -1305,6 +1450,26 @@ void cTelnet::slot_socketConnected()
         postMessage(tr("[  OK  ]  - Connection made (IPv4)."));
     }
 #endif
+    announceConnection();
+}
+
+void cTelnet::noteConnectionMade()
+{
+    mPendingConnectionAttempts = 0;
+    mFailedConnectionCount = 0;
+    // A connection has been made, so whatever ended the last one is spent. Left standing from a
+    // Disconnect pressed while there was nothing to disconnect, it would inhibit the automatic
+    // reconnect after this connection ends and blame that ending on the user.
+    mDontReconnect = false;
+    mDisconnectRequested = false;
+#if !defined(QT_NO_SSL)
+    // The other address family's attempt may have failed its handshake first
+    mSslHandshakeFailed = false;
+#endif
+}
+
+void cTelnet::announceConnection()
+{
     mpHost->mLuaInterpreter.call(qsl("onConnect"), QString());
     mConnectionTimer.start();
     mTimerLogin->start(autoLoginDelay(qsl("autoLoginUsernameDelay"), AUTO_LOGIN_USERNAME_DELAY_MS));
@@ -1338,7 +1503,7 @@ void cTelnet::slot_socketDisconnected()
     // The socket still holds what the game sent before it closed - often its
     // last words, such as a quit message - and no readyRead() will come for it.
     // Not after a Disconnect, when it is not wanted; an abort() leaves nothing.
-    if (!mDisconnectRequested && !mDeferredReconnect && mpSocket && (!mDeferredInput.isEmpty() || mpSocket->bytesAvailable() > 0)) {
+    if (!mDisconnectRequested && !mDeferredReconnect && connectionAdopted() && (!mDeferredInput.isEmpty() || unreadBytes() > 0)) {
         mDisconnectionPending = true;
         QMetaObject::invokeMethod(this, &cTelnet::drainBeforeDisconnection, Qt::QueuedConnection);
         return;
@@ -1359,7 +1524,7 @@ void cTelnet::drainBeforeDisconnection()
         QTimer::singleShot(10ms, this, &cTelnet::drainBeforeDisconnection);
         return;
     }
-    if (!mDisconnectRequested && !mDeferredReconnect && mpSocket && readSocketDataOnce()) {
+    if (!mDisconnectRequested && !mDeferredReconnect && connectionAdopted() && readSocketDataOnce()) {
         QMetaObject::invokeMethod(this, &cTelnet::drainBeforeDisconnection, Qt::QueuedConnection);
         return;
     }
@@ -1380,7 +1545,7 @@ void cTelnet::finishDisconnection()
 
     // A drain's deferred input was read before the connection closed, and no
     // later read will come to take it in
-    while (!mDeferredInput.isEmpty() && mpSocket && !mpHost->isClosingDown() && !mDeferredReconnect && readSocketDataOnce()) {
+    while (!mDeferredInput.isEmpty() && connectionAdopted() && !mpHost->isClosingDown() && !mDeferredReconnect && readSocketDataOnce()) {
     }
     postData();
     // A line held back for server-wrap undoing is complete now that the
@@ -1503,9 +1668,9 @@ void cTelnet::finishDisconnection()
                 postMessage(tr("[ ALERT ] - Socket got disconnected."));
             }
 
-        } else if (mpSocket) {
+        } else if (connectionAdopted()) {
 #else
-        if (mpSocket) {
+        if (connectionAdopted()) {
 #endif
             // We were not connecting securely
             QString reason;
@@ -1514,7 +1679,7 @@ void cTelnet::finishDisconnection()
  one of several to be listed. This text used in two places,
  ensure the same text is used in both.*/
                 reason = tr("User Disconnected");
-            } else if (QAbstractSocket::SslHandshakeFailedError == mpSocket->error()) {
+            } else if (mpSocket && QAbstractSocket::SslHandshakeFailedError == mpSocket->error()) {
                 //: A reason why a connection to a game server ended.
                 reason = tr("Secure connections not supported by this game on this port; try turning the option off");
             } else if (timeOffset >= 0 && timeOffset < 5000) {
@@ -1522,8 +1687,8 @@ void cTelnet::finishDisconnection()
  one of several to be listed. This text used in two places,
  ensure the same text is used in both.*/
                 reason = tr("Connection/login attempt rejected by server");
-            } else if (!mpSocket->errorString().isEmpty()) {
-                reason = mpSocket->errorString();
+            } else {
+                reason = mpSocket ? mpSocket->errorString() : mTransportCloseReason;
             }
 
             if (reason.isEmpty()) {
@@ -1567,6 +1732,9 @@ void cTelnet::finishDisconnection()
     qDebug().noquote() << "cTelnet::slot_socketDisconnected() INFO - resetting mpSocket.";
 #endif
     mpSocket = nullptr;
+    if (mTransportState == TransportState::Closed) {
+        mTransportState = TransportState::Idle;
+    }
 
     // And if the conditions are right start the reconnection attempt straight
     // away:
@@ -2135,6 +2303,16 @@ void cTelnet::openSendConverters()
 // as we do NOT handle the weirdly different EBDIC!!!
 bool cTelnet::socketOutRaw(std::string& data)
 {
+    if (mTransportState == TransportState::Connected) {
+        if (!mpTransport) {
+            return false;
+        }
+        mpTransport->write(QByteArray(data.data(), static_cast<qsizetype>(data.size())));
+        if (mGA_Driver && !mWaitingForResponse) {
+            beginNetworkLatencyMeasurement();
+        }
+        return true;
+    }
     // We were using mpSocket->iswritable() but it was not clear that that was a
     // suitable way to check for an open, usable connection - whereas isvalid()
     // is true if the socket is valid and ready for use:
@@ -2661,7 +2839,7 @@ QString cTelnet::decodeOption(const unsigned char ch) const
 std::tuple<QString, int, bool> cTelnet::getConnectionInfo() const
 {
     // intentionally simplify connection state to a boolean
-    const bool connected = (mpSocket && mpSocket->state() == QAbstractSocket::ConnectedState);
+    const bool connected = (mpSocket && mpSocket->state() == QAbstractSocket::ConnectedState) || mTransportState == TransportState::Connected;
 
     if (mHostUrl.isEmpty() || mHostPort == 0) {
         return {mpHost->getUrl(), mpHost->getPort(), connected};
@@ -3421,7 +3599,7 @@ void cTelnet::autoEnableTTYPEVersion()
     mDeferredReconnect = true;
     QTimer::singleShot(0ms, this, [this]() {
         mDeferredReconnect = false;
-        if (!mpHost || mpHost->isClosingDown() || !mpSocket) {
+        if (!mpHost || mpHost->isClosingDown() || !connectionAdopted()) {
             // Nothing to replace by the time this ran: the player may have
             // disconnected or closed the profile, and a replay or feedTelnet()
             // carrying the pattern was never online to begin with.
@@ -6326,7 +6504,7 @@ void cTelnet::slot_socketReadyToBeRead()
     // Anything arriving after the KaVir handshake pattern was spotted belongs to
     // the connection autoEnableTTYPEVersion() is about to drop, so leave it unread
     // rather than negotiate with it:
-    if (!mpHost || mpHost->isClosingDown() || !mpSocket || mDeferredReconnect) {
+    if (!mpHost || mpHost->isClosingDown() || !connectionAdopted() || mDeferredReconnect) {
         return;
     }
 
@@ -6352,7 +6530,7 @@ void cTelnet::slot_socketReadyToBeRead()
 void cTelnet::readPendingSocketData()
 {
     mReadPending = false;
-    if (!mpHost || mpHost->isClosingDown() || !mpSocket || mDeferredReconnect) {
+    if (!mpHost || mpHost->isClosingDown() || !connectionAdopted() || mDeferredReconnect) {
         return;
     }
 
@@ -6376,12 +6554,37 @@ bool cTelnet::readSocketDataOnce()
 
         amount = static_cast<int>(mpSocket->read(in_buffer.data(), BUFFER_SIZE));
         processSocketData(in_buffer.data(), amount);
+    } else if (unreadBytes() > 0) {
+        std::array<char, BUFFER_SIZE + 10> in_buffer;
+
+        amount = static_cast<int>(std::min<qint64>(unreadBytes(), BUFFER_SIZE));
+        std::memcpy(in_buffer.data(), mTransportInput.constData() + mTransportInputRead, static_cast<size_t>(amount));
+        mTransportInputRead += amount;
+        if (mTransportInputRead == mTransportInput.size()) {
+            mTransportInput.clear();
+            mTransportInputRead = 0;
+        }
+        processSocketData(in_buffer.data(), amount);
     }
 
     // amount > 0 as well as bytesAvailable(): a read that yields nothing while the
     // socket still reports bytes would otherwise requeue forever, spinning a core
     // for as long as the connection stayed in that state.
-    return amount > 0 && (!mDeferredInput.isEmpty() || (mpSocket && mpSocket->bytesAvailable() > 0));
+    return amount > 0 && (!mDeferredInput.isEmpty() || unreadBytes() > 0);
+}
+
+// mpSocket's counterpart: from the connection being made until finishDisconnection() lets it go
+bool cTelnet::connectionAdopted() const
+{
+    return mpSocket || mTransportState == TransportState::Connected || mTransportState == TransportState::Closed;
+}
+
+qint64 cTelnet::unreadBytes() const
+{
+    if (mpSocket) {
+        return mpSocket->bytesAvailable();
+    }
+    return mTransportInput.size() - mTransportInputRead;
 }
 
 void cTelnet::loopbackTest(QByteArray& data)
@@ -7075,6 +7278,16 @@ QAbstractSocket::SocketState cTelnet::getConnectionState() const
 {
     if (mpSocket) {
         return mpSocket->state();
+    }
+    switch (mTransportState) {
+    case TransportState::Dialling:
+        return QAbstractSocket::ConnectingState;
+    case TransportState::Connected:
+        return QAbstractSocket::ConnectedState;
+    case TransportState::Closed:
+        return QAbstractSocket::UnconnectedState;
+    case TransportState::Idle:
+        break;
     }
 
     // Fall back to considering the "best" state of the underlying sockets:
