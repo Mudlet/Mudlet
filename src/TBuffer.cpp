@@ -10056,7 +10056,7 @@ void TBuffer::injectOSC8DocumentationExamples()
               ",\"-\",{\"Drop\":\"send:drop\"}],\"tooltip\":\"+5 Fire Damage\"}\x1b\\🗡️ Flaming Sword\x1b]8;;\x1b\\\n\n";
 
     output += "───────────────────────────────────────────────────────────────────────\n";
-    output += "Docs: https://wiki.mudlet.org/w/Area_51#OSC_8:_Hyperlink_Protocol\n";
+    output += "Docs: https://wiki.mudlet.org/w/Manual:Supported_Protocols#OSC_8:_Hyperlink_Protocol\n";
     output += "Standard: https://wiki.mudlet.org/w/Standards:OSC_8_Hyperlinks\n";
 
     // Process the output through the normal text processing pipeline
