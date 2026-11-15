@@ -9981,8 +9981,8 @@ void TLuaInterpreter::createCookiesTable(lua_State* L, QNetworkReply* reply)
     lua_newtable(L);
 
     // Parse cookies, add them as key-value pairs to the empty table
-    const Host& host = getHostFromLua(L);
-    QNetworkCookieJar* cookieJar = host.mLuaInterpreter.mpFileDownloader->cookieJar();
+    // The reply's own manager: media downloads keep their cookies apart from the scripts' ones
+    QNetworkCookieJar* cookieJar = reply->manager()->cookieJar();
     const QList<QNetworkCookie> cookies = cookieJar->cookiesForUrl(reply->url());
     for (const QNetworkCookie& cookie : cookies) {
         // Push cookie name onto stack
