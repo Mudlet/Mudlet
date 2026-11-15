@@ -122,15 +122,16 @@ int main(int argc, char* argv[])
         setenv("CFFIXED_USER_HOME", home.c_str(), 1);
         fprintf(stderr, "CFFIXED_USER_HOME was unset, so this run keeps its config under %s\n", home.c_str());
         madeHome = home;
-    }
 #if defined(MUDLET_FUNCTIONAL_TEST_GROUP)
-    // As ctest gives every functional case: under a home with no login keychain, as ctest's and the one above are, a
-    // write to the keychain asks the person running the test whether to reset their own
-    if (qEnvironmentVariableIsEmpty("MUDLET_TEST_MODE")) {
-        setenv("MUDLET_TEST_MODE", "1", 1);
-        fprintf(stderr, "MUDLET_TEST_MODE was unset, so this run keeps credentials off the keychain as ctest's do\n");
-    }
+        // As ctest gives every functional case: this home has no login keychain, and a write to the keychain from it
+        // asks the person running the test whether to reset their own. Only for a home made here: a case that runs
+        // itself without test mode on purpose, as CrashTestHookTest does, hands its child the home it already has.
+        if (qEnvironmentVariableIsEmpty("MUDLET_TEST_MODE")) {
+            setenv("MUDLET_TEST_MODE", "1", 1);
+            fprintf(stderr, "MUDLET_TEST_MODE was unset, so this run keeps credentials off the keychain as ctest's do\n");
+        }
 #endif
+    }
 #endif
 
     // qExec skips argv[0] and reads every later argument that is not an option
