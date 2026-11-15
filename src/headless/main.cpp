@@ -987,6 +987,7 @@ int run(int argc, char* argv[])
     if (options.supplyTransport) {
         bridgeTransportToPage(session.get());
     }
+    bridgeConfigSavesToPage(session.get());
 #endif
     // quit() does nothing before exec() runs, and a load that pumps events can ask for one before then
     bool quitAsked = false;
