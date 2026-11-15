@@ -861,7 +861,8 @@ void dlgRoomProperties::restoreOriginalBorders()
 
 void dlgRoomProperties::reject()
 {
+    // Hiding the dialog takes the focus from a colour field, which takes the code typed in it, so restore after that
+    QDialog::reject();
     restoreOriginalBorders();
     emit signal_preview_border(mRoomIds);
-    QDialog::reject();
 }

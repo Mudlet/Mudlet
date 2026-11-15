@@ -388,6 +388,20 @@ private:
         QTest::keyClick(pField, key);
     }
 
+    // A field only loses the focus, and takes the code typed in it, if it had the focus in the active window first
+    static bool focusInTheActiveDialog(dlgRoomProperties* pDlg, QWidget* pField)
+    {
+        pDlg->show();
+        pDlg->activateWindow();
+        if (!QTest::qWaitForWindowActive(pDlg)) {
+            return false;
+        }
+        pField->setFocus();
+        return QTest::qWaitFor([pField]() {
+            return pField->hasFocus();
+        });
+    }
+
     // The colours window is opened rather than run, so it is among the dialog's children as soon as Choose is clicked
     static bool chooseInTheColoursWindow(dlgRoomProperties* pDlg, QPushButton* pChoose, const QColor& colour)
     {
@@ -849,6 +863,30 @@ private slots:
         QVERIFY2(!mEmitted.changeBorderColor, "a code put back was reported as a change of border colour");
     }
 
+    // Leaving the field takes the code as Return does, so a code typed and clicked away from is not lost
+    void leavingTheFieldTakesTheCode()
+    {
+        buildMap();
+        TRoom* pRoom = room(scmFirstRoom);
+        pRoom->mBorderColor = QColor(Qt::darkGreen);
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        uiDesign::ColourValue* pBorder = borderColour(pDlg);
+        QVERIFY2(focusInTheActiveDialog(pDlg, pBorder), "the border field never had the focus, so it had none to lose");
+        pBorder->selectAll();
+        QTest::keyClicks(pBorder, qsl("#ff0000"));
+        QCOMPARE(pRoom->mBorderColor, QColor(Qt::darkGreen));
+
+        QTest::mouseClick(pDlg->lineEdit_name, Qt::LeftButton);
+        QVERIFY2(pDlg->lineEdit_name->hasFocus(), "the click left the focus in the border field");
+        QCOMPARE(pBorder->text(), qsl("#FF0000"));
+        QCOMPARE(pRoom->mBorderColor, QColor(Qt::red));
+
+        pDlg->accept();
+        QVERIFY(mEmitted.changeBorderColor);
+        QCOMPARE(mEmitted.newBorderColor, QColor(Qt::red));
+    }
+
     // Emptying a field and taking it is what Reset does
     void anEmptiedFieldPutsTheRoomBackToTheDefault()
     {
@@ -909,6 +947,22 @@ private slots:
         QVERIFY(pDlg->pushButton_resetBorderColor->isEnabled());
     }
 
+    // A border that is only nearly clear or nearly opaque is held at 1% or 99%, so the box shows 0% and 100% only for
+    // a border that is wholly clear or wholly opaque
+    void onlyAClearOrOpaqueBorderShowsAsZeroOrAHundredPercent()
+    {
+        const QList<std::pair<int, int>> percentForAlpha{{0, 0}, {1, 1}, {254, 99}, {255, 100}};
+        for (const auto& [alpha, percent] : percentForAlpha) {
+            buildMap();
+            room(scmFirstRoom)->mBorderColor = QColor(0, 128, 0, alpha);
+            auto* pDlg = openDialogOn({scmFirstRoom});
+            const int shown = borderOpacity(pDlg)->value();
+            QVERIFY2(shown == percent, qPrintable(qsl("a border of alpha %1 shows as %2%, not %3%").arg(alpha).arg(shown).arg(percent)));
+            pDlg->reject();
+            QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        }
+    }
+
     // Rooms with different symbols show no one colour, and a code typed for them goes to every one
     void aCodeTypedForRoomsWithDifferentSymbolsReachesThemAll()
     {
@@ -956,6 +1010,35 @@ private slots:
 
         QCOMPARE(pRoom->mBorderThickness, 2);
         QCOMPARE(pRoom->mBorderColor, QColor(Qt::darkGreen));
+    }
+
+    // Cancel and closing the window both hide the dialog, and the field takes a code still being typed as the focus
+    // leaves it; the rooms must still end up as they were
+    void cancelOrClosingWithACodeStillTypedLeavesTheBorderAsItWas()
+    {
+        for (const bool closeTheWindow : {false, true}) {
+            const QString way = closeTheWindow ? qsl("closing the window") : qsl("Cancel");
+            buildMap();
+            TRoom* pRoom = room(scmFirstRoom);
+            pRoom->mBorderColor = QColor(Qt::darkGreen);
+
+            auto* pDlg = openDialogOn({scmFirstRoom});
+            uiDesign::ColourValue* pBorder = borderColour(pDlg);
+            QVERIFY2(focusInTheActiveDialog(pDlg, pBorder), "the border field never had the focus, so it had none to lose");
+            pBorder->selectAll();
+            QTest::keyClicks(pBorder, qsl("#ff0000"));
+            QCOMPARE(pRoom->mBorderColor, QColor(Qt::darkGreen));
+
+            // Called, not clicked: where a click gives the button the focus, the field takes the code before Cancel runs
+            if (closeTheWindow) {
+                QVERIFY(pDlg->close());
+            } else {
+                pDlg->reject();
+            }
+            QVERIFY2(pRoom->mBorderColor == QColor(Qt::darkGreen),
+                     qPrintable(qsl("%1 left the room's border %2, the code typed but not taken").arg(way, pRoom->mBorderColor.name(QColor::HexArgb).toUpper())));
+            QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        }
     }
 
     void okKeepsThePreviewedBorderAndReportsIt()
