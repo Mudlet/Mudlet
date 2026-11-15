@@ -89,6 +89,10 @@ public:
         // Mudlet.ini keeps them in the folder. Settled once a process, so a later start() may name it again, but
         // no other, nor leave it out for the GUI's. Never the GUI's folder.
         QString configDir;
+        // The app makes the connection to the game, for a platform with no sockets such as a browser: the profile
+        // asks for it with transportDialRequested, and never uses its own. Only for the session's profile, not
+        // ones its scripts open. See "The game connection" in docs/headless.md
+        bool supplyTransport = false;
     };
 
     // How the game asked for a run of a line to be shown. Reverse is not applied to the colours: the GUI
@@ -809,6 +813,15 @@ public:
     // other move, a release, an enter and a leave do nothing there.
     bool pointer(const QString& window, const WindowPointerEvent& event);
 
+    // With Options::supplyTransport, what the app's connection to the game reports: that it was made, each chunk the
+    // game sent, in order, and that it ended or could not be made, with why if known. Callable from anywhere, a
+    // handler included, as the profile takes them up from the event loop; one made before the profile closed the
+    // connection and taken up after is dropped, so an app stops reporting about a connection at
+    // transportCloseRequested. Without a dial outstanding or a connection, they do nothing.
+    void transportConnected();
+    void transportReceived(const QByteArray& data);
+    void transportClosed(const QString& reason = QString());
+
     // sysExitEvent and, if asked, a save for every profile that loaded, then the pool goes. Meanwhile no profile
     // opens, and none dials the game or logs in, a live connection staying for the exit handlers. Refused while a
     // profile loads, reconnects or runs a script, nested event loop or map operation, and during another
@@ -1021,6 +1034,17 @@ signals:
     // What buttonBars() gives changed, by a script, a package or the profile's reset, for the app to read the bars
     // again. One for all the changes made before the event loop runs, from the event loop.
     void buttonsChanged(const QString& profile);
+    // With Options::supplyTransport, the profile wants a connection to host:port, as it starts, reconnects or a script
+    // connects: answer with transportConnected(), or transportClosed() if it cannot be made. tlsRequested is the
+    // profile's secure connection setting, for the app to honour as it can; the profile calls the connection open
+    // either way. Sent mid-write, as outputLine is, so a handler may call none of the session but the transport...()
+    // calls
+    void transportDialRequested(const QString& profile, const QString& host, int port, bool tlsRequested);
+    // Bytes for the game, telnet negotiation and all, to be sent in order. Sent mid-write, as transportDialRequested
+    void transportWriteRequested(const QString& profile, const QByteArray& data);
+    // End the connection or the dial: the profile has reported the end itself, so no transportClosed() is due.
+    // Sent mid-write, as transportDialRequested; not sent once the session has been deleted
+    void transportCloseRequested(const QString& profile);
     // The connection was made; from the event loop
     void connected(const QString& profile);
     // The connection ended, or could not be made, or was called off while connecting; from the event loop
@@ -1222,6 +1246,9 @@ private:
     bool mLineShownLatched = false;
     class DebugSink;
     std::unique_ptr<DebugSink> mpDebugSink;
+    class Transport;
+    // A child, made by the first start() that supplies the connection
+    Transport* mpTransport = nullptr;
     // What consoleWrap() gave at profileLoaded, then each consoleWrapChanged; none before the load ends
     std::optional<ConsoleWrap> mDeliveredConsoleWrap;
     // The same for consoleForeground() and consoleBackground()
