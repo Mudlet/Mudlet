@@ -1503,9 +1503,11 @@ void cTelnet::slot_socketDisconnected()
 
     // The socket still holds what the game sent before it closed - often its
     // last words, such as a quit message - and no readyRead() will come for it.
+    // Seen from a trigger's nested event loop, the rest of that trigger's read
+    // is still to come, unless its reconnect() made the close.
     // Not after a Disconnect, when it is not wanted; an abort() leaves nothing.
-    // Seen from a trigger's nested event loop, a close also waits for the rest of the trigger's read, unless a reconnect made it.
-    if (!mDisconnectRequested && !mDeferredReconnect && connectionAdopted() && ((mDecompressionRecursionDepth > 0 && mReconnectsOnStack == 0) || !mDeferredInput.isEmpty() || unreadBytes() > 0)) {
+    const bool triggersReadUnfinished = mDecompressionRecursionDepth > 0 && mReconnectsOnStack == 0;
+    if (!mDisconnectRequested && !mDeferredReconnect && connectionAdopted() && (triggersReadUnfinished || !mDeferredInput.isEmpty() || unreadBytes() > 0)) {
         mDisconnectionPending = true;
         QMetaObject::invokeMethod(this, &cTelnet::drainBeforeDisconnection, Qt::QueuedConnection);
         return;
