@@ -280,6 +280,39 @@ registerAnonymousEventHandler("sysConnectionEvent", function() send("hello") end
         QVERIFY(!written(writes).contains("hello"));
     }
 
+    void test_whatIsSentAsTheProfileClosesReachesTheGame_data()
+    {
+        QTest::addColumn<bool>("save");
+        // The exit handlers run from the pool's deletion unsaved, and from the profile's close when saved
+        QTest::newRow("unsaved") << false;
+        QTest::newRow("saved") << true;
+    }
+
+    void test_whatIsSentAsTheProfileClosesReachesTheGame()
+    {
+        QFETCH(const bool, save);
+        const QString name = qsl("Headless Transport Last Words");
+        QVERIFY(writeProfile(name));
+        QStringList requests;
+        THeadlessSession session;
+        QSignalSpy dials(&session, &THeadlessSession::transportDialRequested);
+        QSignalSpy connected(&session, &THeadlessSession::connected);
+        connect(&session, &THeadlessSession::transportWriteRequested, &session, [&requests](const QString&, const QByteArray& data) {
+            requests << QString::fromUtf8(data);
+        });
+        connect(&session, &THeadlessSession::transportCloseRequested, &session, [&requests]() {
+            requests << qsl("close");
+        });
+        QCOMPARE(session.start({.profile = name, .connect = true, .supplyTransport = true}), THeadlessSession::StartResult::started);
+        QTRY_COMPARE_WITH_TIMEOUT(dials.size(), 1, 10000);
+        session.transportConnected(lastDial(dials));
+        QTRY_COMPARE_WITH_TIMEOUT(connected.size(), 1, 10000);
+        QVERIFY(session.runLua(qsl(R"lua(registerAnonymousEventHandler("sysExitEvent", function() send("last words", false) end))lua")));
+
+        QVERIFY(session.shutdown(save));
+        QCOMPARE(requests, QStringList({qsl("last words\r\n"), qsl("close")}));
+    }
+
     // An app whose socket reports its end some time after it was told to close it: that report is about the
     // connection closed, not the one dialled straight after
     void test_aLateReportOfAClosedConnectionIsNotTheNextOnes()
