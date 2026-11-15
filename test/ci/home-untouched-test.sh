@@ -27,7 +27,7 @@
 # do not resolve AppConfigLocation the same way; see the two branches below.
 #
 # Sweep 3, macOS only - one unit_tests case run as a developer would, with no
-# CFFIXED_USER_HOME, must keep its store under the home its main() makes for itself.
+# CFFIXED_USER_HOME, must make a home of its own and leave the real one alone.
 
 set -uo pipefail
 
@@ -185,8 +185,8 @@ if [[ ${MACOS} -eq 1 && -x "${BINARY_DIR}/unit_tests" ]]; then
       # This run made it, so it is this run's to take away
       rm -rf "${real}"
       FAILURES=$((FAILURES + 1))
-    elif [[ -z "${given}" || ! -d "${given}/Library/Preferences/${name}" ]]; then
-      echo "FAIL: ${name}, run by hand without CFFIXED_USER_HOME, did not keep its store under a home of its own" >&2
+    elif [[ -z "${given}" ]]; then
+      echo "FAIL: ${name}, run by hand without CFFIXED_USER_HOME, did not make a home of its own" >&2
       FAILURES=$((FAILURES + 1))
     fi
     if [[ ${status} -ne 0 ]]; then

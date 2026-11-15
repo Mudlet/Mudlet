@@ -23,6 +23,7 @@
 #include "GroupedTest.h"
 #include "TriggerMatchPool.h"
 
+#include <QDir>
 #include <QLatin1Char>
 #include <QMap>
 #include <QString>
@@ -106,6 +107,7 @@ int main(int argc, char* argv[])
     // AppConfigLocation, where a case's profiles keep their keys and passwords, and CacheLocation are built from the
     // home directory CoreFoundation reports, and only CFFIXED_USER_HOME moves it. ctest sets it for every case; run by
     // hand, a case would otherwise write under the real ~/Library. Set before anything asks Foundation for that home.
+    std::string madeHome;
     if (qEnvironmentVariableIsEmpty("CFFIXED_USER_HOME")) {
         const char* tmp = getenv("TMPDIR");
         std::string home = tmp && *tmp ? tmp : "/tmp";
@@ -119,19 +121,31 @@ int main(int argc, char* argv[])
         }
         setenv("CFFIXED_USER_HOME", home.c_str(), 1);
         fprintf(stderr, "CFFIXED_USER_HOME was unset, so this run keeps its config under %s\n", home.c_str());
-#if defined(MUDLET_FUNCTIONAL_TEST_GROUP)
-        // As ctest gives every functional case: this home has no login keychain, and a write to the keychain from it
-        // asks the person running the test whether to reset their own
-        if (qEnvironmentVariableIsEmpty("MUDLET_TEST_MODE")) {
-            setenv("MUDLET_TEST_MODE", "1", 1);
-            fprintf(stderr, "MUDLET_TEST_MODE was unset, so this run keeps credentials off the keychain as ctest's do\n");
-        }
-#endif
+        madeHome = home;
     }
+#if defined(MUDLET_FUNCTIONAL_TEST_GROUP)
+    // As ctest gives every functional case: under a home with no login keychain, as ctest's and the one above are, a
+    // write to the keychain asks the person running the test whether to reset their own
+    if (qEnvironmentVariableIsEmpty("MUDLET_TEST_MODE")) {
+        setenv("MUDLET_TEST_MODE", "1", 1);
+        fprintf(stderr, "MUDLET_TEST_MODE was unset, so this run keeps credentials off the keychain as ctest's do\n");
+    }
+#endif
 #endif
 
     // qExec skips argv[0] and reads every later argument that is not an option
     // as a test function to run, so the class name has to take argv[0]'s place
     // rather than stay in front of the arguments meant for it.
-    return registry().value(QString::fromUtf8(argv[1]))(argc - 1, argv + 1);
+    const int result = registry().value(QString::fromUtf8(argv[1]))(argc - 1, argv + 1);
+#if defined(Q_OS_MACOS)
+    // Kept after a failure, for what its profiles were left holding
+    if (!madeHome.empty()) {
+        if (result == 0) {
+            QDir(QString::fromStdString(madeHome)).removeRecursively();
+        } else {
+            fprintf(stderr, "%s is left in place, as the run failed\n", madeHome.c_str());
+        }
+    }
+#endif
+    return result;
 }
