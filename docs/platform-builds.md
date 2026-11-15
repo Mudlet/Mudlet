@@ -420,11 +420,12 @@ NODE_PATH=~/mudlet-playwright/node_modules node CI/wasm-headless-smoke.js build-
 ```
 
 Given an expected line after the directory, which must not be blank, it passes the rest of its
-arguments to `mudlet-headless` instead of the probe's. With `--quit-while-loading` instead, it
-feeds the game a line from an `-e` step while standard output has gone, as a pipe's has once its
-reader exits, and passes once the run ends with status 0, as the desktop's does; that quit is asked
-for before the event loop runs. Its header lists its exit codes; 3 means it could not run the
-program at all, not that the build failed.
+arguments to `mudlet-headless` instead of the probe's. With `--quit-while-loading` instead, it feeds
+the game a line from an `-e` step while standard output has gone, as a pipe's has once its reader
+exits, and passes once the run ends with status 0, as the desktop's does; that quit is asked for
+before the event loop runs. `--quit-after-lua-error` does the same after an `-e` step that raises an
+error, and passes once the run ends with status 1. Its header lists its exit codes; 3 means it could
+not run the program at all, not that the build failed.
 
 The page seeds `Mudlet.ini` with `interfaceLanguage=en_US` (the script says why). A browser build
 keeps passwords in the profile unless `storePasswordsSecurely` says otherwise, as reading the

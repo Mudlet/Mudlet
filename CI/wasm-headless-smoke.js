@@ -22,7 +22,7 @@
 
 const fs = require("fs");
 const path = require("path");
-const { failureMarkers, outputPrefixes, requireBuild, timeoutFrom, page, parseExit, exitedCleanly, openPage, closeBrowser } = require("./wasm-headless-page");
+const { failureMarkers, outputPrefixes, requireBuild, timeoutFrom, page, parseExit, openPage, closeBrowser } = require("./wasm-headless-page");
 
 const fixtureDir = path.join(__dirname, "..", "src", "mudlet-lua", "tests", "fixtures");
 const mapFixtureDir = path.join(fixtureDir, "maps");
@@ -168,12 +168,11 @@ const settleMs = 2000;
 // A page stuck in a loop prints nothing, so after the settle it must still run a task within this
 const answerMs = 5000;
 
-// exitFailed in src/headless/main.cpp
-const failedStatus = 1;
-
 const [dir, ...rest] = process.argv.slice(2);
 const failingStep = rest[0] === "--quit-after-lua-error";
 const quitting = failingStep || rest[0] === "--quit-while-loading";
+// 1 is exitFailed in src/headless/main.cpp
+const quitStatus = failingStep ? 1 : 0;
 if (!dir || (quitting && rest.length > 1)) {
   console.error(
     "usage: node CI/wasm-headless-smoke.js <dir holding mudlet-headless.js> " +
@@ -224,9 +223,9 @@ if (!quitting) {
     serve: (file) => fixtureFile(path.basename(file)),
     onConsole: (text) => {
       console.log(text);
-      const status = quitting && parseExit(text);
+      const status = quitting ? parseExit(text) : null;
       if (status) {
-        finish(failingStep ? status.code === failedStatus && !status.crashed : exitedCleanly(status));
+        finish(status.code === quitStatus && !status.crashed);
       } else if (!quitting && text.replace(outputPrefixes, "") === expected) {
         seen = true;
         clearTimeout(timer);
@@ -255,7 +254,7 @@ if (!quitting) {
   await closeBrowser();
   if (!passed) {
     if (quitting) {
-      console.error(`mudlet-headless did not end with status ${failingStep ? failedStatus : 0} once standard output had gone`);
+      console.error(`mudlet-headless did not end with status ${quitStatus} once standard output had gone`);
     } else {
       const what = seen ? "failed after printing" : "did not print";
       console.error(`mudlet-headless ${what} "${expected}"`);

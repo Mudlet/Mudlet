@@ -70,7 +70,7 @@
 #if defined(Q_OS_WASM)
 #include <QTimer>
 
-#include <emscripten.h>
+#include <emscripten/emscripten.h>
 
 using namespace std::chrono_literals;
 #endif
