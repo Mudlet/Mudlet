@@ -269,15 +269,21 @@ if (playing) {
 
 (async () => {
   let relay = null;
+  let game = null;
   let gameDir = null;
   if (playing) {
     gameDir = fs.mkdtempSync(path.join(os.tmpdir(), "mudlet-wasm-game-"));
-    try {
-      const { game, port } = await startGame(gameDir);
-      process.on("exit", () => {
-        game.kill();
+    // For a harness failure, which exits at once; a finished run waits for the fixture to end first, as one still
+    // writing into the folder can leave it behind
+    process.on("exit", () => {
+      game?.kill();
+      try {
         fs.rmSync(gameDir, { recursive: true, force: true });
-      });
+      } catch {}
+    });
+    try {
+      let port;
+      ({ game, port } = await startGame(gameDir));
       relay = await startRelay({ gamePort: port, log: (text) => console.log("[relay] " + text) });
       args = gameArgs(port);
     } catch (error) {
@@ -340,6 +346,14 @@ if (playing) {
   const passed = (quitting ? settled : answeredInTime) && !failed && !missing;
   await closeBrowser();
   relay?.close();
+  if (game && game.exitCode === null && game.signalCode === null) {
+    const ended = new Promise((resolve) => game.once("exit", resolve));
+    game.kill();
+    await ended;
+  }
+  if (gameDir) {
+    fs.rmSync(gameDir, { recursive: true, force: true });
+  }
   if (!passed) {
     if (quitting) {
       console.error(`mudlet-headless did not end with status ${quitStatus} once standard output had gone`);
