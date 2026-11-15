@@ -96,8 +96,9 @@ const padding = new TextEncoder().encode(${scriptValue(`\r\n${pagePadding}\r\n`)
 // The first connection's write() throws, and it hands received() a DataView into the middle of a larger buffer, whose
 // padding either side shows as a line of its own if Mudlet reads past the view. The second hands it the Blob a
 // WebSocket gives on its default binaryType, and the rest the ArrayBuffer it gives otherwise. dial() is async, and the
-// third's rejects. Mudlet must close the first three itself, as the profile, told they ended, asks for no close(); the
-// page fails the run if it is asked to dial while the last connection is still open.
+// third's rejects; the fourth's write() returns a promise that rejects. Mudlet must close the first four itself, as the
+// profile, told they ended, asks for no close(); the page fails the run if it is asked to dial while the last connection
+// is still open.
 function relayTransport() {
   let socket = null;
   let dials = 0;
@@ -133,6 +134,9 @@ function relayTransport() {
     write(bytes) {
       if (dials === 1) {
         throw new Error("the page could not send (a fault the smoke test makes)");
+      }
+      if (dials === 4) {
+        return Promise.reject(new Error("the page's send failed later (a fault the smoke test makes)"));
       }
       socket.send(bytes);
     },

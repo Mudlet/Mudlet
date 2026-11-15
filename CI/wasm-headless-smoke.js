@@ -20,9 +20,9 @@
 // With --game-connection, the page makes the profile's connection, as docs/headless.md has a page do,
 // over a WebSocket to CI/wasm-telnet-relay.js and on to CI/telnet-fixture-server.py; that game asks
 // for the terminal type, offers GMCP, sends vitals and a line a trigger answers, and hangs up once
-// the answer arrives. The page's first three connections fail as CI/wasm-headless-page.js describes,
+// the answer arrives. The page's first four connections fail as CI/wasm-headless-page.js describes,
 // and the profile reconnects after each. It passes as the default does, once the disconnect handler
-// finds the next connection played the game, and then only if Mudlet logged all three failures to the
+// finds the next connection played the game, and then only if Mudlet logged all four failures to the
 // browser's console and gave each as the reason on its own, logged no other, never showed the page's
 // padding, the page was never asked to dial while a connection was open, and the game received
 // Mudlet's terminal type, NUL byte and all, its agreement to GMCP and the trigger's command.
@@ -210,8 +210,9 @@ const faultLogged = "mudletTransport: ";
 // The faults the page makes, as Mudlet logs them to the browser's console after this prefix and gives them as the
 // reason the connection ended on its own console
 const pageFaults = [
-  "mudletTransport.write() failed: ",
+  "mudletTransport.write() failed: Error: the page could not send",
   "mudletTransport.dial() failed: ",
+  "mudletTransport.write() failed: Error: the page's send failed later",
   "connection.received() takes an ArrayBuffer or a view of one such as a Uint8Array, not Blob",
 ];
 const pageFailed = "[transport] FAILED";
@@ -224,7 +225,7 @@ function gameArgs(port) {
       'gameStage("connection " .. gameConnections .. " made") end)',
     'registerAnonymousEventHandler("gmcp.Char.Vitals", function() gameHp = gmcp.Char.Vitals.hp gameStage("vitals received") end)',
     'tempRegexTrigger("^A dragon arrives", function() gameTriggered = true gameStage("trigger fired") send("kill dragon") end)',
-    'registerAnonymousEventHandler("sysDisconnectionEvent", function() if gameConnections < 3 then gameStage("connection " .. gameConnections .. " ended") reconnect() ' +
+    'registerAnonymousEventHandler("sysDisconnectionEvent", function() if gameConnections < 4 then gameStage("connection " .. gameConnections .. " ended") reconnect() ' +
       `elseif gameTriggered and gameHp == 42 then echo("${gameOver}\\n") else gameStage("disconnected before the game was played") end end)`,
   ];
   return ["-p", "WasmGame", "--host", "127.0.0.1", "--port", String(port), "--no-tls", "--no-stdin", ...gameLua.flatMap((code) => ["-e", code])];
