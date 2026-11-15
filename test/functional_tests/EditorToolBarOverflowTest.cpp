@@ -27,6 +27,8 @@
 #include <QMainWindow>
 #include <QToolBar>
 #include <QToolButton>
+#include <QMenu>
+#include <QPointer>
 #include <QScopeGuard>
 #include <QHash>
 #include <QtTest/QtTest>
@@ -35,6 +37,7 @@
 #include "HostDialogs.h"
 #include "ProfileSessionTestHelper.h"
 #include "ToolBarOverflow.h"
+#include "dlgPackageManager.h"
 #include "dlgTriggerEditor.h"
 #include "mudlet.h"
 #include "uiDesign.h"
@@ -513,6 +516,22 @@ private slots:
         // Tinting goes through premultiplied alpha, which can land a level off
         const bool sameInk = std::abs(strongest.red() - lit.red()) <= 2 && std::abs(strongest.green() - lit.green()) <= 2 && std::abs(strongest.blue() - lit.blue()) <= 2;
         QVERIFY2(sameInk, qPrintable(qsl("The chevron is inked %1 rather than the chrome tone %2").arg(strongest.name(), lit.name())));
+    }
+
+    // The managers and the Package Exporter are reached from the editor too, under the names they have everywhere else
+    void test_createModuleOpensAMenuOfThePackageTools()
+    {
+        auto* pButton = qobject_cast<QToolButton*>(mpEditor->toolBar->widgetForAction(mpEditor->mpCreateModuleAction));
+        QVERIFY(pButton);
+        QCOMPARE(pButton->popupMode(), QToolButton::MenuButtonPopup);
+        QVERIFY2(pButton->menu(), "Create Module has no menu for the package tools");
+        const QList<QAction*> wanted{mpEditor->mpPackageExporterAction, mpEditor->mpPackageManagerAction, mpEditor->mpModuleManagerAction};
+        QCOMPARE(pButton->menu()->actions(), wanted);
+
+        mpEditor->mpPackageManagerAction->trigger();
+        QPointer<dlgPackageManager> pManager = HostDialogs::of(mpHost).mpPackageManager;
+        QVERIFY2(pManager, "the editor's Package Manager item opened no manager for its own profile");
+        pManager->close();
     }
 };
 
