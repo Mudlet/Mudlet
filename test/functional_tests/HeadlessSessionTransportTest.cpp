@@ -392,7 +392,7 @@ tempTrigger("A dragon arrives", function() dragonSeen = "yes" send("kill dragon"
         QTRY_COMPARE_WITH_TIMEOUT(dials.size(), 1, 10000);
         session.transportConnected(lastDial(dials));
         QTRY_COMPARE_WITH_TIMEOUT(connected.size(), 1, 10000);
-        QVERIFY(session.runLua(qsl(R"lua(registerAnonymousEventHandler("sysDisconnectionEvent", function() reconnect() end))lua")));
+        QVERIFY(session.runLua(qsl(R"lua(registerAnonymousEventHandler("sysDisconnectionEvent", function() reconnect() end, true))lua")));
         local.clear();
 
         session.transportClosed(lastDial(dials), qsl("gone"));
@@ -400,6 +400,14 @@ tempTrigger("A dragon arrives", function() dragonSeen = "yes" send("kill dragon"
         // The app's reason, though the connection lasted under the five seconds that blame the game for a socket's end
         QVERIFY2(printed(local).contains(qsl("[ ALERT ] - Socket got disconnected, for reason:\n")), qPrintable(printed(local)));
         QVERIFY2(printed(local).contains(qsl(" gone\n")), qPrintable(printed(local)));
+
+        // The next connection ends with no reason from the app, so the last one's must not be given for it
+        session.transportConnected(lastDial(dials));
+        QTRY_COMPARE_WITH_TIMEOUT(connected.size(), 2, 10000);
+        local.clear();
+        QVERIFY(session.runLua(qsl("reconnect()")));
+        QTRY_VERIFY2_WITH_TIMEOUT(printed(local).contains(qsl("[ ALERT ] - Socket got disconnected")), qPrintable(printed(local)), 10000);
+        QVERIFY2(!printed(local).contains(qsl(" gone\n")), qPrintable(printed(local)));
         QVERIFY(session.shutdown(false));
     }
 
