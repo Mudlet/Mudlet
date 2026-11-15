@@ -18,6 +18,7 @@ const failureMarkers = [
   "[abort]",
   "program exited (",
   "[sync failed]",
+  "mudletConfigSaved() failed",
 ];
 
 // Where the page puts what mudlet-headless printed, ahead of the text
@@ -61,9 +62,10 @@ function scriptValue(value) {
 // clockJump, { line, seconds }, Date.now() and performance.now() jump that many seconds ahead once the program prints
 // that line; with stdoutGone, writing to standard output fails as it does once a pipe's reader has gone. With relay,
 // a CI/wasm-telnet-relay.js URL, the page makes the profile's game connection through it, as docs/headless.md has it.
-// With keep, { dir, sync }, the page keeps the folder dir in IndexedDB as docs/headless.md has it, loading it before the
-// program starts and, if sync, saving it each time the program says it wrote there, which it prints as "[config saved]";
-// it prints "[synced]" once a save has ended with none due after it.
+// With keep, { dir, sync, fault }, the page keeps the folder dir in IndexedDB as docs/headless.md has it, loading it before
+// the program starts and, if sync, saving it each time the program says it wrote there, which it prints as
+// "[config saved]"; it prints "[synced]" once a save has ended with none due after it. With fault, the first time the
+// program says so the page throws an Error with that message once it has started the save.
 function page({ args, environment = {}, staged = false, clockJump = null, stdoutGone = false, relay = null, keep = null }) {
   return `<!doctype html>
 <html><head><meta charset="utf-8"><title>mudlet-headless</title></head>
@@ -154,6 +156,7 @@ function relayTransport() {
 const keep = ${scriptValue(keep)};
 let syncing = false;
 let syncAgain = false;
+let faulted = false;
 function syncConfig() {
   if (syncing) {
     syncAgain = true;
@@ -189,6 +192,10 @@ let program;
       ? () => {
           console.log("[config saved]");
           syncConfig();
+          if (keep.fault && !faulted) {
+            faulted = true;
+            throw new Error(keep.fault);
+          }
         }
       : undefined,
     print: output("[out] "),

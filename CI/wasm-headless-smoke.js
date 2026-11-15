@@ -31,8 +31,9 @@
 // loaded four times in one tab, which keeps IndexedDB between loads. The first run saves an alias, a map room and a
 // setting with the page not syncing; the second finds none of them, saves them again and is reloaded once the page has
 // synced on Mudlet's signal; the third finds them, makes another alias and room it never saves and quits, so only the
-// shutdown's own save and signal can keep them; and the fourth finds all of them. It passes as the default does, once
-// the fourth says so.
+// shutdown's own save and signal can keep them, and its page's handler for that signal throws once it has started the
+// sync, which Mudlet must log and carry on from to a clean exit; and the fourth finds all of them. It passes as the
+// default does, once the fourth says so.
 // It exits 2 if its arguments, the directory or WASM_SMOKE_TIMEOUT are wrong; and 3 if it could not
 // run the program at all: playwright does not load, Chromium does not start or quits, the page does
 // not load, the game does not start or this script fails. It needs the playwright package on
@@ -314,7 +315,7 @@ const keepChange =
   'permAlias("keepAlias", "", "^keep$", "") addRoom(4242) setRoomArea(4242, addAreaName("keep")) ' +
   'assert(setConfig("showTabConnectionIndicators", true)) assert(saveProfile()) assert(saveMap())';
 const keepAll = "keep: all kept";
-// Each run's steps, whether the page syncs, and the line its last step prints
+// Each run's steps, whether the page syncs, the line its last step prints, and what the page's handler throws
 const keepRuns = [
   {
     sync: false,
@@ -329,6 +330,7 @@ const keepRuns = [
   {
     sync: true,
     quits: true,
+    fault: "the page's handler failed, as the smoke test has it do",
     lua: [
       keepFound,
       'permAlias("keepAlias2", "", "^keep2$", "") addRoom(4243) setRoomArea(4243, getRoomArea(4242))',
@@ -349,11 +351,13 @@ async function keepProfiles() {
   let run = 0;
   let finish;
   const finished = new Promise((resolve) => (finish = resolve));
-  // Per run: its done line, Mudlet's signal after it, its exit, and whether a sync is due or running
+  // Per run: its done line, Mudlet's signal after it, its exit, whether a sync is due or running, and its handler's fault
+  // logged
   let done = false;
   let signalled = false;
   let exited = false;
   let syncDue = false;
+  let faultLogged = false;
   let tab = null;
   let reloading = false;
   const timer = setTimeout(() => {
@@ -363,7 +367,7 @@ async function keepProfiles() {
   function runOver() {
     const current = keepRuns[run];
     if (current.quits) {
-      return exited && !syncDue;
+      return exited && !syncDue && (!current.fault || faultLogged);
     }
     return done && (!current.sync || (signalled && !syncDue));
   }
@@ -377,6 +381,7 @@ async function keepProfiles() {
     signalled = false;
     exited = false;
     syncDue = false;
+    faultLogged = false;
     console.log(`[reload] run ${run + 1} of ${keepRuns.length}`);
     tab.goto("http://localhost/index.html").then(() => {
       reloading = false;
@@ -389,17 +394,21 @@ async function keepProfiles() {
     html: () => {
       const current = keepRuns[run];
       const args = [...keepArgs, ...current.lua.flatMap((code) => ["-e", code])];
-      return page({ args, keep: { dir: "/mudlet", sync: current.sync }, stdoutGone: Boolean(current.quits) });
+      const keep = { dir: "/mudlet", sync: current.sync, fault: current.fault };
+      return page({ args, keep, stdoutGone: Boolean(current.quits) });
     },
     onConsole: (text) => {
       console.log(text);
       const status = parseExit(text);
       const line = text.replace(outputPrefixes, "");
+      const { fault } = keepRuns[run];
       if (status && keepRuns[run].quits) {
         exited = true;
         if (status.code !== 0 || status.crashed) {
           finish(false);
         }
+      } else if (fault && !faultLogged && text === `mudletConfigSaved() failed: Error: ${fault}`) {
+        faultLogged = true;
       } else if (failureMarkers.some((marker) => text.includes(marker))) {
         finish(false);
       } else if (text === "[config saved]") {
