@@ -585,6 +585,7 @@ private:
     // What the transport has delivered and processSocketData() not yet taken, as a socket buffers it
     QByteArray mTransportInput;
     qsizetype mTransportInputRead = 0;
+    bool mTransportReadDeferred = false;
     QString mTransportCloseReason;
     // Could be a URL ("www.game.com") or an IPv4 address ("192.168.1.1") or an
     // IPv6 address ("2001:db8::1"):

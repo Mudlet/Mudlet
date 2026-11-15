@@ -324,6 +324,45 @@ tempTrigger("A dragon arrives", function() dragonSeen = "yes" send("kill dragon"
         QVERIFY2(texts(local).join(QString()).contains(qsl("[ ALERT ] - Socket got disconnected")), qPrintable(texts(local).join(QString())));
         QVERIFY(session.shutdown(false));
     }
+
+    // As a socket's readyRead() is never emitted from inside its own handler
+    void test_dataReportedDuringATriggersEventLoopWaitsItsTurn()
+    {
+        const QString name = qsl("Headless Transport Nested Read");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QSignalSpy dials(&session, &THeadlessSession::transportDialRequested);
+        QSignalSpy connected(&session, &THeadlessSession::connected);
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QCOMPARE(session.start({.profile = name, .connect = true, .supplyTransport = true}), THeadlessSession::StartResult::started);
+        QTRY_COMPARE_WITH_TIMEOUT(dials.size(), 1, 10000);
+        session.transportConnected(lastDial(dials));
+        QTRY_COMPARE_WITH_TIMEOUT(connected.size(), 1, 10000);
+        connect(&session, &THeadlessSession::transportWriteRequested, &session, [&session, &dials](const QString&, const QByteArray& data) {
+            if (data.contains("wait")) {
+                session.transportReceived(lastDial(dials), "C\r\n");
+            }
+        });
+        QVERIFY(session.runLua(qsl(R"lua(
+seen = ""
+tempRegexTrigger("^[ABC]$", function()
+  seen = seen .. matches[1]
+  if matches[1] == "A" then
+    send("wait")
+    pumpEvents(50)
+  end
+end)
+)lua")));
+
+        session.transportReceived(lastDial(dials), "A\r\nB\r\n");
+        QTRY_COMPARE_WITH_TIMEOUT(luaGlobal(session, "seen"), qsl("ABC"), 10000);
+        QStringList lines = texts(output);
+        lines.removeIf([](const QString& line) {
+            return line != qsl("A") && line != qsl("B") && line != qsl("C");
+        });
+        QCOMPARE(lines, QStringList({qsl("A"), qsl("B"), qsl("C")}));
+        QVERIFY(session.shutdown(false));
+    }
 };
 
 #include "HeadlessSessionTransportTest.moc"

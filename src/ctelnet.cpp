@@ -6533,6 +6533,18 @@ void cTelnet::readPendingSocketData()
     if (!mpHost || mpHost->isClosingDown() || !connectionAdopted() || mDeferredReconnect) {
         return;
     }
+    // Qt never emits a socket's readyRead() from inside its handler, but a trigger's nested event loop can take up a
+    // transport's report; read then, it would be parsed in the middle of the read the trigger is part of
+    if (!mpSocket && mDecompressionRecursionDepth > 0) {
+        if (!mTransportReadDeferred) {
+            mTransportReadDeferred = true;
+            QTimer::singleShot(10ms, this, [this]() {
+                mTransportReadDeferred = false;
+                readPendingSocketData();
+            });
+        }
+        return;
+    }
 
     if (readSocketDataOnce()) {
         mReadPending = true;
