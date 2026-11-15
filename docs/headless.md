@@ -624,29 +624,35 @@ the GUI always does.
 
 ```cpp
 QObject::connect(session.get(), &THeadlessSession::transportDialRequested,
-                 [](const QString& profile, const QString& host, int port, bool tlsRequested) {
-    // Dial, then report how it went
+                 [](const QString& profile, quint64 connection, const QString& host, int port, bool tlsRequested) {
+    // Dial, then report how it went, naming connection
 });
 QObject::connect(session.get(), &THeadlessSession::transportWriteRequested, [](const QString& profile, const QByteArray& data) {
-    // Bytes for the game, telnet negotiation included, to send in order
+    // Bytes for the game, telnet negotiation included, to send in order on the connection last dialled
 });
 QObject::connect(session.get(), &THeadlessSession::transportCloseRequested, [](const QString& profile) {
-    // The profile ended the connection or the dial; no report is due
+    // The profile ended the connection last dialled, or its dial; no report is due
 });
 
-// What the app's connection reports, from anywhere
-session->transportConnected();
-session->transportReceived(bytes); // each chunk as it came, which may end anywhere, even mid-negotiation
-session->transportClosed(reason);  // the game hung up, it was lost, or the dial failed; reason may be empty
+// What the app's connection reports, from anywhere, each naming the connection its dial was given
+session->transportConnected(connection);
+session->transportReceived(connection, bytes); // each chunk as it came, which may end anywhere, even mid-negotiation
+session->transportClosed(connection, reason);  // the game hung up, it was lost, or the dial failed; reason may be empty
 ```
 
-`start()`, a reconnect or a script's `connectToServer()` sends `transportDialRequested`. Once the app
-answers `transportConnected()`, the profile announces the connection (`connected`,
-`sysConnectionEvent`, the login) and writes to the game through `transportWriteRequested`, and the app
-hands each chunk the game sends to `transportReceived()`. The game ending it is the app's
-`transportClosed()`; the profile ending it (`disconnect()`, a reconnect, closing the profile) is
-`transportCloseRequested`, after which a report about that connection is dropped. A dial answered with
-`transportClosed()` fails as an unreachable game does, with the reason in Mudlet's message.
+`start()`, a reconnect or a script's `connectToServer()` sends `transportDialRequested`, with an id
+for the connection. Once the app answers `transportConnected()`, the profile announces the connection
+(`connected`, `sysConnectionEvent`, the login) and writes to the game through
+`transportWriteRequested`, and the app hands each chunk the game sends to `transportReceived()`. The
+game ending it is the app's `transportClosed()`; the profile ending it (`disconnect()`, a reconnect,
+closing the profile) is `transportCloseRequested`, after which no report about it is due. A dial
+answered with `transportClosed()` fails as an unreachable game does, with the reason in Mudlet's
+message.
+
+A report is dropped unless it names the profile's current connection: the one last dialled, and not
+closed since. A reconnect closes one connection and dials the next in the same breath, so an app whose
+old socket reports its end late, after `transportCloseRequested`, cannot have that taken for news of
+the new one.
 
 The reports are taken up from the event loop, so they may be made from a handler of the three
 signals, which are sent mid-write and may call nothing else of the session. Only the profile

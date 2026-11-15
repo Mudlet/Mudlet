@@ -814,13 +814,13 @@ public:
     bool pointer(const QString& window, const WindowPointerEvent& event);
 
     // With Options::supplyTransport, what the app's connection to the game reports: that it was made, each chunk the
-    // game sent, in order, and that it ended or could not be made, with why if known. Callable from anywhere, a
-    // handler included, as the profile takes them up from the event loop; one made before the profile closed the
-    // connection and taken up after is dropped, so an app stops reporting about a connection at
-    // transportCloseRequested. Without a dial outstanding or a connection, they do nothing.
-    void transportConnected();
-    void transportReceived(const QByteArray& data);
-    void transportClosed(const QString& reason = QString());
+    // game sent, in order, and that it ended or could not be made, with why if known. Each names the connection
+    // transportDialRequested gave, and is dropped unless that is the profile's current one: a report about a
+    // connection the profile has since closed or dialled again in place of does nothing, however late it comes.
+    // Callable from anywhere, a handler included, as the profile takes them up from the event loop.
+    void transportConnected(quint64 connection);
+    void transportReceived(quint64 connection, const QByteArray& data);
+    void transportClosed(quint64 connection, const QString& reason = QString());
 
     // sysExitEvent and, if asked, a save for every profile that loaded, then the pool goes. Meanwhile no profile
     // opens, and none dials the game or logs in, a live connection staying for the exit handlers. Refused while a
@@ -1035,15 +1035,17 @@ signals:
     // again. One for all the changes made before the event loop runs, from the event loop.
     void buttonsChanged(const QString& profile);
     // With Options::supplyTransport, the profile wants a connection to host:port, as it starts, reconnects or a script
-    // connects: answer with transportConnected(), or transportClosed() if it cannot be made. tlsRequested is the
-    // profile's secure connection setting, for the app to honour as it can; the profile calls the connection open
-    // either way. Sent mid-write, as outputLine is, so a handler may call none of the session but the transport...()
-    // calls
-    void transportDialRequested(const QString& profile, const QString& host, int port, bool tlsRequested);
-    // Bytes for the game, telnet negotiation and all, to be sent in order. Sent mid-write, as transportDialRequested
+    // connects: answer with transportConnected(), or transportClosed() if it cannot be made, passing connection, its
+    // id. tlsRequested is the profile's secure connection setting, for the app to honour as it can; the profile calls
+    // the connection open either way. Sent mid-write, as outputLine is, so a handler may call none of the session but
+    // the transport...() calls
+    void transportDialRequested(const QString& profile, quint64 connection, const QString& host, int port, bool tlsRequested);
+    // Bytes for the game on the connection last dialled, telnet negotiation and all, to be sent in order. Sent
+    // mid-write, as transportDialRequested
     void transportWriteRequested(const QString& profile, const QByteArray& data);
-    // End the connection or the dial: the profile has reported the end itself, so no transportClosed() is due.
-    // Sent mid-write, as transportDialRequested; not sent once the session has been deleted
+    // End the connection last dialled, or its dial: the profile has reported the end itself, so no transportClosed()
+    // is due, and one that comes is dropped. Sent mid-write, as transportDialRequested; not sent once the session has
+    // been deleted
     void transportCloseRequested(const QString& profile);
     // The connection was made; from the event loop
     void connected(const QString& profile);

@@ -327,7 +327,7 @@ private:
     THeadlessSession& mSession;
 };
 
-// A child of the session, so it goes before the session's members do
+// Unhooked by detachFromHost() before the session goes
 class THeadlessSession::Transport final : public TGameTransport
 {
 public:
@@ -337,11 +337,11 @@ public:
     {
     }
 
-    void dial(const QString& host, const int port, const bool tlsRequested) override
+    void dial(const quint64 connection, const QString& host, const int port, const bool tlsRequested) override
     {
         const QString profile = mSession.mProfileName;
         ++gSignalsBeingHandedOut;
-        emit mSession.transportDialRequested(profile, host, port, tlsRequested);
+        emit mSession.transportDialRequested(profile, connection, host, port, tlsRequested);
         --gSignalsBeingHandedOut;
     }
 
@@ -365,24 +365,24 @@ private:
     THeadlessSession& mSession;
 };
 
-void THeadlessSession::transportConnected()
+void THeadlessSession::transportConnected(const quint64 connection)
 {
     if (mpTransport) {
-        emit mpTransport->connected();
+        emit mpTransport->connected(connection);
     }
 }
 
-void THeadlessSession::transportReceived(const QByteArray& data)
+void THeadlessSession::transportReceived(const quint64 connection, const QByteArray& data)
 {
     if (mpTransport) {
-        emit mpTransport->received(data);
+        emit mpTransport->received(connection, data);
     }
 }
 
-void THeadlessSession::transportClosed(const QString& reason)
+void THeadlessSession::transportClosed(const quint64 connection, const QString& reason)
 {
     if (mpTransport) {
-        emit mpTransport->closed(reason);
+        emit mpTransport->closed(connection, reason);
     }
 }
 
@@ -599,7 +599,6 @@ THeadlessSession::StartResult THeadlessSession::finishStart(const Options& optio
     if (options.supplyTransport && !mpTransport) {
         mpTransport = new Transport(this);
     }
-    const bool supplyTransport = options.supplyTransport;
     mDeliveredConsoleFont.reset();
     mUnsavedProfiles.clear();
     mLoadFailed = false;
@@ -608,7 +607,7 @@ THeadlessSession::StartResult THeadlessSession::finishStart(const Options& optio
     Host* pHost = mpPool->openProfile(
             profileName,
             options.connect,
-            [this, self, run, supplyTransport, &password](Host* pNewHost) {
+            [this, self, run, supplyTransport = options.supplyTransport, &password](Host* pNewHost) {
                 if (!self) {
                     return;
                 }

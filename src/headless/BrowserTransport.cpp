@@ -39,9 +39,9 @@ EM_JS(int, pageHasTransport, (), {
     return Module.mudletTransport ? 1 : 0;
 });
 
-// Each dial hands the page a connection of its own, whose reports are dropped once the profile has closed it or
-// dialled again, so a socket's late events cannot be taken for the next connection's
-EM_JS(void, pageDial, (const char* host, int port, int tlsRequested), {
+// Each dial hands the page a connection of its own, whose calls do nothing once the profile has closed it or dialled
+// again, and whose reports carry the id the profile gave the dial
+EM_JS(void, pageDial, (double id, const char* host, int port, int tlsRequested), {
     if (Module.mudletConnection) {
         Module.mudletConnection.live = false;
     }
@@ -49,18 +49,18 @@ EM_JS(void, pageDial, (const char* host, int port, int tlsRequested), {
         live: true,
         connected: function() {
             if (connection.live) {
-                Module.mudletTransportConnected();
+                Module.mudletTransportConnected(id);
             }
         },
         received: function(bytes) {
             if (connection.live) {
-                Module.mudletTransportReceived(bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes));
+                Module.mudletTransportReceived(id, bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes));
             }
         },
         closed: function(reason) {
             if (connection.live) {
                 connection.live = false;
-                Module.mudletTransportClosed(reason === undefined || reason === null ? "" : String(reason));
+                Module.mudletTransportClosed(id, reason === undefined || reason === null ? "" : String(reason));
             }
         }
     };
@@ -100,25 +100,26 @@ EM_JS(void, pageClose, (), {
 });
 // clang-format on
 
-void connectedFromPage()
+// The id is a JavaScript number, which holds any the profile hands out exactly
+void connectedFromPage(const double connection)
 {
     if (gpSession) {
-        gpSession->transportConnected();
+        gpSession->transportConnected(static_cast<quint64>(connection));
     }
 }
 
 // Embind passes a Uint8Array for a std::string byte for byte
-void receivedFromPage(const std::string& bytes)
+void receivedFromPage(const double connection, const std::string& bytes)
 {
     if (gpSession) {
-        gpSession->transportReceived(QByteArray(bytes.data(), static_cast<qsizetype>(bytes.size())));
+        gpSession->transportReceived(static_cast<quint64>(connection), QByteArray::fromStdString(bytes));
     }
 }
 
-void closedFromPage(const std::string& reason)
+void closedFromPage(const double connection, const std::string& reason)
 {
     if (gpSession) {
-        gpSession->transportClosed(QString::fromStdString(reason));
+        gpSession->transportClosed(static_cast<quint64>(connection), QString::fromStdString(reason));
     }
 }
 
@@ -139,8 +140,8 @@ bool pageSuppliesTransport()
 void bridgeTransportToPage(THeadlessSession* pSession)
 {
     gpSession = pSession;
-    QObject::connect(pSession, &THeadlessSession::transportDialRequested, pSession, [](const QString&, const QString& host, const int port, const bool tlsRequested) {
-        pageDial(host.toUtf8().constData(), port, tlsRequested ? 1 : 0);
+    QObject::connect(pSession, &THeadlessSession::transportDialRequested, pSession, [](const QString&, const quint64 connection, const QString& host, const int port, const bool tlsRequested) {
+        pageDial(static_cast<double>(connection), host.toUtf8().constData(), port, tlsRequested);
     });
     QObject::connect(pSession, &THeadlessSession::transportWriteRequested, pSession, [](const QString&, const QByteArray& data) {
         pageWrite(data.constData(), static_cast<int>(data.size()));

@@ -371,7 +371,7 @@ cTelnet::~cTelnet()
         }
     }
 
-    if (mpTransport && connectionUnderway()) {
+    if (mpTransport && transportInUse()) {
         mpTransport->close();
     }
 
@@ -853,14 +853,7 @@ void cTelnet::connectIt(const QString& address, int port)
         dialTransport();
         return;
     }
-    // Detect raw IPv6 addresses - as they need to be wrapped in '['...']'
-
-    /*: For an IPv6 address (which is composed of hex-digits and colons) if we
- want to show it with a port number appended (as a colon and then an
- integer between 1 and 65535) we need to wrap it with '['...']' to
- separate the latter from the former, however some Far-East locales may
- expect to use the wide versions of these character here.*/
-    const QString displayAddress = isRawIPv6Address(mHostUrl) ? tr("[%1]").arg(mHostUrl) : mHostUrl;
+    const QString displayAddress = displayHostAddress();
     /*: %1 is the URL or an IP address (suitably wrapped if it is an IPv6 one)
  of the Game Server (or Proxy); %2 is the port number.*/
     TDebug(QColorConstants::Blue, QColorConstants::White, TDebug::Category::Network)
@@ -1068,7 +1061,7 @@ void cTelnet::slot_socketError()
         return;
     }
 
-    const QString displayAddress = isRawIPv6Address(mHostUrl) ? tr("[%1]").arg(mHostUrl) : mHostUrl;
+    const QString displayAddress = displayHostAddress();
     if (mConnectViaProxy) {
         /*: %1 is the URL or the IP address (suitably wrapped if it is an IPv6 one) of the Game
  Server, %2 is the port number and %3 is the reason the connection could not be made,
@@ -1136,42 +1129,46 @@ void cTelnet::setTransport(TGameTransport* pTransport)
     if (!pTransport) {
         return;
     }
-    connect(pTransport, &TGameTransport::connected, this, [this]() {
-        takeUpTransportReport([this]() {
+    connect(pTransport, &TGameTransport::connected, this, [this](const quint64 connection) {
+        takeUpTransportReport(connection, [this]() {
             transportConnected();
         });
     });
-    connect(pTransport, &TGameTransport::received, this, [this](const QByteArray& data) {
-        takeUpTransportReport([this, data]() {
+    connect(pTransport, &TGameTransport::received, this, [this](const quint64 connection, const QByteArray& data) {
+        takeUpTransportReport(connection, [this, data]() {
             transportReceived(data);
         });
     });
-    connect(pTransport, &TGameTransport::closed, this, [this](const QString& reason) {
-        takeUpTransportReport([this, reason]() {
+    connect(pTransport, &TGameTransport::closed, this, [this](const quint64 connection, const QString& reason) {
+        takeUpTransportReport(connection, [this, reason]() {
             transportClosed(reason);
         });
     });
 }
 
 // From the event loop, as a socket's signals come: a report made from inside a write would otherwise land in the
-// middle of whatever was writing
-void cTelnet::takeUpTransportReport(std::function<void()> report)
+// middle of whatever was writing. Checked then, as the profile may have closed the connection meanwhile.
+void cTelnet::takeUpTransportReport(const quint64 connection, std::function<void()> report)
 {
     QMetaObject::invokeMethod(
             this,
-            [this, generation = mTransportGeneration, report = std::move(report)]() {
-                if (generation == mTransportGeneration) {
+            [this, connection, report = std::move(report)]() {
+                if (connection == mTransportGeneration) {
                     report();
                 }
             },
             Qt::QueuedConnection);
 }
 
+bool cTelnet::transportInUse() const
+{
+    return mTransportState == TransportState::Dialling || mTransportState == TransportState::Connected;
+}
+
 // Dialling or connected, by either a socket or the transport; what connectIt() has to end before it dials
 bool cTelnet::connectionUnderway() const
 {
-    return mSocket_ipV4.state() != QAbstractSocket::UnconnectedState || mSocket_ipV6.state() != QAbstractSocket::UnconnectedState || mTransportState == TransportState::Dialling
-           || mTransportState == TransportState::Connected;
+    return mSocket_ipV4.state() != QAbstractSocket::UnconnectedState || mSocket_ipV6.state() != QAbstractSocket::UnconnectedState || transportInUse();
 }
 
 // In place of the name lookup and the dials it leads to, which are the application's to make
@@ -1183,37 +1180,37 @@ void cTelnet::dialTransport()
     mCurrent_sslTsl = false;
 #endif
     const bool tlsRequested = mpHost && (mpHost->mSslTsl || mpHost->mUseTlsThisSession);
-    const QString displayAddress = isRawIPv6Address(mHostUrl) ? tr("[%1]").arg(mHostUrl) : mHostUrl;
     //: %1 is a URL for the Game Server; %2 is the port number.
-    postMessage(tr("[ INFO ]  - Attempting an open connection to %1:%2 ...").arg(displayAddress, QString::number(mHostPort)));
+    postMessage(tr("[ INFO ]  - Attempting an open connection to %1:%2 ...").arg(displayHostAddress(), QString::number(mHostPort)));
     if (tlsRequested) {
         //: Shown when a profile set to connect securely is connected by the application Mudlet runs inside, such as a web page, which alone knows whether its connection to the game is encrypted
         postMessage(tr("[ WARN ]  - This profile is set to connect securely, but the application running Mudlet makes this connection and Mudlet cannot tell whether it is encrypted, so treats it as "
                        "not secure."));
     }
+    // Before the dial, as the transport may answer from inside it
     ++mTransportGeneration;
     mTransportInput.clear();
     mTransportInputRead = 0;
     mTransportCloseReason.clear();
     mTransportState = TransportState::Dialling;
-    mpTransport->dial(mHostUrl, mHostPort, tlsRequested);
+    mpTransport->dial(mTransportGeneration, mHostUrl, mHostPort, tlsRequested);
 }
 
 // A connection that was made is reported ended here and now, as a socket's disconnectFromHost() or abort() reports it
 void cTelnet::closeTransport()
 {
-    const TransportState state = mTransportState;
-    if (state != TransportState::Dialling && state != TransportState::Connected) {
+    if (!transportInUse()) {
         return;
     }
+    const bool wasConnected = mTransportState == TransportState::Connected;
     ++mTransportGeneration;
     mTransportInput.clear();
     mTransportInputRead = 0;
-    mTransportState = state == TransportState::Connected ? TransportState::Closed : TransportState::Idle;
+    mTransportState = wasConnected ? TransportState::Closed : TransportState::Idle;
     if (mpTransport) {
         mpTransport->close();
     }
-    if (state == TransportState::Connected) {
+    if (wasConnected) {
         slot_socketDisconnected();
     }
 }
@@ -1255,7 +1252,6 @@ void cTelnet::transportClosed(const QString& reason)
     if (!mpHost || mpHost->isClosingDown()) {
         return;
     }
-    const QString displayAddress = isRawIPv6Address(mHostUrl) ? tr("[%1]").arg(mHostUrl) : mHostUrl;
     //: The reason given when the application Mudlet runs inside, such as a web page, could not reach the game and did not say why
     const QString why = reason.isEmpty() ? tr("no reason was given") : reason;
     /*: %1 is the URL or the IP address (suitably wrapped if it is an IPv6 one) of the Game
@@ -1263,7 +1259,7 @@ void cTelnet::transportClosed(const QString& reason)
  as reported by the operating system, e.g. "Connection refused".*/
     postMessage(tr("[ ERROR ] - Unable to connect to %1:%2 - %3.\n"
                    "Check your internet connection and the details entered for the game server.")
-                        .arg(displayAddress, QString::number(mHostPort), why));
+                        .arg(displayHostAddress(), QString::number(mHostPort), why));
     handleFailedConnection();
 }
 
@@ -2307,7 +2303,7 @@ bool cTelnet::socketOutRaw(std::string& data)
         if (!mpTransport) {
             return false;
         }
-        mpTransport->write(QByteArray(data.data(), static_cast<qsizetype>(data.size())));
+        mpTransport->write(QByteArray::fromStdString(data));
         if (mGA_Driver && !mWaitingForResponse) {
             beginNetworkLatencyMeasurement();
         }
@@ -7336,6 +7332,16 @@ QAbstractSocket::SocketState cTelnet::getConnectionState() const
     static const QRegularExpression isRawIPv6AddressRegExp(qsl("^[0-9a-f:]+$"));
 
     return isRawIPv6AddressRegExp.match(text).hasMatch();
+}
+
+QString cTelnet::displayHostAddress() const
+{
+    /*: For an IPv6 address (which is composed of hex-digits and colons) if we
+ want to show it with a port number appended (as a colon and then an
+ integer between 1 and 65535) we need to wrap it with '['...']' to
+ separate the latter from the former, however some Far-East locales may
+ expect to use the wide versions of these character here.*/
+    return isRawIPv6Address(mHostUrl) ? tr("[%1]").arg(mHostUrl) : mHostUrl;
 }
 
 QString cTelnet::assembleTelnetOptionsReport() const

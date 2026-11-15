@@ -27,8 +27,10 @@
 // A game connection made by the application embedding Mudlet in place of cTelnet's sockets, for a
 // platform with no raw TCP such as a browser. It carries the telnet byte stream and nothing else:
 // how the bytes reach the game is the application's business, so cTelnet never calls it secure.
-// The signals may be emitted at any time, even from inside dial(), write() or close(): cTelnet
-// takes them up from the event loop and ignores any about a connection it has since closed.
+// write() and close() are for the connection last dialled. Each signal carries the id dial() gave
+// its connection, and may be emitted at any time, even from inside dial(), write() or close():
+// cTelnet takes them up from the event loop and drops any whose connection it has since closed,
+// however late it comes.
 class TGameTransport : public QObject
 {
     Q_OBJECT
@@ -38,16 +40,16 @@ public:
 
     // Answered by connected(), or by closed() if the game cannot be reached; tlsRequested is the
     // profile's wish for a secure connection, which only the application can act on
-    virtual void dial(const QString& host, int port, bool tlsRequested) = 0;
+    virtual void dial(quint64 connection, const QString& host, int port, bool tlsRequested) = 0;
     virtual void write(const QByteArray& data) = 0;
     // Ends the connection or the attempt; cTelnet reports the end itself, so no closed() is due
     virtual void close() = 0;
 
 signals:
-    void connected();
-    void received(const QByteArray& data);
+    void connected(quint64 connection);
+    void received(quint64 connection, const QByteArray& data);
     // The game closed the connection or it was lost, or a dial failed; reason may be empty
-    void closed(const QString& reason);
+    void closed(quint64 connection, const QString& reason);
 };
 
 #endif // MUDLET_TGAMETRANSPORT_H
