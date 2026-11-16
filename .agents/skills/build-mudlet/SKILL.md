@@ -64,7 +64,7 @@ ctest --preset macos-debug            # run the test suite
 | `<platform>-debug-ubsan` | macOS / Linux | UndefinedBehaviorSanitizer |
 | `<platform>-static-analysis` | macOS / Linux | Runs clang-tidy and cppcheck during compilation |
 | `linux-lowspec` | Linux | No sanitizers, no updater, no 3D mapper, 2 jobs — Raspberry Pi and similar |
-| `wasm-headless` | Browser, cross-built | Release `mudlet-headless` only, 4 jobs — see "WebAssembly" in `docs/platform-builds.md` |
+| `wasm-headless` | Browser, cross-built | Release `mudlet-headless` only, 4 jobs - see "WebAssembly" in `docs/platform-builds.md` |
 | `<platform>-release` | macOS / Linux / Windows | Release build, no sanitizers - the flags CI ships to players |
 
 Every developer preset has a matching build and test preset of the same name, and all three are
