@@ -21,6 +21,7 @@
 #include "CredentialManager.h"
 #include "MudletApp.h"
 #include "SecureStringUtils.h"
+#include "TAppFrontend.h"
 #include "utils.h"
 
 #include <QCoreApplication>
@@ -204,6 +205,7 @@ bool writeCredentialFile(const QString& filePath, const QString& profileName, co
 
     SecureStringUtils::restrictFileToOwner(filePath);
 
+    TAppFrontend::instance()->configWritten();
     return true;
 }
 // Lets a keychain job outlive whoever started it, deleting itself once it finishes. QtKeychain's
@@ -1897,7 +1899,9 @@ bool CredentialManager::removeCredentialFromFile(const QString& profileName, con
 
     bool removed = QFile::remove(filePath);
 
-    if (!removed) {
+    if (removed) {
+        TAppFrontend::instance()->configWritten();
+    } else {
         qWarning() << "CredentialManager: Failed to remove encrypted credential file:" << filePath;
     }
 
