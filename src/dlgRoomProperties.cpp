@@ -70,7 +70,8 @@ public:
     void setModelData(QWidget* editor, QAbstractItemModel* model, const QModelIndex& index) const override
     {
         auto* lineEdit = qobject_cast<QLineEdit*>(editor);
-        if (lineEdit && index.data(scmMixedValueRole).toBool() && lineEdit->text().isEmpty()) {
+        // isModified(), not an empty text: an empty value is a value, and typing one is a decision
+        if (lineEdit && index.data(scmMixedValueRole).toBool() && !lineEdit->isModified()) {
             return;
         }
         QStyledItemDelegate::setModelData(editor, model, index);
@@ -971,7 +972,13 @@ QMap<QString, std::optional<QString>> dlgRoomProperties::userDataChanges() const
         const QTableWidgetItem* keyItem = tableWidget_userData->item(row, 0);
         const QTableWidgetItem* valueItem = tableWidget_userData->item(row, 1);
         const QString key = keyItem ? keyItem->text() : QString();
-        if (key.trimmed().isEmpty() || !editedInUserDataTable(key) || !valueItem) {
+        if (!valueItem) {
+            continue;
+        }
+        // A row listed from the rooms, whose key cannot be edited, is kept whatever its key: setRoomUserData()
+        // accepts blank ones. Only an added row needs a key worth saving
+        const bool addedRow = keyItem && keyItem->flags().testFlag(Qt::ItemIsEditable);
+        if (addedRow && (key.trimmed().isEmpty() || !editedInUserDataTable(key))) {
             continue;
         }
         keysLeft.insert(key);

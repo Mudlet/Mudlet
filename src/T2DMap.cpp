@@ -2457,7 +2457,8 @@ void T2DMap::slot_setRoomsArea(int areaId, QSet<int> roomIds)
             rooms.insert(roomId);
         }
     }
-    if (rooms.isEmpty() || !mpMap->mpRoomDB->getArea(areaId)) {
+    // By name, not getArea(): an area that so far only has a name is made by the first room moved into it
+    if (rooms.isEmpty() || !mpMap->mpRoomDB->getAreaNamesMap().contains(areaId)) {
         return;
     }
     moveRoomsToArea(rooms, areaId);

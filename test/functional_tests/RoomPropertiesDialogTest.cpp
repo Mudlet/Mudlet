@@ -281,6 +281,24 @@ private:
         return nullptr;
     }
 
+    // Opens the cell's real editor, the way a double-click does, so the delegate decides what is written back
+    static QLineEdit* openUserDataValueEditor(dlgRoomProperties* pDlg, const QString& key)
+    {
+        QTableWidgetItem* pItem = userDataValue(pDlg, key);
+        if (!pItem) {
+            return nullptr;
+        }
+        pDlg->tableWidget_userData->editItem(pItem);
+        return pDlg->tableWidget_userData->viewport()->findChild<QLineEdit*>();
+    }
+
+    // Return commits through a queued call, so the event loop has to run before the cell holds what was typed
+    static void commitUserDataValueEditor(QLineEdit* pEditor)
+    {
+        QTest::keyClick(pEditor, Qt::Key_Return);
+        QCoreApplication::processEvents();
+    }
+
     struct ColorSelectorOutcome
     {
         bool sawSelector = false;
@@ -1223,6 +1241,67 @@ private slots:
         QCOMPARE(room(scmFirstRoom)->getArea(), otherArea);
         QCOMPARE(room(scmSecondRoom)->getArea(), otherArea);
         QCOMPARE(room(scmThirdRoom)->getArea(), mAreaId);
+    }
+
+    void theMapperMovesTheRoomsIntoAnAreaThatSoFarHasOnlyAName()
+    {
+        buildMap();
+        // setAreaName() names an area without making it; the first room moved there does
+        const int namedArea = 4242;
+        QVERIFY(roomDB()->setAreaName(namedArea, qsl("Named only")));
+        QVERIFY(!roomDB()->getArea(namedArea));
+
+        mp2dMap->slot_setRoomsArea(namedArea, {scmFirstRoom});
+
+        QCOMPARE(room(scmFirstRoom)->getArea(), namedArea);
+    }
+
+    void okKeepsKeysThatAreBlankButAlreadyThere()
+    {
+        buildMap();
+        // setRoomUserData() accepts an empty key, so a room can hold one
+        room(scmFirstRoom)->userData = {{QString(), qsl("a")}, {qsl("  "), qsl("b")}, {qsl("zone"), qsl("Orcland")}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        QCOMPARE(userDataKeys(pDlg).size(), 3);
+        // nor does a row added and left without a key take the place of the blank one
+        pDlg->pushButton_addUserData->click();
+        pDlg->accept();
+
+        QCOMPARE(mEmitted.userDataEmitCount, 0);
+    }
+
+    void aMixedValueClearedInItsEditorIsWrittenEmpty()
+    {
+        buildMap();
+        room(scmFirstRoom)->userData = {{qsl("notes"), qsl("a")}};
+        room(scmSecondRoom)->userData = {{qsl("notes"), qsl("b")}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
+        auto* pEditor = openUserDataValueEditor(pDlg, qsl("notes"));
+        QVERIFY(pEditor);
+        QTest::keyClicks(pEditor, qsl("x"));
+        QTest::keyClick(pEditor, Qt::Key_Backspace);
+        commitUserDataValueEditor(pEditor);
+        pDlg->accept();
+
+        QCOMPARE(mEmitted.userDataChanges, (QMap<QString, std::optional<QString>>{{qsl("notes"), QString()}}));
+    }
+
+    void aMixedValueOpenedAndLeftAloneInItsEditorChangesNothing()
+    {
+        buildMap();
+        room(scmFirstRoom)->userData = {{qsl("notes"), qsl("a")}};
+        room(scmSecondRoom)->userData = {{qsl("notes"), qsl("b")}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
+        auto* pEditor = openUserDataValueEditor(pDlg, qsl("notes"));
+        QVERIFY(pEditor);
+        commitUserDataValueEditor(pEditor);
+        pDlg->accept();
+
+        QCOMPARE(mEmitted.userDataEmitCount, 0);
+        QCOMPARE(userDataValue(pDlg, qsl("notes"))->text(), scmMultipleValues);
     }
 };
 
