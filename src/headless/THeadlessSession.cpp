@@ -31,6 +31,7 @@
 #include "TEncodingHelper.h"
 #include "TEvent.h"
 #include "TGameDetails.h"
+#include "TGameTransport.h"
 #include "TLuaInterpreter.h"
 #include "TMap.h"
 #include "TNullAppFrontend.h"
@@ -326,6 +327,65 @@ private:
     THeadlessSession& mSession;
 };
 
+// Unhooked by detachFromHost() before the session goes
+class THeadlessSession::Transport final : public TGameTransport
+{
+public:
+    explicit Transport(THeadlessSession* pSession)
+    : TGameTransport(pSession)
+    , mSession(*pSession)
+    {
+    }
+
+    void dial(const quint64 connection, const QString& host, const int port, const bool tlsRequested) override
+    {
+        const QString profile = mSession.mProfileName;
+        ++gSignalsBeingHandedOut;
+        emit mSession.transportDialRequested(profile, connection, host, port, tlsRequested);
+        --gSignalsBeingHandedOut;
+    }
+
+    void write(const QByteArray& data) override
+    {
+        const QString profile = mSession.mProfileName;
+        ++gSignalsBeingHandedOut;
+        emit mSession.transportWriteRequested(profile, data);
+        --gSignalsBeingHandedOut;
+    }
+
+    void close() override
+    {
+        const QString profile = mSession.mProfileName;
+        ++gSignalsBeingHandedOut;
+        emit mSession.transportCloseRequested(profile);
+        --gSignalsBeingHandedOut;
+    }
+
+private:
+    THeadlessSession& mSession;
+};
+
+void THeadlessSession::transportConnected(const quint64 connection)
+{
+    if (mpTransport) {
+        emit mpTransport->connected(connection);
+    }
+}
+
+void THeadlessSession::transportReceived(const quint64 connection, const QByteArray& data)
+{
+    if (mpTransport) {
+        emit mpTransport->received(connection, data);
+    }
+}
+
+void THeadlessSession::transportClosed(const quint64 connection, const QString& reason)
+{
+    if (mpTransport) {
+        emit mpTransport->closed(connection, reason);
+    }
+}
+
 void THeadlessSession::preloadLuaModule(const QByteArray& name, int (*open)(lua_State*))
 {
     TLuaInterpreter::preloadModule(name, open);
@@ -348,6 +408,9 @@ THeadlessSession::THeadlessSession(QObject* parent)
     Q_INIT_RESOURCE(mudlet_fonts_posix);
 #endif
 #endif
+    if (auto* pView = dynamic_cast<TNullAppFrontend*>(TAppFrontend::instance())) {
+        connect(&pView->mNotifier, &TNullAppFrontendNotifier::configWritten, this, &THeadlessSession::noteConfigWritten);
+    }
 }
 
 THeadlessSession::~THeadlessSession()
@@ -394,6 +457,31 @@ void THeadlessSession::tellLater(std::function<void()> tell)
 {
     // From the event loop, so a frontend never hears an answer before the call that asked for it returns
     QTimer::singleShot(0ms, this, std::move(tell));
+}
+
+void THeadlessSession::noteConfigWritten()
+{
+    if (mConfigSavedPending) {
+        return;
+    }
+    mConfigSavedPending = true;
+    QTimer::singleShot(0ms, this, &THeadlessSession::tellConfigSaved);
+}
+
+// A save writes the profile, its modules, Mudlet.ini and the map in turns of the event loop, so the signal waits for
+// all of them
+void THeadlessSession::tellConfigSaved()
+{
+    // A shutdown sends it once its last write is done, as a browser's run ends with the shutdown
+    if (!mConfigSavedPending || mShuttingDown) {
+        return;
+    }
+    if (mSaving || (mpPool && poolSaving(*mpPool))) {
+        QTimer::singleShot(10ms, this, &THeadlessSession::tellConfigSaved);
+        return;
+    }
+    mConfigSavedPending = false;
+    emit configSaved();
 }
 
 void THeadlessSession::beginStart(const Options& asked, std::function<void(StartResult)> done)
@@ -443,7 +531,7 @@ std::optional<THeadlessSession::StartResult> THeadlessSession::prepareStart(Opti
     options.profile = options.profile.trimmed();
     options.host = options.host.trimmed();
     options.login = options.login.trimmed();
-    if (gpClosingPool) {
+    if (gpClosingPool || mShuttingDown) {
         //: Error from a frontend with no window that was asked to open a profile while those it closed were still closing
         mErrorString = tr("The profiles closed earlier are still closing; try again once they have.");
         return StartResult::poolClosing;
@@ -536,6 +624,9 @@ THeadlessSession::StartResult THeadlessSession::finishStart(const Options& optio
     }
 
     const unsigned int run = ++mRun;
+    if (options.supplyTransport && !mpTransport) {
+        mpTransport = new Transport(this);
+    }
     mDeliveredConsoleFont.reset();
     mUnsavedProfiles.clear();
     mLoadFailed = false;
@@ -544,11 +635,14 @@ THeadlessSession::StartResult THeadlessSession::finishStart(const Options& optio
     Host* pHost = mpPool->openProfile(
             profileName,
             options.connect,
-            [this, self, run, &password](Host* pNewHost) {
+            [this, self, run, supplyTransport = options.supplyTransport, &password](Host* pNewHost) {
                 if (!self) {
                     return;
                 }
                 mpHost = pNewHost;
+                if (supplyTransport) {
+                    pNewHost->mTelnet.setTransport(mpTransport);
+                }
                 mSecureConnectionOffered = false;
                 mMapOperationCancelable = false;
                 pNewHost->givePass(password);
@@ -1989,9 +2083,17 @@ void THeadlessSession::shutdownOnceReleased(const std::shared_ptr<bool>& saved, 
     if (!self) {
         return;
     }
-    mShuttingDown = false;
     detachFromHost();
     mpHost.clear();
+    // Still shutting down, so its handler's calls are refused as during the rest of the shutdown
+    if (mConfigSavedPending) {
+        mConfigSavedPending = false;
+        emit configSaved();
+        if (!self) {
+            return;
+        }
+    }
+    mShuttingDown = false;
     done(true);
 }
 
@@ -2149,6 +2251,7 @@ void THeadlessSession::detachFromHost()
         disconnect(&mpHost->mainConsoleModel().mNotifier, nullptr, this, nullptr);
         disconnect(&mpHost->mTelnet, nullptr, this, nullptr);
         disconnect(mpHost->mpMap.data(), nullptr, this, nullptr);
+        mpHost->mTelnet.setTransport(nullptr);
     }
     if (MudletReplay* pReplay = MudletReplay::self()) {
         disconnect(pReplay, nullptr, this, nullptr);

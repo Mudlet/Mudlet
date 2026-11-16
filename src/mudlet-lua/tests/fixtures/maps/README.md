@@ -49,8 +49,8 @@ area's 2D zoom, and room, area and map user data. The JSON has LF line ends; its
 `mapSymbolFontDetails` is cut to its first 16 fields, as `QFont::toString()` gains
 fields across Qt versions; and a label's `image` becomes `["<png>"]`, or stays `[]`
 for a label without one, as the browser build's PNG of the label comes out a few
-bytes apart. `normalise-map-json.lua` does this, for the script and for the
-spec's comparison.
+bytes apart. `normalise-map-json.lua` does this, for the script, the spec's
+comparison and the smoke test.
 
 `Mapper_spec.lua` checks that the file loads to that JSON and that it is at the
 format version Mudlet saves by default. `CI/wasm-headless-smoke.js` checks that
