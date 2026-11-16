@@ -432,6 +432,7 @@ if(USE_HEADLESS)
     list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessSessionLinksTest.cpp)
     list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessSessionWindowsTest.cpp)
     list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessSessionWindowTextTest.cpp)
+    list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessSessionTransportTest.cpp)
     list(APPEND TEARDOWN_GROUP_TEST_SOURCES BuiltinMudletLuaTest.cpp)
     list(APPEND TEARDOWN_GROUP_TEST_SOURCES PreloadedLuaModuleTest.cpp)
 endif()
@@ -876,6 +877,10 @@ set_tests_properties(TelnetNewEnvironTest TelnetOptionsReportTest TelnetAtcpMspT
 # ProfileLifecycleTest opens and closes several profiles, and every open is a
 # full profile load and every close a full save, so it needs a longer timeout
 set_tests_properties(ProfileLifecycleTest PROPERTIES TIMEOUT 300)
+
+# MissingDisplayFontTest opens, reopens and closes profiles across some fifty cases;
+# a macOS runner takes 45s of the default 60s, and a busy one ran out
+set_tests_properties(MissingDisplayFontTest PROPERTIES TIMEOUT 300)
 
 # FeedChecksumRaceTest passes in about 5 seconds, so this timeout is only ever
 # reached by a run that is already failing - and that run has to be allowed to

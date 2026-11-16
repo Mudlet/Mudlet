@@ -394,6 +394,42 @@ jobs:
          # The one job that builds without precompiled headers, so a missing #include still fails somewhere
          echo "CMAKE_DISABLE_PRECOMPILE_HEADERS=ON" >> $GITHUB_ENV
 
+    # A profile-guided Linux build uses Clang with ThinLTO, as Mudlet runs faster built that way than with GCC (docs/platform-builds.md).
+    - name: (Linux) Install Clang for the profile-guided build
+      if: runner.os == 'Linux' && env.MUDLET_PGO_BUILD == 'true'
+      env:
+        LLVM_VERSION: '23'
+        GCC_VERSION: ${{matrix.gcc_compiler_version}}
+        HARDENING_FLAGS: '-fstack-protector-strong -fstack-clash-protection -fcf-protection -D_FORTIFY_SOURCE=2'
+      run: |
+        wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc > /dev/null
+        codename=$(lsb_release -cs)
+        echo "deb http://apt.llvm.org/${codename}/ llvm-toolchain-${codename}-${LLVM_VERSION} main" | sudo tee /etc/apt/sources.list.d/llvm.list
+        sudo apt-get update
+        # libclang-rt, which holds the profile runtime the instrumented link needs, is only a Recommends
+        sudo apt-get install -y "clang-${LLVM_VERSION}" "lld-${LLVM_VERSION}" "llvm-${LLVM_VERSION}" "libclang-rt-${LLVM_VERSION}-dev"
+        # Unversioned clang, ld.lld for USE_ALTERNATE_LINKER and llvm-profdata for CI/pgo-train.sh
+        echo "/usr/lib/llvm-${LLVM_VERSION}/bin" >> "$GITHUB_PATH"
+        {
+          echo "CC=clang"
+          echo "CXX=clang++"
+          # Ubuntu's GCC adds these flags, -z now and --as-needed to every build by default and Clang does not. Set in
+          # the environment, not with -D, so the sentry-native ExternalProject gets them too. -O2 because LuaRocks
+          # takes CFLAGS in place of its own; CMake's build-type -O3 comes after it and wins
+          echo "CFLAGS=-O2 ${HARDENING_FLAGS}"
+          echo "CXXFLAGS=${HARDENING_FLAGS}"
+          # -fuse-ld=lld because try_compile and sentry-native miss USE_ALTERNATE_LINKER's add_link_options, and the
+          # system ld rejects --thinlto-cache-dir; the cache saves ~9 min of links
+          echo "LDFLAGS=-fuse-ld=lld -Wl,--thinlto-cache-dir=thinlto-cache -Wl,-z,now -Wl,--as-needed"
+        } >> "$GITHUB_ENV"
+        # Clang takes the newest GCC it finds; a newer one than this would raise the AppImage's GLIBCXX floor past Ubuntu 22.04
+        selected=$("/usr/lib/llvm-${LLVM_VERSION}/bin/clang++" -v 2>&1 | grep '^Selected GCC installation' || true)
+        echo "${selected}"
+        if [ "${selected}" != "Selected GCC installation: /usr/lib/gcc/x86_64-linux-gnu/${GCC_VERSION}" ]; then
+          echo "::error::Clang would build against another libstdc++ than GCC ${GCC_VERSION}'s"
+          exit 1
+        fi
+
     # Saves are keyed per commit, so the primary key deliberately matches no entry
     # and every restore prefix-matches the newest. A profile-guided build skips it:
     # the profile flags are on every object it compiles, so nothing in the cache matches.
@@ -447,6 +483,9 @@ jobs:
       with:
         configurePreset: ${{ runner.os == 'macOS' && ((matrix.build_tests == 'false' && env.MUDLET_PGO_BUILD != 'true') && 'ci-macos-no-tests' || 'ci-macos') || 'ci-linux' }}
         buildPreset: ${{ runner.os == 'macOS' && ((matrix.build_tests == 'false' && env.MUDLET_PGO_BUILD != 'true') && 'ci-macos-no-tests' || 'ci-macos') || 'ci-linux' }}
+        # CMake's IPO is ThinLTO on Clang: full LTO ran no faster and its links swapped on the runners.
+        # Each test binary links all of Mudlet, so the LTO cache (on Linux, in LDFLAGS above) reuses their shared code generation.
+        configurePresetAdditionalArgs: ${{ env.MUDLET_PGO_BUILD != 'true' && '[]' || (runner.os == 'Linux' && '[''-DUSE_ALTERNATE_LINKER=lld'', ''-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON'']' || '[''-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON'', ''-DCMAKE_EXE_LINKER_FLAGS=-Wl,-cache_path_lto,lto-cache'']') }}
         buildPresetAdditionalArgs: ${{ env.MUDLET_PGO_BUILD == 'true' && '[''--target'', ''PipelineBenchmark'', ''MapRenderBenchmark'', ''PathfindBenchmark'']' || '[]' }}
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
@@ -517,6 +556,7 @@ jobs:
       if: env.MUDLET_PGO_BUILD == 'true'
       run: |
         ${{github.workspace}}/CI/pgo-train.sh ${{runner.workspace}}/b/ninja
+        # Reconfigures the first pass's tree, so its LTO options carry over
         cmake -B ${{runner.workspace}}/b/ninja -DMUDLET_PGO=USE -DBUILD_TESTING=${{ matrix.build_tests == 'false' && 'OFF' || 'ON' }}
         cmake --build ${{runner.workspace}}/b/ninja
       env:
@@ -852,8 +892,8 @@ jobs:
   # Every development build saves its ccache under a new per-commit key and only
   # the newest is ever restored, so the older ones would sit in the 10GB quota
   # until GitHub's least-recently-used eviction, which is as likely to drop a
-  # current entry that only development builds restore. The Windows workflow
-  # saves under the same scheme and is swept here too.
+  # current entry that only development builds restore. The Windows and
+  # WebAssembly workflows save under the same scheme and are swept here too.
   # Deliberately not `needs: compile-mudlet`: that would queue it for a runner only
   # once the slowest leg ends, often long after later pushes have built. Started
   # alongside the builds, it keeps the previous push's entries, which they restore.

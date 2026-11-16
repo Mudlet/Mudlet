@@ -90,6 +90,8 @@
 // OpenBSD doesn't have a sysinfo.h
 #include <sys/sysctl.h>
 #include <unistd.h>
+#elif defined(Q_OS_WASM)
+#include <emscripten/heap.h>
 #elif defined(Q_OS_UNIX)
 // Including both GNU/Linux and FreeBSD
 #include <sys/sysinfo.h>
@@ -168,6 +170,9 @@ int64_t physicalMemoryTotal()
     }
 
     return -1;
+#elif defined(Q_OS_WASM)
+    // The most the page's heap may grow to, which is all the memory this build can ever have
+    return static_cast<int64_t>(emscripten_get_heap_max());
 #elif defined(Q_OS_UNIX)
     // Including both GNU/Linux and FreeBSD:
     // Prefer sysctl() over sysconf() except sysctl() HW_REALMEM and HW_PHYSMEM
@@ -6916,10 +6921,10 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
     bool hasNewline = false;
 
     // find all the appropriate wrap points assuming (hanging-)indentation prepended to each line
-    for (int indexOfChar = 0, total = lineText.size(); indexOfChar < total and indexOfChar >= 0;) {
+    for (int indexOfChar = 0, total = lineText.size(); indexOfChar < total && indexOfChar >= 0;) {
         const QChar c = lineText.at(indexOfChar);
         // skip leading spaces for any wrapped lines
-        if (xPos == 0 and !isNewline and !output.isEmpty() and c == QChar::Space) {
+        if (xPos == 0 && !isNewline && !output.isEmpty() && c == QChar::Space) {
             indexOfChar++;
             firstChar = indexOfChar;
             setGraphemePosition(indexOfChar);
