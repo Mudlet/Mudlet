@@ -2534,6 +2534,19 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       assert.are.equal(112 + container:get_x() + 5, getBorderLeft())
     end)
 
+    -- a package that also sets the border from its sysWindowResizeEvent handler froze Mudlet when it was taken back (#12958)
+    it("leaves a border a script sets alone while the container stays where it is", function()
+      local container = make("gapScriptBorder", {width = 112})
+      container:attachToBorder("left")
+      -- the first resize event after attaching re-measures the window, which takes the border back by design
+      raiseEvent("sysWindowResizeEvent", getMainWindowSize())
+
+      setBorderLeft(300)
+      raiseEvent("sysWindowResizeEvent", getMainWindowSize())
+
+      assert.are.equal(300, getBorderLeft())
+    end)
+
     it("detaches a container that has been moved out of reach of its border", function()
       local container = make("gapOutOfReach", {width = 100})
       container:attachToBorder("left")

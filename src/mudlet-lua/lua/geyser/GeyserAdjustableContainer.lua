@@ -1405,9 +1405,14 @@ end
 --- and false if the reposition event comes as effect of external action, such as resizing of main window)
 function Adjustable.Container:reposition(skipChildren)
     Geyser.Container.reposition(self, skipChildren)
-    -- set_constraints() places the container through here, so a script laying it out again moves its border too
+    -- set_constraints() places the container through here, so a script laying it out again moves its border too.
+    -- Only a changed request is reserved: Geyser repositions on every resize event, and taking back a border a
+    -- script set from its own resize handler would trade writes with it forever
     if self.attached and settlingBorders == 0 then
-        self:adjustBorder()
+        local requested = self.borderSize
+        if not self:measureBorder() or self.borderSize ~= requested then
+            self:adjustBorder()
+        end
     end
     local x, y, width, height = self:pixel_geometry()
     raiseEvent(
