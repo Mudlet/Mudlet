@@ -139,6 +139,17 @@ EM_JS(void, pageClose, (), {
         console.error("mudletTransport.close() failed: " + e);
     }
 });
+
+EM_JS(void, pageConfigSaved, (), {
+    if (typeof Module.mudletConfigSaved !== "function") {
+        return;
+    }
+    try {
+        Module.mudletConfigSaved();
+    } catch (e) {
+        console.error("mudletConfigSaved() failed: " + e);
+    }
+});
 // clang-format on
 
 // The id is a JavaScript number, which holds any the profile hands out exactly
@@ -189,5 +200,12 @@ void bridgeTransportToPage(THeadlessSession* pSession)
     });
     QObject::connect(pSession, &THeadlessSession::transportCloseRequested, pSession, [](const QString&) {
         pageClose();
+    });
+}
+
+void bridgeConfigSavesToPage(THeadlessSession* pSession)
+{
+    QObject::connect(pSession, &THeadlessSession::configSaved, pSession, []() {
+        pageConfigSaved();
     });
 }

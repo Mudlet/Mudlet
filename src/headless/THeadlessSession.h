@@ -855,6 +855,9 @@ signals:
     void packageInstallFinished(const QString& path, THeadlessSession::PackageResult result, const QString& error);
     void shutdownFinished(bool succeeded, const QString& error);
     void saveFinished(bool succeeded, const QString& error);
+    // What Mudlet wrote into Options::configDir is complete: one for an event loop turn's writes, a save or a shutdown;
+    // a shutdown's comes before shutdown() returns or shutdownFinished. See "Keeping the profiles" in docs/headless.md
+    void configSaved();
     void profileLoaded(const QString& profile);
     // A line committed to the main console as the game's (what the game sends, feedTriggers(), Mudlet's own
     // OSC 8 examples), before triggers run on it; not what echo(), print() and Mudlet's messages add. A
@@ -1086,6 +1089,8 @@ signals:
 
 private:
     void tellLater(std::function<void()> tell);
+    void noteConfigWritten();
+    void tellConfigSaved();
     void beginStart(const Options&, std::function<void(StartResult)> done);
     std::optional<StartResult> prepareStart(Options&, std::optional<bool>& tls, bool& stalePasswords);
     StartResult finishStart(const Options&, std::optional<bool> tls, const QString& password);
@@ -1195,6 +1200,7 @@ private:
     bool mRemovingStalePasswords = false;
     bool mInstallingPackage = false;
     bool mSaving = false;
+    bool mConfigSavedPending = false;
     bool mSecureConnectionOffered = false;
     // Bumped by each offer, to drop one still queued for the frontend once a later one is made
     unsigned int mSecureConnectionOffer = 0;

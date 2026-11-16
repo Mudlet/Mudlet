@@ -26,5 +26,8 @@ class THeadlessSession;
 bool pageSuppliesTransport();
 // Hands the session's game connection to the page's mudletTransport; see "The game connection" in docs/headless.md
 void bridgeTransportToPage(THeadlessSession* pSession);
+// Calls the page's mudletConfigSaved(), if it passed Qt's loader one, on each configSaved; see "Keeping the profiles"
+// in docs/headless.md
+void bridgeConfigSavesToPage(THeadlessSession* pSession);
 
 #endif // MUDLET_BROWSERTRANSPORT_H

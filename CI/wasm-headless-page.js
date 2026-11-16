@@ -17,6 +17,8 @@ const failureMarkers = [
   "[exit]",
   "[abort]",
   "program exited (",
+  "[sync failed]",
+  "mudletConfigSaved() failed",
 ];
 
 // Where the page puts what mudlet-headless printed, ahead of the text
@@ -60,7 +62,12 @@ function scriptValue(value) {
 // clockJump, { line, seconds }, Date.now() and performance.now() jump that many seconds ahead once the program prints
 // that line; with stdoutGone, writing to standard output fails as it does once a pipe's reader has gone. With relay,
 // a CI/wasm-telnet-relay.js URL, the page makes the profile's game connection through it, as docs/headless.md has it.
-function page({ args, environment = {}, staged = false, clockJump = null, stdoutGone = false, relay = null }) {
+// With keep, { dir, sync, fault }, the page keeps the folder dir in IndexedDB as docs/headless.md has it, loading it before
+// the program starts and, if sync, saving it each time the program says it wrote there, which it prints as
+// "[config saved]"; it prints "[synced]" once a save has ended with none due after it. With fault, { after, message },
+// the first time the program says so after printing the line after, the page throws an Error with message once it has
+// started the save.
+function page({ args, environment = {}, staged = false, clockJump = null, stdoutGone = false, relay = null, keep = null }) {
   return `<!doctype html>
 <html><head><meta charset="utf-8"><title>mudlet-headless</title></head>
 <body><div id="screen" style="width:800px;height:600px"></div>
@@ -88,6 +95,9 @@ function output(prefix) {
     console.log(prefix + t);
     if (clockJump && t === clockJump.line) {
       clockOffset += clockJump.seconds * 1000;
+    }
+    if (keep?.fault && t === keep.fault.after) {
+      faultArmed = true;
     }
   };
 }
@@ -147,6 +157,30 @@ function relayTransport() {
     },
   };
 }
+const keep = ${scriptValue(keep)};
+let syncing = false;
+let syncAgain = false;
+let faultArmed = false;
+let faulted = false;
+function syncConfig() {
+  if (syncing) {
+    syncAgain = true;
+    return;
+  }
+  syncing = true;
+  program.FS.syncfs(false, (error) => {
+    syncing = false;
+    if (error) {
+      console.log("[sync failed] " + error);
+    }
+    if (syncAgain) {
+      syncAgain = false;
+      syncConfig();
+    } else if (!error) {
+      console.log("[synced]");
+    }
+  });
+}
 let program;
 (async () => {
   const staged = ${scriptValue(Boolean(staged))} ? await Promise.all((await (await fetch("stage.json")).json()).map(async (file) => {
@@ -159,6 +193,16 @@ let program;
   await qtLoad({
     arguments: ${scriptValue(args)},
     mudletTransport: relay ? relayTransport() : undefined,
+    mudletConfigSaved: keep?.sync
+      ? () => {
+          console.log("[config saved]");
+          syncConfig();
+          if (faultArmed && !faulted) {
+            faulted = true;
+            throw new Error(keep.fault.message);
+          }
+        }
+      : undefined,
     print: output("[out] "),
     printErr: output("[err] "),
     preRun: [(m) => {
@@ -168,6 +212,22 @@ let program;
       for (const [file, data] of staged) {
         m.FS.mkdirTree(file.slice(0, file.lastIndexOf("/")) || "/");
         m.FS.writeFile(file, data);
+      }
+      if (keep) {
+        m.FS.mkdirTree(keep.dir);
+        m.FS.mount(m.FS.filesystems.IDBFS, {}, keep.dir);
+        m.addRunDependency("config folder");
+        m.FS.syncfs(true, (error) => {
+          if (error) {
+            console.log("[abort] the config folder did not load from IndexedDB: " + error);
+            return;
+          }
+          const ini = keep.dir + "/Mudlet.ini";
+          if (!m.FS.analyzePath(ini).exists) {
+            m.FS.writeFile(ini, ${scriptValue(settings)});
+          }
+          m.removeRunDependency("config folder");
+        });
       }
     }],
     // The standard streams are opened after preRun, and main() runs after this
@@ -217,7 +277,8 @@ async function harnessFailed(what, error) {
 }
 
 // Opens html at http://localhost/index.html, answering the page's requests with serve(path): a file's path, a
-// response for Playwright's route.fulfill() or null, for the file of that name in dir. onConsole gets each console line; onFailure the crash of the tab or an
+// response for Playwright's route.fulfill() or null, for the file of that name in dir. html may be a function giving
+// the page for each load, for a test that loads it again. onConsole gets each console line; onFailure the crash of the tab or an
 // error the page raised. A harness failure exits 3, naming what. With reachLoopback, the page may open WebSockets to
 // 127.0.0.1, which Chromium otherwise refuses a page whose address it never looked up; Playwright does not route them.
 async function openPage({ what, dir, html, serve = () => null, onConsole, onFailure, reachLoopback = false }) {
@@ -247,7 +308,7 @@ async function openPage({ what, dir, html, serve = () => null, onConsole, onFail
       return route.abort();
     }
     if (url.pathname === "/index.html") {
-      return route.fulfill({ contentType: "text/html", body: html });
+      return route.fulfill({ contentType: "text/html", body: typeof html === "function" ? html() : html });
     }
     const served = serve(decodeURIComponent(url.pathname));
     if (typeof served === "object" && served !== null) {

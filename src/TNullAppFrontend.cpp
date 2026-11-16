@@ -790,7 +790,9 @@ void TNullAppFrontend::writeSettings()
     pSettings->sync();
     if (pSettings->status() != QSettings::NoError) {
         qWarning().nospace() << "TNullAppFrontend::writeSettings() ERROR - failed to save the settings to " << pSettings->fileName() << ", status: " << pSettings->status();
+        return;
     }
+    configWritten();
 }
 
 void TNullAppFrontend::armForceClose()
@@ -840,6 +842,7 @@ bool TNullAppFrontend::saveWindowLayoutForScript()
     }
     mDeleted = Layout();
     mClosedProfiles = Layout();
+    configWritten();
     return true;
 }
 

@@ -142,6 +142,8 @@ HostManager::~HostManager()
             continue;
         }
         TAppFrontend::instance()->profileClosing(pHost.get());
+        // Heard here, not just waited for by ~Host(), so a headless session's last configSaved covers the autosave
+        pHost->waitForMapAutosave();
     }
     if (auto* pSpeechBridge = TSpeechBridge::instance()) {
         for (const auto& pHost : hostList()) {
