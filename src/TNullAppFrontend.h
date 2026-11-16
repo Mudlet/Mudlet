@@ -78,6 +78,7 @@ public:
     void userWindowRemoved(Host*, const QString& name) override;
     void mapWidgetRemoved(Host*) override;
     void profileClosing(Host*) override;
+    void configWritten() override { emit mNotifier.configWritten(); }
     void profilesClosed() override;
     bool quitting() const override { return false; }
     bool openProfile(const QString& profileName, bool connect) override;
