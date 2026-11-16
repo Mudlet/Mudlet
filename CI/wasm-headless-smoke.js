@@ -129,12 +129,21 @@ function defaultProbe() {
       'local suggested = table.concat(assert(spellSuggestWord("smokewibbel", true)), ",") ' +
       'assert(suggested == word, "Hunspell suggested \\"" .. suggested .. "\\" for smokewibbel") ' +
       'smokeStage("spell checked") end',
+    // getVerifiedInt()'s range check, which on a 32-bit build cannot lean on lua_Integer being wider than an int;
+    // getRoomEnv() hands back the int setRoomEnv() stored
+    'function smokeIntRange() for _, n in ipairs({2 ^ 31, -2 ^ 31 - 1}) do local ok, err = pcall(roomExists, n) ' +
+      'assert(not ok and tostring(err):find("over/under-flow", 1, true), ' +
+      '"roomExists(" .. n .. ") was not refused: " .. tostring(err)) end ' +
+      'local room = createRoomID() assert(addRoom(room)) for _, n in ipairs({2147483647, 2147483647.5}) do ' +
+      'assert(setRoomEnv(room, n)) local env = getRoomEnv(room) ' +
+      'assert(env == 2147483647, "setRoomEnv(" .. n .. ") stored " .. tostring(env)) end ' +
+      'assert(deleteRoom(room)) smokeStage("int range checked") end',
     'registerNamedRegexTrigger("smoke", "ping", [[^ping (\\d) \\p{Greek}+$]], function() smokeStage("trigger fired") ' +
       'local numbers = db:create("smoke", {numbers = {n = 0}}).numbers ' +
       'assert(db:add(numbers, {n = tonumber(matches[2])}, {n = yajl.to_value("[1]")[1]})) ' +
       'smokeSum = db:aggregate(numbers.n, "sum") ' +
       'assert(lpeg.match(lpeg.C(lpeg.P("a") ^ 1), "aaab") == "aaa", "lpeg did not match") smokeStage("lpeg matched") ' +
-      'smokeSpellCheck() ' +
+      'smokeIntRange() smokeSpellCheck() ' +
       'smokeSave() smokeStage("save 1 checked") assert(downloadFile(smokeFile, "http://localhost/qtloader.js")) end)',
     'registerAnonymousEventHandler("sysDownloadDone", function(_, file, size) if file == smokeFile then ' +
       'assert(size > 0 and #smokeRead(file) == size, file .. " did not arrive whole") smokeStage("download 1 whole") ' +
