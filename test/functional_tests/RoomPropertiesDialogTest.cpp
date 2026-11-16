@@ -1027,14 +1027,14 @@ private slots:
     void anEditedValueIsSentAlone()
     {
         buildMap();
-        room(scmFirstRoom)->userData = {{qsl("zone"), qsl("Orcland")}, {qsl("notes"), qsl("old")}};
+        room(scmFirstRoom)->userData = {{qsl("zone"), qsl("Orcland")}, {qsl("guild"), qsl("old")}};
 
         auto* pDlg = openDialogOn({scmFirstRoom});
-        userDataValue(pDlg, qsl("notes"))->setText(qsl("new"));
+        userDataValue(pDlg, qsl("guild"))->setText(qsl("new"));
         pDlg->accept();
 
         QCOMPARE(mEmitted.userDataEmitCount, 1);
-        QCOMPARE(mEmitted.userDataChanges, (QMap<QString, std::optional<QString>>{{qsl("notes"), qsl("new")}}));
+        QCOMPARE(mEmitted.userDataChanges, (QMap<QString, std::optional<QString>>{{qsl("guild"), qsl("new")}}));
         QCOMPARE(mEmitted.userDataRoomIds, QList<int>({scmFirstRoom}));
     }
 
@@ -1087,14 +1087,14 @@ private slots:
     void okLeavesAnUntouchedMixedKeyAloneAndWritesAnEditedOneToEveryRoom()
     {
         buildMap();
-        room(scmFirstRoom)->userData = {{qsl("zone"), qsl("Orcland")}, {qsl("notes"), qsl("a")}};
-        room(scmSecondRoom)->userData = {{qsl("zone"), qsl("Moonglow")}, {qsl("notes"), qsl("b")}};
+        room(scmFirstRoom)->userData = {{qsl("zone"), qsl("Orcland")}, {qsl("guild"), qsl("a")}};
+        room(scmSecondRoom)->userData = {{qsl("zone"), qsl("Moonglow")}, {qsl("guild"), qsl("b")}};
 
         auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
-        userDataValue(pDlg, qsl("notes"))->setText(qsl("same"));
+        userDataValue(pDlg, qsl("guild"))->setText(qsl("same"));
         pDlg->accept();
 
-        QCOMPARE(mEmitted.userDataChanges, (QMap<QString, std::optional<QString>>{{qsl("notes"), qsl("same")}}));
+        QCOMPARE(mEmitted.userDataChanges, (QMap<QString, std::optional<QString>>{{qsl("guild"), qsl("same")}}));
         QCOMPARE(mEmitted.userDataRoomIds, QList<int>({scmFirstRoom, scmSecondRoom}));
     }
 
@@ -1158,6 +1158,59 @@ private slots:
         pDlg->plainTextEdit_description->clear();
         pDlg->accept();
         QCOMPARE(mEmitted.userDataChanges, (QMap<QString, std::optional<QString>>{{qsl("description"), std::nullopt}}));
+    }
+
+    void theNotesOfOneRoomHaveTheirOwnFieldAndAreLeftOutOfTheTable()
+    {
+        buildMap();
+        room(scmFirstRoom)->userData = {{qsl("notes"), qsl("Shop opens at dawn.\nAsk for Grim.")}, {qsl("zone"), qsl("Orcland")}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+
+        QCOMPARE(pDlg->plainTextEdit_notes->toPlainText(), qsl("Shop opens at dawn.\nAsk for Grim."));
+        QCOMPARE(userDataKeys(pDlg), QStringList({qsl("zone")}));
+        pDlg->accept();
+        QCOMPARE(mEmitted.userDataEmitCount, 0);
+    }
+
+    void notesTheRoomsDisagreeOnShowThePlaceholderAndOkLeavesThemAlone()
+    {
+        buildMap();
+        room(scmFirstRoom)->userData = {{qsl("notes"), qsl("a")}};
+        room(scmSecondRoom)->userData = {{qsl("notes"), qsl("b")}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
+
+        QVERIFY(pDlg->plainTextEdit_notes->toPlainText().isEmpty());
+        QCOMPARE(pDlg->plainTextEdit_notes->placeholderText(), scmMultipleValues);
+        pDlg->accept();
+        QCOMPARE(mEmitted.userDataEmitCount, 0);
+    }
+
+    void notesWrittenForASelectionGoToEveryRoom()
+    {
+        buildMap();
+        room(scmFirstRoom)->userData = {{qsl("notes"), qsl("a")}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
+        pDlg->plainTextEdit_notes->setPlainText(qsl("safe"));
+        pDlg->accept();
+
+        QCOMPARE(mEmitted.userDataChanges, (QMap<QString, std::optional<QString>>{{qsl("notes"), qsl("safe")}}));
+        QCOMPARE(mEmitted.userDataRoomIds, QList<int>({scmFirstRoom, scmSecondRoom}));
+    }
+
+    void clearedNotesAreRemovedAlongsideAnEditedDescription()
+    {
+        buildMap();
+        room(scmFirstRoom)->userData = {{qsl("description"), qsl("old")}, {qsl("notes"), qsl("gone soon")}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        pDlg->plainTextEdit_description->setPlainText(qsl("new"));
+        pDlg->plainTextEdit_notes->clear();
+        pDlg->accept();
+
+        QCOMPARE(mEmitted.userDataChanges, (QMap<QString, std::optional<QString>>{{qsl("description"), qsl("new")}, {qsl("notes"), std::nullopt}}));
     }
 
     void aChangedGameIdIsSentAndWarnsWhenAnotherRoomHasIt()
@@ -1274,34 +1327,34 @@ private slots:
     void aMixedValueClearedInItsEditorIsWrittenEmpty()
     {
         buildMap();
-        room(scmFirstRoom)->userData = {{qsl("notes"), qsl("a")}};
-        room(scmSecondRoom)->userData = {{qsl("notes"), qsl("b")}};
+        room(scmFirstRoom)->userData = {{qsl("guild"), qsl("a")}};
+        room(scmSecondRoom)->userData = {{qsl("guild"), qsl("b")}};
 
         auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
-        auto* pEditor = openUserDataValueEditor(pDlg, qsl("notes"));
+        auto* pEditor = openUserDataValueEditor(pDlg, qsl("guild"));
         QVERIFY(pEditor);
         QTest::keyClicks(pEditor, qsl("x"));
         QTest::keyClick(pEditor, Qt::Key_Backspace);
         commitUserDataValueEditor(pEditor);
         pDlg->accept();
 
-        QCOMPARE(mEmitted.userDataChanges, (QMap<QString, std::optional<QString>>{{qsl("notes"), QString()}}));
+        QCOMPARE(mEmitted.userDataChanges, (QMap<QString, std::optional<QString>>{{qsl("guild"), QString()}}));
     }
 
     void aMixedValueOpenedAndLeftAloneInItsEditorChangesNothing()
     {
         buildMap();
-        room(scmFirstRoom)->userData = {{qsl("notes"), qsl("a")}};
-        room(scmSecondRoom)->userData = {{qsl("notes"), qsl("b")}};
+        room(scmFirstRoom)->userData = {{qsl("guild"), qsl("a")}};
+        room(scmSecondRoom)->userData = {{qsl("guild"), qsl("b")}};
 
         auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
-        auto* pEditor = openUserDataValueEditor(pDlg, qsl("notes"));
+        auto* pEditor = openUserDataValueEditor(pDlg, qsl("guild"));
         QVERIFY(pEditor);
         commitUserDataValueEditor(pEditor);
         pDlg->accept();
 
         QCOMPARE(mEmitted.userDataEmitCount, 0);
-        QCOMPARE(userDataValue(pDlg, qsl("notes"))->text(), scmMultipleValues);
+        QCOMPARE(userDataValue(pDlg, qsl("guild"))->text(), scmMultipleValues);
     }
 };
 

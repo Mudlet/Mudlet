@@ -39,12 +39,13 @@ namespace {
 // nor writes them
 const QLatin1String scmMudletOwnedUserDataPrefix{"room.ui_"};
 
-// The key the generic mapper keeps a room's description under; the General tab edits it, so the table does not
+// The keys mapper scripts keep a room's description and notes under; the General tab edits them, so the table does not
 const QLatin1String scmDescriptionKey{"description"};
+const QLatin1String scmNotesKey{"notes"};
 
 bool editedInUserDataTable(const QString& key)
 {
-    return !key.startsWith(scmMudletOwnedUserDataPrefix) && key != scmDescriptionKey;
+    return !key.startsWith(scmMudletOwnedUserDataPrefix) && key != scmDescriptionKey && key != scmNotesKey;
 }
 
 // Set on a value cell that shows the placeholder because the selected rooms do not agree on that key
@@ -102,9 +103,13 @@ dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
     connect(tableWidget_userData, &QTableWidget::itemChanged, this, &dlgRoomProperties::slot_userDataItemChanged);
     tableWidget_userData->setItemDelegateForColumn(1, new UserDataValueDelegate(tableWidget_userData));
     connect(lineEdit_hash, &QLineEdit::textChanged, this, &dlgRoomProperties::slot_hashChanged);
-    connect(plainTextEdit_description, &QPlainTextEdit::textChanged, this, [this]() {
-        mDescriptionWasEdited = true;
-    });
+    mUserDataTextFields = {UserDataTextField{scmDescriptionKey, plainTextEdit_description, tr("Room description...")},
+                           UserDataTextField{scmNotesKey, plainTextEdit_notes, tr("Your own notes on this room...")}};
+    for (auto& field : mUserDataTextFields) {
+        connect(field.pEdit, &QPlainTextEdit::textChanged, this, [&field]() {
+            field.edited = true;
+        });
+    }
 
     setAttribute(Qt::WA_DeleteOnClose);
 }
@@ -513,10 +518,13 @@ void dlgRoomProperties::accept()
                             liveRoomIds());
 
     QMap<QString, std::optional<QString>> changes = userDataChanges();
-    if (mDescriptionWasEdited) {
-        const QString description = plainTextEdit_description->toPlainText();
-        if (description != mOriginalDescription) {
-            changes.insert(scmDescriptionKey, description.isEmpty() ? std::nullopt : std::optional<QString>(description));
+    for (const auto& field : mUserDataTextFields) {
+        if (!field.edited) {
+            continue;
+        }
+        const QString text = field.pEdit->toPlainText();
+        if (text != field.original) {
+            changes.insert(field.key, text.isEmpty() ? std::nullopt : std::optional<QString>(text));
         }
     }
     if (!changes.isEmpty()) {
@@ -871,27 +879,34 @@ void dlgRoomProperties::initGeneral()
     }
     comboBox_area->setCurrentIndex(mOriginalAreaId.has_value() ? comboBox_area->findData(*mOriginalAreaId) : 0);
 
-    QSet<QString> descriptions;
+    for (auto& field : mUserDataTextFields) {
+        initUserDataTextField(field, rooms);
+    }
+}
+
+void dlgRoomProperties::initUserDataTextField(UserDataTextField& field, const QList<const TRoom*>& rooms)
+{
+    QSet<QString> values;
     bool someWithout = false;
-    for (const TRoom* room : std::as_const(rooms)) {
-        const auto it = room->userData.constFind(scmDescriptionKey);
+    for (const TRoom* room : rooms) {
+        const auto it = room->userData.constFind(field.key);
         if (it == room->userData.cend()) {
             someWithout = true;
         } else {
-            descriptions.insert(it.value());
+            values.insert(it.value());
         }
     }
-    if (descriptions.isEmpty()) {
-        mOriginalDescription = QString();
-    } else if (descriptions.size() == 1 && !someWithout) {
-        mOriginalDescription = *descriptions.cbegin();
+    if (values.isEmpty()) {
+        field.original = QString();
+    } else if (values.size() == 1 && !someWithout) {
+        field.original = *values.cbegin();
     } else {
-        mOriginalDescription = std::nullopt;
+        field.original = std::nullopt;
     }
-    const QSignalBlocker descriptionBlocker(plainTextEdit_description);
-    plainTextEdit_description->setPlainText(mOriginalDescription.value_or(QString()));
-    plainTextEdit_description->setPlaceholderText(mOriginalDescription.has_value() ? tr("Room description...") : multipleValuesPlaceholder);
-    mDescriptionWasEdited = false;
+    const QSignalBlocker blocker(field.pEdit);
+    field.pEdit->setPlainText(field.original.value_or(QString()));
+    field.pEdit->setPlaceholderText(field.original.has_value() ? field.placeholder : multipleValuesPlaceholder);
+    field.edited = false;
 }
 
 void dlgRoomProperties::slot_hashChanged(const QString& hash)

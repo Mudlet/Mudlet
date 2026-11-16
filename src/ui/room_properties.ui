@@ -112,6 +112,23 @@
          </property>
         </widget>
        </item>
+       <item row="6" column="0">
+        <widget class="QLabel" name="label_notes">
+         <property name="text">
+          <string>Notes:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="1">
+        <widget class="QPlainTextEdit" name="plainTextEdit_notes">
+         <property name="toolTip">
+          <string>&lt;p&gt;Kept in the room's user data under &lt;i&gt;notes&lt;/i&gt;, where scripts can read it with getRoomUserData.&lt;/p&gt;</string>
+         </property>
+         <property name="tabChangesFocus">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
       </layout>
      </widget>
      <widget class="QWidget" name="tab_appearance">
@@ -673,6 +690,7 @@
   <tabstop>lineEdit_name</tabstop>
   <tabstop>comboBox_area</tabstop>
   <tabstop>plainTextEdit_description</tabstop>
+  <tabstop>plainTextEdit_notes</tabstop>
   <tabstop>pushButton_setRoomColor</tabstop>
   <tabstop>lineEdit_roomSymbol</tabstop>
   <tabstop>comboBox_roomSymbol</tabstop>

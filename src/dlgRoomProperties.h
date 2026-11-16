@@ -28,7 +28,9 @@
 #include <QColor>
 #include <QListWidget>
 #include <QMap>
+#include <QPlainTextEdit>
 
+#include <array>
 #include <optional>
 
 class Host;
@@ -90,6 +92,17 @@ private:
     void emitBorderPreview();
     void restoreOriginalBorders();
     void initGeneral();
+    // A General tab text box that edits one user data key of every selected room
+    struct UserDataTextField
+    {
+        QString key;
+        QPlainTextEdit* pEdit = nullptr;
+        QString placeholder;
+        // The rooms' value, or std::nullopt where they do not all have the same one
+        std::optional<QString> original;
+        bool edited = false;
+    };
+    void initUserDataTextField(UserDataTextField&, const QList<const TRoom*>&);
     void initUserData();
     void addUserDataRow(const QString& key, const std::optional<QString>& value, const bool keyEditable);
     QMap<QString, std::optional<QString>> userDataChanges() const;
@@ -117,9 +130,8 @@ private:
     QString mOriginalHash;
     // The rooms' area, or std::nullopt where they are in different ones
     std::optional<int> mOriginalAreaId;
-    // The rooms' description, or std::nullopt where they do not all have the same one
-    std::optional<QString> mOriginalDescription;
-    bool mDescriptionWasEdited = false;
+    // Description and notes, under the keys mapper scripts such as RoMMapper keep them in
+    std::array<UserDataTextField, 2> mUserDataTextFields;
     QString multipleValuesPlaceholder = tr("(Multiple values...)");
 
 private slots:
