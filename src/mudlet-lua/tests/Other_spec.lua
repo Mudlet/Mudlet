@@ -721,10 +721,16 @@ describe("Tests Other.lua functions", function()
       pending("the specs that wait for a delayed speedwalk's timers - need MUDLET_TEST_MODE for waitForEvent")
     else
       -- give a second timer chain, had one survived, time to show itself
-      local function settle()
+      local function settle(timeoutMs)
         tempTimer(0.1, function() raiseEvent("speedwalkSpecSettled") end)
-        assert(waitForEvent("speedwalkSpecSettled", 5000))
+        assert(waitForEvent("speedwalkSpecSettled", timeoutMs or 5000))
       end
+
+      -- These are the first specs in this file to run the event loop, so whatever earlier spec files left
+      -- queued runs inside the first wait; on a slow CI runner that ate the 5 s a walk of three 10 ms steps had
+      setup(function()
+        settle(30000)
+      end)
 
       it("leaves nothing to pause or stop once a delayed walk has finished", function()
         assert.is_true(speedwalk("n;e;s", false, 0.01))
