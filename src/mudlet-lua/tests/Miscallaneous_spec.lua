@@ -152,6 +152,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         local processorBytes = {
           ["x86 (64-bit)"] = 8, ["ppc (64-bit)"] = 8, ["arm (64-bit)"] = 8, ia64 = 8,
           ["x86 (32-bit)"] = 4, ["ppc (32-bit)"] = 4, arm7 = 4, arm6 = 4, arm5 = 4,
+          ["wasm (64-bit)"] = 8, ["wasm (32-bit)"] = 4,
         }
         local sizeTBytes = string.byte(header, 9)
         assert.equals(sizeTBytes, processorBytes[processor], tostring(processor))

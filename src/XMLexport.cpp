@@ -1523,8 +1523,7 @@ QStringList XMLexport::remapAnsiToColorNumber(const QStringList& patternList, co
                             case 13:    fg = 11;    break; // light magenta
                             case 14:    fg = 13;    break; // light cyan
                             case 15:    fg = 15;    break; // light white
-                            default:
-                                   ; // No-op for other color codes
+                            default:                break; // No-op for other color codes
                             }
                             // clang-format on
                         } else {
@@ -1565,8 +1564,7 @@ QStringList XMLexport::remapAnsiToColorNumber(const QStringList& patternList, co
                             case 13:    bg = 11;    break; // light magenta
                             case 14:    bg = 13;    break; // light cyan
                             case 15:    bg = 15;    break; // light white
-                            default:
-                                   ; // No-op for other color codes
+                            default:                break; // No-op for other color codes
                             }
                             // clang-format on
                         } else {
