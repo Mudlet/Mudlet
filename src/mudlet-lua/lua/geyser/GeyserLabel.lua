@@ -2006,6 +2006,10 @@ function Geyser.Label:showMenuLabel(name)
     return
   end
   menuElement.ignore = false
+  -- hide() while a parent container is hidden also sets auto_hidden. The menu
+  -- window stays hidden, so that parent's later show never clears the flag,
+  -- and opening the menu skips showWindow. Leave hidden set: displayNest shows it.
+  menuElement.auto_hidden = false
   -- the parent's list, not the one it was hidden from: deleting a sibling replaces it
   local nestTable = menuElement.nestParent.nestedLabels
   table.insert(nestTable, math.min(menuElement.MenuIndex, #nestTable + 1), menuElement)
