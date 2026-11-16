@@ -2534,17 +2534,52 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       assert.are.equal(112 + container:get_x() + 5, getBorderLeft())
     end)
 
-    -- a package that also sets the border from its sysWindowResizeEvent handler froze Mudlet when it was taken back (#12958)
+    -- a script setting it from its own sysWindowResizeEvent handler would otherwise trade writes with the container forever
     it("leaves a border a script sets alone while the container stays where it is", function()
       local container = make("gapScriptBorder", {width = 112})
       container:attachToBorder("left")
-      -- the first resize event after attaching re-measures the window, which takes the border back by design
+      -- primes resizeBorder()'s recorded window size; until then any resize event re-reserves the border
       raiseEvent("sysWindowResizeEvent", getMainWindowSize())
 
       setBorderLeft(300)
       raiseEvent("sysWindowResizeEvent", getMainWindowSize())
 
       assert.are.equal(300, getBorderLeft())
+    end)
+
+    it("detaches a container a script lays out again out of reach of its border, though its request is unchanged", function()
+      local winw = getMainWindowSize()
+      local container = make("gapShrunkInPlace", {x = winw - 300, width = 300})
+      container:attachToBorder("right")
+      raiseEvent("sysWindowResizeEvent", getMainWindowSize())
+
+      container:set_constraints({x = winw - 300, y = 0, width = 40, height = 100})
+      container:reposition()
+
+      assert.is_false(container.attached)
+    end)
+
+    it("re-reserves a container a resize handler lays out again while its own border is being written", function()
+      local winw = getMainWindowSize()
+      local near = make("gapMidWriteNear", {width = 112})
+      local far = make("gapMidWriteFar", {x = winw - 100, width = 100})
+      near:attachToBorder("left")
+      far:attachToBorder("right")
+      raiseEvent("sysWindowResizeEvent", getMainWindowSize())
+      local fired = false
+      local handler = registerAnonymousEventHandler("sysWindowResizeEvent", function()
+        if not fired then
+          fired = true
+          near:set_constraints({x = 0, y = 0, width = 200, height = 100})
+          near:reposition()
+        end
+      end)
+      finally(function() killAnonymousEventHandler(handler) end)
+
+      near:setBorderMargin(6)
+      raiseEvent("sysWindowResizeEvent", getMainWindowSize())
+
+      assert.are.equal(200 + near:get_x() + 6, getBorderLeft())
     end)
 
     it("detaches a container that has been moved out of reach of its border", function()
