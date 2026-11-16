@@ -113,6 +113,9 @@ public:
     // saved under the old version.
     QMap<QString, int> hashToRoomID;
     QMap<int, QString> roomIDToHash;
+    // Gives the room this hash, taking it from any other room that had it; an empty hash clears the room's. Returns
+    // whether anything changed.
+    bool setRoomHash(const int roomId, const QString& hash);
 
 
 private:

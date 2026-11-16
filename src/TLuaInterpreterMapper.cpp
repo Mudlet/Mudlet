@@ -4560,21 +4560,9 @@ int TLuaInterpreter::setRoomIDbyHash(lua_State* L)
     if (!pRoomDB->getRoom(id)) {
         return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id));
     }
-    if (pRoomDB->roomIDToHash.value(id) == hash && (hash.isEmpty() || pRoomDB->hashToRoomID.value(hash, -1) == id)) {
-        lua_pushboolean(L, true);
-        return 1;
+    if (pRoomDB->setRoomHash(id, hash)) {
+        host.mpMap->setUnsaved(__func__);
     }
-    if (pRoomDB->roomIDToHash.contains(id)) {
-        pRoomDB->hashToRoomID.remove(pRoomDB->roomIDToHash.take(id));
-    }
-    if (!hash.isEmpty()) {
-        if (pRoomDB->hashToRoomID.contains(hash)) {
-            pRoomDB->roomIDToHash.remove(pRoomDB->hashToRoomID[hash]);
-        }
-        pRoomDB->hashToRoomID[hash] = id;
-        pRoomDB->roomIDToHash[id] = hash;
-    }
-    host.mpMap->setUnsaved(__func__);
     lua_pushboolean(L, true);
     return 1;
 }
