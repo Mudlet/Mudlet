@@ -22,6 +22,9 @@ const failureMarkers = [
 // Where the page puts what mudlet-headless printed, ahead of the text
 const outputPrefixes = /^\[(out|err)\] /;
 
+// What the page's game connection puts either side of the bytes it hands received(), outside the view of them
+const pagePadding = "the page's padding";
+
 // "[ ERROR ]" is translated, and Mudlet follows the browser's language once its translation is complete enough
 const settings = "[General]\ninterfaceLanguage=en_US\n";
 
@@ -55,8 +58,9 @@ function scriptValue(value) {
 // it first fetches stage.json, a list of absolute paths, and each of them from stage/<path>, and writes them into
 // the program's file system before it starts. It prints "[exit] " and the exit status when the program ends. With
 // clockJump, { line, seconds }, Date.now() and performance.now() jump that many seconds ahead once the program prints
-// that line; with stdoutGone, writing to standard output fails as it does once a pipe's reader has gone.
-function page({ args, environment = {}, staged = false, clockJump = null, stdoutGone = false }) {
+// that line; with stdoutGone, writing to standard output fails as it does once a pipe's reader has gone. With relay,
+// a CI/wasm-telnet-relay.js URL, the page makes the profile's game connection through it, as docs/headless.md has it.
+function page({ args, environment = {}, staged = false, clockJump = null, stdoutGone = false, relay = null }) {
   return `<!doctype html>
 <html><head><meta charset="utf-8"><title>mudlet-headless</title></head>
 <body><div id="screen" style="width:800px;height:600px"></div>
@@ -87,6 +91,62 @@ function output(prefix) {
     }
   };
 }
+const relay = ${scriptValue(relay)};
+const padding = new TextEncoder().encode(${scriptValue(`\r\n${pagePadding}\r\n`)});
+// The first connection's write() throws, and it hands received() a DataView into the middle of a larger buffer, whose
+// padding either side shows as a line of its own if Mudlet reads past the view. The second hands it the Blob a
+// WebSocket gives on its default binaryType, and the rest the ArrayBuffer it gives otherwise. dial() is async, and the
+// third's rejects; the fourth's write() returns a promise that rejects. Mudlet must close the first four itself, as the
+// profile, told they ended, asks for no close(); the page fails the run if it is asked to dial while the last connection
+// is still open.
+function relayTransport() {
+  let socket = null;
+  let dials = 0;
+  return {
+    async dial(host, port, tlsRequested, connection) {
+      const attempt = ++dials;
+      console.log("[transport] dial " + attempt + " to " + host + ":" + port + (tlsRequested ? " with TLS asked for" : ""));
+      if (socket && socket.readyState <= WebSocket.OPEN) {
+        console.log("[transport] FAILED: asked to dial while the last connection was still open");
+      }
+      if (attempt === 3) {
+        throw new Error("the page could not reach the game (a fault the smoke test makes)");
+      }
+      socket = new WebSocket(relay + "?host=" + encodeURIComponent(host) + "&port=" + port);
+      if (attempt !== 2) {
+        socket.binaryType = "arraybuffer";
+      }
+      socket.onopen = () => connection.connected();
+      socket.onmessage = (e) => {
+        if (attempt === 1) {
+          const data = new Uint8Array(e.data);
+          const padded = new Uint8Array(padding.length + data.length + padding.length);
+          padded.set(padding);
+          padded.set(data, padding.length);
+          padded.set(padding, padding.length + data.length);
+          connection.received(new DataView(padded.buffer, padding.length, data.length));
+        } else {
+          connection.received(e.data);
+        }
+      };
+      socket.onclose = (e) => connection.closed(e.reason || "the relay closed the connection with code " + e.code);
+    },
+    write(bytes) {
+      if (dials === 1) {
+        throw new Error("the page could not send (a fault the smoke test makes)");
+      }
+      if (dials === 4) {
+        return Promise.reject(new Error("the page's send failed later (a fault the smoke test makes)"));
+      }
+      socket.send(bytes);
+    },
+    close() {
+      console.log("[transport] close");
+      socket.onclose = socket.onmessage = null;
+      socket.close();
+    },
+  };
+}
 let program;
 (async () => {
   const staged = ${scriptValue(Boolean(staged))} ? await Promise.all((await (await fetch("stage.json")).json()).map(async (file) => {
@@ -98,6 +158,7 @@ let program;
   })) : [];
   await qtLoad({
     arguments: ${scriptValue(args)},
+    mudletTransport: relay ? relayTransport() : undefined,
     print: output("[out] "),
     printErr: output("[err] "),
     preRun: [(m) => {
@@ -157,8 +218,9 @@ async function harnessFailed(what, error) {
 
 // Opens html at http://localhost/index.html, answering the page's requests with serve(path): a file's path, a
 // response for Playwright's route.fulfill() or null, for the file of that name in dir. onConsole gets each console line; onFailure the crash of the tab or an
-// error the page raised. A harness failure exits 3, naming what.
-async function openPage({ what, dir, html, serve = () => null, onConsole, onFailure }) {
+// error the page raised. A harness failure exits 3, naming what. With reachLoopback, the page may open WebSockets to
+// 127.0.0.1, which Chromium otherwise refuses a page whose address it never looked up; Playwright does not route them.
+async function openPage({ what, dir, html, serve = () => null, onConsole, onFailure, reachLoopback = false }) {
   process.on("uncaughtException", (error) => harnessFailed(what, error));
   process.on("unhandledRejection", (error) => harnessFailed(what, error));
   const { chromium } = require("playwright");
@@ -171,7 +233,7 @@ async function openPage({ what, dir, html, serve = () => null, onConsole, onFail
     }
   }
   browser.on("disconnected", () => gone("Chromium quit"));
-  const tab = await browser.newPage();
+  const tab = await browser.newPage({ permissions: reachLoopback ? ["local-network-access"] : [] });
   tab.on("close", () => gone("the page was closed"));
   tab.on("console", (message) => onConsole(message.text()));
   tab.on("pageerror", (error) => onFailure("[pageerror] " + (error.stack ?? error.message)));
@@ -202,4 +264,4 @@ async function openPage({ what, dir, html, serve = () => null, onConsole, onFail
   return tab;
 }
 
-module.exports = { failureMarkers, outputPrefixes, requireBuild, timeoutFrom, page, parseExit, exitedCleanly, openPage, closeBrowser };
+module.exports = { failureMarkers, outputPrefixes, pagePadding, requireBuild, timeoutFrom, page, parseExit, exitedCleanly, openPage, closeBrowser };

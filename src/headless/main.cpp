@@ -68,6 +68,8 @@
 #endif
 
 #if defined(Q_OS_WASM)
+#include "BrowserTransport.h"
+
 #include <QTimer>
 
 #include <emscripten/emscripten.h>
@@ -922,6 +924,10 @@ int run(int argc, char* argv[])
     if (parser.isSet(tlsOption) || parser.isSet(noTlsOption)) {
         options.tls = parser.isSet(tlsOption);
     }
+#if defined(Q_OS_WASM)
+    // A browser has no sockets, so the page connects for the profile when it can
+    options.supplyTransport = pageSuppliesTransport();
+#endif
     if (bool isNumber = false; exitCode == exitOk && parser.isSet(portOption)) {
         options.port = parser.value(portOption).toInt(&isNumber);
         // Its range is the session's to check, as for any frontend; 0 there keeps what is stored
@@ -977,6 +983,11 @@ int run(int argc, char* argv[])
     }
 
     auto session = std::make_unique<THeadlessSession>();
+#if defined(Q_OS_WASM)
+    if (options.supplyTransport) {
+        bridgeTransportToPage(session.get());
+    }
+#endif
     // quit() does nothing before exec() runs, and a load that pumps events can ask for one before then
     bool quitAsked = false;
 #if defined(Q_OS_WASM)

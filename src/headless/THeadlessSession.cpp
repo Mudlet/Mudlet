@@ -31,6 +31,7 @@
 #include "TEncodingHelper.h"
 #include "TEvent.h"
 #include "TGameDetails.h"
+#include "TGameTransport.h"
 #include "TLuaInterpreter.h"
 #include "TMap.h"
 #include "TNullAppFrontend.h"
@@ -326,6 +327,65 @@ private:
     THeadlessSession& mSession;
 };
 
+// Unhooked by detachFromHost() before the session goes
+class THeadlessSession::Transport final : public TGameTransport
+{
+public:
+    explicit Transport(THeadlessSession* pSession)
+    : TGameTransport(pSession)
+    , mSession(*pSession)
+    {
+    }
+
+    void dial(const quint64 connection, const QString& host, const int port, const bool tlsRequested) override
+    {
+        const QString profile = mSession.mProfileName;
+        ++gSignalsBeingHandedOut;
+        emit mSession.transportDialRequested(profile, connection, host, port, tlsRequested);
+        --gSignalsBeingHandedOut;
+    }
+
+    void write(const QByteArray& data) override
+    {
+        const QString profile = mSession.mProfileName;
+        ++gSignalsBeingHandedOut;
+        emit mSession.transportWriteRequested(profile, data);
+        --gSignalsBeingHandedOut;
+    }
+
+    void close() override
+    {
+        const QString profile = mSession.mProfileName;
+        ++gSignalsBeingHandedOut;
+        emit mSession.transportCloseRequested(profile);
+        --gSignalsBeingHandedOut;
+    }
+
+private:
+    THeadlessSession& mSession;
+};
+
+void THeadlessSession::transportConnected(const quint64 connection)
+{
+    if (mpTransport) {
+        emit mpTransport->connected(connection);
+    }
+}
+
+void THeadlessSession::transportReceived(const quint64 connection, const QByteArray& data)
+{
+    if (mpTransport) {
+        emit mpTransport->received(connection, data);
+    }
+}
+
+void THeadlessSession::transportClosed(const quint64 connection, const QString& reason)
+{
+    if (mpTransport) {
+        emit mpTransport->closed(connection, reason);
+    }
+}
+
 void THeadlessSession::preloadLuaModule(const QByteArray& name, int (*open)(lua_State*))
 {
     TLuaInterpreter::preloadModule(name, open);
@@ -536,6 +596,9 @@ THeadlessSession::StartResult THeadlessSession::finishStart(const Options& optio
     }
 
     const unsigned int run = ++mRun;
+    if (options.supplyTransport && !mpTransport) {
+        mpTransport = new Transport(this);
+    }
     mDeliveredConsoleFont.reset();
     mUnsavedProfiles.clear();
     mLoadFailed = false;
@@ -544,11 +607,14 @@ THeadlessSession::StartResult THeadlessSession::finishStart(const Options& optio
     Host* pHost = mpPool->openProfile(
             profileName,
             options.connect,
-            [this, self, run, &password](Host* pNewHost) {
+            [this, self, run, supplyTransport = options.supplyTransport, &password](Host* pNewHost) {
                 if (!self) {
                     return;
                 }
                 mpHost = pNewHost;
+                if (supplyTransport) {
+                    pNewHost->mTelnet.setTransport(mpTransport);
+                }
                 mSecureConnectionOffered = false;
                 mMapOperationCancelable = false;
                 pNewHost->givePass(password);
@@ -2149,6 +2215,7 @@ void THeadlessSession::detachFromHost()
         disconnect(&mpHost->mainConsoleModel().mNotifier, nullptr, this, nullptr);
         disconnect(&mpHost->mTelnet, nullptr, this, nullptr);
         disconnect(mpHost->mpMap.data(), nullptr, this, nullptr);
+        mpHost->mTelnet.setTransport(nullptr);
     }
     if (MudletReplay* pReplay = MudletReplay::self()) {
         disconnect(pReplay, nullptr, this, nullptr);

@@ -614,6 +614,83 @@ does, that raises `sysProfileFocusChangeEvent` with `false` in the profile it le
 one it brings forward, and shows that profile's Discord presence. A profile whose close has started is
 refused with `false` and a message, and the front stays where it was.
 
+## Embedding it: the game connection
+
+Where there are no sockets, as in a browser, the app makes the connection to the game and Mudlet does
+the rest over it, as over a socket: telnet negotiation, MCCP, GMCP, MSDP, MXP, character sets,
+triggers, logging, reconnecting and the connection events. The app opts in with
+`options.supplyTransport = true` before `start()`; without it the profile uses its own sockets, as
+the GUI always does.
+
+```cpp
+QObject::connect(session.get(), &THeadlessSession::transportDialRequested,
+                 [](const QString& profile, quint64 connection, const QString& host, int port, bool tlsRequested) {
+    // Dial, then report how it went, naming connection
+});
+QObject::connect(session.get(), &THeadlessSession::transportWriteRequested, [](const QString& profile, const QByteArray& data) {
+    // Bytes for the game, telnet negotiation included, to send in order on the connection last dialled
+});
+QObject::connect(session.get(), &THeadlessSession::transportCloseRequested, [](const QString& profile) {
+    // The profile ended the connection last dialled, or its dial; no report is due
+});
+
+// What the app's connection reports, from anywhere, each naming the connection its dial was given
+session->transportConnected(connection);
+session->transportReceived(connection, bytes); // each chunk as it came, which may end anywhere, even mid-negotiation
+session->transportClosed(connection, reason);  // the game hung up, it was lost, or the dial failed; reason may be empty
+```
+
+`start()`, a reconnect or a script's `connectToServer()` sends `transportDialRequested`, with an id
+for the connection. Once the app answers `transportConnected()`, the profile announces the connection
+(`connected`, `sysConnectionEvent`, the login) and writes to the game through
+`transportWriteRequested`, and the app hands each chunk the game sends to `transportReceived()`. The
+game ending it is the app's `transportClosed()`; the profile ending it (`disconnect()`, a reconnect,
+closing the profile) is `transportCloseRequested`, after which no report about it is due. A dial
+answered with `transportClosed()` fails as an unreachable game does, with the reason in Mudlet's
+message, and a connection that ends with a reason gives it in the disconnection message.
+
+A report is dropped unless it names the profile's current connection: the one last dialled, and not
+closed since. A reconnect closes one connection and dials the next in the same breath, so an app whose
+old socket reports its end late, after `transportCloseRequested`, cannot have that taken for news of
+the new one. Ids are unique within the process, so a late report about a closed profile's connection
+cannot be taken for the next profile's either.
+
+The reports are taken up from the event loop, so they may be made from a handler of the three
+signals, which are sent mid-write and may call nothing else of the session. Only the profile
+`start()` opens uses the app's connection; one a script opens uses its own sockets. The profile's
+proxy is not used, and a session deleted while connected sends no `transportCloseRequested`.
+
+A secure connection is the app's to make, not Mudlet's, and Mudlet cannot tell whether the app's
+connection is encrypted, so it never calls it secure: `currentlySecure()` is false, GMCP sign-in keeps
+back what it sends only over an encrypted connection, and a game's offer of a secure port is not
+passed on. A profile set to connect securely still connects: `tlsRequested` tells the app, which may
+honour it, such as through a `wss://` proxy that dials the game with TLS, and Mudlet says in the
+console that it treats the connection as not secure.
+
+In a browser, `mudlet-headless` makes the page's connection the profile's when the object given to
+`qtLoad()` has a `mudletTransport`:
+
+```js
+mudletTransport: {
+  // connection: { connected(), received(bytes), closed(reason) }, to call as the connection goes
+  dial(host, port, tlsRequested, connection) {},
+  write(bytes) {},   // a Uint8Array
+  close() {},        // after which connection's calls do nothing
+}
+```
+
+Each dial gets a connection of its own, so a late event of an old socket cannot reach a new one, and
+the page's `close()` is called at most once for it, never after its `closed()`. `received()` takes an
+`ArrayBuffer` or any view of one, such as a `Uint8Array` or a `DataView`. It refuses anything else,
+strings included: telnet is a byte stream, and a string has no one way back to bytes (as UTF-8, the
+byte 255 that starts every telnet command would become two), so the page converts as it knows its
+source sends. A `Blob`, which a WebSocket delivers unless its `binaryType` is `"arraybuffer"`, is
+refused too. When `received()` refuses, or `dial()` or `write()` throws, Mudlet logs the error to the
+console, calls the page's `close()`, since the profile asks for none of a connection it is told has
+ended, and ends the connection with the error as the reason. A `dial()` or `write()` that returns a
+promise which rejects is treated as one that throws. `CI/wasm-headless-smoke.js --game-connection`
+connects through a WebSocket relay this way.
+
 ## Embedding it: when the signals come and what a handler may do
 
 Each signal's own rules are with the signal, above and below; this is all of them in one place. Mudlet
@@ -622,15 +699,16 @@ decides what its handler may do.
 
 **Sent mid-write.** `outputLine`, `lineShown`, `mainConsoleCleared`, `localText`, `localTextStyled`,
 `errorConsoleText`, `debugText`, `hiddenInputWanted`, `typedLineMoveRequested`,
-`commandLineTextRequested`, `notificationRequested`, `attentionRequested` and `announcementRequested`
-are sent from inside whatever wrote the text or asked: the read of the game's data, a script, or the
-session call that ran it. That is what keeps them in order with one another. One of them is queued
-all the same: the `attentionRequested` for game text that arrives while the app is minimized is sent
-once the event loop runs, yet its handler is held to these same rules. Their handlers must not
-run the event loop, as a modal dialog does, and must not call the session back: every call that is
-refused where `submit()` is fails there with its documented refusal result, with `errorString()` saying to
-queue the call instead.
-The calls described as getters still answer. A handler may delete the session.
+`commandLineTextRequested`, `notificationRequested`, `attentionRequested`, `announcementRequested` and
+the three `transport…Requested` are sent from inside whatever wrote the text or asked: the read of the
+game's data, a script, or the session call that ran it. That is what keeps them in order with one
+another. One of them is queued all the same: the `attentionRequested` for game text that arrives while
+the app is minimized is sent once the event loop runs, yet its handler is held to these same rules.
+Their handlers must not run the event loop, as a modal dialog does, and must not call the session
+back: every call that is refused where `submit()` is fails there with its documented refusal result,
+with `errorString()` saying to queue the call instead.
+The calls described as getters still answer, and the `transport…()` reports may be made. A handler may
+delete the session.
 
 **Sent from the event loop.** Every other signal but the two below is queued, and sent once the event
 loop runs, after the script or call that caused it has returned: `connecting`, `connected`,

@@ -60,6 +60,8 @@ endif()
 # A browser build starts through Qt's own loader, which this sets up as qt_add_executable() would. The
 # page passes environment variables through the loader's qt.environment, which needs ENV exported.
 if(EMSCRIPTEN)
+  # The page's own connection to the game, which it passes the loader as mudletTransport
+  target_sources(mudlet_headless_executable PRIVATE BrowserTransport.cpp BrowserTransport.h)
   set_target_properties(mudlet_headless_executable PROPERTIES QT_WASM_EXTRA_EXPORTED_METHODS ENV)
   set(emscripten_rename_fix "${CMAKE_CURRENT_SOURCE_DIR}/emscripten-rename-fix.js")
   target_link_options(mudlet_headless_executable PRIVATE "SHELL:--post-js \"${emscripten_rename_fix}\"")

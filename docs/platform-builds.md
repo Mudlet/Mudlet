@@ -424,8 +424,18 @@ arguments to `mudlet-headless` instead of the probe's. With `--quit-while-loadin
 the game a line from an `-e` step while standard output has gone, as a pipe's has once its reader
 exits, and passes once the run ends with status 0, as the desktop's does; that quit is asked for
 before the event loop runs. `--quit-after-lua-error` does the same after an `-e` step that raises an
-error, and passes once the run ends with status 1. Its header lists its exit codes; 3 means it could
-not run the program at all, not that the build failed.
+error, and passes once the run ends with status 1. With `--game-connection`, the page makes the
+profile's connection, as "Embedding it: the game connection" in `headless.md` has a page do, over a
+WebSocket to `CI/wasm-telnet-relay.js` and on to `CI/telnet-fixture-server.py`, which asks for the
+terminal type, offers GMCP, sends a line a trigger answers and hangs up once the answer arrives; it
+passes once the profile has seen all of that and the game received the terminal type, whose NUL byte
+must cross the page's connection, and the answer. The page's first four connections fail on purpose,
+in this order: one with a `write()` that throws, one handing `received()` a `Blob`, one whose
+`dial()` returns a promise that rejects and one whose `write()` does. The run also wants Mudlet to
+have reported each, in the browser's console and as the reason on its own, and closed each before
+the next dial. The first connection hands `received()` a view into a padded buffer, whose padding
+must never reach the profile, and the one that plays the game hands it a bare `ArrayBuffer`. Its
+header lists its exit codes; 3 means it could not run the program at all, not that the build failed.
 
 The page seeds `Mudlet.ini` with `interfaceLanguage=en_US` (the script says why). A browser build
 keeps passwords in the profile unless `storePasswordsSecurely` says otherwise, as reading the
