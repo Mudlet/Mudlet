@@ -1,7 +1,7 @@
 # mudlet-headless built with Emscripten against a Qt for WebAssembly that has no
 # threads, and run in headless Chromium, so the browser build of mudlet_core (#9011)
-# keeps compiling, linking and running Lua. See "WebAssembly" in
-# docs/platform-builds.md.
+# keeps compiling, linking, running Lua and passing the Lua specs. See "WebAssembly"
+# in docs/platform-builds.md.
 name: Build mudlet-headless for WebAssembly
 
 on:
@@ -20,6 +20,13 @@ on:
       - 'CI/install-lua-rocks.sh'
       - 'CI/yajl-cmake-fix.patch'
       - 'CI/wasm-headless-smoke.js'
+      - 'CI/wasm-headless-page.js'
+      - 'CI/wasm-headless-lua-tests.js'
+      - 'CI/fetch-wasm-busted.sh'
+      - 'CI/wasm-busted-shims/**'
+      - 'CI/check-headless-lua-failures.py'
+      - 'CI/headless-lua-known-failures.txt'
+      - 'CI/wasm-lua-known-failures.txt'
       - '.github/workflows/wasm-build.yml'
   # Builds the libraries from their downloads rather than the cache, so a dead
   # download URL shows up before the cache entry is evicted
@@ -178,3 +185,42 @@ jobs:
       - name: Run Lua in the browser
         timeout-minutes: 5
         run: NODE_PATH="$RUNNER_TEMP/playwright/node_modules" node CI/wasm-headless-smoke.js build-wasm-headless/src
+
+      - name: Quit while loading in the browser
+        timeout-minutes: 5
+        run: NODE_PATH="$RUNNER_TEMP/playwright/node_modules" node CI/wasm-headless-smoke.js build-wasm-headless/src --quit-while-loading
+
+      - name: Quit with a failed step in the browser
+        timeout-minutes: 5
+        run: NODE_PATH="$RUNNER_TEMP/playwright/node_modules" node CI/wasm-headless-smoke.js build-wasm-headless/src --quit-after-lua-error
+
+      - name: Fetch busted for the browser
+        timeout-minutes: 5
+        run: CI/fetch-wasm-busted.sh "$RUNNER_TEMP/wasm-busted"
+
+      # The specs headless-lua-tests.yml runs, checked against its list and the browser's own. The runner's
+      # timeout comes first, so a hung run still leaves its log.
+      - name: Run the Lua tests in the browser
+        id: wasm-lua-tests
+        timeout-minutes: 45
+        run: |
+          log="$RUNNER_TEMP/wasm-lua-tests.log"
+          status=0
+          NODE_PATH="$RUNNER_TEMP/playwright/node_modules" WASM_LUA_TESTS_TIMEOUT=2400 \
+            node CI/wasm-headless-lua-tests.js build-wasm-headless/src "$RUNNER_TEMP/wasm-busted" "$log" || status=$?
+          checked=0
+          python3 CI/check-headless-lua-failures.py "$log" CI/headless-lua-known-failures.txt CI/wasm-lua-known-failures.txt || checked=$?
+          if [ "$status" -ne 0 ]; then
+            echo "::error::the Lua tests did not run to the end in the browser (status $status)"
+            exit 1
+          fi
+          exit "$checked"
+
+      # check-headless-lua-failures.py --write takes this log to bring CI/wasm-lua-known-failures.txt up to date
+      - name: Upload the log of the Lua tests in the browser
+        if: ${{ !cancelled() && steps.wasm-lua-tests.outcome != 'skipped' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: wasm-lua-tests
+          path: ${{ runner.temp }}/wasm-lua-tests.log
+          if-no-files-found: ignore

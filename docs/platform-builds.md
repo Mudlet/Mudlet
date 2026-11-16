@@ -360,7 +360,7 @@ and `qtspeech` modules. It takes its tools (moc, rcc, lrelease) from the desktop
 version, the host kit. The build also runs host tools: a Lua 5.1 that can load the `lua-yajl` rock
 (`CI/install-lua-rocks.sh lua-yajl`; without it the translation statistics come out empty),
 `ninja`, `make`, `cmake`, `curl` and `git`, a host C++ compiler (Boost's bootstrap builds `b2` with
-it), and Node for the smoke test below. With [aqtinstall](https://github.com/miurahr/aqtinstall):
+it), and Node for the smoke test and specs below. With [aqtinstall](https://github.com/miurahr/aqtinstall):
 
 ```bash
 aqt install-qt all_os wasm 6.9.0 wasm_singlethread -m qt5compat qtmultimedia qtspeech -O ~/Qt
@@ -409,7 +409,9 @@ lua-zip (see the script). As this is the one 32-bit build CI runs, the probe als
 function refuses an integer argument an int cannot hold, then loads a map desktop Mudlet saved, and
 its own save of that map, and fails unless both export the JSON desktop did and the reloaded map
 gives the routes `Mapper_spec.lua` expects of it; a change to the default map format version means
-making both files again, as `src/mudlet-lua/tests/fixtures/maps/README.md` says:
+making both files again, as `src/mudlet-lua/tests/fixtures/maps/README.md` says. Last, the page moves
+its clocks 2200 seconds on and the probe checks that `os.clock()` moved on with them, which
+Emscripten's own `clock()` stops doing 2147 seconds after its first call:
 
 ```bash
 npm install --prefix ~/mudlet-playwright playwright@1.63.0
@@ -418,17 +420,46 @@ NODE_PATH=~/mudlet-playwright/node_modules node CI/wasm-headless-smoke.js build-
 ```
 
 Given an expected line after the directory, which must not be blank, it passes the rest of its
-arguments to `mudlet-headless` instead of the probe's. Its header lists its exit codes; 3 means it
-could not run the program at all, not that the build failed.
+arguments to `mudlet-headless` instead of the probe's. With `--quit-while-loading` instead, it feeds
+the game a line from an `-e` step while standard output has gone, as a pipe's has once its reader
+exits, and passes once the run ends with status 0, as the desktop's does; that quit is asked for
+before the event loop runs. `--quit-after-lua-error` does the same after an `-e` step that raises an
+error, and passes once the run ends with status 1. Its header lists its exit codes; 3 means it could
+not run the program at all, not that the build failed.
 
-The page seeds `Mudlet.ini` with `storePasswordsSecurely=false` and `interfaceLanguage=en_US` (the
-script says why). `mudlet-headless` does not exit by itself in a browser, so a run without the
-line fails after `WASM_SMOKE_TIMEOUT` seconds (120 by default). `.github/workflows/wasm-build.yml`
-builds and runs this on every push to `development` and every pull request that touches the
-sources, caching the dependency prefix, and once a week builds that prefix from scratch. It links
-with Emscripten's runtime checks, which the preset leaves out, so that a stack overflow or a read or
-write through a null pointer aborts the run instead of going unnoticed; they make the module about
-a tenth larger. To do the same, configure with:
+The page seeds `Mudlet.ini` with `interfaceLanguage=en_US` (the script says why). A browser build
+keeps passwords in the profile unless `storePasswordsSecurely` says otherwise, as reading the
+browser's keychain waits on a nested event loop that Qt for WebAssembly cannot run without
+asyncify. `mudlet-headless` ends in a browser as it does on the desktop, which the page reports as
+an `[exit]` line, so a run that ends before the line fails, and one that never prints it fails
+after `WASM_SMOKE_TIMEOUT` seconds (120 by default).
+
+`CI/wasm-headless-lua-tests.js` runs the Lua specs in the browser as `headless-lua-tests.yml` runs
+them on the desktop, with the same arguments and environment, and writes what the run printed to a
+log. `CI/fetch-wasm-busted.sh` fetches busted and the pure-Lua modules it needs, pinned and
+checksummed; `CI/wasm-busted-shims/system.lua` stands in for its one C module. The runner copies
+those, the specs and the package one of them installs into the page. It exits 0 once the run ends
+with busted's summary, whatever failed; `CI/check-headless-lua-failures.py` then checks the failures
+against the desktop's list and `CI/wasm-lua-known-failures.txt`, which adds the browser's own and
+takes off desktop ones that do not get as far as failing there:
+
+```bash
+CI/fetch-wasm-busted.sh ~/mudlet-wasm-busted
+NODE_PATH=~/mudlet-playwright/node_modules node CI/wasm-headless-lua-tests.js build-wasm-headless/src ~/mudlet-wasm-busted /tmp/wasm-lua-tests.log
+python3 CI/check-headless-lua-failures.py /tmp/wasm-lua-tests.log CI/headless-lua-known-failures.txt CI/wasm-lua-known-failures.txt
+```
+
+Most of the browser's own failures wait for a timer. Without asyncify Qt for WebAssembly fires its
+timers only once the page hands the browser its thread back, and busted runs every spec in one call,
+so `pumpEvents()` and `waitForEvent()` deliver posted events but never a timer, a network reply or a
+media event. `WASM_LUA_TESTS_TRACE=1` prints each test's name as it starts, which names the one a
+hang is in, and `WASM_LUA_TESTS_ONLY=<spec file>` runs that file alone.
+
+`.github/workflows/wasm-build.yml` builds and runs both on every push to `development` and every
+pull request that touches the sources, caching the dependency prefix, and once a week builds that
+prefix from scratch. It links with Emscripten's runtime checks, which the preset leaves out, so that
+a stack overflow or a read or write through a null pointer aborts the run instead of going
+unnoticed; they make the module about a tenth larger. To do the same, configure with:
 
 ```bash
 cmake --preset wasm-headless -DCMAKE_EXE_LINKER_FLAGS="-sASSERTIONS=1 -sSTACK_OVERFLOW_CHECK=2 -sSAFE_HEAP=1"

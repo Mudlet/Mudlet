@@ -4,36 +4,25 @@
 //
 //   node CI/wasm-headless-smoke.js <dir holding mudlet-headless.js>
 //   node CI/wasm-headless-smoke.js <dir> <expected line> [mudlet-headless arguments...]
+//   node CI/wasm-headless-smoke.js <dir> --quit-while-loading
+//   node CI/wasm-headless-smoke.js <dir> --quit-after-lua-error
 //
 // Given only the directory, it runs the probe below and expects "lua says 2". It exits 0 then; 1 if
 // before then an error line comes (a package with a part that does not work included), or the
 // program exits, aborts, crashes or raises a page error, if the page then does not answer, or if
-// WASM_SMOKE_TIMEOUT seconds (default 120) pass without the line. "[exit]" covers an abort and a
-// failed start; Qt keeps the runtime alive, so a plain exit only shows in a build linked with
-// -sASSERTIONS, as CI's is, which says "program exited (". It exits 2 if its arguments, the directory
-// or WASM_SMOKE_TIMEOUT are wrong; and 3 if it could not run the program at all: playwright does
-// not load, Chromium does not start or quits, the page does not load or this script fails. It needs
-// the playwright package on NODE_PATH and its Chromium installed.
+// WASM_SMOKE_TIMEOUT seconds (default 120) pass without the line; CI/wasm-headless-page.js lists
+// what counts as an error line and how an exit shows. With --quit-while-loading, an -e step feeds
+// the game a line while standard output has gone, as a pipe's has once its reader exits, which asks
+// for the quit before the event loop runs; it exits 0 once the program ends with status 0, and 1 on
+// another status, an error line first or the timeout. --quit-after-lua-error does the same after an
+// -e step that raises an error, so it wants status 1 and takes that error's line as no failure. It
+// exits 2 if its arguments, the directory or WASM_SMOKE_TIMEOUT are wrong; and 3 if it could not run
+// the program at all: playwright does not load, Chromium does not start or quits, the page does not
+// load or this script fails. It needs the playwright package on NODE_PATH and its Chromium installed.
 
 const fs = require("fs");
 const path = require("path");
-
-let browser;
-// Set before the browser is closed on purpose, after which its going away is no failure
-let closing = false;
-// Bounded, as a browser that broke may not close either
-async function closeBrowser() {
-  closing = true;
-  await Promise.race([browser?.close(), new Promise((resolve) => setTimeout(resolve, 5000))]).catch(() => {});
-}
-// For a failure of this script or what it runs on, as opposed to one of mudlet-headless
-async function harnessFailed(error) {
-  console.error(`the smoke test itself failed: ${error?.stack ?? error}`);
-  await closeBrowser();
-  process.exit(3);
-}
-process.on("uncaughtException", harnessFailed);
-process.on("unhandledRejection", harnessFailed);
+const { failureMarkers, outputPrefixes, requireBuild, timeoutFrom, page, parseExit, openPage, closeBrowser } = require("./wasm-headless-page");
 
 const fixtureDir = path.join(__dirname, "..", "src", "mudlet-lua", "tests", "fixtures");
 const mapFixtureDir = path.join(fixtureDir, "maps");
@@ -48,6 +37,11 @@ function fixtureFile(name) {
   }
   return null;
 }
+
+// Emscripten's clock() wraps 2147 seconds after its first call, so the page moves its clocks on past that when the
+// probe prints this stage, and os.clock() must move on with them
+const clockStage = "moving the clocks on";
+const clockJump = { line: `smoke: ${clockStage}`, seconds: 2200 };
 
 // The trigger comes from the last file LuaGlobal.lua loads, and each step reaches a library the browser build links
 // itself; the maps desktop Mudlet saved (src/mudlet-lua/tests/fixtures/maps/README.md) check the one 32-bit build CI
@@ -110,6 +104,12 @@ function defaultProbe() {
       'assert(saveMap(smokeMapSave, smokeMapVersion or 0)) ' +
       'smokeSameJson("this build\'s save of " .. smokeMap, smokeJson(smokeMapSave), smokeGolden) assert(os.remove(smokeMapSave)) ' +
       'smokeStage("reload compared") smokeRoutes() end',
+    // Waits for the jump through the epoch, as the page sees the stage line once it is printed
+    'function smokeClock(done) local before, epoch = os.clock(), getEpoch() ' +
+      `smokeStage("${clockStage}") local function check() ` +
+      `if getEpoch() - epoch < ${clockJump.seconds} then tempTimer(0.05, check) return end local after = os.clock() ` +
+      `if after < before + ${clockJump.seconds} then error(string.format("os.clock() went from %.2f to %.2f as the clocks ` +
+      `moved on ${clockJump.seconds} seconds", before, after)) end smokeStage("clock moved on") done() end check() end`,
     // lua-zip, through mudlet-lua's unzip()
     'function smokeUnzip() local folder = smokeHome .. "smoke-unzip" lfs.mkdir(folder) ' +
       'local ok, err = unzip(smokeZip, folder) assert(ok, "unzip(" .. smokeZip .. ") failed: " .. tostring(err)) ' +
@@ -152,7 +152,7 @@ function defaultProbe() {
       'elseif file == smokeMap then smokeStage("map downloaded") ' +
       'assert(downloadFile(smokeGolden, "http://localhost/" .. smokeMapName .. ".json")) ' +
       'elseif file == smokeGolden then smokeStage("golden downloaded") smokeMapCheck() ' +
-      'if #smokeMaps > 0 then smokeNextMap() else echo("lua says " .. smokeSum .. "\\n") end end end)',
+      'if #smokeMaps > 0 then smokeNextMap() else smokeClock(function() echo("lua says " .. smokeSum .. "\\n") end) end end end)',
     'registerAnonymousEventHandler("sysDownloadError", function(_, message, file) ' +
       'if file == smokeFile or file == smokeZip or file == smokeMap or file == smokeGolden then error(message) end end)',
     'local id, err = tempTimer(0, [[feedTriggers("ping 1 λ\\n")]]) assert(id ~= -1, err)',
@@ -163,27 +163,20 @@ function defaultProbe() {
   ];
 }
 
-// While a profile loads, a package's broken scripts and patterns are only logged, not put on the console
-const failureMarkers = [
-  "[ ERROR ]",
-  "[ERROR:]",
-  "[  LUA  ] - ",
-  "[ WARN ]  - Failed to load ",
-  "Host::installPackage() WARNING - parts of ",
-  "[exit]",
-  "[abort]",
-  "program exited (",
-];
 // Failures can come after the expected line: mpkg's package-list request, refused below, can report back after it
 const settleMs = 2000;
 // A page stuck in a loop prints nothing, so after the settle it must still run a task within this
 const answerMs = 5000;
 
 const [dir, ...rest] = process.argv.slice(2);
-if (!dir) {
+const failingStep = rest[0] === "--quit-after-lua-error";
+const quitting = failingStep || rest[0] === "--quit-while-loading";
+// 1 is exitFailed in src/headless/main.cpp
+const quitStatus = failingStep ? 1 : 0;
+if (!dir || (quitting && rest.length > 1)) {
   console.error(
     "usage: node CI/wasm-headless-smoke.js <dir holding mudlet-headless.js> " +
-      "[<expected line> [mudlet-headless arguments...]]",
+      "[<expected line> [mudlet-headless arguments...] | --quit-while-loading | --quit-after-lua-error]",
   );
   process.exit(2);
 }
@@ -192,66 +185,24 @@ if (rest.length && !rest[0].trim()) {
   console.error("the expected line must not be blank");
   process.exit(2);
 }
-const missing = ["mudlet-headless.js", "mudlet-headless.wasm", "qtloader.js"]
-  .filter((file) => !fs.existsSync(path.join(dir, file)));
-if (missing.length) {
-  console.error(`${dir} has no ${missing.join(", ")}`);
-  process.exit(2);
+requireBuild(dir);
+const timeoutSeconds = timeoutFrom("WASM_SMOKE_TIMEOUT", 120);
+// The last -e step feeds the game a line, which goes to standard output, so its failure asks for the quit before exec()
+const quitArgs = [
+  "-p", "WasmSmokeQuit", "--host", "mudlet.org", "--port", "23", "--offline", "--no-stdin",
+  ...(failingStep ? ["-e", 'error("smoke")'] : []),
+  "-e", 'feedTriggers("standard output has gone\\n")',
+];
+// The failing step's error, on the error console, is no failure
+const markers = failingStep ? failureMarkers.filter((marker) => marker !== "[ERROR:]") : failureMarkers;
+const probing = !rest.length;
+let expected = null;
+let args = quitArgs;
+if (!quitting) {
+  [expected, ...args] = probing ? ["lua says 2", ...defaultProbe()] : rest;
 }
-const timeoutSeconds = Number(process.env.WASM_SMOKE_TIMEOUT || 120);
-// setTimeout() takes at most 2^31 - 1 ms and fires after 1 ms for anything longer
-const maxTimeoutSeconds = 2147483;
-if (!(timeoutSeconds > 0 && timeoutSeconds <= maxTimeoutSeconds)) {
-  console.error(
-    `WASM_SMOKE_TIMEOUT must be a number of seconds above 0 and at most ${maxTimeoutSeconds}, ` +
-      `not "${process.env.WASM_SMOKE_TIMEOUT}"`,
-  );
-  process.exit(2);
-}
-const [expected, ...args] = rest.length ? rest : ["lua says 2", ...defaultProbe()];
-
-// Reading a password from the system keychain waits in a nested event loop, which Qt for
-// WebAssembly cannot run without asyncify, so passwords are kept in the profile instead. The
-// language is pinned, as "[ ERROR ]" is translated and Mudlet follows the browser's language once
-// that language's translation is complete enough.
-const settings = "[General]\nstorePasswordsSecurely=false\ninterfaceLanguage=en_US\n";
-// Escaped, as an argument holding "</script>" would end the page's script element
-const pageArguments = JSON.stringify(args).replace(/</g, "\\u003c");
-
-const page = `<!doctype html>
-<html><head><meta charset="utf-8"><title>mudlet-headless</title></head>
-<body><div id="screen" style="width:800px;height:600px"></div>
-<script src="qtloader.js"></script>
-<script src="mudlet-headless.js"></script>
-<script>
-qtLoad({
-  arguments: ${pageArguments},
-  print: (t) => console.log("[out] " + t),
-  printErr: (t) => console.log("[err] " + t),
-  preRun: [(m) => {
-    m.FS.mkdirTree("/home/web_user/.config/mudlet");
-    m.FS.writeFile("/home/web_user/.config/mudlet/Mudlet.ini", ${JSON.stringify(settings)});
-  }],
-  qt: {
-    entryFunction: window.mudlet_headless_executable_entry,
-    containerElements: [document.getElementById("screen")],
-    onExit: (e) => console.log("[exit] " + JSON.stringify(e)),
-  },
-}).catch((e) => console.log("[abort] " + e));
-</script>
-</body></html>
-`;
 
 (async () => {
-  const { chromium } = require("playwright");
-  browser = await chromium.launch();
-  // A tab that crashes is mudlet-headless failing; the browser process itself going is not
-  function gone(what) {
-    if (!closing) {
-      harnessFailed(what);
-    }
-  }
-  browser.on("disconnected", () => gone("Chromium quit"));
   let finish;
   const finished = new Promise((resolve) => (finish = resolve));
   let seen = false;
@@ -265,51 +216,33 @@ qtLoad({
     console.log(`[timeout] after ${timeoutSeconds}s`);
     finish(false);
   }, timeoutSeconds * 1000);
-  const tab = await browser.newPage();
-  tab.on("close", () => gone("the page was closed"));
-  tab.on("console", (message) => {
-    const text = message.text();
-    console.log(text);
-    if (text.replace(/^\[(out|err)\] /, "") === expected) {
-      seen = true;
-      clearTimeout(timer);
-      setTimeout(() => finish(true), settleMs);
-    } else if (failureMarkers.some((marker) => text.includes(marker))) {
+  const tab = await openPage({
+    what: "smoke test",
+    dir,
+    html: page({ args, clockJump: probing ? clockJump : null, stdoutGone: quitting }),
+    serve: (file) => fixtureFile(path.basename(file)),
+    onConsole: (text) => {
+      console.log(text);
+      const status = quitting ? parseExit(text) : null;
+      if (status) {
+        finish(status.code === quitStatus && !status.crashed);
+      } else if (!quitting && text.replace(outputPrefixes, "") === expected) {
+        seen = true;
+        clearTimeout(timer);
+        setTimeout(() => finish(true), settleMs);
+      } else if (markers.some((marker) => text.includes(marker))) {
+        fail();
+      }
+    },
+    onFailure: (text) => {
+      console.log(text);
       fail();
-    }
+    },
   });
-  tab.on("pageerror", (error) => {
-    console.log("[pageerror] " + error.message);
-    fail();
-  });
-  tab.on("crash", () => {
-    console.log("[crash]");
-    fail();
-  });
-  // localhost, so the page is a secure context. Nothing listens there, as its requests are answered here;
-  // any other origin's are refused, so the run never depends on the network (mpkg fetches from GitHub)
-  const origin = "http://localhost";
-  await tab.route("**/*", (route) => {
-    const url = new URL(route.request().url());
-    if (url.origin !== origin) {
-      return route.abort();
-    }
-    const name = path.basename(url.pathname);
-    if (name === "index.html") {
-      return route.fulfill({ contentType: "text/html", body: page });
-    }
-    const file = fixtureFile(name) ?? path.join(dir, name);
-    if (!fs.existsSync(file)) {
-      return route.fulfill({ status: 404 });
-    }
-    // Typed by extension, so the module is application/wasm, which the browser compiles as it downloads
-    return route.fulfill({ path: file });
-  });
-  await tab.goto(`${origin}/index.html`);
   const settled = await finished;
   clearTimeout(timer);
   let answeredInTime = false;
-  if (settled) {
+  if (settled && !quitting) {
     const noAnswer = new Promise((resolve) => setTimeout(() => resolve(false), answerMs));
     const answered = tab.evaluate(() => new Promise((resolve) => setTimeout(() => resolve(true), 0)));
     answeredInTime = await Promise.race([answered, noAnswer]).catch(() => false);
@@ -317,11 +250,15 @@ qtLoad({
       console.log(`[hung] the page ran no task within ${answerMs / 1000}s`);
     }
   }
-  const passed = answeredInTime && !failed;
+  const passed = (quitting ? settled : answeredInTime) && !failed;
   await closeBrowser();
   if (!passed) {
-    const what = seen ? "failed after printing" : "did not print";
-    console.error(`mudlet-headless ${what} "${expected}"`);
+    if (quitting) {
+      console.error(`mudlet-headless did not end with status ${quitStatus} once standard output had gone`);
+    } else {
+      const what = seen ? "failed after printing" : "did not print";
+      console.error(`mudlet-headless ${what} "${expected}"`);
+    }
   }
   process.exit(passed ? 0 : 1);
 })();

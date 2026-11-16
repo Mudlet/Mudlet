@@ -169,7 +169,13 @@ void HostManager::readSettings(const QSettings& settings)
     mpMedia->setApiMuted(settings.value(qsl("enableMuteAPI"), false).toBool());
     mpMedia->setGameMuted(settings.value(qsl("enableMuteGame"), false).toBool());
     TMap::smShowMapAuditErrors = settings.value(qsl("reportMapIssuesToConsole"), false).toBool();
-    MudletApp::setStorePasswordsSecurely(settings.value(qsl("storePasswordsSecurely"), true).toBool());
+#if defined(Q_OS_WASM)
+    // A browser's keychain asks the person each time, in a dialog a profile loading cannot wait on without asyncify
+    constexpr bool keychainByDefault = false;
+#else
+    constexpr bool keychainByDefault = true;
+#endif
+    MudletApp::setStorePasswordsSecurely(settings.value(qsl("storePasswordsSecurely"), keychainByDefault).toBool());
 }
 
 void HostManager::writeSettings(QSettings& settings) const
