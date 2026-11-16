@@ -28,6 +28,7 @@
 #include "MudletApp.h"
 
 #include "SecureStringUtils.h"
+#include "TAppFrontend.h"
 #include "TGameDetails.h"
 #include "TSpellChecker.h"
 #include "ctelnet.h"
@@ -911,6 +912,7 @@ QPair<bool, QString> MudletApp::writeProfileData(const QString& profile, const Q
         SecureStringUtils::confirmFileIsOwnerOnly(file.fileName());
     }
 
+    TAppFrontend::instance()->configWritten();
     return qMakePair(true, QString());
 }
 
@@ -928,18 +930,22 @@ QPair<bool, QString> MudletApp::setProfileIcon(const QString& profile, const QSt
         return {false, qsl("couldn't copy icon file into new location")};
     }
 
+    TAppFrontend::instance()->configWritten();
     return {true, QString()};
 }
 
 QPair<bool, QString> MudletApp::resetProfileIcon(const QString& profile)
 {
-    QDir dir;
     auto profileIconPath = getMudletPath(enums::profileDataItemPath, profile, qsl("profileicon"));
-    if (QFileInfo::exists(profileIconPath) && !dir.remove(profileIconPath)) {
+    if (!QFileInfo::exists(profileIconPath)) {
+        return {true, QString()};
+    }
+    if (!QFile::remove(profileIconPath)) {
         qWarning() << "MudletApp::resetProfileIcon() ERROR: couldn't remove existing icon" << profileIconPath;
         return {false, qsl("couldn't remove existing icon file")};
     }
 
+    TAppFrontend::instance()->configWritten();
     return {true, QString()};
 }
 
