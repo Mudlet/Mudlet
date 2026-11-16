@@ -553,6 +553,7 @@ end
         using SoundSource = THeadlessSession::SoundSource;
         const QString name = qsl("Headless Mute");
         const QString other = qsl("Headless Mute Other");
+        const QString joined = qsl("Headless Mute Joined");
         const QString script = qsl(R"lua(
 headlessSettings = ""
 registerAnonymousEventHandler("sysSettingChanged", function(_, setting, value)
@@ -563,6 +564,7 @@ end)
 )lua");
         QVERIFY(writeProfile(name, script));
         QVERIFY(writeProfile(other, script));
+        QVERIFY(writeProfile(joined, script));
         THeadlessSession session;
         QStringList heard;
         connect(&session, &THeadlessSession::soundsMutedChanged, this, [&heard](const SoundSource source, const bool muted) {
@@ -613,11 +615,25 @@ end)
         QTRY_COMPARE(heard, (QStringList{qsl("game unmuted")}));
         QCOMPARE(settings(), qsl("muteMediaGame=false "));
 
-        // Only one session's profiles to tell, as there is only one pool a process
         THeadlessSession second;
-        QCOMPARE(second.start({.profile = name, .connect = false}), THeadlessSession::StartResult::notOpened);
-        QCOMPARE(second.errorString(), qsl("A profile pool already exists in this process."));
+        const QString url = MudletApp::readProfileData(name, qsl("url"));
+        QCOMPARE(second.start({.profile = name, .connect = false, .host = qsl("elsewhere.example.org"), .port = 4000}), THeadlessSession::StartResult::notOpened);
+        QCOMPARE(second.errorString(), qsl("The profile \"%1\" is open already.").arg(name));
+        QCOMPARE(MudletApp::readProfileData(name, qsl("url")), url);
         QVERIFY(!second.setSoundsMuted(SoundSource::scripts, false));
+        // A session sharing the pool presses the same buttons
+        QCOMPARE(second.start({.profile = joined, .connect = false}), THeadlessSession::StartResult::started);
+        heard.clear();
+        QVERIFY(second.setSoundsMuted(SoundSource::game, true));
+        QVERIFY(session.soundsMuted(SoundSource::game));
+        QTRY_COMPARE(heard, (QStringList{qsl("game muted")}));
+        QCOMPARE(settings(), qsl("muteMediaGame=true "));
+        QCOMPARE(luaGlobalString(second.host(), "headlessSettings"), qsl("muteMediaGame=true "));
+        QVERIFY(second.shutdown(false));
+        heard.clear();
+        QVERIFY(session.setSoundsMuted(SoundSource::game, false));
+        QTRY_COMPARE(heard, (QStringList{qsl("game unmuted")}));
+        QCOMPARE(settings(), qsl("muteMediaGame=false "));
 
         QVERIFY(session.runLua(qsl("loadProfile([[%1]], true)").arg(other)));
         Host* pOther = HostManager::self()->getHost(other);

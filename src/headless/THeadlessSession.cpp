@@ -663,6 +663,13 @@ std::optional<THeadlessSession::StartResult> THeadlessSession::prepareStart(Opti
         }
         mProfileName = name;
     }
+    // Before the details or passwords are stored, which would change those of the profile running
+    if (mpPool->getHost(mProfileName)) {
+        mpPool.reset();
+        //: Error from a frontend with no window asked to open a profile that another of its sessions, or a script, has open already. %1 is the profile name
+        mErrorString = tr("The profile \"%1\" is open already.").arg(mProfileName);
+        return StartResult::notOpened;
+    }
     const bool newProfile = !QDir(MudletApp::getMudletPath(enums::profileHomePath, mProfileName)).exists();
     tls = options.tls;
     const bool detailsGiven = !options.host.isEmpty() || options.port || tls.has_value();
