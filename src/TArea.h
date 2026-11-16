@@ -155,8 +155,9 @@ public:
     QMap<int, int> ymaxForZ;
     QList<int> zLevels; // The z-levels that have rooms, in ascending order
     bool gridMode = false;
-    // The area this one is nested in, when isZone is set: the pair has always been in the map file, unused until
-    // nesting gave it a meaning, so older Mudlets keep it intact and see a flat list. Set through TRoomDB::setAreaParent()
+    // Nesting, in two fields every map file has carried unused, so older Mudlets keep it intact and see a flat list:
+    // isZone marks an area that has others nested in it, zoneAreaRef is the area this one is nested in (0 at the top
+    // level; area IDs start at 1). Changed only through TRoomDB::setAreaParent(), which keeps the two in step
     bool isZone = false;
     int zoneAreaRef = 0;
     TRoomDB* mpRoomDB = nullptr;

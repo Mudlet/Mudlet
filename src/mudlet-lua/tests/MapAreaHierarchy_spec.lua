@@ -75,6 +75,13 @@ describe("Tests nesting areas under parent areas", function()
       assert.is_string(message)
     end)
 
+    it("refuses the default area as a parent", function()
+      local ok, message = setAreaParent(zone, -1)
+      assert.is_nil(ok)
+      assert.are.equal("the default area cannot have other areas nested in it", message)
+      assert.is_nil(getAreaParent(zone))
+    end)
+
     it("raises an error for arguments that are not area IDs", function()
       assert.has_error(function() setAreaParent("zone", continent) end)
       assert.has_error(function() setAreaParent(zone, "continent") end)

@@ -33,6 +33,7 @@
 #include <QRegularExpression>
 #include <QVarLengthArray>
 
+#include <algorithm>
 #include <limits>
 
 const QString ROOM_UI_SHOWNAME = qsl("room.ui_showName");
@@ -589,7 +590,7 @@ QString TRoomDB::unusedUnnamedAreaName() const
 std::optional<int> TRoomDB::getAreaParent(const int areaId) const
 {
     const TArea* pA = areas.value(areaId);
-    if (!pA || !pA->isZone || !areaNamesMap.contains(pA->zoneAreaRef)) {
+    if (!pA || pA->zoneAreaRef < 1 || !areaNamesMap.contains(pA->zoneAreaRef)) {
         return std::nullopt;
     }
     return pA->zoneAreaRef;
@@ -603,6 +604,10 @@ TRoomDB::AreaParentResult TRoomDB::setAreaParent(const int areaId, const std::op
     if (parentId.has_value()) {
         if (!areaNamesMap.contains(*parentId)) {
             return AreaParentResult::NoSuchParent;
+        }
+        if (*parentId < 1) {
+            // zoneAreaRef keeps 0 for the top level, and nothing nests in the default area
+            return AreaParentResult::DefaultAreaAsParent;
         }
         if (*parentId == areaId) {
             return AreaParentResult::OwnParent;
@@ -622,13 +627,19 @@ TRoomDB::AreaParentResult TRoomDB::setAreaParent(const int areaId, const std::op
     if (oldParentId == parentId) {
         return AreaParentResult::Unchanged;
     }
-    // An area named by setAreaName() has no TArea, so nowhere to keep its parent, until it gets one here
-    if (!areas.contains(areaId)) {
-        addArea(areaId);
+    // An area named by setAreaName() has no TArea, so nowhere to keep its parent, or to be marked a zone, until it
+    // gets one here
+    for (const std::optional<int>& id : {std::optional<int>(areaId), parentId}) {
+        if (id.has_value() && !areas.contains(*id)) {
+            addArea(*id);
+        }
     }
-    TArea* pA = areas.value(areaId);
-    pA->isZone = parentId.has_value();
-    pA->zoneAreaRef = parentId.value_or(0);
+    areas.value(areaId)->zoneAreaRef = parentId.value_or(0);
+    for (const std::optional<int>& id : {oldParentId, parentId}) {
+        if (id.has_value()) {
+            updateIsZone(*id);
+        }
+    }
     mpMap->setUnsaved(__func__);
 
     if (mpMap->mpHost) {
@@ -675,9 +686,36 @@ void TRoomDB::reparentChildrenOf(const int areaId)
 {
     const std::optional<int> grandParentId = getAreaParent(areaId);
     for (TArea* pChild : std::as_const(areas)) {
-        if (pChild && pChild->isZone && pChild->zoneAreaRef == areaId) {
-            pChild->isZone = grandParentId.has_value();
+        if (pChild && pChild->zoneAreaRef == areaId) {
             pChild->zoneAreaRef = grandParentId.value_or(0);
+        }
+    }
+    if (grandParentId.has_value()) {
+        updateIsZone(*grandParentId);
+    }
+}
+
+void TRoomDB::updateIsZone(const int areaId)
+{
+    if (TArea* pA = areas.value(areaId)) {
+        pA->isZone = std::any_of(areas.cbegin(), areas.cend(), [areaId](const TArea* pOther) {
+            return pOther && pOther->zoneAreaRef == areaId;
+        });
+    }
+}
+
+void TRoomDB::updateAllIsZone()
+{
+    for (TArea* pA : std::as_const(areas)) {
+        if (pA) {
+            pA->isZone = false;
+        }
+    }
+    for (const TArea* pA : std::as_const(areas)) {
+        if (pA && pA->zoneAreaRef > 0) {
+            if (TArea* pParent = areas.value(pA->zoneAreaRef)) {
+                pParent->isZone = true;
+            }
         }
     }
 }

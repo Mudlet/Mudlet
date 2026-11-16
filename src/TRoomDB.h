@@ -70,7 +70,7 @@ public:
     bool addArea(TArea*, const int, const QString&);
     bool setAreaName(int areaID, QString name);
 
-    enum class AreaParentResult { Changed, Unchanged, NoSuchArea, NoSuchParent, OwnParent, ParentInside };
+    enum class AreaParentResult { Changed, Unchanged, NoSuchArea, NoSuchParent, OwnParent, ParentInside, DefaultAreaAsParent };
     // Nests an area in another, or puts it back at the top level for std::nullopt; raises sysAreaParentChanged
     // on a change. Either area may so far have only a name
     AreaParentResult setAreaParent(int areaId, std::optional<int> parentId);
@@ -94,6 +94,10 @@ public:
     QString unusedUnnamedAreaName() const;
     // Gives the children of an area about to go to that area's own parent
     void reparentChildrenOf(int areaId);
+    // Sets isZone from whether any area is nested in this one; nothing for an area that so far only has a name
+    void updateIsZone(int areaId);
+    // After a whole map is read in: isZone follows from the zoneAreaRefs, so it is worked out rather than trusted
+    void updateAllIsZone();
     void updateEntranceMap(TRoom*, bool isMapLoading = false);
     void updateEntranceMap(int);
     const QMultiHash<int, int>& getEntranceHash() const { return entranceMap; }
