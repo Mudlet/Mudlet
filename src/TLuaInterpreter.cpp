@@ -7844,6 +7844,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "resetRoomArea", TLuaInterpreter::resetRoomArea);
     lua_register(pGlobalLua, "setAreaName", TLuaInterpreter::setAreaName);
     lua_register(pGlobalLua, "getAreaGraph", TLuaInterpreter::getAreaGraph);
+    lua_register(pGlobalLua, "setAreaParent", TLuaInterpreter::setAreaParent);
+    lua_register(pGlobalLua, "getAreaParent", TLuaInterpreter::getAreaParent);
+    lua_register(pGlobalLua, "getAreaChildren", TLuaInterpreter::getAreaChildren);
     lua_register(pGlobalLua, "setAreaGraphPosition", TLuaInterpreter::setAreaGraphPosition);
     lua_register(pGlobalLua, "resetAreaGraphLayout", TLuaInterpreter::resetAreaGraphLayout);
     lua_register(pGlobalLua, "roomLocked", TLuaInterpreter::roomLocked);

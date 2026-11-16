@@ -794,6 +794,10 @@ void TArea::writeJsonArea(QJsonArray& array) const
         areaObj.insert(QLatin1String("zoom2D"), static_cast<double>(mLast2DMapZoom));
     }
 
+    if (isZone) {
+        areaObj.insert(QLatin1String("parentArea"), static_cast<double>(zoneAreaRef));
+    }
+
     writeJsonUserData(areaObj);
 
     QList<int> roomList{rooms.begin(), rooms.end()};
@@ -841,6 +845,10 @@ std::pair<int, QString> TArea::readJsonArea(const QJsonArray& array, const int a
     const int id = areaObj.value(QLatin1String("id")).toInt();
     const QString name{areaObj.value(QLatin1String("name")).toString()};
     gridMode = areaObj.value(QLatin1String("gridMode")).toBool();
+    // Missing in a map without nesting, and in one saved by a Mudlet that had none
+    const QJsonValue parentValue{areaObj.value(QLatin1String("parentArea"))};
+    isZone = parentValue.isDouble();
+    zoneAreaRef = isZone ? parentValue.toInt() : 0;
     readJsonUserData(areaObj.value(QLatin1String("userData")).toObject());
     // An export by an older Mudlet can have the binary format's fallbacks in the user data
     const QString fallbackZoom = mUserData.take(QLatin1String("system.fallback_map2DZoom"));

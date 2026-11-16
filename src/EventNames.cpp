@@ -51,6 +51,7 @@ QStringList systemEvents()
                                    qsl("mapOpenEvent"),
                                    qsl("sysApplicationFocusChangeEvent"),
                                    qsl("sysAppStyleSheetChange"),
+                                   qsl("sysAreaParentChanged"),
                                    qsl("sysBufferShrinkEvent"),
                                    qsl("sysCommandClicked"),
                                    qsl("sysCommandLineDeleted"),

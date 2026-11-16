@@ -25,8 +25,11 @@
 
 
 #include <QHash>
+#include <QList>
 #include <QMap>
 #include <QString>
+
+#include <optional>
 
 #include "utils.h"
 
@@ -66,6 +69,15 @@ public:
     bool addArea(int id, QString name);
     bool addArea(TArea*, const int, const QString&);
     bool setAreaName(int areaID, QString name);
+
+    enum class AreaParentResult { Changed, Unchanged, NoSuchArea, NoSuchParent, OwnParent, ParentInside };
+    // Nests an area in another, or puts it back at the top level for std::nullopt; raises sysAreaParentChanged
+    // on a change. Either area may so far have only a name
+    AreaParentResult setAreaParent(int areaId, std::optional<int> parentId);
+    // std::nullopt at the top level, and for a parent that no longer exists
+    std::optional<int> getAreaParent(int areaId) const;
+    // Sorted by ID; with recursive, each child is followed by its own subtree. std::nullopt lists the top level
+    QList<int> getAreaChildren(std::optional<int> areaId, bool recursive) const;
     const QList<TRoom*> getRoomPtrList() const;
     const QList<TArea*> getAreaPtrList() const;
     const QHash<int, TRoom*>& getRoomMap() const { return rooms; }
@@ -80,6 +92,8 @@ public:
     // full copy of every area name just to scan it once.
     bool hasAreaName(const QString& name) const;
     QString unusedUnnamedAreaName() const;
+    // Gives the children of an area about to go to that area's own parent
+    void reparentChildrenOf(int areaId);
     void updateEntranceMap(TRoom*, bool isMapLoading = false);
     void updateEntranceMap(int);
     const QMultiHash<int, int>& getEntranceHash() const { return entranceMap; }
