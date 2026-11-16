@@ -1700,17 +1700,18 @@ int TLuaInterpreter::getAreaConnections(lua_State* L)
         QList<Passage> exits;
         QList<Passage> entrances;
     };
-    const auto areaOfRoom = [pRoomDB](const int roomId) {
+    // Not -1 for a missing room: that is the default area's ID, and an exit into it is a connection like any other
+    const auto areaOfRoom = [pRoomDB](const int roomId) -> std::optional<int> {
         const TRoom* pR = pRoomDB->getRoom(roomId);
-        return pR ? pR->getArea() : -1;
+        return pR ? std::optional<int>(pR->getArea()) : std::nullopt;
     };
 
     QMap<int, Neighbour> neighbours;
     const auto outgoing = pA->getAreaExitRoomData();
     for (auto it = outgoing.cbegin(); it != outgoing.cend(); ++it) {
-        const int toArea = areaOfRoom(it.value().second);
-        if (toArea != -1 && toArea != areaId) {
-            neighbours[toArea].exits << Passage{it.key(), it.value().second, it.value().first};
+        const std::optional<int> toArea = areaOfRoom(it.value().second);
+        if (toArea.has_value() && *toArea != areaId) {
+            neighbours[*toArea].exits << Passage{it.key(), it.value().second, it.value().first};
         }
     }
     const QMap<int, TArea*>& areas = pRoomDB->getAreaMap();
