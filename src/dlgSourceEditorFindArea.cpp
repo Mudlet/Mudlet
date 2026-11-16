@@ -38,7 +38,7 @@ bool dlgSourceEditorFindArea::eventFilter(QObject* obj, QEvent* event)
     if (obj == lineEdit_findText) {
         if (event->type() == QEvent::KeyPress) {
             QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
-            if (keyEvent->key() == Qt::Key_Enter or keyEvent->key() == Qt::Key_Return) {
+            if (keyEvent->key() == Qt::Key_Enter || keyEvent->key() == Qt::Key_Return) {
                 if (keyEvent->modifiers().testFlag(Qt::ShiftModifier)) {
                     emit signal_sourceEditorFindPrevious();
                 } else {
@@ -50,7 +50,7 @@ bool dlgSourceEditorFindArea::eventFilter(QObject* obj, QEvent* event)
     } else if (obj == lineEdit_replaceText) {
         if (event->type() == QEvent::KeyPress) {
             QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
-            if (keyEvent->key() == Qt::Key_Enter or keyEvent->key() == Qt::Key_Return) {
+            if (keyEvent->key() == Qt::Key_Enter || keyEvent->key() == Qt::Key_Return) {
                 emit signal_sourceEditorReplace();
                 if (keyEvent->modifiers().testFlag(Qt::ShiftModifier)) {
                     emit signal_sourceEditorFindPrevious();

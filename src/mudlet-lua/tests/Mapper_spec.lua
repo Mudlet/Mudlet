@@ -3581,10 +3581,10 @@ describe("Tests mapper functions against a shared fixture", function()
     end)
 
     it("a component too large for an int hard-errors rather than wrapping", function()
-      -- getVerifiedInt() reads a Lua number as a 64 bit integer and refuses one
-      -- that will not fit an int, which is a separate refusal from the type
-      -- check above and from the 0-255 range check: without it the value would
-      -- be truncated into range and silently accepted.
+      -- getVerifiedInt() refuses a Lua number that will not fit an int, which is
+      -- a separate refusal from the type check above and from the 0-255 range
+      -- check: without it the value would be truncated into range and silently
+      -- accepted.
       local ok, err = pcall(function() setMapBackgroundColor(2 ^ 40, 0, 0) end)
       assert.is_false(ok)
       assert.is_truthy(tostring(err):find("integer over/under-flow", 1, true), tostring(err))
@@ -5035,6 +5035,12 @@ describe("Tests saveMap and loadMap", function()
     return data
   end
 
+  local function writeFile(path, data)
+    local file = assert(io.open(path, "wb"))
+    file:write(data)
+    file:close()
+  end
+
   -- saveMap() with no arguments writes a timestamped file of its own choosing,
   -- so the only way to clear up after it is to spot what appeared
   local function mapFiles()
@@ -5267,12 +5273,6 @@ describe("Tests saveMap and loadMap", function()
       assert.are.equal(firstName, getRoomName(rooms[1]))
       assert.are.equal(area, getRoomArea(rooms[#rooms]))
       assert.are.equal("room number " .. #rooms, getRoomName(rooms[#rooms]))
-    end
-
-    local function writeFile(path, data)
-      local file = assert(io.open(path, "wb"))
-      file:write(data)
-      file:close()
     end
 
     -- The profile's own map files, and those of earlier specs, go aside for
@@ -5905,12 +5905,14 @@ describe("Tests saveMap and loadMap", function()
     local normalised = dofile(fixtureDirectory .. "/normalise-map-json.lua")
 
     local remake = "; if intended, remake the files as src/mudlet-lua/tests/fixtures/maps/README.md says"
-    local function pendingUnlessEnglish()
-      if mudlet.translations.interfacelanguage == "en_US" then
-        return false
-      end
-      pending("the JSON holds the en_US names of the default and unnamed areas")
-      return true
+    local function itInEnglish(name, test)
+      it(name, function()
+        if mudlet.translations.interfacelanguage ~= "en_US" then
+          pending("the JSON holds the en_US names of the default and unnamed areas")
+          return
+        end
+        test()
+      end)
     end
 
     local function assertExportIsGolden(what, golden)
@@ -5939,14 +5941,12 @@ describe("Tests saveMap and loadMap", function()
       return ((b1 * 256 + b2) * 256 + b3) * 256 + b4
     end
 
-    it("loads to the JSON export it was committed with", function()
-      if pendingUnlessEnglish() then return end
+    itInEnglish("loads to the JSON export it was committed with", function()
       assert.is_true(loadMap(fixturePath))
       assertExportIsGolden(fixturePath, goldenPath)
     end)
 
-    it("is at the format version this Mudlet saves by default, and loads back from that save", function()
-      if pendingUnlessEnglish() then return end
+    itInEnglish("is at the format version this Mudlet saves by default, and loads back from that save", function()
       assert.is_true(loadMap(fixturePath))
       assert.is_true(saveMap(savePath))
       assert.are.equal(formatVersion(savePath), formatVersion(fixturePath), "the default map format version changed" .. remake)
@@ -5991,11 +5991,10 @@ describe("Tests saveMap and loadMap", function()
     end)
 
     for _, version in ipairs(newerVersions) do
-      local newerPath = string.format("%s/cross-platform-map-v%d.dat", fixtureDirectory, version)
-      local newerGoldenPath = string.format("%s/cross-platform-map-v%d.json", fixtureDirectory, version)
-      it(string.format("loads cross-platform-map-v%d.dat to its JSON export, and back from a save at format %d",
-                       version, version), function()
-        if pendingUnlessEnglish() then return end
+      local newerName = string.format("%s/cross-platform-map-v%d", fixtureDirectory, version)
+      local newerPath, newerGoldenPath = newerName .. ".dat", newerName .. ".json"
+      itInEnglish(string.format("loads cross-platform-map-v%d.dat to its JSON export, and back from a save at format %d",
+                                version, version), function()
         assert.are.equal(version, formatVersion(newerPath), newerPath .. " is not at the format its name gives")
         assert.is_true(loadMap(newerPath))
         assertExportIsGolden(newerPath, newerGoldenPath)
@@ -6063,9 +6062,7 @@ describe("Tests saveMap and loadMap", function()
       local at = data:find(marker, 1, true)
       assert.is_truthy(at, "the marker is not in the saved map")
       assert.is_nil(data:find(marker, at + 1, true), "the marker is in the saved map more than once")
-      local file = assert(io.open(corruptPath, "wb"))
-      file:write(data:sub(1, at - 1) .. string.char(highByte) .. data:sub(at + 1))
-      file:close()
+      writeFile(corruptPath, data:sub(1, at - 1) .. string.char(highByte) .. data:sub(at + 1))
     end
 
     -- Loads the corrupt copy, asserting that VmPeak did not rise by anything
