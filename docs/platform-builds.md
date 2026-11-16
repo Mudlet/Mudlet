@@ -405,11 +405,11 @@ or has a script or pattern that does not work.
 Given only the build directory, it runs a probe that exercises mudlet-lua, PCRE2's Unicode tables,
 SQLite, yajl, LPeg and Hunspell (through the profile's own dictionary, as the browser has no system
 one), saves the profile, downloads a file the page serves and unzips an archive it serves through
-lua-zip (see the script). As this is the one 32-bit
-build CI runs, the probe also loads a map desktop Mudlet saved, and its own save of that map, and
-fails unless both export the JSON desktop did and the reloaded map gives the routes `Mapper_spec.lua`
-expects of it; a change to the default map format version means making both files again, as
-`src/mudlet-lua/tests/fixtures/maps/README.md` says:
+lua-zip (see the script). As this is the one 32-bit build CI runs, the probe also loads a map
+desktop Mudlet saved, and its own save of that map, and fails unless both export the JSON desktop
+did and the reloaded map gives the routes `Mapper_spec.lua` expects of it; a change to the default
+map format version means making both files again, as `src/mudlet-lua/tests/fixtures/maps/README.md`
+says:
 
 ```bash
 npm install --prefix ~/mudlet-playwright playwright@1.63.0
