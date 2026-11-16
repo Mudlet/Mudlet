@@ -21,7 +21,7 @@
  * THeadlessSession is what a frontend with no window - the mudlet-headless
  * runner, a phone app - drives a profile through. Each test makes a session of
  * its own, and with it the process's one profile pool, so none of them shares a
- * profile with another.
+ * profile with another, but those that test sessions sharing a pool.
  *
  * Run with: ctest -R HeadlessSessionTest -V
  */
@@ -1425,6 +1425,226 @@ version = "1.2")"},
         QCOMPARE(session.start({.profile = qsl("Headless Second Pool"), .connect = false}), THeadlessSession::StartResult::notOpened);
         QVERIFY(!session.host());
         QVERIFY2(HostManager::self() == pool.get(), "The refused session took the pool it did not make.");
+    }
+
+    void test_sessionsShareOnePool_data()
+    {
+        QTest::addColumn<bool>("save");
+        QTest::newRow("save") << true;
+        QTest::newRow("no save") << false;
+    }
+
+    // As the GUI's tabs: each session closes its own profile, and the last one closes the pool, with the profiles
+    // scripts opened in it
+    void test_sessionsShareOnePool()
+    {
+        QFETCH(bool, save);
+        const QString suffix = save ? qsl(" Saved") : qsl(" Unsaved");
+        const QString first = qsl("Headless Shared First") + suffix;
+        const QString second = qsl("Headless Shared Second") + suffix;
+        const QString opened = qsl("Headless Shared Opened") + suffix;
+        const auto recordPath = [this](const QString& name) {
+            return qsl("%1/%2.record").arg(mConfigDir.path(), name);
+        };
+        for (const QString& name : {first, second, opened}) {
+            QVERIFY(writeProfile(name, recordingScript(recordPath(name))));
+        }
+        auto pFirstSession = std::make_unique<THeadlessSession>();
+        QCOMPARE(pFirstSession->start({.profile = first, .connect = false}), THeadlessSession::StartResult::started);
+        HostManager* pPool = HostManager::self();
+        QVERIFY(pPool);
+        THeadlessSession secondSession;
+        QCOMPARE(secondSession.start({.profile = second, .connect = false}), THeadlessSession::StartResult::started);
+        QCOMPARE(HostManager::self(), pPool);
+        QVERIFY(secondSession.runLua(qsl("loadProfile([[%1]], true)").arg(opened)));
+        QCOMPARE(pPool->getHostCount(), 3);
+        const qsizetype firstSaves = saveCount(first);
+        const qsizetype secondSaves = saveCount(second);
+        const qsizetype openedSaves = saveCount(opened);
+        QSignalSpy firstQuit(pFirstSession.get(), &THeadlessSession::quitRequested);
+        QSignalSpy secondQuit(&secondSession, &THeadlessSession::quitRequested);
+
+        QVERIFY2(pFirstSession->shutdown(save), qPrintable(pFirstSession->errorString()));
+        QVERIFY(!pFirstSession->host());
+        QCOMPARE(HostManager::self(), pPool);
+        QVERIFY(!pPool->getHost(first));
+        QCOMPARE(readFile(recordPath(first)), qsl("sysExitEvent\n"));
+        QCOMPARE(saveCount(first), firstSaves + (save ? 1 : 0));
+        QVERIFY(pPool->getHost(second));
+        QVERIFY(pPool->getHost(opened));
+        QVERIFY(readFile(recordPath(second)).isEmpty());
+        QVERIFY(readFile(recordPath(opened)).isEmpty());
+        QVERIFY(secondSession.runLua(qsl("headlessStillRunning = 'yes'")));
+        QCOMPARE(luaGlobalString(secondSession.host(), "headlessStillRunning"), qsl("yes"));
+        QTest::qWait(100);
+        QCOMPARE(firstQuit.count(), 0);
+        QCOMPARE(secondQuit.count(), 0);
+        pFirstSession.reset();
+        QCOMPARE(HostManager::self(), pPool);
+        QCOMPARE(pPool->getHostCount(), 2);
+
+        QVERIFY2(secondSession.shutdown(save), qPrintable(secondSession.errorString()));
+        QVERIFY(!HostManager::self());
+        QVERIFY(!secondSession.host());
+        QCOMPARE(readFile(recordPath(second)), qsl("sysExitEvent\n"));
+        QCOMPARE(readFile(recordPath(opened)), qsl("sysExitEvent\n"));
+        QCOMPARE(saveCount(second), secondSaves + (save ? 1 : 0));
+        QCOMPARE(saveCount(opened), openedSaves + (save ? 1 : 0));
+        QCOMPARE(secondQuit.count(), 0);
+    }
+
+    // Neither is the last when both begin, so the one whose profile goes last closes the pool
+    void test_sessionsShuttingDownTogetherTakeThePool()
+    {
+        const QString first = qsl("Headless Shared Together First");
+        const QString second = qsl("Headless Shared Together Second");
+        QVERIFY(writeProfile(first, QString()));
+        QVERIFY(writeProfile(second, QString()));
+        THeadlessSession firstSession;
+        QCOMPARE(firstSession.start({.profile = first, .connect = false}), THeadlessSession::StartResult::started);
+        THeadlessSession secondSession;
+        QCOMPARE(secondSession.start({.profile = second, .connect = false}), THeadlessSession::StartResult::started);
+        const qsizetype firstSaves = saveCount(first);
+        const qsizetype secondSaves = saveCount(second);
+        QSignalSpy firstFinished(&firstSession, &THeadlessSession::shutdownFinished);
+        QSignalSpy secondFinished(&secondSession, &THeadlessSession::shutdownFinished);
+
+        firstSession.shutdownAsync(true);
+        secondSession.shutdownAsync(true);
+        QTRY_COMPARE_WITH_TIMEOUT(firstFinished.count(), 1, 10000);
+        QTRY_COMPARE_WITH_TIMEOUT(secondFinished.count(), 1, 10000);
+        QVERIFY(firstFinished.at(0).at(0).toBool());
+        QVERIFY(secondFinished.at(0).at(0).toBool());
+        QVERIFY(!HostManager::self());
+        QCOMPARE(saveCount(first), firstSaves + 1);
+        QCOMPARE(saveCount(second), secondSaves + 1);
+        QCOMPARE(firstSession.start({.profile = first, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(firstSession.shutdown(false));
+    }
+
+    // A session deleted while another holds the pool lets its own profile go unsaved, as a deleted last one lets the pool go
+    void test_aDeletedSessionClosesOnlyItsOwnProfile()
+    {
+        const QString first = qsl("Headless Shared Deleted");
+        const QString second = qsl("Headless Shared Kept");
+        const QString firstRecord = qsl("%1/%2.record").arg(mConfigDir.path(), first);
+        const QString secondRecord = qsl("%1/%2.record").arg(mConfigDir.path(), second);
+        QVERIFY(writeProfile(first, recordingScript(firstRecord)));
+        QVERIFY(writeProfile(second, recordingScript(secondRecord)));
+        auto pFirstSession = std::make_unique<THeadlessSession>();
+        QCOMPARE(pFirstSession->start({.profile = first, .connect = false}), THeadlessSession::StartResult::started);
+        auto pSecondSession = std::make_unique<THeadlessSession>();
+        QCOMPARE(pSecondSession->start({.profile = second, .connect = false}), THeadlessSession::StartResult::started);
+        const QPointer<Host> pFirstHost(pFirstSession->host());
+        const qsizetype firstSaves = saveCount(first);
+
+        pFirstSession.reset();
+        QTRY_VERIFY_WITH_TIMEOUT(!pFirstHost, 10000);
+        QCOMPARE(readFile(firstRecord), qsl("sysExitEvent\n"));
+        QCOMPARE(saveCount(first), firstSaves);
+        QVERIFY(HostManager::self());
+        QVERIFY(pSecondSession->host());
+        QVERIFY(readFile(secondRecord).isEmpty());
+        QVERIFY2(pSecondSession->runLua(qsl("headlessStillRunning = 'yes'")), qPrintable(pSecondSession->errorString()));
+
+        pSecondSession.reset();
+        QTRY_VERIFY_WITH_TIMEOUT(!HostManager::self(), 10000);
+        QCOMPARE(readFile(secondRecord), qsl("sysExitEvent\n"));
+    }
+
+    // The pool keeps the config folder it settled
+    void test_aSessionJoinsThePoolOnlyWithItsConfigDir()
+    {
+        const QString first = qsl("Headless Shared Folder First");
+        const QString second = qsl("Headless Shared Folder Second");
+        QVERIFY(writeProfile(first, QString()));
+        QVERIFY(writeProfile(second, QString()));
+        THeadlessSession firstSession;
+        QCOMPARE(firstSession.start({.profile = first, .connect = false}), THeadlessSession::StartResult::started);
+        QTemporaryDir otherFolder;
+        QVERIFY(otherFolder.isValid());
+        THeadlessSession secondSession;
+        QCOMPARE(secondSession.start({.profile = second, .connect = false, .configDir = otherFolder.path()}), THeadlessSession::StartResult::invalidConfigDir);
+        QVERIFY(!secondSession.host());
+        QCOMPARE(HostManager::self()->getHostCount(), 1);
+        // Refused from a handler of another session's signal, as that session's own calls are
+        std::optional<THeadlessSession::StartResult> fromHandler;
+        const auto connection = connect(&firstSession, &THeadlessSession::localText, &secondSession, [&fromHandler, &secondSession, &second]() {
+            if (!fromHandler) {
+                fromHandler = secondSession.start({.profile = second, .connect = false});
+            }
+        });
+        QVERIFY(firstSession.runLua(qsl("echo('joining\\n')")));
+        disconnect(connection);
+        QVERIFY(fromHandler);
+        QCOMPARE(*fromHandler, THeadlessSession::StartResult::notOpened);
+        QVERIFY(!secondSession.host());
+        QCOMPARE(HostManager::self()->getHostCount(), 1);
+        QCOMPARE(secondSession.start({.profile = second, .connect = false}), THeadlessSession::StartResult::started);
+        QCOMPARE(HostManager::self()->getHostCount(), 2);
+        QVERIFY(secondSession.shutdown(false));
+        QVERIFY(firstSession.shutdown(false));
+        QVERIFY(!HostManager::self());
+    }
+
+    // That save writes every profile of the pool, so each profile is saved once
+    void test_aSaveAskedDuringAnotherSessionsSaveJoinsIt()
+    {
+        const QString first = qsl("Headless Shared Save First");
+        const QString second = qsl("Headless Shared Save Second");
+        QVERIFY(writeProfile(first, QString()));
+        QVERIFY(writeProfile(second, QString()));
+        THeadlessSession firstSession;
+        QCOMPARE(firstSession.start({.profile = first, .connect = false}), THeadlessSession::StartResult::started);
+        THeadlessSession secondSession;
+        QCOMPARE(secondSession.start({.profile = second, .connect = false}), THeadlessSession::StartResult::started);
+        firstSession.host()->waitForProfileSave();
+        secondSession.host()->waitForProfileSave();
+        QSignalSpy firstWrites(firstSession.host(), &Host::profileSaveStarted);
+        QSignalSpy secondWrites(secondSession.host(), &Host::profileSaveStarted);
+        QSignalSpy firstSaved(&firstSession, &THeadlessSession::saveFinished);
+
+        firstSession.saveAsync();
+        QVERIFY2(secondSession.save(), qPrintable(secondSession.errorString()));
+        QTRY_COMPARE_WITH_TIMEOUT(firstSaved.count(), 1, 10000);
+        QVERIFY2(firstSaved.at(0).at(0).toBool(), qPrintable(firstSaved.at(0).at(1).toString()));
+        QCOMPARE(firstWrites.count(), 1);
+        QCOMPARE(secondWrites.count(), 1);
+        QVERIFY(secondSession.shutdown(false));
+        QVERIFY(firstSession.shutdown(false));
+    }
+
+    // The app's state, which a session joining the pool takes, and which each profile hears of once
+    void test_theSessionsOfAPoolShareTheAppsState()
+    {
+        const QString script = qsl(R"lua(
+headlessFocus = ""
+registerAnonymousEventHandler("sysApplicationFocusChangeEvent", function(_, active)
+  headlessFocus = headlessFocus .. tostring(active) .. " "
+end)
+)lua");
+        const QString first = qsl("Headless Shared App State First");
+        const QString second = qsl("Headless Shared App State Second");
+        QVERIFY(writeProfile(first, script));
+        QVERIFY(writeProfile(second, script));
+        THeadlessSession firstSession;
+        QCOMPARE(firstSession.start({.profile = first, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(firstSession.setApplicationActive(false));
+        THeadlessSession secondSession;
+        QVERIFY(secondSession.applicationActive());
+        QCOMPARE(secondSession.start({.profile = second, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(!secondSession.applicationActive());
+        QCOMPARE(luaGlobalString(secondSession.host(), "headlessFocus"), QString());
+
+        QVERIFY(secondSession.setApplicationActive(true));
+        QVERIFY(firstSession.applicationActive());
+        QCOMPARE(luaGlobalString(firstSession.host(), "headlessFocus"), qsl("false true "));
+        QCOMPARE(luaGlobalString(secondSession.host(), "headlessFocus"), qsl("true "));
+        QVERIFY(firstSession.setApplicationActive(true));
+        QCOMPARE(luaGlobalString(firstSession.host(), "headlessFocus"), qsl("false true "));
+        QCOMPARE(luaGlobalString(secondSession.host(), "headlessFocus"), qsl("true "));
+        QVERIFY(secondSession.shutdown(false));
+        QVERIFY(firstSession.shutdown(false));
     }
 
     void test_unreadableSaveIsLoadFailed()

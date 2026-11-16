@@ -193,8 +193,11 @@ bool THeadlessSession::setApplicationActive(const bool active)
     if (active == mApplicationActive) {
         return true;
     }
-    mApplicationActive = active;
-    const unsigned int change = ++mApplicationActiveChanges;
+    for (THeadlessSession* pSession : sessionsSharingPool()) {
+        pSession->mApplicationActive = active;
+        ++pSession->mApplicationActiveChanges;
+    }
+    const unsigned int change = mApplicationActiveChanges;
     if (!mpPool) {
         return true;
     }

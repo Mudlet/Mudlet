@@ -117,7 +117,7 @@ bool resetPending(const HostManager& pool)
     return false;
 }
 
-// The pool of a session in its shutdown(), or of a deleted one, which holds HostManager::self() until it goes
+// The pool of the last session in its shutdown(), or of the last one deleted, which holds HostManager::self() until it goes
 HostManager* gpClosingPool = nullptr;
 
 // The signals being sent from inside the profile's code (a line's commit, a print, an error), which nothing
@@ -126,20 +126,39 @@ int gSignalsBeingHandedOut = 0;
 
 // Closes the profiles, unsaved, once none of those signals is being sent, nothing in the pool is busy or waiting
 // to reset, no profile taken out of it is still being let go and, until savesUntil, no save the session asked for runs
-void deletePoolOnceIdle(HostManager* pPool, const std::optional<std::chrono::steady_clock::time_point> savesUntil = std::nullopt)
+void deletePoolOnceIdle(std::shared_ptr<HostManager> pPool, const std::optional<std::chrono::steady_clock::time_point> savesUntil = std::nullopt)
 {
-    gpClosingPool = pPool;
+    gpClosingPool = pPool.get();
     const bool saving = savesUntil && std::chrono::steady_clock::now() < *savesUntil && poolSaving(*pPool);
     if (gSignalsBeingHandedOut || poolBusy(*pPool, true) || saving || resetPending(*pPool) || HostManager::releasingProfile()) {
         pPool->markDeletionPending();
-        QTimer::singleShot(50ms, QCoreApplication::instance(), [pPool, savesUntil]() {
-            deletePoolOnceIdle(pPool, savesUntil);
+        // Moved on, so the reset below drops the last hold
+        QTimer::singleShot(50ms, QCoreApplication::instance(), [pPool = std::move(pPool), savesUntil]() mutable {
+            deletePoolOnceIdle(std::move(pPool), savesUntil);
         });
         return;
     }
     // Not before: the exit handlers it runs may run the event loop
-    delete pPool;
+    pPool.reset();
     gpClosingPool = nullptr;
+}
+
+// A deleted session's own profile, closed unsaved as deletePoolOnceIdle() closes a whole pool, while other sessions
+// go on with the pool. Held weakly: a pool that goes first takes the profile with it, unsaved too.
+void deleteProfileOnceIdle(const std::weak_ptr<HostManager>& wpPool, const QPointer<Host>& pHost)
+{
+    const std::shared_ptr<HostManager> pPool = wpPool.lock();
+    // A close already begun, as from a script or the session's shutdown(), saves as it was asked to
+    if (!pPool || !pHost || pHost->closeStarted() || pPool->getHost(pHost->getName()) != pHost.data()) {
+        return;
+    }
+    if (gSignalsBeingHandedOut || gConnectionsBeingChanged || pPool->loadingProfile() || pHost->deletionWouldWait() || pHost->profileResetInProgress()) {
+        QTimer::singleShot(50ms, QCoreApplication::instance(), [wpPool, pHost]() {
+            deleteProfileOnceIdle(wpPool, pHost);
+        });
+        return;
+    }
+    pPool->deleteHost(pHost->getName());
 }
 
 // The connection dialog's TLS box
@@ -411,10 +430,22 @@ THeadlessSession::THeadlessSession(QObject* parent)
     if (auto* pView = dynamic_cast<TNullAppFrontend*>(TAppFrontend::instance())) {
         connect(&pView->mNotifier, &TNullAppFrontendNotifier::configWritten, this, &THeadlessSession::noteConfigWritten);
     }
+    smSessions.append(this);
 }
 
 THeadlessSession::~THeadlessSession()
 {
+    smSessions.removeAll(this);
+    // The sessions waiting on this one's save ask again, from the event loop, as this may be deleted inside a call of theirs
+    for (const SaveJoiner& joiner : std::exchange(mSaveJoiners, {})) {
+        if (joiner.session) {
+            QTimer::singleShot(0ms, joiner.session.data(), [pSession = joiner.session, done = joiner.done]() {
+                pSession->mSaving = false;
+                pSession->mJoinedSave = false;
+                pSession->beginSave(done);
+            });
+        }
+    }
     closeDebugConsole();
     if (!mpPool) {
         return;
@@ -422,9 +453,31 @@ THeadlessSession::~THeadlessSession()
     detachFromHost();
     // The exit handlers of a pool deleted at once may run the event loop, where the frontend may call it
     mShuttingDown = true;
+    if (mpPool.use_count() > 1) {
+        if (mpHost) {
+            mpHost->markDeletionPending();
+            deleteProfileOnceIdle(mpPool, mpHost);
+        }
+        mpPool.reset();
+        return;
+    }
     // Anything busy is waited for from a timer, not from an event loop run here as shutdown() does
     // A save asked for is waited for as the blocking save()'s wait would have been, giving up after as long
-    deletePoolOnceIdle(mpPool.release(), mSaving ? std::optional(std::chrono::steady_clock::now() + std::chrono::seconds(30)) : std::nullopt);
+    deletePoolOnceIdle(std::move(mpPool), mSaving ? std::optional(std::chrono::steady_clock::now() + std::chrono::seconds(30)) : std::nullopt);
+}
+
+QList<THeadlessSession*> THeadlessSession::sessionsSharingPool()
+{
+    QList<THeadlessSession*> sessions{this};
+    if (!mpPool) {
+        return sessions;
+    }
+    for (THeadlessSession* pSession : std::as_const(smSessions)) {
+        if (pSession != this && pSession->mpPool == mpPool) {
+            sessions.append(pSession);
+        }
+    }
+    return sessions;
 }
 
 THeadlessSession::StartResult THeadlessSession::start(const Options& asked)
@@ -540,8 +593,15 @@ std::optional<THeadlessSession::StartResult> THeadlessSession::prepareStart(Opti
     if (!mpPool && !finishOpenProgress()) {
         return StartResult::notOpened;
     }
-    // One pool a process: profiles and Lua reach it through HostManager::self()
-    if (mpPool || HostManager::self()) {
+    // One pool a process, which profiles and Lua reach through HostManager::self(); another session's is joined
+    THeadlessSession* pPeer = nullptr;
+    for (THeadlessSession* pSession : std::as_const(smSessions)) {
+        if (pSession != this && pSession->mpPool) {
+            pPeer = pSession;
+            break;
+        }
+    }
+    if (mpPool || (HostManager::self() && (!pPeer || HostManager::self() != pPeer->mpPool.get()))) {
         //: Error from a frontend with no window that was asked to open a second set of profiles
         mErrorString = tr("A profile pool already exists in this process.");
         return StartResult::notOpened;
@@ -553,17 +613,29 @@ std::optional<THeadlessSession::StartResult> THeadlessSession::prepareStart(Opti
         return StartResult::invalidConfigDir;
     }
 
-    // Before the lookup, as making it settles the config root and reports profiles that the lookup cannot see
-    mpPool = std::make_unique<HostManager>(HostManager::ConfigRoot::settledHere, configDir);
-    // Every profile, a script's loadProfile() ones too, as one closed unsaved is lost all the same; the pool
-    // may outlive the session
-    mpPool->setProfileOpenedHook([self = QPointer<THeadlessSession>(this)](Host* pNewHost) {
-        if (self) {
-            connect(pNewHost, &Host::closeSaveFailed, self.data(), [self, name = pNewHost->getName()]() {
-                self->mUnsavedProfiles.append(name);
-            });
+    if (pPeer) {
+        mpPool = pPeer->mpPool;
+        // Refused as the other sessions' calls are, as the load runs the event loop for every profile of the pool
+        if (refused()) {
+            mpPool.reset();
+            return StartResult::notOpened;
         }
-    });
+        mApplicationActive = pPeer->mApplicationActive;
+    } else {
+        // Before the lookup, as making it settles the config root and reports profiles that the lookup cannot see
+        mpPool = std::make_shared<HostManager>(HostManager::ConfigRoot::settledHere, configDir);
+        // Every profile, a script's loadProfile() ones too, as one closed unsaved is lost all the same. Each
+        // session of the pool hears of it, as a close may come from any of them; the pool may outlive them all.
+        mpPool->setProfileOpenedHook([pPool = mpPool.get()](Host* pNewHost) {
+            connect(pNewHost, &Host::closeSaveFailed, pNewHost, [pPool, name = pNewHost->getName()]() {
+                for (THeadlessSession* pSession : std::as_const(smSessions)) {
+                    if (pSession->mpPool.get() == pPool) {
+                        pSession->mUnsavedProfiles.append(name);
+                    }
+                }
+            });
+        });
+    }
     mProfileName = MudletApp::getCanonicalProfileName(options.profile);
     if (mProfileName.isEmpty() && options.host.isEmpty()) {
         mpPool.reset();
@@ -2018,9 +2090,93 @@ void THeadlessSession::beginShutdown(const bool save, const std::shared_ptr<bool
         return;
     }
     mShuttingDown = true;
+    if (mpPool.use_count() > 1) {
+        shutdownOwnProfile(save, saved, std::move(done));
+        return;
+    }
+    closeWholePool(save, saved, std::move(done));
+}
+
+void THeadlessSession::closeWholePool(const bool save, const std::shared_ptr<bool>& saved, std::function<void(bool)> done)
+{
     gpClosingPool = mpPool.get();
     mpPool->markDeletionPending();
     shutdownOnceResetsEnd(save, saved, std::move(done));
+}
+
+// Another session holds the pool, so this one's profile closes as its tab's close button would, and the pool stays
+void THeadlessSession::shutdownOwnProfile(const bool save, const std::shared_ptr<bool>& saved, std::function<void(bool)> done)
+{
+    // A reset, as in shutdownOnceResetsEnd(); a script begun meanwhile would have the close ignored or delete the
+    // profile under it
+    if (mpHost && !mpHost->closeStarted() && (mpHost->profileResetInProgress() || mpHost->busyRunning())) {
+        QTimer::singleShot(10ms, this, [this, save, saved, done]() {
+            shutdownOwnProfile(save, saved, done);
+        });
+        return;
+    }
+    const QPointer<THeadlessSession> self(this);
+    ++mRun;
+    if (mpHost && mpHost->mTelnet.isReplaying()) {
+        mpHost->mTelnet.endReplay(QString());
+    }
+    if (!finishOpenProgress()) {
+        return;
+    }
+    // One a script has begun to close already saves, or not, as it was asked to
+    if (mpHost && !mpHost->closeStarted() && mpPool->getHost(mProfileName) == mpHost.data()) {
+        if (save) {
+            *saved = true;
+        }
+        // One whose save did not load closes unsaved, keeping its last good save and map, as in shutdownOnceResetsEnd()
+        if (save && !mLoadFailed) {
+            mpPool->requestProfileClose(mProfileName);
+        } else {
+            mpPool->deleteHost(mProfileName);
+        }
+        if (!self) {
+            return;
+        }
+    }
+    shutdownOnceOwnProfileGone(save, saved, std::move(done));
+}
+
+// Once its save is written and it is out of the pool; the others may have let go of the pool meanwhile, which then
+// leaves the profiles their scripts opened for this one to close
+void THeadlessSession::shutdownOnceOwnProfileGone(const bool save, const std::shared_ptr<bool>& saved, std::function<void(bool)> done)
+{
+    if (mpHost && (mpPool->getHost(mProfileName) == mpHost.data() || mpHost->closeSaveInFlight())) {
+        QTimer::singleShot(10ms, this, [this, save, saved, done]() {
+            shutdownOnceOwnProfileGone(save, saved, done);
+        });
+        return;
+    }
+    if (mpPool.use_count() == 1) {
+        closeWholePool(save, saved, std::move(done));
+        return;
+    }
+    if (!letGoOfPool()) {
+        return;
+    }
+    done(true);
+}
+
+bool THeadlessSession::letGoOfPool()
+{
+    const QPointer<THeadlessSession> self(this);
+    mpPool.reset();
+    detachFromHost();
+    mpHost.clear();
+    // Still shutting down, so its handler's calls are refused as during the rest of the shutdown
+    if (mConfigSavedPending) {
+        mConfigSavedPending = false;
+        emit configSaved();
+        if (!self) {
+            return false;
+        }
+    }
+    mShuttingDown = false;
+    return true;
 }
 
 // As for TNullAppFrontend's close, a reset asked for first ends first: run in the middle of the close, it would
@@ -2083,17 +2239,9 @@ void THeadlessSession::shutdownOnceReleased(const std::shared_ptr<bool>& saved, 
     if (!self) {
         return;
     }
-    detachFromHost();
-    mpHost.clear();
-    // Still shutting down, so its handler's calls are refused as during the rest of the shutdown
-    if (mConfigSavedPending) {
-        mConfigSavedPending = false;
-        emit configSaved();
-        if (!self) {
-            return;
-        }
+    if (!letGoOfPool()) {
+        return;
     }
-    mShuttingDown = false;
     done(true);
 }
 
@@ -2148,6 +2296,15 @@ void THeadlessSession::beginSave(std::function<void(bool)> done)
         done(false);
         return;
     }
+    // That save writes every profile of the pool too
+    for (THeadlessSession* pSession : sessionsSharingPool()) {
+        if (pSession->mSaving && !pSession->mJoinedSave) {
+            mSaving = true;
+            mJoinedSave = true;
+            pSession->mSaveJoiners.append({this, std::move(done)});
+            return;
+        }
+    }
     QList<QPointer<Host>> profiles;
     for (const auto& pHost : mpPool->hostList()) {
         if (pHost->mLoadedOk) {
@@ -2157,6 +2314,17 @@ void THeadlessSession::beginSave(std::function<void(bool)> done)
     mSaving = true;
     saveEach(profiles, mUnsavedProfiles.size(), {}, [this, done](const bool answer) {
         mSaving = false;
+        for (const SaveJoiner& joiner : std::exchange(mSaveJoiners, {})) {
+            if (!joiner.session) {
+                continue;
+            }
+            joiner.session->mSaving = false;
+            joiner.session->mJoinedSave = false;
+            if (!answer) {
+                joiner.session->mErrorString = mErrorString;
+            }
+            joiner.done(answer);
+        }
         done(answer);
     });
 }

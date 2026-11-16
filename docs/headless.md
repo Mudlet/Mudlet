@@ -1429,6 +1429,30 @@ the desktop GUI pumps the event loop from it, for its progress dialog and its Ab
 `cancelMapOperation()` while the operation runs, and anything else posted meanwhile, such as a profile
 close, runs once the operation has returned.
 
+## Embedding it: several profiles at once
+
+Each `THeadlessSession` runs one profile, and the sessions of a process share one pool of profiles, as
+the GUI's tabs do. The first session's `start()` makes the pool, and a later session's `start()` opens
+its profile in it. That needs the `configDir` the pool settled, and naming another is
+`invalidConfigDir`; a profile already open in the pool, such as one a script opened, is `notOpened`.
+The profiles share `Mudlet.ini`, the media mutes, the replay player, `raiseGlobalEvent()` and synced
+modules, as tabs do, and each session's calls and signals are for its own profile.
+
+- `shutdown()` of a session while another holds the pool closes that session's profile alone, with its
+  `sysExitEvent` and, if asked, its save, as its tab's close button would. The other profiles run on.
+  The last session's `shutdown()` closes what is left, the profiles scripts opened included, and the
+  pool goes; only then is a `start()` refused with `poolClosing`.
+- Deleting a session while another holds the pool closes its profile, unsaved, in the same way.
+- `save()` writes every profile of the pool, so one asked for while another session's save runs waits
+  for that save and answers as it does, rather than writing them all again.
+- `setApplicationActive()` is the app's state, so the sessions of a pool share it: a change through any
+  of them raises `sysApplicationFocusChangeEvent` once in each profile, and a session that joins takes the
+  pool's. `setWindowMinimized()` stays each session's own, as it decides only its profile's
+  `attentionRequested`.
+- `unsavedProfiles()` names any profile of the pool that a close could not save.
+- A load or a script runs the event loop for every profile, so, as with one session, any session's calls
+  are refused while a profile of the pool loads, and its `shutdown()` while one runs a script.
+
 ## Embedding it: Mudlet's own resources
 
 `mudlet_core` is a static library, and the linker keeps a Qt resource from one only if something
@@ -1546,7 +1570,8 @@ package can quiet its sounds or notifications while the player is away. The stat
 raises nothing, as the GUI tells scripts only of a change. It starts as active, and before `start()` it
 is only kept, for the next change to be told against; a profile opened later hears nothing until the
 next change, as in the GUI. `applicationActive()` reads it. It is refused while a profile loads, during
-`shutdown()`, and from a handler of `outputLine` and the other signals sent mid-write.
+`shutdown()`, and from a handler of `outputLine` and the other signals sent mid-write. The sessions
+sharing a pool share it, as "several profiles at once" above tells.
 
 `setWindowMinimized()` tells the session the app's window is minimized or hidden, or a phone app has
 gone to the background, as the GUI's main window is minimized: only then does new game text bring
@@ -1582,8 +1607,8 @@ is refused where `submit()` is, and while the scripts are stopped its events rea
 `setSoundsMuted()` is the main window's mute buttons, for `SoundSource::scripts`, the sounds scripts
 play, or `SoundSource::game`, those the game sends over GMCP or MSP, and `toggleAllSoundsMuted()` is
 the button for both, which unmutes both when both are muted and otherwise mutes both. As in the GUI,
-muting is for every profile: it reaches the session's own and those its scripts opened, the only ones in
-the process, as a second session's `start()` is refused while a pool exists. A change raises
+muting is for every profile: it reaches every profile of the pool, those of the other sessions sharing it
+and those scripts opened included. A change raises
 `sysSettingChanged` with `muteMediaAPI` or `muteMediaGame` in each profile, as a script's `setConfig()`
 does. `soundsMuted()` reads it, and is false with no profile open. `soundsMutedChanged` follows every
 change from the event loop, whoever made it, a script's `setConfig()` in any of the profiles included,

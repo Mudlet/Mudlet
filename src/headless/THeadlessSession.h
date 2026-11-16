@@ -159,11 +159,15 @@ public:
     // frontend that never runs the event loop again then leaks them, and they never get their sysExitEvent. It
     // may be deleted from the frontend's own code, a script, or a handler of the session's signals, even
     // during one of its calls; from a handler of a signal of host() or of what it holds, use deleteLater(), as
-    // one sent with no script running would have its profile deleted under it.
+    // one sent with no script running would have its profile deleted under it. While another session shares
+    // the pool, only this session's profile closes, the same way, and the rest of the pool runs on.
     ~THeadlessSession() override;
 
-    // After the application's organisation and name are set, as it reads Mudlet.ini. Refused while a pool
-    // of profiles exists. A profile loaded for the first time gets its game's default packages, as in the GUI.
+    // After the application's organisation and name are set, as it reads Mudlet.ini. The first session to start
+    // makes the process's pool of profiles, and each later one opens its profile in that pool, as the GUI opens
+    // another tab, so long as its configDir is the one the pool settled; refused while a pool no session made
+    // exists, such as the GUI's, and while this session holds one already. A profile loaded for the first time
+    // gets its game's default packages, as in the GUI.
     // On loadFailed the profile stays open, its connect called off, for the frontend to close: it takes no
     // commands, Lua or packages, and shutdown() does not save it, so its last good save and map are kept.
     StartResult start(const Options&);
@@ -423,7 +427,9 @@ public:
     // sysApplicationFocusChangeEvent with true or false in every profile that loaded and has not begun to close, and
     // the state it is in already raises nothing. It starts true, and before start() it is only kept. Refused while a
     // profile loads, during shutdown(), and from a handler of outputLine, localText, errorConsoleText,
-    // hiddenInputWanted or a ...Requested signal but quitRequested and mainWindowResizeRequested.
+    // hiddenInputWanted or a ...Requested signal but quitRequested and mainWindowResizeRequested. It is the app's,
+    // so the sessions sharing a pool share it: a change through one is the others' too and is raised once in each
+    // profile, and a session that joins a pool takes the pool's.
     bool setApplicationActive(bool active);
     bool applicationActive() const { return mApplicationActive; }
     // The main console's replay recording button: true records what the game sends into a new file in the
@@ -824,13 +830,16 @@ public:
     void transportClosed(quint64 connection, const QString& reason = QString());
 
     // sysExitEvent and, if asked, a save for every profile that loaded, then the pool goes. Meanwhile no profile
-    // opens, and none dials the game or logs in, a live connection staying for the exit handlers. Refused while a
-    // profile loads, reconnects or runs a script, nested event loop or map operation, and during another
-    // shutdown(). It may run the event loop; a session the frontend deletes there returns at once, false if the
-    // save asked for was not yet made.
+    // opens, and none dials the game or logs in, a live connection staying for the exit handlers. While another
+    // session shares the pool, only this session's profile closes, as its tab's close button would, and the
+    // other sessions' profiles and those scripts opened run on, until the last session's shutdown() closes them.
+    // Refused while a profile of the pool loads, reconnects or runs a script, nested event loop or map
+    // operation, and during another shutdown() of this session. It may run the event loop; a session the
+    // frontend deletes there returns at once, false if the save asked for was not yet made.
     bool shutdown(bool save);
     // shutdown() without waiting: sysExitEvent runs in this call, and shutdownFinished() follows from the event
-    // loop once the saves are written and the pool has gone. A session deleted meanwhile tells nothing.
+    // loop once the saves are written and the pool, or the profile it closed alone, has gone. A session deleted
+    // meanwhile tells nothing.
     void shutdownAsync(bool save);
     // The save shutdown(true) makes, with the profiles left running: every profile that loaded, the session's own
     // and ones its scripts opened, writes its save, synced modules, map and profile.ini, and the window layout is written,
@@ -839,13 +848,14 @@ public:
     // as shutdown() does, though not for a reconnect. A profile whose save could not be loaded is left as it is,
     // keeping its last good save and map. False if a profile was not saved, a close a script began meanwhile
     // included, or the layout was not, errorString() saying which; a session the frontend deletes in the event
-    // loop returns at once, false.
+    // loop returns at once, false. Every profile of the pool is written, so one asked for while another session
+    // of the pool saves waits for that save and answers as it does.
     bool save();
     // save() without waiting: saveFinished() follows from the event loop once the profiles are written. Failed
     // while another save asked for has not answered.
     void saveAsync();
-    // The profiles, the session's own or ones its scripts opened, that a close from a script or shutdown()
-    // could not save, in the order it failed to
+    // The profiles of the pool, the session's own, another session's or ones scripts opened, that a close from a
+    // script or shutdown() could not save since this session's start(), in the order it failed to
     QStringList unsavedProfiles() const { return mUnsavedProfiles; }
     bool saveFailed() const { return !mUnsavedProfiles.isEmpty(); }
 
@@ -1100,6 +1110,13 @@ private:
     void beginShutdown(bool save, const std::shared_ptr<bool>& saved, std::function<void(bool)> done);
     void shutdownOnceResetsEnd(bool save, const std::shared_ptr<bool>& saved, std::function<void(bool)> done);
     void shutdownOnceReleased(const std::shared_ptr<bool>& saved, std::function<void(bool)> done);
+    void shutdownOwnProfile(bool save, const std::shared_ptr<bool>& saved, std::function<void(bool)> done);
+    void shutdownOnceOwnProfileGone(bool save, const std::shared_ptr<bool>& saved, std::function<void(bool)> done);
+    void closeWholePool(bool save, const std::shared_ptr<bool>& saved, std::function<void(bool)> done);
+    // False if a handler of configSaved deleted the session
+    bool letGoOfPool();
+    // This session and every other that holds the same pool
+    QList<THeadlessSession*> sessionsSharingPool();
     void beginSave(std::function<void(bool)> done);
     void saveEach(QList<QPointer<Host>> profiles, qsizetype closesUnsavedBefore, QStringList unsaved, std::function<void(bool)> done);
     bool storeConnectionDetails(const Options&, std::optional<bool> tls);
@@ -1240,7 +1257,18 @@ private:
     unsigned int mAddonCommandsQueuedRun = 0;
     // The same for buttonsChanged
     unsigned int mButtonsQueuedRun = 0;
-    std::unique_ptr<HostManager> mpPool;
+    // Shared by every session of the process, so the pool goes with the last one to let it go
+    std::shared_ptr<HostManager> mpPool;
+    // A save() another session of the pool asked for while this one's ran, answered with this one's answer
+    struct SaveJoiner
+    {
+        QPointer<THeadlessSession> session;
+        std::function<void(bool)> done;
+    };
+    QList<SaveJoiner> mSaveJoiners;
+    // Waiting on another session's save rather than running its own
+    bool mJoinedSave = false;
+    inline static QList<THeadlessSession*> smSessions;
     struct ShownLine
     {
         QString text;
