@@ -56,6 +56,7 @@
 #include <zip.h>
 
 #include "CredentialManager.h"
+#include "GMCPAuthenticator.h"
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletApp.h"
@@ -264,6 +265,15 @@ end))lua")
     }
 
     static qsizetype saveCount(const QString& name) { return QDir(MudletApp::getMudletPath(enums::profileXmlFilesPath, name)).entryList(QStringList{qsl("*.xml")}, QDir::Files).size(); }
+
+    static QString newestSave(const QString& name)
+    {
+        const QDir saveFolder(MudletApp::getMudletPath(enums::profileXmlFilesPath, name));
+        const QStringList saves = saveFolder.entryList(QStringList{qsl("*.xml")}, QDir::Files, QDir::Name);
+        return saves.isEmpty() ? QString() : readFile(saveFolder.filePath(saves.constLast()));
+    }
+
+    static QString headlessLayoutPath() { return MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutHeadless.dat")); }
 
     // pumpEvents() and waitForEvent() answer only in test mode
     static auto inTestMode()
@@ -6504,7 +6514,7 @@ registerAnonymousEventHandler("sysLoadEvent", function() feedTriggers("fed by sy
     {
         const QString name = qsl("Headless Save Layout");
         QVERIFY(writeProfile(name, QString()));
-        const QString layoutPath = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutHeadless.dat"));
+        const QString layoutPath = headlessLayoutPath();
         QFile::remove(layoutPath);
         THeadlessSession session;
         QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
@@ -6522,6 +6532,513 @@ registerAnonymousEventHandler("sysLoadEvent", function() feedTriggers("fed by sy
         layoutFile.close();
         QVERIFY(session.shutdown(false));
         QFile::remove(layoutPath);
+    }
+
+    // An app keeping the folder elsewhere, as a browser page syncing it to IndexedDB does, copies it as the signal comes
+    void test_configSavedComesOnceTheProfileSaveIsOnDisk()
+    {
+        const QString name = qsl("Headless Config Saved");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QTest::qWait(100);
+        QStringList seen;
+        connect(&session, &THeadlessSession::configSaved, this, [&seen, name]() {
+            seen.append(newestSave(name));
+        });
+
+        QVERIFY(session.runLua(qsl(R"lua(permAlias("headlessOnDiskAlias", "", "^xyzzy$", ""))lua")));
+        {
+            const PoolHold hold(std::chrono::seconds(1));
+            QVERIFY(hold.heldAll());
+            QVERIFY(std::get<0>(session.host()->saveProfile()));
+            QTest::qWait(300);
+            QVERIFY2(seen.isEmpty(), "configSaved came before the profile was written.");
+        }
+        QTRY_COMPARE_WITH_TIMEOUT(seen.size(), 1, 15000);
+        QVERIFY2(seen.constLast().contains(qsl("headlessOnDiskAlias")) && seen.constLast().trimmed().endsWith(qsl("</MudletPackage>")), qPrintable(seen.constLast().right(200)));
+
+        // A script's save writes Mudlet.ini at once and the profile on a pool thread: one signal, once both are written
+        QVERIFY(session.runLua(qsl(R"lua(permAlias("headlessBurstAlias", "", "^plugh$", ""))lua")));
+        {
+            const PoolHold hold(std::chrono::seconds(1));
+            QVERIFY(hold.heldAll());
+            QVERIFY(session.runLua(qsl("saveProfile()")));
+            QTest::qWait(300);
+            QCOMPARE(seen.size(), 1);
+        }
+        QTRY_COMPARE_WITH_TIMEOUT(seen.size(), 2, 15000);
+        QVERIFY2(seen.constLast().contains(qsl("headlessBurstAlias")), qPrintable(seen.constLast().right(200)));
+        QTest::qWait(100);
+        QCOMPARE(seen.size(), 2);
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_configSavedComesOnceTheMapIsOnDisk()
+    {
+        const QString name = qsl("Headless Config Saved Map");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QTest::qWait(100);
+        const QString mapsFolder = MudletApp::getMudletPath(enums::profileMapsPath, name);
+        QList<QMap<QString, QByteArray>> seen;
+        connect(&session, &THeadlessSession::configSaved, this, [&seen, mapsFolder]() {
+            seen.append(filesUnder(mapsFolder));
+        });
+
+        QVERIFY(session.runLua(qsl("local area = addAreaName('headlessConfigSaved'); addRoom(9101); setRoomArea(9101, area); saveMap()")));
+        QTRY_COMPARE_WITH_TIMEOUT(seen.size(), 1, 15000);
+        QCOMPARE(seen.constFirst(), filesUnder(mapsFolder));
+
+        QVERIFY(session.runLua(qsl("addRoom(9102); setRoomArea(9102, getRoomArea(9101))")));
+        {
+            const PoolHold hold(std::chrono::seconds(1));
+            QVERIFY(hold.heldAll());
+            session.host()->autoSaveMap();
+            QTest::qWait(300);
+            QCOMPARE(seen.size(), 1);
+        }
+        QTRY_COMPARE_WITH_TIMEOUT(seen.size(), 2, 15000);
+        QVERIFY(seen.constLast().contains(qsl("autosave.dat")));
+        QCOMPARE(seen.constLast(), filesUnder(mapsFolder));
+        QTest::qWait(100);
+        QCOMPARE(seen.size(), 2);
+        // After the counts: the pool it reads in writes the window layout as it goes
+        QVERIFY(newestMapHoldsRooms(name, {9101}));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_configSavedComesOnceAShutdownHasWritten_data()
+    {
+        QTest::addColumn<bool>("async");
+        QTest::newRow("shutdown") << false;
+        QTest::newRow("shutdownAsync") << true;
+    }
+
+    // A browser's run ends as the shutdown does, so the signal cannot wait for the event loop
+    void test_configSavedComesOnceAShutdownHasWritten()
+    {
+        QFETCH(bool, async);
+        const QString name = async ? qsl("Headless Config Saved Async Close") : qsl("Headless Config Saved Close");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"lua(permAlias("headlessClosingAlias", "", "^xyzzy$", ""))lua")));
+        QTest::qWait(100);
+        QStringList events;
+        connect(&session, &THeadlessSession::configSaved, this, [&events, name]() {
+            events.append(newestSave(name).contains(qsl("headlessClosingAlias")) ? qsl("configSaved") : qsl("configSaved before the save"));
+        });
+        connect(&session, &THeadlessSession::shutdownFinished, this, [&events]() {
+            events.append(qsl("shutdownFinished"));
+        });
+
+        if (async) {
+            session.shutdownAsync(true);
+            QTRY_VERIFY_WITH_TIMEOUT(events.contains(qsl("shutdownFinished")), 15000);
+        } else {
+            QVERIFY(session.shutdown(true));
+            events.append(qsl("returned"));
+        }
+        QTest::qWait(100);
+        QCOMPARE(events, QStringList({qsl("configSaved"), async ? qsl("shutdownFinished") : qsl("returned")}));
+    }
+
+    void test_configSavedComesOnceAShutdownEndsAMapAutosave_data()
+    {
+        QTest::addColumn<bool>("written");
+        QTest::newRow("still writing") << false;
+        QTest::newRow("written, its end not yet heard") << true;
+    }
+
+    // The next start loads autosave.dat as the newest map, so a page that never synced it would load an older one. A
+    // newer Mudlet's window layout, which the close leaves as it is, keeps the close from writing anything else.
+    void test_configSavedComesOnceAShutdownEndsAMapAutosave()
+    {
+        QFETCH(bool, written);
+        const QString name = written ? qsl("Headless Config Saved Autosave Written") : qsl("Headless Config Saved Autosave Writing");
+        QVERIFY(writeProfile(name, QString()));
+        const QString layoutPath = headlessLayoutPath();
+        const auto removeLayout = qScopeGuard([layoutPath]() {
+            QFile::remove(layoutPath);
+        });
+        {
+            QFile layout(layoutPath);
+            QVERIFY(layout.open(QIODevice::WriteOnly));
+            QDataStream out(&layout);
+            out.setVersion(QDataStream::Qt_5_12);
+            out << quint32(0x4d574c48) << quint32(2);
+        }
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl("local area = addAreaName('headlessAutosaveAtShutdown'); addRoom(9201); setRoomArea(9201, area)")));
+        QTest::qWait(100);
+        const QString mapsFolder = MudletApp::getMudletPath(enums::profileMapsPath, name);
+        QStringList events;
+        QMap<QString, QByteArray> seen;
+        connect(&session, &THeadlessSession::configSaved, this, [&events, &seen, mapsFolder]() {
+            seen = filesUnder(mapsFolder);
+            events.append(seen.contains(qsl("autosave.dat")) ? qsl("configSaved") : qsl("configSaved before the autosave"));
+        });
+
+        {
+            const PoolHold hold(std::chrono::seconds(1));
+            QVERIFY(hold.heldAll());
+            session.host()->autoSaveMap();
+            if (!written) {
+                QVERIFY(session.shutdown(false));
+                events.append(qsl("returned"));
+            }
+        }
+        if (written) {
+            QVERIFY(session.shutdown(false));
+            events.append(qsl("returned"));
+        }
+        QTest::qWait(100);
+        QCOMPARE(events, QStringList({qsl("configSaved"), qsl("returned")}));
+        QCOMPARE(seen, filesUnder(mapsFolder));
+    }
+
+    void test_configSavedComesOnceAWriteOutsideASaveIsOnDisk_data()
+    {
+        QTest::addColumn<QString>("write");
+        QTest::addColumn<bool>("thenRemoved");
+        QTest::newRow("saveWindowLayout()") << qsl("layout") << false;
+        QTest::newRow("connection details") << qsl("profile data") << false;
+        QTest::newRow("a password stored") << qsl("password stored") << false;
+        QTest::newRow("a password removed") << qsl("password removed") << true;
+        QTest::newRow("a sign-in forgotten") << qsl("sign-in forgotten") << true;
+        QTest::newRow("package details") << qsl("package details") << false;
+        QTest::newRow("timestamps shown and hidden") << qsl("timestamps") << true;
+        QTest::newRow("logging on the next load, then not") << qsl("autolog") << true;
+        QTest::newRow("a profile icon set and reset") << qsl("profile icon") << true;
+        QTest::newRow("a rejected token's record dropped") << qsl("rejected token") << true;
+    }
+
+    // No profile save follows these to send the signal for them
+    void test_configSavedComesOnceAWriteOutsideASaveIsOnDisk()
+    {
+        QFETCH(QString, write);
+        QFETCH(bool, thenRemoved);
+        const QString name = qsl("Headless Config Saved %1").arg(write);
+        QVERIFY(writeProfile(name, QString()));
+        QString file;
+        if (write == qsl("layout")) {
+            file = headlessLayoutPath();
+            QFile::remove(file);
+        } else if (write == qsl("profile data")) {
+            file = MudletApp::getMudletPath(enums::profileDataItemPath, name, qsl("url"));
+        } else if (write == qsl("sign-in forgotten")) {
+            file = MudletApp::getMudletPath(enums::profileDataItemPath, name, qsl("reconnect"));
+        } else if (write == qsl("package details")) {
+            file = MudletApp::getMudletPath(enums::profilePackagePath, name, qsl("headlessDetails")) + qsl("/config.lua");
+        } else if (write == qsl("timestamps")) {
+            file = MudletApp::getMudletPath(enums::profileDataItemPath, name, qsl("autotimestamp"));
+        } else if (write == qsl("autolog")) {
+            file = MudletApp::getMudletPath(enums::profileDataItemPath, name, qsl("autolog"));
+        } else if (write == qsl("profile icon")) {
+            file = MudletApp::getMudletPath(enums::profileDataItemPath, name, qsl("profileicon"));
+        } else if (write == qsl("rejected token")) {
+            file = MudletApp::getMudletPath(enums::profileDataItemPath, name, qsl("reconnect-rejected"));
+        } else {
+            file = qsl("%1/profiles/%2/passwords/character").arg(MudletApp::credentialFilesRoot(), MudletApp::sanitizeForPath(name));
+        }
+        // The token goes to a keychain that answers a turn after the sign-in's record is written, so the rejected
+        // token's record goes after the signal for that
+        const bool keychain = write == qsl("rejected token");
+        const bool storedSecurely = MudletApp::storingPasswordsSecurely();
+        const QByteArray testMode = qgetenv("MUDLET_TEST_MODE");
+        const auto restore = qScopeGuard([keychain, storedSecurely, testMode]() {
+            if (keychain) {
+                CredentialManager::jobStartHookForTesting() = nullptr;
+                CredentialManager::forgetStoreRefusal();
+                qputenv("MUDLET_TEST_MODE", testMode);
+                MudletApp::setStorePasswordsSecurely(storedSecurely);
+            }
+        });
+        if (keychain) {
+            MudletApp::setStorePasswordsSecurely(true);
+            qunsetenv("MUDLET_TEST_MODE");
+            CredentialManager::jobStartHookForTesting() = [](QKeychain::Job* job) {
+                const QKeychain::Error error = qobject_cast<QKeychain::ReadPasswordJob*>(job) ? QKeychain::EntryNotFound : QKeychain::NoError;
+                QTimer::singleShot(100, job, [job, error]() {
+                    job->emitFinishedWithError(error, QString());
+                });
+                return false;
+            };
+        }
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        if (write == qsl("package details")) {
+            const QString packagePath = mConfigDir.filePath(qsl("headlessDetails.xml"));
+            QVERIFY(writeFile(packagePath, packageXml(QByteArray())));
+            QSignalSpy installSaved(&session, &THeadlessSession::configSaved);
+            QCOMPARE(session.installPackage(packagePath), THeadlessSession::PackageResult::installed);
+            QTRY_VERIFY_WITH_TIMEOUT(!installSaved.isEmpty(), 15000);
+        }
+        QTest::qWait(100);
+        const auto onDisk = [&file]() {
+            QFile current(file);
+            return current.open(QIODevice::ReadOnly) ? std::optional(current.readAll()) : std::nullopt;
+        };
+        QList<std::optional<QByteArray>> seen;
+        connect(&session, &THeadlessSession::configSaved, this, [&seen, &onDisk]() {
+            seen.append(onDisk());
+        });
+
+        if (write == qsl("layout")) {
+            QVERIFY(session.runLua(qsl("assert(saveWindowLayout())")));
+        } else if (write == qsl("profile data")) {
+            QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("x")).first);
+        } else if (write == qsl("sign-in forgotten")) {
+            QVERIFY(MudletApp::writeProfileData(name, qsl("reconnect"), qsl(R"({"account":"headless"})")).first);
+        } else if (write == qsl("package details")) {
+            QVERIFY(session.runLua(qsl(R"lua(assert(setPackageInfo("headlessDetails", "author", "Headless")))lua")));
+        } else if (write == qsl("timestamps")) {
+            QVERIFY(session.setTimeStampsShown(true));
+        } else if (write == qsl("autolog")) {
+            QVERIFY(session.runLua(qsl("assert(startLogging(true))")));
+        } else if (write == qsl("profile icon")) {
+            const QString icon = mConfigDir.filePath(qsl("headlessIcon.png"));
+            QVERIFY(writeFile(icon, QByteArrayLiteral("not checked")));
+            QVERIFY(session.runLua(qsl(R"lua(assert(setProfileIcon("%1")))lua").arg(icon)));
+        } else if (write == qsl("rejected token")) {
+            QVERIFY(MudletApp::writeProfileData(name, qsl("reconnect-rejected"), qsl("00ff")).first);
+        } else {
+            QVERIFY(storePassword(name, qsl("character"), qsl("secret")));
+        }
+        QTRY_COMPARE_WITH_TIMEOUT(seen.size(), 1, 15000);
+        QVERIFY2(seen.constLast().has_value() && seen.constLast() == onDisk(), qPrintable(file));
+
+        if (write == qsl("password removed")) {
+            CredentialManager store;
+            std::optional<bool> removed;
+            store.removePassword(name, qsl("character"), [&removed](const bool success, const QString&) {
+                removed = success;
+            });
+            QTRY_VERIFY_WITH_TIMEOUT(removed.has_value(), 10000);
+            QVERIFY(*removed);
+        } else if (write == qsl("sign-in forgotten")) {
+            std::optional<bool> forgotten;
+            session.host()->mpAuth->forgetSavedSignIn([&forgotten](const bool success) {
+                forgotten = success;
+            });
+            QTRY_VERIFY_WITH_TIMEOUT(forgotten.has_value(), 10000);
+            QVERIFY(*forgotten);
+        } else if (write == qsl("timestamps")) {
+            QVERIFY(session.setTimeStampsShown(false));
+        } else if (write == qsl("autolog")) {
+            QVERIFY(session.runLua(qsl("assert(startLogging(false))")));
+        } else if (write == qsl("profile icon")) {
+            QVERIFY(session.runLua(qsl("assert(resetProfileIcon())")));
+        } else if (write == qsl("rejected token")) {
+            // Its record goes once the token that replaces it is stored
+            session.host()->mpAuth->handleAuthGMCP(qsl("Char.Login.Default"), qsl(R"({"type": ["password-credentials"]})"));
+            session.host()->mpAuth->handleAuthGMCP(qsl("Char.Login.Token"), qsl(R"({"account": "headless", "token": "fresh", "secure_only": true})"));
+        }
+        if (thenRemoved) {
+            QTRY_VERIFY_WITH_TIMEOUT(seen.size() > 1 && !seen.constLast().has_value(), 15000);
+            QVERIFY2(!onDisk().has_value(), qPrintable(file));
+        }
+        QVERIFY(session.shutdown(false));
+        if (write == qsl("layout")) {
+            QFile::remove(file);
+        }
+    }
+
+    // The session connects to the writes once, as it is made, so a shutdown must leave that for its next start
+    void test_configSavedComesInASecondRunOfTheSession()
+    {
+        const QString name = qsl("Headless Config Saved Second Run");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        int sent = 0;
+        connect(&session, &THeadlessSession::configSaved, this, [&sent]() {
+            ++sent;
+        });
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.shutdown(true));
+        QVERIFY(sent > 0);
+
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QTest::qWait(100);
+        const int before = sent;
+        QVERIFY(session.runLua(qsl("local area = addAreaName('headlessSecondRun'); addRoom(9301); setRoomArea(9301, area); saveMap()")));
+        QTRY_VERIFY_WITH_TIMEOUT(sent > before, 15000);
+        QVERIFY(session.shutdown(false));
+    }
+
+    // save() writes profile.ini and the window layout after the profile save, and its one signal comes after them
+    void test_configSavedComesOnceASessionSaveHasWritten()
+    {
+        const QString name = qsl("Headless Config Saved Session Save");
+        QVERIFY(writeProfile(name, QString()));
+        const QString layoutPath = headlessLayoutPath();
+        const QString iniPath = MudletApp::getMudletPath(enums::profileDataItemPath, name, qsl("profile.ini"));
+        QFile::remove(layoutPath);
+        const auto removeLayout = qScopeGuard([layoutPath]() {
+            QFile::remove(layoutPath);
+        });
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"lua(permAlias("headlessSessionSaveAlias", "", "^xyzzy$", ""))lua")));
+        QTest::qWait(100);
+        QStringList seen;
+        connect(&session, &THeadlessSession::configSaved, this, [&seen, name, layoutPath, iniPath]() {
+            QStringList found;
+            if (newestSave(name).contains(qsl("headlessSessionSaveAlias"))) {
+                found.append(qsl("profile"));
+            }
+            if (readFile(iniPath).contains(qsl("SaveHistory"))) {
+                found.append(qsl("profile.ini"));
+            }
+            if (QFileInfo::exists(layoutPath)) {
+                found.append(qsl("layout"));
+            }
+            seen.append(found.join(qsl(", ")));
+        });
+
+        QVERIFY2(session.save(), qPrintable(session.errorString()));
+        QTRY_COMPARE_WITH_TIMEOUT(seen.size(), 1, 15000);
+        QTest::qWait(100);
+        QCOMPARE(seen, QStringList({qsl("profile, profile.ini, layout")}));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_configSavedComesForAWriteItsHandlerMakes_data()
+    {
+        QTest::addColumn<bool>("closing");
+        QTest::newRow("from the event loop") << false;
+        QTest::newRow("from a shutdown") << true;
+    }
+
+    // As a C++ app's handler storing a password or the connection details as it copies the folder would
+    void test_configSavedComesForAWriteItsHandlerMakes()
+    {
+        QFETCH(bool, closing);
+        const QString name = closing ? qsl("Headless Config Saved Handler Close") : qsl("Headless Config Saved Handler");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QTest::qWait(100);
+        QStringList seen;
+        connect(&session, &THeadlessSession::configSaved, this, [&seen, name]() {
+            seen.append(MudletApp::readProfileData(name, qsl("url")));
+            if (seen.size() == 1) {
+                MudletApp::writeProfileData(name, qsl("url"), qsl("y"));
+            }
+        });
+
+        if (closing) {
+            QVERIFY(session.shutdown(true));
+        } else {
+            QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("x")).first);
+        }
+        QTRY_COMPARE_WITH_TIMEOUT(seen.size(), 2, 15000);
+        QCOMPARE(seen.constLast(), qsl("y"));
+        QTest::qWait(100);
+        QCOMPARE(seen.size(), 2);
+        if (!closing) {
+            QVERIFY(session.shutdown(false));
+        }
+    }
+
+    void test_aStartFromTheShutdownsConfigSavedIsRefused_data()
+    {
+        QTest::addColumn<bool>("async");
+        QTest::newRow("shutdown") << false;
+        QTest::newRow("shutdownAsync") << true;
+    }
+
+    // That one is sent from inside the shutdown, which refuses calls until it is over
+    void test_aStartFromTheShutdownsConfigSavedIsRefused()
+    {
+        QFETCH(bool, async);
+        const QString name = async ? qsl("Headless Config Saved Async Restart") : qsl("Headless Config Saved Restart");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QTest::qWait(100);
+        std::optional<THeadlessSession::StartResult> restart;
+        QStringList events;
+        connect(&session, &THeadlessSession::configSaved, this, [&session, &restart, name]() {
+            if (!restart) {
+                restart = session.start({.profile = name, .connect = false});
+            }
+        });
+        connect(&session, &THeadlessSession::profileLoaded, this, [&events]() {
+            events.append(qsl("profileLoaded"));
+        });
+        connect(&session, &THeadlessSession::shutdownFinished, this, [&events](const bool shutDown) {
+            events.append(shutDown ? qsl("shutdownFinished") : qsl("shutdownFinished(false)"));
+        });
+
+        if (async) {
+            session.shutdownAsync(true);
+            QTRY_VERIFY_WITH_TIMEOUT(events.contains(qsl("shutdownFinished")), 15000);
+        } else {
+            QVERIFY(session.shutdown(true));
+            events.append(qsl("returned"));
+        }
+        QTest::qWait(100);
+        QVERIFY(restart.has_value());
+        QCOMPARE(*restart, THeadlessSession::StartResult::poolClosing);
+        QCOMPARE(events, QStringList({async ? qsl("shutdownFinished") : qsl("returned")}));
+        QVERIFY(!session.host());
+        QVERIFY(!HostManager::self());
+    }
+
+    void test_deletingTheSessionFromTheShutdownsConfigSaved_data()
+    {
+        QTest::addColumn<bool>("async");
+        QTest::newRow("shutdown") << false;
+        QTest::newRow("shutdownAsync") << true;
+    }
+
+    // As a page done with its last sync could; without ASan, the block that takes the session's memory catches the
+    // shutdown writing to it
+    void test_deletingTheSessionFromTheShutdownsConfigSaved()
+    {
+        QFETCH(const bool, async);
+        const QString name = async ? qsl("Headless Config Saved Async Delete") : qsl("Headless Config Saved Delete");
+        QVERIFY(writeProfile(name, QString()));
+        QObject owner;
+        auto* pSession = new THeadlessSession(&owner);
+        const QPointer<THeadlessSession> session(pSession);
+        QCOMPARE(pSession->start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QTest::qWait(100);
+        static constexpr unsigned char sentinel = 0xA5;
+        std::unique_ptr<unsigned char[]> reused;
+        bool reusesTheSession = false;
+        bool finished = false;
+        connect(pSession, &THeadlessSession::configSaved, this, [pSession, &reused, &reusesTheSession]() {
+            const void* freed = pSession;
+            delete pSession;
+            reused.reset(new unsigned char[sizeof(THeadlessSession)]);
+            std::fill_n(reused.get(), sizeof(THeadlessSession), sentinel);
+            reusesTheSession = reused.get() == freed;
+        });
+        connect(pSession, &THeadlessSession::shutdownFinished, this, [&finished]() {
+            finished = true;
+        });
+
+        if (async) {
+            pSession->shutdownAsync(true);
+            QTRY_VERIFY_WITH_TIMEOUT(!session, 15000);
+        } else {
+            QVERIFY(pSession->shutdown(true));
+            QVERIFY(!session);
+        }
+        QTest::qWait(100);
+        QVERIFY(!finished);
+        QVERIFY(!HostManager::self());
+        if (reusesTheSession) {
+            const bool untouched = std::all_of(reused.get(), reused.get() + sizeof(THeadlessSession), [](const unsigned char byte) {
+                return byte == sentinel;
+            });
+            QVERIFY2(untouched, "the shutdown wrote to the session its configSaved handler deleted");
+        }
     }
 
     // As a script that ran while another profile's save waited for its writes could
