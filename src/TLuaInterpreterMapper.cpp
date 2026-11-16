@@ -53,6 +53,7 @@
 #include <cmath>
 #include <cstring>
 #include <limits>
+#include <tuple>
 #include <math.h>
 
 #include <QCollator>
@@ -1635,6 +1636,121 @@ int TLuaInterpreter::getAreaGraph(lua_State* L)
         lua_settable(L, -3);
     }
     lua_setfield(L, -2, "links");
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getAreaExploration
+// How much of an area is mapped: its rooms, and the exits in it known to exist but not mapped yet (exit stubs)
+int TLuaInterpreter::getAreaExploration(lua_State* L)
+{
+    const int areaId = getVerifiedInt(L, __func__, 1, "areaID");
+    const Host& host = getHostFromLua(L);
+    const TArea* pA = host.mpMap->mpRoomDB->getArea(areaId);
+    if (!pA) {
+        return warnArgumentValue(L, __func__, csmInvalidAreaID.arg(areaId));
+    }
+
+    int openExits = 0;
+    QList<int> roomsWithOpenExits;
+    for (const int roomId : pA->getAreaRooms()) {
+        const TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
+        if (pR && !pR->exitStubs.isEmpty()) {
+            openExits += pR->exitStubs.size();
+            roomsWithOpenExits << roomId;
+        }
+    }
+    std::sort(roomsWithOpenExits.begin(), roomsWithOpenExits.end());
+
+    lua_newtable(L);
+    lua_pushnumber(L, pA->getAreaRooms().size());
+    lua_setfield(L, -2, "rooms");
+    lua_pushnumber(L, openExits);
+    lua_setfield(L, -2, "openExits");
+    lua_createtable(L, roomsWithOpenExits.size(), 0);
+    for (int i = 0; i < roomsWithOpenExits.size(); ++i) {
+        lua_pushnumber(L, roomsWithOpenExits.at(i));
+        lua_rawseti(L, -2, i + 1);
+    }
+    lua_setfield(L, -2, "roomsWithOpenExits");
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getAreaConnections
+// Each area this one has an exit to or an entrance from, with those exits and entrances; a one-way link has only one
+// of the two. Unlike getAreaGraph() it names the rooms on both sides, and unlike getAreaExits() the way in as well
+int TLuaInterpreter::getAreaConnections(lua_State* L)
+{
+    const int areaId = getVerifiedInt(L, __func__, 1, "areaID");
+    const Host& host = getHostFromLua(L);
+    TRoomDB* pRoomDB = host.mpMap->mpRoomDB.get();
+    const TArea* pA = pRoomDB->getArea(areaId);
+    if (!pA) {
+        return warnArgumentValue(L, __func__, csmInvalidAreaID.arg(areaId));
+    }
+
+    struct Passage
+    {
+        int from;
+        int to;
+        QString exit;
+        bool operator<(const Passage& other) const { return std::tie(from, exit, to) < std::tie(other.from, other.exit, other.to); }
+    };
+    struct Neighbour
+    {
+        QList<Passage> exits;
+        QList<Passage> entrances;
+    };
+    const auto areaOfRoom = [pRoomDB](const int roomId) {
+        const TRoom* pR = pRoomDB->getRoom(roomId);
+        return pR ? pR->getArea() : -1;
+    };
+
+    QMap<int, Neighbour> neighbours;
+    const auto outgoing = pA->getAreaExitRoomData();
+    for (auto it = outgoing.cbegin(); it != outgoing.cend(); ++it) {
+        const int toArea = areaOfRoom(it.value().second);
+        if (toArea != -1 && toArea != areaId) {
+            neighbours[toArea].exits << Passage{it.key(), it.value().second, it.value().first};
+        }
+    }
+    const QMap<int, TArea*>& areas = pRoomDB->getAreaMap();
+    for (auto itArea = areas.cbegin(); itArea != areas.cend(); ++itArea) {
+        if (itArea.key() == areaId || !itArea.value()) {
+            continue;
+        }
+        const auto incoming = itArea.value()->getAreaExitRoomData();
+        for (auto it = incoming.cbegin(); it != incoming.cend(); ++it) {
+            if (areaOfRoom(it.value().second) == areaId) {
+                neighbours[itArea.key()].entrances << Passage{it.key(), it.value().second, it.value().first};
+            }
+        }
+    }
+
+    const auto pushPassages = [L](QList<Passage> passages) {
+        std::sort(passages.begin(), passages.end());
+        lua_createtable(L, passages.size(), 0);
+        for (int i = 0; i < passages.size(); ++i) {
+            lua_createtable(L, 0, 3);
+            lua_pushnumber(L, passages.at(i).from);
+            lua_setfield(L, -2, "from");
+            lua_pushnumber(L, passages.at(i).to);
+            lua_setfield(L, -2, "to");
+            lua_pushstring(L, passages.at(i).exit.toUtf8().constData());
+            lua_setfield(L, -2, "exit");
+            lua_rawseti(L, -2, i + 1);
+        }
+    };
+
+    lua_newtable(L);
+    for (auto it = neighbours.cbegin(); it != neighbours.cend(); ++it) {
+        lua_pushnumber(L, it.key());
+        lua_createtable(L, 0, 2);
+        pushPassages(it.value().exits);
+        lua_setfield(L, -2, "exits");
+        pushPassages(it.value().entrances);
+        lua_setfield(L, -2, "entrances");
+        lua_settable(L, -3);
+    }
     return 1;
 }
 
