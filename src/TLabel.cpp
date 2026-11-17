@@ -358,6 +358,10 @@ void TLabel::accessibilityChanged(TLabelModel::AccessibilityChange change)
         }
         return;
     }
+    // Heard only as the text next changes (announceTextChange())
+    if (change == TLabelModel::AccessibilityChange::LiveRegion) {
+        return;
+    }
     updateKeyboardAccess();
     if (change == TLabelModel::AccessibilityChange::KeyboardAccess) {
         return;

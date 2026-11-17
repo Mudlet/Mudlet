@@ -463,6 +463,17 @@ std::optional<THeadlessSession::LabelContent> THeadlessSession::labelContent(con
     content.clickThrough = pModel->mClickThrough;
     content.accessibleName = pModel->effectiveAccessibleName();
     content.accessibleButton = pModel->actsAsButton();
+    switch (pModel->mLiveRegion) {
+    case TLabelLiveRegion::Off:
+        content.liveRegion = LabelContent::LiveRegion::off;
+        break;
+    case TLabelLiveRegion::Polite:
+        content.liveRegion = LabelContent::LiveRegion::polite;
+        break;
+    case TLabelLiveRegion::Assertive:
+        content.liveRegion = LabelContent::LiveRegion::assertive;
+        break;
+    }
     content.styleSheet = pModel->mStyleSheet;
     return content;
 }

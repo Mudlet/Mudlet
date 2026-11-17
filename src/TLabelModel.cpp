@@ -563,6 +563,15 @@ void TLabelModel::setAccessibleButton(std::optional<bool> button)
     accessibilityChanged(AccessibilityChange::Role);
 }
 
+void TLabelModel::setLiveRegion(TLabelLiveRegion liveRegion)
+{
+    if (mLiveRegion == liveRegion) {
+        return;
+    }
+    mLiveRegion = liveRegion;
+    accessibilityChanged(AccessibilityChange::LiveRegion);
+}
+
 void TLabelModel::setClickThrough(bool clickThrough)
 {
     if (mClickThrough == clickThrough) {
