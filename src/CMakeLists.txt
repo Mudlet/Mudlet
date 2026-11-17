@@ -481,6 +481,7 @@ set(mudlet_HDRS
     TEntityResolver.h
     TEvent.h
     TGameDetails.h
+    TGameTransport.h
     TGlyphCache.h
     THyperlinkCompactManager.h
     THyperlinkSelectionManager.h

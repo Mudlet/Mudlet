@@ -6921,10 +6921,10 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
     bool hasNewline = false;
 
     // find all the appropriate wrap points assuming (hanging-)indentation prepended to each line
-    for (int indexOfChar = 0, total = lineText.size(); indexOfChar < total and indexOfChar >= 0;) {
+    for (int indexOfChar = 0, total = lineText.size(); indexOfChar < total && indexOfChar >= 0;) {
         const QChar c = lineText.at(indexOfChar);
         // skip leading spaces for any wrapped lines
-        if (xPos == 0 and !isNewline and !output.isEmpty() and c == QChar::Space) {
+        if (xPos == 0 && !isNewline && !output.isEmpty() && c == QChar::Space) {
             indexOfChar++;
             firstChar = indexOfChar;
             setGraphemePosition(indexOfChar);

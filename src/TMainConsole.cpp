@@ -1450,6 +1450,10 @@ void TMainConsole::deleteLabel(const QString& name)
             mpHost->getGifTracker()->unregisterGif(pL->mpMovie);
         }
 
+        // Hidden at once: a nested event loop (pumpEvents(), a JSON map import) can hold the deferred delete back, and a
+        // label left showing is painted until then. Its leave callback goes first, as hiding sends one under the mouse
+        pL->model().setLeave(0);
+        pL->hide();
         // Using deleteLater() rather than delete as it seems a safer option
         // given that this item is likely to be linked to some events and
         // suchlike:
@@ -4271,7 +4275,6 @@ void TMainConsole::showStatistics()
     //: Heading for the system's statistics information displayed in the console
     mpHost->mLuaInterpreter.compileAndExecuteScript(itemScript.arg(tr("Timer Report:")));
     itemMsg = std::get<0>(mpHost->getTimerUnit()->assembleReport());
-    ;
     print(itemMsg, QColor(150, 120, 0), Qt::black);
 
     //: Heading for the system's statistics information displayed in the console

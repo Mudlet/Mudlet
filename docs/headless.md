@@ -614,6 +614,196 @@ does, that raises `sysProfileFocusChangeEvent` with `false` in the profile it le
 one it brings forward, and shows that profile's Discord presence. A profile whose close has started is
 refused with `false` and a message, and the front stays where it was.
 
+## Embedding it: the game connection
+
+Where there are no sockets, as in a browser, the app makes the connection to the game and Mudlet does
+the rest over it, as over a socket: telnet negotiation, MCCP, GMCP, MSDP, MXP, character sets,
+triggers, logging, reconnecting and the connection events. The app opts in with
+`options.supplyTransport = true` before `start()`; without it the profile uses its own sockets, as
+the GUI always does.
+
+```cpp
+QObject::connect(session.get(), &THeadlessSession::transportDialRequested,
+                 [](const QString& profile, quint64 connection, const QString& host, int port, bool tlsRequested) {
+    // Dial, then report how it went, naming connection
+});
+QObject::connect(session.get(), &THeadlessSession::transportWriteRequested, [](const QString& profile, const QByteArray& data) {
+    // Bytes for the game, telnet negotiation included, to send in order on the connection last dialled
+});
+QObject::connect(session.get(), &THeadlessSession::transportCloseRequested, [](const QString& profile) {
+    // The profile ended the connection last dialled, or its dial; no report is due
+});
+
+// What the app's connection reports, from anywhere, each naming the connection its dial was given
+session->transportConnected(connection);
+session->transportReceived(connection, bytes); // each chunk as it came, which may end anywhere, even mid-negotiation
+session->transportClosed(connection, reason);  // the game hung up, it was lost, or the dial failed; reason may be empty
+```
+
+`start()`, a reconnect or a script's `connectToServer()` sends `transportDialRequested`, with an id
+for the connection. Once the app answers `transportConnected()`, the profile announces the connection
+(`connected`, `sysConnectionEvent`, the login) and writes to the game through
+`transportWriteRequested`, and the app hands each chunk the game sends to `transportReceived()`. The
+game ending it is the app's `transportClosed()`; the profile ending it (`disconnect()`, a reconnect,
+closing the profile) is `transportCloseRequested`, after which no report about it is due. A dial
+answered with `transportClosed()` fails as an unreachable game does, with the reason in Mudlet's
+message, and a connection that ends with a reason gives it in the disconnection message.
+
+A report is dropped unless it names the profile's current connection: the one last dialled, and not
+closed since. A reconnect closes one connection and dials the next in the same breath, so an app whose
+old socket reports its end late, after `transportCloseRequested`, cannot have that taken for news of
+the new one. Ids are unique within the process, so a late report about a closed profile's connection
+cannot be taken for the next profile's either.
+
+The reports are taken up from the event loop, so they may be made from a handler of the three
+signals, which are sent mid-write and may call nothing else of the session. Only the profile
+`start()` opens uses the app's connection; one a script opens uses its own sockets. The profile's
+proxy is not used, and a session deleted while connected sends no `transportCloseRequested`.
+
+A secure connection is the app's to make, not Mudlet's, and Mudlet cannot tell whether the app's
+connection is encrypted, so it never calls it secure: `currentlySecure()` is false, GMCP sign-in keeps
+back what it sends only over an encrypted connection, and a game's offer of a secure port is not
+passed on. A profile set to connect securely still connects: `tlsRequested` tells the app, which may
+honour it, such as through a `wss://` proxy that dials the game with TLS, and Mudlet says in the
+console that it treats the connection as not secure.
+
+In a browser, `mudlet-headless` makes the page's connection the profile's when the object given to
+`qtLoad()` has a `mudletTransport`:
+
+```js
+mudletTransport: {
+  // connection: { connected(), received(bytes), closed(reason) }, to call as the connection goes
+  dial(host, port, tlsRequested, connection) {},
+  write(bytes) {},   // a Uint8Array
+  close() {},        // after which connection's calls do nothing
+}
+```
+
+Each dial gets a connection of its own, so a late event of an old socket cannot reach a new one, and
+the page's `close()` is called at most once for it, never after its `closed()`. `received()` takes an
+`ArrayBuffer` or any view of one, such as a `Uint8Array` or a `DataView`. It refuses anything else,
+strings included: telnet is a byte stream, and a string has no one way back to bytes (as UTF-8, the
+byte 255 that starts every telnet command would become two), so the page converts as it knows its
+source sends. A `Blob`, which a WebSocket delivers unless its `binaryType` is `"arraybuffer"`, is
+refused too. When `received()` refuses, or `dial()` or `write()` throws, Mudlet logs the error to the
+console, calls the page's `close()`, since the profile asks for none of a connection it is told has
+ended, and ends the connection with the error as the reason. A `dial()` or `write()` that returns a
+promise which rejects is treated as one that throws. `CI/wasm-headless-smoke.js --game-connection`
+connects through a WebSocket relay this way.
+
+## Embedding it: keeping the profiles
+
+An app that keeps `options.configDir` somewhere Mudlet does not write to itself, such as a browser
+page whose files are in memory until it copies them into IndexedDB, copies the folder each time
+`configSaved` comes:
+
+```cpp
+QObject::connect(session.get(), &THeadlessSession::configSaved, []() {
+    // What Mudlet wrote into configDir since the last one is complete on disk
+});
+```
+
+It comes once the files are written:
+
+- a profile save: a script's `saveProfile()`, `save()`, the save that follows installing or removing a
+  package or module, or a profile's close, with the profile, its synced modules, its packages' files,
+  `profile.ini` and the command line histories;
+- a map save, by `saveMap()` or a profile save, and the map's autosave, which is written on Qt's
+  thread pool; in a single-threaded browser build that write runs in the call, and its end, and so the
+  signal, still comes from the event loop;
+- a `Mudlet.ini` save, a script's `saveWindowLayout()`, the connection details a profile stores or
+  forgets (its game, port, login and the like) and a password stored or removed under `credentials/`;
+- a package's details set by `setPackageInfo()`, the profile's icon, and whether its next load shows
+  the main console's timestamps or logs it.
+
+Not followed by it: files a script writes itself (`io`, `lfs`, `table.save()`), logs, replays, the
+media cache, map exports to JSON or an image, downloads, maps included, the spell-check dictionary, a
+profile deleted, and anything written by a session deleted with its profiles open instead of shut down.
+
+Writes in one turn of the event loop send one, and so do writes while a profile save or `save()` is
+still running: the signal comes from the event loop once none is, so a save that writes the profile, its
+modules, `Mudlet.ini` and the map over several turns sends one, after the last. Writes in separate turns
+with no save running send one each. A shutdown that wrote sends just one, once its profiles have closed
+and their saves are written, before `shutdown()` returns or `shutdownFinished` comes, so an app that
+copies the folder then has all the run wrote.
+
+In a browser, `mudlet-headless` calls `mudletConfigSaved()` on the object given to `qtLoad()` for each
+`configSaved`, and a page keeps the folder in IndexedDB with Emscripten's IDBFS, which the build links:
+
+```js
+const dir = "/mudlet";
+let program;
+let syncing = false;
+let syncAgain = false;
+let retry;
+let settle;
+let synced = Promise.resolve();  // settles once all Mudlet wrote is in IndexedDB
+function sync() {
+  clearTimeout(retry);
+  if (syncing) {
+    syncAgain = true;
+    return;
+  }
+  syncing = true;
+  syncAgain = false;
+  if (!settle) {
+    synced = new Promise((resolve) => (settle = resolve));
+  }
+  program.FS.syncfs(false, (error) => {
+    syncing = false;
+    if (error) {
+      console.error("Could not keep the profiles, trying again:", error);
+      retry = setTimeout(sync, 2000);
+    } else if (syncAgain) {
+      sync();
+    } else {
+      settle();
+      settle = undefined;
+    }
+  });
+}
+addEventListener("beforeunload", (event) => {
+  if (settle) {
+    event.preventDefault();  // the browser asks the player to stay
+  }
+});
+await qtLoad({
+  arguments: ["-p", "My MUD", "--config-dir", dir],
+  mudletConfigSaved: sync,
+  preRun: [(m) => {
+    program = m;
+    m.FS.mkdirTree(dir);
+    m.FS.mount(m.FS.filesystems.IDBFS, {}, dir);
+    m.addRunDependency("config folder");  // main() waits for this
+    m.FS.syncfs(true, (error) => {
+      if (error) {
+        document.body.textContent = `The saved profiles could not be read: ${error}`;
+        return;
+      }
+      m.removeRunDependency("config folder");
+    });
+  }],
+  qt: { /* entryFunction, containerElements and the rest, as for any Qt program */ },
+});
+```
+
+1. Mount IDBFS on the folder in `preRun` and fill it from IndexedDB with `FS.syncfs(true)`. That
+   answers later, so a run dependency holds `main()` back until it has; one that fails here leaves
+   Mudlet unstarted, and says so, rather than starting it on an empty folder whose first save writes
+   over the player's.
+2. Name the folder with `--config-dir`. The GUI's own config folder is refused, as everywhere.
+3. On each `mudletConfigSaved()`, copy the folder back with `FS.syncfs(false)`, one at a time: IDBFS
+   runs overlapping syncs side by side, so one asked for while another runs waits for it. One that
+   fails is tried again after a while, as the run's last write may have no signal after it.
+4. When the run ends, as by `closeMudlet()`, the last `mudletConfigSaved()` comes before Qt's
+   `onExit`, and its sync ends after it: wait for `synced` before closing or leaving the page. Until
+   it settles, `beforeunload` has the browser ask the player to stay.
+
+A reload or a closed tab loses what was written since the last sync ended, as a page cannot wait for
+IndexedDB as it unloads. WasmFS's OPFS backend is not an option: it needs threads or JSPI, which this
+build has neither of, and cannot be linked beside IDBFS. `CI/wasm-headless-smoke.js --persistence`
+keeps profiles across reloads this way, and checks a reload without the sync loses them.
+
 ## Embedding it: when the signals come and what a handler may do
 
 Each signal's own rules are with the signal, above and below; this is all of them in one place. Mudlet
@@ -622,23 +812,26 @@ decides what its handler may do.
 
 **Sent mid-write.** `outputLine`, `lineShown`, `mainConsoleCleared`, `localText`, `localTextStyled`,
 `errorConsoleText`, `debugText`, `hiddenInputWanted`, `typedLineMoveRequested`,
-`commandLineTextRequested`, `notificationRequested`, `attentionRequested` and `announcementRequested`
-are sent from inside whatever wrote the text or asked: the read of the game's data, a script, or the
-session call that ran it. That is what keeps them in order with one another. One of them is queued
-all the same: the `attentionRequested` for game text that arrives while the app is minimized is sent
-once the event loop runs, yet its handler is held to these same rules. Their handlers must not
-run the event loop, as a modal dialog does, and must not call the session back: every call that is
-refused where `submit()` is fails there with its documented refusal result, with `errorString()` saying to
-queue the call instead.
-The calls described as getters still answer. A handler may delete the session.
+`commandLineTextRequested`, `notificationRequested`, `attentionRequested`, `announcementRequested` and
+the three `transport…Requested` are sent from inside whatever wrote the text or asked: the read of the
+game's data, a script, or the session call that ran it. That is what keeps them in order with one
+another. One of them is queued all the same: the `attentionRequested` for game text that arrives while
+the app is minimized is sent once the event loop runs, yet its handler is held to these same rules.
+Their handlers must not run the event loop, as a modal dialog does, and must not call the session
+back: every call that is refused where `submit()` is fails there with its documented refusal result,
+with `errorString()` saying to queue the call instead.
+The calls described as getters still answer, and the `transport…()` reports may be made. A handler may
+delete the session.
 
 **Sent from the event loop.** Every other signal but the two below is queued, and sent once the event
 loop runs, after the script or call that caused it has returned: `connecting`, `connected`,
 `disconnected`, `quitRequested`, `loggingChanged`, `latencyChanged`, `secureConnectionOffered`,
-`soundsMutedChanged`, `mappingScriptMissing`, `mainWindowResizeRequested`, the package download's,
-map progress's and replay's signals, and the ones that follow a state. Their handlers may call the
-session. Of those that follow a state, some are sent once a turn however many changes it held, naming
-what changed, for the app to read again: `scriptWindowsChanged`, `windowTextChanged`,
+`soundsMutedChanged`, `mappingScriptMissing`, `mainWindowResizeRequested`, `configSaved`, the package
+download's, map progress's and replay's signals, and the ones that follow a state. Their handlers may
+call the session, except while `shutdown()` sends them from inside itself, as the order below has it:
+the session refuses their calls then as it does any made during the shutdown, a `start()` with
+`poolClosing`. Of those that follow a state, some are sent once a turn however many changes it held,
+naming what changed, for the app to read again: `scriptWindowsChanged`, `windowTextChanged`,
 `windowCommandLineTextChanged`, `linksChanged`, `addonCommandsChanged`, `buttonsChanged` and
 `mapRepaintRequested`. The others carry the value as it is when they are sent, and only when it differs
 from the one last sent or the one read at `profileLoaded`: `consoleFontChanged`, `consoleWrapChanged`,
@@ -670,7 +863,8 @@ The order that holds between signals:
   `mappingScriptMissing` and a replay's: those still waiting, `replayStarted` among them, are sent from
   inside `shutdown()` ahead of its `replayFinished`. What was open (hidden input, logging, a download, a map
   operation, a replay) has its end from inside `shutdown()`. A session that is deleted instead sends none
-  of those ends.
+  of those ends. A `configSaved` still waiting, or due for what the shutdown wrote, comes once from
+  inside `shutdown()`, at its end, before it returns or `shutdownFinished` comes.
 
 ## Embedding it: drawing the main console as the GUI does
 

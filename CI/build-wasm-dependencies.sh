@@ -34,6 +34,17 @@ mkdir -p "$1/$STAMP_SUBDIR" "$1/include" "$1/lib"
 PREFIX="$(cd "$1" && pwd)"
 STAMPS="$PREFIX/$STAMP_SUBDIR"
 YAJL_PATCH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/yajl-cmake-fix.patch"
+
+sha256() {
+  if command -v sha256sum > /dev/null; then
+    sha256sum "$1"
+  else
+    shasum -a 256 "$1"
+  fi | cut -d' ' -f1
+}
+
+BUILD_ID="emcc-$(emcc -dumpversion) script-$(sha256 "${BASH_SOURCE[0]}") yajl-patch-$(sha256 "$YAJL_PATCH")"
+
 JOBS=4
 
 WORK="$(mktemp -d)"
@@ -67,16 +78,6 @@ needs_build() {
   exec > "$WORK/$1.log" 2>&1 || exit 1
   LIBRARY="$1"
 }
-
-sha256() {
-  if command -v sha256sum > /dev/null; then
-    sha256sum "$1"
-  else
-    shasum -a 256 "$1"
-  fi | cut -d' ' -f1
-}
-
-BUILD_ID="emcc-$(emcc -dumpversion) script-$(sha256 "${BASH_SOURCE[0]}") yajl-patch-$(sha256 "$YAJL_PATCH")"
 
 # fetch <url> <sha256>: downloads into $WORK, verifies it and unpacks it there
 fetch() {

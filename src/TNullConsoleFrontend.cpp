@@ -4764,8 +4764,9 @@ void TNullConsoleFrontend::alertNewData()
     emit mpHost->mainConsoleModel().mNotifier.newDataAlerted();
 }
 
-void TNullConsoleFrontend::finishIncomingText(bool)
+void TNullConsoleFrontend::finishIncomingText(bool carriesText)
 {
+    Q_UNUSED(carriesText)
     --mIncomingTexts;
     TConsoleModel& model = mpHost->mainConsoleModel();
     model.mIncomingTextSeconds = mIncomingTextTimer.elapsed() / 1000.0;
