@@ -8202,24 +8202,54 @@ void Host::setCaretEnabled(bool enabled)
     consoleFrontend()->setCaretMode(enabled);
 }
 
+#if defined(Q_OS_MACOS)
+// The Ctrl key arrives as Qt::MetaModifier on macOS, where Qt::ControlModifier is Command
+static constexpr Qt::KeyboardModifier caretControlKey = Qt::MetaModifier;
+#else
+static constexpr Qt::KeyboardModifier caretControlKey = Qt::ControlModifier;
+#endif
+
 // Whether this key press is the one selected in the accessibility preferences
 // to toggle caret mode - such a press must reach the caret-toggling key
 // handlers instead of being swallowed by an application-wide QShortcut,
 // which the user could have remapped onto any of these keys:
 bool Host::caretShortcutMatches(const QKeyEvent* ke) const
 {
+    return caretShortcutMatches(mCaretShortcut, ke->keyCombination());
+}
+
+bool Host::caretShortcutMatches(const CaretShortcut shortcut, const QKeyCombination combination)
+{
     constexpr Qt::KeyboardModifiers allModifiers = Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier | Qt::KeypadModifier | Qt::GroupSwitchModifier;
-    switch (mCaretShortcut) {
+    constexpr Qt::KeyboardModifier controlKey = caretControlKey;
+    const Qt::Key key = combination.key();
+    const Qt::KeyboardModifiers modifiers = combination.keyboardModifiers();
+    switch (shortcut) {
     case CaretShortcut::None:
         return false;
     case CaretShortcut::Tab:
-        return ke->key() == Qt::Key_Tab && !(ke->modifiers() & Qt::ControlModifier);
+        return key == Qt::Key_Tab && !(modifiers & controlKey);
     case CaretShortcut::CtrlTab:
-        return ke->key() == Qt::Key_Tab && (ke->modifiers() & Qt::ControlModifier);
+        return key == Qt::Key_Tab && (modifiers & controlKey);
     case CaretShortcut::F6:
-        return ke->key() == Qt::Key_F6 && (ke->modifiers() & allModifiers) == Qt::NoModifier;
+        return key == Qt::Key_F6 && (modifiers & allModifiers) == Qt::NoModifier;
     }
     return false;
+}
+
+QKeyCombination Host::caretShortcutCombination(const CaretShortcut shortcut)
+{
+    switch (shortcut) {
+    case CaretShortcut::None:
+        return QKeyCombination::fromCombined(0);
+    case CaretShortcut::Tab:
+        return QKeyCombination(Qt::Key_Tab);
+    case CaretShortcut::CtrlTab:
+        return QKeyCombination(caretControlKey, Qt::Key_Tab);
+    case CaretShortcut::F6:
+        return QKeyCombination(Qt::Key_F6);
+    }
+    return QKeyCombination::fromCombined(0);
 }
 
 void Host::setFocusOnHostActiveCommandLine()
