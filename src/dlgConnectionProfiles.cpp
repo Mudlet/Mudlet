@@ -2752,6 +2752,16 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
     Host* pHostBeforeLoad = HostManager::self()->getHost(profile_name);
     bool hostExistedBefore = (pHostBeforeLoad != nullptr);
 
+    if (pHostBeforeLoad) {
+        // An open profile read these as it loaded, and its automatic login takes them from it at each connection
+        pHostBeforeLoad->setLogin(login_entry->text().trimmed());
+        const QString password = character_password_entry->text().trimmed();
+        // Left empty by the dialog itself, the box may stand for a saved password that could not be read here
+        if (!password.isEmpty() || character_password_entry->isModified()) {
+            pHostBeforeLoad->setPass(password);
+        }
+    }
+
     Host* pHost = mudlet::self()->loadProfile(profile_name, alsoConnect, profile_history->currentData().toString());
 
     // overwrite the generic profile with user supplied name, url and login information
