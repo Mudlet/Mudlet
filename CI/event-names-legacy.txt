@@ -1,0 +1,67 @@
+# Event names Mudlet raises that came before the standard in docs/CONTRIBUTING.md ("Event names").
+# CI/check-event-names.lua lets these through, and fails a listed name that nothing raises any more
+# or that follows the standard. One name per line, sorted without regard to case.
+#
+# Released names stay raised for as long as scripts may rely on them, which may be for good. One that
+# gets a standard name raised beside it notes that name here.
+mapModeChangeEvent  # also raised as sysMapModeChanged
+mapOpenEvent  # also raised as sysMapWindowOpened
+sysApplicationFocusChangeEvent
+sysAppStyleSheetChange
+sysBufferShrinkEvent
+sysConnectionEvent
+sysCustomHttpError
+sysDataSendRequest
+sysDeleteHttpError
+sysDisconnectionEvent
+sysDownloadError
+sysDownloadFileProgress
+sysDropEvent
+sysDropUrlEvent
+sysExitEvent
+sysFontChangeEvent
+sysGetHttpError
+sysInstall
+sysInstallModule
+sysInstallPackage
+sysIrcMessage
+sysLoadEvent
+sysLuaInstallModule
+sysLuaUninstallModule
+sysManualLocationSetEvent  # also raised as sysMapLocationSet
+sysMapDownloadEvent  # also raised as sysMapDownloaded
+sysMapWindowMousePressEvent  # also raised as sysMapWindowMousePressed
+sysMMCPChatMessage
+sysMMCPIncomingSnoopMessage
+sysMMCPPeerUpdateEvent
+sysMMCPSideChannelMessage
+sysPostHttpError
+sysProfileFocusChangeEvent
+sysPutHttpError
+sysSTTError
+sysSTTHandover
+sysSTTPartialResult
+sysSTTResult
+sysSTTWords
+sysSyncInstallModule
+sysSyncUninstallModule
+sysTelnetEvent
+sysUninstall
+sysUninstallModule
+sysUninstallPackage
+sysUnzipError
+sysUserWindowResizeEvent
+sysWindowMousePressEvent
+sysWindowMouseReleaseEvent
+sysWindowOverflowEvent
+sysWindowResizeEvent
+ttsPitchChanged
+ttsRateChanged
+ttsSpeechError
+ttsSpeechPaused
+ttsSpeechQueued
+ttsSpeechReady
+ttsSpeechStarted
+ttsSpeechSynthesizing
+ttsVoiceChanged
+ttsVolumeChanged

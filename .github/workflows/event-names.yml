@@ -1,0 +1,41 @@
+# Scripts depend on an event's name as soon as it ships, so a name that breaks the
+# standard in docs/CONTRIBUTING.md ("Event names") has to be caught before it lands.
+# See CI/check-event-names.lua.
+name: Check event names
+
+on:
+  push:
+    branches: [master, development, release-*]
+    tags: [Mudlet-*]
+  pull_request:
+    paths:
+      - 'src/**.cpp'
+      - 'src/**.h'
+      - 'src/mudlet-lua/lua/**'
+      - 'src/packages/**'
+      - 'CI/check-event-names.lua'
+      - 'CI/test-check-event-names.lua'
+      - 'CI/event-names-fixtures/**'
+      - 'CI/event-names-legacy.txt'
+      - '.github/workflows/event-names.yml'
+  workflow_dispatch:
+
+jobs:
+  event-names:
+    name: Check the names of the events Mudlet raises
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Lua 5.1.5
+        uses: leafo/gh-actions-lua@v13
+        with:
+          luaVersion: "5.1.5"
+
+      - name: Self-test the checker
+        # A checker that has quietly stopped reading names passes every tree, so
+        # prove it still fails on the bad fixtures before trusting the check below.
+        run: lua CI/test-check-event-names.lua
+
+      - name: Check event names
+        run: lua CI/check-event-names.lua
