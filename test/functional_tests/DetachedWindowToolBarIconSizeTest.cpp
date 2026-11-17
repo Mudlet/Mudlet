@@ -154,6 +154,32 @@ private slots:
         QCOMPARE(pDetachedToolBar->iconSize(), mudlet::self()->mpMainToolBar->iconSize());
     }
 
+    // Settings > Advanced > Experiments > Colored icons reaches every bar, not only the main window's
+    void test_colouredIconsReachAnOpenDetachedWindow()
+    {
+        TDetachedWindow* pDetachedWindow = detachSecondProfile();
+        QVERIFY(pDetachedWindow);
+        const auto restore = qScopeGuard([]() {
+            mudlet::self()->setColouredIcons(false);
+        });
+        const auto mostSaturated = [pDetachedWindow]() {
+            const QAction* pMap = pDetachedWindow->findChild<QAction*>(qsl("map_action"));
+            const QImage image = pMap ? pMap->icon().pixmap(QSize(64, 64)).toImage().convertToFormat(QImage::Format_ARGB32) : QImage();
+            qreal most = 0.0;
+            for (int y = 0; y < image.height(); ++y) {
+                for (int x = 0; x < image.width(); ++x) {
+                    const QColor pixel = image.pixelColor(x, y);
+                    most = pixel.alphaF() > 0.95 ? std::max(most, static_cast<qreal>(pixel.hslSaturationF())) : most;
+                }
+            }
+            return most;
+        };
+        QVERIFY2(mostSaturated() < 0.1, "the detached window's Map is in color with the switch off");
+
+        mudlet::self()->setColouredIcons(true);
+        QVERIFY2(mostSaturated() > 0.3, qPrintable(qsl("the detached window's Map stays grey with Colored icons on (saturation %1)").arg(QString::number(mostSaturated()))));
+    }
+
     // A window detached after the setting changed is a separate failure from a
     // missed live update: its toolbar is built from scratch at that point
     void test_aFreshlyDetachedWindowStartsAtTheCurrentIconSize()

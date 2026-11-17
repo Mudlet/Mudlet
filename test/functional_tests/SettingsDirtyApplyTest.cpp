@@ -419,6 +419,30 @@ private slots:
         QCOMPARE(dark ? mpHost->mEditorThemeDark : mpHost->mEditorTheme, qsl("PhaseDProbe"));
     }
 
+    // Every instant apply reads the settings back into the dialog, the Editor page included. Refilling an unchanged
+    // theme list there threw a list the user had open back to wherever the chosen theme then landed.
+    void test_anApplyLeavesAnUnchangedThemeListAlone()
+    {
+        writeEditorThemesFile(R"([{"Title": "Alpha", "FileName": "Alpha.tmTheme"}, {"Title": "Beta", "FileName": "Beta.tmTheme"}])");
+        openPreferences();
+        selectCategory(qsl("editor"));
+        QComboBox* pThemes = mpPreferences->code_editor_theme_selection_combobox;
+        QVERIFY2(pThemes->findText(qsl("Beta")) >= 0, "SETUP: the theme list does not offer the themes file's themes");
+
+        QSignalSpy removed(pThemes->model(), &QAbstractItemModel::rowsRemoved);
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        mpPreferences->checkBox_announceIncomingText->click();
+        QVERIFY2(TestSettings::waitForApply(applySpy), "the debounce never wrote the settings back");
+        QVERIFY2(removed.isEmpty(), "an apply emptied and refilled a theme list whose themes had not changed");
+
+        // ...while a list whose themes did change is still refilled
+        writeEditorThemesFile(R"([{"Title": "Alpha", "FileName": "Alpha.tmTheme"}, {"Title": "Beta", "FileName": "Beta.tmTheme"}, {"Title": "Gamma", "FileName": "Gamma.tmTheme"}])");
+        applySpy.clear();
+        mpPreferences->checkBox_announceIncomingText->click();
+        QVERIFY2(TestSettings::waitForApply(applySpy), "the second debounce never wrote the settings back");
+        QVERIFY2(pThemes->findText(qsl("Gamma")) >= 0, "an apply after the themes file gained a theme did not offer it");
+    }
+
     // The protocol checkboxes are snapshotted like any control, so a protocol a
     // script turned on is not written back over by the next edit somewhere else
     // in the dialog - even though they sit on a subpage rather than on the

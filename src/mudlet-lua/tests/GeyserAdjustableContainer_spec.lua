@@ -128,6 +128,8 @@ describe("Tests functionality of Adjustable.Container", function()
       assert.equals(false, ac.locked)
       assert.equals(10, ac.padding)
       assert.equals("standard", ac.lockStyle)
+      local lockText = loadTranslations("AdjustableContainer").lock.message
+      assert.equals(lockText, ac.lockLabel.txt:sub(-#lockText), "the menu texts are not the translated ones")
       -- the title bar is a drag handle, the close button is a button
       assert.equals("text", getLabelAccessibleRole(ac.adjLabel.name))
       assert.equals("button", getLabelAccessibleRole(ac.exitLabel.name))
@@ -180,6 +182,44 @@ describe("Tests functionality of Adjustable.Container", function()
       ac:restore()
       assert.equals(200, ac:get_height())
       assert.is_false(windowVisible(ac.exitLabel.name))
+    end)
+
+    it("is created with its untranslated menu texts when the translations cannot be found, looking only once", function()
+      local realLocale, realLoadTranslations = Adjustable.Container.Locale, _G.loadTranslations
+      local names = {"testUntranslatedContainer", "testUntranslatedContainer2"}
+      finally(function()
+        Adjustable.Container.Locale, _G.loadTranslations = realLocale, realLoadTranslations
+        if Geyser.Label.closeAllTimer then
+          killTimer(Geyser.Label.closeAllTimer)
+          Geyser.Label.closeAllTimer = nil
+        end
+        for _, name in ipairs(names) do
+          if Geyser.windowList[name] then
+            Geyser.windowList[name]:delete()
+          end
+        end
+      end)
+      local loads = 0
+      Adjustable.Container.Locale = nil
+      _G.loadTranslations = function()
+        loads = loads + 1
+        return nil, "unable to find 'mudlet-lua.json'"
+      end
+
+      local created = {}
+      for _, name in ipairs(names) do
+        created[#created + 1] = Adjustable.Container:new({name = name, x = 0, y = 0, width = 200, height = 200, autoLoad = false, autoSave = false})
+      end
+
+      assert.equals(1, loads)
+      for _, container in ipairs(created) do
+        assert.equals("lock", container.lockLabel.txt:match("</font>(.*)$"))
+        assert.equals("custom", container.customItemsLabel.txt:match("</font>(.*)$"))
+        container:addConnectMenu()
+        assert.is_not_nil(container.adjLabel:findMenuElement("Connect To: "))
+        container:onEnterAtt()
+        assert.equals("<center>" .. container:validAttachPositions()[1], container.att[1].message)
+      end
     end)
   end)
 
@@ -1197,6 +1237,173 @@ describe("Tests the Adjustable.Container mouse handlers", function()
       assert.is_true(math.abs(container:get_width() - 200) <= 1)
     end)
 
+    describe("on a container that is not resizable", function()
+      local realMousePosition
+      before_each(function()
+        realMousePosition = getMousePosition
+      end)
+      after_each(function()
+        _G.getMousePosition = realMousePosition
+      end)
+
+      it("moves it rather than resizing it when the drag started on an edge", function()
+        assert.is_true(container:setResizable(false))
+        local originalX = container:get_x()
+        local pointerX = 300
+        _G.getMousePosition = function() return pointerX, 100 end
+
+        container:onMove(container.adjLabel, mouseEvent("NoButton", 5, 50))
+        container:onClick(container.adjLabel, mouseEvent("LeftButton", 5, 50))
+        pointerX = pointerX + 30
+        container:onMove(container.adjLabel, mouseEvent("LeftButton", 5, 50))
+
+        assert.are.equal("200px", container.width)
+        assert.are.equal("200px", container.height)
+        assert.is_true(math.abs(container:get_x() - (originalX + 30)) <= 1)
+      end)
+
+      it("moves it when made not resizable while the pointer rested on an edge", function()
+        local originalX = container:get_x()
+        local pointerX = 300
+        _G.getMousePosition = function() return pointerX, 100 end
+
+        container:onMove(container.adjLabel, mouseEvent("NoButton", 5, 50))
+        container:setResizable(false)
+        container:onClick(container.adjLabel, mouseEvent("LeftButton", 5, 50))
+        pointerX = pointerX + 30
+        container:onMove(container.adjLabel, mouseEvent("LeftButton", 5, 50))
+
+        assert.are.equal("200px", container.width)
+        assert.is_true(math.abs(container:get_x() - (originalX + 30)) <= 1)
+      end)
+
+      it("resizes it when made resizable again while the pointer rested on an edge", function()
+        container:setResizable(false)
+        local originalX = container:get_x()
+        local pointerX = 300
+        _G.getMousePosition = function() return pointerX, 100 end
+
+        container:onMove(container.adjLabel, mouseEvent("NoButton", 5, 50))
+        container:setResizable(true)
+        container:onClick(container.adjLabel, mouseEvent("LeftButton", 5, 50))
+        pointerX = pointerX + 30
+        container:onMove(container.adjLabel, mouseEvent("LeftButton", 5, 50))
+        container:onRelease(container.adjLabel, mouseEvent("LeftButton", 5, 50))
+
+        assert.is_true(math.abs(container:get_width() - 170) <= 1)
+        assert.is_true(math.abs(container:get_x() - (originalX + 30)) <= 1)
+      end)
+
+      it("stops a resize already under way when made not resizable", function()
+        local pointerX = 300
+        _G.getMousePosition = function() return pointerX, 100 end
+
+        container:onMove(container.adjLabel, mouseEvent("NoButton", 5, 50))
+        container:onClick(container.adjLabel, mouseEvent("LeftButton", 5, 50))
+        pointerX = pointerX + 10
+        container:onMove(container.adjLabel, mouseEvent("LeftButton", 5, 50))
+        local widthMidDrag, xMidDrag = container:get_width(), container:get_x()
+        assert.is_true(math.abs(widthMidDrag - 190) <= 1)
+
+        container:setResizable(false)
+        pointerX = pointerX + 20
+        container:onMove(container.adjLabel, mouseEvent("LeftButton", 5, 50))
+        container:onRelease(container.adjLabel, mouseEvent("LeftButton", 5, 50))
+
+        assert.is_true(math.abs(container:get_width() - widthMidDrag) <= 1)
+        assert.is_true(math.abs(container:get_x() - xMidDrag) <= 1)
+      end)
+
+      -- a connected container is never moved by a drag, so there is nothing left for one to do
+      it("leaves one connected to other containers alone", function()
+        local follower
+        local raised = false
+        local handler = registerAnonymousEventHandler("AdjustableContainerRepositionFinish", function() raised = true end)
+        local realTempTimer = tempTimer
+        finally(function()
+          killAnonymousEventHandler(handler)
+          _G.tempTimer = realTempTimer
+          container:setResizable(true)
+          if follower then
+            follower:delete()
+          end
+        end)
+        -- resizeBorder arms a timer that nothing keeps the id of
+        _G.tempTimer = function() return -1 end
+
+        container:move(0, 0)
+        container:attachToBorder("left")
+        follower = Adjustable.Container:new({
+          name = "gahNoResizeFollower",
+          x = 0, y = 200, width = 60, height = 50,
+          autoLoad = false, autoSave = false,
+        })
+        follower:attachToBorder("left")
+        follower:connectToBorder("left")
+        container:setResizable(false)
+
+        local grabX = container.adjLabel:get_width() - 2
+        local pointerX = 300
+        _G.getMousePosition = function() return pointerX, 100 end
+        container:onMove(container.adjLabel, mouseEvent("NoButton", grabX, 100))
+        assert.are.equal(0, container.adjLabel.cursorShape)
+
+        container:onClick(container.adjLabel, mouseEvent("LeftButton", grabX, 100))
+        pointerX = pointerX + 30
+        container:onMove(container.adjLabel, mouseEvent("LeftButton", grabX, 100))
+        container:onRelease(container.adjLabel, mouseEvent("LeftButton", grabX, 100))
+
+        assert.are.equal(0, container:get_x())
+        assert.is_true(math.abs(container:get_width() - 200) <= 1)
+        assert.is_false(raised)
+      end)
+
+      it("shows the open hand rather than a resize cursor over an edge", function()
+        container:onMove(container.adjLabel, mouseEvent("NoButton", 5, 50))
+        assert.are.equal("ResizeHorizontal", container.adjLabel.cursorShape)
+
+        container:setResizable(false)
+        container:onMove(container.adjLabel, mouseEvent("NoButton", 5, 50))
+        assert.are.equal("OpenHand", container.adjLabel.cursorShape)
+      end)
+
+      it("can be made resizable again", function()
+        container:setResizable(false)
+        assert.is_true(container:setResizable(true))
+
+        container:onClick(container.adjLabel, mouseEvent("LeftButton", 5, 5))
+        container:onClick(container.adjLabel, mouseEvent("LeftButton", 5, 5))
+        container:onMove(container.adjLabel, mouseEvent("LeftButton", 5, 5))
+
+        assert.is_truthy(tostring(container.width):find("%%$"))
+      end)
+
+      it("is what the noResize constructor option asks for", function()
+        local other = Adjustable.Container:new({name = "gahNoResize", x = 20, y = 30, width = 200, height = 200,
+                                                noResize = true, autoLoad = false, autoSave = false})
+        finally(function()
+          other:onClick(other.adjLabel, mouseEvent("LeftButton", 100, 100))
+          other:onRelease(other.adjLabel, mouseEvent("LeftButton", 100, 100))
+          other:delete()
+        end)
+
+        other:onClick(other.adjLabel, mouseEvent("LeftButton", 5, 5))
+        other:onClick(other.adjLabel, mouseEvent("LeftButton", 5, 5))
+        other:onMove(other.adjLabel, mouseEvent("LeftButton", 5, 5))
+
+        assert.are.equal("200px", other.width)
+        assert.are.equal("200px", other.height)
+      end)
+
+      it("refuses anything but a boolean", function()
+        container:setResizable(false)
+        local ok, message = container:setResizable("no")
+        assert.is_nil(ok)
+        assert.is_truthy(message:find("boolean expected", 1, true))
+        assert.is_true(container.noResize)
+      end)
+    end)
+
     -- the border an attached container reserves is the container's own size, so
     -- it has to be measured from the geometry the drag applied and not from the
     -- geometry that drag replaced
@@ -1502,10 +1709,39 @@ describe("Tests the Adjustable.Container mouse handlers", function()
       assert.is_true(container.locked)
     end)
 
+    -- the script decides it, so a layout autoSave wrote either way does not overrule the script
+    it("leaves whether the container is resizable as the script set it", function()
+      container:setResizable(false)
+      container:onClickSave()
+      container:onClickLoad()
+      assert.is_true(container.noResize)
+
+      container:setResizable(true)
+      container:onClickLoad()
+      assert.is_false(container.noResize)
+
+      container:onClickSave()
+      container:setResizable(false)
+      container:onClickLoad()
+      assert.is_true(container.noResize)
+    end)
+
     it("does nothing to a container that has never been saved", function()
       container:move(300, 400)
       container:onClickLoad()
       assert.are.equal(300, container:get_x())
+    end)
+  end)
+
+  describe("the right click menu after the container was hidden and shown", function()
+    it("opens the lock style menu", function()
+      container:hide()
+      container:show()
+      container.adjLabel:onRightClick(mouseEvent("RightButton"))
+      doNestEnter(container.lockStylesLabel)
+      for _, style in ipairs(container.lockStylesLabel.nestedLabels) do
+        assert.is_true(windowVisible(style.name), style.name .. " should show")
+      end
     end)
   end)
 
@@ -1524,6 +1760,13 @@ describe("Tests the Adjustable.Container mouse handlers", function()
     end)
 
     it("opens the menu it just built", function()
+      container:onEnterAtt()
+      assert.is_true(windowVisible(container.att[1].name))
+    end)
+
+    it("opens the menu it just built after the container was hidden and shown", function()
+      container:hide()
+      container:show()
       container:onEnterAtt()
       assert.is_true(windowVisible(container.att[1].name))
     end)
@@ -3064,6 +3307,19 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       local message = container:deleteSaveFile(scratchDir)
       assert.is_string(message)
       assert.is_truthy(message:find("Couldn't find file to delete", 1, true))
+    end)
+
+    it("load deletes the corrupt file it read, not the one in the default directory", function()
+      local container = make("gapCorruptLoad")
+      container:save()
+      container:save(nil, scratchDir)
+      local corrupt = io.open(scratchDir .. "gapCorruptLoad.lua", "w")
+      corrupt:write("this is not a saved layout {")
+      corrupt:close()
+
+      assert.is_false(container:load(nil, scratchDir))
+      assert.is_false(io.exists(scratchDir .. "gapCorruptLoad.lua"))
+      assert.is_true(io.exists(container.defaultDir .. "gapCorruptLoad.lua"))
     end)
   end)
 

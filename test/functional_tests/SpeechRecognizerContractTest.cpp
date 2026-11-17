@@ -440,6 +440,61 @@ private slots:
         QCOMPARE(recognizer.endpointerMode(), VoskRecognizer::EndpointerMode::Default);
     }
 
+    // Passed through in EndpointerMode's numbering, stt.setSensitivity("short")
+    // would ask libvosk for a longer pause
+    void sensitivityReachesVoskInItsOwnNumbering()
+    {
+#if !defined(INCLUDE_SPEECH_ENGINES)
+        QSKIP("this build of Mudlet cannot load a speech engine library");
+#endif
+        if (mSystemEngineWins) {
+            QSKIP("libvosk answers the bare name here, so the loader would reach it before the stand-in this case installs");
+        }
+        QVERIFY2(VoskStub::install(), "the stand-in engine could not be installed, so nothing below the library guard is reachable");
+        QVERIFY(VoskRecognizer::libraryAvailable());
+
+        VoskRecognizer recognizer;
+        // Kept for the model load, which is where it reaches the library
+        QVERIFY(recognizer.setSensitivity(SpeechRecognizer::Sensitivity::Long));
+        QCOMPARE(VoskStub::lastEndpointerMode(), -1);
+        QVERIFY(recognizer.initialize(stubModelDirectory()));
+        QCOMPARE(VoskStub::lastEndpointerMode(), 2);
+
+        // Each step changes the value libvosk sees, so none can pass on the one before it
+        QVERIFY(recognizer.setSensitivity(SpeechRecognizer::Sensitivity::Short));
+        QCOMPARE(VoskStub::lastEndpointerMode(), 1);
+        QVERIFY(recognizer.setEndpointerMode(VoskRecognizer::EndpointerMode::VeryLong));
+        QCOMPARE(VoskStub::lastEndpointerMode(), 3);
+        QVERIFY(recognizer.setEndpointerMode(VoskRecognizer::EndpointerMode::VeryShort));
+        QCOMPARE(VoskStub::lastEndpointerMode(), 1);
+        QVERIFY(recognizer.setSensitivity(SpeechRecognizer::Sensitivity::Default));
+        QCOMPARE(VoskStub::lastEndpointerMode(), 0);
+
+        // Each session starts on a recognizer built afresh, which has to be told again
+        QVERIFY(recognizer.setSensitivity(SpeechRecognizer::Sensitivity::Long));
+        const int recognizersBeforeStart = VoskStub::recognizersCreated();
+        recognizer.startListening();
+        const auto stateAfterStart = recognizer.state();
+        if (stateAfterStart == SpeechRecognizer::State::Listening) {
+            recognizer.stopListening();
+        }
+        if (stateAfterStart == SpeechRecognizer::State::Starting) {
+            recognizer.releaseResources();
+            QSKIP("the start is waiting on a microphone permission prompt, so no session recognizer was built");
+        }
+#if defined(Q_OS_MACOS)
+        // A refusal recorded earlier stops the start before the recognizer is rebuilt
+        if (stateAfterStart == SpeechRecognizer::State::Error && VoskStub::recognizersCreated() == recognizersBeforeStart) {
+            recognizer.releaseResources();
+            QSKIP("microphone access is denied here, so the start stopped before building a session recognizer");
+        }
+#endif
+        QVERIFY2(VoskStub::recognizersCreated() > recognizersBeforeStart, "the start built no recognizer, so the mode below is the one set before it");
+        QCOMPARE(VoskStub::lastEndpointerMode(), 2);
+
+        recognizer.releaseResources();
+    }
+
     // getInfo().modelPath is documented as "the model actually loaded (empty
     // when none)", and a package reads it to decide whether setup has already
     // happened. Naming a model that failed to load, or one that has just been

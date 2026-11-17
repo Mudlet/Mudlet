@@ -25,6 +25,7 @@
 
 #include <QMap>
 #include <QPointer>
+#include <QStyleOptionViewItem>
 #include <QTreeWidget>
 
 #include <map>
@@ -62,13 +63,15 @@ public:
     bool dropMimeData(QTreeWidgetItem* parent, int index, const QMimeData* data, Qt::DropAction action) override;
     void rowsAboutToBeRemoved(const QModelIndex& parent, int start, int end) override;
     void rowsInserted(const QModelIndex& parent, int start, int end) override;
-    void mousePressEvent(QMouseEvent* event) override;
-    void mouseReleaseEvent(QMouseEvent* event) override;
-    void mouseMoveEvent(QMouseEvent* event) override;
+    // QAbstractItemView::initViewItemOption() is protected, and the delegates measure rows from outside the view
+    [[nodiscard]] QStyleOptionViewItem viewItemOption() const;
     void setHost(Host* pH);
     void setTreeType(TreeType type);
     void beginInsertRows(const QModelIndex& parent, int first, int last);
     void getAllChildren(QTreeWidgetItem*, QList<QTreeWidgetItem*>&);
+    // For a caller that made a row current with the selection model's signals blocked, which keeps the
+    // view from telling a screen reader where its focus went
+    void reportCurrentRow();
 
     // Variables view rows. They are this widget's children, so the bookkeeping dies with them.
     void buildVariableRows(VarUnit* pVarUnit, QTreeWidgetItem* pParent, TVar* pVariable, bool showHidden);
@@ -81,10 +84,6 @@ public:
     // Gives up the row's unsaved variable without deleting it, for when the variable tree adopts it
     void forgetNewVariableForRow(QTreeWidgetItem* pItem);
     bool rowCanBeSaved(VarUnit* pVarUnit, QTreeWidgetItem* pItem) const;
-
-    void updateTriggerIcon(QTreeWidgetItem* pItem, int triggerID);
-    void updateTriggerIconsRecursively(QTreeWidgetItem* pItem);
-    QTreeWidgetItem* findItemByTriggerID(QTreeWidgetItem* pParent, int triggerID);
 
 signals:
     void itemMoved(int itemID, int oldParentID, int newParentID, int oldPosition, int newPosition);
@@ -115,9 +114,6 @@ private:
     // An unsaved new variable is in no table yet, so its row's entry is the only owner it has
     std::map<QTreeWidgetItem*, std::unique_ptr<TVar>> mNewVariableForRow;
     quint64 mVariablesGeneration = 0;
-    // CHECK: Should this actually be a: QPersistentModelIndex ?
-    QModelIndex mClickedItem;
-    bool mTickPressHeldFromView = false;
 };
 
 #endif // MUDLET_TTREEWIDGET_H

@@ -80,8 +80,8 @@ class TMap : public QObject
     friend class FrontendRoutingContractTest;
 
 public:
-    // Host settings the 2D map keeps a copy of to draw with, and the 3D view's style
-    enum class MapperSetting { RoomSize, ExitSize, RoundRooms, ShowRoomIds, ShowGrid, Style };
+    // Host settings the 2D map keeps a copy of to draw with, and those a 3D view sets itself up from
+    enum class MapperSetting { RoomSize, ExitSize, RoundRooms, ShowRoomIds, ShowGrid, Style, BackgroundColor };
 
 signals:
     void signal_saveErrorChanged(bool hasError);
@@ -121,6 +121,9 @@ signals:
     void signal_mapProgressSetValue(int value);
     void signal_mapProgressDisableCancel();
     void signal_mapProgressClose();
+    // A long operation has a moment for a window showing its progress to repaint, and to take an Abort. Only a view
+    // that has one connects it; nothing else should run the event loop here, as the operation is still on the stack.
+    void signal_mapProgressRepaintWanted();
 
 private:
     QString mDefaultAreaName;
@@ -242,8 +245,8 @@ public:
     void disableTransferProgressCancel();
     void clearTransferProgress();
 
-    // True while a map import, export or download is on the stack. Those pump
-    // QCoreApplication::processEvents() to keep their progress display alive, so anything
+    // True while a map import, export or download is on the stack. The desktop GUI pumps
+    // the event loop from signal_mapProgressRepaintWanted() to keep its progress dialog alive, so anything
     // delivered from an event loop can find itself running nested inside one -
     // and destroying this map's Host from there would free the operation's own
     // "this" (#9520). Whoever would do that has to wait for this to go false.
@@ -562,10 +565,10 @@ private:
     std::vector<quint8> mSearchState;
     std::vector<vertex> mSearchTouched;
 
-    // Held for the whole of a map operation that pumps the event loop, so that
-    // mapOperationInProgress() can tell anything re-entered from that pump that
-    // this map is on the stack. Nested operations are counted, not flagged: an
-    // XML import can start from inside a download's pump.
+    // Held for the whole of a map operation, under which the GUI pumps the event
+    // loop, so that mapOperationInProgress() can tell anything re-entered from
+    // that pump that this map is on the stack. Nested operations are counted, not
+    // flagged: restore() reads a JSON map from within its own operation.
     class MapOperationScope
     {
     public:
@@ -603,14 +606,14 @@ private:
     std::optional<int> mPendingAreaId;
     std::unique_ptr<TAreaGraph> mpAreaGraph;
 
-    void addDirectionalRoute(std::vector<std::pair<unsigned int, route>>& bestRoutes,
+    void addDirectionalRoute(std::vector<std::pair<int, route>>& bestRoutes,
                              const QMap<QString, int>& exitWeights,
+                             bool recheckTargetLocks,
                              unsigned int source,
                              TRoom* pSourceR,
                              int target,
                              quint8 direction,
-                             const QString& exitKey,
-                             const QSet<unsigned int>& unUsableRoomSet);
+                             const QString& exitKey);
     const QString createFileHeaderLine(QString, QChar);
     void warnIfMapProgressUnwired(const char* context, bool transferPath);
     void writeJsonUserData(QJsonObject&) const;

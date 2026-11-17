@@ -84,6 +84,26 @@ describe("Tests echo() to the main console", function()
     assert.is_false(isPrompt(), "the echoed line took the prompt mark")
   end)
 
+  it("ends a prompt once when a trigger on it feeds text between its IAC EOR and IAC GA", function()
+    local fed = false
+    local triggerId = tempTrigger("SpecNestedEorGa> ", function()
+      if not fed then
+        fed = true
+        feedTelnet("SpecNestedEorGaNote\n")
+      end
+    end)
+    finally(function()
+      killTrigger(triggerId)
+      feedTelnet("\r\n")
+    end)
+    local ok, msg = feedTelnet("SpecNestedEorGa> <T_IAC><T_EOR><T_IAC><T_GA>SpecNestedEorGaAfter\n")
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+    assert.is_true(fed, "the trigger on the prompt did not run")
+    local at = findRecentLine("SpecNestedEorGa> ")
+    assert.is_not_nil(at)
+    assert.are.same({"SpecNestedEorGa> ", "SpecNestedEorGaNote", "SpecNestedEorGaAfter", ""}, getLines("main", at, getLastLineNumber("main") + 1))
+  end)
+
   describe("from inside a trigger", function()
     local triggerId
 

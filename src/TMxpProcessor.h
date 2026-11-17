@@ -30,6 +30,8 @@
 
 #include <QSet>
 
+#include <utility>
+
 class Host;
 
 enum TMXPMode { MXP_MODE_OPEN, MXP_MODE_SECURE, MXP_MODE_LOCKED, MXP_MODE_TEMP_SECURE };
@@ -74,7 +76,12 @@ public:
     void enable();
     void disable();
     bool isEnabled() const;
-    void resetToDefaultMode();
+    // An ignored newline still ends the line's mode, but leaves the open tags open
+    void resetToDefaultMode(bool closeOpenTags = true);
+    // Whether a <NOBR> asked for the next newline from the game to be ignored; taking it clears it
+    bool takeIgnoredNewline();
+    // Locally fed text may not join a line of its own onto the game's with a <NOBR>
+    bool setReadingLocalText(bool local) { return std::exchange(mReadingLocalText, local); }
 
     TMxpProcessingResult processMxpInput(char& ch, bool resolveCustomEntities);
     void processRawInput(char ch);
@@ -107,6 +114,7 @@ public:
 
 private:
     TMxpProcessingResult rejectCurrentTag();
+    bool newlineIgnored(char ch) const;
     QString decodeRawBytes(const std::string& raw, const QByteArray& encoding) const;
     bool isValidTagName(const std::string& tagName) const;
 
@@ -115,6 +123,8 @@ private:
     TMXPMode mMXP_MODE = MXP_MODE_OPEN;
     TMXPMode mMXP_DEFAULT = MXP_MODE_OPEN;
     TMXPMode mModeBeforeTempSecure = MXP_MODE_OPEN;
+    bool mIgnoreNextNewline = false;
+    bool mReadingLocalText = false;
 
     // MXP delegated handlers
     TMxpNodeBuilder mMxpTagBuilder;

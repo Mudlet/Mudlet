@@ -15,6 +15,7 @@ on:
       - 'cmake/**'
       - 'CMakeLists.txt'
       - 'CMakePresets.json'
+      - 'CI/core-mobile-smoke.lua'
       - '.github/workflows/core-mobile-build.yml'
   workflow_dispatch:
 
@@ -26,8 +27,9 @@ jobs:
     name: Build mudlet-headless with the mobile options off
     runs-on: ubuntu-22.04
     if: ${{ github.repository_owner == 'Mudlet' }}
+    # Per run outside pull requests: a group shared by every push cancels each queued push's job
     concurrency:
-      group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+      group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
       cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     steps:
       - uses: actions/checkout@v7
@@ -54,6 +56,8 @@ jobs:
             libpcre2-dev \
             libpugixml-dev \
             libpulse-dev \
+            libsqlite3-dev \
+            libyajl-dev \
             libzip-dev \
             lua5.1 \
             ninja-build \
@@ -90,6 +94,23 @@ jobs:
       - name: Configure
         run: cmake --preset linux-core-minimal
 
+      - name: Check neither mudlet_core nor mudlet-headless carries the build-type splash images
+        # build.ninja names the images of every qrc CMake reads at configure time, so this finds them moved into
+        # another qrc; a GENERATED qrc's are not named, hence the qrc-name match and the check on mudlet.qrc's
+        run: |
+          if ! grep -qx 'USE_VARIABLE_SPLASH_SCREEN:BOOL=ON' build-linux-core-minimal/CMakeCache.txt; then
+            echo "::error::USE_VARIABLE_SPLASH_SCREEN is off in this configure, so this step would check nothing"
+            exit 1
+          fi
+          if ! grep -q 'splash/Mudlet_splashscreen_main.png' build-linux-core-minimal/build.ninja; then
+            echo "::error::build.ninja does not list mudlet.qrc's images, so this step cannot see the splash images"
+            exit 1
+          fi
+          if grep -Eq 'additional_splash_screens|Mudlet_splashscreen_(development|ptb|other_)' build-linux-core-minimal/build.ninja; then
+            echo "::error::A target without the desktop GUI builds the splash images, which only the GUI shows"
+            exit 1
+          fi
+
       - name: Build
         run: cmake --build --preset linux-core-minimal
 
@@ -111,3 +132,24 @@ jobs:
 
       - name: Run mudlet-headless
         run: build-linux-core-minimal/src/mudlet-headless --version
+
+      - name: Open a profile with nothing of Mudlet's on disk
+        # As an app that embeds mudlet_core runs: the checkout's Lua files are moved away and Lua is given
+        # nowhere to find a C module, so a profile's Lua can only come from the library. The checks are one
+        # piece of Lua and the close another, as a piece that fails makes the exit status 1.
+        timeout-minutes: 5
+        run: |
+          mv src/mudlet-lua/lua "$RUNNER_TEMP/mudlet-lua"
+          status=0
+          LUA_CPATH='/nonexistent/?.so' timeout -k 10 120 build-linux-core-minimal/src/mudlet-headless \
+            -p Embedded --host example.org --port 23 --offline --no-stdin --config-dir "$RUNNER_TEMP/embedded" \
+            -e 'dofile("CI/core-mobile-smoke.lua")' -e 'closeMudlet()' > "$RUNNER_TEMP/embedded.log" 2>&1 || status=$?
+          cat "$RUNNER_TEMP/embedded.log"
+          if [ "$status" -ne 0 ]; then
+            echo "::error::mudlet-headless exited with status $status"
+            exit 1
+          fi
+          if grep -q 'Cannot find Lua module' "$RUNNER_TEMP/embedded.log"; then
+            echo "::error::a Lua C module was not found in mudlet_core"
+            exit 1
+          fi

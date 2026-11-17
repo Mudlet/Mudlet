@@ -36,8 +36,10 @@
 #include <QCoreApplication>
 #include <QDataStream>
 #include <QDebug>
+#include <QClipboard>
 #include <QDesktopServices>
 #include <QFile>
+#include <QGuiApplication>
 #include <QKeySequence>
 #include <QList>
 #include <QMap>
@@ -176,6 +178,36 @@ QPointer<const QObject> windowIdentity(const Host* pHost, const QString& name)
     return pModel ? &pModel->mNotifier : nullptr;
 }
 } // namespace
+
+void TNullAppFrontend::getOpenFileNameAsync(const QString&, const QString&, QObject* context, std::function<void(const std::optional<QString>&)> done)
+{
+    QTimer::singleShot(0ms, context, [done = std::move(done)]() {
+        done(std::nullopt);
+    });
+}
+
+void TNullAppFrontend::getExistingDirectoryAsync(const QString&, const QString&, QObject* context, std::function<void(const std::optional<QString>&)> done)
+{
+    QTimer::singleShot(0ms, context, [done = std::move(done)]() {
+        done(std::nullopt);
+    });
+}
+
+void TNullAppFrontend::clipboardTextAsync(QObject* context, std::function<void(const std::optional<QString>&)> done)
+{
+    QTimer::singleShot(0ms, context, [this, done = std::move(done)]() {
+        done(qobject_cast<QGuiApplication*>(QCoreApplication::instance()) ? QGuiApplication::clipboard()->text() : mClipboardText);
+    });
+}
+
+void TNullAppFrontend::setClipboardText(const QString& text)
+{
+    if (qobject_cast<QGuiApplication*>(QCoreApplication::instance())) {
+        QGuiApplication::clipboard()->setText(text);
+        return;
+    }
+    mClipboardText = text;
+}
 
 TAppFrontend* TAppFrontend::nullView()
 {
@@ -358,6 +390,12 @@ QString TNullAppFrontend::addonPlacementRefusal(const CommandRequest& request, c
 {
     if (!request.shortcut.isEmpty()) {
         const QKeySequence sequence(request.shortcut);
+        // Ahead of the commands' own, in the order of mudlet::addonShortcutUsable()
+        for (const ReservedShortcut& reserved : mReservedShortcuts) {
+            if (reserved.sequence == sequence) {
+                return addonShortcutTakenRefusal(sequence, reserved.holder);
+            }
+        }
         for (const AddonCommand& command : mAddonCommands) {
             if (command.request.surfaces == CommandSurface::Toolbar || command.request.shortcut.isEmpty() || QKeySequence(command.request.shortcut) != sequence) {
                 continue;
@@ -416,6 +454,7 @@ int TNullAppFrontend::addAddonCommand(const CommandRequest& request, Host* pHost
     command.icon = request.icon;
     command.tooltip = request.tooltip;
     mAddonCommands.insert(commandId, command);
+    emit mNotifier.addonCommandsChanged(pHost);
     return commandId;
 }
 
@@ -431,14 +470,16 @@ bool TNullAppFrontend::removeAddonCommand(const int commandId, Host* pHost)
         return false;
     }
     mAddonCommands.remove(commandId);
+    emit mNotifier.addonCommandsChanged(pHost);
     return true;
 }
 
 bool TNullAppFrontend::setAddonCommandEnabled(const int commandId, const bool enabled, Host* pHost)
 {
     AddonCommand* pCommand = ownedAddonCommand(commandId, pHost);
-    if (pCommand) {
+    if (pCommand && pCommand->enabled != enabled) {
         pCommand->enabled = enabled;
+        emit mNotifier.addonCommandsChanged(pHost);
     }
     return pCommand;
 }
@@ -446,9 +487,10 @@ bool TNullAppFrontend::setAddonCommandEnabled(const int commandId, const bool en
 bool TNullAppFrontend::setAddonCommandChecked(const int commandId, const bool checked, Host* pHost)
 {
     AddonCommand* pCommand = ownedAddonCommand(commandId, pHost);
-    if (pCommand) {
+    if (pCommand && (!pCommand->checkable || pCommand->checked != checked)) {
         pCommand->checkable = true;
         pCommand->checked = checked;
+        emit mNotifier.addonCommandsChanged(pHost);
     }
     return pCommand;
 }
@@ -456,8 +498,9 @@ bool TNullAppFrontend::setAddonCommandChecked(const int commandId, const bool ch
 bool TNullAppFrontend::setAddonCommandIcon(const int commandId, const QString& icon, Host* pHost)
 {
     AddonCommand* pCommand = ownedAddonCommand(commandId, pHost);
-    if (pCommand) {
+    if (pCommand && pCommand->icon != icon) {
         pCommand->icon = icon;
+        emit mNotifier.addonCommandsChanged(pHost);
     }
     return pCommand;
 }
@@ -465,8 +508,9 @@ bool TNullAppFrontend::setAddonCommandIcon(const int commandId, const QString& i
 bool TNullAppFrontend::setAddonCommandTooltip(const int commandId, const QString& tooltip, Host* pHost)
 {
     AddonCommand* pCommand = ownedAddonCommand(commandId, pHost);
-    if (pCommand) {
+    if (pCommand && pCommand->tooltip != tooltip) {
         pCommand->tooltip = tooltip;
+        emit mNotifier.addonCommandsChanged(pHost);
     }
     return pCommand;
 }
@@ -474,8 +518,9 @@ bool TNullAppFrontend::setAddonCommandTooltip(const int commandId, const QString
 bool TNullAppFrontend::setAddonCommandPinned(const int commandId, const bool pinned, Host* pHost)
 {
     AddonCommand* pCommand = ownedAddonCommand(commandId, pHost);
-    if (pCommand) {
+    if (pCommand && pCommand->pinned != pinned) {
         pCommand->pinned = pinned;
+        emit mNotifier.addonCommandsChanged(pHost);
     }
     return pCommand;
 }
@@ -490,11 +535,15 @@ bool TNullAppFrontend::setAddonCommandPulse(const int commandId, const bool enab
     if (!error.isEmpty()) {
         return false;
     }
+    const bool changed = enabled != pCommand->pulseEnabled || (enabled && (color1 != pCommand->pulseColor1 || color2 != pCommand->pulseColor2 || interval != pCommand->pulseInterval));
     pCommand->pulseEnabled = enabled;
     if (enabled) {
         pCommand->pulseColor1 = color1;
         pCommand->pulseColor2 = color2;
         pCommand->pulseInterval = interval;
+    }
+    if (changed) {
+        emit mNotifier.addonCommandsChanged(pHost);
     }
     return true;
 }
@@ -505,15 +554,17 @@ bool TNullAppFrontend::activateAddonCommand(const int commandId)
     if (it == mAddonCommands.end() || !it->pHost || !it->enabled) {
         return false;
     }
+    Host* pHost = it->pHost;
     if (it->checkable) {
         it->checked = !it->checked;
+        emit mNotifier.addonCommandsChanged(pHost);
     }
     TEvent event{};
     event.mArgumentList.append(qsl("sysCommandClicked"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(commandId));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    it->pHost->raiseEvent(event);
+    pHost->raiseEvent(event);
     return true;
 }
 
@@ -524,28 +575,37 @@ void TNullAppFrontend::watchAddonCommandsOf(Host* pHost)
     }
     mAddonCommandHosts.insert(pHost);
     QObject::connect(pHost, &Host::signal_profileResetting, pHost, [this, pHost]() {
-        removeAddonCommandsOf(pHost);
+        if (removeAddonCommandsOf(pHost)) {
+            emit mNotifier.addonCommandsChanged(pHost);
+        }
     });
     QObject::connect(pHost, &Host::signal_packageRemoved, pHost, [this, pHost](const QString& packageName) {
-        removeAddonCommandsOf(pHost, packageName);
+        if (removeAddonCommandsOf(pHost, packageName)) {
+            emit mNotifier.addonCommandsChanged(pHost);
+        }
     });
     // Emitted before ~QObject() drops the connections, so a later Host at the same address is watched afresh
     QObject::connect(pHost, &QObject::destroyed, pHost, [this, pHost]() {
         mAddonCommandHosts.remove(pHost);
-        removeAddonCommandsOf(nullptr);
+        if (removeAddonCommandsOf(nullptr)) {
+            emit mNotifier.addonCommandsChanged(pHost);
+        }
     });
 }
 
 // A null pHost drops the commands whose profile has gone
-void TNullAppFrontend::removeAddonCommandsOf(const Host* pHost, const QString& package)
+bool TNullAppFrontend::removeAddonCommandsOf(const Host* pHost, const QString& package)
 {
+    bool removed = false;
     for (auto it = mAddonCommands.begin(); it != mAddonCommands.end();) {
         if (it->pHost == pHost && (package.isEmpty() || it->package == package)) {
             it = mAddonCommands.erase(it);
+            removed = true;
         } else {
             ++it;
         }
     }
+    return removed;
 }
 
 std::optional<QSize> TNullAppFrontend::getImageSize(const QString& imageLocation)
@@ -576,6 +636,14 @@ static void raiseProfileFocusChange(Host* pHost, const bool gained)
     event.mArgumentList << QLatin1String("sysProfileFocusChangeEvent") << (gained ? QLatin1String("1") : QLatin1String("0"));
     event.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_BOOLEAN;
     pHost->raiseEvent(event);
+}
+
+std::pair<bool, QString> TNullAppFrontend::resizeMainWindow(Host* pHost, const int width, const int height)
+{
+    if (!pHost) {
+        return {false, QString()};
+    }
+    return pHost->resizeMainWindowWithNoView(QSize(width, height));
 }
 
 bool TNullAppFrontend::setActiveProfileTab(const QString& profileName)
@@ -627,11 +695,21 @@ namespace {
 bool sForceClosePending = false;
 bool sQuitPending = false;
 
+bool eventLoopRunning()
+{
+#if QT_CONFIG(thread)
+    return QThread::currentThread()->loopLevel() > 0;
+#else
+    // The browser's own loop runs from the start
+    return true;
+#endif
+}
+
 // quit() ends only a running exec() and does nothing from an event loop pump before one, which is
 // where an embedder loading profiles meets this. A nested loop before exec() still loses it.
 void quitOnceRunning()
 {
-    if (QThread::currentThread()->loopLevel() == 0) {
+    if (!eventLoopRunning()) {
         QTimer::singleShot(50ms, quitOnceRunning);
         return;
     }
@@ -640,6 +718,7 @@ void quitOnceRunning()
 }
 
 void closeAllAndQuit();
+void quitOnceClosed();
 
 // Nothing would delete a profile taken out of the pool after the quit, and its script may open another
 void closeAllOnceReleased()
@@ -669,14 +748,20 @@ void closeAllAndQuit()
                 mustWait = true;
                 break;
             }
-            mustWait |= pHost->profileResetInProgress() && !pHost->isClosingDown() && !pHost->getLuaInterpreter()->luaOnStack();
+            mustWait |= pHost->profileResetInProgress() && !pHost->closeStarted() && !pHost->getLuaInterpreter()->luaOnStack();
         }
         if (mustWait) {
             QTimer::singleShot(50ms, closeAllAndQuit);
             return;
         }
-        pool->closeAllProfiles();
+        pool->closeAllProfiles(quitOnceClosed);
+        return;
     }
+    quitOnceClosed();
+}
+
+void quitOnceClosed()
+{
     if (HostManager::releasingProfile()) {
         QTimer::singleShot(50ms, closeAllOnceReleased);
         return;
@@ -684,7 +769,7 @@ void closeAllAndQuit()
     sForceClosePending = false;
     if (!sQuitPending) {
         sQuitPending = true;
-        if (QThread::currentThread()->loopLevel() == 0) {
+        if (!eventLoopRunning()) {
             qDebug() << "TNullAppFrontend::armForceClose() INFO - no event loop is running yet, so the quit waits for one";
         }
         quitOnceRunning();
@@ -705,7 +790,9 @@ void TNullAppFrontend::writeSettings()
     pSettings->sync();
     if (pSettings->status() != QSettings::NoError) {
         qWarning().nospace() << "TNullAppFrontend::writeSettings() ERROR - failed to save the settings to " << pSettings->fileName() << ", status: " << pSettings->status();
+        return;
     }
+    configWritten();
 }
 
 void TNullAppFrontend::armForceClose()
@@ -755,6 +842,7 @@ bool TNullAppFrontend::saveWindowLayoutForScript()
     }
     mDeleted = Layout();
     mClosedProfiles = Layout();
+    configWritten();
     return true;
 }
 

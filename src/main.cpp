@@ -30,6 +30,7 @@
 #undef nil
 #endif
 
+#include "HardwareDeviceTypes.h"
 #include "HostManager.h"
 #include "MudletApp.h"
 #include "mudlet.h"
@@ -100,11 +101,11 @@
 
 using namespace std::chrono_literals;
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
+extern int qInitResources_mudlet();
+extern int qInitResources_qm();
+extern int qInitResources_additional_splash_screens();
+extern int qInitResources_mudlet_fonts_common();
+extern int qInitResources_mudlet_fonts_posix();
 void initializeQRCResources();
 
 #if defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
@@ -120,7 +121,7 @@ void copyFont(const QString& externalPathName, const QString& resourcePathName, 
     }
 }
 
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
+#ifdef INCLUDE_EMOJI_FONT
 void removeOldNoteColorEmojiFonts()
 {
     // PLACEMARKER: previous Noto Color Emoji font versions removal
@@ -163,7 +164,7 @@ void removeOldNoteColorEmojiFonts()
         }
     }
 }
-#endif // defined(Q_OS_LINUX)
+#endif // INCLUDE_EMOJI_FONT
 #endif // defined(INCLUDE_FONTS)
 
 // Joined so the warm-up thread has fully exited, exit handlers included, before the application object
@@ -572,6 +573,13 @@ int main(int argc, char* argv[])
     if (printAndExitOption) {
         consoleApp = std::make_unique<QCoreApplication>(argc, argv);
     } else {
+        // Setting the environment is a data race once the application's threads are reading it
+        nameHardwareDeviceTypes();
+        // Read before QApplication takes -style out of argv. An empty value sets no style there either.
+        const QStringList chosenStyles = parser.values(qsl("style"));
+        mudlet::smStyleChosenByPlayer = !qEnvironmentVariableIsEmpty("QT_STYLE_OVERRIDE") || std::any_of(chosenStyles.cbegin(), chosenStyles.cend(), [](const QString& name) {
+            return !name.isEmpty();
+        });
         app = new QApplication(argc, argv);
     }
 
@@ -928,7 +936,7 @@ int main(int argc, char* argv[])
     if (!dir.exists(ubuntuFontDirectory)) {
         dir.mkpath(ubuntuFontDirectory);
     }
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
+#ifdef INCLUDE_EMOJI_FONT
     // Only needed/works on GNU/Linux and FreeBSD to provide color emojis:
     removeOldNoteColorEmojiFonts();
     // PLACEMARKER: current Noto Color Emoji font directory specification:
@@ -987,11 +995,11 @@ int main(int argc, char* argv[])
     copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("UbuntuMono-R.ttf"));
     copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("UbuntuMono-RI.ttf"));
 
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
+#ifdef INCLUDE_EMOJI_FONT
     // PLACEMARKER: current Noto Color Emoji font version file extraction
     copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2025-09-15-v2.051"), qsl("NotoColorEmoji.ttf"));
     copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2025-09-15-v2.051"), qsl("LICENSE"));
-#endif // defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
+#endif // INCLUDE_EMOJI_FONT
 #endif // defined(INCLUDE_FONTS)
 
     const QString homeLink = qsl("%1/mudlet-data").arg(QDir::homePath());
@@ -1519,7 +1527,7 @@ void initializeQRCResources()
 #endif
 #ifdef INCLUDE_FONTS
     qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
+#ifdef INCLUDE_EMOJI_FONT
     qInitResources_mudlet_fonts_posix();
 #endif
 #endif

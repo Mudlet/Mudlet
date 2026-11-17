@@ -16,38 +16,14 @@
     <verstretch>0</verstretch>
    </sizepolicy>
   </property>
-  <property name="minimumSize">
-   <size>
-    <width>400</width>
-    <height>110</height>
-   </size>
-  </property>
-  <layout class="QVBoxLayout" name="verticalLayout_main" stretch="0,10">
+  <layout class="QVBoxLayout" name="verticalLayout_main">
    <item>
     <widget class="QFrame" name="frame_notificationArea">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
+      <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
-     </property>
-     <property name="minimumSize">
-      <size>
-       <width>0</width>
-       <height>80</height>
-      </size>
-     </property>
-     <property name="styleSheet">
-      <string notr="true">QFrame#frame_notificationArea {
-  border: 3px solid;
-  border-radius: 6px;
-  background-color: rgb(255, 254, 215);
-}
-
-QLabel{
-color: black;
-background-color: rgb(255, 254, 215);
-}</string>
      </property>
      <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,0,0,1,0">
       <property name="spacing">
@@ -170,7 +146,7 @@ background-color: rgb(255, 254, 215);
       <item>
        <widget class="QLabel" name="notificationAreaMessageBox">
         <property name="sizePolicy">
-         <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
+         <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
@@ -248,10 +224,6 @@ background-color: rgb(255, 254, 215);
            <property name="focusPolicy">
             <enum>Qt::FocusPolicy::NoFocus</enum>
            </property>
-           <property name="icon">
-            <iconset resource="../mudlet.qrc">
-             <normaloff>:/icons/application-exit.png</normaloff>:/icons/application-exit.png</iconset>
-           </property>
            <property name="autoRaise">
             <bool>true</bool>
            </property>
@@ -278,22 +250,6 @@ background-color: rgb(255, 254, 215);
       </item>
      </layout>
     </widget>
-   </item>
-   <item>
-    <spacer name="verticalSpacer_system_message_area">
-     <property name="orientation">
-      <enum>Qt::Orientation::Vertical</enum>
-     </property>
-     <property name="sizeType">
-      <enum>QSizePolicy::Policy::MinimumExpanding</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>1</width>
-       <height>1</height>
-      </size>
-     </property>
-    </spacer>
    </item>
   </layout>
  </widget>

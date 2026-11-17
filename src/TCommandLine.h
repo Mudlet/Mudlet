@@ -25,6 +25,7 @@
  ***************************************************************************/
 
 
+#include "TCommandLineCompletion.h"
 #include "enums.h"
 #include "utils.h"
 
@@ -43,10 +44,7 @@ class TCommandLine : public QPlainTextEdit //QLineEdit
 {
     Q_OBJECT
 
-    enum MoveDirection {
-        MOVE_UP,
-        MOVE_DOWN
-    };
+    enum MoveDirection { MOVE_UP, MOVE_DOWN };
 
 public:
     Q_DISABLE_COPY(TCommandLine)
@@ -96,6 +94,7 @@ signals:
     void commandSubmitted();
     // Emitted when the command line text changes (for hyperlink visibility triggers)
     void commandLineTextChanged();
+    void rowsMoved();
 
 public slots:
     void slot_popupMenu();
@@ -107,9 +106,11 @@ public slots:
 
 private:
     bool event(QEvent*) override;
+    void resizeEvent(QResizeEvent*) override;
+    void changeEvent(QEvent*) override;
     void mousePressEvent(QMouseEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
-    void handleAutoCompletion();
+    void handleAutoCompletion(bool forward);
     void insertFromMimeData(const QMimeData*) override;
     void slot_contentsChange();
     void spellCheck();
@@ -124,25 +125,20 @@ private:
     bool handleCtrlTabChange(QKeyEvent* key, int tabNumber);
     void restoreHistory();
     int heightForRows(const int) const;
+    void centerRows();
     QMargins frameSides() const;
 
     QPointer<Host> mpHost;
     enums::CommandLineType mType = enums::UnknownCommandLine;
     KeyUnit* mpKeyUnit = nullptr;
     QPointer<TConsole> mpConsole;
-    QString mLastCompletion;
-    int mTabCompletionCount = 0;
-    int mAutoCompletionCount = 0;
-    QString mTabCompletionTyped;
-    bool mUserKeptOnTyping = false;
+    TCommandLineCompletion mCompletion;
     int mHistoryBuffer = 0;
     QStringList mHistoryList;
     QString mSelectedText;
     int mSelectionStart = 0;
-    QString mTabCompletionOld;
     QPoint mPopupPosition;
     QString mSpellCheckedWord;
-    bool mSpellChecking = false;
     QSet<QString> commandLineSuggestions;
     QSet<QString> tabCompleteBlacklist;
     // The file used to store the command history between sessions:

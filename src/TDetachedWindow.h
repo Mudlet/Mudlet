@@ -20,6 +20,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "uiDesign.h"
+
 #include <QMainWindow>
 #include <QVBoxLayout>
 #include <QPointer>
@@ -189,8 +191,10 @@ private:
     void createMenus();
     void showMuteState();
     void createToolBar();
+    void restyleToolBarIcons();
     void connectToolBarActions();
     void closeProfileByName(const QString& profileName);
+    bool closeProfileHere(const QString& profileName);
     void updateTabIndicator(int tabIndex = -1);                            // -1 means current tab
     void updateDockWidgetVisibilityForProfile(const QString& profileName); // Show/hide docked widgets based on active profile
     void restoreWindowGeometry();
@@ -214,6 +218,7 @@ private:
     TTabBar* mpTabBar{nullptr};
     QToolBar* mpToolBar{nullptr};
     QMenu* mpOptionsMenu{nullptr};
+    QList<uiDesign::ActionGlyph> mToolBarGlyphs;
 
     // Toolbar actions - mirroring main window
     QAction* mpActionConnect{nullptr};
@@ -247,6 +252,7 @@ private:
     // Discord actions
     QAction* mpActionDiscord{nullptr};
     QAction* mpActionMudletDiscord{nullptr};
+    QAction* mpHelpMenuDiscordAction{nullptr};
 
     // Menu actions with shortcuts
     QAction* mpMenuConnectAction{nullptr};

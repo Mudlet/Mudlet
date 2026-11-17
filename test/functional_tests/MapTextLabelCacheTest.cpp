@@ -231,6 +231,211 @@ private slots:
         QCOMPARE(target.toImage().pixelColor(0, 0), QColor(Qt::blue));
     }
 
+    // A label drawn without the screen's pixel density is scaled up to it, which
+    // blurs its text (#5992). Upscaling copies each pixel into a whole square of
+    // them, so text drawn at the screen's density is told by squares that differ.
+    // Drawn at 1x first, as on a window moved to another screen afterwards.
+    void aLabelIsRenderedAtThePixelDensityItIsDrawnAt()
+    {
+        TMapLabel label;
+        label.text = qsl("HH");
+        label.font = QFont(qsl("Bitstream Vera Sans"), 10);
+        // Red would mean the text was not rendered at all
+        label.pix = QPixmap(100, 40);
+        label.pix.fill(Qt::red);
+        label.bgColor = Qt::black;
+        label.fgColor = Qt::white;
+        label.outlineColor = Qt::white;
+
+        // Larger than the label, so a pixmap drawn at the wrong size shows past it
+        auto drawAt = [this, &label](const int ratio) {
+            QPixmap target(QSize(120, 50) * ratio);
+            target.setDevicePixelRatio(ratio);
+            target.fill(Qt::blue);
+            QPainter painter(&target);
+            mp2dMap->drawScaledLabel(painter, QPointF(0, 0), label, 5, QRectF(0, 0, 100, 40));
+            painter.end();
+            return target.toImage();
+        };
+        mp2dMap->flushTextLabelPixmapCache();
+        drawAt(1);
+        const QImage image = drawAt(2);
+
+        QCOMPARE(image.pixelColor(0, 0), QColor(Qt::black));
+        QCOMPARE(image.pixelColor(199, 79), QColor(Qt::black));
+        QCOMPARE(image.pixelColor(200, 80), QColor(Qt::blue));
+        int squaresThatDiffer = 0;
+        for (int y = 0; y < 80; y += 2) {
+            for (int x = 0; x < 200; x += 2) {
+                const QRgb topLeft = image.pixel(x, y);
+                if (image.pixel(x + 1, y) != topLeft || image.pixel(x, y + 1) != topLeft || image.pixel(x + 1, y + 1) != topLeft) {
+                    ++squaresThatDiffer;
+                }
+            }
+        }
+        QVERIFY2(squaresThatDiffer > 0, "the label was drawn at half the screen's density and scaled up to it");
+    }
+
+    // A label that does not fit under the ceiling is drawn without the cache:
+    // caching it would evict one still on screen, which would evict another
+    // in turn on every frame. A dense display makes each label cost more.
+    void labelsPastTheCeilingDoNotEvictOnesOnScreen()
+    {
+        mp2dMap->setTextLabelPixmapBudgetKiB(1024);
+        mp2dMap->setTextLabelPixmapCeilingKiB(1024);
+        QPixmap target(QSize(128, 128) * 2);
+        target.setDevicePixelRatio(2);
+        QPainter painter(&target);
+        QList<TMapLabel> labels(6);
+        for (TMapLabel& label : labels) {
+            label.pix = QPixmap(4, 4);
+            label.pix.fill(Qt::red);
+        }
+        const QSize size(128, 128);
+        // 256 KiB each at twice the density, so four fill the ceiling
+        auto drawFrame = [this, &painter, &labels, &size] {
+            mp2dMap->startTextLabelFrame();
+            for (int id = 1; id <= 5; ++id) {
+                mp2dMap->drawScaledLabel(painter, QPointF(0, 0), labels[id], id, QRectF(QPointF(0, 0), size));
+            }
+        };
+        drawFrame();
+        QList<qint64> firstFrame;
+        for (int id = 1; id <= 5; ++id) {
+            firstFrame << mp2dMap->textLabelPixmapCacheKey(id, size);
+        }
+        drawFrame();
+        QList<qint64> secondFrame;
+        for (int id = 1; id <= 5; ++id) {
+            secondFrame << mp2dMap->textLabelPixmapCacheKey(id, size);
+        }
+        painter.end();
+        mp2dMap->setTextLabelPixmapCeilingKiB(T2DMap::scmTextLabelPixmapCeilingKiB);
+        mp2dMap->setTextLabelPixmapBudgetKiB(T2DMap::scmTextLabelPixmapBudgetKiB);
+
+        QCOMPARE(firstFrame.count(0), 1);
+        QCOMPARE(secondFrame, firstFrame);
+    }
+
+    // The labels on screen are in both the last frame's total and this one's,
+    // so adding the two would count them twice and refuse, on every frame, a
+    // label that fits: one panned into view, or one edited in place.
+    void aLabelThatFitsUnderTheCeilingIsCachedInTheEnd()
+    {
+        mp2dMap->setTextLabelPixmapBudgetKiB(1024);
+        mp2dMap->setTextLabelPixmapCeilingKiB(1024);
+        QPixmap target(QSize(128, 128) * 2);
+        target.setDevicePixelRatio(2);
+        QPainter painter(&target);
+        QList<TMapLabel> labels(5);
+        for (TMapLabel& label : labels) {
+            label.pix = QPixmap(4, 4);
+            label.pix.fill(Qt::red);
+        }
+        const QSize size(128, 128);
+        // 256 KiB each at twice the density, so the three on screen take 768 KiB
+        auto drawFrames = [this, &painter, &labels, &size](const QList<int>& ids) {
+            for (int frame = 0; frame < 3; ++frame) {
+                mp2dMap->startTextLabelFrame();
+                for (const int id : ids) {
+                    mp2dMap->drawScaledLabel(painter, QPointF(0, 0), labels[id], id, QRectF(QPointF(0, 0), size));
+                }
+            }
+        };
+        mp2dMap->flushTextLabelPixmapCache();
+        drawFrames({1, 2, 3});
+        drawFrames({1, 2, 4});
+        const qint64 pannedIn = mp2dMap->textLabelPixmapCacheKey(4, size);
+        const qint64 beforeTheEdit = mp2dMap->textLabelPixmapCacheKey(2, size);
+        labels[2].pix.fill(Qt::green);
+        drawFrames({1, 2, 4});
+        const qint64 afterTheEdit = mp2dMap->textLabelPixmapCacheKey(2, size);
+        painter.end();
+        mp2dMap->setTextLabelPixmapCeilingKiB(T2DMap::scmTextLabelPixmapCeilingKiB);
+        mp2dMap->setTextLabelPixmapBudgetKiB(T2DMap::scmTextLabelPixmapBudgetKiB);
+
+        QVERIFY2(pannedIn != 0, "a label panned into view was never cached");
+        QVERIFY2(afterTheEdit != 0 && afterTheEdit != beforeTheEdit, "an edited label was never cached again");
+    }
+
+    // A label drawn at another ratio, as when the window moves to another
+    // screen, that no longer fits under the ceiling must not stay in the cache:
+    // nothing counts it, so trimming the cache to the frame evicts a label on
+    // screen in its place, which is then drawn again, on every frame.
+    void aLabelRefusedTheCacheDoesNotLeaveItsOldPixmapThere()
+    {
+        mp2dMap->setTextLabelPixmapBudgetKiB(128);
+        mp2dMap->setTextLabelPixmapCeilingKiB(600);
+        QList<TMapLabel> labels(3);
+        for (TMapLabel& label : labels) {
+            label.pix = QPixmap(4, 4);
+            label.pix.fill(Qt::red);
+        }
+        // 64 and 128 KiB at 1x, 256 and 512 KiB at twice the density
+        const QSize small(128, 128);
+        const QSize big(128, 256);
+        auto drawFrame = [this, &labels, &small, &big](const int ratio) {
+            QPixmap target(QSize(128, 256) * ratio);
+            target.setDevicePixelRatio(ratio);
+            QPainter painter(&target);
+            mp2dMap->startTextLabelFrame();
+            mp2dMap->drawScaledLabel(painter, QPointF(0, 0), labels[1], 1, QRectF(QPointF(0, 0), small));
+            mp2dMap->drawScaledLabel(painter, QPointF(0, 0), labels[2], 2, QRectF(QPointF(0, 0), big));
+            painter.end();
+            // Both asked for in the order drawn, as asking moves a label up the cache's order
+            const qint64 key = mp2dMap->textLabelPixmapCacheKey(1, small);
+            mp2dMap->textLabelPixmapCacheKey(2, big);
+            return key;
+        };
+        mp2dMap->flushTextLabelPixmapCache();
+        drawFrame(1);
+        drawFrame(2);
+        const qint64 firstFrame = drawFrame(2);
+        const qint64 secondFrame = drawFrame(2);
+        mp2dMap->setTextLabelPixmapCeilingKiB(T2DMap::scmTextLabelPixmapCeilingKiB);
+        mp2dMap->setTextLabelPixmapBudgetKiB(T2DMap::scmTextLabelPixmapBudgetKiB);
+
+        QVERIFY(firstFrame != 0);
+        QCOMPARE(secondFrame, firstFrame);
+    }
+
+    // Zooming draws every label at a new size, so none of what the last frame
+    // cached is on screen: counted as if it were, a scene that fits would be
+    // refused the cache on every other frame, and drawn blurred on those.
+    void labelsThatFitStayCachedThroughAZoom()
+    {
+        mp2dMap->setTextLabelPixmapBudgetKiB(1024);
+        mp2dMap->setTextLabelPixmapCeilingKiB(1024);
+        QPixmap target(QSize(160, 160) * 2);
+        target.setDevicePixelRatio(2);
+        QPainter painter(&target);
+        QList<TMapLabel> labels(5);
+        for (TMapLabel& label : labels) {
+            label.pix = QPixmap(4, 4);
+            label.pix.fill(Qt::red);
+        }
+        mp2dMap->flushTextLabelPixmapCache();
+        // Four labels growing a step each frame, to 256 KiB each at twice the density
+        QList<int> cachedEachFrame;
+        for (int side = 112; side <= 128; side += 4) {
+            const QSize size(side, side);
+            mp2dMap->startTextLabelFrame();
+            for (int id = 1; id <= 4; ++id) {
+                mp2dMap->drawScaledLabel(painter, QPointF(0, 0), labels[id], id, QRectF(QPointF(0, 0), size));
+            }
+            int cached = 0;
+            for (int id = 1; id <= 4; ++id) {
+                cached += mp2dMap->textLabelPixmapCacheKey(id, size) != 0;
+            }
+            cachedEachFrame << cached;
+        }
+        painter.end();
+        mp2dMap->setTextLabelPixmapCeilingKiB(T2DMap::scmTextLabelPixmapCeilingKiB);
+        mp2dMap->setTextLabelPixmapBudgetKiB(T2DMap::scmTextLabelPixmapBudgetKiB);
+
+        QCOMPARE(cachedEachFrame, QList<int>(cachedEachFrame.size(), 4));
+    }
+
     // A zoomed-out area can have hundreds of labels on screen; if they do not
     // all stay cached, every frame renders every one of them again.
     void manySmallLabelsOnScreenAllStayCached()

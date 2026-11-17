@@ -151,10 +151,11 @@ private:
         QCOMPARE(mpPreferences->groupBox_font->isEnabled(), enabled);
         QCOMPARE(mpPreferences->comboBox_encoding->isEnabled(), enabled);
         QCOMPARE(mpPreferences->groupBox_main_window_shortcuts->isEnabled(), enabled);
-        // The three that disableHostDetails() has to name one by one:
+        // The ones that disableHostDetails() has to name one by one:
         QCOMPARE(mpPreferences->doubleclick_ignore_lineedit->isEnabled(), enabled);
         QCOMPARE(mpPreferences->checkBox_enableOSC8Hyperlinks->isEnabled(), enabled);
         QCOMPARE(mpPreferences->checkBox_echoLuaErrors->isEnabled(), enabled);
+        QCOMPARE(mpPreferences->checkBox_showTimeStamps->isEnabled(), enabled);
         QCOMPARE(mpPreferences->checkBox_f3SearchEnabled->isEnabled(), enabled);
         QCOMPARE(mpPreferences->groupBox_MMCPOptions->isEnabled(), enabled);
 
@@ -290,7 +291,8 @@ private slots:
         mpPreferences->setTab(qsl("accessibility"));
 
         QWidget* pNextStop = TestSettings::sidebar(mpPreferences)->nextInFocusChain();
-        while (!(pNextStop->isVisible() && pNextStop->isEnabled() && (pNextStop->focusPolicy() & Qt::TabFocus))) {
+        // The sidebar's own collapse chevron, drawn on its seam, is the sidebar's last stop rather than one after it
+        while (!(pNextStop->isVisible() && pNextStop->isEnabled() && (pNextStop->focusPolicy() & Qt::TabFocus)) || pNextStop->objectName() == qsl("settingsSidebarToggle")) {
             pNextStop = pNextStop->nextInFocusChain();
         }
         QCOMPARE(pNextStop->objectName(), qsl("settingsNoProfileNotice"));

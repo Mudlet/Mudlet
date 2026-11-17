@@ -141,8 +141,8 @@ Geyser.UserWindow.Parent = Geyser.Window
 -- @param cons.titleText choose your UserWindows title (set to default title if not set)
 function Geyser.UserWindow:new(cons)
   cons = cons or {}
-  cons.name = cons.name or Geyser.nameGen()
   cons.type = cons.type or "userwindow"
+  cons.name = cons.name or Geyser.anonymousName(cons.type)
   cons.windowname = cons.name
   cons.width = cons.width or 435
   cons.height = cons.height or 375
