@@ -1225,6 +1225,27 @@ script sets another, as on the desktop.
 A change to any of these names the label in `scriptWindowsChanged`. It is empty for a name that is not a
 label's.
 
+`textBoxContent(name)` is what a text box from `createTextEdit()` holds, beside the place and font its
+`ScriptWindow` has, for the app to draw as an editable box of its own:
+
+- `text`, what `getTextEditText()` reads: as `setTextEditText()` or `clearTextEdit()` left it, or as the
+  player typed it;
+- `readOnly`, as `setTextEditReadOnly()` gave it;
+- `placeholder`, as `setTextEditPlaceholder()` gave it, shown while the box is empty;
+- `styleSheet`, as `setTextEditStyleSheet()` gave it, which Mudlet does not interpret for the app, as a
+  label's;
+- `tabMovesFocus`, as `setTextEditTabMovesFocus()` gave it: Tab moves on to the next control rather than
+  typing a tab.
+
+A script's change to any of these names the box in `scriptWindowsChanged`. It is empty for a name that is
+not a text box's.
+
+`setTextBoxText(name, text)` is what the player has typed in it so far, the whole of the box's text, which
+a script's `getTextEditText()` then reads. The GUI's box gives Mudlet its text as it changes and raises no
+event for that, so neither does this; nor is it told back in `scriptWindowsChanged`. It is false for a name
+that is not a text box's, for a box that is read-only or not `shown` in `scriptWindows()`, which a player
+could not type in, though a script still sets its text, and where `runLua()` is refused.
+
 ### Reading a console's text
 
 `windowLines(window, first, count)` gives the text of a mini console or user window, for the app to draw
