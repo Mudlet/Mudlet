@@ -27,9 +27,13 @@ line, so a name added there shows up in review. A listed name that nothing
 raises any more, or that follows the standard, fails too, so the list stays
 the exact backlog of names still waiting for a standard one.
 
+The script editor offers the names in eventNames::systemEvents() (in
+src/EventNames.cpp), kept by hand. A name Mudlet raises that the list lacks
+fails, and so does a name on it that nothing raises.
+
 Usage: lua CI/check-event-names.lua
          scans the tree against CI/event-names-legacy.txt
-       lua CI/check-event-names.lua --legacy FILE file ...
+       lua CI/check-event-names.lua --legacy FILE [--editor-list FILE] file ...
          scans only the files given (the self-test's fixtures)
        lua CI/check-event-names.lua --list
          prints every name read, where it was found and its verdict
@@ -38,6 +42,8 @@ cannot run.
 ]]
 
 local LEGACY_FILE = "CI/event-names-legacy.txt"
+-- The names the script editor offers when an event handler is added
+local EDITOR_LIST_FILE = "src/EventNames.cpp"
 
 -- Helpers that build the event from a name argument; the first string literal
 -- in the call is that name. raiseSettingChangedEvent() is not one: its literal
@@ -297,13 +303,16 @@ local function listFiles(command)
 end
 
 -- arguments
-local legacyFile, targets, listOnly = nil, {}, false
+local legacyFile, editorListFile, targets, listOnly = nil, nil, {}, false
 do
   local i = 1
   while i <= #arg do
     if arg[i] == "--list" then
       listOnly = true
       i = i + 1
+    elseif arg[i] == "--editor-list" then
+      editorListFile = arg[i + 1]
+      i = i + 2
     elseif arg[i] == "--legacy" then
       legacyFile = arg[i + 1]
       i = i + 2
@@ -318,6 +327,7 @@ local wholeTree = #targets == 0
 local cppFiles, luaFiles = {}, {}
 if wholeTree then
   legacyFile = legacyFile or LEGACY_FILE
+  editorListFile = editorListFile or EDITOR_LIST_FILE
   cppFiles = listFiles("find src \\( -name '*.cpp' -o -name '*.h' \\) 2>/dev/null")
   luaFiles = listFiles("find src/mudlet-lua/lua src/packages \\( -name '*.lua' -o -name '*.xml' \\) 2>/dev/null")
 else
@@ -392,6 +402,39 @@ if legacyFile then
   handle:close()
 end
 
+-- The literals of systemEvents()'s list, from its declaration to the closing brace
+local editorList, editorListLines = {}, {}
+if editorListFile then
+  local handle = io.open(editorListFile, "r")
+  if not handle then
+    io.stderr:write(("cannot read the script editor's list %s\n"):format(editorListFile))
+    os.exit(2)
+  end
+  local n, inList, found = 0, false, false
+  for line in handle:lines() do
+    n = n + 1
+    local code = codeOnly(line, false)
+    if code:match("QStringList%s+systemEvents%s*%(%s*%)") then
+      inList, found = true, true
+    end
+    if inList then
+      for name in code:gmatch('qsl%("([^"]+)"%)') do
+        editorList[name] = true
+        editorListLines[name] = n
+      end
+      if code:match("};") then
+        inList = false
+      end
+    end
+  end
+  handle:close()
+  -- A renamed function would leave the list empty, and every name would then be reported missing
+  if not found then
+    io.stderr:write(("systemEvents() was not found in %s, so the script editor's list cannot be read\n"):format(editorListFile))
+    os.exit(2)
+  end
+end
+
 local findings = {}
 local names, legacyUsed = 0, 0
 for name, where in pairs(raised) do
@@ -413,6 +456,19 @@ for name in pairs(legacy) do
   end
 end
 
+if editorListFile then
+  for name, where in pairs(raised) do
+    if not editorList[name] and not fromProtocol(name) then
+      findings[#findings + 1] = {file = where.file, line = where.line, detail = ("%s is raised, but the script editor's list (systemEvents() in %s) does not offer it"):format(name, EDITOR_LIST_FILE)}
+    end
+  end
+  for name in pairs(editorList) do
+    if not raised[name] then
+      findings[#findings + 1] = {file = editorListFile, line = editorListLines[name], detail = ("%s is in the script editor's list, but nothing raises it"):format(name)}
+    end
+  end
+end
+
 table.sort(findings, function(a, b)
   if a.file ~= b.file then
     return a.file < b.file
@@ -427,9 +483,10 @@ end
 if #findings > 0 then
   print("")
   print(("%d event name problem(s)."):format(#findings))
-  print('Name a new event as docs/CONTRIBUTING.md ("Event names") describes. An existing name')
-  print(("kept on purpose goes on %s, where review sees it in the diff."):format(LEGACY_FILE))
+  print('Name a new event as docs/CONTRIBUTING.md ("Event names") describes, and add it to')
+  print(("systemEvents() in %s. An existing name kept on purpose goes on"):format(EDITOR_LIST_FILE))
+  print(("%s, where review sees it in the diff."):format(LEGACY_FILE))
   os.exit(1)
 end
-print(("All %d event names follow the standard or are on the legacy list (%d legacy, %d files scanned).")
-      :format(names, legacyUsed, filesScanned))
+print(("All %d event names follow the standard or are on the legacy list%s (%d legacy, %d files scanned).")
+      :format(names, editorListFile and ", and the script editor's list offers each" or "", legacyUsed, filesScanned))

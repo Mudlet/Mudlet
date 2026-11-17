@@ -23,8 +23,9 @@ local function shellQuote(text)
   return "'" .. text:gsub("'", "'\\''") .. "'"
 end
 
-local function run(legacy, files)
-  local parts = {shellQuote(interpreter), shellQuote(checker), "--legacy", shellQuote(fixtures .. "/" .. legacy)}
+local function run(legacy, editorList, files)
+  local parts = {shellQuote(interpreter), shellQuote(checker), "--legacy", shellQuote(fixtures .. "/" .. legacy),
+                 "--editor-list", shellQuote(fixtures .. "/" .. editorList)}
   for _, file in ipairs(files) do
     parts[#parts + 1] = shellQuote(fixtures .. "/" .. file)
   end
@@ -43,7 +44,8 @@ end
 
 -- The marked lines are read from the fixtures rather than listed here, so an
 -- edit to a fixture cannot stop a case being checked
-local MARKERS = {["bad.cpp"] = "//%s*BAD%s*$", ["bad.lua"] = "%-%-%s*BAD%s*$", ["legacy.txt"] = "#%s*BAD%s*$"}
+local MARKERS = {["bad.cpp"] = "//%s*BAD%s*$", ["bad.lua"] = "%-%-%s*BAD%s*$", ["legacy.txt"] = "#%s*BAD%s*$",
+                 ["editor-list-bad.cpp"] = "//%s*BAD%s*$"}
 local marked = {}
 for file, marker in pairs(MARKERS) do
   local n = 0
@@ -54,13 +56,12 @@ for file, marker in pairs(MARKERS) do
     end
   end
 end
-check(#marked >= 14, ("the bad fixtures mark %d lines as BAD, fewer than the 14 cases they hold"):format(#marked))
+check(#marked >= 16, ("the bad fixtures mark %d lines as BAD, fewer than the 16 cases they hold"):format(#marked))
 
-local badOutput, badStatus = run("legacy.txt", {"bad.cpp", "bad.lua"})
+local badOutput, badStatus = run("legacy.txt", "editor-list-bad.cpp", {"bad.cpp", "bad.lua"})
 check(badStatus == 1, ("the bad fixtures exited %s, not 1 - a broken name no longer fails CI"):format(tostring(badStatus)))
 for _, mark in ipairs(marked) do
-  local pattern = mark.file:gsub("%.", "%%.") .. ":" .. mark.line .. ":"
-  check(badOutput:match(pattern), ("%s:%d is marked BAD but was not reported"):format(mark.file, mark.line))
+  check(badOutput:find(("%s:%d:"):format(mark.file, mark.line), 1, true), ("%s:%d is marked BAD but was not reported"):format(mark.file, mark.line))
 end
 for file, number in badOutput:gmatch("([%w%-]+%.%w+):(%d+):") do
   local wanted = false
@@ -72,7 +73,7 @@ for file, number in badOutput:gmatch("([%w%-]+%.%w+):(%d+):") do
   check(wanted, ("%s:%s was reported but is not marked BAD"):format(file, number))
 end
 
-local goodOutput, goodStatus = run("legacy-good.txt", {"good.cpp", "good.lua"})
+local goodOutput, goodStatus = run("legacy-good.txt", "editor-list-good.cpp", {"good.cpp", "good.lua"})
 check(goodStatus == 0, ("the good fixtures exited %s, not 0 - a name that follows the standard is failed:\n%s"):format(tostring(goodStatus), goodOutput))
 -- Passing because nothing was read looks the same as passing, so hold the run
 -- to the names the good fixtures raise

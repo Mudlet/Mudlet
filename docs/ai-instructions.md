@@ -24,7 +24,7 @@ Don't break existing scripts without the maintainers' explicit approval. Scripts
 
 ### Event names
 
-Name a new event Mudlet raises by "Event names" in `docs/CONTRIBUTING.md`; `CI/check-event-names.lua` fails a pull request whose name breaks it. A released name keeps firing: give it a standard name in `oldEventNames()` (`src/Host.cpp`) and raise it with `Host::raiseEventWithOldName()`.
+Name a new event Mudlet raises by "Event names" in `docs/CONTRIBUTING.md` and add it to `systemEvents()` in `src/EventNames.cpp`; `CI/check-event-names.lua` fails a pull request whose name breaks the standard or is missing there. A released name keeps firing: give it a standard name in `oldEventNames()` (`src/Host.cpp`) and raise it with `Host::raiseEventWithOldName()`.
 
 ### C++ Conventions
 In general: write modern C++20 code, but avoid C++ exceptions, templates, and concepts as those have performance/complexity considerations, avoiding which has made Mudlet the success it is today.

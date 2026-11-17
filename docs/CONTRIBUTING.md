@@ -29,9 +29,11 @@ Scripts depend on an event's name as soon as it ships, so name a new event Mudle
 
 Protocol events (`gmcp.*`, `msdp.*`, `channel102Message`) keep their protocol's names.
 
-A released name is not renamed: scripts listen for it. Give it a standard name beside it instead, by adding the pair to `oldEventNames()` in `src/Host.cpp` and raising the event with `Host::raiseEventWithOldName()`, which raises the old name first and the standard one straight after, with the same arguments. Add the standard name to the script editor's list in `src/EventNames.cpp` too.
+Add every new name to `systemEvents()` in `src/EventNames.cpp`, the list the script editor offers when an event handler is added.
 
-[CI/check-event-names.lua](https://github.com/Mudlet/Mudlet/blob/development/CI/check-event-names.lua) runs on every pull request: a name raised from C++ that does not start with `sys`, a name that ends in `Event`, does not end in a verb form, or uses `Toggled` or `Triggered` fails it. Names from before these rules are on [CI/event-names-legacy.txt](https://github.com/Mudlet/Mudlet/blob/development/CI/event-names-legacy.txt), where a name added shows up in review. Review still judges whether the words fit, such as Pressed or Clicked, or one `Changed` event or a pair.
+A released name is not renamed: scripts listen for it. Give it a standard name beside it instead, by adding the pair to `oldEventNames()` in `src/Host.cpp` and raising the event with `Host::raiseEventWithOldName()`, which raises the old name first and the standard one straight after, with the same arguments.
+
+[CI/check-event-names.lua](https://github.com/Mudlet/Mudlet/blob/development/CI/check-event-names.lua) runs on every pull request: a name raised from C++ that does not start with `sys`, a name that ends in `Event`, does not end in a verb form, or uses `Toggled` or `Triggered` fails it. Names from before these rules are on [CI/event-names-legacy.txt](https://github.com/Mudlet/Mudlet/blob/development/CI/event-names-legacy.txt), where a name added shows up in review. A name Mudlet raises that `systemEvents()` does not list fails it too, and so does a name listed there that nothing raises. Review still judges whether the words fit, such as Pressed or Clicked, or one `Changed` event or a pair.
 
 ## AI Coding Assistants
 

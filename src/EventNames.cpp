@@ -43,8 +43,8 @@ bool fromGame(const QString& name)
 
 QStringList systemEvents()
 {
-    // Kept by hand, so a newly raised event must be added here. To gather the candidates again:
-    //   grep -rEn '"sys[A-Za-z0-9]+"' src/*.cpp src/mudlet-lua/lua | grep -E 'mArgumentList.append|raiseEvent\(|raiseProtocolEvent\('
+    // Kept by hand: CI/check-event-names.lua fails a pull request that raises a name missing here or keeps one here
+    // that nothing raises, and `lua CI/check-event-names.lua --list` prints every name Mudlet raises.
     // The map, speech and channel 102 events do not start with sys. Sorted without regard to case, which is the order they are offered in.
     static const QStringList names{qsl("channel102Message"),
                                    qsl("mapModeChangeEvent"),
@@ -52,6 +52,7 @@ QStringList systemEvents()
                                    qsl("sysApplicationFocusChangeEvent"),
                                    qsl("sysAppStyleSheetChange"),
                                    qsl("sysBufferShrinkEvent"),
+                                   qsl("sysCharacterModeDetected"),
                                    qsl("sysCommandClicked"),
                                    qsl("sysCommandLineDeleted"),
                                    qsl("sysConnectionEvent"),
@@ -67,6 +68,7 @@ QStringList systemEvents()
                                    qsl("sysDownloadFileProgress"),
                                    qsl("sysDropEvent"),
                                    qsl("sysDropUrlEvent"),
+                                   qsl("sysEchoAnomalyDetected"),
                                    qsl("sysExitEvent"),
                                    qsl("sysFontChangeEvent"),
                                    qsl("sysGetHttpDone"),
@@ -95,12 +97,17 @@ QStringList systemEvents()
                                    qsl("sysMediaPaused"),
                                    qsl("sysMediaStarted"),
                                    qsl("sysMiniConsoleDeleted"),
+                                   qsl("sysMMCPChatMessage"),
+                                   qsl("sysMMCPIncomingSnoopMessage"),
+                                   qsl("sysMMCPPeerUpdateEvent"),
+                                   qsl("sysMMCPSideChannelMessage"),
                                    qsl("sysPathChanged"),
                                    qsl("sysPostHttpDone"),
                                    qsl("sysPostHttpError"),
                                    qsl("sysProfileFocusChangeEvent"),
                                    qsl("sysProtocolDisabled"),
                                    qsl("sysProtocolEnabled"),
+                                   qsl("sysProtocolRejected"),
                                    qsl("sysPutHttpDone"),
                                    qsl("sysPutHttpError"),
                                    qsl("sysScrollBoxDeleted"),

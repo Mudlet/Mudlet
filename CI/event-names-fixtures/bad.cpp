@@ -49,4 +49,8 @@ void raisesBadNames(Host* pHost, bool good)
     // Follows the standard, and is on the legacy list anyway
     TEvent tidy{};
     tidy.mArgumentList.append(qsl("sysFixtureTidied"));
+
+    // Follows the standard, but the script editor's list does not offer it
+    TEvent unlisted{};
+    unlisted.mArgumentList.append(qsl("sysFixtureUnlisted")); // BAD
 }
