@@ -523,24 +523,24 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
              7670,
              true,
              qsl("<a href='http://www.stickmud.com/'>stickmud.com</a>"),
-             qsl(":/icons/stickmud_icon.jpg"),
-             qsl("StickMUD is a free, medieval fantasy game with a graphical user interface and a "
-                 "depth of features. You are welcomed into the game world with maps and dashboards "
-                 "to complement your imagination. Newbies escape quickly into game play with minimal "
-                 "study time. Awaken under the wondrous Mallorn Tree in the center of Newbie Park "
-                 "and learn by playing. Challenge non-player characters to gain experience, advance "
-                 "level and maximize your stats. Between battles, sit on the enchanted bench under "
-                 "the Tree to rapidly heal and reduce wait time. Signs in the park present game "
-                 "features such as races, clans and guilds. Read up on teasers about the adventures "
-                 "on the path ahead like dragons, castles and sailing. Join a guild and learn the "
-                 "ways of a Bard, Fighter, Mage, Necromancer, Ninja, Thief, Healer or Priest. Train "
-                 "skills in both craft and combat aligned with your guild. Participate in frequent "
-                 "game-wide events to earn points exchanged for gold, experience or skill training. "
-                 "Heroes and villains alike are invited! Role play is optional and player vs. player "
-                 "combat is allowed in much of the game. StickMUD was born in Finland in June 1991 "
-                 "and is now hosted in Canada. Our diverse community of players and active game "
-                 "engineers are ready to welcome new players like you to one of the best text-based "
-                 "multi-player games ever!"),
+             qsl(":/icons/stickmud_480x120.png"),
+             qsl("StickMUD is a free medieval fantasy world that opened its doors on 17 June 1991. "
+                 "It was born in Finland, is now hosted in Canada, and after 35 years is busier than ever."
+                 "\n\n"
+                 "New adventurers begin at the Adventurers' Academy in the city of Tristeza, where trainers "
+                 "teach the basics before you head out. Type hint anywhere to see what you can do there, "
+                 "and if you mistype a command, the game asks \"Did you mean...?\""
+                 "\n\n"
+                 "Join one of ten guilds: Bard, Druid, Fighter, Healer, Mage, Necromancer, Ninja, Priest, "
+                 "Psionicist or Thief. Climb toward a level cap of 300, fish from ship decks on the open "
+                 "ocean, explore sixteen race-themed settlements, and travel fast to wherever you're headed. "
+                 "Live events run all year, from solo hunts and town raids to sailing races and boss fights. "
+                 "Role play is optional, and player versus player combat is allowed in much of the game."
+                 "\n\n"
+                 "StickMUD is built for everyone. Its screen reader mode gives you a spoken map and quiet "
+                 "room descriptions, every command can be said aloud, and its displays are colorblind-friendly. "
+                 "Connect securely, sign in once and stay signed in, and optionally load StickMUD's own "
+                 "Mudlet interface, with maps, gauges and sound."),
              GameDetail::OwnUi::ClientGui},
 
             {qsl("Clessidra"),
