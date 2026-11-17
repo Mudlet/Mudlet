@@ -626,7 +626,7 @@ public:
     // A window the profile's scripts made, or the console of an MXP frame the game opened, as the GUI would show
     // it, for the app to draw: Mudlet draws none of them. A Geyser gauge, button or container is the labels and
     // windows it is made of. An MXP frame is a mini console in all but who made it: the same text, links, scroll
-    // and pointer. Its tab header is not told, only, in shown, whether its page is the one in front.
+    // and pointer. Its tab header, where it has one, is in frameTabs, and selectFrameTab() brings a page forward.
     struct ScriptWindow
     {
         enum class Kind { miniConsole, userWindow, label, commandLine, textBox, scrollBox, mapper, mxpFrame };
@@ -683,6 +683,27 @@ public:
         // The kind of its parent, as a scroll box may share its name with a user window or console; nothing with no
         // parent
         Kind parentKind = Kind::userWindow;
+        // An MXP frame's tab header, as the GUI's QTabWidget draws it along the top of the frame, in the 30 pixels
+        // above its console: each page by the name of the MXP frame it shows and the title on its tab, the first
+        // being this frame's own console, and the index of the one in front. A page shows where its header's frame
+        // does, at the place and size of the console under the header; the pages behind are not shown. None for an
+        // MXP frame without a header (one with no TITLE, a FLOATING or EXTERNAL one, one under 50 pixels tall unless
+        // sized in characters, and a page, which has none of its own) and for the other kinds.
+        struct FrameTabs
+        {
+            struct Page
+            {
+                QString name;
+                QString title;
+
+                bool operator==(const Page&) const = default;
+            };
+            QList<Page> pages;
+            int current = 0;
+
+            bool operator==(const FrameTabs&) const = default;
+        };
+        std::optional<FrameTabs> frameTabs;
 
         bool operator==(const ScriptWindow&) const = default;
     };
@@ -773,6 +794,13 @@ public:
     bool setUserWindowGeometry(const QString& name, const QRect& geometry, bool floating);
     // The dock's close button: hides the user window, as hideWindow() does. Refused as setUserWindowGeometry() is.
     bool closeUserWindow(const QString& name);
+    // Brings the MXP frame page forward in the tab header it is a page of, as the player's click on its tab in the
+    // GUI does: it shows, and the page that was in front, with the frames opened in it, no longer does. The header's
+    // frame is named in scriptWindowsChanged, with the two pages. That raises no event in the GUI, so none here.
+    // True, changing nothing, for the page already in front. False for a name that is no page of a header, for a
+    // header whose page in front is not shown (as inside an EXTERNAL frame that is hidden), whose tabs a player could
+    // not click, and where runLua() is refused.
+    bool selectFrameTab(const QString& page);
     // What the app's mouse did over one of the windows, for pointer(); mapPointer() takes a MapPointerEvent
     struct WindowPointerEvent
     {

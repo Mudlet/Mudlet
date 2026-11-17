@@ -574,6 +574,122 @@ end)
         QVERIFY(session.shutdown(false));
     }
 
+    void test_anMxpFramesTabsAreListedAndOneIsBroughtForward()
+    {
+        const QString name = qsl("Headless Window Text Frame Tabs");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        // Refused with no profile open, as runLua() is
+        QVERIFY(!session.selectFrameTab(qsl("chat")));
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        QVERIFY(session.runLua(qsl("setBorderTop(0) setBorderBottom(0) setConfig('specialForceMXPProcessorOn', true)")));
+        QSignalSpy windowChanges(&session, &THeadlessSession::scriptWindowsChanged);
+        const auto told = [&windowChanges]() {
+            settle();
+            QStringList all;
+            for (const QList<QVariant>& change : std::as_const(windowChanges)) {
+                all << change.at(1).toStringList().join(QLatin1Char(','));
+            }
+            windowChanges.clear();
+            return all.join(QLatin1Char(';'));
+        };
+        const auto feed = [&session](const QString& text) {
+            return session.runLua(qsl("feedTriggers([[%1]] .. '\\n')").arg(text));
+        };
+        // Each page's name and title, and the index of the one in front
+        const auto tabsOf = [&session](const QString& frame) {
+            const std::optional<THeadlessSession::ScriptWindow> window = session.scriptWindow(frame);
+            if (!window || !window->frameTabs) {
+                return qsl("none");
+            }
+            QStringList pages;
+            for (const THeadlessSession::ScriptWindow::FrameTabs::Page& page : std::as_const(window->frameTabs->pages)) {
+                pages << qsl("%1=%2").arg(page.name, page.title);
+            }
+            return qsl("%1 @%2").arg(pages.join(QLatin1Char(','))).arg(window->frameTabs->current);
+        };
+        const auto shown = [&session](const QStringList& frames) {
+            QStringList all;
+            for (const QString& frame : frames) {
+                const std::optional<THeadlessSession::ScriptWindow> window = session.scriptWindow(frame);
+                all << (window ? QString::number(window->shown) : qsl("gone"));
+            }
+            return all.join(QLatin1Char(' '));
+        };
+        const QStringList pages{qsl("tabs"), qsl("chat"), qsl("log")};
+
+        // A titled frame's header has the frame's own console as its first tab, under the frame's title
+        QVERIFY(feed(qsl(R"(<FRAME Name="tabs" Title="Tabs" Align="left" Width="200" Height="300">)")));
+        QCOMPARE(tabsOf(qsl("tabs")), qsl("tabs=Tabs @0"));
+        // A frame docked into it is a page under its own title, or its name, and the first of them comes forward
+        QVERIFY(feed(qsl(R"(<FRAME Name="chat" Title="Chat" DOCK="tabs" Align="client">)")));
+        QVERIFY(feed(qsl(R"(<FRAME Name="log" DOCK="tabs" Align="client">)")));
+        QVERIFY(feed(qsl(R"(<FRAME Name="side" Align="right" Width="200" Height="300">)")));
+        told();
+        QCOMPARE(tabsOf(qsl("tabs")), qsl("tabs=Tabs,chat=Chat,log=log @1"));
+        QCOMPARE(shown(pages), qsl("0 1 0"));
+        // A page has no header of its own, nor has a frame with no title
+        QCOMPARE(tabsOf(qsl("chat")), qsl("none"));
+        QCOMPARE(tabsOf(qsl("side")), qsl("none"));
+
+        // A tab brought forward shows its page where the page in front was, at its size, and that one no longer
+        // shows; the header's frame is named with the two pages
+        const QRect front = session.scriptWindow(qsl("chat"))->geometry;
+        QVERIFY(session.selectFrameTab(qsl("log")));
+        QCOMPARE(told(), qsl("chat,log,tabs"));
+        QCOMPARE(tabsOf(qsl("tabs")), qsl("tabs=Tabs,chat=Chat,log=log @2"));
+        QCOMPARE(shown(pages), qsl("0 0 1"));
+        QCOMPARE(session.scriptWindow(qsl("log"))->geometry, front);
+        // The tab in front again changes nothing
+        QVERIFY(session.selectFrameTab(qsl("log")));
+        QCOMPARE(told(), QString());
+        // The frame's own console is a tab like the others
+        QVERIFY(session.selectFrameTab(qsl("tabs")));
+        QCOMPARE(told(), qsl("log,tabs"));
+        QCOMPARE(tabsOf(qsl("tabs")), qsl("tabs=Tabs,chat=Chat,log=log @0"));
+        QCOMPARE(shown(pages), qsl("1 0 0"));
+
+        // Refused for a frame with no header, which is no page, and for a name that is no frame's
+        for (const QString& other : {qsl("side"), qsl("nonesuch")}) {
+            QVERIFY(!session.selectFrameTab(other));
+            QVERIFY2(session.errorString().contains(other), qPrintable(session.errorString()));
+        }
+        QCOMPARE(told(), QString());
+
+        // and for a header a player could not click, as in an EXTERNAL frame that is hidden
+        QVERIFY(feed(qsl(R"(<FRAME Name="away" EXTERNAL Width="300" Height="200">)")));
+        QVERIFY(feed(qsl(R"(<DEST away><FRAME Name="inner" Title="Inner" Align="top" Width="100%" Height="100%"></DEST>)")));
+        QVERIFY(feed(qsl(R"(<FRAME Name="innerPage" DOCK="inner" Align="client">)")));
+        told();
+        QCOMPARE(tabsOf(qsl("inner")), qsl("inner=Inner,innerPage=innerPage @1"));
+        QVERIFY(session.runLua(qsl("hideWindow('away')")));
+        told();
+        QVERIFY(!session.selectFrameTab(qsl("inner")));
+        QVERIFY2(session.errorString().contains(qsl("inner")), qPrintable(session.errorString()));
+        QCOMPARE(tabsOf(qsl("inner")), qsl("inner=Inner,innerPage=innerPage @1"));
+        QVERIFY(session.runLua(qsl("showWindow('away')")));
+        told();
+        QVERIFY(session.selectFrameTab(qsl("inner")));
+        QCOMPARE(tabsOf(qsl("inner")), qsl("inner=Inner,innerPage=innerPage @0"));
+        QCOMPARE(shown({qsl("inner"), qsl("innerPage")}), qsl("1 0"));
+
+        // A page that closes leaves the header, and when it was in front QTabBar brings forward the tab to its right
+        QVERIFY(session.selectFrameTab(qsl("chat")));
+        told();
+        QVERIFY(feed(qsl(R"(<FRAME chat ACTION="close">)")));
+        QVERIFY(told().split(QLatin1Char(',')).contains(qsl("tabs")));
+        QCOMPARE(tabsOf(qsl("tabs")), qsl("tabs=Tabs,log=log @1"));
+        QCOMPARE(shown(pages), qsl("0 gone 1"));
+        // else the one to its left
+        QVERIFY(feed(qsl(R"(<FRAME log ACTION="close">)")));
+        QVERIFY(told().split(QLatin1Char(',')).contains(qsl("tabs")));
+        QCOMPARE(tabsOf(qsl("tabs")), qsl("tabs=Tabs @0"));
+        QCOMPARE(shown(pages), qsl("1 gone gone"));
+        QVERIFY(!session.selectFrameTab(qsl("log")));
+        QVERIFY(session.shutdown(false));
+    }
+
     void test_eachWayAScriptChangesAConsolesTextIsTold_data()
     {
         QTest::addColumn<QString>("lua");
