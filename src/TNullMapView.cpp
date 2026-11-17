@@ -100,11 +100,11 @@ void TNullMapView::switchMode(Host* pHost, const bool viewOnly)
 {
     pHost->mMapViewOnly = viewOnly;
     TEvent mapModeEvent{};
-    mapModeEvent.mArgumentList.append(qsl("mapModeChangeEvent"));
+    mapModeEvent.mArgumentList.append(qsl("sysMapModeChanged"));
     mapModeEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     mapModeEvent.mArgumentList.append(viewOnly ? qsl("viewing") : qsl("editing"));
     mapModeEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    pHost->raiseEvent(mapModeEvent);
+    pHost->raiseEventWithOldName(mapModeEvent);
 }
 
 void TNullMapView::setShown(const bool shown)
