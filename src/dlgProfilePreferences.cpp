@@ -905,8 +905,6 @@ void dlgProfilePreferences::buildShell()
 
     mpStackedWidget_categories = new QStackedWidget(pContent);
     mpStackedWidget_categories->setObjectName(qsl("settingsStack"));
-    // The page on show is part of the breakpoint - see sidebarWidths()
-    connect(mpStackedWidget_categories, &QStackedWidget::currentChanged, this, &dlgProfilePreferences::updateSidebarMode);
     pContentLayout->addWidget(mpStackedWidget_categories, 1);
 
     auto* pFindShortcut = new QShortcut(QKeySequence::Find, this);
@@ -3082,20 +3080,10 @@ dlgProfilePreferences::SidebarWidths dlgProfilePreferences::sidebarWidths() cons
     // The reading column, or the widest page where that is wider
     const int contentColumn = std::max(scmContentColumnWidth, widestPageMinimum);
     widths.fullyExpanded = sidebarAndMargins + std::max(contentColumn + scrollBarWidth, titleRowChrome + widestTitle);
-    // The widest page's minimum held to the reading column, so a wide page does not move the collapse point for
-    // the others - raised to what the page on show needs, so a page wider than the column takes the names rather
-    // than scrolling sideways. Longer names move it, and updateSidebarMode() widens the window after them.
-    const QWidget* pShownColumn = pPage ? pPage->widget() : nullptr;
-    const int shownPageMinimum = pShownColumn ? pShownColumn->minimumSizeHint().width() : 0;
-    // A colour card on the page on show keeps two pairs to a row while the names are there, so the names go first:
-    // the other way round the card would stack, then spread out again as the names went
-    int shownColourCards = 0;
-    for (const QGroupBox* pCard : {groupBox_displayColors, groupBox_mapperColors}) {
-        if (pShownColumn && pShownColumn->isAncestorOf(pCard)) {
-            shownColourCards = std::max(shownColourCards, pCard->sizeHint().width() + scmColourArrangementHysteresis);
-        }
-    }
-    widths.collapseBelow = sidebarAndMargins + std::max({std::min(scmContentColumnWidth, widestPageMinimum), shownPageMinimum, shownColourCards}) + scrollBarWidth;
+    // One point for every page, so a click in the sidebar never folds or unfolds the names under the pointer, and
+    // the least any page needs, so the names stay for as long as every page fits beside them: a colour card drops
+    // to one pair a row first
+    widths.collapseBelow = sidebarAndMargins + widestPageMinimum + scrollBarWidth;
     widths.narrowest = uiDesign::scmSidebarRailWidth + contentMargins.left() + contentMargins.right() + widestPageMinimum + scrollBarWidth;
     // Both colour cards two pairs to a row beside the names, which no page's minimum asks for, as one pair to a row is
     // a card's minimum; taken up as arrangeColourCards() would, so the window opens with them

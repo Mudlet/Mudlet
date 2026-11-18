@@ -986,58 +986,47 @@ private slots:
         verifyColourColumns(mapColumn(false), mapColumn(true), sideBySide);
     }
 
-    // Narrowed a few pixels at a time and widened again, a page with a colour card folds the sidebar's names before
-    // the card drops to one pair a row, and each changes once: the other way round, the card stacked and then spread
-    // out again as the names went
-    void test_theNamesFoldBeforeAColourCardStacks()
+    // Narrowed a few pixels at a time and widened again, the sidebar's names fold at the one width whichever page is
+    // on show, so a click in the sidebar never folds them, and not before the window is down to what the pages need:
+    // a colour card dropping to one pair a row is no reason to
+    void test_theNamesFoldAtOneWidthOnEveryPage()
     {
         MudletApp::getQSettings()->setValue(qsl("settingsSidebarLabelsShown"), true);
-        for (const QString& page : {qsl("mapper"), qsl("mainDisplay")}) {
+        int foldsBelow = 0;
+        for (const QString& page : {qsl("general"), qsl("mapper"), qsl("mainDisplay")}) {
             QVERIFY2(openPreferences(page), "the settings dialog never appeared");
-            const bool mapper = page == qsl("mapper");
-            const auto sideBySide = [this, mapper]() {
-                return mapper ? mapSideBySide() : displayTwoPairsToARow();
-            };
             const auto namesShown = [this]() {
                 return !TestSettings::sidebar(mpPreferences)->property(uiDesign::scmProp_rail).toBool();
             };
-            // From the 1060px the dialog is opened at here, or as much wider as the interface's type needs for the names
-            // and two pairs a row
-            int start = 1060;
-            while (!(namesShown() && sideBySide()) && start < 1600) {
-                start += 4;
-                mpPreferences->resize(start, 760);
-                qApp->processEvents();
-                qApp->processEvents();
+            const int collapseBelow = mpPreferences->sidebarWidths().collapseBelow;
+            if (!foldsBelow) {
+                foldsBelow = collapseBelow;
             }
-            QVERIFY2(namesShown() && sideBySide(), qPrintable(qsl("SETUP: up to %1px the %2 page never shows the names and two pairs a row").arg(start).arg(page)));
+            QVERIFY2(collapseBelow == foldsBelow, qPrintable(qsl("the names fold below %1px on the %2 page and below %3px on the general page").arg(collapseBelow).arg(page).arg(foldsBelow)));
 
             QList<int> widths;
-            for (int width = start; width >= mpPreferences->minimumWidth(); width -= 3) {
+            for (int width = collapseBelow + 240; width >= mpPreferences->minimumWidth(); width -= 3) {
                 widths.append(width);
             }
             for (qsizetype index = widths.size() - 2; index >= 0; --index) {
                 widths.append(widths.at(index));
             }
-            int namesChanges = 0;
-            int arrangementChanges = 0;
-            bool hadNames = true;
-            bool hadTwo = true;
+            bool sawCardStackedBesideNames = false;
             for (const int width : widths) {
                 mpPreferences->resize(width, 760);
                 qApp->processEvents();
                 qApp->processEvents();
-                const bool names = namesShown();
-                const bool two = sideBySide();
-                QVERIFY2(!names || two, qPrintable(qsl("at %1px the %2 page shows the names with its colours one pair a row").arg(width).arg(page)));
-                namesChanges += names != hadNames;
-                arrangementChanges += two != hadTwo;
-                hadNames = names;
-                hadTwo = two;
+                QVERIFY2(namesShown() == (width >= foldsBelow),
+                         qPrintable(qsl("at %1px the %2 page %3 the names, which fold below %4px").arg(width).arg(page, namesShown() ? qsl("shows") : qsl("folds")).arg(foldsBelow)));
+                const auto* pShown = qobject_cast<QScrollArea*>(mpPreferences->mpStackedWidget_categories->currentWidget());
+                QVERIFY2(pShown && pShown->horizontalScrollBar()->maximum() == 0, qPrintable(qsl("at %1px the %2 page scrolls sideways").arg(width).arg(page)));
+                if (page == qsl("mainDisplay") && namesShown() && !displayTwoPairsToARow()) {
+                    sawCardStackedBesideNames = true;
+                }
             }
-            // Down and back up: at most one change each way
-            QVERIFY2(namesChanges <= 2 && arrangementChanges <= 2,
-                     qPrintable(qsl("on the %1 page the names changed %2 times and the colours' arrangement %3 times").arg(page).arg(namesChanges).arg(arrangementChanges)));
+            if (page == qsl("mainDisplay")) {
+                QVERIFY2(sawCardStackedBesideNames, "the names were never shown beside the display colours one pair a row, so they folded to keep the card wide");
+            }
             delete mpPreferences;
             mpPreferences = nullptr;
         }
