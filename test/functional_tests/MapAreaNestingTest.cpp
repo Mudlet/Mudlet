@@ -214,6 +214,29 @@ private slots:
         QVERIFY(!area(child)->isZone);
     }
 
+    void deletingAZonesOnlyChildLeavesItNoZone()
+    {
+        const int continent = newArea(qsl("Continent"));
+        const int child = newArea(qsl("Child"));
+        roomDB()->setAreaParent(child, continent);
+
+        QVERIFY(roomDB()->removeArea(child));
+
+        QVERIFY2(!area(continent)->isZone, "the deleted child still counted");
+    }
+
+    // setAreaParent() refuses a loop, but a map file can hold one
+    void aLoopFromAMapFileEndsTheSubtree()
+    {
+        const int first = newArea(qsl("First"));
+        const int second = newArea(qsl("Second"));
+        area(first)->zoneAreaRef = second;
+        area(second)->zoneAreaRef = first;
+
+        QCOMPARE(roomDB()->getAreaChildren(first, true), QList<int>{second});
+        QCOMPARE(roomDB()->getAreaChildren(second, true), QList<int>{first});
+    }
+
     void aJsonMapStoresTheParentAndTheZonesFollowFromIt()
     {
         const int continent = newArea(qsl("Continent"));

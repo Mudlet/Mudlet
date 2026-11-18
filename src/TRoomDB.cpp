@@ -408,7 +408,8 @@ void TRoomDB::removeRoom(QSet<int>& ids)
 bool TRoomDB::removeArea(int id)
 {
     if (TArea* pA = areas.value(id)) {
-        reparentChildrenOf(id);
+        const std::optional<int> parentId = getAreaParent(id);
+        const QList<int> movedChildren = reparentChildrenOf(id);
         mpMap->areasAboutToBeDeleted();
         mpMap->areaGraph()->forgetArea(id);
         if (!rooms.isEmpty()) {
@@ -429,13 +430,15 @@ bool TRoomDB::removeArea(int id)
         delete pA;
 
         mpMap->mMapGraphNeedsUpdate = true;
+        afterAreaRemoved(id, parentId, movedChildren);
         return true;
     }
     if (areaNamesMap.contains(id)) {
         // Handle corner case where the area name was created but not used
-        reparentChildrenOf(id);
+        const QList<int> movedChildren = reparentChildrenOf(id);
         areaNamesMap.remove(id);
         mpMap->areaGraph()->forgetArea(id);
+        afterAreaRemoved(id, std::nullopt, movedChildren);
         return true;
     }
     return false;
@@ -641,18 +644,23 @@ TRoomDB::AreaParentResult TRoomDB::setAreaParent(const int areaId, const std::op
         }
     }
     mpMap->setUnsaved(__func__);
-
-    if (mpMap->mpHost) {
-        TEvent event{};
-        event.mArgumentList << qsl("sysAreaParentChanged") << QString::number(areaId);
-        event.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_NUMBER;
-        for (const std::optional<int>& id : {oldParentId, parentId}) {
-            event.mArgumentList << (id.has_value() ? QString::number(*id) : QString());
-            event.mArgumentTypeList << (id.has_value() ? ARGUMENT_TYPE_NUMBER : ARGUMENT_TYPE_NIL);
-        }
-        mpMap->mpHost->raiseEvent(event);
-    }
+    raiseAreaParentChanged(areaId, oldParentId, parentId);
     return AreaParentResult::Changed;
+}
+
+void TRoomDB::raiseAreaParentChanged(const int areaId, const std::optional<int> oldParentId, const std::optional<int> newParentId) const
+{
+    if (!mpMap->mpHost) {
+        return;
+    }
+    TEvent event{};
+    event.mArgumentList << qsl("sysAreaParentChanged") << QString::number(areaId);
+    event.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_NUMBER;
+    for (const std::optional<int>& id : {oldParentId, newParentId}) {
+        event.mArgumentList << (id.has_value() ? QString::number(*id) : QString());
+        event.mArgumentTypeList << (id.has_value() ? ARGUMENT_TYPE_NUMBER : ARGUMENT_TYPE_NIL);
+    }
+    mpMap->mpHost->raiseEvent(event);
 }
 
 QList<int> TRoomDB::getAreaChildren(const std::optional<int> areaId, const bool recursive) const
@@ -668,30 +676,51 @@ QList<int> TRoomDB::getAreaChildren(const std::optional<int> areaId, const bool 
         return children;
     }
     QList<int> subtree;
+    QSet<int> listed;
+    if (areaId.has_value()) {
+        listed.insert(*areaId);
+    }
     for (const int child : std::as_const(children)) {
-        subtree << child;
-        // setAreaParent() refuses a loop, but a map file could still hold one; a child already listed ends it
-        if (child != areaId) {
-            for (const int descendant : getAreaChildren(child, true)) {
-                if (!subtree.contains(descendant) && descendant != areaId) {
-                    subtree << descendant;
-                }
-            }
-        }
+        appendAreaSubtree(child, subtree, listed);
     }
     return subtree;
 }
 
-void TRoomDB::reparentChildrenOf(const int areaId)
+void TRoomDB::appendAreaSubtree(const int areaId, QList<int>& subtree, QSet<int>& listed) const
+{
+    // setAreaParent() refuses a loop, but a map file could still hold one: an area already listed ends it
+    if (listed.contains(areaId)) {
+        return;
+    }
+    listed.insert(areaId);
+    subtree << areaId;
+    for (const int child : getAreaChildren(areaId, false)) {
+        appendAreaSubtree(child, subtree, listed);
+    }
+}
+
+QList<int> TRoomDB::reparentChildrenOf(const int areaId)
 {
     const std::optional<int> grandParentId = getAreaParent(areaId);
-    for (TArea* pChild : std::as_const(areas)) {
-        if (pChild && pChild->zoneAreaRef == areaId) {
-            pChild->zoneAreaRef = grandParentId.value_or(0);
+    QList<int> movedChildren;
+    for (auto it = areas.cbegin(); it != areas.cend(); ++it) {
+        if (it.value() && it.value()->zoneAreaRef == areaId) {
+            it.value()->zoneAreaRef = grandParentId.value_or(0);
+            movedChildren << it.key();
         }
     }
-    if (grandParentId.has_value()) {
-        updateIsZone(*grandParentId);
+    std::sort(movedChildren.begin(), movedChildren.end());
+    return movedChildren;
+}
+
+void TRoomDB::afterAreaRemoved(const int areaId, const std::optional<int> parentId, const QList<int>& movedChildren)
+{
+    // Only now that the area is gone does its parent stop counting it as a child
+    if (parentId.has_value()) {
+        updateIsZone(*parentId);
+    }
+    for (const int childId : movedChildren) {
+        raiseAreaParentChanged(childId, areaId, parentId);
     }
 }
 
