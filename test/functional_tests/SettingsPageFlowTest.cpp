@@ -714,6 +714,12 @@ private slots:
         }
         auto* pDisplayGrid = dynamic_cast<uiDesign::PairGridLayout*>(pDisplayColours->layout());
         const int displayTwoPairs = pDisplayGrid->sizeHint().width();
+        // The cases open in a window of one width, and how much of it two pairs need follows the platform's font
+        const int displayRoom = displayTwoPairs + dlgProfilePreferences::scmColourArrangementHysteresis + TestSettings::pageOf(p, qsl("mainDisplay"))->verticalScrollBar()->sizeHint().width();
+        if (pDisplayColours->width() < displayRoom) {
+            QVERIFY2(widthTo(pDisplayColours, displayRoom),
+                     qPrintable(qsl("the display colours could not be given the %1px two pairs to a row need, and have %2px").arg(displayRoom).arg(pDisplayColours->width())));
+        }
         verifyColourGrid(displayRows, true);
         QGroupBox* pDisplayCard = p->groupBox_displayColors;
         pDisplayCard->setMaximumWidth(cardChrome(pDisplayCard, pDisplayColours) + displayTwoPairs - 1);
