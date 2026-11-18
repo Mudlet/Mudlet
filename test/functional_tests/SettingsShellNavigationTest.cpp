@@ -46,9 +46,11 @@
 #include <QScopeGuard>
 #include <QSpinBox>
 #include <QRegularExpression>
+#include <QResizeEvent>
 #include <QStackedWidget>
 #include <QStyleOptionButton>
 #include <QStyleOptionGroupBox>
+#include <QStyleOptionSlider>
 #include <QToolButton>
 #include <QTranslator>
 #include <QWheelEvent>
@@ -156,6 +158,28 @@ static int markedPixelsIn(const QImage& shot, const QRect& box, const QColor& fi
     }
     return marked;
 }
+
+// Every width a widget is resized to, including one a later layout pass takes back before anything settles
+class ResizeWidthRecorder : public QObject
+{
+public:
+    explicit ResizeWidthRecorder(QWidget* pWatched)
+    : QObject(pWatched)
+    {
+        pWatched->installEventFilter(this);
+    }
+
+    QList<int> mWidths;
+
+protected:
+    bool eventFilter(QObject* pWatched, QEvent* pEvent) override
+    {
+        if (pEvent->type() == QEvent::Resize) {
+            mWidths << static_cast<QResizeEvent*>(pEvent)->size().width();
+        }
+        return QObject::eventFilter(pWatched, pEvent);
+    }
+};
 
 class SettingsShellNavigationTest : public QObject
 {
@@ -490,6 +514,172 @@ private slots:
         }
         qDebug() << "pages too tall for the window:" << checked;
         QVERIFY2(checked.size() > 1, "SETUP: at most one page is taller than the shortest window, so this checks next to nothing");
+    }
+
+    // The bar lies in the content's right margin and its room is kept while it is hidden, so the cards end where
+    // the rows above them do whether or not the page scrolls - and no width is laid out on the way from one to the
+    // other, which a comparison of the two settled states alone would miss
+    // The gap is for the bar a page scrolls its cards with; a bar inside something a page holds stands against its
+    // own text
+    void test_onlyAPagesOwnBarKeepsTheGap()
+    {
+        int pageBars = 0;
+        QStringList others;
+        QStringList misses;
+        for (const QScrollBar* pBar : mpPreferences->findChildren<QScrollBar*>()) {
+            if (pBar->orientation() != Qt::Vertical) {
+                continue;
+            }
+            const QWidget* pContainer = pBar->parentWidget();
+            const auto* pArea = pContainer ? qobject_cast<const QScrollArea*>(pContainer->parentWidget()) : nullptr;
+            const bool pagesOwn = pArea && pArea->verticalScrollBar() == pBar && pArea->parentWidget() == mpPreferences->mpStackedWidget_categories;
+            const int width = pBar->sizeHint().width();
+            if (pagesOwn) {
+                ++pageBars;
+                if (width <= uiDesign::scmScrollBarThickness) {
+                    misses << qsl("the %1 page's bar is %2px wide, with no gap").arg(pArea->objectName()).arg(width);
+                }
+                continue;
+            }
+            const QString name =
+                    qsl("%1 in %2").arg(QString::fromLatin1(pBar->metaObject()->className()), pContainer && pContainer->parentWidget() ? pContainer->parentWidget()->objectName() : QString());
+            others << name;
+            if (width > uiDesign::scmScrollBarThickness && pBar->testAttribute(Qt::WA_StyleSheetTarget)) {
+                misses << qsl("%1 is %2px wide, the page's gap added to its %3px").arg(name).arg(width).arg(uiDesign::scmScrollBarThickness);
+            }
+        }
+        QVERIFY2(pageBars > 0 && !others.isEmpty(), qPrintable(qsl("SETUP: %1 page bars and %2 other vertical bars were found").arg(pageBars).arg(others.size())));
+        QVERIFY2(misses.isEmpty(), qPrintable(misses.join(qsl("; "))));
+    }
+
+    void test_theScrollBarLiesInTheMarginAndTheCardsKeepTheirWidth()
+    {
+        selectCategory(qsl("general"));
+        QScrollArea* pPage = pageOf(qsl("general"));
+        QWidget* pColumn = pPage->widget();
+        QScrollBar* pBar = pPage->verticalScrollBar();
+        auto* pContent = mpPreferences->findChild<QWidget*>(qsl("settingsContent"));
+        auto* pSearch = mpPreferences->findChild<QLineEdit*>(qsl("settingsSearchField"));
+        QWidget* pTitleRow = mpPreferences->mpWidget_titleRow;
+        QVERIFY2(pContent && pSearch && pTitleRow, "the settings shell has no content column, search field or title row");
+        QGroupBox* pCard = nullptr;
+        for (auto* pCandidate : pColumn->findChildren<QGroupBox*>(QString(), Qt::FindDirectChildrenOnly)) {
+            if (pCandidate->isVisible()) {
+                pCard = pCandidate;
+                break;
+            }
+        }
+        QVERIFY2(pCard, "the General page has no card on show to measure");
+
+        const auto settle = [this](const int height) {
+            mpPreferences->resize(mpPreferences->width(), height);
+            QCoreApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
+            QCoreApplication::processEvents();
+        };
+        const auto inContent = [pContent](const QWidget* pWidget) {
+            return QRect(pWidget->mapTo(pContent, QPoint(0, 0)), pWidget->size());
+        };
+        const auto cardsOverflow = [pPage, pColumn]() {
+            return pColumn->heightForWidth(pColumn->width()) > pPage->viewport()->height();
+        };
+
+        const int chrome = mpPreferences->height() - pPage->viewport()->height();
+        // Measured at the narrower of the two widths the cards could have, so they fit at either
+        const int tall = chrome + pColumn->heightForWidth(pPage->viewport()->width() - pBar->sizeHint().width()) + 40;
+        const int shortest = mpPreferences->minimumHeight();
+        settle(tall);
+        QTRY_VERIFY2(!pBar->isVisible(), qPrintable(qsl("SETUP: the General page still scrolls in a %1px tall window").arg(mpPreferences->height())));
+        const QRect cardFits = inContent(pCard);
+        const QRect searchFits = inContent(pSearch);
+        const QRect titleRowFits = inContent(pTitleRow);
+        const int columnWidth = pColumn->width();
+        // From the cards' height at the width they settled at, so the walk below crosses the point the bar appears
+        const int threshold = chrome + pColumn->heightForWidth(columnWidth);
+        QVERIFY2(threshold - 8 > shortest, qPrintable(qsl("SETUP: the General page fits a %1px tall window, so it never scrolls").arg(shortest)));
+
+        auto* pColumnWidths = new ResizeWidthRecorder(pColumn);
+        auto* pCardWidths = new ResizeWidthRecorder(pCard);
+        QList<int> heights;
+        for (int height = tall; height > threshold + 8; height -= 24) {
+            heights << height;
+        }
+        for (int height = threshold + 8; height >= threshold - 8; --height) {
+            heights << height;
+        }
+        heights << (threshold + shortest) / 2 << shortest;
+        for (const int height : std::as_const(heights)) {
+            settle(height);
+            QTRY_VERIFY2_WITH_TIMEOUT(pBar->isVisible() == cardsOverflow(),
+                                      qPrintable(qsl("in a %1px tall window the bar is %2 for %3px of cards in a %4px viewport")
+                                                         .arg(mpPreferences->height())
+                                                         .arg(pBar->isVisible() ? qsl("showing") : qsl("hidden"))
+                                                         .arg(pColumn->heightForWidth(pColumn->width()))
+                                                         .arg(pPage->viewport()->height())),
+                                      1000);
+        }
+        QVERIFY2(pBar->isVisible(), qPrintable(qsl("SETUP: the General page does not scroll in a %1px tall window").arg(mpPreferences->height())));
+        QVERIFY2(!pColumnWidths->mWidths.isEmpty(), "SETUP: the column was never resized while the window's height changed, so no width was recorded");
+        const auto verifyOneWidthOnTheWay = [&](const QString& way) {
+            for (const int width : std::as_const(pColumnWidths->mWidths)) {
+                QVERIFY2(width == columnWidth, qPrintable(qsl("%1, the column was laid out %2px wide against its settled %3px").arg(way).arg(width).arg(columnWidth)));
+            }
+            for (const int width : std::as_const(pCardWidths->mWidths)) {
+                QVERIFY2(width == cardFits.width(), qPrintable(qsl("%1, the card was laid out %2px wide against its settled %3px").arg(way).arg(width).arg(cardFits.width())));
+            }
+        };
+        verifyOneWidthOnTheWay(qsl("as the page came to scroll"));
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+
+        const QRect cardScrolls = inContent(pCard);
+        const auto widths = mpPreferences->sidebarWidths();
+        qDebug() << "content column" << pContent->width() << "wide; card" << cardFits << "fitting," << cardScrolls << "scrolling; bar" << inContent(pBar) << "; fold widths" << widths.fullyExpanded
+                 << widths.collapseBelow << widths.narrowest;
+        QVERIFY2(cardScrolls.left() == cardFits.left() && cardScrolls.width() == cardFits.width(),
+                 qPrintable(qsl("the card spans x %1-%2 while the page fits and %3-%4 while it scrolls")
+                                    .arg(cardFits.left())
+                                    .arg(cardFits.right() + 1)
+                                    .arg(cardScrolls.left())
+                                    .arg(cardScrolls.right() + 1)));
+        QVERIFY2(pContent->width() - (cardFits.right() + 1) == 24,
+                 qPrintable(qsl("the card ends %1px short of the content column's right edge, not 24px").arg(pContent->width() - (cardFits.right() + 1))));
+
+        // The style's own groove, which leaves out the gap the bar carries as its margin
+        QStyleOptionSlider option;
+        option.initFrom(pBar);
+        option.orientation = Qt::Vertical;
+        const QRect groove = pBar->style()->subControlRect(QStyle::CC_ScrollBar, &option, QStyle::SC_ScrollBarGroove, pBar).translated(inContent(pBar).topLeft());
+        QVERIFY2(pContent->rect().contains(inContent(pBar)),
+                 qPrintable(qsl("the bar at x %1-%2 is not inside the %3px content column").arg(inContent(pBar).left()).arg(inContent(pBar).right() + 1).arg(pContent->width())));
+        QVERIFY2(pBar->height() == pPage->viewport()->height(), qPrintable(qsl("the bar is %1px tall beside a %2px viewport").arg(pBar->height()).arg(pPage->viewport()->height())));
+        QVERIFY2(groove.left() - (cardScrolls.right() + 1) == 8, qPrintable(qsl("the bar is drawn %1px right of the cards, not 8px").arg(groove.left() - (cardScrolls.right() + 1))));
+        QCOMPARE(groove.width(), uiDesign::scmScrollBarThickness);
+        QVERIFY2(pContent->width() - (groove.right() + 1) == 4,
+                 qPrintable(qsl("the bar is drawn %1px short of the content column's right edge, not 4px").arg(pContent->width() - (groove.right() + 1))));
+
+        QCOMPARE(inContent(pSearch), searchFits);
+        QCOMPARE(inContent(pTitleRow), titleRowFits);
+        QVERIFY2(pContent->width() - (titleRowFits.right() + 1) == 24,
+                 qPrintable(qsl("the title row ends %1px short of the content column's right edge, not where the cards do").arg(pContent->width() - (titleRowFits.right() + 1))));
+        QVERIFY2(searchFits.right() <= titleRowFits.right(), "the search field reaches past where the cards end");
+
+        pColumnWidths->mWidths.clear();
+        pCardWidths->mWidths.clear();
+        for (auto it = heights.crbegin(); it != heights.crend(); ++it) {
+            settle(*it);
+        }
+        settle(tall);
+        QTRY_VERIFY2(!pBar->isVisible(), "the bar stayed on show after the window grew tall enough for the cards again");
+        QVERIFY2(!pColumnWidths->mWidths.isEmpty(), "SETUP: the column was never resized while the window grew, so no width was recorded");
+        verifyOneWidthOnTheWay(qsl("as the page came to fit"));
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        // A container that collapsed under its hidden bar is laid out again only after the bar shows, a pass late
+        QVERIFY2(pBar->parentWidget()->isVisible() && pBar->parentWidget()->height() == pPage->viewport()->height(),
+                 qPrintable(qsl("the hidden bar's container is %1px tall beside a %2px viewport").arg(pBar->parentWidget()->height()).arg(pPage->viewport()->height())));
+        mpPreferences->resize(1060, 760);
     }
 
     void test_theSidebarOpensAtTheWidthARestyleKeeps()
@@ -1625,8 +1815,8 @@ private slots:
         auto* pSidebar = mpPreferences->findChild<QWidget*>(qsl("settingsSidebar"));
         QVERIFY2(pSidebar && !sidebar()->property(uiDesign::scmProp_rail).toBool(), "the names are not on show in a window wider than they and the widest page need");
 
-        // A scrollbar the shorter page no longer needs hands its width back as well
-        QVERIFY2(pColumn->width() >= columnBefore + 400, qPrintable(qsl("the window grew by 400px and the General page's column only from %1px to %2px").arg(columnBefore).arg(pColumn->width())));
+        // The page keeps its bar's room whether or not it scrolls, so the column gains what the window did and no more
+        QVERIFY2(pColumn->width() == columnBefore + 400, qPrintable(qsl("the window grew by 400px and the General page's column from %1px to %2px").arg(columnBefore).arg(pColumn->width())));
         QCOMPARE(pColumn->width(), pPage->viewport()->width());
         for (auto* pCard : cards) {
             if (!pCard->isVisible()) {

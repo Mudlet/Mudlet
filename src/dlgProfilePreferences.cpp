@@ -182,7 +182,10 @@ static constexpr char scmProp_settingsRichText[] = "settingsRichText";
 
 // A reading width: a wide window gains whitespace rather than stretching the controls
 static constexpr int scmContentColumnWidth = 640;
+static constexpr int scmContentMargin = 24;
 static constexpr int scmScrollBarGap = 8;
+// A page keeps this room whether or not its bar shows, and it is taken out of the content's right margin
+static constexpr int scmScrollBarRoom = uiDesign::scmScrollBarThickness + scmScrollBarGap;
 // The narrowest the window goes, however little its pages need
 static constexpr int scmMinimumWindowWidth = 780;
 
@@ -828,9 +831,14 @@ void dlgProfilePreferences::buildShell()
     auto* pContent = new QWidget(mpWidget_shell);
     pContent->setObjectName(qsl("settingsContent"));
     auto* pContentLayout = new QVBoxLayout(pContent);
-    pContentLayout->setContentsMargins(24, 24, 24, 24);
+    pContentLayout->setContentsMargins(scmContentMargin, scmContentMargin, scmContentMargin - scmScrollBarRoom, scmContentMargin);
     pContentLayout->setSpacing(16);
     pShellLayout->addWidget(pContent, 1);
+    // The rows above the pages end where the pages' cards do, short of the scroll bar's room
+    auto* pHeadLayout = new QVBoxLayout();
+    pHeadLayout->setContentsMargins(0, 0, scmScrollBarRoom, 0);
+    pHeadLayout->setSpacing(pContentLayout->spacing());
+    pContentLayout->addLayout(pHeadLayout);
 
     // The control that gives the sidebar's names up rides on the seam between
     // the sidebar and the settings beside it, so it is a child of the shell
@@ -848,7 +856,7 @@ void dlgProfilePreferences::buildShell()
     mpLineEdit_search->setMinimumHeight(36);
     mpLineEdit_search->setMaximumWidth(scmContentColumnWidth);
     mpAction_searchIcon = mpLineEdit_search->addAction(QIcon(), QLineEdit::LeadingPosition);
-    pContentLayout->addWidget(mpLineEdit_search);
+    pHeadLayout->addWidget(mpLineEdit_search);
 
     auto* pTitleRow = new QWidget(pContent);
     mpWidget_titleRow = pTitleRow;
@@ -890,7 +898,7 @@ void dlgProfilePreferences::buildShell()
     mpLabel_pageTitle->setObjectName(qsl("settingsPageTitle"));
     pTitleRowLayout->addWidget(mpLabel_pageTitle);
     pTitleRowLayout->addStretch(1);
-    pContentLayout->addWidget(pTitleRow);
+    pHeadLayout->addWidget(pTitleRow);
 
     // Tab skips disabled controls and screen readers only call them unavailable, so with no profile the
     // explanation has to be a Tab stop itself
@@ -900,7 +908,7 @@ void dlgProfilePreferences::buildShell()
     mpLabel_noProfileNotice->setMaximumWidth(scmContentColumnWidth);
     mpLabel_noProfileNotice->setFocusPolicy(Qt::TabFocus);
     mpLabel_noProfileNotice->hide();
-    pContentLayout->addWidget(mpLabel_noProfileNotice);
+    pHeadLayout->addWidget(mpLabel_noProfileNotice);
 
     mpStackedWidget_categories = new QStackedWidget(pContent);
     mpStackedWidget_categories->setObjectName(qsl("settingsStack"));
@@ -1654,6 +1662,24 @@ public:
         return hint;
     }
 };
+
+// The viewport is laid out beside the bar's room whether or not there is anything to scroll, so the cards never
+// change width and no frame is painted between two widths. Qt shows and hides the bar's container, never the bar,
+// which leaves the bar's own visibility to follow its range.
+void keepRoomForTheVerticalBar(QScrollArea* pScrollArea)
+{
+    pScrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+    QScrollBar* pBar = pScrollArea->verticalScrollBar();
+    // Otherwise a hidden bar collapses its container to no height, and on showing is drawn a layout pass late
+    QSizePolicy policy = pBar->sizePolicy();
+    policy.setRetainSizeWhenHidden(true);
+    pBar->setSizePolicy(policy);
+    const auto showWhileScrollable = [pBar]() {
+        pBar->setVisible(pBar->maximum() > pBar->minimum());
+    };
+    QObject::connect(pBar, &QAbstractSlider::rangeChanged, pBar, showWhileScrollable);
+    showWhileScrollable();
+}
 } // namespace
 
 QScrollArea* dlgProfilePreferences::createScrollPage(const QString& objectSuffix)
@@ -1662,6 +1688,7 @@ QScrollArea* dlgProfilePreferences::createScrollPage(const QString& objectSuffix
     pScrollArea->setObjectName(qsl("settingsPage_%1").arg(objectSuffix));
     pScrollArea->setFrameShape(QFrame::NoFrame);
     pScrollArea->setWidgetResizable(true);
+    keepRoomForTheVerticalBar(pScrollArea);
     markAsShellSurface(pScrollArea);
 
     auto* pColumn = new SettingsColumn(pScrollArea);
@@ -2797,7 +2824,8 @@ dlgProfilePreferences::SidebarWidths dlgProfilePreferences::sidebarWidths() cons
     const int sidebarAndMargins = measuredSidebarWidth() + contentMargins.left() + contentMargins.right();
     // The reading column, or the widest page where that is wider
     const int contentColumn = std::max(scmContentColumnWidth, widestPageMinimum);
-    widths.fullyExpanded = sidebarAndMargins + std::max(contentColumn + scrollBarWidth, titleRowChrome + widestTitle);
+    // A page keeps its bar's room whether or not the bar shows, and the title row stops as far short
+    widths.fullyExpanded = sidebarAndMargins + std::max(contentColumn + scrollBarWidth, titleRowChrome + widestTitle + scmScrollBarRoom);
     // The widest page's minimum held to the reading column, so a wide page does not move the collapse point for
     // the others - raised to what the page on show needs, so a page wider than the column takes the names rather
     // than scrolling sideways. Longer names move it, and updateSidebarMode() widens the window after them.
@@ -3759,8 +3787,10 @@ void dlgProfilePreferences::applyShellStyle()
             + cardIndicatorRules
             // A scroll area's bars answer only to a descendant selector
             + scrollBarStyleSheet(qsl("QScrollArea[settingsSurface=\"true\"]"), tokens)
-            // The margin is part of the bar's width, so the gap to the cards is there only while the bar shows
-            + qsl("QScrollArea[settingsSurface=\"true\"] QScrollBar:vertical { width: %1px; margin-left: %2px; }").arg(QString::number(12 + scmScrollBarGap), QString::number(scmScrollBarGap))
+            // The gap to the cards is part of the bar's width, and so of the room a page keeps for it. A child
+            // selector, as a descendant one also reaches the bars of what a page holds, the theme preview's among them
+            + qsl("QScrollArea[settingsSurface=\"true\"] > #qt_scrollarea_vcontainer > QScrollBar:vertical { width: %1px; margin-left: %2px; }")
+                      .arg(QString::number(scmScrollBarRoom), QString::number(scmScrollBarGap))
             + scrollBarStyleSheet(qsl("#settingsCategoryList"), tokens)
             // Every control a setting is typed into or picked in is drawn the
             // one way the editor draws its own, and under the stack alone:

@@ -135,6 +135,8 @@ inline constexpr qreal scmHoverWashStrength = 0.07;
 // A console is drawn in the profile's colours, not the theme's, so this mixes its command-line colours
 inline constexpr qreal scmConsoleFootSeamStrength = 0.20;
 
+inline constexpr int scmScrollBarThickness = 12;
+
 // A scroll area's own bars answer only to a descendant selector, hence the prefix. An invalid surface means the page.
 QString scrollBarStyleSheet(const QString& selectorPrefix, const ThemeTokens& tokens, const QColor& surface = QColor());
 
