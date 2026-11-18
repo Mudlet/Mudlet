@@ -610,6 +610,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH, std::unique_ptr<TConsoleModel> erro
 
     // main areas
     mpTriggersMainArea = new dlgTriggersMainArea(this);
+    // Named before applyEditorShellStyle() first runs: its rules reach the pattern list and its scroll bar by this
+    // name, and a later pass with the colours unchanged does nothing
+    mpTriggersMainArea->scrollArea->setObjectName(qsl("editorPatternScroll"));
     layoutColumn->addWidget(mpTriggersMainArea, 1);
     connect(mpTriggersMainArea->pushButtonFgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_colorizeTriggerSetFgColor);
     connect(mpTriggersMainArea->pushButtonBgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_colorizeTriggerSetBgColor);
@@ -1697,7 +1700,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH, std::unique_ptr<TConsoleModel> erro
 
     mpScrollArea = mpTriggersMainArea->scrollArea;
     // QAbstractScrollArea fills its viewport with QPalette::Base, which drew the pattern rows as a field-coloured box
-    mpScrollArea->setObjectName(qsl("editorPatternScroll"));
     mpScrollArea->setFrameShape(QFrame::NoFrame);
     mpScrollArea->viewport()->setAutoFillBackground(false);
     mpWidget_triggerItems = new QWidget;

@@ -27,6 +27,8 @@ namespace uiDesign {
 // QScrollArea caches its widget's sizeHint() from the first ask, and its
 // minimumSizeHint() reserves both scroll bars even when neither shows; under a
 // form held to its contents that sizes it for an earlier item and a bar too tall.
+// The vertical bar's width is kept clear while the bar is hidden, so what this
+// holds is one width whether or not it scrolls.
 class ContentScrollArea : public QScrollArea
 {
     Q_OBJECT
@@ -42,6 +44,9 @@ protected:
     // Passes the widget's LayoutRequest up as updateGeometry(), or the layout
     // holding this area keeps the hint it cached
     bool eventFilter(QObject* pWatched, QEvent* pEvent) override;
+
+private:
+    void showTheBarWhileItScrolls();
 };
 
 } // namespace uiDesign

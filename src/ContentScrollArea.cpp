@@ -20,12 +20,22 @@
 #include "ContentScrollArea.h"
 
 #include <QEvent>
+#include <QScrollBar>
 
 namespace uiDesign {
 
 ContentScrollArea::ContentScrollArea(QWidget* pParent)
 : QScrollArea(pParent)
 {
+    // The room is taken from the viewport at all times; only the bar inside it comes and goes
+    setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+    QScrollBar* pBar = verticalScrollBar();
+    // Otherwise a hidden bar collapses its container to no height, and on showing is drawn a layout pass late
+    QSizePolicy policy = pBar->sizePolicy();
+    policy.setRetainSizeWhenHidden(true);
+    pBar->setSizePolicy(policy);
+    connect(pBar, &QAbstractSlider::rangeChanged, this, &ContentScrollArea::showTheBarWhileItScrolls);
+    showTheBarWhileItScrolls();
 }
 
 QSize ContentScrollArea::sizeHint() const
@@ -56,6 +66,12 @@ bool ContentScrollArea::eventFilter(QObject* pWatched, QEvent* pEvent)
         updateGeometry();
     }
     return QScrollArea::eventFilter(pWatched, pEvent);
+}
+
+void ContentScrollArea::showTheBarWhileItScrolls()
+{
+    QScrollBar* pBar = verticalScrollBar();
+    pBar->setVisible(pBar->maximum() > pBar->minimum());
 }
 
 } // namespace uiDesign

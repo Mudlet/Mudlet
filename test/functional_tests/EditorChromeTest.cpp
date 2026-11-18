@@ -34,12 +34,16 @@
 #include <QImage>
 #include <QLabel>
 #include <QLineEdit>
+#include <QMap>
 #include <QMenu>
 #include <QPalette>
 #include <QPixmap>
 #include <QPlainTextEdit>
 #include <QPushButton>
+#include <QResizeEvent>
 #include <QScopeGuard>
+#include <QScrollArea>
+#include <QScrollBar>
 #include <QSplitterHandle>
 #include <QStyleOptionToolButton>
 #include <QTextEdit>
@@ -65,6 +69,24 @@
 
 #include "GroupedTest.h"
 
+// Every width a widget is resized to, a width some later layout pass puts right among them
+class ResizeWidthLog : public QObject
+{
+public:
+    explicit ResizeWidthLog(QWidget* pWidget) { pWidget->installEventFilter(this); }
+
+    QList<int> mWidths;
+
+protected:
+    bool eventFilter(QObject* pWatched, QEvent* pEvent) override
+    {
+        if (pEvent->type() == QEvent::Resize) {
+            mWidths << static_cast<const QResizeEvent*>(pEvent)->size().width();
+        }
+        return QObject::eventFilter(pWatched, pEvent);
+    }
+};
+
 class EditorChromeTest : public QObject
 {
     Q_OBJECT
@@ -86,6 +108,11 @@ private:
     // Small: a glyph's antialiased edges step between ink and surface, so the
     // pixel furthest from the surface is the ink itself
     static constexpr int scmInkTolerance = 2;
+    // Taller than the 800 pixel window at any row height, under the editor's limit of 50
+    static constexpr int scmRowsThatScroll = 40;
+    // Many rows' height, where the bar shows within one row of the full window
+    static constexpr int scmMostHeightStepped = 300;
+    static constexpr int scmStepsPastTheBarsPoint = 6;
 
     // The compile and duplicate notes say a reading in the error hue, and a chip
     // label holds an event name the reader typed - content, not chrome
@@ -181,6 +208,22 @@ private:
                                    chrome.name());
         }
         return audited;
+    }
+
+    // Empty when every width is the one expected, otherwise each other width and how often it came
+    static QString otherWidths(const QList<int>& widths, const int expected)
+    {
+        QMap<int, int> counts;
+        for (const int width : widths) {
+            if (width != expected) {
+                ++counts[width];
+            }
+        }
+        QStringList found;
+        for (auto it = counts.cbegin(); it != counts.cend(); ++it) {
+            found << qsl("%1 pixels %2 time(s)").arg(QString::number(it.key()), QString::number(it.value()));
+        }
+        return found.join(qsl(", "));
     }
 
     void buildThreePatternRows()
@@ -584,6 +627,18 @@ private slots:
             }
         }
         QVERIFY2(misses.isEmpty(), qPrintable(qsl("trees that open with their rows inked in something other than the chrome's %1: %2").arg(mutedText.name(), misses.join(qsl(", ")))));
+    }
+
+    // Ahead of any appearance switch too: a switch applies the editor's rules again, which gives the bar the design
+    // it opened without
+    void test_thePatternListsScrollBarIsTheTreesAsTheWindowOpens()
+    {
+        const auto* pPatterns = mpEditor->findChild<QScrollArea*>(qsl("editorPatternScroll"));
+        QVERIFY2(pPatterns != nullptr, "The trigger form has no pattern list to scroll");
+        const QScrollBar* pPatternBar = pPatterns->verticalScrollBar();
+        const QScrollBar* pTreeBar = mpEditor->treeWidget_triggers->verticalScrollBar();
+        QVERIFY2(pPatternBar->testAttribute(Qt::WA_StyleSheetTarget), "No rule of the editor's reaches the pattern list's scroll bar, so it is the platform's own");
+        QCOMPARE(pPatternBar->sizeHint().width(), pTreeBar->sizeHint().width());
     }
 
     // One list at the end: stopping at the first miss would take a run per miss
@@ -1437,6 +1492,99 @@ private slots:
         QVERIFY2(nothingInIt == 0, qPrintable(qsl("an unchecked option already has %1 pixels in its box that are not the fill").arg(nothingInIt)));
         QVERIFY2(aTick > 0, "a checked option paints nothing inside its box, so there is no mark on it");
         QVERIFY2(nearest <= scmMarkInkSlack, qPrintable(qsl("the mark's nearest ink is %1 away from the %2 every other choice is marked in").arg(nearest).arg(markInk.name())));
+    }
+
+    // Last, as it adds rows and resizes the window, which the cases above would read. Every Resize is read, as a
+    // width a later layout pass puts right can still be painted for a frame.
+    void test_aPatternFieldKeepsItsWidthAsTheListStartsAndStopsScrolling()
+    {
+        enterView(EditorViewType::cmTriggerView);
+        const auto* pPatterns = mpEditor->findChild<QScrollArea*>(qsl("editorPatternScroll"));
+        QVERIFY2(pPatterns != nullptr && pPatterns->widget() != nullptr, "The trigger form has no pattern list to scroll");
+        const QScrollBar* pBar = pPatterns->verticalScrollBar();
+        QWidget* pList = pPatterns->widget();
+        QWidget* pField = mpEditor->mTriggerPatternEdit.at(0)->singleLineTextEdit_pattern;
+        const int rowsAtStart = mpEditor->mVisiblePatternCount;
+        const QSize sizeAtStart = mpEditor->size();
+        const auto putBack = qScopeGuard([this, rowsAtStart, sizeAtStart]() {
+            mpEditor->resize(sizeAtStart);
+            TestPixels::settle();
+            mpEditor->showPatternItems(rowsAtStart);
+            mpEditor->fitFormPaneToItsContents();
+            TestPixels::settle();
+        });
+        // As the add button does: the form pane grows to the rows, up to the code pane's floor
+        const auto showRows = [this](const int rows) {
+            mpEditor->showPatternItems(rows);
+            mpEditor->fitFormPaneToItsContents();
+            TestPixels::settle();
+        };
+        const auto setHeight = [this](const int height) {
+            mpEditor->resize(mpEditor->width(), height);
+            TestPixels::settle();
+        };
+
+        TestPixels::settle();
+        QVERIFY2(!pBar->isVisible(), qPrintable(qsl("the list of %1 patterns scrolls already, so there is no width without the bar to start from").arg(rowsAtStart)));
+        QVERIFY2(pField->maximumWidth() > pField->width() + pBar->sizeHint().width(), "the pattern field is held to a width the scroll bar could not narrow, so this case would measure nothing");
+        const int fieldWidth = pField->width();
+        const int listWidth = pList->width();
+        qInfo().noquote() << qsl("  the first pattern field is %1 pixels wide in a list %2 wide, with %3 pixels kept clear for a %4 pixel bar")
+                                     .arg(QString::number(fieldWidth),
+                                          QString::number(listWidth),
+                                          QString::number(pPatterns->width() - pPatterns->viewport()->width()),
+                                          QString::number(pBar->sizeHint().width()));
+
+        ResizeWidthLog fieldResizes(pField);
+        ResizeWidthLog listResizes(pList);
+
+        showRows(scmRowsThatScroll);
+        QVERIFY2(pBar->isVisible(),
+                 qPrintable(qsl("%1 patterns in a window %2 pixels tall fit without scrolling, so the bar never shows").arg(QString::number(scmRowsThatScroll), QString::number(mpEditor->height()))));
+        showRows(rowsAtStart);
+        QVERIFY2(!pBar->isVisible(), qPrintable(qsl("back at %1 patterns the list still scrolls").arg(rowsAtStart)));
+
+        // With the most rows that fit, the window height the bar shows at is within a row of the full one
+        int rowsThatFit = rowsAtStart;
+        for (; rowsThatFit < scmRowsThatScroll; ++rowsThatFit) {
+            showRows(rowsThatFit + 1);
+            if (pBar->isVisible()) {
+                break;
+            }
+        }
+        showRows(rowsThatFit);
+        QVERIFY2(!pBar->isVisible(), qPrintable(qsl("%1 patterns scrolled with one row more, but scroll still with it taken away").arg(rowsThatFit)));
+        const int fullHeight = mpEditor->height();
+        const int lowest = std::max(mpEditor->minimumHeight(), fullHeight - scmMostHeightStepped);
+        int height = fullHeight;
+        while (!pBar->isVisible() && height > lowest) {
+            setHeight(--height);
+        }
+        QVERIFY2(pBar->isVisible(), qPrintable(qsl("%1 patterns still fit without scrolling in a window stepped down to %2 pixels tall").arg(rowsThatFit).arg(height)));
+        const int barsPoint = height;
+        for (int step = 0; step < scmStepsPastTheBarsPoint && height > lowest; ++step) {
+            setHeight(--height);
+        }
+        while (height < fullHeight) {
+            setHeight(++height);
+        }
+        QVERIFY2(!pBar->isVisible(), qPrintable(qsl("back at %1 pixels tall the list of %2 patterns still scrolls").arg(fullHeight).arg(rowsThatFit)));
+
+        qInfo().noquote() << qsl("  %1 resizes of the first pattern field and %2 of the list read; %3 patterns start scrolling at a window %4 pixels tall")
+                                     .arg(QString::number(fieldResizes.mWidths.size()), QString::number(listResizes.mWidths.size()), QString::number(rowsThatFit), QString::number(barsPoint));
+        const QString fieldMisses = otherWidths(fieldResizes.mWidths, fieldWidth);
+        QVERIFY2(fieldMisses.isEmpty(),
+                 qPrintable(qsl("the first pattern field is %1 pixels wide, but was resized to %2 as the list started and stopped scrolling").arg(QString::number(fieldWidth), fieldMisses)));
+        const QString listMisses = otherWidths(listResizes.mWidths, listWidth);
+        QVERIFY2(listMisses.isEmpty(), qPrintable(qsl("the pattern list is %1 pixels wide, but was resized to %2 as it started and stopped scrolling").arg(QString::number(listWidth), listMisses)));
+
+        const QWidget* pBarColumn = pBar->parentWidget();
+        QVERIFY2(pBarColumn->height() == pPatterns->viewport()->height(),
+                 qPrintable(qsl("with the bar hidden its container is %1x%2 and %3 beside a viewport %4 pixels tall, so the bar shows a layout pass after the list starts scrolling")
+                                    .arg(QString::number(pBarColumn->width()),
+                                         QString::number(pBarColumn->height()),
+                                         pBarColumn->isVisible() ? qsl("shown") : qsl("hidden"),
+                                         QString::number(pPatterns->viewport()->height()))));
     }
 };
 
