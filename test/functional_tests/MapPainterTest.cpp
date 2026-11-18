@@ -400,6 +400,49 @@ private slots:
         QVERIFY2(image.pixelColor(onImage(QPointF(1, 1)).toPoint()) == QColor(Qt::black), qPrintable(saved(image, qsl("custom-line"))));
     }
 
+    // Two rooms just left of the view, whose east exits lead to each other: their bent line runs through their east
+    // stubs half a cell to the right, inside the view, though both rooms' centres are outside it
+    void aBentLineFromRoomsJustOutsideTheViewIsDrawn()
+    {
+        QVERIFY(map()->setRoomCoordinates(scmEastRoom, 0, -2, 0));
+        QVERIFY(map()->setExit(scmWestRoom, scmEastRoom, DIR_EAST));
+        QVERIFY(map()->setExit(scmEastRoom, scmWestRoom, DIR_EAST));
+        QVERIFY(map()->setExit(scmEastRoom, -1, DIR_WEST));
+        TArea* pArea = roomDB()->getArea(mAreaId);
+        QVERIFY(pArea);
+
+        // Map x 0 lands a quarter cell left of the view, so the stubs end a quarter cell inside it
+        const int originX = -10;
+        TMapPainter::View edgeView = view();
+        edgeView.mRX = originX;
+        edgeView.mDirectionalExitLines = true;
+        TMapPainter painter;
+        painter.setView(edgeView);
+        QImage image = blankImage();
+        {
+            QPainter imagePainter(&image);
+            QPen pen(Qt::white);
+            const float exitWidth = 3.0f;
+            pen.setWidthF(exitWidth);
+            imagePainter.setPen(pen);
+            const QRect roomBounds = TMapPainter::viewportRoomBounds(originX, scmOriginY, scmRoomPixels, scmRoomPixels, scmImageWidth, scmImageHeight);
+            const QList<int> viewportRooms = pArea->getGridIndex().roomsInViewport(0, roomBounds.left(), roomBounds.right(), roomBounds.top(), roomBounds.bottom());
+            QList<TMapPainter::ExitToPaint> exitList;
+            QMap<int, QPointF> areaExitsMap;
+            painter.paintRoomExits(imagePainter, pen, exitList, pArea, 0, roomBounds, viewportRooms, exitWidth, areaExitsMap);
+        }
+
+        // Along the stretch joining the two east stubs, solid since each east exit is the other's way back
+        const int stubX = originX + qRound(scmRoomPixels / 2);
+        int drawn = 0;
+        for (int y = scmOriginY + 10; y < scmOriginY + 2 * qRound(scmRoomPixels) - 10; ++y) {
+            for (int x = stubX - 3; x <= stubX + 3; ++x) {
+                drawn += image.pixelColor(x, y) != QColor(Qt::black);
+            }
+        }
+        QVERIFY2(drawn > 20, qPrintable(qsl("%1 pixels drawn. %2").arg(drawn).arg(saved(image, qsl("edge-bent")))));
+    }
+
     // North from the west room leads to the east room, whose west exit leads back: walkable both ways, so with
     // directional lines it is one solid line without an arrow, the way back drawing the same bent path. Straight
     // lines keep calling it one-way, as the east room's south exit does not lead back.

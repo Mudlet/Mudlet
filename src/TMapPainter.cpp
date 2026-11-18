@@ -1694,7 +1694,10 @@ void TMapPainter::paintRoomExits(QPainter& painter,
         if (pRoom->customLines.empty()) {
             const float roomX = pRoom->x() * mRoomWidth + mRX;
             const float roomY = pRoom->y() * -1 * mRoomHeight + mRY;
-            return !(roomX < 0 || roomY < 0 || roomX > widgetWidth || roomY > widgetHeight);
+            // A bent exit line leaves through a stub half a cell out, which shows while the room's centre is just off
+            const float marginX = mDirectionalExitLines ? mRoomWidth / 2.0f : 0.0f;
+            const float marginY = mDirectionalExitLines ? mRoomHeight / 2.0f : 0.0f;
+            return !(roomX < -marginX || roomY < -marginY || roomX > widgetWidth + marginX || roomY > widgetHeight + marginY);
         }
         const float miny = pRoom->min_y * -1 * mRoomHeight + static_cast<float>(mRY);
         const float maxy = pRoom->max_y * -1 * mRoomHeight + static_cast<float>(mRY);
