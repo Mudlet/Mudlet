@@ -74,7 +74,7 @@
 #endif
 
 #include <chrono>
-#include <filesystem>
+#include <filesystem> // NOLINT(build/c++17)
 #include <vector>
 #include <QtConcurrentRun>
 #include <QAbstractScrollArea>
