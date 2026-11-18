@@ -16929,10 +16929,12 @@ void dlgTriggerEditor::setupEditorPanel()
     // With allColumnsShowFocus, QTreeView::drawRow() asks the style for the focus rect with no widget, so the trees'
     // "outline: none" cannot reach it and a square hairline is drawn round the rounded pill; per item, the delegate
     // asks with the widget in hand. The .ui sets it on all but the results tree, listed so all nine are settled here.
-    const QList<QTreeWidget*> focusMarkedTrees{
+    const QList<QTreeWidget*> everyTree{
             treeWidget_triggers, treeWidget_aliases, treeWidget_timers, treeWidget_scripts, treeWidget_actions, treeWidget_keys, treeWidget_variables, mpFolderTree, treeWidget_searchResults};
-    for (QTreeWidget* pTreeWidget : focusMarkedTrees) {
+    for (QTreeWidget* pTreeWidget : everyTree) {
         pTreeWidget->setAllColumnsShowFocus(false);
+        // Or a bar coming in narrows every row: the trailing counts move left and names are cut sooner
+        uiDesign::keepRoomForVerticalScrollBar(pTreeWidget);
     }
 
     treeWidget_searchResults->setObjectName(qsl("editorSearchResults"));

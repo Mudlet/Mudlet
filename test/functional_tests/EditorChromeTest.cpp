@@ -31,6 +31,7 @@
 #include <QAction>
 #include <QComboBox>
 #include <QGroupBox>
+#include <QHeaderView>
 #include <QImage>
 #include <QLabel>
 #include <QLineEdit>
@@ -113,6 +114,9 @@ private:
     // Many rows' height, where the bar shows within one row of the full window
     static constexpr int scmMostHeightStepped = 300;
     static constexpr int scmStepsPastTheBarsPoint = 6;
+    // Triggers are added to a group until the tree scrolls, a batch between checks
+    static constexpr int scmTreeRowsABatch = 10;
+    static constexpr int scmMostTreeRows = 200;
 
     // The compile and duplicate notes say a reading in the error hue, and a chip
     // label holds an event name the reader typed - content, not chrome
@@ -208,6 +212,39 @@ private:
                                    chrome.name());
         }
         return audited;
+    }
+
+    // Empty when the strip a tree keeps for its bar is the pane, with a handle on it while the bar shows; otherwise
+    // what is drawn there. Down the strip's middle, every few pixels.
+    QString barStripMiss(const QTreeWidget* pTree) const
+    {
+        const QScrollBar* pBar = pTree->verticalScrollBar();
+        const QWidget* pStrip = pBar->parentWidget();
+        const QColor pane = uiDesign::themeTokens().pane;
+        const QImage shot = TestPixels::shot(mpEditor);
+        const QPoint topLeft = pStrip->mapTo(mpEditor, QPoint(0, 0));
+        int paneRead = 0;
+        QStringList others;
+        for (int y = 2; y < pStrip->height() - 2; y += 4) {
+            const QColor pixel = TestPixels::sampled(shot, topLeft + QPoint(pStrip->width() / 2, y));
+            if (TestPixels::readsAs(pixel, pane, scmInkTolerance)) {
+                ++paneRead;
+            } else {
+                others << qsl("%1 at %2").arg(pixel.name(), QString::number(y));
+            }
+        }
+        qInfo().noquote() << qsl("  the %1x%2 strip kept for the bar reads the pane's %3 at %4 points, and %5 others")
+                                     .arg(QString::number(pStrip->width()), QString::number(pStrip->height()), pane.name(), QString::number(paneRead), QString::number(others.size()));
+        if (pBar->isVisible()) {
+            if (!paneRead || others.isEmpty()) {
+                return qsl("the bar is not a handle on a groove in the pane's %1: %2 points read the pane and %3 others").arg(pane.name(), QString::number(paneRead), QString::number(others.size()));
+            }
+            return {};
+        }
+        if (!paneRead || !others.isEmpty()) {
+            return qsl("the strip kept for the hidden bar is not the pane's %1: %2").arg(pane.name(), others.isEmpty() ? qsl("nothing was read") : others.join(qsl(", ")));
+        }
+        return {};
     }
 
     // Empty when every width is the one expected, otherwise each other width and how often it came
@@ -1585,6 +1622,115 @@ private slots:
                                          QString::number(pBarColumn->height()),
                                          pBarColumn->isVisible() ? qsl("shown") : qsl("hidden"),
                                          QString::number(pPatterns->viewport()->height()))));
+    }
+
+    // Last, as it adds a group of triggers to the tree and runs searches. A group opened is what makes a tree scroll.
+    void test_aTreeRowKeepsItsWidthAsTheTreeStartsAndStopsScrolling()
+    {
+        enterView(EditorViewType::cmTriggerView);
+        QTreeWidget* pTree = mpEditor->treeWidget_triggers;
+        QWidget* pViewport = pTree->viewport();
+        const QScrollBar* pBar = pTree->verticalScrollBar();
+        QTreeWidgetItem* pHeading = mpEditor->mpTriggerBaseItem;
+        QTreeWidgetItem* pChosenAtStart = pTree->currentItem();
+        QVERIFY2(pHeading && pChosenAtStart, "the triggers tree has no heading row or no chosen trigger to measure");
+        TestPixels::settle();
+        QVERIFY2(!pBar->isVisible(), "the triggers tree scrolls already, so there is no width without the bar to start from");
+
+        // Filled open, a batch at a time, until the tree scrolls
+        mpEditor->addTrigger(true);
+        QTreeWidgetItem* pGroup = pTree->currentItem();
+        QVERIFY2(pGroup && pGroup != pChosenAtStart, "adding a trigger group chose no new row");
+        while (!pBar->isVisible() && pGroup->childCount() < scmMostTreeRows) {
+            for (int row = 0; row < scmTreeRowsABatch; ++row) {
+                mpEditor->addTrigger(false);
+            }
+            pGroup->setExpanded(true);
+            TestPixels::settle();
+        }
+        const int groupRows = pGroup->childCount();
+        QVERIFY2(pBar->isVisible(),
+                 qPrintable(qsl("%1 triggers open in a group still fit a viewport %2 pixels tall, at %3 pixels a row")
+                                    .arg(QString::number(groupRows), QString::number(pViewport->height()), QString::number(pTree->visualItemRect(pHeading).height()))));
+        pTree->setCurrentItem(pChosenAtStart);
+        // The trees animate a fold, and lay their rows out once it ends
+        pGroup->setExpanded(false);
+        QTRY_VERIFY2(!pBar->isVisible(), qPrintable(qsl("with its group of %1 triggers folded the tree still scrolls").arg(groupRows)));
+        TestPixels::settle();
+
+        const int viewportWidth = pViewport->width();
+        const int rowRight = pTree->visualItemRect(pHeading).right();
+        const int sectionWidth = pTree->header()->sectionSize(0);
+        qInfo().noquote() << qsl("  the triggers tree's viewport is %1 pixels wide in a tree %2 wide, its heading row ends at %3 and its column is %4 wide")
+                                     .arg(QString::number(viewportWidth), QString::number(pTree->width()), QString::number(rowRight), QString::number(sectionWidth));
+        const QString foldedStrip = barStripMiss(pTree);
+        ResizeWidthLog viewportResizes(pViewport);
+
+        const auto measuredAs = [&](const QString& when) {
+            return qsl("%1 the viewport is %2 pixels wide, the heading row ends at %3 and the column is %4 wide, against %5, %6 and %7 before")
+                    .arg(when,
+                         QString::number(pViewport->width()),
+                         QString::number(pTree->visualItemRect(pHeading).right()),
+                         QString::number(pTree->header()->sectionSize(0)),
+                         QString::number(viewportWidth),
+                         QString::number(rowRight),
+                         QString::number(sectionWidth));
+        };
+        const auto unchanged = [&]() {
+            return pViewport->width() == viewportWidth && pTree->visualItemRect(pHeading).right() == rowRight && pTree->header()->sectionSize(0) == sectionWidth;
+        };
+
+        pGroup->setExpanded(true);
+        QTRY_VERIFY2(pBar->isVisible(), qPrintable(qsl("with its group of %1 triggers open again the tree fits without scrolling").arg(groupRows)));
+        TestPixels::settle();
+        QVERIFY2(unchanged(), qPrintable(measuredAs(qsl("with the tree scrolling"))));
+        const QString openStrip = barStripMiss(pTree);
+
+        pGroup->setExpanded(false);
+        QTRY_VERIFY2(!pBar->isVisible(), "with its group folded again the tree still scrolls");
+        TestPixels::settle();
+        QVERIFY2(unchanged(), qPrintable(measuredAs(qsl("once the tree stops scrolling"))));
+
+        const QString viewportMisses = otherWidths(viewportResizes.mWidths, viewportWidth);
+        QVERIFY2(viewportMisses.isEmpty(),
+                 qPrintable(qsl("the triggers tree's viewport is %1 pixels wide, but was resized to %2 as it started and stopped scrolling").arg(QString::number(viewportWidth), viewportMisses)));
+        const QWidget* pBarColumn = pBar->parentWidget();
+        QVERIFY2(pBarColumn->height() == pViewport->height(),
+                 qPrintable(qsl("with the bar hidden its container is %1x%2 beside a viewport %3 pixels tall")
+                                    .arg(QString::number(pBarColumn->width()), QString::number(pBarColumn->height()), QString::number(pViewport->height()))));
+        QVERIFY2(foldedStrip.isEmpty(), qPrintable(qsl("with the tree not scrolling, %1").arg(foldedStrip)));
+        QVERIFY2(openStrip.isEmpty(), qPrintable(qsl("with the tree scrolling, %1").arg(openStrip)));
+
+        // The results tree, by how many matches a search finds: one group, or it and every trigger in it
+        QTreeWidget* pResults = mpEditor->treeWidget_searchResults;
+        const auto putBack = qScopeGuard([this]() {
+            mpEditor->comboBox_searchTerms->clear();
+            mpEditor->setSearchResultsShown(false);
+            TestPixels::settle();
+        });
+        const auto search = [this](const QString& term) {
+            mpEditor->comboBox_searchTerms->clear();
+            mpEditor->comboBox_searchTerms->addItem(term);
+            mpEditor->slot_searchMudletItems(0);
+            TestPixels::settle();
+        };
+        // The names addTrigger() gives, which no translation reaches in a test run
+        search(qsl("New trigger group"));
+        QVERIFY2(pResults->isVisible() && !pResults->verticalScrollBar()->isVisible(), "the search results for the one group are not up, or scroll already");
+        const int resultsWidth = pResults->viewport()->width();
+        ResizeWidthLog resultsResizes(pResults->viewport());
+        search(qsl("New trigger"));
+        QVERIFY2(pResults->verticalScrollBar()->isVisible(), qPrintable(qsl("the %1 search results for every new trigger fit without scrolling").arg(pResults->topLevelItemCount())));
+        const int scrollingResultsWidth = pResults->viewport()->width();
+        search(qsl("New trigger group"));
+        QVERIFY2(!pResults->verticalScrollBar()->isVisible(), "back at the one group the search results still scroll");
+        qInfo().noquote() << qsl("  the search results' viewport is %1 pixels wide; %2 resizes read").arg(QString::number(resultsWidth), QString::number(resultsResizes.mWidths.size()));
+        QVERIFY2(scrollingResultsWidth == resultsWidth,
+                 qPrintable(
+                         qsl("the search results' viewport is %1 pixels wide while they scroll and %2 while they do not").arg(QString::number(scrollingResultsWidth), QString::number(resultsWidth))));
+        const QString resultsMisses = otherWidths(resultsResizes.mWidths, resultsWidth);
+        QVERIFY2(resultsMisses.isEmpty(),
+                 qPrintable(qsl("the search results' viewport is %1 pixels wide, but was resized to %2 as they started and stopped scrolling").arg(QString::number(resultsWidth), resultsMisses)));
     }
 };
 

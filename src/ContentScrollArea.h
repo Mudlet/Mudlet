@@ -44,9 +44,6 @@ protected:
     // Passes the widget's LayoutRequest up as updateGeometry(), or the layout
     // holding this area keeps the hint it cached
     bool eventFilter(QObject* pWatched, QEvent* pEvent) override;
-
-private:
-    void showTheBarWhileItScrolls();
 };
 
 } // namespace uiDesign
