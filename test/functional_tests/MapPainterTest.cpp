@@ -400,6 +400,24 @@ private slots:
         QVERIFY2(image.pixelColor(onImage(QPointF(1, 1)).toPoint()) == QColor(Qt::black), qPrintable(saved(image, qsl("custom-line"))));
     }
 
+    // The east room's custom line west stands in for the west room's bent exit east only where it gets back to the west room
+    void aCustomLineBackStandsInOnlyWhereItReachesTheRoom()
+    {
+        TRoom* pWestRoom = roomDB()->getRoom(scmWestRoom);
+        TRoom* pEastRoom = roomDB()->getRoom(scmEastRoom);
+        TMapPainter::ExitToPaint exit;
+        exit.destination = pEastRoom;
+        exit.destinationId = scmEastRoom;
+        exit.direction = DIR_EAST;
+        QVERIFY(!TMapPainter::returnExitHasCustomLine(*pWestRoom, exit));
+
+        pEastRoom->customLines[qsl("w")] = {QPointF(1, 1), QPointF(0, 0)};
+        QVERIFY(TMapPainter::returnExitHasCustomLine(*pWestRoom, exit));
+
+        pEastRoom->customLines[qsl("w")] = {QPointF(1, 1)};
+        QVERIFY2(!TMapPainter::returnExitHasCustomLine(*pWestRoom, exit), "a custom line stopping a room short of the west room stood in for its exit");
+    }
+
     // Two rooms just left of the view, whose east exits lead to each other: their bent line runs through their east
     // stubs half a cell to the right, inside the view, though both rooms' centres are outside it
     void aBentLineFromRoomsJustOutsideTheViewIsDrawn()
