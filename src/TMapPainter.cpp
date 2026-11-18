@@ -144,7 +144,13 @@ int TMapPainter::wayBack(const TRoom& room, const ExitToPaint& exit)
 bool TMapPainter::returnExitHasCustomLine(const TRoom& room, const ExitToPaint& exit)
 {
     const int back = wayBack(room, exit);
-    return back && exit.destination->customLines.contains(TRoom::dirCodeToShortString(back));
+    if (!back) {
+        return false;
+    }
+    // Only a line that gets back here draws the connection; one that stops short leaves the plain line needed. Within
+    // the tolerance customLineRunsStraightTo() allows
+    const QList<QPointF> points = exit.destination->customLines.value(TRoom::dirCodeToShortString(back));
+    return !points.isEmpty() && QLineF(points.last(), QPointF(room.x(), room.y())).length() <= 0.1;
 }
 
 // Whether owner has a custom line for an exit to other that runs straight to its centre, so a plain line between them

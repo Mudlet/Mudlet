@@ -233,8 +233,8 @@ public:
     // The compass exit by which exit's destination leads back to room, preferring the reverse direction so both rooms of
     // a two-way exit draw the same path; 0 if none does
     static int wayBack(const TRoom& room, const ExitToPaint& exit);
-    // Whether exit's destination draws its way back as a custom line, which then shows the two-way connection a bent
-    // plain line would draw again beside it
+    // Whether exit's destination draws its way back as a custom line reaching room, which then shows the two-way
+    // connection a bent plain line would draw again beside it
     static bool returnExitHasCustomLine(const TRoom& room, const ExitToPaint& exit);
     // directionalExitLines in Mudlet.ini, on unless set to false there; read when a view is made
     static bool directionalExitLinesEnabled();
