@@ -405,6 +405,7 @@ private:
         int opening = 0;
     };
     SidebarWidths sidebarWidths() const;
+    static int openingWidth(int wanted, int screenWidth);
     // What the sidebar is drawn at with its names showing, measured off the
     // widest of them the way the editor's is
     [[nodiscard]] int measuredSidebarWidth() const;

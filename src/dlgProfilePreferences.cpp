@@ -652,13 +652,19 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     setMinimumSize(scmMinimumWindowWidth, 560);
     const auto geometry = MudletApp::getQSettings()->value(qsl("profilePreferencesGeometry")).toByteArray();
     if (geometry.isEmpty() || !restoreGeometry(geometry)) {
-        // No wider than the names beside the widest page's column and the map's colours side by side, the width the
-        // window was held to when that was as wide as it went
-        const int opening = sidebarWidths().opening;
-        resize(opening ? std::min(1060, opening) : 1060, 760);
+        const QScreen* pScreen = screen();
+        resize(openingWidth(sidebarWidths().opening, pScreen ? pScreen->availableGeometry().width() : 0), 760);
     }
     // resize() on a never-shown dialog does not always deliver a resize event
     updateSidebarMode();
+}
+
+// The names beside both colour cards two pairs to a row, which a wide font takes past the 1060px the window otherwise
+// opens at; held to the screen, though never below those 1060px, which a window may open at on any screen
+int dlgProfilePreferences::openingWidth(const int wanted, const int screenWidth)
+{
+    constexpr int usual = 1060;
+    return wanted ? std::min(wanted, std::max(usual, screenWidth)) : usual;
 }
 
 dlgProfilePreferences::~dlgProfilePreferences()

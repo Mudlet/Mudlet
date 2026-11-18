@@ -514,8 +514,8 @@ therefore fold first: `sidebarWidths()` raises `collapseBelow` to what the card
 needs side by side, and the card stacks only once even the rail leaves it too
 little. The other way round, narrowing the window stacked the card, then spread
 it out again as the names went. A window with no remembered size opens at the
-width that keeps both colour cards side by side beside the names, at most
-1060px.
+width that keeps both colour cards side by side beside the names: past the
+usual 1060px where a wide font needs it, and no wider than the screen.
 
 Which arrangement a card shows is decided in `arrangeColourCards()` and handed
 to the grid with `setPairsPerRow()`, rather than left to the grid's own reading
@@ -1001,7 +1001,7 @@ is `sidebarWidths()` / `updateSidebarMode()` in
 - The window has no maximum: a page's column grows with the window and its
   cards use the room, so the reading column is the floor the names fold at and
   never a ceiling. A window with no remembered size opens at `opening`, held to
-  1060px: `fullyExpanded`, the names beside the widest page's column, or wider
+  the screen's width by `openingWidth()` and never to less than 1060px: `fullyExpanded`, the names beside the widest page's column, or wider
   where the map's colours need it to stand in their two columns beside the
   names, at the width `arrangeColourCards()` takes that up at (926px under
   cocoa, 923px offscreen, against 887px and 892px for `fullyExpanded`).

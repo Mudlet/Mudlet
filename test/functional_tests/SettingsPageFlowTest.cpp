@@ -942,10 +942,23 @@ private slots:
         }
     }
 
-    // A window with no size remembered opens wide enough for the map's colours
-    // to stand in their two columns beside the sidebar's names, and no wider
-    // than the 1060px it ever opened at; one with a size remembered opens at
-    // that size, and the columns follow it
+    // The width a window with no size remembered opens at: what the names beside both colour cards two pairs to a row
+    // need, past the usual 1060px where a wide font asks for it, though no wider than the screen
+    void test_theOpeningWidthFollowsTheColourCardsUpToTheScreen()
+    {
+        QCOMPARE(dlgProfilePreferences::openingWidth(904, 1920), 904);
+        QCOMPARE(dlgProfilePreferences::openingWidth(1140, 1920), 1140);
+        QCOMPARE(dlgProfilePreferences::openingWidth(2400, 1920), 1920);
+        // A screen narrower than the usual width, or none known, leaves the usual width as the most
+        QCOMPARE(dlgProfilePreferences::openingWidth(1140, 800), 1060);
+        QCOMPARE(dlgProfilePreferences::openingWidth(1140, 0), 1060);
+        QCOMPARE(dlgProfilePreferences::openingWidth(0, 1920), 1060);
+    }
+
+    // A window with no size remembered opens wide enough for both cards' colours
+    // to stand two pairs to a row beside the sidebar's names, and no wider than
+    // that needs; one with a size remembered opens at that size, and the columns
+    // follow it
     void test_theWindowOpensWithTheMapColoursSideBySide()
     {
         QSettings* pSettings = MudletApp::getQSettings();
@@ -969,12 +982,21 @@ private slots:
         pSettings->remove(qsl("profilePreferencesGeometry"));
         open();
         const int opened = mpPreferences->width();
-        QVERIFY2(opened <= 1060, qPrintable(qsl("the window opened %1px wide, past the 1060px it opens at at most").arg(opened)));
+        const int wanted = mpPreferences->sidebarWidths().opening;
+        QVERIFY2(opened <= wanted, qPrintable(qsl("the window opened %1px wide, past the %2px the names and the colour cards need").arg(opened).arg(wanted)));
         QVERIFY2(!TestSettings::sidebar(mpPreferences)->property(uiDesign::scmProp_rail).toBool(), qPrintable(qsl("the window opened %1px wide with the sidebar's names folded").arg(opened)));
         QVERIFY2(mapSideBySide(), qPrintable(qsl("the window opened %1px wide with the map's colours one column under the other").arg(opened)));
         verifyColourColumns(mapColumn(false), mapColumn(true), true);
         if (QTest::currentTestFailed()) {
             return;
+        }
+        if (opened == wanted) {
+            mpPreferences->setTab(qsl("mainDisplay"));
+            qApp->processEvents();
+            qApp->processEvents();
+            QVERIFY2(displayTwoPairsToARow(), qPrintable(qsl("the window opened %1px wide with the display colours one pair a row").arg(opened)));
+            mpPreferences->setTab(qsl("mapper"));
+            qApp->processEvents();
         }
 
         // Remembered at the narrowest the window goes, which fits on the small screen an offscreen test has: the
