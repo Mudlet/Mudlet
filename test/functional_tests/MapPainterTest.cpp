@@ -512,6 +512,46 @@ private slots:
         QVERIFY2(arrowPixels(oneWay) > 0, qPrintable(saved(oneWay, qsl("way-back-none"))));
     }
 
+    // An exported ring sits outside the room's border, which the room is drawn with after its exits: a thick one
+    // would otherwise cover it
+    void anExportedRingClearsTheRoomsBorder()
+    {
+        QVERIFY(map()->setExit(scmWestRoom, scmWestRoom, DIR_EAST));
+        QVERIFY(map()->setExit(scmEastRoom, -1, DIR_WEST));
+        const QColor savedForeground = mpHost->mFgColor_2;
+        auto restore = qScopeGuard([this, savedForeground]() {
+            mpHost->mFgColor_2 = savedForeground;
+        });
+        mpHost->mFgColor_2 = lineColour();
+        TRoom* pWestRoom = roomDB()->getRoom(scmWestRoom);
+
+        const auto ringPixels = [&](const QString& name) {
+            TMapPainter painter;
+            painter.setView(view());
+            QObject saveOwner;
+            const QString exportFile = qsl("%1/ring-%2.png").arg(mConfigDir.path(), name);
+            const auto [started, message] = painter.exportArea(mAreaId, exportFile, 0, 4.0, false, &saveOwner);
+            if (!started) {
+                return -1;
+            }
+            const QImage image = exported(&saveOwner, exportFile);
+            int count = 0;
+            for (int y = 0; y < image.height(); ++y) {
+                for (int x = 0; x < image.width(); ++x) {
+                    count += image.pixelColor(x, y) == lineColour();
+                }
+            }
+            return count;
+        };
+
+        const int unbordered = ringPixels(qsl("unbordered"));
+        QVERIFY2(unbordered > 0, qPrintable(qsl("no ring exported (%1)").arg(unbordered)));
+        pWestRoom->mBorderColor = QColor(Qt::magenta);
+        pWestRoom->mBorderThickness = 20;
+        const int bordered = ringPixels(qsl("bordered"));
+        QVERIFY2(bordered * 10 >= unbordered * 9, qPrintable(qsl("the border covered the ring: %1 pixels of it shown, %2 without a border").arg(bordered).arg(unbordered)));
+    }
+
     // An exit back into its own room is a hollow ring just outside the room on that side, with or without directional
     // lines: a line from the room to itself has no length to show
     void anExitBackIntoItsOwnRoomIsARing()

@@ -4046,7 +4046,8 @@ std::pair<bool, QString> TMapPainter::exportArea(int areaId, const QString& file
 
                 if (exitRoomId == roomId) {
                     painter.setPen(pen);
-                    const QLineF loopLine = drawLoopExit(painter, QPointF(rx, ry), direction, finalRoomSize, finalRoomSize, 0);
+                    const int borderWidth = roomBorderShown(*room) ? roomBorderWidth(*room) : 0;
+                    const QLineF loopLine = drawLoopExit(painter, QPointF(rx, ry), direction, finalRoomSize, finalRoomSize, borderWidth);
                     if (!doorKey.isEmpty() && room->doors.value(doorKey, 0) > 0) {
                         drawDoor(painter, *room, doorKey, loopLine);
                     }
