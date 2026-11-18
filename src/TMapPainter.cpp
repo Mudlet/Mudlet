@@ -124,13 +124,27 @@ bool TMapPainter::directionalExitLinesEnabled()
     return !settings || settings->value(qsl("directionalExitLines"), true).toBool();
 }
 
-bool TMapPainter::returnExitHasCustomLine(const TRoom& room, const ExitToPaint& exit)
+int TMapPainter::wayBack(const TRoom& room, const ExitToPaint& exit)
 {
     if (!exit.destination) {
-        return false;
+        return 0;
     }
     const int reverse = TMap::scmReverseDirections.value(exit.direction);
-    return reverse && exit.destination->getExit(reverse) == room.getId() && exit.destination->customLines.contains(TRoom::dirCodeToShortString(reverse));
+    if (reverse && exit.destination->getExit(reverse) == room.getId()) {
+        return reverse;
+    }
+    for (int direction = DIR_NORTH; direction <= DIR_SOUTHWEST; ++direction) {
+        if (exit.destination->getExit(direction) == room.getId()) {
+            return direction;
+        }
+    }
+    return 0;
+}
+
+bool TMapPainter::returnExitHasCustomLine(const TRoom& room, const ExitToPaint& exit)
+{
+    const int back = wayBack(room, exit);
+    return back && exit.destination->customLines.contains(TRoom::dirCodeToShortString(back));
 }
 
 // Whether owner has a custom line for an exit to other that runs straight to its centre, so a plain line between them
@@ -1579,19 +1593,7 @@ QVector<QPointF> TMapPainter::exitLinePath(const TRoom& room, const ExitToPaint&
         return QPointF(center.x() + unit.x() * mRoomWidth / 2.0, center.y() + unit.y() * mRoomHeight / 2.0);
     };
 
-    // The way back in, preferring the reverse direction, so both rooms of a two-way exit draw the same path
-    int backDirection = 0;
-    const int reverse = TMap::scmReverseDirections.value(exit.direction);
-    if (destination.getExit(reverse) == room.getId()) {
-        backDirection = reverse;
-    } else {
-        for (int direction = DIR_NORTH; direction <= DIR_SOUTHWEST; ++direction) {
-            if (destination.getExit(direction) == room.getId()) {
-                backDirection = direction;
-                break;
-            }
-        }
-    }
+    const int backDirection = wayBack(room, exit);
 
     // One end bending turns the line off the other end's axis too, so then both leave through their stubs
     if (liesAhead(room, exit.direction, destination) && (!backDirection || liesAhead(destination, backDirection, room))) {
@@ -1854,6 +1856,11 @@ void TMapPainter::paintRoomExits(QPainter& painter,
         // line would land on top of it or under it, whichever room paints last. Only where that line is painted.
         for (ExitToPaint& exit : exitList) {
             const TRoom* pDestination = exit.destination;
+            // A bent line comes back in through whichever exit leads back, so any such exit makes it two-way: north
+            // to a room whose west exit returns is walkable both ways and is drawn as one solid line, not two arrows
+            if (exit.oneWay && mDirectionalExitLines) {
+                exit.oneWay = !wayBack(*room, exit);
+            }
             exit.drawnByCustomLine = !exit.oneWay
                                      && (customLineRunsStraightTo(*room, *pDestination)
                                          || (customLineRooms.contains(exit.destinationId) && exitsReachWidget(pDestination) && customLineRunsStraightTo(*pDestination, *room)));
@@ -3876,6 +3883,15 @@ std::pair<bool, QString> TMapPainter::exportArea(int areaId, const QString& file
                         else if (dirKey == "sw" && exitRoom->getNortheast() != roomId)
                             isOneWay = true;
 
+                        // Any compass exit leading back makes it two-way with directional lines, as in paintRoomExits()
+                        if (isOneWay && mDirectionalExitLines) {
+                            for (int back = DIR_NORTH; back <= DIR_SOUTHWEST; ++back) {
+                                if (exitRoom->getExit(back) == roomId) {
+                                    isOneWay = false;
+                                    break;
+                                }
+                            }
+                        }
                         if (isOneWay) {
                             roomOneWayExits.push_back({exitRoomId, dirKey});
                         }
