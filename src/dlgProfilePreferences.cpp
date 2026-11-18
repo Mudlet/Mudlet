@@ -182,6 +182,7 @@ static constexpr char scmProp_settingsRichText[] = "settingsRichText";
 
 // A reading width: a wide window gains whitespace rather than stretching the controls
 static constexpr int scmContentColumnWidth = 640;
+static constexpr int scmScrollBarGap = 8;
 // The narrowest the window goes, however little its pages need
 static constexpr int scmMinimumWindowWidth = 780;
 
@@ -3758,6 +3759,8 @@ void dlgProfilePreferences::applyShellStyle()
             + cardIndicatorRules
             // A scroll area's bars answer only to a descendant selector
             + scrollBarStyleSheet(qsl("QScrollArea[settingsSurface=\"true\"]"), tokens)
+            // The margin is part of the bar's width, so the gap to the cards is there only while the bar shows
+            + qsl("QScrollArea[settingsSurface=\"true\"] QScrollBar:vertical { width: %1px; margin-left: %2px; }").arg(QString::number(12 + scmScrollBarGap), QString::number(scmScrollBarGap))
             + scrollBarStyleSheet(qsl("#settingsCategoryList"), tokens)
             // Every control a setting is typed into or picked in is drawn the
             // one way the editor draws its own, and under the stack alone:
