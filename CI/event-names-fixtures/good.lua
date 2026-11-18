@@ -4,6 +4,9 @@
 function fixtureRaisesGoodNames()
   raiseEvent("sysFixtureSwept")
   raiseEvent('sysFixtureSaving', 1)
+  raiseEvent(
+    "sysFixtureWrapped"
+  )
   -- Only names starting with sys claim to be Mudlet's
   raiseEvent("myPackageEvent")
   -- raiseEvent("sysFixtureCommentedEvent")

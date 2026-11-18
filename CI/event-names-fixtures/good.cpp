@@ -11,9 +11,18 @@ void raisesGoodNames(Host* pHost, bool viewOnly, const QString& scriptChosenName
     // Arguments are not names, camelCase or not they are never read as one here
     loaded.mArgumentList.append(viewOnly ? qsl("viewing") : qsl("editing"));
     loaded.mArgumentList << qsl("main") << qsl("GMCP");
+    loaded.mArgumentList.append(qsl("playerName"));
 
     TEvent streamed{};
-    streamed.mArgumentList << qsl("sysFixtureMoving") << QString::number(2);
+    streamed.mArgumentList << qsl("sysFixtureMoving") << qsl("roomName") << QString::number(2);
+
+    // A name chosen in a branch: a later append is read for a sys name or a legacy one
+    TEvent chosen{};
+    if (viewOnly) {
+        chosen.mArgumentList.append(qsl("sysFixtureViewed"));
+    } else {
+        chosen.mArgumentList.append(qsl("fixtureChosenEvent"));
+    }
 
     TEvent irregular{};
     irregular.mArgumentList.append(qsl("sysFixtureSet"));

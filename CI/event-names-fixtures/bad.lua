@@ -4,5 +4,9 @@
 function fixtureRaisesBadNames()
   raiseEvent("sysFixtureResizeEvent") -- BAD
   raiseEvent('sysFixtureProgress', 50) -- BAD
+  raiseEvent(
+    "sysFixtureWrapEvent", -- BAD
+    1
+  )
   raiseEvent("sysFixtureWalked")
 end

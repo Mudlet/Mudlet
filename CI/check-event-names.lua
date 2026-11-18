@@ -15,10 +15,15 @@ left to review. Protocol events (gmcp.*, msdp.*, channel102Message ...) follow
 their protocol's names and are not checked.
 
 Names read:
-  - C++: every camelCase literal and named constant in an mArgumentList
-    append, the name argument of the helpers in NAME_HELPERS, and the old
-    names in Host's oldEventNames() table;
-  - Lua: raiseEvent("sys...") in src/mudlet-lua/lua and the bundled packages.
+  - C++: every named constant in an mArgumentList append; a camelCase literal
+    in an event's first append after its TEvent is declared (for a << chain,
+    the first operand), which holds the name; a camelCase literal elsewhere in
+    the appends only when it starts with "sys" or is on the legacy list, as a
+    name chosen in a branch, since anything else there is an argument; the
+    name argument of the helpers in NAME_HELPERS; and the old names in Host's
+    oldEventNames() table;
+  - Lua: raiseEvent("sys...") in src/mudlet-lua/lua and the bundled packages,
+    also with the name wrapped onto the next line.
 A name a script chose (raiseEvent() from Lua, menu and link events) is not
 Mudlet's to name and is skipped.
 
@@ -159,9 +164,9 @@ local function looksLikeName(literal)
   return literal:match("^[%a_][%w_%.]*$") ~= nil
 end
 
--- What an mArgumentList holds besides the name - "viewing", "main", a protocol
--- like "GMCP" - is never camelCase, and every event name is, so this picks the
--- name out of whichever append a branch raises it with
+-- Every event name is camelCase, and most arguments ("viewing", "main", a
+-- protocol like "GMCP") are not; which camelCase literals count as names
+-- depends on where in the appends scanCpp() finds them
 local function looksLikeEventName(literal)
   return literal:match("^[a-z][a-z0-9]*[A-Z][%w]*$") ~= nil
 end
@@ -179,6 +184,8 @@ local function statementFrom(lines, n, start)
 end
 
 local raised = {}  -- name -> {file, line, fromCpp}
+-- Filled before the scan, as a legacy name among an event's arguments counts as raised
+local legacy, legacyLines = {}, {}
 local filesScanned = 0
 local oldNameTableFound = false
 
@@ -220,6 +227,8 @@ end
 
 local function scanCpp(path, lines)
   local inOldNameTable = false
+  -- variable -> whether its next append is the first since its TEvent was declared
+  local awaitingName = {}
   for n, code in ipairs(lines) do
     if code:match("oldEventNames%(%)%s*$") or code:match("oldEventNames%(%)%s*{") then
       inOldNameTable = true
@@ -235,11 +244,35 @@ local function scanCpp(path, lines)
       end
     end
 
+    for variable in code:gmatch("TEvent%s+([%a_][%w_]*)%s*[{;=]") do
+      awaitingName[variable] = true
+    end
+
     local s = code:find("mArgumentList%s*%.append%s*%(") or code:find("mArgumentList%s*<<")
     if s then
       local statement = statementFrom(lines, n, s)
-      for _, literal in ipairs(literalsIn(statement)) do
+      local variable = code:sub(1, s - 1):match("([%a_][%w_]*)%s*%.%s*$")
+      local nameSlot, rest = statement, ""
+      -- An event this file never declared is read as if this append were its first
+      if variable and awaitingName[variable] == false then
+        nameSlot, rest = "", statement
+      else
+        local shifted = statement:match("^mArgumentList%s*<<(.*)$")
+        local second = shifted and shifted:find("<<", 1, true)
+        if second then
+          nameSlot, rest = shifted:sub(1, second - 1), shifted:sub(second)
+        end
+      end
+      if variable then
+        awaitingName[variable] = false
+      end
+      for _, literal in ipairs(literalsIn(nameSlot)) do
         if looksLikeEventName(literal) then
+          noteRaised(literal, path, n, true)
+        end
+      end
+      for _, literal in ipairs(literalsIn(rest)) do
+        if looksLikeEventName(literal) and (literal:match("^sys") or legacy[literal]) then
           noteRaised(literal, path, n, true)
         end
       end
@@ -262,21 +295,23 @@ local function scanCpp(path, lines)
   end
 end
 
+-- The whole file at once, as a call's name can sit on the line after raiseEvent(
 local function scanLua(path)
   local handle = io.open(path, "r")
   if not handle then
     io.stderr:write(("cannot read %s\n"):format(path))
     os.exit(2)
   end
-  local n = 0
+  local lines = {}
   for line in handle:lines() do
-    n = n + 1
-    local code = line:gsub("&quot;", '"'):gsub("%-%-.*$", "")
-    for name in code:gmatch("raiseEvent%s*%(%s*[\"'](sys[%w_]*)[\"']") do
-      noteRaised(name, path, n, false)
-    end
+    lines[#lines + 1] = (line:gsub("&quot;", '"'):gsub("%-%-.*$", ""))
   end
   handle:close()
+  local text = table.concat(lines, "\n")
+  for at, name in text:gmatch("raiseEvent%s*%(%s*[\"']()(sys[%w_]*)[\"']") do
+    local _, lineFeeds = text:sub(1, at - 1):gsub("\n", "")
+    noteRaised(name, path, lineFeeds + 1, false)
+  end
 end
 
 local function skipped(path)
@@ -291,8 +326,8 @@ end
 local function listFiles(command)
   local files = {}
   local pipe = io.popen(command)
-  for path in pipe:lines() do
-    path = path:gsub("^%./", "")
+  for line in pipe:lines() do
+    local path = line:gsub("^%./", "")
     if not skipped(path) then
       files[#files + 1] = path
     end
@@ -346,6 +381,24 @@ if #cppFiles + #luaFiles == 0 then
   os.exit(2)
 end
 
+if legacyFile then
+  local handle = io.open(legacyFile, "r")
+  if not handle then
+    io.stderr:write(("cannot read the legacy list %s\n"):format(legacyFile))
+    os.exit(2)
+  end
+  local n = 0
+  for line in handle:lines() do
+    n = n + 1
+    local name = line:gsub("#.*$", ""):match("^%s*(%S+)")
+    if name then
+      legacy[name] = true
+      legacyLines[name] = n
+    end
+  end
+  handle:close()
+end
+
 local cppLines = {}
 for _, path in ipairs(cppFiles) do
   cppLines[path] = readCodeLines(path)
@@ -381,25 +434,6 @@ if listOnly then
     print(("%s\t%s:%d\t%s"):format(name, where.file, where.line, verdict == "" and "ok" or verdict))
   end
   os.exit(0)
-end
-
-local legacy, legacyLines = {}, {}
-if legacyFile then
-  local handle = io.open(legacyFile, "r")
-  if not handle then
-    io.stderr:write(("cannot read the legacy list %s\n"):format(legacyFile))
-    os.exit(2)
-  end
-  local n = 0
-  for line in handle:lines() do
-    n = n + 1
-    local name = line:gsub("#.*$", ""):match("^%s*(%S+)")
-    if name then
-      legacy[name] = true
-      legacyLines[name] = n
-    end
-  end
-  handle:close()
 end
 
 -- The literals of systemEvents()'s list, from its declaration to the closing brace

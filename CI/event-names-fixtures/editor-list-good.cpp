@@ -3,6 +3,7 @@
 QStringList systemEvents()
 {
     static const QStringList names{qsl("channel102Message"),
+                                   qsl("fixtureChosenEvent"),
                                    qsl("sysFixtureDone"),
                                    qsl("sysFixtureHandedOver"),
                                    qsl("sysFixtureKeptEvent"),
@@ -12,6 +13,8 @@ QStringList systemEvents()
                                    qsl("sysFixtureSaving"),
                                    qsl("sysFixtureSet"),
                                    qsl("sysFixtureSettled"),
-                                   qsl("sysFixtureSwept")};
+                                   qsl("sysFixtureSwept"),
+                                   qsl("sysFixtureViewed"),
+                                   qsl("sysFixtureWrapped")};
     return names;
 }

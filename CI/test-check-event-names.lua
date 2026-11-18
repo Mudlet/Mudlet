@@ -56,7 +56,7 @@ for file, marker in pairs(MARKERS) do
     end
   end
 end
-check(#marked >= 16, ("the bad fixtures mark %d lines as BAD, fewer than the 16 cases they hold"):format(#marked))
+check(#marked >= 17, ("the bad fixtures mark %d lines as BAD, fewer than the 17 cases they hold"):format(#marked))
 
 local badOutput, badStatus = run("legacy.txt", "editor-list-bad.cpp", {"bad.cpp", "bad.lua"})
 check(badStatus == 1, ("the bad fixtures exited %s, not 1 - a broken name no longer fails CI"):format(tostring(badStatus)))
@@ -78,7 +78,7 @@ check(goodStatus == 0, ("the good fixtures exited %s, not 0 - a name that follow
 -- Passing because nothing was read looks the same as passing, so hold the run
 -- to the names the good fixtures raise
 local names = tonumber(goodOutput:match("All (%d+) event names")) or 0
-check(names >= 10, ("the good fixtures gave %d names, fewer than the 10 they raise - the checker reads less than it should"):format(names))
+check(names >= 13, ("the good fixtures gave %d names, fewer than the 13 they raise - the checker reads less than it should"):format(names))
 
 if #failures > 0 then
   for _, failure in ipairs(failures) do
