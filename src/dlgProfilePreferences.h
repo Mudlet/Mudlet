@@ -378,6 +378,8 @@ private:
     void reflowMapperCards();
     void reflowColourCards();
     void nameColourControls();
+    // Reset all also takes away a picture a script put behind the main display; while there is one, its words name it
+    void updateResetColorsButton();
     void arrangeColourCards();
     void reflowGeneralCards();
     void reflowPrivacyCards();

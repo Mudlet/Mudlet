@@ -489,7 +489,9 @@ widget before holding it: the first Polish reaches their event filter before
 the style, which then sets the recipe's min-height back, and a dialog that
 sizes itself before it is shown (`adjustSize()`) never gives them a later
 style change to correct it. In the colour cards there is no Reset per colour; the card's "Reset all colors to default" is the
-way back. The card's own colours (Foreground, Background and the command
+way back. On the Main display's card that button also removes a picture a script put behind the main display, so while
+there is one the button shows "Reset all colors and remove the background image", with a tooltip about the picture. The words are set
+when the profile is read in, after a reset and each time the window becomes active again. The card's own colours (Foreground, Background and the command
 colours; the map's background, borders, links, levels, info box and grid) are
 label-and-row pairs in `PairGridLayout`. The Main display's belong together a
 row at a time (Foreground beside Background), so they are read across: two

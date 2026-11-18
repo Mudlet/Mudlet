@@ -1760,6 +1760,75 @@ private slots:
         QCOMPARE(pixelsOf(pPreview, inner), 0);
     }
 
+    // Reset all takes away a picture a script put behind the main display along with the colours, and its words name the
+    // picture while there is one: when the settings open, and when the player comes back after a script set or removed it
+    void test_resetAllSaysItRemovesTheMainDisplaysPicture()
+    {
+        const QList<colourCardColour> colours = colourCardColours();
+        QList<QColor> priorColours;
+        for (const auto& [stem, pHeld] : colours) {
+            priorColours.append(*pHeld);
+        }
+        restoreLater([this, colours, priorColours]() {
+            mpHost->resetBackgroundImage(QString());
+            for (int index = 0; index < colours.size(); ++index) {
+                *colours.at(index).second = priorColours.at(index);
+            }
+            mpHost->mainConsoleView()->changeColors();
+            mpHost->updateAnsi16ColorsInTable();
+        });
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        const QString picture = writePicture(directory, qsl("picture.png"), {{8, QColor(0x3C, 0x5A, 0x78)}}, 8);
+        QVERIFY(!picture.isEmpty());
+        const QString plain = QCoreApplication::translate("profile_preferences", "Reset all colors to default");
+        const QString removing = dlgProfilePreferences::tr("Reset all colors and remove the background image");
+        const QString removingTip = dlgProfilePreferences::tr("Also removes the image a script placed behind the main display.");
+        const auto returnToTheDialog = [this]() {
+            QEvent activation(QEvent::WindowActivate);
+            QCoreApplication::sendEvent(mpPreferences, &activation);
+            QCoreApplication::processEvents();
+        };
+
+        openPreferences();
+        QCOMPARE(mpPreferences->pushButton_resetColors->text(), plain);
+        QCOMPARE(mpPreferences->pushButton_resetColors->toolTip(), QString());
+        closePreferences();
+
+        QString path = picture;
+        QVERIFY(mpHost->setBackgroundImage(QString(), path, 1));
+        // Set from the profile as the dialog is built, before showing it activates the window
+        mpPreferences = new dlgProfilePreferences(mudlet::self(), mpHost);
+        QCOMPARE(mpPreferences->pushButton_resetColors->text(), removing);
+        QCOMPARE(mpPreferences->pushButton_resetColors->toolTip(), removingTip);
+        closePreferences();
+        openPreferences();
+        QPushButton* pReset = mpPreferences->pushButton_resetColors;
+        QCOMPARE(pReset->text(), removing);
+        QCOMPARE(pReset->toolTip(), removingTip);
+
+        QVERIFY(mpHost->resetBackgroundImage(QString()));
+        returnToTheDialog();
+        QCOMPARE(pReset->text(), plain);
+        QCOMPARE(pReset->toolTip(), QString());
+
+        // A search standing holds back the re-read of the settings, and not these words
+        QVERIFY2(TestSettings::search(mpPreferences, qsl("color")), "the search never ran");
+        path = picture;
+        QVERIFY(mpHost->setBackgroundImage(QString(), path, 1));
+        returnToTheDialog();
+        QCOMPARE(pReset->text(), removing);
+        QCOMPARE(pReset->toolTip(), removingTip);
+        mpPreferences->findChild<QLineEdit*>(qsl("settingsSearchField"))->clear();
+        QCoreApplication::processEvents();
+
+        mpPreferences->setTab(qsl("mainDisplay"));
+        pReset->click();
+        QCOMPARE(mpHost->mainConsoleView()->mBgImageMode, 0);
+        QCOMPARE(pReset->text(), plain);
+        QCOMPARE(pReset->toolTip(), QString());
+    }
+
     // Every colour field's swatch stands for the Choose beside it, so a click on a swatch picks in the colours window
     void test_aClickOnASwatchChoosesInTheColoursWindow()
     {

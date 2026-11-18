@@ -3297,6 +3297,9 @@ bool dlgProfilePreferences::event(QEvent* pEvent)
     const bool handled = QDialog::event(pEvent);
     if (pEvent->type() == QEvent::WindowActivate) {
         refreshFromSettings();
+        // Apart from the re-read, which stands down during an edit or a search: a script typically sets the picture
+        // from the main window while this one is open, and the words change no setting
+        updateResetColorsButton();
     }
     // Sent when this dialog's stylesheet or the application's is replaced, and by an appearance change, which is
     // slot_setAppearance()'s: restyled here first, the shell would look drawn for the new mode to it and it would
@@ -5494,6 +5497,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     setColors();
     setColors2();
     showPlayerRoomColours();
+    updateResetColorsButton();
 
     // Identify which Profile we are showing the settings for:
     setWindowTitle(tr("Profile preferences - %1").arg(pHost->getName()));
@@ -5949,6 +5953,7 @@ void dlgProfilePreferences::clearHostDetails()
     groupBox_proxy->setDisabled(true);
     // Hides the hero, as there is no connection to report on
     updateSecurityStatus();
+    updateResetColorsButton();
 
     // Remove the reference to the Host/profile in the title:
     setWindowTitle(tr("Profile preferences"));
@@ -6174,9 +6179,37 @@ void dlgProfilePreferences::slot_resetColors()
         pHost->mainConsoleView()->resetConsoleBackgroundImage();
         pHost->mainConsoleView()->changeColors();
     }
+    updateResetColorsButton();
 
     // Copy across the colors to the Lua "color_table"
     pHost->updateAnsi16ColorsInTable();
+}
+
+// The .ui file's words, kept to put back once the picture is gone; cleared after retranslateUi() so the new language's are kept
+static const char* const scmResetColorsPlainText = "settingsResetColorsPlainText";
+
+void dlgProfilePreferences::updateResetColorsButton()
+{
+    if (!pushButton_resetColors->property(scmResetColorsPlainText).isValid()) {
+        pushButton_resetColors->setProperty(scmResetColorsPlainText, pushButton_resetColors->text());
+    }
+    Host* pHost = mpHost;
+    const TMainConsole* pConsole = pHost ? pHost->mainConsoleView() : nullptr;
+    QString text = pushButton_resetColors->property(scmResetColorsPlainText).toString();
+    QString toolTip;
+    if (pConsole && pConsole->mBgImageMode) {
+        //: Settings, Main display page, Colors card: the button at the foot of the card while a script has put a picture behind the main display; clicking it puts back the default colors and removes that picture. At other times the button shows "Reset all colors to default".
+        text = tr("Reset all colors and remove the background image");
+        //: Settings, Main display page, Colors card: tooltip of the "Reset all colors and remove the background image" button, shown only while a script has put a picture behind the main display
+        toolTip = tr("Also removes the image a script placed behind the main display.");
+    }
+    pushButton_resetColors->setToolTip(toolTip);
+    if (pushButton_resetColors->text() == text) {
+        return;
+    }
+    pushButton_resetColors->setText(text);
+    // The button is the card's footer, so its words move what two pairs to a row need
+    arrangeColourCards();
 }
 
 void dlgProfilePreferences::slot_resetMapColors()
@@ -9654,6 +9687,9 @@ void dlgProfilePreferences::slot_guiLanguageChanged(const QString& language)
     refreshMCPAppButtons();
     updateMCPRestartNotice();
 #endif
+    // retranslateUi() put back the .ui file's words, now in the new language, and left the tooltip in the old one
+    pushButton_resetColors->setProperty(scmResetColorsPlainText, QVariant());
+    updateResetColorsButton();
     // Every text the search index and column widths were measured from has been replaced, including
     // checkboxes fitted to the old language, which can also change the width the sidebar needs
     invalidateSearch();
