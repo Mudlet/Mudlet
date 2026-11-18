@@ -529,9 +529,7 @@ void dlgMapper::loadMapFromFile()
         } else if (isJson) {
             auto [ok, errorMessage] = pHost->mpMap->importJsonMapFile(fileName);
             success = ok;
-            if (ok) {
-                pHost->mpMap->raiseMapLoaded();
-            } else {
+            if (!ok) {
                 pHost->postMessage(tr("[ ERROR ] - Unable to load JSON map file: %1\nreason: %2.").arg(fileName, errorMessage));
             }
         } else {

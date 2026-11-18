@@ -6657,9 +6657,7 @@ void dlgProfilePreferences::loadMap(const QString& fileName)
         if (isJson) {
             auto [localSuccess, errorMessage] = pHost->mpMap->importJsonMapFile(fileName);
             success = localSuccess;
-            if (localSuccess) {
-                pHost->mpMap->raiseMapLoaded();
-            } else {
+            if (!localSuccess) {
                 pHost->postMessage(tr("[ ERROR ] - Unable to load JSON map file: %1\n"
                                       "reason: %2.")
                                            .arg(fileName, errorMessage));

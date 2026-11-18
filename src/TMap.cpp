@@ -3817,8 +3817,8 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     return {true, QString()};
 }
 
-// readJsonMapFile() is also how restore() loads a JSON file, whose caller files
-// the report; an import on its own has to audit the map and file one itself
+// readJsonMapFile() is also how restore() loads a JSON file, whose caller does
+// the rest; an import on its own has to audit and show the map and file a report
 std::pair<bool, QString> TMap::importJsonMapFile(const QString& source)
 {
     //: Title of a report in the map error log file, holding anything left over from before a JSON map import.
@@ -3830,6 +3830,11 @@ std::pair<bool, QString> TMap::importJsonMapFile(const QString& source)
     }
     //: Title of a report in the map error log file. %1 is the JSON map file, %2 the date and time the import started.
     pushErrorMessagesToFile(tr(R"(Importing JSON map "%1" at %2 report)").arg(source, now.toString(Qt::ISODate)), true);
+    if (result.first) {
+        announceMapLoaded(true);
+        requestMapperShown();
+        raiseMapLoaded();
+    }
     return result;
 }
 
