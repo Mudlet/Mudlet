@@ -339,6 +339,9 @@ public:
     // From the room's center to the destination's: straight, or, with mDirectionalExitLines, leaving each end in its
     // exit's direction when the other room does not lie that way
     QVector<QPointF> exitLinePath(const TRoom& room, const ExitToPaint& exit, const QPointF& from, const QPointF& to, bool* leavesByStub = nullptr) const;
+    // An exit back into its own room has no line to draw, so it is a hollow ring just outside the room in its direction -
+    // hollow, unlike a stub's dot. Returns the line from the room's centre to the ring's, for a door to sit on.
+    QLineF drawLoopExit(QPainter&, const QPointF& centre, int direction, qreal cellWidth, qreal cellHeight, qreal borderWidth) const;
 
     // Draws an area at a size of its own into an image file, written on a pool thread; how that goes is reported to
     // the profile. The returned pair says whether the export started, or why not.

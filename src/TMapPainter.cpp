@@ -1551,6 +1551,8 @@ static bool withinViewportBounds(const QRect& bounds, const int x, const int y)
 
 // Of the dot on the end of an exit stub, as a fraction of a room's spacing
 static constexpr qreal cStubDotRadius = 0.1;
+// Of the ring of an exit leading back into its own room, likewise
+static constexpr qreal cLoopExitRadius = 0.15;
 
 // drawPolyline() is 2-3x slower than drawLine(), and almost every exit path is a straight line
 static void drawExitPath(QPainter& painter, const QVector<QPointF>& path)
@@ -1608,6 +1610,23 @@ QVector<QPointF> TMapPainter::exitLinePath(const TRoom& room, const ExitToPaint&
     }
     path << to;
     return path;
+}
+
+QLineF TMapPainter::drawLoopExit(QPainter& painter, const QPointF& centre, const int direction, const qreal cellWidth, const qreal cellHeight, const qreal borderWidth) const
+{
+    const QVector3D unit = TMap::scmUnitVectors.value(direction);
+    const bool diagonal = unit.x() != 0.0f && unit.y() != 0.0f;
+    // Out to the room's edge: its corner on a diagonal, which a round room does not reach
+    const qreal edgeScale = diagonal && mBubbleMode ? 1.0 / std::numbers::sqrt2 : 1.0;
+    const QPointF edge(centre.x() + unit.x() * (rSize * cellWidth / 2.0 + borderWidth) * edgeScale, centre.y() + unit.y() * (rSize * cellHeight / 2.0 + borderWidth) * edgeScale);
+    const qreal radius = cLoopExitRadius * qMin(cellWidth, cellHeight);
+    const qreal unitLength = diagonal ? std::numbers::sqrt2 : 1.0;
+    const QPointF ringCentre(edge.x() + unit.x() / unitLength * radius, edge.y() + unit.y() / unitLength * radius);
+    painter.save();
+    painter.setBrush(Qt::NoBrush);
+    painter.drawEllipse(ringCentre, radius, radius);
+    painter.restore();
+    return QLineF(centre, ringCentre);
 }
 
 void TMapPainter::paintRoomExits(QPainter& painter,
@@ -2061,6 +2080,14 @@ void TMapPainter::paintRoomExits(QPainter& painter,
             }
 
             const TRoom* pE = exit.destination;
+            if (rID == _id) {
+                const int borderWidth = !lodTier && roomBorderShown(*room) ? roomBorderWidth(*room) : 0;
+                const QLineF loopLine = drawLoopExit(painter, QPointF(rx, ry), exit.direction, mRoomWidth, mRoomHeight, borderWidth);
+                if (const QString doorKey = TRoom::dirCodeToShortString(exit.direction); room->doors.value(doorKey)) {
+                    drawDoor(painter, *room, doorKey, loopLine);
+                }
+                continue;
+            }
             const bool areaExit = pE->getArea() != mAreaID;
             const float ex = pE->x() * mRoomWidth + mRX;
             const float ey = pE->y() * mRoomHeight * -1 + mRY;
@@ -4008,6 +4035,14 @@ std::pair<bool, QString> TMapPainter::exportArea(int areaId, const QString& file
                     }
                 }
 
+                if (exitRoomId == roomId) {
+                    painter.setPen(pen);
+                    const QLineF loopLine = drawLoopExit(painter, QPointF(rx, ry), direction, finalRoomSize, finalRoomSize, 0);
+                    if (!doorKey.isEmpty() && room->doors.value(doorKey, 0) > 0) {
+                        drawDoor(painter, *room, doorKey, loopLine);
+                    }
+                    continue;
+                }
                 if (!areaExit) {
                     // Same-area exit: draw line to destination room (original logic)
                     const float exitRoomX = exitRoom->x() * finalRoomSize + (padding - (pArea->min_x * finalRoomSize));

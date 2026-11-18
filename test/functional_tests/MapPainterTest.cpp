@@ -451,6 +451,46 @@ private slots:
         QVERIFY2(arrowPixels(oneWay) > 0, qPrintable(saved(oneWay, qsl("way-back-none"))));
     }
 
+    // An exit back into its own room is a hollow ring just outside the room on that side, with or without directional
+    // lines: a line from the room to itself has no length to show
+    void anExitBackIntoItsOwnRoomIsARing()
+    {
+        QVERIFY(map()->setExit(scmWestRoom, scmWestRoom, DIR_EAST));
+        QVERIFY(map()->setExit(scmEastRoom, -1, DIR_WEST));
+        TArea* pArea = roomDB()->getArea(mAreaId);
+        QVERIFY(pArea);
+
+        for (const bool directional : {false, true}) {
+            TMapPainter::View exitsView = view();
+            exitsView.mDirectionalExitLines = directional;
+            TMapPainter painter;
+            painter.setView(exitsView);
+            QImage image = blankImage();
+            {
+                QPainter imagePainter(&image);
+                QPen pen(Qt::white);
+                const float exitWidth = 2.0f;
+                pen.setWidthF(exitWidth);
+                imagePainter.setPen(pen);
+                const QRect roomBounds = TMapPainter::viewportRoomBounds(scmOriginX, scmOriginY, scmRoomPixels, scmRoomPixels, scmImageWidth, scmImageHeight);
+                const QList<int> viewportRooms = pArea->getGridIndex().roomsInViewport(0, roomBounds.left(), roomBounds.right(), roomBounds.top(), roomBounds.bottom());
+                QList<TMapPainter::ExitToPaint> exitList;
+                QMap<int, QPointF> areaExitsMap;
+                painter.paintRoomExits(imagePainter, pen, exitList, pArea, 0, roomBounds, viewportRooms, exitWidth, areaExitsMap);
+            }
+
+            // The room's edge is a quarter cell east of its centre at the default room size; the ring's radius is
+            // 0.15 of a cell, so its centre is 0.4 of a cell east and its far side 0.55
+            const QString where = saved(image, directional ? qsl("loop-bent") : qsl("loop-straight"));
+            QVERIFY2(image.pixelColor(onImage(QPointF(0.55, 0)).toPoint() - QPoint(1, 0)) == QColor(Qt::white), qPrintable(where));
+            QVERIFY2(image.pixelColor(onImage(QPointF(0.4, 0.15)).toPoint()) == QColor(Qt::white), qPrintable(where));
+            QVERIFY2(image.pixelColor(onImage(QPointF(0.4, 0)).toPoint()) == QColor(Qt::black), qPrintable(where));
+            // Nothing beyond the ring, nor on the room's other side
+            QVERIFY2(image.pixelColor(onImage(QPointF(0.7, 0)).toPoint()) == QColor(Qt::black), qPrintable(where));
+            QVERIFY2(image.pixelColor(onImage(QPointF(-0.4, 0)).toPoint()) == QColor(Qt::black), qPrintable(where));
+        }
+    }
+
     // An image label is scaled to fill the rectangle it is given
     void anImageLabelIsScaledIntoItsRectangle()
     {
