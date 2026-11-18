@@ -29,7 +29,9 @@
 #include <functional>
 #include <tuple>
 
+#include <QDateTime>
 #include <QDir>
+#include <QFile>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -277,17 +279,60 @@ private:
         return colour;
     }
 
-    // How many pixels of a widget's own drawing are exactly that colour
-    static int pixelsOf(QWidget* pWidget, const QColor& colour)
+    // How many pixels of a widget's own drawing, or of a part of it in the widget's coordinates, are exactly that colour
+    static int pixelsOf(QWidget* pWidget, const QColor& colour, const QRect& part = QRect())
     {
         const QImage image = pWidget->grab().toImage();
+        const qreal ratio = image.devicePixelRatio();
+        const QRect counted = part.isNull() ? image.rect() : QRect(part.topLeft() * ratio, part.size() * ratio).intersected(image.rect());
         int count = 0;
-        for (int y = 0; y < image.height(); ++y) {
-            for (int x = 0; x < image.width(); ++x) {
+        for (int y = counted.top(); y <= counted.bottom(); ++y) {
+            for (int x = counted.left(); x <= counted.right(); ++x) {
                 count += image.pixelColor(x, y).rgb() == colour.rgb();
             }
         }
         return count;
+    }
+
+    // The share of a widget's own drawing drawn exactly in that colour
+    static qreal shareOf(QWidget* pWidget, const QColor& colour)
+    {
+        const qreal ratio = pWidget->devicePixelRatioF();
+        return pixelsOf(pWidget, colour) / (pWidget->width() * ratio * pWidget->height() * ratio);
+    }
+
+    // A picture of upright bands of colour side by side, each as many pixels wide as given, saved under that name
+    static QString writePicture(const QTemporaryDir& directory, const QString& name, const QList<std::pair<int, QColor>>& bands, const int height)
+    {
+        int width = 0;
+        for (const auto& [bandWidth, colour] : bands) {
+            width += bandWidth;
+        }
+        QImage picture(width, height, QImage::Format_RGB32);
+        int left = 0;
+        for (const auto& [bandWidth, colour] : bands) {
+            for (int x = left; x < left + bandWidth; ++x) {
+                for (int y = 0; y < height; ++y) {
+                    picture.setPixelColor(x, y, colour);
+                }
+            }
+            left += bandWidth;
+        }
+        const QString path = directory.filePath(name);
+        return picture.save(path) ? path : QString();
+    }
+
+    QWidget* displayPreviewOnShow()
+    {
+        mpPreferences->setTab(qsl("mainDisplay"));
+        QCoreApplication::processEvents();
+        auto* pPreview = mpPreferences->findChild<QWidget*>(qsl("settingsDisplayColoursPreview"));
+        if (!pPreview || !pPreview->isVisible()) {
+            return nullptr;
+        }
+        TestSettings::pageOf(mpPreferences, qsl("mainDisplay"))->ensureWidgetVisible(pPreview, 0, 0);
+        QCoreApplication::processEvents();
+        return pPreview;
     }
 
     // Counts the times a widget is drawn on screen, which grab() never shows: it draws the widget afresh each time
@@ -1495,9 +1540,12 @@ private slots:
     void test_thePreviewsFollowTheColours()
     {
         const QColor priorCommandBackground = mpHost->mCommandBgColor;
+        const QColor priorBackground = mpHost->mBgColor;
         const QColor priorMapGreen = mpHost->mGreen_2;
-        restoreLater([this, priorCommandBackground, priorMapGreen]() {
+        restoreLater([this, priorCommandBackground, priorBackground, priorMapGreen]() {
             mpHost->mCommandBgColor = priorCommandBackground;
+            mpHost->mBgColor = priorBackground;
+            mpHost->mainConsoleView()->changeColors();
             mpHost->mGreen_2 = priorMapGreen;
             mpHost->mpMap->restore16ColorSet();
         });
@@ -1505,6 +1553,7 @@ private slots:
         openPreferences();
         const QList<std::tuple<QString, QString, QString, QPushButton*, QPushButton*>> previews{
                 {qsl("mainDisplay"), qsl("settingsDisplayColoursPreview"), qsl("command_background_color"), mpPreferences->pushButton_command_background_color, mpPreferences->pushButton_resetColors},
+                {qsl("mainDisplay"), qsl("settingsDisplayColoursPreview"), qsl("background_color"), mpPreferences->pushButton_background_color, mpPreferences->pushButton_resetColors},
                 {qsl("mapper"), qsl("settingsMapColoursPreview"), qsl("green_2"), mpPreferences->pushButton_green_2, mpPreferences->reset_colors_button_2}};
         for (const auto& [page, previewName, stem, pChoose, pReset] : previews) {
             mpPreferences->setTab(page);
@@ -1576,6 +1625,139 @@ private slots:
         QCoreApplication::processEvents();
         const int seamPixels = pixelsOf(pPreview, seam);
         QVERIFY2(seamPixels >= pPreview->width() / 2, qPrintable(qsl("the preview shows %1 pixels of the console's seam colour %2 across %3").arg(seamPixels).arg(seam.name()).arg(pPreview->width())));
+    }
+
+    // A picture a script put behind the main display lies over the background in the preview, laid out by the
+    // console's own rule, and the background is plain again once the script takes it away
+    void test_theDisplayPreviewShowsTheMainDisplaysPicture()
+    {
+        const QColor priorBackground = mpHost->mBgColor;
+        restoreLater([this, priorBackground]() {
+            mpHost->resetBackgroundImage(QString());
+            mpHost->mBgColor = priorBackground;
+            mpHost->mainConsoleView()->changeColors();
+        });
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        const QColor leading(0x3C, 0x5A, 0x78);
+        const QColor trailing(0x8F, 0x2D, 0x6E);
+        // Two halves, so a picture stretched over the preview is told apart from one repeated across it
+        QString halves = writePicture(directory, qsl("halves.png"), {{12, leading}, {12, trailing}}, 24);
+        QVERIFY(!halves.isEmpty());
+
+        openPreferences();
+        QWidget* pPreview = displayPreviewOnShow();
+        QVERIFY2(pPreview, "there is no display preview on show");
+        const QColor background(0x20, 0x30, 0x40);
+        typeInto(colourField(qsl("background_color")), background.name(), Qt::Key_Return);
+        QCOMPARE(mpHost->mBgColor, background);
+        const auto shares = [pPreview, leading, trailing, background]() {
+            return qsl("of the preview, %1 is the picture's leading colour, %2 its trailing one and %3 the background")
+                    .arg(shareOf(pPreview, leading), 0, 'f', 2)
+                    .arg(shareOf(pPreview, trailing), 0, 'f', 2)
+                    .arg(shareOf(pPreview, background), 0, 'f', 2);
+        };
+        QVERIFY2(shareOf(pPreview, background) > 0.5, qPrintable(shares()));
+
+        const int quarter = pPreview->width() / 4;
+        const QRect leadingQuarter(0, 0, quarter, pPreview->height());
+        const QRect trailingQuarter(pPreview->width() - quarter, 0, quarter, pPreview->height());
+        const QRect middleThird(pPreview->width() / 3, 0, pPreview->width() / 3, pPreview->height());
+        const QRect topFifth(0, 0, pPreview->width(), pPreview->height() / 5);
+        const auto pictureIn = [pPreview, leading, trailing](const QRect& part) {
+            return pixelsOf(pPreview, leading, part) + pixelsOf(pPreview, trailing, part);
+        };
+
+        // A stylesheet of the script's own is not drawn, even one naming nothing but a picture file
+        QVERIFY(mpHost->setBackgroundImage(QString(), halves, 4));
+        QCOMPARE(pictureIn(pPreview->rect()), 0);
+        QVERIFY2(shareOf(pPreview, background) > 0.5, qPrintable(shares()));
+
+        // Border: stretched over the text, its leading half on the preview's leading side
+        QVERIFY(mpHost->setBackgroundImage(QString(), halves, 1));
+        QVERIFY2(shareOf(pPreview, leading) + shareOf(pPreview, trailing) > 0.5, qPrintable(shares()));
+        QVERIFY(pixelsOf(pPreview, leading, leadingQuarter) > 0);
+        QCOMPARE(pixelsOf(pPreview, trailing, leadingQuarter), 0);
+        QVERIFY(pixelsOf(pPreview, trailing, trailingQuarter) > 0);
+        QCOMPARE(pixelsOf(pPreview, leading, trailingQuarter), 0);
+
+        // Tile: repeated from the top left, so both halves are found at the leading side
+        QVERIFY(mpHost->setBackgroundImage(QString(), halves, 3));
+        QVERIFY2(shareOf(pPreview, leading) + shareOf(pPreview, trailing) > 0.5, qPrintable(shares()));
+        QVERIFY(pixelsOf(pPreview, leading, leadingQuarter) > 0);
+        QVERIFY(pixelsOf(pPreview, trailing, leadingQuarter) > 0);
+
+        // Center: at its own size in the middle of the text, with the background round it
+        QVERIFY(mpHost->setBackgroundImage(QString(), halves, 2));
+        QVERIFY(pixelsOf(pPreview, leading, middleThird) > 0);
+        QVERIFY(pixelsOf(pPreview, trailing, middleThird) > 0);
+        for (const QRect& edge : {leadingQuarter, trailingQuarter, topFifth}) {
+            QCOMPARE(pictureIn(edge), 0);
+            QVERIFY(pixelsOf(pPreview, background, edge) > 0);
+        }
+
+        // A file written again is loaded again once the preview comes back into sight
+        QVERIFY(mpHost->setBackgroundImage(QString(), halves, 1));
+        QVERIFY(pixelsOf(pPreview, leading, leadingQuarter) > 0);
+        QCOMPARE(writePicture(directory, qsl("halves.png"), {{12, trailing}, {12, leading}}, 24), halves);
+        {
+            // QPixmap caches a loaded file under its path, size and modification time, and a write within the same
+            // second leaves all three as they were
+            QFile written(halves);
+            QVERIFY(written.open(QIODevice::ReadWrite));
+            QVERIFY(written.setFileTime(QDateTime::currentDateTime().addSecs(60), QFileDevice::FileModificationTime));
+        }
+        mpPreferences->setTab(qsl("mapper"));
+        QCoreApplication::processEvents();
+        QCOMPARE(displayPreviewOnShow(), pPreview);
+        QVERIFY(pixelsOf(pPreview, trailing, leadingQuarter) > 0);
+        QCOMPARE(pixelsOf(pPreview, leading, leadingQuarter), 0);
+
+        QVERIFY(mpHost->resetBackgroundImage(QString()));
+        QCOMPARE(pictureIn(pPreview->rect()), 0);
+        QVERIFY2(shareOf(pPreview, background) > 0.5, qPrintable(shares()));
+    }
+
+    // A full-window picture lies under the background: out of sight while the background is solid, and once that is
+    // see-through, cut to the preview's shape as the console cuts it to the window's
+    void test_theDisplayPreviewShowsTheFullWindowPictureUnderTheBackground()
+    {
+        const QColor priorBackground = mpHost->mBgColor;
+        restoreLater([this, priorBackground]() {
+            mpHost->resetBackgroundImage(QString(), true);
+            mpHost->mBgColor = priorBackground;
+            mpHost->mainConsoleView()->changeColors();
+        });
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        const QColor outer(0x3C, 0x5A, 0x78);
+        const QColor inner(0x8F, 0x2D, 0x6E);
+        // Far wider than the preview's shape, so only the middle band is left once it is cut to that shape
+        QString banded = writePicture(directory, qsl("banded.png"), {{600, outer}, {800, inner}, {600, outer}}, 100);
+        QVERIFY(!banded.isEmpty());
+        const QColor background(0x20, 0x30, 0x40);
+        mpHost->mBgColor = background;
+
+        openPreferences();
+        QWidget* pPreview = displayPreviewOnShow();
+        QVERIFY2(pPreview, "there is no display preview on show");
+        const auto shares = [pPreview, outer, inner, background]() {
+            return qsl("of the preview, %1 is the picture's middle band, %2 its outer bands and %3 the background")
+                    .arg(shareOf(pPreview, inner), 0, 'f', 2)
+                    .arg(shareOf(pPreview, outer), 0, 'f', 2)
+                    .arg(shareOf(pPreview, background), 0, 'f', 2);
+        };
+
+        QVERIFY(mpHost->setBackgroundImage(QString(), banded, 5, true));
+        QCOMPARE(pixelsOf(pPreview, inner) + pixelsOf(pPreview, outer), 0);
+        QVERIFY2(shareOf(pPreview, background) > 0.5, qPrintable(shares()));
+
+        mpHost->mBgColor.setAlpha(0);
+        QVERIFY2(shareOf(pPreview, inner) > 0.5, qPrintable(shares()));
+        QCOMPARE(pixelsOf(pPreview, outer), 0);
+
+        QVERIFY(mpHost->resetBackgroundImage(QString(), true));
+        QCOMPARE(pixelsOf(pPreview, inner), 0);
     }
 
     // Every colour field's swatch stands for the Choose beside it, so a click on a swatch picks in the colours window

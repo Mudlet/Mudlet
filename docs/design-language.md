@@ -541,7 +541,13 @@ Beside the table, in the width the table leaves, a preview draws the colours in
 use: `ConsoleColourPreview` writes a few lines of a game - the echoed command,
 a room, its exits in light cyan, someone speaking, then the eight names of each
 column in their own colours over a command line, under the seam the console
-draws there - on the Background in the profile's display font, and `MapColourPreview` draws rooms in the environment
+draws there - on the Background in the profile's display font, and over the
+pictures a script set behind the main console with `setBackgroundImage()`: the
+full-window one under the Background, showing where that is see-through, and the
+main display's over it, each laid out by the console's own rule (border, center,
+tile or cover) as though the console were the preview's size. A "style" one is
+left out: it is a stylesheet, which a widget painting itself has no way to
+draw. `MapColourPreview` draws rooms in the environment
 colours on the grid, linked, with a room a level up and one down, two rooms on
 one spot and the info box. A swatch shows a colour; it cannot show black words
 on a black background, a link that vanishes into the grid or an info box

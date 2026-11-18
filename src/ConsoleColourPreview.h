@@ -20,15 +20,18 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QPixmap>
 #include <QPointer>
 #include <QWidget>
 
 class Host;
+class QPainter;
 
 namespace uiDesign {
 
-// A few lines of a game drawn the way the main display draws them, in the profile's colours and display font, so a
-// choice is seen in use: black words on a black background show here, where two swatches side by side say nothing.
+// A few lines of a game drawn the way the main display draws them, in the profile's colours and display font and over
+// any picture a script set behind the main console, so a choice is seen in use: black words on a black background
+// show here, where two swatches side by side say nothing.
 // Shows only; the colours are read from the Host at every paint, so whoever changes one calls update().
 class ConsoleColourPreview : public QWidget
 {
@@ -45,11 +48,25 @@ public:
 protected:
     void changeEvent(QEvent* pEvent) override;
     void paintEvent(QPaintEvent* pEvent) override;
+    void showEvent(QShowEvent* pEvent) override;
 
 private:
+    // A picture a script put behind the main console, loaded from its file once rather than at every paint
+    struct Picture
+    {
+        QString path;
+        QPixmap loaded;
+        // The part of it last stretched over the preview, scaled to the device's pixels so it is drawn sharp
+        QRect fittedPart;
+        QPixmap fitted;
+    };
+
     void retranslate();
+    static void paintPicture(QPainter& painter, Picture& picture, const QString& path, int mode, const QRect& area);
 
     QPointer<Host> mpHost;
+    Picture mWindowPicture;
+    Picture mDisplayPicture;
 };
 
 } // namespace uiDesign

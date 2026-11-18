@@ -20,6 +20,7 @@
 #include "ConsoleColourPreview.h"
 
 #include "Host.h"
+#include "TMainConsole.h"
 #include "uiDesign.h"
 #include "utils.h"
 
@@ -40,6 +41,12 @@ constexpr int scmPadding = 6;
 constexpr int scmCommandLinePadding = 3;
 // Below this the words are no longer words, so the font stops shrinking and the lines are clipped instead
 constexpr int scmSmallestPixelSize = 6;
+
+// The modes of setBackgroundImage() as TConsole keeps them; 4, a stylesheet of the script's own, is not drawn here
+constexpr int scmPictureBorder = 1;
+constexpr int scmPictureCenter = 2;
+constexpr int scmPictureTile = 3;
+constexpr int scmPictureCover = 5;
 
 struct Run
 {
@@ -126,6 +133,50 @@ void ConsoleColourPreview::changeEvent(QEvent* pEvent)
         retranslate();
         update();
     }
+}
+
+void ConsoleColourPreview::showEvent(QShowEvent* pEvent)
+{
+    QWidget::showEvent(pEvent);
+    // The file may have been written again while the preview was out of sight
+    mWindowPicture = {};
+    mDisplayPicture = {};
+}
+
+// Laid over the area by the console's own rule, as though the console were the area's size
+void ConsoleColourPreview::paintPicture(QPainter& painter, Picture& picture, const QString& path, const int mode, const QRect& area)
+{
+    if ((mode != scmPictureBorder && mode != scmPictureCenter && mode != scmPictureTile && mode != scmPictureCover) || area.isEmpty()) {
+        return;
+    }
+    if (picture.path != path) {
+        picture = {path, QPixmap(path), QRect(), QPixmap()};
+    }
+    if (picture.loaded.isNull()) {
+        return;
+    }
+
+    painter.save();
+    painter.setClipRect(area, Qt::IntersectClip);
+    if (mode == scmPictureCenter) {
+        QRect centred(QPoint(), picture.loaded.deviceIndependentSize().toSize());
+        centred.moveCenter(area.center());
+        painter.drawPixmap(centred.topLeft(), picture.loaded);
+    } else if (mode == scmPictureTile) {
+        painter.drawTiledPixmap(area, picture.loaded);
+    } else {
+        const QRect part = mode == scmPictureCover ? TConsole::coverSourceRect(picture.loaded.size(), area.size()) : picture.loaded.rect();
+        const qreal ratio = painter.device()->devicePixelRatioF();
+        const QSize pixels = area.size() * ratio;
+        if (picture.fittedPart != part || picture.fitted.size() != pixels) {
+            const QPixmap cropped = part == picture.loaded.rect() ? picture.loaded : picture.loaded.copy(part);
+            picture.fitted = cropped.scaled(pixels, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+            picture.fitted.setDevicePixelRatio(ratio);
+            picture.fittedPart = part;
+        }
+        painter.drawPixmap(area, picture.fitted);
+    }
+    painter.restore();
 }
 
 void ConsoleColourPreview::paintEvent(QPaintEvent* pEvent)
@@ -224,12 +275,23 @@ void ConsoleColourPreview::paintEvent(QPaintEvent* pEvent)
     const QRectF frame = QRectF(rect()).adjusted(half, half, -half, -half);
     QPainterPath outline;
     outline.addRoundedRect(frame, scmRadiusInput, scmRadiusInput);
-    painter.fillPath(outline, host.mBgColor);
     painter.setClipPath(outline);
 
-    // The command line along the foot, under the seam the console draws there in its own colours
     const int commandLineHeight = metrics.height() + 2 * scmCommandLinePadding;
     const QRect commandLine(0, height() - commandLineHeight, width(), commandLineHeight);
+    // A script's pictures fill the text pane, which ends at the seam over the command line. The full-window one lies
+    // under the background, so it shows only where the background is see-through
+    const QRect textPane(0, 0, width(), commandLine.top() - 1);
+    const TConsole* pConsole = pHost->mainConsoleView();
+    if (pConsole) {
+        paintPicture(painter, mWindowPicture, pConsole->mWindowBgImagePath, pConsole->mWindowBgImageMode, textPane);
+    }
+    painter.fillRect(rect(), host.mBgColor);
+    if (pConsole) {
+        paintPicture(painter, mDisplayPicture, pConsole->mBgImagePath, pConsole->mBgImageMode, textPane);
+    }
+
+    // The command line along the foot, under the seam the console draws there in its own colours
     painter.fillRect(commandLine, host.mCommandLineBgColor);
     painter.fillRect(QRect(0, commandLine.top() - 1, width(), 1), blend(host.mCommandLineBgColor, host.mCommandLineFgColor, scmConsoleFootSeamStrength));
     painter.setPen(host.mCommandLineFgColor);
