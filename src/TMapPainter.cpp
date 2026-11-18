@@ -130,7 +130,13 @@ bool TMapPainter::returnExitHasCustomLine(const TRoom& room, const ExitToPaint& 
         return false;
     }
     const int reverse = TMap::scmReverseDirections.value(exit.direction);
-    return reverse && exit.destination->getExit(reverse) == room.getId() && exit.destination->customLines.contains(TRoom::dirCodeToShortString(reverse));
+    if (!reverse || exit.destination->getExit(reverse) != room.getId()) {
+        return false;
+    }
+    // Only a line that gets back here draws the connection; one that stops short leaves the plain line needed. Within
+    // the tolerance customLineRunsStraightTo() allows
+    const QList<QPointF> points = exit.destination->customLines.value(TRoom::dirCodeToShortString(reverse));
+    return !points.isEmpty() && QLineF(points.last(), QPointF(room.x(), room.y())).length() <= 0.1;
 }
 
 // Whether owner has a custom line for an exit to other that runs straight to its centre, so a plain line between them

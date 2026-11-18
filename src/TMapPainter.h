@@ -230,8 +230,8 @@ public:
     static void paintLabelHighlight(QPainter& painter, QRectF labelPaintRectangle, const QSizeF& clickSize);
     static int customLineDestination(const TRoom& room, const QString& key);
     static bool customLineRunsStraightTo(const TRoom& owner, const TRoom& other);
-    // Whether exit's destination leads back through the opposite exit and draws that one as a custom line, which then
-    // shows the two-way connection a bent plain line would draw again beside it
+    // Whether exit's destination leads back through the opposite exit and draws that one as a custom line reaching room,
+    // which then shows the two-way connection a bent plain line would draw again beside it
     static bool returnExitHasCustomLine(const TRoom& room, const ExitToPaint& exit);
     // directionalExitLines in Mudlet.ini, on unless set to false there; read when a view is made
     static bool directionalExitLinesEnabled();
