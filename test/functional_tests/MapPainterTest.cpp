@@ -330,6 +330,19 @@ private slots:
         QVERIFY2(image.pixelColor(westCentre + QPoint(quarterCell + 2, 0)) == QColor(Qt::black), qPrintable(saved(image, qsl("rooms"))));
     }
 
+    // A pixel reads back as the map coordinates a room there is drawn at, and nothing before rooms are laid out
+    void aPixelReadsBackAsTheMapCoordinatesDrawnThere()
+    {
+        const TMapPainter::View laidOut = view();
+        for (const QPointF& mapPoint : {QPointF(0, 0), QPointF(2, 0), QPointF(-1.5, 2.25)}) {
+            const std::optional<QPointF> read = laidOut.mapPointAt(onImage(mapPoint));
+            QVERIFY(read);
+            QCOMPARE(*read, mapPoint);
+        }
+        TMapPainter::View notLaidOut;
+        QVERIFY(!notLaidOut.mapPointAt(QPointF(10, 10)));
+    }
+
     // A door is two strokes across the exit line, in the colour of its status
     void aDoorIsDrawnAcrossItsExitInItsStatusColour()
     {

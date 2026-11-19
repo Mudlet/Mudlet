@@ -8064,6 +8064,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getPlayerRoom", TLuaInterpreter::getPlayerRoom);
     lua_register(pGlobalLua, "getSelection", TLuaInterpreter::getSelection);
     lua_register(pGlobalLua, "getMapSelection", TLuaInterpreter::getMapSelection);
+    lua_register(pGlobalLua, "getMapMousePosition", TLuaInterpreter::getMapMousePosition);
     lua_register(pGlobalLua, "enableClickthrough", TLuaInterpreter::enableClickthrough);
     lua_register(pGlobalLua, "disableClickthrough", TLuaInterpreter::disableClickthrough);
     lua_register(pGlobalLua, "setLinkStyle", TLuaInterpreter::setLinkStyle);

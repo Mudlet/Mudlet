@@ -685,6 +685,50 @@ headlessAfter = said(openMapWidget())
         }
     }
 
+    // getMapMousePosition() gives the map coordinates where the app last had the mouse on the map, already in what a
+    // press raises
+    void test_getMapMousePositionIsWhereTheAppHadTheMouseOnTheMap()
+    {
+        const QString name = qsl("Headless Map Mouse Coordinates");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"lua(
+openMapWidget()
+headlessArea = addAreaName("Headless Mouse Coordinates")
+addRoom(5)
+setRoomArea(5, headlessArea)
+setRoomCoordinates(5, 3, 2, 4)
+setMapZoom(10, headlessArea)
+centerview(5)
+function headlessMapMouse()
+  local x, y, z = getMapMousePosition()
+  if not x then
+    return "nil " .. y
+  end
+  return string.format("%.1f %.1f %d", x, y, z)
+end
+registerAnonymousEventHandler("sysMapWindowMousePressEvent", function() headlessPressedOn = headlessMapMouse() end)
+)lua")));
+        QTest::qWait(50);
+        const auto mapMouse = [&session]() {
+            session.runLua(qsl("headlessMapMouseNow = headlessMapMouse()"));
+            return luaGlobalString(session.host(), "headlessMapMouseNow");
+        };
+        QVERIFY(rendered(session));
+        QCOMPARE(mapMouse(), qsl("nil the mouse is not over the 2D map"));
+
+        // The view is centred on room 5, so the middle of what was drawn is its place
+        QVERIFY(session.mapPointer({.position = QPointF(scmWidth / 2.0, scmHeight / 2.0)}));
+        QCOMPARE(luaGlobalString(session.host(), "headlessPressedOn"), qsl("3.0 2.0 4"));
+        QCOMPARE(mapMouse(), qsl("3.0 2.0 4"));
+        // East and north are right and up on the screen
+        QVERIFY(session.mapPointer({.position = QPointF(scmWidth - 1.0, 0.0)}));
+        session.runLua(qsl("local x, y = getMapMousePosition() headlessFurther = tostring(x > 3 and y > 2)"));
+        QCOMPARE(luaGlobalString(session.host(), "headlessFurther"), qsl("true"));
+        QVERIFY(session.shutdown(false));
+    }
+
     // The mapper is 100 by 50 into a user window the app put at 200 by 100 of the main window's area
     void test_getMousePositionFollowsTheMapsPointer()
     {

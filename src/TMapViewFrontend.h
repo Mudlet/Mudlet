@@ -51,6 +51,15 @@ public:
 
     virtual int shownAreaId() const = 0;
     virtual std::pair<bool, QString> setMapZoom(qreal zoom, int areaId) = 0;
+    // Where the mouse is on the 2D map, in map coordinates with the level shown; none while it is not over the 2D map
+    // or the map has not been drawn. A frontend with no window has only where its app last said the mouse was.
+    struct MapPoint
+    {
+        qreal x = 0.0;
+        qreal y = 0.0;
+        int z = 0;
+    };
+    virtual std::optional<MapPoint> mousePositionOnMap() const = 0;
     virtual std::pair<bool, QString> exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel, qreal zoom, bool exportAllZLevels) = 0;
 
     // Without the 3D mapper compiled in there is no 3D view to show. The null view never has one, so it refuses a show with why.

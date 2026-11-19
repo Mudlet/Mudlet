@@ -254,6 +254,8 @@ void TNullMapView::clearRoomSelection()
 // SelectionRectangleHandler's press, with no rectangle as there is no drag to size it, then T2DMap's
 void TNullMapView::press(const QPoint& position, const Qt::MouseButton button, const Qt::KeyboardModifiers modifiers)
 {
+    // Before the press event, whose handlers may ask getMapMousePosition()
+    mLastPointer = position;
     TRoomDB* pRoomDB = mpHost->mpMap->mpRoomDB.get();
     if (button == Qt::LeftButton && !modifiers.testFlag(Qt::AltModifier) && mLaidOut && pRoomDB->getRoom(mView.mRoomID)) {
         if (const TArea* pArea = pRoomDB->getArea(mView.mAreaID)) {
@@ -273,6 +275,7 @@ void TNullMapView::press(const QPoint& position, const Qt::MouseButton button, c
 // one last drawn, not one that has followed the player since
 void TNullMapView::doubleClick(const QPoint& position)
 {
+    mLastPointer = position;
     TMapPainter::View view = mView;
     view.mIsSecondaryView = true;
     view.mPHighlight = position;
@@ -294,6 +297,7 @@ void TNullMapView::doubleClick(const QPoint& position)
 
 bool TNullMapView::wheel(const QPointF& position, const QPoint& angleDelta, const Qt::KeyboardModifiers modifiers)
 {
+    mLastPointer = position;
     TArea* pArea = mpHost->mpMap->mpRoomDB->getArea(mView.mAreaID);
     if (!pArea) {
         return false;
@@ -350,6 +354,18 @@ std::pair<bool, QString> TNullMapView::exportAreaToImage(const int areaId, const
 }
 
 // As dlgMapper::setMapZoom() and T2DMap::setMapZoom()
+std::optional<TMapViewFrontend::MapPoint> TNullMapView::mousePositionOnMap() const
+{
+    if (!mShown || !mLaidOut || !mLastPointer) {
+        return std::nullopt;
+    }
+    const std::optional<QPointF> point = mView.mapPointAt(*mLastPointer);
+    if (!point) {
+        return std::nullopt;
+    }
+    return MapPoint{point->x(), point->y(), mView.mMapCenterZ};
+}
+
 std::pair<bool, QString> TNullMapView::setMapZoom(const qreal zoom, const int areaId)
 {
     if (const QString error = TMap::zoomError(zoom); !error.isEmpty()) {

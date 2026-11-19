@@ -288,6 +288,7 @@ public:
     bool mSelecting = false;
     int mShownAreaId = 0;
     bool mShowing3D = false;
+    std::optional<MapPoint> mMousePosition;
     bool mOnScreen = true;
     bool mProgressShown = false;
     int mProgressMaximum = 0;
@@ -357,6 +358,11 @@ public:
     {
         mCalls << call("setMapZoom", {number(zoom), QString::number(areaId)});
         return zoom < 1.0 ? std::pair{false, qsl("routed zoom refusal")} : std::pair{true, QString()};
+    }
+    std::optional<MapPoint> mousePositionOnMap() const override
+    {
+        mCalls << call("mousePositionOnMap");
+        return mMousePosition;
     }
     std::pair<bool, QString> exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel, qreal zoom, bool exportAllZLevels) override
     {
@@ -858,6 +864,26 @@ assert(getMapZoom() == 4.25, "getMapZoom did not read the zoom of the area the v
                 call("shownAreaId"),
         };
         QCOMPARE(mMapView.mCalls.join(qsl("; ")), expected.join(qsl("; ")));
+    }
+
+    void test_mapMousePositionComesFromTheMapView()
+    {
+        mMapView.mMousePosition = TMapViewFrontend::MapPoint{2.5, -1.25, 3};
+        auto clear = qScopeGuard([this]() {
+            mMapView.mMousePosition.reset();
+        });
+        QCOMPARE(runLua(qsl(R"lua(
+local x, y, z = getMapMousePosition()
+assert(x == 2.5 and y == -1.25 and z == 3, "getMapMousePosition did not pass on where the view has the mouse")
+)lua")),
+                 qsl("ok"));
+        mMapView.mMousePosition.reset();
+        QCOMPARE(runLua(qsl(R"lua(
+local x, why = getMapMousePosition()
+assert(x == nil and why == "the mouse is not over the 2D map", "getMapMousePosition answered " .. tostring(x) .. ", " .. tostring(why))
+)lua")),
+                 qsl("ok"));
+        QCOMPARE(mMapView.mCalls.join(qsl("; ")), QStringList({call("mousePositionOnMap"), call("mousePositionOnMap")}).join(qsl("; ")));
     }
 
     void test_mapSelectionReachesTheMapView()
