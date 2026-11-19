@@ -348,6 +348,7 @@ public:
     // always work well on existing maps - so allow for them to be reverted
     // almost back to how they were before that PR:
     bool mLargeAreaExitArrows = false;
+    bool mDirectionalExitLines = false;
 
 public slots:
     void slot_roomSelectionChanged();
