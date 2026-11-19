@@ -1070,6 +1070,28 @@ describe("Tests how a GMCP message is split into name and data", function()
     assert.same({a = 1}, gmcp.Spec.NewlineSplit)
   end)
 
+  it("takes a CRLF or a tab as the separator without keeping any of it in the name", function()
+    local fired = {}
+    local ids = {}
+    for _, name in ipairs({"CrlfSplit", "CrlfPing", "TabSplit"}) do
+      ids[#ids + 1] = registerAnonymousEventHandler("gmcp.Spec." .. name, function(event, key)
+        fired[name] = key
+      end)
+    end
+    finally(function()
+      for _, id in ipairs(ids) do
+        killAnonymousEventHandler(id)
+      end
+    end)
+    feed("<T_IAC><T_SB><O_GMCP>Spec.CrlfSplit\r\n{\"a\": 1}<T_IAC><T_SE>")
+    feed("<T_IAC><T_SB><O_GMCP>Spec.CrlfPing\r\n<T_IAC><T_SE>")
+    feed("<T_IAC><T_SB><O_GMCP>Spec.TabSplit\t{\"b\": 2}<T_IAC><T_SE>")
+    assert.same({a = 1}, gmcp.Spec.CrlfSplit)
+    assert.same({}, gmcp.Spec.CrlfPing)
+    assert.same({b = 2}, gmcp.Spec.TabSplit)
+    assert.same({CrlfSplit = "gmcp.Spec.CrlfSplit", CrlfPing = "gmcp.Spec.CrlfPing", TabSplit = "gmcp.Spec.TabSplit"}, fired)
+  end)
+
   it("reads a payload the game spread over several lines", function()
     assert.is_nil(gmcp.Spec and gmcp.Spec.Pretty)
     feed("<T_IAC><T_SB><O_GMCP>Spec.Pretty {\r\n  \"b\": 2\r\n}<T_IAC><T_SE>")
