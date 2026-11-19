@@ -3594,6 +3594,12 @@ void mudlet::slot_telnetConnectionStateChanged()
     // the brief "Connecting" (yellow) state.
     updateMainWindowTabIndicators();
     updateDetachedWindowTabIndicators();
+    // A detached window with one profile names its connection state in its title
+    for (const auto& detachedWindow : std::as_const(mDetachedWindows)) {
+        if (detachedWindow) {
+            detachedWindow->updateWindowTitle();
+        }
+    }
 }
 
 // Renders a key sequence for use inside a sentence. NativeText produces the
@@ -3636,6 +3642,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
     connect(&pH->mTelnet, &cTelnet::signal_connecting, this, &mudlet::slot_telnetConnectionStateChanged, Qt::UniqueConnection);
     connect(&pH->mTelnet, &cTelnet::signal_connected, this, &mudlet::slot_telnetConnectionStateChanged, Qt::UniqueConnection);
     connect(&pH->mTelnet, &cTelnet::signal_disconnected, this, &mudlet::slot_telnetConnectionStateChanged, Qt::UniqueConnection);
+    connect(&pH->mTelnet, &cTelnet::signal_connectingCalledOff, this, &mudlet::slot_telnetConnectionStateChanged, Qt::UniqueConnection);
 
     // Qt::UniqueConnection cannot dedupe the functor connections below (a documented
     // no-op that also prints a warning); duplicate wiring is instead prevented by

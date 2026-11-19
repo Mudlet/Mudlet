@@ -1438,8 +1438,9 @@ void TDetachedWindow::updateWindowTitle()
 
         if (pHost) {
             title += qsl(" - ");
-            bool isConnected = (pHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectedState);
-            bool isConnecting = (pHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectingState);
+            const QAbstractSocket::SocketState state = pHost->mTelnet.getConnectionState();
+            bool isConnected = (state == QAbstractSocket::ConnectedState);
+            bool isConnecting = (state == QAbstractSocket::ConnectingState || state == QAbstractSocket::HostLookupState);
 
             if (isConnected) {
                 if (!pHost->getUrl().isEmpty()) {
