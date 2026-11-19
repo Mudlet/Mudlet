@@ -3273,7 +3273,7 @@ int TLuaInterpreter::loadProfile(lua_State* L)
     }
     bool offline = false;
 
-    if (lua_gettop(L) > 1) {
+    if (!lua_isnoneornil(L, 2)) {
         offline = getVerifiedBool(L, __func__, 2, "offline mode", true);
     }
 
