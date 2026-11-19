@@ -342,6 +342,12 @@ void TDetachedWindow::createMenus()
     mpMenuShowMapAction->setStatusTip(tr("Show or hide the game map."));
     connect(mpMenuShowMapAction, &QAction::triggered, this, &TDetachedWindow::slot_toggleMap);
     connect(toolboxMenu, &QMenu::aboutToShow, this, &TDetachedWindow::slot_updateShowMapActionText);
+    // The profile's setting can change from the main window or a script, so the checkmark is read when the menu opens
+    connect(toolboxMenu, &QMenu::aboutToShow, this, [this]() {
+        if (Host* pHost = HostManager::self() ? HostManager::self()->getHost(mCurrentProfileName) : nullptr) {
+            mpMenuCompactInputLineAction->setChecked(pHost->getCompactInputLine());
+        }
+    });
     toolboxMenu->addAction(mpMenuShowMapAction);
 
     //: This is an item in the "Toolbox" menu in the menubar of a detached Mudlet window.
@@ -349,6 +355,7 @@ void TDetachedWindow::createMenus()
     //: This explains the "Compact input line" item in the "Toolbox" menu in the menubar of a detached Mudlet window.
     mpMenuCompactInputLineAction->setStatusTip(tr("Hide / show the search area and buttons at the bottom of the screen."));
     mpMenuCompactInputLineAction->setCheckable(true);
+    mpMenuCompactInputLineAction->setObjectName(qsl("menuCompactInputLine"));
     connect(mpMenuCompactInputLineAction, &QAction::triggered, this, &TDetachedWindow::slot_toggleCompactInputLine);
     toolboxMenu->addAction(mpMenuCompactInputLineAction);
 
@@ -473,6 +480,7 @@ void TDetachedWindow::createMenus()
     //: This explains the "Multiview" item in the "Window" menu in the menubar of a detached Mudlet window.
     mpMenuMultiViewAction->setStatusTip(tr("Splits the Mudlet screen to show multiple profiles at once; disabled when less than two are loaded."));
     mpMenuMultiViewAction->setCheckable(true);
+    mpMenuMultiViewAction->setObjectName(qsl("menuMultiView"));
     connect(mpMenuMultiViewAction, &QAction::triggered, this, &TDetachedWindow::slot_toggleMultiView);
     mpWindowMenu->addAction(mpMenuMultiViewAction);
 
@@ -1839,6 +1847,9 @@ void TDetachedWindow::updateWindowMenu()
 
     // Disabled when hiding would cause lockout (menu bar also never shown)
     mpActionToggleToolBar->setEnabled(!(isToolBarVisible() && !canHideToolBar()));
+    if (mpMenuMultiViewAction) {
+        mpMenuMultiViewAction->setChecked(pMudlet->multiView());
+    }
 
     // Clean up existing window list actions
     for (QAction* action : std::as_const(mWindowListActions)) {
