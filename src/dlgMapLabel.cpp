@@ -73,6 +73,7 @@ dlgMapLabel::dlgMapLabel(QWidget* pParentWidget)
     outlineColor = settings.value("outlineColorDialogMapLabel", outlineColor).value<QColor>();
     slot_updateControls();
     slot_updateControlsVisibility();
+    plainTextEdit_labelText->setFocus();
 }
 
 bool dlgMapLabel::isTextLabel()
@@ -182,12 +183,13 @@ void dlgMapLabel::slot_pickFile()
     QSettings& settings = *MudletApp::getQSettings();
     QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
 
-    imagePath = QFileDialog::getOpenFileName(nullptr, tr("Select image"), lastDir);
+    const QString pickedPath = QFileDialog::getOpenFileName(nullptr, tr("Select image"), lastDir);
 
-    if (imagePath.isEmpty()) {
+    if (pickedPath.isEmpty()) {
         return;
     }
 
+    imagePath = pickedPath;
     emit updated();
     lastDir = QFileInfo(imagePath).absolutePath();
     settings.setValue("lastFileDialogLocation", lastDir);
@@ -255,6 +257,8 @@ void dlgMapLabel::slot_updateControls()
     pushButton_outlineColor->setStyleSheet(
             BUTTON_STYLESHEET.arg(QString::number(outlineColor.red()), QString::number(outlineColor.green()), QString::number(outlineColor.blue()), QString::number(outlineColor.alpha())));
     lineEdit_image->setText(imagePath);
+    // Save is the default button, so Enter would otherwise commit an image label with no image
+    pushButton_save->setEnabled(isTextLabel() || !imagePath.isEmpty());
 }
 
 void dlgMapLabel::slot_updateControlsVisibility()
