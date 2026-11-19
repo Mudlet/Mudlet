@@ -420,6 +420,7 @@ void Updater::setupOnWindows()
 
     // finally, create the dblsqd objects. Constructing the UpdateDialog triggers the update check
     updateDialog = new dblsqd::UpdateDialog(feed.get(), updateAutomatically() ? dblsqd::UpdateDialog::OnLastWindowClosed : dblsqd::UpdateDialog::Manual, mSettings);
+    // The dialog's layout owns the button from here on
     //: Label for the update button shown in the update dialog
     mpInstallOrRestart = new QPushButton(tr("Update"));
     updateDialog->addInstallButton(mpInstallOrRestart);
@@ -465,6 +466,7 @@ void Updater::setupOnLinux()
 
     // finally, create the dblsqd objects. Constructing the UpdateDialog triggers the update check
     updateDialog = new dblsqd::UpdateDialog(feed.get(), updateAutomatically() ? dblsqd::UpdateDialog::OnLastWindowClosed : dblsqd::UpdateDialog::Manual, mSettings);
+    // The dialog's layout owns the button from here on
     //: Label for the update button shown in the update dialog
     mpInstallOrRestart = new QPushButton(tr("Update"));
     updateDialog->addInstallButton(mpInstallOrRestart);
@@ -722,7 +724,7 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
 #elif defined(Q_OS_WINDOWS)
         finishSetup();
 #endif
-        // Gone with the update dialog if Mudlet is quitting
+        // Gone with its dialog once the application is quitting
         if (mpInstallOrRestart) {
             if (mUpdateInstalled) {
                 //: Label for the button shown after the update has been downloaded and installed, prompting user to restart
