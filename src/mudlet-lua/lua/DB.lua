@@ -2047,7 +2047,14 @@ function db:aggregate(field, fn, query, distinct)
   local conn = db.__conn[db_name]
   if not conn then error(db_no_connection_message("aggregate over", db_name, A_FIELD), 2) end
 
-  local sql_chunks = { "SELECT", fn, "(", distinct and "DISTINCT" or "", quoted_column(field), ")", "AS", fn, "FROM", s_name }
+  local column = quoted_column(field)
+  local upper_fn = fn:upper()
+  if field.type == "datetime" and (upper_fn == "MIN" or upper_fn == "MAX") then
+    -- sqlite sorts every number below every text, so a plain epoch db:add stored next to datetime
+    -- text would never be the MAX nor lose the MIN; compare both as datetime text
+    column = string.format("CASE WHEN typeof(%s) IN ('integer', 'real') THEN datetime(%s, 'unixepoch') ELSE %s END", column, column, column)
+  end
+  local sql_chunks = { "SELECT", fn, "(", distinct and "DISTINCT" or "", column, ")", "AS", fn, "FROM", s_name }
 
   if query then
     sql_chunks[#sql_chunks + 1] = "WHERE"
@@ -2069,7 +2076,7 @@ function db:aggregate(field, fn, query, distinct)
     cur:close()
 
     -- give back the correct data type. see http://www.sqlite.org/lang_aggfunc.html
-    if (fn:upper() ~= "MIN" and fn:upper() ~= "MAX") or field.type == "number" then
+    if (upper_fn ~= "MIN" and upper_fn ~= "MAX") or field.type == "number" then
       return tonumber(count)
     end
     if field.type == "string" then
@@ -2395,9 +2402,13 @@ end
 
 -- NOT LUADOC
 -- Converts a UTC "YYYY-MM-DD HH:MM:SS" string, as sqlite's datetime() stores it, to an
--- epoch. Done arithmetically (Howard Hinnant's days_from_civil) rather than through
--- os.time, which can only read local time and is slow enough to dominate a db:fetch.
+-- epoch; a plain number, which db:add or raw SQL can store in a datetime field, already is one.
+-- Done arithmetically (Howard Hinnant's days_from_civil) rather than through os.time, which
+-- can only read local time and is slow enough to dominate a db:fetch.
 function db:_epoch_from_utc(value)
+  if type(value) == "number" then
+    return value
+  end
   local year, month, day, hour, min, sec = value:match("^(%d%d%d%d)%-(%d%d)%-(%d%d) (%d%d):(%d%d):(%d%d)$")
   if not year then
     local utc_epoch = datetime:parse(value, nil, true)
