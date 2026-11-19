@@ -2760,6 +2760,62 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.is_true(clearMapUserData())
       assert.is_nil(getAllMapUserData()["mapper.spec.clearall"])
     end)
+
+    -- The map draws every room name in the font under the map's room.ui_nameFont
+    -- key; a map info contributor is asked again on every paint, so it counts them
+    describe("repaints the map when the room name font changes", function()
+      local nameFont = "Sans,11,-1,5,50,0,0,0,0,0"
+      local paints
+
+      local function waitForPaint(ms)
+        local waitedMs = 0
+        while paints == 0 and waitedMs < ms do
+          pumpEvents(5)
+          waitedMs = waitedMs + 5
+        end
+        return paints > 0
+      end
+
+      before_each(function()
+        paints = 0
+        assert.is_true(registerMapInfo("MapperSpecNameFontPaints", function()
+          paints = paints + 1
+          return ""
+        end))
+        assert.is_true(enableMapInfo("MapperSpecNameFontPaints"))
+        assert.is_true(centerview(rA1))
+        assert.is_true(waitForPaint(5000), "the map was never painted")
+        -- let the paints this set off settle, so only the change under test is counted
+        pumpEvents(100)
+        paints = 0
+      end)
+
+      after_each(function()
+        killMapInfo("MapperSpecNameFontPaints")
+        clearMapUserDataItem("room.ui_nameFont")
+      end)
+
+      it("in setMapUserData", function()
+        assert.is_true(setMapUserData("room.ui_nameFont", nameFont))
+        assert.is_true(waitForPaint(1000))
+      end)
+
+      it("in clearMapUserDataItem", function()
+        setMapUserData("room.ui_nameFont", nameFont)
+        pumpEvents(100)
+        paints = 0
+        assert.is_true(clearMapUserDataItem("room.ui_nameFont"))
+        assert.is_true(waitForPaint(1000))
+      end)
+
+      it("in clearMapUserData", function()
+        setMapUserData("room.ui_nameFont", nameFont)
+        pumpEvents(100)
+        paints = 0
+        assert.is_true(clearMapUserData())
+        assert.is_true(waitForPaint(1000))
+      end)
+    end)
   end)
 
   describe("Tests collision detection", function()
