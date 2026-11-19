@@ -2635,7 +2635,8 @@ void dlgProfilePreferences::reflowColourCards()
                                        {label_lowerLevelColor, pushButton_lowerLevelColor},
                                        {label_upperLevelColor, pushButton_upperLevelColor},
                                        {label_pushButton_roomCollisionBorderColor, pushButton_roomCollisionBorderColor},
-                                       {label_mapGridColor, pushButton_mapGridColor}},
+                                       {label_mapGridColor, pushButton_mapGridColor},
+                                       {label_defaultRoomColor, pushButton_defaultRoomColor}},
                       .divider = {line_mapperColorsSeparator},
                       .ansiColours = {{label_17, pushButton_black_2},
                                       {label_49, pushButton_Lblack_2},
@@ -5246,6 +5247,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(pushButton_mapInfoBg, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapInfoBgColor, Qt::UniqueConnection);
     connect(pushButton_roomCollisionBorderColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapRoomCollisionBorderColor, Qt::UniqueConnection);
     connect(pushButton_mapGridColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapGridColor, Qt::UniqueConnection);
+    connect(pushButton_defaultRoomColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapDefaultRoomColor, Qt::UniqueConnection);
 
     connect(pushButton_forgetSavedSignIn, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_forgetSavedSignIn, Qt::UniqueConnection);
 
@@ -5466,6 +5468,7 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(pushButton_lowerLevelColor, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(pushButton_upperLevelColor, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(pushButton_roomBorderColor, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_defaultRoomColor, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(pushButton_mapInfoBg, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(pushButton_roomCollisionBorderColor, &QAbstractButton::clicked, nullptr, nullptr);
 
@@ -5823,6 +5826,7 @@ void dlgProfilePreferences::setColors2()
         setButtonColor(pushButton_mapInfoBg, pHost->mMapInfoBg, true);
         setButtonColor(pushButton_roomCollisionBorderColor, pHost->mRoomCollisionBorderColor);
         setButtonColor(pushButton_mapGridColor, pHost->mMapGridColor, true);
+        setButtonColor(pushButton_defaultRoomColor, pHost->mapperDefaultRoomColor());
     } else {
         // Using QColor() gives an "invalid" color:
         setButtonColor(pushButton_black_2, QColor());
@@ -5850,6 +5854,7 @@ void dlgProfilePreferences::setColors2()
         setButtonColor(pushButton_mapInfoBg, QColor());
         setButtonColor(pushButton_roomCollisionBorderColor, QColor());
         setButtonColor(pushButton_mapGridColor, QColor());
+        setButtonColor(pushButton_defaultRoomColor, QColor());
     }
 }
 
@@ -6001,6 +6006,8 @@ void dlgProfilePreferences::slot_resetMapColors()
     pHost->mLightWhite_2 = QColorConstants::White;
     pHost->mMapInfoBg = Host::scmDefaultMapInfoBg;
     pHost->mMapGridColor = QColor(211, 211, 211, 64);
+    // Unset again, so it follows the map's red
+    pHost->mMapperDefaultRoomColor = QColor();
 
     // This aplies the above colors to the buttons on display:
     setColors2();
@@ -6055,8 +6062,14 @@ void dlgProfilePreferences::setButtonAndProfileColor(QPushButton* button, QColor
                                      || button == pushButton_magenta_2 || button == pushButton_Lmagenta_2 || button == pushButton_cyan_2 || button == pushButton_Lcyan_2 || button == pushButton_white_2
                                      || button == pushButton_Lwhite_2);
 
+        // Unset, the default room color is the map's red, so its well shows that red too
+        if (button == pushButton_red_2) {
+            setButtonColor(pushButton_defaultRoomColor, pHost->mapperDefaultRoomColor());
+        }
+
         if (isAMapEnvColor || button == pushButton_foreground_color_2 || button == pushButton_background_color_2 || button == pushButton_lowerLevelColor || button == pushButton_upperLevelColor
-            || button == pushButton_mapInfoBg || button == pushButton_roomBorderColor || button == pushButton_roomCollisionBorderColor || button == pushButton_mapGridColor) {
+            || button == pushButton_mapInfoBg || button == pushButton_roomBorderColor || button == pushButton_roomCollisionBorderColor || button == pushButton_mapGridColor
+            || button == pushButton_defaultRoomColor) {
             if (pHost->mpMap) {
                 // Update the custom environment (room colors)
                 if (isAMapEnvColor) {
@@ -6308,6 +6321,24 @@ void dlgProfilePreferences::slot_setMapGridColor()
     Host* pHost = mpHost;
     if (pHost) {
         setButtonAndProfileColor(pushButton_mapGridColor, pHost->mMapGridColor, true);
+    }
+}
+
+void dlgProfilePreferences::slot_setMapDefaultRoomColor()
+{
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+    // The picker starts from the color in effect, which unset is the map's red; cancelled, it stays unset
+    const QColor shown = pHost->mapperDefaultRoomColor();
+    QColor picked = shown;
+    setButtonAndProfileColor(pushButton_defaultRoomColor, picked);
+    if (picked != shown) {
+        pHost->mMapperDefaultRoomColor = picked;
+        if (pHost->mpMap) {
+            pHost->mpMap->updateArea(-1);
+        }
     }
 }
 

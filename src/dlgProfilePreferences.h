@@ -124,6 +124,7 @@ public slots:
     void slot_setMapInfoBgColor();
     void slot_setMapRoomCollisionBorderColor();
     void slot_setMapGridColor();
+    void slot_setMapDefaultRoomColor();
     void slot_setLowerLevelColor();
     void slot_setUpperLevelColor();
     void slot_resetMapColors();
