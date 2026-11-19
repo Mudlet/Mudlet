@@ -1845,6 +1845,44 @@ describe("Tests telnet option negotiation", function()
     assert.equals(3, channel102[5])
   end)
 
+  it("starts a fresh channel102 table when a script has replaced it", function()
+    local saved = _G.channel102
+    local seen
+    local handler = registerAnonymousEventHandler("channel102Message", function(_, variable, value)
+      seen = {variable, value}
+    end)
+    finally(function()
+      killAnonymousEventHandler(handler)
+      feed("<T_IAC><T_DONT><O_AARDWULF>")
+      _G.channel102 = saved
+    end)
+
+    feed("<T_IAC><T_DO><O_AARDWULF>")
+    local replacements = {n = 2, nil, "not a table"}
+    for i = 1, replacements.n do
+      _G.channel102 = replacements[i]
+      seen = nil
+      feed("<T_IAC><T_SB><O_AARDWULF>" .. string.char(5) .. string.char(3) .. "<T_IAC><T_SE>")
+      assert.same({[5] = 3}, _G.channel102)
+      assert.same({5, 3}, seen)
+    end
+  end)
+
+  it("keeps the channel102 table a script holds and what is already in it", function()
+    local saved = _G.channel102
+    finally(function()
+      feed("<T_IAC><T_DONT><O_AARDWULF>")
+      _G.channel102 = saved
+    end)
+
+    local held = {[9] = 1}
+    _G.channel102 = held
+    feed("<T_IAC><T_DO><O_AARDWULF>")
+    feed("<T_IAC><T_SB><O_AARDWULF>" .. string.char(5) .. string.char(3) .. "<T_IAC><T_SE>")
+    assert.is_true(rawequal(held, _G.channel102))
+    assert.same({[9] = 1, [5] = 3}, held)
+  end)
+
   it("switches the MXP processor on for the rest of the connection", function()
     -- the MXP mode escapes only act on data flagged as coming from a server, so
     -- this is a path feedTriggers cannot reach at all
@@ -3379,5 +3417,40 @@ describe("Tests the posting timer of a game that sends no GA", function()
     local shown = table.concat(getLines("main", mark, getLastLineNumber("main") + 1), " | ")
     feed("\r\n")
     assert.is_truthy(shown:find("EndlessStart", 1, true), "still held after 5s of reads: " .. shown)
+  end)
+end)
+
+describe("Tests the atcp table", function()
+  -- _G because busted runs each spec in an environment of its own
+  it("starts a fresh atcp table when a script has replaced it", function()
+    local saved = _G.atcp
+    local raised
+    local id = registerAnonymousEventHandler("RoomBrief", function(_, value) raised = value end)
+    finally(function()
+      killAnonymousEventHandler(id)
+      _G.atcp = saved
+    end)
+
+    local replacements = {n = 2, nil, "not a table"}
+    for i = 1, replacements.n do
+      _G.atcp = replacements[i]
+      raised = nil
+      local ok, msg = feedTelnet("<T_IAC><T_SB><O_ATCP>Room.Brief Spec cave<T_IAC><T_SE>")
+      assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+      assert.same({RoomBrief = "Spec cave"}, _G.atcp)
+      assert.equals("Spec cave", raised)
+    end
+  end)
+
+  it("keeps the table a script holds and what is already in it", function()
+    local saved = _G.atcp
+    finally(function() _G.atcp = saved end)
+
+    local held = {Existing = "kept"}
+    _G.atcp = held
+    local ok, msg = feedTelnet("<T_IAC><T_SB><O_ATCP>Room.Brief Spec cave<T_IAC><T_SE>")
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+    assert.is_true(rawequal(held, _G.atcp))
+    assert.same({Existing = "kept", RoomBrief = "Spec cave"}, held)
   end)
 end)

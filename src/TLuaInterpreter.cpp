@@ -4615,7 +4615,13 @@ void TLuaInterpreter::adjustCaptureGroupsForReplace(int x, int replacedLength, c
 void TLuaInterpreter::setAtcpTable(const QString& var, const QString& arg)
 {
     lua_State* L = pGlobalLua;
-    lua_getglobal(L, "atcp"); //defined in LuaGlobal.lua
+    lua_getglobal(L, "atcp");
+    if (!lua_istable(L, -1)) {
+        lua_pop(L, 1);
+        lua_newtable(L);
+        lua_pushvalue(L, -1);
+        lua_setglobal(L, "atcp");
+    }
     lua_pushstring(L, var.toUtf8().constData());
     lua_pushstring(L, arg.toUtf8().constData());
     lua_rawset(L, -3);
@@ -5280,7 +5286,13 @@ void TLuaInterpreter::msdp2Lua(const char* src)
 void TLuaInterpreter::setChannel102Table(int& var, int& arg)
 {
     lua_State* L = pGlobalLua;
-    lua_getglobal(L, "channel102"); //defined in LuaGlobal.lua
+    lua_getglobal(L, "channel102");
+    if (!lua_istable(L, -1)) {
+        lua_pop(L, 1);
+        lua_newtable(L);
+        lua_pushvalue(L, -1);
+        lua_setglobal(L, "channel102");
+    }
     lua_pushnumber(L, var);
     lua_pushnumber(L, arg);
     lua_rawset(L, -3);
