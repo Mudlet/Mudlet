@@ -94,6 +94,7 @@ void SearchResultDelegate::restyle()
     mMutedColor = tokens.mutedText;
     mChipBorder = tokens.border;
     mSelectedText = tokens.accentText;
+    mActionColor = tokens.accentText;
     mMarkerColor = tokens.marker;
     mMarkerText = blend(mMarkerColor, tokens.darkPage ? QColor(Qt::white) : QColor(Qt::black), scmMarkerTextStrength);
 
@@ -168,6 +169,8 @@ void SearchResultDelegate::paint(QPainter* pPainter, const QStyleOptionViewItem&
         paintMatchRow(pPainter, viewOption, index, contentRect);
         break;
     case NoticeRow:
+        [[fallthrough]];
+    case ActionRow:
         paintNoticeRow(pPainter, viewOption, index, contentRect);
         break;
     default:
@@ -290,9 +293,12 @@ void SearchResultDelegate::paintMatchRow(QPainter* pPainter, const QStyleOptionV
 
 void SearchResultDelegate::paintNoticeRow(QPainter* pPainter, const QStyleOptionViewItem& option, const QModelIndex& index, const QRect& contentRect) const
 {
-    const QFontMetrics metrics(option.font);
-    pPainter->setFont(option.font);
-    pPainter->setPen(mMutedColor);
+    const bool action = index.data(RowKindRole).toInt() == ActionRow;
+    QFont font = option.font;
+    font.setUnderline(action);
+    const QFontMetrics metrics(font);
+    pPainter->setFont(font);
+    pPainter->setPen(action ? mActionColor : mMutedColor);
     pPainter->drawText(contentRect, Qt::AlignLeft | Qt::AlignVCenter | Qt::TextSingleLine, metrics.elidedText(index.data(TitleRole).toString(), Qt::ElideRight, contentRect.width()));
 }
 
