@@ -239,6 +239,8 @@ public:
 
     // Center view on a room. For secondary views, skips raising sysMapAreaChanged events.
     std::pair<bool, QString> centerview(int roomId);
+    // The nearest levels above and below the one shown that hold rooms of the area shown
+    std::pair<std::optional<int>, std::optional<int>> roomLevelsBeside() const;
     std::pair<bool, QString> exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel = std::nullopt, qreal zoom = 2.0, bool exportAllZLevels = false);
 
 
