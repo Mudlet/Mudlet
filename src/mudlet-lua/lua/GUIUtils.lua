@@ -943,6 +943,7 @@ end
 
 
 --- Replaces the given wildcard (as a number) with the given text.
+--- Does nothing if that capture group did not match or is empty.
 ---
 --- @usage Replace "goodbye" with "hello" on a trigger of "^You wave (goodbye)\.$"
 ---   <pre>
@@ -957,7 +958,11 @@ function replaceWildcard(what, replacement, keepColor)
   if replacement == nil or what == nil then
     return
   end
-  selectCaptureGroup(what)
+  -- selectCaptureGroup() keeps the old selection when it selects nothing, and
+  -- replace() would then overwrite that instead
+  if selectCaptureGroup(what) ~= 1 then
+    return
+  end
   replace(replacement, keepColor)
 end
 
