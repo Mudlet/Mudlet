@@ -1296,10 +1296,12 @@ void dlgNotepad::scheduleRehighlight()
             Qt::QueuedConnection);
 }
 
+// Every note, as one searched before a switch of tab still holds the marks it had then
 void dlgNotepad::clearSearchHighlights()
 {
-    auto* textEdit = currentTextEdit();
-    if (textEdit) {
-        textEdit->setExtraSelections(QList<QTextEdit::ExtraSelection>());
+    for (int i = 0; i < tabWidget->count(); ++i) {
+        if (auto* textEdit = qobject_cast<QPlainTextEdit*>(tabWidget->widget(i))) {
+            textEdit->setExtraSelections(QList<QTextEdit::ExtraSelection>());
+        }
     }
 }

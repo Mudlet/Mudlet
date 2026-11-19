@@ -530,6 +530,29 @@ private slots:
         QCOMPARE(editAt(notepad.data(), 0)->extraSelections().size(), 0);
     }
 
+    // Only the note on show is marked, so a note searched earlier must not keep its marks once the bar is gone.
+    void test_closingTheFindBarTakesTheMarksOffEveryNote()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        QScopedPointer<dlgNotepad> notepad(new dlgNotepad(mudlet::self()->getActiveHost()));
+        editAt(notepad.data(), 0)->setPlainText(qsl("a herb here\nanother herb there"));
+        notepad->addTab(qsl("Second"), qsl("one more herb"));
+
+        QVERIFY(putOnScreen(notepad.data()));
+        QVERIFY(QMetaObject::invokeMethod(notepad.data(), "slot_showFindBar"));
+        findBox(notepad.data())->setText(qsl("herb"));
+        QCOMPARE(editAt(notepad.data(), 0)->extraSelections().size(), 2);
+
+        notepad->tabWidget->setCurrentIndex(1);
+        auto* closeButton = findBarButton(notepad.data(), qsl("notepadFindClose"));
+        QVERIFY(closeButton);
+        closeButton->click();
+        notepad->tabWidget->setCurrentIndex(0);
+        letQueuedMarkingLand();
+
+        QCOMPARE(editAt(notepad.data(), 0)->extraSelections().size(), 0);
+    }
+
     // Clearing the box is how a search is called off without closing the bar.
     void test_anEmptySearchMarksNothing()
     {
