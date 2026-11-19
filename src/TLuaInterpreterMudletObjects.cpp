@@ -2921,11 +2921,7 @@ int TLuaInterpreter::tempKey(lua_State* L)
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
 
     if (lua_isfunction(L, ++argIndex)) {
-        const int result = pLuaInterpreter->startTempKey(keyModifier, keyCode, QString());
-        if (result == -1) {
-            lua_pushnumber(L, -1);
-            return 2;
-        }
+        const int result = pLuaInterpreter->startTempKey(keyModifier, keyCode, QString()).first;
 
         TKey* key = host.getKeyUnit()->getKey(result);
         Q_ASSERT_X(key, "TLuaInterpreter::tempKey(...)", "Got a positive result from LuaInterpreter::startTempKey(...) but that failed to produce pointer to it from Host::mKeyUnit::getKey(...)");
@@ -2946,8 +2942,12 @@ int TLuaInterpreter::tempKey(lua_State* L)
     }
     const QString luaFunction{lua_tostring(L, argIndex)};
 
-    const int timerID = pLuaInterpreter->startTempKey(keyModifier, keyCode, luaFunction);
-    lua_pushnumber(L, timerID);
+    const auto [keyID, message] = pLuaInterpreter->startTempKey(keyModifier, keyCode, luaFunction);
+    lua_pushnumber(L, keyID);
+    if (keyID == -1) {
+        lua_pushstring(L, message.toUtf8().constData());
+        return 2;
+    }
     return 1;
 }
 

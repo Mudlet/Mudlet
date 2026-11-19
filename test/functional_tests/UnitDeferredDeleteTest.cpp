@@ -222,7 +222,7 @@ private slots:
         QString emptyScript;
         int tempModifier = Qt::NoModifier;
         int tempKeyCode = Qt::Key_F5;
-        const int tempId = mpHost->mLuaInterpreter.startTempKey(tempModifier, tempKeyCode, emptyScript);
+        const int tempId = mpHost->mLuaInterpreter.startTempKey(tempModifier, tempKeyCode, emptyScript).first;
         QVERIFY(tempId > 0);
         QString sharedName = QString::number(tempId);
 
@@ -321,7 +321,7 @@ private slots:
 
         int tempModifier = Qt::NoModifier;
         int tempKeyCode = Qt::Key_F8;
-        const int tempId = mpHost->mLuaInterpreter.startTempKey(tempModifier, tempKeyCode, emptyScript);
+        const int tempId = mpHost->mLuaInterpreter.startTempKey(tempModifier, tempKeyCode, emptyScript).first;
         QCOMPARE(tempId, permId + 1);
         QCOMPARE(lookupCount(unit->mLookupTable.count(sharedName)), 2);
 
@@ -484,7 +484,7 @@ private slots:
         QString emptyScript;
         int modifier = Qt::NoModifier;
         int keyCode = Qt::Key_F10;
-        const int id = mpHost->mLuaInterpreter.startTempKey(modifier, keyCode, emptyScript);
+        const int id = mpHost->mLuaInterpreter.startTempKey(modifier, keyCode, emptyScript).first;
         QVERIFY(id > 0);
         auto* pKey = unit->getKey(id);
         QVERIFY(pKey);
@@ -504,7 +504,7 @@ private slots:
         QString emptyScript;
         int modifier = Qt::NoModifier;
         int keyCode = Qt::Key_F11;
-        const int id = mpHost->mLuaInterpreter.startTempKey(modifier, keyCode, emptyScript);
+        const int id = mpHost->mLuaInterpreter.startTempKey(modifier, keyCode, emptyScript).first;
         QVERIFY(id > 0);
         auto* pKey = unit->getKey(id);
         QVERIFY(pKey);
@@ -707,7 +707,7 @@ private slots:
         QString emptyScript;
         int modifier = Qt::NoModifier;
         int keyCode = Qt::Key_F1;
-        const int id = mpHost->mLuaInterpreter.startTempKey(modifier, keyCode, emptyScript);
+        const int id = mpHost->mLuaInterpreter.startTempKey(modifier, keyCode, emptyScript).first;
         QVERIFY(id > 0);
         auto* pKey = unit->getKey(id);
         QVERIFY(pKey);
@@ -734,7 +734,7 @@ private slots:
         QString script = qsl("keyFires = keyFires + 1");
         int modifier = Qt::NoModifier;
         int keyCode = Qt::Key_F2;
-        const int id = mpHost->mLuaInterpreter.startTempKey(modifier, keyCode, script);
+        const int id = mpHost->mLuaInterpreter.startTempKey(modifier, keyCode, script).first;
         QVERIFY(id > 0);
         QString name = QString::number(id);
 
@@ -756,7 +756,7 @@ private slots:
         QString emptyScript;
         int modifier = Qt::NoModifier;
         int keyCode = Qt::Key_F3;
-        const int id = mpHost->mLuaInterpreter.startTempKey(modifier, keyCode, emptyScript);
+        const int id = mpHost->mLuaInterpreter.startTempKey(modifier, keyCode, emptyScript).first;
         QVERIFY(id > 0);
         auto* pKey = unit->getKey(id);
         QVERIFY(pKey);
@@ -788,7 +788,7 @@ private slots:
 
         int tempModifier = Qt::NoModifier;
         int tempKeyCode = Qt::Key_F9;
-        const int tempId = mpHost->mLuaInterpreter.startTempKey(tempModifier, tempKeyCode, emptyScript);
+        const int tempId = mpHost->mLuaInterpreter.startTempKey(tempModifier, tempKeyCode, emptyScript).first;
         QCOMPARE(tempId, permId + 1);
         QCOMPARE(lookupCount(unit->mLookupTable.count(sharedName)), 2);
 
@@ -953,7 +953,7 @@ private slots:
         int keyCode = Qt::Key_F1;
         for (int i = 0; i < scmCapacityProbeBatch; ++i) {
             keyCode = Qt::Key_F1 + i % 12;
-            const int id = mpHost->mLuaInterpreter.startTempKey(modifier, keyCode, QString());
+            const int id = mpHost->mLuaInterpreter.startTempKey(modifier, keyCode, QString()).first;
             QVERIFY(id > 0);
             firstId = firstId ? firstId : id;
             lastId = id;
