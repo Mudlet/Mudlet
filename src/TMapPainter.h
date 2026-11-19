@@ -229,6 +229,7 @@ public:
 
     void flushSymbolPixmapCache() { mSymbolPixmapCache.clear(); }
     qsizetype symbolPixmapCacheCount() const { return mSymbolPixmapCache.size(); }
+    static QString symbolPixmapKey(const QColor& symbolColor, const QString& symbol, bool gridMode);
     void addSymbolToPixmapCache(const QString, const QString, const QColor, const bool);
     void resetSymbolFontSize() { mSymbolFontSize = 1; }
     void flushTextLabelPixmapCache()
