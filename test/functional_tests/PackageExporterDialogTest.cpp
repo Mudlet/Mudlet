@@ -830,6 +830,21 @@ private slots:
         QVERIFY2(nameField()->accessibleDescription() != packageNameDescription, "the module name field is still described as the package name");
     }
 
+    void test_theExportTreeAndFileListAreNamedForAScreenReader()
+    {
+        openExporter();
+        for (const QString& objectName : {qsl("treeWidget_exportSelection"), qsl("listWidget_addedFiles")}) {
+            auto* pWidget = mpExporter->findChild<QWidget*>(objectName);
+            QVERIFY2(pWidget, qPrintable(objectName));
+            QAccessibleInterface* pInterface = QAccessible::queryAccessibleInterface(pWidget);
+            QVERIFY(pInterface);
+            const QString name = pInterface->text(QAccessible::Name);
+            QVERIFY2(!name.trimmed().isEmpty(), qPrintable(qsl("%1 has nothing for a screen reader to announce it as").arg(objectName)));
+            // Before Qt 6.11 an item view's name is its accessibleName alone, with no buddy label fallback
+            QVERIFY2(!pWidget->accessibleName().trimmed().isEmpty(), qPrintable(qsl("%1 is nameless on Qt 6.8 to 6.10").arg(objectName)));
+        }
+    }
+
     // An empty package would install as nothing at all, so the export stops
     // before it writes anything rather than shipping one.
     void test_exportRefusesWhenNothingIsSelected()
