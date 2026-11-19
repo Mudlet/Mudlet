@@ -667,6 +667,42 @@ describe("Downloads and HTTP verbs against the local fixture server", function()
       assert.equals("OK", response.reason)
     end)
 
+    it("delivers a body holding NUL and non-UTF-8 bytes unchanged", function()
+      if noFixtureServer() then
+        return
+      end
+      assert.is_true(getHTTP(fixtureUrl("/binary.bin")))
+
+      local event, _, body = waitForEvent("sysGetHttpDone", 2000)
+      assert.equals("sysGetHttpDone", event)
+      -- the contents of CI/http-fixtures/binary.bin
+      assert.equals("a\0b\255c", body)
+    end)
+
+    it("delivers an error body holding NUL and non-UTF-8 bytes unchanged", function()
+      if noFixtureServer() then
+        return
+      end
+      assert.is_true(getHTTP(fixtureUrl("/binary-error")))
+
+      local event, _, _, response, body = waitForEvent("sysGetHttpError", 2000)
+      assert.equals("sysGetHttpError", event)
+      assert.equals(500, response.status)
+      assert.equals("a\0b\255c", body)
+    end)
+
+    it("drops a leading UTF-8 BOM so the body parses as JSON", function()
+      if noFixtureServer() then
+        return
+      end
+      assert.is_true(getHTTP(fixtureUrl("/bom.json")))
+
+      local event, _, body = waitForEvent("sysGetHttpDone", 2000)
+      assert.equals("sysGetHttpDone", event)
+      assert.equals('{"a":1}\n', body)
+      assert.equals(1, yajl.to_value(body).a)
+    end)
+
     it("sends the custom headers it was given", function()
       if noFixtureServer() then
         return

@@ -950,6 +950,16 @@ int TLuaInterpreter::warnArgumentChoice(lua_State* L, const char* functionName, 
     return warnArgumentValue(L, functionName, qsl("%1 must be %2 or %3, got \"%4\"").arg(argumentName, quoted.join(qsl(", ")), lastChoice, value));
 }
 
+// For an ARGUMENT_TYPE_BYTES event argument, so NULs and non-UTF-8 bytes survive. A leading
+// UTF-8 BOM is dropped: yajl rejects JSON that starts with one
+static QString httpBodyForLua(QByteArray body)
+{
+    if (body.startsWith("\xEF\xBB\xBF")) {
+        body.remove(0, 3);
+    }
+    return QString::fromLatin1(body);
+}
+
 // No documentation available in wiki - internal function
 // Raises additional sysDownloadError Events on failure to process
 // the local file, the second argument is "failureToWriteLocalFile" and besides
@@ -1036,8 +1046,8 @@ void TLuaInterpreter::slot_httpRequestFinished(QNetworkReply* reply)
         event.mArgumentTypeList << ARGUMENT_TYPE_TABLE;
         // Last, after the response table, so handlers written for the
         // earlier argument positions keep working
-        event.mArgumentList << QString(reply->readAll());
-        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        event.mArgumentList << httpBodyForLua(reply->readAll());
+        event.mArgumentTypeList << ARGUMENT_TYPE_BYTES;
 
         reply->deleteLater();
         downloadMap.remove(reply);
@@ -1065,8 +1075,8 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
         event.mArgumentList << reply->url().toString();
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-        event.mArgumentList << QString(reply->readAll());
-        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        event.mArgumentList << httpBodyForLua(reply->readAll());
+        event.mArgumentTypeList << ARGUMENT_TYPE_BYTES;
         break;
 
     case QNetworkAccessManager::CustomOperation:
@@ -1074,8 +1084,8 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
         event.mArgumentList << reply->url().toString();
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-        event.mArgumentList << QString(reply->readAll());
-        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        event.mArgumentList << httpBodyForLua(reply->readAll());
+        event.mArgumentTypeList << ARGUMENT_TYPE_BYTES;
         event.mArgumentList << reply->request().attribute(QNetworkRequest::CustomVerbAttribute).toString();
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
         break;
@@ -1087,8 +1097,8 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
         event.mArgumentList << reply->url().toString();
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-        event.mArgumentList << QString(reply->readAll());
-        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        event.mArgumentList << httpBodyForLua(reply->readAll());
+        event.mArgumentTypeList << ARGUMENT_TYPE_BYTES;
         break;
 
     case QNetworkAccessManager::PutOperation:
@@ -1096,8 +1106,8 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
         event.mArgumentList << reply->url().toString();
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-        event.mArgumentList << QString(reply->readAll());
-        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        event.mArgumentList << httpBodyForLua(reply->readAll());
+        event.mArgumentTypeList << ARGUMENT_TYPE_BYTES;
         break;
 
     case QNetworkAccessManager::GetOperation:
@@ -1114,8 +1124,8 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << reply->url().toString();
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            event.mArgumentList << QString(reply->readAll());
-            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << httpBodyForLua(reply->readAll());
+            event.mArgumentTypeList << ARGUMENT_TYPE_BYTES;
             break;
         }
 
