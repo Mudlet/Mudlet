@@ -181,21 +181,6 @@ void TPasswordEntry::submit()
     emit submitted();
 }
 
-bool TPasswordEntry::copyConsoleSelection()
-{
-    TConsole* pConsole = mpCommandLine->console();
-    if (!pConsole) {
-        return false;
-    }
-    for (TTextEdit* pPane : {pConsole->mUpperPane, pConsole->mLowerPane}) {
-        if (pPane && !pPane->mSelectedRegion.isEmpty()) {
-            pPane->slot_copySelectionToClipboard();
-            return true;
-        }
-    }
-    return false;
-}
-
 bool TPasswordEntry::event(QEvent* event)
 {
     if (!mpHost || mpHost->isClosingDown() || !mpCommandLine) {
@@ -278,7 +263,7 @@ void TPasswordEntry::handleKeyPress(QKeyEvent* ke)
     }
 
     if (ke->matches(QKeySequence::Copy)) {
-        copyConsoleSelection();
+        mpCommandLine->copyConsoleSelection();
         return;
     }
     // In both echo modes: a revealed password is still not for the clipboard
