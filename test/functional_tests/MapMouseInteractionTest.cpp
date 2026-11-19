@@ -1233,6 +1233,59 @@ private slots:
         QVERIFY2(remaining.contains(pViewMap->mMultiSelectionHighlightRoomId), "the view's highlight is still the deleted room");
     }
 
+    // A view opened on an area has no mRoomID until a script centres it on a
+    // room; editing in it must still work off the area it shows.
+    void test_aSecondaryViewSelectsAndMovesRooms_data()
+    {
+        QTest::addColumn<QString>("action");
+        QTest::newRow("select") << qsl("select");
+        QTest::newRow("shift-click") << qsl("shift-click");
+        QTest::newRow("move") << qsl("move");
+    }
+
+    void test_aSecondaryViewSelectsAndMovesRooms()
+    {
+        QFETCH(QString, action);
+        buildMap();
+        showMapper(false);
+        const auto [viewId, error] = mpHost->createMapView(mAreaId);
+        QVERIFY2(viewId > 0, qPrintable(error));
+        T2DMap* const pMainMap = mp2dMap;
+        const int openedViewId = viewId;
+        const auto restore = qScopeGuard([this, pMainMap, openedViewId] {
+            mp2dMap = pMainMap;
+            mpHost->closeMapView(openedViewId);
+        });
+        mp2dMap = map()->getViewManager()->getView(viewId)->get2DMap();
+        mp2dMap->resize(kWidgetWidth, kWidgetHeight);
+        mp2dMap->mMapCenterX = 0;
+        mp2dMap->mMapCenterY = 0;
+        mp2dMap->mMapCenterZ = 0;
+        renderFrame();
+        QVERIFY(!map()->mpRoomDB->getRoom(mp2dMap->mRoomID));
+
+        if (action == qsl("select")) {
+            dragFromTo(pointUnitsFromCentre(-1.5, 1.5), pointUnitsFromCentre(0.5, -0.5));
+            const QSet<int> expected{kNorthWestRoomId, kNorthRoomId, kWestRoomId, kPlayerRoomId};
+            QCOMPARE(mp2dMap->mMultiSelectionSet, expected);
+            return;
+        }
+
+        if (action == qsl("shift-click")) {
+            clickAt(pointUnitsFromCentre(-1, 0));
+            clickAt(pointUnitsFromCentre(1, 0), Qt::ShiftModifier);
+            const QSet<int> expected{kWestRoomId, kEastRoomId};
+            QCOMPARE(mp2dMap->mMultiSelectionSet, expected);
+            return;
+        }
+
+        TRoom* pEastRoom = map()->mpRoomDB->getRoom(kEastRoomId);
+        QVERIFY(pEastRoom);
+        dragFromTo(pointUnitsFromCentre(1, 0), pointUnitsFromCentre(1, 2));
+        QCOMPARE(pEastRoom->x(), 1);
+        QCOMPARE(pEastRoom->y(), 2);
+    }
+
     // Room ids are reused, so a line left in progress would go on in another room.
     void test_deletingTheRoomALineIsDrawnFromEndsTheDrawing()
     {
