@@ -730,32 +730,32 @@ function speedwalk(dirString, backwards, delay, show)
   for k,v in pairs(long_dir) do
     dirString = dirString:gsub(k,v)
   end
-  local reversedir = {
-    n = "s",
-    en = "sw",
-    e = "w",
-    es = "nw",
-    s = "n",
-    ws = "ne",
-    w = "e",
-    wn = "se",
-    u = "d",
-    d = "u",
-    ni = "out",
-    tuo = "in"
-  }
-  if not backwards then
-    for count, direction in string.gmatch(dirString, "([0-9]*)([neswudio][ewnu]?t?)") do
-      count = (count == "" and 1 or count)
+  -- one direction at a time, longest first, so "nne" is n then ne rather than "nn" then e
+  local steps = {}
+  local position = 1
+  while true do
+    local _, start, count = dirString:find("([0-9]*)[neswudio]", position)
+    if not start then
+      break
+    end
+    local direction = dirString:match("^out", start) or dirString:match("^in", start)
+      or dirString:match("^[ns][ew]", start) or dirString:sub(start, start)
+    steps[#steps + 1] = {direction, count == "" and 1 or tonumber(count)}
+    position = start + #direction
+  end
+  local reversedir = {n = "s", ne = "sw", e = "w", se = "nw", s = "n", sw = "ne", w = "e", nw = "se", u = "d", d = "u", ["in"] = "out", out = "in"}
+  local first, last, increment = 1, #steps, 1
+  if backwards then
+    first, last, increment = #steps, 1, -1
+  end
+  for index = first, last, increment do
+    local direction, count = steps[index][1], steps[index][2]
+    if backwards then
+      direction = reversedir[direction]
+    end
+    if direction then
       for i = 1, count do
         walklist[#walklist + 1] = direction
-      end
-    end
-  else
-    for direction, count in string.gmatch(dirString:reverse(), "(t?[ewnu]?[neswudio])([0-9]*)") do
-      count = (count == "" and 1 or count:reverse())
-      for i = 1, count do
-        walklist[#walklist + 1] = reversedir[direction]
       end
     end
   end
