@@ -59,6 +59,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QLabel>
 #include <QListWidget>
 #include <QMessageBox>
 #include <QNetworkAccessManager>
@@ -619,6 +620,26 @@ private slots:
         manager->close();
         QTRY_VERIFY_WITH_TIMEOUT(settle() && manager.isNull(), 15s);
         QVERIFY(QDir(downloadPath).removeRecursively());
+    }
+
+    // A download that arrives but will not install says why in the dialog's own notice
+    void test_aDownloadThatWillNotInstallSaysWhy()
+    {
+        mpProxy->serve(QByteArrayLiteral("not a package archive"));
+
+        QPointer<dlgPackageManager> manager = openManagerListing({repositoryEntry(qsl("unreadable-package"), qsl("unreadable-package.mpackage"))});
+        QVERIFY2(selectPackages(manager, {qsl("unreadable-package")}), "The package under test was not listed in the Explore view");
+        auto* notice = manager->findChild<QLabel*>(qsl("notificationAreaMessageBox"));
+        QVERIFY2(notice, "SETUP: the dialog has no notice to read");
+
+        QVERIFY(QMetaObject::invokeMethod(manager, "slot_installPackageFromRepository"));
+        QTRY_VERIFY_WITH_TIMEOUT(settle() && !downloadDialogStillUp(manager), 15s);
+
+        const QString shown = notice->text();
+        QVERIFY2(shown.contains(qsl("unreadable-package: ")), qPrintable(qsl("The notice does not give a reason after the package's name: %1").arg(shown)));
+
+        manager->close();
+        QTRY_VERIFY_WITH_TIMEOUT(settle() && manager.isNull(), 15s);
     }
 
     // A refusal's warning box runs an event loop, so a download started by an

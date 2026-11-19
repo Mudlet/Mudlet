@@ -41,8 +41,11 @@ using namespace std::chrono_literals;
 // loop - a package's sysUninstall handler is free to take a sibling away, and
 // the rows were drawn before any of that.
 //
+// An import that fails has to give the reason next to the file's name in the
+// notice, not only on the console behind the dialog.
+//
 // A spec cannot reach this: the dialog is C++ only, with no Lua way to open it
-// or to run its removal.
+// or to run its removal or import.
 class PackageManagerRemovalTest : public QObject
 {
     Q_OBJECT
@@ -123,6 +126,34 @@ private slots:
 
         QVERIFY2(!msg.contains(qsl("being saved")), qPrintable(qsl("A package a handler had already removed was blamed on a profile save: %1").arg(msg)));
         QVERIFY2(msg.contains(qsl("no longer installed")) && msg.contains(qsl("removal-b")), qPrintable(qsl("The package that had gone was not named as such: %1").arg(msg)));
+    }
+
+    // Even when a save is running as it is tried, and with the name escaped for the rich-text notice
+    void test_aFailedImportSaysWhy()
+    {
+        auto* host = startProfile();
+        QVERIFY2(host, "Could not start the profile");
+
+        QTemporaryDir packageDir;
+        QVERIFY(packageDir.isValid());
+        const QString packageFile = packageDir.filePath(qsl("import&twice.xml"));
+        QFile file(packageFile);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        QVERIFY(file.write(R"(<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE MudletPackage><MudletPackage version="1.001"></MudletPackage>)") > 0);
+        file.close();
+
+        auto* manager = new dlgPackageManager(nullptr, host);
+        const QString first = manager->installPackageFiles({packageFile});
+        host->saveProfile();
+        QVERIFY2(host->currentlySavingProfile(), "SETUP: the save had already finished, so the second import did not meet a running save");
+        const QString second = manager->installPackageFiles({packageFile, packageDir.filePath(qsl("never-written.xml"))});
+        delete manager;
+
+        QVERIFY2(first.isEmpty(), qPrintable(qsl("SETUP: the package did not install the first time: %1").arg(first)));
+        QVERIFY2(second.contains(qsl("import&amp;twice.xml")), qPrintable(qsl("The file that failed is not named: %1").arg(second)));
+        QVERIFY2(!second.contains(qsl("import&twice")), qPrintable(qsl("The package name is not escaped everywhere in the rich-text notice: %1").arg(second)));
+        QVERIFY2(second.contains(qsl("already installed")), qPrintable(qsl("The notice does not say why the import failed: %1").arg(second)));
+        QVERIFY2(second.contains(qsl("<br>never-written.xml: ")), qPrintable(qsl("The second failure is not on a line of its own with its reason: %1").arg(second)));
     }
 
     // The other half of the same wording: a save really running is still the

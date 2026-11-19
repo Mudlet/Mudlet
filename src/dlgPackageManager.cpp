@@ -678,25 +678,45 @@ void dlgPackageManager::slot_installPackageFromFile()
     lastDir = QFileInfo(fileNames.first()).absolutePath();
     settings.setValue(qsl("lastFileDialogLocation"), lastDir);
 
-    QStringList failedPackages;
-
-    for (const QString& fileName : fileNames) {
-        if (mpHost->installPackage(fileName, enums::PackageModuleType::Package).first) {
-            mpHost->waitForProfileSave();
-        } else {
-            const QString baseName = QFileInfo(fileName).fileName();
-            failedPackages << baseName;
-            qWarning() << "dlgPackageManager::slot_installPackageFromFile() ERROR - failed to import" << baseName;
-        }
-    }
+    const QString failures = installPackageFiles(fileNames);
 
     resetPackageList();
     comeBackToFront();
 
-    if (!failedPackages.isEmpty()) {
-        //: Package manager - status message shown when some packages failed to import. %1 is a comma-separated list of package names
-        showImportStatus(tr("Failed to import: %1").arg(failedPackages.join(qsl(", "))));
+    if (!failures.isEmpty()) {
+        showImportStatus(failures);
     }
+}
+
+static QString installFailure(const QString& name, const QString& reason)
+{
+    if (reason.isEmpty()) {
+        return name.toHtmlEscaped();
+    }
+    //: Package manager - one line of the notice listing packages that could not be installed. %1 is the package or file name, %2 the reason it was not installed
+    return dlgPackageManager::tr("%1: %2").arg(name, reason).toHtmlEscaped();
+}
+
+// Returns the notice to show, empty if every file installed. Split from the slot so the
+// wording can be tested: the slot opens a file dialog.
+QString dlgPackageManager::installPackageFiles(const QStringList& fileNames)
+{
+    QStringList failures;
+    for (const QString& fileName : fileNames) {
+        // During a save an install is put off and reports success before it has run
+        mpHost->waitForProfileSave();
+        if (auto [installed, reason] = mpHost->installPackage(fileName, enums::PackageModuleType::Package); !installed) {
+            const QString baseName = QFileInfo(fileName).fileName();
+            failures << installFailure(baseName, reason);
+            qWarning() << "dlgPackageManager::installPackageFiles() ERROR - failed to import" << baseName;
+        }
+    }
+    mpHost->waitForProfileSave();
+    if (failures.isEmpty()) {
+        return {};
+    }
+    //: Package manager - status message shown when some packages failed to import. %1 is a list of the files, one per line, each with the reason it was not imported
+    return tr("Failed to import:<br>%1").arg(failures.join(qsl("<br>")));
 }
 
 void dlgPackageManager::slot_installPackageFromRepository()
@@ -750,13 +770,16 @@ void dlgPackageManager::slot_installPackageFromRepository()
                     readyToInstall = mpHost->uninstallPackage(packageName, enums::PackageModuleType::Package);
                     if (!readyToInstall) {
                         // Installing over a still-listed package fails as "already installed", so the update would vanish unreported
-                        failedPackages << packageName;
+                        //: Package manager - why a package from the repository was not updated
+                        failedPackages << installFailure(packageName, tr("the installed version could not be removed to make way for the new one"));
                         qWarning() << "dlgPackageManager::slot_installPackageFromRepository() ERROR - could not remove the installed" << packageName << "to update it";
                     }
                 }
-                if (readyToInstall && !mpHost->installPackage(filePath, enums::PackageModuleType::Package).first) {
-                    failedPackages << packageName;
-                    qWarning() << "dlgPackageManager::slot_installPackageFromRepository() ERROR - failed to install" << packageName;
+                if (readyToInstall) {
+                    if (auto [installed, reason] = mpHost->installPackage(filePath, enums::PackageModuleType::Package); !installed) {
+                        failedPackages << installFailure(packageName, reason);
+                        qWarning() << "dlgPackageManager::slot_installPackageFromRepository() ERROR - failed to install" << packageName;
+                    }
                 }
             }
             QFile::remove(filePath);
@@ -773,8 +796,8 @@ void dlgPackageManager::slot_installPackageFromRepository()
         comeBackToFront();
 
         if (!failedPackages.isEmpty()) {
-            //: Package manager - status message shown when some packages downloaded from the repository failed to install. %1 is a comma-separated list of package names
-            showImportStatus(tr("Failed to install: %1").arg(failedPackages.join(qsl(", "))));
+            //: Package manager - status message shown when some packages downloaded from the repository failed to install. %1 is a list of the packages, one per line, each with the reason it was not installed
+            showImportStatus(tr("Failed to install:<br>%1").arg(failedPackages.join(qsl("<br>"))));
         }
     };
 
