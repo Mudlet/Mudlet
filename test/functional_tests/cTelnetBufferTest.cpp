@@ -60,6 +60,7 @@
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "MudletInstanceCoordinator.h"
+#include "TLuaInterpreter.h"
 #include "TMainConsole.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
@@ -540,6 +541,69 @@ private slots:
 
         QCOMPARE(linesFrom(qsl("PROMPT_F")), (QStringList{qsl("PROMPT_F> "), qsl("AFTER_F"), QString()}));
         QCOMPARE(prompts.count(), 1);
+    }
+
+    // isPrompt() and prompt triggers read promptBuffer, so a replayed prompt has to be marked there as a live one is
+    void replayedPromptIsMarkedAsAPrompt()
+    {
+        lua_State* L = mpHost->getLuaInterpreter()->getLuaGlobalState();
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("replayPromptHits = 0\nreplayPromptTrigger = tempPromptTrigger(function() replayPromptHits = replayPromptHits + 1 end)")));
+        auto killTrigger = qScopeGuard([this]() {
+            mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("killTrigger(replayPromptTrigger)"));
+        });
+        QByteArray chunk("\r\nPROMPT_R> ");
+        chunk += TN_IAC;
+        chunk += TN_GA;
+        chunk += "PROMPT_EOR> ";
+        chunk += TN_IAC;
+        chunk += TN_EOR;
+        chunk += "AFTER_R\r\n";
+
+        feedReplayChunk(chunk);
+
+        TMainConsole* console = mpHost->mainConsoleView();
+        const int promptLine = console->buffer.getLastLineNumber() - 3;
+        QCOMPARE(linesFrom(qsl("PROMPT_R")), (QStringList{qsl("PROMPT_R> "), qsl("PROMPT_EOR> "), qsl("AFTER_R"), QString()}));
+        QVERIFY2(console->buffer.promptBuffer.at(promptLine), "a GA in a replay did not mark its line as a prompt");
+        QVERIFY2(console->buffer.promptBuffer.at(promptLine + 1), "an EOR in a replay did not mark its line as a prompt");
+        QVERIFY(!console->buffer.promptBuffer.at(promptLine + 2));
+        lua_getglobal(L, "replayPromptHits");
+        const int hits = static_cast<int>(lua_tointeger(L, -1));
+        lua_pop(L, 1);
+        QCOMPARE(hits, 2);
+    }
+
+    void replayedPromptIsNotMarkedWithGaForcedOff()
+    {
+        const bool savedForceGaOff = mpHost->mTelnet.mFORCE_GA_OFF;
+        auto restoreFlag = qScopeGuard([this, savedForceGaOff]() {
+            mpHost->mTelnet.mFORCE_GA_OFF = savedForceGaOff;
+        });
+        mpHost->mTelnet.mFORCE_GA_OFF = true;
+        mpHost->mTelnet.mGA_Driver = false;
+        QSignalSpy prompts(&mpHost->mTelnet, &cTelnet::signal_promptReceived);
+        // A link in the prompt's text expires on that prompt only if the text is posted before the prompt counts
+        bool textPostedFirst = false;
+        auto connection = connect(&mpHost->mTelnet, &cTelnet::signal_promptReceived, this, [this, &textPostedFirst]() {
+            textPostedFirst = bufferContains(qsl("PROMPT_S"));
+        });
+        auto disconnectSpy = qScopeGuard([connection]() {
+            QObject::disconnect(connection);
+        });
+        QByteArray chunk("\r\nPROMPT_S> ");
+        chunk += TN_IAC;
+        chunk += TN_GA;
+        chunk += "AFTER_S\r\n";
+
+        feedReplayChunk(chunk);
+
+        TMainConsole* console = mpHost->mainConsoleView();
+        const int promptLine = console->buffer.getLastLineNumber() - 2;
+        QCOMPARE(linesFrom(qsl("PROMPT_S")), (QStringList{qsl("PROMPT_S> "), qsl("AFTER_S"), QString()}));
+        QVERIFY2(!console->buffer.promptBuffer.at(promptLine), "a GA forced off still marked a replayed line as a prompt");
+        QCOMPARE(prompts.count(), 1);
+        QVERIFY2(textPostedFirst, "a forced-off replayed prompt counted before its text was posted");
+        QVERIFY2(!mpHost->mTelnet.mGA_Driver, "a forced-off GA in a replay made the game a GA driver");
     }
 
     // The production route from Lua: feedTelnet() -> loopbackTest() ->
