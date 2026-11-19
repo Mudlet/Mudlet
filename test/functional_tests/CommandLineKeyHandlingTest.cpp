@@ -34,6 +34,7 @@
 
 #include <QClipboard>
 #include <QFileInfo>
+#include <QInputMethodEvent>
 #include <QLineEdit>
 #include <QScopeGuard>
 #include <QSignalSpy>
@@ -943,6 +944,135 @@ private slots:
         QVERIFY(runLua(qsl("clearCmdLine()")));
         qApp->processEvents();
         QCOMPARE(pLayer->maximumHeight(), oneRow);
+    }
+
+    // Chinese, Japanese or Korean text from an input method arrives as one
+    // InputMethod event, never as a KeyPress
+    void test_inputMethodTextResizesTheMainCommandLine()
+    {
+        TCommandLine* pMain = mpHost->mainConsoleView()->mpCommandLine;
+        QVERIFY(pMain);
+        QWidget* pLayer = mpHost->mainConsoleView()->layerCommandLine;
+        QVERIFY(pLayer);
+        const auto clearMain = qScopeGuard([this]() {
+            runLua(qsl("clearCmdLine()"));
+        });
+        QVERIFY(runLua(qsl("clearCmdLine()")));
+        qApp->processEvents();
+        const int oneRow = pLayer->maximumHeight();
+
+        QInputMethodEvent commit;
+        commit.setCommitString(QString(600, QChar(0x4E2D)));
+        QApplication::sendEvent(pMain, &commit);
+        qApp->processEvents();
+
+        QCOMPARE(pMain->toPlainText().size(), 600);
+        QVERIFY2(pLayer->maximumHeight() > oneRow, qPrintable(qsl("600 committed characters left the command line %1 high, one row %2").arg(pLayer->maximumHeight()).arg(oneRow)));
+    }
+
+    // Text an input method adds to a recalled command is the player's own, so
+    // Down banks it as it would typed text, rather than walking the history over it
+    void test_downBanksInputMethodTextAddedToARecalledCommand()
+    {
+        mpHost->mAutoClearCommandLineAfterSend = true;
+        mpHost->mHighlightHistory = false;
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+
+        type(pCommandLine, qsl("say"));
+        press(pCommandLine, Qt::Key_Return);
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("say"));
+
+        QInputMethodEvent commit;
+        commit.setCommitString(qsl(" \u4F60\u597D"));
+        QApplication::sendEvent(pCommandLine, &commit);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("say \u4F60\u597D"));
+
+        press(pCommandLine, Qt::Key_Down);
+        QVERIFY(pCommandLine->toPlainText().isEmpty());
+
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("say \u4F60\u597D"));
+    }
+
+    // A composition the player cancels leaves the line as it was, so Down still
+    // walks on from the recalled command rather than banking it
+    void test_aCancelledCompositionKeepsTheHistoryPosition()
+    {
+        mpHost->mAutoClearCommandLineAfterSend = true;
+        mpHost->mHighlightHistory = false;
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+
+        type(pCommandLine, qsl("one"));
+        press(pCommandLine, Qt::Key_Return);
+        type(pCommandLine, qsl("two"));
+        press(pCommandLine, Qt::Key_Return);
+        press(pCommandLine, Qt::Key_Up);
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("one"));
+
+        QInputMethodEvent composing(qsl("ni"), {});
+        QApplication::sendEvent(pCommandLine, &composing);
+        QInputMethodEvent cancel;
+        QApplication::sendEvent(pCommandLine, &cancel);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("one"));
+
+        press(pCommandLine, Qt::Key_Down);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("two"));
+    }
+
+    // With the recalled command selected, as history highlighting leaves it, the
+    // first composed letter deletes it, so even a cancelled composition is an edit
+    // and Up starts over from the most recent command
+    void test_aCompositionOverARecalledCommandRestartsTheHistoryWalk()
+    {
+        mpHost->mAutoClearCommandLineAfterSend = true;
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+
+        type(pCommandLine, qsl("one"));
+        press(pCommandLine, Qt::Key_Return);
+        type(pCommandLine, qsl("two"));
+        press(pCommandLine, Qt::Key_Return);
+        press(pCommandLine, Qt::Key_Up);
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(selection(pCommandLine), qsl("one"));
+
+        QInputMethodEvent composing(qsl("ni"), {});
+        QApplication::sendEvent(pCommandLine, &composing);
+        QInputMethodEvent cancel;
+        QApplication::sendEvent(pCommandLine, &cancel);
+        QVERIFY(pCommandLine->toPlainText().isEmpty());
+
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("two"));
+    }
+
+    // A long phrase is often composed in full before it is converted, so the
+    // line grows while it is still being composed
+    void test_aLongCompositionResizesTheMainCommandLine()
+    {
+        TCommandLine* pMain = mpHost->mainConsoleView()->mpCommandLine;
+        QVERIFY(pMain);
+        QWidget* pLayer = mpHost->mainConsoleView()->layerCommandLine;
+        QVERIFY(pLayer);
+        const auto clearMain = qScopeGuard([this, pMain]() {
+            QInputMethodEvent cancel;
+            QApplication::sendEvent(pMain, &cancel);
+            runLua(qsl("clearCmdLine()"));
+        });
+        QVERIFY(runLua(qsl("clearCmdLine()")));
+        qApp->processEvents();
+        const int oneRow = pLayer->maximumHeight();
+
+        QInputMethodEvent composing(QString(600, QChar(u'n')), {});
+        QApplication::sendEvent(pMain, &composing);
+        qApp->processEvents();
+
+        QVERIFY(pMain->toPlainText().isEmpty());
+        QVERIFY2(pLayer->maximumHeight() > oneRow, qPrintable(qsl("600 composed characters left the command line %1 high, one row %2").arg(pLayer->maximumHeight()).arg(oneRow)));
     }
 
     // Escape leaves completion mode, and selects the line so the next thing

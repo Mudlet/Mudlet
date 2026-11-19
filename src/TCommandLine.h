@@ -119,6 +119,7 @@ private:
     void historyMove(MoveDirection);
     void enterCommand(QKeyEvent*);
     void processNormalKey(QEvent*);
+    void processInputMethod(QEvent*);
     bool keybindingMatched(QKeyEvent*);
     bool keybindingWouldMatchProfileSwitchShortcut(const QKeyEvent*) const;
     void spellCheckWord(QTextCursor& c);
