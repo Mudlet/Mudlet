@@ -1462,6 +1462,51 @@ private slots:
         QCOMPARE(movedLine.constLast(), QPointF(1.0, 6.0));
     }
 
+    void test_draggingARoomIsAnnouncedToTheOtherMapViewsOnceItIsDropped()
+    {
+        buildMap();
+        showMapper(false);
+        QCoreApplication::sendPostedEvents(map(), QEvent::MetaCall);
+        QSignalSpy announced(map(), &TMap::signal_areaChanged);
+
+        clickAt(pointUnitsFromCentre(1, 0));
+        QCoreApplication::sendPostedEvents(map(), QEvent::MetaCall);
+        QVERIFY2(announced.isEmpty(), "clicking a room without moving it was announced as a change");
+
+        // Flushed after each step, as updateArea() merges every call made before its announcement goes out
+        pressAt(pointUnitsFromCentre(1, 0));
+        moveTo(pointUnitsFromCentre(1, 0));
+        for (const double y : {1.0, 2.0}) {
+            moveTo(pointUnitsFromCentre(1, y));
+            QCOMPARE(roomPosition(kEastRoomId), QVector3D(1, static_cast<float>(y), 0));
+            QCoreApplication::sendPostedEvents(map(), QEvent::MetaCall);
+            QVERIFY2(announced.isEmpty(), "a step of the drag was announced, so the 3D view rebuilds its caches as the mouse moves");
+        }
+        releaseAt(pointUnitsFromCentre(1, 2));
+        QCoreApplication::sendPostedEvents(map(), QEvent::MetaCall);
+        QCOMPARE(announced.size(), 1);
+        QCOMPARE(announced.first().first().toInt(), mAreaId);
+    }
+
+    void test_draggingRoomsOfTwoAreasIsAnnouncedForEveryArea()
+    {
+        buildMap();
+        const int otherAreaId = map()->mpRoomDB->addArea(qsl("Next Door"));
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 0.5), pointUnitsFromCentre(1.5, -0.5));
+        QVERIFY(mp2dMap->mMultiSelectionSet.contains(kWestRoomId));
+        QVERIFY(map()->setRoomArea(kWestRoomId, otherAreaId));
+        QCoreApplication::sendPostedEvents(map(), QEvent::MetaCall);
+        QSignalSpy announced(map(), &TMap::signal_areaChanged);
+
+        dragFromTo(pointUnitsFromCentre(1, 0), pointUnitsFromCentre(1, 1));
+
+        QCOMPARE(roomPosition(kWestRoomId), QVector3D(-1, 1, 0));
+        QCoreApplication::sendPostedEvents(map(), QEvent::MetaCall);
+        QCOMPARE(announced.size(), 1);
+        QVERIFY2(announced.constFirst().constFirst().toInt() == -1, "only the shown area was announced, so a view of the other area goes on drawing its moved room where it was");
+    }
+
     // The area files its rooms by position, by how far it reaches and by how
     // long their exits are; a dragged room has to be refiled in all of them
     // without the area rebuilding them from scratch.
@@ -3259,12 +3304,43 @@ private slots:
         QCOMPARE(pEastRoom->y(), -1);
         QCOMPARE(linePoints(), (QList<QPointF>{QPointF(3.0, 2.0), QPointF(3.0, 3.0)}));
 
+        QCoreApplication::sendPostedEvents(map(), QEvent::MetaCall);
+        QSignalSpy announced(map(), &TMap::signal_areaChanged);
         clickAt(pointUnitsFromCentre(3, -1));
         QVERIFY2(!mp2dMap->mRoomBeingMoved, "a click did not put the rooms down");
+        QCoreApplication::sendPostedEvents(map(), QEvent::MetaCall);
+        QCOMPARE(announced.size(), 1);
+        QCOMPARE(announced.constFirst().constFirst().toInt(), mAreaId);
         QVERIFY(mp2dMap->mHelpMsg.isEmpty());
         hoverTo(pointUnitsFromCentre(7, -2));
         QCOMPARE(pEastRoom->x(), 3);
         QCOMPARE(pEastRoom->y(), -1);
+    }
+
+    // The click that puts the rooms down selects whatever room it lands on
+    void test_aMoveFromTheMenuIsAnnouncedForTheAreasOfTheRoomsItMoved()
+    {
+        buildMap();
+        const int otherAreaId = map()->mpRoomDB->addArea(qsl("Next Door"));
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 0.5), pointUnitsFromCentre(1.5, -0.5));
+        QVERIFY(!mp2dMap->mMultiSelectionSet.contains(kNorthRoomId));
+        QVERIFY(map()->setRoomArea(kWestRoomId, otherAreaId));
+        QVERIFY(mp2dMap->mMultiSelectionSet.contains(kWestRoomId));
+        rightClickAt(pointUnitsFromCentre(1, 0));
+        QVERIFY(pickContextMenuItem(qsl("Move")));
+        hoverTo(pointUnitsFromCentre(3, -1));
+        hoverTo(pointUnitsFromCentre(3, -3));
+        QCOMPARE(roomPosition(kWestRoomId), QVector3D(-1, -2, 0));
+        QCoreApplication::sendPostedEvents(map(), QEvent::MetaCall);
+        QSignalSpy announced(map(), &TMap::signal_areaChanged);
+
+        clickAt(pointUnitsFromCentre(0, 1));
+
+        QVERIFY2(!mp2dMap->mRoomBeingMoved, "a click did not put the rooms down");
+        QCoreApplication::sendPostedEvents(map(), QEvent::MetaCall);
+        QCOMPARE(announced.size(), 1);
+        QVERIFY2(announced.constFirst().constFirst().toInt() == -1, "only the clicked room's area was announced, so a view of the other area goes on drawing its moved room where it was");
     }
 
     // Double-clicking a room walks the player to it along the exits the map
@@ -3892,6 +3968,105 @@ private slots:
         QVERIFY(map()->isUnsaved());
     }
 
+    // Other map views and the 3D view only redraw when the map announces the
+    // change, so each room edit on the menu has to announce it.
+    void test_roomEditsFromTheMenuAreAnnouncedToTheOtherMapViews_data()
+    {
+        QTest::addColumn<QString>("item");
+        // The 3D view's menu edits through the 2D map, which can be showing another area meanwhile
+        QTest::addColumn<bool>("mapShowsAnotherArea");
+        QTest::addColumn<bool>("selectionSpansTwoAreas");
+        for (const bool elsewhere : {false, true}) {
+            const char* suffix = elsewhere ? ", 2D map elsewhere" : "";
+            QTest::newRow(qPrintable(qsl("Delete%1").arg(suffix))) << qsl("Delete") << elsewhere << false;
+            QTest::newRow(qPrintable(qsl("Spread%1").arg(suffix))) << qsl("Spread...") << elsewhere << false;
+            QTest::newRow(qPrintable(qsl("Shrink%1").arg(suffix))) << qsl("Shrink...") << elsewhere << false;
+            QTest::newRow(qPrintable(qsl("Move to position%1").arg(suffix))) << qsl("Move to position...") << elsewhere << false;
+        }
+        QTest::newRow("Delete, two areas") << qsl("Delete") << false << true;
+        QTest::newRow("Spread, two areas") << qsl("Spread...") << false << true;
+        QTest::newRow("Shrink, two areas") << qsl("Shrink...") << false << true;
+        QTest::newRow("Move to position, two areas") << qsl("Move to position...") << false << true;
+    }
+
+    void test_roomEditsFromTheMenuAreAnnouncedToTheOtherMapViews()
+    {
+        QFETCH(QString, item);
+        QFETCH(bool, mapShowsAnotherArea);
+        QFETCH(bool, selectionSpansTwoAreas);
+        buildMap();
+        const int otherAreaId = map()->mpRoomDB->addArea(qsl("Next Door"));
+        QVERIFY(map()->setRoomCoordinates(kWestRoomId, -2, 0, 0));
+        QVERIFY(map()->setRoomCoordinates(kEastRoomId, 2, 0, 0));
+        // An unselected room of the same area leads in, which must not widen the announcement
+        QVERIFY(map()->setExit(kNorthRoomId, kPlayerRoomId, DIR_SOUTH));
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-2.5, 0.5), pointUnitsFromCentre(2.5, -0.5));
+        QCOMPARE(mp2dMap->mMultiSelectionHighlightRoomId, kPlayerRoomId);
+        rightClickAt(pointUnitsFromCentre(2, 0));
+        QCoreApplication::sendPostedEvents(map(), QEvent::MetaCall);
+        const auto restoreMap = qScopeGuard([this]() {
+            mp2dMap->show();
+        });
+        if (mapShowsAnotherArea) {
+            // Hidden, as it is behind the 3D view, so no paint takes it back to the player's area
+            mp2dMap->hide();
+            mp2dMap->mAreaID = otherAreaId;
+        }
+        if (selectionSpansTwoAreas) {
+            QVERIFY(map()->setRoomArea(kWestRoomId, otherAreaId));
+            QVERIFY(mp2dMap->mMultiSelectionSet.contains(kWestRoomId));
+            QCoreApplication::sendPostedEvents(map(), QEvent::MetaCall);
+        }
+        QSignalSpy announced(map(), &TMap::signal_areaChanged);
+
+        if (item == qsl("Move to position...")) {
+            QVERIFY(pickMoveToPosition(3, 2, 0));
+        } else if (item == qsl("Delete")) {
+            QVERIFY(pickContextMenuItem(item));
+        } else {
+            QVERIFY(pickFactorItem(item, 2));
+        }
+
+        QVERIFY2(QTest::qWaitFor(
+                         [&announced]() {
+                             return !announced.isEmpty();
+                         },
+                         2s),
+                 "the edit was not announced, so other map views go on drawing the rooms as they were");
+        QCoreApplication::sendPostedEvents(map(), QEvent::MetaCall);
+        // Every area when the rooms are in several, else just theirs, so views of other areas are spared a redraw
+        QCOMPARE(announced.size(), 1);
+        QCOMPARE(announced.constFirst().constFirst().toInt(), selectionSpansTwoAreas ? -1 : mAreaId);
+        if (selectionSpansTwoAreas && item != qsl("Delete")) {
+            const TArea* otherArea = map()->mpRoomDB->getArea(otherAreaId);
+            QVERIFY(otherArea);
+            QCOMPARE(otherArea->min_x, static_cast<int>(roomPosition(kWestRoomId).x()));
+        }
+    }
+
+    // Deleting a room also takes the exits into it away from rooms in other areas
+    void test_deletingARoomIsAnnouncedToTheAreasWhoseExitsLedToIt()
+    {
+        buildMap();
+        const int otherAreaId = map()->mpRoomDB->addArea(qsl("Next Door"));
+        QVERIFY(map()->addRoom(kOtherAreaRoomId) && map()->setRoomArea(kOtherAreaRoomId, otherAreaId));
+        QVERIFY(map()->setExit(kOtherAreaRoomId, kEastRoomId, DIR_WEST));
+        showMapper(false);
+        clickAt(pointUnitsFromCentre(1, 0));
+        rightClickAt(pointUnitsFromCentre(1, 0));
+        QCoreApplication::sendPostedEvents(map(), QEvent::MetaCall);
+        QSignalSpy announced(map(), &TMap::signal_areaChanged);
+
+        QVERIFY(pickContextMenuItem(qsl("Delete")));
+
+        QVERIFY(!map()->mpRoomDB->getRoom(kEastRoomId));
+        QCOMPARE(map()->mpRoomDB->getRoom(kOtherAreaRoomId)->getExit(DIR_WEST), -1);
+        QCoreApplication::sendPostedEvents(map(), QEvent::MetaCall);
+        QCOMPARE(announced.size(), 1);
+        QVERIFY2(announced.constFirst().constFirst().toInt() == -1, "only the deleted room's area was announced, so a view of the area whose exit led to it goes on drawing that exit");
+    }
+
     // The factor and coordinates dialogs run their own event loop, in which a
     // script can delete the room the selection is centred on.
     void test_spreadingAroundARoomAScriptDeletedLeavesTheRestWhereTheyAre()
@@ -3987,8 +4162,17 @@ private slots:
         QVERIFY2(nextDoorIndex >= 0, "Next Door is not offered in the list of areas");
 
         mp2dMap->arealist_combobox->setCurrentIndex(nextDoorIndex);
+        QCoreApplication::sendPostedEvents(map(), QEvent::MetaCall);
+        QSignalSpy announced(map(), &TMap::signal_areaChanged);
         pDialog->accept();
 
+        QVERIFY2(QTest::qWaitFor(
+                         [&announced]() {
+                             return !announced.isEmpty();
+                         },
+                         2s),
+                 "the move was not announced, so other map views go on drawing the rooms where they were");
+        QCOMPARE(announced.constLast().constFirst().toInt(), -1);
         QCOMPARE(roomsInArea(otherAreaId), northRow + farRooms);
         QVERIFY2(!roomsInArea(mAreaId).intersects(northRow), "the rooms are still in the area they came from");
         QCOMPARE(mp2dMap->mAreaID, otherAreaId);

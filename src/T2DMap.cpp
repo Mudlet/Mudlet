@@ -2197,6 +2197,8 @@ void T2DMap::slot_movePosition()
                 pArea->calcSpan();
             }
         }
+        // Not mAreaID: the 3D view's menu edits through this map while it may be showing another area
+        mpMap->updateArea(dirtyAreas.size() == 1 ? *dirtyAreas.cbegin() : -1);
         mpMap->setUnsaved(__func__);
     }
     dialog->deleteLater();
@@ -2418,6 +2420,20 @@ void T2DMap::slot_setImage() {}
 
 void T2DMap::slot_deleteRoom()
 {
+    // Not mAreaID: the 3D view's menu edits through this map while it may be showing another area.
+    // Rooms whose exits lead in lose those exits too, and may be in other areas.
+    QSet<int> affectedAreas;
+    const QMultiHash<int, int>& entrances = mpMap->mpRoomDB->getEntranceHash();
+    for (const int roomId : std::as_const(mMultiSelectionSet)) {
+        if (const TRoom* room = mpMap->mpRoomDB->getRoom(roomId)) {
+            affectedAreas.insert(room->getArea());
+        }
+        for (auto it = entrances.constFind(roomId); it != entrances.cend() && it.key() == roomId; ++it) {
+            if (const TRoom* enteringRoom = mpMap->mpRoomDB->getRoom(it.value())) {
+                affectedAreas.insert(enteringRoom->getArea());
+            }
+        }
+    }
     mpMap->mpRoomDB->removeRoom(mMultiSelectionSet);
     // mMultiSelectionSet gets cleared as rooms are removed by
     // TRoomDB::removeRoom() so no need to clear it here!
@@ -2425,6 +2441,7 @@ void T2DMap::slot_deleteRoom()
     mMultiSelectionListWidget.clear();
     mMultiSelectionListWidget.hide();
     repaint();
+    mpMap->updateArea(affectedAreas.size() == 1 ? *affectedAreas.cbegin() : -1);
     mpMap->setUnsaved(__func__);
 }
 
@@ -2468,9 +2485,7 @@ void T2DMap::slot_spread()
     mMultiRect = QRect(0, 0, 0, 0);
     const int dx = pR_centerRoom->x();
     const int dy = pR_centerRoom->y();
-    const int areaID = pR_centerRoom->getArea();
-    auto pArea = mpMap->mpRoomDB->getArea(areaID);
-    bool doneSomething = false;
+    QSet<int> movedAreas;
     QSetIterator<int> itSelectionRoom = mMultiSelectionSet;
     while (itSelectionRoom.hasNext()) {
         TRoom* pMovingR = mpMap->mpRoomDB->getRoom(itSelectionRoom.next());
@@ -2478,7 +2493,7 @@ void T2DMap::slot_spread()
             continue;
         }
 
-        doneSomething = true;
+        movedAreas.insert(pMovingR->getArea());
         pMovingR->setCoordinates(((pMovingR->x() - dx) * spread + dx), ((pMovingR->y() - dy) * spread + dy), pMovingR->z());
         QMapIterator<QString, QList<QPointF>> itCustomLine(pMovingR->customLines);
         QMap<QString, QList<QPointF>> newCustomLinePointsMap;
@@ -2495,12 +2510,15 @@ void T2DMap::slot_spread()
         pMovingR->customLines = newCustomLinePointsMap;
         pMovingR->calcRoomDimensions();
     }
-    if (doneSomething) {
-        if (pArea) {
-            pArea->mIsDirty = true;
-            pArea->clean();
+    if (!movedAreas.isEmpty()) {
+        for (const int areaId : std::as_const(movedAreas)) {
+            if (auto pArea = mpMap->mpRoomDB->getArea(areaId)) {
+                pArea->mIsDirty = true;
+                pArea->clean();
+            }
         }
         repaint();
+        mpMap->updateArea(movedAreas.size() == 1 ? *movedAreas.cbegin() : -1);
         mpMap->setUnsaved(__func__);
     }
 }
@@ -2545,9 +2563,7 @@ void T2DMap::slot_shrink()
     mMultiRect = QRect(0, 0, 0, 0);
     const int dx = pR_centerRoom->x();
     const int dy = pR_centerRoom->y();
-    const int areaID = pR_centerRoom->getArea();
-    auto pArea = mpMap->mpRoomDB->getArea(areaID);
-    bool doneSomething = false;
+    QSet<int> movedAreas;
     QSetIterator<int> itSelectionRoom(mMultiSelectionSet);
     while (itSelectionRoom.hasNext()) {
         TRoom* pMovingR = mpMap->mpRoomDB->getRoom(itSelectionRoom.next());
@@ -2555,7 +2571,7 @@ void T2DMap::slot_shrink()
             continue;
         }
 
-        doneSomething = true;
+        movedAreas.insert(pMovingR->getArea());
         pMovingR->setCoordinates(((pMovingR->x() - dx) / spread + dx), ((pMovingR->y() - dy) / spread + dy), pMovingR->z());
         QMapIterator<QString, QList<QPointF>> itCustomLine(pMovingR->customLines);
         QMap<QString, QList<QPointF>> newCustomLinePointsMap;
@@ -2572,12 +2588,15 @@ void T2DMap::slot_shrink()
         pMovingR->customLines = newCustomLinePointsMap;
         pMovingR->calcRoomDimensions();
     }
-    if (doneSomething) {
-        if (pArea) {
-            pArea->mIsDirty = true;
-            pArea->clean();
+    if (!movedAreas.isEmpty()) {
+        for (const int areaId : std::as_const(movedAreas)) {
+            if (auto pArea = mpMap->mpRoomDB->getArea(areaId)) {
+                pArea->mIsDirty = true;
+                pArea->clean();
+            }
         }
         repaint();
+        mpMap->updateArea(movedAreas.size() == 1 ? *movedAreas.cbegin() : -1);
         mpMap->setUnsaved(__func__);
     }
 }
@@ -2733,6 +2752,8 @@ void T2DMap::slot_setArea()
             mpMap->setRoomArea(itSelectedRoom.next(), newAreaId);
         }
         if (!mMultiSelectionSet.isEmpty()) {
+            // The rooms leave their areas for another, so every area involved must be redrawn
+            mpMap->updateArea(-1);
             const auto& targetAreaName = mpMap->mpRoomDB->getAreaNamesMap().value(newAreaId);
             if (!mIsSecondaryView && mpMap->mapper()) {
                 mpMap->mapper()->comboBox_showArea->setCurrentText(targetAreaName);
