@@ -32,6 +32,7 @@
  * Run with: ctest -R RoomPropertiesDialogTest -V
  */
 
+#include <QAccessible>
 #include <QCheckBox>
 #include <QComboBox>
 #include <QContextMenuEvent>
@@ -435,6 +436,25 @@ private slots:
         QCOMPARE(pDlg->checkBox_locked->checkState(), Qt::PartiallyChecked);
         QVERIFY(pDlg->checkBox_hidden->isTristate());
         QCOMPARE(pDlg->checkBox_hidden->checkState(), Qt::PartiallyChecked);
+    }
+
+    // Without a buddy label or an accessible name a screen reader announces a field by its type alone
+    void everyRoomFieldHasAScreenReaderName()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
+
+        const QList<QWidget*> fields{pDlg->lineEdit_name, pDlg->lineEdit_roomSymbol, pDlg->spinBox_weight, pDlg->spinBox_borderThickness};
+        for (QWidget* pField : fields) {
+            QAccessibleInterface* pInterface = QAccessible::queryAccessibleInterface(pField);
+            QVERIFY(pInterface);
+            QVERIFY2(!pInterface->text(QAccessible::Name).trimmed().isEmpty(), qPrintable(qsl("%1 has no name for a screen reader to announce").arg(pField->objectName())));
+        }
+        // Everywhere but Windows, Qt reports a combo box's current text as its
+        // name, so only the property itself can be checked here
+        for (QWidget* pCombo : {static_cast<QWidget*>(pDlg->comboBox_roomSymbol), static_cast<QWidget*>(pDlg->comboBox_weight)}) {
+            QVERIFY2(!pCombo->accessibleName().trimmed().isEmpty(), qPrintable(qsl("%1 has no accessible name").arg(pCombo->objectName())));
+        }
     }
 
     // The whole point of the placeholders: a field left showing one has to come
