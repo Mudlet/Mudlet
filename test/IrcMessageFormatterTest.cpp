@@ -80,6 +80,13 @@ private slots:
 
     void topic_changed() { QCOMPARE(forLua(":bob!u@h TOPIC #mudlet :a new topic"), QStringLiteral("! bob changed topic")); }
 
+    // The window has no topic bar, so this line is the only place a new topic is seen
+    void topic_changedShowsTheNewTopicInTheWindow()
+    {
+        const QString html = forWindow(":bob!u@h TOPIC #mudlet :raid at 8");
+        QVERIFY2(html.contains(QStringLiteral("! bob changed topic to: raid at 8")), qPrintable(html));
+    }
+
     void topic_cleared() { QCOMPARE(forLua(":bob!u@h TOPIC #mudlet :"), QStringLiteral("! bob cleared topic")); }
 
     void away_withAReason() { QCOMPARE(forLua(":bob!u@h AWAY :at lunch"), QStringLiteral("! bob is away (at lunch)")); }
@@ -218,6 +225,7 @@ private slots:
         QTest::newRow("time numeric") << QByteArrayLiteral(":server 391 me irc.example.org :<u>not underlined</u>");
         QTest::newRow("error") << QByteArrayLiteral("ERROR :<u>not underlined</u>");
         QTest::newRow("unknown command") << QByteArrayLiteral(":bob!u@h FROBNICATE :<u>not underlined</u>");
+        QTest::newRow("new topic") << QByteArrayLiteral(":bob!u@h TOPIC #mudlet :<u>not underlined</u>");
         // nick rules are the server's to enforce, and it is the server that is not trusted
         QTest::newRow("new nick") << QByteArrayLiteral(":old!u@h NICK :<u>underlined</u>");
         QTest::newRow("channel message sender") << QByteArrayLiteral(":<u>underlined</u>!u@h PRIVMSG #mudlet :hi");
