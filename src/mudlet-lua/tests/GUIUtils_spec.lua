@@ -246,6 +246,18 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       local actual = decho2ansi("<o>overline</o>")
       assert.equals(expected, actual)
     end)
+
+    it("should keep tags that decho prints as text", function()
+      for _, text in ipairs({ "<12> items", "a <1,2> b", "<1,2,3,4>", "<1000,0,0>", "<:>", "x <1:2> y" }) do
+        assert.equals(text, decho2ansi(text))
+      end
+    end)
+
+    it("should only set the parts of a colour the tag gives", function()
+      assert.equals("\27[38:2::1:2:3mfg", decho2ansi("<1,2,3:>fg"))
+      assert.equals("\27[48:2::4:5:6mbg", decho2ansi("<:4,5,6>bg"))
+      assert.equals("\27[38:2::1:2:3m\27[48:2::4:5:6mboth", decho2ansi("<1,2,3:4,5,6,128>both"))
+    end)
   end)
 
   describe("Tests the functionality of hecho2ansi", function()
@@ -330,6 +342,27 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       local expected = "\27[53moverline\27[55m"
       local actual = cecho2ansi("<o>overline</o>")
       assert.equals(expected, actual)
+    end)
+
+    it("should keep tags that cecho prints as text", function()
+      for _, text in ipairs({ "Say <hello> world", "<notacolour:alsonot>", "</foo>", "<:>", "<red,blue,green>x", "<red:blue:>x", "<b,notacolour>x", "<b:notacolour>x", "<r:notacolour>x", "</red:blue>x", "</b:blue>x", "</foo,red>x", "Map <3,4> here", "<12,34>x" }) do
+        assert.equals(text, cecho2ansi(text))
+      end
+    end)
+
+    it("should only take a style or reset code that is the whole tag, as cecho does", function()
+      assert.equals("\27[48:5:4mx", cecho2ansi("<r:blue>x"))
+      assert.equals("\27[48:5:4mx", cecho2ansi("<reset,blue>x"))
+    end)
+
+    it("should accept a comma between the colours, as cecho does", function()
+      assert.equals("\27[38:5:1m\27[48:5:4mtext", cecho2ansi("<red,blue>text"))
+    end)
+
+    it("should take ctable numbers and names, unlike cecho, but not with a comma", function()
+      assert.equals("\27[38:5:3m\27[48:5:4mx", cecho2ansi("<3:4>x"))
+      assert.equals("\27[38:5:9m\27[48:5:4mx", cecho2ansi("<light_red:blue>x"))
+      assert.equals("\27[48:5:4mx", cecho2ansi("<light_red,blue>x"))
     end)
   end)
 
@@ -1586,44 +1619,44 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       { "plain text", string = "plain text", ansi = "plain text", decho = "plain text", hecho = "plain text" },
       { "héllo wörld ✓ 日本語", string = "héllo wörld ✓ 日本語", ansi = "héllo wörld ✓ 日本語", decho = "héllo wörld ✓ 日本語", hecho = "héllo wörld ✓ 日本語" },
       { "<red>red<blue>blue<reset>plain", string = "redblueplain", ansi = "\27[38:5:1mred\27[38:5:4mblue\27[0mplain", decho = "<255,0,0>red<0,0,255>blue<r>plain", hecho = "#ff0000red#0000ffblue#rplain" },
-      { "<notacolour>text<r>", string = "<notacolour>text", ansi = "text\27[0m", decho = "<notacolour>text<r>", hecho = "<notacolour>text#r" },
+      { "<notacolour>text<r>", string = "<notacolour>text", ansi = "<notacolour>text\27[0m", decho = "<notacolour>text<r>", hecho = "<notacolour>text#r" },
       { "<red", string = "<red", ansi = "<red", decho = "<red", hecho = "<red" },
       { "red>", string = "red>", ansi = "red>", decho = "red>", hecho = "red>" },
       { "<>", string = "<>", ansi = "<>", decho = "<>", hecho = "<>" },
       { "<<red>>", string = "<>", ansi = "<\27[38:5:1m>", decho = "<<255,0,0>>", hecho = "<#ff0000>" },
-      { "</red>x", string = "</red>x", ansi = "x", decho = "</red>x", hecho = "</red>x" },
-      { "<red:blue>a<:blue>b<red:>c<red,blue>d", string = "abcd", ansi = "\27[38:5:1m\27[48:5:4ma\27[48:5:4mb\27[38:5:1mcd", decho = "<255,0,0:0,0,255>a<:0,0,255>b<255,0,0>c<255,0,0:0,0,255>d", hecho = "#ff0000,0000ffa#,0000ffb#ff0000c#ff0000,0000ffd" },
+      { "</red>x", string = "</red>x", ansi = "</red>x", decho = "</red>x", hecho = "</red>x" },
+      { "<red:blue>a<:blue>b<red:>c<red,blue>d", string = "abcd", ansi = "\27[38:5:1m\27[48:5:4ma\27[48:5:4mb\27[38:5:1mc\27[38:5:1m\27[48:5:4md", decho = "<255,0,0:0,0,255>a<:0,0,255>b<255,0,0>c<255,0,0:0,0,255>d", hecho = "#ff0000,0000ffa#,0000ffb#ff0000c#ff0000,0000ffd" },
       { "<reset><r><reset>x<r>", string = "x", ansi = "\27[0m\27[0m\27[0mx\27[0m", decho = "<r><r><r>x<r>", hecho = "#r#r#rx#r" },
       { "<b>b</b><i>i</i><u>u</u><s>s</s><o>o</o>", string = "biuso", ansi = "\27[1mb\27[22m\27[3mi\27[23m\27[4mu\27[24m\27[9ms\27[29m\27[53mo\27[55m", decho = "<b>b</b><i>i</i><u>u</u><s>s</s><o>o</o>", hecho = "#bb#/b#ii#/i#uu#/u#ss#/s#oo#/o" },
       { "<ansi_light_red:ansi_010>x<DodgerBlue>y<ansi_124>z<124>w<ansi_255:12>v", string = "xyz<124>wv", ansi = "\27[38:2::255:0:0m\27[48:2::0:255:0mx\27[38:2::30:144:255my\27[38:5:124mz\27[38:5:124mw\27[38:5:255m\27[48:5:12mv", decho = "<255,0,0:0,255,0>x<30,144,255>y<175,0,0>z<124>w<238,238,238>v", hecho = "#ff0000,00ff00x#1e90ffy#af0000z<124>w#eeeeeev" },
       { "<light_red>a<lightRed>b<light_white:black>c<ansiBlack>d", string = "<light_red>a<lightRed>bcd", ansi = "\27[38:5:9ma\27[38:5:9mb\27[38:5:15m\27[48:5:0mc\27[38:2::0:0:0md", decho = "<light_red>a<lightRed>b<:0,0,0>c<0,0,0>d", hecho = "<light_red>a<lightRed>b#,000000c#000000d" },
-      { "<RED>upper<Red>mixed", string = "<RED>upper<Red>mixed", ansi = "uppermixed", decho = "<RED>upper<Red>mixed", hecho = "<RED>upper<Red>mixed" },
+      { "<RED>upper<Red>mixed", string = "<RED>upper<Red>mixed", ansi = "<RED>upper<Red>mixed", decho = "<RED>upper<Red>mixed", hecho = "<RED>upper<Red>mixed" },
       { "<red:notacolour>x<notacolour:red>y", string = "xy", ansi = "\27[38:5:1mx\27[48:5:1my", decho = "<255,0,0>x<:255,0,0>y", hecho = "#ff0000x#,ff0000y" },
       { "<b><red>bold red</b> <i>it", string = "bold red it", ansi = "\27[1m\27[38:5:1mbold red\27[22m \27[3mit", decho = "<b><255,0,0>bold red</b> <i>it", hecho = "#b#ff0000bold red#/b #iit" },
       { "\\<red>escaped", string = "\\escaped", ansi = "\\\27[38:5:1mescaped", decho = "\\<255,0,0>escaped", hecho = "\\#ff0000escaped" },
       { "<red>日本<blue>語", string = "日本語", ansi = "\27[38:5:1m日本\27[38:5:4m語", decho = "<255,0,0>日本<0,0,255>語", hecho = "#ff0000日本#0000ff語" },
-      { "<0>zero<15>fifteen<256>over", string = "<0>zero<15>fifteen<256>over", ansi = "\27[38:5:0mzero\27[38:5:15mfifteenover", decho = "<0>zero<15>fifteen<256>over", hecho = "<0>zero<15>fifteen<256>over" },
+      { "<0>zero<15>fifteen<256>over", string = "<0>zero<15>fifteen<256>over", ansi = "\27[38:5:0mzero\27[38:5:15mfifteen<256>over", decho = "<0>zero<15>fifteen<256>over", hecho = "<0>zero<15>fifteen<256>over" },
     }
     local dechoCases = {
       { "", string = "", ansi = "", cecho = "", hecho = "" },
       { "plain", string = "plain", ansi = "plain", cecho = "plain", hecho = "plain" },
       { "<255,0,0>red<0,255,0>green<r>plain", string = "redgreenplain", ansi = "\27[38:2::255:0:0mred\27[38:2::0:255:0mgreen\27[0mplain", cecho = "<ansi_light_red>red<ansi_010>green<reset>plain", hecho = "#ff0000red#00ff00green#rplain" },
-      { "<255,0,0:0,0,255>a<:0,0,255>b<0,0,255:>c", string = "abc", ansi = "\27[38:2::255:0:0m\27[48:2::0:0:255ma\27[48:2::0:0:255mb\27[38:2::0:0:255m\27[48:2:::0:0mc", cecho = "<ansi_light_red:ansi_012>a<:ansi_012>b<ansi_012>c", hecho = "#ff0000,0000ffa#,0000ffb#0000ffc" },
+      { "<255,0,0:0,0,255>a<:0,0,255>b<0,0,255:>c", string = "abc", ansi = "\27[38:2::255:0:0m\27[48:2::0:0:255ma\27[48:2::0:0:255mb\27[38:2::0:0:255mc", cecho = "<ansi_light_red:ansi_012>a<:ansi_012>b<ansi_012>c", hecho = "#ff0000,0000ffa#,0000ffb#0000ffc" },
       { "<1,2,3>near<127,0,0>dark<254,1,1>almost", string = "neardarkalmost", ansi = "\27[38:2::1:2:3mnear\27[38:2::127:0:0mdark\27[38:2::254:1:1malmost", cecho = "<ansi_black>near<ansi_001>dark<ansi_light_red>almost", hecho = "#010203near#7f0000dark#fe0101almost" },
       { "<0,0,0:10,20,30,40>alpha", string = "alpha", ansi = "\27[38:2::0:0:0m\27[48:2::10:20:30malpha", cecho = "<ansi_black:ansi_233>alpha", hecho = "#000000,0a141ealpha" },
-      { "<10,20,30,40>fgalpha", string = "<10,20,30,40>fgalpha", ansi = "\27[38:2::10:20:30mfgalpha", cecho = "<10,20,30,40>fgalpha", hecho = "<10,20,30,40>fgalpha" },
-      { "<1,2>bad<1,2,3,4,5>bad2<>empty", string = "<1,2>bad<1,2,3,4,5>bad2<>empty", ansi = "\27[38:2::1:2:0mbad\27[38:2::1:2:3mbad2<>empty", cecho = "<1,2>bad<1,2,3,4,5>bad2<>empty", hecho = "<1,2>bad<1,2,3,4,5>bad2<>empty" },
+      { "<10,20,30,40>fgalpha", string = "<10,20,30,40>fgalpha", ansi = "<10,20,30,40>fgalpha", cecho = "<10,20,30,40>fgalpha", hecho = "<10,20,30,40>fgalpha" },
+      { "<1,2>bad<1,2,3,4,5>bad2<>empty", string = "<1,2>bad<1,2,3,4,5>bad2<>empty", ansi = "<1,2>bad<1,2,3,4,5>bad2<>empty", cecho = "<1,2>bad<1,2,3,4,5>bad2<>empty", hecho = "<1,2>bad<1,2,3,4,5>bad2<>empty" },
       { "<r><b>b</b><i>i</i><u>u</u><s>s</s><o>o</o><r>", string = "biuso", ansi = "\27[0m\27[1mb\27[22m\27[3mi\27[23m\27[4mu\27[24m\27[9ms\27[29m\27[53mo\27[55m\27[0m", cecho = "<reset><b>b</b><i>i</i><u>u</u><s>s</s><o>o</o><reset>", hecho = "#r#bb#/b#ii#/i#uu#/u#ss#/s#oo#/o#r" },
       { "<255,0,0>a<255,0,0>b<255,0,0>c", string = "abc", ansi = "\27[38:2::255:0:0ma\27[38:2::255:0:0mb\27[38:2::255:0:0mc", cecho = "<ansi_light_red>a<ansi_light_red>b<ansi_light_red>c", hecho = "#ff0000a#ff0000b#ff0000c" },
       { "<0,0,0>black<255,255,255>white<128,128,128>grey", string = "blackwhitegrey", ansi = "\27[38:2::0:0:0mblack\27[38:2::255:255:255mwhite\27[38:2::128:128:128mgrey", cecho = "<ansi_black>black<ansi_231>white<ansi_008>grey", hecho = "#000000black#ffffffwhite#808080grey" },
       { "x<12,34,56>é✓<78,90,123>日本", string = "xé✓日本", ansi = "x\27[38:2::12:34:56mé✓\27[38:2::78:90:123m日本", cecho = "x<ansi_235>é✓<ansi_060>日本", hecho = "x#0c2238é✓#4e5a7b日本" },
       { "<007,010,099>leading", string = "leading", ansi = "\27[38:2::007:010:099mleading", cecho = "<ansi_017>leading", hecho = "#070a63leading" },
-      { "<255,0,0:>trail", string = "trail", ansi = "\27[38:2::255:0:0m\27[48:2:::0:0mtrail", cecho = "<ansi_light_red>trail", hecho = "#ff0000trail" },
+      { "<255,0,0:>trail", string = "trail", ansi = "\27[38:2::255:0:0mtrail", cecho = "<ansi_light_red>trail", hecho = "#ff0000trail" },
       { "</b>x</i>y", string = "xy", ansi = "\27[22mx\27[23my", cecho = "</b>x</i>y", hecho = "#/bx#/iy" },
       { "</r>x", string = "x", ansi = raises, cecho = "x", hecho = "x" },
       { "<300,0,0>over", string = "over", ansi = "\27[38:2::300:0:0mover", cecho = raises, hecho = "#ff0000over" },
       { "<0,0,0:300,0,0>bgover", string = "bgover", ansi = "\27[38:2::0:0:0m\27[48:2::300:0:0mbgover", cecho = raises, hecho = "#000000,ff0000bgover" },
-      { "a<0,0,0:1,2,3,4>b<9,9,9,999>c", string = "ab<9,9,9,999>c", ansi = "a\27[38:2::0:0:0m\27[48:2::1:2:3mb\27[38:2::9:9:9mc", cecho = "a<ansi_black:ansi_black>b<9,9,9,999>c", hecho = "a#000000,010203b<9,9,9,999>c" },
+      { "a<0,0,0:1,2,3,4>b<9,9,9,999>c", string = "ab<9,9,9,999>c", ansi = "a\27[38:2::0:0:0m\27[48:2::1:2:3mb<9,9,9,999>c", cecho = "a<ansi_black:ansi_black>b<9,9,9,999>c", hecho = "a#000000,010203b<9,9,9,999>c" },
     }
     local hechoCases = {
       { "", string = "", ansi = "", cecho = "", decho = "" },
