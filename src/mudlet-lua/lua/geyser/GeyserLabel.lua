@@ -949,7 +949,8 @@ end
 
 --- Sets whether a screen reader announces the label's new text when it changes, for a label
 -- showing something the player should hear about, such as a status or an alert. Only heard
--- with the profile's accessibleLabels setting on; text that hasn't changed is not repeated.
+-- with the profile's accessibleLabels setting on; text that hasn't changed is not repeated, and
+-- text that changes more than once a second is heard as its latest value, once a second.
 -- @param mode "polite" waits for the screen reader to finish, "assertive" interrupts it, "off" stops announcing
 -- @return true, or nil and why the label refused it
 function Geyser.Label:setLiveRegion(mode)
