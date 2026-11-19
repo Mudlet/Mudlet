@@ -8258,6 +8258,18 @@ describe("Tests the app-wide mapper options in getConfig and setConfig", functio
     assert.is_true(setConfig("mapStitchAreas", true))
     assert.is_true(getConfig("mapStitchAreas"))
   end)
+
+  it("round-trips mapDeletedRoomExitsAsStubs, which is off unless turned on", function()
+    local original = getConfig("mapDeletedRoomExitsAsStubs")
+    finally(function() setConfig("mapDeletedRoomExitsAsStubs", original) end)
+
+    assert.are.equal("boolean", type(original))
+    assert.is_true(setConfig("mapDeletedRoomExitsAsStubs", true))
+    assert.is_true(getConfig("mapDeletedRoomExitsAsStubs"))
+    assert.is_true(getConfig().mapDeletedRoomExitsAsStubs)
+    assert.is_true(setConfig("mapDeletedRoomExitsAsStubs", false))
+    assert.is_false(getConfig("mapDeletedRoomExitsAsStubs"))
+  end)
 end)
 
 describe("Tests closing another profile that opened a map widget", function()

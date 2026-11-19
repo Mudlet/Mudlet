@@ -241,12 +241,22 @@ bool TRoomDB::__removeRoom(int id)
         // in "Container Class | Qt 5.x Core" for why an iterator into entranceMap
         // itself could not have tolerated that.
         const QList<int> enteringRoomIds = entranceMap.values(id);
+        // mapDeletedRoomExitsAsStubs: an exit that led here still leads somewhere, just not to this room
+        const bool exitsBecomeStubs = mpMap->mpHost && mpMap->mpHost->mMapperDeletedRoomExitsAsStubs;
         for (const int enteringRoomId : enteringRoomIds) {
             if (enteringRoomId == id || (isBulkDelete && mpTempRoomDeletionSet->contains(enteringRoomId))) {
                 continue; // Bypass rooms we know are also to be deleted
             }
             TRoom* r = getRoom(enteringRoomId);
             if (r) {
+                QList<int> stubDirections;
+                if (exitsBecomeStubs) {
+                    for (int direction = DIR_NORTH; direction <= DIR_OUT; ++direction) {
+                        if (r->getExit(direction) == id) {
+                            stubDirections << direction;
+                        }
+                    }
+                }
                 if (r->getNorth() == id) {
                     r->setNorth(-1);
                     r->removeExitExtras(DIR_NORTH);
@@ -294,6 +304,9 @@ bool TRoomDB::__removeRoom(int id)
                 if (r->getOut() == id) {
                     r->setOut(-1);
                     r->removeExitExtras(DIR_OUT);
+                }
+                for (const int direction : std::as_const(stubDirections)) {
+                    r->setExitStub(direction, true);
                 }
                 r->removeAllSpecialExitsToRoom(id);
                 // The plain setters above do not touch the area exit records,

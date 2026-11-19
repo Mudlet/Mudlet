@@ -1673,6 +1673,7 @@ local configOptions = {
   "lazyCaptureGlobals",
   "logDirectory",                    -- read-only in getConfig
   "logInHTML",
+  "mapDeletedRoomExitsAsStubs",
   "mapExitSize",
   "mapInfoColor",
   "mapperButton",
