@@ -2985,6 +2985,31 @@ describe("Tests mapper functions against a shared fixture", function()
       end)
     end
 
+    it("keeps its routing graph when a room is set to the area it is already in", function()
+      -- the filter only runs while the graph is being rebuilt
+      local builds = 0
+      setExitWeightFilter(function() builds = builds + 1 end)
+      assert.is_true(getPath(rA1, rA3))
+      builds = 0
+      assert.is_true(setRoomArea(rA2, areaAlpha))
+      assert.is_true(setRoomArea({rA1, rA3}, "MapperSpecAlpha"))
+      assert.is_true(getPath(rA1, rA3))
+      assert.are.equal(0, builds)
+      assert.are.equal(areaAlpha, getRoomArea(rA2))
+
+      -- moving a room to another area still rebuilds it, as the filter may route by area
+      local moved = createRoomID(); addRoom(moved)
+      finally(function() deleteRoom(moved) end)
+      -- a new room says it is in -1 before that area holds it, so this must still file it
+      assert.is_true(table.contains(getAreaRooms1(-1) or {}, moved))
+      setRoomArea(moved, areaAlpha)
+      assert.is_true(getPath(rA1, rA3))
+      builds = 0
+      assert.is_true(setRoomArea(moved, areaBeta))
+      assert.is_true(getPath(rA1, rA3))
+      assert.is_true(builds > 0)
+    end)
+
     it("reroutes around a locked exit", function()
       lockExit(rA1, "east", true)
       local ok = getPath(rA1, rA3)
