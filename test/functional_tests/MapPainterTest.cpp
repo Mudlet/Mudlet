@@ -202,6 +202,58 @@ private:
         return image;
     }
 
+    static QImage paintedView(TMapPainter& painter, const TMapPainter::View& view, TMapPainter::PaintResult& result, const qreal devicePixelRatio)
+    {
+        QImage image(qRound(scmImageWidth * devicePixelRatio), qRound(scmImageHeight * devicePixelRatio), QImage::Format_ARGB32_Premultiplied);
+        image.setDevicePixelRatio(devicePixelRatio);
+        image.fill(Qt::black);
+        QPainter imagePainter(&image);
+        painter.paintView(imagePainter, view, result);
+        return image;
+    }
+
+    // The bounding box, in device pixels, of where two images of the same size differ
+    static QRect differingPixels(const QImage& a, const QImage& b)
+    {
+        QRect box;
+        for (int y = 0; y < a.height(); ++y) {
+            for (int x = 0; x < a.width(); ++x) {
+                if (a.pixel(x, y) != b.pixel(x, y)) {
+                    box |= QRect(x, y, 1, 1);
+                }
+            }
+        }
+        return box;
+    }
+
+    // A symbol drawn at 1x and scaled up 2x without smoothing is made of 2 by 2 blocks of one colour
+    static bool hasDetailFinerThanTwoDevicePixels(const QImage& image, const QRect& area)
+    {
+        for (int y = area.top() & ~1; y + 1 < image.height() && y <= area.bottom(); y += 2) {
+            for (int x = area.left() & ~1; x + 1 < image.width() && x <= area.right(); x += 2) {
+                const QRgb corner = image.pixel(x, y);
+                if (image.pixel(x + 1, y) != corner || image.pixel(x, y + 1) != corner || image.pixel(x + 1, y + 1) != corner) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    // Where the east room's symbol lands in a fresh painter's view at a pixel ratio
+    QRect eastSymbolPixels(const qreal devicePixelRatio)
+    {
+        TRoom* pRoom = roomDB()->getRoom(scmEastRoom);
+        TMapPainter::PaintResult result;
+        pRoom->mSymbol = qsl("W");
+        TMapPainter withSymbol;
+        const QImage symbol = paintedView(withSymbol, playerView(), result, devicePixelRatio);
+        pRoom->mSymbol.clear();
+        TMapPainter withoutSymbol;
+        const QImage blank = paintedView(withoutSymbol, playerView(), result, devicePixelRatio);
+        return differingPixels(symbol, blank);
+    }
+
     // An info box line from a contributor of the test's own, which counts its calls and keeps what it was asked about
     struct InfoBoxCalls
     {
@@ -569,6 +621,95 @@ private slots:
         QCOMPARE(calls->count, 1);
         QCOMPARE(calls->roomId, scmWestRoom);
         QCOMPARE(calls->displayAreaId, mAreaId);
+    }
+
+    // On a high-DPI screen a symbol is drawn with every pixel the screen has, at the same size and place as on a 1x screen
+    void aSymbolIsDrawnAtTheScreensPixelRatio()
+    {
+        setUpPlayerView();
+        hideInfoBox();
+        for (const bool gridMode : {false, true}) {
+            roomDB()->getArea(mAreaId)->gridMode = gridMode;
+            const QRect atOne = eastSymbolPixels(1.0);
+            const QRect atTwo = eastSymbolPixels(2.0);
+            const QString where = qsl("grid mode %1: at 1x %2,%3 %4x%5; at 2x %6,%7 %8x%9")
+                                          .arg(gridMode ? qsl("on") : qsl("off"))
+                                          .arg(atOne.x())
+                                          .arg(atOne.y())
+                                          .arg(atOne.width())
+                                          .arg(atOne.height())
+                                          .arg(atTwo.x())
+                                          .arg(atTwo.y())
+                                          .arg(atTwo.width())
+                                          .arg(atTwo.height());
+            QVERIFY2(!atOne.isEmpty(), qPrintable(where));
+            QVERIFY2(qAbs(atTwo.left() - atOne.left() * 2) <= 2 && qAbs(atTwo.top() - atOne.top() * 2) <= 2, qPrintable(where));
+            QVERIFY2(qAbs(atTwo.right() - atOne.right() * 2 - 1) <= 2 && qAbs(atTwo.bottom() - atOne.bottom() * 2 - 1) <= 2, qPrintable(where));
+
+            roomDB()->getRoom(scmEastRoom)->mSymbol = qsl("W");
+            TMapPainter painter;
+            TMapPainter::PaintResult result;
+            const QImage image = paintedView(painter, playerView(), result, 2.0);
+            QVERIFY2(hasDetailFinerThanTwoDevicePixels(image, atTwo), qPrintable(where + qsl("; ") + saved(image, qsl("high-dpi-symbol"))));
+        }
+    }
+
+    // Moving the view to a screen of another pixel ratio must not reuse the symbols made for the old one
+    void movingToAnotherScreenRemakesTheSymbols()
+    {
+        setUpPlayerView();
+        hideInfoBox();
+        roomDB()->getRoom(scmEastRoom)->mSymbol = qsl("W");
+        for (const auto& [from, to] : {std::pair{1.0, 2.0}, std::pair{2.0, 1.0}}) {
+            TMapPainter painter;
+            TMapPainter freshPainter;
+            TMapPainter::PaintResult result;
+            paintedView(painter, playerView(), result, from);
+            const QImage moved = paintedView(painter, result.view, result, to);
+            const QImage fresh = paintedView(freshPainter, playerView(), result, to);
+            QVERIFY(!eastSymbolPixels(to).isEmpty());
+            roomDB()->getRoom(scmEastRoom)->mSymbol = qsl("W");
+            const QString name = qsl("moved-%1x-to-%2x").arg(from).arg(to);
+            QVERIFY2(moved == fresh, qPrintable(saved(moved, name) + qsl("; ") + saved(fresh, name + qsl("-fresh"))));
+        }
+    }
+
+    // An area image exported at a zoom draws its symbols at that zoom, not scaled up from 1x
+    void anExportedSymbolIsDrawnAtTheExportsZoom()
+    {
+        setUpPlayerView();
+        TRoom* pRoom = roomDB()->getRoom(scmEastRoom);
+        const auto exportedAtTwo = [this](const QString& name) {
+            TMapPainter painter;
+            painter.setView(playerView());
+            QObject saveOwner;
+            const QString exportFile = qsl("%1/%2.png").arg(mConfigDir.path(), name);
+            const auto [exportStarted, exportMessage] = painter.exportArea(mAreaId, exportFile, 0, 2.0, false, &saveOwner);
+            return exportStarted ? exported(&saveOwner, exportFile) : QImage();
+        };
+        pRoom->mSymbol = qsl("W");
+        const QImage symbol = exportedAtTwo(qsl("zoomed-symbol"));
+        pRoom->mSymbol.clear();
+        const QImage blank = exportedAtTwo(qsl("zoomed-blank"));
+        QVERIFY(!symbol.isNull() && symbol.size() == blank.size());
+        const QRect symbolPixels = differingPixels(symbol, blank);
+        QVERIFY2(!symbolPixels.isEmpty(), qPrintable(saved(symbol, qsl("zoomed-export"))));
+        QVERIFY2(hasDetailFinerThanTwoDevicePixels(symbol, symbolPixels), qPrintable(saved(symbol, qsl("zoomed-export"))));
+    }
+
+    // At a zoom so small that a symbol has no device pixels at all, there is nothing to paint it on
+    void anExportTooSmallForItsSymbolsLeavesThemOut()
+    {
+        setUpPlayerView();
+        roomDB()->getRoom(scmEastRoom)->mSymbol = qsl("W");
+        TMapPainter painter;
+        painter.setView(playerView());
+        QObject saveOwner;
+        const QString exportFile = qsl("%1/tiny-export.png").arg(mConfigDir.path());
+        QTest::failOnWarning(QRegularExpression(qsl("^QPainter::")));
+        const auto [exportStarted, exportMessage] = painter.exportArea(mAreaId, exportFile, 0, 0.01, false, &saveOwner);
+        QVERIFY2(exportStarted, qPrintable(exportMessage));
+        QVERIFY(!exported(&saveOwner, exportFile).isNull());
     }
 
     // In grid mode a room fills its whole cell
