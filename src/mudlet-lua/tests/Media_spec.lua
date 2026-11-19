@@ -1359,6 +1359,212 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(20, playing[1].volume)
   end)
 
+  it("a stop sent while the file is still downloading keeps the sound from starting once it lands", function()
+    if noFixtureServer() then
+      return
+    end
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local downloadName = "busted-media-stop-download.wav"
+    local downloaded = mediaDirectory .. "/" .. downloadName
+    lfs.mkdir(mediaDirectory)
+    os.remove(downloaded)
+    onCleanup(function() os.remove(downloaded) end)
+    onCleanup(function() stopSounds() end)
+    local done, started = {}, {}
+    collect("sysDownloadDone", done)
+    collect("sysMediaStarted", started)
+
+    assert.is_true(playSoundFile({name = downloadName, url = fixtureUrl() .. "/media", volume = 60, key = "busted-media-stop-download"}))
+    assert.is_true(stopSounds({key = "busted-media-stop-download"}))
+    waitForCount("sysDownloadDone", done, 1)
+    waitForEvent("sysMediaStarted", quietMilliseconds)
+
+    assert.equals(1, #done)
+    assert.equals(0, #started)
+    assert.equals(0, #getPlayingSounds())
+    -- still saved, so the next play of it needs no download
+    assert.is_not_nil(lfs.attributes(downloaded, "mode"), "the stopped download did not keep its file")
+  end)
+
+  it("a stop from a sysDownloadDone handler keeps the downloaded sound from starting", function()
+    if noFixtureServer() then
+      return
+    end
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local downloadName = "busted-media-stop-on-done.wav"
+    local downloaded = mediaDirectory .. "/" .. downloadName
+    lfs.mkdir(mediaDirectory)
+    os.remove(downloaded)
+    onCleanup(function() os.remove(downloaded) end)
+    onCleanup(function() stopSounds() end)
+    local done, started = {}, {}
+    local handler = registerAnonymousEventHandler("sysDownloadDone", function(_, path)
+      if contains(path, downloadName) then
+        done[#done + 1] = path
+        stopSounds({key = "busted-media-stop-on-done"})
+      end
+    end)
+    onCleanup(function() killAnonymousEventHandler(handler) end)
+    collect("sysMediaStarted", started)
+
+    assert.is_true(playSoundFile({name = downloadName, url = fixtureUrl() .. "/media", volume = 60, key = "busted-media-stop-on-done"}))
+    waitForCount("sysDownloadDone", done, 1)
+    waitForEvent("sysMediaStarted", quietMilliseconds)
+
+    assert.equals(1, #done)
+    assert.equals(0, #started)
+    assert.equals(0, #getPlayingSounds())
+  end)
+
+  it("a stop for other media leaves a file still downloading to play once it lands", function()
+    if noFixtureServer() then
+      return
+    end
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local downloadName = "busted-media-stop-other-download.wav"
+    local downloaded = mediaDirectory .. "/" .. downloadName
+    lfs.mkdir(mediaDirectory)
+    os.remove(downloaded)
+    onCleanup(function() os.remove(downloaded) end)
+    onCleanup(function() stopSounds() end)
+
+    assert.is_true(playSoundFile({name = downloadName, url = fixtureUrl() .. "/media", volume = 60, key = "busted-media-stop-other-download"}))
+    assert.is_true(stopSounds({key = "busted-media-some-other-key"}))
+    assert.is_true(stopMusic())
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 10000)))
+    assert.equals(1, #getPlayingSounds({key = "busted-media-stop-other-download"}))
+  end)
+
+  it("purgeMediaCache keeps a file still downloading from starting once it lands", function()
+    if noFixtureServer() then
+      return
+    end
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local downloadName = "busted-media-purge-download.wav"
+    local downloaded = mediaDirectory .. "/" .. downloadName
+    lfs.mkdir(mediaDirectory)
+    preserveMediaDirectory()
+    onCleanup(function() os.remove(downloaded) end)
+    onCleanup(function() stopSounds() end)
+    local done, started = {}, {}
+    collect("sysDownloadDone", done)
+    collect("sysMediaStarted", started)
+
+    assert.is_true(playSoundFile({name = downloadName, url = fixtureUrl() .. "/media", volume = 60, key = "busted-media-purge-download"}))
+    assert.is_true(purgeMediaCache())
+    -- Otherwise the download fails to save and raises sysDownloadError, so would never play anyway
+    lfs.mkdir(mediaDirectory)
+    waitForCount("sysDownloadDone", done, 1)
+    waitForEvent("sysMediaStarted", quietMilliseconds)
+
+    assert.equals(1, #done)
+    assert.equals(0, #started, "the purge did not reach the file still downloading")
+  end)
+
+  it("an MSP Off keeps an MSP sound still downloading from starting once it lands", function()
+    if noFixtureServer() then
+      return
+    end
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local downloadName = "busted-msp-off-download.wav"
+    local downloaded = mediaDirectory .. "/" .. downloadName
+    lfs.mkdir(mediaDirectory)
+    os.remove(downloaded)
+    onCleanup(function() os.remove(downloaded) end)
+    onCleanup(function() stopSounds() end)
+    feedTelnet("<T_IAC><T_DO><O_MSP>")
+    onCleanup(function() feedTelnet("<T_IAC><T_DONT><O_MSP>") end)
+    local done, started = {}, {}
+    collect("sysDownloadDone", done)
+    collect("sysMediaStarted", started)
+
+    assert.is_true(receiveMSP("!!SOUND(" .. downloadName .. " U=" .. fixtureUrl() .. "/media/)"))
+    assert.is_true(receiveMSP("!!SOUND(Off)"))
+    waitForCount("sysDownloadDone", done, 1)
+    waitForEvent("sysMediaStarted", quietMilliseconds)
+
+    assert.equals(1, #done, "the MSP sound never reached the download, so this proves nothing")
+    assert.equals(0, #started, "the MSP Off did not reach the sound still downloading")
+  end)
+
+  it("a play with a priority leaves lower-priority and unprioritized files still downloading to play once they land", function()
+    if noFixtureServer() then
+      return
+    end
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    local downloads = {
+      {name = "busted-media-priority-lower-download.wav", key = "busted-media-priority-lower-download", priority = 30},
+      {name = "busted-media-priority-unset-download.wav", key = "busted-media-priority-unset-download"},
+    }
+    lfs.mkdir(mediaDirectory)
+    for _, download in ipairs(downloads) do
+      local downloaded = mediaDirectory .. "/" .. download.name
+      os.remove(downloaded)
+      onCleanup(function() os.remove(downloaded) end)
+    end
+    onCleanup(function() stopSounds() end)
+    local done = {}
+    collect("sysDownloadDone", done)
+
+    for _, download in ipairs(downloads) do
+      assert.is_true(playSoundFile({name = download.name, url = fixtureUrl() .. "/media", volume = 60, priority = download.priority, key = download.key}))
+    end
+    assert.is_true(playSoundFile({name = longSoundFile, volume = 60, priority = 50, key = "busted-media-priority-local"}))
+    -- Still playing, it would outrank the lower-priority download when it lands
+    assert.is_true(stopSounds({key = "busted-media-priority-local"}))
+    waitForCount("sysDownloadDone", done, 2)
+    for _, download in ipairs(downloads) do
+      for _ = 1, 20 do
+        if #getPlayingSounds({key = download.key}) > 0 then
+          break
+        end
+        waitForEvent("sysMediaStarted", 500)
+      end
+      assert.equals(1, #getPlayingSounds({key = download.key}), "a play with a priority kept " .. download.name .. " from starting")
+    end
+  end)
+
+  it("a play with a priority leaves a higher-priority file still downloading to play once it lands", function()
+    if noFixtureServer() then
+      return
+    end
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    local downloadName = "busted-media-priority-higher-download.wav"
+    local downloaded = mediaDirectory .. "/" .. downloadName
+    lfs.mkdir(mediaDirectory)
+    os.remove(downloaded)
+    onCleanup(function() os.remove(downloaded) end)
+    onCleanup(function() stopSounds() end)
+    local started = {}
+    collect("sysMediaStarted", started)
+
+    assert.is_true(playSoundFile({name = downloadName, url = fixtureUrl() .. "/media", volume = 60, priority = 80, key = "busted-media-priority-higher"}))
+    assert.is_true(playSoundFile({name = longSoundFile, volume = 60, priority = 50, key = "busted-media-priority-lower-local"}))
+    for _ = 1, 20 do
+      if #getPlayingSounds({key = "busted-media-priority-higher"}) > 0 then
+        break
+      end
+      waitForEvent("sysMediaStarted", 500)
+    end
+    assert.equals(1, #getPlayingSounds({key = "busted-media-priority-higher"}))
+  end)
+
   it("loadVideoFile reports a download error for a url it cannot fetch from", function()
     -- The preload reaches the same fetch as a play would, so the refusal of a
     -- url that is not http(s) is where a spec can see a load act on its url
@@ -3205,6 +3411,58 @@ describe("Media playback effects with a generated sound file", function()
     -- sysMediaStarted to wait for, so give the player the turns it would need
     pumpEvents(quietMilliseconds)
     assert.equals(0, #started, "a Client.Media.Load played the file it had just fetched")
+  end)
+
+  it("a Client.Media.Stop message keeps a file still downloading from starting once it lands", function()
+    if noFixtureServer() then
+      return
+    end
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local downloadName = "busted-gmcp-stop-download.wav"
+    local downloaded = mediaDirectory .. "/" .. downloadName
+    lfs.mkdir(mediaDirectory)
+    os.remove(downloaded)
+    onCleanup(function() os.remove(downloaded) end)
+    stopGmcpMediaAfterwards()
+
+    local done, started = {}, {}
+    collect("sysDownloadDone", done)
+    collect("sysMediaStarted", started)
+
+    feedGmcp('Client.Media.Play {"name": "' .. downloadName .. '", "url": "' .. fixtureUrl() .. '/media", "key": "busted-gmcp-stop-download"}')
+    feedGmcp('Client.Media.Stop {}')
+    waitForCount("sysDownloadDone", done, 1)
+    pumpEvents(quietMilliseconds)
+
+    assert.equals(1, #done)
+    assert.equals(0, #started, "a Client.Media.Stop did not reach the file still downloading")
+  end)
+
+  it("a Client.Media.Stop message leaves a file a script is still downloading to play once it lands", function()
+    if noFixtureServer() then
+      return
+    end
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local downloadName = "busted-gmcp-stop-api-download.wav"
+    local downloaded = mediaDirectory .. "/" .. downloadName
+    lfs.mkdir(mediaDirectory)
+    os.remove(downloaded)
+    onCleanup(function() os.remove(downloaded) end)
+    onCleanup(function() stopSounds() end)
+
+    assert.is_true(playSoundFile({name = downloadName, url = fixtureUrl() .. "/media", volume = 60, key = "busted-gmcp-stop-api-download"}))
+    feedGmcp('Client.Media.Stop {}')
+    for _ = 1, 20 do
+      if #getPlayingSounds({key = "busted-gmcp-stop-api-download"}) > 0 then
+        break
+      end
+      waitForEvent("sysMediaStarted", 500)
+    end
+    assert.equals(1, #getPlayingSounds({key = "busted-gmcp-stop-api-download"}))
   end)
 
   it("a Client.Media.Play message that names the video type is played as a video", function()

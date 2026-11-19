@@ -39,6 +39,7 @@
 #include <QMetaMethod>
 #include <QNetworkDiskCache>
 #include <QRandomGenerator>
+#include <QScopeGuard>
 #include <QSaveFile>
 #include <QStandardPaths>
 #include <QTimer>
@@ -403,12 +404,6 @@ void TMedia::stopMedia(TMediaData& mediaData, const PriorityStop priorityStop)
         mediaData.setMediaPriority(TMediaData::MediaPriorityNotSet);
     }
 
-    QList<std::shared_ptr<TMediaPlayer>> mediaPlayerList = findMediaPlayersByCriteria(mediaData);
-
-    if (mediaPlayerList.isEmpty()) {
-        return;
-    }
-
     if (!mediaData.mediaFileName().isEmpty() && mediaData.mediaInput() == TMediaData::MediaInputFile) {
         const bool fileRelative = TMedia::isFileRelative(mediaData);
 
@@ -418,18 +413,29 @@ void TMedia::stopMedia(TMediaData& mediaData, const PriorityStop priorityStop)
     }
 
     const TMediaData fileRequest = requestForFilePlayers(mediaData);
+    const auto stops = [&](const TMediaData& candidate) {
+        if (!isMediaMatch(candidate, candidate.mediaInput() == TMediaData::MediaInputFile ? fileRequest : mediaData, BareName::AlsoMatchesSourceFile)) {
+            return false;
+        }
+        return mediaData.mediaPriority() == TMediaData::MediaPriorityNotSet || candidate.mediaPriority() == TMediaData::MediaPriorityNotSet
+               || (priorityStop == PriorityStop::Below ? candidate.mediaPriority() < mediaData.mediaPriority() : candidate.mediaPriority() <= mediaData.mediaPriority());
+    };
+
+    // A file still downloading has no player yet, and would start once it lands; as a preload it is
+    // still saved, but not played. A play's priority stop leaves downloads alone: it matches every
+    // name, and scripts rely on a sound they asked for still playing once its download lands.
+    if (priorityStop != PriorityStop::Below) {
+        for (TMediaData& pending : mMediaDownloads) {
+            if (pending.mediaProtocol() == mediaData.mediaProtocol() && (mediaData.mediaType() == TMediaData::MediaTypeNotSet || pending.mediaType() == mediaData.mediaType()) && stops(pending)) {
+                pending.setMediaVolume(TMediaData::MediaVolumePreload);
+            }
+        }
+    }
+
+    QList<std::shared_ptr<TMediaPlayer>> mediaPlayerList = findMediaPlayersByCriteria(mediaData);
 
     for (auto& pPlayer : mediaPlayerList) {
-        if (!pPlayer) {
-            continue;
-        }
-
-        if (!isMediaMatch(pPlayer, pPlayer->mediaData().mediaInput() == TMediaData::MediaInputFile ? fileRequest : mediaData, BareName::AlsoMatchesSourceFile)) {
-            continue;
-        }
-
-        if (mediaData.mediaPriority() != TMediaData::MediaPriorityNotSet && pPlayer->mediaData().mediaPriority() != TMediaData::MediaPriorityNotSet
-            && (priorityStop == PriorityStop::Below ? pPlayer->mediaData().mediaPriority() >= mediaData.mediaPriority() : pPlayer->mediaData().mediaPriority() > mediaData.mediaPriority())) {
+        if (!pPlayer || !stops(pPlayer->mediaData())) {
             continue;
         }
 
@@ -845,6 +851,11 @@ bool TMedia::resume(TMediaData mediaData)
 
 void TMedia::stopAllMediaPlayers()
 {
+    // A file still downloading must not start once it lands
+    for (TMediaData& pending : mMediaDownloads) {
+        pending.setMediaVolume(TMediaData::MediaVolumePreload);
+    }
+
     TMediaData mediaData{};
 
     mediaData.setMediaProtocol(TMediaData::MediaProtocolNotSet);
@@ -1458,7 +1469,10 @@ void TMedia::slot_writeFile(QNetworkReply* reply)
 {
     TEvent event{};
     TMediaData mediaData = mMediaDownloads.value(reply);
-    mMediaDownloads.remove(reply);
+    // Listed until this returns, so a stop from a sysDownloadDone handler still reaches the request
+    const auto unlist = qScopeGuard([this, reply] {
+        mMediaDownloads.remove(reply);
+    });
 
     if (reply->error() != QNetworkReply::NoError) {
         event.mArgumentList << qsl("sysDownloadError");
@@ -1532,10 +1546,11 @@ void TMedia::slot_writeFile(QNetworkReply* reply)
 
                 reply->deleteLater();
                 mpHost->raiseEvent(event);
+                mediaData = mMediaDownloads.value(reply);
 
-                // A preload (volume 0) asked for the file to be in the cache, not to be
-                // heard: playMedia() returns before playing one it already has, so a
-                // download must not play the copy it has just made either.
+                // A preload (volume 0), whether asked for or left by a stop, wants the file
+                // cached, not heard: playMedia() returns before playing one it already has,
+                // so a download must not play the copy it has just made either.
                 if (mediaData.mediaVolume() != TMediaData::MediaVolumePreload) {
                     TMedia::play(mediaData);
                 }
