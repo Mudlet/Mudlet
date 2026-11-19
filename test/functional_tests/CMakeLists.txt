@@ -111,6 +111,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     WindowBackgroundTest.cpp
     WindowLayoutSaveTest.cpp
     WindowStateGettersTest.cpp
+    WindowStaysOnTopTest.cpp
     ConsoleSearchBarTest.cpp
     WrapLineRewrapTest.cpp
     ScrollLostOnPartialRepaintTest.cpp

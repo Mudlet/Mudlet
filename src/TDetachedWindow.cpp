@@ -714,12 +714,6 @@ void TDetachedWindow::hideEvent(QHideEvent* event)
         return;
     }
 
-    // Allow hiding if we're changing window flags (e.g., always on top)
-    if (mIsChangingWindowFlags) {
-        QMainWindow::hideEvent(event);
-        return;
-    }
-
     // Prevent the window from being hidden if it should stay visible (has profiles)
     // IMPORTANT: Only allow hiding if there are NO profiles remaining, regardless of mIsReattaching
     if (mShouldStayVisible && mpTabBar && mpTabBar->count() > 0) {
@@ -1697,25 +1691,7 @@ void TDetachedWindow::slot_toggleFullScreenView()
 
 void TDetachedWindow::slot_toggleAlwaysOnTop()
 {
-    // Set flag to allow hiding during window flag changes
-    mIsChangingWindowFlags = true;
-
-    Qt::WindowFlags flags = windowFlags();
-
-    if (flags & Qt::WindowStaysOnTopHint) {
-        // Remove always on top flag
-        setWindowFlags(flags & ~Qt::WindowStaysOnTopHint);
-    } else {
-        // Add always on top flag
-        setWindowFlags(flags | Qt::WindowStaysOnTopHint);
-    }
-
-    show(); // Required after changing window flags
-
-    // Reset flag after a short delay to allow the window operations to complete
-    QTimer::singleShot(100ms, this, [this]() {
-        mIsChangingWindowFlags = false;
-    });
+    mudlet::setWindowStaysOnTop(this, !(windowFlags() & Qt::WindowStaysOnTopHint));
 }
 
 void TDetachedWindow::slot_toggleToolBarVisibility()
