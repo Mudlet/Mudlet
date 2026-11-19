@@ -2586,7 +2586,7 @@ function moveCursorDown(window, lines, keep_horizontal)
 end
 
 -- internal function that handles coloured replace variants
-function xReplace(window, text, type)
+function xReplace(window, text, type, wholeLine)
   if not text then
     text = window
     window = "main"
@@ -2595,13 +2595,12 @@ function xReplace(window, text, type)
   if not str then
     return nil, start
   end
-	if window ~= "main" then
-		replace(window, "")
-    moveCursor(window, start, getLineNumber(window))
-	else
-		replace("")
-    moveCursor(start, getLineNumber())
-	end
+  local blanked, blankError = replace(window, "")
+  -- an empty line selects as "", 0, 0, which replace() cannot tell from no selection
+  if not blanked and not wholeLine then
+    return nil, (blankError:gsub("^replace:", (type or "") .. "replace:"))
+  end
+  moveCursor(window, start, getLineNumber(window))
   if type == 'c' then
     return cinsertText(window, text)
   elseif type == 'd' then
@@ -2633,7 +2632,7 @@ function creplaceLine(window, text)
   else
     selectCurrentLine(window)
   end
-  return creplace(window, text)
+  return xReplace(window, text, 'c', true)
 end
 
 --- version of replace function that allows for color, by way of dinsertText
@@ -2655,7 +2654,7 @@ function dreplaceLine(window, text)
   else
     selectCurrentLine(window)
   end
-  return dreplace(window, text)
+  return xReplace(window, text, 'd', true)
 end
 
 --- version of replace function that allows for color, by way of hinsertText
@@ -2677,7 +2676,7 @@ function hreplaceLine(window, text)
   else
     selectCurrentLine(window)
   end
-  return hreplace(window, text)
+  return xReplace(window, text, 'h', true)
 end
 
 function resetLabelToolTip(label)

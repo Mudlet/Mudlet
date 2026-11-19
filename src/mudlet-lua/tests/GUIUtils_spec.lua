@@ -3619,6 +3619,24 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.equals("newer still", currentLine())
     end)
 
+    it("Should answer nil and a message, and leave the line alone, when nothing is selected", function()
+      for name, colourReplace in pairs({creplace = creplace, dreplace = dreplace, hreplace = hreplace}) do
+        assert.equals(-1, selectString(windowName, "not on the line", 1))
+        local result, message = colourReplace(windowName, "earth")
+        assert.is_nil(result, name)
+        assert.equals(name, message:match("^(%a+):"), message)
+        assert.equals("hello world", currentLine(), name)
+      end
+    end)
+
+    it("Should fill an empty line with the replaceLine variants", function()
+      for name, colourReplaceLine in pairs({creplaceLine = creplaceLine, dreplaceLine = dreplaceLine, hreplaceLine = hreplaceLine}) do
+        clearWindow(windowName)
+        assert.is_true(colourReplaceLine(windowName, "filled"), name)
+        assert.equals("filled", currentLine(), name)
+      end
+    end)
+
     it("Should answer nil and a message for a window that does not exist", function()
       for _, colourReplace in ipairs({creplace, dreplace, hreplace}) do
         local ok, result, message = pcall(colourReplace, "guiUtilsNoSuchWindow", "x")
