@@ -350,6 +350,46 @@ std::pair<bool, QString> TNullMapView::exportAreaToImage(const int areaId, const
 }
 
 // As dlgMapper::setMapZoom() and T2DMap::setMapZoom()
+// As T2DMap::centerview() for the main view: the view pans to the room as a drag would, so paint() leaves it there
+// until the player's room changes
+std::pair<bool, QString> TNullMapView::centerViewOn(const int roomId)
+{
+    TMap* pMap = mpHost->mpMap.data();
+    TRoomDB* pRoomDB = pMap->mpRoomDB.get();
+    const TRoom* pRoom = pRoomDB->getRoom(roomId);
+    if (!pRoom) {
+        return {false, qsl("room %1 not found").arg(roomId)};
+    }
+    const int areaId = pRoom->getArea();
+    if (!pRoomDB->getArea(areaId)) {
+        return {false, qsl("room %1 references non-existent area %2").arg(roomId).arg(areaId)};
+    }
+    // The room paint() compares against, with T2DMap's fallback to the map's first room
+    int playerRoomId = pMap->mRoomIdHash.value(pMap->mProfileName);
+    if (!pRoomDB->getRoom(playerRoomId) && !pRoomDB->isEmpty()) {
+        playerRoomId = pRoomDB->getRoomMap().constBegin().key();
+    }
+    if (shownAreaId() != areaId) {
+        TMapPainter::pruneSelectionToArea(pMap, mView.mMultiSelectionSet, mView.mMultiSelectionHighlightRoomId, areaId);
+    }
+    mRecentre = false;
+    mPendingZoom.reset();
+    mView.mAreaID = areaId;
+    mView.mRoomID = playerRoomId;
+    mView.mShiftMode = true;
+    mView.mMapCenterX = pRoom->x();
+    mView.mMapCenterY = -pRoom->y();
+    mView.mMapCenterZ = pRoom->z();
+    mView.xyzoom = pRoomDB->get2DMapZoom(areaId);
+    if (mView.mLastViewedAreaID != areaId) {
+        const int lastViewedAreaId = mView.mLastViewedAreaID;
+        mView.mLastViewedAreaID = areaId;
+        raiseAreaChanged(areaId, lastViewedAreaId);
+    }
+    requestRepaint();
+    return {true, QString()};
+}
+
 std::pair<bool, QString> TNullMapView::setMapZoom(const qreal zoom, const int areaId)
 {
     if (const QString error = TMap::zoomError(zoom); !error.isEmpty()) {

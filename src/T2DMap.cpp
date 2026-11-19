@@ -1016,6 +1016,16 @@ std::pair<bool, QString> T2DMap::centerview(int roomId)
     mAreaID = areaId;
     mLastViewedAreaID = areaId;
     mRoomID = roomId;
+    if (!mIsSecondaryView) {
+        // The main view follows the player unless panned away from the room it last followed, so this pans: the
+        // view stays here until the player moves. The painter falls back to the map's first room as T2DMap does
+        int playerRoomId = mpMap->mRoomIdHash.value(mpMap->mProfileName);
+        if (!mpMap->mpRoomDB->getRoom(playerRoomId) && !mpMap->mpRoomDB->isEmpty()) {
+            playerRoomId = mpMap->mpRoomDB->getRoomMap().constBegin().key();
+        }
+        mRoomID = playerRoomId;
+        mShiftMode = true;
+    }
     mMapCenterX = pR->x();
     mMapCenterY = -pR->y(); // Map y coordinates are reversed
     mMapCenterZ = pR->z();

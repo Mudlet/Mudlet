@@ -761,10 +761,18 @@ int TLuaInterpreter::centerview(lua_State* L)
 
     const int roomId = getVerifiedInt(L, __func__, 1, "roomID");
 
-    // Optional viewId parameter for secondary views
+    // Optional: a secondary view's id, or for the main view whether the player moves there too (false only pans to it)
     int viewId = 0;
-    if (lua_gettop(L) >= 2) {
-        viewId = getVerifiedInt(L, __func__, 2, "view id", true);
+    bool movePlayer = true;
+    if (lua_gettop(L) >= 2 && !lua_isnil(L, 2)) {
+        if (lua_isboolean(L, 2)) {
+            movePlayer = lua_toboolean(L, 2);
+        } else if (lua_isnumber(L, 2)) {
+            viewId = static_cast<int>(lua_tointeger(L, 2));
+        } else {
+            errorArgumentType(L, __func__, 2, "view id or movePlayer", "number or boolean", true);
+            return lua_error(L);
+        }
     }
 
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
@@ -791,6 +799,14 @@ int TLuaInterpreter::centerview(lua_State* L)
     // Primary mapper behavior (original code)
     if (!host.mapOpen()) {
         return warnArgumentValue(L, __func__, "you haven't opened a map yet");
+    }
+
+    if (!movePlayer) {
+        if (auto [centered, refusal] = host.mapViewFrontend()->centerViewOn(roomId); !centered) {
+            return warnArgumentValue(L, __func__, refusal);
+        }
+        lua_pushboolean(L, true);
+        return 1;
     }
 
     host.mpMap->mRoomIdHash[host.getName()] = roomId;

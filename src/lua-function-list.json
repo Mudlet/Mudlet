@@ -33,7 +33,7 @@
     "cecho2string": "plainText = cecho2string(formattedText)",
     "cechoLink": "cechoLink([windowName], text, command, hint, true)",
     "cechoPopup": "cechoPopup([windowName], text, {commands}, {hints}, [useCurrentFormatElseDefault])",
-    "centerview": "centerview (roomID)",
+    "centerview": "centerview (roomID[, viewID or movePlayer])",
     "cfeedTriggers": "cfeedTriggers(text)",
     "cinsertLink": "cinsertLink([windowName], text, command, hint, true)",
     "cinsertPopup": "cinsertPopup([windowName], text, {commands}, {hints}, [useCurrentFormatElseDefault])",
