@@ -47,6 +47,7 @@
 #include <QProgressBar>
 #include <QProgressDialog>
 #include <QPushButton>
+#include <QScopeGuard>
 #include <QSettings>
 #include <QSignalBlocker>
 #include <QTimer>
@@ -513,7 +514,11 @@ void dlgMapper::loadMapFromFile()
     dialog->setDirectory(lastDir);
     dialog->setNameFilter(filters.join(qsl(";;")));
     connect(dialog, &QDialog::finished, this, [this, dialog](int result) {
-        dialog->deleteLater();
+        // Only once the load is done: it pumps events to repaint its progress, and on macOS the native dialog's result
+        // arrives outside any Qt event, where that pump would run this delete while QFileDialog::done() is still running
+        const auto deleteDialog = qScopeGuard([dialog]() {
+            dialog->deleteLater();
+        });
         if (result != QDialog::Accepted || dialog->selectedFiles().isEmpty()) {
             return;
         }
