@@ -649,6 +649,25 @@ describe("Tests the sound and music MSP asks for", function()
     assert.equals(higher, started[2].file)
   end)
 
+  -- Most games send no P=, and their overlapping effects must all be heard
+  it("plays a !!SOUND subnegotiation with no P= alongside another with none", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local first = hold("telnet-unranked-first")
+    local second = brief("telnet-unranked-second")
+    local started = watchStarts()
+
+    feedMsp(("!!SOUND(%s)"):format(first))
+    waitForCount("sysMediaStarted", started, 1)
+    assert.equals(1, #started, names(started))
+
+    feedMsp(("!!SOUND(%s)"):format(second))
+    waitForCount("sysMediaStarted", started, 2)
+    assert.equals(2, #started, names(started))
+    assert.equals(second, started[2].file)
+  end)
+
   it("restarts music already playing only when the subnegotiation gives C=0", function()
     if mediaPlaybackUnavailable() then
       return

@@ -297,6 +297,32 @@ private slots:
         QCOMPARE(TAudioMixer::self()->queuedSamples(), 0);
     }
 
+    void test_anMspRequestPlaysAtTheVolumeItAsksFor_data()
+    {
+        QTest::addColumn<QString>("request");
+        QTest::addColumn<float>("gain");
+        QTest::newRow("sound with no V=") << qsl("!!SOUND(%1)") << 1.0F;
+        QTest::newRow("music with no V=") << qsl("!!MUSIC(%1)") << 1.0F;
+        QTest::newRow("sound with V=40") << qsl("!!SOUND(%1 V=40)") << 0.4F;
+    }
+
+    // A Lua spec cannot see this: what a game starts is kept out of the Lua queries. The output is
+    // kept shut, so no audio device is needed.
+    void test_anMspRequestPlaysAtTheVolumeItAsksFor()
+    {
+        QFETCH(const QString, request);
+        QFETCH(const float, gain);
+        SKIP_OR_FAIL_WITHOUT(backendFeedsTheMix() ? QString() : noMixingReason());
+        TAudioMixer::self()->setOutputSuspended(true);
+        auto resume = qScopeGuard([]() {
+            TAudioMixer::self()->setOutputSuspended(false);
+        });
+        const QString fileName = writeClip(qsl("msp-volume.wav"), 3000);
+        mpHost->mTelnet.setMSPVariables(request.arg(fileName).toUtf8());
+        QVERIFY2(mixedVoice(), "The MSP request was not played through the shared output.");
+        QCOMPARE(mixedVoice()->gain(), gain);
+    }
+
     void test_aSoundMovedOffTheMixAsItStartsStillEndsOnce_data()
     {
         QTest::addColumn<int>("passes");
