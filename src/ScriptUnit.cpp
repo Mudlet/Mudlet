@@ -202,6 +202,9 @@ void ScriptUnit::reParentScript(int childID, int oldParentID, int newParentID, i
     // The profile save skips a top-level module member and the module save only walks its own
     // folder, so an item moved out of a module that kept the mark would be saved nowhere
     pChild->updateModuleMembership();
+    // Moved out of a switched off tree into a switched on one, it would otherwise wait for an
+    // unrelated script there to be switched on
+    compileSwitchedOn(pChild);
 }
 
 void ScriptUnit::reParentScript(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position)
@@ -297,14 +300,65 @@ int ScriptUnit::getNewID()
 bool ScriptUnit::enableScript(const QString& name)
 {
     bool found = false;
-    for (auto script : std::as_const(mScriptMap)) {
-        if (script->getName() == name) {
-            script->setIsActive(true);
-            found = true;
-            emit mpHost->signal_scriptToggled(script->getID());
+    // A copy: the bodies compileSwitchedOn() runs can create scripts
+    const QMap<int, TScript*> scripts = mScriptMap;
+    for (auto script : scripts) {
+        if (script->getName() != name) {
+            continue;
         }
+        found = true;
+        // A body run by an earlier match can uninstall this one's package, which switches it off
+        if (pendingDeletion(script)) {
+            continue;
+        }
+        script->setIsActive(true);
+        compileSwitchedOn(script);
+        emit mpHost->signal_scriptToggled(script->getID());
     }
     return found;
+}
+
+void ScriptUnit::compileSwitchedOn(TScript* pScript)
+{
+    TScript* pRoot = pScript;
+    while (pRoot->getParent()) {
+        pRoot = pRoot->getParent();
+    }
+    if (!mCompilePassDone && std::find(mRootsCompiledThisPass.begin(), mRootsCompiledThisPass.end(), pRoot) == mRootsCompiledThisPass.end()) {
+        return;
+    }
+    // A body in a tree being run switches that tree on: the walk already running reaches the rest in order
+    if (!pRoot->isActive() || std::find(mRootsBeingCompiled.begin(), mRootsBeingCompiled.end(), pRoot) != mRootsBeingCompiled.end()) {
+        return;
+    }
+    std::vector<TScript*> waiting;
+    const std::function<void(TScript*)> collectWaiting = [&](TScript* pNode) {
+        if (pNode->waitingToRun()) {
+            waiting.push_back(pNode);
+        }
+        for (auto* pChild : *pNode->getChildrenList()) {
+            collectWaiting(static_cast<TScript*>(pChild));
+        }
+    };
+    collectWaiting(pRoot);
+    // Keeps the scripts in waiting alive until they are checked below: a body can uninstall its own package
+    beginProcessing();
+    mRootsBeingCompiled.push_back(pRoot);
+    // Only the scripts still waiting to run their body are compiled
+    pRoot->compileAll();
+    mRootsBeingCompiled.pop_back();
+    // Run without saveLoadingError, so the load and reset report never names these. Like that
+    // report, it leaves out a script switched off itself, whose body runs with its group's
+    QStringList failed;
+    for (auto* pNode : waiting) {
+        if (!pNode->waitingToRun() && !pNode->state() && pNode->shouldBeActive() && !pendingDeletion(pNode)) {
+            failed << pNode->getName();
+        }
+    }
+    endProcessing();
+    if (!failed.isEmpty()) {
+        mpHost->reportScriptsThatFailedToRun(failed);
+    }
 }
 
 bool ScriptUnit::disableScript(const QString& name)
@@ -328,11 +382,26 @@ void ScriptUnit::compileAll(bool saveLoadingError)
     // the stack, so no node is unlinked mid-loop, but taking a copy keeps the
     // iteration safe even against a body that adds or removes root scripts:
     const std::vector<TScript*> rootNodes(mScriptRootNodeList.begin(), mScriptRootNodeList.end());
+    mCompilePassDone = false;
+    mRootsCompiledThisPass.clear();
+    // Marked up front: TScript::compileAll() only runs the scripts still marked
+    if (mpHost->profileResetInProgress()) {
+        for (auto script : rootNodes) {
+            script->markForCompile();
+        }
+    }
     for (auto script : rootNodes) {
         if (script->isActive()) {
             script->compileAll(saveLoadingError);
+        } else if (mpHost->profileResetInProgress()) {
+            // An active script registers its handlers once its body has run, so none is called before then.
+            // Not marked again: an earlier body can have set a script in this tree already
+            script->registerEventHandlers();
         }
+        mRootsCompiledThisPass.push_back(script);
     }
+    mRootsCompiledThisPass.clear();
+    mCompilePassDone = true;
     // The loop is now done with the (possibly self-uninstalled) scripts, so flush
     // the deletes uninstall() deferred - before the editor tree is rebuilt below and
     // before returning to the event loop, where the 0ms save Host::uninstallPackage()
