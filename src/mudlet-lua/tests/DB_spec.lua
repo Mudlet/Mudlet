@@ -1874,6 +1874,21 @@ describe("Tests DB.lua functions", function()
       assert.are.same({"Bram", "Drake", "Eve"}, names(db:fetch(mydb.people, query)))
     end)
 
+    it("db:OR matches any of more than two sub-expressions", function()
+      local query = db:OR(db:eq(mydb.people.name, "Ada"), db:eq(mydb.people.name, "Cyra"), db:eq(mydb.people.name, "Eve"))
+      assert.are.same({"Ada", "Cyra", "Eve"}, names(db:fetch(mydb.people, query)))
+    end)
+
+    it("db:OR with a single sub-expression matches just that expression", function()
+      local query = db:OR(db:eq(mydb.people.name, "Ada"))
+      assert.are.same({"Ada"}, names(db:fetch(mydb.people, query)))
+    end)
+
+    it("db:OR keeps a nil condition so the fetch fails rather than dropping it", function()
+      local query = db:OR(db:eq(mydb.people.name, "Ada"), nil, db:eq(mydb.people.name, "Eve"))
+      assert.is_nil(db:fetch(mydb.people, query))
+    end)
+
     it("a table-array query is implicitly ANDed", function()
       local results = db:fetch(mydb.people, {
         db:eq(mydb.people.city, "Chicago"),
