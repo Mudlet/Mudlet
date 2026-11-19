@@ -1066,6 +1066,9 @@ do
   local highestHandlerId = 0
   -- Helps us finding the right event handler from an ID.
   local handlerIdsToHandlers = {}
+  -- past either, a one-shot handler raising events it handles is taken to be feeding itself for
+  -- ever: a chain of events each raised from the last, and all the events raised from those it raised
+  local maxDeferredGenerations, maxDeferredEvents = 200, 10000
 
   -- C function that gets overwritten.
   registerAnonymousEventHandler("*", "dispatchEventToFunctions")
@@ -1128,14 +1131,57 @@ do
     if isOneShot then
       -- wrap the original function to remove itself from the event handler list.
       local origFunc = func
+      local running, deferred, generation = false, {}, 0
       func = function(...)
+        -- an event it raises itself waits until it has said whether to stay, so one that goes
+        -- runs once and one that stays still sees it
+        if running then
+          -- but C++ reads a send request's deny as soon as the event returns
+          if ... == "sysDataSendRequest" then
+            local ok, keepEvaluating = pcall(origFunc, ...)
+            if not (ok and keepEvaluating) then
+              killAnonymousEventHandler(eventHandlerId)
+            end
+            if not ok then
+              error(keepEvaluating, 0)
+            end
+            return
+          end
+          deferred[#deferred + 1] = {n = select("#", ...), generation = generation + 1, ...}
+          return
+        end
+        running = true
         -- a handler that errors never asked to stay, so it goes like one that returned nothing
         local ok, keepEvaluating = pcall(origFunc, ...)
+        local failed, failure = not ok, keepEvaluating
+        local nextEvent, failedEvent = 1, nil
+        -- events it raised itself come first in the queue, and a burst of those is never a runaway
+        local firstBurst = #deferred
+        while ok and keepEvaluating and deferred[nextEvent] and handlerIdsToHandlers[eventHandlerId] do
+          local args = deferred[nextEvent]
+          if args.generation > maxDeferredGenerations or nextEvent - firstBurst > maxDeferredEvents then
+            ok, failed = false, true
+            failure = string.format("registerAnonymousEventHandler: one-shot handler for '%s' removed as it kept raising events it handles", event)
+            break
+          end
+          generation = args.generation
+          nextEvent = nextEvent + 1
+          ok, keepEvaluating = pcall(origFunc, unpack(args, 1, args.n))
+          if not ok then
+            failedEvent = args[1]
+          end
+        end
+        deferred, generation = {}, 0
+        running = false
         if not (ok and keepEvaluating) then
           killAnonymousEventHandler(eventHandlerId)
         end
-        if not ok then
-          error(keepEvaluating, 0)
+        -- tostring, as showHandlerError raises on anything but a string or number; reported after the cleanup so that cannot skip it
+        if failedEvent then
+          showHandlerError(failedEvent, tostring(keepEvaluating))
+        end
+        if failed then
+          error(failure, 0)
         end
       end
     end
