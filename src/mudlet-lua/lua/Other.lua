@@ -1620,7 +1620,7 @@ registerAnonymousEventHandler("sysDropUrlEvent", "packageUrlDrop")
 -- This is to prevent scripts erroring if they've been written with TTS capabilities
 -- then loaded into a Mudlet without them.
 if not ttsSpeak then --check if ttsSpeak is defined, if not then Mudlet lacks TTS capabilities.
-  local funcs = {"ttsClearQueue", "ttsGetCurrentLine", "ttsGetCurrentVoice", "ttsGetQueue", "ttsGetState", "ttsGetVoices", "ttsPause", "ttsQueue", "ttsResume", "ttsSpeak", "ttsSetPitch", "ttsSetRate", "ttsSetVolume", "ttsSetVoiceByIndex", "ttsSetVoiceByName", "ttsSkip"}
+  local funcs = {"ttsClearQueue", "ttsGetCurrentLine", "ttsGetCurrentVoice", "ttsGetPitch", "ttsGetQueue", "ttsGetRate", "ttsGetState", "ttsGetVoices", "ttsGetVolume", "ttsPause", "ttsQueue", "ttsResume", "ttsSpeak", "ttsSetPitch", "ttsSetRate", "ttsSetVolume", "ttsSetVoiceByIndex", "ttsSetVoiceByName", "ttsSkip"}
   for _,fn in ipairs(funcs) do
     _G[fn] = function() debugc(string.format("%s: Mudlet was compiled without TTS capabilities", fn)) end
   end

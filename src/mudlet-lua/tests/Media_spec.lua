@@ -4302,6 +4302,29 @@ describe("Tests the text-to-speech Lua API", function()
         cleanups = {}
       end)
 
+      -- Checked from a build with TTS, the only place the real functions can be
+      -- listed: a script calling one that Other.lua has no shim for errors on a
+      -- build without TTS instead of carrying on.
+      it("Other.lua has a shim for every tts function, for builds without TTS", function()
+        if ttsUnsupported() then
+          return
+        end
+        local path = debug.getinfo(packageUrlDrop, "S").source:gsub("^@", "")
+        local file = assert(io.open(path, "r"))
+        local source = file:read("*a")
+        file:close()
+        local list = assert(source:match("if not ttsSpeak then.-local funcs = (%b{})"))
+        local shimmed = {}
+        for name in list:gmatch('"(tts%w+)"') do
+          shimmed[name] = true
+        end
+        for name, value in pairs(_G) do
+          if type(value) == "function" and name:match("^tts%u") then
+            assert.is_true(shimmed[name] == true, name .. " has no shim")
+          end
+        end
+      end)
+
       it("ttsSpeak rejects whitespace-only text", function()
         if ttsUnsupported() then
           return
