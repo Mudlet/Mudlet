@@ -85,6 +85,7 @@ public:
     void mousePressEvent(QMouseEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
     void mouseMoveEvent(QMouseEvent*) override;
+    void leaveEvent(QEvent*) override;
     void showEvent(QShowEvent* event) override;
     void updateScreenView();
     void updateScrollBar(int);
