@@ -7392,7 +7392,7 @@ void dlgProfilePreferences::applyAll()
             pHost->mProxyUsername = lineEdit_proxyUsername->text();
         }
         if (mSnapshot.dirty(lineEdit_proxyPassword)) {
-            pHost->mProxyPassword = lineEdit_proxyPassword->text();
+            pHost->setProxyPassword(lineEdit_proxyPassword->text());
         }
 
         //tab security
