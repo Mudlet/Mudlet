@@ -28,6 +28,7 @@
 #include "MudletApp.h"
 #include "TIrcClient.h"
 #include "ircmessageformatter.h"
+#include "uiDesign.h"
 
 #include <IrcConnection>
 #include <IrcTextFormat>
@@ -462,7 +463,10 @@ void dlgIRC::slot_onTextEntered()
             error = tr("[ERROR] Unknown command: %1").arg(command.toHtmlEscaped());
         }
         ircBrowser->append(IrcMessageFormatter::formatMessage(error, qsl("indianred")));
-        lineEdit->setStyleSheet(qsl("background: salmon"));
+        // The ink as well as the wash: the platform's own text is white on a dark appearance
+        const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
+        lineEdit->setStyleSheet(
+                qsl("QLineEdit { color: %1; background-color: %2; }").arg(tokens.text.name(), uiDesign::blend(tokens.field, uiDesign::errorInk(tokens), uiDesign::scmSoftWashStrength).name()));
     }
 }
 

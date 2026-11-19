@@ -46,6 +46,7 @@
 #include "TelnetServerStub.h"
 #include "dlgIRC.h"
 #include "mudlet.h"
+#include "uiDesign.h"
 
 #include "GroupedTest.h"
 
@@ -252,6 +253,52 @@ private slots:
         QVERIFY2(client, "the IRC client could not be opened");
         enterText(client, qsl("/msg <b>a</b>,,b hi"));
         QVERIFY2(waitForShownText(client, qsl("Could not send that message: target \"<b>a</b>,,b\"")), qPrintable(shownText(client)));
+    }
+
+    // A command missing its arguments marks the input field; what is still typed in it has
+    // to stay readable on that mark in either appearance
+    void test_aMalformedCommandLeavesTheInputReadable()
+    {
+        dlgIRC* client = openConnectedClient();
+        QVERIFY2(client, "the IRC client could not be opened");
+        const auto restoreAppearance = qScopeGuard([] {
+            mudlet::self()->setAppearance(enums::Appearance::systemSetting);
+        });
+        for (const auto appearance : {enums::Appearance::dark, enums::Appearance::light}) {
+            mudlet::self()->setAppearance(appearance);
+            QCoreApplication::processEvents();
+            enterText(client, qsl("/msg"));
+            QVERIFY2(!client->lineEdit->styleSheet().isEmpty(), "a command missing its arguments left the input field unmarked");
+            QCoreApplication::processEvents();
+            const QImage shot = client->lineEdit->grab().toImage();
+            // The commonest pixel is the field's fill: the words are the minority
+            QHash<QRgb, int> histogram;
+            for (int y = 0; y < shot.height(); ++y) {
+                for (int x = 0; x < shot.width(); ++x) {
+                    ++histogram[shot.pixel(x, y)];
+                }
+            }
+            QRgb fill = 0;
+            int seen = 0;
+            for (auto entry = histogram.cbegin(); entry != histogram.cend(); ++entry) {
+                if (entry.value() > seen) {
+                    seen = entry.value();
+                    fill = entry.key();
+                }
+            }
+            const QColor ink = client->lineEdit->palette().color(QPalette::Text);
+            const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
+            QCOMPARE(ink.name(), tokens.text.name());
+            QCOMPARE(QColor(fill).name(), uiDesign::blend(tokens.field, uiDesign::errorInk(tokens), uiDesign::scmSoftWashStrength).name());
+            const qreal ratio = uiDesign::contrastRatio(ink, QColor(fill));
+            QVERIFY2(ratio >= uiDesign::scmTextMinimumRatio,
+                     qPrintable(qsl("on the %1 appearance the marked field writes %2 on %3, a contrast of %4:1")
+                                        .arg(appearance == enums::Appearance::dark ? qsl("dark") : qsl("light"), ink.name(), QColor(fill).name(), QString::number(ratio, 'f', 2))));
+            // setText() and clear() don't emit textEdited, so only a keystroke drops this pass's mark before the next
+            QTest::keyClick(client->lineEdit, Qt::Key_A);
+            QVERIFY2(client->lineEdit->styleSheet().isEmpty(), "typing into the marked field did not clear the mark");
+            client->lineEdit->clear();
+        }
     }
 
     // A click must neither load the link into the window nor, unless it is a
