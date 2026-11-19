@@ -1277,6 +1277,15 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.has_error(function() setRoomCharColor(rSandA, 256, 0, 0) end)
     end)
 
+    it("setRoomCharColor's range error names the offending component and its value", function()
+      assert.has_error(function() setRoomCharColor(rSandA, 256, 0, 0) end,
+        "setRoomCharColor: bad argument #2 value (red component 256 is out of range 0 to 255)")
+      assert.has_error(function() setRoomCharColor(rSandA, 10, 300, 0) end,
+        "setRoomCharColor: bad argument #3 value (green component 300 is out of range 0 to 255)")
+      assert.has_error(function() setRoomCharColor(rSandA, 10, 20, -1) end,
+        "setRoomCharColor: bad argument #4 value (blue component -1 is out of range 0 to 255)")
+    end)
+
     it("unsetRoomCharColor returns true and clears the stored colour", function()
       setRoomCharColor(rSandA, 100, 100, 100)
       -- The symbol colour is reset to an invalid QColor whose RGB read-back is
