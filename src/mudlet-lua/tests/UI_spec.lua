@@ -2774,6 +2774,40 @@ describe("Tests UI functions", function()
       assert.are.same({ current = 30, max = 60 }, applied[1].mv)
     end)
 
+    -- DuneMUD documents Char.Vitals as a delta: after the first message only the
+    -- fields that changed are sent, and Mudlet replaces gmcp.Char.Vitals each time
+    it("should keep what a vitals message sent as a delta leaves out", function()
+      local renderVitals, lock, vitalsData = BaseUI.renderVitals, BaseUI.vitalsLock, BaseUI.vitalsData
+      finally(function()
+        BaseUI.renderVitals, BaseUI.vitalsLock, BaseUI.vitalsData = renderVitals, lock, vitalsData
+      end)
+      BaseUI.applyVitals = saved.applyVitals
+      BaseUI.renderVitals = function() end
+      BaseUI.vitalsLock, BaseUI.vitalsData = 3, {}
+      local function send(vitals)
+        _G.gmcp = { Char = { Vitals = vitals } }
+        raiseEvent("gmcp.Char.Vitals")
+      end
+
+      send({ hp = 200, maxhp = 200, sp = 150, maxsp = 150 })
+      send({ hp = 50 })
+      assert.are.same({ current = 50, max = 200 }, BaseUI.vitalsData.hp)
+      assert.are.same({ current = 150, max = 150 }, BaseUI.vitalsData.mp)
+      send({ maxhp = 250 })
+      assert.are.same({ current = 50, max = 250 }, BaseUI.vitalsData.hp)
+
+      -- a full reading is newer than a percentage kept from an earlier message
+      send({ nl = 40 })
+      send({ xp = 10, maxxp = 20 })
+      assert.are.same({ current = 10, max = 20 }, BaseUI.vitalsData.xp)
+
+      -- an enemy that GMCP stops mentioning is gone, unlike the other stats
+      send({ enemypct = 40 })
+      assert.are.same({ percent = 40 }, BaseUI.vitalsData.enemy)
+      send({ hp = 60 })
+      assert.is_nil(BaseUI.vitalsData.enemy)
+    end)
+
     -- fed rather than raised: an unknown spelling is picked up from the namespace event
     it("should read a vitals node sent in any casing", function()
       for _, spelling in ipairs({ { "char", "MaxStats" }, { "Char", "maxStats" }, { "CHAR", "MAXSTATS" }, { "Char", "vitals" } }) do
