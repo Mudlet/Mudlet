@@ -28,10 +28,13 @@
 
 class Host;
 class QCloseEvent;
+class dlgSystemMessageArea;
 
 class dlgModuleManager : public QDialog, public Ui::module_manager
 {
     Q_OBJECT
+
+    friend class ModuleManagerShellTest;
 
 public:
     Q_DISABLE_COPY(dlgModuleManager)
@@ -48,6 +51,7 @@ private slots:
     void slot_helpModule();
     void slot_moduleClicked(QTableWidgetItem*);
     void slot_moduleChanged(QTableWidgetItem*);
+    void slot_applyAppearance();
 
 signals:
     void moduleManagerClosing(const QString& profileName);
@@ -56,10 +60,15 @@ protected:
     void closeEvent(QCloseEvent* event) override;
 
 private:
+    void buildShell();
+    void applyModuleManagerShellStyle();
+    void installModules(const QStringList& fileNames);
     void showImportStatus(const QString& message);
     QString moduleHelpUrl(const QString& moduleName) const;
 
     Host* mpHost = nullptr;
+    QWidget* mpShell = nullptr;
+    dlgSystemMessageArea* mpNotice = nullptr;
 };
 
 #endif
