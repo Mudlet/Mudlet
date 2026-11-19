@@ -6669,10 +6669,6 @@ void dlgProfilePreferences::loadMap(const QString& fileName)
     }
 
     if (success) {
-        // TMap::audit() is what paints up the "[  OK  ]" message for the map load.
-        if (!isJson) {
-            pHost->mpMap->audit();
-        }
         label_mapFileActionResult->setText(tr("Loaded map from %1.").arg(fileName.toHtmlEscaped()));
     } else {
         label_mapFileActionResult->setText(tr("Could not load map from %1.").arg(fileName.toHtmlEscaped()));
