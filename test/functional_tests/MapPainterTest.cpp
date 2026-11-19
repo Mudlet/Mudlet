@@ -343,6 +343,24 @@ private slots:
         QVERIFY(!notLaidOut.mapPointAt(QPointF(10, 10)));
     }
 
+    // Once the map is deleted the widget reads no coordinates, though its last frame's scale is still there
+    void aDeletedMapReadsNoCoordinates()
+    {
+        setUpPlayerView();
+        T2DMap mapperMap;
+        mapperMap.mpMap = map();
+        mapperMap.mpHost = mpHost;
+        mapperMap.init();
+        mapperMap.resize(scmImageWidth, scmImageHeight);
+        mapperMap.grab();
+        const QPoint westCentre = onImage(QPointF(0, 0)).toPoint();
+        QVERIFY(mapperMap.mapPointAt(westCentre));
+
+        map()->mapClear();
+        mapperMap.grab();
+        QVERIFY(!mapperMap.mapPointAt(westCentre));
+    }
+
     // A door is two strokes across the exit line, in the colour of its status
     void aDoorIsDrawnAcrossItsExitInItsStatusColour()
     {

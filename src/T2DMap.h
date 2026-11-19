@@ -237,7 +237,7 @@ public:
     qreal getZoom() const { return xyzoom; }
     int getZLevel() const { return mMapCenterZ; }
     // The map coordinates at a pixel of this widget, as its last frame drew them
-    std::optional<QPointF> mapPointAt(const QPoint& pixel) const { return painterView().mapPointAt(pixel); }
+    std::optional<QPointF> mapPointAt(const QPoint& pixel) const;
 
     // Center view on a room. For secondary views, skips raising sysMapAreaChanged events.
     std::pair<bool, QString> centerview(int roomId);
