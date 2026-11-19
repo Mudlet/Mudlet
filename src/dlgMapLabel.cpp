@@ -19,14 +19,12 @@
  ***************************************************************************/
 
 #include "dlgMapLabel.h"
+#include "AlphaColourWell.h"
 #include "MudletApp.h"
-#include "utils.h"
 #include <QColorDialog>
 #include <QFileDialog>
 #include <QFontDialog>
 #include <QSettings>
-
-static QString BUTTON_STYLESHEET = qsl("QPushButton { background-color: rgba(%1, %2, %3, %4); }");
 
 dlgMapLabel::dlgMapLabel(QWidget* pParentWidget)
 : QDialog(pParentWidget)
@@ -250,10 +248,10 @@ void dlgMapLabel::slot_updateControls()
         lineEdit_font->setText(tr("%1, %2pt %3").arg(font.family(), QString::number(font.pointSizeF()), font.styleName()));
         lineEdit_font->setToolTip(QString());
     }
-    pushButton_fgColor->setStyleSheet(BUTTON_STYLESHEET.arg(QString::number(fgColor.red()), QString::number(fgColor.green()), QString::number(fgColor.blue()), QString::number(fgColor.alpha())));
-    pushButton_bgColor->setStyleSheet(BUTTON_STYLESHEET.arg(QString::number(bgColor.red()), QString::number(bgColor.green()), QString::number(bgColor.blue()), QString::number(bgColor.alpha())));
-    pushButton_outlineColor->setStyleSheet(
-            BUTTON_STYLESHEET.arg(QString::number(outlineColor.red()), QString::number(outlineColor.green()), QString::number(outlineColor.blue()), QString::number(outlineColor.alpha())));
+    // A label's colours may be see-through: a swatch over a checkerboard and how opaque the colour is
+    uiDesign::AlphaColourWell::on(pushButton_fgColor)->setColour(fgColor);
+    uiDesign::AlphaColourWell::on(pushButton_bgColor)->setColour(bgColor);
+    uiDesign::AlphaColourWell::on(pushButton_outlineColor)->setColour(outlineColor);
     lineEdit_image->setText(imagePath);
 }
 
