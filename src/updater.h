@@ -36,6 +36,7 @@ class UpdateDialog;
 #endif
 #endif
 
+#include <functional>
 #include <memory>
 
 class QAbstractButton;
@@ -98,6 +99,7 @@ private:
     QString getPreviousVersion() const;
     QString readPreviousVersionFile(const bool removeAfterRead) const;
     bool downloadReleaseIfValid(const dblsqd::Release& release);
+    void onNextFeedAnswer(const std::function<void()>& onReady, const std::function<void(const QString&)>& onError);
     void finishSetup();
     void showDialogManually() const;
 

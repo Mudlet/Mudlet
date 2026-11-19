@@ -520,6 +520,7 @@ private slots:
     void theChangelogDialogFillsInItsOwnLabels();
     void aSupersededDownloadIsFetchedAgain();
     void theChangelogAfterAnUpdateListsWhatTheUpdateBrought();
+    void aManualCheckOnlyAnswersItsOwnRequest();
     void aCheckThatFindsNothingWithdrawsTheEarlierOffer();
     void aDownloadedInstallerSurvivesACheckThatFindsNothing();
     void anInstallerTheRunningVersionHasPassedIsNotKept();
@@ -1004,6 +1005,69 @@ void FeedChecksumRaceTest::theChangelogAfterAnUpdateListsWhatTheUpdateBrought()
     QTRY_VERIFY2_WITH_TIMEOUT(
             changelog->toPlainText().contains(installedNotes), qPrintable(qsl("the changelog left out the release the user updated to, it holds \"%1\"").arg(changelog->toPlainText())), waitMs);
     QVERIFY2(!changelog->toPlainText().contains(earlierNotes), qPrintable(qsl("the changelog reached back past the version updated from, it holds \"%1\"").arg(changelog->toPlainText())));
+}
+
+// Help > Check for updates waits for the feed to answer either way. Whichever answer did not
+// come stayed connected and answered the twice-daily check: one that failed after a manual check
+// had succeeded was reported to the player as their own check failing, and one that succeeded
+// after a manual check had failed opened the update dialog unasked.
+void FeedChecksumRaceTest::aManualCheckOnlyAnswersItsOwnRequest()
+{
+#if defined(Q_OS_MACOS)
+    QSKIP("on macOS Sparkle answers Check for updates, not the Feed");
+#else
+    UpdateHarness harness;
+    QVERIFY2(harness.start(), "the stub update server needs TLS support and a free loopback port");
+
+    QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    const QWidgetList widgetsBeforeUpdater = QApplication::topLevelWidgets();
+    QList<QPointer<QWidget>> updaterWidgets;
+    // Runs after ~Updater, as the unparented "Update" button its constructor makes needs
+    const auto destroyUpdaterWidgets = qScopeGuard([&updaterWidgets]() {
+        for (const auto& widget : updaterWidgets) {
+            delete widget.data();
+        }
+    });
+
+    Updater updater(nullptr, &harness.settings());
+    for (auto* widget : QApplication::topLevelWidgets()) {
+        if (!widgetsBeforeUpdater.contains(widget)) {
+            updaterWidgets.append(widget);
+        }
+    }
+    auto* feed = updater.findChild<dblsqd::Feed*>();
+    QVERIFY2(feed, "the Updater no longer parents its Feed to itself, so this test cannot reach it");
+    QSignalSpy feedReady(feed, &dblsqd::Feed::ready);
+    QSignalSpy feedError(feed, &dblsqd::Feed::loadError);
+    QSignalSpy checkFailed(&updater, &Updater::signal_updateCheckFailed);
+    // A manual check that succeeds goes on to show the update dialog, which this Updater, never
+    // started, lacks - so it says so, and saying it is how a check is seen to open the dialog
+    const QByteArray opensTheDialog("showDialogManually called but update dialog not initialized");
+    QTest::failOnWarning(opensTheDialog.constData());
+
+    harness.server().setFeedBody("not json");
+    updater.manuallyCheckUpdates();
+    QVERIFY2(feedError.wait(waitMs), "the stub's broken feed did not fail to load");
+    QCOMPARE(checkFailed.size(), 1);
+
+    // The twice-daily check, once the connection is back
+    harness.server().setFeedBody(stubReleasesJson(harness.assetBaseUrl(), 1024));
+    feed->load();
+    QVERIFY2(feedReady.wait(waitMs), "the repaired feed never loaded, so the failOnWarning above would test nothing");
+
+    QTest::ignoreMessage(QtWarningMsg, opensTheDialog.constData());
+    feedReady.clear();
+    updater.manuallyCheckUpdates();
+    QVERIFY2(feedReady.wait(waitMs), "the second manual check never loaded the feed");
+
+    // And a twice-daily check that fails after it
+    harness.server().setFeedBody("not json");
+    feedError.clear();
+    feed->load();
+    QVERIFY2(feedError.wait(waitMs), "the stub's broken feed did not fail to load the second time");
+    // Only the player's own failed check is reported, not the background one
+    QCOMPARE(checkFailed.size(), 1);
+#endif
 }
 
 // The dialog decides whether there is an update to show from the release the
