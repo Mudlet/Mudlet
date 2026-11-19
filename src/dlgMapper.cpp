@@ -366,7 +366,6 @@ void dlgMapper::setupEmptyStateOverlay()
     layout->addWidget(startBlankButton);
 
     connect(mpEmptyStateDownloadButton, &QPushButton::clicked, this, [this]() {
-        mEmptyStateDismissed = true;
         if (mpMap) {
             mpMap->downloadMap();
         }
@@ -560,7 +559,9 @@ void dlgMapper::updateEmptyStateOverlay()
     if (!mpMap->mpRoomDB->isEmpty()) {
         mEmptyStateDismissed = false;
     }
-    const bool shouldShow = mpMap->mpRoomDB->isEmpty() && !mEmptyStateDismissed;
+    // Gives way to a download or import in progress, and returns if that leaves the map empty
+    const bool progressShown = mpProgressOverlay && !mpProgressOverlay->isHidden();
+    const bool shouldShow = mpMap->mpRoomDB->isEmpty() && !mEmptyStateDismissed && !progressShown;
     const bool canDownload = !mpMap->getMmpMapLocation().isEmpty();
     if (mpEmptyStateDownloadButton) {
         mpEmptyStateDownloadButton->setVisible(canDownload);
