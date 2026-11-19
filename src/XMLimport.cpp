@@ -437,7 +437,10 @@ void XMLimport::readEnvColors()
     while (!atEnd()) {
         readNext();
 
-        if (name() == qsl("environment")) {
+        if (isEndElement() && name() == qsl("environments")) {
+            break;
+        }
+        if (isStartElement() && name() == qsl("environment")) {
             readEnvColor();
         }
     }
