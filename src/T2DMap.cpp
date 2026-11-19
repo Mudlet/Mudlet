@@ -713,7 +713,6 @@ std::pair<std::optional<int>, std::optional<int>> T2DMap::roomLevelsBeside() con
     return {above, below};
 }
 
-// Viewing, up and down go to the next level with rooms, and not past the last one; editing goes a level at a time
 void T2DMap::slot_shiftZup()
 {
     if (mMapViewOnly) {
@@ -1078,6 +1077,7 @@ TMapPainter::View T2DMap::painterView() const
     view.mpMap = mpMap;
     view.mpHost = mpHost;
     view.mSize = size();
+    view.mMapViewOnly = mMapViewOnly;
     view.mRoomWidth = mRoomWidth;
     view.mRoomHeight = mRoomHeight;
     view.mRX = mRX;
@@ -1294,7 +1294,6 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
         mpMap->mapper()->comboBox_showArea->setFont(_f);
 
-        // Viewing, there is nowhere to go past the last level with rooms
         const auto [above, below] = roomLevelsBeside();
         mpMap->mapper()->toolButton_shiftZup->setEnabled(!mMapViewOnly || above.has_value());
         mpMap->mapper()->toolButton_shiftZdown->setEnabled(!mMapViewOnly || below.has_value());

@@ -713,7 +713,8 @@ private slots:
         QCOMPARE(mapperMap.getCenterRoomId(), scmWestRoom);
     }
 
-    // Viewing, the map cannot be panned so far that no room is left in view; editing, it can go anywhere
+    // Viewing, the map cannot be panned so far that no room is left in view; editing, it can go anywhere. Each view
+    // goes by its own mode, as map windows keep one apiece, whatever the profile's says.
     void viewingKeepsTheMapsRoomsInView()
     {
         setUpPlayerView();
@@ -731,7 +732,8 @@ private slots:
         panned.mMapCenterY = 0.0;
 
         for (const bool viewOnly : {true, false}) {
-            mpHost->mMapViewOnly = viewOnly;
+            panned.mMapViewOnly = viewOnly;
+            mpHost->mMapViewOnly = !viewOnly;
             // A pending move would centre on the player instead, whatever the pan
             map()->mNewMove = false;
             TMapPainter painter;
