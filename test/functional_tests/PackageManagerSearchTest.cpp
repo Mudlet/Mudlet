@@ -154,6 +154,23 @@ private slots:
         mpManager->lineEdit_searchBar->setText(qsl("titled"));
         QCOMPARE(listedNames(), QStringList{mNamedPackage});
     }
+
+    // Installing or removing a package relists the dialog while the box still shows the search
+    void test_aRelistedPackageListKeepsTheSearch()
+    {
+        mpManager->lineEdit_searchBar->setText(qsl("titled"));
+        // Installed after the search was typed, so only a relist can list it
+        const QString installed = qsl("RelistedPackage");
+        mpHost->mInstalledPackages << installed;
+        mpHost->mPackageInfo.insert(installed, {{qsl("title"), qsl("Another titled package")}});
+        emit mpHost->signal_packageListChanged();
+        const QStringList listed = listedNames();
+        mpHost->mInstalledPackages.removeAll(installed);
+        mpHost->mPackageInfo.remove(installed);
+
+        QCOMPARE(mpManager->lineEdit_searchBar->text(), qsl("titled"));
+        QCOMPARE(listed, QStringList({installed, mNamedPackage}));
+    }
 };
 
 #include "PackageManagerSearchTest.moc"
