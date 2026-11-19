@@ -3037,9 +3037,9 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
                             }
                         }
                         popup->popup(eventGlobalPos);
+                        mIsCommandPopup = true;
+                        return;
                     }
-                    mIsCommandPopup = true;
-                    return;
                 }
             }
         }
