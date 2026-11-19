@@ -968,8 +968,7 @@ void FeedChecksumRaceTest::theChangelogAfterAnUpdateListsWhatTheUpdateBrought()
     QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     const QWidgetList widgetsBeforeUpdater = QApplication::topLevelWidgets();
     QList<QPointer<QWidget>> updaterWidgets;
-    // Runs after ~Updater: the "Update" button the constructor makes is unparented, and only
-    // checkUpdatesOnStart() reaches the addInstallButton() that would give it an owner
+    // Runs after ~Updater, which leaves its top-level widgets for the application to destroy
     const auto destroyUpdaterWidgets = qScopeGuard([&updaterWidgets]() {
         for (const auto& widget : updaterWidgets) {
             delete widget.data();
