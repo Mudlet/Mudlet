@@ -32,6 +32,7 @@
 #include <limits>
 
 #include <QAction>
+#include <QComboBox>
 #include <QDockWidget>
 #include <QMenu>
 #include <QOpenGLContext>
@@ -705,6 +706,39 @@ private slots:
         // The hidden 2D map stays where it was, so only the 3D view can have dropped them
         QCOMPARE(map()->mapper()->mp2dMap->mAreaID, mPlayerAreaId);
         QVERIFY(selection().isEmpty());
+    }
+
+    // The hidden 2D map behind the menu still holds the area it last showed, which is not the one the player is moving rooms from
+    void test_moveToAreaFromThe3DMenuPreselectsTheArea3DShows()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        T2DMap* p2dMap = map()->mapper()->mp2dMap;
+        pModern->setViewCenter(mOtherAreaId, 20, 20, 0);
+        QCOMPARE(p2dMap->mAreaID, mPlayerAreaId);
+
+        p2dMap->mMapViewOnly = false;
+        QTest::mouseClick(pModern, Qt::RightButton, Qt::NoModifier, pixelOfRoom(pModern, kOtherAreaRoomId));
+        QMenu* menu = openMenu(pModern);
+        QVERIFY2(menu, "right-clicking a room in the 3D view opened no menu");
+        QAction* moveToArea = nullptr;
+        for (QAction* action : menu->actions()) {
+            if (action->text() == qsl("Move to area...")) {
+                moveToArea = action;
+            }
+        }
+        QVERIFY2(moveToArea, qPrintable(actionTexts(menu).join(qsl(", "))));
+        moveToArea->trigger();
+        menu->close();
+        p2dMap->mMapViewOnly = true;
+
+        QVERIFY(p2dMap->arealist_combobox);
+        auto* pDialog = qobject_cast<QDialog*>(p2dMap->arealist_combobox->window());
+        const QString preselected = p2dMap->arealist_combobox->currentText();
+        if (pDialog) {
+            pDialog->reject();
+        }
+        QCOMPARE(preselected, qsl("Other Area (%1)").arg(mOtherAreaId));
     }
 
     // As on the 2D map, which changes the selection on the press, a script handling the press reads the selection

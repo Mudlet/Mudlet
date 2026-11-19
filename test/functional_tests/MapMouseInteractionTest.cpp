@@ -3998,6 +3998,24 @@ private slots:
         QVERIFY(map()->isUnsaved());
     }
 
+    // The mapper's own list leaves the Default Area out when it is hidden, so
+    // its position there is not the shown area's position in this list
+    void test_moveToAreaPreselectsTheShownAreaWhenTheDefaultAreaIsHidden()
+    {
+        showMapWithAnotherArea();
+        map()->setDefaultAreaShown(false);
+        map()->mapper()->updateAreaComboBox();
+        QCOMPARE(map()->mapper()->comboBox_showArea->currentText(), qsl("Mouse Area"));
+        clickAt(pointUnitsFromCentre(1, 0));
+        rightClickAt(pointUnitsFromCentre(1, 0));
+        QVERIFY(pickContextMenuItem(qsl("Move to area...")));
+        QDialog* pDialog = moveToAreaDialog();
+        QVERIFY(pDialog);
+
+        QCOMPARE(mp2dMap->arealist_combobox->currentText(), mouseAreaRow());
+        pDialog->reject();
+    }
+
     void test_typingANewAreaNameIntoMoveToAreaMakesThatArea()
     {
         buildMap();
