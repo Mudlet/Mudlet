@@ -57,12 +57,11 @@ TKey::~TKey()
     if (mpHost) {
         mpHost->getKeyUnit()->unregisterKey(this);
 
-        if (isTemporary()) {
-            if (mScript.isEmpty()) {
-                mpHost->mLuaInterpreter.delete_luafunction(mLuaFunctionRef);
-            } else {
-                mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
-            }
+        mpHost->mLuaInterpreter.delete_luafunction(mLuaFunctionRef);
+        // IDs are never reused, so nothing else frees this global. Only the one compiled under this ID:
+        // one compiled before the ID was assigned is named Key0, which other items share.
+        if (mID > 0 && mFuncName == qsl("Key%1").arg(QString::number(mID))) {
+            mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
         }
     }
 
@@ -230,8 +229,7 @@ bool TKey::setScript(const QString& script)
     // Switching from a registered anonymous Lua function (set up by tempKey with a
     // function argument) to a script string: release the old function from the Lua
     // registry and leave callback mode. Otherwise execute() keeps calling the stale
-    // function so the new script never runs, and the registry entry leaks - the
-    // destructor would take its mScript-based branch and delete the compiled function.
+    // function so the new script never runs.
     if (mRegisteredAnonymousLuaFunction) {
         if (mpHost) {
             mpHost->mLuaInterpreter.delete_luafunction(mLuaFunctionRef);

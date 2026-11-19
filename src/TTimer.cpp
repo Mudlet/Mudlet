@@ -73,12 +73,11 @@ TTimer::~TTimer()
     if (mpHost) {
         mpHost->getTimerUnit()->unregisterTimer(this);
 
-        if (isTemporary()) {
-            if (mScript.isEmpty()) {
-                mpHost->mLuaInterpreter.delete_luafunction(mLuaFunctionRef);
-            } else {
-                mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
-            }
+        mpHost->mLuaInterpreter.delete_luafunction(mLuaFunctionRef);
+        // IDs are never reused, so nothing else frees this global. Only the one compiled under this ID:
+        // one compiled before the ID was assigned is named Timer0, which other items share.
+        if (mID > 0 && mFuncName == qsl("Timer%1").arg(QString::number(mID))) {
+            mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
         }
 
         // During normal operation, use deleteLater() for safety
@@ -191,8 +190,7 @@ bool TTimer::setScript(const QString& script)
     // Switching from a registered anonymous Lua function (set up by tempTimer with a
     // function argument) to a script string: release the old function from the Lua
     // registry and leave callback mode. TTimer::execute() picks a temporary timer's
-    // payload by the flag, so it has to be cleared for the new script to run at all,
-    // and the destructor's mScript-based branch would otherwise leak the registry entry.
+    // payload by the flag, so it has to be cleared for the new script to run at all.
     if (mRegisteredAnonymousLuaFunction) {
         if (mpHost) {
             mpHost->mLuaInterpreter.delete_luafunction(mLuaFunctionRef);
