@@ -298,6 +298,18 @@ centerview(5)
         QVERIFY2(image, qPrintable(session.errorString()));
         QVERIFY2(image->pixelColor(scmWidth / 2, scmHeight / 2) == westColour(), qPrintable(saved(*image, qsl("followed"))));
 
+        // A move and then a pan before the next frame: the pan is the later request, so it is the one shown
+        QVERIFY(session.runLua(qsl("centerview(5) centerview(6, false)")));
+        QTest::qWait(50);
+        image = rendered(session);
+        QVERIFY2(image, qPrintable(session.errorString()));
+        QVERIFY2(image->pixelColor(scmWidth / 2, scmHeight / 2) == eastColour(), qPrintable(saved(*image, qsl("moved-then-panned"))));
+
+        // A view id beyond int's range is refused, not narrowed to 0, which would have moved the player
+        QVERIFY(session.runLua(qsl("headlessHugeView = tostring(pcall(centerview, 7, 4294967296))")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessHugeView"), qsl("false"));
+        QCOMPARE(pMap->mRoomIdHash.value(session.host()->getName()), 5);
+
         QVERIFY(session.shutdown(false));
     }
 

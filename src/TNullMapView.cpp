@@ -373,6 +373,8 @@ std::pair<bool, QString> TNullMapView::centerViewOn(const int roomId)
         TMapPainter::pruneSelectionToArea(pMap, mView.mMultiSelectionSet, mView.mMultiSelectionHighlightRoomId, areaId);
     }
     mRecentre = false;
+    // The pan is the later request, so a recentre on the player still pending from earlier must not undo it
+    pMap->mNewMove = false;
     mPendingZoom.reset();
     mView.mAreaID = areaId;
     mView.mRoomID = playerRoomId;

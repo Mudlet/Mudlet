@@ -768,7 +768,8 @@ int TLuaInterpreter::centerview(lua_State* L)
         if (lua_isboolean(L, 2)) {
             movePlayer = lua_toboolean(L, 2);
         } else if (lua_isnumber(L, 2)) {
-            viewId = static_cast<int>(lua_tointeger(L, 2));
+            // Verified, so an id beyond int's range is refused rather than narrowed to 0, which would move the player
+            viewId = getVerifiedInt(L, __func__, 2, "view id");
         } else {
             errorArgumentType(L, __func__, 2, "view id or movePlayer", "number or boolean", true);
             return lua_error(L);
