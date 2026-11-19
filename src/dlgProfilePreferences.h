@@ -252,7 +252,8 @@ protected:
 private:
     void setColors();
     void setColors2();
-    void setButtonAndProfileColor(QPushButton*, QColor&, bool allowAlpha = false);
+    // Whether a color was accepted, even the one it started from
+    bool setButtonAndProfileColor(QPushButton*, QColor&, bool allowAlpha = false);
     void setPlayerRoomColor(QPushButton*, QColor&);
     // After a colour dialog, however it was closed: macOS's native colour panel hands the activation to the
     // application's main window as it closes, which leaves the settings behind it with nothing focused

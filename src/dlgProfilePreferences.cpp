@@ -6019,11 +6019,11 @@ void dlgProfilePreferences::slot_resetMapColors()
     }
 }
 
-void dlgProfilePreferences::setButtonAndProfileColor(QPushButton* button, QColor& presentColor, bool allowAlpha)
+bool dlgProfilePreferences::setButtonAndProfileColor(QPushButton* button, QColor& presentColor, bool allowAlpha)
 {
     Host* pHost = mpHost;
     if (!pHost) {
-        return;
+        return false;
     }
 
     // The dialog runs an event loop of its own, in which the button or the whole window can go
@@ -6032,7 +6032,7 @@ void dlgProfilePreferences::setButtonAndProfileColor(QPushButton* button, QColor
     //: Generic pick color dialog title
     auto color = QColorDialog::getColor(presentColor, this, tr("Pick color"), allowAlpha ? QColorDialog::ShowAlphaChannel : QColorDialog::ColorDialogOptions());
     if (!pSelf) {
-        return;
+        return false;
     }
     returnFromColourDialog(pClicked);
     if (color.isValid()) {
@@ -6084,6 +6084,7 @@ void dlgProfilePreferences::setButtonAndProfileColor(QPushButton* button, QColor
         // visible:
         setButtonColor(button, color, allowAlpha);
     }
+    return color.isValid();
 }
 
 void dlgProfilePreferences::slot_setFgColor()
@@ -6330,11 +6331,10 @@ void dlgProfilePreferences::slot_setMapDefaultRoomColor()
     if (!pHost) {
         return;
     }
-    // The picker starts from the color in effect, which unset is the map's red; cancelled, it stays unset
-    const QColor shown = pHost->mapperDefaultRoomColor();
-    QColor picked = shown;
-    setButtonAndProfileColor(pushButton_defaultRoomColor, picked);
-    if (picked != shown) {
+    // The picker starts from the color in effect, which unset is the map's red. Cancelled, it stays unset;
+    // accepting that same red sets it, so a later change to red leaves these rooms alone.
+    QColor picked = pHost->mapperDefaultRoomColor();
+    if (setButtonAndProfileColor(pushButton_defaultRoomColor, picked)) {
         pHost->mMapperDefaultRoomColor = picked;
         if (pHost->mpMap) {
             pHost->mpMap->updateArea(-1);
