@@ -3540,6 +3540,30 @@ private slots:
         }
     }
 
+    // The dialog stays open while the map is zoomed, panned or moved to another
+    // level, and every edit in it redraws the label: that must keep it where it was drawn.
+    void test_editingANewLabelAfterPanningKeepsItWhereItWasDrawn()
+    {
+        buildMap();
+        showMapper(false);
+        dragOutALabelBox();
+        QVERIFY(mp2dMap->mpDlgMapLabel);
+
+        const float roomWidthBeforeZoom = mp2dMap->mRoomWidth;
+        rollWheelAt(viewCentre(), 3);
+        renderFrame();
+        QVERIFY2(!qFuzzyCompare(mp2dMap->mRoomWidth, roomWidthBeforeZoom), "the wheel did not zoom the map");
+        mp2dMap->mMapCenterX = 3;
+        mp2dMap->mMapCenterY = -2;
+        mp2dMap->mMapCenterZ = 1;
+        emit mp2dMap->mpDlgMapLabel->updated();
+
+        QCOMPARE(area()->mMapLabels.size(), 1);
+        QCOMPARE(area()->mMapLabels.first().pos, QVector3D(-5, 5, 0));
+        QCOMPARE(area()->mMapLabels.first().size, QSizeF(3, 2));
+        mp2dMap->mpDlgMapLabel->close();
+    }
+
     // A click with no drag has no box to put a label in, so nothing is made
     // and no dialog comes up.
     void test_clickingWithoutDraggingOutABoxMakesNoLabel()
@@ -3594,7 +3618,8 @@ private slots:
 
     // The dialog is not modal, so the mapper can be switched to another area
     // while it is open. The label belongs to the area its box was dragged out
-    // in: typing keeps it there, and cancelling takes it back out of there.
+    // in: typing keeps it there and announces a change to that area, and cancelling
+    // takes it back out of there.
     void test_theLabelDialogStaysWithTheAreaItsBoxWasDraggedOutIn()
     {
         buildMap();
@@ -3607,9 +3632,14 @@ private slots:
         QVERIFY(map()->addRoom(nextDoorRoomId) && map()->setRoomArea(nextDoorRoomId, otherAreaId) && map()->setRoomCoordinates(nextDoorRoomId, 0, 0, 0));
         mp2dMap->switchArea(otherAreaId);
         QCOMPARE(mp2dMap->mAreaID, otherAreaId);
+        // Announcements are merged until the next event loop pass, so let the one from the label's first draw go out
+        QCoreApplication::processEvents();
+        QSignalSpy areaChanged(map(), &TMap::signal_areaChanged);
 
         mp2dMap->mpDlgMapLabel->plainTextEdit_labelText->setPlainText(qsl("typed in another area"));
 
+        QTRY_COMPARE(areaChanged.size(), 1);
+        QCOMPARE(areaChanged.first().first().toInt(), mAreaId);
         QCOMPARE(area()->mMapLabels.size(), 1);
         QVERIFY2(map()->mpRoomDB->getArea(otherAreaId)->mMapLabels.isEmpty(), "the label landed in the area the mapper was switched to");
 
