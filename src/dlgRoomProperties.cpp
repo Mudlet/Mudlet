@@ -22,6 +22,7 @@
 
 
 #include "dlgRoomProperties.h"
+#include "AlphaColourWell.h"
 #include "Host.h"
 #include "RoomAppearance.h"
 #include "TMap.h"
@@ -39,6 +40,9 @@ dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
 {
     // init generated dialog
     setupUi(this);
+    mBorderColorButtonWords = pushButton_setBorderColor->text();
+    // The well's words say how opaque the colour is, so its name says what it sets
+    pushButton_setBorderColor->setAccessibleName(mBorderColorButtonWords);
 
     connect(lineEdit_roomSymbol, &QLineEdit::textChanged, this, &dlgRoomProperties::slot_updatePreview);
     connect(comboBox_roomSymbol, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgRoomProperties::slot_symbolComboBoxItemChanged);
@@ -180,10 +184,7 @@ void dlgRoomProperties::init(
     selectedBorderColor = pFirstRoom->mBorderColor;
     mBorderThickness = pFirstRoom->mBorderThickness;
 
-    // Set button background to show current color
-    if (selectedBorderColor.isValid()) {
-        pushButton_setBorderColor->setStyleSheet(qsl("background-color: %1").arg(selectedBorderColor.name()));
-    }
+    showBorderColor();
 
     // Set thickness spinbox
     spinBox_borderThickness->setValue(mBorderThickness);
@@ -725,15 +726,25 @@ void dlgRoomProperties::slot_borderColorSelected(const QColor& color)
 {
     selectedBorderColor = color;
     mBorderColorWasChanged = true;
-    pushButton_setBorderColor->setStyleSheet(qsl("background-color: %1").arg(color.name()));
+    showBorderColor();
     emitBorderPreview();
+}
+
+// A border colour may be see-through, so it is shown as a swatch over a checkerboard with how opaque it is;
+// with none chosen the button goes back to saying what it does
+void dlgRoomProperties::showBorderColor()
+{
+    uiDesign::AlphaColourWell::on(pushButton_setBorderColor)->setColour(selectedBorderColor);
+    if (!selectedBorderColor.isValid()) {
+        pushButton_setBorderColor->setText(mBorderColorButtonWords);
+    }
 }
 
 void dlgRoomProperties::slot_resetBorderColor()
 {
     selectedBorderColor = QColor();
     mBorderColorWasChanged = true;
-    pushButton_setBorderColor->setStyleSheet(QString());
+    showBorderColor();
     emitBorderPreview();
 }
 

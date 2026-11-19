@@ -52,6 +52,7 @@
 #include <QTimer>
 #include <QtTest/QtTest>
 
+#include "AlphaColourWell.h"
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
@@ -408,6 +409,32 @@ private slots:
         QVERIFY(!pDlg->checkBox_locked->isTristate());
         QCOMPARE(pDlg->checkBox_hidden->checkState(), Qt::Unchecked);
         QVERIFY(!pDlg->checkBox_hidden->isTristate());
+    }
+
+    // The picker offers an alpha channel, so the button has to show it rather
+    // than paint the colour opaque behind its own words
+    void aBorderColorIsShownWithItsOpacity()
+    {
+        buildMap();
+        room(scmFirstRoom)->mBorderColor = QColor(200, 0, 0, 128);
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        QPushButton* pButton = pDlg->pushButton_setBorderColor;
+        const QString words = pButton->accessibleName();
+        QVERIFY2(!words.isEmpty(), "the border colour button has no name to say what it sets");
+
+        const uiDesign::AlphaColourWell* pWell = uiDesign::AlphaColourWell::find(pButton);
+        QVERIFY2(pWell, "the border colour is not shown in an alpha colour well");
+        QCOMPARE(pWell->colour(), QColor(200, 0, 0, 128));
+        QVERIFY2(pButton->text().contains(qsl("50%")), qPrintable(qsl("the well does not say the colour is half opaque: \"%1\"").arg(pButton->text())));
+
+        QVERIFY(QMetaObject::invokeMethod(pDlg, "slot_borderColorSelected", Q_ARG(QColor, QColor(0, 0, 200, 255))));
+        QCOMPARE(pWell->colour(), QColor(0, 0, 200, 255));
+        QVERIFY2(pButton->text().contains(qsl("100%")), qPrintable(pButton->text()));
+
+        QVERIFY(QMetaObject::invokeMethod(pDlg, "slot_resetBorderColor"));
+        QCOMPARE(pButton->text(), words);
+        QVERIFY2(pButton->styleSheet().isEmpty(), "with no colour chosen the button still carries the well's sheet");
     }
 
     void aSelectionThatDisagreesShowsPlaceholdersAndTristates()

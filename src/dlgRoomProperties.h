@@ -81,6 +81,7 @@ private:
     void initHiddenInstructions(const int);
     void initBorderInstructions();
     void emitBorderPreview();
+    void showBorderColor();
     void restoreOriginalBorders();
     TRoom* liveRoom(const int) const;
     QSet<int> liveRoomIds() const;
@@ -96,6 +97,7 @@ private:
     bool mChangeRoomColor = false;
     bool mSymbolColorWasChanged = false;
     QColor selectedBorderColor;
+    QString mBorderColorButtonWords;
     int mBorderThickness = 0;
     bool mBorderColorWasChanged = false;
     bool mBorderThicknessWasChanged = false;
