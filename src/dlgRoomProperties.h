@@ -33,6 +33,10 @@
 class Host;
 class TRoom;
 
+namespace uiDesign {
+class ColourValue;
+}
+
 class dlgRoomProperties : public QDialog, public Ui::room_properties
 {
     Q_OBJECT
@@ -69,6 +73,9 @@ signals:
 
 private:
     QColor backgroundBasedColor(QColor);
+    void restyleColourRows();
+    bool resetOffered(const QColor& chosen) const;
+    void showBorderColour();
     QColor defaultSymbolColor();
     QString getNewSymbol();
     void initSymbolInstructions();
@@ -86,6 +93,8 @@ private:
     QSet<int> liveRoomIds() const;
 
     Host* mpHost = nullptr;
+    uiDesign::ColourValue* mpSymbolColour = nullptr;
+    uiDesign::ColourValue* mpBorderColour = nullptr;
     QSet<int> mRoomIds;
     QHash<int, quint64> mRoomSerials;
     QHash<QString, int> mpSymbols;

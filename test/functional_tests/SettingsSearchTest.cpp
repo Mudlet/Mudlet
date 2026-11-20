@@ -33,6 +33,8 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include <tuple>
+
 #include <QBoxLayout>
 #include <QColorSpace>
 #include <QGroupBox>
@@ -236,6 +238,46 @@ private slots:
 
         QCOMPARE(mpPreferences->groupBox_editorFont->parentWidget(), resultsColumn());
         QVERIFY2(mpPreferences->groupBox_font->parentWidget() != resultsColumn(), "the display font's card answered a search for the editor's font");
+    }
+
+    // The ring colours and diameters are named by labels beside their controls, and the button choosing a ring's
+    // colour, which shows only a glyph, keeps the words it used to show in its tooltip
+    void test_thePlayerRoomMarkerIsFoundByItsRingsAndDiameters()
+    {
+        for (const QString& query : {qsl("outer ring"), qsl("inner ring"), qsl("diameter"), qsl("outer ring color"), qsl("inner ring color")}) {
+            search(query);
+            QVERIFY2(mpPreferences->groupBox_playerRoomStyle->parentWidget() == resultsColumn(), qPrintable(qsl("searching for '%1' did not find the Player room marker card").arg(query)));
+        }
+        search(QString());
+    }
+
+    // The light colours have no label of their own on the colour cards: the
+    // column heading and the row's name say it. A search for one still finds
+    // both cards and lights up that row's name and that column, and a plain
+    // colour lights up its own row.
+    void test_aConsoleColourIsFoundOnItsRow()
+    {
+        const auto lit = [](const QWidget* pWidget) {
+            return pWidget && pWidget->isVisible() && pWidget->property("searchMatch").toBool();
+        };
+        search(qsl("light red"));
+        QCOMPARE(mpPreferences->groupBox_displayColors->parentWidget(), resultsColumn());
+        QCOMPARE(mpPreferences->groupBox_mapperColors->parentWidget(), resultsColumn());
+        for (const QWidget* pWidget : {static_cast<QWidget*>(mpPreferences->label_red),
+                                       static_cast<QWidget*>(mpPreferences->label_42),
+                                       mpPreferences->findChild<QWidget*>(qsl("settingsDisplayColoursLight")),
+                                       mpPreferences->findChild<QWidget*>(qsl("settingsMapColoursLight"))}) {
+            QVERIFY2(lit(pWidget), qPrintable(qsl("searching for 'light red' did not light up '%1'").arg(pWidget ? pWidget->objectName() : qsl("a heading that is missing"))));
+        }
+        QVERIFY2(!lit(mpPreferences->label_green), "searching for 'light red' lit up the green row");
+
+        for (const auto& [query, pRowName, pMapRowName] :
+             {std::tuple{qsl("black"), mpPreferences->label_black, mpPreferences->label_17}, std::tuple{qsl("cyan"), mpPreferences->label_cyan, mpPreferences->label_46}}) {
+            search(query);
+            QCOMPARE(mpPreferences->groupBox_displayColors->parentWidget(), resultsColumn());
+            QVERIFY2(lit(pRowName) && lit(pMapRowName), qPrintable(qsl("searching for '%1' did not light up its rows").arg(query)));
+        }
+        search(QString());
     }
 
     // The protocol names only exist inside the menu that button pops up, where

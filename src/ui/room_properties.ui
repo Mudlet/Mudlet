@@ -194,41 +194,62 @@
           <number>0</number>
          </property>
          <item>
+          <widget class="QLabel" name="label_symbolColor">
+           <property name="text">
+            <string extracomment="Label in front of the box showing the room symbol color">Color:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QPushButton" name="pushButton_setSymbolColor">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
            </property>
-           <property name="font">
-            <font>
-             <pointsize>9</pointsize>
-            </font>
-           </property>
            <property name="toolTip">
             <string>Color of to use for the room symbol(s)</string>
            </property>
-           <property name="autoFillBackground">
-            <bool>true</bool>
+           <property name="accessibleName">
+            <string>Set symbol color</string>
            </property>
            <property name="text">
-            <string>Set symbol color</string>
+            <string notr="true"/>
            </property>
           </widget>
          </item>
          <item>
           <widget class="QPushButton" name="pushButton_resetSymbolColor">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
            </property>
+           <property name="toolTip">
+            <string extracomment="Tooltip of the button showing only a glyph next to the &quot;Set symbol color&quot; button: it takes the room symbol color chosen here away again, so the symbol is drawn in black or white against the room, which the box beside it calls Automatic.">Reset the symbol color to automatic</string>
+           </property>
+           <property name="accessibleName">
+            <string extracomment="Read out by a screen reader for the button showing only a glyph next to the &quot;Set symbol color&quot; button; it will reset the symbol color back to the original color.">Reset</string>
+           </property>
            <property name="text">
-            <string extracomment="This button is located next to the button &quot;Set symbol color&quot; and will reset the symbol color back to the original color.">Reset</string>
+            <string notr="true"/>
            </property>
           </widget>
+         </item>
+         <item>
+          <spacer name="horizontalSpacer_symbolColor">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>0</width>
+             <height>0</height>
+            </size>
+           </property>
+          </spacer>
          </item>
         </layout>
        </widget>
@@ -277,9 +298,16 @@
           <number>0</number>
          </property>
          <item>
+          <widget class="QLabel" name="label_borderColor">
+           <property name="text">
+            <string extracomment="Label in front of the box showing the room border color">Color:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QPushButton" name="pushButton_setBorderColor">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -287,26 +315,45 @@
            <property name="toolTip">
             <string>Color of the room border</string>
            </property>
-           <property name="autoFillBackground">
-            <bool>true</bool>
+           <property name="accessibleName">
+            <string>Set border color</string>
            </property>
            <property name="text">
-            <string>Set border color</string>
+            <string notr="true"/>
            </property>
           </widget>
          </item>
          <item>
           <widget class="QPushButton" name="pushButton_resetBorderColor">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
            </property>
+           <property name="toolTip">
+            <string extracomment="Tooltip of the button showing only a glyph next to the &quot;Set border color&quot; button: it takes the room border color chosen here away again, so the border is drawn in the map's own border color, which the box beside it calls Map default.">Reset the border color to the map default</string>
+           </property>
+           <property name="accessibleName">
+            <string extracomment="Read out by a screen reader for the button showing only a glyph next to the &quot;Set border color&quot; button; it will reset the border color back to the map's own.">Reset</string>
+           </property>
            <property name="text">
-            <string>Reset</string>
+            <string notr="true"/>
            </property>
           </widget>
+         </item>
+         <item>
+          <spacer name="horizontalSpacer_borderColor">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>0</width>
+             <height>0</height>
+            </size>
+           </property>
+          </spacer>
          </item>
         </layout>
        </widget>

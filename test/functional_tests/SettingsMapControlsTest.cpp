@@ -144,10 +144,10 @@ private slots:
         }
     }
 
-    // Resetting the map colours has to reach the buttons that stand for them,
-    // not only the profile: the buttons are the only thing in the dialog that
-    // says which colour the map will be drawn in (#1049).
-    void test_resettingTheMapColoursShowsThemOnTheButtons()
+    // Resetting the map colours has to reach the fields that show them, not
+    // only the profile: the fields are the only thing in the dialog that says
+    // which colour the map will be drawn in (#1049).
+    void test_resettingTheMapColoursShowsThemInTheFields()
     {
         const QColor priorBlack = mpHost->mBlack_2;
         const QColor priorWhite = mpHost->mLightWhite_2;
@@ -156,26 +156,27 @@ private slots:
             mpHost->mLightWhite_2 = priorWhite;
         });
 
-        // The dialog draws the buttons from the profile as it opens, so colours
+        // The dialog fills the fields from the profile as it opens, so colours
         // picked before it opens are the ones they come up showing. Two
-        // different ones, so a button drawn from the wrong field still shows.
+        // different ones, so a field filled from the wrong colour still shows.
         const QColor pickedBlack(17, 34, 51);
         const QColor pickedWhite(204, 187, 170);
         mpHost->mBlack_2 = pickedBlack;
         mpHost->mLightWhite_2 = pickedWhite;
         QVERIFY2(openPreferences(), "the settings dialog never appeared");
 
-        QPushButton* pBlack = mpPreferences->pushButton_black_2;
-        QPushButton* pWhite = mpPreferences->pushButton_Lwhite_2;
-        QVERIFY2(pBlack->styleSheet().contains(pickedBlack.name()), qPrintable(qsl("the map colour button does not show the colour the profile holds: '%1'").arg(pBlack->styleSheet())));
-        QVERIFY2(pWhite->styleSheet().contains(pickedWhite.name()), qPrintable(qsl("the map colour button does not show the colour the profile holds: '%1'").arg(pWhite->styleSheet())));
+        auto* pBlack = mpPreferences->findChild<QLineEdit*>(qsl("settingsColour_black_2"));
+        auto* pWhite = mpPreferences->findChild<QLineEdit*>(qsl("settingsColour_Lwhite_2"));
+        QVERIFY2(pBlack && pWhite, "the map's black and light white have no fields");
+        QCOMPARE(pBlack->text(), qsl("#112233"));
+        QCOMPARE(pWhite->text(), qsl("#CCBBAA"));
 
         mpPreferences->reset_colors_button_2->click();
 
         QCOMPARE(mpHost->mBlack_2, QColor(QColorConstants::Black));
         QCOMPARE(mpHost->mLightWhite_2, QColor(QColorConstants::White));
-        QVERIFY2(pBlack->styleSheet().contains(QColor(QColorConstants::Black).name()), qPrintable(qsl("the reset left the map colour button showing the old colour: '%1'").arg(pBlack->styleSheet())));
-        QVERIFY2(pWhite->styleSheet().contains(QColor(QColorConstants::White).name()), qPrintable(qsl("the reset left the map colour button showing the old colour: '%1'").arg(pWhite->styleSheet())));
+        QCOMPARE(pBlack->text(), qsl("#000000"));
+        QCOMPARE(pWhite->text(), qsl("#FFFFFF"));
     }
 
     // The map draws environments 257 to 272 from its own copy of the sixteen
