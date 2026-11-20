@@ -468,6 +468,10 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
                 }
             },
             Qt::QueuedConnection);
+    // After the queued one above, so the configSaved this asks for queues behind the continuations writing profile.ini
+    connect(this, &Host::profileSaveFinished, this, []() {
+        TAppFrontend::instance()->configWritten();
+    });
     connect(this, &Host::signal_forceMXPProcessorOnChanged, this, [this](bool enabled) {
         if (enabled) {
             if (!mMxpProcessor.isEnabled()) {
@@ -1177,6 +1181,7 @@ bool Host::saveMapFile(const QString& location, int saveVersion)
     if (saved) {
         mpMap->resetUnsaved();
         mpMap->setSaveError(false);
+        TAppFrontend::instance()->configWritten();
     } else {
         mpMap->setSaveError(true);
     }
@@ -1395,7 +1400,9 @@ void Host::waitForMapAutosave()
     mMapAutosave.waitForFinished();
     mMapAutosaveResultPending = false;
     const QString failure = mMapAutosave.reason();
-    if (!failure.isEmpty()) {
+    if (failure.isEmpty()) {
+        TAppFrontend::instance()->configWritten();
+    } else {
         qDebug().noquote() << "Error autosaving map to" << MudletApp::getMudletPath(enums::profileMapPathFileName, mHostName, qsl("autosave.dat")) << ":" << failure;
         mpMap->setUnsavedKeepingRevisions(__func__);
     }
@@ -3213,7 +3220,9 @@ static void saveMainConsoleTimeStamps(const QString& hostName, const bool shown)
 {
     const auto filePath = MudletApp::getMudletPath(enums::profileDataItemPath, hostName, qsl("autotimestamp"));
     if (!shown) {
-        QFile::remove(filePath);
+        if (QFile::remove(filePath)) {
+            TAppFrontend::instance()->configWritten();
+        }
         return;
     }
     QSaveFile file(filePath);
@@ -3223,7 +3232,9 @@ static void saveMainConsoleTimeStamps(const QString& hostName, const bool shown)
     }
     if (!file.commit()) {
         qWarning() << "Host: error saving timestamp state:" << file.errorString();
+        return;
     }
+    TAppFrontend::instance()->configWritten();
 }
 
 std::optional<bool> Host::setWindowTimeStamps(const QString& name, const bool shown)
@@ -4005,6 +4016,7 @@ QString Host::setPackageInfo(const QString& packageName, const QString& info, co
     if (const QString error = writePackageConfig(MudletApp::getMudletPath(enums::profilePackagePath, getName(), packageName), details); !error.isEmpty()) {
         return qsl("could not save the details of package '%1', so nothing was changed: %2").arg(packageName, error);
     }
+    TAppFrontend::instance()->configWritten();
     mPackageInfo[packageName] = details;
     return {};
 }
@@ -8197,13 +8209,19 @@ void Host::setCaretEnabled(bool enabled)
 bool Host::caretShortcutMatches(const QKeyEvent* ke) const
 {
     constexpr Qt::KeyboardModifiers allModifiers = Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier | Qt::KeypadModifier | Qt::GroupSwitchModifier;
+#if defined(Q_OS_MACOS)
+    // The Ctrl key arrives as Qt::MetaModifier on macOS, where Qt::ControlModifier is Command
+    constexpr Qt::KeyboardModifier controlKey = Qt::MetaModifier;
+#else
+    constexpr Qt::KeyboardModifier controlKey = Qt::ControlModifier;
+#endif
     switch (mCaretShortcut) {
     case CaretShortcut::None:
         return false;
     case CaretShortcut::Tab:
-        return ke->key() == Qt::Key_Tab && !(ke->modifiers() & Qt::ControlModifier);
+        return ke->key() == Qt::Key_Tab && !(ke->modifiers() & controlKey);
     case CaretShortcut::CtrlTab:
-        return ke->key() == Qt::Key_Tab && (ke->modifiers() & Qt::ControlModifier);
+        return ke->key() == Qt::Key_Tab && (ke->modifiers() & controlKey);
     case CaretShortcut::F6:
         return ke->key() == Qt::Key_F6 && (ke->modifiers() & allModifiers) == Qt::NoModifier;
     }
