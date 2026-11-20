@@ -920,8 +920,8 @@ it out:
 - What they leave is where the main console's text goes, `mainConsoleTextRect()`, in pixels from the
   area's top left corner.
 - The main console's grid, `mainConsoleGrid()`, is as many characters of its font as fit there, never
-  fewer than 40 columns. The game is told it, if the profile has NAWS on and the game asks, and a
-  script's `getColumnCount()` and `getRowCount()` read it. With no border set, the grid fills the area.
+  fewer than 40 columns. The game is told it, if the profile has NAWS on and the game asks, unless the
+  app gave `setGameScreenSize()` (below), and a script's `getColumnCount()` and `getRowCount()` read it. With no border set, the grid fills the area.
 - Borders wider than the area leave the text no room, as in the GUI: `mainConsoleTextRect()` and
   `sysWindowResizeEvent` give a width or height of 0, never a negative one, and the grid stays at its
   40 columns, or 1 row.
@@ -938,6 +938,13 @@ Either raises `sysWindowResizeEvent` with the text's width and height in pixels,
 window does in the GUI, and nothing when the size is the one already given; a border change raises it
 too. Both are refused where `submit()` is, and for a size of no character, or more than 65535, either
 way.
+
+An app that draws the main console in a font of its own counts its columns and rows itself:
+`setGameScreenSize(columns, rows)` tells the game (NAWS) that size from then on, in place of the grid,
+with the same 40-column floor, wrap-width cap and 0.3 s settling as `setScreenSize()`. It changes
+neither the area nor the grid, so a main window given with `setMainWindowSize()` keeps its size and
+scripts read it; a later `setScreenSize()` still resizes the area. It is refused where `setScreenSize()`
+is, and holds until the profile closes.
 
 `mainConsoleAreaChanged` carries the grid and where the text goes when either changes: from a border, a
 font change, either call, or a script's own `setMainWindowSize()`. Read both at `profileLoaded`; the
