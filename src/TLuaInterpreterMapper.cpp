@@ -1660,9 +1660,11 @@ int TLuaInterpreter::getAreaExploration(lua_State* L)
         }
     }
     std::sort(roomsWithOpenExits.begin(), roomsWithOpenExits.end());
+    // Read before any table is made: making one can run a __gc handler, which could delete the area
+    const auto roomCount = pA->getAreaRooms().size();
 
     lua_newtable(L);
-    lua_pushnumber(L, pA->getAreaRooms().size());
+    lua_pushnumber(L, roomCount);
     lua_setfield(L, -2, "rooms");
     lua_pushnumber(L, openExits);
     lua_setfield(L, -2, "openExits");
