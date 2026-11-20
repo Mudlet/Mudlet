@@ -450,7 +450,7 @@ private slots:
             painter.paintRoomExits(imagePainter, pen, exitList, pArea, 0, roomBounds, viewportRooms, exitWidth, areaExitsMap);
         }
 
-        // Along the stretch joining the two east stubs; dotted, as neither exit's reverse leads back
+        // Along the stretch joining the two east stubs, solid since each east exit is the other's way back
         const int stubX = originX + qRound(scmRoomPixels / 2);
         int drawn = 0;
         for (int y = scmOriginY + 10; y < scmOriginY + 2 * qRound(scmRoomPixels) - 10; ++y) {
@@ -459,6 +459,137 @@ private slots:
             }
         }
         QVERIFY2(drawn > 20, qPrintable(qsl("%1 pixels drawn. %2").arg(drawn).arg(saved(image, qsl("edge-bent")))));
+    }
+
+    // North from the west room leads to the east room, whose west exit leads back: walkable both ways, so with
+    // directional lines it is one solid line without an arrow, the way back drawing the same bent path. Straight
+    // lines keep calling it one-way, as the east room's south exit does not lead back.
+    void aWayBackThroughAnotherExitIsTwoWayWithDirectionalLines()
+    {
+        QVERIFY(map()->setExit(scmWestRoom, -1, DIR_EAST));
+        QVERIFY(map()->setExit(scmWestRoom, scmEastRoom, DIR_NORTH));
+        TArea* pArea = roomDB()->getArea(mAreaId);
+        QVERIFY(pArea);
+
+        const auto paintedExits = [&](const bool directional) {
+            TMapPainter::View exitsView = view();
+            exitsView.mDirectionalExitLines = directional;
+            TMapPainter painter;
+            painter.setView(exitsView);
+            QImage image = blankImage();
+            QPainter imagePainter(&image);
+            QPen pen(Qt::white);
+            const float exitWidth = 3.0f;
+            pen.setWidthF(exitWidth);
+            imagePainter.setPen(pen);
+            const QRect roomBounds = TMapPainter::viewportRoomBounds(scmOriginX, scmOriginY, scmRoomPixels, scmRoomPixels, scmImageWidth, scmImageHeight);
+            const QList<int> viewportRooms = pArea->getGridIndex().roomsInViewport(0, roomBounds.left(), roomBounds.right(), roomBounds.top(), roomBounds.bottom());
+            QList<TMapPainter::ExitToPaint> exitList;
+            QMap<int, QPointF> areaExitsMap;
+            painter.paintRoomExits(imagePainter, pen, exitList, pArea, 0, roomBounds, viewportRooms, exitWidth, areaExitsMap);
+            return image;
+        };
+        const auto arrowPixels = [](const QImage& image) {
+            int count = 0;
+            for (int y = 0; y < image.height(); ++y) {
+                for (int x = 0; x < image.width(); ++x) {
+                    count += image.pixelColor(x, y) == ExitAppearance::oneWayArrowColor();
+                }
+            }
+            return count;
+        };
+
+        const QImage straight = paintedExits(false);
+        QVERIFY2(arrowPixels(straight) > 0, qPrintable(saved(straight, qsl("way-back-straight"))));
+        const QImage bent = paintedExits(true);
+        QVERIFY2(arrowPixels(bent) == 0, qPrintable(saved(bent, qsl("way-back-bent"))));
+        // The west room's north stub, which only the bent line draws
+        QVERIFY2(bent.pixelColor(onImage(QPointF(0, 0.4)).toPoint()) == QColor(Qt::white), qPrintable(saved(bent, qsl("way-back-bent"))));
+
+        // With no way back at all it stays one-way either way
+        QVERIFY(map()->setExit(scmEastRoom, -1, DIR_WEST));
+        const QImage oneWay = paintedExits(true);
+        QVERIFY2(arrowPixels(oneWay) > 0, qPrintable(saved(oneWay, qsl("way-back-none"))));
+    }
+
+    // An exported ring sits outside the room's border, which the room is drawn with after its exits: a thick one
+    // would otherwise cover it
+    void anExportedRingClearsTheRoomsBorder()
+    {
+        QVERIFY(map()->setExit(scmWestRoom, scmWestRoom, DIR_EAST));
+        QVERIFY(map()->setExit(scmEastRoom, -1, DIR_WEST));
+        const QColor savedForeground = mpHost->mFgColor_2;
+        auto restore = qScopeGuard([this, savedForeground]() {
+            mpHost->mFgColor_2 = savedForeground;
+        });
+        mpHost->mFgColor_2 = lineColour();
+        TRoom* pWestRoom = roomDB()->getRoom(scmWestRoom);
+
+        const auto ringPixels = [&](const QString& name) {
+            TMapPainter painter;
+            painter.setView(view());
+            QObject saveOwner;
+            const QString exportFile = qsl("%1/ring-%2.png").arg(mConfigDir.path(), name);
+            const auto [started, message] = painter.exportArea(mAreaId, exportFile, 0, 4.0, false, &saveOwner);
+            if (!started) {
+                return -1;
+            }
+            const QImage image = exported(&saveOwner, exportFile);
+            int count = 0;
+            for (int y = 0; y < image.height(); ++y) {
+                for (int x = 0; x < image.width(); ++x) {
+                    count += image.pixelColor(x, y) == lineColour();
+                }
+            }
+            return count;
+        };
+
+        const int unbordered = ringPixels(qsl("unbordered"));
+        QVERIFY2(unbordered > 0, qPrintable(qsl("no ring exported (%1)").arg(unbordered)));
+        pWestRoom->mBorderColor = QColor(Qt::magenta);
+        pWestRoom->mBorderThickness = 20;
+        const int bordered = ringPixels(qsl("bordered"));
+        QVERIFY2(bordered * 10 >= unbordered * 9, qPrintable(qsl("the border covered the ring: %1 pixels of it shown, %2 without a border").arg(bordered).arg(unbordered)));
+    }
+
+    // An exit back into its own room is a hollow ring just outside the room on that side, with or without directional
+    // lines: a line from the room to itself has no length to show
+    void anExitBackIntoItsOwnRoomIsARing()
+    {
+        QVERIFY(map()->setExit(scmWestRoom, scmWestRoom, DIR_EAST));
+        QVERIFY(map()->setExit(scmEastRoom, -1, DIR_WEST));
+        TArea* pArea = roomDB()->getArea(mAreaId);
+        QVERIFY(pArea);
+
+        for (const bool directional : {false, true}) {
+            TMapPainter::View exitsView = view();
+            exitsView.mDirectionalExitLines = directional;
+            TMapPainter painter;
+            painter.setView(exitsView);
+            QImage image = blankImage();
+            {
+                QPainter imagePainter(&image);
+                QPen pen(Qt::white);
+                const float exitWidth = 2.0f;
+                pen.setWidthF(exitWidth);
+                imagePainter.setPen(pen);
+                const QRect roomBounds = TMapPainter::viewportRoomBounds(scmOriginX, scmOriginY, scmRoomPixels, scmRoomPixels, scmImageWidth, scmImageHeight);
+                const QList<int> viewportRooms = pArea->getGridIndex().roomsInViewport(0, roomBounds.left(), roomBounds.right(), roomBounds.top(), roomBounds.bottom());
+                QList<TMapPainter::ExitToPaint> exitList;
+                QMap<int, QPointF> areaExitsMap;
+                painter.paintRoomExits(imagePainter, pen, exitList, pArea, 0, roomBounds, viewportRooms, exitWidth, areaExitsMap);
+            }
+
+            // The room's edge is a quarter cell east of its centre at the default room size; the ring's radius is
+            // 0.15 of a cell, so its centre is 0.4 of a cell east and its far side 0.55
+            const QString where = saved(image, directional ? qsl("loop-bent") : qsl("loop-straight"));
+            QVERIFY2(image.pixelColor(onImage(QPointF(0.55, 0)).toPoint() - QPoint(1, 0)) == QColor(Qt::white), qPrintable(where));
+            QVERIFY2(image.pixelColor(onImage(QPointF(0.4, 0.15)).toPoint()) == QColor(Qt::white), qPrintable(where));
+            QVERIFY2(image.pixelColor(onImage(QPointF(0.4, 0)).toPoint()) == QColor(Qt::black), qPrintable(where));
+            // Nothing beyond the ring, nor on the room's other side
+            QVERIFY2(image.pixelColor(onImage(QPointF(0.7, 0)).toPoint()) == QColor(Qt::black), qPrintable(where));
+            QVERIFY2(image.pixelColor(onImage(QPointF(-0.4, 0)).toPoint()) == QColor(Qt::black), qPrintable(where));
+        }
     }
 
     // An image label is scaled to fill the rectangle it is given
