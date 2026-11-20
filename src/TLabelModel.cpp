@@ -519,10 +519,15 @@ QString plainName(const QString& labelText)
 
 QString TLabelModel::effectiveAccessibleName() const
 {
+    return effectiveAccessibleName(mText);
+}
+
+QString TLabelModel::effectiveAccessibleName(const QString& shownText) const
+{
     if (!mAccessibleName.isEmpty()) {
         return mAccessibleName;
     }
-    if (QString name = plainName(mText); !name.isEmpty()) {
+    if (QString name = plainName(shownText); !name.isEmpty()) {
         return name;
     }
     // Qt shows a tooltip that is not rich text literally, so it is read that way too
