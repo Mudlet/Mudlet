@@ -507,6 +507,7 @@ private:
         bool drawUpperLowerLevels = false;
         bool inOutStubs = false;
         bool largeAreaExitArrows = false;
+        bool specialExitMarkers = false;
         QColor borderColor;
         QColor background;
         QColor foreground;

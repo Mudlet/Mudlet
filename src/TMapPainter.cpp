@@ -666,6 +666,10 @@ void TMapPainter::drawRoom(QPainter& painter,
     }
 
     ExitAppearance::paintExitMarkers(painter, pen, *pRoom, rx, ry, mRoomWidth * rSize, mRoomHeight * rSize, roomColor, mMapperUseAntiAlias);
+
+    if (mpHost->mMapperShowSpecialExitMarkers && !pRoom->getSpecialExits().isEmpty()) {
+        ExitAppearance::paintSpecialExitMarker(painter, rx, ry, roomRectangle.width(), roomRectangle.height(), !isGridMode);
+    }
 }
 
 bool TMapPainter::roomBorderShown(const TRoom& room) const
@@ -1032,6 +1036,7 @@ void TMapPainter::drawGridModeRooms(QPainter& painter,
     QList<QPair<TRoom*, QRectF>> selectedRooms;
     QList<QPair<TRoom*, QRectF>> highlightedRooms;
     QList<QPair<TRoom*, QPointF>> verticalExitRooms;
+    QList<QPair<TRoom*, QRectF>> specialExitRooms;
     TRoom* pPlayerRoom = nullptr;
     bool playerRoomCollision = false;
 
@@ -1083,6 +1088,10 @@ void TMapPainter::drawGridModeRooms(QPainter& painter,
         if (room->getUp() > 0 || room->exitStubs.contains(DIR_UP) || room->getDown() > 0 || room->exitStubs.contains(DIR_DOWN) || room->getIn() > 0 || room->exitStubs.contains(DIR_IN)
             || room->getOut() > 0 || room->exitStubs.contains(DIR_OUT)) {
             verticalExitRooms.append({room, QPointF(rx, ry)});
+        }
+
+        if (mpHost->mMapperShowSpecialExitMarkers && !room->getSpecialExits().isEmpty()) {
+            specialExitRooms.append({room, roomRect});
         }
     }
 
@@ -1259,6 +1268,11 @@ void TMapPainter::drawGridModeRooms(QPainter& painter,
             }
         }
         painter.restore();
+    }
+
+    for (const auto& [room, roomRect] : specialExitRooms) {
+        const QPointF center = roomRect.center();
+        ExitAppearance::paintSpecialExitMarker(painter, center.x(), center.y(), roomRect.width(), roomRect.height(), false);
     }
 
     const qreal timeCollision = timer.nsecsElapsed() / 1000000.0;

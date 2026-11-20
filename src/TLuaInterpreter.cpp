@@ -10233,6 +10233,13 @@ int TLuaInterpreter::setConfig(lua_State* L)
             host.mMapperShowRoomBorders = getVerifiedBool(L, __func__, 2, "value");
             return success();
         }
+        if (key == qsl("mapShowSpecialExitMarkers")) {
+            host.mMapperShowSpecialExitMarkers = getVerifiedBool(L, __func__, 2, "value");
+            if (host.mpMap) {
+                host.mpMap->refreshArea(-1);
+            }
+            return success();
+        }
         if (key == qsl("mapShowGrid")) {
             host.mMapperShowGrid = getVerifiedBool(L, __func__, 2, "value");
             host.mpMap->announceMapperSettingChanged(TMap::MapperSetting::ShowGrid);
@@ -10862,6 +10869,10 @@ int TLuaInterpreter::getConfig(lua_State* L)
             {qsl("mapShowRoomBorders"),
              [&]() {
                  lua_pushboolean(L, host.mMapperShowRoomBorders);
+             }},
+            {qsl("mapShowSpecialExitMarkers"),
+             [&]() {
+                 lua_pushboolean(L, host.mMapperShowSpecialExitMarkers);
              }},
             {qsl("mapInfoColor"),
              [&]() {

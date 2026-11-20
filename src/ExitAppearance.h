@@ -60,4 +60,8 @@ QList<qreal> visibleDashes(Qt::PenStyle style);
 // roomHeight centered on rx, ry. pen is left as the outer pen last used.
 void paintExitMarkers(QPainter& painter, QPen& pen, const TRoom& room, float rx, float ry, qreal roomWidth, qreal roomHeight, const QColor& roomColor, bool cosmeticPen);
 
+// The dot that says a room roomWidth by roomHeight centered on rx, ry has special exits: centered on its
+// top right corner where rooms have space between them, or else just inside that corner
+void paintSpecialExitMarker(QPainter& painter, float rx, float ry, qreal roomWidth, qreal roomHeight, bool onCorner);
+
 } // namespace ExitAppearance

@@ -252,4 +252,18 @@ void paintExitMarkers(QPainter& painter, QPen& pen, const TRoom& room, const flo
     painter.restore();
 }
 
+void paintSpecialExitMarker(QPainter& painter, const float rx, const float ry, const qreal roomWidth, const qreal roomHeight, const bool onCorner)
+{
+    // White ringed in black stands out on any room color and on the map background alike
+    const qreal radius = qMax(qMin(roomWidth, roomHeight) * 0.14, 2.5);
+    const qreal inset = onCorner ? 0.0 : radius * 1.3;
+    const QPointF center(rx + roomWidth / 2.0 - inset, ry - roomHeight / 2.0 + inset);
+    painter.save();
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.setPen(QPen(QColorConstants::Black, radius * 0.4));
+    painter.setBrush(QColorConstants::White);
+    painter.drawEllipse(center, radius, radius);
+    painter.restore();
+}
+
 } // namespace ExitAppearance

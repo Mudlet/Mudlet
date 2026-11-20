@@ -230,6 +230,7 @@ private slots:
     // Named rather than lambdas so initWithHost() can connect them with Qt::UniqueConnection
     void slot_mapSymbolFontFudgeChanged(const double factor);
     void slot_changeMapperShowRoomBorders(const bool state);
+    void slot_changeMapperShowSpecialExitMarkers(const bool state);
     void slot_changeDrawUpperLowerLevels(const bool state);
     void slot_changeMapperUseAntiAlias(const bool state);
     void slot_caretModeKeyChanged(const int index);
