@@ -22,6 +22,10 @@ All files should end with a newline character at the end of the file.
 
 Don't break existing scripts without the maintainers' explicit approval. Scripts in the wild depend on what the Lua API observably does: the values a function already returns (appending more breaks callers like `table.insert(t, f())`), whether a failure raises an error, where output lands, and lenient handling of bad input - even when the current behaviour is plainly a bug. Back such a change with a scan of the packages in the [Mudlet package repository](https://github.com/Mudlet/mudlet-package-repository) showing nothing relies on the old behaviour. Adding return values to a function that returned nothing, including `nil` plus a message on failure, is not a break, and neither is improving the text of an error that already raises.
 
+### Event names
+
+Name a new event Mudlet raises by "Event names" in `docs/CONTRIBUTING.md` and add it to `systemEvents()` in `src/EventNames.cpp`; `CI/check-event-names.lua` fails a pull request whose name breaks the standard or is missing there. A released name keeps firing: give it a standard name in `oldEventNames()` (`src/Host.cpp`) and raise it with `Host::raiseEventWithOldName()`.
+
 ### C++ Conventions
 In general: write modern C++20 code, but avoid C++ exceptions, templates, and concepts as those have performance/complexity considerations, avoiding which has made Mudlet the success it is today.
 

@@ -1,0 +1,3 @@
+# Legacy list for good.cpp and good.lua
+sysFixtureKeptEvent
+fixtureChosenEvent

@@ -1066,6 +1066,7 @@ void Host::loadMap()
     if (mpMap->restore(QString())) {
         mpMap->audit();
         consoleFrontend()->showLoadedMap();
+        mpMap->raiseMapLoaded();
     }
 }
 
@@ -1238,6 +1239,9 @@ bool Host::loadMapFile(const QString& location)
 
     mpMap->updateArea(-1);
 
+    if (result) {
+        mpMap->raiseMapLoaded();
+    }
     return result;
 }
 
@@ -1316,6 +1320,9 @@ bool Host::importMapFile(const QString& location, QString* errMsg)
 
     mpMap->updateArea(-1);
 
+    if (result) {
+        mpMap->raiseMapLoaded();
+    }
     return result;
 }
 
@@ -3788,6 +3795,34 @@ void Host::raiseEvent(const TEvent& pE)
     // we need to safely dereference the members of 'event' that point to
     // values in the Lua registry
     mLuaInterpreter.freeAllInLuaRegistry(pE);
+}
+
+// Standard event names, each with the older name scripts already listen for. Only Mudlet's own raises go out
+// under both: an event a script raises keeps the one name it was given, so a script that re-raises one name as
+// the other, for older Mudlet versions, cannot set off a loop.
+static const QHash<QString, QString>& oldEventNames()
+{
+    static const QHash<QString, QString> names{
+            {qsl("sysMapDownloaded"), qsl("sysMapDownloadEvent")},
+            {qsl("sysMapLocationSet"), qsl("sysManualLocationSetEvent")},
+            {qsl("sysMapModeChanged"), qsl("mapModeChangeEvent")},
+            {qsl("sysMapWindowMousePressed"), qsl("sysMapWindowMousePressEvent")},
+            {qsl("sysMapWindowOpened"), qsl("mapOpenEvent")},
+    };
+    return names;
+}
+
+void Host::raiseEventWithOldName(const TEvent& event)
+{
+    if (event.mArgumentList.isEmpty()) {
+        return;
+    }
+    if (const QString oldName = oldEventNames().value(event.mArgumentList.constFirst()); !oldName.isEmpty()) {
+        TEvent oldEvent = event;
+        oldEvent.mArgumentList.first() = oldName;
+        raiseEvent(oldEvent);
+    }
+    raiseEvent(event);
 }
 
 void Host::postIrcMessage(const QString& a, const QString& b, const QString& c)
@@ -7682,7 +7717,7 @@ void Host::setProfileCommandForegroundColor(const QColor& color)
 
 // Returns true when a script has claimed the built-in map buttons for this
 // profile via setConfig("mapperButton", ...): "disabled" swallows the request
-// outright, "scripted" turns it into a sysMapperButtonAction event so the
+// outright, "scripted" turns it into a sysMapButtonActivated event so the
 // profile's UI package can show or hide its own map window instead.
 bool Host::interceptMapperButton()
 {
@@ -7691,7 +7726,7 @@ bool Host::interceptMapperButton()
     }
     if (mMapperButtonMode == MapperButtonMode::Scripted) {
         TEvent event{};
-        event.mArgumentList.append(QLatin1String("sysMapperButtonAction"));
+        event.mArgumentList.append(QLatin1String("sysMapButtonActivated"));
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         raiseEvent(event);
         return true;
@@ -7729,12 +7764,12 @@ void Host::toggleMapperVisibility()
     consoleFrontend()->setMapperShown(!mapperShown());
 }
 
-bool Host::loadMapForNewMapper(const bool embedded)
+Host::NewMapperLoad Host::loadMapForNewMapper(const bool embedded)
 {
     // Past closeChildren() with its view gone, the close is all that is left, so there is no map to show, and its
     // error log is not written to again
     if ((mIsClosingDown && !hasConsoleView()) || !mpMap->mpRoomDB->isEmpty()) {
-        return false;
+        return NewMapperLoad::Skipped;
     }
     // Numbered as the GUI numbers them: case 2 is TMainConsole::createMapper()'s, case 3 the map widget's
     const QString now = QDateTime::currentDateTime().toString(Qt::ISODate);
@@ -7753,13 +7788,14 @@ bool Host::loadMapForNewMapper(const bool embedded)
     }
     qDebug() << "Host::loadMapForNewMapper() - restore map case" << (embedded ? 2 : 3);
     mpMap->pushErrorMessagesToFile(preLoadTitle, true);
-    if (mpMap->restore(QString())) {
+    const bool loaded = mpMap->restore(QString());
+    if (loaded) {
         mpMap->audit();
         consoleFrontend()->showLoadedMap();
     }
 
     mpMap->pushErrorMessagesToFile(loadTitle, true);
-    return true;
+    return loaded ? NewMapperLoad::Loaded : NewMapperLoad::Failed;
 }
 
 void Host::createMapper(const bool loadDefaultMap)
@@ -7767,18 +7803,22 @@ void Host::createMapper(const bool loadDefaultMap)
     auto hostName(getName());
     consoleFrontend()->createMapperDock(tr("Map - %1").arg(hostName), qsl("dockMap_%1").arg(hostName));
 
-    if (!loadDefaultMap || !loadMapForNewMapper(false)) {
+    const NewMapperLoad load = loadDefaultMap ? loadMapForNewMapper(false) : NewMapperLoad::Skipped;
+    if (load == NewMapperLoad::Skipped) {
         // Needed to set the area selector widget to right area when map is
         // loaded by clicking on Map main toolbar button:
         consoleFrontend()->showMapAtPlayerArea();
     }
     consoleFrontend()->showNewMapperDock();
+    if (load == NewMapperLoad::Loaded) {
+        mpMap->raiseMapLoaded();
+    }
 
     check_for_mappingscript();
-    TEvent mapOpenEvent{};
-    mapOpenEvent.mArgumentList.append(QLatin1String("mapOpenEvent"));
-    mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    raiseEvent(mapOpenEvent);
+    TEvent mapOpenedEvent{};
+    mapOpenedEvent.mArgumentList.append(QLatin1String("sysMapWindowOpened"));
+    mapOpenedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    raiseEventWithOldName(mapOpenedEvent);
 }
 
 void Host::setDockLayoutUpdated(const QString& name)

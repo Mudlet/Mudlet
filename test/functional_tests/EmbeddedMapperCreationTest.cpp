@@ -191,7 +191,7 @@ private slots:
         }
 
         QVERIFY(mpHost->mainConsoleView());
-        watchMapOpenEvent();
+        watchMapEvents();
     }
 
     void cleanup()
@@ -223,6 +223,7 @@ private slots:
         QVERIFY(mpHost->mainConsoleView()->mpMapper);
 
         QVERIFY2(mapOpenEventCountIs(1), "createMapper() did not raise mapOpenEvent exactly once for an already-loaded map");
+        QVERIFY2(mapEventsAre(qsl("mapOpenEvent,sysMapWindowOpened")), "createMapper() raised sysMapLoaded for a map that was already loaded");
 
         auto* pComboBox = mpHost->mainConsoleView()->mpMapper->comboBox_showArea;
         QCOMPARE(pComboBox->count(), 2); // the hidden default area is still in the constructor's fill
@@ -847,6 +848,42 @@ private slots:
         QVERIFY(mpHost->mainConsoleView()->mpMapper);
 
         QVERIFY2(mapOpenEventCountIs(1), "createMapper() did not raise mapOpenEvent exactly once for a first-run profile");
+        QVERIFY2(mapEventsAre(qsl("mapOpenEvent,sysMapWindowOpened")), "createMapper() raised sysMapLoaded with no map file to load");
+    }
+
+    // The map the profile saved last, loaded because nothing was in memory: sysMapLoaded comes once the map
+    // is in place, before the window opening is announced
+    void test_createMapperLoadsTheSavedMap()
+    {
+        TMap* pMap = mpHost->mpMap.data();
+        QVERIFY(pMap->mpRoomDB->addArea(mPlayerAreaName) > 0);
+        QVERIFY(pMap->addRoom(1));
+        QVERIFY(mpHost->saveMapFile(QString()));
+        pMap->mapClear();
+        QVERIFY(pMap->mpRoomDB->isEmpty());
+
+        auto [created, message] = mpHost->mainConsoleView()->createMapper(QString(), 0, 0, 300, 300);
+        QVERIFY2(created, qPrintable(message));
+        QVERIFY2(pMap->mpRoomDB->getRoom(1), "createMapper() did not load the profile's saved map");
+        QVERIFY2(mapEventsAre(qsl("sysMapLoaded,mapOpenEvent,sysMapWindowOpened")), "createMapper() did not raise sysMapLoaded once, before the window events");
+    }
+
+    // The same for the map widget, which loads through Host::loadMapForNewMapper() before its dock is shown;
+    // sysMapLoaded waits for the dock, so a handler finds the map on screen
+    void test_openMapWidgetLoadsTheSavedMap()
+    {
+        TMap* pMap = mpHost->mpMap.data();
+        QVERIFY(pMap->addRoom(1));
+        QVERIFY(mpHost->saveMapFile(QString()));
+        pMap->mapClear();
+        QVERIFY(pMap->mpRoomDB->isEmpty());
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("registerAnonymousEventHandler('sysMapLoaded', function() mapWidgetShownOnLoad = getMapWidgetGeometry() ~= nil end)")));
+
+        auto [opened, message] = mpHost->openMapWidget(QString(), -1, -1, -1, -1);
+        QVERIFY2(opened, qPrintable(message));
+        QVERIFY2(pMap->mpRoomDB->getRoom(1), "openMapWidget() did not load the profile's saved map");
+        QVERIFY2(mapEventsAre(qsl("sysMapLoaded,mapOpenEvent,sysMapWindowOpened")), "openMapWidget() did not raise sysMapLoaded once, before the window events");
+        QVERIFY2(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(mapWidgetShownOnLoad == true)")), "sysMapLoaded fired before the map widget was on screen");
     }
 
     // The main toolbar map button runs mudlet::slot_showMapperDialog(). With a
@@ -891,13 +928,31 @@ private slots:
     }
 
 private:
-    void watchMapOpenEvent()
+    void watchMapEvents()
     {
-        mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("mapOpenSeen = 0\n"
-                                                                 "registerAnonymousEventHandler('mapOpenEvent', function() mapOpenSeen = mapOpenSeen + 1 end)"));
+        mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("mapEventsSeen = {}\n"
+                                                                 "for _, name in ipairs({'mapOpenEvent', 'sysMapWindowOpened', 'sysMapLoaded'}) do\n"
+                                                                 "  registerAnonymousEventHandler(name, function(event) mapEventsSeen[#mapEventsSeen + 1] = event end)\n"
+                                                                 "end"));
     }
 
-    bool mapOpenEventCountIs(const int expected) const { return mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(mapOpenSeen == %1)").arg(expected)); }
+    // Each opening raises the old name and then, straight after it, the new one
+    bool mapOpenEventCountIs(const int expected) const
+    {
+        return mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("local opened = 0\n"
+                                                                        "for i, event in ipairs(mapEventsSeen) do\n"
+                                                                        "  if event == 'mapOpenEvent' then\n"
+                                                                        "    assert(mapEventsSeen[i + 1] == 'sysMapWindowOpened')\n"
+                                                                        "    opened = opened + 1\n"
+                                                                        "  elseif event == 'sysMapWindowOpened' then\n"
+                                                                        "    assert(mapEventsSeen[i - 1] == 'mapOpenEvent')\n"
+                                                                        "  end\n"
+                                                                        "end\n"
+                                                                        "assert(opened == %1)")
+                                                                            .arg(expected));
+    }
+
+    bool mapEventsAre(const QString& expected) const { return mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(table.concat(mapEventsSeen, ',') == '%1')").arg(expected)); }
 
     void deleteProfileDirectory() const { TestProfile::removeProfileDirectory(mHostname); }
 };

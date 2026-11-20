@@ -2269,14 +2269,16 @@ std::pair<bool, QString> TNullConsoleFrontend::createMapper(const QString& windo
             mWindowNotifier.note();
         });
         copyPlayerRoomStyleToMap();
-        mpHost->loadMapForNewMapper(true);
+        if (mpHost->loadMapForNewMapper(true) == Host::NewMapperLoad::Loaded) {
+            mpHost->mpMap->raiseMapLoaded();
+        }
     }
     // Raised too where a handler of the mode event made the mapper, as the GUI's second createMapper() does
     if (makesMapper) {
-        TEvent mapOpenEvent{};
-        mapOpenEvent.mArgumentList.append(QLatin1String("mapOpenEvent"));
-        mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        mpHost->raiseEvent(mapOpenEvent);
+        TEvent mapOpenedEvent{};
+        mapOpenedEvent.mArgumentList.append(QLatin1String("sysMapWindowOpened"));
+        mapOpenedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mpHost->raiseEventWithOldName(mapOpenedEvent);
     }
     // TMainConsole::createMapper() moves and resizes the one there is, as Geyser.Mapper does by calling it again
     mEmbeddedMapperGeometry = QRect(QPoint(x, y), widgetSize(width, height));

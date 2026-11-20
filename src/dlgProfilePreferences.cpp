@@ -6669,10 +6669,6 @@ void dlgProfilePreferences::loadMap(const QString& fileName)
     }
 
     if (success) {
-        // TMap::audit() is what paints up the "[  OK  ]" message for the map load.
-        if (!isJson) {
-            pHost->mpMap->audit();
-        }
         label_mapFileActionResult->setText(tr("Loaded map from %1.").arg(fileName.toHtmlEscaped()));
     } else {
         label_mapFileActionResult->setText(tr("Could not load map from %1.").arg(fileName.toHtmlEscaped()));
@@ -9762,8 +9758,7 @@ void dlgProfilePreferences::slot_deleteMap()
     label_mapFileActionResult->show();
     label_mapFileActionResult->setText(tr("Deleting map - please wait..."));
     qApp->processEvents(); // Allow the above message to show up when erasing big maps
-    pHost->mpMap->mapClear();
-    pHost->mpMap->updateArea(-1);
+    pHost->mpMap->deleteMap();
 
     // Reset the button but leave it disabled
     pushButton_deleteMap->setChecked(false);

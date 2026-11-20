@@ -31,6 +31,7 @@
 
 #include <QDir>
 #include <QFileDialog>
+#include <QFileInfo>
 #include <QLineEdit>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
@@ -50,6 +51,7 @@
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "T2DMap.h"
+#include "TLuaInterpreter.h"
 #include "TMainConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
@@ -336,6 +338,44 @@ private slots:
         QVERIFY2(QTest::qWaitFor(saysWhy, 5s), qPrintable(qsl("the console does not say why: '%1'").arg(shown())));
         // Spaces dropped, since a wrap can fall inside the path
         QVERIFY2(shown().remove(QChar::Space).contains(qsl("/%1\"").arg(name)), qPrintable(qsl("the console does not show the path as typed: '%1'").arg(shown())));
+    }
+
+    // The map re-centres on the player after any load, so a list left on the area shown before names the wrong one
+    void test_aJsonMapLoadedHereShowsThePlayersArea()
+    {
+        // Only when there is none: on an existing mapper this toggles it hidden
+        if (!mpHost->mpMap->mapper()) {
+            mpHost->showHideOrCreateMapper(true);
+        }
+        dlgMapper* pMapper = mpHost->mpMap->mapper();
+        QVERIFY2(pMapper, "there is no mapper to show the loaded map");
+
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString file = dir.filePath(qsl("two-areas.json"));
+        const QString script = qsl(R"(
+            local first = addAreaName("JsonLoadFirst")
+            local second = addAreaName("JsonLoadSecond")
+            addRoom(9001)
+            setRoomArea(9001, first)
+            addRoom(9002)
+            setRoomArea(9002, second)
+            centerview(9002)
+            saveJsonMap([[%1]])
+        )");
+        mpHost->getLuaInterpreter()->compileAndExecuteScript(script.arg(file));
+        QVERIFY2(QFileInfo::exists(file), "the map was not saved as JSON");
+        pMapper->updateAreaComboBox();
+        pMapper->comboBox_showArea->setCurrentText(qsl("JsonLoadFirst"));
+        QCOMPARE(pMapper->comboBox_showArea->currentText(), qsl("JsonLoadFirst"));
+
+        QVERIFY2(openPreferences(), "the settings dialog never appeared");
+        mpPreferences->loadMap(file);
+
+        // A paint is where the map moves to the player
+        pMapper->mp2dMap->grab();
+        QCOMPARE(mpHost->mpMap->mpRoomDB->getAreaNamesMap().value(pMapper->mp2dMap->mAreaID), qsl("JsonLoadSecond"));
+        QCOMPARE(pMapper->comboBox_showArea->currentText(), qsl("JsonLoadSecond"));
     }
 };
 
