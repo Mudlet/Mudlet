@@ -550,6 +550,8 @@ endforeach()
 # add_test entry, which names the class for the group binary to run.
 macro(add_grouped_test_binary target)
     add_functional_test_binary(${target} GroupedTestMain.cpp ${ARGN})
+    # So a functional group run by hand sets MUDLET_TEST_MODE as ctest does; unit_tests runs without it under ctest too
+    target_compile_definitions(${target} PRIVATE MUDLET_FUNCTIONAL_TEST_GROUP)
     foreach(grouped_test_file ${ARGN})
         get_filename_component(grouped_test_name ${grouped_test_file} NAME_WE)
         add_test(NAME ${grouped_test_name} COMMAND $<TARGET_FILE:${target}> ${grouped_test_name})
