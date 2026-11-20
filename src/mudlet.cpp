@@ -2805,7 +2805,11 @@ void mudlet::loadTranslators(const QString& languageCode)
 
 void mudlet::slot_moduleManager()
 {
-    Host* pH = getActiveHost();
+    showModuleManager(getActiveHost());
+}
+
+void mudlet::showModuleManager(Host* pH)
+{
     if (!pH) {
         return;
     }
@@ -2823,10 +2827,8 @@ void mudlet::slot_moduleManager()
 
     // Force reposition after showing, since module manager is a singleton per profile
     // that may restore its position after being shown
-    Host* activeHost = getActiveHost();
-    QWidget* activeConsole = activeHost ? activeHost->mainConsoleView() : nullptr;
-    QWidget* referenceWidget = activeConsole ? activeConsole : this;
-    widgetutils::forceRepositionDialogOnParentScreen(moduleManager, referenceWidget);
+    QWidget* console = pH->mainConsoleView();
+    widgetutils::forceRepositionDialogOnParentScreen(moduleManager, console ? console : this);
 }
 
 bool mudlet::openWebPage(const QString& path)
@@ -2843,7 +2845,11 @@ bool mudlet::openWebPage(const QString& path)
 
 void mudlet::slot_packageManager()
 {
-    Host* pH = getActiveHost();
+    showPackageManager(getActiveHost());
+}
+
+void mudlet::showPackageManager(Host* pH)
+{
     if (!pH) {
         return;
     }
@@ -2863,17 +2869,19 @@ void mudlet::slot_packageManager()
 
     // Force reposition after showing, since package manager is a singleton per profile
     // that may restore its position after being shown
-    Host* activeHost = getActiveHost();
-    QWidget* activeConsole = activeHost ? activeHost->mainConsoleView() : nullptr;
-    QWidget* referenceWidget = activeConsole ? activeConsole : this;
-    widgetutils::forceRepositionDialogOnParentScreen(packageManager, referenceWidget);
+    QWidget* console = pH->mainConsoleView();
+    widgetutils::forceRepositionDialogOnParentScreen(packageManager, console ? console : this);
 }
 
 void mudlet::slot_packageExporter()
 {
-    Host* pH = getActiveHost();
+    showPackageExporter(getActiveHost());
+}
+
+dlgPackageExporter* mudlet::showPackageExporter(Host* pH)
+{
     if (!pH) {
-        return;
+        return nullptr;
     }
     auto d = new dlgPackageExporter(this, pH);
     d->setAttribute(Qt::WA_DeleteOnClose);
@@ -2884,10 +2892,9 @@ void mudlet::slot_packageExporter()
     d->show();
 
     // Force reposition after showing to ensure correct screen placement
-    Host* activeHost = getActiveHost();
-    QWidget* activeConsole = activeHost ? activeHost->mainConsoleView() : nullptr;
-    QWidget* referenceWidget = activeConsole ? activeConsole : this;
-    widgetutils::forceRepositionDialogOnParentScreen(d, referenceWidget);
+    QWidget* console = pH->mainConsoleView();
+    widgetutils::forceRepositionDialogOnParentScreen(d, console ? console : this);
+    return d;
 }
 
 // Qt reports several inactive states - suspended, hidden, and plain inactive -

@@ -29,6 +29,7 @@
 
 #include "EventNames.h"
 #include "Host.h"
+#include "HostDialogs.h"
 #include "LuaInterface.h"
 #include "MudletApp.h"
 #include "TConsole.h"
@@ -42,7 +43,9 @@
 #include "dlgAliasMainArea.h"
 #include "dlgColorTrigger.h"
 #include "dlgKeysMainArea.h"
+#include "dlgModuleManager.h"
 #include "dlgPackageExporter.h"
+#include "dlgPackageManager.h"
 #include "dlgProfilePreferences.h"
 #include "dlgScriptsMainArea.h"
 #include "dlgTriggerPatternEdit.h"
@@ -1190,17 +1193,48 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH, std::unique_ptr<TConsoleModel> erro
 
     QAction* importAction = new QAction(QIcon(qsl(":/icons/import.png")), tr("Import"), this);
     importAction->setEnabled(true);
+    //: Tooltip of the script editor toolbar's Import button
+    importAction->setToolTip(qsl("<p>%1</p>%2").arg(importAction->text(), tr("<p>Install a package from a .mpackage, .zip or .xml file into this profile</p>")));
     connect(importAction, &QAction::triggered, this, &dlgTriggerEditor::slot_import);
 
     mpExportAction = new QAction(QIcon(qsl(":/icons/export.png")), tr("Export"), this);
     mpExportAction->setEnabled(true);
+    //: Tooltip of the script editor toolbar's Export button
+    mpExportAction->setToolTip(qsl("<p>%1</p>%2").arg(mpExportAction->text(), tr("<p>Save the selected item, with everything in it if it is a group, as an .xml file</p>")));
     connect(mpExportAction, &QAction::triggered, this, &dlgTriggerEditor::slot_export);
 
     mpCreateModuleAction = new QAction(QIcon(qsl(":/icons/package-exporter.png")), tr("Create Module"), this);
     mpCreateModuleAction->setEnabled(true);
     // Led by the button's text, which the tooltip stands in for once the bar drops its labels
-    mpCreateModuleAction->setToolTip(qsl("<p>%1</p>%2").arg(mpCreateModuleAction->text(), tr("<p>Create a module from selected items</p>")));
+    mpCreateModuleAction->setToolTip(
+            qsl("<p>%1</p>%2")
+                    .arg(mpCreateModuleAction->text(),
+                         //: Tooltip of the script editor toolbar's Create Module button, whose arrow opens a menu with the Package Exporter, Package Manager and Module Manager
+                         tr("<p>Bundle the selected items into a module (.mpackage) in this profile's folder and install it here as a module</p>"
+                            "<p>Its arrow opens the Package Exporter, to make a package to share, and the Package and Module Managers</p>")));
     connect(mpCreateModuleAction, &QAction::triggered, this, &dlgTriggerEditor::slot_createModule);
+
+    mpPackageExporterAction = new QAction(tr("Package Exporter"), this);
+    connect(mpPackageExporterAction, &QAction::triggered, this, [this]() {
+        if (auto* pDialog = mudlet::self()->showPackageExporter(mpHost)) {
+            widgetutils::positionDialogOnParentScreen(pDialog, this);
+        }
+    });
+
+    mpPackageManagerAction = new QAction(tr("Package Manager"), this);
+    connect(mpPackageManagerAction, &QAction::triggered, this, [this]() {
+        mudlet::self()->showPackageManager(mpHost);
+        if (auto* pDialog = HostDialogs::of(mpHost).mpPackageManager.data()) {
+            widgetutils::positionDialogOnParentScreen(pDialog, this);
+        }
+    });
+    mpModuleManagerAction = new QAction(tr("Module Manager"), this);
+    connect(mpModuleManagerAction, &QAction::triggered, this, [this]() {
+        mudlet::self()->showModuleManager(mpHost);
+        if (auto* pDialog = HostDialogs::of(mpHost).mpModuleManager.data()) {
+            widgetutils::positionDialogOnParentScreen(pDialog, this);
+        }
+    });
 
     mProfileSaveAction = new QAction(QIcon(qsl(":/icons/document-save-all.png")), tr("Save Profile"), this);
     mProfileSaveAction->setToolTip(qsl("<p>%1 (%2)</p>%3")
@@ -1301,6 +1335,16 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH, std::unique_ptr<TConsoleModel> erro
         pButton_saveProfile->setPopupMode(QToolButton::MenuButtonPopup);
         // Named so the stylesheet's split-button padding reaches this button and no other
         pButton_saveProfile->setObjectName(qsl("editorSaveProfileButton"));
+    }
+    if (auto* pButton_packages = qobject_cast<QToolButton*>(toolBar->widgetForAction(mpCreateModuleAction))) {
+        auto* pMenu_packages = new QMenu(pButton_packages);
+        pMenu_packages->addAction(mpPackageExporterAction);
+        pMenu_packages->addAction(mpPackageManagerAction);
+        pMenu_packages->addAction(mpModuleManagerAction);
+        pButton_packages->setMenu(pMenu_packages);
+        pButton_packages->setPopupMode(QToolButton::MenuButtonPopup);
+        // Named so the stylesheet's split-button padding reaches it, as it does Save Profile
+        pButton_packages->setObjectName(qsl("editorCreateModuleButton"));
     }
 
     // In the order the groups give up their labels: profile actions first, item actions last
@@ -17342,7 +17386,8 @@ static void inkAsChrome(QWidget* pWidget, const QColor& chrome, const QColor& ch
 void dlgTriggerEditor::inkEditorTrees()
 {
     const uiDesign::ThemeTokens tokens = uiDesign::themeTokens();
-    const QList<QTreeWidget*> trees{treeWidget_triggers, treeWidget_aliases, treeWidget_timers, treeWidget_scripts, treeWidget_actions, treeWidget_keys, treeWidget_variables, mpFolderTree, treeWidget_searchResults};
+    const QList<QTreeWidget*> trees{
+            treeWidget_triggers, treeWidget_aliases, treeWidget_timers, treeWidget_scripts, treeWidget_actions, treeWidget_keys, treeWidget_variables, mpFolderTree, treeWidget_searchResults};
     for (QTreeWidget* pTreeWidget : trees) {
         inkAsChrome(pTreeWidget, tokens.mutedText, tokens.accentText);
     }
@@ -17417,9 +17462,12 @@ void dlgTriggerEditor::applyEditorShellStyle()
     const QString toolBarRules = uiDesign::toolBarStyleSheet(toolBarSelector, uiDesign::ToolBarSeam::Bottom, tokens);
 
     // The split button recipe, rounded to the bar's corner since the face under it is the flat one toolBarStyleSheet() drew
-    const QString saveProfileSelector = toolBarSelector + qsl(" QToolButton#editorSaveProfileButton");
-    const QString splitButtonRules = saveProfileSelector + qsl(" { padding-right: %1px; }").arg(QString::number(uiDesign::scmToolBarButtonPaddingHorizontal + uiDesign::scmInputDropDownWidth))
-                                     + uiDesign::splitButtonMenuHalfStyleSheet(saveProfileSelector, uiDesign::scmToolBarButtonRadius, tokens);
+    const auto splitButtonRulesFor = [&](const QString& objectName) {
+        const QString selector = toolBarSelector + qsl(" QToolButton#") + objectName;
+        return selector + qsl(" { padding-right: %1px; }").arg(QString::number(uiDesign::scmToolBarButtonPaddingHorizontal + uiDesign::scmInputDropDownWidth))
+               + uiDesign::splitButtonMenuHalfStyleSheet(selector, uiDesign::scmToolBarButtonRadius, tokens);
+    };
+    const QString splitButtonRules = splitButtonRulesFor(qsl("editorSaveProfileButton")) + splitButtonRulesFor(qsl("editorCreateModuleButton"));
 
     const QString statusBarRules = qsl("QStatusBar#editorStatusBar { background-color: %1; border-top: 1px solid %2; }"
                                        // Or the platform style draws a sunken frame around
@@ -17429,7 +17477,7 @@ void dlgTriggerEditor::applyEditorShellStyle()
                                            .arg(pageColor.name(), borderColor.name(), mutedText.name());
 
     const QString shellStyleSheet = toolBarRules + splitButtonRules + statusBarRules;
-    // Save Profile's menu hangs off its button, so the bar's sheet is what reaches it
+    // The split buttons' menus hang off their buttons, so the bar's sheet is what reaches them
     toolBar->setStyleSheet(shellStyleSheet + uiDesign::menuStyleSheet(tokens));
     uiDesign::letPopupsTakeTheFieldsCorner(toolBar);
     if (QStatusBar* pStatusBar = QMainWindow::statusBar()) {
