@@ -420,7 +420,7 @@ void Updater::setupOnWindows()
 
     // finally, create the dblsqd objects. Constructing the UpdateDialog triggers the update check
     updateDialog = new dblsqd::UpdateDialog(feed.get(), updateAutomatically() ? dblsqd::UpdateDialog::OnLastWindowClosed : dblsqd::UpdateDialog::Manual, mSettings);
-    // Made here so the dialog's layout owns it at once: a button made earlier and never shown in a dialog had no owner
+    // The dialog's layout owns the button from here on
     //: Label for the update button shown in the update dialog
     mpInstallOrRestart = new QPushButton(tr("Update"));
     updateDialog->addInstallButton(mpInstallOrRestart);
@@ -466,7 +466,7 @@ void Updater::setupOnLinux()
 
     // finally, create the dblsqd objects. Constructing the UpdateDialog triggers the update check
     updateDialog = new dblsqd::UpdateDialog(feed.get(), updateAutomatically() ? dblsqd::UpdateDialog::OnLastWindowClosed : dblsqd::UpdateDialog::Manual, mSettings);
-    // Made here so the dialog's layout owns it at once: a button made earlier and never shown in a dialog had no owner
+    // The dialog's layout owns the button from here on
     //: Label for the update button shown in the update dialog
     mpInstallOrRestart = new QPushButton(tr("Update"));
     updateDialog->addInstallButton(mpInstallOrRestart);

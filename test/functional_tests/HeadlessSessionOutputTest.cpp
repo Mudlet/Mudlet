@@ -538,11 +538,14 @@ resetFormat())lua")));
             prompted = prompted || isPrompt;
         });
         QStringList styled;
-        connect(&session, &THeadlessSession::localTextStyled, &session, [&styled](const QString&, const QString& text, const QList<THeadlessSession::TextRun>& runs) {
-            // Not the connection's own messages
-            if (!text.startsWith(QLatin1Char('[')) && !text.contains(QLatin1String("connection"))) {
+        bool afterPrefix = false;
+        connect(&session, &THeadlessSession::localTextStyled, &session, [&styled, &afterPrefix](const QString&, const QString& text, const QList<THeadlessSession::TextRun>& runs) {
+            // Not Mudlet's own messages, such as a PTB's welcome: each is a "[  OK  ]  - " prefix, then its text
+            const bool prefix = text.startsWith(QLatin1Char('['));
+            if (!prefix && !afterPrefix) {
                 styled << styledPiece(text, runs);
             }
+            afterPrefix = prefix;
         });
         QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
         QVERIFY(session.runLua(qsl(R"(tempTrigger("Welcome", [[send("from a trigger")]]))")));

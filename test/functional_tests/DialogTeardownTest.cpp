@@ -326,8 +326,8 @@ private slots:
         QVERIFY2(HostDialogs::of(mpHost).mpDlgProfilePreferences.isNull(), "Preferences dialog should have been destroyed");
     }
 
-    // The updater's Update button is made with the update dialog that owns it. Made with the updater, it had no owner
-    // until checkUpdatesOnStart(), which no test calls, so every test that set Mudlet up leaked it (#12972)
+    // Mudlet set up without checkUpdatesOnStart(), as in every test, holds no button without an owner: nothing would
+    // ever delete it
     void test_noUnownedUpdateButtonBeforeTheUpdaterIsSetUp()
     {
 #if defined(INCLUDE_UPDATER)
