@@ -330,6 +330,37 @@ private slots:
         QVERIFY2(image.pixelColor(westCentre + QPoint(quarterCell + 2, 0)) == QColor(Qt::black), qPrintable(saved(image, qsl("rooms"))));
     }
 
+    // A pixel reads back as the map coordinates a room there is drawn at, and nothing before rooms are laid out
+    void aPixelReadsBackAsTheMapCoordinatesDrawnThere()
+    {
+        const TMapPainter::View laidOut = view();
+        for (const QPointF& mapPoint : {QPointF(0, 0), QPointF(2, 0), QPointF(-1.5, 2.25)}) {
+            const std::optional<QPointF> read = laidOut.mapPointAt(onImage(mapPoint));
+            QVERIFY(read);
+            QCOMPARE(*read, mapPoint);
+        }
+        TMapPainter::View notLaidOut;
+        QVERIFY(!notLaidOut.mapPointAt(QPointF(10, 10)));
+    }
+
+    // Once the map is deleted the widget reads no coordinates, though its last frame's scale is still there
+    void aDeletedMapReadsNoCoordinates()
+    {
+        setUpPlayerView();
+        T2DMap mapperMap;
+        mapperMap.mpMap = map();
+        mapperMap.mpHost = mpHost;
+        mapperMap.init();
+        mapperMap.resize(scmImageWidth, scmImageHeight);
+        mapperMap.grab();
+        const QPoint westCentre = onImage(QPointF(0, 0)).toPoint();
+        QVERIFY(mapperMap.mapPointAt(westCentre));
+
+        map()->mapClear();
+        mapperMap.grab();
+        QVERIFY(!mapperMap.mapPointAt(westCentre));
+    }
+
     // A door is two strokes across the exit line, in the colour of its status
     void aDoorIsDrawnAcrossItsExitInItsStatusColour()
     {

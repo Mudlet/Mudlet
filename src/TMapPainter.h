@@ -97,6 +97,16 @@ struct TMapPainterView
     qreal xyzoom = 0.0;
     float xspan = 0.0f;
     float yspan = 0.0f;
+
+    // The map coordinates at a pixel of mSize, x eastward and y northward, as the rooms are drawn: none until a frame
+    // has laid out rooms
+    std::optional<QPointF> mapPointAt(const QPointF& pixel) const
+    {
+        if (!(mRoomWidth > 0.0f) || !(mRoomHeight > 0.0f)) {
+            return std::nullopt;
+        }
+        return QPointF((pixel.x() - mRX) / mRoomWidth, (mRY - pixel.y()) / mRoomHeight);
+    }
     // The room size the symbol and label pixmaps were cached at
     float mPrevRoomWidth = 0.0f;
     float mPrevRoomHeight = 0.0f;

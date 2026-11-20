@@ -35,6 +35,7 @@
 #include "mudlet.h"
 
 #include <QApplication>
+#include <QCursor>
 #include <QEvent>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -736,6 +737,24 @@ std::pair<bool, QString> dlgMapper::setMapZoom(qreal zoom, int areaId)
 #else
     return mp2dMap->setMapZoom(zoom, areaId);
 #endif
+}
+
+std::optional<TMapViewFrontend::MapPoint> dlgMapper::mousePositionOnMap() const
+{
+    // The 3D view has no map plane under the pointer to read
+    if (showing3DView() || !mp2dMap->isVisible()) {
+        return std::nullopt;
+    }
+    // Only where the map itself is uppermost: not under another window, nor its own panels such as the progress one
+    const QPoint globalPixel = QCursor::pos();
+    if (QApplication::widgetAt(globalPixel) != mp2dMap) {
+        return std::nullopt;
+    }
+    const std::optional<QPointF> point = mp2dMap->mapPointAt(mp2dMap->mapFromGlobal(globalPixel));
+    if (!point) {
+        return std::nullopt;
+    }
+    return MapPoint{point->x(), point->y(), mp2dMap->getZLevel()};
 }
 
 int dlgMapper::shownAreaId() const

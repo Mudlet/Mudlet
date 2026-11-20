@@ -977,6 +977,16 @@ void T2DMap::switchArea(int areaId)
     switchArea(areaName);
 }
 
+std::optional<QPointF> T2DMap::mapPointAt(const QPoint& pixel) const
+{
+    // Painting a map with no rooms returns before laying out, so the scale left behind is a deleted map's
+    TArea* pArea = mpMap ? mpMap->mpRoomDB->getArea(mAreaID) : nullptr;
+    if (!pArea || pArea->rooms.isEmpty()) {
+        return std::nullopt;
+    }
+    return painterView().mapPointAt(pixel);
+}
+
 std::pair<bool, QString> T2DMap::centerview(int roomId)
 {
     if (!mpMap || !mpMap->mpRoomDB) {
