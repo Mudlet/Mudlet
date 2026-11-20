@@ -774,6 +774,34 @@ private slots:
         QCOMPARE(mapperMap.getCenterRoomId(), scmWestRoom);
     }
 
+    // centerview() pans the main mapper to a room as a drag would: the player stays where they are, and the view only
+    // goes back to them once they move
+    void theMapperPansToARoomWithoutMovingThePlayer()
+    {
+        setUpPlayerView();
+        hideInfoBox();
+        T2DMap mapperMap;
+        mapperMap.mpMap = map();
+        mapperMap.mpHost = mpHost;
+        mapperMap.init();
+        mapperMap.setPlayerRoomStyle(map()->mPlayerRoomStyle);
+        mapperMap.resize(scmImageWidth, scmImageHeight);
+        const auto centre = [&mapperMap]() {
+            return mapperMap.grab().toImage().convertToFormat(QImage::Format_ARGB32).pixelColor(westCentreInView());
+        };
+        QCOMPARE(centre(), markerColour());
+
+        QVERIFY(mapperMap.centerview(scmEastRoom).first);
+        // A second frame too: the pan has to outlast the one it was made for
+        for (int frame = 0; frame < 2; ++frame) {
+            QCOMPARE(centre(), QColor(Qt::blue));
+        }
+        QCOMPARE(map()->mRoomIdHash.value(map()->mProfileName), scmWestRoom);
+
+        map()->mRoomIdHash[map()->mProfileName] = scmEastRoom;
+        QCOMPARE(centre(), markerColour());
+    }
+
     // The info box's Lua reads the area from the mapper, as getMapZoom() and setMapZoom() do, so the frame has moved it
     // there by then; and an export from that Lua leaves the frame to finish as it was drawing it
     void theInfoBoxLuaSeesTheFramesAreaAndCanExport()
