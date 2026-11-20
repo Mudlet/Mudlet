@@ -882,6 +882,12 @@ private slots:
 
         T2DMap* p2dMap = showAreaAtTheOrigin(areaId);
         QVERIFY(p2dMap);
+        // Straight lines only: bent, room 3412's west exit back makes room 3411's north-east exit two-way, and its
+        // custom line then draws that connection
+        const bool directionalExitLines = std::exchange(p2dMap->mDirectionalExitLines, false);
+        const auto restore = qScopeGuard([p2dMap, directionalExitLines]() {
+            p2dMap->mDirectionalExitLines = directionalExitLines;
+        });
         removeCustomLine(pOtherEnd, qsl("w"));
         const Frame withoutLine = renderMapFrame(p2dMap);
         // Running straight back to room 3401, though the exit it is for leads to room 3403; drawn with no

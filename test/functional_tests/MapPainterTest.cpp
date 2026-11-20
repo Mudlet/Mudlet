@@ -450,7 +450,7 @@ private slots:
             painter.paintRoomExits(imagePainter, pen, exitList, pArea, 0, roomBounds, viewportRooms, exitWidth, areaExitsMap);
         }
 
-        // Along the stretch joining the two east stubs; dotted, as neither exit's reverse leads back
+        // Along the stretch joining the two east stubs, solid since each east exit is the other's way back
         const int stubX = originX + qRound(scmRoomPixels / 2);
         int drawn = 0;
         for (int y = scmOriginY + 10; y < scmOriginY + 2 * qRound(scmRoomPixels) - 10; ++y) {
@@ -459,6 +459,57 @@ private slots:
             }
         }
         QVERIFY2(drawn > 20, qPrintable(qsl("%1 pixels drawn. %2").arg(drawn).arg(saved(image, qsl("edge-bent")))));
+    }
+
+    // North from the west room leads to the east room, whose west exit leads back: walkable both ways, so with
+    // directional lines it is one solid line without an arrow, the way back drawing the same bent path. Straight
+    // lines keep calling it one-way, as the east room's south exit does not lead back.
+    void aWayBackThroughAnotherExitIsTwoWayWithDirectionalLines()
+    {
+        QVERIFY(map()->setExit(scmWestRoom, -1, DIR_EAST));
+        QVERIFY(map()->setExit(scmWestRoom, scmEastRoom, DIR_NORTH));
+        TArea* pArea = roomDB()->getArea(mAreaId);
+        QVERIFY(pArea);
+
+        const auto paintedExits = [&](const bool directional) {
+            TMapPainter::View exitsView = view();
+            exitsView.mDirectionalExitLines = directional;
+            TMapPainter painter;
+            painter.setView(exitsView);
+            QImage image = blankImage();
+            QPainter imagePainter(&image);
+            QPen pen(Qt::white);
+            const float exitWidth = 3.0f;
+            pen.setWidthF(exitWidth);
+            imagePainter.setPen(pen);
+            const QRect roomBounds = TMapPainter::viewportRoomBounds(scmOriginX, scmOriginY, scmRoomPixels, scmRoomPixels, scmImageWidth, scmImageHeight);
+            const QList<int> viewportRooms = pArea->getGridIndex().roomsInViewport(0, roomBounds.left(), roomBounds.right(), roomBounds.top(), roomBounds.bottom());
+            QList<TMapPainter::ExitToPaint> exitList;
+            QMap<int, QPointF> areaExitsMap;
+            painter.paintRoomExits(imagePainter, pen, exitList, pArea, 0, roomBounds, viewportRooms, exitWidth, areaExitsMap);
+            return image;
+        };
+        const auto arrowPixels = [](const QImage& image) {
+            int count = 0;
+            for (int y = 0; y < image.height(); ++y) {
+                for (int x = 0; x < image.width(); ++x) {
+                    count += image.pixelColor(x, y) == ExitAppearance::oneWayArrowColor();
+                }
+            }
+            return count;
+        };
+
+        const QImage straight = paintedExits(false);
+        QVERIFY2(arrowPixels(straight) > 0, qPrintable(saved(straight, qsl("way-back-straight"))));
+        const QImage bent = paintedExits(true);
+        QVERIFY2(arrowPixels(bent) == 0, qPrintable(saved(bent, qsl("way-back-bent"))));
+        // The west room's north stub, which only the bent line draws
+        QVERIFY2(bent.pixelColor(onImage(QPointF(0, 0.4)).toPoint()) == QColor(Qt::white), qPrintable(saved(bent, qsl("way-back-bent"))));
+
+        // With no way back at all it stays one-way either way
+        QVERIFY(map()->setExit(scmEastRoom, -1, DIR_WEST));
+        const QImage oneWay = paintedExits(true);
+        QVERIFY2(arrowPixels(oneWay) > 0, qPrintable(saved(oneWay, qsl("way-back-none"))));
     }
 
     // An image label is scaled to fill the rectangle it is given
