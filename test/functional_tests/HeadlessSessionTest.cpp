@@ -160,6 +160,17 @@ private:
                                     .toUtf8());
     }
 
+    // Reads the main window as it loads, and counts what it is told of a resize
+    static QString scriptReadingTheMainWindow()
+    {
+        return qsl(R"lua(local w, h = getMainWindowSize()
+headlessAtStart = w .. "x" .. h .. " " .. getColumnCount() .. "x" .. getRowCount()
+headlessResizes = 0
+registerAnonymousEventHandler("sysWindowResizeEvent", function()
+  headlessResizes = headlessResizes + 1
+end))lua");
+    }
+
     // Opened binary so Windows writes no \r
     static QString recordingScript(const QString& recordPath)
     {
@@ -5106,6 +5117,45 @@ headlessGrid = getColumnCount() .. "x" .. getRowCount())lua")));
         const int cellWidth = luaGlobalString(session.host(), "cellWidth").toInt();
         QVERIFY(cellWidth > 0);
         QCOMPARE(luaGlobalString(session.host(), "headlessGridAtStart"), qsl("%1x%2").arg(std::max(40, (unlaid.width() * cellWidth - 300) / cellWidth)).arg(unlaid.height()));
+        QVERIFY(session.shutdown(false));
+    }
+
+    // A frontend that knows its main window before the profile opens gives it to start(), so a script that fits a
+    // window to it as it loads reads that size from its first line, laid out with the save's font and borders
+    void test_aMainWindowGivenAtStartIsWhatTheFirstScriptReads()
+    {
+        const QString name = qsl("Headless Main Window At Start");
+        QVERIFY(writeProfile(name, scriptReadingTheMainWindow(), qsl("<borderLeftWidth>100</borderLeftWidth>")));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false, .mainWindowSize = QSize(800, 600)}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl("cellWidth, cellHeight = calcFontSize()")));
+        const int cellWidth = luaGlobalString(session.host(), "cellWidth").toInt();
+        const int cellHeight = luaGlobalString(session.host(), "cellHeight").toInt();
+        QVERIFY(cellWidth > 0 && cellHeight > 0);
+        QCOMPARE(luaGlobalString(session.host(), "headlessAtStart"), qsl("800x600 %1x%2").arg(std::max(40, 700 / cellWidth)).arg(600 / cellHeight));
+        // As a frontend gives it again once the profile has loaded, which tells scripts nothing for the size they have
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        QCOMPARE(luaGlobalString(session.host(), "headlessResizes"), qsl("0"));
+        QVERIFY(session.shutdown(false));
+    }
+
+    void test_aScreenSizeGivenAtStartIsWhatTheFirstScriptReads()
+    {
+        const QString name = qsl("Headless Screen Size At Start");
+        QVERIFY(writeProfile(name, scriptReadingTheMainWindow(), qsl("<borderLeftWidth>100</borderLeftWidth>")));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false, .screenSize = QSize(65536, 20)}), THeadlessSession::StartResult::notOpened);
+        QVERIFY2(session.errorString().contains(qsl("from 1 to 65535")), qPrintable(session.errorString()));
+        QVERIFY(!session.host());
+
+        QCOMPARE(session.start({.profile = name, .connect = false, .screenSize = QSize(70, 20)}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl("cellWidth, cellHeight = calcFontSize()")));
+        const int cellWidth = luaGlobalString(session.host(), "cellWidth").toInt();
+        const int cellHeight = luaGlobalString(session.host(), "cellHeight").toInt();
+        QVERIFY(cellWidth > 0 && cellHeight > 0);
+        QCOMPARE(luaGlobalString(session.host(), "headlessAtStart"), qsl("%1x%2 %3x20").arg(70 * cellWidth).arg(20 * cellHeight).arg(std::max(40, (70 * cellWidth - 100) / cellWidth)));
+        QVERIFY(session.setScreenSize(70, 20));
+        QCOMPARE(luaGlobalString(session.host(), "headlessResizes"), qsl("0"));
         QVERIFY(session.shutdown(false));
     }
 

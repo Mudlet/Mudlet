@@ -904,7 +904,7 @@ void Host::startProfileScripts()
 {
     // enable script compilation (which is off by default)
     mBlockScriptCompile = false;
-    if (!hasConsoleView() && !mBorders.isNull()) {
+    if (!hasConsoleView() && (!mBorders.isNull() || mMainAreaCells || mMainAreaPixels)) {
         layOutMainAreaWithNoView(MainAreaChange::load);
     }
     // This uses the external LuaGlobal.lua file to load all the other external
