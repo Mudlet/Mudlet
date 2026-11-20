@@ -470,3 +470,211 @@ describe("Tests that the generic mapper reports its move queue in debug mode", f
     assert.same({}, echoedMentioning("move queue"))
   end)
 end)
+
+-- A trigger on "You must stand up first" or a stun holds the walk; it then walks on from wherever the character is
+describe("Tests the generic mapper's map.customwalkdelay", function()
+  if type(map) ~= "table" or type(map.customwalkdelay) ~= "function" then
+    it("needs the generic mapper installed", function()
+      pending("the generic mapper is not installed in this profile")
+    end)
+    return
+  end
+
+  local continueWalk = upvalue(map.speedwalk, "continue_walk")
+  local mapperState = {"mapping", "currentRoom", "currentArea"}
+  local walkConfigs = {"speedwalk_delay", "speedwalk_wait", "speedwalk_random", "use_translation"}
+  local areaId, rooms, saved, sent, timers
+
+  local function makeRoom(name, y)
+    local id = createRoomID()
+    addRoom(id)
+    setRoomArea(id, areaId)
+    setRoomCoordinates(id, 0, y, 0)
+    setRoomName(id, name)
+    return id
+  end
+
+  -- the timers the walk has started and not seen killed, latest last
+  local function liveTimers()
+    local live = {}
+    for _, timer in ipairs(timers) do
+      if not timer.killed then
+        live[#live + 1] = timer
+      end
+    end
+    return live
+  end
+
+  before_each(function()
+    saved = {configs = {}, state = {}, playerRoom = getPlayerRoom()}
+    for _, key in ipairs(walkConfigs) do
+      saved.configs[key] = map.configs[key]
+    end
+    for _, key in ipairs(mapperState) do
+      saved.state[key] = map[key]
+    end
+    areaId = addAreaName("genericMapperWalkDelaySpec")
+    rooms = {makeRoom("Walk start", 0), makeRoom("Walk middle", 1), makeRoom("Walk end", 2)}
+    setExit(rooms[1], rooms[2], "n")
+    setExit(rooms[2], rooms[3], "n")
+    map.set("mapping", false)
+    map.set("currentRoom", rooms[1])
+    map.set("currentArea", areaId)
+    map.configs.speedwalk_delay = 1
+    map.configs.speedwalk_wait = false
+    map.configs.speedwalk_random = false
+    map.configs.use_translation = false
+    sent, timers = {}, {}
+    stub(_G, "send", function(command) sent[#sent + 1] = command end)
+    -- ids far above Mudlet's own, so killing one of these never kills a real timer, and the rest still reach Mudlet
+    local firstId = 1000000000
+    local realKillTimer = killTimer
+    stub(_G, "tempTimer", function(seconds, fn)
+      timers[#timers + 1] = {seconds = seconds, fn = fn}
+      return firstId + #timers
+    end)
+    stub(_G, "killTimer", function(id)
+      local timer = type(id) == "number" and timers[id - firstId]
+      if not timer then
+        return realKillTimer(id)
+      end
+      timer.killed = true
+      return true
+    end)
+    stub(map, "echo")
+  end)
+
+  after_each(function()
+    -- speedWalkDir is nil until the profile's first path
+    if speedWalkDir and #speedWalkDir > 0 then
+      map.stopSpeedwalk()
+    end
+    send:revert()
+    tempTimer:revert()
+    killTimer:revert()
+    map.echo:revert()
+    for _, key in ipairs(walkConfigs) do
+      map.configs[key] = saved.configs[key]
+    end
+    for _, key in ipairs(mapperState) do
+      map.set(key, saved.state[key])
+    end
+    if saved.playerRoom and roomExists(saved.playerRoom) then
+      centerview(saved.playerRoom)
+    end
+    deleteArea(areaId)
+  end)
+
+  it("can reach the mapper's walk", function()
+    assert.is_function(continueWalk)
+  end)
+
+  it("holds the walk for the seconds given, then walks on from where the character is", function()
+    map.speedwalk(rooms[3])
+    assert.equals(1, #sent)
+
+    assert.equals(2.5, map.customwalkdelay(2.5))
+    local live = liveTimers()
+    assert.equals(1, #live, "the walk's own next step should have been cancelled")
+    assert.equals(2.5, live[1].seconds)
+
+    -- the game said no to the first step, so the character is still at the start
+    live[1].fn()
+    assert.equals(2, #sent)
+    assert.equals(sent[1], sent[2])
+  end)
+
+  it("walks on to where it was going after another route was looked up during the hold", function()
+    map.speedwalk(rooms[3])
+    map.customwalkdelay(1)
+    getPath(rooms[1], rooms[2])
+    liveTimers()[1].fn()
+    -- getPath fills speedWalkPath with room ids as strings
+    assert.equals(tostring(rooms[3]), tostring(speedWalkPath[#speedWalkPath]))
+  end)
+
+  it("walks to a destination chosen during the hold once the hold ends", function()
+    map.speedwalk(rooms[3])
+    map.customwalkdelay(1)
+    map.speedwalk(rooms[2])
+    assert.equals(1, #sent)
+    local paths = spy.on(_G, "getPath")
+    finally(function() getPath:revert() end)
+    liveTimers()[1].fn()
+    assert.equals(2, #sent)
+    -- a one-step walk is over, and speedWalkPath emptied, once its step is sent
+    assert.spy(paths).was_called_with(rooms[1], rooms[2])
+  end)
+
+  it("keeps a destination chosen during the hold when the hold is renewed", function()
+    map.speedwalk(rooms[3])
+    map.customwalkdelay(1)
+    map.speedwalk(rooms[2])
+    map.customwalkdelay(1)
+    local paths = spy.on(_G, "getPath")
+    finally(function() getPath:revert() end)
+    local live = liveTimers()
+    live[#live].fn()
+    assert.spy(paths).was_called_with(rooms[1], rooms[2])
+  end)
+
+  it("resumes towards a destination chosen during the hold", function()
+    map.speedwalk(rooms[3])
+    map.customwalkdelay(1)
+    map.speedwalk(rooms[2])
+    stub(map, "find_me")
+    finally(function() map.find_me:revert() end)
+    map.pauseSpeedwalk()
+    map.resumeSpeedwalk()
+    local paths = spy.on(_G, "getPath")
+    finally(function() getPath:revert() end)
+    local live = liveTimers()
+    live[#live].fn()
+    assert.spy(paths).was_called_with(rooms[1], rooms[2])
+  end)
+
+  it("picks a time from the range when given a second number", function()
+    map.speedwalk(rooms[3])
+    for _ = 1, 20 do
+      local seconds = map.customwalkdelay(0.5, 1.5)
+      assert.is_true(seconds >= 0.5 and seconds <= 1.5, tostring(seconds))
+      local live = liveTimers()
+      assert.equals(seconds, live[#live].seconds)
+    end
+  end)
+
+  it("sends nothing on arriving in a room while the walk is held", function()
+    map.configs.speedwalk_wait = true
+    map.configs.speedwalk_delay = 0
+    map.speedwalk(rooms[3])
+    assert.equals(1, #sent)
+    map.customwalkdelay(1)
+    continueWalk(true)
+    assert.equals(1, #sent)
+  end)
+
+  it("lets a stopped walk stay stopped", function()
+    map.speedwalk(rooms[3])
+    map.customwalkdelay(1)
+    local hold = liveTimers()[1]
+    map.stopSpeedwalk()
+    assert.is_true(hold.killed)
+    hold.fn()
+    assert.equals(1, #sent)
+  end)
+
+  it("returns nil and a message when no walk is going step by step", function()
+    local seconds, message = map.customwalkdelay(1)
+    assert.is_nil(seconds)
+    assert.is_string(message)
+    assert.equals(0, #timers)
+  end)
+
+  it("refuses seconds that are not a number of 0 or more", function()
+    assert.has_error(function() map.customwalkdelay("2") end)
+    assert.has_error(function() map.customwalkdelay(-1) end)
+    assert.has_error(function() map.customwalkdelay(0 / 0) end)
+    assert.has_error(function() map.customwalkdelay(2, 1) end)
+    assert.has_error(function() map.customwalkdelay(1, "3") end)
+  end)
+end)
