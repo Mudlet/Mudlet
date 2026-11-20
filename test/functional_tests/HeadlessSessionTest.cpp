@@ -7372,7 +7372,7 @@ registerAnonymousEventHandler("sysLoadEvent", function() feedTriggers("fed by sy
         QCOMPARE(session.start({.profile = qsl("Headless No Pass"), .connect = false}), THeadlessSession::StartResult::started);
         QSignalSpy output(&session, &THeadlessSession::outputLine);
         QVERIFY(session.runLua(qsl(R"lua(echo("!osc8-" .. "docs"))lua")));
-        QVERIFY2(outputTexts(output).contains(qsl("Docs: https://wiki.mudlet.org/w/Area_51#OSC_8:_Hyperlink_Protocol")), qPrintable(outputTexts(output).join(QLatin1Char('\n'))));
+        QVERIFY2(outputTexts(output).contains(qsl("Docs: https://wiki.mudlet.org/w/Manual:Supported_Protocols#OSC_8:_Hyperlink_Protocol")), qPrintable(outputTexts(output).join(QLatin1Char('\n'))));
     }
 
     // A load that runs the event loop, as a script of its own can, lets a frontend's timer run a script before the

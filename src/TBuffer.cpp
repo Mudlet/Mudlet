@@ -24,6 +24,7 @@
 #include "TBuffer.h"
 
 #include "Host.h"
+#include "GmcpLinkUri.h"
 #include "LuaLiteral.h"
 #include "MailtoUri.h"
 #include "MudletApp.h"
@@ -5275,7 +5276,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                     }
                 }
             } else {
-                // For send: and prompt: commands, remove all query parameters
+                // On a scheme the system does not open the whole query is Mudlet's, so a '?' in a gmcp: message has to be percent-encoded
                 int queryStart = baseUrl.indexOf('?');
                 if (queryStart != -1) {
                     baseUrl = baseUrl.left(queryStart);
@@ -5297,6 +5298,27 @@ void TBuffer::decodeOSC(const QString& sequence)
                 mCurrentHyperlinkStyling.baseCommand = innerCommand;
                 command = {qsl("sendCmdLine(%1)").arg(LuaLiteral::quote(innerCommand))};
                 hint = {qsl("%1: %2").arg(QObject::tr("Prompt"), UntrustedText::forTarget(innerCommand))};
+            } else if (baseUrl.startsWith(qsl("gmcp:"))) {
+                QString whyNot;
+                const auto gmcpLink = parseGmcpLinkUri(baseUrl, &whyNot);
+                // A selection reports its state in the link's JSON object, so other data leaves it nowhere to go
+                if (gmcpLink && mCurrentHyperlinkStyling.selection.hasSelectionSettings && !gmcpLink->dataAllowsSelection()) {
+                    whyNot = qsl("a selection link's data has to be a JSON object");
+                }
+                if (!whyNot.isEmpty()) {
+                    qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - Ignored a gmcp: link, as " << whyNot << ": \"" << baseUrl << "\"";
+                    return;
+                }
+                const QString message = gmcpLink->message();
+                mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionGmcp;
+                mCurrentHyperlinkStyling.baseCommand = message;
+                command = {qsl("sendGMCP(%1)").arg(LuaLiteral::quote(message))};
+                //: Start of the tooltip on a game's link that sends a GMCP message, followed by a colon and the message
+                hint = {qsl("%1: %2").arg(QObject::tr("Send GMCP"), UntrustedText::forTarget(message))};
+            } else if (baseUrl.startsWith(qsl("local:"))) {
+                mCurrentHyperlinkStyling.actionScheme = Mudlet::HyperlinkStyling::ActionLocal;
+                command = {QString()};
+                hint = {QString()};
             } else {
                 QUrl qurl(baseUrl);
                 QString scheme = qurl.scheme().toLower();
@@ -5344,8 +5366,8 @@ void TBuffer::decodeOSC(const QString& sequence)
                 QStringList menuHints;
 
                 // Add menu items in pairs (label, command)
-                // The first menu item becomes the primary left-click action (index 0)
-                // All items (including first) appear in the right-click menu (index 1+)
+                // The first menu item becomes the link's own action (index 0), except on a local: link, where activating it opens the menu
+                // All items (including first) appear in the menu (index 1+)
                 for (int i = 0; i < mCurrentHyperlinkMenu.size() - 1; i += 2) {
                     QString menuLabel = mCurrentHyperlinkMenu[i];
                     QString menuCommand = mCurrentHyperlinkMenu[i + 1];
@@ -5359,6 +5381,19 @@ void TBuffer::decodeOSC(const QString& sequence)
                         QString innerCommand = QUrl::fromPercentEncoding(menuCommand.mid(7).toUtf8());
                         menuCommands.append(qsl("sendCmdLine(%1)").arg(LuaLiteral::quote(innerCommand)));
                         menuHints.append(UntrustedText::forAuthoredText(menuLabel));
+                    } else if (menuCommand.startsWith(qsl("gmcp:"), Qt::CaseInsensitive)) {
+                        // One that is not valid stays in the menu with nothing to run, so it shows greyed out, and is never typed at the game
+                        // An item has no parameters of its own, so a '?' here is the game's data, as it would be in a send: item
+                        QString whyNot;
+                        const auto gmcpItem = parseGmcpLinkUri(QString(menuCommand).replace(QLatin1Char('?'), qsl("%3F")), &whyNot);
+                        if (!gmcpItem) {
+                            qWarning().noquote().nospace() << "TBuffer::decodeOSC(...) - Greyed out a gmcp: menu item, as " << whyNot << ": \"" << menuCommand << "\"";
+                        }
+                        menuCommands.append(gmcpItem ? qsl("sendGMCP(%1)").arg(LuaLiteral::quote(gmcpItem->message())) : QString());
+                        menuHints.append(UntrustedText::forAuthoredText(menuLabel));
+                    } else if (menuCommand.startsWith(qsl("local:"), Qt::CaseInsensitive)) {
+                        // An item is an action, and this has none: it is left out rather than typed at the game
+                        continue;
                     } else if (menuCommand == qsl("-")) {
                         // Special case: "-" creates a menu separator
                         menuCommands.append(QString());
@@ -5378,7 +5413,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                 }
 
                 // Set the tooltip for the link (what shows on hover)
-                // Use custom tooltip if provided, otherwise show "Right-click for menu" message
+                // Use custom tooltip if provided, otherwise say how to open the menu
                 QString linkTooltip;
                 if (!customTooltip.isEmpty()) {
                     // Custom tooltip explicitly provided
@@ -5386,17 +5421,29 @@ void TBuffer::decodeOSC(const QString& sequence)
                 } else {
                     // Default tooltip for menu links
                     linkTooltip = QObject::tr("Right-click for menu");
+                    if (mCurrentHyperlinkStyling.actionScheme == Mudlet::HyperlinkStyling::ActionLocal) {
+                        //: Default tooltip on a game's link that opens its menu when clicked, rather than running the menu's first item
+                        linkTooltip = QObject::tr("Click for menu");
+                    }
                 }
 
                 // For menus, we need tooltip as first hint, then menu labels
                 // This ensures tooltip.size() > commands.size() so only first hint shows in tooltip
-                // But menu labels are available for right-click menu display
                 QStringList finalHints;
                 finalHints.append(linkTooltip); // First: tooltip for hover
-                finalHints.append(menuHints);   // Rest: menu labels for right-click menu
+                finalHints.append(menuHints);   // Rest: the menu's item labels
 
-                command = menuCommands;
-                hint = finalHints;
+                // Every item may have been left out or be a separator; then the link has no menu and keeps its own action and tooltip
+                bool hasMenuItem = false;
+                for (int i = 0; i < menuCommands.size(); ++i) {
+                    hasMenuItem = hasMenuItem || !menuCommands.at(i).isEmpty() || !menuHints.at(i).isEmpty();
+                }
+                if (hasMenuItem) {
+                    command = menuCommands;
+                    hint = finalHints;
+                } else if (!customTooltip.isEmpty()) {
+                    hint = {customTooltip};
+                }
 #if defined(DEBUG_OSC_PROCESSING)
                 qDebug() << "[OSC] Final menu commands:" << command;
                 qDebug() << "[OSC] Final menu hints:" << hint;
@@ -9986,6 +10033,20 @@ void TBuffer::injectOSC8DocumentationExamples()
     output += "\x1b]8;;send:p3?preset=danger\x1b\\Danger\x1b]8;;\x1b\\ ";
     output += "\x1b]8;;send:p4?preset=btn&config={\"s\":{\"c\":\"yellow\"}}\x1b\\Override\x1b]8;;\x1b\\\n\n";
 
+    output += "── GMCP AND LOCAL (a click types no command) ──────────────────────────\n";
+    output += "GMCP:  ";
+    output += "\x1b]8;;gmcp:IRE.Target.Set%20%22rat%22\x1b\\Target the rat\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;gmcp:Game.Preference.Set%20%7B%22preference%22%3A%22hints%22%7D?config={\"selection\":{\"group\":\"docPrefs\",\"value\":\"hints\",\"exclusive\":false},\"style\":{\"selected\":{"
+              "\"bold\":true}}}\x1b\\Hints\x1b]8;;\x1b\\\n";
+    output += "       one GMCP message per click, nothing when GMCP is off\n";
+    output += "Local: ";
+    output += "\x1b]8;;local:?config={\"tooltip\":\"It needs a silver key\",\"style\":{\"u\":\"dotted\"}}\x1b\\Note\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;local:?config={\"spoiler\":true}\x1b\\The butler\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;local:?config={\"tooltip\":\"Click to dismiss\",\"visibility\":{\"action\":\"conceal\"}}\x1b\\Dismiss\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;local:?config={\"selection\":{\"group\":\"docRecipe\",\"value\":\"flour\",\"exclusive\":false},\"style\":{\"selected\":{\"strikethrough\":true}}}\x1b\\Flour\x1b]8;;\x1b\\ ";
+    output += "\x1b]8;;local:?config={\"menu\":[{\"Look\":\"send:look sword\"},{\"Wield\":\"send:wield sword\"}]}\x1b\\Sword\x1b]8;;\x1b\\\n";
+    output += "       a note, a spoiler, a dismiss, a checklist item, and a menu on click\n\n";
+
     // ═══════════════════════════════════════════════════════════════════
     // REAL-WORLD SHOWCASE
     // ═══════════════════════════════════════════════════════════════════
@@ -10000,7 +10061,8 @@ void TBuffer::injectOSC8DocumentationExamples()
               ",\"-\",{\"Drop\":\"send:drop\"}],\"tooltip\":\"+5 Fire Damage\"}\x1b\\🗡️ Flaming Sword\x1b]8;;\x1b\\\n\n";
 
     output += "───────────────────────────────────────────────────────────────────────\n";
-    output += "Docs: https://wiki.mudlet.org/w/Area_51#OSC_8:_Hyperlink_Protocol\n";
+    output += "Docs: https://wiki.mudlet.org/w/Manual:Supported_Protocols#OSC_8:_Hyperlink_Protocol\n";
+    output += "Standard: https://wiki.mudlet.org/w/Standards:OSC_8_Hyperlinks\n";
 
     // Process the output through the normal text processing pipeline
     // Skip trigger processing to avoid re-entrancy issues during injection
@@ -10538,7 +10600,16 @@ void TBuffer::revealSpoilerLink(int linkIndex)
     if (styling.isSpoiler) {
         QStringList hints = mLinkStore.getHintsConst(linkIndex);
         if (!hints.isEmpty() && hints.first() == QObject::tr("Click to reveal")) {
-            mLinkStore.getHints(linkIndex).clear();
+            // A menu's labels follow the tooltip in the same list, so with a menu only the tooltip is replaced
+            if (hints.size() > mLinkStore.getLinksConst(linkIndex).size()) {
+                mLinkStore.getHints(linkIndex).first() = styling.actionScheme == Mudlet::HyperlinkStyling::ActionLocal
+                                                                 //: Default tooltip on a game's link that opens its menu when clicked, rather than running the menu's first item
+                                                                 ? QObject::tr("Click for menu")
+                                                                 //: Default tooltip on a game's link whose menu opens on a right-click
+                                                                 : QObject::tr("Right-click for menu");
+            } else {
+                mLinkStore.getHints(linkIndex).clear();
+            }
 
 #if defined(DEBUG_OSC_PROCESSING)
             qDebug() << "[OSC] Cleared auto-generated 'Click to reveal' tooltip for spoiler link" << linkIndex;
@@ -10664,6 +10735,23 @@ int TBuffer::getLinkIndexAt(int line, int column) const
     return bufferLine.at(column).linkIndex();
 }
 
+bool TBuffer::linkOpensItsMenu(const int linkIndex) const
+{
+    return mLinkStore.hasStyling(linkIndex) && mLinkStore.getStyling(linkIndex).actionScheme == Mudlet::HyperlinkStyling::ActionLocal
+           && (mLinkStore.getLinksConst(linkIndex).size() > 1 || mLinkStore.getHintsConst(linkIndex).size() > mLinkStore.getLinksConst(linkIndex).size());
+}
+
+bool TBuffer::linkIsNote(const int linkIndex) const
+{
+    if (!mLinkStore.hasStyling(linkIndex)) {
+        return false;
+    }
+    const Mudlet::HyperlinkStyling styling = mLinkStore.getStyling(linkIndex);
+    using Action = Mudlet::HyperlinkStyling::VisibilitySettings::Action;
+    const bool clickHides = styling.visibility.hasVisibilitySettings && (styling.visibility.action == Action::Conceal || styling.visibility.action == Action::RevealThenConceal);
+    return styling.actionScheme == Mudlet::HyperlinkStyling::ActionLocal && !isSpoilerUnrevealed(linkIndex) && !styling.selection.hasSelectionSettings && !clickHides && !linkOpensItsMenu(linkIndex);
+}
+
 bool TBuffer::findNextLink(int fromLine, int fromColumn, int& outLine, int& outColumn, bool* wrapped) const
 {
     if (buffer.empty()) {
@@ -10688,7 +10776,7 @@ bool TBuffer::findNextLink(int fromLine, int fromColumn, int& outLine, int& outC
 
         for (int col = startCol; col < static_cast<int>(bufferLine.size()); ++col) {
             int linkIdx = bufferLine.at(col).linkIndex();
-            if (linkIdx > 0 && linkIdx != currentLinkAtStart) {
+            if (linkIdx > 0 && linkIdx != currentLinkAtStart && !linkIsNote(linkIdx)) {
                 outLine = line;
                 outColumn = col;
                 return true;
@@ -10703,7 +10791,7 @@ bool TBuffer::findNextLink(int fromLine, int fromColumn, int& outLine, int& outC
 
         for (int col = 0; col < endCol; ++col) {
             int linkIdx = bufferLine.at(col).linkIndex();
-            if (linkIdx > 0 && linkIdx != currentLinkAtStart) {
+            if (linkIdx > 0 && linkIdx != currentLinkAtStart && !linkIsNote(linkIdx)) {
                 outLine = line;
                 outColumn = col;
                 if (wrapped) {
@@ -10745,7 +10833,7 @@ bool TBuffer::findPreviousLink(int fromLine, int fromColumn, int& outLine, int& 
 
         for (int col = startCol; col >= 0; --col) {
             int linkIdx = bufferLine.at(col).linkIndex();
-            if (linkIdx > 0 && linkIdx != currentLinkAtStart) {
+            if (linkIdx > 0 && linkIdx != currentLinkAtStart && !linkIsNote(linkIdx)) {
                 // Found a different link — now find its start (first column with this linkIdx on this line)
                 int linkStart = col;
                 while (linkStart > 0 && bufferLine.at(linkStart - 1).linkIndex() == linkIdx) {
@@ -10765,7 +10853,7 @@ bool TBuffer::findPreviousLink(int fromLine, int fromColumn, int& outLine, int& 
 
         for (int col = startCol; col >= 0; --col) {
             int linkIdx = bufferLine.at(col).linkIndex();
-            if (linkIdx > 0 && linkIdx != currentLinkAtStart) {
+            if (linkIdx > 0 && linkIdx != currentLinkAtStart && !linkIsNote(linkIdx)) {
                 int linkStart = col;
                 while (linkStart > 0 && bufferLine.at(linkStart - 1).linkIndex() == linkIdx) {
                     --linkStart;
