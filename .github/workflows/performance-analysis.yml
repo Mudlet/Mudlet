@@ -27,7 +27,7 @@ jobs:
         submodules: recursive
 
     - name: Use the latest CMake
-      uses: lukka/get-cmake@v4.4.5
+      uses: lukka/get-cmake@v4.5.0
 
     - name: Install dependencies
       run: |
