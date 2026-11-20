@@ -644,13 +644,13 @@ TRoomDB::AreaParentResult TRoomDB::setAreaParent(const int areaId, const std::op
         }
     }
     mpMap->setUnsaved(__func__);
-    raiseAreaParentChanged(areaId, oldParentId, parentId);
+    raiseAreaParentChanged(mpMap, areaId, oldParentId, parentId);
     return AreaParentResult::Changed;
 }
 
-void TRoomDB::raiseAreaParentChanged(const int areaId, const std::optional<int> oldParentId, const std::optional<int> newParentId) const
+void TRoomDB::raiseAreaParentChanged(TMap* pMap, const int areaId, const std::optional<int> oldParentId, const std::optional<int> newParentId)
 {
-    if (!mpMap->mpHost) {
+    if (!pMap->mpHost) {
         return;
     }
     TEvent event{};
@@ -660,7 +660,7 @@ void TRoomDB::raiseAreaParentChanged(const int areaId, const std::optional<int> 
         event.mArgumentList << (id.has_value() ? QString::number(*id) : QString());
         event.mArgumentTypeList << (id.has_value() ? ARGUMENT_TYPE_NUMBER : ARGUMENT_TYPE_NIL);
     }
-    mpMap->mpHost->raiseEvent(event);
+    pMap->mpHost->raiseEvent(event);
 }
 
 QList<int> TRoomDB::getAreaChildren(const std::optional<int> areaId, const bool recursive) const
@@ -719,8 +719,15 @@ void TRoomDB::afterAreaRemoved(const int areaId, const std::optional<int> parent
     if (parentId.has_value()) {
         updateIsZone(*parentId);
     }
+    // A handler may load another map, which deletes this database: the loop reads only its own copies, and stops
+    // once that has happened, as the children it would report are no longer in the map
+    TMap* pMap = mpMap;
+    const TRoomDB* pThisRoomDB = this;
     for (const int childId : movedChildren) {
-        raiseAreaParentChanged(childId, areaId, parentId);
+        if (pMap->mpRoomDB.get() != pThisRoomDB) {
+            return;
+        }
+        raiseAreaParentChanged(pMap, childId, areaId, parentId);
     }
 }
 

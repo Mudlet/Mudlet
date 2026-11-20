@@ -216,4 +216,29 @@ describe("Tests that nested areas survive saving and loading the map", function(
 
     assert.are.equal(parent, getAreaParent(child))
   end)
+
+  it("stops reporting children moved by a delete once a handler has loaded another map", function()
+    local parent = addAreaName("HierarchySpecReplacedParent")
+    local first = addAreaName("HierarchySpecReplacedFirst")
+    local second = addAreaName("HierarchySpecReplacedSecond")
+    assert.is_true(setAreaParent(first, parent))
+    assert.is_true(setAreaParent(second, parent))
+    assert.is_true(saveJsonMap(jsonPath))
+    local loaded, movedAfterLoading = nil, {}
+    local handler = registerAnonymousEventHandler("sysAreaParentChanged", function(_, areaId, oldParent)
+      if loaded == nil then
+        loaded = loadJsonMap(jsonPath)
+      elseif oldParent == parent then
+        movedAfterLoading[#movedAfterLoading + 1] = areaId
+      end
+    end)
+    finally(function() killAnonymousEventHandler(handler) end)
+
+    deleteArea(parent)
+
+    assert.is_true(loaded)
+    assert.are.same({}, movedAfterLoading)
+    -- the map loaded is the one saved, with the parent still in it
+    assert.are.equal(parent, getAreaParent(second))
+  end)
 end)

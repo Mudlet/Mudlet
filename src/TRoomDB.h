@@ -145,7 +145,8 @@ private:
     void appendAreaSubtree(int areaId, QList<int>& subtree, QSet<int>& listed) const;
     // After an area is gone: its parent may have lost its last child, and each of its children moved up a level
     void afterAreaRemoved(int areaId, std::optional<int> parentId, const QList<int>& movedChildren);
-    void raiseAreaParentChanged(int areaId, std::optional<int> oldParentId, std::optional<int> newParentId) const;
+    // Static, as a handler may delete the database that raised it
+    static void raiseAreaParentChanged(TMap*, int areaId, std::optional<int> oldParentId, std::optional<int> newParentId);
 
     QHash<int, TRoom*> rooms;
     QMultiHash<int, int> entranceMap; // key is exit target, value is exit source
