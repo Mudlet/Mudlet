@@ -1546,6 +1546,24 @@ bool TRoomDB::set2DMapZoom(const int areaId, const qreal zoom) const
     return true;
 }
 
+bool TRoomDB::setRoomHash(const int roomId, const QString& hash)
+{
+    if (roomIDToHash.value(roomId) == hash && (hash.isEmpty() || hashToRoomID.value(hash, -1) == roomId)) {
+        return false;
+    }
+    if (roomIDToHash.contains(roomId)) {
+        hashToRoomID.remove(roomIDToHash.take(roomId));
+    }
+    if (!hash.isEmpty()) {
+        if (hashToRoomID.contains(hash)) {
+            roomIDToHash.remove(hashToRoomID[hash]);
+        }
+        hashToRoomID[hash] = roomId;
+        roomIDToHash[roomId] = hash;
+    }
+    return true;
+}
+
 qreal TRoomDB::get2DMapZoom(const int areaId) const
 {
     auto pA = areas.value(areaId);
