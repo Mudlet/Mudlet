@@ -992,6 +992,11 @@ void dlgMapper::slot_toggle3DView(const bool is3DMode)
 
     mp2dMap->setVisible(!is3DMode);
     glWidget->setVisible(is3DMode);
+    // The 2D map disables these at the last level with rooms when viewing; the 3D view keeps its own levels
+    if (is3DMode) {
+        toolButton_shiftZup->setEnabled(true);
+        toolButton_shiftZdown->setEnabled(true);
+    }
     if (glWidget->isVisible()) {
         widget_3DControls->setVisible(true);
         widget_playerIconControls->setVisible(mpHost->experimentEnabled("experiment.3d-player-icon")

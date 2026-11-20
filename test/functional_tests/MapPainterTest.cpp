@@ -774,6 +774,76 @@ private slots:
         QCOMPARE(mapperMap.getCenterRoomId(), scmWestRoom);
     }
 
+    // Viewing, the map cannot be panned so far that no room is left in view; editing, it can go anywhere. Each view
+    // goes by its own mode, as map windows keep one apiece, whatever the profile's says.
+    void viewingKeepsTheMapsRoomsInView()
+    {
+        setUpPlayerView();
+        hideInfoBox();
+        const bool savedViewOnly = mpHost->mMapViewOnly;
+        auto restore = qScopeGuard([this, savedViewOnly]() {
+            mpHost->mMapViewOnly = savedViewOnly;
+        });
+        // Panned a hundred rooms east of the east room, the player's room still the one the view last followed
+        TMapPainter::View panned = playerView();
+        panned.mAreaID = mAreaId;
+        panned.mRoomID = scmWestRoom;
+        panned.mShiftMode = true;
+        panned.mMapCenterX = 102.0;
+        panned.mMapCenterY = 0.0;
+
+        for (const bool viewOnly : {true, false}) {
+            panned.mMapViewOnly = viewOnly;
+            mpHost->mMapViewOnly = !viewOnly;
+            // A pending move would centre on the player instead, whatever the pan
+            map()->mNewMove = false;
+            TMapPainter painter;
+            TMapPainter::PaintResult result;
+            const QImage image = paintedView(painter, panned, result);
+            if (viewOnly) {
+                // The east room, at x 2, is a room in from the view's west edge
+                QVERIFY2(result.view.mMapCenterX < 102.0, qPrintable(saved(image, qsl("pan-viewing"))));
+                const qreal westEdge = result.view.mMapCenterX - result.view.xspan / 2.0;
+                QVERIFY2(westEdge <= 1.0 + 1e-6, qPrintable(qsl("the view starts at x %1, past the east room. %2").arg(westEdge).arg(saved(image, qsl("pan-viewing")))));
+                QVERIFY2(holds(image, QColor(Qt::blue)), qPrintable(saved(image, qsl("pan-viewing"))));
+            } else {
+                QCOMPARE(result.view.mMapCenterX, 102.0);
+            }
+        }
+    }
+
+    // Viewing, the level buttons go to the next level with rooms and no further; editing, a level at a time
+    void viewingTheLevelButtonsGoOnlyToLevelsWithRooms()
+    {
+        setUpPlayerView();
+        hideInfoBox();
+        QVERIFY(map()->setRoomCoordinates(scmEastRoom, 2, 0, 5));
+        const bool savedViewOnly = mpHost->mMapViewOnly;
+        auto restore = qScopeGuard([this, savedViewOnly]() {
+            mpHost->mMapViewOnly = savedViewOnly;
+        });
+        mpHost->mMapViewOnly = true;
+        T2DMap mapperMap;
+        mapperMap.mpMap = map();
+        mapperMap.mpHost = mpHost;
+        mapperMap.init();
+        mapperMap.resize(scmImageWidth, scmImageHeight);
+        mapperMap.grab();
+        QCOMPARE(mapperMap.getZLevel(), 0);
+
+        mapperMap.slot_shiftZdown();
+        QCOMPARE(mapperMap.getZLevel(), 0);
+        mapperMap.slot_shiftZup();
+        QCOMPARE(mapperMap.getZLevel(), 5);
+        mapperMap.slot_shiftZup();
+        QCOMPARE(mapperMap.getZLevel(), 5);
+
+        mpHost->mMapViewOnly = false;
+        mapperMap.mMapViewOnly = false;
+        mapperMap.slot_shiftZup();
+        QCOMPARE(mapperMap.getZLevel(), 6);
+    }
+
     // The info box's Lua reads the area from the mapper, as getMapZoom() and setMapZoom() do, so the frame has moved it
     // there by then; and an export from that Lua leaves the frame to finish as it was drawing it
     void theInfoBoxLuaSeesTheFramesAreaAndCanExport()

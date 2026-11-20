@@ -2504,6 +2504,21 @@ void TMapPainter::paintFrame(QPainter& painter, PaintResult& result, const std::
         }
     }
 
+    // Viewing, the map cannot be panned so far that none of the level's rooms are left: the level's extent stays at
+    // least a room into the view. Editing may go anywhere, to map into empty space.
+    if (mMapViewOnly && !pDrawnArea->rooms.isEmpty()) {
+        const int zLevel = mMapCenterZ;
+        // The y bounds are kept in screen coordinates, running southward as mMapCenterY does
+        const qreal westmost = pDrawnArea->xminForZ.value(zLevel, pDrawnArea->min_x);
+        const qreal eastmost = pDrawnArea->xmaxForZ.value(zLevel, pDrawnArea->max_x);
+        const qreal northmost = pDrawnArea->yminForZ.value(zLevel, pDrawnArea->min_y);
+        const qreal southmost = pDrawnArea->ymaxForZ.value(zLevel, pDrawnArea->max_y);
+        const qreal reachX = qMax(0.0, xspan / 2.0 - 1.0);
+        const qreal reachY = qMax(0.0, yspan / 2.0 - 1.0);
+        mMapCenterX = std::clamp<qreal>(mMapCenterX, westmost - reachX, eastmost + reachX);
+        mMapCenterY = std::clamp<qreal>(mMapCenterY, northmost - reachY, southmost + reachY);
+    }
+
     mRoomWidth = widgetWidth / xspan;
     mRoomHeight = widgetHeight / yspan;
 
