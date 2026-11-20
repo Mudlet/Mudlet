@@ -656,7 +656,8 @@ private slots:
                                                               {p->label_lowerLevelColor, p->pushButton_lowerLevelColor},
                                                               {p->label_upperLevelColor, p->pushButton_upperLevelColor},
                                                               {p->label_pushButton_roomCollisionBorderColor, p->pushButton_roomCollisionBorderColor},
-                                                              {p->label_mapGridColor, p->pushButton_mapGridColor}};
+                                                              {p->label_mapGridColor, p->pushButton_mapGridColor},
+                                                              {p->label_defaultRoomColor, p->pushButton_defaultRoomColor}};
         const QList<std::pair<QLabel*, QPushButton*>> ansiColours{{p->label_17, p->pushButton_black_2},
                                                                   {p->label_49, p->pushButton_Lblack_2},
                                                                   {p->label_42, p->pushButton_red_2},

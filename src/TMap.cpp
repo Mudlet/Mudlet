@@ -4444,10 +4444,8 @@ QColor TMap::getColor(int id)
     int env = room->environment;
     if (mEnvColors.contains(env)) {
         env = mEnvColors.value(env);
-    } else {
-        if (!mCustomEnvColors.contains(env)) {
-            env = 1;
-        }
+    } else if (!mCustomEnvColors.contains(env)) {
+        return mpHost->mapperDefaultRoomColor();
     }
     switch (env) {
     case 1:

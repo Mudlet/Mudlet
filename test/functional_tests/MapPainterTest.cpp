@@ -330,6 +330,39 @@ private slots:
         QVERIFY2(image.pixelColor(westCentre + QPoint(quarterCell + 2, 0)) == QColor(Qt::black), qPrintable(saved(image, qsl("rooms"))));
     }
 
+    // A room whose environment has no colour of its own takes the default room colour, which unset is the map's red
+    void aRoomWithNoEnvironmentColourTakesTheDefaultRoomColour()
+    {
+        TRoom* pWestRoom = roomDB()->getRoom(scmWestRoom);
+        pWestRoom->environment = 999;
+        const QColor savedDefault = mpHost->mMapperDefaultRoomColor;
+        auto restore = qScopeGuard([this, savedDefault]() {
+            mpHost->mMapperDefaultRoomColor = savedDefault;
+        });
+
+        const auto drawnColour = [&]() {
+            TMapPainter painter;
+            painter.setView(view());
+            QImage image = blankImage();
+            QPainter imagePainter(&image);
+            QFont roomIdFont;
+            QFont roomNameFont;
+            QPen pen;
+            const QPointF centre = onImage(QPointF(0, 0));
+            painter.drawRoom(imagePainter, roomIdFont, roomNameFont, pen, pWestRoom, false, false, false, -1, centre.x(), centre.y(), false);
+            imagePainter.end();
+            return image.pixelColor(centre.toPoint());
+        };
+
+        mpHost->mMapperDefaultRoomColor = QColor();
+        QCOMPARE(drawnColour(), mpHost->mRed_2);
+        mpHost->mMapperDefaultRoomColor = QColor(20, 160, 90);
+        QCOMPARE(drawnColour(), QColor(20, 160, 90));
+        QCOMPARE(map()->getColor(scmWestRoom), QColor(20, 160, 90));
+        // A room with an environment of its own keeps it
+        QCOMPARE(map()->getColor(scmEastRoom), QColor(Qt::blue));
+    }
+
     // A door is two strokes across the exit line, in the colour of its status
     void aDoorIsDrawnAcrossItsExitInItsStatusColour()
     {
