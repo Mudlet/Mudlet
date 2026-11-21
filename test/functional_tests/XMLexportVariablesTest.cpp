@@ -145,8 +145,8 @@ private slots:
     void test_lateCreatedSavedVariableIsExported()
     {
         // QTest runs slots in declaration order and these stand for a profile
-        // whose Variables view was never opened. Profile load builds the editor
-        // dialog itself, so what matters is that no slot has shown it yet.
+        // whose Variables view was never opened, so no slot may have opened the
+        // editor yet.
         QVERIFY2(!mpEditor, "a Variables-view test was declared before the ones that must run without it");
         LuaInterface* lI = mpHost->getLuaInterface();
         VarUnit* vu = lI->getVarUnit();

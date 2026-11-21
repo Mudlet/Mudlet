@@ -1199,6 +1199,29 @@ describe("Tests DB.lua functions", function()
       end
     end)
 
+    it("reads back a plain epoch number stored in a datetime field as that timestamp", function()
+      local conn = db.__conn["mydbdstesting"]
+      for n, epoch in ipairs(epochs) do
+        assert.are.equal(1, conn:execute(string.format("INSERT INTO sheet (seen, n) VALUES (%d, %d)", epoch, n)))
+      end
+      local results = db:fetch(mydb.sheet, nil, { mydb.sheet.n })
+      assert.are.equal(#epochs, #results)
+      for n, epoch in ipairs(epochs) do
+        assert.are.equal(epoch, results[n].seen:as_number())
+      end
+      assert.are.equal(1730615400, db:aggregate(mydb.sheet.seen, "MAX"):as_number())
+    end)
+
+    it("aggregates by time across plain epoch numbers and timestamps in one datetime field", function()
+      db:add(mydb.sheet, { seen = db:Timestamp(1500000000), n = 1 })
+      local conn = db.__conn["mydbdstesting"]
+      assert.are.equal(1, conn:execute("INSERT INTO sheet (seen, n) VALUES (1800000000, 2)"))
+      assert.are.equal(1, conn:execute("INSERT INTO sheet (seen, n) VALUES (1600000000, 3)"))
+
+      assert.are.equal(1800000000, db:aggregate(mydb.sheet.seen, "MAX"):as_number())
+      assert.are.equal(1500000000, db:aggregate(mydb.sheet.seen, "MIN"):as_number())
+    end)
+
     it("aggregates to the same epoch as was added", function()
       for n, epoch in ipairs(epochs) do
         db:add(mydb.sheet, { seen = db:Timestamp(epoch), n = n })
@@ -1857,6 +1880,29 @@ describe("Tests DB.lua functions", function()
       assert.are.same({"Eve"}, names(results))
     end)
 
+    it("an empty table query returns every row", function()
+      assert.are.same({"Ada", "Bram", "Cyra", "Drake", "Eve"}, names(db:fetch(mydb.people, {})))
+    end)
+
+    it("db:aggregate over an empty table query counts every row", function()
+      assert.are.equal(5, db:aggregate(mydb.people.name, "COUNT", {}))
+    end)
+
+    it("db:aggregate ANDs a table query of several conditions", function()
+      assert.are.equal(1, db:aggregate(mydb.people.name, "COUNT", {
+        db:eq(mydb.people.city, "Chicago"),
+        db:gt(mydb.people.level, 25),
+      }))
+    end)
+
+    it("a hash-style table query fails with nil rather than returning every row", function()
+      assert.is_nil(db:fetch(mydb.people, {name = "Ada"}))
+    end)
+
+    it("db:aggregate over a hash-style table query raises rather than counting every row", function()
+      assert.has_error(function() db:aggregate(mydb.people.name, "COUNT", {name = "Ada"}) end)
+    end)
+
     it("db:exp still combines with db:AND and db:OR", function()
       local anded = db:fetch(mydb.people, db:AND(db:exp("level > 25"), db:eq(mydb.people.city, "Chicago")))
       assert.are.same({"Eve"}, names(anded))
@@ -1874,6 +1920,21 @@ describe("Tests DB.lua functions", function()
       assert.are.same({"Bram", "Drake", "Eve"}, names(db:fetch(mydb.people, query)))
     end)
 
+    it("db:OR matches any of more than two sub-expressions", function()
+      local query = db:OR(db:eq(mydb.people.name, "Ada"), db:eq(mydb.people.name, "Cyra"), db:eq(mydb.people.name, "Eve"))
+      assert.are.same({"Ada", "Cyra", "Eve"}, names(db:fetch(mydb.people, query)))
+    end)
+
+    it("db:OR with a single sub-expression matches just that expression", function()
+      local query = db:OR(db:eq(mydb.people.name, "Ada"))
+      assert.are.same({"Ada"}, names(db:fetch(mydb.people, query)))
+    end)
+
+    it("db:OR keeps a nil condition so the fetch fails rather than dropping it", function()
+      local query = db:OR(db:eq(mydb.people.name, "Ada"), nil, db:eq(mydb.people.name, "Eve"))
+      assert.is_nil(db:fetch(mydb.people, query))
+    end)
+
     it("a table-array query is implicitly ANDed", function()
       local results = db:fetch(mydb.people, {
         db:eq(mydb.people.city, "Chicago"),
@@ -1886,6 +1947,111 @@ describe("Tests DB.lua functions", function()
       db:set(mydb.people.city, db:Null(), db:eq(mydb.people.name, "Ada"))
       assert.are.same({"Ada"}, names(db:fetch(mydb.people, db:is_nil(mydb.people.city))))
       assert.are.same({"Bram", "Cyra", "Drake", "Eve"}, names(db:fetch(mydb.people, db:is_not_nil(mydb.people.city))))
+    end)
+  end)
+
+  describe("Tests db query-expression builders on columns named after SQL keywords", function()
+    local function names(results)
+      assert.is_table(results, "the fetch failed, which db:fetch reports as nil")
+      local t = {}
+      for _, row in ipairs(results) do
+        t[#t + 1] = row.name
+      end
+      table.sort(t)
+      return t
+    end
+
+    before_each(function()
+      mydb = db:create("keywordcolumnstestingonly", {
+        items = {
+          name = "",
+          group = 0,
+          order = "",
+        }
+      })
+      db:add(mydb.items,
+        {name = "Ada",  group = 1, order = "first"},
+        {name = "Bram", group = 2, order = "second"},
+        {name = "Cyra", group = 3, order = "third"})
+    end)
+
+    after_each(function()
+      db:close()
+      os.remove(getMudletHomeDir() .. "/Database_keywordcolumnstestingonly.db")
+      mydb = nil
+    end)
+
+    local cases = {
+      { "db:eq", function() return db:eq(mydb.items.group, 2) end, {"Bram"} },
+      { "db:not_eq", function() return db:not_eq(mydb.items.group, 2) end, {"Ada", "Cyra"} },
+      { "db:not_eq with case_insensitive", function() return db:not_eq(mydb.items.order, "SECOND", true) end, {"Ada", "Cyra"} },
+      { "db:lt", function() return db:lt(mydb.items.group, 2) end, {"Ada"} },
+      { "db:lte", function() return db:lte(mydb.items.group, 2) end, {"Ada", "Bram"} },
+      { "db:gt", function() return db:gt(mydb.items.group, 2) end, {"Cyra"} },
+      { "db:gte", function() return db:gte(mydb.items.group, 2) end, {"Bram", "Cyra"} },
+      { "db:is_nil", function() return db:is_nil(mydb.items.order) end, {} },
+      { "db:is_not_nil", function() return db:is_not_nil(mydb.items.order) end, {"Ada", "Bram", "Cyra"} },
+      { "db:like", function() return db:like(mydb.items.order, "s%") end, {"Bram"} },
+      { "db:not_like", function() return db:not_like(mydb.items.order, "s%") end, {"Ada", "Cyra"} },
+      { "db:between", function() return db:between(mydb.items.group, 2, 3) end, {"Bram", "Cyra"} },
+      { "db:not_between", function() return db:not_between(mydb.items.group, 2, 3) end, {"Ada"} },
+      { "db:in_", function() return db:in_(mydb.items.order, {"first", "third"}) end, {"Ada", "Cyra"} },
+      { "db:not_in", function() return db:not_in(mydb.items.order, {"first", "third"}) end, {"Bram"} },
+      { "db:query_by_example", function() return db:query_by_example(mydb.items, {group = "<3"}) end, {"Ada", "Bram"} },
+      -- a script's own field table can carry an expression, which quoting would break
+      { "a hand-built field naming an expression", function() return db:gt({name = "items.`group` + 10", type = "number"}, 11) end, {"Bram", "Cyra"} },
+    }
+
+    for _, case in ipairs(cases) do
+      it(case[1] .. " fetches the rows it selects", function()
+        assert.are.same(case[3], names(db:fetch(mydb.items, case[2]())))
+      end)
+    end
+
+    it("db:aggregate sums the column", function()
+      assert.are.equal(6, db:aggregate(mydb.items.group, "sum"))
+    end)
+  end)
+
+  describe("Tests db query-expression builders on a column whose name holds a backtick", function()
+    after_each(function()
+      db:close()
+      os.remove(getMudletHomeDir() .. "/Database_backtickcolumntestingonly.db")
+      mydb = nil
+    end)
+
+    it("db:lt and db:delete select only the rows the filter names", function()
+      mydb = db:create("backtickcolumntestingonly", { items = { name = "", ["it`s"] = 0 } })
+      db:add(mydb.items, {name = "Ada", ["it`s"] = 1}, {name = "Bram", ["it`s"] = 5})
+      local rows = db:fetch(mydb.items, db:lt(mydb.items["it`s"], 3))
+      assert.is_table(rows, "the fetch failed, which db:fetch reports as nil")
+      assert.are.equal(1, #rows)
+      assert.are.equal("Ada", rows[1].name)
+
+      db:delete(mydb.items, db:gt(mydb.items["it`s"], 3))
+      rows = db:fetch(mydb.items)
+      assert.are.equal(1, #rows)
+      assert.are.equal("Ada", rows[1].name)
+    end)
+  end)
+
+  describe("Tests db query-expression builders on a column db:create could not add", function()
+    after_each(function()
+      db:close()
+      os.remove(getMudletHomeDir() .. "/Database_missingcolumntestingonly.db")
+      mydb = nil
+    end)
+
+    -- sqlite will not add a column defaulting to CURRENT_TIMESTAMP to a sheet that
+    -- holds rows, yet the schema keeps it, so a field for it can still be had
+    it("db:delete with db:is_not_nil on it raises and deletes nothing", function()
+      mydb = db:create("missingcolumntestingonly", { items = { name = "" } })
+      db:add(mydb.items, {name = "Ada"}, {name = "Bram"})
+      mydb = db:create("missingcolumntestingonly", { items = { name = "", seen = db:Timestamp("CURRENT_TIMESTAMP") } })
+      assert.are.equal("seen", mydb.items.seen.name)
+
+      assert.has_error(function() db:delete(mydb.items, db:is_not_nil(mydb.items.seen)) end)
+      assert.are.equal(2, #db:fetch(mydb.items))
     end)
   end)
 

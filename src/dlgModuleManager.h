@@ -40,6 +40,8 @@ public:
 
     void layoutModules();
     void showModuleSync(const QString& module, const bool sync);
+    QString removeModules(const QStringList& moduleNames);
+    QString installModuleFiles(const QStringList& fileNames);
 
 private slots:
     void slot_installModule();

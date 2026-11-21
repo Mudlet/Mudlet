@@ -36,8 +36,6 @@
 #include "TDockWidget.h"
 #include "TEvent.h"
 #include "TGlyphCache.h"
-#include "THyperlinkSelectionManager.h"
-#include "THyperlinkVisibilityManager.h"
 #include "mudlet.h"
 #include "MudletApp.h"
 #include "TMainConsole.h"
@@ -60,15 +58,19 @@
 #include <QChar>
 #include <QClipboard>
 #include <QDesktopServices>
+#include <QDialog>
+#include <QDialogButtonBox>
 #include <QHash>
 #include <QPainter>
 #include <QPainterPath>
 #include <QScrollBar>
 #include <QStringRef>
 #include <QTextBoundaryFinder>
+#include <QTextBrowser>
 #include <QLabel>
 #include <QLineEdit>
 #include <QToolTip>
+#include <QVBoxLayout>
 #include <QWidgetAction>
 #include <QVersionNumber>
 #include <optional>
@@ -183,6 +185,7 @@ void TTextEdit::scheduleUpdate(const QRect& rect)
         return;
     }
     const QRect area = rect.isValid() ? rect : QWidget::rect();
+    const bool nothingHeldBack = mPendingPaintRegion.isEmpty();
     mPendingPaintRegion += area;
     const int pace = paintPaceMs();
     const qint64 sincePaint = mSincePaint.isValid() ? mSincePaint.elapsed() : pace;
@@ -194,10 +197,15 @@ void TTextEdit::scheduleUpdate(const QRect& rect)
         update(mPendingPaintRegion);
         mWholePaneRequested = area.contains(QWidget::rect());
         mPendingPaintRegion = QRegion();
+        mPaintPacerMoved = false;
         return;
     }
 
-    if (!mpPaintPacer->isActive()) {
+    // A timer still running with nothing held back is due on the last frame's clock. Moved once a
+    // frame, as paints covering the pane can outpace it and only its firing moves the scrollbar.
+    const bool leftRunning = mpPaintPacer->isActive();
+    if (!leftRunning || (nothingHeldBack && !mPaintPacerMoved)) {
+        mPaintPacerMoved = leftRunning;
         mPaintPacerStretched = pace == csmFloodPaintPaceMs;
         mpPaintPacer->start(pace - static_cast<int>(sincePaint));
     }
@@ -279,6 +287,13 @@ void TTextEdit::needUpdate(int y1, int y2)
 
 void TTextEdit::focusInEvent(QFocusEvent* event)
 {
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
+    // The central debug console's and the error console's menus never took the grab from the profile's own console
+    const bool borrowsCaretMode = mpConsole && (mpConsole->getType() & (TConsole::CentralDebugConsole | TConsole::ErrorConsole));
+    if (!borrowsCaretMode && mpHost->caretEnabled() && event->reason() == Qt::PopupFocusReason) {
+        grabKeyboard();
+    }
+#endif
     update();
     QWidget::focusInEvent(event);
 }
@@ -288,10 +303,17 @@ void TTextEdit::focusOutEvent(QFocusEvent* event)
     // Avoid disabling caret mode when the window is merely deactivated
     // (e.g., user Alt+Tabs away). This preserves focus for screen reader
     // users like NVDA so returning to Mudlet restores the original widget
-    // rather than forcing focus to the command line.
-    // The central debug console shares its Host's caret mode without driving it.
-    const bool centralDebug = mpConsole && mpConsole->getType() == TConsole::CentralDebugConsole;
-    if (!centralDebug && mpHost->caretEnabled() && event->reason() != Qt::ActiveWindowFocusReason) {
+    // rather than forcing focus to the command line. This pane's own menus only
+    // borrow the focus and hand it back on closing, so caret mode stays on; a menu bar's may open a dialog.
+    const QWidget* popup = QApplication::activePopupWidget();
+    // The central debug console and the error console share their Host's caret mode without driving it.
+    const bool borrowsCaretMode = mpConsole && (mpConsole->getType() & (TConsole::CentralDebugConsole | TConsole::ErrorConsole));
+    if (event->reason() == Qt::PopupFocusReason && popup && popup->parentWidget() == this) {
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
+        // Caret mode's keyboard grab would otherwise beat the popup to every key
+        releaseKeyboard();
+#endif
+    } else if (!borrowsCaretMode && mpHost->caretEnabled() && event->reason() != Qt::ActiveWindowFocusReason) {
         mpHost->setCaretEnabled(false);
     }
 
@@ -443,6 +465,7 @@ void TTextEdit::updateScreenView()
         forceUpdate();
     }
     mOldScrollPos = mpBuffer->getLastLineNumber();
+    mLinesTrimmedAtOldScrollPos = mpBuffer->linesTrimmedTotal();
 }
 
 // Rows and columns start at the top left corner, so whatever covers that edge
@@ -476,9 +499,13 @@ void TTextEdit::showNewLines()
         mpBuffer->mCursorY = mpBuffer->size();
     }
 
-    const int previousOldScrollPos = mOldScrollPos;
+    // A trim off the top of the buffer moves the last line seen up with everything else, and must
+    // not read as the new lines that came in with it being taken away
+    const qint64 linesTrimmed = mpBuffer->linesTrimmedTotal();
+    const int previousOldScrollPos = std::max(0, mOldScrollPos - static_cast<int>(linesTrimmed - mLinesTrimmedAtOldScrollPos));
 
     mOldScrollPos = mpBuffer->getLastLineNumber();
+    mLinesTrimmedAtOldScrollPos = linesTrimmed;
 
     if (!mIsLowerPane) {
         // This is ONLY for the upper pane
@@ -840,7 +867,7 @@ void TTextEdit::replaceControlCharacterWith_Picture(const uint unicode, QStringV
         charWidth = 1;
         break; // DEL
     default:
-        charWidth = getGraphemeWidth(unicode);
+        charWidth = getGraphemeWidth(unicode, grapheme);
         outGrapheme = (charWidth < 1) ? QStringView() : grapheme;
     }
 }
@@ -983,7 +1010,7 @@ void TTextEdit::replaceControlCharacterWith_OEMFont(const uint unicode, QStringV
         charWidth = 1;
         break; // DEL - House
     default:
-        charWidth = getGraphemeWidth(unicode);
+        charWidth = getGraphemeWidth(unicode, grapheme);
         outGrapheme = (charWidth < 1) ? QStringView() : grapheme;
     }
 }
@@ -1002,7 +1029,7 @@ int TTextEdit::layoutGrapheme(LineLayout& layout, const QPoint& cursor, QStringV
             charWidth = mTabStopwidth - (column % mTabStopwidth);
             run.grapheme = u"\t";
         } else {
-            charWidth = graphemeInfo::getWidth(unicode, mWideAmbigousWidthGlyphs);
+            charWidth = graphemeInfo::withPresentation(grapheme, unicode, graphemeInfo::getWidth(unicode, mWideAmbigousWidthGlyphs));
             run.grapheme = (charWidth < 1) ? QStringView() : grapheme;
         }
         break;
@@ -1173,10 +1200,9 @@ void TTextEdit::drawCustomDecorations(QPainter& painter, const QColor& defaultCo
     QColor overlineColor = defaultColor;
     QColor strikeoutColor = defaultColor;
 
-    if (linkIndex > 0 && mpBuffer->mLinkStore.hasStyling(linkIndex)) {
-        Mudlet::HyperlinkStyling styling = mpBuffer->mLinkStore.getStyling(linkIndex);
-        styling.currentState = mpBuffer->getLinkState(linkIndex);
-        Mudlet::HyperlinkStyling::StateStyle effectiveStyle = styling.getEffectiveStyle();
+    if (linkIndex > 0 && (mpBuffer->mLinkStore.hasStyling(linkIndex) || mpBuffer->showsFocus(linkIndex))) {
+        // From the buffer, which adds Mudlet's focus cue to a link the game gave no focus style, and to MXP and script links
+        const Mudlet::HyperlinkStyling effectiveStyle = mpBuffer->getEffectiveHyperlinkStyling(linkIndex);
 
         if (effectiveStyle.hasUnderlineColor) {
             underlineColor = effectiveStyle.underlineColor;
@@ -1263,7 +1289,7 @@ void TTextEdit::drawCustomDecorations(QPainter& painter, const QColor& defaultCo
     }
 }
 
-int TTextEdit::getGraphemeWidth(uint unicode) const
+int TTextEdit::getGraphemeWidth(uint unicode, QStringView grapheme) const
 {
 #if defined(DEBUG_CODEPOINT_PROBLEMS)
     switch (widechar_wcwidth(unicode)) {
@@ -1358,7 +1384,7 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
         return 1;
     }
 #endif
-    return graphemeInfo::getWidth(unicode, mWideAmbigousWidthGlyphs);
+    return graphemeInfo::withPresentation(grapheme, unicode, graphemeInfo::getWidth(unicode, mWideAmbigousWidthGlyphs));
 }
 QImage TTextEdit::cachedScreen()
 {
@@ -1838,23 +1864,15 @@ void TTextEdit::highlightSelection()
 
     mSelectedRegion = mSelectedRegion.subtracted(newRegion);
 
-    // clang-format off
-    for (int y = std::max(0, mPA.y()),
-             endY = std::min((mPB.y() + 1), static_cast<int>(mpBuffer->buffer.size()));
-         y < endY;
-         ++y) {
-
-        for (int x = (y == mPA.y()) ? std::max(0, mPA.x()) : 0,
-                 endX = (y == (mPB.y()))
-                     ? std::min((mPB.x() + 1), static_cast<int>(mpBuffer->buffer.at(y).size()))
-                     : static_cast<int>(mpBuffer->buffer.at(y).size());
-             x < endX;
-             ++x) {
-
-            mpBuffer->buffer.at(y).expand().at(x).select();
+    for (int y = std::max(0, mPA.y()), endY = std::min((mPB.y() + 1), static_cast<int>(mpBuffer->buffer.size())); y < endY; ++y) {
+        TLineFormat& line = mpBuffer->buffer.at(y);
+        const int lineSize = static_cast<int>(line.size());
+        const int startX = (y == mPA.y()) ? std::clamp(mPA.x(), 0, lineSize) : 0;
+        const int endX = (y == mPB.y()) ? std::min(mPB.x() + 1, lineSize) : lineSize;
+        if (startX < endX) {
+            line.select(startX, endX);
         }
     }
-    // clang-format on
 
     update(mSelectedRegion.boundingRect());
     update(newRegion);
@@ -1881,12 +1899,7 @@ void TTextEdit::unHighlight()
             break;
         }
 
-        auto& bufferLine = mpBuffer->buffer.at(yIndex);
-        for (int xIndex = 0; xIndex < static_cast<int>(bufferLine.size()); ++xIndex) {
-            if (bufferLine.at(xIndex).isSelected()) {
-                bufferLine.expand()[xIndex].deselect();
-            }
-        }
+        mpBuffer->buffer.at(yIndex).deselect();
     }
     mPBTakingNewline = QPoint(-1, -1);
     if (QAccessible::isActive()) {
@@ -2030,12 +2043,7 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
             break;
         }
 
-        auto& bufferLine = mpBuffer->buffer.at(yIndex);
-        for (int xIndex = 0; xIndex < static_cast<int>(bufferLine.size()); ++xIndex) {
-            if (bufferLine.at(xIndex).isSelected()) {
-                bufferLine.expand()[xIndex].deselect();
-            }
-        }
+        mpBuffer->buffer.at(yIndex).deselect();
     }
 
     const bool anchorFirst = mDragStart.y() < cursorLocation.y() || (mDragStart.y() == cursorLocation.y() && mDragStart.x() < cursorLocation.x());
@@ -2075,9 +2083,6 @@ void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tC
         int linkIndex = mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex();
 
         setCursor(Qt::PointingHandCursor);
-        QStringList tooltip = mpBuffer->mLinkStore.getHints(linkIndex);
-        QStringList commands = mpBuffer->mLinkStore.getLinks(linkIndex);
-        // If a special tooltip hint was given, use that one.
         // The server chooses this text and QToolTip renders anything
         // Qt::mightBeRichText() accepts as HTML, so escape it and wrap it
         // in an explicit document rather than letting that guess decide
@@ -2085,7 +2090,7 @@ void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tC
         // breaks the plain-text path used to give.
         // An empty string is how QToolTip is told to hide, so it has to
         // stay empty rather than becoming an empty document.
-        const QString tooltipText = tooltip.size() > commands.size() ? tooltip[0] : tooltip.join(QChar::LineFeed);
+        const QString tooltipText = mpBuffer->mLinkStore.tooltip(linkIndex);
         const QString tooltipMarkup = tooltipText.isEmpty() ? QString() : qsl("<html><body style='white-space:pre'>%1</body></html>").arg(tooltipText.toHtmlEscaped());
         QToolTip::showText(event->globalPosition().toPoint(), tooltipMarkup);
 
@@ -2155,7 +2160,7 @@ int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber, bo
             if (unicode == '\t') {
                 charWidth = mTabStopwidth - (column % mTabStopwidth);
             } else {
-                auto reportedWidth = getGraphemeWidth(unicode);
+                auto reportedWidth = getGraphemeWidth(unicode, grapheme);
                 // The paint code is set to use a replacement character for a
                 // zero return value - so handle the space that will need)
                 charWidth = (reportedWidth ? reportedWidth : 1);
@@ -2276,32 +2281,18 @@ void TTextEdit::slot_popupMenu()
     }
     // index is set to be greater than zero for every possible sender():
     const int index = pA->data().toInt();
-    if (index && mPopupCommands.contains(index)) {
-        QString cmd = mPopupCommands.value(index).first;
-        const int luaReference = mPopupCommands.value(index).second;
-
-        // Apply selection-group state to the chosen popup item, mirroring the
-        // direct-activation paths (mousePressEvent / showLinkContextMenu /
-        // keyPressEvent). Without this, multi-command links activated via the
-        // popup menu would silently skip toggle / exclusive-group propagation.
-        if (mPopupLinkIndex > 0 && mpBuffer) {
-            const auto styling = mpBuffer->mLinkStore.getStyling(mPopupLinkIndex);
-            if (styling.selection.hasSelectionSettings) {
-                applyHyperlinkSelectionGroupState(mPopupLinkIndex, cmd, styling.selection, "TTextEdit::slot_popupMenu");
-            }
-            if (mpConsole) {
-                mpConsole->getHyperlinkVisibilityManager().onLinkClicked(mPopupLinkIndex);
-            } else {
-                qWarning() << "TTextEdit::slot_popupMenu() - mpConsole is null, skipping visibility manager notification for link" << mPopupLinkIndex;
-            }
-            mpBuffer->markLinkAsVisited(mPopupLinkIndex);
+    if (index && mPopupLinkIndex > 0 && mpConsole) {
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
+        // The item may open a dialog, whose keys caret mode's keyboard grab would keep for this pane
+        releaseKeyboard();
+#endif
+        mpConsole->model().runMenuPick(mPopupLinkIndex, mPopupLinkIssue, index - 1);
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
+        const bool borrowsCaretMode = mpConsole && (mpConsole->getType() & (TConsole::CentralDebugConsole | TConsole::ErrorConsole));
+        if (!borrowsCaretMode && mpHost->caretEnabled() && hasFocus()) {
+            grabKeyboard();
         }
-
-        if (!luaReference) {
-            mpHost->mLuaInterpreter.compileAndExecuteScript(cmd);
-        } else {
-            mpHost->mLuaInterpreter.callAnonymousFunction(luaReference, qsl("echoPopup"));
-        }
+#endif
     }
     mPopupLinkIndex = 0;
 }
@@ -2353,55 +2344,11 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                 if (mpBuffer->buffer.at(y).at(x).linkIndex()) {
                     int linkIndex = mpBuffer->buffer.at(y).at(x).linkIndex();
                     QStringList command = mpBuffer->mLinkStore.getLinks(linkIndex);
-                    int luaReference = mpBuffer->mLinkStore.getReference(linkIndex).value(0, false);
-                    QString func;
-                    if (!command.empty() && mpHost) {
-                        func = command.at(0);
-#if defined(DEBUG_OSC_PROCESSING)
-                        qDebug() << "TTextEdit::mousePressEvent - Link clicked, func:" << func << "luaReference:" << luaReference;
-#endif
-
+                    if (!command.empty() && mpHost && mpConsole) {
                         mpBuffer->setActiveLink(linkIndex);
-
-                        Mudlet::HyperlinkStyling hyperlinkStyling = mpBuffer->getEffectiveHyperlinkStyling(linkIndex);
-
-#if defined(DEBUG_OSC_PROCESSING)
-                        qDebug() << "TTextEdit::mousePressEvent - Link" << linkIndex << "disabled:" << hyperlinkStyling.selection.disabled
-                                 << "hasSelectionSettings:" << hyperlinkStyling.selection.hasSelectionSettings << "isSpoiler:" << hyperlinkStyling.isSpoiler;
-#endif
-
-                        // Handle spoiler revealing first (even for disabled links)
-                        if (hyperlinkStyling.isSpoiler) {
-                            // Check if this spoiler hasn't been revealed yet
-                            bool wasUnrevealed = mpBuffer->isSpoilerUnrevealed(linkIndex);
-                            mpBuffer->revealSpoilerLink(linkIndex);
-
-                            // For unrevealed spoilers, the first click should ONLY reveal, not execute the function
-                            if (wasUnrevealed && !hyperlinkStyling.selection.disabled) {
-#if defined(DEBUG_OSC_PROCESSING)
-                                qDebug() << "TTextEdit::mousePressEvent - Link" << linkIndex << "first spoiler reveal, blocking function execution until next click";
-#endif
-                                forceUpdate();
-                                return;
-                            }
-
-                            // Update styling after spoiler reveal
-                            hyperlinkStyling = mpBuffer->getEffectiveHyperlinkStyling(linkIndex);
-                        }
-
-                        // Check for disabled links - they can reveal spoilers but can't execute functions
-                        if (hyperlinkStyling.selection.disabled) {
-#if defined(DEBUG_OSC_PROCESSING)
-                            qDebug() << "TTextEdit::mousePressEvent - Link" << linkIndex << "is disabled, allowing spoiler reveal but blocking function execution";
-#endif
-                            // Disabled links only update visual state, don't execute functions
-                            mpBuffer->setLinkState(linkIndex, Mudlet::HyperlinkStyling::StateDisabled);
+                        if (mpConsole->model().linkMayRun(linkIndex) != TConsoleModel::LinkFollowed::ran) {
                             forceUpdate();
                             return;
-                        }
-
-                        if (hyperlinkStyling.selection.hasSelectionSettings) {
-                            applyHyperlinkSelectionGroupState(linkIndex, func, hyperlinkStyling.selection, "TTextEdit::mousePressEvent");
                         }
 
                         // Clear hover to show selection immediately; mouse move will restore it
@@ -2412,20 +2359,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
 
                         forceUpdate();
 
-                        // Notify visibility manager that link was clicked (activates timers)
-                        if (mpConsole) {
-                            mpConsole->getHyperlinkVisibilityManager().onLinkClicked(linkIndex);
-                        }
-
-                        if (!luaReference) {
-                            mpHost->mLuaInterpreter.compileAndExecuteScript(func);
-                        } else {
-                            mpHost->mLuaInterpreter.callAnonymousFunction(luaReference, qsl("echoLink"));
-                        }
-
-                        // Mark link as visited after execution (will update to visited state)
-                        mpBuffer->markLinkAsVisited(linkIndex);
-
+                        mpConsole->model().runLink(linkIndex, 0, false);
                         return;
                     }
                 }
@@ -2781,11 +2715,12 @@ void TTextEdit::slot_copySelectionToClipboardImage()
             auto nextBoundary{boundaryFinder.toNextBoundary()};
             // Width in "normal" width equivalent of this grapheme:
             int charWidth{};
-            const uint unicode = graphemeInfo::getBaseCharacter(QStringView(lineText).mid(indexOfChar, nextBoundary - indexOfChar));
+            const QStringView grapheme = QStringView(lineText).mid(indexOfChar, nextBoundary - indexOfChar);
+            const uint unicode = graphemeInfo::getBaseCharacter(grapheme);
             if (unicode == '\t') {
                 charWidth = mTabStopwidth - (column % mTabStopwidth);
             } else {
-                auto reportedWidth = getGraphemeWidth(unicode);
+                auto reportedWidth = getGraphemeWidth(unicode, grapheme);
                 // The paint code is set to use a replacement character for a
                 // zero return value - so handle the space that will need)
                 charWidth = (reportedWidth ? reportedWidth : 1);
@@ -3052,18 +2987,7 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
                         return;
                     }
 
-                    QStringList command = mpBuffer->mLinkStore.getLinks(linkIndex);
-                    QStringList hint = mpBuffer->mLinkStore.getHints(linkIndex);
-                    QVector<int> luaReference = mpBuffer->mLinkStore.getReference(linkIndex);
-                    if (command.size() > 1 || hint.size() > command.size()) {
-                        // This is a popup menu rather than a link as it has
-                        // more than one item, or has menu hints indicating menu items.
-
-                        // Skip a special tooltip hint (at the start of the
-                        // hints), if one was given, i.e. there is (at least)
-                        // an extra one:
-                        int hint_offset = (hint.size() > command.size()) ? 1 : 0;
-
+                    if (mpBuffer->mLinkStore.opensMenu(linkIndex)) {
                         auto popup = new QMenu(this);
                         popup->setAttribute(Qt::WA_DeleteOnClose);
                         popup->setFont(font());
@@ -3104,39 +3028,23 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
                             popup->addSeparator();
                         }
 
-                        mPopupCommands.clear();
                         mPopupLinkIndex = linkIndex;
-                        for (int i = 0, total = command.size(); i < total; ++i) {
-                            QAction* pA = nullptr;
-                            // Check to see if this item has a command/function
-                            // so we can disable it if not:
-                            const bool doesSomething = !command.at(i).isEmpty() || luaReference.value(i, 0);
-                            // A safety flag in case we have too few hints:
-                            const bool useHintNotCommand = (i + hint_offset) < hint.size();
-                            // If it doesn't have a hint either then make it
-                            // into a separator in the context menu:
-                            const bool makeASeparator = !doesSomething && hint.at(i + hint_offset).isEmpty();
-                            const QString actionText = useHintNotCommand ? hint.at(i + hint_offset) : command.at(i);
-                            if (makeASeparator) {
-                                pA = popup->addSeparator();
-                            } else {
-                                pA = popup->addAction(actionText);
-                            }
-                            mPopupCommands[i + 1] = {command.at(i), luaReference.value(i, 0)};
-                            // We now use this to index into mPopupCommands
-                            // when the action is triggered - but we do offset
-                            // it by one so that the first one is NOT zero:
+                        mPopupLinkIssue = mpBuffer->mLinkStore.issueOf(linkIndex);
+                        const QList<TLinkStore::MenuItem> items = mpBuffer->mLinkStore.menuItems(linkIndex);
+                        for (int i = 0, total = items.size(); i < total; ++i) {
+                            QAction* pA = items.at(i).separator ? popup->addSeparator() : popup->addAction(items.at(i).label);
+                            // The item's index, offset by one so that the first one is NOT zero:
                             pA->setData(i + 1);
-                            if (doesSomething) {
+                            if (items.at(i).enabled) {
                                 connect(pA, &QAction::triggered, this, &TTextEdit::slot_popupMenu);
                             } else {
                                 pA->setEnabled(false);
                             }
                         }
                         popup->popup(eventGlobalPos);
+                        mIsCommandPopup = true;
+                        return;
                     }
-                    mIsCommandPopup = true;
-                    return;
                 }
             }
         }
@@ -3240,7 +3148,7 @@ void TTextEdit::showContextMenu(const QPoint& globalPosition)
     popup->addSeparator();
     popup->addAction(action3);
 
-    if (mDragStart != mDragSelectionEnd && mpHost->mEnableTextAnalyzer) {
+    if (selectionAvailable && mpHost->mEnableTextAnalyzer) {
         mpContextMenuAnalyser = new QAction(tr("Analyse characters"), popup);
         // NOTE: If running inside the Qt Creator IDE using the debugger with
         // the hovered() signal can be *problematic* - as hitting a
@@ -3250,7 +3158,10 @@ void TTextEdit::showContextMenu(const QPoint& globalPosition)
         // killing the gdb debugger instance run by Qt Creator will restore
         // normality.
         connect(mpContextMenuAnalyser, &QAction::hovered, this, &TTextEdit::slot_analyseSelection);
-        mpContextMenuAnalyser->setToolTip(utils::richText(tr("Hover on this item to display the Unicode codepoints in the selection <i>(only the first line!)</i>")));
+        connect(mpContextMenuAnalyser, &QAction::triggered, this, &TTextEdit::slot_showSelectionAnalysis);
+        mpContextMenuAnalyser->setObjectName(qsl("consoleAnalyseCharacters"));
+        //: Tooltip for the console context menu's "Analyse characters" entry, replaced by the analysis itself once the pointer rests on it
+        mpContextMenuAnalyser->setToolTip(utils::richText(tr("Choose this item, or hover on it, to display the Unicode codepoints in the selection <i>(only the first line!)</i>")));
         popup->addSeparator();
         popup->addAction(mpContextMenuAnalyser);
     }
@@ -3274,8 +3185,9 @@ void TTextEdit::showContextMenu(const QPoint& globalPosition)
 
     if (mpConsole->getType() == TConsole::ErrorConsole) {
         QAction* clearErrorConsole = new QAction(tr("Clear console"), popup);
-        connect(clearErrorConsole, &QAction::triggered, this, [=, this]() {
-            mpConsole->buffer.clear();
+        clearErrorConsole->setObjectName(qsl("consoleClearErrorConsole"));
+        connect(clearErrorConsole, &QAction::triggered, this, [this]() {
+            mpConsole->clear();
             mpConsole->print(qsl("%1\n").arg(tr("*** starting new session ***")));
         });
         popup->addAction(clearErrorConsole);
@@ -3699,15 +3611,65 @@ QString TTextEdit::byteToLuaCodeOrChar(const char* byte)
  */
 void TTextEdit::slot_analyseSelection()
 {
-    if (!mpContextMenuAnalyser || mpBuffer->lineBuffer.isEmpty()) {
-        // Menu has gone away or no text on screen
+    if (!mpContextMenuAnalyser) {
         return;
+    }
+    if (const QString analysis = selectionAnalysisHtml(); !analysis.isEmpty()) {
+        mpContextMenuAnalyser->setToolTip(analysis);
+    }
+}
+
+void TTextEdit::slot_showSelectionAnalysis()
+{
+    if (!hasSelectedText()) {
+        return;
+    }
+    QString analysis = selectionAnalysisHtml();
+    if (analysis.isEmpty()) {
+        return;
+    }
+    // In the text rather than a label beside it, so a screen reader reads it with the table
+    if (mPA.y() != mPB.y()) {
+        //: Note above the table in the window opened by the console context menu's "Analyse characters" entry, shown when more than one line was selected
+        analysis.prepend(qsl("<p>%1</p>").arg(tr("Only the first line of the selection is analyzed.")));
+    }
+
+    auto* dialog = new QDialog(this);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->setObjectName(qsl("consoleCharacterAnalysis"));
+    //: Title of the window opened by the console context menu's "Analyse characters" entry
+    dialog->setWindowTitle(tr("Character analysis"));
+
+    auto* browser = new QTextBrowser(dialog);
+    browser->setTextInteractionFlags(browser->textInteractionFlags() | Qt::TextSelectableByKeyboard);
+    //: Accessible name of the text area in the window opened by the console context menu's "Analyse characters" entry
+    browser->setAccessibleName(tr("Unicode codepoints in the selection"));
+    browser->setHtml(analysis);
+
+    auto* buttons = new QDialogButtonBox(QDialogButtonBox::Close, dialog);
+    connect(buttons, &QDialogButtonBox::rejected, dialog, &QDialog::reject);
+
+    auto* layout = new QVBoxLayout(dialog);
+    layout->addWidget(browser);
+    layout->addWidget(buttons);
+
+    dialog->resize(800, 400);
+    dialog->show();
+    dialog->raise();
+    dialog->activateWindow();
+    browser->setFocus();
+}
+
+QString TTextEdit::selectionAnalysisHtml()
+{
+    if (mpBuffer->lineBuffer.isEmpty()) {
+        return {};
     }
     // If we get here we must at least have a line 0!
 
     // Get the smallest of the two lines in the range, but clamp it to the first
     // line which is zero and then the maximum line in existence:
-    int line = qMin(qMax(qMin(mPA.y(), mPB.y()), 0), (mpBuffer->lineBuffer.size() - 1));
+    int line = qMin(qMax(qMin(mPA.y(), mPB.y()) - selectionLinesTrimmed(), 0), (mpBuffer->lineBuffer.size() - 1));
 
     int startColumn = -1;
     int endColumn = -1;
@@ -3728,7 +3690,7 @@ void TTextEdit::slot_analyseSelection()
     // (non-ASCII) into a literal string:
     QString luaCodes;
     QString completedRows;
-    quint8 rowItems = 0;
+    int rowItems = 0;
     QChar zero('0');
     // Start the UTF-8 indexing at 1 so that it directly maps to string indexing
     // in Lua.
@@ -3757,9 +3719,39 @@ void TTextEdit::slot_analyseSelection()
     // We do not want more than around 16 code-points per row, but we also do
     // not want orphans (a few odd code-points) on the last row so deduce a
     // number of items to include in a row:
-    quint8 rowsCount = qMax(1, qRound((total + 8.5) / 16.0));
-    quint8 rowLimit = qMax(8, qRound(total * 1.0 / rowsCount));
-    bool isFirstRow = true;
+    const int rowsCount = qMax(1, qRound((total + 8.5) / 16.0));
+    const int rowLimit = qMax(8, qRound(total * 1.0 / rowsCount));
+
+    //: 1st Row heading for Text analyser output, table item is the count into the QChars/TChars that make up the text
+    const QString utf16IndexHeading = tr("Index (UTF-16)");
+    //: 2nd Row heading for Text analyser output, table item is the unicode code point (will be between 000001 and 10FFFF in hexadecimal)
+    const QString codePointHeading = tr("U+<i>####</i> Unicode Code-point <i>(High:Low Surrogates)</i>");
+    /*:
+    3rd Row heading for Text analyser output, table item is a visual representation of the character/part of the character or a '{'...'}' wrapped letter
+    code if the character is whitespace or otherwise unshowable
+    */
+    const QString visualHeading = tr("Visual");
+    //: 4th Row heading for Text analyser output, table item is the count into the bytes that make up the UTF-8 form of the text that the Lua system uses
+    const QString utf8IndexHeading = tr("Index (UTF-8)");
+    //: 5th Row heading for Text analyser output, table item is the unsigned 8-bit integer for the particular byte in the UTF-8 form of the text that the Lua system uses
+    const QString byteHeading = tr("Byte");
+    /*:
+    6th Row heading for Text analyser output, table item is either the ASCII character or the numeric code for the byte in the row about
+    this item in the table, as displayed the thing shown can be used in a Lua string entry to reproduce this byte
+    */
+    const QString luaCodeHeading = tr("Lua character or code");
+    // Every table carries the headings so a screen reader can say what each row of numbers is
+    const auto table = [&]() {
+        return qsl("<small><table border=\"1\" style=\"margin-top:5px; margin-bottom:5px; margin-left:5px; margin-right:5px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">"
+                   "<tr><th>%1</th>%2</tr>"
+                   "<tr><th>%3</th>%4</tr>"
+                   "<tr><th>%5</th>%6</tr>"
+                   "<tr><th>%7</th>%8</tr>"
+                   "<tr><th>%9</th>%10</tr>"
+                   "<tr><th>%11</th>%12</tr>"
+                   "</table></small>")
+                .arg(utf16IndexHeading, utf16indexes, codePointHeading, utf16Vals, visualHeading, graphemes, utf8IndexHeading, utf8Indexes, byteHeading, utf8Vals, luaCodeHeading, luaCodes);
+    };
 
     for (int index = 0; index < lineLength; ++index) {
         bool includeThisCodePoint = false;
@@ -3782,7 +3774,7 @@ void TTextEdit::slot_analyseSelection()
                 // The static casts are only needed since Qt 6.9.0 but they
                 // shouldn't do any harm prior to that:
                 utf16Vals.append(
-                        qsl("<td colspan=\"%1\" style=\"white-space:no-wrap vertical-align:top\"><center>%2</center>&#8232;<center>(0x%3:0x%4)</center></td>")
+                        qsl("<td colspan=\"%1\" style=\"white-space:nowrap; vertical-align:top\"><center>%2</center>&#8232;<center>(0x%3:0x%4)</center></td>")
                                 .arg(QString::number(columnsToUse),
                                      qsl("%1")
                                              .arg(static_cast<uint32_t>(QChar::surrogateToUcs4(mpBuffer->lineBuffer.at(line).at(index), mpBuffer->lineBuffer.at(line).at(index + 1))), 4, 16, zero)
@@ -3798,7 +3790,7 @@ void TTextEdit::slot_analyseSelection()
             switch (utf8Width) {
             case 4:
                 if (includeThisCodePoint) {
-                    utf8Indexes.append(qsl("<th><center>%1</center></th><td><center>%2</center></td><td><center>%3</center></td><td><center>%4</center></td></b>")
+                    utf8Indexes.append(qsl("<th><center>%1</center></th><td><center>%2</center></td><td><center>%3</center></td><td><center>%4</center></td>")
                                                .arg(QString::number(utf8Index), QString::number(utf8Index + 1), QString::number(utf8Index + 2), QString::number(utf8Index + 3)));
                     utf8Vals.append(qsl("<td><center>0x%1</center></td><td><center>0x%2</center></td><td><center>0x%3</center></td><td><center>0x%4</center></td>")
                                             .arg(static_cast<quint8>(utf8Bytes[0]), 2, 16, zero)
@@ -3857,7 +3849,7 @@ void TTextEdit::slot_analyseSelection()
             if (includeThisCodePoint) {
                 utf16indexes.append(qsl("<th colspan=\"%1\"><center>%2</center></th>").arg(QString::number(columnsToUse), QString::number(index + 1)));
 
-                utf16Vals.append(qsl("<td colspan=\"%1\" style=\"white-space:no-wrap vertical-align:top\"><center>%2</center></td>")
+                utf16Vals.append(qsl("<td colspan=\"%1\" style=\"white-space:nowrap; vertical-align:top\"><center>%2</center></td>")
                                          .arg(QString::number(columnsToUse))
 #if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
                                          .arg(static_cast<uint16_t>(mpBuffer->lineBuffer.at(line).at(index).unicode()), 4, 16, QChar('0'))
@@ -3933,56 +3925,7 @@ void TTextEdit::slot_analyseSelection()
         }
 
         if (rowItems > rowLimit) {
-            if (isFirstRow) {
-                completedRows = qsl("<small><table border=\"1\" style=\"margin-top:5px; margin-bottom:5px; margin-left:5px; margin-right:5px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">"
-                                    "<tr><th>%1</th>%2</tr>"
-                                    "<tr><th>%3</th>%4</tr>"
-                                    "<tr><th>%5</th>%6</tr>"
-                                    "<tr><th>%7</th>%8</tr>"
-                                    "<tr><th>%9</th>%10</tr>"
-                                    "<tr><th>%11</th>%12</tr>"
-                                    "</table></small><br>")
-                                        //: 1st Row heading for Text analyser output, table item is the count into the QChars/TChars that make up the text {this translation used 2 times}
-                                        .arg(tr("Index (UTF-16)"), utf16indexes)
-                                        /*:
-                                2nd Row heading for Text analyser output, table item is the unicode code point (will be
-                                between 000001 and 10FFFF in hexadecimal) {this translation used 2 times}
-                                */
-                                        .arg(tr("U+<i>####</i> Unicode Code-point <i>(High:Low Surrogates)</i>"), utf16Vals)
-                                        /*:
-                                3rd Row heading for Text analyser output, table item is a visual representation of the character/part of the character or a '{'...'}' wrapped
-                                letter code if the character is whitespace or otherwise unshowable {this translation used 2 times}
-                                */
-                                        .arg(tr("Visual"), graphemes)
-                                        /*:
-                                4th Row heading for Text analyser output, table item is the count into the bytes that make up the UTF-8 form of the text that the Lua system
-                                uses {this translation used 2 times}
-                                */
-                                        .arg(tr("Index (UTF-8)"), utf8Indexes)
-                                        /*:
-                                5th Row heading for Text analyser output, table item is the unsigned 8-bit integer for the particular byte in the UTF-8 form of the text that the Lua
-                                system uses {this translation used 2 times}
-                                */
-                                        .arg(tr("Byte"), utf8Vals)
-                                        /*:
-                                6th Row heading for Text analyser output, table item is either the ASCII character or the numeric code for the byte in the row about
-                                this item in the table, as displayed the thing shown can be used in a Lua string entry to reproduce this byte {this translation used
-                                2 times}"
-                                */
-                                        .arg(tr("Lua character or code"), luaCodes);
-                isFirstRow = false;
-            } else {
-                completedRows.append(
-                        qsl("<small><table border=\"1\" style=\"margin-top:5px; margin-bottom:5px; margin-left:5px; margin-right:5px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">"
-                            "<tr>%1</tr>"
-                            "<tr>%2</tr>"
-                            "<tr>%3</tr>"
-                            "<tr>%4</tr>"
-                            "<tr>%5</tr>"
-                            "<tr>%6</tr>"
-                            "</table></small><br>")
-                                .arg(utf16indexes, utf16Vals, graphemes, utf8Indexes, utf8Vals, luaCodes));
-            }
+            completedRows.append(table() + qsl("<br>"));
             rowItems = 0;
             utf16indexes.clear();
             utf16Vals.clear();
@@ -3993,63 +3936,7 @@ void TTextEdit::slot_analyseSelection()
         }
     }
 
-    if (mpContextMenuAnalyser) {
-        if (isFirstRow) {
-            // if this is still true then we only have a short, single line of
-            // less than 16 codepoints
-            mpContextMenuAnalyser->setToolTip(
-                    qsl("%1"
-                        "<small><table border=\"1\" style=\"margin-top:5px; margin-bottom:5px; margin-left:5px; margin-right:5px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">"
-                        "<tr><th>%2</th>%3</tr>"
-                        "<tr><th>%4</th>%5</tr>"
-                        "<tr><th>%6</th>%7</tr>"
-                        "<tr><th>%8</th>%9</tr>"
-                        "<tr><th>%10</th>%11</tr>"
-                        "<tr><th>%12</th>%13</tr>"
-                        "</table></small>")
-                            .arg(completedRows)
-                            //: 1st Row heading for Text analyser output, table item is the count into the QChars/TChars that make up the text {this translation used 2 times}
-                            .arg(tr("Index (UTF-16)"), utf16indexes)
-                            /*:
-                        2nd Row heading for Text analyser output, table item is the unicode code point (will be between
-                        000001 and 10FFFF in hexadecimal) {this translation used 2 times}
-                        */
-                            .arg(tr("U+<i>####</i> Unicode Code-point <i>(High:Low Surrogates)</i>"), utf16Vals)
-                            /*:
-                        3rd Row heading for Text analyser output, table item is a visual representation of the character/part of the character or a '{'...'}' wrapped letter
-                        code if the character is whitespace or otherwise unshowable {this translation used 2 times}
-                        */
-                            .arg(tr("Visual"), graphemes)
-                            /*:
-                        4th Row heading for Text analyser output, table item is the count into the bytes that make up the UTF-8 form of the text that the Lua system
-                        uses {this translation used 2 times}
-                        */
-                            .arg(tr("Index (UTF-8)"), utf8Indexes)
-                            /*:
-                        5th Row heading for Text analyser output, table item is the unsigned 8-bit integer for the particular byte in the UTF-8 form of the text that the Lua
-                        system uses {this translation used 2 times}
-                        */
-                            .arg(tr("Byte"), utf8Vals)
-                            /*:
-                        6th Row heading for Text analyser output, table item is either the ASCII character or the numeric code for the byte in the row about
-                        this item in the table, as displayed the thing shown can be used in a Lua string entry to reproduce this byte {this translation used 2
-                        times}
-                        */
-                            .arg(tr("Lua character or code"), luaCodes));
-        } else {
-            mpContextMenuAnalyser->setToolTip(
-                    qsl("%1"
-                        "<small><table border=\"1\" style=\"margin-top:5px; margin-bottom:5px; margin-left:5px; margin-right:5px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">"
-                        "<tr>%2</tr>"
-                        "<tr>%3</tr>"
-                        "<tr>%4</tr>"
-                        "<tr>%5</tr>"
-                        "<tr>%6</tr>"
-                        "<tr>%7</tr>"
-                        "</table></small>")
-                            .arg(completedRows, utf16indexes, utf16Vals, graphemes, utf8Indexes, utf8Vals, luaCodes));
-        }
-    }
+    return completedRows + table();
 }
 
 void TTextEdit::slot_changeIsAmbigousWidthGlyphsToBeWide(const bool state)
@@ -4374,73 +4261,7 @@ void TTextEdit::announceLinkFocus(int linkIndex)
     }
 }
 
-void TTextEdit::applyHyperlinkSelectionGroupState(int linkIndex, QString& uri, const Mudlet::HyperlinkStyling::SelectionSettings& selection, const char* callerContext)
-{
-    if (!selection.hasSelectionSettings) {
-        return;
-    }
-    if (!mpBuffer) {
-        qWarning() << callerContext << "- mpBuffer is null, skipping selection-group state update for link" << linkIndex;
-        return;
-    }
-    auto* mgr = mpConsole ? &mpConsole->getHyperlinkSelectionManager() : nullptr;
-    if (!mgr) {
-        qWarning() << callerContext << "- Selection manager is null, skipping selection-group state update for link" << linkIndex;
-        return;
-    }
-
-    const QString& group = selection.group;
-    const QString& value = selection.value;
-
-    mgr->setGroupExclusive(group, selection.exclusive);
-
-    if (selection.toggle) {
-        mgr->toggleSelection(group, value);
-    } else {
-        mgr->setSelected(group, value, true);
-    }
-
-    const bool newSelected = mgr->isSelected(group, value);
-
-    // A menu link's commands are built from its menu items and the base URI's
-    // command is discarded, so baseCommand matches none of what can actually be
-    // run here. Callers pass the item the user picked; rebuilding from the base
-    // would send something they did not choose. A one-item menu has a single
-    // command too, but its hints carry the tooltip ahead of the item's label.
-    if (mpBuffer->mLinkStore.getLinksConst(linkIndex).size() <= 1 && mpBuffer->mLinkStore.getHintsConst(linkIndex).size() <= 1) {
-        const Mudlet::HyperlinkStyling styling = mpBuffer->mLinkStore.getStyling(linkIndex);
-        const QString rebuiltUri = mgr->modifyUriForSelection(styling.actionScheme, styling.baseCommand, group, value);
-        if (!rebuiltUri.isEmpty()) {
-            uri = rebuiltUri;
-        }
-    }
-
-    mpBuffer->setLinkSelected(linkIndex, newSelected);
-    mpBuffer->setLinkState(linkIndex, newSelected ? Mudlet::HyperlinkStyling::StateSelected : Mudlet::HyperlinkStyling::StateDefault);
-    mpBuffer->updateLinkCharacters(linkIndex);
-
-    if (!mgr->isGroupExclusive(group)) {
-        return;
-    }
-
-    // For exclusive groups, propagate visual state to all other members
-    // that may have been deselected by the toggle/setSelected call above.
-    const QStringList groupMembers = mgr->getGroupMembers(group);
-    for (const QString& member : std::as_const(groupMembers)) {
-        if (member == value) {
-            continue;
-        }
-        const bool memberSelected = mgr->isSelected(group, member);
-        const QList<int> matchingLinkIds = mpBuffer->mLinkStore.getLinkIdsByGroupValue(group, member);
-        for (const int otherLinkId : std::as_const(matchingLinkIds)) {
-            mpBuffer->setLinkSelected(otherLinkId, memberSelected);
-            mpBuffer->setLinkState(otherLinkId, memberSelected ? Mudlet::HyperlinkStyling::StateSelected : Mudlet::HyperlinkStyling::StateDefault);
-            mpBuffer->updateLinkCharacters(otherLinkId);
-        }
-    }
-}
-
-void TTextEdit::showLinkContextMenu()
+void TTextEdit::showKeyboardContextMenu()
 {
     if (!mpBuffer) {
         return;
@@ -4448,6 +4269,10 @@ void TTextEdit::showLinkContextMenu()
 
     int focusedLink = mpBuffer->getFocusedLink();
     if (focusedLink <= 0) {
+        // The central debug console builds its own menu in contextMenuEvent()
+        if (!(mpConsole && mpConsole->getType() == TConsole::CentralDebugConsole)) {
+            showContextMenu(caretGlobalPosition());
+        }
         return;
     }
 
@@ -4464,39 +4289,17 @@ void TTextEdit::showLinkContextMenu()
         return;
     }
 
-    QStringList command = mpBuffer->mLinkStore.getLinksConst(focusedLink);
-    if (command.isEmpty()) {
+    if (mpBuffer->mLinkStore.getLinksConst(focusedLink).isEmpty() || !mpConsole) {
         return;
     }
-    QStringList hint = mpBuffer->mLinkStore.getHintsConst(focusedLink);
-    QVector<int> luaReference = mpBuffer->mLinkStore.getReference(focusedLink);
 
-    if (command.size() <= 1 && hint.size() <= command.size()) {
+    if (!mpBuffer->mLinkStore.opensMenu(focusedLink)) {
         // No menu needed: one command and no extra hints means direct activation
-        if (!command.isEmpty()) {
-            if (hyperlinkStyling.selection.hasSelectionSettings) {
-                applyHyperlinkSelectionGroupState(focusedLink, command[0], hyperlinkStyling.selection, "TTextEdit::showLinkContextMenu");
-            }
-
-            if (mpConsole) {
-                mpConsole->getHyperlinkVisibilityManager().onLinkClicked(focusedLink);
-            } else {
-                qWarning() << "TTextEdit::showLinkContextMenu() - mpConsole is null, skipping visibility manager notification for link" << focusedLink;
-            }
-            const int ref = luaReference.value(0, 0);
-            if (ref) {
-                mpHost->mLuaInterpreter.callAnonymousFunction(ref, qsl("echoLink"));
-            } else {
-                mpHost->mLuaInterpreter.compileAndExecuteScript(command.first());
-            }
-            mpBuffer->markLinkAsVisited(focusedLink);
-        }
+        mpConsole->model().runLink(focusedLink, 0, false);
         return;
     }
 
     // Show popup at caret position (not mouse position) since this is keyboard-driven
-    int hintOffset = (hint.size() > command.size()) ? 1 : 0;
-
     auto popup = new QMenu(this);
     popup->setAttribute(Qt::WA_DeleteOnClose);
     popup->setFont(font());
@@ -4536,32 +4339,27 @@ void TTextEdit::showLinkContextMenu()
         popup->addSeparator();
     }
 
-    mPopupCommands.clear();
     mPopupLinkIndex = focusedLink;
-    for (int i = 0, total = command.size(); i < total; ++i) {
-        QAction* pA = nullptr;
-        const bool doesSomething = !command.at(i).isEmpty() || luaReference.value(i, 0);
-        const bool useHintNotCommand = (i + hintOffset) < hint.size();
-        const bool makeASeparator = !doesSomething && useHintNotCommand && hint.at(i + hintOffset).isEmpty();
-        const QString actionText = useHintNotCommand ? hint.at(i + hintOffset) : command.at(i);
-        if (makeASeparator) {
-            pA = popup->addSeparator();
-        } else {
-            pA = popup->addAction(actionText);
-        }
-        mPopupCommands[i + 1] = {command.at(i), luaReference.value(i, 0)};
+    mPopupLinkIssue = mpBuffer->mLinkStore.issueOf(focusedLink);
+    const QList<TLinkStore::MenuItem> items = mpBuffer->mLinkStore.menuItems(focusedLink);
+    for (int i = 0, total = items.size(); i < total; ++i) {
+        QAction* pA = items.at(i).separator ? popup->addSeparator() : popup->addAction(items.at(i).label);
         pA->setData(i + 1);
-        if (doesSomething) {
+        if (items.at(i).enabled) {
             connect(pA, &QAction::triggered, this, &TTextEdit::slot_popupMenu);
         } else {
             pA->setEnabled(false);
         }
     }
 
-    int lineOffset = imageTopLine();
-    int visibleLine = qBound(lineOffset, mCaretLine, lineOffset + mScreenHeight - 1);
-    QPoint caretScreenPos = mapToGlobal(QPoint(mCaretColumn * mFontWidth, (visibleLine - lineOffset + 1) * mFontHeight));
-    popup->popup(caretScreenPos);
+    popup->popup(caretGlobalPosition());
+}
+
+QPoint TTextEdit::caretGlobalPosition()
+{
+    const int lineOffset = imageTopLine();
+    const int visibleLine = qBound(lineOffset, mCaretLine, lineOffset + mScreenHeight - 1);
+    return mapToGlobal(QPoint(mCaretColumn * mFontWidth, (visibleLine - lineOffset + 1) * mFontHeight));
 }
 
 bool TTextEdit::focusNextPrevChild(bool next)
@@ -4582,10 +4380,11 @@ bool TTextEdit::event(QEvent* event)
         // While caret mode is active its shortcut (Tab, Ctrl+Tab or F6) must
         // beat any application-wide QShortcut - the profile-switching ones
         // use Ctrl+Tab by default and all of them can be remapped onto these
-        // keys - so claim it here to make it arrive as a KeyPress for the
-        // caret-toggling code in keyPressEvent():
+        // keys - so claim it here, and on macOS post the KeyPress Cocoa
+        // withholds, for the caret-toggling code in keyPressEvent():
         if (mpHost->caretEnabled() && mpHost->caretShortcutMatches(ke)) {
             ke->accept();
+            TCommandLine::pressClaimedControlTab(this, ke);
             return true;
         }
     }
@@ -4595,6 +4394,18 @@ bool TTextEdit::event(QEvent* event)
 void TTextEdit::keyPressEvent(QKeyEvent* event)
 {
     if (!mpHost->caretEnabled()) {
+        QWidget::keyPressEvent(event);
+        return;
+    }
+
+    if (mpHost->caretShortcutMatches(event)) {
+        mpHost->setCaretEnabled(false);
+        // Not passed to QWidget, which would ignore it and send a Tab up the
+        // parents' focus chain - onto the main toolbar when it is shown
+        if (mpConsole && mpConsole->mpCommandLine) {
+            mpHost->setFocusOnHostActiveCommandLine();
+            return;
+        }
         QWidget::keyPressEvent(event);
         return;
     }
@@ -4867,54 +4678,19 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
     case Qt::Key_Enter:
     case Qt::Key_Space: {
         int focusedLink = mpBuffer->getFocusedLink();
-        if (focusedLink > 0) {
-            Mudlet::HyperlinkStyling hyperlinkStyling = mpBuffer->getEffectiveHyperlinkStyling(focusedLink);
-
-            // Handle spoiler revealing first (even for disabled links)
-            if (hyperlinkStyling.isSpoiler) {
-                bool wasUnrevealed = mpBuffer->isSpoilerUnrevealed(focusedLink);
-                mpBuffer->revealSpoilerLink(focusedLink);
-
-                // For unrevealed spoilers, the first activation should ONLY reveal
-                if (wasUnrevealed && !hyperlinkStyling.selection.disabled) {
-                    forceUpdate();
-                    return;
-                }
-
-                hyperlinkStyling = mpBuffer->getEffectiveHyperlinkStyling(focusedLink);
-            }
-
-            if (hyperlinkStyling.selection.disabled) {
-                mpBuffer->setLinkState(focusedLink, Mudlet::HyperlinkStyling::StateDisabled);
+        if (focusedLink > 0 && mpConsole) {
+            const TConsoleModel::LinkFollowed mayRun = mpConsole->model().linkMayRun(focusedLink);
+            if (mayRun == TConsoleModel::LinkFollowed::revealedSpoiler || mayRun == TConsoleModel::LinkFollowed::disabled) {
                 forceUpdate();
                 return;
             }
 
-            QStringList commands = mpBuffer->mLinkStore.getLinksConst(focusedLink);
-            if (commands.isEmpty()) {
+            if (mpBuffer->mLinkStore.getLinksConst(focusedLink).isEmpty()) {
                 QWidget::keyPressEvent(event);
                 return;
             }
 
-            if (hyperlinkStyling.selection.hasSelectionSettings) {
-                applyHyperlinkSelectionGroupState(focusedLink, commands[0], hyperlinkStyling.selection, "TTextEdit::keyPressEvent");
-            }
-
-            if (mpConsole) {
-                mpConsole->getHyperlinkVisibilityManager().onLinkClicked(focusedLink);
-            } else {
-                qWarning() << "TTextEdit::keyPressEvent() - mpConsole is null, skipping visibility manager notification for link" << focusedLink;
-            }
-
-            QVector<int> luaReference = mpBuffer->mLinkStore.getReference(focusedLink);
-            const int ref = luaReference.value(0, 0);
-            if (ref) {
-                mpHost->mLuaInterpreter.callAnonymousFunction(ref, qsl("echoLink"));
-            } else {
-                mpHost->mLuaInterpreter.compileAndExecuteScript(commands.first());
-            }
-
-            mpBuffer->markLinkAsVisited(focusedLink);
+            mpConsole->model().runLink(focusedLink, 0, false);
             return;
         }
         break;
@@ -4929,11 +4705,6 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         }
         break;
     case Qt::Key_Tab: {
-        if (mpHost->caretShortcutMatches(event)) {
-            mpHost->setCaretEnabled(false);
-            break;
-        }
-
         if (!(event->modifiers() & (Qt::ShiftModifier | Qt::ControlModifier))) {
             if (navigateToLink(true)) {
                 event->accept();
@@ -4970,20 +4741,14 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         break;
     }
     case Qt::Key_Menu: {
-        showLinkContextMenu();
+        showKeyboardContextMenu();
         return;
     }
 
-    case Qt::Key_F6: {
-        if (mpHost->caretShortcutMatches(event)) {
-            mpHost->setCaretEnabled(false);
-        }
-        break;
-    }
     case Qt::Key_F10: {
         // Shift+F10 opens context menu on focused link (standard accessibility shortcut)
         if (event->modifiers() & Qt::ShiftModifier) {
-            showLinkContextMenu();
+            showKeyboardContextMenu();
             return;
         }
         break;

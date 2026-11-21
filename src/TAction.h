@@ -63,6 +63,9 @@ public:
     }
     int getButtonRotation() const { return mButtonRotation; }
     void setButtonColumns(int columns) {
+        // The editor's range: a bar grows its grid layout to the filler offset, which may be
+        // up to one less than this, so a package asking for billions of columns exhausts memory
+        columns = std::clamp(columns, 0, 99);
         if (columns != mButtonColumns) {
             setDataChanged();
             mButtonColumns = columns;
@@ -105,6 +108,8 @@ public:
     void compile();
     bool compileScript();
     void execute();
+    // A click on the button: a push-down button takes the state it was clicked to, any other is left up
+    void press(bool checked);
     // execute() without sending the button's command, for restoring a push-down button's state
     void runScript();
     QString getIcon() const { return mIcon; }
@@ -194,11 +199,16 @@ public:
     QString css;
     QPointer<Host> mpHost;
     bool exportItem = true;
+    // After a move: a member under a module's folder, and at the top level only while its module's file still holds it
+    void updateModuleMembership();
     bool mModuleMasterFolder = false;
+    // The module whose file this was loaded from
+    QString mLoadedFromModule;
     Qt::DockWidgetArea mToolbarLastDockArea = Qt::LeftDockWidgetArea;
     bool mToolbarLastFloatingState = true;
 
 private:
+    void setModuleMembership(bool);
     TAction() = default;
 
     QString mName;

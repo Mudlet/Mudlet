@@ -20,6 +20,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "uiDesign.h"
+
 #include <QMainWindow>
 #include <QVBoxLayout>
 #include <QPointer>
@@ -102,6 +104,7 @@ public:
     void updateAllTabIndicators(); // Update all tab indicators in this window
 
     void saveWindowGeometry();
+    void closeProfileByName(const QString& profileName);
 
 protected:
     void closeEvent(QCloseEvent* event) override;
@@ -179,8 +182,6 @@ private slots:
     void slot_mudletDiscord();
 
     // Window menu activation slots
-    void slot_activateMainWindow();
-    void slot_activateDetachedWindow();
     void slot_activateMainWindowProfile();
     void slot_activateDetachedWindowProfile();
 
@@ -189,8 +190,9 @@ private:
     void createMenus();
     void showMuteState();
     void createToolBar();
+    void restyleToolBarIcons();
     void connectToolBarActions();
-    void closeProfileByName(const QString& profileName);
+    bool closeProfileHere(const QString& profileName);
     void updateTabIndicator(int tabIndex = -1);                            // -1 means current tab
     void updateDockWidgetVisibilityForProfile(const QString& profileName); // Show/hide docked widgets based on active profile
     void restoreWindowGeometry();
@@ -214,6 +216,7 @@ private:
     TTabBar* mpTabBar{nullptr};
     QToolBar* mpToolBar{nullptr};
     QMenu* mpOptionsMenu{nullptr};
+    QList<uiDesign::ActionGlyph> mToolBarGlyphs;
 
     // Toolbar actions - mirroring main window
     QAction* mpActionConnect{nullptr};
@@ -247,6 +250,7 @@ private:
     // Discord actions
     QAction* mpActionDiscord{nullptr};
     QAction* mpActionMudletDiscord{nullptr};
+    QAction* mpHelpMenuDiscordAction{nullptr};
 
     // Menu actions with shortcuts
     QAction* mpMenuConnectAction{nullptr};

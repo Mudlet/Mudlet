@@ -60,9 +60,7 @@ struct TrackedHyperlink
     bool expireOnPrompt = false;  // GA/EOR telnet signal received
     bool expireOnOutput = false;  // New output after idle gap
     quint32 outputDelayMs = 500;  // Idle gap for output trigger
-    bool expireActivated = false; // Link has been clicked, expire triggers are active
     bool skipFirstPrompt = false; // Skip the immediate prompt after registration
-    bool skipFirstOutput = false; // Skip the first output gap after registration
 };
 
 // Tracks which OSC 8 hyperlinks are concealed and when each is due to change:
@@ -81,6 +79,9 @@ class THyperlinkVisibilityManager : public QObject
     friend class HyperlinkModelSplitTest;
 
 public:
+    // The line number of a link kept across a clear whose line the game has not ended yet
+    static constexpr int csmLineStillToCome = -1;
+
     explicit THyperlinkVisibilityManager(TConsoleModel& model);
     ~THyperlinkVisibilityManager() override;
 
@@ -100,13 +101,15 @@ public:
     void removeLinksOnLine(int lineNumber);
     QList<int> adjustLineNumbers(int deletedLineStart, int deletedLineCount);
     void clear();
+    QList<TrackedHyperlink> takeLinks(const QSet<int>& linkIds);
+    void trackAwaitingTheirLine(const QList<TrackedHyperlink>& links);
+    void anchorLinksAwaitingTheirLine(int lineNumber);
 
 signals:
     void visibilityChanged();
 
 private slots:
     void slot_checkTimers();
-    void slot_outputGapExpired();
     void slot_announceHiddenLinks();
 
 private:
@@ -122,10 +125,10 @@ private:
     TConsoleModel& mModel;
     QMap<int, TrackedHyperlink> mTrackedLinks;
     QTimer* mpTimer = nullptr;
-    QTimer* mpOutputGapTimer = nullptr;
     QTimer* mpAnnouncementTimer = nullptr;
     int mPendingHiddenCount = 0;
     bool mHasTimerBasedLinks = false;
+    bool mHasLinksAwaitingTheirLine = false;
     qint64 mLastDataReceivedMs = 0;
 };
 

@@ -222,6 +222,12 @@ public:
         }
     }
     void setMainCommandLineText(const QString& text) { mMainCommandLine.text = text; }
+    // Overwritten before it goes, as it may hold a password typed ahead of its prompt
+    void wipeMainCommandLineText()
+    {
+        mMainCommandLine.text.fill(QChar::Null);
+        mMainCommandLine.text.clear();
+    }
     // An empty name or "main" is the main command line, as getCmdLine() resolves them.
     std::optional<QString> commandLineText(const QString& name) const
     {

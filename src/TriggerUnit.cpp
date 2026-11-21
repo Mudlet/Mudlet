@@ -195,6 +195,10 @@ void TriggerUnit::reParentTrigger(int childID, int oldParentID, int newParentID,
         pChild->Tree<TTrigger>::setParent(nullptr);
         addTriggerRootNode(pChild, parentPosition, childPosition, true);
     }
+
+    // The profile save skips a top-level module member and the module save only walks its own
+    // folder, so an item moved out of a module that kept the mark would be saved nowhere
+    pChild->updateModuleMembership();
 }
 
 // Legacy integer-based reParentTrigger - delegates to enum-based version
@@ -1161,6 +1165,13 @@ TTrigger* TriggerUnit::findTrigger(const QString& name)
         return pT;
     }
     return nullptr;
+}
+
+void TriggerUnit::refreshColorPatterns()
+{
+    for (auto* pT : std::as_const(mTriggerMap)) {
+        pT->refreshColorPatterns();
+    }
 }
 
 std::vector<int> TriggerUnit::findItems(const QString& name, const bool exactMatch, const bool caseSensitive)

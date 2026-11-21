@@ -147,6 +147,21 @@ describe("Tests MXP handling", function()
       assertLineShown("\27[1z<!ENTITY storm \"Гроза\">The &storm; rages", "The Гроза rages")
     end)
 
+    -- a list built up with ADD starts from nothing, whether the entity was
+    -- never defined, was deleted, was set empty, had every item removed from it,
+    -- or is a standard entity no custom one has replaced yet
+    it("starts a list ADD builds from an entity with no items", function()
+      finally(function() feedTriggers("\27[1z<!EN mxpadd1 DELETE><!EN mxpadd2 DELETE><!EN mxpadd3 DELETE><!EN lt DELETE>\n") end)
+      assertLineShown("\27[1z<!EN mxpadd1 a ADD><!EN mxpadd1 b ADD>[&mxpadd1;]", "[a|b]")
+      assertLineShown("\27[1z<!EN mxpadd1 DELETE><!EN mxpadd1 c ADD>[&mxpadd1;]", "[c]")
+      assertLineShown("\27[1z<!EN mxpadd1 c REMOVE><!EN mxpadd1 d ADD>[&mxpadd1;]", "[d]")
+      assertLineShown("\27[1z<!EN mxpadd1 ''><!EN mxpadd1 e ADD>[&mxpadd1;]", "[e]")
+      assertLineShown("\27[1z<!EN mxpadd2 a ADD><!EN mxpadd2 b ADD><!EN mxpadd2 c ADD><!EN mxpadd2 b REMOVE>[&mxpadd2;]", "[a|c]")
+      assertLineShown("\27[1z<!EN mxpadd3 z REMOVE>[&mxpadd3;]", "[&mxpadd3;]")
+      assertLineShown("\27[1z<!EN lt x REMOVE>[&lt;]", "[<]")
+      assertLineShown("\27[1z<!EN lt x ADD>[&lt;]", "[x]")
+    end)
+
     -- <HR> is not written out, it is fed back through the parser as a rule of
     -- its own, so its width is the window's wrap column with a forty column floor
     it("draws a horizontal rule as wide as the window wraps", function()
@@ -402,6 +417,25 @@ describe("Tests MXP handling", function()
       assert.is_true(holds(frameLines(), "MXPDEST6 fresh"), shown)
       -- an EOF clear that overreached past the frame would take main with it
       assert.is_true(mainRecentlyHolds("MXPDEST12 anchored in main"))
+    end)
+
+    -- the GUI's clear closes a scrolled-back frame's split screen too
+    it("counts every row of a scrolled-back frame again once EOF empties it", function()
+      for i = 1, 100 do
+        echo(frame, "MXPDEST15 line " .. i .. "\n")
+      end
+      pumpEvents(100)
+      local fullRows = getRowCount(frame)
+      scrollTo(frame, 10)
+      pumpEvents(100)
+      local splitRows = getRowCount(frame)
+
+      assert.is_true(feedTriggers(('<DEST %s EOF>MXPDEST15 fresh</DEST>'):format(frame) .. "\n"))
+      pumpEvents(100)
+      local clearedRows = getRowCount(frame)
+      scrollTo(frame)
+      assert.is_true(splitRows < fullRows, ("%d rows split, %d without"):format(splitRows, fullRows))
+      assert.are.equal(fullRows, clearedRows)
     end)
 
     -- EOL discards the part-written line the frame was left sitting on rather

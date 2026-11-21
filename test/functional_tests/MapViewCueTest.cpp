@@ -379,8 +379,8 @@ private slots:
 
     void test_aMapErrorIsPrintedInTheEditorsErrorConsole()
     {
-        QVERIFY2(HostDialogs::of(mpHost).mpEditorDialog, "the profile has no trigger editor");
-        const TBuffer& errors = HostDialogs::of(mpHost).mpEditorDialog->mpErrorConsole->buffer;
+        QVERIFY2(HostDialogs::editor(mpHost), "no trigger editor was built for the profile");
+        const TBuffer& errors = HostDialogs::editor(mpHost)->mpErrorConsole->buffer;
         const QString expected = qsl(R"([MAP ERROR:] Area not added. An area called "Ground" already exists!)");
 
         QCOMPARE(map()->mpRoomDB->addArea(qsl("Ground")), 0);

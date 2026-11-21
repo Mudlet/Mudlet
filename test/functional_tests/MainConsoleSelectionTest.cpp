@@ -260,6 +260,16 @@ private:
         return lines.join(QChar::LineFeed);
     }
 
+    int proseLinesHeldPerCharacter()
+    {
+        const TBuffer& buffer = mudlet::self()->getActiveHost()->mainConsoleView()->buffer;
+        const auto first = buffer.buffer.cbegin() + lineNumberOf(proseLine(scmProseFirstNumber));
+        const auto last = buffer.buffer.cbegin() + lineNumberOf(proseLine(scmProseLastNumber)) + 1;
+        return static_cast<int>(std::count_if(first, last, [](const TLineFormat& line) {
+            return line.heapData() != nullptr;
+        }));
+    }
+
     // Each copy starts from a marker, so a slot that returns early cannot pass
     // on what an earlier copy left on the clipboard.
     const QString mNothingCopied = qsl("nothing was copied");
@@ -344,6 +354,61 @@ private slots:
         sendMouse(pane, QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, clickPos);
 
         QVERIFY2(pane->mSelectedRegion.isEmpty(), "A click with no drag left a stray selection in the console (regression of #3922)");
+    }
+
+    void test_aPressAndReleaseRaiseTheirButtonPlaceAndWindow()
+    {
+        mpServer->setWelcomeMessage(qsl("ready\r\n"));
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        QVERIFY2(waitForTextInBuffer(qsl("ready")), "The welcome text never reached the buffer");
+        TTextEdit* pane = upperPane();
+        QVERIFY2(pane, "No upper pane available");
+        runLua(qsl("mouseEvents = {}\n"
+                   "local function note(event, button, x, y, window) mouseEvents[#mouseEvents + 1] = string.format('%s %d %d %d %s', event, button, x, y, window) end\n"
+                   "registerAnonymousEventHandler('sysWindowMousePressEvent', note)\n"
+                   "registerAnonymousEventHandler('sysWindowMouseReleaseEvent', note)"));
+
+        const QPointF at(40, 30);
+        sendMouse(pane, QEvent::MouseButtonPress, Qt::LeftButton, Qt::LeftButton, at);
+        sendMouse(pane, QEvent::MouseButtonRelease, Qt::ExtraButton24, Qt::NoButton, at);
+
+        const QPoint inParent = mudlet::self()->getActiveHost()->mainConsoleView()->parentWidget()->mapFromGlobal(pane->mapToGlobal(at.toPoint()));
+        runLua(qsl("mouseEventsSeen = table.concat(mouseEvents, ';')"));
+        lua_State* L = mudlet::self()->getActiveHost()->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, "mouseEventsSeen");
+        const QString seen = QString::fromUtf8(lua_tostring(L, -1));
+        lua_pop(L, 1);
+        QCOMPARE(seen, qsl("sysWindowMousePressEvent 1 %1 %2 main;sysWindowMouseReleaseEvent 27 %1 %2 main").arg(inParent.x()).arg(inParent.y()));
+    }
+
+    void test_aRightButtonReleaseOnTheTextOpensItsMenuAndRaisesNothing()
+    {
+        mpServer->setWelcomeMessage(qsl("ready\r\n"));
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        QVERIFY2(waitForTextInBuffer(qsl("ready")), "The welcome text never reached the buffer");
+        TTextEdit* pane = upperPane();
+        QVERIFY2(pane, "No upper pane available");
+        runLua(qsl("mouseEvents = {}\n"
+                   "local function note(event, button, x, y, window) mouseEvents[#mouseEvents + 1] = string.format('%s %d %d %d %s', event, button, x, y, window) end\n"
+                   "registerAnonymousEventHandler('sysWindowMousePressEvent', note)\n"
+                   "registerAnonymousEventHandler('sysWindowMouseReleaseEvent', note)"));
+
+        const QPointF at(40, 30);
+        sendMouse(pane, QEvent::MouseButtonPress, Qt::RightButton, Qt::RightButton, at);
+        sendMouse(pane, QEvent::MouseButtonRelease, Qt::RightButton, Qt::NoButton, at);
+        QPointer<QMenu> menu = pane->findChildren<QMenu*>().value(0);
+        QVERIFY2(menu, "the right click put up no menu");
+        menu->close();
+
+        const QPoint inParent = mudlet::self()->getActiveHost()->mainConsoleView()->parentWidget()->mapFromGlobal(pane->mapToGlobal(at.toPoint()));
+        runLua(qsl("mouseEventsSeen = table.concat(mouseEvents, ';')"));
+        lua_State* L = mudlet::self()->getActiveHost()->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, "mouseEventsSeen");
+        const QString seen = QString::fromUtf8(lua_tostring(L, -1));
+        lua_pop(L, 1);
+        // QWidget::mousePressEvent() leaves a right press for the console around the text, which raises it again
+        QVERIFY2(seen.startsWith(qsl("sysWindowMousePressEvent 2 %1 %2 main").arg(inParent.x()).arg(inParent.y())), qPrintable(seen));
+        QVERIFY2(!seen.contains(qsl("sysWindowMouseReleaseEvent")), qPrintable(seen));
     }
 
     // Control case: a genuine drag across cells must still produce a selection,
@@ -1184,6 +1249,79 @@ private slots:
         QCOMPARE(console->buffer.getLastLineNumber(), y);
 
         QVERIFY2(console->buffer.buffer.at(y).at(0).isSelected(), "text arriving on a selected line deselected the characters that were already on it");
+
+        pane->unHighlight();
+        QVERIFY2(console->buffer.buffer.at(y).uniform(), "deselecting did not store the line as one TChar");
+        QCOMPARE(highlightedText(), QString());
+    }
+
+    // Each line held as one TChar per character costs 16 bytes a character, which
+    // a line in one format otherwise does without
+    void test_selectingAllKeepsLinesInOneFormatStoredAsOne()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "the prose never reached the upper pane");
+        const TBuffer& buffer = mudlet::self()->getActiveHost()->mainConsoleView()->buffer;
+        const int y = lineNumberOf(proseLine(scmProseFirstNumber));
+        QVERIFY2(buffer.buffer.at(y).uniform(), "the prose is not stored as one TChar a line, so selecting it has nothing to expand");
+        const int heldBefore = proseLinesHeldPerCharacter();
+
+        pane->slot_selectAll();
+        QVERIFY(highlightedText().contains(proseLine(scmProseLastNumber)));
+        QCOMPARE(proseLinesHeldPerCharacter(), heldBefore);
+
+        pane->unHighlight();
+        QCOMPARE(highlightedText(), QString());
+        QCOMPARE(proseLinesHeldPerCharacter(), heldBefore);
+    }
+
+    void test_deselectingStoresPartlySelectedLinesAsOneAgain()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "the prose never reached the upper pane");
+        const int heldBefore = proseLinesHeldPerCharacter();
+
+        // down three lines, then back up two, so two lines leave the selection while the button is held
+        const QPointF pressPos = cellInMiddleRow(pane, 5);
+        const QPointF lineDown(0, pane->mFontHeight);
+        sendMouse(pane, QEvent::MouseButtonPress, Qt::LeftButton, Qt::LeftButton, pressPos);
+        sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::LeftButton, cellInMiddleRow(pane, 10) + 3 * lineDown);
+        moveAndReleaseLeftButton(pane, cellInMiddleRow(pane, 10) + lineDown);
+        QCOMPARE(highlightedText(), lineUnder(pane, pressPos).mid(5) + QChar::LineFeed + lineUnder(pane, pressPos + lineDown).left(11));
+        QCOMPARE(proseLinesHeldPerCharacter(), heldBefore + 2);
+
+        // the next click must not join the drag's press into a double-click
+        QTest::qWait(400ms);
+        const QPointF elsewhere = cellInMiddleRow(pane, 20);
+        sendMouse(pane, QEvent::MouseButtonPress, Qt::LeftButton, Qt::LeftButton, elsewhere);
+        sendMouse(pane, QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, elsewhere);
+        QCOMPARE(highlightedText(), QString());
+        QCOMPARE(proseLinesHeldPerCharacter(), heldBefore);
+    }
+
+    void test_recolouringPartOfAHighlightedLineKeepsAllOfItHighlighted()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "the prose never reached the upper pane");
+        const TBuffer& buffer = mudlet::self()->getActiveHost()->mainConsoleView()->buffer;
+        const QString text = proseLine(scmProseFirstNumber);
+        const int y = lineNumberOf(text);
+        QVERIFY2(buffer.buffer.at(y).uniform(), "the prose is not stored as one TChar a line, so recolouring it has nothing to expand");
+
+        pane->slot_selectAll();
+        runLua(qsl("moveCursor('main', 0, %1) selectSection(3, 3) setFgColor(255, 0, 0) deselect()").arg(y));
+        QVERIFY2(!buffer.buffer.at(y).uniform(), "recolouring part of the line left it stored as one TChar");
+        int highlighted = 0;
+        for (const TChar& character : buffer.buffer.at(y)) {
+            highlighted += character.isSelected() ? 1 : 0;
+        }
+        QCOMPARE(highlighted, static_cast<int>(text.size()));
+
+        pane->unHighlight();
+        QCOMPARE(highlightedText(), QString());
+        QVERIFY2(!buffer.buffer.at(y).uniform(), "deselecting stored a line in two colours as one TChar");
+        QCOMPARE(buffer.buffer.at(y).at(3).foreground(), QColor(255, 0, 0));
+        QVERIFY(buffer.buffer.at(y).at(2).foreground() != QColor(255, 0, 0));
     }
 
     // Selected text takes its background as the pen, and a transparent cell
@@ -1370,6 +1508,88 @@ private slots:
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
 
         QVERIFY2(menu.isNull(), "the menu did not delete itself on closing");
+    }
+
+    // A link for which opensMenu() is false (one command and no extra hint)
+    // has no menu of its own, so a right click on it has to give the console's
+    // menu, while a popup link or one with a one-item menu still gives its own,
+    // and a disabled link or an unrevealed spoiler gives none
+    void test_aRightClickOnALinkWithoutAMenuGivesTheConsolesMenu()
+    {
+        mpServer->setWelcomeMessage(qsl("menu test\r\n"));
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        QVERIFY2(waitForTextInBuffer(qsl("menu test")), "the welcome text never reached the buffer");
+
+        mudlet::self()->resize(1200, 800);
+        QTest::qWait(100ms);
+
+        TTextEdit* pane = upperPane();
+        QVERIFY2(pane, "No upper pane available");
+
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(
+                         qsl("clearWindow()\nechoLink('PlainLink', [[ ]], '', true)\necho('\\n')\nechoPopup('PopupLink', {[[ ]], [[ ]]}, {'first', 'second'}, true)\necho('\\n')\n")),
+                 "the echoLink()/echoPopup() calls failed");
+        const bool osc8WasEnabled = host->mEnableOSC8Hyperlinks;
+        host->mEnableOSC8Hyperlinks = true;
+        const QString esc = QString(QChar(0x1B));
+        const QString st = esc + QLatin1Char('\\');
+        const QString osc8Links = qsl("%1]8;;send:x?config={\"disabled\":true}%2DisabledLink%1]8;;%2\n%1]8;;send:x?config={\"spoiler\":true}%2SpoilerLink%1]8;;%2\n%1]8;;send:x?config={\"menu\":[{"
+                                      "\"Item\":\"send:y\"}]}%2OneItemMenuLink%1]8;;%2\n")
+                                          .arg(esc, st);
+        const bool fed = host->getLuaInterpreter()->compileAndExecuteScript(qsl("feedTriggers([==[%1]==])").arg(osc8Links)) && waitForTextInBuffer(qsl("OneItemMenuLink"));
+        host->mEnableOSC8Hyperlinks = osc8WasEnabled;
+        QVERIFY2(fed, "the OSC 8 links never reached the buffer");
+        QTest::qWait(100ms);
+
+        QList<QPoint> overALink;
+        for (int y = pane->mFontHeight / 2; y < pane->height() && overALink.size() < 5; y += pane->mFontHeight) {
+            for (int x = pane->mFontWidth / 2; x < pane->width(); x += pane->mFontWidth) {
+                sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::NoButton, QPointF(x, y));
+                if (pane->cursor().shape() == Qt::PointingHandCursor) {
+                    overALink.append(QPoint(x, y));
+                    break;
+                }
+            }
+        }
+        QVERIFY2(overALink.size() == 5, "the five links were not all found, so the clicks below prove nothing");
+
+        auto menuFromRightClickAt = [&](const QPoint& pos) -> QPointer<QMenu> {
+            for (auto* stale : pane->findChildren<QMenu*>()) {
+                delete stale;
+            }
+            sendMouse(pane, QEvent::MouseButtonPress, Qt::RightButton, Qt::RightButton, pos);
+            sendMouse(pane, QEvent::MouseButtonRelease, Qt::RightButton, Qt::NoButton, pos);
+            const auto menus = pane->findChildren<QMenu*>();
+            return menus.size() == 1 ? menus.first() : nullptr;
+        };
+
+        QPointer<QMenu> plainMenu = menuFromRightClickAt(overALink.at(0));
+        QVERIFY2(plainMenu, "a right click on a link with one command did not put up exactly one menu");
+        QVERIFY2(plainMenu->findChild<QAction*>(qsl("consoleCopy")), "the menu over a link with one command is not the console's own");
+        plainMenu->close();
+
+        QPointer<QMenu> popupMenu = menuFromRightClickAt(overALink.at(1));
+        QVERIFY2(popupMenu, "a right click on a popup link did not put up exactly one menu");
+        QVERIFY2(!popupMenu->findChild<QAction*>(qsl("consoleCopy")), "a popup link gave the console's menu instead of its own");
+        popupMenu->close();
+
+        for (int i : {2, 3}) {
+            menuFromRightClickAt(overALink.at(i));
+            QVERIFY2(pane->findChildren<QMenu*>().isEmpty(), qPrintable(qsl("a right click on the %1 link put up a menu").arg(i == 2 ? qsl("disabled") : qsl("unrevealed spoiler"))));
+        }
+        QVERIFY2(waitForTextInBuffer(qsl("SpoilerLink"), 1000), "the right click never revealed the spoiler, so it proves nothing about its menu");
+        QPointer<QMenu> revealedSpoilerMenu = menuFromRightClickAt(overALink.at(3));
+        QVERIFY2(revealedSpoilerMenu, "a right click on a revealed spoiler link did not put up exactly one menu");
+        QVERIFY2(revealedSpoilerMenu->findChild<QAction*>(qsl("consoleCopy")), "a revealed spoiler link did not give the console's menu");
+        revealedSpoilerMenu->close();
+
+        // One command, but the menu's tooltip hint makes it a menu of its own
+        QPointer<QMenu> oneItemMenu = menuFromRightClickAt(overALink.at(4));
+        QVERIFY2(oneItemMenu, "a right click on a link with a one-item menu did not put up exactly one menu");
+        QVERIFY2(!oneItemMenu->findChild<QAction*>(qsl("consoleCopy")), "a link with a one-item menu gave the console's menu instead of its own");
+        oneItemMenu->close();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     }
 
     // #6351: the console actions are keyed on the unique name while the menu

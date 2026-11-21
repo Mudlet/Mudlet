@@ -531,6 +531,7 @@ public:
     bool setupColorTrigger(int, int);
     bool setupTmpColorTrigger(int ansiFg, int ansiBg);
     std::unique_ptr<TColorTable> createColorPattern(int, int);
+    void refreshColorPatterns();
     static QString createColorPatternText(const int fgColorCode, const int bgColorCode);
     static void decodeColorPatternText(const QString& patternText, int& fgColorCode, int& bgColorCode);
     QString packageName(TTrigger* pTrigger);
@@ -570,7 +571,12 @@ public:
     QStringList mPatterns;
     int mRootSnapshotPosition = scmNeverSnapshotted;
     bool exportItem = true;
+    bool moduleMember() const { return mModuleMember; }
+    // After a move: a member under a module's folder, and at the top level only while its module's file still holds it
+    void updateModuleMembership();
     bool mModuleMasterFolder = false;
+    // The module whose file this was loaded from
+    QString mLoadedFromModule;
     // specifies whenever the payload is Lua code as a string
     // or a function
     bool mRegisteredAnonymousLuaFunction = false;
@@ -597,6 +603,7 @@ public:
 
 
 private:
+    void setModuleMembership(bool);
     pcre2_match_data* matchDataFor(int patternNumber);
     int search(int patternNumber, const char* subject, int subjectLength, pcre2_match_data* matchData) const;
     TTrigger() = default;
@@ -605,6 +612,7 @@ private:
     void enterChildren(const TUtf8Subject& subject, const QString& haystack, int line, int posOffset, const TBigramFilter* pLineBigrams, bool haystackIsCapture, bool& conditionMet);
     void noteOpen();
     void refile(TriggerRefile change);
+    bool applyPalette(TColorTable& table) const;
     void patternLiteralsChanged();
     inline void filter(std::string_view capture, int posOffset, int lineNumber, bool positionsInCurrentColumns);
     bool selectTextMatch(int lineNumber, int from, std::string_view capture) const;

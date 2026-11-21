@@ -27,6 +27,7 @@
 #include "MapStyle.h"
 #include "CredentialManager.h"
 #include "Host.h"
+#include "MudletApp.h"
 #include "SecureStringUtils.h"
 #include "ShortcutsManager.h"
 #include "TAction.h"
@@ -50,6 +51,7 @@
 #include <QtMath>
 #include <QVersionNumber>
 
+#include <algorithm>
 #include <memory>
 
 XMLimport::XMLimport(Host* pH)
@@ -85,6 +87,7 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
         if (module) {
             mpKey->mModuleMasterFolder = true;
             mpKey->mModuleMember = true;
+            mpKey->mLoadedFromModule = mPackageName;
         }
         mpKey->mPackageName = mPackageName;
         mpKey->setIsActive(true);
@@ -95,6 +98,7 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
         if (module) {
             mpTrigger->mModuleMasterFolder = true;
             mpTrigger->mModuleMember = true;
+            mpTrigger->mLoadedFromModule = mPackageName;
         }
         mpTrigger->mPackageName = mPackageName;
         mpTrigger->setIsActive(true);
@@ -105,6 +109,7 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
         if (module) {
             mpTimer->mModuleMasterFolder = true;
             mpTimer->mModuleMember = true;
+            mpTimer->mLoadedFromModule = mPackageName;
         }
         mpTimer->mPackageName = mPackageName;
         mpTimer->setIsActive(true);
@@ -115,6 +120,7 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
         if (module) {
             mpAlias->mModuleMasterFolder = true;
             mpAlias->mModuleMember = true;
+            mpAlias->mLoadedFromModule = mPackageName;
         }
         mpAlias->mPackageName = mPackageName;
         mpAlias->setIsActive(true);
@@ -127,6 +133,7 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
         if (module) {
             mpAction->mModuleMasterFolder = true;
             mpAction->mModuleMember = true;
+            mpAction->mLoadedFromModule = mPackageName;
         }
         mpAction->mPackageName = mPackageName;
         mpAction->setIsActive(true);
@@ -137,6 +144,7 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
         if (module) {
             mpScript->mModuleMasterFolder = true;
             mpScript->mModuleMember = true;
+            mpScript->mLoadedFromModule = mPackageName;
         }
         mpScript->mPackageName = mPackageName;
         mpScript->setIsActive(true);
@@ -162,7 +170,10 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
                     versionString = attributes().value(qsl("version")).toString();
                     if (!versionString.isEmpty()) {
                         bool isOk = false;
-                        const float versionNumber = versionString.toFloat(&isOk);
+                        // No Mudlet wrote a version that reads as NaN, negative or past 255: it is refused as a later
+                        // Mudlet's, rather than overflowing qFloor() or wrapping the quint8 major version
+                        const float parsedVersion = versionString.toFloat(&isOk);
+                        const float versionNumber = parsedVersion >= 0.0f ? std::min(parsedVersion, 255.0f) : 255.0f;
                         if (isOk) {
                             mVersionMajor = qFloor(versionNumber);
                             mVersionMinor = qRound(1000.0 * versionNumber) - (1000 * mVersionMajor);
@@ -462,9 +473,16 @@ void XMLimport::readArea()
 {
     if (attributes().hasAttribute(qsl("id"))) {
         const int id = attributes().value(qsl("id")).toString().toInt();
-        const QString name = attributes().value(qsl("name")).toString();
+        const QString wantedName = attributes().value(qsl("name")).toString();
+        TRoomDB* pRoomDB = mpHost->mpMap->mpRoomDB.get();
 
-        mpHost->mpMap->mpRoomDB->addArea(id, name);
+        // Game maps reuse area names, which addArea() refuses: the area would be
+        // dropped, or remade for its rooms under an "Unnamed Area" name
+        QString name = wantedName;
+        for (int suffix = 1; !name.isEmpty() && pRoomDB->hasAreaName(name); ++suffix) {
+            name = qsl("%1_%2").arg(wantedName).arg(suffix, 3, 10, QLatin1Char('0'));
+        }
+        pRoomDB->addArea(id, name);
     }
 }
 
@@ -923,11 +941,15 @@ void XMLimport::readHost(Host* pHost)
     pHost->mEditorTheme = attributes().value(QLatin1String("mEditorTheme")).toString();
     pHost->mEditorThemeFile = attributes().value(QLatin1String("mEditorThemeFile")).toString();
     if (pHost->mEditorTheme.isEmpty() || pHost->mEditorThemeFile.isEmpty()) {
-        pHost->mEditorTheme = qsl("Mudlet");
-        pHost->mEditorThemeFile = qsl("Mudlet.tmTheme");
+        pHost->mEditorTheme = MudletApp::scmEditorThemeNameLight;
+        pHost->mEditorThemeFile = MudletApp::scmEditorThemeFileLight;
     }
     pHost->mEditorThemeDark = attributes().value(QLatin1String("mEditorThemeDark")).toString();
     pHost->mEditorThemeFileDark = attributes().value(QLatin1String("mEditorThemeFileDark")).toString();
+    // Both halves, because a profile that was in dark mode when it last picked a
+    // theme could have picked the bundled one there too
+    MudletApp::migrateBundledEditorTheme(pHost->mEditorTheme, pHost->mEditorThemeFile);
+    MudletApp::migrateBundledEditorTheme(pHost->mEditorThemeDark, pHost->mEditorThemeFileDark);
     pHost->mThemePreviewItemID = attributes().value(QLatin1String("mThemePreviewItemID")).toInt();
     pHost->mThemePreviewType = attributes().value(QLatin1String("mThemePreviewType")).toString();
     pHost->setHaveColorSpaceId(attributes().value(QLatin1String("mSGRCodeHasColSpaceId")).toString() == QLatin1String("yes"));
@@ -1444,6 +1466,7 @@ int XMLimport::readTrigger(TTrigger* pParent)
 
     if (module) {
         pT->mModuleMember = true;
+        pT->mLoadedFromModule = mPackageName;
     }
 
     mpHost->getTriggerUnit()->registerTrigger(pT);
@@ -1582,6 +1605,7 @@ int XMLimport::readTimer(TTimer* pParent)
 
     if (module) {
         pT->mModuleMember = true;
+        pT->mLoadedFromModule = mPackageName;
     }
 
     const QString what = name().toString();
@@ -1653,6 +1677,7 @@ int XMLimport::readAlias(TAlias* pParent)
     pT->setIsFolder(attributes().value(qsl("isFolder")) == YES);
     if (module) {
         pT->mModuleMember = true;
+        pT->mLoadedFromModule = mPackageName;
     }
 
     QStringList itemErrors;
@@ -1732,6 +1757,7 @@ int XMLimport::readAction(TAction* pParent)
 
     if (module) {
         pT->mModuleMember = true;
+        pT->mLoadedFromModule = mPackageName;
     }
 
     const QString what = name().toString();
@@ -1829,6 +1855,7 @@ int XMLimport::readScript(TScript* pParent)
 
     if (module) {
         script->mModuleMember = true;
+        script->mLoadedFromModule = mPackageName;
     }
 
     const QString what = name().toString();
@@ -1894,6 +1921,7 @@ int XMLimport::readKey(TKey* pParent)
     pT->setIsFolder(attributes().value(qsl("isFolder")) == YES);
     if (module) {
         pT->mModuleMember = true;
+        pT->mLoadedFromModule = mPackageName;
     }
 
     const QString what = name().toString();

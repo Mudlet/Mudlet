@@ -114,6 +114,130 @@ describe("spawn", function()
       assert.are.same({"spawnBurstA\n", "spawnBurstB\n", "spawnBurstC\n"}, lines)
     end)
 
+    it("should hand the callback a line whole when it holds a NUL byte", function()
+      if getOS() == "windows" then
+        pending("no POSIX shell to write a NUL byte")
+        return
+      end
+      if not os.getenv("MUDLET_TEST_MODE") then
+        pending("waiting for the child's output needs pumpEvents(), which is refused outside MUDLET_TEST_MODE")
+        return
+      end
+
+      local lines = {}
+      spawn(function(line)
+        table.insert(lines, line)
+      end, "/bin/sh", "-c", "printf 'spawnNulA\\000spawnNulB\\n'")
+      finally(function()
+        pumpEvents(2200)
+      end)
+
+      for _ = 1, 500 do
+        if #lines >= 1 then
+          break
+        end
+        pumpEvents(20)
+      end
+
+      assert.are.same({"spawnNulA\0spawnNulB\n"}, lines)
+    end)
+
+    it("should hand the callback the last of the output when it does not end in a newline", function()
+      if getOS() == "windows" then
+        pending("no POSIX shell to write output without a trailing newline")
+        return
+      end
+      if not os.getenv("MUDLET_TEST_MODE") then
+        pending("waiting for the child's output needs pumpEvents(), which is refused outside MUDLET_TEST_MODE")
+        return
+      end
+
+      local lines = {}
+      local process = spawn(function(line)
+        table.insert(lines, line)
+      end, "/bin/sh", "-c", "printf 'spawnTailA\\nspawnTailB'")
+      finally(function()
+        pumpEvents(2200)
+      end)
+
+      for _ = 1, 500 do
+        if #lines >= 2 or not process.isRunning() then
+          break
+        end
+        pumpEvents(20)
+      end
+
+      assert.are.same({"spawnTailA\n", "spawnTailB"}, lines)
+    end)
+
+    it("should keep the process alive while the last callback runs an event loop", function()
+      if getOS() == "windows" then
+        pending("no POSIX shell to write output without a trailing newline")
+        return
+      end
+      if not os.getenv("MUDLET_TEST_MODE") then
+        pending("waiting for the child's output needs pumpEvents(), which is refused outside MUDLET_TEST_MODE")
+        return
+      end
+
+      local lines = {}
+      local process = spawn(function(line)
+        table.insert(lines, line)
+        if line == "spawnLoopB" then
+          -- past the 2s purge timer, as a modal dialog left open would be
+          pumpEvents(2200)
+        end
+      end, "/bin/sh", "-c", "printf 'spawnLoopA\\nspawnLoopB'")
+      finally(function()
+        pumpEvents(2200)
+      end)
+
+      for _ = 1, 500 do
+        if #lines >= 2 or not process.isRunning() then
+          break
+        end
+        pumpEvents(20)
+      end
+
+      assert.are.same({"spawnLoopA\n", "spawnLoopB"}, lines)
+    end)
+
+    it("should not call the callback again inside itself when the process ends during an event loop", function()
+      if getOS() == "windows" then
+        pending("no POSIX shell to delay the child's output")
+        return
+      end
+      if not os.getenv("MUDLET_TEST_MODE") then
+        pending("waiting for the child's output needs pumpEvents(), which is refused outside MUDLET_TEST_MODE")
+        return
+      end
+
+      local lines, inCallback, nested = {}, false, false
+      local process = spawn(function(line)
+        nested = nested or inCallback
+        inCallback = true
+        table.insert(lines, line)
+        if line == "spawnNestA\n" then
+          -- the child ends, and the purge timer fires, before this returns
+          pumpEvents(2200)
+        end
+        inCallback = false
+      end, "/bin/sh", "-c", "printf 'spawnNestA\\n'; sleep 0.3; printf 'spawnNestB'")
+      finally(function()
+        pumpEvents(2200)
+      end)
+
+      for _ = 1, 500 do
+        if #lines >= 2 or not process.isRunning() then
+          break
+        end
+        pumpEvents(20)
+      end
+
+      assert.is_false(nested)
+      assert.are.same({"spawnNestA\n", "spawnNestB"}, lines)
+    end)
+
   end)
 
   -- Tests that need a profile of their own write one here, load it and take it
@@ -395,6 +519,135 @@ end]])
       assert.is_nil(lfs.attributes(child.survivor), "the finalizer started a process the reset left running")
     end)
 
+  end)
+
+  describe("the handle it returns", function()
+    local function waitUntil(condition)
+      for _ = 1, 500 do
+        if condition() then
+          return true
+        end
+        pumpEvents(20)
+      end
+      return condition()
+    end
+
+    -- A child left waiting on its input would outlive the test, so each one is
+    -- told to stop; the purge timer then frees every ended child's wrapper at once
+    local function spawnDrained(callback, ...)
+      local process = spawn(callback, ...)
+      onCleanup(function()
+        process.close()
+        waitUntil(function() return not process.isRunning() end)
+      end)
+      return process
+    end
+
+    teardown(function()
+      pumpEvents(2200)
+    end)
+
+    it("should send text to the child's input", function()
+      if skipped() then
+        return
+      end
+      local lines = {}
+      local process = spawnDrained(function(line) lines[#lines + 1] = line end, "cat")
+
+      process.send("first ")
+      process.send("line\n")
+      process.send(42)
+      process.send("\n")
+
+      assert.is_true(waitUntil(function() return #lines >= 2 end), "the child echoed nothing back")
+      assert.are.same({"first line\n", "42\n"}, lines)
+    end)
+
+    it("should send every byte, a NUL included", function()
+      if skipped() then
+        return
+      end
+      local lines = {}
+      local process = spawnDrained(function(line) lines[#lines + 1] = line end, "wc", "-c")
+
+      process.send("a\0b")
+      -- wc counts only once its input ends, so a close() that did nothing would leave this empty
+      process.close()
+
+      assert.is_true(waitUntil(function() return #lines >= 1 end), "the child never saw its input end")
+      assert.are.equal(3, tonumber(lines[1]:match("%d+")))
+    end)
+
+    it("should let a child reading to the end of its input finish", function()
+      if skipped() then
+        return
+      end
+      local process = spawnDrained(function() end, "cat")
+      assert.is_true(process.isRunning())
+
+      process.close()
+
+      assert.is_true(waitUntil(function() return not process.isRunning() end), "the child is still waiting on its input")
+    end)
+
+    it("should refuse to send something that is not text", function()
+      if skipped() then
+        return
+      end
+      local process = spawnDrained(function() end, "cat")
+
+      local ok, err = pcall(process.send, {})
+
+      assert.is_false(ok)
+      assert.are.equal("Unable to get data to send.", err)
+    end)
+
+    it("should refuse to send to a child that has ended", function()
+      if skipped() then
+        return
+      end
+      local process = spawnDrained(function() end, "/bin/sh", "-c", "exit 0")
+      assert.is_true(waitUntil(function() return not process.isRunning() end), "the child never ended")
+
+      local ok, err = pcall(process.send, "too late\n")
+
+      assert.is_false(ok)
+      assert.are.equal("Unable to send data to process. Process has ended.", err)
+      -- and closing an ended child's input does nothing, rather than raising
+      assert.is_true(pcall(process.close))
+    end)
+
+    -- One full purge timer period after the child ends frees its wrapper, leaving the handle holding nothing
+    it("should refuse to send to a child whose wrapper has been freed", function()
+      if skipped() then
+        return
+      end
+      local process = spawnDrained(function() end, "/bin/sh", "-c", "exit 0")
+      assert.is_true(waitUntil(function() return not process.isRunning() end), "the child never ended")
+      pumpEvents(2200)
+
+      local ok, err = pcall(process.send, "too late\n")
+
+      assert.is_false(ok)
+      assert.are.equal("Unable to send data to process. Process has ended.", err)
+      assert.is_true(pcall(process.close))
+      assert.is_false(process.isRunning())
+    end)
+
+    -- A regression here hangs the whole suite rather than failing this test
+    it("should refuse to send to a child whose input it has closed", function()
+      if skipped() then
+        return
+      end
+      local process = spawnDrained(function() end, "sleep", "1")
+      process.close()
+      assert.is_true(process.isRunning())
+
+      local ok, err = pcall(process.send, "after close\n")
+
+      assert.is_false(ok)
+      assert.are.equal("Unable to send data to process. Its input has been closed.", err)
+    end)
   end)
 
   describe("a callback that raises", function()

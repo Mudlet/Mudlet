@@ -49,6 +49,14 @@ dlgModuleManager::dlgModuleManager(QWidget* parent, Host* pHost)
     connect(installButton, &QAbstractButton::clicked, this, &dlgModuleManager::slot_installModule);
     connect(helpButton, &QAbstractButton::clicked, this, &dlgModuleManager::slot_helpModule);
     connect(moduleTable, &QTableWidget::itemClicked, this, &dlgModuleManager::slot_moduleClicked);
+    // Help opens the current row's page, which the arrow keys and a rebuild move without a click
+    connect(moduleTable, &QTableWidget::currentItemChanged, this, [this](QTableWidgetItem* current) {
+        if (current) {
+            slot_moduleClicked(current);
+        } else {
+            helpButton->setDisabled(true);
+        }
+    });
     connect(moduleTable, &QTableWidget::itemChanged, this, &dlgModuleManager::slot_moduleChanged);
     connect(mpHost->mainConsoleView(), &QWidget::destroyed, this, &dlgModuleManager::close);
     connect(mpHost, &Host::signal_packageListChanged, this, &dlgModuleManager::layoutModules);
@@ -166,28 +174,75 @@ void dlgModuleManager::slot_installModule()
     lastDir = QFileInfo(fileNames.first()).absolutePath();
     settings.setValue(qsl("lastFileDialogLocation"), lastDir);
 
-    QStringList failedModules;
+    const QString failures = installModuleFiles(fileNames);
+    layoutModules();
 
+    if (!failures.isEmpty()) {
+        showImportStatus(failures);
+    }
+}
+
+// Returns the notice naming each file that failed and why, empty if none. The reason
+// otherwise goes only to the main console, behind this window.
+QString dlgModuleManager::installModuleFiles(const QStringList& fileNames)
+{
+    if (!mpHost) {
+        return {};
+    }
+
+    QStringList failures;
     for (const QString& fileName : fileNames) {
-        if (mpHost->installPackage(fileName, enums::PackageModuleType::ModuleFromUI).first) {
-            mpHost->waitForProfileSave();
+        // Mid-save, installPackage() answers yes and tries later, leaving no reason to report
+        mpHost->waitForProfileSave();
+        const auto [installed, reason] = mpHost->installPackage(fileName, enums::PackageModuleType::ModuleFromUI);
+        if (installed) {
+            continue;
+        }
+        //: Module manager - one line of the notice listing modules that failed to import. %1 is the file name, %2 the reason it was refused
+        failures << tr("Failed to import %1: %2").arg(QFileInfo(fileName).fileName(), reason);
+    }
+    return failures.join(QLatin1Char('\n'));
+}
+
+// Returns what to tell the user about refused removals, empty if none. Split from the slot so the
+// wording can be tested: the dialog has no Lua entry point and the box in the slot blocks.
+QString dlgModuleManager::removeModules(const QStringList& moduleNames)
+{
+    if (!mpHost) {
+        return {};
+    }
+
+    QStringList refusedWhileSaving;
+    QStringList noLongerInstalled;
+    for (const QString& moduleName : moduleNames) {
+        if (mpHost->uninstallPackage(moduleName, enums::PackageModuleType::ModuleFromUI)) {
+            continue;
+        }
+        // Otherwise the module went after the row was drawn (a sibling in this selection can remove it
+        // from its sysUninstall handler), so do not blame a save that is not running.
+        if (mpHost->currentlySavingProfile()) {
+            refusedWhileSaving << moduleName;
         } else {
-            const QString baseName = QFileInfo(fileName).fileName();
-            failedModules << baseName;
-            qWarning() << "dlgModuleManager::slot_installModule() ERROR - failed to import" << baseName;
+            noLongerInstalled << moduleName;
         }
     }
 
-    for (int i = moduleTable->rowCount() - 1; i >= 0; --i) {
-        moduleTable->removeRow(i);
+    QStringList sentences;
+    if (refusedWhileSaving.size() == 1) {
+        //: %1 is the name of the module the user asked to remove
+        sentences << tr("\"%1\" could not be removed while the profile is being saved. Please try again in a moment.").arg(refusedWhileSaving.constFirst());
+    } else if (!refusedWhileSaving.isEmpty()) {
+        //: %1 is a comma separated list of the modules that are still installed
+        sentences << tr("These could not be removed while the profile is being saved: %1. Please try again in a moment.").arg(refusedWhileSaving.join(qsl(", ")));
     }
-
-    layoutModules();
-
-    if (!failedModules.isEmpty()) {
-        //: Module manager - status message shown when some modules failed to import. %1 is a comma-separated list of module names
-        showImportStatus(tr("Failed to import: %1").arg(failedModules.join(qsl(", "))));
+    if (noLongerInstalled.size() == 1) {
+        //: %1 is the name of the module the user asked to remove, which turned out not to be installed any more
+        sentences << tr("\"%1\" is no longer installed, so there was nothing to remove.").arg(noLongerInstalled.constFirst());
+    } else if (!noLongerInstalled.isEmpty()) {
+        //: %1 is a comma separated list of the modules that turned out not to be installed any more
+        sentences << tr("These are no longer installed, so there was nothing to remove: %1.").arg(noLongerInstalled.join(qsl(", ")));
     }
+    return sentences.join(qsl(" "));
 }
 
 void dlgModuleManager::slot_uninstallModule()
@@ -196,28 +251,25 @@ void dlgModuleManager::slot_uninstallModule()
         return;
     }
 
-    const int cRow = moduleTable->currentRow();
-    QTableWidgetItem* pI = moduleTable->item(cRow, 0);
-    if (!pI) {
+    // Read every name before uninstalling: that pumps the event loop while a save finishes, and a handler
+    // that removes a module rebuilds this table, deleting its items.
+    QStringList moduleNames;
+    for (int row = 0; row < moduleTable->rowCount(); ++row) {
+        if (auto* nameItem = moduleTable->item(row, 0); nameItem && nameItem->isSelected()) {
+            moduleNames << nameItem->text();
+        }
+    }
+    if (moduleNames.isEmpty()) {
         return;
     }
-    // Read before uninstalling: that pumps the event loop while a save finishes, and a handler that
-    // removes a module rebuilds this table, deleting this row's item.
-    const QString moduleName = pI->text();
-    if (!mpHost->uninstallPackage(moduleName, enums::PackageModuleType::ModuleFromUI)) {
-        QString msg;
-        if (mpHost->currentlySavingProfile()) {
-            //: %1 is the name of the module the user asked to remove
-            msg = tr("\"%1\" could not be removed while the profile is being saved. Please try again in a moment.").arg(moduleName);
-        } else {
-            //: %1 is the name of the module the user asked to remove, which turned out not to be installed any more
-            msg = tr("\"%1\" is no longer installed, so there was nothing to remove.").arg(moduleName);
-        }
-        //: Title of the dialog that says why a module the user asked to remove was not removed
-        QMessageBox::warning(this, tr("Removal failed"), msg);
-    }
+
+    const QString msg = removeModules(moduleNames);
     // Rebuild even if refused: only that clears a stale row
     layoutModules();
+    if (!msg.isEmpty()) {
+        //: Title of the dialog that says why one or more modules the user asked to remove were not removed
+        QMessageBox::warning(this, tr("Removal failed"), msg);
+    }
 }
 
 void dlgModuleManager::slot_moduleClicked(QTableWidgetItem* pItem)
@@ -313,6 +365,7 @@ void dlgModuleManager::slot_helpModule()
 
 void dlgModuleManager::showImportStatus(const QString& message)
 {
+    label_importStatus->setTextFormat(Qt::PlainText);
     label_importStatus->setText(message);
     label_importStatus->setStyleSheet(qsl("QLabel { padding: 8px; }"));
     label_importStatus->show();

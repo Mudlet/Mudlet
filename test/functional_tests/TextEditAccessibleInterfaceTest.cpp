@@ -107,6 +107,15 @@ private:
         return offset;
     }
 
+    inline static QStringList smAnnouncements;
+
+    static void recordAnnouncement(QAccessibleEvent* event)
+    {
+        if (event->type() == QAccessible::Announcement) {
+            smAnnouncements.append(static_cast<QAccessibleAnnouncementEvent*>(event)->message());
+        }
+    }
+
     QAccessibleTextInterface* textInterface() const
     {
         QAccessibleInterface* pInterface = QAccessible::queryAccessibleInterface(pane());
@@ -121,10 +130,13 @@ private:
     }
 
     // TTextEdit counts a click within 300ms of the last one as the next of a
-    // double- or triple-click, so the wait keeps an earlier case's clicks out of it
+    // double- or triple-click, so the wait keeps an earlier case's clicks out of it.
+    // It runs events, and text arriving in it scrolls the pane, so take the point
+    // to click only after it.
+    static void waitOutMultiClick() { QTest::qWait(350ms); }
+
     void clickRepeatedly(const QPoint& where, const int clicks) const
     {
-        QTest::qWait(350ms);
         for (int click = 0; click < clicks; ++click) {
             QTest::mouseClick(pane(), Qt::LeftButton, Qt::NoModifier, where);
         }
@@ -132,6 +144,7 @@ private:
 
     void tripleClickLine(const int line) const
     {
+        waitOutMultiClick();
         const int fontHeight = pane()->fontMetrics().height();
         clickRepeatedly(QPoint(pane()->fontMetrics().averageCharWidth() * 2, (line - pane()->imageTopLine()) * fontHeight + fontHeight / 2), 3);
     }
@@ -278,6 +291,9 @@ private slots:
         QAccessible::installFactory(TAccessibleTextEdit::textEditFactory);
 
         mpServer = new TelnetServerStub(qApp);
+        // The welcome comes on a timer, and a slow machine can take it after the
+        // marker lines, where it scrolls them up a line under a case's clicks
+        mpServer->setSendsWelcome(false);
         mpServer->start(mLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
 
         mudlet::start();
@@ -709,11 +725,11 @@ private slots:
         const int line = lineOf(mSecondMarker);
         QVERIFY2(lineIsOnScreen(line), "the line being selected is off screen, so no selection region could be built for it");
         const int lineStart = offsetOfLine(line);
+        waitOutMultiClick();
         // "line two" runs from column 11 to 18
         const QPoint dragFrom = pointOfOffset(lineStart + 11);
         const QPoint dragTo = pointOfOffset(lineStart + 18);
 
-        QTest::qWait(350ms);
         QTest::mousePress(pane(), Qt::LeftButton, Qt::NoModifier, dragFrom);
         QMouseEvent move(QEvent::MouseMove, QPointF(dragTo), pane()->mapToGlobal(QPointF(dragTo)), Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
         QApplication::sendEvent(pane(), &move);
@@ -721,6 +737,7 @@ private slots:
         QCOMPARE(selectedText(), qsl("line two"));
 
         ti->removeSelection(0);
+        waitOutMultiClick();
         clickRepeatedly(pointOfOffset(lineStart + 3), 2);
         QCOMPARE(selectedText(), qsl("accessible"));
     }
@@ -743,6 +760,7 @@ private slots:
         int reportedStart = -1;
         int reportedEnd = -1;
 
+        waitOutMultiClick();
         clickRepeatedly(pointOfOffset(spaceOffset), 2);
         QVERIFY2(!pane()->mSelectedRegion.isEmpty(), "the two clicks were not taken as a double-click, so no word highlight was built");
         ti->selection(0, &reportedStart, &reportedEnd);
@@ -1085,7 +1103,7 @@ private slots:
         }
     }
 
-    // Last, as it trims the buffer: the lines going off the front leave the
+    // Among the last, as it trims the buffer: the lines going off the front leave the
     // selection on indexes the buffer has moved on from until a copy catches
     // it up, so the line and its newline have to be found both before the
     // copy and after it
@@ -1123,6 +1141,38 @@ private slots:
         QCOMPARE(selectedBeforeCopy, marker + QChar::LineFeed);
         QCOMPARE(copied, marker + QChar::LineFeed);
         QCOMPARE(selectedAfterCopy, marker + QChar::LineFeed);
+    }
+
+    // The line that pushes the buffer over its limit leaves fewer lines than there were, which is
+    // not the same as lines being taken away: a screen reader still has to be read it
+    void test_aLineThatTrimsTheBufferIsStillAnnounced()
+    {
+        TBuffer& buffer = mpHost->mainConsoleView()->buffer;
+        const int savedLimit = buffer.mLinesLimit;
+        const int savedBatch = buffer.mBatchDeleteSize;
+        const qint64 trimmedBefore = buffer.linesTrimmedTotal();
+        smAnnouncements.clear();
+        // Qt only hands events to the handler while accessibility is active, which no screen reader makes it here
+        QAccessible::installUpdateHandler(recordAnnouncement);
+        QAccessible::setActive(true);
+        const bool active = QAccessible::isActive();
+
+        buffer.setBufferSize(static_cast<int>(buffer.buffer.size()) + 2, 50);
+        QStringList printed;
+        for (int i = 0; i < 5; ++i) {
+            printed << qsl("announced line %1").arg(i);
+            mpHost->mainConsoleView()->print(printed.last() + QChar::LineFeed);
+        }
+        const bool trimmed = buffer.linesTrimmedTotal() > trimmedBefore;
+        buffer.setBufferSize(savedLimit, savedBatch);
+        QAccessible::setActive(false);
+        QAccessible::installUpdateHandler(nullptr);
+
+        if (!active) {
+            QSKIP("QAccessible::setActive(true) does not make isActive() true without a screen reader before Qt 6.10");
+        }
+        QVERIFY2(trimmed, "the buffer was not trimmed, so nothing here was tested");
+        QCOMPARE(smAnnouncements, printed);
     }
 };
 

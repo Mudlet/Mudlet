@@ -25,6 +25,12 @@
      <layout class="QHBoxLayout" name="horizontalLayout_packageName">
       <item>
        <widget class="QLineEdit" name="lineEdit_packageName">
+        <property name="accessibleName">
+         <string extracomment="Screen reader name of the field the package to export is named in, which has no visible label of its own">Package name</string>
+        </property>
+        <property name="accessibleDescription">
+         <string extracomment="Screen reader description of the field the package to export is named in">Name to export the package under, or pick an installed package or module to update from the list beside it</string>
+        </property>
         <property name="placeholderText">
          <string>Package name here</string>
         </property>
@@ -39,6 +45,12 @@
       </item>
       <item>
        <widget class="QComboBox" name="packageList">
+        <property name="accessibleName">
+         <string extracomment="Screen reader name of the list of installed packages and modules beside the package name field, which has no visible label of its own">Installed package or module to update</string>
+        </property>
+        <property name="accessibleDescription">
+         <string extracomment="Screen reader description of the list of installed packages and modules beside the package name field">Fills the form in from an installed package or module, to export an update of it</string>
+        </property>
         <property name="enabled">
          <bool>true</bool>
         </property>
@@ -190,16 +202,16 @@
             <widget class="QWidget" name="widget_icon" native="true">
              <layout class="QHBoxLayout" name="horizontalLayout_2">
               <property name="leftMargin">
-               <number>0</number>
+               <number>2</number>
               </property>
               <property name="topMargin">
-               <number>0</number>
+               <number>2</number>
               </property>
               <property name="rightMargin">
-               <number>0</number>
+               <number>2</number>
               </property>
               <property name="bottomMargin">
-               <number>0</number>
+               <number>2</number>
               </property>
               <item>
                <widget class="QPushButton" name="pushButton_addIcon">
@@ -210,7 +222,7 @@
                  </sizepolicy>
                 </property>
                 <property name="toolTip">
-                 <string>Icon size of 512x512 recommended</string>
+                 <string>Icon size of 512x512 recommended. You can also drop an image here.</string>
                 </property>
                 <property name="text">
                  <string>Add icon</string>
@@ -238,7 +250,7 @@
                  </size>
                 </property>
                 <property name="toolTip">
-                 <string>Icon size of 512x512 recommended</string>
+                 <string>Icon size of 512x512 recommended. You can also drop an image here.</string>
                 </property>
                </widget>
               </item>
@@ -532,13 +544,6 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
              <property name="toolTip">
               <string>Drag and drop files and folders, or use the browse button below</string>
              </property>
-             <property name="styleSheet">
-              <string notr="true">QListWidget {
-    border-style: dashed;
-    border-width: 2px;
-    border-color: grey;
-}</string>
-             </property>
             </widget>
            </item>
            <item>
@@ -617,6 +622,9 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
       </property>
       <item>
        <widget class="QLineEdit" name="lineEdit_filePath">
+        <property name="accessibleName">
+         <string extracomment="Screen reader name of the read-only field showing where the package will be exported to, which has no visible label of its own">Export location</string>
+        </property>
         <property name="frame">
          <bool>false</bool>
         </property>

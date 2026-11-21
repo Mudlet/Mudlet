@@ -3638,6 +3638,17 @@ describe("Tests UI functions", function()
       assert.is_truthy(tostring(message):find(takenName, 1, true), "a plain button is no toolbar, got: " .. tostring(message))
     end)
 
+    it("tempButtonToolbar answers nil and a message for a location no bar shows", function()
+      for _, location in ipairs({-1, 4}) do
+        local name = ("bustedTempBadLocation%d%s"):format(location, suffix)
+        local count, id, message = pack(tempButtonToolbar(name, location, 0))
+        assert.are.equal(2, count)
+        assert.is_nil(id)
+        assert.is_truthy(tostring(message):find("location " .. location, 1, true), "the refusal should name the location, got: " .. tostring(message))
+        assert.are.equal(0, exists(name, "button"))
+      end
+    end)
+
     it("showing a button toolbar again does not stack another copy of its buttons", function()
       if not os.getenv("MUDLET_TEST_MODE") then
         pending("the layout only settles once pumpEvents() has run")
@@ -4524,6 +4535,18 @@ describe("Tests UI functions", function()
       assert.are.equal("ERROR: mini console does not exist", first)
       assert.is_string(second)
     end)
+
+    it("getCurrentLine returns nil and a message for an unknown window when asked for full error reporting", function()
+      local first, second = getCurrentLine("uiReadbackNoSuchWindow", true)
+      assert.is_nil(first)
+      assert.are.equal('window "uiReadbackNoSuchWindow" not found', second)
+    end)
+
+    it("getCurrentLine rejects an enableFullErrorReporting that is not a boolean", function()
+      local wanted = "getCurrentLine: bad argument #2 type (enableFullErrorReporting {default = false} as boolean is optional, got string!)"
+      assert.has_error(function() getCurrentLine("main", "yes") end, wanted)
+      assert.has_error(function() getCurrentLine("uiReadbackNoSuchWindow", 1) end)
+    end)
   end)
 
   -- these all return nil plus a 'window "..." not found' message for an
@@ -5105,6 +5128,48 @@ describe("Window state getters", function()
       finally(function() setLabelStyleSheet(labelName, "") end)
       assert.is_true(setLabelStyleSheet(labelName, 'qproperty-text: "from the style sheet";'))
       assert.are.equal("from the style sheet", getLabelText(labelName))
+    end)
+
+    for _, case in ipairs({
+      {'qproperty-text: "x\\41 y";', "xA y"},
+      {'qproperty-text: "a\\中b";', "a中b"},
+      {'qproperty-text: "x\\FFFFF y";', "xFFFFF y"},
+      {'qproperty-text: "a\\\r\nb";', "a\r\nb"},
+    }) do
+      it("reads the text " .. case[2]:gsub("%c", "<break>") .. " from a style sheet that escapes it", function()
+        finally(function() setLabelStyleSheet(labelName, "") end)
+        assert.is_true(setLabelStyleSheet(labelName, case[1]))
+        assert.are.equal(case[2], getLabelText(labelName))
+      end)
+    end
+
+    local unreadable = {
+      'qproperty-text: "from the style sheet"; qproperty-toolTip: "a\\a b";',
+      'qproperty-toolTip: "a\\1F600 b"; qproperty-text: "from the style sheet";',
+      'QPushButton { color: "\\a"; } QLabel { qproperty-text: "from the style sheet"; }',
+      'qproperty-text: "from the\nstyle sheet";',
+      'qproperty-toolTip: "a\rb"; qproperty-text: "from the style sheet";',
+      "qproperty-toolTip: 'a\fb'; qproperty-text: 'from the style sheet';",
+      'QPushButton { color: red; } QPushButton { qproperty-toolTip: "a\nb"; } QLabel { qproperty-text: "from the style sheet"; }',
+      '@media screen { QLabel { color: "\\a"; } } QLabel { qproperty-text: "from the style sheet"; }',
+      'qproperty-text: "never ends;',
+    }
+    for _, escape in ipairs({"x\\1F600 y", "\\10000", "x\\0 y", "x\\a y", "x\\d y"}) do
+      unreadable[#unreadable + 1] = ('qproperty-text: "%s";'):format(escape)
+    end
+    for _, sheet in ipairs(unreadable) do
+      it("keeps its text under a style sheet with a string Qt cannot read: " .. sheet:gsub("%c", "<break>"), function()
+        echo(labelName, "before the style sheet")
+        finally(function() setLabelStyleSheet(labelName, "") end)
+        assert.is_true(setLabelStyleSheet(labelName, sheet))
+        assert.are.equal("before the style sheet", getLabelText(labelName))
+      end)
+    end
+
+    it("takes its text from a rule ahead of one with an escape Qt cannot read", function()
+      finally(function() setLabelStyleSheet(labelName, "") end)
+      assert.is_true(setLabelStyleSheet(labelName, 'QLabel { qproperty-text: "from the first rule"; } QLabel:hover { qproperty-text: "x\\a"; }'))
+      assert.are.equal("from the first rule", getLabelText(labelName))
     end)
 
     -- the label colours its links by rewriting the text it is given
@@ -6143,8 +6208,18 @@ describe("Window and label state", function()
     end)
 
     it("setBorderColor round-trips through getBorderColor", function()
-      setBorderColor(11, 22, 33)
+      assert.are.same({true}, {setBorderColor(11, 22, 33)})
       assert.are.same({11, 22, 33}, {getBorderColor()})
+    end)
+
+    it("setBorderColor refuses a component outside 0-255 and keeps the colour it had", function()
+      setBorderColor(11, 22, 33)
+      assert.are.same({nil, "red value 256 needs to be between 0-255"}, {setBorderColor(256, 22, 33)})
+      assert.are.same({nil, "green value -1 needs to be between 0-255"}, {setBorderColor(11, -1, 33)})
+      assert.are.same({nil, "blue value 300 needs to be between 0-255"}, {setBorderColor(11, 22, 300)})
+      assert.are.same({11, 22, 33}, {getBorderColor()})
+      assert.are.same({true}, {setBorderColor(255, 0, 255)})
+      assert.are.same({255, 0, 255}, {getBorderColor()})
     end)
   end)
 
@@ -6949,6 +7024,29 @@ describe("Widget state getters", function()
       finally(function() deleteMiniConsole(floating) end)
       assert.is_true(setUserWindowStyleSheet(floating, 'QDockWidget { qproperty-windowTitle: "from the style sheet"; }'))
       assert.are.equal("from the style sheet", getUserWindowTitle(floating))
+    end)
+
+    it("reports the title a profile style sheet gives user windows open before and after it", function()
+      local before, after = name("wdgProfileTitleA"), name("wdgProfileTitleB")
+      openUserWindow(before, false, false)
+      finally(function()
+        setProfileStyleSheet("")
+        deleteMiniConsole(before)
+        deleteMiniConsole(after)
+      end)
+      assert.is_true(setProfileStyleSheet('QDockWidget { qproperty-windowTitle: "from the profile"; }'))
+      openUserWindow(after, false, false)
+      assert.are.equal("from the profile", getUserWindowTitle(before))
+      assert.are.equal("from the profile", getUserWindowTitle(after))
+    end)
+
+    it("keeps a user window's title under a style sheet with a string Qt cannot read", function()
+      local floating = name("wdgCssBadTitle")
+      openUserWindow(floating, false, false)
+      finally(function() deleteMiniConsole(floating) end)
+      assert.is_true(setUserWindowTitle(floating, "before the style sheet"))
+      assert.is_true(setUserWindowStyleSheet(floating, 'QWidget { font-size: 14pt; qproperty-toolTip: "x\\a y"; qproperty-windowTitle: "from the style sheet"; }'))
+      assert.are.equal("before the style sheet", getUserWindowTitle(floating))
     end)
 
     it("does not give a user window the title of a deleted one it shares a name with", function()
@@ -8077,10 +8175,7 @@ describe("Console buffer size", function()
   end)
 
   it("useMaximum raises the main console to the buffer maximum", function()
-    -- the main console has to be named for this one: with three arguments the
-    -- first is read as a window name, so the four argument form only lines up
-    -- when it is actually given one. The lines limit is then discarded and the
-    -- machine's maximum used instead
+    -- the lines limit is discarded and the machine's maximum used instead
     local before = getConsoleBufferSize()
     assert.is_true(setConsoleBufferSize("main", 1000, 100, true))
     local maximum = getConsoleBufferSize()
@@ -8089,11 +8184,23 @@ describe("Console buffer size", function()
     assert.are.equal(before, getConsoleBufferSize())
   end)
 
-  it("the useMaximum flag needs the window to be named", function()
-    -- without a name the flag lands in the batch deletion size's place
-    local ok, err = pcall(setConsoleBufferSize, 1000, 100, true)
-    assert.is_false(ok)
-    assert.is_truthy(tostring(err):find("setConsoleBufferSize: bad argument #3 type", 1, true))
+  it("the useMaximum flag works without naming the main console", function()
+    local before = getConsoleBufferSize()
+    assert.are.same({true}, {setConsoleBufferSize(1000, 100, true)})
+    local maximum, batch = getConsoleBufferSize()
+    assert.is_true(maximum > 1000, "maximum was " .. maximum)
+    assert.are.equal(100, batch)
+    assert.are.same({true}, {setConsoleBufferSize(2500, 250, false)})
+    assert.are.same({2500, 250}, {getConsoleBufferSize()})
+    assert.is_true(setConsoleBufferSize(before, mainBatchSize))
+    assert.are.equal(before, getConsoleBufferSize())
+  end)
+
+  it("three arguments not ending in a boolean still start with the window name", function()
+    assert.is_true(setConsoleBufferSize(console, 3000, 300))
+    assert.are.same({3000, 300}, {getConsoleBufferSize(console)})
+    local unknown = "bufferSizeNoSuchWindow" .. suffix
+    assert.are.same({nil, ('window "%s" not found'):format(unknown)}, {setConsoleBufferSize(unknown, 3000, 300)})
   end)
 
   it("useMaximum is refused for anything but the main console", function()
@@ -8223,14 +8330,22 @@ describe("Main window size and saved layout", function()
     assert.is_truthy(tostring(err):find("setMainWindowSize: bad argument #2 type", 1, true))
   end)
 
-  it("setMainWindowSize says so when there is no main window to size", function()
+  it("setMainWindowSize sizes the profile's own area when there is no main window", function()
     -- getMousePosition() has no answer only when there is no main window
     if getMousePosition() then
       pending("there is a main window")
     end
-    local ok, err = setMainWindowSize(800, 600)
+    local width, height = getMainWindowSize()
+    finally(function()
+      -- Leaves the area given in pixels, as the GUI always has it: no script can give it in characters again
+      setMainWindowSize(width, height)
+    end)
+    assert.is_true(setMainWindowSize(800, 600))
+    assert.are.same({800, 600}, {getMainWindowSize()})
+    local ok, err = setMainWindowSize(0, 0)
     assert.is_nil(ok)
-    assert.are.equal("the profile has no main window", err)
+    assert.is_truthy(err:find("each must be from 1 to 65535", 1, true))
+    assert.are.same({800, 600}, {getMainWindowSize()})
   end)
 
   it("a bigger main window is reported as bigger", function()
@@ -8786,8 +8901,8 @@ describe("Toolbar buttons", function()
     -- arrived: a setup that failed after the install would otherwise leave it in
     -- the reused profile, and nothing else would ever take it out again
     if packageIsInstalled() then
-      -- uninstalling is refused while the save the install started is still
-      -- draining, and that only finishes when the event loop runs
+      -- uninstalling can be refused by a save that outlasts its wait, so keep
+      -- asking
       assert.is_true(waitUntil(function() return uninstallPackage(packageName) == true end, 5000),
         packageName .. " could not be uninstalled")
       assert.is_true(waitUntil(function() return not packageIsInstalled() end, 5000),

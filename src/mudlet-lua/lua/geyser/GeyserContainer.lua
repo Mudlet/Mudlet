@@ -12,7 +12,7 @@
 --             use internally for primitive types like labels and
 --             miniconsoles.  If not specified in the constraints table during
 --             creation, an anonymous name unique to this session will be
---             made up.
+--             made up, with a warning through debugc().
 -- @field x The x-coordinate relative to this window's container, not absolute
 --          from the Mudlet main window. This is not a number, but a
 --          constraint specification. To find out the numeric x-coordinate in
@@ -74,8 +74,9 @@ function Geyser.Container:calculate_dynamic_window_size()
   local dynamic_horizontal_count = 0.0
   local dynamic_vertical_count = 0.0
 
-  if total_count <= 1 then
-    --If there is only one window it can have all the width/height, if there are none then it doesn't matter
+  -- A lone window still goes through the split: the box multiplies the share by
+  -- its stretch factor, so handing it the full size would overflow the box
+  if total_count == 0 then
     return ret_size
   end
   for _, window in pairs(self.windowList) do
@@ -361,7 +362,7 @@ function Geyser.Container:new(cons, container)
 
   -- enforce a default type, name and parent
   me.type = me.type or "container"
-  me.name = me.name or Geyser.nameGen()
+  me.name = me.name or Geyser.anonymousName(me.type)
   me.windowList = {}
   me.windows = {}
   -- add2() reads these flags itself, while add() shows whatever it adds and

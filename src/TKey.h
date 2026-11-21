@@ -79,13 +79,18 @@ public:
     void validateKeyBinding();
 
     bool exportItem = true;
+    // After a move: a member under a module's folder, and at the top level only while its module's file still holds it
+    void updateModuleMembership();
     bool mModuleMasterFolder = false;
+    // The module whose file this was loaded from
+    QString mLoadedFromModule;
     bool mRegisteredAnonymousLuaFunction = false;
     // 0 when no function is held; luaL_ref() never returns 0
     int mLuaFunctionRef = 0;
     QPointer<Host> mpHost;
 
 private:
+    void setModuleMembership(bool);
     TKey() = default;
 
     QString mName;

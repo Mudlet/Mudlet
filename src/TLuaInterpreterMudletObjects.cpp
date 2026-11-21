@@ -57,7 +57,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <limits>
 #include <math.h>
 #include <utility>
 
@@ -305,7 +304,7 @@ int TLuaInterpreter::createStopWatch(lua_State* L)
             autoStart = false;
             hasName = true;
         } else if (lua_type(L, s) == LUA_TNIL) {
-            ; // fallthrough for compatibility with old-style stopwatches in case createStopWatch(nil) is passed
+            // fallthrough for compatibility with old-style stopwatches in case createStopWatch(nil) is passed
             // note that 'nil' will still count towards the stack's gettop amount
         } else {
             lua_pushfstring(L, "createStopWatch: bad argument #%d type (name as string or autostart as boolean are optional, got %s!)", s, luaL_typename(L, s));
@@ -1995,7 +1994,9 @@ int TLuaInterpreter::setButtonState(lua_State* L)
 
     if (pItem->mButtonState != checked) {
         pItem->mButtonState = checked;
-        getHostFromLua(L).consoleFrontend()->setActionButtonChecked(pItem, checked);
+        Host& host = getHostFromLua(L);
+        host.consoleFrontend()->setActionButtonChecked(pItem, checked);
+        emit host.signal_buttonsChanged();
         lua_pushboolean(L, true);
         return 1;
     }
@@ -2011,7 +2012,8 @@ int TLuaInterpreter::setConsoleBufferSize(lua_State* L)
     int s = 1;
     const int n = lua_gettop(L);
     const char* windowName = "";
-    if (n > 2) {
+    // three arguments ending in a boolean are the limits and useMaximum, with no name
+    if (n > 3 || (n == 3 && !lua_isboolean(L, 3))) {
         windowName = WINDOW_NAME(L, s++);
     }
 
@@ -2552,6 +2554,11 @@ int TLuaInterpreter::tempButtonToolbar(lua_State* L)
 
     const QString name{lua_tostring(L, 1)};
 
+    // The toolbar is saved with the profile, so one made at a location no bar
+    // shows would keep its name taken where Lua cannot remove it
+    if (location < 0 || location > 3) {
+        return warnArgumentValue(L, __func__, qsl("location %1 invalid, it should be 0 (top), 1 (left), 2 (right) or 3 (floating)").arg(location));
+    }
     if (location > 0) {
         location++;
     }
@@ -2764,23 +2771,20 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
         }
     }
 
-    bool highlight;
-    QColor hlFgColor;
-    if (lua_isnumber(L, 9)) {
-        highlight = false;
-    } else {
-        highlight = true;
+    // A number for either highlight color leaves that side of the text as it is, as "transparent" does
+    const bool highlightFg = !lua_isnumber(L, 9);
+    const bool highlightBg = !lua_isnumber(L, 10);
+    const bool highlight = highlightFg || highlightBg;
+    QColor hlFgColor = QColorConstants::Transparent;
+    QColor hlBgColor = QColorConstants::Transparent;
+    if (highlightFg) {
 #if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
         hlFgColor.setNamedColor(lua_tostring(L, 9));
 #else
         hlFgColor = QColor::fromString(lua_tostring(L, 9));
 #endif
     }
-    QColor hlBgColor;
-    if (lua_isnumber(L, 10)) {
-        highlight = false;
-    } else {
-        highlight = true;
+    if (highlightBg) {
 #if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
         hlBgColor.setNamedColor(lua_tostring(L, 10));
 #else
@@ -3273,7 +3277,7 @@ int TLuaInterpreter::loadProfile(lua_State* L)
     }
     bool offline = false;
 
-    if (lua_gettop(L) > 1) {
+    if (!lua_isnoneornil(L, 2)) {
         offline = getVerifiedBool(L, __func__, 2, "offline mode", true);
     }
 

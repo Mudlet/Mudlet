@@ -18,6 +18,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QColor>
 #include <QSyntaxHighlighter>
 #include <QTextCharFormat>
 #include <QRegularExpression>
@@ -29,12 +30,14 @@ class TriggerHighlighter : public QSyntaxHighlighter
     Q_OBJECT
 
 public:
-    explicit TriggerHighlighter(QTextDocument *parent = nullptr);
+    explicit TriggerHighlighter(QTextDocument* parent = nullptr);
     void setHighlightingEnabled(bool enabled);
     void setTheme(const QString&);
+    // The pattern row's own colours: tokens are made readable on them and paint no background
+    void setFieldColors(const QColor& background, const QColor& text);
 
 protected:
-    void highlightBlock(const QString &text) override;
+    void highlightBlock(const QString& text) override;
 
 private:
     struct HighlightingRule
@@ -42,6 +45,8 @@ private:
         QRegularExpression pattern;
         QTextCharFormat format;
     };
+
+    void rebuildRules();
 
     QVector<HighlightingRule> highlightingRules;
 
@@ -52,7 +57,10 @@ private:
     QTextCharFormat quantifierFormat;
 
     bool highlightingEnabled = false;
+    QString mThemeName;
+    QColor mFieldBackground;
+    QColor mFieldText;
     void applyFormatting(QTextCharFormat& format, edbee::TextThemeRule* rule);
 };
 
-#endif  // TRIGGERHIGHLIGHTER_H
+#endif // TRIGGERHIGHLIGHTER_H

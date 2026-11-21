@@ -28,11 +28,11 @@
 #include "mudlet.h"
 
 #include "ui_profile_preferences.h"
+#include "uiDesign.h"
 #include <QDialog>
 #include <QHash>
 #include <QList>
 #include <QMap>
-#include <QVariant>
 
 class QCloseEvent;
 class QDoubleSpinBox;
@@ -53,43 +53,21 @@ class TScript;
 class TTimer;
 class TTrigger;
 
+namespace uiDesign {
+class SidebarToggle;
+struct ThemeTokens;
+}
 
-// Control values as last read from the settings, so an apply writes back only what the user changed.
-// Both references are to members of the owning dialog, so they outlive this. Keys may dangle: they are
-// only compared, never dereferenced, and a control created after the last snapshot reads as dirty.
-class SettingsSnapshot
-{
-public:
-    Q_DISABLE_COPY(SettingsSnapshot)
-    SettingsSnapshot(const QWidget& owner, const QMap<QString, QKeySequence>& shortcuts);
-    // Whether any setting is written from this widget's value
-    static bool carriesValue(const QObject* pControl);
-    // Call once the controls hold the settings' values; later differences count as user edits
-    void take();
-    // For one control whose list was rebuilt while the dialog is showing
-    void take(const QObject* pControl);
-    bool dirty(const QObject* pControl) const;
-    bool anyDirty(const QList<const QObject*>& controls) const;
-    bool shortcutsDirty() const;
-    bool shortcutDirty(const QString& key) const;
-    // Edits not yet in the settings: a dirty control, an uncommitted shortcut, a part-typed line edit,
-    // or an apply still waiting out its debounce
-    bool pendingEdits(const QTimer* pApplyTimer, const QLineEdit* pSearchField) const;
-    // Lets a second profile reuse the first one's editors rather than adding another row
-    TKeySequenceEdit* editorFor(const QString& key) const;
-    void addEditor(const QString& key, TKeySequenceEdit* pEditor);
-
-private:
-    const QWidget& mOwner;
-    const QMap<QString, QKeySequence>& mCurrentShortcuts;
-    QHash<const QObject*, QVariant> mValues;
-    QMap<QString, QKeySequence> mShortcuts;
-    QMap<QString, QPointer<TKeySequenceEdit>> mEditors;
-};
 
 class dlgProfilePreferences : public QDialog, public Ui::profile_preferences
 {
     Q_OBJECT
+
+    // Allow QTest-based test classes to access private members
+    friend class SettingsAppearanceTest;
+    friend class SettingsMapControlsTest;
+    friend class SettingsPageFlowTest;
+    friend class SettingsShellNavigationTest;
 
 public:
     Q_DISABLE_COPY(dlgProfilePreferences)
@@ -200,6 +178,7 @@ private slots:
     void slot_changeEditorTextOptions(const QTextOption::Flags);
     void slot_setAppearance(const enums::Appearance);
     void slot_changeShowMapAuditErrors(const bool);
+    void slot_changeColouredIcons(const bool);
 #ifdef INCLUDE_MCPSERVER
     void slot_updateMCPServerEndpoint();
     void slot_connectClaudeDesktop();
@@ -267,12 +246,16 @@ protected:
     bool event(QEvent* pEvent) override;
     bool eventFilter(QObject* pObject, QEvent* pEvent) override;
     void resizeEvent(QResizeEvent* pEvent) override;
+    void changeEvent(QEvent* pEvent) override;
 
 private:
     void setColors();
     void setColors2();
     void setButtonAndProfileColor(QPushButton*, QColor&, bool allowAlpha = false);
     void setPlayerRoomColor(QPushButton*, QColor&);
+    // After a colour dialog, however it was closed: macOS's native colour panel hands the activation to the
+    // application's main window as it closes, which leaves the settings behind it with nothing focused
+    void returnFromColourDialog(QWidget* pClicked);
     void setButtonColor(QPushButton*, const QColor&, const bool hasAlpha = false);
     void loadEditorTab();
     void populateThemesList();
@@ -309,6 +292,7 @@ private:
     void fillOutMapHistory();
     bool updateDisplayFont(Host::DisplayFontChange change);
     void rememberDisplayFontFamilyShown();
+    void showDisplayFont(const QFont&);
     void showEditorFont(const QFont&);
     void reflectEditorFontControls();
     void cancelShortcutCaptures();
@@ -346,6 +330,9 @@ private:
     // "category/sub", or empty for a widget on a category page
     QString subpageHolding(const QWidget* pWidget) const;
     QGroupBox* createCard(const QString& objectName);
+    // Every label here that can hold a link goes through this: an anchor's
+    // colour is written into the text rather than answered by a palette
+    void setLinkedText(QLabel* pLabel, const QString& richText);
     // A muted line under the card's title, ending in a "Learn more" link if learnMoreUrl is given
     void setCardDescription(QGroupBox* pCard, const QString& description, const QString& learnMoreUrl = QString());
     void setCardDescriptions();
@@ -379,26 +366,44 @@ private:
     void addCardRow(QGroupBox* pCard, QWidget* pLabel, QWidget* pControl);
     void retitleCards();
     void reflowWideCards();
+    void reflowMapperCards();
+    void reflowColourCards();
+    void reflowGeneralCards();
+    void reflowPrivacyCards();
     void reflowDisplayOptionsCard();
     void reflowCompatibilityCard();
-    void capColumnWidth(QScrollArea* pScrollArea);
+    void fitColumn(QScrollArea* pScrollArea);
     // Rerun once a profile has filled the controls, which decide the widest card, and after a language change
-    void updateColumnWidthCaps();
+    void fitColumns();
     // A checkbox never wraps its text, so a long translation makes the page scroll sideways. Offenders
     // get a wrapping label beside them, one at a time and only while that measurably narrows the column.
     void fitCheckBoxesToColumn(QWidget* pColumn);
     void wrapCheckBox(QCheckBox* pCheckBox);
     void unwrapCheckBox(QCheckBox* pCheckBox);
-    // Window widths: below collapseBelow the sidebar becomes an icon rail; past fullyExpanded the dialog
-    // gains only empty space
+    // Window widths: below collapseBelow the sidebar becomes an icon rail; fullyExpanded has the names beside
+    // the widest page's column, the most a window with no remembered size opens at; below narrowest even the
+    // rail leaves the widest page too little room
     struct SidebarWidths
     {
         int collapseBelow = 0;
         int fullyExpanded = 0;
+        int narrowest = 0;
     };
     SidebarWidths sidebarWidths() const;
+    // What the sidebar is drawn at with its names showing, measured off the
+    // widest of them the way the editor's is
+    [[nodiscard]] int measuredSidebarWidth() const;
+    // Called wherever the names, the font or the style they are measured
+    // against change, since none of those reach a resize
+    void invalidateSidebarWidth();
     void updateSidebarMode();
     void setSidebarCollapsed(bool collapsed);
+    // The chevron on the seam, and the one place the preference it carries
+    // is changed
+    void updateSidebarToggle();
+    // Widens the window to wantedWidth if its screen can hold that, keeping it on that screen
+    bool refitWindowTo(const int wantedWidth);
+    void setSidebarLabelsShown(const bool shown);
     void rebuildTabOrder();
     void guardScrollWheel();
     void buildMigrationBanner();
@@ -408,7 +413,12 @@ private:
     void spotlight(QWidget* pTarget);
     void applyShellStyle();
     QPalette shellPalette(bool& themeSurface) const;
-    void restyleSidebarIcons(const QColor& normal, const QColor& selected);
+    // The menu of profiles a map can be copied to. It hangs off the dialog
+    // rather than off the shell, so the shell's sheet never reaches it - and it
+    // is rebuilt whenever a host is loaded, which may be before or after the
+    // style pass, so both call this.
+    void styleProfileMapMenu();
+    void restyleSidebarIcons(const uiDesign::ThemeTokens& tokens);
     // Search indexes the real widget tree and lends matching cards to the results page while the query stands
     void buildSearchResultsPage();
     void buildSearchIndex();
@@ -439,11 +449,13 @@ private:
     QPointer<QDoubleSpinBox> mpDoubleSpinBox_mapSymbolFontFudge;
     // Kept so that initWithHost(), which runs again for each profile, can replace it rather than stack another
     QMetaObject::Connection mMapStyleConnection;
+    QMetaObject::Connection mTimeStampsConnection;
+    void followMainConsoleTimeStamps();
     void followMapStyle();
     std::unique_ptr<QTimer> hidePasswordMigrationLabelTimer;
     QMap<QString, QKeySequence> currentShortcuts;
     // Must be declared after currentShortcuts, which it references
-    SettingsSnapshot mSnapshot{*this, currentShortcuts};
+    uiDesign::SettingsSnapshot mSnapshot{*this, currentShortcuts};
     QPointer<QCheckBox> mEnableGMCP;
     QPointer<QCheckBox> mEnableMSDP;
     QPointer<QCheckBox> mEnableMSSP;
@@ -485,6 +497,27 @@ private:
     QLabel* mpLabel_triggerMatchSpin = nullptr;
     QSpinBox* mpSpinBox_triggerMatchSpin = nullptr;
     QListWidget* mpListWidget_categories = nullptr;
+    // The chevron on the seam down the sidebar's trailing edge, which is the
+    // one control that sidebar has
+    uiDesign::SidebarToggle* mpToggle_sidebar = nullptr;
+    // Measuring the names costs a pass over every row, and a resize asks for
+    // the answer on every frame of a drag
+    mutable int mSidebarWidth = 0;
+    mutable bool mSidebarWidthKnown = false;
+    // What the user asked the sidebar for, kept across sessions under
+    // settingsSidebarLabelsShown. It is a preference about the names alone: the
+    // sidebar is there either way, as a list of names or as a rail of icons -
+    // and a dialog that has never been told opens with the names, the way the
+    // editor does.
+    bool mSidebarLabelsShown = true;
+    // ...and whether the window is currently wide enough to grant it. This one
+    // is the window's answer rather than the user's, so it is never stored - a
+    // window dragged narrow shows the rail and gives the names back when it is
+    // widened, whatever it was in the middle of
+    bool mSidebarNamesFit = true;
+    // The sidebar width the last mode decision was taken at, so that names measured anew (a language, font or
+    // style change) can be told from a resize
+    int mSidebarWidthDecidedAt = 0;
     // The sidebar row that is a link rather than a category
     QListWidgetItem* mpItem_support = nullptr;
     QStackedWidget* mpStackedWidget_categories = nullptr;
@@ -525,6 +558,8 @@ private:
     QPointer<QGroupBox> mpCard_experiments;
     // Keyed by experiment, e.g. "experiment.3dmap.modernmapper"
     QMap<QString, QPointer<QCheckBox>> mExperimentCheckBoxes;
+    // App-wide, unlike the profile's experiments beside it on the card
+    QPointer<QCheckBox> mpCheckBox_colouredIcons;
     QPointer<QGroupBox> mpCard_discord;
     QPointer<QPushButton> mpButton_discordSubpage;
     QPointer<QGroupBox> mpCard_securityStatus;
@@ -535,6 +570,9 @@ private:
     QPointer<QLabel> mpLabel_securityHeadline;
     QPointer<QLabel> mpLabel_securityDetail;
     QPointer<QLabel> mpLabel_securityLink;
+    // What every anchor on this dialog currently carries, since the colour is
+    // written into the text rather than answered by a palette
+    QColor mInkedLinkColour;
     // iconFile is kept because the sidebar item gets a recoloured copy, not the file itself
     struct CategoryPlace
     {
@@ -562,10 +600,20 @@ private:
     // Debounces typing so a part-typed query does not move most cards onto the results page and back
     QTimer* mpTimer_search = nullptr;
     QString mPendingSearch;
-    // An icon rail rather than a list of names
-    bool mSidebarCollapsed = false;
     // Set once buildShell() has finished moving controls between cards; wrapping one before then is unsafe
     bool mShellReady = false;
+    // Which side of the light/dark line the shell's stylesheet was last mixed
+    // for, written by applyShellStyle() from the application's tokens. An appearance
+    // change reaches this dialog either from its own combo box or from the
+    // application's signal, and by the time the signal arrives the mode has
+    // already moved - so what says whether there is anything to redraw is the
+    // sheet on the shell rather than a reading taken around the call that
+    // changed it.
+    bool mShellStyledForDarkPage = false;
+    // How many times the shell has been restyled, so that a test can hold an
+    // appearance change to one pass: the slot is re-entered through that same
+    // signal, and a second pass would be invisible from the outside.
+    int mShellStyleApplications = 0;
     // Set while initWithHost()/clearHostDetails() write the controls: suppresses instant apply and re-entry
     bool mPopulating = false;
     // Set for all of closeEvent(): QDialog::closeEvent() calls reject(), which would otherwise start the
