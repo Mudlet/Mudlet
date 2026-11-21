@@ -1927,46 +1927,6 @@ void TDetachedWindow::updateWindowMenu()
     }
 }
 
-void TDetachedWindow::slot_activateMainWindow()
-{
-    mudlet* mainWindow = mudlet::self();
-
-    if (mainWindow) {
-        mainWindow->raise();
-        mainWindow->activateWindow();
-        mainWindow->show(); // Ensure it's not minimized
-        updateWindowMenu(); // Refresh checkmarks
-    }
-}
-
-void TDetachedWindow::slot_activateDetachedWindow()
-{
-    QAction* action = qobject_cast<QAction*>(sender());
-
-    if (!action) {
-        return;
-    }
-
-    QString profileName = action->data().toString();
-    auto pMudlet = mudlet::self();
-    if (!pMudlet) {
-        return;
-    }
-
-    const auto& detachedWindows = pMudlet->getDetachedWindows();
-
-    if (detachedWindows.contains(profileName)) {
-        TDetachedWindow* detachedWindow = detachedWindows[profileName];
-
-        if (detachedWindow) {
-            detachedWindow->raise();
-            detachedWindow->activateWindow();
-            detachedWindow->show(); // Ensure it's not minimized
-            updateWindowMenu();     // Refresh checkmarks
-        }
-    }
-}
-
 void TDetachedWindow::slot_activateMainWindowProfile()
 {
     QAction* action = qobject_cast<QAction*>(sender());
@@ -1992,10 +1952,7 @@ void TDetachedWindow::slot_activateMainWindowProfile()
         }
 
         if (tabIndex >= 0) {
-            // Activate the main window first
-            mainWindow->raise();
-            mainWindow->activateWindow();
-            mainWindow->show(); // Ensure it's not minimized
+            mudlet::bringWindowToFront(mainWindow);
 
             // Switch to the specific tab
             mainWindow->mpTabBar->setCurrentIndex(tabIndex);
@@ -2028,10 +1985,7 @@ void TDetachedWindow::slot_activateDetachedWindowProfile()
 
     for (const auto& detachedWindow : detachedWindows) {
         if (detachedWindow && detachedWindow->getProfileNames().contains(profileName)) {
-            // Activate the detached window
-            detachedWindow->raise();
-            detachedWindow->activateWindow();
-            detachedWindow->show(); // Ensure it's not minimized
+            mudlet::bringWindowToFront(detachedWindow);
 
             // Switch to the specific profile tab in the detached window
             detachedWindow->switchToProfile(profileName);

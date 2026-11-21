@@ -38,6 +38,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     AddonControlsTest.cpp
     AnalyseCharactersTest.cpp
     AsciiLineBreakTest.cpp
+    BringWindowToFrontTest.cpp
     ConsoleFootSeamTest.cpp
     BlinkRowRepaintTest.cpp
     ConsoleModelExtractionTest.cpp
