@@ -18,14 +18,14 @@
  ***************************************************************************/
 
 /*
- * The connection dialog dates a profile's saves without the time zone: formatting the zone
- * looks it up for every entry, which on Windows goes through ICU and has crashed there.
- * See issue #12984.
+ * The connection dialog's list of a profile's saves, and the preferences' list of its map saves,
+ * date them without the time zone: formatting the zone looks it up for every entry, which on
+ * Windows goes through ICU and has crashed there. See issue #12984.
  *
  * Run with: ctest -R ConnectionDialogDateFormatTest -V
  */
 
-#include "dlgConnectionProfiles.h"
+#include "utils.h"
 
 #include <QtTest/QtTest>
 
@@ -51,6 +51,22 @@ private:
         return false;
     }
 
+    // The quoted literals and unquoted letters other than t, in order: what has to survive
+    static QString fieldsOf(const QString& format)
+    {
+        QString fields;
+        bool quoted = false;
+        for (const QChar c : format) {
+            if (c == u'\'') {
+                quoted = !quoted;
+            }
+            if (quoted || c == u'\'' || (c.isLetter() && c != u't')) {
+                fields.append(c);
+            }
+        }
+        return fields;
+    }
+
 private slots:
     void test_zoneIsRemoved_data()
     {
@@ -74,7 +90,7 @@ private slots:
         QFETCH(QString, format);
         QFETCH(QString, expected);
 
-        QCOMPARE(dlgConnectionProfiles::dateTimeFormatWithoutZone(format), expected);
+        QCOMPARE(utils::dateTimeFormatWithoutZone(format), expected);
     }
 
     void test_noLocaleKeepsAZone()
@@ -83,9 +99,10 @@ private slots:
         QVERIFY(!locales.isEmpty());
         for (const QLocale& locale : locales) {
             const QString format = locale.dateTimeFormat();
-            const QString stripped = dlgConnectionProfiles::dateTimeFormatWithoutZone(format);
+            const QString stripped = utils::dateTimeFormatWithoutZone(format);
             const QByteArray context = qsl("%1: \"%2\" -> \"%3\"").arg(locale.name(), format, stripped).toUtf8();
             QVERIFY2(!hasUnquotedZone(stripped), context.constData());
+            QVERIFY2(fieldsOf(stripped) == fieldsOf(format), context.constData());
             QVERIFY2(stripped == stripped.trimmed(), context.constData());
             QVERIFY2(!stripped.contains(qsl("  ")), context.constData());
         }

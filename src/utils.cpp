@@ -204,3 +204,49 @@ bool utils::unzip(const QString& archivePath, const QString& destination, const 
 
     return true;
 }
+
+static QChar charAt(const QString& text, const qsizetype index)
+{
+    return index < text.size() ? text.at(index) : QChar();
+}
+
+// The zone tells nothing in the list of saves, and formatting it looks the zone up for every entry - on Windows
+// through ICU, which has crashed there (#12984). Any unquoted run of t's is a zone field, the offset as well as the name.
+QString utils::dateTimeFormatWithoutZone(const QString& format)
+{
+    QString result;
+    result.reserve(format.size());
+    bool quoted = false;
+    for (qsizetype i = 0; i < format.size(); ++i) {
+        const QChar c = format.at(i);
+        if (c == u'\'') {
+            quoted = !quoted;
+        }
+        if (quoted || c != u't') {
+            result.append(c);
+            continue;
+        }
+
+        while (charAt(format, i + 1) == u't') {
+            ++i;
+        }
+        const QChar after = charAt(format, i + 1);
+        const bool bracketed = (result.endsWith(u'(') || result.endsWith(u'[')) && (after == u')' || after == u']');
+        if (bracketed) {
+            result.chop(1);
+            ++i;
+        }
+        while (!result.isEmpty() && result.back().isSpace()) {
+            result.chop(1);
+        }
+        if (result.endsWith(u',')) {
+            result.chop(1);
+        }
+        if (result.isEmpty()) {
+            while (charAt(format, i + 1).isSpace()) {
+                ++i;
+            }
+        }
+    }
+    return result;
+}

@@ -126,6 +126,7 @@ public:
 
     // Creates any folders the archive needs through tmpDir. Runs on a worker thread, so must not touch the UI.
     static bool unzip(const QString& archivePath, const QString& destination, const QDir& tmpDir);
+    static QString dateTimeFormatWithoutZone(const QString& format);
 };
 
 #endif // MUDLET_UTILS_H
