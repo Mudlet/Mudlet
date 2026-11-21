@@ -1879,7 +1879,7 @@ describe("Tests telnet option negotiation", function()
     _G.channel102 = held
     feed("<T_IAC><T_DO><O_AARDWULF>")
     feed("<T_IAC><T_SB><O_AARDWULF>" .. string.char(5) .. string.char(3) .. "<T_IAC><T_SE>")
-    assert.is_true(rawequal(held, _G.channel102))
+    assert.equals(held, _G.channel102)
     assert.same({[9] = 1, [5] = 3}, held)
   end)
 
@@ -3421,6 +3421,12 @@ describe("Tests the posting timer of a game that sends no GA", function()
 end)
 
 describe("Tests the atcp table", function()
+
+  local function feed(data)
+    local ok, msg = feedTelnet(data)
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+  end
+
   -- _G because busted runs each spec in an environment of its own
   it("starts a fresh atcp table when a script has replaced it", function()
     local saved = _G.atcp
@@ -3435,8 +3441,7 @@ describe("Tests the atcp table", function()
     for i = 1, replacements.n do
       _G.atcp = replacements[i]
       raised = nil
-      local ok, msg = feedTelnet("<T_IAC><T_SB><O_ATCP>Room.Brief Spec cave<T_IAC><T_SE>")
-      assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+      feed("<T_IAC><T_SB><O_ATCP>Room.Brief Spec cave<T_IAC><T_SE>")
       assert.same({RoomBrief = "Spec cave"}, _G.atcp)
       assert.equals("Spec cave", raised)
     end
@@ -3448,9 +3453,8 @@ describe("Tests the atcp table", function()
 
     local held = {Existing = "kept"}
     _G.atcp = held
-    local ok, msg = feedTelnet("<T_IAC><T_SB><O_ATCP>Room.Brief Spec cave<T_IAC><T_SE>")
-    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
-    assert.is_true(rawequal(held, _G.atcp))
+    feed("<T_IAC><T_SB><O_ATCP>Room.Brief Spec cave<T_IAC><T_SE>")
+    assert.equals(held, _G.atcp)
     assert.same({Existing = "kept", RoomBrief = "Spec cave"}, held)
   end)
 end)
