@@ -715,6 +715,9 @@ private slots:
                                                       .arg(token)
                                                       .arg(static_cast<int>(Qt::Key_F35))));
         QVERIFY2(pLua->compileAndExecuteScript(qsl("for i = 1, 5 do assert(type(qaTempIds[i]) == 'number') end")), "a temporary item was not created, so its absence below would prove nothing");
+        // The editor's tree never shows a temporary trigger's children either, even permanent ones
+        QVERIFY(pLua->compileAndExecuteScript(qsl("qaTempChildId = permRegexTrigger('qaTempChild', tostring(qaTempIds[1]), {'^%1 child$'}, '')").arg(token)));
+        QVERIFY2(pLua->compileAndExecuteScript(qsl("assert(type(qaTempChildId) == 'number' and qaTempChildId >= 0)")), "the child trigger was not created under the temporary one");
         auto* pTempAction = new TAction(qsl("qaTempButton"), mpHost);
         pTempAction->setTemporary(true);
         pTempAction->setCommandButtonDown(qsl("%1 down").arg(token));
@@ -726,7 +729,8 @@ private slots:
         QVERIFY(pPermanent->registerTrigger());
 
         auto restore = qScopeGuard([pLua, pTempAction, pPermanent]() {
-            pLua->compileAndExecuteScript(qsl("killTrigger(qaTempIds[1]) killTrigger(qaTempIds[2]) killTimer(qaTempIds[3]) killAlias(qaTempIds[4]) killKey(qaTempIds[5]) qaTempIds = nil"));
+            pLua->compileAndExecuteScript(qsl("killTrigger(qaTempIds[1]) killTrigger(qaTempIds[2]) killTimer(qaTempIds[3]) killAlias(qaTempIds[4]) killKey(qaTempIds[5]) "
+                                              "qaTempIds = nil qaTempChildId = nil"));
             delete pTempAction;
             delete pPermanent;
         });
@@ -736,7 +740,8 @@ private slots:
         auto* results = mpEditor->treeWidget_searchResults;
         QStringList found;
         for (int i = 0, total = results->topLevelItemCount(); i < total; ++i) {
-            found << qsl("%1 %2").arg(results->topLevelItem(i)->text(0), results->topLevelItem(i)->text(1));
+            const QTreeWidgetItem* top = results->topLevelItem(i);
+            found << qsl("%1 %2").arg(typeOf(top), titleOf(top));
         }
         QCOMPARE(found, QStringList({qsl("Trigger qaPermanentTokenTrigger")}));
     }
