@@ -858,7 +858,7 @@ private slots:
         QCOMPARE(mpEditor->mpSourceEditorEdbeeDocument->text(), qsl("alpha delta gamma delta\n"));
     }
 
-    // Variables are only searched when asked for, so a search that leaves them out says so
+    // A search that finds nothing with variables left out offers to search them
     void test_aSearchThatLeftVariablesOutOffersToSearchThemToo()
     {
         mpEditor->slot_showScripts();
