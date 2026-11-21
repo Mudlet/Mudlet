@@ -23,6 +23,34 @@ describe("Trigger processing", function()
         return not tostring(err):find("still in progress", 1, true)
     end
 
+    -- What the profile keeps for the main console's buffer: the limit it goes back
+    -- to once "use the maximum" is off, and whether that is on. A plain
+    -- setConsoleBufferSize() overwrites both and only a saved profile shows them,
+    -- which takes test mode to wait for.
+    local function savedMainBufferSettings()
+        local folder = getMudletHomeDir() .. "/trigger-spec-buffer-settings"
+        lfs.mkdir(folder)
+        local saved, file
+        for _ = 1, 100 do
+            saved, file = saveProfile(folder)
+            if saved then
+                break
+            end
+            pumpEvents(50)
+        end
+        waitForProfileSaveToPass()
+        local xml = ""
+        local handle = saved and io.open(file)
+        if handle then
+            xml = handle:read("*a")
+            handle:close()
+            os.remove(file)
+        end
+        lfs.rmdir(folder)
+        return tonumber(xml:match("<consoleBufferSize>(%d+)</consoleBufferSize>")),
+            xml:match("<useMaxConsoleBufferSize>(%a+)</useMaxConsoleBufferSize>") == "yes"
+    end
+
     -- The self-test profile is kept between runs, so a package under a fixture's
     -- name can be one an interrupted run left installed rather than the fixture
     -- in this checkout. Both fixtures are removed before they are installed for
@@ -836,34 +864,6 @@ describe("Trigger processing", function()
             assert.are.equal(countBefore - 1, countAfter)
             assert.are.same({"RecolorThenDeleteAbove red"}, fired)
         end)
-
-        -- What the profile keeps for the main console's buffer: the limit it goes back
-        -- to once "use the maximum" is off, and whether that is on. A plain
-        -- setConsoleBufferSize() overwrites both and only a saved profile shows them,
-        -- which takes test mode to wait for.
-        local function savedMainBufferSettings()
-            local folder = getMudletHomeDir() .. "/trigger-spec-buffer-settings"
-            lfs.mkdir(folder)
-            local saved, file
-            for _ = 1, 100 do
-                saved, file = saveProfile(folder)
-                if saved then
-                    break
-                end
-                pumpEvents(50)
-            end
-            waitForProfileSaveToPass()
-            local xml = ""
-            local handle = saved and io.open(file)
-            if handle then
-                xml = handle:read("*a")
-                handle:close()
-                os.remove(file)
-            end
-            lfs.rmdir(folder)
-            return tonumber(xml:match("<consoleBufferSize>(%d+)</consoleBufferSize>")),
-                xml:match("<useMaxConsoleBufferSize>(%a+)</useMaxConsoleBufferSize>") == "yes"
-        end
 
         it("should still match after the buffer trims its oldest lines during the pass", function()
             if not os.getenv("MUDLET_TEST_MODE") then
@@ -1846,6 +1846,157 @@ describe("Trigger processing", function()
                 assert.are.equal(getLastLineNumber("main"), getScroll(), "the main console was left short of the lines the trigger fed")
                 assert.is_false(scrolledMidPass, "the feed inside the trigger scrolled the console before the game data that fired it was handled")
             end)
+
+            it("to just past the lines from before, while the lines after them are still being handled", function()
+                local seen = {}
+                triggerId = tempRegexTrigger("^feed_scroll held (beta|delta)$", function()
+                    seen[#seen + 1] = getScroll()
+                end)
+                local before = getLastLineNumber("main")
+                assertFedAndScrolled("a feed of four lines", 4, "feed_scroll held alpha\nfeed_scroll held beta\nfeed_scroll held gamma\nfeed_scroll held delta\n")
+                assert.are.same({before + 1, before + 1}, seen)
+            end)
+
+            it("to just past the lines from before, less the oldest lines trimmed while the later ones are handled", function()
+                if not os.getenv("MUDLET_TEST_MODE") then
+                    pending("restoring the buffer limits this changes needs MUDLET_TEST_MODE (pumpEvents() does nothing without it)")
+                    return
+                end
+                local _, batch = getConsoleBufferSize("main")
+                local remembered, useMaximum = savedMainBufferSettings()
+                assert.is_not_nil(remembered, "the main console's buffer settings could not be read back from a saved profile")
+                finally(function()
+                    setConsoleBufferSize("main", remembered, batch)
+                    if useMaximum then
+                        setConsoleBufferSize("main", remembered, batch, true)
+                    end
+                end)
+                setConsoleBufferSize("main", 100, 10)
+                -- Lines from before that the echoes below would not all trim
+                clearWindow()
+                for i = 1, 120 do
+                    echo("feed_scroll filler " .. i .. "\n")
+                end
+                local function firstFiller()
+                    return tonumber(getLines("main", 0, 1)[1]:match("filler (%d+)"))
+                end
+                local before, firstBefore = getLastLineNumber("main"), firstFiller()
+                local seen
+                triggerId = tempRegexTrigger("^feed_scroll trim 15$", function()
+                    seen = {scroll = getScroll(), last = getLastLineNumber("main"), trimmed = firstFiller() - firstBefore}
+                end)
+                local feed = {}
+                for i = 1, 30 do
+                    feed[i] = "feed_scroll trim " .. i .. "\n"
+                end
+                assert.is_true(feedTriggers(table.concat(feed)))
+                assert.is_true(seen.trimmed > 0, "no line was trimmed before the trigger ran")
+                assert.are.equal(before + 1 - seen.trimmed, seen.scroll)
+                assert.is_true(seen.scroll < seen.last)
+            end)
+
+            it("where it was while a trigger deletes lines below it", function()
+                local seen = {}
+                triggerId = tempRegexTrigger("^feed_scroll drift (gag|see)", function()
+                    if matches[2] == "gag" then
+                        deleteLine()
+                    else
+                        seen[#seen + 1] = getScroll()
+                    end
+                end)
+                local before = getLastLineNumber("main")
+                assert.is_true(feedTriggers("feed_scroll drift keep 1\nfeed_scroll drift gag 1\nfeed_scroll drift gag 2\nfeed_scroll drift gag 3\nfeed_scroll drift see 1\n"
+                    .. "feed_scroll drift keep 2\nfeed_scroll drift gag 4\nfeed_scroll drift see 2\n"))
+                assert.are.equal(getLastLineNumber("main"), getScroll(), "the main console was left short of the lines it was fed")
+                assert.are.same({before + 1, before + 1}, seen)
+            end)
+
+            it("at the top of what is left once a trigger clears the console", function()
+                local seen = {}
+                triggerId = tempRegexTrigger("^feed_scroll clear (now|see)", function()
+                    if matches[2] == "now" then
+                        clearWindow()
+                    else
+                        seen[#seen + 1] = getScroll() .. " of " .. getLastLineNumber("main")
+                    end
+                end)
+                assert.is_true(feedTriggers("feed_scroll clear a\nfeed_scroll clear now\nfeed_scroll clear see 1\nfeed_scroll clear b\nfeed_scroll clear see 2\n"))
+                assert.are.equal(getLastLineNumber("main"), getScroll(), "the main console was left short of the lines it was fed")
+                assert.are.same({"1 of 1", "1 of 3"}, seen)
+            end)
+
+            it("at the end a trigger's echoLink brought it to, while later lines are still being handled", function()
+                local held
+                local seen = {}
+                triggerId = tempRegexTrigger("^feed_scroll retake (b|d|e|f)$", function()
+                    if matches[2] == "b" then
+                        echoLink("feed_scroll link", function() end, "a hint")
+                        held = getLastLineNumber("main") + 1
+                    else
+                        seen[#seen + 1] = getScroll()
+                    end
+                end)
+                assert.is_true(feedTriggers("feed_scroll retake a\nfeed_scroll retake b\nfeed_scroll retake c\nfeed_scroll retake d\nfeed_scroll retake e\nfeed_scroll retake f\n"))
+                assert.are.equal(getLastLineNumber("main"), getScroll(), "the main console was left short of the lines it was fed")
+                assert.are.same({held, held, held}, seen)
+            end)
+
+            it("at what is left after a clear that follows a trigger's echoLink", function()
+                local seen
+                triggerId = tempRegexTrigger("^feed_scroll relink (b|d|f)$", function()
+                    if matches[2] == "b" then
+                        echoLink("feed_scroll link", function() end, "a hint")
+                    elseif matches[2] == "d" then
+                        clearWindow()
+                    else
+                        seen = getScroll() .. " of " .. getLastLineNumber("main")
+                    end
+                end)
+                assert.is_true(feedTriggers("feed_scroll relink a\nfeed_scroll relink b\nfeed_scroll relink c\nfeed_scroll relink d\nfeed_scroll relink e\nfeed_scroll relink f\n"))
+                assert.are.equal("1 of 2", seen)
+            end)
+
+            it("at the end a trigger's scrollTo() brought it back to, while later lines are still being handled", function()
+                local back
+                local seen = {}
+                triggerId = tempRegexTrigger("^feed_scroll back (b|d|e|f)$", function()
+                    if matches[2] == "b" then
+                        scrollTo(getLastLineNumber("main") - 5)
+                        return
+                    end
+                    if matches[2] == "d" then
+                        scrollTo()
+                        back = getLastLineNumber("main")
+                    end
+                    seen[#seen + 1] = getScroll()
+                end)
+                finally(function() scrollTo() end)
+                for i = 1, 10 do
+                    echo("main", "feed_scroll back filler " .. i .. "\n")
+                end
+                assert.is_true(feedTriggers("feed_scroll back a\nfeed_scroll back b\nfeed_scroll back c\nfeed_scroll back d\nfeed_scroll back e\nfeed_scroll back f\n"))
+                assert.are.same({back, back + 1, back + 1}, seen)
+            end)
+
+            local appends = {
+                {"echoLink", function() echoLink("feed_scroll link", function() end, "a hint") end},
+                {"appendBuffer", function() selectCurrentLine() copy() appendBuffer() end},
+                {"paste", function() selectCurrentLine() copy() moveCursorEnd() paste() end},
+            }
+            for _, append in ipairs(appends) do
+                it("at once when a trigger adds to it with " .. append[1], function()
+                    local heldBefore, followedAfter
+                    triggerId = tempRegexTrigger("^feed_scroll append gamma$", function()
+                        heldBefore = getScroll() ~= getLastLineNumber("main")
+                        append[2]()
+                        followedAfter = getScroll() == getLastLineNumber("main")
+                    end)
+                    assert.is_true(feedTriggers("feed_scroll append alpha\nfeed_scroll append beta\nfeed_scroll append gamma\nfeed_scroll append delta\n"))
+                    assert.are.equal(getLastLineNumber("main"), getScroll(), "the main console was left short of the lines it was fed")
+                    assert.is_true(heldBefore, "the console had already scrolled to the trigger's line, so nothing was tested")
+                    assert.is_true(followedAfter, append[1] .. " did not scroll the console to its end")
+                end)
+            end
 
             it("unless it has been scrolled back up", function()
                 for i = 1, 200 do

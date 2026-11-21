@@ -72,7 +72,8 @@ private:
     // the rest of the quit cascade (#9967).
     QPointer<dblsqd::UpdateDialog> updateDialog;
 #if !defined(Q_OS_MACOS)
-    QPushButton* mpInstallOrRestart;
+    // Made with updateDialog and owned by it, so none exists where no update dialog was ever set up
+    QPointer<QPushButton> mpInstallOrRestart;
 #endif
     bool mUpdateInstalled;
     bool mManualCheckInProgress{false};
