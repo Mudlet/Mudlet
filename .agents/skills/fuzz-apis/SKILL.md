@@ -34,8 +34,8 @@ inline.
 4. **All clean? That is a result too**, and the explored space is finite - extending beats
    re-rolling seeds forever. Extend a generator (new option sequences, new API calls) or
    aim at a fresh surface, with the user picking where; candidates that have never been
-   fuzzed: deeper GMCP/MSDP dispatch, the map file loaders on corrupt input, package
-   installation on malformed archives, OSC 8 hyperlink parsing. Write it with the pattern
+   fuzzed: deeper GMCP/MSDP dispatch, package installation on malformed archives (the
+   bare-XML path is covered), OSC 8 hyperlink parsing. Write it with the pattern
    below.
 5. **Report what ran either way**: sanitizer, seeds, iteration counts, and what fell out -
    a clean run over a stated space is information the next run builds on.
@@ -58,9 +58,12 @@ ordinary spec with three properties:
 `BufferManipFuzz_spec.lua` (console text and selection API, deliberately out-of-range
 indices). They arrive with PR #10221, together with a "Running the fuzzers" section in
 `src/mudlet-lua/tests/README.md` - if neither is in your tree yet, fetch them from that
-PR. Both bail out unless `MUDLET_FUZZ=1` is set, so normal runs and CI skip them. Seed,
+PR. `MapFileFuzz_spec.lua` (binary and JSON map loaders on mutated files) and
+`XmlImportFuzz_spec.lua` (map and package XML import) aim at the file loaders. Every
+fuzzer bails out unless `MUDLET_FUZZ=1` is set, so normal runs and CI skip them. Seed,
 iteration counts and dump path are environment variables listed in each spec's header
-comment.
+comment; to run one on its own, point `TESTS_DIRECTORY` at a directory holding just
+that spec (plus a `fixtures` link for the XML one).
 
 ```bash
 # point at the binary the preset actually built: build/src/mudlet for
@@ -78,6 +81,11 @@ setup and the isolated-config-root invocation.
 
 Calibration: by 2026-08 the telnet generator had run ~48k feeds and ~19k compiled patterns
 across 6 seeds clean under ASan - that surface is well explored at default settings.
+By 2026-11 the map file fuzzer had loaded ~136k mutated binary and JSON maps (ASan seeds
+2-3, UBSan 4-8) and the XML one ~24k map and package files (UBSan 3-4, ASan 2), with the
+loaders clean. What they did reach is `T2DMap::paintEvent` overflowing on rooms or labels
+at the edge of the int range - known, and as reachable through `setRoomCoordinates()` -
+so expect those reports from a UBSan run until it is fixed.
 
 ## Sanitizer gotchas
 

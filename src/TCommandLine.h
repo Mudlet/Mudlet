@@ -25,6 +25,7 @@
  ***************************************************************************/
 
 
+#include "TCommandLineCompletion.h"
 #include "enums.h"
 #include "utils.h"
 
@@ -43,10 +44,7 @@ class TCommandLine : public QPlainTextEdit //QLineEdit
 {
     Q_OBJECT
 
-    enum MoveDirection {
-        MOVE_UP,
-        MOVE_DOWN
-    };
+    enum MoveDirection { MOVE_UP, MOVE_DOWN };
 
 public:
     Q_DISABLE_COPY(TCommandLine)
@@ -54,6 +52,7 @@ public:
     void focusInEvent(QFocusEvent*) override;
     void focusOutEvent(QFocusEvent*) override;
     void hideEvent(QHideEvent*) override;
+    QSize minimumSizeHint() const override;
     void recheckWholeLine();
     void clearMarksOnWholeLine();
     void setAction(const int);
@@ -76,6 +75,10 @@ public:
     void restorePlayerTypedLine(const QString& text);
     // So the hidden-input box can make the same claims
     bool claimsShortcutOverride(const QKeyEvent*) const;
+    // Called after claiming a ShortcutOverride: macOS sends no key press for a claimed Ctrl+Tab, so this posts one
+    static void pressClaimedControlTab(QObject* receiver, const QKeyEvent* override);
+    // For a key pressed in another window of the profile's, such as a floating map, that nothing there used
+    bool takeKeyPress(QKeyEvent*);
 
     int mActionFunction = 0;
     QPalette mRegularPalette;
@@ -93,6 +96,7 @@ signals:
     void commandSubmitted();
     // Emitted when the command line text changes (for hyperlink visibility triggers)
     void commandLineTextChanged();
+    void rowsMoved();
 
 public slots:
     void slot_popupMenu();
@@ -104,9 +108,11 @@ public slots:
 
 private:
     bool event(QEvent*) override;
+    void resizeEvent(QResizeEvent*) override;
+    void changeEvent(QEvent*) override;
     void mousePressEvent(QMouseEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
-    void handleAutoCompletion();
+    void handleAutoCompletion(bool forward);
     void insertFromMimeData(const QMimeData*) override;
     void slot_contentsChange();
     void spellCheck();
@@ -121,24 +127,20 @@ private:
     bool handleCtrlTabChange(QKeyEvent* key, int tabNumber);
     void restoreHistory();
     int heightForRows(const int) const;
+    void centerRows();
+    QMargins frameSides() const;
 
     QPointer<Host> mpHost;
     enums::CommandLineType mType = enums::UnknownCommandLine;
     KeyUnit* mpKeyUnit = nullptr;
     QPointer<TConsole> mpConsole;
-    QString mLastCompletion;
-    int mTabCompletionCount = 0;
-    int mAutoCompletionCount = 0;
-    QString mTabCompletionTyped;
-    bool mUserKeptOnTyping = false;
+    TCommandLineCompletion mCompletion;
     int mHistoryBuffer = 0;
     QStringList mHistoryList;
     QString mSelectedText;
     int mSelectionStart = 0;
-    QString mTabCompletionOld;
     QPoint mPopupPosition;
     QString mSpellCheckedWord;
-    bool mSpellChecking = false;
     QSet<QString> commandLineSuggestions;
     QSet<QString> tabCompleteBlacklist;
     // The file used to store the command history between sessions:

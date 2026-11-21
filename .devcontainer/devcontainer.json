@@ -1,43 +1,44 @@
-// For format details, see https://aka.ms/devcontainer.json. For config options, see the README at:
-// https://github.com/microsoft/vscode-dev-containers/tree/v0.208.0/containers/cpp
+// Format: https://containers.dev/implementors/json_reference/
 {
-	"name": "C++",
+	"name": "Mudlet",
 	"build": {
-		"dockerfile": "Dockerfile",
-		// Update 'VARIANT' to pick an Debian / Ubuntu OS version: debian-12, debian-11, ubuntu-24.04, ubuntu-22.04
-		// Use Debian 12, Debian 11, Ubuntu 22.04 or Ubuntu 24.04 on local arm64/Apple Silicon
-		"args": { "VARIANT": "debian-13" }
+		// Shared with docker/, so both take the same dependencies
+		"dockerfile": "../docker/Dockerfile",
+		"context": "..",
+		"target": "deps"
 	},
-	"runArgs": ["--cap-add=SYS_PTRACE", "--security-opt", "seccomp=unconfined"],
-
-	// Set *default* container specific settings.json values on container create.
-	"settings": {},
-
-	// Add the IDs of extensions you want installed when the container is created.
-	"extensions": [
-		"ms-vscode.cpptools",
-		"ms-vscode.cmake-tools",
-		"ms-dotnettools.vscode-dotnet-runtime",
-		"sumneko.lua"
-	],
-
-	"forwardPorts": [5900, 5901, 6080],
-
-	"portsAttributes": {
-		"6080": {
-			"label": "Open Mudlet"
-		}
-	},
-
-	"postCreateCommand": "git submodule update --init",
-
-	// Comment out connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
-	"remoteUser": "vscode",
 	"features": {
+		"ghcr.io/devcontainers/features/common-utils:2": {
+			"username": "mudlet",
+			"upgradePackages": false
+		},
 		"ghcr.io/devcontainers/features/desktop-lite:1": {
 			"password": "mudlet",
 			"webPort": "6080",
 			"vncPort": "5901"
 		}
-	}
+	},
+	"capAdd": ["SYS_PTRACE"],
+	"securityOpt": ["seccomp=unconfined"],
+	"forwardPorts": [6080, 5901],
+	"portsAttributes": {
+		"6080": {
+			"label": "Desktop (browser)"
+		},
+		"5901": {
+			"label": "Desktop (VNC)"
+		}
+	},
+	"postCreateCommand": "git submodule update --init",
+	"customizations": {
+		"vscode": {
+			// Keep in line with .vscode/extensions.json
+			"extensions": [
+				"ms-vscode.cpptools",
+				"ms-vscode.cmake-tools",
+				"sumneko.lua"
+			]
+		}
+	},
+	"remoteUser": "mudlet"
 }

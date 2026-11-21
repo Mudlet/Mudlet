@@ -238,19 +238,24 @@ end
 local fstring_param = "supersecretstringvariablenocollision"
 
 -- `level` is counted from this function's own frame. Returns whether it found a local, and its value.
+-- A frame lists a local that shadows another of the same name after it, so the last one counts.
 local function fstring_local(k, level)
   while getinfo(level, "") ~= nil do
     local i = 1
+    local found, found_value = false, nil
     repeat
       local name, value = getlocal(level, i)
       if i == 1 and name == fstring_param then
         break
       end
       if name == k then
-        return true, value
+        found, found_value = true, value
       end
       i = i + 1
     until name == nil
+    if found then
+      return true, found_value
+    end
     level = level + 1
   end
   return false
@@ -258,6 +263,7 @@ end
 
 -- fstring_local for every name in the set `names` at once, for a template that
 -- is nothing but several names: one walk of the stack rather than one each.
+-- seen[name] holds the level the name was found at, so a later shadowing local in that frame replaces it.
 local function fstring_locals(names, count, level, values, seen)
   while count > 0 and getinfo(level, "") ~= nil do
     local i = 1
@@ -266,13 +272,18 @@ local function fstring_locals(names, count, level, values, seen)
       if i == 1 and name == fstring_param then
         break
       end
-      if names[name] and not seen[name] then
-        seen[name] = true
-        values[name] = value
-        count = count - 1
+      if names[name] then
+        local found_at = seen[name]
+        if not found_at then
+          seen[name] = level
+          count = count - 1
+          values[name] = value
+        elseif found_at == level then
+          values[name] = value
+        end
       end
       i = i + 1
-    until name == nil or count == 0
+    until name == nil
     level = level + 1
   end
 end
@@ -315,8 +326,23 @@ local function fstring_parse(template)
   return parts
 end
 
--- Must match fstring_param: an unusual name, so no other function's frame is mistaken for f's
+--- Documentation: https://wiki.mudlet.org/w/Manual:String_Functions#f
+---
+--- return f(...) is a Lua tail call: the frame of the function or script that wrote it
+--- is gone before f runs, so f cannot see that frame's locals and looks further up the
+--- stack, then in globals. Wrap the call in parentheses, return (f(...)), or assign it
+--- to a local first. A wrapper such as function myf(str) return f(str) end relies on
+--- this to read its own caller's locals.
+---
+--- @usage Without the parentheses, {name} would be read from greet's caller.
+---   <pre>
+---   local function greet()
+---     local name = "Bob"
+---     return (f("Hello {name}"))
+---   end
+---   </pre>
 function f(supersecretstringvariablenocollision)
+  -- The parameter's name must match fstring_param, so no other function's frame is mistaken for f's
   local supersecretstringvariablenocollisiontype = type(supersecretstringvariablenocollision)
   if supersecretstringvariablenocollisiontype ~= "string" then
     error("f: bad argument #1 type (str as string expected, got " .. supersecretstringvariablenocollisiontype .. ")")

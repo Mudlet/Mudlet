@@ -25,7 +25,8 @@
  * whole T, not left to ~Tree(), by which point the parent's T part has been
  * destroyed (#11059). Neither ASan nor valgrind sees that, because the storage
  * has not been freed yet, so each case plants a child that records its
- * parent's dynamic type at the start of its own teardown.
+ * parent's dynamic type at the start of its own teardown. The two that redo a
+ * trigger deletion instead check that it takes the trigger out of its group's child walk.
  *
  * Run with: ctest -R TreeChildTeardownTest -V
  */
@@ -47,6 +48,7 @@
 #include "TAction.h"
 #include "TAlias.h"
 #include "TKey.h"
+#include "TLuaInterpreter.h"
 #include "TScript.h"
 #include "TTimer.h"
 #include "TTrigger.h"
@@ -207,6 +209,72 @@ private slots:
         QVERIFY(!unit->getTrigger(childID));
     }
 
+    // The editor's redo of a deletion nulls mpHost before deleting, so the trigger's own teardown cannot
+    // reach its unit. One held open below a group must still be gone from what the next line reads of
+    // the open ones; ASan sees it left behind, as does MALLOC_PERTURB_ without it.
+    void test_redoingTheDeletionOfATriggerHeldOpen()
+    {
+        TriggerUnit* unit = mpHost->getTriggerUnit();
+        // Enough filed triggers below the group for the tree index to engage
+        QVERIFY(runLua(qsl(R"(
+            permGroup("tct open group", "trigger")
+            for index = 1, 48 do
+                permSubstringTrigger("tct open padding " .. index, "tct open group", {"tct_open_padding_" .. index .. "_bait"}, "")
+            end
+            tctOpenChildId = permSubstringTrigger("tct open child", "tct open group", {"tct_open_child_bait"}, "")
+            feedTriggers("tct warm-up line\n")
+            setTriggerStayOpen("tct open child", 2)
+        )")));
+        QVERIFY2(unit->treeIndexFiledCount() >= 48, "the tree index has not engaged, so nothing holds the open trigger");
+        TTrigger* group = unit->findTrigger(qsl("tct open group"));
+        QVERIFY(group);
+        const int childID = luaInteger("tctOpenChildId");
+        TTrigger* child = unit->getTrigger(childID);
+        QVERIFY(child);
+
+        QList<EditorDeleteItemCommand::DeletedItemInfo> items;
+        items.append({childID, group->getID(), 0, QString(), child->getName()});
+        EditorDeleteItemCommand command(EditorViewType::cmTriggerView, items, mpHost);
+        command.redo();
+        QVERIFY(!unit->getTrigger(childID));
+
+        QVERIFY(runLua(qsl(R"(feedTriggers("tct line after the deletion\n"))")));
+        delete group;
+    }
+
+    // The index files nothing for a pattern without plain text, so its group's walk enters it on every
+    // line; deleting it has to take it out of that walk all the same
+    void test_redoingTheDeletionOfAnUnfiledTrigger()
+    {
+        // Without ASan, entering the freed trigger usually reads it without crashing, and match() then warns
+        QTest::failOnWarning(QRegularExpression(qsl("called on destroyed trigger")));
+        TriggerUnit* unit = mpHost->getTriggerUnit();
+        QVERIFY(runLua(qsl(R"(
+            permGroup("tct unfiled group", "trigger")
+            for index = 1, 48 do
+                permSubstringTrigger("tct unfiled padding " .. index, "tct unfiled group", {"tct_unfiled_padding_" .. index .. "_bait"}, "")
+            end
+            tctUnfiledChildId = permRegexTrigger("tct unfiled child", "tct unfiled group", {[[^\d{6}$]]}, "")
+            feedTriggers("tct warm-up line\n")
+        )")));
+        QVERIFY2(unit->treeIndexFiledCount() >= 48, "the tree index has not engaged, so no walk holds the unfiled trigger");
+        TTrigger* group = unit->findTrigger(qsl("tct unfiled group"));
+        QVERIFY(group);
+        const int childID = luaInteger("tctUnfiledChildId");
+        TTrigger* child = unit->getTrigger(childID);
+        QVERIFY(child);
+        QCOMPARE(child->getParent(), group);
+
+        QList<EditorDeleteItemCommand::DeletedItemInfo> items;
+        items.append({childID, group->getID(), 0, QString(), child->getName()});
+        EditorDeleteItemCommand command(EditorViewType::cmTriggerView, items, mpHost);
+        command.redo();
+        QVERIFY(!unit->getTrigger(childID));
+
+        QVERIFY(runLua(qsl(R"(feedTriggers("123456\n"))")));
+        delete group;
+    }
+
     void test_deletingAnAliasGroup()
     {
         AliasUnit* unit = mpHost->getAliasUnit();
@@ -276,6 +344,17 @@ private slots:
     }
 
 private:
+    bool runLua(const QString& script) { return mpHost->mLuaInterpreter.compileAndExecuteScript(script); }
+
+    int luaInteger(const char* name)
+    {
+        lua_State* L = mpHost->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, name);
+        const int value = static_cast<int>(lua_tointeger(L, -1));
+        lua_pop(L, 1);
+        return value;
+    }
+
     void startProfile(const QString& hostname, const QString& address, const QString& port)
     {
         auto host = TestProfile::create(hostname, address, port);

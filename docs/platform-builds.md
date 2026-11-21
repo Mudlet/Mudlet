@@ -104,6 +104,12 @@ as what CI passes — set them to match the job being reproduced:
 | `USE_SANITIZER` | `Address` on Linux, empty on macOS | empty |
 | `WITH_SENTRY` | `ON` | `ON` |
 | `SENTRY_SEND_DEBUG` | `0` | `1` |
+| `MUDLET_PGO` | empty | `GENERATE` for the first pass on macOS and the Linux build that ships (Windows passes it with `-D`); see below |
+
+The Linux build that ships also takes the `PATH`, `CC`, `CXX`, `CFLAGS`, `CXXFLAGS` and `LDFLAGS`
+that the *(Linux) Install Clang for the profile-guided build* step in `build-mudlet.yml` sets, and
+passes `-DUSE_ALTERNATE_LINKER=lld` in place of the preset's `mold`, plus
+`-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON`.
 
 ```bash
 USE_SANITIZER=Address cmake --preset ci-linux
@@ -115,12 +121,54 @@ involves Sentry; `SENTRY_DSN` is a repository secret and cannot be matched local
 These presets build outside the checkout, into `../b/ninja`, because that is where the workflows'
 ctest and packaging steps look — `ci-windows` is the exception and uses `build-$MSYSTEM/`.
 
+### The Lua specs with no main window
+
+`.github/workflows/headless-lua-tests.yml` runs the Lua specs in `mudlet-headless`, the terminal
+runner, which has no main window, as a phone app has none; `headless.md` explains running it and
+embedding a profile without a window. It runs nightly against `development`,
+when started by hand, and on pull requests and pushes to `development` that change `src/headless/`,
+the `src/TNull*` views, the list, its checker or the workflow itself. It is not part of every pull
+request, as it would double the time the spec run takes there. Many specs still need a main
+window, so the run passes only when exactly the failures listed in
+`CI/headless-lua-known-failures.txt` fail. It fails on any other failure, on a listed one that now
+passes, on a spec file that does not load, and on a run that does not finish or exits with an
+error. To reproduce it:
+
+```bash
+set -o pipefail
+CONFIG_DIR=$(mktemp -d)
+mkdir -p "$CONFIG_DIR/.config/mudlet/profiles"
+AUTORUN_BUSTED_TESTS=true MUDLET_TEST_MODE=1 QUIT_MUDLET_AFTER_TESTS=true QT_QPA_PLATFORM=offscreen \
+  MUDLET_MATCH_THREADS=2 MUDLET_MATCH_SAMPLE_EVERY=0 DBUS_SESSION_BUS_ADDRESS='disabled:' \
+  TESTS_DIRECTORY="$PWD/src/mudlet-lua/tests" HOME="$CONFIG_DIR" XDG_CONFIG_HOME="$CONFIG_DIR/.config" \
+  MUDLET_TEST_FAILURE_MARKER="$CONFIG_DIR/busted-tests-failed" \
+  build/src/mudlet-headless -p "Mudlet self-test" --host mudlet.org --port 23 --offline --no-stdin \
+  2>&1 | tee headless-lua.log
+CI/check-headless-lua-failures.py headless-lua.log CI/headless-lua-known-failures.txt
+```
+
+A private `HOME` keeps the run off your own profiles: with an empty `$XDG_CONFIG_HOME/mudlet`,
+Mudlet goes on using `~/.config/mudlet`. A local run can still differ from CI's, whose Qt, compiler
+and sanitizer are its own, and run as root it pends the specs that need a file it may not write,
+so update the list from the `headless-lua-tests` artifact the job
+uploads, which holds its log:
+
+```bash
+CI/check-headless-lua-failures.py headless-lua-tests.log CI/headless-lua-known-failures.txt --write
+```
+
+`--write` keeps the comments and the entries that still fail where they are, drops the ones that
+no longer fail and adds new failures at the end. A new failure there is a regression in a profile
+with no main window, unless the spec is about something only a main window has; a spec whose
+setup or teardown needs one should pend instead, as the checker will not accept a failed hook.
+`CI/test-check-headless-lua-failures.py` tests the checker itself, and the workflow runs it first.
+
 ## Sanitizers and static analysis
 
-Sanitizers are enabled on every non-Windows build; `USE_SANITIZER` defaults to `address`, and a
-Release build type does not turn them off on its own - `<platform>-release` clears the variable
-explicitly. Use the `-tsan` / `-ubsan` / `-nosan` presets to change the choice, or pass a CMake
-list — semicolon-separated, not comma-separated — such as `-DUSE_SANITIZER="Address;Undefined"`.
+Sanitizers are enabled on every non-Windows build but Android; `USE_SANITIZER` defaults to `address`,
+and a Release build type does not turn them off on its own - `<platform>-release` clears the variable
+explicitly. Use the `-tsan` / `-ubsan` / `-nosan` presets to change the choice, or pass a CMake list —
+semicolon-separated, not comma-separated — such as `-DUSE_SANITIZER="Address;Undefined"`.
 A comma-separated value is read as a single name, which silently skips the per-sanitizer options
 such as `-fno-omit-frame-pointer`.
 
@@ -138,6 +186,88 @@ are active.
 Because IDEs read `CMakePresets.json` natively, selecting one of these presets in CLion, VS Code or
 Qt Creator is enough — no per-IDE sanitizer configuration is needed.
 
+## Profile-guided optimisation
+
+A PGO build lays out and inlines code by what a training run measured. It is off by default and
+takes two builds of the *same* tree, since GCC finds each object's profile by the object's path:
+
+```bash
+cmake --preset linux-release -DMUDLET_PGO=GENERATE
+cmake --build build-linux-release --target PipelineBenchmark MapRenderBenchmark PathfindBenchmark
+CI/pgo-train.sh build-linux-release       # runs those three, writes the profile
+cmake -B build-linux-release -DMUDLET_PGO=USE
+cmake --build build-linux-release --target mudlet_executable
+```
+
+GCC and Clang are both supported; for Clang, `CI/pgo-train.sh` merges the raw profiles with
+`llvm-profdata` (`LLVM_PROFDATA` picks a particular one), and on Linux the instrumented link needs
+the compiler-rt profile runtime (`libclang-rt-<version>-dev` on Ubuntu). The profile lands in
+`MUDLET_PGO_DIR`, `<build>/pgo-profile` unless set. The training script clears it before each run,
+as Clang names each raw profile after the binary that wrote it and would otherwise merge an older
+build's in. It also fails when a slot the training is for did not run, since a skipped slot still
+leaves a profile - one that leaves its code untrained. Keep the sources the same between the two
+builds: a function whose code changed loses its profile, which GCC refuses as an error and Clang
+reports as a `hash mismatch` warning.
+
+The training is PipelineBenchmark - text decoding, the trigger engine, the default packages and
+console painting - then MapRenderBenchmark and PathfindBenchmark on the Achaea map in
+`src/mudlet-lua/tests/fixtures/maps`, which load, audit and draw it and build its pathfinding graph.
+Only Clang builds also search four routes across it: left untrained, Clang 21 took 1.04 to 1.09
+times as long per search as with no profile on a map it never saw, and trained 0.99 to 1.00, while
+GCC 12 trained on them took about 1.15 times as long per search, on the trained map too.
+Functions the training never enters are compiled as if there were no profile: under GCC thanks to
+`-fprofile-partial-training`, under Clang because `CI/pgo-train.sh` merges the profile with
+`llvm-profdata merge -sparse`, which leaves them out of it. Kept in with zero counts, Clang marks
+them cold, and Apple's compiler then optimises them for size, which made held-out map loading and
+path searches up to 1.3 times as slow on Apple Silicon. With PipelineBenchmark as the only training,
+measured as time taken relative to a plain Release build of the same compiler at `-O3` - below 1 is
+faster - interleaved and paired per round, with svof (an Achaea combat system of 3,086 triggers),
+the 2D mapper and the pathfinder held out:
+
+| | GCC 13 | Clang 18 |
+| --- | --- | --- |
+| trigger engine (trained) | 0.99 | 0.81 |
+| text pipeline (trained) | 0.98 | 0.83 |
+| console painting (trained) | noise | 0.95 |
+| svof triggers (held out) | 0.98 | noise |
+| pathfinder graph build (held out) | noise | 0.82 |
+| 2D map rendering (held out) | noise | noise |
+
+So through the benchmark's own slots it pays mostly for Clang builds, and a big trigger package
+like svof gained little from a profile of the benchmark's triggers. Held-out code can move either
+way: on the 2.3-million-room Aetherspace map, GCC 12 with that profile took 1.12 of the time to load
+the map, 1.09 to audit it and 1.04 to build the pathfinding graph, which is why the training covers
+the mapper too - with it, those came out at 0.97, 0.99 and 0.97. Hand-placed `Q_LIKELY`/`Q_UNLIKELY`
+hints are not a substitute - removing all of Mudlet's, or adding more to the hottest branches,
+measured as noise.
+
+CI builds all three releases this way with Clang, and links the Windows and Linux ones with ThinLTO.
+Linux takes Clang 23 from apt.llvm.org but compiles against GCC 12's libstdc++, so the AppImage
+still runs on Ubuntu 22.04; the workflow fails if Clang would pick another GCC's. It also passes the
+hardening flags Ubuntu's GCC adds by default and Clang does not, which cost Clang 1 to 4%. Measured
+end to end on the Linux release configuration, 16 interleaved rounds at each of three code layouts,
+Clang 23 with the profile, ThinLTO and that hardening took 0.85 of the time GCC 12 with the profile
+did on a replayed session with 46 triggers, 0.93 on the same session with none and 0.93 on svof.
+Full LTO was no faster than ThinLTO and needs 6.4 GB per link; adding LTO to GCC 12 with the profile
+took 0.91, 0.95 and 0.99. GCC 12's profile alone took 0.89, 0.89 and 0.94 of the time of a plain
+GCC 12 build, drew the Aetherspace map within noise, and took 1.00 to 1.05 of the time to search for
+paths on four maps. Map drawing and path searches have not been measured on the Clang build; with
+PipelineBenchmark as the only training, profile-guided Clang without LTO took 1.08 to 1.24 of plain
+GCC's time at 2D map rendering.
+
+The first pass builds only the instrumented benchmarks - building `mudlet` would send the
+instrumented binary's debug files to Sentry - and the second builds everything against the profile,
+so the tests that follow run on what ships. Tagged releases and the nightly macOS and Windows PTBs
+build this way, so a broken profile-guided build shows up the morning after it lands rather than on
+release day; Linux PTBs are AddressSanitizer builds and are not profile-guided. macOS PTBs keep
+their own build type, which is unoptimised, so there the nightly run proves the steps work but not
+that the optimised compile does - before tagging a release, run the *Build Mudlet* workflow by hand
+with its `pgo` input set to `true`, which builds macOS and the Linux build that ships as Release,
+without AddressSanitizer, the way a tag does (*Build Mudlet (windows)* takes the same input, though its PTBs
+are Release already).
+Pull requests never build profile-guided, and no profile-guided run saves its objects to the
+shared ccache.
+
 ## Optional feature modules
 
 Seven feature modules are declared through `include_optional_module` in `CMakeLists.txt`: the
@@ -146,8 +276,11 @@ splash screen. Each has a
 `USE_*` option and a `WITH_*` name, and they are **not** interchangeable — `cmake/IncludeOptionalModule.cmake`
 reads the `WITH_*` name from the **environment** only. So `-DWITH_UPDATER=NO` on the command line is
 accepted by CMake and silently ignored; use `-DUSE_UPDATER=OFF`, or set `WITH_UPDATER=NO` in the
-environment. Note that the MCP server, shader hot-reloading and memory tracking default to OFF, the
-rest to ON.
+environment. A `USE_*` value already in the cache - from `-D` or an earlier configure of the same
+build tree - takes precedence over the `WITH_*` environment variable, so changing the environment
+of an existing build tree has no effect; pass `-DUSE_*` instead. Shader hot-reloading and memory
+tracking default to OFF, the rest to ON, except that for Android the 3D mapper, MCP server and
+build-type splash screen default to OFF (see "Leaving out what a mobile build cannot use").
 
 This applies only to those seven. Other `WITH_*` names are ordinary options: `WITH_SENTRY` and
 `SENTRY_SEND_DEBUG` are declared with `option()` and are set on the command line as normal.
@@ -157,8 +290,8 @@ This applies only to those seven. Other `WITH_*` names are ordinary options: `WI
 The MCP server is the one optional module that needs Qt modules the rest of Mudlet does not, so it
 is the one that fails at configure time rather than silently doing nothing when they are missing:
 `src/CMakeLists.txt` does `find_package(Qt6 COMPONENTS HttpServer REQUIRED)` only under
-`USE_MCPSERVER`. Qt HttpServer in turn pulls in Qt WebSockets, and distributions package the two
-separately, so install both:
+`USE_MCPSERVER`, which is on by default except for Android. Qt HttpServer in turn pulls in Qt
+WebSockets, and distributions package the two separately, so install both:
 
 | Environment | Packages |
 | --- | --- |
@@ -167,17 +300,180 @@ separately, so install both:
 | Fedora | `qt6-qthttpserver-devel` `qt6-qtwebsockets-devel` |
 | MSYS2 (CLANG64) | `${MINGW_PACKAGE_PREFIX}-qt6-httpserver` `${MINGW_PACKAGE_PREFIX}-qt6-websockets` — `CI/setup-windows-sdk.sh` installs both |
 | macOS (Homebrew) | included in the `qt` formula, nothing extra to install |
+| Flatpak (KDE runtime) | included in the KDE runtime that `CI/org.mudlet.mudlet.yml` uses, nothing extra to install |
 | aqtinstall (what CI uses) | `-m qthttpserver qtwebsockets` alongside the existing modules |
 
-Then build with the module on — remembering that the `WITH_*` name is read from the environment:
+To build without it, and so without either package, turn it off:
 
 ```bash
-WITH_MCPSERVER=ON cmake --preset linux-debug
+cmake --preset linux-debug -DUSE_MCPSERVER=OFF
 ```
 
-`-DUSE_MCPSERVER=ON` on the command line works too. Leaving it off is the default and needs
-neither package; the sources and the `TMCPServerTest` / `TMCPBridgeTest` ctest cases are simply
-not built.
+`WITH_MCPSERVER=NO` in the environment does the same for a fresh build tree. The sources and the
+`TMCPServerTest` / `TMCPBridgeTest` ctest cases are then simply not built.
+
+### Leaving out what a mobile build cannot use
+
+These options default to ON and are declared through `include_optional_module` like the modules
+above, so turn one off with `-DUSE_SPAWN=OFF` or `WITH_SPAWN=NO` in the environment, never
+`-DWITH_SPAWN=NO`. Each leaves out something an Android or iOS build of `mudlet_core` cannot use
+(#9011); `mudlet-headless` is the reference frontend for a build without them.
+
+| Option | Turning it off removes | What scripts see |
+| --- | --- | --- |
+| `USE_SPAWN` | `TForkedProcess`, the `QProcess` behind `spawn()` | `spawn()` raises an error, as when a process fails to start |
+| `USE_DISCORD_RPC` | the `QLibrary` that loads the Discord RPC library, and with it Rich Presence | the Discord functions return `nil` and `"Discord API is not available"`, as when the library is missing; `setDiscordGameUrl()` still works |
+| `USE_SPEECH_ENGINES` | the `QLibrary` loading of the Vosk and sherpa-onnx speech engines | the `stt.*` functions refuse, saying the build cannot load a speech engine library, and `stt.getPlatformKey()` returns `nil`; a platform engine (macOS's own) still works |
+
+For Android they default to OFF, as do `USE_MCPSERVER`, `USE_3DMAPPER`, `USE_GUI` and
+`USE_VARIABLE_SPLASH_SCREEN`, and `USE_SANITIZER` defaults to none instead of `address`, so a
+configure with the NDK's toolchain file needs none of them named. Each can still be turned on
+there but `USE_GUI` and `USE_3DMAPPER`: Android has no Qt DBus for the desktop GUI, and no desktop
+OpenGL or GLU for the 3D mapper. `USE_MCPSERVER` needs Qt HttpServer for Android installed.
+With `USE_GUI` off, as on Android, `USE_VARIABLE_SPLASH_SCREEN` has no effect, and configure says
+so: its images go into the desktop GUI, not `mudlet_core` or `mudlet-headless`.
+
+`USE_BUILTIN_MUDLET_LUA` and `USE_BUNDLED_LUA_MODULES` go the other way: off by default except for
+Android and a browser, they build Mudlet's own Lua files and the Lua C modules those need into
+`mudlet_core`, for an app with no Mudlet installed beside it to load them from; see "Embedding it:
+Mudlet's own Lua files" in `headless.md`. The modules need SQLite3 (`libsqlite3-dev`) to build.
+
+The `linux-core-minimal` preset turns the options in the table off, along with `USE_MCPSERVER`,
+`USE_UPDATER`, `USE_3DMAPPER` and `WITH_SENTRY`, turns those two on, and builds only
+`mudlet-headless`. CI builds it on every pull
+request that touches the sources (`.github/workflows/core-mobile-build.yml`), and fails if
+`mudlet_core` still calls into `QProcess`, `QLibrary`, `QLocalServer`, Qt HttpServer or Sentry. It then
+opens a profile with the checkout's Lua files moved away and nowhere for Lua to find a C module, which
+only a `mudlet_core` that carries both can do, and runs `CI/core-mobile-smoke.lua` in it, which uses each
+module:
+
+```bash
+cmake --preset linux-core-minimal
+cmake --build --preset linux-core-minimal
+```
+
+## WebAssembly
+
+`mudlet-headless` builds for the browser (#9011) with Emscripten 3.1.70 against Qt 6.9.0's
+`wasm_singlethread` kit (Qt for WebAssembly without threads), with the `qt5compat`, `qtmultimedia`
+and `qtspeech` modules. It takes its tools (moc, rcc, lrelease) from the desktop Qt of the same
+version, the host kit. The build also runs host tools: a Lua 5.1 that can load the `lua-yajl` rock
+(`CI/install-lua-rocks.sh lua-yajl`; without it the translation statistics come out empty),
+`ninja`, `make`, `cmake`, `curl` and `git`, a host C++ compiler (Boost's bootstrap builds `b2` with
+it), and Node for the smoke test and specs below. With [aqtinstall](https://github.com/miurahr/aqtinstall):
+
+```bash
+aqt install-qt all_os wasm 6.9.0 wasm_singlethread -m qt5compat qtmultimedia qtspeech -O ~/Qt
+aqt install-qt linux desktop 6.9.0 linux_gcc_64 -m qt5compat qtmultimedia qtspeech -O ~/Qt
+```
+
+`CI/build-wasm-dependencies.sh` builds the libraries Mudlet and its bundled Lua C modules link,
+SQLite among them, from pinned and checksummed sources, into a prefix of your choosing, and skips
+any that this same script, yajl patch and emcc already built there. The prefix must hold these
+libraries alone, as a desktop build may search one such as `~/.local`: the script refuses a
+directory holding anything it did not build, and a non-Emscripten configure fails if it finds zlib
+or PCRE2 there through `CMAKE_PREFIX_PATH` (cache or environment). The `wasm-headless` preset reads
+the wasm kit from `QT_ROOT_DIR`, the host kit from `QT_HOST_PATH` and that prefix, as an absolute
+path, from `MUDLET_WASM_DEPS`, and fails to configure without them or with a prefix the script has
+not finished. A build directory keeps the toolchain and the libraries it was first configured with,
+so after correcting `QT_ROOT_DIR` or changing `MUDLET_WASM_DEPS`, configure with
+`cmake --fresh --preset wasm-headless`. It warns when another version of the script built the
+prefix; rerun the script then. From scratch:
+
+```bash
+/path/to/emsdk/emsdk install 3.1.70
+/path/to/emsdk/emsdk activate 3.1.70
+source /path/to/emsdk/emsdk_env.sh
+export QT_ROOT_DIR=~/Qt/6.9.0/wasm_singlethread QT_HOST_PATH=~/Qt/6.9.0/gcc_64
+export MUDLET_WASM_DEPS=~/mudlet-wasm-deps
+CI/build-wasm-dependencies.sh "$MUDLET_WASM_DEPS"
+cmake --preset wasm-headless
+cmake --build --preset wasm-headless
+```
+
+The preset turns off what `linux-core-minimal` does (see the previous section), keeps the bundled
+Lua C modules and mudlet-lua, and builds only `mudlet-headless`, in Release, into
+`build-wasm-headless/src/` as `mudlet-headless.js`, `mudlet-headless.wasm` and `qtloader.js`.
+
+Qt for WebAssembly needs a DOM, so the result runs in a browser rather than in Node.
+`CI/wasm-headless-smoke.js` serves it to headless Chromium through Playwright and exits 0 two
+seconds after the program prints the expected line, if the page still answers then, as a hung page
+prints nothing. It fails on an error line before then, any of the script's `failureMarkers`: a Lua C
+module or mudlet-lua that does not load, a Lua error, or a package or module that did not load whole
+or has a script or pattern that does not work.
+
+Given only the build directory, it runs a probe that exercises mudlet-lua, PCRE2's Unicode tables,
+SQLite, yajl, LPeg and Hunspell (through the profile's own dictionary, as the browser has no system
+one), saves the profile, downloads a file the page serves and unzips an archive it serves through
+lua-zip (see the script). As this is the one 32-bit build CI runs, the probe also checks that a
+function refuses an integer argument an int cannot hold, then loads a map desktop Mudlet saved, and
+its own save of that map, and fails unless both export the JSON desktop did and the reloaded map
+gives the routes `Mapper_spec.lua` expects of it; a change to the default map format version means
+making both files again, as `src/mudlet-lua/tests/fixtures/maps/README.md` says. Last, the page moves
+its clocks 2200 seconds on and the probe checks that `os.clock()` moved on with them, which
+Emscripten's own `clock()` stops doing 2147 seconds after its first call:
+
+```bash
+npm install --prefix ~/mudlet-playwright playwright@1.63.0
+~/mudlet-playwright/node_modules/.bin/playwright install chromium
+NODE_PATH=~/mudlet-playwright/node_modules node CI/wasm-headless-smoke.js build-wasm-headless/src
+```
+
+Given an expected line after the directory, which must not be blank, it passes the rest of its
+arguments to `mudlet-headless` instead of the probe's. With `--quit-while-loading` instead, it feeds
+the game a line from an `-e` step while standard output has gone, as a pipe's has once its reader
+exits, and passes once the run ends with status 0, as the desktop's does; that quit is asked for
+before the event loop runs. `--quit-after-lua-error` does the same after an `-e` step that raises an
+error, and passes once the run ends with status 1. With `--game-connection`, the page makes the
+profile's connection, as "Embedding it: the game connection" in `headless.md` has a page do, over a
+WebSocket to `CI/wasm-telnet-relay.js` and on to `CI/telnet-fixture-server.py`, which asks for the
+terminal type, offers GMCP, sends a line a trigger answers and hangs up once the answer arrives; it
+passes once the profile has seen all of that and the game received the terminal type, whose NUL byte
+must cross the page's connection, and the answer. The page's first four connections fail on purpose,
+in this order: one with a `write()` that throws, one handing `received()` a `Blob`, one whose
+`dial()` returns a promise that rejects and one whose `write()` does. The run also wants Mudlet to
+have reported each, in the browser's console and as the reason on its own, and closed each before
+the next dial. The first connection hands `received()` a view into a padded buffer, whose padding
+must never reach the profile, and the one that plays the game hands it a bare `ArrayBuffer`. Its
+header lists its exit codes; 3 means it could not run the program at all, not that the build failed.
+
+The page seeds `Mudlet.ini` with `interfaceLanguage=en_US` (the script says why). A browser build
+keeps passwords in the profile unless `storePasswordsSecurely` says otherwise, as reading the
+browser's keychain waits on a nested event loop that Qt for WebAssembly cannot run without
+asyncify. `mudlet-headless` ends in a browser as it does on the desktop, which the page reports as
+an `[exit]` line, so a run that ends before the line fails, and one that never prints it fails
+after `WASM_SMOKE_TIMEOUT` seconds (120 by default).
+
+`CI/wasm-headless-lua-tests.js` runs the Lua specs in the browser as `headless-lua-tests.yml` runs
+them on the desktop, with the same arguments and environment, and writes what the run printed to a
+log. `CI/fetch-wasm-busted.sh` fetches busted and the pure-Lua modules it needs, pinned and
+checksummed; `CI/wasm-busted-shims/system.lua` stands in for its one C module. The runner copies
+those, the specs and the package one of them installs into the page. It exits 0 once the run ends
+with busted's summary, whatever failed; `CI/check-headless-lua-failures.py` then checks the failures
+against the desktop's list and `CI/wasm-lua-known-failures.txt`, which adds the browser's own and
+takes off desktop ones that do not get as far as failing there:
+
+```bash
+CI/fetch-wasm-busted.sh ~/mudlet-wasm-busted
+NODE_PATH=~/mudlet-playwright/node_modules node CI/wasm-headless-lua-tests.js build-wasm-headless/src ~/mudlet-wasm-busted /tmp/wasm-lua-tests.log
+python3 CI/check-headless-lua-failures.py /tmp/wasm-lua-tests.log CI/headless-lua-known-failures.txt CI/wasm-lua-known-failures.txt
+```
+
+Most of the browser's own failures wait for a timer. Without asyncify Qt for WebAssembly fires its
+timers only once the page hands the browser its thread back, and busted runs every spec in one call,
+so `pumpEvents()` and `waitForEvent()` deliver posted events but never a timer, a network reply or a
+media event. `WASM_LUA_TESTS_TRACE=1` prints each test's name as it starts, which names the one a
+hang is in, and `WASM_LUA_TESTS_ONLY=<spec file>` runs that file alone.
+
+`.github/workflows/wasm-build.yml` builds and runs both on every push to `development` and every
+pull request that touches the sources, caching the dependency prefix, and once a week builds that
+prefix from scratch. It links with Emscripten's runtime checks, which the preset leaves out, so that
+a stack overflow or a read or write through a null pointer aborts the run instead of going
+unnoticed; they make the module about a tenth larger. To do the same, configure with:
+
+```bash
+cmake --preset wasm-headless -DCMAKE_EXE_LINKER_FLAGS="-sASSERTIONS=1 -sSTACK_OVERFLOW_CHECK=2 -sSAFE_HEAP=1"
+```
 
 ## Debugging options
 
@@ -193,22 +489,38 @@ not built.
 
 ## Runtime tuning: the trigger match pool
 
-When a single chunk from the game carries many lines, `TriggerMatchPool` (`src/TriggerMatchPool.h`) spreads the "can this trigger match this line?" question over a few helper threads, for the triggers with a Perl regex pattern - the one pattern kind whose evaluation costs a search; substring, begin-of-line and exact-match patterns are answered on the main thread in a few instructions, so nothing is gained by handing them over. Four knobs tune it, read once when the pool starts; none are needed in normal use. Each has a key in `Mudlet.ini` (in the `[General]` section, alongside the other settings there) for a player who wants to keep a setting, and an environment variable that overrides the file for one run, which is what the tests and benchmarks use:
+When a single chunk from the game carries many lines, `TriggerMatchPool` (`src/TriggerMatchPool.h`) spreads the "can this trigger match this line?" question over a few helper threads, for the triggers with a Perl regex pattern - the one pattern kind whose evaluation costs a search; substring, begin-of-line and exact-match patterns are answered on the main thread in a few instructions, so nothing is gained by handing them over. A regex the helpers find a match for is not searched again: the main thread takes its captures from the helper's search.
+
+The pool is **off by default**: on most profiles it makes no difference and costs CPU, because Mudlet's single-threaded pre-checks already dismiss most regex triggers before they are searched. A player switches it on, and tunes it, under Preferences > Advanced > Performance; the change applies at once. Once it is on, the Statistics report (trigger editor, Ctrl+9) and `getProfileStats().triggers.matchPool` say whether it has paid on that player's own workload: one in 32 of the lines it would take, at random, is matched without it, and the average time of those lines is compared with the lines it did take. A verdict needs 100 such sampled lines. A line's time includes the scripts it fired, so each line counts for at most four times the typical line of its kind (the median of its first eight, then the running average), to keep one slow script or garbage collection from deciding the verdict. The figures cover every profile and start afresh whenever the pool is switched on or its settings change.
+
+Five knobs tune it. Each has a key in `Mudlet.ini` (in the `[General]` section), which is what the Preferences controls read and write, and an environment variable that overrides the file for one run, which is what the tests and benchmarks use:
 
 | `Mudlet.ini` key | Environment variable | Default | Meaning |
 | --- | --- | --- | --- |
-| `triggerMatchThreads` | `MUDLET_MATCH_THREADS` | `min(4, cores / 2)` | Threads sharing a batch, the main thread included. Capped at the core count. Below 2 the pool is off, so `0` disables it and the trigger engine runs exactly as it did before the pool existed. |
-| `triggerMatchThreshold` | `MUDLET_MATCH_THRESHOLD` | `128` | Fewest regex searches the previous line must have run before this line's batch is shared out. Searches rather than triggers: a trigger that is disabled, multiline, or settled by an earlier pattern of its own runs none, and only work the pool would actually share out counts. `0` or below falls back to the default. |
+| `triggerMatchThreads` | `MUDLET_MATCH_THREADS` | `0` (off) | Threads sharing a batch, the main thread included. Capped at the core count. Below 2 the pool is off, and the trigger engine runs exactly as it did before the pool existed. Switching it on in Preferences offers `min(4, cores / 2)`; Preferences counts only the extra threads, so it shows one less. |
+| `triggerMatchThreshold` | `MUDLET_MATCH_THRESHOLD` | `128` | Fewest failed regex searches the previous line must have run before this line's batch is shared out (every search counts when `triggerMatchMissesPerMatch` is `0`). Searches rather than triggers: a trigger that is disabled, multiline, or settled by an earlier pattern of its own runs none, and only work the pool would actually share out counts. `0` or below falls back to the default. |
 | `triggerMatchFloodLines` | `MUDLET_MATCH_FLOOD_LINES` | `8` | Fewest lines one incoming chunk must carry to count as a flood. `0` or below falls back to the default. |
+| `triggerMatchMissesPerMatch` | `MUDLET_MATCH_MISSES_PER_MATCH` | `2` | Failed regex searches the previous line must have run for each one that matched before this line's batch is shared out. A match's search is reused rather than run again, but the trigger is still visited twice and its state crosses between cores, which costs more than the search saves, so a line whose regexes mostly match is quicker on the main thread alone. `0` counts every search towards the threshold, matched or not. Below `0` falls back to the default. |
 | `triggerMatchSpinMicroseconds` | `MUDLET_MATCH_SPIN_US` | `100` | Microseconds a helper keeps spinning after a batch before it parks. `0` parks at once, which is the setting for stressing the wake-up path. |
+| `triggerMatchSampleEvery` | `MUDLET_MATCH_SAMPLE_EVERY` | `32` | One line in this many that the pool would take is matched without it, for the statistics. `0` never samples. Not in Preferences. |
 
-A value that is set but does not parse as an integer, or is out of range, is refused with a warning on the console and the default is used. For example, to turn the pool off for good:
+A value that is set but does not parse as an integer, or is out of range, is refused with a warning on the console and the default is used. For example, to turn the pool on with two threads without opening Preferences:
 
 ```ini
 [General]
-triggerMatchThreads=0
+triggerMatchThreads=2
 ```
 
-Independent of the pool, `TriggerUnit` files every trigger below a root trigger by the n-grams its patterns need, and a line stamps the ones it can reach before the tree is walked, so `TTrigger::match()` skips the rest of each folder - see `TTrigger::skippableForLine()`. It needs no tuning, but `MUDLET_TREE_INDEX` has two settings for checking it: `0` turns it off, and `verify` walks the triggers it would have skipped and warns `TTrigger tree index MISS` for any that fired or opened a multiline state. `src/mudlet-lua/tests/TreeIndex_spec.lua` covers it, and reports as pending when it is off.
+Independent of the pool, `TriggerUnit` files triggers by the n-grams their patterns need, and a line stamps the ones it can reach before the tree is walked, so the walk skips the rest of the root triggers and of each folder, and passes over a folder with nothing in it to enter - see `TTrigger::skippableForLine()` and `TChildWalk`. It needs no tuning, but `MUDLET_TREE_INDEX` has two settings for checking it: `0` turns it off, and `verify` walks the triggers and folders it would have skipped and warns `TTrigger tree index MISS` for any that fired or opened a multiline state. `src/mudlet-lua/tests/TreeIndex_spec.lua` covers it, and reports as pending when it is off.
 
-Setting the threshold and flood lines to `1` puts every line through the pool, which is the way to run `src/mudlet-lua/tests/TriggerFlood_spec.lua` and the rest of the trigger specs against both paths; `MUDLET_MATCH_SPIN_US=0` on top makes every one of those lines a cold start. No checked-in CI job does this yet, so it is a local run, and the pool has to be on for it to mean anything - `MUDLET_MATCH_THREADS=2` on a small machine. `PipelineBenchmark` reads `MUDLET_BENCH_TRIGGERS` and `MUDLET_BENCH_CHUNK_LINES` to sweep trigger counts and chunk sizes against these thresholds - see the comment at the top of `test/functional_tests/PipelineBenchmark.cpp`.
+Setting the threshold and flood lines to `1` and the misses per match to `0` puts every line through the pool, which is the way to run `src/mudlet-lua/tests/TriggerFlood_spec.lua` and the rest of the trigger specs against both paths; `MUDLET_MATCH_SPIN_US=0` on top makes every one of those lines a cold start. No checked-in CI job does this yet, so it is a local run. CI's Lua test runs and `.claude/scripts/run-lua-tests.sh` set `MUDLET_MATCH_THREADS=2`, so the flood specs run rather than pend, and `MUDLET_MATCH_SAMPLE_EVERY=0`, so no line those specs compare is quietly matched without the pool; anything else that measures the pool, `PipelineBenchmark` included, needs it set too. `PipelineBenchmark` reads `MUDLET_BENCH_TRIGGERS` and `MUDLET_BENCH_CHUNK_LINES` to sweep trigger counts and chunk sizes against these thresholds - see the comment at the top of `test/functional_tests/PipelineBenchmark.cpp`.
+
+## Runtime tuning: the ingest worker
+
+When a chunk from the game carries 16 lines or more, `TIngestPipeline` (`src/TIngestPipeline.h`) parses it on a worker thread, ahead of the main thread - ANSI and UTF-8 decoding and line building - and the main thread commits the lines it made instead of parsing them itself. Triggers, MXP, GMCP and everything else with an effect stay on the main thread, in order; a line is used only if the main thread reaches it in the parser state and with the settings the worker parsed it under, and the worker stops at any sequence whose handling has an effect: the main thread parses that line and may hand the rest of the chunk back. The worker only takes chunks in UTF-8, ISO 8859-1, ASCII or a single byte code page, while MXP is off with no MXP link or colour left open, and no OSC 8 hyperlink is open. It is on by default on machines with two or more cores.
+
+| `Mudlet.ini` key | Environment variable | Default | Meaning |
+| --- | --- | --- | --- |
+| `ingestThread` | `MUDLET_INGEST_THREAD` | `true` | `false` (or `0`, `false` or `off` in the environment) turns the worker off, and the main thread parses everything as it did before it existed. |
+
+`MUDLET_INGEST_THREAD=verify` has the main thread parse every line as well and warn `TBuffer ingest worker MISMATCH` for any line the worker made differently. Under `MUDLET_TEST_MODE` the main thread waits for the worker rather than parse a line itself, so that a spec's burst is parsed ahead whatever the scheduling; the ingest worker specs in `src/mudlet-lua/tests/Telnet_spec.lua` feed the same lines one per chunk and all in one chunk and require the same buffer from both.

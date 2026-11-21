@@ -22,6 +22,8 @@
 
 #include "T2DMap.h"
 
+class TArea;
+
 class LabelInteractionHandler : public T2DMap::IInteractionHandler
 {
 public:
@@ -29,6 +31,9 @@ public:
 
     bool matches(const T2DMap::MapInteractionContext& context) const override;
     bool handle(T2DMap::MapInteractionContext& context) override;
+
+    // The labels drawn below the rooms at this point on the level shown, the one drawn on top first
+    static QList<int> belowRoomsLabelsAt(const T2DMap& mapWidget, const TArea& area, const QPoint& widgetPosition);
 
 private:
     bool handleMousePress(T2DMap::MapInteractionContext& context) const;

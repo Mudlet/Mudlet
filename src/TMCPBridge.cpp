@@ -19,6 +19,7 @@
 
 #include "TMCPBridge.h"
 
+#include "SecureStringUtils.h"
 #include "TMCPServer.h"
 #include "utils.h"
 
@@ -46,6 +47,10 @@
 #if defined(Q_OS_WIN32)
 #include <fcntl.h>
 #include <io.h>
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
 #endif
 
 namespace {
@@ -106,6 +111,22 @@ TMCPBridge::TMCPBridge(const QString& configDir)
 
 int TMCPBridge::exec(const QString& configDir)
 {
+#if defined(Q_OS_WIN32)
+    // A GUI-subsystem exe run from a console without redirection has no stdout or stderr
+    // (fd -2). Reopen only those: attaching succeeds under a client's pipes too.
+    if ((_fileno(stdout) < 0 || _fileno(stderr) < 0) && AttachConsole(ATTACH_PARENT_PROCESS)) {
+        if (_fileno(stdout) < 0) {
+            std::freopen("CONOUT$", "w", stdout);
+        }
+        if (_fileno(stderr) < 0) {
+            std::freopen("CONOUT$", "w", stderr);
+        }
+    }
+    if (_fileno(stdin) < 0 || _fileno(stdout) < 0) {
+        noteOnStderr(qsl("mudlet --mcp-bridge: there is no stdin or stdout to speak JSON-RPC over - this is for an MCP client such as Claude Desktop to start"));
+        return 1;
+    }
+#endif
     TMCPBridge bridge(configDir);
     bridge.startStdinReader();
     return QCoreApplication::exec();
@@ -118,12 +139,10 @@ void TMCPBridge::startStdinReader()
     _setmode(_fileno(stdin), _O_BINARY);
     _setmode(_fileno(stdout), _O_BINARY);
 #endif
-    // Detached because there is no portable way to interrupt a blocking getline. Once
-    // the loop ends the thread touches only the application object, to post quit; the
-    // bridge outlives every post to itself because exec() cannot return before that
-    // quit runs, and queued calls tied to `this` as their context are dropped by Qt if
-    // any are still in flight at destruction. Nothing else may call quit(), or the
-    // application object could be gone while the reader still posts to it.
+    // Detached because there is no portable way to interrupt a blocking getline. Its
+    // last act is posting stdinClosed(), queued behind every line it read, and only
+    // that may lead to quit(): exec() cannot return before then, so the bridge and the
+    // application object outlive every post the reader makes.
     std::thread([this]() {
         std::string line;
         while (std::getline(std::cin, line)) {
@@ -138,8 +157,27 @@ void TMCPBridge::startStdinReader()
         if (std::cin.bad()) {
             noteOnStderr(qsl("mudlet --mcp-bridge: stdin failed with a read error; shutting down"));
         }
-        QMetaObject::invokeMethod(QCoreApplication::instance(), &QCoreApplication::quit, Qt::QueuedConnection);
+        QMetaObject::invokeMethod(
+                this,
+                [this]() {
+                    stdinClosed();
+                },
+                Qt::QueuedConnection);
     }).detach();
+}
+
+void TMCPBridge::stdinClosed()
+{
+    mStdinClosed = true;
+    quitOnceAnswered();
+}
+
+void TMCPBridge::quitOnceAnswered()
+{
+    // A stalled request is aborted by its transfer timeout, so this cannot wait forever.
+    if (mStdinClosed && mRepliesInFlight == 0) {
+        QCoreApplication::quit();
+    }
 }
 
 void TMCPBridge::handleLine(const QByteArray& line)
@@ -308,6 +346,7 @@ void TMCPBridge::forward(const QJsonObject& message)
     request.setTransferTimeout(30000);
 
     QNetworkReply* reply = mpNetworkManager->post(request, QJsonDocument(forwardEnvelope(message, mClientCapabilities)).toJson(QJsonDocument::Compact));
+    ++mRepliesInFlight;
     connect(reply, &QNetworkReply::finished, this, [reply, id]() {
         reply->deleteLater();
         const QJsonDocument doc = QJsonDocument::fromJson(reply->readAll());
@@ -331,6 +370,11 @@ void TMCPBridge::forward(const QJsonObject& message)
         }
         noteOnStderr(qsl("mudlet --mcp-bridge: Mudlet answered HTTP %1 with a body that is not JSON").arg(reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt()));
         writeMessage(bridgeError(id, qsl("Mudlet returned an unreadable response (HTTP %1)").arg(reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt())));
+    });
+    // Connected second so that it runs after the reply above has been written.
+    connect(reply, &QNetworkReply::finished, this, [this]() {
+        --mRepliesInFlight;
+        quitOnceAnswered();
     });
 }
 
@@ -362,14 +406,28 @@ bool TMCPBridge::writeDiscoveryFile(const QString& configDir, const quint16 port
     // portable install, say) the restriction cannot be applied; the file is written
     // anyway, since refusing would break the feature there entirely, but it is worth
     // a trace.
-    if (!file.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner)) {
-        qWarning() << "TMCPBridge::writeDiscoveryFile(...) WARNING - could not make" << file.fileName() << "private to this user; other users of this machine may be able to read the MCP access token";
-    }
+    const bool narrowAfterCommit = !SecureStringUtils::restrictSaveFileToOwner(file);
     QJsonObject contents;
     contents[qsl("port")] = static_cast<int>(port);
     contents[qsl("token")] = token;
     file.write(QJsonDocument(contents).toJson(QJsonDocument::Compact));
-    return file.commit();
+    if (!file.commit()) {
+        return false;
+    }
+
+#if defined(Q_OS_UNIX)
+    // Some file systems refuse owner-only on the open file but take it by path; either way, a file
+    // left readable by others is warned about once per path
+    if (narrowAfterCommit) {
+        SecureStringUtils::restrictFileToOwner(file.fileName());
+    } else {
+        SecureStringUtils::confirmFileIsOwnerOnly(file.fileName());
+    }
+#else
+    // Not confirmFileIsOwnerOnly(): off Unix it only warns, and calls this file a saved password
+    Q_UNUSED(narrowAfterCommit)
+#endif
+    return true;
 }
 
 void TMCPBridge::removeDiscoveryFile(const QString& configDir)
@@ -423,13 +481,28 @@ QString TMCPBridge::claudeDesktopConfigDir()
 #if defined(Q_OS_MACOS)
     return qsl("%1/Library/Application Support/Claude").arg(QDir::homePath());
 #elif defined(Q_OS_WIN32)
-    const QString appData = qEnvironmentVariable("APPDATA");
-    return appData.isEmpty() ? QString() : qsl("%1/Claude").arg(appData);
+    return claudeDesktopConfigDirOnWindows(qEnvironmentVariable("LOCALAPPDATA"), qEnvironmentVariable("APPDATA"));
 #else
     // GenericConfigLocation honours XDG_CONFIG_HOME the way Claude Desktop's Linux
     // builds do. On macOS it would give ~/Library/Preferences - hence the branch above.
     return qsl("%1/Claude").arg(QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation));
 #endif
+}
+
+QString TMCPBridge::claudeDesktopConfigDirOnWindows(const QString& localAppData, const QString& appData)
+{
+    // Packaged (MSIX) Claude Desktop moves its data to Claude-Data\<lowercased package family>
+    // and prefers it over %APPDATA%\Claude. Uninstalling leaves that but removes Packages\<family>.
+    // Of two installed packages, the more recently modified is taken to be the one in use.
+    if (!localAppData.isEmpty()) {
+        const QFileInfoList packaged = QDir(qsl("%1/Claude-Data").arg(localAppData)).entryInfoList({qsl("claude_*"), qsl("anthropicpbc.claude_*")}, QDir::Dirs | QDir::NoDotAndDotDot, QDir::Time);
+        for (const QFileInfo& dir : packaged) {
+            if (QFileInfo(qsl("%1/Packages/%2").arg(localAppData, dir.fileName())).isDir()) {
+                return dir.filePath();
+            }
+        }
+    }
+    return appData.isEmpty() ? QString() : qsl("%1/Claude").arg(appData);
 }
 
 QString TMCPBridge::claudeDesktopConfigFilePath()
@@ -858,7 +931,7 @@ QString tomlBasicString(const QString& value)
             escaped += u'\\';
             escaped += c;
         } else if (c.unicode() < 0x20 || c.unicode() == 0x7f) {
-            escaped += qsl("\\u%1").arg(int(c.unicode()), 4, 16, QLatin1Char('0'));
+            escaped += qsl("\\u%1").arg(static_cast<int>(c.unicode()), 4, 16, QLatin1Char('0'));
         } else {
             escaped += c;
         }

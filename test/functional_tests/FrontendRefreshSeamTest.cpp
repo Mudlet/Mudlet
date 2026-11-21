@@ -313,7 +313,7 @@ private slots:
         // Of the three visibility actions, a delayed reveal is the only one that
         // completes without a click. The delay runs from the moment the link is
         // registered inside feedTriggers(), and the observer below goes on a
-        // few statements later, so three seconds is budget for a loaded
+        // few statements later, so one second is budget for a loaded
         // sanitiser runner rather than a figure the reveal needs.
         //
         // Real escape bytes inside a Lua long-bracket string, rather than Lua's
@@ -322,7 +322,7 @@ private slots:
         // meta-object for whatever follows, which links as an undefined vtable.
         const QString esc = QString(QChar(0x1B));
         const QString stringTerminator = esc + QLatin1Char('\\');
-        const QString link = qsl("%1]8;;send:osc8seam?config={\"visibility\":{\"action\":\"reveal\",\"delay\":3000}}%2HIDDENWORD%1]8;;%2").arg(esc, stringTerminator);
+        const QString link = qsl("%1]8;;send:osc8seam?config={\"visibility\":{\"action\":\"reveal\",\"delay\":1000}}%2HIDDENWORD%1]8;;%2").arg(esc, stringTerminator);
         const QString feed = qsl("feedTriggers([==[OSCSEAM1(%1)OSCSEAM1\n]==])").arg(link);
         QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(feed), "feedTriggers() did not run, so no hyperlink was ever registered");
 

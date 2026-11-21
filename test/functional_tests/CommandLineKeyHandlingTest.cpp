@@ -63,6 +63,13 @@
 
 using namespace std::chrono_literals;
 
+// Qt::ControlModifier is Command on macOS, where the Ctrl key arrives as Qt::MetaModifier
+#if defined(Q_OS_MACOS)
+static constexpr Qt::KeyboardModifier controlKey = Qt::MetaModifier;
+#else
+static constexpr Qt::KeyboardModifier controlKey = Qt::ControlModifier;
+#endif
+
 class CommandLineKeyHandlingTest : public QObject
 {
     Q_OBJECT
@@ -119,6 +126,14 @@ private:
     }
 
     static QString selection(const TCommandLine* pCommandLine) { return pCommandLine->textCursor().selectedText(); }
+
+    static void select(TCommandLine* pCommandLine, const int from, const int to)
+    {
+        QTextCursor cursor = pCommandLine->textCursor();
+        cursor.setPosition(from);
+        cursor.setPosition(to, QTextCursor::KeepAnchor);
+        pCommandLine->setTextCursor(cursor);
+    }
 
     // Puts text into the command line without going through the keys, for the
     // cases whose subject is what a key does to text that is already there - a
@@ -515,6 +530,86 @@ private slots:
         QCOMPARE(pCommandLine->textCursor().position(), 3);
     }
 
+    // A selection in the middle of the line is the player's own text, not a completion tail.
+    void test_upWithAMidLineSelectionKeepsTheTypedText()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        sendCommand(pCommandLine, qsl("north"));
+
+        const QString typed = qsl("say abcdefghij KLMNOPQRST");
+        setText(pCommandLine, typed);
+        select(pCommandLine, 4, 9);
+        QCOMPARE(selection(pCommandLine), qsl("abcde"));
+
+        press(pCommandLine, Qt::Key_Up);
+
+        QCOMPARE(pCommandLine->toPlainText(), typed);
+        QCOMPARE(selection(pCommandLine), qsl("abcde"));
+    }
+
+    // The completed tail starts where the typed prefix ends in UTF-16 units, so
+    // a second Up can cut it again and step on to the next older entry.
+    void test_upKeepsCyclingWhenThePrefixHoldsAnEmoji()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        // QTest cannot type an emoji, so these are put in place before Return
+        for (const QString& command : {qsl("say \U0001F600 ho"), qsl("say \U0001F600 hi")}) {
+            setText(pCommandLine, command);
+            press(pCommandLine, Qt::Key_Return);
+            press(pCommandLine, Qt::Key_Escape);
+        }
+
+        const QString prefix = qsl("say \U0001F600");
+        setText(pCommandLine, prefix);
+
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("say \U0001F600 hi"));
+        QCOMPARE(selection(pCommandLine), qsl(" hi"));
+
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("say \U0001F600 ho"));
+        QCOMPARE(selection(pCommandLine), qsl(" ho"));
+    }
+
+    // Shift+End or a double-clicked last word ends where a completion tail does,
+    // but was never filled in by Up, so it is not cut off either.
+    void test_upWithASelectionThePlayerMadeAtTheEndKeepsTheTypedText()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        sendCommand(pCommandLine, qsl("north"));
+
+        const QString typed = qsl("say hello world");
+        setText(pCommandLine, typed);
+        select(pCommandLine, 10, typed.size());
+        QCOMPARE(selection(pCommandLine), qsl("world"));
+
+        press(pCommandLine, Qt::Key_Up);
+
+        QCOMPARE(pCommandLine->toPlainText(), typed);
+        QCOMPARE(selection(pCommandLine), qsl("world"));
+    }
+
+    // With a selection that is not a completion tail, the whole line is what
+    // the history entries have to start with.
+    void test_upWithAMidLineSelectionCompletesTheWholeLine()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        sendCommand(pCommandLine, qsl("say hi there friend"));
+        sendCommand(pCommandLine, qsl("say hello"));
+
+        setText(pCommandLine, qsl("say hi there"));
+        select(pCommandLine, 4, 6);
+
+        press(pCommandLine, Qt::Key_Up);
+
+        QCOMPARE(pCommandLine->toPlainText(), qsl("say hi there friend"));
+        QCOMPARE(selection(pCommandLine), qsl(" friend"));
+    }
+
     // A password typed at a game's login prompt arrives with remote echo on -
     // past the hidden-input box, after an Esc - and must not be left in a
     // history the next player at the keyboard can page through.
@@ -605,6 +700,29 @@ private slots:
         press(pCommandLine, Qt::Key_Tab);
 
         QCOMPARE(pCommandLine->toPlainText(), qsl("qzxbrachiosaurus "));
+    }
+
+    // Punctuation ends a word as a space does, so a Tab after it has no part-word to
+    // complete and must not glue some word from the game's output onto the line
+    void test_tabDoesNothingAfterPunctuation_data()
+    {
+        QTest::addColumn<QString>("typed");
+        QTest::newRow("comma") << qsl("qzxpterodactyl,");
+        QTest::newRow("full stop after a space") << qsl("look .");
+        QTest::newRow("exclamation mark") << qsl("say hello qzxpterodactyl!");
+    }
+
+    void test_tabDoesNothingAfterPunctuation()
+    {
+        QFETCH(QString, typed);
+        mpHost->mainConsoleView()->print(qsl("a qzxpterodactyl circles overhead\n"));
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+
+        type(pCommandLine, typed);
+        press(pCommandLine, Qt::Key_Tab);
+
+        QCOMPARE(pCommandLine->toPlainText(), typed);
     }
 
     // Typing a space accepts the completion. A Tab straight after it must not
@@ -972,6 +1090,89 @@ private slots:
         QVERIFY2(pClipboard->text().contains(sentinel), qPrintable(qsl("Ctrl+C copied '%1' rather than the scrollback pane's selection").arg(pClipboard->text().left(60))));
     }
 
+    // A real keyboard sends Ctrl on its own ahead of the C, and the line spell checks
+    // that press - with no word at the caret after "('')"
+    void test_pressingCtrlKeepsTheGameWindowsSelectionForCopy()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+
+        TMainConsole* pConsole = mpHost->mainConsoleView();
+        QVERIFY(pConsole);
+        const bool spellCheckWas = mpHost->getEnableSpellCheck();
+        mpHost->setEnableSpellCheck(true);
+        const QSize windowSize = mudlet::self()->size();
+        const auto restore = qScopeGuard([this, pConsole, windowSize, spellCheckWas]() {
+            pConsole->clearSelection();
+            mudlet::self()->hide();
+            mudlet::self()->resize(windowSize);
+            mpHost->setEnableSpellCheck(spellCheckWas);
+        });
+
+        const QString sentinel = qsl("qzxupperpaneline");
+        pConsole->print(qsl("%1\n").arg(sentinel));
+
+        QClipboard* pClipboard = QApplication::clipboard();
+        QVERIFY(pClipboard);
+        pClipboard->setText(qsl("nothing has been copied yet"));
+        type(pCommandLine, qsl("lua echo('')"));
+        pCommandLine->selectAll();
+
+        // A selection in a pane of no height cannot be worked out
+        mudlet::self()->resize(1200, 800);
+        mudlet::self()->show();
+        QVERIFY2(QTest::qWaitForWindowExposed(mudlet::self()), "the main window never came up");
+        QTRY_VERIFY2(pConsole->mUpperPane->height() > 0, "the game window was never laid out");
+
+        pConsole->mUpperPane->slot_selectAll();
+        QVERIFY2(!pConsole->mUpperPane->mSelectedRegion.isEmpty(), "select-all put no selection on the game window");
+        QVERIFY2(pCommandLine->textCursor().hasSelection(), "the command line lost the selection it is meant to lose the contest with");
+
+        QTest::keyPress(pCommandLine, Qt::Key_Control, Qt::ControlModifier);
+        const bool keptAfterCtrl = !pConsole->mUpperPane->mSelectedRegion.isEmpty();
+        press(pCommandLine, Qt::Key_C, Qt::ControlModifier);
+        QTest::keyRelease(pCommandLine, Qt::Key_Control);
+
+        QVERIFY2(keptAfterCtrl, "pressing Ctrl on its own cleared the game window's selection");
+        QVERIFY2(pClipboard->text().contains(sentinel), qPrintable(qsl("Ctrl+C copied '%1' rather than the game window's selection").arg(pClipboard->text().left(60))));
+    }
+
+    // Switching spell checking off strips the marks from every command line,
+    // which must not count as the player selecting text in one of them
+    void test_switchingSpellCheckOffKeepsTheGameWindowsSelection()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+
+        TMainConsole* pConsole = mpHost->mainConsoleView();
+        QVERIFY(pConsole);
+        const bool spellCheckWas = mpHost->getEnableSpellCheck();
+        mpHost->setEnableSpellCheck(true);
+        const QSize windowSize = mudlet::self()->size();
+        const auto restore = qScopeGuard([this, pConsole, windowSize, spellCheckWas]() {
+            pConsole->clearSelection();
+            mudlet::self()->hide();
+            mudlet::self()->resize(windowSize);
+            mpHost->setEnableSpellCheck(spellCheckWas);
+        });
+
+        pConsole->print(qsl("qzxupperpaneline\n"));
+        type(pCommandLine, qsl("some typed words"));
+        QVERIFY(!pCommandLine->textCursor().hasSelection());
+
+        mudlet::self()->resize(1200, 800);
+        mudlet::self()->show();
+        QVERIFY2(QTest::qWaitForWindowExposed(mudlet::self()), "the main window never came up");
+        QTRY_VERIFY2(pConsole->mUpperPane->height() > 0, "the game window was never laid out");
+
+        pConsole->mUpperPane->slot_selectAll();
+        QVERIFY2(!pConsole->mUpperPane->mSelectedRegion.isEmpty(), "select-all put no selection on the game window");
+
+        mpHost->setEnableSpellCheck(false);
+
+        QVERIFY2(!pConsole->mUpperPane->mSelectedRegion.isEmpty(), "switching spell checking off cleared the game window's selection");
+    }
+
     // #10764: a key put in a group made by permGroup(name, "key") reported
     // itself active and still never fired, because the group above it was
     // created switched off and KeyUnit never descends into an inactive folder.
@@ -1231,20 +1432,23 @@ private slots:
     {
         QTest::addColumn<Host::CaretShortcut>("shortcut");
         QTest::addColumn<Qt::Key>("key");
-        QTest::newRow("F6") << Host::CaretShortcut::F6 << Qt::Key_F6;
-        QTest::newRow("Tab") << Host::CaretShortcut::Tab << Qt::Key_Tab;
+        QTest::addColumn<Qt::KeyboardModifiers>("modifiers");
+        QTest::newRow("F6") << Host::CaretShortcut::F6 << Qt::Key_F6 << Qt::KeyboardModifiers();
+        QTest::newRow("Tab") << Host::CaretShortcut::Tab << Qt::Key_Tab << Qt::KeyboardModifiers();
+        QTest::newRow("Ctrl+Tab") << Host::CaretShortcut::CtrlTab << Qt::Key_Tab << Qt::KeyboardModifiers(controlKey);
     }
 
     void test_theChosenCaretKeyTurnsCaretModeOn()
     {
         QFETCH(Host::CaretShortcut, shortcut);
         QFETCH(Qt::Key, key);
+        QFETCH(Qt::KeyboardModifiers, modifiers);
         TCommandLine* pCommandLine = freshCommandLine();
         QVERIFY(pCommandLine);
         QVERIFY(!mpHost->caretEnabled());
 
-        // with no caret key chosen the press is the command line's own
-        press(pCommandLine, key);
+        // with no caret key chosen the press leaves caret mode alone
+        press(pCommandLine, key, modifiers);
         QVERIFY2(!mpHost->caretEnabled(), "caret mode came on with no caret key chosen");
 
         mpHost->mCaretShortcut = shortcut;
@@ -1257,9 +1461,93 @@ private slots:
             QTest::qWait(80ms);
         });
 
-        press(pCommandLine, key);
+        QKeyEvent override(QEvent::ShortcutOverride, key, modifiers);
+        QVERIFY2(pCommandLine->claimsShortcutOverride(&override), "the chosen caret key was left to the application's shortcuts");
+
+        press(pCommandLine, key, modifiers);
 
         QVERIFY2(mpHost->caretEnabled(), "the chosen caret key did not turn caret mode on");
+    }
+
+    // Ctrl+Tab is "next profile" by default, so Tab as the caret key must leave it alone
+    void test_tabAsTheCaretKeyLeavesCtrlTabToTheApplication()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        mpHost->mCaretShortcut = Host::CaretShortcut::Tab;
+        const auto restoreCaretMode = qScopeGuard([this]() {
+            mpHost->mCaretShortcut = Host::CaretShortcut::None;
+            if (mpHost->caretEnabled()) {
+                mpHost->setCaretEnabled(false);
+            }
+            QTest::qWait(80ms);
+        });
+
+        QKeyEvent override(QEvent::ShortcutOverride, Qt::Key_Tab, controlKey);
+        QVERIFY2(!pCommandLine->claimsShortcutOverride(&override), "Tab as the caret key claimed Ctrl+Tab from the profile-switching shortcut");
+
+        press(pCommandLine, Qt::Key_Tab, controlKey);
+
+        QVERIFY2(!mpHost->caretEnabled(), "Ctrl+Tab turned caret mode on when Tab is the caret key");
+    }
+
+    // macOS sends Ctrl+Tab only as a possible shortcut, with no key press after it, so the claim alone has to toggle
+    void test_ctrlTabArrivingOnlyAsAShortcutTurnsCaretModeOn()
+    {
+#if !defined(Q_OS_MACOS)
+        QSKIP("only macOS delivers Ctrl+Tab without a key press");
+#else
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        mpHost->mCaretShortcut = Host::CaretShortcut::CtrlTab;
+        const auto restoreCaretMode = qScopeGuard([this]() {
+            mpHost->mCaretShortcut = Host::CaretShortcut::None;
+            if (mpHost->caretEnabled()) {
+                mpHost->setCaretEnabled(false);
+            }
+            QTest::qWait(80ms);
+        });
+
+        // As QNSView sends it: the native Tab key code, then nothing if the override is claimed
+        QKeyEvent override(QEvent::ShortcutOverride, Qt::Key_Tab, controlKey, 0, 0x30, 0, qsl("\t"));
+        override.ignore();
+        QApplication::sendEvent(pCommandLine, &override);
+        QVERIFY(override.isAccepted());
+
+        QTRY_VERIFY2(mpHost->caretEnabled(), "Ctrl+Tab sent as macOS sends it did not turn caret mode on");
+#endif
+    }
+
+    // A plain Tab from macOS carries the same native key code, but its press does follow, so it must not be posted another
+    void test_plainTabAsTheCaretKeyIsPressedOnceOnMacOS()
+    {
+#if !defined(Q_OS_MACOS)
+        QSKIP("only macOS posts a key press for a claimed Tab");
+#else
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        mpHost->mCaretShortcut = Host::CaretShortcut::Tab;
+        const auto restoreCaretMode = qScopeGuard([this]() {
+            mpHost->mCaretShortcut = Host::CaretShortcut::None;
+            if (mpHost->caretEnabled()) {
+                mpHost->setCaretEnabled(false);
+            }
+            QTest::qWait(80ms);
+        });
+        const quint64 handOffsBefore = mpHost->mKeyboardHandOffs;
+
+        // As QNSView's keyDown sends it: the override, then the press
+        QKeyEvent override(QEvent::ShortcutOverride, Qt::Key_Tab, Qt::NoModifier, 0, 0x30, 0, qsl("\t"));
+        override.ignore();
+        QApplication::sendEvent(pCommandLine, &override);
+        QVERIFY(override.isAccepted());
+        QKeyEvent press(QEvent::KeyPress, Qt::Key_Tab, Qt::NoModifier, 0, 0x30, 0, qsl("\t"));
+        QApplication::sendEvent(pCommandLine, &press);
+        QCoreApplication::processEvents();
+
+        QVERIFY(mpHost->caretEnabled());
+        QCOMPARE(mpHost->mKeyboardHandOffs, handOffsBefore + 1);
+#endif
     }
 };
 

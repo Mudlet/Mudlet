@@ -269,7 +269,7 @@ private slots:
                 continue;
             }
 
-            const std::vector<TChar>& chars = console->buffer.buffer.at(i);
+            const TLineFormat& chars = console->buffer.buffer.at(i);
             QCOMPARE(static_cast<int>(chars.size()), line.size());
             const QColor& textColour = chars.at(firstTextChar).background();
             sawFirstHalf = sawFirstHalf || textColour == firstHalf;
@@ -325,7 +325,7 @@ private slots:
             if (line.isEmpty()) {
                 continue;
             }
-            const std::vector<TChar>& chars = console->buffer.buffer.at(i);
+            const TLineFormat& chars = console->buffer.buffer.at(i);
             QCOMPARE(static_cast<int>(chars.size()), line.size());
             for (int j = 0; j < line.size(); ++j) {
                 const QChar letter = line.at(j);

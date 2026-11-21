@@ -28,9 +28,14 @@
  * can only cover the character shapes someone thought to write a trigger for.
  * This covers every substring of each shape instead.
  *
+ * TNeedle, the search that follows the filter, has to answer as QStringMatcher
+ * does. No spec can hand it an embedded NUL or empty text, so this covers those.
+ *
  * Run with: ctest -R BigramFilterTest -V
  */
 
+#include <QRandomGenerator>
+#include <QStringMatcher>
 #include <QtTest/QtTest>
 
 #include "TTrigger.h"
@@ -57,6 +62,26 @@ private:
                            qsl("aaaaaaaa"),
                            QString(QChar(0)) + qsl("a null leads this line"),
                            qsl("e") + acute + qsl(" is two characters")};
+    }
+
+    static QString units(const QString& text)
+    {
+        QStringList hex;
+        for (const QChar unit : text) {
+            hex << QString::number(unit.unicode(), 16);
+        }
+        return hex.join(QLatin1Char(' '));
+    }
+
+    static bool searchesAgree(const QString& needle, const QString& haystack)
+    {
+        const qsizetype expected = QStringMatcher(needle, Qt::CaseSensitive).indexIn(haystack);
+        const qsizetype found = TNeedle(needle).indexIn(haystack);
+        if (found == expected) {
+            return true;
+        }
+        qWarning().noquote() << qsl("needle [%1] in [%2]: TNeedle %3, QStringMatcher %4").arg(units(needle), units(haystack), QString::number(found), QString::number(expected));
+        return false;
     }
 
 private slots:
@@ -104,6 +129,56 @@ private slots:
         filter.couldContain(line, TBigramFilter::bitsFor(qsl("xorb")));
         filter.couldContain(line, TBigramFilter::bitsFor(qsl("quick")));
         QCOMPARE(filter.questionsAsked(), 2);
+    }
+
+    void needleFindsWhatQStringMatcherFinds()
+    {
+        const QString dragon = QString(QChar(0xD83D)) + QChar(0xDC09); // U+1F409
+        const QString wyrm = QString(QChar(0xD83D)) + QChar(0xDC32);   // U+1F432, the same high surrogate
+        const QString nul(QChar(0));
+        const QList<std::pair<QString, QString>> cases{
+                {qsl("abcd"), qsl("abc bcd")},
+                {qsl("dog."), qsl("lazy dog.")},
+                {qsl("wholeline"), qsl("wholeline")},
+                {qsl("aab"), qsl("aaab")},
+                {qsl("----X"), qsl("-----X -----X")},
+                {qsl("--- Exits ---"), QString(80, QLatin1Char('-'))},
+                {qsl("ab"), QString()},
+                {QString(), QString()},
+                {QString(), qsl("ab")},
+                {qsl("x"), qsl("abx")},
+                {qsl("cd"), qsl("ab") + nul + qsl("cd")},
+                {qsl("a") + nul + qsl("b"), qsl("ab a") + nul + qsl("b")},
+                {dragon + wyrm, wyrm + qsl(" ") + dragon + dragon},
+                {QString(QChar(0xDC09)) + qsl("x"), dragon + qsl("x")},
+        };
+        for (const auto& [needle, haystack] : cases) {
+            QVERIFY(searchesAgree(needle, haystack));
+        }
+
+        const QString alphabet = qsl("abe -.Z9") + QChar(0x00E9) + QChar(0x0436) + nul + dragon + wyrm;
+        QRandomGenerator random(12159);
+        const auto randomText = [&](const int length) {
+            QString text;
+            for (int i = 0; i < length; ++i) {
+                text += alphabet.at(random.bounded(alphabet.size()));
+            }
+            return text;
+        };
+        for (int round = 0; round < 20000; ++round) {
+            const QString haystack = randomText(random.bounded(24));
+            QString needle;
+            if (round % 2) {
+                needle = randomText(random.bounded(6));
+            } else {
+                const qsizetype start = random.bounded(haystack.size() + 1);
+                needle = haystack.mid(start, random.bounded(haystack.size() - start + 1));
+                if (!needle.isEmpty() && round % 4 == 0) {
+                    needle[random.bounded(needle.size())] = alphabet.at(random.bounded(alphabet.size()));
+                }
+            }
+            QVERIFY(searchesAgree(needle, haystack));
+        }
     }
 };
 

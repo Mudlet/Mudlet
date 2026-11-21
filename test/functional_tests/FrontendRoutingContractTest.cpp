@@ -18,6 +18,7 @@
  ***************************************************************************/
 
 #include <QDir>
+#include <QScopeGuard>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QtNetwork/QTcpServer>
@@ -264,9 +265,10 @@ public:
         mCalls << call("openWebPage", {path});
         return true;
     }
-    void showNotification(const QString& title, const QString& text, std::optional<int> expiryMs) override
+    bool showNotification(const QString& title, const QString& text, std::optional<int> expiryMs) override
     {
         mCalls << call("showNotification", {title, text, expiryMs ? QString::number(*expiryMs) : qsl("none")});
+        return true;
     }
     int profileTabIndex(const QString& name) const override
     {
@@ -356,16 +358,22 @@ public:
         mCalls << call("setMapZoom", {number(zoom), QString::number(areaId)});
         return zoom < 1.0 ? std::pair{false, qsl("routed zoom refusal")} : std::pair{true, QString()};
     }
+    std::pair<bool, QString> centerViewOn(int roomId) override
+    {
+        mCalls << call("centerViewOn", {QString::number(roomId)});
+        return roomId == 1 ? std::pair{true, QString()} : std::pair{false, qsl("routed centring refusal")};
+    }
     std::pair<bool, QString> exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel, qreal zoom, bool exportAllZLevels) override
     {
         mCalls << call("exportAreaToImage", {QString::number(areaId), filePath, zLevel ? QString::number(*zLevel) : qsl("none"), number(zoom), flag(exportAllZLevels)});
         return exportAllZLevels ? std::pair{true, QString()} : std::pair{false, qsl("routed export refusal")};
     }
 
-    void show3DView(bool shown) override
+    std::pair<bool, QString> show3DView(bool shown) override
     {
         mCalls << call("show3DView", {flag(shown)});
         mShowing3D = shown;
+        return {true, QString()};
     }
     bool showing3DView() const override
     {
@@ -488,6 +496,21 @@ private:
     RecordingMapViews mMapViews;
     int mAreaId = 0;
     int mShownAreaId = 0;
+
+    // pumpEvents() and waitForEvent() answer only in test mode
+    static auto inTestMode()
+    {
+        const bool wasSet = qEnvironmentVariableIsSet("MUDLET_TEST_MODE");
+        const QByteArray value = qgetenv("MUDLET_TEST_MODE");
+        qputenv("MUDLET_TEST_MODE", "1");
+        return qScopeGuard([wasSet, value]() {
+            if (wasSet) {
+                qputenv("MUDLET_TEST_MODE", value);
+            } else {
+                qunsetenv("MUDLET_TEST_MODE");
+            }
+        });
+    }
 
     QString runLua(const QString& chunk)
     {
@@ -795,6 +818,35 @@ assert(getProfileTabNumber() == 3, "getProfileTabNumber did not count from one")
         QCOMPARE(app.mCalls.join(qsl("; ")), expected.join(qsl("; ")));
     }
 
+    // Only the view's destruction counts: a view a run sets and clears again, as this file's do, leaves waits running
+    void test_onlyTheViewGoingCountsAsShuttingDown()
+    {
+        const auto restore = inTestMode();
+        const auto noView = qScopeGuard([]() {
+            TAppFrontend::setInstance(nullptr);
+        });
+        RecordingAppFrontend app;
+        TAppFrontend::setInstance(&app);
+        TAppFrontend::setInstance(nullptr);
+        QVERIFY(!TAppFrontend::viewGone());
+        QCOMPARE(runLua(qsl("assert(pumpEvents(1) == true)")), qsl("ok"));
+
+        TAppFrontend::setInstance(&app);
+        TAppFrontend::viewDestroyed();
+        QVERIFY(TAppFrontend::viewGone());
+        QVERIFY(!TAppFrontend::hasView());
+        QCOMPARE(runLua(qsl(R"(
+local ok, err = pumpEvents(1)
+assert(ok == nil and err:find("shutting down", 1, true), tostring(err))
+local event, waitError = waitForEvent("neverRaised", 1000)
+assert(event == nil and waitError:find("shutting down", 1, true), tostring(waitError))
+)")),
+                 qsl("ok"));
+
+        TAppFrontend::setInstance(&app);
+        QVERIFY(!TAppFrontend::viewGone());
+    }
+
     void test_mapZoomReachesTheMapView()
     {
         const QString result = runMapLua(qsl(R"lua(
@@ -811,6 +863,28 @@ assert(getMapZoom() == 4.25, "getMapZoom did not read the zoom of the area the v
                 call("shownAreaId"),
         };
         QCOMPARE(mMapView.mCalls.join(qsl("; ")), expected.join(qsl("; ")));
+    }
+
+    // centerview(roomID, false) pans the view to the room and leaves the player's room alone
+    void test_centerviewWithoutMovingThePlayerReachesTheMapView()
+    {
+        TMap* map = mpHost->mpMap.data();
+        const int savedPlayerRoom = map->mRoomIdHash.value(map->mProfileName);
+        auto restore = qScopeGuard([map, savedPlayerRoom]() {
+            map->mRoomIdHash[map->mProfileName] = savedPlayerRoom;
+        });
+        map->mRoomIdHash[map->mProfileName] = 2;
+
+        const QString result = runMapLua(qsl(R"lua(
+assert(centerview(1, false) == true, "centerview did not pass on the view panning")
+local refused, why = centerview(2, false)
+assert(refused == nil and why == "routed centring refusal", "centerview did not pass on the view refusing it")
+assert(not pcall(centerview, 1, "east"), "centerview took a string for its view id or movePlayer")
+)lua"));
+        QCOMPARE(result, qsl("ok"));
+
+        QCOMPARE(mMapView.mCalls.join(qsl("; ")), QStringList({call("centerViewOn", {qsl("1")}), call("centerViewOn", {qsl("2")})}).join(qsl("; ")));
+        QCOMPARE(map->mRoomIdHash.value(map->mProfileName), 2);
     }
 
     void test_mapSelectionReachesTheMapView()

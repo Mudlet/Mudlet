@@ -239,6 +239,24 @@ describe("Tests that the timestamp and wrap functions find their console by name
             assert.is_true(#line <= 20, line)
           end
         end)
+
+        it("refuses wrapLine() for a line the window does not have, leaving the window alone", function()
+          setWindowWrap(window, 200)
+          clearWindow(window)
+          echo(window, text .. "\n")
+          setWindowWrap(window, 20)
+          local before = getLines(window, 0, getLineCount(window) + 1)
+
+          -- one past the last line is where getLineNumber() stands once deleteLine() has
+          -- taken a trigger's line, so it is not refused
+          local past = getLastLineNumber(window) + 1
+          for _, line in ipairs({-1, past + 1, past + 1000}) do
+            assert.are.same({nil, ('line %d does not exist in window "%s"'):format(line, window)}, {wrapLine(window, line)})
+          end
+          assert.are.same({true}, {wrapLine(window, past)})
+          assert.are.same(before, getLines(window, 0, getLineCount(window) + 1))
+          assert.are.same({true}, {wrapLine(window, 0)})
+        end)
       end)
     end
   end)
@@ -304,6 +322,40 @@ describe("Tests that the timestamp and wrap functions find their console by name
       end
     end)
 
+    it("refuses wrapLine() for a line the main console does not have, leaving it alone", function()
+      -- an empty last line, so rewrapping it at the end changes nothing
+      echo("\n")
+      local past = getLastLineNumber("main") + 1
+      local before = getLines("main", 0, past)
+      for _, name in ipairs({"main", ""}) do
+        for _, line in ipairs({-1, past + 1, past + 1000}) do
+          assert.are.same({nil, ('line %d does not exist in window "main"'):format(line)}, {wrapLine(name, line)})
+        end
+        assert.are.same({true}, {wrapLine(name, past)})
+      end
+      assert.are.same(before, getLines("main", 0, past))
+      assert.are.same({true}, {wrapLine("main", past - 1)})
+    end)
+
+    -- the sequence wrapLine()'s documentation describes, where getLineNumber()
+    -- is one past the last line once deleteLine() has taken the trigger's line
+    it("does not refuse wrapLine(getLineNumber()) in a trigger after deleteLine() and echo()", function()
+      local answers, onePast
+      local id = tempRegexTrigger("^specWrapByName gag me$", function()
+        deleteLine()
+        echo("specWrapByName replacement")
+        onePast = getLineNumber() == getLastLineNumber("main") + 1
+        answers = {wrapLine("main", getLineNumber())}
+      end)
+      finally(function() killTrigger(id) end)
+      -- the echo lands on the line before the deleted one, so give it an empty one
+      echo("\n")
+      feedTriggers("specWrapByName gag me\n")
+      echo("\n")
+      assert.is_true(onePast)
+      assert.are.same({true}, answers)
+    end)
+
     -- the main console's width is also the profile's, which is what
     -- getMainConsoleWidth() is worked out from
     it("sets the main console's wrap width by an empty name, main or none", function()
@@ -323,6 +375,14 @@ describe("Tests that the timestamp and wrap functions find their console by name
       assert.are.same({nil, "wrapAt must be greater than zero, got 0"}, {setWindowWrap("main", 0)})
       assert.are.equal(74, getWindowWrap(""))
       assert.are.equal(columnWidth * 75, getMainConsoleWidth())
+    end)
+
+    it("works out the main console's width for the widest wrap it accepts", function()
+      assert.is_true(setWindowWrap("main", 70))
+      local columnWidth = getMainConsoleWidth() / 71
+
+      assert.is_true(setWindowWrap("main", 2147483647))
+      assert.are.equal(columnWidth * 2147483648, getMainConsoleWidth())
     end)
   end)
 end)

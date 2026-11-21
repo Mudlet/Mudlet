@@ -642,7 +642,7 @@ private:
                 return {};
             }
             auto& below = host->mainConsoleView()->buffer.buffer.at(underscoreLine + 1);
-            for (TChar& character : below) {
+            for (TChar& character : below.expand()) {
                 character.select();
             }
         }

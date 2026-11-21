@@ -34,15 +34,19 @@
  */
 
 #include <QFileInfo>
+#include <QMessageBox>
+#include <QPointer>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTimer>
 #include <QtTest/QtTest>
+#include <chrono>
 #include <string>
 
 #include "MudletApp.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
+#include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "TDetachedWindow.h"
 #include "TMainConsole.h"
@@ -52,6 +56,8 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 class DetachedWindowTabActivityTest : public QObject
 {
@@ -69,6 +75,8 @@ private:
     const QString mFirstHostname = qsl("DetachedWindowTabActivity-First");
     const QString mSecondHostname = qsl("DetachedWindowTabActivity-Second");
     const QString mThirdHostname = qsl("DetachedWindowTabActivity-Third");
+    const QString mClosingHostname = qsl("DetachedWindowTabActivity-Closing");
+    const QString mOtherClosingHostname = qsl("DetachedWindowTabActivity-OtherClosing");
 
     // setupConfig() consults portable.txt before the XDG logic
     static bool portableMarkerPresent()
@@ -128,6 +136,8 @@ private slots:
             deleteProfileDirectory(mFirstHostname);
             deleteProfileDirectory(mSecondHostname);
             deleteProfileDirectory(mThirdHostname);
+            deleteProfileDirectory(mClosingHostname);
+            deleteProfileDirectory(mOtherClosingHostname);
             delete mudlet::self();
         }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
@@ -135,6 +145,14 @@ private slots:
 
     void cleanup()
     {
+        // A case that failed part-way can leave its closing profiles open
+        for (const QString& closingName : {mClosingHostname, mOtherClosingHostname}) {
+            if (Host* pClosing = HostManager::self()->getHost(closingName)) {
+                pClosing->forceClose();
+                mudlet::self()->slot_closeProfileByName(closingName);
+                QTRY_VERIFY(!HostManager::self()->getHost(closingName));
+            }
+        }
         // Whichever profiles a case left outside, so that each one starts from
         // three tabs in the main window
         const QStringList detachedProfiles = mudlet::self()->getDetachedWindows().keys();
@@ -295,6 +313,297 @@ private slots:
         QVERIFY2(orphansMidMove.isEmpty(), qPrintable(qsl("orphaned while moving into a detached window: %1").arg(orphansMidMove.join(qsl(", ")))));
         QCOMPARE(mudlet::self()->getDetachedWindows().value(mThirdHostname), pWindow);
         QCOMPARE(mudlet::self()->mpTabBar->count(), 1);
+    }
+
+    // The orphan check can land between a detached profile leaving its window and the queued close
+    void test_aProfileClosingFromAWindowIsNeverOrphaned()
+    {
+        deleteProfileDirectory(mClosingHostname);
+        QVERIFY(startProfile(mClosingHostname));
+        mudlet::self()->slot_tabDetachRequested(mudlet::self()->mpTabBar->tabIndex(mClosingHostname), QPoint(200, 200));
+        TDetachedWindow* pWindow = mudlet::self()->getDetachedWindows().value(mClosingHostname);
+        QVERIFY(pWindow);
+
+        // What the window's Close profile action calls
+        QVERIFY(QMetaObject::invokeMethod(pWindow, "closeProfile", Qt::DirectConnection));
+        QVERIFY2(HostManager::self()->getHost(mClosingHostname), "the profile closed at once, so there was no gap for the orphan check to land in");
+        QVERIFY(!mudlet::self()->getDetachedWindows().contains(mClosingHostname));
+        QCOMPARE(mudlet::self()->mpTabBar->tabIndex(mClosingHostname), -1);
+
+        const QStringList orphansMidClose = mudlet::self()->getOrphanedProfiles();
+        mudlet::self()->reattachOrphanedProfiles();
+        QVERIFY2(orphansMidClose.isEmpty(), qPrintable(qsl("orphaned while closing: %1").arg(orphansMidClose.join(qsl(", ")))));
+
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return !HostManager::self()->getHost(mClosingHostname);
+                         },
+                         2000ms),
+                 "the closing profile was never closed");
+    }
+
+    void test_aProfileWhoseCloseDoesNotGoAheadStaysInItsWindow_data()
+    {
+        QTest::addColumn<bool>("cancelled");
+        QTest::newRow("save question cancelled") << true;
+        QTest::newRow("held off by a nested event loop") << false;
+    }
+
+    void test_aProfileWhoseCloseDoesNotGoAheadStaysInItsWindow()
+    {
+        QFETCH(bool, cancelled);
+        deleteProfileDirectory(mClosingHostname);
+        Host* pHost = startProfile(mClosingHostname);
+        QVERIFY(pHost);
+        const QPointer<Host> hostGuard(pHost);
+        mudlet::self()->slot_tabDetachRequested(mudlet::self()->mpTabBar->tabIndex(mClosingHostname), QPoint(200, 200));
+        const QPointer<TDetachedWindow> pWindow = mudlet::self()->getDetachedWindows().value(mClosingHostname);
+        QVERIFY(pWindow);
+        TTabBar* pTabBar = tabBarOf(pWindow);
+        QVERIFY(pTabBar);
+
+        int asked = 0;
+        QTimer modalWatch;
+        connect(&modalWatch, &QTimer::timeout, this, [&asked]() {
+            if (auto pBox = qobject_cast<QMessageBox*>(QApplication::activeModalWidget())) {
+                ++asked;
+                if (auto pCancel = pBox->button(QMessageBox::Cancel)) {
+                    pCancel->click();
+                } else {
+                    pBox->reject();
+                }
+            }
+        });
+        modalWatch.start(20);
+        if (cancelled) {
+            pHost->mFORCE_SAVE_ON_EXIT = false;
+        } else {
+            pHost->getLuaInterpreter()->enterNestedEventLoop();
+        }
+
+        QVERIFY(QMetaObject::invokeMethod(pWindow, "closeProfile", Qt::DirectConnection));
+        if (!cancelled) {
+            pHost->getLuaInterpreter()->leaveNestedEventLoop();
+        }
+        // Whatever the close queued, and the orphan check, get their turn
+        QTest::qWait(300);
+        mudlet::self()->reattachOrphanedProfiles();
+        modalWatch.stop();
+
+        QVERIFY2(hostGuard, "the profile closed although its close did not go ahead");
+        QCOMPARE(asked, cancelled ? 1 : 0);
+        QVERIFY2(pWindow, "the window closed with the profile still open in it");
+        QCOMPARE(mudlet::self()->getDetachedWindows().value(mClosingHostname), pWindow);
+        QVERIFY2(pTabBar->tabIndex(mClosingHostname) != -1, "the profile left its window");
+        QCOMPARE(mudlet::self()->mpTabBar->tabIndex(mClosingHostname), -1);
+        QVERIFY(mudlet::self()->getOrphanedProfiles().isEmpty());
+
+        // Asked again, the close goes ahead
+        pHost->mFORCE_SAVE_ON_EXIT = true;
+        QVERIFY(QMetaObject::invokeMethod(pWindow, "closeProfile", Qt::DirectConnection));
+        QVERIFY2(QTest::qWaitFor(
+                         [&hostGuard]() {
+                             return hostGuard.isNull();
+                         },
+                         2000ms),
+                 "the profile was never closed");
+        QVERIFY(!mudlet::self()->getDetachedWindows().contains(mClosingHostname));
+    }
+
+    void test_closingAWindowKeepsItOpenForAProfileWhoseCloseDoesNotGoAhead_data()
+    {
+        QTest::addColumn<bool>("cancelled");
+        QTest::addColumn<bool>("keptProfileFirst");
+        QTest::newRow("save question cancelled, asked first") << true << true;
+        QTest::newRow("save question cancelled, asked last") << true << false;
+        QTest::newRow("held off by a nested event loop, first") << false << true;
+        QTest::newRow("held off by a nested event loop, last") << false << false;
+    }
+
+    // Closing the whole window closes each profile in turn, and one whose close does not
+    // go ahead keeps the window open around it while the others close
+    void test_closingAWindowKeepsItOpenForAProfileWhoseCloseDoesNotGoAhead()
+    {
+        QFETCH(bool, cancelled);
+        QFETCH(bool, keptProfileFirst);
+        // The window closes its profiles in name order
+        QVERIFY(mClosingHostname < mOtherClosingHostname);
+        const QString keptName = keptProfileFirst ? mClosingHostname : mOtherClosingHostname;
+        const QString closedName = keptProfileFirst ? mOtherClosingHostname : mClosingHostname;
+        deleteProfileDirectory(keptName);
+        deleteProfileDirectory(closedName);
+        Host* pKeptHost = startProfile(keptName);
+        QVERIFY(pKeptHost);
+        const QPointer<Host> keptGuard(pKeptHost);
+        Host* pClosedHost = startProfile(closedName);
+        QVERIFY(pClosedHost);
+        const QPointer<Host> closedGuard(pClosedHost);
+        mudlet::self()->slot_tabDetachRequested(mudlet::self()->mpTabBar->tabIndex(keptName), QPoint(200, 200));
+        const QPointer<TDetachedWindow> pWindow = mudlet::self()->getDetachedWindows().value(keptName);
+        QVERIFY(pWindow);
+        mudlet::self()->slot_profileDetachToWindow(closedName, pWindow);
+        QCOMPARE(mudlet::self()->getDetachedWindows().value(closedName), pWindow);
+        const QPointer<TTabBar> pTabBar = tabBarOf(pWindow);
+        QVERIFY(pTabBar);
+
+        int asked = 0;
+        QTimer modalWatch;
+        connect(&modalWatch, &QTimer::timeout, this, [&asked]() {
+            if (auto pBox = qobject_cast<QMessageBox*>(QApplication::activeModalWidget())) {
+                ++asked;
+                pBox->button(QMessageBox::Cancel)->click();
+            }
+        });
+        modalWatch.start(20);
+        pClosedHost->mFORCE_SAVE_ON_EXIT = true;
+        if (cancelled) {
+            pKeptHost->mFORCE_SAVE_ON_EXIT = false;
+        } else {
+            pKeptHost->getLuaInterpreter()->enterNestedEventLoop();
+        }
+
+        pWindow->close();
+        if (!cancelled) {
+            pKeptHost->getLuaInterpreter()->leaveNestedEventLoop();
+        }
+        QVERIFY2(QTest::qWaitFor(
+                         [&closedGuard]() {
+                             return closedGuard.isNull();
+                         },
+                         2000ms),
+                 "the profile that did not ask was never closed");
+        // Whatever the close queued, and the orphan check, get their turn
+        QTest::qWait(300);
+        mudlet::self()->reattachOrphanedProfiles();
+        modalWatch.stop();
+
+        QCOMPARE(asked, cancelled ? 1 : 0);
+        QVERIFY2(keptGuard, "the profile closed although its close did not go ahead");
+        QVERIFY2(pWindow, "the window closed with a profile still open in it");
+        QVERIFY(pWindow->isVisible());
+        QCOMPARE(mudlet::self()->getDetachedWindows().value(keptName), pWindow);
+        QVERIFY(!mudlet::self()->getDetachedWindows().contains(closedName));
+        QVERIFY2(pTabBar && pTabBar->tabIndex(keptName) != -1, "the kept profile left its window");
+        QCOMPARE(pTabBar->tabIndex(closedName), -1);
+        QCOMPARE(pWindow->getCurrentProfileName(), keptName);
+        QVERIFY(pKeptHost->mainConsoleView());
+        QCOMPARE(pKeptHost->mainConsoleView()->window(), static_cast<QWidget*>(pWindow.data()));
+        QCOMPARE(mudlet::self()->mpTabBar->tabIndex(keptName), -1);
+        QVERIFY(mudlet::self()->getOrphanedProfiles().isEmpty());
+
+        // Closed again, the window goes with the profile
+        pKeptHost->mFORCE_SAVE_ON_EXIT = true;
+        pWindow->close();
+        QVERIFY2(QTest::qWaitFor(
+                         [&keptGuard, &pWindow]() {
+                             return keptGuard.isNull() && pWindow.isNull();
+                         },
+                         2000ms),
+                 "the profile and its window were never closed");
+        QVERIFY(!mudlet::self()->getDetachedWindows().contains(keptName));
+    }
+
+    void test_aProfileClosedDuringASaveWaitClosesWithItsTab_data()
+    {
+        QTest::addColumn<bool>("closingTheWindow");
+        QTest::newRow("its tab closed") << false;
+        QTest::newRow("its window closed") << true;
+    }
+
+    // A close asked for while a save is being waited out is retried by the window once the wait ends
+    void test_aProfileClosedDuringASaveWaitClosesWithItsTab()
+    {
+        QFETCH(bool, closingTheWindow);
+        deleteProfileDirectory(mClosingHostname);
+        Host* pHost = startProfile(mClosingHostname);
+        QVERIFY(pHost);
+        const QPointer<Host> hostGuard(pHost);
+        mudlet::self()->slot_tabDetachRequested(mudlet::self()->mpTabBar->tabIndex(mClosingHostname), QPoint(200, 200));
+        const QPointer<TDetachedWindow> pWindow = mudlet::self()->getDetachedWindows().value(mClosingHostname);
+        QVERIFY(pWindow);
+        const QPointer<TTabBar> pTabBar = tabBarOf(pWindow);
+        QVERIFY(pTabBar);
+        pHost->mFORCE_SAVE_ON_EXIT = true;
+
+        // The save's end is announced from inside waitForProfileSave()
+        bool askedDuringWait = false;
+        auto connection = connect(pHost, &Host::profileSaveFinished, this, [&askedDuringWait, pHost, pWindow, closingTheWindow]() {
+            if (askedDuringWait || !pWindow) {
+                return;
+            }
+            askedDuringWait = pHost->waitingForProfileSave();
+            if (closingTheWindow) {
+                pWindow->close();
+            } else {
+                QMetaObject::invokeMethod(pWindow, "closeProfile", Qt::DirectConnection);
+            }
+        });
+        QVERIFY(std::get<0>(pHost->saveProfile()));
+        pHost->waitForProfileSave();
+        disconnect(connection);
+        QVERIFY2(askedDuringWait, "the close was not asked for while the save was being waited out");
+
+        QVERIFY2(QTest::qWaitFor(
+                         [&hostGuard]() {
+                             return hostGuard.isNull();
+                         },
+                         3000ms),
+                 "the profile was never closed");
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return !mudlet::self()->getDetachedWindows().contains(mClosingHostname);
+                         },
+                         1000ms),
+                 "the closed profile stayed listed in its window");
+        QVERIFY2(!pTabBar || pTabBar->tabIndex(mClosingHostname) == -1, "the closed profile's tab stayed in its window");
+        QCOMPARE(mudlet::self()->mpTabBar->tabIndex(mClosingHostname), -1);
+        QVERIFY2(QTest::qWaitFor(
+                         [&pWindow]() {
+                             return pWindow.isNull();
+                         },
+                         1000ms),
+                 "the window outlived the last profile in it");
+    }
+
+    // A profile closed from outside its window leaves its tab behind there. Reopened and detached
+    // again under the same name, it must survive the old window being closed.
+    void test_closingAWindowWithAStaleTabLeavesAReopenedProfileAlone()
+    {
+        deleteProfileDirectory(mClosingHostname);
+        Host* pOldHost = startProfile(mClosingHostname);
+        QVERIFY(pOldHost);
+        const QPointer<Host> oldGuard(pOldHost);
+        mudlet::self()->slot_tabDetachRequested(mudlet::self()->mpTabBar->tabIndex(mClosingHostname), QPoint(200, 200));
+        const QPointer<TDetachedWindow> pOldWindow = mudlet::self()->getDetachedWindows().value(mClosingHostname);
+        QVERIFY(pOldWindow);
+        const QPointer<TTabBar> pOldTabBar = tabBarOf(pOldWindow);
+        QVERIFY(pOldTabBar);
+
+        pOldHost->mFORCE_SAVE_ON_EXIT = true;
+        mudlet::self()->slot_closeProfileByName(mClosingHostname);
+        QTRY_VERIFY(oldGuard.isNull());
+        QVERIFY(!mudlet::self()->getDetachedWindows().contains(mClosingHostname));
+        if (!pOldWindow || !pOldTabBar || pOldTabBar->tabIndex(mClosingHostname) == -1) {
+            QSKIP("closing the profile elsewhere took its tab out of the window, so no stale tab is left to test");
+        }
+
+        deleteProfileDirectory(mClosingHostname);
+        Host* pNewHost = startProfile(mClosingHostname);
+        QVERIFY(pNewHost);
+        const QPointer<Host> newGuard(pNewHost);
+        mudlet::self()->slot_tabDetachRequested(mudlet::self()->mpTabBar->tabIndex(mClosingHostname), QPoint(300, 300));
+        const QPointer<TDetachedWindow> pNewWindow = mudlet::self()->getDetachedWindows().value(mClosingHostname);
+        QVERIFY(pNewWindow);
+        QVERIFY(pNewWindow != pOldWindow);
+
+        pNewHost->mFORCE_SAVE_ON_EXIT = true;
+        pOldWindow->close();
+        QTest::qWait(300);
+
+        QVERIFY2(newGuard, "closing the old window closed the profile reopened under the same name");
+        QVERIFY2(pNewWindow, "closing the old window closed the reopened profile's window");
+        QCOMPARE(mudlet::self()->getDetachedWindows().value(mClosingHostname), pNewWindow);
+        QVERIFY(mudlet::self()->getOrphanedProfiles().isEmpty());
     }
 
 private:

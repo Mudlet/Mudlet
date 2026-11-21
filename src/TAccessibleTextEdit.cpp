@@ -621,7 +621,7 @@ bool TAccessibleTextEdit::thaiRunReaches(int firstLine, int lastLine) const
 }
 
 /*
- * Auxiliary function for textAtOffset() and textAfterOffset().
+ * Auxiliary function for textAtOffset(), textBeforeOffset() and textAfterOffset().
  */
 QString TAccessibleTextEdit::textAroundOffset(TAccessibleTextEdit::TextOp operation, int offset, QAccessible::TextBoundaryType boundaryType, int* startOffset, int* endOffset) const
 {
@@ -665,12 +665,15 @@ QString TAccessibleTextEdit::textAroundOffset(TAccessibleTextEdit::TextOp operat
         int start = 0, end = 0;
 
         finder.setPosition(offset - windowStart);
+        // An offset on a boundary is in the item it starts, not the one it ends, as in
+        // Qt's own lookups; the end of the text starts none
+        const bool atItemStart = finder.isAtBoundary() && finder.position() < contents.length();
 
         if (operation == TAccessibleTextEdit::TextOp::BeforeOffset) {
-            end = finder.toPreviousBoundary();
+            end = atItemStart ? finder.position() : finder.toPreviousBoundary();
             start = finder.toPreviousBoundary();
         } else if (operation == TAccessibleTextEdit::TextOp::AtOffset) {
-            start = finder.toPreviousBoundary();
+            start = atItemStart ? finder.position() : finder.toPreviousBoundary();
             end = finder.toNextBoundary();
         } else {
             start = finder.toNextBoundary();

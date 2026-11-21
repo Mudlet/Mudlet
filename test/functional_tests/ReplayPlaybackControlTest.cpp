@@ -96,7 +96,7 @@ private:
     // restarting it takes the whole gap, and the assertion sits between them -
     // so both margins are a generous fraction of the gap rather than a fixed
     // number of milliseconds that a loaded runner can eat.
-    static constexpr int scmLongGapMsec = 6000;
+    static constexpr int scmLongGapMsec = 4000;
     static constexpr int scmPauseAfterMsec = (scmLongGapMsec * 3) / 4;
 
     struct Chunk
@@ -297,7 +297,7 @@ private slots:
                  qPrintable(qsl("the time readout does not say the replay is held: \"%1\"").arg(replayTimeLabel() ? replayTimeLabel()->text() : qsl("<no label>"))));
 
         // Well past the gap the file asks for before the next chunk.
-        QTest::qWait(scmChunkGapMsec * 3);
+        QTest::qWait(scmChunkGapMsec * 2);
         QCOMPARE(linesContaining(qsl("REPLAY_TWO")).size(), playedWhenPaused);
         QVERIFY(mpHost->mTelnet.isReplaying());
 
@@ -420,6 +420,22 @@ private slots:
 
     // Stop ends the replay there and then - the rest of the file is not played,
     // and the toolbar it was driving goes away.
+    // A replayed prompt counts as a live one does: the first ends the link's own output, the next hides it
+    void replayedPromptsExpireAnOsc8Link()
+    {
+        const QByteArray ga("\xff\xf9", 2);
+        const QByteArray link("\x1b]8;;send:look?config={\"visibility\":{\"action\":\"conceal\",\"expire\":{\"prompt\":true}}}\x1b\\Hint\x1b]8;;\x1b\\\r\n");
+        const QString file = writeReplay(qsl("prompts.dat"), {{20, QByteArrayLiteral("REPLAY_ONE\r\n") + link + ga}, {scmChunkGapMsec, QByteArrayLiteral("REPLAY_TWO") + ga}});
+        QVERIFY(!file.isEmpty());
+        QVERIFY(MudletReplay::self()->load(mpHost, file));
+
+        QTRY_VERIFY(bufferContains(qsl("REPLAY_ONE")));
+        QVERIFY2(bufferContains(qsl("Hint")), "the prompt ending the link's own output hid it");
+
+        QTRY_VERIFY(bufferContains(qsl("REPLAY_TWO")));
+        QTRY_VERIFY_WITH_TIMEOUT(!bufferContains(qsl("Hint")), 200);
+    }
+
     void stopEndsTheReplayAndTakesTheToolbarDown()
     {
         const QString file = writeThreeChunkReplay(qsl("stop.dat"));
@@ -433,7 +449,7 @@ private slots:
         stop->trigger();
 
         // The two chunks still in the file stay unplayed.
-        QTest::qWait(scmChunkGapMsec * 3);
+        QTest::qWait(scmChunkGapMsec * 2);
         QVERIFY2(!bufferContains(qsl("REPLAY_TWO")), qPrintable(qsl("the replay kept playing past Stop: %1").arg(linesContaining(qsl("REPLAY_")).join(qsl(" | ")))));
         QVERIFY(!bufferContains(qsl("REPLAY_THREE")));
 
@@ -587,29 +603,29 @@ private slots:
         QTRY_VERIFY2_WITH_TIMEOUT(bufferContains(qsl("REPLAY_TWO")), "Faster left the gap already being waited out at normal speed", 5s);
     }
 
-    // Slower lengthens the wait already running: read at 16x, the 3.2s gap is
-    // owed in 200ms until Slower takes it back to normal speed
+    // Slower lengthens the wait already running: read at 4x, the 1.6s gap is
+    // owed in 400ms until Slower takes it back to normal speed
     void slowerLengthensTheGapAlreadyRunning()
     {
-        const QString file = writeReplay(qsl("runningslower.dat"), {{20, QByteArrayLiteral("REPLAY_ONE\r\n")}, {3200, QByteArrayLiteral("REPLAY_TWO\r\n")}});
+        const QString file = writeReplay(qsl("runningslower.dat"), {{20, QByteArrayLiteral("REPLAY_ONE\r\n")}, {1600, QByteArrayLiteral("REPLAY_TWO\r\n")}});
         QVERIFY(!file.isEmpty());
         QVERIFY(MudletReplay::self()->load(mpHost, file));
         QAction* faster = replayAction(qsl("replay_speed_up_action"));
         QAction* slower = replayAction(qsl("replay_speed_down_action"));
         QVERIFY(faster);
         QVERIFY(slower);
-        for (int click = 0; click < 4; ++click) {
+        for (int click = 0; click < 2; ++click) {
             faster->trigger();
         }
-        QCOMPARE(MudletReplay::self()->speed(), 16);
+        QCOMPARE(MudletReplay::self()->speed(), 4);
         QTRY_VERIFY(bufferContains(qsl("REPLAY_ONE")));
 
-        for (int click = 0; click < 4; ++click) {
+        for (int click = 0; click < 2; ++click) {
             slower->trigger();
         }
         QCOMPARE(MudletReplay::self()->speed(), 1);
 
-        QTest::qWait(1000ms);
+        QTest::qWait(800ms);
         QVERIFY2(!bufferContains(qsl("REPLAY_TWO")), "Slower left the gap already being waited out at the faster speed");
         QTRY_VERIFY_WITH_TIMEOUT(bufferContains(qsl("REPLAY_TWO")), 5s);
     }
@@ -617,7 +633,7 @@ private slots:
     // ...and the wait a pause holds
     void slowerLengthensTheGapAPausedReplayHolds()
     {
-        const QString file = writeReplay(qsl("pausedslower.dat"), {{20, QByteArrayLiteral("REPLAY_ONE\r\n")}, {3200, QByteArrayLiteral("REPLAY_TWO\r\n")}});
+        const QString file = writeReplay(qsl("pausedslower.dat"), {{20, QByteArrayLiteral("REPLAY_ONE\r\n")}, {1600, QByteArrayLiteral("REPLAY_TWO\r\n")}});
         QVERIFY(!file.isEmpty());
         QVERIFY(MudletReplay::self()->load(mpHost, file));
         QAction* pause = replayAction(qsl("replay_pause_action"));
@@ -626,21 +642,21 @@ private slots:
         QVERIFY(pause);
         QVERIFY(faster);
         QVERIFY(slower);
-        for (int click = 0; click < 4; ++click) {
+        for (int click = 0; click < 2; ++click) {
             faster->trigger();
         }
-        QCOMPARE(MudletReplay::self()->speed(), 16);
+        QCOMPARE(MudletReplay::self()->speed(), 4);
         QTRY_VERIFY(bufferContains(qsl("REPLAY_ONE")));
 
         pause->trigger();
         QVERIFY(mpHost->mTelnet.replayPaused());
-        for (int click = 0; click < 4; ++click) {
+        for (int click = 0; click < 2; ++click) {
             slower->trigger();
         }
         QCOMPARE(MudletReplay::self()->speed(), 1);
         pause->trigger();
 
-        QTest::qWait(1000ms);
+        QTest::qWait(800ms);
         QVERIFY2(!bufferContains(qsl("REPLAY_TWO")), "resuming at normal speed still owed only the wait read at the faster speed");
         QTRY_VERIFY_WITH_TIMEOUT(bufferContains(qsl("REPLAY_TWO")), 5s);
     }

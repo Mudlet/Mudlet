@@ -31,7 +31,8 @@
  *
  *   MUDLET_BENCH_MAP=/path/to/map.dat QT_QPA_PLATFORM=offscreen ./MapRenderBenchmark
  *
- * Without that variable the whole benchmark skips. The reference map is
+ * Without that variable the whole benchmark skips. An .xml map is converted to
+ * the binary format before the timed restore. The reference map is
  * Ssaliss' 2.2-million-room Aetherspace map from Lusternia, the one the mapper
  * has been stress-tested against since 2015:
  * https://bugs.launchpad.net/mudlet/+bug/1500927 (attachment 4578177, 7z).
@@ -70,6 +71,7 @@
 #include <cstdio>
 #include <limits>
 
+#include "BenchMapTestHelper.h"
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
@@ -104,11 +106,11 @@
 
 using namespace std::chrono_literals;
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
+extern int qInitResources_mudlet();
+extern int qInitResources_qm();
+extern int qInitResources_additional_splash_screens();
+extern int qInitResources_mudlet_fonts_common();
+extern int qInitResources_mudlet_fonts_posix();
 static void initializeQRCResources();
 
 class MapRenderBenchmark : public QObject
@@ -284,9 +286,12 @@ private slots:
         QVERIFY(host->mpMap->mapper());
         TMap* pMap = host->mpMap.data();
 
+        QString conversionError;
+        const QString mapToRestore = binaryBenchMap(host, mMapPath, mConfigDir.path(), conversionError);
+        QVERIFY2(!mapToRestore.isEmpty(), qPrintable(qsl("could not convert the XML map at \"%1\": %2").arg(mMapPath, conversionError)));
         QElapsedTimer loadTimer;
         loadTimer.start();
-        QVERIFY2(pMap->restore(mMapPath), qPrintable(qsl("could not restore the map at \"%1\"").arg(mMapPath)));
+        QVERIFY2(pMap->restore(mapToRestore), qPrintable(qsl("could not restore the map at \"%1\"").arg(mapToRestore)));
         const double restoreSeconds = loadTimer.nsecsElapsed() / 1.0e9;
         loadTimer.restart();
         pMap->audit();
@@ -586,7 +591,7 @@ static void initializeQRCResources()
 #endif
 #ifdef INCLUDE_FONTS
     qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
+#ifdef INCLUDE_EMOJI_FONT
     qInitResources_mudlet_fonts_posix();
 #endif
 #endif

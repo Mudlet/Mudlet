@@ -404,7 +404,11 @@ void Builder::customLine(const TRoom& room, const QString& key, const QList<QPoi
     }
 
     // Down to (or up to) a destination on another level that the line ends over
-    const int destinationId = direction ? room.getExit(direction) : room.getSpecialExits().value(key);
+    int destinationId = direction ? room.getExit(direction) : 0;
+    // A special exit can be named like a normal one; without that normal exit the line is the special exit's
+    if (destinationId <= 0 && room.getSpecialExits().contains(key)) {
+        destinationId = room.getSpecialExits().value(key);
+    }
     mToRoomId = destinationId;
     if (const TRoom* pDestination = mMap.mpRoomDB->getRoom(destinationId); pDestination && pDestination->getArea() == mOptions.areaId && pDestination->z() != room.z() && !pDestination->isHidden()) {
         const QVector3D last = polyline.constLast();

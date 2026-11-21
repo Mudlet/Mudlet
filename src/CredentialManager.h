@@ -41,7 +41,9 @@ class ReadPasswordJob;
  * @brief Secure credential management with QtKeychain integration and encrypted file fallback
  *
  * This class provides a comprehensive credential management system following the principle:
- * "QtKeychain first, encrypted file fallback". It offers both asynchronous and legacy APIs.
+ * "QtKeychain first, encrypted file fallback" - except under an Android app's chosen root, where a file
+ * copy, while there is one, is read instead (see retrievePassword()). It offers both asynchronous and
+ * legacy APIs.
  *
  * RECOMMENDED: Async API (QtKeychain + fallback)
  * - Primary storage: System keychain (macOS Keychain, Windows Credential Store, Linux Secret Service)
@@ -67,6 +69,10 @@ class CredentialManager : public QObject
     friend class CredentialManagerKeychainTest;
     // Stalls the keychain behind a profile's own password lookup
     friend class TelnetLatePasswordTest;
+    // Reads the storage preference with no main window
+    friend class HeadlessHostSmokeTest;
+    // Answers the keychain for the managers a profile with no main window makes itself
+    friend class HeadlessSessionTest;
 
 public:
     explicit CredentialManager(QObject* parent = nullptr);
@@ -154,6 +160,7 @@ private:
     bool isPortableModeActive() const;
     bool shouldUseKeychain(const QString& profileName) const;
 
+    void trackCurrentJob(QKeychain::Job* job);
     void startJob(QKeychain::Job* job);
 
     // Timeout and cleanup management
@@ -182,6 +189,12 @@ private:
     // cannot be opened or decrypted, or Unavailable when no valid path can be made
     static QString retrieveCredentialFromFile(const QString& profileName, const QString& key, ReadOutcome* failure = nullptr);
     static bool removeCredentialFromFile(const QString& profileName, const QString& key);
+    // This profile's: under the current name readable or not, one that cannot be looked at included; under the
+    // older name only one it decrypts, the only kind a save or a forget can prove its own and remove
+    static bool fileCopyExists(const QString& profileName, const QString& key);
+    // removeCredentialFromFile(), except that under a chosen root the keychain serves it is true only once no copy
+    // is left that retrievePassword() reads in the keychain's place
+    static bool dropFileCopies(const QString& profileName, const QString& key);
 
     // One place a lookup may find the password: a keychain entry, or the encrypted file. recover
     // re-files a password found there under the current name.
@@ -256,10 +269,9 @@ private:
     static void forgetStoreRefusal();
 
     // Whether the player asked for passwords to be kept in the profile rather than in secure
-    // storage. Empty when there is nothing to ask - a unit test with no mudlet instance - so the
-    // caller keeps its own default.
-    static std::optional<bool> profileStoragePreferred();
-    // Test-only: stands in for that preference where there is no mudlet to read it from.
+    // storage.
+    static bool profileStoragePreferred();
+    // Test-only: stands in for that preference.
     static std::optional<bool>& profileStorageOverrideForTesting();
     // Whether the preference alone is what keeps this manager off the keychain, so a copy stored
     // there before the player chose the profile may remain. Never for a portable install or a test
@@ -288,6 +300,9 @@ private:
 
     // Current operation state
     QPointer<QKeychain::Job> mCurrentJob{nullptr};
+    // Whether the keychain has answered mCurrentJob, so abandoning it can tell a job QtKeychain is
+    // done with from one it still holds.
+    bool mCurrentJobFinished = false;
     QTimer* mTimeoutTimer{nullptr};
     CredentialCallback mCurrentCallback;
     AvailabilityCallback mCurrentAvailabilityCallback;
@@ -301,6 +316,10 @@ private:
     // Returning false leaves the job unstarted for the hook to answer. A job that has reached the store
     // can't be cancelled and the store keeps a pointer to it, so only the store may answer that one.
     std::function<bool(QKeychain::Job*)> mJobStartHook;
+    // Test-only: the hook every manager made from then on starts with, for one the code under test makes itself
+    static std::function<bool(QKeychain::Job*)>& jobStartHookForTesting();
+    // Test-only: what a read the hook answered holds, which QtKeychain gives a test no way to set
+    static std::optional<QString>& readTextForTesting();
 
     // Destruction flag to prevent operations during cleanup
     bool mShuttingDown = false;

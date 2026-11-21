@@ -23,7 +23,9 @@
 #include "SpeechRecognizer.h"
 #include "utils.h"
 
+#if defined(INCLUDE_SPEECH_ENGINES)
 #include <QLibrary>
+#endif
 #include <QPointer>
 #include <QString>
 #include <QVariantList>
@@ -53,7 +55,7 @@ public:
     // Endpointer mode controls how quickly Vosk detects end of speech
     enum class EndpointerMode {
         Default = 0,   // Balanced (default, good for most use)
-        VeryShort = 1, // Very fast detection (may cut off words)
+        VeryShort = 1, // The same as Short: libvosk has no shorter mode
         Short = 2,     // Faster detection (good for commands)
         Long = 3,      // Slower detection (good for dictation)
         VeryLong = 4   // Very slow detection (continuous speech)
@@ -250,7 +252,9 @@ private:
     QString mLastPartialResult;                   // Track last partial to detect stuck hallucinations
 
     // Vosk library and function pointers (for dynamic loading)
+#if defined(INCLUDE_SPEECH_ENGINES)
     static QLibrary sVoskLibrary;
+#endif
     static bool sLibraryLoaded;
     static QString sLibraryLoadError;
     static bool sLibraryLoadAttempted;

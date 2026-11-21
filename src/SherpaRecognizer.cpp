@@ -38,9 +38,9 @@
 #include "MacMicrophonePermission.h"
 #endif
 
-// Vendored from sherpa-onnx v1.13.5 c-api.h. These layouts are the ABI the
+// Vendored from sherpa-onnx v2.0.1 c-api.h. These layouts are the ABI the
 // loaded library reads, so field order and types must not change; sherpa-onnx
-// itself only ever appends fields, which initialize() defends against by
+// itself only ever appends fields, which loadModel() defends against by
 // passing the struct inside a larger zeroed block.
 
 struct SherpaOnnxOnlineTransducerModelConfig
@@ -140,7 +140,9 @@ struct SherpaOnnxOnlineRecognizerResult
 };
 
 // Static member initialization
+#if defined(INCLUDE_SPEECH_ENGINES)
 QLibrary SherpaRecognizer::sSherpaLibrary;
+#endif
 bool SherpaRecognizer::sLibraryLoaded = false;
 bool SherpaRecognizer::sLibraryLoadAttempted = false;
 QString SherpaRecognizer::sLibraryLoadError;
@@ -193,6 +195,7 @@ int SherpaRecognizer::silenceTimeout() const
     return mpCapture->silenceTimeout();
 }
 
+#if defined(INCLUDE_SPEECH_ENGINES)
 // The sherpa-onnx C-API library depends on onnxruntime, which release
 // bundles place beside it. Loading those first lets the dynamic linker
 // satisfy the dependency from a directory it would not search on its own.
@@ -209,6 +212,7 @@ static void preloadBundledDependencies(const QString& directory)
         library.load();
     }
 }
+#endif
 
 bool SherpaRecognizer::loadSherpaLibrary()
 {
@@ -218,6 +222,9 @@ bool SherpaRecognizer::loadSherpaLibrary()
 
     sLibraryLoadAttempted = true;
 
+#if !defined(INCLUDE_SPEECH_ENGINES)
+    return false;
+#else
     // QLibrary automatically adds platform-specific prefix/suffix:
     // "sherpa-onnx-c-api" becomes libsherpa-onnx-c-api.dylib / .so, or
     // sherpa-onnx-c-api.dll on Windows
@@ -309,6 +316,7 @@ bool SherpaRecognizer::loadSherpaLibrary()
 
     sLibraryLoaded = true;
     return true;
+#endif
 }
 
 bool SherpaRecognizer::sherpaAvailable()
@@ -328,6 +336,9 @@ bool SherpaRecognizer::sherpaAvailable()
 
 bool SherpaRecognizer::libraryPresent()
 {
+#if !defined(INCLUDE_SPEECH_ENGINES)
+    return false;
+#else
     if (sLibraryLoadAttempted) {
         return sLibraryLoaded;
     }
@@ -335,6 +346,7 @@ bool SherpaRecognizer::libraryPresent()
     return std::any_of(paths.cbegin(), paths.cend(), [](const QString& path) {
         return QFileInfo::exists(path);
     });
+#endif
 }
 
 bool SherpaRecognizer::resetLibraryLoadState()
@@ -342,9 +354,11 @@ bool SherpaRecognizer::resetLibraryLoadState()
     // Whether the module actually went. QLibrary::unload() refuses while
     // anything still holds it mapped, and reporting success then is how a
     // caller comes to delete a file the loader has not let go of.
+#if defined(INCLUDE_SPEECH_ENGINES)
     if (sSherpaLibrary.isLoaded() && !sSherpaLibrary.unload()) {
         return false;
     }
+#endif
 
     sLibraryLoaded = false;
     sLibraryLoadAttempted = false;
@@ -582,7 +596,7 @@ bool SherpaRecognizer::loadModel(const QString& modelPath)
     qInfo().noquote() << "SherpaRecognizer: Loading model from:" << modelPath;
 
     // The config crosses the ABI boundary by pointer. A library newer than the
-    // vendored 1.13.5 layout may read fields appended after it, so the struct
+    // vendored 2.0.1 layout may read fields appended after it, so the struct
     // sits at the front of a larger zeroed block and any such field reads as
     // zero, which sherpa-onnx replaces with its own default.
     alignas(std::max_align_t) char configBlock[4096] = {};

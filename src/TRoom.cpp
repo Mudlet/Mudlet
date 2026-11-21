@@ -374,13 +374,17 @@ bool TRoom::hasExitWeight(const QString& cmd)
     return false;
 }
 
-void TRoom::setWeight(int w)
+bool TRoom::setWeight(int w)
 {
     if (w < 1) {
         w = 1;
     }
+    if (weight == w) {
+        return false;
+    }
     weight = w;
     mpRoomDB->mpMap->setUnsaved(__func__);
+    return true;
 }
 
 void TRoom::setHidden(const bool isHidden)
@@ -394,6 +398,9 @@ void TRoom::setHidden(const bool isHidden)
 void TRoom::setExitWeight(const QString& cmd, int w)
 {
     if (w > 0) {
+        if (exitWeights.value(cmd) == w) {
+            return;
+        }
         exitWeights[cmd] = w;
         mpRoomDB->mpMap->setUnsaved(__func__);
         mpRoomDB->mpMap->mMapGraphNeedsUpdate = true;
@@ -707,6 +714,29 @@ void TRoom::removeExitExtras(const int direction)
     }
 }
 
+// A special exit named like a normal one ("n", "up"...) shares that exit's door,
+// weight and custom line; returns whether a custom line went
+bool TRoom::removeSpecialExitExtras(const QString& cmd)
+{
+    mSpecialExitLocks.remove(cmd);
+    if (hasExitOrSpecialExit(cmd)) {
+        return false;
+    }
+    exitWeights.remove(cmd);
+    const bool lineRemoved = customLines.remove(cmd) > 0;
+    customLinesColor.remove(cmd);
+    customLinesStyle.remove(cmd);
+    customLinesArrow.remove(cmd);
+    bool stubHoldsDoor = false;
+    for (int direction = DIR_NORTH; direction <= DIR_OUT && !stubHoldsDoor; ++direction) {
+        stubHoldsDoor = exitStubs.contains(direction) && dirCodeToShortString(direction) == cmd;
+    }
+    if (!stubHoldsDoor) {
+        doors.remove(cmd);
+    }
+    return lineRemoved;
+}
+
 bool TRoom::setSpecialExitLock(const QString& cmd, const bool doLock)
 {
     if (!mSpecialExits.contains(cmd)) {
@@ -749,17 +779,15 @@ void TRoom::setSpecialExit(const int to, const QString& cmd)
     }
 
     if (to > 0) {
+        if (mSpecialExits.value(cmd) == to) {
+            return;
+        }
         mSpecialExits[cmd] = to;
     } else {
-        // Clean up related data:
-        customLinesArrow.remove(cmd);
-        customLinesColor.remove(cmd);
-        customLinesStyle.remove(cmd);
-        customLines.remove(cmd);
-        exitWeights.remove(cmd);
-        doors.remove(cmd);
-        mSpecialExitLocks.remove(cmd);
         mSpecialExits.remove(cmd);
+        if (removeSpecialExitExtras(cmd)) {
+            calcRoomDimensions();
+        }
     }
 
     TArea* pA = mpRoomDB->getArea(area);
@@ -779,23 +807,15 @@ void TRoom::clearSpecialExits()
     }
 
     QMutableMapIterator<QString, int> itSpecialExit(mSpecialExits);
+    bool lineRemoved = false;
     while (itSpecialExit.hasNext()) {
         itSpecialExit.next();
-        // Clean up related elements first:
-        mSpecialExitLocks.remove(itSpecialExit.key());
-        doors.remove(itSpecialExit.key());
-        customLines.remove(itSpecialExit.key());
-        customLinesColor.remove(itSpecialExit.key());
-        customLinesStyle.remove(itSpecialExit.key());
-        customLinesArrow.remove(itSpecialExit.key());
         const QString exitName = itSpecialExit.key();
-        // Then remove the exit itself from the QMap:
         itSpecialExit.remove();
-        // A special exit named like a normal one ("n", "up"...) shares that
-        // exit's weight, which has to stay while the normal exit does:
-        if (!hasExitOrSpecialExit(exitName)) {
-            exitWeights.remove(exitName);
-        }
+        lineRemoved |= removeSpecialExitExtras(exitName);
+    }
+    if (lineRemoved) {
+        calcRoomDimensions();
     }
     if (TArea* pA = mpRoomDB->getArea(area)) {
         pA->determineAreaExitsOfRoom(id);
@@ -809,6 +829,7 @@ void TRoom::removeAllSpecialExitsToRoom(const int roomId)
 {
     QMutableMapIterator<QString, int> itSpecialExit(mSpecialExits);
     bool exitFound = false;
+    bool lineRemoved = false;
     while (itSpecialExit.hasNext()) {
         itSpecialExit.next();
         if (itSpecialExit.value() != roomId) {
@@ -816,24 +837,15 @@ void TRoom::removeAllSpecialExitsToRoom(const int roomId)
         }
 
         exitFound = true;
-        // Clean up related elements first:
-        mSpecialExitLocks.remove(itSpecialExit.key());
-        doors.remove(itSpecialExit.key());
-        customLines.remove(itSpecialExit.key());
-        customLinesColor.remove(itSpecialExit.key());
-        customLinesStyle.remove(itSpecialExit.key());
-        customLinesArrow.remove(itSpecialExit.key());
         const QString exitName = itSpecialExit.key();
-        // Then remove the exit itself from the QMap:
         itSpecialExit.remove();
-        // A special exit named like a normal one ("n", "up"...) shares that
-        // exit's weight, which has to stay while the normal exit does:
-        if (!hasExitOrSpecialExit(exitName)) {
-            exitWeights.remove(exitName);
-        }
+        lineRemoved |= removeSpecialExitExtras(exitName);
     }
 
     if (exitFound) {
+        if (lineRemoved) {
+            calcRoomDimensions();
+        }
         TArea* pA = mpRoomDB->getArea(area);
         if (pA) {
             pA->determineAreaExitsOfRoom(id);
@@ -1218,6 +1230,8 @@ void TRoom::auditExits(const QHash<int, int>& roomRemapping)
     QMap<QString, QColor> customLinesColorCopy = customLinesColor;
     QMap<QString, Qt::PenStyle> customLinesStyleCopy = customLinesStyle;
     QMap<QString, bool> customLinesArrowCopy = customLinesArrow;
+    // auditExit() only ever takes these away, so a room without any keeps it that way
+    const bool exitExtrasPresent = !exitWeights.isEmpty() || !doors.isEmpty() || !customLines.isEmpty() || !customLinesColor.isEmpty() || !customLinesStyle.isEmpty() || !customLinesArrow.isEmpty();
 
     auditExit(north,
               DIR_NORTH,
@@ -1230,6 +1244,7 @@ void TRoom::auditExits(const QHash<int, int>& roomRemapping)
               customLinesColorCopy,
               customLinesStyleCopy,
               customLinesArrowCopy,
+              exitExtrasPresent,
               roomRemapping);
 
     auditExit(northeast,
@@ -1243,6 +1258,7 @@ void TRoom::auditExits(const QHash<int, int>& roomRemapping)
               customLinesColorCopy,
               customLinesStyleCopy,
               customLinesArrowCopy,
+              exitExtrasPresent,
               roomRemapping);
 
     auditExit(northwest,
@@ -1256,6 +1272,7 @@ void TRoom::auditExits(const QHash<int, int>& roomRemapping)
               customLinesColorCopy,
               customLinesStyleCopy,
               customLinesArrowCopy,
+              exitExtrasPresent,
               roomRemapping);
 
     auditExit(south,
@@ -1269,6 +1286,7 @@ void TRoom::auditExits(const QHash<int, int>& roomRemapping)
               customLinesColorCopy,
               customLinesStyleCopy,
               customLinesArrowCopy,
+              exitExtrasPresent,
               roomRemapping);
 
     auditExit(southeast,
@@ -1282,6 +1300,7 @@ void TRoom::auditExits(const QHash<int, int>& roomRemapping)
               customLinesColorCopy,
               customLinesStyleCopy,
               customLinesArrowCopy,
+              exitExtrasPresent,
               roomRemapping);
 
     auditExit(southwest,
@@ -1295,6 +1314,7 @@ void TRoom::auditExits(const QHash<int, int>& roomRemapping)
               customLinesColorCopy,
               customLinesStyleCopy,
               customLinesArrowCopy,
+              exitExtrasPresent,
               roomRemapping);
 
     auditExit(east,
@@ -1308,6 +1328,7 @@ void TRoom::auditExits(const QHash<int, int>& roomRemapping)
               customLinesColorCopy,
               customLinesStyleCopy,
               customLinesArrowCopy,
+              exitExtrasPresent,
               roomRemapping);
 
     auditExit(west,
@@ -1321,6 +1342,7 @@ void TRoom::auditExits(const QHash<int, int>& roomRemapping)
               customLinesColorCopy,
               customLinesStyleCopy,
               customLinesArrowCopy,
+              exitExtrasPresent,
               roomRemapping);
 
     auditExit(up,
@@ -1334,6 +1356,7 @@ void TRoom::auditExits(const QHash<int, int>& roomRemapping)
               customLinesColorCopy,
               customLinesStyleCopy,
               customLinesArrowCopy,
+              exitExtrasPresent,
               roomRemapping);
 
     auditExit(down,
@@ -1347,6 +1370,7 @@ void TRoom::auditExits(const QHash<int, int>& roomRemapping)
               customLinesColorCopy,
               customLinesStyleCopy,
               customLinesArrowCopy,
+              exitExtrasPresent,
               roomRemapping);
 
     auditExit(in,
@@ -1360,6 +1384,7 @@ void TRoom::auditExits(const QHash<int, int>& roomRemapping)
               customLinesColorCopy,
               customLinesStyleCopy,
               customLinesArrowCopy,
+              exitExtrasPresent,
               roomRemapping);
 
     auditExit(out,
@@ -1373,6 +1398,7 @@ void TRoom::auditExits(const QHash<int, int>& roomRemapping)
               customLinesColorCopy,
               customLinesStyleCopy,
               customLinesArrowCopy,
+              exitExtrasPresent,
               roomRemapping);
 
     // If we use the Mutable iterator we don't have to restart after a deletion
@@ -1446,13 +1472,7 @@ void TRoom::auditExits(const QHash<int, int>& roomRemapping)
                     // Remove the corresponding things from the pools of things
                     // that have to be checked:
                     // TODO: Add additional warnings if we ARE deleting any data in following
-                    exitWeights.remove(exitName);
-                    doors.remove(exitName);
-                    mSpecialExitLocks.remove(exitName);
-                    customLines.remove(exitName);
-                    customLinesColor.remove(exitName);
-                    customLinesStyle.remove(exitName);
-                    customLinesArrow.remove(exitName);
+                    removeSpecialExitExtras(exitName);
                     exitWeightsCopy.remove(exitName);
                     doorsCopy.remove(exitName);
                     customLinesCopy.remove(exitName);
@@ -1486,14 +1506,7 @@ void TRoom::auditExits(const QHash<int, int>& roomRemapping)
                 }
                 mpRoomDB->mpMap->appendRoomErrorMsg(id, infoMsg, true);
                 it.remove();
-                // We cannot have a door or anything else on a non-existent special exit
-                doors.remove(exitName);
-                exitWeights.remove(exitName);
-                mSpecialExitLocks.remove(exitName);
-                customLines.remove(exitName);
-                customLinesColor.remove(exitName);
-                customLinesStyle.remove(exitName);
-                customLinesArrow.remove(exitName);
+                removeSpecialExitExtras(exitName);
                 doorsCopy.remove(exitName);
                 exitWeightsCopy.remove(exitName);
                 customLinesCopy.remove(exitName);
@@ -1706,13 +1719,6 @@ void TRoom::auditExits(const QHash<int, int>& roomRemapping)
             mpRoomDB->mpMap->appendRoomErrorMsg(id, infoMsg, true);
         }
     }
-
-    // Only a remapped room id gives an exit a destination that the load did
-    // not record. The superseded entries are left behind, as the consumers all
-    // re-check the exit anyway.
-    if (!roomRemapping.isEmpty()) {
-        mpRoomDB->updateEntranceMap(this, true);
-    }
 }
 
 void TRoom::auditExit(int& exitRoomId,                     // Reference to where exit goes to
@@ -1726,8 +1732,17 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
                       QMap<QString, QColor>& customLinesColorPool,
                       QMap<QString, Qt::PenStyle>& customLinesStylePool,
                       QMap<QString, bool>& customLinesArrowPool,
+                      const bool exitExtrasPresent, // Whether the room had any weight, door or custom line to begin with
                       const QHash<int, int>& roomRemapping)
 {
+    // QMap::remove() copies a shared map even when the key is absent, and each
+    // pool starts out shared with the room's own map
+    const auto removeExitKey = [&exitKey](auto& map) {
+        if (map.contains(exitKey)) {
+            map.remove(exitKey);
+        }
+    };
+
     // -1 is also what every absent exit holds, so a room renumbered from that
     // id cannot take the exits that led to it without taking all the others:
     if (exitRoomId != -1 && roomRemapping.contains(exitRoomId)) {
@@ -1777,22 +1792,22 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
             // TODO: Add additional warnings if we ARE deleting any data in following
             exitLocksPool.remove(dirCode); // A stub exit can retain a lock so keep any that exists
 
-            exitWeights.remove(exitKey);
-            exitWeightsPool.remove(exitKey);
+            removeExitKey(exitWeights);
+            removeExitKey(exitWeightsPool);
 
-            doorsPool.remove(exitKey); // we now have a stub exit and that can take a door so clear the door from the check pool
+            removeExitKey(doorsPool); // we now have a stub exit and that can take a door so clear the door from the check pool
 
-            customLines.remove(exitKey);
-            customLinesPool.remove(exitKey);
+            removeExitKey(customLines);
+            removeExitKey(customLinesPool);
 
-            customLinesColor.remove(exitKey);
-            customLinesColorPool.remove(exitKey);
+            removeExitKey(customLinesColor);
+            removeExitKey(customLinesColorPool);
 
-            customLinesStyle.remove(exitKey);
-            customLinesStylePool.remove(exitKey);
+            removeExitKey(customLinesStyle);
+            removeExitKey(customLinesStylePool);
 
-            customLinesArrow.remove(exitKey);
-            customLinesArrowPool.remove(exitKey);
+            removeExitKey(customLinesArrow);
+            removeExitKey(customLinesArrowPool);
         } else {
             // we do have a valid exit destination room
 
@@ -1816,12 +1831,14 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
             // So remove from the pools of things to check all the things CAN be
             // associated with this exit direction:
             exitLocksPool.remove(dirCode);
-            exitWeightsPool.remove(exitKey);
-            doorsPool.remove(exitKey);
-            customLinesPool.remove(exitKey);
-            customLinesColorPool.remove(exitKey);
-            customLinesStylePool.remove(exitKey);
-            customLinesArrowPool.remove(exitKey);
+            if (exitExtrasPresent) {
+                removeExitKey(exitWeightsPool);
+                removeExitKey(doorsPool);
+                removeExitKey(customLinesPool);
+                removeExitKey(customLinesColorPool);
+                removeExitKey(customLinesStylePool);
+                removeExitKey(customLinesArrowPool);
+            }
         }
     } else if (exitRoomId == -1) {
         // No exit - so do we have a stub?
@@ -1829,27 +1846,33 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
             exitStubsPool.remove(dirCode); // Remove the stub in this direction from check pool as we have handled it
         } else {
             // If NOT we cannot have a door or a lock
-            doors.remove(exitKey);
-            exitLocks.removeAll(dirCode);
+            if (exitExtrasPresent) {
+                removeExitKey(doors);
+            }
+            if (!exitLocks.isEmpty()) {
+                exitLocks.removeAll(dirCode);
+            }
         }
-        doorsPool.remove(exitKey);
         exitLocksPool.remove(dirCode);
 
-        // Whether we do or not have a stub exit we cannot have a custom
-        // line or a weight - so remove them if they exist:
-        exitWeights.remove(exitKey);
-        customLines.remove(exitKey);
-        customLinesColor.remove(exitKey);
-        customLinesStyle.remove(exitKey);
-        customLinesArrow.remove(exitKey);
-        // Whether we have a stub or not we have handled all the things that we
-        // want to check the existence of so take them out of the pools of
-        // things left to check after all the exits have been looked at
-        exitWeightsPool.remove(exitKey);
-        customLinesPool.remove(exitKey);
-        customLinesColorPool.remove(exitKey);
-        customLinesStylePool.remove(exitKey);
-        customLinesArrowPool.remove(exitKey);
+        if (exitExtrasPresent) {
+            removeExitKey(doorsPool);
+            // Whether we do or not have a stub exit we cannot have a custom
+            // line or a weight - so remove them if they exist:
+            removeExitKey(exitWeights);
+            removeExitKey(customLines);
+            removeExitKey(customLinesColor);
+            removeExitKey(customLinesStyle);
+            removeExitKey(customLinesArrow);
+            // Whether we have a stub or not we have handled all the things that we
+            // want to check the existence of so take them out of the pools of
+            // things left to check after all the exits have been looked at
+            removeExitKey(exitWeightsPool);
+            removeExitKey(customLinesPool);
+            removeExitKey(customLinesColorPool);
+            removeExitKey(customLinesStylePool);
+            removeExitKey(customLinesArrowPool);
+        }
     } else {
         // either 0 or < -1 and not renumbered because the bad room Id DID NOT
         // exist, there could be a "double fault" in that there is also a stub
@@ -1879,7 +1902,7 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
             userData.insert(auditKeyWeight, QString::number(exitWeights.value(exitKey)));
             //: %1 is the audit key for the weight
             infoMsg.append(qsl("  %1").arg(tr(R"(It had a weight, this is recorded as user data with key: "%1".)").arg(auditKeyWeight)));
-            exitWeights.remove(exitKey);
+            removeExitKey(exitWeights);
         }
         if (TMap::smShowMapAuditErrors) {
             mpRoomDB->mpMap->postMessage(infoMsg);
@@ -1893,22 +1916,22 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
                 mpRoomDB->mpMap->postMessage(warnMsg);
             }
             mpRoomDB->mpMap->appendRoomErrorMsg(id, warnMsg, true);
-            customLines.remove(exitKey);
+            removeExitKey(customLines);
         }
-        customLinesColor.remove(exitKey);
-        customLinesStyle.remove(exitKey);
-        customLinesArrow.remove(exitKey);
+        removeExitKey(customLinesColor);
+        removeExitKey(customLinesStyle);
+        removeExitKey(customLinesArrow);
         // Whether we have a stub or not we have handled all the things that we
         // want to check the existence of so take them out of the pools of
         // things left to check after all the exits have been looked at
 
-        doorsPool.remove(exitKey); // Can still have a door on a stub
+        removeExitKey(doorsPool); // Can still have a door on a stub
         exitLocksPool.remove(dirCode);
-        exitWeightsPool.remove(exitKey);
-        customLinesPool.remove(exitKey);
-        customLinesColorPool.remove(exitKey);
-        customLinesStylePool.remove(exitKey);
-        customLinesArrowPool.remove(exitKey);
+        removeExitKey(exitWeightsPool);
+        removeExitKey(customLinesPool);
+        removeExitKey(customLinesColorPool);
+        removeExitKey(customLinesStylePool);
+        removeExitKey(customLinesArrowPool);
     }
 }
 

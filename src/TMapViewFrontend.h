@@ -27,7 +27,7 @@
 #include <utility>
 
 // What core code asks of the mapper drawing a profile's map. dlgMapper implements it; core code
-// reaches it through TMap::mapViewFrontend().
+// reaches it through TMap::mapViewFrontend(), or Host::mapViewFrontend() for one the null view stands in for.
 class TMapViewFrontend
 {
 public:
@@ -51,10 +51,13 @@ public:
 
     virtual int shownAreaId() const = 0;
     virtual std::pair<bool, QString> setMapZoom(qreal zoom, int areaId) = 0;
+    // Pans the 2D map to a room, its area and level, leaving the player's room where it is; the map follows the player
+    // again once they move. Refused for a room that does not exist or lies in no area.
+    virtual std::pair<bool, QString> centerViewOn(int roomId) = 0;
     virtual std::pair<bool, QString> exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel, qreal zoom, bool exportAllZLevels) = 0;
 
-    // Without the 3D mapper compiled in there is no 3D view to show.
-    virtual void show3DView(bool shown) = 0;
+    // Without the 3D mapper compiled in there is no 3D view to show. The null view never has one, so it refuses a show with why.
+    virtual std::pair<bool, QString> show3DView(bool shown) = 0;
     virtual bool showing3DView() const = 0;
     // Builds the 3D view afresh, for a change of 3D renderer to take effect.
     virtual void recreate3DView() = 0;

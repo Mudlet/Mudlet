@@ -28,6 +28,7 @@
  * worth of maintenance. Nothing observable separates that from a rebuild - both
  * leave the same index behind and match identically - so the count of rebuilds
  * is the only thing that can tell them apart, and it is what this watches.
+ * The last cases check firings instead, for the child walk built on that filing.
  *
  * Run with: ctest -R PrescanStayOpenRefileTest -V
  */
@@ -42,6 +43,7 @@
 #include "MudletInstanceCoordinator.h"
 #include "MudletApp.h"
 #include "TLuaInterpreter.h"
+#include "TTrigger.h"
 #include "TriggerUnit.h"
 #include "mudlet.h"
 
@@ -88,20 +90,25 @@ private:
         return runLua(setup);
     }
 
-    // Each slot leaves the profile as it found it. The index rebuilds once its
-    // mutations reach max(32, live roots), so triggers an earlier slot left
-    // behind raise the bar the next one is measured against and its budget
+    // Each slot leaves the profile as it found it. The index rebuilds once what
+    // refiling abandons outnumbers what it holds, so triggers an earlier slot
+    // left behind raise the bar the next one is measured against and its budget
     // stops meaning anything.
     void removeProbe(const QString& tag)
     {
-        QString teardown;
+        // killTrigger() refuses permanent triggers
+        QStringList names{qsl("%1Target").arg(tag), qsl("%1Probe").arg(tag)};
         for (int i = 1; i <= scFillerTriggers; ++i) {
-            teardown += qsl("killTrigger('%1Filler%2')\n").arg(tag).arg(i);
+            names << qsl("%1Filler%2").arg(tag).arg(i);
         }
-        teardown += qsl("killTrigger('%1Target')\nkillTrigger('%1Probe')\n").arg(tag);
-        QVERIFY2(runLua(teardown), "the teardown did not compile, so the next slot would measure against this one's triggers");
-        // one line, so the killings are reclaimed and the live-root count the
-        // next slot measures against is its own
+        auto* triggerUnit = mpHost->getTriggerUnit();
+        for (const QString& name : names) {
+            TTrigger* pTrigger = triggerUnit->findTrigger(name);
+            QVERIFY2(pTrigger, qPrintable(qsl("probe trigger %1 is missing, so the next slot would not start from a clean profile").arg(name)));
+            delete pTrigger;
+        }
+        // one line, so the snapshot drops the deleted roots and the next slot
+        // measures against its own triggers
         runLua(qsl("feedTriggers('teardownline\\n')"));
     }
 
@@ -200,7 +207,7 @@ private slots:
 
     // A script that sets the same stay-open count every line changes nothing the
     // index files on. The refile it would otherwise cost is not merely wasted
-    // work: each one counts towards the mutations that buy a rebuild.
+    // work: each one costs the rest of its line the filters.
     void repeatedStayOpenCallsThatChangeNothingCostNothing()
     {
         constexpr int lines = 400;
@@ -209,6 +216,11 @@ private slots:
 
         const quint64 rebuilds = feedAndCountRebuilds(qsl("steady"), lines);
         const int fires = luaInteger("steadyFires");
+        auto* triggerUnit = mpHost->getTriggerUnit();
+        const quint32 filterEpoch = triggerUnit->rootFilterEpoch();
+        const quint32 unfilterableEpoch = triggerUnit->unfilterableEpoch();
+        runLua(qsl("feedTriggers('steadyprobeline again\\n')"));
+        const bool filtersKept = filterEpoch == triggerUnit->rootFilterEpoch() && unfilterableEpoch == triggerUnit->unfilterableEpoch();
         removeProbe(qsl("steady"));
 
         // The window is reopened at 3 before it can ever count down to 0, so
@@ -222,13 +234,14 @@ private slots:
                                     .arg(callsPerLine)
                                     .arg(lines)
                                     .arg(rebuilds)));
+        QVERIFY2(filtersKept, "a stay-open call that changed nothing still cost the rest of its line the filters");
     }
 
     // A script that opens and closes one trigger repeatedly inside a single line
     // queues that one slot to be filed again as many times as it was called,
     // because the index a line is reading from is only patched once the line is
-    // over. Filing it once is enough; filing it again for every call spends
-    // mutations that buy a rebuild.
+    // over. Filing it once is enough; filing it for every call must not cost a
+    // rebuild each time.
     void manyFlipsInsideOneLineCostOneRefile()
     {
         constexpr int lines = 60;
@@ -250,6 +263,191 @@ private slots:
                                     .arg(lines)
                                     .arg(rebuilds)
                                     .arg(budget)));
+    }
+
+    // Below the size the tree index engages at nothing is stamped, so a group's walk would pass over every
+    // filed child; with the index idle the group has to enter its children down the list
+    void filedChildFiresWhileTheTreeIndexIsIdle()
+    {
+        QVERIFY2(runLua(qsl(R"(
+            permGroup("idleGroup", "trigger")
+            idleFires = 0
+            permSubstringTrigger("idleChild", "idleGroup", {"qqidlebaitzz"}, "idleFires = idleFires + 1")
+            feedTriggers("idlewarmupline\n")
+        )")),
+                 "the triggers did not compile");
+        auto* triggerUnit = mpHost->getTriggerUnit();
+        TTrigger* group = triggerUnit->findTrigger(qsl("idleGroup"));
+        QVERIFY(group);
+        QCOMPARE(triggerUnit->treeIndexFiledCount(), 0);
+
+        runLua(qsl("feedTriggers('qqidlebaitzz\\n')"));
+
+        QCOMPARE(luaInteger("idleFires"), 1);
+        delete group;
+    }
+
+    // A root held open is unfiled, so the root walk enters it without tracking it as open; moved below a
+    // group by the editor, it has to be entered all the same while it stays open
+    void openRootMovedBelowAGroupStillFires()
+    {
+        QVERIFY2(runLua(qsl(R"(
+            permGroup("movedGroup", "trigger")
+            for index = 1, 48 do
+                permSubstringTrigger("movedPadding" .. index, "movedGroup", {"qqmovedpadding" .. index .. "zz"}, "")
+            end
+            movedFires = 0
+            movedId = permSubstringTrigger("movedOpen", "", {"qqmovedbaitzz"}, "movedFires = movedFires + 1")
+            feedTriggers("movedwarmupline\n")
+            setTriggerStayOpen("movedOpen", 3)
+        )")),
+                 "the triggers did not compile");
+        auto* triggerUnit = mpHost->getTriggerUnit();
+        QVERIFY2(triggerUnit->treeIndexFiledCount() >= 48, "the tree index has not engaged, so it cannot pass the moved trigger over");
+        TTrigger* group = triggerUnit->findTrigger(qsl("movedGroup"));
+        QVERIFY(group);
+        triggerUnit->reParentTrigger(luaInteger("movedId"), 0, group->getID());
+        QCOMPARE(triggerUnit->getTrigger(luaInteger("movedId"))->getParent(), group);
+
+        for (int line = 0; line < 4; ++line) {
+            runLua(qsl("feedTriggers('movedquietline\\n')"));
+        }
+
+        QCOMPARE(luaInteger("movedFires"), 3);
+        delete group;
+    }
+
+    // A line's root walk is marked before any script runs, so a root that its own match on a line fed
+    // from a script holds open has to reach the line that script's trigger matched, as it would unfiltered
+    void rootHeldOpenByItsMatchInANestedFeedFiresOnTheOuterLine()
+    {
+        QVERIFY2(runLua(qsl(R"(
+            nestedIds = {}
+            for index = 1, 80 do
+                nestedIds[index] = tempTrigger("qqnestedfiller" .. index .. "zz", function() end)
+            end
+            nestedIds[#nestedIds + 1] = tempTrigger("nestedfeederbait", function() feedTriggers("qqnestedopenedbaitzz\n") end)
+            nestedFires = 0
+            nestedOpenedId = tempTrigger("qqnestedopenedbaitzz", function() nestedFires = nestedFires + 1 end)
+            nestedIds[#nestedIds + 1] = nestedOpenedId
+            feedTriggers("nestedwarmupline\n")
+        )")),
+                 "the triggers did not compile");
+        QVERIFY2(mpHost->getTriggerUnit()->rootPrescanActive(), "the root prescan has not engaged, so it cannot skip the opened trigger");
+        TTrigger* opened = mpHost->getTriggerUnit()->getTrigger(luaInteger("nestedOpenedId"));
+        QVERIFY(opened);
+        // No Lua function sets how long a substring trigger stays open after it matches
+        opened->mStayOpen = 2;
+
+        runLua(qsl("feedTriggers('nestedfeederbait here\\n')"));
+        const int fires = luaInteger("nestedFires");
+        runLua(qsl("for _, id in ipairs(nestedIds) do killTrigger(id) end feedTriggers('nestedteardownline\\n')"));
+
+        QCOMPARE(fires, 2);
+    }
+
+    // Nothing refiles a multiline trigger when it opens a state, so a root one part-way through has to be
+    // offered a line holding only a later pattern's text
+    void multilineRootReachesItsLaterPatternWhileTheRootPrescanIsOn()
+    {
+        QVERIFY2(runLua(qsl(R"(
+            multilineIds = {}
+            for index = 1, 80 do
+                multilineIds[index] = tempTrigger("qqmultilinefiller" .. index .. "zz", function() end)
+            end
+            multilineFires = 0
+        )")),
+                 "the triggers did not compile");
+        // The plain-text multiline triggers Lua makes (perm*Trigger) have a line delta of 0, so only C++ can make one span lines
+        auto* pTrigger = new TTrigger(nullptr, mpHost);
+        pTrigger->setName(qsl("plainMultiline"));
+        QVERIFY(pTrigger->registerTrigger());
+        QVERIFY(pTrigger->setRegexCodeList({qsl("qzvjx opens"), qsl("plain closes")}, {REGEX_SUBSTRING, REGEX_SUBSTRING}));
+        pTrigger->setIsMultiline(true);
+        pTrigger->setConditionLineDelta(2);
+        QVERIFY(pTrigger->setScript(qsl("multilineFires = multilineFires + 1")));
+        pTrigger->setIsActive(true);
+        runLua(qsl("feedTriggers('multilinewarmupline\\n')"));
+        QVERIFY2(mpHost->getTriggerUnit()->rootPrescanActive(), "the root prescan has not engaged, so it cannot skip the multiline trigger");
+
+        runLua(qsl("feedTriggers('qzvjx opens\\n')"));
+        runLua(qsl("feedTriggers('plain closes\\n')"));
+        const int fires = luaInteger("multilineFires");
+        delete pTrigger;
+        runLua(qsl("for _, id in ipairs(multilineIds) do killTrigger(id) end feedTriggers('multilineteardownline\\n')"));
+
+        QCOMPARE(fires, 1);
+    }
+
+    // The editor recompiles a root in place, which only C++ can do, and its slot has to be refiled under the new text
+    void editedRootFiresOnItsNewPattern()
+    {
+        QVERIFY2(runLua(qsl(R"(
+            editedIds = {}
+            for index = 1, 80 do
+                editedIds[index] = tempTrigger("qqeditedfiller" .. index .. "zz", function() end)
+            end
+            editedFires = 0
+        )")),
+                 "the triggers did not compile");
+        auto* pTrigger = new TTrigger(nullptr, mpHost);
+        pTrigger->setName(qsl("editedRoot"));
+        QVERIFY(pTrigger->registerTrigger());
+        QVERIFY(pTrigger->setRegexCodeList({qsl("qzvjk")}, {REGEX_SUBSTRING}));
+        QVERIFY(pTrigger->setScript(qsl("editedFires = editedFires + 1")));
+        pTrigger->setIsActive(true);
+        runLua(qsl("feedTriggers('editedwarmupline\\n')"));
+        QVERIFY2(mpHost->getTriggerUnit()->rootPrescanActive(), "the root prescan has not engaged, so it cannot skip the edited trigger");
+
+        QVERIFY(pTrigger->setRegexCodeList({qsl("xjqwv")}, {REGEX_SUBSTRING}));
+        runLua(qsl("feedTriggers('xjqwv\\n')"));
+        const int fires = luaInteger("editedFires");
+        delete pTrigger;
+        runLua(qsl("for _, id in ipairs(editedIds) do killTrigger(id) end feedTriggers('editedteardownline\\n')"));
+
+        QCOMPARE(fires, 1);
+    }
+
+    // Deleting one child while most of the index stays filed unfiles its slot gram by gram, and the
+    // roots filed under the same text have to keep their entries. Lua cannot delete a permanent trigger.
+    // Half the roots are filed before the child and half after, so its slot sits among theirs whichever
+    // order free slots come back in.
+    void rootsSharingADeletedChildsTextStillFire()
+    {
+        QVERIFY2(runLua(qsl(R"(
+            sharedIds = {}
+            sharedFires = 0
+            local function armRoots()
+                for index = 1, 20 do
+                    sharedIds[#sharedIds + 1] = tempTrigger("qzsharedjx", function() sharedFires = sharedFires + 1 end)
+                end
+                feedTriggers("sharedwarmupline\n")
+            end
+            armRoots()
+            permGroup("sharedGroup", "trigger")
+            for index = 1, 40 do
+                permSubstringTrigger("sharedFiller" .. index, "sharedGroup", {"qqsharedfiller" .. index .. "zz"}, "")
+            end
+            permSubstringTrigger("sharedChild", "sharedGroup", {"qzsharedjx"}, "")
+            feedTriggers("sharedwarmupline\n")
+            armRoots()
+        )")),
+                 "the triggers did not compile");
+        auto* triggerUnit = mpHost->getTriggerUnit();
+        QVERIFY2(triggerUnit->rootPrescanActive(), "the root prescan has not engaged, so it cannot skip the roots");
+        QVERIFY2(triggerUnit->treeIndexFiledCount() >= 41, "the tree index has not engaged, so the child was never filed beside the roots");
+
+        delete triggerUnit->findTrigger(qsl("sharedChild"));
+        const quint64 rebuildsBefore = triggerUnit->prescanRebuildCount();
+        runLua(qsl("feedTriggers('sharedrefileline\\n')"));
+        // A reindex would refile the roots and mend whatever unfiling the child broke
+        QVERIFY2(triggerUnit->prescanRebuildCount() == rebuildsBefore, "the refiling reindexed, so it says nothing about unfiling one child");
+        runLua(qsl("feedTriggers('qzsharedjx\\n')"));
+        const int fires = luaInteger("sharedFires");
+        delete triggerUnit->findTrigger(qsl("sharedGroup"));
+        runLua(qsl("for _, id in ipairs(sharedIds) do killTrigger(id) end feedTriggers('sharedteardownline\\n')"));
+
+        QCOMPARE(fires, 40);
     }
 };
 

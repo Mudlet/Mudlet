@@ -64,7 +64,7 @@ TToolBar::TToolBar(Host* pHost, TAction* pA, const QString& name, QWidget* pW)
 void TToolBar::resizeEvent(QResizeEvent* e)
 {
     Q_UNUSED(e)
-    if (mpHost.isNull() || !mpHost->mainConsoleView()) {
+    if (!mpHost->mainConsoleView()) {
         return;
     }
     mpHost->mainConsoleView()->setToolBarLayoutChanged(this);
@@ -82,7 +82,7 @@ void TToolBar::setName(const QString& name)
 
 void TToolBar::moveEvent(QMoveEvent* e)
 {
-    if (!mpTAction || mpHost.isNull()) {
+    if (!mpTAction) {
         return;
     }
 
@@ -109,6 +109,11 @@ void TToolBar::slot_topLevelChanged(bool topLevel)
     if (mpTAction) {
         mpTAction->mToolbarLastFloatingState = topLevel;
     }
+}
+
+Host* TToolBar::getHost() const
+{
+    return mpHost;
 }
 
 void TToolBar::addButton(TFlipButton* pB)
@@ -228,6 +233,7 @@ void TToolBar::addActionToMenu(TAction* pAction, QMenu* pMenu)
     mpHost->mainConsoleView()->setActionToolBar(pAction, this);
     auto pEAction = new EAction(pAction->mpHost, QIcon(pAction->getIcon()), pAction->getName(), pAction->mID);
     pEAction->setCheckable(pAction->isPushDownButton());
+    pEAction->setChecked(pAction->isPushDownButton() && pAction->mButtonState);
     pEAction->setStatusTip(pAction->getName());
     mpHost->mainConsoleView()->replaceActionMenuEntry(pAction, pEAction);
     pMenu->addAction(pEAction);
@@ -298,16 +304,10 @@ void TToolBar::slot_pressed(const bool isChecked)
     // entries...
     pB->menu();
 
-    if (pA->isPushDownButton()) {
-        pA->mButtonState = isChecked;
-        mpHost->mainConsoleView()->mButtonState = (pA->mButtonState ? 2 : 1); // Was using 1 and 0 but that was wrong
-    } else {
-        pA->mButtonState = false;
-        pB->setChecked(false);                       // This does NOT invoke the clicked()!
-        mpHost->mainConsoleView()->mButtonState = 1; // Was effectively 0 but that is wrong
+    if (!pA->isPushDownButton()) {
+        pB->setChecked(false); // This does NOT invoke the clicked()!
     }
-
-    pA->execute();
+    pA->press(isChecked);
 }
 
 void TToolBar::clear()
@@ -341,9 +341,6 @@ void TToolBar::clear()
 // Needed to detect mouse clicking on areas not covered by a button or menu:
 void TToolBar::mousePressEvent(QMouseEvent* e)
 {
-    if (mpHost.isNull()) {
-        return;
-    }
     if (e->button() & Qt::AllButtons) {
         // move focus back to the active console / command line
         mpHost->setFocusOnHostActiveCommandLine();

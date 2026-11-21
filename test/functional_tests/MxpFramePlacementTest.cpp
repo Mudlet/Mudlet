@@ -103,10 +103,17 @@ private:
     // border changes and window resizes reposition frames from a zero timer
     void settle() { QTest::qWait(50ms); }
 
-    void showTab(const QString& hostname) const
+    void showTab(const QString& hostname)
     {
         mudlet::self()->mpTabBar->setCurrentIndex(mudlet::self()->mpTabBar->tabIndex(hostname));
-        QTest::qWait(500ms);
+        QPointer<Host> host = HostManager::self()->getHost(hostname);
+        QTest::qWaitFor(
+                [host]() {
+                    return host && host->mainConsoleView() && host->mainConsoleView()->isVisible();
+                },
+                5s);
+        // the newly shown console is laid out over more than one turn of the event loop
+        QTest::qWait(150ms);
     }
 
     // Loaded offline and only by the case that needs it. Reports rather than
@@ -122,11 +129,13 @@ private:
             return false;
         }
         runLua(qsl("loadProfile('%1', true)").arg(mSecondHostname));
-        for (int attempt = 0; attempt < 20 && mpSecondHost.isNull(); ++attempt) {
-            QTest::qWait(300ms);
-            mpSecondHost = HostManager::self()->getHost(mSecondHostname);
-        }
-        QTest::qWait(600ms);
+        QTest::qWaitFor(
+                [this]() {
+                    mpSecondHost = HostManager::self()->getHost(mSecondHostname);
+                    return mpSecondHost && mpSecondHost->mainConsoleView() && mudlet::self()->mpTabBar->tabIndex(mSecondHostname) >= 0;
+                },
+                6s);
+        settle();
         return !mpSecondHost.isNull();
     }
 
@@ -344,8 +353,11 @@ private slots:
         QCOMPARE(frame.y(), reservedArea.bottom() + 1 - 80);
         QCOMPARE(mpHost->borders().bottom(), 200);
         // an anchor that does not go through the same formula: the frame has to
-        // clear the command line as well as the reserved strip
-        QCOMPARE(frame.bottom() + 1, mpHost->mainConsoleView()->height() - mpHost->mainConsoleView()->mpCommandLine->height() - 120);
+        // clear the console's foot, the command line and the seam over it, as
+        // well as the reserved strip
+        const QWidget* pFoot = mpHost->mainConsoleView()->findChild<QWidget*>(qsl("consoleFoot"));
+        QVERIFY2(pFoot != nullptr, "the main console has no foot under its text");
+        QCOMPARE(frame.bottom() + 1, pFoot->y() - 120);
     }
 
     // WIDTH defaults to a percentage, which now resolves against the space the
@@ -953,7 +965,12 @@ private slots:
         const auto closeSecondProfile = qScopeGuard([this]() {
             showTab(mHostname);
             mudlet::self()->slot_closeProfileByName(mSecondHostname);
-            QTest::qWait(1000ms);
+            QTest::qWaitFor(
+                    [this]() {
+                        return !HostManager::self()->getHost(mSecondHostname);
+                    },
+                    5s);
+            settle();
         });
         showTab(mSecondHostname);
         QVERIFY2(mpHost->mainConsoleView()->isHidden(), "the profile should be in a background tab by now");
@@ -979,7 +996,12 @@ private slots:
         const auto closeSecondProfile = qScopeGuard([this]() {
             showTab(mHostname);
             mudlet::self()->slot_closeProfileByName(mSecondHostname);
-            QTest::qWait(1000ms);
+            QTest::qWaitFor(
+                    [this]() {
+                        return !HostManager::self()->getHost(mSecondHostname);
+                    },
+                    5s);
+            settle();
         });
         showTab(mSecondHostname);
         QVERIFY2(mpHost->mainConsoleView()->isHidden(), "the profile should be in a background tab by now");
@@ -1003,7 +1025,12 @@ private slots:
         const auto closeSecondProfile = qScopeGuard([this]() {
             showTab(mHostname);
             mudlet::self()->slot_closeProfileByName(mSecondHostname);
-            QTest::qWait(1000ms);
+            QTest::qWaitFor(
+                    [this]() {
+                        return !HostManager::self()->getHost(mSecondHostname);
+                    },
+                    5s);
+            settle();
         });
         showTab(mSecondHostname);
         QVERIFY2(mpHost->mainConsoleView()->isHidden(), "the profile should be in a background tab by now");

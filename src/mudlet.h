@@ -28,10 +28,11 @@
 
 #include "discord.h"
 #include "HostManager.h"
-#include "MudletReplay.h"
 #include "ShortcutsManager.h"
 #include "TAppFrontend.h"
+#include "uiDesign.h"
 #include "utils.h"
+#include <functional>
 #include <memory>
 
 #if defined(INCLUDE_UPDATER)
@@ -93,6 +94,7 @@ class TMCPServer;
 #endif
 class MudletInstanceCoordinator;
 class ShortcutManager;
+struct TelnetUriData;
 class TConsole;
 class TDebugFilterBar;
 class TDetachedWindow;
@@ -101,7 +103,6 @@ class TEvent;
 class TLabel;
 class translation;
 class TScrollBox;
-class TSpeechBridge;
 class TTabBar;
 class TToolBar;
 class TUiTour;
@@ -110,6 +111,7 @@ class mudlet : public QMainWindow, public Ui::main_window, public TAppFrontend
 {
     Q_OBJECT
     friend class ConnectionDialogOfflineProfileTest;
+    friend class ConsoleSearchBarTest;
 
 public:
     Q_DISABLE_COPY(mudlet)
@@ -117,16 +119,13 @@ public:
     ~mudlet() override;
 
     static bool loadEdbeeTheme(const QString& themeName, const QString& themeFile);
+    static bool ensureEdbeeTheme(const QString& themeName, const QString& themeFile);
     static bool loadLuaFunctionList(const QString& fileName = qsl(":/lua-function-list.json"));
     static mudlet* self();
     // This method allows better debugging when mudlet::self() is called inappropriately.
     static void start();
     static QImage getSplashScreen(bool releaseVersion, bool testVersion);
 
-
-    // translations done high enough will get a gold star to hide the last few percent
-    // as well as encourage translators to maintain it
-    static const int scmTranslationGoldStar = 95;
     // These have to be "inline" to satisfy the ODR (One Definition Rule):
     inline static QVariantHash smLuaFunctionNames;
     inline static QPointer<TConsole> smpDebugConsole;
@@ -134,6 +133,8 @@ public:
     inline static QPointer<TDebugFilterBar> smpDebugFilterBar;
     // adjust Mudlet settings to match Steam's requirements
     inline static bool smSteamMode = false;
+    // Set when a style was given with -style or QT_STYLE_OVERRIDE; the light appearance keeps it on macOS and Windows
+    inline static bool smStyleChosenByPlayer = false;
 
 
     void showEvent(QShowEvent*) override;
@@ -159,9 +160,11 @@ public:
     void commitLayoutUpdates(bool flush = false);
     bool saveFloatingDockGeometries();
     void restoreFloatingDockGeometries();
+    void growDockToSizeHint(QDockWidget*, bool onlyFromMinimum);
+    void growDockToSizeHintWhenShown(QDockWidget*);
     void deleteProfileData(const QString& profile, const QString& item);
     void disableToolbarButtons();
-    void doAutoLogin(const QString&, bool offline);
+    void doAutoLogin(const QString&, bool offline, bool useTlsThisSession = false);
     void enableToolbarButtons();
     void updateMainWindowToolbarState();
     void updateMapActionAvailability() override;
@@ -198,6 +201,7 @@ public:
     bool closeHeldOffByEventPump(Host*) const;
     Host* loadProfile(const QString&, const bool, const QString& saveFileName = QString());
     bool loadWindowLayout() override;
+    bool layoutLoading() const override { return mIsLoadingLayout; }
     enums::controlsVisibility menuBarVisibility() const { return mMenuBarVisibility; }
     bool canHideToolBar() const { return mMenuBarVisibility != enums::visibleNever; }
     bool migratePasswordsToProfileStorage();
@@ -210,7 +214,6 @@ public:
     bool openWebPage(const QString&) override;
 
     // Profile validation and orphan detection
-    bool hasOrphanedProfiles();
     QStringList getOrphanedProfiles();
     void reattachOrphanedProfiles();
     void processEventLoopHack() override;
@@ -218,18 +221,22 @@ public:
     void closeComposer(QObject* composer) override;
     QString getOpenFileName(const QString& title, const QString& location) override;
     QString getExistingDirectory(const QString& title, const QString& location) override;
+    void getOpenFileNameAsync(const QString& title, const QString& location, QObject* context, std::function<void(const std::optional<QString>&)> done) override;
+    void getExistingDirectoryAsync(const QString& title, const QString& location, QObject* context, std::function<void(const std::optional<QString>&)> done) override;
+    void clipboardTextAsync(QObject* context, std::function<void(const std::optional<QString>&)> done) override;
+    void setClipboardText(const QString& text) override;
     void readEarlySettings(const QSettings&);
     void readLateSettings(const QSettings&);
     void refreshTabBar();
     void refreshTabBarsAfterStyleChange();
-    // Used by a profile to tell the mudlet class
-    // to tell other profiles to reload the updated
-    // maps (via signal_profileMapReloadRequested(...))
-    void requestProfilesToReloadMaps(QList<QString>);
+    // mapFileName is a bare file name; each listed profile loads it from its own map folder
+    void requestProfilesToReloadMaps(QList<QString>, const QString& mapFileName);
     bool saveWindowLayout();
     bool saveWindowLayoutForScript() override;
     bool openProfile(const QString& profileName, bool connect) override;
-    bool requestProfileTabClose(const QString& profileName) override;
+    bool requestProfileClose(const QString& profileName) override;
+    // Destroys the profile's windows, so that none of them outlives its Host
+    void profileClosing(Host* pHost) override;
     void scanForMudletTranslations(const QString&);
     void scanForQtTranslations(const QString&);
     void setAppearance(enums::Appearance, const bool& loading = false);
@@ -242,20 +249,30 @@ public:
     void setShowIconsOnMenu(const Qt::CheckState);
     void setShowMapAuditErrors(const bool);
     void setInvertMapZoom(const bool);
+    void setColouredIcons(const bool);
     void setShowTabConnectionIndicators(const bool) override;
     int profileTabIndex(const QString& profileName) const override;
-    void setActiveProfileTab(const QString& profileName) override;
-    void resizeMainWindow(int width, int height) override { resize(width, height); }
+    bool setActiveProfileTab(const QString& profileName) override;
+    std::pair<bool, QString> resizeMainWindow(Host*, int width, int height) override
+    {
+        resize(width, height);
+        return {true, QString()};
+    }
     void setupPreInstallPackages(const QString&, const QString&, const bool);
     void setToolBarIconSize(int);
+    void restyleToolBarIcons();
+    void restyleMainToolBar();
+    static QString toolBarShellStyleSheet(const QString& barSelector);
+    static bool sheetStylesToolBars(const QString& sheet);
     void setToolBarVisibility(enums::controlsVisibility);
     void showChangelogIfUpdated();
     void slot_showConnectionDialog();
     void showConnectionDialog() override { slot_showConnectionDialog(); }
     void setCompactInputLineChecked(Host* pHost, bool checked) override;
     bool invertMapZoom() const { return mInvertMapZoom; }
+    bool colouredIcons() const { return mColouredIcons; }
     bool showTabConnectionIndicators() const override { return mShowTabConnectionIndicators; }
-    void showNotification(const QString& title, const QString& text, std::optional<int> msecs) override;
+    bool showNotification(const QString& title, const QString& text, std::optional<int> msecs) override;
     bool drawUpperLowerLevels() const override { return mDrawUpperLowerLevels; }
     void setDrawUpperLowerLevels(bool draw) override;
     // Addon toolbar button management
@@ -297,6 +314,10 @@ public:
     void setStorePasswordsSecurely(bool storeSecurely);
     enums::controlsVisibility toolBarVisibility() const { return mToolbarVisibility; }
     void updateDiscordNamedIcon();
+    // Shared with TDetachedWindow so both windows' Discord buttons read, and are translated, the same
+    static QString gameDiscordLabel(const QString& gameName);
+    // Plain text, for a status tip as it is; escape it before putting it in a rich text tooltip
+    static QString gameDiscordToolTip(const QString& gameName);
     void updateMultiViewControls();
     void writeSettings() override;
 #ifdef INCLUDE_MCPSERVER
@@ -331,11 +352,13 @@ public:
 
     // Telnet URI handling
     void handleTelnetUri(const QString& uri) override;
+    void connectFromGameLink(const QString& uri) override;
+    // Answers the question connectFromGameLink() asks, in place of the dialog; set by tests
+    std::function<bool(const QString& question)> mConfirmGameLink;
 
     enums::Appearance mAppearance = enums::Appearance::systemSetting;
-    // 1 (of 2) needed to work around a (Windows/MacOs specific QStyleFactory)
-    // issue:
-    QString mBG_ONLY_STYLESHEET;
+    QString backgroundOnlyStyleSheet(const QColor& fill) const;
+    bool mStyleDropsButtonFrame = false;
     // approximate max duration that 'Copy as image' is allowed to take
     // (seconds):
     int mCopyAsImageTimeout = 3;
@@ -347,7 +370,6 @@ public:
     // reported in the dictionary selection as the hunspell dictionary/affix
     // filename (e.g. a "xx" or "xx_YY" form rather than "words"):
     QHash<QString, QString> mDictionaryLanguageCodeMap;
-    Discord mDiscord;
     // Used for editor area, but
     // only ::ShowTabsAndSpaces
     // and ::ShowLineAndParagraphSeparators
@@ -368,7 +390,11 @@ public:
     QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
     // Flag to prevent connection dialog from opening during telnet:// URI processing
     bool mProcessingTelnetUri = false;
+    bool mGameLinkQuestionOpen = false;
     QToolBar* mpMainToolBar = nullptr;
+    // Never set on the bar directly: restyleMainToolBar() appends it to the design's rules on the same widget
+    QString mMainToolBarProfileStyleSheet;
+    QList<uiDesign::ActionGlyph> mToolBarGlyphs;
     QPointer<ShortcutsManager> mpShortcutsManager;
     TTabBar* mpTabBar = nullptr;
     // More modern Desktop styles no longer include icons on the buttons in
@@ -392,8 +418,7 @@ public:
     // sysApplicationFocusChangeEvent is raised on a change of that and not on
     // every transition Qt reports between its inactive states
     bool mApplicationActive = true;
-    // 2 (of 2) needed to work around a (Windows/MacOs specific QStyleFactory)
-    // issue:
+    // The caller's arg() fills in the ink, the fill and the hairline, in that order
     QString mTEXT_ON_BG_STYLESHEET;
     int mToolbarIconSize = 0;
     QMap<QString, translation> mTranslationsMap;
@@ -524,12 +549,13 @@ signals:
     void signal_passwordsMigratedToSecure();
     void signal_characterPasswordsMigrated();
     void signal_profileActivated(Host*, quint8);
-    void signal_profileMapReloadRequested(QList<QString>);
+    void signal_profileMapReloadRequested(QList<QString>, const QString& mapFileName);
     void signal_setToolBarIconSize(int);
     void signal_setTreeIconSize(int);
     void signal_shortcutsChanged();
     void signal_showIconsOnMenusChanged(const Qt::CheckState);
     void signal_showMapAuditErrorsChanged(bool);
+    void signal_colouredIconsChanged(bool);
     void signal_tabChanged(const QString&);
     void signal_toolBarVisibilityChanged(const enums::controlsVisibility);
     void signal_windowStateChanged(const Qt::WindowStates);
@@ -564,7 +590,7 @@ private slots:
 
 private:
     void assignKeySequences();
-    QString autodetectPreferredLanguage();
+    void keepFloatingDocksOnScreen();
 #ifdef INCLUDE_MCPSERVER
     // Everything setMCPEnabled() does bar the discovery file, which has to be squared
     // with whatever this leaves behind whichever way it goes
@@ -612,8 +638,6 @@ private:
     // const TBuffer::csmEncodingTable:
     QMap<QByteArray, QString> mEncodingNameMap;
     HostManager mHostManager;
-    // After mHostManager, so it is gone before the profiles that reach it are
-    MudletReplay mReplay;
     QKeySequence mKeySequenceCloseProfile;
     QKeySequence mKeySequenceConnect;
     QKeySequence mKeySequenceDisconnect;
@@ -656,6 +680,9 @@ private:
 #endif
     QPointer<QAction> mpActionAbout;
     QPointer<QAction> mpActionAboutWithUpdates;
+#if defined(INCLUDE_UPDATER)
+    bool mUpdateInstalled = false;
+#endif
     QPointer<QAction> mpActionAliases;
     QPointer<QAction> mpActionButtons;
     QPointer<QAction> mpActionCloseProfile;
@@ -700,7 +727,6 @@ private:
     QPointer<QToolButton> mpButtonConnect;
     QPointer<QToolButton> mpButtonDiscord;
     QPointer<QToolButton> mpButtonMute;
-    QPointer<TSpeechBridge> mpSpeechBridge;
     void refreshMicrophoneMarkers();
     QPointer<QToolButton> mpButtonPackageManagers;
     QHBoxLayout* mpHBoxLayout_profileContainer = nullptr;
@@ -743,6 +769,7 @@ private:
     // read-only value to see if the interface is light or dark. To set the value,
     // use setAppearance instead
     bool mInvertMapZoom = false; // true = old behavior (inverted), false = modern behavior (non-inverted)
+    bool mColouredIcons = false;
     QSplitter* mpSplitter_profileContainer = nullptr;
     // Argument to QDateTime::toString(...) to format the elapsed time display
     // on the mpToolBarReplay:
@@ -869,16 +896,7 @@ private:
     static constexpr int mCharacterModeWarningsMax = 3;     // Character mode
     static constexpr int mCompactInputLineTutorialsMax = 3; // Compact input line
 
-    // Telnet URI handling structures and methods
-    struct TelnetUriData
-    {
-        QString host;
-        int port = 23;
-        QString username;
-        bool useTls = false;
-    };
-
-    std::optional<TelnetUriData> parseTelnetUri(const QString& uri);
+    // Telnet URI handling methods
     QString findMatchingProfile(const QString& host, int port);
     QString createProfileForUri(const TelnetUriData& uriData);
 

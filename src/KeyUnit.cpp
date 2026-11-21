@@ -273,7 +273,9 @@ bool KeyUnit::enableKey(const QString& name)
         // whole subtrees, so a corpse never sits under a parent this loop keeps.
         pT->enableKey(name);
         found = true;
-        emit mpHost->signal_keyToggled(pT->getID());
+        if (!pT->isTemporary() || pT->getParent()) {
+            emit mpHost->signal_keyToggled(pT->getID());
+        }
     }
     return found;
 }
@@ -289,7 +291,9 @@ bool KeyUnit::disableKey(const QString& name)
         // Walks pT's children for the same name as well - see enableKey()
         pT->disableKey(name);
         found = true;
-        emit mpHost->signal_keyToggled(pT->getID());
+        if (!pT->isTemporary() || pT->getParent()) {
+            emit mpHost->signal_keyToggled(pT->getID());
+        }
     }
     return found;
 }
@@ -384,6 +388,10 @@ void KeyUnit::reParentKey(int childID, int oldParentID, int newParentID, int par
         pChild->Tree<TKey>::setParent(nullptr);
         addKeyRootNode(pChild, parentPosition, childPosition, true);
     }
+
+    // The profile save skips a top-level module member and the module save only walks its own
+    // folder, so an item moved out of a module that kept the mark would be saved nowhere
+    pChild->updateModuleMembership();
 }
 
 void KeyUnit::reParentKey(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position)

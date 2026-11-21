@@ -29,7 +29,9 @@
 #include <QDebug>
 #include <QTimer>
 #include <QTimerEvent>
+#if defined(INCLUDE_DISCORD_RPC)
 #include <QLibrary>
+#endif
 #include "../3rdparty/discord/rpc/include/discord_register.h"
 #include "../3rdparty/discord/rpc/include/discord_rpc.h"
 
@@ -173,6 +175,8 @@ class Discord : public QObject
 
     // Allows the functional test to simulate the logged-in Discord user:
     friend class TDiscordModeTest;
+    // Checks whether a presence is being published with no main window:
+    friend class HeadlessHostSmokeTest;
 
 public:
     explicit Discord(QObject *parent = nullptr);
@@ -216,14 +220,14 @@ public:
     QString getLargeImageText(Host* pHost) const { return mLargeImageTexts.value(pHost); }
     QString getSmallImage(Host* pHost) const { return mSmallImages.value(pHost); }
     QString getSmallImageText(Host* pHost) const { return mSmallImageTexts.value(pHost); }
-    QPair<int64_t ,int64_t> getTimeStamps(Host* pHost) const { return qMakePair(mStartTimes.value(pHost), mEndTimes.value(pHost)); }
+    QPair<int64_t, int64_t> getTimeStamps(Host* pHost) const { return qMakePair(mStartTimes.value(pHost), mEndTimes.value(pHost)); }
     QPair<int, int> getParty(Host* pHost) const { return qMakePair(mPartySize.value(pHost), mPartyMax.value(pHost)); }
 
     // Runs the Host::discordUserIdMatch(...) check for the given Host:
     bool discordUserIdMatch(Host* pHost) const;
 
 
-    const static QString mMudletApplicationId;
+    static const QString mMudletApplicationId;
 
 
 private:
@@ -264,7 +268,9 @@ private:
     // Mudlet:
     QMap<Host*, QString>mHostApplicationIDs;
 
+#if defined(INCLUDE_DISCORD_RPC)
     QScopedPointer<QLibrary> mpLibrary;
+#endif
 
     // Used to hold the per profile data independently of whichever application id
     // it will be used with:

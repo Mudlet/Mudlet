@@ -30,6 +30,7 @@ int TLinkStore::addLinks(const QStringList& links, const QStringList& hints, Hos
 {
     if (++mLinkID > mMaxLinks) {
         mLinkID = 1;
+        ++mLaps;
     }
 
     // Used to unref lua objects in the registry to avoid memory leaks
@@ -57,6 +58,16 @@ int TLinkStore::addLinks(const QStringList& links, const QStringList& hints, Hos
     }
 
     return mLinkID;
+}
+
+qint64 TLinkStore::issueOf(const int id) const
+{
+    if (!contains(id)) {
+        return 0;
+    }
+    // Those above the last id handed out were handed out on the lap before
+    const qint64 lap = id <= mLinkID ? mLaps : mLaps - 1;
+    return lap * mMaxLinks + id;
 }
 
 void TLinkStore::freeReference(Host* pH, const QVector<int>& oldReference)
@@ -97,20 +108,53 @@ void TLinkStore::removeLinkById(int id, Host* pH)
     mStylingStore.remove(id);
 }
 
-void TLinkStore::expireLinks(const QString& expireName, Host* pH)
+QString TLinkStore::tooltip(const int id) const
 {
-    if (expireName.isEmpty()) {
-        return;
-    }
-
-    QList<int> linkIds = mExpireToLinks.values(expireName);
-
-    for (const int linkId : std::as_const(linkIds)) {
-        removeLinkById(linkId, pH);
-    }
+    const QStringList hints = mHintStore.value(id);
+    return hints.size() > mLinkStore.value(id).size() ? hints.constFirst() : hints.join(QChar::LineFeed);
 }
 
-void TLinkStore::removeUnreferencedLinks(const QSet<int>& referencedIds, Host* pH)
+bool TLinkStore::opensMenu(const int id) const
+{
+    const qsizetype commands = mLinkStore.value(id).size();
+    return commands > 1 || mHintStore.value(id).size() > commands;
+}
+
+QList<TLinkStore::MenuItem> TLinkStore::menuItems(const int id) const
+{
+    const QStringList commands = mLinkStore.value(id);
+    const QStringList hints = mHintStore.value(id);
+    const QVector<int> references = mReferenceStore.value(id);
+    const qsizetype hintOffset = hints.size() > commands.size() ? 1 : 0;
+    QList<MenuItem> items;
+    for (qsizetype i = 0; i < commands.size(); ++i) {
+        const bool doesSomething = !commands.at(i).isEmpty() || references.value(i, 0);
+        // Too few hints is allowed for, as a script may have given them
+        const bool hasHint = i + hintOffset < hints.size();
+        MenuItem item;
+        item.label = hasHint ? hints.at(i + hintOffset) : commands.at(i);
+        item.enabled = doesSomething;
+        item.separator = !doesSomething && hasHint && item.label.isEmpty();
+        items.append(item);
+    }
+    return items;
+}
+
+QList<int> TLinkStore::expireLinks(const QString& expireName, Host* pH)
+{
+    if (expireName.isEmpty()) {
+        return {};
+    }
+
+    const QList<int> linkIds = mExpireToLinks.values(expireName);
+
+    for (const int linkId : linkIds) {
+        removeLinkById(linkId, pH);
+    }
+    return linkIds;
+}
+
+QList<int> TLinkStore::removeUnreferencedLinks(const QSet<int>& referencedIds, Host* pH)
 {
     QList<int> idsToRemove;
 
@@ -123,6 +167,7 @@ void TLinkStore::removeUnreferencedLinks(const QSet<int>& referencedIds, Host* p
     for (int id : idsToRemove) {
         removeLinkById(id, pH);
     }
+    return idsToRemove;
 }
 
 void TLinkStore::clearStyling(int id)

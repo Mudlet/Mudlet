@@ -44,11 +44,11 @@
 #include "TTextEdit.h"
 #include "dlgMapper.h"
 #include "mudlet.h"
+#include "uiDesign.h"
 
 #include <QAccessibleInterface>
 #include <QAccessibleWidget>
 #include <QApplication>
-#include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QFrame>
@@ -79,28 +79,12 @@ namespace {
 // Between the text panes and the vertical scroll bar; predictions of pane width must subtract it.
 constexpr int scrollBarSpacing = 1;
 
+constexpr int footSeamHeight = 1;
+
 // Windows 11 colours the handle for the app's colour scheme, not its surface: 45% black, invisible on a
 // black console. A style, not a style sheet: a widget's own sheet outranks every rule, so it would drop
 // setProfileStyleSheet() rules. Other styles draw the handle against their own groove, so it is visible
 // already, and keep hover/pressed feedback this painting lacks.
-bool consoleScrollBarStyleWanted()
-{
-    const QStyle* pStyle = QApplication::style();
-    if (!pStyle) {
-        return false;
-    }
-
-    // Mudlet's style is a proxy (MudletProxyStyle or DarkTheme) with no object name; use the base's.
-    QString styleName = pStyle->objectName();
-    if (styleName.isEmpty()) {
-        if (const auto* pProxy = qobject_cast<const QProxyStyle*>(pStyle); pProxy && pProxy->baseStyle()) {
-            styleName = pProxy->baseStyle()->objectName();
-        }
-    }
-    // Not windows10: its opaque handle on a light track has the same contrast on any console.
-    return !styleName.compare(qsl("windows11"), Qt::CaseInsensitive);
-}
-
 class ConsoleScrollBarStyle : public QProxyStyle
 {
 public:
@@ -110,9 +94,7 @@ public:
     {
         const auto* pSlider = qstyleoption_cast<const QStyleOptionSlider*>(pOption);
         const QColor handleColor = pWidget ? pWidget->property(csHandleColorProperty).value<QColor>() : QColor();
-        // Checked here, not at install, so a style switch (the appearance setting) needs no console
-        // told, and a test can stand in a Windows 11 style on any platform.
-        if (control != CC_ScrollBar || !pSlider || !handleColor.isValid() || !consoleScrollBarStyleWanted()) {
+        if (control != CC_ScrollBar || !pSlider || !handleColor.isValid() || !baseIsWindows11()) {
             QProxyStyle::drawComplexControl(control, pOption, pPainter, pWidget);
             return;
         }
@@ -146,6 +128,16 @@ public:
         pPainter->drawRoundedRect(handleRect.adjusted(0.5, 0.5, -0.5, -0.5), cornerRadius, cornerRadius);
         pPainter->restore();
     }
+
+private:
+    // The base, not the application style, draws the bar: QProxyStyle makes it from the -style override or
+    // the desktop's style, never the application's. Not windows10: its opaque handle on a light track has
+    // the same contrast on any console.
+    bool baseIsWindows11() const
+    {
+        const QStyle* pBase = baseStyle();
+        return pBase && !pBase->objectName().compare(qsl("windows11"), Qt::CaseInsensitive);
+    }
 };
 
 QStyle* consoleScrollBarStyle()
@@ -154,14 +146,13 @@ QStyle* consoleScrollBarStyle()
     return pStyle;
 }
 
-// The main console co-owns Host's model so the trigger pipeline outlives the
-// view; every other console owns its own model.
-std::shared_ptr<TConsoleModel> resolveConsoleModel(Host* pHost, const QString& name, const TConsole::ConsoleType type)
+// None for the main console, which uses Host's so the trigger pipeline runs without a view
+std::unique_ptr<TConsoleModel> ownConsoleModel(Host* pHost, const QString& name, const TConsole::ConsoleType type)
 {
     if (type == TConsole::MainConsole) {
-        return pHost->sharedMainConsoleModel();
+        return nullptr;
     }
-    auto model = std::make_shared<TConsoleModel>(pHost);
+    auto model = std::make_unique<TConsoleModel>(pHost);
     model->mConsoleName = name;
     model->mScriptAddressable = type.testAnyFlags(TConsole::UserWindow | TConsole::SubConsole | TConsole::Buffer);
     return model;
@@ -185,15 +176,40 @@ QPointer<TConsole> parentTConsole(QObject* start)
     }
     return qobject_cast<TConsole*>(ptr);
 }
+
+// Under an app style sheet QStyleSheetStyle pins a copy of each polished widget's palette onto it and
+// restores that copy on unpolish, so a palette set while polished is undone by the next setAppStyleSheet()
+void setPaletteWhileUnpolished(QWidget* pWidget, const QPalette& palette)
+{
+    QStyle* pStyle = pWidget->style();
+    pStyle->unpolish(pWidget);
+    pWidget->setPalette(palette);
+    pStyle->polish(pWidget);
+}
+
+// The viewport paints the background, but a child of a polished widget does not inherit its palette,
+// so the viewport is let go of its pinned copy while both are unpolished
+void setCommandLinePalette(TCommandLine* pCommandLine, const QPalette& palette)
+{
+    QStyle* pStyle = pCommandLine->style();
+    QWidget* pViewport = pCommandLine->viewport();
+    pStyle->unpolish(pViewport);
+    pStyle->unpolish(pCommandLine);
+    pCommandLine->setPalette(palette);
+    pViewport->setPalette(QPalette());
+    pStyle->polish(pCommandLine);
+    pStyle->polish(pViewport);
+}
 } // namespace
 
 // A high-performance text widget with split screen ability for scrolling back
 // Contains two TTextEdits, and is backed by a TBuffer
-TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidget* parent)
+TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidget* parent, std::unique_ptr<TConsoleModel> handedModel)
 : QWidget(parent)
 , mpHost(pH)
 , mDisplayFontDetails(pH->fontsAntiAlias())
-, mpModel(resolveConsoleModel(pH, name, type))
+, mpOwnModel(handedModel ? std::move(handedModel) : ownConsoleModel(pH, name, type))
+, mpModel(mpOwnModel ? mpOwnModel.get() : &pH->mainConsoleModel())
 , buffer(mpModel->buffer)
 , emergencyStop(new QToolButton)
 , mBgColor(mpModel->mBgColor)
@@ -493,13 +509,25 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     layerCommandLine->setSizePolicy(sizePolicy);
     layerCommandLine->setFocusPolicy(Qt::NoFocus);
 
-    layerCommandLine->setMaximumHeight(31);
-    layerCommandLine->setMinimumHeight(31);
+    layerCommandLine->setMaximumHeight(commandLineLayerHeight(31));
+    layerCommandLine->setMinimumHeight(commandLineLayerHeight(31));
     layerCommandLine->setMinimumWidth(300);
 
-    layoutLayer2 = new QHBoxLayout(layerCommandLine);
+    mpFootSeam = new QWidget;
+    mpFootSeam->setObjectName(qsl("consoleFootSeam"));
+    mpFootSeam->setFixedHeight(footSeamHeight);
+    mpFootSeam->setAutoFillBackground(true);
+
+    auto commandLineLayerLayout = new QVBoxLayout(layerCommandLine);
+    commandLineLayerLayout->setContentsMargins(0, 0, 0, 0);
+    commandLineLayerLayout->setSpacing(0);
+    if (mType != MainConsole) {
+        commandLineLayerLayout->addWidget(mpFootSeam);
+    }
+    layoutLayer2 = new QHBoxLayout;
     layoutLayer2->setContentsMargins(0, 0, 0, 0);
     layoutLayer2->setSpacing(0);
+    commandLineLayerLayout->addLayout(layoutLayer2);
 
     mpButtonMainLayer = new QWidget;
     mpButtonMainLayer->setObjectName(qsl("mpButtonMainLayer"));
@@ -709,6 +737,20 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         auto* pShortcut_find = new QShortcut(QKeySequence::Find, this);
         pShortcut_find->setContext(Qt::WindowShortcut);
         connect(pShortcut_find, &QShortcut::activated, this, &TConsole::showSearchBar);
+
+        // No command line here to take the key and copy for the panes, as the main console's does
+        mUpperPane->setFocusPolicy(Qt::ClickFocus);
+        mLowerPane->setFocusPolicy(Qt::ClickFocus);
+        auto* pShortcut_copy = new QShortcut(QKeySequence::Copy, this);
+        pShortcut_copy->setContext(Qt::WidgetWithChildrenShortcut);
+        connect(pShortcut_copy, &QShortcut::activated, this, [this]() {
+            // Selecting in one pane leaves the other's selection behind, so the clicked one goes first
+            TTextEdit* pPane = mLowerPane->hasFocus() ? mLowerPane : mUpperPane;
+            if (pPane->mSelectedRegion.isEmpty()) {
+                pPane = (pPane == mUpperPane) ? mLowerPane : mUpperPane;
+            }
+            pPane->slot_copySelectionToClipboard();
+        });
     }
 
     if (mType == MainConsole) {
@@ -733,7 +775,14 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         commandSplitter->setCollapsible(0, false); // command line cannot collapse
         commandSplitter->setCollapsible(1, false); // search layer cannot collapse
 
-        centralLayout->addWidget(commandSplitter);
+        mpFoot = new QWidget(this);
+        mpFoot->setObjectName(qsl("consoleFoot"));
+        auto footLayout = new QVBoxLayout(mpFoot);
+        footLayout->setContentsMargins(0, 0, 0, 0);
+        footLayout->setSpacing(0);
+        footLayout->addWidget(mpFootSeam);
+        footLayout->addWidget(commandSplitter);
+        centralLayout->addWidget(mpFoot);
         restoreCommandSearchSettings();
     } else {
         centralLayout->addWidget(layerCommandLine);
@@ -795,7 +844,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         // They always use "Control Pictures" to show control characters:
         mControlCharacter = ControlCharacterMode::Picture;
         refreshView();
-    } else if (mpHost) {
+    } else {
         connect(mpHost, &Host::signal_controlCharacterHandlingChanged, this, &TConsole::slot_changeControlCharacterHandling);
     }
 
@@ -830,16 +879,21 @@ TConsole::~TConsole()
         TDebug::setSink(nullptr);
     }
 
-    // Host co-owns the main console's model, so the model - and its buffer -
-    // can outlive this view. ~QObject() would only drop these connections once
-    // it runs, leaving the buffer notifying a half-destroyed widget for the
-    // whole of this teardown, so drop them up front.
+    // The main console's model, and its buffer, belong to Host and outlive this
+    // view. ~QObject() would only drop these connections once it runs, leaving
+    // the buffer notifying a half-destroyed widget for the whole of this
+    // teardown, so drop them up front.
     disconnect(&mpModel->mNotifier, nullptr, this, nullptr);
 
     // Backstop: TMainConsole deregisters sub-consoles it destroys, but one can also die with the
     // widget it was created into, e.g. a scroll box.
-    if (mpHost && (mType & (SubConsole | UserWindow | Buffer))) {
-        mpHost->windowRegistry().deregisterSubConsole(mConsoleName, mpModel.get());
+    if (mType & (SubConsole | UserWindow | Buffer)) {
+        mpHost->windowRegistry().deregisterSubConsole(mConsoleName, mpModel);
+        // Now, not in ~QObject: ~QWidget destroys our command line first, and its destroyed()
+        // handler looks consoles up by name, which would reach this one half destroyed.
+        if (auto pMainConsole = mpHost->mainConsoleView()) {
+            pMainConsole->forgetSubConsole(this);
+        }
     }
 
 #if defined(DEBUG_CODEPOINT_PROBLEMS)
@@ -865,9 +919,6 @@ void TConsole::resizeConsole()
 
 void TConsole::raiseMudletSysWindowResizeEvent(const int overallWidth, const int overallHeight)
 {
-    if (mpHost.isNull()) {
-        return;
-    }
     TEvent mudletEvent{};
     mudletEvent.mArgumentList.append(QLatin1String("sysWindowResizeEvent"));
     mudletEvent.mArgumentList.append(QString::number(overallWidth - mBorders.left() - mBorders.right()));
@@ -903,19 +954,15 @@ void TConsole::resizeEvent(QResizeEvent* event)
         layoutLayer2->activate();
     }
 
-    // Move before resizing: resizing first could leave the display overrunning
-    // its parent frame, clipping it and making TTextEdit::updateScreenView()
-    // undercount the visible rows:
-    mpMainDisplay->move(mBorders.left(), mBorders.top());
     if (mType & (MainConsole | SubConsole | UserWindow) && mpCommandLine && !mpCommandLine->isHidden()) {
         mpMainFrame->resize(x, y);
         mpBaseVFrame->resize(x, y);
         mpBaseHFrame->resize(x, y);
         x -= (mpLeftToolBar->width() + mpRightToolBar->width());
         y -= mpTopToolBar->height();
-        // The mBorders components will be all zeros for all but the MainConsole:
-        mpMainDisplay->resize(x - mBorders.left() - mBorders.right(), y - mBorders.top() - mBorders.bottom() - mpCommandLine->height());
+        layoutMainDisplay();
     } else {
+        mpMainDisplay->move(mBorders.left(), mBorders.top());
         mpMainFrame->resize(x, y);
         // Sized before this frame's layout has run, while the bar still has Qt's 100x30 default
         // geometry, so use its size hint - exact, as its vertical policy is Fixed in a QVBoxLayout.
@@ -940,8 +987,9 @@ void TConsole::resizeEvent(QResizeEvent* event)
     }
 
     // Sync Host dimensions on resize so wraps and NAWS reflect the current pane width.
-    if ((mType & MainConsole) && !mpHost.isNull() && mUpperPane && !mUpperPane->visibleRegion().isEmpty()) {
-        syncHostScreenDimensions(mUpperPane->visibleRegion().boundingRect().width(), -1);
+    const QSize upperPane = (mType & MainConsole) && mUpperPane ? mUpperPane->drawableSize() : QSize();
+    if (!upperPane.isEmpty()) {
+        syncHostScreenDimensions(upperPane.width(), -1);
 
         // Background-tab consoles share this container but get no resize event, so size them from here.
         // A detached profile has its own window.
@@ -982,23 +1030,19 @@ void TConsole::resizeEvent(QResizeEvent* event)
         const bool preventLuaEvent = (getMainWindowSize() == mOldSize);
         mOldSize = getMainWindowSize();
         // Laying out a hidden console, as above, resizes its command line with no event to report it
-        if (!mpHost.isNull()) {
-            mpHost->windowRegistry().setMainWindowSize(mOldSize);
-        }
+        mpHost->windowRegistry().setMainWindowSize(mOldSize);
         if (preventLuaEvent) {
             return;
         }
-        if (!mpHost.isNull()) {
-            TLuaInterpreter* pLua = mpHost->getLuaInterpreter();
-            const QString func = "handleWindowResizeEvent";
-            const QString n = "WindowResizeEvent";
-            pLua->call(func, n);
+        TLuaInterpreter* pLua = mpHost->getLuaInterpreter();
+        const QString func = "handleWindowResizeEvent";
+        const QString n = "WindowResizeEvent";
+        pLua->call(func, n);
 
-            raiseMudletSysWindowResizeEvent(x, y);
-        }
+        raiseMudletSysWindowResizeEvent(x, y);
     }
     //create the sysUserWindowResize Event for automatic resizing with Geyser
-    if (mType & (UserWindow) && !mpHost.isNull()) {
+    if (mType & (UserWindow)) {
         TLuaInterpreter* pLua = mpHost->getLuaInterpreter();
         const QString func = "handleWindowResizeEvent";
         const QString n = "WindowResizeEvent";
@@ -1015,6 +1059,18 @@ void TConsole::resizeEvent(QResizeEvent* event)
         mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mpHost->raiseEvent(mudletEvent);
     }
+}
+
+void TConsole::layoutMainDisplay()
+{
+    const int x = width() - mpLeftToolBar->width() - mpRightToolBar->width();
+    const int y = height() - mpTopToolBar->height() - mpCommandLine->height() - footSeamHeightShown();
+    // Move before resizing: resizing first could leave the display overrunning
+    // its parent frame, clipping it and making TTextEdit::updateScreenView()
+    // undercount the visible rows:
+    mpMainDisplay->move(mBorders.left(), mBorders.top());
+    // The mBorders components will be all zeros for all but the MainConsole:
+    mpMainDisplay->resize(x - mBorders.left() - mBorders.right(), y - mBorders.top() - mBorders.bottom());
 }
 
 void TConsole::refresh()
@@ -1042,9 +1098,9 @@ void TConsole::refresh()
         y -= mpTopToolBar->height();
     }
 
-    // Move before resizing, see comment in resizeEvent():
+    // Move before resizing, see comment in layoutMainDisplay():
     mpMainDisplay->move(mBorders.left(), mBorders.top());
-    mpMainDisplay->resize(x - mBorders.left() - mBorders.right(), y - mBorders.top() - mBorders.bottom() - mpCommandLine->height());
+    mpMainDisplay->resize(x - mBorders.left() - mBorders.right(), y - mBorders.top() - mBorders.bottom() - mpCommandLine->height() - footSeamHeightShown());
 
     if (!mpCommandLine.isNull()) {
         mpCommandLine->adjustHeight();
@@ -1186,36 +1242,16 @@ void TConsole::slot_toggleReplayRecording()
         return;
     }
     cTelnet& telnet = mpHost->mTelnet;
-    if (!telnet.recordingReplay()) {
-        const QString directoryLogFile = MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, mProfileName);
-        const QString mLogFileName = qsl("%1/%2.dat").arg(directoryLogFile, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
-        const QDir dirLogFile;
-        if (!dirLogFile.exists(directoryLogFile)) {
-            dirLogFile.mkpath(directoryLogFile);
-        }
-        if (!telnet.startReplayRecording(mLogFileName)) {
-            // clicked() fires after the button has toggled itself on:
-            replayButton->setChecked(false);
-            qWarning() << "TConsole: failed to open replay file for writing:" << telnet.replayRecordingErrorString();
-            //: Informational message displayed when replay recording file could not be opened. %1 is the reason
-            printSystemMessage(tr("Failed to open replay recording file for writing: %1").arg(telnet.replayRecordingErrorString()) % QChar::LineFeed);
-            return;
-        }
-        printSystemMessage(tr("Replay recording has started. File: %1").arg(telnet.replayRecordingFileName()) % QChar::LineFeed);
+    telnet.toggleReplayRecording();
+    if (telnet.recordingReplay()) {
         //: Button tooltip for the replay recording toggle button
         replayButton->setToolTip(utils::richText(tr("Stop recording of replay")));
-    } else {
-        if (!telnet.stopReplayRecording()) {
-            qWarning() << "TConsole::slot_toggleReplayRecording: error saving replay: " << telnet.replayRecordingErrorString();
-            //: Informational message displayed when replay recording is stopped but could not be saved. %1 is the reason
-            printSystemMessage(tr("Replay recording has been stopped, but couldn't be saved: %1").arg(telnet.replayRecordingErrorString()) % QChar::LineFeed);
-        } else {
-            //: Informational message displayed when replay recording is stopped
-            printSystemMessage(tr("Replay recording has been stopped. File: %1").arg(telnet.replayRecordingFileName()) % QChar::LineFeed);
-        }
-        //: Button tooltip for the replay recording toggle button
-        replayButton->setToolTip(utils::richText(tr("Start recording of replay")));
+        return;
     }
+    // clicked() fires after the button has toggled itself on, so one that could not start is turned off again
+    replayButton->setChecked(false);
+    //: Button tooltip for the replay recording toggle button
+    replayButton->setToolTip(utils::richText(tr("Start recording of replay")));
 }
 
 QString getColorCode(QColor color)
@@ -1273,8 +1309,8 @@ void TConsole::changeColors()
             commandLinePalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
             commandLinePalette.setColor(QPalette::Base, mpHost->mCommandLineBgColor);
             commandLinePalette.setColor(QPalette::Window, mpHost->mCommandLineBgColor);
-            mpCommandLine->setPalette(commandLinePalette);
-            mpButtonMainLayer->setPalette(commandLinePalette);
+            setCommandLinePalette(mpCommandLine, commandLinePalette);
+            setPaletteWhileUnpolished(mpButtonMainLayer, commandLinePalette);
             mpCommandLine->mRegularPalette = commandLinePalette;
             mpCommandLine->setStyleSheet(styleSheet);
         }
@@ -1293,6 +1329,15 @@ void TConsole::changeColors()
         updateMainFrameTransparency();
     } else {
         Q_ASSERT_X(false, "TConsole::changeColors()", "invalid TConsole type detected");
+    }
+    applyFootSeamColour();
+    // The settings dialog and an import restyle only the main console, yet every foot mixes these colours
+    if (auto pMainConsole = qobject_cast<TMainConsole*>(this); pMainConsole && !mpHost.isNull()) {
+        for (const QString& name : mpHost->windowRegistry().subConsoleNames()) {
+            if (TConsole* pSubConsole = pMainConsole->subConsoleWidget(name)) {
+                pSubConsole->applyFootSeamColour();
+            }
+        }
     }
 
     if (mType != MainConsole) {
@@ -1417,37 +1462,61 @@ void TConsole::scrollUp(int lines)
         return;
     }
 
-    const bool lowerAppears = mLowerPane->isHidden();
-    mLowerPane->mCursorY = buffer.size();
-    mLowerPane->show();
-    mLowerPane->updateScreenView();
-    mLowerPane->forceUpdate();
+    // With every line already on screen there is nothing to scroll back to, and a split would only show them twice
+    if (mLowerPane->isHidden() && mUpperPane->imageTopLine() == 0) {
+        return;
+    }
 
-    if (lowerAppears) {
+    if (showLowerPane()) {
         QTimer::singleShot(0ms, this, [this, lines]() {
             mUpperPane->scrollUp(mLowerPane->getRowCount() + lines);
         });
-        if (mudlet::self()->showSplitscreenTutorial()) {
-#if defined(Q_OS_MACOS)
-            const QString infoMsg = tr("[ INFO ]  - Split-screen scrollback activated. Press <⌘>+<ENTER> to cancel.");
-#else
-            const QString infoMsg = tr("[ INFO ]  - Split-screen scrollback activated. Press <CTRL>+<ENTER> to cancel.");
-#endif
-            mpHost->postMessage(infoMsg);
-            mudlet::self()->showedSplitscreenTutorial();
-        }
     } else {
         mUpperPane->scrollUp(lines);
     }
     slot_adjustAccessibleNames();
 }
 
+void TConsole::scrollTo(int line)
+{
+    // A buffer is never drawn, so it never shows itself scrolled back - as TNullConsoleFrontend has it
+    if (mType == Buffer || ((mType & (UserWindow | SubConsole)) && !mScrollingEnabled)) {
+        return;
+    }
+
+    // The split-screen tutorial prints here, and in a full buffer that trims lines from above the target
+    const qint64 linesRemovedBefore = buffer.linesRemovedTotal();
+    showLowerPane();
+    line = static_cast<int>(std::max<qint64>(0, line - (buffer.linesRemovedTotal() - linesRemovedBefore)));
+    mUpperPane->scrollTo(line);
+    mUpperPane->updateScrollBar(buffer.mCursorY);
+    slot_adjustAccessibleNames();
+}
+
+bool TConsole::showLowerPane()
+{
+    const bool lowerAppears = mLowerPane->isHidden();
+    mLowerPane->mCursorY = buffer.size();
+    mLowerPane->show();
+    mLowerPane->updateScreenView();
+    mLowerPane->forceUpdate();
+
+    if (lowerAppears && mudlet::self()->showSplitscreenTutorial()) {
+#if defined(Q_OS_MACOS)
+        const QString infoMsg = tr("[ INFO ]  - Split-screen scrollback activated. Press <⌘>+<ENTER> to cancel.");
+#else
+        const QString infoMsg = tr("[ INFO ]  - Split-screen scrollback activated. Press <CTRL>+<ENTER> to cancel.");
+#endif
+        mpHost->postMessage(infoMsg);
+        mudlet::self()->showedSplitscreenTutorial();
+    }
+    return lowerAppears;
+}
+
 void TConsole::showEvent(QShowEvent* event)
 {
     if (mType & (MainConsole | Buffer)) {
-        if (mpHost) {
-            mAlertOnNewData = false;
-        }
+        mAlertOnNewData = false;
     }
     QWidget::showEvent(event); //FIXME-refac: might cause problems
 }
@@ -1455,11 +1524,9 @@ void TConsole::showEvent(QShowEvent* event)
 void TConsole::hideEvent(QHideEvent* event)
 {
     if (mType & (MainConsole | Buffer)) {
-        if (mpHost) {
-            if (mudlet::self()->mWindowMinimized) {
-                if (mpHost->mAlertOnNewData) {
-                    mAlertOnNewData = true;
-                }
+        if (mudlet::self()->mWindowMinimized) {
+            if (mpHost->mAlertOnNewData) {
+                mAlertOnNewData = true;
             }
         }
     }
@@ -1654,6 +1721,26 @@ bool TConsole::updateWindowBackgroundCoverPixmap()
     return true;
 }
 
+int TConsole::commandLineLayerHeight(const int commandLineHeight) const
+{
+    return mType == MainConsole ? commandLineHeight : commandLineHeight + footSeamHeight;
+}
+
+int TConsole::footSeamHeightShown() const
+{
+    return mpFootSeam && mpFootSeam->isVisibleTo(this) ? footSeamHeight : 0;
+}
+
+void TConsole::applyFootSeamColour()
+{
+    if (!mpFootSeam || mpHost.isNull()) {
+        return;
+    }
+    QPalette seamPalette;
+    seamPalette.setColor(QPalette::Window, uiDesign::blend(mpHost->mCommandLineBgColor, mpHost->mCommandLineFgColor, uiDesign::scmConsoleFootSeamStrength));
+    mpFootSeam->setPalette(seamPalette);
+}
+
 void TConsole::setCmdVisible(bool isVisible)
 {
     const QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
@@ -1675,16 +1762,16 @@ void TConsole::setCmdVisible(bool isVisible)
         layoutLayer2->addWidget(mpCommandLine);
     }
     if (mType == MainConsole) {
-        if (mpHost) {
-            if (!mpHost->getCompactInputLine() && isVisible) {
-                mpButtonMainLayer->setVisible(true);
-            } else {
-                mpButtonMainLayer->setVisible(false);
-            }
+        if (!mpHost->getCompactInputLine() && isVisible) {
+            mpButtonMainLayer->setVisible(true);
+        } else {
+            mpButtonMainLayer->setVisible(false);
         }
-
     } else {
         mpButtonMainLayer->setVisible(false);
+    }
+    if (mpFoot) {
+        mpFoot->setVisible(isVisible);
     }
     layerCommandLine->setVisible(isVisible);
     mpCommandLine->setVisible(isVisible);
@@ -1693,7 +1780,7 @@ void TConsole::setCmdVisible(bool isVisible)
     setProxyForFocus(isVisible ? mpCommandLine : nullptr);
     // Need to remove the TCommandLine from the last used stack
     // if it has been explicitly hidden:
-    if (!isVisible && mpHost && mpHost->mainConsoleView()) {
+    if (!isVisible && mpHost->mainConsoleView()) {
         mpHost->mainConsoleView()->forgetCommandLine(mpCommandLine);
     }
 }
@@ -1710,9 +1797,6 @@ void TConsole::refreshView() const
 
 void TConsole::raiseFontChangeEvent()
 {
-    if (!mpHost) {
-        return;
-    }
     if (!(mType & (MainConsole | UserWindow | SubConsole))) {
         return;
     }
@@ -1737,7 +1821,7 @@ void TConsole::setFont(const QFont& newFont, const bool forceChange)
         QWidget::setFont(newFont);
         // Update associated TCommandLine's:
         if (mType & (MainConsole | SubConsole | UserWindow)) {
-            if (mpHost && mpHost->mainConsoleView()) {
+            if (mpHost->mainConsoleView()) {
                 for (auto commandLine : mpHost->mainConsoleView()->subCommandLineWidgets()) {
                     auto pConsole = commandLine->console();
                     if (pConsole && (pConsole == this)) {
@@ -2081,10 +2165,10 @@ void TConsole::slot_searchBufferUp()
         } while (searchX > -1);
 
         if (found) {
-            // Scroll to show the match
-            scrollUp(buffer.mCursorY - searchY - 3);
-            mUpperPane->forceUpdate();
+            // Set first, so that a trim as the scroll opens the split screen moves it with the match
             mCurrentSearchResult = searchY;
+            scrollTo(std::min(searchY + 3, buffer.getLastLineNumber()));
+            mUpperPane->forceUpdate();
             return;
         }
     }
@@ -2124,10 +2208,10 @@ void TConsole::slot_searchBufferDown()
         } while (searchX > -1);
 
         if (found) {
-            // Scroll to show the match
-            scrollUp(buffer.mCursorY - searchY - 3);
-            mUpperPane->forceUpdate();
+            // Set first, so that a trim as the scroll opens the split screen moves it with the match
             mCurrentSearchResult = searchY;
+            scrollTo(std::min(searchY + 3, buffer.getLastLineNumber()));
+            mUpperPane->forceUpdate();
             return;
         }
     }
@@ -2139,11 +2223,9 @@ void TConsole::slot_searchBufferDown()
 int TConsole::upperPaneWidthFor(const int containerWidth) const
 {
     int paneWidth = containerWidth - (mpLeftToolBar->width() + mpRightToolBar->width());
-    if (!mpHost.isNull()) {
-        // Not mBorders: it is only refreshed on layout, so is stale for a background console.
-        const QMargins borders = mpHost->borders();
-        paneWidth -= borders.left() + borders.right();
-    }
+    // Not mBorders: it is only refreshed on layout, so is stale for a background console.
+    const QMargins borders = mpHost->borders();
+    paneWidth -= borders.left() + borders.right();
     if (!mpScrollBar->isHidden()) {
         paneWidth -= mpScrollBar->width() + scrollBarSpacing;
     }
@@ -2157,10 +2239,8 @@ int TConsole::upperPaneHeightFor(const int containerHeight) const
         return -1;
     }
     int paneHeight = containerHeight - mpTopToolBar->height();
-    if (!mpHost.isNull()) {
-        const QMargins borders = mpHost->borders();
-        paneHeight -= borders.top() + borders.bottom();
-    }
+    const QMargins borders = mpHost->borders();
+    paneHeight -= borders.top() + borders.bottom();
     if (mpCommandLine) {
         paneHeight -= mpCommandLine->height();
     }
@@ -2173,7 +2253,7 @@ int TConsole::upperPaneHeightFor(const int containerHeight) const
 // Either dimension can be -1 to leave what the Host already has.
 void TConsole::syncHostScreenDimensions(const int paneWidthPx, const int paneHeightPx)
 {
-    if (mpHost.isNull() || !mUpperPane) {
+    if (!mUpperPane) {
         return;
     }
     const QFontMetrics metrics(mUpperPane->font());
@@ -2202,7 +2282,7 @@ void TConsole::syncHiddenScreenDimensions()
     // Only for a console hidden by a tab switch. One sharing the container (multi-view, or an unassigned
     // splitter share) is on screen and sizes itself; a detached one has its own window.
     const QWidget* container = parentWidget();
-    if (mType != MainConsole || mpHost.isNull() || !isHidden() || !container) {
+    if (mType != MainConsole || !isHidden() || !container) {
         return;
     }
     mudlet* const app = mudlet::self();
@@ -2223,7 +2303,7 @@ QSize TConsole::getMainWindowSize() const
     const QSize consoleSize = predicted ? parentWidget()->size() : size();
     const int toolbarWidth = mpLeftToolBar->width() + mpRightToolBar->width();
     const int toolbarHeight = mpTopToolBar->height();
-    const int commandLineHeight = mpCommandLine->height();
+    const int commandLineHeight = mpCommandLine->height() + footSeamHeightShown();
     const QSize mainWindowSize(consoleSize.width() - toolbarWidth, consoleSize.height() - (commandLineHeight + toolbarHeight));
 
     // A profile being switched to gets its geometry over several events, so in
@@ -2351,105 +2431,7 @@ void TConsole::raiseMudletMousePressOrReleaseEvent(QMouseEvent* event, const boo
         return;
     }
 
-    // Else if NOT the CentralDebugConsole or the ErrorConsole then bring the
-    // focus to the current profile in the main application window:
-    TEvent mudletEvent{};
-    mudletEvent.mArgumentList.append(isPressEvent ? qsl("sysWindowMousePressEvent") : qsl("sysWindowMouseReleaseEvent"));
-    switch (event->button()) {
-    case Qt::LeftButton:
-        mudletEvent.mArgumentList.append(QString::number(1));
-        break;
-    case Qt::RightButton:
-        mudletEvent.mArgumentList.append(QString::number(2));
-        break;
-    case Qt::MiddleButton:
-        mudletEvent.mArgumentList.append(QString::number(3));
-        break;
-    case Qt::BackButton:
-        mudletEvent.mArgumentList.append(QString::number(4));
-        break;
-    case Qt::ForwardButton:
-        mudletEvent.mArgumentList.append(QString::number(5));
-        break;
-    case Qt::TaskButton:
-        mudletEvent.mArgumentList.append(QString::number(6));
-        break;
-    case Qt::ExtraButton4:
-        mudletEvent.mArgumentList.append(QString::number(7));
-        break;
-    case Qt::ExtraButton5:
-        mudletEvent.mArgumentList.append(QString::number(8));
-        break;
-    case Qt::ExtraButton6:
-        mudletEvent.mArgumentList.append(QString::number(9));
-        break;
-    case Qt::ExtraButton7:
-        mudletEvent.mArgumentList.append(QString::number(10));
-        break;
-    case Qt::ExtraButton8:
-        mudletEvent.mArgumentList.append(QString::number(11));
-        break;
-    case Qt::ExtraButton9:
-        mudletEvent.mArgumentList.append(QString::number(12));
-        break;
-    case Qt::ExtraButton10:
-        mudletEvent.mArgumentList.append(QString::number(13));
-        break;
-    case Qt::ExtraButton11:
-        mudletEvent.mArgumentList.append(QString::number(14));
-        break;
-    case Qt::ExtraButton12:
-        mudletEvent.mArgumentList.append(QString::number(15));
-        break;
-    case Qt::ExtraButton13:
-        mudletEvent.mArgumentList.append(QString::number(16));
-        break;
-    case Qt::ExtraButton14:
-        mudletEvent.mArgumentList.append(QString::number(17));
-        break;
-    case Qt::ExtraButton15:
-        mudletEvent.mArgumentList.append(QString::number(18));
-        break;
-    case Qt::ExtraButton16:
-        mudletEvent.mArgumentList.append(QString::number(19));
-        break;
-    case Qt::ExtraButton17:
-        mudletEvent.mArgumentList.append(QString::number(20));
-        break;
-    case Qt::ExtraButton18:
-        mudletEvent.mArgumentList.append(QString::number(21));
-        break;
-    case Qt::ExtraButton19:
-        mudletEvent.mArgumentList.append(QString::number(22));
-        break;
-    case Qt::ExtraButton20:
-        mudletEvent.mArgumentList.append(QString::number(23));
-        break;
-    case Qt::ExtraButton21:
-        mudletEvent.mArgumentList.append(QString::number(24));
-        break;
-    case Qt::ExtraButton22:
-        mudletEvent.mArgumentList.append(QString::number(25));
-        break;
-    case Qt::ExtraButton23:
-        mudletEvent.mArgumentList.append(QString::number(26));
-        break;
-    case Qt::ExtraButton24:
-        mudletEvent.mArgumentList.append(QString::number(27));
-        break;
-    default:
-        mudletEvent.mArgumentList.append(QString::number(0));
-    }
-    QPoint pos = event->position().toPoint();
-    mudletEvent.mArgumentList.append(QString::number(pos.x()));
-    mudletEvent.mArgumentList.append(QString::number(pos.y()));
-    mudletEvent.mArgumentList.append(mConsoleName);
-    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    mpHost->raiseEvent(mudletEvent);
+    mpHost->raiseWindowMouseEvent(mConsoleName, *event, isPressEvent);
 
     // Focus this console's command line, not the "active" one
     // This ensures clicking on a console focuses its own command line
@@ -2728,6 +2710,8 @@ void TConsole::setCaretMode(bool enabled)
         Q_ASSERT_X(!mUpperPane->focusProxy(), "TConsole:setCaretMode(false) FAIL", "About to set a focusPolicy but there is a focusProxy in place that will get it instead!");
         mUpperPane->setFocusPolicy(Qt::ClickFocus);
         setProxyForFocus(mpCommandLine);
+        // Only the caret gives a link focus, so the link it was on stops showing it
+        buffer.setFocusedLink(0);
         // Carefull - if there is a FocusProxy for this element then IT gets the policy
     }
 }
@@ -2969,7 +2953,7 @@ void TConsole::applyTimeStamps()
     mUpperPane->toggleTimeStamps(state);
     mLowerPane->toggleTimeStamps(state);
 
-    if (mpHost && mType == TConsole::MainConsole) {
+    if (mType == TConsole::MainConsole) {
         // Update and send out the NAWS data:
         mpHost->updateDisplayDimensions();
     }
@@ -2981,28 +2965,22 @@ void TConsole::applyTimeStamps()
 
 void TConsole::slot_saveCommandSearchSettings()
 {
-    if (!mpHost) {
-        return;
-    }
-
-    QSettings* pQSettings = MudletApp::getQSettings();
-    if (!pQSettings) {
-        return;
-    }
-
-    pQSettings->setValue("commandSearchSplitterState", commandSplitter->saveState());
+    mpHost->writeProfileIniData(qsl("MainConsole/CommandSearchSplitterState"), QString::fromLatin1(commandSplitter->saveState().toBase64()));
 }
 
 void TConsole::restoreCommandSearchSettings()
 {
-    if (!mpHost) {
+    const QString profileState = mpHost->readProfileIniData(qsl("MainConsole/CommandSearchSplitterState"));
+    if (!profileState.isEmpty()) {
+        commandSplitter->restoreState(QByteArray::fromBase64(profileState.toLatin1()));
         return;
     }
 
+    // Mudlet once kept one position for every profile; it is the best guess for a profile yet to have its own
     QSettings* pQSettings = MudletApp::getQSettings();
     if (!pQSettings) {
         return;
     }
 
-    commandSplitter->restoreState(pQSettings->value("commandSearchSplitterState").toByteArray());
+    commandSplitter->restoreState(pQSettings->value(qsl("commandSearchSplitterState")).toByteArray());
 }

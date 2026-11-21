@@ -42,9 +42,9 @@
 #include "TEvent.h"
 #include "TMainConsole.h"
 #include "TMap.h"
+#include "TMapPainter.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
-#include "dlgMapper.h"
 #include "mudlet.h"
 
 #include <QtEvents>
@@ -69,6 +69,7 @@
 #include <QToolTip>
 #include <QVector2D>
 #include <QVBoxLayout>
+#include <QWindow>
 #include <QVector2D>
 #include <algorithm>
 #include <array>
@@ -97,7 +98,7 @@ ModernGLWidget::ModernGLWidget(TMap* pMap, Host* pHost, QWidget* parent)
 , mIndexBuffer(QOpenGLBuffer::IndexBuffer)
 , mpHost(pHost)
 {
-    // Per widget rather than application wide, so the classic 3D view keeps its compatibility profile context
+    // Per widget, as the classic 3D view takes the default format for its compatibility profile context
     QSurfaceFormat format = QSurfaceFormat::defaultFormat();
     format.setVersion(3, 3);
     format.setProfile(QSurfaceFormat::CoreProfile);
@@ -107,7 +108,7 @@ ModernGLWidget::ModernGLWidget(TMap* pMap, Host* pHost, QWidget* parent)
     applyStyle();
     if (mpMap) {
         connect(mpMap, &TMap::signal_mapperSettingChanged, this, [this](const TMap::MapperSetting setting) {
-            if (setting == TMap::MapperSetting::Style) {
+            if (setting == TMap::MapperSetting::Style || setting == TMap::MapperSetting::BackgroundColor) {
                 applyStyle();
             }
         });
@@ -424,6 +425,17 @@ bool ModernGLWidget::event(QEvent* event)
             return true;
         }
     }
+#if defined(Q_OS_MACOS)
+    // QWidget::event() steps the focus on a Tab unless Command or Option is held, so while the keys pan a Ctrl+Tab
+    // would not reach keyPressEvent()
+    if (event->type() == QEvent::KeyPress) {
+        auto* keyEvent = static_cast<QKeyEvent*>(event);
+        if ((keyEvent->key() == Qt::Key_Tab || keyEvent->key() == Qt::Key_Backtab) && (keyEvent->modifiers() & Qt::MetaModifier)) {
+            keyPressEvent(keyEvent);
+            return true;
+        }
+    }
+#endif
     // The keys go on to the command line, so it must also win the shortcuts it wins with focus of its own
     if (event->type() == QEvent::ShortcutOverride) {
         if (searchKeyed(static_cast<QKeyEvent*>(event))) {
@@ -435,6 +447,7 @@ bool ModernGLWidget::event(QEvent* event)
         TCommandLine* pCommandLine = commandLine();
         if (!searching && pCommandLine && pCommandLine->claimsShortcutOverride(static_cast<QKeyEvent*>(event))) {
             event->accept();
+            TCommandLine::pressClaimedControlTab(this, static_cast<QKeyEvent*>(event));
             return true;
         }
     }
@@ -524,6 +537,7 @@ void ModernGLWidget::showFailure(const QString& message, const QString& advice)
     const QString tryClassic = tr("Turn off \"Modern 3D mapper\" in <a href=\"settings\">Settings</a>, Advanced, Experiments to try the classic 3D view; if that stays blank too, use the 2D map.");
     mpFailureLabel->setText(qsl("<p>%1</p><p>%2</p>").arg(message.toHtmlEscaped(), advice.isEmpty() ? tryClassic : advice.toHtmlEscaped()));
     mpFailureLabel->show();
+    applyStacking();
 }
 
 void ModernGLWidget::initializeGL()
@@ -535,9 +549,20 @@ void ModernGLWidget::initializeGL()
     if (mpFailureLabel) {
         mpFailureLabel->hide();
     }
+    applyStacking();
 
     // Reparenting to another window replaces the context, and everything made in the old one goes with it
     connect(context(), &QOpenGLContext::aboutToBeDestroyed, this, &ModernGLWidget::cleanup);
+
+    // Qt asks for every QOpenGLWidget's context to share with its window's, and drops the share when the platform refuses it; the window then
+    // shows its own texture with the same id. A window not yet composing with OpenGL has nothing to share, which grabFramebuffer() allows
+    if (const QWindow* pWindow = window()->windowHandle(); pWindow && pWindow->surfaceType() == QSurface::OpenGLSurface && !context()->shareContext()) {
+        //: Shown in place of the 3D map when the window cannot show what the modern 3D mapper draws
+        showFailure(tr("The modern 3D mapper cannot show its map in this window."),
+                    //: Second paragraph of the message shown in place of the 3D map when the window cannot show what the modern 3D mapper draws
+                    tr("On macOS this happens when the classic 3D view was opened in the same window first, from this profile or another. Restart Mudlet to use the modern 3D mapper here."));
+        return;
+    }
 
     const QSurfaceFormat actualFormat = context()->format();
     if (actualFormat.version() < qMakePair(3, 3)) {
@@ -818,7 +843,7 @@ void ModernGLWidget::paintGL()
     if (infoBackground != mpHost->mMapInfoBg && style.infoTextColor.isValid()) {
         infoColor = style.infoTextColor;
     }
-    const int infoBottom = dlgMapper::paintMapInfo(mFrameTimer, painter, mpHost, mpMap, mRID, mAID, 0, infoColor, 10, 10, width(), mFontHeight, infoBackground, style.labelFontFamily);
+    const int infoBottom = TMapPainter::paintMapInfo(mFrameTimer, painter, mpHost, mpMap, mRID, mAID, 0, infoColor, 10, 10, width(), mFontHeight, infoBackground, style.labelFontFamily);
     paintScannerOverlay(painter, infoBottom > 10 ? infoBottom : 0);
 
     if (mRectangleSelecting) {
@@ -2110,7 +2135,8 @@ void ModernGLWidget::renderRooms()
 
         auto rx = static_cast<float>(pR->x());
         auto ry = static_cast<float>(pR->y());
-        const QPointF nameOffset = showRoomNames && !pR->name.isEmpty() ? RoomAppearance::nameOffset(pR->userData.value(ROOM_UI_NAMEPOS)) : QPointF();
+        const bool showThisRoomName = showRoomNames && RoomAppearance::nameShown(*pR);
+        const QPointF nameOffset = showThisRoomName ? RoomAppearance::nameOffset(pR->userData.value(ROOM_UI_NAMEPOS)) : QPointF();
         const float highlightReach = pR->highlight ? pR->highlightRadius * style.highlightScale / 2.0f : 0.0f;
         if (!keptRooms && outOfView(QVector3D(rx, ry, static_cast<float>(pR->z())), qMax(static_cast<float>(std::hypot(nameOffset.x(), nameOffset.y())), highlightReach))) {
             continue;
@@ -2436,7 +2462,7 @@ void ModernGLWidget::renderRooms()
         }
 
         // Only the viewed level's, as only the 2D map's are
-        if (detailed && showRoomNames && look.onViewedLevel() && !pR->name.isEmpty()) {
+        if (detailed && showThisRoomName && look.onViewedLevel()) {
             // One room's size below the room on screen, or standing up just under its front edge, then moved by its
             // offset along the map, in rooms' spacing, y downward
             const QVector3D shift(static_cast<float>(nameOffset.x()), -static_cast<float>(nameOffset.y()), 0.0f);
@@ -3338,8 +3364,14 @@ void ModernGLWidget::applyStyle()
     if (mapStyle().playerMarker != MapStyle::PlayerMarker::Pulse) {
         stopPulse();
     }
-    // Only an opaque view may tell Qt that it paints over everything behind it
-    const bool translucent = backgroundColor().alpha() < 255;
+    applyStacking();
+}
+
+void ModernGLWidget::applyStacking()
+{
+    // Only an opaque view may tell Qt that it paints over everything behind it; a failure's message is a child, which
+    // Qt draws under a view stacked on top
+    const bool translucent = backgroundColor().alpha() < 255 && mFailureMessage.isEmpty();
     setAttribute(Qt::WA_OpaquePaintEvent, !translucent);
     setAttribute(Qt::WA_AlwaysStackOnTop, translucent);
     // Qt asks for the window, not only this widget, to be repainted when stacking on top changes
@@ -4283,6 +4315,10 @@ bool ModernGLWidget::followingPlayer() const
         return false;
     }
     if (!mShiftMode || !mpMap) {
+        return true;
+    }
+    // The area it was taken to was deleted, and paintGL() would only re-present that area's last frame
+    if (mpMap->mpRoomDB && !mpMap->mpRoomDB->getArea(mAID)) {
         return true;
     }
     // Not while rooms are dragged, as they follow the pointer across the map and would go along with the view
@@ -6647,10 +6683,12 @@ void ModernGLWidget::paintScannerOverlay(QPainter& painter, const int top)
     bracket.setAlphaF(0.45f);
     constexpr int margin = 12;
     constexpr int leg = 18;
+    // The top legs fall in the map info box's 10px top padding, above its text
+    constexpr int bracketInset = 4;
     painter.save();
     painter.setRenderHint(QPainter::Antialiasing);
     painter.setPen(QPen(bracket, 1.5));
-    const QRectF frame = QRectF(rect()).adjusted(margin, margin, -margin, -margin);
+    const QRectF frame = QRectF(rect()).adjusted(bracketInset, bracketInset, -bracketInset, -bracketInset);
     for (const QPointF& corner : {frame.topLeft(), frame.topRight(), frame.bottomLeft(), frame.bottomRight()}) {
         // Each leg runs from the corner toward the middle
         const qreal across = corner.x() < frame.center().x() ? leg : -leg;
@@ -6673,7 +6711,7 @@ void ModernGLWidget::paintScannerOverlay(QPainter& painter, const int top)
     const QString scan = metrics.elidedText(tr("SCAN // %1").arg(areaName.toUpper()), Qt::ElideRight, textWidth);
     //: The 3D map's readout in the Hologram style, below the area's name: the level being viewed (%1), the area's lowest and highest levels (%2 and %3, as -1 and +3) and how many rooms it has
     const QString levels = metrics.elidedText(
-            tr("Z %1   LEVELS %2 … %3   %n ROOMS", nullptr, static_cast<int>(pArea->getAreaRooms().size())).arg(signedLevel(mMapCenterZ), signedLevel(pArea->min_z), signedLevel(pArea->max_z)),
+            tr("Z %1   LEVELS %2 … %3   %n ROOM(S)", nullptr, static_cast<int>(pArea->getAreaRooms().size())).arg(signedLevel(mMapCenterZ), signedLevel(pArea->min_z), signedLevel(pArea->max_z)),
             Qt::ElideRight,
             textWidth);
     // So that it reads over a crowded map
@@ -7799,6 +7837,8 @@ void ModernGLWidget::keyPressEvent(QKeyEvent* event)
         pCommandLine->activateWindow();
         pCommandLine->setFocus(Qt::OtherFocusReason);
         QCoreApplication::sendEvent(pCommandLine, event);
+        // Or one the command line left would reach the map around this view, which hands it over again
+        event->accept();
         return;
     }
     QOpenGLWidget::keyPressEvent(event);

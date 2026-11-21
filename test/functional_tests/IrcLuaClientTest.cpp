@@ -645,6 +645,31 @@ private slots:
         QCOMPARE(bufferTitles(), QStringList({mServerHost}));
     }
 
+    // Lines other than messages and notices are reported against the buffer
+    // they arrived in, and are ordinary traffic that must not warn
+    void test_ordinaryServerTrafficReachesLuaWithoutWarnings()
+    {
+        QTest::failOnWarning(QRegularExpression(qsl("TIrcClient|dlgIRC|messageTarget")));
+        QVERIFY(openJoinedClient());
+
+        QVERIFY(mpIrcServer->sendLine(qsl(":%1 375 %2 :- %1 Message of the day -").arg(mServerName, mNick).toUtf8()));
+        QVERIFY(mpIrcServer->sendLine(qsl(":%1 372 %2 :- be nice").arg(mServerName, mNick).toUtf8()));
+        QVERIFY(mpIrcServer->sendLine(qsl(":%1 376 %2 :End of /MOTD command.").arg(mServerName, mNick).toUtf8()));
+        QVERIFY(mpIrcServer->sendLine(qsl(":%1 332 %2 %3 :all about lua").arg(mServerName, mNick, mChannel).toUtf8()));
+        QVERIFY(mpIrcServer->sendLine(qsl(":%1 353 %2 = %3 :%2 alice").arg(mServerName, mNick, mChannel).toUtf8()));
+        QVERIFY(mpIrcServer->sendLine(qsl(":%1 366 %2 %3 :End of /NAMES list.").arg(mServerName, mNick, mChannel).toUtf8()));
+        QVERIFY(mpIrcServer->sendLine(qsl(":bob!u@h JOIN %1").arg(mChannel).toUtf8()));
+        QVERIFY(mpIrcServer->sendLine(qsl(":bob!u@h PART %1 :later").arg(mChannel).toUtf8()));
+
+        const QString expected = qsl("%1>%2:[MOTD] - be nice\n\n"
+                                     "%1>%3:[TOPIC] all about lua\n"
+                                     "%1>%3:! %3 has 2 users: %4 alice\n"
+                                     "bob>%3:! bob has joined %3\n"
+                                     "bob>%3:! bob has left %3 (later)")
+                                         .arg(mServerName, mServerHost, mChannel, mNick);
+        QVERIFY2(waitForEvents(expected), qPrintable(events()));
+    }
+
     void test_closingAChannelShowsTheServerBufferAfterTheServerRenamedIt()
     {
         QVERIFY(openJoinedClient());

@@ -29,9 +29,8 @@ class Host;
 // The one replay the application plays at a time, whichever profile plays it:
 // who holds it, how fast it runs and how much recorded time it has covered.
 // cTelnet reads the file and feeds it through; this is the state around that
-// which the main window shows on its replay toolbar. A member of the
-// application object like HostManager, so a profile reaches it through self()
-// rather than through the main window.
+// which the main window shows on its replay toolbar. Owned by HostManager, so a
+// profile with no main window has one too, and reaches it through self().
 class MudletReplay : public QObject
 {
     Q_OBJECT
@@ -51,6 +50,9 @@ public:
     // Claims the replay for pHost, at normal speed and from the start; false
     // while another replay holds it
     bool start(Host*);
+    // Sends the start of the claimed replay, once its file has been found
+    // playable, so that one whose file is corrupt from the start is never shown
+    void announce();
     // Releases the replay, however it ended
     void over();
     bool running() const { return mRunning; }
@@ -64,12 +66,14 @@ public:
     void speedDown();
 
     // How much of the recording has been played, by its own timestamps
-    const QTime& elapsed() const { return mElapsed; }
+    qint64 elapsedMSecs() const { return mElapsedMSecs; }
+    // The same as a clock face, which goes round each day
+    QTime elapsed() const { return QTime(0, 0).addMSecs(static_cast<int>(mElapsedMSecs % (24 * 60 * 60 * 1000))); }
     // Called per chunk with the gap the recording has before it: counts the
     // gap as played and returns how long to wait at the current speed
     int advance(int gapMsec)
     {
-        mElapsed = mElapsed.addMSecs(gapMsec);
+        mElapsedMSecs += gapMsec;
         return gapMsec / mSpeed;
     }
 
@@ -82,7 +86,7 @@ private:
     inline static MudletReplay* smpSelf = nullptr;
 
     QPointer<Host> mpHost;
-    QTime mElapsed;
+    qint64 mElapsedMSecs = 0;
     int mSpeed = 1;
     bool mRunning = false;
 };

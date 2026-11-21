@@ -521,6 +521,9 @@ private slots:
     // recognizer coming into existence, and that happens once per process.
     void test_aCapabilityChangeReachesEveryProfile()
     {
+#if !defined(INCLUDE_SPEECH_ENGINES)
+        QSKIP("this build of Mudlet cannot load a speech engine library");
+#endif
         if (mSystemEngineWins) {
             QSKIP("libvosk answers the bare name here, so the loader would reach it before the stand-in this case installs");
         }
@@ -1078,6 +1081,9 @@ private slots:
     // file they do not have.
     void test_aBrokenLibraryIsReportedFromThePathThatHoldsIt()
     {
+#if !defined(INCLUDE_SPEECH_ENGINES)
+        QSKIP("this build of Mudlet cannot load a speech engine library");
+#endif
         if (mSystemEngineWins) {
             QSKIP("libvosk answers the bare name here, so the loader reaches it before anything this case installs");
         }

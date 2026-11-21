@@ -75,7 +75,7 @@ TTimer::~TTimer()
 
         if (isTemporary()) {
             if (mScript.isEmpty()) {
-                mpHost->mLuaInterpreter.delete_luafunction(this);
+                mpHost->mLuaInterpreter.delete_luafunction(mLuaFunctionRef);
             } else {
                 mpHost->mLuaInterpreter.delete_luafunction(mFuncName);
             }
@@ -145,6 +145,14 @@ bool TTimer::setIsActive(bool b)
     return condition1 && condition2;
 }
 
+bool TTimer::stayActive()
+{
+    if (mpQTimer->isActive() && activate() && canBeUnlocked()) {
+        return true;
+    }
+    return setIsActive(true);
+}
+
 
 void TTimer::start()
 {
@@ -187,7 +195,7 @@ bool TTimer::setScript(const QString& script)
     // and the destructor's mScript-based branch would otherwise leak the registry entry.
     if (mRegisteredAnonymousLuaFunction) {
         if (mpHost) {
-            mpHost->mLuaInterpreter.delete_luafunction(this);
+            mpHost->mLuaInterpreter.delete_luafunction(mLuaFunctionRef);
         }
         mRegisteredAnonymousLuaFunction = false;
     }
@@ -254,7 +262,7 @@ void TTimer::execute()
 
     if (isTemporary()) {
         if (mRegisteredAnonymousLuaFunction) {
-            mpHost->mLuaInterpreter.call_luafunction(this, mName);
+            mpHost->mLuaInterpreter.call_luafunction(mLuaFunctionRef, mName);
         } else if (!mScript.isEmpty()) {
             mpHost->mLuaInterpreter.compileAndExecuteScript(mScript);
         }
@@ -443,4 +451,37 @@ QString TTimer::packageName(TTimer* pTimer)
     }
 
     return QString();
+}
+
+void TTimer::updateModuleMembership()
+{
+    if (!mpHost || mModuleMasterFolder) {
+        return;
+    }
+    const TTimer* pRoot = getRoot();
+    if (pRoot != this) {
+        setModuleMembership(pRoot->mModuleMasterFolder);
+        return;
+    }
+    // An unsynced module's file is never rewritten, so it still holds what was loaded from it
+    const bool heldByItsModule = !mLoadedFromModule.isEmpty() && mpHost->mInstalledModules.contains(mLoadedFromModule) && !mpHost->moduleSavesBack(mLoadedFromModule);
+    setModuleMembership(heldByItsModule);
+}
+
+void TTimer::setModuleMembership(const bool member)
+{
+    if (mModuleMasterFolder) {
+        return;
+    }
+    mModuleMember = member;
+    // Uninstalling or reloading a module removes every top-level item with its name as package name
+    if (!member && mpHost && mpHost->mInstalledModules.contains(mPackageName)) {
+        mPackageName.clear();
+    }
+    if (!member) {
+        mLoadedFromModule.clear();
+    }
+    for (auto* pChild : *mpMyChildrenList) {
+        static_cast<TTimer*>(pChild)->setModuleMembership(member);
+    }
 }

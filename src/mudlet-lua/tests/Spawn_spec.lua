@@ -9,6 +9,18 @@
 
 describe("spawn", function()
 
+  local unavailable = "spawn: starting processes is not available in this build of Mudlet"
+  local _, probeError = pcall(spawn, function() end, "/nonexistent/mudlet-spawn-test")
+  if probeError == unavailable then
+    it("should raise in a build that cannot start processes", function()
+      local ok, err = pcall(spawn, function() end, "echo")
+      assert.is_false(ok)
+      assert.are.equal(unavailable, err)
+    end)
+    pending("this build of Mudlet cannot start processes")
+    return
+  end
+
   describe("argument checking", function()
 
     it("should reject a call with no process name", function()
@@ -100,6 +112,34 @@ describe("spawn", function()
       end
 
       assert.are.same({"spawnBurstA\n", "spawnBurstB\n", "spawnBurstC\n"}, lines)
+    end)
+
+    it("should hand the callback a line whole when it holds a NUL byte", function()
+      if getOS() == "windows" then
+        pending("no POSIX shell to write a NUL byte")
+        return
+      end
+      if not os.getenv("MUDLET_TEST_MODE") then
+        pending("waiting for the child's output needs pumpEvents(), which is refused outside MUDLET_TEST_MODE")
+        return
+      end
+
+      local lines = {}
+      spawn(function(line)
+        table.insert(lines, line)
+      end, "/bin/sh", "-c", "printf 'spawnNulA\\000spawnNulB\\n'")
+      finally(function()
+        pumpEvents(2200)
+      end)
+
+      for _ = 1, 500 do
+        if #lines >= 1 then
+          break
+        end
+        pumpEvents(20)
+      end
+
+      assert.are.same({"spawnNulA\0spawnNulB\n"}, lines)
     end)
 
   end)
@@ -216,20 +256,57 @@ describe("spawn", function()
   -- A child outlives the Lua state that spawned it unless something ends it:
   -- once its profile closed, the next line it wrote was read off the freed
   -- interpreter, and after a reset it called whatever the new state held at the
-  -- old callback reference. Each child below writes a line after a second and,
-  -- if still alive a second later, touches a file. The suite's own profile
-  -- cannot be torn down from inside it, so each test loads a second one.
+  -- old callback reference. Each child below touches a file and writes a line
+  -- only once the spec releases it, after the teardown is over: a teardown can
+  -- outlast any fixed head start, as the sysExitEvent handlers and the profile
+  -- save run first, and a child on a timer then acts before it is due to be
+  -- ended. The suite's own profile cannot be torn down from inside it, so each
+  -- test loads a second one.
   describe("a profile torn down while its process runs", function()
+    -- Pumps events until `condition` holds or `timeoutMs` has run out, and
+    -- returns whether it held
+    local function waitUntil(condition, timeoutMs)
+      for _ = 1, timeoutMs / 50 do
+        if condition() then
+          return true
+        end
+        pumpEvents(50)
+      end
+      return condition() and true or false
+    end
+
     -- Writes a profile whose script is `script` with its %s replaced by the
-    -- spawn() call, and returns the file the child touches if it survives
+    -- spawn() call, and returns the files the child touches: `started` as it
+    -- starts, `survivor` if it is still running once `release` is called, and
+    -- `gaveUp` if it stopped waiting first
     local function makeProfile(name, script)
-      local survivor = getMudletHomeDir() .. "/" .. name .. "-survivor"
-      onCleanup(function() os.remove(survivor) end)
-      os.remove(survivor)
-      local command = string.format("sleep 1; echo spawnAfterTeardown; sleep 1; touch '%s'", survivor)
-      local child = string.format([[spawn(function(line) raiseGlobalEvent("mudletSpecSpawnLine", line) end, "/bin/sh", "-c", %q)]], command)
-      makeFixtureProfile(name, string.format(script, child))
-      return survivor
+      local base = getMudletHomeDir() .. "/" .. name
+      local child = {started = base .. "-started", go = base .. "-go", survivor = base .. "-survivor", gaveUp = base .. "-gaveup"}
+      local function removeFiles()
+        for _, path in pairs(child) do
+          os.remove(path)
+        end
+      end
+      onCleanup(removeFiles)
+      removeFiles()
+      -- Gives up after 30s so a survivor of a failed run does not linger. The
+      -- script lands in the profile's XML unescaped, so it cannot hold & or <.
+      local command = string.format(
+        "touch '%s'; n=0; until [ -e '%s' ] || [ $n -ge 300 ]; do sleep 0.1; n=$((n + 1)); done; if [ -e '%s' ]; then touch '%s'; echo spawnAfterTeardown; else touch '%s'; fi",
+        child.started, child.go, child.go, child.survivor, child.gaveUp)
+      local call = string.format([[spawn(function(line) raiseGlobalEvent("mudletSpecSpawnLine", line) end, "/bin/sh", "-c", %q)]], command)
+      makeFixtureProfile(name, string.format(script, call))
+      return child
+    end
+
+    -- Lets a child that outlived its teardown act, and waits long enough for
+    -- one polling every 0.1s to have done so many times over. One that gave up
+    -- first, as it would at once where sleep takes no fractions, could never
+    -- act, so that fails rather than passing as an ended child.
+    local function release(child, lines)
+      assert.is_nil(lfs.attributes(child.gaveUp), "the child stopped waiting before it was released")
+      assert(io.open(child.go, "w")):close()
+      waitUntil(function() return #lines > 0 or lfs.attributes(child.survivor) ~= nil end, 2000)
     end
 
     local function collectLines()
@@ -247,17 +324,16 @@ describe("spawn", function()
       end
       local name = "mudlet-spec-spawn-closed"
       local lines = collectLines()
-      local survivor = makeProfile(name, "%s")
+      local child = makeProfile(name, "%s")
 
       assert.is_true(loadProfile(name, true))
+      assert.is_true(waitUntil(function() return lfs.attributes(child.started) ~= nil end, 10000), "the profile's process never started")
       assert.is_true(closeProfile(name))
-      for _ = 1, 30 do
-        pumpEvents(100)
-      end
+      assert.is_true(waitUntil(function() return not loaded(name) end, 10000), "the profile never finished closing")
+      release(child, lines)
 
-      assert.is_false(loaded(name))
       assert.are.same({}, lines)
-      assert.is_nil(lfs.attributes(survivor), "the closed profile's process was still running")
+      assert.is_nil(lfs.attributes(child.survivor), "the closed profile's process was still running")
     end)
 
     it("should end the process when its profile is reset", function()
@@ -271,25 +347,33 @@ describe("spawn", function()
         reruns = reruns + 1
       end)
       onCleanup(function() killAnonymousEventHandler(handler) end)
+      -- told by the script, as the reset can end the child before it touches its started file
+      local spawned = 0
+      local spawnedHandler = registerAnonymousEventHandler("mudletSpecSpawnStarted", function()
+        spawned = spawned + 1
+      end)
+      onCleanup(function() killAnonymousEventHandler(spawnedHandler) end)
       -- the reset runs the script again, which must not start a second child
-      local survivor = makeProfile(name, [[
+      local child = makeProfile(name, [[
 local marker = getMudletHomeDir() .. "/mudlet-spec-spawned"
 if io.exists(marker) then
   raiseGlobalEvent("mudletSpecSpawnRerun")
 else
   io.open(marker, "w"):close()
-  %s
+  if %s then
+    raiseGlobalEvent("mudletSpecSpawnStarted")
+  end
   tempTimer(0, function() resetProfile() end)
 end]])
 
       assert.is_true(loadProfile(name, true))
-      for _ = 1, 30 do
-        pumpEvents(100)
-      end
+      assert.are.equal(1, spawned, "the profile's process never started")
+      assert.is_true(waitUntil(function() return reruns > 0 end, 10000), "the profile was never reset")
+      release(child, lines)
 
       assert.are.equal(1, reruns)
       assert.are.same({}, lines)
-      assert.is_nil(lfs.attributes(survivor), "the reset profile's process was still running")
+      assert.is_nil(lfs.attributes(child.survivor), "the reset profile's process was still running")
     end)
 
     -- finalizers run inside lua_close(), after the profile's processes were ended
@@ -299,27 +383,175 @@ end]])
       end
       local name = "mudlet-spec-spawn-finalizer"
       local lines = collectLines()
-      local survivor = makeProfile(name, [[
+      local reset = false
+      local handler = registerAnonymousEventHandler("mudletSpecSpawnRerun", function()
+        reset = true
+      end)
+      onCleanup(function() killAnonymousEventHandler(handler) end)
+      -- Written by the finalizer, as Lua drops an error raised in one, so a
+      -- finalizer that never got as far as spawn() would leave no trace
+      local outcome = getMudletHomeDir() .. "/" .. name .. "-finalized"
+      onCleanup(function() os.remove(outcome) end)
+      os.remove(outcome)
+      local child = makeProfile(name, [[
 local marker = getMudletHomeDir() .. "/mudlet-spec-spawned"
-if not io.exists(marker) then
+if io.exists(marker) then
+  raiseGlobalEvent("mudletSpecSpawnRerun")
+else
   io.open(marker, "w"):close()
   local proxy = newproxy(true)
   getmetatable(proxy).__gc = function()
-    %s
+    local process = %s
+    local file = io.open(]] .. string.format("%q", outcome) .. [[, "w")
+    file:write(process and "started" or "refused")
+    file:close()
   end
   mudletSpecSpawnProxy = proxy
   tempTimer(0, function() resetProfile() end)
 end]])
 
       assert.is_true(loadProfile(name, true))
-      for _ = 1, 30 do
-        pumpEvents(100)
-      end
+      assert.is_true(waitUntil(function() return reset end, 10000), "the profile was never reset")
+      local file = io.open(outcome)
+      assert.is_not_nil(file, "the finalizer never got as far as spawn()")
+      local result = file:read("*a")
+      file:close()
+      assert.are.equal("refused", result)
+      release(child, lines)
 
       assert.are.same({}, lines)
-      assert.is_nil(lfs.attributes(survivor), "the finalizer started a process the reset left running")
+      assert.is_nil(lfs.attributes(child.survivor), "the finalizer started a process the reset left running")
     end)
 
+  end)
+
+  describe("the handle it returns", function()
+    local function waitUntil(condition)
+      for _ = 1, 500 do
+        if condition() then
+          return true
+        end
+        pumpEvents(20)
+      end
+      return condition()
+    end
+
+    -- A child left waiting on its input would outlive the test, so each one is
+    -- told to stop; the purge timer then frees every ended child's wrapper at once
+    local function spawnDrained(callback, ...)
+      local process = spawn(callback, ...)
+      onCleanup(function()
+        process.close()
+        waitUntil(function() return not process.isRunning() end)
+      end)
+      return process
+    end
+
+    teardown(function()
+      pumpEvents(2200)
+    end)
+
+    it("should send text to the child's input", function()
+      if skipped() then
+        return
+      end
+      local lines = {}
+      local process = spawnDrained(function(line) lines[#lines + 1] = line end, "cat")
+
+      process.send("first ")
+      process.send("line\n")
+      process.send(42)
+      process.send("\n")
+
+      assert.is_true(waitUntil(function() return #lines >= 2 end), "the child echoed nothing back")
+      assert.are.same({"first line\n", "42\n"}, lines)
+    end)
+
+    it("should send every byte, a NUL included", function()
+      if skipped() then
+        return
+      end
+      local lines = {}
+      local process = spawnDrained(function(line) lines[#lines + 1] = line end, "wc", "-c")
+
+      process.send("a\0b")
+      -- wc counts only once its input ends, so a close() that did nothing would leave this empty
+      process.close()
+
+      assert.is_true(waitUntil(function() return #lines >= 1 end), "the child never saw its input end")
+      assert.are.equal(3, tonumber(lines[1]:match("%d+")))
+    end)
+
+    it("should let a child reading to the end of its input finish", function()
+      if skipped() then
+        return
+      end
+      local process = spawnDrained(function() end, "cat")
+      assert.is_true(process.isRunning())
+
+      process.close()
+
+      assert.is_true(waitUntil(function() return not process.isRunning() end), "the child is still waiting on its input")
+    end)
+
+    it("should refuse to send something that is not text", function()
+      if skipped() then
+        return
+      end
+      local process = spawnDrained(function() end, "cat")
+
+      local ok, err = pcall(process.send, {})
+
+      assert.is_false(ok)
+      assert.are.equal("Unable to get data to send.", err)
+    end)
+
+    it("should refuse to send to a child that has ended", function()
+      if skipped() then
+        return
+      end
+      local process = spawnDrained(function() end, "/bin/sh", "-c", "exit 0")
+      assert.is_true(waitUntil(function() return not process.isRunning() end), "the child never ended")
+
+      local ok, err = pcall(process.send, "too late\n")
+
+      assert.is_false(ok)
+      assert.are.equal("Unable to send data to process. Process has ended.", err)
+      -- and closing an ended child's input does nothing, rather than raising
+      assert.is_true(pcall(process.close))
+    end)
+
+    -- One full purge timer period after the child ends frees its wrapper, leaving the handle holding nothing
+    it("should refuse to send to a child whose wrapper has been freed", function()
+      if skipped() then
+        return
+      end
+      local process = spawnDrained(function() end, "/bin/sh", "-c", "exit 0")
+      assert.is_true(waitUntil(function() return not process.isRunning() end), "the child never ended")
+      pumpEvents(2200)
+
+      local ok, err = pcall(process.send, "too late\n")
+
+      assert.is_false(ok)
+      assert.are.equal("Unable to send data to process. Process has ended.", err)
+      assert.is_true(pcall(process.close))
+      assert.is_false(process.isRunning())
+    end)
+
+    -- A regression here hangs the whole suite rather than failing this test
+    it("should refuse to send to a child whose input it has closed", function()
+      if skipped() then
+        return
+      end
+      local process = spawnDrained(function() end, "sleep", "1")
+      process.close()
+      assert.is_true(process.isRunning())
+
+      local ok, err = pcall(process.send, "after close\n")
+
+      assert.is_false(ok)
+      assert.are.equal("Unable to send data to process. Its input has been closed.", err)
+    end)
   end)
 
   describe("a callback that raises", function()

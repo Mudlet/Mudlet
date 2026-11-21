@@ -53,6 +53,7 @@ public:
     void recordMove() { mRecordMove = true; }
     QString getName() const { return mName; }
     void setName(const QString&);
+    Host* getHost() const;
 
     TAction* mpTAction;
 

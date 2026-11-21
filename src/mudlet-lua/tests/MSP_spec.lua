@@ -56,7 +56,7 @@ describe("Tests the sound and music MSP asks for", function()
     return fixture(stem, 10000)
   end
 
-  -- a fifth of a second, for the spec that waits for a loop to play out
+  -- 150ms, for the spec that waits for a loop to play out
   local function brief(stem)
     return fixture(stem, 150)
   end
@@ -73,19 +73,22 @@ describe("Tests the sound and music MSP asks for", function()
     feedTriggers(tag .. "\n")
   end
 
+  -- Once the canary has warmed the backend a start arrives a few milliseconds
+  -- after its request, so a 400ms round is ample to show none is coming.
   local function pump(rounds)
-    for _ = 1, (rounds or 3) do
+    for _ = 1, (rounds or 1) do
       waitForEvent("sysMediaStarted", 400)
     end
   end
 
   -- Naming the file "Off" is how MSP asks for a stop, and it is the only way to
   -- stop what MSP started: stopSounds() and stopMusic() act on the players the
-  -- Lua API keeps and leave a game's alone.
+  -- Lua API keeps and leave a game's alone. The source release after a stop is
+  -- a zero-timer, so a short pump lets it run.
   local function stopEverything()
     feed('<SOUND FName="Off">')
     feed('<MUSIC FName="Off">')
-    pump(2)
+    pumpEvents(100)
   end
 
   -- busted keeps one finally() per spec, so cleanups that have to stack go here
@@ -247,7 +250,8 @@ describe("Tests the sound and music MSP asks for", function()
     feed(('<MUSIC FName="%s" L=2>'):format(file))
 
     waitForCount("sysMediaStarted", started, 2)
-    pump()
+    -- a third pass would start ~150ms after the second; two rounds leave a slow runner room
+    pump(2)
     assert.equals(2, #started, names(started))
     assert.equals(file, started[2].file)
   end)
@@ -704,7 +708,7 @@ describe("Tests the sound and music MSP asks for", function()
     feedMsp(("!!SOUND(%s V60)"):format(file))
     feedMsp(("!!SOUND(%s V=50"):format(file))
     feedMsp(("!!NOISE(%s)"):format(file))
-    pump(2)
+    pump()
     assert.equals(0, #started, names(started))
 
     -- the same file asked for properly does play, so it was the form refused

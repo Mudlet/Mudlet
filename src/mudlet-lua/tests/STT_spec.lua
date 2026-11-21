@@ -12,6 +12,9 @@
 
 describe("stt bridge", function()
 
+  -- How a build left without Vosk and sherpa-onnx (USE_SPEECH_ENGINES=OFF) refuses
+  local cannotLoadEngines = "this build of Mudlet cannot load a speech engine library"
+
   describe("API surface", function()
 
     it("registers the stt table whether or not an engine is installed", function()
@@ -561,6 +564,9 @@ describe("stt bridge", function()
       finally(function() stt.reloadLibrary() end)
 
       local unloaded, unloadError = stt.unloadLibrary()
+      if not unloaded and tostring(unloadError):find(cannotLoadEngines, 1, true) then
+        return -- nothing could have been loaded, so there is nothing to unload
+      end
       assert.is_true(unloaded, "unloading with nothing in use should succeed, got: " .. tostring(unloadError))
       -- The latch is about the library. Availability is not only about the
       -- library on a Mac, where the built-in backend needs none and keeps
@@ -597,18 +603,30 @@ describe("stt bridge", function()
     -- none, and the platform running the spec is known.
     it("names this platform with the key an installer would download by", function()
       local key = stt.getPlatformKey()
+      local osName = getOS()
       -- The architecture is not visible from Lua, so each platform's keys are
-      -- named rather than one of them: Windows on ARM64 has no build and
-      -- correctly answers nil, which is the only nil this may be.
+      -- named rather than one of them. A nil is accepted only on Windows on
+      -- ARM64, which has no engine build, or from a build that cannot load engines.
       local allowed = {
         mac = {["macos"] = true},
         linux = {["linux-x86_64"] = true, ["linux-aarch64"] = true},
         windows = {["windows-x64"] = true, ["windows-x86"] = true},
       }
-      local keys = allowed[getOS()]
-      assert.is_table(keys, "this spec does not know the keys for " .. tostring(getOS()))
-      if getOS() == "windows" and key == nil then
+      local keys = allowed[osName]
+      if not keys then
+        assert.is_nil(key, "only macOS, Linux and Windows have an engine build, so " .. tostring(osName) .. " should name no key")
+        return
+      end
+      if osName == "windows" and key == nil then
         return -- ARM64 Windows, which ships no engine build
+      end
+      if key == nil then
+        local unloaded, unloadError = stt.unloadLibrary()
+        if unloaded then
+          stt.reloadLibrary()
+        elseif tostring(unloadError):find(cannotLoadEngines, 1, true) then
+          return -- no downloaded engine could be loaded, so there is nothing to pick
+        end
       end
       assert.is_string(key, "a platform with a build should name its key")
       assert.is_true(keys[key] == true, "unexpected platform key: " .. tostring(key))

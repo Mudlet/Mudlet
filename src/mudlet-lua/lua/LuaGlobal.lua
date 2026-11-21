@@ -293,6 +293,9 @@ end
 function handleWindowResizeEvent()
 end
 
+-- TLuaInterpreter::loadGlobal() passes a dofile() that keeps the compiled files in a cache
+local loadPackage = ... or dofile
+
 local packages = {
   "3rdparty/Inspect.lua",
 
@@ -360,7 +363,7 @@ if debugLoading then
   for _, packageName in ipairs(packages) do
     packagePath = nativeLuaGlobalPath .. sep .. toNativeSeparators(packageName)
     echo("Trying to load: \"" .. packagePath .. "\"\n")
-    status, result = pcall(dofile, packagePath)
+    status, result = pcall(loadPackage, packagePath, packageName)
     if (status == false) then
         error("Error attempting to load package("..packageName..") file:\n  " .. result .. ".\n\n")
     end
@@ -375,6 +378,6 @@ else
   local packagePath = ""
   for _, packageName in ipairs(packages) do
     packagePath = nativeLuaGlobalPath .. sep .. toNativeSeparators(packageName)
-    dofile(packagePath)
+    loadPackage(packagePath, packageName)
   end
 end

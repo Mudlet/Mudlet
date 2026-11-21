@@ -8,8 +8,8 @@ describe("Tests that the link and text functions find their console by name", fu
   local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
   local unknown = "specLinksByNameNoSuchWindow" .. suffix
 
-  -- replace() is wrapped in Lua to add a keepcolor argument, and the wrapper
-  -- drops whatever the function it wraps answers, so what that function
+  -- replace() is wrapped in Lua, and the wrapper refuses an empty selection
+  -- before the function it wraps sees the call, so what that function
   -- answers is only seen by calling it directly
   local rawReplace
   for index = 1, math.huge do

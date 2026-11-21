@@ -21,16 +21,20 @@
 
 #include "Host.h"
 #include "T2DMap.h"
+#include "TCommandLine.h"
+#include "TMainConsole.h"
 #include "TMap.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
 #include "utils.h"
 #if defined(INCLUDE_3DMAPPER)
+#include "glwidget_integration.h"
 #include "modern_glwidget.h"
 #endif
 
 #include <QApplication>
 #include <QHBoxLayout>
+#include <QKeyEvent>
 #include <QLabel>
 #include <QToolButton>
 #include <QVBoxLayout>
@@ -92,6 +96,15 @@ TMapView::TMapView(int viewId, Host* pHost, TMap* pMap, QWidget* parent)
 }
 
 TMapView::~TMapView() = default;
+
+// A map view floats as a window of its own, where a key none of its widgets used would go no further
+void TMapView::keyPressEvent(QKeyEvent* event)
+{
+    TMainConsole* pConsole = mpHost ? mpHost->mainConsoleView() : nullptr;
+    if (!pConsole || !pConsole->mpCommandLine || !pConsole->mpCommandLine->takeKeyPress(event)) {
+        QWidget::keyPressEvent(event);
+    }
+}
 
 void TMapView::setupUi()
 {
@@ -378,6 +391,7 @@ void TMapView::show3DView(const bool show)
         return;
     }
     if (show && !mp3DView) {
+        GLWidgetFactory::matchWindowTo3DView(this, true);
         auto* view = new ModernGLWidget(mpMap, mpHost, this);
         view->setObjectName(qsl("mapView3D_%1").arg(mViewId));
         view->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);

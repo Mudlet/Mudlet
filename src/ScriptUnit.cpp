@@ -33,6 +33,7 @@
 #include <QSet>
 #include <QStringList>
 
+#include <algorithm>
 #include <functional>
 #include <utility>
 
@@ -141,6 +142,13 @@ void ScriptUnit::stopAllTriggers()
     }
 }
 
+void ScriptUnit::moveRootNodesToEnd(const std::vector<int>& ids)
+{
+    std::stable_partition(mScriptRootNodeList.begin(), mScriptRootNodeList.end(), [&ids](TScript* pScript) {
+        return std::ranges::find(ids, pScript->getID()) == ids.end();
+    });
+}
+
 void ScriptUnit::addScriptRootNode(TScript* pT, int parentPosition, int childPosition)
 {
     if (!pT) {
@@ -190,6 +198,10 @@ void ScriptUnit::reParentScript(int childID, int oldParentID, int newParentID, i
         pChild->Tree<TScript>::setParent(nullptr);
         addScriptRootNode(pChild, parentPosition, childPosition);
     }
+
+    // The profile save skips a top-level module member and the module save only walks its own
+    // folder, so an item moved out of a module that kept the mark would be saved nowhere
+    pChild->updateModuleMembership();
 }
 
 void ScriptUnit::reParentScript(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position)

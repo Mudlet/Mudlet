@@ -33,6 +33,7 @@
 #include <optional>
 
 class Host;
+class QEvent;
 class QSvgRenderer;
 
 // How a change of a label's text is announced to a screen reader, as ARIA's aria-live
@@ -54,6 +55,7 @@ struct TLabelModel
 
     // The name a screen reader hears: the one a script gave it, else its text, else its tooltip
     QString effectiveAccessibleName() const;
+    QString effectiveAccessibleName(const QString& shownText) const;
     // The label's text as a screen reader would say it
     QString spokenText() const;
     bool namedByToolTip() const;
@@ -66,15 +68,21 @@ struct TLabelModel
     void setAccessibleName(const QString& name);
     void setAccessibleButton(std::optional<bool> button);
     void setClickThrough(bool clickThrough);
-    // Nothing to tell the view: a live region is heard only when the text next changes
-    void setLiveRegion(TLabelLiveRegion liveRegion) { mLiveRegion = liveRegion; }
+    // The view speaks or drops any text still waiting out its pacing
+    void setLiveRegion(TLabelLiveRegion liveRegion)
+    {
+        if (liveRegion != mLiveRegion) {
+            mLiveRegion = liveRegion;
+            accessibilityChanged(AccessibilityChange::LiveRegion);
+        }
+    }
     // The view's copies of what the label shows, which name it unless a script named it
     void setText(const QString& text);
     void setToolTip(const QString& toolTip);
 
     // KeyboardAccess: the profile's accessibleLabels setting changed
-    enum class AccessibilityChange { Name, Role, KeyboardAccess };
-    // Set by the widget, if there is one, to update its focus policy and tell assistive technology of a change
+    enum class AccessibilityChange { Name, Role, KeyboardAccess, LiveRegion };
+    // Set by the widget, if there is one, to update its focus policy, tell assistive technology of a change and pace its announcements
     std::function<void(AccessibilityChange)> mAccessibilityChanged;
     void accessibilityChanged(AccessibilityChange change) const;
 
@@ -92,6 +100,10 @@ struct TLabelModel
     void setWheel(const int func);
     void setEnter(const int func);
     void setLeave(const int func);
+    enum class Callback { click, doubleClick, release, move, wheel, enter, leave };
+    // What TLabel's mouse handlers do with the callbacks: runs that one with the event, or nothing and false where
+    // the label has none, so the event goes on to what the label is in
+    bool runCallback(Callback callback, const QEvent& event) const;
 
     // What TLabel::setBackgroundColor() restyles a label with: the sheet with its background-color
     // declarations given the colour, or the colour's appended.
@@ -106,8 +118,6 @@ struct TLabelModel
     // What the label shows for its text once the link style or the visited links change
     QString restyledText();
 
-    // A QPointer because Host and view are torn down in either order: quitting
-    // destroys every Host before the labels' deferred deletes run.
     QPointer<Host> mpHost;
     QString mName;
     int mClickFunction = 0;

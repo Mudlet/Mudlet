@@ -22,7 +22,7 @@ inline.
    take the top entry.
 2. **Build a benchmark-safe tree.** Never benchmark a sanitizer build - ASan roughly
    halves text throughput - and the default is to have one, because
-   `src/cmake/EnableSanitizers.cmake` defaults `USE_SANITIZER` to `address`.
+   `src/cmake/EnableSanitizers.cmake` defaults `USE_SANITIZER` to `address` (to none for Android).
    - Linux: `linux-debug-nosan` (plain `linux-debug` IS an ASan build).
    - macOS: `macos-debug-nosan`, same trap with the same preset naming.
    - Windows: `windows-debug` is already safe - `src/CMakeLists.txt` skips
@@ -200,6 +200,7 @@ Four live in `test/functional_tests/`, built alongside the functional tests into
   `compare-perf-baseline.py` understands MapRenderBenchmark's output too.
 - `TelnetBenchmark` (small, medium and large payloads) is an ordinary grouped ctest case:
   `ctest -R TelnetBenchmark`.
+- `test/svof-replay/` times a real curing system against a replayed game session; see its README.
 
 When extending them:
 

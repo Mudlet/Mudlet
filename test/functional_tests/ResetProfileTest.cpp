@@ -31,11 +31,16 @@
  * Run with: ctest -R ResetProfileTest -V
  */
 
+#include <QCryptographicHash>
+#include <QDataStream>
 #include <QFileInfo>
+#include <QStandardPaths>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 #include <chrono>
 #include <QMouseEvent>
+#include <QPointer>
+#include <QScopeGuard>
 
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
@@ -86,6 +91,8 @@ class ResetProfileTest : public QObject {
 private:
   QTemporaryDir mConfigDir;
   QByteArray mSavedXdg;
+  QTemporaryDir mCacheDir;
+  QByteArray mSavedXdgCache;
   TelnetServerStub *mpServer = nullptr;
   Host *mpHost = nullptr;
   const QString mHostname = "ResetProfile-Test";
@@ -115,6 +122,69 @@ private:
     return isTrue;
   }
 
+  QString bytecodeCachePathFileName() const {
+    return qsl("%1/lua-bytecode.dat")
+        .arg(QStandardPaths::writableLocation(QStandardPaths::CacheLocation));
+  }
+
+  QHash<QByteArray, QByteArray> readBytecodeCache() const {
+    QHash<QByteArray, QByteArray> entries;
+    QFile file(bytecodeCachePathFileName());
+    if (file.open(QIODevice::ReadOnly)) {
+      QDataStream ifs(&file);
+      ifs.setVersion(QDataStream::Qt_5_12);
+      QByteArray magic;
+      ifs >> magic;
+      // Leaves a cache in a format these tests do not know looking empty
+      if (magic == QByteArrayLiteral("Mudlet Lua bytecode 1")) {
+        ifs >> entries;
+      }
+    }
+    return entries;
+  }
+
+  void writeBytecodeCache(const QHash<QByteArray, QByteArray> &entries) const {
+    QFile file(bytecodeCachePathFileName());
+    QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Truncate));
+    QDataStream ofs(&file);
+    ofs.setVersion(QDataStream::Qt_5_12);
+    ofs << QByteArrayLiteral("Mudlet Lua bytecode 1") << entries;
+  }
+
+  // "ok", or what is wrong with the file and line that functions from
+  // LuaGlobal.lua's files report
+  QString luaGlobalFunctionOrigins() {
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    // A raw string literal here trips up moc
+    const int error = luaL_dostring(
+        L,
+        "local sep = package.config:sub(1, 1)\n"
+        "local function check(fn, file, definition)\n"
+        "  local info = debug.getinfo(fn, \"S\")\n"
+        "  local expected = \"@\" .. nativeLuaGlobalPath .. sep .. (file:gsub(\"/\", sep))\n"
+        "  if info.source ~= expected then\n"
+        "    return \"source \" .. info.source .. \" is not \" .. expected\n"
+        "  end\n"
+        "  local lineNumber = 0\n"
+        "  for line in io.lines(luaGlobalPath .. \"/\" .. file) do\n"
+        "    lineNumber = lineNumber + 1\n"
+        "    if line:find(definition, 1, true) then\n"
+        "      if info.linedefined == lineNumber then\n"
+        "        return nil\n"
+        "      end\n"
+        "      return file .. \" line \" .. info.linedefined .. \" is not \" .. lineNumber\n"
+        "    end\n"
+        "  end\n"
+        "  return definition .. \" is not in \" .. file\n"
+        "end\n"
+        "return check(string.cut, \"StringUtils.lua\", \"function string:cut(\")\n"
+        "  or check(Geyser.Label.new, \"geyser/GeyserLabel.lua\", \"function Geyser.Label:new (\")\n"
+        "  or \"ok\"\n");
+    const QString result = QString::fromUtf8(lua_tostring(L, -1));
+    lua_pop(L, 1);
+    return error ? qsl("error: %1").arg(result) : result;
+  }
+
   int countTempKeys() {
     int count = 0;
     for (auto *key : mpHost->getKeyUnit()->getKeyRootNodeList()) {
@@ -142,6 +212,12 @@ private slots:
     QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
     mSavedXdg = qgetenv("XDG_CONFIG_HOME");
     qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
+    // Where the platform honours it, keeps the bytecode cache this test
+    // tampers with away from the developer's own. Elsewhere the tests use the
+    // real one, which every reset leaves holding freshly compiled entries.
+    QVERIFY(mCacheDir.isValid());
+    mSavedXdgCache = qgetenv("XDG_CACHE_HOME");
+    qputenv("XDG_CACHE_HOME", mCacheDir.path().toUtf8());
 
     mpServer = new TelnetServerStub(qApp);
     mpServer->start(mLocalhost, 0); // ephemeral OS-assigned port avoids collisions across concurrent test runs
@@ -173,6 +249,8 @@ private slots:
     }
     mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME")
                        : qputenv("XDG_CONFIG_HOME", mSavedXdg);
+    mSavedXdgCache.isNull() ? qunsetenv("XDG_CACHE_HOME")
+                            : qputenv("XDG_CACHE_HOME", mSavedXdgCache);
   }
 
   // Per-test cleanup: reset the profile so each test starts from clean state.
@@ -475,17 +553,104 @@ private slots:
     mpHost->mBlockStopWatchCreation = false;
 
     mpHost->resetProfile_phase1();
-    // mResetProfile is now true — stopwatch creation should be blocked
+    // Blocked until phase2 has the new Lua state ready
     auto result = mpHost->createStopWatch(qsl("blocked_sw"));
     QCOMPARE(result.first, 0);
 
     QCoreApplication::processEvents();
 
     // After phase2, creation should work again
-    mpHost->mBlockStopWatchCreation = false;
     auto result2 = mpHost->createStopWatch(qsl("unblocked_sw"));
     QVERIFY2(result2.first > 0,
              "Stopwatch creation should work after reset completes");
+  }
+
+  void test_scriptCreatesItsStopWatchWhenResetRunsIt() {
+    const QString watchName = qsl("loadTimeStopWatch");
+    mpHost->mBlockStopWatchCreation = false;
+    auto *pScript = new TScript(qsl("stopWatchAtLoadScript"), mpHost);
+    const auto removeScript = qScopeGuard([pScript]() { delete pScript; });
+    pScript->setScript(
+        qsl("loadTimeStopWatchId = createStopWatch(\"%1\")").arg(watchName));
+    mpHost->getScriptUnit()->registerScript(pScript);
+    pScript->setIsActive(true);
+    pScript->compile();
+    QVERIFY(mpHost->findStopWatchId(watchName) > 0);
+
+    performReset();
+
+    const int id = mpHost->findStopWatchId(watchName);
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    lua_getglobal(L, "loadTimeStopWatchId");
+    const int luaId =
+        lua_isnumber(L, -1) ? static_cast<int>(lua_tointeger(L, -1)) : 0;
+    lua_pop(L, 1);
+    QVERIFY2(id > 0,
+             "A script run by the reset should be able to create its stopwatch");
+    QCOMPARE(luaId, id);
+  }
+
+  // The reset's teardown still runs code on the old Lua state (sysMediaFinished
+  // handlers, the DeferredDelete drain used here), and a stopwatch made there
+  // would outlive the reset that was meant to remove it
+  void test_stopWatchCreationStaysBlockedThroughResetTeardown() {
+    const QString watchName = qsl("teardown_sw");
+    QPointer<QObject> doomed = new QObject;
+    int teardownId = -1;
+    const auto destroyedConnection =
+        connect(doomed, &QObject::destroyed, this,
+                [this, &teardownId, watchName]() {
+                  teardownId = mpHost->createStopWatch(watchName).first;
+                });
+    const auto resettingConnection =
+        connect(mpHost, &Host::signal_profileResetting, doomed.data(),
+                &QObject::deleteLater);
+
+    performReset();
+    disconnect(resettingConnection);
+    disconnect(destroyedConnection);
+    const bool drainedByReset = doomed.isNull();
+    delete doomed.data();
+
+    QVERIFY2(drainedByReset,
+             "The reset never drained the deleteLater() posted while it ran");
+    QCOMPARE(teardownId, 0);
+    QCOMPARE(mpHost->findStopWatchId(watchName), 0);
+  }
+
+  // Finalisers on the old Lua state run inside initLuaGlobals()'s lua_close(),
+  // the last point of the teardown
+  void test_stopWatchCreationStaysBlockedInFinalisersRunByReset() {
+    QTemporaryDir markerDir;
+    QVERIFY(markerDir.isValid());
+    const QString markerPath = markerDir.filePath(qsl("finaliser-ran"));
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    lua_pushstring(L, markerPath.toUtf8().constData());
+    lua_setglobal(L, "resetGcMarkerPath");
+    QCOMPARE(luaL_dostring(
+                 L, "resetGcProxy = newproxy(true)\n"
+                    "getmetatable(resetGcProxy).__gc = function()\n"
+                    "  createStopWatch('gc_sw')\n"
+                    "  io.open(resetGcMarkerPath, 'w'):close()\n"
+                    "end"),
+             0);
+
+    performReset();
+
+    QVERIFY2(QFileInfo::exists(markerPath),
+             "The finaliser did not run during the reset");
+    QCOMPARE(mpHost->findStopWatchId(qsl("gc_sw")), 0);
+  }
+
+  void test_refusedResetLeavesStopWatchCreationWorking() {
+    mpHost->mLuaInterpreter.enterNestedEventLoop();
+    const bool started = mpHost->resetProfile_phase1();
+    mpHost->mLuaInterpreter.leaveNestedEventLoop();
+    QVERIFY(!started);
+
+    const auto result =
+        mpHost->createStopWatch(qsl("after_refused_reset"));
+    QVERIFY2(result.first > 0, qPrintable(result.second));
   }
 
   // -----------------------------------------------------------------------
@@ -790,6 +955,71 @@ private slots:
     QVERIFY2(!lua_isnil(L, -1),
              "Geyser framework should be loaded after reset");
     lua_pop(L, 1);
+  }
+
+  void test_resetLoadsLuaGlobalFilesFromBytecodeCache() {
+    QVERIFY2(readBytecodeCache().contains("StringUtils.lua"),
+             "opening the profile should have cached LuaGlobal.lua's files");
+    const QDateTime written =
+        QFileInfo(bytecodeCachePathFileName()).lastModified();
+
+    performReset();
+
+    QCOMPARE(QFileInfo(bytecodeCachePathFileName()).lastModified(), written);
+    QCOMPARE(luaGlobalFunctionOrigins(), qsl("ok"));
+  }
+
+  void test_editedLuaGlobalFileIsRecompiled() {
+    auto entries = readBytecodeCache();
+    QVERIFY(entries.contains("StringUtils.lua"));
+    QVERIFY(entries.contains("TableUtils.lua"));
+    // Another file's bytecode, filed under a source that no longer matches
+    const QByteArray otherSourceHash(20, '\0');
+    entries.insert("StringUtils.lua",
+                   otherSourceHash + entries.value("TableUtils.lua").mid(20));
+    writeBytecodeCache(entries);
+
+    performReset();
+
+    QCOMPARE(luaGlobalFunctionOrigins(), qsl("ok"));
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    lua_getglobal(L, "luaGlobalPath");
+    QFile source(
+        qsl("%1/StringUtils.lua").arg(QString::fromUtf8(lua_tostring(L, -1))));
+    lua_pop(L, 1);
+    QVERIFY(source.open(QIODevice::ReadOnly));
+    QCOMPARE(readBytecodeCache().value("StringUtils.lua").left(20),
+             QCryptographicHash::hash(source.readAll(),
+                                      QCryptographicHash::Sha1));
+  }
+
+  void test_damagedBytecodeIsRecompiled() {
+    auto entries = readBytecodeCache();
+    QVERIFY(entries.contains("StringUtils.lua"));
+    QVERIFY(entries.contains("TableUtils.lua"));
+    // StringUtils.lua's source and bytecode hashes, over bytecode that no
+    // longer matches the second of them
+    const QByteArray damaged = entries.value("StringUtils.lua").left(40) +
+                               entries.value("TableUtils.lua").mid(40);
+    entries.insert("StringUtils.lua", damaged);
+    writeBytecodeCache(entries);
+
+    performReset();
+
+    QCOMPARE(luaGlobalFunctionOrigins(), qsl("ok"));
+    QVERIFY(readBytecodeCache().value("StringUtils.lua") != damaged);
+  }
+
+  void test_unreadableBytecodeCacheIsReplaced() {
+    QFile file(bytecodeCachePathFileName());
+    QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Truncate));
+    file.write("not a bytecode cache");
+    file.close();
+
+    performReset();
+
+    QCOMPARE(luaGlobalFunctionOrigins(), qsl("ok"));
+    QVERIFY(readBytecodeCache().contains("StringUtils.lua"));
   }
 
   void test_gmcpTableFreshAfterReset() {

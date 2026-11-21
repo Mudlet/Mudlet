@@ -104,6 +104,29 @@ describe("Tests the audit of a damaged binary map file", function()
     return id
   end
 
+  local mapErrorLogPath = getMudletHomeDir() .. "/log/errors.txt"
+
+  local function mapErrorLogSize()
+    local file = io.open(mapErrorLogPath, "rb")
+    if not file then
+      return 0
+    end
+    local size = file:seek("end")
+    file:close()
+    return size
+  end
+
+  local function readMapErrorLogFrom(offset)
+    local file = io.open(mapErrorLogPath, "rb")
+    if not file then
+      return ""
+    end
+    file:seek("set", offset)
+    local text = file:read("*a")
+    file:close()
+    return text
+  end
+
   local function listHas(list, wanted)
     for _, value in pairs(list or {}) do
       if value == wanted then
@@ -186,6 +209,48 @@ describe("Tests the audit of a damaged binary map file", function()
       assert.are.equal("-4", getRoomUserData(from, "audit.removed_invalid_special_exit.zqc"))
       assert.is_nil(getDoors(from)["zqc"])
       assert.is_nil(getExitWeights(from)["zqc"])
+    end)
+  end)
+
+  describe("Tests normal exit data that the file holds without the exit", function()
+    it("drops what only an exit can carry and keeps what a stub can, beside sound exits", function()
+      local area = newArea("MapFileAuditSpecExitless")
+      local room = newRoom(area, 0)
+      local gone = newRoom(area, 1, distantRoomId)
+      local kept = newRoom(area, 2)
+      local plain = newRoom(area, 3)
+      assert.is_true(setExit(room, gone, "east"))
+      assert.is_true(setExitWeight(room, "east", 5))
+      assert.is_true(setDoor(room, "e", 2))
+      assert.is_true(addCustomLine(room, {{0.5, 0.5, 0}}, "e", "dot line", {1, 2, 3}, false))
+      lockExit(room, "east", true)
+      assert.is_true(setExit(room, kept, "west"))
+      assert.is_true(setExitWeight(room, "west", 7))
+      assert.is_true(setDoor(room, "w", 3))
+      assert.is_true(addCustomLine(room, {{-0.5, 0.5, 0}}, "w", "dash line", {4, 5, 6}, true))
+      setExitStub(room, "north", true)
+      assert.is_true(setDoor(room, "n", 1))
+      -- the control: a room with none of these to lose
+      assert.is_true(setExit(plain, kept, "east"))
+
+      reloadWith(function(data)
+        return planted(data, minusOne .. minusOne .. int32(gone) .. minusOne,
+                       minusOne .. minusOne .. minusOne .. minusOne, 1)
+      end)
+
+      assert.is_nil(getRoomExits(room)["east"])
+      assert.is_false(listHas(getExitStubs1(room), 4)) -- DIR_EAST
+      assert.is_nil(getDoors(room)["e"])
+      assert.is_nil(getExitWeights(room)["e"])
+      assert.is_nil((getCustomLines1(room) or {})["e"])
+      assert.is_false(hasExitLock(room, "east"))
+      assert.are.equal(kept, getRoomExits(room)["west"])
+      assert.are.equal(3, getDoors(room)["w"])
+      assert.are.equal(7, getExitWeights(room)["w"])
+      assert.is_not_nil((getCustomLines1(room) or {})["w"])
+      assert.are.equal(1, getDoors(room)["n"])
+      assert.are.equal(kept, getRoomExits(plain)["east"])
+      assert.are.same({}, getAllRoomEntrances(gone))
     end)
   end)
 
@@ -355,6 +420,54 @@ describe("Tests the audit of a damaged binary map file", function()
       assert.are.same({renumbered}, getRoomsByPosition1(area, x, y, z))
       assert.are.same({renumbered}, getAllRoomEntrances(from))
       assert.are.same({from}, getAllRoomEntrances(renumbered))
+    end)
+
+    it("gives each of two rooms with IDs below one an ID of its own", function()
+      local area = newArea("MapFileAuditSpecTwoBadRoomIds")
+      local from = newRoom(area, 0)
+      local bystander = newRoom(area, 3)
+      newRoom(area, 1, distantRoomId)
+      newRoom(area, 2, otherDistantRoomId)
+      setRoomName(distantRoomId, "MapFileAuditSpecBadRoomZero")
+      setRoomName(otherDistantRoomId, "MapFileAuditSpecBadRoomMinusSeven")
+      assert.is_true(setExit(from, distantRoomId, "east"))
+      assert.is_true(setExit(distantRoomId, from, "west"))
+      assert.is_true(setExit(from, otherDistantRoomId, "west"))
+      assert.is_true(setExit(otherDistantRoomId, from, "east"))
+
+      reloadWith(function(data)
+        -- each room's own key, its place in its area's list of rooms and the exit that leads to it
+        data = planted(data, int32(distantRoomId), int32(0), 3)
+        return planted(data, int32(otherDistantRoomId), int32(-7), 3)
+      end)
+
+      local renumberedZero, renumberedMinusSeven
+      local roomCount = 0
+      for id, name in pairs(getRooms()) do
+        roomCount = roomCount + 1
+        if name == "MapFileAuditSpecBadRoomZero" then
+          renumberedZero = id
+        elseif name == "MapFileAuditSpecBadRoomMinusSeven" then
+          renumberedMinusSeven = id
+        end
+      end
+      assert.are.equal(4, roomCount)
+      assert.is_not_nil(renumberedZero, "the room with ID 0 was lost")
+      assert.is_not_nil(renumberedMinusSeven, "the room with ID -7 was lost")
+      assert.is_true(renumberedZero >= 1)
+      assert.is_true(renumberedMinusSeven >= 1)
+      assert.are_not.equal(renumberedZero, renumberedMinusSeven)
+      assert.is_false(table.contains({from, bystander}, renumberedZero))
+      assert.is_false(table.contains({from, bystander}, renumberedMinusSeven))
+      assert.are.equal("0", getRoomUserData(renumberedZero, "audit.remapped_id"))
+      assert.are.equal("-7", getRoomUserData(renumberedMinusSeven, "audit.remapped_id"))
+      assert.are.equal(renumberedZero, getRoomExits(from)["east"])
+      assert.are.equal(renumberedMinusSeven, getRoomExits(from)["west"])
+      assert.are.same({from}, getAllRoomEntrances(renumberedZero))
+      assert.are.same({from}, getAllRoomEntrances(renumberedMinusSeven))
+      local expected = {renumberedZero, renumberedMinusSeven}
+      table.sort(expected)
+      assert.are.same(expected, getAllRoomEntrances(from))
     end)
 
     it("keeps the player in a room it renumbers", function()
@@ -545,6 +658,32 @@ describe("Tests the audit of a damaged binary map file", function()
       assert.are.same({awayRoom}, getAreaRooms1(away))
       assert.are.equal(home, getRoomArea(homeRoom))
       assert.are.equal(away, getRoomArea(awayRoom))
+    end)
+
+    it("reports one room missing from and one extra in an area in the singular", function()
+      if mudlet.translations.interfacelanguage ~= "en_US" then
+        pending("the singular forms come from the en_US translation")
+        return
+      end
+      local home = newArea("MapFileAuditSpecHome")
+      local away = newArea("MapFileAuditSpecAway")
+      local homeRoom = newRoom(home, 0, distantRoomId)
+      local awayRoom = newRoom(away, 1, otherDistantRoomId)
+      local logSize = mapErrorLogSize()
+
+      reloadWith(function(data)
+        assert.are.equal(2, countBytes(data, int32(homeRoom)))
+        return planted(data, int32(homeRoom), int32(awayRoom), 1, 1)
+      end)
+
+      local log = readMapErrorLogFrom(logSize)
+      -- loading first writes out any messages still queued under a report of its own
+      local reportStart = log:find(('Loading map(1) "%s" at'):format(damagedPath), 1, true)
+      assert.is_truthy(reportStart, log)
+      local areaIssues = log:sub(reportStart):match("= Area issues =(.-)= Room issues =")
+      assert.is_truthy(areaIssues, log)
+      assert.is_truthy(areaIssues:find(("there was 1 room missing from those it should be recorded as possessing.  It is: %d."):format(homeRoom), 1, true), areaIssues)
+      assert.is_truthy(areaIssues:find(("there was 1 extra room that it should not be recorded as possessing.  It was: %d."):format(awayRoom), 1, true), areaIssues)
     end)
 
     it("creates an area that has a name but was never instantiated", function()

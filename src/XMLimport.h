@@ -26,6 +26,7 @@
 
 
 #include "EditorCommand.h"
+#include "XmlImportReader.h"
 #include "utils.h"
 
 #include <QCoreApplication>
@@ -35,7 +36,6 @@
 #include <QMargins>
 #include <QMultiHash>
 #include <QPointer>
-#include <QXmlStreamReader>
 
 class Host;
 class TAction;
@@ -47,7 +47,7 @@ class TTrigger;
 class TVar;
 class TRoom;
 
-class XMLimport : public QXmlStreamReader
+class XMLimport : public XmlImportReader
 {
     Q_DECLARE_TR_FUNCTIONS(XMLimport);
 
@@ -98,8 +98,8 @@ private:
     void recordItemErrors(const QString& itemName, const QStringList& errors, qsizetype errorsAt, qsizetype namesAt);
 
     void readHost(Host*);
-    bool readHostColorElement(Host*, QStringView elementName);
-    bool readHostBorderElement(QMargins&, QStringView elementName);
+    bool readHostColorElement(Host*, QAnyStringView elementName);
+    bool readHostBorderElement(QMargins&, QAnyStringView elementName);
     void readLegacyMapInfoContributors();
     void readMapInfoContributor();
     void readProfileShortcut();

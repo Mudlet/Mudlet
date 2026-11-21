@@ -36,6 +36,7 @@ public:
     TDockWidget(Host *, const QString &);
     void setTConsole(TConsole*);
     TConsole* getConsole();
+    Host* getHost() const { return mpHost; }
     void setVisible(bool) override;
 
 

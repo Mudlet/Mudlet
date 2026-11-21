@@ -71,6 +71,7 @@ public:
     const QHash<int, TRoom*>& getRoomMap() const { return rooms; }
     const QMap<int, TArea*>& getAreaMap() const { return areas; }
     QList<int> getRoomIDList();
+    // 0 when every ID from minimumId upwards is taken
     int lowestFreeRoomId(int minimumId);
     bool hasRoom(int id) const { return rooms.contains(id); }
     QList<int> getAreaIDList();
@@ -84,6 +85,7 @@ public:
     const QMultiHash<int, int>& getEntranceHash() const { return entranceMap; }
     void deleteValuesFromEntranceMap(int);
     void deleteValuesFromEntranceMap(QSet<int>&);
+    void reserveEntrances(qsizetype roomCount);
 
     void buildAreas();
     void clearMapDB();

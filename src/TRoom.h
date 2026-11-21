@@ -50,7 +50,7 @@ public:
     bool setExit(const int to, const int direction);
     int getExit(const int) const;
     bool hasExit(const int) const;
-    void setWeight(int);
+    bool setWeight(int);
     bool setExitLock(const int, const bool);
     void removeExitExtras(const int);
     bool setSpecialExitLock(const QString&, const bool);
@@ -129,6 +129,7 @@ public:
                    QMap<QString, QColor>&,
                    QMap<QString, Qt::PenStyle>&,
                    QMap<QString, bool>&,
+                   bool,
                    const QHash<int, int>&);
     QString dirCodeToDisplayName(int) const;
     // As above but for auditExit()'s messages specifically, which predate
@@ -194,6 +195,7 @@ private:
     void calcCustomLineBounds();
     void setPlanarExit(int&, const int);
     void refreshLodExitIndex();
+    bool removeSpecialExitExtras(const QString&);
 
     bool readJsonExits(const QJsonObject&);
     void readJsonExitStubs(const QJsonObject&);

@@ -28,10 +28,10 @@
 
 #include "Host.h"
 #include "TAlias.h"
+#include "TAppFrontend.h"
 #include "TArea.h"
 #include "TDebug.h"
 #include "TEvent.h"
-#include "TForkedProcess.h"
 #include "TIrcClient.h"
 #include "TMap.h"
 #include "TMapLabel.h"
@@ -47,7 +47,6 @@
 
 #include <QCollator>
 #include <QCoreApplication>
-#include <QDesktopServices>
 #include <QFileInfo>
 #include <QMovie>
 #include <QVector>
@@ -93,6 +92,8 @@ int TLuaInterpreter::connectToServer(lua_State* L)
         }
     }
 
+    // A telnets:// link's TLS was for the address the player agreed to, not this one
+    host.mUseTlsThisSession = false;
     host.mTelnet.connectIt(url, port);
 
     lua_pushboolean(L, true);
@@ -275,8 +276,8 @@ int TLuaInterpreter::getNetworkLatency(lua_State* L)
 int TLuaInterpreter::openUrl(lua_State* L)
 {
     const QString url = getVerifiedString(L, __func__, 1, "url");
-    QDesktopServices::openUrl(url);
-    return 0;
+    lua_pushboolean(L, TAppFrontend::instance()->openWebPage(url));
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#reconnect

@@ -22,7 +22,7 @@
  * src/packages and are compiled in through mudlet.qrc.
  *
  * Nothing else notices when one of these breaks: a path in
- * setupPreInstallPackages() that no longer names a compiled-in resource, or an
+ * HostManager::defaultPackages() that no longer names a compiled-in resource, or an
  * archive rebuilt without config.lua, just means the profile quietly comes up
  * without the package. The build stays green either way, so this test walks
  * both the preinstall table and every archive in the resource tree.
@@ -179,8 +179,8 @@ private slots:
         QVERIFY(!preinstallsFor(qsl("icesus.org"), qsl("test"), false).contains(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage")));
     }
 
-    // Why mpkg cannot be in a test profile: see setupPreInstallPackages() in
-    // src/mudlet.cpp. Both directions are asserted, so removing the skip and leaving it
+    // Why mpkg cannot be in a test profile: see HostManager::defaultPackages() in
+    // src/HostManager.cpp. Both directions are asserted, so removing the skip and leaving it
     // permanently on both fail, and the players' half pins the resource path the skip
     // matches on - rename it in the table alone and the first check goes red.
     void test_testModeLeavesOutTheSelfUpdatingPackage()

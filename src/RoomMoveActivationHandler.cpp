@@ -55,6 +55,11 @@ bool RoomMoveActivationHandler::matches(const T2DMap::MapInteractionContext& con
             return false;
         }
 
+        // The click that finishes moving a label is not a room drag, even over a room
+        if (context.isMoveLabelActive) {
+            return false;
+        }
+
         const auto clickedRoomId = mMapWidget.roomIdAtWidgetPosition(context.widgetPosition, context.area);
         return clickedRoomId.has_value();
     }

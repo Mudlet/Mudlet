@@ -476,11 +476,10 @@ void TArea::calcSpan()
 {
     mSpanIndex.clear();
 
-    // Collect the room-to-Z mapping in a single pass so mZLevelIndex can be
-    // rebuilt without a second iteration. Also collect the full z/x/y data
+    // Group the rooms by Z level in a single pass, which is the form mZLevelIndex
+    // keeps them in, so it needs no second iteration. Also collect the full z/x/y data
     // so the grid index can be rebuilt at the same time.
-    QHash<int, int> roomIdToZ;
-    roomIdToZ.reserve(rooms.size());
+    QHash<int, QSet<int>> zToRoomIds;
     QHash<int, QHash<int, QPair<int, int>>> zToRoomXY;
     QHash<int, int> customLineRoomIdToZ;
 
@@ -492,7 +491,7 @@ void TArea::calcSpan()
             continue;
         }
 
-        roomIdToZ.insert(id, pR->z());
+        zToRoomIds[pR->z()].insert(id);
         zToRoomXY[pR->z()].insert(id, {pR->x(), pR->y()});
         mSpanIndex.addRoom(pR->x(), spanIndexY(pR->y()), pR->z());
         if (!pR->customLines.empty()) {
@@ -502,7 +501,7 @@ void TArea::calcSpan()
 
     publishSpan();
 
-    mZLevelIndex.rebuild(roomIdToZ);
+    mZLevelIndex.replace(std::move(zToRoomIds));
     mGridIndex.rebuild(zToRoomXY);
     mCustomLineIndex.rebuild(customLineRoomIdToZ);
     mLodExitIndex.markDirty();
@@ -549,7 +548,7 @@ int TArea::lodExitSpanOfRoom(const TRoom* pR, const QList<LodRoomPos>* positions
         span = qMax(span, qMax(qAbs(exitX - pR->x()), qAbs(exitY - pR->y())));
     }
     // Saturate: a span too large for an int cannot be skipped by any threshold either.
-    return int(qMin<qint64>(span, TAreaLodExitIndex::cAlwaysVisibleSpan));
+    return static_cast<int>(qMin<qint64>(span, TAreaLodExitIndex::cAlwaysVisibleSpan));
 }
 
 // Only whole-area changes come here, about once per map load; single-room changes re-file that room.

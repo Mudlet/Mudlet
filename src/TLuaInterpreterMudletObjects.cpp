@@ -42,7 +42,6 @@
 #include "TConsoleModel.h"
 #include "TDebug.h"
 #include "TEvent.h"
-#include "TForkedProcess.h"
 #include "TKey.h"
 #include "TMap.h"
 #include "TMapLabel.h"
@@ -306,7 +305,7 @@ int TLuaInterpreter::createStopWatch(lua_State* L)
             autoStart = false;
             hasName = true;
         } else if (lua_type(L, s) == LUA_TNIL) {
-            ; // fallthrough for compatibility with old-style stopwatches in case createStopWatch(nil) is passed
+            // fallthrough for compatibility with old-style stopwatches in case createStopWatch(nil) is passed
             // note that 'nil' will still count towards the stack's gettop amount
         } else {
             lua_pushfstring(L, "createStopWatch: bad argument #%d type (name as string or autostart as boolean are optional, got %s!)", s, luaL_typename(L, s));
@@ -732,6 +731,44 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
 
     lua_settable(L, -3); // patterns
 
+    // Whether matching on several threads has paid for this workload, as the statistics report shows it.
+    // App-wide, like the pool itself, so every profile reads the same figures.
+    {
+        const TriggerMatchPool& pool = TriggerMatchPool::instance();
+        const TriggerMatchPool::Report& report = pool.report();
+        lua_pushstring(L, "matchPool");
+        lua_newtable(L);
+        const auto field = [L](const char* name, const double value) {
+            lua_pushstring(L, name);
+            lua_pushnumber(L, value);
+            lua_settable(L, -3);
+        };
+        field("threads", pool.workerCount());
+        field("pooledLines", static_cast<double>(report.pooledLines));
+        field("sampledLines", static_cast<double>(report.sampledLines));
+        field("pooledMicroseconds", static_cast<double>(report.averagePooledNanoseconds()) / 1000.0);
+        field("sampledMicroseconds", static_cast<double>(report.averageSampledNanoseconds()) / 1000.0);
+        field("savedMilliseconds", static_cast<double>(report.savedNanoseconds()) / 1000000.0);
+        const char* verdict = "not enough data";
+        switch (report.verdict()) {
+        case TriggerMatchPool::Report::Verdict::NotEnoughData:
+            break;
+        case TriggerMatchPool::Report::Verdict::WorthIt:
+            verdict = "worth it";
+            break;
+        case TriggerMatchPool::Report::Verdict::AboutEven:
+            verdict = "about even";
+            break;
+        case TriggerMatchPool::Report::Verdict::NotWorthIt:
+            verdict = "not worth it";
+            break;
+        }
+        lua_pushstring(L, "verdict");
+        lua_pushstring(L, verdict);
+        lua_settable(L, -3);
+        lua_settable(L, -3); // matchPool
+    }
+
     // No documentation available in wiki - test-only, so a spec can confirm a burst reached the parallel prescan
     if (qEnvironmentVariableIsSet("MUDLET_TEST_MODE")) {
         lua_pushstring(L, "prescanWorkers");
@@ -742,8 +779,16 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
         lua_pushnumber(L, static_cast<double>(TriggerMatchPool::instance().prescanCount()));
         lua_settable(L, -3);
 
+        lua_pushstring(L, "prescanMatchesReused");
+        lua_pushnumber(L, static_cast<double>(TTrigger::prescanMatchesReused()));
+        lua_settable(L, -3);
+
         lua_pushstring(L, "rootFilterEpoch");
         lua_pushnumber(L, static_cast<double>(host.getTriggerUnit()->rootFilterEpoch()));
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "unfilterableEpoch");
+        lua_pushnumber(L, static_cast<double>(host.getTriggerUnit()->unfilterableEpoch()));
         lua_settable(L, -3);
 
         if (TriggerUnit::treeIndexMode() != TriggerUnit::TreeIndexMode::Off) {
@@ -835,6 +880,13 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
     lua_pushnumber(L, activeGifs);
     lua_settable(L, -3);
     lua_settable(L, -3);
+
+    // No documentation available in wiki - test-only, so a spec can confirm a burst was parsed ahead on the ingest worker
+    if (qEnvironmentVariableIsSet("MUDLET_TEST_MODE")) {
+        lua_pushstring(L, "linesParsedAhead");
+        lua_pushnumber(L, static_cast<double>(host.mainConsoleModel().buffer.linesParsedAhead()));
+        lua_settable(L, -3);
+    }
 
     return 1;
 }
@@ -1629,12 +1681,14 @@ int TLuaInterpreter::raiseEvent(lua_State* L)
     return 1;
 }
 
-// A gone Host, or no main window (as once mudlet is past its destructor), is
-// further along than the flags rather than healthier, so both count as
-// shutting down too.
+// A gone Host, a main window that has gone (as once mudlet is past its
+// destructor) or a pool being destroyed is further along than the flags rather
+// than healthier, so each counts as shutting down too. A run that never had a
+// main window is not.
 static bool shuttingDown(const QPointer<Host>& pHost)
 {
-    return !pHost || pHost->isClosingDown() || !TAppFrontend::hasView() || TAppFrontend::instance()->quitting();
+    const HostManager* pool = HostManager::self();
+    return !pHost || pHost->isClosingDown() || TAppFrontend::viewGone() || (pool && pool->goingDown()) || TAppFrontend::instance()->quitting();
 }
 
 // No documentation available in wiki - internal, test-only function
@@ -1941,7 +1995,9 @@ int TLuaInterpreter::setButtonState(lua_State* L)
 
     if (pItem->mButtonState != checked) {
         pItem->mButtonState = checked;
-        getHostFromLua(L).consoleFrontend()->setActionButtonChecked(pItem, checked);
+        Host& host = getHostFromLua(L);
+        host.consoleFrontend()->setActionButtonChecked(pItem, checked);
+        emit host.signal_buttonsChanged();
         lua_pushboolean(L, true);
         return 1;
     }
@@ -1957,7 +2013,8 @@ int TLuaInterpreter::setConsoleBufferSize(lua_State* L)
     int s = 1;
     const int n = lua_gettop(L);
     const char* windowName = "";
-    if (n > 2) {
+    // three arguments ending in a boolean are the limits and useMaximum, with no name
+    if (n > 3 || (n == 3 && !lua_isboolean(L, 3))) {
         windowName = WINDOW_NAME(L, s++);
     }
 
@@ -2316,9 +2373,8 @@ int TLuaInterpreter::tempAnsiColorTrigger(lua_State* L)
             return 1;
         }
         trigger->mRegisteredAnonymousLuaFunction = true;
-        lua_pushlightuserdata(L, trigger);
         lua_pushvalue(L, codeIndex);
-        lua_settable(L, LUA_REGISTRYINDEX);
+        trigger->mLuaFunctionRef = luaL_ref(L, LUA_REGISTRYINDEX);
     }
 
     lua_pushnumber(L, triggerID);
@@ -2359,9 +2415,8 @@ int TLuaInterpreter::tempAlias(lua_State* L)
             return 1;
         }
         alias->mRegisteredAnonymousLuaFunction = true;
-        lua_pushlightuserdata(L, alias);
         lua_pushvalue(L, 2);
-        lua_settable(L, LUA_REGISTRYINDEX);
+        alias->mLuaFunctionRef = luaL_ref(L, LUA_REGISTRYINDEX);
         lua_pushnumber(L, result);
         return 1;
     }
@@ -2414,9 +2469,8 @@ int TLuaInterpreter::tempBeginOfLineTrigger(lua_State* L)
             return 1;
         }
         trigger->mRegisteredAnonymousLuaFunction = true;
-        lua_pushlightuserdata(L, trigger);
         lua_pushvalue(L, 2);
-        lua_settable(L, LUA_REGISTRYINDEX);
+        trigger->mLuaFunctionRef = luaL_ref(L, LUA_REGISTRYINDEX);
     }
 
     lua_pushnumber(L, triggerID);
@@ -2502,7 +2556,7 @@ int TLuaInterpreter::tempButtonToolbar(lua_State* L)
 
     const QString name{lua_tostring(L, 1)};
 
-    if (location > 0) {
+    if (location > 0 && location < std::numeric_limits<int>::max()) {
         location++;
     }
     Host& host = getHostFromLua(L);
@@ -2632,9 +2686,8 @@ int TLuaInterpreter::tempColorTrigger(lua_State* L)
             return 1;
         }
         trigger->mRegisteredAnonymousLuaFunction = true;
-        lua_pushlightuserdata(L, trigger);
         lua_pushvalue(L, 3);
-        lua_settable(L, LUA_REGISTRYINDEX);
+        trigger->mLuaFunctionRef = luaL_ref(L, LUA_REGISTRYINDEX);
     } else {
         lua_pushfstring(L, "tempColorTrigger: bad argument #3 type (code to run as a string or a function expected, got %s!)", luaL_typename(L, 3));
         return lua_error(L);
@@ -2716,23 +2769,20 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
         }
     }
 
-    bool highlight;
-    QColor hlFgColor;
-    if (lua_isnumber(L, 9)) {
-        highlight = false;
-    } else {
-        highlight = true;
+    // A number for either highlight color leaves that side of the text as it is, as "transparent" does
+    const bool highlightFg = !lua_isnumber(L, 9);
+    const bool highlightBg = !lua_isnumber(L, 10);
+    const bool highlight = highlightFg || highlightBg;
+    QColor hlFgColor = QColorConstants::Transparent;
+    QColor hlBgColor = QColorConstants::Transparent;
+    if (highlightFg) {
 #if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
         hlFgColor.setNamedColor(lua_tostring(L, 9));
 #else
         hlFgColor = QColor::fromString(lua_tostring(L, 9));
 #endif
     }
-    QColor hlBgColor;
-    if (lua_isnumber(L, 10)) {
-        highlight = false;
-    } else {
-        highlight = true;
+    if (highlightBg) {
 #if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
         hlBgColor.setNamedColor(lua_tostring(L, 10));
 #else
@@ -2797,9 +2847,8 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
         pT->setScript(QString());
 
         pT->mRegisteredAnonymousLuaFunction = true;
-        lua_pushlightuserdata(L, pT);
         lua_pushvalue(L, 3);
-        lua_settable(L, LUA_REGISTRYINDEX);
+        pT->mLuaFunctionRef = luaL_ref(L, LUA_REGISTRYINDEX);
     }
 
     lua_pushnumber(L, pT->getID());
@@ -2848,9 +2897,8 @@ int TLuaInterpreter::tempExactMatchTrigger(lua_State* L)
             return 1;
         }
         trigger->mRegisteredAnonymousLuaFunction = true;
-        lua_pushlightuserdata(L, trigger);
         lua_pushvalue(L, 2);
-        lua_settable(L, LUA_REGISTRYINDEX);
+        trigger->mLuaFunctionRef = luaL_ref(L, LUA_REGISTRYINDEX);
     }
 
     lua_pushnumber(L, triggerID);
@@ -2888,9 +2936,8 @@ int TLuaInterpreter::tempKey(lua_State* L)
             return 1;
         }
         key->mRegisteredAnonymousLuaFunction = true;
-        lua_pushlightuserdata(L, key);
         lua_pushvalue(L, argIndex);
-        lua_settable(L, LUA_REGISTRYINDEX);
+        key->mLuaFunctionRef = luaL_ref(L, LUA_REGISTRYINDEX);
         lua_pushnumber(L, result);
         return 1;
     }
@@ -2931,9 +2978,8 @@ int TLuaInterpreter::tempLineTrigger(lua_State* L)
             return 1;
         }
         trigger->mRegisteredAnonymousLuaFunction = true;
-        lua_pushlightuserdata(L, trigger);
         lua_pushvalue(L, 3);
-        lua_settable(L, LUA_REGISTRYINDEX);
+        trigger->mLuaFunctionRef = luaL_ref(L, LUA_REGISTRYINDEX);
     } else {
         lua_pushfstring(L, "tempLineTrigger: bad argument #3 type (code to run as a string or a function expected, got %s!)", luaL_typename(L, 3));
         return lua_error(L);
@@ -2977,9 +3023,8 @@ int TLuaInterpreter::tempPromptTrigger(lua_State* L)
             return 1;
         }
         trigger->mRegisteredAnonymousLuaFunction = true;
-        lua_pushlightuserdata(L, trigger);
         lua_pushvalue(L, 1);
-        lua_settable(L, LUA_REGISTRYINDEX);
+        trigger->mLuaFunctionRef = luaL_ref(L, LUA_REGISTRYINDEX);
     } else {
         lua_pushfstring(L, "tempPromptTrigger: bad argument #1 type (code to run as a string or a function expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
@@ -3034,9 +3079,8 @@ int TLuaInterpreter::tempRegexTrigger(lua_State* L)
             return 1;
         }
         trigger->mRegisteredAnonymousLuaFunction = true;
-        lua_pushlightuserdata(L, trigger);
         lua_pushvalue(L, 2);
-        lua_settable(L, LUA_REGISTRYINDEX);
+        trigger->mLuaFunctionRef = luaL_ref(L, LUA_REGISTRYINDEX);
     }
 
     lua_pushnumber(L, triggerID);
@@ -3076,9 +3120,8 @@ int TLuaInterpreter::tempTimer(lua_State* L)
             return 1;
         }
         timer->mRegisteredAnonymousLuaFunction = true;
-        lua_pushlightuserdata(L, timer);
         lua_pushvalue(L, 2);
-        lua_settable(L, LUA_REGISTRYINDEX);
+        timer->mLuaFunctionRef = luaL_ref(L, LUA_REGISTRYINDEX);
         lua_pushnumber(L, result.first);
         return 1;
     }
@@ -3142,9 +3185,8 @@ int TLuaInterpreter::tempTrigger(lua_State* L)
             return 1;
         }
         trigger->mRegisteredAnonymousLuaFunction = true;
-        lua_pushlightuserdata(L, trigger);
         lua_pushvalue(L, 2);
-        lua_settable(L, LUA_REGISTRYINDEX);
+        trigger->mLuaFunctionRef = luaL_ref(L, LUA_REGISTRYINDEX);
     }
 
     lua_pushnumber(L, triggerID);
@@ -3293,7 +3335,7 @@ int TLuaInterpreter::closeProfile(lua_State* L)
         return 2;
     }
 
-    if (!TAppFrontend::instance()->requestProfileTabClose(profileName)) {
+    if (!TAppFrontend::instance()->requestProfileClose(profileName)) {
         return 0;
     }
     lua_pushboolean(L, true);

@@ -917,7 +917,20 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="0" colspan="5">
+          <item row="1" column="1" colspan="4">
+           <widget class="QCheckBox" name="checkBox_monospacedFontsOnly">
+            <property name="toolTip">
+             <string>&lt;p&gt;List only fonts whose characters all have the same width, which keeps columns of text from games lined up. While the font in use is not one of them, every font is listed.&lt;/p&gt;</string>
+            </property>
+            <property name="accessibleDescription">
+             <string>List only fonts whose characters all have the same width, which keeps columns of text from games lined up. While the font in use is not one of them, every font is listed.</string>
+            </property>
+            <property name="text">
+             <string>Show only monospaced fonts</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0" colspan="5">
            <widget class="QLabel" name="label_invalidFontError">
             <property name="font">
              <font>
@@ -929,7 +942,7 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="0" colspan="5">
+          <item row="3" column="0" colspan="5">
            <widget class="QLabel" name="label_variableWidthFontWarning">
             <property name="font">
              <font>
@@ -1648,6 +1661,19 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
+          <item row="4" column="0" colspan="2">
+           <widget class="QCheckBox" name="checkBox_showTimeStamps">
+            <property name="toolTip">
+             <string extracomment="Tooltip of the profile preference that shows the time each line arrived at the start of every line in the main window. &quot;Toggle time stamps&quot; must match the translation of that button's tooltip">&lt;p&gt;Shows the time each line arrived at the start of every line in the main window. This is the same setting as the main window's &quot;Toggle time stamps&quot; button.&lt;/p&gt;</string>
+            </property>
+            <property name="accessibleDescription">
+             <string extracomment="Accessibility-friendly description of the profile preference that shows the time each line arrived at the start of every line in the main window. &quot;Toggle time stamps&quot; must match the translation of that button's tooltip">Shows the time each line arrived at the start of every line in the main window. This is the same setting as the main window's &quot;Toggle time stamps&quot; button.</string>
+            </property>
+            <property name="text">
+             <string extracomment="Label of the profile preference that shows the time each line arrived at the start of every line in the main window">Show timestamps</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -1719,6 +1745,12 @@ you can use it but there could be issues with aligning columns of text</string>
           </item>
           <item row="1" column="0">
            <widget class="QComboBox" name="code_editor_theme_selection_combobox">
+            <property name="accessibleName">
+             <string extracomment="Screen reader name of the editor color theme picker on the Editor page of the settings, which has no visible label of its own">Editor theme</string>
+            </property>
+            <property name="accessibleDescription">
+             <string extracomment="Screen reader description of the editor color theme picker on the Editor page of the settings">Color theme the script editor is drawn in</string>
+            </property>
             <property name="editable">
              <bool>true</bool>
             </property>
@@ -1726,11 +1758,20 @@ you can use it but there could be issues with aligning columns of text</string>
           </item>
           <item row="1" column="1">
            <widget class="QComboBox" name="script_preview_combobox">
+            <property name="accessibleName">
+             <string extracomment="Screen reader name of the picker for the script shown as the theme preview on the Editor page of the settings, which has no visible label of its own">Script to preview</string>
+            </property>
+            <property name="accessibleDescription">
+             <string extracomment="Screen reader description of the picker for the script shown as the theme preview on the Editor page of the settings">One of your scripts to show in the editor theme preview</string>
+            </property>
             <property name="editable">
              <bool>true</bool>
             </property>
             <property name="sizeAdjustPolicy">
-             <enum>QComboBox::SizeAdjustPolicy::AdjustToContents</enum>
+             <enum>QComboBox::SizeAdjustPolicy::AdjustToMinimumContentsLengthWithIcon</enum>
+            </property>
+            <property name="minimumContentsLength">
+             <number>24</number>
             </property>
            </widget>
           </item>
@@ -1743,6 +1784,116 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
             <property name="text">
              <string>Updating themes from colorsublime.github.io...</string>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBox_editorFont">
+         <property name="title">
+          <string extracomment="Card title on the Editor settings page, above the font the script editor's code is written in">Font</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_groupBox_editorFont" columnstretch="0,1,0,0">
+          <item row="0" column="0" colspan="4">
+           <widget class="QCheckBox" name="checkBox_editorFontFollowsDisplay">
+            <property name="toolTip">
+             <string extracomment="Tooltip of the Editor settings page option that writes the script editor's code in the font set for the game's text">&lt;p&gt;Shows code and the error messages under it in the font and size set for the game's text on the Main display page. Untick it to give the script editor a font and size of its own.&lt;/p&gt;</string>
+            </property>
+            <property name="accessibleDescription">
+             <string extracomment="Accessibility-friendly description of the Editor settings page option that writes the script editor's code in the font set for the game's text">Shows code and the error messages under it in the font and size set for the game's text on the Main display page. Untick it to give the script editor a font and size of its own.</string>
+            </property>
+            <property name="text">
+             <string extracomment="Option on the Editor settings page: when ticked, the script editor's code is written in the font and size of the game's text, set on the Main display page">Use the main display font</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_editorFont">
+            <property name="text">
+             <string>Font:</string>
+            </property>
+            <property name="buddy">
+             <cstring>fontComboBox_editorFont</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QFontComboBox" name="fontComboBox_editorFont">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+              <horstretch>1</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="editable">
+             <bool>false</bool>
+            </property>
+            <property name="maxVisibleItems">
+             <number>20</number>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="2">
+           <widget class="QLabel" name="label_editorFontSize">
+            <property name="text">
+             <string>Size:</string>
+            </property>
+            <property name="buddy">
+             <cstring>spinBox_editorFontSize</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="3">
+           <widget class="QSpinBox" name="spinBox_editorFontSize">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <number>99</number>
+            </property>
+            <property name="value">
+             <number>14</number>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0" colspan="4">
+           <widget class="QLabel" name="label_editorFontInvalid">
+            <property name="font">
+             <font>
+              <pointsize>8</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>The selected font doesn't work with Mudlet, please pick another</string>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0" colspan="4">
+           <widget class="QLabel" name="label_editorFontVariableWidth">
+            <property name="font">
+             <font>
+              <pointsize>8</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string extracomment="Warning under the script editor's font picker on the Editor settings page, shown when the chosen font's letters are not all the same width">This font is not monospace, so indented code and columns of text may not line up.</string>
             </property>
             <property name="wordWrap">
              <bool>true</bool>
@@ -1829,10 +1980,10 @@ you can use it but there could be issues with aligning columns of text</string>
           <item row="2" column="0" colspan="2">
            <widget class="QCheckBox" name="checkBox_folderView">
             <property name="toolTip">
-             <string>&lt;p&gt;Adds a &lt;b&gt;Folders&lt;/b&gt; button to the editor's item toolbar. It shows triggers, aliases, scripts, timers, keys and buttons together, grouped by folder. Folders with the same name in different item types are shown as one folder.&lt;/p&gt;</string>
+             <string>&lt;p&gt;Adds a &lt;b&gt;Folders&lt;/b&gt; entry to the editor's sidebar. It shows triggers, aliases, scripts, timers, keys and buttons together, grouped by folder. Folders with the same name in different item types are shown as one folder.&lt;/p&gt;</string>
             </property>
             <property name="accessibleDescription">
-             <string>Adds a Folders button to the editor's item toolbar. It shows triggers, aliases, scripts, timers, keys and buttons together, grouped by folder. Folders with the same name in different item types are shown as one folder.</string>
+             <string>Adds a Folders entry to the editor's sidebar. It shows triggers, aliases, scripts, timers, keys and buttons together, grouped by folder. Folders with the same name in different item types are shown as one folder.</string>
             </property>
             <property name="text">
              <string>Show a Folders view of all item types</string>
@@ -5626,6 +5777,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>fontComboBox_displayFont</tabstop>
   <tabstop>spinBox_displayFontSize</tabstop>
   <tabstop>checkBox_antiAlias</tabstop>
+  <tabstop>checkBox_monospacedFontsOnly</tabstop>
   <tabstop>topBorderHeight</tabstop>
   <tabstop>bottomBorderHeight</tabstop>
   <tabstop>leftBorderWidth</tabstop>
@@ -5640,10 +5792,14 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>checkBox_useWideAmbiguousEastAsianGlyphs</tabstop>
   <tabstop>checkBox_showTabConnectionIndicators</tabstop>
   <tabstop>checkBox_enableTextAnalyzer</tabstop>
+  <tabstop>checkBox_showTimeStamps</tabstop>
   <tabstop>checkBox_echoLuaErrors</tabstop>
   <tabstop>comboBox_controlCharacterHandling</tabstop>
   <tabstop>code_editor_theme_selection_combobox</tabstop>
   <tabstop>script_preview_combobox</tabstop>
+  <tabstop>checkBox_editorFontFollowsDisplay</tabstop>
+  <tabstop>fontComboBox_editorFont</tabstop>
+  <tabstop>spinBox_editorFontSize</tabstop>
   <tabstop>checkBox_autocompleteLuaCode</tabstop>
   <tabstop>checkBox_showSpacesAndTabs</tabstop>
   <tabstop>checkBox_showBidi</tabstop>

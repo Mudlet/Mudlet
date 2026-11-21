@@ -30,6 +30,7 @@
 #undef nil
 #endif
 
+#include "HardwareDeviceTypes.h"
 #include "HostManager.h"
 #include "MudletApp.h"
 #include "mudlet.h"
@@ -100,11 +101,11 @@
 
 using namespace std::chrono_literals;
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
+extern int qInitResources_mudlet();
+extern int qInitResources_qm();
+extern int qInitResources_additional_splash_screens();
+extern int qInitResources_mudlet_fonts_common();
+extern int qInitResources_mudlet_fonts_posix();
 void initializeQRCResources();
 
 #if defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
@@ -120,7 +121,7 @@ void copyFont(const QString& externalPathName, const QString& resourcePathName, 
     }
 }
 
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
+#ifdef INCLUDE_EMOJI_FONT
 void removeOldNoteColorEmojiFonts()
 {
     // PLACEMARKER: previous Noto Color Emoji font versions removal
@@ -163,7 +164,7 @@ void removeOldNoteColorEmojiFonts()
         }
     }
 }
-#endif // defined(Q_OS_LINUX)
+#endif // INCLUDE_EMOJI_FONT
 #endif // defined(INCLUDE_FONTS)
 
 // Joined so the warm-up thread has fully exited, exit handlers included, before the application object
@@ -228,55 +229,6 @@ private:
     bool mStarted = false;
 #endif
 };
-
-QTranslator* loadTranslationsForCommandLine(const bool printAndExitRun)
-{
-    // Not MudletApp::getQSettings(): it stays null until setupConfig(), which a --help or --version run never
-    // reaches. Same file and format as setupConfig() opens - keep the spellings in step.
-    QSettings settings(qsl("%1/Mudlet.ini").arg(MudletApp::getMudletPath(enums::mainPath)), QSettings::IniFormat);
-    MudletApp::noteEarlySettingsStatus(settings);
-    // By name: only the first reader to parse a file is told of a format error, and the reader before this
-    // one, applyHighDpiRoundingPolicyFromConfig()'s, finds its root from argv[0] so it can have parsed another file
-    const QSettings::Status settingsStatus = MudletApp::earlySettingsStatus(settings.fileName());
-    // Other runs have getQSettings() report this, which a print-and-exit run never calls
-    if (printAndExitRun && settingsStatus == QSettings::FormatError) {
-        // Qt keeps every key it could parse, so a language set there may still be in use
-        qWarning().nospace().noquote() << "loadTranslationsForCommandLine() WARNING - \"" << settings.fileName()
-                                       << "\" is not valid INI, so an interface language set in it may have been read wrongly or not at all.";
-    } else if (printAndExitRun && settingsStatus != QSettings::NoError) {
-        qWarning().nospace().noquote() << "loadTranslationsForCommandLine() WARNING - \"" << settings.fileName()
-                                       << "\" is not readable, so any interface language set in it is not used for this text.";
-    }
-    auto interfaceLanguage = settings.value(QLatin1String("interfaceLanguage")).toString();
-    auto userLocale = interfaceLanguage.isEmpty() ? QLocale::system() : QLocale(interfaceLanguage);
-    if (userLocale == QLocale::c()) {
-        // Other runs have mudlet::readEarlySettings() report a code that names no locale
-        if (printAndExitRun && !interfaceLanguage.isEmpty()) {
-            qWarning().nospace().noquote() << "loadTranslationsForCommandLine() WARNING - the interface language \"" << interfaceLanguage
-                                           << "\" is not a recognised locale, so the command line text is in English.";
-        }
-        return nullptr;
-    }
-    // We only need the Mudlet translations for the Command Line texts, no need
-    // for any Qt ones. Parented to QCoreApplication::instance(), not qApp, which static-casts
-    // to a QApplication that a print-and-exit run has not created.
-    QTranslator* pMudletTranslator = new QTranslator(QCoreApplication::instance());
-    // If we allow the translations to be outside of the resource file inside
-    // the application executable then this will have to be revised to handle
-    // it:
-    const bool isOk = pMudletTranslator->load(userLocale, qsl("mudlet"), QString("_"), qsl(":/lang"), qsl(".qm"));
-    if (!isOk) {
-        // Only a print-and-exit run prints the text this is about
-        if (printAndExitRun && !interfaceLanguage.isEmpty()) {
-            qWarning().nospace().noquote() << "loadTranslationsForCommandLine() WARNING - no translation could be loaded for the interface language \"" << interfaceLanguage
-                                           << "\", so the command line text is in English.";
-        }
-        delete pMudletTranslator;
-        return nullptr;
-    }
-    QCoreApplication::installTranslator(pMudletTranslator);
-    return pMudletTranslator;
-}
 
 #ifdef Q_OS_WINDOWS
 void msys2QtMessageHandler(QtMsgType type, const QMessageLogContext& context, const QString& msg)
@@ -621,6 +573,13 @@ int main(int argc, char* argv[])
     if (printAndExitOption) {
         consoleApp = std::make_unique<QCoreApplication>(argc, argv);
     } else {
+        // Setting the environment is a data race once the application's threads are reading it
+        nameHardwareDeviceTypes();
+        // Read before QApplication takes -style out of argv. An empty value sets no style there either.
+        const QStringList chosenStyles = parser.values(qsl("style"));
+        mudlet::smStyleChosenByPlayer = !qEnvironmentVariableIsEmpty("QT_STYLE_OVERRIDE") || std::any_of(chosenStyles.cbegin(), chosenStyles.cend(), [](const QString& name) {
+            return !name.isEmpty();
+        });
         app = new QApplication(argc, argv);
     }
 
@@ -668,7 +627,7 @@ int main(int argc, char* argv[])
 #endif
     }
 
-    QPointer<QTranslator> commandLineTranslator(loadTranslationsForCommandLine(printAndExitOption));
+    QPointer<QTranslator> commandLineTranslator(MudletApp::loadTranslationsForCommandLine(printAndExitOption));
 
     // A print-and-exit run keeps the verdict above: a second reading may differ, and such a run has no
     // QApplication for the rest of main() to dereference. Other runs are reparsed from the application's
@@ -874,26 +833,8 @@ int main(int argc, char* argv[])
         commandLineTranslator.clear();
     }
 
-    // Configure the media backend - does not work in mudlet class c'tor.
-    // FFmpeg plays .ogg/.opus, which the native Windows backend doesn't, and is what Linux gets by Qt's
-    // default. macOS uses it too: only FFmpeg feeds the shared output, TAudioMixer, which keeps Bluetooth
-    // headphones from being claimed for every sound.
-#if defined(Q_OS_WINDOWS) || defined(Q_OS_MACOS)
-    const QByteArray defaultMediaBackend("ffmpeg");
-#else
-    const QByteArray defaultMediaBackend;
-#endif
-    if (!defaultMediaBackend.isEmpty()) {
-        if (qEnvironmentVariableIsEmpty("QT_MEDIA_BACKEND")) {
-            if (qputenv("QT_MEDIA_BACKEND", defaultMediaBackend)) {
-                qDebug().noquote() << "main(...) INFO - setting QT_MEDIA_BACKEND environmental variable to:" << defaultMediaBackend;
-            } else {
-                qWarning().noquote() << "main(...) WARNING - failed to set QT_MEDIA_BACKEND environmental variable to:" << defaultMediaBackend << ", sound may not work.";
-            }
-        } else {
-            qDebug().noquote().nospace() << "main(...) INFO - QT_MEDIA_BACKEND environmental variable is set to: \"" << qgetenv("QT_MEDIA_BACKEND") << "\".";
-        }
-    }
+    // Does not work in the mudlet class c'tor
+    MudletApp::setDefaultMediaBackend();
 
     QStringList cliProfiles = parser.values(profileToOpen);
 
@@ -995,7 +936,7 @@ int main(int argc, char* argv[])
     if (!dir.exists(ubuntuFontDirectory)) {
         dir.mkpath(ubuntuFontDirectory);
     }
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
+#ifdef INCLUDE_EMOJI_FONT
     // Only needed/works on GNU/Linux and FreeBSD to provide color emojis:
     removeOldNoteColorEmojiFonts();
     // PLACEMARKER: current Noto Color Emoji font directory specification:
@@ -1054,11 +995,11 @@ int main(int argc, char* argv[])
     copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("UbuntuMono-R.ttf"));
     copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("UbuntuMono-RI.ttf"));
 
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
+#ifdef INCLUDE_EMOJI_FONT
     // PLACEMARKER: current Noto Color Emoji font version file extraction
     copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2025-09-15-v2.051"), qsl("NotoColorEmoji.ttf"));
     copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2025-09-15-v2.051"), qsl("LICENSE"));
-#endif // defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
+#endif // INCLUDE_EMOJI_FONT
 #endif // defined(INCLUDE_FONTS)
 
     const QString homeLink = qsl("%1/mudlet-data").arg(QDir::homePath());
@@ -1586,7 +1527,7 @@ void initializeQRCResources()
 #endif
 #ifdef INCLUDE_FONTS
     qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
+#ifdef INCLUDE_EMOJI_FONT
     qInitResources_mudlet_fonts_posix();
 #endif
 #endif

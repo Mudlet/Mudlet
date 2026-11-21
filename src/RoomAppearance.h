@@ -113,8 +113,16 @@ qreal playerRoomRadius(quint8 outerDiameterPercentage, qreal roomVisualSize);
 // the room's ROOM_UI_NAMEPOS: "x y", or just "y"
 QPointF nameOffset(const QString& positionData);
 
+// Whether the room has a name to draw where the map shows room names, which its own ROOM_UI_SHOWNAME can turn off
+bool nameShown(const TRoom& room);
+
 // From the room's ROOM_UI_NAMECOLOR, else whichever of black or white stands out on background
 QColor nameColor(const QString& colorData, const QColor& background);
+
+// False for variation selectors, the zero width joiner and the other code
+// points that steer how their neighbours are drawn: fonts rarely map them, so
+// checking them against a font would reject symbols like U+2694 U+FE0F.
+bool symbolCodePointNeedsGlyph(char32_t codePoint);
 
 // Draws text centered in rect at the largest size that fits, or nothing if
 // even the smallest is too big. fontSize is where the search for that size

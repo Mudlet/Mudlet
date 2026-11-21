@@ -13,17 +13,46 @@ Geyser.Label = Geyser.Window:new({
   fillBg = 1, })
 Geyser.Label.scrollV = {}
 Geyser.Label.scrollH = {}
+
+-- every span the converters write sets font-weight, font-style and text-decoration,
+-- which overrides a <b>, <i>, <u> or <s> wrapped around them
+local function addLabelTextStyle(resetFormat, ft)
+  resetFormat.bold = resetFormat.bold or ft.bold
+  resetFormat.italic = resetFormat.italic or ft.italics
+  resetFormat.underline = resetFormat.underline or ft.underline
+  resetFormat.strikeout = resetFormat.strikeout or ft.strikethrough
+end
 --- Prints a message to the window.  All parameters are optional and if not
--- specified will use the last set value.
+-- specified will use the last set value. Left out, the message is shown again
+-- the way it was last put up, so one set by decho, hecho or cecho keeps its colours.
 -- @param message The message to print. Can contain html formatting.
 -- @param color The color to use. Accepts color names like "red", decho codes like "<255,0,0>", and hex codes like "#ff0000". If no color formatting is needed it is possible to use 'nocolor' which allows color formatting by using :setStyleSheet
 -- @param format A format list to use. 'c' - center, 'l' - left, 'r' - right,  'b' - bold, 'i' - italics, 'u' - underline, 's' - strikethrough,  '##' - font size.  For example, "cb18" specifies center bold 18pt font be used.  Order doesn't matter.
 function Geyser.Label:echo(message, color, format)
-  message = message or self.message
-  self.message = message
+  -- the setters re-render through here, so a message put up by decho, hecho or
+  -- cecho is shown again through that function rather than as raw markup
+  local replay = not message and self.echoType and self.message == self.echoMessage
+  if not replay then
+    -- false, not nil, so a flavour inherited from a prototype label is shadowed
+    self.echoType = false
+    message = message or self.message
+    self.message = message
+  end
   color = color or self.fgColor
   self.fgColor = color
   if format then self:processFormatString(format) end
+  if replay then
+    -- a colour the plain path would raise on raises here too, before the flavour
+    -- function has a chance to drop the flavour
+    if color ~= "nocolor" then
+      Geyser.Color.hex(color)
+    end
+    local ok, err = Geyser.Label[self.echoType](self)
+    if ok == nil and err ~= nil then
+      debugc(string.format("Geyser.Label:echo(): could not show '%s' again through %s: %s", self.name, self.echoType, tostring(err)))
+    end
+    return
+  end
 
   local ft = self.formatTable
   local fs = ft.fontSize or tostring(self.fontSize)
@@ -92,13 +121,19 @@ function Geyser.Label:decho(message)
     return nil, err
   end
   self.message = message
+  -- the flavour is only set once the message has converted, so a message that
+  -- raises is shown plain by the next setter rather than replayed
+  self.echoType = false
   -- Override foreground with label's fgColor property if set
-  if self.fgColor and self.fgColor ~= "" then
+  if self.fgColor and self.fgColor ~= "" and self.fgColor ~= "nocolor" then
     resetFormat.foreground = Geyser.Color.hex(self.fgColor)
   end
+  addLabelTextStyle(resetFormat, self.formatTable)
 
   -- Convert decho formatted text to HTML, preserving label's colors
   local htmlContent = decho2html(message, resetFormat)
+  self.echoType = "decho"
+  self.echoMessage = message
 
   -- Apply label's formatting settings
   local ft = self.formatTable
@@ -145,13 +180,19 @@ function Geyser.Label:hecho(message)
     return nil, err
   end
   self.message = message
+  -- the flavour is only set once the message has converted, so a message that
+  -- raises is shown plain by the next setter rather than replayed
+  self.echoType = false
   -- Override foreground with label's fgColor property if set
-  if self.fgColor and self.fgColor ~= "" then
+  if self.fgColor and self.fgColor ~= "" and self.fgColor ~= "nocolor" then
     resetFormat.foreground = Geyser.Color.hex(self.fgColor)
   end
+  addLabelTextStyle(resetFormat, self.formatTable)
 
   -- Convert hecho formatted text to HTML, preserving label's colors
   local htmlContent = hecho2html(message, resetFormat)
+  self.echoType = "hecho"
+  self.echoMessage = message
 
   -- Apply label's formatting settings
   local ft = self.formatTable
@@ -198,13 +239,19 @@ function Geyser.Label:cecho(message)
     return nil, err
   end
   self.message = message
+  -- the flavour is only set once the message has converted, so a message that
+  -- raises is shown plain by the next setter rather than replayed
+  self.echoType = false
   -- Override foreground with label's fgColor property if set
-  if self.fgColor and self.fgColor ~= "" then
+  if self.fgColor and self.fgColor ~= "" and self.fgColor ~= "nocolor" then
     resetFormat.foreground = Geyser.Color.hex(self.fgColor)
   end
+  addLabelTextStyle(resetFormat, self.formatTable)
 
   -- Convert cecho formatted text to HTML, preserving label's colors
   local htmlContent = cecho2html(message, resetFormat)
+  self.echoType = "cecho"
+  self.echoMessage = message
 
   -- Apply label's formatting settings
   local ft = self.formatTable
@@ -902,7 +949,8 @@ end
 
 --- Sets whether a screen reader announces the label's new text when it changes, for a label
 -- showing something the player should hear about, such as a status or an alert. Only heard
--- with the profile's accessibleLabels setting on; text that hasn't changed is not repeated.
+-- with the profile's accessibleLabels setting on; text that hasn't changed is not repeated, and
+-- text that changes more than once a second is heard as its latest value, once a second.
 -- @param mode "polite" waits for the screen reader to finish, "assertive" interrupts it, "off" stops announcing
 -- @return true, or nil and why the label refused it
 function Geyser.Label:setLiveRegion(mode)
@@ -1049,6 +1097,38 @@ local function labelWindowSize(windowname)
   return getMainWindowSize()
 end
 
+-- a right click menu level flies out the way its parent item did, unless only
+-- the other side of that item has room for it
+local function fitMenuLevel(parent, windowWidth)
+  local items = parent.nestedLabels
+  local first = items and items[1]
+  if not first or not first.menuName then
+    return
+  end
+  local flyDir = parent.flyDir or first.flyDir
+  if flyDir ~= "R" and flyDir ~= "L" then
+    return
+  end
+  local width = first.get_width()
+  local x = parent.get_x()
+  local fitsRight = x + parent.get_width() + width <= windowWidth
+  local fitsLeft = x - width >= 0
+  if flyDir == "R" and not fitsRight and fitsLeft then
+    flyDir = "L"
+  elseif flyDir == "L" and not fitsLeft and fitsRight then
+    flyDir = "R"
+  end
+  for _, item in ipairs(items) do
+    item.flyDir = flyDir
+  end
+  -- the scroll buttons outlive the menu being closed, so they would keep the side they were made on
+  for _, scrolls in pairs({Geyser.Label.scrollV[parent] or {}, Geyser.Label.scrollH[parent] or {}}) do
+    for _, scroll in ipairs(scrolls) do
+      scroll.flyDir = flyDir
+    end
+  end
+end
+
 --- Displays the nested elements within label, and orients them
 -- appropriately
 -- @param label The name of the label to use
@@ -1056,6 +1136,7 @@ function Geyser.Label:displayNest()
   local maxDim = {}
   local flyMap = { R = { 1, 0 }, L = { -1, 0 }, T = { 0, -1 }, B = { 0, 1 } }
   maxDim["H"], maxDim["V"] = labelWindowSize(self.windowname)
+  fitMenuLevel(self, maxDim["H"])
   local parent = self
   --build a list of the labels we can use until we hit the max
   local nestedLabels = {}
@@ -1432,30 +1513,23 @@ function Geyser.Label:new (cons, container)
   -- applies it, or a value the label refused would stay on the object
   local accessibleName, accessibleRole, liveRegion = me.accessibleName, me.accessibleRole, me.liveRegion
   me.accessibleName, me.accessibleRole, me.liveRegion = nil, nil, nil
-  if accessibleName then
-    local ok, err = me:setAccessibleName(accessibleName)
-    if not ok then
-      debugc(string.format("Geyser.Label:new(): accessibleName refused for '%s': %s", me.name, tostring(err)))
-    end
-  end
-
-  if accessibleRole then
-    local ok, err = me:setAccessibleRole(accessibleRole)
-    if not ok then
-      debugc(string.format("Geyser.Label:new(): accessibleRole refused for '%s': %s", me.name, tostring(err)))
-    end
-  end
-
-  if liveRegion then
-    -- setLabelLiveRegion raises on a non-string, which would leave this label half built
-    local ok, err
-    if type(liveRegion) == "string" then
-      ok, err = me:setLiveRegion(liveRegion)
-    else
-      err = string.format("liveRegion must be a string, got %s", type(liveRegion))
-    end
-    if not ok then
-      debugc(string.format("Geyser.Label:new(): liveRegion refused for '%s': %s", me.name, tostring(err)))
+  for _, setting in ipairs({
+    {"accessibleName", accessibleName, me.setAccessibleName},
+    {"accessibleRole", accessibleRole, me.setAccessibleRole},
+    {"liveRegion", liveRegion, me.setLiveRegion},
+  }) do
+    local key, value, setter = setting[1], setting[2], setting[3]
+    if value then
+      -- The setter raises on anything Lua cannot read as a string, which would leave this label half built
+      local ok, err
+      if type(value) == "string" or type(value) == "number" then
+        ok, err = setter(me, value)
+      else
+        err = string.format("%s must be a string, got %s", key, type(value))
+      end
+      if not ok then
+        debugc(string.format("Geyser.Label:new(): %s refused for '%s': %s", key, me.name, tostring(err)))
+      end
     end
   end
 
@@ -1501,9 +1575,11 @@ end
 -- @param auto true when the label is shown because its container was shown
 function Geyser.Label:show(auto)
   -- the nest parent's container may still be hidden when this label's own one comes
-  -- back; showing the parent again brings this label back with it
+  -- back; showing the parent again brings this label back with it. A parent that is
+  -- only closed is not waited on: its nest is closed too and stays hidden, but must
+  -- drop auto_hidden, or opening the parent later could never show it
   local parent = self.nestParent
-  if auto and parent and (parent.hidden or parent.auto_hidden) then
+  if auto and parent and parent.auto_hidden then
     return false
   end
   if Geyser.Container.show(self, auto) == false then

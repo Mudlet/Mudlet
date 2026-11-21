@@ -84,6 +84,22 @@ inline int getWidth(uint unicode, bool mWideAmbigousWidthGlyphs)
     return width > maxWidth ? maxWidth : width;
 }
 
+// Every base character in Unicode's emoji-variation-sequences.txt lies in one of these ranges or is a keycap base
+// (# * 0-9), which needs U+20E3 as well to become an emoji. A letter such as U+00E9 with VS16 stays a letter.
+inline bool hasEmojiForm(uint base)
+{
+    return base == 0xA9 || base == 0xAE || (base >= 0x2000 && base <= 0x2BFF) || base == 0x3030 || base == 0x303D || base == 0x3297 || base == 0x3299 || base >= 0x1F000;
+}
+
+// Fonts draw a symbol followed by VS16 (U+FE0F) as a colour emoji, which takes two columns whatever the symbol's own width.
+inline int withPresentation(QStringView grapheme, uint base, int baseWidth)
+{
+    if (baseWidth != 1 || grapheme.size() < 2 || !grapheme.contains(QChar(0xFE0F))) {
+        return baseWidth;
+    }
+    return (hasEmojiForm(base) || grapheme.contains(QChar(0x20E3))) ? maxWidth : baseWidth;
+}
+
 
 // Extract the base (first) part which will be one or two QChars
 // and if they ARE a surrogate pair convert them back to the single
@@ -113,6 +129,12 @@ inline uint getBaseCharacter(QStringView str)
     }
 
     return first.unicode();
+}
+
+inline int getGraphemeWidth(QStringView grapheme, bool mWideAmbigousWidthGlyphs)
+{
+    const uint base = getBaseCharacter(grapheme);
+    return withPresentation(grapheme, base, getWidth(base, mWideAmbigousWidthGlyphs));
 }
 } // namespace graphemeInfo
 
@@ -290,6 +312,15 @@ inline Breaks asciiLineBreaks(const QStringView text)
     AsciiClass lcls = SOT;
     AsciiClass cls = SOT;
     for (qsizetype i = 0; i != len; ++i) {
+        if (cls == AL && lcls == AL && nelast == lb25::XX && neactlast == lb25::None) {
+            // A letter after a letter, outside a number, leaves every bit of state as it was
+            while (i != len && static_cast<unsigned>((text[i].unicode() | 0x20) - u'a') < 26U) {
+                ++i;
+            }
+            if (i == len) {
+                break;
+            }
+        }
         AsciiClass ncls = classOf(text[i].unicode());
         if (ncls == HY && (lcls == SP || lcls == SOT)) {
             // LB20a: no break after a word-initial hyphen

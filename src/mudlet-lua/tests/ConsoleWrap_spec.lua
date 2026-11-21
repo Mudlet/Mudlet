@@ -76,6 +76,20 @@ describe("Tests how a console wraps the lines it is given", function()
       assert.are.same({"日本語のテ", "キストです"}, wrapped(10, "日本語のテキストです"))
     end)
 
+    it("counts a symbol drawn as an emoji as two columns", function()
+      -- U+2620 and U+1F56F are one column on their own; VS16 (U+FE0F) makes each a colour emoji
+      assert.are.same({"☠️☠️", "☠️"}, wrapped(4, "☠️☠️☠️"))
+      assert.are.same({"🕯️🕯️", "🕯️"}, wrapped(4, "🕯️🕯️🕯️"))
+      assert.are.same({"#️⃣#️⃣", "#️⃣"}, wrapped(4, "#️⃣#️⃣#️⃣"))
+    end)
+
+    it("keeps a one column symbol without VS16 at one column", function()
+      assert.are.same({"☠☠☠☠"}, wrapped(4, "☠☠☠☠"))
+      assert.are.same({"#️#️#️#️"}, wrapped(4, "#️#️#️#️"))
+      -- U+00E9 has no emoji form, so VS16 leaves it a one column letter
+      assert.are.same({"é️é️é️é️"}, wrapped(4, "é️é️é️é️"))
+    end)
+
     it("drops the spaces a break lands inside", function()
       -- the break falls in the middle of the run of six spaces: the four that
       -- fit finish the line and the two that would have started the next are
@@ -90,6 +104,71 @@ describe("Tests how a console wraps the lines it is given", function()
     it("wraps each half of a line that has a newline in the middle", function()
       assert.are.same({"one", "two three four five ", "six seven"},
                       wrapped(20, "one\ntwo three four five six seven"))
+    end)
+  end)
+
+  -- More than half the width in characters, so only counting the columns of
+  -- each one can tell whether the line fits
+  describe("Tests where a line that is not plain ASCII breaks", function()
+    it("leaves an accented line that exactly fills the width alone", function()
+      assert.are.same({"éaaaaaaaaa"}, wrapped(10, "éaaaaaaaaa"))
+    end)
+
+    it("breaks an accented line that is one column too wide", function()
+      assert.are.same({"éaaaaaaaaa", "a"}, wrapped(10, "éaaaaaaaaaa"))
+    end)
+
+    it("counts a letter and the accents combined with it as one column", function()
+      local accented = "e\204\129"
+      assert.are.same({string.rep(accented, 10)}, wrapped(10, string.rep(accented, 10)))
+      assert.are.same({string.rep(accented, 10), accented}, wrapped(10, string.rep(accented, 11)))
+    end)
+
+    it("counts east asian characters among narrow ones as two columns each", function()
+      assert.are.same({"日本語abcd"}, wrapped(10, "日本語abcd"))
+      -- a line may break where the east asian text ends, so the word goes down whole
+      assert.are.same({"日本語", "abcde"}, wrapped(10, "日本語abcde"))
+    end)
+
+    it("counts a character outside the BMP by its width rather than its two halves", function()
+      assert.are.same({"😀😀😀😀😀"}, wrapped(10, "😀😀😀😀😀"))
+      assert.are.same({"😀😀😀😀😀", "😀"}, wrapped(10, "😀😀😀😀😀😀"))
+    end)
+
+    -- echo() splits its text at line feeds before wrapping, insertText() does not
+    it("breaks an accented line that fits the width at the newline inserted into it", function()
+      wrapAt(10)
+      echo(win, "abcdefgh\n")
+      moveCursor(win, 2, 0)
+      insertText(win, "é\n")
+      assert.are.same({"abé", "cdefgh"}, lines())
+    end)
+
+    describe("with the width of east asian ambiguous characters set", function()
+      local savedSetting
+
+      before_each(function()
+        savedSetting = getConfig("ambiguousEAsianWidthCharacters")
+      end)
+
+      after_each(function()
+        setConfig("ambiguousEAsianWidthCharacters", savedSetting)
+      end)
+
+      it("counts them as one column each when they are narrow", function()
+        setConfig("ambiguousEAsianWidthCharacters", "narrow")
+        assert.are.same({"±±±±±±±±±a"}, wrapped(10, "±±±±±±±±±a"))
+      end)
+
+      it("counts them as two columns each when they are wide", function()
+        setConfig("ambiguousEAsianWidthCharacters", "wide")
+        assert.are.same({"±±±±±", "±±±±a"}, wrapped(10, "±±±±±±±±±a"))
+      end)
+
+      it("counts those outside the BMP as two columns each when they are wide", function()
+        setConfig("ambiguousEAsianWidthCharacters", "wide")
+        assert.are.same({"🄰🄰🄰🄰🄰", "🄰"}, wrapped(10, "🄰🄰🄰🄰🄰🄰"))
+      end)
     end)
   end)
 
@@ -115,6 +194,26 @@ describe("Tests how a console wraps the lines it is given", function()
       local out = wrapped(10, "aaaa bbbb cccc dddd", 3, 0)
       assert.are.equal("   aaaa ", out[1])
       assert.are.equal("bbbb cccc ", out[2])
+    end)
+
+    -- what getLines() reads back already carries the indents, and fits
+    it("echoes the lines of a wrapped line back unchanged", function()
+      for _, text in ipairs({"the quick brown fox jumps over the lazy dog", "thé quick brown fox jumps over the lazy dog"}) do
+        local first = wrapped(20, text, 4, 2)
+        clearWindow(win)
+        for _, line in ipairs(first) do
+          echo(win, line .. "\n")
+        end
+        assert.are.same(first, lines())
+      end
+    end)
+
+    it("breaks a line whose spaces run on past the room left beside the indent", function()
+      assert.are.same({"    aaaaaaaaaaaaaaaa", "b"}, wrapped(20, "aaaaaaaaaaaaaaaa     b", 4, 0))
+    end)
+
+    it("leaves a line that fits the width but for its trailing spaces alone", function()
+      assert.are.same({"aaaaaaaaaaaaaaaaaaaa   "}, wrapped(20, "aaaaaaaaaaaaaaaaaaaa   ", 4, 0))
     end)
 
     it("ignores a wrap indent as wide as the window", function()
@@ -165,6 +264,81 @@ describe("Tests how a console wraps the lines it is given", function()
       setWindowWrap(win, 10)
       wrapLine(win, 0)
       assert.are.same({"aaaa bbbb ", "cccc dddd ", "eeee"}, lines())
+    end)
+
+    -- the first line exactly fills the width, indent included, so measuring it
+    -- as though the indent were still to come would break it again
+    local alphabetWrapped = {"  abcdefghij", "    klmnopqr", "    stuvwxyz"}
+
+    it("leaves an indented line alone when wrapLine() rewraps it at the same width", function()
+      assert.are.same(alphabetWrapped, wrapped(12, "abcdefghijklmnopqrstuvwxyz", 2, 4))
+      wrapLine(win, 0)
+      assert.are.same(alphabetWrapped, lines())
+      wrapLine(win, 0)
+      assert.are.same(alphabetWrapped, lines())
+    end)
+
+    it("leaves an indented line that is not plain ASCII alone when wrapLine() rewraps it at the same width", function()
+      local accented = {"  abcdéfghij", "    klmnopqr", "    stuvwxyz"}
+      assert.are.same(accented, wrapped(12, "abcdéfghijklmnopqrstuvwxyz", 2, 4))
+      wrapLine(win, 0)
+      assert.are.same(accented, lines())
+    end)
+
+    it("indents an already indented line once when wrapLine() rewraps it narrower", function()
+      wrapped(12, "abcdefghijklmnopqrstuvwxyz", 2, 4)
+      setWindowWrap(win, 8)
+      wrapLine(win, 0)
+      assert.are.same({"  abcdef", "    ghij", "    klmn", "    opqr", "    stuv", "    wxyz"}, lines())
+    end)
+
+    it("indents an already indented line once when a newline is inserted into it", function()
+      wrapped(12, "abcdefghijklmnopqrstuvwxyz", 2, 4)
+      moveCursor(win, 5, 0)
+      insertText(win, "\n")
+      assert.are.same({"  abc", "defghij", "    klmnopqr", "    stuvwxyz"}, lines())
+    end)
+
+    it("indents the line a newline inserted into a wrapped line starts when wrapLine() breaks it", function()
+      wrapped(12, "abcdefghijklmnopqrstuvwxyz", 2, 4)
+      moveCursor(win, 5, 0)
+      insertText(win, "\n")
+      setWindowWrap(win, 5)
+      wrapLine(win, 1)
+      assert.are.equal("  def", lines()[2])
+    end)
+
+    it("indents the line a newline inserted into a wrapped line starts when that line begins with spaces", function()
+      wrapped(12, "abcdefghijklmnopqrstuvwxyz", 2, 4)
+      moveCursor(win, 5, 0)
+      insertText(win, "\n  ")
+      setWindowWrap(win, 8)
+      wrapLine(win, 1)
+      local result = lines()
+      -- the spaces are text, so it wraps as that text echoed as a paragraph of its own does
+      local fresh = wrapped(8, "  defghij", 2, 4)
+      assert.are.same(fresh, {select(2, unpack(result, 1, #fresh + 1))})
+    end)
+
+    it("indents an already indented line once when wrapLine() rewraps it narrower after its continuation lines were deleted", function()
+      wrapped(12, "abcdefghijklmnopqrstuvwxyz", 2, 4)
+      moveCursor(win, 0, 1)
+      deleteLine(win)
+      moveCursor(win, 0, 1)
+      deleteLine(win)
+      setWindowWrap(win, 8)
+      wrapLine(win, 0)
+      assert.are.same({"  abcdef", "    ghij"}, lines())
+    end)
+
+    it("leaves the indented lines below alone when a newline is inserted above them", function()
+      wrapAt(12, 2, 4)
+      echo(win, "one\n")
+      echo(win, "abcdefghijklmnopqrstuvwxyz\n")
+      moveCursor(win, 3, 0)
+      insertText(win, "\ntwo")
+      local result = lines()
+      assert.are.same(alphabetWrapped, {select(3, unpack(result))})
     end)
 
     -- Wider than the main console's own width, so a rewrap at that width shows
@@ -270,11 +444,18 @@ describe("Tests how a console wraps the lines it is given", function()
       return out
     end
 
-    it("wraps a line that fits the width but not the width less the indent", function()
+    it("leaves a line that fits the width but not the width less the indent alone", function()
       setWindowWrap("main", 20)
       setWindowWrapIndent("main", 4)
       feedTriggers("\naaaaaaaaaaaaaa bbbbb\n")
-      assert.are.same({"    aaaaaaaaaaaaaa ", "bbbbb"}, lastLines(2))
+      assert.are.same({"aaaaaaaaaaaaaa bbbbb"}, lastLines(1))
+    end)
+
+    it("indents a line one column wider than the width", function()
+      setWindowWrap("main", 20)
+      setWindowWrapIndent("main", 4)
+      feedTriggers("\naaaaaaaaaaaaaa bbbbbb\n")
+      assert.are.same({"    aaaaaaaaaaaaaa ", "bbbbbb"}, lastLines(2))
     end)
 
     it("leaves a line that fits the width less the indent alone", function()
@@ -288,6 +469,26 @@ describe("Tests how a console wraps the lines it is given", function()
       setWindowWrap("main", 20)
       feedTriggers("\naaaaaaaaaaaaaa bbbbbb\n")
       assert.are.same({"aaaaaaaaaaaaaa ", "bbbbbb"}, lastLines(2))
+    end)
+
+    it("leaves an accented line that fits the width but not the width less the indent alone", function()
+      setWindowWrap("main", 20)
+      setWindowWrapIndent("main", 4)
+      feedTriggers("\néééééééééééééé bbbbb\n")
+      assert.are.same({"éééééééééééééé bbbbb"}, lastLines(1))
+    end)
+
+    it("leaves an accented line that fits the width less the indent alone", function()
+      setWindowWrap("main", 20)
+      setWindowWrapIndent("main", 4)
+      feedTriggers("\néééééééééé bbbbb\n")
+      assert.are.same({"éééééééééé bbbbb"}, lastLines(1))
+    end)
+
+    it("wraps an accented line one column wider than the width", function()
+      setWindowWrap("main", 20)
+      feedTriggers("\néééééééééééééé bbbbbb\n")
+      assert.are.same({"éééééééééééééé ", "bbbbbb"}, lastLines(2))
     end)
 
     -- in a trigger echo() adds to the line without wrapping it, so the wrap

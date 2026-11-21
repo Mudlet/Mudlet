@@ -176,6 +176,10 @@ void AliasUnit::reParentAlias(int childID, int oldParentID, int newParentID, int
         pChild->Tree<TAlias>::setParent(nullptr);
         addAliasRootNode(pChild, parentPosition, childPosition, true);
     }
+
+    // The profile save skips a top-level module member and the module save only walks its own
+    // folder, so an item moved out of a module that kept the mark would be saved nowhere
+    pChild->updateModuleMembership();
 }
 
 void AliasUnit::reParentAlias(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position)
@@ -440,7 +444,9 @@ bool AliasUnit::enableAlias(const QString& name)
         }
         pT->setIsActive(true);
         found = true;
-        emit mpHost->signal_aliasToggled(pT->getID());
+        if (!pT->isTemporary() || pT->getParent()) {
+            emit mpHost->signal_aliasToggled(pT->getID());
+        }
     }
     return found;
 }
@@ -454,7 +460,9 @@ bool AliasUnit::disableAlias(const QString& name)
     for (auto it = begin; it != end; ++it) {
         it.value()->setIsActive(false);
         found = true;
-        emit mpHost->signal_aliasToggled(it.value()->getID());
+        if (!it.value()->isTemporary() || it.value()->getParent()) {
+            emit mpHost->signal_aliasToggled(it.value()->getID());
+        }
     }
     return found;
 }

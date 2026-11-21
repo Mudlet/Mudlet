@@ -374,6 +374,36 @@ private slots:
         QVERIFY(pane->testAttribute(Qt::WA_OpaquePaintEvent));
     }
 
+    // The pane sizes its drawing from the part of it that is unclipped, so the
+    // console has to move it back inside the window before it widens it there.
+    void test_aPaneABorderNarrowedDrawsItsWholeWidthOnceTheBorderIsGone()
+    {
+        TTextEdit* pane = startPane();
+        QVERIFY(pane);
+        Host* host = mudlet::self()->getActiveHost();
+        auto* lua = host->getLuaInterpreter();
+        lua->compileAndExecuteScript(qsl("setWindowWrap('main', 500) for i = 1, 60 do echo(string.rep('W', 400) .. '\\n') end\n"));
+        settle(pane);
+        const int fullColumns = pane->mScreenWidth;
+        QVERIFY2(fullColumns > 80, "the pane is too narrow to tell its whole width from the console's 40 column floor");
+
+        lua->compileAndExecuteScript(qsl("setBorderLeft(getMainWindowSize() - 200)\n"));
+        settle(pane);
+        QVERIFY2(pane->mScreenWidth < fullColumns, "the border did not narrow the pane");
+
+        lua->compileAndExecuteScript(qsl("setBorderLeft(0)\n"));
+        settle(pane);
+        QCOMPARE(pane->mScreenWidth, fullColumns);
+
+        QImage shown(pane->size(), QImage::Format_ARGB32_Premultiplied);
+        shown.fill(Qt::magenta);
+        pane->render(&shown, QPoint(), QRegion(), QWidget::RenderFlags());
+        const QImage lastCells = shown.copy((fullColumns - 4) * pane->mFontWidth, 0, 3 * pane->mFontWidth, shown.height());
+        const QRgb background = host->mBgColor.rgba();
+        QVERIFY2(lastCells.width() * lastCells.height() > pixelsOf(lastCells, background) + pixelsOf(lastCells, QColor(Qt::magenta).rgba()),
+                 "the text was cut off short of the right edge of the pane");
+    }
+
     // Whatever the pane paints for itself has to match the background it hides.
     // Only backgrounds are compared: glyphs can rasterize differently onto an
     // opaque target than onto a transparent one, and on macOS they differ outright.

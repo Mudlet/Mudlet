@@ -708,7 +708,7 @@ private slots:
     void test_folderOnDiskWithATurnedDownNameIsStillUsable()
     {
         const QString awkward = qsl("QA..Dots");
-        QVERIFY(!dlgConnectionProfiles::profileNameUsableAsIs(awkward));
+        QVERIFY(!MudletApp::profileNameUsableAsIs(awkward));
         makeProfileWithSavedGame(awkward);
         MudletApp::writeProfileData(awkward, qsl("url"), qsl("mudlet.org"));
         MudletApp::writeProfileData(awkward, qsl("port"), qsl("23"));

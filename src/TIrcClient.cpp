@@ -40,6 +40,7 @@
 #include <QDateTime>
 #include <QDebug>
 #include <QFile>
+#include <QRandomGenerator>
 #include <QSaveFile>
 
 #include <algorithm>
@@ -106,9 +107,7 @@ static QString messageTarget(IrcMessage* msg, const QString& bufferName)
         break;
     }
     default:
-        // Other message types are not expected - I hope - SlySven
-        qWarning().noquote().nospace() << "TIrcClient messageTarget(..., \"" << bufferName << "\") WARNING - message of type: " << msg->type()
-                                       << " not explicitly handled, this needs fixing by Mudlet Makers...";
+        break;
     }
     return target;
 }
@@ -308,7 +307,7 @@ bool TIrcClient::restart(bool reloadConfigs)
 void TIrcClient::slot_nickNameRequired(const QString& reserved, QString* alt)
 {
     Q_UNUSED(alt)
-    const QString newNick = qsl("%1_%2").arg(reserved, QString::number(rand() % 10000));
+    const QString newNick = qsl("%1_%2").arg(reserved, QString::number(QRandomGenerator::global()->bounded(10000)));
     emit signal_nickNameReserved(reserved, newNick);
     mpConnection->setNickName(newNick);
 }
@@ -411,7 +410,7 @@ QString TIrcClient::readIrcNickName(Host* pH)
         nick = readAppDefaultIrcNick();
 
         if (nick.isEmpty()) {
-            nick = qsl("%1%2").arg(TIrcClient::DefaultNickName, QString::number(rand() % 10000));
+            nick = qsl("%1%2").arg(TIrcClient::DefaultNickName, QString::number(QRandomGenerator::global()->bounded(10000)));
         }
     }
     return nick;

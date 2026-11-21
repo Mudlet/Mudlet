@@ -27,7 +27,9 @@
 #include "MapStyle.h"
 #include "CredentialManager.h"
 #include "Host.h"
+#include "MudletApp.h"
 #include "SecureStringUtils.h"
+#include "ShortcutsManager.h"
 #include "TAction.h"
 #include "TAlias.h"
 #include "TKey.h"
@@ -84,6 +86,7 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
         if (module) {
             mpKey->mModuleMasterFolder = true;
             mpKey->mModuleMember = true;
+            mpKey->mLoadedFromModule = mPackageName;
         }
         mpKey->mPackageName = mPackageName;
         mpKey->setIsActive(true);
@@ -94,6 +97,7 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
         if (module) {
             mpTrigger->mModuleMasterFolder = true;
             mpTrigger->mModuleMember = true;
+            mpTrigger->mLoadedFromModule = mPackageName;
         }
         mpTrigger->mPackageName = mPackageName;
         mpTrigger->setIsActive(true);
@@ -104,6 +108,7 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
         if (module) {
             mpTimer->mModuleMasterFolder = true;
             mpTimer->mModuleMember = true;
+            mpTimer->mLoadedFromModule = mPackageName;
         }
         mpTimer->mPackageName = mPackageName;
         mpTimer->setIsActive(true);
@@ -114,6 +119,7 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
         if (module) {
             mpAlias->mModuleMasterFolder = true;
             mpAlias->mModuleMember = true;
+            mpAlias->mLoadedFromModule = mPackageName;
         }
         mpAlias->mPackageName = mPackageName;
         mpAlias->setIsActive(true);
@@ -126,6 +132,7 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
         if (module) {
             mpAction->mModuleMasterFolder = true;
             mpAction->mModuleMember = true;
+            mpAction->mLoadedFromModule = mPackageName;
         }
         mpAction->mPackageName = mPackageName;
         mpAction->setIsActive(true);
@@ -136,6 +143,7 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
         if (module) {
             mpScript->mModuleMasterFolder = true;
             mpScript->mModuleMember = true;
+            mpScript->mLoadedFromModule = mPackageName;
         }
         mpScript->mPackageName = mPackageName;
         mpScript->setIsActive(true);
@@ -726,20 +734,14 @@ void XMLimport::readUnknownElement(const QString& what)
     if (!atEnd()) {
         qDebug().nospace().noquote() << "XMLimport::readUnknownElement(\"" << what << "\") ERROR - UNKNOWN Package Element name: \"" << name().toString() << "\".";
         qDebug().nospace().noquote() << "    This is at byte offset: " << characterOffset() << ", which is (line:column): " << lineNumber() << ":" << columnNumber() << ".";
-#if !defined(QT_STRICT_ITERATORS)
         if (attributes().isEmpty()) {
             qDebug().nospace().noquote() << "    It has no attributes.";
         } else {
-            // This can fail if QT_STRICT_ITERATORS is defined.
-            // See https://bugreports.qt.io/browse/QTBUG-45368
-            QVectorIterator<QXmlStreamAttribute> itAttribute(attributes());
             qDebug().nospace().noquote() << "    It has the following attributes:";
-            while (itAttribute.hasNext()) {
-                const auto attribute = itAttribute.next();
-                qDebug().nospace().noquote() << "        name: \"" << attribute.name() << "\", value: \"" << attribute.value() << "\".";
+            for (const auto& [attributeName, attributeValue] : attributes().all()) {
+                qDebug().nospace().noquote() << "        name: \"" << attributeName << "\", value: \"" << attributeValue << "\".";
             }
         }
-#endif
         // The argument to readElementText(...) is required otherwise it stops
         // if a child element is encountered, the third alternative
         // "IncludeChildElements" is not so helpful as it might seem as it only
@@ -928,11 +930,15 @@ void XMLimport::readHost(Host* pHost)
     pHost->mEditorTheme = attributes().value(QLatin1String("mEditorTheme")).toString();
     pHost->mEditorThemeFile = attributes().value(QLatin1String("mEditorThemeFile")).toString();
     if (pHost->mEditorTheme.isEmpty() || pHost->mEditorThemeFile.isEmpty()) {
-        pHost->mEditorTheme = qsl("Mudlet");
-        pHost->mEditorThemeFile = qsl("Mudlet.tmTheme");
+        pHost->mEditorTheme = MudletApp::scmEditorThemeNameLight;
+        pHost->mEditorThemeFile = MudletApp::scmEditorThemeFileLight;
     }
     pHost->mEditorThemeDark = attributes().value(QLatin1String("mEditorThemeDark")).toString();
     pHost->mEditorThemeFileDark = attributes().value(QLatin1String("mEditorThemeFileDark")).toString();
+    // Both halves, because a profile that was in dark mode when it last picked a
+    // theme could have picked the bundled one there too
+    MudletApp::migrateBundledEditorTheme(pHost->mEditorTheme, pHost->mEditorThemeFile);
+    MudletApp::migrateBundledEditorTheme(pHost->mEditorThemeDark, pHost->mEditorThemeFileDark);
     pHost->mThemePreviewItemID = attributes().value(QLatin1String("mThemePreviewItemID")).toInt();
     pHost->mThemePreviewType = attributes().value(QLatin1String("mThemePreviewType")).toString();
     pHost->setHaveColorSpaceId(attributes().value(QLatin1String("mSGRCodeHasColSpaceId")).toString() == QLatin1String("yes"));
@@ -1252,6 +1258,10 @@ void XMLimport::readHost(Host* pHost)
 #endif
                 // For Qt 6.9+, emoji font support is handled globally in FontManager::addEmojiFont()
 #endif
+            } else if (name() == qsl("mEditorFont")) {
+                pHost->setEditorFontFromString(readElementText());
+            } else if (name() == qsl("mEditorFontFollowsDisplay")) {
+                pHost->setEditorFontFollowsDisplay(readElementText() == YES);
             } else if (name() == qsl("mCommandLineFont")) {
                 // We use the same font as the main console now so discard this
                 // one silently:
@@ -1314,7 +1324,7 @@ void XMLimport::readHost(Host* pHost)
     }
 }
 
-bool XMLimport::readHostColorElement(Host* pHost, QStringView elementName)
+bool XMLimport::readHostColorElement(Host* pHost, QAnyStringView elementName)
 {
     // Simple colors (no alpha channel)
     static const QHash<QString, QColor Host::*> simpleColors = {
@@ -1387,7 +1397,7 @@ bool XMLimport::readHostColorElement(Host* pHost, QStringView elementName)
     return false;
 }
 
-bool XMLimport::readHostBorderElement(QMargins& borders, QStringView elementName)
+bool XMLimport::readHostBorderElement(QMargins& borders, QAnyStringView elementName)
 {
     if (elementName == qsl("borderTopHeight")) {
         borders.setTop(readElementText().toInt());
@@ -1445,6 +1455,7 @@ int XMLimport::readTrigger(TTrigger* pParent)
 
     if (module) {
         pT->mModuleMember = true;
+        pT->mLoadedFromModule = mPackageName;
     }
 
     mpHost->getTriggerUnit()->registerTrigger(pT);
@@ -1583,6 +1594,7 @@ int XMLimport::readTimer(TTimer* pParent)
 
     if (module) {
         pT->mModuleMember = true;
+        pT->mLoadedFromModule = mPackageName;
     }
 
     const QString what = name().toString();
@@ -1654,6 +1666,7 @@ int XMLimport::readAlias(TAlias* pParent)
     pT->setIsFolder(attributes().value(qsl("isFolder")) == YES);
     if (module) {
         pT->mModuleMember = true;
+        pT->mLoadedFromModule = mPackageName;
     }
 
     QStringList itemErrors;
@@ -1733,6 +1746,7 @@ int XMLimport::readAction(TAction* pParent)
 
     if (module) {
         pT->mModuleMember = true;
+        pT->mLoadedFromModule = mPackageName;
     }
 
     const QString what = name().toString();
@@ -1830,6 +1844,7 @@ int XMLimport::readScript(TScript* pParent)
 
     if (module) {
         script->mModuleMember = true;
+        script->mLoadedFromModule = mPackageName;
     }
 
     const QString what = name().toString();
@@ -1895,6 +1910,7 @@ int XMLimport::readKey(TKey* pParent)
     pT->setIsFolder(attributes().value(qsl("isFolder")) == YES);
     if (module) {
         pT->mModuleMember = true;
+        pT->mLoadedFromModule = mPackageName;
     }
 
     const QString what = name().toString();
@@ -2061,9 +2077,6 @@ void XMLimport::getVersionString(QString& versionString)
 QString XMLimport::readScriptElement()
 {
     QString localScript = readElementText();
-    if (Error() != NoError) {
-        qDebug() << "XMLimport::readScriptElement() ERROR:" << errorString();
-    }
 
     // From format 1.001, control characters are stored as U+FFFC then the matching Control Picture.
     // Few scripts hold a U+FFFC, so one contains() spares most scripts the 30 replace() scans below:
@@ -2278,9 +2291,14 @@ void XMLimport::readLegacyMapInfoContributors()
 
 void XMLimport::readProfileShortcut()
 {
-    auto key = attributes().value(qsl("key"));
+    // Copied, as reading the text moves the reader on from the attribute
+    const QString key = attributes().value(qsl("key")).toString();
     auto sequenceString = readElementText();
-    if (auto it = mpHost->profileShortcuts.find(key.toString()); it != mpHost->profileShortcuts.end()) {
+    if (!ShortcutsManager::self()) {
+        mpHost->mProfileShortcutsAsRead.insert(key, sequenceString);
+        return;
+    }
+    if (auto it = mpHost->profileShortcuts.find(key); it != mpHost->profileShortcuts.end()) {
         QKeySequence sequence = !sequenceString.isEmpty() ? QKeySequence(sequenceString) : QKeySequence();
         it->second->swap(sequence);
     }

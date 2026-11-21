@@ -38,6 +38,7 @@
  */
 
 #include <QEventLoop>
+#include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QThread>
 #include <QTimer>
@@ -222,8 +223,14 @@ private slots:
         const double beforeSilence = measureRoughlyAThirdOfASecond();
         QVERIFY2(beforeSilence > 0.2 && beforeSilence < 0.6, qPrintable(qsl("Setup failed: expected a ~0.3s reading to start from, got %1s").arg(beforeSilence)));
 
+        QVERIFY2(mpHost->mTelnet.mNetworkLatencyTimeout == 10s, "an unanswered command is no longer given 10s before its measurement is abandoned");
+        // Well past the 0.7s round trip measured below
+        const auto restoreTimeout = qScopeGuard([this, timeout = mpHost->mTelnet.mNetworkLatencyTimeout]() {
+            mpHost->mTelnet.mNetworkLatencyTimeout = timeout;
+        });
+        mpHost->mTelnet.mNetworkLatencyTimeout = 1500ms;
         sendCommand();
-        runEventLoop(11s); // past NETWORK_LATENCY_TIMEOUT, so the measurement is abandoned
+        runEventLoop(mpHost->mTelnet.mNetworkLatencyTimeout + 500ms);
         replyFromServer(); // so this is a line of its own, not that command's reply
         runEventLoop(400ms);
 

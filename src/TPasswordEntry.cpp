@@ -34,6 +34,8 @@
 #include <QContextMenuEvent>
 #include <QKeyEvent>
 #include <QMenu>
+#include <QStyleOptionFrame>
+#include <QTextCursor>
 #include <QTimer>
 
 using namespace std::chrono_literals;
@@ -53,6 +55,11 @@ TPasswordEntry::TPasswordEntry(Host* pHost, TCommandLine* pCommandLine, QWidget*
     placeholderColor.setAlpha(128);
     palette.setColor(QPalette::PlaceholderText, placeholderColor);
     setPalette(palette);
+    // It lies over the command line, which has no frame either
+    setFrame(false);
+    // Top-aligned, so followRow() places the text rather than QLineEdit centring it a pixel off the row
+    setAlignment((alignment() & Qt::AlignHorizontal_Mask) | Qt::AlignTop);
+    connect(pCommandLine, &TCommandLine::rowsMoved, this, &TPasswordEntry::followRow);
 
     mpRevealAction = addAction(QIcon(qsl(":/icons/password-show-on.png")), QLineEdit::TrailingPosition);
     connect(mpRevealAction, &QAction::triggered, this, [this]() {
@@ -120,8 +127,10 @@ void TPasswordEntry::takeTypedAhead(const QString& typedAhead)
 void TPasswordEntry::setReopened()
 {
     mReopened = true;
-    //: Placeholder text of the hidden-input box when it opens again after the player pressed Esc on an empty one and their next line did not make the game stop hiding input
-    setPlaceholderText(tr("Still hidden - Esc again to stop hiding input until the game says otherwise"));
+    //: Placeholder text of the hidden-input box when it opens again after the player pressed Esc on an empty one and their next line did not make the game stop hiding input. Keep it short: the box is only as wide as the command line, and the tooltip below carries the full instruction
+    setPlaceholderText(tr("Esc stops hiding input"));
+    //: Tooltip of the hidden-input box when it opens again after the player pressed Esc on an empty one and their next line did not make the game stop hiding input
+    setToolTip(tr("Still hidden - Esc on the empty box stops hiding input until the game says otherwise"));
     slot_adjustAccessibleNames();
 }
 
@@ -198,6 +207,7 @@ bool TPasswordEntry::event(QEvent* event)
         // would disable all application shortcuts
         if (mpCommandLine->claimsShortcutOverride(static_cast<QKeyEvent*>(event))) {
             event->accept();
+            TCommandLine::pressClaimedControlTab(this, static_cast<QKeyEvent*>(event));
             return true;
         }
         return QLineEdit::event(event);
@@ -332,6 +342,32 @@ void TPasswordEntry::scrollConsole(const bool up)
         });
     } else {
         pConsole->scrollDown(pConsole->mUpperPane->getScreenHeight());
+    }
+}
+
+void TPasswordEntry::resizeEvent(QResizeEvent* event)
+{
+    QLineEdit::resizeEvent(event);
+    followRow();
+}
+
+// The text goes on the command line's first row, so the line does not jump as the box comes and goes. The box has
+// the command line's geometry, so the two share coordinates.
+void TPasswordEntry::followRow()
+{
+    if (!mpCommandLine) {
+        return;
+    }
+    QStyleOptionFrame option;
+    initStyleOption(&option);
+    const QRect contents = style()->subElementRect(QStyle::SE_LineEditContents, &option, this);
+    const int rowTop = mpCommandLine->viewport()->geometry().top() + mpCommandLine->cursorRect(QTextCursor(mpCommandLine->document())).top();
+    QMargins margins = textMargins();
+    // QLineEdit draws top-aligned text a pixel under the top of its contents
+    margins.setTop(std::max(0, rowTop - contents.top() - 1));
+    margins.setBottom(0);
+    if (margins != textMargins()) {
+        setTextMargins(margins);
     }
 }
 

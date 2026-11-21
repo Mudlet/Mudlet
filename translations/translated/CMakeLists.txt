@@ -23,7 +23,8 @@
 
 message(STATUS "Building translations")
 
-find_package(Qt6LinguistTools 6.8.2 REQUIRED)
+# In a cross build only this form looks for the host tools under QT_HOST_PATH
+find_package(Qt6 6.8.2 REQUIRED COMPONENTS LinguistTools)
 get_target_property(LRELEASE_LOCATION Qt6::lrelease LOCATION)
 
 file(GLOB TS_FILES *.ts)

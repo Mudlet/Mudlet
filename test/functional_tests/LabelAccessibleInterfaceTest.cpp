@@ -50,6 +50,36 @@
 
 using namespace std::chrono_literals;
 
+// Before Qt 6.10, QAccessible::setActive() only told activation observers and left the
+// platform inactive, so with no screen reader isActive() stays false and TLabel rightly
+// announces nothing; Qt 6.10 made it activate the platform accessibility
+#if QT_VERSION < QT_VERSION_CHECK(6, 10, 0)
+#define SKIP_UNLESS_ACCESSIBILITY_ACTIVE()                                                                                                                                                             \
+    if (!QAccessible::isActive()) {                                                                                                                                                                    \
+        QSKIP("before Qt 6.10, QAccessible::setActive(true) does not make isActive() true without a screen reader");                                                                                   \
+    }
+#else
+#define SKIP_UNLESS_ACCESSIBILITY_ACTIVE()
+#endif
+
+// Unnamed namespace: other tests in the same grouped binary have a PaintCounter of their own
+namespace {
+class PaintCounter : public QObject
+{
+public:
+    int mCount = 0;
+
+protected:
+    bool eventFilter(QObject* watched, QEvent* event) override
+    {
+        if (event->type() == QEvent::Paint) {
+            ++mCount;
+        }
+        return QObject::eventFilter(watched, event);
+    }
+};
+} // namespace
+
 class LabelAccessibleInterfaceTest : public QObject
 {
     Q_OBJECT
@@ -76,6 +106,8 @@ private:
 
     inline static QList<QAccessible::Event> smEvents;
     inline static QList<std::pair<QString, QAccessible::AnnouncementPoliteness>> smAnnouncements;
+    // What a screen reader asking at once would hear as the new name
+    inline static QStringList smNamesAtNameChange;
     inline static QObject* smWatched = nullptr;
 
     static void recordEvent(QAccessibleEvent* event)
@@ -84,6 +116,10 @@ private:
             return;
         }
         smEvents.append(event->type());
+        if (event->type() == QAccessible::NameChanged) {
+            QAccessibleInterface* pInterface = event->accessibleInterface();
+            smNamesAtNameChange.append(pInterface ? pInterface->text(QAccessible::Name) : QString());
+        }
         if (event->type() == QAccessible::Announcement) {
             const auto* announcement = static_cast<QAccessibleAnnouncementEvent*>(event);
             smAnnouncements.append({announcement->message(), announcement->politeness()});
@@ -95,6 +131,7 @@ private:
     {
         smEvents.clear();
         smAnnouncements.clear();
+        smNamesAtNameChange.clear();
         smWatched = object;
         QAccessible::installUpdateHandler(recordEvent);
         QAccessible::setActive(true);
@@ -386,9 +423,6 @@ private:
             qWarning() << "the main window never became active";
             return false;
         }
-        // Handing the focus to the command line retries on timers up to 50ms long, which would take it back,
-        // and a loaded CI runner fires them late
-        QTest::qWait(300ms);
         mpHost->setCaretEnabled(true);
         return QTest::qWaitFor(
                 [this]() {
@@ -408,7 +442,67 @@ private:
         runLua(qsl("clearWindow()"));
     }
 
+    // a window that has just been shown or activated goes on painting for a while
+    static bool settlePaints(const PaintCounter& counter)
+    {
+        int seen = -1;
+        for (int wait = 0; wait < 25; ++wait) {
+            if (seen == counter.mCount) {
+                return true;
+            }
+            seen = counter.mCount;
+            QTest::qWait(200ms);
+        }
+        return false;
+    }
+
 private slots:
+    // A gauge sets its text label on every prompt, mostly to what it already says, and repainting a
+    // translucent label redraws everything under it as well
+    void test_anUnfocusedLabelGivenTheTextItHasIsNotRepainted()
+    {
+        mudlet::self()->show();
+        QTRY_VERIFY(label()->isVisible());
+        QVERIFY(runLua(qsl("setConfig('accessibleLabels', true); setLabelClickCallback('%1', function() end); echo('%1', 'steady')").arg(mLabelName)));
+        PaintCounter counter;
+        label()->installEventFilter(&counter);
+        QTRY_VERIFY2(counter.mCount > 0, "the label was never painted, so no paint count below means anything");
+        QVERIFY2(settlePaints(counter), "the label never stopped being repainted, so no paint count below means anything");
+
+        counter.mCount = 0;
+        for (int prompt = 0; prompt < 10; ++prompt) {
+            QVERIFY(runLua(qsl("echo('%1', 'steady')").arg(mLabelName)));
+            QTest::qWait(20ms);
+        }
+        // the window may repaint the label for reasons of its own while this runs, but not on every prompt
+        QVERIFY2(counter.mCount < 5, qPrintable(qsl("the label was repainted %1 times for being given its own text 10 times").arg(counter.mCount)));
+
+        counter.mCount = 0;
+        QVERIFY(runLua(qsl("echo('%1', 'changed')").arg(mLabelName)));
+        QTRY_VERIFY2(counter.mCount > 0, "new text was not painted");
+    }
+
+    // the outline a focused button is drawn with has to go when it stops being one but keeps the focus
+    void test_aFocusedLabelThatStopsBeingAButtonLosesItsOutline()
+    {
+        auto restore = qScopeGuard([this]() {
+            tearDownLinksAndButtons();
+        });
+        QVERIFY(setUpLinksAndButtons());
+        mpHost->setCaretEnabled(false);
+        QVERIFY(runLua(qsl("echo('%1', '<a href=\"send:look\">look</a>')").arg(mLabelName)));
+        label()->setFocus(Qt::TabFocusReason);
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(label()));
+        PaintCounter counter;
+        label()->installEventFilter(&counter);
+        QVERIFY2(settlePaints(counter), "the label never stopped being repainted, so no paint count below means anything");
+
+        counter.mCount = 0;
+        QVERIFY(runLua(qsl("setLabelAccessibleRole('%1', 'text')").arg(mLabelName)));
+        QCOMPARE(QApplication::focusWidget(), static_cast<QWidget*>(label()));
+        QTRY_VERIFY2(counter.mCount > 0, "the label kept the outline of a button it no longer is");
+    }
+
     // Caret mode starts below the links, so Tab goes on to the buttons, then round to the first link, the second,
     // and the buttons again; Shift+Tab goes the other way
     void test_tabCyclesThroughTheLinksAndTheButtons()
@@ -731,6 +825,77 @@ private slots:
         QTRY_COMPARE(QApplication::focusWidget(), pane());
     }
 
+    // macOS sends Ctrl+Tab only as a possible shortcut, with no key press after it, and a QWidget would take the
+    // press that stands in for it to step the focus to the next button
+    void test_ctrlTabFromAButtonTurnsCaretModeOnOnMacOS()
+    {
+#if !defined(Q_OS_MACOS)
+        QSKIP("only macOS delivers Ctrl+Tab without a key press");
+#else
+        auto restore = qScopeGuard([this]() {
+            mpHost->mCaretShortcut = Host::CaretShortcut::None;
+            tearDownLinksAndButtons();
+        });
+        QVERIFY(setUpLinksAndButtons());
+        mpHost->mCaretShortcut = Host::CaretShortcut::CtrlTab;
+
+        key(Qt::Key_Tab);
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(label()));
+        // As QNSView sends it: the native Tab key code, then nothing if the override is claimed
+        QKeyEvent override(QEvent::ShortcutOverride, Qt::Key_Tab, Qt::MetaModifier, 0, 0x30, 0, qsl("\t"));
+        override.ignore();
+        QApplication::sendEvent(label(), &override);
+        QVERIFY(override.isAccepted());
+        QTRY_VERIFY2(mpHost->caretEnabled(), "Ctrl+Tab from a focused button did not turn caret mode on");
+        QTRY_COMPARE(QApplication::focusWidget(), pane());
+#endif
+    }
+
+    // A keybinding pressed on a button sends the keyboard to the command line, which goes on reclaiming it for a
+    // moment afterwards; the caret shortcut pressed straight after has to keep it
+    void test_theCaretShortcutRightAfterAKeybindingStays()
+    {
+        auto restore = qScopeGuard([this]() {
+            runLua(qsl("killKey(accessibleF5Key)"));
+            tearDownLinksAndButtons();
+        });
+        QVERIFY(setUpLinksAndButtons());
+        QVERIFY(runLua(qsl("accessibleF5Key = tempKey(mudlet.key.F5, [[accessibleF5 = true]])")));
+        mpHost->mCaretShortcut = Host::CaretShortcut::F6;
+
+        key(Qt::Key_Tab);
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(label()));
+        key(Qt::Key_F5);
+        QVERIFY(luaHolds(qsl("accessibleF5")));
+        QCOMPARE(QApplication::focusWidget(), static_cast<QWidget*>(mpHost->mainConsoleView()->mpCommandLine));
+        key(Qt::Key_F6);
+        QVERIFY(mpHost->caretEnabled());
+        QTest::qWait(100ms);
+        QVERIFY2(mpHost->caretEnabled(), "the command line took the keyboard back out of caret mode");
+        QCOMPARE(QApplication::focusWidget(), pane());
+    }
+
+    // A busy main thread handles both key presses before the keybinding's hand-off to the command line runs
+    void test_theCaretShortcutAheadOfAKeybindingsHandOffStays()
+    {
+        auto restore = qScopeGuard([this]() {
+            runLua(qsl("killKey(accessibleF5Key)"));
+            tearDownLinksAndButtons();
+        });
+        QVERIFY(setUpLinksAndButtons());
+        QVERIFY(runLua(qsl("accessibleF5Key = tempKey(mudlet.key.F5, [[accessibleF5 = true]])")));
+        mpHost->mCaretShortcut = Host::CaretShortcut::F6;
+
+        key(Qt::Key_Tab);
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(label()));
+        QCoreApplication::postEvent(label(), new QKeyEvent(QEvent::KeyPress, Qt::Key_F5, Qt::NoModifier));
+        QCoreApplication::postEvent(label(), new QKeyEvent(QEvent::KeyPress, Qt::Key_F6, Qt::NoModifier));
+        QTest::qWait(100ms);
+        QVERIFY(luaHolds(qsl("accessibleF5")));
+        QVERIFY2(mpHost->caretEnabled(), "the keybinding's hand-off took the keyboard back out of caret mode");
+        QCOMPARE(QApplication::focusWidget(), pane());
+    }
+
     // Without caret mode to go back to, the way out of the buttons is the command line
     void test_leavingTheButtonsWithoutCaretModeGoesToTheCommandLine()
     {
@@ -918,6 +1083,7 @@ private slots:
         auto restore = qScopeGuard([this]() {
             stopListening();
         });
+        SKIP_UNLESS_ACCESSIBILITY_ACTIVE()
         QVERIFY(runLua(qsl("setConfig('accessibleLabels', true); assert(setLabelLiveRegion('%1', 'polite'))").arg(mLabelName)));
 
         QVERIFY(runLua(qsl("echo('%1', '<b>HP</b> 50')").arg(mLabelName)));
@@ -943,11 +1109,12 @@ private slots:
         auto restore = qScopeGuard([this]() {
             stopListening();
         });
+        SKIP_UNLESS_ACCESSIBILITY_ACTIVE()
         QVERIFY(runLua(qsl("setConfig('accessibleLabels', true); setLabelAccessibleName('%1', 'Health'); assert(setLabelLiveRegion('%1', 'polite'))").arg(mLabelName)));
 
         QVERIFY(runLua(qsl("echo('%1', 'HP 50')").arg(mLabelName)));
         QVERIFY(runLua(qsl("echo('%1', 'HP 40')").arg(mLabelName)));
-        QCOMPARE(smAnnouncements.size(), 2);
+        QTRY_COMPARE(smAnnouncements.size(), 2);
         QCOMPARE(smAnnouncements.at(0).first, qsl("HP 50"));
         QCOMPARE(smAnnouncements.at(1).first, qsl("HP 40"));
     }
@@ -959,6 +1126,7 @@ private slots:
             stopListening();
             runLua(qsl("showWindow('%1')").arg(mLabelName));
         });
+        SKIP_UNLESS_ACCESSIBILITY_ACTIVE()
         QVERIFY(runLua(qsl("setConfig('accessibleLabels', true); assert(setLabelLiveRegion('%1', 'polite')); hideWindow('%1')").arg(mLabelName)));
 
         QVERIFY(runLua(qsl("echo('%1', 'HP 50')").arg(mLabelName)));
@@ -966,6 +1134,129 @@ private slots:
 
         QVERIFY(runLua(qsl("showWindow('%1'); echo('%1', 'HP 40')").arg(mLabelName)));
         QCOMPARE(smAnnouncements.size(), 1);
+    }
+
+    // A gauge redrawn several times a second would build a backlog of stale values in a screen reader
+    void test_aFastChangingLiveLabelSaysOnlyItsLatestText()
+    {
+        listenTo(label());
+        auto restore = qScopeGuard([this]() {
+            stopListening();
+        });
+        SKIP_UNLESS_ACCESSIBILITY_ACTIVE()
+        QVERIFY(runLua(qsl("setConfig('accessibleLabels', true); assert(setLabelLiveRegion('%1', 'polite'))").arg(mLabelName)));
+
+        QVERIFY(runLua(qsl("echo('%1', 'HP 50'); echo('%1', 'HP 49'); echo('%1', 'HP 48'); echo('%1', 'HP 47')").arg(mLabelName)));
+        QCOMPARE(smAnnouncements.size(), 1);
+        QCOMPARE(smAnnouncements.at(0).first, qsl("HP 50"));
+        QTest::qWait(500);
+        QCOMPARE(smAnnouncements.size(), 1);
+        QTRY_COMPARE(smAnnouncements.size(), 2);
+        QCOMPARE(smAnnouncements.at(1).first, qsl("HP 47"));
+
+        // Back at the value last read by the time the interval ends, it says nothing more
+        QVERIFY(runLua(qsl("echo('%1', 'HP 46'); echo('%1', 'HP 47')").arg(mLabelName)));
+        QTest::qWait(1500);
+        QCOMPARE(smAnnouncements.size(), 2);
+
+        // A script raising the politeness as the value falls has the waiting text spoken at once, at the new level
+        QVERIFY(runLua(qsl("echo('%1', 'HP 20'); echo('%1', 'HP 10'); setLabelLiveRegion('%1', 'assertive')").arg(mLabelName)));
+        QCOMPARE(smAnnouncements.size(), 4);
+        QCOMPARE(smAnnouncements.at(2).first, qsl("HP 20"));
+        QCOMPARE(smAnnouncements.at(3).first, qsl("HP 10"));
+        QCOMPARE(smAnnouncements.at(3).second, QAccessible::AnnouncementPoliteness::Assertive);
+    }
+
+    // Qt reads a focused label's new name itself, and an unnamed label's name is its text
+    void test_aFocusedLiveButtonIsReadOnce()
+    {
+        listenTo(label());
+        auto restore = qScopeGuard([this]() {
+            stopListening();
+            label()->clearFocus();
+        });
+        SKIP_UNLESS_ACCESSIBILITY_ACTIVE()
+        QVERIFY(runLua(qsl("setConfig('accessibleLabels', true); setLabelClickCallback('%1', function() end); assert(setLabelLiveRegion('%1', 'polite'))").arg(mLabelName)));
+        mudlet::self()->show();
+        mudlet::self()->activateWindow();
+        QTRY_COMPARE(QApplication::activeWindow(), static_cast<QWidget*>(mudlet::self()));
+        label()->setFocus(Qt::TabFocusReason);
+        QTRY_VERIFY(label()->hasFocus());
+        smEvents.clear();
+
+        QVERIFY(runLua(qsl("echo('%1', 'Attack ready')").arg(mLabelName)));
+        QVERIFY2(smEvents.contains(QAccessible::NameChanged), "the new text was not announced as the focused label's name");
+        QVERIFY2(!smNamesAtNameChange.isEmpty() && smNamesAtNameChange.last() == qsl("Attack ready"), qPrintable(qsl("asked at once, the name was: %1").arg(smNamesAtNameChange.join(qsl(" | ")))));
+        QCOMPARE(smAnnouncements.size(), 0);
+
+        // Read as the name while it waited out the interval, it is not read again once the focus has gone
+        QVERIFY(runLua(qsl("echo('%1', 'Attack charging')").arg(mLabelName)));
+        label()->clearFocus();
+        QTest::qWait(1500);
+        QCOMPARE(smAnnouncements.size(), 0);
+        label()->setFocus(Qt::TabFocusReason);
+        QTRY_VERIFY(label()->hasFocus());
+
+        // A script's name stays put, so the text is only heard through the announcement
+        QVERIFY(runLua(qsl("setLabelAccessibleName('%1', 'Attack'); echo('%1', 'Attack cooling')").arg(mLabelName)));
+        QTRY_COMPARE(smAnnouncements.size(), 1);
+        QCOMPARE(smAnnouncements.at(0).first, qsl("Attack cooling"));
+    }
+
+    // QLabel takes a qproperty-text as the style sheet is applied, without TLabel::setText() being called for it
+    void test_textFromAStyleSheetIsAnnounced()
+    {
+        listenTo(label());
+        auto restore = qScopeGuard([this]() {
+            stopListening();
+            runLua(qsl("setLabelStyleSheet('%1', '')").arg(mLabelName));
+        });
+        SKIP_UNLESS_ACCESSIBILITY_ACTIVE()
+        QVERIFY(runLua(qsl("setConfig('accessibleLabels', true); assert(setLabelLiveRegion('%1', 'polite'))").arg(mLabelName)));
+
+        QVERIFY(runLua(qsl("setLabelStyleSheet('%1', [[qproperty-text: \"HP 30\";]])").arg(mLabelName)));
+        QTRY_COMPARE(smAnnouncements.size(), 1);
+        QCOMPARE(smAnnouncements.at(0).first, qsl("HP 30"));
+        QVERIFY2(smNamesAtNameChange.contains(qsl("HP 30")), qPrintable(qsl("asked at once, the name was: %1").arg(smNamesAtNameChange.join(qsl(" | ")))));
+
+        // Restyled with its text left alone, as a gauge is recoloured at low health, it says nothing
+        QTest::qWait(1500);
+        QVERIFY(runLua(qsl("setLabelStyleSheet('%1', [[qproperty-text: \"HP 30\"; color: red;]])").arg(mLabelName)));
+        QCOMPARE(smAnnouncements.size(), 1);
+    }
+
+    // Text waiting out the interval is not spoken once the label should be quiet
+    void test_aPacedLabelDropsWaitingTextWhenItGoesQuiet()
+    {
+        listenTo(label());
+        auto restore = qScopeGuard([this]() {
+            stopListening();
+            runLua(qsl("showWindow('%1')").arg(mLabelName));
+        });
+        SKIP_UNLESS_ACCESSIBILITY_ACTIVE()
+        QVERIFY(runLua(qsl("setConfig('accessibleLabels', true); assert(setLabelLiveRegion('%1', 'polite'))").arg(mLabelName)));
+
+        QVERIFY(runLua(qsl("echo('%1', 'HP 50'); echo('%1', 'HP 49'); setLabelLiveRegion('%1', 'off')").arg(mLabelName)));
+        QCOMPARE(smAnnouncements.size(), 1);
+
+        QVERIFY(runLua(qsl("setLabelLiveRegion('%1', 'polite'); echo('%1', 'HP 48'); echo('%1', 'HP 47'); hideWindow('%1')").arg(mLabelName)));
+        QCOMPARE(smAnnouncements.size(), 2);
+        QTest::qWait(1500);
+        QCOMPARE(smAnnouncements.size(), 2);
+        // Spoken at once, so the interval had ended while it was hidden
+        QVERIFY(runLua(qsl("showWindow('%1'); echo('%1', 'HP 46')").arg(mLabelName)));
+        QCOMPARE(smAnnouncements.size(), 3);
+
+        // A script setting the live region it already has on every prompt leaves the pacing alone
+        QVERIFY(runLua(qsl("echo('%1', 'HP 45'); setLabelLiveRegion('%1', 'polite')").arg(mLabelName)));
+        QCOMPARE(smAnnouncements.size(), 3);
+        QTRY_COMPARE(smAnnouncements.size(), 4);
+        QCOMPARE(smAnnouncements.at(3).first, qsl("HP 45"));
+
+        // Hidden and shown again before the interval ends, it does not go on to say what was waiting
+        QVERIFY(runLua(qsl("echo('%1', 'HP 44'); hideWindow('%1'); showWindow('%1')").arg(mLabelName)));
+        QTest::qWait(1500);
+        QCOMPARE(smAnnouncements.size(), 4);
     }
 
     void test_aLabelIsQuietUnlessLiveWithAccessibleLabelsOn()

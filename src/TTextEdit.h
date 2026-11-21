@@ -30,7 +30,6 @@
 
 #include <QColor>
 #include <QElapsedTimer>
-#include <QMap>
 #include <QPointer>
 #include <QImage>
 #include <QRect>
@@ -41,8 +40,6 @@
 #include <memory>
 #include <string>
 #include <vector>
-
-#include "THyperlinkStyling.h"
 
 
 class Host;
@@ -107,9 +104,11 @@ public:
         mMaxHRange = 0;
     }
     int getScreenHeight() const { return mScreenHeight; }
+    QSize drawableSize() const;
     void searchSelectionOnline();
     int getColumnCount() const;
     int getRowCount() const;
+    int drawnColumnCount() const;
     // Upper pane only: its grid is what Host::windowGridSize() answers for the console.
     void reportGridSize();
     void toggleTimeStamps(const bool);
@@ -123,9 +122,8 @@ public:
     // Onto the first or the last link, where Tab leaving the script buttons lands; nowhere new with no links
     void moveCaretToLink(bool first);
     void updateCaret();
-    void showLinkContextMenu();
+    void showKeyboardContextMenu();
     void announceLinkFocus(int linkIndex);
-    void applyHyperlinkSelectionGroupState(int linkIndex, QString& uri, const Mudlet::HyperlinkStyling::SelectionSettings& selection, const char* callerContext);
 
     QColor mBgColor;
     // position of cursor, in characters, across the entire buffer. The upper
@@ -141,6 +139,7 @@ public:
     // long enough again.
     int mOldCaretColumn = 0;
 
+    friend class AnalyseCharactersTest;
     friend class CopyAsImageTest;
     friend class SplitCharacterFormatTest;
     friend class FramePacingTest;
@@ -150,7 +149,9 @@ public:
     friend class OpaqueConsolePaintTest;
     friend class ScrollLostOnPartialRepaintTest;
     friend class TTextEditBlinkTest;
+    friend class BlinkRowRepaintTest;
     friend class PipelineBenchmark;
+    friend class NawsWidthReportTest;
     static bool shouldRegisterBlinkClient(bool enableBlinkText, bool hasBlinkingContentInRedrawnRegion, bool isBlinkClientRegistered, bool reusedCachedScreenContent);
     static QSize smallestEnclosingSurfaceSize(int screenWidth, int fontWidth, int pixmapHeight, qreal devicePixelRatio);
 
@@ -162,16 +163,10 @@ public:
     // to be related to the file monitoring feature in the *nix tail command.
     // See, e.g.: https://en.wikipedia.org/wiki/Tail_(Unix)#File_monitoring
     bool mIsTailMode = true;
-    // The content to use for the current popup (link)
-    // Key: is an index stored when the popup is created - this has been
-    // changed from the previous "text to show for each popup" to avoid
-    // problems with duplicate texts:
-    // Value: is the lua code as a string (first) or the lua function reference number (second)
-    QMap<int, std::pair<QString, int>> mPopupCommands;
-    // The link index that the currently-displayed popup belongs to, or 0 if
-    // none. Used so that selection-group state is applied to the right link
-    // when a multi-command popup item is activated via slot_popupMenu().
+    // The link whose menu is showing, 0 for none; its actions carry the item's index plus one
     int mPopupLinkIndex = 0;
+    // Its TLinkStore::issueOf() as the menu was built, as a pick must not run a link that has since taken its id
+    qint64 mPopupLinkIssue = 0;
     // How many lines the screen scrolled since it was last rendered.
     int mScrollVector;
     QRegion mSelectedRegion;
@@ -203,16 +198,20 @@ protected:
 
 private slots:
     void slot_copySelectionToClipboardImage();
+    void slot_showSelectionAnalysis();
 
 private:
     void applyPendingScrollBarUpdate();
+    void followTrimsWithDirtyLines();
     QString getSelectedText(const QChar& newlineChar = QChar::LineFeed, const bool showTimestamps = false);
     inline static QString htmlCenter(const QString&);
+    QString selectionAnalysisHtml();
+    QPoint caretGlobalPosition();
     static QString convertWhitespaceToVisual(const QChar& first, const QChar& second = QChar::Null);
     static QString byteToLuaCodeOrChar(const char*);
     std::pair<bool, int> drawTextForClipboard(QPainter& p, QRect r, int lineOffset) const;
     int convertMouseXToBufferX(const int mouseX, const int lineNumber, bool* isOutOfbounds, bool* isOverTimeStamp = nullptr) const;
-    int getGraphemeWidth(uint unicode) const;
+    int getGraphemeWidth(uint unicode, QStringView grapheme) const;
     void normaliseSelection();
     // Borrows mScreenBuffer's rows, so it must not outlive a reallocation of it.
     QImage cachedScreen();
@@ -221,7 +220,7 @@ private:
     void paintNothing(const QRect&);
     // Coalescing replacement for update() on the paths that new output drives.
     // Those paints run inside the receive loop, so one per network packet
-    // delays the next packet; capping them at one per csmPaintPaceMs lets a
+    // delays the next packet; capping them at one per paintPaceMs() lets a
     // flood put several packets' worth of text into a single frame. An
     // invalid rect means the whole widget.
     void scheduleUpdate(const QRect& rect = QRect());
@@ -238,6 +237,8 @@ private:
     int accessibleSelectionLength() const;
     std::pair<int, int> accessibleSelection() const;
     bool hasBufferLine(int lineNumber) const;
+    bool lineShowsBlinkingText(int lineNumber) const;
+    static bool hasStackedMarks(const QString&);
     static int overflowRowsUsed(const QImage& image, const int fromRow, const QColor& background);
     TChar timeStampCharStyle() const;
 
@@ -301,6 +302,8 @@ private:
     int mLowerPaneCursorY = 0;
     // last line offset rendered
     int mLastRenderedOffset = 0;
+    // The buffer's linesTrimmedTotal() as of that render
+    qint64 mLinesTrimmedAtRender = 0;
     bool mMouseTracking = false;
     // 1/2/3 for single/double/triple click seen so far
     int mMouseTrackLevel = 0;
@@ -343,6 +346,8 @@ private:
     // cannot be trusted for the rows they land on. -1 for "none pending".
     int mDirtyFirstLine = -1;
     int mDirtyLastLine = -1;
+    // The buffer's linesTrimmedTotal() that the dirty lines are numbered against
+    qint64 mDirtyLinesTrimmedAt = 0;
     int mScreenWidth = 100;
     int mScreenOffset = 0;
     int mMaxHRange = 0;
@@ -353,12 +358,18 @@ private:
     mutable bool mHasBlinkingContent = false;
     mutable bool mIsBlinkClientRegistered = false;
     QPointer<QTimer> mpScrollStoppedTimer;
-    // Maximum of one repaint per csmPaintPaceMs is allowed via scheduleUpdate().
+    // Maximum of one repaint per paintPaceMs() is allowed via scheduleUpdate().
     static constexpr int csmPaintPaceMs = 16; // ~60 fps cap
+    // The cap instead while more than a screen of lines arrives between frames.
+    static constexpr int csmFloodPaintPaceMs = 33;
+    int paintPaceMs() const;
     QTimer* mpPaintPacer = nullptr;
+    bool mPaintPacerStretched = false;
+    bool mPaintPacerMoved = false;
     // Restarted by each paintEvent(), so scheduleUpdate() can tell how much of
     // the current frame's window is left.
     QElapsedTimer mSincePaint;
+    qint64 mLinesAddedAtPaint = 0;
     // What the deferred repaint has to cover once the pacer fires.
     QRegion mPendingPaintRegion;
     // The whole pane went to update() since the last paint, so asking again only costs time.

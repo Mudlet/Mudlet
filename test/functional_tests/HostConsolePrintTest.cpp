@@ -255,7 +255,7 @@ private slots:
         const int line = lastTextLine();
         QVERIFY(line >= 0);
         QCOMPARE(buffer().line(line), qsl("tinted"));
-        const std::vector<TChar>& chars = buffer().buffer.at(line);
+        const TLineFormat& chars = buffer().buffer.at(line);
         QCOMPARE(chars.front().foreground(), fg);
         QCOMPARE(chars.front().background(), bg);
         QCOMPARE(buffer().mCursorY, buffer().size());
@@ -271,7 +271,7 @@ private slots:
         const int line = lineContaining(qsl("hcpt-echoedhcpt-printed"));
         QVERIFY(line >= 0);
         const QString text = buffer().line(line);
-        const std::vector<TChar>& chars = buffer().buffer.at(line);
+        const TLineFormat& chars = buffer().buffer.at(line);
         const int echoedFrom = text.indexOf(qsl("hcpt-echoed"));
         const int printedFrom = text.indexOf(qsl("hcpt-printed"));
         for (int i = echoedFrom; i < printedFrom; ++i) {
@@ -440,7 +440,7 @@ private slots:
         const int line = lastTextLine();
         QVERIFY(line >= 0);
         QCOMPARE(buffer().line(line), qsl("[ INFO ]  - hello from the test"));
-        const std::vector<TChar>& chars = buffer().buffer.at(line);
+        const TLineFormat& chars = buffer().buffer.at(line);
         QCOMPARE(chars.front().foreground(), QColor(0, 150, 190));
         QCOMPARE(chars.back().foreground(), QColor(0, 160, 0));
     }

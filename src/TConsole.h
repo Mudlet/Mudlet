@@ -82,7 +82,8 @@ public:
     Q_DECLARE_FLAGS(ConsoleType, ConsoleTypeFlag)
 
     Q_DISABLE_COPY(TConsole)
-    explicit TConsole(Host*, const QString&, const ConsoleType type = UnknownType, QWidget* parent = nullptr);
+    // A model handed in keeps its own name, and may already hold lines
+    explicit TConsole(Host*, const QString&, const ConsoleType type = UnknownType, QWidget* parent = nullptr, std::unique_ptr<TConsoleModel> handedModel = {});
     ~TConsole() override;
 
     void reset();
@@ -128,9 +129,12 @@ public:
     THyperlinkVisibilityManager& getHyperlinkVisibilityManager() { return mpModel->mHyperlinkVisibilityManager; }
 
     void setCmdVisible(bool);
+    int commandLineLayerHeight(const int commandLineHeight) const;
     void changeColors();
     void scrollDown(int lines);
     void scrollUp(int lines);
+    // To an absolute buffer position, as the scroll bar does, splitting the screen if it is not split yet
+    void scrollTo(int line);
     void print(const QString& msg);
     void print(const char*);
     // timeStampOverride keeps the arrival time for held-back content being replayed; csmNoTimeStamp stamps it now.
@@ -214,9 +218,10 @@ public:
     // The Central Debug Console's find bar, floating over its bottom right.
     QPointer<QWidget> mpFindBar;
 
-    // The main console co-owns its model with Host, which runs triggers through it; sub-consoles own theirs.
-    // The members below alias the model, so it must be declared first.
-    std::shared_ptr<TConsoleModel> mpModel;
+    // Empty for the main console, whose model is its Host's, as Host runs triggers through it; other consoles own theirs.
+    // The members below alias the model, so these must be declared first.
+    std::unique_ptr<TConsoleModel> mpOwnModel;
+    TConsoleModel* mpModel = nullptr;
     TBuffer& buffer;
     TTextEdit* mUpperPane = nullptr;
     TTextEdit* mLowerPane = nullptr;
@@ -312,6 +317,8 @@ signals:
     void resized(QResizeEvent* event);
 
 protected:
+    // For a console with a command line, which the output area is laid out above
+    void layoutMainDisplay();
     void dragEnterEvent(QDragEnterEvent*) override;
     void dragMoveEvent(QDragMoveEvent*) override;
     void dropEvent(QDropEvent*) override;
@@ -338,6 +345,10 @@ private:
     void raiseFontChangeEvent();
     void restoreCommandSearchSettings();
     void updateScrollBarStyle();
+    void applyFootSeamColour();
+    int footSeamHeightShown() const;
+    // Returns whether the lower pane was hidden
+    bool showLowerPane();
 
     ConsoleType mType = UnknownType;
     // the size the last resize reported to Lua
@@ -359,6 +370,9 @@ private:
     QColor& mBorderColor;
     // latches the 'cover' scale failure so a resize drag does not repeat the warning
     bool mWindowBgCoverScaleFailed = false;
+    // In the main console the search box shares commandSplitter, so the seam must span mpFoot
+    QWidget* mpFootSeam = nullptr;
+    QWidget* mpFoot = nullptr;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)

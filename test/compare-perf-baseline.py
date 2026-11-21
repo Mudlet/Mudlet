@@ -96,6 +96,7 @@ HARNESSES = {
         "workload_knobs": {
             "feed_chunk_lines": "MUDLET_BENCH_CHUNK_LINES",
             "bench_chunk_bytes": "MUDLET_BENCH_CHUNK_BYTES",
+            "bench_wrap_at": "MUDLET_BENCH_WRAP_AT",
         },
         # Whether the trigger prescan ran in parallel: worth a note, since it
         # moves trigger_lines_per_sec by a lot, but a fair comparison across

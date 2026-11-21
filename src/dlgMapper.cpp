@@ -26,6 +26,7 @@
 
 #include "Host.h"
 #include "MudletApp.h"
+#include "TCommandLine.h"
 #include "TConsole.h"
 #include "TMainConsole.h"
 #include "TMap.h"
@@ -34,20 +35,19 @@
 #include "mudlet.h"
 
 #include <QApplication>
-#include <QElapsedTimer>
 #include <QEvent>
 #include <QFileDialog>
 #include <QFileInfo>
-#include <QFontMetrics>
 #include <QFrame>
+#include <QKeyEvent>
 #include <QLabel>
 #include <QListWidget>
 #include <QMenu>
 #include <QMessageBox>
-#include <QPainter>
 #include <QProgressBar>
 #include <QProgressDialog>
 #include <QPushButton>
+#include <QScopeGuard>
 #include <QSettings>
 #include <QSignalBlocker>
 #include <QTimer>
@@ -296,6 +296,9 @@ void dlgMapper::connectMapCues()
         case TMap::MapperSetting::Style:
             update3DView();
             break;
+        case TMap::MapperSetting::BackgroundColor:
+            repaintMaps();
+            break;
         }
     });
 }
@@ -500,9 +503,6 @@ bool dlgMapper::isMapProgressVisible() const
 
 void dlgMapper::loadMapFromFile()
 {
-    if (!mpHost) {
-        return;
-    }
     //: File dialog filter. Keep the extensions (in braces) unchanged - they are used programmatically.
     auto filters = QStringList() << tr("Any map file (*.dat *.json *.xml)") << tr("Mudlet binary map (*.dat)") << tr("Mudlet JSON map (*.json)") << tr("Mudlet XML map (*.xml)") << tr("Any file (*)");
 
@@ -514,7 +514,11 @@ void dlgMapper::loadMapFromFile()
     dialog->setDirectory(lastDir);
     dialog->setNameFilter(filters.join(qsl(";;")));
     connect(dialog, &QDialog::finished, this, [this, dialog](int result) {
-        dialog->deleteLater();
+        // Only once the load is done: it pumps events to repaint its progress, and on macOS the native dialog's result
+        // arrives outside any Qt event, where that pump would run this delete while QFileDialog::done() is still running
+        const auto deleteDialog = qScopeGuard([dialog]() {
+            dialog->deleteLater();
+        });
         if (result != QDialog::Accepted || dialog->selectedFiles().isEmpty()) {
             return;
         }
@@ -594,6 +598,15 @@ bool dlgMapper::eventFilter(QObject* watched, QEvent* event)
         }
     }
     return QWidget::eventFilter(watched, event);
+}
+
+// A floating map is a window of its own, where a key none of its widgets used would go no further
+void dlgMapper::keyPressEvent(QKeyEvent* event)
+{
+    TMainConsole* pConsole = mpHost ? mpHost->mainConsoleView() : nullptr;
+    if (!pConsole || !pConsole->mpCommandLine || !pConsole->mpCommandLine->takeKeyPress(event)) {
+        QWidget::keyPressEvent(event);
+    }
 }
 
 int dlgMapper::getCurrentShownAreaIndex()
@@ -723,6 +736,25 @@ std::pair<bool, QString> dlgMapper::setMapZoom(qreal zoom, int areaId)
 #else
     return mp2dMap->setMapZoom(zoom, areaId);
 #endif
+}
+
+std::pair<bool, QString> dlgMapper::centerViewOn(const int roomId)
+{
+    auto centered = mp2dMap->centerview(roomId);
+    if (!centered.first) {
+        return centered;
+    }
+    // The pan is the later request, so a recentre on the player still pending from earlier would undo it at the
+    // next 2D frame. The 3D view is not panned by this, so while it shows, its pending recentre is left to it.
+    if (!showing3DView()) {
+        mpMap->mNewMove = false;
+    }
+    // Set by text, which is not an activation, so the chooser does not switch the area a second time
+    const QString areaName = mpMap->mpRoomDB->getAreaNamesMap().value(mp2dMap->getAreaId());
+    if (!areaName.isEmpty()) {
+        comboBox_showArea->setCurrentText(areaName);
+    }
+    return centered;
 }
 
 int dlgMapper::shownAreaId() const
@@ -981,7 +1013,7 @@ void dlgMapper::slot_toggle3DView(const bool is3DMode)
     glWidget->setVisible(is3DMode);
     if (glWidget->isVisible()) {
         widget_3DControls->setVisible(true);
-        widget_playerIconControls->setVisible(mpHost && mpHost->experimentEnabled("experiment.3d-player-icon")
+        widget_playerIconControls->setVisible(mpHost->experimentEnabled("experiment.3d-player-icon")
 #ifdef DEBUG_PLAYER_ICON_CONTROLS
                                               && true
 #else
@@ -1142,117 +1174,6 @@ void dlgMapper::recreate3DWidget()
 #endif
 }
 
-int dlgMapper::paintMapInfo(const QElapsedTimer& renderTimer,
-                            QPainter& painter,
-                            Host* pHost,
-                            TMap* pMap,
-                            int roomID,
-                            int displayAreaId,
-                            int selectionSize,
-                            QColor& infoColor,
-                            int xOffset,
-                            int yOffset,
-                            int widgetWidth,
-                            int fontHeight,
-                            const QColor& background,
-                            const QString& fontFamily)
-{
-    if (!pMap || !pMap->mMapInfoContributorManager || !pHost) {
-        return yOffset;
-    }
-
-    QList<QString> contributorList = pMap->mMapInfoContributorManager->getContributorKeys();
-    QSet<QString> const contributorKeys{contributorList.begin(), contributorList.end()};
-    if (!contributorKeys.intersects(pHost->mMapInfoContributors)) {
-        return yOffset;
-    }
-
-    TRoom* pRoom = pMap->mpRoomDB->getRoom(roomID);
-    if (!pRoom) {
-        return yOffset;
-    }
-
-    const int initialYOffset = yOffset;
-    const QColor infoBackground = background.isValid() ? background : pHost->mMapInfoBg;
-
-    painter.save();
-    QFont font = pHost->getDisplayFont();
-    if (!fontFamily.isEmpty()) {
-        font.setFamily(fontFamily);
-        fontHeight = QFontMetrics(font).height();
-    }
-    painter.setFont(font);
-
-    // The caller holds raw TRoom/TArea pointers across this, and a Lua contributor can
-    // register or kill contributors, so walk a copy and skip any that went away.
-    const TMap::ScriptCallbackScope callbackScope(pMap);
-    const QList<QString> keys = pMap->mMapInfoContributorManager->getContributorKeys();
-    for (const auto& key : keys) {
-        if (pHost->mMapInfoContributors.contains(key)) {
-            const MapInfoCallback contributor = pMap->mMapInfoContributorManager->getContributor(key);
-            if (!contributor) {
-                continue;
-            }
-            auto properties = contributor(roomID, selectionSize, pRoom->getArea(), displayAreaId, infoColor);
-            if (!properties.color.isValid()) {
-                properties.color = infoColor;
-            }
-            yOffset += paintMapInfoContributor(painter, xOffset, yOffset, properties, infoBackground, fontHeight, widgetWidth);
-        }
-    }
-
-#ifdef QT_DEBUG
-    yOffset += paintMapInfoContributor(
-            painter, xOffset, yOffset, {false, false, QObject::tr("render time: %1S").arg(renderTimer.nsecsElapsed() * 1.0e-9, 0, 'f', 3), infoColor}, infoBackground, fontHeight, widgetWidth);
-#else
-    Q_UNUSED(renderTimer)
-#endif
-
-    painter.restore();
-
-    if (yOffset > initialYOffset) {
-        painter.fillRect(xOffset, initialYOffset - 10, widgetWidth - 10 - xOffset, 10, infoBackground);
-    }
-    return yOffset;
-}
-
-int dlgMapper::paintMapInfoContributor(QPainter& painter, int xOffset, int yOffset, const MapInfoProperties& properties, QColor bgColor, int fontHeight, int widgetWidth)
-{
-    if (properties.text.isEmpty()) {
-        return 0;
-    }
-
-    painter.save();
-    auto infoText = properties.text.trimmed();
-    auto font = painter.font();
-    font.setBold(properties.isBold);
-    font.setItalic(properties.isItalic);
-    painter.setFont(font);
-    // Set the pen before calling boundingRect: Qt6's drawTextItem early-returns
-    // when pen().style() == Qt::NoPen, which causes boundingRect to return
-    // height=0 and makes drawText render nothing (grey box with no text).
-    painter.setPen(properties.color);
-    const int infoHeight = fontHeight;
-    QRect testRect;
-    QRect mapInfoRect = QRect(xOffset, yOffset, widgetWidth - 10 - xOffset, infoHeight);
-    testRect = painter.boundingRect(mapInfoRect.left() + 10,
-                                    mapInfoRect.top(),
-                                    mapInfoRect.width() - 20,
-                                    mapInfoRect.height() - 20,
-                                    Qt::Alignment(Qt::AlignTop | Qt::AlignLeft) | Qt::TextFlag(Qt::TextWordWrap | Qt::TextIncludeTrailingSpaces),
-                                    infoText);
-    mapInfoRect.setHeight(testRect.height() + 10);
-    painter.fillRect(mapInfoRect, bgColor);
-    painter.drawText(mapInfoRect.left() + 10,
-                     mapInfoRect.top(),
-                     mapInfoRect.width() - 20,
-                     mapInfoRect.height() - 10,
-                     Qt::Alignment(Qt::AlignTop | Qt::AlignLeft) | Qt::TextFlag(Qt::TextWordWrap | Qt::TextIncludeTrailingSpaces),
-                     infoText);
-    painter.restore();
-    return mapInfoRect.height();
-}
-
 void dlgMapper::slot_setupMapperMenu()
 {
     auto* menu = new QMenu(this);
@@ -1391,7 +1312,7 @@ void dlgMapper::slot_showSaveWarningMenu()
 
     auto* retryAction = new QAction(tr("Retry save"), this);
     connect(retryAction, &QAction::triggered, this, [this]() {
-        if (mpHost && mpHost->saveMapFile(QString())) {
+        if (mpHost->saveMapFile(QString())) {
             mpMap->setSaveError(false);
         }
     });

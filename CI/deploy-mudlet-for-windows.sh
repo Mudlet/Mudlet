@@ -21,7 +21,8 @@
 
 set -x
 
-# Version: 2.5.0    Replace date-based PTB skip with commit-hash check against GitHub releases
+# Version: 2.6.0    Drop dblsqd; number forced rebuilds of a published PTB from GitHub releases
+#          2.5.0    Replace date-based PTB skip with commit-hash check against GitHub releases
 #          2.4.0    Switch from MINGW64 to CLANG64
 #          2.3.0    Add build counter suffix for multiple builds from same commit
 #          2.2.0    Skip commit date check when build is manually forced
@@ -101,32 +102,33 @@ if [[ ${VERSION_LINE} =~ ${VERSION_REGEX} ]]; then
   VERSION="${BASH_REMATCH[1]}"
 fi
 
-# For PTB builds, check if we need a build counter suffix
-# This allows multiple builds from the same commit
+# A forced PTB of a commit whose Windows PTB is already published needs a
+# version of its own, or its installer would take the published one's name
 BUILD_COUNTER_SUFFIX=""
-if [[ "${MUDLET_VERSION_BUILD}" == -ptb* ]] && [[ -n "${BUILD_COMMIT}" ]]; then
-  # Query the dblsqd feed for existing versions with this commit
-  EXISTING_VERSIONS=$(curl --silent "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/win/x86_64" | \
-    jq --raw-output ".releases[].version" | \
-    grep -E "${BUILD_COMMIT}(rebuild[0-9]+)?$" || true)
-
-  if [[ -n "${EXISTING_VERSIONS}" ]]; then
-    # Count existing versions and find the highest build number
-    HIGHEST_BUILD=1
-    while IFS= read -r ver; do
-      if [[ "${ver}" =~ rebuild([0-9]+)$ ]]; then
-        NUM="${BASH_REMATCH[1]}"
-        if [[ "${NUM}" -gt "${HIGHEST_BUILD}" ]]; then
-          HIGHEST_BUILD="${NUM}"
-        fi
-      fi
-    done <<< "${EXISTING_VERSIONS}"
-
-    # Next build number
-    NEXT_BUILD=$((HIGHEST_BUILD + 1))
-    BUILD_COUNTER_SUFFIX="rebuild${NEXT_BUILD}"
-    echo "=== Found existing PTB builds for commit ${BUILD_COMMIT}, using build counter: ${NEXT_BUILD} ==="
+if [[ "${MUDLET_VERSION_BUILD}" == -ptb* ]] && [[ "${GITHUB_FORCE_BUILD}" == "true" ]] && [[ -n "${BUILD_COMMIT}" ]]; then
+  if ! PTB_TAGS=$(gh release list --repo "${GITHUB_REPOSITORY}" --limit 100 --json tagName --jq '.[].tagName | select(contains("-ptb-"))'); then
+    echo "::warning::Could not list PTB releases, so a forced rebuild of a published PTB may overwrite its installer"
   fi
+  while IFS= read -r existing_tag; do
+    existing_commit="${existing_tag##*-}"
+    if [[ -z "${existing_commit}" ]] \
+        || { [[ "${BUILD_COMMIT}" != "${existing_commit}"* ]] && [[ "${existing_commit}" != "${BUILD_COMMIT}"* ]]; }; then
+      continue
+    fi
+    if ! EXISTING_ASSETS=$(gh release view "${existing_tag}" --repo "${GITHUB_REPOSITORY}" --json assets --jq '.assets[].name'); then
+      echo "::warning::Could not read the assets of ${existing_tag}, so a forced rebuild may overwrite its installer"
+      continue
+    fi
+    if grep -q -- '-windows-64\.exe$' <<< "${EXISTING_ASSETS}"; then
+      # Re-running a workflow keeps its run number, so the attempt keeps a rerun from clobbering the first run's upload
+      BUILD_COUNTER_SUFFIX="rebuild${GITHUB_RUN_NUMBER}"
+      if [[ "${GITHUB_RUN_ATTEMPT:-1}" -gt 1 ]]; then
+        BUILD_COUNTER_SUFFIX="${BUILD_COUNTER_SUFFIX}a${GITHUB_RUN_ATTEMPT}"
+      fi
+      echo "=== PTB ${existing_tag} already has a Windows installer for ${BUILD_COMMIT}, using build counter: ${BUILD_COUNTER_SUFFIX} ==="
+      break
+    fi
+  done <<< "${PTB_TAGS}"
 fi
 
 # Check if MUDLET_VERSION_BUILD is empty and print accordingly
@@ -292,7 +294,6 @@ else
     # Typically of form: 'Mudlet-4.19.1-ptb-2025-01-01-012345678-windows-64.exe'
     # Or with build counter: 'Mudlet-4.19.1-ptb-2025-01-01-012345678rebuild2-windows-64.exe'
     INSTALLER_EXE="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}${BUILD_COUNTER_SUFFIX}-windows-64.exe"
-    DBLSQD_VERSION_STRING="${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}${BUILD_COUNTER_SUFFIX}"
     # The GHA artifact name — includes '-installer' so make.mudlet.org
     # recognises it as a PTB installer (distinct from the snapshot .zip):
     ARTIFACT_NAME="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}${BUILD_COUNTER_SUFFIX}-windows-64-installer.exe"
@@ -306,7 +307,6 @@ else
     INSTALLER_VERSION="${VERSION}"
     # Typically of form: 'Mudlet-4.19.1-windows-64-installer.exe'
     INSTALLER_EXE="Mudlet-${VERSION}-windows-64-installer.exe"
-    DBLSQD_VERSION_STRING="${VERSION}"
   fi
   ./Clowd.Squirrel/tools/Squirrel.exe pack \
     --allowUnaware \
@@ -379,10 +379,6 @@ else
       echo "ARTIFACT_UNZIP=1"
     } >> "${GITHUB_ENV}"
 
-    # This identifies the "channel" that the release applies to, currently
-    # we have three defined: this one; "release" and (unused) "testing":
-    DBLSQD_CHANNEL="public-test-build"
-    CHANGELOG_MODE="ptb"
   else
     # Expose the installer to the workflow's SignPath steps. Only the PTB branch
     # above ever set these, so on tag builds the installer-signing chain silently
@@ -537,64 +533,11 @@ EOF
       echo "Warning: Portable ZIP not found at ${PORTABLE_ZIP_PATH}, skipping portable upload"
     fi
 
-    DBLSQD_CHANNEL="release"
-    CHANGELOG_MODE="release"
   fi
-
-  echo "=== Installing NodeJS ==="
-  # Check: according to https://github.com/actions/runner-images/blob/main/images/windows/Windows2022-Readme.md
-  # we already have node 22.17.1 available to us:
-  choco install --no-progress nodejs --version="22.1.0" -y -r -n
-  PATH="/c/Program Files/nodejs/:/c/npm/prefix/:${PATH}"
-  export PATH
-
-  echo "=== Installing dblsqd-cli ==="
-  npm install -g dblsqd-cli
-  echo "=== Logging-in to dblsqd ==="
-  dblsqd login -e "https://api.dblsqd.com/v1/jsonrpc" -u "${DBLSQD_USER}" -p "${DBLSQD_PASS}"
-
-  echo "=== Downloading release feed ==="
-  DOWNLOADED_FEED=$(mktemp)
-  curl "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/${DBLSQD_CHANNEL}/win/x86_64" -o "${DOWNLOADED_FEED}"
-
-  echo "=== Generating a changelog ==="
-  cd "${GITHUB_WORKSPACE}/CI" || exit 1
-
-  GENERATE_CHANGELOG_FILEPATH="$(cygpath -a "${GITHUB_WORKSPACE}/CI/generate-changelog.lua")"
-  CHANGELOG="$(lua5.1 "${GENERATE_CHANGELOG_FILEPATH}" --mode "${CHANGELOG_MODE}" --releasefile "${DOWNLOADED_FEED}")"
-  # cd - seems to swap between the current and previous working directory!
-  cd - || exit 1
-  echo "=== Changelog ==="
-  echo "${CHANGELOG}"
-  echo "=== End of Changelog ==="
-
-  echo "=== Creating release in Dblsqd ==="
-  echo "DBLSQD_VERSION_STRING=\"${DBLSQD_VERSION_STRING}\""
-  export DBLSQD_VERSION_STRING
-
-  # This may fail as a build from another architecture may have already registered a release with dblsqd,
-  # if so, that is OK. Don't reproduce the changelog contents in the following
-  # echo - we've already shown them:
-  echo "dblsqd release -a mudlet -c ${DBLSQD_CHANNEL} -m \${CHANGELOG} \"${DBLSQD_VERSION_STRING}\""
-  dblsqd release -a mudlet -c "${DBLSQD_CHANNEL}" -m "${CHANGELOG}" "${DBLSQD_VERSION_STRING}" || true
-
-  # PTB's are handled by the register script, release builds are just pushed here
-  if [[ "${DBLSQD_CHANNEL}" == "release" ]]; then
-    echo "=== Registering release with Dblsqd ==="
-    echo "dblsqd push -a mudlet -c \"${DBLSQD_CHANNEL}\" -r \"${DBLSQD_VERSION_STRING}\" -s mudlet --type 'standalone' --attach win:x86_64 \"${DEPLOY_URL}\""
-    # Non-fatal: dblsqd is legacy (GitHub releases are the primary distribution now).
-    dblsqd push -a mudlet -c "${DBLSQD_CHANNEL}" -r "${DBLSQD_VERSION_STRING}" -s mudlet --type 'standalone' --attach win:x86_64 "${DEPLOY_URL}" || echo "::warning::dblsqd push failed for win:x86_64 - continuing (GitHub release is the primary distribution)"
-  fi
-
 fi
 
-# Make VERSION_STRING and BUILD_COMMIT available to the
-# GHA "build-mudlet-win.yml" workflow so they can be passed to the
-# "Register Release" step:
-{
-  echo "VERSION_STRING=${DBLSQD_VERSION_STRING}"
-  echo "BUILD_COMMIT=${BUILD_COMMIT}"
-} >> "${GITHUB_ENV}"
+# The workflow's release metadata step reads BUILD_COMMIT
+echo "BUILD_COMMIT=${BUILD_COMMIT}" >> "${GITHUB_ENV}"
 
 echo ""
 echo "******************************************************"

@@ -55,6 +55,46 @@ describe("Tests that the generic mapper keeps the lines it reads a room from", f
     assert.are.equal(2, timesSeen(marker))
   end)
 
+  -- an event per line would also run every "*" handler on every line
+  it("reads a line without raising an event for it", function()
+    local marker = ("genericMapperNoEvent-%d-%d"):format(os.time(), math.random(100000))
+    local lines = upvalue(grabLine, "lines")
+    local keptLines = #lines
+    local raised = 0
+    local handler = registerAnonymousEventHandler("*", function(event)
+      if event == "onNewLine" then
+        raised = raised + 1
+      end
+    end)
+    finally(function()
+      killAnonymousEventHandler(handler)
+      if upvalue(grabLine, "lines") == lines then
+        for index = #lines, keptLines + 1, -1 do
+          lines[index] = nil
+        end
+      end
+    end)
+    feedTriggers("\n" .. marker .. "\n")
+    assert.are.equal(1, timesSeen(marker))
+    assert.are.equal(0, raised)
+  end)
+
+  it("still reads the line when a script raises onNewLine", function()
+    local marker = ("genericMapperRaised-%d-%d"):format(os.time(), math.random(100000))
+    local lines = upvalue(grabLine, "lines")
+    local keptLines = #lines
+    finally(function()
+      if upvalue(grabLine, "lines") == lines then
+        for index = #lines, keptLines + 1, -1 do
+          lines[index] = nil
+        end
+      end
+    end)
+    feedTriggers("\n" .. marker .. "\n")
+    raiseEvent("onNewLine")
+    assert.are.equal(2, timesSeen(marker))
+  end)
+
   -- Lua 5.1 builds an arg table on every call of a vararg function that reads arg
   it("handles an event without building a table for it", function()
     local event = "genericMapperSpecUnhandledEvent"

@@ -179,6 +179,30 @@ describe("Tests TBuffer OSC sequence handling", function()
       assert.are.same(foregroundOf("OSCSPLIT2", "OSCSPLIT2"), foregroundOf("OSCSPLIT2", "rest"))
     end)
 
+    -- A link carried past a line break has no text in any line yet, so the trim
+    -- and link sweep that line's commit sets off must leave it be. Its colour
+    -- comes from the link store, so a swept link loses it.
+    it("should keep an OSC 8 link whose line ended before its text, when that line trims the buffer", function()
+      local savedLimit, savedBatch = getConsoleBufferSize("main")
+      finally(function()
+        feedTriggers("\027]8;;\027\\\027[0m\n")
+        setConsoleBufferSize("main", savedLimit, savedBatch)
+      end)
+      -- every trim at this size sweeps, and each commit adds one line
+      setConsoleBufferSize("main", 100, 50)
+      for _ = 1, 300 do
+        if getLastLineNumber("main") == 99 then
+          break
+        end
+        feedTriggers("OSCSWEEP filler\n")
+      end
+      assert.equals(99, getLastLineNumber("main"))
+      assert.is_true(feedTriggers("\027[0mOSCSWEEP1(\027]8;;send:north?config={\"style\":{\"link\":{\"color\":\"#00ff00\"}}}\027\\\n"))
+      assert.is_true(getLastLineNumber("main") < 99, "the line did not trim the buffer, so this test proves nothing")
+      assert.is_true(feedTriggers("north\027]8;;\027\\)OSCSWEEP1\n"))
+      assert.are.same({ 0, 255, 0 }, foregroundOf("OSCSWEEP1", "north"))
+    end)
+
     it("should not read the rest of a feed, or a later one, inside a sequence a nested feed left open", function()
       local id = tempExactMatchTrigger("OSCNEST1", [[feedTriggers("\027]0;title")]])
       finally(function() killTrigger(id) end)
@@ -191,6 +215,34 @@ describe("Tests TBuffer OSC sequence handling", function()
     it("should still render OSC 8 hyperlink text", function()
       assert.is_true(feedTriggers("OSCLINK1(\027]8;;https://example.com\027\\click me\027]8;;\027\\)OSCLINK1\n"))
       assert.equals("OSCLINK1(click me)OSCLINK1", findRecentLine("OSCLINK1"))
+    end)
+
+    -- A link written concealed shows which text joined it. Only a link start over
+    -- the length cap ends the open link: a preset: opens none, and the rest are not OSC 8.
+    describe("an OSC sequence too long to decode inside an open link", function()
+      local concealed = "\027]8;;send:look?config={\"visibility\":{\"action\":\"reveal\",\"delay\":3000}}\027\\"
+      local long = string.rep("z", 5000)
+      after_each(function() feedTriggers("\027]8;;\027\\\n") end)
+
+      it("should end the open link when it starts a link", function()
+        assert.is_true(feedTriggers("OSCLONG1(" .. concealed .. "A\027]8;;send:big?x=" .. long .. "\027\\more\027]8;;\027\\)OSCLONG1\n"))
+        assert.equals("OSCLONG1( more)OSCLONG1", findRecentLine("OSCLONG1"))
+      end)
+
+      it("should end the open link when its parameters run past the cap", function()
+        assert.is_true(feedTriggers("OSCLONG4(" .. concealed .. "A\027]8;id=" .. long .. ";send:big\027\\more\027]8;;\027\\)OSCLONG4\n"))
+        assert.equals("OSCLONG4( more)OSCLONG4", findRecentLine("OSCLONG4"))
+      end)
+
+      it("should leave the open link alone when it is a preset", function()
+        assert.is_true(feedTriggers("OSCLONG2(" .. concealed .. "A\027]8;;preset:big?x=" .. long .. "\027\\more\027]8;;\027\\)OSCLONG2\n"))
+        assert.equals("OSCLONG2(     )OSCLONG2", findRecentLine("OSCLONG2"))
+      end)
+
+      it("should leave the open link alone when it is not OSC 8", function()
+        assert.is_true(feedTriggers("OSCLONG3(" .. concealed .. "A\027]2;" .. long .. "\027\\more\027]8;;\027\\)OSCLONG3\n"))
+        assert.equals("OSCLONG3(     )OSCLONG3", findRecentLine("OSCLONG3"))
+      end)
     end)
 
     it("should still consume OSC color sequences", function()
@@ -651,7 +703,7 @@ describe("Tests TBuffer OSC sequence handling", function()
   -- to. Paths that do not reach appendLine() print the phrase as ordinary text:
   -- anything the game sends, and an echo from inside a trigger. The injection
   -- is debounced to a second of wall clock and the timestamp it keeps lives on
-  -- the main buffer, so each spec here waits that window out before it starts.
+  -- the main buffer, so a spec that can follow another's injection waits it out.
   -- The phrase is built rather than written out below, and kept out of the
   -- describe and it names, so busted's own report cannot set it off.
   describe("Tests the OSC 8 documentation helper phrase", function()
@@ -704,10 +756,16 @@ describe("Tests TBuffer OSC sequence handling", function()
         pending("waiting out the injection debounce needs MUDLET_TEST_MODE")
         return
       end
-      pumpEvents(1100)
       echo("OSCDOCSMARKA\n")
       echo("OSCDOCS1 " .. phrase .. " OSCDOCS2")
       local injected = mainSinceMarker("OSCDOCSMARKA")
+      if injected and not someLineHolds(injected, "OSC 8 Hyperlink Examples") then
+        -- an earlier spec's injection is still inside the debounce window
+        pumpEvents(1100)
+        echo("OSCDOCSMARKA\n")
+        echo("OSCDOCS1 " .. phrase .. " OSCDOCS2")
+        injected = mainSinceMarker("OSCDOCSMARKA")
+      end
       assert.is_truthy(injected, "the marker line the examples follow is gone")
       assert.is_true(#injected > 10, "only " .. #injected .. " lines were injected")
       assert.is_true(someLineHolds(injected, "OSC 8 Hyperlink Examples"), table.concat(injected, "\n"))
@@ -769,6 +827,15 @@ describe("Tests TBuffer OSC sequence handling", function()
       return nil
     end
 
+    local function waitForLine(lineNumber, expected)
+      for _ = 1, 60 do
+        if getLines("main", lineNumber, lineNumber + 1)[1] == expected then
+          return
+        end
+        pumpEvents(50)
+      end
+    end
+
     -- the buffer size is global state, so restore it even when the body throws or
     -- a failure here fails an unrelated spec later in the run
     local function withSmallBuffer(body)
@@ -792,7 +859,7 @@ describe("Tests TBuffer OSC sequence handling", function()
       -- concealment keeps the character count identical so buffer indices stay
       -- valid, which is why the text is replaced space for space
       assert.equals("OSCREVEAL1(          )OSCREVEAL1", concealed)
-      pumpEvents(700)
+      waitForLine(lineNumber, "OSCREVEAL1(HIDDENWORD)OSCREVEAL1")
       assert.equals("OSCREVEAL1(HIDDENWORD)OSCREVEAL1", getLines("main", lineNumber, lineNumber + 1)[1])
     end)
 
@@ -812,7 +879,7 @@ describe("Tests TBuffer OSC sequence handling", function()
         assert.is_truthy(moved, "the link's line scrolled out entirely, so this test proves nothing")
         assert.is_not.equal(before, moved, "the buffer never trimmed, so this test proves nothing")
 
-        pumpEvents(700)
+        waitForLine(moved, "OSCTRIM1(HIDDENWORD)OSCTRIM1")
         assert.equals("OSCTRIM1(HIDDENWORD)OSCTRIM1", getLines("main", moved, moved + 1)[1])
       end)
     end)
@@ -828,7 +895,7 @@ describe("Tests TBuffer OSC sequence handling", function()
         -- where performReveal() no-ops instead of corrupting
         clearWindow()
         for i = 1, 3 do echo("oscgoneseed " .. i .. "\n") end
-        local link = "\027]8;;send:osc8gone?config={\"visibility\":{\"action\":\"reveal\",\"delay\":3000}}\027\\HIDDENWORD\027]8;;\027\\"
+        local link = "\027]8;;send:osc8gone?config={\"visibility\":{\"action\":\"reveal\",\"delay\":250}}\027\\HIDDENWORD\027]8;;\027\\"
         assert.is_true(feedTriggers("OSCGONE1(" .. link .. ")OSCGONE1\n"))
         local registeredAt = findLine("OSCGONE1")
         assert.is_truthy(registeredAt and registeredAt < 20, "the link did not land at a low buffer index")
@@ -844,7 +911,7 @@ describe("Tests TBuffer OSC sequence handling", function()
           snapshot[lineNumber] = getLines("main", lineNumber, lineNumber + 1)[1]
         end
 
-        pumpEvents(3500)
+        pumpEvents(700)
         for lineNumber = 0, lastLine do
           assert.equals(snapshot[lineNumber], getLines("main", lineNumber, lineNumber + 1)[1],
             "revealing a link whose line was trimmed away rewrote line " .. lineNumber)
@@ -863,7 +930,7 @@ describe("Tests TBuffer OSC sequence handling", function()
       withSmallBuffer(function()
         clearWindow()
         for i = 1, 3 do echo("oscdelseed " .. i .. "\n") end
-        local link = "\027]8;;send:osc8del?config={\"visibility\":{\"action\":\"reveal\",\"delay\":3000}}\027\\HIDDENWORD\027]8;;\027\\"
+        local link = "\027]8;;send:osc8del?config={\"visibility\":{\"action\":\"reveal\",\"delay\":250}}\027\\HIDDENWORD\027]8;;\027\\"
         assert.is_true(feedTriggers("OSCDEL1(" .. link .. ")OSCDEL1\n"))
         local registeredAt, concealed = findLine("OSCDEL1")
         assert.is_truthy(registeredAt and registeredAt < 20, "the link did not land at a low buffer index")
@@ -886,7 +953,8 @@ describe("Tests TBuffer OSC sequence handling", function()
           snapshot[lineNumber] = getLines("main", lineNumber, lineNumber + 1)[1]
         end
 
-        pumpEvents(3500)
+        assert.equals("OSCDEL1(          )OSCDEL1", snapshot[movedTo], "the link revealed before its line had moved")
+        waitForLine(movedTo, "OSCDEL1(HIDDENWORD)OSCDEL1")
         -- the link's own line is the one that should change: it reveals where the
         -- text actually sits now, and every other line is left alone
         assert.equals("OSCDEL1(HIDDENWORD)OSCDEL1", getLines("main", movedTo, movedTo + 1)[1],
@@ -911,7 +979,7 @@ describe("Tests TBuffer OSC sequence handling", function()
       withSmallBuffer(function()
         clearWindow()
         for i = 1, 3 do echo("oscclrseed " .. i .. "\n") end
-        local link = "\027]8;;send:osc8clr?config={\"visibility\":{\"action\":\"reveal\",\"delay\":3000}}\027\\HIDDENWORD\027]8;;\027\\"
+        local link = "\027]8;;send:osc8clr?config={\"visibility\":{\"action\":\"reveal\",\"delay\":250}}\027\\HIDDENWORD\027]8;;\027\\"
         assert.is_true(feedTriggers("OSCCLR1(" .. link .. ")OSCCLR1\n"))
         local registeredAt, concealed = findLine("OSCCLR1")
         assert.is_truthy(registeredAt and registeredAt < 20, "the link did not land at a low buffer index")
@@ -932,7 +1000,7 @@ describe("Tests TBuffer OSC sequence handling", function()
           snapshot[lineNumber] = getLines("main", lineNumber, lineNumber + 1)[1]
         end
 
-        pumpEvents(3500)
+        pumpEvents(700)
         for lineNumber = 0, lastLine do
           assert.equals(snapshot[lineNumber], getLines("main", lineNumber, lineNumber + 1)[1],
             "a link tracked across clearWindow() rewrote line " .. lineNumber)
@@ -941,10 +1009,9 @@ describe("Tests TBuffer OSC sequence handling", function()
     end)
   end)
 
-  -- A link the game marks as already selected is drawn in its selected style,
-  -- which takes over from the formatting the game wrapped it in once the line
-  -- it is on is committed - and a flush marker can commit the start of that
-  -- line, link and all, before the rest of it has arrived
+  -- A link the game marks as selected shows its selected style over the game's
+  -- own formatting once its line is committed, even when a flush marker
+  -- commits the start of the line first
   describe("Tests OSC 8 links that start out selected", function()
     local italic = "\027[3m"
     local selectedLink = "\027]8;;send:x?config={\"selection\":{\"group\":\"g\",\"value\":\"v\",\"selected\":true},"
@@ -962,14 +1029,14 @@ describe("Tests TBuffer OSC sequence handling", function()
           local format = getTextFormat("main")
           moveCursorEnd("main")
           assert.are.same({ 255, 0, 0 }, format.foreground)
-          assert.is_false(format.italic)
+          assert.is_true(format.italic)
           return
         end
       end
       error(needle .. " is not on any of the last lines")
     end
 
-    it("should draw a link in its selected style alone", function()
+    it("should draw a link in its selected style over the game's formatting", function()
       assert.is_true(feedTriggers("SELWHOLE1 " .. italic .. selectedLink .. "picked" .. closeLink .. " SELWHOLE1\n"))
       assertSelectedStyle("SELWHOLE1", "picked")
     end)

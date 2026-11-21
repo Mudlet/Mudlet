@@ -1,21 +1,36 @@
+# Needs a checkout cloned with --recurse-submodules. From this directory, on a Linux X11 or Wayland desktop:
+#
+#   cp .env.template .env                          # optional: sets the build's job count
+#   xhost +SI:localuser:"$(id -un)"                # let the container use your display; assumes your UID is 1000
+#   docker compose -f docker-compose.yml -f docker-compose.override.linux.yml up --build mudlet   # build and run Mudlet
+#   docker compose -f docker-compose.yml -f docker-compose.override.linux.yml up --build dev      # Qt Creator on this checkout
+#
+# On Wayland the window goes through Xwayland. "dev" builds into the checkout, so give it a build
+# directory that no host build has configured: CMake refuses a tree configured at another path.
+name: mudlet
+
 services:
-  mudlet: &base-settings
-    image: mudlet:dev
+  mudlet:
+    image: mudlet
     build:
-      dockerfile: docker/Dockerfile
       context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        BUILD_CORES: ${BUILD_CORES:-4}
+    volumes:
+      - profiles:/home/mudlet/.config/mudlet
 
   dev:
-    <<: *base-settings
+    image: mudlet-qtcreator
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: qtcreator
     volumes:
+      - ..:/home/mudlet/Mudlet
+      - profiles:/home/mudlet/.config/mudlet
       - settings:/home/mudlet/settings
-      - build:/home/mudlet/build
-      - ../CMakeLists.txt:/home/mudlet/CMakeLists.txt
-      - ../src:/home/mudlet/src
-      - ../translations:/home/mudlet/translations
-      - ../test:/home/mudlet/test
-    command: qtcreator CMakeLists.txt -settingspath /home/mudlet/settings/
 
 volumes:
-  build:
+  profiles:
   settings:

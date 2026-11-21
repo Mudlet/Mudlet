@@ -19,6 +19,7 @@
 
 #include "RoomContextMenuHandler.h"
 
+#include "LabelInteractionHandler.h"
 #include "TArea.h"
 #include "TMap.h"
 #include "TRoomDB.h"
@@ -83,6 +84,9 @@ bool RoomContextMenuHandler::handle(T2DMap::MapInteractionContext& context)
         context.hasMultiSelection = !mMapWidget.mMultiSelectionSet.isEmpty();
 
         populateRoomActions(popup, context.area, true);
+        if (context.area && !context.isMapViewOnly) {
+            populateBelowRoomsLabelActions(popup, *context.area, context.widgetPosition);
+        }
     }
 
     showPopup(popup, context);
@@ -372,6 +376,79 @@ void RoomContextMenuHandler::populateViewModeActions(QMenu* menu, int selectionS
         QObject::connect(setPlayerLocation, &QAction::triggered, &mMapWidget, &T2DMap::slot_setPlayerLocation);
         menu->addAction(setPlayerLocation);
     }
+}
+
+// A room takes clicks from a label drawn below it, so a label lying wholly under rooms is only reachable from here
+void RoomContextMenuHandler::populateBelowRoomsLabelActions(QMenu* menu, const TArea& area, const QPoint& widgetPosition) const
+{
+    const QList<int> labelIds = LabelInteractionHandler::belowRoomsLabelsAt(mMapWidget, area, widgetPosition);
+    if (labelIds.isEmpty()) {
+        return;
+    }
+
+    menu->addSeparator();
+    if (labelIds.size() == 1) {
+        //: 2D Mapper context menu (room) item, for the label drawn under the room that was clicked
+        const QString moveText = T2DMap::tr("Move label");
+        //: 2D Mapper context menu (room) item, for the label drawn under the room that was clicked
+        const QString deleteText = T2DMap::tr("Delete label");
+        addLabelActions(menu, labelIds.first(), moveText, deleteText);
+        return;
+    }
+
+    for (const int labelId : labelIds) {
+        QString text = area.mMapLabels.value(labelId).text.simplified();
+        if (text.size() > 30) {
+            text = text.left(29) + QChar(0x2026);
+        }
+        QString title;
+        if (text.isEmpty()) {
+            //: 2D Mapper context menu (room) submenu for an image label drawn under the room that was clicked; %1 is the label's id
+            title = T2DMap::tr("Image label %1").arg(labelId);
+        } else {
+            //: 2D Mapper context menu (room) submenu for a text label drawn under the room that was clicked; %1 is the label's text
+            title = T2DMap::tr("Label: %1").arg(text);
+        }
+        auto* labelMenu = menu->addMenu(title.replace(QLatin1Char('&'), qsl("&&")));
+        //: 2D Mapper context menu (label) item
+        const QString moveText = T2DMap::tr("Move");
+        //: 2D Mapper context menu (label) item
+        const QString deleteText = T2DMap::tr("Delete");
+        addLabelActions(labelMenu, labelId, moveText, deleteText);
+    }
+}
+
+void RoomContextMenuHandler::addLabelActions(QMenu* menu, const int labelId, const QString& moveText, const QString& deleteText) const
+{
+    const int areaId = mMapWidget.mAreaID;
+    const auto pickLabel = [this, areaId, labelId]() {
+        auto* pArea = mMapWidget.mpMap->mpRoomDB->getArea(areaId);
+        if (mMapWidget.mAreaID != areaId || !pArea || !pArea->mMapLabels.contains(labelId)) {
+            return false;
+        }
+        for (auto&& [key, label] : pArea->mMapLabels.asKeyValueRange()) {
+            label.highlight = key == labelId;
+        }
+        mMapWidget.mLabelHighlighted = true;
+        return true;
+    };
+
+    auto* moveLabel = new QAction(moveText, menu);
+    QObject::connect(moveLabel, &QAction::triggered, &mMapWidget, [this, pickLabel]() {
+        if (pickLabel()) {
+            mMapWidget.slot_moveLabel();
+        }
+    });
+    menu->addAction(moveLabel);
+
+    auto* deleteLabel = new QAction(deleteText, menu);
+    QObject::connect(deleteLabel, &QAction::triggered, &mMapWidget, [this, pickLabel]() {
+        if (pickLabel()) {
+            mMapWidget.slot_deleteLabel();
+            mMapWidget.mLabelHighlighted = false;
+        }
+    });
+    menu->addAction(deleteLabel);
 }
 
 bool RoomContextMenuHandler::hasCustomLineSelection(const T2DMap::MapInteractionContext& context) const

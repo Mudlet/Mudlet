@@ -44,19 +44,26 @@
 #include <QVarLengthArray>
 #include <QVector>
 
+#include <array>
 #include <deque>
+#include <iterator>
 #include <memory>
 #include <string>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 class Host;
 class QJsonArray;
 class QJsonObject;
 class QRegularExpression;
+class QTextCodec;
 class QTimer;
 struct TConsoleModel;
 class THyperlinkVisibilityManager;
+class TIngestPipeline;
+struct TIngestJob;
+struct TSpeculatedLine;
 
 class WrapInfo
 {
@@ -141,7 +148,11 @@ public:
         // Replaces TCHAR_ECHO 16
         Echo = 0x200000,              // 0000 0000 0010 0000 0000 0000 0000 0000
         // In the showing console's selection. Not a display attribute (outside TestMask); dropped by the copy constructor:
-        Selected = 0x2000000          // 0000 0010 0000 0000 0000 0000 0000 0000
+        Selected = 0x2000000,         // 0000 0010 0000 0000 0000 0000 0000 0000
+        // Bold as SGR 1, MXP or a link's style asked for it, whatever the colour. Bold is how it is painted:
+        // not on a colour, which is brightened instead, and also after a 256-colour index from 8 to 15.
+        // Outside TestMask, so only an app embedding Mudlet reads it:
+        BoldAsked = 0x4000000         // 0000 0100 0000 0000 0000 0000 0000 0000
     };
     // clang-format on
     Q_DECLARE_FLAGS(AttributeFlags, AttributeFlag)
@@ -246,6 +257,7 @@ public:
     bool isStruckOut() const { return mFlags & StrikeOut; }
     bool isReversed() const { return mFlags & Reverse; }
     bool isConcealed() const { return mFlags & Concealed; }
+    bool isBoldAsked() const { return mFlags & BoldAsked; }
     bool isFound() const { return mFlags & Found; }
     // Extended underline style accessors for enhanced OSC 8 hyperlink support
     bool isUnderlineWavy() const { return mFlags & UnderlineWavy; }
@@ -359,6 +371,162 @@ Q_DECLARE_OPERATORS_FOR_FLAGS(TChar::AttributeFlags)
 static_assert(std::is_nothrow_move_constructible_v<TChar>);
 static_assert(sizeof(TChar) == 16, "TChar has grown - every character of every buffered line is one of these");
 
+// The formatting of one buffered line, read like a const std::vector<TChar>. Most game lines arrive
+// in one rendition, so those are kept as a single TChar and a count, which saves a heap block per
+// line; expand() turns a line into one TChar per character before a caller writes to its characters.
+class TLineFormat
+{
+public:
+    class const_iterator
+    {
+    public:
+        using iterator_category = std::random_access_iterator_tag;
+        using value_type = TChar;
+        using difference_type = std::ptrdiff_t;
+        using pointer = const TChar*;
+        using reference = const TChar&;
+
+        const_iterator() = default;
+        // A stride of 0 reads the one shared TChar at every index
+        const_iterator(const TChar* base, difference_type index, difference_type stride)
+        : mpBase(base)
+        , mIndex(index)
+        , mStride(stride)
+        {
+        }
+        reference operator*() const { return mpBase[mIndex * mStride]; }
+        pointer operator->() const { return mpBase + mIndex * mStride; }
+        reference operator[](difference_type offset) const { return mpBase[(mIndex + offset) * mStride]; }
+        const_iterator& operator++()
+        {
+            ++mIndex;
+            return *this;
+        }
+        const_iterator operator++(int)
+        {
+            const_iterator previous = *this;
+            ++mIndex;
+            return previous;
+        }
+        const_iterator& operator--()
+        {
+            --mIndex;
+            return *this;
+        }
+        const_iterator operator--(int)
+        {
+            const_iterator previous = *this;
+            --mIndex;
+            return previous;
+        }
+        const_iterator& operator+=(difference_type offset)
+        {
+            mIndex += offset;
+            return *this;
+        }
+        const_iterator& operator-=(difference_type offset)
+        {
+            mIndex -= offset;
+            return *this;
+        }
+        friend const_iterator operator+(const_iterator it, difference_type offset) { return it += offset; }
+        friend const_iterator operator+(difference_type offset, const_iterator it) { return it += offset; }
+        friend const_iterator operator-(const_iterator it, difference_type offset) { return it -= offset; }
+        friend difference_type operator-(const const_iterator& lhs, const const_iterator& rhs) { return lhs.mIndex - rhs.mIndex; }
+        friend bool operator==(const const_iterator& lhs, const const_iterator& rhs) { return lhs.mIndex == rhs.mIndex; }
+        friend auto operator<=>(const const_iterator& lhs, const const_iterator& rhs) { return lhs.mIndex <=> rhs.mIndex; }
+
+    private:
+        const TChar* mpBase = nullptr;
+        difference_type mIndex = 0;
+        difference_type mStride = 0;
+    };
+    using value_type = TChar;
+    using size_type = std::size_t;
+    using difference_type = std::ptrdiff_t;
+    using const_reference = const TChar&;
+
+    TLineFormat() = default;
+    // Not explicit, so a finished std::vector<TChar> is stored as a line without ceremony
+    TLineFormat(std::vector<TChar>&& chars); // NOLINT(runtime/explicit)
+    explicit TLineFormat(const std::vector<TChar>& chars);
+    TLineFormat(const TLineFormat&) = default;
+    TLineFormat& operator=(const TLineFormat&) = default;
+    // Leaves the source empty, as a moved-from std::vector is in practice
+    TLineFormat(TLineFormat&& other) noexcept
+    : mChars(std::move(other.mChars))
+    , mUniform(std::move(other.mUniform))
+    , mUniformCount(std::exchange(other.mUniformCount, 0))
+    {
+    }
+    TLineFormat& operator=(TLineFormat&& other) noexcept
+    {
+        mChars = std::move(other.mChars);
+        mUniform = std::move(other.mUniform);
+        mUniformCount = std::exchange(other.mUniformCount, 0);
+        return *this;
+    }
+    ~TLineFormat() = default;
+
+    size_type size() const { return mUniformCount + mChars.size(); }
+    bool empty() const { return size() == 0; }
+    const TChar& operator[](size_type index) const { return mUniformCount ? mUniform : mChars[index]; }
+    // Out of range throws as std::vector::at() does
+    const TChar& at(size_type index) const { return (index < mUniformCount) ? mUniform : mChars.at(index); }
+    const TChar& front() const { return mUniformCount ? mUniform : mChars.front(); }
+    const TChar& back() const { return mUniformCount ? mUniform : mChars.back(); }
+    const_iterator begin() const { return mUniformCount ? const_iterator(&mUniform, 0, 0) : const_iterator(mChars.data(), 0, 1); }
+    const_iterator end() const { return mUniformCount ? const_iterator(&mUniform, mUniformCount, 0) : const_iterator(mChars.data(), mChars.size(), 1); }
+    const_iterator cbegin() const { return begin(); }
+    const_iterator cend() const { return end(); }
+    // Stored as one shared TChar; a line held per character may still look uniform
+    bool uniform() const { return mUniformCount; }
+    // The one TChar every character shares, so writing it restyles them all; null unless uniform()
+    TChar* sharedFormat() { return mUniformCount ? &mUniform : nullptr; }
+    // The per-character storage's heap block, null when none is held
+    const TChar* heapData() const { return mChars.data(); }
+    size_type capacity() const { return mChars.capacity(); }
+
+    // Invalidates every reference and iterator into the line, and the vector returned stays valid only until
+    // the next non-const call
+    std::vector<TChar>& expand();
+    std::vector<TChar> toVector() const;
+    // Selects [from, to); a line stored as one TChar stays that way when all of it is selected
+    void select(size_type from, size_type to);
+    // Stores a selected line as one TChar when deselecting it leaves every character alike
+    void deselect();
+    // As std::vector::insert() would, so format is stored deselected
+    void insert(size_type index, size_type count, const TChar& format);
+    void append(size_type count, const TChar& format) { insert(size(), count, format); }
+    // Removes [from, to)
+    void erase(size_type from, size_type to)
+    {
+        if (mUniformCount) {
+            mUniformCount -= to - from;
+        } else {
+            mChars.erase(mChars.begin() + static_cast<difference_type>(from), mChars.begin() + static_cast<difference_type>(to));
+        }
+    }
+    void clear()
+    {
+        mChars.clear();
+        mUniformCount = 0;
+    }
+    void swap(TLineFormat& other) noexcept
+    {
+        mChars.swap(other.mChars);
+        std::swap(mUniform, other.mUniform);
+        std::swap(mUniformCount, other.mUniformCount);
+    }
+
+private:
+    // Empty while mUniformCount is not
+    std::vector<TChar> mChars;
+    TChar mUniform;
+    size_type mUniformCount = 0;
+};
+static_assert(std::is_nothrow_move_constructible_v<TLineFormat>);
+
 
 class TBuffer
 {
@@ -374,6 +542,9 @@ class TBuffer
     // buffer while the write-out is queued:
     friend class MxpWatchdogBufferLifetimeTest;
 
+    // Drives a second buffer's parser on the ingest worker, see TIngestPipeline:
+    friend class TIngestPipeline;
+
     static inline const TEncodingTable& csmEncodingTable = TEncodingTable::csmDefaultInstance;
 
     static inline const int TCHAR_IN_BYTES = sizeof(TChar);
@@ -381,6 +552,56 @@ class TBuffer
 public:
     // limit on how many characters a single echo can accept for performance reasons
     static inline const int MAX_CHARACTERS_PER_ECHO = 1000000;
+
+    // Resolved from the encoding name when it changes, not in the per-byte loop:
+    enum class Decoder : quint8 { Ascii, Latin1, Gbk, Gb18030, EucKr, Big5, ShiftJis, EucJp, Utf8 };
+
+    // What the parser carries from one byte to the next. A line parsed ahead on the ingest worker is
+    // used only where this buffer's state is the one the worker parsed it from.
+    struct ParseState
+    {
+        QColor foreground;
+        QColor foregroundLight;
+        QColor background;
+        TChar pendingLeadFormat;
+        std::string incompleteSequenceBytes;
+        Decoder decoder = Decoder::Ascii;
+        char pendingLead = 0;
+        quint8 altFont = 0;
+        bool gotEsc = false;
+        bool gotEscCharset = false;
+        bool gotCsi = false;
+        bool gotOsc = false;
+        bool gotString = false;
+        bool isDefaultColor = true;
+        bool bold = false;
+        bool boldAsked = false;
+        bool italics = false;
+        bool overline = false;
+        bool reverse = false;
+        bool strikeOut = false;
+        bool underline = false;
+        bool underlineWavy = false;
+        bool underlineDotted = false;
+        bool underlineDashed = false;
+        bool blink = false;
+        bool fastBlink = false;
+        bool concealed = false;
+        bool hyperlinkActive = false;
+    };
+    // What the parser reads from Host, as of when a unit was handed to the ingest worker
+    struct ParseConfig
+    {
+        QColor hostForeground;
+        QColor hostBackground;
+        quint64 colourGeneration = 0;
+        bool haveColorSpaceId = false;
+        bool mxpBold = false;
+        bool mxpItalic = false;
+        bool mxpUnderline = false;
+        bool mxpStrikeOut = false;
+        bool mxpColourOrLink = false;
+    };
 
     // As per QDateTime::toString(). Translatable, so overwritten once at startup and fixed thereafter:
     static inline QString smTimeStampFormat = qsl("hh:mm:ss.zzz ");
@@ -409,11 +630,14 @@ public:
     void log(int, int);
     QString assembleLog(int fromLine, int toLine);
     inline int skipSpacesAtBeginOfLine(const int row, const int column);
-    void addLink(bool, const QString& text, QStringList& command, QStringList& hint, const TChar& format, const QVector<int>& luaReference = QVector<int>());
+    // Gives the id the link was stored under
+    int addLink(bool, const QString& text, QStringList& command, QStringList& hint, const TChar& format, const QVector<int>& luaReference = QVector<int>());
     // line is the first the link can land on, by default the last line
     int addLinkToStore(const QStringList& links, const QStringList& hints, const QVector<int>& luaReference = QVector<int>(), const QString& expireName = QString(), int line = -1);
     QString bufferToHtml(const bool showTimeStamp = false, const int row = -1, const int endColumn = -1, const int startColumn = 0, int spacePadding = 0);
     int size() { return static_cast<int>(buffer.size()); }
+    // Counts trimmed lines as well, so it keeps rising while a full buffer drops its oldest.
+    qint64 linesAddedTotal() const { return mLinesRemovedTotal + static_cast<qint64>(buffer.size()); }
     // Whether word wrapping split this line off the end of the one before it
     bool wrapsFromPreviousLine(int lineNumber) const;
     int wrapGapBefore(int lineNumber) const;
@@ -422,7 +646,7 @@ public:
     QString& line(int lineNumber);
     // Colors of the current trigger-pass line as committed, before any
     // trigger ran; nullptr when lineNumber is not the line being processed:
-    const std::vector<TChar>* preTriggerPassLine(int lineNumber) const;
+    const TLineFormat* preTriggerPassLine(int lineNumber) const;
     // The one color pair shared by every character of that same line, or
     // nullptr when its colors vary or there is no snapshot for it:
     const TChar* preTriggerPassLineUniformColors(int lineNumber);
@@ -438,9 +662,13 @@ public:
     bool triggerPassLineEdited(int lineNumber) const { return lineNumber >= 0 && lineNumber == mTriggerPassLineAsCommitted && !mTriggerPassLineEdits.empty(); }
     // What color matching reads for a pass line that has been deleted: its colors as
     // they arrived and its text as it was when it went
-    const std::vector<TChar>& detachedTriggerPassLine() const { return mPreTriggerPassLine; }
+    const TLineFormat& detachedTriggerPassLine() const { return mPreTriggerPassLine; }
     const QString& detachedTriggerPassLineText() const { return mDetachedTriggerPassLineText; }
     static constexpr int csmDetachedTriggerPassLine = -2;
+    // Whether a trigger pass, the current one or one a feedTriggers() paused, is running over the line,
+    // or over one a wrap split it off
+    bool triggerPassRunningOn(int lineNumber) const;
+    bool triggerPassUnderWay() const { return !mEnclosingTriggerPasses.isEmpty(); }
     int find(int line, const QString& what, int pos);
     QStringList split(int line, const QString& splitter);
     QStringList split(int line, const QRegularExpression& splitter);
@@ -454,6 +682,9 @@ public:
     void appendBuffer(const TBuffer& chunk);
     bool moveCursor(QPoint& where);
     int getLastLineNumber();
+    qint64 linesRemovedTotal() const { return mLinesRemovedTotal; }
+    // Only the lines dropped off the top for the line limit, each of which moves every line left up by one
+    qint64 linesTrimmedTotal() const { return mLinesTrimmedTotal; }
     QStringList getEndLines(int);
     void clear();
     void clearLinkState(const QSet<int>& stillLiveLinkIds = {});
@@ -519,9 +750,9 @@ public:
 
     // OSC 8 hyperlink documentation examples - triggered by secret phrase
     void injectOSC8DocumentationExamples();
+    // For specs: how many lines the ingest worker parsed that this buffer committed without parsing them again
+    quint64 linesParsedAhead() const;
 
-    // Resolved from the encoding name when it changes, not in the per-byte loop:
-    enum class Decoder : quint8 { Ascii, Latin1, Gbk, Gb18030, EucKr, Big5, ShiftJis, EucJp, Utf8 };
     static Decoder decoderFor(const QByteArray&);
     // It would have been nice to do this with Qt's signals and slots but that
     // is apparently incompatible with using a default constructor - sigh!
@@ -533,7 +764,7 @@ public:
 
     std::vector<TChar> bufferLine;
     // stores the text attributes (TChars) that make up each line of text in the buffer
-    std::deque<std::vector<TChar>> buffer;
+    std::deque<TLineFormat> buffer;
     // stores the actual content of lines
     QStringList lineBuffer;
     // each line's arrival time, see csmNoTimeStamp
@@ -541,7 +772,8 @@ public:
     // stores a boolean whenever the line is a prompt one
     QList<bool> promptBuffer;
     // stores, for a line that word wrapping split off the one before it, how
-    // many spaces the break dropped between the two - a copy puts them back
+    // many spaces the break dropped between the two - a copy puts them back;
+    // for the first line of a paragraph, how many columns of wrap indent it carries
     QList<quint16> wrapGapBuffer;
     TLinkStore mLinkStore;
     int mLinesLimit = 10000;
@@ -558,15 +790,18 @@ private:
     int mLinesUntilLinkSweep = 0;
     QSet<int> mLinkIdsRemovedSinceSweep;
     qint64 mLinesRemovedTotal = 0;
+    qint64 mLinesTrimmedTotal = 0;
     QHash<int, qint64> mLinkIdIssuedAtLine;
     bool linkHoldsState(const int id) const;
     QSet<int> collectLiveLinkIdsResettingIssueLines();
+    QSet<int> liveLinkIdsOutsideTheLines();
+    QSet<int> linkIdsOnTheLinesStillToCome() const;
     void dropStateOfRemovedLinks();
-    void noteRemovedLinkId(int id, qint64 lastLine);
-    void noteRemovedLinks(const std::vector<TChar>& line, qint64 lineNumber, int from = 0, int to = -1);
+    void noteRemovedLinkId(int id, qint64 lastLine, bool tell = true);
+    void noteRemovedLinks(const TLineFormat& line, qint64 lineNumber, int from = 0, int to = -1, bool tell = true);
     THyperlinkVisibilityManager* hyperlinkVisibilityManagerOrNull();
     TChar currentFormat() const;
-    inline QList<WrapInfo> getWrapInfo(const QString& lineText, bool isNewline, const int maxWidth, const int indent, const int hangingIndent);
+    inline QList<WrapInfo> getWrapInfo(const QString& lineText, bool isNewline, bool startsIndented, const int maxWidth, const int indent, const int hangingIndent);
     void shrinkBuffer();
     void spliceInsertIntoPreTriggerPassLine(int y, int x, int count, const TChar& format);
     void spliceEraseFromPreTriggerPassLine(int y, int x, int xEnd);
@@ -575,10 +810,40 @@ private:
     void materialisePreTriggerPassLine(int y);
     void noteTriggerPassLineEdit(int y, int x, int removed, int inserted);
     void triggerPassLinesRemoved(int from, int to);
+    void triggerPassSegmentTaken(int lineNumber);
     int remapLinkId(const TLinkStore& sourceLinkStore, int sourceLinkId, QHash<int, int>& remappedLinkIds, int line = -1);
     int calculateWrapPosition(int lineNumber, int begin, int end);
     void handleNewLine();
     void translateToPlainTextInner(std::string& incoming, bool isFromServer);
+    // Also runs on the ingest worker: read Host only through the mpParseConfig accessors, and call speculationStops() before any effect, logging included
+    void parseChunk(std::string& localBuffer, bool isFromServer, const QVector<QChar>& encodingLookupTable, size_t localBufferDecodableLength, TIngestJob* speculation, size_t startPosition = 0);
+    bool speculationEligible() const;
+    ParseState parseState() const;
+    bool parseStateIs(const ParseState&) const;
+    void setParseState(const ParseState&);
+    ParseConfig parseConfig() const;
+    bool parseConfigIs(const ParseConfig&) const;
+    void replaySpeculatedLines(TIngestJob&, size_t& localBufferPosition, bool isFromServer);
+    bool recordSpeculatedLine(char ch, size_t& localBufferPosition, bool forcedLineBreak);
+    bool speculatedLineTooLong(size_t moreChars);
+    void verifySpeculatedLine(const TSpeculatedLine&, char ch, size_t localBufferPosition, bool forcedLineBreak) const;
+    // In the worker's buffer: marks the unit as not parsed ahead from here, before a side effect
+    bool speculationStops()
+    {
+        if (Q_UNLIKELY(mpSpeculationSink)) {
+            mSpeculationStopped = true;
+            return true;
+        }
+        return false;
+    }
+    bool mxpProcessorEnabled() const;
+    bool mxpClientBold() const;
+    bool mxpClientItalic() const;
+    bool mxpClientUnderline() const;
+    bool mxpClientStrikeOut() const;
+    bool hostHaveColorSpaceId() const;
+    const QColor& hostForeground() const;
+    const QColor& hostBackground() const;
     void swapParserSequenceState();
     void warnAboutDiscardedStringSequence(const QString& what, const std::string& localBuffer, const size_t spanStart, const size_t spanEnd);
     bool processUtf8Sequence(const std::string&, bool, size_t, size_t&, bool&);
@@ -594,8 +859,10 @@ private:
     void clearSequenceLatches();
     void endLocalFeedSequences();
     void appendReplacementCharacter(TChar);
+    void appendMxpText(const QString&);
+    void appendLinkedText(const QString&, TChar);
     static QStringDecoder multibyteDecoderFor(Decoder, const QByteArray&);
-    bool decodeMultibyteSequence(QByteArrayView, QString&);
+    bool decodeMultibyteSequence(QByteArrayView, QStringView&);
     // Views into the string decodeSGR() was handed, so none may outlive that call.
     using SgrParameters = QVarLengthArray<QStringView, 12>;
     void decodeSGR(QStringView);
@@ -604,11 +871,13 @@ private:
     void decodeOSC(const QString&);
     void finaliseActiveHyperlink();
     void registerLinkVisibility(const int linkId, const int column, const int length, const Mudlet::HyperlinkStyling& styling);
-    void carryActiveHyperlinkPastFlush(QString& line);
-    void maskSpoilerText(const int linkId, QString& line, const int column, const int length);
+    void carryActiveHyperlinkPastFlush(QString& line, const TLineFormat& format);
+    void maskSpoilerText(const int linkId, QString& line, const TLineFormat& format, const int column, const int length);
+    void forgetSpoilerTextOnTheLines(const QSet<int>& linkIds);
     void resetColors();
     bool commitLine(char ch, size_t& localBufferPosition, bool isFromServer = false, bool forcedLineBreak = false);
-    void commitLineData(QString line, std::vector<TChar> chars, char ch);
+    void commitLineData(QString line, TLineFormat chars, char ch);
+    qint64 lineArrivalTime();
     bool dropSpaceAtWrap(QChar);
     bool endsAtServerWrapColumn() const;
     bool looksLikeWrappedProse(const QString& line) const;
@@ -618,6 +887,8 @@ private:
     bool continuationRepeatsSegmentOpening() const;
     void joinPendingServerWrapOntoCurrent();
     void processMxpWatchdogCallback();
+    void watchMxpTag(bool tagWrittenOut);
+    void stopTagWatchdog();
     TChar::AttributeFlags computeCurrentAttributeFlags() const;
 
     // Helper function for parsing URI query parameters in OSC 8 hyperlinks
@@ -633,7 +904,7 @@ private:
     // Helper function for parsing JSON selection config to SelectionSettings
     void parseJsonSelectionConfig(const QJsonObject& selectionObj, Mudlet::HyperlinkStyling::SelectionSettings& settings);
     // Helper function for JSON menu array conversion
-    QString jsonMenuArrayToString(const QJsonArray& menuArray);
+    QStringList jsonMenuArrayToList(const QJsonArray& menuArray);
     // Helper function for parsing visibility JSON object into VisibilitySettings
     bool parseVisibilityFromJson(const QJsonObject& visibilityObj, Mudlet::HyperlinkStyling::VisibilitySettings& settings);
     // Helper function for appending query parameters to URIs (handles existing params)
@@ -642,8 +913,6 @@ private:
     bool parseVisibilitySettings(const QString& jsonString, Mudlet::HyperlinkStyling::VisibilitySettings& settings, QString* errorDetails = nullptr);
     // Helper function for parsing color values (hex, named, rgb)
     QColor parseColorValue(const QString& value);
-    // Accessibility enhancements for hyperlink styling
-    void applyAccessibilityEnhancements(Mudlet::HyperlinkStyling& styling);
 
     // The model this buffer is the text of. The hyperlink managers, the
     // current format and the console background are read off it, and whatever
@@ -704,6 +973,8 @@ private:
     QPointer<Host> mpHost;
 
     bool mBold = false;
+    // By SGR 1 alone: mBold is also how 256-colour indexes 8 to 15 ask for their bright colour
+    bool mBoldAsked = false;
     bool mItalics = false;
     bool mOverline = false;
     bool mReverse = false;
@@ -720,11 +991,16 @@ private:
     quint8 mAltFont = 0;
 
     QString mMudLine;
-    std::vector<TChar> mMudBuffer;
-    std::vector<TChar> mPreTriggerPassLine;
+    TLineFormat mMudBuffer;
+    TLineFormat mPreTriggerPassLine;
     // Parked between lines so the trigger-pass snapshot reuses its allocation:
-    std::vector<TChar> mSpareTriggerPassLine;
+    TLineFormat mSpareTriggerPassLine;
     int mPreTriggerPassLineNumber = -1;
+    // The last of the lines a wrap split the pass line into, or the pass line itself
+    int mTriggerPassLineLastSegment = -1;
+    // Where the rest of a split pass line starts once its first part is deleted, which the console still shows
+    int mTriggerPassLineTailFrom = -1;
+    static int triggerPassSpanFirst(int passLine, int tailFrom) { return passLine >= 0 ? passLine : tailFrom; }
     // The index the current trigger pass was handed, which mPreTriggerPassLineNumber moves on from
     int mTriggerPassLineAsCommitted = -1;
     QString mDetachedTriggerPassLineText;
@@ -742,6 +1018,8 @@ private:
         int lineNumber = -1;
         QString detachedText;
         std::vector<TriggerPassLineEdit> edits;
+        int lastSegment = -1;
+        int tailFrom = -1;
     };
     // The passes a trigger calling feedTriggers() has paused. A member, not saved in
     // commitLineData()'s frame, as their lines move with deleted, rewrapped and
@@ -750,6 +1028,9 @@ private:
     // Meaningful only inside a trigger pass: false until something overwrites
     // the committed line, while the game's colors are still readable from it:
     bool mPreTriggerPassSnapshotTaken = true;
+    // A line fed from inside the pass filled the pass's line, which it had left empty, so lineShown
+    // sends the fed line and not the pass's as well
+    bool mTriggerPassLineTaken = false;
     enum class PassLineUniformity { Unknown, Uniform, Mixed };
     // Worked out on demand, so a profile with no color triggers never pays for it:
     PassLineUniformity mPreTriggerPassLineUniformity = PassLineUniformity::Unknown;
@@ -757,7 +1038,7 @@ private:
     // is held here instead of being committed, so its continuation can be
     // joined back on and triggers run once over the whole logical line:
     QString mServerWrapPendingLine;
-    std::vector<TChar> mServerWrapPendingBuffer;
+    TLineFormat mServerWrapPendingBuffer;
     // Length of the last game line joined into the above. Once a paragraph
     // has been joined even once the held text is longer than the wrap column,
     // so the column the game actually broke at is only recoverable from this:
@@ -793,12 +1074,17 @@ private:
     // (e.g. an MXP <HR> inside locally fed text) does not swap the state again:
     bool mProcessingLocalFeed = false;
     int mPendingChunkLines = 0;
+    quint64 mArrivalClockTicks = 0;
+    qint64 mArrivalClockTime = 0;
 
     // keeps track of the previously logged buffer lines to ensure no log duplication
     // happens when you enter a command
     int lastLoggedFromLine = 0;
     int lastloggedToLine = 0;
     QString lastTextToLog;
+    // appendLog() text written after lastTextToLog, so it keeps its place in arrival order
+    QString mTextAppendedToLog;
+    void logTextAppendedBehindPendingLine();
     // indices of lines being committed while their triggers run - a stack,
     // because a trigger calling feedTriggers() re-enters commitLine();
     // deleteLines() adjusts the entries so commitLine() can tell whether its
@@ -810,12 +1096,19 @@ private:
     // Opening an ICU converter costs far more than decoding the one character
     // each processGBSequence() etc. call needs, so one is kept per encoding
     QStringDecoder mMultibyteDecoder;
+    // Qt builds without ICU have no such converter, only a Qt5Compat codec
+    QTextCodec* mLegacyMultibyteCodec = nullptr;
+    // decodeMultibyteSequence() points its caller here, so each result lasts until the next call
+    std::array<QChar, 8> mMultibyteDecoded;
+    QString mMultibyteDecodedString;
 
     // OSC 8 hyperlink tracking
     QStringList mCurrentHyperlinkCommand;
     QStringList mCurrentHyperlinkHint;
     int mCurrentHyperlinkLinkId = 0;
     bool mHyperlinkActive = false;
+    // The MXP link this OSC 8 hyperlink opened inside, which it overrides until it closes; 0 if none
+    int mHyperlinkEnclosingMxpLinkId = 0;
     // Track hyperlink start position for visibility manager registration
     int mCurrentHyperlinkStartLine = 0;
     int mCurrentHyperlinkStartColumn = 0;
@@ -829,10 +1122,13 @@ private:
     int mHeldSpoilerLinkId = 0;
     int mHeldSpoilerStartColumn = 0;
     int mHeldSpoilerContinuationLength = 0;
-    // A link with visibility settings closed while text is held back for joining. Where its text ends
-    // up is known only once that is resolved - joined, or committed as a line of its own - so it is
-    // registered then: from startColumn in the text it began in, through continuationLength
-    // characters of the text after the held text. linkId 0 is none.
+    // A link begun in held text that clear() ended rather than the game: should the held text turn
+    // out to be a whole line, the link ends with it, as it would have had it still been open
+    int mHeldLinkEndedByClear = 0;
+    // Links with visibility settings closed while text is held back for joining. Where their text
+    // ends up is known only once that is resolved - joined, or committed as a line of its own - so
+    // each is registered then: from startColumn in the text it began in, through continuationLength
+    // characters of the text after the held text.
     struct HeldVisibility
     {
         int linkId = 0;
@@ -841,7 +1137,7 @@ private:
         bool startsAfterHeldText = false;
         Mudlet::HyperlinkStyling styling;
     };
-    HeldVisibility mHeldVisibility;
+    QList<HeldVisibility> mHeldVisibilities;
     QString mCurrentHyperlinkText;
 
     enum class WatchdogPhase { Phase1_Snapshot, Phase2_Unfreeze, None };
@@ -852,14 +1148,58 @@ private:
 
     // Enhanced OSC 8 hyperlink styling and menu support
     Mudlet::HyperlinkStyling mCurrentHyperlinkStyling;
-    QStringList mCurrentHyperlinkMenu; // Format: "Label|Command|Label|Command..."
+    QStringList mCurrentHyperlinkMenu; // Label, command, label, command...
 
     // Link state tracking for interactive pseudo-classes
     QMap<int, Mudlet::HyperlinkStyling::LinkState> mLinkStates; // Track current state per linkIndex
     QMap<int, bool> mVisitedLinks;
     QMap<int, bool> mLinkSelectionState;
     QMap<int, QColor> mLinkOriginalBackgrounds;
-    QMap<int, TChar> mLinkOriginalCharacters;
+    // The colors and flags a link's style puts on its characters
+    struct LinkDrawing
+    {
+        QRgb foreground = 0;
+        QRgb background = 0;
+        bool hasForeground = false;
+        bool hasBackground = false;
+        TChar::AttributeFlags setFlags = TChar::None;
+        TChar::AttributeFlags clearedFlags = TChar::None;
+
+        bool operator==(const LinkDrawing&) const = default;
+    };
+    struct LinkLook
+    {
+        // Each of the link's characters in buffer order as printed, and as scripts changed it since: saveLinkLooks()
+        // saves them as a line is committed, updateLinkCharacters() any it finds unsaved
+        QList<TChar> printed;
+        // What was last drawn over them, so a redraw takes back that and no more
+        LinkDrawing drawing;
+    };
+    QMap<int, LinkLook> mLinkLooks;
+    LinkDrawing drawingFor(int linkIndex, Mudlet::HyperlinkStyling::LinkState state) const;
+    static LinkDrawing drawingOf(const Mudlet::HyperlinkStyling& styling);
+    // The base and :any-link styles, which every state shares, drawn as the link's text prints
+    LinkDrawing printDrawing(int linkIndex) const;
+    int mPrintDrawingLinkId = 0;
+    LinkDrawing mPrintDrawing;
+    Mudlet::HyperlinkStyling getEffectiveHyperlinkStyling(int linkIndex, Mudlet::HyperlinkStyling::LinkState state) const;
+    static void applyDrawing(TChar& character, const LinkDrawing& drawing);
+    // The character with the drawing taken off: as printed, with whatever a script changed since
+    static TChar undrawn(const TChar& character, const TChar& printed, const LinkDrawing& drawing);
+    // The state a link returns to once the pointer, a pressed button and the caret have left it
+    Mudlet::HyperlinkStyling::LinkState restingState(int linkIndex) const;
+    void saveLinkLooks(int fromLine, int toLine);
+    void drawLinkCharacters(int linkIndex, const LinkDrawing& drawing, int fromLine);
+    void forgetLooksOfRemovedCharacters(int y, int from, int to);
+    // What copyInto() works out once for each link it copies
+    struct LinkCopy
+    {
+        // How many of the link's characters with a saved look are left from the copy's point to the end of the buffer
+        qsizetype fromHere = 0;
+        LinkDrawing resting;
+    };
+    // The link's character as it shows once the pointer, a pressed button and the caret have left it
+    TChar restingCharacter(const TChar& character, int line, int column, QHash<int, LinkCopy>& links) const;
     QMap<int, QString> mLinkOriginalText;
     int mCurrentHoveredLinkIndex = 0; // Which link is currently hovered (0 = none)
     int mCurrentActiveLinkIndex = 0;  // Which link is currently being clicked (0 = none)
@@ -907,6 +1247,20 @@ private:
     // a pasted log) would park its capacity all session, and a TChar is far bigger than a QChar:
     static constexpr size_t csmMaxRetainedLineCapacity = 8192;
 
+    std::unique_ptr<TIngestPipeline> mpIngestPipeline;
+    // The outermost game unit's job while this buffer parses it; nested feeds leave it alone
+    TIngestJob* mpActiveSpeculation = nullptr;
+    // Set only in the ingest worker's buffer, for the unit it is parsing ahead
+    TIngestJob* mpSpeculationSink = nullptr;
+    // Worker's buffer only: Host is main-thread state, so everything parseChunk() reaches reads it through this snapshot
+    const ParseConfig* mpParseConfig = nullptr;
+    // MUDLET_INGEST_THREAD=verify: the worker's line that main is parsing again, compared at its commit
+    const TSpeculatedLine* mpVerifiedLine = nullptr;
+    size_t mSpeculatedLineStart = 0;
+    bool mSpeculationStopped = false;
+    // Moves whenever mBlack..mLightWhite change, so a line parsed ahead with older colours is not used
+    quint64 mColourGeneration = 0;
+
     // Timestamp to prevent duplicate OSC 8 documentation injection
     qint64 mLastOSC8DocsInjectionTime = 0;
 
@@ -925,12 +1279,16 @@ public:
     void setHoveredLink(int linkIndex);
     void setActiveLink(int linkIndex);
     void setFocusedLink(int linkIndex);
+    // Whether the link has the caret on it, so its focus style or Mudlet's focus cue shows
+    bool showsFocus(int linkIndex) const;
     void markLinkAsVisited(int linkIndex);
     bool isLinkVisited(int linkIndex) const;
     void setLinkSelected(int linkIndex, bool selected);
     bool isLinkSelected(int linkIndex) const;
     void revealSpoilerLink(int linkIndex);
     bool isSpoilerUnrevealed(int linkIndex) const { return mLinkOriginalText.contains(linkIndex); }
+    // Whether a line still carries the link, concealed or not: the store keeps a removed line's links until a sweep
+    bool linkHeld(int linkIndex) const;
     void clearGroupSelection(const QString& group, const QString& exceptValue);
     void applyPendingSelectionStyling();
     void updateLinkCharacters(int linkIndex, int fromLine = 0);
@@ -950,6 +1308,7 @@ public:
     void restoreLinkIndices(int lineNumber, int startColumn, int count, int linkIndex); // Restore link indices in a range
 
 private:
+    void noteLinkChanged(int linkIndex);
 };
 
 #ifndef QT_NO_DEBUG_STREAM
@@ -1032,6 +1391,9 @@ inline QDebug& operator<<(QDebug& debug, const TChar::AttributeFlags& attributes
     }
     if (attributes & TChar::Selected) {
         presentAttributes << QLatin1String("Selected (0x2000000)");
+    }
+    if (attributes & TChar::BoldAsked) {
+        presentAttributes << QLatin1String("BoldAsked (0x4000000)");
     }
     if (presentAttributes.isEmpty()) {
         result.append(QLatin1String("None (0x0))"));

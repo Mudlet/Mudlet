@@ -25,6 +25,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "TMapPainter.h"
 #include "dlgMapLabel.h"
 #include "dlgRoomProperties.h"
 
@@ -41,6 +42,7 @@
 #include <QList>
 #include <memory>
 #include <optional>
+#include <utility>
 
 class Host;
 class TArea;
@@ -78,10 +80,14 @@ public:
     Q_DISABLE_COPY(T2DMap)
     explicit T2DMap(QWidget* parent = nullptr);
     ~T2DMap() override;
+    QSize sizeHint() const override;
     std::pair<bool, QString> setMapZoom(const qreal zoom, const int areaId = 0);
     void init();
     // Public so MapRenderBenchmark need not copy the arithmetic.
-    static QRect viewportRoomBounds(float rx0, float ry0, float roomWidth, float roomHeight, float widgetWidth, float widgetHeight);
+    static QRect viewportRoomBounds(float rx0, float ry0, float roomWidth, float roomHeight, float widgetWidth, float widgetHeight)
+    {
+        return TMapPainter::viewportRoomBounds(rx0, ry0, roomWidth, roomHeight, widgetWidth, widgetHeight);
+    }
     void paintEvent(QPaintEvent*) override;
     void mousePressEvent(QMouseEvent*) override;
     void mouseDoubleClickEvent(QMouseEvent* event) override;
@@ -187,14 +193,21 @@ public:
     void setBorderSize(double);
     void createLabel(QRectF labelRectangle);
     // Clears cache so new symbols are built at next paintEvent():
-    void flushSymbolPixmapCache() { mSymbolPixmapCache.clear(); }
+    void flushSymbolPixmapCache() { mPainter.flushSymbolPixmapCache(); }
     // How many symbols that cache is holding - the only way from outside to
     // tell that a flush reached this particular 2D map, of which there is one
     // per secondary map view as well as the mapper's own:
-    qsizetype symbolPixmapCacheCount() const { return mSymbolPixmapCache.size(); }
+    qsizetype symbolPixmapCacheCount() const { return mPainter.symbolPixmapCacheCount(); }
     void addSymbolToPixmapCache(const QString, const QString, const QColor, const bool);
-    void flushTextLabelPixmapCache() { mTextLabelPixmapCache.clear(); }
-    void addTextLabelToCache(const QString& key, const TMapLabel& label, const QSize& targetSize);
+    void flushTextLabelPixmapCache() { mPainter.flushTextLabelPixmapCache(); }
+    void startTextLabelFrame() { mPainter.startTextLabelFrame(); }
+    qsizetype textLabelPixmapCacheCount() const { return mPainter.textLabelPixmapCacheCount(); }
+    static constexpr qsizetype scmTextLabelPixmapBudgetKiB = TMapPainter::scmTextLabelPixmapBudgetKiB;
+    void setTextLabelPixmapBudgetKiB(qsizetype budgetKiB) { mPainter.setTextLabelPixmapBudgetKiB(budgetKiB); }
+    static constexpr qsizetype scmTextLabelPixmapCeilingKiB = TMapPainter::scmTextLabelPixmapCeilingKiB;
+    void setTextLabelPixmapCeilingKiB(qsizetype ceilingKiB) { mPainter.setTextLabelPixmapCeilingKiB(ceilingKiB); }
+    // Which pixmap the cache holds for a label of this area drawn at this size, 0 for none
+    qint64 textLabelPixmapCacheKey(int labelId, const QSize& size) const { return mPainter.textLabelPixmapCacheKey(mAreaID, labelId, size); }
     void drawScaledLabel(QPainter& painter, const QPointF& position, TMapLabel& label, int labelKey, const QRectF& paintRect);
     void setPlayerRoomStyle(const int style);
     void switchArea(const QString& newAreaName);
@@ -224,7 +237,8 @@ public:
     qreal getZoom() const { return xyzoom; }
     int getZLevel() const { return mMapCenterZ; }
 
-    // Center view on a room. For secondary views, skips raising sysMapAreaChanged events.
+    // Center view on a room. For secondary views, skips raising sysMapAreaChanged events. The main view is panned
+    // there, leaving the player's room alone, and follows the player again once they move.
     std::pair<bool, QString> centerview(int roomId);
     std::pair<bool, QString> exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel = std::nullopt, qreal zoom = 2.0, bool exportAllZLevels = false);
 
@@ -335,6 +349,7 @@ public:
     // always work well on existing maps - so allow for them to be reverted
     // almost back to how they were before that PR:
     bool mLargeAreaExitArrows = false;
+    bool mDirectionalExitLines = false;
 
 public slots:
     void slot_roomSelectionChanged();
@@ -403,6 +418,7 @@ public slots:
 
 private:
     void set3DViewCenter(int areaId, int x, int y, int z);
+    void takeFocusAwayFromTheCommandLine(Qt::FocusReason);
 
     class InteractionDispatcher
     {
@@ -440,60 +456,20 @@ private:
     void hideSelectionWidget();
     void pruneDeletedRoomsFromSelectionWidget();
     std::pair<int, int> getMousePosition();
-    std::pair<bool, QString> performImageSave(const QPixmap& pixmap, const QString& filePath, const QString& format);
     bool isSnapCustomLinePointsToGridEnabled() const;
     QPointF snapPointToGrid(const QPointF& point) const;
     bool checkButtonIsForGivenDirection(const QPushButton*, const QString&, const int&);
-    bool sizeFontToFitTextInRect(QFont&, const QRectF&, const QString&, const quint8 percentageMargin = 10, const qreal minFontSize = 7.0);
-    inline void drawRoom(
-            QPainter&, QFont&, QFont&, QPen&, TRoom*, const bool isGridMode, const bool areRoomIdsLegible, const bool showRoomNames, const int, const float, const float, const bool showRoomCollision);
-    // Batch rendering for large grid mode areas - draws rooms grouped by color
-    void drawGridModeRooms(QPainter&,
-                           const TArea* pDrawnArea,
-                           const int zLevel,
-                           const int playerRoomId,
-                           const float mRX,
-                           const float mRY,
-                           const float mRoomWidth,
-                           const float mRoomHeight,
-                           const float widgetWidth,
-                           const float widgetHeight,
-                           QFont& roomVNumFont,
-                           bool& isPlayerRoomVisible,
-                           QPointF& playerRoomOnWidgetCoordinates,
-                           bool areRoomIdsLegible,
-                           QString* profileOutput = nullptr);
-    // The non-grid room loop for zooms where a room is a few pixels across.
-    void drawNonGridModeRoomsLod(QPainter&,
-                                 const TArea* pDrawnArea,
-                                 int zLevel,
-                                 int playerRoomId,
-                                 const QList<int>& viewportRooms,
-                                 float widgetWidth,
-                                 float widgetHeight,
-                                 bool& isPlayerRoomVisible,
-                                 QPointF& playerRoomOnWidgetCoordinates,
-                                 QString* profileOutput = nullptr);
-    QColor environmentColor(int environmentId) const;
-    QSize lodRoomBlobSize() const;
-    // Carries the room to save the drawing pass a second room-database probe per exit.
-    // Valid only within the paintRoomExits() room iteration that gathered it.
-    struct ExitToPaint
-    {
-        const TRoom* destination = nullptr;
-        int destinationId = 0;
-        // The destination's reverse exit doesn't lead back. Not the sole arrow test: an exit also gets
-        // an arrow when a sibling exit to the same room is one-way.
-        bool oneWay = false;
-        // A straight custom line between the two rooms draws this exit's line, but not this room's door on it.
-        bool drawnByCustomLine = false;
-    };
-    void paintRoomExits(QPainter&, QPen&, QList<ExitToPaint>& exitList, const TArea*, int zLevel, const QRect& roomBounds, const QList<int>& viewportRooms, float exitWidth, QMap<int, QPointF>&);
-    void resolveAreaExitClick(QPainter&, const QMap<int, QPointF>& areaExitsMap, const int speedWalkStartRoomId);
+    using RoomDrawPass = TMapPainter::RoomDrawPass;
+    using ExitToPaint = TMapPainter::ExitToPaint;
+    // The view the painter draws, from this widget's state
+    TMapPainter::View painterView() const;
+    // What drawing the rooms resolved: the click it used up, and how the exits were gathered
+    void takePainterResults();
+    void startPendingSpeedWalk();
+    void applyPaintedView(const TMapPainter::View& before, const TMapPainter::View& after);
+    void applyPaintResult(const TMapPainter::View& before, const TMapPainter::PaintResult&);
     void addClickedRoomsToSelection(const QList<int>& hitRooms, Qt::KeyboardModifiers modifiers);
-    inline void drawDoor(QPainter&, const TRoom&, const QString&, const QLineF&);
     void updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea);
-    static void paintLabelHighlight(QPainter& painter, QRectF labelPaintRectangle, const QSizeF& clickSize);
 
     bool mDialogLock = false;
     struct ClickPosition
@@ -522,10 +498,9 @@ private:
     // room listing/selection widget, and by what,
     // as we now show room names (if present) as well.
     bool mIsSelectionUsingNames = false;
-    QCache<QString, QPixmap> mSymbolPixmapCache;
-    QCache<QString, QPixmap> mTextLabelPixmapCache;
-    ushort mSymbolFontSize = 1;
-    QFont mMapSymbolFont;
+    TMapPainter mPainter;
+    // Whether the mapper's area box names the area this map shows
+    bool mAreaWidgetValid = true;
     // in the players current area, how many digits does the biggest room number have?
     quint8 mMaxRoomIdDigits = 0;
     // Cache for the above: recomputing it is a scan of every room in the area,

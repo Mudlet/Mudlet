@@ -23,7 +23,15 @@ fi
 # else from apt. qtkeychain-qt6-dev is built against the distro Qt 6.4, which
 # is fine: Qt guarantees binary compatibility across 6.x minor releases, and
 # CI relies on the same mix.
-QT_VERSION=6.9.0
+# The version is read from the CI matrix so sessions test against the Qt that CI
+# does: Qt changes behaviour between minor releases, and a test that passes on
+# CI can fail on an older Qt here.
+CI_WORKFLOW="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/.github/workflows/build-mudlet.yml"
+QT_VERSION="$(sed -n "/^ *qt: '[0-9]/{s/^ *qt: '\([0-9.]*\)'.*/\1/p;q;}" "${CI_WORKFLOW}")"
+if [ -z "${QT_VERSION}" ]; then
+  echo "ERROR: could not read the Qt version from the 'qt:' matrix entries in ${CI_WORKFLOW}" >&2
+  exit 1
+fi
 QT_DIR="/opt/qt/${QT_VERSION}/gcc_64"
 
 if ! dpkg -s qtkeychain-qt6-dev >/dev/null 2>&1; then
@@ -58,7 +66,8 @@ if ! dpkg -s qtkeychain-qt6-dev >/dev/null 2>&1; then
     qtkeychain-qt6-dev
 fi
 
-if [ ! -d "${QT_DIR}" ]; then
+# Checks for HttpServer, the newest module, so an older install picks it up
+if [ ! -d "${QT_DIR}/lib/cmake/Qt6HttpServer" ]; then
   echo "Installing Qt ${QT_VERSION} via aqtinstall..."
   if [ ! -x /opt/aqt-venv/bin/aqt ]; then
     ${SUDO} mkdir -p /opt/aqt-venv /opt/qt
@@ -68,7 +77,7 @@ if [ ! -d "${QT_DIR}" ]; then
   fi
   # aqt drops aqtinstall.log in the current directory - keep it out of the repo
   (cd /opt/qt && /opt/aqt-venv/bin/aqt install-qt linux desktop "${QT_VERSION}" \
-    linux_gcc_64 -O /opt/qt -m qt5compat qtmultimedia qtspeech)
+    linux_gcc_64 -O /opt/qt -m qt5compat qtmultimedia qtspeech qtwebsockets qthttpserver)
 fi
 
 # rcc stamps every resource with its file's mtime, which differs between

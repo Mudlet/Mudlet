@@ -18,6 +18,7 @@
  ***************************************************************************/
 
 #include "GroupedTest.h"
+#include "MudletApp.h"
 #include "dlgConnectionProfiles.h"
 #include "utils.h"
 
@@ -56,7 +57,7 @@ private slots:
     void acceptableNames()
     {
         QFETCH(QString, name);
-        QVERIFY(dlgConnectionProfiles::firstInvalidProfileNameChar(name).isNull());
+        QVERIFY(MudletApp::firstInvalidProfileNameChar(name).isNull());
     }
 
     void rejectedNames_data()
@@ -77,7 +78,7 @@ private slots:
     {
         QFETCH(QString, name);
         QFETCH(QChar, badChar);
-        QCOMPARE(dlgConnectionProfiles::firstInvalidProfileNameChar(name), badChar);
+        QCOMPARE(MudletApp::firstInvalidProfileNameChar(name), badChar);
     }
 
     // Folders created outside of Mudlet keep their name only if the rest of
@@ -118,7 +119,7 @@ private slots:
     {
         QFETCH(QString, name);
         QFETCH(bool, usable);
-        QCOMPARE(dlgConnectionProfiles::profileNameUsableAsIs(name), usable);
+        QCOMPARE(MudletApp::profileNameUsableAsIs(name), usable);
     }
 
     // No path at all means nothing for the deletion to act on

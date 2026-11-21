@@ -20,7 +20,7 @@
 // The three OSC 8 hyperlink managers were fields of the TConsole widget, and
 // THyperlinkVisibilityManager reached back through it fourteen times: twice for
 // the text buffer it conceals and reveals in, and twelve times to repaint the
-// two panes. They are now fields of the core TConsoleModel, which Host co-owns
+// two panes. They are now fields of the core TConsoleModel, which Host owns
 // for the main console, and the repaint is the view's alone - the manager emits
 // visibilityChanged() and TConsole::slot_hyperlinkVisibilityChanged() forces
 // both panes to redraw (#8681).
@@ -207,10 +207,10 @@ private slots:
     {
         Host* host = startProfile();
         QVERIFY(host);
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
 
         destroyTheView(host);
-        QCOMPARE(&host->mainConsoleModel(), model.get());
+        QCOMPARE(&host->mainConsoleModel(), model);
 
         host->mMxpClient.insertText(qsl("MXPNOVIEW1 written with no view\n"));
         const int lineNumber = lineHolding(model->buffer, qsl("MXPNOVIEW1"));
@@ -303,7 +303,7 @@ private slots:
 
     // The end of it, through the real pipeline: a link registered by feeding an
     // OSC 8 sequence, revealed by the manager's own 100ms timer, with the widget
-    // that used to own that timer already destroyed. Host co-owns the model, so
+    // that used to own that timer already destroyed. Host owns the model, so
     // the reveal has a buffer to write into and a timer to run on long after the
     // view is gone.
     void test_aDelayedRevealCompletesAfterTheViewIsDestroyed()
@@ -328,7 +328,7 @@ private slots:
         const QString feed = qsl("feedTriggers([==[OSCSPLIT1(%1)OSCSPLIT1\n]==])").arg(link);
         QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(feed), "feedTriggers() did not run, so no hyperlink was ever registered");
 
-        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        TConsoleModel* model = &host->mainConsoleModel();
         // feedTriggers() runs synchronously inside compileAndExecuteScript(), so
         // the line is normally already there; this only covers a loaded runner.
         int lineNumber = -1;
@@ -345,7 +345,7 @@ private slots:
         // preinstalled packages out, which is why the reveal delay above is set
         // far past anything that save can cost.
         destroyTheView(host);
-        QCOMPARE(&host->mainConsoleModel(), model.get());
+        QCOMPARE(&host->mainConsoleModel(), model);
         QVERIFY2(lineTextAt(model->buffer, lineNumber) == qsl("OSCSPLIT1(          )OSCSPLIT1"), "the reveal had already run before the view was destroyed, so this case proves nothing");
 
         // The delay only had to outlast the close, so with the view gone it is
@@ -383,7 +383,7 @@ private:
         return host;
     }
 
-    // Destroys the main console widget while Host - and the model it co-owns -
+    // Destroys the main console widget while Host - and the model it owns -
     // live on, which is the window the delayed-reveal case needs.
     void destroyTheView(Host* host)
     {

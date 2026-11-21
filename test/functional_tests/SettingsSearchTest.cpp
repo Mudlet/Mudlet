@@ -54,6 +54,7 @@
 #include "TelnetServerStub.h"
 #include "dlgProfilePreferences.h"
 #include "mudlet.h"
+#include "uiDesign.h"
 
 #include "GroupedTest.h"
 
@@ -226,6 +227,15 @@ private slots:
         QCOMPARE(mpPreferences->groupBox_mapperColors->parentWidget(), resultsColumn());
         QVERIFY2(visibleCategoryHeaders() >= 2, "the results were not grouped under a header per category");
         QVERIFY2(mpPreferences->findChild<QLabel*>(qsl("settingsSearchEmpty"))->isHidden(), "a search that matched showed the empty state as well");
+    }
+
+    // Both cards are titled "Font", so the words that tell them apart are the editor's
+    void test_editorFontFindsTheEditorsFontCardAndNotTheDisplays()
+    {
+        search(qsl("editor font"));
+
+        QCOMPARE(mpPreferences->groupBox_editorFont->parentWidget(), resultsColumn());
+        QVERIFY2(mpPreferences->groupBox_font->parentWidget() != resultsColumn(), "the display font's card answered a search for the editor's font");
     }
 
     // The protocol names only exist inside the menu that button pops up, where
@@ -451,8 +461,9 @@ private slots:
         QImage carried;
         QVERIFY(carried.loadFromData(QByteArray::fromBase64(mainDisplayGlyph.toLatin1()), "PNG"));
         // Tinting replaces the colour and keeps the alpha, so the shape is what
-        // survives out of the file and into the header
-        const QImage expected(qsl(":/icons/settings-display.png"));
+        // survives out of the file and into the header. Read via glyphPixmap():
+        // the raw SVG renders at its file's size and Lucide's stroke width.
+        const QImage expected = uiDesign::glyphPixmap(qsl(":/icons/settings-display.svg")).toImage();
         QCOMPARE(carried.size(), expected.size());
         QImage carriedShape = carried.convertToFormat(QImage::Format_Alpha8);
         QImage expectedShape = expected.convertToFormat(QImage::Format_Alpha8);
