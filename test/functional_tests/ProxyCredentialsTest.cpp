@@ -63,6 +63,8 @@ private:
         }
     }
 
+    QString storedProxyPasswordPath() const { return qsl("%1/profiles/%2/passwords/proxy").arg(MudletApp::credentialFilesRoot(), MudletApp::sanitizeForPath(mHostname)); }
+
     void save()
     {
         pugi::xml_document doc;
@@ -96,7 +98,11 @@ private slots:
         removeStoredCredentials();
         mpHost = nullptr;
         mpHostManager.reset();
-        mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
+        if (mSavedXdg.isNull()) {
+            qunsetenv("XDG_CONFIG_HOME");
+        } else {
+            qputenv("XDG_CONFIG_HOME", mSavedXdg);
+        }
     }
 
     void clearedCredentialsAreNotOfferedToTheNextProxy()
@@ -138,7 +144,7 @@ private slots:
     void anUnreadablePasswordSurvivesASave()
     {
         QVERIFY(CredentialManager::storeCredential(mHostname, qsl("proxy"), qsl("secret")));
-        const QString path = qsl("%1/profiles/%2/passwords/proxy").arg(MudletApp::credentialFilesRoot(), MudletApp::sanitizeForPath(mHostname));
+        const QString path = storedProxyPasswordPath();
         QFile file(path);
         QVERIFY2(file.open(QIODevice::WriteOnly | QIODevice::Truncate), qPrintable(path));
         file.write("not something that decrypts");
@@ -157,7 +163,7 @@ private slots:
     void aPasswordThatCannotBeDeletedIsReported()
     {
         // A directory where the stored password belongs, which QFile::remove() cannot delete even as root
-        const QString path = qsl("%1/profiles/%2/passwords/proxy").arg(MudletApp::credentialFilesRoot(), MudletApp::sanitizeForPath(mHostname));
+        const QString path = storedProxyPasswordPath();
         QFile::remove(path);
         QVERIFY(QDir().mkpath(qsl("%1/blocker").arg(path)));
 
