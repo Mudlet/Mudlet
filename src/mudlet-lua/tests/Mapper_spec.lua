@@ -2765,7 +2765,7 @@ describe("Tests mapper functions against a shared fixture", function()
     -- key; a map info contributor is asked again on every paint, so it counts them
     describe("repaints the map when the room name font changes", function()
       local nameFont = "Sans,11,-1,5,50,0,0,0,0,0"
-      local paints
+      local paints, painted
 
       local function waitForPaint(ms)
         local waitedMs = 0
@@ -2784,7 +2784,9 @@ describe("Tests mapper functions against a shared fixture", function()
         end))
         assert.is_true(enableMapInfo("MapperSpecNameFontPaints"))
         assert.is_true(centerview(rA1))
-        assert.is_true(waitForPaint(5000), "the map was never painted")
+        -- Checked in each test, as a failed hook skips its tests unreported and
+        -- mudlet-headless never paints the map
+        painted = waitForPaint(5000)
         -- let the paints this set off settle, so only the change under test is counted
         pumpEvents(100)
         paints = 0
@@ -2796,11 +2798,13 @@ describe("Tests mapper functions against a shared fixture", function()
       end)
 
       it("in setMapUserData", function()
+        assert.is_true(painted, "the map was never painted")
         assert.is_true(setMapUserData("room.ui_nameFont", nameFont))
         assert.is_true(waitForPaint(1000))
       end)
 
       it("in clearMapUserDataItem", function()
+        assert.is_true(painted, "the map was never painted")
         setMapUserData("room.ui_nameFont", nameFont)
         pumpEvents(100)
         paints = 0
@@ -2809,6 +2813,7 @@ describe("Tests mapper functions against a shared fixture", function()
       end)
 
       it("in clearMapUserData", function()
+        assert.is_true(painted, "the map was never painted")
         setMapUserData("room.ui_nameFont", nameFont)
         pumpEvents(100)
         paints = 0
