@@ -224,11 +224,25 @@ private slots:
         QVERIFY(okEnabled);
         const int centre = mp2dMap->getCenterSelectedRoomId();
         QVERIFY(centre == scmRoomA || centre == scmRoomB);
-        const int dx = -10 - (centre == scmRoomA ? 5 : 8);
-        QCOMPARE(roomPosition(scmRoomA), QPoint(5 + dx, 20));
-        QCOMPARE(roomPosition(scmRoomB), QPoint(8 + dx, 20));
+        QCOMPARE(roomPosition(centre), QPoint(-10, 20));
+        QCOMPARE(roomPosition(scmRoomB) - roomPosition(scmRoomA), QPoint(3, 0));
         QCOMPARE(roomDB()->getRoom(scmRoomA)->z(), -3);
         QCOMPARE(roomDB()->getRoom(scmRoomB)->z(), -3);
+    }
+
+    // A minus sign pasted from a web page or a word processor is U+2212, which the validator
+    // passes, so reading it as anything but negative would move the selection to the wrong level
+    void typographicMinusIsReadAsNegative()
+    {
+        buildSelection();
+
+        runDialog([&](const QList<QLineEdit*>& edits, QPushButton* ok) {
+            edits.at(2)->setText(QString(QChar(0x2212)) + qsl("5"));
+            ok->click();
+        });
+
+        QCOMPARE(roomDB()->getRoom(scmRoomA)->z(), -5);
+        QCOMPARE(roomDB()->getRoom(scmRoomB)->z(), -5);
     }
 };
 
