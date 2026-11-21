@@ -5225,7 +5225,7 @@ void cTelnet::setGMCPVariables(QByteArrayView msg)
 
     // A package name holds no whitespace; a CR left on the name of "Package\r\n{...}"
     // would file the data under a name no script asks for
-    const auto separatorAt = std::find_if(msg.begin(), msg.end(), [](const char ch) {
+    const auto separatorAt = std::ranges::find_if(msg, [](const char ch) {
         return ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r';
     });
     const qsizetype nameLength = separatorAt - msg.begin();
