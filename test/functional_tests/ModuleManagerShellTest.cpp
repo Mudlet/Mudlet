@@ -94,11 +94,7 @@ private slots:
     {
         QWidget* pShell = shell();
         QVERIFY2(pShell, "there is no widget named 'modulesShell' - the window is still drawn by the platform");
-        for (QWidget* pWidget : {static_cast<QWidget*>(mpDialog->moduleTable),
-                                 static_cast<QWidget*>(mpDialog->textEdit),
-                                 static_cast<QWidget*>(mpDialog->installButton),
-                                 static_cast<QWidget*>(mpDialog->uninstallButton),
-                                 static_cast<QWidget*>(mpDialog->helpButton)}) {
+        for (QWidget* pWidget : std::initializer_list<QWidget*>{mpDialog->moduleTable, mpDialog->textEdit, mpDialog->installButton, mpDialog->uninstallButton, mpDialog->helpButton}) {
             QVERIFY2(pShell->isAncestorOf(pWidget), qPrintable(qsl("%1 is not inside the shell, so the shell's sheet does not reach it").arg(pWidget->objectName())));
         }
         QVERIFY2(mpDialog->styleSheet().isEmpty(), "the dialog carries a sheet of its own, which a profile stylesheet given to the dialog would replace");
