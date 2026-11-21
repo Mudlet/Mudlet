@@ -96,8 +96,9 @@ void dlgTriggerPatternEdit::updateDeleteGlyph()
     toolButton_deletePattern->setIcon(mRowHovered || mDeleteButtonFocused ? mDeleteGlyph : QIcon());
 }
 
-void dlgTriggerPatternEdit::paintEvent(QPaintEvent*)
+void dlgTriggerPatternEdit::paintEvent(QPaintEvent* event)
 {
+    Q_UNUSED(event)
     QStyleOption styleOption;
     styleOption.initFrom(this);
     QPainter painter(this);
