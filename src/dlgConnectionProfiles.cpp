@@ -210,24 +210,54 @@ QString dlgConnectionProfiles::profileFolderPath(const QString& profilesPath, co
     return candidate;
 }
 
+// The zone takes up room in the list of a profile's saves and tells nothing there, and formatting
+// it sends every entry through the platform's time zone database. Since Qt 6.8 a locale writes it
+// as "tttt", or "t" through "ttt" for shorter forms, so the whole unquoted run has to go.
+QString dlgConnectionProfiles::dateTimeFormatWithoutZone(const QString& format)
+{
+    QString result;
+    result.reserve(format.size());
+    bool quoted = false;
+    for (qsizetype i = 0; i < format.size(); ++i) {
+        const QChar c = format.at(i);
+        if (c == QLatin1Char('\'')) {
+            quoted = !quoted;
+        }
+        if (quoted || c != QLatin1Char('t')) {
+            result.append(c);
+            continue;
+        }
+
+        while (i + 1 < format.size() && format.at(i + 1) == QLatin1Char('t')) {
+            ++i;
+        }
+        const bool bracketed = !result.isEmpty() && (result.back() == QLatin1Char('(') || result.back() == QLatin1Char('[')) && i + 1 < format.size()
+                               && (format.at(i + 1) == QLatin1Char(')') || format.at(i + 1) == QLatin1Char(']'));
+        if (bracketed) {
+            result.chop(1);
+            ++i;
+        }
+        while (!result.isEmpty() && result.back().isSpace()) {
+            result.chop(1);
+        }
+        if (result.endsWith(QLatin1Char(','))) {
+            result.chop(1);
+        }
+        if (result.isEmpty()) {
+            while (i + 1 < format.size() && format.at(i + 1).isSpace()) {
+                ++i;
+            }
+        }
+    }
+    return result;
+}
+
 dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 : QDialog(parent)
 {
     setupUi(this);
 
-    mDateTimeFormat = mudlet::self()->getUserLocale().dateTimeFormat();
-    if (mDateTimeFormat.contains(QLatin1Char('t'))) {
-        // There is a timezone identifier in there - which (apart from perhaps
-        // the period around DST changes) we don't really need and which takes
-        // up space:
-        if (mDateTimeFormat.contains(QLatin1String(" t"))) {
-            // Deal with the space if the time zone is appended to the end of
-            // the string:
-            mDateTimeFormat.remove(QLatin1String(" t"), Qt::CaseSensitive);
-        } else {
-            mDateTimeFormat.remove(QLatin1Char('t'), Qt::CaseSensitive);
-        }
-    }
+    mDateTimeFormat = dateTimeFormatWithoutZone(mudlet::self()->getUserLocale().dateTimeFormat());
     // Undoes the sizing the .ui pins for 64px bitmaps; done here rather than in the file so
     // its object names and connections stay where the rest of this window expects them
     if (QLayout* pNoticeLayout = notificationArea->layout()) {
