@@ -41,7 +41,6 @@
 #include <QTreeWidget>
 #include <QtTest/QtTest>
 #include <functional>
-#include <chrono>
 
 #include "ChipRow.h"
 #include "Host.h"
@@ -72,8 +71,6 @@
 
 #include "GroupedTest.h"
 
-using namespace std::chrono_literals;
-
 class ReadabilityAuditTest : public QObject
 {
     Q_OBJECT
@@ -91,6 +88,7 @@ private:
     QTreeWidgetItem* mpKeyItem = nullptr;
     QTreeWidgetItem* mpTimerItem = nullptr;
     QTreeWidgetItem* mpActionItem = nullptr;
+    QTreeWidgetItem* mpTriggerItem = nullptr;
 
     // Looked up rather than kept: every entry into the Variables view rebuilds
     // the tree, so a row held from one case dangles by the next
@@ -308,9 +306,7 @@ private:
             QCoreApplication::processEvents();
         }
         mpPreferences->comboBox_appearance->setCurrentIndex(appearance);
-        QCoreApplication::processEvents();
-        QTest::qWait(50ms);
-        QCoreApplication::processEvents();
+        TestPixels::settle();
         mpEditor->grab();
         mpPreferences->grab();
         mpAbout->grab();
@@ -537,8 +533,8 @@ private:
         expectAtLeast(caseName, auditWindow(pWindow, where, appearance, mCases[caseName].failures), least, where, appearance);
     }
 
-    // The editor stays on the trigger form initTestCase() built, with its three pattern rows and the code pane's
-    // compile note, for as long as the windows are walked whole; so both appearances walk them before any form is shown
+    // The windows are walked whole with the editor on the trigger form initTestCase() built, with its three pattern
+    // rows and the code pane's compile note; after the forms, backToTheTriggerForm() puts it back for the next walk
     void auditTheWindows(const QString& appearance)
     {
         QLabel* pLabel = mpEditor->mpLabel_statusCounts;
@@ -553,12 +549,11 @@ private:
         auditWindowFor(qsl("windows"), mpAbout, qsl("the About dialog"), appearance, scmLeastAuditedInTheAbout);
     }
 
-    // Shown and settled as each case used to do it, then grabbed so its palette settles before it is read
+    // Grabbed once shown, so its palette settles before it is read
     bool showForm(const QString& caseName, const std::function<void()>& show, const std::function<bool()>& ready, const QString& notReady)
     {
         show();
         QCoreApplication::processEvents();
-        QTest::qWait(100ms);
         if (!ready()) {
             mCases[caseName].setupFailure = notReady;
             return false;
@@ -628,7 +623,6 @@ private:
             for (const auto& tab : QList<QPair<QWidget*, int>>{{mpConnection->tab_connection_info, scmLeastAuditedOnTheConnectTab}, {mpConnection->tab_options, scmLeastAuditedOnTheOptionsTab}}) {
                 mpConnection->tabWidget_connectionInfo->setCurrentIndex(mpConnection->tabWidget_connectionInfo->indexOf(tab.first));
                 QCoreApplication::processEvents();
-                QTest::qWait(100ms);
                 auditWithinFor(qsl("connection"), mpConnection, tab.first, qsl("the connection dialog's %1 tab").arg(tab.first->objectName()), appearance, tab.second);
             }
             // The button sheet is set on these two containers, which the tab pages do not reach
@@ -670,17 +664,35 @@ private:
         }
     }
 
+    // The saved trigger reopens with two of the three pattern rows initTestCase() gave it, so the rows are built
+    // and saved again as it did. Opening the options strip again is what fits the pane to the third row.
+    void backToTheTriggerForm()
+    {
+        mpEditor->slot_showTriggers();
+        mpEditor->treeWidget_triggers->setCurrentItem(mpTriggerItem);
+        mpEditor->slot_triggerSelected(mpTriggerItem);
+        TestPixels::settle();
+        buildThreePatternRows();
+        mpEditor->setTriggerOptionsShown(true);
+        mpEditor->slot_saveEdits();
+        TestPixels::settle();
+        const QWidget* pNote = mpEditor->findChild<QWidget*>(qsl("editorCompileNote"));
+        if (mpEditor->mVisiblePatternCount != 3 || !pNote || !pNote->isVisible() || !mpEditor->mpWidget_triggerOptionsRow->isVisible()) {
+            mCases[qsl("windows")].setupFailure = qsl("going back to the trigger form after the forms were walked did not bring back its three pattern rows, open options strip and compile note");
+        }
+    }
+
     // An appearance switch restyles every open window and takes over a second, where reading them takes
-    // milliseconds: three switches for the whole audit rather than two per case
+    // milliseconds: two switches for the whole audit rather than two per case
     void auditEverything()
     {
         setAppearance(enums::Appearance::dark);
         auditTheWindows(qsl("dark"));
+        auditTheForms(qsl("dark"));
+        backToTheTriggerForm();
         setAppearance(enums::Appearance::light);
         auditTheWindows(qsl("light"));
         auditTheForms(qsl("light"));
-        setAppearance(enums::Appearance::dark);
-        auditTheForms(qsl("dark"));
     }
 
     void report(const QString& caseName)
@@ -709,7 +721,7 @@ private slots:
         mpHost = mSession.host();
 
         mudlet::self()->slot_showTriggerDialog();
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
         mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
         QVERIFY2(mpEditor != nullptr, "Editor dialog should be created");
         mpEditor->resize(1100, 800);
@@ -718,42 +730,44 @@ private slots:
         // the script's. Made before the trigger, so the editor settles on that view.
         mpEditor->slot_showScripts();
         mpEditor->addScript(false);
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
         QVERIFY2(mpEditor->mpCurrentScriptItem != nullptr, "addScript() left no current script item");
         TScript* pScript = mpHost->getScriptUnit()->getScript(mpEditor->mpCurrentScriptItem->data(0, Qt::UserRole).toInt());
         QVERIFY2(pScript != nullptr, "the new script is not in the script unit");
         pScript->setEventHandlerList({qsl("sysConnectionEvent"), qsl("MyEvent")});
         mpEditor->slot_scriptsSelected(mpEditor->mpCurrentScriptItem);
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
 
         // A key with no keystroke, so its form shows the placeholder and the hint
         mpEditor->slot_showKeys();
         mpEditor->addKey(false);
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
         mpKeyItem = mpEditor->mpCurrentKeyItem;
         QVERIFY2(mpKeyItem != nullptr, "addKey() left no current key item");
 
         mpEditor->slot_showTimers();
         mpEditor->addTimer(false);
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
         mpTimerItem = mpEditor->mpCurrentTimerItem;
         QVERIFY2(mpTimerItem != nullptr, "addTimer() left no current timer item");
 
         mpEditor->slot_showActions();
         mpEditor->addAction(false);
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
         mpActionItem = mpEditor->mpCurrentActionItem;
         QVERIFY2(mpActionItem != nullptr, "addAction() left no current button");
 
         // A variable of the profile's own: a root row shows a notice instead of the form
         QVERIFY2(mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("auditedVariable = \"north\"")), "the variable the variables form is walked on could not be made");
         mpEditor->slot_showVariables();
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
         QVERIFY2(auditedVariableRow() != nullptr, "the Variables view did not show the variable this walks");
 
         mpEditor->slot_showTriggers();
         mpEditor->addTrigger(false);
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
+        mpTriggerItem = mpEditor->mpCurrentTriggerItem;
+        QVERIFY2(mpTriggerItem != nullptr, "addTrigger() left no current trigger item");
         buildThreePatternRows();
         // The options strip opens closed; a sound file and a highlight colour give
         // its two switches something beside them to read
@@ -761,7 +775,7 @@ private slots:
         mpEditor->showTriggerSoundFile(qsl("/tmp/ReadabilityAuditTest.wav"));
         mpEditor->mpTriggersMainArea->checkBox_soundTrigger->setChecked(true);
         mpEditor->mpTriggersMainArea->checkBox_triggerColorizer->setChecked(true);
-        QTest::qWait(100ms);
+        QCoreApplication::processEvents();
 
         openPreferences();
         openAbout();
@@ -774,7 +788,7 @@ private slots:
         // a state colour rather than the shell's ink
         mpEditor->mpSourceEditorEdbee->textDocument()->setText(qsl("local a = 1\nlocal b = 1 +* 2\n"));
         mpEditor->slot_saveEdits();
-        QTest::qWait(50ms);
+        QCoreApplication::processEvents();
         QWidget* pNote = mpEditor->findChild<QWidget*>(qsl("editorCompileNote"));
         QVERIFY2(pNote != nullptr && pNote->isVisible(), "the heading over the code pane carries no compile note, so the audit below does not cover one");
 

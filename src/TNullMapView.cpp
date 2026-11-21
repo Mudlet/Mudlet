@@ -33,6 +33,7 @@
 
 #include <QImage>
 #include <QPainter>
+#include <QPointer>
 #include <QSettings>
 #include <QTimer>
 
@@ -77,6 +78,33 @@ void TNullMapView::requestRepaint()
     if (auto* pFrontend = dynamic_cast<TNullConsoleFrontend*>(mpHost->consoleFrontend()); pFrontend && pFrontend->mMapRepaintRequested) {
         pFrontend->mMapRepaintRequested();
     }
+}
+
+void TNullMapView::setViewOnly(const bool viewOnly)
+{
+    const QPointer<TNullMapView> self(this);
+    switchMode(mpHost, viewOnly);
+    if (self) {
+        requestRepaint();
+    }
+}
+
+void TNullMapView::announceEditing(Host* pHost)
+{
+    if (!pHost->mMapViewOnly) {
+        switchMode(pHost, false);
+    }
+}
+
+void TNullMapView::switchMode(Host* pHost, const bool viewOnly)
+{
+    pHost->mMapViewOnly = viewOnly;
+    TEvent mapModeEvent{};
+    mapModeEvent.mArgumentList.append(qsl("mapModeChangeEvent"));
+    mapModeEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mapModeEvent.mArgumentList.append(viewOnly ? qsl("viewing") : qsl("editing"));
+    mapModeEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    pHost->raiseEvent(mapModeEvent);
 }
 
 void TNullMapView::setShown(const bool shown)
@@ -171,6 +199,7 @@ void TNullMapView::render(QPainter& painter, const QSize& size)
     view.mShowRoomID = mpHost->mShowRoomID;
     view.mBubbleMode = mpHost->mBubbleMode;
     view.mLargeAreaExitArrows = mpHost->getLargeAreaExitArrows();
+    view.mDirectionalExitLines = TMapPainter::directionalExitLinesEnabled();
     view.mDrawUpperLowerLevels = TAppFrontend::instance()->drawUpperLowerLevels();
     view.mPlayerRoomColorGradientStops = RoomAppearance::playerRoomStops(pMap->mPlayerRoomStyle, pMap->mPlayerRoomInnerDiameterPercentage, pMap->mPlayerRoomInnerColor, pMap->mPlayerRoomOuterColor);
     if (mPendingZoom) {
@@ -309,6 +338,7 @@ std::pair<bool, QString> TNullMapView::exportAreaToImage(const int areaId, const
     view.mShowRoomID = mpHost->mShowRoomID;
     view.mBubbleMode = mpHost->mBubbleMode;
     view.mLargeAreaExitArrows = mpHost->getLargeAreaExitArrows();
+    view.mDirectionalExitLines = TMapPainter::directionalExitLinesEnabled();
     view.mAreaID = shownAreaId();
     if (const TRoom* pCentredRoom = mpHost->mpMap->mpRoomDB->getRoom(centredRoomId())) {
         view.mMapCenterZ = pCentredRoom->z();
@@ -322,6 +352,48 @@ std::pair<bool, QString> TNullMapView::exportAreaToImage(const int areaId, const
 }
 
 // As dlgMapper::setMapZoom() and T2DMap::setMapZoom()
+// As T2DMap::centerview() for the main view: the view pans to the room as a drag would, so paint() leaves it there
+// until the player's room changes
+std::pair<bool, QString> TNullMapView::centerViewOn(const int roomId)
+{
+    TMap* pMap = mpHost->mpMap.data();
+    TRoomDB* pRoomDB = pMap->mpRoomDB.get();
+    const TRoom* pRoom = pRoomDB->getRoom(roomId);
+    if (!pRoom) {
+        return {false, qsl("room %1 not found").arg(roomId)};
+    }
+    const int areaId = pRoom->getArea();
+    if (!pRoomDB->getArea(areaId)) {
+        return {false, qsl("room %1 references non-existent area %2").arg(roomId).arg(areaId)};
+    }
+    // The room paint() compares against, with T2DMap's fallback to the map's first room
+    int playerRoomId = pMap->mRoomIdHash.value(pMap->mProfileName);
+    if (!pRoomDB->getRoom(playerRoomId) && !pRoomDB->isEmpty()) {
+        playerRoomId = pRoomDB->getRoomMap().constBegin().key();
+    }
+    if (shownAreaId() != areaId) {
+        TMapPainter::pruneSelectionToArea(pMap, mView.mMultiSelectionSet, mView.mMultiSelectionHighlightRoomId, areaId);
+    }
+    mRecentre = false;
+    // The pan is the later request, so a recentre on the player still pending from earlier must not undo it
+    pMap->mNewMove = false;
+    mPendingZoom.reset();
+    mView.mAreaID = areaId;
+    mView.mRoomID = playerRoomId;
+    mView.mShiftMode = true;
+    mView.mMapCenterX = pRoom->x();
+    mView.mMapCenterY = -pRoom->y();
+    mView.mMapCenterZ = pRoom->z();
+    mView.xyzoom = pRoomDB->get2DMapZoom(areaId);
+    if (mView.mLastViewedAreaID != areaId) {
+        const int lastViewedAreaId = mView.mLastViewedAreaID;
+        mView.mLastViewedAreaID = areaId;
+        raiseAreaChanged(areaId, lastViewedAreaId);
+    }
+    requestRepaint();
+    return {true, QString()};
+}
+
 std::pair<bool, QString> TNullMapView::setMapZoom(const qreal zoom, const int areaId)
 {
     if (const QString error = TMap::zoomError(zoom); !error.isEmpty()) {
