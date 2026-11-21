@@ -246,6 +246,14 @@ public:
         mPass = password;
         mPassGiven = true;
     }
+    // One the connection dialog read from the store while this profile is open, which can be an older copy than the
+    // profile holds or is still looking up, so it only stands in for none, and a later lookup answer replaces it
+    void setPassFilledInByDialog(const QString& password)
+    {
+        if (mPass.isEmpty() && !mSecuredPasswordPending) {
+            mPass = password;
+        }
+    }
     // A password still being fetched from the keychain counts, unless one given or typed stands in for it: the
     // auto-login is timer based, so the password step has to be armed before the read that answers it comes back,
     // or there is no prompt left for a late answer to be typed at.

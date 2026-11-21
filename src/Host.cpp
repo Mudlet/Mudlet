@@ -6639,7 +6639,7 @@ void Host::lookUpSecuredPassword(CredentialManager* credManager)
 void Host::reportUnreadableSavedPassword()
 {
     // Once per load, as a reconnect has no more of a password than the first connection had
-    if (!mSecuredPasswordUnreadable || mLogin.isEmpty() || !mPass.isEmpty()) {
+    if (!mSecuredPasswordUnreadable || mLogin.isEmpty() || !mPass.isEmpty() || mPassGiven) {
         return;
     }
     mSecuredPasswordUnreadable = false;

@@ -2756,13 +2756,11 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
         // An open profile read these as it loaded, and its automatic login takes them from it at each connection
         pHostBeforeLoad->setLogin(login_entry->text().trimmed());
         const QString password = character_password_entry->text().trimmed();
-        // Left empty by the dialog itself, the box may stand for a saved password that could not be read here
         if (character_password_entry->isModified()) {
             pHostBeforeLoad->setPassTypedByPlayer(password);
-        } else if (!password.isEmpty() && pHostBeforeLoad->getPass().isEmpty()) {
-            // Filled in by the dialog, which can fall back to an older copy than the profile holds; a pending lookup of
-            // the profile's own may still answer with a newer one
-            pHostBeforeLoad->setPass(password);
+        } else if (!password.isEmpty()) {
+            // Left empty by the dialog itself, the box may stand for a saved password that could not be read here
+            pHostBeforeLoad->setPassFilledInByDialog(password);
         }
     }
 
