@@ -1478,8 +1478,7 @@ private slots:
         QVERIFY2(pane, "No upper pane available");
         TBuffer* buffer = pane->mpBuffer;
 
-        auto host = mudlet::self()->getActiveHost();
-        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("clearWindow()\nechoLink('LinkForHoverTest', [[ ]], '', true)\n")), "the echoLink() call failed");
+        runLua(qsl("clearWindow()\nechoLink('LinkForHoverTest', [[ ]], '', true)\n"));
         QVERIFY2(waitForTextInBuffer(qsl("LinkForHoverTest")), "the link text never reached the buffer");
         // A link without a hover style of its own never takes the hover state
         TLinkStore& links = buffer->mLinkStore;
