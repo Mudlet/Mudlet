@@ -82,6 +82,13 @@ local function wellFormedParameter()
   return "4:" .. rrange(0, 5)
 end
 
+local function withNumbers(parts, count)
+  for _ = 1, count do
+    parts[#parts + 1] = number()
+  end
+  return parts
+end
+
 -- an SGR parameter that is out of range, cut short, oddly separated or unknown
 local function malformedParameter()
   local k = rnd(7)
@@ -89,27 +96,16 @@ local function malformedParameter()
     return pick({"38", "48", "58"}) .. ":5:" .. number()
   elseif k == 1 then
     -- with and without the colour space slot, and cut short
-    local parts = {pick({"38", "48", "58"}), "2"}
-    for _ = 1, rrange(0, 5) do
-      parts[#parts + 1] = number()
-    end
-    return concat(parts, ":")
+    return concat(withNumbers({pick({"38", "48", "58"}), "2"}, rrange(0, 5)), ":")
   elseif k == 2 then
     local parts = {pick({"38", "48", "58"}), pick({"2", "5", "3", "4", "1", "0", "", "9"})}
-    for _ = 1, rrange(0, 5) do
-      parts[#parts + 1] = number()
-    end
-    return concat(parts, ";")
+    return concat(withNumbers(parts, rrange(0, 5)), ";")
   elseif k == 3 then
     return pick({"4:6", "4:", "4:x", "38", "48", "58", "38:", "48:", ":", "::", "38::", "51", "59", "20", "21", "00"})
   elseif k == 4 then
     return number()
   end
-  local parts = {}
-  for _ = 1, rrange(1, 4) do
-    parts[#parts + 1] = number()
-  end
-  return concat(parts, ":")
+  return concat(withNumbers({}, rrange(1, 4)), ":")
 end
 
 local function sgr()
