@@ -36,12 +36,15 @@
  * Run with: ctest -R DetachedWindowOwnershipTest -V
  */
 
+#include <QAbstractButton>
 #include <QAction>
 #include <QDockWidget>
 #include <QFileInfo>
+#include <QMessageBox>
 #include <QMimeData>
 #include <QSignalSpy>
 #include <QTabBar>
+#include <QTimer>
 #include <QTemporaryDir>
 #include <QPointer>
 #include <QScopeGuard>
@@ -571,6 +574,73 @@ private slots:
         QCOMPARE(mudlet::self()->mpTabBar->tabName(1), rightMostProfile);
     }
 
+    // #12346: cancelling one profile's save question has to keep its window, rather than orphan the profile
+    void test_cancellingASaveQuestionKeepsTheDetachedWindowOpen()
+    {
+        QVERIFY(mpDetachedWindow);
+        startProfile(mThirdHostname);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        // Still open after a failure, cleanup() closes it and removes it then
+        auto removeThird = qScopeGuard([this] {
+            if (!HostManager::self()->getHost(mThirdHostname)) {
+                deleteProfileDirectory(mThirdHostname);
+            }
+        });
+        mudlet::self()->slot_profileDetachToWindow(mThirdHostname, mpDetachedWindow);
+        QCOMPARE(mudlet::self()->getDetachedWindows().value(mThirdHostname), mpDetachedWindow);
+
+        // Restored on every way out, or a failure leaves a profile whose next close puts up a question nobody answers
+        auto restoreSaveOnExit = qScopeGuard([this] {
+            for (const QString& name : {mSecondHostname, mThirdHostname}) {
+                if (Host* pHost = HostManager::self()->getHost(name)) {
+                    pHost->mFORCE_SAVE_ON_EXIT = true;
+                }
+            }
+        });
+        for (const QString& name : {mSecondHostname, mThirdHostname}) {
+            Host* pHost = HostManager::self()->getHost(name);
+            QVERIFY(pHost);
+            pHost->mFORCE_SAVE_ON_EXIT = false;
+        }
+
+        // Asked in name order, so the second profile is asked first
+        QStringList asked;
+        QTimer answer;
+        answer.setInterval(20ms);
+        connect(&answer, &QTimer::timeout, this, [&asked]() {
+            auto* pBox = qobject_cast<QMessageBox*>(QApplication::activeModalWidget());
+            if (!pBox) {
+                return;
+            }
+            asked.append(pBox->text());
+            if (QAbstractButton* pButton = pBox->button(asked.size() == 1 ? QMessageBox::Cancel : QMessageBox::No)) {
+                pButton->click();
+            } else {
+                pBox->reject();
+            }
+        });
+        answer.start();
+        mpDetachedWindow->close();
+        QVERIFY(QTest::qWaitFor(
+                [this]() {
+                    return HostManager::self()->getHost(mThirdHostname) == nullptr;
+                },
+                5s));
+        QTest::qWait(200ms);
+        answer.stop();
+
+        QCOMPARE(asked.size(), 2);
+        QVERIFY2(asked.at(0).contains(mSecondHostname), qPrintable(asked.at(0)));
+        QVERIFY2(asked.at(1).contains(mThirdHostname), qPrintable(asked.at(1)));
+        QVERIFY(HostManager::self()->getHost(mSecondHostname));
+        QVERIFY2(mpDetachedWindow, "the window closed with the cancelled profile still in it");
+        QVERIFY(mpDetachedWindow->isVisible());
+        QCOMPARE(mpDetachedWindow->getProfileCount(), 1);
+        QCOMPARE(mudlet::self()->getDetachedWindows().value(mSecondHostname), mpDetachedWindow);
+    }
+
     // Detaching takes the map dock's show hook with it, so the reattach has to put one back. Hidden while
     // detached, so that the reattach's own check cannot size it first.
     void test_aReattachedMapDockShownWhereOtherDocksWereOpensAtAUsableWidth()
@@ -825,6 +895,30 @@ private slots:
         QTest::qWait(200ms);
         QCOMPARE(QApplication::activeWindow(), mpDetachedWindow.data());
         QCOMPARE(QApplication::focusWidget(), static_cast<QWidget*>(pHost->mainConsoleView()->mpCommandLine.data()));
+    }
+
+    // closeProfile() from a script has to reach a profile that is not in the main window's tab bar
+    void test_closeProfileClosesADetachedProfile()
+    {
+        startThirdProfile();
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        mudlet::self()->slot_tabDetachRequested(mudlet::self()->mpTabBar->tabIndex(mThirdHostname), QPoint(200, 200));
+        QPointer<TDetachedWindow> pWindow = mudlet::self()->getDetachedWindows().value(mThirdHostname);
+        QVERIFY2(pWindow, "the third profile did not detach, so this case would close it from the main window");
+
+        Host* pFirstHost = HostManager::self()->getHost(mFirstHostname);
+        QVERIFY(pFirstHost);
+        QVERIFY(pFirstHost->getLuaInterpreter()->compileAndExecuteScript(qsl("closeProfile('%1')").arg(mThirdHostname)));
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return HostManager::self()->getHost(mThirdHostname) == nullptr;
+                         },
+                         10s),
+                 "closeProfile() left the detached profile open");
+        QTRY_VERIFY2(!pWindow, "the detached window was left open with no profile in it");
+        deleteProfileDirectory(mThirdHostname);
     }
 
 private:
