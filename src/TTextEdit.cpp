@@ -136,8 +136,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
     connect(mpDragScrollTimer, &QTimer::timeout, this, [this]() {
         // A popup or another window can take the release, so the pane never sees it
         if (!mMouseTracking || !isVisible() || !(QGuiApplication::mouseButtons() & Qt::LeftButton)) {
-            mpDragScrollTimer->stop();
-            mMouseTracking = false;
+            stopDragScroll();
             return;
         }
         QMouseEvent move(QEvent::MouseMove, mDragScrollPos, mapToGlobal(mDragScrollPos), Qt::NoButton, Qt::LeftButton, QGuiApplication::keyboardModifiers());

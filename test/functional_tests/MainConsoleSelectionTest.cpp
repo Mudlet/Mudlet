@@ -593,13 +593,14 @@ private slots:
         QTRY_VERIFY2_WITH_TIMEOUT(lowerPane->isVisible() && lowerPane->height() > 40, "Scrolling back did not open the split", 2000);
 
         const QPoint middle = lowerPane->rect().center();
+        const QPoint bottomEdgePos(middle.x(), lowerPane->height() - 2);
         QTest::mousePress(lowerPane, Qt::LeftButton, Qt::NoModifier, middle);
-        QTest::mouseMove(lowerPane, QPoint(middle.x(), lowerPane->height() - 2));
+        QTest::mouseMove(lowerPane, bottomEdgePos);
         const int topAfterMove = pane->imageTopLine();
         QTest::qWait(300ms);
         const bool stillOpen = lowerPane->isVisible();
         const int topAfterHold = pane->imageTopLine();
-        QTest::mouseRelease(lowerPane, Qt::LeftButton, Qt::NoModifier, QPoint(middle.x(), lowerPane->height() - 2));
+        QTest::mouseRelease(lowerPane, Qt::LeftButton, Qt::NoModifier, bottomEdgePos);
         QVERIFY2(stillOpen, "Holding at the lower pane's bottom edge closed the split");
         QCOMPARE(topAfterHold, topAfterMove);
     }
@@ -610,18 +611,20 @@ private slots:
         QVERIFY2(pane, "No upper pane available");
 
         const QPoint middle = pane->rect().center();
+        const QPoint aboveMiddle(middle.x(), middle.y() - 20);
+        const QPoint edgePos(middle.x(), 2);
         const int topBefore = pane->imageTopLine();
         QTest::mousePress(pane, Qt::LeftButton, Qt::NoModifier, middle);
-        QTest::mouseMove(pane, QPoint(middle.x(), middle.y() - 20));
-        QTest::mousePress(pane, Qt::BackButton, Qt::NoModifier, QPoint(middle.x(), middle.y() - 20));
-        QTest::mouseRelease(pane, Qt::BackButton, Qt::NoModifier, QPoint(middle.x(), middle.y() - 20));
-        QTest::mouseMove(pane, QPoint(middle.x(), 2));
+        QTest::mouseMove(pane, aboveMiddle);
+        QTest::mousePress(pane, Qt::BackButton, Qt::NoModifier, aboveMiddle);
+        QTest::mouseRelease(pane, Qt::BackButton, Qt::NoModifier, aboveMiddle);
+        QTest::mouseMove(pane, edgePos);
         const bool kept = QTest::qWaitFor(
                 [&] {
                     return pane->imageTopLine() < topBefore - 6;
                 },
                 1000);
-        QTest::mouseRelease(pane, Qt::LeftButton, Qt::NoModifier, QPoint(middle.x(), 2));
+        QTest::mouseRelease(pane, Qt::LeftButton, Qt::NoModifier, edgePos);
         QVERIFY2(kept, "Pressing another button ended the drag's edge scrolling");
     }
 
@@ -636,12 +639,13 @@ private slots:
 
         // The lower pane cannot scroll, so repeating there would only drag the upper pane away from the selection
         const QPoint middle = lowerPane->rect().center();
+        const QPoint edgePos(middle.x(), 2);
         QTest::mousePress(lowerPane, Qt::LeftButton, Qt::NoModifier, middle);
-        QTest::mouseMove(lowerPane, QPoint(middle.x(), 2));
+        QTest::mouseMove(lowerPane, edgePos);
         const int topAfterMove = pane->imageTopLine();
         QTest::qWait(300ms);
         const int topAfterHold = pane->imageTopLine();
-        QTest::mouseRelease(lowerPane, Qt::LeftButton, Qt::NoModifier, QPoint(middle.x(), 2));
+        QTest::mouseRelease(lowerPane, Qt::LeftButton, Qt::NoModifier, edgePos);
         QCOMPARE(topAfterHold, topAfterMove);
     }
 
