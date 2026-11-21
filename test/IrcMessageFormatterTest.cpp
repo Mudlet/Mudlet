@@ -21,6 +21,7 @@
 
 #include <IrcConnection>
 #include <ircnetwork_p.h>
+#include <QTranslator>
 #include <QtTest/QtTest>
 
 /*
@@ -79,6 +80,13 @@ private slots:
     }
 
     void topic_changed() { QCOMPARE(forLua(":bob!u@h TOPIC #mudlet :a new topic"), QStringLiteral("! bob changed topic")); }
+
+    // The window has no topic bar, so this line is the only place a new topic is seen
+    void topic_changedShowsTheNewTopicInTheWindow()
+    {
+        const QString html = forWindow(":bob!u@h TOPIC #mudlet :raid at 8");
+        QVERIFY2(html.contains(QStringLiteral("! bob changed topic to: raid at 8")), qPrintable(html));
+    }
 
     void topic_cleared() { QCOMPARE(forLua(":bob!u@h TOPIC #mudlet :"), QStringLiteral("! bob cleared topic")); }
 
@@ -218,6 +226,7 @@ private slots:
         QTest::newRow("time numeric") << QByteArrayLiteral(":server 391 me irc.example.org :<u>not underlined</u>");
         QTest::newRow("error") << QByteArrayLiteral("ERROR :<u>not underlined</u>");
         QTest::newRow("unknown command") << QByteArrayLiteral(":bob!u@h FROBNICATE :<u>not underlined</u>");
+        QTest::newRow("new topic") << QByteArrayLiteral(":bob!u@h TOPIC #mudlet :<u>not underlined</u>");
         // nick rules are the server's to enforce, and it is the server that is not trusted
         QTest::newRow("new nick") << QByteArrayLiteral(":old!u@h NICK :<u>underlined</u>");
         QTest::newRow("channel message sender") << QByteArrayLiteral(":<u>underlined</u>!u@h PRIVMSG #mudlet :hi");
@@ -540,6 +549,23 @@ private slots:
         message->setParameters({QStringLiteral("#mudlet"), QStringLiteral("alice"), QStringLiteral("bob")});
         QCOMPARE(IrcMessageFormatter::formatMessage(message, true), QStringLiteral("! #mudlet has 2 users: alice bob"));
         QVERIFY2(IrcMessageFormatter::formatMessage(message, false).contains(QStringLiteral("! #mudlet has 2 users")), "the window form should carry the count");
+    }
+
+    // The source string is always plural; the singular comes from the en_US translation
+    void names_saysUserForALoneUserInTheWindow()
+    {
+        QTranslator americanEnglish;
+        QVERIFY2(americanEnglish.load(QStringLiteral(MUDLET_EN_US_QM)), MUDLET_EN_US_QM " could not be loaded");
+        QCoreApplication::installTranslator(&americanEnglish);
+        auto* lone = new IrcNamesMessage(&mConnection);
+        lone->setParameters({QStringLiteral("#mudlet"), QStringLiteral("alice")});
+        const QString loneText = IrcMessageFormatter::formatMessage(lone, false);
+        auto* pair = new IrcNamesMessage(&mConnection);
+        pair->setParameters({QStringLiteral("#mudlet"), QStringLiteral("alice"), QStringLiteral("bob")});
+        const QString pairText = IrcMessageFormatter::formatMessage(pair, false);
+        QCoreApplication::removeTranslator(&americanEnglish);
+        QVERIFY2(loneText.contains(QStringLiteral("! #mudlet has 1 user</")), qPrintable(loneText));
+        QVERIFY2(pairText.contains(QStringLiteral("! #mudlet has 2 users")), qPrintable(pairText));
     }
 
     void motd_putsEveryLineOnItsOwn()

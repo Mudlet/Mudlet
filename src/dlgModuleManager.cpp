@@ -49,6 +49,14 @@ dlgModuleManager::dlgModuleManager(QWidget* parent, Host* pHost)
     connect(installButton, &QAbstractButton::clicked, this, &dlgModuleManager::slot_installModule);
     connect(helpButton, &QAbstractButton::clicked, this, &dlgModuleManager::slot_helpModule);
     connect(moduleTable, &QTableWidget::itemClicked, this, &dlgModuleManager::slot_moduleClicked);
+    // Help opens the current row's page, which the arrow keys and a rebuild move without a click
+    connect(moduleTable, &QTableWidget::currentItemChanged, this, [this](QTableWidgetItem* current) {
+        if (current) {
+            slot_moduleClicked(current);
+        } else {
+            helpButton->setDisabled(true);
+        }
+    });
     connect(moduleTable, &QTableWidget::itemChanged, this, &dlgModuleManager::slot_moduleChanged);
     connect(mpHost->mainConsoleView(), &QWidget::destroyed, this, &dlgModuleManager::close);
     connect(mpHost, &Host::signal_packageListChanged, this, &dlgModuleManager::layoutModules);
@@ -166,28 +174,34 @@ void dlgModuleManager::slot_installModule()
     lastDir = QFileInfo(fileNames.first()).absolutePath();
     settings.setValue(qsl("lastFileDialogLocation"), lastDir);
 
-    QStringList failedModules;
-
-    for (const QString& fileName : fileNames) {
-        if (mpHost->installPackage(fileName, enums::PackageModuleType::ModuleFromUI).first) {
-            mpHost->waitForProfileSave();
-        } else {
-            const QString baseName = QFileInfo(fileName).fileName();
-            failedModules << baseName;
-            qWarning() << "dlgModuleManager::slot_installModule() ERROR - failed to import" << baseName;
-        }
-    }
-
-    for (int i = moduleTable->rowCount() - 1; i >= 0; --i) {
-        moduleTable->removeRow(i);
-    }
-
+    const QString failures = installModuleFiles(fileNames);
     layoutModules();
 
-    if (!failedModules.isEmpty()) {
-        //: Module manager - status message shown when some modules failed to import. %1 is a comma-separated list of module names
-        showImportStatus(tr("Failed to import: %1").arg(failedModules.join(qsl(", "))));
+    if (!failures.isEmpty()) {
+        showImportStatus(failures);
     }
+}
+
+// Returns the notice naming each file that failed and why, empty if none. The reason
+// otherwise goes only to the main console, behind this window.
+QString dlgModuleManager::installModuleFiles(const QStringList& fileNames)
+{
+    if (!mpHost) {
+        return {};
+    }
+
+    QStringList failures;
+    for (const QString& fileName : fileNames) {
+        // Mid-save, installPackage() answers yes and tries later, leaving no reason to report
+        mpHost->waitForProfileSave();
+        const auto [installed, reason] = mpHost->installPackage(fileName, enums::PackageModuleType::ModuleFromUI);
+        if (installed) {
+            continue;
+        }
+        //: Module manager - one line of the notice listing modules that failed to import. %1 is the file name, %2 the reason it was refused
+        failures << tr("Failed to import %1: %2").arg(QFileInfo(fileName).fileName(), reason);
+    }
+    return failures.join(QLatin1Char('\n'));
 }
 
 // Returns what to tell the user about refused removals, empty if none. Split from the slot so the
@@ -351,6 +365,7 @@ void dlgModuleManager::slot_helpModule()
 
 void dlgModuleManager::showImportStatus(const QString& message)
 {
+    label_importStatus->setTextFormat(Qt::PlainText);
     label_importStatus->setText(message);
     label_importStatus->setStyleSheet(qsl("QLabel { padding: 8px; }"));
     label_importStatus->show();
