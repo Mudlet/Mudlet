@@ -75,6 +75,8 @@ public:
     void restorePlayerTypedLine(const QString& text);
     // So the hidden-input box can make the same claims
     bool claimsShortcutOverride(const QKeyEvent*) const;
+    // Called after claiming a ShortcutOverride: macOS sends no key press for a claimed Ctrl+Tab, so this posts one
+    static void pressClaimedControlTab(QObject* receiver, const QKeyEvent* override);
     // For a key pressed in another window of the profile's, such as a floating map, that nothing there used
     bool takeKeyPress(QKeyEvent*);
 
