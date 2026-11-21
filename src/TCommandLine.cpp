@@ -175,8 +175,11 @@ void TCommandLine::slot_contentsChange()
 void TCommandLine::insertFromMimeData(const QMimeData* source)
 {
     // Paste, drop and middle-click all land here
-    const UserEditScope userEdit(*this);
-    QPlainTextEdit::insertFromMimeData(source);
+    {
+        const UserEditScope userEdit(*this);
+        QPlainTextEdit::insertFromMimeData(source);
+    }
+    adjustHeight();
 }
 
 bool TCommandLine::claimsShortcutOverride(const QKeyEvent* ke) const
@@ -190,8 +193,23 @@ bool TCommandLine::claimsShortcutOverride(const QKeyEvent* ke) const
         return true;
     }
     // QShortcutMap consumes a profile-switching shortcut before the KeyPress
-    // arrives, so a user binding on one is claimed here and runs off that KeyPress
+    // arrives, so a user binding on one is claimed here and runs off that KeyPress,
+    // which a caller posts with pressClaimedControlTab() on macOS
     return keybindingWouldMatchProfileSwitchShortcut(ke);
+}
+
+void TCommandLine::pressClaimedControlTab([[maybe_unused]] QObject* receiver, [[maybe_unused]] const QKeyEvent* override)
+{
+#if defined(Q_OS_MACOS)
+    // Cocoa sends Ctrl+Tab only as a possible shortcut and keeps it for its own focus loop unless a QShortcut fires, so
+    // no press follows a claimed one (see QNSView's performKeyEquivalent); the native Tab code with Ctrl marks it
+    constexpr quint32 virtualKeyTab = 0x30;
+    if (override->nativeVirtualKey() == virtualKeyTab && (override->modifiers() & Qt::MetaModifier)) {
+        QCoreApplication::postEvent(
+                receiver,
+                new QKeyEvent(QEvent::KeyPress, override->key(), override->modifiers(), override->nativeScanCode(), override->nativeVirtualKey(), override->nativeModifiers(), override->text()));
+    }
+#endif
 }
 
 void TCommandLine::processNormalKey(QEvent* event)
@@ -287,6 +305,7 @@ bool TCommandLine::event(QEvent* event)
 
     if (event->type() == QEvent::ShortcutOverride && claimsShortcutOverride(static_cast<QKeyEvent*>(event))) {
         event->accept();
+        pressClaimedControlTab(this, static_cast<QKeyEvent*>(event));
         return true;
     }
 
