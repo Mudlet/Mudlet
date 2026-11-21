@@ -3251,7 +3251,6 @@ void TTextEdit::wheelEvent(QWheelEvent* e)
     // per click:
     delta.rx() *= (e->modifiers() & Qt::ShiftModifier ? 1.0 : (e->modifiers() & Qt::ControlModifier ? xSpeedUp : 3.0));
     delta.ry() *= (e->modifiers() & Qt::ShiftModifier ? 1.0 : (e->modifiers() & Qt::ControlModifier ? ySpeedUp : 3.0));
-    // Add on any previously stored remainder:
     delta += mMouseWheelRemainder;
     // Convert to 15 degree steps and record them:
     int xDelta = qRound(delta.x() / 15.0);

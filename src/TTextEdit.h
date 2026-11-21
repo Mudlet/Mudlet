@@ -394,8 +394,8 @@ private:
     mutable QHash<uint, std::tuple<uint, std::string>> mProblemCodepoints;
 #endif
 
-    // We scroll on the basis that one vertical mouse wheel click is one line
-    // (vertically, not really concerned about horizontal stuff at present).
+    // We scroll on the basis that one mouse wheel click is three lines, or
+    // three columns when the horizontal scroll bar is on.
     // According to Qt: "Most mouse types work in steps of 15 degrees, in which
     // case the delta value is a multiple of 120;
     // i.e., 120 units * 1/8 = 15 degrees.
@@ -406,7 +406,7 @@ private:
     // partially scroll the widget in response to each wheel event. But to
     // provide a more native feel, you should prefer pixelDelta() on platforms
     // where it's available."
-    // We use the following to store the remainder (modulus 120):
+    // Degrees not yet used up by a whole 15 degree step:
     QPointF mMouseWheelRemainder;
 
     // skip over the following characters when searching for a word

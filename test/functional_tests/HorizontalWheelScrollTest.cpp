@@ -53,12 +53,33 @@ private:
     const QString mpLocalhost = qsl("localhost");
     QString mpPort;
 
-    static void wheelSideways(TTextEdit* pane, const int angle, const Qt::KeyboardModifiers modifiers = Qt::NoModifier)
+    TMainConsole* startProfile()
+    {
+        mpServer->setSendsWelcome(false);
+        auto host = TestProfile::create(mpHostname, mpLocalhost, mpPort);
+        if (!host) {
+            return nullptr;
+        }
+        QSignalSpy spy(&(host->mTelnet), &cTelnet::signal_connected);
+        if (!spy.wait(2s)) {
+            return nullptr;
+        }
+        mudlet::self()->resize(1200, 800);
+        mudlet::self()->show();
+        if (!QTest::qWaitForWindowExposed(mudlet::self())) {
+            return nullptr;
+        }
+        return host->mainConsoleView();
+    }
+
+    static void wheel(TTextEdit* pane, const QPoint angle, const Qt::KeyboardModifiers modifiers = Qt::NoModifier)
     {
         const QPointF position(pane->width() / 2.0, pane->height() / 2.0);
-        QWheelEvent event(position, pane->mapToGlobal(position), QPoint(), QPoint(angle, 0), Qt::NoButton, modifiers, Qt::NoScrollPhase, false);
+        QWheelEvent event(position, pane->mapToGlobal(position), QPoint(), angle, Qt::NoButton, modifiers, Qt::NoScrollPhase, false);
         QApplication::sendEvent(pane, &event);
     }
+
+    static void wheelSideways(TTextEdit* pane, const int angle, const Qt::KeyboardModifiers modifiers = Qt::NoModifier) { wheel(pane, QPoint(angle, 0), modifiers); }
 
 private slots:
     void initTestCase()
@@ -99,17 +120,8 @@ private slots:
 
     void test_sidewaysWheelMovesTheHorizontalScrollBar()
     {
-        mpServer->setSendsWelcome(false);
-        auto host = TestProfile::create(mpHostname, mpLocalhost, mpPort);
-        QVERIFY2(host, "the profile did not start");
-        QSignalSpy spy(&(host->mTelnet), &cTelnet::signal_connected);
-        QVERIFY2(spy.wait(2s), "the profile did not connect");
-        mudlet::self()->resize(1200, 800);
-        mudlet::self()->show();
-        QVERIFY(QTest::qWaitForWindowExposed(mudlet::self()));
-
-        TMainConsole* console = host->mainConsoleView();
-        QVERIFY(console);
+        TMainConsole* console = startProfile();
+        QVERIFY2(console, "the profile did not start");
         TTextEdit* upper = console->mUpperPane;
         console->setWrapAt(1000);
         console->setHorizontalScrollBar(true);
@@ -155,6 +167,26 @@ private slots:
             wheelSideways(upper, -2);
         }
         QCOMPARE(bar->value(), 3);
+    }
+
+    void test_smallVerticalDeltasAddUpToLines()
+    {
+        TMainConsole* console = startProfile();
+        QVERIFY2(console, "the profile did not start");
+        TTextEdit* upper = console->mUpperPane;
+        for (int line = 1; line <= 300; ++line) {
+            console->print(qsl("line %1\n").arg(line));
+        }
+        qApp->processEvents();
+        // The first scroll up splits the console, and the split's scroll runs on a 0ms timer
+        wheel(upper, QPoint(0, 120));
+        QTest::qWait(50ms);
+        const int before = console->buffer.mCursorY;
+
+        for (int i = 0; i < 120 / 2; ++i) {
+            wheel(upper, QPoint(0, 2));
+        }
+        QCOMPARE(console->buffer.mCursorY, before - 3);
     }
 };
 
