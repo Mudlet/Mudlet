@@ -1522,6 +1522,17 @@ private slots:
                  "the failed map download never finished");
         QVERIFY2(consoleShows(qsl("Map download encountered an error")), qPrintable(consoleTextSinceMark()));
         QVERIFY2(emptyState->isVisible(), "a failed download left the empty map without its choices");
+
+        pMap->setMmpMapLocation(mpMapServer->url(qsl("/map.xml")));
+        downloadButton->click();
+        QVERIFY2(QTest::qWaitFor(
+                         [pMap]() {
+                             return !pMap->hasActiveTransferProgress();
+                         },
+                         15s),
+                 "the map download never finished");
+        QVERIFY2(consoleShows(qsl("map downloaded and stored")), qPrintable(consoleTextSinceMark()));
+        QVERIFY2(!emptyState->isVisible(), "the empty state came back over the map that was just downloaded");
     }
 
     // The empty map's "Load map..." loads from its file dialog's finished(), while QFileDialog::done() is still running.
