@@ -1164,20 +1164,23 @@ console's, under the frame's tab header where it has one, in the main window's a
 opened inside another, in that frame, which is its `parent`. An `EXTERNAL` frame is a window of its
 own, so it has `inDock` set, no place and only a size, like a user window the app has not placed; a
 press on it goes on to the main console as the GUI's does, and it and `getMousePosition()` take the
-frame as sitting at the main area's top left corner. An
-internal frame given a `TITLE`, not `FLOATING`, and at least 50 pixels tall (or sized in characters) has a tab
-header, which the GUI draws along the frame's top, in the 30 pixels above its console: its `frameTabs` lists the pages, the frame's own console first, each by the name of the frame it
-shows and the `title` on its tab (a `DOCK` frame's `TITLE`, or its name), with `current` the index of the one
-in front. Each page is an `mxpFrame` of its own at the place and size of the console under the header, and
-only the one in front is `shown`. A page whose console a script moved out or deleted keeps its tab, which the
-GUI leaves empty. A page, and a frame with no header, has no `frameTabs`, nor has a frame whose
-own console a script moved out with `setWindow()` or deleted, though the GUI goes on drawing its header.
-`selectFrameTab(page)` is the player's click on a tab: it brings that page forward, so the header's frame and
-the two pages are named in `scriptWindowsChanged`. As in the GUI no event is raised. It is true, changing
-nothing, for the page already in front, and false for a name that is no page of a header, for a header a
-player could not click, as inside a hidden `EXTERNAL` frame or on a page behind another tab (a script hiding
-the page in front with `hideWindow()` leaves the header), for one not in `frameTabs`, and where
-`runLua()` is refused. A frame's `<DEST … EOF>` empties it and `<DEST … EOL>` drops its last line before
+frame as sitting at the main area's top left corner. An internal frame given a `TITLE`, not `FLOATING`, and laid out at least 50 pixels tall (or sized in
+characters) has a tab header, which the GUI draws along the frame's top, in the 30 pixels above its
+console: its `frameTabs` lists the pages, the frame's own console first, each by the name of the frame it
+shows and the `title` on its tab (a `DOCK` frame's `TITLE`, or its name), with `current` the index of the
+one in front. Each page is an `mxpFrame` of its own, and only the one in front is `shown`, at the place
+and size of the console under the header; a page behind keeps the size it last had until it comes forward.
+The header is drawn whatever its own frame's `shown` says, as a script hiding the page in front with
+`hideWindow()` leaves it: `frameTabs.shown` says whether a player can see and click it, which they cannot
+inside a hidden `EXTERNAL` frame or on a page behind another tab. A page whose console a script moved out
+or deleted keeps its tab, which the GUI leaves empty. A page, and a frame with no header, has no
+`frameTabs`, nor has a frame whose own console a script moved out with `setWindow()` or deleted, though
+the GUI goes on drawing its header. `selectFrameTab(page)` is the player's click on a tab: it brings that
+page forward, and `scriptWindowsChanged` names the header's frame and the pages, and frames in them,
+whose `shown` changes. As in the GUI no event is raised. It is false for a name that is no page of a
+header, for a header whose `frameTabs` is not `shown`, whichever page is asked for, for a header that has
+no `frameTabs`, its frame's own console being moved out or deleted, and where `runLua()` is refused; else
+it is true, changing nothing for the page already in front. A frame's `<DEST … EOF>` empties it and `<DEST … EOL>` drops its last line before
 the text that follows, so however much one packet brought, `windowTextChanged` names the frame once
 and `windowLines()` then has only what is left. `setMainWindowSize()` does not lay the frames out
 again: they move as the game opens and closes them.

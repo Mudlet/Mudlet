@@ -251,6 +251,7 @@ QList<THeadlessSession::ScriptWindow> THeadlessSession::scriptWindows() const
                 frameTabs.pages.append({page, title});
             }
             frameTabs.current = static_cast<int>(tabs->current);
+            frameTabs.shown = pView->nullMxpFrames().pageShown(tabs->pages.at(tabs->current).first);
             window.frameTabs = std::move(frameTabs);
         }
     }

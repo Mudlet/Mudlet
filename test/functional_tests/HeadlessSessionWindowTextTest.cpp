@@ -659,6 +659,7 @@ end)
         QVERIFY(session.runLua(qsl("hideWindow('chat')")));
         told();
         QCOMPARE(shown(pages), qsl("0 0 0"));
+        QVERIFY(session.scriptWindow(qsl("tabs"))->frameTabs->shown);
         QVERIFY(session.selectFrameTab(qsl("log")));
         QCOMPARE(shown(pages), qsl("0 0 1"));
         QVERIFY(session.runLua(qsl("showWindow('chat')")));
@@ -678,8 +679,11 @@ end)
         QVERIFY(feed(qsl(R"(<FRAME Name="innerPage" DOCK="inner" Align="client">)")));
         told();
         QCOMPARE(tabsOf(qsl("inner")), qsl("inner=Inner,innerPage=innerPage @1"));
+        QVERIFY(session.scriptWindow(qsl("inner"))->frameTabs->shown);
         QVERIFY(session.runLua(qsl("hideWindow('away')")));
         told();
+        QVERIFY(!session.scriptWindow(qsl("inner"))->frameTabs->shown);
+        QVERIFY(!session.selectFrameTab(qsl("innerPage")));
         QVERIFY(!session.selectFrameTab(qsl("inner")));
         QVERIFY2(session.errorString().contains(qsl("inner")), qPrintable(session.errorString()));
         QCOMPARE(tabsOf(qsl("inner")), qsl("inner=Inner,innerPage=innerPage @1"));
@@ -741,6 +745,16 @@ end)
         QVERIFY(header && header->frameTabs);
         QCOMPARE(header->frameTabs->pages.size(), 3);
         QCOMPARE(header->frameTabs->pages.at(1).name, qsl("chat"));
+        // Its tab still comes forward, leaving the console where the script put it
+        const QRect movedOut = session.scriptWindow(qsl("chat"))->geometry;
+        QVERIFY(session.selectFrameTab(qsl("log")));
+        settle();
+        QVERIFY(session.scriptWindow(qsl("chat"))->shown);
+        QVERIFY(session.selectFrameTab(qsl("chat")));
+        settle();
+        QCOMPARE(session.scriptWindow(qsl("tabs"))->frameTabs->current, 1);
+        QCOMPARE(session.scriptWindow(qsl("chat"))->geometry, movedOut);
+        QVERIFY(!session.scriptWindow(qsl("log"))->shown);
 
         QVERIFY(session.runLua(qsl("setWindow('uw', 'tabs', 10, 20, true)")));
         settle();

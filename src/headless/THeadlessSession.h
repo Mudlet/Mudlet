@@ -683,15 +683,11 @@ public:
         // The kind of its parent, as a scroll box may share its name with a user window or console; nothing with no
         // parent
         Kind parentKind = Kind::userWindow;
-        // An MXP frame's tab header, as the GUI's QTabWidget draws it along the top of the frame, in the 30 pixels
-        // above its console: each page by the name of the MXP frame it shows and the title on its tab, the first
-        // being this frame's own console, and the index of the one in front. A page shows where its header's frame
-        // does, at the place and size of the console under the header; the pages behind are not shown, and one whose
-        // console a script moved out or deleted keeps its tab, which the GUI leaves empty. None for an
-        // MXP frame without a header (one with no TITLE, a FLOATING or EXTERNAL one, one under 50 pixels tall unless
-        // sized in characters, and a page, which has none of its own), for one whose own console a script moved out
-        // of the frame or deleted, which leaves the GUI's header in place with its first page empty, and for the
-        // other kinds.
+        // An MXP frame's tab header, drawn in the 30 pixels above its console: each page by the name of the MXP frame
+        // it shows and its tab's title, this frame's own console first, and the index of the one in front. None for
+        // an MXP frame without a header (no TITLE, FLOATING or EXTERNAL, laid out under 50 pixels tall unless sized in
+        // characters, or a page), for one whose own console a script moved out or deleted, and for the other kinds.
+        // A page whose console a script moved out or deleted keeps its tab.
         struct FrameTabs
         {
             struct Page
@@ -703,6 +699,9 @@ public:
             };
             QList<Page> pages;
             int current = 0;
+            // Whether a player can see and click it: not inside a hidden EXTERNAL frame or on a page behind another
+            // tab. A script hiding the page in front, this frame's own console included, leaves the header drawn.
+            bool shown = false;
 
             bool operator==(const FrameTabs&) const = default;
         };
@@ -798,11 +797,12 @@ public:
     // The dock's close button: hides the user window, as hideWindow() does. Refused as setUserWindowGeometry() is.
     bool closeUserWindow(const QString& name);
     // Brings the MXP frame page forward in the tab header it is a page of, as the player's click on its tab in the
-    // GUI does: it shows, and the page that was in front, with the frames opened in it, no longer does. The header's
-    // frame is named in scriptWindowsChanged, with the two pages. That raises no event in the GUI, so none here.
-    // True, changing nothing, for the page already in front. False for a name that is no page of a header, for a
-    // header a player could not click (inside an EXTERNAL frame that is hidden, or on a page behind another tab; a
-    // script hiding the page in front leaves the header), for one not in frameTabs, and where runLua() is refused.
+    // GUI does: it comes to the front, and the page that was in front, with the frames opened in it, no longer
+    // shows. scriptWindowsChanged names the header's frame and the pages, and frames in them, whose shown changes;
+    // that raises no event in the GUI, so none here. False for a name that is no page of a header, for a header
+    // whose frameTabs is not shown, whichever page is asked for, for a header that has no frameTabs, its frame's own
+    // console being moved out or deleted, and where runLua() is refused; else true, changing nothing for the page
+    // already in front.
     bool selectFrameTab(const QString& page);
     // What the app's mouse did over one of the windows, for pointer(); mapPointer() takes a MapPointerEvent
     struct WindowPointerEvent
