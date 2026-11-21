@@ -1524,8 +1524,9 @@ void TConsole::showEvent(QShowEvent* event)
 void TConsole::hideEvent(QHideEvent* event)
 {
     if (mType & (MainConsole | Buffer)) {
+        mudlet* pMudlet = mudlet::self();
         QWidget* pWindow = window();
-        const bool windowMinimized = (pWindow == mudlet::self()) ? mudlet::self()->mWindowMinimized : pWindow->isMinimized();
+        const bool windowMinimized = (pWindow == pMudlet) ? pMudlet->mWindowMinimized : pWindow->isMinimized();
         if (windowMinimized) {
             if (mpHost->mAlertOnNewData) {
                 mAlertOnNewData = true;
