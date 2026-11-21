@@ -134,6 +134,162 @@ private slots:
         QCOMPARE(joinedText(console), qsl("first linesecond linethird linefourth line"));
     }
 
+    void test_silenceLineUsesTheTriggerContext_data()
+    {
+        QTest::addColumn<QString>("setup");
+        QTest::addColumn<QString>("action");
+        QTest::addColumn<QString>("silenced");
+        QTest::addColumn<QString>("audible");
+
+        QTest::newRow("moved-cursor") << QString() << qsl("moveCursor(0, 0); silenceLine()") << qsl("alphabetagamma") << qsl("keep");
+        QTest::newRow("earlier-trigger-moved-cursor") << qsl("tempExactMatchTrigger('alpha beta gamma', function() moveCursor(0, 0) end)") << qsl("silenceLine()") << qsl("alphabetagamma")
+                                                      << qsl("keep");
+        QTest::newRow("deleted-line-above") << QString() << qsl("moveCursor(0, 0); deleteLine(); silenceLine()") << qsl("alphabetagamma") << QString();
+        QTest::newRow("deleted-trigger-line") << QString() << qsl("deleteLine(); moveCursor(0, 0); silenceLine()") << QString() << qsl("keep");
+        QTest::newRow("already-wrapped") << QString() << qsl("setWindowWrap('main', 6); wrapLine('main', getLineNumber()); moveCursor(0, 0); silenceLine()") << qsl("alphabetagamma") << qsl("keep");
+        QTest::newRow("deleted-first-wrap") << QString() << qsl("setWindowWrap('main', 6); wrapLine('main', getLineNumber()); moveCursor(0, 1); deleteLine(); moveCursor(0, 0); silenceLine()")
+                                            << qsl("betagamma") << qsl("keep");
+        QTest::newRow("nested-trigger") << qsl("tempExactMatchTrigger('inner', function() moveCursor(0, 0); silenceLine() end)") << qsl("feedTriggers('inner\\n'); moveCursor(0, 0); silenceLine()")
+                                        << qsl("alphabetagammainner") << qsl("keep");
+        QTest::newRow("nested-line-stays-audible") << QString() << qsl("feedTriggers('inner\\n'); silenceLine()") << qsl("alphabetagamma") << qsl("keepinner");
+        QTest::newRow("nested-line-took-empty-target") << QString() << qsl("selectCurrentLine(); replace(''); feedTriggers('inner\\n'); silenceLine()") << QString() << qsl("keepinner");
+        QTest::newRow("appended-text-stays-audible") << QString() << qsl("silenceLine(); echo('added')") << qsl("alphabetagamma") << qsl("keepadded");
+    }
+
+    void test_silenceLineUsesTheTriggerContext()
+    {
+        QFETCH(QString, setup);
+        QFETCH(QString, action);
+        QFETCH(QString, silenced);
+        QFETCH(QString, audible);
+
+        auto* host = startOfflineProfile();
+        QVERIFY(host);
+        auto& buffer = host->mainConsoleModel().buffer;
+        buffer.clear();
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("setWindowWrap('main', 200); setWindowWrapIndent('main', 0); setWindowWrapHangingIndent('main', 0)\n"
+                                                                       "echo('keep\\n')\n%1\n"
+                                                                       "tempExactMatchTrigger('alpha beta gamma', function() %2 end)\n"
+                                                                       "feedTriggers('alpha beta gamma\\n')")
+                                                                           .arg(setup, action)));
+
+        compareSilencedText(buffer, silenced, audible);
+    }
+
+    void test_silenceText_data()
+    {
+        QTest::addColumn<QString>("input");
+        QTest::addColumn<QString>("action");
+        QTest::addColumn<QString>("silenced");
+        QTest::addColumn<QString>("audible");
+
+        QTest::newRow("contiguous") << qsl("vengo a decir: hola feos que tal?") << qsl("silenceText('hola feos')") << qsl("hola feos") << qsl("keepvengo a decir:  que tal?");
+        QTest::newRow("not-contiguous") << qsl("vengo a decir hola a los feos") << qsl("silenceText('hola feos')") << QString() << qsl("keepvengo a decir hola a los feos");
+        QTest::newRow("single-character") << qsl("a!b!c") << qsl("silenceText('!')") << qsl("!!") << qsl("keepabc");
+        QTest::newRow("spaces") << qsl("a  b c") << qsl("silenceText(' ')") << qsl("   ") << qsl("keepabc");
+        QTest::newRow("literal-punctuation") << qsl("a.*[x]?b") << qsl("silenceText('.*[x]?')") << qsl(".*[x]?") << qsl("keepab");
+        QTest::newRow("repeated") << qsl("hola-hola hola") << qsl("silenceText('hola')") << qsl("holaholahola") << qsl("keep- ");
+        QTest::newRow("overlapping") << qsl("ababa") << qsl("silenceText('aba')") << qsl("ababa") << qsl("keep");
+        QTest::newRow("case-sensitive") << qsl("Hola hola HOLA") << qsl("silenceText('hola')") << qsl("hola") << qsl("keepHola  HOLA");
+        QTest::newRow("whole-line") << qsl("hola feos") << qsl("silenceText('hola feos')") << qsl("hola feos") << qsl("keep");
+        QTest::newRow("empty-pattern") << qsl("hola") << qsl("silenceText('')") << QString() << qsl("keephola");
+        QTest::newRow("longer-pattern") << qsl("hola") << qsl("silenceText('hola feos')") << QString() << qsl("keephola");
+        QTest::newRow("empty-line") << QString() << qsl("silenceText('hola')") << QString() << qsl("keep");
+        QTest::newRow("unicode") << QString::fromUtf8("a ñá😀 b") << QString::fromUtf8("silenceText('ñá😀')") << QString::fromUtf8("ñá😀") << qsl("keepa  b");
+        QTest::newRow("moved-cursor") << qsl("hola feos") << qsl("moveCursor(0, 0); silenceText('hola')") << qsl("hola") << qsl("keep feos");
+        QTest::newRow("deleted-line-above") << qsl("hola feos") << qsl("moveCursor(0, 0); deleteLine(); silenceText('hola')") << qsl("hola") << qsl(" feos");
+        QTest::newRow("deleted-target") << qsl("hola feos") << qsl("deleteLine(); moveCursor(0, 0); silenceText('keep')") << QString() << qsl("keep");
+        QTest::newRow("accumulated") << qsl("hola feos hola") << qsl("silenceText('hola'); silenceText('feos'); silenceText('hola')") << qsl("holafeoshola") << qsl("keep  ");
+        QTest::newRow("nested-trigger") << qsl("hola feos") << qsl("feedTriggers('inner\\n'); silenceText('hola')") << qsl("hola") << qsl("keep feosinner");
+    }
+
+    void test_silenceText()
+    {
+        QFETCH(QString, input);
+        QFETCH(QString, action);
+        QFETCH(QString, silenced);
+        QFETCH(QString, audible);
+
+        auto* host = startOfflineProfile();
+        QVERIFY(host);
+        auto& buffer = host->mainConsoleModel().buffer;
+        buffer.clear();
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("setWindowWrap('main', 200); setWindowWrapIndent('main', 0); setWindowWrapHangingIndent('main', 0)\n"
+                                                                       "echo('keep\\n')\n"
+                                                                       "tempExactMatchTrigger([=[%1]=], function() %2 end)\n"
+                                                                       "feedTriggers([=[%1]=] .. '\\n')")
+                                                                           .arg(input, action)));
+        compareSilencedText(buffer, silenced, audible, true);
+    }
+
+    void test_silenceTextOutsideTriggers()
+    {
+        auto* host = startOfflineProfile();
+        QVERIFY(host);
+        auto& buffer = host->mainConsoleModel().buffer;
+        buffer.clear();
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("setWindowWrap('main', 200); echo('hola feos\\nhola feos\\n')")));
+        compareSilencedText(buffer, QString(), qsl("hola feoshola feos"), true);
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("moveCursor(0, 0); silenceText('hola')")));
+        compareSilencedText(buffer, qsl("hola"), qsl(" feoshola feos"), true);
+    }
+
+    void test_silenceTextSurvivesWrapping()
+    {
+        auto* host = startOfflineProfile();
+        QVERIFY(host);
+        auto& model = host->mainConsoleModel();
+        auto& buffer = model.buffer;
+        buffer.clear();
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("setWindowWrap('main', 200); setWindowWrapIndent('main', 0); setWindowWrapHangingIndent('main', 0); echo('keep\\n')")));
+        host->mWrapAt = 6;
+        model.setWrapAt(6);
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(
+                qsl("tempExactMatchTrigger('alpha hola feos omega', function() silenceText('hola feos') end); feedTriggers('alpha hola feos omega\\n')")));
+        QVERIFY2(buffer.wrapsFromPreviousLine(2), "The incoming line was not wrapped, so this did not exercise preservation across wrapping");
+        compareSilencedText(buffer, qsl("holafeos"), qsl("keepalphaomega"));
+    }
+
+    void test_silenceLineContinuous_data()
+    {
+        QTest::addColumn<QString>("setup");
+        QTest::addColumn<QString>("action");
+        QTest::addColumn<QString>("silenced");
+        QTest::addColumn<QString>("audible");
+
+        QTest::newRow("batch") << QString() << qsl("feedTriggers('before\\nstart\\nalpha beta gamma\\nstop\\nafter\\n')") << qsl("startalphabetagamma") << qsl("beforestopafter");
+        QTest::newRow("wrapped-and-moved") << qsl("tempExactMatchTrigger('alpha beta gamma', function() setWindowWrap('main', 6); wrapLine('main', getLineNumber()); moveCursor(0, 0) end)")
+                                           << qsl("feedTriggers('before\\nstart\\nalpha beta gamma\\nstop\\nafter\\n')") << qsl("startalphabetagamma") << qsl("beforestopafter");
+        QTest::newRow("nested") << qsl("tempExactMatchTrigger('alpha beta gamma', function() feedTriggers('inner\\n') end)") << qsl("feedTriggers('start\\nalpha beta gamma\\nstop\\nafter\\n')")
+                                << qsl("startalphabetagammainner") << qsl("stopafter");
+        QTest::newRow("outside-triggers") << QString() << qsl("echo('current\\n'); moveCursor(0, 0); silenceLine('on'); feedTriggers('hidden\\n'); silenceLine('off'); feedTriggers('after\\n')")
+                                          << qsl("currenthidden") << qsl("after");
+        QTest::newRow("single-does-not-enable") << qsl("tempExactMatchTrigger('once', function() silenceLine() end)") << qsl("feedTriggers('once\\nafter\\n')") << qsl("once") << qsl("after");
+        QTest::newRow("single-does-not-disable") << qsl("tempExactMatchTrigger('once', function() silenceLine() end)") << qsl("feedTriggers('start\\nonce\\nstill hidden\\nstop\\nafter\\n')")
+                                                 << qsl("startoncestillhidden") << qsl("stopafter");
+        QTest::newRow("deleted-target") << qsl("tempExactMatchTrigger('removed', function() deleteLine() end)") << qsl("feedTriggers('before\\nstart\\nremoved\\nstop\\nafter\\n')") << qsl("start")
+                                        << qsl("beforestopafter");
+        QTest::newRow("repeated-on-and-off") << QString() << qsl("feedTriggers('stop\\nstart\\nstart\\nhidden\\nstop\\nstop\\nafter\\n')") << qsl("startstarthidden") << qsl("stopstopstopafter");
+    }
+
+    void test_silenceLineContinuous()
+    {
+        QFETCH(QString, setup);
+        QFETCH(QString, action);
+        QFETCH(QString, silenced);
+        QFETCH(QString, audible);
+
+        auto* host = startOfflineProfile();
+        QVERIFY(host);
+        auto& buffer = host->mainConsoleModel().buffer;
+        buffer.clear();
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("setWindowWrap('main', 200); setWindowWrapIndent('main', 0); setWindowWrapHangingIndent('main', 0)\n"
+                                                                       "tempExactMatchTrigger('start', function() silenceLine('on') end)\n"
+                                                                       "tempExactMatchTrigger('stop', function() silenceLine('off') end)\n%1\n%2")
+                                                                           .arg(setup, action)));
+        compareSilencedText(buffer, silenced, audible);
+    }
+
     // A line that fits has to come back with its own timestamp and prompt flag,
     // not a freshly stamped and unflagged replacement.
     void test_aLineThatFitsKeepsItsTimestampAndPromptFlag()
@@ -667,6 +823,22 @@ private slots:
     }
 
 private:
+    static void compareSilencedText(TBuffer& buffer, const QString& silenced, const QString& audible, const bool includeSpaces = false)
+    {
+        QString actualSilenced;
+        QString actualAudible;
+        for (int line = 0; line <= buffer.getLastLineNumber(); ++line) {
+            const QString& text = buffer.line(line);
+            for (int column = 0; column < text.size(); ++column) {
+                if (includeSpaces || !text.at(column).isSpace()) {
+                    (buffer.isCharacterSilenced(line, column) ? actualSilenced : actualAudible).append(text.at(column));
+                }
+            }
+        }
+        QCOMPARE(actualSilenced, silenced);
+        QCOMPARE(actualAudible, audible);
+    }
+
     void runLua(const QString& script)
     {
         auto host = mudlet::self()->getActiveHost();

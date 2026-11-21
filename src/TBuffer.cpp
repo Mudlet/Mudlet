@@ -3084,6 +3084,9 @@ void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch)
         const quint64 committedColors = colorFingerprint(buffer.back());
 #endif
         mpHost->runTriggers(lineIndex);
+        if (mSilenceIncomingLines) {
+            silenceCurrentTriggerLine();
+        }
 #ifndef QT_NO_DEBUG
         // A write bypassing materialisePreTriggerPassLine() fails silently (color triggers match the
         // recolored text), so catch it here, wherever earlier triggers moved the line to:
@@ -7454,6 +7457,69 @@ QString& TBuffer::line(int lineNumber)
         return badLineError;
     }
     return lineBuffer[lineNumber];
+}
+
+bool TBuffer::silenceLine(const int lineNumber)
+{
+    if (lineNumber < 0 || lineNumber >= static_cast<int>(buffer.size())) {
+        return false;
+    }
+
+    const int lineLength = static_cast<int>(lineBuffer.at(lineNumber).size());
+    if (lineLength <= 0) {
+        return false;
+    }
+
+    return applyAttribute(QPoint(0, lineNumber), QPoint(lineLength, lineNumber), TChar::Silenced, true);
+}
+
+bool TBuffer::silenceCurrentTriggerLine()
+{
+    if (!triggerPassUnderWay() || mTriggerPassLineTaken) {
+        return false;
+    }
+
+    const int first = triggerPassSpanFirst(mPreTriggerPassLineNumber, mTriggerPassLineTailFrom);
+    if (first < 0) {
+        return false;
+    }
+
+    bool silenced = false;
+    for (int line = first, last = std::max(first, mTriggerPassLineLastSegment); line <= last; ++line) {
+        silenced = silenceLine(line) || silenced;
+    }
+    return silenced;
+}
+
+void TBuffer::silenceText(const int lineNumber, const QString& text)
+{
+    if (text.isEmpty() || lineNumber < 0 || lineNumber >= static_cast<int>(buffer.size())) {
+        return;
+    }
+
+    const QString& lineText = lineBuffer.at(lineNumber);
+    qsizetype from = 0;
+    while ((from = lineText.indexOf(text, from, Qt::CaseSensitive)) >= 0) {
+        applyAttribute(QPoint(static_cast<int>(from), lineNumber), QPoint(static_cast<int>(from + text.size()), lineNumber), TChar::Silenced, true);
+        ++from;
+    }
+}
+
+void TBuffer::silenceTextInCurrentTriggerLine(const QString& text)
+{
+    if (!triggerPassUnderWay() || mTriggerPassLineTaken) {
+        return;
+    }
+
+    silenceText(mPreTriggerPassLineNumber, text);
+}
+
+bool TBuffer::isCharacterSilenced(const int lineNumber, const int column) const
+{
+    if (lineNumber < 0 || lineNumber >= static_cast<int>(buffer.size()) || column < 0 || column >= static_cast<int>(buffer.at(lineNumber).size())) {
+        return false;
+    }
+    return buffer.at(lineNumber).at(column).isSilenced();
 }
 
 int TBuffer::find(int line, const QString& what, int pos = 0)

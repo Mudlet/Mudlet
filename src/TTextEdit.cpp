@@ -529,8 +529,16 @@ void TTextEdit::showNewLines()
 
         // content has been added
         for (int i = previousOldScrollPos; i < mOldScrollPos; i++) {
-            newLines.append(mpBuffer->line(i));
-            newLines.append('\n');
+            const QString& lineText = mpBuffer->line(i);
+            const auto lineStart = newLines.size();
+            for (int column = 0; column < lineText.size(); ++column) {
+                if (!mpBuffer->isCharacterSilenced(i, column)) {
+                    newLines.append(lineText.at(column));
+                }
+            }
+            if (newLines.size() > lineStart) {
+                newLines.append('\n');
+            }
         }
 
         newLines = newLines.trimmed();
