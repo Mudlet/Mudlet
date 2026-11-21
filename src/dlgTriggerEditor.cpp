@@ -14141,10 +14141,8 @@ void dlgTriggerEditor::resetTrees()
     QString saveError;
     if (!openScriptUnchanged) {
         mEditorSaveErrorCaptured.clear();
-        {
-            const QScopedValueRollback savingForReset(mSavingForReset, true);
-            saveOpenChanges();
-        }
+        const QScopedValueRollback savingForReset(mSavingForReset, true);
+        saveOpenChanges();
         saveError = mEditorSaveErrorCaptured;
     }
 
