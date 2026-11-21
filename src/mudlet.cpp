@@ -93,6 +93,7 @@
 #include <QFile>
 #include <QClipboard>
 #include <QFileDialog>
+#include <QHostAddress>
 #include <QJsonDocument>
 #include <QImage>
 #include <QKeyEvent>
@@ -6790,8 +6791,17 @@ QString mudlet::createProfileForUri(const TelnetUriData& uriData)
 {
     QString profileName = uriData.host;
 
-    int dotIndex = profileName.indexOf('.');
-    if (dotIndex > 0) {
+    if (QHostAddress address; address.setAddress(profileName)) {
+        // An IPv6 address's colons cannot be in a profile name, and an IPv4 address's first number alone says little.
+        // A zone ID is free text that could hold "..", and names only a network interface on this computer.
+        address.setScopeId(QString());
+        profileName = address.toString();
+        for (QChar& c : profileName) {
+            if (!MudletApp::scmAllowedProfileNameChars.contains(c)) {
+                c = QLatin1Char('-');
+            }
+        }
+    } else if (const int dotIndex = profileName.indexOf('.'); dotIndex > 0) {
         profileName = profileName.left(dotIndex);
     }
 
