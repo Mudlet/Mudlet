@@ -8926,6 +8926,15 @@ describe("Toolbar buttons", function()
       setButtonState(pushDownButton, false)
     end)
 
+    local function assertBothRefuse(id, message)
+      local getOk, getErr = getButtonState(id)
+      assert.is_nil(getOk, tostring(id))
+      assert.are.equal(message, getErr)
+      local setOk, setErr = setButtonState(id, true)
+      assert.is_nil(setOk, tostring(id))
+      assert.are.equal(message, setErr)
+    end
+
     it("round-trips a button state by name", function()
       assert.is_false(getButtonState(pushDownButton))
       assert.is_true(setButtonState(pushDownButton, true))
@@ -8951,42 +8960,21 @@ describe("Toolbar buttons", function()
     end)
 
     it("both refuse an item ID that is NaN or rounds outside int's range", function()
-      -- Exact messages, as an unchecked cast gives INT_MAX or 0 on arm64 and INT_MIN on x86
-      local cases = {
-        {math.huge, "no button item with ID inf found"},
-        {-math.huge, "no button item with ID -inf found"},
-        {0 / 0, "no button item with ID nan found"},
-        {2147483648, "no button item with ID 2147483648 found"},
-        {-2147483649, "no button item with ID -2147483649 found"},
-        {2147483647.5, "no button item with ID 2147483647.5 found"},
-        {-2147483648.5, "no button item with ID -2147483648.5 found"},
-      }
-      for _, case in ipairs(cases) do
-        local id, message = case[1], case[2]
-        local getOk, getErr = getButtonState(id)
-        assert.is_nil(getOk, tostring(id))
-        assert.are.equal(message, getErr)
-        local setOk, setErr = setButtonState(id, true)
-        assert.is_nil(setOk, tostring(id))
-        assert.are.equal(message, setErr)
-      end
+      -- Exact messages, as an unchecked cast gives INT_MIN on x86 and saturates (NaN to 0) on arm64
+      assertBothRefuse(math.huge, "no button item with ID inf found")
+      assertBothRefuse(-math.huge, "no button item with ID -inf found")
+      assertBothRefuse(0 / 0, "no button item with ID nan found")
+      assertBothRefuse(2147483648, "no button item with ID 2147483648 found")
+      assertBothRefuse(-2147483649, "no button item with ID -2147483649 found")
+      assertBothRefuse(2147483647.5, "no button item with ID 2147483647.5 found")
+      assertBothRefuse(-2147483648.5, "no button item with ID -2147483648.5 found")
     end)
 
     it("both take an item ID that rounds to an end of int's range as that int", function()
-      local expected = {
-        [2147483647] = "no button item with ID 2147483647 found",
-        [2147483647.4] = "no button item with ID 2147483647 found",
-        [-2147483648] = "item ID (-2147483648) invalid, it must be equal or greater than zero",
-        [-2147483648.4] = "item ID (-2147483648) invalid, it must be equal or greater than zero",
-      }
-      for id, message in pairs(expected) do
-        local getOk, getErr = getButtonState(id)
-        assert.is_nil(getOk, tostring(id))
-        assert.are.equal(message, getErr)
-        local setOk, setErr = setButtonState(id, true)
-        assert.is_nil(setOk, tostring(id))
-        assert.are.equal(message, setErr)
-      end
+      assertBothRefuse(2147483647, "no button item with ID 2147483647 found")
+      assertBothRefuse(2147483647.4, "no button item with ID 2147483647 found")
+      assertBothRefuse(-2147483648, "item ID (-2147483648) invalid, it must be equal or greater than zero")
+      assertBothRefuse(-2147483648.4, "item ID (-2147483648) invalid, it must be equal or greater than zero")
     end)
 
     it("getButtonState with no arguments answers the console's own button state", function()
