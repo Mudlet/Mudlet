@@ -2437,8 +2437,9 @@ void cTelnet::sendCurrentNAWS()
     // Never below 1: RFC 1073 reads 0 as unknown, and a negative width goes on
     // the wire as a very wide one.
     const bool gutterDrawn = pHost->hasConsoleView() && pHost->mainConsoleShowsTimeStamps();
-    int naws_x = std::max(1, std::min(pHost->mScreenWidth, pHost->mWrapAt) - static_cast<int>(gutterDrawn ? TBuffer::smTimeStampFormat.size() : 0));
-    int naws_y = pHost->mScreenHeight;
+    const QSize screen = pHost->mGameScreenSize.value_or(QSize(pHost->mScreenWidth, pHost->mScreenHeight));
+    int naws_x = std::max(1, std::min(screen.width(), pHost->mWrapAt) - static_cast<int>(gutterDrawn ? TBuffer::smTimeStampFormat.size() : 0));
+    int naws_y = screen.height();
     if ((naws_y > 0) && (myOptionState.test(static_cast<size_t>(OPT_NAWS))) && ((mNaws_x != naws_x) || (mNaws_y != naws_y))) {
         sendNAWS(naws_x, naws_y);
         mNaws_x = naws_x;
@@ -3667,6 +3668,35 @@ QByteArray cTelnet::encodingForCharacterSet(const QByteArray& characterSet) cons
         return characterSet;
     }
 
+    // RFC 2066 has servers offer IANA registered names, and a name may be offered
+    // by any of its registered aliases - or by the codec name of the language the
+    // server is written in, such as Python's "cp1252" or "latin1":
+    static const QHash<QByteArray, QByteArray> aliases = {
+            {"UTF8", "UTF-8"},          {"CSUTF8", "UTF-8"},        {"ANSI_X3.4-1968", "ASCII"},
+            {"ISO646-US", "ASCII"},     {"LATIN1", "ISO 8859-1"},   {"L1", "ISO 8859-1"},
+            {"IBM819", "ISO 8859-1"},   {"CP819", "ISO 8859-1"},    {"LATIN2", "ISO 8859-2"},
+            {"L2", "ISO 8859-2"},       {"LATIN3", "ISO 8859-3"},   {"L3", "ISO 8859-3"},
+            {"LATIN4", "ISO 8859-4"},   {"L4", "ISO 8859-4"},       {"CYRILLIC", "ISO 8859-5"},
+            {"ARABIC", "ISO 8859-6"},   {"GREEK", "ISO 8859-7"},    {"HEBREW", "ISO 8859-8"},
+            {"LATIN5", "ISO 8859-9"},   {"L5", "ISO 8859-9"},       {"LATIN6", "ISO 8859-10"},
+            {"L6", "ISO 8859-10"},      {"LATIN7", "ISO 8859-13"},  {"L7", "ISO 8859-13"},
+            {"LATIN8", "ISO 8859-14"},  {"L8", "ISO 8859-14"},      {"LATIN-9", "ISO 8859-15"},
+            {"LATIN9", "ISO 8859-15"},  {"L9", "ISO 8859-15"},      {"LATIN10", "ISO 8859-16"},
+            {"L10", "ISO 8859-16"},     {"IBM437", "CP437"},        {"437", "CP437"},
+            {"IBM850", "CP850"},        {"850", "CP850"},           {"IBM866", "CP866"},
+            {"866", "CP866"},           {"IBM869", "CP869"},        {"869", "CP869"},
+            {"CP1250", "WINDOWS-1250"}, {"CP1251", "WINDOWS-1251"}, {"CP1252", "WINDOWS-1252"},
+            {"CP1253", "WINDOWS-1253"}, {"CP1254", "WINDOWS-1254"}, {"CP1255", "WINDOWS-1255"},
+            {"CP1256", "WINDOWS-1256"}, {"CP1257", "WINDOWS-1257"}, {"CP1258", "WINDOWS-1258"},
+            {"MAC", "MACINTOSH"},       {"SHIFT-JIS", "SHIFT_JIS"}, {"SJIS", "SHIFT_JIS"},
+            {"MS_KANJI", "SHIFT_JIS"},  {"EUCJP", "EUC-JP"},        {"EUCKR", "EUC-KR"},
+            {"CP936", "GBK"},           {"MS936", "GBK"},           {"WINDOWS-936", "GBK"},
+            {"BIG-5", "BIG5"},
+    };
+    if (const auto alias = aliases.constFind(characterSet); alias != aliases.cend()) {
+        return encodingForCharacterSet(alias.value());
+    }
+
     if (characterSet.contains("ASCII")) { // Accept variants of ASCII
         return QByteArrayLiteral("ASCII");
     }
@@ -3679,6 +3709,14 @@ QByteArray cTelnet::encodingForCharacterSet(const QByteArray& characterSet) cons
 
     if (characterSet.startsWith("ISO") && !characterSet.startsWith("ISO ") && mAcceptableEncodings.contains("ISO " + characterSet.mid(3))) {
         return "ISO " + characterSet.mid(3);
+    }
+
+    // The IANA name proper, e.g. "ISO_8859-1:1987", with its optional year
+    if (characterSet.startsWith("ISO_8859-")) {
+        const QByteArray encoding = "ISO " + characterSet.mid(4).split(':').constFirst();
+        if (mAcceptableEncodings.contains(encoding)) {
+            return encoding;
+        }
     }
 
     return {};

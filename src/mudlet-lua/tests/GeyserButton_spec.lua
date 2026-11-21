@@ -427,5 +427,53 @@ describe("Tests functionality of Geyser.Button", function()
         assert.are.equal(sheet:getCSS(), getLabelStyleSheet("gbsSetters"))
       end)
     end)
+
+    describe('Geyser.Button click and down functions given as constraints', function()
+      after_each(function()
+        GeyserButtonSpecClicks = nil
+      end)
+
+      it("runs Lua code given as a string, as setClickFunction and setDownFunction do", function()
+        local button = track(Geyser.Button:new({
+          name = "gbsStringFuncs", x = 0, y = 0, width = 60, height = 20, twoState = true,
+          clickFunction = "GeyserButtonSpecClicks = (GeyserButtonSpecClicks or '') .. 'up'",
+          downFunction = "GeyserButtonSpecClicks = (GeyserButtonSpecClicks or '') .. 'down'",
+        }))
+        assert.are.equal("function", type(button.clickFunction))
+        assert.are.equal("function", type(button.downFunction))
+
+        local expand = spy.on(_G, "expandAlias")
+        finally(function() expand:revert() end)
+        button:press()
+        button:press()
+        assert.are.equal("updown", GeyserButtonSpecClicks)
+        assert.spy(expand).was_not.called()
+        assert.are.equal("up", button.state)
+      end)
+
+      it("still creates the button when the code does not compile", function()
+        local button
+        local reported = spy.on(_G, "errorc")
+        finally(function() reported:revert() end)
+        assert.has_no.errors(function()
+          button = track(Geyser.Button:new({name = "gbsBadStringFunc", x = 0, y = 0, width = 60, height = 20,
+            clickFunction = "this is not lua"}))
+        end)
+        assert.is_table(button)
+        assert.are.equal("string", type(button.clickFunction))
+        assert.spy(reported).was.called(1)
+        assert.truthy(tostring(reported.calls[1].vals[1]):find("clickFunction", 1, true))
+      end)
+
+      it("keeps a function it was given as it is", function()
+        local clicked = 0
+        local func = function() clicked = clicked + 1 end
+        local button = track(Geyser.Button:new({name = "gbsFuncFunc", x = 0, y = 0, width = 60, height = 20,
+          clickFunction = func}))
+        assert.are.equal(func, button.clickFunction)
+        button:press()
+        assert.are.equal(1, clicked)
+      end)
+    end)
   end)
 end)
