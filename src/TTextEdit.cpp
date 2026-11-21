@@ -451,8 +451,8 @@ void TTextEdit::updateScreenView()
         // the width is the upper pane's unless it is dragged out of sight. A
         // pane that sees nothing of itself, as in a background tab, knows neither.
         if (!drawable.isEmpty()) {
-            const TTextEdit* widthPane = mpConsole->mUpperPane->drawableSize().isEmpty() ? mpConsole->mLowerPane : mpConsole->mUpperPane;
-            const int columns = this == widthPane ? mScreenWidth : mpHost->mScreenWidth;
+            const bool measuresWidth = !mIsLowerPane || mpConsole->mUpperPane->drawableSize().isEmpty();
+            const int columns = measuresWidth ? mScreenWidth : mpHost->mScreenWidth;
             mpHost->setScreenDimensions(columns, mpConsole->mUpperPane->mainWindowRows());
         }
     } else {
