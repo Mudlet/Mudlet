@@ -288,9 +288,9 @@ void TTextEdit::needUpdate(int y1, int y2)
 void TTextEdit::focusInEvent(QFocusEvent* event)
 {
 #if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
-    // The central debug console's menus never took the grab from the profile's own console
-    const bool centralDebug = mpConsole && mpConsole->getType() == TConsole::CentralDebugConsole;
-    if (!centralDebug && mpHost->caretEnabled() && event->reason() == Qt::PopupFocusReason) {
+    // The central debug console's and the error console's menus never took the grab from the profile's own console
+    const bool borrowsCaretMode = mpConsole && (mpConsole->getType() & (TConsole::CentralDebugConsole | TConsole::ErrorConsole));
+    if (!borrowsCaretMode && mpHost->caretEnabled() && event->reason() == Qt::PopupFocusReason) {
         grabKeyboard();
     }
 #endif
@@ -306,14 +306,14 @@ void TTextEdit::focusOutEvent(QFocusEvent* event)
     // rather than forcing focus to the command line. This pane's own menus only
     // borrow the focus and hand it back on closing, so caret mode stays on; a menu bar's may open a dialog.
     const QWidget* popup = QApplication::activePopupWidget();
-    // The central debug console shares its Host's caret mode without driving it.
-    const bool centralDebug = mpConsole && mpConsole->getType() == TConsole::CentralDebugConsole;
+    // The central debug console and the error console share their Host's caret mode without driving it.
+    const bool borrowsCaretMode = mpConsole && (mpConsole->getType() & (TConsole::CentralDebugConsole | TConsole::ErrorConsole));
     if (event->reason() == Qt::PopupFocusReason && popup && popup->parentWidget() == this) {
 #if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
         // Caret mode's keyboard grab would otherwise beat the popup to every key
         releaseKeyboard();
 #endif
-    } else if (!centralDebug && mpHost->caretEnabled() && event->reason() != Qt::ActiveWindowFocusReason) {
+    } else if (!borrowsCaretMode && mpHost->caretEnabled() && event->reason() != Qt::ActiveWindowFocusReason) {
         mpHost->setCaretEnabled(false);
     }
 
@@ -465,6 +465,7 @@ void TTextEdit::updateScreenView()
         forceUpdate();
     }
     mOldScrollPos = mpBuffer->getLastLineNumber();
+    mLinesTrimmedAtOldScrollPos = mpBuffer->linesTrimmedTotal();
 }
 
 // Rows and columns start at the top left corner, so whatever covers that edge
@@ -498,9 +499,13 @@ void TTextEdit::showNewLines()
         mpBuffer->mCursorY = mpBuffer->size();
     }
 
-    const int previousOldScrollPos = mOldScrollPos;
+    // A trim off the top of the buffer moves the last line seen up with everything else, and must
+    // not read as the new lines that came in with it being taken away
+    const qint64 linesTrimmed = mpBuffer->linesTrimmedTotal();
+    const int previousOldScrollPos = std::max(0, mOldScrollPos - static_cast<int>(linesTrimmed - mLinesTrimmedAtOldScrollPos));
 
     mOldScrollPos = mpBuffer->getLastLineNumber();
+    mLinesTrimmedAtOldScrollPos = linesTrimmed;
 
     if (!mIsLowerPane) {
         // This is ONLY for the upper pane
@@ -1195,10 +1200,9 @@ void TTextEdit::drawCustomDecorations(QPainter& painter, const QColor& defaultCo
     QColor overlineColor = defaultColor;
     QColor strikeoutColor = defaultColor;
 
-    if (linkIndex > 0 && mpBuffer->mLinkStore.hasStyling(linkIndex)) {
-        Mudlet::HyperlinkStyling styling = mpBuffer->mLinkStore.getStyling(linkIndex);
-        styling.currentState = mpBuffer->getLinkState(linkIndex);
-        Mudlet::HyperlinkStyling::StateStyle effectiveStyle = styling.getEffectiveStyle();
+    if (linkIndex > 0 && (mpBuffer->mLinkStore.hasStyling(linkIndex) || mpBuffer->showsFocus(linkIndex))) {
+        // From the buffer, which adds Mudlet's focus cue to a link the game gave no focus style, and to MXP and script links
+        const Mudlet::HyperlinkStyling effectiveStyle = mpBuffer->getEffectiveHyperlinkStyling(linkIndex);
 
         if (effectiveStyle.hasUnderlineColor) {
             underlineColor = effectiveStyle.underlineColor;
@@ -2284,8 +2288,8 @@ void TTextEdit::slot_popupMenu()
 #endif
         mpConsole->model().runMenuPick(mPopupLinkIndex, mPopupLinkIssue, index - 1);
 #if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
-        const bool centralDebug = mpConsole && mpConsole->getType() == TConsole::CentralDebugConsole;
-        if (!centralDebug && mpHost->caretEnabled() && hasFocus()) {
+        const bool borrowsCaretMode = mpConsole && (mpConsole->getType() & (TConsole::CentralDebugConsole | TConsole::ErrorConsole));
+        if (!borrowsCaretMode && mpHost->caretEnabled() && hasFocus()) {
             grabKeyboard();
         }
 #endif
@@ -3038,9 +3042,9 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
                             }
                         }
                         popup->popup(eventGlobalPos);
+                        mIsCommandPopup = true;
+                        return;
                     }
-                    mIsCommandPopup = true;
-                    return;
                 }
             }
         }
@@ -3181,8 +3185,9 @@ void TTextEdit::showContextMenu(const QPoint& globalPosition)
 
     if (mpConsole->getType() == TConsole::ErrorConsole) {
         QAction* clearErrorConsole = new QAction(tr("Clear console"), popup);
-        connect(clearErrorConsole, &QAction::triggered, this, [=, this]() {
-            mpConsole->buffer.clear();
+        clearErrorConsole->setObjectName(qsl("consoleClearErrorConsole"));
+        connect(clearErrorConsole, &QAction::triggered, this, [this]() {
+            mpConsole->clear();
             mpConsole->print(qsl("%1\n").arg(tr("*** starting new session ***")));
         });
         popup->addAction(clearErrorConsole);
@@ -4375,10 +4380,11 @@ bool TTextEdit::event(QEvent* event)
         // While caret mode is active its shortcut (Tab, Ctrl+Tab or F6) must
         // beat any application-wide QShortcut - the profile-switching ones
         // use Ctrl+Tab by default and all of them can be remapped onto these
-        // keys - so claim it here to make it arrive as a KeyPress for the
-        // caret-toggling code in keyPressEvent():
+        // keys - so claim it here, and on macOS post the KeyPress Cocoa
+        // withholds, for the caret-toggling code in keyPressEvent():
         if (mpHost->caretEnabled() && mpHost->caretShortcutMatches(ke)) {
             ke->accept();
+            TCommandLine::pressClaimedControlTab(this, ke);
             return true;
         }
     }
