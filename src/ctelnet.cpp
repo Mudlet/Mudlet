@@ -2437,8 +2437,9 @@ void cTelnet::sendCurrentNAWS()
     // Never below 1: RFC 1073 reads 0 as unknown, and a negative width goes on
     // the wire as a very wide one.
     const bool gutterDrawn = pHost->hasConsoleView() && pHost->mainConsoleShowsTimeStamps();
-    int naws_x = std::max(1, std::min(pHost->mScreenWidth, pHost->mWrapAt) - static_cast<int>(gutterDrawn ? TBuffer::smTimeStampFormat.size() : 0));
-    int naws_y = pHost->mScreenHeight;
+    const QSize screen = pHost->mGameScreenSize.value_or(QSize(pHost->mScreenWidth, pHost->mScreenHeight));
+    int naws_x = std::max(1, std::min(screen.width(), pHost->mWrapAt) - static_cast<int>(gutterDrawn ? TBuffer::smTimeStampFormat.size() : 0));
+    int naws_y = screen.height();
     if ((naws_y > 0) && (myOptionState.test(static_cast<size_t>(OPT_NAWS))) && ((mNaws_x != naws_x) || (mNaws_y != naws_y))) {
         sendNAWS(naws_x, naws_y);
         mNaws_x = naws_x;

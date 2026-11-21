@@ -229,8 +229,15 @@ public:
     // The profile's scripts read the size as the main window's, and a change raises sysWindowResizeEvent with
     // what the borders leave of it, in pixels. As in the GUI, a width below 40 is taken as 40 and the game is told
     // no more than the profile's wrap width. Refused below 1 or above 65535, which NAWS cannot carry, and where
-    // submit() is.
+    // submit() is. Once setGameScreenSize() has given what the game is told, this sizes only the main window.
     bool setScreenSize(int columns, int rows);
+    // What the game is told (NAWS), for a frontend that draws the main console in a font of its own and so counts its
+    // columns and rows itself: from then on in place of the main console's grid, which this leaves as it is, as it
+    // does the main window's size scripts read, so a main window given in pixels (setMainWindowSize()) keeps that
+    // size. As setScreenSize() tells the game, a width below 40 is taken as 40, the game is told no more than the
+    // profile's wrap width, and of a change once it has held for 0.3s. Refused where setScreenSize() is. Holds till
+    // the profile closes.
+    bool setGameScreenSize(int columns, int rows);
     // Shows or closes the Central Debug Console, as the editor's button does: while it is shown, debugText carries
     // what it prints, what was kept from before first, and the profiles write what they write only in debug mode.
     // There is one for the whole process, owned by the session that showed it last: showing it here takes it from
@@ -547,8 +554,8 @@ public:
     // The main window's size in pixels, as a resize of the GUI's main window gives it: the borders a script or MXP
     // sets take their room from it, and the main console's font decides how many characters fit in what is left,
     // so a font change regrids it and the area stays. Raises sysWindowResizeEvent as setScreenSize() does, and the
-    // later of the two holds. Refused where setScreenSize() is, and for a size that holds no character of the font
-    // either way, or more than 65535.
+    // later of the two holds; setGameScreenSize() tells the game a grid of its own without resizing it. Refused
+    // where setScreenSize() is, and for a size that holds no character of the font either way, or more than 65535.
     bool setMainWindowSize(const QSize& pixels);
     // The main console's grid in characters, and where its text goes in the main window's area in pixels: the area
     // less the borders. Empty with no profile open: read them at profileLoaded, then follow mainConsoleAreaChanged.
