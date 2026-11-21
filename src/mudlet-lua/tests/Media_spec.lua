@@ -1590,6 +1590,37 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(1, #getPlayingSounds({key = "busted-media-priority-higher"}))
   end)
 
+  it("a stop with a priority keeps only files still downloading at or below it from playing", function()
+    if noFixtureServer() then
+      return
+    end
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local above = {name = "busted-media-stop-priority-above.wav", key = "busted-media-stop-priority-above", priority = 80}
+    local below = {name = "busted-media-stop-priority-below.wav", key = "busted-media-stop-priority-below", priority = 30}
+    lfs.mkdir(mediaDirectory)
+    for _, download in ipairs({above, below}) do
+      local downloaded = mediaDirectory .. "/" .. download.name
+      os.remove(downloaded)
+      onCleanup(function() os.remove(downloaded) end)
+    end
+    onCleanup(function() stopSounds() end)
+    local done = {}
+    collect("sysDownloadDone", done)
+
+    for _, download in ipairs({above, below}) do
+      assert.is_true(playSoundFile({name = download.name, url = fixtureUrl() .. "/media", volume = 60, priority = download.priority, key = download.key}))
+    end
+    assert.is_true(stopSounds({priority = 50}))
+    waitForCount("sysDownloadDone", done, 2)
+    waitForPlaying(above.key)
+    waitForEvent("sysMediaStarted", quietMilliseconds)
+
+    assert.equals(1, #getPlayingSounds({key = above.key}))
+    assert.equals(0, #getPlayingSounds({key = below.key}))
+  end)
+
   it("loadVideoFile reports a download error for a url it cannot fetch from", function()
     -- The preload reaches the same fetch as a play would, so the refusal of a
     -- url that is not http(s) is where a spec can see a load act on its url
