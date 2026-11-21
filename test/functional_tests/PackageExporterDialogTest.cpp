@@ -833,15 +833,10 @@ private slots:
     void test_theExportTreeAndFileListAreNamedForAScreenReader()
     {
         openExporter();
-        for (const QString& objectName : {qsl("treeWidget_exportSelection"), qsl("listWidget_addedFiles")}) {
-            auto* pWidget = mpExporter->findChild<QWidget*>(objectName);
-            QVERIFY2(pWidget, qPrintable(objectName));
-            QAccessibleInterface* pInterface = QAccessible::queryAccessibleInterface(pWidget);
-            QVERIFY(pInterface);
-            const QString name = pInterface->text(QAccessible::Name);
-            QVERIFY2(!name.trimmed().isEmpty(), qPrintable(qsl("%1 has nothing for a screen reader to announce it as").arg(objectName)));
-            // Before Qt 6.11 an item view's name is its accessibleName alone, with no buddy label fallback
-            QVERIFY2(!pWidget->accessibleName().trimmed().isEmpty(), qPrintable(qsl("%1 is nameless on Qt 6.8 to 6.10").arg(objectName)));
+        for (QWidget* pWidget : std::initializer_list<QWidget*>{tree(), addedFiles()}) {
+            QVERIFY(pWidget);
+            // Neither view is a label's buddy, so its accessibleName is all a screen reader has to announce
+            QVERIFY2(!pWidget->accessibleName().trimmed().isEmpty(), qPrintable(qsl("%1 has nothing for a screen reader to announce it as").arg(pWidget->objectName())));
         }
     }
 
