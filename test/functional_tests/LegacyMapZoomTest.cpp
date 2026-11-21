@@ -50,6 +50,13 @@ protected:
     void initializeGL() override {}
 };
 
+static bool sendWheel(QWidget& widget, const QPoint angleDelta)
+{
+    QWheelEvent event(QPointF(1, 1), QPointF(1, 1), QPoint(), angleDelta, Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
+    QCoreApplication::sendEvent(&widget, &event);
+    return event.isAccepted();
+}
+
 class LegacyMapZoomTest : public QObject
 {
     Q_OBJECT
@@ -94,13 +101,8 @@ private slots:
     void test_theMapTakesATouchpadsSmallStepButNotASidewaysScroll()
     {
         GLWidget view(nullptr, nullptr);
-        auto wheel = [&view](const QPoint angleDelta) {
-            QWheelEvent event(QPointF(1, 1), QPointF(1, 1), QPoint(), angleDelta, Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
-            QCoreApplication::sendEvent(&view, &event);
-            return event.isAccepted();
-        };
-        QVERIFY2(wheel(QPoint(0, 15)), "an eighth of a notch from a touchpad was passed on instead of zooming the map");
-        QVERIFY2(!wheel(QPoint(120, 0)), "a sideways scroll was kept from the widgets around the map");
+        QVERIFY2(sendWheel(view, QPoint(0, 15)), "an eighth of a notch from a touchpad was passed on instead of zooming the map");
+        QVERIFY2(!sendWheel(view, QPoint(120, 0)), "a sideways scroll was kept from the widgets around the map");
     }
 
     void test_theWheelAndTheViewButtonsZoomOnScreen()
@@ -121,8 +123,7 @@ private slots:
         };
         view.slot_setScale(1000);
         QVERIFY2(qAbs(verticalFieldOfView() - 60.0f * 150.0f / 1300.0f) < 0.1f, "the zoom slider did not reach the projection");
-        QWheelEvent touchpad(QPointF(1, 1), QPointF(1, 1), QPoint(), QPoint(0, 15), Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
-        QCoreApplication::sendEvent(&view, &touchpad);
+        sendWheel(view, QPoint(0, 15));
         const float touchpadDegrees = verticalFieldOfView();
         QVERIFY2(qAbs(touchpadDegrees - 60.0f * GLWidget::scaleAfterWheel(150.0f / 1300.0f, 15)) < 0.01f, qPrintable(qsl("a touchpad step left a %1 degree field of view").arg(touchpadDegrees)));
 
