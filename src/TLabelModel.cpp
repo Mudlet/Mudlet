@@ -55,6 +55,39 @@ void TLabelModel::setClick(const int func)
     accessibilityChanged(AccessibilityChange::Role);
 }
 
+bool TLabelModel::runCallback(const Callback callback, const QEvent& event) const
+{
+    int function = 0;
+    switch (callback) {
+    case Callback::click:
+        function = mClickFunction;
+        break;
+    case Callback::doubleClick:
+        function = mDoubleClickFunction;
+        break;
+    case Callback::release:
+        function = mReleaseFunction;
+        break;
+    case Callback::move:
+        function = mMoveFunction;
+        break;
+    case Callback::wheel:
+        function = mWheelFunction;
+        break;
+    case Callback::enter:
+        function = mEnterFunction;
+        break;
+    case Callback::leave:
+        function = mLeaveFunction;
+        break;
+    }
+    if (!function || !mpHost) {
+        return false;
+    }
+    mpHost->getLuaInterpreter()->callLabelCallbackEvent(function, &event);
+    return true;
+}
+
 void TLabelModel::setDoubleClick(const int func)
 {
     releaseFunc(mDoubleClickFunction, func);
@@ -486,10 +519,15 @@ QString plainName(const QString& labelText)
 
 QString TLabelModel::effectiveAccessibleName() const
 {
+    return effectiveAccessibleName(mText);
+}
+
+QString TLabelModel::effectiveAccessibleName(const QString& shownText) const
+{
     if (!mAccessibleName.isEmpty()) {
         return mAccessibleName;
     }
-    if (QString name = plainName(mText); !name.isEmpty()) {
+    if (QString name = plainName(shownText); !name.isEmpty()) {
         return name;
     }
     // Qt shows a tooltip that is not rich text literally, so it is read that way too
