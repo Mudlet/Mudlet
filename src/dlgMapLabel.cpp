@@ -19,14 +19,13 @@
  ***************************************************************************/
 
 #include "dlgMapLabel.h"
+#include "AlphaColourWell.h"
 #include "MudletApp.h"
 #include "utils.h"
 #include <QColorDialog>
 #include <QFileDialog>
 #include <QFontDialog>
 #include <QSettings>
-
-static QString BUTTON_STYLESHEET = qsl("QPushButton { background-color: rgba(%1, %2, %3, %4); }");
 
 dlgMapLabel::dlgMapLabel(QWidget* pParentWidget)
 : QDialog(pParentWidget)
@@ -73,6 +72,7 @@ dlgMapLabel::dlgMapLabel(QWidget* pParentWidget)
     outlineColor = settings.value("outlineColorDialogMapLabel", outlineColor).value<QColor>();
     slot_updateControls();
     slot_updateControlsVisibility();
+    plainTextEdit_labelText->setFocus();
 }
 
 bool dlgMapLabel::isTextLabel()
@@ -87,17 +87,18 @@ QString dlgMapLabel::getImagePath()
 
 void dlgMapLabel::slot_pickFgColor()
 {
-    QSettings& settings = *MudletApp::getQSettings();
     fgColorDialog = new QColorDialog(this);
-    fgColorDialog->setCurrentColor(settings.value("fgColorDialogMapLabel", fgColor).value<QColor>());
+    fgColorDialog->setCurrentColor(fgColor);
     fgColorDialog->setAttribute(Qt::WA_DeleteOnClose);
     //: 2D mapper create label color dialog title
     fgColorDialog->setWindowTitle(tr("Foreground color"));
     fgColorDialog->setOption(QColorDialog::ShowAlphaChannel);
-    connect(fgColorDialog, &QColorDialog::currentColorChanged, this, [&](const QColor& color) {
+    connect(fgColorDialog, &QColorDialog::currentColorChanged, this, [this](const QColor& color) {
         fgColor = color;
-        settings.setValue("fgColorDialogMapLabel", fgColor);
         emit updated();
+    });
+    connect(fgColorDialog, &QColorDialog::colorSelected, this, [](const QColor& color) {
+        MudletApp::getQSettings()->setValue(qsl("fgColorDialogMapLabel"), color);
     });
     auto originalColor = QColor(fgColor);
     connect(fgColorDialog, &QColorDialog::rejected, this, [this, originalColor]() {
@@ -110,17 +111,18 @@ void dlgMapLabel::slot_pickFgColor()
 
 void dlgMapLabel::slot_pickBgColor()
 {
-    QSettings& settings = *MudletApp::getQSettings();
     bgColorDialog = new QColorDialog(this);
-    bgColorDialog->setCurrentColor(settings.value("bgColorDialogMapLabel", bgColor).value<QColor>());
+    bgColorDialog->setCurrentColor(bgColor);
     bgColorDialog->setAttribute(Qt::WA_DeleteOnClose);
     //: 2D mapper create label color dialog title
     bgColorDialog->setWindowTitle(tr("Background color"));
     bgColorDialog->setOption(QColorDialog::ShowAlphaChannel);
-    connect(bgColorDialog, &QColorDialog::currentColorChanged, this, [&](const QColor& color) {
+    connect(bgColorDialog, &QColorDialog::currentColorChanged, this, [this](const QColor& color) {
         bgColor = color;
-        settings.setValue("bgColorDialogMapLabel", bgColor);
         emit updated();
+    });
+    connect(bgColorDialog, &QColorDialog::colorSelected, this, [](const QColor& color) {
+        MudletApp::getQSettings()->setValue(qsl("bgColorDialogMapLabel"), color);
     });
     auto originalColor = QColor(bgColor);
     connect(bgColorDialog, &QColorDialog::rejected, this, [this, originalColor]() {
@@ -133,17 +135,18 @@ void dlgMapLabel::slot_pickBgColor()
 
 void dlgMapLabel::slot_pickOutlineColor()
 {
-    QSettings& settings = *MudletApp::getQSettings();
     outlineColorDialog = new QColorDialog(this);
-    outlineColorDialog->setCurrentColor(settings.value("outlineColorDialogMapLabel", outlineColor).value<QColor>());
+    outlineColorDialog->setCurrentColor(outlineColor);
     outlineColorDialog->setAttribute(Qt::WA_DeleteOnClose);
     //: 2D mapper create label color dialog title
     outlineColorDialog->setWindowTitle(tr("Text outline color"));
     outlineColorDialog->setOption(QColorDialog::ShowAlphaChannel);
-    connect(outlineColorDialog, &QColorDialog::currentColorChanged, this, [&](const QColor& color) {
+    connect(outlineColorDialog, &QColorDialog::currentColorChanged, this, [this](const QColor& color) {
         outlineColor = color;
-        settings.setValue("outlineColorDialogMapLabel", outlineColor);
         emit updated();
+    });
+    connect(outlineColorDialog, &QColorDialog::colorSelected, this, [](const QColor& color) {
+        MudletApp::getQSettings()->setValue(qsl("outlineColorDialogMapLabel"), color);
     });
     auto originalColor = QColor(outlineColor);
     connect(outlineColorDialog, &QColorDialog::rejected, this, [this, originalColor]() {
@@ -182,12 +185,13 @@ void dlgMapLabel::slot_pickFile()
     QSettings& settings = *MudletApp::getQSettings();
     QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
 
-    imagePath = QFileDialog::getOpenFileName(nullptr, tr("Select image"), lastDir);
+    const QString pickedPath = QFileDialog::getOpenFileName(nullptr, tr("Select image"), lastDir);
 
-    if (imagePath.isEmpty()) {
+    if (pickedPath.isEmpty()) {
         return;
     }
 
+    imagePath = pickedPath;
     emit updated();
     lastDir = QFileInfo(imagePath).absolutePath();
     settings.setValue("lastFileDialogLocation", lastDir);
@@ -250,11 +254,13 @@ void dlgMapLabel::slot_updateControls()
         lineEdit_font->setText(tr("%1, %2pt %3").arg(font.family(), QString::number(font.pointSizeF()), font.styleName()));
         lineEdit_font->setToolTip(QString());
     }
-    pushButton_fgColor->setStyleSheet(BUTTON_STYLESHEET.arg(QString::number(fgColor.red()), QString::number(fgColor.green()), QString::number(fgColor.blue()), QString::number(fgColor.alpha())));
-    pushButton_bgColor->setStyleSheet(BUTTON_STYLESHEET.arg(QString::number(bgColor.red()), QString::number(bgColor.green()), QString::number(bgColor.blue()), QString::number(bgColor.alpha())));
-    pushButton_outlineColor->setStyleSheet(
-            BUTTON_STYLESHEET.arg(QString::number(outlineColor.red()), QString::number(outlineColor.green()), QString::number(outlineColor.blue()), QString::number(outlineColor.alpha())));
+    // A label's colours may be see-through: a swatch over a checkerboard and how opaque the colour is
+    uiDesign::AlphaColourWell::on(pushButton_fgColor)->setColour(fgColor);
+    uiDesign::AlphaColourWell::on(pushButton_bgColor)->setColour(bgColor);
+    uiDesign::AlphaColourWell::on(pushButton_outlineColor)->setColour(outlineColor);
     lineEdit_image->setText(imagePath);
+    // Save is the default button, so Enter would otherwise commit an image label with no image
+    pushButton_save->setEnabled(isTextLabel() || !imagePath.isEmpty());
 }
 
 void dlgMapLabel::slot_updateControlsVisibility()

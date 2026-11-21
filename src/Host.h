@@ -1194,6 +1194,9 @@ public:
     bool mResetProfile = false;
     int mScreenHeight = 25;
     int mScreenWidth = 90;
+    // With no view, what the game is told (NAWS) in place of mScreenWidth and mScreenHeight, from a frontend that
+    // counts the main console's columns and rows in a font of its own: THeadlessSession::setGameScreenSize()
+    std::optional<QSize> mGameScreenSize;
 
     // has the profile save data been loaded without issues?
     // if there were issues during loading, we should not save anything on close
