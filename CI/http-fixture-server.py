@@ -84,7 +84,7 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
         super().do_GET()
 
     def serve_binary_error(self):
-        # An error body that is not text, for the spec that checks error events carry it byte for byte
+        """An error body that is not text, so a spec can check error events carry it unchanged."""
         payload = b"a\x00b\xffc"
         self.send_response(500)
         self.send_header("Content-Type", "application/octet-stream")
