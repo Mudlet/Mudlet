@@ -669,12 +669,24 @@ private:
         host->mSslIgnoreExpired = false;
         host->mSslIgnoreAll = ignoreAll;
         host->mTelnet.connectIt(mLocalhost, mPort);
-        QVERIFY2(QTest::qWaitFor(
-                         [&]() {
-                             return countLines(host, qsl("Secure connection made")) > connectionsBefore;
-                         },
-                         20s),
-                 "the stub's certificate was not accepted");
+        QTest::qWaitFor(
+                [&]() {
+                    return countLines(host, qsl("Secure connection made")) > connectionsBefore || countLines(host, qsl("Socket got disconnected")) > disconnectsBefore;
+                },
+                20s);
+        if (countLines(host, qsl("Secure connection made")) == connectionsBefore) {
+            // A TLS backend can object to the stub's 100-year, CA-flagged certificate on more than its being self-signed
+            QStringList otherErrors;
+            for (const auto& sslError : host->mTelnet.getSslErrors()) {
+                if (sslError.error() != QSslError::SelfSignedCertificate) {
+                    otherErrors << sslError.errorString();
+                }
+            }
+            if (!ignoreAll && !otherErrors.isEmpty()) {
+                QSKIP(qPrintable(qsl("this TLS backend raises more than a self-signed error for the stub's certificate: %1").arg(otherErrors.join(qsl("; ")))));
+            }
+            QFAIL("the stub's certificate was not accepted");
+        }
         // The control: with no certificate error there was nothing accepted that could be mistaken for a refusal
         QVERIFY2(!host->mTelnet.getSslErrors().isEmpty(), "the stub's certificate raised no error to accept");
 
