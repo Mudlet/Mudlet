@@ -19,6 +19,7 @@
 
 #include <QAccessible>
 #include <QDir>
+#include <QInputDialog>
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QPlainTextEdit>
@@ -108,11 +109,12 @@ private:
 
     // A note with text in it asks before it goes, and QMessageBox::exec() spins a
     // loop of its own, so the answer is armed before the close and given from inside it
-    static void closeTabAnsweringTheQuestion(dlgNotepad* notepad, const int index)
+    static QString closeTabAnsweringTheQuestion(dlgNotepad* notepad, const int index)
     {
+        QString question;
         QTimer answerer;
         answerer.setInterval(20ms);
-        QObject::connect(&answerer, &QTimer::timeout, &answerer, [&answerer]() {
+        QObject::connect(&answerer, &QTimer::timeout, &answerer, [&answerer, &question]() {
             QMessageBox* box = nullptr;
             const QList<QWidget*> topLevels = QApplication::topLevelWidgets();
             for (QWidget* widget : topLevels) {
@@ -127,6 +129,7 @@ private:
             for (QAbstractButton* button : buttons) {
                 if (box->buttonRole(button) == QMessageBox::DestructiveRole) {
                     answerer.stop();
+                    question = box->text();
                     button->click();
                     return;
                 }
@@ -134,6 +137,7 @@ private:
         });
         answerer.start();
         notepad->closeTab(index);
+        return question;
     }
 
     bool waitForServerToReceive(const QByteArray& text) const
@@ -297,20 +301,56 @@ private slots:
         auto* profile = mudlet::self()->getActiveHost();
         const QString name = qsl("Spells & Skills");
 
+        const auto shownName = [](dlgNotepad* pad) {
+            QAccessibleInterface* tabBar = QAccessible::queryAccessibleInterface(pad->tabWidget->tabBar());
+            QAccessibleInterface* tab = tabBar ? tabBar->child(1) : nullptr;
+            return tab ? tab->text(QAccessible::Name) : QString();
+        };
+
         QScopedPointer<dlgNotepad> notepad(new dlgNotepad(profile));
         notepad->addTab(name, qsl("fireball"));
         QVERIFY(putOnScreen(notepad.data()));
-        QAccessibleInterface* tabBar = QAccessible::queryAccessibleInterface(notepad->tabWidget->tabBar());
-        QVERIFY(tabBar && tabBar->child(1));
-        QCOMPARE(tabBar->child(1)->text(QAccessible::Name), name);
+        QCOMPARE(shownName(notepad.data()), name);
 
         notepad->save();
         notepad.reset();
         QScopedPointer<dlgNotepad> reopened(new dlgNotepad(profile));
         QVERIFY(putOnScreen(reopened.data()));
-        tabBar = QAccessible::queryAccessibleInterface(reopened->tabWidget->tabBar());
+        QCOMPARE(shownName(reopened.data()), name);
+    }
+
+    // The rename box and the close question name the note as it reads, not as the tab bar stores it
+    void test_renamingAndClosingANoteWithAnAmpersandUseItsName()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        QScopedPointer<dlgNotepad> notepad(new dlgNotepad(mudlet::self()->getActiveHost()));
+        notepad->addTab(qsl("Spells & Skills"), qsl("fireball"));
+        QVERIFY(putOnScreen(notepad.data()));
+
+        QString offered;
+        QTimer answerer;
+        answerer.setInterval(20ms);
+        QObject::connect(&answerer, &QTimer::timeout, &answerer, [&answerer, &offered]() {
+            const QList<QWidget*> topLevels = QApplication::topLevelWidgets();
+            for (QWidget* widget : topLevels) {
+                if (auto* box = qobject_cast<QInputDialog*>(widget); box && box->isVisible()) {
+                    answerer.stop();
+                    offered = box->textValue();
+                    box->setTextValue(qsl("Rock && Roll"));
+                    box->accept();
+                    return;
+                }
+            }
+        });
+        answerer.start();
+        notepad->renameTab(1);
+        QCOMPARE(offered, qsl("Spells & Skills"));
+        QAccessibleInterface* tabBar = QAccessible::queryAccessibleInterface(notepad->tabWidget->tabBar());
         QVERIFY(tabBar && tabBar->child(1));
-        QCOMPARE(tabBar->child(1)->text(QAccessible::Name), name);
+        QCOMPARE(tabBar->child(1)->text(QAccessible::Name), qsl("Rock && Roll"));
+
+        QCOMPARE(closeTabAnsweringTheQuestion(notepad.data(), 1), qsl("Close the note \"Rock && Roll\"?"));
+        QCOMPARE(notepad->tabWidget->count(), 1);
     }
 
     // Closing the only tab would leave the notepad with nowhere to type.
