@@ -170,7 +170,7 @@ bool TMapPainter::customLineRunsStraightTo(const TRoom& owner, const TRoom& othe
 }
 
 // A grid mode room fills its whole cell, so its symbol is made at a different size
-QString TMapPainter::symbolPixmapKey(const QColor& symbolColor, const QString& symbol, const bool gridMode)
+static QString symbolPixmapKey(const QColor& symbolColor, const QString& symbol, const bool gridMode)
 {
     return qsl("%1_%2_%3").arg(symbolColor.name(), gridMode ? qsl("g") : qsl("n"), symbol);
 }
