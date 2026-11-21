@@ -96,9 +96,8 @@ private:
     }
   }
 
-  // Opens the script in the editor and types over it without saving
-  QTreeWidgetItem *typeIntoScript(dlgTriggerEditor *pEditor, const QString &name, const QString &text) {
-    auto *pTree = pEditor->findChild<QTreeWidget *>(qsl("treeWidget_scripts"));
+  // doCleanReset() rebuilds the trees later, so wait for the item to come back
+  QTreeWidgetItem *resetAndFindItem(dlgTriggerEditor *pEditor, QTreeWidget *pTree, const QString &name) {
     QTreeWidgetItem *pItem = nullptr;
     pEditor->doCleanReset();
     if (!QTest::qWaitFor([&]() {
@@ -106,6 +105,16 @@ private:
           pItem = found.isEmpty() ? nullptr : found.first();
           return pItem != nullptr;
         })) {
+      return nullptr;
+    }
+    return pItem;
+  }
+
+  // Opens the script in the editor and types over it without saving
+  QTreeWidgetItem *typeIntoScript(dlgTriggerEditor *pEditor, const QString &name, const QString &text) {
+    auto *pTree = pEditor->findChild<QTreeWidget *>(qsl("treeWidget_scripts"));
+    QTreeWidgetItem *pItem = resetAndFindItem(pEditor, pTree, name);
+    if (!pItem) {
       return nullptr;
     }
     pEditor->slot_showScripts();
@@ -1005,13 +1014,8 @@ private slots:
         qsl("permSubstringTrigger(\"qaUnsavedTrigger\", \"\", {\"qaUnsavedTrigger\"}, [[-- saved]])")));
     auto *pTree = pEditor->findChild<QTreeWidget *>(qsl("treeWidget_triggers"));
     QVERIFY(pTree);
-    QTreeWidgetItem *pItem = nullptr;
-    pEditor->doCleanReset();
-    QVERIFY(QTest::qWaitFor([&]() {
-      const auto found = pTree->findItems(qsl("qaUnsavedTrigger"), Qt::MatchCaseSensitive | Qt::MatchFixedString | Qt::MatchRecursive, 0);
-      pItem = found.isEmpty() ? nullptr : found.first();
-      return pItem != nullptr;
-    }));
+    QTreeWidgetItem *pItem = resetAndFindItem(pEditor, pTree, qsl("qaUnsavedTrigger"));
+    QVERIFY(pItem);
     pEditor->slot_showTriggers();
     pTree->setCurrentItem(pItem);
     pEditor->slot_triggerSelected(pItem);
