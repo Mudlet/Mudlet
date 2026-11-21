@@ -1101,12 +1101,14 @@ void cTelnet::handleFailedConnection()
 
     emit signal_disconnected(mpHost);
 
+    // Taken first, as a handler that reconnects clears it for its own attempt
+    const bool calledOff = mDontReconnect;
     TEvent event{};
     event.mArgumentList.append(qsl("sysDisconnectionEvent"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     mpHost->raiseEvent(event);
 
-    const bool retry = mAutoReconnect && !mDontReconnect;
+    const bool retry = mAutoReconnect && !calledOff && !mDontReconnect;
     mDontReconnect = false;
     if (!retry) {
         return;
@@ -1588,9 +1590,12 @@ void cTelnet::finishDisconnection()
 
     // Double-check Host is still valid before raising event
     if (mpHost && !mpHost->isClosingDown()) {
+        // A handler that reconnects clears this for its own attempt, but the end being reported was still the user's
+        const bool calledOff = mDontReconnect;
         event.mArgumentList.append(qsl("sysDisconnectionEvent"));
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mpHost->raiseEvent(event);
+        mDontReconnect = mDontReconnect || calledOff;
     }
 
     QTime timeDiff(0, 0, 0, 0);

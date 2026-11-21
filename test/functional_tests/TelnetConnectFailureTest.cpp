@@ -308,8 +308,7 @@ private slots:
         host->mTelnet.setAutoReconnect(true);
         host->mTelnet.mFailedConnectionRetryDelay = 200ms;
 
-        const quint16 deadPort = connectToADeadPort(host);
-        QVERIFY(deadPort);
+        QVERIFY(disconnectAndWait(host));
         QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("local handler\n"
                                                                        "handler = registerAnonymousEventHandler(\"sysDisconnectionEvent\", function()\n"
                                                                        "  killAnonymousEventHandler(handler)\n"
@@ -317,8 +316,10 @@ private slots:
                                                                        "end)")
                                                                            .arg(mpServer->serverPort())));
         const int connectionsBefore = mpServer->connectionCount();
-        // Called off while the dial to the dead port is still under way, which Qt lets run to its end
-        host->mTelnet.disconnectIt();
+        // A refused dial to this machine fails within connectToHost(), leaving no moment to call it
+        // off in, so this is the state a Disconnect leaves a slower dial in, and that dial's end
+        host->mTelnet.mDontReconnect = true;
+        host->mTelnet.handleFailedConnection();
 
         QVERIFY2(QTest::qWaitFor(
                          [&]() {
