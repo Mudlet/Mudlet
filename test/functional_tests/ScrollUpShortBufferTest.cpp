@@ -92,7 +92,7 @@ private:
     }
 
     // A scroll box 200 pixels high holding a taller mini console, which has the given number of lines
-    TConsole* miniConsoleInAScrollBox(TMainConsole* console, const int lines, TScrollBox** box)
+    static TConsole* miniConsoleInAScrollBox(TMainConsole* console, const int lines, TScrollBox** box)
     {
         if (!console->createScrollBox(QString(), qsl("box"), 0, 0, 300, 200)) {
             return nullptr;
@@ -229,8 +229,6 @@ private slots:
         QVERIFY2(upper->mIsTailMode, "scrolling down did not bring the console back to its bottom");
     }
 
-    // A mini console with all its text on screen, or with scrolling disabled, has no use for a wheel
-    // turn, so the scroll box holding it scrolls instead
     void test_aWheelTheMiniConsoleCannotUseScrollsTheScrollBoxHoldingIt_data()
     {
         QTest::addColumn<int>("lines");
