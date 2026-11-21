@@ -994,33 +994,40 @@ std::pair<bool, QString> T2DMap::centerview(int roomId)
         return {false, qsl("room %1 references non-existent area %2").arg(roomId).arg(areaId)};
     }
 
-    // For secondary views, don't raise sysMapAreaChanged event
-    if (!mIsSecondaryView) {
-        TEvent areaViewedChangedEvent{};
-        if (mAreaID != areaId) {
-            areaViewedChangedEvent.mArgumentList.append(qsl("sysMapAreaChanged"));
-            areaViewedChangedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-            areaViewedChangedEvent.mArgumentList.append(QString::number(areaId));
-            areaViewedChangedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-            areaViewedChangedEvent.mArgumentList.append(QString::number(mAreaID));
-            areaViewedChangedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-        }
-
-        if (!areaViewedChangedEvent.mArgumentList.isEmpty() && mpHost) {
-            mpHost->raiseEvent(areaViewedChangedEvent);
-        }
-    }
-
-    if (mAreaID != areaId) {
+    const int previousAreaId = mAreaID;
+    if (previousAreaId != areaId) {
         pruneRoomSelectionToArea(areaId);
     }
     mAreaID = areaId;
     mLastViewedAreaID = areaId;
     mRoomID = roomId;
+    if (!mIsSecondaryView) {
+        // The main view follows the player unless panned away from the room it last followed, so this pans: the
+        // view stays here until the player moves. The painter falls back to the map's first room as T2DMap does
+        int playerRoomId = mpMap->mRoomIdHash.value(mpMap->mProfileName);
+        if (!mpMap->mpRoomDB->getRoom(playerRoomId) && !mpMap->mpRoomDB->isEmpty()) {
+            playerRoomId = mpMap->mpRoomDB->getRoomMap().constBegin().key();
+        }
+        mRoomID = playerRoomId;
+        mShiftMode = true;
+    }
     mMapCenterX = pR->x();
     mMapCenterY = -pR->y(); // Map y coordinates are reversed
     mMapCenterZ = pR->z();
     xyzoom = mpMap->mpRoomDB->get2DMapZoom(areaId);
+
+    // Raised once the view shows the new area, so its handlers read that one; and as a handler may delete the room,
+    // nothing below reads pR. Secondary views raise none.
+    if (!mIsSecondaryView && previousAreaId != areaId && mpHost) {
+        TEvent areaViewedChangedEvent{};
+        areaViewedChangedEvent.mArgumentList.append(qsl("sysMapAreaChanged"));
+        areaViewedChangedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        areaViewedChangedEvent.mArgumentList.append(QString::number(areaId));
+        areaViewedChangedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        areaViewedChangedEvent.mArgumentList.append(QString::number(previousAreaId));
+        areaViewedChangedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        mpHost->raiseEvent(areaViewedChangedEvent);
+    }
 
     isCenterViewCall = true;
     update();
