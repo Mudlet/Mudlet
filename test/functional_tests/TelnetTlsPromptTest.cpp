@@ -120,7 +120,7 @@ private slots:
         deleteProfileDirectory(mHostname);
     }
 
-    void test_msspHostnameWithLineEndStillPrompts()
+    void test_msspHostnameWithLineBreaksStillPrompts()
     {
 #if defined(QT_NO_SSL)
         QSKIP("Built without SSL support - the TLS upgrade prompt does not exist.");
@@ -140,6 +140,7 @@ private slots:
         data.append(MSSP_VAR);
         data.append("HOSTNAME");
         data.append(MSSP_VAL);
+        data.append("\r\n");
         data.append(mLocalhost.toLatin1());
         data.append("\r\n");
         data.append(MSSP_VAR);
@@ -151,7 +152,7 @@ private slots:
         host->mTelnet.loopbackTest(data);
 
         if (spy.isEmpty()) {
-            QVERIFY2(spy.wait(2s), "A HOSTNAME ending in CR LF suppressed the TLS upgrade prompt.");
+            QVERIFY2(spy.wait(2s), "A HOSTNAME wrapped in CR LF suppressed the TLS upgrade prompt.");
         }
         QCOMPARE(spy.count(), 1);
         QCOMPARE(host->mMSSPHostName, mLocalhost);
@@ -171,10 +172,12 @@ private slots:
 
         QSignalSpy spy(&host->mTelnet, &cTelnet::signal_promptTlsAvailable);
         QVERIFY(spy.isValid());
-        QByteArray advertise = msspTlsPayload("1\r\n");
-        host->mTelnet.loopbackTest(advertise);
-        QVERIFY2(spy.isEmpty(), "The MSSP 'TLS supported' flag 1 was taken for port 1.");
-        QCOMPARE(host->mMSSPTlsPort, 0);
+        for (const QByteArray& flag : {QByteArray("1\r\n"), QByteArray("\r\n1"), QByteArray("\r\n-1")}) {
+            QByteArray advertise = msspTlsPayload(flag);
+            host->mTelnet.loopbackTest(advertise);
+            QVERIFY2(spy.isEmpty(), qPrintable(qsl("The MSSP 'TLS supported' flag %1 was taken for a port.").arg(QString::fromLatin1(flag.toPercentEncoding()))));
+            QCOMPARE(host->mMSSPTlsPort, 0);
+        }
 #endif
     }
 

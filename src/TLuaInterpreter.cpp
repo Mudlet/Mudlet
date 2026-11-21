@@ -5001,10 +5001,14 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
                 continue;
             }
 
-            // A variable can carry several values, with the default one last
             const QString msspVAR = payloadList.first();
-            // setMSSPVariables() already dropped the CR of each CR LF
+            // A variable can carry several values, with the default one last
             QString msspVAL = payloadList.last();
+            // setMSSPVariables() has already removed every CR. A line break at either end is
+            // not part of the value, and would spoil the HOSTNAME match and the TLS flags below
+            while (msspVAL.startsWith(QChar::LineFeed)) {
+                msspVAL.remove(0, 1);
+            }
             while (msspVAL.endsWith(QChar::LineFeed)) {
                 msspVAL.chop(1);
             }
