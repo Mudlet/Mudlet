@@ -188,6 +188,25 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       end
     end)
 
+    it("Should return to the default foreground or background on 39 and 49", function()
+      local sequences = {
+        {"\27[31mred\27[39mplain", "<128,0,0>red<r>plain"},
+        {"\27[31;44mred\27[39mplain", "<128,0,0:0,0,128>red<r><:0,0,128>plain"},
+        {"\27[31;44mred\27[49mplain", "<128,0,0:0,0,128>red<r><128,0,0>plain"},
+        {"\27[3;4;31mred\27[39mplain", "<i><u><128,0,0>red<r><i><u>plain"},
+        {"\27[31mred\27[39;32mgreen", "<128,0,0>red<r><0,128,0>green"},
+        {"\27[44mblue\27[31;49mred", "<:0,0,128>blue<r><128,0,0>red"},
+        {"\27[39mplain\27[49mplain", "plainplain"},
+        {"\27[31;39mplain", "plain"},
+      }
+      for _, seq in ipairs(sequences) do
+        assert.are.same(seq[2], ansi2decho(seq[1]), string.format("ansi2decho(%q)", seq[1]))
+      end
+      local result, lastColour = ansi2decho("\27[31mred\27[39mplain", 7)
+      assert.are.same("<128,0,0>red<r><192,192,192>plain", result)
+      assert.are.equal(7, lastColour)
+    end)
+
     it("Should convert some real life examples correctly", function()
       local sequences = {
         {"\27[4z<PROMPT>\27[0;32;40m4876h, \27[0;1;33;40m3539m, \27[0;1;31;40m22200e, \27[0;1;32;40m21648w \27[0;37;40mcexkdb-\27[4z</PROMPT>", "\27[4z<PROMPT><r><0,128,0:0,0,0>4876h, <r><255,255,0:0,0,0>3539m, <r><255,0,0:0,0,0>22200e, <r><0,255,0:0,0,0>21648w <r><192,192,192:0,0,0>cexkdb-\27[4z</PROMPT>"},
