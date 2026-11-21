@@ -83,10 +83,10 @@ cmake_language(DEFER CALL add_luarocks_paths_to_tests)
 # On Linux the lever is XDG_CONFIG_HOME. macOS never reads it: AppConfigLocation there is
 # NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSUserDomainMask) plus
 # "/Preferences" and the application name, so the lever is CFFIXED_USER_HOME, the
-# home directory override CoreFoundation resolves that call against. It has to
-# arrive from here rather than from the test, because a test process cannot move it
-# once Foundation has answered - which is why the per-test qputenv() in
-# initTestCase() covers Linux only, and why HomeUntouchedTest checks this redirect
+# home directory override CoreFoundation resolves that call against. It has to be
+# set before Foundation first answers - here, or by a grouped binary's main()
+# (functional_tests/GroupedTestMain.cpp) run by hand - and not by the test, which
+# is why the per-test qputenv() in initTestCase() covers Linux only, and why HomeUntouchedTest checks this redirect
 # rather than trusting it (test/ci/home-untouched-test.sh). Windows has no such
 # override - SHGetKnownFolderPath reads no environment - so it stays uncovered.
 #
