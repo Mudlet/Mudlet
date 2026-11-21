@@ -101,11 +101,11 @@
 
 using namespace std::chrono_literals;
 
-extern void qInitResources_mudlet();
-extern void qInitResources_qm();
-extern void qInitResources_additional_splash_screens();
-extern void qInitResources_mudlet_fonts_common();
-extern void qInitResources_mudlet_fonts_posix();
+extern int qInitResources_mudlet();
+extern int qInitResources_qm();
+extern int qInitResources_additional_splash_screens();
+extern int qInitResources_mudlet_fonts_common();
+extern int qInitResources_mudlet_fonts_posix();
 void initializeQRCResources();
 
 #if defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
@@ -121,7 +121,7 @@ void copyFont(const QString& externalPathName, const QString& resourcePathName, 
     }
 }
 
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
+#ifdef INCLUDE_EMOJI_FONT
 void removeOldNoteColorEmojiFonts()
 {
     // PLACEMARKER: previous Noto Color Emoji font versions removal
@@ -164,7 +164,7 @@ void removeOldNoteColorEmojiFonts()
         }
     }
 }
-#endif // defined(Q_OS_LINUX)
+#endif // INCLUDE_EMOJI_FONT
 #endif // defined(INCLUDE_FONTS)
 
 // Joined so the warm-up thread has fully exited, exit handlers included, before the application object
@@ -936,7 +936,7 @@ int main(int argc, char* argv[])
     if (!dir.exists(ubuntuFontDirectory)) {
         dir.mkpath(ubuntuFontDirectory);
     }
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
+#ifdef INCLUDE_EMOJI_FONT
     // Only needed/works on GNU/Linux and FreeBSD to provide color emojis:
     removeOldNoteColorEmojiFonts();
     // PLACEMARKER: current Noto Color Emoji font directory specification:
@@ -995,11 +995,11 @@ int main(int argc, char* argv[])
     copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("UbuntuMono-R.ttf"));
     copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("UbuntuMono-RI.ttf"));
 
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
+#ifdef INCLUDE_EMOJI_FONT
     // PLACEMARKER: current Noto Color Emoji font version file extraction
     copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2025-09-15-v2.051"), qsl("NotoColorEmoji.ttf"));
     copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2025-09-15-v2.051"), qsl("LICENSE"));
-#endif // defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
+#endif // INCLUDE_EMOJI_FONT
 #endif // defined(INCLUDE_FONTS)
 
     const QString homeLink = qsl("%1/mudlet-data").arg(QDir::homePath());
@@ -1051,8 +1051,7 @@ int main(int argc, char* argv[])
     QSettings* appSettings = MudletApp::getQSettings();
     bool shouldRegisterTelnet = false;
 
-    bool headlessMode =
-            qEnvironmentVariableIsSet("CI") || qEnvironmentVariableIsSet("GITHUB_ACTIONS") || QCoreApplication::arguments().contains("--profile") || QCoreApplication::arguments().contains("--mirror");
+    bool headlessMode = qEnvironmentVariableIsSet("CI") || qEnvironmentVariableIsSet("GITHUB_ACTIONS") || parser.isSet(profileToOpen) || parser.isSet(mirrorToStdout);
 
     bool forceAsk = false;
 #if defined(Q_OS_MACOS)
@@ -1081,7 +1080,8 @@ int main(int argc, char* argv[])
         shouldRegisterTelnet = appSettings->value("telnetHandlerEnabled", false).toBool();
         qDebug() << "main: Headless mode detected, skipping telnet handler registration";
     } else {
-        const bool asked = appSettings->contains("telnetHandlerAsked");
+        // The Settings checkbox saves only telnetHandlerEnabled, and that choice stands too
+        const bool asked = appSettings->contains("telnetHandlerAsked") || appSettings->contains("telnetHandlerEnabled");
         const bool storedEnabled = appSettings->value("telnetHandlerEnabled", false).toBool();
         const bool dontAsk = appSettings->value("telnetHandlerDontAsk", false).toBool();
 
@@ -1098,6 +1098,7 @@ int main(int argc, char* argv[])
         } else {
             // First time - check if there's an existing handler
             bool existingHandlerFound = false;
+            bool canRegister = true;
 
 #if defined(Q_OS_WIN)
             // Check Windows registry for existing telnet handler
@@ -1111,8 +1112,9 @@ int main(int argc, char* argv[])
             xdgQuery.start(qsl("xdg-mime"), QStringList() << qsl("query") << qsl("default") << qsl("x-scheme-handler/telnet"));
             xdgQuery.waitForFinished(3000);
             if (xdgQuery.error() == QProcess::FailedToStart) {
-                existingHandlerFound = true;
-                qDebug() << "main: Linux telnet handler check: xdg-mime not found (assuming existing handler to ask user)";
+                // Registering needs xdg-mime too; leave telnetHandlerAsked unset so installing it later brings the check back
+                canRegister = false;
+                qDebug() << "main: Linux telnet handler check: xdg-mime not found, so Mudlet cannot register as the handler";
             } else {
                 QString existingHandler = QString::fromUtf8(xdgQuery.readAllStandardOutput()).trimmed();
                 existingHandlerFound = !existingHandler.isEmpty() && !existingHandler.toLower().contains("mudlet");
@@ -1132,7 +1134,9 @@ int main(int argc, char* argv[])
             }
 #endif
 
-            if (existingHandlerFound) {
+            if (!canRegister) {
+                shouldRegisterTelnet = false;
+            } else if (existingHandlerFound) {
                 QMessageBox msgBox;
                 //: Title for the dialog asking if Mudlet should handle telnet:// and telnets:// links
                 msgBox.setWindowTitle(QObject::tr("Telnet Protocol Handler"));
@@ -1527,7 +1531,7 @@ void initializeQRCResources()
 #endif
 #ifdef INCLUDE_FONTS
     qInitResources_mudlet_fonts_common();
-#if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
+#ifdef INCLUDE_EMOJI_FONT
     qInitResources_mudlet_fonts_posix();
 #endif
 #endif

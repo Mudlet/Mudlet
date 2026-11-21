@@ -278,6 +278,122 @@ setWindow("uw", "mapper", 40, 50, true)
         QVERIFY(session.shutdown(false));
     }
 
+    // What a deleted user window held keeps its names until deferred deletes run, as the dock's deleteLater() takes
+    // it on the desktop, but is in no window an app is shown, and a script's later windows of that name stay
+    void test_whatADeletedUserWindowHeldIsInNoWindowTheAppSees()
+    {
+        const QString name = qsl("Headless Windows Held");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        QSignalSpy changes(&session, &THeadlessSession::scriptWindowsChanged);
+        QSignalSpy texts(&session, &THeadlessSession::windowTextChanged);
+        const auto namesTold = [](const QSignalSpy& spy) {
+            QStringList names;
+            for (const QList<QVariant>& emitted : spy) {
+                names << emitted.at(1).toStringList();
+            }
+            return names;
+        };
+        // The first window whose parent is a deleted window's internal key, which an app must never be given
+        const auto underRetiredKey = [&session]() {
+            for (const THeadlessSession::ScriptWindow& window : session.scriptWindows()) {
+                if (window.parent.startsWith(QChar(0))) {
+                    return window.name;
+                }
+            }
+            return QString();
+        };
+        QVERIFY(session.runLua(qsl(R"lua(
+openUserWindow("held")
+createMiniConsole("held", "heldMini", 0, 0, 100, 100)
+createMiniConsole("held", "heldRescued", 0, 0, 100, 100)
+createLabel("held", "heldLabel", 0, 0, 10, 10, 1)
+createScrollBox("held", "heldBox", 0, 0, 50, 50)
+createLabel("heldBox", "heldBoxLabel", 1, 1, 5, 5, 1)
+createScrollBox("held", "heldGoneBox", 0, 0, 50, 50)
+createLabel("heldGoneBox", "heldGoneBoxLabel", 1, 1, 5, 5, 1)
+)lua")));
+        QVERIFY(session.scriptWindow(qsl("heldGoneBoxLabel")));
+        QVERIFY(changes.wait(1000));
+        QCoreApplication::processEvents();
+        changes.clear();
+        texts.clear();
+        QVERIFY(session.runLua(qsl(R"lua(
+deleteScrollBox("heldGoneBox")
+deleteMiniConsole("held")
+echo("heldMini", "after the delete\n")
+echo("heldRescued", "before its rescue\n")
+setWindow("main", "heldRescued", 0, 0, true)
+)lua")));
+        const QStringList held{qsl("heldMini"), qsl("heldLabel"), qsl("heldBox"), qsl("heldBoxLabel"), qsl("heldGoneBoxLabel")};
+        QCOMPARE(luaString(session, qsl("windowType('heldMini')")), qsl("miniconsole"));
+        // Not changes.wait(), whose event loop would run the deferred deletes
+        QCoreApplication::processEvents();
+        QCoreApplication::processEvents();
+        QVERIFY(!changes.isEmpty());
+        const QStringList told = namesTold(changes);
+        const QStringList textTold = namesTold(texts);
+        for (const QString& window : held) {
+            QVERIFY2(!session.scriptWindow(window), qPrintable(window));
+            QVERIFY2(told.contains(window), qPrintable(window + u' ' + told.join(u',')));
+        }
+        QVERIFY(!textTold.contains(qsl("heldMini")));
+        QVERIFY(textTold.contains(qsl("heldRescued")));
+        QVERIFY(!session.windowLines(qsl("heldMini"), 0, 1));
+        QVERIFY(session.windowLines(qsl("heldRescued"), 0, 1));
+        QCOMPARE(underRetiredKey(), QString());
+        std::optional<THeadlessSession::ScriptWindow> rescued = session.scriptWindow(qsl("heldRescued"));
+        QVERIFY(rescued);
+        QCOMPARE(rescued->parent, QString());
+
+        QVERIFY(session.runLua(qsl(R"lua(
+openUserWindow("held")
+createMiniConsole("held", "heldFresh", 0, 0, 100, 100)
+createLabel("held", "heldFreshLabel", 0, 0, 10, 10, 1)
+)lua")));
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        for (const QString& window : held) {
+            QCOMPARE(luaString(session, qsl("windowType('%1')").arg(window)), qsl("nil"));
+        }
+        for (const QString& window : {qsl("heldFresh"), qsl("heldFreshLabel")}) {
+            const std::optional<THeadlessSession::ScriptWindow> fresh = session.scriptWindow(window);
+            QVERIFY2(fresh, qPrintable(window));
+            QCOMPARE(fresh->parent, qsl("held"));
+        }
+        QCOMPARE(luaString(session, qsl("windowType('heldFresh')")), qsl("miniconsole"));
+        QCOMPARE(luaString(session, qsl("windowType('heldRescued')")), qsl("miniconsole"));
+        QVERIFY(session.runLua(qsl(R"(echo("heldFresh", "fresh\n") echo("heldRescued", "still here\n"))")));
+        QVERIFY(session.windowLines(qsl("heldFresh"), 0, 1));
+        rescued = session.scriptWindow(qsl("heldRescued"));
+        QVERIFY(rescued);
+        QCOMPARE(rescued->parent, QString());
+        QCOMPARE(underRetiredKey(), QString());
+        QVERIFY(session.shutdown(false));
+    }
+
+    // Columns and rows are counted in the font the main console's text is drawn in, which a profile sheet can give it
+    void test_theMainAreaIsCountedInTheMainTextsFont()
+    {
+        const QString name = qsl("Headless Windows Main Text");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        const auto grid = [&session]() {
+            return QSize(luaString(session, qsl("getColumnCount('main')")).toInt(), luaString(session, qsl("getRowCount('main')")).toInt());
+        };
+        const QSize base = grid();
+        QVERIFY(!base.isEmpty());
+        QVERIFY(session.runLua(qsl(R"(setProfileStyleSheet("TMainConsole TTextEdit { font-size: 20pt; }"))")));
+        const QSize styled = grid();
+        QVERIFY2(styled.width() < base.width() && styled.height() < base.height(), qPrintable(qsl("%1x%2 %3x%4").arg(styled.width()).arg(styled.height()).arg(base.width()).arg(base.height())));
+        QVERIFY(session.runLua(qsl(R"(setProfileStyleSheet(""))")));
+        QCOMPARE(grid(), base);
+        QVERIFY(session.shutdown(false));
+    }
+
     void test_aTurnsChangesAreToldOnce()
     {
         const QString name = qsl("Headless Windows Changes");
@@ -582,6 +698,93 @@ end)
         QVERIFY(!session.closeUserWindow(qsl("nonesuch")));
         QVERIFY(session.shutdown(false));
         QVERIFY(!session.closeUserWindow(qsl("uw")));
+    }
+
+    void test_aTextBoxsContentIsWhatScriptsSetAndThePlayerTypes()
+    {
+        using TextBoxContent = THeadlessSession::TextBoxContent;
+        const QString name = qsl("Headless Text Box Content");
+        QVERIFY(writeProfile(name));
+        THeadlessSession session;
+        // Refused where runLua() is
+        QVERIFY(!session.setTextBoxText(qsl("notes"), qsl("early")));
+        QCOMPARE(session.errorString(), qsl("No profile is open."));
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.setMainWindowSize(QSize(800, 600)));
+        QSignalSpy changes(&session, &THeadlessSession::scriptWindowsChanged);
+        QVERIFY(session.runLua(qsl(R"lua(
+createTextEdit("notes", 0, 0, 200, 100)
+createLabel("lbl", 0, 200, 100, 20, 1)
+createScrollBox("sb", 300, 0, 200, 100)
+createTextEdit("sb", "inBox", 0, 0, 100, 50)
+)lua")));
+        QVERIFY(changes.wait(1000));
+        changes.clear();
+        std::optional<TextBoxContent> content = session.textBoxContent(qsl("notes"));
+        QVERIFY(content);
+        QVERIFY(*content == TextBoxContent{});
+        for (const QString& other : {QString(), qsl("lbl"), qsl("sb"), qsl("nope")}) {
+            QVERIFY(!session.textBoxContent(other));
+            QVERIFY(!session.setTextBoxText(other, qsl("x")));
+            QCOMPARE(session.errorString(), qsl("The profile has no text box called \"%1\".").arg(other));
+        }
+
+        // Each setting alone names the box
+        const auto toldBy = [&](const QString& lua) {
+            if (!session.runLua(lua) || !changes.wait(1000)) {
+                return false;
+            }
+            const bool named = changes.takeFirst().at(1).toStringList() == QStringList{qsl("notes")};
+            changes.clear();
+            return named;
+        };
+        QVERIFY(toldBy(qsl(R"(setTextEditText("notes", "line one\nline two"))")));
+        QVERIFY(toldBy(qsl(R"(setTextEditPlaceholder("notes", "Your notes"))")));
+        QVERIFY(toldBy(qsl(R"(setTextEditStyleSheet("notes", "color: red;"))")));
+        QVERIFY(toldBy(qsl(R"(setTextEditTabMovesFocus("notes", true))")));
+        QVERIFY(toldBy(qsl(R"(setTextEditReadOnly("notes", true))")));
+        content = session.textBoxContent(qsl("notes"));
+        QVERIFY(content);
+        QCOMPARE(content->text, qsl("line one\nline two"));
+        QCOMPARE(content->placeholder, qsl("Your notes"));
+        QCOMPARE(content->styleSheet, qsl("color: red;"));
+        QVERIFY(content->tabMovesFocus);
+        QVERIFY(content->readOnly);
+        // What it has already is no change
+        QVERIFY(session.runLua(qsl(R"(setTextEditReadOnly("notes", true) setTextEditPlaceholder("notes", "Your notes"))")));
+        QVERIFY(!changes.wait(200));
+
+        // A player cannot type in a read-only box, so neither can the app; a script still sets its text
+        QVERIFY(!session.setTextBoxText(qsl("notes"), qsl("typed")));
+        QCOMPARE(session.errorString(), qsl("The text box \"notes\" is read-only, so nothing can be typed in it."));
+        QCOMPARE(luaString(session, qsl("getTextEditText('notes')")), qsl("line one\nline two"));
+        QVERIFY(toldBy(qsl(R"(setTextEditReadOnly("notes", false))")));
+
+        // What the player typed is what a script reads, as a line break and a non-breaking space come back from the
+        // GUI's box, and it is not told back
+        QVERIFY(session.setTextBoxText(qsl("notes"), qsl("typed here now")));
+        QCOMPARE(luaString(session, qsl("getTextEditText('notes')")), qsl("typed\nhere now"));
+        QCOMPARE(session.textBoxContent(qsl("notes"))->text, qsl("typed\nhere now"));
+        QVERIFY(!changes.wait(200));
+        // A script's text is told, though the box had it when last told
+        QVERIFY(toldBy(qsl(R"(setTextEditText("notes", "line one\nline two"))")));
+        QCOMPARE(session.textBoxContent(qsl("notes"))->text, qsl("line one\nline two"));
+        QVERIFY(toldBy(qsl(R"(clearTextEdit("notes"))")));
+        QCOMPARE(session.textBoxContent(qsl("notes"))->text, QString());
+
+        // Nor in one hidden, or in a hidden window
+        QVERIFY(session.runLua(qsl("hideWindow('notes') hideWindow('sb')")));
+        for (const QString& hidden : {qsl("notes"), qsl("inBox")}) {
+            QVERIFY(!session.setTextBoxText(hidden, qsl("unseen")));
+            QCOMPARE(session.errorString(), qsl("The text box \"%1\" is not shown, so nothing can be typed in it.").arg(hidden));
+            QCOMPARE(session.textBoxContent(hidden)->text, QString());
+        }
+        QVERIFY(session.runLua(qsl("showWindow('notes') showWindow('sb')")));
+        QVERIFY(session.setTextBoxText(qsl("notes"), qsl("seen")));
+        QVERIFY(session.setTextBoxText(qsl("inBox"), qsl("seen")));
+        QCOMPARE(luaString(session, qsl("getTextEditText('inBox')")), qsl("seen"));
+
+        QVERIFY(session.shutdown(false));
     }
 
     void test_aUserWindowsSheetFindsItsTextByTheGuisName()

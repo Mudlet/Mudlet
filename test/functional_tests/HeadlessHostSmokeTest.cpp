@@ -32,7 +32,6 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QPointer>
-#include <QPromise>
 #include <QScopeGuard>
 #include <QSemaphore>
 #include <QSettings>
@@ -56,6 +55,7 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <chrono>
 #include <memory>
 
@@ -666,8 +666,9 @@ local ok, err = pcall(function()
 
   assert(deleteMiniConsole("headlessWindow") == true, "deleting the user window did not answer true")
   assert(windowType("headlessWindow") == nil, "the deleted user window still has a type")
-  assert(windowType("headlessNested") == nil, "a miniconsole in the user window outlived it")
-  assert(windowType("headlessNestedLabel") == nil, "a label in the user window outlived it")
+  -- As the GUI's dock, which goes in deferred deletes and takes them with it then
+  assert(windowType("headlessNested") == "miniconsole", "a miniconsole in the user window went before deferred deletes")
+  assert(windowType("headlessNestedLabel") == "label", "a label in the user window went before deferred deletes")
 end)
 headlessWindows = ok and 'ok' or tostring(err)
 headlessDeletedNames = table.concat(headlessDeleted, ",")
@@ -675,6 +676,10 @@ headlessDeletedNames = table.concat(headlessDeleted, ",")
 
         QVERIFY2(ran, "The Lua chunk did not run.");
         QCOMPARE(luaGlobalString(host, "headlessWindows"), qsl("ok"));
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QVERIFY2(!host->windowRegistry().subConsoleModel(qsl("headlessNested")), "A miniconsole in the deleted user window outlived deferred deletes.");
+        QVERIFY2(!host->windowRegistry().labelModel(qsl("headlessNestedLabel")), "A label in the deleted user window outlived deferred deletes.");
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(headlessDeletedNames = table.concat(headlessDeleted, ","))lua")));
         // Only what a script deleted, as the GUI raises nothing for what goes with a user window
         QCOMPARE(luaGlobalString(host, "headlessDeletedNames"), qsl("headlessLabel,headlessMini,headlessWindow"));
 
@@ -2289,14 +2294,15 @@ assert(deleteScrollBox("ubLoneBox"))
 ubTypes = tostring(windowType("ubBox")) .. "," .. tostring(windowType("ubLabel")) .. "," .. tostring(windowType("ubLine")) .. "," .. tostring(windowType("ubBoxLine"))
 )lua"));
         QVERIFY2(ran, "The Lua chunk did not run.");
-        QCOMPARE(luaGlobalString(host, "ubTypes"), qsl("nil,nil,nil,nil"));
+        // As the GUI's, where the dock takes them only in deferred deletes
+        QCOMPARE(luaGlobalString(host, "ubTypes"), qsl("scrollbox,label,commandline,commandline"));
+
+        // A main window command line of a scroll box's name is what is left of the name once the box is
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
         QVERIFY(!host->windowRegistry().hasScrollBox(qsl("ubBox")));
         QVERIFY(!host->windowRegistry().hasLabel(qsl("ubLabel")));
         QVERIFY(!host->windowRegistry().hasCommandLine(qsl("ubLine")));
         QVERIFY(!host->windowRegistry().hasCommandLine(qsl("ubBoxLine")));
-
-        // A main window command line of a scroll box's name is what is left of the name once the box is
-        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
         ran = host->getLuaInterpreter()->compileAndExecuteScript(
                 qsl(R"lua(ubShared = tostring(windowType("ubShared")) .. ":" .. table.concat({getWindowGeometry("ubShared")}, ",") .. ":" .. tostring(windowVisible("ubShared")))lua"));
         QVERIFY2(ran, "The Lua chunk after the deferred deletes did not run.");
@@ -9823,7 +9829,8 @@ headlessShrinkLeft = table.concat({tostring(windowType("headlessShrinkBuffer")),
         QVERIFY2(luaGlobalString(host, "headlessShrinks").toInt() >= 2, "A shrink event never reached the handler, so nothing was deleted mid-echo.");
         QCOMPARE(luaGlobalString(host, "headlessShrinkEcho"), qsl("true"));
         QCOMPARE(luaGlobalString(host, "headlessShrinkNestedEcho"), qsl("true"));
-        QCOMPARE(luaGlobalString(host, "headlessShrinkLeft"), qsl("nil,nil,nil"));
+        QCOMPARE(luaGlobalString(host, "headlessShrinkLeft"), qsl("nil,nil,miniconsole"));
+        QVERIFY2(!host->windowRegistry().subConsoleModel(qsl("headlessShrinkNested")), "A miniconsole in the deleted user window outlived deferred deletes.");
         QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(createBuffer("headlessShrinkBuffer"); echo("headlessShrinkBuffer", "made again\n"))lua")));
         const TConsoleModel* remade = host->windowRegistry().subConsoleModel(qsl("headlessShrinkBuffer"));
         QVERIFY2(remade, "A buffer of the deleted one's name could not be made again.");
@@ -12646,6 +12653,25 @@ end))lua");
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Opening the profile created a widget.");
     }
 
+    void test_openProfileWhoseSaveDidNotLoadSaysSoInsteadOfOk()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Open-Corrupt");
+        const QString saveFolder = MudletApp::getMudletPath(enums::profileXmlFilesPath, hostname);
+        QVERIFY(QDir().mkpath(saveFolder));
+        QFile saveFile(qsl("%1/2020-01-01#00-00-00.xml").arg(saveFolder));
+        QVERIFY(saveFile.open(QIODevice::WriteOnly));
+        saveFile.write("<?xml version=\"1.0\"?><MudletPackage version=\"1.001\"><HostPackage><Host");
+        saveFile.close();
+
+        Host* host = HostManager::self()->openProfile(hostname, false);
+        QVERIFY2(host, "The profile did not open.");
+        QVERIFY(!host->mLoadedOk);
+        QCoreApplication::processEvents();
+        QVERIFY2(!mainBufferHolds(host, qsl("loaded in offline mode")), "A profile whose save did not load was reported as loaded.");
+        QVERIFY2(mainBufferHolds(host, qsl("opened in offline mode, but")), "The offline open did not say the save failed to load.");
+        HostManager::self()->deleteHost(hostname);
+    }
+
     // A negative priority module runs before the profile's own scripts, so the editor, which lists the root
     // scripts in order, has to show it above them - and a profile reset runs them in that order too
     void test_negativePriorityModulesComeBeforeTheProfileScripts()
@@ -12944,17 +12970,102 @@ headlessRecord("finished")
     // the profile's write must read as running
     void test_aWriteWaitingForAnEarlierOneReadsAsRunning()
     {
-        QPromise<bool> earlier;
-        earlier.start();
-        QFuture<bool> later = TBackgroundTask::runAfter({earlier.future()}, []() {
+        QSemaphore release;
+        // Shared, since the scope guard waits only for the earlier task, not later's queued continuation, which may
+        // still read this after a failed check returns
+        const auto earlierDone = std::make_shared<std::atomic_bool>(false);
+        const TBackgroundResult earlier = TBackgroundTask::run([&release, earlierDone]() {
+            release.acquire();
+            *earlierDone = true;
             return true;
         });
+        // A failed check returns early, which would leave earlier's pool thread blocked for good on a semaphore that has gone
+        const auto unblock = qScopeGuard([&release, &earlier]() {
+            release.release();
+            earlier.waitForFinished();
+        });
+        // Fails unless the earlier task had finished by the time this one ran, so it catches an ordering that only timing kept
+        const TBackgroundResult later = TBackgroundTask::runAfter({earlier}, [earlierDone]() {
+            return earlierDone->load();
+        });
+        // Long enough for a free pool thread to run it if nothing holds it back; the earlier one is still blocked, so a
+        // correctly queued write cannot have run or finished
+        QTest::qWait(100);
         QVERIFY2(later.isRunning(), "A write queued behind an earlier one did not read as running.");
         QVERIFY(!later.isFinished());
-        earlier.addResult(true);
-        earlier.finish();
+        release.release();
         QTRY_VERIFY_WITH_TIMEOUT(later.isFinished(), 5000);
-        QVERIFY(later.result());
+        QVERIFY2(later.succeeded(), "A write queued behind an earlier one ran before it finished.");
+
+        // Nor may inline running start one while an earlier one is still on a pool thread
+        QSemaphore releaseHeld;
+        const auto heldDone = std::make_shared<std::atomic_bool>(false);
+        const TBackgroundResult held = TBackgroundTask::run([&releaseHeld, heldDone]() {
+            releaseHeld.acquire();
+            *heldDone = true;
+            return true;
+        });
+        const auto unblockHeld = qScopeGuard([&releaseHeld, &held]() {
+            releaseHeld.release();
+            held.waitForFinished();
+        });
+        TBackgroundTask::setRunInline(true);
+        const auto restore = qScopeGuard([]() {
+            TBackgroundTask::setRunInline(false);
+        });
+        const TBackgroundResult queued = TBackgroundTask::runAfter({held}, [heldDone]() {
+            return heldDone->load();
+        });
+        QVERIFY2(queued.isRunning(), "With inline running set, a write queued behind one still on a pool thread ran inline before it.");
+        releaseHeld.release();
+        QTRY_VERIFY_WITH_TIMEOUT(queued.isFinished(), 5000);
+        QVERIFY2(queued.succeeded(), "With inline running set, a write queued behind one ran before it finished.");
+    }
+
+    // As in a browser build: a task run inline tells its context later, from the event loop, through a named child
+    // that a wait delivering only FutureCallOut events reaches, as it would a QFutureWatcher
+    void test_anInlineTaskTellsItsContextFromTheEventLoop()
+    {
+        TBackgroundTask::setRunInline(true);
+        const auto restore = qScopeGuard([]() {
+            TBackgroundTask::setRunInline(false);
+        });
+        const TBackgroundResult result = TBackgroundTask::run([]() {
+            return true;
+        });
+        QVERIFY(result.isFinished());
+        QVERIFY(!result.isRunning());
+        QVERIFY(result.succeeded());
+
+        QObject context;
+        bool told = false;
+        const QString notifierName = qsl("inlineNotifier");
+        result.whenFinished(&context, notifierName, [&told]() {
+            told = true;
+        });
+        QVERIFY2(!told, "An inline task's end was told during whenFinished().");
+        const auto notifiers = context.findChildren<QObject*>(notifierName, Qt::FindDirectChildrenOnly);
+        QCOMPARE(notifiers.size(), 1);
+        QCoreApplication::sendPostedEvents(notifiers.first(), QEvent::FutureCallOut);
+        QVERIFY2(told, "Sending the notifier its FutureCallOut did not tell the context.");
+        QTRY_VERIFY(context.findChildren<QObject*>(notifierName, Qt::FindDirectChildrenOnly).isEmpty());
+
+        bool toldGone = false;
+        {
+            QObject gone;
+            result.whenFinished(&gone, QString(), [&toldGone]() {
+                toldGone = true;
+            });
+        }
+        QCoreApplication::processEvents();
+        QVERIFY2(!toldGone, "A context that had gone was told.");
+
+        const TBackgroundResult failed = TBackgroundTask::runForReason([]() {
+            return qsl("no room");
+        });
+        QVERIFY(failed.isFinished());
+        QVERIFY(!failed.succeeded());
+        QCOMPARE(failed.reason(), qsl("no room"));
     }
 
     // As in a browser build, whose pool never runs a task: the save's writes, and an unzipAsync(), run as they are
@@ -13008,6 +13119,12 @@ headlessRecord("finished")
         QCOMPARE(saveCount(hostname), savesBefore + 1);
         QVERIFY(newestSaveIsComplete(hostname));
 
+        // A script's wait sends only the save's own posted events, and the inline writes' ends are among them
+        QVERIFY(std::get<0>(host->saveProfile()));
+        QVERIFY(host->currentlySavingProfile());
+        host->waitForProfileSave(true);
+        QVERIFY2(!host->currentlySavingProfile(), "A wait for the save's own events did not deliver an inline write's end.");
+
         const QString extractTo = recordDir.filePath(qsl("extracted"));
         QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
 registerAnonymousEventHandler("sysUnzipDone", function() headlessRecord("sysUnzipDone") end)
@@ -13027,7 +13144,7 @@ unzipAsync([[%1]], [[%2]])
         const QString autosave = MudletApp::getMudletPath(enums::profileMapPathFileName, hostname, qsl("autosave.dat"));
         QFile::remove(autosave);
         host->autoSaveMap();
-        QVERIFY2(host->mMapAutosaveFuture.isFinished(), "The map's autosave was left for a pool thread.");
+        QVERIFY2(host->mMapAutosave.isFinished(), "The map's autosave was left for a pool thread.");
         QVERIFY(QFileInfo(autosave).size() > 0);
         host->waitForMapAutosave();
         QVERIFY(!host->mpMap->isUnsaved());

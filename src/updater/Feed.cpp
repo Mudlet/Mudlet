@@ -164,6 +164,11 @@ bool Feed::isReady() const
     return mReady;
 }
 
+bool Feed::isLoading() const
+{
+    return mFeedReply != nullptr && !mFeedReply->isFinished();
+}
+
 bool Feed::isDownloading() const
 {
     // The checksums are fetched before the download request is made, so a

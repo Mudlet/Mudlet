@@ -350,6 +350,7 @@ void THeadlessSession::connectCommandRelays(const unsigned int run)
 void THeadlessSession::disconnectCommandRelays()
 {
     if (auto* pView = dynamic_cast<TNullAppFrontend*>(TAppFrontend::instance())) {
-        disconnect(&pView->mNotifier, nullptr, this, nullptr);
+        // Only this one: configWritten is connected once, by the constructor, for every run of the session
+        disconnect(&pView->mNotifier, &TNullAppFrontendNotifier::addonCommandsChanged, this, nullptr);
     }
 }

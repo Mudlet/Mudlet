@@ -32,6 +32,7 @@
 #include "KeyUnit.h"
 #include "ScriptUnit.h"
 #include "GifTracker.h"
+#include "TBackgroundTask.h"
 #include "TConsoleModel.h"
 #include "TLuaInterpreter.h"
 #include "TimerUnit.h"
@@ -44,7 +45,6 @@
 #include <QColor>
 #include <QFile>
 #include <QFont>
-#include <QFuture>
 #include <QList>
 #include <QMargins>
 #include <QPointer>
@@ -1194,6 +1194,9 @@ public:
     bool mResetProfile = false;
     int mScreenHeight = 25;
     int mScreenWidth = 90;
+    // With no view, what the game is told (NAWS) in place of mScreenWidth and mScreenHeight, from a frontend that
+    // counts the main console's columns and rows in a font of its own: THeadlessSession::setGameScreenSize()
+    std::optional<QSize> mGameScreenSize;
 
     // has the profile save data been loaded without issues?
     // if there were issues during loading, we should not save anything on close
@@ -1597,17 +1600,18 @@ private:
     // False if a module was not written, with a console line for each in failures.
     static bool writeModuleFiles(const QList<ModuleWriteJob>& jobs, QStringList& failures);
     static bool updateModuleZip(const ModuleWriteJob& job, QString& reason);
-    // Main thread only: snapshot of the still-pending profile-save futures, so a
-    // background task never reads `writers`/`saveFutures` while the main thread mutates
+    // Main thread only: snapshot of the still-pending profile saves, so a
+    // background task never reads `writers`/`saveResults` while the main thread mutates
     // them (that concurrent access is a heap-corrupting data race).
-    QList<QFuture<bool>> pendingXmlSaveFutures() const;
+    QList<TBackgroundResult> pendingXmlSaves() const;
     void waitForAsyncXmlSave();
     void reloadModules();
     void startMapAutosave(const int interval);
     void timerEvent(QTimerEvent* event) override;
     void autoSaveMap();
     void autoSaveMapInBackground(const QString& path);
-    void closeChildren();
+    // connectionEnded, for a close with no view, has the connection wait from the event loop for the game to close too
+    void closeChildren(std::function<void()> connectionEnded = {});
     void installModulesList(const QStringList&);
     void setupSandboxedLuaState(lua_State* L);
 
@@ -1744,8 +1748,8 @@ private:
     // keeps track of all of the array writers we're currently operating with
     QHash<QString, std::shared_ptr<XMLexport>> writers;
 
-    QFuture<bool> mModuleFuture;
-    QFuture<QString> mMapAutosaveFuture;
+    TBackgroundResult mModuleWrite;
+    TBackgroundResult mMapAutosave;
     bool mMapAutosaveResultPending = false;
 
     // Will be null/empty if is to use Mudlet's default/own presence

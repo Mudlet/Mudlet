@@ -94,6 +94,23 @@ jobs:
       - name: Configure
         run: cmake --preset linux-core-minimal
 
+      - name: Check neither mudlet_core nor mudlet-headless carries the build-type splash images
+        # build.ninja names the images of every qrc CMake reads at configure time, so this finds them moved into
+        # another qrc; a GENERATED qrc's are not named, hence the qrc-name match and the check on mudlet.qrc's
+        run: |
+          if ! grep -qx 'USE_VARIABLE_SPLASH_SCREEN:BOOL=ON' build-linux-core-minimal/CMakeCache.txt; then
+            echo "::error::USE_VARIABLE_SPLASH_SCREEN is off in this configure, so this step would check nothing"
+            exit 1
+          fi
+          if ! grep -q 'splash/Mudlet_splashscreen_main.png' build-linux-core-minimal/build.ninja; then
+            echo "::error::build.ninja does not list mudlet.qrc's images, so this step cannot see the splash images"
+            exit 1
+          fi
+          if grep -Eq 'additional_splash_screens|Mudlet_splashscreen_(development|ptb|other_)' build-linux-core-minimal/build.ninja; then
+            echo "::error::A target without the desktop GUI builds the splash images, which only the GUI shows"
+            exit 1
+          fi
+
       - name: Build
         run: cmake --build --preset linux-core-minimal
 

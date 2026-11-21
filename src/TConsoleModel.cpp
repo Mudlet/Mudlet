@@ -23,6 +23,7 @@
 
 #include "Host.h"
 #include "MudletApp.h"
+#include "TAppFrontend.h"
 #include "TDebug.h"
 
 #include <QCoreApplication>
@@ -1139,8 +1140,20 @@ void TConsoleModel::applyLinkSelection(const int linkIndex, QString& command, co
         }
     }
 
+    // The pointer, a pressed button and focus outrank being selected, so a link in one of those states keeps it
+    const auto stateFor = [this](int link, bool linkSelected) {
+        const auto current = buffer.getLinkState(link);
+        if (current == Mudlet::HyperlinkStyling::StateDisabled || current == Mudlet::HyperlinkStyling::StateActive || current == Mudlet::HyperlinkStyling::StateHover) {
+            return current;
+        }
+        if (buffer.showsFocus(link)) {
+            return Mudlet::HyperlinkStyling::StateFocusVisible;
+        }
+        return linkSelected ? Mudlet::HyperlinkStyling::StateSelected : Mudlet::HyperlinkStyling::StateDefault;
+    };
+
     buffer.setLinkSelected(linkIndex, selected);
-    buffer.setLinkState(linkIndex, selected ? Mudlet::HyperlinkStyling::StateSelected : Mudlet::HyperlinkStyling::StateDefault);
+    buffer.setLinkState(linkIndex, stateFor(linkIndex, selected));
     buffer.updateLinkCharacters(linkIndex);
 
     if (!mHyperlinkSelectionManager.isGroupExclusive(group)) {
@@ -1156,7 +1169,7 @@ void TConsoleModel::applyLinkSelection(const int linkIndex, QString& command, co
         const QList<int> memberLinks = buffer.mLinkStore.getLinkIdsByGroupValue(group, member);
         for (const int memberLink : memberLinks) {
             buffer.setLinkSelected(memberLink, memberSelected);
-            buffer.setLinkState(memberLink, memberSelected ? Mudlet::HyperlinkStyling::StateSelected : Mudlet::HyperlinkStyling::StateDefault);
+            buffer.setLinkState(memberLink, stateFor(memberLink, memberSelected));
             buffer.updateLinkCharacters(memberLink);
         }
     }
@@ -1358,11 +1371,10 @@ void removeAutologSentinel(const QString& path)
     if (!sentinel.exists()) {
         return;
     }
-    if (sentinel.isDir()) {
-        QDir().rmdir(path);
-        return;
+    const bool removed = sentinel.isDir() ? QDir().rmdir(path) : QFile::remove(path);
+    if (removed) {
+        TAppFrontend::instance()->configWritten();
     }
-    QFile::remove(path);
 }
 } // namespace
 
@@ -1406,6 +1418,7 @@ void TConsoleModel::toggleLogging(bool isMessageEnabled)
     const auto loggingPath = MudletApp::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("autolog"));
     QFile file(loggingPath);
     const QDateTime logDateTime = QDateTime::currentDateTime();
+    QString previousSessions;
     if (!mLogToLogFile) {
         if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
             qWarning() << "TConsoleModel: failed to open autolog file" << loggingPath << "for writing:" << file.errorString();
@@ -1415,6 +1428,7 @@ void TConsoleModel::toggleLogging(bool isMessageEnabled)
         }
         QTextStream out(&file);
         file.close();
+        TAppFrontend::instance()->configWritten();
 
         QString directoryLogFile;
         QString logFileName;
@@ -1463,6 +1477,32 @@ void TConsoleModel::toggleLogging(bool isMessageEnabled)
                 qWarning() << "TConsoleModel: failed to open log file" << mLogFileName << "for reading/writing:" << mLogFile.errorString();
                 removeAutologSentinel(loggingPath);
                 reportFailedLogStart(mLogFileName, mLogFile.errorString());
+                return;
+            }
+            // The earlier sessions are carried into the rewritten file from
+            // the old <body>, so a file without one would be wiped
+            QTextStream previousLog(&mLogFile);
+            bool isAtBody = false;
+            bool hasContent = false;
+            while (!previousLog.atEnd()) {
+                const QString line = previousLog.readLine();
+                // An editor "emptying" a file often leaves a newline or byte order mark behind
+                hasContent = hasContent || !line.trimmed().remove(QChar::ByteOrderMark).isEmpty();
+                if (line.contains("<body><div>")) {
+                    isAtBody = true;
+                } else if (line.contains("</div></body>")) {
+                    isAtBody = false;
+                }
+
+                if (isAtBody) {
+                    previousSessions.append(line).append(QChar::LineFeed);
+                }
+            }
+            if (previousSessions.isEmpty() && hasContent) {
+                mLogFile.close();
+                removeAutologSentinel(loggingPath);
+                //: Reason shown when logging to an HTML file is refused because the file already holds something that is not a Mudlet HTML log
+                reportFailedLogStart(mLogFileName, QCoreApplication::translate("TConsoleModel", "the file already exists and is not a Mudlet HTML log, so logging to it would overwrite it"));
                 return;
             }
         } else {
@@ -1532,26 +1572,8 @@ void TConsoleModel::toggleLogging(bool isMessageEnabled)
             logStream << "     -->\n";
             logStream << "  </style>\n";
             logStream << "  </head>\n";
-            bool isAtBody = false;
-            bool foundBody = false;
-            while (!mLogStream.atEnd()) {
-                const QString line = mLogStream.readLine();
-                if (line.contains("<body><div>")) {
-                    // Begin writing old log to the current log when the body is
-                    // found.
-                    isAtBody = true;
-                    foundBody = true;
-                } else if (line.contains("</div></body>")) {
-                    // Stop writing to current log once the end of the old log's
-                    // <body> is reached.
-                    isAtBody = false;
-                }
-
-                if (isAtBody) {
-                    logStream << line << "\n";
-                }
-            }
-            if (!foundBody) {
+            logStream << previousSessions;
+            if (previousSessions.isEmpty()) {
                 logStream << "  <body><div>\n";
             } else {
                 // Put a horizontal line between separate log sessions
@@ -1586,21 +1608,25 @@ void TConsoleModel::toggleLogging(bool isMessageEnabled)
                     QCoreApplication::translate("TMainConsole", "'Log session starting at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'.")));
         }
     } else {
-        // Logging is being turned off
-        buffer.logRemainingOutput();
-        //: This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale
-        const QString endDateTimeLine = logDateTime.toString(QCoreApplication::translate("TMainConsole", "'Log session ending at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'."));
-        if (mpHost->mIsCurrentLogFileInHtmlFormat) {
-            mLogStream << qsl("<p>%1</p>\n").arg(endDateTimeLine);
-            mLogStream << "  </div></body>\n";
-            mLogStream << "</html>\n";
-        } else {
-            // File is NOT an HTML one but pure text:
-            mLogStream << endDateTimeLine << "\n";
-        }
-        mLogFile.flush();
-        mLogFile.close();
+        closeLogFile();
     }
 
     mpHost->raiseLoggingStateChanged(mLogToLogFile);
+}
+
+void TConsoleModel::closeLogFile()
+{
+    buffer.logRemainingOutput();
+    //: This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale
+    const QString endDateTimeLine = QDateTime::currentDateTime().toString(QCoreApplication::translate("TMainConsole", "'Log session ending at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'."));
+    if (mpHost->mIsCurrentLogFileInHtmlFormat) {
+        mLogStream << qsl("<p>%1</p>\n").arg(endDateTimeLine);
+        mLogStream << "  </div></body>\n";
+        mLogStream << "</html>\n";
+    } else {
+        // File is NOT an HTML one but pure text:
+        mLogStream << endDateTimeLine << "\n";
+    }
+    mLogFile.flush();
+    mLogFile.close();
 }

@@ -1281,6 +1281,9 @@ int TLuaInterpreter::sttGetPlatformKey(lua_State* L)
 #else
     lua_pushstring(L, "windows-x86");
 #endif
+#elif defined(Q_OS_ANDROID)
+    // Before Q_OS_LINUX, which Android also defines: a desktop Linux build cannot load there
+    lua_pushnil(L);
 #elif defined(Q_OS_LINUX)
 #if defined(Q_PROCESSOR_ARM_64)
     lua_pushstring(L, "linux-aarch64");

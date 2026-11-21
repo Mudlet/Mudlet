@@ -38,6 +38,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     AddonControlsTest.cpp
     AnalyseCharactersTest.cpp
     AsciiLineBreakTest.cpp
+    BringWindowToFrontTest.cpp
     ConsoleFootSeamTest.cpp
     BlinkRowRepaintTest.cpp
     ConsoleModelExtractionTest.cpp
@@ -97,6 +98,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     DetachedWindowToolBarIconSizeTest.cpp
     DetachedWindowToolBarVisibilityTest.cpp
     DetachedWindowMuteStateTest.cpp
+    DetachedWindowToggleStateTest.cpp
     GlobalSettingsFlushTest.cpp
     AppFrontendAsyncTest.cpp
     PastedLinkStateTest.cpp
@@ -106,6 +108,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     TrackedLinkTrimTest.cpp
     ProfileSwitchShortcutTest.cpp
     ProfileTabBarStyleTest.cpp
+    ProfileTabLabelTest.cpp
     SubCommandLineLifetimeTest.cpp
     ReplaySpeedClampTest.cpp
     WindowBackgroundTest.cpp
@@ -119,6 +122,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     ScriptFileDialogTest.cpp
     OpaqueConsolePaintTest.cpp
     ConnectButtonIconsTest.cpp
+    PrimaryButtonStatesTest.cpp
 )
 
 # Profiles: their config dir, their folders, and loading, saving and deleting them
@@ -205,6 +209,7 @@ set(TELNET_GROUP_TEST_SOURCES
 # Triggers and the other scriptable units, and what a running script does to them
 set(TRIGGER_GROUP_TEST_SOURCES
     CaptureGroupParkingTest.cpp
+    ColorTriggerPaletteTest.cpp
     BigramFilterTest.cpp
     CompileErrorLabelTest.cpp
     CorruptTriggerPatternsTest.cpp
@@ -295,6 +300,7 @@ set(EDITOR_GROUP_TEST_SOURCES
 set(MAP_GROUP_TEST_SOURCES
     EmbeddedMapperCreationTest.cpp
     MapAutosaveTest.cpp
+    MapLabelColourWellTest.cpp
     FloatingMapKeyBindingTest.cpp
     ExitAppearanceTest.cpp
     MapAreaReassignmentTest.cpp
@@ -431,6 +437,7 @@ if(USE_HEADLESS)
     list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessSessionLinksTest.cpp)
     list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessSessionWindowsTest.cpp)
     list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessSessionWindowTextTest.cpp)
+    list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessSessionTransportTest.cpp)
     list(APPEND TEARDOWN_GROUP_TEST_SOURCES BuiltinMudletLuaTest.cpp)
     list(APPEND TEARDOWN_GROUP_TEST_SOURCES PreloadedLuaModuleTest.cpp)
 endif()
@@ -547,6 +554,8 @@ endforeach()
 # add_test entry, which names the class for the group binary to run.
 macro(add_grouped_test_binary target)
     add_functional_test_binary(${target} GroupedTestMain.cpp ${ARGN})
+    # So a functional group run by hand sets MUDLET_TEST_MODE as ctest does; unit_tests runs without it under ctest too
+    target_compile_definitions(${target} PRIVATE MUDLET_FUNCTIONAL_TEST_GROUP)
     foreach(grouped_test_file ${ARGN})
         get_filename_component(grouped_test_name ${grouped_test_file} NAME_WE)
         add_test(NAME ${grouped_test_name} COMMAND $<TARGET_FILE:${target}> ${grouped_test_name})
@@ -873,6 +882,10 @@ set_tests_properties(TelnetNewEnvironTest TelnetOptionsReportTest TelnetAtcpMspT
 # ProfileLifecycleTest opens and closes several profiles, and every open is a
 # full profile load and every close a full save, so it needs a longer timeout
 set_tests_properties(ProfileLifecycleTest PROPERTIES TIMEOUT 300)
+
+# MissingDisplayFontTest opens, reopens and closes profiles across some fifty cases;
+# a macOS runner takes 45s of the default 60s, and a busy one ran out
+set_tests_properties(MissingDisplayFontTest PROPERTIES TIMEOUT 300)
 
 # FeedChecksumRaceTest passes in about 5 seconds, so this timeout is only ever
 # reached by a run that is already failing - and that run has to be allowed to

@@ -524,6 +524,29 @@ describe("Tests that the other bad-argument refusals stay on one line", function
   end)
 end)
 
+-- setRoomEnv() and roomExists() have no range check of their own, so these
+-- exercise getVerifiedInt()'s; getRoomEnv() hands back the int setRoomEnv() stored
+describe("Tests the range of numbers an integer argument takes", function()
+
+  -- A fraction is truncated, so these still land on an int
+  for _, case in ipairs({{2147483647, 2147483647}, {-2147483648, -2147483648},
+      {2147483647.5, 2147483647}, {-2147483648.5, -2147483648}}) do
+    it("takes " .. case[1] .. " as " .. case[2], function()
+      local id = createRoomID()
+      assert.is_true(addRoom(id))
+      finally(function() deleteRoom(id) end)
+      assert.is_true(setRoomEnv(id, case[1]))
+      assert.are.equal(case[2], getRoomEnv(id))
+    end)
+  end
+
+  for _, case in ipairs({{"2147483648", 2147483648}, {"-2147483649", -2147483649}, {"1e10", 1e10}, {"NaN", 0 / 0}}) do
+    it("refuses " .. case[1] .. " rather than wrapping it into range", function()
+      assertArgError(function() return roomExists(case[2]) end, "roomExists: integer over/under-flow in argument #1")
+    end)
+  end
+end)
+
 describe("Tests that raiseEvent lets go of what it was handed when it refuses", function()
 
   local function registryEntryCount()
@@ -779,6 +802,26 @@ describe("Tests feedTelnet's marker escapes", function()
     local ok, msg = feedTelnet("FeedTelnetEscaped <<T_IAC>> and <<b>>\n")
     assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
     assert.is_true(contains(textFrom(mark), "FeedTelnetEscaped <T_IAC> and <b>"), textFrom(mark))
+  end)
+
+  -- A subnegotiation payload reaches sysTelnetEvent byte for byte, so it shows what each marker became
+  it("turns the named control code markers NUL to DC4 into their bytes", function()
+    -- <FF> is left out: as a hex marker it is 0xFF, not form feed
+    local names = {NUL = 0, SOH = 1, STX = 2, ETX = 3, EOT = 4, ENQ = 5, ACK = 6, BELL = 7, BS = 8, HTAB = 9, LF = 10,
+                   VTAB = 11, CR = 13, SO = 14, SI = 15, DLE = 16, DC1 = 17, DC2 = 18, DC3 = 19, DC4 = 20}
+    local option = 140
+    for name, byte in pairs(names) do
+      local seen
+      local handler = registerAnonymousEventHandler("sysTelnetEvent", function(_, kind, opt, payload)
+        if kind == 250 and opt == option then
+          seen = payload
+        end
+      end)
+      local ok, msg = feedTelnet("<T_IAC><T_SB>" .. string.char(option) .. "<" .. name .. "><T_IAC><T_SE>")
+      killAnonymousEventHandler(handler)
+      assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+      assert.equals(string.char(byte), seen, "<" .. name .. "> did not become byte " .. byte)
+    end
   end)
 end)
 
