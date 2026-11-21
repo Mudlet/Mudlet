@@ -26,6 +26,7 @@
  */
 
 #include <QAbstractButton>
+#include <QAccessible>
 #include <QAction>
 #include <QApplication>
 #include <QImage>
@@ -56,8 +57,6 @@
 #include "uiDesign.h"
 
 #include "GroupedTest.h"
-
-using namespace std::chrono_literals;
 
 class PackageManagerShellTest : public QObject
 {
@@ -263,12 +262,10 @@ private slots:
 
         mpDialog->mpSplitter->setSizes({mpDialog->width() - 330, 330});
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
         const QString cramped = mpDialog->label_packageName->text();
 
         mpDialog->mpSplitter->setSizes({300, mpDialog->width() - 300});
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
         const QString roomy = mpDialog->label_packageName->text();
         qInfo().noquote() << qsl("  the headline reads \"%1\" with the details column narrow and \"%2\" with it wide").arg(cramped, roomy);
 
@@ -288,14 +285,12 @@ private slots:
         mudlet::self()->raise();
         mudlet::self()->activateWindow();
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
         if (QApplication::activeWindow() != mudlet::self()) {
             QSKIP("this platform does not report window activation, so nothing here can be read");
         }
 
         mpDialog->comeBackToFront();
         QCoreApplication::processEvents();
-        QTest::qWait(50ms);
         QVERIFY2(QApplication::activeWindow() == mpDialog,
                  qPrintable(qsl("after asking for the front the active window is %1 rather than the package manager")
                                     .arg(QApplication::activeWindow() ? QApplication::activeWindow()->objectName() : qsl("none"))));
@@ -681,6 +676,18 @@ private slots:
         TestPixels::settle();
     }
 
+    // Without an accessible name a screen reader reads these as just "edit" and "list"
+    void test_theSearchFieldAndListHaveScreenReaderNames()
+    {
+        for (const QString& objectName : {qsl("lineEdit_searchBar"), qsl("packageList")}) {
+            auto* pWidget = mpDialog->findChild<QWidget*>(objectName);
+            QVERIFY2(pWidget, qPrintable(objectName));
+            QAccessibleInterface* pInterface = QAccessible::queryAccessibleInterface(pWidget);
+            QVERIFY(pInterface);
+            QVERIFY2(!pInterface->text(QAccessible::Name).trimmed().isEmpty(), qPrintable(qsl("%1 has no name for a screen reader to announce").arg(objectName)));
+        }
+    }
+
     void test_theActionButtonsSayWhatTheyDo()
     {
         showView(NavigationView::Installed);
@@ -746,9 +753,7 @@ private slots:
 
         const int narrow = floor.width();
         mpDialog->resize(narrow, 420);
-        QCoreApplication::processEvents();
-        QTest::qWait(50ms);
-        QCoreApplication::processEvents();
+        TestPixels::settle();
         qInfo().noquote() << qsl("  asked for %1x420 the window measures %2x%3; the row needs %4px worded and has %5px; Website reads \"%6\"")
                                      .arg(QString::number(narrow),
                                           QString::number(mpDialog->width()),
@@ -771,9 +776,7 @@ private slots:
         // The row's words come back at a wider width than they were taken away at,
         // so a width on the line does not flicker
         mpDialog->resize(1000, 600);
-        QCoreApplication::processEvents();
-        QTest::qWait(50ms);
-        QCoreApplication::processEvents();
+        TestPixels::settle();
         qInfo().noquote() << qsl("  back at 1000px across Website reads \"%1\"").arg(mpDialog->pushButton_website->text());
         QVERIFY2(mpDialog->pushButton_website->text() == qsl("Website"),
                  qPrintable(qsl("with room for every word again Website reads \"%1\" rather than its own word").arg(mpDialog->pushButton_website->text())));

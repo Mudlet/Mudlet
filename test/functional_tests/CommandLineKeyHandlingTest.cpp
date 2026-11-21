@@ -63,6 +63,13 @@
 
 using namespace std::chrono_literals;
 
+// Qt::ControlModifier is Command on macOS, where the Ctrl key arrives as Qt::MetaModifier
+#if defined(Q_OS_MACOS)
+static constexpr Qt::KeyboardModifier controlKey = Qt::MetaModifier;
+#else
+static constexpr Qt::KeyboardModifier controlKey = Qt::ControlModifier;
+#endif
+
 class CommandLineKeyHandlingTest : public QObject
 {
     Q_OBJECT
@@ -1089,6 +1096,29 @@ private slots:
         QCOMPARE(pLayer->maximumHeight(), oneRow);
     }
 
+    // The context menu's Paste, a middle-click and a drop bypass the key handler,
+    // so the line has to grow for a pasted block of rows by itself
+    void test_pastingSeveralRowsResizesTheMainCommandLine()
+    {
+        TCommandLine* pMain = mpHost->mainConsoleView()->mpCommandLine;
+        QVERIFY(pMain);
+        QWidget* pLayer = mpHost->mainConsoleView()->layerCommandLine;
+        QVERIFY(pLayer);
+        const auto clearMain = qScopeGuard([this]() {
+            runLua(qsl("clearCmdLine()"));
+        });
+        QVERIFY(runLua(qsl("clearCmdLine()")));
+        qApp->processEvents();
+        const int oneRow = pLayer->maximumHeight();
+
+        QGuiApplication::clipboard()->setText(qsl("row one\nrow two\nrow three"));
+        pMain->paste();
+        qApp->processEvents();
+
+        QCOMPARE(pMain->document()->blockCount(), 3);
+        QVERIFY2(pLayer->maximumHeight() > oneRow, qPrintable(qsl("three pasted rows left the command line %1 high, one row %2").arg(pLayer->maximumHeight()).arg(oneRow)));
+    }
+
     // Escape leaves completion mode, and selects the line so the next thing
     // typed replaces it.
     void test_escapeSelectsTheWholeLine()
@@ -1569,20 +1599,23 @@ private slots:
     {
         QTest::addColumn<Host::CaretShortcut>("shortcut");
         QTest::addColumn<Qt::Key>("key");
-        QTest::newRow("F6") << Host::CaretShortcut::F6 << Qt::Key_F6;
-        QTest::newRow("Tab") << Host::CaretShortcut::Tab << Qt::Key_Tab;
+        QTest::addColumn<Qt::KeyboardModifiers>("modifiers");
+        QTest::newRow("F6") << Host::CaretShortcut::F6 << Qt::Key_F6 << Qt::KeyboardModifiers();
+        QTest::newRow("Tab") << Host::CaretShortcut::Tab << Qt::Key_Tab << Qt::KeyboardModifiers();
+        QTest::newRow("Ctrl+Tab") << Host::CaretShortcut::CtrlTab << Qt::Key_Tab << Qt::KeyboardModifiers(controlKey);
     }
 
     void test_theChosenCaretKeyTurnsCaretModeOn()
     {
         QFETCH(Host::CaretShortcut, shortcut);
         QFETCH(Qt::Key, key);
+        QFETCH(Qt::KeyboardModifiers, modifiers);
         TCommandLine* pCommandLine = freshCommandLine();
         QVERIFY(pCommandLine);
         QVERIFY(!mpHost->caretEnabled());
 
-        // with no caret key chosen the press is the command line's own
-        press(pCommandLine, key);
+        // with no caret key chosen the press leaves caret mode alone
+        press(pCommandLine, key, modifiers);
         QVERIFY2(!mpHost->caretEnabled(), "caret mode came on with no caret key chosen");
 
         mpHost->mCaretShortcut = shortcut;
@@ -1595,9 +1628,93 @@ private slots:
             QTest::qWait(80ms);
         });
 
-        press(pCommandLine, key);
+        QKeyEvent override(QEvent::ShortcutOverride, key, modifiers);
+        QVERIFY2(pCommandLine->claimsShortcutOverride(&override), "the chosen caret key was left to the application's shortcuts");
+
+        press(pCommandLine, key, modifiers);
 
         QVERIFY2(mpHost->caretEnabled(), "the chosen caret key did not turn caret mode on");
+    }
+
+    // Ctrl+Tab is "next profile" by default, so Tab as the caret key must leave it alone
+    void test_tabAsTheCaretKeyLeavesCtrlTabToTheApplication()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        mpHost->mCaretShortcut = Host::CaretShortcut::Tab;
+        const auto restoreCaretMode = qScopeGuard([this]() {
+            mpHost->mCaretShortcut = Host::CaretShortcut::None;
+            if (mpHost->caretEnabled()) {
+                mpHost->setCaretEnabled(false);
+            }
+            QTest::qWait(80ms);
+        });
+
+        QKeyEvent override(QEvent::ShortcutOverride, Qt::Key_Tab, controlKey);
+        QVERIFY2(!pCommandLine->claimsShortcutOverride(&override), "Tab as the caret key claimed Ctrl+Tab from the profile-switching shortcut");
+
+        press(pCommandLine, Qt::Key_Tab, controlKey);
+
+        QVERIFY2(!mpHost->caretEnabled(), "Ctrl+Tab turned caret mode on when Tab is the caret key");
+    }
+
+    // macOS sends Ctrl+Tab only as a possible shortcut, with no key press after it, so the claim alone has to toggle
+    void test_ctrlTabArrivingOnlyAsAShortcutTurnsCaretModeOn()
+    {
+#if !defined(Q_OS_MACOS)
+        QSKIP("only macOS delivers Ctrl+Tab without a key press");
+#else
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        mpHost->mCaretShortcut = Host::CaretShortcut::CtrlTab;
+        const auto restoreCaretMode = qScopeGuard([this]() {
+            mpHost->mCaretShortcut = Host::CaretShortcut::None;
+            if (mpHost->caretEnabled()) {
+                mpHost->setCaretEnabled(false);
+            }
+            QTest::qWait(80ms);
+        });
+
+        // As QNSView sends it: the native Tab key code, then nothing if the override is claimed
+        QKeyEvent override(QEvent::ShortcutOverride, Qt::Key_Tab, controlKey, 0, 0x30, 0, qsl("\t"));
+        override.ignore();
+        QApplication::sendEvent(pCommandLine, &override);
+        QVERIFY(override.isAccepted());
+
+        QTRY_VERIFY2(mpHost->caretEnabled(), "Ctrl+Tab sent as macOS sends it did not turn caret mode on");
+#endif
+    }
+
+    // A plain Tab from macOS carries the same native key code, but its press does follow, so it must not be posted another
+    void test_plainTabAsTheCaretKeyIsPressedOnceOnMacOS()
+    {
+#if !defined(Q_OS_MACOS)
+        QSKIP("only macOS posts a key press for a claimed Tab");
+#else
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        mpHost->mCaretShortcut = Host::CaretShortcut::Tab;
+        const auto restoreCaretMode = qScopeGuard([this]() {
+            mpHost->mCaretShortcut = Host::CaretShortcut::None;
+            if (mpHost->caretEnabled()) {
+                mpHost->setCaretEnabled(false);
+            }
+            QTest::qWait(80ms);
+        });
+        const quint64 handOffsBefore = mpHost->mKeyboardHandOffs;
+
+        // As QNSView's keyDown sends it: the override, then the press
+        QKeyEvent override(QEvent::ShortcutOverride, Qt::Key_Tab, Qt::NoModifier, 0, 0x30, 0, qsl("\t"));
+        override.ignore();
+        QApplication::sendEvent(pCommandLine, &override);
+        QVERIFY(override.isAccepted());
+        QKeyEvent press(QEvent::KeyPress, Qt::Key_Tab, Qt::NoModifier, 0, 0x30, 0, qsl("\t"));
+        QApplication::sendEvent(pCommandLine, &press);
+        QCoreApplication::processEvents();
+
+        QVERIFY(mpHost->caretEnabled());
+        QCOMPARE(mpHost->mKeyboardHandOffs, handOffsBefore + 1);
+#endif
     }
 };
 
