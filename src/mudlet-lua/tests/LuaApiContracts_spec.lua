@@ -1102,6 +1102,8 @@ end)
 
 describe("Tests that the item lookups refuse a numeric ID outside int's range", function()
 
+  local notAnId = "does not seem to be parseable as a positive integer"
+
   local hostile = {
     {"math.huge", math.huge},
     {"-math.huge", -math.huge},
@@ -1114,9 +1116,9 @@ describe("Tests that the item lookups refuse a numeric ID outside int's range", 
     local label, id = case[1], case[2]
 
     it("refuses " .. label .. " in exists, isActive and getKeyCode", function()
-      assertRefused("does not seem to be parseable as a positive integer", exists(id, "trigger"))
-      assertRefused("does not seem to be parseable as a positive integer", isActive(id, "trigger"))
-      assertRefused("does not seem to be parseable as a positive integer", getKeyCode(id))
+      assertRefused(notAnId, exists(id, "trigger"))
+      assertRefused(notAnId, isActive(id, "trigger"))
+      assertRefused(notAnId, getKeyCode(id))
     end)
   end
 
