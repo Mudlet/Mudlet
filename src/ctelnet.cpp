@@ -5585,7 +5585,7 @@ void cTelnet::setAutoReconnect(bool status)
 {
     mAutoReconnect = status;
     // A retry already waiting after a failed connection would otherwise still run
-    if (!status && mTimerFailedConnectionRetry) {
+    if (!status) {
         mTimerFailedConnectionRetry->stop();
     }
 }
