@@ -146,6 +146,7 @@ describe("Tests keybind-related functions", function()
       assert.are.equal(0, exists(probe + 1, "keybind"), "the key that failed to compile must be removed")
       assert.is_string(message)
       assert.truthy(message:find("unable to compile", 1, true), message)
+      assert.truthy(message:find("')' expected", 1, true), "the reason the body did not compile is missing: " .. message)
     end)
 
     it("rejects a non-string, non-function body", function()
