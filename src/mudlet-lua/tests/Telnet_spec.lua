@@ -1858,14 +1858,15 @@ describe("Tests telnet option negotiation", function()
     end)
 
     feed("<T_IAC><T_DO><O_AARDWULF>")
-    local replacements = {n = 2, nil, "not a table"}
-    for i = 1, replacements.n do
-      _G.channel102 = replacements[i]
+    local function receiveAfterReplacingWith(replacement)
+      _G.channel102 = replacement
       seen = nil
       feed("<T_IAC><T_SB><O_AARDWULF>" .. string.char(5) .. string.char(3) .. "<T_IAC><T_SE>")
       assert.same({[5] = 3}, _G.channel102)
       assert.same({5, 3}, seen)
     end
+    receiveAfterReplacingWith(nil)
+    receiveAfterReplacingWith("not a table")
   end)
 
   it("keeps the channel102 table a script holds and what is already in it", function()
@@ -1889,14 +1890,15 @@ describe("Tests telnet option negotiation", function()
       _G.atcp = saved
     end)
 
-    local replacements = {n = 2, nil, "not a table"}
-    for i = 1, replacements.n do
-      _G.atcp = replacements[i]
+    local function receiveAfterReplacingWith(replacement)
+      _G.atcp = replacement
       raised = nil
       feed("<T_IAC><T_SB><O_ATCP>Room.Brief Spec cave<T_IAC><T_SE>")
       assert.same({RoomBrief = "Spec cave"}, _G.atcp)
       assert.equals("Spec cave", raised)
     end
+    receiveAfterReplacingWith(nil)
+    receiveAfterReplacingWith("not a table")
   end)
 
   it("keeps the atcp table a script holds and what is already in it", function()
